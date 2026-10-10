@@ -335,9 +335,9 @@ namespace sw
         const float32 distance = delta.getLength();
         if ( distance <= 1.0e-5f )
             return false;
-        const uint64 ignoreId = pOwner->getObjectId();
+        const uint64 ignoreID = pOwner->getObjectID();
         if ( is2D() )
-            return CharacterHitUtil::circleCast2D( *pManager, from, delta, distance, radius, layerMask, ignoreId, outHit );
-        return CharacterHitUtil::sphereCast3D( *pManager, from, delta, distance, radius, layerMask, ignoreId, outHit );
+            return CharacterHitUtil::circleCast2D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
+        return CharacterHitUtil::sphereCast3D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
     }
 } // namespace sw

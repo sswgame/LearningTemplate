@@ -31,7 +31,7 @@ namespace sw
     struct BrGroundItem
     {
         float2        _position{};
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int32         _count{ 0 };
         int32         _spotIndex{ -1 }; ///< 나온 지점(보급 상자면 −1)
     };
@@ -50,7 +50,7 @@ namespace sw
         static int32 placeMapLoot( const BrCatalog& catalog, const LootCatalog& lootCatalog, const vector<BrLootSpot>& listSpot, uint32 seed,
                                    vector<BrGroundItem>& outListItem );
         /** @brief 표 하나를 굴려 @p position 에 놓을 무더기를 @p outListItem 뒤에 붙입니다(보급 상자). 붙인 수입니다. */
-        static int32 rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableId, const float2& position, int32 spotIndex, int32 rollCount,
+        static int32 rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableID, const float2& position, int32 spotIndex, int32 rollCount,
                                   GameRandom& random, vector<BrGroundItem>& outListItem );
     };
 } // namespace sw

@@ -47,15 +47,15 @@ namespace sw
             {
                 const string filePath = FileUtil::normalizeSeparators( fileName );
 #if defined( SW_PLATFORM_WINDOWS )
-                const uint64 processId = static_cast<uint64>( GetCurrentProcessId() );
+                const uint64 processID = static_cast<uint64>( GetCurrentProcessId() );
 #else
-                const uint64 processId = static_cast<uint64>( ::getpid() );
+                const uint64 processID = static_cast<uint64>( ::getpid() );
 #endif
                 // 같은 폴더에 둔다. 다른 볼륨(시스템 임시 폴더)이면 이름 바꾸기가 원자적이지 않고 복사가 된다.
                 StringBuilder<constant::kMaxPathSize> tempPathBuilder;
                 tempPathBuilder.append( filePath.c_str() )
                     .append( ".tmp" )
-                    .append( processId )
+                    .append( processID )
                     .append( '_' )
                     .append( s_tempFileSerial.fetch_add( 1, std::memory_order_relaxed ) );
                 const string tempPath{ tempPathBuilder.c_str() };

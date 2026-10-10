@@ -43,7 +43,7 @@ namespace sw
 namespace sw
 {
     AccountClient::AccountClient()
-        : _mapClientIdToCall{}
+        : _mapClientIDToCall{}
         , _listReply{}
         , _listEvent{}
         , _listDeferred{}
@@ -52,7 +52,7 @@ namespace sw
         , _token{}
         , _sendingCall{}
         , _pClient{ nullptr }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _bLoggedIn{ SW_FALSE }
         , _bResuming{ SW_FALSE }
         , _bSending{ SW_FALSE }
@@ -102,10 +102,10 @@ namespace sw
         if ( _token.isEmpty() )
         {
             AccountClientReply& reply = _listReply.emplace_back();
-            reply._requestId          = _nextRequestId++;
+            reply._requestID          = _nextRequestID++;
             reply._operation          = AccountClientOperation::Resume;
             reply._result             = LoginResult::InvalidToken;
-            return reply._requestId;
+            return reply._requestID;
         }
         BitWriter body;
         AccountWire::writeToken( body, _token );
@@ -131,10 +131,10 @@ namespace sw
         return send( AccountClientOperation::LinkPlatform, AccountMethod::kLinkPlatform, body, true );
     }
 
-    uint64 AccountClient::issueGameTicket( string_view serverId )
+    uint64 AccountClient::issueGameTicket( string_view serverID )
     {
         BitWriter body;
-        AccountWire::writeText( body, serverId );
+        AccountWire::writeText( body, serverID );
         return send( AccountClientOperation::IssueGameTicket, AccountMethod::kIssueGameTicket, body, true );
     }
 
@@ -220,46 +220,46 @@ namespace sw
 
     uint64 AccountClient::send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic )
     {
-        const uint64        requestId = _nextRequestId++;
+        const uint64        requestID = _nextRequestID++;
         const vector<uint8> bodyBytes( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
         if ( bNeedsSession && _bResuming == SW_TRUE )
         {
-            _listDeferred.push_back( DeferredCall{ bodyBytes, requestId, method, operation } ); // 재접속 응답 뒤에 보낸다
-            return requestId;
+            _listDeferred.push_back( DeferredCall{ bodyBytes, requestID, method, operation } ); // 재접속 응답 뒤에 보낸다
+            return requestID;
         }
-        transmit( operation, method, bodyBytes, requestId, bAutomatic );
-        return requestId;
+        transmit( operation, method, bodyBytes, requestID, bAutomatic );
+        return requestID;
     }
 
-    void AccountClient::transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestId, bool bAutomatic )
+    void AccountClient::transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic )
     {
         BitWriter body;
         if ( bodyBytes.empty() == false )
             body.writeBytes( bodyBytes.data(), static_cast<int32>( bodyBytes.size() ) );
         NetRequestOptions options;
-        _sendingCall                = PendingCall{ requestId, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
+        _sendingCall                = PendingCall{ requestID, operation, static_cast<uint8>( bAutomatic ? SW_TRUE : SW_FALSE ) };
         _bSending                   = SW_TRUE;
-        const uint64 clientId       = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ) );
+        const uint64 clientID       = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&AccountClient::onResponse>( this ) );
         _bSending                   = SW_FALSE;
-        const bool bAlreadyAnswered = _sendingCall._requestId == 0;
+        const bool bAlreadyAnswered = _sendingCall._requestID == 0;
         if ( bAlreadyAnswered == false )
-            _mapClientIdToCall[clientId] = _sendingCall;
+            _mapClientIDToCall[clientID] = _sendingCall;
         _sendingCall = PendingCall{};
     }
 
     void AccountClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIdToCall.find( response._requestId );
-        if ( callIt != _mapClientIdToCall.end() )
+        const auto  callIt = _mapClientIDToCall.find( response._requestID );
+        if ( callIt != _mapClientIDToCall.end() )
         {
             call = callIt->second;
-            _mapClientIdToCall.erase( callIt );
+            _mapClientIDToCall.erase( callIt );
         }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestId != 0 )
+        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
         {
             call                    = _sendingCall;
-            _sendingCall._requestId = 0; // 맡기는 자리에서 바로 끝났다
+            _sendingCall._requestID = 0; // 맡기는 자리에서 바로 끝났다
         }
         else
         {
@@ -267,7 +267,7 @@ namespace sw
         }
 
         AccountClientReply reply;
-        reply._requestId  = call._requestId;
+        reply._requestID  = call._requestID;
         reply._operation  = call._operation;
         reply._bAutomatic = call._bAutomatic;
         reply._errorCode  = response._errorCode;
@@ -331,11 +331,11 @@ namespace sw
         {
             if ( failure == LoginResult::Ok )
             {
-                transmit( deferred._operation, deferred._method, deferred._bodyBytes, deferred._requestId, false );
+                transmit( deferred._operation, deferred._method, deferred._bodyBytes, deferred._requestID, false );
                 continue;
             }
             AccountClientReply& reply = _listReply.emplace_back();
-            reply._requestId          = deferred._requestId;
+            reply._requestID          = deferred._requestID;
             reply._operation          = deferred._operation;
             reply._result             = failure;
         }

@@ -78,11 +78,11 @@ namespace sw
                                    : UiRect::computeRangeGap( from.getLeft(), from.getRight(), candidate.getLeft(), candidate.getRight() );
             }
 
-            static WidgetId findTabNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, bool bForward )
+            static WidgetID findTabNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, bool bForward )
             {
                 const uint32 count = static_cast<uint32>( listCandidate.size() );
                 if ( count == 0 )
-                    return kInvalidWidgetId;
+                    return kInvalidWidgetID;
                 uint32 current = count;
                 for ( uint32 index = 0; index < count; ++index )
                 {
@@ -93,12 +93,12 @@ namespace sw
                     }
                 }
                 if ( current == count ) // 범위 밖에서 왔다 — 처음(앞으로) · 끝(뒤로)
-                    return bForward ? listCandidate[0]->getId() : listCandidate[count - 1]->getId();
+                    return bForward ? listCandidate[0]->getID() : listCandidate[count - 1]->getID();
                 const uint32 next = bForward ? ( current + 1 ) % count : ( current + count - 1 ) % count;
-                return listCandidate[next]->getId();
+                return listCandidate[next]->getID();
             }
 
-            static WidgetId findSpatialNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, UiNavigationDirection direction )
+            static WidgetID findSpatialNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, UiNavigationDirection direction )
             {
                 const UiRect  fromRect     = from.getGeometry().computeScreenBounds();
                 const float2  fromCenter   = fromRect.getCenter();
@@ -123,11 +123,11 @@ namespace sw
                         bestDistance = distance;
                     }
                 }
-                return pBest != nullptr ? pBest->getId() : kInvalidWidgetId;
+                return pBest != nullptr ? pBest->getID() : kInvalidWidgetID;
             }
 
             /** @brief Wrap: 반대 방향으로 가장 먼 후보입니다 — 수직 틈이 0 인 후보가 있으면 그 안에서만. */
-            static WidgetId findWrapNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, UiNavigationDirection direction )
+            static WidgetID findWrapNeighbor( const vector<const Widget*>& listCandidate, const Widget& from, UiNavigationDirection direction )
             {
                 const UiNavigationDirection opposite     = getOpposite( direction );
                 const UiRect                fromRect     = from.getGeometry().computeScreenBounds();
@@ -153,7 +153,7 @@ namespace sw
                         bBestAligned = bAligned;
                     }
                 }
-                return pBest != nullptr ? pBest->getId() : kInvalidWidgetId;
+                return pBest != nullptr ? pBest->getID() : kInvalidWidgetID;
             }
         };
     } // namespace
@@ -245,11 +245,11 @@ namespace sw
         return primary + 2.0f * perpendicularGap;
     }
 
-    WidgetId UiNavigationSolver::findNextWidget( const WidgetTree& tree, WidgetId from, UiNavigationDirection direction )
+    WidgetID UiNavigationSolver::findNextWidget( const WidgetTree& tree, WidgetID from, UiNavigationDirection direction )
     {
-        const Widget* pFrom = tree.findWidgetById( from );
+        const Widget* pFrom = tree.findWidgetByID( from );
         if ( pFrom == nullptr || tree.getRoot() == nullptr )
-            return kInvalidWidgetId;
+            return kInvalidWidgetID;
 
         // (1) 조상으로 올라가며 규칙을 본다 — 첫 Explicit(받을 수 있으면) · 첫 Stop/Wrap 이 범위.
         const Widget*    pScope = tree.getRoot();
@@ -261,7 +261,7 @@ namespace sw
             {
                 const Widget* pTarget = tree.findWidgetByName( entry._target );
                 if ( pTarget != nullptr && pTarget != pFrom && canReceiveFocus( *pTarget ) )
-                    return pTarget->getId();
+                    return pTarget->getID();
                 continue;
             }
             if ( entry._rule == UiNavigationRule::Stop || entry._rule == UiNavigationRule::Wrap )
@@ -278,16 +278,16 @@ namespace sw
             return UiNavigationSolverInternal::findTabNeighbor( listCandidate, *pFrom, direction == UiNavigationDirection::Next );
 
         // (2) 공간 탐색 → (3) 없고 Wrap 이면 반대쪽 끝.
-        const WidgetId spatial = UiNavigationSolverInternal::findSpatialNeighbor( listCandidate, *pFrom, direction );
-        if ( spatial != kInvalidWidgetId || rule != UiNavigationRule::Wrap )
+        const WidgetID spatial = UiNavigationSolverInternal::findSpatialNeighbor( listCandidate, *pFrom, direction );
+        if ( spatial != kInvalidWidgetID || rule != UiNavigationRule::Wrap )
             return spatial;
         return UiNavigationSolverInternal::findWrapNeighbor( listCandidate, *pFrom, direction );
     }
 
-    WidgetId UiNavigationSolver::findFirstFocusable( const Widget& scope )
+    WidgetID UiNavigationSolver::findFirstFocusable( const Widget& scope )
     {
         vector<const Widget*> listCandidate;
         UiNavigationSolverInternal::collectFocusable( scope, listCandidate );
-        return listCandidate.empty() ? kInvalidWidgetId : listCandidate[0]->getId();
+        return listCandidate.empty() ? kInvalidWidgetID : listCandidate[0]->getID();
     }
 } // namespace sw

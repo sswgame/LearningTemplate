@@ -65,7 +65,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, PrimitiveBuiltins )
     // ReflectBuiltins 별칭 → canonical TypeInfo (직렬화 핸들러 resolve 용).
     const sw::TypeInfo* viaInt = sw::engine::getTypeRegistry().findType( sw::hashed_string( "int32" ) );
     SW_ASSERT_NOT_NULL( viaInt );
-    SW_EXPECT_EQUAL( i32->_typeId, viaInt->_typeId );
+    SW_EXPECT_EQUAL( i32->_typeID, viaInt->_typeID );
     SW_EXPECT_TRUE( viaInt->_name == sw::hashed_string( "int32" ) );
 }
 
@@ -300,7 +300,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, TypeAndEnumAliasLookup )
     const sw::TypeInfo* viaAlias =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
     SW_ASSERT_NOT_NULL( viaAlias );
-    SW_EXPECT_EQUAL( canonical->_typeId, viaAlias->_typeId );
+    SW_EXPECT_EQUAL( canonical->_typeID, viaAlias->_typeID );
     SW_EXPECT_TRUE( viaAlias->_fullyQualifiedName == sw::hashed_string( "sw::RenameCompatActor" ) );
 
     const sw::EnumInfo* enumCanonical =
@@ -719,7 +719,7 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, ParentTypePointerIsResolvedAfterBatch 
 
 /**
  * @brief [ReflectionTypeRegistryTest] 조상 표 — 배치 끝에 세워지고, 걷기와 같은 답을 내며, 사슬이 바뀌면 따라온다
- * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 등록 배치 끝에 타입마다 루트부터의 `_typeId` 표를
+ * @details 캐스트의 핫패스는 `isDerivedFrom( const TypeInfo* )` 다. 등록 배치 끝에 타입마다 루트부터의 `_typeID` 표를
  *          적어 두고, 검사는 로드 둘과 비교 하나다(HotSpot 의 primary supers display). 지켜야 할 것 넷:
  *          (1) 표의 답은 걷기의 답과 같다 (2) 표가 없는 쪽 — 레지스트리 밖 사본·표보다 깊은 사슬 — 은 걷기로
  *          폴백해 같은 답을 낸다 (3) 재등록으로 부모가 바뀌면 옛 표로 답하지 않는다 (4) 모듈 해제 뒤 남은
@@ -785,13 +785,13 @@ SW_TEST_CASE( ReflectionTypeRegistryTest, AncestorDisplayMatchesWalkAndFollowsRe
     SW_EXPECT_FALSE( pOther->isDerivedFrom( pRoot ) );
     SW_EXPECT_FALSE( pLeaf->isDerivedFrom( static_cast<const sw::TypeInfo*>( nullptr ) ) );
 
-    // (2a) 레지스트리 밖 사본 — 손으로 만든 같은 이름의 TypeInfo(테스트 목의 `StaticType()` 이 이렇다. 자기 `_typeId`
+    // (2a) 레지스트리 밖 사본 — 손으로 만든 같은 이름의 TypeInfo(테스트 목의 `StaticType()` 이 이렇다. 자기 `_typeID`
     //      를 따로 가진다)는 **이름**으로 같은 타입이다. 표가 이름을 적는 이유. 표 쪽에서도, 걷기 쪽에서도 같은 답.
     sw::TypeInfo midCopy;
     midCopy._name               = sw::hashed_string( "DispMid" );
     midCopy._fullyQualifiedName = sw::hashed_string( "swtest::DispMid" );
     midCopy._parentFQN          = sw::hashed_string( "swtest::DispRoot" );
-    midCopy._typeId             = 0xC0FFEE;
+    midCopy._typeID             = 0xC0FFEE;
     SW_EXPECT_TRUE( pLeaf->isDerivedFrom( &midCopy ) );
     SW_EXPECT_TRUE( midCopy.isDerivedFrom( pRoot ) );
     SW_EXPECT_FALSE( midCopy.isDerivedFrom( pLeaf ) );

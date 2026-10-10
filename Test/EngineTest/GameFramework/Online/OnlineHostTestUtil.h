@@ -45,13 +45,13 @@ namespace test
 
         void onServiceRequest( sw::OnlineServiceHost& host, const sw::OnlineCallContext& context, sw::BitReader& body ) override
         {
-            const sw::AccountId accountId = body.readVarUint();
-            if ( body.hasOverflowed() || accountId == sw::kInvalidAccountId )
+            const sw::AccountID accountID = body.readVarUint();
+            if ( body.hasOverflowed() || accountID == sw::kInvalidAccountID )
             {
                 (void)host.respondError( context._token, sw::OnlineError::kInvalidRequest );
                 return;
             }
-            if ( host.bindAccount( context._connection, accountId ) == false )
+            if ( host.bindAccount( context._connection, accountID ) == false )
             {
                 (void)host.respondError( context._token, sw::OnlineError::kConflict );
                 return;
@@ -88,7 +88,7 @@ namespace test
     public:
         struct RemotePush
         {
-            sw::AccountId _accountId{ sw::kInvalidAccountId };
+            sw::AccountID _accountID{ sw::kInvalidAccountID };
             uint16        _kind{ 0 };
         };
 
@@ -98,12 +98,12 @@ namespace test
             : _listRemotePush{}
             , _mapAccountToEntry{}
             , _listPending{}
-            , _nextRequestId{ 1 }
+            , _nextRequestID{ 1 }
         {
         }
 
-        void setOnline( const sw::AccountIdentity& identity, uint64 serverId ) { _mapAccountToEntry[identity._accountId] = Entry{ identity, serverId }; }
-        void setOffline( sw::AccountId accountId ) { _mapAccountToEntry.erase( accountId ); }
+        void setOnline( const sw::AccountIdentity& identity, uint64 serverID ) { _mapAccountToEntry[identity._accountID] = Entry{ identity, serverID }; }
+        void setOffline( sw::AccountID accountID ) { _mapAccountToEntry.erase( accountID ); }
 
         /** @brief 쌓인 찾기 결과를 알립니다(서버 `tick` 이 부른다). */
         void tick()
@@ -120,45 +120,45 @@ namespace test
         uint64 submitFindByDisplayName( sw::string_view displayName, const sw::AccountPresenceDelegate& onFound ) override
         {
             sw::AccountPresenceResult result;
-            result._requestId = _nextRequestId++;
-            for ( const auto& [accountId, entry] : _mapAccountToEntry )
+            result._requestID = _nextRequestID++;
+            for ( const auto& [accountID, entry] : _mapAccountToEntry )
             {
                 if ( sw::StringUtil::toLower( entry._identity._displayName.c_str() ) == sw::StringUtil::toLower( sw::string( displayName ).c_str() ) )
                 {
                     result._identity = entry._identity;
-                    result._serverId = entry._serverId;
+                    result._serverID = entry._serverID;
                 }
             }
             _listPending.push_back( Pending{ result, onFound } );
-            return result._requestId;
+            return result._requestID;
         }
 
-        uint64 submitFindByAccount( sw::AccountId accountId, const sw::AccountPresenceDelegate& onFound ) override
+        uint64 submitFindByAccount( sw::AccountID accountID, const sw::AccountPresenceDelegate& onFound ) override
         {
             sw::AccountPresenceResult result;
-            result._requestId  = _nextRequestId++;
-            const auto entryIt = _mapAccountToEntry.find( accountId );
+            result._requestID  = _nextRequestID++;
+            const auto entryIt = _mapAccountToEntry.find( accountID );
             if ( entryIt != _mapAccountToEntry.end() )
             {
-                result._identity._accountId = accountId;
-                result._serverId            = entryIt->second._serverId;
+                result._identity._accountID = accountID;
+                result._serverID            = entryIt->second._serverID;
             }
             _listPending.push_back( Pending{ result, onFound } );
-            return result._requestId;
+            return result._requestID;
         }
 
-        bool sendRemotePush( sw::AccountId accountId, uint16 kind, const sw::BitWriter& body ) override
+        bool sendRemotePush( sw::AccountID accountID, uint16 kind, const sw::BitWriter& body ) override
         {
             (void)body;
-            _listRemotePush.push_back( RemotePush{ accountId, kind } );
+            _listRemotePush.push_back( RemotePush{ accountID, kind } );
             return true;
         }
 
-        void cancel( uint64 requestId ) override
+        void cancel( uint64 requestID ) override
         {
             for ( Pending& pending : _listPending )
             {
-                if ( pending._result._requestId == requestId )
+                if ( pending._result._requestID == requestID )
                     pending._onFound = sw::AccountPresenceDelegate{};
             }
         }
@@ -178,7 +178,7 @@ namespace test
         struct Entry
         {
             sw::AccountIdentity _identity{};
-            uint64              _serverId{ 0 };
+            uint64              _serverID{ 0 };
         };
 
         struct Pending
@@ -187,9 +187,9 @@ namespace test
             sw::AccountPresenceDelegate _onFound{};
         };
 
-        sw::unordered_map<sw::AccountId, Entry> _mapAccountToEntry;
+        sw::unordered_map<sw::AccountID, Entry> _mapAccountToEntry;
         sw::vector<Pending>                     _listPending;
-        uint64                                  _nextRequestId;
+        uint64                                  _nextRequestID;
     };
 } // namespace test
 
@@ -223,16 +223,16 @@ namespace test
         uint16                               _port;
 
         OnlineTestServer( sw::LoopbackStreamNetwork& network, sw::MemoryServiceDatabase* pDatabase, sw::MemoryEphemeralDatabase* pCacheDatabase,
-                          sw::LocalServerBusHub* pBusHub, uint64 serverId )
+                          sw::LocalServerBusHub* pBusHub, uint64 serverID )
             : _listKit{}
             , _store{ pDatabase }
             , _cache{ pCacheDatabase }
-            , _bus{ pBusHub, serverId }
+            , _bus{ pBusHub, serverID }
             , _presence{}
             , _loginService{}
             , _transport{ network.createTransport() }
             , _host{}
-            , _port{ static_cast<uint16>( kFirstPort + serverId ) }
+            , _port{ static_cast<uint16>( kFirstPort + serverID ) }
         {
             SW_EXPECT_TRUE( _host.registerService( &_loginService ) );
         }
@@ -267,7 +267,7 @@ namespace test
             SW_EXPECT_TRUE_MSG( _host.initialize( _transport.get(), settings, error ), error.c_str() );
         }
 
-        uint64 getServerId() const { return _bus.getServerId(); }
+        uint64 getServerID() const { return _bus.getServerID(); }
 
         /** @brief 호스트 틱(전송 · 저장소 완료 · 캐시 라우터 · 버스 · 서비스) 뒤 가짜 접속 상태의 결과를 알립니다. */
         void tick( int64 nowMs )
@@ -324,10 +324,10 @@ namespace test
         }
 
         /** @brief 시험 로그인을 보냅니다(응답은 기다리지 않는다 — 다음 `tickAll` 뒤면 붙어 있다). */
-        void login( int32 clientIndex, sw::AccountId accountId )
+        void login( int32 clientIndex, sw::AccountID accountID )
         {
             sw::BitWriter body;
-            body.writeVarUint( accountId );
+            body.writeVarUint( accountID );
             (void)getClient( clientIndex ).sendRequest( TestLoginService::kLoginMethod, body, sw::NetRequestOptions{}, sw::OnlineResponseDelegate{} );
         }
 

@@ -30,10 +30,10 @@
 namespace sw
 {
     /**
-     * @struct ProfileScopeId
+     * @struct ProfileScopeID
      * @brief 계측 지점 하나의 등록 결과입니다 — 이 표의 슬롯과 외부 출력의 지점. 매크로가 static 으로 한 번 받습니다.
      */
-    struct ProfileScopeId
+    struct ProfileScopeID
     {
         uint32 _slot; ///< `FrameProfiler` 슬롯(없으면 `kInvalidSlot`)
 #if SW_PROFILER_BACKEND_COMPILED
@@ -86,7 +86,7 @@ namespace sw
          * @brief `SW_PROFILE_SCOPE` 의 등록입니다. 이 표의 슬롯과 외부 출력 지점을 함께 받습니다.
          * @details 함수 · 파일 · 줄은 외부 출력(Tracy 소스 위치)에만 씁니다. Shipping 에서는 슬롯만 받습니다.
          */
-        ProfileScopeId registerScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
+        ProfileScopeID registerScopeSite( const utf8* pName, const utf8* pFunction, const utf8* pFile, uint32 line );
 
         /** @brief 구간에 경과 나노초와 호출 1회를 더합니다. 스레드 안전합니다. */
         void addSample( uint32 slot, uint64 nanos );
@@ -190,7 +190,7 @@ namespace sw
     {
     public:
         /** @brief 계측이 켜져 있을 때만 시작 시각을 읽고, 외부 출력이 있으면 그 구간을 엽니다. */
-        explicit ScopedFrameProfile( const ProfileScopeId& scopeId ) noexcept;
+        explicit ScopedFrameProfile( const ProfileScopeID& scopeID ) noexcept;
         /** @brief 경과를 슬롯에 더하고 외부 구간을 닫습니다. */
         ~ScopedFrameProfile() noexcept;
 
@@ -225,7 +225,7 @@ namespace sw
  * @details 슬롯 번호 · 외부 지점은 함수 지역 static 으로 한 번만 받습니다(C++11 이후 스레드 안전 초기화).
  */
 #define SW_PROFILE_SCOPE( name )                                                                                         \
-    static const ::sw::ProfileScopeId SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                                    \
+    static const ::sw::ProfileScopeID SW_PROFILE_CONCAT( swProfileSlot_, __LINE__ ) =                                    \
         ::sw::engine::getFrameProfiler().registerScopeSite( name, __func__, __FILE__, static_cast<uint32>( __LINE__ ) ); \
     ::sw::ScopedFrameProfile SW_PROFILE_CONCAT( swProfileScope_, __LINE__ )                                              \
     {                                                                                                                    \

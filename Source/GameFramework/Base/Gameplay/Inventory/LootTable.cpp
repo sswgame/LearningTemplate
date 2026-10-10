@@ -23,8 +23,8 @@ namespace sw
                 LootEntry   entry;
                 const utf8* pItem  = node.findAttribute( "item" );
                 const utf8* pTable = node.findAttribute( "table" );
-                entry._itemId      = pItem != nullptr ? hashed_string( pItem ) : hashed_string{};
-                entry._tableId     = pTable != nullptr ? hashed_string( pTable ) : hashed_string{};
+                entry._itemID      = pItem != nullptr ? hashed_string( pItem ) : hashed_string{};
+                entry._tableID     = pTable != nullptr ? hashed_string( pTable ) : hashed_string{};
                 entry._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
                 entry._chance      = MathUtil::saturate( node.getAttributeFloat( "chance", entry._chance ) );
                 entry._minCount    = MathUtil::max( 0, node.getAttributeInt( "min", node.getAttributeInt( "count", entry._minCount ) ) );
@@ -42,11 +42,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Table" ); node; node = node.findNextSibling( "Table" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             LootTableDef table;
-            table._id         = hashed_string( pId );
+            table._id         = hashed_string( pID );
             table._minRolls   = MathUtil::max( 0, node.getAttributeInt( "rolls", table._minRolls ) );
             table._maxRolls   = MathUtil::max( table._minRolls, node.getAttributeInt( "rollsMax", table._minRolls ) );
             table._noneWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "none", table._noneWeight ) );
@@ -65,16 +65,16 @@ namespace sw
         {
             for ( const LootEntry& entry : table._listEntry )
             {
-                if ( entry._tableId.empty() == false && _catalog.find( entry._tableId ) == nullptr )
-                    SW_LOG_WARNING( "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableId.c_str() );
+                if ( entry._tableID.empty() == false && _catalog.find( entry._tableID ) == nullptr )
+                    SW_LOG_WARNING( "%#: table '%#' refers to unknown table '%#'", sourceName, table._id.c_str(), entry._tableID.c_str() );
             }
         }
         return loadedCount;
     }
 
-    bool LootCatalog::roll( const hashed_string& tableId, GameRandom& random, ItemStackList& outItems, float32 luck ) const
+    bool LootCatalog::roll( const hashed_string& tableID, GameRandom& random, ItemStackList& outItems, float32 luck ) const
     {
-        const LootTableDef* pTable = _catalog.find( tableId );
+        const LootTableDef* pTable = _catalog.find( tableID );
         if ( pTable == nullptr )
             return false;
         rollTable( *pTable, random, outItems, MathUtil::max( 0.01f, luck ), 0 );
@@ -83,16 +83,16 @@ namespace sw
 
     void LootCatalog::giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const
     {
-        if ( entry._tableId.empty() == false )
+        if ( entry._tableID.empty() == false )
         {
-            const LootTableDef* pTable = _catalog.find( entry._tableId );
+            const LootTableDef* pTable = _catalog.find( entry._tableID );
             if ( pTable != nullptr && depth + 1 < kMaxDepth )
                 rollTable( *pTable, random, outItems, luck, depth + 1 );
             return;
         }
         const int32 count = random.nextInt( entry._minCount, entry._maxCount );
-        if ( count > 0 && entry._itemId.empty() == false )
-            outItems.addItem( entry._itemId, count );
+        if ( count > 0 && entry._itemID.empty() == false )
+            outItems.addItem( entry._itemID, count );
     }
 
     void LootCatalog::rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const
@@ -126,22 +126,22 @@ namespace sw
         }
     }
 
-    float32 LootCatalog::computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const
+    float32 LootCatalog::computeEntryChance( const LootEntry& entry, const hashed_string& itemID, int32 depth ) const
     {
-        if ( entry._tableId.empty() == false )
+        if ( entry._tableID.empty() == false )
         {
-            const LootTableDef* pTable = _catalog.find( entry._tableId );
-            return pTable != nullptr && depth + 1 < kMaxDepth ? computeTableChance( *pTable, itemId, depth + 1 ) : 0.0f;
+            const LootTableDef* pTable = _catalog.find( entry._tableID );
+            return pTable != nullptr && depth + 1 < kMaxDepth ? computeTableChance( *pTable, itemID, depth + 1 ) : 0.0f;
         }
-        return entry._itemId == itemId && entry._maxCount > 0 ? 1.0f : 0.0f;
+        return entry._itemID == itemID && entry._maxCount > 0 ? 1.0f : 0.0f;
     }
 
-    float32 LootCatalog::computeTableChance( const LootTableDef& table, const hashed_string& itemId, int32 depth ) const
+    float32 LootCatalog::computeTableChance( const LootTableDef& table, const hashed_string& itemID, int32 depth ) const
     {
         float32 missChance = 1.0f;
         for ( const LootEntry& entry : table._listAlways )
         {
-            missChance *= 1.0f - entry._chance * computeEntryChance( entry, itemId, depth );
+            missChance *= 1.0f - entry._chance * computeEntryChance( entry, itemID, depth );
         }
         float32 totalWeight = table._noneWeight;
         for ( const LootEntry& entry : table._listEntry )
@@ -153,7 +153,7 @@ namespace sw
             float32 pickChance = 0.0f;
             for ( const LootEntry& entry : table._listEntry )
             {
-                pickChance += entry._weight / totalWeight * computeEntryChance( entry, itemId, depth );
+                pickChance += entry._weight / totalWeight * computeEntryChance( entry, itemID, depth );
             }
             const float32 rolls = 0.5f * static_cast<float32>( table._minRolls + table._maxRolls );
             missChance *= MathUtil::pow( 1.0f - MathUtil::saturate( pickChance ), rolls );
@@ -161,9 +161,9 @@ namespace sw
         return 1.0f - missChance;
     }
 
-    float32 LootCatalog::computeDropChance( const hashed_string& tableId, const hashed_string& itemId ) const
+    float32 LootCatalog::computeDropChance( const hashed_string& tableID, const hashed_string& itemID ) const
     {
-        const LootTableDef* pTable = _catalog.find( tableId );
-        return pTable != nullptr ? computeTableChance( *pTable, itemId, 0 ) : 0.0f;
+        const LootTableDef* pTable = _catalog.find( tableID );
+        return pTable != nullptr ? computeTableChance( *pTable, itemID, 0 ) : 0.0f;
     }
 } // namespace sw

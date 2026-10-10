@@ -24,9 +24,9 @@ namespace sw
         static PhysicsBodyHandle fromUserData( void* pUserData ) { return PhysicsBodyHandle::fromPacked( static_cast<uint64>( reinterpret_cast<uintptr_t>( pUserData ) ) ); }
 
         /** @brief 셰이프 id 를 표의 키로 묶습니다(색인 | 세대 << 32). 같은 월드 안에서만 씁니다. */
-        static uint64 makeShapeKey( b2ShapeId shapeId )
+        static uint64 makeShapeKey( b2ShapeId shapeID )
         {
-            return static_cast<uint64>( static_cast<uint32>( shapeId.index1 ) ) | ( static_cast<uint64>( shapeId.generation ) << 32 );
+            return static_cast<uint64>( static_cast<uint32>( shapeID.index1 ) ) | ( static_cast<uint64>( shapeID.generation ) << 32 );
         }
     };
 } // namespace sw

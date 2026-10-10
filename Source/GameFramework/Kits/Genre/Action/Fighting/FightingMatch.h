@@ -105,7 +105,7 @@ namespace sw
             MatchEnd  ///< `_value` = 이긴 쪽
         };
 
-        hashed_string _moveId{};
+        hashed_string _moveID{};
         int32         _player{ -1 }; ///< 한 쪽(공격 · 발동한 쪽)
         int32         _value{ 0 };
         Kind          _kind{ Kind::MoveStarted };
@@ -255,7 +255,7 @@ namespace sw
         void  enterState( int32 player, FighterState state, int32 frames );
         void  resetCombo( int32 player );
         void  endRound( int32 winner, FightingEvent::Kind reason );
-        void  pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveId = hashed_string() );
+        void  pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveID = hashed_string() );
 
         FighterRuntime             _arrFighter[kPlayerCount];
         FightingSettings           _settings;

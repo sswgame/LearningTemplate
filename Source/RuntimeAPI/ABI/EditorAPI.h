@@ -33,7 +33,7 @@ namespace sw
         void ( *abandonPendingDraw )( EditorHandle editor ){ nullptr };                                                       /**< @brief 렌더 워커를 재운 뒤, 렌더 대기 중인 draw 스냅샷 표시를 버리게 합니다. */
         bool ( *processEvent )( EditorHandle editor, const NativeWindowEvent* pEvent ){ nullptr };                            /**< @brief 네이티브 이벤트를 에디터로 전달합니다. */
         void* ( *registerTexture )(EditorHandle editor, TextureHandle texture){ nullptr };                                    /**< @brief 텍스처를 ImGui 에 등록합니다. */
-        void ( *unregisterTexture )( EditorHandle editor, void* pTextureId ){ nullptr };                                      /**< @brief 텍스처를 ImGui 에서 해제합니다. */
+        void ( *unregisterTexture )( EditorHandle editor, void* pTextureID ){ nullptr };                                      /**< @brief 텍스처를 ImGui 에서 해제합니다. */
         void ( *getGameViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr };  /**< @brief 이번 프레임 게임 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
         void ( *getSceneViewport )( EditorHandle editor, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight ){ nullptr }; /**< @brief 이번 프레임 씬 뷰 RT 핸들과 크기를 조회합니다(패널이 안 보이면 0). */
         void* ( *getSceneViewCamera )(EditorHandle editor){ nullptr };                                                        /**< @brief 이번 프레임 씬 뷰 카메라(에디터 카메라, CameraComponent*)를 반환합니다. */

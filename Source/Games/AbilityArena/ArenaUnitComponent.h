@@ -51,7 +51,7 @@ namespace sw
         struct AbilityButton
         {
             const utf8* _pName;
-            int32       _inputId;
+            int32       _inputID;
         };
         static constexpr AbilityButton kArrAbilityButton[] = {
             {   "Arena.Melee", 1},

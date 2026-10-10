@@ -80,7 +80,7 @@ namespace sw
     void AccountWire::writeGrantReply( BitWriter& outWriter, LoginResult result, const LoginGrant& grant )
     {
         outWriter.writeVarUint( static_cast<uint64>( result ) );
-        outWriter.writeVarUint( grant._identity._accountId );
+        outWriter.writeVarUint( grant._identity._accountID );
         writeText( outWriter, grant._identity._displayName );
         outWriter.writeBool( grant._identity._bGuest == SW_TRUE );
         writeToken( outWriter, grant._token );
@@ -90,7 +90,7 @@ namespace sw
         outWriter.writeVarInt( grant._retryAfterMs );
         outWriter.writeVarInt( grant._sanctionUntilMs );
         outWriter.writeVarInt( grant._deletionDueMs );
-        outWriter.writeVarUint( grant._replacedSessionId );
+        outWriter.writeVarUint( grant._replacedSessionID );
         outWriter.writeVarUint( static_cast<uint64>( grant._revokeReason ) );
         outWriter.writeBool( grant._bCreated == SW_TRUE );
         outWriter.writeBool( grant._bUpdateRecommended == SW_TRUE );
@@ -101,7 +101,7 @@ namespace sw
         outGrant = LoginGrant{};
         if ( AccountProtocolInternal::readResult( reader, outResult ) == false )
             return false;
-        outGrant._identity._accountId = reader.readVarUint();
+        outGrant._identity._accountID = reader.readVarUint();
         if ( readText( reader, LoginConstant::kMaxDisplayNameSize, outGrant._identity._displayName ) == false )
             return false;
         outGrant._identity._bGuest = reader.readBool() ? SW_TRUE : SW_FALSE;
@@ -113,7 +113,7 @@ namespace sw
         outGrant._retryAfterMs      = reader.readVarInt();
         outGrant._sanctionUntilMs   = reader.readVarInt();
         outGrant._deletionDueMs     = reader.readVarInt();
-        outGrant._replacedSessionId = reader.readVarUint();
+        outGrant._replacedSessionID = reader.readVarUint();
         const uint64 revokeReason   = reader.readVarUint();
         if ( revokeReason > static_cast<uint64>( LoginRevokeReason::AccountDeleted ) )
             return false;

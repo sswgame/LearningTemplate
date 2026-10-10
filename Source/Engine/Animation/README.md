@@ -60,7 +60,7 @@ KayKit 기사 캐릭터를 Idle 상태로 시작하고, 게임 코드에서 걷�
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 
 SkeletalMeshComponent* pMesh = pObject->addComponent<SkeletalMeshComponent>();
-pMesh->setMeshId( "game/shooter3d/models/kaykit/knight.mesh" );
+pMesh->setMeshID( "game/shooter3d/models/kaykit/knight.mesh" );
 pMesh->setSkeletonPath( "game/shooter3d/models/kaykit/knight/knight.skeleton.json" );
 
 SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
@@ -344,7 +344,7 @@ glTF 모프 타깃은 `.mesh` 의 모프 블록으로, `weights` 채널은 타�
 
 ### 새 코덱
 
-1. `AnimCodecId` 에 값을 추가합니다. 이 값은 파일에 기록되므로 기존 값을 바꾸지 않습니다.
+1. `AnimCodecID` 에 값을 추가합니다. 이 값은 파일에 기록되므로 기존 값을 바꾸지 않습니다.
 2. `IAnimCodec` 을 구현하고 코덱 테이블(`AnimCodec.cpp`)에 넣습니다.
 3. 서드파티 라이브러리를 쓴다면 그 헤더는 코덱 폴더의 `.cpp` 에서만 include 합니다(`CheckThirdPartyIsolation.py`).
 

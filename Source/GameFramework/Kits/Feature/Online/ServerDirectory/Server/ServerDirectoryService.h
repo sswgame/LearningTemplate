@@ -96,16 +96,16 @@ namespace sw
 
         // 클라이언트 요청(동기 — 메모리)
         ServerDirectoryStatus makeStatus( int64 nowMs ) const;
-        ServerAssignment      assignServer( AccountId accountId, const ServerAssignmentRequest& request, int64 nowMs );
+        ServerAssignment      assignServer( AccountID accountID, const ServerAssignmentRequest& request, int64 nowMs );
         ServerDirectoryResult listServers( string_view kind, int64 nowMs, vector<ServerListEntry>& outListEntry ) const;
-        /** @brief 지금 @p kind 에 걸린 점검이 @p accountId 를 막는가입니다(계정 · 게임 서버가 조립에서 물을 수 있다). 막으면 그 창을 @p pOutWindow 에. */
-        bool isBlockedByMaintenance( string_view kind, AccountId accountId, int64 nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
+        /** @brief 지금 @p kind 에 걸린 점검이 @p accountID 를 막는가입니다(계정 · 게임 서버가 조립에서 물을 수 있다). 막으면 그 창을 @p pOutWindow 에. */
+        bool isBlockedByMaintenance( string_view kind, AccountID accountID, int64 nowMs, MaintenanceWindow* pOutWindow = nullptr ) const;
 
-        // 바꾸기(비동기 — 완료는 drainCompletions). @p actorId 는 감사 줄의 GM 계정(0 = system).
-        void setMaintenance( const MaintenanceWindow& window, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag );
-        void clearMaintenance( string_view scope, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag );
-        void postNotice( const ServiceNotice& notice, AccountId actorId, int64 nowMs, uint64 requestTag );
-        void removeNotice( uint64 noticeId, AccountId actorId, int64 nowMs, uint64 requestTag );
+        // 바꾸기(비동기 — 완료는 drainCompletions). @p actorID 는 감사 줄의 GM 계정(0 = system).
+        void setMaintenance( const MaintenanceWindow& window, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
+        void clearMaintenance( string_view scope, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
+        void postNotice( const ServiceNotice& notice, AccountID actorID, int64 nowMs, uint64 requestTag );
+        void removeNotice( uint64 noticeID, AccountID actorID, int64 nowMs, uint64 requestTag );
 
         void   drainCompletions( vector<ServerDirectoryCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         uint64 getStatusRevision() const { return _statusRevision; }

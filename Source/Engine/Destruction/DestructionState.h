@@ -31,7 +31,7 @@ namespace sw
     {
         vector<uint32> _listNode;              ///< 활성 노드(오름차순)
         uint32         _id{ 0 };               ///< 늘기만 하는 번호
-        uint32         _parentId{ 0 };         ///< 갈라져 나온 그룹(처음 그룹은 0)
+        uint32         _parentID{ 0 };         ///< 갈라져 나온 그룹(처음 그룹은 0)
         uint32         _leafCount{ 0 };        ///< 품은 잎 수
         uint8          _bAnchored{ SW_FALSE }; ///< 앵커까지 이어져 붙어 있다(정적)
     };
@@ -99,7 +99,7 @@ namespace sw
 
         const vector<DestructionGroup>& getGroups() const { return _listGroup; }
         /** @brief 번호의 그룹입니다. 없으면 nullptr 입니다. */
-        const DestructionGroup* findGroup( uint32 groupId ) const;
+        const DestructionGroup* findGroup( uint32 groupID ) const;
         /** @brief 잎이 속한 그룹 번호입니다. */
         uint32 getGroupOfLeaf( uint32 leaf ) const { return _listLeafGroup[leaf]; }
         /** @brief 잎을 품은 활성 노드입니다. */
@@ -141,7 +141,7 @@ namespace sw
         /** @brief 잎의 연결을 모두 끊고 앵커에서 뗍니다. */
         void severLeaf( uint32 leaf, DestructionChange& outChange );
         /** @brief 표시된 그룹들을 연결로 다시 나누고, 붙은 덩어리의 지지를 계산해 무너뜨린 뒤 그룹을 바꿉니다. */
-        void regroup( vector<uint32>& inoutListDirtyGroupId, DestructionChange& outChange );
+        void regroup( vector<uint32>& inoutListDirtyGroupID, DestructionChange& outChange );
         /** @brief 활성 노드들을 연결로 이어진 덩어리들로 나눕니다(덩어리마다 가장 작은 노드 순). */
         void splitComponents( const vector<uint32>& listNode, vector<vector<uint32>>& outListComponent ) const;
         /** @brief 붙은 덩어리의 하중을 앵커 쪽으로 흘려 지지 세기를 넘는 연결을 끊습니다. 끊었으면 true 입니다. */
@@ -149,7 +149,7 @@ namespace sw
         /** @brief 활성 노드가 앵커 잎을 품었는지입니다. */
         bool hasAnchoredLeaf( uint32 node ) const;
         /** @brief 그룹 번호의 자리입니다. 없으면 -1 입니다. */
-        int32 findGroupIndex( uint32 groupId ) const;
+        int32 findGroupIndex( uint32 groupID ) const;
 
     private:
         const FractureGraph*     _pGraph;
@@ -166,7 +166,7 @@ namespace sw
         vector<uint32>           _listLeafLinkStart; ///< 잎마다 `_listLeafLinkIndex` 의 시작(잎 수 + 1)
         vector<uint32>           _listLeafLinkIndex;
         vector<DestructionGroup> _listGroup; ///< 번호 오름차순
-        uint32                   _nextGroupId;
+        uint32                   _nextGroupID;
         uint32                   _eventCount;        ///< 적용한 피해 사건 수(해시에 든다)
         vector<float32>          _listScratchStrain; ///< applyDamage 의 잎별 변형(재사용)
     };

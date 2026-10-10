@@ -56,8 +56,8 @@ namespace sw
     /** @brief 파티 초대 알림입니다. */
     struct PartyInvite
     {
-        uint64    _partyId{ 0 };
-        AccountId _inviterId{ kInvalidAccountId };
+        uint64    _partyID{ 0 };
+        AccountID _inviterID{ kInvalidAccountID };
     };
 } // namespace sw
 
@@ -69,7 +69,7 @@ namespace sw
         vector<LobbySnapshot> _listLobby{}; ///< LobbyList
         PartySnapshot         _party{};
         LobbySnapshot         _lobby{};
-        uint64                _ticketId{ 0 }; ///< QueueJoin · QueueLeave
+        uint64                _ticketID{ 0 }; ///< QueueJoin · QueueLeave
         MatchmakingResult     _result{ MatchmakingResult::Ok };
     };
 } // namespace sw
@@ -98,8 +98,8 @@ namespace sw
         static vector<uint8>      encodeLobby( const LobbySnapshot& lobby );
         [[nodiscard]] static bool decodeLobby( const vector<uint8>& bytes, LobbySnapshot& outLobby );
         /** @brief 캐시 값 하나에 든 id(16 진 글)입니다 — 계정 → 파티 색인 · 임대 주인. */
-        static vector<uint8>      encodeId( uint64 id );
-        [[nodiscard]] static bool decodeId( const vector<uint8>& bytes, uint64& outId );
+        static vector<uint8>      encodeID( uint64 id );
+        [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outID );
 
         // 서버 사이(버스) — 표 · 만든 경기 · 결과
         static void               writeTicket( BitWriter& outWriter, const MatchTicket& ticket );

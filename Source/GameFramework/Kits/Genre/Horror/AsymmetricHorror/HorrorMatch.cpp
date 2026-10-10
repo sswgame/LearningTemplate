@@ -122,10 +122,10 @@ namespace sw
         _bEndReported            = SW_FALSE;
         if ( _pCatalog == nullptr )
             return false;
-        _killer._pDef = _pCatalog->findKiller( _settings._killerId );
+        _killer._pDef = _pCatalog->findKiller( _settings._killerID );
         if ( _killer._pDef == nullptr )
         {
-            SW_LOG_WARNING( "unknown killer '%#'", _settings._killerId.c_str() );
+            SW_LOG_WARNING( "unknown killer '%#'", _settings._killerID.c_str() );
             return false;
         }
         return true;
@@ -854,7 +854,7 @@ namespace sw
 
     void HorrorMatch::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeName( outArchive, _settings._killerId );
+        StateArchiveUtil::writeName( outArchive, _settings._killerID );
         outArchive << _bStarted;
         outArchive << _bEndReported;
         outArchive << _tick;
@@ -955,8 +955,8 @@ namespace sw
     {
         if ( _pCatalog == nullptr || _killer._pDef == nullptr )
             return false;
-        hashed_string killerId;
-        if ( StateArchiveUtil::readName( archive, killerId ) == false || killerId != _settings._killerId )
+        hashed_string killerID;
+        if ( StateArchiveUtil::readName( archive, killerID ) == false || killerID != _settings._killerID )
             return false;
         // 같은 설정 · 카탈로그로 새 판을 열고 무대 · 생존자를 add… 로 다시 세운 뒤(규칙에서 오는 설정) 상태를 덮는다 — 끝까지 맞을 때만 바꾼다.
         HorrorMatch restored;
@@ -1416,7 +1416,7 @@ namespace sw
         bool bCompleted = false;
         for ( const InteractionEvent& event : _listInteractionScratch )
         {
-            const int32 actor = static_cast<int32>( event._actorId );
+            const int32 actor = static_cast<int32>( event._actorID );
             switch ( event._kind )
             {
                 case InteractionEvent::Kind::SkillCheckStarted:

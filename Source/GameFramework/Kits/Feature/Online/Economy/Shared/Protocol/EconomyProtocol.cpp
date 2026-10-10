@@ -33,13 +33,13 @@ namespace sw
 
     void EconomyProtocol::writePurchaseRequest( BitWriter& outWriter, const EconomyPurchaseRequest& request )
     {
-        ServiceKeyUtil::writeString( outWriter, request._offerId );
+        ServiceKeyUtil::writeString( outWriter, request._offerID );
         outWriter.writeVarInt( request._count );
     }
 
     bool EconomyProtocol::readPurchaseRequest( BitReader& reader, EconomyPurchaseRequest& outRequest )
     {
-        if ( ServiceKeyUtil::readString( reader, kMaxIdSize, outRequest._offerId ) == false )
+        if ( ServiceKeyUtil::readString( reader, kMaxIDSize, outRequest._offerID ) == false )
             return false;
         const int64 count   = reader.readVarInt();
         outRequest._count   = static_cast<int32>( count );
@@ -55,7 +55,7 @@ namespace sw
 
     bool EconomyProtocol::readRedeemRequest( BitReader& reader, EconomyRedeemRequest& outRequest )
     {
-        return ServiceKeyUtil::readString( reader, kMaxIdSize, outRequest._storeName ) && ServiceKeyUtil::readString( reader, kMaxPayloadSize, outRequest._payload );
+        return ServiceKeyUtil::readString( reader, kMaxIDSize, outRequest._storeName ) && ServiceKeyUtil::readString( reader, kMaxPayloadSize, outRequest._payload );
     }
 
     void EconomyProtocol::writeHistoryRequest( BitWriter& outWriter, const EconomyHistoryRequest& request )
@@ -79,7 +79,7 @@ namespace sw
         outWriter.writeVarUint( listBalance.size() );
         for ( const LedgerBalance& balance : listBalance )
         {
-            ServiceKeyUtil::writeString( outWriter, balance._assetId );
+            ServiceKeyUtil::writeString( outWriter, balance._assetID );
             outWriter.writeVarInt( balance._amount );
         }
     }
@@ -92,7 +92,7 @@ namespace sw
         outListBalance.resize( static_cast<size_t>( count ) );
         for ( LedgerBalance& balance : outListBalance )
         {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, balance._assetId ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, balance._assetID ) == false )
                 return false;
             balance._amount = reader.readVarInt();
         }
@@ -104,7 +104,7 @@ namespace sw
         outWriter.writeVarUint( static_cast<uint64>( reply._result ) );
         outWriter.writeBool( reply._bReplayed == SW_TRUE );
         writeBalances( outWriter, reply._listBalance );
-        ServiceKeyUtil::writeString( outWriter, reply._productId );
+        ServiceKeyUtil::writeString( outWriter, reply._productID );
         ServiceKeyUtil::writeString( outWriter, reply._nextCursor );
         outWriter.writeVarUint( reply._listHistory.size() );
         for ( const EconomyHistoryEntry& entry : reply._listHistory )
@@ -125,7 +125,7 @@ namespace sw
         outReply._bReplayed = reader.readBool() ? SW_TRUE : SW_FALSE;
         if ( readBalances( reader, outReply._listBalance ) == false )
             return false;
-        const bool bTextOk = ServiceKeyUtil::readString( reader, kMaxIdSize, outReply._productId ) &&
+        const bool bTextOk = ServiceKeyUtil::readString( reader, kMaxIDSize, outReply._productID ) &&
                              ServiceKeyUtil::readString( reader, kMaxCursorSize, outReply._nextCursor );
         if ( bTextOk == false )
             return false;

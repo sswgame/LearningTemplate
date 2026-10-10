@@ -25,15 +25,15 @@ namespace sw
     class SW_GF_API AccountConnectAuthenticator final : public INetConnectAuthenticator
     {
     public:
-        /** @brief @p pAuthority 는 빌려 쓴다(초기화된 것). @p serverId 는 표가 가리켜야 하는 이 게임 서버의 id. */
-        AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverId );
+        /** @brief @p pAuthority 는 빌려 쓴다(초기화된 것). @p serverID 는 표가 가리켜야 하는 이 게임 서버의 id. */
+        AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID );
 
         void setNowMs( int64 nowMs ) { _nowMs.store( nowMs, std::memory_order_relaxed ); }
 
-        [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalId ) override;
+        [[nodiscard]] bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) override;
 
     private:
-        hashed_string               _serverId;
+        hashed_string               _serverID;
         const LoginTicketAuthority* _pAuthority;
         atomic<int64>               _nowMs;
     };

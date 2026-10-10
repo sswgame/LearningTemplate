@@ -181,8 +181,8 @@ namespace sw
     {
         // 순서 키는 이 쓰기를 낸 틱의 주인 오브젝트다 — 여러 오브젝트의 틱이 한 컴포넌트에 쓰면 id 가 큰 쪽이 이긴다.
         const GameObject* pTickWriter = StructuralChangeBuffer::getTickWriter();
-        const uint64      writerId    = ( pTickWriter != nullptr ) ? pTickWriter->getObjectId() : 0;
-        if ( _transformHierarchy.queueWriteParallel( write, writerId ) )
+        const uint64      writerID    = ( pTickWriter != nullptr ) ? pTickWriter->getObjectID() : 0;
+        if ( _transformHierarchy.queueWriteParallel( write, writerID ) )
             return;
 
         // 이 스레드가 스크래치 슬롯을 받지 못했다(도우미 칸이 다 찬 드문 경우). 계층 변경과 같은 지연 경로로 가서, 틱 뒤에 한 건짜리 배치로 적용한다.

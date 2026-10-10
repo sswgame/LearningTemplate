@@ -24,7 +24,7 @@ namespace sw
     struct SW_GF_API DishDef
     {
         hashed_string _id{};
-        hashed_string _recipeId{};
+        hashed_string _recipeID{};
         hashed_string _category{};         ///< "Noodle" · "Grill" · "Dessert" — 손님 선호와 맞춘다
         vector<int32> _listQualityLevel{}; ///< 품질 단계의 요리사 레벨 문턱(낮은 것부터)
         string        _name{};
@@ -101,15 +101,15 @@ namespace sw
 
         const DishDef*                 findDish( const hashed_string& id ) const { return _dishCatalog.find( id ); }
         const CustomerTypeDef*         findCustomerType( const hashed_string& id ) const { return _customerCatalog.find( id ); }
-        const IngredientDef*           findIngredient( const hashed_string& itemId ) const { return _ingredientCatalog.find( itemId ); }
+        const IngredientDef*           findIngredient( const hashed_string& itemID ) const { return _ingredientCatalog.find( itemID ); }
         const vector<DishDef>&         getDishes() const { return _dishCatalog.getAll(); }
         const vector<CustomerTypeDef>& getCustomerTypes() const { return _customerCatalog.getAll(); }
         /** @brief 그 시의 시간당 손님 수입니다. */
         float32 getArrivalRate( int32 hour ) const;
         /** @brief 그 날씨의 손님 배율입니다(모르는 날씨는 1). */
-        float32 findWeatherScale( const hashed_string& weatherId ) const;
+        float32 findWeatherScale( const hashed_string& weatherID ) const;
         /** @brief 유통 기한 날 수입니다(0 = 상하지 않는다). */
-        int32 findShelfLife( const hashed_string& itemId ) const;
+        int32 findShelfLife( const hashed_string& itemID ) const;
         int32 getOpenHour() const { return _openHour; }
         int32 getCloseHour() const { return _closeHour; }
         int32 getRatingWindow() const { return _ratingWindow; }

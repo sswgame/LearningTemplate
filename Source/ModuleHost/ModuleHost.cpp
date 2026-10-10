@@ -518,7 +518,7 @@ namespace sw
 #define SW_HOST_SERVICE( member, Tag, Type, getter, visibility )                                        \
     if ( bGameModule == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )                    \
     {                                                                                                   \
-        outService.arrServices[internal::toRawServiceId( internal::ModuleServiceId::Type )] = getter(); \
+        outService.arrServices[internal::toRawServiceID( internal::ModuleServiceID::Type )] = getter(); \
     }
 
 #include "RuntimeAPI/Service/HostServiceList.xxx"

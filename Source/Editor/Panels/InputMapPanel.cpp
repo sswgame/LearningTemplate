@@ -42,9 +42,9 @@ namespace sw::editor
 
             /** @brief 표를 열고 열 · 머리 줄을 둡니다. 열렸으면 true 이고, 그때 부르는 쪽이 `ImGui::EndTable` 을 부릅니다. */
             template <size_t kColumnCount>
-            static bool beginColumnTable( const utf8* pTableId, const TableColumn ( &arrColumn )[kColumnCount], ImGuiTableFlags flags )
+            static bool beginColumnTable( const utf8* pTableID, const TableColumn ( &arrColumn )[kColumnCount], ImGuiTableFlags flags )
             {
-                if ( ImGui::BeginTable( pTableId, static_cast<int32>( kColumnCount ), flags ) == false )
+                if ( ImGui::BeginTable( pTableID, static_cast<int32>( kColumnCount ), flags ) == false )
                     return false;
                 for ( const TableColumn& column : arrColumn )
                 {

@@ -37,16 +37,16 @@ namespace sw
 {
     void RTSSelection::writeState( Archive& outArchive ) const
     {
-        const auto writeList = [&outArchive]( const vector<RTSUnitId>& listUnit )
+        const auto writeList = [&outArchive]( const vector<RTSUnitID>& listUnit )
         {
             outArchive << static_cast<uint32>( listUnit.size() );
-            for ( const RTSUnitId unitId : listUnit )
+            for ( const RTSUnitID unitID : listUnit )
             {
-                outArchive << unitId.packed();
+                outArchive << unitID.packed();
             }
         };
         writeList( _listSelected );
-        for ( const vector<RTSUnitId>& listGroup : _arrGroup )
+        for ( const vector<RTSUnitID>& listGroup : _arrGroup )
         {
             writeList( listGroup );
         }
@@ -54,25 +54,25 @@ namespace sw
 
     bool RTSSelection::readState( Archive& archive )
     {
-        const auto readList = [&archive]( vector<RTSUnitId>& outListUnit )
+        const auto readList = [&archive]( vector<RTSUnitID>& outListUnit )
         {
             uint32 count = 0;
             if ( StateArchiveUtil::readCount( archive, sizeof( uint64 ), count ) == false )
                 return false;
             outListUnit.resize( count );
-            for ( RTSUnitId& unitId : outListUnit )
+            for ( RTSUnitID& unitID : outListUnit )
             {
                 uint64 packed = 0;
                 archive >> packed;
-                unitId = RTSUnitId::fromPacked( packed );
+                unitID = RTSUnitID::fromPacked( packed );
             }
             return archive.isOk();
         };
-        vector<RTSUnitId> listSelected;
-        vector<RTSUnitId> arrGroup[kGroupCount];
+        vector<RTSUnitID> listSelected;
+        vector<RTSUnitID> arrGroup[kGroupCount];
         if ( readList( listSelected ) == false )
             return false;
-        for ( vector<RTSUnitId>& listGroup : arrGroup )
+        for ( vector<RTSUnitID>& listGroup : arrGroup )
         {
             if ( readList( listGroup ) == false )
                 return false;
@@ -93,11 +93,11 @@ namespace sw
     {
     }
 
-    void RTSSelection::addUnit( RTSUnitId unitId )
+    void RTSSelection::addUnit( RTSUnitID unitID )
     {
-        if ( isSelected( unitId ) || ( _maxCount > 0 && static_cast<int32>( _listSelected.size() ) >= _maxCount ) )
+        if ( isSelected( unitID ) || ( _maxCount > 0 && static_cast<int32>( _listSelected.size() ) >= _maxCount ) )
             return;
-        _listSelected.push_back( unitId );
+        _listSelected.push_back( unitID );
     }
 
     void RTSSelection::selectInRect( const RTSWorld& world, const float3& cornerA, const float3& cornerB, bool bAdd )
@@ -105,9 +105,9 @@ namespace sw
         float3 minCorner{};
         float3 maxCorner{};
         RTSSelectionInternal::sortCorners( cornerA, cornerB, minCorner, maxCorner );
-        vector<RTSUnitId> listMobile;
-        RTSUnitId         ownBuilding{};
-        RTSUnitId         otherUnit{};
+        vector<RTSUnitID> listMobile;
+        RTSUnitID         ownBuilding{};
+        RTSUnitID         otherUnit{};
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( RTSSelectionInternal::isInRect( unit, minCorner, maxCorner ) == false )
@@ -125,9 +125,9 @@ namespace sw
             const RTSUnit* pPrimary = world.findUnit( getPrimary() );
             if ( pPrimary == nullptr || pPrimary->isMobile() )
             {
-                for ( const RTSUnitId unitId : listMobile )
+                for ( const RTSUnitID unitID : listMobile )
                 {
-                    addUnit( unitId );
+                    addUnit( unitID );
                 }
                 return;
             }
@@ -137,9 +137,9 @@ namespace sw
         _listSelected.clear();
         if ( listMobile.empty() == false )
         {
-            for ( const RTSUnitId unitId : listMobile )
+            for ( const RTSUnitID unitID : listMobile )
             {
-                addUnit( unitId );
+                addUnit( unitID );
             }
         }
         else
@@ -148,43 +148,43 @@ namespace sw
         }
     }
 
-    void RTSSelection::selectUnit( const RTSWorld& world, RTSUnitId unitId, bool bToggle )
+    void RTSSelection::selectUnit( const RTSWorld& world, RTSUnitID unitID, bool bToggle )
     {
-        const RTSUnit* pUnit = world.findUnit( unitId );
+        const RTSUnit* pUnit = world.findUnit( unitID );
         if ( pUnit == nullptr )
             return;
         if ( bToggle && pUnit->_owner == _player && pUnit->isMobile() && isCommandable( world ) )
         {
-            const auto selectedIter = std::find( _listSelected.begin(), _listSelected.end(), unitId );
+            const auto selectedIter = std::find( _listSelected.begin(), _listSelected.end(), unitID );
             if ( selectedIter != _listSelected.end() )
                 _listSelected.erase( selectedIter );
             else
-                addUnit( unitId );
+                addUnit( unitID );
             return;
         }
         _listSelected.clear();
-        _listSelected.push_back( unitId );
+        _listSelected.push_back( unitID );
     }
 
-    void RTSSelection::selectSameType( const RTSWorld& world, RTSUnitId unitId, const float3& cornerA, const float3& cornerB )
+    void RTSSelection::selectSameType( const RTSWorld& world, RTSUnitID unitID, const float3& cornerA, const float3& cornerB )
     {
-        const RTSUnit* pUnit = world.findUnit( unitId );
+        const RTSUnit* pUnit = world.findUnit( unitID );
         if ( pUnit == nullptr )
             return;
         if ( pUnit->_owner != _player )
         {
-            selectUnit( world, unitId, false );
+            selectUnit( world, unitID, false );
             return;
         }
         float3 minCorner{};
         float3 maxCorner{};
         RTSSelectionInternal::sortCorners( cornerA, cornerB, minCorner, maxCorner );
-        const hashed_string defId = pUnit->_pDef->_id;
+        const hashed_string defID = pUnit->_pDef->_id;
         _listSelected.clear();
-        addUnit( unitId );
+        addUnit( unitID );
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
-            if ( unit._owner == _player && unit._pDef->_id == defId && RTSSelectionInternal::isInRect( unit, minCorner, maxCorner ) )
+            if ( unit._owner == _player && unit._pDef->_id == defID && RTSSelectionInternal::isInRect( unit, minCorner, maxCorner ) )
                 addUnit( unit._id );
         } );
     }
@@ -200,11 +200,11 @@ namespace sw
     {
         if ( group < 0 || group >= kGroupCount )
             return;
-        vector<RTSUnitId>& listGroup = _arrGroup[group];
-        for ( const RTSUnitId unitId : _listSelected )
+        vector<RTSUnitID>& listGroup = _arrGroup[group];
+        for ( const RTSUnitID unitID : _listSelected )
         {
-            if ( std::find( listGroup.begin(), listGroup.end(), unitId ) == listGroup.end() )
-                listGroup.push_back( unitId );
+            if ( std::find( listGroup.begin(), listGroup.end(), unitID ) == listGroup.end() )
+                listGroup.push_back( unitID );
         }
     }
 
@@ -221,28 +221,28 @@ namespace sw
 
     void RTSSelection::prune( const RTSWorld& world )
     {
-        const auto isDead = [&world]( RTSUnitId unitId )
-        { return world.findUnit( unitId ) == nullptr; };
+        const auto isDead = [&world]( RTSUnitID unitID )
+        { return world.findUnit( unitID ) == nullptr; };
         _listSelected.erase( std::remove_if( _listSelected.begin(), _listSelected.end(), isDead ), _listSelected.end() );
-        for ( vector<RTSUnitId>& listGroup : _arrGroup )
+        for ( vector<RTSUnitID>& listGroup : _arrGroup )
         {
             listGroup.erase( std::remove_if( listGroup.begin(), listGroup.end(), isDead ), listGroup.end() );
         }
     }
 
-    const vector<RTSUnitId>& RTSSelection::getGroup( int32 group ) const
+    const vector<RTSUnitID>& RTSSelection::getGroup( int32 group ) const
     {
-        static const vector<RTSUnitId> kEmptyGroup{};
+        static const vector<RTSUnitID> kEmptyGroup{};
         return group >= 0 && group < kGroupCount ? _arrGroup[group] : kEmptyGroup;
     }
 
-    bool RTSSelection::isSelected( RTSUnitId unitId ) const { return std::find( _listSelected.begin(), _listSelected.end(), unitId ) != _listSelected.end(); }
+    bool RTSSelection::isSelected( RTSUnitID unitID ) const { return std::find( _listSelected.begin(), _listSelected.end(), unitID ) != _listSelected.end(); }
 
     bool RTSSelection::isCommandable( const RTSWorld& world ) const
     {
-        for ( const RTSUnitId unitId : _listSelected )
+        for ( const RTSUnitID unitID : _listSelected )
         {
-            const RTSUnit* pUnit = world.findUnit( unitId );
+            const RTSUnit* pUnit = world.findUnit( unitID );
             if ( pUnit != nullptr && pUnit->_owner != _player )
                 return false;
         }

@@ -34,13 +34,13 @@ namespace sw
         /** @brief 칸 @p cellCount 개의 벤치 화면을 짓습니다. */
         static unique_ptr<UiBenchScreen> create( uint32 cellCount );
 
-        UiBenchScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetId> listCellText );
+        UiBenchScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText );
 
         void   onTick( float32 deltaSeconds ) override;
         uint32 getCellCount() const { return static_cast<uint32>( _listCellText.size() ); }
 
     private:
-        vector<WidgetId> _listCellText; ///< 칸마다 글 위젯 번호(칸 순서)
+        vector<WidgetID> _listCellText; ///< 칸마다 글 위젯 번호(칸 순서)
         uint32           _churnCursor;  ///< 다음에 바꿀 칸
         uint32           _frameIndex;   ///< 바꾼 글에 넣는 프레임 번호
     };

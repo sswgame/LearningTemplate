@@ -62,23 +62,23 @@ namespace sw
 
         void initialize( const BrCatalog* pCatalog );
         /** @brief 방어구를 입습니다(같은 칸의 것은 벗겨진다 — 게임이 바닥에 떨어뜨린다). @p durability 음수면 새것입니다. 모르는 id 면 false 입니다. */
-        [[nodiscard]] bool tryEquipArmor( const hashed_string& itemId, float32 durability = -1.0f );
+        [[nodiscard]] bool tryEquipArmor( const hashed_string& itemID, float32 durability = -1.0f );
         /** @brief 가방을 멥니다(빈 id 는 가방 벗기). 모르는 가방 · 무게가 넘치면 false 이고 그대로입니다. */
-        [[nodiscard]] bool tryEquipBackpack( const hashed_string& itemId, Inventory& inoutInventory );
+        [[nodiscard]] bool tryEquipBackpack( const hashed_string& itemID, Inventory& inoutInventory );
         /** @brief 한 방을 방어구로 거릅니다. */
         BrArmorResult absorbDamage( float32 damage, BrHitZone hitZone );
         /**
-         * @brief 인벤토리의 탄약 아이템(`WeaponDef::_ammoId`)을 탄창을 채울 만큼 예비탄으로 옮기고 재장전을 시작합니다.
+         * @brief 인벤토리의 탄약 아이템(`WeaponDef::_ammoID`)을 탄창을 채울 만큼 예비탄으로 옮기고 재장전을 시작합니다.
          * @return 재장전을 시작했으면 true. 탄약 아이템이 없거나 탄창이 가득이거나 재장전 중이면 false 이고 아무것도 옮기지 않습니다.
          */
         [[nodiscard]] bool tryReload( WeaponState& inoutWeapon, Inventory& inoutInventory ) const;
 
         const BrArmorSlot&   getHelmet() const { return _helmet; }
         const BrArmorSlot&   getVest() const { return _vest; }
-        const hashed_string& getBackpackId() const { return _backpackId; }
+        const hashed_string& getBackpackID() const { return _backpackID; }
         /** @brief 지금 무게 한도입니다(기본 + 가방). */
         float32 computeCarryLimit() const;
-        float32 computeCarryLimit( const hashed_string& backpackId ) const;
+        float32 computeCarryLimit( const hashed_string& backpackID ) const;
 
         /** @brief 헬멧 · 조끼(방어구 id · 내구도) · 가방 id 를 씁니다. 방어구 정의는 카탈로그의 것이라 id 만 싣습니다(무게 한도는 인벤토리가 든다). */
         void writeState( Archive& outArchive ) const;
@@ -89,6 +89,6 @@ namespace sw
         const BrCatalog* _pCatalog;
         BrArmorSlot      _helmet;
         BrArmorSlot      _vest;
-        hashed_string    _backpackId;
+        hashed_string    _backpackID;
     };
 } // namespace sw

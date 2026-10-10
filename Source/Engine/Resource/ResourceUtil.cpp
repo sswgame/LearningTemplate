@@ -72,7 +72,7 @@ namespace sw
              * @param outKeyUnderRoot 그 루트 아래 상대 키(팩 이름만 있으면 빈 문자열)
              * @return 알려진 전역 ID 이고 그 루트가 있으면 true 입니다.
              */
-            static bool mapGlobalIdToRoot( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
+            static bool mapGlobalIDToRoot( string_view lowerRel, string& outRoot, string& outKeyUnderRoot )
             {
                 outRoot.clear();
                 outKeyUnderRoot.clear();
@@ -356,7 +356,7 @@ namespace sw
         string found;
         string domainRoot;
         string keyUnderRoot;
-        if ( ResourceUtilInternal::mapGlobalIdToRoot( lowerFile, domainRoot, keyUnderRoot ) )
+        if ( ResourceUtilInternal::mapGlobalIDToRoot( lowerFile, domainRoot, keyUnderRoot ) )
         {
             found = ResourceUtilInternal::tryUnderRoot( domainRoot, keyUnderRoot, lowerFolder );
 #if defined( SW_PLATFORM_LINUX )
@@ -398,7 +398,7 @@ namespace sw
             return FileUtil::normalizeSeparators( path );
 
         // 상대 경로가 `..` 로 올라가면 리소스 루트 밖에 쓴다(데이터에 적힌 경로 하나로 아무 곳에나 쓸 수 있다). 쓰지 않는다.
-        if ( toResourceId( path ).empty() )
+        if ( toResourceID( path ).empty() )
         {
             SW_LOG_ERROR( "'%#' leaves the resource tree - nothing is written there", path );
             return {};
@@ -413,7 +413,7 @@ namespace sw
         return result;
     }
 
-    string ResourceUtil::toResourceId( string_view path )
+    string ResourceUtil::toResourceID( string_view path )
     {
         if ( path.empty() )
             return {};
@@ -456,7 +456,7 @@ namespace sw
             const string lowerRel = FileUtil::normalizePath( relativePath );
             string       domainRoot;
             string       keyUnderRoot;
-            if ( ResourceUtilInternal::mapGlobalIdToRoot( lowerRel, domainRoot, keyUnderRoot ) )
+            if ( ResourceUtilInternal::mapGlobalIDToRoot( lowerRel, domainRoot, keyUnderRoot ) )
                 result = FileUtil::joinPath( domainRoot, keyUnderRoot );
         }
         return result;

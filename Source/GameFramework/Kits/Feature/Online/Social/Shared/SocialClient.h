@@ -26,7 +26,7 @@ namespace sw
     struct SocialClientReply
     {
         SocialReply _reply{};
-        uint64      _requestId{ 0 };
+        uint64      _requestID{ 0 };
         uint16      _method{ 0 };
         uint16      _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`)
     };
@@ -49,22 +49,22 @@ namespace sw
         void initialize( OnlineServiceClient* pClient );
 
         // 친구
-        uint64 requestFriend( AccountId otherId, const SocialReplyDelegate& onReply );
+        uint64 requestFriend( AccountID otherID, const SocialReplyDelegate& onReply );
         uint64 requestFriendByName( string_view displayName, const SocialReplyDelegate& onReply );
-        uint64 respondFriend( AccountId requesterId, bool bAccept, const SocialReplyDelegate& onReply );
-        uint64 removeFriend( AccountId otherId, const SocialReplyDelegate& onReply );
-        uint64 block( AccountId otherId, const SocialReplyDelegate& onReply );
-        uint64 unblock( AccountId otherId, const SocialReplyDelegate& onReply );
+        uint64 respondFriend( AccountID requesterID, bool bAccept, const SocialReplyDelegate& onReply );
+        uint64 removeFriend( AccountID otherID, const SocialReplyDelegate& onReply );
+        uint64 block( AccountID otherID, const SocialReplyDelegate& onReply );
+        uint64 unblock( AccountID otherID, const SocialReplyDelegate& onReply );
         uint64 listLinks( const SocialReplyDelegate& onReply );
         uint64 setPresence( SocialPresenceStatus status, string_view activity, const SocialReplyDelegate& onReply );
         uint64 queryFriendPresence( const SocialReplyDelegate& onReply );
         // 길드
         uint64 createGuild( string_view name, const SocialReplyDelegate& onReply );
-        uint64 inviteToGuild( AccountId targetId, const SocialReplyDelegate& onReply );
-        uint64 acceptGuildInvite( uint64 guildId, const SocialReplyDelegate& onReply );
+        uint64 inviteToGuild( AccountID targetID, const SocialReplyDelegate& onReply );
+        uint64 acceptGuildInvite( uint64 guildID, const SocialReplyDelegate& onReply );
         uint64 leaveGuild( const SocialReplyDelegate& onReply );
-        uint64 kickFromGuild( AccountId targetId, const SocialReplyDelegate& onReply );
-        uint64 setGuildRole( AccountId targetId, GuildRole role, const SocialReplyDelegate& onReply );
+        uint64 kickFromGuild( AccountID targetID, const SocialReplyDelegate& onReply );
+        uint64 setGuildRole( AccountID targetID, GuildRole role, const SocialReplyDelegate& onReply );
         uint64 setGuildNotice( string_view notice, const SocialReplyDelegate& onReply );
         uint64 requestGuild( const SocialReplyDelegate& onReply );
 

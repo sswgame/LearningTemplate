@@ -70,18 +70,18 @@ namespace sw
         void resetState();
 
         /** @brief 탑을 깨웁니다. 지역의 방을 드러내고 새로 드러난 수입니다. 탑이 아니거나 이미 깨웠으면 −1 입니다. */
-        int32 activateTower( const hashed_string& towerId, AreaGraph& areaGraph );
+        int32 activateTower( const hashed_string& towerID, AreaGraph& areaGraph );
         /** @brief 사당을 찾았습니다(순간 이동 지점). 처음이면 true 입니다. */
-        bool discoverShrine( const hashed_string& shrineId );
+        bool discoverShrine( const hashed_string& shrineID );
         /** @brief 사당을 마쳤습니다. 처음이면 증표 하나를 주고 true 입니다(찾은 것도 된다). */
-        bool completeShrine( const hashed_string& shrineId );
+        bool completeShrine( const hashed_string& shrineID );
         /** @brief 증표 `_orbsPerExchange` 개를 그릇 하나로 바꿉니다. */
         AdventureExchangeResult exchangeOrbs( AdventureOrbReward reward, AdventureVitals& vitals );
 
         /** @brief 순간 이동할 수 있는가(깨운 탑 · 찾은 사당)입니다. */
-        bool                                canWarpTo( const hashed_string& landmarkId ) const;
-        bool                                isActivated( const hashed_string& landmarkId ) const;
-        bool                                isCompleted( const hashed_string& landmarkId ) const;
+        bool                                canWarpTo( const hashed_string& landmarkID ) const;
+        bool                                isActivated( const hashed_string& landmarkID ) const;
+        bool                                isCompleted( const hashed_string& landmarkID ) const;
         int32                               getOrbCount() const { return _orbCount; }
         int32                               getOrbsPerExchange() const { return _orbsPerExchange; }
         int32                               getCompletedShrineCount() const { return _completedShrineCount; }

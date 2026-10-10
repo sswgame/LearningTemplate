@@ -204,7 +204,7 @@ SW_TEST_CASE( AutosaveTest, RestoreCheckpointLoadsTheNewestCheckpointSlot )
     manager.update( 0.1f ); // 저장 3 — 체크포인트
     SW_ASSERT_TRUE( manager.restoreCheckpoint() );
     SW_EXPECT_EQUAL( string( "3" ), harness._lastLoaded );
-    SW_EXPECT_TRUE( manager.getLastCheckpointId() == hashed_string( "Bridge" ) );
+    SW_EXPECT_TRUE( manager.getLastCheckpointID() == hashed_string( "Bridge" ) );
     manager.reachCheckpoint( hashed_string( "Bridge" ) );
     SW_EXPECT_FALSE( manager.hasPendingRequest() );
 
@@ -243,7 +243,7 @@ SW_TEST_CASE( AutosaveTest, TriggerVolumeReachesTheCheckpointOnceForTheTaggedAct
     SW_EXPECT_FALSE( pTrigger->activate( pCrate ) ); // 태그가 없다
     SW_EXPECT_TRUE( pTrigger->activate( pPlayer ) );
     SW_EXPECT_TRUE( harness._manager.getPendingTrigger() == AutosaveTrigger::Checkpoint );
-    SW_EXPECT_TRUE( harness._manager.getLastCheckpointId() == hashed_string( "Shrine" ) );
+    SW_EXPECT_TRUE( harness._manager.getLastCheckpointID() == hashed_string( "Shrine" ) );
     SW_EXPECT_FALSE( pTrigger->activate( pPlayer ) ); // 한 번
     game::unbindLocalService<AutosaveManager>();
 }

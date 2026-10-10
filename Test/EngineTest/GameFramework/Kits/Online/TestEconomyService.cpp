@@ -34,7 +34,7 @@ namespace
 
     struct EconomyServiceFixture
     {
-        static constexpr AccountId kPlayer = 0x42;
+        static constexpr AccountID kPlayer = 0x42;
 
         MemoryServiceDatabase    _database;
         MemoryServiceStore       _store;
@@ -93,11 +93,11 @@ namespace
             _service.tick( nowMs );
         }
 
-        EconomyCall makeCall( uint16 method, AccountId accountId = kPlayer ) const
+        EconomyCall makeCall( uint16 method, AccountID accountID = kPlayer ) const
         {
             EconomyCall call;
             call._method    = method;
-            call._accountId = accountId;
+            call._accountID = accountID;
             call._nowMs     = 1000;
             return call;
         }
@@ -121,7 +121,7 @@ SW_TEST_CASE( EconomyServiceTest, SameKeyPurchaseChargesOnce )
 {
     EconomyServiceFixture fixture;
     EconomyCall           call = fixture.makeCall( EconomyMethod::kPurchase );
-    call._purchase._offerId    = "potion";
+    call._purchase._offerID    = "potion";
     call._purchase._count      = 2;
     call._idempotencyKey       = NetIdempotencyKey{ 5, 6 };
     EconomyServiceReplyCapture first;
@@ -142,9 +142,9 @@ SW_TEST_CASE( EconomyServiceTest, MissingSignInOrKeyIsRefusedAndCounted )
     EconomyServiceFixture      fixture;
     EconomyServiceReplyCapture unsignedCapture;
     EconomyServiceReplyCapture noKey;
-    fixture._service.submitCall( fixture.makeCall( EconomyMethod::kGetWallet, kInvalidAccountId ), unsignedCapture.makeDelegate() );
+    fixture._service.submitCall( fixture.makeCall( EconomyMethod::kGetWallet, kInvalidAccountID ), unsignedCapture.makeDelegate() );
     EconomyCall purchase        = fixture.makeCall( EconomyMethod::kPurchase );
-    purchase._purchase._offerId = "potion";
+    purchase._purchase._offerID = "potion";
     fixture._service.submitCall( purchase, noKey.makeDelegate() );
     SW_EXPECT_TRUE( unsignedCapture._reply._result == EconomyResult::NotSignedIn ); // 규칙 위반 거절은 그 자리에서
     SW_EXPECT_TRUE( noKey._reply._result == EconomyResult::InvalidRequest );
@@ -171,7 +171,7 @@ SW_TEST_CASE( EconomyServiceTest, ReceiptGoesThroughTheValidatorThenGrants )
     fixture.tick( 1001 ); // 지급 일의 완료
     SW_ASSERT_EQUAL( capture._count, 1 );
     SW_EXPECT_TRUE( capture._reply._result == EconomyResult::Ok );
-    SW_EXPECT_EQUAL( capture._reply._productId, string( "gem100" ) );
+    SW_EXPECT_EQUAL( capture._reply._productID, string( "gem100" ) );
     SW_ASSERT_EQUAL( capture._reply._listBalance.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( capture._reply._listBalance[0]._amount, int64( 100 ) );
 #endif

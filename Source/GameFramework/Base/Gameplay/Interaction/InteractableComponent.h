@@ -20,7 +20,7 @@ namespace sw
 {
     /**
      * @class InteractableComponent
-     * @brief 종류(`_interactionId`)는 상호작용 표(`_catalogPath`)에서 찾습니다. 코드로 정의를 넣으면(`setDefinition`) 그것이 이깁니다.
+     * @brief 종류(`_interactionID`)는 상호작용 표(`_catalogPath`)에서 찾습니다. 코드로 정의를 넣으면(`setDefinition`) 그것이 이깁니다.
      * @details 맞춤 지점(`computeAlignmentPoint`)은 하는 쪽이 설 자리와 방향입니다 — 정의의 마커 이름(`_alignmentMarker`)을 이 오브젝트의 소켓 · 마커 표
      *          (`SocketSetComponent` 의 `*.sockets.xml`, 마커의 +Z 가 하는 쪽이 볼 방향)에서 찾고, 없으면 오브젝트 원점 · 앞입니다. 하는 쪽이 시작할 때
      *          그 자리를 마커 이름의 워프 목표로 넣어(`MotionWarpingComponent`) 애니메이션이 모션 워핑으로 손을 문고리에 맞춥니다.
@@ -57,7 +57,7 @@ namespace sw
          */
         bool computeAlignmentPoint( float3& outPosition, float32& outYaw ) const;
 
-        void setInteractionId( const hashed_string& id );
+        void setInteractionID( const hashed_string& id );
         /** @brief 상호작용 표 경로를 바꾸고 정의를 다시 찾습니다. 빈 글이면 공용 기본표(`InteractionCatalog::kDefaultPath`)입니다. */
         void    setCatalogPath( string_view path );
         void    setEnabled( bool bEnabled ) { _bEnabled = bEnabled; }
@@ -82,7 +82,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Interaction", DisplayName = "Interaction", Tooltip = "Interaction kind id in the catalog" )
-        hashed_string _interactionId;
+        hashed_string _interactionID;
         PROPERTY( Category = "Interaction", DisplayName = "Catalog", AssetPath, Tooltip = "Interaction table; empty uses the common default" )
         string _catalogPath;
         PROPERTY( Category = "Interaction", DisplayName = "Last Interactor", Tooltip = "Who completed it last (runtime)" )

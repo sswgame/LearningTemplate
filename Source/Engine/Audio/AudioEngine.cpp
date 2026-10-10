@@ -19,7 +19,7 @@ namespace sw
         , _pGameMixerDesc{ nullptr }
         , _commandMutex{}
         , _libraryMutex{}
-        , _nextPlayingId{ 1 }
+        , _nextPlayingID{ 1 }
         , _pMixer{ nullptr }
         , _listVoice{}
         , _listVoiceOrder{}
@@ -30,7 +30,7 @@ namespace sw
         , _listAttenuation{}
         , _listSnapshot{}
         , _pMusic{ nullptr }
-        , _musicPlayingId{ 0 }
+        , _musicPlayingID{ 0 }
         , _musicSegmentStart{ 0 }
         , _musicPendingFrame{ 0 }
         , _musicSegment{ -1 }
@@ -42,7 +42,7 @@ namespace sw
         , _arrListener{}
         , _random{}
         , _renderedFrameCount{ 0 }
-        , _appliedPlayingId{ 0 }
+        , _appliedPlayingID{ 0 }
         , _playedEventCount{ 0 }
         , _droppedEventCount{ 0 }
         , _peakRealVoiceCount{ 0 }
@@ -50,7 +50,7 @@ namespace sw
         , _listPublishedPlaying{}
         , _publishedStats{}
         , _publishedMusic{}
-        , _publishedAppliedId{ 0 }
+        , _publishedAppliedID{ 0 }
         , _publishMutex{}
         , _bInitialized{ false }
     {
@@ -238,7 +238,7 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    AudioPlayingId AudioEngine::postEvent( const hashed_string& eventName, AudioEmitterId emitterId )
+    AudioPlayingID AudioEngine::postEvent( const hashed_string& eventName, AudioEmitterID emitterID )
     {
         // 라이브러리를 쥐고 잠금을 푼다 — 다른 스레드가 그 사이에 내려도 서술이 산다.
         const AudioEventDesc*               pEvent = nullptr;
@@ -268,16 +268,16 @@ namespace sw
         Command command;
         command._type      = CommandType::PostEvent;
         command._name      = eventName;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         // id 는 명령을 쌓을 때(잠금 안에서) 매긴다 — 큐 순서와 id 순서가 같아야 "아직 처리되지 않은 id" 판정이 맞다.
         std::scoped_lock<mutex> lock{ _commandMutex };
-        command._playingId             = _nextPlayingId.fetch_add( 1 );
-        const AudioPlayingId playingId = command._playingId;
+        command._playingID             = _nextPlayingID.fetch_add( 1 );
+        const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
-        return playingId;
+        return playingID;
     }
 
-    AudioPlayingId AudioEngine::playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params )
+    AudioPlayingID AudioEngine::playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params )
     {
         if ( path.empty() )
             return 0;
@@ -288,40 +288,40 @@ namespace sw
         command._name       = bus;
         command._clipParams = params;
         std::scoped_lock<mutex> lock{ _commandMutex };
-        command._playingId             = _nextPlayingId.fetch_add( 1 );
-        const AudioPlayingId playingId = command._playingId;
+        command._playingID             = _nextPlayingID.fetch_add( 1 );
+        const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
-        return playingId;
+        return playingID;
     }
 
-    void AudioEngine::stop( AudioPlayingId playingId, float32 fadeSeconds )
+    void AudioEngine::stop( AudioPlayingID playingID, float32 fadeSeconds )
     {
         Command command;
         command._type      = CommandType::Stop;
-        command._playingId = playingId;
+        command._playingID = playingID;
         command._value     = fadeSeconds;
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::stopEmitter( AudioEmitterId emitterId, float32 fadeSeconds )
+    void AudioEngine::stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds )
     {
         Command command;
         command._type      = CommandType::StopEmitter;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         command._value     = fadeSeconds;
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setPaused( AudioPlayingId playingId, bool bPaused )
+    void AudioEngine::setPaused( AudioPlayingID playingID, bool bPaused )
     {
         Command command;
         command._type      = CommandType::SetPaused;
-        command._playingId = playingId;
+        command._playingID = playingID;
         command._bFlag     = bPaused;
         pushCommand( std::move( command ) );
     }
 
-    AudioPlayingId AudioEngine::startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds )
+    AudioPlayingID AudioEngine::startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds )
     {
         if ( pMusic == nullptr )
             return 0;
@@ -341,10 +341,10 @@ namespace sw
         command._pMusic = std::move( pMusic );
         command._value  = fadeSeconds;
         std::scoped_lock<mutex> lock{ _commandMutex };
-        command._playingId             = _nextPlayingId.fetch_add( 1 );
-        const AudioPlayingId playingId = command._playingId;
+        command._playingID             = _nextPlayingID.fetch_add( 1 );
+        const AudioPlayingID playingID = command._playingID;
         _listPendingCommand.push_back( std::move( command ) );
-        return playingId;
+        return playingID;
     }
 
     void AudioEngine::setMusicSegment( const hashed_string& segment )
@@ -405,13 +405,13 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setEmitterParameter( AudioEmitterId emitterId, const hashed_string& name, float32 value )
+    void AudioEngine::setEmitterParameter( AudioEmitterID emitterID, const hashed_string& name, float32 value )
     {
-        if ( emitterId == 0 )
+        if ( emitterID == 0 )
             return;
         Command command;
         command._type      = CommandType::SetEmitterParameter;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         command._name      = name;
         command._value     = value;
         pushCommand( std::move( command ) );
@@ -453,46 +453,46 @@ namespace sw
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setEmitter( AudioEmitterId emitterId, const float3& position, const float3& velocity )
+    void AudioEngine::setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity )
     {
-        if ( emitterId == 0 )
+        if ( emitterID == 0 )
             return;
         Command command;
         command._type      = CommandType::SetEmitter;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         command._position  = position;
         command._velocity  = velocity;
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::setEmitterOcclusion( AudioEmitterId emitterId, float32 occlusion )
+    void AudioEngine::setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion )
     {
-        if ( emitterId == 0 )
+        if ( emitterID == 0 )
             return;
         Command command;
         command._type      = CommandType::SetEmitterOcclusion;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         command._value     = MathUtil::saturate( occlusion );
         pushCommand( std::move( command ) );
     }
 
-    void AudioEngine::removeEmitter( AudioEmitterId emitterId )
+    void AudioEngine::removeEmitter( AudioEmitterID emitterID )
     {
         Command command;
         command._type      = CommandType::RemoveEmitter;
-        command._emitterId = emitterId;
+        command._emitterID = emitterID;
         pushCommand( std::move( command ) );
     }
 
-    bool AudioEngine::isPlaying( AudioPlayingId playingId ) const
+    bool AudioEngine::isPlaying( AudioPlayingID playingID ) const
     {
-        if ( playingId == 0 )
+        if ( playingID == 0 )
             return false;
         // 아직 오디오 스레드가 보지 못한 재생은 살아 있는 것으로 친다.
-        if ( playingId > _publishedAppliedId.load( std::memory_order_acquire ) )
-            return playingId < _nextPlayingId.load( std::memory_order_acquire );
+        if ( playingID > _publishedAppliedID.load( std::memory_order_acquire ) )
+            return playingID < _nextPlayingID.load( std::memory_order_acquire );
         std::scoped_lock<mutex> lock{ _publishMutex };
-        return std::binary_search( _listPublishedPlaying.begin(), _listPublishedPlaying.end(), playingId );
+        return std::binary_search( _listPublishedPlaying.begin(), _listPublishedPlaying.end(), playingID );
     }
 
     AudioEngineStats AudioEngine::getStats() const
@@ -561,14 +561,14 @@ namespace sw
         {
             case CommandType::PlayClip:
             {
-                _appliedPlayingId = MathUtil::max( _appliedPlayingId, command._playingId );
+                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
                 VoiceSlot* pSlot  = allocateVoice();
                 if ( pSlot == nullptr )
                 {
                     SW_LOG_WARNING( "Voice pool exhausted - dropped %#", command._path.c_str() );
                     break;
                 }
-                pSlot->_playingId        = command._playingId;
+                pSlot->_playingID        = command._playingID;
                 pSlot->_clipPath         = command._path;
                 pSlot->_busName          = command._name;
                 pSlot->_busIndex         = resolveBusIndex( command._name );
@@ -577,7 +577,7 @@ namespace sw
                 pSlot->_pitchRatio       = AudioMath::semitonesToRatio( command._clipParams._pitchSemitones );
                 pSlot->_fadeInSeconds    = command._clipParams._fadeInSeconds;
                 pSlot->_bLoop            = command._clipParams._bLoop;
-                pSlot->_emitterId        = command._clipParams._emitterId;
+                pSlot->_emitterID        = command._clipParams._emitterID;
                 pSlot->_attenuationName  = command._clipParams._attenuation;
                 pSlot->_attenuationIndex = resolveAttenuationIndex( command._clipParams._attenuation );
                 pSlot->_priority         = command._clipParams._priority;
@@ -588,25 +588,25 @@ namespace sw
             }
             case CommandType::PostEvent:
             {
-                _appliedPlayingId = MathUtil::max( _appliedPlayingId, command._playingId );
+                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
                 applyPostEvent( command );
                 break;
             }
             case CommandType::Stop:
             {
-                stopVoices( command._playingId, 0, command._value );
+                stopVoices( command._playingID, 0, command._value );
                 break;
             }
             case CommandType::StopEmitter:
             {
-                stopVoices( 0, command._emitterId, command._value );
+                stopVoices( 0, command._emitterID, command._value );
                 break;
             }
             case CommandType::SetPaused:
             {
                 for ( VoiceSlot& slot : _listVoice )
                 {
-                    if ( slot._bInUse == false || slot._playingId != command._playingId )
+                    if ( slot._bInUse == false || slot._playingID != command._playingID )
                         continue;
                     slot._bPausedRequest = command._bFlag;
                     slot._voice.setPaused( command._bFlag );
@@ -673,7 +673,7 @@ namespace sw
             }
             case CommandType::SetEmitter:
             {
-                EmitterRecord& record   = _mapEmitter[command._emitterId];
+                EmitterRecord& record   = _mapEmitter[command._emitterID];
                 record._state._position = command._position;
                 record._state._velocity = command._velocity;
                 record._bRemoved        = false;
@@ -681,12 +681,12 @@ namespace sw
             }
             case CommandType::SetEmitterOcclusion:
             {
-                _mapEmitter[command._emitterId]._state._occlusionTarget = command._value;
+                _mapEmitter[command._emitterID]._state._occlusionTarget = command._value;
                 break;
             }
             case CommandType::SetEmitterParameter:
             {
-                vector<EmitterParameter>& listParameter = _mapEmitter[command._emitterId]._listParameter;
+                vector<EmitterParameter>& listParameter = _mapEmitter[command._emitterID]._listParameter;
                 bool                      bFound        = false;
                 for ( EmitterParameter& parameter : listParameter )
                 {
@@ -703,7 +703,7 @@ namespace sw
             case CommandType::RemoveEmitter:
             {
                 // 바로 지우지 않는다 — 그 자리의 원샷이 끝나기 전에 자리를 잃으면 2D 로 돌아가 크게 들린다.
-                const auto it = _mapEmitter.find( command._emitterId );
+                const auto it = _mapEmitter.find( command._emitterID );
                 if ( it != _mapEmitter.end() )
                     it->second._bRemoved = true;
                 break;
@@ -743,7 +743,7 @@ namespace sw
             }
             case CommandType::StartMusic:
             {
-                _appliedPlayingId = MathUtil::max( _appliedPlayingId, command._playingId );
+                _appliedPlayingID = MathUtil::max( _appliedPlayingID, command._playingID );
                 applyStartMusic( command );
                 break;
             }
@@ -789,17 +789,17 @@ namespace sw
         slot._voice.reset();
         slot._bInUse          = false;
         slot._bWaitingForClip = false;
-        slot._playingId       = 0;
+        slot._playingID       = 0;
         slot._instanceIndex   = -1;
     }
 
-    void AudioEngine::stopVoices( AudioPlayingId playingId, AudioEmitterId emitterId, float32 fadeSeconds )
+    void AudioEngine::stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds )
     {
         for ( VoiceSlot& slot : _listVoice )
         {
             if ( slot._bInUse == false )
                 continue;
-            const bool bMatches = ( playingId != 0 && slot._playingId == playingId ) || ( emitterId != 0 && slot._emitterId == emitterId );
+            const bool bMatches = ( playingID != 0 && slot._playingID == playingID ) || ( emitterID != 0 && slot._emitterID == emitterID );
             if ( bMatches == false )
                 continue;
             float32 seconds = fadeSeconds;
@@ -906,10 +906,10 @@ namespace sw
         float32 lowPassHz = audio::kFilterOpenHz;
         slot._distance    = 0.0f;
 
-        const bool bSpatial = slot._attenuationIndex >= 0 && slot._emitterId != 0;
+        const bool bSpatial = slot._attenuationIndex >= 0 && slot._emitterID != 0;
         if ( bSpatial )
         {
-            const auto it = _mapEmitter.find( slot._emitterId );
+            const auto it = _mapEmitter.find( slot._emitterID );
             if ( it != _mapEmitter.end() )
             {
                 const AudioAttenuationDesc& attenuation = _listAttenuation[static_cast<size_t>( slot._attenuationIndex )];
@@ -944,7 +944,7 @@ namespace sw
             {
                 for ( const AudioParameterMapping& mapping : pEvent->_listParameterMap )
                 {
-                    const float32 output = AudioCurvePoint::evaluate( mapping._listPoint, findParameterValue( slot._emitterId, mapping._parameter ), 0.0f );
+                    const float32 output = AudioCurvePoint::evaluate( mapping._listPoint, findParameterValue( slot._emitterID, mapping._parameter ), 0.0f );
                     switch ( mapping._target )
                     {
                         case AudioParameterTarget::Volume:
@@ -1043,7 +1043,7 @@ namespace sw
             {
                 for ( const VoiceSlot& slot : _listVoice )
                 {
-                    bInUse = bInUse || ( slot._bInUse && slot._emitterId == it->first );
+                    bInUse = bInUse || ( slot._bInUse && slot._emitterID == it->first );
                 }
             }
             if ( it->second._bRemoved && bInUse == false )
@@ -1075,7 +1075,7 @@ namespace sw
             if ( slot._bInUse == false )
                 continue;
             ++stats._voiceCount;
-            _listPublishedPlaying.push_back( slot._playingId );
+            _listPublishedPlaying.push_back( slot._playingID );
         }
         std::sort( _listPublishedPlaying.begin(), _listPublishedPlaying.end() );
         _publishedStats = stats;
@@ -1091,6 +1091,6 @@ namespace sw
             _publishedMusic._tempo      = static_cast<float32>( 60.0 * static_cast<float64>( audio::kSampleRate ) / framesPerBeat );
             _publishedMusic._bPlaying   = true;
         }
-        _publishedAppliedId.store( _appliedPlayingId, std::memory_order_release );
+        _publishedAppliedID.store( _appliedPlayingID, std::memory_order_release );
     }
 } // namespace sw

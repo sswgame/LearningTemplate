@@ -641,12 +641,12 @@ SW_TEST_CASE( InputMapTest, EditorSavedDefinitionReloadsWithTheSameBindings )
  */
 SW_TEST_CASE( InputMapTest, ShippedInputMapsSurviveTheEditorSave )
 {
-    for ( const sw::string_view resourceId : { "engine/input/default.input.xml", "engine/input/ui.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
+    for ( const sw::string_view resourceID : { "engine/input/default.input.xml", "engine/input/ui.input.xml", "game/shooter3d/data/shooter.input.xml", "game/abilityarena/data/arena.input.xml",
                                                "game/harvestvalley/data/farm.input.xml", "game/nilecity/data/nile.input.xml", "game/starskirmish/data/skirmish.input.xml",
                                                "game/themepark/data/park.input.xml", "game/voxelcraft/data/voxel.input.xml" } )
     {
         sw::InputMap original;
-        SW_ASSERT_TRUE( original.loadFromResource( resourceId ) );
+        SW_ASSERT_TRUE( original.loadFromResource( resourceID ) );
         const sw::string savedPath = test::makeTempPath( "shipped.input.xml" );
         SW_ASSERT_TRUE( original.saveToResource( savedPath ) );
         sw::InputMap reloaded;
@@ -663,7 +663,7 @@ SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
 {
     struct GameInputMap
     {
-        const utf8*                        _pResourceId;
+        const utf8*                        _pResourceID;
         std::initializer_list<const utf8*> _listAction;
     };
     const GameInputMap arrGameMap[] = {
@@ -687,7 +687,7 @@ SW_TEST_CASE( InputMapTest, GameInputMapsBindEveryActionTheGamesAsk )
     for ( const GameInputMap& gameMap : arrGameMap )
     {
         sw::InputMap inputMap;
-        SW_ASSERT_TRUE( inputMap.loadFromResource( gameMap._pResourceId ) );
+        SW_ASSERT_TRUE( inputMap.loadFromResource( gameMap._pResourceID ) );
         for ( const utf8* pAction : gameMap._listAction )
         {
             const sw::hashed_string action( pAction );

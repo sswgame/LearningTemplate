@@ -38,7 +38,7 @@ namespace sw
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
         void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override;
+        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:

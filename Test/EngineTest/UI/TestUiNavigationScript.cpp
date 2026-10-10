@@ -179,26 +179,26 @@ namespace
                 collectFocusable( *tree.getRoot(), listFocusable );
             if ( listFocusable.empty() )
                 return 0;
-            sw::WidgetId start = ui.getFocusManager().getFocusedTree() == &tree ? ui.getFocusManager().getFocusedWidget() : sw::kInvalidWidgetId;
-            if ( start == sw::kInvalidWidgetId )
+            sw::WidgetID start = ui.getFocusManager().getFocusedTree() == &tree ? ui.getFocusManager().getFocusedWidget() : sw::kInvalidWidgetID;
+            if ( start == sw::kInvalidWidgetID )
                 start = sw::UiNavigationSolver::findFirstFocusable( *tree.getRoot() );
-            sw::vector<sw::WidgetId>        listQueue{ start };
-            sw::unordered_set<sw::WidgetId> uniqueVisited{ start };
+            sw::vector<sw::WidgetID>        listQueue{ start };
+            sw::unordered_set<sw::WidgetID> uniqueVisited{ start };
             for ( size_t index = 0; index < listQueue.size(); ++index )
             {
                 for ( const sw::UiNavigationDirection direction : { sw::UiNavigationDirection::Up, sw::UiNavigationDirection::Down,
                                                                     sw::UiNavigationDirection::Left, sw::UiNavigationDirection::Right } )
                 {
-                    const sw::WidgetId next = sw::UiNavigationSolver::findNextWidget( tree, listQueue[index], direction );
-                    if ( next != sw::kInvalidWidgetId && uniqueVisited.insert( next ).second )
+                    const sw::WidgetID next = sw::UiNavigationSolver::findNextWidget( tree, listQueue[index], direction );
+                    if ( next != sw::kInvalidWidgetID && uniqueVisited.insert( next ).second )
                         listQueue.push_back( next );
                 }
             }
             for ( const sw::Widget* pWidget : listFocusable )
             {
-                SW_EXPECT_TRUE_MSG( uniqueVisited.count( pWidget->getId() ) != 0,
+                SW_EXPECT_TRUE_MSG( uniqueVisited.count( pWidget->getID() ) != 0,
                                     ( label + ": '" + describe( *pWidget ) + "' cannot be reached with the gamepad from '" +
-                                      describe( *tree.findWidgetById( start ) ) + "'" )
+                                      describe( *tree.findWidgetByID( start ) ) + "'" )
                                         .c_str() );
             }
             return static_cast<uint32>( listFocusable.size() );

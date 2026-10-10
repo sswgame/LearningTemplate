@@ -20,7 +20,7 @@ namespace
         static ScheduleDefinition makeDaily( int32 minuteOfDay )
         {
             ScheduleDefinition definition;
-            definition._jobId       = "daily_reward";
+            definition._jobID       = "daily_reward";
             definition._kind        = ScheduleKind::Daily;
             definition._minuteOfDay = minuteOfDay;
             definition._leaseMs     = kHourMs;
@@ -70,7 +70,7 @@ SW_TEST_CASE( ServiceSchedulerTest, LatestOccurrenceFollowsDailyWeeklyAndWindowB
     SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, dayStartMs + Internal::kDayMs ) ); // 끝은 빠진다
 
     ScheduleDefinition broken = daily;
-    broken._jobId             = "Daily Reward";
+    broken._jobID             = "Daily Reward";
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( broken ) );
 }
 

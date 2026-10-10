@@ -75,7 +75,7 @@ namespace sw
     /** @brief 레벨에 배우는 기술 하나입니다. */
     struct MonsterLearnEntry
     {
-        hashed_string _moveId{};
+        hashed_string _moveID{};
         int32         _level{ 1 };
     };
 } // namespace sw
@@ -88,8 +88,8 @@ namespace sw
      */
     struct MonsterEvolutionDef
     {
-        hashed_string _targetId{};
-        hashed_string _itemId{};        ///< 비지 않으면 그 아이템을 썼을 때
+        hashed_string _targetID{};
+        hashed_string _itemID{};        ///< 비지 않으면 그 아이템을 썼을 때
         int32         _level{ 0 };      ///< 0 = 레벨 조건 없음
         int32         _friendship{ 0 }; ///< 0 = 친밀도 조건 없음
     };
@@ -123,7 +123,7 @@ namespace sw
         hashed_string       _id{};
         string              _name{};
         hashed_string       _type{};
-        hashed_string       _weatherId{}; ///< 비지 않으면 날씨를 부른다(비바라기)
+        hashed_string       _weatherID{}; ///< 비지 않으면 날씨를 부른다(비바라기)
         int32               _power{ 0 };
         int32               _accuracy{ 100 }; ///< 0 = 반드시 맞는다
         int32               _pp{ 10 };
@@ -174,7 +174,7 @@ namespace sw
     /** @brief 조우 칸 하나입니다. */
     struct MonsterEncounterSlot
     {
-        hashed_string _speciesId{};
+        hashed_string _speciesID{};
         int32         _minLevel{ 2 };
         int32         _maxLevel{ 2 };
         int32         _weight{ 1 };
@@ -227,7 +227,7 @@ namespace sw
          * @brief 지역 · 시간대에 맞는 모든 테이블의 칸을 모아 가중치로 하나를 뽑고 레벨을 범위 안에서 굴립니다.
          * @return 맞는 칸이 없으면 false 입니다(그 지역은 조우가 없다). 씨앗이 같으면 같은 결과입니다.
          */
-        [[nodiscard]] bool rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesId,
+        [[nodiscard]] bool rollEncounter( const hashed_string& area, const hashed_string& timeOfDay, GameRandom& random, hashed_string& outSpeciesID,
                                           int32& outLevel ) const;
         /** @brief @p type 이 @p status 에 면역인가입니다(불꽃은 화상, 전기는 마비 …). */
         bool isStatusImmune( MonsterStatus status, const vector<hashed_string>& listType ) const;
@@ -253,9 +253,9 @@ namespace sw
 
         static constexpr const utf8* kXmlRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XmlCatalog`)
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadMove( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadSpecies( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadEncounter( const XmlNode& node, const utf8* pId );
+        void                         loadMove( const XmlNode& node, const utf8* pID, string_view sourceName );
+        void                         loadSpecies( const XmlNode& node, const utf8* pID, string_view sourceName );
+        void                         loadEncounter( const XmlNode& node, const utf8* pID );
 
         GameCatalog<MonsterSpeciesDef>   _speciesCatalog;
         GameCatalog<MonsterMoveDef>      _moveCatalog;

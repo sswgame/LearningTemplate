@@ -46,13 +46,13 @@ namespace sw
     {
         static const hashed_string& getTable();
         /** @brief 읽습니다. 레코드가 없으면 `Ok` 와 빈 상태(판 0)입니다. */
-        [[nodiscard]] static ServiceStoreResult readState( IServiceStoreConnection& connection, uint64 accountId, ServiceSanctionState& outState );
+        [[nodiscard]] static ServiceStoreResult readState( IServiceStoreConnection& connection, uint64 accountID, ServiceSanctionState& outState );
         /** @brief 지금(@p nowMs) @p kind 가 걸려 있는가입니다. */
         static bool isActive( const ServiceSanctionState& state, ServiceSanctionKind kind, int64 nowMs );
         /** @brief 로그인을 막는 제재(정지 · 영구 정지)가 걸려 있으면 그 끝 시각(둘 중 늦은 것), 아니면 0 입니다. */
         static int64 getLoginBlockedUntilMs( const ServiceSanctionState& state, int64 nowMs );
         /** @brief 새 상태를 판 조건(@p state 의 `_version` — 0 이면 "없어야 한다")으로 붙입니다. 모든 종류가 0 이면 레코드를 지운다. */
-        static void stageWrite( ServiceTransaction& inoutTransaction, uint64 accountId, const ServiceSanctionState& state );
+        static void stageWrite( ServiceTransaction& inoutTransaction, uint64 accountID, const ServiceSanctionState& state );
     };
 } // namespace sw
 

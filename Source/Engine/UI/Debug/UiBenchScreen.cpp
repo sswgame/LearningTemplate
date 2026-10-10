@@ -31,7 +31,7 @@ namespace sw
                 widget.setLayoutSlot( slot );
             }
 
-            static unique_ptr<BorderPanel> makeCell( uint32 index, WidgetId& outTextId )
+            static unique_ptr<BorderPanel> makeCell( uint32 index, WidgetID& outTextID )
             {
                 unique_ptr<BorderPanel> cell = make_unique<BorderPanel>();
                 cell->setBackground( UiBrush::makeSolid( float4{ 0.12f + 0.02f * static_cast<float32>( index % 4 ), 0.14f, 0.2f, 0.9f }, 6.0f ) );
@@ -46,7 +46,7 @@ namespace sw
                 unique_ptr<TextWidget> text = make_unique<TextWidget>();
                 text->setText( "Cell " + to_string( index ) );
                 setFixedSize( *text, UiBenchScreen::kCellWidth - 48.0f, 24.0f );
-                outTextId = text->getId();
+                outTextID = text->getID();
                 (void)row->addChild( std::move( text ) );
                 (void)cell->addChild( std::move( row ) );
                 return cell;
@@ -72,13 +72,13 @@ namespace sw
         unique_ptr<WrapPanel> grid = make_unique<WrapPanel>();
         grid->setItemSpacing( 4.0f );
         grid->setLineSpacing( 4.0f );
-        vector<WidgetId> listCellText;
+        vector<WidgetID> listCellText;
         listCellText.reserve( cellCount );
         for ( uint32 index = 0; index < cellCount; ++index )
         {
-            WidgetId textId = kInvalidWidgetId;
-            (void)grid->addChild( Internal::makeCell( index, textId ) );
-            listCellText.push_back( textId );
+            WidgetID textID = kInvalidWidgetID;
+            (void)grid->addChild( Internal::makeCell( index, textID ) );
+            listCellText.push_back( textID );
         }
         (void)scroll->addChild( std::move( grid ) );
         (void)root->addChild( std::move( scroll ) );
@@ -89,7 +89,7 @@ namespace sw
         return sw::make_unique<UiBenchScreen>( desc, std::move( root ), std::move( listCellText ) );
     }
 
-    UiBenchScreen::UiBenchScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetId> listCellText )
+    UiBenchScreen::UiBenchScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, vector<WidgetID> listCellText )
         : UiScreen{ desc, std::move( root ) }
         , _listCellText{ std::move( listCellText ) }
         , _churnCursor{ 0 }
@@ -110,7 +110,7 @@ namespace sw
         {
             const uint32 cell = _churnCursor;
             _churnCursor      = ( _churnCursor + 1 ) % window;
-            if ( TextWidget* pText = castTo<TextWidget>( tree.findWidgetById( _listCellText[cell] ) ); pText != nullptr )
+            if ( TextWidget* pText = castTo<TextWidget>( tree.findWidgetByID( _listCellText[cell] ) ); pText != nullptr )
                 pText->setText( "Cell " + to_string( cell ) + " #" + to_string( _frameIndex ) );
         }
     }

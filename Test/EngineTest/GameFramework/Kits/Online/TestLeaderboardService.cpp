@@ -20,11 +20,11 @@ namespace
         static constexpr int64 kMonday20261005Ms = 1791158400000ll; // 2026-10-05 00:00 UTC(월)
         static constexpr int64 kDayMs            = 86400000;
 
-        static LeaderboardDefinition makeBoard( string_view boardId, LeaderboardUpdate update, LeaderboardOrder order = LeaderboardOrder::Descending,
+        static LeaderboardDefinition makeBoard( string_view boardID, LeaderboardUpdate update, LeaderboardOrder order = LeaderboardOrder::Descending,
                                                 LeaderboardReset reset = LeaderboardReset::None )
         {
             LeaderboardDefinition definition;
-            definition._boardId = string( boardId );
+            definition._boardID = string( boardID );
             definition._update  = update;
             definition._order   = order;
             definition._reset   = reset;
@@ -86,14 +86,14 @@ SW_TEST_CASE( LeaderboardServiceTest, BestKeepsHighestAndTopListsWithNames )
     node._service.readTop( "kills", 0, 2, 0, 5 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) );
-    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 2 ) );
     SW_EXPECT_STREQ( node.getLast()._listEntry[0]._displayName.c_str(), "bob" );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._rank, 2 );
 
     node._service.readAround( "kills", 1, 1, 0, 6 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) ); // 2 등 carol, 3 등 alice(아래가 없다)
-    SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._accountId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._accountID, AccountID( 1 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._rank, 3 );
     node._service.readAround( "kills", 9, 1, 0, 7 ); // 점수 없음
     node.step();
@@ -132,7 +132,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AscendingSumAndLatest )
     node._service.readTop( "lap_time", 0, 2, 0, 8 );
     node.step();
     SW_ASSERT_EQUAL( node.getLast()._listEntry.size(), size_t( 2 ) );
-    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 1 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._score, int64( 8000 ) );
     SW_EXPECT_EQUAL( node.getLast()._listEntry[1]._score, int64( 8500 ) );
 }
@@ -149,11 +149,11 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardStartsEmptyAfterReset )
     node._service.readTop( "daily_runs", 0, 10, Internal::kMonday20261005Ms + 2000, 2 );
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._listEntry.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( node.getLast()._periodId, uint64( Internal::kMonday20261005Ms ) );
+    SW_EXPECT_EQUAL( node.getLast()._periodID, uint64( Internal::kMonday20261005Ms ) );
     node._service.readTop( "daily_runs", 0, 10, Internal::kMonday20261005Ms + Internal::kDayMs, 3 ); // 다음 날
     node.step();
     SW_EXPECT_EQUAL( node.getLast()._listEntry.size(), size_t( 0 ) );
-    SW_EXPECT_EQUAL( node.getLast()._periodId, uint64( Internal::kMonday20261005Ms + Internal::kDayMs ) );
+    SW_EXPECT_EQUAL( node.getLast()._periodID, uint64( Internal::kMonday20261005Ms + Internal::kDayMs ) );
 }
 
 SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrder )
@@ -165,11 +165,11 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
         MemoryEphemeralDatabase cacheDatabase;
         BoardNode               node( &database, &cacheDatabase );
         SW_ASSERT_TRUE( node._service.registerBoard( Internal::makeBoard( "kills", LeaderboardUpdate::Best ) ) );
-        for ( AccountId accountId = 1; accountId <= 300; ++accountId ) // 다시 채우기 묶음(256)보다 많이 — 점수는 서로 다르다(307 은 소수)
+        for ( AccountID accountID = 1; accountID <= 300; ++accountID ) // 다시 채우기 묶음(256)보다 많이 — 점수는 서로 다르다(307 은 소수)
         {
-            const int64 score = static_cast<int64>( accountId * 7 % 307 );
+            const int64 score = static_cast<int64>( accountID * 7 % 307 );
             bestScore         = std::max( bestScore, score );
-            node._service.submitScore( "kills", accountId, "p", score, 0, accountId );
+            node._service.submitScore( "kills", accountID, "p", score, 0, accountID );
         }
         node.step();
     }
@@ -182,7 +182,7 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 2 ) );
     SW_ASSERT_EQUAL( node._listCompletion[0]._listEntry.size(), size_t( 3 ) );
     SW_EXPECT_EQUAL( node._listCompletion[0]._listEntry[0]._score, bestScore );
-    SW_EXPECT_EQUAL( node._listCompletion[1]._listEntry[0]._accountId, node._listCompletion[0]._listEntry[0]._accountId );
+    SW_EXPECT_EQUAL( node._listCompletion[1]._listEntry[0]._accountID, node._listCompletion[0]._listEntry[0]._accountID );
 
     const uint64 commitBefore = database.getCommitCount();
     node._service.readTop( "kills", 0, 1, 0, 3 ); // 준비 표시가 있다 — 다시 채우지 않는다
@@ -192,7 +192,7 @@ SW_TEST_CASE( LeaderboardServiceTest, LostCacheIsRebuiltFromStoreWithTheSameOrde
     SW_EXPECT_EQUAL( database.getCommitCount(), commitBefore + 1 );
     node._service.readTop( "kills", 0, 1, 0, 5 );
     node.step();
-    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountId, AccountId( 301 ) );
+    SW_EXPECT_EQUAL( node.getLast()._listEntry[0]._accountID, AccountID( 301 ) );
 }
 
 SW_TEST_CASE( LeaderboardServiceTest, StatFeedsLinkedBoardAndStoreFailure )

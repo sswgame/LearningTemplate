@@ -141,25 +141,25 @@ def makeManifestInternal(packageJson: dict) -> str:
     return f"""<?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011" xmlns:d="http://schemas.microsoft.com/developer/vsx-schema-design/2011">
   <Metadata>
-    <Identity Language="en-US" Id="{escape(packageJson['name'])}" Version="{escape(packageJson['version'])}" Publisher="{escape(packageJson['publisher'])}" />
+    <Identity Language="en-US" ID="{escape(packageJson['name'])}" Version="{escape(packageJson['version'])}" Publisher="{escape(packageJson['publisher'])}" />
     <DisplayName>{escape(packageJson.get('displayName', packageJson['name']))}</DisplayName>
     <Description xml:space="preserve">{escape(packageJson.get('description', ''))}</Description>
     <Tags>{keywordText}</Tags>
     <Categories>{categoryText}</Categories>
     <GalleryFlags>Public</GalleryFlags>
     <Properties>
-      <Property Id="Microsoft.VisualStudio.Code.Engine" Value="{escape(packageJson['engines']['vscode'])}" />
-      <Property Id="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
-      <Property Id="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
-      <Property Id="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace" />
-      <Property Id="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
-      <Property Id="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
-      <Property Id="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
-      <Property Id="Microsoft.VisualStudio.Services.Content.Pricing" Value="Free" />
+      <Property ID="Microsoft.VisualStudio.Code.Engine" Value="{escape(packageJson['engines']['vscode'])}" />
+      <Property ID="Microsoft.VisualStudio.Code.ExtensionDependencies" Value="" />
+      <Property ID="Microsoft.VisualStudio.Code.ExtensionPack" Value="" />
+      <Property ID="Microsoft.VisualStudio.Code.ExtensionKind" Value="workspace" />
+      <Property ID="Microsoft.VisualStudio.Code.LocalizedLanguages" Value="" />
+      <Property ID="Microsoft.VisualStudio.Code.ExecutesCode" Value="true" />
+      <Property ID="Microsoft.VisualStudio.Services.GitHubFlavoredMarkdown" Value="true" />
+      <Property ID="Microsoft.VisualStudio.Services.Content.Pricing" Value="Free" />
     </Properties>
   </Metadata>
   <Installation>
-    <InstallationTarget Id="Microsoft.VisualStudio.Code" />
+    <InstallationTarget ID="Microsoft.VisualStudio.Code" />
   </Installation>
   <Dependencies />
   <Assets>

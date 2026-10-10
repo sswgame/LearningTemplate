@@ -19,7 +19,7 @@ namespace sw
     namespace
     {
         /** @brief 위젯 번호를 주는 프로세스 전역 카운터입니다(Engine.dll 안이라 모듈 핫 리로드에도 이어진다). 0 은 무효 번호라 1 부터. */
-        atomic<uint32> s_nextWidgetId{ 1 };
+        atomic<uint32> s_nextWidgetID{ 1 };
     } // namespace
 } // namespace sw
 
@@ -42,7 +42,7 @@ namespace sw
         , _lastSlotSize{}
         , _pParent{ nullptr }
         , _pTree{ nullptr }
-        , _id{ s_nextWidgetId.fetch_add( 1, std::memory_order_relaxed ) }
+        , _id{ s_nextWidgetID.fetch_add( 1, std::memory_order_relaxed ) }
         , _dirtyFlags{ WidgetDirty::kLayout | WidgetDirty::kPaint | WidgetDirty::kStyle }
         , _layoutSerial{ 0 }
         , _opacity{ 1.0f }

@@ -40,18 +40,18 @@ namespace sw
 
             static bool isExpired( const ServiceMailMessage& message, int64 nowMs ) { return message._expiresMs > 0 && message._expiresMs <= nowMs; }
 
-            static string makeAccountPrefix( uint64 accountId )
+            static string makeAccountPrefix( uint64 accountID )
             {
-                string prefix = ServiceKeyUtil::makeHex64( accountId );
+                string prefix = ServiceKeyUtil::makeHex64( accountID );
                 prefix.push_back( '/' );
                 return prefix;
             }
 
             /** @brief 우편 하나를 읽어 해독합니다(받는 계정 확인 포함). */
-            static MailboxResult readMail( IServiceStoreConnection& connection, uint64 accountId, string_view mailKey, ServiceMailRecord& outRecord )
+            static MailboxResult readMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey, ServiceMailRecord& outRecord )
             {
                 uint64 recipient = 0;
-                if ( ServiceMail::parseRecipient( mailKey, recipient ) == false || recipient != accountId )
+                if ( ServiceMail::parseRecipient( mailKey, recipient ) == false || recipient != accountID )
                     return MailboxResult::NotFound;
                 ServiceRecord            record;
                 const ServiceStoreResult read = connection.readRecord( ServiceMail::getMailTable(), mailKey, record );
@@ -83,9 +83,9 @@ namespace sw
                 return MailboxResult::Unavailable;
             }
 
-            static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountId, vector<LedgerBalance>& inoutListBalance )
+            static void collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& inoutListBalance )
             {
-                const LedgerHolder account = LedgerHolder::makeAccount( accountId );
+                const LedgerHolder account = LedgerHolder::makeAccount( accountID );
                 for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
                 {
                     if ( holderBalance._holder != account )
@@ -93,7 +93,7 @@ namespace sw
                     bool bReplaced = false;
                     for ( LedgerBalance& existing : inoutListBalance )
                     {
-                        if ( existing._assetId == holderBalance._balance._assetId )
+                        if ( existing._assetID == holderBalance._balance._assetID )
                         {
                             existing  = holderBalance._balance;
                             bReplaced = true;
@@ -104,10 +104,10 @@ namespace sw
                 }
             }
 
-            static MailboxResult claimCampaign( IServiceStoreConnection& connection, uint64 campaignId, const MailboxClaimInput& input, MailboxReply& outReply )
+            static MailboxResult claimCampaign( IServiceStoreConnection& connection, uint64 campaignID, const MailboxClaimInput& input, MailboxReply& outReply )
             {
                 ServiceRecord            campaignRecord;
-                const ServiceStoreResult read = connection.readRecord( ServiceMailCampaignTable::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignId ), campaignRecord );
+                const ServiceStoreResult read = connection.readRecord( ServiceMailCampaignTable::getCampaignTable(), ServiceKeyUtil::makeHex64( campaignID ), campaignRecord );
                 if ( read == ServiceStoreResult::NotFound )
                     return MailboxResult::NotFound;
                 ServiceMailCampaign campaign;
@@ -115,7 +115,7 @@ namespace sw
                     return MailboxResult::Unavailable;
                 if ( campaign.isActive( input._nowMs ) == false )
                     return MailboxResult::Expired;
-                const string          claimKey = ServiceMailCampaignTable::makeClaimKey( campaignId, input._accountId );
+                const string          claimKey = ServiceMailCampaignTable::makeClaimKey( campaignID, input._accountID );
                 LedgerTransferRequest request;
                 if ( LedgerJournalKey::makeFromToken( "mail.campaign", claimKey, request._journalKey ) == false )
                     return MailboxResult::InvalidRequest;
@@ -123,11 +123,11 @@ namespace sw
                 request._memo      = campaign._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
                 request._pPolicy   = input._pPolicy;
                 request._timeMs    = input._nowMs;
-                request._actorId   = input._accountId;
+                request._actorID   = input._accountID;
                 request._actorKind = LedgerActorKind::Player;
                 for ( const ServiceMailAttachment& attachment : campaign._listAttachment )
                 {
-                    request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( input._accountId ), attachment._assetId, attachment._amount } );
+                    request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
                 }
                 for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
                 {
@@ -142,7 +142,7 @@ namespace sw
                     const ServiceStoreResult committed = connection.commit( transaction );
                     if ( committed == ServiceStoreResult::Ok )
                     {
-                        collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                        collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                         ++outReply._claimedCount;
                         return MailboxResult::Ok;
                     }
@@ -187,7 +187,7 @@ namespace sw
                 request._pPolicy   = nullptr; // 돌려주기는 상한을 보지 않는다 — 보낸 쪽이 가득 차도 재화가 사라지면 안 된다
                 for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
                 {
-                    request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetId, attachment._amount } );
+                    request._listPosting.push_back( LedgerPosting{ escrow, target, attachment._assetID, attachment._amount } );
                 }
                 LedgerTransferOutcome outcome;
                 return Ledger::stageTransfer( connection, request, inoutTransaction, outcome ) == LedgerResult::Ok && outcome._bReplayed == SW_FALSE;
@@ -198,7 +198,7 @@ namespace sw
 
 namespace sw
 {
-    MailboxResult MailboxStoreLogic::listMail( IServiceStoreConnection& connection, uint64 accountId, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
+    MailboxResult MailboxStoreLogic::listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
                                                const MailboxRequest& request, MailboxReply& outReply )
     {
         outReply = MailboxReply{};
@@ -210,13 +210,13 @@ namespace sw
                     continue;
                 ServiceRecord            claimRecord;
                 const ServiceStoreResult claimed =
-                    connection.readRecord( ServiceMailCampaignTable::getClaimTable(), ServiceMailCampaignTable::makeClaimKey( campaign._campaignId, accountId ), claimRecord );
+                    connection.readRecord( ServiceMailCampaignTable::getClaimTable(), ServiceMailCampaignTable::makeClaimKey( campaign._campaignID, accountID ), claimRecord );
                 if ( claimed == ServiceStoreResult::Ok )
                     continue;
                 if ( claimed != ServiceStoreResult::NotFound )
                     return MailboxStoreLogicInternal::finish( outReply, MailboxResult::Unavailable );
                 MailView& view       = outReply._listMail.emplace_back();
-                view._mailKey        = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( campaign._campaignId );
+                view._mailKey        = string( MailboxProtocol::kCampaignPrefix ) + ServiceKeyUtil::makeHex64( campaign._campaignID );
                 view._titleKey       = campaign._titleKey;
                 view._body           = campaign._body;
                 view._senderName     = campaign._senderName;
@@ -228,7 +228,7 @@ namespace sw
             }
         }
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountId ), request._cursor,
+        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), request._cursor,
                                                                   request._maxCount, true, listRecord );
         if ( listed != ServiceStoreResult::Ok )
             return MailboxStoreLogicInternal::finish( outReply, MailboxResult::Unavailable );
@@ -250,10 +250,10 @@ namespace sw
         return MailboxStoreLogicInternal::finish( outReply, MailboxResult::Ok );
     }
 
-    MailboxResult MailboxStoreLogic::markRead( IServiceStoreConnection& connection, uint64 accountId, string_view mailKey )
+    MailboxResult MailboxStoreLogic::markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
     {
         ServiceMailRecord   mail;
-        const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, accountId, mailKey, mail );
+        const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
         if ( read != MailboxResult::Ok || mail._state != ServiceMailState::Unread )
             return read;
         mail._state = ServiceMailState::Read;
@@ -270,15 +270,15 @@ namespace sw
         const string_view mailKey = input._mailKey;
         if ( StringUtil::startsWith( mailKey, MailboxProtocol::kCampaignPrefix ) )
         {
-            uint64 campaignId = 0;
-            if ( ServiceKeyUtil::parseHex64( mailKey.substr( string_view( MailboxProtocol::kCampaignPrefix ).size() ), campaignId ) == false )
+            uint64 campaignID = 0;
+            if ( ServiceKeyUtil::parseHex64( mailKey.substr( string_view( MailboxProtocol::kCampaignPrefix ).size() ), campaignID ) == false )
                 return MailboxResult::NotFound;
-            return MailboxStoreLogicInternal::claimCampaign( connection, campaignId, input, outReply );
+            return MailboxStoreLogicInternal::claimCampaign( connection, campaignID, input, outReply );
         }
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             ServiceMailRecord   mail;
-            const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, input._accountId, mailKey, mail );
+            const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, input._accountID, mailKey, mail );
             if ( read != MailboxResult::Ok )
                 return read;
             if ( mail._state == ServiceMailState::Claimed )
@@ -300,11 +300,11 @@ namespace sw
                 request._memo      = mail._message._titleKey.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
                 request._pPolicy   = input._pPolicy;
                 request._timeMs    = input._nowMs;
-                request._actorId   = input._accountId;
+                request._actorID   = input._accountID;
                 request._actorKind = LedgerActorKind::Player;
                 for ( const ServiceMailAttachment& attachment : mail._message._listAttachment )
                 {
-                    request._listPosting.push_back( LedgerPosting{ funding, LedgerHolder::makeAccount( input._accountId ), attachment._assetId, attachment._amount } );
+                    request._listPosting.push_back( LedgerPosting{ funding, LedgerHolder::makeAccount( input._accountID ), attachment._assetID, attachment._amount } );
                 }
                 const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outcome );
                 if ( staged != LedgerResult::Ok )
@@ -323,7 +323,7 @@ namespace sw
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                 ++outReply._claimedCount;
                 return MailboxResult::Ok;
             }
@@ -335,7 +335,7 @@ namespace sw
                 if ( resolved == LedgerResult::Ok )
                 {
                     // 응답만 잃었거나(이번 수령이 들어갔다) 다른 기기가 먼저 받았다 — 어느 쪽이든 원장은 한 번이다.
-                    MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                    MailboxStoreLogicInternal::collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                     return MailboxResult::Ok;
                 }
                 if ( resolved == LedgerResult::Unavailable || committed == ServiceStoreResult::Unavailable )
@@ -350,11 +350,11 @@ namespace sw
         return MailboxResult::Busy;
     }
 
-    MailboxResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountId, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxReply& outReply )
+    MailboxResult MailboxStoreLogic::claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxReply& outReply )
     {
         outReply = MailboxReply{};
         vector<ServiceRecord>    listRecord;
-        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountId ), "",
+        const ServiceStoreResult listed = connection.listRecords( ServiceMail::getMailTable(), MailboxStoreLogicInternal::makeAccountPrefix( accountID ), "",
                                                                   MailboxProtocol::kMaxListCount, true, listRecord );
         if ( listed != ServiceStoreResult::Ok )
             return MailboxStoreLogicInternal::finish( outReply, MailboxResult::Unavailable );
@@ -370,7 +370,7 @@ namespace sw
                 continue;
             MailboxClaimInput input;
             input._mailKey             = record._key;
-            input._accountId           = accountId;
+            input._accountID           = accountID;
             input._nowMs               = nowMs;
             input._pPolicy             = pPolicy;
             const MailboxResult result = claim( connection, input, outReply );
@@ -380,10 +380,10 @@ namespace sw
         return MailboxStoreLogicInternal::finish( outReply, outReply._claimedCount > 0 ? MailboxResult::Ok : firstFailure );
     }
 
-    MailboxResult MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountId, string_view mailKey )
+    MailboxResult MailboxStoreLogic::deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey )
     {
         ServiceMailRecord   mail;
-        const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, accountId, mailKey, mail );
+        const MailboxResult read = MailboxStoreLogicInternal::readMail( connection, accountID, mailKey, mail );
         if ( read != MailboxResult::Ok )
             return read;
         if ( mail._state != ServiceMailState::Claimed && mail._message._listAttachment.empty() == false )

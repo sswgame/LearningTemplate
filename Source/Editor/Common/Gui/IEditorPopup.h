@@ -17,10 +17,10 @@ namespace sw::editor
         virtual ~IEditorPopup() = default;
 
         /** @brief 팝업의 고유 식별자(ID)를 반환합니다. */
-        virtual const utf8* getPopupId() const = 0;
+        virtual const utf8* getPopupID() const = 0;
 
         /** @brief 팝업의 표시 타이틀을 반환합니다. 기본값은 ID와 동일합니다. */
-        virtual const utf8* getPopupTitle() const { return getPopupId(); }
+        virtual const utf8* getPopupTitle() const { return getPopupID(); }
 
         /** @brief 팝업이 열려 있는지 여부를 반환합니다. */
         bool isOpen() const { return _bOpen; }

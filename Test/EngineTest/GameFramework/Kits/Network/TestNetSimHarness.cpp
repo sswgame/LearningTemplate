@@ -124,20 +124,20 @@ namespace
             _client.update( deltaTime );
             if ( _client.hasSnapshot() && _firstSnapshotTick < 0 )
                 _firstSnapshotTick = static_cast<int32>( world.getLocalTick() );
-            for ( uint32 entityId = 1; entityId <= kCrateCount; ++entityId )
+            for ( uint32 entityID = 1; entityID <= kCrateCount; ++entityID )
             {
                 const NetEntityState* pFrom = nullptr;
                 const NetEntityState* pTo   = nullptr;
                 float32               alpha = 0.0f;
-                if ( _client.sampleEntity( entityId, pFrom, pTo, alpha ) == false )
+                if ( _client.sampleEntity( entityID, pFrom, pTo, alpha ) == false )
                     continue;
                 const float3         from     = readPosition( pFrom->_buffer );
                 const float3         to       = readPosition( pTo->_buffer );
                 const float3         position = from + ( to - from ) * alpha;
-                RigidBodyComponent*& pProxy   = _listProxy[entityId - 1];
+                RigidBodyComponent*& pProxy   = _listProxy[entityID - 1];
                 if ( pProxy == nullptr )
                 {
-                    const string name = string{ "CrateProxy" } + sw::to_string( entityId );
+                    const string name = string{ "CrateProxy" } + sw::to_string( entityID );
                     pProxy            = spawnBox( world.getObjectManager(), name.c_str(), position, float3{ 0.5f, 0.5f, 0.5f }, PhysicsBodyType::Kinematic );
                 }
                 else
@@ -145,7 +145,7 @@ namespace
             }
         }
 
-        const RigidBodyComponent* findProxy( uint32 entityId ) const { return _listProxy[entityId - 1]; }
+        const RigidBodyComponent* findProxy( uint32 entityID ) const { return _listProxy[entityID - 1]; }
         int32                     getFirstSnapshotTick() const { return _firstSnapshotTick; }
 
     private:
@@ -192,12 +192,12 @@ namespace
             return -1.0f;
         const vector<RigidBodyComponent*>& listCrate = getServerSession( harness ).getCrates();
         float32                            maxError  = 0.0f;
-        for ( uint32 entityId = 1; entityId <= kCrateCount; ++entityId )
+        for ( uint32 entityID = 1; entityID <= kCrateCount; ++entityID )
         {
-            const RigidBodyComponent* pProxy = pClient->findProxy( entityId );
+            const RigidBodyComponent* pProxy = pClient->findProxy( entityID );
             if ( pProxy == nullptr )
                 return -1.0f;
-            const float3 difference = pProxy->getWorldPosition() - listCrate[entityId - 1]->getWorldPosition();
+            const float3 difference = pProxy->getWorldPosition() - listCrate[entityID - 1]->getWorldPosition();
             maxError                = MathUtil::max( maxError, MathUtil::sqrt( difference.dot( difference ) ) );
         }
         return maxError;
@@ -343,9 +343,9 @@ namespace
         for ( NetSimWorld* pClient : listClient )
         {
             const CrateClientSession* pSession = static_cast<const CrateClientSession*>( pClient->getSession() );
-            for ( uint32 entityId = 1; entityId <= kCrateCount; ++entityId )
+            for ( uint32 entityID = 1; entityID <= kCrateCount; ++entityID )
             {
-                const RigidBodyComponent* pProxy = pSession->findProxy( entityId );
+                const RigidBodyComponent* pProxy = pSession->findProxy( entityID );
                 result._listProxyPosition.push_back( pProxy != nullptr ? pProxy->getWorldPosition() : float3{ -999.0f, -999.0f, -999.0f } );
             }
         }

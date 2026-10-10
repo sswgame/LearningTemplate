@@ -30,8 +30,8 @@ namespace sw
                 {
                     const uint32     codepoint  = StringUtil::decodeUtf8( text, offset );
                     uint32           glyphIndex = 0;
-                    const FontFaceId face       = fontSystem.findFaceForCodepoint( chain, codepoint, glyphIndex );
-                    if ( face == kInvalidFontFaceId )
+                    const FontFaceID face       = fontSystem.findFaceForCodepoint( chain, codepoint, glyphIndex );
+                    if ( face == kInvalidFontFaceID )
                         continue;
                     (void)painter.drawGlyph( float2{ penX, origin._y }, face, glyphIndex, glyphStyle, fontSystem.getGlyphCache(), frameIndex );
                     GlyphMetrics metrics{};

@@ -383,13 +383,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode trackNode = root.findChild( "Track" ); trackNode; trackNode = trackNode.findNextSibling( "Track" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( trackNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( trackNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             KartTrackDef def;
-            def._id                = hashed_string( pId );
+            def._id                = hashed_string( pID );
             const utf8* pName      = trackNode.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pId;
+            def._name              = pName != nullptr ? pName : pID;
             def._width             = trackNode.getAttributeFloat( "width", def._width );
             def._offroadScale      = trackNode.getAttributeFloat( "offroadScale", def._offroadScale );
             def._gateMargin        = trackNode.getAttributeFloat( "gateMargin", def._gateMargin );
@@ -434,7 +434,7 @@ namespace sw
             }
             if ( def._listControlPoint.size() < 3 )
             {
-                SW_LOG_WARNING( "%#: track '%#' has fewer than 3 points - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: track '%#' has fewer than 3 points - skipped", sourceName, pID );
                 continue;
             }
             addTrack( def );

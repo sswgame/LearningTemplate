@@ -65,7 +65,7 @@ namespace sw
         WesternHorse();
 
         /** @brief 품종으로 시작합니다. 품종이 없으면 false 입니다. */
-        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const hashed_string& horseId, uint32 seed );
+        [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const hashed_string& horseID, uint32 seed );
         /**
          * @brief 시간을 흘립니다 — 게이지 회복(코어 배율) · 코어 감소 · 겁 식기 · 탄 시간 경험치.
          * @param deltaTime 실제 초 @param gameHours 이번에 흐른 게임 시간
@@ -77,7 +77,7 @@ namespace sw
         /** @brief 솔질합니다. 손질 대기 시간이 지났으면 경험치가 붙고 true 입니다. */
         bool brush();
         /** @brief 먹이를 줍니다 — 코어 · 게이지 회복과 유대 경험치. 모르는 먹이면 false 입니다. */
-        bool feed( const hashed_string& foodId );
+        bool feed( const hashed_string& foodID );
         /** @brief 겁을 줍니다(총소리 · 뱀 · 곰 — @p amount 1 이면 용기 없는 말이 바로 넘는다). */
         WesternHorseReaction frighten( float32 amount );
         /** @brief 달랩니다 — 겁을 지우고 유대 경험치를 조금. */
@@ -89,7 +89,7 @@ namespace sw
         int32 getBondLevel() const;
         /** @brief 모은 유대 경험치(정수 경험치 + 아직 1 이 안 된 소수)입니다. */
         float32 getBondExperience() const { return static_cast<float32>( _bond.getTotalXp() ) + _bondXpCarry; }
-        bool    hasAbility( const hashed_string& abilityId ) const;
+        bool    hasAbility( const hashed_string& abilityID ) const;
         float32 getHealthCore() const { return _healthCore; }
         float32 getStaminaCore() const { return _staminaCore; }
         float32 getFear() const { return _fear; }

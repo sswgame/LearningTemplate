@@ -44,8 +44,8 @@ namespace sw
 
         void              initialize( const WitcherCatalog* pCatalog, int32 characterLevel );
         void              setCharacterLevel( int32 characterLevel ) { _characterLevel = characterLevel; }
-        WitcherSlotResult equipSkill( int32 group, int32 slot, const hashed_string& skillId );
-        WitcherSlotResult equipMutagen( int32 group, const hashed_string& mutagenId );
+        WitcherSlotResult equipSkill( int32 group, int32 slot, const hashed_string& skillID );
+        WitcherSlotResult equipMutagen( int32 group, const hashed_string& mutagenID );
         void              clearSlot( int32 group, int32 slot );
 
         bool          isGroupOpen( int32 group ) const;
@@ -67,7 +67,7 @@ namespace sw
         struct Group
         {
             vector<hashed_string> _listSkill{};
-            hashed_string         _mutagenId{};
+            hashed_string         _mutagenID{};
         };
 
         bool isValidSlot( int32 group, int32 slot ) const;

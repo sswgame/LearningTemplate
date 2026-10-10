@@ -87,11 +87,11 @@ namespace
         probeNode._listChoice    = { "a", "b" };
         asset._listNode.push_back( probeNode );
 
-        const int32 arrTargetId[] = { 10, 11, 12, 13, 14 };
-        for ( int32 targetId : arrTargetId )
+        const int32 arrTargetID[] = { 10, 11, 12, 13, 14 };
+        for ( int32 targetID : arrTargetID )
         {
             DialogueAssetNode target{};
-            target._id   = targetId;
+            target._id   = targetID;
             target._type = DialogueAssetNodeType::Dialogue;
             target._text = "target";
             asset._listNode.push_back( target );
@@ -106,7 +106,7 @@ namespace
         };
         for ( int32 linkIndex = 0; linkIndex < static_cast<int32>( SW_COUNT_OF( arrFromPin ) ); ++linkIndex )
         {
-            const int32 toPin = DialogueGraphAsset::encodePin( arrTargetId[linkIndex], DialogueGraphAsset::kPinOffsetIn );
+            const int32 toPin = DialogueGraphAsset::encodePin( arrTargetID[linkIndex], DialogueGraphAsset::kPinOffsetIn );
             asset._listLink.push_back( DialogueAssetLink{ linkIndex + 1, arrFromPin[linkIndex], toPin } );
         }
         return asset;
@@ -121,15 +121,15 @@ namespace
 SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
 {
     const int32 outPin = DialogueGraphAsset::encodePin( 7, DialogueGraphAsset::kPinOffsetOut );
-    SW_EXPECT_EQUAL( 7, DialogueGraphAsset::decodePinNodeId( outPin ) );
+    SW_EXPECT_EQUAL( 7, DialogueGraphAsset::decodePinNodeID( outPin ) );
     SW_EXPECT_EQUAL( DialogueGraphAsset::kPinOffsetOut, DialogueGraphAsset::decodePinOffset( outPin ) );
 
     const int32 choicePin = DialogueGraphAsset::encodeChoicePin( 12, 3 );
-    SW_EXPECT_EQUAL( 12, DialogueGraphAsset::decodePinNodeId( choicePin ) );
+    SW_EXPECT_EQUAL( 12, DialogueGraphAsset::decodePinNodeID( choicePin ) );
     SW_EXPECT_EQUAL( DialogueGraphAsset::kPinOffsetChoiceBase + 3, DialogueGraphAsset::decodePinOffset( choicePin ) );
 
     // kPinScale 보다 작은 값은 핀이 아니다(노드 id 는 1 부터) — 노드 id * 10 으로 짐작해 읽지 않는다.
-    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinNodeId( 12 ) );
+    SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinNodeID( 12 ) );
     SW_EXPECT_EQUAL( 0, DialogueGraphAsset::decodePinOffset( 12 ) );
 }
 
@@ -138,7 +138,7 @@ SW_TEST_CASE( DialogueGraphTest, PinEncodeAndDecodeRoundTrip )
  * @details 오프셋이 `kPinScale` 을 넘으면 **노드 id 를 오염시켜** 링크가 다른 노드를 가리킨다.
  *          조용히 그런 번호를 만드느니 "없는 핀"(0)을 돌려준다.
  */
-SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeId )
+SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
 {
     SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodePin( 5, DialogueGraphAsset::kPinScale ) );
     SW_EXPECT_EQUAL( 0, DialogueGraphAsset::encodePin( 5, DialogueGraphAsset::kPinScale + 1 ) );
@@ -154,7 +154,7 @@ SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeId )
     for ( int32 choiceIndex = 0; choiceIndex <= lastChoiceIndex; ++choiceIndex )
     {
         const int32 pin = DialogueGraphAsset::encodeChoicePin( 5, choiceIndex );
-        SW_EXPECT_EQUAL( 5, DialogueGraphAsset::decodePinNodeId( pin ) );
+        SW_EXPECT_EQUAL( 5, DialogueGraphAsset::decodePinNodeID( pin ) );
     }
 }
 
@@ -196,14 +196,14 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
     SW_EXPECT_NOT_NULL( pStart );
     SW_EXPECT_EQUAL( 1, pStart->_id );
 
-    SW_EXPECT_EQUAL( 2, asset.findDefaultNextNodeId( 1 ) );
-    SW_EXPECT_EQUAL( 3, asset.findChoiceNextNodeId( 2, 0 ) );
-    SW_EXPECT_EQUAL( 4, asset.findChoiceNextNodeId( 2, 1 ) );
+    SW_EXPECT_EQUAL( 2, asset.findDefaultNextNodeID( 1 ) );
+    SW_EXPECT_EQUAL( 3, asset.findChoiceNextNodeID( 2, 0 ) );
+    SW_EXPECT_EQUAL( 4, asset.findChoiceNextNodeID( 2, 1 ) );
 
     // 연결되지 않은 선택지는 기본 출력으로 떨어진다 — 여기서는 그것도 없으므로 0 이다.
-    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeId( 2, 5 ) );
+    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, 5 ) );
     // 범위를 벗어난 선택지 번호도 기본 출력을 볼 뿐, 엉뚱한 노드로 가지 않는다.
-    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeId( 2, DialogueGraphAsset::getMaxChoiceCount() + 10 ) );
+    SW_EXPECT_EQUAL( 0, asset.findChoiceNextNodeID( 2, DialogueGraphAsset::getMaxChoiceCount() + 10 ) );
 }
 
 /**
@@ -220,7 +220,7 @@ SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeType::Choice );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
-    SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeId( 2, 0 ) );
+    SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeID( 2, 0 ) );
 
     const string filePath = test::makeTempPath( "test_dialogue_graph.json" );
     SW_EXPECT_TRUE( source.saveToFile( filePath ) );
@@ -230,7 +230,7 @@ SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
     SW_EXPECT_EQUAL( parsed._listNode[1]._text, loaded._listNode[1]._text );
-    SW_EXPECT_EQUAL( 4, loaded.findChoiceNextNodeId( 2, 1 ) );
+    SW_EXPECT_EQUAL( 4, loaded.findChoiceNextNodeID( 2, 1 ) );
 }
 
 /**
@@ -274,8 +274,8 @@ SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
  */
 SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
 {
-    const int32 arrExpectedNextId[] = { 10, 10, 14, 11, 10, 0 };
-    static_assert( SW_COUNT_OF( arrExpectedNextId ) == static_cast<size_t>( DialogueAssetNodeType::Count ), "노드 종류마다 기대 값 하나" );
+    const int32 arrExpectedNextID[] = { 10, 10, 14, 11, 10, 0 };
+    static_assert( SW_COUNT_OF( arrExpectedNextID ) == static_cast<size_t>( DialogueAssetNodeType::Count ), "노드 종류마다 기대 값 하나" );
 
     for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
     {
@@ -283,8 +283,8 @@ SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
         const DialogueGraphAsset    asset  = makeProbeGraph( type );
         const DialogueAssetNode*    pProbe = asset.findNode( 2 );
         SW_ASSERT_NOT_NULL( pProbe );
-        const int32 cursorNextId = DialogueCursor::step( asset, *pProbe, makeProbeInput() );
-        SW_EXPECT_EQUAL( arrExpectedNextId[typeIndex], cursorNextId );
+        const int32 cursorNextID = DialogueCursor::step( asset, *pProbe, makeProbeInput() );
+        SW_EXPECT_EQUAL( arrExpectedNextID[typeIndex], cursorNextID );
 
         DialogueRunnerComponent runner;
         runner.setGraph( asset );
@@ -297,19 +297,19 @@ SW_TEST_CASE( DialogueGraphTest, RunnerAndCursorAgreeOnEveryType )
         SW_ASSERT_NOT_NULL( pInfo );
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance )
         {
-            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
+            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeID() );
             SW_EXPECT_TRUE( runner.advance() );
         }
         else if ( pInfo->_flow == DialogueNodeFlow::WaitChoice )
         {
-            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeId() );
+            SW_EXPECT_EQUAL( 2, runner.getCurrentNodeID() );
             SW_EXPECT_TRUE( runner.selectChoice( 1 ) );
         }
 
-        if ( cursorNextId > 0 )
+        if ( cursorNextID > 0 )
         {
             SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::ShowingDialogue ), static_cast<uint8>( runner.getState() ) );
-            SW_EXPECT_EQUAL( cursorNextId, runner.getCurrentNodeId() );
+            SW_EXPECT_EQUAL( cursorNextID, runner.getCurrentNodeID() );
         }
         else
         {

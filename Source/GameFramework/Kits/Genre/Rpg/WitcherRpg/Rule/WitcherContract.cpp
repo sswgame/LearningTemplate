@@ -75,10 +75,10 @@ namespace sw
     {
     }
 
-    bool WitcherInvestigation::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId, QuestLog* pQuestLog )
+    bool WitcherInvestigation::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractID, QuestLog* pQuestLog )
     {
         _pCatalog  = pCatalog;
-        _pContract = pCatalog != nullptr ? pCatalog->findContract( contractId ) : nullptr;
+        _pContract = pCatalog != nullptr ? pCatalog->findContract( contractID ) : nullptr;
         _pQuestLog = pQuestLog;
         _stepIndex = 0;
         _listFound.clear();
@@ -101,7 +101,7 @@ namespace sw
         }
     }
 
-    WitcherClueResult WitcherInvestigation::investigate( const hashed_string& clueId, const float3& position )
+    WitcherClueResult WitcherInvestigation::investigate( const hashed_string& clueID, const float3& position )
     {
         if ( isSolved() )
             return WitcherClueResult::Solved;
@@ -109,39 +109,39 @@ namespace sw
         const WitcherClueDef*         pClue = nullptr;
         for ( const WitcherClueDef& clue : step._listClue )
         {
-            if ( clue._id == clueId )
+            if ( clue._id == clueID )
                 pClue = &clue;
         }
         if ( pClue == nullptr )
             return WitcherClueResult::UnknownClue;
-        if ( isFoundInternal( clueId ) )
+        if ( isFoundInternal( clueID ) )
             return WitcherClueResult::AlreadyFound;
         if ( pClue->_order > computeOpenOrder() )
             return WitcherClueResult::OutOfOrder;
         if ( WitcherContractInternal::computeDistanceSquared( position, pClue->_position ) > pClue->_radius * pClue->_radius )
             return WitcherClueResult::TooFar;
 
-        _listFound.push_back( clueId );
+        _listFound.push_back( clueID );
         WitcherInvestigationEvent found;
         found._kind   = WitcherInvestigationEvent::Kind::ClueFound;
-        found._stepId = step._id;
-        found._clueId = clueId;
+        found._stepID = step._id;
+        found._clueID = clueID;
         _eventBuffer.push( found );
         if ( _pQuestLog != nullptr )
-            (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueId );
+            (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueID );
         if ( computeOpenOrder() >= 0 )
             return WitcherClueResult::Found;
 
         // 단계의 단서를 모두 찾았다 — 일지에 알리고 다음 단계로. 단서가 없는 단계는 바로 넘긴다.
         while ( _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) && computeOpenOrder() < 0 )
         {
-            const hashed_string       stepId = _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;
+            const hashed_string       stepID = _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id;
             WitcherInvestigationEvent completed;
             completed._kind   = WitcherInvestigationEvent::Kind::StepCompleted;
-            completed._stepId = stepId;
+            completed._stepID = stepID;
             _eventBuffer.push( completed );
             if ( _pQuestLog != nullptr )
-                (void)_pQuestLog->notify( hashed_string( kStepNotifyKind ), stepId );
+                (void)_pQuestLog->notify( hashed_string( kStepNotifyKind ), stepID );
             ++_stepIndex;
             _listFound.clear();
         }
@@ -154,18 +154,18 @@ namespace sw
         return WitcherClueResult::Found;
     }
 
-    bool WitcherInvestigation::isClueFound( const hashed_string& clueId ) const
+    bool WitcherInvestigation::isClueFound( const hashed_string& clueID ) const
     {
         if ( _pContract == nullptr )
             return false;
-        if ( isFoundInternal( clueId ) )
+        if ( isFoundInternal( clueID ) )
             return true;
         // 지난 단계의 단서는 모두 찾았다.
         for ( int32 stepIndex = 0; stepIndex < _stepIndex && stepIndex < static_cast<int32>( _pContract->_listStep.size() ); ++stepIndex )
         {
             for ( const WitcherClueDef& clue : _pContract->_listStep[static_cast<size_t>( stepIndex )]._listClue )
             {
-                if ( clue._id == clueId )
+                if ( clue._id == clueID )
                     return true;
             }
         }
@@ -174,7 +174,7 @@ namespace sw
 
     bool WitcherInvestigation::isSolved() const { return _pContract == nullptr || _stepIndex >= static_cast<int32>( _pContract->_listStep.size() ); }
 
-    hashed_string WitcherInvestigation::getStepId() const { return isSolved() ? hashed_string{} : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id; }
+    hashed_string WitcherInvestigation::getStepID() const { return isSolved() ? hashed_string{} : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._id; }
 
     void WitcherInvestigation::drainEvents( vector<WitcherInvestigationEvent>& outListEvent )
     {
@@ -194,11 +194,11 @@ namespace sw
         return openOrder;
     }
 
-    bool WitcherInvestigation::isFoundInternal( const hashed_string& clueId ) const
+    bool WitcherInvestigation::isFoundInternal( const hashed_string& clueID ) const
     {
         for ( const hashed_string& found : _listFound )
         {
-            if ( found == clueId )
+            if ( found == clueID )
                 return true;
         }
         return false;
@@ -214,10 +214,10 @@ namespace sw
     {
     }
 
-    bool WitcherHaggle::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractId )
+    bool WitcherHaggle::initialize( const WitcherCatalog* pCatalog, const hashed_string& contractID )
     {
         _pCatalog    = pCatalog;
-        _pContract   = pCatalog != nullptr ? pCatalog->findContract( contractId ) : nullptr;
+        _pContract   = pCatalog != nullptr ? pCatalog->findContract( contractID ) : nullptr;
         _anger       = 0.0f;
         _offer       = _pContract != nullptr ? _pContract->_reward : 0;
         _finalReward = 0;
@@ -263,20 +263,20 @@ namespace sw
         StateArchiveUtil::writeName( outArchive, _pContract != nullptr ? _pContract->_id : hashed_string{} );
         outArchive << _stepIndex;
         outArchive << static_cast<uint32>( _listFound.size() );
-        for ( const hashed_string& clueId : _listFound )
+        for ( const hashed_string& clueID : _listFound )
         {
-            StateArchiveUtil::writeName( outArchive, clueId );
+            StateArchiveUtil::writeName( outArchive, clueID );
         }
     }
 
     bool WitcherInvestigation::readState( Archive& archive )
     {
-        hashed_string contractId;
+        hashed_string contractID;
         int32         stepIndex = 0;
         uint32        count     = 0;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractId ) == false )
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractID ) == false )
             return false;
-        const WitcherContractDef* pContract = _pCatalog->findContract( contractId );
+        const WitcherContractDef* pContract = _pCatalog->findContract( contractID );
         archive >> stepIndex;
         if ( pContract == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
             return false;
@@ -284,9 +284,9 @@ namespace sw
         if ( bStepInside == false )
             return false;
         vector<hashed_string> listFound( count );
-        for ( hashed_string& clueId : listFound )
+        for ( hashed_string& clueID : listFound )
         {
-            if ( StateArchiveUtil::readName( archive, clueId ) == false )
+            if ( StateArchiveUtil::readName( archive, clueID ) == false )
                 return false;
         }
         _pContract = pContract;
@@ -307,14 +307,14 @@ namespace sw
 
     bool WitcherHaggle::readState( Archive& archive )
     {
-        hashed_string contractId;
+        hashed_string contractID;
         float32       anger       = 0.0f;
         int32         offer       = 0;
         int32         finalReward = 0;
         uint8         bClosed     = SW_FALSE;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractId ) == false )
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, contractID ) == false )
             return false;
-        const WitcherContractDef* pContract = _pCatalog->findContract( contractId );
+        const WitcherContractDef* pContract = _pCatalog->findContract( contractID );
         archive >> anger;
         archive >> offer;
         archive >> finalReward;

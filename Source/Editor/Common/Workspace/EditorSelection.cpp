@@ -105,10 +105,10 @@ namespace sw::editor
         return editor::findGameObject( _listSelectedObject.front() );
     }
 
-    uint64 EditorSelection::getPrimaryObjectId() const
+    uint64 EditorSelection::getPrimaryObjectID() const
     {
         const GameObject* pPrimary = getPrimaryObject();
-        return pPrimary != nullptr ? pPrimary->getObjectId() : 0;
+        return pPrimary != nullptr ? pPrimary->getObjectID() : 0;
     }
 
     void EditorSelection::getSelectedObjects( vector<GameObject*>& outListObject ) const

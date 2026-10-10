@@ -59,7 +59,7 @@ namespace sw
         , _strobeCharge{ 0.0f }
         , _surgeGauge{ 0.0f }
         , _suctionTarget{ 0 }
-        , _nextGhostId{ 1 }
+        , _nextGhostID{ 1 }
         , _vacuumStage{ 0 }
     {
     }
@@ -79,27 +79,27 @@ namespace sw
         _strobeCharge  = 0.0f;
         _surgeGauge    = 0.0f;
         _suctionTarget = 0;
-        _nextGhostId   = 1;
+        _nextGhostID   = 1;
     }
 
-    uint32 GhostEncounter::spawnGhost( const hashed_string& ghostId, const float3& position )
+    uint32 GhostEncounter::spawnGhost( const hashed_string& ghostID, const float3& position )
     {
-        const GhostDef* pDef = _pCatalog != nullptr ? _pCatalog->findGhost( ghostId ) : nullptr;
+        const GhostDef* pDef = _pCatalog != nullptr ? _pCatalog->findGhost( ghostID ) : nullptr;
         if ( pDef == nullptr )
             return 0;
         GhostInstance ghost;
         ghost._pDef     = pDef;
         ghost._position = position;
         ghost._hp       = pDef->_hp;
-        ghost._id       = _nextGhostId++;
+        ghost._id       = _nextGhostID++;
         enterState( ghost, GhostState::Hidden );
         _listGhost.push_back( ghost );
         return ghost._id;
     }
 
-    void GhostEncounter::setGhostPosition( uint32 ghostId, const float3& position )
+    void GhostEncounter::setGhostPosition( uint32 ghostID, const float3& position )
     {
-        GhostInstance* pGhost = findGhostMutable( ghostId );
+        GhostInstance* pGhost = findGhostMutable( ghostID );
         if ( pGhost != nullptr )
             pGhost->_position = position;
     }
@@ -151,22 +151,22 @@ namespace sw
         return stunnedCount;
     }
 
-    bool GhostEncounter::startSuction( uint32 ghostId, const float3& playerPosition )
+    bool GhostEncounter::startSuction( uint32 ghostID, const float3& playerPosition )
     {
-        GhostInstance* pGhost = findGhostMutable( ghostId );
+        GhostInstance* pGhost = findGhostMutable( ghostID );
         if ( _suctionTarget != 0 || pGhost == nullptr || pGhost->_state != GhostState::Stunned || _pCatalog == nullptr )
             return false;
         const float3 toGhost{ pGhost->_position._x - playerPosition._x, 0.0f, pGhost->_position._z - playerPosition._z };
         if ( toGhost.getLength() > _pCatalog->getVacuum()._range )
             return false;
-        _suctionTarget = ghostId;
+        _suctionTarget = ghostID;
         _surgeGauge    = 0.0f;
         enterState( *pGhost, GhostState::Sucking );
         // 처음에는 플레이어에게서 멀어지는 쪽으로 — 그 뒤로는 간격마다 씨앗 난수로.
         pGhost->_fleeDirection = GhostEncounterInternal::flatten( toGhost );
         if ( pGhost->_fleeDirection.getLengthSquared() < 0.5f )
             chooseFleeDirection( *pGhost );
-        pushEvent( GhostEventType::SuctionStarted, ghostId );
+        pushEvent( GhostEventType::SuctionStarted, ghostID );
         return true;
     }
 
@@ -197,7 +197,7 @@ namespace sw
         tick._drag                        = pGhost->_fleeDirection * dragScale;
         if ( bAligned )
             _surgeGauge = MathUtil::min( 1.0f, _surgeGauge + deltaTime / vacuum._surgeFillTime );
-        const uint32 ghostId = pGhost->_id;
+        const uint32 ghostID = pGhost->_id;
         applySuctionDamage( *pGhost, tick._damage );
         if ( _suctionTarget == 0 )
         {
@@ -205,7 +205,7 @@ namespace sw
             return tick;
         }
         // 도망 방향 바꾸기 — 흡입이 이 시계를 쥔다(update 는 흡입 중인 유령을 건너뛴다).
-        GhostInstance* pStill = findGhostMutable( ghostId );
+        GhostInstance* pStill = findGhostMutable( ghostID );
         pStill->_timer.tick( deltaTime );
         if ( pStill->_timer.isActive() == false )
         {
@@ -288,23 +288,23 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    const GhostInstance* GhostEncounter::findGhost( uint32 ghostId ) const
+    const GhostInstance* GhostEncounter::findGhost( uint32 ghostID ) const
     {
         for ( const GhostInstance& ghost : _listGhost )
         {
-            if ( ghost._id == ghostId )
+            if ( ghost._id == ghostID )
                 return &ghost;
         }
         return nullptr;
     }
 
-    GhostInstance* GhostEncounter::findGhostMutable( uint32 ghostId )
+    GhostInstance* GhostEncounter::findGhostMutable( uint32 ghostID )
     {
-        if ( ghostId == 0 )
+        if ( ghostID == 0 )
             return nullptr;
         for ( GhostInstance& ghost : _listGhost )
         {
-            if ( ghost._id == ghostId )
+            if ( ghost._id == ghostID )
                 return &ghost;
         }
         return nullptr;
@@ -382,11 +382,11 @@ namespace sw
         pushEvent( GhostEventType::Caught, ghost._id, 0.0f, ghost._pDef->_coins );
     }
 
-    void GhostEncounter::pushEvent( GhostEventType type, uint32 ghostId, float32 amount, int32 coins )
+    void GhostEncounter::pushEvent( GhostEventType type, uint32 ghostID, float32 amount, int32 coins )
     {
         GhostEvent event;
         event._type    = type;
-        event._ghostId = ghostId;
+        event._ghostID = ghostID;
         event._amount  = amount;
         event._coins   = coins;
         _eventBuffer.push( event );
@@ -409,7 +409,7 @@ namespace sw
         outArchive << _strobeCharge;
         outArchive << _surgeGauge;
         outArchive << _suctionTarget;
-        outArchive << _nextGhostId;
+        outArchive << _nextGhostID;
         outArchive << _vacuumStage;
     }
 
@@ -425,11 +425,11 @@ namespace sw
         vector<GhostInstance> listGhost( count );
         for ( GhostInstance& ghost : listGhost )
         {
-            hashed_string ghostId;
+            hashed_string ghostID;
             uint8         state = 0;
-            if ( StateArchiveUtil::readName( archive, ghostId ) == false )
+            if ( StateArchiveUtil::readName( archive, ghostID ) == false )
                 return false;
-            ghost._pDef = _pCatalog->findGhost( ghostId );
+            ghost._pDef = _pCatalog->findGhost( ghostID );
             archive >> ghost._position;
             archive >> ghost._fleeDirection;
             archive >> ghost._hp;
@@ -444,12 +444,12 @@ namespace sw
         float32 strobeCharge  = 0.0f;
         float32 surgeGauge    = 0.0f;
         uint32  suctionTarget = 0;
-        uint32  nextGhostId   = 1;
+        uint32  nextGhostID   = 1;
         int32   vacuumStage   = 0;
         archive >> strobeCharge;
         archive >> surgeGauge;
         archive >> suctionTarget;
-        archive >> nextGhostId;
+        archive >> nextGhostID;
         archive >> vacuumStage;
         if ( archive.isError() || vacuumStage < 0 )
             return false;
@@ -466,7 +466,7 @@ namespace sw
         _strobeCharge  = strobeCharge;
         _surgeGauge    = surgeGauge;
         _suctionTarget = suctionTarget;
-        _nextGhostId   = nextGhostId;
+        _nextGhostID   = nextGhostID;
         _vacuumStage   = vacuumStage;
         _eventBuffer.clear();
         return true;

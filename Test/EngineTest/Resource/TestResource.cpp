@@ -804,7 +804,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaGivesNoIdentityToAMissingAsset )
  *          돌려줘 그 GUID 로 에셋을 다시 찾는 쪽(씬의 프리팹 · 머티리얼 참조)이 기계마다 다른 경로를 받는다.
  *          유니티 `AssetDatabase` 도 키는 프로젝트 상대 경로(`Assets/...`)다.
  */
-SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
+SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsID )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const utf8*      pAsset   = "engine/materials/defaultmaterial.material";
@@ -820,9 +820,9 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
     SW_EXPECT_STREQ( pAsset, path.c_str() );
 
     // id 로 물어도 같은 GUID 이고, 표에는 한 줄뿐이다.
-    sw::UUID fromId{};
-    SW_EXPECT_TRUE( db.tryGetGuid( pAsset, fromId ) );
-    SW_EXPECT_TRUE( fromId == fromAbsolute );
+    sw::UUID fromID{};
+    SW_EXPECT_TRUE( db.tryGetGuid( pAsset, fromID ) );
+    SW_EXPECT_TRUE( fromID == fromAbsolute );
     SW_EXPECT_TRUE( db.ensureMeta( pAsset ) == fromAbsolute );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), db.getAssetCount() );
 #else
@@ -1007,17 +1007,17 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
  * @brief [ResourceTest] `..` 로 리소스 루트 밖을 가리키는 id 는 풀지도 읽지도 않는다
  * @details `..` 를 거르지 않으면 도메인 루트에 붙은 id 가 루트 밖 파일을 읽는다.
  */
-SW_TEST_CASE( ResourceTest, ParentDirectoryIdsAreRefused )
+SW_TEST_CASE( ResourceTest, ParentDirectoryIDsAreRefused )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     // 루트 바로 위의 실제 파일을 가리킨다 — 막지 않으면 읽힌다.
-    const sw::string escapingId = "engine/../../CLAUDE.md";
+    const sw::string escapingID = "engine/../../CLAUDE.md";
     sw::string       content;
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( sw::ResourceUtil::readTextResource( escapingId, content ) );
+        SW_EXPECT_FALSE( sw::ResourceUtil::readTextResource( escapingID, content ) );
     }
-    SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( escapingId ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::getResourcePath( escapingID ).empty() );
 }
 
 /**
@@ -1056,20 +1056,20 @@ SW_TEST_CASE( ResourceTest, PackOnlyModeRefusesAbsolutePathsIntoTheResourceRoot 
  *          스프라이트가 흰 사각형이 되고, `Resource/…` 를 그대로 넘기면 씬 열기 · 에셋 포커스가 다른 형태를 받는다. 루트 밖 · `..` 는 빈 글이다 —
  *          쓰기 경로도 `..` 로 리소스 트리 밖에 쓰지 않는다(데이터에 적힌 경로 하나로 아무 곳에나 쓰지 못하게).
  */
-SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceId )
+SW_TEST_CASE( ResourceTest, EveryPathTheEditorHoldsBecomesOneResourceID )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string root = sw::FileUtil::trimTrailingSlashes( sw::ResourceUtil::getRootFolderPath() );
     SW_ASSERT_TRUE( root.empty() == false );
 
-    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( root + "/game/empty/readme.md" ).c_str() );
-    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "Resource/game/empty/readme.md" ).c_str() );
-    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "Game\\Empty\\ReadMe.md" ).c_str() );
-    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceId( "./game/empty/readme.md" ).c_str() );
-    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( sw::FileUtil::getDirectoryPart( root ) + "/Source/Engine/Engine.h" ).empty() );
-    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "game/empty/../../../escape.txt" ).empty() );
-    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "../escape.txt" ).empty() );
-    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceId( "" ).empty() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceID( root + "/game/empty/readme.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceID( "Resource/game/empty/readme.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceID( "Game\\Empty\\ReadMe.md" ).c_str() );
+    SW_EXPECT_STREQ( "game/empty/readme.md", sw::ResourceUtil::toResourceID( "./game/empty/readme.md" ).c_str() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceID( sw::FileUtil::getDirectoryPart( root ) + "/Source/Engine/Engine.h" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceID( "game/empty/../../../escape.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceID( "../escape.txt" ).empty() );
+    SW_EXPECT_TRUE( sw::ResourceUtil::toResourceID( "" ).empty() );
 
     {
         test::ScopedDefensiveTestLog expected( "a write path that climbs out of the resource tree" );

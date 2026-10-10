@@ -44,7 +44,7 @@ namespace sw::editor
         /** @brief 마지막 프레임에 실제로 그린 루트 수입니다(화면 밖의 접힌 루트는 빈자리만 두고 세지 않는다). */
         uint32 getDrawnRootCount() const { return _drawnRootCount; }
         /** @brief 마지막 프레임에 그린 마지막 루트의 오브젝트 id 입니다(없으면 0). */
-        uint64 getLastDrawnRootId() const { return _lastDrawnRootId; }
+        uint64 getLastDrawnRootID() const { return _lastDrawnRootID; }
         /** @brief 화면 밖의 접힌 루트를 빈자리로 둘지 정합니다(기본 켬). 에디터 자체 시험이 껐다 켜며 자리가 같은지 본다. */
         void setOffscreenRowSkipEnabled( bool bEnabled ) { _bSkipOffscreenRows = bEnabled; }
 
@@ -56,8 +56,8 @@ namespace sw::editor
          *          호출마다 새로 할당하므로, 버퍼를 들고 출력 매개변수 오버로드를 씁니다.
          */
         vector<GameObject*>                   _listSceneObject;
-        uint64                                _renamingObjectId;
-        uint64                                _lastDrawnRootId; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootId`)
+        uint64                                _renamingObjectID;
+        uint64                                _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
         fixed_string<constant::kMaxBuffer128> _filterBuffer;
         fixed_string<constant::kMaxBuffer256> _renameBuffer;
         uint32                                _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)

@@ -112,15 +112,15 @@ namespace sw
         return slot;
     }
 
-    ProfileScopeId FrameProfiler::registerScopeSite( const utf8* pName, [[maybe_unused]] const utf8* pFunction,
+    ProfileScopeID FrameProfiler::registerScopeSite( const utf8* pName, [[maybe_unused]] const utf8* pFunction,
                                                      [[maybe_unused]] const utf8* pFile, [[maybe_unused]] uint32 line )
     {
-        ProfileScopeId scopeId{};
-        scopeId._slot = registerScope( pName );
+        ProfileScopeID scopeID{};
+        scopeID._slot = registerScope( pName );
 #if SW_PROFILER_BACKEND_COMPILED
-        scopeId._pSite = ProfilerBackend::registerZoneSite( pName, pFunction, pFile, line );
+        scopeID._pSite = ProfilerBackend::registerZoneSite( pName, pFunction, pFile, line );
 #endif
-        return scopeId;
+        return scopeID;
     }
 
     uint32 FrameProfiler::getScopeCount() const { return MathUtil::min( _scopeCount.load( std::memory_order_acquire ), kMaxScope ); }
@@ -314,21 +314,21 @@ namespace sw
         backend.plotValue( pPlotName, static_cast<float64>( value ) );
     }
 
-    ScopedFrameProfile::ScopedFrameProfile( const ProfileScopeId& scopeId ) noexcept
+    ScopedFrameProfile::ScopedFrameProfile( const ProfileScopeID& scopeID ) noexcept
         : _startNanos{ 0 }
 #if SW_PROFILER_BACKEND_COMPILED
         , _pBackend{ nullptr }
         , _zoneToken{ 0 }
 #endif
-        , _slot{ scopeId._slot }
+        , _slot{ scopeID._slot }
     {
 #if SW_PROFILER_BACKEND_COMPILED
         // 외부 구간을 먼저 연다 — 닫을 때는 역순(시간 누적 뒤)이라 외부 구간이 이 표의 측정을 감싼다.
         IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
-        if ( pBackend != nullptr && scopeId._pSite != nullptr )
+        if ( pBackend != nullptr && scopeID._pSite != nullptr )
         {
             _pBackend  = pBackend;
-            _zoneToken = pBackend->beginZone( *scopeId._pSite );
+            _zoneToken = pBackend->beginZone( *scopeID._pSite );
         }
 #endif
         if ( _slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )

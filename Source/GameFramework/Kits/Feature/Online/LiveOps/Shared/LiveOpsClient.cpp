@@ -39,10 +39,10 @@ namespace sw
         return send( LiveOpsMethod::kRegisterDevice, body, onReply );
     }
 
-    uint64 LiveOpsClient::unregisterDevice( string_view providerId, string_view token, const ReplyDelegate& onReply )
+    uint64 LiveOpsClient::unregisterDevice( string_view providerID, string_view token, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, providerId );
+        ServiceKeyUtil::writeString( body, providerID );
         ServiceKeyUtil::writeString( body, token );
         return send( LiveOpsMethod::kUnregisterDevice, body, onReply );
     }
@@ -82,10 +82,10 @@ namespace sw
     void LiveOpsClient::onResponse( const OnlineResponse& response )
     {
         ReplyDelegate onReply;
-        if ( _callTable.take( response._requestId, onReply ) == false )
+        if ( _callTable.take( response._requestID, onReply ) == false )
             return;
         LiveOpsClientReply reply;
-        reply._requestId = response._requestId;
+        reply._requestID = response._requestID;
         reply._errorCode = response._errorCode;
         if ( response._errorCode != OnlineError::kOk || response.isOk() == false )
         {

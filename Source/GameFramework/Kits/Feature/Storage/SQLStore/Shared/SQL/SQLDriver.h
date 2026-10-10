@@ -77,7 +77,7 @@ namespace sw
         const utf8* _pDriverName{ "" };         ///< "sqlite" · "postgres" — 마이그레이션 방언 갈래 파일 이름(`NNNN_이름.<드라이버>.sql`)
         const utf8* _pBlobType{ "BLOB" };       ///< {{blob}}
         const utf8* _pKeyTextType{ "TEXT" };    ///< {{keytext}} — 바이트 순서로 정렬되는 문자열
-        const utf8* _pAutoIdColumn{ "" };       ///< {{autoid}}
+        const utf8* _pAutoIDColumn{ "" };       ///< {{autoid}}
         const utf8* _pBeginWrite{ "BEGIN" };    ///< 쓰기 트랜잭션 시작
         const utf8* _pNextCommitVersion{ "" };  ///< 다음 커밋 판 한 행 한 열을 돌려주는 문
         const utf8* _pLockMigrationTable{ "" }; ///< 마이그레이션 동안 다른 서버를 막는 문(없으면 빈 글)

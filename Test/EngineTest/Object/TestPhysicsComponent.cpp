@@ -34,7 +34,7 @@ namespace sw
         const TypeInfo* getTypeInfo() const override { return StaticType(); }
         void            onCollisionBegin( const CollisionInfo& collision ) override
         {
-            _listCollisionBeginOther.push_back( collision._pOther != nullptr ? collision._pOther->getObjectId() : 0 );
+            _listCollisionBeginOther.push_back( collision._pOther != nullptr ? collision._pOther->getObjectID() : 0 );
             _listCollisionBeginImpulse.push_back( collision._impulse );
         }
         void onCollisionEnd( const CollisionInfo& collision ) override
@@ -143,10 +143,10 @@ SW_TEST_CASE( PhysicsComponentTest, DynamicBodyLandsAndReportsCollision )
     SW_EXPECT_NEAR_EQUAL( 0.5f, pCrate->getWorldPosition()._y, 0.03f );
     SW_EXPECT_NEAR_EQUAL( -0.5f, pFloor->getWorldPosition()._y, 1e-5f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), pCrateListener->_listCollisionBeginOther.size() );
-    SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectId(), pCrateListener->_listCollisionBeginOther[0] );
+    SW_EXPECT_EQUAL( pFloor->getOwner()->getObjectID(), pCrateListener->_listCollisionBeginOther[0] );
     SW_EXPECT_TRUE( pCrateListener->_listCollisionBeginImpulse[0] > 0.0f );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), pFloorListener->_listCollisionBeginOther.size() );
-    SW_EXPECT_EQUAL( pCrate->getOwner()->getObjectId(), pFloorListener->_listCollisionBeginOther[0] );
+    SW_EXPECT_EQUAL( pCrate->getOwner()->getObjectID(), pFloorListener->_listCollisionBeginOther[0] );
     SW_EXPECT_TRUE( manager.getScenePhysics().getStepCount() >= 240 );
 
     // 코드가 옮기면 순간이동이다 — 다시 떨어진다.

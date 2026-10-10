@@ -74,7 +74,7 @@ namespace sw
          * @brief 공격이 지금 닿았습니다. 패리 창 → 막기 → 맞기 순서로 봅니다.
          * @param poiseDamage 강인도 피해(막으면 반만, 패리면 없음)
          */
-        MetroDefenseOutcome receiveAttack( float32 damage, float32 poiseDamage, int32 attackerId = -1 );
+        MetroDefenseOutcome receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID = -1 );
         /**
          * @brief 내가 @p target 을 칠 때의 피해입니다. 패리 직후(반격 창)이거나 상대 강인도가 무너졌으면 반격 배율을 곱하고, 반격 창은 그 한 번으로 닫힙니다.
          */

@@ -5,9 +5,9 @@
  *
  * 스레드 하나가 인스턴스 하나를 맡는다. 절두체를 통과하면
  *   1) 자기 배치의 `instanceCount` 를 InterlockedAdd 로 하나 올려 **자리 번호를 받고**,
- *   2) 그 자리에 자기 인스턴스 번호를 적는다 (`g_VisibleInstanceIds`).
+ *   2) 그 자리에 자기 인스턴스 번호를 적는다 (`g_VisibleInstanceIDs`).
  * 그래서 간접 인자의 개수와 인스턴스 목록이 **함께** 만들어진다. 정점 셰이더는 입력 어셈블러가 주는 인스턴스 슬롯
- * (`SW_INSTANCESLOT` — 간접 인자의 startInstanceLocation + 서수)으로 `g_SwVisibleInstanceIds[slot]` 을 읽어 자기 인스턴스를 찾는다
+ * (`SW_INSTANCESLOT` — 간접 인자의 startInstanceLocation + 서수)으로 `g_SwVisibleInstanceIDs[slot]` 을 읽어 자기 인스턴스를 찾는다
  * (`swResolveInstanceId`).
  *
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
@@ -60,7 +60,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
 SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
-SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
+SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIDs, 1 );
 
 bool isVisible(float3 center, float radius)
 {
@@ -96,7 +96,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	// 큰 투명 배치만 여기로 온다. 나머지 투명(sortMode 2)은 압축한 뒤 instancesort.hlsl 이 CPU 정렬 순서로 되돌린다.
 	if (g_BatchInfo[batchIndex].sortMode == 1u)
 	{
-		g_VisibleInstanceIds[instanceId] = instanceId;
+		g_VisibleInstanceIDs[instanceId] = instanceId;
 		return;
 	}
 
@@ -134,5 +134,5 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 
 	const uint writeAt = g_BatchInfo[batchIndex].instanceBase + slot;
 	if (writeAt < g_InstanceCount)
-		g_VisibleInstanceIds[writeAt] = instanceId;
+		g_VisibleInstanceIDs[writeAt] = instanceId;
 }

@@ -56,7 +56,7 @@ namespace sw
         {
             const size_t  start     = offset;
             const uint32  codepoint = StringUtil::decodeUtf8( text, offset );
-            FontFaceId    face      = kInvalidFontFaceId;
+            FontFaceID    face      = kInvalidFontFaceID;
             TextDirection direction = bHasRun ? current._direction : TextDirection::LeftToRight;
             const bool    bNeutral  = isNeutral( codepoint );
             if ( bNeutral && bHasRun )
@@ -66,7 +66,7 @@ namespace sw
                 if ( bCurrentFaceHasIt )
                     face = current._face;
             }
-            if ( face == kInvalidFontFaceId )
+            if ( face == kInvalidFontFaceID )
             {
                 uint32 glyphIndex = 0;
                 face              = fontSystem.findFaceForCodepoint( chain, codepoint, glyphIndex );

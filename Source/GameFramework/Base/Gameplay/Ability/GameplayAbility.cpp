@@ -136,11 +136,11 @@ namespace sw
         return _pAbilitySystem != nullptr ? _pAbilitySystem->getOwner() : nullptr;
     }
 
-    GameplayEffectSpec GameplayAbility::makeOutgoingSpec( const hashed_string& effectId ) const
+    GameplayEffectSpec GameplayAbility::makeOutgoingSpec( const hashed_string& effectID ) const
     {
         if ( _pAbilitySystem == nullptr )
             return GameplayEffectSpec{};
-        return _pAbilitySystem->makeOutgoingSpecById( effectId, _level );
+        return _pAbilitySystem->makeOutgoingSpecByID( effectID, _level );
     }
 
     ActiveEffectHandle GameplayAbility::applyEffectSpecToOwner( const GameplayEffectSpec& spec )

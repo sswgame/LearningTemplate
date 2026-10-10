@@ -191,7 +191,7 @@ namespace sw
         }
         desc._position           = position;
         desc._rotation           = rotation;
-        desc._userData           = getOwner()->getObjectId();
+        desc._userData           = getOwner()->getObjectID();
         desc._material           = _material;
         desc._mass               = _mass;
         desc._linearDamping      = _linearDamping;

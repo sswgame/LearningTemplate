@@ -436,20 +436,20 @@ SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectI
     pKept->setName( hashed_string( "Rig" ) ); // 부모와 같은 이름
 
     // 2) 씬 파일(파일 id)로 쓴다 — 남겨 둔 런타임 id 는 파일 id 공간이 아니라 비우고 이름만 남는다.
-    const ObjectSavedIdMap mapSavedId{
-        { pKept->getObjectId(), uint64{ 2 } }
+    const ObjectSavedIDMap mapSavedID{
+        { pKept->getObjectID(), uint64{ 2 } }
     };
     ObjectSaveOptions options{};
-    options._pSavedIdMap  = &mapSavedId;
+    options._pSavedIDMap  = &mapSavedID;
     const string sceneXml = ObjectStateSerializer::saveToXmlString( pKept, options );
     SW_ASSERT_TRUE( sceneXml.find( "_attachOwner=\"Rig\"" ) != string::npos );
-    SW_ASSERT_TRUE( sceneXml.find( "_attachOwnerId=\"0\"" ) != string::npos );
+    SW_ASSERT_TRUE( sceneXml.find( "_attachOwnerID=\"0\"" ) != string::npos );
 
     // 3) 같은 이름의 부모 엔티티와 한 묶음으로 읽는다 — 이름으로 그 엔티티를 찾아 붙는다.
     GameObjectManager world;
     GameObject*       pWorldRig = world.createGameObject( hashed_string( "Rig" ) );
     GameObject*       pWorldGun = world.createGameObject( hashed_string( "Rig" ) );
-    ObjectStateBatch  batch( ObjectIdSpace::Saved );
+    ObjectStateBatch  batch( ObjectIDSpace::Saved );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldRig, rigXml, { nullptr, &batch, 1 } ) );
     SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldGun, sceneXml, { nullptr, &batch, 2 } ) );
     batch.finish();
@@ -583,9 +583,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 
     SW_EXPECT_TRUE( childXml.find( "ParentGO" ) != sw::string::npos );
     SW_EXPECT_TRUE( grandXml.find( "ChildGO" ) != sw::string::npos );
-    const uint64 parentSavedId = parent->getObjectId();
-    const uint64 childSavedId  = child->getObjectId();
-    const uint64 grandSavedId  = grand->getObjectId();
+    const uint64 parentSavedID = parent->getObjectID();
+    const uint64 childSavedID  = child->getObjectID();
+    const uint64 grandSavedID  = grand->getObjectID();
 
     // 계층을 해체하고 빈 GO 를 다시 만든 뒤 한 묶음으로 읽는다(Play 스냅샷 순서). 새 오브젝트는 새 id 라, 묶음이 상태를 찍을 때의 id 로 서로를 찾는다.
     manager->clear();
@@ -597,10 +597,10 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_ASSERT_NOT_NULL( grand );
 
     // 자식을 부모보다 먼저 로드한다 — 읽는 자리에서는 부모가 아직 없고, 묶음의 끝(`finish`)이 잇는다(비순서 스냅샷 복원).
-    ObjectStateBatch batch( ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml, { nullptr, &batch, childSavedId } ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml, { nullptr, &batch, grandSavedId } ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    ObjectStateBatch batch( ObjectIDSpace::Saved );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml, { nullptr, &batch, childSavedID } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml, { nullptr, &batch, grandSavedID } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml, { nullptr, &batch, parentSavedID } ) );
     SW_EXPECT_NULL( child->getParent() );
     batch.finish();
 
@@ -1015,7 +1015,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
 
 /**
  * @brief [ObjectStateRoundTripTest] 바이너리 오브젝트 상태는 본문 크기(uint32) + 본문뿐이다 — 부모를 이름으로 적던 칸이 앞에 없다
- * @details 부모는 상태 안의 부착 필드(`_attachOwnerId` · `_attachComponent`)가 id 로 든다. 읽는 쪽이 버리기만 하던 부모 이름 칸을 쓰지 않는다.
+ * @details 부모는 상태 안의 부착 필드(`_attachOwnerID` · `_attachComponent`)가 id 로 든다. 읽는 쪽이 버리기만 하던 부모 이름 칸을 쓰지 않는다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, BinaryStateIsBodySizeThenBody )
 {

@@ -74,7 +74,7 @@ namespace sw
 {
     /**
      * @brief 펼친 프리셋 — 후보를 모두 뽑고 부모와 합친 구체 값입니다. 해석기(`AppearanceResolver`)의 입력입니다.
-     * @details `_listSlot` 은 슬롯 표의 모든 칸을 표 순서로 가집니다(빈 칸은 `_itemId` 가 빈 것).
+     * @details `_listSlot` 은 슬롯 표의 모든 칸을 표 순서로 가집니다(빈 칸은 `_itemID` 가 빈 것).
      */
     struct SW_GF_API CharacterAppearanceSpec
     {
@@ -82,7 +82,7 @@ namespace sw
         vector<AppearanceSlotRequest>    _listSlot{};
         vector<AppearanceSocketOverride> _listSocketOverride{};
         TagContainer                     _tags{};
-        hashed_string                    _presetId{};
+        hashed_string                    _presetID{};
         hashed_string                    _schema{};
         hashed_string                    _bodyType{};
         hashed_string                    _bodyShape{};

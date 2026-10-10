@@ -12,17 +12,17 @@
 namespace sw
 {
     /** @brief 요청 추적 id 128 비트입니다(0 = 없음). */
-    struct LogTraceId
+    struct LogTraceID
     {
         uint64 _high{ 0 };
         uint64 _low{ 0 };
 
         constexpr bool isValid() const { return ( _high | _low ) != 0; }
-        constexpr bool operator==( const LogTraceId& other ) const { return _high == other._high && _low == other._low; }
-        constexpr bool operator!=( const LogTraceId& other ) const { return ( *this == other ) == false; }
+        constexpr bool operator==( const LogTraceID& other ) const { return _high == other._high && _low == other._low; }
+        constexpr bool operator!=( const LogTraceID& other ) const { return ( *this == other ) == false; }
 
         /** @brief 무작위로 만듭니다(0 이 나오지 않게). 보안 값이 아니다 — 줄을 가르는 표다. */
-        SW_API static LogTraceId makeRandom();
+        SW_API static LogTraceID makeRandom();
     };
 } // namespace sw
 
@@ -34,10 +34,10 @@ namespace sw
         /** @brief `formatTag` 가 쓰는 최대 길이(널 포함) — `[trace=<32 자> acct=<16 자>] ` 는 63 자다. */
         static constexpr int32 kMaxTagSize = 64;
 
-        LogTraceId _traceId{};
-        uint64     _principalId{ 0 }; ///< 계정 id(0 = 없음)
+        LogTraceID _traceID{};
+        uint64     _principalID{ 0 }; ///< 계정 id(0 = 없음)
 
-        bool isEmpty() const { return _traceId.isValid() == false && _principalId == 0; }
+        bool isEmpty() const { return _traceID.isValid() == false && _principalID == 0; }
 
         /**
          * @brief 로그 줄 꼬리표 `[trace=<16 진 32> acct=<16 진 16>] `(있는 칸만)를 @p pOutBuffer 에 널로 끝나게 씁니다. 빈 문맥이면 빈 글입니다.

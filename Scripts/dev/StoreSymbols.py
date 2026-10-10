@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 @file StoreSymbols.py
-@brief 빌드의 심볼을 심볼 저장소 배치로 복사합니다 — 크래시 묶음의 `buildId` 로 그 빌드의 심볼을 찾는 자리입니다.
+@brief 빌드의 심볼을 심볼 저장소 배치로 복사합니다 — 크래시 묶음의 `buildID` 로 그 빌드의 심볼을 찾는 자리입니다.
 
     py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore
     py -3 -m Scripts symbols --preset Ninja-Shipping --store D:/SymbolStore --dry-run
 
 Windows: `Symbols/*.pdb`(없으면 Dev 의 `Bin/Symbols/*.pdb`)를 `<저장소>/<pdb 이름>/<GUID 32 자리><age 16진>/<pdb 이름>`(symstore · 심볼 서버 배치)로.
-PDB 의 GUID · age 는 PDB 자신의 정보 스트림(스트림 1)에서 읽는다 — 실행 파일의 RSDS 와 같은 값이다(`ModuleBuildId` 가 만드는 열쇠).
+PDB 의 GUID · age 는 PDB 자신의 정보 스트림(스트림 1)에서 읽는다 — 실행 파일의 RSDS 와 같은 값이다(`ModuleBuildID` 가 만드는 열쇠).
 리눅스: `Symbols/*.debug` 를 `<저장소>/.build-id/<앞 2 자리>/<나머지>.debug`(gdb · Sentry 배치)로 — build-id 는 `.note.gnu.build-id` 에서 읽는다.
 배포물(`Bin`)에는 심볼을 싣지 않는다.
 """
@@ -126,12 +126,12 @@ def main(listArgument: list[str] | None = None) -> int:
             guidText, age = signature
             destination = args.store / path.name / f"{guidText}{age:X}" / path.name
         else:
-            buildId = readBuildIdInternal(path)
-            if buildId is None or len(buildId) < 3:
+            buildID = readBuildIdInternal(path)
+            if buildID is None or len(buildID) < 3:
                 print(f"  [skip] {path.name}: no .note.gnu.build-id", file=sys.stderr)
                 failedCount += 1
                 continue
-            destination = args.store / ".build-id" / buildId[:2] / f"{buildId[2:]}.debug"
+            destination = args.store / ".build-id" / buildID[:2] / f"{buildID[2:]}.debug"
         if storeFileInternal(path, destination, args.dry_run):
             copiedCount += 1
     print(f"{copiedCount} stored, {len(listFile) - copiedCount - failedCount} already present, {failedCount} skipped")

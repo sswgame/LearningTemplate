@@ -58,7 +58,7 @@ namespace sw
     /** @brief 순위 구간 → 뽑기 표입니다. */
     struct KartRankTable
     {
-        hashed_string _tableId{};
+        hashed_string _tableID{};
         int32         _fromPlace{ 1 };
         int32         _toPlace{ 1 };
     };
@@ -88,8 +88,8 @@ namespace sw
 
         /** @brief @p racerCount 명 중 @p place 등이 상자에서 받을 아이템입니다. 표가 없거나 비면 nullptr 입니다. */
         const KartItemDef* rollItem( int32 place, int32 racerCount, GameRandom& random ) const;
-        /** @brief @p place 등이 @p itemId 를 받을 확률입니다(도움말 · 밸런스 시험). */
-        float32 computeItemChance( int32 place, int32 racerCount, const hashed_string& itemId ) const;
+        /** @brief @p place 등이 @p itemID 를 받을 확률입니다(도움말 · 밸런스 시험). */
+        float32 computeItemChance( int32 place, int32 racerCount, const hashed_string& itemID ) const;
         /** @brief 순위가 쓰는 표입니다. 없으면 nullptr 입니다. */
         const KartRankTable* findRankTable( int32 place, int32 racerCount ) const;
 

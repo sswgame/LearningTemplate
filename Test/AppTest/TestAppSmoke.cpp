@@ -307,26 +307,26 @@ namespace
     }
 
 #if defined( SW_PLATFORM_WINDOWS )
-    /** @brief 프로세스 @p processId 의 엔진 창을 찾습니다. 보일 때까지 @p timeoutSeconds 만큼 기다리고, 못 찾으면 nullptr 입니다. */
-    HWND waitForEngineWindow( DWORD processId, int32 timeoutSeconds )
+    /** @brief 프로세스 @p processID 의 엔진 창을 찾습니다. 보일 때까지 @p timeoutSeconds 만큼 기다리고, 못 찾으면 nullptr 입니다. */
+    HWND waitForEngineWindow( DWORD processID, int32 timeoutSeconds )
     {
         struct WindowSearch
         {
-            DWORD _processId{ 0 };
+            DWORD _processID{ 0 };
             HWND  _hWnd{ nullptr };
         };
         const Deadline deadline = Deadline::afterMilliseconds( static_cast<int64>( timeoutSeconds ) * 1000 );
         while ( deadline.isExpired() == false )
         {
-            WindowSearch search{ processId, nullptr };
+            WindowSearch search{ processID, nullptr };
             EnumWindows( []( HWND hWnd, LPARAM lParam ) -> BOOL
             {
                 WindowSearch* pSearch = reinterpret_cast<WindowSearch*>( lParam );
-                DWORD         ownerId = 0;
-                GetWindowThreadProcessId( hWnd, &ownerId );
+                DWORD         ownerID = 0;
+                GetWindowThreadProcessId( hWnd, &ownerID );
                 utf16 className[64]{};
                 GetClassNameW( hWnd, className, 64 );
-                if ( ownerId == pSearch->_processId && IsWindowVisible( hWnd ) != FALSE && wcscmp( className, L"SWEngineWindowClass_OWNDC" ) == 0 )
+                if ( ownerID == pSearch->_processID && IsWindowVisible( hWnd ) != FALSE && wcscmp( className, L"SWEngineWindowClass_OWNDC" ) == 0 )
                 {
                     pSearch->_hWnd = hWnd;
                     return FALSE;
@@ -360,7 +360,7 @@ SW_TEST_CASE( AppSmokeTest, WindowCloseEndsTheApp )
         }
     } );
 
-    const HWND hWnd          = waitForEngineWindow( static_cast<DWORD>( process.getProcessId() ), 60 );
+    const HWND hWnd          = waitForEngineWindow( static_cast<DWORD>( process.getProcessID() ), 60 );
     bool       bExitedInTime = false;
     if ( hWnd != nullptr )
     {

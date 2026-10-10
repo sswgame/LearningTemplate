@@ -46,9 +46,9 @@ SW_TEST_CASE( NavMeshCrowdTest, TwoAgentsPassEachOtherInACorridor )
     params._avoidanceQuality = sw::NavAvoidanceQuality::Good;
     const sw::float3          westStart{ 2.0f, 0.0f, 1.5f };
     const sw::float3          eastStart{ 18.0f, 0.0f, 1.5f };
-    const sw::NavCrowdAgentId west = pCrowd->addAgent( westStart, params );
-    const sw::NavCrowdAgentId east = pCrowd->addAgent( eastStart, params );
-    SW_ASSERT_TRUE( west != sw::NavigationConstant::kInvalidAgentId && east != sw::NavigationConstant::kInvalidAgentId );
+    const sw::NavCrowdAgentID west = pCrowd->addAgent( westStart, params );
+    const sw::NavCrowdAgentID east = pCrowd->addAgent( eastStart, params );
+    SW_ASSERT_TRUE( west != sw::NavigationConstant::kInvalidAgentID && east != sw::NavigationConstant::kInvalidAgentID );
     SW_EXPECT_EQUAL( 2u, pCrowd->getActiveAgentCount() );
     SW_ASSERT_TRUE( pCrowd->requestMoveTarget( west, eastStart ) );
     SW_ASSERT_TRUE( pCrowd->requestMoveTarget( east, westStart ) );

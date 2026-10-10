@@ -90,17 +90,17 @@ namespace sw
     struct AdminRequest
     {
         vector<ServiceMailAttachment> _listAttachment{}; ///< SendMail · BulkMail · CreateCampaign
-        vector<AccountId>             _listAccountId{};  ///< BulkMail(16 이하)
+        vector<AccountID>             _listAccountID{};  ///< BulkMail(16 이하)
         string                        _displayName{};    ///< LookupAccount — 계정 id 대신(이 프로세스에 붙어 있는 계정만)
         string                        _subject{};        ///< ListAudit — 주체 접두(`acct.<16 진>/` …)
-        string                        _assetId{};
+        string                        _assetID{};
         string                        _reasonCode{}; ///< 제재 표시 사유(로컬라이제이션 키)
         string                        _memo{};       ///< 티켓 · 사유(바꾸는 명령은 필수, 1 KB 이하)
         string                        _titleKey{};
         string                        _body{};
         string                        _cursor{};
-        AccountId                     _accountId{ kInvalidAccountId };
-        uint64                        _batchId{ 0 }; ///< BulkMail 배치 · CreateCampaign id
+        AccountID                     _accountID{ kInvalidAccountID };
+        uint64                        _batchID{ 0 }; ///< BulkMail 배치 · CreateCampaign id
         int64                         _amount{ 0 };  ///< AdjustAsset — 양수 지급, 음수 회수
         int64                         _untilMs{ 0 }; ///< SetSanction — 0 = 풂
         int64                         _startMs{ 0 };
@@ -121,7 +121,7 @@ namespace sw
         string                _reason{};
         string                _memo{};
         int64                 _timeMs{ 0 };
-        uint64                _actorId{ 0 };
+        uint64                _actorID{ 0 };
         LedgerActorKind       _actorKind{ LedgerActorKind::System };
     };
 } // namespace sw

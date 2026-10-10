@@ -59,19 +59,19 @@ namespace sw
     {
         for ( XmlNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
         {
-            const utf8* pIdStr = node.findAttribute( "id" );
-            if ( StringUtil::isNullOrEmpty( pIdStr ) )
+            const utf8* pIDStr = node.findAttribute( "id" );
+            if ( StringUtil::isNullOrEmpty( pIDStr ) )
                 continue;
 
             MonsterDef monsterDef;
-            monsterDef._id       = pIdStr;
+            monsterDef._id       = pIDStr;
             const utf8* pNameStr = node.findAttribute( "name" );
             if ( pNameStr != nullptr )
                 monsterDef._name = pNameStr;
             else
                 monsterDef._name = monsterDef._id;
 
-            monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ), pIdStr );
+            monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ), pIDStr );
 
             XmlNode statsNode = node.findChild( "Stats" );
             if ( statsNode.isValid() )
@@ -84,7 +84,7 @@ namespace sw
                 monsterDef._invincibility = statsNode.getAttributeFloat( "invincibility", monsterDef._invincibility );
                 monsterDef._radius        = statsNode.getAttributeFloat( "radius", monsterDef._radius );
                 if ( monsterDef._speed > MonsterDef::kMaxSpeed )
-                    SW_LOG_WARNING( "Monster '%#': speed %# is above %# m/s - the catalog is in meters, was it written in pixels?", pIdStr, monsterDef._speed,
+                    SW_LOG_WARNING( "Monster '%#': speed %# is above %# m/s - the catalog is in meters, was it written in pixels?", pIDStr, monsterDef._speed,
                                     MonsterDef::kMaxSpeed );
             }
 
@@ -127,11 +127,11 @@ namespace sw
                 // 속성 이름이 곧 보상 이름이다. 코드가 보상 종류를 알 필요가 없다.
                 for ( XmlAttribute attr = dropNode.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
-                    const utf8* pRewardId = attr.getName();
-                    if ( StringUtil::isNullOrEmpty( pRewardId ) )
+                    const utf8* pRewardID = attr.getName();
+                    if ( StringUtil::isNullOrEmpty( pRewardID ) )
                         continue;
-                    monsterDef._mapDrop.insert_or_assign( hashed_string( pRewardId ),
-                                                          dropNode.getAttributeInt( pRewardId, 0 ) );
+                    monsterDef._mapDrop.insert_or_assign( hashed_string( pRewardID ),
+                                                          dropNode.getAttributeInt( pRewardID, 0 ) );
                 }
             }
 
@@ -168,7 +168,7 @@ namespace sw
         _mapMonster.clear();
     }
 
-    MonsterArchetype MonsterCatalog::parseArchetype( const utf8* pStr, const utf8* pMonsterId )
+    MonsterArchetype MonsterCatalog::parseArchetype( const utf8* pStr, const utf8* pMonsterID )
     {
         if ( pStr == nullptr )
             return MonsterArchetype::MeleePatrol;
@@ -178,7 +178,7 @@ namespace sw
         if ( engine::getTypeRegistry().enumFromString( pStr, archetype ) )
             return archetype;
 
-        SW_LOG_WARNING( "Monster '%#': unknown archetype '%#' — using MeleePatrol", pMonsterId, pStr );
+        SW_LOG_WARNING( "Monster '%#': unknown archetype '%#' — using MeleePatrol", pMonsterID, pStr );
         return MonsterArchetype::MeleePatrol;
     }
 } // namespace sw

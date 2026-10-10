@@ -25,7 +25,7 @@ namespace sw
     /** @brief 답이 누구 것인지 — 맡은 요청 id 와 그 요청의 몇 번째 명령인지입니다. */
     struct RespCommandTag
     {
-        uint64 _requestId{ 0 };
+        uint64 _requestID{ 0 };
         uint32 _step{ 0 };
     };
 } // namespace sw

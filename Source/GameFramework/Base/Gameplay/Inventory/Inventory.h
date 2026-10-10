@@ -27,7 +27,7 @@ namespace sw
     {
         CustomizationValueSet _customization{};    ///< 아이템 인스턴스의 꾸미기 값(염색 · 부착물 · 변형 — 외형 스키마가 뜻을 정한다)
         vector<hashed_string> _listDetachedPart{}; ///< 맞아서 떨어져 나간 외형 부품 이름(모자가 날아감 · 갑옷 판이 깨짐)
-        hashed_string         _itemId{};
+        hashed_string         _itemID{};
         int32                 _count{ 0 };
         float32               _durability{ 0.0f }; ///< 닳는 아이템만(겹치지 않는다)
         float32               _damage{ 0.0f };     ///< 맞아서 입은 외형 피해 0..1(내구도와 별개로 쌓는다 — 외형 피해 단계는 둘 중 큰 쪽)
@@ -60,11 +60,11 @@ namespace sw
         void setMaxWeight( float32 maxWeight );
 
         /** @brief 넣고, 넣은 개수를 돌려줍니다(칸 · 무게가 모자라면 일부만). */
-        int32 addItem( const hashed_string& itemId, int32 count );
+        int32 addItem( const hashed_string& itemID, int32 count );
         /** @brief 칸 하나(내구도 포함)를 통째로 넣습니다. 다 들어갔으면 true 입니다. */
         [[nodiscard]] bool addStack( const InventorySlot& stack );
         /** @brief @p count 개가 모두 있으면 뺍니다(뒤 칸부터). */
-        [[nodiscard]] bool removeItem( const hashed_string& itemId, int32 count );
+        [[nodiscard]] bool removeItem( const hashed_string& itemID, int32 count );
         /** @brief 칸에서 @p count 개까지 빼고 뺀 것을 돌려줍니다. */
         InventorySlot takeFromSlot( int32 slot, int32 count );
         /** @brief 칸을 옮깁니다 — 같은 아이템이면 합치고(넘치면 남김), 아니면 바꿉니다. */
@@ -77,12 +77,12 @@ namespace sw
         bool wearSlot( int32 slot, float32 amount );
         void clear();
 
-        int32 getItemCount( const hashed_string& itemId ) const;
-        bool  hasItem( const hashed_string& itemId, int32 count = 1 ) const { return getItemCount( itemId ) >= count; }
+        int32 getItemCount( const hashed_string& itemID ) const;
+        bool  hasItem( const hashed_string& itemID, int32 count = 1 ) const { return getItemCount( itemID ) >= count; }
         bool  hasItems( const ItemStackList& items ) const;
         /** @brief @p count 개가 다 들어갈 자리(칸 · 무게)가 있는가입니다. */
-        bool                 hasRoomFor( const hashed_string& itemId, int32 count ) const;
-        int32                findFirstSlot( const hashed_string& itemId ) const;
+        bool                 hasRoomFor( const hashed_string& itemID, int32 count ) const;
+        int32                findFirstSlot( const hashed_string& itemID ) const;
         int32                countEmptySlots() const;
         float32              computeWeight() const;
         float32              getMaxWeight() const { return _maxWeight; }
@@ -100,8 +100,8 @@ namespace sw
 
     private:
         bool    isValidSlot( int32 slot ) const { return slot >= 0 && slot < static_cast<int32>( _listSlot.size() ); }
-        int32   computeWeightRoom( const hashed_string& itemId, int32 count ) const;
-        float32 getItemWeight( const hashed_string& itemId ) const;
+        int32   computeWeightRoom( const hashed_string& itemID, int32 count ) const;
+        float32 getItemWeight( const hashed_string& itemID ) const;
 
         vector<InventorySlot> _listSlot;
         const ItemCatalog*    _pCatalog;

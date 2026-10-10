@@ -24,7 +24,7 @@ namespace sw
     {
     }
 
-    const CachedGlyph* GlyphCache::findOrAddGlyph( FontFaceId face, uint32 glyphIndex, uint64 frameIndex )
+    const CachedGlyph* GlyphCache::findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex )
     {
         const uint64 key  = makeKey( face, glyphIndex );
         const auto   iter = _mapGlyph.find( key );
@@ -69,13 +69,13 @@ namespace sw
         return &inserted.first->second;
     }
 
-    void GlyphCache::forgetFace( FontFaceId face )
+    void GlyphCache::forgetFace( FontFaceID face )
     {
         vector<uint64> listKey;
         for ( const auto& [key, glyph] : _mapGlyph )
         {
             (void)glyph;
-            if ( static_cast<FontFaceId>( key >> 32 ) == face )
+            if ( static_cast<FontFaceID>( key >> 32 ) == face )
                 listKey.push_back( key );
         }
         for ( const uint64 key : listKey )

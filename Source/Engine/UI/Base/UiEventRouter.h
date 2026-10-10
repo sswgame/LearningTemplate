@@ -21,11 +21,11 @@ namespace sw
      */
     struct UiWidgetPath
     {
-        vector<WidgetId> _listWidget{};
+        vector<WidgetID> _listWidget{};
 
         bool     isEmpty() const { return _listWidget.empty(); }
-        WidgetId getLeaf() const { return _listWidget.empty() ? kInvalidWidgetId : _listWidget.back(); }
-        bool     contains( WidgetId id ) const;
+        WidgetID getLeaf() const { return _listWidget.empty() ? kInvalidWidgetID : _listWidget.back(); }
+        bool     contains( WidgetID id ) const;
     };
 } // namespace sw
 
@@ -46,13 +46,13 @@ namespace sw
          */
         static bool hitTest( const WidgetTree& tree, const float2& screenPoint, UiWidgetPath& outPath );
         /** @brief @p widget 까지의 조상 경로(뿌리 → @p widget)를 만듭니다. 트리에 없으면 false 이고 경로는 빕니다. */
-        static bool makePathTo( const WidgetTree& tree, WidgetId widget, UiWidgetPath& outPath );
+        static bool makePathTo( const WidgetTree& tree, WidgetID widget, UiWidgetPath& outPath );
         /**
          * @brief 경로로 포인터 사건을 보냅니다 — 터널링(앞에서부터) 뒤 버블링(뒤에서부터). 처리한 위젯이 나오면 멈춥니다.
          * @param outHandler 처리한 위젯 번호(없으면 무효).
          */
-        static UiReply routePointerEvent( const WidgetTree& tree, const UiWidgetPath& path, const UiPointerEvent& event, WidgetId& outHandler );
+        static UiReply routePointerEvent( const WidgetTree& tree, const UiWidgetPath& path, const UiPointerEvent& event, WidgetID& outHandler );
         /** @brief 경로로 행동 사건을 보냅니다(포커스 경로). 규칙은 포인터와 같습니다. */
-        static UiReply routeActionEvent( const WidgetTree& tree, const UiWidgetPath& path, const UiActionEvent& event, WidgetId& outHandler );
+        static UiReply routeActionEvent( const WidgetTree& tree, const UiWidgetPath& path, const UiActionEvent& event, WidgetID& outHandler );
     };
 } // namespace sw

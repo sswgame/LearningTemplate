@@ -980,7 +980,7 @@ SW_TEST_CASE( ControlTest, UiConsumedInputDoesNotReachThePawn )
         auto                 root    = sw::make_unique<uitest::TestPanelWidget>( "menuRoot" );
         auto*                pButton = static_cast<uitest::TestBoxWidget*>( root->addChild( sw::make_unique<uitest::TestBoxWidget>( "play", true ) ) );
         const UiScreenHandle menu    = ui.pushScreen( sw::make_unique<UiScreen>( UiScreenDesc{}, std::move( root ) ) );
-        SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( menu )->getTree(), pButton->getId() ) );
+        SW_ASSERT_TRUE( ui.getFocusManager().setFocus( ui.findScreen( menu )->getTree(), pButton->getID() ) );
 
         GameObjectManager manager;
         GameObject*       pPawnObject = Internal::spawnPawn( manager, "Hero", float3{ 0.0f, 0.0f, 0.0f } );

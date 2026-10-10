@@ -93,7 +93,7 @@ namespace sw
     /** @brief 격자 위에 생긴 서식지 하나입니다. */
     struct HabitatInstance
     {
-        hashed_string _habitatId{};
+        hashed_string _habitatID{};
         vector<int32> _listTile{};    ///< 차지한 칸(y × width + x)
         int2          _origin{};      ///< 회전한 패턴의 왼쪽 아래 칸
         int32         _id{ 0 };       ///< 사라질 때까지 같은 번호(생물이 가리킨다)
@@ -106,7 +106,7 @@ namespace sw
     /** @brief 마을에 사는 생물 하나입니다. */
     struct TownCreature
     {
-        hashed_string _speciesId{};
+        hashed_string _speciesID{};
         vector<int32> _listAbilityUse{}; ///< 종의 `_listAbility` 와 같은 자리 — 오늘 쓴 횟수
         int32         _habitat{ -1 };    ///< 머무는 서식지 번호(`HabitatInstance::_id`, 사라졌으면 −1)
         int32         _house{ -1 };      ///< 사는 집 자리(없으면 −1)
@@ -188,23 +188,23 @@ namespace sw
         /** @brief 시계 · 날씨로 이번 시의 방문을 굴립니다. 찾아온 수입니다. */
         int32 attractVisitors( const WorldClock& clock, const WeatherSystem& weather );
         /** @brief 날 · 시 · 때 · 날씨를 직접 줍니다(시험 · 서버). */
-        int32 attractVisitorsAt( int32 day, int32 hour, DayPhase phase, const hashed_string& weatherId );
+        int32 attractVisitorsAt( int32 day, int32 hour, DayPhase phase, const hashed_string& weatherID );
 
-        CreatureInteractResult talkTo( const hashed_string& speciesId );
+        CreatureInteractResult talkTo( const hashed_string& speciesID );
         /** @brief @p inventory 에서 하나를 빼서 줍니다 — 좋아하는 선물 · 음식 · 그 밖으로 점수가 다릅니다. */
-        CreatureInteractResult giveGift( const hashed_string& speciesId, const hashed_string& itemId, Inventory& inventory );
-        CreatureRequestResult  startRequest( const hashed_string& speciesId, const hashed_string& questId );
+        CreatureInteractResult giveGift( const hashed_string& speciesID, const hashed_string& itemID, Inventory& inventory );
+        CreatureRequestResult  startRequest( const hashed_string& speciesID, const hashed_string& questID );
         /**
          * @brief 부탁의 `Deliver` 목표에 아이템을 건넵니다. 목표가 그것을 세었을 때만 @p inventory 에서 뺍니다.
          * @return 진행한 목표 수(0 이면 아무것도 빼지 않았다).
          */
-        int32 deliverItem( const hashed_string& itemId, int32 count, Inventory& inventory );
+        int32 deliverItem( const hashed_string& itemID, int32 count, Inventory& inventory );
         /** @brief 능력으로 칸을 바꿉니다. 얻은 아이템은 @p pYieldInventory(없어도 된다)에 넣습니다. */
-        CreatureAbilityResult useAbility( const hashed_string& speciesId, const hashed_string& abilityId, int32 x, int32 y, Inventory* pYieldInventory );
+        CreatureAbilityResult useAbility( const hashed_string& speciesID, const hashed_string& abilityID, int32 x, int32 y, Inventory* pYieldInventory );
 
         /** @brief 빈 칸에 집을 짓습니다. 집 자리 번호, 밖이거나 칸이 차 있거나 공유 땅이 남의 것이면 −1 입니다. */
         int32               placeHouse( int32 x, int32 y, int32 capacity );
-        CreatureHouseResult assignHouse( const hashed_string& speciesId, int32 houseIndex );
+        CreatureHouseResult assignHouse( const hashed_string& speciesID, int32 houseIndex );
         /** @brief 집 없는 생물을 온 순서대로 자리가 남은 가장 가까운 집(서식지 기준 맨해튼 거리, 같으면 앞 집)에 넣습니다. 넣은 수입니다. */
         int32 assignHomeless();
 
@@ -217,19 +217,19 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
         const hashed_string*           findObject( int32 x, int32 y ) const;
-        const TownCreature*            findCreature( const hashed_string& speciesId ) const;
-        const HabitatInstance*         findHabitat( int32 habitatInstanceId ) const;
+        const TownCreature*            findCreature( const hashed_string& speciesID ) const;
+        const HabitatInstance*         findHabitat( int32 habitatInstanceID ) const;
         const vector<TownCreature>&    getCreatures() const { return _listCreature; }
         const vector<HabitatInstance>& getHabitats() const { return _listHabitat; }
         const vector<CreatureHouse>&   getHouses() const { return _listHouse; }
         /** @brief 그 레시피의 서식지 수입니다. */
-        int32 countHabitats( const hashed_string& habitatId ) const;
+        int32 countHabitats( const hashed_string& habitatID ) const;
         /** @brief 서식지에 머무는 생물 수입니다. */
-        int32 countResidents( int32 habitatInstanceId ) const;
+        int32 countResidents( int32 habitatInstanceID ) const;
         /** @brief 오늘 남은 능력 횟수입니다. 모르면 0 입니다. */
-        int32         countAbilityUsesLeft( const hashed_string& speciesId, const hashed_string& abilityId ) const;
-        int32         getFriendship( const hashed_string& speciesId ) const;
-        hashed_string getFriendshipTier( const hashed_string& speciesId ) const;
+        int32         countAbilityUsesLeft( const hashed_string& speciesID, const hashed_string& abilityID ) const;
+        int32         getFriendship( const hashed_string& speciesID ) const;
+        hashed_string getFriendshipTier( const hashed_string& speciesID ) const;
         /** @brief 사는 생물의 호감도 평균입니다(없으면 0). */
         float32 computeAverageFriendship() const;
         /** @brief 매력도 점수입니다(서식지 종류 · 생물 수 · 호감도 평균). */
@@ -248,15 +248,15 @@ namespace sw
         /** @brief 패턴을 그 자리 · 회전에 맞춰 봅니다. 맞으면 차지할 칸을 @p outListTile 에 적습니다. */
         bool  matchesAt( const HabitatDef& habitat, int32 rotation, int32 originX, int32 originY, const vector<uint8>& listClaimed,
                          vector<int32>& outListTile ) const;
-        int32 findCreatureIndex( const hashed_string& speciesId ) const;
+        int32 findCreatureIndex( const hashed_string& speciesID ) const;
         bool  hasRoom( const HabitatInstance& instance ) const;
         void  notifyHabitatObjectives();
         /** @brief 호감도를 바꾸고 단계가 바뀌었으면 알립니다(빌린 평판의 알림은 꺼내지 않는다 — 앞뒤 단계를 견준다). */
-        void changeFriendship( const hashed_string& speciesId, int32 delta );
+        void changeFriendship( const hashed_string& speciesID, int32 delta );
         /** @brief 받은 부탁 중 끝난 것에 보상하고 목록에서 뺍니다(실패 · 포기는 보상 없이). 일지 알림은 꺼내지 않는다. */
         void collectCompletedRequests();
-        /** @brief 부탁 @p questId 를 하는(마을에 사는) 생물에게 호감도를 줍니다. 준 생물이 있으면 true 입니다. */
-        bool rewardRequest( const hashed_string& questId );
+        /** @brief 부탁 @p questID 를 하는(마을에 사는) 생물에게 호감도를 줍니다. 준 생물이 있으면 true 입니다. */
+        bool rewardRequest( const hashed_string& questID );
         void updateAppealTier();
         int2 computeCreatureAnchor( const TownCreature& creature ) const;
         bool isBlockingObject( const hashed_string& object ) const;
@@ -274,7 +274,7 @@ namespace sw
         const WorldClock*              _pClock;      ///< 빌린 시계(날 — 없으면 0 일)
         GridTopology                   _topology;
         LandBinding                    _land; ///< 빌린 공유 땅(없으면 단독)
-        int32                          _nextHabitatId;
+        int32                          _nextHabitatID;
         int32                          _lastAttractKey; ///< 마지막으로 방문을 굴린 날 × 24 + 시
         int32                          _appealTier;
     };

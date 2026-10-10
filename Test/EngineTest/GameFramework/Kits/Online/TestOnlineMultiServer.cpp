@@ -44,10 +44,10 @@ namespace
         unique_ptr<IStreamTransport> _transport;
         OnlineServiceHost            _host;
 
-        ServerNode( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, MemoryEphemeralDatabase& cacheDatabase, LocalServerBusHub& hub, uint64 serverId )
+        ServerNode( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, MemoryEphemeralDatabase& cacheDatabase, LocalServerBusHub& hub, uint64 serverID )
             : _store{ &database }
             , _cache{ &cacheDatabase }
-            , _bus{ &hub, serverId }
+            , _bus{ &hub, serverID }
             , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
             , _accountServer{}
@@ -66,13 +66,13 @@ namespace
             accountSettings._refreshIntervalMs           = 1000000000; // 세션 다시 읽기는 끈다 — 버스만으로 닫혀야 한다
             accountSettings._presence._refreshIntervalMs = 1000;
             _accountServer.initialize( &_loginService, accountSettings );
-            _tradeService.initialize( &_store, &_tradePolicy, nullptr, serverId, TradeSettings{} );
+            _tradeService.initialize( &_store, &_tradePolicy, nullptr, serverID, TradeSettings{} );
             _tradeServer.initialize( &_tradeService, &_loginService, _accountServer.getPresence() );
             SW_EXPECT_TRUE( _host.registerService( &_accountServer ) );
             SW_EXPECT_TRUE( _host.registerService( &_tradeServer ) );
             OnlineServiceHostSettings hostSettings;
             hostSettings._transportSettings._ioThreadCount = 0;
-            hostSettings._listenAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverId ) );
+            hostSettings._listenAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverID ) );
             hostSettings._pServiceStore                    = &_store;
             hostSettings._pEphemeralStore                  = &_cache;
             hostSettings._pServerBus                       = &_bus;
@@ -102,7 +102,7 @@ namespace
         TradeClient                  _trade;
         OnlineServiceClient          _client;
 
-        ClientNode( LoopbackStreamNetwork& network, uint64 serverId )
+        ClientNode( LoopbackStreamNetwork& network, uint64 serverID )
             : _transport{ network.createTransport() }
             , _account{}
             , _trade{}
@@ -114,7 +114,7 @@ namespace
             SW_EXPECT_TRUE( _client.registerClientService( &_trade ) );
             OnlineServiceClientSettings settings;
             settings._transportSettings._ioThreadCount = 0;
-            settings._serverAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverId ) );
+            settings._serverAddress                    = NetAddress::makeLoopback( static_cast<uint16>( kFirstPort + serverID ) );
             settings._maxBackoffMs                     = 200;
             string error;
             SW_EXPECT_TRUE_MSG( _client.initialize( _transport.get(), settings, error ), error.c_str() );
@@ -165,7 +165,7 @@ namespace
             }
         }
 
-        AccountClientReply waitAccount( ClientNode& client, uint64 requestId )
+        AccountClientReply waitAccount( ClientNode& client, uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -173,7 +173,7 @@ namespace
                 (void)client._account.pollReplies( listReply );
                 for ( AccountClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -181,7 +181,7 @@ namespace
             return AccountClientReply{};
         }
 
-        TradeClientReply waitTrade( ClientNode& client, uint64 requestId )
+        TradeClientReply waitTrade( ClientNode& client, uint64 requestID )
         {
             for ( int32 attempt = 0; attempt < 400; ++attempt )
             {
@@ -189,7 +189,7 @@ namespace
                 (void)client._trade.pollReplies( listReply );
                 for ( TradeClientReply& reply : listReply )
                 {
-                    if ( reply._requestId == requestId )
+                    if ( reply._requestID == requestID )
                         return std::move( reply );
                 }
                 step();
@@ -200,7 +200,7 @@ namespace
         }
 
         /** @brief 앨리스는 A, 밥은 B 에 가입 · 로그인합니다. 계정 id 를 채운다. */
-        bool loginAliceOnAAndBobOnB( AccountId& outAliceId, AccountId& outBobId )
+        bool loginAliceOnAAndBobOnB( AccountID& outAliceID, AccountID& outBobID )
         {
             for ( int32 attempt = 0; attempt < 400 && ( _aliceOnA._client.isReady() == false || _bobOnB._client.isReady() == false ); ++attempt )
             {
@@ -210,29 +210,29 @@ namespace
                                      waitAccount( _bobOnB, _bobOnB._account.registerAccount( "bob", "password123" ) )._result == LoginResult::Ok;
             const AccountClientReply aliceLogin = waitAccount( _aliceOnA, _aliceOnA._account.login( "alice", "password123" ) );
             const AccountClientReply bobLogin   = waitAccount( _bobOnB, _bobOnB._account.login( "bob", "password123" ) );
-            outAliceId                          = aliceLogin._grant._identity._accountId;
-            outBobId                            = bobLogin._grant._identity._accountId;
-            _aliceOnA._trade.setAccountId( outAliceId );
-            _bobOnB._trade.setAccountId( outBobId );
+            outAliceID                          = aliceLogin._grant._identity._accountID;
+            outBobID                            = bobLogin._grant._identity._accountID;
+            _aliceOnA._trade.setAccountID( outAliceID );
+            _bobOnB._trade.setAccountID( outBobID );
             step( 4 ); // 접속 상태가 캐시에 적힌다
             return bRegistered && aliceLogin._result == LoginResult::Ok && bobLogin._result == LoginResult::Ok;
         }
 
-        void grant( AccountId accountId, const utf8* pAsset, int64 amount )
+        void grant( AccountID accountID, const utf8* pAsset, int64 amount )
         {
             LedgerTransferRequest request;
-            request._journalKey = string( "test/grant." ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountId );
+            request._journalKey = string( "test/grant." ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountID );
             request._reason     = "test.grant";
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), pAsset, amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), pAsset, amount } );
             LedgerTransferOutcome outcome;
             (void)Ledger::executeTransfer( _database, request, outcome );
         }
 
-        int64 readAmount( AccountId accountId, const utf8* pAsset )
+        int64 readAmount( AccountID accountID, const utf8* pAsset )
         {
             LedgerBalance balance;
             // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
-            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), pAsset, balance );
+            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), pAsset, balance );
             return balance._amount;
         }
 
@@ -259,10 +259,10 @@ namespace
 SW_TEST_CASE( OnlineMultiServerTest, LoginOnAnotherServerClosesTheOldConnectionThroughTheBus )
 {
     MultiServerRig rig;
-    AccountId      aliceId = kInvalidAccountId;
-    AccountId      bobId   = kInvalidAccountId;
-    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
-    SW_ASSERT_TRUE( rig._serverA._accountServer.findSessionId( aliceId ) != 0 );
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
+    SW_ASSERT_TRUE( rig._serverA._accountServer.findSessionID( aliceID ) != 0 );
 
     for ( int32 attempt = 0; attempt < 400 && rig._aliceOnB._client.isReady() == false; ++attempt )
     {
@@ -278,8 +278,8 @@ SW_TEST_CASE( OnlineMultiServerTest, LoginOnAnotherServerClosesTheOldConnectionT
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() ); // 세션 다시 읽기는 꺼져 있다 — 버스가 닫았다
     SW_EXPECT_EQUAL( int32( LoginRevokeReason::DuplicateLogin ), int32( listEvent[0]._reason ) );
-    SW_EXPECT_EQUAL( uint64( 0 ), rig._serverA._accountServer.findSessionId( aliceId ) );
-    SW_EXPECT_EQUAL( secondLogin._grant._token._sessionId, rig._serverB._accountServer.findSessionId( aliceId ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), rig._serverA._accountServer.findSessionID( aliceID ) );
+    SW_EXPECT_EQUAL( secondLogin._grant._token._sessionID, rig._serverB._accountServer.findSessionID( aliceID ) );
     rig.step( 4 );
     SW_EXPECT_TRUE( rig._aliceOnB._account.isLoggedIn() ); // 옛 서버의 떠남이 새 서버의 접속 표시를 지우지 않는다
     AccountIdentity found;
@@ -289,10 +289,10 @@ SW_TEST_CASE( OnlineMultiServerTest, LoginOnAnotherServerClosesTheOldConnectionT
 SW_TEST_CASE( OnlineMultiServerTest, AdministrativeRevokeOnOneServerReachesTheOtherWithItsReasonCode )
 {
     MultiServerRig rig;
-    AccountId      aliceId = kInvalidAccountId;
-    AccountId      bobId   = kInvalidAccountId;
-    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
-    rig._serverA._accountServer.revokeAccountSessions( bobId, "gm.kick", rig._nowMs ); // 밥은 B 에 붙어 있다
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
+    rig._serverA._accountServer.revokeAccountSessions( bobID, "gm.kick", rig._nowMs ); // 밥은 B 에 붙어 있다
     vector<AccountClientEvent> listEvent;
     for ( int32 attempt = 0; attempt < 50 && listEvent.empty(); ++attempt )
     {
@@ -302,27 +302,27 @@ SW_TEST_CASE( OnlineMultiServerTest, AdministrativeRevokeOnOneServerReachesTheOt
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_EQUAL( int32( LoginRevokeReason::Administrative ), int32( listEvent[0]._reason ) );
     SW_EXPECT_TRUE( listEvent[0]._reasonCode == "gm.kick" );
-    SW_EXPECT_EQUAL( uint64( 0 ), rig._serverB._accountServer.findSessionId( bobId ) );
+    SW_EXPECT_EQUAL( uint64( 0 ), rig._serverB._accountServer.findSessionID( bobID ) );
 }
 
 SW_TEST_CASE( OnlineMultiServerTest, TradeWithAPeerOnAnotherServerSettlesAndBothSidesArePushed )
 {
     MultiServerRig rig;
-    AccountId      aliceId = kInvalidAccountId;
-    AccountId      bobId   = kInvalidAccountId;
-    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
-    rig.grant( aliceId, "item.sword", 1 );
-    rig.grant( bobId, "cur.gold", 500 );
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
+    rig.grant( aliceID, "item.sword", 1 );
+    rig.grant( bobID, "cur.gold", 500 );
 
     const TradeClientReply invited = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "BOB" ) ); // A 의 디렉터리에 없다 — 캐시로 찾는다
     SW_ASSERT_EQUAL( int32( TradeResult::Ok ), int32( invited._result ) );
-    const uint64 tradeId = invited._snapshot._tradeId;
+    const uint64 tradeID = invited._snapshot._tradeID;
     rig.step( 6 );
     vector<TradeClientUpdate> listBobUpdate;
     (void)rig._bobOnB._trade.pollUpdates( listBobUpdate );
     SW_ASSERT_TRUE( MultiServerRig::hasUpdateKind( listBobUpdate, TradeMethod::kPushInvited ) ); // 버스로 건너온 초대 알림
 
-    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.respond( tradeId, true ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.respond( tradeID, true ) )._result == TradeResult::Ok );
     rig.step( 6 );
     const vector<TradeLeg> listAliceLeg = {
         TradeLeg{ "item.sword", 1 }
@@ -330,17 +330,17 @@ SW_TEST_CASE( OnlineMultiServerTest, TradeWithAPeerOnAnotherServerSettlesAndBoth
     const vector<TradeLeg> listBobLeg = {
         TradeLeg{ "cur.gold", 300 }
     };
-    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.setOffer( tradeId, listAliceLeg ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.setOffer( tradeID, listAliceLeg ) )._result == TradeResult::Ok );
     rig.step( 6 );
-    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.setOffer( tradeId, listBobLeg ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.setOffer( tradeID, listBobLeg ) )._result == TradeResult::Ok );
     rig.step( 6 );
-    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.lock( tradeId ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.lock( tradeID ) )._result == TradeResult::Ok );
     rig.step( 6 );
-    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.lock( tradeId ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.lock( tradeID ) )._result == TradeResult::Ok );
     rig.step( 6 ); // 두 쪽 모두 상대의 잠금 · 판을 알림으로 봤다
-    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.confirm( tradeId ) )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.confirm( tradeID ) )._result == TradeResult::Ok );
     rig.step( 6 );
-    const TradeClientReply settled = rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.confirm( tradeId ) );
+    const TradeClientReply settled = rig.waitTrade( rig._bobOnB, rig._bobOnB._trade.confirm( tradeID ) );
     SW_ASSERT_EQUAL( int32( TradeResult::Ok ), int32( settled._result ) );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
     rig.step( 6 );
@@ -348,8 +348,8 @@ SW_TEST_CASE( OnlineMultiServerTest, TradeWithAPeerOnAnotherServerSettlesAndBoth
     (void)rig._aliceOnA._trade.pollUpdates( listAliceUpdate );
     SW_ASSERT_TRUE( listAliceUpdate.empty() == false );
     SW_EXPECT_EQUAL( TradeMethod::kPushClosed, listAliceUpdate.back()._kind ); // B 에서 정산 — A 의 앨리스에게 버스로
-    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( bobId, "item.sword" ) );
-    SW_EXPECT_EQUAL( int64( 300 ), rig.readAmount( aliceId, "cur.gold" ) );
+    SW_EXPECT_EQUAL( int64( 1 ), rig.readAmount( bobID, "item.sword" ) );
+    SW_EXPECT_EQUAL( int64( 300 ), rig.readAmount( aliceID, "cur.gold" ) );
     LedgerAuditReport report;
     SW_ASSERT_TRUE( LedgerAudit::computeReport( rig._database, report ) == ServiceStoreResult::Ok );
     SW_EXPECT_TRUE( report.isBalanced() );
@@ -358,46 +358,46 @@ SW_TEST_CASE( OnlineMultiServerTest, TradeWithAPeerOnAnotherServerSettlesAndBoth
 SW_TEST_CASE( OnlineMultiServerTest, WipedCacheComesBackOnTheNextPresenceRefresh )
 {
     MultiServerRig rig;
-    AccountId      aliceId = kInvalidAccountId;
-    AccountId      bobId   = kInvalidAccountId;
-    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
     rig._cacheDatabase.clearData(); // 캐시 서버가 다시 떴다
     const TradeClientReply lost = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( int32( TradeResult::PeerOffline ), int32( lost._result ) );
     rig.step( 60 ); // 다시 적기 주기(시험 1 초) 를 넘긴다
     const TradeClientReply found = rig.waitTrade( rig._aliceOnA, rig._aliceOnA._trade.invite( "bob" ) );
     SW_EXPECT_EQUAL( int32( TradeResult::Ok ), int32( found._result ) );
-    SW_EXPECT_TRUE( found._snapshot.findSideIndex( bobId ) >= 0 );
+    SW_EXPECT_TRUE( found._snapshot.findSideIndex( bobID ) >= 0 );
 }
 
-SW_TEST_CASE( OnlineMultiServerTest, PresenceFindsTheServerOfAnAccountByIdAndByName )
+SW_TEST_CASE( OnlineMultiServerTest, PresenceFindsTheServerOfAnAccountByIDAndByName )
 {
     MultiServerRig rig;
-    AccountId      aliceId = kInvalidAccountId;
-    AccountId      bobId   = kInvalidAccountId;
-    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceId, bobId ) );
+    AccountID      aliceID = kInvalidAccountID;
+    AccountID      bobID   = kInvalidAccountID;
+    SW_ASSERT_TRUE( rig.loginAliceOnAAndBobOnB( aliceID, bobID ) );
     IAccountPresence* pPresence = rig._serverA._accountServer.getPresence();
     // 두 서비스가 같은 창구로 같이 찾는다 — 각자 맡긴 결과만 받는다.
     PresenceRecorder chatRecorder;
     PresenceRecorder socialRecorder;
-    const uint64     bobLookup     = pPresence->submitFindByAccount( bobId, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
-    const uint64     aliceLookup   = pPresence->submitFindByAccount( aliceId, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
+    const uint64     bobLookup     = pPresence->submitFindByAccount( bobID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
+    const uint64     aliceLookup   = pPresence->submitFindByAccount( aliceID, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
     const uint64     nameLookup    = pPresence->submitFindByDisplayName( "BOB", AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &socialRecorder ) );
     const uint64     offlineLookup = pPresence->submitFindByAccount( 0xDEAD, AccountPresenceDelegate::create<&PresenceRecorder::onFound>( &chatRecorder ) );
     SW_EXPECT_TRUE( chatRecorder._listResult.empty() ); // 맡긴 자리에서 부르지 않는다
     rig.step( 2 );
 
     SW_ASSERT_EQUAL( size_t( 2 ), chatRecorder._listResult.size() );
-    SW_EXPECT_EQUAL( bobLookup, chatRecorder._listResult[0]._requestId );
-    SW_EXPECT_EQUAL( bobId, chatRecorder._listResult[0]._identity._accountId );
-    SW_EXPECT_EQUAL( uint64( 2 ), chatRecorder._listResult[0]._serverId );
-    SW_EXPECT_EQUAL( offlineLookup, chatRecorder._listResult[1]._requestId );
+    SW_EXPECT_EQUAL( bobLookup, chatRecorder._listResult[0]._requestID );
+    SW_EXPECT_EQUAL( bobID, chatRecorder._listResult[0]._identity._accountID );
+    SW_EXPECT_EQUAL( uint64( 2 ), chatRecorder._listResult[0]._serverID );
+    SW_EXPECT_EQUAL( offlineLookup, chatRecorder._listResult[1]._requestID );
     SW_EXPECT_FALSE( chatRecorder._listResult[1].isOnline() );
     SW_ASSERT_EQUAL( size_t( 2 ), socialRecorder._listResult.size() );
-    SW_EXPECT_EQUAL( aliceLookup, socialRecorder._listResult[0]._requestId );
-    SW_EXPECT_EQUAL( uint64( 1 ), socialRecorder._listResult[0]._serverId ); // 이 서버
-    SW_EXPECT_EQUAL( nameLookup, socialRecorder._listResult[1]._requestId );
-    SW_EXPECT_EQUAL( bobId, socialRecorder._listResult[1]._identity._accountId );
+    SW_EXPECT_EQUAL( aliceLookup, socialRecorder._listResult[0]._requestID );
+    SW_EXPECT_EQUAL( uint64( 1 ), socialRecorder._listResult[0]._serverID ); // 이 서버
+    SW_EXPECT_EQUAL( nameLookup, socialRecorder._listResult[1]._requestID );
+    SW_EXPECT_EQUAL( bobID, socialRecorder._listResult[1]._identity._accountID );
     SW_EXPECT_TRUE( socialRecorder._listResult[1]._identity._displayName == "bob" );
-    SW_EXPECT_EQUAL( uint64( 2 ), socialRecorder._listResult[1]._serverId );
+    SW_EXPECT_EQUAL( uint64( 2 ), socialRecorder._listResult[1]._serverID );
 }

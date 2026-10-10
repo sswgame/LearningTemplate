@@ -85,21 +85,21 @@ namespace sw
                 writer.writeBits( kFormatVersion, 8 );
                 ServiceKeyUtil::writeString( writer, info._name );
                 ServiceKeyUtil::writeString( writer, info._notice );
-                writer.writeVarUint( info._masterId );
+                writer.writeVarUint( info._masterID );
                 writer.writeVarInt( info._createdMs );
                 writer.writeVarInt( info._memberCount );
                 return writer.getBytes();
             }
 
-            [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildId, GuildInfo& outInfo )
+            [[nodiscard]] static bool decodeGuild( const vector<uint8>& bytes, uint64 guildID, GuildInfo& outInfo )
             {
                 BitReader  reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 const bool bHeadOk = reader.readBits( 8 ) == kFormatVersion && ServiceKeyUtil::readString( reader, GuildLimit::kMaxNameSize, outInfo._name ) &&
                                      ServiceKeyUtil::readString( reader, GuildLimit::kMaxNoticeSize, outInfo._notice );
                 if ( bHeadOk == false )
                     return false;
-                outInfo._guildId     = guildId;
-                outInfo._masterId    = reader.readVarUint();
+                outInfo._guildID     = guildID;
+                outInfo._masterID    = reader.readVarUint();
                 outInfo._createdMs   = reader.readVarInt();
                 outInfo._memberCount = static_cast<int32>( reader.readVarInt() );
                 return reader.hasOverflowed() == false;
@@ -127,7 +127,7 @@ namespace sw
                 return true;
             }
 
-            static vector<uint8> encodeId( uint64 value )
+            static vector<uint8> encodeID( uint64 value )
             {
                 BitWriter writer;
                 writer.writeBits( kFormatVersion, 8 );
@@ -135,7 +135,7 @@ namespace sw
                 return writer.getBytes();
             }
 
-            [[nodiscard]] static bool decodeId( const vector<uint8>& bytes, uint64& outValue )
+            [[nodiscard]] static bool decodeID( const vector<uint8>& bytes, uint64& outValue )
             {
                 BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
                 if ( reader.readBits( 8 ) != kFormatVersion )
@@ -144,11 +144,11 @@ namespace sw
                 return reader.hasOverflowed() == false;
             }
 
-            static vector<uint8> encodeInvite( AccountId inviterId, int64 expiresMs )
+            static vector<uint8> encodeInvite( AccountID inviterID, int64 expiresMs )
             {
                 BitWriter writer;
                 writer.writeBits( kFormatVersion, 8 );
-                writer.writeVarUint( inviterId );
+                writer.writeVarUint( inviterID );
                 writer.writeVarInt( expiresMs );
                 return writer.getBytes();
             }
@@ -209,20 +209,20 @@ namespace sw
             }
 
             /** @brief 계정의 길드를 읽습니다 — Ok(있음) · NotFound(없음) · Unavailable. */
-            static ServiceStoreResult readAccountGuild( IServiceStoreConnection& connection, AccountId accountId, uint64& outGuildId, ServiceRecord& outRecord )
+            static ServiceStoreResult readAccountGuild( IServiceStoreConnection& connection, AccountID accountID, uint64& outGuildID, ServiceRecord& outRecord )
             {
-                outGuildId                    = 0;
-                const ServiceStoreResult read = connection.readRecord( GuildServiceInternal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountId ), outRecord );
+                outGuildID                    = 0;
+                const ServiceStoreResult read = connection.readRecord( GuildServiceInternal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( accountID ), outRecord );
                 if ( read != ServiceStoreResult::Ok )
                     return read == ServiceStoreResult::NotFound ? ServiceStoreResult::NotFound : ServiceStoreResult::Unavailable;
-                return GuildServiceInternal::decodeId( outRecord._bytes, outGuildId ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
+                return GuildServiceInternal::decodeID( outRecord._bytes, outGuildID ) ? ServiceStoreResult::Ok : ServiceStoreResult::Unavailable;
             }
 
             ServiceStoreResult runOnce( IServiceStoreConnection& connection )
             {
                 ServiceRecord            selfGuildRecord;
-                uint64                   guildId  = 0;
-                const ServiceStoreResult selfRead = readAccountGuild( connection, _request._accountId, guildId, selfGuildRecord );
+                uint64                   guildID  = 0;
+                const ServiceStoreResult selfRead = readAccountGuild( connection, _request._accountID, guildID, selfGuildRecord );
                 if ( selfRead == ServiceStoreResult::Unavailable )
                     return ServiceStoreResult::Unavailable;
                 const bool bSelfInGuild = selfRead == ServiceStoreResult::Ok;
@@ -240,13 +240,13 @@ namespace sw
                     {
                         if ( bSelfInGuild == false )
                             return fail( SocialResult::NotInGuild );
-                        _outcome._guildId    = guildId;
-                        _outcome._attachedId = _request._accountId;
+                        _outcome._guildID    = guildID;
+                        _outcome._attachedID = _request._accountID;
                         return ServiceStoreResult::Ok;
                     }
                     default:
                     {
-                        return bSelfInGuild ? runInGuild( connection, guildId, selfGuildRecord ) : fail( SocialResult::NotInGuild );
+                        return bSelfInGuild ? runInGuild( connection, guildID, selfGuildRecord ) : fail( SocialResult::NotInGuild );
                     }
                 }
             }
@@ -265,28 +265,28 @@ namespace sw
                     return fail( SocialResult::GuildNameTaken );
                 if ( nameRead != ServiceStoreResult::NotFound || ( sequenceRead != ServiceStoreResult::Ok && sequenceRead != ServiceStoreResult::NotFound ) )
                     return ServiceStoreResult::Unavailable;
-                uint64 nextId = 1;
-                if ( sequenceRead == ServiceStoreResult::Ok && Internal::decodeId( sequenceRecord._bytes, nextId ) == false )
+                uint64 nextID = 1;
+                if ( sequenceRead == ServiceStoreResult::Ok && Internal::decodeID( sequenceRecord._bytes, nextID ) == false )
                     return ServiceStoreResult::Unavailable;
                 GuildInfo info;
-                info._guildId     = nextId;
+                info._guildID     = nextID;
                 info._name        = _request._text;
-                info._masterId    = _request._accountId;
+                info._masterID    = _request._accountID;
                 info._createdMs   = _request._nowMs;
                 info._memberCount = 1;
                 ServiceTransaction transaction;
-                transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, Internal::encodeId( nextId + 1 ), sequenceRecord._version );
-                transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( nextId ), Internal::encodeGuild( info ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextId, _request._accountId ), Internal::encodeMember( GuildRole::Master, _request._nowMs ),
+                transaction.put( Internal::getSequenceTable(), Internal::kSequenceKey, Internal::encodeID( nextID + 1 ), sequenceRecord._version );
+                transaction.put( Internal::getGuildTable(), ServiceKeyUtil::makeHex64( nextID ), Internal::encodeGuild( info ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( nextID, _request._accountID ), Internal::encodeMember( GuildRole::Master, _request._nowMs ),
                                  ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountId ), Internal::encodeId( nextId ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getNameTable(), nameKey, Internal::encodeId( nextId ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
+                transaction.put( Internal::getNameTable(), nameKey, Internal::encodeID( nextID ), ServiceRecord::kAbsentVersion );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
                     _outcome._info     = info;
-                    _outcome._guildId  = nextId;
-                    _outcome._joinedId = _request._accountId;
+                    _outcome._guildID  = nextID;
+                    _outcome._joinedID = _request._accountID;
                 }
                 return commitResult; // 이름이 그새 잡혔으면 다시 읽어 GuildNameTaken
             }
@@ -298,8 +298,8 @@ namespace sw
                 ServiceRecord guildRecord;
                 int64         expiresMs = 0;
                 GuildInfo     info;
-                const string  inviteKey = Internal::makePairKey( _request._accountId, _request._guildId );
-                const string  guildKey  = ServiceKeyUtil::makeHex64( _request._guildId );
+                const string  inviteKey = Internal::makePairKey( _request._accountID, _request._guildID );
+                const string  guildKey  = ServiceKeyUtil::makeHex64( _request._guildID );
                 const bool    bInvited  = connection.readRecord( Internal::getInviteTable(), inviteKey, inviteRecord ) == ServiceStoreResult::Ok &&
                                       Internal::decodeInviteExpiry( inviteRecord._bytes, expiresMs );
                 if ( bInvited == false )
@@ -307,7 +307,7 @@ namespace sw
                 if ( _request._nowMs >= expiresMs )
                     return fail( SocialResult::InviteExpired );
                 const bool bGuildOk = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                      Internal::decodeGuild( guildRecord._bytes, _request._guildId, info );
+                                      Internal::decodeGuild( guildRecord._bytes, _request._guildID, info );
                 if ( bGuildOk == false )
                     return fail( SocialResult::NotFound ); // 해산된 길드
                 if ( info._memberCount >= GuildLimit::kMaxMember )
@@ -315,37 +315,37 @@ namespace sw
                 ++info._memberCount;
                 ServiceTransaction transaction;
                 transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
-                transaction.put( Internal::getMemberTable(), Internal::makePairKey( _request._guildId, _request._accountId ),
+                transaction.put( Internal::getMemberTable(), Internal::makePairKey( _request._guildID, _request._accountID ),
                                  Internal::encodeMember( GuildRole::Member, _request._nowMs ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountId ), Internal::encodeId( _request._guildId ),
+                transaction.put( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), Internal::encodeID( _request._guildID ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.erase( Internal::getInviteTable(), inviteKey, inviteRecord._version );
                 const ServiceStoreResult commitResult = connection.commit( transaction );
                 if ( commitResult == ServiceStoreResult::Ok )
                 {
-                    _outcome._guildId  = _request._guildId;
-                    _outcome._joinedId = _request._accountId;
+                    _outcome._guildID  = _request._guildID;
+                    _outcome._joinedID = _request._accountID;
                 }
                 return commitResult;
             }
 
             /** @brief "내 길드" 위의 요청(조회 · 초대 · 떠나기 · 내보내기 · 역할 · 공지)입니다. */
-            ServiceStoreResult runInGuild( IServiceStoreConnection& connection, uint64 guildId, const ServiceRecord& selfGuildRecord )
+            ServiceStoreResult runInGuild( IServiceStoreConnection& connection, uint64 guildID, const ServiceRecord& selfGuildRecord )
             {
                 using Internal = GuildServiceInternal;
                 ServiceRecord guildRecord;
                 ServiceRecord selfMemberRecord;
                 GuildInfo     info;
                 GuildMember   selfMember;
-                const string  guildKey = ServiceKeyUtil::makeHex64( guildId );
+                const string  guildKey = ServiceKeyUtil::makeHex64( guildID );
                 const bool    bReadOk  = connection.readRecord( Internal::getGuildTable(), guildKey, guildRecord ) == ServiceStoreResult::Ok &&
-                                     Internal::decodeGuild( guildRecord._bytes, guildId, info ) &&
-                                     connection.readRecord( Internal::getMemberTable(), Internal::makePairKey( guildId, _request._accountId ), selfMemberRecord ) ==
+                                     Internal::decodeGuild( guildRecord._bytes, guildID, info ) &&
+                                     connection.readRecord( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord ) ==
                                          ServiceStoreResult::Ok &&
                                      Internal::decodeMember( selfMemberRecord._bytes, selfMember );
                 if ( bReadOk == false )
                     return ServiceStoreResult::Unavailable;
-                _outcome._guildId = guildId;
+                _outcome._guildID = guildID;
 
                 ServiceTransaction transaction;
                 switch ( _request._operation )
@@ -359,26 +359,26 @@ namespace sw
                     {
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
-                        if ( _request._targetId == kInvalidAccountId || _request._targetId == _request._accountId )
+                        if ( _request._targetID == kInvalidAccountID || _request._targetID == _request._accountID )
                             return fail( SocialResult::Invalid );
-                        uint64                   targetGuildId = 0;
+                        uint64                   targetGuildID = 0;
                         ServiceRecord            targetRecord;
-                        const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetId, targetGuildId, targetRecord );
+                        const ServiceStoreResult targetRead = readAccountGuild( connection, _request._targetID, targetGuildID, targetRecord );
                         if ( targetRead == ServiceStoreResult::Unavailable )
                             return ServiceStoreResult::Unavailable;
                         if ( targetRead == ServiceStoreResult::Ok )
                             return fail( SocialResult::AlreadyInGuild );
-                        transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetId, guildId ),
-                                         Internal::encodeInvite( _request._accountId, _request._nowMs + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮는다
-                        _outcome._invitedId = _request._targetId;
+                        transaction.put( Internal::getInviteTable(), Internal::makePairKey( _request._targetID, guildID ),
+                                         Internal::encodeInvite( _request._accountID, _request._nowMs + GuildLimit::kInviteLifetimeMs ) ); // 다시 보내면 덮는다
+                        _outcome._invitedID = _request._targetID;
                         return connection.commit( transaction );
                     }
                     case GuildOperation::Leave:
                     {
                         if ( selfMember._role == GuildRole::Master && info._memberCount > 1 )
                             return fail( SocialResult::NotAllowed ); // 넘기고 떠난다
-                        transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildId, _request._accountId ), selfMemberRecord._version );
-                        transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountId ), selfGuildRecord._version );
+                        transaction.erase( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ), selfMemberRecord._version );
+                        transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._accountID ), selfGuildRecord._version );
                         if ( selfMember._role == GuildRole::Master ) // 혼자 남은 길드장 — 해산
                         {
                             transaction.erase( Internal::getGuildTable(), guildKey, guildRecord._version );
@@ -389,13 +389,13 @@ namespace sw
                             --info._memberCount;
                             transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
                         }
-                        _outcome._leftId = _request._accountId;
+                        _outcome._leftID = _request._accountID;
                         return connection.commit( transaction );
                     }
                     case GuildOperation::Kick:
                     case GuildOperation::SetRole:
                     {
-                        return runMemberChange( connection, guildId, info, guildRecord, selfMember, selfMemberRecord );
+                        return runMemberChange( connection, guildID, info, guildRecord, selfMember, selfMemberRecord );
                     }
                     case GuildOperation::SetNotice:
                     {
@@ -415,15 +415,15 @@ namespace sw
             }
 
             /** @brief 내보내기 · 역할 바꾸기(길드장 넘기기 포함)입니다. */
-            ServiceStoreResult runMemberChange( IServiceStoreConnection& connection, uint64 guildId, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
+            ServiceStoreResult runMemberChange( IServiceStoreConnection& connection, uint64 guildID, GuildInfo& inoutInfo, const ServiceRecord& guildRecord,
                                                 const GuildMember& selfMember, const ServiceRecord& selfMemberRecord )
             {
                 using Internal = GuildServiceInternal;
                 ServiceRecord targetMemberRecord;
                 GuildMember   targetMember;
-                const string  targetMemberKey = Internal::makePairKey( guildId, _request._targetId );
-                const string  guildKey        = ServiceKeyUtil::makeHex64( guildId );
-                const bool    bTargetOk       = _request._targetId != _request._accountId &&
+                const string  targetMemberKey = Internal::makePairKey( guildID, _request._targetID );
+                const string  guildKey        = ServiceKeyUtil::makeHex64( guildID );
+                const bool    bTargetOk       = _request._targetID != _request._accountID &&
                                        connection.readRecord( Internal::getMemberTable(), targetMemberKey, targetMemberRecord ) == ServiceStoreResult::Ok &&
                                        Internal::decodeMember( targetMemberRecord._bytes, targetMember );
                 if ( bTargetOk == false )
@@ -434,15 +434,15 @@ namespace sw
                     if ( selfMember._role <= targetMember._role )
                         return fail( SocialResult::NotAllowed );
                     ServiceRecord            targetGuildRecord;
-                    uint64                   targetGuildId = 0;
-                    const ServiceStoreResult targetRead    = readAccountGuild( connection, _request._targetId, targetGuildId, targetGuildRecord );
+                    uint64                   targetGuildID = 0;
+                    const ServiceStoreResult targetRead    = readAccountGuild( connection, _request._targetID, targetGuildID, targetGuildRecord );
                     if ( targetRead == ServiceStoreResult::Unavailable )
                         return ServiceStoreResult::Unavailable;
                     --inoutInfo._memberCount;
                     transaction.erase( Internal::getMemberTable(), targetMemberKey, targetMemberRecord._version );
-                    transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetId ), targetGuildRecord._version );
+                    transaction.erase( Internal::getAccountGuildTable(), ServiceKeyUtil::makeHex64( _request._targetID ), targetGuildRecord._version );
                     transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
-                    _outcome._leftId = _request._targetId;
+                    _outcome._leftID = _request._targetID;
                     return connection.commit( transaction );
                 }
                 if ( selfMember._role != GuildRole::Master )
@@ -450,9 +450,9 @@ namespace sw
                 transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
                 if ( _request._role == GuildRole::Master ) // 길드장 넘기기 — 나는 임원으로
                 {
-                    transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildId, _request._accountId ),
+                    transaction.put( Internal::getMemberTable(), Internal::makePairKey( guildID, _request._accountID ),
                                      Internal::encodeMember( GuildRole::Officer, selfMember._joinedMs ), selfMemberRecord._version );
-                    inoutInfo._masterId = _request._targetId;
+                    inoutInfo._masterID = _request._targetID;
                     transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( inoutInfo ), guildRecord._version );
                 }
                 return connection.commit( transaction );
@@ -461,21 +461,21 @@ namespace sw
             /** @brief 성공 뒤 회원 목록을 읽습니다 — 조회는 정보로, 바꾸기는 알림 대상으로. */
             void collectMembers( IServiceStoreConnection& connection )
             {
-                const bool bSkip = _outcome._guildId == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite;
+                const bool bSkip = _outcome._guildID == 0 || _request._operation == GuildOperation::Attach || _request._operation == GuildOperation::Invite;
                 if ( bSkip )
                     return;
                 vector<ServiceRecord> listRecord;
-                const string          prefix = ServiceKeyUtil::makeHex64( _outcome._guildId ) + "/";
+                const string          prefix = ServiceKeyUtil::makeHex64( _outcome._guildID ) + "/";
                 if ( connection.listRecords( GuildServiceInternal::getMemberTable(), prefix, "", GuildLimit::kMaxMember, false, listRecord ) != ServiceStoreResult::Ok )
                     return; // 알림만 빠진다(클라이언트가 다시 조회)
                 for ( const ServiceRecord& record : listRecord )
                 {
                     GuildMember member;
-                    const bool  bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), member._accountId ) &&
+                    const bool  bParsed = ServiceKeyUtil::parseHex64( string_view( record._key ).substr( prefix.size() ), member._accountID ) &&
                                          GuildServiceInternal::decodeMember( record._bytes, member );
                     if ( bParsed == false )
                         continue;
-                    _outcome._listNotifyMember.push_back( member._accountId );
+                    _outcome._listNotifyMember.push_back( member._accountID );
                     if ( _request._operation == GuildOperation::Get )
                         _outcome._info._listMember.push_back( member );
                 }
@@ -535,11 +535,11 @@ namespace sw
         _pStore->submit( sw::make_unique<GuildWork>( this, request, requestTag ) );
     }
 
-    void GuildService::attachAccount( AccountId accountId, int64 nowMs )
+    void GuildService::attachAccount( AccountID accountID, int64 nowMs )
     {
         GuildRequest request;
         request._operation = GuildOperation::Attach;
-        request._accountId = accountId;
+        request._accountID = accountID;
         request._nowMs     = nowMs;
         submit( request, 0 );
     }
@@ -557,30 +557,30 @@ namespace sw
         }
         if ( outcome._result != SocialResult::Ok )
             return;
-        if ( outcome._attachedId != kInvalidAccountId )
-            raiseEvent( outcome._attachedId, outcome._guildId, GuildEvent::Kind::MemberAttached );
-        if ( outcome._joinedId != kInvalidAccountId )
-            raiseEvent( outcome._joinedId, outcome._guildId, GuildEvent::Kind::Joined );
-        if ( outcome._leftId != kInvalidAccountId )
+        if ( outcome._attachedID != kInvalidAccountID )
+            raiseEvent( outcome._attachedID, outcome._guildID, GuildEvent::Kind::MemberAttached );
+        if ( outcome._joinedID != kInvalidAccountID )
+            raiseEvent( outcome._joinedID, outcome._guildID, GuildEvent::Kind::Joined );
+        if ( outcome._leftID != kInvalidAccountID )
         {
-            raiseEvent( outcome._leftId, outcome._guildId, GuildEvent::Kind::Left );
-            if ( outcome._leftId != request._accountId ) // 내보내진 사람 — 이제 회원 목록에 없다
-                _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._leftId, request._accountId, outcome._guildId, SocialNotificationKind::GuildChanged } );
+            raiseEvent( outcome._leftID, outcome._guildID, GuildEvent::Kind::Left );
+            if ( outcome._leftID != request._accountID ) // 내보내진 사람 — 이제 회원 목록에 없다
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._leftID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
         }
-        if ( outcome._invitedId != kInvalidAccountId )
-            _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._invitedId, request._accountId, outcome._guildId, SocialNotificationKind::GuildInvited } );
+        if ( outcome._invitedID != kInvalidAccountID )
+            _notificationBuffer.push( SocialNotification{ SocialPresence{}, outcome._invitedID, request._accountID, outcome._guildID, SocialNotificationKind::GuildInvited } );
         if ( request._operation == GuildOperation::Get )
             return;
-        for ( const AccountId memberId : outcome._listNotifyMember )
+        for ( const AccountID memberID : outcome._listNotifyMember )
         {
-            if ( memberId != request._accountId )
-                _notificationBuffer.push( SocialNotification{ SocialPresence{}, memberId, request._accountId, outcome._guildId, SocialNotificationKind::GuildChanged } );
+            if ( memberID != request._accountID )
+                _notificationBuffer.push( SocialNotification{ SocialPresence{}, memberID, request._accountID, outcome._guildID, SocialNotificationKind::GuildChanged } );
         }
     }
 
-    void GuildService::raiseEvent( AccountId accountId, uint64 guildId, GuildEvent::Kind kind )
+    void GuildService::raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind )
     {
         if ( _onEvent.isBound() )
-            _onEvent( GuildEvent{ accountId, guildId, kind } );
+            _onEvent( GuildEvent{ accountID, guildID, kind } );
     }
 } // namespace sw

@@ -41,7 +41,7 @@ namespace sw
         , _backoffMs{ 0 }
         , _serverTimeMs{ 0 }
         , _remoteConfigHash{ 0 }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _gateOwnerRange{ 0 }
         , _state{ OnlineClientState::Disconnected }
         , _bGateClosed{ SW_FALSE }
@@ -145,7 +145,7 @@ namespace sw
             NetResponse response;
             response._method = call._method;
             response._status = NetRequestStatus::DeadlineExceeded;
-            deliver( call._onResponse, call._requestId, response );
+            deliver( call._onResponse, call._requestID, response );
         }
     }
 
@@ -154,31 +154,31 @@ namespace sw
         QueuedCall call;
         call._bodyBytes.assign( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
         call._options = options;
-        if ( call._options._traceId.isValid() == false )
-            call._options._traceId = LogContext::getCurrent()._traceId; // Hello 전에 모았다 보내도 부른 쪽의 추적 id 로
+        if ( call._options._traceID.isValid() == false )
+            call._options._traceID = LogContext::getCurrent()._traceID; // Hello 전에 모았다 보내도 부른 쪽의 추적 id 로
         call._onResponse       = onResponse;
-        call._requestId        = _nextRequestId++;
+        call._requestID        = _nextRequestID++;
         call._deadlineMs       = _nowMs + static_cast<int64>( options._timeoutSeconds * 1000.0 );
         call._method           = method;
-        const uint64 requestId = call._requestId;
+        const uint64 requestID = call._requestID;
         if ( _bInitialized == SW_FALSE || _state == OnlineClientState::VersionMismatch )
         {
             const bool     bMismatch = _state == OnlineClientState::VersionMismatch;
             OnlineResponse response;
-            response._requestId = requestId;
+            response._requestID = requestID;
             response._status    = bMismatch ? NetRequestStatus::ApplicationError : NetRequestStatus::ConnectionLost;
             response._errorCode = bMismatch ? OnlineError::kVersionMismatch : OnlineError::kUnavailable;
             if ( onResponse.isBound() )
                 onResponse( response );
-            return requestId;
+            return requestID;
         }
         if ( _state != OnlineClientState::Ready || isGated( method ) )
         {
             _listQueuedCall.push_back( std::move( call ) );
-            return requestId;
+            return requestID;
         }
         sendQueuedCall( call );
-        return requestId;
+        return requestID;
     }
 
     void OnlineServiceClient::setRequestGate( uint16 ownerRange, bool bClosed )
@@ -267,11 +267,11 @@ namespace sw
         NetRequestOptions options     = call._options;
         options._timeoutSeconds       = static_cast<float64>( remainingMs ) / 1000.0;
         _pSendingCall                 = &call;
-        const uint64 netRequestId     = _pRequestClient->sendRequest( _connection, call._method, call._bodyBytes.data(), static_cast<int32>( call._bodyBytes.size() ),
+        const uint64 netRequestID     = _pRequestClient->sendRequest( _connection, call._method, call._bodyBytes.data(), static_cast<int32>( call._bodyBytes.size() ),
                                                                       options, Delegate<void( const NetResponse& )>::create<&OnlineServiceClient::onNetResponse>( this ) );
         _pSendingCall                 = nullptr;
-        if ( netRequestId != 0 )
-            _mapPendingCall[netRequestId] = PendingCall{ call._onResponse, call._requestId };
+        if ( netRequestID != 0 )
+            _mapPendingCall[netRequestID] = PendingCall{ call._onResponse, call._requestID };
     }
 
     void OnlineServiceClient::flushQueuedCalls()
@@ -294,7 +294,7 @@ namespace sw
         for ( const QueuedCall& call : listCall )
         {
             OnlineResponse response;
-            response._requestId = call._requestId;
+            response._requestID = call._requestID;
             response._status    = status;
             response._errorCode = errorCode;
             if ( call._onResponse.isBound() )
@@ -350,24 +350,24 @@ namespace sw
 
     void OnlineServiceClient::onNetResponse( const NetResponse& response )
     {
-        const auto pendingIt = _mapPendingCall.find( response._requestId );
+        const auto pendingIt = _mapPendingCall.find( response._requestID );
         if ( pendingIt != _mapPendingCall.end() )
         {
             const PendingCall pending = pendingIt->second;
             _mapPendingCall.erase( pendingIt );
-            deliver( pending._onResponse, pending._requestId, response );
+            deliver( pending._onResponse, pending._requestID, response );
             return;
         }
         if ( _pSendingCall != nullptr ) // 보내지도 못했다(끊김 · 과부하) — sendRequest 안에서 불렸다
-            deliver( _pSendingCall->_onResponse, _pSendingCall->_requestId, response );
+            deliver( _pSendingCall->_onResponse, _pSendingCall->_requestID, response );
     }
 
-    void OnlineServiceClient::deliver( const OnlineResponseDelegate& onResponse, uint64 requestId, const NetResponse& response )
+    void OnlineServiceClient::deliver( const OnlineResponseDelegate& onResponse, uint64 requestID, const NetResponse& response )
     {
         if ( onResponse.isBound() == false )
             return;
         OnlineResponse answer;
-        answer._requestId = requestId;
+        answer._requestID = requestID;
         answer._status    = response._status;
         answer._pBody     = response._pBody;
         answer._bodySize  = response._bodySize;

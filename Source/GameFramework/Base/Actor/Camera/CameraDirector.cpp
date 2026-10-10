@@ -28,8 +28,8 @@ namespace sw
         const CameraPresetDef* pDef = catalog.findPreset( id );
         if ( pDef == nullptr )
             return false;
-        const hashed_string fromId = _bHasActive == SW_TRUE ? _activeDef._id : hashed_string{};
-        activatePreset( *pDef, catalog.getBlend( fromId, id ) );
+        const hashed_string fromID = _bHasActive == SW_TRUE ? _activeDef._id : hashed_string{};
+        activatePreset( *pDef, catalog.getBlend( fromID, id ) );
         return true;
     }
 

@@ -25,7 +25,7 @@ namespace sw
         /** @brief 뷰 후보 하나입니다. */
         struct Candidate
         {
-            uint64  _viewId{ 0 };
+            uint64  _viewID{ 0 };
             float32 _updateRate{ 0.0f }; ///< 초당 그리기(0 = 매 프레임)
             uint8   _bVisible{ SW_TRUE };
         };
@@ -46,13 +46,13 @@ namespace sw
     private:
         struct Entry
         {
-            uint64  _viewId{ 0 };
+            uint64  _viewID{ 0 };
             float64 _lastRenderTime{ -1.0 }; ///< 음수면 아직 그린 적이 없다
             uint64  _renderCount{ 0 };       ///< 그린 횟수 — 늦은 정도가 같으면 덜 그린 뷰가 먼저다(번호 순으로 고르면 앞 뷰만 이긴다)
             uint8   _bSeen{ SW_FALSE };
         };
         /** @brief 뷰의 기록입니다. 없으면 새로 만들어 "한 번도 안 그림" 으로 둡니다. */
-        Entry& findOrAddEntry( uint64 viewId );
+        Entry& findOrAddEntry( uint64 viewID );
 
         vector<Entry>   _listEntry;
         vector<uint32>  _listScratchDue;         ///< 때가 된 후보 번호

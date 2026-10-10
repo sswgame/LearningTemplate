@@ -115,7 +115,7 @@ namespace sw
         , _listSlot{}
         , _listBlockReason{}
         , _pendingLabel{}
-        , _lastCheckpointId{}
+        , _lastCheckpointID{}
         , _playTime{ 0.0 }
         , _lastSaveTime{ -1.0 }
         , _intervalTimer{ 0.0f }
@@ -135,7 +135,7 @@ namespace sw
         _onLoad              = onLoad;
         _listBlockReason.clear();
         _pendingLabel     = hashed_string{};
-        _lastCheckpointId = hashed_string{};
+        _lastCheckpointID = hashed_string{};
         _playTime         = 0.0;
         _lastSaveTime     = -1.0;
         _intervalTimer    = 0.0f;
@@ -186,12 +186,12 @@ namespace sw
         _bPending       = SW_TRUE;
     }
 
-    void AutosaveManager::reachCheckpoint( const hashed_string& checkpointId )
+    void AutosaveManager::reachCheckpoint( const hashed_string& checkpointID )
     {
-        if ( checkpointId.empty() || checkpointId == _lastCheckpointId )
+        if ( checkpointID.empty() || checkpointID == _lastCheckpointID )
             return;
-        _lastCheckpointId = checkpointId;
-        requestSave( AutosaveTrigger::Checkpoint, checkpointId );
+        _lastCheckpointID = checkpointID;
+        requestSave( AutosaveTrigger::Checkpoint, checkpointID );
     }
 
     bool AutosaveManager::notifyQuit()
@@ -247,10 +247,10 @@ namespace sw
         if ( pSlot == nullptr || _onLoad.isBound() == false )
             return false;
         const string        path         = pSlot->_path;
-        const hashed_string checkpointId = pSlot->_label;
+        const hashed_string checkpointID = pSlot->_label;
         if ( _onLoad( path ) == false )
             return false;
-        _lastCheckpointId = checkpointId; // 되돌린 체크포인트에 다시 서도 저장하지 않는다
+        _lastCheckpointID = checkpointID; // 되돌린 체크포인트에 다시 서도 저장하지 않는다
         _bPending         = SW_FALSE;
         return true;
     }

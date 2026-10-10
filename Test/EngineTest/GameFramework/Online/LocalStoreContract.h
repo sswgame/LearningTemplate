@@ -59,7 +59,7 @@ namespace test
         }
 
         /** @brief 요청 id 의 완료를 기다립니다(10 초 상한). 받았으면 true. */
-        static bool waitCompletion( sw::ILocalStore& store, uint64 requestId, sw::LocalStoreCompletion& outCompletion )
+        static bool waitCompletion( sw::ILocalStore& store, uint64 requestID, sw::LocalStoreCompletion& outCompletion )
         {
             const sw::Deadline                   deadline = sw::Deadline::afterMilliseconds( 10000 );
             sw::vector<sw::LocalStoreCompletion> listCompletion;
@@ -73,7 +73,7 @@ namespace test
                 }
                 for ( sw::LocalStoreCompletion& completion : listCompletion )
                 {
-                    if ( completion._requestId != requestId )
+                    if ( completion._requestID != requestID )
                         continue;
                     outCompletion = std::move( completion );
                     return true;
@@ -253,23 +253,23 @@ namespace test
         {
             using namespace sw;
             ILocalStore&   store = fixture.getStore();
-            vector<uint64> listRequestId;
+            vector<uint64> listRequestID;
             for ( int32 index = 0; index < 40; ++index )
             {
                 const uint8 value = static_cast<uint8>( index );
-                listRequestId.push_back( index % 2 == 0 ? store.submitWrite( "order", vector<uint8>{ value }, LocalStoreWriteOptions{} ) : store.submitRead( "order" ) );
+                listRequestID.push_back( index % 2 == 0 ? store.submitWrite( "order", vector<uint8>{ value }, LocalStoreWriteOptions{} ) : store.submitRead( "order" ) );
             }
             vector<LocalStoreCompletion> listCompletion;
             const Deadline               deadline = Deadline::afterMilliseconds( 10000 );
-            while ( listCompletion.size() < listRequestId.size() && deadline.isExpired() == false )
+            while ( listCompletion.size() < listRequestID.size() && deadline.isExpired() == false )
             {
                 if ( store.pollCompletions( listCompletion ) == 0 )
                     std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
             }
-            SW_ASSERT_EQUAL( listRequestId.size(), listCompletion.size() );
+            SW_ASSERT_EQUAL( listRequestID.size(), listCompletion.size() );
             for ( size_t index = 0; index < listCompletion.size(); ++index )
             {
-                SW_EXPECT_EQUAL( listRequestId[index], listCompletion[index]._requestId );
+                SW_EXPECT_EQUAL( listRequestID[index], listCompletion[index]._requestID );
                 if ( index % 2 == 1 )
                     SW_EXPECT_TRUE( listCompletion[index]._bytes == vector<uint8>{ static_cast<uint8>( index - 1 ) } ); // 바로 앞 쓰기를 본다
             }

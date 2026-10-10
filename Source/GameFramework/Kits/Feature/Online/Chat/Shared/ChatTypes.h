@@ -51,7 +51,7 @@ namespace sw
     struct ChatLimit
     {
         static constexpr int32 kMaxTextSize         = 512; ///< UTF-8 바이트
-        static constexpr int32 kMaxChannelIdSize    = 48;
+        static constexpr int32 kMaxChannelIDSize    = 48;
         static constexpr int32 kMaxChannelPerMember = 16; ///< 한 계정이 들어가 있는 채널
         static constexpr int32 kMaxHistoryPage      = 50;
     };
@@ -62,13 +62,13 @@ namespace sw
     /** @brief 메시지 하나입니다. (보낸 시각, 서버, 서버 안 순번)이 같은 채널 안의 시간 순 정렬 키다. */
     struct ChatMessage
     {
-        string          _channelId{}; ///< 귓속말이면 기록 키(`ChatChannelId::makeWhisper`)
+        string          _channelID{}; ///< 귓속말이면 기록 키(`ChatChannelID::makeWhisper`)
         string          _senderName{};
         string          _text{}; ///< 거르개를 지난 글
-        AccountId       _senderId{ kInvalidAccountId };
-        AccountId       _recipientId{ kInvalidAccountId }; ///< 귓속말만
+        AccountID       _senderID{ kInvalidAccountID };
+        AccountID       _recipientID{ kInvalidAccountID }; ///< 귓속말만
         int64           _sentMs{ 0 };
-        uint64          _serverId{ 0 };
+        uint64          _serverID{ 0 };
         uint32          _sequence{ 0 };
         ChatChannelKind _kind{ ChatChannelKind::World };
     };
@@ -76,14 +76,14 @@ namespace sw
 
 namespace sw
 {
-    /** @struct ChatChannelId @brief 채널 id 규칙입니다. */
-    struct SW_GF_API ChatChannelId
+    /** @struct ChatChannelID @brief 채널 id 규칙입니다. */
+    struct SW_GF_API ChatChannelID
     {
         /** @brief 규칙에 맞으면 종류를 돌려줍니다. 귓속말 기록 키도 읽습니다. 접두만 있고 이름이 빈 id 는 거절합니다. */
-        [[nodiscard]] static bool parseKind( string_view channelId, ChatChannelKind& outKind );
-        static string             makeGuild( uint64 guildId );
-        static string             makeParty( uint64 partyId );
+        [[nodiscard]] static bool parseKind( string_view channelID, ChatChannelKind& outKind );
+        static string             makeGuild( uint64 guildID );
+        static string             makeParty( uint64 partyID );
         /** @brief 귓속말 기록 키 — 두 계정의 순서와 무관하게 같은 키입니다. */
-        static string makeWhisper( AccountId first, AccountId second );
+        static string makeWhisper( AccountID first, AccountID second );
     };
 } // namespace sw

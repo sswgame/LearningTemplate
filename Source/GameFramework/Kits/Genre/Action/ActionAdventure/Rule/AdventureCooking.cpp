@@ -30,9 +30,9 @@ namespace sw
             {
                 if ( lhs.getItems().size() != rhs.getItems().size() )
                     return false;
-                for ( const auto& [itemId, count] : lhs.getItems() )
+                for ( const auto& [itemID, count] : lhs.getItems() )
                 {
-                    if ( rhs.getItemCount( itemId ) != count )
+                    if ( rhs.getItemCount( itemID ) != count )
                         return false;
                 }
                 return true;
@@ -87,11 +87,11 @@ namespace sw
         _dubiousHeartQuarters  = MathUtil::max( 0, root.getAttributeInt( "dubiousHearts", _dubiousHeartQuarters ) );
         for ( XmlNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             AdventureCookEffectDef effect;
-            effect._id           = hashed_string( pId );
+            effect._id           = hashed_string( pID );
             effect._tier2Potency = MathUtil::max( 0.0f, node.getAttributeFloat( "tier2", effect._tier2Potency ) );
             effect._tier3Potency = MathUtil::max( effect._tier2Potency, node.getAttributeFloat( "tier3", effect._tier3Potency ) );
             effect._maxDuration  = MathUtil::max( 0.0f, node.getAttributeFloat( "maxDuration", effect._maxDuration ) );
@@ -100,18 +100,18 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             AdventureIngredientDef ingredient;
-            ingredient._id            = hashed_string( pId );
+            ingredient._id            = hashed_string( pID );
             const utf8* pEffect       = node.findAttribute( "effect" );
             ingredient._effect        = pEffect != nullptr ? hashed_string( pEffect ) : hashed_string{};
             ingredient._potency       = MathUtil::max( 0.0f, node.getAttributeFloat( "potency", 0.0f ) );
             ingredient._duration      = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", 0.0f ) );
             ingredient._heartQuarters = MathUtil::max( 0, node.getAttributeInt( "hearts", 0 ) );
             if ( ingredient._effect.empty() == false && _effectCatalog.find( ingredient._effect ) == nullptr )
-                SW_LOG_WARNING( "%#: ingredient '%#' has an undeclared effect '%#' - tier stays 1", sourceName, pId, ingredient._effect.c_str() );
+                SW_LOG_WARNING( "%#: ingredient '%#' has an undeclared effect '%#' - tier stays 1", sourceName, pID, ingredient._effect.c_str() );
             (void)_ingredientCatalog.add( ingredient );
             ++loadedCount;
         }
@@ -130,9 +130,9 @@ namespace sw
         float32       duration      = 0.0f;
         hashed_string effect{};
         bool          bMixed = false;
-        for ( const hashed_string& ingredientId : listIngredient )
+        for ( const hashed_string& ingredientID : listIngredient )
         {
-            const AdventureIngredientDef* pIngredient = _ingredientCatalog.find( ingredientId );
+            const AdventureIngredientDef* pIngredient = _ingredientCatalog.find( ingredientID );
             if ( pIngredient == nullptr )
                 return AdventureCookResult::UnknownIngredient;
             heartQuarters += pIngredient->_heartQuarters;
@@ -148,12 +148,12 @@ namespace sw
         if ( bMixed )
         {
             // 서로 다른 효과는 서로를 지운다 — 효과도 회복 배율도 없는 수상한 요리.
-            outDish._itemId        = _dubiousDish;
+            outDish._itemID        = _dubiousDish;
             outDish._heartQuarters = _dubiousHeartQuarters;
             outDish._bDubious      = SW_TRUE;
             return AdventureCookResult::Ok;
         }
-        outDish._itemId        = _genericDish;
+        outDish._itemID        = _genericDish;
         outDish._heartQuarters = static_cast<int32>( static_cast<float32>( heartQuarters ) * _heartScale + 0.5f );
         if ( effect.empty() )
             return AdventureCookResult::Ok;
@@ -180,9 +180,9 @@ namespace sw
         if ( result != AdventureCookResult::Ok )
             return result;
         ItemStackList pot;
-        for ( const hashed_string& ingredientId : listIngredient )
+        for ( const hashed_string& ingredientID : listIngredient )
         {
-            pot.addItem( ingredientId, 1 );
+            pot.addItem( ingredientID, 1 );
         }
         if ( inventory.hasItems( pot ) == false )
             return AdventureCookResult::MissingIngredients;
@@ -200,21 +200,21 @@ namespace sw
                     return AdventureCookResult::NoRoom;
                 if ( craftResult != CraftResult::Ok )
                     break; // 아직 모르는 레시피 · 레벨 부족 — 일반 요리로
-                outDish._itemId       = recipe._outputs.getItems().front()._itemId;
+                outDish._itemID       = recipe._outputs.getItems().front()._itemID;
                 outDish._bNamedRecipe = SW_TRUE;
                 return AdventureCookResult::Ok;
             }
         }
 
-        for ( const auto& [itemId, count] : pot.getItems() )
+        for ( const auto& [itemID, count] : pot.getItems() )
         {
-            (void)inventory.removeItem( itemId, count ); // 재료는 위 hasItems 가 확인했다
+            (void)inventory.removeItem( itemID, count ); // 재료는 위 hasItems 가 확인했다
         }
-        if ( inventory.addItem( outDish._itemId, 1 ) == 1 )
+        if ( inventory.addItem( outDish._itemID, 1 ) == 1 )
             return AdventureCookResult::Ok;
-        for ( const auto& [itemId, count] : pot.getItems() )
+        for ( const auto& [itemID, count] : pot.getItems() )
         {
-            (void)inventory.addItem( itemId, count );
+            (void)inventory.addItem( itemID, count );
         }
         return AdventureCookResult::NoRoom;
     }

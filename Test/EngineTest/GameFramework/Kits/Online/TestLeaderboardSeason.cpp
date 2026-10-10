@@ -59,9 +59,9 @@ namespace
         /** @brief 30 명이 시즌 1 안에 점수를 낸다(1 등 = 계정 1). */
         void submitThirtyPlayers()
         {
-            for ( AccountId accountId = 1; accountId <= 30; ++accountId )
+            for ( AccountID accountID = 1; accountID <= 30; ++accountID )
             {
-                _service.submitScore( "arena", accountId, "p", static_cast<int64>( 1000 - accountId ), 1500, accountId );
+                _service.submitScore( "arena", accountID, "p", static_cast<int64>( 1000 - accountID ), 1500, accountID );
             }
             step();
         }
@@ -72,11 +72,11 @@ namespace
         static LeaderboardDefinition makeSeasonBoard()
         {
             LeaderboardDefinition board;
-            board._boardId = "arena";
+            board._boardID = "arena";
             board._update  = LeaderboardUpdate::Best;
             board._reset   = LeaderboardReset::Season;
             LeaderboardSeason season;
-            season._seasonId = 1;
+            season._seasonID = 1;
             season._startMs  = 1000;
             season._endMs    = 2000;
             season._listRewardTier.push_back( LeaderboardRewardTier{ "cur.gem", "mail.season.top1", 100, 1, 1 } );
@@ -95,10 +95,10 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
     MemoryEphemeralDatabase cacheDatabase;
     SeasonNode              node( &database, &cacheDatabase );
     AchievementDefinition   achievement;
-    achievement._achievementId = "ten_wins";
+    achievement._achievementID = "ten_wins";
     achievement._statName      = "wins";
     achievement._threshold     = 10;
-    achievement._rewardAssetId = "cur.gold";
+    achievement._rewardAssetID = "cur.gold";
     achievement._rewardAmount  = 500;
     achievement._mailTitleKey  = "mail.achievement.ten_wins";
     SW_ASSERT_TRUE( node._service.registerAchievement( achievement ) );
@@ -115,15 +115,15 @@ SW_TEST_CASE( LeaderboardSeasonTest, AchievementUnlocksOnceWithOneRewardMail )
     vector<AchievementUnlock> listUnlock;
     node._service.drainAchievementUnlocks( listUnlock );
     SW_ASSERT_EQUAL( listUnlock.size(), size_t( 1 ) );
-    SW_EXPECT_STREQ( listUnlock[0]._state._achievementId.c_str(), "ten_wins" );
+    SW_EXPECT_STREQ( listUnlock[0]._state._achievementID.c_str(), "ten_wins" );
     SW_EXPECT_EQUAL( listUnlock[0]._state._unlockedMs, int64( 200 ) );
-    SW_EXPECT_EQUAL( listUnlock[0]._accountId, AccountId( 7 ) );
+    SW_EXPECT_EQUAL( listUnlock[0]._accountID, AccountID( 7 ) );
     SW_EXPECT_EQUAL( database.countRecords( ServiceMail::getMailTable() ), 1 );
 
     node._service.readAchievements( 7, 4 );
     node.step();
     SW_ASSERT_EQUAL( node._listCompletion.back()._listAchievement.size(), size_t( 1 ) );
-    SW_EXPECT_STREQ( node._listCompletion.back()._listAchievement[0]._achievementId.c_str(), "ten_wins" );
+    SW_EXPECT_STREQ( node._listCompletion.back()._listAchievement[0]._achievementID.c_str(), "ten_wins" );
 }
 
 SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
@@ -137,7 +137,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
     node.step();
     SW_EXPECT_TRUE( node._listCompletion.back()._result == LeaderboardResult::NotRanked );
     node.submitThirtyPlayers();
-    SW_EXPECT_EQUAL( node._listCompletion.back()._periodId, uint64( 1 ) );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._periodID, uint64( 1 ) );
 
     node._service.readSeasonResult( "arena", 1, 1, 50 ); // 정산 전
     node.step();
@@ -156,7 +156,7 @@ SW_TEST_CASE( LeaderboardSeasonTest, SettlementRanksRewardsAndIsIdempotent )
     SW_ASSERT_EQUAL( node._listCompletion.back()._listEntry.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( node._listCompletion.back()._listEntry[0]._rank, 1 );
     SW_EXPECT_EQUAL( node._listCompletion.back()._listEntry[0]._score, int64( 999 ) );
-    SW_EXPECT_EQUAL( node._listCompletion.back()._periodId, uint64( 1 ) );
+    SW_EXPECT_EQUAL( node._listCompletion.back()._periodID, uint64( 1 ) );
 
     const uint64 hashAfter = database.computeContentHash();
     node._service.settleSeason( "arena", 1, 2200, recorder.makeDelegate() ); // 다른 서버가 다시 돌았다

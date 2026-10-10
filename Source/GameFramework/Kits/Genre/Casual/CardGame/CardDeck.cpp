@@ -39,9 +39,9 @@ namespace sw
         return movedCount;
     }
 
-    bool CardPile::takeById( uint16 cardId, Card& outCard )
+    bool CardPile::takeByID( uint16 cardID, Card& outCard )
     {
-        const int32 index = findIndexById( cardId );
+        const int32 index = findIndexByID( cardID );
         if ( index < 0 )
             return false;
         outCard = removeAt( index );
@@ -55,11 +55,11 @@ namespace sw
         return card;
     }
 
-    int32 CardPile::findIndexById( uint16 cardId ) const
+    int32 CardPile::findIndexByID( uint16 cardID ) const
     {
         for ( size_t index = 0; index < _listCard.size(); ++index )
         {
-            if ( _listCard[index]._id == cardId )
+            if ( _listCard[index]._id == cardID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -118,17 +118,17 @@ namespace sw
     void CardDeckUtil::makeStandardDeck( CardPile& outPile, int32 jokerCount )
     {
         outPile.clear();
-        uint16 cardId = 0;
+        uint16 cardID = 0;
         for ( int32 suit = 0; suit < StandardSuit::kCount; ++suit )
         {
             for ( int32 rank = StandardRank::kAce; rank <= StandardRank::kKing; ++rank )
             {
-                outPile.push( Card{ cardId++, static_cast<uint8>( suit ), static_cast<uint8>( rank ) } );
+                outPile.push( Card{ cardID++, static_cast<uint8>( suit ), static_cast<uint8>( rank ) } );
             }
         }
         for ( int32 jokerIndex = 0; jokerIndex < jokerCount; ++jokerIndex )
         {
-            outPile.push( Card{ cardId++, StandardSuit::kJoker, 0 } );
+            outPile.push( Card{ cardID++, StandardSuit::kJoker, 0 } );
         }
     }
 
@@ -148,10 +148,10 @@ namespace sw
         const uint32 amount = static_cast<uint32>( action._amount );
         outBuffer.push_back( kTag );
         outBuffer.push_back( action._kind );
-        outBuffer.push_back( static_cast<uint8>( action._cardId & 0xFFu ) );
-        outBuffer.push_back( static_cast<uint8>( action._cardId >> 8 ) );
-        outBuffer.push_back( static_cast<uint8>( action._targetId & 0xFFu ) );
-        outBuffer.push_back( static_cast<uint8>( action._targetId >> 8 ) );
+        outBuffer.push_back( static_cast<uint8>( action._cardID & 0xFFu ) );
+        outBuffer.push_back( static_cast<uint8>( action._cardID >> 8 ) );
+        outBuffer.push_back( static_cast<uint8>( action._targetID & 0xFFu ) );
+        outBuffer.push_back( static_cast<uint8>( action._targetID >> 8 ) );
         outBuffer.push_back( static_cast<uint8>( amount & 0xFFu ) );
         outBuffer.push_back( static_cast<uint8>( ( amount >> 8 ) & 0xFFu ) );
         outBuffer.push_back( static_cast<uint8>( ( amount >> 16 ) & 0xFFu ) );
@@ -163,8 +163,8 @@ namespace sw
         if ( static_cast<int32>( buffer.size() ) != kEncodedSize || buffer[0] != kTag )
             return false;
         outAction._kind     = buffer[1];
-        outAction._cardId   = static_cast<uint16>( buffer[2] | ( buffer[3] << 8 ) );
-        outAction._targetId = static_cast<uint16>( buffer[4] | ( buffer[5] << 8 ) );
+        outAction._cardID   = static_cast<uint16>( buffer[2] | ( buffer[3] << 8 ) );
+        outAction._targetID = static_cast<uint16>( buffer[4] | ( buffer[5] << 8 ) );
         const uint32 amount = static_cast<uint32>( buffer[6] ) | ( static_cast<uint32>( buffer[7] ) << 8 ) | ( static_cast<uint32>( buffer[8] ) << 16 ) |
                               ( static_cast<uint32>( buffer[9] ) << 24 );
         outAction._amount = static_cast<int32>( amount );

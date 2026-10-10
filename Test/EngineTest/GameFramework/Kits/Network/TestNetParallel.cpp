@@ -35,13 +35,13 @@ namespace
     class StripedPolicy final : public IReplicationPolicy
     {
     public:
-        bool isRelevant( int32 connectionId, const NetEntityState& entity ) const override
+        bool isRelevant( int32 connectionID, const NetEntityState& entity ) const override
         {
-            return ( entity._entityId + static_cast<uint32>( connectionId ) ) % 3 != 0;
+            return ( entity._entityID + static_cast<uint32>( connectionID ) ) % 3 != 0;
         }
-        float32 computePriority( int32 connectionId, const NetEntityState& entity ) const override
+        float32 computePriority( int32 connectionID, const NetEntityState& entity ) const override
         {
-            return static_cast<float32>( ( entity._entityId * 7u + static_cast<uint32>( connectionId ) * 13u ) % 31u );
+            return static_cast<float32>( ( entity._entityID * 7u + static_cast<uint32>( connectionID ) * 13u ) % 31u );
         }
     };
 
@@ -86,24 +86,24 @@ namespace
         for ( uint32 tick = 0; tick < 60; ++tick )
         {
             server.beginTick( tick );
-            for ( uint32 entityId = 0; entityId < 120; ++entityId )
+            for ( uint32 entityID = 0; entityID < 120; ++entityID )
             {
                 BitWriter writer;
-                writer.writeVarUint( ( entityId * 31u + tick * ( entityId % 5u ) ) % 1000u );
-                server.setEntity( entityId, entityId % 4u, writer.getBytes() );
+                writer.writeVarUint( ( entityID * 31u + tick * ( entityID % 5u ) ) % 1000u );
+                server.setEntity( entityID, entityID % 4u, writer.getBytes() );
             }
             server.endTick();
             server.sendSnapshots();
             cluster.step( 1.0 / 60.0 );
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
-            while ( cluster.getServer().receiveMessage( connectionId, channel, buffer ) )
+            while ( cluster.getServer().receiveMessage( connectionID, channel, buffer ) )
             {
-                (void)server.handleMessage( connectionId, buffer );
+                (void)server.handleMessage( connectionID, buffer );
             }
             for ( int32 index = 0; index < kClientCount; ++index )
             {
-                while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
+                while ( cluster.getClient( index ).receiveMessage( connectionID, channel, buffer ) )
                 {
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
                     (void)listReplication[static_cast<size_t>( index )].handleMessage( 0, buffer );
@@ -169,11 +169,11 @@ namespace
             }
             server.update( 1.0f / 20.0f );
             cluster.step( 1.0 / 20.0 );
-            int32          connectionId = -1;
+            int32          connectionID = -1;
             NetChannelType channel      = NetChannelType::Unreliable;
             for ( int32 index = 0; index < kClientCount; ++index )
             {
-                while ( cluster.getClient( index ).receiveMessage( connectionId, channel, buffer ) )
+                while ( cluster.getClient( index ).receiveMessage( connectionID, channel, buffer ) )
                 {
                     listHash[static_cast<size_t>( index )] = mixBytes( listHash[static_cast<size_t>( index )], buffer );
                 }

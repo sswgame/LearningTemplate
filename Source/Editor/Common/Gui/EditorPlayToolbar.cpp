@@ -36,7 +36,7 @@ namespace sw::editor
                 Simulate
             };
 
-            static constexpr const utf8* kUnsavedPopupId = "##UnsavedScenePlay";
+            static constexpr const utf8* kUnsavedPopupID = "##UnsavedScenePlay";
 
             inline static int32          _s_stepFrameCount      = 10; ///< "Step N" 이 진행할 프레임 수
             inline static PendingSession _s_pendingSession      = PendingSession::Play;
@@ -211,10 +211,10 @@ namespace sw::editor
             {
                 if ( _s_bConfirmUnsavedPlay )
                 {
-                    ImGui::OpenPopup( kUnsavedPopupId );
+                    ImGui::OpenPopup( kUnsavedPopupID );
                     _s_bConfirmUnsavedPlay = false;
                 }
-                if ( ImGui::BeginPopupModal( kUnsavedPopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+                if ( ImGui::BeginPopupModal( kUnsavedPopupID, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
                     return;
                 ImGui::TextUnformatted( "Scene has unsaved changes. Play anyway?" );
                 if ( ImGui::Button( "Play" ) )

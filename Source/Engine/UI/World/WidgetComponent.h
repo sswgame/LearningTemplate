@@ -153,7 +153,7 @@ namespace sw
 
     private:
         unique_ptr<Widget>     _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯
-        WidgetId               _markerWidget;   ///< 마커 화면에 붙인 위젯(없으면 무효)
+        WidgetID               _markerWidget;   ///< 마커 화면에 붙인 위젯(없으면 무효)
         WidgetMarkerPlacement  _lastPlacement;
         UiSystem*              _pUiSystem;     ///< 등록한 UI 시스템(없으면 nullptr)
         unique_ptr<WidgetTree> _worldTree;     ///< World — 위젯 트리(루트 = 콘텐츠)

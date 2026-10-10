@@ -48,7 +48,7 @@ namespace sw
         vector<SocialLink>     _listLink{};     ///< 관계 목록
         vector<SocialPresence> _listPresence{}; ///< 친구 접속 상태
         uint64                 _requestTag{ 0 };
-        AccountId              _otherId{ kInvalidAccountId }; ///< 관계 바꾸기의 상대(이름으로 찾았으면 찾은 계정)
+        AccountID              _otherID{ kInvalidAccountID }; ///< 관계 바꾸기의 상대(이름으로 찾았으면 찾은 계정)
         SocialResult           _result{ SocialResult::Ok };
     };
 } // namespace sw
@@ -85,20 +85,20 @@ namespace sw
         void tick( int64 nowMs );
 
         // 관계(비동기 — 완료는 꼬리표로)
-        void changeLink( SocialLinkOperation operation, AccountId accountId, AccountId otherId, int64 nowMs, uint64 requestTag );
-        /** @brief 정식 계정의 표시 이름으로 친구 신청합니다(완료의 `_otherId` 가 찾은 계정). */
-        void requestFriendByName( AccountId accountId, string_view displayName, int64 nowMs, uint64 requestTag );
+        void changeLink( SocialLinkOperation operation, AccountID accountID, AccountID otherID, int64 nowMs, uint64 requestTag );
+        /** @brief 정식 계정의 표시 이름으로 친구 신청합니다(완료의 `_otherID` 가 찾은 계정). */
+        void requestFriendByName( AccountID accountID, string_view displayName, int64 nowMs, uint64 requestTag );
         /** @brief 관계 목록을 저장소에서 읽습니다(이 서버 메모리도 그것으로 바꾼다). */
-        void listLinks( AccountId accountId, uint64 requestTag );
+        void listLinks( AccountID accountID, uint64 requestTag );
 
         // 접속 상태
-        void setPresence( AccountId accountId, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag );
-        void queryFriendPresence( AccountId accountId, uint64 requestTag );
+        void setPresence( AccountID accountID, SocialPresenceStatus status, string_view activity, int64 nowMs, uint64 requestTag );
+        void queryFriendPresence( AccountID accountID, uint64 requestTag );
         /** @brief 계정이 이 서버를 떠났다 — 오프라인을 알리고 캐시 · 메모리에서 뺀다. */
-        void removeAccount( AccountId accountId );
+        void removeAccount( AccountID accountID );
 
-        /** @brief 이 서버에 붙은 @p ownerId 가 @p otherId 를 막았는가입니다(관계를 아직 읽지 않았으면 false). */
-        bool isBlockedLocal( AccountId ownerId, AccountId otherId ) const;
+        /** @brief 이 서버에 붙은 @p ownerID 가 @p otherID 를 막았는가입니다(관계를 아직 읽지 않았으면 false). */
+        bool isBlockedLocal( AccountID ownerID, AccountID otherID ) const;
         /** @brief 다른 서버가 낸 버스 메시지입니다(`SocialBus` 주제 — 자기 서버 것은 부르는 쪽이 거른다). */
         void handleBusMessage( string_view topic, const vector<uint8>& bytes );
 
@@ -107,8 +107,8 @@ namespace sw
         int32 getPendingCount() const { return _pendingCount; }
 
         /** @brief 일의 `complete` 가 부릅니다(키트 안). */
-        void applyLinkChange( uint64 requestTag, AccountId accountId, AccountId otherId, const SocialLinkDecision& decision );
-        void applyLinksLoaded( AccountId accountId, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
+        void applyLinkChange( uint64 requestTag, AccountID accountID, AccountID otherID, const SocialLinkDecision& decision );
+        void applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink );
 
     private:
         struct LocalAccount
@@ -130,27 +130,27 @@ namespace sw
 
         struct PresenceRead
         {
-            uint64    _queryId{ 0 };
-            AccountId _friendId{ kInvalidAccountId };
+            uint64    _queryID{ 0 };
+            AccountID _friendID{ kInvalidAccountID };
         };
 
-        LocalAccount& ensureLocal( AccountId accountId );
-        void          startLoad( AccountId accountId, uint64 requestTag );
-        void          reloadIfLocal( AccountId accountId );
-        void          submitLinkWork( SocialLinkOperation operation, AccountId accountId, AccountId otherId, string_view displayName, int64 nowMs, uint64 requestTag );
-        void          publishPresence( AccountId accountId, const LocalAccount& local );
+        LocalAccount& ensureLocal( AccountID accountID );
+        void          startLoad( AccountID accountID, uint64 requestTag );
+        void          reloadIfLocal( AccountID accountID );
+        void          submitLinkWork( SocialLinkOperation operation, AccountID accountID, AccountID otherID, string_view displayName, int64 nowMs, uint64 requestTag );
+        void          publishPresence( AccountID accountID, const LocalAccount& local );
         void          notifyFriendsOfPresence( const SocialPresence& presence );
-        void          writePresenceRecord( AccountId accountId, const LocalAccount& local );
+        void          writePresenceRecord( AccountID accountID, const LocalAccount& local );
         void          onPresenceReply( const EphemeralReply& reply );
         void          pushCompletion( uint64 requestTag, SocialResult result );
 
-        unordered_map<AccountId, LocalAccount> _mapAccountToLocal;
+        unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
         unordered_map<uint64, PresenceRead>    _mapCacheRequestToRead;
         unordered_map<uint64, PresenceQuery>   _mapQuery;
         EventBuffer<SocialCompletion>          _completionBuffer;
         EventBuffer<SocialNotification>        _notificationBuffer;
         SocialServiceDependencies              _dependencies;
-        uint64                                 _nextQueryId;
+        uint64                                 _nextQueryID;
         int32                                  _pendingCount;
     };
 } // namespace sw

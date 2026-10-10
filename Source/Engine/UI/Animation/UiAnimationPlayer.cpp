@@ -178,13 +178,13 @@ namespace sw
             }
         }
         outTrack._pTrack = &track;
-        outTrack._widget = pWidget->getId();
+        outTrack._widget = pWidget->getID();
         return track._listKey.empty() == false;
     }
 
-    bool UiAnimationPlayer::tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
+    bool UiAnimationPlayer::tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve )
     {
-        Widget* pWidget = _pTree->findWidgetById( widget );
+        Widget* pWidget = _pTree->findWidgetByID( widget );
         if ( pWidget == nullptr )
         {
             SW_LOG_WARNING( "[Ui] Tween of '%#': widget %# is not in this tree", string( propertyPath ).c_str(), widget );
@@ -253,7 +253,7 @@ namespace sw
         for ( size_t index = 0; index < _listTween.size(); )
         {
             ActiveTween& tween   = _listTween[index];
-            Widget*      pWidget = _pTree->findWidgetById( tween._widget );
+            Widget*      pWidget = _pTree->findWidgetByID( tween._widget );
             tween._elapsed += step;
             const bool bFinished = pWidget == nullptr || bReduceMotion || tween._elapsed >= tween._duration;
             if ( pWidget != nullptr )
@@ -316,7 +316,7 @@ namespace sw
     {
         for ( const ResolvedTrack& track : active._listTrack )
         {
-            Widget* pWidget = _pTree->findWidgetById( track._widget );
+            Widget* pWidget = _pTree->findWidgetByID( track._widget );
             if ( pWidget != nullptr )
                 (void)track._property.writeValue( *pWidget, evaluateTrack( track, active._time ) ); // false 는 값이 같거나 경로가 사라진 것 — 쓸 것이 없다
         }

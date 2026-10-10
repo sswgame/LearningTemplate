@@ -23,7 +23,7 @@ namespace sw
     struct LiveOpsClientReply
     {
         LiveOpsReply _reply{};
-        uint64       _requestId{ 0 };
+        uint64       _requestID{ 0 };
         uint16       _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_reply._result` 는 그 코드의 결과
     };
 } // namespace sw
@@ -48,7 +48,7 @@ namespace sw
         uint64 requestLiveState( string_view region, uint32 buildVersion, const ReplyDelegate& onReply );
         /** @brief OS 가 준 푸시 토큰을 등록합니다(로그인 뒤, 토큰이 바뀔 때마다 — 같은 토큰은 덮는다). */
         uint64 registerDevice( const PushDeviceRegistration& registration, const ReplyDelegate& onReply );
-        uint64 unregisterDevice( string_view providerId, string_view token, const ReplyDelegate& onReply );
+        uint64 unregisterDevice( string_view providerID, string_view token, const ReplyDelegate& onReply );
 
         const vector<LiveEventState>& getActiveEvents() const { return _listEvent; }
         bool                          hasEventKind( string_view kind ) const;

@@ -184,7 +184,7 @@ SW_TEST_CASE( EditorSelectionTest, PruneInvalidDestroyedObjects )
 
 /**
  * @brief [EditorSelectionTest] 이름을 바꿔도 선택이 유지되고, 옛 이름의 새 오브젝트로 옮겨 가지 않는다
- * @details 선택은 objectId 로 들고, id 는 다시 쓰지 않는다. 이름으로 찾는 참조로 들면 이름을 바꿀 때 선택이 풀리고, 옛 이름으로
+ * @details 선택은 objectID 로 들고, id 는 다시 쓰지 않는다. 이름으로 찾는 참조로 들면 이름을 바꿀 때 선택이 풀리고, 옛 이름으로
  *          새 오브젝트를 만들면 선택이 조용히 그쪽을 가리킨다.
  */
 SW_TEST_CASE( EditorSelectionTest, SelectionSurvivesRename )

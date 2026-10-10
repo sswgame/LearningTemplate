@@ -25,11 +25,11 @@ namespace sw
     inline constexpr uint32 kObjectReflectedSchemaVersion = 0;
 
     /**
-     * @brief 저장된 상태가 다른 오브젝트를 가리킬 때 쓴 id(`SceneComponent::_attachOwnerId`)가 어느 공간의 것인지입니다.
+     * @brief 저장된 상태가 다른 오브젝트를 가리킬 때 쓴 id(`SceneComponent::_attachOwnerID`)가 어느 공간의 것인지입니다.
      * @details 같은 값이라도 공간이 다르면 다른 오브젝트입니다. 씬 파일의 id 는 그 파일 안에서만 뜻이 있고, 이 실행의 런타임 id 와 우연히
      *          같을 수 있습니다 — 그 둘을 섞으면 엉뚱한 오브젝트에 붙습니다.
      */
-    enum class ObjectIdSpace : uint8
+    enum class ObjectIDSpace : uint8
     {
         /// 이 프로세스의 런타임 id 입니다(되돌리기 · 플레이 종료 복원 · 같은 실행의 핫 리로드 · 복제 · 영속 이월). 묶음에 없으면 매니저에서 찾습니다.
         Live,
@@ -38,7 +38,7 @@ namespace sw
     };
 
     /** @brief 런타임 오브젝트 id → 저장할 id 표입니다. 씬이 저장할 때 넘겨 부모 참조를 파일 id 로 옮겨 적게 합니다. */
-    using ObjectSavedIdMap = unordered_map<uint64, uint64>;
+    using ObjectSavedIDMap = unordered_map<uint64, uint64>;
 
     /**
      * @struct ObjectSaveOptions
@@ -47,7 +47,7 @@ namespace sw
     struct ObjectSaveOptions
     {
         /** @brief 있으면 다른 오브젝트의 런타임 id 를 이 표로 옮겨 적습니다(씬 파일 id). 없으면 런타임 id 그대로입니다(같은 실행의 스냅샷). */
-        const ObjectSavedIdMap* _pSavedIdMap{ nullptr };
+        const ObjectSavedIDMap* _pSavedIDMap{ nullptr };
         /**
          * @brief 다른 오브젝트를 가리키는 것을 적지 않습니다 — 프리팹이 씁니다(프리팹 루트에는 부모가 없고, 핸들 PROPERTY 는 비워 적는다).
          * @details 이것이 없으면 자식 인스턴스로 프리팹을 만들 때 원래 부모의 이름이 프리팹에 들어가, 그 프리팹을 스폰할 때마다 그 이름의 오브젝트에
@@ -60,12 +60,12 @@ namespace sw
          * @details 표가 있으면 그 오브젝트의 파일 id, 표에 없는 오브젝트(이 파일에 없다)는 0 입니다. 표가 없으면 그대로입니다. 언리얼의 Instigator 처럼
          *          런타임 참조는 파일 밖을 가리키면 저장되지 않는다.
          */
-        uint64 getSavedObjectId( uint64 runtimeId ) const
+        uint64 getSavedObjectID( uint64 runtimeID ) const
         {
-            if ( _pSavedIdMap == nullptr )
-                return runtimeId;
-            const auto mapIt = _pSavedIdMap->find( runtimeId );
-            return ( mapIt != _pSavedIdMap->end() ) ? mapIt->second : 0;
+            if ( _pSavedIDMap == nullptr )
+                return runtimeID;
+            const auto mapIt = _pSavedIDMap->find( runtimeID );
+            return ( mapIt != _pSavedIDMap->end() ) ? mapIt->second : 0;
         }
     };
 } // namespace sw
@@ -78,12 +78,12 @@ namespace sw
      */
     struct ObjectLoadContext
     {
-        /** @brief 같은 오브젝트를 되살릴 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentId 를 받습니다. */
+        /** @brief 같은 오브젝트를 되살릴 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentID 를 받습니다. */
         const ObjectIdentity* _pIdentity{ nullptr };
         /** @brief 여러 오브젝트를 함께 읽을 때의 묶음입니다. 주면 부착은 읽는 자리가 아니라 `ObjectStateBatch::finish` 가 한 번에 잇습니다. */
         ObjectStateBatch* _pBatch{ nullptr };
         /** @brief 이 상태가 저장될 때 이 오브젝트의 id 입니다(같은 묶음의 다른 상태가 이 값으로 이 오브젝트를 가리킵니다). 0 이면 `_pIdentity` 의 것입니다. */
-        uint64 _savedId{ 0 };
+        uint64 _savedID{ 0 };
         /** @brief false 면 다른 오브젝트로의 부착을 읽지 않습니다 — 프리팹(루트에 부모가 없다). 오브젝트 안의 부착은 그대로 잇습니다. */
         bool _bExternalParentAllowed{ true };
         /**
@@ -104,7 +104,7 @@ namespace sw
      *          `ObjectStateBatch`). 씬 · 프리팹을 읽거나 오브젝트를 복제할 때는 늘 새 ID 를
      *          받아야 하기 때문입니다(같은 프리팹을 두 번 놓으면 ID 가 겹칩니다). 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드처럼
      *          **같은 프로세스에서 같은 오브젝트를 되살리는** 경우에만 이것을 로드 함수에 넘겨 원래 ID 를 되살립니다.
-     *          objectId 는 오브젝트를 만들 때 `GameObjectManager::createGameObjectWithId` 가, componentId 는 로드가 되살립니다.
+     *          objectID 는 오브젝트를 만들 때 `GameObjectManager::createGameObjectWithID` 가, componentID 는 로드가 되살립니다.
      */
     struct ObjectIdentity
     {
@@ -112,10 +112,10 @@ namespace sw
         struct ComponentEntry
         {
             hashed_string _typeName;
-            uint64        _componentId{ 0 };
+            uint64        _componentID{ 0 };
         };
 
-        uint64                 _objectId{ 0 };
+        uint64                 _objectID{ 0 };
         vector<ComponentEntry> _listComponent;
     };
 } // namespace sw
@@ -128,7 +128,7 @@ namespace sw
      * @details 상태를 읽는 길(씬 로드 · 쿠커 · 플레이 종료 복원 · 핫 리로드 · 세이브 · 영속 이월 · 복제 · 되돌리기)이 모두 이것을 지납니다 —
      *          상태 하나만 읽는 로드도 한 개짜리 묶음입니다. 규칙은 하나입니다:
      *          - 자기 오브젝트 안의 부착은 소유자 칸이 비어 있습니다.
-     *          - 다른 오브젝트는 **id** 로 찾습니다. 먼저 이 묶음의 저장된 id, 그다음(`ObjectIdSpace::Live` 일 때만) 매니저의 런타임 id 입니다.
+     *          - 다른 오브젝트는 **id** 로 찾습니다. 먼저 이 묶음의 저장된 id, 그다음(`ObjectIDSpace::Live` 일 때만) 매니저의 런타임 id 입니다.
      *          - id 가 빈 참조(찾지 못한 참조를 다른 id 공간으로 옮겨 적은 것)만 이름으로 찾되 **이 묶음의 저장된 이름**에서만 찾습니다. 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`)
      *            매니저에서 이름으로 찾으면 같은 이름의 다른 오브젝트(원본 · 자동으로 만든 카메라 · 들어오는 씬의 같은 이름)에 붙습니다.
      *          - 찾지 못한 참조는 지우지 않고 그대로 둡니다(`SceneComponent::keepUnresolvedAttach`). 다음 저장이 살아 있는 부모 포인터(null)에서
@@ -143,7 +143,7 @@ namespace sw
     class SW_API ObjectStateBatch
     {
     public:
-        explicit ObjectStateBatch( ObjectIdSpace idSpace );
+        explicit ObjectStateBatch( ObjectIDSpace idSpace );
         /** @brief 더했으면 `finish` 를 불렀어야 합니다(Debug 단언). */
         ~ObjectStateBatch();
 
@@ -152,15 +152,15 @@ namespace sw
 
         /**
          * @brief 상태를 읽은(또는 프리팹으로 지은) 오브젝트 하나를 적습니다. 로드가 부르고, 상태 없이 지은 오브젝트는 부른 쪽이 직접 적습니다.
-         * @param savedId 같은 묶음의 다른 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 0 이면 id 로는 찾을 수 없습니다(id 가 없는 데이터).
+         * @param savedID 같은 묶음의 다른 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 0 이면 id 로는 찾을 수 없습니다(id 가 없는 데이터).
          * @param savedName 상태에 적힌 이름입니다 — 매니저가 유일하게 바꾸기 **전**의 것입니다.
          */
-        void add( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed = true );
+        void add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed = true );
         /**
          * @brief 상태를 읽은 오브젝트 하나를 적습니다(`add` 와 같고, `finish` 가 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다). 로더가 부릅니다.
          * @details `onPostLoad` 는 부착 · 핸들 PROPERTY 가 풀린 **뒤에** 옵니다 — 읽는 자리에서 부르면 다른 오브젝트를 가리키는 칸이 아직 저장된 id 입니다.
          */
-        void addLoadedState( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed = true );
+        void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed = true );
 
         /**
          * @brief 적은 오브젝트들의 부착 · 핸들 PROPERTY 를 잇고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
@@ -170,29 +170,29 @@ namespace sw
         void finish();
 
         /** @brief 저장된 id 로 이 묶음의 오브젝트를 찾습니다. 없으면 nullptr 입니다. */
-        GameObject* findBySavedId( uint64 savedId ) const;
+        GameObject* findBySavedID( uint64 savedID ) const;
         /** @brief 저장된 이름으로 이 묶음의 오브젝트를 찾습니다(id 가 없는 데이터용). 같은 이름이 여럿이면 먼저 적힌 것입니다. */
         GameObject* findBySavedName( hashed_string savedName ) const;
 
-        ObjectIdSpace getIdSpace() const { return _idSpace; }
+        ObjectIDSpace getIDSpace() const { return _idSpace; }
 
     private:
         struct Entry
         {
             GameObject*   _pObject{ nullptr };
-            uint64        _savedId{ 0 };
+            uint64        _savedID{ 0 };
             hashed_string _savedName{};
             bool          _bExternalParentAllowed{ true };
             bool          _bLoadedState{ false }; ///< 상태를 읽었다 — `finish` 가 `onPostLoad` 를 부른다
         };
 
         /** @brief `add` · `addLoadedState` 의 몸통입니다. */
-        void addEntry( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState );
+        void addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState );
 
         /** @brief 항목 하나의 씬 컴포넌트마다 부모를 찾아 붙이고, 못 찾으면 참조를 남깁니다. */
         void resolveEntry( const Entry& entry ) const;
         /** @brief 부착 참조의 소유자 칸이 가리키는 오브젝트입니다. 자기면 항목의 오브젝트, 못 찾으면 nullptr 입니다. */
-        GameObject* findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerId ) const;
+        GameObject* findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerID ) const;
         /** @brief 항목 하나의 컴포넌트마다 `GameObjectHandle` PROPERTY 를 이 실행의 오브젝트로 옮깁니다(`Transient` 는 읽지 않았으니 건드리지 않는다). */
         void resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트입니다(클래스 설명의 규칙). */
@@ -205,9 +205,9 @@ namespace sw
         [[nodiscard]] bool remapContainerHandles( void* pContainer, const NestedContainerInfo& shape ) const;
 
         vector<Entry>                        _listEntry;
-        unordered_map<uint64, GameObject*>   _mapSavedIdToObject;
+        unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;
-        ObjectIdSpace                        _idSpace;
+        ObjectIDSpace                        _idSpace;
         bool                                 _bFinished;
     };
 } // namespace sw
@@ -239,7 +239,7 @@ namespace sw
         [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options = {} );
 
         /**
-         * @brief XML 문자열에서 GameObject 상태를 복원합니다(ObjectId 제외).
+         * @brief XML 문자열에서 GameObject 상태를 복원합니다(ObjectID 제외).
          * @param context 원래 id 를 되살릴지(`_pIdentity`), 여러 오브젝트를 함께 읽는 묶음인지(`_pBatch`)입니다. 기본값은 새 id 의 단독 로드입니다.
          * @details 적용하기 전에 기존 컴포넌트를 비웁니다. 묶음 없이 읽으면 부착은 이 오브젝트 하나짜리 묶음으로 바로 잇습니다(다른 오브젝트는
          *          매니저의 런타임 id 로 찾습니다). 여러 오브젝트를 읽을 때는 묶음을 주고 모두 읽은 뒤 `ObjectStateBatch::finish` 를 부릅니다 —

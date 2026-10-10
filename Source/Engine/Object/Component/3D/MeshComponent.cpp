@@ -25,11 +25,11 @@ namespace sw
         : _mesh{}
         , _pMaterial{ nullptr }
         , _materialInstance{}
-        , _meshId{}
+        , _meshID{}
         , _materialPath{}
         , _acquiredMaterialPath{}
         , _requestedMaterialPath{}
-        , _resolvedMeshId{}
+        , _resolvedMeshID{}
         , _boundsRadius{ 0.866f }
         , _blendMode{ RHIBlendMode::Opaque }
         , _gpuSpinSeed{ 0 }
@@ -99,14 +99,14 @@ namespace sw
 
     void MeshComponent::resolveRuntimeMesh()
     {
-        const string_view   meshId = _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId };
-        const hashed_string hashedMeshId( string{ meshId }.c_str() );
-        if ( _mesh != nullptr && _resolvedMeshId == hashedMeshId )
+        const string_view   meshID = _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID };
+        const hashed_string hashedMeshID( string{ meshID }.c_str() );
+        if ( _mesh != nullptr && _resolvedMeshID == hashedMeshID )
             return;
         // **공유되는** 메시를 받는다(`.mesh` 경로는 메시 캐시, 그 밖은 내장 도형). 컴포넌트마다 제 메시를 만들면 배치가 그만큼 갈린다.
         // 읽지 못한 에셋은 메시 없이 남는다(그리지 않는다) — 캐시가 경로마다 한 번 경고하고, 핫 리로드 알림이 다시 해석한다.
-        _mesh           = MeshAssetFormat::isMeshAssetPath( meshId ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
-        _resolvedMeshId = hashedMeshId;
+        _mesh           = MeshAssetFormat::isMeshAssetPath( meshID ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
+        _resolvedMeshID = hashedMeshID;
         markRenderStateDirty();
     }
 
@@ -147,8 +147,8 @@ namespace sw
         // PROPERTY 만 보면 된다. 어느 쪽이든 빠지는 경로가 없다.
         SceneComponent::onPropertyChanged( propertyName );
         static const hashed_string s_materialPathName( "_materialPath" );
-        static const hashed_string s_meshIdName( "_meshId" );
-        if ( propertyName == s_materialPathName || propertyName == s_meshIdName )
+        static const hashed_string s_meshIDName( "_meshID" );
+        if ( propertyName == s_materialPathName || propertyName == s_meshIDName )
             resolveRenderAssets();
         markRenderStateDirty();
     }
@@ -170,13 +170,13 @@ namespace sw
     {
         _mesh = std::move( mesh );
         // 지금 id 의 메시로 삼는다 — 시작 · 로드 뒤 해석이 런타임 지정을 덮지 않고, id 가 바뀌면 그 id 의 것으로 바뀐다.
-        _resolvedMeshId = hashed_string( string{ _meshId.empty() ? getDefaultMeshId() : string_view{ _meshId } }.c_str() );
+        _resolvedMeshID = hashed_string( string{ _meshID.empty() ? getDefaultMeshID() : string_view{ _meshID } }.c_str() );
         markRenderStateDirty();
     }
 
-    void MeshComponent::setMeshId( string_view meshId )
+    void MeshComponent::setMeshID( string_view meshID )
     {
-        _meshId = string{ meshId };
+        _meshID = string{ meshID };
         resolveRuntimeMesh();
     }
 

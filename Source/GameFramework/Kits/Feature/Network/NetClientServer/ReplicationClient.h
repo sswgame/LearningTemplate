@@ -44,7 +44,7 @@ namespace sw
         uint16          getMessageKindMask() const override { return 1u << ( NetClientServerMessage::kSnapshot - NetKitMessageRange::kClientServer ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 서버에 (다시) 연결됐다 — 받은 스냅샷 · 렌더 시각을 새로 시작한다(새 서버의 틱은 옛 것보다 작을 수 있다). */
-        void onConnectionOpened( int32 connectionId ) override;
+        void onConnectionOpened( int32 connectionID ) override;
         /** @brief 렌더 시각을 흘립니다. */
         void update( float32 deltaTime );
         /**
@@ -57,7 +57,7 @@ namespace sw
          * @brief 렌더 시각의 엔티티 — 앞뒤 스냅샷의 상태와 그 사이 비율(0..1)입니다. 앞 스냅샷에만 있으면 그것 하나(@p pOutTo 도 같은 것).
          * @return 렌더 시각 근처에 그 엔티티가 없으면 false.
          */
-        bool sampleEntity( uint32 entityId, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const;
+        bool sampleEntity( uint32 entityID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const;
         /** @brief 렌더 시각에 보이는 엔티티 id(앞 스냅샷 기준)입니다. */
         void collectVisibleEntities( vector<uint32>& outListEntity ) const;
 

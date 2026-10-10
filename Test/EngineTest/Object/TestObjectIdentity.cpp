@@ -1,6 +1,6 @@
 /**
  * @file TestObjectIdentity.cpp
- * @brief 같은 오브젝트를 되살릴 때 런타임 id 를 되살리는 장치 — `createGameObjectWithId` · `ObjectIdentity` · 프로세스 토큰.
+ * @brief 같은 오브젝트를 되살릴 때 런타임 id 를 되살리는 장치 — `createGameObjectWithID` · `ObjectIdentity` · 프로세스 토큰.
  * @details 에디터 되돌리기 · 플레이 세션 복원 · 핫 리로드가 이것에 기대어 `GameObjectHandle` · `ComponentHandle` 을 이어 간다.
  *          각 경로의 배선(트랜잭션 · 선택)은 EditorTest 가 보고, 여기서는 그 아래 장치를 직접 본다.
  */
@@ -21,56 +21,56 @@
  * @details 물러서는 이유: 옛 오브젝트가 삭제 대기인 채로 같은 id 를 쓰면, 나중에 옛 것의 지연 파괴가 id 로 정리하는
  *          항목(슬롯 표 · 에디터 GUID 맵)을 새 것 몫까지 지운다.
  */
-SW_TEST_CASE( ObjectIdentityTest, CreateWithIdReusesFreedIdOnly )
+SW_TEST_CASE( ObjectIdentityTest, CreateWithIDReusesFreedIDOnly )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pOriginal = manager.createGameObject( sw::hashed_string( "Original" ) );
     SW_ASSERT_NOT_NULL( pOriginal );
-    const uint64 originalId = pOriginal->getObjectId();
+    const uint64 originalID = pOriginal->getObjectID();
 
     BLOCK( "아직 등록돼 있으면 새 id" )
     {
-        sw::GameObject* pClash = manager.createGameObjectWithId( sw::hashed_string( "Clash" ), originalId );
+        sw::GameObject* pClash = manager.createGameObjectWithID( sw::hashed_string( "Clash" ), originalID );
         SW_ASSERT_NOT_NULL( pClash );
-        SW_EXPECT_TRUE( pClash->getObjectId() != originalId );
+        SW_EXPECT_TRUE( pClash->getObjectID() != originalID );
     }
 
     BLOCK( "삭제 대기도 등록돼 있는 것이다 — 지연 파괴가 끝나기 전에는 새 id" )
     {
         manager.destroyObject( pOriginal );
-        sw::GameObject* pEarly = manager.createGameObjectWithId( sw::hashed_string( "Early" ), originalId );
+        sw::GameObject* pEarly = manager.createGameObjectWithID( sw::hashed_string( "Early" ), originalID );
         SW_ASSERT_NOT_NULL( pEarly );
-        SW_EXPECT_TRUE( pEarly->getObjectId() != originalId );
+        SW_EXPECT_TRUE( pEarly->getObjectID() != originalID );
     }
 
     BLOCK( "지연 파괴가 끝나면 원래 id 로 되살린다" )
     {
         manager.processDeferredDestruction();
-        sw::GameObject* pRestored = manager.createGameObjectWithId( sw::hashed_string( "Original" ), originalId );
+        sw::GameObject* pRestored = manager.createGameObjectWithID( sw::hashed_string( "Original" ), originalID );
         SW_ASSERT_NOT_NULL( pRestored );
-        SW_EXPECT_EQUAL( originalId, pRestored->getObjectId() );
+        SW_EXPECT_EQUAL( originalID, pRestored->getObjectID() );
         SW_EXPECT_TRUE( manager.resolveGameObject( pRestored->getHandle() ) == pRestored );
     }
 
     BLOCK( "발급 카운터는 되살린 id 뒤로 밀린다 — 앞으로의 발급과 겹치지 않는다" )
     {
-        constexpr uint64 kFarId = 100000;
-        sw::GameObject*  pFar   = manager.createGameObjectWithId( sw::hashed_string( "Far" ), kFarId );
+        constexpr uint64 kFarID = 100000;
+        sw::GameObject*  pFar   = manager.createGameObjectWithID( sw::hashed_string( "Far" ), kFarID );
         SW_ASSERT_NOT_NULL( pFar );
-        SW_EXPECT_EQUAL( kFarId, pFar->getObjectId() );
+        SW_EXPECT_EQUAL( kFarID, pFar->getObjectID() );
 
         sw::GameObject* pNext = manager.createGameObject( sw::hashed_string( "Next" ) );
         SW_ASSERT_NOT_NULL( pNext );
-        SW_EXPECT_TRUE( pNext->getObjectId() > kFarId );
+        SW_EXPECT_TRUE( pNext->getObjectID() > kFarID );
     }
 }
 
 /**
- * @brief [ObjectIdentityTest] id 와 함께 읽으면 다시 만든 컴포넌트가 원래 componentId 를 받는다
+ * @brief [ObjectIdentityTest] id 와 함께 읽으면 다시 만든 컴포넌트가 원래 componentID 를 받는다
  * @details 로드는 컴포넌트를 전부 지우고 팩토리로 새로 만든다. id 를 같이 넘기지 않으면(씬 · 프리팹 로드와 복제가 가는 길)
  *          새 id 를 받는다 — 마지막 블록이 그 대조군이다.
  */
-SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
+SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIDs )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "Source" ) );
@@ -94,7 +94,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
     manager.processDeferredDestruction();
     SW_EXPECT_TRUE( manager.resolveComponent( sceneHandle ) == nullptr );
 
-    sw::GameObject* pRestored = manager.createGameObjectWithId( sw::hashed_string( "Source" ), identity._objectId );
+    sw::GameObject* pRestored = manager.createGameObjectWithID( sw::hashed_string( "Source" ), identity._objectID );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pRestored, bytes.data(), bytes.size(), { &identity } ) > 0 );
 
@@ -106,23 +106,23 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
     SW_EXPECT_TRUE( pRestoredScene->isSceneComponent() );
     SW_EXPECT_TRUE( pRestoredMesh->getOwner() == pRestored );
 
-    BLOCK( "대조군 — id 없이 읽으면 새 componentId 를 받는다" )
+    BLOCK( "대조군 — id 없이 읽으면 새 componentID 를 받는다" )
     {
         sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "Copy" ) );
         SW_ASSERT_NOT_NULL( pCopy );
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromBinaryBuffer( pCopy, bytes.data(), bytes.size() ) > 0 );
 
-        uint32 sameIdCount = 0;
+        uint32 sameIDCount = 0;
         for ( const sw::Component* pComp : pCopy->getComponents() )
         {
             if ( pComp == nullptr )
                 continue;
             for ( const sw::ObjectIdentity::ComponentEntry& entry : identity._listComponent )
             {
-                sameIdCount += ( pComp->getComponentId() == entry._componentId ) ? 1u : 0u;
+                sameIDCount += ( pComp->getComponentID() == entry._componentID ) ? 1u : 0u;
             }
         }
-        SW_EXPECT_EQUAL( 0u, sameIdCount );
+        SW_EXPECT_EQUAL( 0u, sameIDCount );
     }
 }
 
@@ -132,7 +132,7 @@ SW_TEST_CASE( ObjectIdentityTest, BinaryLoadRestoresComponentIds )
 SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
 {
     sw::ObjectIdentity identity;
-    identity._objectId = 42;
+    identity._objectID = 42;
     identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "SceneComponent" ), 7 } );
     identity._listComponent.push_back( sw::ObjectIdentity::ComponentEntry{ sw::hashed_string( "MeshComponent" ), 9 } );
 
@@ -141,10 +141,10 @@ SW_TEST_CASE( ObjectIdentityTest, WireFormatRoundTripAndRejectsGarbage )
 
     sw::ObjectIdentity readBack;
     SW_ASSERT_EQUAL( bytes.size(), sw::ObjectStateSerializer::readIdentity( bytes.data(), bytes.size(), readBack ) );
-    SW_EXPECT_EQUAL( uint64( 42 ), readBack._objectId );
+    SW_EXPECT_EQUAL( uint64( 42 ), readBack._objectID );
     SW_ASSERT_EQUAL( size_t( 2 ), readBack._listComponent.size() );
     SW_EXPECT_TRUE( readBack._listComponent[1]._typeName == sw::hashed_string( "MeshComponent" ) );
-    SW_EXPECT_EQUAL( uint64( 9 ), readBack._listComponent[1]._componentId );
+    SW_EXPECT_EQUAL( uint64( 9 ), readBack._listComponent[1]._componentID );
 
     // 잘린 입력
     SW_EXPECT_EQUAL( size_t( 0 ), sw::ObjectStateSerializer::readIdentity( bytes.data(), bytes.size() - 1, readBack ) );

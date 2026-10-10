@@ -621,7 +621,7 @@ SW_TEST_CASE( KartRacingTest, StateRoundTripContinuesTheSameRace )
     SW_EXPECT_TRUE( restored.getPhase() == KartRacePhase::Racing );
     SW_EXPECT_TRUE( race.getRaceTime() == restored.getRaceTime() );
     SW_EXPECT_EQUAL( static_cast<int32>( race.getProjectiles().size() ), static_cast<int32>( restored.getProjectiles().size() ) );
-    SW_EXPECT_TRUE( restored.findRacer( 0 )->_itemId == hashed_string( "shield" ) );
+    SW_EXPECT_TRUE( restored.findRacer( 0 )->_itemID == hashed_string( "shield" ) );
     for ( int32 racer = 0; racer < 4; ++racer )
     {
         SW_EXPECT_TRUE( race.findRacer( racer )->_motor.getPosition()._z == restored.findRacer( racer )->_motor.getPosition()._z );

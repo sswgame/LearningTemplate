@@ -78,7 +78,7 @@ namespace sw::editor
         for ( const Widget* pWidget : listWidget )
         {
             UiPreviewWidgetRow row{};
-            row._widget = pWidget->getId();
+            row._widget = pWidget->getID();
             for ( const PanelWidget* pParent = pWidget->getParent(); pParent != nullptr; pParent = pParent->getParent() )
             {
                 ++row._depth;
@@ -91,7 +91,7 @@ namespace sw::editor
         }
     }
 
-    WidgetId UiPreviewLogic::findWidgetAt( const WidgetTree& tree, const float2& point )
+    WidgetID UiPreviewLogic::findWidgetAt( const WidgetTree& tree, const float2& point )
     {
         vector<Widget*> listWidget;
         tree.collectWidgetsInDocumentOrder( listWidget );
@@ -107,9 +107,9 @@ namespace sw::editor
                 continue;
             const UiRect bounds = pWidget->getGeometry().computeScreenBounds();
             if ( bounds._left <= point._x && point._x < bounds._right && bounds._top <= point._y && point._y < bounds._bottom )
-                return pWidget->getId();
+                return pWidget->getID();
         }
-        return kInvalidWidgetId;
+        return kInvalidWidgetID;
     }
 
     string UiPreviewLogic::makeTargetPath( const UiViewport& viewport )

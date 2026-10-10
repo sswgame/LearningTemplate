@@ -8,21 +8,21 @@
 
 namespace sw
 {
-    AccountConnectAuthenticator::AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverId )
-        : _serverId{ serverId }
+    AccountConnectAuthenticator::AccountConnectAuthenticator( const LoginTicketAuthority* pAuthority, const hashed_string& serverID )
+        : _serverID{ serverID }
         , _pAuthority{ pAuthority }
         , _nowMs{ 0 }
     {
     }
 
-    bool AccountConnectAuthenticator::findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalId )
+    bool AccountConnectAuthenticator::findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID )
     {
         NetGameTicketClaim claim;
-        if ( _pAuthority == nullptr || _pAuthority->verifyTicket( pToken, tokenSize, _serverId, _nowMs.load( std::memory_order_relaxed ), claim ) == false )
+        if ( _pAuthority == nullptr || _pAuthority->verifyTicket( pToken, tokenSize, _serverID, _nowMs.load( std::memory_order_relaxed ), claim ) == false )
             return false;
         static_assert( sizeof( outSecret._arrByte ) == NetGameTicket::kSecretSize );
         Memory::copy( outSecret._arrByte, claim._arrSecret, NetGameTicket::kSecretSize );
-        outPrincipalId = claim._accountId;
+        outPrincipalID = claim._accountID;
         return true;
     }
 } // namespace sw

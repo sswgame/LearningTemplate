@@ -78,11 +78,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Armor" ); node; node = node.findNextSibling( "Armor" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             BrArmorDef def;
-            def._id                = hashed_string( pId );
+            def._id                = hashed_string( pID );
             const string_view slot = node.getAttributeText( "slot" );
             def._slot              = hashed_string( slot.empty() ? string_view( "Vest" ) : slot );
             def._tier              = MathUtil::clamp( node.getAttributeInt( "tier", def._tier ), 1, 9 );
@@ -93,11 +93,11 @@ namespace sw
         }
         for ( XmlNode node = root.findChild( "Backpack" ); node; node = node.findNextSibling( "Backpack" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             BrBackpackDef def;
-            def._id       = hashed_string( pId );
+            def._id       = hashed_string( pID );
             def._tier     = MathUtil::clamp( node.getAttributeInt( "tier", def._tier ), 1, 9 );
             def._capacity = MathUtil::max( 0.0f, node.getAttributeFloat( "capacity", def._capacity ) );
             (void)_backpackCatalog.add( def );
@@ -105,13 +105,13 @@ namespace sw
         }
         for ( XmlNode node = root.findChild( "LootSpot" ); node; node = node.findNextSibling( "LootSpot" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             BrLootSpotDef def;
-            def._id                 = hashed_string( pId );
+            def._id                 = hashed_string( pID );
             const string_view table = node.getAttributeText( "table" );
-            def._tableId            = table.empty() ? def._id : hashed_string( table );
+            def._tableID            = table.empty() ? def._id : hashed_string( table );
             def._chance             = MathUtil::saturate( node.getAttributeFloat( "chance", def._chance ) );
             def._minRolls           = MathUtil::max( 0, node.getAttributeInt( "rolls", def._minRolls ) );
             def._maxRolls           = MathUtil::max( def._minRolls, node.getAttributeInt( "rollsMax", def._minRolls ) );
@@ -121,7 +121,7 @@ namespace sw
         if ( const XmlNode node = root.findChild( "SupplyDrop" ) )
         {
             const string_view table = node.getAttributeText( "table" );
-            _supplyDrop._tableId    = hashed_string( table );
+            _supplyDrop._tableID    = hashed_string( table );
             _supplyDrop._listTime.clear();
             GameDataXml::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
             {

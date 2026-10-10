@@ -76,7 +76,7 @@ namespace sw
         {
             _bPressed = true;
             invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
-            return UiReply::makeHandled().capturePointer().requestFocus( getId() );
+            return UiReply::makeHandled().capturePointer().requestFocus( getID() );
         }
         if ( event._kind == UiPointerEventKind::Up && _bPressed )
         {
@@ -107,7 +107,7 @@ namespace sw
     void ButtonWidget::handleClick()
     {
         ++_clickCount;
-        _onClicked.broadcast( getId() );
+        _onClicked.broadcast( getID() );
         UiScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
         if ( pScreen != nullptr )
             pScreen->dispatchCommand( _command, *this );

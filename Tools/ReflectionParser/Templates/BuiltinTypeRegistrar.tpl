@@ -1,5 +1,5 @@
 	// --- $Name ---
-	struct ${Id}_Registrar
+	struct ${ID}_Registrar
 	{
 		static void RegisterType( ::sw::TypeRegistry& registry )
 		{
@@ -12,10 +12,10 @@
 $AliasRegs
 		}
 
-		${Id}_Registrar()
+		${ID}_Registrar()
 		{
 			static ::sw::TypeRegistrar reg{ &RegisterType };
 		}
 	};
-	static ${Id}_Registrar s_${Id}_registrar{};
+	static ${ID}_Registrar s_${ID}_registrar{};
 

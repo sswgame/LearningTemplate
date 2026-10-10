@@ -32,9 +32,9 @@ namespace sw
 
         void initialize( const WesternCatalog* pCatalog, const GameStateRefs& refs );
         /** @brief 이름 붙은 행동(낯선 이 돕기 · 낙인 · 강도)을 반영합니다. 실제로 바뀐 값입니다. 모르는 행동은 0 입니다. */
-        int32 applyAction( const hashed_string& actionId );
+        int32 applyAction( const hashed_string& actionID );
         /** @brief 범죄의 명예 변화를 반영합니다(목격 여부와 상관없이 — 양심의 문제). */
-        int32 applyCrime( const hashed_string& crimeId );
+        int32 applyCrime( const hashed_string& crimeID );
         int32 changeValue( int32 delta );
 
         int32         getValue() const;

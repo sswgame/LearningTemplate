@@ -225,11 +225,11 @@ namespace sw::editor
         return bClicked;
     }
 
-    bool EditorWidgets::drawToggleIconButton( const utf8* pId, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+    bool EditorWidgets::drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                               const utf8* pTooltipOff )
     {
         const float32 side = ImGui::GetFrameHeight();
-        ImGui::PushID( pId );
+        ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( bOn ? pIconOn : pIconOff, ImVec2{ side, side } );
         ImGui::PopID();
         if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
@@ -322,13 +322,13 @@ namespace sw::editor
         ImGui::TextDisabled( "%s", pText );
     }
 
-    bool EditorWidgets::drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,
+    bool EditorWidgets::drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,
                                          bool bShowClear )
     {
         if ( pBuffer == nullptr || bufferBytes == 0 )
             return false;
 
-        ImGui::PushID( pId != nullptr ? pId : "##search" );
+        ImGui::PushID( pID != nullptr ? pID : "##search" );
         if ( width < 0.0f )
             ImGui::SetNextItemWidth( -1.0f );
         else if ( width > 0.0f )
@@ -467,13 +467,13 @@ namespace sw::editor
         ImGui::PopStyleVar( 3 );
     }
 
-    void EditorWidgets::drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId )
+    void EditorWidgets::drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullID )
     {
         if ( StringUtil::isNullOrEmpty( pRelativePath ) )
             return;
 
         ImGuiDragDropFlags flags = 0;
-        if ( bAllowNullId )
+        if ( bAllowNullID )
             flags |= ImGuiDragDropFlags_SourceAllowNullID;
 
         if ( ImGui::BeginDragDropSource( flags ) == false )
@@ -537,12 +537,12 @@ namespace sw::editor
         return ImGui::IsKeyPressed( ImGuiKey_Enter, bRepeat );
     }
 
-    EditorUnsavedChoice EditorWidgets::drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage )
+    EditorUnsavedChoice EditorWidgets::drawUnsavedChangesModal( const utf8* pPopupID, const utf8* pMessage )
     {
-        if ( StringUtil::isNullOrEmpty( pPopupId ) )
+        if ( StringUtil::isNullOrEmpty( pPopupID ) )
             return EditorUnsavedChoice::None;
 
-        if ( ImGui::BeginPopupModal( pPopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
+        if ( ImGui::BeginPopupModal( pPopupID, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
             return EditorUnsavedChoice::None;
 
         ImGui::TextUnformatted( pMessage != nullptr ? pMessage : "You have unsaved changes." );

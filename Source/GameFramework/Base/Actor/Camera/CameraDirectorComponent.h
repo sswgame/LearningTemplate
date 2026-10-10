@@ -72,7 +72,7 @@ namespace sw
         /** @brief 충격을 더합니다(원점 · 모양) — 폭발 · 착지. */
         void addImpulse( const CameraImpulseDef& def, const float3& origin ) { _director.addImpulse( def, origin ); }
 
-        const hashed_string& getActivePresetId() const { return _director.getActivePresetId(); }
+        const hashed_string& getActivePresetID() const { return _director.getActivePresetID(); }
         bool                 isBlending() const { return _director.isBlending(); }
         const CameraPose&    getPose() const { return _director.getPose(); }
         /** @brief 켠 프리셋의 모드 상태입니다(입력이 돌린 각 · 줌 · 팬 · 암 길이 — 시험 · 진단). */

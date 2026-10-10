@@ -67,7 +67,7 @@ namespace sw::editor
             struct ThemePresetRow
             {
                 EditorThemePreset _preset;
-                const utf8*       _pConfigId;    ///< EditorConfig 에 저장되는 이름
+                const utf8*       _pConfigID;    ///< EditorConfig 에 저장되는 이름
                 const utf8*       _pDisplayName; ///< 콤보에 보이는 이름
                 /** @brief true면 창 색을 우리 팔레트로 덮지 않고 ImGui 기본 다크를 씁니다. */
                 bool              _bUseImGuiDarkColors;
@@ -90,13 +90,13 @@ namespace sw::editor
             }
 
             /** @brief 저장된 이름의 행입니다. 못 찾으면 첫 행(기본)입니다. */
-            static const ThemePresetRow& findRowByConfigId( string_view configId )
+            static const ThemePresetRow& findRowByConfigID( string_view configID )
             {
                 uint32                      rowCount{ 0 };
                 const ThemePresetRow* const pRow = getPresetRows( rowCount );
                 for ( uint32 index = 0; index < rowCount; ++index )
                 {
-                    if ( configId == pRow[index]._pConfigId )
+                    if ( configID == pRow[index]._pConfigID )
                         return pRow[index];
                 }
                 return pRow[0];
@@ -225,13 +225,13 @@ namespace sw::editor
         return EditorThemeInternal::activeTheme();
     }
 
-    bool EditorThemeUtil::findPresetByConfigId( string_view configId, EditorThemePreset& outPreset )
+    bool EditorThemeUtil::findPresetByConfigID( string_view configID, EditorThemePreset& outPreset )
     {
         uint32                                           rowCount{ 0 };
         const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
         for ( uint32 index = 0; index < rowCount; ++index )
         {
-            if ( StringUtil::equals( configId, pRow[index]._pConfigId, true ) )
+            if ( StringUtil::equals( configID, pRow[index]._pConfigID, true ) )
             {
                 outPreset = pRow[index]._preset;
                 return true;
@@ -401,7 +401,7 @@ namespace sw::editor
     {
         const EditorConfig& editorConfig = EditorConfig::getActive();
 
-        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigId( editorConfig._themePreset )._preset;
+        const EditorThemePreset preset = EditorThemeInternal::findRowByConfigID( editorConfig._themePreset )._preset;
         applyPreset( preset );
 
         if ( preset != EditorThemePreset::ClassicDark )
@@ -429,7 +429,7 @@ namespace sw::editor
         EditorConfig editorConfig = EditorConfig::getActive();
 
         const EditorThemeConfig& themeConfig = EditorThemeInternal::activeTheme();
-        editorConfig._themePreset            = EditorThemeInternal::findRow( themeConfig._preset )._pConfigId;
+        editorConfig._themePreset            = EditorThemeInternal::findRow( themeConfig._preset )._pConfigID;
 
         editorConfig._themeAccentR        = themeConfig._accentColor._r;
         editorConfig._themeAccentG        = themeConfig._accentColor._g;

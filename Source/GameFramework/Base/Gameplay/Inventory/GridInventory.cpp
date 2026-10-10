@@ -16,7 +16,7 @@ namespace sw
         , _shapeLookup{}
         , _width{ 0 }
         , _height{ 0 }
-        , _nextInstanceId{ 1 }
+        , _nextInstanceID{ 1 }
         , _revision{ 0 }
     {
     }
@@ -40,7 +40,7 @@ namespace sw
         _listCell.assign( static_cast<size_t>( _width * _height ), -1 );
         for ( const GridItem& item : _listItem )
         {
-            stampItem( item, item._instanceId );
+            stampItem( item, item._instanceID );
         }
         ++_revision;
         return true;
@@ -53,10 +53,10 @@ namespace sw
         ++_revision;
     }
 
-    bool GridInventory::canPlace( const hashed_string& itemId, int32 x, int32 y, bool bRotated, int32 ignoreInstanceId ) const
+    bool GridInventory::canPlace( const hashed_string& itemID, int32 x, int32 y, bool bRotated, int32 ignoreInstanceID ) const
     {
         GridItemShape shape;
-        if ( findShape( itemId, shape ) == false )
+        if ( findShape( itemID, shape ) == false )
             return false;
         int32 footWidth  = 0;
         int32 footHeight = 0;
@@ -68,14 +68,14 @@ namespace sw
             for ( int32 cellX = x; cellX < x + footWidth; ++cellX )
             {
                 const int32 occupant = _listCell[static_cast<size_t>( cellY * _width + cellX )];
-                if ( occupant >= 0 && occupant != ignoreInstanceId )
+                if ( occupant >= 0 && occupant != ignoreInstanceID )
                     return false;
             }
         }
         return true;
     }
 
-    bool GridInventory::findFreeSpot( const hashed_string& itemId, int32& outX, int32& outY, bool& outRotated ) const
+    bool GridInventory::findFreeSpot( const hashed_string& itemID, int32& outX, int32& outY, bool& outRotated ) const
     {
         for ( int32 rotation = 0; rotation < 2; ++rotation )
         {
@@ -84,7 +84,7 @@ namespace sw
             {
                 for ( int32 x = 0; x < _width; ++x )
                 {
-                    if ( canPlace( itemId, x, y, bRotated ) )
+                    if ( canPlace( itemID, x, y, bRotated ) )
                     {
                         outX       = x;
                         outY       = y;
@@ -97,35 +97,35 @@ namespace sw
         return false;
     }
 
-    int32 GridInventory::placeItem( const hashed_string& itemId, int32 count, int32 x, int32 y, bool bRotated )
+    int32 GridInventory::placeItem( const hashed_string& itemID, int32 count, int32 x, int32 y, bool bRotated )
     {
         GridItemShape shape;
-        if ( findShape( itemId, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemId, x, y, bRotated ) == false )
+        if ( findShape( itemID, shape ) == false || count <= 0 || count > shape._maxStack || canPlace( itemID, x, y, bRotated ) == false )
             return -1;
         GridItem item;
-        item._itemId     = itemId;
-        item._instanceId = _nextInstanceId++;
+        item._itemID     = itemID;
+        item._instanceID = _nextInstanceID++;
         item._count      = count;
         item._x          = x;
         item._y          = y;
         item._bRotated   = bRotated ? SW_TRUE : SW_FALSE;
         _listItem.push_back( item );
-        stampItem( item, item._instanceId );
+        stampItem( item, item._instanceID );
         ++_revision;
-        return item._instanceId;
+        return item._instanceID;
     }
 
-    int32 GridInventory::addItem( const hashed_string& itemId, int32 count )
+    int32 GridInventory::addItem( const hashed_string& itemID, int32 count )
     {
         GridItemShape shape;
-        if ( findShape( itemId, shape ) == false || count <= 0 )
+        if ( findShape( itemID, shape ) == false || count <= 0 )
             return 0;
         int32 remaining = count;
         for ( GridItem& item : _listItem )
         {
             if ( remaining <= 0 )
                 break;
-            if ( item._itemId != itemId || item._count >= shape._maxStack )
+            if ( item._itemID != itemID || item._count >= shape._maxStack )
                 continue;
             const int32 moved = MathUtil::min( remaining, shape._maxStack - item._count );
             item._count += moved;
@@ -136,10 +136,10 @@ namespace sw
             int32 x        = 0;
             int32 y        = 0;
             bool  bRotated = false;
-            if ( findFreeSpot( itemId, x, y, bRotated ) == false )
+            if ( findFreeSpot( itemID, x, y, bRotated ) == false )
                 break;
             const int32 stackCount = MathUtil::min( remaining, shape._maxStack );
-            if ( placeItem( itemId, stackCount, x, y, bRotated ) < 0 )
+            if ( placeItem( itemID, stackCount, x, y, bRotated ) < 0 )
                 break;
             remaining -= stackCount;
         }
@@ -148,15 +148,15 @@ namespace sw
         return count - remaining;
     }
 
-    bool GridInventory::removeItem( const hashed_string& itemId, int32 count )
+    bool GridInventory::removeItem( const hashed_string& itemID, int32 count )
     {
-        if ( count <= 0 || getItemCount( itemId ) < count )
+        if ( count <= 0 || getItemCount( itemID ) < count )
             return false;
         int32 remaining = count;
         for ( size_t itemIndex = _listItem.size(); itemIndex > 0 && remaining > 0; --itemIndex )
         {
             GridItem& item = _listItem[itemIndex - 1];
-            if ( item._itemId != itemId )
+            if ( item._itemID != itemID )
                 continue;
             const int32 taken = MathUtil::min( remaining, item._count );
             item._count -= taken;
@@ -168,9 +168,9 @@ namespace sw
         return true;
     }
 
-    int32 GridInventory::takeFromInstance( int32 instanceId, int32 count )
+    int32 GridInventory::takeFromInstance( int32 instanceID, int32 count )
     {
-        const int32 itemIndex = findItemIndex( instanceId );
+        const int32 itemIndex = findItemIndex( instanceID );
         if ( itemIndex < 0 || count <= 0 )
             return 0;
         GridItem&   item  = _listItem[static_cast<size_t>( itemIndex )];
@@ -182,29 +182,29 @@ namespace sw
         return taken;
     }
 
-    bool GridInventory::moveItem( int32 instanceId, int32 x, int32 y, bool bRotated )
+    bool GridInventory::moveItem( int32 instanceID, int32 x, int32 y, bool bRotated )
     {
-        const int32 itemIndex = findItemIndex( instanceId );
+        const int32 itemIndex = findItemIndex( instanceID );
         if ( itemIndex < 0 )
             return false;
         GridItem& item = _listItem[static_cast<size_t>( itemIndex )];
-        if ( canPlace( item._itemId, x, y, bRotated, instanceId ) == false )
+        if ( canPlace( item._itemID, x, y, bRotated, instanceID ) == false )
             return false;
         stampItem( item, -1 );
         item._x        = x;
         item._y        = y;
         item._bRotated = bRotated ? SW_TRUE : SW_FALSE;
-        stampItem( item, instanceId );
+        stampItem( item, instanceID );
         ++_revision;
         return true;
     }
 
-    bool GridInventory::rotateItem( int32 instanceId )
+    bool GridInventory::rotateItem( int32 instanceID )
     {
-        const GridItem* pItem = findInstance( instanceId );
+        const GridItem* pItem = findInstance( instanceID );
         if ( pItem == nullptr )
             return false;
-        return moveItem( instanceId, pItem->_x, pItem->_y, pItem->_bRotated == SW_FALSE );
+        return moveItem( instanceID, pItem->_x, pItem->_y, pItem->_bRotated == SW_FALSE );
     }
 
     int32 GridInventory::findInstanceAt( int32 x, int32 y ) const
@@ -214,18 +214,18 @@ namespace sw
         return _listCell[static_cast<size_t>( y * _width + x )];
     }
 
-    const GridItem* GridInventory::findInstance( int32 instanceId ) const
+    const GridItem* GridInventory::findInstance( int32 instanceID ) const
     {
-        const int32 itemIndex = findItemIndex( instanceId );
+        const int32 itemIndex = findItemIndex( instanceID );
         return itemIndex >= 0 ? &_listItem[static_cast<size_t>( itemIndex )] : nullptr;
     }
 
-    int32 GridInventory::getItemCount( const hashed_string& itemId ) const
+    int32 GridInventory::getItemCount( const hashed_string& itemID ) const
     {
         int32 total = 0;
         for ( const GridItem& item : _listItem )
         {
-            if ( item._itemId == itemId )
+            if ( item._itemID == itemID )
                 total += item._count;
         }
         return total;
@@ -242,9 +242,9 @@ namespace sw
         return freeCount;
     }
 
-    bool GridInventory::findShape( const hashed_string& itemId, GridItemShape& outShape ) const
+    bool GridInventory::findShape( const hashed_string& itemID, GridItemShape& outShape ) const
     {
-        if ( _shapeLookup.isBound() == false || _shapeLookup( itemId, outShape ) == false )
+        if ( _shapeLookup.isBound() == false || _shapeLookup( itemID, outShape ) == false )
             return false;
         outShape._width    = MathUtil::max( 1, outShape._width );
         outShape._height   = MathUtil::max( 1, outShape._height );
@@ -252,11 +252,11 @@ namespace sw
         return true;
     }
 
-    int32 GridInventory::findItemIndex( int32 instanceId ) const
+    int32 GridInventory::findItemIndex( int32 instanceID ) const
     {
         for ( size_t itemIndex = 0; itemIndex < _listItem.size(); ++itemIndex )
         {
-            if ( _listItem[itemIndex]._instanceId == instanceId )
+            if ( _listItem[itemIndex]._instanceID == instanceID )
                 return static_cast<int32>( itemIndex );
         }
         return -1;
@@ -271,7 +271,7 @@ namespace sw
     void GridInventory::stampItem( const GridItem& item, int32 value )
     {
         GridItemShape shape;
-        if ( findShape( item._itemId, shape ) == false )
+        if ( findShape( item._itemID, shape ) == false )
             return;
         int32 footWidth  = 0;
         int32 footHeight = 0;
@@ -295,7 +295,7 @@ namespace sw
     {
         outArchive << _width;
         outArchive << _height;
-        outArchive << _nextInstanceId;
+        outArchive << _nextInstanceID;
         for ( const int32 cell : _listCell )
         {
             outArchive << cell;
@@ -303,8 +303,8 @@ namespace sw
         outArchive << static_cast<uint32>( _listItem.size() );
         for ( const GridItem& item : _listItem )
         {
-            StateArchiveUtil::writeName( outArchive, item._itemId );
-            outArchive << item._instanceId;
+            StateArchiveUtil::writeName( outArchive, item._itemID );
+            outArchive << item._instanceID;
             outArchive << item._count;
             outArchive << item._x;
             outArchive << item._y;
@@ -316,10 +316,10 @@ namespace sw
     {
         int32 width          = 0;
         int32 height         = 0;
-        int32 nextInstanceId = 0;
+        int32 nextInstanceID = 0;
         archive >> width;
         archive >> height;
-        archive >> nextInstanceId;
+        archive >> nextInstanceID;
         const uint64 cellCount = static_cast<uint64>( MathUtil::max( 0, width ) ) * static_cast<uint64>( MathUtil::max( 0, height ) );
         if ( archive.isError() || width < 0 || height < 0 || archive.hasBytesAvailable( cellCount * 4 ) == false )
             return false;
@@ -335,20 +335,20 @@ namespace sw
         vector<GridItem> listItem( itemCount );
         for ( GridItem& item : listItem )
         {
-            if ( StateArchiveUtil::readName( archive, item._itemId ) == false )
+            if ( StateArchiveUtil::readName( archive, item._itemID ) == false )
                 return false;
-            archive >> item._instanceId;
+            archive >> item._instanceID;
             archive >> item._count;
             archive >> item._x;
             archive >> item._y;
             archive >> item._bRotated;
-            const bool bValid = archive.isOk() && 0 <= item._instanceId && item._instanceId < nextInstanceId && 0 < item._count && item._bRotated <= SW_TRUE;
+            const bool bValid = archive.isOk() && 0 <= item._instanceID && item._instanceID < nextInstanceID && 0 < item._count && item._bRotated <= SW_TRUE;
             if ( bValid == false )
                 return false;
         }
         _width          = width;
         _height         = height;
-        _nextInstanceId = nextInstanceId;
+        _nextInstanceID = nextInstanceID;
         _listCell       = std::move( listCell );
         _listItem       = std::move( listItem );
         ++_revision;

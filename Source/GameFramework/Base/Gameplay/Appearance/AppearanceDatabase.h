@@ -57,7 +57,7 @@ namespace sw
         uint32                            getRevision() const { return _revision; }
 
         /** @brief 아이템의 외형입니다(형상 변경이 없을 때). 없으면 nullptr 입니다. */
-        const ItemVisualDef* findItemVisual( const hashed_string& itemId ) const;
+        const ItemVisualDef* findItemVisual( const hashed_string& itemID ) const;
         /** @brief 이름이 외형 주인(칸 또는 어떤 스키마의 매개변수)인가입니다. */
         bool isOwnerName( const hashed_string& name ) const;
 
@@ -69,7 +69,7 @@ namespace sw
         void               validateSchemas();
         void               validateRules( const vector<hashed_string>* pListKnownBodyRegion );
         void               validatePresets();
-        void               validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaId, const utf8* pWhere );
+        void               validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
         bool               isVariantDeclared( const hashed_string& variant ) const;
         bool               isPartDeclared( const hashed_string& part ) const;
 

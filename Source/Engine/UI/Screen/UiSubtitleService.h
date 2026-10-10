@@ -93,7 +93,7 @@ namespace sw
         float32                _authoredTextFontSize;    ///< 문서에 적힌 글 크기(크기 설정이 곱한다)
         float32                _authoredSpeakerFontSize; ///< 문서에 적힌 화자 이름 크기
         UiScreenHandle         _screen;
-        uint32                 _nextLineId;
+        uint32                 _nextLineID;
         bool                   _bDocumentFailed; ///< 문서를 못 지었다 — 같은 오류를 매 프레임 내지 않는다
     };
 } // namespace sw

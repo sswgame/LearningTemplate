@@ -20,7 +20,7 @@ namespace sw
         vector<uint8> _ticket{}; ///< 성공 — 계정 서버의 외부 로그인에 그대로 넘긴다
         string        _provider{};
         string        _failureText{}; ///< 실패 — 사람이 읽는 까닭(로그 · 화면)
-        uint64        _requestId{ 0 };
+        uint64        _requestID{ 0 };
         uint8         _bSucceeded{ SW_FALSE };
         uint8         _bCancelled{ SW_FALSE }; ///< 사용자가 거절했거나(`error=access_denied`) 시한이 지났다
     };
@@ -41,7 +41,7 @@ namespace sw
         IPlatformLoginClient( const IPlatformLoginClient& )            = delete;
         IPlatformLoginClient& operator=( const IPlatformLoginClient& ) = delete;
 
-        /** @brief @p provider 로 로그인을 시작합니다. 0 이 아닌 요청 id(결과의 `_requestId`) — 결과는 반드시 한 번(실패 · 취소도). */
+        /** @brief @p provider 로 로그인을 시작합니다. 0 이 아닌 요청 id(결과의 `_requestID`) — 결과는 반드시 한 번(실패 · 취소도). */
         virtual uint64 beginLogin( string_view provider, int64 nowMs )                 = 0;
         virtual void   tick( int64 nowMs )                                             = 0;
         virtual int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) = 0;
@@ -93,6 +93,6 @@ namespace sw
         vector<Preset>                    _listPreset;
         vector<PlatformLoginClientResult> _listPending;
         vector<PlatformLoginClientResult> _listDone;
-        uint64                            _nextRequestId;
+        uint64                            _nextRequestID;
     };
 } // namespace sw

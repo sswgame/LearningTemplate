@@ -11,7 +11,7 @@ namespace sw
 {
     StringPool::StringPool()
         : _listString{}
-        , _mapStringToId{}
+        , _mapStringToID{}
     {
         initializePredefined();
     }
@@ -19,16 +19,16 @@ namespace sw
     void StringPool::initializePredefined()
     {
         _listString.clear();
-        _mapStringToId.clear();
+        _mapStringToID.clear();
         _listString.reserve( kPredefinedCount + 32 );
-        _mapStringToId.reserve( kPredefinedCount + 32 );
+        _mapStringToID.reserve( kPredefinedCount + 32 );
 
 #define REGISTER_NAME( index, name )                               \
     {                                                              \
         const string strKey        = #name;                        \
         const uint32 expectedIndex = static_cast<uint32>( index ); \
         _listString.push_back( strKey );                           \
-        _mapStringToId.emplace( strKey, expectedIndex );           \
+        _mapStringToID.emplace( strKey, expectedIndex );           \
     }
 #include "Core/Predefined/PredefinedNameType.xxx"
 #undef REGISTER_NAME
@@ -42,14 +42,14 @@ namespace sw
             return keyIndex;
 
         const string key( str );
-        const auto   it = _mapStringToId.find( key );
-        if ( it != _mapStringToId.end() )
+        const auto   it = _mapStringToID.find( key );
+        if ( it != _mapStringToID.end() )
             return it->second;
 
-        const uint32 newId = static_cast<uint32>( _listString.size() );
+        const uint32 newID = static_cast<uint32>( _listString.size() );
         _listString.push_back( key );
-        _mapStringToId.emplace( _listString.back(), newId );
-        return newId;
+        _mapStringToID.emplace( _listString.back(), newID );
+        return newID;
     }
 
     string_view StringPool::getString( uint32 index ) const
@@ -82,16 +82,16 @@ namespace sw
             return false;
 
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
-        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
+        _mapStringToID.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
 
         for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
             string str;
             if ( inArchive.readString( str ) == false )
                 return false;
-            const uint32 stringId = static_cast<uint32>( _listString.size() );
+            const uint32 stringID = static_cast<uint32>( _listString.size() );
             _listString.push_back( std::move( str ) );
-            _mapStringToId.emplace( _listString.back(), stringId );
+            _mapStringToID.emplace( _listString.back(), stringID );
         }
         return true;
     }
@@ -115,7 +115,7 @@ namespace sw
             return false;
 
         _listString.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
-        _mapStringToId.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
+        _mapStringToID.reserve( kPredefinedCount + static_cast<size_t>( dynamicCount ) );
 
         for ( uint64 strIndex = 0; strIndex < dynamicCount; ++strIndex )
         {
@@ -132,7 +132,7 @@ namespace sw
 
             const uint32 id = static_cast<uint32>( _listString.size() );
             _listString.push_back( str );
-            _mapStringToId.emplace( std::move( str ), id );
+            _mapStringToID.emplace( std::move( str ), id );
         }
         return true;
     }

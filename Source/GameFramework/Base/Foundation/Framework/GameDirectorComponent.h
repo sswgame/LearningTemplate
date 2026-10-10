@@ -59,7 +59,7 @@ namespace sw
         /** @brief 규칙을 주 틱에서 돌면 `runRules` 를 부릅니다(`_tickAfter` 를 걸었으면 서브틱이 부른다). */
         void onTick( float32 deltaTime ) override;
         /** @brief 규칙 서브틱(`kRuleSubTick`)이면 `runRules` 를 부릅니다. */
-        void onSubTick( uint32 subTickId, float32 deltaTime ) override;
+        void onSubTick( uint32 subTickID, float32 deltaTime ) override;
         /** @brief 다른 오브젝트의 디렉터 뒤에 규칙을 돌게 합니다(플레이 시작 전 — 씬 데이터는 PROPERTY `_tickAfter`). */
         void setTickAfter( GameObjectHandle director ) { _tickAfter = director; }
         /** @brief 이 디렉터의 규칙이 도는 틱입니다 — `_tickAfter` 를 걸었으면 규칙 서브틱, 아니면 주 틱. 다른 디렉터가 선행 조건으로 겁니다. */

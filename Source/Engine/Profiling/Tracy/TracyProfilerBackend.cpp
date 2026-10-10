@@ -76,7 +76,7 @@ namespace sw
         : _zoneCount{ 0 }
         , _gpuZoneCount{ 0 }
         , _gpuContextCount{ 0 }
-        , _nextGpuQueryId{ 0 }
+        , _nextGpuQueryID{ 0 }
     {
     }
 
@@ -208,16 +208,16 @@ namespace sw
         if ( gpuContext >= _gpuContextCount )
             return;
         // 시각을 이미 안다 — 구간을 열면서 그 쿼리의 시각을 바로 넘긴다. 서버는 쿼리 번호로 둘을 잇는다.
-        const uint16                 queryId = allocateGpuQueryId();
+        const uint16                 queryID = allocateGpuQueryID();
         ___tracy_gpu_zone_begin_data beginData{};
         beginData.srcloc  = static_cast<uint64_t>( reinterpret_cast<uintptr_t>( &site ) );
-        beginData.queryId = queryId;
+        beginData.queryID = queryID;
         beginData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_zone_begin( beginData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuBeginNanos;
-        timeData.queryId = queryId;
+        timeData.queryID = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_time( timeData );
 #endif
@@ -228,25 +228,25 @@ namespace sw
 #if defined( SW_PROFILER_TRACY )
         if ( gpuContext >= _gpuContextCount )
             return;
-        const uint16               queryId = allocateGpuQueryId();
+        const uint16               queryID = allocateGpuQueryID();
         ___tracy_gpu_zone_end_data endData{};
-        endData.queryId = queryId;
+        endData.queryID = queryID;
         endData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_zone_end( endData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuEndNanos;
-        timeData.queryId = queryId;
+        timeData.queryID = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_time( timeData );
         _gpuZoneCount.fetch_add( 1, std::memory_order_relaxed );
 #endif
     }
 
-    uint16 TracyProfilerBackend::allocateGpuQueryId()
+    uint16 TracyProfilerBackend::allocateGpuQueryID()
     {
-        const uint16 queryId = _nextGpuQueryId;
-        _nextGpuQueryId      = static_cast<uint16>( _nextGpuQueryId + 1u );
-        return queryId;
+        const uint16 queryID = _nextGpuQueryID;
+        _nextGpuQueryID      = static_cast<uint16>( _nextGpuQueryID + 1u );
+        return queryID;
     }
 } // namespace sw

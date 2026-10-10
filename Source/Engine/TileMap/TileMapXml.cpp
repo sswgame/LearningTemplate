@@ -154,7 +154,7 @@ namespace sw
                     tileVisual._height = listEncounter[elementIndex] != 0 ? 2 : ( listWalkable[elementIndex] != 0 ? 1 : 0 );
 
                 if ( tileNode.findAttribute( "atlas" ) != nullptr )
-                    tileVisual._atlasId = TileMapXmlInternal::readByteAttribute( tileNode, "atlas", 0 );
+                    tileVisual._atlasID = TileMapXmlInternal::readByteAttribute( tileNode, "atlas", 0 );
 
                 const bool bHasTint = tileNode.findAttribute( "tr" ) != nullptr || tileNode.findAttribute( "tg" ) != nullptr || tileNode.findAttribute( "tb" ) != nullptr;
                 if ( bHasTint )
@@ -200,7 +200,7 @@ namespace sw
                 warp._targetTileY = warpNode.getAttributeInt( "ty", 0 );
                 const utf8* pPair = warpNode.findAttribute( "pair" );
                 if ( pPair != nullptr )
-                    warp._pairId = pPair;
+                    warp._pairID = pPair;
                 _listWarp.push_back( std::move( warp ) );
             }
         }
@@ -408,8 +408,8 @@ namespace sw
                 else if ( ( value != 0 ) != ( info._defaultValue != 0 ) )
                     tileNode.appendAttribute( info._pXmlAttribute, value != 0 ? 1 : 0 );
             }
-            if ( tileVisual._atlasId != 0 )
-                tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasId ) );
+            if ( tileVisual._atlasID != 0 )
+                tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasID ) );
             tileNode.appendAttribute( "tr", static_cast<int32>( tileVisual._tintR ) );
             tileNode.appendAttribute( "tg", static_cast<int32>( tileVisual._tintG ) );
             tileNode.appendAttribute( "tb", static_cast<int32>( tileVisual._tintB ) );
@@ -426,8 +426,8 @@ namespace sw
             warpNode.appendAttribute( "map", warp._targetMap );
             warpNode.appendAttribute( "tx", warp._targetTileX );
             warpNode.appendAttribute( "ty", warp._targetTileY );
-            if ( warp._pairId.empty() == false )
-                warpNode.appendAttribute( "pair", warp._pairId );
+            if ( warp._pairID.empty() == false )
+                warpNode.appendAttribute( "pair", warp._pairID );
         }
 
         // 타일 레이어는 타일셋이 있을 때만 쓴다 — 없는 맵은 예전과 바이트까지 같다. 칸은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게).

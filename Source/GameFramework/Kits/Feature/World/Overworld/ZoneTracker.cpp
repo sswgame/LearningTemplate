@@ -79,11 +79,11 @@ namespace sw
         _activeIndex = 0;
     }
 
-    void ZoneTracker::activate( string_view zoneId )
+    void ZoneTracker::activate( string_view zoneID )
     {
         for ( size_t zoneIndex = 0; zoneIndex < _listZone.size(); ++zoneIndex )
         {
-            if ( _listZone[zoneIndex]._id == zoneId )
+            if ( _listZone[zoneIndex]._id == zoneID )
             {
                 _activeIndex = static_cast<int32>( zoneIndex );
                 return;
@@ -117,7 +117,7 @@ namespace sw
         return &_listZone[static_cast<size_t>( _activeIndex )];
     }
 
-    string ZoneTracker::getActiveZoneId() const
+    string ZoneTracker::getActiveZoneID() const
     {
         const ZoneDef* pZone = getActiveZone();
         return pZone != nullptr ? pZone->_id : string{};

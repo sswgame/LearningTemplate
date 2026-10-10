@@ -61,7 +61,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, DerivedComponentShowsInheritedPropert
     InspectorPropertyLayout::collectPropertyGroups( *pSprite, {}, EditorListFilter{ "" }, listGroup );
 
     SW_EXPECT_EQUAL( 1u, countProperty( listGroup, "_localPosition" ) ); // SceneComponent
-    SW_EXPECT_EQUAL( 1u, countProperty( listGroup, "_meshId" ) );        // MeshComponent
+    SW_EXPECT_EQUAL( 1u, countProperty( listGroup, "_meshID" ) );        // MeshComponent
     SW_EXPECT_EQUAL( 1u, countProperty( listGroup, "_textureName" ) );   // SpriteComponent
     const size_t transformAt = findGroupIndex( listGroup, "Transform" );
     const size_t renderingAt = findGroupIndex( listGroup, "Rendering" );

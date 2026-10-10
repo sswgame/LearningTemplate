@@ -45,9 +45,9 @@ namespace sw
         _clock.reset();        // 새 서버의 틱은 옛 것보다 작을 수 있다 — 첫 스냅숏에서 다시 선다
     }
 
-    void ReplicationClient::onConnectionOpened( int32 connectionId )
+    void ReplicationClient::onConnectionOpened( int32 connectionID )
     {
-        (void)connectionId;
+        (void)connectionID;
         resetHistory();
     }
 
@@ -123,13 +123,13 @@ namespace sw
         outAlpha = NetInterpolationUtil::computeAlpha( pOutFrom->_tick, pOutTo->_tick, renderTick );
     }
 
-    bool ReplicationClient::sampleEntity( uint32 entityId, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const
+    bool ReplicationClient::sampleEntity( uint32 entityID, const NetEntityState*& pOutFrom, const NetEntityState*& pOutTo, float32& outAlpha ) const
     {
         const NetSnapshot* pFrom = nullptr;
         const NetSnapshot* pTo   = nullptr;
         findBracket( pFrom, pTo, outAlpha );
-        pOutFrom = pFrom != nullptr ? pFrom->findEntity( entityId ) : nullptr;
-        pOutTo   = pTo != nullptr ? pTo->findEntity( entityId ) : nullptr;
+        pOutFrom = pFrom != nullptr ? pFrom->findEntity( entityID ) : nullptr;
+        pOutTo   = pTo != nullptr ? pTo->findEntity( entityID ) : nullptr;
         if ( pOutFrom == nullptr && pOutTo == nullptr )
             return false;
         if ( pOutFrom == nullptr )
@@ -156,7 +156,7 @@ namespace sw
             return;
         for ( const NetEntityState& entity : pFrom->_listEntity )
         {
-            outListEntity.push_back( entity._entityId );
+            outListEntity.push_back( entity._entityID );
         }
     }
 

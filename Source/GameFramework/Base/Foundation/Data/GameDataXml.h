@@ -74,7 +74,7 @@ namespace sw
         }
 
         /** @brief `id` 속성을 돌려줍니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 입니다. */
-        static const utf8* findRequiredId( const XmlNode& node, string_view sourceName );
+        static const utf8* findRequiredID( const XmlNode& node, string_view sourceName );
 
         /**
          * @brief 쉼표 · 공백 · 탭 · 세미콜론으로 나뉜 실수를 최대 @p maxCount 개 읽습니다. 읽은 개수입니다.

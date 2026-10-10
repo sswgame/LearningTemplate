@@ -12,7 +12,7 @@ namespace sw
     {
         struct ChatTypesInternal
         {
-            static bool isIdCharacter( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.'; }
+            static bool isIDCharacter( utf8 ch ) { return ( 'a' <= ch && ch <= 'z' ) || ( '0' <= ch && ch <= '9' ) || ch == '_' || ch == '.'; }
 
             /** @brief 접두 뒤에 이름이 한 글자 이상 있는가입니다. */
             static bool hasPrefixWithName( string_view text, string_view prefix ) { return text.size() > prefix.size() && StringUtil::startsWith( text, prefix ); }
@@ -54,52 +54,52 @@ namespace sw
         return "Unknown";
     }
 
-    bool ChatChannelId::parseKind( string_view channelId, ChatChannelKind& outKind )
+    bool ChatChannelID::parseKind( string_view channelID, ChatChannelKind& outKind )
     {
-        if ( channelId.empty() || channelId.size() > static_cast<size_t>( ChatLimit::kMaxChannelIdSize ) )
+        if ( channelID.empty() || channelID.size() > static_cast<size_t>( ChatLimit::kMaxChannelIDSize ) )
             return false;
-        for ( const utf8 ch : channelId )
+        for ( const utf8 ch : channelID )
         {
-            if ( ChatTypesInternal::isIdCharacter( ch ) == false )
+            if ( ChatTypesInternal::isIDCharacter( ch ) == false )
                 return false;
         }
-        if ( ChatTypesInternal::hasPrefixWithName( channelId, "world." ) )
+        if ( ChatTypesInternal::hasPrefixWithName( channelID, "world." ) )
             outKind = ChatChannelKind::World;
-        else if ( ChatTypesInternal::hasPrefixWithName( channelId, "guild." ) )
+        else if ( ChatTypesInternal::hasPrefixWithName( channelID, "guild." ) )
             outKind = ChatChannelKind::Guild;
-        else if ( ChatTypesInternal::hasPrefixWithName( channelId, "party." ) )
+        else if ( ChatTypesInternal::hasPrefixWithName( channelID, "party." ) )
             outKind = ChatChannelKind::Party;
-        else if ( ChatTypesInternal::hasPrefixWithName( channelId, "custom." ) )
+        else if ( ChatTypesInternal::hasPrefixWithName( channelID, "custom." ) )
             outKind = ChatChannelKind::Custom;
-        else if ( ChatTypesInternal::hasPrefixWithName( channelId, "whisper." ) )
+        else if ( ChatTypesInternal::hasPrefixWithName( channelID, "whisper." ) )
             outKind = ChatChannelKind::Whisper;
         else
             return false;
         return true;
     }
 
-    string ChatChannelId::makeGuild( uint64 guildId )
+    string ChatChannelID::makeGuild( uint64 guildID )
     {
-        string channelId( "guild." );
-        ServiceKeyUtil::appendHex64( channelId, guildId );
-        return channelId;
+        string channelID( "guild." );
+        ServiceKeyUtil::appendHex64( channelID, guildID );
+        return channelID;
     }
 
-    string ChatChannelId::makeParty( uint64 partyId )
+    string ChatChannelID::makeParty( uint64 partyID )
     {
-        string channelId( "party." );
-        ServiceKeyUtil::appendHex64( channelId, partyId );
-        return channelId;
+        string channelID( "party." );
+        ServiceKeyUtil::appendHex64( channelID, partyID );
+        return channelID;
     }
 
-    string ChatChannelId::makeWhisper( AccountId first, AccountId second )
+    string ChatChannelID::makeWhisper( AccountID first, AccountID second )
     {
-        const AccountId low  = first < second ? first : second;
-        const AccountId high = first < second ? second : first;
-        string          channelId( "whisper." );
-        ServiceKeyUtil::appendHex64( channelId, low );
-        channelId += '.';
-        ServiceKeyUtil::appendHex64( channelId, high );
-        return channelId;
+        const AccountID low  = first < second ? first : second;
+        const AccountID high = first < second ? second : first;
+        string          channelID( "whisper." );
+        ServiceKeyUtil::appendHex64( channelID, low );
+        channelID += '.';
+        ServiceKeyUtil::appendHex64( channelID, high );
+        return channelID;
     }
 } // namespace sw

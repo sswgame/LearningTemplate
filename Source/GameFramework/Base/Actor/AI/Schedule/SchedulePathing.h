@@ -147,7 +147,7 @@ namespace sw
     private:
         /** @brief 지나는 방(출발 · 도착 포함)과 점을 채웁니다. 같은 방 · 길 없음이면 방 둘 · 점 둘입니다. */
         void   makeAreaRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<hashed_string>& outListArea, vector<float3>& outListPoint ) const;
-        float3 computeAreaCenter( const hashed_string& areaId, const float3& fallback ) const;
+        float3 computeAreaCenter( const hashed_string& areaID, const float3& fallback ) const;
 
         const AreaGraph* _pGraph;
         const GameFlags* _pFlags;

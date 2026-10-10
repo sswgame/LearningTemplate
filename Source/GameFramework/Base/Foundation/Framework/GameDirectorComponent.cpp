@@ -76,10 +76,10 @@ namespace sw
             runRules( deltaTime );
     }
 
-    void GameDirectorComponent::onSubTick( uint32 subTickId, float32 deltaTime )
+    void GameDirectorComponent::onSubTick( uint32 subTickID, float32 deltaTime )
     {
-        Component::onSubTick( subTickId, deltaTime );
-        if ( subTickId == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
+        Component::onSubTick( subTickID, deltaTime );
+        if ( subTickID == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
             runRules( deltaTime );
     }
 
@@ -88,7 +88,7 @@ namespace sw
         SubTickHandle handle = getTickHandle();
         // 걸 대상이 있으면 아직 시작 전이어도 서브틱 핸들 — 먼저 시작한 뒤쪽 디렉터가 이것을 걸어도 맞는다.
         if ( _tickAfter.isValid() )
-            handle._subTickId = kRuleSubTick;
+            handle._subTickID = kRuleSubTick;
         return handle;
     }
 

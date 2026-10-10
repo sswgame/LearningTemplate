@@ -115,7 +115,7 @@ namespace sw
          *
          * @note 이것은 오탐만 줄입니다. 다른 스레드가 들어오면 id 가 다르므로 그대로 보고됩니다.
          */
-        atomic<uint64> _ownerThreadId{ 0 };
+        atomic<uint64> _ownerThreadID{ 0 };
 #endif
     };
 } // namespace sw

@@ -17,7 +17,7 @@ namespace sw
     /** @brief 자산 하나의 검사 결과입니다. */
     struct LedgerAssetAudit
     {
-        string _assetId{};
+        string _assetID{};
         int64  _issued{ 0 }; ///< 발행에서 나간 양의 합
         int64  _burned{ 0 }; ///< 소각으로 들어간 양의 합
         int64  _held{ 0 };   ///< 계정 · 맡김 잔액의 합(빚은 음수로 든다)
@@ -38,7 +38,7 @@ namespace sw
         int32                    _journalCount{ 0 };
 
         bool                    isBalanced() const;
-        const LedgerAssetAudit* findAsset( string_view assetId ) const;
+        const LedgerAssetAudit* findAsset( string_view assetID ) const;
     };
 } // namespace sw
 

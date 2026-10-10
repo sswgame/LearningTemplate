@@ -39,14 +39,14 @@ namespace sw
     class SW_API TelemetryEvent
     {
     public:
-        explicit TelemetryEvent( const hashed_string& eventId );
+        explicit TelemetryEvent( const hashed_string& eventID );
 
         TelemetryEvent& setBool( const hashed_string& name, bool bValue );
         TelemetryEvent& setInt( const hashed_string& name, int64 value );
         TelemetryEvent& setFloat( const hashed_string& name, float64 value );
         TelemetryEvent& setString( const hashed_string& name, string_view value );
 
-        const hashed_string&          getId() const { return _id; }
+        const hashed_string&          getID() const { return _id; }
         const vector<TelemetryValue>& getValues() const { return _listValue; }
         const TelemetryValue*         findValue( const hashed_string& name ) const;
 

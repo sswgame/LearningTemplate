@@ -34,7 +34,7 @@ namespace sw::editor
         void update( float32 deltaTime, bool bWindowFocused, bool bWindowHovered );
 
         /** @brief 뷰포트 UI 와 ImGuizmo 를 그립니다. */
-        void draw( const void* pTextureId, const float2& canvasSize );
+        void draw( const void* pTextureID, const float2& canvasSize );
 
         /** @brief 뷰포트 렌더 모드/카메라 속도 툴바를 그립니다. */
         void drawViewportToolbar( float32 viewportWidth );

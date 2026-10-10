@@ -20,9 +20,9 @@ namespace sw
     /** @brief 조립 설정입니다. */
     struct LoadBotLocalServerSettings
     {
-        vector<string> _listBoardId{};          ///< 서버만 점수를 내는 순위표 — 비면 "kills"
+        vector<string> _listBoardID{};          ///< 서버만 점수를 내는 순위표 — 비면 "kills"
         string         _region{ "kr" };         ///< 게임 서버 지역
-        uint64         _serverId{ 1 };          ///< 버스 · 접속 상태의 서버 id
+        uint64         _serverID{ 1 };          ///< 버스 · 접속 상태의 서버 id
         int32          _maxConnections{ 1024 }; ///< 받을 연결 상한(봇 수보다 크게)
         int32          _gameServerCapacity{ 100000 };
         uint16         _port{ 7100 };

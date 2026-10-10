@@ -988,12 +988,12 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
  *          번호가 0·1·2 면 화면이 빨강이고(D3D), 36·37·38 이면 삼각형이 퇴화해 클리어 색만 남는다(Vulkan·GL).
  *          이 기대가 깨지면 셰이더의 분기도 같이 틀린 것이다.
  */
-SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
+SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIDStartsAtZeroOnlyOnD3D )
 {
     struct Expectation
     {
         sw::RHIBackend _backend;
-        bool           _bVertexIdStartsAtZero;
+        bool           _bVertexIDStartsAtZero;
     };
     const Expectation arrExpectation[] = {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -1056,7 +1056,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
                     const PrimaryColorCount count    = countPrimaryColorPixels( pixels, layout );
                     const uint32            redCount = count._red;
                     const uint32            total    = count._total;
-                    if ( expectation._bVertexIdStartsAtZero )
+                    if ( expectation._bVertexIDStartsAtZero )
                     {
                         SW_EXPECT_TRUE_MSG( redCount == total,
                                             ( sw::string( device->getBackendName() ) + ": SV_VertexID 가 startVertex 를 포함한다 (red " + sw::to_string( redCount ) +

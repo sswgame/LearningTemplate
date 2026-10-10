@@ -36,36 +36,36 @@ namespace sw
         _listBatch.clear();
     }
 
-    int32 IngredientStock::addFresh( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost )
+    int32 IngredientStock::addFresh( const hashed_string& itemID, int32 count, int32 shelfLife, int64 unitCost )
     {
         if ( _pInventory == nullptr || count <= 0 )
             return 0;
-        const int32 addedCount = _pInventory->addItem( itemId, count );
-        recordBatch( itemId, addedCount, shelfLife, unitCost );
+        const int32 addedCount = _pInventory->addItem( itemID, count );
+        recordBatch( itemID, addedCount, shelfLife, unitCost );
         return addedCount;
     }
 
-    void IngredientStock::recordBatch( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost )
+    void IngredientStock::recordBatch( const hashed_string& itemID, int32 count, int32 shelfLife, int64 unitCost )
     {
         if ( count <= 0 )
             return;
-        _listBatch.push_back( IngredientBatch{ itemId, unitCost, count, shelfLife > 0 ? shelfLife : -1 } );
+        _listBatch.push_back( IngredientBatch{ itemID, unitCost, count, shelfLife > 0 ? shelfLife : -1 } );
         sortBatches();
     }
 
-    bool IngredientStock::consume( const hashed_string& itemId, int32 count, int64& outCost )
+    bool IngredientStock::consume( const hashed_string& itemID, int32 count, int64& outCost )
     {
-        if ( _pInventory == nullptr || count <= 0 || _pInventory->hasItem( itemId, count ) == false )
+        if ( _pInventory == nullptr || count <= 0 || _pInventory->hasItem( itemID, count ) == false )
             return false;
-        reconcile( itemId );
-        if ( _pInventory->removeItem( itemId, count ) == false )
+        reconcile( itemID );
+        if ( _pInventory->removeItem( itemID, count ) == false )
             return false;
         int32 remaining = count;
         for ( IngredientBatch& batch : _listBatch )
         {
             if ( remaining == 0 )
                 break;
-            if ( batch._itemId != itemId || batch._count <= 0 )
+            if ( batch._itemID != itemID || batch._count <= 0 )
                 continue;
             const int32 takenCount = batch._count < remaining ? batch._count : remaining;
             batch._count -= takenCount;
@@ -85,17 +85,17 @@ namespace sw
             return false;
         // 이름 순으로 돌아 결과(원가 합 · 로그)가 해시 순서에 기대지 않게 한다.
         vector<hashed_string> listItem;
-        items.getItemIds( listItem );
+        items.getItemIDs( listItem );
         std::sort( listItem.begin(), listItem.end(), HashedStringLexicalLess{} );
-        for ( const hashed_string& itemId : listItem )
+        for ( const hashed_string& itemID : listItem )
         {
-            if ( _pInventory->hasItem( itemId, items.getItemCount( itemId ) * times ) == false )
+            if ( _pInventory->hasItem( itemID, items.getItemCount( itemID ) * times ) == false )
                 return false;
         }
-        for ( const hashed_string& itemId : listItem )
+        for ( const hashed_string& itemID : listItem )
         {
-            if ( consume( itemId, items.getItemCount( itemId ) * times, outCost ) == false )
-                SW_LOG_WARNING( "lost '%#' between the check and the take", itemId.c_str() );
+            if ( consume( itemID, items.getItemCount( itemID ) * times, outCost ) == false )
+                SW_LOG_WARNING( "lost '%#' between the check and the take", itemID.c_str() );
         }
         return true;
     }
@@ -106,14 +106,14 @@ namespace sw
         {
             if ( batch._daysLeft < 0 )
                 continue;
-            reconcile( batch._itemId );
+            reconcile( batch._itemID );
             --batch._daysLeft;
             if ( batch._daysLeft > 0 || batch._count <= 0 )
                 continue;
-            const int32 heldCount    = _pInventory != nullptr ? _pInventory->getItemCount( batch._itemId ) : 0;
+            const int32 heldCount    = _pInventory != nullptr ? _pInventory->getItemCount( batch._itemID ) : 0;
             const int32 spoiledCount = batch._count < heldCount ? batch._count : heldCount;
-            if ( spoiledCount > 0 && _pInventory != nullptr && _pInventory->removeItem( batch._itemId, spoiledCount ) )
-                outListSpoilage.push_back( IngredientSpoilage{ batch._itemId, batch._unitCost * spoiledCount, spoiledCount } );
+            if ( spoiledCount > 0 && _pInventory != nullptr && _pInventory->removeItem( batch._itemID, spoiledCount ) )
+                outListSpoilage.push_back( IngredientSpoilage{ batch._itemID, batch._unitCost * spoiledCount, spoiledCount } );
             batch._count = 0;
         }
         _listBatch.erase( std::remove_if( _listBatch.begin(), _listBatch.end(), []( const IngredientBatch& batch )
@@ -121,37 +121,37 @@ namespace sw
                           _listBatch.end() );
     }
 
-    int32 IngredientStock::findEarliestExpiry( const hashed_string& itemId ) const
+    int32 IngredientStock::findEarliestExpiry( const hashed_string& itemID ) const
     {
         for ( const IngredientBatch& batch : _listBatch )
         {
-            if ( batch._itemId == itemId && batch._daysLeft >= 0 )
+            if ( batch._itemID == itemID && batch._daysLeft >= 0 )
                 return batch._daysLeft;
         }
         return -1;
     }
 
-    int32 IngredientStock::getBatchCount( const hashed_string& itemId ) const
+    int32 IngredientStock::getBatchCount( const hashed_string& itemID ) const
     {
         int32 count = 0;
         for ( const IngredientBatch& batch : _listBatch )
         {
-            if ( batch._itemId == itemId )
+            if ( batch._itemID == itemID )
                 count += batch._count;
         }
         return count;
     }
 
-    void IngredientStock::reconcile( const hashed_string& itemId )
+    void IngredientStock::reconcile( const hashed_string& itemID )
     {
         if ( _pInventory == nullptr )
             return;
-        int32 excess = getBatchCount( itemId ) - _pInventory->getItemCount( itemId );
+        int32 excess = getBatchCount( itemID ) - _pInventory->getItemCount( itemID );
         for ( IngredientBatch& batch : _listBatch )
         {
             if ( excess <= 0 )
                 break;
-            if ( batch._itemId != itemId )
+            if ( batch._itemID != itemID )
                 continue;
             const int32 droppedCount = batch._count < excess ? batch._count : excess;
             batch._count -= droppedCount;
@@ -170,7 +170,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listBatch.size() );
         for ( const IngredientBatch& batch : _listBatch )
         {
-            StateArchiveUtil::writeName( outArchive, batch._itemId );
+            StateArchiveUtil::writeName( outArchive, batch._itemID );
             outArchive << batch._unitCost;
             outArchive << batch._count;
             outArchive << batch._daysLeft;
@@ -186,7 +186,7 @@ namespace sw
         vector<IngredientBatch> listBatch( count );
         for ( IngredientBatch& batch : listBatch )
         {
-            if ( StateArchiveUtil::readName( archive, batch._itemId ) == false )
+            if ( StateArchiveUtil::readName( archive, batch._itemID ) == false )
                 return false;
             archive >> batch._unitCost;
             archive >> batch._count;

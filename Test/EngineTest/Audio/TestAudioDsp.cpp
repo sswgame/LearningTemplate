@@ -268,10 +268,10 @@ SW_TEST_CASE( AudioDspTest, BusEffectChainsComeFromData )
     SW_ASSERT_TRUE( engine.initialize( desc ) );
     engine.getClipStore().addClip( sw::hashed_string( "test/tone" ), test::AudioTestUtil::makeSineClip( 4000.0f, 0.2f, 48000 ) );
 
-    const sw::AudioPlayingId  musicId     = engine.playClip( sw::hashed_string( "test/tone" ), sw::hashed_string( "music" ), sw::AudioClipPlayParams{} );
+    const sw::AudioPlayingID  musicID     = engine.playClip( sw::hashed_string( "test/tone" ), sw::hashed_string( "music" ), sw::AudioClipPlayParams{} );
     const sw::vector<float32> listMusic   = test::AudioTestUtil::render( engine, 9600 );
     const float32             musicAmount = test::AudioTestUtil::computeToneAmplitude( listMusic, 0, 4800, 4800, 4000.0f );
-    engine.stop( musicId, 0.0f );
+    engine.stop( musicID, 0.0f );
     (void)engine.playClip( sw::hashed_string( "test/tone" ), sw::hashed_string( "sfx" ), sw::AudioClipPlayParams{} );
     const sw::vector<float32> listSfx   = test::AudioTestUtil::render( engine, 9600 );
     const float32             sfxAmount = test::AudioTestUtil::computeToneAmplitude( listSfx, 0, 4800, 4800, 4000.0f );

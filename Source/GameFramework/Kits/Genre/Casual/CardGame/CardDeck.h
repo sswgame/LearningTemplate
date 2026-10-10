@@ -78,13 +78,13 @@ namespace sw
         [[nodiscard]] bool draw( Card& outCard );
         /** @brief 맨 위에서 @p count 장을 @p target 위로 옮깁니다(한 장씩 — 순서가 뒤집힌다). 옮긴 수입니다. */
         int32 drawInto( CardPile& target, int32 count );
-        /** @brief 번호가 @p cardId 인 카드를 빼냅니다. 없으면 false 입니다. */
-        [[nodiscard]] bool takeById( uint16 cardId, Card& outCard );
+        /** @brief 번호가 @p cardID 인 카드를 빼냅니다. 없으면 false 입니다. */
+        [[nodiscard]] bool takeByID( uint16 cardID, Card& outCard );
         /** @brief 자리 @p index 의 카드를 뺍니다(위아래 순서는 그대로). */
         Card removeAt( int32 index );
-        /** @brief 번호가 @p cardId 인 카드의 자리입니다. 없으면 −1 입니다. */
-        int32 findIndexById( uint16 cardId ) const;
-        bool  containsId( uint16 cardId ) const { return findIndexById( cardId ) >= 0; }
+        /** @brief 번호가 @p cardID 인 카드의 자리입니다. 없으면 −1 입니다. */
+        int32 findIndexByID( uint16 cardID ) const;
+        bool  containsID( uint16 cardID ) const { return findIndexByID( cardID ) >= 0; }
 
         /** @brief Fisher-Yates 셔플입니다. 같은 씨앗의 @p random 이면 같은 순서가 나옵니다(플랫폼 무관). */
         void shuffle( GameRandom& random );
@@ -129,13 +129,13 @@ namespace sw
     /**
      * @struct CardAction
      * @brief 한 게임의 행동 하나입니다. 뜻은 게임이 정합니다(`_kind` = 게임의 행동 enum, 카드 · 대상 · 금액).
-     * @details 포커: 종류 + 금액, 맞고: 낸 카드 + 고를 바닥 카드, 우노: 낸 카드 + 고른 색(`_targetId`) + 우노 선언(`_amount`).
+     * @details 포커: 종류 + 금액, 맞고: 낸 카드 + 고를 바닥 카드, 우노: 낸 카드 + 고른 색(`_targetID`) + 우노 선언(`_amount`).
      */
     struct CardAction
     {
         int32  _amount{ 0 };
-        uint16 _cardId{ Card::kNoCard };
-        uint16 _targetId{ Card::kNoCard };
+        uint16 _cardID{ Card::kNoCard };
+        uint16 _targetID{ Card::kNoCard };
         uint8  _kind{ 0 };
     };
 } // namespace sw

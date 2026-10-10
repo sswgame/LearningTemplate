@@ -32,7 +32,7 @@ namespace sw::editor
     struct EditorViewTarget
     {
         uint64 _renderTarget{ 0 };
-        void*  _pTextureId{ nullptr };
+        void*  _pTextureID{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
         uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다) — 프레임 시작에 지운다

@@ -62,7 +62,7 @@ namespace sw
     {
         Vitality       _vitality{};
         ScavengerCarry _carry{};
-        hashed_string  _areaId{};                   ///< 있는 곳(`ship` · `outside` · 시설 방)
+        hashed_string  _areaID{};                   ///< 있는 곳(`ship` · `outside` · 시설 방)
         uint8          _bBodyRecovered{ SW_FALSE }; ///< 죽었고 시신이 우주선에 실렸다
 
         bool isDead() const { return _vitality.isDead(); }
@@ -126,8 +126,8 @@ namespace sw
     class SW_GF_API ScavengerExpedition
     {
     public:
-        static constexpr const utf8* kShipAreaId    = "ship";
-        static constexpr const utf8* kOutsideAreaId = "outside";
+        static constexpr const utf8* kShipAreaID    = "ship";
+        static constexpr const utf8* kOutsideAreaID = "outside";
         static constexpr uint32      kStateTag      = FourCcUtil::make( "SCEX" );
         static constexpr uint32      kStateVersion  = 1;
 
@@ -140,7 +140,7 @@ namespace sw
         void initialize( const ScavengerExpeditionData& data, const GameStateRefs& refs, Inventory& shipStorage, uint32 seed, int32 crewCount );
 
         /** @brief 궤도에서 위성으로 갑니다(비용을 낸다). 이미 그 위성이면 공짜입니다. */
-        ScavengerActionResult routeTo( const hashed_string& moonId );
+        ScavengerActionResult routeTo( const hashed_string& moonID );
         /** @brief 지금 위성에 내립니다 — 하루가 시작되고 시설 · 날씨 · 위협이 정해집니다. */
         ScavengerActionResult land();
         /** @brief 이륙합니다(사람이 레버를 당겼다). */
@@ -148,7 +148,7 @@ namespace sw
         void                  update( float32 deltaTime );
 
         /** @brief 이어진 곳으로 옮깁니다(잠긴 문은 막힌다). */
-        ScavengerActionResult movePlayer( int32 player, const hashed_string& areaId );
+        ScavengerActionResult movePlayer( int32 player, const hashed_string& areaID );
         /** @brief 그 방의 바닥에서 줍습니다. */
         ScavengerPickupResult pickUp( int32 player, int32 uid );
         /** @brief 든 것을 지금 방 바닥에 내려놓습니다(우주선 안이면 우주선에 싣는다). */
@@ -156,19 +156,19 @@ namespace sw
         /** @brief 우주선 안에서 든 것을 모두 싣습니다. 실은 수입니다. */
         int32 depositToShip( int32 player );
         /** @brief 잠긴 문을 엽니다(열쇠 · 자물쇠 따개 — 게임이 판단). */
-        bool unlockDoor( const hashed_string& roomId ) { return _facility.unlockDoor( roomId ); }
+        bool unlockDoor( const hashed_string& roomID ) { return _facility.unlockDoor( roomID ); }
         /** @brief 피해를 줍니다. 체력이 받은 양입니다. */
         float32 applyDamage( int32 player, float32 amount );
         void    killPlayer( int32 player );
         /** @brief 게임 쪽 위협이 사라졌습니다. */
-        void notifyThreatDespawned( bool bIndoor, uint32 spawnId );
+        void notifyThreatDespawned( bool bIndoor, uint32 spawnID );
 
         /** @brief 회사에서 우주선 고철을 모두 팝니다. 받은 크레딧입니다(회사가 아니면 0 · @p outResult). */
         int32 sellAllShipScrap( ScavengerActionResult& outResult );
         /** @brief 지금 팔면 받는 값입니다. */
         int32 computeSellValue() const;
         /** @brief 터미널 상점에서 삽니다(우주선 창고로). */
-        ShopResult buyFromTerminal( const hashed_string& itemId, int32 count );
+        ShopResult buyFromTerminal( const hashed_string& itemID, int32 count );
         void       drainEvents( vector<ScavengerEvent>& outListEvent );
 
         /**

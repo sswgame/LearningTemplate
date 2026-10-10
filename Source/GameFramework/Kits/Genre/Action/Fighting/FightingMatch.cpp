@@ -446,14 +446,14 @@ namespace sw
         const FighterRuntime& fighter = _arrFighter[player];
         if ( fighter._state != FighterState::Attacking || fighter._timeline.isPlaying() == false )
             return false;
-        const hashed_string& moveId = fighter._pDef->_listMove[static_cast<size_t>( moveIndex )]._frame._id;
+        const hashed_string& moveID = fighter._pDef->_listMove[static_cast<size_t>( moveIndex )]._frame._id;
         for ( const MoveCancelWindow& window : fighter._timeline.getMove()._listCancel )
         {
             if ( window._toFrame < fighter._timeline.getFrame() )
                 continue;
-            for ( const hashed_string& candidate : window._listMoveId )
+            for ( const hashed_string& candidate : window._listMoveID )
             {
-                if ( candidate == moveId )
+                if ( candidate == moveID )
                     return true;
             }
         }
@@ -1047,13 +1047,13 @@ namespace sw
         return _series.getWinner() == RoundSeries::kNoWinner ? kDraw : _series.getWinner();
     }
 
-    void FightingMatch::pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveId )
+    void FightingMatch::pushEvent( FightingEvent::Kind kind, int32 player, int32 value, const hashed_string& moveID )
     {
         FightingEvent event;
         event._kind   = kind;
         event._player = player;
         event._value  = value;
-        event._moveId = moveId;
+        event._moveID = moveID;
         _eventBuffer.push( event );
     }
 

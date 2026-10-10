@@ -34,12 +34,12 @@ namespace
     void measureSteps( bool bWithFarMover, sw::vector<int64>& outListSample )
     {
         sw::PhysicsWorld world;
-        uint64           objectId = 1;
+        uint64           objectID = 1;
         for ( uint32 row = 0; row < kStaticRowCount; ++row )
         {
             for ( uint32 column = 0; column < kStaticRowCount; ++column )
             {
-                world.addBody( makeBoxAt( static_cast<float32>( column ) * kStaticSpacing, static_cast<float32>( row ) * kStaticSpacing ), 0, objectId++ );
+                world.addBody( makeBoxAt( static_cast<float32>( column ) * kStaticSpacing, static_cast<float32>( row ) * kStaticSpacing ), 0, objectID++ );
             }
         }
 
@@ -52,10 +52,10 @@ namespace
             sw::PhysicsBodyState state;
             state._aabb        = makeBoxAt( position._x, position._y );
             state._bContinuous = SW_TRUE;
-            listContinuousBody.push_back( world.addBody( state, objectId++ ) );
+            listContinuousBody.push_back( world.addBody( state, objectID++ ) );
             listPosition.push_back( position );
         }
-        const sw::PhysicsWorld::BodyHandle farMover = world.addBody( makeBoxAt( -50.0f, -50.0f ), 0, objectId++ );
+        const sw::PhysicsWorld::BodyHandle farMover = world.addBody( makeBoxAt( -50.0f, -50.0f ), 0, objectID++ );
         world.step( 0.016f );
 
         outListSample.clear();

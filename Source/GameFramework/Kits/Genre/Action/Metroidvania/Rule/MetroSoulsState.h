@@ -69,7 +69,7 @@ namespace sw
     /** @brief 처치 기록 하나입니다(놓인 자리 id 단위 — 같은 종류도 자리마다 따로). */
     struct MetroKillRecord
     {
-        hashed_string _spawnId{};
+        hashed_string _spawnID{};
         uint8         _bBoss{ SW_FALSE };
     };
 } // namespace sw
@@ -98,15 +98,15 @@ namespace sw
          * @brief 쉬는 지점에서 쉽니다 — 체력 가득(`Vitality::respawn`), 물약 충전, 보스가 아닌 적 부활, 되살아날 자리 갱신.
          * @return 쉬는 지점이 아니면 아무 일 없이 false.
          */
-        [[nodiscard]] bool rest( const hashed_string& siteId, Vitality& vitality );
+        [[nodiscard]] bool rest( const hashed_string& siteID, Vitality& vitality );
         /**
          * @brief 죽습니다 — 가진 통화를 그 자리에 시체로 떨어뜨리고(이미 시체가 있으면 그 통화는 영영 사라진다), 마지막으로 쉰 자리에서 되살아납니다
          *        (체력 · 물약 가득, 보스가 아닌 적 부활).
          * @return 되살아날 지점 id(쉰 적이 없으면 빈 이름).
          */
-        hashed_string die( const hashed_string& areaId, const float2& position, Vitality& vitality );
+        hashed_string die( const hashed_string& areaID, const float2& position, Vitality& vitality );
         /** @brief 시체를 되찾습니다 — 같은 방, `_corpseRecoverRadius` 안이어야 합니다. 되찾았으면 true 입니다. */
-        [[nodiscard]] bool tryRecoverCorpse( const hashed_string& areaId, const float2& position );
+        [[nodiscard]] bool tryRecoverCorpse( const hashed_string& areaID, const float2& position );
 
         /** @brief 물약을 마십니다 — 충전이 남았고 살아 있으면 회복하고 true 입니다. */
         bool drinkFlask( Vitality& vitality );
@@ -118,12 +118,12 @@ namespace sw
 
         /**
          * @brief 적을 쓰러뜨립니다. 통화를 더하고, 전리품 표가 있으면 굴려 @p outDrops 에 더하고, 보스면 플래그를 켭니다.
-         * @param spawnId 그 적이 놓인 자리(같은 자리는 쉬기 전까지 다시 나오지 않는다)
+         * @param spawnID 그 적이 놓인 자리(같은 자리는 쉬기 전까지 다시 나오지 않는다)
          * @return 얻은 통화. 모르는 적이거나 이미 쓰러뜨린 자리면 −1.
          */
-        int32 registerKill( const hashed_string& spawnId, const hashed_string& enemyId, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemStackList& outDrops );
+        int32 registerKill( const hashed_string& spawnID, const hashed_string& enemyID, GameFlags& flags, const LootCatalog* pLoot, GameRandom& random, ItemStackList& outDrops );
         /** @brief 그 자리의 적이 지금 살아 있는가(처치 기록이 없다)입니다. */
-        bool isSpawnAlive( const hashed_string& spawnId ) const;
+        bool isSpawnAlive( const hashed_string& spawnID ) const;
         /** @brief 쌓인 알림을 꺼내 갑니다. */
         void drainEvents( vector<MetroSoulsEvent>& outListEvent );
 

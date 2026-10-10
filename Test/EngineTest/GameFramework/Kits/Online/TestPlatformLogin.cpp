@@ -114,7 +114,7 @@ namespace
     /** @brief 키 하나(kid · 알고리즘 · 비밀 PEM · 공개 키)입니다. */
     struct SigningKey
     {
-        string                _keyId{};
+        string                _keyID{};
         string                _privateKeyPem{};
         NetPublicKey          _publicKey{};
         NetSignatureAlgorithm _algorithm{ NetSignatureAlgorithm::RsaPkcs1Sha256 };
@@ -122,10 +122,10 @@ namespace
 
     struct TestPlatformLoginInternal
     {
-        static SigningKey makeKey( const utf8* pKeyId, NetSignatureAlgorithm algorithm )
+        static SigningKey makeKey( const utf8* pKeyID, NetSignatureAlgorithm algorithm )
         {
             SigningKey key;
-            key._keyId     = pKeyId;
+            key._keyID     = pKeyID;
             key._algorithm = algorithm;
             (void)NetSecurity::getProvider().createSigningKeyPair( algorithm, key._privateKeyPem, key._publicKey );
             return key;
@@ -138,7 +138,7 @@ namespace
             {
                 if ( index != 0 )
                     jwks += ",";
-                jwks += JsonWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyId );
+                jwks += JsonWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyID );
             }
             return jwks + "]}";
         }
@@ -151,7 +151,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JsonWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
+            (void)JsonWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyID, payload, key._privateKeyPem, compact );
             return compact;
         }
 
@@ -225,7 +225,7 @@ namespace
             settings._kind    = PlatformLoginProviderKind::Oidc;
             settings._issuer  = "https://issuer.test";
             settings._jwksURL = makeURL( "/jwks" );
-            settings._listClientId.push_back( "client-a" );
+            settings._listClientID.push_back( "client-a" );
             settings._displayNamePath = "name";
             return settings;
         }
@@ -233,7 +233,7 @@ namespace
         /** @brief 제공자 표 하나를 끝까지 확인합니다(서버 · 제공자를 번갈아 돌린다). */
         PlatformLoginVerification verify( IPlatformLoginProvider& provider, string_view ticket )
         {
-            const uint64 verificationId = provider.submitVerification( TestPlatformLoginInternal::toBytes( ticket ), _nowMs );
+            const uint64 verificationID = provider.submitVerification( TestPlatformLoginInternal::toBytes( ticket ), _nowMs );
             for ( int32 step = 0; step < 400; ++step )
             {
                 _server.tick();
@@ -242,7 +242,7 @@ namespace
                 (void)provider.pollVerifications( listVerification );
                 for ( PlatformLoginVerification& verification : listVerification )
                 {
-                    if ( verification._verificationId == verificationId )
+                    if ( verification._verificationID == verificationID )
                         return std::move( verification );
                 }
                 _nowMs += 10;
@@ -357,7 +357,7 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
     string                                error;
     SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJson, listSettings, error ) );
     SW_ASSERT_EQUAL( size_t( 3 ), listSettings.size() );
-    SW_EXPECT_EQUAL( size_t( 2 ), listSettings[0]._listClientId.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), listSettings[0]._listClientID.size() );
     SW_EXPECT_TRUE( listSettings[0]._bRequireNonce == SW_TRUE );
     SW_EXPECT_EQUAL( string( "sub" ), listSettings[1]._subjectPath );
     SW_EXPECT_TRUE( listSettings[2]._kind == PlatformLoginProviderKind::AccessTokenProfile );
@@ -371,7 +371,7 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
     SW_EXPECT_FALSE( PlatformLoginProviderFactory::readSettings( "{\"providers\":[{\"name\":\"x\",\"kind\":\"oidc\"}]}", listSettings, error ) ); // 필수 칸
 }
 
-SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
+SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIDTokenWithNonce )
 {
     using Internal = TestPlatformLoginInternal;
     IssuerFixture             fixture;
@@ -381,7 +381,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     settings._provider         = "google";
     settings._authorizationURL = fixture.makeURL( "/authorize?prompt=select_account" );
     settings._tokenURL         = fixture.makeURL( "/token" );
-    settings._clientId         = "client-a";
+    settings._clientID         = "client-a";
     StreamTransportSettings transportSettings;
     transportSettings._ioThreadCount = 0;
     SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &NetSecurity::getProvider(),
@@ -389,7 +389,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     client.getHttpClient().registerTLSContext( "localhost", fixture._clientContext.get() );
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
-    const uint64     requestId = client.beginLogin( "google", kNowMs );
+    const uint64     requestID = client.beginLogin( "google", kNowMs );
     SW_ASSERT_FALSE( browser._lastURL.empty() );
     SW_EXPECT_EQUAL( string( "select_account" ), Internal::findQuery( browser._lastURL, "prompt" ) ); // 설정의 쿼리를 지킨다
     SW_EXPECT_EQUAL( string( "S256" ), Internal::findQuery( browser._lastURL, "code_challenge_method" ) );
@@ -419,7 +419,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
         (void)client.pollResults( listResult );
     }
     SW_ASSERT_EQUAL( size_t( 1 ), listResult.size() );
-    SW_EXPECT_EQUAL( requestId, listResult[0]._requestId );
+    SW_EXPECT_EQUAL( requestID, listResult[0]._requestID );
     SW_ASSERT_TRUE( listResult[0]._bSucceeded == SW_TRUE );
     SW_EXPECT_EQUAL( fixture._handler._idToken + "|" + nonce, string( reinterpret_cast<const utf8*>( listResult[0]._ticket.data() ), listResult[0]._ticket.size() ) );
     SW_EXPECT_EQUAL( 1, fixture._handler._tokenHitCount ); // 위조 state 는 토큰 교환까지 가지 않았다
@@ -461,7 +461,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     SW_EXPECT_TRUE( listResult[1]._bCancelled == SW_TRUE );
 }
 
-SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIdToken )
+SW_TEST_CASE( PlatformLoginTest, LoginServiceCreatesAnAccountFromAVerifiedIDToken )
 {
     using Internal = TestPlatformLoginInternal;
     IssuerFixture    fixture;

@@ -167,6 +167,6 @@ namespace sw
      */
     struct SW_GF_API LightExposure
     {
-        static float32 computeExposure( const GameObjectManager& manager, const float3& position, bool bOcclusion, uint64 ignoreObjectId = 0 );
+        static float32 computeExposure( const GameObjectManager& manager, const float3& position, bool bOcclusion, uint64 ignoreObjectID = 0 );
     };
 } // namespace sw

@@ -17,9 +17,9 @@ using namespace sw;
 
 namespace
 {
-    constexpr AccountId kAlice = 0xA11CE;
-    constexpr AccountId kBob   = 0xB0B;
-    constexpr AccountId kCarol = 0xCA201;
+    constexpr AccountID kAlice = 0xA11CE;
+    constexpr AccountID kBob   = 0xB0B;
+    constexpr AccountID kCarol = 0xCA201;
 
     /** @brief 서버 한 대 — 앞(MemoryServiceStore) + 거래 서비스. 데이터는 밖에서 빌린다. */
     struct TradeNode
@@ -27,14 +27,14 @@ namespace
         MemoryServiceStore       _store;
         DefaultTradePolicy       _policy;
         unique_ptr<TradeService> _service;
-        uint64                   _serverId;
+        uint64                   _serverID;
         uint64                   _nextTag;
 
-        TradeNode( MemoryServiceDatabase* pDatabase, uint64 serverId )
+        TradeNode( MemoryServiceDatabase* pDatabase, uint64 serverID )
             : _store{ pDatabase }
             , _policy{}
             , _service{}
-            , _serverId{ serverId }
+            , _serverID{ serverID }
             , _nextTag{ 1 }
         {
             restart();
@@ -50,7 +50,7 @@ namespace
         {
             (void)_store.pollCompletions();
             _service = make_unique<TradeService>();
-            _service->initialize( &_store, &_policy, nullptr, _serverId, TradeSettings{} );
+            _service->initialize( &_store, &_policy, nullptr, _serverID, TradeSettings{} );
         }
 
         TradeCompletion settle()
@@ -61,34 +61,34 @@ namespace
             return listCompletion.empty() ? TradeCompletion{} : listCompletion.back();
         }
 
-        TradeCompletion invite( AccountId fromId, AccountId toId, int64 nowMs )
+        TradeCompletion invite( AccountID fromID, AccountID toID, int64 nowMs )
         {
-            _service->invite( fromId, toId, nowMs, _nextTag++ );
+            _service->invite( fromID, toID, nowMs, _nextTag++ );
             return settle();
         }
-        TradeCompletion respond( AccountId responderId, uint64 tradeId, bool bAccept, int64 nowMs )
+        TradeCompletion respond( AccountID responderID, uint64 tradeID, bool bAccept, int64 nowMs )
         {
-            _service->respondInvite( responderId, tradeId, bAccept, nowMs, _nextTag++ );
+            _service->respondInvite( responderID, tradeID, bAccept, nowMs, _nextTag++ );
             return settle();
         }
-        TradeCompletion setOffer( AccountId actorId, uint64 tradeId, vector<TradeLeg> listLeg, int64 nowMs )
+        TradeCompletion setOffer( AccountID actorID, uint64 tradeID, vector<TradeLeg> listLeg, int64 nowMs )
         {
-            _service->setOffer( actorId, tradeId, listLeg, nowMs, _nextTag++ );
+            _service->setOffer( actorID, tradeID, listLeg, nowMs, _nextTag++ );
             return settle();
         }
-        TradeCompletion lock( AccountId actorId, uint64 tradeId, int64 nowMs )
+        TradeCompletion lock( AccountID actorID, uint64 tradeID, int64 nowMs )
         {
-            _service->lock( actorId, tradeId, nowMs, _nextTag++ );
+            _service->lock( actorID, tradeID, nowMs, _nextTag++ );
             return settle();
         }
-        TradeCompletion confirm( AccountId actorId, uint64 tradeId, uint32 own, uint32 peer, int64 nowMs )
+        TradeCompletion confirm( AccountID actorID, uint64 tradeID, uint32 own, uint32 peer, int64 nowMs )
         {
-            _service->confirm( actorId, tradeId, own, peer, nowMs, _nextTag++ );
+            _service->confirm( actorID, tradeID, own, peer, nowMs, _nextTag++ );
             return settle();
         }
-        TradeCompletion cancel( AccountId actorId, uint64 tradeId, int64 nowMs )
+        TradeCompletion cancel( AccountID actorID, uint64 tradeID, int64 nowMs )
         {
-            _service->cancel( actorId, tradeId, nowMs, _nextTag++ );
+            _service->cancel( actorID, tradeID, nowMs, _nextTag++ );
             return settle();
         }
         vector<TradeSnapshot> drainUpdates()
@@ -101,21 +101,21 @@ namespace
 
     struct TestTradeServiceInternal
     {
-        static void grant( MemoryServiceDatabase& database, AccountId accountId, const utf8* pAsset, int64 amount )
+        static void grant( MemoryServiceDatabase& database, AccountID accountID, const utf8* pAsset, int64 amount )
         {
             LedgerTransferRequest request;
-            request._journalKey = string( "test/" ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountId );
+            request._journalKey = string( "test/" ) + pAsset + "." + ServiceKeyUtil::makeHex64( accountID );
             request._reason     = "test.grant";
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), pAsset, amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), pAsset, amount } );
             LedgerTransferOutcome outcome;
             (void)Ledger::executeTransfer( database, request, outcome );
         }
 
-        static int64 readAmount( MemoryServiceDatabase& database, AccountId accountId, const utf8* pAsset )
+        static int64 readAmount( MemoryServiceDatabase& database, AccountID accountID, const utf8* pAsset )
         {
             LedgerBalance balance;
             // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
-            (void)Ledger::readBalance( database, LedgerHolder::makeAccount( accountId ), pAsset, balance );
+            (void)Ledger::readBalance( database, LedgerHolder::makeAccount( accountID ), pAsset, balance );
             return balance._amount;
         }
 
@@ -134,19 +134,19 @@ namespace
             const TradeCompletion invited = node.invite( kAlice, kBob, nowMs );
             if ( invited._result != TradeResult::Ok )
                 return 0;
-            const TradeCompletion opened = node.respond( kBob, invited._snapshot._tradeId, true, nowMs );
-            return opened._result == TradeResult::Ok ? invited._snapshot._tradeId : 0;
+            const TradeCompletion opened = node.respond( kBob, invited._snapshot._tradeID, true, nowMs );
+            return opened._result == TradeResult::Ok ? invited._snapshot._tradeID : 0;
         }
 
         /** @brief 칼 ↔ 금 300 을 걸고 둘 다 잠근다. A · B 의 제시 판을 돌려준다. */
-        static bool offerAndLock( TradeNode& node, uint64 tradeId, int64 nowMs )
+        static bool offerAndLock( TradeNode& node, uint64 tradeID, int64 nowMs )
         {
-            return node.setOffer( kAlice, tradeId, {
+            return node.setOffer( kAlice, tradeID, {
                                                        TradeLeg{ "item.sword", 1 }
             },
                                   nowMs )
                            ._result == TradeResult::Ok &&
-                   node.setOffer( kBob, tradeId, { TradeLeg{ "cur.gold", 300 } }, nowMs )._result == TradeResult::Ok && node.lock( kAlice, tradeId, nowMs )._result == TradeResult::Ok && node.lock( kBob, tradeId, nowMs )._result == TradeResult::Ok;
+                   node.setOffer( kBob, tradeID, { TradeLeg{ "cur.gold", 300 } }, nowMs )._result == TradeResult::Ok && node.lock( kAlice, tradeID, nowMs )._result == TradeResult::Ok && node.lock( kBob, tradeID, nowMs )._result == TradeResult::Ok;
         }
     };
 } // namespace
@@ -156,12 +156,12 @@ SW_TEST_CASE( TradeServiceTest, HappyPathMovesBothSidesInOneJournal )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_ASSERT_TRUE( tradeId != 0 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1100 ) );
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_ASSERT_TRUE( tradeID != 0 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1100 ) );
     const int32 journalBefore = database.countRecords( Ledger::getJournalTable() );
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1200 )._result == TradeResult::Ok );
-    const TradeCompletion settled = node.confirm( kBob, tradeId, 1, 1, 1300 );
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1200 )._result == TradeResult::Ok );
+    const TradeCompletion settled = node.confirm( kBob, tradeID, 1, 1, 1300 );
     SW_ASSERT_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
     SW_EXPECT_EQUAL( size_t( 4 ), settled._ledger._listHolderBalance.size() ); // 두 계정 × 두 자산
@@ -184,10 +184,10 @@ SW_TEST_CASE( TradeServiceTest, ChangingTheOfferAfterLockClearsLocksAndConfirms 
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1100 ) );
-    SW_ASSERT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1150 )._result == TradeResult::Ok );
-    const TradeCompletion changed = node.setOffer( kBob, tradeId, {
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1100 ) );
+    SW_ASSERT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1150 )._result == TradeResult::Ok );
+    const TradeCompletion changed = node.setOffer( kBob, tradeID, {
                                                                       TradeLeg{ "cur.gold", 200 }
     },
                                                    1200 ); // 미끼 바꿔치기
@@ -198,11 +198,11 @@ SW_TEST_CASE( TradeServiceTest, ChangingTheOfferAfterLockClearsLocksAndConfirms 
         SW_EXPECT_TRUE( side._bLocked == SW_FALSE );
         SW_EXPECT_TRUE( side._bConfirmed == SW_FALSE );
     }
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1300 )._result == TradeResult::WrongState ); // 잠금이 풀렸다
-    SW_ASSERT_TRUE( node.lock( kAlice, tradeId, 1310 )._result == TradeResult::Ok );
-    SW_ASSERT_TRUE( node.lock( kBob, tradeId, 1320 )._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1330 )._result == TradeResult::StaleOffer ); // 옛 판을 본 확정
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 1, 2, 1340 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1300 )._result == TradeResult::WrongState ); // 잠금이 풀렸다
+    SW_ASSERT_TRUE( node.lock( kAlice, tradeID, 1310 )._result == TradeResult::Ok );
+    SW_ASSERT_TRUE( node.lock( kBob, tradeID, 1320 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1330 )._result == TradeResult::StaleOffer ); // 옛 판을 본 확정
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 1, 2, 1340 )._result == TradeResult::Ok );
 }
 
 SW_TEST_CASE( TradeServiceTest, InsufficientAtSettleFailsWithoutMovement )
@@ -210,8 +210,8 @@ SW_TEST_CASE( TradeServiceTest, InsufficientAtSettleFailsWithoutMovement )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1100 ) );
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1100 ) );
     // 잠근 뒤 A 의 칼이 다른 데로 갔다(GM 회수) — 잠금 때의 미리 보기는 안내일 뿐, 정산이 다시 본다.
     LedgerTransferRequest clawback;
     clawback._journalKey = "test/clawback";
@@ -220,15 +220,15 @@ SW_TEST_CASE( TradeServiceTest, InsufficientAtSettleFailsWithoutMovement )
     LedgerTransferOutcome outcome;
     SW_ASSERT_TRUE( Ledger::executeTransfer( database, clawback, outcome ) == LedgerResult::Ok );
     const int64 bobGold = Internal::readAmount( database, kBob, "cur.gold" );
-    SW_ASSERT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1200 )._result == TradeResult::Ok );
-    const TradeCompletion failed = node.confirm( kBob, tradeId, 1, 1, 1300 );
+    SW_ASSERT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1200 )._result == TradeResult::Ok );
+    const TradeCompletion failed = node.confirm( kBob, tradeID, 1, 1, 1300 );
     SW_EXPECT_TRUE( failed._result == TradeResult::InsufficientFunds );
     SW_EXPECT_TRUE( failed._snapshot._state == TradeState::Failed );
     SW_EXPECT_TRUE( failed._snapshot._closeReason == TradeCloseReason::InsufficientFunds );
     SW_EXPECT_EQUAL( bobGold, Internal::readAmount( database, kBob, "cur.gold" ) );
     SW_EXPECT_EQUAL( int64( 0 ), Internal::readAmount( database, kBob, "item.sword" ) );
     SW_EXPECT_EQUAL( 0, database.countRecords( TradeStoreLogic::getActiveTable() ) );                      // 실패도 닫혀 링크가 풀린다
-    SW_EXPECT_TRUE( node.confirm( kBob, tradeId, 1, 1, 1400 )._result == TradeResult::InsufficientFunds ); // 재시도는 같은 결과
+    SW_EXPECT_TRUE( node.confirm( kBob, tradeID, 1, 1, 1400 )._result == TradeResult::InsufficientFunds ); // 재시도는 같은 결과
     SW_EXPECT_TRUE( Internal::isBalanced( database ) );
 }
 
@@ -238,18 +238,18 @@ SW_TEST_CASE( TradeServiceTest, OneOpenTradePerAccountAcrossServers )
     MemoryServiceDatabase database;
     TradeNode             serverA{ &database, 1 };
     TradeNode             serverB{ &database, 2 }; // 앞 둘 · 데이터 하나
-    const uint64          tradeId = Internal::openTrade( database, serverA, 1000 );
-    SW_ASSERT_TRUE( tradeId != 0 );
+    const uint64          tradeID = Internal::openTrade( database, serverA, 1000 );
+    SW_ASSERT_TRUE( tradeID != 0 );
     SW_EXPECT_TRUE( serverB.invite( kAlice, kCarol, 1100 )._result == TradeResult::AlreadyTrading );
     SW_EXPECT_TRUE( serverB.invite( kCarol, kBob, 1100 )._result == TradeResult::PeerBusy );
     SW_EXPECT_TRUE( serverB.invite( kCarol, kCarol, 1100 )._result == TradeResult::Invalid );
     // 상대가 다른 서버에 붙어 있어도 상대 서버가 같은 레코드를 바꾼다
-    SW_EXPECT_TRUE( serverB.setOffer( kBob, tradeId, {
+    SW_EXPECT_TRUE( serverB.setOffer( kBob, tradeID, {
                                                          TradeLeg{ "cur.gold", 10 }
     },
                                       1200 )
                         ._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( serverA.cancel( kAlice, tradeId, 1300 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( serverA.cancel( kAlice, tradeID, 1300 )._result == TradeResult::Ok );
     SW_EXPECT_TRUE( serverB.invite( kAlice, kCarol, 1400 )._result == TradeResult::Ok ); // 닫히면 다시 열 수 있다
 }
 
@@ -258,14 +258,14 @@ SW_TEST_CASE( TradeServiceTest, LostCommitReplyStillSettlesOnce )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1100 ) );
-    SW_ASSERT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1200 )._result == TradeResult::Ok );
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1100 ) );
+    SW_ASSERT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1200 )._result == TradeResult::Ok );
     database.armFault( ServiceStoreFault::LoseCommitReply );
-    const TradeCompletion settled = node.confirm( kBob, tradeId, 1, 1, 1300 );
+    const TradeCompletion settled = node.confirm( kBob, tradeID, 1, 1, 1300 );
     SW_EXPECT_TRUE( settled._result == TradeResult::Ok );
     SW_EXPECT_TRUE( settled._snapshot._state == TradeState::Settled );
-    SW_EXPECT_TRUE( node.confirm( kBob, tradeId, 1, 1, 1400 )._result == TradeResult::Ok ); // 클라이언트의 확정 재시도
+    SW_EXPECT_TRUE( node.confirm( kBob, tradeID, 1, 1, 1400 )._result == TradeResult::Ok ); // 클라이언트의 확정 재시도
     SW_EXPECT_EQUAL( int64( 1 ), Internal::readAmount( database, kBob, "item.sword" ) );
     SW_EXPECT_EQUAL( int64( 200 ), Internal::readAmount( database, kBob, "cur.gold" ) ); // 한 번만
     SW_EXPECT_TRUE( Internal::isBalanced( database ) );
@@ -276,14 +276,14 @@ SW_TEST_CASE( TradeServiceTest, RejectedCommitLeavesNothingAndRetrySettles )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1100 ) );
-    SW_ASSERT_TRUE( node.confirm( kAlice, tradeId, 1, 1, 1200 )._result == TradeResult::Ok );
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1100 ) );
+    SW_ASSERT_TRUE( node.confirm( kAlice, tradeID, 1, 1, 1200 )._result == TradeResult::Ok );
     const uint64 before = database.computeContentHash();
     database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( node.confirm( kBob, tradeId, 1, 1, 1300 )._result == TradeResult::Unavailable );
+    SW_EXPECT_TRUE( node.confirm( kBob, tradeID, 1, 1, 1300 )._result == TradeResult::Unavailable );
     SW_EXPECT_EQUAL( before, database.computeContentHash() );
-    SW_EXPECT_TRUE( node.confirm( kBob, tradeId, 1, 1, 1400 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( node.confirm( kBob, tradeID, 1, 1, 1400 )._result == TradeResult::Ok );
     SW_EXPECT_EQUAL( int64( 1 ), Internal::readAmount( database, kBob, "item.sword" ) );
     SW_EXPECT_TRUE( Internal::isBalanced( database ) );
 }
@@ -294,8 +294,8 @@ SW_TEST_CASE( TradeServiceTest, ServerRestartCancelsOwnedOpenTradesWithoutMoveme
     MemoryServiceDatabase database;
     TradeNode             serverA{ &database, 1 };
     TradeNode             serverB{ &database, 2 };
-    const uint64          tradeId = Internal::openTrade( database, serverA, 1000 );
-    SW_ASSERT_TRUE( Internal::offerAndLock( serverA, tradeId, 1100 ) );
+    const uint64          tradeID = Internal::openTrade( database, serverA, 1000 );
+    SW_ASSERT_TRUE( Internal::offerAndLock( serverA, tradeID, 1100 ) );
     const TradeCompletion other = serverB.invite( kCarol, 0xD0D, 1100 ); // 다른 서버 주인의 거래
     SW_ASSERT_TRUE( other._result == TradeResult::Ok );
 
@@ -304,9 +304,9 @@ SW_TEST_CASE( TradeServiceTest, ServerRestartCancelsOwnedOpenTradesWithoutMoveme
     (void)serverA.settle();
     const vector<TradeSnapshot> listUpdate = serverA.drainUpdates();
     SW_ASSERT_EQUAL( size_t( 1 ), listUpdate.size() );
-    SW_EXPECT_EQUAL( tradeId, listUpdate[0]._tradeId );
+    SW_EXPECT_EQUAL( tradeID, listUpdate[0]._tradeID );
     SW_EXPECT_TRUE( listUpdate[0]._closeReason == TradeCloseReason::ServerRestart );
-    SW_EXPECT_TRUE( serverA.confirm( kAlice, tradeId, 1, 1, 2100 )._result == TradeResult::WrongState );
+    SW_EXPECT_TRUE( serverA.confirm( kAlice, tradeID, 1, 1, 2100 )._result == TradeResult::WrongState );
     SW_EXPECT_EQUAL( int64( 1 ), Internal::readAmount( database, kAlice, "item.sword" ) );
     SW_EXPECT_EQUAL( 2, database.countRecords( TradeStoreLogic::getActiveTable() ) ); // 다른 서버의 거래는 그대로
 }
@@ -316,13 +316,13 @@ SW_TEST_CASE( TradeServiceTest, PartyLeavingAndIdleTimeoutCancel )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
     node._service->closeForAccount( kBob, TradeCloseReason::PartyLeft, 1100 );
     (void)node.settle();
     vector<TradeSnapshot> listUpdate = node.drainUpdates();
     SW_ASSERT_TRUE( listUpdate.empty() == false );
     SW_EXPECT_TRUE( listUpdate.back()._closeReason == TradeCloseReason::PartyLeft );
-    SW_EXPECT_TRUE( node.lock( kAlice, tradeId, 1200 )._result == TradeResult::WrongState );
+    SW_EXPECT_TRUE( node.lock( kAlice, tradeID, 1200 )._result == TradeResult::WrongState );
 
     const TradeCompletion idle = node.invite( kAlice, kBob, 2000 );
     SW_ASSERT_TRUE( idle._result == TradeResult::Ok );
@@ -339,8 +339,8 @@ SW_TEST_CASE( TradeServiceTest, PartyLeavingAndIdleTimeoutCancel )
 
     // 시한이 지났는데 아무도 닫지 않은 거래(다른 서버가 열었다) — 다음 신청이 그 자리에서 정리한다.
     TradeNode    otherServer{ &database, 9 };
-    const uint64 staleId = otherServer.invite( kAlice, kCarol, 5000 )._snapshot._tradeId;
-    SW_ASSERT_TRUE( staleId != 0 );
+    const uint64 staleID = otherServer.invite( kAlice, kCarol, 5000 )._snapshot._tradeID;
+    SW_ASSERT_TRUE( staleID != 0 );
     SW_EXPECT_TRUE( node.invite( kAlice, kBob, 5000 + TradeConstant::kInviteTimeoutMs - 1 )._result == TradeResult::AlreadyTrading );
     SW_EXPECT_TRUE( node.invite( kAlice, kBob, 5000 + TradeConstant::kInviteTimeoutMs )._result == TradeResult::Ok );
 }
@@ -350,8 +350,8 @@ SW_TEST_CASE( TradeServiceTest, UntradableAssetsTooManyLegsAndDuplicateConfirm )
     using Internal = TestTradeServiceInternal;
     MemoryServiceDatabase database;
     TradeNode             node{ &database, 1 };
-    const uint64          tradeId = Internal::openTrade( database, node, 1000 );
-    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, {
+    const uint64          tradeID = Internal::openTrade( database, node, 1000 );
+    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeID, {
                                                         TradeLeg{ "soul.bound", 1 }
     },
                                    1100 )
@@ -361,28 +361,28 @@ SW_TEST_CASE( TradeServiceTest, UntradableAssetsTooManyLegsAndDuplicateConfirm )
     {
         listTooMany.push_back( TradeLeg{ "item.gem" + to_string( index ), 1 } );
     }
-    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, listTooMany, 1100 )._result == TradeResult::TooManyLegs );
-    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, {
+    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeID, listTooMany, 1100 )._result == TradeResult::TooManyLegs );
+    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeID, {
                                                         TradeLeg{"item.sword", 1},
                                                         TradeLeg{"item.sword", 1}
     },
                                    1100 )
                         ._result == TradeResult::Invalid );
-    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, {
+    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeID, {
                                                         TradeLeg{ "item.sword", 0 }
     },
                                    1100 )
                         ._result == TradeResult::Invalid );
-    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeId, {
+    SW_EXPECT_TRUE( node.setOffer( kAlice, tradeID, {
                                                         TradeLeg{ "item.sword", 2 }
     },
                                    1100 )
                         ._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( node.lock( kAlice, tradeId, 1200 )._result == TradeResult::InsufficientFunds ); // 칼은 하나뿐 — 잠글 때 미리 본다
-    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeId, 1300 ) );
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 2, 1, 1400 )._result == TradeResult::Ok );
-    SW_EXPECT_TRUE( node.confirm( kAlice, tradeId, 2, 1, 1410 )._result == TradeResult::Ok ); // 같은 확정 두 번 — 멱등
-    SW_EXPECT_TRUE( node.setOffer( kCarol, tradeId, {
+    SW_EXPECT_TRUE( node.lock( kAlice, tradeID, 1200 )._result == TradeResult::InsufficientFunds ); // 칼은 하나뿐 — 잠글 때 미리 본다
+    SW_ASSERT_TRUE( Internal::offerAndLock( node, tradeID, 1300 ) );
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 2, 1, 1400 )._result == TradeResult::Ok );
+    SW_EXPECT_TRUE( node.confirm( kAlice, tradeID, 2, 1, 1410 )._result == TradeResult::Ok ); // 같은 확정 두 번 — 멱등
+    SW_EXPECT_TRUE( node.setOffer( kCarol, tradeID, {
                                                         TradeLeg{ "cur.gold", 1 }
     },
                                    1420 )
@@ -403,12 +403,12 @@ SW_TEST_CASE( TradeServiceTest, StateMachineTable )
             {
                 TradeSnapshot trade;
                 trade._state                 = state;
-                trade._arrSide[0]._accountId = kAlice;
-                trade._arrSide[1]._accountId = kBob;
+                trade._arrSide[0]._accountID = kAlice;
+                trade._arrSide[1]._accountID = kBob;
                 trade._arrSide[0]._bLocked   = SW_TRUE; // Confirm 칸이 잠금 조건에 걸리지 않게
                 trade._arrSide[1]._bLocked   = SW_TRUE;
                 TradeCommand command;
-                command._actorId = sideIndex == 0 ? kAlice : kBob;
+                command._actorID = sideIndex == 0 ? kAlice : kBob;
                 command._kind    = kind;
                 command._listLeg = {
                     TradeLeg{ "cur.gold", 1 }

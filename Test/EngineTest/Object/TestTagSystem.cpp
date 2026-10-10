@@ -34,29 +34,29 @@ SW_TEST_CASE( TagSystemTest, ParentHashOnHierarchicalLiteral )
 
 /**
  * @brief [TagSystemTest] 문자열에서 만든 ID 로도 리터럴 태그를 찾는다
- * @details `""_tag` · `TagID::request` · 에디터 Hierarchy 의 `tag:` 필터가 모두 `TagID::computeId` 를 쓴다. 한 곳이 대소문자 규칙을
+ * @details `""_tag` · `TagID::request` · 에디터 Hierarchy 의 `tag:` 필터가 모두 `TagID::computeID` 를 쓴다. 한 곳이 대소문자 규칙을
  *          달리하면(예: `computeHash64` 를 기본 인자로 불러 무시) 대문자로 시작하는 태그(`Collider` · `Sprite` · `UI` · `Faction.Player` …)를
  *          **하나도 찾지 못한다.**
  */
-SW_TEST_CASE( TagSystemTest, IdBuiltFromStringFindsLiteralTag )
+SW_TEST_CASE( TagSystemTest, IDBuiltFromStringFindsLiteralTag )
 {
     TagContainer owned{ "Collider"_tag, "Faction.Player"_tag };
 
     // 필터가 하는 일 그대로 — 문자열만 들고 ID 를 만들어 묻는다.
     const string_view exact{ "Collider" };
-    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( exact.data(), exact.size() ), exact.data() } ) );
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeID( exact.data(), exact.size() ), exact.data() } ) );
 
     // 대소문자는 무시한다. intern 이 이미 무시하므로 ID 도 같아야 앞뒤가 맞는다.
     const string_view lowered{ "collider" };
-    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( lowered.data(), lowered.size() ), lowered.data() } ) );
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeID( lowered.data(), lowered.size() ), lowered.data() } ) );
 
     // 계층도 잡힌다 — 문자열을 함께 넘기므로 isSubtagOf 가 돈다.
     const string_view parent{ "Faction" };
-    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeId( parent.data(), parent.size() ), parent.data() } ) );
+    SW_EXPECT_TRUE( owned.hasTag( TagID{ TagID::computeID( parent.data(), parent.size() ), parent.data() } ) );
 
     // 없는 태그를 찾아내면 안 된다.
     const string_view absent{ "Sprite" };
-    SW_EXPECT_FALSE( owned.hasTag( TagID{ TagID::computeId( absent.data(), absent.size() ), absent.data() } ) );
+    SW_EXPECT_FALSE( owned.hasTag( TagID{ TagID::computeID( absent.data(), absent.size() ), absent.data() } ) );
 }
 
 /**
@@ -314,10 +314,10 @@ SW_TEST_CASE( TagSystemTest, DeserializedTagIDStringRecoveryAndHierarchyMatching
     // 1) 런타임 등록으로 원본 태그 생성
     TagID  originalTag = TagID::request( "Skill.Spell.Fireball" );
     TagID  rootTag     = TagID::request( "Skill" );
-    uint64 rawId       = originalTag._id;
+    uint64 rawID       = originalTag._id;
 
     // 2) 역직렬화 모의: 숫자 ID만 가진 TagID 복원
-    TagID restoredTag( rawId );
+    TagID restoredTag( rawID );
     SW_EXPECT_TRUE( restoredTag.isValid() );
     SW_EXPECT_EQUAL( originalTag._id, restoredTag._id );
     SW_EXPECT_TRUE( originalTag == restoredTag );

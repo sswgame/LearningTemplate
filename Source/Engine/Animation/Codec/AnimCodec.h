@@ -16,10 +16,10 @@
 namespace sw
 {
     /**
-     * @enum AnimCodecId
+     * @enum AnimCodecID
      * @brief 클립 파일에 적히는 코덱 번호입니다. 값은 파일 형식의 일부라 바꾸지 않습니다.
      */
-    enum class AnimCodecId : uint8
+    enum class AnimCodecID : uint8
     {
         Raw = 0, ///< 압축하지 않은 균일 샘플(기준 · 디버그)
         Acl = 1, ///< Animation Compression Library 2.1(가변 비트율 · 상수 트랙 제거 · 오차 기준 키 줄이기)
@@ -93,7 +93,7 @@ namespace sw
         IAnimCodec& operator=( const IAnimCodec& ) = delete;
 
         /** @brief 코덱 번호입니다. */
-        virtual AnimCodecId getId() const = 0;
+        virtual AnimCodecID getID() const = 0;
         /** @brief 데이터(임포트 규칙)가 고르는 이름입니다("raw" · "acl"). */
         virtual const utf8* getName() const = 0;
         /** @brief 클립을 압축해 @p outBytes 에 씁니다. 실패하면 false 입니다. */
@@ -133,7 +133,7 @@ namespace sw
     struct SW_API AnimCodecRegistry
     {
         /** @brief 번호로 찾습니다. */
-        static const IAnimCodec* findCodec( AnimCodecId id );
+        static const IAnimCodec* findCodec( AnimCodecID id );
         /** @brief 이름으로 찾습니다(대소문자 무시). */
         static const IAnimCodec* findCodecByName( string_view name );
         /** @brief 압축하고 오차를 잽니다(임포트 · 시험). */

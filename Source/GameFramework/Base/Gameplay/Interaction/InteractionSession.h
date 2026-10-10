@@ -49,7 +49,7 @@ namespace sw
          * @brief 시작합니다. 누름 단계면 그 자리에서 끝납니다(시작을 일으킨 누름이 그 단계의 누름).
          * @return 시작했으면 true(정의가 없거나 단계가 없으면 false).
          */
-        bool begin( const InteractionDef* pDef, uint32 actorId );
+        bool begin( const InteractionDef* pDef, uint32 actorID );
         /**
          * @brief 시간을 흘립니다. @p bHeld = 지금 누르고 있는가, @p bPressed = 이번 프레임에 새로 눌렀는가.
          * @details 누르고 있기 단계에서 떼면 취소(진행은 처음부터), 연타 단계는 누를 때마다 1/presses 오르고 쉬면 decay 만큼 줄어듭니다.
@@ -78,7 +78,7 @@ namespace sw
         InteractionProgress                  _holdProgress;
         EventBuffer<InteractionSessionEvent> _eventBuffer;
         vector<InteractionEvent>             _listHoldEvent;
-        uint32                               _actorId;
+        uint32                               _actorID;
         int32                                _stepIndex;
         float32                              _mashProgress;
         InteractionSessionState              _state;

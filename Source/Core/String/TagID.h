@@ -50,7 +50,7 @@ namespace sw
          *          두 태그가 서로 다른 ID** 를 갖는 모순이 생깁니다. 태그는 ID 가 아니라 **문자열로 직렬화**되므로(SerializeContext 가
          *          `TagID::request( text )` 로 다시 읽습니다) 규칙을 바꿔도 저장된 씬은 그대로입니다.
          */
-        static constexpr uint64 computeId( const utf8* pStr, size_t length )
+        static constexpr uint64 computeID( const utf8* pStr, size_t length )
         {
             return StringUtil::computeHash64( pStr, length, true );
         }
@@ -91,6 +91,6 @@ namespace sw
     /** @brief 리터럴로 컴파일 타임 태그를 만듭니다. */
     constexpr TagID operator""_tag( const utf8* pStr, size_t len )
     {
-        return TagID( TagID::computeId( pStr, len ), pStr );
+        return TagID( TagID::computeID( pStr, len ), pStr );
     }
 } // namespace sw

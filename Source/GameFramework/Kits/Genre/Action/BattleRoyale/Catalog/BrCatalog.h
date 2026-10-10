@@ -109,7 +109,7 @@ namespace sw
     struct BrLootSpotDef
     {
         hashed_string _id{};
-        hashed_string _tableId{}; ///< `LootCatalog` 의 표
+        hashed_string _tableID{}; ///< `LootCatalog` 의 표
         float32       _chance{ 1.0f };
         int32         _minRolls{ 1 };
         int32         _maxRolls{ 1 };
@@ -122,7 +122,7 @@ namespace sw
     struct BrSupplyDropSettings
     {
         vector<float32> _listTime{}; ///< 판 시작 뒤 떨어지는 시각(초, 오름차순)
-        hashed_string   _tableId{};
+        hashed_string   _tableID{};
     };
 } // namespace sw
 

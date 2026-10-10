@@ -222,10 +222,10 @@ namespace sw
                 SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
-            const hashed_string id( pId );
+            const hashed_string id( pID );
             ++loadedCount;
             if ( StringUtil::equals( name, string_view( "Crime" ), true ) )
             {
@@ -335,7 +335,7 @@ namespace sw
     void WesternCatalog::loadHonor( const XmlNode& node )
     {
         FactionDef faction;
-        faction._id         = hashed_string( kHonorFactionId );
+        faction._id         = hashed_string( kHonorFactionID );
         faction._name       = "Honor";
         faction._minValue   = node.getAttributeInt( "min", faction._minValue );
         faction._maxValue   = MathUtil::max( faction._minValue, node.getAttributeInt( "max", faction._maxValue ) );
@@ -357,11 +357,11 @@ namespace sw
         { return lhs._minValue < rhs._minValue; } );
         for ( XmlNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {
-            const utf8* pId = child.findAttribute( "id" );
-            if ( pId == nullptr || pId[0] == '\0' )
+            const utf8* pID = child.findAttribute( "id" );
+            if ( pID == nullptr || pID[0] == '\0' )
                 continue;
             WesternHonorActionDef action;
-            action._id    = hashed_string( pId );
+            action._id    = hashed_string( pID );
             action._delta = child.getAttributeInt( "delta", 0 );
             (void)_honorActionCatalog.add( action );
         }

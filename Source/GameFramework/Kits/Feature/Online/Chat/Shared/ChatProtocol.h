@@ -80,7 +80,7 @@ namespace sw
 
         /** @brief 공통 오류 코드(`OnlineError`) → 결과입니다 — 로그인 없음 · 깨진 몸 · 도배 제한은 그 결과, 나머지(전송 · 저장소 · 시한)는 Unavailable 입니다. */
         static ChatResult fromErrorCode( uint16 errorCode );
-        static string     makeChannelTopic( string_view channelId );
-        static string     makeServerTopic( uint64 serverId );
+        static string     makeChannelTopic( string_view channelID );
+        static string     makeServerTopic( uint64 serverID );
     };
 } // namespace sw

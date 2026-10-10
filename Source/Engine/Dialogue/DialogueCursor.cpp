@@ -20,25 +20,25 @@ namespace sw
             }
             case DialogueNodeOutput::Next:
             {
-                return asset.findDefaultNextNodeId( node._id );
+                return asset.findDefaultNextNodeID( node._id );
             }
             case DialogueNodeOutput::Branch:
             {
-                const int32 branchNextId = asset.findBranchNextNodeId( node._id, input._bConditionMet );
-                return branchNextId > 0 ? branchNextId : asset.findDefaultNextNodeId( node._id );
+                const int32 branchNextID = asset.findBranchNextNodeID( node._id, input._bConditionMet );
+                return branchNextID > 0 ? branchNextID : asset.findDefaultNextNodeID( node._id );
             }
             case DialogueNodeOutput::Choice:
             {
-                return asset.findChoiceNextNodeId( node._id, input._choiceIndex );
+                return asset.findChoiceNextNodeID( node._id, input._choiceIndex );
             }
         }
         return 0;
     }
 
-    DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeType type, int32 nodeId )
+    DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeType type, int32 nodeID )
     {
         DialogueAssetNode node{};
-        node._id   = nodeId;
+        node._id   = nodeID;
         node._type = type;
 
         const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( type );

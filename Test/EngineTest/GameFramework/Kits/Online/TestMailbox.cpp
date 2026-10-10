@@ -29,7 +29,7 @@ namespace
                      ServiceMailExpiryAction action = ServiceMailExpiryAction::Discard )
         {
             ServiceMailMessage message;
-            message._recipientAccountId = kOwner;
+            message._recipientAccountID = kOwner;
             message._idempotencyKey     = pIdempotencyKey;
             message._fundingHolder      = funding;
             message._createdMs          = createdMs;
@@ -48,21 +48,21 @@ namespace
             return mailKey;
         }
 
-        void grant( uint64 accountId, int64 amount, const utf8* pKey )
+        void grant( uint64 accountID, int64 amount, const utf8* pKey )
         {
             LedgerTransferRequest request;
             request._journalKey = string( "test/" ) + pKey;
             request._reason     = "test.grant";
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountId ), "cur.gold", amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), LedgerHolder::makeAccount( accountID ), "cur.gold", amount } );
             LedgerTransferOutcome outcome;
             (void)Ledger::executeTransfer( _database, request, outcome );
         }
 
-        int64 gold( uint64 accountId )
+        int64 gold( uint64 accountID )
         {
             LedgerBalance balance;
             // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
-            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), "cur.gold", balance );
+            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), "cur.gold", balance );
             return balance._amount;
         }
 
@@ -70,7 +70,7 @@ namespace
         {
             MailboxClaimInput input;
             input._mailKey   = mailKey;
-            input._accountId = kOwner;
+            input._accountID = kOwner;
             input._nowMs     = nowMs;
             input._pPolicy   = pPolicy;
             MailboxReply reply;
@@ -87,7 +87,7 @@ namespace
     class MailboxSmallCap final : public ILedgerPolicy
     {
     public:
-        int64 getBalanceCap( string_view assetId ) const override { return assetId == "cur.gold" ? 50 : 0; }
+        int64 getBalanceCap( string_view assetID ) const override { return assetID == "cur.gold" ? 50 : 0; }
     };
 
     struct TestMailboxInternal
@@ -229,7 +229,7 @@ SW_TEST_CASE( MailboxTest, CampaignIsClaimedOncePerAccount )
 {
     MailFixture         fixture;
     ServiceMailCampaign campaign;
-    campaign._campaignId = 77;
+    campaign._campaignID = 77;
     campaign._startMs    = 1000;
     campaign._endMs      = 9000;
     campaign._titleKey   = "mail.title.event";
@@ -300,7 +300,7 @@ SW_TEST_CASE( MailboxTest, ServiceClaimNeedsAKeyAndSweepsOnItsPeriod )
 
     MailboxCall claimCall;
     claimCall._method           = MailboxMethod::kClaim;
-    claimCall._accountId        = MailFixture::kOwner;
+    claimCall._accountID        = MailFixture::kOwner;
     claimCall._nowMs            = 2000;
     claimCall._request._mailKey = mailKey;
     MailboxReplyCapture noKey;

@@ -621,16 +621,16 @@ namespace sw
         set<string> _uniqueTag;
 
         PROPERTY()
-        unordered_set<int32> _uniqueId;
+        unordered_set<int32> _uniqueID;
 
         PROPERTY()
-        unordered_map<int32, string> _mapIdToName;
+        unordered_map<int32, string> _mapIDToName;
 
         PROPERTY()
         map<SampleStatus, int32> _mapStatusToCount;
 
         PROPERTY()
-        map<string, set<int32>> _mapGroupToId;
+        map<string, set<int32>> _mapGroupToID;
 
         PROPERTY()
         vector<map<string, int32>> _listScoreTable;

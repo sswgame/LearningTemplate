@@ -107,7 +107,7 @@ namespace sw
 
         // 뿌리 목록을 먼저 떼어 둔다 — 걷는 동안 그리기 더러움만 생긴다(arrange 의 기하 변경). 목록 순서대로 처리하고, 이미 위에서 다시 잰 뿌리는
         // 비트가 지워져 건너뛴다. 처리 순서가 어떻든 마지막에 놓인 쪽이 맞다 — 조상이 나중이면 조상이 다시 놓는다.
-        vector<WidgetId> listRoot;
+        vector<WidgetID> listRoot;
         listRoot.swap( tree._listLayoutDirtyRoot );
 
         const bool bInsetsChanged = tree._layoutSafeInsets != context._safeInsets;
@@ -117,9 +117,9 @@ namespace sw
         if ( bRootPending )
             layoutTreeRoot( *pRoot, context );
 
-        for ( const WidgetId id : listRoot )
+        for ( const WidgetID id : listRoot )
         {
-            Widget* const pWidget = tree.findWidgetById( id );
+            Widget* const pWidget = tree.findWidgetByID( id );
             if ( pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0 )
                 continue;
             if ( pWidget->_layoutSerial == 0 || pWidget->getParent() == nullptr )
@@ -214,7 +214,7 @@ namespace sw
 
     void UiLayoutPass::invalidateAllLayout( WidgetTree& tree )
     {
-        for ( const auto& [id, pWidget] : tree._mapIdToWidget )
+        for ( const auto& [id, pWidget] : tree._mapIDToWidget )
         {
             pWidget->_dirtyFlags |= UiLayoutPassInternal::kLayoutBits;
         }

@@ -108,7 +108,7 @@ namespace sw
          * @param origin 기준선 위의 글리프 원점(UI 단위)
          * @return 사각형을 냈으면 true(빈 글리프 · 캐시 실패 · 다 잘림은 false)
          */
-        bool drawGlyph( const float2& origin, FontFaceId face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex );
+        bool drawGlyph( const float2& origin, FontFaceID face, uint32 glyphIndex, const CanvasGlyphStyle& style, GlyphCache& glyphCache, uint64 frameIndex );
         /** @brief 둥근 상자의 흐린 그림자를 칠합니다(상자는 @p offset 만큼 밀린 자리). */
         void drawShadow( const float2& position, const float2& size, const float4& cornerRadius, const float4& color, float32 blur, const float2& offset );
 

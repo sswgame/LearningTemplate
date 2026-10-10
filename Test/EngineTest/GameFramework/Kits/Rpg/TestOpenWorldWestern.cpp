@@ -150,7 +150,7 @@ SW_TEST_CASE( OpenWorldWesternTest, CatalogReadsLawHorseSurvivalAndHunting )
     SW_EXPECT_EQUAL( 3, catalog.findDeadEyeLevel( 5 )->_markCount );
     SW_EXPECT_NEAR_EQUAL( 0.6f, catalog.getGradeScale( 2 ), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, catalog.getGradeScale( 0 ), 1.0e-5f );
-    SW_EXPECT_TRUE( catalog.getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionId ) ) != nullptr );
+    SW_EXPECT_TRUE( catalog.getHonorReputation().findFaction( hashed_string( WesternCatalog::kHonorFactionID ) ) != nullptr );
 }
 
 SW_TEST_CASE( OpenWorldWesternTest, WitnessesReportAfterDelayUnlessSilencedAndLawmenReportAtOnce )
@@ -484,9 +484,9 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     const auto stars = [&]( const utf8* pAnimal, const utf8* pWeapon, const utf8* pZone, int32 hits )
     {
         WesternKill kill;
-        kill._animalId = hashed_string( pAnimal );
-        kill._weaponId = hashed_string( pWeapon );
-        kill._zoneId   = hashed_string( pZone );
+        kill._animalID = hashed_string( pAnimal );
+        kill._weaponID = hashed_string( pWeapon );
+        kill._zoneID   = hashed_string( pZone );
         kill._hitCount = hits;
         return WesternHunting::computePeltStars( catalog, kill );
     };
@@ -504,9 +504,9 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     SW_ASSERT_TRUE( loot.loadFromXmlText( R"(<LootCatalog><Table id="deer_parts" rolls="0"><Always item="venison" min="2" max="2" chance="1"/></Table></LootCatalog>)",
                                           "OpenWorldWesternTest" ) );
     WesternKill kill;
-    kill._animalId         = hashed_string( "deer" );
-    kill._weaponId         = hashed_string( "bow" );
-    kill._zoneId           = hashed_string( "head" );
+    kill._animalID         = hashed_string( "deer" );
+    kill._weaponID         = hashed_string( "bow" );
+    kill._zoneID           = hashed_string( "head" );
     WesternCarcass carcass = WesternHunting::makeCarcass( catalog, kill );
     SW_EXPECT_EQUAL( 300, WesternHunting::computeCarcassPrice( catalog, carcass ) );
     WesternHunting::ageCarcass( carcass, 23.9f );

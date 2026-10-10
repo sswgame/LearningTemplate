@@ -12,7 +12,7 @@ namespace sw
     ScheduleSpotLocator::ScheduleSpotLocator()
         : _pCatalog{ nullptr }
         , _listReservation{}
-        , _nextId{ 1 }
+        , _nextID{ 1 }
     {
     }
 
@@ -25,10 +25,10 @@ namespace sw
     void ScheduleSpotLocator::clear()
     {
         _listReservation.clear();
-        _nextId = 1;
+        _nextID = 1;
     }
 
-    bool ScheduleSpotLocator::reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationId )
+    bool ScheduleSpotLocator::reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID )
     {
         if ( _pCatalog == nullptr )
             return false;
@@ -42,7 +42,7 @@ namespace sw
             {
                 const ScheduleSpotDef& spot = listSpot[static_cast<size_t>( reservation._spotIndex )];
                 outLocation                 = ScheduleLocation{ spot._position, spot._area };
-                outReservationId            = reservation._id;
+                outReservationID            = reservation._id;
                 return true;
             }
         }
@@ -71,7 +71,7 @@ namespace sw
         Reservation reservation;
         reservation._npc         = request._npc;
         reservation._kind        = request._objectKind;
-        reservation._id          = _nextId++;
+        reservation._id          = _nextID++;
         reservation._spotIndex   = bestIndex;
         reservation._day         = request._day;
         reservation._startMinute = request._startMinute;
@@ -79,15 +79,15 @@ namespace sw
         _listReservation.push_back( reservation );
         const ScheduleSpotDef& spot = listSpot[static_cast<size_t>( bestIndex )];
         outLocation                 = ScheduleLocation{ spot._position, spot._area };
-        outReservationId            = reservation._id;
+        outReservationID            = reservation._id;
         return true;
     }
 
-    void ScheduleSpotLocator::release( uint32 reservationId )
+    void ScheduleSpotLocator::release( uint32 reservationID )
     {
         for ( size_t reservationIndex = 0; reservationIndex < _listReservation.size(); ++reservationIndex )
         {
-            if ( _listReservation[reservationIndex]._id == reservationId )
+            if ( _listReservation[reservationIndex]._id == reservationID )
             {
                 _listReservation.erase( _listReservation.begin() + static_cast<ptrdiff_t>( reservationIndex ) );
                 return;
@@ -139,7 +139,7 @@ namespace sw
             reservation._startMinute = state._startMinute;
             reservation._endMinute   = state._endMinute;
             _listReservation.push_back( reservation );
-            _nextId = MathUtil::max( _nextId, state._id + 1 );
+            _nextID = MathUtil::max( _nextID, state._id + 1 );
         }
     }
 

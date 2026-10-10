@@ -46,8 +46,8 @@ namespace sw
     /** @brief 진행 중(또는 끝난) 퀘스트 하나입니다. */
     struct QuestProgress
     {
-        hashed_string _questId{};
-        hashed_string _stageId{};
+        hashed_string _questID{};
+        hashed_string _stageID{};
         vector<int32> _listCount{}; ///< 지금 단계의 목표마다
         float32       _stageTime{ 0.0f };
         int32         _completedCount{ 0 };
@@ -72,8 +72,8 @@ namespace sw
             Failed,
             Abandoned
         };
-        hashed_string      _questId{};
-        hashed_string      _stageId{};
+        hashed_string      _questID{};
+        hashed_string      _stageID{};
         const QuestReward* _pReward{ nullptr };
         int32              _objective{ -1 };
         int32              _value{ 0 };
@@ -100,23 +100,23 @@ namespace sw
 
         void initialize( const QuestCatalog* pCatalog );
 
-        QuestStartResult evaluateStart( const hashed_string& questId, int32 level ) const;
-        QuestStartResult start( const hashed_string& questId, int32 level );
+        QuestStartResult evaluateStart( const hashed_string& questID, int32 level ) const;
+        QuestStartResult start( const hashed_string& questID, int32 level );
         /** @brief 일어난 일을 알립니다. 진행한 목표 수입니다. */
         int32 notify( const hashed_string& kind, const hashed_string& target, int32 amount = 1 );
         /** @brief 개수를 그대로 정합니다(가진 아이템 수 — 버리면 줄어든다). 바뀐 목표 수입니다. */
         int32 notifyCount( const hashed_string& kind, const hashed_string& target, int32 count );
         /** @brief 선택지를 고릅니다. 그 퀘스트가 선택을 기다리지 않거나 없는 선택이면 false 입니다. */
-        [[nodiscard]] bool choose( const hashed_string& questId, const hashed_string& choice );
+        [[nodiscard]] bool choose( const hashed_string& questID, const hashed_string& choice );
         /** @brief 실패시킵니다(호위 대상이 죽었다 등). */
-        [[nodiscard]] bool fail( const hashed_string& questId );
-        [[nodiscard]] bool abandon( const hashed_string& questId );
+        [[nodiscard]] bool fail( const hashed_string& questID );
+        [[nodiscard]] bool abandon( const hashed_string& questID );
         /** @brief 시간 제한을 셉니다. */
         void update( float32 deltaTime );
 
-        QuestStatus          getStatus( const hashed_string& questId ) const;
-        const QuestProgress* findProgress( const hashed_string& questId ) const;
-        const QuestStage*    findCurrentStage( const hashed_string& questId ) const;
+        QuestStatus          getStatus( const hashed_string& questID ) const;
+        const QuestProgress* findProgress( const hashed_string& questID ) const;
+        const QuestStage*    findCurrentStage( const hashed_string& questID ) const;
         /** @brief 진행 중인 퀘스트 id 입니다(받은 순서). */
         void collectActive( vector<hashed_string>& outListQuest ) const;
         void drainEvents( vector<QuestEvent>& outListEvent );
@@ -129,8 +129,8 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        QuestProgress* findProgressMutable( const hashed_string& questId );
-        void           enterStage( QuestProgress& progress, const QuestDef& quest, const hashed_string& stageId, int32 depth );
+        QuestProgress* findProgressMutable( const hashed_string& questID );
+        void           enterStage( QuestProgress& progress, const QuestDef& quest, const hashed_string& stageID, int32 depth );
         /** @brief 지금 단계의 필수 목표를 다 했으면 다음으로 넘깁니다. */
         void  tryAdvance( QuestProgress& progress );
         int32 applyNotify( const hashed_string& kind, const hashed_string& target, int32 value, bool bAbsolute );

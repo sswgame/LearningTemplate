@@ -187,7 +187,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentDecidesWhatLeavesTheMachine )
     // 보고 프로세스 일: 보낼 줄 하나만 올리고 Sent, 덤프는 지운다.
     SW_EXPECT_EQUAL( 1u, CrashReportService::runReporter( reportsFolder, uploader ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( uploader._listBundle.size() ) );
-    SW_EXPECT_TRUE( uploader._listBundle[0]._sessionId == "askyes" );
+    SW_EXPECT_TRUE( uploader._listBundle[0]._sessionID == "askyes" );
     SW_EXPECT_TRUE( uploader._listBundle[0]._manifest.find( "\"askyes\"" ) != string::npos );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( uploader._listBundle[0]._listFilePath.size() ) ); // 덤프 · 컨텍스트 · 스택 · 빵부스러기(이 세션의 로그는 없다)
     SW_EXPECT_TRUE( Internal::stateOf( reportsFolder, "askyes" ) == "sent" );
@@ -356,17 +356,17 @@ SW_TEST_CASE( CrashBundleTest, RealCrashLeavesABundle )
     SW_EXPECT_TRUE( child._exitCode != 0 );
 
     CrashReportService service;
-    service.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
+    service.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
     SW_ASSERT_EQUAL( 1u, service.collectNewCrashes() );
     vector<CrashReportSummary> listReport;
     service.collectReports( listReport );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listReport.size() ) );
     const CrashReportSummary& report = listReport[0];
-    SW_EXPECT_TRUE( report._sessionId != CrashHandler::getSessionId() );
+    SW_EXPECT_TRUE( report._sessionID != CrashHandler::getSessionID() );
     SW_EXPECT_FALSE( report._reason.empty() );
 #if defined( SW_PLATFORM_WINDOWS )
     // 모든 구성이 /DEBUG 로 링크된다 — 부트스트랩이 올린 빌드 id 가 컨텍스트에 있다.
-    SW_EXPECT_FALSE( report._buildId.empty() );
+    SW_EXPECT_FALSE( report._buildID.empty() );
     SW_EXPECT_TRUE( FileUtil::getFileSize( FileUtil::joinPath( report._folder, "crash.dmp" ) ) > 0u );
 #endif
     string breadcrumbs;

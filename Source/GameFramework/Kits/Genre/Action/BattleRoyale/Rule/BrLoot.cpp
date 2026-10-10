@@ -25,31 +25,31 @@ namespace sw
             if ( random.nextChance( pDef->_chance ) == false )
                 continue;
             const int32 rollCount = random.nextInt( pDef->_minRolls, pDef->_maxRolls );
-            (void)rollTableAt( lootCatalog, pDef->_tableId, spot._position, static_cast<int32>( spotIndex ), rollCount, random, outListItem );
+            (void)rollTableAt( lootCatalog, pDef->_tableID, spot._position, static_cast<int32>( spotIndex ), rollCount, random, outListItem );
         }
         return static_cast<int32>( outListItem.size() );
     }
 
-    int32 BrLootPlacement::rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableId, const float2& position, int32 spotIndex, int32 rollCount,
+    int32 BrLootPlacement::rollTableAt( const LootCatalog& lootCatalog, const hashed_string& tableID, const float2& position, int32 spotIndex, int32 rollCount,
                                         GameRandom& random, vector<BrGroundItem>& outListItem )
     {
         ItemStackList items;
         for ( int32 rollIndex = 0; rollIndex < rollCount; ++rollIndex )
         {
-            (void)lootCatalog.roll( tableId, random, items );
+            (void)lootCatalog.roll( tableID, random, items );
         }
-        vector<hashed_string> listItemId;
-        items.getItemIds( listItemId );
-        std::sort( listItemId.begin(), listItemId.end(), HashedStringLexicalLess{} );
-        for ( const hashed_string& itemId : listItemId )
+        vector<hashed_string> listItemID;
+        items.getItemIDs( listItemID );
+        std::sort( listItemID.begin(), listItemID.end(), HashedStringLexicalLess{} );
+        for ( const hashed_string& itemID : listItemID )
         {
             BrGroundItem item;
             item._position  = position;
-            item._itemId    = itemId;
-            item._count     = items.getItemCount( itemId );
+            item._itemID    = itemID;
+            item._count     = items.getItemCount( itemID );
             item._spotIndex = spotIndex;
             outListItem.push_back( item );
         }
-        return static_cast<int32>( listItemId.size() );
+        return static_cast<int32>( listItemID.size() );
     }
 } // namespace sw

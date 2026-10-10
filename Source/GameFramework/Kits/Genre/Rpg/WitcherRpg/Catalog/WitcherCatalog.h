@@ -182,7 +182,7 @@ namespace sw
     struct WitcherContractDef
     {
         hashed_string                  _id{};
-        hashed_string                  _questId{};
+        hashed_string                  _questID{};
         vector<WitcherContractStepDef> _listStep{};
         int32                          _reward{ 100 };         ///< 처음 제시하는 보상
         float32                        _limitRatio{ 1.3f };    ///< 의뢰인이 받아들이는 최대 배율
@@ -230,7 +230,7 @@ namespace sw
         const WitcherMutagenDef*  findMutagen( const hashed_string& id ) const { return _mutagenCatalog.find( id ); }
         const WitcherContractDef* findContract( const hashed_string& id ) const { return _contractCatalog.find( id ); }
         /** @brief 스킬의 색입니다. 정하지 않은 스킬은 빈 이름(어느 변이원과도 맞지 않는다)입니다. */
-        hashed_string getSkillColor( const hashed_string& skillId ) const;
+        hashed_string getSkillColor( const hashed_string& skillID ) const;
 
         const vector<WitcherAlchemyDef>&   getAlchemyItems() const { return _alchemyCatalog.getAll(); }
         const vector<WitcherSlotGroupDef>& getSlotGroups() const { return _listSlotGroup; }

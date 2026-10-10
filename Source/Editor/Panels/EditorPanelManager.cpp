@@ -16,7 +16,7 @@ namespace sw::editor
     SW_TEST_GLOBAL_VARIABLE( int32, gv_editorPanelTimes, 0, "N 프레임 동안 에디터 패널마다 그리기 시간을 모아 한 번 로그로 찍는다 (0=끄기)" );
 
     void EditorPanelManager::registerPanel( unique_ptr<IEditorPanel> pPanel,
-                                            string_view              panelId,
+                                            string_view              panelID,
                                             EditorPanelCategory      category )
     {
         if ( pPanel == nullptr )
@@ -24,7 +24,7 @@ namespace sw::editor
 
         const utf8*      pTitle = pPanel->getPanelTitle();
         EditorPanelEntry entry{};
-        entry._id        = panelId.empty() == false ? string{ panelId } : ( pTitle != nullptr ? pTitle : "" );
+        entry._id        = panelID.empty() == false ? string{ panelID } : ( pTitle != nullptr ? pTitle : "" );
         entry._title     = pTitle != nullptr ? pTitle : "";
         entry._category  = category;
         entry._pInstance = std::move( pPanel );
@@ -32,21 +32,21 @@ namespace sw::editor
         _listPanel.push_back( std::move( entry ) );
     }
 
-    IEditorPanel* EditorPanelManager::findPanel( string_view panelId ) const
+    IEditorPanel* EditorPanelManager::findPanel( string_view panelID ) const
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance == nullptr )
                 continue;
-            if ( entry._id == panelId || entry._title == panelId )
+            if ( entry._id == panelID || entry._title == panelID )
                 return entry._pInstance.get();
         }
         return nullptr;
     }
 
-    bool EditorPanelManager::setPanelOpen( string_view panelId, bool bOpen )
+    bool EditorPanelManager::setPanelOpen( string_view panelID, bool bOpen )
     {
-        IEditorPanel* pPanel = findPanel( panelId );
+        IEditorPanel* pPanel = findPanel( panelID );
         if ( pPanel != nullptr )
         {
             pPanel->setOpen( bOpen );
@@ -68,7 +68,7 @@ namespace sw::editor
         for ( uint32 index = 0; index < PanelRegistry::getCount(); ++index )
         {
             const EditorPanelRegistration& registration = PanelRegistry::getAt( index );
-            registerPanel( registration._pCreate(), registration._pId, registration._category );
+            registerPanel( registration._pCreate(), registration._pID, registration._category );
         }
     }
 

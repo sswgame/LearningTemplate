@@ -47,12 +47,12 @@ namespace sw
         void initialize( const MetroidvaniaCatalog* pCatalog );
 
         /** @brief 부적을 얻습니다. 새로 얻었으면 true 입니다. */
-        bool grantCharm( const hashed_string& charmId );
+        bool grantCharm( const hashed_string& charmID );
         /** @brief 슬롯을 늘립니다(슬롯 조각). */
         void addNotches( int32 count ) { _notchCount += count > 0 ? count : 0; }
 
-        MetroCharmResult equip( const hashed_string& charmId );
-        MetroCharmResult unequip( const hashed_string& charmId );
+        MetroCharmResult equip( const hashed_string& charmID );
+        MetroCharmResult unequip( const hashed_string& charmID );
 
         /** @brief 낀 부적 능력치를 @p outStats 에 더합니다(먼저 비우지 않는다). */
         void  mergeStats( StatBlock& outStats ) const;
@@ -60,8 +60,8 @@ namespace sw
         bool  isOvercharmed() const { return computeUsedNotches() > _notchCount; }
         /** @brief 넘겨 끼었으면 규칙의 배율, 아니면 1 입니다. */
         float32 computeDamageTakenScale() const;
-        bool    isOwned( const hashed_string& charmId ) const;
-        bool    isEquipped( const hashed_string& charmId ) const;
+        bool    isOwned( const hashed_string& charmID ) const;
+        bool    isEquipped( const hashed_string& charmID ) const;
 
         int32                        getNotchCount() const { return _notchCount; }
         const vector<hashed_string>& getEquipped() const { return _listEquipped; }
@@ -72,7 +72,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        static bool contains( const vector<hashed_string>& listId, const hashed_string& id );
+        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
 
         const MetroidvaniaCatalog* _pCatalog;
         vector<hashed_string>      _listOwned;

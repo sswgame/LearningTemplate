@@ -624,7 +624,7 @@ SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_EXPECT_TRUE( mission.applyDamage( 1, 99999, -1 ) );
     campaign.completeMission( mission, SRPGOutcome::Victory );
     SW_EXPECT_FALSE( campaign.isFailed() );
-    SW_EXPECT_TRUE( campaign.getRoster()[0]._unitId == hashed_string( "gmcustom" ) );
+    SW_EXPECT_TRUE( campaign.getRoster()[0]._unitID == hashed_string( "gmcustom" ) );
     SW_EXPECT_EQUAL( 2, campaign.getRoster()[0]._pilotLevel.getLevel() );
     SW_EXPECT_TRUE( campaign.getRoster()[1]._bLost == SW_TRUE ); // 격파된 유닛은 이번 판에서 빠진다
 

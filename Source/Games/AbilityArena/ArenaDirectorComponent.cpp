@@ -43,7 +43,7 @@ namespace sw
             static constexpr const utf8* kSoundEnemyFell  = "game/abilityarena/sounds/impact_punch_heavy_000.ogg";
 
             /** @brief 종류마다의 어빌리티 세트 id 입니다. */
-            static hashed_string findAbilitySetId( ArenaUnitKind kind )
+            static hashed_string findAbilitySetID( ArenaUnitKind kind )
             {
                 switch ( kind )
                 {
@@ -452,10 +452,10 @@ namespace sw
         }
 
         // 카탈로그는 정하지 않는다 — 게임 서비스(`AbilityCatalog`)를 쓴다. 포인터를 박아 두면 모듈이 다시 올라온 뒤 옛 카탈로그를 가리킨다.
-        const hashed_string setId = ArenaDirectorComponentInternal::findAbilitySetId( request._kind );
-        if ( pAbilitySystem->grantAbilitySet( setId ) == false )
+        const hashed_string setID = ArenaDirectorComponentInternal::findAbilitySetID( request._kind );
+        if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
-            SW_LOG_WARNING( "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setId.c_str() );
+            SW_LOG_WARNING( "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
             manager.destroyObject( pObject );
             return false;
         }

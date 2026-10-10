@@ -48,19 +48,19 @@ namespace sw
     /** @brief 변경 통보의 종류입니다. */
     enum class UserSettingEventKind : uint8
     {
-        PendingChanged,  ///< 보류 값이 바뀜(`_settingId`)
-        Applied,         ///< 대상에 들어감(`_settingId`)
-        Reverted,        ///< 보류 값을 버림(`_settingId`)
+        PendingChanged,  ///< 보류 값이 바뀜(`_settingID`)
+        Applied,         ///< 대상에 들어감(`_settingID`)
+        Reverted,        ///< 보류 값을 버림(`_settingID`)
         ConfirmStarted,  ///< 확인 대기 시작(카운트다운)
         Confirmed,       ///< 확인됨
         ConfirmTimedOut, ///< 확인하지 않아 되돌림
         Loaded,          ///< 사용자 파일을 읽음 · 기본값으로 되돌림 등 전체가 바뀜
     };
 
-    /** @brief 변경 통보 하나입니다. 전체 사건(확인 · 로드)은 `_settingId` 가 비어 있습니다. */
+    /** @brief 변경 통보 하나입니다. 전체 사건(확인 · 로드)은 `_settingID` 가 비어 있습니다. */
     struct UserSettingEvent
     {
-        hashed_string        _settingId{};
+        hashed_string        _settingID{};
         UserSettingEventKind _kind{ UserSettingEventKind::PendingChanged };
     };
 } // namespace sw
@@ -83,10 +83,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 키 바인딩 겹침 하나입니다. `_settingId` 가 비면 스키마 밖의 액션(`_action`)과 겹친 것입니다. */
+    /** @brief 키 바인딩 겹침 하나입니다. `_settingID` 가 비면 스키마 밖의 액션(`_action`)과 겹친 것입니다. */
     struct UserSettingBindingConflict
     {
-        hashed_string _settingId{};
+        hashed_string _settingID{};
         hashed_string _action{};
     };
 } // namespace sw
@@ -123,7 +123,7 @@ namespace sw
          * @brief 게임 프리셋의 기본값 덮어쓰기(`GameConfig::_mapUserSettingDefault`)를 겁니다. 아직 바꾸지 않은 값(기본값)도 따라 바뀝니다.
          * @return 모르는 설정 · 받을 수 없는 값이면 오류를 알리고 false 입니다.
          */
-        [[nodiscard]] bool setGameDefault( const hashed_string& settingId, string_view value );
+        [[nodiscard]] bool setGameDefault( const hashed_string& settingID, string_view value );
 
         // ------------------------------------------------------------------------------
         // 2) 사용자 파일 — 세이브 게임과 별개, 판 번호 · 버전 올리기 단계가 있는 플레이어 데이터
@@ -168,33 +168,33 @@ namespace sw
         // ------------------------------------------------------------------------------
         const vector<UserSettingCategoryDef>& getCategories() const { return _schema.getCategories(); }
         /** @brief 카테고리의 설정을 표시 순서로 모읍니다. 이 플랫폼에서 쓸 수 없는 설정은 빠집니다. */
-        void                      collectSettings( const hashed_string& categoryId, vector<const UserSettingDef*>& outListSetting ) const;
-        const UserSettingDef*     findSetting( const hashed_string& settingId ) const { return _schema.findSetting( settingId ); }
+        void                      collectSettings( const hashed_string& categoryID, vector<const UserSettingDef*>& outListSetting ) const;
+        const UserSettingDef*     findSetting( const hashed_string& settingID ) const { return _schema.findSetting( settingID ); }
         const UserSettingsSchema& getSchema() const { return _schema; }
         /** @brief 메뉴가 보일 값 — 보류 값이 있으면 그것, 없으면 확정 값입니다. 없는 설정은 빈 글입니다. */
-        string_view getValue( const hashed_string& settingId ) const;
+        string_view getValue( const hashed_string& settingID ) const;
         /** @brief 확정 값(적용 · 저장된 값)입니다. */
-        string_view getAppliedValue( const hashed_string& settingId ) const;
+        string_view getAppliedValue( const hashed_string& settingID ) const;
         /** @brief 기본값(게임 프리셋 덮어쓰기 포함)입니다. */
-        string_view getDefaultValue( const hashed_string& settingId ) const;
-        bool        getBoolValue( const hashed_string& settingId ) const;
-        int32       getIntValue( const hashed_string& settingId ) const;
-        float32     getFloatValue( const hashed_string& settingId ) const;
+        string_view getDefaultValue( const hashed_string& settingID ) const;
+        bool        getBoolValue( const hashed_string& settingID ) const;
+        int32       getIntValue( const hashed_string& settingID ) const;
+        float32     getFloatValue( const hashed_string& settingID ) const;
         /** @brief 열거형의 선택지입니다(공급자 설정은 지금 공급자가 주는 것). */
-        void collectOptions( const hashed_string& settingId, vector<UserSettingOption>& outListOption ) const;
+        void collectOptions( const hashed_string& settingID, vector<UserSettingOption>& outListOption ) const;
 
         /** @brief 보류 값을 넣습니다. `Immediate` 설정은 바로 대상에 미리 적용합니다. 품질 묶음의 프리셋 · Custom 을 함께 맞춥니다. */
-        UserSettingSetResult setPendingValue( const hashed_string& settingId, string_view value );
-        UserSettingSetResult setPendingBoolValue( const hashed_string& settingId, bool bValue );
-        UserSettingSetResult setPendingIntValue( const hashed_string& settingId, int32 value );
-        UserSettingSetResult setPendingFloatValue( const hashed_string& settingId, float32 value );
+        UserSettingSetResult setPendingValue( const hashed_string& settingID, string_view value );
+        UserSettingSetResult setPendingBoolValue( const hashed_string& settingID, bool bValue );
+        UserSettingSetResult setPendingIntValue( const hashed_string& settingID, int32 value );
+        UserSettingSetResult setPendingFloatValue( const hashed_string& settingID, float32 value );
 
-        bool isPending( const hashed_string& settingId ) const;
+        bool isPending( const hashed_string& settingID ) const;
         bool hasPendingChanges() const;
         /** @brief 이 플랫폼에서 쓰고 의존 조건(`enabledWhen`)을 모두 만족하면 true 입니다(메뉴가 회색으로 보일지). */
-        bool isSettingEnabled( const hashed_string& settingId ) const;
+        bool isSettingEnabled( const hashed_string& settingID ) const;
         /** @brief 이 플랫폼에서 쓰는 설정이면 true 입니다. */
-        bool isSettingAvailable( const hashed_string& settingId ) const;
+        bool isSettingAvailable( const hashed_string& settingID ) const;
 
         // ------------------------------------------------------------------------------
         // 5) 적용 · 되돌리기 · 기본값 · 확인 카운트다운
@@ -204,7 +204,7 @@ namespace sw
         /** @brief 보류 값을 모두 버립니다. 미리 적용한 `Immediate` 값은 확정 값으로 되돌립니다. */
         void revertPending();
         /** @brief 카테고리의 설정을 기본값으로 보류합니다(`applyPending` 으로 확정). */
-        void resetCategoryToDefaults( const hashed_string& categoryId );
+        void resetCategoryToDefaults( const hashed_string& categoryID );
         /** @brief 확인 대기 중인지 반환합니다. */
         bool isAwaitingConfirm() const { return _confirmSecondsLeft > 0.0f; }
         /** @brief 확인 대기의 남은 초입니다(메뉴의 "N 초 뒤 되돌립니다"). */
@@ -220,11 +220,11 @@ namespace sw
         // 6) 키 바인딩 · 글리프
         // ------------------------------------------------------------------------------
         /** @brief @p slotText 를 이 설정에 줄 때 겹치는 것을 찾습니다. 같은 범위(`context` · 입력 맵 레이어)의 다른 키 바인딩 설정, 그다음 스키마 밖 액션. */
-        bool findBindingConflict( const hashed_string& settingId, string_view slotText, UserSettingBindingConflict& outConflict ) const;
+        bool findBindingConflict( const hashed_string& settingID, string_view slotText, UserSettingBindingConflict& outConflict ) const;
         /** @brief 키를 보류합니다. 겹치면 @p policy 대로 거절하거나 맞바꿉니다(겹친 설정에 이 설정의 지금 키). */
-        UserSettingSetResult setPendingBinding( const hashed_string& settingId, string_view slotText, UserSettingBindingPolicy policy );
+        UserSettingSetResult setPendingBinding( const hashed_string& settingID, string_view slotText, UserSettingBindingPolicy policy );
         /** @brief 메뉴가 보일 키 표기(보류 값 기준, 빈 값이면 입력 맵의 기본 키)입니다. 모르면 `[ ? ]` 입니다. */
-        string getBindingGlyph( const hashed_string& settingId, InputGlyphStyle style ) const;
+        string getBindingGlyph( const hashed_string& settingID, InputGlyphStyle style ) const;
 
         // ------------------------------------------------------------------------------
         // 7) 통보 · 등록부 · 화면 요청
@@ -257,7 +257,7 @@ namespace sw
         };
 
         bool                 appendSchema( bool bLoaded );
-        uint32               findIndex( const hashed_string& settingId ) const;
+        uint32               findIndex( const hashed_string& settingID ) const;
         const string&        getEffectiveValue( uint32 settingIndex ) const;
         bool                 isEnabledAt( uint32 settingIndex ) const;
         bool                 isAvailableAt( uint32 settingIndex ) const;
@@ -267,7 +267,7 @@ namespace sw
         void                 applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted );
         bool                 findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
         hashed_string        findBindingContext( uint32 settingIndex ) const;
-        void                 broadcast( const hashed_string& settingId, UserSettingEventKind kind );
+        void                 broadcast( const hashed_string& settingID, UserSettingEventKind kind );
         [[nodiscard]] bool   saveIfPathSet();
 
     private:

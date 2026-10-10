@@ -37,15 +37,15 @@ namespace sw
 
 namespace sw
 {
-    LogTraceId LogTraceId::makeRandom()
+    LogTraceID LogTraceID::makeRandom()
     {
-        LogTraceId traceId;
-        while ( traceId.isValid() == false )
+        LogTraceID traceID;
+        while ( traceID.isValid() == false )
         {
-            traceId._high = MathUtil::getRandom<uint64>();
-            traceId._low  = MathUtil::getRandom<uint64>();
+            traceID._high = MathUtil::getRandom<uint64>();
+            traceID._low  = MathUtil::getRandom<uint64>();
         }
-        return traceId;
+        return traceID;
     }
 
     int32 LogContext::formatTag( utf8* pOutBuffer, int32 capacity ) const
@@ -56,16 +56,16 @@ namespace sw
         if ( isEmpty() || capacity < kMaxTagSize )
             return 0;
         int32 length = LogContextInternal::appendText( pOutBuffer, 0, "[" );
-        if ( _traceId.isValid() )
+        if ( _traceID.isValid() )
         {
             length = LogContextInternal::appendText( pOutBuffer, length, "trace=" );
-            length = LogContextInternal::appendHex64( pOutBuffer, length, _traceId._high );
-            length = LogContextInternal::appendHex64( pOutBuffer, length, _traceId._low );
+            length = LogContextInternal::appendHex64( pOutBuffer, length, _traceID._high );
+            length = LogContextInternal::appendHex64( pOutBuffer, length, _traceID._low );
         }
-        if ( _principalId != 0 )
+        if ( _principalID != 0 )
         {
             length = LogContextInternal::appendText( pOutBuffer, length, length > 1 ? " acct=" : "acct=" );
-            length = LogContextInternal::appendHex64( pOutBuffer, length, _principalId );
+            length = LogContextInternal::appendHex64( pOutBuffer, length, _principalID );
         }
         length             = LogContextInternal::appendText( pOutBuffer, length, "] " );
         pOutBuffer[length] = '\0';

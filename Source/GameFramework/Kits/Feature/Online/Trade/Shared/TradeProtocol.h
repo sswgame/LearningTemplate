@@ -49,7 +49,7 @@ namespace sw
     /** @brief 이동 뒤 잔액 하나입니다(원장의 계정 잔액 — 게임 거울용). */
     struct TradeBalance
     {
-        string _assetId{};
+        string _assetID{};
         int64  _amount{ 0 };
     };
 } // namespace sw

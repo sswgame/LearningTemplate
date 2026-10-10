@@ -40,9 +40,9 @@ namespace sw::editor
              * @brief 변수 표의 틀을 엽니다. 핀 · 이름 · 타입 · 값 · 리셋 다섯 열은 고정 섹션과 본문(모듈별 · 평면)이 같습니다.
              * @return 표가 열렸으면 true. `EndTable` 은 부르는 쪽이 부릅니다.
              */
-            static bool beginVariableTable( const utf8* pId, ImGuiTableFlags flags, float32 outerHeight )
+            static bool beginVariableTable( const utf8* pID, ImGuiTableFlags flags, float32 outerHeight )
             {
-                if ( ImGui::BeginTable( pId, 5, flags, ImVec2( 0.0f, outerHeight ) ) == false )
+                if ( ImGui::BeginTable( pID, 5, flags, ImVec2( 0.0f, outerHeight ) ) == false )
                     return false;
                 ImGui::TableSetupColumn( "Pin", ImGuiTableColumnFlags_WidthFixed, 30.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::TableSetupColumn( "Name", ImGuiTableColumnFlags_WidthFixed, 180.0f * EditorThemeUtil::getDpiScale() );
@@ -415,8 +415,8 @@ namespace sw::editor
 
                 if ( bModuleHeaderOpen )
                 {
-                    const string tableId = "GvTable_" + currentModule;
-                    if ( GlobalVariablesPanelInternal::beginVariableTable( tableId.c_str(), GlobalVariablesPanelInternal::kGroupedTableFlags, 0.0f ) )
+                    const string tableID = "GvTable_" + currentModule;
+                    if ( GlobalVariablesPanelInternal::beginVariableTable( tableID.c_str(), GlobalVariablesPanelInternal::kGroupedTableFlags, 0.0f ) )
                     {
                         for ( size_t rowIndex = varIndex; rowIndex < rangeEnd; ++rowIndex )
                         {

@@ -315,10 +315,10 @@ namespace sw
         return _header;
     }
 
-    uint32 ResourcePackReader::getDlcAppId() const
+    uint32 ResourcePackReader::getDlcAppID() const
     {
         std::scoped_lock<mutex> lock( _fileMutex );
-        return _header._dlcAppId;
+        return _header._dlcAppID;
     }
 
     uint32 ResourcePackReader::getFileCount() const

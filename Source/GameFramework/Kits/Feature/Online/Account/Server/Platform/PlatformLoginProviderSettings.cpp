@@ -101,10 +101,10 @@ namespace sw
             settings._subjectPath     = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
             settings._displayNamePath = Internal::readText( entry, "displayNamePath", "" );
             settings._bRequireNonce   = entry.get( "requireNonce", false ).asBool( false ) ? SW_TRUE : SW_FALSE;
-            const JsonValue clientIds = entry.get( "clientIds", false );
-            for ( size_t clientIndex = 0; clientIds.isArray() && clientIndex < clientIds.size(); ++clientIndex )
+            const JsonValue clientIDs = entry.get( "clientIds", false );
+            for ( size_t clientIndex = 0; clientIDs.isArray() && clientIndex < clientIDs.size(); ++clientIndex )
             {
-                settings._listClientId.push_back( clientIds.at( clientIndex ).asString() );
+                settings._listClientID.push_back( clientIDs.at( clientIndex ).asString() );
             }
             if ( isValidSettings( settings ) == false )
             {
@@ -120,7 +120,7 @@ namespace sw
         if ( AccountUtil::isValidLowerToken( settings._name, LoginConstant::kMaxProviderNameSize ) == false || settings._subjectPath.empty() )
             return false;
         if ( settings._kind == PlatformLoginProviderKind::Oidc )
-            return settings._issuer.empty() == false && settings._jwksURL.empty() == false && settings._listClientId.empty() == false;
+            return settings._issuer.empty() == false && settings._jwksURL.empty() == false && settings._listClientID.empty() == false;
         return settings._profileURL.empty() == false;
     }
 } // namespace sw

@@ -85,7 +85,7 @@ namespace sw
         ActionCombatRig();
 
         /** @brief 규칙 · 기술 표 · 쓸 콤보를 둡니다. 모르는 콤보면 false 입니다(근접 없이 총 · 패리만). */
-        [[nodiscard]] bool initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboId );
+        [[nodiscard]] bool initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID );
         /** @brief 총을 듭니다(예비탄 @p reserveAmmo, 퍼짐 씨앗 @p seed). */
         void equipGun( const WeaponDef& weapon, int32 reserveAmmo, uint32 seed = 1u );
 
@@ -142,7 +142,7 @@ namespace sw
         WeaponState                    _gun;
         vector<ActionProjectile>       _listProjectile;
         EventBuffer<ActionCombatEvent> _eventBuffer;
-        uint32                         _nextProjectileId;
+        uint32                         _nextProjectileID;
         int32                          _comboIndex; ///< 지금 기술의 콤보 자리(−1 = 쉬는 중)
         int32                          _attackBufferFrames;
         int32                          _parryFrames;

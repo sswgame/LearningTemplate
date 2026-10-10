@@ -54,7 +54,7 @@ namespace sw
             const MonsterMoveSlot& moveSlot = monster._arrMove[slot];
             if ( moveSlot.isEmpty() || moveSlot._pp <= 0 )
                 continue;
-            const float32 damage = battle.computeExpectedDamage( stageSide, monster, moveSlot._moveId, foeSide, battle.getActive( foeSide ) );
+            const float32 damage = battle.computeExpectedDamage( stageSide, monster, moveSlot._moveID, foeSide, battle.getActive( foeSide ) );
             if ( damage > bestDamage )
             {
                 bestDamage = damage;
@@ -102,7 +102,7 @@ namespace sw
         bool                           bAny     = false;
         for ( const MonsterMoveSlot& moveSlot : monster._arrMove )
         {
-            const MonsterMoveDef* pMove = pCatalog != nullptr ? pCatalog->findMove( moveSlot._moveId ) : nullptr;
+            const MonsterMoveDef* pMove = pCatalog != nullptr ? pCatalog->findMove( moveSlot._moveID ) : nullptr;
             if ( pMove == nullptr || pMove->isDamaging() == false || moveSlot._pp <= 0 )
                 continue;
             const float32 multiplier = battle.computeTypeMultiplier( pMove->_type, battle.getActive( foeSide ) );
@@ -116,8 +116,8 @@ namespace sw
     {
         const MonsterCollectorCatalog* pCatalog = battle.getCatalog();
         const ElementChart*            pChart   = battle.getChart();
-        const MonsterSpeciesDef*       pFoe     = pCatalog != nullptr ? pCatalog->findSpecies( battle.getActive( foeSide )._speciesId ) : nullptr;
-        const MonsterSpeciesDef*       pSelf    = pCatalog != nullptr ? pCatalog->findSpecies( monster._speciesId ) : nullptr;
+        const MonsterSpeciesDef*       pFoe     = pCatalog != nullptr ? pCatalog->findSpecies( battle.getActive( foeSide )._speciesID ) : nullptr;
+        const MonsterSpeciesDef*       pSelf    = pCatalog != nullptr ? pCatalog->findSpecies( monster._speciesID ) : nullptr;
         if ( pFoe == nullptr || pSelf == nullptr || pChart == nullptr )
             return 1.0f;
         float32 threat = 0.0f;

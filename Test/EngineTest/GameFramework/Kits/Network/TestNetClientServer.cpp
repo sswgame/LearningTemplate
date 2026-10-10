@@ -67,10 +67,10 @@ namespace
     class HideThreePolicy final : public IReplicationPolicy
     {
     public:
-        bool isRelevant( int32 connectionId, const NetEntityState& entity ) const override
+        bool isRelevant( int32 connectionID, const NetEntityState& entity ) const override
         {
-            (void)connectionId;
-            return entity._entityId != 3;
+            (void)connectionID;
+            return entity._entityID != 3;
         }
     };
 
@@ -113,9 +113,9 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
 {
     NetSnapshot baseline;
     baseline._tick = 10;
-    for ( uint32 entityId = 1; entityId <= 4; ++entityId )
+    for ( uint32 entityID = 1; entityID <= 4; ++entityID )
     {
-        baseline._listEntity.push_back( NetEntityState{ makeFloatBytes( static_cast<float32>( entityId ) ), entityId, 7 } );
+        baseline._listEntity.push_back( NetEntityState{ makeFloatBytes( static_cast<float32>( entityID ) ), entityID, 7 } );
     }
     NetSnapshot current;
     current._tick = 12;
@@ -138,7 +138,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
     SW_EXPECT_EQUAL( 12, static_cast<int32>( decoded._tick ) );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( decoded._listEntity.size() ) );
     SW_EXPECT_NEAR_EQUAL( 20.0f, readFloatBytes( decoded.findEntity( 2 )->_buffer ), 1.0e-6f );
-    SW_EXPECT_EQUAL( 8, static_cast<int32>( decoded.findEntity( 5 )->_typeId ) );
+    SW_EXPECT_EQUAL( 8, static_cast<int32>( decoded.findEntity( 5 )->_typeID ) );
     SW_EXPECT_NULL( decoded.findEntity( 3 ) );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( written._listEntity.size() ) );
 
@@ -150,9 +150,9 @@ SW_TEST_CASE( NetClientServerTest, SnapshotDeltasCarryChangesRemovalsAndRespectB
     // 예산 — 다 싣지 못하면 실은 것만 재구성에 반영되고, 받는 쪽 결과가 그것과 같다.
     NetSnapshot big;
     big._tick = 13;
-    for ( uint32 entityId = 1; entityId <= 60; ++entityId )
+    for ( uint32 entityID = 1; entityID <= 60; ++entityID )
     {
-        big._listEntity.push_back( NetEntityState{ vector<uint8>( 20, static_cast<uint8>( entityId ) ), entityId, 1 } );
+        big._listEntity.push_back( NetEntityState{ vector<uint8>( 20, static_cast<uint8>( entityID ) ), entityID, 1 } );
     }
     BitWriter   smallWriter;
     NetSnapshot partial;
@@ -172,21 +172,21 @@ SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
 {
     NetSnapshot baseline;
     baseline._tick = 10;
-    for ( uint32 entityId = 1; entityId <= 50; ++entityId )
+    for ( uint32 entityID = 1; entityID <= 50; ++entityID )
     {
-        baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId ) ), entityId, 1 } );
+        baseline._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityID ) ), entityID, 1 } );
     }
     NetSnapshot current;
     current._tick = 11;
-    for ( uint32 entityId = 5; entityId <= 60; ++entityId ) // 1..4 사라짐, 51..60 새것, 7 의 배수는 바뀜
+    for ( uint32 entityID = 5; entityID <= 60; ++entityID ) // 1..4 사라짐, 51..60 새것, 7 의 배수는 바뀜
     {
-        current._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityId % 7 == 0 ? 0xEE : entityId ) ), entityId, 1 } );
+        current._listEntity.push_back( NetEntityState{ vector<uint8>( 8, static_cast<uint8>( entityID % 7 == 0 ? 0xEE : entityID ) ), entityID, 1 } );
     }
     // 다시 쓰는 자리 — 크기 · 내용이 다른 옛 재구성이 들어 있다.
     NetSnapshot written;
-    for ( uint32 entityId = 100; entityId < 180; ++entityId )
+    for ( uint32 entityID = 100; entityID < 180; ++entityID )
     {
-        written._listEntity.push_back( NetEntityState{ vector<uint8>( 32, 0x11 ), entityId, 9 } );
+        written._listEntity.push_back( NetEntityState{ vector<uint8>( 32, 0x11 ), entityID, 9 } );
     }
     NetSnapshot decoded = written;
     BitWriter   writer;
@@ -197,10 +197,10 @@ SW_TEST_CASE( NetClientServerTest, DeltaReconstructionMatchesAfterSlotReuse )
     SW_ASSERT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
     for ( size_t index = 0; index < written._listEntity.size(); ++index )
     {
-        SW_EXPECT_EQUAL( current._listEntity[index]._entityId, written._listEntity[index]._entityId );
+        SW_EXPECT_EQUAL( current._listEntity[index]._entityID, written._listEntity[index]._entityID );
         SW_EXPECT_TRUE( current._listEntity[index]._buffer == written._listEntity[index]._buffer );
-        SW_EXPECT_EQUAL( written._listEntity[index]._entityId, decoded._listEntity[index]._entityId );
-        SW_EXPECT_EQUAL( written._listEntity[index]._typeId, decoded._listEntity[index]._typeId );
+        SW_EXPECT_EQUAL( written._listEntity[index]._entityID, decoded._listEntity[index]._entityID );
+        SW_EXPECT_EQUAL( written._listEntity[index]._typeID, decoded._listEntity[index]._typeID );
         SW_EXPECT_TRUE( written._listEntity[index]._buffer == decoded._listEntity[index]._buffer );
     }
     SW_EXPECT_NULL( written.findEntity( 3 ) );
@@ -286,13 +286,13 @@ SW_TEST_CASE( NetClientServerTest, ReplicationInterpolatesOverLossyLatencyAndCar
         clientTransport.update( time );
         serverHost.update( time );
         clientHost.update( time );
-        int32          connectionId = -1;
+        int32          connectionID = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
-        while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+        while ( serverHost.receiveMessage( connectionID, channel, buffer ) )
         {
-            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionID, buffer ) );
         }
-        while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+        while ( clientHost.receiveMessage( connectionID, channel, buffer ) )
         {
             SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
         }
@@ -441,13 +441,13 @@ SW_TEST_CASE( NetClientServerTest, ReplicationSurvivesEmulatedBadNetwork )
         serverHost.update( time );
         clientHost.update( time );
         network.deliverInFlight();
-        int32          connectionId = -1;
+        int32          connectionID = -1;
         NetChannelType channel      = NetChannelType::Unreliable;
-        while ( serverHost.receiveMessage( connectionId, channel, buffer ) )
+        while ( serverHost.receiveMessage( connectionID, channel, buffer ) )
         {
-            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionId, buffer ) );
+            SW_EXPECT_TRUE( NetHandleResult::Handled == server.handleMessage( connectionID, buffer ) );
         }
-        while ( clientHost.receiveMessage( connectionId, channel, buffer ) )
+        while ( clientHost.receiveMessage( connectionID, channel, buffer ) )
         {
             SW_EXPECT_TRUE( NetHandleResult::Handled == client.handleMessage( 0, buffer ) );
         }
@@ -656,7 +656,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
         SW_ASSERT_EQUAL( written._listEntity.size(), decoded._listEntity.size() );
         for ( size_t index = 0; index < written._listEntity.size(); ++index )
         {
-            SW_EXPECT_EQUAL( written._listEntity[index]._entityId, decoded._listEntity[index]._entityId );
+            SW_EXPECT_EQUAL( written._listEntity[index]._entityID, decoded._listEntity[index]._entityID );
             SW_EXPECT_TRUE( written._listEntity[index]._buffer == decoded._listEntity[index]._buffer );
         }
         clientState = decoded;
@@ -665,7 +665,7 @@ SW_TEST_CASE( NetClientServerTest, SnapshotStaysUnderMessageLimitWithManyRemoval
     }
     SW_EXPECT_TRUE( rounds >= 2 ); // 한 메시지에 다 들어가지 않는다
     SW_ASSERT_EQUAL( size_t{ 1 }, clientState._listEntity.size() );
-    SW_EXPECT_EQUAL( 4u, clientState._listEntity[0]._entityId );
+    SW_EXPECT_EQUAL( 4u, clientState._listEntity[0]._entityID );
     SW_EXPECT_NULL( clientState.findEntity( 3 ) ); // 넘는 엔티티는 싣지 않았다
 }
 

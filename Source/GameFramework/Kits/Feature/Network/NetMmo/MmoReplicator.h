@@ -57,8 +57,8 @@ namespace sw
     {
         vector<uint8> _listState{};
         float3        _position{};
-        uint32        _entityId{ 0 };
-        uint32        _typeId{ 0 };
+        uint32        _entityID{ 0 };
+        uint32        _typeID{ 0 };
         float32       _importance{ 1.0f }; ///< 보스 · 다른 플레이어는 크게
     };
 } // namespace sw
@@ -85,16 +85,16 @@ namespace sw
          */
         virtual bool hasAlwaysRelevant() const { return false; }
         /** @brief 반경과 상관없이 늘 보이는가입니다(파티원 · 추적 중인 퀘스트 대상). `hasAlwaysRelevant` 가 true 일 때만 묻는다. */
-        virtual bool isAlwaysRelevant( int32 connectionId, const MmoEntity& entity ) const
+        virtual bool isAlwaysRelevant( int32 connectionID, const MmoEntity& entity ) const
         {
-            (void)connectionId;
+            (void)connectionID;
             (void)entity;
             return false;
         }
         /** @brief 한 틱에 쌓을 우선도입니다. 기본은 중요도 / (1 + 거리 / 10). */
-        virtual float32 computePriority( int32 connectionId, const MmoEntity& entity, float32 distance ) const
+        virtual float32 computePriority( int32 connectionID, const MmoEntity& entity, float32 distance ) const
         {
-            (void)connectionId;
+            (void)connectionID;
             return entity._importance / ( 1.0f + distance * 0.1f );
         }
     };
@@ -128,15 +128,15 @@ namespace sw
         uint8           getMessageRangeBase() const override { return NetKitMessageRange::kMmo; }
         uint16          getMessageKindMask() const override { return static_cast<uint16>( 1u << ( NetMmoMessage::kUpdateAck - NetKitMessageRange::kMmo ) ); }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
-        void            onConnectionClosed( int32 connectionId, NetDisconnectReason reason ) override;
+        void            onConnectionClosed( int32 connectionID, NetDisconnectReason reason ) override;
 
         void initialize( NetHost* pHost, const MmoReplicatorSettings& settings, const IInterestPolicy* pPolicy = nullptr );
         /** @brief 엔티티를 넣거나 바꿉니다. 상태가 `NetMmoMessage::kMaxStateBytes` 를 넘으면 받지 않는다(그 엔티티는 지난 값 그대로 — 처음 한 번 경고, 그 뒤로는 센다). */
         void setEntity( const MmoEntity& entity );
-        void removeEntity( uint32 entityId );
-        void setObserver( int32 connectionId, uint32 entityId );
+        void removeEntity( uint32 entityID );
+        void setObserver( int32 connectionID, uint32 entityID );
         /** @brief 관찰자를 지웁니다(연결이 닫히면 라우터를 통해 저절로 — 연결은 두고 관심만 끊을 때 직접 부른다). */
-        void removeObserver( int32 connectionId );
+        void removeObserver( int32 connectionID );
         /**
          * @brief 관찰자마다 들어옴 · 나감 · 갱신을 보냅니다. `setTaskManager` 를 줬으면 관찰자들을 작업 스레드에 나눠 계산한다(관찰자마다 독립 —
          *        결과는 한 스레드로 돌 때와 같다). 도는 동안 엔티티 · 관찰자를 바꾸지 않는다(같은 스레드에서 차례로 부르면 그렇다).
@@ -146,7 +146,7 @@ namespace sw
         void setTaskManager( TaskManager* pTaskManager, uint32 serialThreshold = NetParallelFor::kDefaultSerialThreshold );
 
         /** @brief 그 관찰자에게 지금 보이는 엔티티 수입니다. */
-        int32  getVisibleCount( int32 connectionId ) const;
+        int32  getVisibleCount( int32 connectionID ) const;
         uint64 getSentUpdateCount() const { return _sentUpdateCount; }
         /** @brief 상한을 넘어 받지 않은 `setEntity` 수입니다. */
         uint64 getOversizedEntityCount() const { return _oversizedEntityCount; }
@@ -165,7 +165,7 @@ namespace sw
             unordered_map<uint32, VisibleEntry> _mapVisible{};
             NetPrioritizer                      _prioritizer{}; ///< 보이는 엔티티마다 쌓인 우선도
             TickRingBuffer<uint8>               _ackedUpdate{}; ///< 클라이언트가 받았다고 확인한 갱신 틱(값은 쓰지 않는다 — 있으면 받음)
-            uint32                              _entityId{ 0 };
+            uint32                              _entityID{ 0 };
             uint32                              _newestAckTick{ 0 };
             uint8                               _bHasAck{ SW_FALSE };
             uint8                               _bActive{ SW_FALSE };
@@ -185,12 +185,12 @@ namespace sw
         };
 
         void updateObserverRange( uint32 start, uint32 end );
-        void updateObserver( int32 connectionId, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
+        void updateObserver( int32 connectionID, Observer& observer, float32 deltaTime, ObserverScratch& scratch );
         /** @brief 나감을 조각나지 않는 크기(`NetConnection::kMaxSingleMessageSize`)로 쪼개 보내고, 보낸 것만 보이는 목록에서 뺍니다. 못 보낸 것의 시작 자리(`_listLeave`)입니다. */
-        size_t sendLeaves( int32 connectionId, Observer& observer, ObserverScratch& scratch );
+        size_t sendLeaves( int32 connectionID, Observer& observer, ObserverScratch& scratch );
         /** @brief 확인 기다리는 갱신을 판정합니다 — 받았으면 확인된 상태로 옮기고, 잃었으면 우선도를 되돌린다(`NetPrioritizer::resolveSend`). */
         void             resolveInFlightUpdates( Observer& observer ) const;
-        const MmoEntity& getEntity( uint32 entityId ) const;
+        const MmoEntity& getEntity( uint32 entityID ) const;
 
         unordered_map<uint32, MmoEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
@@ -221,7 +221,7 @@ namespace sw
             Left,
             Updated
         };
-        uint32 _entityId{ 0 };
+        uint32 _entityID{ 0 };
         Kind   _kind{ Kind::Entered };
     };
 } // namespace sw
@@ -240,12 +240,12 @@ namespace sw
         }
         NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) override;
         /** @brief 서버에 (다시) 연결됐다 — 보이던 엔티티를 비운다(새 연결은 들어옴부터 다시 받는다). */
-        void onConnectionOpened( int32 connectionId ) override;
+        void onConnectionOpened( int32 connectionID ) override;
         void drainEvents( vector<MmoClientEvent>& outListEvent );
-        /** @brief 받은 갱신 틱을 서버에 확인합니다(틱마다 한 번 — 받은 것이 없으면 보내지 않는다). @p connectionId 는 서버 연결입니다. */
-        void sendAck( NetHost& host, int32 connectionId );
+        /** @brief 받은 갱신 틱을 서버에 확인합니다(틱마다 한 번 — 받은 것이 없으면 보내지 않는다). @p connectionID 는 서버 연결입니다. */
+        void sendAck( NetHost& host, int32 connectionID );
 
-        const MmoEntity* findEntity( uint32 entityId ) const;
+        const MmoEntity* findEntity( uint32 entityID ) const;
         int32            getEntityCount() const { return static_cast<int32>( _mapEntity.size() ); }
         /** @brief 순서가 뒤바뀌어 마지막으로 적용한 것보다 옛 틱이라 버린 갱신 수입니다. */
         uint64 getStaleUpdateCount() const { return _staleUpdateCount; }

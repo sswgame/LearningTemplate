@@ -84,14 +84,14 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
     GameObject*             pTarget     = manager.createGameObject( hashed_string( "Target" ) );
     MeshComponent*          pTargetMesh = pTarget->addComponent<MeshComponent>();
     SW_ASSERT_TRUE( pSourceMesh != nullptr && pTargetMesh != nullptr );
-    const PropertyInfo* pMeshId = pSourceMesh->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_meshId" ) );
-    SW_ASSERT_NOT_NULL( pMeshId );
+    const PropertyInfo* pMeshID = pSourceMesh->getTypeInfo()->findPropertyInHierarchy( hashed_string( "_meshID" ) );
+    SW_ASSERT_NOT_NULL( pMeshID );
     pTargetMesh->resolveRuntimeMesh();
     manager.flushSceneTransforms();
 
     // 붙여넣기
     pSourceMesh->setLocalPosition( float3( 3.0f, 0.0f, 0.0f ) );
-    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Sphere", ctx ) );
+    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshID, pSourceMesh, "Sphere", ctx ) );
     SW_ASSERT_TRUE( pTargetMesh->getRawMesh() != MeshUtil::acquirePrimitive( "Sphere" ).get() );
     SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
     manager.flushSceneTransforms();
@@ -100,7 +100,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
 
     // 프리셋
     pSourceMesh->setLocalPosition( float3( 0.0f, 4.0f, 0.0f ) );
-    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Cylinder", ctx ) );
+    SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshID, pSourceMesh, "Cylinder", ctx ) );
     const string presetPath = test::makeTempPath( "mesh.preset.xml" );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( presetPath, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
     SW_ASSERT_TRUE( EditorTransformCommands::loadComponentPreset( pTargetMesh, presetPath ) );

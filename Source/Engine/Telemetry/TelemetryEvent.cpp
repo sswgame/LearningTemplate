@@ -4,9 +4,9 @@
 
 namespace sw
 {
-    TelemetryEvent::TelemetryEvent( const hashed_string& eventId )
+    TelemetryEvent::TelemetryEvent( const hashed_string& eventID )
         : _listValue{}
-        , _id{ eventId }
+        , _id{ eventID }
     {
     }
 

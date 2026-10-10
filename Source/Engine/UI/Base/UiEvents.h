@@ -108,7 +108,7 @@ namespace sw
      */
     struct SW_API UiReply
     {
-        WidgetId _focusRequest{ kInvalidWidgetId }; ///< 이 위젯으로 포커스를 옮겨 달라(버튼을 마우스로 눌러도 포커스가 따라온다)
+        WidgetID _focusRequest{ kInvalidWidgetID }; ///< 이 위젯으로 포커스를 옮겨 달라(버튼을 마우스로 눌러도 포커스가 따라온다)
         uint8    _bHandled{ SW_FALSE };
         uint8    _bCapturePointer{ SW_FALSE }; ///< 이 위젯이 포인터를 잡는다(슬라이더 끌기) — 뗄 때까지 사건이 이 위젯에게만
         uint8    _bReleasePointer{ SW_FALSE };
@@ -117,7 +117,7 @@ namespace sw
         static UiReply makeUnhandled();
         UiReply&       capturePointer();
         UiReply&       releasePointer();
-        UiReply&       requestFocus( WidgetId widget );
+        UiReply&       requestFocus( WidgetID widget );
         bool           isHandled() const { return _bHandled == SW_TRUE; }
     };
 } // namespace sw

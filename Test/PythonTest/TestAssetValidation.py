@@ -161,7 +161,7 @@ class CheckTest(AssetValidationFixture):
     def testMissingReference(self) -> None:
         self.put("Resource/game/p/models/here.mesh", makeMeshInternal(1))
         self.put("Resource/game/p/maps/a.scene.xml",
-                 '<Scene><x _meshId="game/p/models/here.mesh" _other="game/p/models/gone.mesh" _builtin="Cube"/></Scene>')
+                 '<Scene><x _meshID="game/p/models/here.mesh" _other="game/p/models/gone.mesh" _builtin="Cube"/></Scene>')
         messages = self.findMessages({"name": "r", "check": "missing_reference", "include_patterns": ["*.xml"]})
         self.assertEqual(1, len(messages), messages)
         self.assertIn("gone.mesh", messages[0])
@@ -169,7 +169,7 @@ class CheckTest(AssetValidationFixture):
     def testOrphan(self) -> None:
         self.put("Resource/game/p/models/used.mesh", makeMeshInternal(1))
         self.put("Resource/game/p/models/unused.mesh", makeMeshInternal(1))
-        self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshId="game/p/models/used.mesh"/></Scene>')
+        self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshID="game/p/models/used.mesh"/></Scene>')
         self.put("Source/Probe.cpp", 'const char* kName = "byname.mesh";')
         self.put("Resource/game/p/models/byname.mesh", makeMeshInternal(1))
         findings = self.findMessages({"name": "o", "check": "orphan", "include_patterns": ["*.mesh"]})
@@ -177,7 +177,7 @@ class CheckTest(AssetValidationFixture):
 
     def testStaleExcludeIsAnErrorOnlyOnAFullRun(self) -> None:
         self.put("Resource/game/p/models/kept.mesh", makeMeshInternal(1))
-        self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshId="game/p/models/kept.mesh"/></Scene>')
+        self.put("Resource/game/p/maps/a.scene.xml", '<Scene><x _meshID="game/p/models/kept.mesh"/></Scene>')
         rule = {"name": "o", "check": "orphan", "include_patterns": ["*.mesh"], "exclude_patterns": ["game/q/*.mesh"],
                 "exclude_reason": "시험"}
         findings = self.findMessages(rule)
@@ -232,7 +232,7 @@ class CheckTest(AssetValidationFixture):
     def testEntityIds(self) -> None:
         self.put("Resource/game/p/maps/a.scene.xml",
                  '<Scene><entities><entity id="1"/><entity id="1"/><entity id="0"/><entity id="3">'
-                 '<GameObject><_listComponent><MeshComponent _attachOwnerId="9"/></_listComponent></GameObject></entity></entities></Scene>')
+                 '<GameObject><_listComponent><MeshComponent _attachOwnerID="9"/></_listComponent></GameObject></entity></entities></Scene>')
         messages = self.findMessages({"name": "e", "check": "entity_id", "include_patterns": ["*.scene.xml"]})
         self.assertEqual(3, len(messages), messages)
 

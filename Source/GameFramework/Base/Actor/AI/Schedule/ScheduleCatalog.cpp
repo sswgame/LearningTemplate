@@ -167,13 +167,13 @@ namespace sw
         return _pActivityRegistry != nullptr ? *_pActivityRegistry : ScheduleActivityRegistry::getBuiltin();
     }
 
-    bool ScheduleCatalog::isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeId ) const
+    bool ScheduleCatalog::isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeID ) const
     {
         hashed_string current = npc._archetype;
         // 순환은 읽을 때 끊었지만 묶음 수만큼만 걷는다.
         for ( size_t step = 0; step <= _archetypeCatalog.getCount() && current.empty() == false; ++step )
         {
-            if ( current == archetypeId )
+            if ( current == archetypeID )
                 return true;
             const ScheduleArchetypeDef* pArchetype = findArchetype( current );
             current                                = pArchetype != nullptr ? pArchetype->_parent : hashed_string{};
@@ -216,14 +216,14 @@ namespace sw
             ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), _vocabulary._listWeather );
             return 0;
         }
-        const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-        if ( pId == nullptr )
+        const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+        if ( pID == nullptr )
             return 0;
         if ( StringUtil::equals( pName, "Place", true ) )
         {
             Internal::warnUnknownAttributes( node, Internal::kArrPlaceAttribute, false, sourceName );
             SchedulePlaceDef place;
-            place._id       = hashed_string( pId );
+            place._id       = hashed_string( pID );
             place._area     = hashed_string( node.getAttributeText( "area" ) );
             place._position = GameDataXml::parseFloat3( node.getAttributeText( "position" ), place._position );
             place._radius   = MathUtil::max( 0.0f, node.getAttributeFloat( "radius", place._radius ) );
@@ -233,13 +233,13 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrSpotAttribute, false, sourceName );
             ScheduleSpotDef spot;
-            spot._id       = hashed_string( pId );
+            spot._id       = hashed_string( pID );
             spot._kind     = hashed_string( node.getAttributeText( "kind" ) );
             spot._area     = hashed_string( node.getAttributeText( "area" ) );
             spot._position = GameDataXml::parseFloat3( node.getAttributeText( "position" ), spot._position );
             spot._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", spot._capacity ) );
             if ( spot._kind.empty() )
-                SW_LOG_WARNING( "%#: spot '%#' has no kind - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: spot '%#' has no kind - skipped", sourceName, pID );
             else
                 (void)_spotCatalog.add( spot );
         }
@@ -247,7 +247,7 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrInterruptAttribute, false, sourceName );
             ScheduleInterruptDef interrupt;
-            interrupt._id             = hashed_string( pId );
+            interrupt._id             = hashed_string( pID );
             interrupt._priority       = node.getAttributeInt( "priority", interrupt._priority );
             interrupt._timeoutMinutes = MathUtil::max( 0, node.getAttributeInt( "timeout", interrupt._timeoutMinutes ) );
             (void)_interruptCatalog.add( interrupt );
@@ -256,22 +256,22 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrAppointmentAttribute, true, sourceName );
             ScheduleAppointmentDef appointment;
-            appointment._id          = hashed_string( pId );
+            appointment._id          = hashed_string( pID );
             appointment._place       = hashed_string( node.getAttributeText( "place" ) );
             bool bValid              = true;
-            appointment._startMinute = Internal::readClock( node, "start", -1, sourceName, pId, bValid );
-            appointment._endMinute   = Internal::readClock( node, "end", -1, sourceName, pId, bValid );
+            appointment._startMinute = Internal::readClock( node, "start", -1, sourceName, pID, bValid );
+            appointment._endMinute   = Internal::readClock( node, "end", -1, sourceName, pID, bValid );
             appointment._waitMinutes = MathUtil::max( 0, node.getAttributeInt( "wait", appointment._waitMinutes ) );
             appointment._priority    = node.getAttributeInt( "priority", appointment._priority );
-            appointment._condition.readFromNode( node, _vocabulary, sourceName, pId );
+            appointment._condition.readFromNode( node, _vocabulary, sourceName, pID );
             if ( findPlace( appointment._place ) == nullptr )
             {
-                SW_LOG_WARNING( "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pId, appointment._place.c_str() );
+                SW_LOG_WARNING( "%#: appointment '%#' has an unknown place '%#' - skipped", sourceName, pID, appointment._place.c_str() );
                 bValid = false;
             }
             if ( bValid && ( appointment._startMinute < 0 || appointment._endMinute <= appointment._startMinute ) )
             {
-                SW_LOG_WARNING( "%#: appointment '%#' needs start < end - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: appointment '%#' needs start < end - skipped", sourceName, pID );
                 bValid = false;
             }
             if ( bValid )
@@ -281,17 +281,17 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrArchetypeAttribute, false, sourceName );
             ScheduleArchetypeDef archetype;
-            archetype._id     = hashed_string( pId );
+            archetype._id     = hashed_string( pID );
             archetype._parent = hashed_string( node.getAttributeText( "parent" ) );
             for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
                 {
-                    SW_LOG_WARNING( "%#: archetype '%#' has unknown element <%#>", sourceName, pId, child.getName() );
+                    SW_LOG_WARNING( "%#: archetype '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                     continue;
                 }
                 ScheduleRoutineDef routine;
-                readRoutine( child, sourceName, pId, routine );
+                readRoutine( child, sourceName, pID, routine );
                 archetype._listRoutine.push_back( routine );
             }
             (void)_archetypeCatalog.add( archetype );
@@ -300,29 +300,29 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrNpcAttribute, false, sourceName );
             ScheduleNpcDef npc;
-            npc._id             = hashed_string( pId );
+            npc._id             = hashed_string( pID );
             npc._archetype      = hashed_string( node.getAttributeText( "archetype" ) );
             npc._home           = hashed_string( node.getAttributeText( "home" ) );
             npc._idleActivity   = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
             npc._unitsPerMinute = MathUtil::max( 0.01f, node.getAttributeFloat( "speed", npc._unitsPerMinute ) );
             Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
             if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
-                SW_LOG_WARNING( "%#: npc '%#' has an unknown home '%#'", sourceName, pId, npc._home.c_str() );
+                SW_LOG_WARNING( "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
             const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );
             if ( pIdle == nullptr || pIdle->_target != ScheduleActivityTarget::Home )
             {
-                SW_LOG_WARNING( "%#: npc '%#' has idle activity '%#' that is not a home activity - StayHome used", sourceName, pId, npc._idleActivity.c_str() );
+                SW_LOG_WARNING( "%#: npc '%#' has idle activity '%#' that is not a home activity - StayHome used", sourceName, pID, npc._idleActivity.c_str() );
                 npc._idleActivity = hashed_string( "StayHome" );
             }
             for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
                 {
-                    SW_LOG_WARNING( "%#: npc '%#' has unknown element <%#>", sourceName, pId, child.getName() );
+                    SW_LOG_WARNING( "%#: npc '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                     continue;
                 }
                 ScheduleRoutineDef routine;
-                readRoutine( child, sourceName, pId, routine );
+                readRoutine( child, sourceName, pID, routine );
                 npc._listRoutine.push_back( routine );
             }
             (void)_npcCatalog.add( npc );
@@ -332,28 +332,28 @@ namespace sw
         {
             Internal::warnUnknownAttributes( node, Internal::kArrEventAttribute, true, sourceName );
             ScheduleEventDef event;
-            event._id       = hashed_string( pId );
+            event._id       = hashed_string( pID );
             event._priority = node.getAttributeInt( "priority", event._priority );
             ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNpc );
             ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
-            event._condition.readFromNode( node, _vocabulary, sourceName, pId );
-            for ( const hashed_string& archetypeId : event._listArchetype )
+            event._condition.readFromNode( node, _vocabulary, sourceName, pID );
+            for ( const hashed_string& archetypeID : event._listArchetype )
             {
-                if ( findArchetype( archetypeId ) == nullptr )
-                    SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pId, archetypeId.c_str() );
+                if ( findArchetype( archetypeID ) == nullptr )
+                    SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pID, archetypeID.c_str() );
             }
             for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Block", true ) == false )
                 {
-                    SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pId, child.getName() );
+                    SW_LOG_WARNING( "%#: event '%#' has unknown element <%#>", sourceName, pID, child.getName() );
                     continue;
                 }
                 ScheduleBlockDef block;
-                if ( readBlock( child, sourceName, pId, false, block ) )
+                if ( readBlock( child, sourceName, pID, false, block ) )
                     event._listBlock.push_back( block );
             }
-            warnOverlappingBlocks( event._listBlock, sourceName, pId );
+            warnOverlappingBlocks( event._listBlock, sourceName, pID );
             (void)_eventCatalog.add( event );
         }
         return 0;
@@ -516,10 +516,10 @@ namespace sw
             ScheduleNpcDef npc = _npcCatalog.getAt( npcIndex );
             if ( npc._archetype.empty() == false && findArchetype( npc._archetype ) == nullptr )
                 SW_LOG_WARNING( "%#: npc '%#' has an unknown archetype '%#'", sourceName, npc._id.c_str(), npc._archetype.c_str() );
-            vector<hashed_string> listRoutineId;
+            vector<hashed_string> listRoutineID;
             for ( const ScheduleRoutineDef& routine : npc._listRoutine )
             {
-                listRoutineId.push_back( routine._id );
+                listRoutineID.push_back( routine._id );
             }
             hashed_string current = npc._archetype;
             for ( size_t step = 0; step <= archetypeCount && current.empty() == false; ++step )
@@ -529,9 +529,9 @@ namespace sw
                     break;
                 for ( const ScheduleRoutineDef& routine : pArchetype->_listRoutine )
                 {
-                    if ( ScheduleCatalogInternal::contains( listRoutineId, routine._id ) )
+                    if ( ScheduleCatalogInternal::contains( listRoutineID, routine._id ) )
                         continue;
-                    listRoutineId.push_back( routine._id );
+                    listRoutineID.push_back( routine._id );
                     npc._listRoutine.push_back( routine );
                 }
                 current = pArchetype->_parent;
@@ -561,10 +561,10 @@ namespace sw
         }
         for ( const ScheduleEventDef& event : _eventCatalog.getAll() )
         {
-            for ( const hashed_string& npcId : event._listNpc )
+            for ( const hashed_string& npcID : event._listNpc )
             {
-                if ( findNpc( npcId ) == nullptr )
-                    SW_LOG_WARNING( "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcId.c_str() );
+                if ( findNpc( npcID ) == nullptr )
+                    SW_LOG_WARNING( "%#: event '%#' has an unknown npc '%#'", sourceName, event._id.c_str(), npcID.c_str() );
             }
         }
     }

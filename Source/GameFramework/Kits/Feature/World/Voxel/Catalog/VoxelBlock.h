@@ -96,7 +96,7 @@ namespace sw
         /** @brief 번호로 찾습니다. 공기 · 모르는 번호는 nullptr 입니다. */
         const VoxelBlockDef* findBlock( VoxelBlockIndex index ) const;
         /** @brief id 로 번호를 찾습니다. 모르면 공기(0)입니다. */
-        VoxelBlockIndex findBlockIndex( const hashed_string& blockId ) const;
+        VoxelBlockIndex findBlockIndex( const hashed_string& blockID ) const;
         /** @brief 몸이 통과하지 못하는 블록이면 true 입니다(공기 · 모르는 번호는 false). */
         bool isSolid( VoxelBlockIndex index ) const;
         /** @brief 이웃 면을 가리는 블록이면 true 입니다. */

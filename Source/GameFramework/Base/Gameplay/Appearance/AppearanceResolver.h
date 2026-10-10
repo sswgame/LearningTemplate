@@ -26,8 +26,8 @@ namespace sw
     {
         AppearancePlacement _placement{}; ///< 소켓 부착 · 스프라이트: 소켓 후보(한 이름 공간) + 오프셋 · 회전
         hashed_string       _owner{};     ///< 칸 · 꾸미기 매개변수 — 비면 몸
-        hashed_string       _itemId{};    ///< 장비 부품이면 아이템 id
-        hashed_string       _visualId{};
+        hashed_string       _itemID{};    ///< 장비 부품이면 아이템 id
+        hashed_string       _visualID{};
         hashed_string       _partName{};
         hashed_string       _variant{};         ///< 고른 메시 변형(비면 기본)
         hashed_string       _materialVariant{}; ///< 고른 머티리얼 변형(비면 기본)
@@ -119,7 +119,7 @@ namespace sw
         AppearancePlacement _placement{}; ///< 떨어지기 전 자리
         float3              _impulse{};
         hashed_string       _owner{};
-        hashed_string       _itemId{};
+        hashed_string       _itemID{};
         hashed_string       _partName{};
         hashed_string       _asset{};
         uint8               _bFromDamageStage{ SW_FALSE }; ///< 피해 단계로 떨어졌다(아니면 맞아서)
@@ -169,7 +169,7 @@ namespace sw
         vector<ResolvedDetachedPart>     _listDetachedPart{};
         vector<hashed_string>            _listHiddenRegion{};
         vector<AppearanceTraceEntry>     _listTrace{};
-        hashed_string                    _presetId{};
+        hashed_string                    _presetID{};
         hashed_string                    _bodyType{};
         hashed_string                    _bodyShape{};
         hashed_string                    _face{};

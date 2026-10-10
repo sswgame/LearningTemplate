@@ -20,7 +20,7 @@ namespace test
     namespace
     {
         /** @brief 이 프로세스의 id 입니다. 임시 파일 이름을 프로세스마다 다르게 하는 데 씁니다. */
-        uint32 currentProcessId()
+        uint32 currentProcessID()
         {
 #if defined( SW_PLATFORM_WINDOWS )
             return static_cast<uint32>( ::_getpid() );
@@ -47,7 +47,7 @@ namespace test
         {
             sw::StringBuilder<sw::constant::kMaxBuffer64> name;
             name.append( "sw_" );
-            name.append( static_cast<int32>( currentProcessId() ) );
+            name.append( static_cast<int32>( currentProcessID() ) );
             return sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), name.c_str() );
         }
 

@@ -33,11 +33,11 @@ namespace sw
         /** @brief 앞 하나를 받은편지함 주인으로 올립니다. 그 id 입니다. */
         uint64 registerInbox();
         /** @brief 받은편지함과 그 구독을 모두 내립니다. */
-        void unregisterInbox( uint64 inboxId );
-        void subscribe( uint64 inboxId, string_view channel );
-        void unsubscribe( uint64 inboxId, string_view channel );
-        /** @brief @p inboxId 에 온 메시지를 @p outListMessage 뒤에 붙이고 비웁니다. 붙인 수입니다. */
-        int32 takeMessages( uint64 inboxId, vector<EphemeralMessage>& outListMessage );
+        void unregisterInbox( uint64 inboxID );
+        void subscribe( uint64 inboxID, string_view channel );
+        void unsubscribe( uint64 inboxID, string_view channel );
+        /** @brief @p inboxID 에 온 메시지를 @p outListMessage 뒤에 붙이고 비웁니다. 붙인 수입니다. */
+        int32 takeMessages( uint64 inboxID, vector<EphemeralMessage>& outListMessage );
 
         /** @brief 시계를 @p nowMs 에 고정합니다(시험). 그 뒤로는 `advanceTimeMs` 로만 흐른다. */
         void  setManualTimeMs( int64 nowMs );
@@ -81,7 +81,7 @@ namespace sw
         unordered_map<string, ScoreSetEntry> _mapScoreSet;
         unordered_map<uint64, Inbox>         _mapInbox;
         int64                                _manualTimeMs;
-        uint64                               _nextInboxId;
+        uint64                               _nextInboxID;
         uint8                                _bManualTime;
     };
 } // namespace sw
@@ -112,8 +112,8 @@ namespace sw
     private:
         vector<EphemeralReply>   _listReply;
         MemoryEphemeralDatabase* _pDatabase;
-        uint64                   _inboxId;
-        uint64                   _nextRequestId;
+        uint64                   _inboxID;
+        uint64                   _nextRequestID;
         uint8                    _bShutdown;
     };
 } // namespace sw

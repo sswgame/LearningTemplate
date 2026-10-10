@@ -23,14 +23,14 @@ namespace
     using FakeRegistrar = EditorRegistrar<FakeRegistration>;
 
     /** @brief 등록부의 id 를 순서대로 쉼표로 이은 글입니다. */
-    string joinRegisteredIds()
+    string joinRegisteredIDs()
     {
         string text;
         for ( uint32 index = 0; index < FakeRegistry::getCount(); ++index )
         {
             if ( text.empty() == false )
                 text += ',';
-            text += FakeRegistry::getAt( index )._pId;
+            text += FakeRegistry::getAt( index )._pID;
         }
         return text;
     }
@@ -58,7 +58,7 @@ SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
             FakeRegistration{ { "second_a", 200 }, 21 }
         };
 
-        SW_EXPECT_STREQ( "first,second_a,second_b,third", joinRegisteredIds().c_str() );
+        SW_EXPECT_STREQ( "first,second_a,second_b,third", joinRegisteredIDs().c_str() );
         SW_EXPECT_TRUE( first.isRegistered() );
 
         const FakeRegistration* pFound = FakeRegistry::find( "second_b" );
@@ -72,9 +72,9 @@ SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
             const FakeRegistrar middle{
                 FakeRegistration{ { "middle", 250 }, 0 }
             };
-            SW_EXPECT_STREQ( "first,second_a,second_b,middle,third", joinRegisteredIds().c_str() );
+            SW_EXPECT_STREQ( "first,second_a,second_b,middle,third", joinRegisteredIDs().c_str() );
         }
-        SW_EXPECT_STREQ( "first,second_a,second_b,third", joinRegisteredIds().c_str() );
+        SW_EXPECT_STREQ( "first,second_a,second_b,third", joinRegisteredIDs().c_str() );
     }
     SW_EXPECT_EQUAL( 0u, FakeRegistry::getCount() );
 }
@@ -83,7 +83,7 @@ SW_TEST_CASE( EditorRegistryTest, OrderKeyDecidesOrderNotRegistrationOrder )
  * @brief [EditorRegistryTest] 같은 id 의 둘째 등록은 거절되고, 그것이 내려가도 첫째는 남는다
  * @details 두 파일이 같은 패널 id 를 쓰면 `windows.ini` 가시성 키와 `-gv_editorOpenPanel` 이 둘 중 아무것에나 걸린다. 첫째만 받아 오류로 알린다.
  */
-SW_TEST_CASE( EditorRegistryTest, SecondRegistrationOfAnIdIsRejected )
+SW_TEST_CASE( EditorRegistryTest, SecondRegistrationOfAnIDIsRejected )
 {
     const FakeRegistrar first{
         FakeRegistration{ { "panel_id", 100 }, 1 }

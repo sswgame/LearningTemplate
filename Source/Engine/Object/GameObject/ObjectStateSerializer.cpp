@@ -108,11 +108,11 @@ namespace sw
             }
 
             /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 되살리는 원래 id 입니다. */
-            static uint64 resolveSavedId( const ObjectLoadContext& context )
+            static uint64 resolveSavedID( const ObjectLoadContext& context )
             {
-                if ( context._savedId != 0 )
-                    return context._savedId;
-                return ( context._pIdentity != nullptr ) ? context._pIdentity->_objectId : 0;
+                if ( context._savedID != 0 )
+                    return context._savedID;
+                return ( context._pIdentity != nullptr ) ? context._pIdentity->_objectID : 0;
             }
 
             /**
@@ -241,7 +241,7 @@ namespace sw
             }
 
             /**
-             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 · 바이너리 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectId`).
+             * @brief 저장할 때 `GameObjectHandle` 값을 저장할 id 로 옮겨 적는 글 · 바이너리 처리기입니다 — 부착과 같은 규칙(`ObjectSaveOptions::getSavedObjectID`).
              * @details 세 형식이 모두 이 처리기를 지납니다. 런타임 id 를 그대로 적으면 씬 파일을 다시 열 때 같은 값을 받은 다른 오브젝트를 가리킬 수 있다.
              *          주의: 핸들은 내장 타입이라 기본 문맥에 8 바이트 바이너리 처리기가 있다 — 글 처리기만 바꾸면 바이너리(쿠킹한 씬 · 세이브)는 런타임
              *          id 를 그대로 싣고, 읽는 묶음이 그 id 를 파일 id 로 찾지 못해 핸들이 비게 된다. 바이너리도 같은 8 바이트 모양으로 바꿔 적는다.
@@ -250,19 +250,19 @@ namespace sw
             {
                 const ObjectSaveOptions* _pOptions{ nullptr };
 
-                uint64 computeSavedId( const void* pValue ) const
+                uint64 computeSavedID( const void* pValue ) const
                 {
                     const GameObjectHandle& handle = *static_cast<const GameObjectHandle*>( pValue );
                     const bool              bOmit  = handle.isValid() == false || _pOptions->_bOmitExternalParent;
-                    return bOmit ? 0 : _pOptions->getSavedObjectId( handle.objectId() );
+                    return bOmit ? 0 : _pOptions->getSavedObjectID( handle.objectID() );
                 }
 
-                string write( const void* pValue ) const { return sw::to_string( computeSavedId( pValue ) ); }
+                string write( const void* pValue ) const { return sw::to_string( computeSavedID( pValue ) ); }
 
                 /** @brief 기본 바이너리 처리기와 같은 모양(핸들 하나의 바이트)으로 저장할 id 를 적습니다 — 읽기는 기본 처리기 그대로다. */
                 void writeBinary( const void* pValue, vector<uint8>& outListBuffer ) const
                 {
-                    const GameObjectHandle savedHandle = GameObjectHandle::make( computeSavedId( pValue ) );
+                    const GameObjectHandle savedHandle = GameObjectHandle::make( computeSavedID( pValue ) );
                     const uint8*           pByte       = reinterpret_cast<const uint8*>( &savedHandle );
                     outListBuffer.insert( outListBuffer.end(), pByte, pByte + sizeof( GameObjectHandle ) );
                 }
@@ -335,7 +335,7 @@ namespace sw
         }
         pGameObject->clearComponents();
 
-        const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, context._pIdentity );
+        const GameObject::ComponentIDRestoreScope restoreScope( pGameObject, context._pIdentity );
         const SerializeContext                    ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
         uint32                                    version{ 0 };
         const bool                                bLoaded = deserializeState( version, ctx );
@@ -344,16 +344,16 @@ namespace sw
             // 상태에 적힌 이름 — 매니저가 유일하게 바꾸기(`finishLoad`) 전에 잡는다. 같은 묶음의 이름만 남은 참조가 이 이름으로 찾는다.
             const hashed_string savedName = pGameObject->getName();
             ObjectStateSerializerInternal::finishLoad( pGameObject, oldName );
-            const uint64 savedId = ObjectStateSerializerInternal::resolveSavedId( context );
+            const uint64 savedID = ObjectStateSerializerInternal::resolveSavedID( context );
             if ( context._pBatch != nullptr )
             {
-                context._pBatch->addLoadedState( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+                context._pBatch->addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
             }
             else
             {
                 // 혼자 읽는 상태도 같은 규칙으로 잇는다 — 같은 실행의 상태라 다른 오브젝트는 매니저의 런타임 id 로 찾는다.
-                ObjectStateBatch single( ObjectIdSpace::Live );
-                single.addLoadedState( pGameObject, savedId, savedName, context._bExternalParentAllowed );
+                ObjectStateBatch single( ObjectIDSpace::Live );
+                single.addLoadedState( pGameObject, savedID, savedName, context._bExternalParentAllowed );
                 single.finish();
             }
         }
@@ -409,7 +409,7 @@ namespace sw
 
         BinaryStreamWriter writer( outBuffer );
 
-        // 부모는 따로 적지 않는다 — 씬 컴포넌트의 부착 필드(`_attachOwnerId` · `_attachComponent`)로 상태 안에 든다.
+        // 부모는 따로 적지 않는다 — 씬 컴포넌트의 부착 필드(`_attachOwnerID` · `_attachComponent`)로 상태 안에 든다.
         // 본문 크기를 앞에 둔다. 세이브 게임은 오브젝트를 이어 붙여 놓고 하나씩 끊어 읽는다.
         const size_t sizeHeaderPos = writer.getOffset();
         writer.write( static_cast<uint32>( 0 ) );
@@ -466,15 +466,15 @@ namespace sw
         if ( pGameObject == nullptr )
             return identity;
 
-        identity._objectId = pGameObject->getObjectId();
+        identity._objectID = pGameObject->getObjectID();
         identity._listComponent.reserve( pGameObject->getComponents().size() );
         for ( const Component* pComp : pGameObject->getComponents() )
         {
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
-            // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentId`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
+            // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊긴다.
-            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentId() } );
+            identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentID() } );
         }
         return identity;
     }
@@ -482,12 +482,12 @@ namespace sw
     void ObjectStateSerializer::writeIdentity( const ObjectIdentity& identity, vector<uint8>& outBuffer )
     {
         BinaryStreamWriter writer( outBuffer );
-        writer.write( identity._objectId );
+        writer.write( identity._objectID );
         writer.write( static_cast<uint32>( identity._listComponent.size() ) );
         for ( const ObjectIdentity::ComponentEntry& entry : identity._listComponent )
         {
             writer.writeString( entry._typeName.c_str() );
-            writer.write( entry._componentId );
+            writer.write( entry._componentID );
         }
     }
 
@@ -499,7 +499,7 @@ namespace sw
 
         BinaryStreamReader reader( pData, size );
         uint32             componentCount{ 0 };
-        if ( reader.read( outIdentity._objectId ) == false || reader.read( componentCount ) == false )
+        if ( reader.read( outIdentity._objectID ) == false || reader.read( componentCount ) == false )
             return 0;
 
         // 항목 하나는 적어도 이름 길이(4) + ID(8) 바이트다. 남은 바이트로 담을 수 없는 개수는 망가진 데이터다.
@@ -513,7 +513,7 @@ namespace sw
         {
             string                         typeName;
             ObjectIdentity::ComponentEntry entry;
-            if ( reader.readString( typeName ) == false || reader.read( entry._componentId ) == false )
+            if ( reader.readString( typeName ) == false || reader.read( entry._componentID ) == false )
                 return 0;
             entry._typeName = hashed_string( typeName.data(), static_cast<uint32>( typeName.size() ) );
             outIdentity._listComponent.push_back( entry );
@@ -531,9 +531,9 @@ namespace sw
     // ObjectStateBatch: 모두 읽은 뒤 부착을 한 번에 잇는다
     // ======================================================================
 
-    ObjectStateBatch::ObjectStateBatch( ObjectIdSpace idSpace )
+    ObjectStateBatch::ObjectStateBatch( ObjectIDSpace idSpace )
         : _listEntry{}
-        , _mapSavedIdToObject{}
+        , _mapSavedIDToObject{}
         , _mapSavedNameToEntry{}
         , _idSpace{ idSpace }
         , _bFinished{ false }
@@ -546,27 +546,27 @@ namespace sw
         SW_ASSERT( _listEntry.empty() || _bFinished );
     }
 
-    void ObjectStateBatch::add( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed )
+    void ObjectStateBatch::add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
     {
-        addEntry( pObject, savedId, savedName, bExternalParentAllowed, false );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, false );
     }
 
-    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed )
+    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
     {
-        addEntry( pObject, savedId, savedName, bExternalParentAllowed, true );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, true );
     }
 
-    void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedId, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState )
+    void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, bool bLoadedState )
     {
         if ( pObject == nullptr )
             return;
         SW_ASSERT( _bFinished == false );
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
-        _listEntry.push_back( Entry{ pObject, savedId, savedName, bExternalParentAllowed, bLoadedState } );
+        _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, bLoadedState } );
         // 같은 id · 이름이 둘이면 먼저 적힌 것이다(문서에 이름이 겹친 엔티티가 있을 수 있다).
-        if ( savedId != 0 )
-            _mapSavedIdToObject.emplace( savedId, pObject );
+        if ( savedID != 0 )
+            _mapSavedIDToObject.emplace( savedID, pObject );
         if ( savedName.empty() == false )
             _mapSavedNameToEntry.emplace( savedName, entryIndex );
     }
@@ -655,7 +655,7 @@ namespace sw
                     if ( ObjectStateSerializerInternal::holdsObjectHandle( shape ) )
                         bRemapped = remapContainerHandles( prop.getRawPtr( pComp ), shape );
                 }
-                if ( bRemapped || _idSpace != ObjectIdSpace::Saved )
+                if ( bRemapped || _idSpace != ObjectIDSpace::Saved )
                     continue;
                 SW_LOG_WARNING( "Property '%#::%#' holds object handles a load batch cannot remap (ComponentHandle, or a set of containers) - cleared",
                                 pTypeInfo->_fullyQualifiedName.c_str(), prop._name.c_str() );
@@ -777,20 +777,20 @@ namespace sw
     {
         if ( savedHandle.isValid() == false )
             return GameObjectHandle{};
-        const GameObject* pReferent = findBySavedId( savedHandle.objectId() );
+        const GameObject* pReferent = findBySavedID( savedHandle.objectID() );
         if ( pReferent != nullptr )
             return pReferent->getHandle();
         // 같은 실행의 상태면 묶음 밖의 런타임 id 그대로다 — 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.
-        if ( _idSpace == ObjectIdSpace::Live )
+        if ( _idSpace == ObjectIDSpace::Live )
             return savedHandle;
         // 파일 id 가 이 묶음에 없다 — 이 실행에서 같은 값은 다른 오브젝트다(언리얼의 Instigator 처럼 파일 밖을 가리키는 런타임 참조는 남지 않는다).
         return GameObjectHandle{};
     }
 
-    GameObject* ObjectStateBatch::findBySavedId( uint64 savedId ) const
+    GameObject* ObjectStateBatch::findBySavedID( uint64 savedID ) const
     {
-        const auto mapIt = _mapSavedIdToObject.find( savedId );
-        return ( mapIt != _mapSavedIdToObject.end() ) ? mapIt->second : nullptr;
+        const auto mapIt = _mapSavedIDToObject.find( savedID );
+        return ( mapIt != _mapSavedIDToObject.end() ) ? mapIt->second : nullptr;
     }
 
     GameObject* ObjectStateBatch::findBySavedName( hashed_string savedName ) const
@@ -799,9 +799,9 @@ namespace sw
         return ( mapIt != _mapSavedNameToEntry.end() ) ? _listEntry[mapIt->second]._pObject : nullptr;
     }
 
-    GameObject* ObjectStateBatch::findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerId ) const
+    GameObject* ObjectStateBatch::findAttachOwner( const Entry& entry, hashed_string ownerName, uint64 ownerID ) const
     {
-        if ( ownerId == 0 )
+        if ( ownerID == 0 )
         {
             // 소유자 칸이 비었으면 자기다(같은 오브젝트 안의 부착은 소유자 칸을 비워 쓴다).
             if ( ownerName.empty() )
@@ -810,15 +810,15 @@ namespace sw
             // **이 묶음의 저장된 이름**에서만 찾는다 — 매니저에서 찾으면 유일하게 바뀐 이름 때문에 다른 오브젝트에 붙는다.
             return findBySavedName( ownerName );
         }
-        if ( ownerId == entry._savedId )
+        if ( ownerID == entry._savedID )
             return entry._pObject;
 
-        GameObject* pOwner = findBySavedId( ownerId );
+        GameObject* pOwner = findBySavedID( ownerID );
         if ( pOwner != nullptr )
             return pOwner;
         // 같은 실행의 상태면 묶음 밖(이미 살아 있는 부모 — 되돌리기 · 복제)도 런타임 id 로 찾는다. 파일 id 는 이 실행의 id 와 우연히 같을 수 있어 찾지 않는다.
-        if ( _idSpace == ObjectIdSpace::Live && entry._pObject->getManager() != nullptr )
-            return entry._pObject->getManager()->findGameObjectById( ownerId );
+        if ( _idSpace == ObjectIDSpace::Live && entry._pObject->getManager() != nullptr )
+            return entry._pObject->getManager()->findGameObjectByID( ownerID );
         return nullptr;
     }
 
@@ -838,13 +838,13 @@ namespace sw
                 continue; // 루트
             reference._idSpace = _idSpace;
 
-            GameObject* pOwner    = findAttachOwner( entry, reference._ownerName, reference._ownerId );
+            GameObject* pOwner    = findAttachOwner( entry, reference._ownerName, reference._ownerID );
             const bool  bExternal = pOwner != pObject;
             if ( bExternal && entry._bExternalParentAllowed == false )
             {
                 // 프리팹 루트에는 부모가 없다 — 프리팹을 쓰는 쪽은 다른 오브젝트로의 부착을 싣지 않는다(`ObjectSaveOptions::_bOmitExternalParent`).
                 SW_LOG_WARNING( "Prefab state of '%#' carries a parent reference to '%#' (id %#, %#) - a prefab root has no parent, the reference is dropped",
-                                pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerId,
+                                pObject->getName().c_str(), reference._ownerName.empty() ? "?" : reference._ownerName.c_str(), reference._ownerID,
                                 reference._componentKey.c_str() );
                 continue;
             }
@@ -856,7 +856,7 @@ namespace sw
 
             // 찾지 못했다 — 지우지 않고 남긴다. 다음 저장이 그대로 다시 쓰고, 부모가 돌아오면(프리팹을 되찾았다) 다음 로드가 붙인다.
             SW_LOG_WARNING( "'%#' keeps its parent reference to '%#' (id %#, %#) - the parent is not loaded", pObject->getName().c_str(),
-                            reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerId, reference._componentKey.c_str() );
+                            reference._ownerName.empty() ? "self" : reference._ownerName.c_str(), reference._ownerID, reference._componentKey.c_str() );
             pScene->keepUnresolvedAttach( reference );
         }
     }

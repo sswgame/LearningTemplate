@@ -62,7 +62,7 @@ namespace sw
             static bool assertFailed( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, JPH::uint line )
             {
                 // `Vec3::CheckW`(W == Z) 는 부동소수 예외 설정이 켜진 헤더에서만 돈다. vcpkg 설치본의 헤더는 그것을 켜고 라이브러리는 끄고 지어
-                // 라이브러리가 돌려준 벡터의 W 는 맞춰져 있지 않다 — 거짓 경보라 넘긴다(`findLibraryVersionId` 의 같은 사정).
+                // 라이브러리가 돌려준 벡터의 W 는 맞춰져 있지 않다 — 거짓 경보라 넘긴다(`findLibraryVersionID` 의 같은 사정).
                 const string_view file{ pFile != nullptr ? pFile : "" };
                 const string_view expression{ pExpression != nullptr ? pExpression : "" };
                 if ( StringUtil::endsWith( file, "Vec3.inl", true ) && expression.find( "mF32)[2] == " ) != string_view::npos )
@@ -80,7 +80,7 @@ namespace sw
              *          짓는다 — 그 비트 하나만 다르면 받아들인다. 그 설정은 부동소수 예외를 켜고 끄는 스택 위의 가드(`FPException.h`)만 바꾸고
              *          구조체 배치는 바꾸지 않는다. 다른 비트(단언 · 정밀도 · 디버그 렌더러 · 프로파일러 · 레이어 비트)가 다르면 거부한다.
              */
-            static bool findLibraryVersionId( uint64& outVersionId )
+            static bool findLibraryVersionID( uint64& outVersionID )
             {
                 constexpr uint64 kFloatingPointExceptionBit = static_cast<uint64>( 1 ) << ( 24 + 2 );
                 const uint64     arrCandidate[2]            = { JPH_VERSION_ID, JPH_VERSION_ID ^ kFloatingPointExceptionBit };
@@ -88,7 +88,7 @@ namespace sw
                 {
                     if ( JPH::VerifyJoltVersionIDInternal( candidate ) )
                     {
-                        outVersionId = candidate;
+                        outVersionID = candidate;
                         return true;
                     }
                 }
@@ -124,8 +124,8 @@ namespace sw
         JPH_IF_ENABLE_ASSERTS( JPH::AssertFailed = &JoltPhysicsBackendInternal::assertFailed; )
 
         // 헤더가 본 설정(정밀도 · 단언 · 디버그 렌더러 …)과 DLL 이 지어진 설정이 다르면 구조체 배치가 어긋난다 — 쓰기 전에 멈춘다.
-        uint64 libraryVersionId = 0;
-        if ( JoltPhysicsBackendInternal::findLibraryVersionId( libraryVersionId ) == false )
+        uint64 libraryVersionID = 0;
+        if ( JoltPhysicsBackendInternal::findLibraryVersionID( libraryVersionID ) == false )
         {
             SW_LOG_ERROR( "Jolt headers and the Jolt library were built with different settings (JPH_VERSION_ID mismatch)" );
             return false;
@@ -134,7 +134,7 @@ namespace sw
         JoltPhysicsBackendInternal::s_pFactory = sw_placement_new( JoltPhysicsBackendInternal::s_arrFactoryStorage ) JPH::Factory();
         JPH::Factory::sInstance                = JoltPhysicsBackendInternal::s_pFactory;
         // `JPH::RegisterTypes()` 는 헤더의 버전 ID 를 넘겨 다르면 abort 한다 — 위에서 맞춘 라이브러리의 ID 로 직접 부른다.
-        JPH::RegisterTypesInternal( libraryVersionId );
+        JPH::RegisterTypesInternal( libraryVersionID );
         JoltPhysicsBackendInternal::s_pJobSystem   = JoltUtil::createObject<JoltJobSystem>( JoltPhysicsBackendInternal::kMaxJobCount, JoltPhysicsBackendInternal::kMaxBarrierCount );
         JoltPhysicsBackendInternal::s_bInitialized = true;
         SW_LOG_INFO( "Jolt %#.%#.%# initialized (job concurrency %#)", JPH_VERSION_MAJOR, JPH_VERSION_MINOR, JPH_VERSION_PATCH,

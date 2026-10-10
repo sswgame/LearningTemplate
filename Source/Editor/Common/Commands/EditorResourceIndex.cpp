@@ -16,15 +16,15 @@ namespace sw::editor
         const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         if ( pInfo == nullptr )
             return false;
-        const string resourceId = ResourceUtil::toResourceId( filePath );
-        if ( resourceId.empty() )
+        const string resourceID = ResourceUtil::toResourceID( filePath );
+        if ( resourceID.empty() )
             return false;
 
         outEntry._kind     = kind;
         outEntry._category = pInfo->_pDisplayName;
         outEntry._title    = FileUtil::getFileNamePart( filePath );
-        outEntry._detail   = resourceId;
-        outEntry._path     = resourceId;
+        outEntry._detail   = resourceID;
+        outEntry._path     = resourceID;
         return true;
     }
 

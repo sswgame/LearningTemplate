@@ -42,7 +42,7 @@ namespace sw::editor
     /** @brief Isolation에서 숨긴 오브젝트와 이전 활성 상태 */
     struct PrefabIsolationHiddenObject
     {
-        uint64 _objectId{ 0 };
+        uint64 _objectID{ 0 };
         uint8  _bWasActive{ SW_FALSE };
     };
 } // namespace sw::editor
@@ -54,7 +54,7 @@ namespace sw::editor
     {
         string                              _prefabPath;
         vector<PrefabIsolationHiddenObject> _listHidden;
-        uint64                              _rootObjectId{ 0 };
+        uint64                              _rootObjectID{ 0 };
         uint8                               _bSpawnedRoot{ SW_FALSE };
     };
 } // namespace sw::editor
@@ -74,11 +74,11 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) 선택 — 오브젝트 / 컴포넌트
         // ------------------------------------------------------------------------------
-        uint64 getSelectedObjectId() const;
+        uint64 getSelectedObjectID() const;
         /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. 이번 호출 안에서만 쓰십시오. */
         GameObject* getSelectedObject() const;
-        uint64      getSelectedComponentId() const { return _selectedComponentId; }
-        void        setSelectedComponentId( uint64 id ) { _selectedComponentId = id; }
+        uint64      getSelectedComponentID() const { return _selectedComponentID; }
+        void        setSelectedComponentID( uint64 id ) { _selectedComponentID = id; }
         string      getSelectedObjectName() const;
         void        setSelectedComponentKey( string_view key ) { _selectedComponentKey = key; }
         void        clearSelection();
@@ -134,16 +134,16 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 6) 스크롤 타깃 · 본 계층 팝업
         // ------------------------------------------------------------------------------
-        uint64 getScrollToComponentId() const { return _scrollToComponentId; }
-        void   setScrollToComponentId( uint64 id ) { _scrollToComponentId = id; }
+        uint64 getScrollToComponentID() const { return _scrollToComponentID; }
+        void   setScrollToComponentID( uint64 id ) { _scrollToComponentID = id; }
 
         // ------------------------------------------------------------------------------
         // 7) 프리팹 인스턴스 경로 — 활성 씬(`Scene::getEntityPrefabPath`)이 정본이고 여기는 창구일 뿐입니다
         // ------------------------------------------------------------------------------
         /** @brief 활성 씬에 오브젝트의 프리팹 경로를 적습니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
-        void setGameObjectPrefabPath( uint64 objectId, string_view prefabPath );
+        void setGameObjectPrefabPath( uint64 objectID, string_view prefabPath );
         /** @brief 활성 씬이 적어 둔 오브젝트의 프리팹 경로입니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
-        const string& getGameObjectPrefabPath( uint64 objectId ) const;
+        const string& getGameObjectPrefabPath( uint64 objectID ) const;
 
         // ------------------------------------------------------------------------------
         // 8) 뷰포트 카메라 북마크 (0~8 인덱스, 1~9 슬롯)
@@ -169,7 +169,7 @@ namespace sw::editor
 
         bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
         const string&               getPrefabIsolationPrefabPath() const;
-        uint64                      getPrefabIsolationRootId() const;
+        uint64                      getPrefabIsolationRootID() const;
         const PrefabIsolationFrame* getPrefabIsolationFrame() const;
         void                        pushPrefabIsolation( PrefabIsolationFrame frame );
         /** @brief 한 단계를 나갑니다. 스택이 비면 true입니다. */
@@ -178,9 +178,9 @@ namespace sw::editor
 
     private:
         EditorSelection*             _pEditorSelection;
-        uint64                       _selectedComponentId;
+        uint64                       _selectedComponentID;
         uint64                       _observedSceneGeneration;
-        uint64                       _scrollToComponentId;
+        uint64                       _scrollToComponentID;
         string                       _selectedComponentKey;
         string                       _focusedAssetPath;
         string                       _pendingOpenPanelTitle;

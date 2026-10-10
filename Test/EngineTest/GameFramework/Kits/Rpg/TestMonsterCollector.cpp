@@ -104,7 +104,7 @@ namespace
             {
                 iv = 0;
             }
-            monster._natureId = hashed_string( "Hardy" );
+            monster._natureID = hashed_string( "Hardy" );
             for ( MonsterMoveSlot& slot : monster._arrMove )
             {
                 slot = MonsterMoveSlot{};
@@ -218,7 +218,7 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
         SW_EXPECT_TRUE( pikachuA._arrIv[index] >= 0 && pikachuA._arrIv[index] <= 31 );
     }
     SW_EXPECT_TRUE( bSameIv );
-    SW_EXPECT_TRUE( pikachuA._natureId == pikachuB._natureId );
+    SW_EXPECT_TRUE( pikachuA._natureID == pikachuB._natureID );
     SW_EXPECT_EQUAL( 4, pikachuA.countMoves() );
     SW_EXPECT_EQUAL( -1, pikachuA.findMoveSlot( hashed_string( "thundershock" ) ) );
     SW_EXPECT_EQUAL( 3, pikachuA.findMoveSlot( hashed_string( "swordsdance" ) ) );
@@ -230,7 +230,7 @@ SW_TEST_CASE( MonsterCollectorTest, StatFormulaIvEvNatureAndExpGroups )
     MonsterInstance adamant        = world.makeMonster( "squirtle", 50, { "tackle" } );
     const int32     neutralAttack  = adamant.getStat( MonsterStat::Attack );
     const int32     neutralSpecial = adamant.getStat( MonsterStat::SpecialAttack );
-    adamant._natureId              = hashed_string( "Adamant" );
+    adamant._natureID              = hashed_string( "Adamant" );
     MonsterRules::recomputeStats( world._catalog, adamant );
     SW_EXPECT_EQUAL( neutralAttack * 110 / 100, adamant.getStat( MonsterStat::Attack ) );
     SW_EXPECT_EQUAL( neutralSpecial * 90 / 100, adamant.getStat( MonsterStat::SpecialAttack ) );
@@ -532,7 +532,7 @@ SW_TEST_CASE( MonsterCollectorTest, CaptureShakesPartyBoxAndEscape )
     SW_EXPECT_FALSE( battle.setAction( MonsterBattle::kFoeSide, MonsterAction::makeBall( 1.0f ) ) );
     battle.resolveRound();
     SW_EXPECT_TRUE( battle.getOutcome() == MonsterBattleOutcome::Captured );
-    SW_EXPECT_TRUE( battle.getCaptured()._speciesId == hashed_string( "rattata" ) );
+    SW_EXPECT_TRUE( battle.getCaptured()._speciesID == hashed_string( "rattata" ) );
 
     MonsterStorage storage;
     storage.initialize( 2 );
@@ -610,7 +610,7 @@ SW_TEST_CASE( MonsterCollectorTest, LevelUpLearnsMovesAndEvolvesByLevelItemAndFr
     const int32 hpLost       = 5;
     charmander._hp -= hpLost;
     SW_ASSERT_TRUE( MonsterRules::evolve( world._catalog, charmander, hashed_string( "charmeleon" ) ) );
-    SW_EXPECT_TRUE( charmander._speciesId == hashed_string( "charmeleon" ) );
+    SW_EXPECT_TRUE( charmander._speciesID == hashed_string( "charmeleon" ) );
     SW_EXPECT_TRUE( charmander.getStat( MonsterStat::Attack ) > attackBefore );
     SW_EXPECT_EQUAL( charmander.getMaxHp() - hpLost, charmander._hp ); // 늘어난 최대 HP 만큼 지금 HP 도 는다
     SW_EXPECT_EQUAL( 3, charmander.countMoves() );
@@ -659,21 +659,21 @@ SW_TEST_CASE( MonsterCollectorTest, WildEncounterTableRespectsAreaTimeLevelAndWe
     MonsterTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
     GameRandom    random( 31 );
-    hashed_string speciesId;
+    hashed_string speciesID;
     int32         level      = 0;
     int32         pidgeyDay  = 0;
     bool          bDayLevels = true;
     for ( int32 roll = 0; roll < 2000; ++roll )
     {
-        SW_ASSERT_TRUE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Day" ), random, speciesId, level ) );
-        if ( speciesId == hashed_string( "pidgey" ) )
+        SW_ASSERT_TRUE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Day" ), random, speciesID, level ) );
+        if ( speciesID == hashed_string( "pidgey" ) )
         {
             ++pidgeyDay;
             bDayLevels = bDayLevels && level >= 2 && level <= 4;
         }
         else
         {
-            bDayLevels = bDayLevels && speciesId == hashed_string( "rattata" ) && level >= 2 && level <= 3;
+            bDayLevels = bDayLevels && speciesID == hashed_string( "rattata" ) && level >= 2 && level <= 3;
         }
     }
     SW_EXPECT_TRUE( bDayLevels );
@@ -682,15 +682,15 @@ SW_TEST_CASE( MonsterCollectorTest, WildEncounterTableRespectsAreaTimeLevelAndWe
     bool bNightOnlyRattata = true;
     for ( int32 roll = 0; roll < 200; ++roll )
     {
-        SW_ASSERT_TRUE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Night" ), random, speciesId, level ) );
-        bNightOnlyRattata = bNightOnlyRattata && speciesId == hashed_string( "rattata" ) && level >= 3 && level <= 5;
+        SW_ASSERT_TRUE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Night" ), random, speciesID, level ) );
+        bNightOnlyRattata = bNightOnlyRattata && speciesID == hashed_string( "rattata" ) && level >= 3 && level <= 5;
     }
     SW_EXPECT_TRUE( bNightOnlyRattata );
     // 시간대가 없는 테이블은 아무 때나, 없는 지역은 조우가 없다.
-    SW_EXPECT_TRUE( world._catalog.rollEncounter( hashed_string( "cave" ), hashed_string( "Night" ), random, speciesId, level ) );
-    SW_EXPECT_TRUE( speciesId == hashed_string( "geodude" ) && level >= 7 && level <= 9 );
-    SW_EXPECT_FALSE( world._catalog.rollEncounter( hashed_string( "sea" ), hashed_string( "Day" ), random, speciesId, level ) );
-    SW_EXPECT_FALSE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Dusk" ), random, speciesId, level ) );
+    SW_EXPECT_TRUE( world._catalog.rollEncounter( hashed_string( "cave" ), hashed_string( "Night" ), random, speciesID, level ) );
+    SW_EXPECT_TRUE( speciesID == hashed_string( "geodude" ) && level >= 7 && level <= 9 );
+    SW_EXPECT_FALSE( world._catalog.rollEncounter( hashed_string( "sea" ), hashed_string( "Day" ), random, speciesID, level ) );
+    SW_EXPECT_FALSE( world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Dusk" ), random, speciesID, level ) );
 
     GameRandom    randomA( 500 );
     GameRandom    randomB( 500 );
@@ -699,9 +699,9 @@ SW_TEST_CASE( MonsterCollectorTest, WildEncounterTableRespectsAreaTimeLevelAndWe
     bool          bSame  = true;
     for ( int32 roll = 0; roll < 50; ++roll )
     {
-        (void)world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Morning" ), randomA, speciesId, level );
+        (void)world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Morning" ), randomA, speciesID, level );
         (void)world._catalog.rollEncounter( hashed_string( "route1" ), hashed_string( "Morning" ), randomB, speciesB, levelB );
-        bSame = bSame && speciesId == speciesB && level == levelB;
+        bSame = bSame && speciesID == speciesB && level == levelB;
     }
     SW_EXPECT_TRUE( bSame );
 }
@@ -814,7 +814,7 @@ SW_TEST_CASE( MonsterCollectorTest, StateRoundTripContinuesTheSameBattle )
     SW_EXPECT_TRUE( captureMonsterBytes( restoredStorage ) == storageBytes );
     SW_ASSERT_TRUE( restoredStorage.getParty().size() == 2 && restoredStorage.getBox().size() == 1 );
     SW_EXPECT_STREQ( "Shelly", restoredStorage.getParty()[0]._nickname.c_str() );
-    SW_EXPECT_TRUE( restoredStorage.getBox()[0]._speciesId == hashed_string( "pikachu" ) );
+    SW_EXPECT_TRUE( restoredStorage.getBox()[0]._speciesID == hashed_string( "pikachu" ) );
 
     // 같은 걸음을 둘 다 더 돌리면 바이트가 같다.
     SW_ASSERT_TRUE( storage.withdrawFromBox( 0 ) );

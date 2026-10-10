@@ -78,10 +78,10 @@ namespace
 
         [[nodiscard]] bool load()
         {
-            for ( const utf8* pItemId : { "flower", "berry", "stone" } )
+            for ( const utf8* pItemID : { "flower", "berry", "stone" } )
             {
                 ItemDef item;
-                item._id       = hashed_string( pItemId );
+                item._id       = hashed_string( pItemID );
                 item._maxStack = 99;
                 _items.addItem( item );
             }
@@ -251,9 +251,9 @@ SW_TEST_CASE( CreatureLifeTest, HabitatsMatchRotatedPatternsAndLargestWins )
     SW_EXPECT_EQUAL( 5, static_cast<int32>( town.getHabitats()[0]._listTile.size() ) );
 
     // 무관한 칸을 바꿔도 서식지 번호는 그대로다.
-    const int32 habitatId = town.getHabitats()[0]._id;
+    const int32 habitatID = town.getHabitats()[0]._id;
     (void)town.setObject( 7, 7, "rock" );
-    SW_EXPECT_EQUAL( habitatId, town.getHabitats()[0]._id );
+    SW_EXPECT_EQUAL( habitatID, town.getHabitats()[0]._id );
 
     // 나무를 치우면 풀숲은 사라지고 꽃밭 둘로 돌아간다.
     (void)town.setObject( 3, 4, {} );
@@ -504,7 +504,7 @@ SW_TEST_CASE( CreatureLifeTest, RequestsLeaveTheQuestEventsToTheGame )
     int32 completedCount = 0;
     for ( const QuestEvent& questEvent : listEvent )
     {
-        if ( questEvent._kind == QuestEvent::Kind::Completed && questEvent._questId == hashed_string( "sprout_berries" ) )
+        if ( questEvent._kind == QuestEvent::Kind::Completed && questEvent._questID == hashed_string( "sprout_berries" ) )
             ++completedCount;
     }
     SW_EXPECT_EQUAL( 1, completedCount );                  // 마을이 꺼내 먹지 않았다

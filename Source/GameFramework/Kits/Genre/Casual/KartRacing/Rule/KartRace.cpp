@@ -53,7 +53,7 @@ namespace sw
                 {
                     outArchive << lapTime;
                 }
-                StateArchiveUtil::writeName( outArchive, kart._itemId );
+                StateArchiveUtil::writeName( outArchive, kart._itemID );
                 outArchive << kart._previousPosition;
                 outArchive << kart._distance;
                 outArchive << kart._progress;
@@ -101,7 +101,7 @@ namespace sw
                 {
                     archive >> lapTime;
                 }
-                if ( StateArchiveUtil::readName( archive, outKart._itemId ) == false )
+                if ( StateArchiveUtil::readName( archive, outKart._itemID ) == false )
                     return false;
                 archive >> outKart._previousPosition;
                 archive >> outKart._distance;
@@ -293,7 +293,7 @@ namespace sw
 
             kart._spinTime.tick( deltaTime );
             kart._shieldTime.tick( deltaTime );
-            if ( kart._itemId.empty() == false )
+            if ( kart._itemID.empty() == false )
                 kart._itemHeldTime += deltaTime;
             updateProgress( racer );
         }
@@ -317,10 +317,10 @@ namespace sw
         if ( kart._bAI != SW_FALSE )
         {
             KartAIContext context;
-            context._bHasItem        = kart._itemId.empty() ? SW_FALSE : SW_TRUE;
+            context._bHasItem        = kart._itemID.empty() ? SW_FALSE : SW_TRUE;
             context._itemHeldTime    = kart._itemHeldTime;
             context._bShielded       = kart._shieldTime.isActive() ? SW_TRUE : SW_FALSE;
-            const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemId.empty() == false ? _pItemCatalog->findItem( kart._itemId ) : nullptr;
+            const KartItemDef* pItem = _pItemCatalog != nullptr && kart._itemID.empty() == false ? _pItemCatalog->findItem( kart._itemID ) : nullptr;
             if ( pItem != nullptr )
                 context._itemKind = pItem->_kind;
             const int32 ahead  = findRacerAtPlace( kart._place - 1 );
@@ -485,30 +485,30 @@ namespace sw
                     continue;
                 // 상자는 들고 있어도 깨진다 — 빈 손이면 순위 표로 굴린다.
                 _listItemBoxTimer[boxIndex].start( _settings._itemBoxRespawn );
-                hashed_string itemId;
-                if ( kart._itemId.empty() )
+                hashed_string itemID;
+                if ( kart._itemID.empty() )
                 {
                     const KartItemDef* pItem = _pItemCatalog->rollItem( kart._place, static_cast<int32>( _listRacer.size() ), _random );
                     if ( pItem != nullptr )
                     {
-                        kart._itemId       = pItem->_id;
+                        kart._itemID       = pItem->_id;
                         kart._itemHeldTime = 0.0f;
-                        itemId             = pItem->_id;
+                        itemID             = pItem->_id;
                     }
                 }
                 pushEvent( KartRaceEvent::Kind::ItemBoxTaken, static_cast<int32>( racerIndex ), -1, static_cast<int32>( boxIndex ), _raceTime );
-                _eventBuffer.getLast()._itemId = itemId;
+                _eventBuffer.getLast()._itemID = itemID;
                 break;
             }
         }
     }
 
-    void KartRace::giveItem( int32 racer, const hashed_string& itemId )
+    void KartRace::giveItem( int32 racer, const hashed_string& itemID )
     {
         if ( isValidRacer( racer ) == false )
             return;
         KartRacer& kart    = _listRacer[static_cast<size_t>( racer )];
-        kart._itemId       = itemId;
+        kart._itemID       = itemID;
         kart._itemHeldTime = 0.0f;
     }
 
@@ -517,18 +517,18 @@ namespace sw
         if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr )
             return false;
         KartRacer&         kart  = _listRacer[static_cast<size_t>( racer )];
-        const KartItemDef* pItem = kart._itemId.empty() ? nullptr : _pItemCatalog->findItem( kart._itemId );
+        const KartItemDef* pItem = kart._itemID.empty() ? nullptr : _pItemCatalog->findItem( kart._itemID );
         if ( pItem == nullptr )
             return false;
-        kart._itemId       = hashed_string{};
+        kart._itemID       = hashed_string{};
         kart._itemHeldTime = 0.0f;
         pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
-        _eventBuffer.getLast()._itemId = pItem->_id;
+        _eventBuffer.getLast()._itemID = pItem->_id;
 
         const float3   forward  = kart._motor.computeForward();
         const float3&  position = kart._motor.getPosition();
         KartProjectile projectile;
-        projectile._itemId    = pItem->_id;
+        projectile._itemID    = pItem->_id;
         projectile._kind      = pItem->_kind;
         projectile._owner     = racer;
         projectile._direction = forward;
@@ -608,7 +608,7 @@ namespace sw
         for ( size_t projectileIndex = 0; projectileIndex < _listProjectile.size(); ++projectileIndex )
         {
             KartProjectile&    projectile = _listProjectile[projectileIndex];
-            const KartItemDef* pItem      = _pItemCatalog->findItem( projectile._itemId );
+            const KartItemDef* pItem      = _pItemCatalog->findItem( projectile._itemID );
             if ( pItem == nullptr || projectile._bActive == SW_FALSE )
             {
                 projectile._bActive = SW_FALSE;
@@ -691,7 +691,7 @@ namespace sw
         {
             kart._shieldTime.clear();
             pushEvent( KartRaceEvent::Kind::ShieldBlocked, victim, attacker, 0, _raceTime );
-            _eventBuffer.getLast()._itemId = def._id;
+            _eventBuffer.getLast()._itemID = def._id;
             return false;
         }
         // 감속은 충격으로 — 차의 드리프트가 보상 없이 끊긴다.
@@ -700,7 +700,7 @@ namespace sw
         kart._motor.addImpulse( float3{ -velocity._x * cut, 0.0f, -velocity._z * cut } );
         kart._spinTime.extendTo( def._spinTime );
         pushEvent( KartRaceEvent::Kind::Hit, victim, attacker, static_cast<int32>( def._kind ), _raceTime );
-        _eventBuffer.getLast()._itemId = def._id;
+        _eventBuffer.getLast()._itemID = def._id;
         return true;
     }
 
@@ -858,7 +858,7 @@ namespace sw
         {
             outArchive << projectile._position;
             outArchive << projectile._direction;
-            StateArchiveUtil::writeName( outArchive, projectile._itemId );
+            StateArchiveUtil::writeName( outArchive, projectile._itemID );
             outArchive << projectile._age;
             outArchive << projectile._owner;
             outArchive << projectile._target;
@@ -896,7 +896,7 @@ namespace sw
         const int32 count = static_cast<int32>( racerCount );
         for ( KartRacer& kart : race._listRacer )
         {
-            if ( KartRaceInternal::readRacer( archive, count, kart ) == false || race.isKnownItem( kart._itemId ) == false )
+            if ( KartRaceInternal::readRacer( archive, count, kart ) == false || race.isKnownItem( kart._itemID ) == false )
                 return false;
             // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 만든다(`updateRubberBand` 와 같은 식).
             ArcadeVehicleSettings settings = kart._baseSettings;
@@ -914,7 +914,7 @@ namespace sw
             uint8 kind = 0;
             archive >> projectile._position;
             archive >> projectile._direction;
-            if ( StateArchiveUtil::readName( archive, projectile._itemId ) == false || race.isKnownItem( projectile._itemId ) == false )
+            if ( StateArchiveUtil::readName( archive, projectile._itemID ) == false || race.isKnownItem( projectile._itemID ) == false )
                 return false;
             archive >> projectile._age;
             archive >> projectile._owner;
@@ -966,9 +966,9 @@ namespace sw
         return true;
     }
 
-    bool KartRace::isKnownItem( const hashed_string& itemId ) const
+    bool KartRace::isKnownItem( const hashed_string& itemID ) const
     {
-        return itemId.empty() || ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemId ) != nullptr );
+        return itemID.empty() || ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemID ) != nullptr );
     }
 
     void KartRace::pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time )

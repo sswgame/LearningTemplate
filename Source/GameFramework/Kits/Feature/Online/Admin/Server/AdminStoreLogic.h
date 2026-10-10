@@ -22,7 +22,7 @@ namespace sw
     {
         AdminRequest         _request{};
         const ILedgerPolicy* _pPolicy{ nullptr };
-        AccountId            _adminId{ kInvalidAccountId };
+        AccountID            _adminID{ kInvalidAccountID };
         uint64               _keyHigh{ 0 }; ///< 멱등 키(바꾸는 명령은 필수)
         uint64               _keyLow{ 0 };
         int64                _nowMs{ 0 };
@@ -39,8 +39,8 @@ namespace sw
 
         static AdminResult execute( IServiceStoreConnection& connection, const AdminCommand& command, AdminReply& outReply );
         /** @brief 등급을 읽습니다(레코드가 없으면 None 과 판 0). */
-        [[nodiscard]] static ServiceStoreResult readRole( IServiceStoreConnection& connection, AccountId accountId, AdminRole& outRole, uint64& outVersion );
+        [[nodiscard]] static ServiceStoreResult readRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole& outRole, uint64& outVersion );
         /** @brief 서버 설정의 첫 관리자 — 레코드가 없을 때만 넣는다(감사 줄 actor "system.bootstrap"). 운영 중 바뀐 등급은 덮지 않는다. */
-        static AdminResult seedRole( IServiceStoreConnection& connection, AccountId accountId, AdminRole role, int64 nowMs );
+        static AdminResult seedRole( IServiceStoreConnection& connection, AccountID accountID, AdminRole role, int64 nowMs );
     };
 } // namespace sw

@@ -255,14 +255,14 @@ namespace sw
 
     int32 MechArenaWorld::addPilot( const MechPilotConfig& config )
     {
-        if ( _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechId.empty() || config._team < 0 ||
+        if ( _bStarted == SW_TRUE || _pMechCatalog == nullptr || config._listMechID.empty() || config._team < 0 ||
              config._team >= static_cast<int32>( _listTeamName.size() ) )
             return -1;
         MechPilot pilot;
         int32     deckCost = 0;
-        for ( const hashed_string& mechId : config._listMechId )
+        for ( const hashed_string& mechID : config._listMechID )
         {
-            const MechDef* pMech = _pMechCatalog->findMech( mechId );
+            const MechDef* pMech = _pMechCatalog->findMech( mechID );
             if ( pMech == nullptr || pMech->_listMode.empty() )
                 return -1;
             deckCost += pMech->_cost;
@@ -270,9 +270,9 @@ namespace sw
         }
         if ( _pMechCatalog->getDeckCostLimit() > 0 && deckCost > _pMechCatalog->getDeckCostLimit() )
             return -1;
-        for ( const hashed_string& skillId : config._listSkillId )
+        for ( const hashed_string& skillID : config._listSkillID )
         {
-            const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillId );
+            const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
             if ( pSkill != nullptr )
                 pilot._listSkill.push_back( pSkill );
         }
@@ -600,7 +600,7 @@ namespace sw
             if ( bPressedMelee == false || slotIndex < 0 )
                 return;
             const MechWeaponSlotDef& slot  = pilot.getMode()->_listWeapon[static_cast<size_t>( slotIndex - pilot.getMech()->computeSlotOffset( pilot._mode ) )];
-            const MoveFrameData*     pMove = slot._listMoveId.empty() ? nullptr : _pMoveCatalog->findMove( slot._listMoveId.front() );
+            const MoveFrameData*     pMove = slot._listMoveID.empty() ? nullptr : _pMoveCatalog->findMove( slot._listMoveID.front() );
             if ( pMove == nullptr )
                 return;
             (void)findLockTarget( pilotIndex );
@@ -617,8 +617,8 @@ namespace sw
             if ( bPressedMelee )
                 pilot._bMeleeQueued = SW_TRUE;
             const int32          nextStage = pilot._comboStage + 1;
-            const bool           bHasNext  = nextStage < static_cast<int32>( slot._listMoveId.size() );
-            const MoveFrameData* pNext     = bHasNext ? _pMoveCatalog->findMove( slot._listMoveId[static_cast<size_t>( nextStage )] ) : nullptr;
+            const bool           bHasNext  = nextStage < static_cast<int32>( slot._listMoveID.size() );
+            const MoveFrameData* pNext     = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
             if ( pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id ) )
             {
                 // 캔슬 창 — 다음 단이 이 프레임에 나간다.
@@ -1021,7 +1021,7 @@ namespace sw
         {
             for ( const MechWeaponSlotDef& slot : mode._listWeapon )
             {
-                const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->findWeapon( slot._weaponId ) : nullptr;
+                const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->findWeapon( slot._weaponID ) : nullptr;
                 if ( pWeapon != nullptr )
                     pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip( *pWeapon, pWeapon->_maxReserveAmmo,
                                                                                     MechArenaWorldInternal::mixSeed( _settings._seed, pilotIndex, slotIndex ) );
@@ -1327,10 +1327,10 @@ namespace sw
             return false;
         for ( uint32 index = 0; index < deckCount; ++index )
         {
-            hashed_string mechId;
-            if ( StateArchiveUtil::readName( archive, mechId ) == false )
+            hashed_string mechID;
+            if ( StateArchiveUtil::readName( archive, mechID ) == false )
                 return false;
-            const MechDef* pMech = _pMechCatalog->findMech( mechId );
+            const MechDef* pMech = _pMechCatalog->findMech( mechID );
             if ( pMech == nullptr || pMech->_listMode.empty() )
                 return false;
             outPilot._listDeckMech.push_back( pMech );
@@ -1340,10 +1340,10 @@ namespace sw
             return false;
         for ( uint32 index = 0; index < skillCount; ++index )
         {
-            hashed_string skillId;
-            if ( StateArchiveUtil::readName( archive, skillId ) == false )
+            hashed_string skillID;
+            if ( StateArchiveUtil::readName( archive, skillID ) == false )
                 return false;
-            const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillId );
+            const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
             if ( pSkill == nullptr )
                 return false;
             outPilot._listSkill.push_back( pSkill );

@@ -46,9 +46,9 @@ namespace sw
         void initialize( const ChatSpamSettings& settings );
 
         /** @brief 말하기 하나를 판정합니다. 허락이면 버킷에서 꺼내고 반복 기록에 넣습니다. 거절이면 @p outRetryAfterMs 가 기다릴 시간입니다. */
-        ChatSpamVerdict check( AccountId accountId, string_view text, int64 nowMs, int64& outRetryAfterMs );
+        ChatSpamVerdict check( AccountID accountID, string_view text, int64 nowMs, int64& outRetryAfterMs );
         /** @brief 계정이 떠났다 — 반복 기록을 지웁니다(버킷은 상한에서 저절로 정리된다). */
-        void forget( AccountId accountId ) { _mapAccountToHistory.erase( accountId ); }
+        void forget( AccountID accountID ) { _mapAccountToHistory.erase( accountID ); }
 
         /** @brief 정규화(대소 · 전각 · 끼움 글자)한 글의 64 비트 해시입니다. */
         static uint64 computeTextHash( string_view text );
@@ -65,7 +65,7 @@ namespace sw
         };
 
         TokenBucketMap                    _bucketMap;
-        unordered_map<AccountId, History> _mapAccountToHistory;
+        unordered_map<AccountID, History> _mapAccountToHistory;
         ChatSpamSettings                  _settings;
     };
 } // namespace sw

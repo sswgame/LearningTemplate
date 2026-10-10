@@ -163,7 +163,7 @@ namespace sw
         /** @brief 양쪽 파티로 전투를 시작합니다. 맨 앞의 싸울 수 있는 개체가 나섭니다. @p bWild 면 볼 · 도망이 됩니다. */
         void start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild );
         /** @brief 날씨를 겁니다. @p turns 가 0 이하면 끝없이(필드 날씨)입니다. 빈 id 면 날씨를 걷습니다. */
-        void setWeather( const hashed_string& weatherId, int32 turns );
+        void setWeather( const hashed_string& weatherID, int32 turns );
         /** @brief 이번 라운드 행동을 둡니다. 쓸 수 없는 행동(없는 칸 · 기절한 자리 · 트레이너전의 볼)이면 false 입니다. */
         [[nodiscard]] bool setAction( int32 side, const MonsterAction& action );
         /** @brief 라운드를 풉니다. 행동을 두지 않은 쪽은 아무것도 하지 않습니다. */
@@ -194,7 +194,7 @@ namespace sw
          * @brief 기대 피해(난수 평균 0.925 · 급소 없음 · 명중률 곱)입니다 — 트레이너 AI 가 씁니다.
          * @param attackerSide 능력 변화를 반영할 편(−1 이면 변화 없음 — 아직 나오지 않은 개체). @p defenderSide 도 같다.
          */
-        float32 computeExpectedDamage( int32 attackerSide, const MonsterInstance& attacker, const hashed_string& moveId, int32 defenderSide,
+        float32 computeExpectedDamage( int32 attackerSide, const MonsterInstance& attacker, const hashed_string& moveID, int32 defenderSide,
                                        const MonsterInstance& defender ) const;
         /** @brief 지금 나선 개체의 실효 스피드(능력 변화 · 마비 반영)입니다. */
         float32 computeEffectiveSpeed( int32 side ) const;
@@ -207,7 +207,7 @@ namespace sw
         const vector<MonsterInstance>& getParty( int32 side ) const { return _arrSide[side]._listMonster; }
         int32                          getStage( int32 side, MonsterStat stat ) const { return _arrSide[side]._arrStage[static_cast<size_t>( stat )]; }
         bool                           needsSwitch( int32 side ) const { return _arrSide[side]._bNeedsSwitch; }
-        const hashed_string&           getWeather() const { return _weatherId; }
+        const hashed_string&           getWeather() const { return _weatherID; }
         int32                          getWeatherTurns() const { return _weatherTurns; }
         const MonsterInstance&         getCaptured() const { return _captured; }
         const MonsterCollectorCatalog* getCatalog() const { return _pCatalog; }
@@ -248,7 +248,7 @@ namespace sw
         TurnOrder                       _turnOrder;
         GameRandom                      _random;
         MonsterInstance                 _captured;
-        hashed_string                   _weatherId;
+        hashed_string                   _weatherID;
         const MonsterCollectorCatalog*  _pCatalog;
         const ElementChart*             _pChart;
         int32                           _weatherTurns;

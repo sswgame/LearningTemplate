@@ -194,10 +194,10 @@ namespace sw
         }
     }
 
-    void LockstepSession::onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+    void LockstepSession::onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
     {
         (void)reason;
-        const int32 player = connectionId + 1;
+        const int32 player = connectionID + 1;
         if ( _pHost == nullptr || _pHost->isServer() == false || player <= 0 || player >= _playerCount || hasLeft( player ) )
             return;
         // 서버가 받은 마지막 입력의 다음 틱 — 그 앞의 입력은 이미 모두에게 신뢰 순서로 나갔고, 그 뒤는 아무도 받지 못했다.
@@ -224,7 +224,7 @@ namespace sw
             return NetHandleResult::Handled;
         }
         // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
-        if ( bServer && player != context._connectionId + 1 )
+        if ( bServer && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
         if ( context._kind == NetLockstepMessage::kInput )
         {

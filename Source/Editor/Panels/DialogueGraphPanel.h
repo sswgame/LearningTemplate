@@ -39,9 +39,9 @@ namespace sw::editor
         /** @brief 노드들을 캔버스에 그립니다. */
         void drawGraphNodes();
         /** @brief 노드 왼쪽의 입력 핀("-> In")을 그립니다(입력이 있는 노드 종류가 함께 씁니다). */
-        void drawInputPin( int32 nodeId );
+        void drawInputPin( int32 nodeID );
         /** @brief 출력 핀 하나를 그립니다. 핀 번호는 부르는 쪽이 인코딩합니다(다음 · 선택지 · 분기). */
-        void drawOutputPin( int32 pinId, const utf8* pLabel );
+        void drawOutputPin( int32 pinID, const utf8* pLabel );
         /** @brief 캔버스의 링크 생성·삭제 상호작용을 처리합니다. */
         void handleCanvasInteractions();
         /** @brief 선택된 노드의 상세 인스펙터를 그립니다. */
@@ -71,12 +71,12 @@ namespace sw::editor
         /** @brief 미리보기를 다음 노드로 보냅니다. 다음 노드는 러너와 같은 `DialogueCursor::step` 이 정합니다. */
         void previewStep( const DialogueStepInput& input );
         /** @brief 미리보기를 그 노드로 옮깁니다. 대사 · 선택지 노드면 뷰포트에 보이고, 끝 노드 · 없는 노드면 멈춥니다. */
-        void enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeId );
+        void enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeID );
         /** @brief 미리보기 툴바를 그립니다. */
         void drawPreviewToolbar();
 
     private:
-        int32 _selectedNodeId;
-        int32 _previewNodeId;
+        int32 _selectedNodeID;
+        int32 _previewNodeID;
     };
 } // namespace sw::editor

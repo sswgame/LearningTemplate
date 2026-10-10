@@ -26,14 +26,14 @@ namespace
     class ChatTestDirectory final : public IAccountDirectory
     {
     public:
-        unordered_map<AccountId, string> _mapOnline{};
+        unordered_map<AccountID, string> _mapOnline{};
 
-        bool findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const override
+        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
-            const auto onlineIt = _mapOnline.find( accountId );
+            const auto onlineIt = _mapOnline.find( accountID );
             if ( onlineIt == _mapOnline.end() )
                 return false;
-            outIdentity._accountId   = accountId;
+            outIdentity._accountID   = accountID;
             outIdentity._displayName = onlineIt->second;
             return true;
         }
@@ -45,20 +45,20 @@ namespace
             return false;
         }
 
-        bool isAccountOnline( AccountId accountId ) const override { return _mapOnline.find( accountId ) != _mapOnline.end(); }
+        bool isAccountOnline( AccountID accountID ) const override { return _mapOnline.find( accountID ) != _mapOnline.end(); }
     };
 
     /** @brief 차단 표 — (막은 이, 막힌 이). */
     class ChatTestPolicy final : public IChatPolicy
     {
     public:
-        vector<std::pair<AccountId, AccountId>> _listBlock{};
+        vector<std::pair<AccountID, AccountID>> _listBlock{};
 
-        bool isBlocked( AccountId recipientId, AccountId senderId ) const override
+        bool isBlocked( AccountID recipientID, AccountID senderID ) const override
         {
-            for ( const std::pair<AccountId, AccountId>& block : _listBlock )
+            for ( const std::pair<AccountID, AccountID>& block : _listBlock )
             {
-                if ( block.first == recipientId && block.second == senderId )
+                if ( block.first == recipientID && block.second == senderID )
                     return true;
             }
             return false;
@@ -77,9 +77,9 @@ namespace
         vector<ChatCompletion>    _listCompletion;
         vector<ChatDelivery>      _listDelivery;
 
-        ChatNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverId, const ChatSettings& settings = ChatSettings{} )
+        ChatNode( MemoryServiceDatabase* pDatabase, LocalServerBusHub* pHub, uint64 serverID, const ChatSettings& settings = ChatSettings{} )
             : _store{ pDatabase }
-            , _bus{ pHub, serverId }
+            , _bus{ pHub, serverID }
             , _directory{}
             , _policy{}
             , _presence{}
@@ -93,7 +93,7 @@ namespace
             dependencies._pPresence  = &_presence;
             dependencies._pDirectory = &_directory;
             dependencies._pPolicy    = &_policy;
-            dependencies._serverId   = serverId;
+            dependencies._serverID   = serverID;
             SW_EXPECT_TRUE( _service.initialize( dependencies, settings ) );
         }
 
@@ -126,12 +126,12 @@ namespace
             _service.drainDeliveries( _listDelivery );
         }
 
-        int32 countDelivery( AccountId recipientId ) const
+        int32 countDelivery( AccountID recipientID ) const
         {
             int32 count = 0;
             for ( const ChatDelivery& delivery : _listDelivery )
             {
-                count += delivery._recipientId == recipientId ? 1 : 0;
+                count += delivery._recipientID == recipientID ? 1 : 0;
             }
             return count;
         }
@@ -141,21 +141,21 @@ namespace
 
     struct ChatServiceTestInternal
     {
-        static void writeChatMute( MemoryServiceDatabase& database, AccountId accountId, int64 untilMs )
+        static void writeChatMute( MemoryServiceDatabase& database, AccountID accountID, int64 untilMs )
         {
             ServiceSanctionState state;
-            SW_EXPECT_TRUE( ServiceSanction::readState( database, accountId, state ) == ServiceStoreResult::Ok );
+            SW_EXPECT_TRUE( ServiceSanction::readState( database, accountID, state ) == ServiceStoreResult::Ok );
             state._arrUntilMs[static_cast<int32>( ServiceSanctionKind::ChatMute )] = untilMs;
             ServiceTransaction transaction;
-            ServiceSanction::stageWrite( transaction, accountId, state );
+            ServiceSanction::stageWrite( transaction, accountID, state );
             SW_EXPECT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
         }
 
-        static void publishSanctionChanged( LocalServerBusHub& hub, AccountId accountId )
+        static void publishSanctionChanged( LocalServerBusHub& hub, AccountID accountID )
         {
             LocalServerBus gmBus( &hub, 99 ); // GM 서버
             BitWriter      body;
-            body.writeVarUint( accountId );
+            body.writeVarUint( accountID );
             gmBus.publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
         }
     };
@@ -299,7 +299,7 @@ SW_TEST_CASE( ChatServiceTest, WhisperLocalBlockedAndAcrossServers )
     first.step( 100 );
     SW_EXPECT_EQUAL( first.countDelivery( 11 ), 1 );
     SW_EXPECT_TRUE( first.getLastResult() == ChatResult::Ok );
-    SW_EXPECT_STREQ( first._listCompletion.back()._reply._message._channelId.c_str(), ChatChannelId::makeWhisper( 10, 11 ).c_str() );
+    SW_EXPECT_STREQ( first._listCompletion.back()._reply._message._channelID.c_str(), ChatChannelID::makeWhisper( 10, 11 ).c_str() );
 
     first._policy._listBlock.push_back( { 11, 10 } ); // bob 이 alice 를 막았다
     first._service.sendWhisper( 10, 11, "psst again", 200, 2 );
@@ -397,7 +397,7 @@ SW_TEST_CASE( ChatServiceTest, HistoryIsWrittenInBatchesAndReadNewestFirst )
     SW_EXPECT_STREQ( node._listCompletion[0]._reply._listHistory[1]._text.c_str(), "line 0" );
     SW_EXPECT_TRUE( node._listCompletion[0]._reply._nextCursor.empty() );
 
-    const string whisperKey = ChatChannelId::makeWhisper( 10, 11 );
+    const string whisperKey = ChatChannelID::makeWhisper( 10, 11 );
     node._listCompletion.clear();
     node._service.readHistory( 99, "world.kr", "", 3, 52 ); // 회원이 아니다
     node._service.readHistory( 12, whisperKey, "", 3, 53 ); // 두 사람이 아니다
@@ -468,20 +468,20 @@ SW_TEST_CASE( ChatServiceTest, ShutdownCancelsPendingPresenceFinds )
 SW_TEST_CASE( ChatServiceTest, ProtocolRoundTripsRepliesAndRecords )
 {
     ChatMessage message;
-    message._channelId   = ChatChannelId::makeWhisper( 3, 7 );
+    message._channelID   = ChatChannelID::makeWhisper( 3, 7 );
     message._kind        = ChatChannelKind::Whisper;
-    message._senderId    = 3;
+    message._senderID    = 3;
     message._senderName  = "alice";
-    message._recipientId = 7;
+    message._recipientID = 7;
     message._text        = "hello";
     message._sentMs      = 123456;
-    message._serverId    = 2;
+    message._serverID    = 2;
     message._sequence    = 9;
 
     ChatMessage decoded;
     SW_ASSERT_TRUE( ChatProtocol::decodeRecord( ChatProtocol::encodeRecord( message ), decoded ) );
-    SW_EXPECT_STREQ( decoded._channelId.c_str(), message._channelId.c_str() );
-    SW_EXPECT_EQUAL( decoded._recipientId, AccountId( 7 ) );
+    SW_EXPECT_STREQ( decoded._channelID.c_str(), message._channelID.c_str() );
+    SW_EXPECT_EQUAL( decoded._recipientID, AccountID( 7 ) );
     SW_EXPECT_EQUAL( decoded._sentMs, int64( 123456 ) );
     SW_EXPECT_EQUAL( decoded._sequence, uint32( 9 ) );
 

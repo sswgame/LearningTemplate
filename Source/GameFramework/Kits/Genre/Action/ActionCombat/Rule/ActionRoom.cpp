@@ -43,41 +43,41 @@ namespace sw
         /** @brief 룸에 세울 적 하나 — 종 id 와 자리(m)입니다. */
         struct ActionRoomSpawnDef
         {
-            const utf8* _pMonsterId;
+            const utf8* _pMonsterID;
             float32     _x;
             float32     _y;
         };
 
         struct ActionRoomInternal
         {
-            static constexpr const utf8* kGruntId = "grunt";
-            static constexpr const utf8* kBossId  = "boss";
+            static constexpr const utf8* kGruntID = "grunt";
+            static constexpr const utf8* kBossID  = "boss";
 
             /** @brief 룸 종류마다의 배치입니다. 쓰는 게임이 생기면 맵의 스폰 지점으로 옮길 자리다. */
             static constexpr ActionRoomSpawnDef kArrEntranceSpawn[] = {
-                {kGruntId, 6.0f, 3.0f},
-                {kGruntId, 8.0f, 5.0f}
+                {kGruntID, 6.0f, 3.0f},
+                {kGruntID, 8.0f, 5.0f}
             };
             static constexpr ActionRoomSpawnDef kArrHallSpawn[] = {
-                {kGruntId, 5.0f, 2.5f},
-                {kGruntId, 8.0f, 4.0f},
-                {kGruntId, 6.5f, 5.5f}
+                {kGruntID, 5.0f, 2.5f},
+                {kGruntID, 8.0f, 4.0f},
+                {kGruntID, 6.5f, 5.5f}
             };
             static constexpr ActionRoomSpawnDef kArrBossSpawn[] = {
-                { kBossId, 7.0f, 4.0f }
+                { kBossID, 7.0f, 4.0f }
             };
 
             /**
              * @brief 카탈로그가 없거나 그 종이 없을 때 쓰는 내장 정의입니다 — 데이터 없이도 룸이 돈다. 값은 옛 상수 그대로다
              *        (`ActionCombatTest.ActionRoomEnemyNumbersStayTheSame`).
-             * @return @p monsterId 가 내장 종이 아니면 false
+             * @return @p monsterID 가 내장 종이 아니면 false
              */
-            static bool findBuiltInMonster( const hashed_string& monsterId, MonsterDef& outDef )
+            static bool findBuiltInMonster( const hashed_string& monsterID, MonsterDef& outDef )
             {
-                if ( monsterId == hashed_string( kGruntId ) )
+                if ( monsterID == hashed_string( kGruntID ) )
                 {
                     outDef         = MonsterDef{};
-                    outDef._id     = kGruntId;
+                    outDef._id     = kGruntID;
                     outDef._name   = "Grunt";
                     outDef._hp     = 30;
                     outDef._maxHp  = 30;
@@ -87,10 +87,10 @@ namespace sw
                     outDef._radius = 0.32f;
                     return true;
                 }
-                if ( monsterId == hashed_string( kBossId ) )
+                if ( monsterID == hashed_string( kBossID ) )
                 {
                     outDef                   = MonsterDef{};
-                    outDef._id               = kBossId;
+                    outDef._id               = kBossID;
                     outDef._name             = "Boss";
                     outDef._hp               = 220;
                     outDef._maxHp            = 220;
@@ -162,7 +162,7 @@ namespace sw
         startFight( ActionRoomKind::Hall );
         for ( const ActionRoomSpawnDef& spawn : ActionRoomInternal::kArrEntranceSpawn )
         {
-            spawnMonster( hashed_string( spawn._pMonsterId ), float2{ spawn._x, spawn._y } );
+            spawnMonster( hashed_string( spawn._pMonsterID ), float2{ spawn._x, spawn._y } );
         }
     }
 
@@ -171,7 +171,7 @@ namespace sw
         startFight( ActionRoomKind::Hall );
         for ( const ActionRoomSpawnDef& spawn : ActionRoomInternal::kArrHallSpawn )
         {
-            spawnMonster( hashed_string( spawn._pMonsterId ), float2{ spawn._x, spawn._y } );
+            spawnMonster( hashed_string( spawn._pMonsterID ), float2{ spawn._x, spawn._y } );
         }
     }
 
@@ -180,7 +180,7 @@ namespace sw
         startFight( ActionRoomKind::Boss );
         for ( const ActionRoomSpawnDef& spawn : ActionRoomInternal::kArrBossSpawn )
         {
-            spawnMonster( hashed_string( spawn._pMonsterId ), float2{ spawn._x, spawn._y } );
+            spawnMonster( hashed_string( spawn._pMonsterID ), float2{ spawn._x, spawn._y } );
         }
     }
 
@@ -207,7 +207,7 @@ namespace sw
     void ActionRoom::sendGateState( bool bLocked, bool bTriggered ) const
     {
         ClearGateStateChangedEvent gate;
-        gate._zoneId     = _site._zoneId;
+        gate._zoneID     = _site._zoneID;
         gate._bLocked    = bLocked ? SW_TRUE : SW_FALSE;
         gate._bTriggered = bTriggered ? SW_TRUE : SW_FALSE;
         GameEventUtil::send( gate );
@@ -308,9 +308,9 @@ namespace sw
         };
     }
 
-    void ActionRoom::spawnMonster( const hashed_string& monsterId, const float2& position )
+    void ActionRoom::spawnMonster( const hashed_string& monsterID, const float2& position )
     {
-        const int32 defIndex = findOrAddMonsterDef( monsterId );
+        const int32 defIndex = findOrAddMonsterDef( monsterID );
         if ( defIndex < 0 )
             return;
         const MonsterDef& def = _listMonsterDef[static_cast<size_t>( defIndex )];
@@ -325,18 +325,18 @@ namespace sw
         _listActor.push_back( actor );
     }
 
-    int32 ActionRoom::findOrAddMonsterDef( const hashed_string& monsterId )
+    int32 ActionRoom::findOrAddMonsterDef( const hashed_string& monsterID )
     {
         for ( size_t defIndex = 0; defIndex < _listMonsterDef.size(); ++defIndex )
         {
-            if ( hashed_string( _listMonsterDef[defIndex]._id.c_str() ) == monsterId )
+            if ( hashed_string( _listMonsterDef[defIndex]._id.c_str() ) == monsterID )
                 return static_cast<int32>( defIndex );
         }
 
         // 게임이 건 카탈로그가 먼저다. 걸린 카탈로그에 없는 id 는 알린다 — 데이터 오타가 내장 수치로 조용히 바뀌면 "고쳤는데 그대로" 를 찾을 길이 없다.
         MonsterDef            def;
         const MonsterCatalog* pCatalog = game::getService<MonsterCatalog>();
-        const MonsterDef*     pFound   = ( pCatalog != nullptr ) ? pCatalog->findMonster( monsterId ) : nullptr;
+        const MonsterDef*     pFound   = ( pCatalog != nullptr ) ? pCatalog->findMonster( monsterID ) : nullptr;
         if ( pFound != nullptr )
         {
             def = *pFound;
@@ -344,10 +344,10 @@ namespace sw
         else
         {
             if ( pCatalog != nullptr )
-                SW_LOG_WARNING( "Monster '%#' is not in the monster catalog - the action room uses its built-in definition", monsterId.c_str() );
-            if ( ActionRoomInternal::findBuiltInMonster( monsterId, def ) == false )
+                SW_LOG_WARNING( "Monster '%#' is not in the monster catalog - the action room uses its built-in definition", monsterID.c_str() );
+            if ( ActionRoomInternal::findBuiltInMonster( monsterID, def ) == false )
             {
-                SW_LOG_WARNING( "Monster '%#' has no definition - the action room does not spawn it", monsterId.c_str() );
+                SW_LOG_WARNING( "Monster '%#' has no definition - the action room does not spawn it", monsterID.c_str() );
                 return -1;
             }
         }
@@ -602,10 +602,10 @@ namespace sw
         restored._listMonsterDef.clear();
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
         {
-            hashed_string monsterId;
-            if ( StateArchiveUtil::readName( archive, monsterId ) == false )
+            hashed_string monsterID;
+            if ( StateArchiveUtil::readName( archive, monsterID ) == false )
                 return false;
-            if ( restored.findOrAddMonsterDef( monsterId ) != static_cast<int32>( defIndex ) )
+            if ( restored.findOrAddMonsterDef( monsterID ) != static_cast<int32>( defIndex ) )
                 return false;
         }
 

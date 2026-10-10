@@ -167,10 +167,10 @@ namespace sw::editor
                 GameObject*    pObj     = primaryObject();
                 if ( pContext == nullptr || pObj == nullptr )
                     return nullptr;
-                const uint64 componentId = pContext->getWorkspace().getSelectedComponentId();
-                if ( componentId == 0 )
+                const uint64 componentID = pContext->getWorkspace().getSelectedComponentID();
+                if ( componentID == 0 )
                     return nullptr;
-                return pObj->findComponentById( componentId );
+                return pObj->findComponentByID( componentID );
             }
 
             static void warn( const utf8* pTitle, const utf8* pDetail )
@@ -299,7 +299,7 @@ namespace sw::editor
                 pOutObj                 = ( pContext != nullptr ) ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
                 if ( pOutObj == nullptr )
                     return {};
-                return pContext->getWorkspace().getGameObjectPrefabPath( pOutObj->getObjectId() );
+                return pContext->getWorkspace().getGameObjectPrefabPath( pOutObj->getObjectID() );
             }
 
             static void commandApplyPrefabOverrides()
@@ -368,7 +368,7 @@ namespace sw::editor
             /** @brief 표의 한 줄입니다. 문자열은 모두 리터럴이라 수명 걱정이 없습니다. */
             struct CommandRow
             {
-                const utf8*           _pId;
+                const utf8*           _pID;
                 const utf8*           _pLabel;
                 const utf8*           _pIcon;
                 const utf8*           _pCategory;
@@ -538,7 +538,7 @@ namespace sw::editor
         for ( const EditorCommandGuiInternal::CommandRow& row : EditorCommandGuiInternal::_s_arrCommandRow )
         {
             EditorCommandDesc desc{};
-            desc._id              = row._pId;
+            desc._id              = row._pID;
             desc._label           = row._pLabel;
             desc._icon            = row._pIcon;
             desc._category        = row._pCategory;

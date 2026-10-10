@@ -26,10 +26,10 @@ namespace sw
         enum class Kind : uint8
         {
             KnowledgeRaised = 0, ///< _value = 새 단계
-            WeaknessRevealed     ///< _weaknessId
+            WeaknessRevealed     ///< _weaknessID
         };
-        hashed_string _monsterId{};
-        hashed_string _weaknessId{};
+        hashed_string _monsterID{};
+        hashed_string _weaknessID{};
         int32         _value{ 0 };
         Kind          _kind{ Kind::KnowledgeRaised };
     };
@@ -52,18 +52,18 @@ namespace sw
 
         void initialize( const WitcherCatalog* pCatalog, const ElementChart* pChart );
         /** @brief 괴물 책을 읽었습니다. 단계가 올랐으면 true 입니다. */
-        [[nodiscard]] bool readBook( const hashed_string& monsterId );
+        [[nodiscard]] bool readBook( const hashed_string& monsterID );
         /** @brief 처치했습니다. 단계가 올랐으면 true 입니다. */
-        bool recordKill( const hashed_string& monsterId );
+        bool recordKill( const hashed_string& monsterID );
         /** @brief 흔적 · 시체를 조사했습니다(계약). 단계가 올랐으면 true 입니다. */
-        bool investigate( const hashed_string& monsterId );
+        bool investigate( const hashed_string& monsterID );
 
-        int32 getKnowledge( const hashed_string& monsterId ) const;
-        int32 getKillCount( const hashed_string& monsterId ) const;
+        int32 getKnowledge( const hashed_string& monsterID ) const;
+        int32 getKillCount( const hashed_string& monsterID ) const;
         /** @brief 지금 지식으로 보이는 약점입니다(적힌 순서). */
-        void collectKnownWeaknesses( const hashed_string& monsterId, vector<const WitcherWeakness*>& outListWeakness ) const;
+        void collectKnownWeaknesses( const hashed_string& monsterID, vector<const WitcherWeakness*>& outListWeakness ) const;
         /** @brief 공격 속성 @p attackElement 가 그 괴물에게 주는 배율입니다(방어 속성 모두의 곱 — 모르는 괴물 · 표가 없으면 1). */
-        float32 computeMultiplier( const hashed_string& monsterId, const hashed_string& attackElement ) const;
+        float32 computeMultiplier( const hashed_string& monsterID, const hashed_string& attackElement ) const;
         void    drainEvents( vector<WitcherBestiaryEvent>& outListEvent );
         /** @brief 괴물마다 지식 단계 · 처치 수를 씁니다. 카탈로그 · 상성표는 싣지 않는다. */
         void writeState( Archive& outArchive ) const;
@@ -73,14 +73,14 @@ namespace sw
     private:
         struct Entry
         {
-            hashed_string _monsterId{};
+            hashed_string _monsterID{};
             int32         _knowledge{ 0 };
             int32         _killCount{ 0 };
         };
 
-        Entry*       findEntryMutable( const hashed_string& monsterId );
-        const Entry* findEntry( const hashed_string& monsterId ) const;
-        bool         raiseKnowledge( const hashed_string& monsterId, int32 level );
+        Entry*       findEntryMutable( const hashed_string& monsterID );
+        const Entry* findEntry( const hashed_string& monsterID ) const;
+        bool         raiseKnowledge( const hashed_string& monsterID, int32 level );
 
         vector<Entry>                     _listEntry;
         EventBuffer<WitcherBestiaryEvent> _eventBuffer;

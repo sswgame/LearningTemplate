@@ -74,7 +74,7 @@ namespace sw
             _lastLogHour = record._hour;
             fixed_string<constant::kMaxBuffer128> expectedFileName{};
             formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt",
-                          record._year, record._month, record._day, record._hour, getCrashSessionId() );
+                          record._year, record._month, record._day, record._hour, getCrashSessionID() );
             _currentLogFileName = expectedFileName.c_str();
 
             const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );

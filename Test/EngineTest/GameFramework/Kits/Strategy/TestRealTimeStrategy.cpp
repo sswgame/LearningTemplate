@@ -57,7 +57,7 @@ namespace
             return true;
         }
 
-        RTSUnitId spawn( const utf8* pId, int32 owner, float32 x, float32 z ) { return _world.spawnUnit( hashed_string( pId ), owner, float3{ x, 0.0f, z } ); }
+        RTSUnitID spawn( const utf8* pID, int32 owner, float32 x, float32 z ) { return _world.spawnUnit( hashed_string( pID ), owner, float3{ x, 0.0f, z } ); }
 
         /** @brief 지갑 하나를 채워 빌려 주며 플레이어를 더합니다. */
         int32 addPlayer( int32 team, int32 minerals, int32 gas, const float3& startPosition )
@@ -91,9 +91,9 @@ namespace
             return count;
         }
 
-        float32 computeDistance( RTSUnitId unitId, const float3& point ) const
+        float32 computeDistance( RTSUnitID unitID, const float3& point ) const
         {
-            const RTSUnit* pUnit = _world.findUnit( unitId );
+            const RTSUnit* pUnit = _world.findUnit( unitID );
             if ( pUnit == nullptr )
                 return MathUtil::kMaxFloat;
             const float32 dx = pUnit->_position._x - point._x;
@@ -141,33 +141,33 @@ SW_TEST_CASE( RealTimeStrategyTest, WorkersGatherReturnCargoAndMoveOnFromDeplete
     RTSTestScene scene;
     SW_ASSERT_TRUE( scene.initialize() );
     const int32     player = scene.addPlayer( 0, 0, 0, float3{ 6.0f, 0.0f, 6.0f } );
-    const RTSUnitId baseId = scene.spawn( "base", player, 4.5f, 4.5f );
-    SW_ASSERT_TRUE( baseId.isValid() );
+    const RTSUnitID baseID = scene.spawn( "base", player, 4.5f, 4.5f );
+    SW_ASSERT_TRUE( baseID.isValid() );
     SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 5, 5 ) == false ); // 본진이 칸을 막는다
-    const RTSUnitId shardId = scene.spawn( "shard", RTSWorld::kNoOwner, 5.5f, 12.5f );
+    const RTSUnitID shardID = scene.spawn( "shard", RTSWorld::kNoOwner, 5.5f, 12.5f );
     (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 6.5f, 12.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     (void)scene.spawn( "minerals", RTSWorld::kNoOwner, 7.5f, 12.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
-    const RTSUnitId workerA = scene.spawn( "worker", player, 10.5f, 10.5f );
-    const RTSUnitId workerB = scene.spawn( "worker", player, 10.5f, 9.5f );
-    SW_EXPECT_TRUE( scene._world.findUnit( shardId )->_owner == RTSWorld::kNoOwner );
+    const RTSUnitID workerA = scene.spawn( "worker", player, 10.5f, 10.5f );
+    const RTSUnitID workerB = scene.spawn( "worker", player, 10.5f, 9.5f );
+    SW_EXPECT_TRUE( scene._world.findUnit( shardID )->_owner == RTSWorld::kNoOwner );
 
-    SW_EXPECT_TRUE( scene._world.issueGather( workerA, shardId ) == RTSCommandResult::Ok );
-    SW_EXPECT_TRUE( scene._world.issueGather( workerB, shardId ) == RTSCommandResult::Ok );
-    SW_EXPECT_TRUE( scene._world.issueGather( workerA, baseId ) == RTSCommandResult::CannotDo ); // 본진은 캐지 않는다
-    SW_EXPECT_TRUE( scene._world.issueGather( baseId, shardId ) == RTSCommandResult::CannotDo ); // 일꾼만
-    SW_EXPECT_TRUE( scene._world.issueGather( workerA, shardId ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.issueGather( workerA, shardID ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.issueGather( workerB, shardID ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.issueGather( workerA, baseID ) == RTSCommandResult::CannotDo ); // 본진은 캐지 않는다
+    SW_EXPECT_TRUE( scene._world.issueGather( baseID, shardID ) == RTSCommandResult::CannotDo ); // 일꾼만
+    SW_EXPECT_TRUE( scene._world.issueGather( workerA, shardID ) == RTSCommandResult::Ok );
 
     scene.run( 40.0f );
     SW_EXPECT_TRUE( scene.minerals( player ) >= 40 );
     SW_EXPECT_EQUAL( 0, scene.minerals( player ) % 5 );
     SW_EXPECT_TRUE( scene.countEvents( RTSEvent::Kind::ResourcesDeposited, player ) >= 8 );
     // 조각(10)은 두 번에 다 캐 사라지고, 두 일꾼은 옆 광물로 옮겨 계속 캔다.
-    SW_EXPECT_NULL( scene._world.findUnit( shardId ) );
+    SW_EXPECT_NULL( scene._world.findUnit( shardID ) );
     SW_EXPECT_EQUAL( 1, scene.countEvents( RTSEvent::Kind::ResourceDepleted ) );
     SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 5, 12 ) ); // 사라진 광물의 칸이 열린다
-    for ( const RTSUnitId workerId : { workerA, workerB } )
+    for ( const RTSUnitID workerID : { workerA, workerB } )
     {
-        const RTSOrder* pOrder = scene._world.findUnit( workerId )->findOrder();
+        const RTSOrder* pOrder = scene._world.findUnit( workerID )->findOrder();
         SW_ASSERT_NOT_NULL( pOrder );
         SW_EXPECT_TRUE( pOrder->_type == RTSOrderType::Gather );
     }
@@ -180,8 +180,8 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
     RTSTestScene scene;
     SW_ASSERT_TRUE( scene.initialize() );
     const int32     player     = scene.addPlayer( 0, 1000, 0, float3{ 6.0f, 0.0f, 6.0f } );
-    const RTSUnitId baseId     = scene.spawn( "base", player, 4.5f, 4.5f );
-    const RTSUnitId barracksId = scene.spawn( "barracks", player, 20.5f, 4.5f );
+    const RTSUnitID baseID     = scene.spawn( "base", player, 4.5f, 4.5f );
+    const RTSUnitID barracksID = scene.spawn( "barracks", player, 20.5f, 4.5f );
     for ( int32 index = 0; index < 9; ++index )
     {
         (void)scene.spawn( "worker", player, 10.5f + static_cast<float32>( index ), 20.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
@@ -191,18 +191,18 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
     SW_EXPECT_EQUAL( 9, pPlayer->_supplyUsed );
     SW_EXPECT_EQUAL( 10, pPlayer->_supplyCap );
 
-    SW_EXPECT_TRUE( scene._world.train( baseId, hashed_string( "marine" ) ) == RTSCommandResult::CannotDo );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "zealot" ) ) == RTSCommandResult::TechRequired );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "wraith" ) ) == RTSCommandResult::NotEnoughGas );
-    SW_EXPECT_TRUE( scene._world.train( baseId, hashed_string( "worker" ) ) == RTSCommandResult::Ok );
-    SW_EXPECT_TRUE( scene._world.train( baseId, hashed_string( "worker" ) ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.train( baseID, hashed_string( "marine" ) ) == RTSCommandResult::CannotDo );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "zealot" ) ) == RTSCommandResult::TechRequired );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "wraith" ) ) == RTSCommandResult::NotEnoughGas );
+    SW_EXPECT_TRUE( scene._world.train( baseID, hashed_string( "worker" ) ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.train( baseID, hashed_string( "worker" ) ) == RTSCommandResult::Ok );
     SW_EXPECT_EQUAL( 900, scene.minerals( player ) ); // 넣을 때 낸다
 
     // 첫 일꾼은 보급 10/10 으로 나오고, 둘째는 보급이 막힌다.
     scene.run( 25.0f );
     SW_EXPECT_EQUAL( 10, scene._world.countUnits( player, hashed_string( "worker" ), true ) );
     SW_EXPECT_EQUAL( 1, scene.countEvents( RTSEvent::Kind::SupplyBlocked, player ) );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( scene._world.findUnit( baseId )->_listProduction.size() ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( scene._world.findUnit( baseID )->_listProduction.size() ) );
 
     // 보급 건물이 서면 이어서 나온다.
     (void)scene.spawn( "depot", player, 30.5f, 30.5f );
@@ -214,31 +214,31 @@ SW_TEST_CASE( RealTimeStrategyTest, ProductionQueuesChargeUpFrontAndWaitForSuppl
     // 대기열은 다섯 — 여섯째는 거절, 취소는 값을 돌려준다.
     for ( int32 index = 0; index < 5; ++index )
     {
-        SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
+        SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
     }
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RTSCommandResult::QueueFull );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::QueueFull );
     SW_EXPECT_EQUAL( 650, scene.minerals( player ) );
-    SW_EXPECT_TRUE( scene._world.cancelTrain( barracksId ) );
+    SW_EXPECT_TRUE( scene._world.cancelTrain( barracksID ) );
     SW_EXPECT_EQUAL( 700, scene.minerals( player ) );
 
     // 집결지 — 나온 해병은 그리로 간다.
     const float3 rally{ 30.5f, 0.0f, 12.5f };
-    scene._world.setRallyPoint( barracksId, rally );
+    scene._world.setRallyPoint( barracksID, rally );
     scene.run( 19.0f );
     SW_EXPECT_EQUAL( 1, scene._world.countUnits( player, hashed_string( "marine" ), true ) );
     scene.run( 10.0f );
-    RTSUnitId marineId{};
+    RTSUnitID marineID{};
     scene._world.forEachUnit( [&]( const RTSUnit& unit )
     {
-        if ( unit._pDef->_id == hashed_string( "marine" ) && marineId.isValid() == false )
-            marineId = unit._id;
+        if ( unit._pDef->_id == hashed_string( "marine" ) && marineID.isValid() == false )
+            marineID = unit._id;
     } );
-    SW_EXPECT_TRUE( scene.computeDistance( marineId, rally ) < 1.0f );
+    SW_EXPECT_TRUE( scene.computeDistance( marineID, rally ) < 1.0f );
 
     // 테크 — 아카데미가 서면 질럿을 뽑을 수 있다.
     (void)scene.spawn( "academy", player, 30.5f, 20.5f );
     SW_EXPECT_TRUE( scene._world.hasConstructed( player, hashed_string( "academy" ) ) );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "zealot" ) ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "zealot" ) ) == RTSCommandResult::Ok );
 }
 
 SW_TEST_CASE( RealTimeStrategyTest, WorkersConstructBuildingsAndRefineriesYieldGas )
@@ -247,11 +247,11 @@ SW_TEST_CASE( RealTimeStrategyTest, WorkersConstructBuildingsAndRefineriesYieldG
     SW_ASSERT_TRUE( scene.initialize() );
     const int32 player = scene.addPlayer( 0, 300, 0, float3{ 6.0f, 0.0f, 6.0f } );
     (void)scene.spawn( "base", player, 4.5f, 4.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
-    const RTSUnitId mineralId = scene.spawn( "minerals", RTSWorld::kNoOwner, 12.5f, 12.5f );
-    const RTSUnitId geyserId  = scene.spawn( "geyser", RTSWorld::kNoOwner, 4.5f, 14.5f );
-    const RTSUnitId builderA  = scene.spawn( "worker", player, 10.5f, 4.5f );
-    const RTSUnitId builderB  = scene.spawn( "worker", player, 10.5f, 6.5f );
-    SW_ASSERT_TRUE( mineralId.isValid() && geyserId.isValid() );
+    const RTSUnitID mineralID = scene.spawn( "minerals", RTSWorld::kNoOwner, 12.5f, 12.5f );
+    const RTSUnitID geyserID  = scene.spawn( "geyser", RTSWorld::kNoOwner, 4.5f, 14.5f );
+    const RTSUnitID builderA  = scene.spawn( "worker", player, 10.5f, 4.5f );
+    const RTSUnitID builderB  = scene.spawn( "worker", player, 10.5f, 6.5f );
+    SW_ASSERT_TRUE( mineralID.isValid() && geyserID.isValid() );
 
     SW_EXPECT_TRUE( scene._world.issueBuild( builderA, hashed_string( "barracks" ), int2{ 11, 11 } ) == RTSCommandResult::InvalidPlacement ); // 광물 위
     SW_EXPECT_TRUE( scene._world.issueBuild( builderA, hashed_string( "barracks" ), int2{ 46, 46 } ) == RTSCommandResult::InvalidPlacement ); // 맵 밖으로
@@ -273,24 +273,24 @@ SW_TEST_CASE( RealTimeStrategyTest, WorkersConstructBuildingsAndRefineriesYieldG
     SW_EXPECT_TRUE( scene._world.hasConstructed( player, hashed_string( "refinery" ) ) );
     SW_EXPECT_EQUAL( 2, scene.countEvents( RTSEvent::Kind::ConstructionComplete, player ) );
     SW_EXPECT_TRUE( scene._world.findUnit( builderA )->isIdle() );
-    RTSUnitId barracksId{};
-    RTSUnitId refineryId{};
+    RTSUnitID barracksID{};
+    RTSUnitID refineryID{};
     scene._world.forEachUnit( [&]( const RTSUnit& unit )
     {
         if ( unit._pDef->_id == hashed_string( "barracks" ) )
-            barracksId = unit._id;
+            barracksID = unit._id;
         if ( unit._pDef->_id == hashed_string( "refinery" ) )
-            refineryId = unit._id;
+            refineryID = unit._id;
     } );
-    SW_EXPECT_NEAR_EQUAL( 1000.0f, scene._world.findUnit( barracksId )->_hp, 1.0f ); // 체력도 함께 올랐다
-    SW_EXPECT_TRUE( scene._world.findUnit( refineryId )->_linkedResource == geyserId );
+    SW_EXPECT_NEAR_EQUAL( 1000.0f, scene._world.findUnit( barracksID )->_hp, 1.0f ); // 체력도 함께 올랐다
+    SW_EXPECT_TRUE( scene._world.findUnit( refineryID )->_linkedResource == geyserID );
 
     // 정제소에서 가스를 캔다(간헐천은 캐지 못한다).
-    SW_EXPECT_TRUE( scene._world.issueGather( builderB, geyserId ) == RTSCommandResult::CannotDo );
-    SW_EXPECT_TRUE( scene._world.issueSmart( builderB, scene._world.findUnit( refineryId )->_position, refineryId ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.issueGather( builderB, geyserID ) == RTSCommandResult::CannotDo );
+    SW_EXPECT_TRUE( scene._world.issueSmart( builderB, scene._world.findUnit( refineryID )->_position, refineryID ) == RTSCommandResult::Ok );
     scene.run( 20.0f );
     SW_EXPECT_TRUE( scene.gas( player ) >= 10 );
-    SW_EXPECT_TRUE( scene._world.findUnit( geyserId )->_resourceLeft < 500 );
+    SW_EXPECT_TRUE( scene._world.findUnit( geyserID )->_resourceLeft < 500 );
 
     // 돈이 모자라면 명령부터 거절한다.
     SW_EXPECT_TRUE( scene._world.issueBuild( builderA, hashed_string( "base" ), int2{ 30, 30 } ) == RTSCommandResult::NotEnoughMinerals );
@@ -305,15 +305,15 @@ SW_TEST_CASE( RealTimeStrategyTest, CombatAppliesArmorMinimumDamageAirTargetsAnd
     SW_EXPECT_TRUE( scene._world.areEnemies( blue, red ) );
 
     // 방어 — 일꾼(5) 이 본진(방어 1)을 치면 4, 벽(방어 10)은 최소 0.5.
-    const RTSUnitId redBase = scene.spawn( "base", red, 30.5f, 30.5f );
-    const RTSUnitId wallId  = scene.spawn( "wall", red, 30.5f, 40.5f );
-    const RTSUnitId workerA = scene.spawn( "worker", blue, 28.5f, 29.5f );
-    const RTSUnitId workerB = scene.spawn( "worker", blue, 29.5f, 39.5f );
+    const RTSUnitID redBase = scene.spawn( "base", red, 30.5f, 30.5f );
+    const RTSUnitID wallID  = scene.spawn( "wall", red, 30.5f, 40.5f );
+    const RTSUnitID workerA = scene.spawn( "worker", blue, 28.5f, 29.5f );
+    const RTSUnitID workerB = scene.spawn( "worker", blue, 29.5f, 39.5f );
     SW_EXPECT_TRUE( scene._world.issueAttack( workerA, redBase ) == RTSCommandResult::Ok );
-    SW_EXPECT_TRUE( scene._world.issueSmart( workerB, float3{ 31.0f, 0.0f, 41.0f }, wallId ) == RTSCommandResult::Ok ); // 적을 오른쪽 클릭 = 공격
+    SW_EXPECT_TRUE( scene._world.issueSmart( workerB, float3{ 31.0f, 0.0f, 41.0f }, wallID ) == RTSCommandResult::Ok ); // 적을 오른쪽 클릭 = 공격
     scene.run( 3.0f );
     const float32 baseLoss = 1500.0f - scene._world.findUnit( redBase )->_hp;
-    const float32 wallLoss = 300.0f - scene._world.findUnit( wallId )->_hp;
+    const float32 wallLoss = 300.0f - scene._world.findUnit( wallID )->_hp;
     SW_EXPECT_TRUE( baseLoss >= 4.0f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, MathUtil::abs( baseLoss / 4.0f - static_cast<float32>( static_cast<int32>( baseLoss / 4.0f + 0.5f ) ) ), 1.0e-3f );
     SW_EXPECT_TRUE( wallLoss >= 0.5f && wallLoss <= 1.5f );
@@ -322,20 +322,20 @@ SW_TEST_CASE( RealTimeStrategyTest, CombatAppliesArmorMinimumDamageAirTargetsAnd
     (void)scene._world.issueStop( workerB );
 
     // 공중 — 질럿은 레이스를 치지 못하고, 대공 포탑은 레이스만 친다.
-    const RTSUnitId zealotId = scene.spawn( "zealot", red, 10.5f, 30.5f );
-    const RTSUnitId wraithId = scene.spawn( "wraith", blue, 12.5f, 30.5f );
-    SW_EXPECT_TRUE( scene._world.issueAttack( zealotId, wraithId ) == RTSCommandResult::CannotDo );
-    const RTSUnitId turretId = scene.spawn( "turret", red, 14.5f, 34.5f );
-    SW_ASSERT_TRUE( turretId.isValid() );
+    const RTSUnitID zealotID = scene.spawn( "zealot", red, 10.5f, 30.5f );
+    const RTSUnitID wraithID = scene.spawn( "wraith", blue, 12.5f, 30.5f );
+    SW_EXPECT_TRUE( scene._world.issueAttack( zealotID, wraithID ) == RTSCommandResult::CannotDo );
+    const RTSUnitID turretID = scene.spawn( "turret", red, 14.5f, 34.5f );
+    SW_ASSERT_TRUE( turretID.isValid() );
     scene.run( 3.0f );
-    SW_EXPECT_TRUE( scene._world.findUnit( wraithId )->_hp < 120.0f );
-    SW_EXPECT_TRUE( scene._world.findUnit( turretId )->_attackTarget == wraithId );
-    (void)scene._world.issueMove( wraithId, float3{ 2.0f, 0.0f, 46.0f } );
+    SW_EXPECT_TRUE( scene._world.findUnit( wraithID )->_hp < 120.0f );
+    SW_EXPECT_TRUE( scene._world.findUnit( turretID )->_attackTarget == wraithID );
+    (void)scene._world.issueMove( wraithID, float3{ 2.0f, 0.0f, 46.0f } );
     scene.run( 6.0f );
-    SW_EXPECT_TRUE( scene._world.findUnit( wraithId ) != nullptr );
+    SW_EXPECT_TRUE( scene._world.findUnit( wraithID ) != nullptr );
 
     // 공격 이동 — 해병 셋이 가는 길의 질럿을 잡고 계속 간다.
-    vector<RTSUnitId> listMarine;
+    vector<RTSUnitID> listMarine;
     for ( int32 index = 0; index < 3; ++index )
     {
         listMarine.push_back( scene.spawn( "marine", blue, 3.5f, 28.5f + static_cast<float32>( index ) ) );
@@ -343,24 +343,24 @@ SW_TEST_CASE( RealTimeStrategyTest, CombatAppliesArmorMinimumDamageAirTargetsAnd
     const float3 goal{ 20.5f, 0.0f, 22.5f };
     SW_EXPECT_EQUAL( 3, scene._world.issueGroupMove( listMarine, goal, true ) );
     scene.run( 25.0f );
-    SW_EXPECT_NULL( scene._world.findUnit( zealotId ) );
+    SW_EXPECT_NULL( scene._world.findUnit( zealotID ) );
     int32 aliveMarine = 0;
-    for ( const RTSUnitId marineId : listMarine )
+    for ( const RTSUnitID marineID : listMarine )
     {
-        aliveMarine += scene._world.findUnit( marineId ) != nullptr ? 1 : 0;
+        aliveMarine += scene._world.findUnit( marineID ) != nullptr ? 1 : 0;
     }
     SW_EXPECT_TRUE( aliveMarine >= 2 );
     bool bKilledByMarine = false;
     for ( const RTSEvent& event : scene._listEvent )
     {
-        if ( event._kind == RTSEvent::Kind::UnitDied && event._unit == zealotId )
+        if ( event._kind == RTSEvent::Kind::UnitDied && event._unit == zealotID )
             bKilledByMarine = std::find( listMarine.begin(), listMarine.end(), event._other ) != listMarine.end();
     }
     SW_EXPECT_TRUE( bKilledByMarine );
-    for ( const RTSUnitId marineId : listMarine )
+    for ( const RTSUnitID marineID : listMarine )
     {
-        if ( scene._world.findUnit( marineId ) != nullptr )
-            SW_EXPECT_TRUE( scene.computeDistance( marineId, goal ) < 3.5f );
+        if ( scene._world.findUnit( marineID ) != nullptr )
+            SW_EXPECT_TRUE( scene.computeDistance( marineID, goal ) < 3.5f );
     }
 }
 
@@ -371,25 +371,25 @@ SW_TEST_CASE( RealTimeStrategyTest, FogOfWarTracksVisibleAndExploredCellsPerTeam
     const int32     blue     = scene.addPlayer( 0, 0, 0, float3{} );
     const int32     ally     = scene.addPlayer( 0, 0, 0, float3{} );
     const int32     red      = scene.addPlayer( 1, 0, 0, float3{} );
-    const RTSUnitId marineId = scene.spawn( "marine", blue, 5.5f, 5.5f );
-    const RTSUnitId enemyId  = scene.spawn( "marine", red, 40.5f, 40.5f );
+    const RTSUnitID marineID = scene.spawn( "marine", blue, 5.5f, 5.5f );
+    const RTSUnitID enemyID  = scene.spawn( "marine", red, 40.5f, 40.5f );
     scene.run( 0.3f );
     SW_EXPECT_TRUE( scene._world.getVisibility( blue, int2{ 5, 5 } ) == RTSVisibility::Visible );
     SW_EXPECT_TRUE( scene._world.getVisibility( ally, int2{ 8, 8 } ) == RTSVisibility::Visible ); // 같은 팀은 시야를 나눈다
     SW_EXPECT_TRUE( scene._world.getVisibility( blue, int2{ 30, 30 } ) == RTSVisibility::Unexplored );
     SW_EXPECT_TRUE( scene._world.getVisibility( red, int2{ 5, 5 } ) == RTSVisibility::Unexplored );
-    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, marineId ) );
-    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, enemyId ) == false );
-    SW_EXPECT_TRUE( scene._world.isVisibleTo( ally, marineId ) ); // 같은 팀 유닛은 늘 보인다
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, marineID ) );
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, enemyID ) == false );
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( ally, marineID ) ); // 같은 팀 유닛은 늘 보인다
     SW_EXPECT_FALSE( scene._world.areEnemies( blue, ally ) );
     SW_EXPECT_TRUE( scene._world.areEnemies( blue, red ) );
     SW_EXPECT_FALSE( scene._world.areEnemies( blue, RTSWorld::kNoOwner ) ); // 주인 없음(자원)은 적이 아니다
 
-    SW_EXPECT_TRUE( scene._world.issueMove( marineId, float3{ 34.5f, 0.0f, 34.5f } ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.issueMove( marineID, float3{ 34.5f, 0.0f, 34.5f } ) == RTSCommandResult::Ok );
     scene.run( 20.0f );
     SW_EXPECT_TRUE( scene._world.getVisibility( blue, int2{ 2, 2 } ) == RTSVisibility::Explored );
-    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, enemyId ) );
-    SW_EXPECT_TRUE( scene._world.isVisibleTo( red, marineId ) );
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( blue, enemyID ) );
+    SW_EXPECT_TRUE( scene._world.isVisibleTo( red, marineID ) );
 }
 
 SW_TEST_CASE( RealTimeStrategyTest, LargeGroupsShareOneFlowFieldAroundWalls )
@@ -401,7 +401,7 @@ SW_TEST_CASE( RealTimeStrategyTest, LargeGroupsShareOneFlowFieldAroundWalls )
         scene._world.setTerrainBlocked( 20, y, true ); // 위쪽 끝만 열린 벽
     }
     const int32       player = scene.addPlayer( 0, 0, 0, float3{} );
-    vector<RTSUnitId> listMarine;
+    vector<RTSUnitID> listMarine;
     for ( int32 index = 0; index < 8; ++index )
     {
         listMarine.push_back( scene.spawn( "marine", player, 8.5f + static_cast<float32>( index % 4 ), 9.5f + static_cast<float32>( index / 4 ) ) );
@@ -410,20 +410,20 @@ SW_TEST_CASE( RealTimeStrategyTest, LargeGroupsShareOneFlowFieldAroundWalls )
     SW_EXPECT_EQUAL( 8, scene._world.issueGroupMove( listMarine, goal, false ) );
     const FlowField* pShared = scene._world.findUnit( listMarine[0] )->findOrder()->_pFlowField;
     SW_ASSERT_NOT_NULL( pShared );
-    for ( const RTSUnitId marineId : listMarine )
+    for ( const RTSUnitID marineID : listMarine )
     {
-        SW_EXPECT_TRUE( scene._world.findUnit( marineId )->findOrder()->_pFlowField == pShared );
+        SW_EXPECT_TRUE( scene._world.findUnit( marineID )->findOrder()->_pFlowField == pShared );
     }
 
     scene.run( 50.0f );
-    for ( const RTSUnitId marineId : listMarine )
+    for ( const RTSUnitID marineID : listMarine )
     {
-        SW_EXPECT_TRUE( scene.computeDistance( marineId, goal ) < 3.5f );
-        SW_EXPECT_TRUE( scene._world.findUnit( marineId )->isIdle() );
+        SW_EXPECT_TRUE( scene.computeDistance( marineID, goal ) < 3.5f );
+        SW_EXPECT_TRUE( scene._world.findUnit( marineID )->isIdle() );
     }
 
     // 둘은 A* 로(무리가 작다).
-    vector<RTSUnitId> listPair{ listMarine[0], listMarine[1] };
+    vector<RTSUnitID> listPair{ listMarine[0], listMarine[1] };
     (void)scene._world.issueGroupMove( listPair, float3{ 8.5f, 0.0f, 8.5f }, false );
     SW_EXPECT_NULL( scene._world.findUnit( listMarine[0] )->findOrder()->_pFlowField );
 }
@@ -434,22 +434,22 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
     SW_ASSERT_TRUE( scene.initialize() );
     const int32     blue    = scene.addPlayer( 0, 0, 0, float3{} );
     const int32     red     = scene.addPlayer( 1, 0, 0, float3{} );
-    const RTSUnitId baseId  = scene.spawn( "base", blue, 4.5f, 4.5f );
-    const RTSUnitId marineA = scene.spawn( "marine", blue, 10.5f, 5.5f );
-    const RTSUnitId marineB = scene.spawn( "marine", blue, 11.5f, 5.5f );
-    const RTSUnitId workerA = scene.spawn( "worker", blue, 12.5f, 5.5f );
-    const RTSUnitId enemyId = scene.spawn( "base", red, 30.5f, 30.5f );
+    const RTSUnitID baseID  = scene.spawn( "base", blue, 4.5f, 4.5f );
+    const RTSUnitID marineA = scene.spawn( "marine", blue, 10.5f, 5.5f );
+    const RTSUnitID marineB = scene.spawn( "marine", blue, 11.5f, 5.5f );
+    const RTSUnitID workerA = scene.spawn( "worker", blue, 12.5f, 5.5f );
+    const RTSUnitID enemyID = scene.spawn( "base", red, 30.5f, 30.5f );
     scene.run( 0.3f );
 
     RTSSelection selection;
     selection.setPlayer( blue );
     selection.selectInRect( scene._world, float3{ 0.0f, 0.0f, 0.0f }, float3{ 14.0f, 0.0f, 8.0f }, false );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( selection.getSelected().size() ) ); // 유닛만 — 본진은 빠진다
-    SW_EXPECT_TRUE( selection.isSelected( baseId ) == false );
+    SW_EXPECT_TRUE( selection.isSelected( baseID ) == false );
     SW_EXPECT_TRUE( selection.isCommandable( scene._world ) );
 
     selection.selectInRect( scene._world, float3{ 3.0f, 0.0f, 3.0f }, float3{ 6.0f, 0.0f, 6.0f }, false );
-    SW_EXPECT_TRUE( selection.getPrimary() == baseId );
+    SW_EXPECT_TRUE( selection.getPrimary() == baseID );
 
     selection.selectSameType( scene._world, marineA, float3{ 0.0f, 0.0f, 0.0f }, float3{ 20.0f, 0.0f, 20.0f } );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( selection.getSelected().size() ) );
@@ -468,7 +468,7 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
     (void)scene._world.issueMove( marineA, float3{ 24.5f, 0.0f, 24.5f } );
     scene.run( 12.0f );
     selection.selectInRect( scene._world, float3{ 29.0f, 0.0f, 29.0f }, float3{ 35.0f, 0.0f, 35.0f }, false );
-    SW_EXPECT_TRUE( selection.getPrimary() == enemyId );
+    SW_EXPECT_TRUE( selection.getPrimary() == enemyID );
     SW_EXPECT_TRUE( selection.isCommandable( scene._world ) == false );
 
     // 부대의 해병이 죽으면 부대에서 빠진다.
@@ -479,9 +479,9 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
     scene.run( 10.0f );
     SW_EXPECT_NULL( scene._world.findUnit( marineB ) );
     int32 aliveCount = 0;
-    for ( const RTSUnitId unitId : { marineA, workerA, marineB } )
+    for ( const RTSUnitID unitID : { marineA, workerA, marineB } )
     {
-        aliveCount += scene._world.findUnit( unitId ) != nullptr ? 1 : 0;
+        aliveCount += scene._world.findUnit( unitID ) != nullptr ? 1 : 0;
     }
     SW_EXPECT_TRUE( selection.recallGroup( scene._world, 1 ) );
     SW_EXPECT_EQUAL( aliveCount, static_cast<int32>( selection.getSelected().size() ) );
@@ -494,7 +494,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuild
     SW_ASSERT_TRUE( scene.initialize( 64, 64 ) );
     const int32     human     = scene.addPlayer( 0, 0, 0, float3{ 8.0f, 0.0f, 8.0f } );
     const int32     cpu       = scene.addPlayer( 1, 50, 0, float3{ 44.0f, 0.0f, 44.0f } );
-    const RTSUnitId humanBase = scene.spawn( "base", human, 6.5f, 6.5f );
+    const RTSUnitID humanBase = scene.spawn( "base", human, 6.5f, 6.5f );
     (void)scene.spawn( "base", cpu, 42.5f, 42.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     for ( int32 index = 0; index < 8; ++index )
     {
@@ -506,11 +506,11 @@ SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuild
     }
 
     RTSCommanderAISettings aiSettings;
-    aiSettings._workerId         = hashed_string( "worker" );
-    aiSettings._depotId          = hashed_string( "base" );
-    aiSettings._supplyId         = hashed_string( "depot" );
-    aiSettings._productionId     = hashed_string( "barracks" );
-    aiSettings._armyUnitId       = hashed_string( "marine" );
+    aiSettings._workerID         = hashed_string( "worker" );
+    aiSettings._depotID          = hashed_string( "base" );
+    aiSettings._supplyID         = hashed_string( "depot" );
+    aiSettings._productionID     = hashed_string( "barracks" );
+    aiSettings._armyUnitID       = hashed_string( "marine" );
     aiSettings._workerTarget     = 8;
     aiSettings._productionTarget = 1;
     aiSettings._attackArmySize   = 3;
@@ -558,12 +558,12 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
         world.setTerrainBlocked( 20, y, true ); // 위쪽 끝만 열린 벽
     }
     const int32     player = original.addPlayer( 0, 0, 0, float3{ 6.0f, 0.0f, 6.0f } );
-    const RTSUnitId baseId = original.spawn( "base", player, 4.5f, 4.5f );
-    const RTSUnitId oreId  = original.spawn( "minerals", RTSWorld::kNoOwner, 6.5f, 12.5f );
-    const RTSUnitId worker = original.spawn( "worker", player, 10.5f, 10.5f );
-    SW_ASSERT_TRUE( baseId.isValid() && oreId.isValid() && worker.isValid() );
-    SW_ASSERT_TRUE( world.issueGather( worker, oreId ) == RTSCommandResult::Ok );
-    vector<RTSUnitId> listMarine;
+    const RTSUnitID baseID = original.spawn( "base", player, 4.5f, 4.5f );
+    const RTSUnitID oreID  = original.spawn( "minerals", RTSWorld::kNoOwner, 6.5f, 12.5f );
+    const RTSUnitID worker = original.spawn( "worker", player, 10.5f, 10.5f );
+    SW_ASSERT_TRUE( baseID.isValid() && oreID.isValid() && worker.isValid() );
+    SW_ASSERT_TRUE( world.issueGather( worker, oreID ) == RTSCommandResult::Ok );
+    vector<RTSUnitID> listMarine;
     for ( int32 index = 0; index < 8; ++index )
     {
         listMarine.push_back( original.spawn( "marine", player, 8.5f + static_cast<float32>( index % 4 ), 16.5f + static_cast<float32>( index / 4 ) ) );
@@ -609,24 +609,24 @@ SW_TEST_CASE( RealTimeStrategyTest, StateRoundTripContinuesTheSameMatch )
         SW_EXPECT_TRUE( restoredSelection.getGroup( 3 ).size() == 1 );
         const FlowField* pShared = restoredWorld.findUnit( listMarine[0] )->findOrder()->_pFlowField;
         SW_ASSERT_NOT_NULL( pShared );
-        for ( const RTSUnitId marineId : listMarine )
+        for ( const RTSUnitID marineID : listMarine )
         {
-            SW_EXPECT_TRUE( restoredWorld.findUnit( marineId )->findOrder()->_pFlowField == pShared );
+            SW_EXPECT_TRUE( restoredWorld.findUnit( marineID )->findOrder()->_pFlowField == pShared );
         }
     }
 
     BLOCK( "움직이던 무리는 목표까지 가고 일꾼은 계속 캔다" )
     {
         restored.run( 0.2f );
-        for ( const RTSUnitId marineId : listMarine )
+        for ( const RTSUnitID marineID : listMarine )
         {
-            SW_EXPECT_FALSE( restoredWorld.findUnit( marineId )->isIdle() ); // 멈춰 있다고 명령을 끝내지 않는다
+            SW_EXPECT_FALSE( restoredWorld.findUnit( marineID )->isIdle() ); // 멈춰 있다고 명령을 끝내지 않는다
         }
         restored.run( 50.0f );
-        for ( const RTSUnitId marineId : listMarine )
+        for ( const RTSUnitID marineID : listMarine )
         {
-            SW_EXPECT_TRUE( restored.computeDistance( marineId, goal ) < 3.5f );
-            SW_EXPECT_TRUE( restoredWorld.findUnit( marineId )->isIdle() );
+            SW_EXPECT_TRUE( restored.computeDistance( marineID, goal ) < 3.5f );
+            SW_EXPECT_TRUE( restoredWorld.findUnit( marineID )->isIdle() );
         }
         SW_EXPECT_TRUE( restored.minerals( player ) > mineralsAtSave + 20 );
     }
@@ -658,13 +658,13 @@ SW_TEST_CASE( RealTimeStrategyTest, PlayersSpendFromTheirOwnBorrowedWallets )
     const int32 red  = scene.addPlayer( 1, 100, 0, float3{ 40.0f, 0.0f, 40.0f } );
     scene._arrWallet[blue].add( "Deben", 500 );    // 같은 지갑에 다른 키트의 돈
     (void)scene.spawn( "base", blue, 4.5f, 4.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
-    const RTSUnitId barracksId = scene.spawn( "barracks", blue, 12.5f, 4.5f );
-    SW_ASSERT_TRUE( barracksId.isValid() );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
+    const RTSUnitID barracksID = scene.spawn( "barracks", blue, 12.5f, 4.5f );
+    SW_ASSERT_TRUE( barracksID.isValid() );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::Ok );
     SW_EXPECT_EQUAL( 0, scene.minerals( blue ) );
     SW_EXPECT_EQUAL( 100, scene.minerals( red ) );
-    SW_EXPECT_TRUE( scene._world.train( barracksId, hashed_string( "marine" ) ) == RTSCommandResult::NotEnoughMinerals );
+    SW_EXPECT_TRUE( scene._world.train( barracksID, hashed_string( "marine" ) ) == RTSCommandResult::NotEnoughMinerals );
     SW_EXPECT_EQUAL( int64{ 500 }, scene._arrWallet[blue].getBalance( "Deben" ) );
 }
 
@@ -689,15 +689,15 @@ SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
     Wallet          redWallet;
     const int32     blue    = world.addPlayer( 0, &blueWallet, float3{ 2.0f, 0.0f, 2.0f } );
     const int32     red     = world.addPlayer( 1, &redWallet, float3{ 28.0f, 0.0f, 28.0f } );
-    const RTSUnitId cannon  = world.spawnUnit( hashed_string( "cannon" ), blue, float3{ 10.0f, 0.0f, 10.0f } );
-    const RTSUnitId blockId = world.spawnUnit( hashed_string( "block" ), red, float3{ 14.0f, 0.0f, 10.0f } );
-    SW_ASSERT_TRUE( cannon.isValid() && blockId.isValid() );
+    const RTSUnitID cannon  = world.spawnUnit( hashed_string( "cannon" ), blue, float3{ 10.0f, 0.0f, 10.0f } );
+    const RTSUnitID blockID = world.spawnUnit( hashed_string( "block" ), red, float3{ 14.0f, 0.0f, 10.0f } );
+    SW_ASSERT_TRUE( cannon.isValid() && blockID.isValid() );
     const float32 seconds = 120.0f;
     for ( int32 frameIndex = 0; frameIndex < static_cast<int32>( seconds * 10.0f ); ++frameIndex )
     {
         world.update( 0.1f );
     }
-    const float32 shotCount = ( 100000.0f - world.findUnit( blockId )->_hp ) / 10.0f;
+    const float32 shotCount = ( 100000.0f - world.findUnit( blockID )->_hp ) / 10.0f;
     SW_EXPECT_NEAR_EQUAL( seconds / 1.2f, shotCount, 1.5f );
 }
 
@@ -718,13 +718,13 @@ SW_TEST_CASE( RealTimeStrategyTest, WorldBuildsOnlyOnUsableLandAndRepaintsTheGri
     SW_EXPECT_TRUE( scene._world.getGrid().isWalkable( 5, 20 ) );
 
     const int32     player = scene.addPlayer( 0, 1000, 0, float3{ 2.0f, 0.0f, 2.0f } );
-    const RTSUnitId worker = scene.spawn( "worker", player, 2.5f, 2.5f );
+    const RTSUnitID worker = scene.spawn( "worker", player, 2.5f, 2.5f );
     SW_ASSERT_TRUE( worker.isValid() );
     SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 9, 9 } ) == RTSCommandResult::InvalidPlacement );
     SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 4, 19 } ) == RTSCommandResult::InvalidPlacement ); // 도로 위
     SW_EXPECT_TRUE( scene._world.issueBuild( worker, hashed_string( "depot" ), int2{ 20, 4 } ) == RTSCommandResult::Ok );
 
-    const RTSUnitId depot = scene.spawn( "depot", player, 24.5f, 24.5f );
+    const RTSUnitID depot = scene.spawn( "depot", player, 24.5f, 24.5f );
     SW_ASSERT_TRUE( depot.isValid() );
     SW_EXPECT_TRUE( land.getOwnerName( 24, 24 ) == hashed_string( "RealTimeStrategy" ) );
     SW_EXPECT_TRUE( land.isBlockedFor( other, 25, 25 ) );

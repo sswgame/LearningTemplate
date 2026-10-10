@@ -38,31 +38,31 @@ namespace
             (void)_registry.registerValidator( &_fake );
         }
 
-        ReceiptValidationResult validate( const utf8* pPayload, uint64 accountId )
+        ReceiptValidationResult validate( const utf8* pPayload, uint64 accountID )
         {
-            [[maybe_unused]] const uint64   ticket = _registry.submitValidation( "fake", pPayload, accountId );
+            [[maybe_unused]] const uint64   ticket = _registry.submitValidation( "fake", pPayload, accountID );
             vector<ReceiptValidationResult> listResult;
             _registry.pollCompletions( listResult );
             SW_ASSERT( listResult.size() == 1 && listResult[0]._ticket == ticket );
             return listResult[0];
         }
 
-        EconomyResult redeem( const utf8* pPayload, uint64 accountId, bool bAcceptSandbox = false )
+        EconomyResult redeem( const utf8* pPayload, uint64 accountID, bool bAcceptSandbox = false )
         {
             EconomyRedeemInput input;
-            input._receipt        = validate( pPayload, accountId );
-            input._accountId      = accountId;
+            input._receipt        = validate( pPayload, accountID );
+            input._accountID      = accountID;
             input._nowMs          = 1000;
             input._bAcceptSandbox = bAcceptSandbox ? SW_TRUE : SW_FALSE;
             EconomyReply reply;
             return EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
         }
 
-        int64 readPaid( uint64 accountId )
+        int64 readPaid( uint64 accountID )
         {
             LedgerBalance balance;
             // 실패면 balance 가 0 으로 남아 호출한 단언이 틀린 값으로 잡는다
-            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountId ), "cur.gem_paid", balance );
+            (void)Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), "cur.gem_paid", balance );
             return balance._amount;
         }
     };
@@ -88,7 +88,7 @@ SW_TEST_CASE( ReceiptRedeemTest, FakeValidatorCompletesOnTheNextPoll )
     SW_ASSERT_EQUAL( listResult.size(), size_t( 1 ) );
     SW_EXPECT_EQUAL( listResult[0]._ticket, ticket );
     SW_EXPECT_TRUE( listResult[0]._status == ReceiptStatus::Valid );
-    SW_EXPECT_EQUAL( listResult[0]._transactionId, string( "tx1" ) );
+    SW_EXPECT_EQUAL( listResult[0]._transactionID, string( "tx1" ) );
     SW_EXPECT_TRUE( fixture._registry.hasDevelopmentValidator() );
 }
 

@@ -161,11 +161,11 @@ namespace sw
         SRPGBattlefield();
 
         void               initialize( const SRPGCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SRPGSettings& settings, uint32 seed );
-        [[nodiscard]] bool setTerrain( const int2& cell, const hashed_string& terrainId );
+        [[nodiscard]] bool setTerrain( const int2& cell, const hashed_string& terrainID );
         /** @brief 사각형(양 끝 포함)을 한 지형으로 칠합니다. 칠한 칸 수입니다. */
-        int32 fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainId );
+        int32 fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainID );
         /** @brief 유닛을 놓습니다. 모르는 기체 · 파일럿, 격자 밖, 이미 선 칸, 못 들어가는 지형이면 −1 입니다. */
-        int32 addUnit( const hashed_string& unitId, const hashed_string& pilotId, SRPGTeam team, const int2& cell, int32 pilotLevel = 1 );
+        int32 addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel = 1 );
         void  setCommander( int32 unitIndex, bool bCommander );
         /** @brief 1 턴을 엽니다(유닛을 다 놓은 뒤). */
         void beginBattle();
@@ -232,9 +232,9 @@ namespace sw
 
         // --- 개발 ---
         /** @brief 기체 레벨 조건을 채운 개발 갈래입니다. */
-        void collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const;
+        void collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitID ) const;
         /** @brief 다른 기체로 개발합니다(파일럿 · 위치 그대로, 기체 레벨 1, HP · EN · 탄 가득). 조건이 안 되면 false 입니다. */
-        [[nodiscard]] bool developUnit( int32 unitIndex, const hashed_string& targetUnitId );
+        [[nodiscard]] bool developUnit( int32 unitIndex, const hashed_string& targetUnitID );
 
         // --- 조회 ---
         static bool           isHostile( SRPGTeam lhs, SRPGTeam rhs ) { return lhs != rhs; }

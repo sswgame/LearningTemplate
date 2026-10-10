@@ -73,9 +73,9 @@ namespace sw
         return &_catalog.getAt( static_cast<size_t>( index - 1 ) );
     }
 
-    VoxelBlockIndex VoxelBlockCatalog::findBlockIndex( const hashed_string& blockId ) const
+    VoxelBlockIndex VoxelBlockCatalog::findBlockIndex( const hashed_string& blockID ) const
     {
-        const int32 index = _catalog.findIndex( blockId );
+        const int32 index = _catalog.findIndex( blockID );
         return index >= 0 ? static_cast<VoxelBlockIndex>( index + 1 ) : kVoxelAirBlock;
     }
 
@@ -113,13 +113,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Block" ); node; node = node.findNextSibling( "Block" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             VoxelBlockDef block;
-            block._id                                                      = hashed_string( pId );
+            block._id                                                      = hashed_string( pID );
             const utf8* pName                                              = node.findAttribute( "name" );
-            block._name                                                    = pName != nullptr ? pName : pId;
+            block._name                                                    = pName != nullptr ? pName : pID;
             const int32 baseTile                                           = node.getAttributeInt( "tile", 0 );
             const int32 sideTile                                           = node.getAttributeInt( "side", baseTile );
             block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveX )] = sideTile;

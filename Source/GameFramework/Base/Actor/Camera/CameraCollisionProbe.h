@@ -70,13 +70,13 @@ namespace sw
     class SW_GF_API PhysicsWorldCameraProbe final : public ICameraCollisionProbe
     {
     public:
-        PhysicsWorldCameraProbe( const PhysicsWorld& world, uint8 layer, uint64 ignoredObjectId );
+        PhysicsWorldCameraProbe( const PhysicsWorld& world, uint8 layer, uint64 ignoredObjectID );
 
         bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const override;
 
     private:
         const PhysicsWorld* _pWorld;
-        uint64              _ignoredObjectId;
+        uint64              _ignoredObjectID;
         uint8               _layer;
     };
 } // namespace sw
@@ -91,12 +91,12 @@ namespace sw
     class SW_GF_API SceneCameraProbe final : public ICameraCollisionProbe
     {
     public:
-        SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectId );
+        SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectID );
 
         bool sweepSphere( const float3& from, const float3& to, float32 radius, float32& outDistance ) const override;
 
     private:
         const GameObjectManager& _manager;
-        uint64                   _ignoredObjectId;
+        uint64                   _ignoredObjectID;
     };
 } // namespace sw

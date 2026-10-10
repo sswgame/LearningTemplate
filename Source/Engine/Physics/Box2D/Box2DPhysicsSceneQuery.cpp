@@ -32,7 +32,7 @@ namespace sw
             {
                 const Box2DPhysicsScene*  _pScene{ nullptr };
                 const PhysicsQueryFilter* _pFilter{ nullptr };
-                b2ShapeId                 _shapeId{};
+                b2ShapeId                 _shapeID{};
                 b2Vec2                    _point{};
                 b2Vec2                    _normal{};
                 float32                   _fraction{ 1.0f };
@@ -52,22 +52,22 @@ namespace sw
                 int32             _planeCount{ 0 };
             };
 
-            static bool acceptsShape( const Box2DPhysicsScene& scene, b2ShapeId shapeId, const PhysicsQueryFilter& filter )
+            static bool acceptsShape( const Box2DPhysicsScene& scene, b2ShapeId shapeID, const PhysicsQueryFilter& filter )
             {
-                if ( filter._bIncludeTriggers == false && b2Shape_IsSensor( shapeId ) )
+                if ( filter._bIncludeTriggers == false && b2Shape_IsSensor( shapeID ) )
                     return false;
-                const PhysicsBodyHandle body = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeId ) ) );
+                const PhysicsBodyHandle body = Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) );
                 if ( body == filter._ignoreBody )
                     return false;
                 return filter._ignoreUserData == 0 || scene.getBodyUserData( body ) != filter._ignoreUserData;
             }
 
-            static float32 castResult( b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
+            static float32 castResult( b2ShapeId shapeID, b2Vec2 point, b2Vec2 normal, float32 fraction, void* pContext )
             {
                 CastContext& context = *static_cast<CastContext*>( pContext );
-                if ( acceptsShape( *context._pScene, shapeId, *context._pFilter ) == false )
+                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) == false )
                     return -1.0f; // 이 셰이프는 없는 것으로 친다
-                context._shapeId  = shapeId;
+                context._shapeID  = shapeID;
                 context._point    = point;
                 context._normal   = normal;
                 context._fraction = fraction;
@@ -75,18 +75,18 @@ namespace sw
                 return fraction; // 더 가까운 것만 찾는다
             }
 
-            static bool overlapResult( b2ShapeId shapeId, void* pContext )
+            static bool overlapResult( b2ShapeId shapeID, void* pContext )
             {
                 OverlapContext& context = *static_cast<OverlapContext*>( pContext );
-                if ( acceptsShape( *context._pScene, shapeId, *context._pFilter ) )
-                    context._pListBody->push_back( Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeId ) ) ) );
+                if ( acceptsShape( *context._pScene, shapeID, *context._pFilter ) )
+                    context._pListBody->push_back( Box2DUtil::fromUserData( b2Body_GetUserData( b2Shape_GetBody( shapeID ) ) ) );
                 return true;
             }
 
-            static bool collectPlane( b2ShapeId shapeId, const b2PlaneResult* pPlane, void* pContext )
+            static bool collectPlane( b2ShapeId shapeID, const b2PlaneResult* pPlane, void* pContext )
             {
                 MoverContext& context = *static_cast<MoverContext*>( pContext );
-                if ( pPlane->hit == false || b2Shape_IsSensor( shapeId ) || context._planeCount >= kMaxMoverPlaneCount )
+                if ( pPlane->hit == false || b2Shape_IsSensor( shapeID ) || context._planeCount >= kMaxMoverPlaneCount )
                     return true;
                 context._pPlane[context._planeCount] = b2CollisionPlane{ pPlane->plane, FLT_MAX, 0.0f, true };
                 ++context._planeCount;
@@ -170,40 +170,40 @@ namespace sw
             SW_LOG_ERROR( "createJoint: a body handle is stale" );
             return PhysicsJointHandle{};
         }
-        const b2BodyId bodyIdA           = pRecordA->_bodyId;
-        const b2BodyId bodyIdB           = pRecordB != nullptr ? pRecordB->_bodyId : _groundBodyId;
+        const b2BodyId bodyIDA           = pRecordA->_bodyID;
+        const b2BodyId bodyIDB           = pRecordB != nullptr ? pRecordB->_bodyID : _groundBodyID;
         const b2Vec2   anchor            = Box2DUtil::toBox2D( desc._anchor );
         const bool     bCollideConnected = desc._bDisableCollision == false;
-        const float32  referenceAngle    = b2Rot_GetAngle( b2InvMulRot( b2Body_GetRotation( bodyIdA ), b2Body_GetRotation( bodyIdB ) ) );
+        const float32  referenceAngle    = b2Rot_GetAngle( b2InvMulRot( b2Body_GetRotation( bodyIDA ), b2Body_GetRotation( bodyIDB ) ) );
 
-        b2JointId jointId = b2_nullJointId;
+        b2JointId jointID = b2_nullJointId;
         switch ( desc._type )
         {
             case PhysicsJointType::Fixed:
             {
                 b2WeldJointDef jointDef   = b2DefaultWeldJointDef();
-                jointDef.bodyIdA          = bodyIdA;
-                jointDef.bodyIdB          = bodyIdB;
-                jointDef.localAnchorA     = b2Body_GetLocalPoint( bodyIdA, anchor );
-                jointDef.localAnchorB     = b2Body_GetLocalPoint( bodyIdB, anchor );
+                jointDef.bodyIdA          = bodyIDA;
+                jointDef.bodyIdB          = bodyIDB;
+                jointDef.localAnchorA     = b2Body_GetLocalPoint( bodyIDA, anchor );
+                jointDef.localAnchorB     = b2Body_GetLocalPoint( bodyIDB, anchor );
                 jointDef.referenceAngle   = referenceAngle;
                 jointDef.collideConnected = bCollideConnected;
-                jointId                   = b2CreateWeldJoint( _worldId, &jointDef );
+                jointID                   = b2CreateWeldJoint( _worldID, &jointDef );
                 break;
             }
             case PhysicsJointType::Hinge:
             {
                 b2RevoluteJointDef jointDef = b2DefaultRevoluteJointDef();
-                jointDef.bodyIdA            = bodyIdA;
-                jointDef.bodyIdB            = bodyIdB;
-                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIdA, anchor );
-                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIdB, anchor );
+                jointDef.bodyIdA            = bodyIDA;
+                jointDef.bodyIdB            = bodyIDB;
+                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
+                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchor );
                 jointDef.referenceAngle     = referenceAngle;
                 jointDef.enableLimit        = desc._bLimitsEnabled;
                 jointDef.lowerAngle         = desc._minLimit;
                 jointDef.upperAngle         = desc._maxLimit;
                 jointDef.collideConnected   = bCollideConnected;
-                jointId                     = b2CreateRevoluteJoint( _worldId, &jointDef );
+                jointID                     = b2CreateRevoluteJoint( _worldID, &jointDef );
                 break;
             }
             case PhysicsJointType::Cone:
@@ -215,10 +215,10 @@ namespace sw
             {
                 const b2Vec2       anchorB  = Box2DUtil::toBox2D( desc._anchorB );
                 b2DistanceJointDef jointDef = b2DefaultDistanceJointDef();
-                jointDef.bodyIdA            = bodyIdA;
-                jointDef.bodyIdB            = bodyIdB;
-                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIdA, anchor );
-                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIdB, anchorB );
+                jointDef.bodyIdA            = bodyIDA;
+                jointDef.bodyIdB            = bodyIDB;
+                jointDef.localAnchorA       = b2Body_GetLocalPoint( bodyIDA, anchor );
+                jointDef.localAnchorB       = b2Body_GetLocalPoint( bodyIDB, anchorB );
                 jointDef.length             = b2Distance( anchor, anchorB );
                 jointDef.enableLimit        = desc._bLimitsEnabled;
                 jointDef.minLength          = desc._minLimit;
@@ -230,30 +230,30 @@ namespace sw
                     jointDef.hertz        = 0.0f;
                 }
                 jointDef.collideConnected = bCollideConnected;
-                jointId                   = b2CreateDistanceJoint( _worldId, &jointDef );
+                jointID                   = b2CreateDistanceJoint( _worldID, &jointDef );
                 break;
             }
             case PhysicsJointType::Slider:
             {
                 b2PrismaticJointDef jointDef = b2DefaultPrismaticJointDef();
-                jointDef.bodyIdA             = bodyIdA;
-                jointDef.bodyIdB             = bodyIdB;
-                jointDef.localAnchorA        = b2Body_GetLocalPoint( bodyIdA, anchor );
-                jointDef.localAnchorB        = b2Body_GetLocalPoint( bodyIdB, anchor );
-                jointDef.localAxisA          = b2Body_GetLocalVector( bodyIdA, b2Normalize( Box2DUtil::toBox2D( desc._axis ) ) );
+                jointDef.bodyIdA             = bodyIDA;
+                jointDef.bodyIdB             = bodyIDB;
+                jointDef.localAnchorA        = b2Body_GetLocalPoint( bodyIDA, anchor );
+                jointDef.localAnchorB        = b2Body_GetLocalPoint( bodyIDB, anchor );
+                jointDef.localAxisA          = b2Body_GetLocalVector( bodyIDA, b2Normalize( Box2DUtil::toBox2D( desc._axis ) ) );
                 jointDef.referenceAngle      = referenceAngle;
                 jointDef.enableLimit         = desc._bLimitsEnabled;
                 jointDef.lowerTranslation    = desc._minLimit;
                 jointDef.upperTranslation    = desc._maxLimit;
                 jointDef.collideConnected    = bCollideConnected;
-                jointId                      = b2CreatePrismaticJoint( _worldId, &jointDef );
+                jointID                      = b2CreatePrismaticJoint( _worldID, &jointDef );
                 break;
             }
         }
-        if ( B2_IS_NULL( jointId ) )
+        if ( B2_IS_NULL( jointID ) )
             return PhysicsJointHandle{};
         JointRecord record;
-        record._jointId                 = jointId;
+        record._jointID                 = jointID;
         record._bodyA                   = desc._bodyA;
         record._bodyB                   = desc._bodyB;
         record._type                    = desc._type;
@@ -267,10 +267,10 @@ namespace sw
         JointRecord record;
         if ( _joints.take( joint.getSlot(), record ) == false )
             return;
-        if ( b2Joint_IsValid( record._jointId ) )
+        if ( b2Joint_IsValid( record._jointID ) )
         {
-            b2Joint_WakeBodies( record._jointId );
-            b2DestroyJoint( record._jointId );
+            b2Joint_WakeBodies( record._jointID );
+            b2DestroyJoint( record._jointID );
         }
     }
 
@@ -282,9 +282,9 @@ namespace sw
     void Box2DPhysicsScene::setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor )
     {
         const JointRecord* pRecord = _joints.get( joint.getSlot() );
-        if ( pRecord == nullptr || b2Joint_IsValid( pRecord->_jointId ) == false )
+        if ( pRecord == nullptr || b2Joint_IsValid( pRecord->_jointID ) == false )
             return;
-        const b2JointId jointId   = pRecord->_jointId;
+        const b2JointId jointID   = pRecord->_jointID;
         const bool      bOff      = motor._mode == PhysicsMotorMode::Off || motor._maxForce <= 0.0f;
         const bool      bVelocity = bOff == false && motor._mode == PhysicsMotorMode::Velocity;
         const bool      bPosition = bOff == false && motor._mode == PhysicsMotorMode::Position;
@@ -292,33 +292,33 @@ namespace sw
         {
             case PhysicsJointType::Hinge:
             {
-                b2RevoluteJoint_EnableMotor( jointId, bVelocity );
-                b2RevoluteJoint_SetMotorSpeed( jointId, bVelocity ? motor._target : 0.0f );
-                b2RevoluteJoint_SetMaxMotorTorque( jointId, motor._maxForce );
-                b2RevoluteJoint_EnableSpring( jointId, bPosition );
-                b2RevoluteJoint_SetSpringHertz( jointId, Box2DPhysicsSceneQueryInternal::kPositionMotorHertz );
-                b2RevoluteJoint_SetSpringDampingRatio( jointId, Box2DPhysicsSceneQueryInternal::kPositionMotorDampingRatio );
+                b2RevoluteJoint_EnableMotor( jointID, bVelocity );
+                b2RevoluteJoint_SetMotorSpeed( jointID, bVelocity ? motor._target : 0.0f );
+                b2RevoluteJoint_SetMaxMotorTorque( jointID, motor._maxForce );
+                b2RevoluteJoint_EnableSpring( jointID, bPosition );
+                b2RevoluteJoint_SetSpringHertz( jointID, Box2DPhysicsSceneQueryInternal::kPositionMotorHertz );
+                b2RevoluteJoint_SetSpringDampingRatio( jointID, Box2DPhysicsSceneQueryInternal::kPositionMotorDampingRatio );
                 if ( bPosition )
-                    b2RevoluteJoint_SetTargetAngle( jointId, motor._target );
+                    b2RevoluteJoint_SetTargetAngle( jointID, motor._target );
                 break;
             }
             case PhysicsJointType::Slider:
             {
-                b2PrismaticJoint_EnableMotor( jointId, bVelocity );
-                b2PrismaticJoint_SetMotorSpeed( jointId, bVelocity ? motor._target : 0.0f );
-                b2PrismaticJoint_SetMaxMotorForce( jointId, motor._maxForce );
-                b2PrismaticJoint_EnableSpring( jointId, bPosition );
-                b2PrismaticJoint_SetSpringHertz( jointId, Box2DPhysicsSceneQueryInternal::kPositionMotorHertz );
-                b2PrismaticJoint_SetSpringDampingRatio( jointId, Box2DPhysicsSceneQueryInternal::kPositionMotorDampingRatio );
+                b2PrismaticJoint_EnableMotor( jointID, bVelocity );
+                b2PrismaticJoint_SetMotorSpeed( jointID, bVelocity ? motor._target : 0.0f );
+                b2PrismaticJoint_SetMaxMotorForce( jointID, motor._maxForce );
+                b2PrismaticJoint_EnableSpring( jointID, bPosition );
+                b2PrismaticJoint_SetSpringHertz( jointID, Box2DPhysicsSceneQueryInternal::kPositionMotorHertz );
+                b2PrismaticJoint_SetSpringDampingRatio( jointID, Box2DPhysicsSceneQueryInternal::kPositionMotorDampingRatio );
                 if ( bPosition )
-                    b2PrismaticJoint_SetTargetTranslation( jointId, motor._target );
+                    b2PrismaticJoint_SetTargetTranslation( jointID, motor._target );
                 break;
             }
             case PhysicsJointType::Distance:
             {
-                b2DistanceJoint_EnableMotor( jointId, bVelocity );
-                b2DistanceJoint_SetMotorSpeed( jointId, bVelocity ? motor._target : 0.0f );
-                b2DistanceJoint_SetMaxMotorForce( jointId, motor._maxForce );
+                b2DistanceJoint_EnableMotor( jointID, bVelocity );
+                b2DistanceJoint_SetMotorSpeed( jointID, bVelocity ? motor._target : 0.0f );
+                b2DistanceJoint_SetMaxMotorForce( jointID, motor._maxForce );
                 break;
             }
             case PhysicsJointType::Fixed:
@@ -327,22 +327,22 @@ namespace sw
                 return;
             }
         }
-        b2Joint_WakeBodies( jointId );
+        b2Joint_WakeBodies( jointID );
     }
 
     float32 Box2DPhysicsScene::getJointPosition( PhysicsJointHandle joint ) const
     {
         const JointRecord* pRecord = _joints.get( joint.getSlot() );
-        if ( pRecord == nullptr || b2Joint_IsValid( pRecord->_jointId ) == false )
+        if ( pRecord == nullptr || b2Joint_IsValid( pRecord->_jointID ) == false )
             return 0.0f;
         switch ( pRecord->_type )
         {
             case PhysicsJointType::Hinge:
-                return b2RevoluteJoint_GetAngle( pRecord->_jointId );
+                return b2RevoluteJoint_GetAngle( pRecord->_jointID );
             case PhysicsJointType::Slider:
-                return b2PrismaticJoint_GetTranslation( pRecord->_jointId );
+                return b2PrismaticJoint_GetTranslation( pRecord->_jointID );
             case PhysicsJointType::Distance:
-                return b2DistanceJoint_GetCurrentLength( pRecord->_jointId );
+                return b2DistanceJoint_GetCurrentLength( pRecord->_jointID );
             case PhysicsJointType::Fixed:
             case PhysicsJointType::Cone:
                 return 0.0f;
@@ -398,9 +398,9 @@ namespace sw
             {
                 const b2Capsule mover = makeMoverCapsule( *pRecord, position );
                 context._planeCount   = 0;
-                b2World_CollideMover( _worldId, &mover, filter, &Box2DPhysicsSceneQueryInternal::collectPlane, &context );
+                b2World_CollideMover( _worldID, &mover, filter, &Box2DPhysicsSceneQueryInternal::collectPlane, &context );
                 const b2PlaneSolverResult result   = b2SolvePlanes( Box2DUtil::toBox2D( target - position ), arrPlane, context._planeCount );
-                const float32             fraction = b2World_CastMover( _worldId, &mover, result.translation, filter );
+                const float32             fraction = b2World_CastMover( _worldID, &mover, result.translation, filter );
                 const b2Vec2              delta    = b2MulSV( fraction, result.translation );
                 position                           = position + Box2DUtil::toEngine( delta );
                 if ( b2LengthSquared( delta ) < Box2DPhysicsSceneQueryInternal::kMoverTolerance * Box2DPhysicsSceneQueryInternal::kMoverTolerance )
@@ -410,7 +410,7 @@ namespace sw
         // 디딤: 캡슐을 조금 내려 걸리는 면 가운데 걸을 수 있는 기울기가 있는가.
         const b2Capsule probe = makeMoverCapsule( *pRecord, position - float2{ 0.0f, Box2DPhysicsSceneQueryInternal::kGroundProbeDistance } );
         context._planeCount   = 0;
-        b2World_CollideMover( _worldId, &probe, filter, &Box2DPhysicsSceneQueryInternal::collectPlane, &context );
+        b2World_CollideMover( _worldID, &probe, filter, &Box2DPhysicsSceneQueryInternal::collectPlane, &context );
         const float32 minGroundNormalY = ::cosf( pRecord->_desc._maxSlopeAngle );
         state._bGrounded               = false;
         state._groundNormal            = float2{};
@@ -478,17 +478,17 @@ namespace sw
         Box2DPhysicsSceneQueryInternal::CastContext context;
         context._pScene  = this;
         context._pFilter = &filter;
-        b2World_CastRay( _worldId, Box2DUtil::toBox2D( origin ), Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneQueryInternal::castResult,
+        b2World_CastRay( _worldID, Box2DUtil::toBox2D( origin ), Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneQueryInternal::castResult,
                          &context );
         if ( context._bHit == false )
             return false;
-        outHit._body     = findHandleOfShape( context._shapeId );
+        outHit._body     = findHandleOfShape( context._shapeID );
         outHit._userData = getBodyUserData( outHit._body );
         outHit._point    = Box2DUtil::toEngine( context._point );
         outHit._normal   = Box2DUtil::toEngine( context._normal );
         outHit._fraction = context._fraction;
         outHit._distance = context._fraction * maxDistance;
-        outHit._material = findMaterialName( b2Shape_GetMaterial( context._shapeId ) );
+        outHit._material = findMaterialName( b2Shape_GetMaterial( context._shapeID ) );
         return true;
     }
 
@@ -507,10 +507,10 @@ namespace sw
         Box2DPhysicsSceneQueryInternal::CastContext context;
         context._pScene  = this;
         context._pFilter = &filter;
-        b2World_CastShape( _worldId, &proxy, Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneQueryInternal::castResult, &context );
+        b2World_CastShape( _worldID, &proxy, Box2DUtil::toBox2D( direction * maxDistance ), queryFilter, &Box2DPhysicsSceneQueryInternal::castResult, &context );
         if ( context._bHit == false )
             return false;
-        outHit._body     = findHandleOfShape( context._shapeId );
+        outHit._body     = findHandleOfShape( context._shapeID );
         outHit._userData = getBodyUserData( outHit._body );
         outHit._point    = Box2DUtil::toEngine( context._point );
         outHit._normal   = Box2DUtil::toEngine( context._normal );
@@ -530,7 +530,7 @@ namespace sw
         queryFilter.maskBits      = static_cast<uint64_t>( filter._layerMask );
         vector<PhysicsBodyHandle>                      listFound;
         Box2DPhysicsSceneQueryInternal::OverlapContext context{ this, &filter, &listFound };
-        b2World_OverlapShape( _worldId, &proxy, queryFilter, &Box2DPhysicsSceneQueryInternal::overlapResult, &context );
+        b2World_OverlapShape( _worldID, &proxy, queryFilter, &Box2DPhysicsSceneQueryInternal::overlapResult, &context );
         std::sort( listFound.begin(), listFound.end() );
         listFound.erase( std::unique( listFound.begin(), listFound.end() ), listFound.end() );
         outListBody.insert( outListBody.end(), listFound.begin(), listFound.end() );

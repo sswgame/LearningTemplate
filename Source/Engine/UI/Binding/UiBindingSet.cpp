@@ -233,7 +233,7 @@ namespace sw
         binding._bDirty     = false;
         if ( UiBindingExpression::parse( desc._expression, binding._expression, outError ) == false )
             return false;
-        const Widget* pWidget = _pScreen->getTree().findWidgetById( desc._widget );
+        const Widget* pWidget = _pScreen->getTree().findWidgetByID( desc._widget );
         if ( pWidget == nullptr || pWidget->getTypeInfo() == nullptr )
         {
             outError = "the widget is not in the screen";
@@ -505,7 +505,7 @@ namespace sw
 
     bool UiBindingSet::apply( ActiveBinding& binding, const UiBindingContext& context )
     {
-        Widget*    pWidget  = _pScreen->getTree().findWidgetById( binding._widget );
+        Widget*    pWidget  = _pScreen->getTree().findWidgetByID( binding._widget );
         const bool bSetting = binding._expression._source == UiBindingSource::Setting;
         if ( pWidget == nullptr || ( bSetting == false && _pViewModel == nullptr ) )
             return false;
@@ -539,7 +539,7 @@ namespace sw
             return;
         for ( ActiveBinding& binding : _listBinding )
         {
-            const bool bMatches = binding._widget == widget.getId() && binding._expression._mode == UiBindingMode::TwoWay &&
+            const bool bMatches = binding._widget == widget.getID() && binding._expression._mode == UiBindingMode::TwoWay &&
                                   binding._target.getRootProperty()._name == propertyName;
             if ( bMatches == false )
                 continue;

@@ -130,11 +130,11 @@ SW_TEST_CASE( SceneAsyncTest, AsyncRequestCompletes )
     doc._name = "AsyncTown";
     sw::SceneDocument::SceneObjectNode entA{};
     entA._name   = "PlayerSpawn";
-    entA._fileId = 1;
+    entA._fileID = 1;
     doc._listSceneObjectNode.push_back( std::move( entA ) );
     sw::SceneDocument::SceneObjectNode entB{};
     entB._name   = "Npc";
-    entB._fileId = 2;
+    entB._fileID = 2;
     doc._listSceneObjectNode.push_back( std::move( entB ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -170,7 +170,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
     doc._name = "Dungeon";
     sw::SceneDocument::SceneObjectNode decoy{};
     decoy._name   = "MusicPlayer";
-    decoy._fileId = 3;
+    decoy._fileID = 3;
     doc._listSceneObjectNode.push_back( std::move( decoy ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -227,7 +227,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
     docSetup._name = "DescOnly";
     sw::SceneDocument::SceneObjectNode entA{};
     entA._name   = "A";
-    entA._fileId = 4;
+    entA._fileID = 4;
     docSetup._listSceneObjectNode.push_back( std::move( entA ) );
     SW_ASSERT_TRUE( docSetup.saveBinary( binPath ) );
 
@@ -249,14 +249,14 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     originalDoc._name = "BinaryTestScene";
     sw::SceneDocument::SceneObjectNode entA{};
     entA._name        = "Hero";
-    entA._fileId      = 5;
+    entA._fileID      = 5;
     entA._prefab      = "game/empty/prefabs/hero.prefab";
     entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
     originalDoc._listSceneObjectNode.push_back( std::move( entA ) );
 
     sw::SceneDocument::SceneObjectNode entB{};
     entB._name   = "Monster";
-    entB._fileId = 6;
+    entB._fileID = 6;
     entB._prefab = "game/empty/prefabs/monster.prefab";
     originalDoc._listSceneObjectNode.push_back( std::move( entB ) );
 
@@ -299,7 +299,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     docA._name = "TownA";
     sw::SceneDocument::SceneObjectNode entA{};
     entA._name   = "A";
-    entA._fileId = 7;
+    entA._fileID = 7;
     docA._listSceneObjectNode.push_back( std::move( entA ) );
     SW_ASSERT_TRUE( docA.saveBinary( binA ) );
 
@@ -307,11 +307,11 @@ SW_TEST_CASE( SceneAsyncTest, AsyncWarpSequenceQueuesLatest )
     docB._name = "TownB";
     sw::SceneDocument::SceneObjectNode entB1{};
     entB1._name   = "B1";
-    entB1._fileId = 8;
+    entB1._fileID = 8;
     docB._listSceneObjectNode.push_back( std::move( entB1 ) );
     sw::SceneDocument::SceneObjectNode entB2{};
     entB2._name   = "B2";
-    entB2._fileId = 9;
+    entB2._fileID = 9;
     docB._listSceneObjectNode.push_back( std::move( entB2 ) );
     SW_ASSERT_TRUE( docB.saveBinary( binB ) );
 
@@ -347,7 +347,7 @@ SW_TEST_CASE( SceneAsyncTest, AsyncSwapUnloadsPreviousActive )
     doc._name = "Replaced";
     sw::SceneDocument::SceneObjectNode ent{};
     ent._name   = "Only";
-    ent._fileId = 10;
+    ent._fileID = 10;
     doc._listSceneObjectNode.push_back( std::move( ent ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -389,7 +389,7 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     doc1._name = "SceneFirst";
     sw::SceneDocument::SceneObjectNode ent1{};
     ent1._name   = "E1";
-    ent1._fileId = 11;
+    ent1._fileID = 11;
     doc1._listSceneObjectNode.push_back( std::move( ent1 ) );
     SW_ASSERT_TRUE( doc1.saveBinary( binPath1 ) );
 
@@ -397,7 +397,7 @@ SW_TEST_CASE( SceneAsyncTest, SceneAsyncLoadCancellationAndRecovery )
     doc2._name = "SceneSecond";
     sw::SceneDocument::SceneObjectNode ent2{};
     ent2._name   = "E2";
-    ent2._fileId = 12;
+    ent2._fileID = 12;
     doc2._listSceneObjectNode.push_back( std::move( ent2 ) );
     SW_ASSERT_TRUE( doc2.saveBinary( binPath2 ) );
 
@@ -440,7 +440,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
     doc._name = "FutureTown";
     sw::SceneDocument::SceneObjectNode ent{};
     ent._name   = "Hero";
-    ent._fileId = 13;
+    ent._fileID = 13;
     doc._listSceneObjectNode.push_back( std::move( ent ) );
     SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -495,7 +495,7 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         doc._name = name;
         sw::SceneDocument::SceneObjectNode ent{};
         ent._name   = "E";
-        ent._fileId = 14;
+        ent._fileID = 14;
         doc._listSceneObjectNode.push_back( std::move( ent ) );
         SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
@@ -562,7 +562,7 @@ SW_TEST_CASE( SceneAsyncTest, QueuedRequestGetsItsOwnScene )
         doc._name = nameAndPath.first;
         sw::SceneDocument::SceneObjectNode node{};
         node._name   = "Root";
-        node._fileId = 15;
+        node._fileID = 15;
         doc._listSceneObjectNode.push_back( std::move( node ) );
         SW_ASSERT_TRUE( doc.saveBinary( *nameAndPath.second ) );
     }

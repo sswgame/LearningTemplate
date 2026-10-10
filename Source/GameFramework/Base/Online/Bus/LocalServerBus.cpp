@@ -14,28 +14,28 @@ namespace sw
     LocalServerBusHub::LocalServerBusHub()
         : _mutex{}
         , _mapInbox{}
-        , _nextInboxId{ 1 }
+        , _nextInboxID{ 1 }
     {
     }
 
     uint64 LocalServerBusHub::registerInbox()
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const uint64            inboxId = _nextInboxId++;
-        _mapInbox[inboxId]              = Inbox{};
-        return inboxId;
+        const uint64            inboxID = _nextInboxID++;
+        _mapInbox[inboxID]              = Inbox{};
+        return inboxID;
     }
 
-    void LocalServerBusHub::unregisterInbox( uint64 inboxId )
+    void LocalServerBusHub::unregisterInbox( uint64 inboxID )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapInbox.erase( inboxId );
+        _mapInbox.erase( inboxID );
     }
 
-    void LocalServerBusHub::subscribe( uint64 inboxId, string_view topic )
+    void LocalServerBusHub::subscribe( uint64 inboxID, string_view topic )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
@@ -43,10 +43,10 @@ namespace sw
             listTopic.push_back( string{ topic } );
     }
 
-    void LocalServerBusHub::unsubscribe( uint64 inboxId, string_view topic )
+    void LocalServerBusHub::unsubscribe( uint64 inboxID, string_view topic )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return;
         vector<string>& listTopic = inboxIt->second._listTopic;
@@ -57,9 +57,9 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         int32                   receiverCount = 0;
-        for ( auto& [inboxId, inbox] : _mapInbox )
+        for ( auto& [inboxID, inbox] : _mapInbox )
         {
-            (void)inboxId;
+            (void)inboxID;
             if ( std::find( inbox._listTopic.begin(), inbox._listTopic.end(), message._topic ) == inbox._listTopic.end() )
                 continue;
             inbox._listMessage.push_back( message );
@@ -68,10 +68,10 @@ namespace sw
         return receiverCount;
     }
 
-    int32 LocalServerBusHub::takeMessages( uint64 inboxId, vector<ServerBusMessage>& outListMessage )
+    int32 LocalServerBusHub::takeMessages( uint64 inboxID, vector<ServerBusMessage>& outListMessage )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const auto              inboxIt = _mapInbox.find( inboxId );
+        const auto              inboxIt = _mapInbox.find( inboxID );
         if ( inboxIt == _mapInbox.end() )
             return 0;
         vector<ServerBusMessage>& listMessage = inboxIt->second._listMessage;
@@ -87,15 +87,15 @@ namespace sw
 
 namespace sw
 {
-    LocalServerBus::LocalServerBus( LocalServerBusHub* pHub, uint64 serverId )
+    LocalServerBus::LocalServerBus( LocalServerBusHub* pHub, uint64 serverID )
         : _pHub{ pHub }
-        , _serverId{ serverId }
-        , _inboxId{ pHub->registerInbox() }
+        , _serverID{ serverID }
+        , _inboxID{ pHub->registerInbox() }
         , _nextSequence{ 1 }
     {
     }
 
-    LocalServerBus::~LocalServerBus() { _pHub->unregisterInbox( _inboxId ); }
+    LocalServerBus::~LocalServerBus() { _pHub->unregisterInbox( _inboxID ); }
 
     void LocalServerBus::publish( string_view topic, const uint8* pData, int32 size )
     {
@@ -108,7 +108,7 @@ namespace sw
         ServerBusMessage message;
         message._bytes.assign( pData, pData + size );
         message._topic          = string{ topic };
-        message._originServerId = _serverId;
+        message._originServerID = _serverID;
         message._sequence       = _nextSequence++;
         (void)_pHub->deliver( message );
     }
@@ -120,10 +120,10 @@ namespace sw
             SW_LOG_WARNING( "Ignored a bus subscription to an invalid topic '%#'", topic );
             return;
         }
-        _pHub->subscribe( _inboxId, topic );
+        _pHub->subscribe( _inboxID, topic );
     }
 
-    void LocalServerBus::unsubscribe( string_view topic ) { _pHub->unsubscribe( _inboxId, topic ); }
+    void LocalServerBus::unsubscribe( string_view topic ) { _pHub->unsubscribe( _inboxID, topic ); }
 
-    int32 LocalServerBus::pollMessages( vector<ServerBusMessage>& outListMessage ) { return _pHub->takeMessages( _inboxId, outListMessage ); }
+    int32 LocalServerBus::pollMessages( vector<ServerBusMessage>& outListMessage ) { return _pHub->takeMessages( _inboxID, outListMessage ); }
 } // namespace sw

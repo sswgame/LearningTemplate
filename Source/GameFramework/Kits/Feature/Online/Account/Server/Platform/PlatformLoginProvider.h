@@ -21,7 +21,7 @@ namespace sw
     {
         string _subject{};     ///< 성공 — 제공자 안의 주체 id(`sub`)
         string _displayName{}; ///< 성공 — 제공자가 준 표시 이름(없으면 빈 글, 계정 이름의 힌트일 뿐)
-        uint64 _verificationId{ 0 };
+        uint64 _verificationID{ 0 };
         uint8  _bRejected{ SW_FALSE };    ///< 표가 틀렸다(서명 · 만료 · 대상 · 401)
         uint8  _bUnavailable{ SW_FALSE }; ///< 제공자에 닿지 못했다(다시 시도)
 

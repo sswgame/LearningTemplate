@@ -63,7 +63,7 @@ namespace sw
         /// @brief GPUScene 머티리얼 데이터 구조버퍼(g_SwMaterials)입니다. 인스턴스의 materialIndex 로 읽습니다.
         inline constexpr uint32 kMaterialBuffer = SW_SLOT_MATERIAL_BUFFER;
         /**
-         * @brief GPU 컬링이 만든 가시 인스턴스 ID 목록(g_SwVisibleInstanceIds)입니다.
+         * @brief GPU 컬링이 만든 가시 인스턴스 ID 목록(g_SwVisibleInstanceIDs)입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스 번호를 배치 구간에 압축해 넣고, 정점 셰이더가 이 순서로
          *          읽습니다. 언리얼 FInstanceCullingContext 의 InstanceIdBuffer 와 같은 자리입니다.
          */
@@ -162,7 +162,7 @@ namespace sw
         } // namespace vk
 
         /**
-         * @brief DX11 정적 샘플러 세트 s9..s15 입니다. 슬롯 결합 샘플러 뒤에 놓입니다. 디바이스가 초기화 때 걸고 셰이더가 samplerId 로 고릅니다.
+         * @brief DX11 정적 샘플러 세트 s9..s15 입니다. 슬롯 결합 샘플러 뒤에 놓입니다. 디바이스가 초기화 때 걸고 셰이더가 samplerID 로 고릅니다.
          * @details DX11 이 SW_SAMPLER_* 를 존중하는 유일한 길입니다(SM5.0 은 샘플러 배열 동적 인덱싱이 없어 리터럴 분기). GL 은 없습니다.
          */
         namespace dx11
@@ -226,7 +226,7 @@ namespace sw
             inline constexpr const utf8* kSamplerSlot        = "g_SwSampler";            ///< + 0..6. DX12 정적 샘플러 s#(배열은 정적 샘플러로 못 채움)
             inline constexpr const utf8* kShadowSampler      = "g_SwSamplerShadowCmp";   ///< s7 비교 샘플러
             inline constexpr const utf8* kRwTextureSlot      = "g_SwRWSlot";             ///< + 0..3 (DX11/GL 컴퓨트 RW 텍스처 슬롯)
-            inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIds"; ///< t10(그래픽스). 컬링이 만든 가시 목록
+            inline constexpr const utf8* kVisibleInstances   = "g_SwVisibleInstanceIDs"; ///< t10(그래픽스). 컬링이 만든 가시 목록
             inline constexpr const utf8* kMorphVertices      = "g_SwMorphVertices";      ///< t11(그래픽스). GPU 가 변형한 정점 풀
             inline constexpr const utf8* kLights             = "g_SwLights";             ///< t12(그래픽스). 씬 라이트 목록
             inline constexpr const utf8* kBatches            = "g_SwBatches";            ///< t13(그래픽스). 씬 배치 표
@@ -240,7 +240,7 @@ namespace sw
             inline constexpr const utf8* kCullInstances      = "g_Instances";
             inline constexpr const utf8* kCullBatchInfo      = "g_BatchInfo"; ///< 컬링 t1. 배치의 인스턴스 구간
             inline constexpr const utf8* kCullIndirectArgs   = "g_IndirectArgs";
-            inline constexpr const utf8* kCullVisibleIds     = "g_VisibleInstanceIds"; ///< 컬링 u1. 압축해 쓰는 쪽
+            inline constexpr const utf8* kCullVisibleIDs     = "g_VisibleInstanceIDs"; ///< 컬링 u1. 압축해 쓰는 쪽
             inline constexpr const utf8* kAnimInstancesRw    = "g_InstancesRW";        ///< instanceanim u0. 월드 행렬을 고쳐 씀
         } // namespace resname
 

@@ -172,16 +172,16 @@ SW_TEST_CASE( AppearanceTest, PresetInheritanceAndSeededCandidates )
     SW_EXPECT_TRUE( knight._tags.hasTag( TagID::request( "Race.Human" ) ) ); // 태그는 합쳐진다
     SW_EXPECT_TRUE( knight._tags.hasTag( TagID::request( "Class.Knight" ) ) );
     SW_EXPECT_NEAR_EQUAL( 1.2f, knight._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-5f );
-    SW_EXPECT_TRUE( knight.findSlot( hashed_string( "Head" ) )->_itemId == hashed_string( "helm" ) ); // 세트
+    SW_EXPECT_TRUE( knight.findSlot( hashed_string( "Head" ) )->_itemID == hashed_string( "helm" ) ); // 세트
     SW_EXPECT_TRUE( knight.findSlot( hashed_string( "MainHand" ) )->_customization.findValue( hashed_string( "Gem" ) ) != nullptr );
     SW_EXPECT_EQUAL( knight._listSlot.size(), fixture._database.getSlotTable().getSlots().size() );
 
     CharacterAppearanceSpec squire;
     SW_ASSERT_TRUE( fixture.expand( hashed_string( "Squire" ), 0u, squire ) );
     SW_EXPECT_NEAR_EQUAL( 0.9f, squire._customization.findValue( hashed_string( "Height" ) )->_number._x, 1.0e-5f );
-    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Head" ) )->_itemId.empty() );                     // item="" 은 비운다
-    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Body" ) )->_itemId == hashed_string( "shirt" ) ); // 아래 층의 칸이 세트를 덮는다
-    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Legs" ) )->_itemId == hashed_string( "greaves" ) );
+    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Head" ) )->_itemID.empty() );                     // item="" 은 비운다
+    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Body" ) )->_itemID == hashed_string( "shirt" ) ); // 아래 층의 칸이 세트를 덮는다
+    SW_EXPECT_TRUE( squire.findSlot( hashed_string( "Legs" ) )->_itemID == hashed_string( "greaves" ) );
 
     // 씨앗 — 같으면 같고, 여럿이면 후보가 고루 나온다.
     CharacterAppearanceSpec first;
@@ -208,7 +208,7 @@ SW_TEST_CASE( AppearanceTest, PresetInheritanceAndSeededCandidates )
             listHeight.push_back( height );
         if ( AppearanceXmlUtil::containsName( listShape, villager._bodyShape ) == false )
             listShape.push_back( villager._bodyShape );
-        const hashed_string body = villager.findSlot( hashed_string( "Body" ) )->_itemId;
+        const hashed_string body = villager.findSlot( hashed_string( "Body" ) )->_itemID;
         if ( AppearanceXmlUtil::containsName( listBody, body ) == false )
             listBody.push_back( body );
         if ( villager._customization.findValue( hashed_string( "Hair" ) )->_option == hashed_string( "Bald" ) )
@@ -260,7 +260,7 @@ SW_TEST_CASE( AppearanceTest, CompleteSetSwapsToItsRepresentation )
     AppearanceResolver::resolve( fixture._database, spec, resolved );
     const ResolvedPart* pSuit = resolved.findPart( hashed_string( "Body" ), hashed_string( "Suit" ) );
     SW_ASSERT_NOT_NULL( pSuit );
-    SW_EXPECT_TRUE( pSuit->_visualId == hashed_string( "knight_full" ) );
+    SW_EXPECT_TRUE( pSuit->_visualID == hashed_string( "knight_full" ) );
     SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Body" ), hashed_string( "Plate" ) ) == nullptr );
     SW_EXPECT_FALSE( resolved.hasOwner( hashed_string( "Legs" ) ) );
     SW_EXPECT_TRUE( resolved.hasOwner( hashed_string( "Head" ) ) ); // 완성 표현 칸이 아니다
@@ -362,7 +362,7 @@ SW_TEST_CASE( AppearanceTest, TransmogShowsTheOverrideAndItsTags )
     AppearanceResolver::resolve( fixture._database, spec, resolved );
     const ResolvedPart* pCap = resolved.findPart( hashed_string( "Head" ), hashed_string( "Cap" ) );
     SW_ASSERT_NOT_NULL( pCap );
-    SW_EXPECT_TRUE( pCap->_itemId == hashed_string( "helm" ) ); // 아이템은 그대로
+    SW_EXPECT_TRUE( pCap->_itemID == hashed_string( "helm" ) ); // 아이템은 그대로
     SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Head" ), hashed_string( "Shell" ) ) == nullptr );
     SW_EXPECT_TRUE( resolved.findPart( hashed_string( "Hair" ), hashed_string( "Hair" ) )->_variant == hashed_string( "UnderHat" ) );
     SW_EXPECT_FALSE( resolved.isRegionHidden( hashed_string( "Scalp" ) ) );
@@ -511,7 +511,7 @@ SW_TEST_CASE( AppearanceTest, DamageStagesFollowDataThresholds )
     Equipment equipment;
     fixture.makeEquipment( equipment );
     InventorySlot sword;
-    sword._itemId     = hashed_string( "sword" );
+    sword._itemID     = hashed_string( "sword" );
     sword._count      = 1;
     sword._durability = 15.0f;
     vector<InventorySlot> listRemoved;
@@ -539,7 +539,7 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     Equipment equipment;
     fixture.makeEquipment( equipment );
     InventorySlot sword;
-    sword._itemId     = hashed_string( "sword" );
+    sword._itemID     = hashed_string( "sword" );
     sword._count      = 1;
     sword._durability = 100.0f;
     vector<InventorySlot> listRemoved;
@@ -560,7 +560,7 @@ SW_TEST_CASE( AppearanceTest, BreakOffEmitsOneDetachEvent )
     state.takeDetachEvents( listEvent );
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_TRUE( listEvent[0]._part._partName == hashed_string( "Tassel" ) );
-    SW_EXPECT_TRUE( listEvent[0]._part._itemId == hashed_string( "sword" ) );
+    SW_EXPECT_TRUE( listEvent[0]._part._itemID == hashed_string( "sword" ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, listEvent[0]._part._impulse._y, 1.0e-6f );
     SW_EXPECT_TRUE( listEvent[0]._part._placement._listSocket[0] == hashed_string( "MainHand.Pommel" ) );
     SW_EXPECT_TRUE( state.getResolved().findPart( hashed_string( "MainHand" ), hashed_string( "Blade" ) ) != nullptr );
@@ -676,7 +676,7 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
     SW_EXPECT_EQUAL( 1u, state.getResolveCount() );
 
     InventorySlot cap;
-    cap._itemId = hashed_string( "cap" );
+    cap._itemID = hashed_string( "cap" );
     cap._count  = 1;
     vector<InventorySlot> listRemoved;
     SW_ASSERT_TRUE( equipment.equip( hashed_string( "Head" ), cap, listRemoved ) == EquipResult::Ok );

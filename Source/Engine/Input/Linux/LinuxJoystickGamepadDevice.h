@@ -53,7 +53,7 @@ namespace sw
 
         int32                  _fdJoystick;        /**< /dev/input/jsN 파일 디스크립터. 연결 전이면 invalid_index::kInt32(POSIX open() 실패 규약과 같은 -1). */
         int32                  _fdForceFeedback;   /**< 대응하는 /dev/input/eventN 파일 디스크립터(럼블용). 없으면 invalid_index::kInt32. */
-        int16                  _ffEffectId;        /**< ioctl( EVIOCSFF ) 로 올린 FF_RUMBLE 이펙트 ID. 없으면 invalid_index::kInt16. */
+        int16                  _ffEffectID;        /**< ioctl( EVIOCSFF ) 로 올린 FF_RUMBLE 이펙트 ID. 없으면 invalid_index::kInt16. */
         uint16                 _ffStrongMagnitude; /**< 마지막으로 올린 강모터 세기. 같은 값이면 다시 올리지 않음. */
         uint16                 _ffWeakMagnitude;   /**< 마지막으로 올린 약모터 세기. */
         float32                _reconnectTimer;    /**< 연결되지 않은 상태에서 다시 열기까지 남은 시간(초). XInput 과 같이 폴링 남발을 막음. */

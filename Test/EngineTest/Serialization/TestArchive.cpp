@@ -1008,10 +1008,10 @@ SW_TEST_CASE( ArchiveTest, PredefinedTypesStringPoolIntegration )
     SW_EXPECT_EQUAL( 1ULL, arch.getSize() ); // VarUInt(0) = 1바이트만 기록됨
 
     // 4) 신규 동적 문자열 추가 시 kPredefinedCount 번호부터 순차 할당 검증
-    const uint32 customId1 = pool.internString( "CustomDynamicArchetype_A" );
-    const uint32 customId2 = pool.internString( "CustomDynamicArchetype_B" );
-    SW_EXPECT_EQUAL( sw::StringPool::kPredefinedCount, customId1 );
-    SW_EXPECT_EQUAL( sw::StringPool::kPredefinedCount + 1, customId2 );
+    const uint32 customID1 = pool.internString( "CustomDynamicArchetype_A" );
+    const uint32 customID2 = pool.internString( "CustomDynamicArchetype_B" );
+    SW_EXPECT_EQUAL( sw::StringPool::kPredefinedCount, customID1 );
+    SW_EXPECT_EQUAL( sw::StringPool::kPredefinedCount + 1, customID2 );
     SW_EXPECT_EQUAL( 2ULL, pool.getDynamicCount() );
 
     // 5) 아카이브 저장 및 로드 라운드트립 검증
@@ -1024,8 +1024,8 @@ SW_TEST_CASE( ArchiveTest, PredefinedTypesStringPoolIntegration )
     SW_EXPECT_EQUAL( 2ULL, restoredPool.getDynamicCount() );
     SW_EXPECT_EQUAL( sw::string( "int32" ), sw::string( restoredPool.getString( static_cast<uint32>( sw::PredefinedNameType::NameType_int32 ) ) ) );
     SW_EXPECT_EQUAL( sw::string( "float3" ), sw::string( restoredPool.getString( static_cast<uint32>( sw::PredefinedNameType::NameType_float3 ) ) ) );
-    SW_EXPECT_EQUAL( sw::string( "CustomDynamicArchetype_A" ), sw::string( restoredPool.getString( customId1 ) ) );
-    SW_EXPECT_EQUAL( sw::string( "CustomDynamicArchetype_B" ), sw::string( restoredPool.getString( customId2 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "CustomDynamicArchetype_A" ), sw::string( restoredPool.getString( customID1 ) ) );
+    SW_EXPECT_EQUAL( sw::string( "CustomDynamicArchetype_B" ), sw::string( restoredPool.getString( customID2 ) ) );
 }
 
 /**
@@ -1494,10 +1494,10 @@ SW_TEST_CASE( ArchiveTest, CorruptedStringPoolAndOutofBoundsSymbolFaultInjection
         SW_EXPECT_FALSE( pool.loadFromBinaryBuffer( rawBytes.data(), rawBytes.size(), offset ) );
     }
 
-    // 3. Archive::readPooledString with out-of-bounds poolId
+    // 3. Archive::readPooledString with out-of-bounds poolID
     {
         sw::Archive writeArch;
-        writeArch.writeVarUint( 99999ULL ); // poolId not in string pool
+        writeArch.writeVarUint( 99999ULL ); // poolID not in string pool
         sw::Archive readArch( writeArch.getData(), writeArch.getSize() );
         sw::string  outStr;
         SW_EXPECT_FALSE( readArch.readPooledString( outStr ) );
@@ -1727,7 +1727,7 @@ SW_TEST_CASE( ArchiveTest, CompactPayloadSizeIsBounded )
 /**
  * @brief [ArchiveTest] 32비트로 못 담는 varint 는 잘리는 대신 거절된다
  * @details 32비트 디코더가 `static_cast` 한 줄이면 범위 밖 값을 **조용히 잘라** 내, 망가진 아카이브가 거부되는 대신
- *          엉뚱하게 읽힌다. 가장 아픈 자리가 `Archive::readPooledString` 이다: 거기 있는 `poolId >= getCount()` 검사는
+ *          엉뚱하게 읽힌다. 가장 아픈 자리가 `Archive::readPooledString` 이다: 거기 있는 `poolID >= getCount()` 검사는
  *          잘린 값을 보므로 `0x1'0000'0000 + n` 이 **유효한 n 인 척 통과한다.**
  */
 SW_TEST_CASE( ArchiveTest, VarIntNarrowingRejectsOutOfRange )

@@ -30,10 +30,10 @@ namespace sw
     {
         const bool bNamesOk   = ServerRecord::isValidName( descriptor._kind ) && ServerRecord::isValidName( descriptor._region );
         const bool bAddressOk = descriptor._address.size() <= static_cast<size_t>( ServerRecord::kMaxAddressSize );
-        if ( pRouter == nullptr || descriptor._serverId == 0 || bNamesOk == false || bAddressOk == false )
+        if ( pRouter == nullptr || descriptor._serverID == 0 || bNamesOk == false || bAddressOk == false )
         {
             SW_LOG_ERROR( "ServerRegistration: invalid descriptor (kind '%#', region '%#', id %#)", descriptor._kind.c_str(), descriptor._region.c_str(),
-                          descriptor._serverId );
+                          descriptor._serverID );
             return false;
         }
         _pRouter            = pRouter;
@@ -49,8 +49,8 @@ namespace sw
         if ( _pRouter == nullptr )
             return;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverId ) ), EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverId ) ),
+        (void)_pRouter->submit( EphemeralRequest::makeErase( ServerRecord::makeRecordKey( descriptor._serverID ) ), EphemeralStoreRouter::ReplyDelegate{} );
+        (void)_pRouter->submit( EphemeralRequest::makeScoreRemove( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ) ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _pRouter = nullptr;
     }
@@ -84,9 +84,9 @@ namespace sw
     {
         _status._heartbeatMs               = nowMs;
         const ServerDescriptor& descriptor = _status._descriptor;
-        (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverId ), ServerRecord::encode( _status ), kRecordTtlMs ),
+        (void)_pRouter->submit( EphemeralRequest::makeSet( ServerRecord::makeRecordKey( descriptor._serverID ), ServerRecord::encode( _status ), kRecordTtlMs ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
-        (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverId ),
+        (void)_pRouter->submit( EphemeralRequest::makeScoreSet( ServerRecord::makeIndexKey( descriptor._kind ), ServerRecord::makeMember( descriptor._serverID ),
                                                                 nowMs / ServerRegistrationInternal::kMillisecondsPerSecond ),
                                 EphemeralStoreRouter::ReplyDelegate{} );
         _lastWrittenMs = nowMs;

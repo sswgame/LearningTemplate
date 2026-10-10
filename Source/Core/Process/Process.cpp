@@ -15,7 +15,7 @@ namespace sw
         , _pNativeThread{ nullptr }
         , _pStdInWrite{ nullptr }
         , _bufferedOutput{}
-        , _processId{ 0 }
+        , _processID{ 0 }
         , _bNewProcessGroup{ false }
     {
     }
@@ -31,14 +31,14 @@ namespace sw
         , _pNativeThread{ other._pNativeThread }
         , _pStdInWrite{ other._pStdInWrite }
         , _bufferedOutput{ std::move( other._bufferedOutput ) }
-        , _processId{ other._processId.load() }
+        , _processID{ other._processID.load() }
         , _bNewProcessGroup{ other._bNewProcessGroup }
     {
         other._pNativeHandle = nullptr;
         other._pStdOutRead   = nullptr;
         other._pNativeThread = nullptr;
         other._pStdInWrite   = nullptr;
-        other._processId.store( 0 );
+        other._processID.store( 0 );
     }
 
     Process& Process::operator=( Process&& other ) noexcept
@@ -53,13 +53,13 @@ namespace sw
             _pStdInWrite      = other._pStdInWrite;
             _bufferedOutput   = std::move( other._bufferedOutput );
             _bNewProcessGroup = other._bNewProcessGroup;
-            _processId.store( other._processId.load() );
+            _processID.store( other._processID.load() );
 
             other._pNativeHandle = nullptr;
             other._pStdOutRead   = nullptr;
             other._pNativeThread = nullptr;
             other._pStdInWrite   = nullptr;
-            other._processId.store( 0 );
+            other._processID.store( 0 );
         }
         return *this;
     }

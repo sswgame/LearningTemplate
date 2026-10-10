@@ -212,7 +212,7 @@ namespace sw
     /** @brief 판 하나의 설정입니다. */
     struct HorrorMatchSettings
     {
-        hashed_string _killerId{};
+        hashed_string _killerID{};
         float32       _fixedStep{ 1.0f / 30.0f };
         uint32        _seed{ 0xD8D0u };
     };

@@ -219,7 +219,7 @@ SW_TEST_CASE( ResourcePackTest, SinglePackMountAndHashLookup )
     SW_ASSERT_TRUE( reader.open( testPackPath ) );
     SW_EXPECT_TRUE( reader.isOpen() );
     SW_EXPECT_EQUAL( reader.getFileCount(), 3u );
-    SW_EXPECT_EQUAL( reader.getDlcAppId(), 0u );
+    SW_EXPECT_EQUAL( reader.getDlcAppID(), 0u );
 
     // O(1) 해시 존재 확인
     SW_EXPECT_TRUE( reader.hasFile( "maps/title.scene.xml" ) );
@@ -384,18 +384,18 @@ SW_TEST_CASE( ResourcePackTest, VFSPriorityStackAndOverrides )
 SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
 {
     const sw::string dlcPackPath = sw::FileUtil::joinPath( test::makeTempDirectory( "packs" ), "test_secure_dlc.pack" );
-    constexpr uint32 kDlcAppId   = 5001;
+    constexpr uint32 kDlcAppID   = 5001;
 
-    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( dlcPackPath, kDlcAppId, sw::PackCompressionType::None, {
+    SW_ASSERT_TRUE( sw::test::ResourcePackTestUtil::createPackFile( dlcPackPath, kDlcAppID, sw::PackCompressionType::None, {
                                                                                                                                { "dlc/secret_weapon.xml", "<Weapon name=\"Excalibur\"/>" }
     } ) );
 
     sw::ResourcePackManager packManager;
 
     // 소유권 검증 콜백 등록: 5001번 미소유 상태
-    packManager.setDlcEntitlementValidator( []( uint32 appId ) -> bool
+    packManager.setDlcEntitlementValidator( []( uint32 appID ) -> bool
     {
-        return appId == 9999; // 5001은 미소유 (false)
+        return appID == 9999; // 5001은 미소유 (false)
     } );
 
     // 미소유 시 마운트 거부 확인
@@ -403,9 +403,9 @@ SW_TEST_CASE( ResourcePackTest, DlcEntitlementProtection )
     SW_EXPECT_FALSE( packManager.hasFile( "dlc/secret_weapon.xml" ) );
 
     // 유저가 DLC 5001을 정상 구매한 상태로 콜백 변경
-    packManager.setDlcEntitlementValidator( []( uint32 appId ) -> bool
+    packManager.setDlcEntitlementValidator( []( uint32 appID ) -> bool
     {
-        return appId == kDlcAppId; // 5001 소유 확인 (true)
+        return appID == kDlcAppID; // 5001 소유 확인 (true)
     } );
 
     // 정상 소유 시 마운트 허용 및 로드 성공 확인

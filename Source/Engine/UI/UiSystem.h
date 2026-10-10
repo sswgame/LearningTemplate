@@ -179,11 +179,11 @@ namespace sw
          * @brief 마커 화면(HUD 층 · 캔버스 패널 루트 · 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 돌려줍니다. 마커 화면은 처음 붙일 때 만들고 마지막을 뗄 때 닫는다.
          * @details 위치는 붙인 쪽이 슬롯 앵커 · 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
          */
-        WidgetId addScreenMarker( unique_ptr<Widget> widget );
+        WidgetID addScreenMarker( unique_ptr<Widget> widget );
         /** @brief 마커 위젯을 떼어 지웁니다. */
-        void removeScreenMarker( WidgetId widget );
+        void removeScreenMarker( WidgetID widget );
         /** @brief 마커 위젯입니다(없으면 nullptr). */
-        Widget* findScreenMarker( WidgetId widget ) const;
+        Widget* findScreenMarker( WidgetID widget ) const;
         /** @brief 위젯 컴포넌트를 등록합니다 — `update` 가 레이아웃 앞에서 화면 마커 자리를 갱신한다(시작할 때 컴포넌트가 부른다). */
         void   registerWidgetComponent( WidgetComponent& component );
         void   unregisterWidgetComponent( WidgetComponent& component );
@@ -222,7 +222,7 @@ namespace sw
          * @details 그 위젯이 든 화면의 재생기(`UiScreen::getAnimationPlayer`)가 돌립니다. 같은 위젯 · 경로의 트윈은 새 것이 대신합니다.
          * @return 위젯이 어느 화면에도 없거나 경로 · 값을 읽지 못하면 경고하고 false 입니다.
          */
-        bool tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
+        bool tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
 
         // --- 자막 ---------------------------------------------------------------
         /** @brief 자막(오버레이 층 아래 가운데, 둘까지 — 사용자 설정의 끔/켬 · 크기 · 배경)입니다. */

@@ -59,7 +59,7 @@ namespace sw
     /** @brief 행동 종류입니다(`CardAction::_kind`). */
     enum class UnoActionKind : uint8
     {
-        Play = 0, ///< `_cardId`, `_targetId` = 고른 색(와일드), `_amount` ≠ 0 = 우노 선언
+        Play = 0, ///< `_cardID`, `_targetID` = 고른 색(와일드), `_amount` ≠ 0 = 우노 선언
         Draw,
         CallUno
     };
@@ -69,7 +69,7 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Played = 0, ///< _cardId
+            Played = 0, ///< _cardID
             Drew,       ///< _value = 장수
             Skipped,
             Reversed,
@@ -81,7 +81,7 @@ namespace sw
         };
         int32  _player{ -1 };
         int32  _value{ 0 };
-        uint16 _cardId{ Card::kNoCard };
+        uint16 _cardID{ Card::kNoCard };
         Kind   _kind{ Kind::Played };
     };
 } // namespace sw
@@ -117,8 +117,8 @@ namespace sw
         void initialize( const UnoSettings& settings, uint32 seed );
         void initializeFromLayout( const UnoSettings& settings, const UnoLayout& layout, uint32 seed = GameRandom::kDefaultSeed );
 
-        /** @brief 차례인 @p player 가 낼 수 있는 패 @p cardId 를 냅니다. 와일드는 @p chosenColor 가 네 색 중 하나여야 합니다. */
-        [[nodiscard]] bool playCard( int32 player, uint16 cardId, UnoColor chosenColor = UnoColor::Wild, bool bDeclareUno = false );
+        /** @brief 차례인 @p player 가 낼 수 있는 패 @p cardID 를 냅니다. 와일드는 @p chosenColor 가 네 색 중 하나여야 합니다. */
+        [[nodiscard]] bool playCard( int32 player, uint16 cardID, UnoColor chosenColor = UnoColor::Wild, bool bDeclareUno = false );
         /** @brief 차례인 @p player 가 뽑습니다 — 쌓인 벌칙이 있으면 그만큼, 없으면 한 장. 차례가 넘어갑니다. */
         [[nodiscard]] bool drawCard( int32 player );
         /** @brief 우노 잡기(남) · 늦은 선언(본인)입니다. 잡을 사람이 없으면 false 입니다. */
@@ -152,7 +152,7 @@ namespace sw
     private:
         int32 findNextPlayer( int32 player, int32 steps ) const;
         int32 drawInto( int32 player, int32 count );
-        bool  hasColor( int32 player, UnoColor color, uint16 exceptCardId ) const;
+        bool  hasColor( int32 player, UnoColor color, uint16 exceptCardID ) const;
 
         vector<CardPile>      _listHand;
         EventBuffer<UnoEvent> _eventBuffer;

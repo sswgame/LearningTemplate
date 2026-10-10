@@ -410,7 +410,7 @@ SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
  *          자리가 튄다. 컴포넌트가 새 id 를 받으면 인스턴스의 컴포넌트를 가리키던 핸들(씬의 활성 카메라 · 게임 코드)이 끊긴다. 되돌리기 · 플레이
  *          종료 · 핫 리로드와 같이 원래 id 를 되살린다.
  */
-SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIds )
+SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIDs )
 {
     const sw::string xmlPath = test::makeTempPath( "crate_socket.prefab.xml" );
     SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );

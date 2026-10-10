@@ -147,7 +147,7 @@ namespace
         explicit ScopedDirectorSceneService( SceneManager& manager )
         {
             ModuleService service{};
-            service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::SceneManager )] = &manager;
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::SceneManager )] = &manager;
             game::bindGameService( service );
         }
         ~ScopedDirectorSceneService() { game::unbindGameService(); }
@@ -325,7 +325,7 @@ SW_TEST_CASE( GameDirectorTest, TickAfterOrdersDirectorsOnDifferentObjects )
     SW_ASSERT_NOT_NULL( pBefore );
     pAfter->setTickAfter( pBefore->getOwner()->getHandle() );
     pAfter->_pWatched = pBefore;
-    SW_EXPECT_TRUE( pAfter->getRuleTickHandle()._subTickId == GameDirectorComponent::kRuleSubTick );
+    SW_EXPECT_TRUE( pAfter->getRuleTickHandle()._subTickID == GameDirectorComponent::kRuleSubTick );
     SW_EXPECT_TRUE( pBefore->getRuleTickHandle() == pBefore->getTickHandle() );
 
     pManager->beginPlay();

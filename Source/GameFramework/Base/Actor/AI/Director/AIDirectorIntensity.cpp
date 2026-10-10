@@ -46,13 +46,13 @@ namespace sw
         _calmSeconds = AIDirectorIntensityInternal::kNeverFought;
     }
 
-    int32 AIDirectorIntensityModel::findSignalIndex( const hashed_string& signalId ) const
+    int32 AIDirectorIntensityModel::findSignalIndex( const hashed_string& signalID ) const
     {
         if ( _pDef == nullptr )
             return -1;
         for ( size_t index = 0; index < _pDef->_listSignal.size(); ++index )
         {
-            if ( _pDef->_listSignal[index]._id == signalId )
+            if ( _pDef->_listSignal[index]._id == signalID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -63,9 +63,9 @@ namespace sw
         _calmSeconds = 0.0f;
     }
 
-    bool AIDirectorIntensityModel::addSignal( const hashed_string& signalId, float32 amount )
+    bool AIDirectorIntensityModel::addSignal( const hashed_string& signalID, float32 amount )
     {
-        const int32 signalIndex = findSignalIndex( signalId );
+        const int32 signalIndex = findSignalIndex( signalID );
         if ( signalIndex < 0 )
             return false;
         const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
@@ -79,9 +79,9 @@ namespace sw
         return true;
     }
 
-    bool AIDirectorIntensityModel::setSignal( const hashed_string& signalId, float32 value )
+    bool AIDirectorIntensityModel::setSignal( const hashed_string& signalID, float32 value )
     {
-        const int32 signalIndex = findSignalIndex( signalId );
+        const int32 signalIndex = findSignalIndex( signalID );
         if ( signalIndex < 0 )
             return false;
         const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
@@ -134,9 +134,9 @@ namespace sw
         return MathUtil::min( _pDef->_max, MathUtil::max( _stress, computeLevelFloor() ) );
     }
 
-    float32 AIDirectorIntensityModel::getSignal( const hashed_string& signalId ) const
+    float32 AIDirectorIntensityModel::getSignal( const hashed_string& signalID ) const
     {
-        const int32 signalIndex = findSignalIndex( signalId );
+        const int32 signalIndex = findSignalIndex( signalID );
         return signalIndex >= 0 ? _listSignalValue[static_cast<size_t>( signalIndex )] : 0.0f;
     }
 

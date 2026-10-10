@@ -23,7 +23,7 @@ namespace sw
         , _carry{}
         , _penalty{}
         , _facility{}
-        , _terminalShopId{ "terminal" }
+        , _terminalShopID{ "terminal" }
         , _currency{ "Credits" }
         , _crewHealth{ 100.0f }
     {
@@ -49,9 +49,9 @@ namespace sw
 
     uint32 ScavengerCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
-        const string_view shopId = root.getAttributeText( "terminalShop" );
-        if ( shopId.empty() == false )
-            _terminalShopId = hashed_string( shopId );
+        const string_view shopID = root.getAttributeText( "terminalShop" );
+        if ( shopID.empty() == false )
+            _terminalShopID = hashed_string( shopID );
         const string_view currency = root.getAttributeText( "currency" );
         if ( currency.empty() == false )
             _currency = hashed_string( currency );
@@ -121,11 +121,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Scrap" ); node; node = node.findNextSibling( "Scrap" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ScavengerScrapDef def;
-            def._id          = hashed_string( pId );
+            def._id          = hashed_string( pID );
             def._minValue    = MathUtil::max( 0, node.getAttributeInt( "min", def._minValue ) );
             def._maxValue    = MathUtil::max( def._minValue, node.getAttributeInt( "max", def._minValue ) );
             def._weight      = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", def._weight ) );
@@ -136,13 +136,13 @@ namespace sw
         }
         for ( XmlNode node = root.findChild( "Moon" ); node; node = node.findNextSibling( "Moon" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ScavengerMoonDef def;
-            def._id            = hashed_string( pId );
+            def._id            = hashed_string( pID );
             const utf8* pName  = node.findAttribute( "name" );
-            def._name          = pName != nullptr ? pName : pId;
+            def._name          = pName != nullptr ? pName : pID;
             def._risk          = MathUtil::max( 0.0f, node.getAttributeFloat( "risk", def._risk ) );
             def._routeCost     = MathUtil::max( 0, node.getAttributeInt( "cost", def._routeCost ) );
             def._minScrap      = MathUtil::max( 0, node.getAttributeInt( "scrap", def._minScrap ) );
@@ -152,11 +152,11 @@ namespace sw
             def._bCompany      = node.getAttributeBool( "company", false ) ? SW_TRUE : SW_FALSE;
             GameDataXml::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
             {
-                const hashed_string scrapId( token );
-                if ( _scrapCatalog.find( scrapId ) == nullptr )
-                    SW_LOG_WARNING( "%#: moon '%#' lists unknown scrap '%#' - skipped", sourceName, pId, token );
+                const hashed_string scrapID( token );
+                if ( _scrapCatalog.find( scrapID ) == nullptr )
+                    SW_LOG_WARNING( "%#: moon '%#' lists unknown scrap '%#' - skipped", sourceName, pID, token );
                 else
-                    def._listScrap.push_back( scrapId );
+                    def._listScrap.push_back( scrapID );
             } );
             (void)_moonCatalog.add( def );
             ++loadedCount;

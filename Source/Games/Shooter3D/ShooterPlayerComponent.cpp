@@ -41,7 +41,7 @@ namespace sw
     {
         struct ShooterPlayerComponentInternal
         {
-            static constexpr const utf8* kArrWeaponId[ShooterPlayerComponent::kWeaponCount]     = { "rifle", "shotgun", "pistol" };
+            static constexpr const utf8* kArrWeaponID[ShooterPlayerComponent::kWeaponCount]     = { "rifle", "shotgun", "pistol" };
             static constexpr const utf8* kArrWeaponModel[ShooterPlayerComponent::kWeaponCount]  = { "game/shooter3d/models/blaster_d.mesh",
                                                                                                     "game/shooter3d/models/blaster_h.mesh",
                                                                                                     "game/shooter3d/models/blaster_a.mesh" };
@@ -79,11 +79,11 @@ namespace sw
             }
 
             /** @brief 아이템의 외형에서 소켓 에셋을 가진 첫 부품의 소켓 에셋입니다(무기의 총구). 없으면 빈 이름입니다. */
-            static hashed_string findItemSocketSet( const AppearanceDatabase& database, const hashed_string& itemId )
+            static hashed_string findItemSocketSet( const AppearanceDatabase& database, const hashed_string& itemID )
             {
                 const ItemCatalog*   pItems  = database.getItemCatalog();
-                const ItemDef*       pItem   = pItems != nullptr ? pItems->findItem( itemId ) : nullptr;
-                const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualId ) : nullptr;
+                const ItemDef*       pItem   = pItems != nullptr ? pItems->findItem( itemID ) : nullptr;
+                const ItemVisualDef* pVisual = pItem != nullptr ? database.getVisuals().findVisual( pItem->_visualID ) : nullptr;
                 if ( pVisual == nullptr )
                     return hashed_string{};
                 for ( const AppearancePartDef& part : pVisual->_listPart )
@@ -435,7 +435,7 @@ namespace sw
         const WeaponCatalog* pCatalog = game::getService<WeaponCatalog>();
         for ( int32 weaponIndex = 0; weaponIndex < kWeaponCount; ++weaponIndex )
         {
-            const WeaponDef* pDef = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponId[weaponIndex] ) ) : nullptr;
+            const WeaponDef* pDef = pCatalog != nullptr ? pCatalog->findWeapon( hashed_string( ShooterPlayerComponentInternal::kArrWeaponID[weaponIndex] ) ) : nullptr;
             if ( pDef == nullptr && pCatalog != nullptr && pCatalog->getWeapons().empty() == false )
                 pDef = &pCatalog->getWeapons().front();
             if ( pDef != nullptr )
@@ -621,7 +621,7 @@ namespace sw
         {
             if ( pCameraDirector->isPendingDestroy() || pCameraDirector->getTarget() != self )
                 continue;
-            const CameraPresetDef* pPreset = pCameraDirector->getCatalog().findPreset( pCameraDirector->getActivePresetId() );
+            const CameraPresetDef* pPreset = pCameraDirector->getCatalog().findPreset( pCameraDirector->getActivePresetID() );
             if ( pPreset != nullptr )
                 bFirstPerson = pPreset->_view._mode == CameraPresetMode::FirstPerson;
         }
@@ -732,7 +732,7 @@ namespace sw
             _bWeaponModelDirty    = SW_FALSE;
             MeshComponent* pModel = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
             if ( pModel != nullptr )
-                pModel->setMeshId( Internal::kArrWeaponModel[_weaponIndex] );
+                pModel->setMeshID( Internal::kArrWeaponModel[_weaponIndex] );
             // 몸의 무기 — 외형의 MainHand 칸(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
             GameObject*                   pBody       = findBodyObject();
             CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;

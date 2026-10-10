@@ -41,8 +41,8 @@ def readResourceInternal(relPath: str) -> str:
     return (kRepositoryRoot / "Resource" / relPath).read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
-def findEntityInternal(asset, entityId: str):
-    return next(entity for entity in asset.root.iter("entity") if entity.get("id") == entityId)
+def findEntityInternal(asset, entityID: str):
+    return next(entity for entity in asset.root.iter("entity") if entity.get("id") == entityID)
 
 
 class RoundTripTest(unittest.TestCase):
@@ -116,9 +116,9 @@ class MergeTest(unittest.TestCase):
         self.assertEqual([], listConflict)
         self.assertEqual("0.9", next(iter(findEntityInternal(merged, "2").iter("_listComponent")))[0].get("_fovY"))
         self.assertEqual("FloorRenamed", findEntityInternal(merged, "3").get("name"))
-        listId = [entity.get("id") for entity in merged.root.iter("entity")]
-        self.assertIn("9001", listId)
-        self.assertIn("9002", listId)
+        listID = [entity.get("id") for entity in merged.root.iter("entity")]
+        self.assertIn("9001", listID)
+        self.assertIn("9002", listID)
         self.assertNotIn(kConflictMarker, serializeXmlAsset(merged))
         # 결과를 다시 읽어도 같다(서식이 읽을 수 있는 XML 이다)
         self.assertEqual([], diffAssets(merged, parseXmlAsset(serializeXmlAsset(merged))))

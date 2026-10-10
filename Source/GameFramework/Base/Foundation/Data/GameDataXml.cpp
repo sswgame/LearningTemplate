@@ -54,15 +54,15 @@ namespace sw
         return true;
     }
 
-    const utf8* GameDataXml::findRequiredId( const XmlNode& node, string_view sourceName )
+    const utf8* GameDataXml::findRequiredID( const XmlNode& node, string_view sourceName )
     {
-        const utf8* pId = node.findAttribute( "id" );
-        if ( StringUtil::isNullOrEmpty( pId ) )
+        const utf8* pID = node.findAttribute( "id" );
+        if ( StringUtil::isNullOrEmpty( pID ) )
         {
             SW_LOG_WARNING( "%#: <%#> without an id - skipped", sourceName, node.getName() );
             return nullptr;
         }
-        return pId;
+        return pID;
     }
 
     uint32 GameDataXml::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )

@@ -383,7 +383,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
     const sw::TypeInfo* pTypeLegacy  = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
     SW_ASSERT_NOT_NULL( pTypeCurrent );
     SW_ASSERT_NOT_NULL( pTypeLegacy );
-    SW_EXPECT_EQUAL( pTypeCurrent->_typeId, pTypeLegacy->_typeId );
+    SW_EXPECT_EQUAL( pTypeCurrent->_typeID, pTypeLegacy->_typeID );
     SW_EXPECT_TRUE( pTypeCurrent->_fullyQualifiedName == pTypeLegacy->_fullyQualifiedName );
 
     // 3) 저작 기본값 (PROPERTY(Default = "75"))

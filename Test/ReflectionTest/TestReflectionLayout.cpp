@@ -283,13 +283,13 @@ SW_TEST_CASE( ReflectionInnerTypesTest, FindInnerClass )
         return;
 
     sw::InnerNamespaceForTest::OuterStruct::InnerClass instance;
-    const sw::PropertyInfo*                            propId = typeInfoFqn->findProperty( sw::hashed_string( "_id" ) );
-    SW_EXPECT_TRUE( propId != nullptr );
-    if ( propId != nullptr )
+    const sw::PropertyInfo*                            propID = typeInfoFqn->findProperty( sw::hashed_string( "_id" ) );
+    SW_EXPECT_TRUE( propID != nullptr );
+    if ( propID != nullptr )
     {
-        int64 newId = 8888;
-        propId->setValue( &instance, newId );
-        SW_EXPECT_EQUAL( 8888, *propId->getValuePtr<int64>( &instance ) );
+        int64 newID = 8888;
+        propID->setValue( &instance, newID );
+        SW_EXPECT_EQUAL( 8888, *propID->getValuePtr<int64>( &instance ) );
     }
 }
 

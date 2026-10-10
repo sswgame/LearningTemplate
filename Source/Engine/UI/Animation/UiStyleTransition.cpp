@@ -452,8 +452,8 @@ namespace sw
             Internal::writeField( state->_shown._value, channel._field, arrValue );
         }
         WidgetTree* pTree = widget.getTree();
-        if ( pTree != nullptr && std::find( pTree->_listStyleTransition.begin(), pTree->_listStyleTransition.end(), widget.getId() ) == pTree->_listStyleTransition.end() )
-            pTree->_listStyleTransition.push_back( widget.getId() );
+        if ( pTree != nullptr && std::find( pTree->_listStyleTransition.begin(), pTree->_listStyleTransition.end(), widget.getID() ) == pTree->_listStyleTransition.end() )
+            pTree->_listStyleTransition.push_back( widget.getID() );
     }
 
     uint32 UiStyleTransition::update( WidgetTree& tree, float32 deltaSeconds )
@@ -466,7 +466,7 @@ namespace sw
         uint32        updatedCount  = 0;
         for ( size_t index = 0; index < tree._listStyleTransition.size(); )
         {
-            Widget* pWidget = tree.findWidgetById( tree._listStyleTransition[index] );
+            Widget* pWidget = tree.findWidgetByID( tree._listStyleTransition[index] );
             if ( pWidget == nullptr || pWidget->_styleTransition == nullptr )
             {
                 tree._listStyleTransition.erase( tree._listStyleTransition.begin() + static_cast<ptrdiff_t>( index ) );

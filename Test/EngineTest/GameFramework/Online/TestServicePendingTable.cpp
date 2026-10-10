@@ -12,10 +12,10 @@ SW_TEST_CASE( ServicePendingTableTest, TagsAreDistinctAndTakenOnce )
     ServicePendingTable table;
     NetRequestToken     first;
     first._handle    = StreamConnectionHandle::make( 1, 1 );
-    first._requestId = 10;
+    first._requestID = 10;
     NetRequestToken second;
     second._handle         = StreamConnectionHandle::make( 2, 1 );
-    second._requestId      = 11;
+    second._requestID      = 11;
     const uint64 firstTag  = table.add( first );
     const uint64 secondTag = table.add( second );
     SW_EXPECT_TRUE( firstTag != 0 && secondTag != 0 );
@@ -24,7 +24,7 @@ SW_TEST_CASE( ServicePendingTableTest, TagsAreDistinctAndTakenOnce )
 
     NetRequestToken taken;
     SW_ASSERT_TRUE( table.take( firstTag, taken ) );
-    SW_EXPECT_EQUAL( taken._requestId, uint64( 10 ) );
+    SW_EXPECT_EQUAL( taken._requestID, uint64( 10 ) );
     SW_EXPECT_TRUE( taken._handle == first._handle );
     SW_EXPECT_FALSE( table.take( firstTag, taken ) );
 

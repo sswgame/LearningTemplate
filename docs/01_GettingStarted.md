@@ -175,7 +175,7 @@ void EmptyGame::ensureTutorialSpinner()
     MeshComponent* pMesh = pObject->addComponent<MeshComponent>();
     if ( pMesh != nullptr )
     {
-        pMesh->setMeshId( "Cube" );
+        pMesh->setMeshID( "Cube" );
         pMesh->setLocalPosition( float3{ 1.5f, 1.0f, 0.0f } );
     }
     pObject->addComponent<SpinnerComponent>();

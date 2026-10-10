@@ -40,10 +40,10 @@ namespace sw
     {
     }
 
-    bool WesternHorse::initialize( const WesternCatalog* pCatalog, const hashed_string& horseId, uint32 seed )
+    bool WesternHorse::initialize( const WesternCatalog* pCatalog, const hashed_string& horseID, uint32 seed )
     {
         _pCatalog = pCatalog;
-        _pDef     = pCatalog != nullptr ? pCatalog->findHorse( horseId ) : nullptr;
+        _pDef     = pCatalog != nullptr ? pCatalog->findHorse( horseID ) : nullptr;
         if ( _pDef == nullptr )
             return false;
         ResourceGaugeSettings health;
@@ -126,9 +126,9 @@ namespace sw
         return true;
     }
 
-    bool WesternHorse::feed( const hashed_string& foodId )
+    bool WesternHorse::feed( const hashed_string& foodID )
     {
-        const WesternFoodDef* pFood = _pCatalog != nullptr ? _pCatalog->findFood( foodId ) : nullptr;
+        const WesternFoodDef* pFood = _pCatalog != nullptr ? _pCatalog->findFood( foodID ) : nullptr;
         if ( pFood == nullptr || _pDef == nullptr )
             return false;
         _healthCore  = MathUtil::clamp( _healthCore + pFood->_healthCore, 0.0f, kCoreMax );
@@ -177,11 +177,11 @@ namespace sw
             applyBondLevel( getBondLevel() );
     }
 
-    bool WesternHorse::hasAbility( const hashed_string& abilityId ) const
+    bool WesternHorse::hasAbility( const hashed_string& abilityID ) const
     {
         for ( const hashed_string& ability : _listAbility )
         {
-            if ( ability == abilityId )
+            if ( ability == abilityID )
                 return true;
         }
         return false;
@@ -221,13 +221,13 @@ namespace sw
 
     bool WesternHorse::readState( Archive& archive )
     {
-        hashed_string horseId;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, horseId ) == false )
+        hashed_string horseID;
+        if ( _pCatalog == nullptr || StateArchiveUtil::readName( archive, horseID ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다. 품종이 다르면 사본을 그 품종으로 열어 게이지 설정을 맞춘다(값은 아래에서 덮는다).
         WesternHorse restored = *this;
-        const bool   bSameDef = _pDef != nullptr && _pDef->_id == horseId;
-        if ( bSameDef == false && restored.initialize( _pCatalog, horseId, 1 ) == false )
+        const bool   bSameDef = _pDef != nullptr && _pDef->_id == horseID;
+        if ( bSameDef == false && restored.initialize( _pCatalog, horseID, 1 ) == false )
             return false;
         uint32 abilityCount = 0;
         if ( StateArchiveUtil::readCount( archive, 4, abilityCount ) == false )

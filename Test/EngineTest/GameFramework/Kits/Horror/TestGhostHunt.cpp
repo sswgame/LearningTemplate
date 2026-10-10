@@ -59,11 +59,11 @@ namespace
     constexpr float3 kNorth{ 0.0f, 0.0f, 1.0f };
 
     /** @brief 유령이 공격할 때까지 시간을 흘립니다(0.1 초씩). 공격 중이 되었으면 true 입니다. */
-    bool waitForAttack( GhostEncounter& encounter, uint32 ghostId )
+    bool waitForAttack( GhostEncounter& encounter, uint32 ghostID )
     {
         for ( int32 tick = 0; tick < 200; ++tick )
         {
-            const GhostInstance* pGhost = encounter.findGhost( ghostId );
+            const GhostInstance* pGhost = encounter.findGhost( ghostID );
             if ( pGhost != nullptr && pGhost->_state == GhostState::Attacking )
                 return true;
             encounter.update( 0.1f );
@@ -72,20 +72,20 @@ namespace
     }
 
     /** @brief 유령을 기절시켜 빨아들이기 시작합니다. */
-    bool stunAndGrab( GhostEncounter& encounter, uint32 ghostId )
+    bool stunAndGrab( GhostEncounter& encounter, uint32 ghostID )
     {
-        if ( waitForAttack( encounter, ghostId ) == false || encounter.shineBeam( kPlayer, kNorth ) == 0 )
+        if ( waitForAttack( encounter, ghostID ) == false || encounter.shineBeam( kPlayer, kNorth ) == 0 )
             return false;
-        return encounter.startSuction( ghostId, kPlayer );
+        return encounter.startSuction( ghostID, kPlayer );
     }
 
     /** @brief 흡입 줄다리기를 잡힐 때까지 합니다. @p bOpposite 면 도망 반대로, 아니면 도망 방향의 옆으로 당깁니다. 걸린 틱 수입니다. */
-    int32 tugUntilCaught( GhostEncounter& encounter, uint32 ghostId, bool bOpposite, float32& outDragDistance )
+    int32 tugUntilCaught( GhostEncounter& encounter, uint32 ghostID, bool bOpposite, float32& outDragDistance )
     {
         outDragDistance = 0.0f;
         for ( int32 tick = 1; tick <= 400; ++tick )
         {
-            const GhostInstance*   pGhost = encounter.findGhost( ghostId );
+            const GhostInstance*   pGhost = encounter.findGhost( ghostID );
             const float3           flee   = pGhost->_fleeDirection;
             const float3           pull   = bOpposite ? float3{ -flee._x, 0.0f, -flee._z } : float3{ flee._z, 0.0f, -flee._x };
             const GhostSuctionTick result = encounter.updateSuction( pull, 0.1f );
@@ -129,21 +129,21 @@ namespace
         }
 
         /** @brief 지금 방의 유령 하나를 기절시켜 반대로 당겨 잡습니다. */
-        bool catchGhost( uint32 ghostId )
+        bool catchGhost( uint32 ghostID )
         {
             GhostEncounter& encounter = _mansion.getEncounter();
             for ( int32 tick = 0; tick < 200; ++tick )
             {
-                const GhostInstance* pGhost = encounter.findGhost( ghostId );
+                const GhostInstance* pGhost = encounter.findGhost( ghostID );
                 if ( pGhost != nullptr && pGhost->_state == GhostState::Attacking )
                     break;
                 _mansion.update( 0.1f );
             }
-            if ( encounter.shineBeam( kPlayer, kNorth ) == 0 || encounter.startSuction( ghostId, kPlayer ) == false )
+            if ( encounter.shineBeam( kPlayer, kNorth ) == 0 || encounter.startSuction( ghostID, kPlayer ) == false )
                 return false;
             for ( int32 tick = 0; tick < 400; ++tick )
             {
-                const float3 flee = encounter.findGhost( ghostId )->_fleeDirection;
+                const float3 flee = encounter.findGhost( ghostID )->_fleeDirection;
                 if ( encounter.updateSuction( float3{ -flee._x, 0.0f, -flee._z }, 0.1f )._bCaught == SW_TRUE )
                 {
                     _mansion.update( 0.1f );

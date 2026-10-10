@@ -210,14 +210,14 @@ SW_TEST_CASE( SocketBindingTest, TransferHandsUnitToNewHolderWithoutRespawn )
     SceneComponent* pPickupScene = pPickup->addComponent<SceneComponent>();
     pPickupScene->setLocalPosition( float3( 20.0f, 0.0f, 0.0f ) );
     SW_ASSERT_TRUE( rig._pBinding->bindToSocket( rig._pHolder, hashed_string( "HandR" ), Internal::makeSocket() ) );
-    const uint64 unitId = rig._pUnit->getHandle().objectId();
+    const uint64 unitID = rig._pUnit->getHandle().objectID();
 
     SW_ASSERT_TRUE( rig._pBinding->transferTo( pPickup, hashed_string( "Rest" ), float4x4::Identity, false ) );
     SW_EXPECT_TRUE( rig._pUnitScene->getParent() == pPickupScene );
     SW_EXPECT_TRUE( rig._pBinding->getHolder() == pPickup->getHandle() );
     SW_EXPECT_TRUE( rig._pBinding->getSocketName() == hashed_string( "Rest" ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 20.0f, 0.0f, 0.0f ), rig._pUnitScene->getWorldPosition(), 1.0e-4f ) );
-    SW_EXPECT_EQUAL( unitId, rig._pUnit->getHandle().objectId() ); // 같은 오브젝트
+    SW_EXPECT_EQUAL( unitID, rig._pUnit->getHandle().objectID() ); // 같은 오브젝트
 
     // 다시 캐릭터 손으로 — 지금 자리에서 블렌드.
     const float3 before = rig._pUnitScene->getWorldPosition();
@@ -262,8 +262,8 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
     pHeroScene->setLocalRotation( float3( 0.0f, 0.0f, MathUtil::kHalfPi ) );
     manager.beginPlay();
 
-    const SocketId tipId = table.findSocket( hashed_string( "Tip" ) );
-    SW_ASSERT_TRUE( pBinding->bindToSocket( pHero, table.getSocketName( tipId ), tipInUnit ) );
+    const SocketID tipID = table.findSocket( hashed_string( "Tip" ) );
+    SW_ASSERT_TRUE( pBinding->bindToSocket( pHero, table.getSocketName( tipID ), tipInUnit ) );
     const float3 world = pTorchScene->getWorldPosition();
     SW_EXPECT_NEAR_EQUAL( 0.0f, world._z, 1.0e-5f );
     SW_EXPECT_TRUE( Internal::isNear( ( tipInUnit * pHeroScene->getWorldMatrix() ).getTranslation(), world, 1.0e-4f ) );

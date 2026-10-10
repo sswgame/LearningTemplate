@@ -614,7 +614,7 @@ namespace sw
             refreshBoneNames( _pUnit->getSkeleton() );
             PhysicsRagdollOptions options;
             options._pSettings = physics.findSettings();
-            options._userData  = getOwner()->getObjectId();
+            options._userData  = getOwner()->getObjectID();
             options._bodyType  = PhysicsBodyType::Kinematic;
             if ( PhysicsRagdollBuilder::create( *pScene, *_asset, makeSkeletonView( *_pUnit ), _pUnit->getWorldMatrix(), options, _ragdoll ) == false )
             {

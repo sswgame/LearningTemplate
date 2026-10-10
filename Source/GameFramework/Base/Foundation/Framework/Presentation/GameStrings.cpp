@@ -114,11 +114,11 @@ namespace sw
         return pLoc->registerLanguageChangedCallback( std::move( callback ) );
     }
 
-    void GameStrings::unregisterLanguageChangedCallback( uint32 callbackId )
+    void GameStrings::unregisterLanguageChangedCallback( uint32 callbackID )
     {
         LocalizationManager* pLoc = game::getService<LocalizationManager>();
         if ( pLoc != nullptr )
-            pLoc->unregisterLanguageChangedCallback( callbackId );
+            pLoc->unregisterLanguageChangedCallback( callbackID );
     }
 
     void GameStrings::clear()

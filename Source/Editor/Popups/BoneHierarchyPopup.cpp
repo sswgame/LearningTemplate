@@ -35,10 +35,10 @@ namespace sw::editor
                         pCompName = pNameStr;
                 }
 
-                const ImGuiID            nodeId = static_cast<ImGuiID>( pComp->getComponentId() );
+                const ImGuiID            nodeID = static_cast<ImGuiID>( pComp->getComponentID() );
                 const ImGuiTreeNodeFlags flags  = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth;
 
-                ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeId ) ), flags, "%s", pCompName );
+                ImGui::TreeNodeEx( reinterpret_cast<void*>( static_cast<uintptr_t>( nodeID ) ), flags, "%s", pCompName );
 
                 const vector<SceneComponent*>& listChildren = pComp->getChildren();
                 for ( const SceneComponent* pChild : listChildren )
@@ -102,7 +102,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( kPopupId );
+        pContext->getPopupManager().openPopup( kPopupID );
     }
 
     void BoneHierarchyPopup::close()
@@ -111,7 +111,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( kPopupId );
+        pContext->getPopupManager().closePopup( kPopupID );
     }
 
     void BoneHierarchyPopup::toggle()
@@ -120,7 +120,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( kPopupId );
+        pContext->getPopupManager().togglePopup( kPopupID );
     }
 
     bool BoneHierarchyPopup::isOpen()
@@ -129,7 +129,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( kPopupId );
+        return pContext->getPopupManager().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
@@ -149,7 +149,7 @@ namespace sw::editor
 
         EditorWorkspace& ws   = pContext->getWorkspace();
         const string     name = ws.getSelectedObjectName();
-        if ( name.empty() || ws.getSelectedObjectId() == 0 )
+        if ( name.empty() || ws.getSelectedObjectID() == 0 )
         {
             EditorWidgets::drawEmptyHint( "No selection. Select an object in the Hierarchy." );
             EditorChrome::endPanel();
@@ -162,7 +162,7 @@ namespace sw::editor
         Scene* pScene = editor::getActiveScene();
         if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
         {
-            GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectById( ws.getSelectedObjectId() );
+            GameObject* pSelectedObj = pScene->getObjectManager()->findGameObjectByID( ws.getSelectedObjectID() );
             if ( pSelectedObj != nullptr )
                 BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
             else

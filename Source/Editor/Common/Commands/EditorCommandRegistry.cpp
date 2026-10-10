@@ -189,11 +189,11 @@ namespace sw::editor
         }
     }
 
-    const EditorCommandDesc* EditorCommandRegistry::find( string_view commandId ) const
+    const EditorCommandDesc* EditorCommandRegistry::find( string_view commandID ) const
     {
         for ( const EditorCommandDesc& desc : _listCommand )
         {
-            if ( desc._id == commandId )
+            if ( desc._id == commandID )
                 return &desc;
         }
         return nullptr;
@@ -206,9 +206,9 @@ namespace sw::editor
         return desc._enabledPredicate();
     }
 
-    bool EditorCommandRegistry::execute( string_view commandId )
+    bool EditorCommandRegistry::execute( string_view commandID )
     {
-        const EditorCommandDesc* pDesc = find( commandId );
+        const EditorCommandDesc* pDesc = find( commandID );
         if ( pDesc == nullptr )
             return false;
         return executeDesc( *pDesc );

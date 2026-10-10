@@ -23,14 +23,14 @@ namespace sw
     class MeshInstanceBatch;
     class PrimitiveRegistry;
 
-    /** @brief 식생 레이어가 고르는 메시 하나입니다. `_meshId` 는 `.mesh` 경로 또는 내장 도형 이름(`GrassClump` 포함)입니다. */
+    /** @brief 식생 레이어가 고르는 메시 하나입니다. `_meshID` 는 `.mesh` 경로 또는 내장 도형 이름(`GrassClump` 포함)입니다. */
     REFLECT()
     struct SW_API FoliageMesh
     {
         REFLECT_BODY();
 
         PROPERTY( AssetPath, AssetType = "Mesh" )
-        string _meshId{};
+        string _meshID{};
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
     };

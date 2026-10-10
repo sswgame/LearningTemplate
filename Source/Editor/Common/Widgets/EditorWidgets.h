@@ -68,7 +68,7 @@ namespace sw::editor
          * @brief 켬/끔 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn · @p pTooltipOff 입니다.
          * @details 한 변은 `GetFrameHeight()` 라 글꼴 · DPI 배율을 함께 받는다. 픽셀 상수로 폭을 주면 150 % 에서 글자가 잘린다.
          */
-        static bool drawToggleIconButton( const utf8* pId, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
+        static bool drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                           const utf8* pTooltipOff );
         /**
          * @brief @p width 안에 이름을 최대 @p maxLineCount 줄로 그립니다. 넘치면 마지막 줄 끝을 말줄임으로 줄이고 툴팁에 전체를 보입니다.
@@ -103,17 +103,17 @@ namespace sw::editor
         /**
          * @brief C 버퍼를 쓰는 검색 필드입니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
          */
-        static bool drawSearchField( const utf8* pId, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...",
+        static bool drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...",
                                      float32 width = 0.0f, bool bShowClear = true );
 
         /**
          * @brief fixed_string 검색 필드 오버로드입니다.
          */
         template <uint32 N>
-        static bool drawSearchField( const utf8* pId, fixed_string<N>& str, const utf8* pHint = "Search...",
+        static bool drawSearchField( const utf8* pID, fixed_string<N>& str, const utf8* pHint = "Search...",
                                      float32 width = 0.0f, bool bShowClear = true )
         {
-            return drawSearchField( pId, str.data(), str.capacity(), pHint, width, bShowClear );
+            return drawSearchField( pID, str.data(), str.capacity(), pHint, width, bShowClear );
         }
 
         /**
@@ -165,7 +165,7 @@ namespace sw::editor
         /**
          * @brief 현재 아이템을 애셋 경로 드래그 소스로 등록합니다.
          */
-        static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullId = false );
+        static void drawAssetDragSource( const utf8* pRelativePath, bool bAllowNullID = false );
 
         /**
          * @brief BeginDragDropTarget 안에서 애셋 경로 페이로드를 받습니다.
@@ -185,7 +185,7 @@ namespace sw::editor
         /**
          * @brief Save / Don't Save / Cancel 모달을 그립니다. 버튼이 눌리기 전에는 None 입니다.
          */
-        static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupId, const utf8* pMessage );
+        static EditorUnsavedChoice drawUnsavedChangesModal( const utf8* pPopupID, const utf8* pMessage );
 
         /**
          * @brief 직전에 그린 UI 항목 위에 마우스를 올리면 보일 툴팁을 그립니다.

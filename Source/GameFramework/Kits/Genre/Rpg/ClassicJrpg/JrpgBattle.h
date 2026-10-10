@@ -41,8 +41,8 @@ namespace sw
         JrpgCommandKind _kind{ JrpgCommandKind::None };
 
         static JrpgCommand makeAttack( int32 enemyIndex ) { return JrpgCommand{ hashed_string{}, enemyIndex, JrpgCommandKind::Attack }; }
-        static JrpgCommand makeSpell( const hashed_string& spellId, int32 target ) { return JrpgCommand{ spellId, target, JrpgCommandKind::Spell }; }
-        static JrpgCommand makeCombo( const hashed_string& comboId, int32 enemyIndex ) { return JrpgCommand{ comboId, enemyIndex, JrpgCommandKind::Combo }; }
+        static JrpgCommand makeSpell( const hashed_string& spellID, int32 target ) { return JrpgCommand{ spellID, target, JrpgCommandKind::Spell }; }
+        static JrpgCommand makeCombo( const hashed_string& comboID, int32 enemyIndex ) { return JrpgCommand{ comboID, enemyIndex, JrpgCommandKind::Combo }; }
         static JrpgCommand makeDefend() { return JrpgCommand{ hashed_string{}, 0, JrpgCommandKind::Defend }; }
     };
 } // namespace sw
@@ -99,7 +99,7 @@ namespace sw
     /** @brief 전투 중 적 하나입니다. */
     struct JrpgEnemyState
     {
-        hashed_string         _enemyId{};
+        hashed_string         _enemyID{};
         vector<hashed_string> _listLock{}; ///< 남은 잠금
         int32                 _hp{ 1 };
         int32                 _castTurnsLeft{ 0 }; ///< 0 = 시전 중이 아니다
@@ -184,7 +184,7 @@ namespace sw
         void initialize( const JrpgCatalog* pCatalog, const TimingJudge* pJudge, const JrpgBattleSettings& settings, uint32 seed );
         void setTimingInput( const IJrpgTimingInput* pTimingInput ) { _pTimingInput = pTimingInput; }
         /** @brief 파티와 적 목록으로 시작합니다. 모르는 적은 빼고, 남은 적이 없으면 false 입니다. */
-        [[nodiscard]] bool start( JrpgParty* pParty, const vector<hashed_string>& listEnemyId );
+        [[nodiscard]] bool start( JrpgParty* pParty, const vector<hashed_string>& listEnemyID );
         /** @brief 멤버의 이번 라운드 명령입니다. 쓸 수 없는 명령(쓰러진 멤버 · 모르는 주문 · 포인트 부족 · 참여 멤버가 쓰러진 합동기)은 false 입니다. */
         [[nodiscard]] bool setCommand( int32 memberIndex, const JrpgCommand& command );
         void               resolveRound();

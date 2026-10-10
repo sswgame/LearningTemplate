@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    enum class ObjectIdSpace : uint8;
+    enum class ObjectIDSpace : uint8;
 
     struct AABB;
     struct ObjectSaveOptions;
@@ -29,7 +29,7 @@ namespace sw
 
     /**
      * @struct SceneAttachReference
-     * @brief 상태에 적힌 부착 하나 — 부모가 어느 오브젝트의 어느 컴포넌트인가입니다. 부착 필드(`_attachOwner` · `_attachOwnerId` ·
+     * @brief 상태에 적힌 부착 하나 — 부모가 어느 오브젝트의 어느 컴포넌트인가입니다. 부착 필드(`_attachOwner` · `_attachOwnerID` ·
      *        `_attachComponent`)를 한데 묶은 값이고, 묶음(`ObjectStateBatch`)이 이것으로 부모를 찾습니다.
      */
     struct SceneAttachReference
@@ -37,11 +37,11 @@ namespace sw
         /** @brief 부모 오브젝트의 이름입니다. **비면 같은 오브젝트**입니다. id 가 없는 데이터는 다른 오브젝트도 이것만 있습니다. */
         hashed_string _ownerName{};
         /** @brief 다른 오브젝트의 id 입니다(`_idSpace` 의 것). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다. */
-        uint64 _ownerId{ 0 };
+        uint64 _ownerID{ 0 };
         /** @brief 부모 컴포넌트의 안정 키(`ComponentStableKey`)입니다. 비면 루트입니다. */
         hashed_string _componentKey{};
-        /** @brief `_ownerId` 의 공간입니다. 찾지 못한 참조를 남길 때만 뜻이 있습니다(다른 공간으로 저장할 때는 id 를 비우고 이름만 남깁니다). */
-        ObjectIdSpace _idSpace{};
+        /** @brief `_ownerID` 의 공간입니다. 찾지 못한 참조를 남길 때만 뜻이 있습니다(다른 공간으로 저장할 때는 id 를 비우고 이름만 남깁니다). */
+        ObjectIDSpace _idSpace{};
     };
 } // namespace sw
 
@@ -221,7 +221,7 @@ namespace sw
         /**
          * @brief `_pParent` 에서 부착 직렬화 필드를 채웁니다. 같은 오브젝트의 부모는 소유자 칸을 비우고, 다른 오브젝트는 이름과 id 를 적습니다.
          * @details 부모가 없는데 찾지 못한 참조를 남겨 두었으면(`keepUnresolvedAttach`) 그것을 그대로 적습니다 — 지우지 않습니다. 남겨 둔 id 가
-         *          지금 쓰는 공간(`options._pSavedIdMap` 유무)과 다르면 id 를 비우고 이름 · 컴포넌트 키만 적습니다.
+         *          지금 쓰는 공간(`options._pSavedIDMap` 유무)과 다르면 id 를 비우고 이름 · 컴포넌트 키만 적습니다.
          */
         void syncAttachSerializeFields( const ObjectSaveOptions& options ) const;
         /** @brief 상태에서 읽은 부착 필드입니다. 공간은 묶음이 압니다(`_idSpace` 는 채우지 않습니다). */
@@ -314,16 +314,16 @@ namespace sw
         PROPERTY( Name = "_localScale", Category = "Transform", DisplayName = "Scale", Tooltip = "Local scale vector" )
         float3& getLocalScaleRef() { return _pTransformPage->_arrLocalScale[getPageIndex()]; }
 
-        /** @brief 부모 오브젝트의 이름입니다. 같은 오브젝트면 비어 있습니다. 사람이 읽는 값이고, 다른 오브젝트는 `_attachOwnerId` 로 찾습니다. */
+        /** @brief 부모 오브젝트의 이름입니다. 같은 오브젝트면 비어 있습니다. 사람이 읽는 값이고, 다른 오브젝트는 `_attachOwnerID` 로 찾습니다. */
         PROPERTY( HideInInspector )
         mutable hashed_string _attachOwner;
         /**
-         * @brief 다른 오브젝트인 부모의 id 입니다. 씬 파일에서는 파일 id, 스냅샷에서는 런타임 id 입니다(`ObjectIdSpace`). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다.
+         * @brief 다른 오브젝트인 부모의 id 입니다. 씬 파일에서는 파일 id, 스냅샷에서는 런타임 id 입니다(`ObjectIDSpace`). 0 이면 같은 오브젝트이거나 id 가 없는 데이터입니다.
          * @details 주의: 이름만으로 찾지 말 것 — 매니저는 이름을 유일하게 바꾸므로(`X` → `X_2`) 복제본 · 두 번 놓은 프리팹 · 되돌린 오브젝트가
          *          **같은 이름의 다른 오브젝트**(원본 · 자동으로 생긴 카메라)에 붙는다.
          */
         PROPERTY( HideInInspector )
-        mutable uint64 _attachOwnerId;
+        mutable uint64 _attachOwnerID;
         PROPERTY( HideInInspector )
         mutable hashed_string _attachComponent;
         /**

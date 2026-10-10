@@ -46,7 +46,7 @@ namespace sw
         /** @brief 계정 · 맡김의 모든 잔액(자산 id 순)을 @p outListBalance 뒤에 붙입니다. 시스템 보유자 · 무효 보유자는 `Invalid` 입니다. */
         [[nodiscard]] static ServiceStoreResult listBalances( IServiceStoreConnection& connection, const LedgerHolder& holder, vector<LedgerBalance>& outListBalance );
         /** @brief 잔액 하나입니다. 레코드가 없으면 `Ok` 와 0(판 0) 입니다. */
-        [[nodiscard]] static ServiceStoreResult readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetId, LedgerBalance& outBalance );
+        [[nodiscard]] static ServiceStoreResult readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetID, LedgerBalance& outBalance );
         /** @brief 최근 것부터 분개를 읽습니다. @p cursor 는 앞 쪽의 @p outNextCursor(처음은 빈 글), 다 읽었으면 @p outNextCursor 가 빕니다. */
         [[nodiscard]] static ServiceStoreResult listHistory( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view cursor, int32 maxCount,
                                                              vector<LedgerJournalEntry>& outListEntry, string& outNextCursor );

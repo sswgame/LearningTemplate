@@ -34,9 +34,9 @@ namespace sw
 namespace sw
 {
     /** @brief 재생 하나(이벤트 인스턴스 · 클립 재생)의 id 입니다. 0 은 없음이고, 다시 쓰지 않습니다. */
-    using AudioPlayingId = uint64;
+    using AudioPlayingID = uint64;
     /** @brief 소리를 내는 자리(게임 오브젝트)의 id 입니다. 0 은 "자리 없음 — 2D(공간화 없음)" 입니다. */
-    using AudioEmitterId = uint64;
+    using AudioEmitterID = uint64;
 } // namespace sw
 
 namespace sw

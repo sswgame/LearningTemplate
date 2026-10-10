@@ -18,7 +18,7 @@ namespace sw
 
     SceneComponent::SceneComponent()
         : _attachOwner{}
-        , _attachOwnerId{ 0 }
+        , _attachOwnerID{ 0 }
         , _attachComponent{}
         , _pTransformPage{ nullptr }
         , _transformSlot{ SceneTransformStorage::kInvalidSlot }
@@ -548,7 +548,7 @@ namespace sw
     void SceneComponent::syncAttachSerializeFields( const ObjectSaveOptions& options ) const
     {
         _attachOwner     = {};
-        _attachOwnerId   = 0;
+        _attachOwnerID   = 0;
         _attachComponent = {};
         if ( _pParent == nullptr )
         {
@@ -557,12 +557,12 @@ namespace sw
             if ( _unresolvedAttach == nullptr )
                 return;
             const SceneAttachReference& kept           = *_unresolvedAttach;
-            const ObjectIdSpace         writtenIdSpace = ( options._pSavedIdMap != nullptr ) ? ObjectIdSpace::Saved : ObjectIdSpace::Live;
-            const bool                  bExternal      = kept._ownerName.empty() == false || kept._ownerId != 0;
+            const ObjectIDSpace         writtenIDSpace = ( options._pSavedIDMap != nullptr ) ? ObjectIDSpace::Saved : ObjectIDSpace::Live;
+            const bool                  bExternal      = kept._ownerName.empty() == false || kept._ownerID != 0;
             if ( bExternal && options._bOmitExternalParent )
                 return;
             _attachOwner     = kept._ownerName;
-            _attachOwnerId   = ( kept._idSpace == writtenIdSpace ) ? kept._ownerId : 0;
+            _attachOwnerID   = ( kept._idSpace == writtenIDSpace ) ? kept._ownerID : 0;
             _attachComponent = kept._componentKey;
             return;
         }
@@ -585,9 +585,9 @@ namespace sw
         if ( options._bOmitExternalParent )
             return;
 
-        // 부모 id 를 저장할 id 로 옮긴다 — 핸들 PROPERTY 와 같은 규칙 하나(`ObjectSaveOptions::getSavedObjectId`).
+        // 부모 id 를 저장할 id 로 옮긴다 — 핸들 PROPERTY 와 같은 규칙 하나(`ObjectSaveOptions::getSavedObjectID`).
         _attachOwner     = pParentOwner->getName();
-        _attachOwnerId   = options.getSavedObjectId( pParentOwner->getObjectId() );
+        _attachOwnerID   = options.getSavedObjectID( pParentOwner->getObjectID() );
         _attachComponent = hashed_string( parentKey.c_str() );
     }
 
@@ -595,7 +595,7 @@ namespace sw
     {
         SceneAttachReference reference{};
         reference._ownerName    = _attachOwner;
-        reference._ownerId      = _attachOwnerId;
+        reference._ownerID      = _attachOwnerID;
         reference._componentKey = _attachComponent;
         return reference;
     }

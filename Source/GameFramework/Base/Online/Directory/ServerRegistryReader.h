@@ -64,7 +64,7 @@ namespace sw
         unordered_map<uint64, uint64> _mapRequestToServer; ///< 기록 읽기 요청 id → 서버 id
         string                        _kind;
         EphemeralStoreRouter*         _pRouter;
-        uint64                        _indexRequestId; ///< 기다리는 색인 읽기(0 = 없음)
+        uint64                        _indexRequestID; ///< 기다리는 색인 읽기(0 = 없음)
         int64                         _refreshPeriodMs;
         int64                         _lastRefreshStartMs;
         uint64                        _refreshCount;

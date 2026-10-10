@@ -46,20 +46,20 @@ namespace sw
     void UnoGame::makeDeck( CardPile& outPile )
     {
         outPile.clear();
-        uint16 cardId = 0;
+        uint16 cardID = 0;
         for ( int32 color = 0; color < UnoGameInternal::kColorCount; ++color )
         {
-            outPile.push( Card{ cardId++, static_cast<uint8>( color ), static_cast<uint8>( UnoValue::Zero ) } );
+            outPile.push( Card{ cardID++, static_cast<uint8>( color ), static_cast<uint8>( UnoValue::Zero ) } );
             for ( int32 value = 1; value <= static_cast<int32>( UnoValue::DrawTwo ); ++value )
             {
-                outPile.push( Card{ cardId++, static_cast<uint8>( color ), static_cast<uint8>( value ) } );
-                outPile.push( Card{ cardId++, static_cast<uint8>( color ), static_cast<uint8>( value ) } );
+                outPile.push( Card{ cardID++, static_cast<uint8>( color ), static_cast<uint8>( value ) } );
+                outPile.push( Card{ cardID++, static_cast<uint8>( color ), static_cast<uint8>( value ) } );
             }
         }
         for ( int32 copy = 0; copy < UnoGameInternal::kWildCopyCount; ++copy )
         {
-            outPile.push( Card{ cardId++, static_cast<uint8>( UnoColor::Wild ), static_cast<uint8>( UnoValue::Wild ) } );
-            outPile.push( Card{ cardId++, static_cast<uint8>( UnoColor::Wild ), static_cast<uint8>( UnoValue::WildDrawFour ) } );
+            outPile.push( Card{ cardID++, static_cast<uint8>( UnoColor::Wild ), static_cast<uint8>( UnoValue::Wild ) } );
+            outPile.push( Card{ cardID++, static_cast<uint8>( UnoColor::Wild ), static_cast<uint8>( UnoValue::WildDrawFour ) } );
         }
     }
 
@@ -142,11 +142,11 @@ namespace sw
         return ( ( player + _direction * steps ) % count + count ) % count;
     }
 
-    bool UnoGame::hasColor( int32 player, UnoColor color, uint16 exceptCardId ) const
+    bool UnoGame::hasColor( int32 player, UnoColor color, uint16 exceptCardID ) const
     {
         for ( const Card& card : getHand( player ).getCards() )
         {
-            if ( card._id != exceptCardId && card._suit == static_cast<uint8>( color ) )
+            if ( card._id != exceptCardID && card._suit == static_cast<uint8>( color ) )
                 return true;
         }
         return false;
@@ -177,12 +177,12 @@ namespace sw
         return drawnCount;
     }
 
-    bool UnoGame::playCard( int32 player, uint16 cardId, UnoColor chosenColor, bool bDeclareUno )
+    bool UnoGame::playCard( int32 player, uint16 cardID, UnoColor chosenColor, bool bDeclareUno )
     {
         if ( _winner >= 0 || player != _currentPlayer )
             return false;
         CardPile&   hand  = _listHand[static_cast<size_t>( player )];
-        const int32 index = hand.findIndexById( cardId );
+        const int32 index = hand.findIndexByID( cardID );
         if ( index < 0 )
             return false;
         const Card card = hand.getAt( index );
@@ -299,8 +299,8 @@ namespace sw
         {
             case UnoActionKind::Play:
             {
-                const UnoColor color = action._targetId < static_cast<uint16>( UnoColor::Wild ) ? static_cast<UnoColor>( action._targetId ) : UnoColor::Wild;
-                return playCard( player, action._cardId, color, action._amount != 0 );
+                const UnoColor color = action._targetID < static_cast<uint16>( UnoColor::Wild ) ? static_cast<UnoColor>( action._targetID ) : UnoColor::Wild;
+                return playCard( player, action._cardID, color, action._amount != 0 );
             }
             case UnoActionKind::Draw:
             {

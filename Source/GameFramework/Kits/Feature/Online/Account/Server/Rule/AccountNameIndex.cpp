@@ -11,8 +11,8 @@ namespace sw
         return LoginStoreLogic::readIdentityByDisplayName( connection, displayName, outIdentity );
     }
 
-    ServiceStoreResult AccountNameIndex::readIdentity( IServiceStoreConnection& connection, AccountId accountId, AccountIdentity& outIdentity ) const
+    ServiceStoreResult AccountNameIndex::readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const
     {
-        return LoginStoreLogic::readIdentity( connection, accountId, outIdentity );
+        return LoginStoreLogic::readIdentity( connection, accountID, outIdentity );
     }
 } // namespace sw

@@ -1567,7 +1567,7 @@ SW_TEST_CASE( RenderPassGpuTest, TransparentOrderMatchesAcrossBackends )
 /**
  * @brief [RenderPassGpuTest] 컴퓨트가 만든 드로우 커맨드가 **보이는 인스턴스만** 고르는지 (4 백엔드).
  * @details 컬링 컴퓨트는 배치의 개수를 줄이는 데서 끝나지 않고, 살아남은 인스턴스 번호를 압축 목록
- *          (g_SwVisibleInstanceIds)에 적는다. 정점 셰이더는 그 목록으로 자기 인스턴스를 찾는다 —
+ *          (g_SwVisibleInstanceIDs)에 적는다. 정점 셰이더는 그 목록으로 자기 인스턴스를 찾는다 —
  *          언리얼 FInstanceCullingContext 와 같은 구조다.
  *
  *          개수만 줄이면 "배치 앞쪽 N 개"를 그린다. 한 배치 안에서 앞이 안 보이고 뒤가
@@ -7376,8 +7376,8 @@ SW_TEST_CASE( RenderPassGpuTest, CanvasDrawsOnEveryBackend )
         sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
         sw::vector<uint8>                   fontBytes;
         SW_ASSERT_TRUE( sw::ResourceUtil::readBinaryResource( "engine/fonts/kenney_future.ttf", fontBytes ) );
-        const sw::FontFaceId face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
-        SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+        const sw::FontFaceID face = rasterizer->loadFace( std::move( fontBytes ), 0, "engine/fonts/kenney_future.ttf" );
+        SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
         sw::GlyphCache      glyphCache( *rasterizer );
         sw::CanvasFrameData canvas{};
         canvas._mainOutput._targetSize = sw::float2{ static_cast<float32>( without.getWidth() ), static_cast<float32>( without.getHeight() ) };

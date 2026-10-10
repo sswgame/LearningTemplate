@@ -43,7 +43,7 @@ namespace sw
         {
             string _token{};
             string _nonce{};
-            uint64 _verificationId{ 0 };
+            uint64 _verificationID{ 0 };
             uint32 _waitedFetchGeneration{ 0 }; ///< 이 세대의 받기가 끝나면 다시 본다(0 = 기다리지 않는다)
         };
 
@@ -62,8 +62,8 @@ namespace sw
         vector<PlatformLoginVerification> _listDone;
         INetSecurityProvider*             _pProvider;
         HttpClient*                       _pHttpClient;
-        uint64                            _nextVerificationId;
-        uint64                            _jwksRequestId;
+        uint64                            _nextVerificationID;
+        uint64                            _jwksRequestID;
         int64                             _lastFetchStartMs;
         uint32                            _fetchGeneration; ///< 끝난 받기 수
         int32                             _jwksFetchCount;

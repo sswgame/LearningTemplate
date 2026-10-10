@@ -81,7 +81,7 @@ namespace sw
          * @details 로그 파일 이름과 크래시 리포트에 같은 값이 들어가 둘을 짝지을 수 있습니다. 사용자가 보낸 덤프와 로그가 같은
          *          실행의 것인지 확인하는 유일한 방법입니다.
          */
-        static const utf8* getSessionId();
+        static const utf8* getSessionID();
 
         /**
          * @brief 크래시 보고에 줄 시한(초)입니다. 넘기면 보고를 버리고 곧장 끝냅니다. 0 이면 기본값(20 초).

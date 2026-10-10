@@ -13,7 +13,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Widgets/EditorNodeGraphId.h"
+#include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Panels/EditorPanelManager.h"
@@ -42,29 +42,29 @@ namespace sw::editor
             static constexpr int32 kPinTrueOffset   = DialogueGraphAsset::kPinOffsetTrue;
             static constexpr int32 kPinFalseOffset  = DialogueGraphAsset::kPinOffsetFalse;
 
-            static int32 pinIn( int32 nodeId )
+            static int32 pinIn( int32 nodeID )
             {
-                return DialogueGraphAsset::encodePin( nodeId, kPinInputOffset );
+                return DialogueGraphAsset::encodePin( nodeID, kPinInputOffset );
             }
 
-            static int32 pinOut( int32 nodeId )
+            static int32 pinOut( int32 nodeID )
             {
-                return DialogueGraphAsset::encodePin( nodeId, kPinOutputOffset );
+                return DialogueGraphAsset::encodePin( nodeID, kPinOutputOffset );
             }
 
-            static int32 pinBranchTrue( int32 nodeId )
+            static int32 pinBranchTrue( int32 nodeID )
             {
-                return DialogueGraphAsset::encodePin( nodeId, kPinTrueOffset );
+                return DialogueGraphAsset::encodePin( nodeID, kPinTrueOffset );
             }
 
-            static int32 pinBranchFalse( int32 nodeId )
+            static int32 pinBranchFalse( int32 nodeID )
             {
-                return DialogueGraphAsset::encodePin( nodeId, kPinFalseOffset );
+                return DialogueGraphAsset::encodePin( nodeID, kPinFalseOffset );
             }
 
-            static int32 pinChoice( int32 nodeId, int32 choiceIndex )
+            static int32 pinChoice( int32 nodeID, int32 choiceIndex )
             {
-                return DialogueGraphAsset::encodeChoicePin( nodeId, choiceIndex );
+                return DialogueGraphAsset::encodeChoicePin( nodeID, choiceIndex );
             }
         };
     } // namespace
@@ -77,8 +77,8 @@ namespace sw::editor
 
     DialogueGraphPanel::DialogueGraphPanel()
         : EditorGraphDocumentPanel{ EditorAssetType::DialogueGraph, "Move Dialogue Nodes", "dialogue-graph-layout" }
-        , _selectedNodeId{ 0 }
-        , _previewNodeId{ 0 }
+        , _selectedNodeID{ 0 }
+        , _previewNodeID{ 0 }
     {
     }
 
@@ -98,10 +98,10 @@ namespace sw::editor
 
         // 노드를 고르면 오른쪽에 인스펙터가 붙으므로 캔버스가 그만큼 좁아진다.
         const float32 availWidth  = ImGui::GetContentRegionAvail().x;
-        const float32 canvasWidth = _selectedNodeId > 0 ? availWidth * 0.72f : availWidth;
+        const float32 canvasWidth = _selectedNodeID > 0 ? availWidth * 0.72f : availWidth;
         drawGraphCanvas( canvasWidth );
 
-        if ( _selectedNodeId > 0 )
+        if ( _selectedNodeID > 0 )
         {
             ImGui::SameLine();
             drawSelectedNodeInspector();
@@ -154,7 +154,7 @@ namespace sw::editor
     void DialogueGraphPanel::drawGraphCanvas( float32 canvasWidth )
     {
         editor::EditorSectionDesc canvasDesc{};
-        canvasDesc._pId       = "DialogueCanvasRegion";
+        canvasDesc._pID       = "DialogueCanvasRegion";
         canvasDesc._kind      = editor::EditorSectionKind::Child;
         canvasDesc._childSize = float2{ canvasWidth, 0.0f };
         canvasDesc._flags     = editor::EditorSectionFlags::NoScrollbar | editor::EditorSectionFlags::NoScrollWithMouse;
@@ -172,7 +172,7 @@ namespace sw::editor
         // 링크 렌더링
         for ( const DialogueLink& link : _listLink )
         {
-            ed::Link( toLinkId( link._id ), toPinId( link._fromPin ), toPinId( link._toPin ) );
+            ed::Link( toLinkID( link._id ), toPinID( link._fromPin ), toPinID( link._toPin ) );
         }
 
         handleCanvasInteractions();
@@ -180,7 +180,7 @@ namespace sw::editor
         ed::NodeId  selectedNodes[1];
         const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
         if ( count > 0 )
-            _selectedNodeId = static_cast<int32>( selectedNodes[0].Get() );
+            _selectedNodeID = static_cast<int32>( selectedNodes[0].Get() );
 
         _nodeGraph.applyContentFitIfNeeded();
         cacheNodeLayout();
@@ -194,15 +194,15 @@ namespace sw::editor
         // 노드 렌더링
         for ( DialogueNode& node : _listNode )
         {
-            const ed::NodeId nodeId = toNodeId( node._id );
-            ed::BeginNode( nodeId );
+            const ed::NodeId nodeID = toNodeID( node._id );
+            ed::BeginNode( nodeID );
 
             drawNodeBody( node );
 
             ed::EndNode();
 
             if ( _nodeGraph.needsContentFit() )
-                ed::SetNodePosition( nodeId, ImVec2( node._position._x, node._position._y ) );
+                ed::SetNodePosition( nodeID, ImVec2( node._position._x, node._position._y ) );
         }
     }
 
@@ -218,7 +218,7 @@ namespace sw::editor
                 if ( a.Get() != 0 && b.Get() != 0 && ed::AcceptNewItem() )
                 {
                     DialogueLink newLink{};
-                    newLink._id      = nextLinkId();
+                    newLink._id      = nextLinkID();
                     const int32 pinA = static_cast<int32>( a.Get() );
                     const int32 pinB = static_cast<int32>( b.Get() );
 
@@ -247,15 +247,15 @@ namespace sw::editor
         ed::EndCreate();
 
         // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 정본은 `DialogueGraphAsset` 이다.**
-        // `decodePinNodeId` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 여기서 손으로 풀면
+        // `decodePinNodeID` 는 자릿수 기준(`kPinScale`)이 다른 옛 핀도 함께 푼다. 여기서 손으로 풀면
         // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
         processCanvasDeletions(
-            []( const DialogueLink& link, int32 nodeId )
-        { return DialogueGraphAsset::decodePinNodeId( link._fromPin ) == nodeId || DialogueGraphAsset::decodePinNodeId( link._toPin ) == nodeId; },
-            [this]( int32 nodeId )
+            []( const DialogueLink& link, int32 nodeID )
+        { return DialogueGraphAsset::decodePinNodeID( link._fromPin ) == nodeID || DialogueGraphAsset::decodePinNodeID( link._toPin ) == nodeID; },
+            [this]( int32 nodeID )
         {
-            if ( _selectedNodeId == nodeId )
-                _selectedNodeId = 0;
+            if ( _selectedNodeID == nodeID )
+                _selectedNodeID = 0;
         },
             "Delete Dialogue Link", "Delete Dialogue Node" );
     }
@@ -263,7 +263,7 @@ namespace sw::editor
     void DialogueGraphPanel::drawSelectedNodeInspector()
     {
         editor::EditorSectionDesc inspectorDesc{};
-        inspectorDesc._pId   = "DialogueNodeInspector";
+        inspectorDesc._pID   = "DialogueNodeInspector";
         inspectorDesc._kind  = editor::EditorSectionKind::Child;
         inspectorDesc._flags = editor::EditorSectionFlags::Border;
         EditorChrome::beginSection( inspectorDesc );
@@ -271,7 +271,7 @@ namespace sw::editor
         DialogueNode* pSelectedNode{ nullptr };
         for ( DialogueNode& node : _listNode )
         {
-            if ( node._id == _selectedNodeId )
+            if ( node._id == _selectedNodeID )
             {
                 pSelectedNode = &node;
                 break;
@@ -349,7 +349,7 @@ namespace sw::editor
         DialogueGraphAsset        data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadDialogueGraph( data, getLoadedAssetPath() );
         adoptLoadedGraph( std::move( data ), result );
-        _previewNodeId = 0;
+        _previewNodeID = 0;
         return result;
     }
 
@@ -389,15 +389,15 @@ namespace sw::editor
         if ( ImGui::Button( "Stop Preview" ) )
         {
             _bPreviewPlaying = SW_FALSE;
-            _previewNodeId   = 0;
+            _previewNodeID   = 0;
         }
-        if ( _previewNodeId <= 0 )
+        if ( _previewNodeID <= 0 )
             return;
 
         ImGui::SameLine();
-        ImGui::TextDisabled( "Preview node #%d", _previewNodeId );
+        ImGui::TextDisabled( "Preview node #%d", _previewNodeID );
         const DialogueGraphAsset asset = captureGraphData();
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
             return;
@@ -435,10 +435,10 @@ namespace sw::editor
 
     void DialogueGraphPanel::tickPreview( float32 deltaSeconds )
     {
-        if ( _bPreviewPlaying == SW_FALSE || _previewNodeId <= 0 )
+        if ( _bPreviewPlaying == SW_FALSE || _previewNodeID <= 0 )
             return;
         const DialogueGraphAsset asset = captureGraphData();
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
         {
@@ -477,20 +477,20 @@ namespace sw::editor
     void DialogueGraphPanel::previewStep( const DialogueStepInput& input )
     {
         const DialogueGraphAsset asset = captureGraphData();
-        if ( _previewNodeId <= 0 )
+        if ( _previewNodeID <= 0 )
         {
             const DialogueAssetNode* pStart = asset.findStartNode();
             enterPreviewNode( asset, pStart != nullptr ? pStart->_id : 0 );
             return;
         }
-        const DialogueAssetNode* pNode = asset.findNode( _previewNodeId );
+        const DialogueAssetNode* pNode = asset.findNode( _previewNodeID );
         enterPreviewNode( asset, pNode != nullptr ? DialogueCursor::step( asset, *pNode, input ) : 0 );
     }
 
-    void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeId )
+    void DialogueGraphPanel::enterPreviewNode( const DialogueGraphAsset& asset, int32 nodeID )
     {
         _previewHoldSeconds            = 0.0f;
-        const DialogueAssetNode* pNode = asset.findNode( nodeId );
+        const DialogueAssetNode* pNode = asset.findNode( nodeID );
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
         {
@@ -498,7 +498,7 @@ namespace sw::editor
             return;
         }
 
-        _previewNodeId = nodeId;
+        _previewNodeID = nodeID;
         // 러너가 알리는 노드(대사 · 선택지)만 뷰포트에 보인다.
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
             EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
@@ -508,10 +508,10 @@ namespace sw::editor
 
     void DialogueGraphPanel::addNode( DialogueAssetNodeType type )
     {
-        DialogueNode node = DialogueCursor::makeNode( type, nextNodeId() );
+        DialogueNode node = DialogueCursor::makeNode( type, nextNodeID() );
         node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
         node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
-        _selectedNodeId   = node._id;
+        _selectedNodeID   = node._id;
         _listNode.push_back( std::move( node ) );
     }
 
@@ -545,11 +545,11 @@ namespace sw::editor
             case DialogueNodeOutput::Branch:
             {
                 ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
-                ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
+                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
                 ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
                 ed::EndPin();
                 ImGui::SameLine();
-                ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
+                ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
                 ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
                 ed::EndPin();
                 return;
@@ -564,7 +564,7 @@ namespace sw::editor
                 }
                 for ( size_t choiceIndex = 0; choiceIndex < node._listChoice.size(); ++choiceIndex )
                 {
-                    ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
+                    ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinChoice( node._id, static_cast<int32>( choiceIndex ) ) ), ed::PinKind::Output );
                     ImGui::Text( "#%zu: %s ->", choiceIndex + 1, node._listChoice[choiceIndex].c_str() );
                     ed::EndPin();
                 }
@@ -678,16 +678,16 @@ namespace sw::editor
         }
     }
 
-    void DialogueGraphPanel::drawInputPin( int32 nodeId )
+    void DialogueGraphPanel::drawInputPin( int32 nodeID )
     {
-        ed::BeginPin( toPinId( DialogueGraphPanelInternal::pinIn( nodeId ) ), ed::PinKind::Input );
+        ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinIn( nodeID ) ), ed::PinKind::Input );
         ImGui::TextUnformatted( "-> In" );
         ed::EndPin();
     }
 
-    void DialogueGraphPanel::drawOutputPin( int32 pinId, const utf8* pLabel )
+    void DialogueGraphPanel::drawOutputPin( int32 pinID, const utf8* pLabel )
     {
-        ed::BeginPin( toPinId( pinId ), ed::PinKind::Output );
+        ed::BeginPin( toPinID( pinID ), ed::PinKind::Output );
         ImGui::TextUnformatted( pLabel );
         ed::EndPin();
     }

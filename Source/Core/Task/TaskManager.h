@@ -252,7 +252,7 @@ namespace sw
     private:
         // --- 수명 · 정리 ---
         /** @brief 워커 스레드의 메인 루프입니다. 큐 소비 · 훔치기 · 세대 스핀 · 자기 워드에서 잠들기를 합니다. */
-        void workerLoop( uint32 workerId );
+        void workerLoop( uint32 workerID );
         /** @brief `clear` 가 큐에서 꺼낸 항목 하나를 실행하지 않고 놓습니다(노드는 참조를 해제하고, 티켓은 그룹을 닫습니다). */
         void drainQueueItem( uintptr_t item );
 
@@ -340,8 +340,8 @@ namespace sw
         // --- 큐 ---
         /** @brief Normal 큐에 넣습니다. 워커면 자기 데크(가득 차면 전역 큐), 아니면 전역 큐에 넣습니다. */
         void pushToNormalQueue( uintptr_t item );
-        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerId 가 음수면 워커가 아닙니다. @p bTakeLowQueue 가 false 면 Low 는 보지 않습니다. */
-        [[nodiscard]] bool tryTakeItem( int32 workerId, bool bTakeLowQueue, uintptr_t& outItem );
+        /** @brief 큐 순서(High → 내 데크 → Normal 전역 → 훔치기 → Low)대로 항목 하나를 가져옵니다. @p workerID 가 음수면 워커가 아닙니다. @p bTakeLowQueue 가 false 면 Low 는 보지 않습니다. */
+        [[nodiscard]] bool tryTakeItem( int32 workerID, bool bTakeLowQueue, uintptr_t& outItem );
         /** @brief 이 스레드가 가져올 수 있는 항목 하나를 가져와 실행합니다. 기다리는 동안 다른 일을 돕는 곳입니다. */
         [[nodiscard]] bool tryHelpAndExecute( bool bHelpLowQueue );
 
@@ -369,12 +369,12 @@ namespace sw
         static constexpr uint32 kMaxWorkerCount = 64;
 
         bool                           _bInitialized;       ///< 매니저를 초기화했는지 여부
-        std::thread::id                _mainThreadId;       ///< 메인 스레드의 ID
+        std::thread::id                _mainThreadID;       ///< 메인 스레드의 ID
         atomic<bool>                   _bStop;              ///< 워커 스레드 종료 플래그
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
         atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 칸은 `_helperSlotFreeMask` 로 다시 쓴다)
         atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크
-        uint32                         _instanceId;         ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
+        uint32                         _instanceID;         ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
         /**
          * @brief 잠든 워커의 비트마스크입니다. 깨우는 쪽은 비트를 **원자적으로 내리고** 그 워커만 깨웁니다.
          * @details 비트를 내린 쪽만 깨우므로 두 제출자가 같은 워커를 두 번 깨우지 않고, n 번의 깨우기는 서로 독립적인 n 번의 주소

@@ -30,7 +30,7 @@ namespace sw
         return *this;
     }
 
-    UiReply& UiReply::requestFocus( WidgetId widget )
+    UiReply& UiReply::requestFocus( WidgetID widget )
     {
         _focusRequest = widget;
         return *this;

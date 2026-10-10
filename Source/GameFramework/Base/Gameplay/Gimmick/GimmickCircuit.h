@@ -56,7 +56,7 @@ namespace sw
         int32                  findNode( const hashed_string& id ) const;
         int32                  getNodeCount() const { return static_cast<int32>( _listNode.size() ); }
         const GimmickNodeKind& getKind( int32 node ) const { return *_listNode[static_cast<size_t>( node )]._pKind; }
-        const hashed_string&   getNodeId( int32 node ) const { return _listNode[static_cast<size_t>( node )]._id; }
+        const hashed_string&   getNodeID( int32 node ) const { return _listNode[static_cast<size_t>( node )]._id; }
         uint32                 getOutputBits( int32 node ) const { return _listNode[static_cast<size_t>( node )]._outputBits; }
         bool                   getOutput( int32 node, int32 port ) const { return port >= 0 && ( getOutputBits( node ) & ( 1u << static_cast<uint32>( port ) ) ) != 0; }
         /** @brief 이름으로 출력을 읽습니다. 모르는 포트면 false 입니다. */

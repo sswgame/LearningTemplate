@@ -123,7 +123,7 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
 `instantiate` 는 모든 엔티티를 하나의 상태 로드 배치(`ObjectStateBatch`)로 읽습니다. 오브젝트를 모두 만들고, 상태를 모두 읽은 다음, 마지막에 `finish()` 가 부모 관계와 핸들을 한 번에 연결합니다.
 그래서 파일에서 자식이 부모보다 앞에 있어도 됩니다.
 
-씬 컴포넌트의 부모는 세 필드로 저장됩니다. 부모 오브젝트의 이름(`_attachOwner`), 부모 오브젝트의 파일 id(`_attachOwnerId`), 부모 컴포넌트의 안정 키(`_attachComponent`)입니다.
+씬 컴포넌트의 부모는 세 필드로 저장됩니다. 부모 오브젝트의 이름(`_attachOwner`), 부모 오브젝트의 파일 id(`_attachOwnerID`), 부모 컴포넌트의 안정 키(`_attachComponent`)입니다.
 안정 키는 `CameraComponent#0` 처럼 "컴포넌트 이름#같은 이름 중 순번" 형식이고, `ComponentStableKey` 가 만듭니다.
 
 - 같은 오브젝트 안의 소켓에 붙었으면 소유자 필드가 비어 있습니다.
@@ -134,8 +134,8 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
 찾지 못한 부모 참조는 지우지 않고 보관했다가(`SceneComponent::keepUnresolvedAttach`) 다음 저장에서 그대로 다시 씁니다. 부모가 돌아오면 다음 로드에서 붙습니다.
 프리팹 파일은 오브젝트 하나만 담으므로 파일 id가 없고, 다른 오브젝트로의 부착도 싣지 않습니다.
 
-다른 오브젝트를 가리키는 `GameObjectHandle` 프로퍼티도 같은 방식으로 저장됩니다. 저장할 때 런타임 id를 파일 id로 바꾸고(`ObjectSaveOptions::getSavedObjectId`), 읽을 때 배치가 이번 실행의 오브젝트로 되돌립니다.
-`Scene` 은 런타임 id와 파일 id의 대응을 보관하다가(`collectSavedIdMap`) 저장할 때 같은 파일 id를 다시 씁니다. 지운 오브젝트의 파일 id는 다시 쓰지 않습니다.
+다른 오브젝트를 가리키는 `GameObjectHandle` 프로퍼티도 같은 방식으로 저장됩니다. 저장할 때 런타임 id를 파일 id로 바꾸고(`ObjectSaveOptions::getSavedObjectID`), 읽을 때 배치가 이번 실행의 오브젝트로 되돌립니다.
+`Scene` 은 런타임 id와 파일 id의 대응을 보관하다가(`collectSavedIDMap`) 저장할 때 같은 파일 id를 다시 씁니다. 지운 오브젝트의 파일 id는 다시 쓰지 않습니다.
 
 ### 씬 파일 형식
 
@@ -157,7 +157,7 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
         <entity id="3" name="CustomLight">
             <GameObject _schemaVersion="0" _name="CustomLight" _bActive="true">
                 <_listComponent>
-                    <MeshComponent _componentName="MeshComponent" _meshId="Sphere" _localPosition="0,2,0"/>
+                    <MeshComponent _componentName="MeshComponent" _meshID="Sphere" _localPosition="0,2,0"/>
                 </_listComponent>
             </GameObject>
         </entity>
@@ -199,7 +199,7 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
 ## 함정과 주의
 
 **씬 엔티티에는 0이 아닌 `id` 가 꼭 있어야 합니다.** `SceneDocument::loadXml`, `saveXml`, 쿠커가 모두 id가 없거나 0인 엔티티가 있는 문서를 거절합니다.
-코드로 씬 XML이나 `SceneObjectNode` 를 만들 때 `_fileId` 를 빠뜨리지 마세요.
+코드로 씬 XML이나 `SceneObjectNode` 를 만들 때 `_fileID` 를 빠뜨리지 마세요.
 id가 0이고 이름만 있는 부착은 찾지 못한 부모 참조를 저장한 현재 형식입니다(`SceneComponent::syncAttachSerializeFields`). 낡은 데이터로 보고 지우면 안 됩니다.
 
 **씬과 프리팹 XML을 손으로 쓰지 마세요.** 엔티티 안의 오브젝트 XML은 리플렉션이 만든 결과입니다.

@@ -139,13 +139,13 @@ namespace sw
         _roadCost = MathUtil::max( 0, root.getAttributeInt( "roadCost", _roadCost ) );
         for ( XmlNode node = root.findChild( "Good" ); node; node = node.findNextSibling( "Good" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             CityGoodDef good;
-            good._id          = hashed_string( pId );
+            good._id          = hashed_string( pID );
             const utf8* pName = node.findAttribute( "name" );
-            good._name        = pName != nullptr ? pName : pId;
+            good._name        = pName != nullptr ? pName : pID;
             good._price       = MathUtil::max( 0, node.getAttributeInt( "price", good._price ) );
             good._bFood       = node.getAttributeBool( "food", false ) ? SW_TRUE : SW_FALSE;
             (void)_goodCatalog.add( good );
@@ -154,19 +154,19 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             CityBuildingDef building;
-            building._id               = hashed_string( pId );
+            building._id               = hashed_string( pID );
             const utf8* pName          = node.findAttribute( "name" );
-            building._name             = pName != nullptr ? pName : pId;
+            building._name             = pName != nullptr ? pName : pID;
             const string_view kindText = node.getAttributeText( "kind" );
             if ( kindText.empty() == false && CityCatalogInternal::parseKind( kindText, building._kind ) == false )
-                SW_LOG_WARNING( "%#: building '%#' has an unknown kind '%#'", sourceName, pId, kindText );
+                SW_LOG_WARNING( "%#: building '%#' has an unknown kind '%#'", sourceName, pID, kindText );
             const string_view serviceText = node.getAttributeText( "service" );
             if ( serviceText.empty() == false && parseCityService( serviceText, building._service ) == false )
-                SW_LOG_WARNING( "%#: building '%#' has an unknown service '%#'", sourceName, pId, serviceText );
+                SW_LOG_WARNING( "%#: building '%#' has an unknown service '%#'", sourceName, pID, serviceText );
             building._delivery            = StringUtil::equals( node.getAttributeText( "delivery" ), string_view( "Radius" ), true ) ? CityDelivery::Radius : CityDelivery::Walker;
             const string_view terrainText = node.getAttributeText( "terrain" );
             if ( terrainText.empty() == false )
@@ -174,13 +174,13 @@ namespace sw
                 if ( CityCatalogInternal::parseTerrain( terrainText, building._requiredTerrain ) )
                     building._bRequiresTerrain = SW_TRUE;
                 else
-                    SW_LOG_WARNING( "%#: building '%#' needs an unknown terrain '%#'", sourceName, pId, terrainText );
+                    SW_LOG_WARNING( "%#: building '%#' needs an unknown terrain '%#'", sourceName, pID, terrainText );
             }
             CityCatalogInternal::parseGoodList( node.getAttributeText( "goods" ), building._listGood );
-            for ( const hashed_string& goodId : building._listGood )
+            for ( const hashed_string& goodID : building._listGood )
             {
-                if ( _goodCatalog.find( goodId ) == nullptr )
-                    SW_LOG_WARNING( "%#: building '%#' names an unknown good '%#'", sourceName, pId, goodId.c_str() );
+                if ( _goodCatalog.find( goodID ) == nullptr )
+                    SW_LOG_WARNING( "%#: building '%#' names an unknown good '%#'", sourceName, pID, goodID.c_str() );
             }
             building._size               = MathUtil::clamp( node.getAttributeInt( "size", building._size ), 1, 6 );
             building._cost               = MathUtil::max( 0, node.getAttributeInt( "cost", building._cost ) );
@@ -193,7 +193,7 @@ namespace sw
             building._desirability       = node.getAttributeInt( "desirability", building._desirability );
             building._desirabilityRadius = MathUtil::clamp( node.getAttributeInt( "desirabilityRadius", building._desirabilityRadius ), 0, 8 );
             if ( building._kind == CityBuildingKind::Service && building._service == CityService::Count )
-                SW_LOG_WARNING( "%#: service building '%#' names no service", sourceName, pId );
+                SW_LOG_WARNING( "%#: service building '%#' names no service", sourceName, pID );
             (void)_buildingCatalog.add( building );
             ++loadedCount;
         }

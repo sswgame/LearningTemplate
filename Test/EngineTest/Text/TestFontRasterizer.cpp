@@ -15,11 +15,11 @@ namespace
     {
         static constexpr const utf8* kFontPath = "engine/fonts/kenney_future.ttf";
 
-        static sw::FontFaceId openEngineFace( sw::IFontRasterizer& rasterizer )
+        static sw::FontFaceID openEngineFace( sw::IFontRasterizer& rasterizer )
         {
             sw::vector<uint8> bytes;
             if ( sw::ResourceUtil::readBinaryResource( kFontPath, bytes ) == false )
-                return sw::kInvalidFontFaceId;
+                return sw::kInvalidFontFaceID;
             return rasterizer.loadFace( std::move( bytes ), 0, kFontPath );
         }
     };
@@ -30,8 +30,8 @@ SW_TEST_CASE( FontRasterizerTest, OpensFaceAndFindsGlyphs )
 {
     sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
     SW_ASSERT_NOT_NULL( rasterizer.get() );
-    const sw::FontFaceId face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
-    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+    const sw::FontFaceID face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
+    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
 
     SW_EXPECT_NOT_EQUAL( 0u, rasterizer->findGlyphIndex( face, 'A' ) );
     SW_EXPECT_EQUAL( 0u, rasterizer->findGlyphIndex( face, 0xAC00u ) ); // '가'
@@ -56,8 +56,8 @@ SW_TEST_CASE( FontRasterizerTest, SdfIsBrightInsideTheGlyph )
 {
     sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
     SW_ASSERT_NOT_NULL( rasterizer.get() );
-    const sw::FontFaceId face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
-    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+    const sw::FontFaceID face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
+    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
 
     sw::SdfGlyphBitmap bitmap{};
     SW_ASSERT_TRUE( rasterizer->rasterizeSdf( face, rasterizer->findGlyphIndex( face, 'H' ), sw::SdfRasterParams{}, bitmap ) );
@@ -79,8 +79,8 @@ SW_TEST_CASE( FontRasterizerTest, SpaceHasAdvanceButNoBitmap )
 {
     sw::unique_ptr<sw::IFontRasterizer> rasterizer = sw::IFontRasterizer::createDefault();
     SW_ASSERT_NOT_NULL( rasterizer.get() );
-    const sw::FontFaceId face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
-    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceId );
+    const sw::FontFaceID face = FontRasterizerTestUtil::openEngineFace( *rasterizer );
+    SW_ASSERT_TRUE( face != sw::kInvalidFontFaceID );
     sw::SdfGlyphBitmap bitmap{};
     SW_ASSERT_TRUE( rasterizer->rasterizeSdf( face, rasterizer->findGlyphIndex( face, ' ' ), sw::SdfRasterParams{}, bitmap ) );
     SW_EXPECT_EQUAL( 0u, bitmap._width );
@@ -95,5 +95,5 @@ SW_TEST_CASE( FontRasterizerTest, RejectsNonFontBytes )
     SW_ASSERT_NOT_NULL( rasterizer.get() );
     SW_TEST_DEFENSIVE_SCOPE( "garbage bytes are rejected with an error" );
     sw::vector<uint8> garbage( 64, 0x5Au );
-    SW_EXPECT_EQUAL( sw::kInvalidFontFaceId, rasterizer->loadFace( std::move( garbage ), 0, "garbage" ) );
+    SW_EXPECT_EQUAL( sw::kInvalidFontFaceID, rasterizer->loadFace( std::move( garbage ), 0, "garbage" ) );
 }

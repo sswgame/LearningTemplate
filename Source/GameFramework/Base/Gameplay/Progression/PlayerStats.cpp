@@ -103,19 +103,19 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             StatDef           def;
             const string_view kindText = node.getAttributeText( "kind" );
             if ( kindText.empty() == false && parseStatKind( kindText, def._kind ) == false )
             {
-                SW_LOG_ERROR( "%#: stat '%#' has an unknown kind '%#' (Counter, Max, Min, Time) - skipped", sourceName, pId, kindText );
+                SW_LOG_ERROR( "%#: stat '%#' has an unknown kind '%#' (Counter, Max, Min, Time) - skipped", sourceName, pID, kindText );
                 continue;
             }
             const utf8* pName = node.findAttribute( "name" );
-            def._id           = hashed_string( pId );
-            def._name         = pName != nullptr ? pName : pId;
+            def._id           = hashed_string( pID );
+            def._name         = pName != nullptr ? pName : pID;
             def._maxValue     = MathUtil::max( 0.0, static_cast<float64>( node.getAttributeFloat( "max", 0.0f ) ) );
             addStat( def );
             ++loadedCount;

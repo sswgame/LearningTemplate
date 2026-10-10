@@ -300,7 +300,7 @@ namespace sw
             SW_LOG_ERROR( "Retarget bake: '%#' / '%#' could not be loaded", profilePath, sourceClipPath );
             return false;
         }
-        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( sourceClip.getCodecId() );
+        const IAnimCodec* pCodec = AnimCodecRegistry::findCodec( sourceClip.getCodecID() );
         PoseRetargeter    retargeter;
         AnimClip          baked;
         const bool        bBaked = pCodec != nullptr && retargeter.initialize( profile, sourceSkeleton, targetSkeleton, nullptr ) &&

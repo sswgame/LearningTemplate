@@ -33,13 +33,13 @@ namespace sw
         struct PendingTicket
         {
             string _text{};
-            uint64 _verificationId{ 0 };
+            uint64 _verificationID{ 0 };
         };
 
         vector<PendingTicket>             _listPending;
         vector<PlatformLoginVerification> _listDone;
         string                            _name;
-        uint64                            _nextVerificationId;
+        uint64                            _nextVerificationID;
         int32                             _submittedCount;
     };
 } // namespace sw

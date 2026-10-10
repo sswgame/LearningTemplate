@@ -53,16 +53,16 @@ namespace sw
             }
 
             /** @brief "spearman:3,archer:2" 를 읽습니다(개수를 빼면 하나). */
-            static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pId )
+            static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pID )
             {
                 outListGarrison.clear();
                 GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     ConquestGarrisonDef garrison;
                     const size_t        colon = token.find( ':' );
-                    garrison._unitId          = hashed_string( token.substr( 0, colon ) );
+                    garrison._unitID          = hashed_string( token.substr( 0, colon ) );
                     if ( colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), garrison._count ) == false )
-                        SW_LOG_WARNING( "%#: site '%#' has a bad garrison count '%#'", sourceName, pId, token );
+                        SW_LOG_WARNING( "%#: site '%#' has a bad garrison count '%#'", sourceName, pID, token );
                     garrison._count = MathUtil::max( 0, garrison._count );
                     outListGarrison.push_back( garrison );
                 } );
@@ -148,11 +148,11 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ConquestUnitDef unit;
-            unit._id                   = hashed_string( pId );
+            unit._id                   = hashed_string( pID );
             unit._health               = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", unit._health ) );
             unit._damage               = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", unit._damage ) );
             unit._range                = MathUtil::max( 0.1f, node.getAttributeFloat( "range", unit._range ) );
@@ -163,7 +163,7 @@ namespace sw
             unit._population           = MathUtil::max( 0, node.getAttributeInt( "pop", unit._population ) );
             const string_view roleText = node.getAttributeText( "siege" );
             if ( roleText.empty() == false && ConquestCatalogInternal::parseSiegeRole( roleText, unit._siegeRole ) == false )
-                SW_LOG_WARNING( "%#: unit '%#' has an unknown siege role '%#'", sourceName, pId, roleText );
+                SW_LOG_WARNING( "%#: unit '%#' has an unknown siege role '%#'", sourceName, pID, roleText );
             ConquestCatalogInternal::loadStatChild( node, "Cost", unit._cost );
             (void)_unitCatalog.add( unit );
             ++loadedCount;
@@ -171,11 +171,11 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ConquestBuildingDef building;
-            building._id              = hashed_string( pId );
+            building._id              = hashed_string( pID );
             building._produces        = hashed_string( node.getAttributeText( "produces" ) );
             building._cycleTime       = MathUtil::max( 0.1f, node.getAttributeFloat( "cycleTime", building._cycleTime ) );
             building._amountPerWorker = MathUtil::max( 0, node.getAttributeInt( "amount", building._amountPerWorker ) );
@@ -183,10 +183,10 @@ namespace sw
             building._housing         = MathUtil::max( 0, node.getAttributeInt( "housing", building._housing ) );
             GameDataXml::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
             {
-                const hashed_string unitId( token );
-                if ( _unitCatalog.find( unitId ) == nullptr )
-                    SW_LOG_WARNING( "%#: building '%#' trains an unknown unit '%#'", sourceName, pId, token );
-                building._listTrainable.push_back( unitId );
+                const hashed_string unitID( token );
+                if ( _unitCatalog.find( unitID ) == nullptr )
+                    SW_LOG_WARNING( "%#: building '%#' trains an unknown unit '%#'", sourceName, pID, token );
+                building._listTrainable.push_back( unitID );
             } );
             ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
             (void)_buildingCatalog.add( building );
@@ -195,11 +195,11 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ConquestSiteDef site;
-            site._id                   = hashed_string( pId );
+            site._id                   = hashed_string( pID );
             site._x                    = node.getAttributeFloat( "x", site._x );
             site._captureRadius        = MathUtil::max( 0.5f, node.getAttributeFloat( "captureRadius", site._captureRadius ) );
             site._gateHealth           = MathUtil::max( 0.0f, node.getAttributeFloat( "gate", site._gateHealth ) );
@@ -209,15 +209,15 @@ namespace sw
             site._buildSlots           = MathUtil::max( 0, node.getAttributeInt( "slots", site._buildSlots ) );
             const string_view kindText = node.getAttributeText( "kind" );
             if ( kindText.empty() == false && ConquestCatalogInternal::parseSiteKind( kindText, site._kind ) == false )
-                SW_LOG_WARNING( "%#: site '%#' has an unknown kind '%#'", sourceName, pId, kindText );
+                SW_LOG_WARNING( "%#: site '%#' has an unknown kind '%#'", sourceName, pID, kindText );
             const string_view ownerText = node.getAttributeText( "owner" );
             if ( ownerText.empty() == false && parseConquestTeam( ownerText, site._owner ) == false )
-                SW_LOG_WARNING( "%#: site '%#' has an unknown owner '%#'", sourceName, pId, ownerText );
-            ConquestCatalogInternal::parseGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, pId );
+                SW_LOG_WARNING( "%#: site '%#' has an unknown owner '%#'", sourceName, pID, ownerText );
+            ConquestCatalogInternal::parseGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, pID );
             for ( const ConquestGarrisonDef& garrison : site._listGarrison )
             {
-                if ( _unitCatalog.find( garrison._unitId ) == nullptr )
-                    SW_LOG_WARNING( "%#: site '%#' garrisons an unknown unit '%#'", sourceName, pId, garrison._unitId.c_str() );
+                if ( _unitCatalog.find( garrison._unitID ) == nullptr )
+                    SW_LOG_WARNING( "%#: site '%#' garrisons an unknown unit '%#'", sourceName, pID, garrison._unitID.c_str() );
             }
             ConquestCatalogInternal::loadStatChild( node, "Income", site._income );
             (void)_siteCatalog.add( site );

@@ -24,8 +24,8 @@ namespace sw
     /** @brief 주울 수 있는 것 하나(고철 · 동료 시신)입니다. */
     struct ScavengerScrap
     {
-        hashed_string _scrapId{};
-        hashed_string _areaId{}; ///< 놓인 방(들려 있으면 비어 있다)
+        hashed_string _scrapID{};
+        hashed_string _areaID{}; ///< 놓인 방(들려 있으면 비어 있다)
         float32       _weight{ 0.0f };
         int32         _uid{ 0 };
         int32         _value{ 0 };
@@ -61,12 +61,12 @@ namespace sw
         void               clear();
 
         /** @brief 잠긴 문(그 방으로 들어가는)을 엽니다. 잠겨 있었으면 true 입니다. */
-        bool unlockDoor( const hashed_string& roomId );
-        bool canTraverse( const hashed_string& fromId, const hashed_string& toId ) const;
+        bool unlockDoor( const hashed_string& roomID );
+        bool canTraverse( const hashed_string& fromID, const hashed_string& toID ) const;
         /** @brief 바닥에 놓습니다(새 고유 번호를 준다). 번호를 돌려줍니다. */
-        int32 placeScrap( const ScavengerScrap& scrap, const hashed_string& areaId );
+        int32 placeScrap( const ScavengerScrap& scrap, const hashed_string& areaID );
         /** @brief 바닥에서 집어 올립니다. 그 방에 없으면 false 입니다. */
-        [[nodiscard]] bool tryTakeScrap( int32 uid, const hashed_string& areaId, ScavengerScrap& outScrap );
+        [[nodiscard]] bool tryTakeScrap( int32 uid, const hashed_string& areaID, ScavengerScrap& outScrap );
 
         const AreaGraph& getGraph() const { return _graph; }
         /** @brief 빌린 플래그입니다(빌리지 않았으면 빈 플래그). */
@@ -100,7 +100,7 @@ namespace sw
         AreaGraph               _graph;
         vector<ScavengerScrap>  _listGroundScrap;
         vector<hashed_string>   _listUnlockedFlag; ///< 이 시설이 빌린 플래그에 둔 것(하루가 끝나면 이것만 지운다)
-        hashed_string           _layoutMoonId;     ///< 그래프를 지은 위성(비면 지은 적 없음 — `clear` 뒤에도 그래프와 함께 남는다)
+        hashed_string           _layoutMoonID;     ///< 그래프를 지은 위성(비면 지은 적 없음 — `clear` 뒤에도 그래프와 함께 남는다)
         GameFlags*              _pFlags;           ///< 빌린 플래그
         const ScavengerCatalog* _pCatalog;         ///< 빌린 카탈로그(지도를 다시 짓는다)
         uint32                  _layoutSeed;       ///< 그래프를 지은 씨앗

@@ -133,21 +133,21 @@ namespace
     /** @brief 그 플레이어가 마지막으로 시작한 기술 id 입니다. 없으면 빈 이름입니다. */
     hashed_string findLastStartedMove( const vector<FightingEvent>& listEvent, int32 player )
     {
-        hashed_string moveId;
+        hashed_string moveID;
         for ( const FightingEvent& event : listEvent )
         {
             if ( event._kind == FightingEvent::Kind::MoveStarted && event._player == player )
-                moveId = event._moveId;
+                moveID = event._moveID;
         }
-        return moveId;
+        return moveID;
     }
 
     /** @brief 그 플레이어가 그 기술로 낸 첫 Hit 의 피해입니다. 없으면 −1 입니다. */
-    int32 findHitDamage( const vector<FightingEvent>& listEvent, int32 player, const hashed_string& moveId )
+    int32 findHitDamage( const vector<FightingEvent>& listEvent, int32 player, const hashed_string& moveID )
     {
         for ( const FightingEvent& event : listEvent )
         {
-            if ( event._kind == FightingEvent::Kind::Hit && event._player == player && event._moveId == moveId )
+            if ( event._kind == FightingEvent::Kind::Hit && event._player == player && event._moveID == moveID )
                 return event._value;
         }
         return -1;

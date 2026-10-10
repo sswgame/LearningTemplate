@@ -60,7 +60,7 @@ namespace sw
         unordered_map<const MeshVertexAnimation*, uint32> _mapBaseByAnimation;
         unordered_map<const Mesh*, uint32>                _mapBase;
         vector<const Mesh*>                               _listBuilt;
-        vector<uint64>                                    _listBuiltContentId;
+        vector<uint64>                                    _listBuiltContentID;
         uint32                                            _elementCount{ 0 };
     };
 } // namespace sw

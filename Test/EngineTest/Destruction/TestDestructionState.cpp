@@ -123,7 +123,7 @@ SW_TEST_CASE( DestructionStateTest, PartCutFromTheAnchorsFalls )
     SW_EXPECT_TRUE( pLower->_bAnchored == SW_TRUE );
     SW_EXPECT_TRUE( pUpper->_bAnchored == SW_FALSE );
     SW_EXPECT_EQUAL( 2u, pUpper->_leafCount );
-    SW_EXPECT_EQUAL( 1u, pUpper->_parentId );
+    SW_EXPECT_EQUAL( 1u, pUpper->_parentID );
 }
 
 /**

@@ -53,7 +53,7 @@ else
 ### 2단계 — 오브젝트에 외형 컴포넌트 붙이기
 
 스킨드 메시(`SkeletalMeshComponent`)가 있는 오브젝트에 `CharacterAppearanceComponent` 를 붙이고 프리셋 id 와 씨앗을 줍니다.
-씬이나 프리팹에 PROPERTY 로 적거나, 코드에서 `setPreset( presetId, seed )` 를 부릅니다. 플레이를 시작하면 몸 메시와 장비 부품이 조립됩니다.
+씬이나 프리팹에 PROPERTY 로 적거나, 코드에서 `setPreset( presetID, seed )` 를 부릅니다. 플레이를 시작하면 몸 메시와 장비 부품이 조립됩니다.
 
 ### 3단계 — 무기 바꾸기
 

@@ -14,7 +14,7 @@ namespace sw
 {
     ControlIntentHistory::ControlIntentHistory()
         : _listTrack{}
-        , _mapComponentIdToTrack{}
+        , _mapComponentIDToTrack{}
         , _capacityTicks{ kDefaultCapacityTicks }
     {
     }
@@ -28,14 +28,14 @@ namespace sw
     void ControlIntentHistory::reset()
     {
         _listTrack.clear();
-        _mapComponentIdToTrack.clear();
+        _mapComponentIDToTrack.clear();
     }
 
     void ControlIntentHistory::record( uint32 tick, const ComponentHandle& pawn, const hashed_string& pawnName, const ControlIntent& intent )
     {
         int32                                              trackIndex = -1;
-        const unordered_map<uint64, int32>::const_iterator found      = _mapComponentIdToTrack.find( pawn.componentId() );
-        if ( found != _mapComponentIdToTrack.end() )
+        const unordered_map<uint64, int32>::const_iterator found      = _mapComponentIDToTrack.find( pawn.componentID() );
+        if ( found != _mapComponentIDToTrack.end() )
         {
             trackIndex = found->second;
         }
@@ -47,7 +47,7 @@ namespace sw
             created._ring.initialize( _capacityTicks );
             created._pawnName = pawnName;
             created._pawn     = pawn;
-            _mapComponentIdToTrack.emplace( pawn.componentId(), trackIndex );
+            _mapComponentIDToTrack.emplace( pawn.componentID(), trackIndex );
         }
         ControlIntentTrack& track       = _listTrack[static_cast<size_t>( trackIndex )];
         const bool          bContinuing = track._ring.getCount() > 0 && tick == track._lastTick + 1;

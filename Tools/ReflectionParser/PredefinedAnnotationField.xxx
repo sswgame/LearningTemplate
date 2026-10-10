@@ -3,11 +3,11 @@
  * @brief REFLECT / ENUM / PROPERTY / FUNCTION 애노테이션 필드 하나가 파싱에서 코드젠까지 가는 길을 한 줄로 정합니다.
  * @details include 하기 전에 두 매크로를 정의하십시오(`AnnotationFields.cpp` 가 전개합니다).
  *
- *          REGISTER_ANNOTATION_FIELD( Scope, Id, Member, Emit )         값을 멤버에 그대로 넣는다
- *          REGISTER_ANNOTATION_FIELD_FN( Scope, Id, Member, Fn, Emit )  값을 `Fn( 대상, 값 )` 이 넣는다
+ *          REGISTER_ANNOTATION_FIELD( Scope, ID, Member, Emit )         값을 멤버에 그대로 넣는다
+ *          REGISTER_ANNOTATION_FIELD_FN( Scope, ID, Member, Fn, Emit )  값을 `Fn( 대상, 값 )` 이 넣는다
  *
- *          Scope  : Reflect | Enum | Property | Function   (PredefinedReflectAnnotation.xxx 의 Id)
- *          Id     : AnnotationMeta.txt 의 정규 필드명(`flag.ReadOnly` 의 ReadOnly). 철자(별칭)는 거기서 늘립니다.
+ *          Scope  : Reflect | Enum | Property | Function   (PredefinedReflectAnnotation.xxx 의 ID)
+ *          ID     : AnnotationMeta.txt 의 정규 필드명(`flag.ReadOnly` 의 ReadOnly). 철자(별칭)는 거기서 늘립니다.
  *          Member : 값이 들어가는 ParsedReflection.h 의 멤버입니다. **멤버 타입이 곧 값의 종류입니다.**
  *                     uint8 비트필드   → bool    (단독 토큰 `X` 와 `X = true/false`)
  *                     string · 목록    → 문자열  (`X = "..."`)

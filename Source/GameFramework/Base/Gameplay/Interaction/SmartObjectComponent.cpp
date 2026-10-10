@@ -21,22 +21,22 @@ namespace sw
         _listClaimant.assign( def._listSlot.size(), 0 );
     }
 
-    bool SmartObjectSlots::claim( int32 slot, uint64 claimantId )
+    bool SmartObjectSlots::claim( int32 slot, uint64 claimantID )
     {
-        if ( slot < 0 || slot >= getSlotCount() || claimantId == 0 )
+        if ( slot < 0 || slot >= getSlotCount() || claimantID == 0 )
             return false;
         uint64& holder = _listClaimant[static_cast<size_t>( slot )];
-        if ( holder == claimantId )
+        if ( holder == claimantID )
             return true;
-        if ( holder != 0 || findSlotOf( claimantId ) >= 0 )
+        if ( holder != 0 || findSlotOf( claimantID ) >= 0 )
             return false;
-        holder = claimantId;
+        holder = claimantID;
         return true;
     }
 
-    bool SmartObjectSlots::release( uint64 claimantId )
+    bool SmartObjectSlots::release( uint64 claimantID )
     {
-        const int32 slot = findSlotOf( claimantId );
+        const int32 slot = findSlotOf( claimantID );
         if ( slot < 0 )
             return false;
         _listClaimant[static_cast<size_t>( slot )] = 0;
@@ -53,11 +53,11 @@ namespace sw
         return -1;
     }
 
-    int32 SmartObjectSlots::findSlotOf( uint64 claimantId ) const
+    int32 SmartObjectSlots::findSlotOf( uint64 claimantID ) const
     {
         for ( int32 slot = 0; slot < getSlotCount(); ++slot )
         {
-            if ( _listClaimant[static_cast<size_t>( slot )] == claimantId )
+            if ( _listClaimant[static_cast<size_t>( slot )] == claimantID )
                 return slot;
         }
         return -1;
@@ -81,7 +81,7 @@ namespace sw
     }
 
     SmartObjectComponent::SmartObjectComponent()
-        : _smartObjectId{}
+        : _smartObjectID{}
         , _catalogPath{}
         , _listClaimant{}
         , _slots{}
@@ -94,13 +94,13 @@ namespace sw
     void SmartObjectComponent::resolveDefinition()
     {
         _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
-        if ( _bHasOverride == SW_TRUE || _smartObjectId.empty() )
+        if ( _bHasOverride == SW_TRUE || _smartObjectID.empty() )
             return;
         const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
-        const SmartObjectDef*     pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectId ) : nullptr;
+        const SmartObjectDef*     pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr;
         if ( pDef == nullptr )
         {
-            SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectId.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
+            SW_LOG_ERROR( "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
             return;
         }
         std::lock_guard<std::mutex> lock( _mutex );
@@ -109,7 +109,7 @@ namespace sw
         for ( size_t slot = 0; slot < _listClaimant.size() && slot < static_cast<size_t>( _slots.getSlotCount() ); ++slot )
         {
             if ( _listClaimant[slot].isValid() )
-                (void)_slots.claim( static_cast<int32>( slot ), _listClaimant[slot].objectId() );
+                (void)_slots.claim( static_cast<int32>( slot ), _listClaimant[slot].objectID() );
         }
         _listClaimant.resize( static_cast<size_t>( _slots.getSlotCount() ) );
     }
@@ -141,9 +141,9 @@ namespace sw
         resolveDefinition();
     }
 
-    void SmartObjectComponent::setSmartObjectId( const hashed_string& id )
+    void SmartObjectComponent::setSmartObjectID( const hashed_string& id )
     {
-        _smartObjectId = id;
+        _smartObjectID = id;
         resolveDefinition();
     }
 
@@ -178,7 +178,7 @@ namespace sw
     {
         std::lock_guard<std::mutex> lock( _mutex );
         syncClaimants();
-        const bool bClaimed = _slots.claim( slot, claimant.getObjectId() );
+        const bool bClaimed = _slots.claim( slot, claimant.getObjectID() );
         syncClaimants();
         return bClaimed;
     }
@@ -187,11 +187,11 @@ namespace sw
     {
         std::lock_guard<std::mutex> lock( _mutex );
         syncClaimants();
-        const int32 owned = _slots.findSlotOf( claimant.getObjectId() );
+        const int32 owned = _slots.findSlotOf( claimant.getObjectID() );
         if ( owned >= 0 )
             return owned;
         const int32 slot = _slots.findFreeSlot( requiredTags );
-        if ( slot < 0 || _slots.claim( slot, claimant.getObjectId() ) == false )
+        if ( slot < 0 || _slots.claim( slot, claimant.getObjectID() ) == false )
             return -1;
         syncClaimants();
         return slot;
@@ -200,7 +200,7 @@ namespace sw
     bool SmartObjectComponent::releaseSlot( const GameObject& claimant )
     {
         std::lock_guard<std::mutex> lock( _mutex );
-        const bool                  bReleased = _slots.release( claimant.getObjectId() );
+        const bool                  bReleased = _slots.release( claimant.getObjectID() );
         syncClaimants();
         return bReleased;
     }
@@ -208,7 +208,7 @@ namespace sw
     int32 SmartObjectComponent::findSlotOf( const GameObject& claimant ) const
     {
         std::lock_guard<std::mutex> lock( _mutex );
-        return _slots.findSlotOf( claimant.getObjectId() );
+        return _slots.findSlotOf( claimant.getObjectID() );
     }
 
     int32 SmartObjectComponent::countFreeSlots() const

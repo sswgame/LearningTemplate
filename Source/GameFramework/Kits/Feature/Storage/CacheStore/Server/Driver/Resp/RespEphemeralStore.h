@@ -85,7 +85,7 @@ namespace sw
         void onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason ) override;
 
         void       pumpTransport();
-        Operation* findOperation( uint64 requestId );
+        Operation* findOperation( uint64 requestID );
         /** @brief 아직 내보내지 않은 요청을 맡긴 순서대로 내보냅니다(비교 후 쓰기의 GET 답을 기다리는 동안은 멈춘다). */
         void sendDeferredOperations();
         /** @brief 요청 하나의 명령을 보냅니다. 명령 연결이 없으면 다시 겁니다(물러남 동안이면 Unavailable). */
@@ -121,10 +121,10 @@ namespace sw
         int64                        _nextSubscribeConnectNanoseconds;
         int64                        _commandBackoffMs;
         int64                        _subscribeBackoffMs;
-        uint64                       _nextRequestId;
+        uint64                       _nextRequestID;
         uint64                       _subscriptionAckCount; ///< 구독 연결이 받은 subscribe · unsubscribe 확인 수
         uint64                       _subscriptionSentCount;
-        uint64                       _blockingRequestId; ///< 비교 후 쓰기가 GET 답을 기다리는 요청(0 = 없음)
+        uint64                       _blockingRequestID; ///< 비교 후 쓰기가 GET 답을 기다리는 요청(0 = 없음)
         uint8                        _bInitialized;
         uint8                        _bShutdown;
     };

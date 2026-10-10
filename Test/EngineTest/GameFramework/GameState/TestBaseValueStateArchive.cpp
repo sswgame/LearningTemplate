@@ -561,9 +561,9 @@ SW_TEST_CASE( BaseValueStateArchiveTest, SpawnDirectorReplaysAfterRestore )
  */
 SW_TEST_CASE( BaseValueStateArchiveTest, GridInventoryReplaysAfterRestore )
 {
-    const GridInventory::ShapeDelegate shapeLookup = GridInventory::ShapeDelegate::create( []( const hashed_string& itemId, GridItemShape& outShape )
+    const GridInventory::ShapeDelegate shapeLookup = GridInventory::ShapeDelegate::create( []( const hashed_string& itemID, GridItemShape& outShape )
     {
-        if ( itemId == hashed_string( "rifle" ) )
+        if ( itemID == hashed_string( "rifle" ) )
         {
             outShape._width  = 3;
             outShape._height = 1;

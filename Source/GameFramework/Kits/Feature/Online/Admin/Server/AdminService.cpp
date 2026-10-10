@@ -35,43 +35,43 @@ namespace sw
         class AdminCommandWork final : public IServiceStoreWork
         {
         public:
-            AdminCommandWork( AdminService* pService, const AdminCommand& command, uint64 callId )
+            AdminCommandWork( AdminService* pService, const AdminCommand& command, uint64 callID )
                 : _command{ command }
                 , _reply{}
                 , _pService{ pService }
-                , _callId{ callId }
+                , _callID{ callID }
             {
             }
 
             void run( IServiceStoreConnection& connection ) override { (void)AdminStoreLogic::execute( connection, _command, _reply ); }
-            void complete() override { _pService->completeCall( _callId, _reply ); }
+            void complete() override { _pService->completeCall( _callID, _reply ); }
 
         private:
             AdminCommand  _command;
             AdminReply    _reply;
             AdminService* _pService;
-            uint64        _callId;
+            uint64        _callID;
         };
 
         /** @brief 첫 관리자 넣기입니다. */
         class AdminSeedWork final : public IServiceStoreWork
         {
         public:
-            AdminSeedWork( AdminService* pService, AccountId accountId, AdminRole role, int64 nowMs )
+            AdminSeedWork( AdminService* pService, AccountID accountID, AdminRole role, int64 nowMs )
                 : _pService{ pService }
-                , _accountId{ accountId }
+                , _accountID{ accountID }
                 , _nowMs{ nowMs }
                 , _role{ role }
                 , _result{ AdminResult::Unavailable }
             {
             }
 
-            void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountId, _role, _nowMs ); }
+            void run( IServiceStoreConnection& connection ) override { _result = AdminStoreLogic::seedRole( connection, _accountID, _role, _nowMs ); }
             void complete() override { _pService->completeSeed( _result ); }
 
         private:
             AdminService* _pService;
-            AccountId     _accountId;
+            AccountID     _accountID;
             int64         _nowMs;
             AdminRole     _role;
             AdminResult   _result;
@@ -86,7 +86,7 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _pStore{ nullptr }
-        , _nextCallId{ 1 }
+        , _nextCallID{ 1 }
         , _nowMs{ 0 }
         , _pendingSeedCount{ 0 }
     {
@@ -124,19 +124,19 @@ namespace sw
         _pStore = nullptr;
     }
 
-    void AdminService::submitCall( AccountId adminId, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply )
+    void AdminService::submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, ReplyDelegate onReply )
     {
         PendingCall pending;
         pending._onReply = onReply;
-        startCall( adminId, method, request, idempotencyKey, nowMs, pending );
+        startCall( adminID, method, request, idempotencyKey, nowMs, pending );
     }
 
-    void AdminService::startCall( AccountId adminId, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending )
+    void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, int64 nowMs, PendingCall pending )
     {
-        pending._callId              = _nextCallId++;
+        pending._callID              = _nextCallID++;
         pending._receivedNanoseconds = MonotonicClock::nowNanoseconds();
         pending._nowMs               = nowMs != 0 ? nowMs : _nowMs;
-        pending._targetId            = request._accountId;
+        pending._targetID            = request._accountID;
         pending._methodIndex         = AdminMethod::toIndex( method );
         pending._method              = method;
         _listPendingCall.push_back( pending );
@@ -145,7 +145,7 @@ namespace sw
         AdminCommand command;
         command._request = request;
         command._pPolicy = _settings._pPolicy;
-        command._adminId = adminId;
+        command._adminID = adminID;
         command._keyHigh = idempotencyKey._high;
         command._keyLow  = idempotencyKey._low;
         command._nowMs   = pending._nowMs;
@@ -155,34 +155,34 @@ namespace sw
         refused._result = AdminResult::Ok;
         if ( _pStore == nullptr )
             refused._result = AdminResult::Unavailable;
-        else if ( adminId == kInvalidAccountId )
+        else if ( adminID == kInvalidAccountID )
             refused._result = AdminResult::NotSignedIn;
         else if ( pending._methodIndex < 0 )
             refused._result = AdminResult::Forbidden; // 모르는 명령 — 누구도 갖지 못한 등급
-        const bool bByName = method == AdminMethod::kLookupAccount && request._displayName.empty() == false && request._accountId == kInvalidAccountId;
+        const bool bByName = method == AdminMethod::kLookupAccount && request._displayName.empty() == false && request._accountID == kInvalidAccountID;
         if ( refused._result == AdminResult::Ok && bByName )
         {
             AccountIdentity identity;
             if ( _settings._pDirectory == nullptr || _settings._pDirectory->findIdentityByDisplayName( request._displayName, identity ) == false )
                 refused._result = AdminResult::UnknownAccount; // 이 프로세스에 붙은 계정만 이름으로 찾는다
             else
-                command._request._accountId = identity._accountId;
-            _listPendingCall[pendingIndex]._targetId = command._request._accountId;
+                command._request._accountID = identity._accountID;
+            _listPendingCall[pendingIndex]._targetID = command._request._accountID;
         }
         if ( refused._result != AdminResult::Ok )
         {
             finishCall( pendingIndex, refused );
             return;
         }
-        _pStore->submit( make_unique<AdminCommandWork>( this, command, pending._callId ) );
+        _pStore->submit( make_unique<AdminCommandWork>( this, command, pending._callID ) );
     }
 
-    void AdminService::seedRole( AccountId accountId, AdminRole role, int64 nowMs )
+    void AdminService::seedRole( AccountID accountID, AdminRole role, int64 nowMs )
     {
-        if ( _pStore == nullptr || accountId == kInvalidAccountId || role == AdminRole::None || role >= AdminRole::Count )
+        if ( _pStore == nullptr || accountID == kInvalidAccountID || role == AdminRole::None || role >= AdminRole::Count )
             return;
         ++_pendingSeedCount;
-        _pStore->submit( make_unique<AdminSeedWork>( this, accountId, role, nowMs ) );
+        _pStore->submit( make_unique<AdminSeedWork>( this, accountID, role, nowMs ) );
     }
 
     void AdminService::tick( int64 nowMs )
@@ -202,7 +202,7 @@ namespace sw
         PendingCall pending;
         pending._pHost = &host;
         pending._token = context._token;
-        startCall( context._accountId, context._method, request, context._idempotencyKey, context._nowMs, pending );
+        startCall( context._accountID, context._method, request, context._idempotencyKey, context._nowMs, pending );
     }
 
     void AdminService::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -211,38 +211,38 @@ namespace sw
         tick( nowMs );
     }
 
-    void AdminService::completeCall( uint64 callId, AdminReply& inoutReply )
+    void AdminService::completeCall( uint64 callID, AdminReply& inoutReply )
     {
         for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
         {
             const PendingCall& pending = _listPendingCall[pendingIndex];
-            if ( pending._callId != callId )
+            if ( pending._callID != callID )
                 continue;
             if ( pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr )
             {
                 AccountIdentity identity;
-                if ( _settings._pDirectory->findIdentity( pending._targetId, identity ) )
+                if ( _settings._pDirectory->findIdentity( pending._targetID, identity ) )
                     inoutReply._identity = identity;
-                inoutReply._identity._accountId = pending._targetId;
-                inoutReply._bOnline             = _settings._pDirectory->isAccountOnline( pending._targetId ) ? SW_TRUE : SW_FALSE;
+                inoutReply._identity._accountID = pending._targetID;
+                inoutReply._bOnline             = _settings._pDirectory->isAccountOnline( pending._targetID ) ? SW_TRUE : SW_FALSE;
             }
             const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
             if ( bRevoke && _settings._pSessionControl != nullptr )
             {
                 const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
-                _settings._pSessionControl->revokeAccountSessions( pending._targetId, reasonCode, pending._nowMs );
+                _settings._pSessionControl->revokeAccountSessions( pending._targetID, reasonCode, pending._nowMs );
             }
             const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
             if ( bSanctionChanged && _settings._pBus != nullptr )
             {
                 BitWriter body;
-                body.writeVarUint( pending._targetId );
+                body.writeVarUint( pending._targetID );
                 _settings._pBus->publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
             }
             finishCall( pendingIndex, inoutReply );
             return;
         }
-        SW_LOG_WARNING( "AdminService completed an unknown call %#", callId );
+        SW_LOG_WARNING( "AdminService completed an unknown call %#", callID );
     }
 
     void AdminService::completeSeed( AdminResult result )

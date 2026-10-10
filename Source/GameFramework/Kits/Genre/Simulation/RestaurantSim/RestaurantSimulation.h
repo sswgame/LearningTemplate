@@ -97,8 +97,8 @@ namespace sw
     /** @brief 손님 하나입니다. */
     struct RestaurantCustomer
     {
-        hashed_string _typeId{};
-        hashed_string _dishId{};
+        hashed_string _typeID{};
+        hashed_string _dishID{};
         float32       _waited{ 0.0f }; ///< 자리 · 요리를 기다린 분
         float32       _patience{ 30.0f };
         float32       _eatRemaining{ 0.0f };
@@ -117,10 +117,10 @@ namespace sw
     /** @brief 주방 주문 하나입니다. */
     struct KitchenOrder
     {
-        hashed_string _dishId{};
+        hashed_string _dishID{};
         hashed_string _station{}; ///< 레시피의 조리 스테이션(비면 아무 데서나)
         float32       _remaining{ 0.0f };
-        int32         _customerId{ 0 };
+        int32         _customerID{ 0 };
         int32         _cook{ -1 }; ///< 맡은 요리사(−1 = 기다림)
         int32         _quality{ 0 };
         uint8         _bReady{ SW_FALSE };
@@ -132,7 +132,7 @@ namespace sw
     /** @brief 메뉴 한 줄 — 가격은 바꿀 수 있습니다. */
     struct MenuEntry
     {
-        hashed_string _dishId{};
+        hashed_string _dishID{};
         int64         _price{ 0 };
         uint8         _bOnMenu{ SW_TRUE };
     };
@@ -175,7 +175,7 @@ namespace sw
         };
         hashed_string _id{};
         int64         _value{ 0 };
-        int32         _customerId{ -1 };
+        int32         _customerID{ -1 };
         Kind          _kind{ Kind::CustomerArrived };
     };
 } // namespace sw
@@ -217,20 +217,20 @@ namespace sw
         /** @brief 내보냅니다(맡은 일이 있으면 그 일은 다시 기다린다). 없는 직원이면 false 입니다. */
         bool fireStaff( int32 staffIndex );
         /** @brief 메뉴 가격을 바꿉니다. 메뉴에 없는 요리면 false 입니다. */
-        bool setMenuPrice( const hashed_string& dishId, int64 price );
-        bool setDishOnMenu( const hashed_string& dishId, bool bOnMenu );
+        bool setMenuPrice( const hashed_string& dishID, int64 price );
+        bool setDishOnMenu( const hashed_string& dishID, bool bOnMenu );
 
         /** @brief 시장에서 재료를 사서 신선도 묶음으로 넣습니다(단가는 그날 시세). */
-        ShopResult buyIngredient( const hashed_string& shopId, const hashed_string& itemId, int32 count );
+        ShopResult buyIngredient( const hashed_string& shopID, const hashed_string& itemID, int32 count );
         /** @brief 재료를 그냥 넣습니다(텃밭 · 선물 · 시험). */
-        int32 addIngredient( const hashed_string& itemId, int32 count, int64 unitCost );
+        int32 addIngredient( const hashed_string& itemID, int32 count, int64 unitCost );
 
         /** @brief 문을 엽니다 — 그날 날씨 · 집계를 새로 둡니다. */
-        void openDay( const hashed_string& weatherId );
+        void openDay( const hashed_string& weatherID );
         /** @brief 시간(게임 분)을 흘립니다. 닫는 시각이 지나도 안에 있는 손님은 계속 받습니다. */
         void update( float32 deltaMinutes );
         /** @brief 손님 하나를 바로 들입니다(예약 · 시험). 손님 id 이고 모르는 성향이면 −1 입니다. */
-        int32 admitCustomer( const hashed_string& typeId );
+        int32 admitCustomer( const hashed_string& typeID );
         /** @brief 닫습니다 — 남은 손님을 정리하고 급여를 치른 뒤 결산을 @p outSummary 에 적습니다. */
         void closeDay( RestaurantDaySummary& outSummary );
         /** @brief 밤을 넘깁니다 — 재료가 하루 늙어 상한 것은 버리고(다음 결산에 들어간다), 시세 · 평판이 바뀝니다. */
@@ -246,8 +246,8 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 지금 주문할 수 있는 요리인가입니다(메뉴 · 레시피 · 스테이션 · 레벨 · 재료). */
-        bool  canServe( const hashed_string& dishId ) const;
-        int64 getMenuPrice( const hashed_string& dishId ) const;
+        bool  canServe( const hashed_string& dishID ) const;
+        int64 getMenuPrice( const hashed_string& dishID ) const;
         /** @brief 지금 가격이 손님 도착에 주는 배율입니다(메뉴 평균 가격 비율로). */
         float32 computePriceDemandScale() const;
         /** @brief 지금의 손님 도착률(시간당)입니다. */
@@ -292,12 +292,12 @@ namespace sw
         void grantXp( StaffMember& staff, int64 amount );
         void rollMarketPrices();
 
-        int32            findCustomerIndex( int32 customerId ) const;
+        int32            findCustomerIndex( int32 customerID ) const;
         int32            findIdleStaff( StaffRole role ) const;
         int32            findBestCookLevel() const;
         int32            countStations( const hashed_string& station ) const;
         int32            countCookingAt( const hashed_string& station ) const;
-        const MenuEntry* findMenuEntry( const hashed_string& dishId ) const;
+        const MenuEntry* findMenuEntry( const hashed_string& dishID ) const;
         const RecipeDef* findRecipe( const DishDef& dish ) const;
         float32          computeDishDemand( const DishDef& dish, int64 price ) const;
 
@@ -316,7 +316,7 @@ namespace sw
         RestaurantDaySummary         _today;
         FixedStepTimer               _stepTimer;
         GameRandom                   _random;
-        hashed_string                _weatherId;
+        hashed_string                _weatherID;
         const RestaurantCatalog*     _pCatalog;
         Inventory*                   _pPantry;     ///< 주방 창고(빌림)
         Wallet*                      _pWallet;     ///< 빌린 지갑
@@ -328,7 +328,7 @@ namespace sw
         float32                      _minutes; ///< 문을 연 뒤 지난 분
         RateAccumulator              _arrival; ///< 손님 도착(명)
         int64                        _pendingSpoilageCost;
-        int32                        _nextCustomerId;
+        int32                        _nextCustomerID;
         uint8                        _bOpen;
     };
 } // namespace sw

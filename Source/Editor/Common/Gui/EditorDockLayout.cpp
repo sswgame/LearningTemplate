@@ -53,9 +53,9 @@ namespace sw::editor
              * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받습니다.** 그래서 패널 제목이 바뀌면 기본 배치만 말없이
              *          깨집니다. `EditorCommandRegistry::validate` 가 커맨드 표에 하는 일을 여기서도 합니다.
              */
-            static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockId )
+            static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockID )
             {
-                ImGui::DockBuilderDockWindow( pTitle, dockId );
+                ImGui::DockBuilderDockWindow( pTitle, dockID );
 
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
@@ -327,10 +327,10 @@ namespace sw::editor
 
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
         // 이름의 판 번호는 기본 배치의 창이 바뀔 때 올린다 — 저장된 imgui.ini 의 옛 도크 트리를 버리고 기본 배치를 다시 짓는다(v7: Game View → Scene · Game).
-        const ImGuiID dockspaceId = ImGui::GetID( "EditorMainDockSpace_v7" );
+        const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v7" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
-        scaleDockSizeToViewport( dockspaceId );
-        (void)ImGui::DockSpaceOverViewport( dockspaceId, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
+        scaleDockSizeToViewport( dockspaceID );
+        (void)ImGui::DockSpaceOverViewport( dockspaceID, pViewport, ImGuiDockNodeFlags_PassthruCentralNode );
 
         if ( _bApplied == SW_FALSE && isOpeningAllPanels() )
         {
@@ -339,11 +339,11 @@ namespace sw::editor
         }
         else if ( _bApplied == SW_FALSE )
         {
-            const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceId );
+            const ImGuiDockNode* const pNode = ImGui::DockBuilderGetNode( dockspaceID );
             const bool                 bEmpty =
                 ( pNode == nullptr ) || ( pNode->IsSplitNode() == false && pNode->Windows.Size == 0 );
             if ( bEmpty || _bResetDefault == SW_TRUE )
-                applyDefaultDockLayout( dockspaceId );
+                applyDefaultDockLayout( dockspaceID );
             _bApplied      = SW_TRUE;
             _bResetDefault = SW_FALSE;
         }
@@ -356,13 +356,13 @@ namespace sw::editor
         _bResetDefault = SW_TRUE;
     }
 
-    void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceId )
+    void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceID )
     {
         const ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
         if ( workSize.x < EditorDockLayoutInternal::kMinScaledDockspaceSize || workSize.y < EditorDockLayoutInternal::kMinScaledDockspaceSize )
             return; // 최소화 — 기준을 바꾸지 않고 다음 실제 크기에서 비교한다
 
-        ImGuiDockNode* pRoot = ImGui::DockBuilderGetNode( dockspaceId );
+        ImGuiDockNode* pRoot = ImGui::DockBuilderGetNode( dockspaceID );
         if ( _lastDockspaceWidth <= 0.0f || _lastDockspaceHeight <= 0.0f )
         {
             // 첫 프레임 · 이름 붙인 레이아웃을 읽은 뒤: 기준은 저장된 도크스페이스 크기다(다른 창 크기로 저장한 imgui.ini 도 비율로 맞는다).
@@ -383,9 +383,9 @@ namespace sw::editor
         _lastDockspaceHeight = workSize.y;
     }
 
-    void EditorDockLayout::applyDefaultDockLayout( uint32 dockspaceId )
+    void EditorDockLayout::applyDefaultDockLayout( uint32 dockspaceID )
     {
-        const ImGuiID        id        = dockspaceId;
+        const ImGuiID        id        = dockspaceID;
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
 
         ImGui::DockBuilderRemoveNode( id );

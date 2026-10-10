@@ -492,7 +492,7 @@ namespace sw
         const TypeInfo* pLhs = findType( nameOrFqn );
         const TypeInfo* pRhs = findType( canonicalName );
         if ( pLhs != nullptr && pRhs != nullptr )
-            return pLhs->_typeId == pRhs->_typeId;
+            return pLhs->_typeID == pRhs->_typeID;
         return canonicalTypeName( nameOrFqn ) == canonicalTypeName( canonicalName );
     }
 

@@ -851,10 +851,10 @@ namespace sw
              * @brief 이벤트에 받는 애노테이션인지 봅니다 — 표시 메타(`Category` · `DisplayName` · `Tooltip` · `Meta` · `HideInInspector`)와 `Name` 만.
              * @details 직렬화 · 범위 · 네트워크 플래그는 값이 아닌 구독 목록에 뜻이 없다. 조용히 버리지 않고 그 헤더를 멈춘다.
              */
-            static bool isEventAnnotationField( const string_view fieldId ) noexcept
+            static bool isEventAnnotationField( const string_view fieldID ) noexcept
             {
-                return fieldId == "Category" || fieldId == "DisplayName" || fieldId == "Tooltip" || fieldId == "Meta" || fieldId == "HideInInspector" ||
-                       fieldId == "Name";
+                return fieldID == "Category" || fieldID == "DisplayName" || fieldID == "Tooltip" || fieldID == "Meta" || fieldID == "HideInInspector" ||
+                       fieldID == "Name";
             }
 
             /**

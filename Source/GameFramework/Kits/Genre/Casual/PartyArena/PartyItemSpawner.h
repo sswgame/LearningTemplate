@@ -56,7 +56,7 @@ namespace sw
     struct PartyItemInstance
     {
         float3        _position{};
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         float32       _age{ 0.0f };
         int32         _serial{ 0 };
     };
@@ -73,7 +73,7 @@ namespace sw
             Expired,
             PickedUp ///< _player = 주운 사람
         };
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int32         _serial{ 0 };
         int32         _player{ -1 };
         Kind          _kind{ Kind::Spawned };

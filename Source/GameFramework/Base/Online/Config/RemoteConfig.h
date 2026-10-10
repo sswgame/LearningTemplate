@@ -76,7 +76,7 @@ namespace sw
         bool findReal( string_view key, float64& outValue ) const;
         bool findText( string_view key, string& outValue ) const;
         /** @brief 플래그가 이 계정에 켜졌는가입니다(없거나 플래그가 아닌 키는 @p bDefault). */
-        bool isFeatureEnabled( string_view flag, uint64 accountId, bool bDefault = false ) const;
+        bool isFeatureEnabled( string_view flag, uint64 accountID, bool bDefault = false ) const;
 
         /** @brief 클라이언트 묶음(보이는 키만)의 해시입니다. */
         uint64 getSnapshotHash() const { return _snapshotHash; }
@@ -93,7 +93,7 @@ namespace sw
         static const hashed_string& getTable(); ///< "remote_config"
         static bool                 isValidKey( string_view key );
         /** @brief 계정의 출시 칸(0..9999)입니다 — `isFeatureEnabled` 가 비율과 견준다. */
-        static int32 computeRolloutBucket( string_view flag, uint64 accountId );
+        static int32 computeRolloutBucket( string_view flag, uint64 accountID );
 
     private:
         class ReloadWork;

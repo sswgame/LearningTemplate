@@ -199,7 +199,7 @@ namespace
             _server.beginTick( tick );
             for ( const NetEntityState& entity : _listEntity )
             {
-                _server.setEntity( entity._entityId, entity._typeId, entity._buffer );
+                _server.setEntity( entity._entityID, entity._typeID, entity._buffer );
             }
             _server.endTick();
             _server.sendSnapshots();

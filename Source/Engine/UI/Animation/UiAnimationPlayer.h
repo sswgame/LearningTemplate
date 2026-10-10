@@ -66,7 +66,7 @@ namespace sw
          * @details 같은 위젯 · 경로의 트윈이 있으면 그것을 대신합니다(지금 값에서 새 끝값으로). 실수 칸이 아니면 끝에서 바뀝니다.
          * @return 위젯이 없거나 경로 · 값을 읽지 못하면 경고하고 false 입니다.
          */
-        bool   tween( WidgetId widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
+        bool   tween( WidgetID widget, string_view propertyPath, string_view endValue, float32 duration, BlendCurve curve = BlendCurve::EaseOut );
         uint32 getTweenCount() const { return static_cast<uint32>( _listTween.size() ); }
 
         /** @brief 시간을 @p deltaSeconds 만큼 진행해 값을 쓰고 사건을 보냅니다. 끝난 애니메이션 · 트윈은 끝 값을 쓰고 뺍니다. */
@@ -79,7 +79,7 @@ namespace sw
             UiAnimatedProperty      _property{};
             vector<UiAnimatedValue> _listValue{}; ///< 키마다(트랙 키와 같은 순서)
             const UiAnimationTrack* _pTrack{ nullptr };
-            WidgetId                _widget{ kInvalidWidgetId };
+            WidgetID                _widget{ kInvalidWidgetID };
         };
 
         /** @brief 재생 중인 애니메이션 하나입니다. */
@@ -104,7 +104,7 @@ namespace sw
             string             _path{};
             float32            _elapsed{ 0.0f };
             float32            _duration{ 0.0f };
-            WidgetId           _widget{ kInvalidWidgetId };
+            WidgetID           _widget{ kInvalidWidgetID };
             BlendCurve         _curve{ BlendCurve::EaseOut };
         };
 

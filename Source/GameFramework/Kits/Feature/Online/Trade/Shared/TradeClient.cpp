@@ -7,14 +7,14 @@
 namespace sw
 {
     TradeClient::TradeClient()
-        : _mapClientIdToCall{}
+        : _mapClientIDToCall{}
         , _listReply{}
         , _listUpdate{}
         , _snapshot{}
         , _sendingCall{}
         , _pClient{ nullptr }
-        , _accountId{ kInvalidAccountId }
-        , _nextRequestId{ 1 }
+        , _accountID{ kInvalidAccountID }
+        , _nextRequestID{ 1 }
         , _bSending{ SW_FALSE }
     {
     }
@@ -28,50 +28,50 @@ namespace sw
         return send( TradeMethod::kInvite, body, key );
     }
 
-    uint64 TradeClient::respond( uint64 tradeId, bool bAccept, const NetIdempotencyKey& key )
+    uint64 TradeClient::respond( uint64 tradeID, bool bAccept, const NetIdempotencyKey& key )
     {
         BitWriter body;
-        body.writeVarUint( tradeId );
+        body.writeVarUint( tradeID );
         body.writeBool( bAccept );
         return send( TradeMethod::kRespond, body, key );
     }
 
-    uint64 TradeClient::setOffer( uint64 tradeId, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key )
+    uint64 TradeClient::setOffer( uint64 tradeID, const vector<TradeLeg>& listLeg, const NetIdempotencyKey& key )
     {
         BitWriter body;
-        body.writeVarUint( tradeId );
+        body.writeVarUint( tradeID );
         TradeWire::writeLegs( body, listLeg );
         return send( TradeMethod::kSetOffer, body, key );
     }
 
-    uint64 TradeClient::lock( uint64 tradeId, const NetIdempotencyKey& key )
+    uint64 TradeClient::lock( uint64 tradeID, const NetIdempotencyKey& key )
     {
         BitWriter body;
-        body.writeVarUint( tradeId );
+        body.writeVarUint( tradeID );
         return send( TradeMethod::kLock, body, key );
     }
 
-    uint64 TradeClient::confirm( uint64 tradeId, const NetIdempotencyKey& key )
+    uint64 TradeClient::confirm( uint64 tradeID, const NetIdempotencyKey& key )
     {
-        const int32  sideIndex    = _snapshot._tradeId == tradeId ? _snapshot.findSideIndex( _accountId ) : -1;
+        const int32  sideIndex    = _snapshot._tradeID == tradeID ? _snapshot.findSideIndex( _accountID ) : -1;
         const uint32 ownRevision  = sideIndex >= 0 ? _snapshot._arrSide[sideIndex]._offerRevision : 0;
         const uint32 peerRevision = sideIndex >= 0 ? _snapshot._arrSide[1 - sideIndex]._offerRevision : 0;
-        return confirmSeen( tradeId, ownRevision, peerRevision, key );
+        return confirmSeen( tradeID, ownRevision, peerRevision, key );
     }
 
-    uint64 TradeClient::confirmSeen( uint64 tradeId, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key )
+    uint64 TradeClient::confirmSeen( uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, const NetIdempotencyKey& key )
     {
         BitWriter body;
-        body.writeVarUint( tradeId );
+        body.writeVarUint( tradeID );
         body.writeVarUint( seenOwnRevision );
         body.writeVarUint( seenPeerRevision );
         return send( TradeMethod::kConfirm, body, key );
     }
 
-    uint64 TradeClient::cancel( uint64 tradeId, const NetIdempotencyKey& key )
+    uint64 TradeClient::cancel( uint64 tradeID, const NetIdempotencyKey& key )
     {
         BitWriter body;
-        body.writeVarUint( tradeId );
+        body.writeVarUint( tradeID );
         return send( TradeMethod::kCancel, body, key );
     }
 
@@ -112,37 +112,37 @@ namespace sw
     {
         NetRequestOptions options;
         options._idempotencyKey = key.isValid() ? key : NetIdempotencyKey::makeRandom();
-        const uint64 requestId  = _nextRequestId++;
-        _sendingCall            = PendingCall{ options._idempotencyKey, requestId, method };
+        const uint64 requestID  = _nextRequestID++;
+        _sendingCall            = PendingCall{ options._idempotencyKey, requestID, method };
         _bSending               = SW_TRUE;
-        const uint64 clientId   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ) );
+        const uint64 clientID   = _pClient->sendRequest( method, body, options, OnlineResponseDelegate::create<&TradeClient::onResponse>( this ) );
         _bSending               = SW_FALSE;
-        if ( _sendingCall._requestId != 0 )
-            _mapClientIdToCall[clientId] = _sendingCall;
+        if ( _sendingCall._requestID != 0 )
+            _mapClientIDToCall[clientID] = _sendingCall;
         _sendingCall = PendingCall{};
-        return requestId;
+        return requestID;
     }
 
     void TradeClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        const auto  callIt = _mapClientIdToCall.find( response._requestId );
-        if ( callIt != _mapClientIdToCall.end() )
+        const auto  callIt = _mapClientIDToCall.find( response._requestID );
+        if ( callIt != _mapClientIDToCall.end() )
         {
             call = callIt->second;
-            _mapClientIdToCall.erase( callIt );
+            _mapClientIDToCall.erase( callIt );
         }
-        else if ( _bSending == SW_TRUE && _sendingCall._requestId != 0 )
+        else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
         {
             call                    = _sendingCall;
-            _sendingCall._requestId = 0;
+            _sendingCall._requestID = 0;
         }
         else
         {
             return;
         }
         TradeClientReply reply;
-        reply._requestId      = call._requestId;
+        reply._requestID      = call._requestID;
         reply._method         = call._method;
         reply._idempotencyKey = call._key;
         reply._errorCode      = response._errorCode;
@@ -163,9 +163,9 @@ namespace sw
 
     void TradeClient::observe( const TradeSnapshot& snapshot )
     {
-        if ( snapshot._tradeId == 0 )
+        if ( snapshot._tradeID == 0 )
             return;
-        const bool bNewer = snapshot._tradeId != _snapshot._tradeId || snapshot._updatedMs >= _snapshot._updatedMs;
+        const bool bNewer = snapshot._tradeID != _snapshot._tradeID || snapshot._updatedMs >= _snapshot._updatedMs;
         if ( bNewer )
             _snapshot = snapshot;
     }

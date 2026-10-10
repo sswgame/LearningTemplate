@@ -45,7 +45,7 @@
  *          `createPrimitive` 가 매번 새로 만드는 성질도 같이 지킨다 — 벤치가 그것으로 도형 변종을
  *          갈라 배치를 일부러 나눈다(`BenchScene`).
  */
-SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
+SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIDWhileCreateMakesNew )
 {
     // 1. 같은 id -> 같은 객체.
     sw::shared_ptr<sw::Mesh> sharedA = sw::MeshUtil::acquirePrimitive( "Cube" );
@@ -85,9 +85,9 @@ SW_TEST_CASE( MeshPrimitiveTest, AcquireSharesOneMeshPerIdWhileCreateMakesNew )
 SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
 {
     sw::GameObjectManager manager;
-    for ( const utf8* pMeshId : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "Quad", "Cone" } )
+    for ( const utf8* pMeshID : { "Cube", "Sphere", "Cylinder", "Capsule", "Plane", "Quad", "Cone" } )
     {
-        const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshId );
+        const sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::acquirePrimitive( pMeshID );
         SW_ASSERT_NOT_NULL( mesh );
         float32 farthest = 0.0f;
         for ( const sw::RHIVertex& vertex : mesh->getVertices() )
@@ -97,15 +97,15 @@ SW_TEST_CASE( MeshPrimitiveTest, MeshBoundsCoverEveryVertexOfEveryPrimitive )
         }
         SW_EXPECT_NEAR_EQUAL( farthest, mesh->getBoundingRadius(), 1e-4f );
 
-        sw::GameObject*    pObj  = manager.createGameObject( sw::hashed_string( pMeshId ) );
+        sw::GameObject*    pObj  = manager.createGameObject( sw::hashed_string( pMeshID ) );
         sw::MeshComponent* pMesh = pObj->addComponent<sw::MeshComponent>();
         SW_ASSERT_NOT_NULL( pMesh );
         pMesh->setMesh( mesh );
-        SW_EXPECT_TRUE_MSG( pMesh->getBoundsRadius() >= farthest - 1e-4f, pMeshId );
+        SW_EXPECT_TRUE_MSG( pMesh->getBoundsRadius() >= farthest - 1e-4f, pMeshID );
         sw::float3 center{};
         float32    worldRadius{ 0.0f };
         SW_ASSERT_TRUE( pMesh->getWorldBounds( center, worldRadius ) );
-        SW_EXPECT_TRUE_MSG( worldRadius >= farthest - 1e-4f, pMeshId );
+        SW_EXPECT_TRUE_MSG( worldRadius >= farthest - 1e-4f, pMeshID );
     }
 }
 
@@ -156,7 +156,7 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 {
     struct PrimitiveCase
     {
-        const utf8* _pId;
+        const utf8* _pID;
         float32     _maxRadius; ///< 원점에서 가장 먼 정점까지의 허용 거리
     };
     // 큐브는 대각선이 가장 멀다(0.5 * sqrt(3)). 곡면은 반지름 0.5, 캡슐만 원통부 때문에 더 길다.
@@ -170,12 +170,12 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
 
     for ( const PrimitiveCase& testCase : arrCase )
     {
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( testCase._pId );
-        SW_EXPECT_TRUE_MSG( mesh != nullptr, testCase._pId );
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( testCase._pID );
+        SW_EXPECT_TRUE_MSG( mesh != nullptr, testCase._pID );
         SW_ASSERT_TRUE( mesh != nullptr );
 
         const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
-        SW_EXPECT_TRUE_MSG( listVertex.empty() == false, testCase._pId );
+        SW_EXPECT_TRUE_MSG( listVertex.empty() == false, testCase._pID );
         SW_ASSERT_TRUE( listVertex.size() >= 3 );
         SW_EXPECT_TRUE_MSG( ( listVertex.size() % 3 ) == 0, "삼각형 목록인데 정점 수가 3의 배수가 아니다" );
 
@@ -207,12 +207,12 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
                 ++inwardCount;
         }
 
-        SW_EXPECT_TRUE_MSG( degenerateCount == 0, testCase._pId );
-        SW_EXPECT_TRUE_MSG( inwardCount == 0, testCase._pId );
+        SW_EXPECT_TRUE_MSG( degenerateCount == 0, testCase._pID );
+        SW_EXPECT_TRUE_MSG( inwardCount == 0, testCase._pID );
         if ( inwardCount != 0 || degenerateCount != 0 )
         {
             SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 정점 %#, 안쪽 향함 %#, 면적 0 %#",
-                          testCase._pId, static_cast<uint32>( listVertex.size() ), inwardCount, degenerateCount );
+                          testCase._pID, static_cast<uint32>( listVertex.size() ), inwardCount, degenerateCount );
         }
     }
 }
@@ -226,11 +226,11 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitivesAreClosedAndOutwardFacing )
  */
 SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
 {
-    const utf8* arrPrimitiveId[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
+    const utf8* arrPrimitiveID[] = { "Cube", "Sphere", "Cylinder", "Capsule", "Cone" };
 
-    for ( const utf8* pId : arrPrimitiveId )
+    for ( const utf8* pID : arrPrimitiveID )
     {
-        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pId );
+        sw::shared_ptr<sw::Mesh> mesh = sw::MeshUtil::createPrimitive( pID );
         SW_ASSERT_TRUE( mesh != nullptr );
         const sw::vector<sw::RHIVertex>& listVertex = mesh->getVertices();
         SW_ASSERT_TRUE( listVertex.size() >= 3 );
@@ -260,12 +260,12 @@ SW_TEST_CASE( MeshPrimitiveTest, PrimitiveNormalsAndUvsAreUsable )
         SW_EXPECT_TRUE_MSG( badUvCount == 0, "UV 가 0..1 밖이다" );
         if ( badLengthCount != 0 || inwardCount != 0 || badUvCount != 0 )
         {
-            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 노멀 길이 %#, 안쪽 %#, UV 범위 %#", pId, badLengthCount,
+            SW_LOG_ERROR( "[MeshPrimitiveTest] %# — 노멀 길이 %#, 안쪽 %#, UV 범위 %#", pID, badLengthCount,
                           inwardCount, badUvCount );
         }
 
         // 곡면은 **면마다 노멀이 달라야** 한다 — 전부 같으면 평면 음영으로 되돌아간 것이다.
-        if ( sw::StringUtil::equals( pId, "Sphere", true ) )
+        if ( sw::StringUtil::equals( pID, "Sphere", true ) )
         {
             bool bFoundDifferent = false;
             for ( const sw::RHIVertex& vertex : listVertex )
@@ -349,11 +349,11 @@ SW_TEST_CASE( MeshPrimitiveTest, SpriteQuadReadsTheSameFromBothSides )
  */
 SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked )
 {
-    const utf8* const arrId[] = { "Cube", "Quad", "Sprite", "Plane", "Sphere", "Cylinder", "Capsule", "Cone" };
-    for ( const utf8* pId : arrId )
+    const utf8* const arrID[] = { "Cube", "Quad", "Sprite", "Plane", "Sphere", "Cylinder", "Capsule", "Cone" };
+    for ( const utf8* pID : arrID )
     {
-        const sw::shared_ptr<sw::Mesh> acquired = sw::MeshUtil::acquirePrimitive( pId );
-        const sw::shared_ptr<sw::Mesh> created  = sw::MeshUtil::createPrimitive( pId );
+        const sw::shared_ptr<sw::Mesh> acquired = sw::MeshUtil::acquirePrimitive( pID );
+        const sw::shared_ptr<sw::Mesh> created  = sw::MeshUtil::createPrimitive( pID );
         SW_ASSERT_NOT_NULL( acquired.get() );
         SW_ASSERT_NOT_NULL( created.get() );
         for ( const sw::Mesh* pMesh : { acquired.get(), created.get() } )
@@ -363,7 +363,7 @@ SW_TEST_CASE( MeshPrimitiveTest, NamedPrimitivesAreWhiteUnlessDiagnosticIsAsked 
             {
                 bAllWhite = bAllWhite && vertex._arrColor[0] == 1.0f && vertex._arrColor[1] == 1.0f && vertex._arrColor[2] == 1.0f && vertex._arrColor[3] == 1.0f;
             }
-            SW_EXPECT_TRUE_MSG( bAllWhite, ( sw::string( "vertex colors are not white: " ) + pId ).c_str() );
+            SW_EXPECT_TRUE_MSG( bAllWhite, ( sw::string( "vertex colors are not white: " ) + pID ).c_str() );
         }
     }
 

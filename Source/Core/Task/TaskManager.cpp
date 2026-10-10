@@ -23,9 +23,9 @@ namespace sw
     {
         thread_local int32  t_currentWorkerIndex = -1; ///< 현재 워커 스레드의 인덱스. 워커가 아니면 -1
         thread_local int32  t_helperScratchSlot  = -1; ///< 워커가 아닌 스레드가 받은 도우미 스크래치 번호(0..). 아직 없으면 -1
-        thread_local uint32 t_helperSlotOwnerId  = 0;  ///< 위 번호를 준 매니저의 `_instanceId`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
+        thread_local uint32 t_helperSlotOwnerID  = 0;  ///< 위 번호를 준 매니저의 `_instanceID`. 매니저를 다시 만들면 옛 번호를 쓰지 않는다
         /// @brief 매니저 인스턴스 번호를 나눠 주는 카운터입니다(0 은 "없음").
-        atomic<uint32>         s_nextInstanceId{ 1 };
+        atomic<uint32>         s_nextInstanceID{ 1 };
         thread_local TaskNode* t_pCurrentRunningTask = nullptr; ///< 현재 스레드에서 실행 중인 태스크 노드
 #if !defined( SW_SHIPPING )
         /// @brief 태스크 · 스테이지 대기 구간을 내보낼 곳입니다(`TaskManager::setProfileHook`). 없으면 nullptr.
@@ -154,12 +154,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     TaskManager::TaskManager()
         : _bInitialized{ false }
-        , _mainThreadId{}
+        , _mainThreadID{}
         , _bStop{ false }
         , _listWorkerSlot{}
         , _helperSlotCount{ 0 }
         , _helperSlotFreeMask{ 0 }
-        , _instanceId{ s_nextInstanceId.fetch_add( 1, std::memory_order_relaxed ) }
+        , _instanceID{ s_nextInstanceID.fetch_add( 1, std::memory_order_relaxed ) }
         , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
         , _wakeSignalCount{ 0 }
@@ -204,7 +204,7 @@ namespace sw
         if ( threadCount > kMaxWorkerCount )
             threadCount = kMaxWorkerCount;
 
-        _mainThreadId = std::this_thread::get_id();
+        _mainThreadID = std::this_thread::get_id();
         _bStop        = false;
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
@@ -252,7 +252,7 @@ namespace sw
         BLOCK( "Cleanup Resources" )
         {
             clear();
-            _mainThreadId = {};
+            _mainThreadID = {};
             _bInitialized = false;
         }
         SW_LOG_INFO( "Shutdown cleanly." );
@@ -313,7 +313,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool TaskManager::isMainThread() const
     {
-        return _bInitialized && std::this_thread::get_id() == _mainThreadId;
+        return _bInitialized && std::this_thread::get_id() == _mainThreadID;
     }
 
     void TaskManager::ensureMainThread() const
@@ -335,9 +335,9 @@ namespace sw
     {
         if ( t_currentWorkerIndex >= 0 )
             return static_cast<uint32>( t_currentWorkerIndex );
-        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerId != _instanceId )
+        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
         {
-            t_helperSlotOwnerId = _instanceId;
+            t_helperSlotOwnerID = _instanceID;
             // 돌려받은 칸부터 다시 쓴다(가장 낮은 비트).
             uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
             while ( freeMask != 0 )
@@ -371,7 +371,7 @@ namespace sw
 
     void TaskManager::releaseCurrentThreadHelperSlot()
     {
-        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerId != _instanceId )
+        if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
             return;
         // 넘쳐서 나눠 쓰던 마지막 칸은 다른 스레드도 쓰고 있을 수 있어 돌려주지 않는다.
         const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
@@ -379,7 +379,7 @@ namespace sw
         if ( bShared == false )
             _helperSlotFreeMask.fetch_or( 1u << static_cast<uint32>( t_helperScratchSlot ), std::memory_order_acq_rel );
         t_helperScratchSlot = -1;
-        t_helperSlotOwnerId = 0;
+        t_helperSlotOwnerID = 0;
     }
 
     atomic<uint32>& TaskManager::getWaiterWord( uint32 slotIndex )
@@ -1094,10 +1094,10 @@ namespace sw
     {
         // 워커는 자기 데크(LIFO 라 방금 만든 것이 캐시에 남아 있다)에, 바깥 스레드(게임 · 렌더)는 전역 큐에 넣는다.
         // 데크가 가득 차면 전역 큐로 넘긴다.
-        const int32 workerId = t_currentWorkerIndex;
-        if ( workerId >= 0 )
+        const int32 workerID = t_currentWorkerIndex;
+        if ( workerID >= 0 )
         {
-            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
+            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerID )];
             while ( localSlot._queue.push( item ) == false )
             {
                 if ( _globalWorkerQueue.enqueue( item ) )
@@ -1112,7 +1112,7 @@ namespace sw
         }
     }
 
-    bool TaskManager::tryTakeItem( int32 workerId, const bool bTakeLowQueue, uintptr_t& outItem )
+    bool TaskManager::tryTakeItem( int32 workerID, const bool bTakeLowQueue, uintptr_t& outItem )
     {
         outItem                 = 0;
         const uint32 numWorkers = getWorkerCount();
@@ -1124,9 +1124,9 @@ namespace sw
         if ( _globalHighQueue.dequeue( outItem ) && outItem != 0 )
             return true;
 
-        if ( workerId >= 0 )
+        if ( workerID >= 0 )
         {
-            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerId )];
+            WorkerSlot& localSlot = *std::as_const( _listWorkerSlot )[static_cast<uint32>( workerID )];
             if ( localSlot._queue.pop( outItem ) && outItem != 0 )
                 return true;
         }
@@ -1135,12 +1135,12 @@ namespace sw
             return true;
 
         // 워커는 자기 다음 워커부터 한 바퀴를 돈다(자기 데크는 방금 비웠다). 바깥 스레드는 모두 돈다.
-        const uint32 firstTarget = workerId >= 0 ? static_cast<uint32>( workerId ) + 1 : 0;
-        const uint32 sweepCount  = workerId >= 0 ? numWorkers - 1 : numWorkers;
+        const uint32 firstTarget = workerID >= 0 ? static_cast<uint32>( workerID ) + 1 : 0;
+        const uint32 sweepCount  = workerID >= 0 ? numWorkers - 1 : numWorkers;
         for ( uint32 step = 0; step < sweepCount; ++step )
         {
-            const uint32 targetId   = ( firstTarget + step ) % numWorkers;
-            WorkerSlot&  targetSlot = *std::as_const( _listWorkerSlot )[targetId];
+            const uint32 targetID   = ( firstTarget + step ) % numWorkers;
+            WorkerSlot&  targetSlot = *std::as_const( _listWorkerSlot )[targetID];
             if ( targetSlot._queue.steal( outItem ) && outItem != 0 )
                 return true;
         }
@@ -1236,12 +1236,12 @@ namespace sw
         uint32 wokenCount = 0;
         while ( mask != 0 && wokenCount < requestedCount )
         {
-            const uint32 workerId = MathUtil::countTrailingZeros( mask );
-            const uint64 bit      = static_cast<uint64>( 1 ) << workerId;
+            const uint32 workerID = MathUtil::countTrailingZeros( mask );
+            const uint64 bit      = static_cast<uint64>( 1 ) << workerID;
             const uint64 previous = _idleWorkerMask.fetch_and( ~bit, std::memory_order_seq_cst );
             if ( ( previous & bit ) != 0 )
             {
-                unparkSlot( workerId ); // 워커의 대기자 슬롯 번호는 곧 워커 번호다
+                unparkSlot( workerID ); // 워커의 대기자 슬롯 번호는 곧 워커 번호다
                 ++wokenCount;
             }
             // 처음 읽은 마스크 안에서만 고른다(남이 먼저 내린 비트는 뺀다). 부른 뒤에 잠든 워커는 잠들기 전에 큐를 한 번 더 보므로
@@ -1253,25 +1253,25 @@ namespace sw
             _wakeSignalCount.fetch_add( 1, std::memory_order_relaxed );
     }
 
-    void TaskManager::workerLoop( uint32 workerId )
+    void TaskManager::workerLoop( uint32 workerID )
     {
         // 이 스레드에서 스택이 넘쳐도 크래시 리포트가 남게 한다(ThreadCrashStack::initializeCurrentThread 설명).
         ThreadCrashStack::initializeCurrentThread();
-        t_currentWorkerIndex = static_cast<int32>( workerId );
+        t_currentWorkerIndex = static_cast<int32>( workerID );
         {
             // 디버거 · 프로파일러(Tracy)가 같은 이름을 본다. 번호는 워커 슬롯 번호다.
             fixed_string<constant::kMaxBuffer32> threadName;
-            formatstring( threadName.data(), threadName.capacity(), "Worker %#", workerId );
+            formatstring( threadName.data(), threadName.capacity(), "Worker %#", workerID );
             ThreadName::setCurrentThreadName( threadName.c_str() );
         }
 
-        WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerId];
-        const uint64 idleBit = static_cast<uint64>( 1 ) << workerId;
+        WorkerSlot&  slot    = *std::as_const( _listWorkerSlot )[workerID];
+        const uint64 idleBit = static_cast<uint64>( 1 ) << workerID;
 
         while ( _bStop.load( std::memory_order_relaxed ) == false )
         {
             uintptr_t item{ 0 };
-            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
+            if ( tryTakeItem( static_cast<int32>( workerID ), true, item ) )
             {
                 executeItem( item );
                 continue;
@@ -1287,7 +1287,7 @@ namespace sw
                 if ( _workEpoch.load( std::memory_order_acquire ) != observedEpoch )
                 {
                     observedEpoch = _workEpoch.load( std::memory_order_acquire );
-                    if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
+                    if ( tryTakeItem( static_cast<int32>( workerID ), true, item ) )
                     {
                         bFoundInSpin = true;
                         break;
@@ -1316,7 +1316,7 @@ namespace sw
             const uint32 observedParkWord = slot._park._word.load( std::memory_order_acquire );
             _idleWorkerMask.fetch_or( idleBit, std::memory_order_seq_cst );
             std::atomic_thread_fence( std::memory_order_seq_cst );
-            if ( tryTakeItem( static_cast<int32>( workerId ), true, item ) )
+            if ( tryTakeItem( static_cast<int32>( workerID ), true, item ) )
             {
                 _idleWorkerMask.fetch_and( ~idleBit, std::memory_order_seq_cst );
                 executeItem( item );

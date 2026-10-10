@@ -13,9 +13,9 @@
 namespace sw
 {
     /** @brief 트리 안에서 위젯을 가리키는 번호입니다. 프로세스 안에서 다시 쓰지 않습니다 — 포커스 · 포인터 잡기 · 호버는 포인터가 아니라 이것을 듭니다. */
-    using WidgetId = uint32;
+    using WidgetID = uint32;
     /** @brief 위젯이 없음을 뜻하는 번호입니다(위젯 번호는 1 부터다). */
-    inline constexpr WidgetId kInvalidWidgetId = 0;
+    inline constexpr WidgetID kInvalidWidgetID = 0;
 
     /** @brief 보임 · 히트 테스트 방식입니다(언리얼 ESlateVisibility 와 같은 다섯). */
     ENUM()

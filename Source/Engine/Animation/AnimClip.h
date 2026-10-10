@@ -74,7 +74,7 @@ namespace sw
         float32                      getDuration() const { return _duration; }
         uint32                       getTrackCount() const { return static_cast<uint32>( _listTrackName.size() ); }
         const vector<hashed_string>& getTrackNames() const { return _listTrackName; }
-        AnimCodecId                  getCodecId() const { return _codecId; }
+        AnimCodecID                  getCodecID() const { return _codecID; }
         /** @brief 블롭 크기(바이트)입니다. */
         size_t getCodecByteCount() const { return _codecByteCount; }
         /** @brief 16 바이트 정렬된 블롭 시작입니다. */
@@ -151,7 +151,7 @@ namespace sw
         vector<AnimCurve>      _listCurve;
         float32                _duration;
         int32                  _rootMotionTrack;
-        AnimCodecId            _codecId;
+        AnimCodecID            _codecID;
         uint8                  _bLoop;
     };
 } // namespace sw

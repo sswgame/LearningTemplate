@@ -57,22 +57,22 @@ namespace sw
         /** @brief 계정이 이 프로세스에 붙었다(또는 표시 이름이 바뀌었다). */
         void noteOnline( const AccountIdentity& identity );
         /** @brief 계정이 이 프로세스에서 떠났다. */
-        void noteOffline( AccountId accountId );
+        void noteOffline( AccountID accountID );
         /** @brief 다시 적기 주기입니다. */
         void tick( int64 nowMs );
         /** @brief 이 서버 알림 주제(`push.<서버>`)의 메시지 — 붙어 있는 계정에게 넘긴다. 이 주제가 아니면 false. */
         bool handlePushMessage( const ServerBusMessage& message );
 
-        /** @brief 서버 @p serverId 의 알림 주제입니다. */
-        static string makePushTopic( uint64 serverId );
-        static string makeAccountKey( AccountId accountId );
+        /** @brief 서버 @p serverID 의 알림 주제입니다. */
+        static string makePushTopic( uint64 serverID );
+        static string makeAccountKey( AccountID accountID );
         static string makeNameKey( string_view displayName );
 
         // IAccountPresence
         uint64 submitFindByDisplayName( string_view displayName, const AccountPresenceDelegate& onFound ) override;
-        uint64 submitFindByAccount( AccountId accountId, const AccountPresenceDelegate& onFound ) override;
-        bool   sendRemotePush( AccountId accountId, uint16 kind, const BitWriter& body ) override;
-        void   cancel( uint64 requestId ) override;
+        uint64 submitFindByAccount( AccountID accountID, const AccountPresenceDelegate& onFound ) override;
+        bool   sendRemotePush( AccountID accountID, uint16 kind, const BitWriter& body ) override;
+        void   cancel( uint64 requestID ) override;
 
     private:
         enum class PendingKind : uint8
@@ -89,8 +89,8 @@ namespace sw
             vector<uint8>           _bodyBytes{}; ///< Push — 알림 몸
             string                  _nameKey{};   ///< FindName — 찾는 이름(소문자 비교) · RefreshName — 키
             AccountPresenceDelegate _onFound{};   ///< Find* — 부른 쪽
-            AccountId               _accountId{ kInvalidAccountId };
-            uint64                  _lookupId{ 0 }; ///< Find* — 부른 쪽에 준 id
+            AccountID               _accountID{ kInvalidAccountID };
+            uint64                  _lookupID{ 0 }; ///< Find* — 부른 쪽에 준 id
             uint16                  _kind{ 0 };     ///< Push — 알림 종류
             PendingKind             _pendingKind{ PendingKind::FindName };
         };
@@ -113,12 +113,12 @@ namespace sw
         vector<uint8> makeNameBytes( const AccountIdentity& identity ) const;
 
         unordered_map<uint64, PendingOperation>   _mapRequestToPending;
-        unordered_map<AccountId, AccountIdentity> _mapAccountToIdentity; ///< 이 프로세스에 붙은 계정
+        unordered_map<AccountID, AccountIdentity> _mapAccountToIdentity; ///< 이 프로세스에 붙은 계정
         vector<DeferredFound>                     _listDeferred;         ///< 캐시 없이 끝난 찾기 — 다음 `tick` 에 알린다(맡긴 함수 안에서 부르지 않는다)
         OnlinePresenceSettings                    _settings;
         OnlineServiceHost*                        _pHost;
-        uint64                                    _serverId;
-        uint64                                    _nextLookupId;
+        uint64                                    _serverID;
+        uint64                                    _nextLookupID;
         int64                                     _nextRefreshMs;
     };
 } // namespace sw

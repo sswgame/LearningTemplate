@@ -58,7 +58,7 @@ namespace sw
         , _agentPosition{}
         , _nextCorner{}
         , _writtenPosition{}
-        , _crowdAgentId{ NavigationConstant::kInvalidAgentId }
+        , _crowdAgentID{ NavigationConstant::kInvalidAgentID }
         , _navIndex{ SceneNavigation::kNotRegistered }
         , _crowdIndex{ SceneNavigation::kNotRegistered }
         , _moveStatus{ NavMoveStatus::Idle }

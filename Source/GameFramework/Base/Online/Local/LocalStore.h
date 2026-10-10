@@ -78,7 +78,7 @@ namespace sw
         vector<uint8>         _bytes{};        ///< Read — 봉투를 푼 몸
         vector<LocalSlotInfo> _listSlotInfo{}; ///< List — 이름순
         string                _slot{};         ///< Read · Write · Erase 의 슬롯, List 의 묶음 접두
-        uint64                _requestId{ 0 };
+        uint64                _requestID{ 0 };
         uint32                _formatVersion{ 0 }; ///< Read — 쓸 때의 판
         LocalStoreResult      _result{ LocalStoreResult::Ok };
         LocalStoreOperation   _operation{ LocalStoreOperation::Read };

@@ -84,9 +84,9 @@ namespace sw
          * @brief 프리미티브 id 로 내장 도형을 새로 만듭니다.
          * @details 비었거나 "Cube" 면 큐브, "Quad"/"Rect" 면 쿼드, "Sprite" 면 양면 스프라이트 사각형, "Plane"/"Ground" 면 바닥 평면,
          *          "Sphere" · "Cylinder" · "Capsule" · "Cone" 은 각각의 곡면 도형, "GrassClump" 는 풀 한 포기입니다. 모르면 nullptr 입니다.
-         *          씬 XML 의 `_meshId` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색 — 게임이 쓰는 색).
+         *          씬 XML 의 `_meshID` 와 벤치의 도형 섞기가 같은 이름을 씁니다. 정점 색은 @p vertexColor 입니다(기본 흰색 — 게임이 쓰는 색).
          */
-        static shared_ptr<Mesh> createPrimitive( string_view meshId, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );
+        static shared_ptr<Mesh> createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor = PrimitiveVertexColor::White );
 
         /**
          * @brief 프리미티브 id 로 **공유되는** 내장 도형을 반환합니다. 같은 id 면 같은 객체입니다.
@@ -101,7 +101,7 @@ namespace sw
          *          캐시는 `weak_ptr` 이라 아무도 안 쓰면 알아서 사라집니다. 수명을 따로 관리하지
          *          않으므로 디바이스가 내려갈 때 붙들고 있는 것이 없습니다. 정점 색은 흰색입니다(`PrimitiveVertexColor::White`).
          */
-        static shared_ptr<Mesh> acquirePrimitive( string_view meshId );
+        static shared_ptr<Mesh> acquirePrimitive( string_view meshID );
 
         /** @brief `acquirePrimitive` 의 표를 에셋 캐시 등록부에 보이는 창구입니다("PrimitiveMesh" — 진단 · 비우기). `AssetManager` 가 올립니다. */
         static IAssetCache& getPrimitiveCache();

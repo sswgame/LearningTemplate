@@ -20,7 +20,7 @@ namespace sw
         , _queueSpinLock{}
         , _mapChannelDispatchTable{}
         , _mapChannelQueue{}
-        , _busThreadId{}
+        , _busThreadID{}
         , _arrFrameAllocator{ LinearAllocator{ constant::kDefaultLinearCapacity }, LinearAllocator{ constant::kDefaultLinearCapacity } }
         , _arrListOverflowAllocation{}
         , _activeAllocatorIndex{ 0 }
@@ -38,13 +38,13 @@ namespace sw
     {
         // 이미 주인이 있으면 그대로다 — 큐를 비우는 스레드는 하나로 정해져 있다.
         std::thread::id unbound{};
-        (void)_busThreadId.compare_exchange_strong( unbound, std::this_thread::get_id(), std::memory_order_acq_rel );
+        (void)_busThreadID.compare_exchange_strong( unbound, std::this_thread::get_id(), std::memory_order_acq_rel );
     }
 
     bool EventDispatcher::isBusThread() const
     {
         // 아직 아무도 큐를 비우지 않았으면 주인이 없다. 시작할 때 구독 · 발행부터 하는 것은 정상이다.
-        const std::thread::id owner = _busThreadId.load( std::memory_order_acquire );
+        const std::thread::id owner = _busThreadID.load( std::memory_order_acquire );
         return owner == std::thread::id{} || owner == std::this_thread::get_id();
     }
 
@@ -128,7 +128,7 @@ namespace sw
                     ChannelDispatchEntry callback;
                     {
                         std::scoped_lock<SpinLock>       lock{ _busSpinLock };
-                        pair<hashed_string, EventTypeId> key( channel, pEvent->getEventType() );
+                        pair<hashed_string, EventTypeID> key( channel, pEvent->getEventType() );
                         auto                             iter = _mapChannelDispatchTable.find( key );
                         if ( iter != _mapChannelDispatchTable.end() )
                             callback = iter->second;
@@ -163,7 +163,7 @@ namespace sw
         const uintptr_t end    = reinterpret_cast<uintptr_t>( pEnd );
 
         uint32                                   releasedCount{ 0 };
-        vector<pair<hashed_string, EventTypeId>> listErase;
+        vector<pair<hashed_string, EventTypeID>> listErase;
         std::scoped_lock<SpinLock>               lock{ _busSpinLock };
         for ( const auto& [key, entry] : _mapChannelDispatchTable )
         {
@@ -185,7 +185,7 @@ namespace sw
             listErase.push_back( key );
         }
         // 멀티캐스트의 해제자도 그 범위의 코드다. 범위가 아직 올라와 있는 지금 지운다.
-        for ( const pair<hashed_string, EventTypeId>& key : listErase )
+        for ( const pair<hashed_string, EventTypeID>& key : listErase )
         {
             _mapChannelDispatchTable.erase( key );
         }

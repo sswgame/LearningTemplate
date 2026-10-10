@@ -67,12 +67,12 @@ namespace sw
 
     private:
         /** @brief 다음 GPU 쿼리 번호입니다. 시각을 begin · end 와 같은 자리에서 바로 넘기므로 번호는 돌려 써도 겹치지 않습니다. */
-        uint16 allocateGpuQueryId();
+        uint16 allocateGpuQueryID();
 
     private:
         atomic<uint64>          _zoneCount;       ///< 연 CPU 구간 수
         atomic<uint64>          _gpuZoneCount;    ///< 닫은 GPU 구간 수
         [[maybe_unused]] uint32 _gpuContextCount; ///< 만든 GPU 컨텍스트 수(렌더 스레드만 쓴다). Tracy 없는 빌드에서는 쓰이지 않는다
-        uint16                  _nextGpuQueryId;  ///< 렌더 스레드만 쓴다
+        uint16                  _nextGpuQueryID;  ///< 렌더 스레드만 쓴다
     };
 } // namespace sw

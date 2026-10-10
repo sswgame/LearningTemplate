@@ -85,7 +85,7 @@ namespace sw
         quaternion         _driveRotation{};
         PhysicsBodyHandle  _body{};  ///< 떨어진 그룹: 동적 바디 하나(앵커 그룹은 잎마다 정적 바디 — 컴포넌트가 잎 표로 든다)
         PhysicsShapeHandle _shape{}; ///< 떨어진 그룹의 컴파운드 셰이프(바디와 함께 놓는다)
-        uint32             _groupId{ 0 };
+        uint32             _groupID{ 0 };
         uint32             _spawnOrder{ 0 }; ///< 만든 순서(예산이 오래된 것부터 고른다)
         float32            _volume{ 0.0f };  ///< 배율을 건 부피(세제곱미터)
         float32            _age{ 0.0f };
@@ -108,7 +108,7 @@ namespace sw
         float3     _position{}; ///< 그룹 자세의 자리(오브젝트 원점이 있는 월드 자리)
         float3     _center{};   ///< 질량 중심(월드) — 보간 · 오차는 이것으로 본다(원점은 덩어리에서 멀 수 있어 돌면 크게 움직인다)
         quaternion _rotation{};
-        uint32     _groupId{ 0 };
+        uint32     _groupID{ 0 };
         float32    _volume{ 0.0f };       ///< 배율을 건 부피 — 덩어리(`isChunkVolume`)면 서버가 자세를 보낸다
         uint8      _bResting{ SW_FALSE }; ///< 잠들었거나 바디를 뺐다(멈췄다)
         uint8      _bGone{ SW_FALSE };    ///< 사라졌다
@@ -193,7 +193,7 @@ namespace sw
         bool                       hasFractureData() const { return _asset != nullptr; }
         const DestructionState&    getState() const { return _state; }
         const DestructionEventLog& getEventLog() const { return _eventLog; }
-        /** @brief 사건 기록과 같은 자리 — 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다(앵커 그룹 · 그룹 없음은 `_groupId` 0). */
+        /** @brief 사건 기록과 같은 자리 — 그 사건이 맞힌 떨어진 그룹의 적용 직전 자세입니다(앵커 그룹 · 그룹 없음은 `_groupID` 0). */
         const vector<FractureGroupPose>& getEventGroupPoses() const { return _listEventGroupPose; }
         const FractureAsset*             findAsset() const { return _asset.get(); }
         /** @brief 지금 있는 동적 바디 수(떨어진 그룹)입니다. */
@@ -243,7 +243,7 @@ namespace sw
          * @brief 떨어진 그룹 하나의 자세를 네트워크가 정합니다(클라이언트의 덩어리) — @p worldCenter 는 질량 중심(월드). 그 바디는 키네마틱이 되고 스텝마다 이 자세로 옮겨진다.
          * @details 그룹이 아직 없거나(사건이 오기 전) 사라졌으면 아무것도 하지 않는다. 다음 물리 프레임에 든다.
          */
-        void driveGroup( uint32 groupId, const float3& worldCenter, const quaternion& rotation );
+        void driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation );
 
     protected:
         /** @brief 2D 물리(Box2D)를 쓰는지입니다. */
@@ -303,8 +303,8 @@ namespace sw
         /** @brief 바디가 속한 그룹 번호입니다. 없으면 0 입니다. */
         uint32 findGroupOfBody( PhysicsBodyHandle body ) const;
         /** @brief 그룹 번호의 런타임입니다. 없으면 nullptr 입니다. */
-        FractureGroupRuntime*       findRuntime( uint32 groupId );
-        const FractureGroupRuntime* findRuntime( uint32 groupId ) const;
+        FractureGroupRuntime*       findRuntime( uint32 groupID );
+        const FractureGroupRuntime* findRuntime( uint32 groupID ) const;
         /** @brief 이 오브젝트의 컴포넌트 핸들을 풉니다. 사라졌으면 nullptr 입니다. */
         Component* resolveOwnedComponent( const ComponentHandle& handle ) const;
         /** @brief 바디가 하나도 남지 않게 놓고 셰이프를 지웁니다. */

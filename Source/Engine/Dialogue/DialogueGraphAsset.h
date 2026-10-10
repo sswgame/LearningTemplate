@@ -149,7 +149,7 @@ namespace sw
         /** @brief Start 노드를 반환합니다. 없으면 nullptr 입니다. */
         const DialogueAssetNode* findStartNode() const;
         /** @brief id 로 노드를 찾습니다. */
-        const DialogueAssetNode* findNode( int32 nodeId ) const;
+        const DialogueAssetNode* findNode( int32 nodeID ) const;
 
         // ------------------------------------------------------------------------------
         // 핀 번호 계약: **이 파일이 기준이다.**
@@ -177,24 +177,24 @@ namespace sw
          * @return 오프셋이 `kPinScale` 에 담기지 않거나 노드 id 가 1 미만이면 0 입니다.
          *         담기지 않는 오프셋은 **자릿수를 넘어 노드 id 를 오염시킵니다.**
          */
-        static int32 encodePin( int32 nodeId, int32 pinOffset );
+        static int32 encodePin( int32 nodeID, int32 pinOffset );
         /** @brief 선택지 하나의 핀 번호를 만듭니다. 담기지 않으면 0 입니다. */
-        static int32 encodeChoicePin( int32 nodeId, int32 choiceIndex );
+        static int32 encodeChoicePin( int32 nodeID, int32 choiceIndex );
         /** @brief 한 노드가 가질 수 있는 최대 선택지 개수입니다. */
         static constexpr int32 getMaxChoiceCount() { return kPinScale - kPinOffsetChoiceBase; }
 
-        /** @brief 핀 값(nodeId * kPinScale + offset)에서 노드 id 를 꺼냅니다. kPinScale 보다 작은 값은 핀이 아니라 0 입니다. */
-        static int32 decodePinNodeId( int32 pin );
+        /** @brief 핀 값(nodeID * kPinScale + offset)에서 노드 id 를 꺼냅니다. kPinScale 보다 작은 값은 핀이 아니라 0 입니다. */
+        static int32 decodePinNodeID( int32 pin );
         /** @brief 핀 값에서 오프셋을 꺼냅니다. */
         static int32 decodePinOffset( int32 pin );
         /** @brief from 노드의 그 핀 오프셋이 가리키는 노드 id 입니다. 없으면 0 입니다. */
-        int32 findLinkedNodeId( int32 fromNodeId, int32 pinOffset ) const;
+        int32 findLinkedNodeID( int32 fromNodeID, int32 pinOffset ) const;
         /** @brief 기본 Out 핀의 다음 노드 id 입니다. */
-        int32 findDefaultNextNodeId( int32 fromNodeId ) const;
+        int32 findDefaultNextNodeID( int32 fromNodeID ) const;
         /** @brief 선택지 핀의 다음 노드 id 입니다. */
-        int32 findChoiceNextNodeId( int32 fromNodeId, int32 choiceIndex ) const;
+        int32 findChoiceNextNodeID( int32 fromNodeID, int32 choiceIndex ) const;
         /** @brief Branch True/False 핀의 다음 노드 id 입니다. */
-        int32 findBranchNextNodeId( int32 fromNodeId, bool bTrue ) const;
+        int32 findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
         /** @brief 화자 · 대사 · 선택지를 로컬라이제이션 수집기에 넣습니다(키이거나 글 그대로 — `resolveLocalizedText` 가 같은 규칙으로 찾는다). */

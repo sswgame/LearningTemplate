@@ -59,7 +59,7 @@ namespace sw
         static uint32 registerLanguageChangedCallback( LanguageChangedCallback callback );
 
         /** @brief 등록된 언어 변경 콜백을 해제합니다. */
-        static void unregisterLanguageChangedCallback( uint32 callbackId );
+        static void unregisterLanguageChangedCallback( uint32 callbackID );
 
         /** @brief 게임 프로젝트를 내립니다(엔진 문자열은 남는다). */
         static void clear();

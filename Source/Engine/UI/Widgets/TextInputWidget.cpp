@@ -119,7 +119,7 @@ namespace sw
     {
         if ( phase != UiRoutePhase::Bubble || event._kind != UiPointerEventKind::Down || event._button != MouseButton::Left )
             return UiReply::makeUnhandled();
-        return UiReply::makeHandled().requestFocus( getId() );
+        return UiReply::makeHandled().requestFocus( getID() );
     }
 
     UiReply TextInputWidget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )

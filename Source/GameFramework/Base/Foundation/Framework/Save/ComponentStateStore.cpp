@@ -21,11 +21,11 @@ namespace sw
     {
     }
 
-    void ComponentStateStore::add( const hashed_string& typeName, uint64 componentId, vector<uint8>&& bytes )
+    void ComponentStateStore::add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes )
     {
         for ( Entry& entry : _listEntry )
         {
-            if ( entry._typeName == typeName && entry._componentId == componentId )
+            if ( entry._typeName == typeName && entry._componentID == componentID )
             {
                 entry._bytes = std::move( bytes );
                 return;
@@ -33,12 +33,12 @@ namespace sw
         }
         Entry entry{};
         entry._typeName    = typeName;
-        entry._componentId = componentId;
+        entry._componentID = componentID;
         entry._bytes       = std::move( bytes );
         _listEntry.push_back( std::move( entry ) );
     }
 
-    const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentId, uint32 orderInType ) const
+    const ComponentStateStore::Entry* ComponentStateStore::findEntry( const hashed_string& typeName, uint64 componentID, uint32 orderInType ) const
     {
         const Entry* pByOrder = nullptr;
         uint32       order    = 0;
@@ -46,7 +46,7 @@ namespace sw
         {
             if ( entry._typeName != typeName )
                 continue;
-            if ( entry._componentId == componentId )
+            if ( entry._componentID == componentID )
                 return &entry;
             if ( order == orderInType )
                 pByOrder = &entry;
@@ -62,7 +62,7 @@ namespace sw
         for ( const Entry& entry : _listEntry )
         {
             outArchive << string_view( entry._typeName.c_str() );
-            outArchive << entry._componentId;
+            outArchive << entry._componentID;
             outArchive << entry._bytes;
         }
     }
@@ -85,7 +85,7 @@ namespace sw
             string typeName;
             Entry  entry{};
             archive >> typeName;
-            archive >> entry._componentId;
+            archive >> entry._componentID;
             archive >> entry._bytes;
             if ( archive.isError() )
             {

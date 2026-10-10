@@ -17,7 +17,7 @@ namespace sw
             {
                 const InventorySlot& left  = lhs._item;
                 const InventorySlot& right = rhs._item;
-                return lhs._bSuppressed == rhs._bSuppressed && left._itemId == right._itemId && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left._customization.isEquivalent( right._customization );
+                return lhs._bSuppressed == rhs._bSuppressed && left._itemID == right._itemID && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left._customization.isEquivalent( right._customization );
             }
 
             /** @brief 정리는 칸 수의 두 배 안에 끝난다 — 넘으면 데이터 순환이다(로드에서 막히지만 방어). */
@@ -113,7 +113,7 @@ namespace sw
                     slot._bSuppressed = SW_FALSE;
                     continue;
                 }
-                const ItemDef* pDef = _pCatalog->findItem( slot._item._itemId );
+                const ItemDef* pDef = _pCatalog->findItem( slot._item._itemID );
                 if ( pDef == nullptr || pDef->hasEquipConditions() == false )
                     continue;
                 const bool bMet = areConditionsMet( *pDef, inoutListSlot, static_cast<int32>( slotIndex ) );
@@ -152,7 +152,7 @@ namespace sw
         outListRemoved.clear();
         if ( slotIndex < 0 )
             return EquipResult::UnknownSlot;
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( item._itemId ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( item._itemID ) : nullptr;
         if ( pDef == nullptr || item.isEmpty() )
             return EquipResult::UnknownItem;
         if ( pDef->_equipSlot != _listSlot[static_cast<size_t>( slotIndex )]._accept )
@@ -191,19 +191,19 @@ namespace sw
         commitSlots( std::move( listTrial ) );
     }
 
-    EquipResult Equipment::evaluateEquip( const hashed_string& slot, const hashed_string& itemId ) const
+    EquipResult Equipment::evaluateEquip( const hashed_string& slot, const hashed_string& itemID ) const
     {
         InventorySlot item;
-        item._itemId = itemId;
+        item._itemID = itemID;
         item._count  = 1;
         vector<EquipSlot>     listTrial;
         vector<InventorySlot> listRemoved;
         return makeTrialEquip( findSlotIndex( slot ), item, listTrial, listRemoved );
     }
 
-    hashed_string Equipment::findSlotFor( const hashed_string& itemId ) const
+    hashed_string Equipment::findSlotFor( const hashed_string& itemID ) const
     {
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemId ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
         if ( pDef == nullptr || pDef->isEquipment() == false )
             return hashed_string{};
         hashed_string firstMatch{};
@@ -260,10 +260,10 @@ namespace sw
         if ( inventorySlot < 0 || inventorySlot >= inventory.getSlotCount() || inventory.getSlot( inventorySlot ).isEmpty() )
             return EquipResult::UnknownItem;
         const InventorySlot source     = inventory.getSlot( inventorySlot );
-        const hashed_string targetSlot = slot.empty() ? findSlotFor( source._itemId ) : slot;
+        const hashed_string targetSlot = slot.empty() ? findSlotFor( source._itemID ) : slot;
         if ( targetSlot.empty() )
             return EquipResult::WrongSlot; // 그 아이템을 받는 칸이 없다
-        const EquipResult evaluated = evaluateEquip( targetSlot, source._itemId );
+        const EquipResult evaluated = evaluateEquip( targetSlot, source._itemID );
         if ( evaluated != EquipResult::Ok )
             return evaluated;
         // 하나를 꺼내고, 벗은 것은 인벤토리로. 하나라도 자리가 없으면 두 쪽을 모두 되돌린다.
@@ -344,7 +344,7 @@ namespace sw
         {
             if ( equipSlot._item.isEmpty() || equipSlot._bSuppressed == SW_TRUE )
                 continue;
-            const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( equipSlot._item._itemId ) : nullptr;
+            const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( equipSlot._item._itemID ) : nullptr;
             if ( pDef != nullptr )
                 outStats.merge( pDef->_stats );
         }

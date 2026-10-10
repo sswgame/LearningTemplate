@@ -25,15 +25,15 @@ namespace
     class HostAccountDirectory final : public IAccountDirectory
     {
     public:
-        unordered_map<AccountId, string> _mapName{};
+        unordered_map<AccountID, string> _mapName{};
         const OnlineServiceHost*         _pHost{ nullptr };
 
-        bool findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const override
+        bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const override
         {
-            const auto nameIt = _mapName.find( accountId );
-            if ( nameIt == _mapName.end() || isAccountOnline( accountId ) == false )
+            const auto nameIt = _mapName.find( accountID );
+            if ( nameIt == _mapName.end() || isAccountOnline( accountID ) == false )
                 return false;
-            outIdentity._accountId   = accountId;
+            outIdentity._accountID   = accountID;
             outIdentity._displayName = nameIt->second;
             return true;
         }
@@ -45,10 +45,10 @@ namespace
             return false;
         }
 
-        bool isAccountOnline( AccountId accountId ) const override
+        bool isAccountOnline( AccountID accountID ) const override
         {
             StreamConnectionHandle connection;
-            return _pHost != nullptr && _pHost->findConnection( accountId, connection );
+            return _pHost != nullptr && _pHost->findConnection( accountID, connection );
         }
     };
 
@@ -71,7 +71,7 @@ namespace
             dependencies._pBus       = &server._bus;
             dependencies._pPresence  = &server._presence;
             dependencies._pDirectory = &_directory;
-            dependencies._serverId   = server.getServerId();
+            dependencies._serverID   = server.getServerID();
             SW_EXPECT_TRUE( _service.initialize( dependencies, ChatSettings{} ) );
             _binding.initialize( &_service );
         }
@@ -170,7 +170,7 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     secondChat.start( second );
     firstChat._directory._mapName[1]  = "alice";
     secondChat._directory._mapName[2] = "bob";
-    first._presence.setOnline( AccountIdentity{ "bob", 2, SW_FALSE }, second.getServerId() ); // 계정 서버(K14)가 쓴 접속 상태
+    first._presence.setOnline( AccountIdentity{ "bob", 2, SW_FALSE }, second.getServerID() ); // 계정 서버(K14)가 쓴 접속 상태
 
     ChatClient              aliceChat;
     ChatClient              bobChat;
@@ -194,9 +194,9 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
     bobChat.drainMessages( listBobMessage );
     SW_ASSERT_EQUAL( listBobMessage.size(), size_t( 1 ) ); // 접속 상태 → 버스 chat.server.<2> → 알림
     SW_EXPECT_STREQ( listBobMessage[0]._text.c_str(), "hi bob" );
-    SW_EXPECT_EQUAL( listBobMessage[0]._senderId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( listBobMessage[0]._senderID, AccountID( 1 ) );
 
-    const string whisperKey = ChatChannelId::makeWhisper( 1, 2 );
+    const string whisperKey = ChatChannelID::makeWhisper( 1, 2 );
     (void)aliceChat.requestHistory( whisperKey, "", 10, aliceRecorder.makeDelegate() );
     (void)bobChat.requestHistory( whisperKey, "", 10, bobRecorder.makeDelegate() ); // 다른 서버 — 같은 저장소
     test::tickAll( { &first, &second }, clients, 20, 10 );
@@ -214,7 +214,7 @@ SW_TEST_CASE( ChatStreamTest, WhisperHistoryAndMuteAcrossTwoServers )
         SW_ASSERT_TRUE( database.commit( transaction ) == ServiceStoreResult::Ok );
         LocalServerBus gmBus( &hub, 99 );
         BitWriter      body;
-        body.writeVarUint( AccountId( 1 ) );
+        body.writeVarUint( AccountID( 1 ) );
         gmBus.publish( ServiceSanctionBus::kChangedTopic, body.getBytes().data(), body.getByteCount() );
     }
     test::tickAll( { &first, &second }, clients, 30 ); // 첫 서버가 버스로 받아 묵힌 제재를 버린다(60 초 안이다)

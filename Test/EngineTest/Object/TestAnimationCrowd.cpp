@@ -152,7 +152,7 @@ SW_TEST_CASE( AnimationCrowdTest, SameStateUnitsShareOneBucket )
     SW_EXPECT_TRUE( arrUnit[0]->findCrowdBucket() != arrUnit[2]->findCrowdBucket() );
     SW_EXPECT_TRUE( arrUnit[0]->findCrowdBucket() != arrUnit[5]->findCrowdBucket() );
     SW_EXPECT_TRUE( arrUnit[0]->getMesh() != mesh );                                  // 원본이 아니라 묶음의 사본을 그린다
-    SW_EXPECT_EQUAL( mesh->getSkinDataId(), arrUnit[0]->getMesh()->getSkinDataId() ); // 사본은 원본의 스킨 데이터를 나눈다
+    SW_EXPECT_EQUAL( mesh->getSkinDataID(), arrUnit[0]->getMesh()->getSkinDataID() ); // 사본은 원본의 스킨 데이터를 나눈다
 
     // 묶음의 포즈 = 묶음 시각의 클립 값, 유닛 시각과는 반 칸(0.125 초) 안.
     const AnimRawClip raw = test::makeChainRawClip( *skeleton, 31, 30.0f, 0.6f );
@@ -204,7 +204,7 @@ SW_TEST_CASE( AnimationCrowdTest, CrossfadeFallsBackToSoloThenRejoins )
     SW_EXPECT_TRUE( pUnit->getCrowdMode() == AnimationCrowdMode::Solo );
     SW_EXPECT_NULL( pUnit->findCrowdBucket() );
     SW_EXPECT_TRUE( pUnit->getMesh() != mesh );
-    SW_EXPECT_EQUAL( mesh->getSkinDataId(), pUnit->getMesh()->getSkinDataId() );
+    SW_EXPECT_EQUAL( mesh->getSkinDataID(), pUnit->getMesh()->getSkinDataID() );
     const uint32 soloEvaluations = pUnit->getPoseEvaluationCount();
     SW_EXPECT_TRUE( soloEvaluations >= 1u ); // 혼자 평가한다
     const Mesh* pSoloMesh = pUnit->getRawMesh();

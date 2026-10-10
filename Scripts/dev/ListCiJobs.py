@@ -96,9 +96,9 @@ def formatFailureAnnotations(listAnnotation: list[dict], maxChars: int = kMaxMes
     return listLine
 
 
-def printAnnotationsOfJob(fetch: JsonFetcher, repository: str, jobId: str | int) -> None:
-    print(f"=== 잡 {jobId}")
-    listAnnotation = fetch(f"{kApiRoot}/repos/{repository}/check-runs/{jobId}/annotations?per_page=50")
+def printAnnotationsOfJob(fetch: JsonFetcher, repository: str, jobID: str | int) -> None:
+    print(f"=== 잡 {jobID}")
+    listAnnotation = fetch(f"{kApiRoot}/repos/{repository}/check-runs/{jobID}/annotations?per_page=50")
     listLine = formatFailureAnnotations(listAnnotation)
     print("\n".join(listLine) if listLine else "(실패 주석 없음)")
 
@@ -132,8 +132,8 @@ def main(argv: list[str] | None = None) -> int:
             if args.annotations:
                 for job in listFailedJobs(payload):
                     printAnnotationsOfJob(fetchJson, repository, job["id"])
-        for jobId in args.job:
-            printAnnotationsOfJob(fetchJson, repository, jobId)
+        for jobID in args.job:
+            printAnnotationsOfJob(fetchJson, repository, jobID)
     except OSError as error:
         print(f"[ListCiJobs] GitHub API 를 읽지 못했습니다(시간당 한도 · 네트워크): {error}", file=sys.stderr)
         return 1

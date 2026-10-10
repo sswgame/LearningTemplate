@@ -101,10 +101,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 개발 갈래 하나 — 기체 레벨이 @p _requiredLevel 이상이면 @p _unitId 로 바꿀 수 있습니다. */
+    /** @brief 개발 갈래 하나 — 기체 레벨이 @p _requiredLevel 이상이면 @p _unitID 로 바꿀 수 있습니다. */
     struct SRPGDevelopTarget
     {
-        hashed_string _unitId{};
+        hashed_string _unitID{};
         int32         _requiredLevel{ 1 };
     };
 } // namespace sw
@@ -116,7 +116,7 @@ namespace sw
     {
         hashed_string             _id{};
         string                    _name{};
-        vector<hashed_string>     _listWeaponId{};
+        vector<hashed_string>     _listWeaponID{};
         vector<SRPGDevelopTarget> _listDevelop{};
         int32                     _hp{ 3000 };
         int32                     _en{ 100 };
@@ -173,10 +173,10 @@ namespace sw
     private:
         static constexpr const utf8* kXmlRootName = "SRPGCatalog"; ///< 루트 원소(`XmlCatalog`)
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadTerrain( const XmlNode& node, const utf8* pId );
-        void                         loadWeapon( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadUnit( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadPilot( const XmlNode& node, const utf8* pId );
+        void                         loadTerrain( const XmlNode& node, const utf8* pID );
+        void                         loadWeapon( const XmlNode& node, const utf8* pID, string_view sourceName );
+        void                         loadUnit( const XmlNode& node, const utf8* pID, string_view sourceName );
+        void                         loadPilot( const XmlNode& node, const utf8* pID );
 
         GameCatalog<SRPGTerrainDef> _terrainCatalog;
         GameCatalog<SRPGWeaponDef>  _weaponCatalog;

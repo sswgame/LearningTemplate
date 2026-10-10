@@ -39,11 +39,11 @@ namespace sw
         return "Unknown";
     }
 
-    const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillId ) const
+    const SkillDef* SkillTreeDef::findSkill( const hashed_string& skillID ) const
     {
         for ( const SkillDef& skill : _listSkill )
         {
-            if ( skill._id == skillId )
+            if ( skill._id == skillID )
                 return &skill;
         }
         return nullptr;
@@ -58,22 +58,22 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
         {
-            const utf8* pTreeId = GameDataXml::findRequiredId( treeNode, sourceName );
-            if ( pTreeId == nullptr )
+            const utf8* pTreeID = GameDataXml::findRequiredID( treeNode, sourceName );
+            if ( pTreeID == nullptr )
                 continue;
             SkillTreeDef tree;
-            tree._id = hashed_string( pTreeId );
+            tree._id = hashed_string( pTreeID );
             for ( XmlNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-                if ( pId == nullptr )
+                const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+                if ( pID == nullptr )
                     continue;
                 SkillDef skill;
-                skill._id            = hashed_string( pId );
+                skill._id            = hashed_string( pID );
                 const utf8* pName    = node.findAttribute( "name" );
                 const utf8* pGroup   = node.findAttribute( "group" );
                 const utf8* pAbility = node.findAttribute( "ability" );
-                skill._name          = pName != nullptr ? pName : pId;
+                skill._name          = pName != nullptr ? pName : pID;
                 skill._group         = pGroup != nullptr ? hashed_string( pGroup ) : hashed_string{};
                 skill._ability       = pAbility != nullptr ? hashed_string( pAbility ) : hashed_string{};
                 skill._maxRank       = MathUtil::max( 1, node.getAttributeInt( "maxRank", skill._maxRank ) );
@@ -85,7 +85,7 @@ namespace sw
                 {
                     SkillRequirement requirement;
                     const size_t     colon = token.find( ':' );
-                    requirement._skillId   = hashed_string( colon == string_view::npos ? token : token.substr( 0, colon ) );
+                    requirement._skillID   = hashed_string( colon == string_view::npos ? token : token.substr( 0, colon ) );
                     if ( colon != string_view::npos )
                     {
                         int32 rank = 1;
@@ -103,8 +103,8 @@ namespace sw
             {
                 for ( const SkillRequirement& requirement : skill._listRequirement )
                 {
-                    if ( tree.findSkill( requirement._skillId ) == nullptr )
-                        SW_LOG_WARNING( "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillId.c_str() );
+                    if ( tree.findSkill( requirement._skillID ) == nullptr )
+                        SW_LOG_WARNING( "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
                 }
             }
             (void)_catalog.add( tree );
@@ -129,21 +129,21 @@ namespace sw
         _listRank.assign( pTree != nullptr ? pTree->_listSkill.size() : 0, 0 );
     }
 
-    int32 SkillTreeState::findIndex( const hashed_string& skillId ) const
+    int32 SkillTreeState::findIndex( const hashed_string& skillID ) const
     {
         if ( _pTree == nullptr )
             return -1;
         for ( size_t index = 0; index < _pTree->_listSkill.size(); ++index )
         {
-            if ( _pTree->_listSkill[index]._id == skillId )
+            if ( _pTree->_listSkill[index]._id == skillID )
                 return static_cast<int32>( index );
         }
         return -1;
     }
 
-    int32 SkillTreeState::getRank( const hashed_string& skillId ) const
+    int32 SkillTreeState::getRank( const hashed_string& skillID ) const
     {
-        const int32 index = findIndex( skillId );
+        const int32 index = findIndex( skillID );
         return index >= 0 ? _listRank[static_cast<size_t>( index )] : 0;
     }
 
@@ -157,9 +157,9 @@ namespace sw
         return spent;
     }
 
-    SkillResult SkillTreeState::evaluateRankUp( const hashed_string& skillId, int32 characterLevel ) const
+    SkillResult SkillTreeState::evaluateRankUp( const hashed_string& skillID, int32 characterLevel ) const
     {
-        const int32 index = findIndex( skillId );
+        const int32 index = findIndex( skillID );
         if ( index < 0 )
             return SkillResult::UnknownSkill;
         const SkillDef& skill = _pTree->_listSkill[static_cast<size_t>( index )];
@@ -172,7 +172,7 @@ namespace sw
             return SkillResult::TierLocked;
         for ( const SkillRequirement& requirement : skill._listRequirement )
         {
-            if ( getRank( requirement._skillId ) < requirement._rank )
+            if ( getRank( requirement._skillID ) < requirement._rank )
                 return SkillResult::RequirementMissing;
         }
         if ( skill._group.empty() == false && rank == 0 )
@@ -188,20 +188,20 @@ namespace sw
         return SkillResult::Ok;
     }
 
-    SkillResult SkillTreeState::rankUp( const hashed_string& skillId, int32 characterLevel )
+    SkillResult SkillTreeState::rankUp( const hashed_string& skillID, int32 characterLevel )
     {
-        const SkillResult result = evaluateRankUp( skillId, characterLevel );
+        const SkillResult result = evaluateRankUp( skillID, characterLevel );
         if ( result != SkillResult::Ok )
             return result;
-        const int32 index = findIndex( skillId );
+        const int32 index = findIndex( skillID );
         _points -= _pTree->_listSkill[static_cast<size_t>( index )]._cost;
         ++_listRank[static_cast<size_t>( index )];
         return SkillResult::Ok;
     }
 
-    SkillResult SkillTreeState::rankDown( const hashed_string& skillId )
+    SkillResult SkillTreeState::rankDown( const hashed_string& skillID )
     {
-        const int32 index = findIndex( skillId );
+        const int32 index = findIndex( skillID );
         if ( index < 0 || _listRank[static_cast<size_t>( index )] <= 0 )
             return SkillResult::UnknownSkill;
         const SkillDef& skill   = _pTree->_listSkill[static_cast<size_t>( index )];
@@ -213,7 +213,7 @@ namespace sw
             const SkillDef& otherSkill = _pTree->_listSkill[other];
             for ( const SkillRequirement& requirement : otherSkill._listRequirement )
             {
-                if ( requirement._skillId == skill._id && newRank < requirement._rank )
+                if ( requirement._skillID == skill._id && newRank < requirement._rank )
                     return SkillResult::RequiredByOther;
             }
             // 층 — 내리면 이 스킬을 열어 준 점수가 모자라게 되는가.

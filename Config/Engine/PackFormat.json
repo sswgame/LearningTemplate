@@ -54,7 +54,7 @@
         "fields": [
             { "name": "_magic", "type": "uint32", "doc": "'SWPK' 매직" },
             { "name": "_formatVersion", "type": "uint32", "doc": "포맷 버전" },
-            { "name": "_dlcAppId", "type": "uint32", "doc": "DLC 식별자 (0: 본편/공용, >0: 유료 DLC AppID)" },
+            { "name": "_dlcAppID", "type": "uint32", "doc": "DLC 식별자 (0: 본편/공용, >0: 유료 DLC AppID)" },
             { "name": "_compressionType", "type": "uint8", "doc": "팩 전체에 적용된 압축 코덱" },
             { "name": "_encryptionType", "type": "uint8", "doc": "암호화 방식" },
             { "name": "_sectorAlignment", "type": "uint16", "doc": "섹터 정렬 경계 (기본 4096)" },

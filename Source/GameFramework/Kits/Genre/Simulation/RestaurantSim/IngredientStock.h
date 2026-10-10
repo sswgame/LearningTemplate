@@ -19,7 +19,7 @@ namespace sw
     /** @brief 한 번에 들어온 재료 묶음입니다. */
     struct IngredientBatch
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int64         _unitCost{ 0 }; ///< 한 개의 원가(결산의 재료비)
         int32         _count{ 0 };
         int32         _daysLeft{ 0 }; ///< 0 이하가 되면 버린다(−1 = 상하지 않는다)
@@ -31,7 +31,7 @@ namespace sw
     /** @brief 기한이 지나 버린 묶음입니다. */
     struct IngredientSpoilage
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         int64         _cost{ 0 };
         int32         _count{ 0 };
     };
@@ -52,19 +52,19 @@ namespace sw
 
         void initialize( Inventory* pInventory );
         /** @brief 인벤토리에 넣고 묶음을 적습니다. 들어간 개수입니다. @p shelfLife 0 이면 상하지 않습니다. */
-        int32 addFresh( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost );
+        int32 addFresh( const hashed_string& itemID, int32 count, int32 shelfLife, int64 unitCost );
         /** @brief 이미 인벤토리에 들어간 것(가게에서 산 것)의 묶음만 적습니다. */
-        void recordBatch( const hashed_string& itemId, int32 count, int32 shelfLife, int64 unitCost );
+        void recordBatch( const hashed_string& itemID, int32 count, int32 shelfLife, int64 unitCost );
         /** @brief @p count 개가 모두 있으면 오래된 것부터 빼고 원가 합을 @p outCost 에 더합니다. 모자라면 아무것도 빼지 않고 false 입니다. */
-        [[nodiscard]] bool consume( const hashed_string& itemId, int32 count, int64& outCost );
+        [[nodiscard]] bool consume( const hashed_string& itemID, int32 count, int64& outCost );
         /** @brief 목록의 재료 × @p times 를 다 있으면 모두 뺍니다(다 되거나 아무것도). */
         [[nodiscard]] bool consumeItems( const ItemStackList& items, int32 times, int64& outCost );
         /** @brief 하루를 넘깁니다 — 남은 날을 줄이고 0 이 된 묶음을 인벤토리에서 버립니다. */
         void advanceDay( vector<IngredientSpoilage>& outListSpoilage );
 
         /** @brief 그 재료의 가장 가까운 남은 날입니다(상하는 묶음이 없으면 −1). */
-        int32                          findEarliestExpiry( const hashed_string& itemId ) const;
-        int32                          getBatchCount( const hashed_string& itemId ) const;
+        int32                          findEarliestExpiry( const hashed_string& itemID ) const;
+        int32                          getBatchCount( const hashed_string& itemID ) const;
         const vector<IngredientBatch>& getBatches() const { return _listBatch; }
 
         /** @brief 묶음(재료 · 원가 · 개수 · 남은 날)을 씁니다. 빌린 창고는 싣지 않습니다(주인이 싣는다). */
@@ -74,7 +74,7 @@ namespace sw
 
     private:
         /** @brief 묶음 합이 인벤토리 개수를 넘으면 오래된 묶음부터 줄입니다(밖에서 뺀 만큼). */
-        void reconcile( const hashed_string& itemId );
+        void reconcile( const hashed_string& itemID );
         void sortBatches();
 
         vector<IngredientBatch> _listBatch; ///< 남은 날이 적은 것부터(상하지 않는 것은 뒤)

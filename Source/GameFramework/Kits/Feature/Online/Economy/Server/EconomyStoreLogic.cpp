@@ -24,20 +24,20 @@ namespace sw
             }
 
             /** @brief 구매 분개를 찾는 요청(키 · 사유 · 상품만)입니다. */
-            static LedgerTransferRequest makePurchaseProbe( const EconomyPurchaseInput& input, string_view offerId )
+            static LedgerTransferRequest makePurchaseProbe( const EconomyPurchaseInput& input, string_view offerID )
             {
                 LedgerTransferRequest probe;
                 probe._journalKey = input._journalKey;
                 probe._reason     = "shop.buy";
-                probe._memo       = string( offerId );
+                probe._memo       = string( offerID );
                 return probe;
             }
 
-            static string makePurchaseCountKey( uint64 accountId, string_view offerId )
+            static string makePurchaseCountKey( uint64 accountID, string_view offerID )
             {
-                string key = ServiceKeyUtil::makeHex64( accountId );
+                string key = ServiceKeyUtil::makeHex64( accountID );
                 key.push_back( '/' );
-                key += offerId;
+                key += offerID;
                 return key;
             }
 
@@ -45,10 +45,10 @@ namespace sw
             static EconomyResult appendPriceLegs( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferPrice& price, int64 totalAmount,
                                                   const LedgerHolder& account, LedgerTransferRequest& inoutRequest )
             {
-                const CurrencyDef* pCurrency = currencies.findCurrency( price._currencyId );
+                const CurrencyDef* pCurrency = currencies.findCurrency( price._currencyID );
                 if ( pCurrency == nullptr || pCurrency->isVirtual() == false )
                 {
-                    inoutRequest._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), price._currencyId, totalAmount } );
+                    inoutRequest._listPosting.push_back( LedgerPosting{ account, LedgerHolder::makeSink(), price._currencyID, totalAmount } );
                     return EconomyResult::Ok;
                 }
                 int64 remaining = totalAmount;
@@ -74,7 +74,7 @@ namespace sw
              * @brief 같은 분개 키의 분개가 이미 있으면 그 결과를 @p outReply 에 넣고 true 입니다(`_result` 는 Ok, 다른 구매의 키면 InvalidRequest).
              * @details 다리는 지금 잔액으로 다시 짤 수 없으므로(재원이 비었을 수 있다) 저장된 분개의 다리로 재생한다.
              */
-            static bool findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountId, EconomyReply& outReply )
+            static bool findReplay( IServiceStoreConnection& connection, const LedgerTransferRequest& request, uint64 accountID, EconomyReply& outReply )
             {
                 LedgerJournalEntry entry;
                 if ( Ledger::findJournal( connection, request._journalKey, entry ) != ServiceStoreResult::Ok )
@@ -92,7 +92,7 @@ namespace sw
                     outReply._result = EconomyResult::InvalidRequest;
                     return true;
                 }
-                EconomyStoreLogic::collectAccountBalances( replay, accountId, outReply._listBalance );
+                EconomyStoreLogic::collectAccountBalances( replay, accountID, outReply._listBalance );
                 outReply._bReplayed = SW_TRUE;
                 outReply._result    = EconomyResult::Ok;
                 return true;
@@ -131,9 +131,9 @@ namespace sw
         return EconomyResult::Unavailable;
     }
 
-    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountId, vector<LedgerBalance>& outListBalance )
+    void EconomyStoreLogic::collectAccountBalances( const LedgerTransferOutcome& outcome, uint64 accountID, vector<LedgerBalance>& outListBalance )
     {
-        const LedgerHolder account = LedgerHolder::makeAccount( accountId );
+        const LedgerHolder account = LedgerHolder::makeAccount( accountID );
         for ( const LedgerTransferOutcome::HolderBalance& holderBalance : outcome._listHolderBalance )
         {
             if ( holderBalance._holder == account )
@@ -145,21 +145,21 @@ namespace sw
                                                const EconomyPurchaseInput& input, EconomyReply& outReply )
     {
         outReply               = EconomyReply{};
-        const OfferDef* pOffer = offers.findOffer( input._offerId );
+        const OfferDef* pOffer = offers.findOffer( input._offerID );
         if ( pOffer == nullptr )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownOffer );
         if ( pOffer->isRealMoney() )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotPurchasable );
         const bool bCountOk = 1 <= input._count && input._count <= pOffer->_maxCountPerPurchase;
-        if ( bCountOk == false || input._accountId == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false )
+        if ( bCountOk == false || input._accountID == 0 || LedgerUtil::isValidJournalKey( input._journalKey ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
         if ( pOffer->isOnSale( input._nowMs ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::NotOnSale );
 
-        const LedgerHolder account = LedgerHolder::makeAccount( input._accountId );
+        const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
         const int64        count   = input._count;
         // 재시도는 잔액 · 한도 판정보다 먼저 지난 결과를 본다 — 가상 화폐 다리는 지금 잔액으로 짜므로 다시 짜면 처음과 다를 수 있다.
-        if ( EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountId, outReply ) )
+        if ( EconomyStoreLogicInternal::findReplay( connection, EconomyStoreLogicInternal::makePurchaseProbe( input, pOffer->_id ), input._accountID, outReply ) )
             return EconomyStoreLogicInternal::finish( outReply, outReply._result );
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
@@ -169,7 +169,7 @@ namespace sw
             request._memo       = pOffer->_id;
             request._pPolicy    = &currencies;
             request._timeMs     = input._nowMs;
-            request._actorId    = input._accountId;
+            request._actorID    = input._accountID;
             request._actorKind  = LedgerActorKind::Player;
             for ( const OfferPrice& price : pOffer->_listPrice )
             {
@@ -179,7 +179,7 @@ namespace sw
                 if ( priced == EconomyResult::Ok )
                     continue;
                 // 모자람 판정 전에 같은 키로 이미 산 것인지 본다 — 첫 구매로 잔액이 준 뒤의 재시도가 "모자람" 을 받으면 안 된다.
-                if ( EconomyStoreLogicInternal::findReplay( connection, request, input._accountId, outReply ) )
+                if ( EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
                     return EconomyStoreLogicInternal::finish( outReply, outReply._result );
                 return EconomyStoreLogicInternal::finish( outReply, priced );
             }
@@ -187,7 +187,7 @@ namespace sw
             {
                 if ( grant._amount > LedgerConstant::kMaxAmount / count )
                     return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
-                request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetId, grant._amount * count } );
+                request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount * count } );
             }
 
             ServiceTransaction    transaction;
@@ -195,19 +195,19 @@ namespace sw
             const LedgerResult    staged = Ledger::stageTransfer( connection, request, transaction, outcome );
             if ( staged != LedgerResult::Ok )
             {
-                if ( staged == LedgerResult::InsufficientFunds && EconomyStoreLogicInternal::findReplay( connection, request, input._accountId, outReply ) )
+                if ( staged == LedgerResult::InsufficientFunds && EconomyStoreLogicInternal::findReplay( connection, request, input._accountID, outReply ) )
                     return EconomyStoreLogicInternal::finish( outReply, outReply._result );
                 return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( staged ) );
             }
             if ( outcome._bReplayed == SW_TRUE )
             {
-                collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                 outReply._bReplayed = SW_TRUE;
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
             if ( pOffer->_limitPerAccount > 0 )
             {
-                const string             countKey = EconomyStoreLogicInternal::makePurchaseCountKey( input._accountId, pOffer->_id );
+                const string             countKey = EconomyStoreLogicInternal::makePurchaseCountKey( input._accountID, pOffer->_id );
                 ServiceRecord            countRecord;
                 const ServiceStoreResult read = connection.readRecord( getPurchaseCountTable(), countKey, countRecord );
                 if ( read != ServiceStoreResult::Ok && read != ServiceStoreResult::NotFound )
@@ -227,7 +227,7 @@ namespace sw
             const ServiceStoreResult committed = connection.commit( transaction );
             if ( committed == ServiceStoreResult::Ok )
             {
-                collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
             if ( committed == ServiceStoreResult::Invalid )
@@ -235,7 +235,7 @@ namespace sw
             const LedgerResult resolved = Ledger::resolveConflict( connection, request, outcome );
             if ( resolved == LedgerResult::Ok )
             {
-                collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+                collectAccountBalances( outcome, input._accountID, outReply._listBalance );
                 outReply._bReplayed = outcome._bReplayed;
                 return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
             }
@@ -253,7 +253,7 @@ namespace sw
     {
         outReply                               = EconomyReply{};
         const ReceiptValidationResult& receipt = input._receipt;
-        outReply._productId                    = receipt._productId;
+        outReply._productID                    = receipt._productID;
         switch ( receipt._status )
         {
             case ReceiptStatus::Valid:
@@ -269,26 +269,26 @@ namespace sw
         }
         if ( receipt._bSandbox == SW_TRUE && input._bAcceptSandbox == SW_FALSE )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
-        if ( input._accountId == 0 )
+        if ( input._accountID == 0 )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
-        const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, receipt._productId );
+        const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, receipt._productID );
         if ( pOffer == nullptr )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownProduct );
 
         LedgerTransferRequest request;
         const string          scope = string( EconomyStoreLogicInternal::kReceiptScopePrefix ) + receipt._storeName;
-        if ( LedgerJournalKey::makeFromToken( scope, receipt._transactionId, request._journalKey ) == false )
+        if ( LedgerJournalKey::makeFromToken( scope, receipt._transactionID, request._journalKey ) == false )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
         request._reason            = "iap.redeem";
-        request._memo              = receipt._productId.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
+        request._memo              = receipt._productID.substr( 0, static_cast<size_t>( LedgerConstant::kMaxMemoSize ) );
         request._pPolicy           = &currencies;
         request._timeMs            = input._nowMs;
-        request._actorId           = input._accountId;
+        request._actorID           = input._accountID;
         request._actorKind         = LedgerActorKind::Player;
-        const LedgerHolder account = LedgerHolder::makeAccount( input._accountId );
+        const LedgerHolder account = LedgerHolder::makeAccount( input._accountID );
         for ( const OfferGrant& grant : pOffer->_listGrant )
         {
-            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetId, grant._amount } );
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
         LedgerTransferOutcome outcome;
         const LedgerResult    result = Ledger::executeTransfer( connection, request, outcome );
@@ -296,22 +296,22 @@ namespace sw
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라 분개 내용이 다르다
         if ( result != LedgerResult::Ok )
             return EconomyStoreLogicInternal::finish( outReply, toEconomyResult( result ) );
-        collectAccountBalances( outcome, input._accountId, outReply._listBalance );
+        collectAccountBalances( outcome, input._accountID, outReply._listBalance );
         outReply._bReplayed = outcome._bReplayed;
         return EconomyStoreLogicInternal::finish( outReply, EconomyResult::Ok );
     }
 
-    EconomyResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountId, EconomyReply& outReply )
+    EconomyResult EconomyStoreLogic::readWallet( IServiceStoreConnection& connection, uint64 accountID, EconomyReply& outReply )
     {
         outReply                      = EconomyReply{};
-        const ServiceStoreResult read = Ledger::listBalances( connection, LedgerHolder::makeAccount( accountId ), outReply._listBalance );
+        const ServiceStoreResult read = Ledger::listBalances( connection, LedgerHolder::makeAccount( accountID ), outReply._listBalance );
         return EconomyStoreLogicInternal::finish( outReply, read == ServiceStoreResult::Ok ? EconomyResult::Ok : EconomyResult::Unavailable );
     }
 
-    EconomyResult EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountId, const EconomyHistoryRequest& request, EconomyReply& outReply )
+    EconomyResult EconomyStoreLogic::readHistory( IServiceStoreConnection& connection, uint64 accountID, const EconomyHistoryRequest& request, EconomyReply& outReply )
     {
         outReply                           = EconomyReply{};
-        const LedgerHolder         account = LedgerHolder::makeAccount( accountId );
+        const LedgerHolder         account = LedgerHolder::makeAccount( accountID );
         vector<LedgerJournalEntry> listEntry;
         const ServiceStoreResult   read = Ledger::listHistory( connection, account, request._cursor, request._maxCount, listEntry, outReply._nextCursor );
         if ( read != ServiceStoreResult::Ok )
@@ -330,13 +330,13 @@ namespace sw
                 LedgerBalance* pChange = nullptr;
                 for ( LedgerBalance& change : historyEntry._listChange )
                 {
-                    if ( change._assetId == posting._assetId )
+                    if ( change._assetID == posting._assetID )
                         pChange = &change;
                 }
                 if ( pChange == nullptr )
                 {
                     pChange           = &historyEntry._listChange.emplace_back();
-                    pChange->_assetId = posting._assetId;
+                    pChange->_assetID = posting._assetID;
                 }
                 pChange->_amount += sign * posting._amount;
             }

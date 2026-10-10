@@ -22,7 +22,7 @@ SW_TEST_CASE( LiveEventRulesTest, OnceWeeklyWeekendAndDailyEvening )
 {
     using Internal = LiveEventRulesTestInternal;
     LiveEventDefinition once;
-    once._eventId     = "halloween";
+    once._eventID     = "halloween";
     once._startMs     = Internal::kMonday20261005;
     once._endMs       = Internal::kMonday20261005 + 7 * Internal::kDay;
     int64 windowEndMs = 0;
@@ -32,7 +32,7 @@ SW_TEST_CASE( LiveEventRulesTest, OnceWeeklyWeekendAndDailyEvening )
     SW_EXPECT_FALSE( LiveEventRules::isWindowOpen( once, Internal::kMonday20261005 + 7 * Internal::kDay, windowEndMs ) );
 
     LiveEventDefinition weekend;
-    weekend._eventId          = "weekend_xp";
+    weekend._eventID          = "weekend_xp";
     weekend._startMs          = Internal::kMonday20261005;
     weekend._endMs            = Internal::kMonday20261005 + 28 * Internal::kDay;
     weekend._recurrence       = LiveEventRecurrence::Weekly;
@@ -45,7 +45,7 @@ SW_TEST_CASE( LiveEventRulesTest, OnceWeeklyWeekendAndDailyEvening )
     SW_EXPECT_TRUE( LiveEventRules::isWindowOpen( weekend, Internal::kMonday20261005 + 13 * Internal::kDay, windowEndMs ) ); // 둘째 주 일요일
 
     LiveEventDefinition evening;
-    evening._eventId           = "evening_drop";
+    evening._eventID           = "evening_drop";
     evening._startMs           = Internal::kMonday20261005;
     evening._endMs             = Internal::kMonday20261005 + 3 * Internal::kDay;
     evening._recurrence        = LiveEventRecurrence::Daily;
@@ -62,7 +62,7 @@ SW_TEST_CASE( LiveEventRulesTest, OnceWeeklyWeekendAndDailyEvening )
     broken._activeDurationMs   = 0; // 반복인데 회차 길이가 없다
     SW_EXPECT_FALSE( LiveEventRules::isValid( broken ) );
     broken          = once;
-    broken._eventId = "Halloween"; // 키 규칙 밖
+    broken._eventID = "Halloween"; // 키 규칙 밖
     SW_EXPECT_FALSE( LiveEventRules::isValid( broken ) );
     broken        = once;
     broken._endMs = broken._startMs;
@@ -75,21 +75,21 @@ SW_TEST_CASE( LiveEventRulesTest, OnceWeeklyWeekendAndDailyEvening )
 SW_TEST_CASE( LiveEventRulesTest, AudienceFilters )
 {
     LiveEventDefinition definition;
-    definition._eventId            = "beta_mode";
+    definition._eventID            = "beta_mode";
     definition._minBuildVersion    = 120;
     definition._listRegion         = { "kr", "jp" };
     definition._rolloutBasisPoints = 2500;
     SW_EXPECT_FALSE( LiveEventRules::isAudienceMatch( definition, 1, "kr", 119 ) );
     SW_EXPECT_FALSE( LiveEventRules::isAudienceMatch( definition, 1, "eu", 120 ) );
     LiveEventDefinition other = definition;
-    other._eventId            = "beta_shop";
+    other._eventID            = "beta_shop";
     int32 enabledCount        = 0;
     int32 differentCount      = 0;
-    for ( AccountId accountId = 1; accountId <= 10000; ++accountId )
+    for ( AccountID accountID = 1; accountID <= 10000; ++accountID )
     {
-        const bool bEnabled = LiveEventRules::isAudienceMatch( definition, accountId, "kr", 200 );
+        const bool bEnabled = LiveEventRules::isAudienceMatch( definition, accountID, "kr", 200 );
         enabledCount += bEnabled ? 1 : 0;
-        differentCount += bEnabled != LiveEventRules::isAudienceMatch( other, accountId, "kr", 200 ) ? 1 : 0;
+        differentCount += bEnabled != LiveEventRules::isAudienceMatch( other, accountID, "kr", 200 ) ? 1 : 0;
     }
     SW_EXPECT_EQUAL( enabledCount, 2498 );   // 결정적 해시 — 비율 2500 근처, 원격 설정 플래그와 같은 함수
     SW_EXPECT_EQUAL( differentCount, 3734 ); // 같은 비율이어도 이벤트마다 다른 계정 집합(해시 이름이 이벤트 id)

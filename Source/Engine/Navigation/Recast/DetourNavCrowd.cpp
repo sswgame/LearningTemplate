@@ -110,75 +110,75 @@ namespace sw
         _maxAgentCount = 0;
     }
 
-    bool DetourNavCrowd::isActiveAgent( NavCrowdAgentId agentId ) const
+    bool DetourNavCrowd::isActiveAgent( NavCrowdAgentID agentID ) const
     {
-        if ( _pCrowd == nullptr || agentId < 0 || static_cast<uint32>( agentId ) >= _maxAgentCount )
+        if ( _pCrowd == nullptr || agentID < 0 || static_cast<uint32>( agentID ) >= _maxAgentCount )
             return false;
-        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentId );
+        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
         return pAgent != nullptr && pAgent->active;
     }
 
-    NavCrowdAgentId DetourNavCrowd::addAgent( const float3& position, const NavCrowdAgentParams& params )
+    NavCrowdAgentID DetourNavCrowd::addAgent( const float3& position, const NavCrowdAgentParams& params )
     {
         if ( _pCrowd == nullptr )
-            return NavigationConstant::kInvalidAgentId;
+            return NavigationConstant::kInvalidAgentID;
         dtCrowdAgentParams detourParams{};
         DetourNavCrowdInternal::toDetourParams( params, detourParams );
         const int32 agentIndex = _pCrowd->addAgent( &position._x, &detourParams );
         if ( agentIndex < 0 )
-            return NavigationConstant::kInvalidAgentId;
+            return NavigationConstant::kInvalidAgentID;
         _listFailed[static_cast<size_t>( agentIndex )] = SW_FALSE;
         _listTarget[static_cast<size_t>( agentIndex )] = position;
         return agentIndex;
     }
 
-    void DetourNavCrowd::removeAgent( NavCrowdAgentId agentId )
+    void DetourNavCrowd::removeAgent( NavCrowdAgentID agentID )
     {
-        if ( isActiveAgent( agentId ) )
-            _pCrowd->removeAgent( agentId );
+        if ( isActiveAgent( agentID ) )
+            _pCrowd->removeAgent( agentID );
     }
 
-    void DetourNavCrowd::updateAgentParams( NavCrowdAgentId agentId, const NavCrowdAgentParams& params )
+    void DetourNavCrowd::updateAgentParams( NavCrowdAgentID agentID, const NavCrowdAgentParams& params )
     {
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return;
         dtCrowdAgentParams detourParams{};
         DetourNavCrowdInternal::toDetourParams( params, detourParams );
-        _pCrowd->updateAgentParameters( agentId, &detourParams );
+        _pCrowd->updateAgentParameters( agentID, &detourParams );
     }
 
-    bool DetourNavCrowd::requestMoveTarget( NavCrowdAgentId agentId, const float3& target )
+    bool DetourNavCrowd::requestMoveTarget( NavCrowdAgentID agentID, const float3& target )
     {
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return false;
-        _listTarget[static_cast<size_t>( agentId )] = target;
+        _listTarget[static_cast<size_t>( agentID )] = target;
         dtPolyRef targetRef                         = 0;
         float32   arrNearest[3]{};
         (void)_pQuery->findNearestPoly( &target._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &targetRef, arrNearest );
         if ( targetRef == 0 )
         {
-            _pCrowd->resetMoveTarget( agentId );
-            _listFailed[static_cast<size_t>( agentId )] = SW_TRUE;
+            _pCrowd->resetMoveTarget( agentID );
+            _listFailed[static_cast<size_t>( agentID )] = SW_TRUE;
             return false;
         }
-        _listFailed[static_cast<size_t>( agentId )] = SW_FALSE;
-        return _pCrowd->requestMoveTarget( agentId, targetRef, arrNearest );
+        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
+        return _pCrowd->requestMoveTarget( agentID, targetRef, arrNearest );
     }
 
-    void DetourNavCrowd::resetMoveTarget( NavCrowdAgentId agentId )
+    void DetourNavCrowd::resetMoveTarget( NavCrowdAgentID agentID )
     {
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return;
-        _pCrowd->resetMoveTarget( agentId );
-        _listFailed[static_cast<size_t>( agentId )] = SW_FALSE;
+        _pCrowd->resetMoveTarget( agentID );
+        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
     }
 
-    void DetourNavCrowd::teleportAgent( NavCrowdAgentId agentId, const float3& position )
+    void DetourNavCrowd::teleportAgent( NavCrowdAgentID agentID, const float3& position )
     {
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return;
         // Detour 의 addAgent 가 하는 것과 같은 초기화 — 통로를 새 자리에서 다시 시작한다.
-        dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentId );
+        dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentID );
         dtPolyRef     polyRef = 0;
         float32       arrNearest[3]{ position._x, position._y, position._z };
         (void)_pQuery->findNearestPoly( &position._x, _pCrowd->getQueryHalfExtents(), _pCrowd->getFilter( 0 ), &polyRef, arrNearest );
@@ -195,18 +195,18 @@ namespace sw
         dtVset( pAgent->vel, 0.0f, 0.0f, 0.0f );
         dtVcopy( pAgent->npos, arrNearest );
         pAgent->state = polyRef != 0 ? DT_CROWDAGENT_STATE_WALKING : DT_CROWDAGENT_STATE_INVALID;
-        _pCrowd->resetMoveTarget( agentId );
-        _listFailed[static_cast<size_t>( agentId )] = SW_FALSE;
+        _pCrowd->resetMoveTarget( agentID );
+        _listFailed[static_cast<size_t>( agentID )] = SW_FALSE;
     }
 
-    void DetourNavCrowd::syncAgentPosition( NavCrowdAgentId agentId, const float3& position )
+    void DetourNavCrowd::syncAgentPosition( NavCrowdAgentID agentID, const float3& position )
     {
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return;
-        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentId );
+        dtCrowdAgent* pAgent = _pCrowd->getEditableAgent( agentID );
         if ( pAgent->state != DT_CROWDAGENT_STATE_WALKING || pAgent->corridor.getFirstPoly() == 0 )
         {
-            teleportAgent( agentId, position );
+            teleportAgent( agentID, position );
             return;
         }
         // 통로를 따라 새 자리로 끌어 옮긴다(벽을 넘지 않는다) — 경로는 지킨다.
@@ -221,20 +221,20 @@ namespace sw
         _pCrowd->update( deltaTime, nullptr );
     }
 
-    bool DetourNavCrowd::findAgentState( NavCrowdAgentId agentId, NavCrowdAgentState& outState ) const
+    bool DetourNavCrowd::findAgentState( NavCrowdAgentID agentID, NavCrowdAgentState& outState ) const
     {
         outState = NavCrowdAgentState{};
-        if ( isActiveAgent( agentId ) == false )
+        if ( isActiveAgent( agentID ) == false )
             return false;
         using Internal             = DetourNavCrowdInternal;
-        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentId );
+        const dtCrowdAgent* pAgent = _pCrowd->getAgent( agentID );
         outState._position         = Internal::toFloat3( pAgent->npos );
         outState._velocity         = Internal::toFloat3( pAgent->vel );
         outState._desiredVelocity  = Internal::toFloat3( pAgent->dvel );
-        outState._target           = _listTarget[static_cast<size_t>( agentId )];
+        outState._target           = _listTarget[static_cast<size_t>( agentID )];
         outState._bOnNavMesh       = pAgent->state == DT_CROWDAGENT_STATE_WALKING;
         outState._nextCorner       = pAgent->ncorners > 0 ? Internal::toFloat3( pAgent->cornerVerts ) : outState._position;
-        if ( _listFailed[static_cast<size_t>( agentId )] == SW_TRUE )
+        if ( _listFailed[static_cast<size_t>( agentID )] == SW_TRUE )
         {
             outState._moveState = NavCrowdMoveState::Failed;
             return true;
@@ -286,7 +286,7 @@ namespace sw
         uint32 count = 0;
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
         {
-            count += isActiveAgent( static_cast<NavCrowdAgentId>( agentIndex ) ) ? 1u : 0u;
+            count += isActiveAgent( static_cast<NavCrowdAgentID>( agentIndex ) ) ? 1u : 0u;
         }
         return count;
     }
@@ -300,7 +300,7 @@ namespace sw
         const float4 desiredColor{ 0.2f, 0.5f, 1.0f, 1.0f };
         for ( uint32 agentIndex = 0; agentIndex < _maxAgentCount; ++agentIndex )
         {
-            if ( isActiveAgent( static_cast<NavCrowdAgentId>( agentIndex ) ) == false )
+            if ( isActiveAgent( static_cast<NavCrowdAgentID>( agentIndex ) ) == false )
                 continue;
             const dtCrowdAgent* pAgent   = _pCrowd->getAgent( static_cast<int32>( agentIndex ) );
             const float3        position = Internal::toFloat3( pAgent->npos ) + lift;

@@ -81,7 +81,7 @@ namespace sw
         const PackHeader& getHeader() const;
 
         /** @brief DLC 식별자를 반환합니다(0 = 본편, >0 = DLC AppID). */
-        uint32 getDlcAppId() const;
+        uint32 getDlcAppID() const;
 
         /** @brief 팩에 든 파일 총 개수를 반환합니다. */
         uint32 getFileCount() const;

@@ -49,7 +49,7 @@ namespace sw
      * @details - **포즈**: 로컬 포즈(SoA) → 모델 공간 → 스킨 팔레트. 기본 포즈 단계에서 레퍼런스 포즈로 시작하고, 등록된 일(애니메이터)이 덮어씁니다.
      *          - **리더 포즈(Leader Pose)**: 리더를 정하면 기본 포즈 단계에서 리더의 로컬 포즈를 본 이름으로 옮깁니다(모듈식 파츠가 몸을 따른다).
      *            리더는 의존이 되어 먼저 평가됩니다. `_bFollowParentPose` 면 부모 오브젝트의 유닛이 리더입니다.
-     *          - **메시**: `_meshId` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다 — GPU 스키닝 결과(모프 풀 구간)가 메시마다
+     *          - **메시**: `_meshID` 의 `.mesh` 가 스킨을 가지면 컴포넌트마다 메시 객체를 따로 둡니다 — GPU 스키닝 결과(모프 풀 구간)가 메시마다
      *            하나라서, 포즈가 다른 캐릭터가 같은 메시 객체를 나누면 한 포즈로 그려집니다. 정점 데이터는 그 복사본입니다(군중 공유는 다음 일).
      *          - **LOD**: `AnimationSystem` 이 프레임마다 뷰(카메라 절두체들)로 판정해 넣습니다(`applyAnimationLod`) — 화면 밖이면 포즈를 건너뛰고
      *            (`_bAnimateWhenOffscreen` 이 아니면), 화면 크기 단계 · 예산이 정한 주기마다 포즈를 만들며(시간 · 알림은 매 프레임), 건너뛴 프레임은
@@ -233,7 +233,7 @@ namespace sw
         shared_ptr<const Skeleton> _skeleton;
         /// @brief 스킨드 메시의 공유 원본입니다(정체성 · 핫 리로드 대조용). 이 컴포넌트의 메시는 그 복사본입니다.
         shared_ptr<Mesh>                  _skinSourceMesh;
-        uint64                            _skinSourceContentId;
+        uint64                            _skinSourceContentID;
         Pose                              _localPose;
         vector<float4x4>                  _listModelSpace;
         vector<float4x4>                  _listSkinPalette;

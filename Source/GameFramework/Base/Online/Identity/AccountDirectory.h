@@ -16,9 +16,9 @@
 namespace sw
 {
     /** @brief 계정 id 입니다. 0 = 없음. 저장소 키로는 `ServiceKeyUtil::makeHex64`. */
-    using AccountId = uint64;
+    using AccountID = uint64;
 
-    inline constexpr AccountId kInvalidAccountId = 0;
+    inline constexpr AccountID kInvalidAccountID = 0;
 } // namespace sw
 
 namespace sw
@@ -27,7 +27,7 @@ namespace sw
     struct AccountIdentity
     {
         string    _displayName{};
-        AccountId _accountId{ kInvalidAccountId };
+        AccountID _accountID{ kInvalidAccountID };
         uint8     _bGuest{ SW_FALSE }; ///< 게스트 계정(연동 전)
     };
 } // namespace sw
@@ -48,10 +48,10 @@ namespace sw
         IAccountDirectory& operator=( const IAccountDirectory& ) = delete;
 
         /** @brief 계정 id 의 공개 정보입니다. 이 프로세스가 아는(붙어 있는) 계정만 — 모르면 false. */
-        virtual bool findIdentity( AccountId accountId, AccountIdentity& outIdentity ) const = 0;
+        virtual bool findIdentity( AccountID accountID, AccountIdentity& outIdentity ) const = 0;
         /** @brief 붙어 있는 계정을 표시 이름(대소문자 무시)으로 찾습니다 — 거래 신청 · 귓속말은 상대가 붙어 있어야 한다. */
         virtual bool findIdentityByDisplayName( string_view displayName, AccountIdentity& outIdentity ) const = 0;
         /** @brief 지금 이 프로세스에 로그인해 붙어 있는가입니다(재접속 유예 중이면 false). */
-        virtual bool isAccountOnline( AccountId accountId ) const = 0;
+        virtual bool isAccountOnline( AccountID accountID ) const = 0;
     };
 } // namespace sw

@@ -56,7 +56,7 @@ namespace sw
         bool notifyHit();
         void setFacing( int32 facing ) { _facing = facing < 0 ? -1 : 1; }
 
-        const hashed_string& getStateId() const;
+        const hashed_string& getStateID() const;
         int32                getStateFrame() const { return _stateFrame; }
         int32                getFacing() const { return _facing; }
 

@@ -35,8 +35,8 @@ namespace sw
         , _invulnerable{}
         , _reviveElapsed{ 0.0f }
         , _reviveSpeedScale{ 1.0f }
-        , _reviverId{ -1 }
-        , _lastInstigatorId{ -1 }
+        , _reviverID{ -1 }
+        , _lastInstigatorID{ -1 }
         , _downCount{ 0 }
         , _state{ VitalityState::Alive }
         , _bReviving{ SW_FALSE }
@@ -79,9 +79,9 @@ namespace sw
         _invulnerable.clear();
         _reviveElapsed    = 0.0f;
         _reviveSpeedScale = 1.0f;
-        _reviverId        = -1;
+        _reviverID        = -1;
         _bReviving        = SW_FALSE;
-        _lastInstigatorId = -1;
+        _lastInstigatorID = -1;
     }
 
     void Vitality::setMaxHealth( float32 maxHealth, bool bFill )
@@ -100,7 +100,7 @@ namespace sw
         _health = MathUtil::min( _health, maxHealth );
     }
 
-    VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorId )
+    VitalityDamageResult Vitality::applyDamage( float32 amount, float32 poiseDamage, int32 instigatorID )
     {
         VitalityDamageResult result;
         amount      = MathUtil::max( 0.0f, amount );
@@ -110,7 +110,7 @@ namespace sw
             result._bIgnored = SW_TRUE;
             return result;
         }
-        _lastInstigatorId = instigatorId;
+        _lastInstigatorID = instigatorID;
         _sinceDamage      = 0.0f;
 
         if ( _state == VitalityState::Downed )
@@ -119,15 +119,15 @@ namespace sw
             result._healthDamage = MathUtil::min( amount, _downedHealth );
             _downedHealth -= result._healthDamage;
             if ( result._healthDamage > 0.0f )
-                pushEvent( VitalityEventType::Damaged, result._healthDamage, instigatorId );
+                pushEvent( VitalityEventType::Damaged, result._healthDamage, instigatorID );
             if ( amount > 0.0f && isReviving() && _settings._bDamageInterruptsRevive == SW_TRUE )
             {
-                pushEvent( VitalityEventType::ReviveInterrupted, 0.0f, instigatorId );
+                pushEvent( VitalityEventType::ReviveInterrupted, 0.0f, instigatorID );
                 stopRevive();
             }
             if ( _downedHealth <= 0.0f && amount > 0.0f )
             {
-                enterDead( instigatorId );
+                enterDead( instigatorID );
                 result._bDied = SW_TRUE;
             }
             return result;
@@ -140,12 +140,12 @@ namespace sw
         result._healthDamage = MathUtil::min( amount - result._shieldAbsorbed, _health );
         _health -= result._healthDamage;
         if ( result._shieldAbsorbed + result._healthDamage > 0.0f )
-            pushEvent( VitalityEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorId );
+            pushEvent( VitalityEventType::Damaged, result._shieldAbsorbed + result._healthDamage, instigatorID );
         if ( bHadShield && _shield <= 0.0f )
         {
             _shield               = 0.0f;
             result._bShieldBroken = SW_TRUE;
-            pushEvent( VitalityEventType::ShieldBroken, 0.0f, instigatorId );
+            pushEvent( VitalityEventType::ShieldBroken, 0.0f, instigatorID );
         }
 
         // 경직 — 붕괴 중에는 더 쌓지 않는다(붕괴가 끝나면 가득 찬다).
@@ -157,7 +157,7 @@ namespace sw
             {
                 _poiseBreak.start( MathUtil::max( _settings._poiseBreakDuration, 1.0e-6f ) );
                 result._bPoiseBroken = SW_TRUE;
-                pushEvent( VitalityEventType::PoiseBroken, poiseDamage, instigatorId );
+                pushEvent( VitalityEventType::PoiseBroken, poiseDamage, instigatorID );
             }
         }
 
@@ -167,12 +167,12 @@ namespace sw
             const bool bDownLimitLeft = _settings._maxDownCount == 0 || _downCount < _settings._maxDownCount;
             if ( _settings._bDownedEnabled == SW_TRUE && bDownLimitLeft && _settings._downedHealth > 0.0f )
             {
-                enterDowned( instigatorId );
+                enterDowned( instigatorID );
                 result._bDowned = SW_TRUE;
             }
             else
             {
-                enterDead( instigatorId );
+                enterDead( instigatorID );
                 result._bDied = SW_TRUE;
             }
         }
@@ -217,7 +217,7 @@ namespace sw
             }
             _downedHealth = MathUtil::max( 0.0f, _downedHealth - _settings._bleedoutRate * deltaTime );
             if ( _downedHealth <= 0.0f )
-                enterDead( _lastInstigatorId );
+                enterDead( _lastInstigatorID );
             return;
         }
 
@@ -244,16 +244,16 @@ namespace sw
         _poise                       = MathUtil::min( _settings._poiseMax, _poise + MathUtil::max( 0.0f, _settings._poiseRegenRate ) * poiseRegenTime );
     }
 
-    bool Vitality::startRevive( int32 reviverId, float32 speedScale )
+    bool Vitality::startRevive( int32 reviverID, float32 speedScale )
     {
         if ( _state != VitalityState::Downed )
             return false;
         _reviveSpeedScale = MathUtil::max( 0.0f, speedScale );
-        _reviverId        = reviverId;
+        _reviverID        = reviverID;
         if ( isReviving() == false )
         {
             _bReviving = SW_TRUE;
-            pushEvent( VitalityEventType::ReviveStarted, 0.0f, reviverId );
+            pushEvent( VitalityEventType::ReviveStarted, 0.0f, reviverID );
         }
         if ( _settings._reviveTime <= 0.0f )
             finishRevive();
@@ -265,7 +265,7 @@ namespace sw
         if ( isReviving() == false )
             return;
         _bReviving        = SW_FALSE;
-        _reviverId        = -1;
+        _reviverID        = -1;
         _reviveSpeedScale = 1.0f;
         if ( _settings._bKeepReviveProgress == SW_FALSE )
             _reviveElapsed = 0.0f;
@@ -273,11 +273,11 @@ namespace sw
 
     void Vitality::setInvulnerable( float32 seconds ) { _invulnerable.extendTo( seconds ); }
 
-    void Vitality::kill( int32 instigatorId )
+    void Vitality::kill( int32 instigatorID )
     {
         if ( _state == VitalityState::Dead )
             return;
-        enterDead( instigatorId );
+        enterDead( instigatorID );
     }
 
     void Vitality::drainEvents( vector<VitalityEvent>& outListEvent )
@@ -294,7 +294,7 @@ namespace sw
         return MathUtil::saturate( _reviveElapsed / _settings._reviveTime );
     }
 
-    void Vitality::enterDowned( int32 instigatorId )
+    void Vitality::enterDowned( int32 instigatorID )
     {
         _state        = VitalityState::Downed;
         _health       = 0.0f;
@@ -302,27 +302,27 @@ namespace sw
         _downedHealth = _settings._downedHealth;
         _poiseBreak.clear();
         _reviveElapsed = 0.0f;
-        _reviverId     = -1;
+        _reviverID     = -1;
         _bReviving     = SW_FALSE;
         ++_downCount;
-        pushEvent( VitalityEventType::Downed, 0.0f, instigatorId );
+        pushEvent( VitalityEventType::Downed, 0.0f, instigatorID );
     }
 
-    void Vitality::enterDead( int32 instigatorId )
+    void Vitality::enterDead( int32 instigatorID )
     {
         _state        = VitalityState::Dead;
         _health       = 0.0f;
         _shield       = 0.0f;
         _downedHealth = 0.0f;
         _poiseBreak.clear();
-        _reviverId = -1;
+        _reviverID = -1;
         _bReviving = SW_FALSE;
-        pushEvent( VitalityEventType::Died, 0.0f, instigatorId );
+        pushEvent( VitalityEventType::Died, 0.0f, instigatorID );
     }
 
     void Vitality::finishRevive()
     {
-        const int32 reviverId = _reviverId;
+        const int32 reviverID = _reviverID;
         _state                = VitalityState::Alive;
         _health               = _settings._maxHealth * _settings._reviveHealthRatio;
         _shield               = 0.0f;
@@ -332,18 +332,18 @@ namespace sw
         _sincePoiseDamage     = 0.0f;
         _reviveElapsed        = 0.0f;
         _reviveSpeedScale     = 1.0f;
-        _reviverId            = -1;
+        _reviverID            = -1;
         _bReviving            = SW_FALSE;
         _invulnerable.extendTo( _settings._invulnerableAfterRevive );
-        pushEvent( VitalityEventType::Revived, _health, reviverId );
+        pushEvent( VitalityEventType::Revived, _health, reviverID );
     }
 
-    void Vitality::pushEvent( VitalityEventType type, float32 amount, int32 instigatorId )
+    void Vitality::pushEvent( VitalityEventType type, float32 amount, int32 instigatorID )
     {
         VitalityEvent event;
         event._type         = type;
         event._amount       = amount;
-        event._instigatorId = instigatorId;
+        event._instigatorID = instigatorID;
         _eventBuffer.push( event );
     }
 
@@ -359,8 +359,8 @@ namespace sw
         StateArchiveUtil::writeCountdown( outArchive, _invulnerable );
         outArchive << _reviveElapsed;
         outArchive << _reviveSpeedScale;
-        outArchive << _reviverId;
-        outArchive << _lastInstigatorId;
+        outArchive << _reviverID;
+        outArchive << _lastInstigatorID;
         outArchive << _downCount;
         outArchive << static_cast<uint8>( _state );
         outArchive << _bReviving;
@@ -380,8 +380,8 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._poiseBreak ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
         archive >> restored._reviveElapsed;
         archive >> restored._reviveSpeedScale;
-        archive >> restored._reviverId;
-        archive >> restored._lastInstigatorId;
+        archive >> restored._reviverID;
+        archive >> restored._lastInstigatorID;
         archive >> restored._downCount;
         archive >> state;
         archive >> restored._bReviving;

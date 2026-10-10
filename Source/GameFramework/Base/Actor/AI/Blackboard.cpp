@@ -57,9 +57,9 @@ namespace sw
         acquireValue( key, BlackboardValueType::Vector )._vector = value;
     }
 
-    void Blackboard::setObject( const hashed_string& key, uint64 objectId )
+    void Blackboard::setObject( const hashed_string& key, uint64 objectID )
     {
-        acquireValue( key, BlackboardValueType::Object )._object = objectId;
+        acquireValue( key, BlackboardValueType::Object )._object = objectID;
     }
 
     void Blackboard::clearValue( const hashed_string& key )

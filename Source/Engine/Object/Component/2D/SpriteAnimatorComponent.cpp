@@ -139,7 +139,7 @@ namespace sw
         SceneComponent::onRegister( manager );
         _pAnimationSystem = &manager.getAnimationSystem();
         _pAnimationSystem->registerLodClient( &_lodClient );
-        const uint64 mixed = getHandle().componentId() * HashUtil::kGoldenRatio64;
+        const uint64 mixed = getHandle().componentID() * HashUtil::kGoldenRatio64;
         _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
     }
 

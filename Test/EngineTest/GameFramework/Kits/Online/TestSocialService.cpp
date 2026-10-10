@@ -24,7 +24,7 @@ namespace
         {
         }
 
-        void add( AccountId accountId, string_view displayName ) { _listIdentity.push_back( AccountIdentity{ string( displayName ), accountId, SW_FALSE } ); }
+        void add( AccountID accountID, string_view displayName ) { _listIdentity.push_back( AccountIdentity{ string( displayName ), accountID, SW_FALSE } ); }
 
         ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override
         {
@@ -40,12 +40,12 @@ namespace
             return ServiceStoreResult::NotFound;
         }
 
-        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountId accountId, AccountIdentity& outIdentity ) const override
+        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const override
         {
             (void)connection;
             for ( const AccountIdentity& identity : _listIdentity )
             {
-                if ( identity._accountId == accountId )
+                if ( identity._accountID == accountID )
                 {
                     outIdentity = identity;
                     return ServiceStoreResult::Ok;
@@ -70,12 +70,12 @@ namespace
         vector<SocialNotification> _listNotification;
         IServiceStore*             _pFront; ///< 서비스가 쓰는 저장소 앞(시험이 끼워 넣는 앞일 수 있다)
 
-        SocialNode( MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverId,
+        SocialNode( MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverID,
                     const IAccountNameIndex* pNameIndex = nullptr, IServiceStore* pStore = nullptr )
             : _store{ pDatabase }
             , _cache{ pCacheDatabase }
             , _router{}
-            , _bus{ pHub, serverId }
+            , _bus{ pHub, serverID }
             , _service{}
             , _listCompletion{}
             , _listNotification{}
@@ -100,7 +100,7 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerId != _bus.getServerId() )
+                    if ( message._originServerID != _bus.getServerID() )
                         _service.handleBusMessage( message._topic, message._bytes );
                 }
                 _service.tick( nowMs );
@@ -113,10 +113,10 @@ namespace
 
         SocialResult getLastResult() const { return _listCompletion.empty() ? SocialResult::Count : _listCompletion.back()._result; }
 
-        /** @brief @p accountId 의 관계 목록을 읽어 마지막 완료로 둡니다. */
-        const vector<SocialLink>& readLinks( AccountId accountId, uint64 requestTag, int64 nowMs )
+        /** @brief @p accountID 의 관계 목록을 읽어 마지막 완료로 둡니다. */
+        const vector<SocialLink>& readLinks( AccountID accountID, uint64 requestTag, int64 nowMs )
         {
-            _service.listLinks( accountId, requestTag );
+            _service.listLinks( accountID, requestTag );
             step( nowMs );
             return _listCompletion.back()._listLink;
         }
@@ -126,11 +126,11 @@ namespace
     class InterleavingConnection final : public IServiceStoreConnection
     {
     public:
-        InterleavingConnection( MemoryServiceDatabase* pDatabase, SocialService* pRival, AccountId rivalId, AccountId targetId )
+        InterleavingConnection( MemoryServiceDatabase* pDatabase, SocialService* pRival, AccountID rivalID, AccountID targetID )
             : _pDatabase{ pDatabase }
             , _pRival{ pRival }
-            , _rivalId{ rivalId }
-            , _targetId{ targetId }
+            , _rivalID{ rivalID }
+            , _targetID{ targetID }
             , _bInterleaved{ SW_FALSE }
         {
         }
@@ -151,7 +151,7 @@ namespace
             if ( _bInterleaved == SW_FALSE )
             {
                 _bInterleaved = SW_TRUE;
-                _pRival->changeLink( SocialLinkOperation::Request, _rivalId, _targetId, 0, 99 ); // 메모리 앞은 그 자리에서 돈다 — 상대의 신청이 먼저 들어간다
+                _pRival->changeLink( SocialLinkOperation::Request, _rivalID, _targetID, 0, 99 ); // 메모리 앞은 그 자리에서 돈다 — 상대의 신청이 먼저 들어간다
             }
             return _pDatabase->commit( transaction, pOutInfo );
         }
@@ -159,8 +159,8 @@ namespace
     private:
         MemoryServiceDatabase* _pDatabase;
         SocialService*         _pRival;
-        AccountId              _rivalId;
-        AccountId              _targetId;
+        AccountID              _rivalID;
+        AccountID              _targetID;
         uint8                  _bInterleaved;
     };
 
@@ -210,7 +210,7 @@ SW_TEST_CASE( SocialServiceTest, RequestAcceptAndList )
     node.step( 100 );
     SW_EXPECT_TRUE( node.getLastResult() == SocialResult::Ok );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( node._listNotification[0]._recipientId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( node._listNotification[0]._recipientID, AccountID( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._kind == SocialNotificationKind::FriendRequested );
 
     node._service.changeLink( SocialLinkOperation::Request, 1, 2, 150, 2 );
@@ -224,7 +224,7 @@ SW_TEST_CASE( SocialServiceTest, RequestAcceptAndList )
     const vector<SocialLink>& listLink = node.readLinks( 1, 4, 200 );
     SW_ASSERT_EQUAL( listLink.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listLink[0]._state == SocialLinkState::Friend );
-    SW_EXPECT_EQUAL( listLink[0]._otherId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( listLink[0]._otherID, AccountID( 2 ) );
     SW_EXPECT_EQUAL( listLink[0]._sinceMs, int64( 200 ) );
 
     node._service.changeLink( SocialLinkOperation::Request, 1, 1, 300, 5 ); // 자기 자신
@@ -277,9 +277,9 @@ SW_TEST_CASE( SocialServiceTest, RequestByNameFindsRegisteredAccountsOnly )
     node.step( 0 );
     SW_ASSERT_EQUAL( node._listCompletion.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( node._listCompletion[0]._result == SocialResult::Ok );
-    SW_EXPECT_EQUAL( node._listCompletion[0]._otherId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( node._listCompletion[0]._otherID, AccountID( 2 ) );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( node._listNotification[0]._recipientId, AccountId( 2 ) );
+    SW_EXPECT_EQUAL( node._listNotification[0]._recipientID, AccountID( 2 ) );
 
     node._service.requestFriendByName( 1, "Guest-00abcd", 0, 2 ); // 게스트 이름은 색인에 없다 — 계정 id 로
     node.step( 0 );
@@ -338,7 +338,7 @@ SW_TEST_CASE( SocialServiceTest, PresenceReachesFriendsOnOtherServersAndQueryRea
     second.step( 100 );
     first.step( 100 );
     SW_ASSERT_EQUAL( first._listNotification.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( first._listNotification[0]._recipientId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( first._listNotification[0]._recipientID, AccountID( 1 ) );
     SW_EXPECT_TRUE( first._listNotification[0]._kind == SocialNotificationKind::PresenceChanged );
     SW_EXPECT_STREQ( first._listNotification[0]._presence._activity.c_str(), "dungeon 3" );
 

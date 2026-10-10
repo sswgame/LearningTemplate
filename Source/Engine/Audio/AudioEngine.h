@@ -39,7 +39,7 @@ namespace sw
     struct AudioClipPlayParams
     {
         hashed_string    _attenuation{};          ///< 감쇠 프리셋 이름 — 비었거나 에미터가 0 이면 공간화하지 않는다(2D)
-        AudioEmitterId   _emitterId{ 0 };         ///< 소리 내는 자리
+        AudioEmitterID   _emitterID{ 0 };         ///< 소리 내는 자리
         float32          _volumeDb{ 0.0f };       ///< 볼륨(dB)
         float32          _pitchSemitones{ 0.0f }; ///< 피치(반음)
         float32          _pan{ 0.0f };            ///< 팬 [-1, 1]
@@ -129,22 +129,22 @@ namespace sw
 
         /**
          * @brief 이벤트를 냅니다 — 컨테이너가 클립을 고르고, 범위 · 쿨다운 · 동시 재생 상한 · 우선순위를 데이터대로 적용합니다.
-         * @param emitterId 0 이면 공간화하지 않습니다(UI · 2D).
+         * @param emitterID 0 이면 공간화하지 않습니다(UI · 2D).
          * @return 재생 id 입니다. 모르는 이벤트면 0 이고 경고를 남깁니다. 쿨다운 · 상한으로 버려진 재생은 다음 블록부터 `isPlaying` 이 false 입니다.
          */
-        AudioPlayingId postEvent( const hashed_string& eventName, AudioEmitterId emitterId = 0 );
+        AudioPlayingID postEvent( const hashed_string& eventName, AudioEmitterID emitterID = 0 );
         /**
          * @brief 클립을 버스 하나로 재생합니다. 클립이 캐시에 없으면 디코드를 요청하고, 준비되면 시작합니다.
          * @param bus 비었거나 모르는 이름이면 `sfx` 입니다.
          * @return 재생 id 입니다. 경로가 비었으면 0 입니다.
          */
-        AudioPlayingId playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params );
+        AudioPlayingID playClip( const hashed_string& path, const hashed_string& bus, const AudioClipPlayParams& params );
         /** @brief 재생을 멈춥니다. @p fadeSeconds 동안 줄인 뒤 멈춥니다(0 이면 바로, 음수면 이벤트의 `_fadeOutSeconds`). */
-        void stop( AudioPlayingId playingId, float32 fadeSeconds );
+        void stop( AudioPlayingID playingID, float32 fadeSeconds );
         /** @brief 에미터의 재생을 모두 멈춥니다(음수 페이드는 이벤트의 값). */
-        void stopEmitter( AudioEmitterId emitterId, float32 fadeSeconds );
+        void stopEmitter( AudioEmitterID emitterID, float32 fadeSeconds );
         /** @brief 재생을 일시정지 · 재개합니다. */
-        void setPaused( AudioPlayingId playingId, bool bPaused );
+        void setPaused( AudioPlayingID playingID, bool bPaused );
 
         // --- 게임 스레드: 적응형 음악 ------------------------------------------------------------------------------------
 
@@ -152,7 +152,7 @@ namespace sw
          * @brief 적응형 음악을 시작합니다(시작 구간부터, 지금 음악은 @p fadeSeconds 로 빠짐). 레이어 클립의 디코드를 요청해 둡니다.
          * @return 음악의 재생 id 입니다(구간이 바뀌어도 같다). 서술이 nullptr 이면 0 입니다.
          */
-        AudioPlayingId startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds );
+        AudioPlayingID startMusic( shared_ptr<const AudioMusicDesc> pMusic, float32 fadeSeconds );
         /** @brief 구간을 바꿉니다 — 전환 규칙의 맞춤 지점(박 · 마디 · 구간 끝)에서 샘플 단위로 바꾸고 스팅어를 냅니다. 같은 구간이면 아무것도 하지 않습니다. */
         void setMusicSegment( const hashed_string& segment );
         /** @brief 음악을 @p fadeSeconds 동안 줄여 멈춥니다. */
@@ -171,7 +171,7 @@ namespace sw
         /** @brief 게임 파라미터(RTPC)를 정합니다. 라이브러리의 범위로 묶고 `_seekSpeed` 로 따라갑니다. */
         void setParameter( const hashed_string& name, float32 value );
         /** @brief 에미터 하나에만 걸리는 파라미터 값입니다(전역 값보다 앞선다). */
-        void setEmitterParameter( AudioEmitterId emitterId, const hashed_string& name, float32 value );
+        void setEmitterParameter( AudioEmitterID emitterID, const hashed_string& name, float32 value );
         /** @brief 스냅샷을 켭니다 — `_fadeInSeconds` 동안 세기 1 로. 이미 켜져 있으면 가장 나중에 켠 것으로 순서만 바꿉니다. */
         void startSnapshot( const hashed_string& name );
         /** @brief 스냅샷을 끕니다 — `_fadeOutSeconds` 동안 세기 0 으로. */
@@ -187,16 +187,16 @@ namespace sw
          */
         void setListener( uint32 listenerIndex, const AudioListenerState& state );
         /** @brief 에미터의 자리 · 속도를 정합니다(처음이면 만듭니다). */
-        void setEmitter( AudioEmitterId emitterId, const float3& position, const float3& velocity );
+        void setEmitter( AudioEmitterID emitterID, const float3& position, const float3& velocity );
         /** @brief 에미터의 가림 값(0..1)을 정합니다 — 엔진이 `AudioOcclusionDesc::_smoothingSeconds` 로 따라갑니다. */
-        void setEmitterOcclusion( AudioEmitterId emitterId, float32 occlusion );
+        void setEmitterOcclusion( AudioEmitterID emitterID, float32 occlusion );
         /** @brief 에미터를 지웁니다. 그 자리의 소리는 마지막 자리에 남아 끝까지 재생합니다. */
-        void removeEmitter( AudioEmitterId emitterId );
+        void removeEmitter( AudioEmitterID emitterID );
 
         // --- 게임 스레드: 읽기 ------------------------------------------------------------------------------------------
 
         /** @brief 재생이 아직 살아 있는지입니다(디코드 대기 · 가상 포함). 명령이 아직 처리되지 않았으면 true 입니다. */
-        bool isPlaying( AudioPlayingId playingId ) const;
+        bool isPlaying( AudioPlayingID playingID ) const;
         /** @brief 마지막 블록의 상태입니다. */
         AudioEngineStats getStats() const;
 
@@ -257,8 +257,8 @@ namespace sw
             AudioListenerState                  _listener{};   ///< SetListener
             float3                              _position{};   ///< SetEmitter
             float3                              _velocity{};   ///< SetEmitter
-            AudioPlayingId                      _playingId{ 0 };
-            AudioEmitterId                      _emitterId{ 0 };
+            AudioPlayingID                      _playingID{ 0 };
+            AudioEmitterID                      _emitterID{ 0 };
             uint64                              _seed{ 0 };     ///< SetRandomSeed
             float32                             _value{ 0.0f }; ///< 볼륨 · 페이드 · 파라미터 · 세기
             uint32                              _index{ 0 };    ///< 리스너 번호
@@ -316,8 +316,8 @@ namespace sw
         {
             shared_ptr<const AudioEventLibrary> _pLibrary{}; ///< 서술이 사는 라이브러리(내려도 인스턴스가 쥔다)
             const AudioEventDesc*               _pDesc{ nullptr };
-            AudioPlayingId                      _playingId{ 0 };
-            AudioEmitterId                      _emitterId{ 0 };
+            AudioPlayingID                      _playingID{ 0 };
+            AudioEmitterID                      _emitterID{ 0 };
             uint64                              _startFrame{ 0 };
             float32                             _audibility{ 0.0f }; ///< 지난 블록 보이스 목표 게인의 최대
             float32                             _distance{ 0.0f };   ///< 지난 블록의 리스너 거리
@@ -342,8 +342,8 @@ namespace sw
             hashed_string    _clipPath{};
             hashed_string    _busName{};
             hashed_string    _attenuationName{};
-            AudioPlayingId   _playingId{ 0 };
-            AudioEmitterId   _emitterId{ 0 };
+            AudioPlayingID   _playingID{ 0 };
+            AudioEmitterID   _emitterID{ 0 };
             float32          _volume{ 1.0f }; ///< 기본 볼륨(선형)
             float32          _pan{ 0.0f };
             float32          _pitchRatio{ 1.0f };
@@ -378,7 +378,7 @@ namespace sw
         /** @brief 보이스 칸을 돌려줍니다. */
         void freeVoice( VoiceSlot& slot );
         /** @brief 재생 id(또는 에미터)의 보이스를 멈춥니다(@p fadeSeconds 음수면 이벤트 값). */
-        void stopVoices( AudioPlayingId playingId, AudioEmitterId emitterId, float32 fadeSeconds );
+        void stopVoices( AudioPlayingID playingID, AudioEmitterID emitterID, float32 fadeSeconds );
         /** @brief 클립을 기다리는 칸에 클립이 왔으면 시작합니다. 실패한 클립의 칸은 돌려줍니다. */
         void startWaitingVoice( VoiceSlot& slot );
         /** @brief 버스 이름을 지금 그래프의 번호로 풉니다(없으면 sfx, 그것도 없으면 master). */
@@ -412,7 +412,7 @@ namespace sw
         /** @brief 파라미터를 이 블록만큼 목표로 옮깁니다. */
         void updateParameters();
         /** @brief 이 에미터에서 본 파라미터 값입니다(에미터 값 → 전역 값 → 0). */
-        float32 findParameterValue( AudioEmitterId emitterId, const hashed_string& name ) const;
+        float32 findParameterValue( AudioEmitterID emitterID, const hashed_string& name ) const;
         /** @brief 스냅샷 세기를 옮기고 버스 오프셋 · 센드 · 이펙트 파라미터에 겁니다. */
         void updateSnapshots();
         /** @brief 그래프가 바뀐 뒤 스냅샷 서술을 이름으로 다시 풉니다. */
@@ -455,7 +455,7 @@ namespace sw
         shared_ptr<const AudioMixerDesc> _pGameMixerDesc;      /**< 게임 스레드가 아는 그래프입니다(이름 대조). */
         mutex                            _commandMutex;        /**< `_listPendingCommand` 를 지킵니다. */
         mutable mutex                    _libraryMutex;        /**< `_mapGameLibrary` · `_pGameMixerDesc` 를 지킵니다(이벤트는 병렬 틱에서도 낸다). */
-        atomic<uint64>                   _nextPlayingId;       /**< 다음 재생 id 입니다. */
+        atomic<uint64>                   _nextPlayingID;       /**< 다음 재생 id 입니다. */
         // 오디오 스레드
         shared_ptr<AudioMixer>                       _pMixer;                         /**< 지금 그래프입니다. */
         vector<VoiceSlot>                            _listVoice;                      /**< 보이스 칸입니다. */
@@ -467,7 +467,7 @@ namespace sw
         vector<AudioAttenuationDesc>                 _listAttenuation;                /**< 감쇠 표(그래프 프리셋 + 라이브러리 프리셋)입니다. */
         vector<SnapshotState>                        _listSnapshot;                   /**< 켠 스냅샷(켠 순서)입니다. */
         shared_ptr<const AudioMusicDesc>             _pMusic;                         /**< 지금 음악입니다. */
-        AudioPlayingId                               _musicPlayingId;                 /**< 음악의 재생 id 입니다. */
+        AudioPlayingID                               _musicPlayingID;                 /**< 음악의 재생 id 입니다. */
         uint64                                       _musicSegmentStart;              /**< 지금 구간의 0 박이 든 렌더 프레임입니다. */
         uint64                                       _musicPendingFrame;              /**< 예약된 전환의 렌더 프레임입니다. */
         int32                                        _musicSegment;                   /**< 지금 구간입니다(-1 = 없음). */
@@ -475,20 +475,20 @@ namespace sw
         LibraryMap                                   _mapLibrary;                     /**< 올린 라이브러리입니다. */
         EventMap                                     _mapEventState;                  /**< 이벤트 이름 → 상태입니다. */
         ParameterMap                                 _mapParameter;                   /**< 파라미터 이름 → 상태입니다. */
-        unordered_map<AudioEmitterId, EmitterRecord> _mapEmitter;                     /**< 에미터 id → 상태입니다. */
+        unordered_map<AudioEmitterID, EmitterRecord> _mapEmitter;                     /**< 에미터 id → 상태입니다. */
         AudioListenerState                           _arrListener[kMaxListenerCount]; /**< 리스너입니다. */
         AudioRandom                                  _random;                         /**< 컨테이너 · 범위 난수입니다. */
         uint64                                       _renderedFrameCount;             /**< 지금까지 렌더한 프레임입니다. */
-        uint64                                       _appliedPlayingId;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
+        uint64                                       _appliedPlayingID;               /**< 적용한 재생 명령의 가장 큰 id 입니다. */
         uint64                                       _playedEventCount;               /**< 낸 이벤트 수입니다(게시용). */
         uint64                                       _droppedEventCount;              /**< 버린 이벤트 수입니다(게시용). */
         uint32                                       _peakRealVoiceCount;             /**< 한 블록에 섞은 보이스의 최대입니다(게시용). */
         uint32                                       _blockCursor;                    /**< `_listBlockOutput` 에서 다음에 내보낼 프레임입니다. */
         // 게시(오디오 스레드 → 게임 스레드)
-        vector<AudioPlayingId> _listPublishedPlaying; /**< 살아 있는 재생 id(정렬)입니다. */
+        vector<AudioPlayingID> _listPublishedPlaying; /**< 살아 있는 재생 id(정렬)입니다. */
         AudioEngineStats       _publishedStats;       /**< 마지막 블록의 상태입니다. */
         AudioMusicStatus       _publishedMusic;       /**< 마지막 블록의 음악 자리입니다. */
-        atomic<uint64>         _publishedAppliedId;   /**< 게시 시점에 적용된 재생 id 입니다. */
+        atomic<uint64>         _publishedAppliedID;   /**< 게시 시점에 적용된 재생 id 입니다. */
         mutable mutex          _publishMutex;         /**< 게시 사본을 지킵니다. */
         atomic<bool>           _bInitialized;         /**< 초기화되었는지입니다. */
     };

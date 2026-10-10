@@ -73,7 +73,7 @@ namespace sw::editor
         /** @brief 마지막으로 읽은 레지스트리 세대입니다. 값이 같으면 다시 읽지 않습니다. */
         uint64 _lastGeneration;
         /** @brief ImGui 에 등록한 미리보기 텍스처 id 입니다. 이 패널이 소유하며, 선택이 바뀌면 놓고 다시 등록합니다. */
-        void* _pPreviewTextureId;
+        void* _pPreviewTextureID;
         /** @brief 그 id 가 가리키는 RHI 텍스처 핸들입니다. 같으면 다시 등록하지 않습니다. */
         uint64 _previewTexture;
         /** @brief 미리보기 확대 배율입니다. 0 이면 창에 맞춥니다. */

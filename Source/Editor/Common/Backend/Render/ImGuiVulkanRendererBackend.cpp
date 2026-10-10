@@ -207,12 +207,12 @@ namespace sw::editor
         // 렌더 스레드 · GPU 를 기다려 미뤄 둔 디스크립터 해제를 모두 끝낸 뒤에 풀을 부순다.
         flushDrawReleases( _pRHIDevice );
 
-        for ( pair<void* const, RHITextureHandle>& pair : _mapTextureId )
+        for ( pair<void* const, RHITextureHandle>& pair : _mapTextureID )
         {
             if ( pair.first != nullptr )
                 ImGui_ImplVulkan_RemoveTexture( static_cast<VkDescriptorSet>( pair.first ) );
         }
-        _mapTextureId.clear();
+        _mapTextureID.clear();
 
         if ( ImGui::GetIO().BackendRendererUserData != nullptr )
         {
@@ -290,7 +290,7 @@ namespace sw::editor
             return nullptr;
 
         auto textureID           = set;
-        _mapTextureId[textureID] = texture;
+        _mapTextureID[textureID] = texture;
         return textureID;
     }
 
@@ -299,11 +299,11 @@ namespace sw::editor
         if ( pTextureID == nullptr )
             return;
 
-        auto it = _mapTextureId.find( pTextureID );
-        if ( it == _mapTextureId.end() )
+        auto it = _mapTextureID.find( pTextureID );
+        if ( it == _mapTextureID.end() )
             return;
 
-        _mapTextureId.erase( it );
+        _mapTextureID.erase( it );
 
         // 이미 낸 draw 스냅샷이 이 세트를 아직 그릴 수 있다. 세트를 그린 마지막 프레임의 GPU 완료 뒤에 놓는다. 그 콜백은 렌더 스레드에서
         // 불리므로 UI 스레드의 할당과 같은 잠금 안에서 놓는다. AddTexture 는 InitInfo.DescriptorPool(이 풀)에서 세트를 잡는다.

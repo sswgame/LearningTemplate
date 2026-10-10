@@ -40,9 +40,9 @@ namespace sw
     /** @brief 모든 메서드의 요청(쓰는 칸만)입니다. */
     struct LeaderboardRequest
     {
-        string _boardId{};
+        string _boardID{};
         int64  _score{ 0 };    ///< kSubmitScore
-        uint32 _seasonId{ 0 }; ///< kGetSeasonResult
+        uint32 _seasonID{ 0 }; ///< kGetSeasonResult
         int32  _offset{ 0 };   ///< kGetTop
         int32  _count{ 0 };    ///< kGetTop 개수 · kGetAround 반경
     };
@@ -56,7 +56,7 @@ namespace sw
         vector<LeaderboardEntry> _listEntry{};
         vector<LeaderboardStat>  _listStat{};
         vector<AchievementState> _listAchievement{};
-        uint64                   _periodId{ 0 };
+        uint64                   _periodID{ 0 };
         int64                    _score{ 0 }; ///< kSubmitScore — 적용 뒤 값
         LeaderboardResult        _result{ LeaderboardResult::Ok };
     };

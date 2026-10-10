@@ -119,7 +119,7 @@ namespace sw
 
     RHIMemoryLedger::RHIMemoryLedger()
         : _mutex{}
-        , _arrMapIdToEntry{}
+        , _arrMapIDToEntry{}
         , _arrStat{}
         , _driverBudget{}
         , _sizeBasis{ RHIMemorySizeBasis::Allocation }
@@ -134,20 +134,20 @@ namespace sw
             return;
 
         std::scoped_lock<mutex>           lock{ _mutex };
-        unordered_map<uint64, LiveEntry>& mapIdToEntry = _arrMapIdToEntry[spaceIndex];
-        const auto                        entryIt      = mapIdToEntry.find( key._id );
-        if ( entryIt != mapIdToEntry.end() )
+        unordered_map<uint64, LiveEntry>& mapIDToEntry = _arrMapIDToEntry[spaceIndex];
+        const auto                        entryIt      = mapIDToEntry.find( key._id );
+        if ( entryIt != mapIDToEntry.end() )
         {
             SW_LOG_WARNING( "GPU memory key %# (space %#) recorded twice without a free - replacing the old %# bytes", key._id, spaceIndex,
                             entryIt->second._bytes );
             subtractLocked( entryIt->second );
-            mapIdToEntry.erase( entryIt );
+            mapIDToEntry.erase( entryIt );
         }
 
         LiveEntry entry{};
         entry._bytes = bytes;
         entry._kind  = kind;
-        mapIdToEntry.emplace( key._id, entry );
+        mapIDToEntry.emplace( key._id, entry );
 
         RHIMemoryKindStats& stat = _arrStat[kindIndex];
         if ( bytes == kRHIMemoryUnknownBytes )
@@ -166,12 +166,12 @@ namespace sw
             return;
 
         std::scoped_lock<mutex>           lock{ _mutex };
-        unordered_map<uint64, LiveEntry>& mapIdToEntry = _arrMapIdToEntry[spaceIndex];
-        const auto                        entryIt      = mapIdToEntry.find( key._id );
-        if ( entryIt == mapIdToEntry.end() )
+        unordered_map<uint64, LiveEntry>& mapIDToEntry = _arrMapIDToEntry[spaceIndex];
+        const auto                        entryIt      = mapIDToEntry.find( key._id );
+        if ( entryIt == mapIDToEntry.end() )
             return;
         subtractLocked( entryIt->second );
-        mapIdToEntry.erase( entryIt );
+        mapIDToEntry.erase( entryIt );
     }
 
     RHIMemoryKindStats RHIMemoryLedger::getStats( RHIMemoryKind kind ) const

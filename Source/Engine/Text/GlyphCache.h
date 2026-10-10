@@ -47,9 +47,9 @@ namespace sw
          *          그래도 자리가 없으면(한 프레임이 페이지를 다 쓴다) nullptr 과 경고 — 그 글자는 이번 프레임에 안 보인다. 래스터화 실패도 nullptr.
          *          돌려준 포인터는 다음 `findOrAddGlyph` 까지만 유효합니다(표가 자라면 자리가 옮겨진다).
          */
-        const CachedGlyph* findOrAddGlyph( FontFaceId face, uint32 glyphIndex, uint64 frameIndex );
+        const CachedGlyph* findOrAddGlyph( FontFaceID face, uint32 glyphIndex, uint64 frameIndex );
         /** @brief 면 하나의 글리프를 모두 표에서 지웁니다(면을 닫을 때). 아틀라스 자리는 페이지를 비울 때 돌아온다. */
-        void forgetFace( FontFaceId face );
+        void forgetFace( FontFaceID face );
 
         /** @brief 아틀라스입니다(렌더러에 업로드를 넘길 때 `takeUploads`). */
         GlyphAtlas&       getAtlas() { return _atlas; }
@@ -61,7 +61,7 @@ namespace sw
 
     private:
         /** @brief 표 키 = (면 << 32) | 글리프. */
-        static uint64 makeKey( FontFaceId face, uint32 glyphIndex ) { return ( static_cast<uint64>( face ) << 32 ) | glyphIndex; }
+        static uint64 makeKey( FontFaceID face, uint32 glyphIndex ) { return ( static_cast<uint64>( face ) << 32 ) | glyphIndex; }
         /** @brief 비운 페이지에 있던 글리프를 표에서 지웁니다. */
         void forgetPage( uint32 page );
 

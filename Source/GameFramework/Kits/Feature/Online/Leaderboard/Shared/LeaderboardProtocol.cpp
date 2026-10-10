@@ -11,24 +11,24 @@ namespace sw
 {
     void LeaderboardProtocol::writeRequest( BitWriter& outWriter, const LeaderboardRequest& request )
     {
-        ServiceKeyUtil::writeString( outWriter, request._boardId );
+        ServiceKeyUtil::writeString( outWriter, request._boardID );
         outWriter.writeVarInt( request._score );
-        outWriter.writeVarUint( request._seasonId );
+        outWriter.writeVarUint( request._seasonID );
         outWriter.writeVarInt( request._offset );
         outWriter.writeVarInt( request._count );
     }
 
     bool LeaderboardProtocol::readRequest( BitReader& reader, LeaderboardRequest& outRequest )
     {
-        if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIdSize, outRequest._boardId ) == false )
+        if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIDSize, outRequest._boardID ) == false )
             return false;
         outRequest._score     = reader.readVarInt();
-        const uint64 seasonId = reader.readVarUint();
+        const uint64 seasonID = reader.readVarUint();
         const int64  offset   = reader.readVarInt();
         const int64  count    = reader.readVarInt();
-        const bool   bInRange = seasonId <= static_cast<uint64>( std::numeric_limits<uint32>::max() ) && 0 <= offset && offset <= static_cast<int64>( std::numeric_limits<int32>::max() ) &&
+        const bool   bInRange = seasonID <= static_cast<uint64>( std::numeric_limits<uint32>::max() ) && 0 <= offset && offset <= static_cast<int64>( std::numeric_limits<int32>::max() ) &&
                               0 <= count && count <= static_cast<int64>( LeaderboardLimit::kMaxPage );
-        outRequest._seasonId = static_cast<uint32>( seasonId );
+        outRequest._seasonID = static_cast<uint32>( seasonID );
         outRequest._offset   = static_cast<int32>( offset );
         outRequest._count    = static_cast<int32>( count );
         return bInRange && reader.hasOverflowed() == false;
@@ -37,12 +37,12 @@ namespace sw
     void LeaderboardProtocol::writeReply( BitWriter& outWriter, const LeaderboardReply& reply )
     {
         outWriter.writeVarUint( static_cast<uint64>( reply._result ) );
-        outWriter.writeVarUint( reply._periodId );
+        outWriter.writeVarUint( reply._periodID );
         outWriter.writeVarInt( reply._score );
         outWriter.writeVarUint( reply._listEntry.size() );
         for ( const LeaderboardEntry& entry : reply._listEntry )
         {
-            outWriter.writeVarUint( entry._accountId );
+            outWriter.writeVarUint( entry._accountID );
             outWriter.writeVarInt( entry._score );
             outWriter.writeVarInt( entry._rank );
             ServiceKeyUtil::writeString( outWriter, entry._displayName );
@@ -66,7 +66,7 @@ namespace sw
         if ( result >= static_cast<uint64>( LeaderboardResult::Count ) )
             return false;
         outReply._result        = static_cast<LeaderboardResult>( result );
-        outReply._periodId      = reader.readVarUint();
+        outReply._periodID      = reader.readVarUint();
         outReply._score         = reader.readVarInt();
         const uint64 entryCount = reader.readVarUint();
         if ( entryCount > static_cast<uint64>( LeaderboardLimit::kMaxPage ) )
@@ -74,7 +74,7 @@ namespace sw
         outReply._listEntry.resize( static_cast<size_t>( entryCount ) );
         for ( LeaderboardEntry& entry : outReply._listEntry )
         {
-            entry._accountId = reader.readVarUint();
+            entry._accountID = reader.readVarUint();
             entry._score     = reader.readVarInt();
             entry._rank      = static_cast<int32>( reader.readVarInt() );
             if ( ServiceKeyUtil::readString( reader, RequestLimits::kMaxDisplayNameSize, entry._displayName ) == false )
@@ -86,7 +86,7 @@ namespace sw
         outReply._listStat.resize( static_cast<size_t>( statCount ) );
         for ( LeaderboardStat& stat : outReply._listStat )
         {
-            if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIdSize, stat._name ) == false )
+            if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIDSize, stat._name ) == false )
                 return false;
             stat._value = reader.readVarInt();
         }
@@ -104,13 +104,13 @@ namespace sw
 
     void LeaderboardProtocol::writeAchievement( BitWriter& outWriter, const AchievementState& achievement )
     {
-        ServiceKeyUtil::writeString( outWriter, achievement._achievementId );
+        ServiceKeyUtil::writeString( outWriter, achievement._achievementID );
         outWriter.writeVarInt( achievement._unlockedMs );
     }
 
     bool LeaderboardProtocol::readAchievement( BitReader& reader, AchievementState& outAchievement )
     {
-        if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIdSize, outAchievement._achievementId ) == false )
+        if ( ServiceKeyUtil::readString( reader, LeaderboardLimit::kMaxIDSize, outAchievement._achievementID ) == false )
             return false;
         outAchievement._unlockedMs = reader.readVarInt();
         return reader.hasOverflowed() == false;

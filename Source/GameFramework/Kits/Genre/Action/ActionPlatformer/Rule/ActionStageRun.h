@@ -60,16 +60,16 @@ namespace sw
         ActionStageRun();
 
         /** @brief 스테이지를 시작합니다. 모르는 스테이지면 false 입니다. */
-        [[nodiscard]] bool start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageId );
+        [[nodiscard]] bool start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageID );
         /** @brief 처음부터 다시 — 목숨 · 시간 · 수집 · 피격을 모두 되돌립니다(게임 오버 뒤 이어하기). */
         void restartStage();
         /** @brief 시간을 흘립니다(진행 중일 때만). */
         void update( float32 deltaTime );
 
         /** @brief 체크포인트에 닿았습니다. 지금보다 뒤의 것이면 그곳이 새 시작점이 되고 지닌 수집품이 확정됩니다. 새로 닿았으면 true 입니다. */
-        bool reachCheckpoint( const hashed_string& checkpointId );
+        bool reachCheckpoint( const hashed_string& checkpointID );
         /** @brief 비밀 수집품을 줍습니다(아직 확정 아님). 이 스테이지의 것이고 처음 줍는 것이면 true 입니다. */
-        bool collectSecret( const hashed_string& secretId );
+        bool collectSecret( const hashed_string& secretID );
         /** @brief 맞았습니다(죽지 않은 피격). */
         void registerHit();
         /**
@@ -83,7 +83,7 @@ namespace sw
         /** @brief 지금까지의 결과(깬 뒤면 최종)입니다. 점수 · 등급은 카탈로그의 등급 규칙입니다. */
         ActionStageResult computeResult() const;
         /** @brief 비밀을 찾았는가(확정 또는 지닌 것)입니다. */
-        bool isSecretFound( const hashed_string& secretId ) const;
+        bool isSecretFound( const hashed_string& secretID ) const;
 
         ActionStageState      getState() const { return _state; }
         int32                 getLives() const { return _lives; }
@@ -102,7 +102,7 @@ namespace sw
 
     private:
         void        commitSecrets();
-        static bool contains( const vector<hashed_string>& listId, const hashed_string& id );
+        static bool contains( const vector<hashed_string>& listID, const hashed_string& id );
 
         const ActionPlatformerCatalog* _pCatalog;
         const ActionStageDef*          _pStage;

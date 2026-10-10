@@ -32,7 +32,7 @@ namespace sw
         , _gun{}
         , _listProjectile{}
         , _eventBuffer{}
-        , _nextProjectileId{ 1 }
+        , _nextProjectileID{ 1 }
         , _comboIndex{ -1 }
         , _attackBufferFrames{ 0 }
         , _parryFrames{ 0 }
@@ -41,11 +41,11 @@ namespace sw
     {
     }
 
-    bool ActionCombatRig::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboId )
+    bool ActionCombatRig::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
     {
         _pCatalog = pCatalog;
         _pMoves   = pMoves;
-        _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboId ) : nullptr;
+        _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboID ) : nullptr;
         _timeline.cancel();
         _listProjectile.clear();
         _eventBuffer.clear();
@@ -112,7 +112,7 @@ namespace sw
     uint32 ActionCombatRig::spawnProjectile( const ActionProjectile& projectile )
     {
         ActionProjectile added = projectile;
-        added._id              = _nextProjectileId++;
+        added._id              = _nextProjectileID++;
         _listProjectile.push_back( added );
         return added._id;
     }
@@ -228,13 +228,13 @@ namespace sw
 
     void ActionCombatRig::startMove( int32 comboIndex )
     {
-        const hashed_string& moveId = _pCombo->_listMove[static_cast<size_t>( comboIndex )];
-        const MoveFrameData* pMove  = _pMoves->findMove( moveId );
+        const hashed_string& moveID = _pCombo->_listMove[static_cast<size_t>( comboIndex )];
+        const MoveFrameData* pMove  = _pMoves->findMove( moveID );
         if ( pMove == nullptr )
             return;
         _timeline.start( *pMove );
         _comboIndex = comboIndex;
-        pushEvent( ActionCombatEventType::MoveStarted, moveId, comboIndex );
+        pushEvent( ActionCombatEventType::MoveStarted, moveID, comboIndex );
     }
 
     void ActionCombatRig::startHitstop( int32 frames )
@@ -262,7 +262,7 @@ namespace sw
         outArchive << _attackBufferFrames;
         outArchive << _parryFrames;
         outArchive << _hitstopFrames;
-        outArchive << _nextProjectileId;
+        outArchive << _nextProjectileID;
         outArchive << _bGunEquipped;
         _gun.writeState( outArchive );
         outArchive << static_cast<uint32>( _listProjectile.size() );
@@ -284,12 +284,12 @@ namespace sw
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 기술 표 · 무기 정의는 사본이 그대로 든다.
         ActionCombatRig restored = *this;
-        hashed_string   comboId;
+        hashed_string   comboID;
         uint8           bGunEquipped = SW_FALSE;
-        if ( StateArchiveUtil::readName( archive, comboId ) == false )
+        if ( StateArchiveUtil::readName( archive, comboID ) == false )
             return false;
-        restored._pCombo = comboId.empty() ? nullptr : _pCatalog->findCombo( comboId );
-        if ( comboId.empty() == false && restored._pCombo == nullptr )
+        restored._pCombo = comboID.empty() ? nullptr : _pCatalog->findCombo( comboID );
+        if ( comboID.empty() == false && restored._pCombo == nullptr )
             return false;
         if ( restored._timeline.readState( archive, *_pMoves ) == false )
             return false;
@@ -297,7 +297,7 @@ namespace sw
         archive >> restored._attackBufferFrames;
         archive >> restored._parryFrames;
         archive >> restored._hitstopFrames;
-        archive >> restored._nextProjectileId;
+        archive >> restored._nextProjectileID;
         archive >> bGunEquipped;
         const int32 comboMoveCount = restored._pCombo != nullptr ? static_cast<int32>( restored._pCombo->_listMove.size() ) : 0;
         const bool  bHeadValid     = archive.isOk() && -1 <= restored._comboIndex && restored._comboIndex < comboMoveCount && 0 <= restored._attackBufferFrames &&

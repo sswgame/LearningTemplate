@@ -72,7 +72,7 @@ def makeExportPaths(repositoryRoot: str, packName: str, assetName: str) -> dict[
         "source": f"{root}/Resource/{domain}/models_raw/{name}.glb",
         "mesh": f"{root}/Resource/{domain}/models/{name}.mesh",
         "sockets": f"{root}/Resource/{domain}/models/{name}.sockets.xml",
-        "meshId": f"{domain}/models/{name}.mesh",
+        "meshID": f"{domain}/models/{name}.mesh",
     }
 
 

@@ -67,7 +67,7 @@ RigidBodyComponent* pBody = pWall->addComponent<RigidBodyComponent>(); // 뿌리
 pBody->setShape( box );
 pBody->setBodyType( PhysicsBodyType::Static );
 MeshComponent* pMesh = pWall->addComponent<MeshComponent>();
-pMesh->setMesh( mesh ); // 테스트는 상자 메시를 직접 만든다. 씬에서는 _meshId 에 .mesh 경로를 적는다
+pMesh->setMesh( mesh ); // 테스트는 상자 메시를 직접 만든다. 씬에서는 _meshID 에 .mesh 경로를 적는다
 FractureComponent* pFracture = pWall->addComponent<FractureComponent>();
 pFracture->setFracturePath( fracturePath );
 pFracture->setProfilePath( profilePath );

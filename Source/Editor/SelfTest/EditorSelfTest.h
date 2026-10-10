@@ -58,7 +58,7 @@ namespace sw::editor
 
     /**
      * @struct EditorSelfTestRegistration
-     * @brief 에디터 자체 시험 하나의 등록 줄입니다. `_pId` 는 `-gv_editorSelfTest` 패턴이 보는 이름(`영역.무엇`)이고 `_order` 가 실행 순서입니다.
+     * @brief 에디터 자체 시험 하나의 등록 줄입니다. `_pID` 는 `-gv_editorSelfTest` 패턴이 보는 이름(`영역.무엇`)이고 `_order` 가 실행 순서입니다.
      */
     struct EditorSelfTestRegistration : EditorRegistration
     {

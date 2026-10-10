@@ -203,7 +203,7 @@ SW_TEST_CASE( EditorTransactionTest, ObjectLifetimeUndoRedoAreMirrors )
 
 /**
  * @brief [EditorTransactionTest] 지운 오브젝트를 되돌리면 그 오브젝트와 컴포넌트의 핸들이 다시 풀린다
- * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithId`, 컴포넌트는 `ObjectIdentity`). 새 id 를 받으면
+ * @details 되살린 오브젝트가 **원래 id** 를 받기 때문이다(`createGameObjectWithID`, 컴포넌트는 `ObjectIdentity`). 새 id 를 받으면
  *          핸들이 끊긴다. 이름으로 찾는 참조로 메우면 이름을 바꿀 때 끊긴다.
  */
 SW_TEST_CASE( EditorTransactionTest, HandlesSurviveUndoOfDestruction )
@@ -384,8 +384,8 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentN
     SW_ASSERT_NOT_NULL( pAnchor->addComponent<SceneComponent>() );
     pManager->mergePendingAdds();
     SW_ASSERT_TRUE( pAnchor->attachToParent( pCamera ) );
-    const uint64 cameraId = pCamera->getObjectId();
-    const uint64 anchorId = pAnchor->getObjectId();
+    const uint64 cameraID = pCamera->getObjectID();
+    const uint64 anchorID = pAnchor->getObjectID();
 
     SW_ASSERT_TRUE( EditorSceneCommands::destroy( pManager, pCamera ) );
     pManager->processDeferredDestruction();
@@ -397,8 +397,8 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentN
 
     stack.undo();
     pManager->mergePendingAdds();
-    GameObject* pRestoredCamera = pManager->findGameObjectById( cameraId );
-    GameObject* pRestoredAnchor = pManager->findGameObjectById( anchorId );
+    GameObject* pRestoredCamera = pManager->findGameObjectByID( cameraID );
+    GameObject* pRestoredAnchor = pManager->findGameObjectByID( anchorID );
     SW_ASSERT_NOT_NULL( pRestoredCamera );
     SW_ASSERT_NOT_NULL( pRestoredAnchor );
     SW_EXPECT_TRUE( pRestoredAnchor->getParent() == pRestoredCamera );
@@ -508,11 +508,11 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     GameObject* pTarget = pManager->createGameObject( hashed_string( "ReloadTarget" ) );
     SW_ASSERT_NOT_NULL( pTarget );
     pManager->mergePendingAdds();
-    const uint64 targetId = pTarget->getObjectId();
+    const uint64 targetID = pTarget->getObjectID();
 
     const ObjectSnapshot beforeRename = EditorTransaction::captureSnapshot( pTarget );
     SW_ASSERT_TRUE( EditorSceneCommands::rename( pTarget, "ReloadRenamed" ) );
-    const ObjectSnapshot afterRename = EditorTransaction::captureSnapshot( pManager->findGameObjectById( targetId ) );
+    const ObjectSnapshot afterRename = EditorTransaction::captureSnapshot( pManager->findGameObjectByID( targetID ) );
     int32                documentValue{ 0 };
     EditorTransaction::push( SW_DELEGATE_LAMBDA( Delegate<void()>, [&documentValue]()
     { documentValue = 0; } ),
@@ -536,14 +536,14 @@ SW_TEST_CASE( EditorTransactionTest, ObjectEditsSurviveReleasingTheEditorCode )
     workspace.clearSceneDirty();
     stack.undo();
     SW_EXPECT_FALSE( workspace.isSceneDirty() );
-    GameObject* pAfterUndo = pManager->findGameObjectById( targetId );
+    GameObject* pAfterUndo = pManager->findGameObjectByID( targetID );
     SW_ASSERT_NOT_NULL( pAfterUndo );
     SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( pAfterUndo )._xml == beforeRename._xml );
 
     EditorTransaction::bindObjectEditListener( stack );
     stack.redo();
     SW_EXPECT_TRUE( workspace.isSceneDirty() );
-    GameObject* pAfterRedo = pManager->findGameObjectById( targetId );
+    GameObject* pAfterRedo = pManager->findGameObjectByID( targetID );
     SW_ASSERT_NOT_NULL( pAfterRedo );
     SW_EXPECT_TRUE( EditorTransaction::captureSnapshot( pAfterRedo )._xml == afterRename._xml );
     SW_EXPECT_EQUAL( 0, documentValue );

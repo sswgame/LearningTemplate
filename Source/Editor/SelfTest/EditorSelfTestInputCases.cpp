@@ -55,7 +55,7 @@ namespace sw::editor
             struct TypingProbe
             {
                 string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`) — 실패 이유에 붙인다
-                uint64 _objectId{ 0 };
+                uint64 _objectID{ 0 };
                 uint32 _hintCountBefore{ 0 };
             };
 
@@ -72,7 +72,7 @@ namespace sw::editor
                 const ImGuiWindow*                    pHoveredWindow = imguiContext.HoveredWindow;
                 fixed_string<constant::kMaxBuffer512> text;
                 formatstring( text.data(), text.capacity(), "active=%u field=%u hoveredId=%u hoveredWindow=%s wantTextInput=%d",
-                              static_cast<uint32>( imguiContext.ActiveId ), bHasMark ? mark._itemId : 0u, static_cast<uint32>( imguiContext.HoveredId ),
+                              static_cast<uint32>( imguiContext.ActiveId ), bHasMark ? mark._itemID : 0u, static_cast<uint32>( imguiContext.HoveredId ),
                               pHoveredWindow != nullptr && pHoveredWindow->Name != nullptr ? pHoveredWindow->Name : "(none)",
                               ImGui::GetIO().WantTextInput ? 1 : 0 );
                 return string{ text.c_str() };
@@ -93,7 +93,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
                     pContext->getWorkspace().clearSelection();
-                GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectById( probe._objectId ) : nullptr;
+                GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
                 probe = TypingProbe{};
@@ -120,7 +120,7 @@ namespace sw::editor
                         if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                             return EditorSelfTestStep::Done;
                         pObj->addTag( TagID::request( "SwSelfTest.Typed" ) );
-                        probe._objectId = pObj->getObjectId();
+                        probe._objectID = pObj->getObjectID();
                         pHierarchy->setFilterText( "" );
                         return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 이름표가 생기게
                     }
@@ -343,10 +343,10 @@ namespace sw::editor
             // --------------------------------------------------------------------------------------------------
             // hierarchy.visibilityToggleFits — Hierarchy 가시성 토글이 아이콘을 담는다(폭이 글꼴 · DPI 배율을 따른다)
             // --------------------------------------------------------------------------------------------------
-            static uint64& getToggleProbeObjectId()
+            static uint64& getToggleProbeObjectID()
             {
-                static uint64 s_objectId = 0;
-                return s_objectId;
+                static uint64 s_objectID = 0;
+                return s_objectID;
             }
 
             static EditorSelfTestStep runVisibilityToggleFits( EditorSelfTestContext& context )
@@ -357,7 +357,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
                 HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
-                uint64&         objectId   = getToggleProbeObjectId();
+                uint64&         objectID   = getToggleProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -367,7 +367,7 @@ namespace sw::editor
                     GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestToggle" ) );
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
-                    objectId = pObj->getObjectId();
+                    objectID = pObj->getObjectID();
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -392,20 +392,20 @@ namespace sw::editor
                     (void)context.expect( width >= iconWidth, what.c_str() );
                     (void)context.expect( width + 0.5f >= height, "the visibility toggle is not square - it does not follow the frame height" );
                 }
-                GameObject* pObj = pManager->findGameObjectById( objectId );
+                GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                objectId = 0;
+                objectID = 0;
                 return EditorSelfTestStep::Done;
             }
 
             // --------------------------------------------------------------------------------------------------
             // hierarchy.selectedRowLeavesTheToggleVisible — 고른 줄의 선택 배경 · 클릭 영역이 가시성 토글을 덮지 않는다
             // --------------------------------------------------------------------------------------------------
-            static uint64& getRowProbeObjectId()
+            static uint64& getRowProbeObjectID()
             {
-                static uint64 s_objectId = 0;
-                return s_objectId;
+                static uint64 s_objectID = 0;
+                return s_objectID;
             }
 
             static EditorSelfTestStep runSelectedRowLeavesTheToggleVisible( EditorSelfTestContext& context )
@@ -418,7 +418,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 (void)pContext->getPanelManager().setPanelOpen( "hierarchy", true );
                 HierarchyPanel* pHierarchy = static_cast<HierarchyPanel*>( pContext->getPanelManager().findPanel( "hierarchy" ) );
-                uint64&         objectId   = getRowProbeObjectId();
+                uint64&         objectID   = getRowProbeObjectID();
                 const uint32    stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -427,7 +427,7 @@ namespace sw::editor
                     GameObject* pObj = pManager->createGameObject( hashed_string( kProbeName ) );
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
-                    objectId = pObj->getObjectId();
+                    objectID = pObj->getObjectID();
                     pContext->getWorkspace().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
                 }
@@ -445,10 +445,10 @@ namespace sw::editor
                     (void)context.expect( toggle._max._x <= row._min._x + 0.5f, what.c_str() );
                 }
                 pContext->getWorkspace().clearSelection();
-                GameObject* pObj = pManager->findGameObjectById( objectId );
+                GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
-                objectId = 0;
+                objectID = 0;
                 return EditorSelfTestStep::Done;
             }
         };

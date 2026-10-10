@@ -2,7 +2,7 @@
  * @file FractureComponent.h
  * @brief 3D 파괴 가능 메시 — 오브젝트의 메시 옆 `.fracture`(모델 임포트가 쿠킹한 조각)를 Jolt 바디 · 스킨드 조각 메시로 부숩니다. 동작은 `FractureComponentBase`.
  * @details 오브젝트 구성: 온전할 때 그릴 `MeshComponent`(`.mesh`) + 충돌용 `RigidBodyComponent`(벽은 Static, 상자는 Dynamic) + 이것. 파쇄 경로를 비우면
- *          오브젝트 메시의 `_meshId`(`a/b.mesh`)에서 `a/b.fracture` 를 찾습니다.
+ *          오브젝트 메시의 `_meshID`(`a/b.mesh`)에서 `a/b.fracture` 를 찾습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

@@ -203,8 +203,8 @@ namespace sw
         const vector<ScheduleEventDef>&       getEvents() const { return _eventCatalog.getAll(); }
         const vector<ScheduleAppointmentDef>& getAppointments() const { return _appointmentCatalog.getAll(); }
         const vector<ScheduleInterruptDef>&   getInterrupts() const { return _interruptCatalog.getAll(); }
-        /** @brief 묶음 사슬(자기부터 부모 쪽으로)에 @p archetypeId 가 있으면 true 입니다. */
-        bool isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeId ) const;
+        /** @brief 묶음 사슬(자기부터 부모 쪽으로)에 @p archetypeID 가 있으면 true 입니다. */
+        bool isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeID ) const;
 
     private:
         static constexpr const utf8* kXmlRootName = "Schedules"; ///< 루트 원소(`XmlCatalog`)

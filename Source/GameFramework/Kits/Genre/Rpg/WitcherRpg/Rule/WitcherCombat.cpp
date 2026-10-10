@@ -60,13 +60,13 @@ namespace sw
         return _stamina.trySpend( cost ) ? WitcherCombatResult::Ok : WitcherCombatResult::NotEnoughStamina;
     }
 
-    WitcherSignCast WitcherCombat::castSign( const hashed_string& signId, bool bAlternate, const SkillTreeState* pSkill, const StatBlock& stats,
+    WitcherSignCast WitcherCombat::castSign( const hashed_string& signID, bool bAlternate, const SkillTreeState* pSkill, const StatBlock& stats,
                                              const ElementChart* pChart )
     {
         WitcherSignCast cast;
-        cast._signId                = signId;
+        cast._signID                = signID;
         cast._bAlternate            = bAlternate ? SW_TRUE : SW_FALSE;
-        const WitcherSignDef* pSign = _pCatalog != nullptr ? _pCatalog->findSign( signId ) : nullptr;
+        const WitcherSignDef* pSign = _pCatalog != nullptr ? _pCatalog->findSign( signID ) : nullptr;
         if ( pSign == nullptr )
         {
             cast._result = WitcherCombatResult::UnknownSign;

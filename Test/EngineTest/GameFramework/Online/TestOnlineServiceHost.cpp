@@ -47,7 +47,7 @@ namespace
             , _listCacheReply{}
             , _cacheKeyToRead{}
             , _lastLogContext{}
-            , _lastTraceId{}
+            , _lastTraceID{}
             , _range{ range }
             , _handledCount{ 0 }
             , _hostShutdownCount{ 0 }
@@ -68,7 +68,7 @@ namespace
         void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
         {
             ++_handledCount;
-            _lastTraceId    = context._traceId;
+            _lastTraceID    = context._traceID;
             _lastLogContext = LogContext::getCurrent();
             BitWriter answer;
             switch ( static_cast<uint16>( context._method - _range ) )
@@ -82,8 +82,8 @@ namespace
                 }
                 case OnlineServiceHostTestInternal::kLogin:
                 {
-                    const AccountId accountId = body.readVarUint();
-                    if ( host.bindAccount( context._connection, accountId ) )
+                    const AccountID accountID = body.readVarUint();
+                    if ( host.bindAccount( context._connection, accountID ) )
                         (void)host.respondOk( context._token, answer );
                     else
                         (void)host.respondError( context._token, OnlineError::kConflict );
@@ -96,7 +96,7 @@ namespace
                 }
                 default:
                 {
-                    answer.writeVarUint( context._accountId );
+                    answer.writeVarUint( context._accountID );
                     (void)host.respondOk( context._token, answer );
                     break;
                 }
@@ -121,10 +121,10 @@ namespace
             }
         }
 
-        void onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override
+        void onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override
         {
             (void)host;
-            _listLeftAccount.push_back( accountId );
+            _listLeftAccount.push_back( accountID );
         }
 
         void onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override
@@ -144,12 +144,12 @@ namespace
 
         vector<NetRequestToken>  _listLateToken;
         vector<bool>             _listLateAnswer;
-        vector<AccountId>        _listLeftAccount;
+        vector<AccountID>        _listLeftAccount;
         vector<ServerBusMessage> _listBusMessage;
         vector<EphemeralReply>   _listCacheReply;
         string                   _cacheKeyToRead;
         LogContext               _lastLogContext; ///< 마지막 요청을 처리할 때의 로그 문맥
-        LogTraceId               _lastTraceId;    ///< 마지막 요청의 추적 id
+        LogTraceID               _lastTraceID;    ///< 마지막 요청의 추적 id
         uint16                   _range;
         int32                    _handledCount;
         int32                    _hostShutdownCount;
@@ -606,7 +606,7 @@ SW_TEST_CASE( OnlineServiceHostTest, UnbindAccountClosesTheConnectionAndTellsEve
     SW_EXPECT_FALSE( rig._host.findConnection( 9, connection ) );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listLeftAccount.size() );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceB._listLeftAccount.size() );
-    SW_EXPECT_EQUAL( AccountId( 9 ), rig._serviceB._listLeftAccount[0] );
+    SW_EXPECT_EQUAL( AccountID( 9 ), rig._serviceB._listLeftAccount[0] );
     rig.step( 6 );
     SW_EXPECT_TRUE( client._client.isReady() == false || client._client.getConnection() != connection ); // 닫혔다(다시 걸 수는 있다)
     SW_EXPECT_EQUAL( size_t( 1 ), rig._serviceA._listLeftAccount.size() );                               // 닫힘이 또 알리지 않는다
@@ -693,7 +693,7 @@ SW_TEST_CASE( OnlineServiceHostTest, ServerBusMessagesFanOutToSubscribedServices
     rig.step( 1 );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceA._listBusMessage.size() );
     SW_ASSERT_EQUAL( size_t( 1 ), rig._serviceB._listBusMessage.size() );
-    SW_EXPECT_EQUAL( uint64( 2 ), rig._serviceA._listBusMessage[0]._originServerId );
+    SW_EXPECT_EQUAL( uint64( 2 ), rig._serviceA._listBusMessage[0]._originServerID );
 
     rig._host.unsubscribeServerBus( "sd.changed", &rig._serviceA );
     busOfOther.publish( "sd.changed", arrPayload, 1 );
@@ -761,7 +761,7 @@ SW_TEST_CASE( OnlineServiceHostTest, SharedEndpointClientsEachHelloAndGetTheirOw
     SW_EXPECT_EQUAL( size_t( 1 ), bots._arrService[1]._listPushKind.size() );
 }
 
-SW_TEST_CASE( OnlineServiceHostTest, TraceIdReachesTheServiceLogContextWithTheAccount )
+SW_TEST_CASE( OnlineServiceHostTest, TraceIDReachesTheServiceLogContextWithTheAccount )
 {
     HostRig    rig;
     ClientSide client( rig._network, rig.getPort() );
@@ -769,7 +769,7 @@ SW_TEST_CASE( OnlineServiceHostTest, TraceIdReachesTheServiceLogContextWithTheAc
     rig.step( 10 );
     (void)rig.call( client, OnlineServiceHostTestInternal::kRangeA + OnlineServiceHostTestInternal::kLogin, 21 );
     LogContext caller;
-    caller._traceId = LogTraceId{ 0x5, 0x6 };
+    caller._traceID = LogTraceID{ 0x5, 0x6 };
     ResponseRecord record;
     {
         ScopedLogContext scope( caller ); // 클라이언트 쪽 문맥 — 요청 머리에 실린다
@@ -783,8 +783,8 @@ SW_TEST_CASE( OnlineServiceHostTest, TraceIdReachesTheServiceLogContextWithTheAc
         rig.step( 1 ); // 문맥 밖 — 서비스의 문맥은 호스트가 건 것이다
     }
     SW_ASSERT_TRUE( record._bAnswered );
-    SW_EXPECT_TRUE( rig._serviceA._lastTraceId == caller._traceId );
-    SW_EXPECT_TRUE( rig._serviceA._lastLogContext._traceId == caller._traceId );
-    SW_EXPECT_EQUAL( rig._serviceA._lastLogContext._principalId, uint64( 21 ) );
+    SW_EXPECT_TRUE( rig._serviceA._lastTraceID == caller._traceID );
+    SW_EXPECT_TRUE( rig._serviceA._lastLogContext._traceID == caller._traceID );
+    SW_EXPECT_EQUAL( rig._serviceA._lastLogContext._principalID, uint64( 21 ) );
     SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
 }

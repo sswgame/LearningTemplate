@@ -26,7 +26,7 @@ namespace sw
             static constexpr const utf8* kName          = "name";
             static constexpr const utf8* kEntities      = "entities";
             static constexpr const utf8* kEntity        = "entity";
-            static constexpr const utf8* kFileId        = "id";
+            static constexpr const utf8* kFileID        = "id";
             static constexpr const utf8* kPrefab        = "prefab";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
@@ -111,10 +111,10 @@ namespace sw
 
                 // 엔티티마다 0 이 아닌 파일 id 가 있다(`Scene::serializeToDocument` 가 늘 적는다). 없거나 못 읽는 문서는 받지 않는다 —
                 // 부착 · 핸들이 이 값으로 부모를 가리키고, 쿠커는 이 값으로 엔티티를 찾는다.
-                const utf8* pFileId = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileId );
-                if ( pFileId == nullptr || StringUtil::parseUint64( pFileId, node._fileId ) == false || node._fileId == 0 )
+                const utf8* pFileID = sceneObjectNode.findAttribute( SceneDocumentInternal::kFileID );
+                if ( pFileID == nullptr || StringUtil::parseUint64( pFileID, node._fileID ) == false || node._fileID == 0 )
                 {
-                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileId != nullptr ? pFileId : "",
+                    SW_LOG_ERROR( "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", node._name, pFileID != nullptr ? pFileID : "",
                                   absPath );
                     *this = {};
                     return false;
@@ -164,15 +164,15 @@ namespace sw
         for ( const SceneObjectNode& entity : _listSceneObjectNode )
         {
             // 읽는 쪽(`loadXml`)이 받지 않는 모양은 쓰지 않는다.
-            if ( entity._fileId == 0 )
+            if ( entity._fileID == 0 )
             {
                 SW_LOG_ERROR( "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
             XmlNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            utf8         arrFileIdText[constant::kMaxBuffer32]{};
-            const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
-            sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
+            utf8         arrFileIDText[constant::kMaxBuffer32]{};
+            const uint32 fileIDLength = StringUtil::formatNumber( arrFileIDText, constant::kMaxBuffer32, entity._fileID, 10 );
+            sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileID, string_view( arrFileIDText, fileIDLength ) );
             sceneObjectNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
                 sceneObjectNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
@@ -293,7 +293,7 @@ namespace sw
         for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
         {
             SceneObjectNode node{};
-            arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml >> node._embeddedStateBytes >> node._fileId >> node._prefabOverrideXml;
+            arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXml;
             // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
             if ( arch.isError() )
                 break;
@@ -339,7 +339,7 @@ namespace sw
             arch << prefabGuid;
             arch << entity._embeddedXml;
             arch << entity._embeddedStateBytes;
-            arch << entity._fileId;
+            arch << entity._fileID;
             arch << entity._prefabOverrideXml;
         }
 

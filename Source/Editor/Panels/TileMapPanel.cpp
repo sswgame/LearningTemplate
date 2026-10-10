@@ -47,7 +47,7 @@ namespace sw::editor
         , _inputWidth{ 8 }
         , _inputHeight{ 8 }
         , _paintHeight{ 1 }
-        , _atlasId{ 0 }
+        , _atlasID{ 0 }
         , _warpTx{ 1 }
         , _warpTy{ 1 }
         , _lastPaintCell{}
@@ -220,7 +220,7 @@ namespace sw::editor
         if ( _layer == PaintLayer::Visual )
         {
             ImGui::InputInt( "Height", &_paintHeight );
-            ImGui::InputInt( "Atlas Id", &_atlasId );
+            ImGui::InputInt( "Atlas ID", &_atlasID );
             ImGui::ColorEdit3( "Tint", _arrTint );
         }
         else if ( _layer == PaintLayer::Warp )
@@ -394,7 +394,7 @@ namespace sw::editor
                 {
                     TileMapXmlData::Visual& tileVisual = _map._listVisual[tileIndex];
                     tileVisual._height                 = static_cast<uint8>( _paintHeight );
-                    tileVisual._atlasId                = static_cast<uint8>( _atlasId );
+                    tileVisual._atlasID                = static_cast<uint8>( _atlasID );
                     tileVisual._tintR                  = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
                     tileVisual._tintG                  = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
                     tileVisual._tintB                  = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );

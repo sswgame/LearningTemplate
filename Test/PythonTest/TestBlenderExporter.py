@@ -70,7 +70,7 @@ class NamingTest(unittest.TestCase):
         paths = Conventions.makeExportPaths("D:\\Repo\\", "Shooter3D", "Rifle Mk2")
         self.assertEqual("D:/Repo/Resource/game/shooter3d/models_raw/rifle_mk2.glb", paths["source"])
         self.assertEqual("D:/Repo/Resource/game/shooter3d/models/rifle_mk2.sockets.xml", paths["sockets"])
-        self.assertEqual("game/shooter3d/models/rifle_mk2.mesh", paths["meshId"])
+        self.assertEqual("game/shooter3d/models/rifle_mk2.mesh", paths["meshID"])
         self.assertEqual("D:/Repo/Resource/engine/models_raw/cube.glb", Conventions.makeExportPaths("D:/Repo", "engine", "Cube")["source"])
 
 

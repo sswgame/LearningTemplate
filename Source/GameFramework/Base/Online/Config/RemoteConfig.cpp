@@ -241,14 +241,14 @@ namespace sw
         return true;
     }
 
-    bool RemoteConfig::isFeatureEnabled( string_view flag, uint64 accountId, bool bDefault ) const
+    bool RemoteConfig::isFeatureEnabled( string_view flag, uint64 accountID, bool bDefault ) const
     {
         const Entry* pEntry = findEntry( flag, RemoteConfigValueType::Flag );
         if ( pEntry == nullptr )
             return bDefault;
         if ( pEntry->_value._integer == 0 )
             return false;
-        return computeRolloutBucket( flag, accountId ) < pEntry->_value._rolloutBasisPoints;
+        return computeRolloutBucket( flag, accountID ) < pEntry->_value._rolloutBasisPoints;
     }
 
     void RemoteConfig::writeClientSnapshot( BitWriter& outWriter ) const
@@ -315,12 +315,12 @@ namespace sw
         return true;
     }
 
-    int32 RemoteConfig::computeRolloutBucket( string_view flag, uint64 accountId )
+    int32 RemoteConfig::computeRolloutBucket( string_view flag, uint64 accountID )
     {
         uint8 arrAccountByte[8];
         for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
         {
-            arrAccountByte[byteIndex] = static_cast<uint8>( accountId >> ( byteIndex * 8 ) );
+            arrAccountByte[byteIndex] = static_cast<uint8>( accountID >> ( byteIndex * 8 ) );
         }
         uint64 hash = StringUtil::computeHash64( flag.data(), flag.size(), false );
         hash        = StringUtil::computeHash64( reinterpret_cast<const utf8*>( arrAccountByte ), sizeof( arrAccountByte ), false, hash );

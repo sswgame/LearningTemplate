@@ -201,12 +201,12 @@ SW_TEST_CASE( ActionCombatTest, ProjectileDamagesTheUnitItHitsOnceAndIsGoneAfter
     ProjectileComponent* pProjectile = spawnBullet( manager, 0.0f, 0.0f, 6.0f, 25 );
     SW_ASSERT_TRUE( pTarget != nullptr && pProjectile != nullptr );
     SW_EXPECT_EQUAL( 25, pProjectile->getDamage() );
-    const uint64 bulletId = pProjectile->getOwner()->getObjectId();
+    const uint64 bulletID = pProjectile->getOwner()->getObjectID();
 
     manager.beginPlay();
     SW_ASSERT_TRUE_MSG( tickUntilHpChanges( manager, *pTarget, 100, 0.1f, 20 ) >= 0, "the bullet never hit the unit" );
     SW_EXPECT_EQUAL( 80, pTarget->getHp() );
-    SW_EXPECT_TRUE( manager.findGameObjectById( bulletId ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( bulletID ) == nullptr );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), manager.getAllGameObjects().size() );
 
     // 더 흘려도 다시 깎이지 않는다.
@@ -257,7 +257,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
     SW_ASSERT_TRUE( pAlly != nullptr && pProjectile != nullptr );
     pAlly->getOwner()->getComponent<BoxCollider2DComponent>()->setColliderType( 2 );
     pProjectile->getOwner()->getComponent<BoxCollider2DComponent>()->setColliderType( 1 );
-    const uint64 bulletId = pProjectile->getOwner()->getObjectId();
+    const uint64 bulletID = pProjectile->getOwner()->getObjectID();
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 10; ++frameIndex )
@@ -265,7 +265,7 @@ SW_TEST_CASE( ActionCombatTest, ProjectileIgnoresUnitsOnALayerItDoesNotCollideWi
         manager.tick( 0.1f );
     }
     SW_EXPECT_EQUAL( 100, pAlly->getHp() );
-    SW_EXPECT_TRUE( manager.findGameObjectById( bulletId ) != nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( bulletID ) != nullptr );
     manager.endPlay();
 }
 
@@ -564,25 +564,25 @@ SW_TEST_CASE( ActionCombatTest, InterceptorDestroysAnEnemyProjectileButPelletsPa
     }
     SW_EXPECT_TRUE( pInterceptor->isInterceptor() );
     SW_EXPECT_FALSE( pPlainShot->isInterceptor() );
-    const uint64 enemyShotId   = pEnemyShot->getOwner()->getObjectId();
-    const uint64 interceptorId = pInterceptor->getOwner()->getObjectId();
-    const uint64 pelletAId     = pPelletA->getOwner()->getObjectId();
-    const uint64 pelletBId     = pPelletB->getOwner()->getObjectId();
-    const uint64 plainShotId   = pPlainShot->getOwner()->getObjectId();
-    const uint64 enemyPassId   = pEnemyPass->getOwner()->getObjectId();
+    const uint64 enemyShotID   = pEnemyShot->getOwner()->getObjectID();
+    const uint64 interceptorID = pInterceptor->getOwner()->getObjectID();
+    const uint64 pelletAID     = pPelletA->getOwner()->getObjectID();
+    const uint64 pelletBID     = pPelletB->getOwner()->getObjectID();
+    const uint64 plainShotID   = pPlainShot->getOwner()->getObjectID();
+    const uint64 enemyPassID   = pEnemyPass->getOwner()->getObjectID();
 
     manager.beginPlay();
     for ( int32 frameIndex = 0; frameIndex < 15; ++frameIndex )
     {
         manager.tick( 0.1f );
     }
-    SW_EXPECT_TRUE( manager.findGameObjectById( enemyShotId ) == nullptr );
-    SW_EXPECT_TRUE( manager.findGameObjectById( interceptorId ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( enemyShotID ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( interceptorID ) == nullptr );
     SW_EXPECT_EQUAL( 100, pGuard->getHp() );
-    SW_EXPECT_TRUE( manager.findGameObjectById( pelletAId ) != nullptr );
-    SW_EXPECT_TRUE( manager.findGameObjectById( pelletBId ) != nullptr );
-    SW_EXPECT_TRUE( manager.findGameObjectById( plainShotId ) != nullptr );
-    SW_EXPECT_TRUE( manager.findGameObjectById( enemyPassId ) != nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( pelletAID ) != nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( pelletBID ) != nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( plainShotID ) != nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( enemyPassID ) != nullptr );
     manager.endPlay();
 }
 
@@ -754,7 +754,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveASceneRoundTripAsTheSameO
 /**
  * @brief [ActionCombatTest] 같은 실행에서 상태를 제자리에 다시 읽어도(되돌리기 · 핫 리로드) 핸들은 묶음 밖의 같은 오브젝트를 가리킨다
  * @details 같은 실행의 상태는 런타임 id 로 적는다 — 쏜 쪽이 그 묶음에 없어도(총알 하나만 다시 읽었다) 런타임 id 는 다시 쓰이지 않으므로 그대로 둔다.
- *          파일 상태(`ObjectIdSpace::Saved`)만 묶음에 없는 것을 없음으로 만든다.
+ *          파일 상태(`ObjectIDSpace::Saved`)만 묶음에 없는 것을 없음으로 만든다.
  */
 SW_TEST_CASE( ActionCombatTest, ObjectReferencesKeepTheirTargetWhenReloadedInPlace )
 {
@@ -791,11 +791,11 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
     pShot->setInstigator( pShooter->getOwner()->getHandle() );
 
     // 파일 id 로 적는다 — 쏜 쪽 7, 총알 8.
-    ObjectSavedIdMap mapSavedId;
-    mapSavedId.emplace( pShooter->getOwner()->getHandle().objectId(), 7u );
-    mapSavedId.emplace( pShot->getOwner()->getHandle().objectId(), 8u );
+    ObjectSavedIDMap mapSavedID;
+    mapSavedID.emplace( pShooter->getOwner()->getHandle().objectID(), 7u );
+    mapSavedID.emplace( pShot->getOwner()->getHandle().objectID(), 8u );
     ObjectSaveOptions options{};
-    options._pSavedIdMap = &mapSavedId;
+    options._pSavedIDMap = &mapSavedID;
     vector<uint8> bytes;
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pShot->getOwner(), bytes, options ) );
 
@@ -803,11 +803,11 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesSurviveBinaryFileState )
     GameObject* pNewShot    = manager.createGameObject( hashed_string( "NewShot" ) );
     SW_ASSERT_TRUE( pNewShooter != nullptr && pNewShot != nullptr );
     {
-        ObjectStateBatch batch( ObjectIdSpace::Saved );
+        ObjectStateBatch batch( ObjectIDSpace::Saved );
         batch.add( pNewShooter, 7u, hashed_string( "Shooter" ), false );
         ObjectLoadContext context{};
         context._pBatch  = &batch;
-        context._savedId = 8u;
+        context._savedID = 8u;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromBinaryBuffer( pNewShot, bytes.data(), bytes.size(), context ) > 0 );
         batch.finish();
     }
@@ -835,10 +835,10 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
     GameObject*  pFresh = manager.createGameObject( hashed_string( "FromFile" ) );
     SW_ASSERT_TRUE( state.empty() == false && pFresh != nullptr );
     {
-        ObjectStateBatch  batch( ObjectIdSpace::Saved );
+        ObjectStateBatch  batch( ObjectIDSpace::Saved );
         ObjectLoadContext context{};
         context._pBatch  = &batch;
-        context._savedId = 1;
+        context._savedID = 1;
         SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFresh, state, context ) );
         batch.finish();
     }
@@ -930,14 +930,14 @@ SW_TEST_CASE( ActionCombatTest, ActionRoomAnnouncesGateClearAndDefeat )
     ActionRoom     room;
     ActionRoomSite site;
     site._mapPath       = "game/test/maps/dungeon.scene.xml";
-    site._zoneId        = "zone_dungeon";
+    site._zoneID        = "zone_dungeon";
     site._returnMapPath = "game/test/maps/town.scene.xml";
     room.setSite( site );
 
     // 1) 홀 — 들어오면 닫히고, 마지막 적이 쓰러진 프레임에 클리어와 열림. 적이 오른쪽에서 다가오는 자리에 서서 공격한다.
     room.beginEntrance();
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listGate.size() );
-    SW_EXPECT_TRUE( listGate[0]._zoneId == site._zoneId );
+    SW_EXPECT_TRUE( listGate[0]._zoneID == site._zoneID );
     SW_EXPECT_TRUE( listGate[0]._bLocked == SW_TRUE );
     SW_EXPECT_TRUE( listGate[0]._bTriggered == SW_TRUE );
     ActionRoomFrameInput input;

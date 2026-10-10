@@ -28,7 +28,7 @@ namespace sw
     {
         string _filePath{};
         string _content{};
-        string _sessionId{};
+        string _sessionID{};
         uint32 _eventCount{ 0 };
     };
 } // namespace sw

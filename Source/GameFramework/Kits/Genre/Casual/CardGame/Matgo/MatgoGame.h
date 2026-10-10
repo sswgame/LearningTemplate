@@ -95,7 +95,7 @@ namespace sw
     /** @brief 행동 종류입니다(`CardAction::_kind`). */
     enum class MatgoActionKind : uint8
     {
-        Play = 0, ///< `_cardId` = 낼 패, `_targetId` = 같은 월 바닥 두 장 중 먹을 것(없으면 센 것)
+        Play = 0, ///< `_cardID` = 낼 패, `_targetID` = 같은 월 바닥 두 장 중 먹을 것(없으면 센 것)
         Go,
         Stop
     };
@@ -105,15 +105,15 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Played = 0, ///< _cardId
-            Flipped,    ///< _cardId
-            Captured,   ///< _cardId — 먹은 패 한 장마다
+            Played = 0, ///< _cardID
+            Flipped,    ///< _cardID
+            Captured,   ///< _cardID — 먹은 패 한 장마다
             Ppeok,
             Jjok,
             Ttadak,
             PpeokEaten,
             Sweep,
-            PiStolen,     ///< _player = 뺏은 쪽, _value = 뺏긴 쪽, _cardId
+            PiStolen,     ///< _player = 뺏은 쪽, _value = 뺏긴 쪽, _cardID
             GoStopChoice, ///< _value = 점수
             Go,           ///< _value = 고 횟수
             Stop,         ///< _value = 받을 점수(진 사람 하나당 · 고스톱이면 첫 패자 기준)
@@ -121,7 +121,7 @@ namespace sw
         };
         int32  _player{ -1 };
         int32  _value{ 0 };
-        uint16 _cardId{ Card::kNoCard };
+        uint16 _cardID{ Card::kNoCard };
         Kind   _kind{ Kind::Played };
     };
 } // namespace sw
@@ -183,8 +183,8 @@ namespace sw
         void initialize( const MatgoSettings& settings, uint32 seed );
         void initializeFromLayout( const MatgoSettings& settings, const MatgoLayout& layout );
 
-        /** @brief 차례인 @p player 가 손패 @p cardId 를 냅니다. 같은 월 바닥 두 장이면 @p targetId 를 먹습니다(아니면 센 것). */
-        [[nodiscard]] bool playCard( int32 player, uint16 cardId, uint16 targetId = Card::kNoCard );
+        /** @brief 차례인 @p player 가 손패 @p cardID 를 냅니다. 같은 월 바닥 두 장이면 @p targetID 를 먹습니다(아니면 센 것). */
+        [[nodiscard]] bool playCard( int32 player, uint16 cardID, uint16 targetID = Card::kNoCard );
         /** @brief 고 — 판을 이어 갑니다. 다음에는 점수가 더 올라야 다시 고/스톱입니다. */
         [[nodiscard]] bool declareGo( int32 player );
         /** @brief 스톱 — @p player 가 이기고 판이 끝납니다. */
@@ -216,9 +216,9 @@ namespace sw
         void                 drainEvents( vector<MatgoEvent>& outListEvent );
 
     private:
-        void resolveCard( int32 player, const Card& card, uint16 targetId );
+        void resolveCard( int32 player, const Card& card, uint16 targetID );
         void captureCard( int32 player, const Card& card );
-        void captureFloorCard( int32 player, uint16 cardId );
+        void captureFloorCard( int32 player, uint16 cardID );
         void stealPi( int32 player );
         void finishTurn( int32 player );
         void finishGame( int32 winner );

@@ -44,7 +44,7 @@ namespace sw
     /** @brief 표식 한 번의 결과입니다. */
     struct WitcherSignCast
     {
-        hashed_string       _signId{};
+        hashed_string       _signID{};
         hashed_string       _element{};
         hashed_string       _status{}; ///< 걸린 상태이상(없으면 빈 이름)
         float32             _power{ 0.0f };
@@ -76,7 +76,7 @@ namespace sw
          * @brief 표식을 겁니다.
          * @param pSkill 대체 시전 해금을 볼 스킬 트리(없으면 대체 시전 불가) @param stats 위력 능력치를 읽는 곳 @param pChart 상태이상을 굴릴 표(없으면 굴리지 않음)
          */
-        WitcherSignCast castSign( const hashed_string& signId, bool bAlternate, const SkillTreeState* pSkill, const StatBlock& stats, const ElementChart* pChart );
+        WitcherSignCast castSign( const hashed_string& signID, bool bAlternate, const SkillTreeState* pSkill, const StatBlock& stats, const ElementChart* pChart );
         /** @brief 공격이 맞았습니다 — 아드레날린이 쌓입니다. */
         void registerHitLanded();
         /** @brief 맞았습니다 — 아드레날린이 줍니다. */

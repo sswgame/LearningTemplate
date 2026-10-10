@@ -27,7 +27,7 @@ namespace sw
 
         MatchServerAgent();
 
-        void   initialize( uint64 serverId );
+        void   initialize( uint64 serverID );
         string getAssignTopic() const;
         /** @brief 버스 메시지 몸(`MatchmakingProtocol::writeFormed`)입니다. 깨졌으면 false. */
         [[nodiscard]] bool handleAssign( const vector<uint8>& bytes, int64 nowMs );
@@ -35,7 +35,7 @@ namespace sw
         void tick( int64 nowMs );
 
         /** @brief 접속한 계정이 올 사람인가 — 경기 id · 팀입니다. */
-        bool findExpected( AccountId accountId, uint64& outMatchId, int32& outTeam ) const;
+        bool findExpected( AccountID accountID, uint64& outMatchID, int32& outTeam ) const;
         /** @brief 게임 로직이 경기를 차린다(새로 배정된 경기). */
         void  drainNewMatches( vector<MatchFormed>& outListMatch ) { _newMatchBuffer.drainTo( outListMatch ); }
         int32 getExpectedCount() const { return static_cast<int32>( _mapAccountToExpected.size() ); }
@@ -43,13 +43,13 @@ namespace sw
     private:
         struct Expected
         {
-            uint64 _matchId{ 0 };
+            uint64 _matchID{ 0 };
             int64  _expiresMs{ 0 };
             int32  _team{ 0 };
         };
 
-        unordered_map<AccountId, Expected> _mapAccountToExpected;
+        unordered_map<AccountID, Expected> _mapAccountToExpected;
         EventBuffer<MatchFormed>           _newMatchBuffer;
-        uint64                             _serverId;
+        uint64                             _serverID;
     };
 } // namespace sw

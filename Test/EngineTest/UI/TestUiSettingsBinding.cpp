@@ -55,10 +55,10 @@ namespace
             input.endFrame();
         }
 
-        static float32 readFloat( const sw::UserSettingsManager& settings, const utf8* pId )
+        static float32 readFloat( const sw::UserSettingsManager& settings, const utf8* pID )
         {
             float32 value = -1.0f;
-            (void)sw::StringUtil::parseFloat( settings.getValue( sw::hashed_string( pId ) ), value ); // 읽지 못하면 -1 이 남아 부르는 쪽 단언이 드러낸다
+            (void)sw::StringUtil::parseFloat( settings.getValue( sw::hashed_string( pID ) ), value ); // 읽지 못하면 -1 이 남아 부르는 쪽 단언이 드러낸다
             return value;
         }
     };

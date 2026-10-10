@@ -49,7 +49,7 @@ namespace sw
             else if ( bBetter == false && fill != bestFill )
                 bBetter = fill < bestFill;
             else if ( bBetter == false )
-                bBetter = status._descriptor._serverId < listStatus[static_cast<size_t>( bestIndex )]._descriptor._serverId;
+                bBetter = status._descriptor._serverID < listStatus[static_cast<size_t>( bestIndex )]._descriptor._serverID;
             if ( bBetter )
             {
                 bestIndex       = index;

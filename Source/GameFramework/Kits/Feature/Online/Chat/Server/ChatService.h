@@ -47,8 +47,8 @@ namespace sw
         IChatPolicy( const IChatPolicy& )            = delete;
         IChatPolicy& operator=( const IChatPolicy& ) = delete;
 
-        /** @brief @p recipientId 가 @p senderId 를 막았는가입니다(받는 이가 이 서버에 붙어 있을 때 불린다 — 메모리 조회여야 한다). */
-        virtual bool isBlocked( AccountId recipientId, AccountId senderId ) const = 0;
+        /** @brief @p recipientID 가 @p senderID 를 막았는가입니다(받는 이가 이 서버에 붙어 있을 때 불린다 — 메모리 조회여야 한다). */
+        virtual bool isBlocked( AccountID recipientID, AccountID senderID ) const = 0;
     };
 } // namespace sw
 
@@ -80,7 +80,7 @@ namespace sw
         IAccountPresence*        _pPresence{ nullptr };  ///< 서버 하나면 null(다른 서버 귓속말 없음)
         const IAccountDirectory* _pDirectory{ nullptr }; ///< 필수(표시 이름 · 이 서버에 있나)
         const IChatPolicy*       _pPolicy{ nullptr };    ///< null 이면 차단 없음
-        uint64                   _serverId{ 1 };
+        uint64                   _serverID{ 1 };
     };
 } // namespace sw
 
@@ -101,7 +101,7 @@ namespace sw
     struct ChatDelivery
     {
         ChatMessage _message{};
-        AccountId   _recipientId{ kInvalidAccountId };
+        AccountID   _recipientID{ kInvalidAccountID };
     };
 } // namespace sw
 
@@ -139,19 +139,19 @@ namespace sw
         void tick( int64 nowMs );
 
         // 클라이언트 요청 — 결과는 drainCompletions(같은 꼬리표)
-        void joinChannel( AccountId accountId, string_view channelId, int64 nowMs, uint64 requestTag );
-        void leaveChannel( AccountId accountId, string_view channelId, uint64 requestTag );
-        void sendMessage( AccountId accountId, string_view channelId, string_view text, int64 nowMs, uint64 requestTag );
-        void sendWhisper( AccountId accountId, AccountId recipientId, string_view text, int64 nowMs, uint64 requestTag );
-        void readHistory( AccountId accountId, string_view channelId, string_view cursor, int32 maxCount, uint64 requestTag );
+        void joinChannel( AccountID accountID, string_view channelID, int64 nowMs, uint64 requestTag );
+        void leaveChannel( AccountID accountID, string_view channelID, uint64 requestTag );
+        void sendMessage( AccountID accountID, string_view channelID, string_view text, int64 nowMs, uint64 requestTag );
+        void sendWhisper( AccountID accountID, AccountID recipientID, string_view text, int64 nowMs, uint64 requestTag );
+        void readHistory( AccountID accountID, string_view channelID, string_view cursor, int32 maxCount, uint64 requestTag );
 
         // 서버 시스템(길드 · 파티 · GM) — 완료 없음
-        [[nodiscard]] ChatResult addMember( AccountId accountId, string_view channelId, int64 nowMs );
-        void                     removeMember( AccountId accountId, string_view channelId );
+        [[nodiscard]] ChatResult addMember( AccountID accountID, string_view channelID, int64 nowMs );
+        void                     removeMember( AccountID accountID, string_view channelID );
         /** @brief 제재가 바뀌었다(GM) — 다음 말하기 전에 다시 읽는다. */
-        void refreshSanction( AccountId accountId );
+        void refreshSanction( AccountID accountID );
         /** @brief 계정이 이 서버를 떠났다 — 모든 채널에서 뺀다. */
-        void removeAccount( AccountId accountId );
+        void removeAccount( AccountID accountID );
 
         /** @brief 구독한 버스 메시지(바인딩이 넘긴다 — 자기 서버가 낸 채팅은 메시지의 서버 id 로 거른다, 제재 알림은 자기 서버 것도 본다). */
         void handleBusMessage( string_view topic, const vector<uint8>& bytes );
@@ -160,24 +160,24 @@ namespace sw
         void drainDeliveries( vector<ChatDelivery>& outListDelivery ) { _deliveryBuffer.drainTo( outListDelivery ); }
         void drainBusTopicChanges( vector<ChatBusTopicChange>& outListChange ) { _busTopicBuffer.drainTo( outListChange ); }
 
-        int32 getLocalMemberCount( string_view channelId ) const;
+        int32 getLocalMemberCount( string_view channelID ) const;
         /** @brief 맡겨 두고 끝나지 않은 일(저장 · 접속 상태 찾기) 수입니다. */
         int32 getPendingCount() const { return _pendingStoreCount + static_cast<int32>( _mapPresenceRequestToWhisper.size() ); }
         int32 getQueuedHistoryCount() const { return static_cast<int32>( _listHistoryQueue.size() ); }
 
         /** @brief 저장 일의 `complete` 가 부릅니다(키트 안). */
-        void applySanction( AccountId accountId, int64 muteUntilMs, bool bReadOk, int64 nowMs );
+        void applySanction( AccountID accountID, int64 muteUntilMs, bool bReadOk, int64 nowMs );
         void applyHistoryRead( uint64 requestTag, ChatResult result, vector<ChatMessage>&& listMessage, string&& nextCursor );
         void applyHistoryWrite( bool bCommitted, int32 messageCount );
 
     private:
         struct PendingSend
         {
-            string    _channelId{};
+            string    _channelID{};
             string    _text{};
             uint64    _requestTag{ 0 };
             int64     _nowMs{ 0 };
-            AccountId _recipientId{ kInvalidAccountId }; ///< 귓속말이면
+            AccountID _recipientID{ kInvalidAccountID }; ///< 귓속말이면
         };
 
         struct Member
@@ -197,24 +197,24 @@ namespace sw
         };
 
         void       onPresenceFound( const AccountPresenceResult& result );
-        Member*    ensureMember( AccountId accountId, int64 nowMs );
+        Member*    ensureMember( AccountID accountID, int64 nowMs );
         bool       isSanctionFresh( const Member& member, int64 nowMs ) const;
-        void       startSanctionRead( AccountId accountId, Member& member, int64 nowMs );
-        void       submitSend( AccountId accountId, PendingSend&& send );
-        ChatResult prepareText( AccountId accountId, Member& member, string_view text, int64 nowMs, string& outText, int64& outRetryAfterMs );
-        void       processSend( AccountId accountId, Member& member, const PendingSend& send );
+        void       startSanctionRead( AccountID accountID, Member& member, int64 nowMs );
+        void       submitSend( AccountID accountID, PendingSend&& send );
+        ChatResult prepareText( AccountID accountID, Member& member, string_view text, int64 nowMs, string& outText, int64& outRetryAfterMs );
+        void       processSend( AccountID accountID, Member& member, const PendingSend& send );
         void       publishMessage( const string& topic, const ChatMessage& message );
         void       deliverToChannel( const ChatMessage& message );
         void       deliverWhisperLocally( const ChatMessage& message );
         void       queueHistory( const ChatMessage& message );
         void       completeMessage( uint16 method, uint64 requestTag, ChatMessage&& message );
         void       completeSimple( uint16 method, uint64 requestTag, ChatResult result, int64 retryAfterMs = 0 );
-        void       addLocalMember( AccountId accountId, Member& member, const string& channelId );
-        void       removeLocalMember( AccountId accountId, Member& member, const string& channelId );
-        bool       isWhisperParticipant( AccountId accountId, string_view channelId ) const;
+        void       addLocalMember( AccountID accountID, Member& member, const string& channelID );
+        void       removeLocalMember( AccountID accountID, Member& member, const string& channelID );
+        bool       isWhisperParticipant( AccountID accountID, string_view channelID ) const;
 
-        unordered_map<AccountId, Member>         _mapAccountToMember;
-        unordered_map<string, vector<AccountId>> _mapChannelToMember;
+        unordered_map<AccountID, Member>         _mapAccountToMember;
+        unordered_map<string, vector<AccountID>> _mapChannelToMember;
         unordered_map<uint64, PendingWhisper>    _mapPresenceRequestToWhisper;
         vector<ChatMessage>                      _listHistoryQueue;
         EventBuffer<ChatCompletion>              _completionBuffer;

@@ -46,11 +46,11 @@ namespace sw
 
 namespace sw
 {
-    int32 ActionPatternDef::findStateIndex( const hashed_string& stateId ) const
+    int32 ActionPatternDef::findStateIndex( const hashed_string& stateID ) const
     {
         for ( size_t index = 0; index < _listState.size(); ++index )
         {
-            if ( _listState[index]._id == stateId )
+            if ( _listState[index]._id == stateID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -77,9 +77,9 @@ namespace sw
             _grading._collectWeight = MathUtil::max( 0.0f, grading.getAttributeFloat( "collect", _grading._collectWeight ) );
             for ( XmlNode node = grading.findChild( "Grade" ); node; node = node.findNextSibling( "Grade" ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-                if ( pId != nullptr )
-                    _grading._listGrade.push_back( ActionPlatformerCatalogInternal::makeGrade( pId, node.getAttributeFloat( "min", 0.0f ) ) );
+                const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+                if ( pID != nullptr )
+                    _grading._listGrade.push_back( ActionPlatformerCatalogInternal::makeGrade( pID, node.getAttributeFloat( "min", 0.0f ) ) );
             }
         }
         if ( _grading._listGrade.empty() )
@@ -128,13 +128,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Stage" ); node; node = node.findNextSibling( "Stage" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ActionStageDef stage;
-            stage._id         = hashed_string( pId );
+            stage._id         = hashed_string( pID );
             const utf8* pName = node.findAttribute( "name" );
-            stage._name       = pName != nullptr ? pName : pId;
+            stage._name       = pName != nullptr ? pName : pID;
             ActionPlatformerCatalogInternal::readNameList( node, "checkpoints", stage._listCheckpoint );
             ActionPlatformerCatalogInternal::readNameList( node, "secrets", stage._listSecret );
             stage._parTime      = MathUtil::max( 0.1f, node.getAttributeFloat( "parTime", stage._parTime ) );
@@ -146,15 +146,15 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Combo" ); node; node = node.findNextSibling( "Combo" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             ActionComboDef combo;
-            combo._id = hashed_string( pId );
+            combo._id = hashed_string( pID );
             ActionPlatformerCatalogInternal::readNameList( node, "moves", combo._listMove );
             if ( combo._listMove.empty() )
             {
-                SW_LOG_WARNING( "%#: combo '%#' has no moves - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: combo '%#' has no moves - skipped", sourceName, pID );
                 continue;
             }
             (void)_comboCatalog.add( combo );
@@ -163,26 +163,26 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Pattern" ); node; node = node.findNextSibling( "Pattern" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
-            loadPattern( node, pId, sourceName );
+            loadPattern( node, pID, sourceName );
             ++loadedCount;
         }
         return loadedCount;
     }
 
-    void ActionPlatformerCatalog::loadPattern( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void ActionPlatformerCatalog::loadPattern( const XmlNode& node, const utf8* pID, string_view sourceName )
     {
         ActionPatternDef pattern;
-        pattern._id = hashed_string( pId );
+        pattern._id = hashed_string( pID );
         for ( XmlNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
         {
-            const utf8* pStateId = GameDataXml::findRequiredId( child, sourceName );
-            if ( pStateId == nullptr )
+            const utf8* pStateID = GameDataXml::findRequiredID( child, sourceName );
+            if ( pStateID == nullptr )
                 continue;
             ActionPatternStateDef state;
-            state._id        = hashed_string( pStateId );
+            state._id        = hashed_string( pStateID );
             state._next      = ActionPlatformerCatalogInternal::readName( child, "next" );
             state._onNear    = ActionPlatformerCatalogInternal::readName( child, "onNear" );
             state._onHit     = ActionPlatformerCatalogInternal::readName( child, "onHit" );
@@ -196,7 +196,7 @@ namespace sw
         }
         if ( pattern._listState.empty() )
         {
-            SW_LOG_WARNING( "%#: pattern '%#' has no <State> - skipped", sourceName, pId );
+            SW_LOG_WARNING( "%#: pattern '%#' has no <State> - skipped", sourceName, pID );
             return;
         }
         pattern._start = ActionPlatformerCatalogInternal::readName( node, "start" );
@@ -209,7 +209,7 @@ namespace sw
             for ( const hashed_string& target : arrTarget )
             {
                 if ( target.empty() == false && pattern.findStateIndex( target ) < 0 )
-                    SW_LOG_WARNING( "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pId, state._id.c_str(), target.c_str() );
+                    SW_LOG_WARNING( "%#: pattern '%#' state '%#' goes to an unknown state '%#'", sourceName, pID, state._id.c_str(), target.c_str() );
             }
         }
         (void)_patternCatalog.add( pattern );

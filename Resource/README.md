@@ -60,7 +60,7 @@ BC7 압축은 Debug 빌드에서 느리므로 큰 원본은 Release 빌드의 Ap
 그런 메시는 `Config/Editor/AssetValidationRules.json` 의 `exclude_patterns` 에 적습니다. NileCity, StarSkirmish, HarvestValley의 작물 메시가 그 예입니다.
 아무도 쓰지 않는 원본은 `models_raw/` 의 파일과 `import.stamp` 의 줄까지 함께 지웁니다. 기믹 프리팹(`common/prefabs/gimmicks`)은 게임이 가져다 쓰는 라이브러리라 검사에서 뺍니다.
 
-**경로는 리소스 ID 하나로 보관합니다.** `ResourceUtil::toResourceId` 가 경로를 ID로 바꾸고, 리소스 루트 밖의 경로나 `..` 가 든 경로는 빈 문자열이 됩니다.
+**경로는 리소스 ID 하나로 보관합니다.** `ResourceUtil::toResourceID` 가 경로를 ID로 바꾸고, 리소스 루트 밖의 경로나 `..` 가 든 경로는 빈 문자열이 됩니다.
 쓰기 경로는 `ResourceUtil::getWritePath` 하나로 얻고, 폴더는 `FileUtil::ensureParentDirectoryExists` 로 만듭니다. 이 함수는 실패하면 그 자리에서 경로와 OS 오류를 로그로 남깁니다.
 맵의 키는 `normalizePath`(소문자)로 만들고, 파일을 열 경로는 `normalizeSeparators` 로 만듭니다. `collectFiles` 는 대소문자를 보존합니다.
 

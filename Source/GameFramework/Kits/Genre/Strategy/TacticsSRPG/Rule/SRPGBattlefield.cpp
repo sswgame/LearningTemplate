@@ -81,38 +81,38 @@ namespace sw
         _phaseTeam  = SRPGTeam::Player;
     }
 
-    bool SRPGBattlefield::setTerrain( const int2& cell, const hashed_string& terrainId )
+    bool SRPGBattlefield::setTerrain( const int2& cell, const hashed_string& terrainID )
     {
-        const SRPGTerrainDef* pTerrain = _pCatalog != nullptr ? _pCatalog->findTerrain( terrainId ) : nullptr;
+        const SRPGTerrainDef* pTerrain = _pCatalog != nullptr ? _pCatalog->findTerrain( terrainID ) : nullptr;
         if ( pTerrain == nullptr || isInside( cell ) == false )
             return false;
         _listTerrain[static_cast<size_t>( _topology.toIndex( cell ) )] = pTerrain;
         return true;
     }
 
-    int32 SRPGBattlefield::fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainId )
+    int32 SRPGBattlefield::fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainID )
     {
         int32 count = 0;
         for ( int32 cellY = MathUtil::min( fromCell._y, toCell._y ); cellY <= MathUtil::max( fromCell._y, toCell._y ); ++cellY )
         {
             for ( int32 cellX = MathUtil::min( fromCell._x, toCell._x ); cellX <= MathUtil::max( fromCell._x, toCell._x ); ++cellX )
             {
-                count += setTerrain( int2{ cellX, cellY }, terrainId ) ? 1 : 0;
+                count += setTerrain( int2{ cellX, cellY }, terrainID ) ? 1 : 0;
             }
         }
         return count;
     }
 
-    int32 SRPGBattlefield::addUnit( const hashed_string& unitId, const hashed_string& pilotId, SRPGTeam team, const int2& cell, int32 pilotLevel )
+    int32 SRPGBattlefield::addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel )
     {
         if ( _pCatalog == nullptr )
             return -1;
         SRPGUnit unit;
-        unit._pDef   = _pCatalog->findUnit( unitId );
-        unit._pPilot = _pCatalog->findPilot( pilotId );
+        unit._pDef   = _pCatalog->findUnit( unitID );
+        unit._pPilot = _pCatalog->findPilot( pilotID );
         if ( unit._pDef == nullptr || unit._pPilot == nullptr )
         {
-            SW_LOG_WARNING( "cannot place unit '%#' with pilot '%#' - unknown id", unitId.c_str(), pilotId.c_str() );
+            SW_LOG_WARNING( "cannot place unit '%#' with pilot '%#' - unknown id", unitID.c_str(), pilotID.c_str() );
             return -1;
         }
         if ( isInside( cell ) == false || findUnitAt( cell ) >= 0 || computeTerrainCost( unit, cell ) < 0 )
@@ -295,9 +295,9 @@ namespace sw
         unit._en = unit._pDef->_en;
         unit._listWeapon.clear();
         unit._listAmmo.clear();
-        for ( const hashed_string& weaponId : unit._pDef->_listWeaponId )
+        for ( const hashed_string& weaponID : unit._pDef->_listWeaponID )
         {
-            const SRPGWeaponDef* pWeapon = _pCatalog->findWeapon( weaponId );
+            const SRPGWeaponDef* pWeapon = _pCatalog->findWeapon( weaponID );
             if ( pWeapon == nullptr )
                 continue;
             unit._listWeapon.push_back( pWeapon );
@@ -594,11 +594,11 @@ namespace sw
         SRPGBattlefield restored = *this;
         for ( const SRPGTerrainDef*& pTerrain : restored._listTerrain )
         {
-            hashed_string terrainId;
-            if ( StateArchiveUtil::readName( archive, terrainId ) == false )
+            hashed_string terrainID;
+            if ( StateArchiveUtil::readName( archive, terrainID ) == false )
                 return false;
-            pTerrain = terrainId.empty() ? nullptr : _pCatalog->findTerrain( terrainId );
-            if ( terrainId.empty() == false && pTerrain == nullptr )
+            pTerrain = terrainID.empty() ? nullptr : _pCatalog->findTerrain( terrainID );
+            if ( terrainID.empty() == false && pTerrain == nullptr )
                 return false;
         }
 
@@ -609,15 +609,15 @@ namespace sw
         restored._listUnit.assign( unitCount, SRPGUnit{} );
         for ( SRPGUnit& unit : restored._listUnit )
         {
-            hashed_string unitId;
-            hashed_string pilotId;
+            hashed_string unitID;
+            hashed_string pilotID;
             uint32        ammoCount = 0;
             const bool    bHeadRead =
-                StateArchiveUtil::readName( archive, unitId ) && StateArchiveUtil::readName( archive, pilotId ) && StateArchiveUtil::readCount( archive, 4, ammoCount );
+                StateArchiveUtil::readName( archive, unitID ) && StateArchiveUtil::readName( archive, pilotID ) && StateArchiveUtil::readCount( archive, 4, ammoCount );
             if ( bHeadRead == false )
                 return false;
-            unit._pDef   = _pCatalog->findUnit( unitId );
-            unit._pPilot = _pCatalog->findPilot( pilotId );
+            unit._pDef   = _pCatalog->findUnit( unitID );
+            unit._pPilot = _pCatalog->findPilot( pilotID );
             if ( unit._pDef == nullptr || unit._pPilot == nullptr )
                 return false;
             // 무기는 기체 정의의 순서로 다시 짓는다 — 탄 수가 그 무기 수와 같아야 한다.
@@ -666,32 +666,32 @@ namespace sw
         return true;
     }
 
-    void SRPGBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitId ) const
+    void SRPGBattlefield::collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitID ) const
     {
-        outListUnitId.clear();
+        outListUnitID.clear();
         const SRPGUnit* pUnit = findUnit( unitIndex );
         if ( pUnit == nullptr || _pCatalog == nullptr )
             return;
         for ( const SRPGDevelopTarget& target : pUnit->_pDef->_listDevelop )
         {
-            if ( pUnit->_unitLevel.getLevel() >= target._requiredLevel && _pCatalog->findUnit( target._unitId ) != nullptr )
-                outListUnitId.push_back( target._unitId );
+            if ( pUnit->_unitLevel.getLevel() >= target._requiredLevel && _pCatalog->findUnit( target._unitID ) != nullptr )
+                outListUnitID.push_back( target._unitID );
         }
     }
 
-    bool SRPGBattlefield::developUnit( int32 unitIndex, const hashed_string& targetUnitId )
+    bool SRPGBattlefield::developUnit( int32 unitIndex, const hashed_string& targetUnitID )
     {
         vector<hashed_string> listOption;
         collectDevelopOptions( unitIndex, listOption );
         bool bAllowed = false;
         for ( const hashed_string& option : listOption )
         {
-            bAllowed = bAllowed || option == targetUnitId;
+            bAllowed = bAllowed || option == targetUnitID;
         }
         if ( bAllowed == false )
             return false;
         SRPGUnit& unit = _listUnit[static_cast<size_t>( unitIndex )];
-        unit._pDef     = _pCatalog->findUnit( targetUnitId );
+        unit._pDef     = _pCatalog->findUnit( targetUnitID );
         unit._unitLevel.setLevel( _pCatalog->getUnitCurve(), 1 );
         refillUnit( unit );
         pushEvent( SRPGEvent{ unitIndex, -1, 0, SRPGEvent::Kind::Developed, unit._team } );

@@ -258,7 +258,7 @@ SW_TEST_CASE( UiOptionsMenuTest, RebindIgnoresUiActionsWhileListening )
     SW_EXPECT_NOT_NULL( fixture.getMenu() ); // Esc 가 메뉴의 뒤로가 되지 않았다
 
     fixture._ui.setInputMode( sw::UiInputMode::Navigation );
-    const sw::WidgetId jumpButton = pMenu->findRowValueWidget( "controls.jump" )->getId();
+    const sw::WidgetID jumpButton = pMenu->findRowValueWidget( "controls.jump" )->getID();
     SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pMenu->getTree(), jumpButton ) );
     pMenu->dispatchCommand( "Rebind", *pMenu->findRowValueWidget( "controls.jump" ) );
     pRebind = fixture.getPrompt<sw::KeyRebindScreen>();
@@ -289,8 +289,8 @@ SW_TEST_CASE( UiOptionsMenuTest, NavigationVisitsEveryRow )
     UiOptionsMenuFixture   fixture;
     sw::OptionsMenuScreen* pMenu = fixture.getMenu();
     fixture._ui.setInputMode( sw::UiInputMode::Navigation );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pMenu->getTree(), pMenu->findRowValueWidget( "audio.master" )->getId() ) );
-    sw::vector<sw::WidgetId> listVisited{ fixture._ui.getFocusManager().getFocusedWidget() };
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pMenu->getTree(), pMenu->findRowValueWidget( "audio.master" )->getID() ) );
+    sw::vector<sw::WidgetID> listVisited{ fixture._ui.getFocusManager().getFocusedWidget() };
     for ( uint32 step = 0; step < 2; ++step )
     {
         fixture.tapKey( sw::Key::Down );
@@ -298,12 +298,12 @@ SW_TEST_CASE( UiOptionsMenuTest, NavigationVisitsEveryRow )
     }
     for ( uint32 row = 0; row < pMenu->getRowCount(); ++row )
     {
-        SW_EXPECT_EQUAL( pMenu->findRowValueWidget( pMenu->getRowSetting( row ) )->getId(), listVisited[row] );
+        SW_EXPECT_EQUAL( pMenu->findRowValueWidget( pMenu->getRowSetting( row ) )->getID(), listVisited[row] );
     }
 
     SW_EXPECT_TRUE( pMenu->onUnhandledAction( sw::UiActionName::kTabNext ) );
     SW_EXPECT_EQUAL( 1u, pMenu->getSelectedTab() );
-    SW_EXPECT_EQUAL( pMenu->findRowValueWidget( "video.mode" )->getId(), fixture._ui.getFocusManager().getFocusedWidget() ); // 새 탭의 첫 행
+    SW_EXPECT_EQUAL( pMenu->findRowValueWidget( "video.mode" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() ); // 새 탭의 첫 행
     SW_EXPECT_TRUE( pMenu->onUnhandledAction( sw::UiActionName::kTabPrevious ) );
     SW_EXPECT_TRUE( pMenu->onUnhandledAction( sw::UiActionName::kTabPrevious ) );
     SW_EXPECT_EQUAL( 2u, pMenu->getSelectedTab() ); // 처음에서 뒤로 = 끝

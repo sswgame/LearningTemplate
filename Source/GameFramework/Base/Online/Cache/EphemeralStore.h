@@ -116,7 +116,7 @@ namespace sw
     {
         vector<uint8>                 _value{};
         vector<EphemeralScoredMember> _listMember{};
-        uint64                        _requestId{ 0 };
+        uint64                        _requestID{ 0 };
         int64                         _integer{ 0 };
         int64                         _score{ 0 };
         EphemeralResult               _result{ EphemeralResult::Ok };
@@ -154,7 +154,7 @@ namespace sw
         IEphemeralStore( const IEphemeralStore& )            = delete;
         IEphemeralStore& operator=( const IEphemeralStore& ) = delete;
 
-        /** @brief 요청을 맡깁니다. 요청 id(1 부터)입니다 — 답의 `_requestId`. */
+        /** @brief 요청을 맡깁니다. 요청 id(1 부터)입니다 — 답의 `_requestID`. */
         virtual uint64 submit( const EphemeralRequest& request ) = 0;
         /** @brief 끝난 답을 @p outListReply 뒤에 붙입니다. 붙인 수입니다. */
         virtual int32 pollReplies( vector<EphemeralReply>& outListReply ) = 0;

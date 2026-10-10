@@ -918,12 +918,12 @@ namespace sw
          *          레지스트리를 잠그고 다시 찾지 않도록, 같은 세대면 답이 같으므로 세대를 적어 두고 등록 · 해제로 세대가 바뀔 때만 다시 찾습니다.
          */
         mutable atomic<uint32> _parentMissGeneration;
-        uint32                 _typeId;
+        uint32                 _typeID;
         /**
          * @brief 루트부터 자기까지의 **이름(FQN 의 intern 인덱스)** 을 깊이 순서로 적은 조상 표입니다. `_ancestorDepth` 가 자기 칸입니다.
          * @details 캐스트의 핫패스가 이것만 봅니다: `표[pTarget 의 깊이] == pTarget 의 이름`. 포인터가 아니라 이름이라, 레지스트리 밖
          *          사본(테스트 목의 손으로 만든 `StaticType()`)도 같은 이름이면 같은 타입으로 봅니다. 걷기의 `isSameTypeName` 과
-         *          같은 규칙입니다. `_typeId` 를 쓰지 않는 이유도 그 사본입니다. 사본은 자기 id 를 따로 가집니다. 등록 · 해제로
+         *          같은 규칙입니다. `_typeID` 를 쓰지 않는 이유도 그 사본입니다. 사본은 자기 id 를 따로 가집니다. 등록 · 해제로
          *          사슬이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고, 배치 끝(`buildLookupCaches`)
          *          이나 첫 상속 검사가 다시 세웁니다.
          *          원자값인 이유는 `_pParentType` 과 같습니다. 첫 조회는 여러 스레드에서 올 수 있고 같은 값을 씁니다. 등록과

@@ -108,11 +108,11 @@ namespace sw
         resetCrew();
     }
 
-    ScavengerActionResult ScavengerExpedition::routeTo( const hashed_string& moonId )
+    ScavengerActionResult ScavengerExpedition::routeTo( const hashed_string& moonID )
     {
         if ( _phase != ScavengerPhase::InOrbit || _data._pCatalog == nullptr )
             return ScavengerActionResult::WrongPhase;
-        const ScavengerMoonDef* pMoon = _data._pCatalog->findMoon( moonId );
+        const ScavengerMoonDef* pMoon = _data._pCatalog->findMoon( moonID );
         if ( pMoon == nullptr )
             return ScavengerActionResult::UnknownMoon;
         if ( pMoon == _pMoon )
@@ -201,16 +201,16 @@ namespace sw
             departShip( true );
     }
 
-    ScavengerActionResult ScavengerExpedition::movePlayer( int32 player, const hashed_string& areaId )
+    ScavengerActionResult ScavengerExpedition::movePlayer( int32 player, const hashed_string& areaID )
     {
         if ( _phase != ScavengerPhase::Landed )
             return ScavengerActionResult::WrongPhase;
         if ( isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead() )
             return ScavengerActionResult::InvalidPlayer;
         ScavengerCrewMember& member = _listCrew[static_cast<size_t>( player )];
-        if ( _facility.canTraverse( member._areaId, areaId ) == false )
+        if ( _facility.canTraverse( member._areaID, areaID ) == false )
             return ScavengerActionResult::Blocked;
-        member._areaId = areaId;
+        member._areaID = areaID;
         return ScavengerActionResult::Ok;
     }
 
@@ -223,7 +223,7 @@ namespace sw
         if ( result != ScavengerPickupResult::Ok )
             return result;
         ScavengerScrap scrap;
-        if ( _facility.tryTakeScrap( uid, member._areaId, scrap ) == false )
+        if ( _facility.tryTakeScrap( uid, member._areaID, scrap ) == false )
             return ScavengerPickupResult::NotFound;
         return member._carry.add( scrap );
     }
@@ -238,7 +238,7 @@ namespace sw
         ScavengerScrap       scrap;
         if ( member._carry.tryRemove( uid, scrap ) == false )
             return ScavengerActionResult::InvalidPlayer;
-        if ( member._areaId == hashed_string( kShipAreaId ) )
+        if ( member._areaID == hashed_string( kShipAreaID ) )
         {
             if ( scrap.isBody() )
             {
@@ -250,7 +250,7 @@ namespace sw
             _listShipScrap.push_back( scrap );
             return ScavengerActionResult::Ok;
         }
-        (void)_facility.placeScrap( scrap, member._areaId );
+        (void)_facility.placeScrap( scrap, member._areaID );
         return ScavengerActionResult::Ok;
     }
 
@@ -259,7 +259,7 @@ namespace sw
         if ( isValidPlayer( player ) == false || _listCrew[static_cast<size_t>( player )].isDead() )
             return 0;
         ScavengerCrewMember& member = _listCrew[static_cast<size_t>( player )];
-        if ( member._areaId != hashed_string( kShipAreaId ) )
+        if ( member._areaID != hashed_string( kShipAreaID ) )
             return 0;
         int32 count = 0;
         while ( member._carry.getCount() > 0 )
@@ -293,9 +293,9 @@ namespace sw
         handleDeath( player, false );
     }
 
-    void ScavengerExpedition::notifyThreatDespawned( bool bIndoor, uint32 spawnId )
+    void ScavengerExpedition::notifyThreatDespawned( bool bIndoor, uint32 spawnID )
     {
-        (void)( bIndoor ? _indoorDirector : _outdoorDirector ).notifyDespawned( spawnId );
+        (void)( bIndoor ? _indoorDirector : _outdoorDirector ).notifyDespawned( spawnID );
         _listSpawnScratch.clear();
         ( bIndoor ? _indoorDirector : _outdoorDirector ).drainEvents( _listSpawnScratch );
     }
@@ -333,13 +333,13 @@ namespace sw
         return static_cast<int32>( static_cast<float32>( computeShipValue() ) * rate );
     }
 
-    ShopResult ScavengerExpedition::buyFromTerminal( const hashed_string& itemId, int32 count )
+    ShopResult ScavengerExpedition::buyFromTerminal( const hashed_string& itemID, int32 count )
     {
         if ( _data._pCatalog == nullptr || _phase == ScavengerPhase::GameOver )
             return ShopResult::UnknownShop;
         if ( _pWallet == nullptr )
             return ShopResult::NotEnoughMoney;
-        return _shop.buy( _data._pCatalog->getTerminalShopId(), itemId, count, *_pWallet, *_pShipStorage );
+        return _shop.buy( _data._pCatalog->getTerminalShopID(), itemID, count, *_pWallet, *_pShipStorage );
     }
 
     void ScavengerExpedition::drainEvents( vector<ScavengerEvent>& outListEvent )
@@ -395,7 +395,7 @@ namespace sw
         // 든 것은 그 자리에 떨어지고 시신이 남는다. 우주선 안에서 죽으면 시신은 이미 실려 있다.
         vector<ScavengerScrap> listDropped;
         member._carry.takeAll( listDropped );
-        const bool bOnShip = member._areaId == hashed_string( kShipAreaId );
+        const bool bOnShip = member._areaID == hashed_string( kShipAreaID );
         for ( ScavengerScrap& scrap : listDropped )
         {
             if ( bOnShip && scrap.isBody() == false )
@@ -409,7 +409,7 @@ namespace sw
             }
             else
             {
-                (void)_facility.placeScrap( scrap, member._areaId );
+                (void)_facility.placeScrap( scrap, member._areaID );
             }
         }
         if ( bOnShip )
@@ -419,11 +419,11 @@ namespace sw
         else if ( bLeftBehind == false && _data._pCatalog != nullptr )
         {
             ScavengerScrap body;
-            body._scrapId    = hashed_string( "body" );
+            body._scrapID    = hashed_string( "body" );
             body._weight     = _data._pCatalog->getCarrySettings()._bodyWeight;
             body._bodyOf     = player;
             body._bTwoHanded = SW_TRUE;
-            (void)_facility.placeScrap( body, member._areaId );
+            (void)_facility.placeScrap( body, member._areaID );
         }
         pushEvent( ScavengerEvent::Kind::PlayerDied, player, bLeftBehind ? 1 : 0 );
         if ( bLeftBehind == false && countAlive() == 0 && _phase == ScavengerPhase::Landed )
@@ -439,7 +439,7 @@ namespace sw
             ScavengerCrewMember& member = _listCrew[index];
             if ( member.isDead() )
                 continue;
-            if ( member._areaId == hashed_string( kShipAreaId ) )
+            if ( member._areaID == hashed_string( kShipAreaID ) )
             {
                 vector<ScavengerScrap> listCarried;
                 member._carry.takeAll( listCarried );
@@ -541,7 +541,7 @@ namespace sw
         {
             member._vitality.initialize( settings );
             member._carry.initialize( _data._pCatalog->getCarrySettings() );
-            member._areaId         = hashed_string( kShipAreaId );
+            member._areaID         = hashed_string( kShipAreaID );
             member._bBodyRecovered = SW_FALSE;
         }
     }
@@ -556,8 +556,8 @@ namespace sw
                 continue;
             ScavengerEvent event;
             event._kind    = ScavengerEvent::Kind::ThreatSpawned;
-            event._id      = spawn._entryId;
-            event._value   = static_cast<int32>( spawn._spawnId );
+            event._id      = spawn._entryID;
+            event._value   = static_cast<int32>( spawn._spawnID );
             event._bIndoor = bIndoor ? SW_TRUE : SW_FALSE;
             _eventBuffer.push( event );
         }
@@ -582,7 +582,7 @@ namespace sw
         {
             member._vitality.writeState( outArchive );
             member._carry.writeState( outArchive );
-            StateArchiveUtil::writeName( outArchive, member._areaId );
+            StateArchiveUtil::writeName( outArchive, member._areaID );
             outArchive << member._bBodyRecovered;
         }
         outArchive << static_cast<uint32>( _listShipScrap.size() );
@@ -615,7 +615,7 @@ namespace sw
         ScavengerExpedition restored = *this;
         for ( ScavengerCrewMember& member : restored._listCrew )
         {
-            const bool bMemberRead = member._vitality.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaId );
+            const bool bMemberRead = member._vitality.readState( archive ) && member._carry.readState( archive ) && StateArchiveUtil::readName( archive, member._areaID );
             if ( bMemberRead == false )
                 return false;
             archive >> member._bBodyRecovered;
@@ -633,9 +633,9 @@ namespace sw
                 return false;
         }
 
-        hashed_string moonId;
+        hashed_string moonID;
         uint8         phase = 0;
-        if ( StateArchiveUtil::readName( archive, moonId ) == false )
+        if ( StateArchiveUtil::readName( archive, moonID ) == false )
             return false;
         archive >> phase;
         archive >> restored._bDuskAnnounced;
@@ -646,8 +646,8 @@ namespace sw
         if ( bHeadValid == false )
             return false;
         restored._phase = static_cast<ScavengerPhase>( phase );
-        restored._pMoon = moonId.empty() ? nullptr : _data._pCatalog->findMoon( moonId );
-        if ( moonId.empty() == false && restored._pMoon == nullptr )
+        restored._pMoon = moonID.empty() ? nullptr : _data._pCatalog->findMoon( moonID );
+        if ( moonID.empty() == false && restored._pMoon == nullptr )
             return false;
         if ( restored._phase == ScavengerPhase::Landed && restored._pMoon == nullptr )
             return false;

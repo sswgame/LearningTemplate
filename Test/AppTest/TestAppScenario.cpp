@@ -36,17 +36,17 @@ namespace
             if ( sw::ResourceUtil::initialize() == false )
                 return listPath;
             const sw::string& resourceRoot = sw::ResourceUtil::getRootFolderPath();
-            for ( const sw::string& folderId : listFolder )
+            for ( const sw::string& folderID : listFolder )
             {
                 sw::vector<sw::string> listFile;
-                const sw::string       folder = sw::FileUtil::joinPath( resourceRoot, folderId );
+                const sw::string       folder = sw::FileUtil::joinPath( resourceRoot, folderID );
                 if ( sw::FileUtil::isDirectory( folder ) == false || sw::FileUtil::collectFiles( folder, ".xml", listFile, false ) == false )
                     continue;
                 std::sort( listFile.begin(), listFile.end() );
                 for ( const sw::string& filePath : listFile )
                 {
                     if ( sw::StringUtil::endsWith( filePath, ".scenario.xml", true ) )
-                        listPath.push_back( sw::ResourceUtil::toResourceId( filePath ) );
+                        listPath.push_back( sw::ResourceUtil::toResourceID( filePath ) );
                 }
             }
             return listPath;

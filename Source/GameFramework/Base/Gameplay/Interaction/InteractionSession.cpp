@@ -11,19 +11,19 @@ namespace sw
         , _holdProgress{}
         , _eventBuffer{}
         , _listHoldEvent{}
-        , _actorId{ 0 }
+        , _actorID{ 0 }
         , _stepIndex{ 0 }
         , _mashProgress{ 0.0f }
         , _state{ InteractionSessionState::Idle }
     {
     }
 
-    bool InteractionSession::begin( const InteractionDef* pDef, uint32 actorId )
+    bool InteractionSession::begin( const InteractionDef* pDef, uint32 actorID )
     {
         if ( pDef == nullptr || pDef->_listStep.empty() )
             return false;
         _pDef      = pDef;
-        _actorId   = actorId;
+        _actorID   = actorID;
         _stepIndex = 0;
         _state     = InteractionSessionState::Active;
         _eventBuffer.push( InteractionSessionEvent::Started );
@@ -51,7 +51,7 @@ namespace sw
                 config._maxParticipants   = step._maxParticipants;
                 config._bResetOnInterrupt = SW_TRUE;
                 _holdProgress.initialize( config, nullptr, 1u );
-                (void)_holdProgress.join( _actorId );
+                (void)_holdProgress.join( _actorID );
                 break;
             }
             case InteractionInputMode::Mash:
@@ -92,7 +92,7 @@ namespace sw
                 if ( bHeld == false )
                 {
                     // 떼면 진행은 처음부터(InteractionProgress 의 끊김 규칙) — 상호작용이 끝난다.
-                    (void)_holdProgress.leave( _actorId );
+                    (void)_holdProgress.leave( _actorID );
                     cancel();
                     break;
                 }

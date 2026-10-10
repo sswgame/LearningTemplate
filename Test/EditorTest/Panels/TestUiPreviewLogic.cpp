@@ -82,7 +82,7 @@ SW_TEST_CASE( UiPreviewLogicTest, ImageMappingAndWidgetRows )
     SW_EXPECT_EQUAL( 1u, listRow[1]._depth );
     SW_EXPECT_STREQ( "BorderPanel #Card", listRow[1]._label.c_str() );
     SW_EXPECT_EQUAL( 2u, listRow[2]._depth );
-    SW_EXPECT_EQUAL( pBorder->getId(), UiPreviewLogic::findWidgetAt( tree, sw::float2{ 50.0f, 30.0f } ) ); // 글은 놓지 않아 크기 0 — 테두리가 맨 위
-    SW_EXPECT_EQUAL( pRoot->getId(), UiPreviewLogic::findWidgetAt( tree, sw::float2{ 300.0f, 200.0f } ) );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, UiPreviewLogic::findWidgetAt( tree, sw::float2{ 500.0f, 500.0f } ) );
+    SW_EXPECT_EQUAL( pBorder->getID(), UiPreviewLogic::findWidgetAt( tree, sw::float2{ 50.0f, 30.0f } ) ); // 글은 놓지 않아 크기 0 — 테두리가 맨 위
+    SW_EXPECT_EQUAL( pRoot->getID(), UiPreviewLogic::findWidgetAt( tree, sw::float2{ 300.0f, 200.0f } ) );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, UiPreviewLogic::findWidgetAt( tree, sw::float2{ 500.0f, 500.0f } ) );
 }

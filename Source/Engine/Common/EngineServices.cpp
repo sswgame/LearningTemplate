@@ -93,7 +93,7 @@ namespace sw
 #define SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )     \
     if ( bGameModuleOnly == false || ( SW_SERVICE_IS_GAME_VISIBLE( visibility ) == 1 ) )     \
     {                                                                                        \
-        outService.arrServices[toRawServiceId( ModuleServiceId::Type )] = s_services.member; \
+        outService.arrServices[toRawServiceID( ModuleServiceID::Type )] = s_services.member; \
     }
 #define SW_ENGINE_SERVICE_CONST( member, Tag, Type, getter, requirement, visibility, creator ) \
     SW_ENGINE_SERVICE( member, Tag, Type, getter, requirement, visibility, creator )

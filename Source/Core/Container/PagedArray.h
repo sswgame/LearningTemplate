@@ -22,7 +22,7 @@ namespace sw
      *          아직 없는 청크면 nullptr 을 받습니다.
      *
      *          쓰는 곳은 둘입니다. `SlotHandleTable` 은 슬롯을 여기에 두고 RHI 가 드로우마다 락 없이 찾습니다.
-     *          `GameObjectManager` 는 objectId → GameObject* 표를 여기에 두고 핸들을 풀 때마다 락 없이 읽습니다.
+     *          `GameObjectManager` 는 objectID → GameObject* 표를 여기에 두고 핸들을 풀 때마다 락 없이 읽습니다.
      *
      *          **동시성 계약**
      *          - `find` 는 락이 없고, 쓰기와 동시에 불러도 안전합니다.

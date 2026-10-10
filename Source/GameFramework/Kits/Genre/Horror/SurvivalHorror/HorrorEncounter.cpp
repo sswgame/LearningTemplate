@@ -35,10 +35,10 @@ namespace sw
         for ( HorrorInvestigator& investigator : _listInvestigator )
         {
             investigator._bDefeated = SW_FALSE;
-            _turnOrder.addActor( investigator._actorId, investigator._speed );
+            _turnOrder.addActor( investigator._actorID, investigator._speed );
             defeatIfBroken( investigator );
         }
-        _turnOrder.addActor( kMonsterActorId, monster._speed );
+        _turnOrder.addActor( kMonsterActorID, monster._speed );
         refreshState();
     }
 
@@ -47,21 +47,21 @@ namespace sw
         HorrorTurnResult result;
         if ( _state != HorrorEncounterState::Ongoing )
             return result;
-        result._actorId = _turnOrder.next();
+        result._actorID = _turnOrder.next();
         ++_turnCount;
-        if ( result._actorId == kMonsterActorId )
+        if ( result._actorID == kMonsterActorID )
         {
             HorrorInvestigator* pTarget = nullptr;
             for ( HorrorInvestigator& investigator : _listInvestigator )
             {
                 if ( investigator._bDefeated == SW_TRUE )
                     continue;
-                if ( pTarget == nullptr || investigator._health < pTarget->_health || ( investigator._health == pTarget->_health && investigator._actorId < pTarget->_actorId ) )
+                if ( pTarget == nullptr || investigator._health < pTarget->_health || ( investigator._health == pTarget->_health && investigator._actorID < pTarget->_actorID ) )
                     pTarget = &investigator;
             }
             if ( pTarget != nullptr )
             {
-                result._targetId   = pTarget->_actorId;
+                result._targetID   = pTarget->_actorID;
                 result._healthLoss = MathUtil::min( pTarget->_health, _monster._damage );
                 pTarget->_health -= result._healthLoss;
                 defeatIfBroken( *pTarget );
@@ -70,7 +70,7 @@ namespace sw
             return result;
         }
 
-        HorrorInvestigator* pInvestigator = findInvestigator( result._actorId );
+        HorrorInvestigator* pInvestigator = findInvestigator( result._actorID );
         if ( pInvestigator == nullptr || pInvestigator->_bDefeated == SW_TRUE )
             return result;
         result._horrorSuccesses = rollSuccesses( pInvestigator->_will );
@@ -100,11 +100,11 @@ namespace sw
         return successCount;
     }
 
-    HorrorInvestigator* HorrorEncounter::findInvestigator( int32 actorId )
+    HorrorInvestigator* HorrorEncounter::findInvestigator( int32 actorID )
     {
         for ( HorrorInvestigator& investigator : _listInvestigator )
         {
-            if ( investigator._actorId == actorId )
+            if ( investigator._actorID == actorID )
                 return &investigator;
         }
         return nullptr;
@@ -115,7 +115,7 @@ namespace sw
         if ( investigator._bDefeated == SW_TRUE || ( investigator._health > 0 && investigator._sanity > 0 ) )
             return;
         investigator._bDefeated = SW_TRUE;
-        _turnOrder.removeActor( investigator._actorId );
+        _turnOrder.removeActor( investigator._actorID );
     }
 
     void HorrorEncounter::refreshState()
@@ -140,7 +140,7 @@ namespace sw
         for ( const HorrorInvestigator& investigator : _listInvestigator )
         {
             outArchive << investigator._speed;
-            outArchive << investigator._actorId;
+            outArchive << investigator._actorID;
             outArchive << investigator._health;
             outArchive << investigator._sanity;
             outArchive << investigator._will;
@@ -156,11 +156,11 @@ namespace sw
 
     bool HorrorEncounter::readState( Archive& archive )
     {
-        hashed_string monsterId;
+        hashed_string monsterID;
         uint32        count = 0;
         // 조사자마다 속도 · 번호 · 체력 · 정신력 · 의지 · 힘(24) + 빠짐(1)
-        const bool bHeadRead = StateArchiveUtil::readName( archive, monsterId ) && StateArchiveUtil::readCount( archive, 25, count );
-        if ( bHeadRead == false || monsterId != _monster._id )
+        const bool bHeadRead = StateArchiveUtil::readName( archive, monsterID ) && StateArchiveUtil::readCount( archive, 25, count );
+        if ( bHeadRead == false || monsterID != _monster._id )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다 — 괴물 정의 · 성공 눈은 사본이 그대로 든다.
         HorrorEncounter restored = *this;
@@ -168,7 +168,7 @@ namespace sw
         for ( HorrorInvestigator& investigator : restored._listInvestigator )
         {
             archive >> investigator._speed;
-            archive >> investigator._actorId;
+            archive >> investigator._actorID;
             archive >> investigator._health;
             archive >> investigator._sanity;
             archive >> investigator._will;

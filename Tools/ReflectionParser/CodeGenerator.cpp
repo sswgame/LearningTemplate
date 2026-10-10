@@ -571,7 +571,7 @@ namespace sw
         }
 
         appendTemplate( out, templatefile::kTypeRegistrarBegin, {
-                                                                    {        templatekey::kId,                registrarName},
+                                                                    {        templatekey::kID,                registrarName},
                                                                     {       templatekey::kFqn, typeInfo._fullyQualifiedName},
                                                                     {      templatekey::kName,               typeInfo._name},
                                                                     { templatekey::kParentFqn,          typeInfo._parentFQN},
@@ -605,7 +605,7 @@ namespace sw
 
         appendTemplate( out, templatefile::kTypeRegistrarEnd,
                         {
-                            { templatekey::kId, registrarName },
+                            { templatekey::kID, registrarName },
                             { templatekey::kFqn, typeInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( typeInfo._listAlias, typeInfo._fullyQualifiedName, false ) }
@@ -627,7 +627,7 @@ namespace sw
         };
 
         appendTemplate( out, templatefile::kEnumRegistrarBegin, {
-                                                                    {          templatekey::kId,                                                  registrarName},
+                                                                    {          templatekey::kID,                                                  registrarName},
                                                                     {         templatekey::kFqn,                                   enumInfo._fullyQualifiedName},
                                                                     {        templatekey::kName,                                                 enumInfo._name},
                                                                     {  templatekey::kModuleName,                                                    _moduleName},
@@ -682,7 +682,7 @@ namespace sw
 
         appendTemplate( out, templatefile::kEnumRegistrarEnd,
                         {
-                            { templatekey::kId, registrarName },
+                            { templatekey::kID, registrarName },
                             { templatekey::kFqn, enumInfo._fullyQualifiedName },
                             { templatekey::kAliasRegs,
                              CodeGeneratorInternal::emitAliasRegisterLines( enumInfo._listAlias, enumInfo._fullyQualifiedName, true ) }

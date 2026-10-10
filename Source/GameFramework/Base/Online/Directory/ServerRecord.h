@@ -36,7 +36,7 @@ namespace sw
         string _kind{};
         string _region{};
         string _address{};
-        uint64 _serverId{ 0 };
+        uint64 _serverID{ 0 };
         uint32 _buildVersion{ 0 };
         int32  _capacity{ 0 };
         uint16 _port{ 0 };
@@ -67,10 +67,10 @@ namespace sw
         static constexpr int32 kMaxAddressSize = 128;
         static constexpr uint8 kFormatVersion  = 1;
 
-        static string             makeRecordKey( uint64 serverId );
+        static string             makeRecordKey( uint64 serverID );
         static string             makeIndexKey( string_view kind );
-        static string             makeMember( uint64 serverId );
-        [[nodiscard]] static bool parseMember( string_view member, uint64& outServerId );
+        static string             makeMember( uint64 serverID );
+        [[nodiscard]] static bool parseMember( string_view member, uint64& outServerID );
         /** @brief 종류 · 지역 이름 규칙(`[0-9a-z_-]`, 1..16 바이트)을 지키는가입니다. */
         static bool isValidName( string_view name );
 

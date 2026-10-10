@@ -180,27 +180,27 @@ namespace test
         {
             vector<Sample> _listSample{};
             uint32         _objectIndex{ 0 };
-            uint32         _groupId{ 0 };
+            uint32         _groupID{ 0 };
         };
 
         vector<Track> _listTrack;
 
-        void record( uint32 objectIndex, uint32 groupId, uint32 tick, const float3& position )
+        void record( uint32 objectIndex, uint32 groupID, uint32 tick, const float3& position )
         {
-            Track* pTrack = findTrack( objectIndex, groupId );
+            Track* pTrack = findTrack( objectIndex, groupID );
             if ( pTrack == nullptr )
             {
-                _listTrack.push_back( Track{ {}, objectIndex, groupId } );
+                _listTrack.push_back( Track{ {}, objectIndex, groupID } );
                 pTrack = &_listTrack.back();
             }
             pTrack->_listSample.push_back( Sample{ position, tick } );
         }
 
-        Track* findTrack( uint32 objectIndex, uint32 groupId )
+        Track* findTrack( uint32 objectIndex, uint32 groupID )
         {
             for ( Track& track : _listTrack )
             {
-                if ( track._objectIndex == objectIndex && track._groupId == groupId )
+                if ( track._objectIndex == objectIndex && track._groupID == groupID )
                     return &track;
             }
             return nullptr;
@@ -210,9 +210,9 @@ namespace test
          * @brief 서버 틱(소수)의 자리 — 앞뒤 기록 사이 선형. 그 틱에 서버에 그 그룹이 없었으면 false.
          * @details 서버에서 이미 갈라진 그룹을 클라이언트가 아직 들고 있는 것(가른 사건이 신뢰 채널에서 밀렸다)은 자세 오차가 아니라 사건 지연이다 — 따로 잰다.
          */
-        bool sample( uint32 objectIndex, uint32 groupId, float32 tick, float3& outPosition )
+        bool sample( uint32 objectIndex, uint32 groupID, float32 tick, float3& outPosition )
         {
-            Track*     pTrack   = findTrack( objectIndex, groupId );
+            Track*     pTrack   = findTrack( objectIndex, groupID );
             const bool bOutside = pTrack == nullptr || pTrack->_listSample.empty() || tick < static_cast<float32>( pTrack->_listSample.front()._tick ) ||
                                   tick > static_cast<float32>( pTrack->_listSample.back()._tick ) + 1.0f;
             if ( bOutside )
@@ -369,7 +369,7 @@ namespace test
                 for ( const FractureGroupPose& pose : listPose )
                 {
                     if ( pose._bGone == SW_FALSE && server._listFracture[object]->isChunkVolume( pose._volume ) )
-                        history.record( object, pose._groupId, serverTick, pose._center );
+                        history.record( object, pose._groupID, serverTick, pose._center );
                 }
             }
 
@@ -400,7 +400,7 @@ namespace test
                         float3 serverPosition{};
                         if ( pose._bDriven == SW_FALSE || pose._bResting == SW_TRUE || renderTick < 0.0f )
                             continue;
-                        if ( history.sample( object, pose._groupId, renderTick, serverPosition ) )
+                        if ( history.sample( object, pose._groupID, renderTick, serverPosition ) )
                             result._listChunkError.push_back( ( pose._center - serverPosition ).getLength() );
                     }
                 }
@@ -465,7 +465,7 @@ namespace test
                         ++result._chunkCount;
                         for ( const FractureGroupPose& serverPose : listServerPose )
                         {
-                            if ( serverPose._groupId == pose._groupId && serverPose._bResting == SW_TRUE )
+                            if ( serverPose._groupID == pose._groupID && serverPose._bResting == SW_TRUE )
                                 result._maxRestError = MathUtil::max( result._maxRestError, ( pose._position - serverPose._position ).getLength() );
                         }
                         if ( pose._bDriven == SW_FALSE )

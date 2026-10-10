@@ -49,9 +49,9 @@ namespace sw
 
 namespace sw
 {
-    EphemeralServerBus::EphemeralServerBus( IEphemeralStore* pStore, uint64 serverId )
+    EphemeralServerBus::EphemeralServerBus( IEphemeralStore* pStore, uint64 serverID )
         : _pStore{ pStore }
-        , _serverId{ serverId }
+        , _serverID{ serverID }
         , _nextSequence{ 1 }
         , _droppedCount{ 0 }
     {
@@ -68,7 +68,7 @@ namespace sw
         vector<uint8> envelopeBytes;
         envelopeBytes.reserve( EphemeralServerBusInternal::kEnvelopeSize + static_cast<size_t>( size ) );
         envelopeBytes.push_back( EphemeralServerBusInternal::kEnvelopeVersion );
-        EphemeralServerBusInternal::appendUint64( envelopeBytes, _serverId );
+        EphemeralServerBusInternal::appendUint64( envelopeBytes, _serverID );
         EphemeralServerBusInternal::appendUint64( envelopeBytes, _nextSequence++ );
         envelopeBytes.insert( envelopeBytes.end(), pData, pData + size );
         (void)_pStore->submit( EphemeralRequest::makePublish( EphemeralServerBusInternal::makeChannel( topic ), std::move( envelopeBytes ) ) );
@@ -106,7 +106,7 @@ namespace sw
             }
             ServerBusMessage& busMessage = outListMessage.emplace_back();
             busMessage._topic            = message._channel.substr( prefix.size() );
-            busMessage._originServerId   = EphemeralServerBusInternal::readUint64( message._bytes.data() + 1 );
+            busMessage._originServerID   = EphemeralServerBusInternal::readUint64( message._bytes.data() + 1 );
             busMessage._sequence         = EphemeralServerBusInternal::readUint64( message._bytes.data() + 9 );
             busMessage._bytes.assign( message._bytes.begin() + static_cast<ptrdiff_t>( EphemeralServerBusInternal::kEnvelopeSize ), message._bytes.end() );
             ++addedCount;

@@ -21,8 +21,8 @@ namespace sw
     /** @brief 표의 항목 하나 — 아이템이거나 다른 표입니다. */
     struct LootEntry
     {
-        hashed_string _itemId{};
-        hashed_string _tableId{}; ///< 비지 않으면 이 표를 굴린다
+        hashed_string _itemID{};
+        hashed_string _tableID{}; ///< 비지 않으면 이 표를 굴린다
         float32       _weight{ 1.0f };
         float32       _chance{ 1.0f }; ///< 늘 주는 항목의 확률(0..1)
         int32         _minCount{ 1 };
@@ -66,9 +66,9 @@ namespace sw
          * @brief 표를 굴려 @p outItems 에 더합니다. 표가 없으면 false 입니다.
          * @param luck "없음" 가중치를 나누고 늘 주는 항목의 확률에 곱한다(1 = 그대로).
          */
-        bool roll( const hashed_string& tableId, GameRandom& random, ItemStackList& outItems, float32 luck = 1.0f ) const;
+        bool roll( const hashed_string& tableID, GameRandom& random, ItemStackList& outItems, float32 luck = 1.0f ) const;
         /** @brief 아이템 하나가 나올 확률(한 번 굴릴 때 — 표 안의 표 포함, 늘 주는 항목 포함)의 근삿값입니다(도감 · 툴팁). */
-        float32 computeDropChance( const hashed_string& tableId, const hashed_string& itemId ) const;
+        float32 computeDropChance( const hashed_string& tableID, const hashed_string& itemID ) const;
 
         const LootTableDef* findTable( const hashed_string& id ) const { return _catalog.find( id ); }
 
@@ -77,8 +77,8 @@ namespace sw
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
         void                         rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
-        float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const;
-        float32                      computeTableChance( const LootTableDef& table, const hashed_string& itemId, int32 depth ) const;
+        float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemID, int32 depth ) const;
+        float32                      computeTableChance( const LootTableDef& table, const hashed_string& itemID, int32 depth ) const;
 
         GameCatalog<LootTableDef> _catalog{};
     };

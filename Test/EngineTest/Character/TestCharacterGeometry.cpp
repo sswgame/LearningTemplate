@@ -64,15 +64,15 @@ SW_TEST_CASE( MeshMergerTest, NeverMergesAcrossSkeletons )
     MeshMergeSource          arrSource[2];
     arrSource[0]._name       = hashed_string( "Body" );
     arrSource[0]._pGeometry  = &body;
-    arrSource[0]._skeletonId = 1;
+    arrSource[0]._skeletonID = 1;
     arrSource[1]._name       = hashed_string( "Hat" );
     arrSource[1]._pGeometry  = &hat;
-    arrSource[1]._skeletonId = 2;
+    arrSource[1]._skeletonID = 2;
     MergedMesh merged;
     string     error;
     SW_EXPECT_FALSE( MeshMerger::merge( vector_reference<const MeshMergeSource>( arrSource, 2 ), nullptr, merged, &error ) );
     SW_EXPECT_TRUE( StringUtil::contains( error, "another skeleton" ) );
-    arrSource[1]._skeletonId = 1;
+    arrSource[1]._skeletonID = 1;
     SW_EXPECT_TRUE( MeshMerger::merge( vector_reference<const MeshMergeSource>( arrSource, 2 ), nullptr, merged, &error ) );
     SW_EXPECT_EQUAL( body.getTriangleCount() + hat.getTriangleCount(), merged._geometry.getTriangleCount() );
 }

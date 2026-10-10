@@ -48,9 +48,9 @@ namespace sw
      * @class AbilitySystemComponent
      * @brief 오브젝트 하나의 어빌리티 시스템입니다 — 어트리뷰트 묶음, 걸린 이펙트, 부여된 어빌리티, 태그 개수를 들고 시간을 돌립니다.
      * @details **쓰는 법**(언리얼 GAS 와 같은 순서):
-     *          1. 오브젝트에 붙이고 어트리뷰트 묶음을 더합니다 — 코드(`addAttributeSet<CombatAttributeSet>()`) 또는 데이터(`_abilitySetId` →
+     *          1. 오브젝트에 붙이고 어트리뷰트 묶음을 더합니다 — 코드(`addAttributeSet<CombatAttributeSet>()`) 또는 데이터(`_abilitySetID` →
      *             카탈로그의 `<AbilitySet>` 이 플레이 시작에 묶음 · 어빌리티 · 시작 이펙트 · 태그를 한 번에 줍니다).
-     *          2. 어빌리티를 줍니다(`giveAbility` · `giveAbilityById`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 발동합니다.
+     *          2. 어빌리티를 줍니다(`giveAbility` · `giveAbilityByID`). 입력 번호를 주면 `abilityInputPressed( 번호 )` 가 발동합니다.
      *          3. 어빌리티는 이펙트 스펙(`makeOutgoingSpec`)을 만들어 자기에게 · 남에게 겁니다(`applyGameplayEffectSpecToTarget`).
      *          4. 게임은 델리게이트(어트리뷰트 · 태그 · 큐 · 이벤트)나 "game" 채널(`GameplayCueEvent` · `AbilityOwnerDiedEvent`)로 반응합니다.
      *
@@ -85,7 +85,7 @@ namespace sw
         using GameplayCueDelegate      = Delegate<void( const GameplayCueEvent& )>;
 
         /** @brief 입력에 묶이지 않은 어빌리티의 입력 번호입니다. */
-        static constexpr int32 kNoInputId = -1;
+        static constexpr int32 kNoInputID = -1;
 
         AbilitySystemComponent();
         ~AbilitySystemComponent() override;
@@ -108,13 +108,13 @@ namespace sw
         const AbilityCatalog* findCatalog() const;
 
         /** @brief 플레이 시작에 줄 어빌리티 세트 id 입니다(카탈로그 `<AbilitySet id="...">`). */
-        void                 setAbilitySetId( const hashed_string& setId ) { _abilitySetId = setId; }
-        const hashed_string& getAbilitySetId() const { return _abilitySetId; }
+        void                 setAbilitySetID( const hashed_string& setID ) { _abilitySetID = setID; }
+        const hashed_string& getAbilitySetID() const { return _abilitySetID; }
         /**
          * @brief 카탈로그의 어빌리티 세트 하나를 지금 줍니다 — 어트리뷰트 묶음 · 기본값, 어빌리티(입력 번호 포함), 시작 이펙트, 태그.
          * @return 세트를 찾아 줬으면 true. 카탈로그 · 세트가 없으면 경고하고 false 입니다.
          */
-        bool grantAbilitySet( const hashed_string& setId );
+        bool grantAbilitySet( const hashed_string& setID );
 
         // --------------------------------------------------------------------------
         // 2) 어트리뷰트
@@ -180,7 +180,7 @@ namespace sw
         /** @brief 정의로 이 오브젝트가 거는 스펙을 만듭니다 — 컨텍스트 · 레벨 · 어트리뷰트 스냅샷이 채워집니다. */
         GameplayEffectSpec makeOutgoingSpec( const shared_ptr<const GameplayEffectDef>& pDef, int32 level = 1 ) const;
         /** @brief 카탈로그의 이펙트 id 로 스펙을 만듭니다. 없으면 빈 스펙입니다(경고). */
-        GameplayEffectSpec makeOutgoingSpecById( const hashed_string& effectId, int32 level = 1 ) const;
+        GameplayEffectSpec makeOutgoingSpecByID( const hashed_string& effectID, int32 level = 1 ) const;
         /**
          * @brief 스펙을 이 오브젝트에 겁니다(언리얼 `ApplyGameplayEffectSpecToSelf`).
          * @return 걸렸으면 유효한 핸들(즉시 이펙트도). 대상 태그 조건에 막혔거나 스펙이 비었으면 무효 핸들입니다.
@@ -193,7 +193,7 @@ namespace sw
          */
         ActiveEffectHandle applyGameplayEffectSpecToTarget( const GameplayEffectSpec& spec, AbilitySystemComponent* pTarget );
         /** @brief 카탈로그 이펙트 id 로 스펙을 만들어 자기에게 겁니다(시작 이펙트 · 디버그). */
-        ActiveEffectHandle applyGameplayEffectToSelf( const hashed_string& effectId, int32 level = 1 );
+        ActiveEffectHandle applyGameplayEffectToSelf( const hashed_string& effectID, int32 level = 1 );
         /**
          * @brief 걸린 이펙트를 지웁니다. @p stacksToRemove 가 0 이하이면 통째로, 아니면 그만큼 스택을 내립니다(0 이 되면 지운다).
          * @return 무엇이든 바뀌었으면 true 입니다.
@@ -230,11 +230,11 @@ namespace sw
         // --------------------------------------------------------------------------
         /**
          * @brief 어빌리티를 줍니다(언리얼 `GiveAbility`). 설정에 `_bActivateOnGranted` 가 있으면 바로 발동을 시도합니다.
-         * @param inputId `abilityInputPressed` 로 발동할 번호(`kNoInputId` 면 입력 없음)
+         * @param inputID `abilityInputPressed` 로 발동할 번호(`kNoInputID` 면 입력 없음)
          */
-        AbilitySpecHandle giveAbility( unique_ptr<GameplayAbility> pAbility, int32 level = 1, int32 inputId = kNoInputId );
+        AbilitySpecHandle giveAbility( unique_ptr<GameplayAbility> pAbility, int32 level = 1, int32 inputID = kNoInputID );
         /** @brief 카탈로그의 어빌리티 id 로 만들어 줍니다. 없으면 무효 핸들입니다(경고). */
-        AbilitySpecHandle giveAbilityById( const hashed_string& abilityId, int32 level = 1, int32 inputId = kNoInputId );
+        AbilitySpecHandle giveAbilityByID( const hashed_string& abilityID, int32 level = 1, int32 inputID = kNoInputID );
         /** @brief 어빌리티를 거둡니다. 도는 중이면 취소한 뒤 거둡니다. */
         bool clearAbility( AbilitySpecHandle handle );
         /** @brief 모든 어빌리티를 거둡니다. */
@@ -246,7 +246,7 @@ namespace sw
         /** @brief 어빌리티 태그가 @p tags 에 맞는 어빌리티를 모두 발동해 봅니다. 하나라도 발동했으면 true 입니다. */
         [[nodiscard]] bool tryActivateAbilitiesByTag( const TagContainer& tags );
         /** @brief 카탈로그 id(`GameplayAbilityConfig::_id`)로 부여된 어빌리티를 찾습니다. 없으면 무효 핸들입니다. */
-        AbilitySpecHandle findAbilitySpecHandle( const hashed_string& abilityId ) const;
+        AbilitySpecHandle findAbilitySpecHandle( const hashed_string& abilityID ) const;
         /** @brief 부여된 어빌리티를 찾습니다. 없거나 거두는 중이면 nullptr 입니다. */
         GameplayAbility* findAbility( AbilitySpecHandle handle ) const;
         /** @brief 도는 중이면 true 입니다. */
@@ -261,10 +261,10 @@ namespace sw
         uint32 getAbilityCount() const;
         /** @brief 부여된 어빌리티 핸들을 채웁니다(부여 순서). */
         void getAbilitySpecHandles( vector<AbilitySpecHandle>& outListHandle ) const;
-        /** @brief 입력 @p inputId 가 눌렸습니다 — 그 번호의 어빌리티가 돌고 있으면 알리고, 아니면 발동을 시도합니다. */
-        void abilityInputPressed( int32 inputId );
-        /** @brief 입력 @p inputId 가 떼어졌습니다. */
-        void abilityInputReleased( int32 inputId );
+        /** @brief 입력 @p inputID 가 눌렸습니다 — 그 번호의 어빌리티가 돌고 있으면 알리고, 아니면 발동을 시도합니다. */
+        void abilityInputPressed( int32 inputID );
+        /** @brief 입력 @p inputID 가 떼어졌습니다. */
+        void abilityInputReleased( int32 inputID );
         /** @brief 어빌리티가 발동한 뒤 부를 델리게이트입니다. */
         DelegateHandle registerAbilityActivated( const AbilityActivatedDelegate& delegate );
         void           unregisterAbilityActivated( DelegateHandle handle );
@@ -309,7 +309,7 @@ namespace sw
             AbilitySpecHandle           _handle{};
             unique_ptr<GameplayAbility> _pAbility{};
             int32                       _level{ 1 };
-            int32                       _inputId{ kNoInputId };
+            int32                       _inputID{ kNoInputID };
             uint8                       _bPendingRemove{ SW_FALSE };
         };
 
@@ -419,13 +419,13 @@ namespace sw
         unique_ptr<AbilitySystemModuleUnloadGuard>                                                      _pModuleCodeGuard; ///< 모듈을 내리기 전 그 모듈의 코드를 뗀다
         const AbilityCatalog*                                                                           _pCatalog;
         float32                                                                                         _time;
-        uint64                                                                                          _nextHandleId;
+        uint64                                                                                          _nextHandleID;
         uint32                                                                                          _listLockDepth;
         uint8                                                                                           _bHasPendingRemoval;
 
         // ---- 저장되는 설정 ----
         PROPERTY( Category = "Ability System", DisplayName = "Ability Set", Tooltip = "Ability set id in the AbilityCatalog, granted on begin play" )
-        hashed_string _abilitySetId;
+        hashed_string _abilitySetID;
         PROPERTY( Category = "Ability System", DisplayName = "Health Attribute", Tooltip = "Attribute that drives the health bar and damage numbers" )
         hashed_string _healthAttribute;
         PROPERTY( Category = "Ability System", DisplayName = "Max Health Attribute", Tooltip = "Attribute used as the health bar maximum" )

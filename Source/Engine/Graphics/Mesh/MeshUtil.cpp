@@ -161,8 +161,8 @@ namespace sw
         {
             using PrimitiveCache = WeakInternCache<hashed_string, Mesh>;
 
-            /** @brief 기준 이름(`canonicalPrimitiveIdVal`)으로 흰색 도형을 짓습니다. */
-            static shared_ptr<Mesh> createSharedPrimitive( const hashed_string& canonicalId ) { return MeshUtil::createPrimitive( canonicalId.c_str() ); }
+            /** @brief 기준 이름(`canonicalPrimitiveIDVal`)으로 흰색 도형을 짓습니다. */
+            static shared_ptr<Mesh> createSharedPrimitive( const hashed_string& canonicalID ) { return MeshUtil::createPrimitive( canonicalID.c_str() ); }
 
             /** @brief 내장 도형 표입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). */
             static PrimitiveCache& getPrimitiveCache()
@@ -229,33 +229,33 @@ namespace sw
      * @details 만들기와 공유 캐시가 **같은 판정**을 써야 합니다. 따로 적으면 "Quad" 와 "Rect" 가
      *          같은 기하인데 캐시에서는 다른 자리를 차지합니다(배치도 그만큼 갈립니다).
      */
-    static const utf8* canonicalPrimitiveIdVal( string_view meshId )
+    static const utf8* canonicalPrimitiveIDVal( string_view meshID )
     {
-        if ( meshId.empty() || StringUtil::equals( meshId, "Cube", true ) )
+        if ( meshID.empty() || StringUtil::equals( meshID, "Cube", true ) )
             return "cube";
-        if ( StringUtil::equals( meshId, "Quad", true ) || StringUtil::equals( meshId, "Rect", true ) )
+        if ( StringUtil::equals( meshID, "Quad", true ) || StringUtil::equals( meshID, "Rect", true ) )
             return "quad";
-        if ( StringUtil::equals( meshId, "Sprite", true ) )
+        if ( StringUtil::equals( meshID, "Sprite", true ) )
             return "sprite";
-        if ( StringUtil::equals( meshId, "Plane", true ) || StringUtil::equals( meshId, "Ground", true ) )
+        if ( StringUtil::equals( meshID, "Plane", true ) || StringUtil::equals( meshID, "Ground", true ) )
             return "plane";
-        if ( StringUtil::equals( meshId, "Sphere", true ) )
+        if ( StringUtil::equals( meshID, "Sphere", true ) )
             return "sphere";
-        if ( StringUtil::equals( meshId, "Cylinder", true ) )
+        if ( StringUtil::equals( meshID, "Cylinder", true ) )
             return "cylinder";
-        if ( StringUtil::equals( meshId, "Capsule", true ) )
+        if ( StringUtil::equals( meshID, "Capsule", true ) )
             return "capsule";
-        if ( StringUtil::equals( meshId, "Cone", true ) )
+        if ( StringUtil::equals( meshID, "Cone", true ) )
             return "cone";
-        if ( StringUtil::equals( meshId, "GrassClump", true ) )
+        if ( StringUtil::equals( meshID, "GrassClump", true ) )
             return "grassclump";
         return nullptr;
     }
 
-    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshId, PrimitiveVertexColor vertexColor )
+    shared_ptr<Mesh> MeshUtil::createPrimitive( string_view meshID, PrimitiveVertexColor vertexColor )
     {
         SW_MEMORY_SCOPE( Mesh );
-        const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
+        const utf8* pCanonical = canonicalPrimitiveIDVal( meshID );
         if ( pCanonical == nullptr )
             return {};
 
@@ -295,10 +295,10 @@ namespace sw
         return pMesh;
     }
 
-    shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshId )
+    shared_ptr<Mesh> MeshUtil::acquirePrimitive( string_view meshID )
     {
         SW_MEMORY_SCOPE( Mesh );
-        const utf8* pCanonical = canonicalPrimitiveIdVal( meshId );
+        const utf8* pCanonical = canonicalPrimitiveIDVal( meshID );
         if ( pCanonical == nullptr )
             return {};
 

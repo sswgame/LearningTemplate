@@ -21,7 +21,7 @@ namespace sw
         // 반대로 **디코딩에는 있다.** 그쪽은 캐스팅이 아니라 uint32/int32 범위를 벗어난 값을 걸러 내는 진짜 검사를 한다.
         //
         // 주의: 32비트 디코더가 `static_cast` 로 자르면 범위 밖 값을 **조용히 잘라** 망가진 아카이브가 거부되지 않고 엉뚱하게
-        // 읽힌다(`Archive::readPooledString` 의 `poolId >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다).
+        // 읽힌다(`Archive::readPooledString` 의 `poolID >= getCount()` 검사는 0x1'0000'0000+n 이 n 으로 잘린 뒤에 보므로 통과한다).
         // `narrowToUint32` · `narrowToInt32` 가 실제로 거른다.
 
         /**

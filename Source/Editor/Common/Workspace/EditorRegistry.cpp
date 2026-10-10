@@ -16,7 +16,7 @@ namespace sw::editor
 
     bool EditorRegistrationList::addRegistration( const EditorRegistration& registration )
     {
-        const string_view        id     = ( registration._pId != nullptr ) ? string_view{ registration._pId } : string_view{};
+        const string_view        id     = ( registration._pID != nullptr ) ? string_view{ registration._pID } : string_view{};
         const RegistrationResult result = _registered.add( &registration, id, registration._order );
         switch ( result )
         {

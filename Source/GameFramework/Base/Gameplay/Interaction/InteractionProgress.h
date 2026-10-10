@@ -53,14 +53,14 @@ namespace sw
             Left,
             Interrupted, ///< 마지막 사람이 끝내기 전에 떠났다(`_value` = 남은 진행량)
             Completed,
-            SkillCheckStarted, ///< `_actorId` 가 `_value` 시각(이 상호작용의 시계)에 눌러야 한다
+            SkillCheckStarted, ///< `_actorID` 가 `_value` 시각(이 상호작용의 시계)에 눌러야 한다
             SkillCheckSucceeded,
             SkillCheckFailed, ///< `_bNoise` 면 소음
             RegressionStarted ///< 아무도 없어 줄기 시작했다
         };
         hashed_string _grade{}; ///< 스킬 체크 성공 등급
         float32       _value{ 0.0f };
-        uint32        _actorId{ 0 };
+        uint32        _actorID{ 0 };
         Kind          _kind{ Kind::Joined };
         uint8         _bNoise{ SW_FALSE };
     };
@@ -85,22 +85,22 @@ namespace sw
         void reset();
 
         /** @brief 붙습니다. 이미 붙었거나 가득 찼거나 끝났으면 false 입니다. */
-        bool join( uint32 actorId );
+        bool join( uint32 actorID );
         /** @brief 떠납니다. 붙어 있지 않았으면 false 입니다. */
-        bool leave( uint32 actorId );
+        bool leave( uint32 actorID );
         void update( float32 deltaTime );
         /**
          * @brief 스킬 체크에 응답합니다. @p pressTime 은 `getTime()` 시계입니다.
          * @return 그 사람에게 뜬 체크가 있어 판정했으면 true(성공 · 실패는 이벤트로). 체크가 없으면 false.
          */
-        bool respondSkillCheck( uint32 actorId, float32 pressTime );
+        bool respondSkillCheck( uint32 actorID, float32 pressTime );
         /** @brief 진행량을 바로 정합니다(세이브 · 디버그). */
         void setProgress( float32 progress );
 
         float32                  getProgress() const { return _progress; }
         float32                  getTime() const { return _time; }
         bool                     isCompleted() const { return _bCompleted == SW_TRUE; }
-        bool                     hasParticipant( uint32 actorId ) const;
+        bool                     hasParticipant( uint32 actorID ) const;
         int32                    getParticipantCount() const { return static_cast<int32>( _listParticipant.size() ); }
         bool                     hasPendingSkillCheck() const { return _bSkillCheckPending == SW_TRUE; }
         float32                  getSkillCheckTargetTime() const { return _skillCheckTarget; }
@@ -118,7 +118,7 @@ namespace sw
         void addProgress( float32 delta );
         void scheduleSkillCheck();
         void resolveSkillCheck( bool bSuccess, const hashed_string& grade );
-        void pushEvent( InteractionEvent::Kind kind, uint32 actorId, float32 value = 0.0f );
+        void pushEvent( InteractionEvent::Kind kind, uint32 actorID, float32 value = 0.0f );
 
         InteractionConfig             _config;
         vector<uint32>                _listParticipant; ///< 붙은 순서

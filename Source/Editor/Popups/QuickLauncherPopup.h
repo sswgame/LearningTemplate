@@ -22,7 +22,7 @@ namespace sw::editor
         string          _title;
         string          _detail;
         string          _path;
-        uint64          _targetObjectId{ 0 };
+        uint64          _targetObjectID{ 0 };
     };
 } // namespace sw::editor
 
@@ -36,12 +36,12 @@ namespace sw::editor
     {
     public:
         /** @brief 팝업 매니저에서 이 팝업을 찾는 id 입니다. */
-        static constexpr const utf8* kPopupId = "QuickLauncher";
+        static constexpr const utf8* kPopupID = "QuickLauncher";
 
         QuickLauncherPopup();
         virtual ~QuickLauncherPopup() override = default;
 
-        virtual const utf8* getPopupId() const override { return kPopupId; }
+        virtual const utf8* getPopupID() const override { return kPopupID; }
         virtual const utf8* getPopupTitle() const override { return "Quick Open"; }
 
         static void open();

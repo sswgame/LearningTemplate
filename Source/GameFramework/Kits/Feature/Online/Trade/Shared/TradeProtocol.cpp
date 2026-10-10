@@ -13,7 +13,7 @@ namespace sw
         outWriter.writeVarUint( listBalance.size() );
         for ( const TradeBalance& balance : listBalance )
         {
-            outWriter.writeBlob( reinterpret_cast<const uint8*>( balance._assetId.data() ), static_cast<int32>( balance._assetId.size() ) );
+            outWriter.writeBlob( reinterpret_cast<const uint8*>( balance._assetID.data() ), static_cast<int32>( balance._assetID.size() ) );
             outWriter.writeVarInt( balance._amount );
         }
     }
@@ -33,10 +33,10 @@ namespace sw
         for ( uint64 index = 0; index < balanceCount; ++index )
         {
             vector<uint8> assetBytes;
-            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIdSize ) == false )
+            if ( reader.readBlob( assetBytes, TradeConstant::kMaxAssetIDSize ) == false )
                 return false;
             TradeBalance& balance = outListBalance.emplace_back();
-            balance._assetId.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );
+            balance._assetID.assign( reinterpret_cast<const utf8*>( assetBytes.data() ), assetBytes.size() );
             balance._amount = reader.readVarInt();
         }
         return reader.hasOverflowed() == false;

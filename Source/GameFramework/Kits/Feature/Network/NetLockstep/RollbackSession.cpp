@@ -240,7 +240,7 @@ namespace sw
         if ( player < 0 || player >= _playerCount || player == _localPlayer )
             return NetHandleResult::Handled; // 시작 전이거나 남의 판
         // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
-        if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionId + 1 )
+        if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
         int32 ackedLocalFrame = -1;
         int32 advantage       = 0;

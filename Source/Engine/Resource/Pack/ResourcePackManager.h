@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @brief 유료 DLC 소유권을 확인하는 델리게이트입니다(스팀 · 에픽 · 콘솔 플랫폼 서비스 연동용).
-     * @param dlcAppId 확인할 DLC 식별자
+     * @param dlcAppID 확인할 DLC 식별자
      * @return 소유가 확인되면 true, 구매하지 않았으면 false
      */
     SW_DECLARE_DELEGATE( bool, DlcEntitlementDelegate, uint32 );

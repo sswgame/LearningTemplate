@@ -44,7 +44,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 | Memory → Container · String · Log · Process | 10 | `Memory.cpp` → `MemoryProfiler.h`, `FrameArenaAllocator.h` → `vector.h` | 스레드의 현재 태그와 `ScopedMemoryTag` 는 `Memory` 가 갖고, 프로파일러는 할당 기록기 인터페이스(`IAllocationTracker`)로 걸린다. `MemoryProfiler` 는 `Diagnostics`, `FrameArenaAllocator` 는 `Container` 로 |
 | String → Log | 2 | `hashed_string.h` · `fixed_string.h` → `Logger.h` | `Log` 가 쓰는 `StringUtil` · `formatString` 을 `Container`(문자열 타입 옆)로 옮겨 `String` 을 `Log` 위에 둔다 |
 | Log → File · Process · Module | 5 | `FileLogOutput.cpp` → `FileUtil.h`, `Logger.cpp` → `CrashHandler.h` | `Logger` 는 정적 파사드(전역 싱크 · 상세도 · 호출자 표)만 남고, 기본 싱크(`AsyncLogSink`)와 출력 장치는 `LogSink` 로 |
-| Process → File · Module | 3 | `WindowsCallStackCapture.cpp` → `FileUtil.h` · `ModuleImageUtil.h`, `ModuleBuildId.cpp` → `FileUtil.h` | 작업 스레드가 부르는 크래시 스택 준비(`ThreadCrashStack`)만 `Process` 에 남기고 호출 스택 · 크래시 보고는 `Diagnostics` 로, `ModuleBuildId` 는 `Module` 로 |
+| Process → File · Module | 3 | `WindowsCallStackCapture.cpp` → `FileUtil.h` · `ModuleImageUtil.h`, `ModuleBuildID.cpp` → `FileUtil.h` | 작업 스레드가 부르는 크래시 스택 준비(`ThreadCrashStack`)만 `Process` 에 남기고 호출 스택 · 크래시 보고는 `Diagnostics` 로, `ModuleBuildID` 는 `Module` 로 |
 | Time → Log | 1 | `GameTimer.h` → `Logger.h` | `Time` 을 `Log` 위에 둔다(`Log` 파사드는 시계를 쓰지 않는다) |
 | 폴더 → 루트 모음 헤더(38 건 밖) | 3 | `LinearAllocator.cpp` 등의 `CoreMinimal.h` | 쓰는 헤더를 직접 include 한다 |
 

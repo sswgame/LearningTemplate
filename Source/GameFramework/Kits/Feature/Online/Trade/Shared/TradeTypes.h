@@ -25,7 +25,7 @@ namespace sw
         static constexpr int32 kMaxLegsPerSide  = 8; ///< 원장 이동 다리 16 = 양쪽 8
         static constexpr int64 kInviteTimeoutMs = 30 * 1000;
         static constexpr int64 kIdleTimeoutMs   = 5 * 60 * 1000;
-        static constexpr int32 kMaxAssetIdSize  = 48;
+        static constexpr int32 kMaxAssetIDSize  = 48;
     };
 } // namespace sw
 
@@ -34,7 +34,7 @@ namespace sw
     /** @brief 다리 하나 — 자산 id(원장 규칙 — `item.*` · `cur.*`) · 수량(1 이상)입니다. */
     struct TradeLeg
     {
-        string _assetId{};
+        string _assetID{};
         int64  _amount{ 0 };
     };
 
@@ -90,7 +90,7 @@ namespace sw
     struct TradeSide
     {
         vector<TradeLeg> _listLeg{};
-        AccountId        _accountId{ kInvalidAccountId };
+        AccountID        _accountID{ kInvalidAccountID };
         uint32           _offerRevision{ 0 };
         uint8            _bLocked{ SW_FALSE };
         uint8            _bConfirmed{ SW_FALSE };
@@ -103,14 +103,14 @@ namespace sw
     struct SW_GF_API TradeSnapshot
     {
         TradeSide        _arrSide[2]{}; ///< 0 = 신청한 쪽
-        uint64           _tradeId{ 0 };
+        uint64           _tradeID{ 0 };
         int64            _createdMs{ 0 };
         int64            _updatedMs{ 0 };
         TradeState       _state{ TradeState::Invited };
         TradeCloseReason _closeReason{ TradeCloseReason::None };
 
         /** @brief 계정의 쪽 번호(0 · 1)입니다. 당사자가 아니면 −1. */
-        int32 findSideIndex( AccountId accountId ) const;
+        int32 findSideIndex( AccountID accountID ) const;
         bool  isClosed() const { return _state == TradeState::Settled || _state == TradeState::Failed || _state == TradeState::Cancelled; }
         bool  isBothConfirmed() const { return _arrSide[0]._bConfirmed == SW_TRUE && _arrSide[1]._bConfirmed == SW_TRUE; }
     };

@@ -105,11 +105,11 @@ namespace
         }
     };
 
-    bool hasWeakness( const vector<const WitcherWeakness*>& listWeakness, const utf8* pId )
+    bool hasWeakness( const vector<const WitcherWeakness*>& listWeakness, const utf8* pID )
     {
         for ( const WitcherWeakness* pWeakness : listWeakness )
         {
-            if ( pWeakness->_id == hashed_string( pId ) )
+            if ( pWeakness->_id == hashed_string( pID ) )
                 return true;
         }
         return false;
@@ -443,15 +443,15 @@ SW_TEST_CASE( WitcherRpgTest, ContractCluesFollowOrderAdvanceTheQuestAndGreedyHa
     investigation.senseClues( float3{ 5.0f, 0.0f, 5.0f }, 20.0f, listClue );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( listClue.size() ) ); // 같은 순서 둘이 함께 열린다
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "carcass" ), float3{ 10.0f, 0.0f, 9.0f } ) == WitcherClueResult::Found );
-    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageId == hashed_string( "tracks" ) );
+    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageID == hashed_string( "tracks" ) );
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "feathers" ), float3{ 10.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
-    SW_EXPECT_TRUE( investigation.getStepId() == hashed_string( "lair" ) );
-    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageId == hashed_string( "lair" ) );
+    SW_EXPECT_TRUE( investigation.getStepID() == hashed_string( "lair" ) );
+    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageID == hashed_string( "lair" ) );
     SW_EXPECT_TRUE( investigation.isClueFound( hashed_string( "blood" ) ) );
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "nest" ), float3{ 52.0f, 0.0f, 50.0f } ) == WitcherClueResult::Found );
     SW_EXPECT_TRUE( investigation.isSolved() );
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "nest" ), float3{ 52.0f, 0.0f, 50.0f } ) == WitcherClueResult::Solved );
-    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageId == hashed_string( "slay" ) );
+    SW_EXPECT_TRUE( questLog.findProgress( hashed_string( "contract_griffin" ) )->_stageID == hashed_string( "slay" ) );
     vector<WitcherInvestigationEvent> listEvent;
     investigation.drainEvents( listEvent );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( listEvent.size() ) ); // 단서 4 + 단계 2 + 해결 1
@@ -625,8 +625,8 @@ SW_TEST_CASE( WitcherRpgTest, StateRoundTripContinuesTheSameHunt )
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "carcass" ), float3{ 10.0f, 0.0f, 9.0f } ) == WitcherClueResult::Found );
     SW_EXPECT_TRUE( restoredInvestigation.investigate( hashed_string( "feathers" ), float3{ 10.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
     SW_EXPECT_TRUE( investigation.investigate( hashed_string( "feathers" ), float3{ 10.0f, 0.0f, 1.0f } ) == WitcherClueResult::Found );
-    SW_EXPECT_TRUE( restoredInvestigation.getStepId() == hashed_string( "lair" ) ); // 단계가 이어진다
-    SW_EXPECT_TRUE( restoredQuestLog.findProgress( hashed_string( "contract_griffin" ) )->_stageId == hashed_string( "lair" ) );
+    SW_EXPECT_TRUE( restoredInvestigation.getStepID() == hashed_string( "lair" ) ); // 단계가 이어진다
+    SW_EXPECT_TRUE( restoredQuestLog.findProgress( hashed_string( "contract_griffin" ) )->_stageID == hashed_string( "lair" ) );
     SW_EXPECT_TRUE( captureWitcherBytes( investigation ) == captureWitcherBytes( restoredInvestigation ) );
 
     WitcherInvestigation truncatedInvestigation;

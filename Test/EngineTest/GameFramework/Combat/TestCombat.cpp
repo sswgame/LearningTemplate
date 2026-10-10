@@ -35,7 +35,7 @@ SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
     SW_ASSERT_TRUE( catalog.loadFromXmlText( kCombatTestXml, "CombatTest" ) );
     const WeaponDef* pSmg = catalog.findWeapon( hashed_string( "smg" ) );
     SW_ASSERT_NOT_NULL( pSmg );
-    SW_EXPECT_TRUE( pSmg->_ammoId == hashed_string( "ammo_9mm" ) );
+    SW_EXPECT_TRUE( pSmg->_ammoID == hashed_string( "ammo_9mm" ) );
     SW_EXPECT_NEAR_EQUAL( 20.0f, DamageMath::computeWeaponDamage( *pSmg, 5.0f, false ), 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 15.0f, DamageMath::computeWeaponDamage( *pSmg, 20.0f, false ), 1.0e-4f ); // 감쇠 중간
     SW_EXPECT_NEAR_EQUAL( 10.0f, DamageMath::computeWeaponDamage( *pSmg, 99.0f, false ), 1.0e-4f );

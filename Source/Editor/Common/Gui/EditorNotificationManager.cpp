@@ -102,11 +102,11 @@ namespace sw::editor
             float32 posX = viewportPos._x + screenWidth - toastWidth - toastMargin;
             currentY -= 75.0f;
 
-            fixed_string<constant::kMaxBuffer32> windowId;
-            formatstring( windowId.data(), windowId.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
+            fixed_string<constant::kMaxBuffer32> windowID;
+            formatstring( windowID.data(), windowID.capacity(), "##Toast_%#", static_cast<uint64>( notificationIndex ) );
 
             editor::EditorOverlayDesc toastDesc{};
-            toastDesc._pId        = windowId.c_str();
+            toastDesc._pID        = windowID.c_str();
             toastDesc._anchorPos  = float2{ posX, currentY };
             toastDesc._size       = float2{ toastWidth, 0.0f };
             toastDesc._rounding   = 6.0f;

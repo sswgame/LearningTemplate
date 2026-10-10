@@ -48,9 +48,9 @@ namespace sw
             }
 
             /** @brief 사슬 끝에 면을 더합니다(겹치거나 무효면 건너뛰고, 가득 차면 버린다). */
-            static void appendFace( FontFaceChain& inoutChain, FontFaceId face )
+            static void appendFace( FontFaceChain& inoutChain, FontFaceID face )
             {
-                if ( face == kInvalidFontFaceId || inoutChain._faceCount >= FontFaceChain::kMaxFaceCount )
+                if ( face == kInvalidFontFaceID || inoutChain._faceCount >= FontFaceChain::kMaxFaceCount )
                     return;
                 for ( uint32 index = 0; index < inoutChain._faceCount; ++index )
                 {
@@ -108,8 +108,8 @@ namespace sw
         _glyphCache                  = make_unique<GlyphCache>( *_rasterizer );
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
-        const FontFaceId defaultFace = openFamilyFace( _catalog._defaultFamily, FontWeight::Regular, FontSlant::Upright, bFauxBold, bFauxItalic );
-        if ( defaultFace == kInvalidFontFaceId )
+        const FontFaceID defaultFace = openFamilyFace( _catalog._defaultFamily, FontWeight::Regular, FontSlant::Upright, bFauxBold, bFauxItalic );
+        if ( defaultFace == kInvalidFontFaceID )
         {
             SW_LOG_ERROR( "[Text] The default font family '%#' could not be opened - no text can be drawn", _catalog._defaultFamily.c_str() );
             return false;
@@ -158,9 +158,9 @@ namespace sw
         // 1) 고른 가족 — 가짜 굵게 · 기울임은 이 면에서 정한다.
         uint8            bFauxBold   = SW_FALSE;
         uint8            bFauxItalic = SW_FALSE;
-        const FontFaceId primaryFace = openFamilyFace( family, spec._weight, spec._slant, bFauxBold, bFauxItalic );
+        const FontFaceID primaryFace = openFamilyFace( family, spec._weight, spec._slant, bFauxBold, bFauxItalic );
         FontSystemInternal::appendFace( chain, primaryFace );
-        if ( primaryFace != kInvalidFontFaceId )
+        if ( primaryFace != kInvalidFontFaceID )
         {
             chain._bFauxBold   = bFauxBold;
             chain._bFauxItalic = bFauxItalic;
@@ -178,9 +178,9 @@ namespace sw
         // 3) 카탈로그 기본 가족 — 늘 열린다(initialize 가 확인했다).
         uint8            bDefaultBold   = SW_FALSE;
         uint8            bDefaultItalic = SW_FALSE;
-        const FontFaceId defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
+        const FontFaceID defaultFace    = openFamilyFace( _catalog._defaultFamily, spec._weight, spec._slant, bDefaultBold, bDefaultItalic );
         FontSystemInternal::appendFace( chain, defaultFace );
-        if ( primaryFace == kInvalidFontFaceId )
+        if ( primaryFace == kInvalidFontFaceID )
         {
             chain._bFauxBold   = bDefaultBold;
             chain._bFauxItalic = bDefaultItalic;
@@ -189,11 +189,11 @@ namespace sw
         return chain;
     }
 
-    FontFaceId FontSystem::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
+    FontFaceID FontSystem::findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex )
     {
         outGlyphIndex = 0;
         if ( chain._faceCount == 0 || _rasterizer == nullptr )
-            return kInvalidFontFaceId;
+            return kInvalidFontFaceID;
         for ( uint32 index = 0; index < chain._faceCount; ++index )
         {
             const uint32 glyphIndex = _rasterizer->findGlyphIndex( chain._arrFace[index], codepoint );
@@ -210,7 +210,7 @@ namespace sw
 
     void FontSystem::invalidateFaceChains() { _mapChain.clear(); }
 
-    FontFaceId FontSystem::openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic )
+    FontFaceID FontSystem::openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic )
     {
         outFauxBold                = SW_FALSE;
         outFauxItalic              = SW_FALSE;
@@ -276,7 +276,7 @@ namespace sw
             }
         }
 
-        if ( opened._face == kInvalidFontFaceId )
+        if ( opened._face == kInvalidFontFaceID )
         {
             opened = OpenedFamilyFace{};
             // 카탈로그의 시스템 가족은 설치가 기계마다 다르다 — 없으면 대체 사슬의 다음 가족을 쓰는 것이 정상이라 Info 다.
@@ -296,7 +296,7 @@ namespace sw
         return opened._face;
     }
 
-    FontFaceId FontSystem::openFontFile( const string& path, uint32 faceIndex, bool bResourcePath )
+    FontFaceID FontSystem::openFontFile( const string& path, uint32 faceIndex, bool bResourcePath )
     {
         const string lowerPath = StringUtil::toLower( path.c_str() );
         const uint64 fileKey   = HashUtil::combine( FontSystemInternal::hashName( lowerPath ), faceIndex );
@@ -320,7 +320,7 @@ namespace sw
         {
             bRead = FileUtil::readFile( path, bytes );
         }
-        FontFaceId face = kInvalidFontFaceId;
+        FontFaceID face = kInvalidFontFaceID;
         if ( bRead )
             face = _rasterizer->loadFace( std::move( bytes ), faceIndex, path );
         else

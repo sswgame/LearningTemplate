@@ -37,12 +37,12 @@ namespace sw
         ++_specRevision;
     }
 
-    void CharacterAppearanceState::setVisibleVisual( const hashed_string& slot, const hashed_string& visualId )
+    void CharacterAppearanceState::setVisibleVisual( const hashed_string& slot, const hashed_string& visualID )
     {
         AppearanceSlotRequest* pRequest = _spec.findSlot( slot );
-        if ( pRequest == nullptr || pRequest->_visibleVisual == visualId )
+        if ( pRequest == nullptr || pRequest->_visibleVisual == visualID )
             return;
-        pRequest->_visibleVisual = visualId;
+        pRequest->_visibleVisual = visualID;
         ++_specRevision;
     }
 
@@ -90,7 +90,7 @@ namespace sw
         for ( const ResolvedDetachedPart& detached : current._listDetachedPart )
         {
             const ResolvedPart* pBefore      = previous.findPart( detached._owner, detached._partName );
-            const bool          bWasAttached = pBefore != nullptr && pBefore->_itemId == detached._itemId;
+            const bool          bWasAttached = pBefore != nullptr && pBefore->_itemID == detached._itemID;
             if ( bWasAttached )
                 _listPendingEvent.push_back( AppearanceDetachEvent{ detached } );
         }

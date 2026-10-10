@@ -26,7 +26,7 @@ namespace sw
     struct CameraShakeRequest
     {
         float3  _origin{};
-        uint64  _sourceObjectId{ 0 };
+        uint64  _sourceObjectID{ 0 };
         float32 _amplitude{ 0.1f };
         float32 _duration{ 0.3f };
         float32 _frequency{ 30.0f };

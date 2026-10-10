@@ -128,7 +128,7 @@ namespace sw
         };
 
         vector<unique_ptr<Scene>> _listLoadedScene;
-        vector<uint64>            _listPersistentObjectId; ///< `markPersistent` 로 표시한 루트의 오브젝트 id(옮겨 심어도 같다)
+        vector<uint64>            _listPersistentObjectID; ///< `markPersistent` 로 표시한 루트의 오브젝트 id(옮겨 심어도 같다)
         Scene*                    _pActiveScene;
         bool                      _bWorldPlaying; ///< `setWorldPlaying`
         uint64                    _sceneGeneration;

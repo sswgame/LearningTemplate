@@ -20,7 +20,7 @@ namespace sw
                 outWriter.writeVarUint( listBalance.size() );
                 for ( const LedgerBalance& balance : listBalance )
                 {
-                    ServiceKeyUtil::writeString( outWriter, balance._assetId );
+                    ServiceKeyUtil::writeString( outWriter, balance._assetID );
                     outWriter.writeVarInt( balance._amount );
                 }
             }
@@ -33,7 +33,7 @@ namespace sw
                 outListBalance.resize( static_cast<size_t>( count ) );
                 for ( LedgerBalance& balance : outListBalance )
                 {
-                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, balance._assetId ) == false )
+                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, balance._assetID ) == false )
                         return false;
                     balance._amount = reader.readVarInt();
                 }
@@ -45,7 +45,7 @@ namespace sw
                 outWriter.writeVarUint( listAttachment.size() );
                 for ( const ServiceMailAttachment& attachment : listAttachment )
                 {
-                    ServiceKeyUtil::writeString( outWriter, attachment._assetId );
+                    ServiceKeyUtil::writeString( outWriter, attachment._assetID );
                     outWriter.writeVarInt( attachment._amount );
                 }
             }
@@ -58,7 +58,7 @@ namespace sw
                 outListAttachment.resize( static_cast<size_t>( count ) );
                 for ( ServiceMailAttachment& attachment : outListAttachment )
                 {
-                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, attachment._assetId ) == false )
+                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
                         return false;
                     attachment._amount = reader.readVarInt();
                 }
@@ -93,7 +93,7 @@ namespace sw
                 ServiceKeyUtil::writeString( outWriter, line._reason );
                 ServiceKeyUtil::writeString( outWriter, line._memo );
                 outWriter.writeVarInt( line._timeMs );
-                outWriter.writeVarUint( line._actorId );
+                outWriter.writeVarUint( line._actorID );
                 outWriter.writeVarUint( static_cast<uint64>( line._actorKind ) );
                 writeBalances( outWriter, line._listChange );
             }
@@ -105,7 +105,7 @@ namespace sw
                 if ( bTextOk == false )
                     return false;
                 outLine._timeMs        = reader.readVarInt();
-                outLine._actorId       = reader.readVarUint();
+                outLine._actorID       = reader.readVarUint();
                 const uint64 actorKind = reader.readVarUint();
                 if ( actorKind >= static_cast<uint64>( LedgerActorKind::Count ) )
                     return false;
@@ -147,21 +147,21 @@ namespace sw
     void AdminProtocol::writeRequest( BitWriter& outWriter, const AdminRequest& request )
     {
         AdminProtocolInternal::writeAttachments( outWriter, request._listAttachment );
-        outWriter.writeVarUint( request._listAccountId.size() );
-        for ( const AccountId accountId : request._listAccountId )
+        outWriter.writeVarUint( request._listAccountID.size() );
+        for ( const AccountID accountID : request._listAccountID )
         {
-            outWriter.writeVarUint( accountId );
+            outWriter.writeVarUint( accountID );
         }
         ServiceKeyUtil::writeString( outWriter, request._displayName );
         ServiceKeyUtil::writeString( outWriter, request._subject );
-        ServiceKeyUtil::writeString( outWriter, request._assetId );
+        ServiceKeyUtil::writeString( outWriter, request._assetID );
         ServiceKeyUtil::writeString( outWriter, request._reasonCode );
         ServiceKeyUtil::writeString( outWriter, request._memo );
         ServiceKeyUtil::writeString( outWriter, request._titleKey );
         ServiceKeyUtil::writeString( outWriter, request._body );
         ServiceKeyUtil::writeString( outWriter, request._cursor );
-        outWriter.writeVarUint( request._accountId );
-        outWriter.writeVarUint( request._batchId );
+        outWriter.writeVarUint( request._accountID );
+        outWriter.writeVarUint( request._batchID );
         outWriter.writeVarInt( request._amount );
         outWriter.writeVarInt( request._untilMs );
         outWriter.writeVarInt( request._startMs );
@@ -179,22 +179,22 @@ namespace sw
         const uint64 accountCount = reader.readVarUint();
         if ( accountCount > static_cast<uint64>( kMaxBulkCount ) )
             return false;
-        outRequest._listAccountId.resize( static_cast<size_t>( accountCount ) );
-        for ( AccountId& accountId : outRequest._listAccountId )
+        outRequest._listAccountID.resize( static_cast<size_t>( accountCount ) );
+        for ( AccountID& accountID : outRequest._listAccountID )
         {
-            accountId = reader.readVarUint();
+            accountID = reader.readVarUint();
         }
         const bool bTextOk = ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._displayName ) &&
                              ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._subject ) &&
-                             ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, outRequest._assetId ) &&
+                             ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, outRequest._assetID ) &&
                              ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._reasonCode ) && ServiceKeyUtil::readString( reader, kMaxMemoSize, outRequest._memo ) &&
                              ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, outRequest._titleKey ) &&
                              ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, outRequest._body ) &&
                              ServiceKeyUtil::readString( reader, kMaxTextSize, outRequest._cursor );
         if ( bTextOk == false )
             return false;
-        outRequest._accountId = reader.readVarUint();
-        outRequest._batchId   = reader.readVarUint();
+        outRequest._accountID = reader.readVarUint();
+        outRequest._batchID   = reader.readVarUint();
         outRequest._amount    = reader.readVarInt();
         outRequest._untilMs   = reader.readVarInt();
         outRequest._startMs   = reader.readVarInt();
@@ -216,7 +216,7 @@ namespace sw
         outWriter.writeVarUint( static_cast<uint64>( reply._targetRole ) );
         outWriter.writeVarInt( reply._processedCount );
         ServiceKeyUtil::writeString( outWriter, reply._nextCursor );
-        outWriter.writeVarUint( reply._identity._accountId );
+        outWriter.writeVarUint( reply._identity._accountID );
         ServiceKeyUtil::writeString( outWriter, reply._identity._displayName );
         outWriter.writeBool( reply._identity._bGuest == SW_TRUE );
         ServiceKeyUtil::writeString( outWriter, reply._sanction._reasonCode );
@@ -248,7 +248,7 @@ namespace sw
         outReply._processedCount = static_cast<int32>( reader.readVarInt() );
         if ( ServiceKeyUtil::readString( reader, kMaxTextSize, outReply._nextCursor ) == false )
             return false;
-        outReply._identity._accountId = reader.readVarUint();
+        outReply._identity._accountID = reader.readVarUint();
         if ( ServiceKeyUtil::readString( reader, kMaxTextSize, outReply._identity._displayName ) == false )
             return false;
         outReply._identity._bGuest = reader.readBool() ? SW_TRUE : SW_FALSE;

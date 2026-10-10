@@ -79,7 +79,7 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorFloatingBarDesc::EditorFloatingBarDesc()
-        : _pId{ "##FloatingBar" }
+        : _pID{ "##FloatingBar" }
         , _anchorPos{ 0.0f, 0.0f }
         , _pivot{ 0.5f, 0.0f }
         , _maxWidth{ 0.0f }
@@ -147,7 +147,7 @@ namespace sw::editor
 
     bool EditorChrome::beginSection( const EditorSectionDesc& desc )
     {
-        const utf8* pId = desc._pId != nullptr ? desc._pId : "##Section";
+        const utf8* pID = desc._pID != nullptr ? desc._pID : "##Section";
         if ( EditorChromeInternal::s_sectionDepth < EditorChromeInternal::kMaxSectionDepth )
         {
             EditorChromeInternal::s_arrSectionStack[EditorChromeInternal::s_sectionDepth] = desc._kind;
@@ -179,7 +179,7 @@ namespace sw::editor
             if ( ( desc._flags & EditorSectionFlags::NoScrollWithMouse ) != EditorSectionFlags::None )
                 windowFlags |= ImGuiWindowFlags_NoScrollWithMouse;
 
-            return ImGui::BeginChild( pId, childSize, childFlags, windowFlags );
+            return ImGui::BeginChild( pID, childSize, childFlags, windowFlags );
         }
 
         ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 3.0f );
@@ -214,7 +214,7 @@ namespace sw::editor
 
     bool EditorChrome::beginFloatingBar( const EditorFloatingBarDesc& desc )
     {
-        const utf8* pId = desc._pId != nullptr ? desc._pId : "##FloatingBar";
+        const utf8* pID = desc._pID != nullptr ? desc._pID : "##FloatingBar";
 
         ImGui::SetNextWindowPos( ImVec2{ desc._anchorPos._x, desc._anchorPos._y }, ImGuiCond_Always,
                                  ImVec2{ desc._pivot._x, desc._pivot._y } );
@@ -243,7 +243,7 @@ namespace sw::editor
         if ( desc._bEnabled == false && bPassThrough )
             flags |= ImGuiWindowFlags_NoInputs;
 
-        const bool bVisible = ImGui::Begin( pId, nullptr, flags );
+        const bool bVisible = ImGui::Begin( pID, nullptr, flags );
         if ( bVisible && desc._bEnabled == false )
         {
             ImGui::BeginDisabled();
@@ -264,7 +264,7 @@ namespace sw::editor
 
     bool EditorChrome::beginOverlay( const EditorOverlayDesc& desc )
     {
-        const utf8* pId = desc._pId != nullptr ? desc._pId : "##Overlay";
+        const utf8* pID = desc._pID != nullptr ? desc._pID : "##Overlay";
 
         ImGui::SetNextWindowPos( ImVec2{ desc._anchorPos._x, desc._anchorPos._y }, ImGuiCond_Always,
                                  ImVec2{ desc._pivot._x, desc._pivot._y } );
@@ -298,7 +298,7 @@ namespace sw::editor
             ++EditorChromeInternal::s_overlayOverflow;
         }
 
-        return ImGui::Begin( pId, desc._pOpen, EditorChromeInternal::toImGuiOverlayFlags( desc._flags ) );
+        return ImGui::Begin( pID, desc._pOpen, EditorChromeInternal::toImGuiOverlayFlags( desc._flags ) );
     }
 
     void EditorChrome::endOverlay()
@@ -320,10 +320,10 @@ namespace sw::editor
             ImGui::PopStyleVar( styleVarCount );
     }
 
-    bool EditorChrome::beginToolbar( const utf8* pId )
+    bool EditorChrome::beginToolbar( const utf8* pID )
     {
         EditorSectionDesc desc{};
-        desc._pId  = pId != nullptr ? pId : "##Toolbar";
+        desc._pID  = pID != nullptr ? pID : "##Toolbar";
         desc._kind = EditorSectionKind::Toolbar;
         return beginSection( desc );
     }
@@ -344,7 +344,7 @@ namespace sw::editor
         }
 
         EditorOverlayDesc overlayDesc{};
-        overlayDesc._pId        = desc._pId != nullptr ? desc._pId : "##SearchOverlay";
+        overlayDesc._pID        = desc._pID != nullptr ? desc._pID : "##SearchOverlay";
         overlayDesc._pOpen      = desc._pOpen;
         overlayDesc._anchorPos  = float2{ viewportPos._x + viewportSize._x * 0.5f,
                                          viewportPos._y + viewportSize._y * desc._viewportYFrac };

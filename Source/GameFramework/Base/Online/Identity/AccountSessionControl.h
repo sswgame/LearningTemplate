@@ -25,6 +25,6 @@ namespace sw
         IAccountSessionControl& operator=( const IAccountSessionControl& ) = delete;
 
         /** @brief 그 계정의 세션을 모두 끝내고 붙어 있는 클라이언트에 @p reasonCode(로컬라이제이션 키)를 알립니다. */
-        virtual void revokeAccountSessions( AccountId accountId, string_view reasonCode, int64 nowMs ) = 0;
+        virtual void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) = 0;
     };
 } // namespace sw

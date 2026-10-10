@@ -42,7 +42,7 @@ namespace sw::editor
                 vector<PendingEvent> _listEvent;
                 vector<NamedMark>    _listMark;
                 float2               _heldMousePosition{};
-                uint32               _heldMouseViewportId{ 0 };
+                uint32               _heldMouseViewportID{ 0 };
                 bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 자리로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
                 bool                 _bEnabled{ false };
             };
@@ -66,8 +66,8 @@ namespace sw::editor
         if ( state._bEnabled == false || pKey == nullptr )
             return;
         EditorSelfTestMark mark;
-        mark._itemId     = ImGui::GetItemID();
-        mark._viewportId = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
+        mark._itemID     = ImGui::GetItemID();
+        mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
         mark._min        = float2{ ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y };
         mark._max        = float2{ ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y };
         mark._frame      = static_cast<uint32>( ImGui::GetFrameCount() );
@@ -110,12 +110,12 @@ namespace sw::editor
 
     bool EditorSelfTestMarks::isEnabled() { return EditorSelfTestInputInternal::getState()._bEnabled; }
 
-    void EditorSelfTestInput::moveMouse( const float2& position, uint32 viewportId )
+    void EditorSelfTestInput::moveMouse( const float2& position, uint32 viewportID )
     {
         EditorSelfTestInputInternal::PendingEvent event;
         event._kind     = EditorSelfTestInputInternal::EventKind::MousePos;
         event._position = position;
-        event._code     = static_cast<int32>( viewportId );
+        event._code     = static_cast<int32>( viewportID );
         EditorSelfTestInputInternal::push( std::move( event ) );
     }
 
@@ -188,7 +188,7 @@ namespace sw::editor
         EditorSelfTestMark mark;
         if ( EditorSelfTestMarks::find( key, mark ) == false )
             return false;
-        moveMouse( float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f }, mark._viewportId );
+        moveMouse( float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f }, mark._viewportID );
         return true;
     }
 
@@ -199,7 +199,7 @@ namespace sw::editor
             return false;
         EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
         state._heldMousePosition                  = float2{ ( mark._min._x + mark._max._x ) * 0.5f, ( mark._min._y + mark._max._y ) * 0.5f };
-        state._heldMouseViewportId                = mark._viewportId;
+        state._heldMouseViewportID                = mark._viewportID;
         state._bHoldMouse                         = true;
         return true;
     }
@@ -214,8 +214,8 @@ namespace sw::editor
         {
             ImGuiIO& io = ImGui::GetIO();
             io.AddMousePosEvent( state._heldMousePosition._x, state._heldMousePosition._y );
-            if ( state._heldMouseViewportId != 0 )
-                io.AddMouseViewportEvent( static_cast<ImGuiID>( state._heldMouseViewportId ) );
+            if ( state._heldMouseViewportID != 0 )
+                io.AddMouseViewportEvent( static_cast<ImGuiID>( state._heldMouseViewportID ) );
         }
         if ( listEvent.empty() )
             return;

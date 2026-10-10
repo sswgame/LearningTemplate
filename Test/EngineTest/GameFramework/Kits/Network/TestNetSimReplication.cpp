@@ -52,7 +52,7 @@ namespace
                         entity._buffer[index] = static_cast<uint8>( tick >> ( 8 * index ) );
                     }
                 }
-                _server.setEntity( entity._entityId, entity._typeId, entity._buffer );
+                _server.setEntity( entity._entityID, entity._typeID, entity._buffer );
             }
             _server.endTick();
             _server.sendSnapshots();
@@ -91,14 +91,14 @@ namespace
                 return;
             for ( const NetEntityState& entity : pLatest->_listEntity )
             {
-                if ( entity._buffer.size() < 4 || entity._entityId >= _listMaxStaleness.size() )
+                if ( entity._buffer.size() < 4 || entity._entityID >= _listMaxStaleness.size() )
                     continue;
                 uint32 stampTick = 0;
                 for ( size_t index = 0; index < 4; ++index )
                 {
                     stampTick |= static_cast<uint32>( entity._buffer[index] ) << ( 8 * index );
                 }
-                uint32& maxStaleness = _listMaxStaleness[entity._entityId];
+                uint32& maxStaleness = _listMaxStaleness[entity._entityID];
                 maxStaleness         = MathUtil::max( maxStaleness, pLatest->_tick - stampTick );
             }
         }
@@ -112,7 +112,7 @@ namespace
 
         const ReplicationClient& getClient() const { return _client; }
         /** @brief 잰 동안 그 엔티티의 상태가 서버보다 가장 많이 뒤처진 틱 수입니다. */
-        uint32 getMaxStaleness( uint32 entityId ) const { return _listMaxStaleness[entityId]; }
+        uint32 getMaxStaleness( uint32 entityID ) const { return _listMaxStaleness[entityID]; }
 
     private:
         ReplicationClient _client;
@@ -138,10 +138,10 @@ namespace
     class TypePriorityPolicy final : public IReplicationPolicy
     {
     public:
-        float32 computePriority( int32 connectionId, const NetEntityState& entity ) const override
+        float32 computePriority( int32 connectionID, const NetEntityState& entity ) const override
         {
-            (void)connectionId;
-            return static_cast<float32>( entity._typeId );
+            (void)connectionID;
+            return static_cast<float32>( entity._typeID );
         }
     };
 
@@ -174,11 +174,11 @@ namespace
 SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
 {
     constexpr uint32 kEntityCount = 400;
-    constexpr uint32 kFirstId     = 1000000; // 가변 정수 3 바이트
+    constexpr uint32 kFirstID     = 1000000; // 가변 정수 3 바이트
     TableGame        game;
     for ( uint32 index = 0; index < kEntityCount; ++index )
     {
-        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 4, static_cast<uint8>( index ) ), kFirstId + index, 1 } );
+        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 4, static_cast<uint8>( index ) ), kFirstID + index, 1 } );
     }
     NetSimHarness harness;
     SW_ASSERT_TRUE( harness.initialize( NetSimSettings{}, &game ) );
@@ -210,16 +210,16 @@ SW_TEST_CASE( NetSimReplicationTest, MassRemovalStaysUnderMessageLimit )
 SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
 {
     constexpr uint32   kHighCount = 4;
-    constexpr uint32   kLowId     = kHighCount + 1;
+    constexpr uint32   kLowID     = kHighCount + 1;
     TypePriorityPolicy policy;
     TableGame          game;
     game._table._pPolicy    = &policy;
     game._table._bStampTick = SW_TRUE;
-    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    for ( uint32 entityID = 1; entityID <= kHighCount; ++entityID )
     {
-        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityID, 10 } );
     }
-    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
+    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowID, 1 } );
     NetSimSettings settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0; // 스냅숏마다 한 패킷 — 순서만 채널이 앞 스냅숏을 지우지 않게
     NetSimHarness harness;
@@ -228,21 +228,21 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
     harness.stepTicks( 60 );
 
     TableClientSession& session = getTableClient( harness, client );
-    session.beginMeasure( harness.getServer().getLocalTick(), kLowId + 1 );
+    session.beginMeasure( harness.getServer().getLocalTick(), kLowID + 1 );
     harness.stepTicks( 600 );
     const NetSnapshot* pLatest = session.getClient().getLatest();
     SW_ASSERT_NOT_NULL( pLatest );
     uint32 maxHighStaleness = 0;
-    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    for ( uint32 entityID = 1; entityID <= kHighCount; ++entityID )
     {
-        maxHighStaleness = MathUtil::max( maxHighStaleness, session.getMaxStaleness( entityId ) );
+        maxHighStaleness = MathUtil::max( maxHighStaleness, session.getMaxStaleness( entityID ) );
     }
-    const bool bLowSeen = pLatest->findEntity( kLowId ) != nullptr;
+    const bool bLowSeen = pLatest->findEntity( kLowID ) != nullptr;
     SW_LOG_INFO( "[NetSimReplication] saturated budget over 600 ticks: priority-10 entities at most %# ticks stale, priority-1 entity %# (seen %#)", maxHighStaleness,
-                 session.getMaxStaleness( kLowId ), bLowSeen );
+                 session.getMaxStaleness( kLowID ), bLowSeen );
     SW_ASSERT_TRUE_MSG( bLowSeen, "the low-priority entity reaches the client" );
     // 쌓인 1 이 10 을 넘는 열한 번째쯤 — 실린 스냅숏이 패킷으로 나가기 전에 다음 스냅숏에 밀리면(순서만 채널) 한 차례 더.
-    SW_EXPECT_TRUE( session.getMaxStaleness( kLowId ) <= 24 );
+    SW_EXPECT_TRUE( session.getMaxStaleness( kLowID ) <= 24 );
     SW_EXPECT_TRUE( maxHighStaleness <= 4 ); // 높은 것은 여전히 거의 매번
 }
 
@@ -253,16 +253,16 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityEntitiesAreNotStarved )
 SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon )
 {
     constexpr uint32   kHighCount = 4;
-    constexpr uint32   kLowId     = kHighCount + 1;
+    constexpr uint32   kLowID     = kHighCount + 1;
     TypePriorityPolicy policy;
     TableGame          game;
     game._table._pPolicy    = &policy;
     game._table._bStampTick = SW_TRUE;
-    for ( uint32 entityId = 1; entityId <= kHighCount; ++entityId )
+    for ( uint32 entityID = 1; entityID <= kHighCount; ++entityID )
     {
-        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityId, 10 } );
+        game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), entityID, 10 } );
     }
-    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowId, 1 } );
+    game._table._listEntity.push_back( NetEntityState{ vector<uint8>( 240, 0 ), kLowID, 1 } );
     NetSimSettings settings;
     settings._hostSettings._sendInterval = 1.0 / 60.0;
     NetSimHarness harness;
@@ -276,9 +276,9 @@ SW_TEST_CASE( NetSimReplicationTest, LowPriorityStateLostInASnapshotIsResentSoon
     harness.stepTicks( 60 );
 
     TableClientSession& session = getTableClient( harness, client );
-    session.beginMeasure( harness.getServer().getLocalTick(), kLowId + 1 );
+    session.beginMeasure( harness.getServer().getLocalTick(), kLowID + 1 );
     harness.stepTicks( 1200 );
-    SW_LOG_INFO( "[NetSimReplication] 20 percent downstream loss over 1200 ticks: priority-1 entity at most %# ticks stale", session.getMaxStaleness( kLowId ) );
+    SW_LOG_INFO( "[NetSimReplication] 20 percent downstream loss over 1200 ticks: priority-1 entity at most %# ticks stale", session.getMaxStaleness( kLowID ) );
     // 씨앗이 고정이라 값은 결정적이다 — 판정 없이(실은 순간 0 으로만) 96, 판정하면 89. 고친 값 + 3.
-    SW_EXPECT_TRUE( session.getMaxStaleness( kLowId ) <= 92u );
+    SW_EXPECT_TRUE( session.getMaxStaleness( kLowID ) <= 92u );
 }

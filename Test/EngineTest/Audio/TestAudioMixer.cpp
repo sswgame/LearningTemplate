@@ -186,14 +186,14 @@ SW_TEST_CASE( AudioMixerTest, PitchChangesPlaybackLength )
     engine.getClipStore().addClip( sw::hashed_string( "test/short" ), test::AudioTestUtil::makeConstantClip( 0.5f, 4800 ) );
     sw::AudioClipPlayParams params;
     params._pitchSemitones             = 12.0f;
-    const sw::AudioPlayingId playingId = engine.playClip( sw::hashed_string( "test/short" ), sw::hashed_string( "sfx" ), params );
-    SW_EXPECT_TRUE( engine.isPlaying( playingId ) );
+    const sw::AudioPlayingID playingID = engine.playClip( sw::hashed_string( "test/short" ), sw::hashed_string( "sfx" ), params );
+    SW_EXPECT_TRUE( engine.isPlaying( playingID ) );
 
     const sw::vector<float32> listSample = test::AudioTestUtil::render( engine, 4800 );
     // 2400 프레임(±1 블록 안 보간 끝)에서 소리가 끝난다.
     SW_EXPECT_TRUE( test::AudioTestUtil::computePeak( listSample, 0, 1000, 1300 ) > 0.3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, test::AudioTestUtil::computePeak( listSample, 0, 2410, 2000 ), 1e-6f );
-    SW_EXPECT_FALSE( engine.isPlaying( playingId ) );
+    SW_EXPECT_FALSE( engine.isPlaying( playingID ) );
     SW_EXPECT_EQUAL( 0u, engine.getStats()._voiceCount );
 }
 

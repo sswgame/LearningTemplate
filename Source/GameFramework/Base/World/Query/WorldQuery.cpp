@@ -31,7 +31,7 @@ namespace sw
     {
     }
 
-    bool PhysicsWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const
+    bool PhysicsWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const
     {
         outHit                     = WorldRayHit{};
         const float3 halfThickness = float3{ WorldQueryInternal::kRayHalfThickness };
@@ -47,7 +47,7 @@ namespace sw
         for ( const PhysicsWorld::BodyHandle handle : listHandle )
         {
             PhysicsBody body;
-            if ( _physicsWorld.tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE || body._objectId == ignoreObjectId )
+            if ( _physicsWorld.tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE || body._objectID == ignoreObjectID )
                 continue;
             AABB target = body._aabb;
             if ( target._min._z == target._max._z )
@@ -63,7 +63,7 @@ namespace sw
             bHit             = true;
             outHit._fraction = sweep._time;
             outHit._point    = from + displacement * sweep._time;
-            outHit._objectId = body._objectId;
+            outHit._objectID = body._objectID;
         }
         return bHit;
     }
@@ -73,7 +73,7 @@ namespace sw
     {
     }
 
-    bool ScenePhysicsWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit ) const
+    bool ScenePhysicsWorldQuery::raycast( const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit ) const
     {
         outHit               = WorldRayHit{};
         const float3  delta  = to - from;
@@ -82,16 +82,16 @@ namespace sw
             return false;
         bool            bHit = false;
         CharacterRayHit hit;
-        if ( CharacterHitUtil::raycast3D( _manager, from, delta, length, MathUtil::kMaxUInt32, ignoreObjectId, hit ) )
+        if ( CharacterHitUtil::raycast3D( _manager, from, delta, length, MathUtil::kMaxUInt32, ignoreObjectID, hit ) )
         {
             bHit             = true;
             outHit._fraction = hit._distance / length;
             outHit._point    = hit._point;
-            outHit._objectId = hit._pObject != nullptr ? hit._pObject->getObjectId() : 0;
+            outHit._objectID = hit._pObject != nullptr ? hit._pObject->getObjectID() : 0;
         }
         // 2D 씬은 XY 평면 — 같은 선분의 평면 길이로 잰다.
         const float32 planarLength = float2{ delta._x, delta._y }.getLength();
-        if ( planarLength > MathUtil::kEpsilon && CharacterHitUtil::raycast2D( _manager, from, delta, planarLength, MathUtil::kMaxUInt32, ignoreObjectId, hit ) )
+        if ( planarLength > MathUtil::kEpsilon && CharacterHitUtil::raycast2D( _manager, from, delta, planarLength, MathUtil::kMaxUInt32, ignoreObjectID, hit ) )
         {
             const float32 fraction = hit._distance / planarLength;
             if ( bHit == false || fraction < outHit._fraction )
@@ -99,24 +99,24 @@ namespace sw
                 bHit             = true;
                 outHit._fraction = fraction;
                 outHit._point    = from + delta * fraction;
-                outHit._objectId = hit._pObject != nullptr ? hit._pObject->getObjectId() : 0;
+                outHit._objectID = hit._pObject != nullptr ? hit._pObject->getObjectID() : 0;
             }
         }
         return bHit;
     }
 
-    bool WorldQuery::raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectId, WorldRayHit& outHit )
+    bool WorldQuery::raycast( const GameObjectManager& manager, const float3& from, const float3& to, uint64 ignoreObjectID, WorldRayHit& outHit )
     {
         const IWorldQuery* pService = game::getService<IWorldQuery>();
         if ( pService != nullptr )
-            return pService->raycast( from, to, ignoreObjectId, outHit );
+            return pService->raycast( from, to, ignoreObjectID, outHit );
         // 강체 물리와 겹침 월드(BoxCollider2D) 중 가까운 것 — 두 세계가 한 씬에 섞여 있을 수 있다.
         const ScenePhysicsWorldQuery rigid{ manager };
         const PhysicsWorldQuery      fallback{ manager.getOverlapWorld2D().getPhysicsWorld() };
         WorldRayHit                  rigidHit;
         WorldRayHit                  fallbackHit;
-        const bool                   bRigid    = rigid.raycast( from, to, ignoreObjectId, rigidHit );
-        const bool                   bFallback = fallback.raycast( from, to, ignoreObjectId, fallbackHit );
+        const bool                   bRigid    = rigid.raycast( from, to, ignoreObjectID, rigidHit );
+        const bool                   bFallback = fallback.raycast( from, to, ignoreObjectID, fallbackHit );
         if ( bRigid && ( bFallback == false || rigidHit._fraction <= fallbackHit._fraction ) )
         {
             outHit = rigidHit;
@@ -131,11 +131,11 @@ namespace sw
         return false;
     }
 
-    bool WorldQuery::hasLineOfSight( const GameObjectManager& manager, const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId )
+    bool WorldQuery::hasLineOfSight( const GameObjectManager& manager, const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID )
     {
         WorldRayHit hit;
-        if ( raycast( manager, from, to, viewerObjectId, hit ) == false )
+        if ( raycast( manager, from, to, viewerObjectID, hit ) == false )
             return true;
-        return targetObjectId != 0 && hit._objectId == targetObjectId;
+        return targetObjectID != 0 && hit._objectID == targetObjectID;
     }
 } // namespace sw

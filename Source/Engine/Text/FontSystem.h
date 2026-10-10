@@ -50,7 +50,7 @@ namespace sw
     {
         static constexpr uint32 kMaxFaceCount = 8; ///< 사슬에 담는 면 수 상한(대체 목록이 더 길면 뒤를 버린다)
 
-        FontFaceId _arrFace[kMaxFaceCount]{}; ///< 앞이 먼저. 쓰지 않는 칸은 kInvalidFontFaceId
+        FontFaceID _arrFace[kMaxFaceCount]{}; ///< 앞이 먼저. 쓰지 않는 칸은 kInvalidFontFaceID
         uint8      _faceCount{ 0 };           ///< 쓰는 칸 수
         uint8      _bFauxBold{ SW_FALSE };    ///< 고른 가족에 굵은 면이 없어 일반 면을 굵게 그린다(SDF 문턱 이동)
         uint8      _bFauxItalic{ SW_FALSE };  ///< 기운 면이 없어 기울여 그린다
@@ -96,9 +96,9 @@ namespace sw
         FontFaceChain getFaceChain( const FontSpec& spec );
         /**
          * @brief 사슬에서 코드 포인트의 글리프를 가진 첫 면입니다.
-         * @details 어디에도 없으면 사슬 첫 면 + 글리프 0(두부)이고, 코드 포인트마다 처음 한 번 경고합니다. 빈 사슬이면 kInvalidFontFaceId.
+         * @details 어디에도 없으면 사슬 첫 면 + 글리프 0(두부)이고, 코드 포인트마다 처음 한 번 경고합니다. 빈 사슬이면 kInvalidFontFaceID.
          */
-        FontFaceId findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex );
+        FontFaceID findFaceForCodepoint( const FontFaceChain& chain, uint32 codepoint, uint32& outGlyphIndex );
         /** @brief 문화권이 바뀌면 사슬 캐시를 비웁니다(UI 가 글 판 변경에서 부른다). 연 면은 그대로 둡니다. */
         void invalidateFaceChains();
 
@@ -114,10 +114,10 @@ namespace sw
         uint32 getWarnedOnceCount() const { return static_cast<uint32>( _uniqueWarned.size() ); }
 
     private:
-        /** @brief 가족 이름으로 면을 엽니다 — 저장소 가족 → 시스템 가족. 못 찾으면 kInvalidFontFaceId(처음 한 번 경고). 결과(없음 포함)를 캐시합니다. */
-        FontFaceId openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
+        /** @brief 가족 이름으로 면을 엽니다 — 저장소 가족 → 시스템 가족. 못 찾으면 kInvalidFontFaceID(처음 한 번 경고). 결과(없음 포함)를 캐시합니다. */
+        FontFaceID openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
         /** @brief 글꼴 파일 하나를 엽니다 — 등록한 메모리 파일 → 리소스 → 절대 경로. 같은 (경로 · 면 번호)는 한 번만 엽니다. */
-        FontFaceId openFontFile( const string& path, uint32 faceIndex, bool bResourcePath );
+        FontFaceID openFontFile( const string& path, uint32 faceIndex, bool bResourcePath );
         /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
         bool markWarnedOnce( uint64 key );
         /** @brief 지금 대체 목록을 묻는 곳입니다(주입하지 않았으면 엔진 서비스). */
@@ -126,7 +126,7 @@ namespace sw
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */
         struct OpenedFamilyFace
         {
-            FontFaceId _face{ kInvalidFontFaceId };
+            FontFaceID _face{ kInvalidFontFaceID };
             uint8      _bFauxBold{ SW_FALSE };
             uint8      _bFauxItalic{ SW_FALSE };
         };
@@ -135,7 +135,7 @@ namespace sw
         unique_ptr<GlyphCache>                  _glyphCache; ///< 시작에서 만들고 종료에서 놓는다(래스터라이저를 빌린다)
         FontCatalogDesc                         _catalog;
         unordered_map<uint64, OpenedFamilyFace> _mapOpenedFamilyFace; ///< (가족 · 굵기 · 기울기) → 연 면
-        unordered_map<uint64, FontFaceId>       _mapOpenedFile;       ///< (경로 · 면 번호) → 연 면
+        unordered_map<uint64, FontFaceID>       _mapOpenedFile;       ///< (경로 · 면 번호) → 연 면
         unordered_map<uint64, FontFaceChain>    _mapChain;            ///< (FontSpec · 문화권) → 사슬
         unordered_map<string, vector<uint8>>    _mapMemoryFile;       ///< 등록한 메모리 글꼴(소문자 경로 → 바이트)
         unordered_set<uint64>                   _uniqueWarned;        ///< 한 번 경고한 것(가족 · 코드 포인트)

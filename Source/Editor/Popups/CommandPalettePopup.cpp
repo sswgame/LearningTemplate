@@ -73,7 +73,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().openPopup( kPopupId );
+        pContext->getPopupManager().openPopup( kPopupID );
     }
 
     void CommandPalettePopup::close()
@@ -82,7 +82,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().closePopup( kPopupId );
+        pContext->getPopupManager().closePopup( kPopupID );
     }
 
     void CommandPalettePopup::toggle()
@@ -91,7 +91,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        pContext->getPopupManager().togglePopup( kPopupId );
+        pContext->getPopupManager().togglePopup( kPopupID );
     }
 
     bool CommandPalettePopup::isOpen()
@@ -100,7 +100,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        return pContext->getPopupManager().isPopupOpen( kPopupId );
+        return pContext->getPopupManager().isPopupOpen( kPopupID );
     }
 
     // ------------------------------------------------------------------------------
@@ -128,17 +128,17 @@ namespace sw::editor
             if ( desc._bPaletteVisible == false )
                 continue;
 
-            const string        commandId = desc._id;
+            const string        commandID = desc._id;
             CommandPaletteEntry entry;
             entry._category = desc._category;
             entry._label    = desc._label;
             entry._detail   = desc._detail;
             // 이 델리게이트는 나중에 불린다. 그때 컨텍스트가 있는지 그 자리에서 확인한다.
-            entry._action = [commandId]()
+            entry._action = [commandID]()
             {
                 EditorContext* pRunContext = EditorContext::get();
                 if ( pRunContext != nullptr )
-                    pRunContext->getCommandRegistry().execute( commandId );
+                    pRunContext->getCommandRegistry().execute( commandID );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
@@ -146,17 +146,17 @@ namespace sw::editor
         // 2) 등록된 모든 에디터 패널 토글 커맨드
         for ( const EditorPanelEntry& win : pContext->getPanelManager().getPanels() )
         {
-            const string        panelId  = win._id;
+            const string        panelID  = win._id;
             const string        winTitle = win._title;
             CommandPaletteEntry entry;
             entry._category = "Panel";
             entry._label    = "Open Panel: " + winTitle;
             entry._detail   = "Editor Panel";
-            entry._action   = [panelId]()
+            entry._action   = [panelID]()
             {
                 EditorContext* pRunContext = EditorContext::get();
                 if ( pRunContext != nullptr )
-                    pRunContext->getPanelManager().setPanelOpen( panelId.c_str(), true );
+                    pRunContext->getPanelManager().setPanelOpen( panelID.c_str(), true );
             };
             _listAllCommand.push_back( std::move( entry ) );
         }
@@ -169,17 +169,17 @@ namespace sw::editor
         // 값으로 반환하는 `getAllGameObjects()` 는 씬 전체를 복사한다. 순회만 하므로 복사하지 않는 쪽을 쓴다.
         pObjects->forEachGameObject( [this]( GameObject* pObj )
         {
-            const uint64 objId   = pObj->getObjectId();
+            const uint64 objID   = pObj->getObjectID();
             const string objName = string{ pObj->getName().c_str() };
 
             CommandPaletteEntry entry;
             entry._category = "GameObject";
             entry._label    = "Select GameObject: " + objName;
-            entry._detail   = "Scene Object (ID: " + to_string( objId ) + ")";
-            entry._action   = [objId]()
+            entry._detail   = "Scene Object (ID: " + to_string( objID ) + ")";
+            entry._action   = [objID]()
             {
                 GameObjectManager* pCurrentObjects = editor::getActiveObjectManager();
-                GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectById( objId ) : nullptr;
+                GameObject*        pFound          = ( pCurrentObjects != nullptr ) ? pCurrentObjects->findGameObjectByID( objID ) : nullptr;
                 EditorContext*     pRunContext     = EditorContext::get();
                 if ( pFound != nullptr && pRunContext != nullptr )
                     pRunContext->getEditorSelection().selectObject( pFound, SelectionMode::Replace );
@@ -191,7 +191,7 @@ namespace sw::editor
     void CommandPalettePopup::drawContent()
     {
         editor::EditorSearchOverlayDesc overlayDesc{};
-        overlayDesc._pId          = "##CommandPalette";
+        overlayDesc._pID          = "##CommandPalette";
         overlayDesc._pOpen        = &_bOpen;
         overlayDesc._size         = float2{ 580.0f, 360.0f };
         overlayDesc._pFocusOnOpen = &_bJustOpened;
@@ -216,7 +216,7 @@ namespace sw::editor
                 EditorWidgets::updateListSelection( _selectedIndex, static_cast<int32>( listFiltered.size() ) );
 
             editor::EditorSectionDesc resultsDesc{};
-            resultsDesc._pId   = "##PaletteResults";
+            resultsDesc._pID   = "##PaletteResults";
             resultsDesc._kind  = editor::EditorSectionKind::Child;
             resultsDesc._flags = editor::EditorSectionFlags::Border;
             if ( EditorChrome::beginSection( resultsDesc ) )

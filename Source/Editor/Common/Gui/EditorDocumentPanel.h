@@ -71,14 +71,14 @@ namespace sw::editor
         virtual void applyDocumentText( string_view /*text*/ ) {}
 
         template <typename TItem>
-        static int32 nextItemId( const vector<TItem>& list )
+        static int32 nextItemID( const vector<TItem>& list )
         {
-            int32 maxId{ 0 };
+            int32 maxID{ 0 };
             for ( const TItem& item : list )
             {
-                maxId = MathUtil::max( maxId, item._id );
+                maxID = MathUtil::max( maxID, item._id );
             }
-            return maxId + 1;
+            return maxID + 1;
         }
 
     private:

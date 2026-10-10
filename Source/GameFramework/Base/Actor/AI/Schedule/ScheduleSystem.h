@@ -74,8 +74,8 @@ namespace sw
         ScheduleLocation      _target{};
         hashed_string         _activity{};
         hashed_string         _animation{};
-        hashed_string         _sourceId{}; ///< 루틴 · 행사 · 약속 id
-        uint32                _reservationId{ 0 };
+        hashed_string         _sourceID{}; ///< 루틴 · 행사 · 약속 id
+        uint32                _reservationID{ 0 };
         int32                 _startMinute{ 0 };
         int32                 _endMinute{ 0 };
         int32                 _departMinute{ 0 }; ///< 이 칸의 자리로 나서는 시각(일찍 나서기 — 시작보다 앞설 수 있다)
@@ -119,15 +119,15 @@ namespace sw
             Arrived,           ///< 칸의 자리에 닿았다
             ActivityStarted,   ///< 활동을 시작했다(`_animation` 을 재생)
             ActivityEnded,     ///< 활동을 끝냈다
-            Interrupted,       ///< 끼어들기가 시작됐다(`_sourceId` = 끼어들기 id)
+            Interrupted,       ///< 끼어들기가 시작됐다(`_sourceID` = 끼어들기 id)
             Resumed,           ///< 끼어들기가 모두 끝나 일정으로 돌아갔다
-            AppointmentMet,    ///< 약속의 참가자가 모두 모였다(`_sourceId` = 약속 id, NPC 는 마지막에 온 이)
+            AppointmentMet,    ///< 약속의 참가자가 모두 모였다(`_sourceID` = 약속 id, NPC 는 마지막에 온 이)
             AppointmentBroken, ///< 기다려도 모두 오지 않아 그날 약속이 깨졌다
             Snapped            ///< 시간 건너뛰기 · 화면 안으로 들어와 그 시각 자리로 옮겨졌다
         };
         hashed_string _activity{};
         hashed_string _animation{};
-        hashed_string _sourceId{};
+        hashed_string _sourceID{};
         int32         _npcIndex{ -1 };
         int32         _minute{ 0 }; ///< 0 일 0:00 부터 센 분
         Kind          _kind{ Kind::Departed };
@@ -243,7 +243,7 @@ namespace sw
         void setFlags( const GameFlags* pFlags );
         /** @brief 세계 태그입니다. 내용이 바뀌면 `notifyConditionsChanged` 를 부릅니다. */
         void setWorldTags( const TagContainer* pTags );
-        void setWeather( const hashed_string& weatherId );
+        void setWeather( const hashed_string& weatherID );
         /** @brief 게임이 조건 입력(세계 태그 등)을 바꿨음을 알립니다 — 지금 시각에 모두 다시 세웁니다. */
         void notifyConditionsChanged() { _bConditionsDirty = SW_TRUE; }
 
@@ -253,20 +253,20 @@ namespace sw
         void        removeNpcTag( int32 npcIndex, const TagID& tag );
 
         /** @brief 끼어들기(카탈로그 `<Interrupt>` id)를 쌓습니다. 모르는 id 면 경고하고 false, 이미 있으면 만료만 다시 셉니다. */
-        bool pushInterruption( int32 npcIndex, const hashed_string& interruptId );
+        bool pushInterruption( int32 npcIndex, const hashed_string& interruptID );
         /** @brief 끼어들기를 뺍니다. 모두 빠지면 지금 시각의 칸으로 돌아갑니다. 없던 것이면 false 입니다. */
-        bool popInterruption( int32 npcIndex, const hashed_string& interruptId );
+        bool popInterruption( int32 npcIndex, const hashed_string& interruptID );
         /** @brief 끼어든 동안 몸이 옮겨진 자리를 알립니다(도망 · 전투). 끼어든 중이 아니면 무시합니다. */
         void reportInterruptedLocation( int32 npcIndex, const ScheduleLocation& location );
 
         int32           getNpcCount() const { return static_cast<int32>( _listNpc.size() ); }
-        int32           findNpcIndex( const hashed_string& npcId ) const;
-        hashed_string   getNpcId( int32 npcIndex ) const;
+        int32           findNpcIndex( const hashed_string& npcID ) const;
+        hashed_string   getNpcID( int32 npcIndex ) const;
         ScheduleNpcView getNpcView( int32 npcIndex ) const;
         /** @brief 오늘 계획입니다. */
         const vector<ScheduleSegment>& getPlan( int32 npcIndex ) const;
-        bool                           isAppointmentMet( const hashed_string& appointmentId ) const;
-        bool                           isAppointmentBroken( const hashed_string& appointmentId ) const;
+        bool                           isAppointmentMet( const hashed_string& appointmentID ) const;
+        bool                           isAppointmentBroken( const hashed_string& appointmentID ) const;
         int32                          getMinute() const { return _minute; }
         int32                          getDay() const;
         void                           drainEvents( vector<ScheduleEvent>& outListEvent );
@@ -320,7 +320,7 @@ namespace sw
         struct BlockCandidate
         {
             const ScheduleBlockDef* _pBlock{ nullptr };
-            hashed_string           _sourceId{};
+            hashed_string           _sourceID{};
             int32                   _startMinute{ 0 };
             int32                   _endMinute{ 0 };
             int32                   _priority{ 0 };
@@ -363,7 +363,7 @@ namespace sw
         void  processAppointmentCheck( AppointmentCheck& inoutCheck );
         void  refreshNpc( int32 npcIndex );
         int32 computeWakeMinute( int32 npcIndex ) const;
-        void  emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceId );
+        void  emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceID );
         void  emitSnapped( int32 npcIndex );
         void  applyConditionChanges();
         void  updateNearRoutes();

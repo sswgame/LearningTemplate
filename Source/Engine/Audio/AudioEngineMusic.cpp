@@ -25,7 +25,7 @@ namespace sw
         if ( _pMusic != nullptr )
             applyStopMusic( command._value );
         _pMusic         = command._pMusic;
-        _musicPlayingId = command._playingId;
+        _musicPlayingID = command._playingID;
 
         int32 startSegment = _pMusic->findSegmentIndex( _pMusic->_startSegment );
         if ( startSegment < 0 )
@@ -41,7 +41,7 @@ namespace sw
         const uint32 fadeFrames = static_cast<uint32>( MathUtil::max( 0.0f, fadeSeconds ) * static_cast<float32>( audio::kSampleRate ) );
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingId != _musicPlayingId || _musicPlayingId == 0 )
+            if ( slot._bInUse == false || slot._playingID != _musicPlayingID || _musicPlayingID == 0 )
                 continue;
             if ( slot._bWaitingForClip || fadeFrames == 0 )
                 freeVoice( slot );
@@ -97,7 +97,7 @@ namespace sw
                 return;
             for ( VoiceSlot& slot : _listVoice )
             {
-                if ( slot._bInUse && slot._playingId == _musicPlayingId && slot._musicSegment == _musicPendingSegment )
+                if ( slot._bInUse && slot._playingID == _musicPlayingID && slot._musicSegment == _musicPendingSegment )
                     freeVoice( slot );
             }
             _musicPendingSegment = targetSegment;
@@ -115,7 +115,7 @@ namespace sw
         // 옛 구간은 경계에서(샘플 단위) 빠지기 시작한다.
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingId != _musicPlayingId || slot._musicSegment != _musicSegment )
+            if ( slot._bInUse == false || slot._playingID != _musicPlayingID || slot._musicSegment != _musicSegment )
                 continue;
             if ( slot._bWaitingForClip )
                 freeVoice( slot );
@@ -129,7 +129,7 @@ namespace sw
             VoiceSlot* pSlot = allocateVoice();
             if ( pSlot != nullptr )
             {
-                pSlot->_playingId       = _musicPlayingId;
+                pSlot->_playingID       = _musicPlayingID;
                 pSlot->_clipPath        = pRule->_stinger;
                 pSlot->_busName         = _pMusic->_bus.empty() ? hashed_string( AudioBusNames::kMusic ) : _pMusic->_bus;
                 pSlot->_busIndex        = resolveBusIndex( pSlot->_busName );
@@ -157,7 +157,7 @@ namespace sw
                 SW_LOG_WARNING( "Voice pool exhausted - dropped a music layer" );
                 return;
             }
-            pSlot->_playingId       = _musicPlayingId;
+            pSlot->_playingID       = _musicPlayingID;
             pSlot->_clipPath        = segment._listLayer[layerIndex]._path;
             pSlot->_busName         = bus;
             pSlot->_busIndex        = resolveBusIndex( bus );
@@ -216,7 +216,7 @@ namespace sw
         const float32 maxStep     = fadeSeconds <= 0.0f ? MathUtil::kMaxFloat : audio::kBlockSeconds / fadeSeconds;
         for ( VoiceSlot& slot : _listVoice )
         {
-            if ( slot._bInUse == false || slot._playingId != _musicPlayingId || slot._musicSegment < 0 || slot._musicLayer < 0 )
+            if ( slot._bInUse == false || slot._playingID != _musicPlayingID || slot._musicSegment < 0 || slot._musicLayer < 0 )
                 continue;
             const float32 target = computeMusicLayerGain( slot._musicSegment, slot._musicLayer );
             const float32 delta  = target - slot._musicGain;

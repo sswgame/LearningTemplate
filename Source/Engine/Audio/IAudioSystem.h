@@ -152,7 +152,7 @@ namespace sw
         vector<AudioBusVolume>  _listBusVolume;    /**< 세 기본 버스 밖의 버스 볼륨입니다. */
         vector<float32>         _listOfflineBlock; /**< 장치가 없을 때 렌더하는 버퍼입니다. */
         string                  _musicPath;        /**< 마지막으로 요청된 배경음악 경로입니다. */
-        AudioPlayingId          _musicPlayingId;   /**< 배경음악 재생 id 입니다. */
+        AudioPlayingID          _musicPlayingID;   /**< 배경음악 재생 id 입니다. */
         float64                 _offlineFrameDebt; /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
         float32                 _masterVolume;     /**< 마스터 볼륨 [0,1] 입니다. */
         float32                 _musicVolume;      /**< 배경음악 볼륨 [0,1] 입니다. */

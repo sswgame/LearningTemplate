@@ -26,7 +26,7 @@ namespace sw
         hashed_string          _category{};  ///< "Weapon" · "Food" · "Material" … (정렬 · 필터)
         hashed_string          _equipSlot{}; ///< 낄 수 있는 칸 종류("Head" · "Ring" — 비면 장비가 아니다)
         hashed_string          _useEffect{}; ///< 쓰면 적용할 효과 id(어빌리티 카탈로그의 이펙트 — 게임이 잇는다)
-        hashed_string          _visualId{};  ///< 아이템 외형 id(`ItemVisualCatalog` — 게임플레이 정의와 따로 둔 외형, 비면 안 보인다)
+        hashed_string          _visualID{};  ///< 아이템 외형 id(`ItemVisualCatalog` — 게임플레이 정의와 따로 둔 외형, 비면 안 보인다)
         string                 _name{};
         vector<hashed_string>  _listTag{};
         StatBlock              _stats{};

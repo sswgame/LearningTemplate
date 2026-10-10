@@ -66,8 +66,8 @@ namespace sw
     {
         LevelProgress _pilotLevel{};
         LevelProgress _unitLevel{};
-        hashed_string _unitId{};
-        hashed_string _pilotId{};
+        hashed_string _unitID{};
+        hashed_string _pilotID{};
         uint8         _bLost{ SW_FALSE }; ///< 격파되어 이번 판에서 빠졌다(로그라이트)
     };
 } // namespace sw
@@ -89,7 +89,7 @@ namespace sw
 
         void initialize( const RunMapSettings& settings, uint32 seed );
         /** @brief 명단에 더합니다. 모르는 기체 · 파일럿이면 −1 입니다. */
-        int32 addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitId, const hashed_string& pilotId, int32 pilotLevel = 1 );
+        int32 addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel = 1 );
 
         void collectChoices( vector<int32>& outListNode ) const { _runMap.collectChoices( outListNode ); }
         /** @brief 지도의 칸으로 가서 작전을 엽니다. 갈 수 없거나 판이 끝났으면 false 입니다. */

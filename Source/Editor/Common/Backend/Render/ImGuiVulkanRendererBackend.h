@@ -59,7 +59,7 @@ namespace sw::editor
         VkSampler_T*                           _pSampler{ nullptr };
         IRHIDevice*                            _pRHIDevice{ nullptr };
         mutex*                                 _pQueueMutex{ nullptr }; ///< RHI 디바이스의 큐 제출 잠금(`RHINativeHandles::_pQueueMutex`)
-        unordered_map<void*, RHITextureHandle> _mapTextureId;
+        unordered_map<void*, RHITextureHandle> _mapTextureID;
         /// @brief 디스크립터 풀 잠금입니다. 세트를 잡는 UI 스레드와, 미뤄 둔 해제를 부르는 렌더 스레드가 같은 풀을 씁니다.
         mutex _descriptorPoolMutex;
     };

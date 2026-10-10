@@ -241,7 +241,7 @@ namespace sw
         _bConsent          = SW_FALSE;
         _bInitialized      = SW_TRUE;
         _listEventOccurrence.assign( _schema.getEvents().size(), 0u );
-        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( StringUtil::computeHash64( _context._sessionId ) ) ) ? SW_TRUE : SW_FALSE;
+        _bSessionSampled = Internal::passes( _schema.getSettings()._sessionSampleRate, Internal::toUnit( StringUtil::computeHash64( _context._sessionID ) ) ) ? SW_TRUE : SW_FALSE;
 
         // 지난 실행이 닫지 못하고 남긴 파일까지 이어 받는다 — 동의가 켜지면 올리고, 동의가 꺼지면 `setConsent( false )` 가 지운다.
         vector<string> listFile;
@@ -315,7 +315,7 @@ namespace sw
         }
         if ( bWasEnabled )
             return;
-        SW_LOG_INFO( "Telemetry consent given - session %# (%#)", _context._sessionId.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
+        SW_LOG_INFO( "Telemetry consent given - session %# (%#)", _context._sessionID.c_str(), _bSessionSampled == SW_TRUE ? "sampled in" : "sampled out" );
         if ( _schema.findEvent( hashed_string( kSessionStartEvent ) ) != nullptr )
             (void)recordLocked( TelemetryEvent{ hashed_string( kSessionStartEvent ) } );
     }
@@ -339,7 +339,7 @@ namespace sw
     {
         // 보류 값(메뉴에서 바꾸는 중)은 동의가 아니다 — 적용 · 되돌리기 · 로드 뒤의 확정 값만 본다.
         const bool bSettled = event._kind != UserSettingEventKind::PendingChanged && event._kind != UserSettingEventKind::ConfirmStarted;
-        const bool bOurs    = event._settingId.empty() || event._settingId == hashed_string( kConsentSettingId );
+        const bool bOurs    = event._settingID.empty() || event._settingID == hashed_string( kConsentSettingID );
         if ( bSettled && bOurs )
             refreshConsentFromSetting();
     }
@@ -348,7 +348,7 @@ namespace sw
     {
         if ( _pSettings == nullptr )
             return;
-        const string_view value = _pSettings->getAppliedValue( hashed_string( kConsentSettingId ) );
+        const string_view value = _pSettings->getAppliedValue( hashed_string( kConsentSettingID ) );
         setConsent( StringUtil::parseBool( value, false ) );
     }
 
@@ -368,11 +368,11 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE )
             return TelemetryRecordResult::NotInitialized;
-        const TelemetryEventDef* pDef = _schema.findEvent( event.getId() );
+        const TelemetryEventDef* pDef = _schema.findEvent( event.getID() );
         if ( pDef == nullptr )
         {
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' is not in the schema - dropped", event.getId().c_str() );
+            SW_LOG_WARNING( "Telemetry event '%#' is not in the schema - dropped", event.getID().c_str() );
             return TelemetryRecordResult::UnknownEvent;
         }
         // 스키마 대조 — 받는 쪽 테이블과 어긋나는 줄은 쓰지 않는다.
@@ -384,7 +384,7 @@ namespace sw
             if ( bMatches )
                 continue;
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' field '%#' is unknown or not a %# - dropped", event.getId().c_str(), value._name.c_str(),
+            SW_LOG_WARNING( "Telemetry event '%#' field '%#' is unknown or not a %# - dropped", event.getID().c_str(), value._name.c_str(),
                             pField != nullptr ? toString( pField->_type ) : "declared field" );
             return TelemetryRecordResult::InvalidField;
         }
@@ -393,7 +393,7 @@ namespace sw
             if ( field._bRequired == SW_FALSE || event.findValue( field._name ) != nullptr )
                 continue;
             ++_stats._rejected;
-            SW_LOG_WARNING( "Telemetry event '%#' misses required field '%#' - dropped", event.getId().c_str(), field._name.c_str() );
+            SW_LOG_WARNING( "Telemetry event '%#' misses required field '%#' - dropped", event.getID().c_str(), field._name.c_str() );
             return TelemetryRecordResult::InvalidField;
         }
 
@@ -421,7 +421,7 @@ namespace sw
     {
         if ( def._sampleRate >= 1.0f )
             return true;
-        uint64 hash = StringUtil::computeHash64( _context._sessionId );
+        uint64 hash = StringUtil::computeHash64( _context._sessionID );
         hash        = StringUtil::computeHash64( def._id.c_str(), def._id.size(), true, hash );
         hash        = StringUtil::computeHash64( reinterpret_cast<const utf8*>( &occurrence ), sizeof( occurrence ), false, hash );
         return TelemetryServiceInternal::passes( def._sampleRate, TelemetryServiceInternal::toUnit( hash ) );
@@ -451,10 +451,10 @@ namespace sw
         const JsonValue root = doc.makeObject();
         root.set( "type" ).setString( "context" );
         root.set( "schema" ).setInt( _schema.getVersion() );
-        root.set( "session" ).setString( _context._sessionId );
+        root.set( "session" ).setString( _context._sessionID );
         root.set( "build" ).setString( _context._buildConfig );
         root.set( "platform" ).setString( _context._platform );
-        root.set( "buildId" ).setString( _context._buildId );
+        root.set( "buildId" ).setString( _context._buildID );
         root.set( "game" ).setString( _context._game );
         root.set( "file" ).setUint( _fileIndex );
         return doc.dump( -1 );
@@ -463,7 +463,7 @@ namespace sw
     string TelemetryService::makeSpoolFilePathLocked( uint32 fileIndex ) const
     {
         StringBuilder<constant::kMaxBuffer256> name;
-        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context._sessionId.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
+        name.appendFormat( "%#%#_%#%#", kSpoolFilePrefix, _context._sessionID.c_str(), Fmt( fileIndex, Format().width( 4 ).zeroPad() ), kSpoolExtension );
         return FileUtil::joinPath( _spoolFolder, name.c_str() );
     }
 
@@ -473,7 +473,7 @@ namespace sw
         if ( capacity == 0 )
             return;
         StringBuilder<constant::kMaxBuffer512> text;
-        text.appendFormat( "%.3f %#", _sessionSeconds, event.getId().c_str() );
+        text.appendFormat( "%.3f %#", _sessionSeconds, event.getID().c_str() );
         for ( const TelemetryValue& value : event.getValues() )
         {
             text.appendFormat( " %#=", value._name.c_str() );
@@ -542,15 +542,15 @@ namespace sw
         flushLocked();
     }
 
-    void TelemetryService::recordFrame( string_view sceneId, float32 deltaSeconds )
+    void TelemetryService::recordFrame( string_view sceneID, float32 deltaSeconds )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _bInitialized == SW_FALSE || _bConsent == SW_FALSE || deltaSeconds <= 0.0f )
             return;
-        if ( _currentScene != sceneId )
+        if ( _currentScene != sceneID )
         {
             emitSceneSummaryLocked();
-            _currentScene.assign( sceneId.data(), sceneId.size() );
+            _currentScene.assign( sceneID.data(), sceneID.size() );
         }
         _frames.add( deltaSeconds * 1000.0f );
     }
@@ -671,7 +671,7 @@ namespace sw
         {
             TelemetryUploadBatch batch;
             batch._filePath  = _listClosedFile.front();
-            batch._sessionId = _context._sessionId;
+            batch._sessionID = _context._sessionID;
             if ( FileUtil::readTextFile( batch._filePath, batch._content ) == false )
             {
                 _listClosedFile.erase( _listClosedFile.begin() ); // 지워진 파일 — 목록에서만 뺀다

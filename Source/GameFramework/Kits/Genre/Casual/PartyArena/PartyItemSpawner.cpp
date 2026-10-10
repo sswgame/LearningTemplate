@@ -44,7 +44,7 @@ namespace sw
         for ( const PartyItemInstance& instance : _listInstance )
         {
             outArchive << instance._position;
-            StateArchiveUtil::writeName( outArchive, instance._itemId );
+            StateArchiveUtil::writeName( outArchive, instance._itemID );
             outArchive << instance._age;
             outArchive << instance._serial;
         }
@@ -63,7 +63,7 @@ namespace sw
         for ( PartyItemInstance& instance : listInstance )
         {
             archive >> instance._position;
-            if ( StateArchiveUtil::readName( archive, instance._itemId ) == false || findItem( instance._itemId ) == nullptr )
+            if ( StateArchiveUtil::readName( archive, instance._itemID ) == false || findItem( instance._itemID ) == nullptr )
                 return false;
             archive >> instance._age;
             archive >> instance._serial;
@@ -105,7 +105,7 @@ namespace sw
             {
                 PartyItemEvent event;
                 event._kind   = PartyItemEvent::Kind::Expired;
-                event._itemId = instance._itemId;
+                event._itemID = instance._itemID;
                 event._serial = instance._serial;
                 _eventBuffer.push( event );
                 continue;
@@ -141,7 +141,7 @@ namespace sw
         const float32     radius = _settings._spawnRadius * MathUtil::sqrt( _random.nextFloat() );
         const float32     angle  = _random.nextRange( 0.0f, 2.0f * MathUtil::kPi );
         PartyItemInstance instance;
-        instance._itemId   = pDef->_id;
+        instance._itemID   = pDef->_id;
         instance._serial   = _nextSerial++;
         instance._position = float3{ _settings._center._x + MathUtil::sin( angle ) * radius, _settings._center._y + _settings._height,
                                      _settings._center._z + MathUtil::cos( angle ) * radius };
@@ -149,7 +149,7 @@ namespace sw
 
         PartyItemEvent event;
         event._kind   = PartyItemEvent::Kind::Spawned;
-        event._itemId = instance._itemId;
+        event._itemID = instance._itemID;
         event._serial = instance._serial;
         _eventBuffer.push( event );
     }
@@ -174,7 +174,7 @@ namespace sw
 
         PartyItemEvent event;
         event._kind   = PartyItemEvent::Kind::PickedUp;
-        event._itemId = outItem._itemId;
+        event._itemID = outItem._itemID;
         event._serial = outItem._serial;
         event._player = player;
         _eventBuffer.push( event );
@@ -197,13 +197,13 @@ namespace sw
         uint32 loadedCount     = 0;
         for ( XmlNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( itemNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( itemNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             PartyItemDef def;
-            def._id             = hashed_string( pId );
+            def._id             = hashed_string( pID );
             const utf8* pEffect = itemNode.findAttribute( "effect" );
-            def._effect         = hashed_string( pEffect != nullptr ? pEffect : pId );
+            def._effect         = hashed_string( pEffect != nullptr ? pEffect : pID );
             def._weight         = itemNode.getAttributeFloat( "weight", def._weight );
             (void)def._stats.loadFromAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             addItem( def );

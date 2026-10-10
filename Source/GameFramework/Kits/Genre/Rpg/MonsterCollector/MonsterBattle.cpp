@@ -19,14 +19,14 @@ namespace sw
 
             static bool isSpeciesStab( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster, const hashed_string& moveType )
             {
-                const MonsterSpeciesDef* pSpecies = catalog.findSpecies( monster._speciesId );
+                const MonsterSpeciesDef* pSpecies = catalog.findSpecies( monster._speciesID );
                 return pSpecies != nullptr && moveType.empty() == false && pSpecies->hasType( moveType );
             }
 
             static const vector<hashed_string>& findTypes( const MonsterCollectorCatalog& catalog, const MonsterInstance& monster )
             {
                 static const vector<hashed_string> s_listEmpty;
-                const MonsterSpeciesDef*           pSpecies = catalog.findSpecies( monster._speciesId );
+                const MonsterSpeciesDef*           pSpecies = catalog.findSpecies( monster._speciesID );
                 return pSpecies != nullptr ? pSpecies->_listType : s_listEmpty;
             }
 
@@ -57,7 +57,7 @@ namespace sw
         , _turnOrder{}
         , _random{}
         , _captured{}
-        , _weatherId{}
+        , _weatherID{}
         , _pCatalog{ nullptr }
         , _pChart{ nullptr }
         , _weatherTurns{ 0 }
@@ -85,7 +85,7 @@ namespace sw
         _outcome                           = MonsterBattleOutcome::Ongoing;
         _escapeAttempts                    = 0;
         _captured                          = MonsterInstance{};
-        _weatherId                         = hashed_string{};
+        _weatherID                         = hashed_string{};
         _weatherTurns                      = 0;
         _eventBuffer.clear();
         _turnOrder.removeActor( kPlayerSide );
@@ -104,19 +104,19 @@ namespace sw
         }
     }
 
-    void MonsterBattle::setWeather( const hashed_string& weatherId, int32 turns )
+    void MonsterBattle::setWeather( const hashed_string& weatherID, int32 turns )
     {
-        if ( weatherId.empty() || _pCatalog == nullptr || _pCatalog->findWeather( weatherId ) == nullptr )
+        if ( weatherID.empty() || _pCatalog == nullptr || _pCatalog->findWeather( weatherID ) == nullptr )
         {
-            if ( _weatherId.empty() == false )
-                pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherId );
-            _weatherId    = hashed_string{};
+            if ( _weatherID.empty() == false )
+                pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherID );
+            _weatherID    = hashed_string{};
             _weatherTurns = 0;
             return;
         }
-        _weatherId    = weatherId;
+        _weatherID    = weatherID;
         _weatherTurns = turns > 0 ? turns : -1;
-        pushEvent( MonsterBattleEvent::Kind::WeatherStarted, kPlayerSide, _weatherTurns, weatherId );
+        pushEvent( MonsterBattleEvent::Kind::WeatherStarted, kPlayerSide, _weatherTurns, weatherID );
     }
 
     const MonsterInstance& MonsterBattle::getActive( int32 side ) const
@@ -180,7 +180,7 @@ namespace sw
             int32                priority = kNonMovePriority;
             if ( action._kind == MonsterActionKind::Move )
             {
-                const MonsterMoveDef* pMove = _pCatalog->findMove( getActive( side )._arrMove[action._index]._moveId );
+                const MonsterMoveDef* pMove = _pCatalog->findMove( getActive( side )._arrMove[action._index]._moveID );
                 priority                    = pMove != nullptr ? pMove->_priority : 0;
             }
             _turnOrder.setPriority( side, priority );
@@ -288,19 +288,19 @@ namespace sw
         const int32           foeSide  = 1 - side;
         MonsterInstance&      attacker = getActiveMutable( side );
         MonsterMoveSlot&      moveSlot = attacker._arrMove[slot];
-        const MonsterMoveDef* pMove    = _pCatalog->findMove( moveSlot._moveId );
+        const MonsterMoveDef* pMove    = _pCatalog->findMove( moveSlot._moveID );
         if ( pMove == nullptr || moveSlot._pp <= 0 )
         {
-            pushEvent( MonsterBattleEvent::Kind::NoPp, side, 0, moveSlot._moveId );
+            pushEvent( MonsterBattleEvent::Kind::NoPp, side, 0, moveSlot._moveID );
             return;
         }
         --moveSlot._pp;
         pushEvent( MonsterBattleEvent::Kind::MoveUsed, side, slot, pMove->_id );
 
-        if ( pMove->_weatherId.empty() == false )
+        if ( pMove->_weatherID.empty() == false )
         {
-            const MonsterWeatherDef* pWeather = _pCatalog->findWeather( pMove->_weatherId );
-            setWeather( pMove->_weatherId, pWeather != nullptr ? pWeather->_turns : 5 );
+            const MonsterWeatherDef* pWeather = _pCatalog->findWeather( pMove->_weatherID );
+            setWeather( pMove->_weatherID, pWeather != nullptr ? pWeather->_turns : 5 );
         }
 
         const bool bTargetsFoe = pMove->isDamaging() || pMove->_status != MonsterStatus::None ||
@@ -354,20 +354,20 @@ namespace sw
     void MonsterBattle::executeBall( float32 ballMultiplier )
     {
         MonsterInstance&           target   = getActiveMutable( kFoeSide );
-        const MonsterSpeciesDef*   pSpecies = _pCatalog->findSpecies( target._speciesId );
+        const MonsterSpeciesDef*   pSpecies = _pCatalog->findSpecies( target._speciesID );
         const int32                rate     = pSpecies != nullptr ? pSpecies->_catchRate : 1;
         const MonsterCaptureResult result   = computeCapture( target.getMaxHp(), target._hp, rate, ballMultiplier, target._status, _random );
         for ( int32 shake = 1; shake <= result._shakes; ++shake )
         {
-            pushEvent( MonsterBattleEvent::Kind::CaptureShake, kFoeSide, shake, target._speciesId );
+            pushEvent( MonsterBattleEvent::Kind::CaptureShake, kFoeSide, shake, target._speciesID );
         }
         if ( result._bCaught == false )
         {
-            pushEvent( MonsterBattleEvent::Kind::BrokeFree, kFoeSide, result._shakes, target._speciesId );
+            pushEvent( MonsterBattleEvent::Kind::BrokeFree, kFoeSide, result._shakes, target._speciesID );
             return;
         }
         _captured = target;
-        pushEvent( MonsterBattleEvent::Kind::Captured, kFoeSide, 0, target._speciesId );
+        pushEvent( MonsterBattleEvent::Kind::Captured, kFoeSide, 0, target._speciesID );
         setOutcome( MonsterBattleOutcome::Captured );
     }
 
@@ -409,7 +409,7 @@ namespace sw
         }
         entry._activeIndex  = partyIndex;
         entry._bNeedsSwitch = false;
-        pushEvent( MonsterBattleEvent::Kind::Switched, side, partyIndex, getActive( side )._speciesId );
+        pushEvent( MonsterBattleEvent::Kind::Switched, side, partyIndex, getActive( side )._speciesID );
     }
 
     bool MonsterBattle::switchFainted( int32 side, int32 partyIndex )
@@ -461,7 +461,7 @@ namespace sw
     void MonsterBattle::handleFaint( int32 side )
     {
         const MonsterInstance& fainted = getActive( side );
-        pushEvent( MonsterBattleEvent::Kind::Fainted, side, 0, fainted._speciesId );
+        pushEvent( MonsterBattleEvent::Kind::Fainted, side, 0, fainted._speciesID );
         if ( side == kFoeSide && getActive( kPlayerSide ).isFainted() == false )
             awardExp( fainted );
 
@@ -482,12 +482,12 @@ namespace sw
 
     void MonsterBattle::awardExp( const MonsterInstance& defeated )
     {
-        const MonsterSpeciesDef* pDefeated = _pCatalog->findSpecies( defeated._speciesId );
+        const MonsterSpeciesDef* pDefeated = _pCatalog->findSpecies( defeated._speciesID );
         if ( pDefeated == nullptr )
             return;
         MonsterInstance& winner = getActiveMutable( kPlayerSide );
         const int64      amount = MonsterRules::computeExpYield( *pDefeated, defeated._level, _bWild == false );
-        pushEvent( MonsterBattleEvent::Kind::ExpGained, kPlayerSide, static_cast<int32>( amount ), winner._speciesId );
+        pushEvent( MonsterBattleEvent::Kind::ExpGained, kPlayerSide, static_cast<int32>( amount ), winner._speciesID );
         MonsterRules::addEffortValues( *_pCatalog, winner, *pDefeated );
 
         vector<MonsterGrowthEvent> listGrowth;
@@ -507,7 +507,7 @@ namespace sw
 
     void MonsterBattle::applyEndOfRound()
     {
-        const MonsterWeatherDef* pWeather = _weatherId.empty() ? nullptr : _pCatalog->findWeather( _weatherId );
+        const MonsterWeatherDef* pWeather = _weatherID.empty() ? nullptr : _pCatalog->findWeather( _weatherID );
         for ( int32 side = 0; side < kSideCount && _outcome == MonsterBattleOutcome::Ongoing; ++side )
         {
             if ( _arrSide[side]._bNeedsSwitch || getActive( side ).isFainted() )
@@ -524,7 +524,7 @@ namespace sw
                 }
                 if ( bImmune == false )
                     applyDamage( side, MathUtil::max( 1, getActive( side ).getMaxHp() / pWeather->_chipDivisor ), MonsterBattleEvent::Kind::WeatherDamage,
-                                 _weatherId );
+                                 _weatherID );
             }
 
             MonsterInstance& monster = getActiveMutable( side );
@@ -552,8 +552,8 @@ namespace sw
 
         if ( _weatherTurns > 0 && --_weatherTurns == 0 )
         {
-            pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherId );
-            _weatherId = hashed_string{};
+            pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherID );
+            _weatherID = hashed_string{};
         }
     }
 
@@ -635,10 +635,10 @@ namespace sw
         return _pChart->computeMultiplier( moveType, MonsterBattleInternal::findTypes( *_pCatalog, defender ) );
     }
 
-    float32 MonsterBattle::computeExpectedDamage( int32 attackerSide, const MonsterInstance& attacker, const hashed_string& moveId, int32 defenderSide,
+    float32 MonsterBattle::computeExpectedDamage( int32 attackerSide, const MonsterInstance& attacker, const hashed_string& moveID, int32 defenderSide,
                                                   const MonsterInstance& defender ) const
     {
-        const MonsterMoveDef* pMove = _pCatalog != nullptr ? _pCatalog->findMove( moveId ) : nullptr;
+        const MonsterMoveDef* pMove = _pCatalog != nullptr ? _pCatalog->findMove( moveID ) : nullptr;
         if ( pMove == nullptr || pMove->isDamaging() == false )
             return 0.0f;
         const bool         bPhysical = pMove->_category == MonsterMoveCategory::Physical;
@@ -676,9 +676,9 @@ namespace sw
 
     float32 MonsterBattle::computeWeatherMultiplier( const hashed_string& moveType ) const
     {
-        if ( _weatherId.empty() || _pCatalog == nullptr || moveType.empty() )
+        if ( _weatherID.empty() || _pCatalog == nullptr || moveType.empty() )
             return 1.0f;
-        const MonsterWeatherDef* pWeather = _pCatalog->findWeather( _weatherId );
+        const MonsterWeatherDef* pWeather = _pCatalog->findWeather( _weatherID );
         if ( pWeather == nullptr )
             return 1.0f;
         if ( pWeather->_boostedType == moveType )
@@ -743,7 +743,7 @@ namespace sw
         _turnOrder.writeState( outArchive );
         StateArchiveUtil::writeRandom( outArchive, _random );
         _captured.writeState( outArchive );
-        StateArchiveUtil::writeName( outArchive, _weatherId );
+        StateArchiveUtil::writeName( outArchive, _weatherID );
         outArchive << _weatherTurns;
         outArchive << _escapeAttempts;
         outArchive << static_cast<uint8>( _outcome );
@@ -764,11 +764,11 @@ namespace sw
             side._listMonster.assign( monsterCount, MonsterInstance{} );
             for ( MonsterInstance& monster : side._listMonster )
             {
-                if ( monster.readState( archive ) == false || _pCatalog->findSpecies( monster._speciesId ) == nullptr )
+                if ( monster.readState( archive ) == false || _pCatalog->findSpecies( monster._speciesID ) == nullptr )
                     return false;
                 for ( const MonsterMoveSlot& slot : monster._arrMove )
                 {
-                    if ( slot.isEmpty() == false && _pCatalog->findMove( slot._moveId ) == nullptr )
+                    if ( slot.isEmpty() == false && _pCatalog->findMove( slot._moveID ) == nullptr )
                         return false;
                 }
             }
@@ -794,13 +794,13 @@ namespace sw
         uint8 outcome = 0;
         if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
             return false;
-        if ( restored._captured.readState( archive ) == false || StateArchiveUtil::readName( archive, restored._weatherId ) == false )
+        if ( restored._captured.readState( archive ) == false || StateArchiveUtil::readName( archive, restored._weatherID ) == false )
             return false;
         archive >> restored._weatherTurns;
         archive >> restored._escapeAttempts;
         archive >> outcome;
         archive >> restored._bWild;
-        const bool bWeatherKnown = restored._weatherId.empty() || _pCatalog->findWeather( restored._weatherId ) != nullptr;
+        const bool bWeatherKnown = restored._weatherID.empty() || _pCatalog->findWeather( restored._weatherID ) != nullptr;
         const bool bValid        = archive.isOk() && bWeatherKnown && outcome <= static_cast<uint8>( MonsterBattleOutcome::Escaped );
         if ( bValid == false )
             return false;

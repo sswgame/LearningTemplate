@@ -16,9 +16,9 @@ SW_TEST_CASE( RenderViewSchedulerTest, UpdateRateSkipsFrames )
 {
     RenderViewScheduler            scheduler;
     RenderViewScheduler::Candidate arrCandidate[2]{};
-    arrCandidate[0]._viewId     = 1;
+    arrCandidate[0]._viewID     = 1;
     arrCandidate[0]._updateRate = 10.0f;
-    arrCandidate[1]._viewId     = 2;
+    arrCandidate[1]._viewID     = 2;
     arrCandidate[1]._updateRate = 0.0f;
 
     uint32 arrRenderCount[2]{};
@@ -49,7 +49,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, InvisibleViewsWait )
 {
     RenderViewScheduler            scheduler;
     RenderViewScheduler::Candidate candidate;
-    candidate._viewId     = 7;
+    candidate._viewID     = 7;
     candidate._updateRate = 2.0f;
     candidate._bVisible   = SW_FALSE;
     uint8 bRender         = SW_FALSE;
@@ -74,7 +74,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, BudgetRotatesWithoutStarving )
     RenderViewScheduler::Candidate arrCandidate[3]{};
     for ( uint32 index = 0; index < 3; ++index )
     {
-        arrCandidate[index]._viewId = 100 + index;
+        arrCandidate[index]._viewID = 100 + index;
     }
 
     uint32 arrRenderCount[3]{};
@@ -102,7 +102,7 @@ SW_TEST_CASE( RenderViewSchedulerTest, ForgetsViewsThatDisappear )
 {
     RenderViewScheduler            scheduler;
     RenderViewScheduler::Candidate candidate;
-    candidate._viewId     = 9;
+    candidate._viewID     = 9;
     candidate._updateRate = 0.5f;
     uint8 bRender         = SW_FALSE;
     (void)scheduler.schedule( 0.0, &candidate, 1, 0, &bRender );

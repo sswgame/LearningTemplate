@@ -16,10 +16,10 @@ namespace sw
         {
             static constexpr int32 kPageSize = 256;
 
-            static LedgerAssetAudit& findOrAdd( map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetId )
+            static LedgerAssetAudit& findOrAdd( map<string, LedgerAssetAudit>& inoutMapAsset, const string& assetID )
             {
-                LedgerAssetAudit& audit = inoutMapAsset[assetId];
-                audit._assetId          = assetId;
+                LedgerAssetAudit& audit = inoutMapAsset[assetID];
+                audit._assetID          = assetID;
                 return audit;
             }
         };
@@ -40,11 +40,11 @@ namespace sw
         return true;
     }
 
-    const LedgerAssetAudit* LedgerAuditReport::findAsset( string_view assetId ) const
+    const LedgerAssetAudit* LedgerAuditReport::findAsset( string_view assetID ) const
     {
         for ( const LedgerAssetAudit& asset : _listAsset )
         {
-            if ( asset._assetId == assetId )
+            if ( asset._assetID == assetID )
                 return &asset;
         }
         return nullptr;
@@ -75,9 +75,9 @@ namespace sw
                 for ( const LedgerPosting& posting : entry._listPosting )
                 {
                     if ( posting._from._kind == LedgerHolderKind::Mint )
-                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetId )._issued += posting._amount;
+                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetID )._issued += posting._amount;
                     if ( posting._to._kind == LedgerHolderKind::Sink )
-                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetId )._burned += posting._amount;
+                        LedgerAuditInternal::findOrAdd( mapAsset, posting._assetID )._burned += posting._amount;
                 }
             }
             if ( static_cast<int32>( listRecord.size() ) < LedgerAuditInternal::kPageSize )
@@ -117,7 +117,7 @@ namespace sw
         }
 
         outReport._listAsset.reserve( mapAsset.size() );
-        for ( auto& [assetId, audit] : mapAsset )
+        for ( auto& [assetID, audit] : mapAsset )
         {
             outReport._listAsset.push_back( std::move( audit ) );
         }

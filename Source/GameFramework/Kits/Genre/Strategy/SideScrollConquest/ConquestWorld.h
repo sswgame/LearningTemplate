@@ -85,7 +85,7 @@ namespace sw
         Countdown              _attackCooldown{};
         float32                _holdX{ 0.0f }; ///< 대기 명령의 자기 자리
         float32                _damageDealt{ 0.0f };
-        int32                  _unitId{ -1 };
+        int32                  _unitID{ -1 };
         int32                  _squadSlot{ -1 }; ///< 지휘관 부대의 자리(0 = 바로 뒤), 부대가 아니면 −1
         ConquestTeam           _team{ ConquestTeam::Neutral };
         ConquestOrder          _order{ ConquestOrder::Follow };
@@ -164,16 +164,16 @@ namespace sw
         /** @brief 부대 전체에 명령합니다. 대기는 지금 지휘관 자리를 기준으로 진형 자리를 정합니다. */
         void issueOrder( ConquestOrder order );
 
-        ConquestResult placeBuilding( const hashed_string& buildingId, const hashed_string& siteId );
+        ConquestResult placeBuilding( const hashed_string& buildingID, const hashed_string& siteID );
         /** @brief 건물의 일꾼 수를 정합니다(0..자리 수). 늘리는 만큼 남는 일꾼이 있어야 합니다. */
         ConquestResult assignWorkers( int32 buildingIndex, int32 workerCount );
         /** @brief 건물에서 병종을 훈련합니다(값은 지금 낸다, 인구 한도는 대기열까지 센다). */
-        ConquestResult trainUnit( int32 buildingIndex, const hashed_string& unitId );
+        ConquestResult trainUnit( int32 buildingIndex, const hashed_string& unitID );
         /**
          * @brief 병사를 바로 세웁니다(스크립트 · 시험). 플레이어 병사는 지휘관 부대에 듭니다.
          * @return 병사 번호. 모르는 병종이면 −1 입니다.
          */
-        int32 spawnUnit( const hashed_string& unitId, ConquestTeam team, float32 x, ConquestOrder order );
+        int32 spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );
         void  addResource( const hashed_string& resource, float32 amount ) { _resource.addValue( resource, amount ); }
 
         void drainEvents( vector<ConquestEvent>& outListEvent );
@@ -194,8 +194,8 @@ namespace sw
         int32 computeTerritory() const;
         /** @brief 지금 웨이브가 오면 몇 명인가입니다(기본 + 지난 분 × 분당 + (영토 − 1) × 거점당). */
         int32                           computeWaveSize() const;
-        const ConquestSite*             findSite( const hashed_string& siteId ) const;
-        const ConquestUnit*             findUnit( int32 unitId ) const;
+        const ConquestSite*             findSite( const hashed_string& siteID ) const;
+        const ConquestUnit*             findUnit( int32 unitID ) const;
         int32                           getSquadSize() const;
         const vector<ConquestSite>&     getSites() const { return _listSite; }
         const vector<ConquestBuilding>& getBuildings() const { return _listBuilding; }
@@ -247,7 +247,7 @@ namespace sw
         float32                    _elapsed;
         float32                    _incomeTimer;
         float32                    _waveTimer;
-        int32                      _nextUnitId;
+        int32                      _nextUnitID;
         uint8                      _bVictory;
         uint8                      _bDefeat;
     };

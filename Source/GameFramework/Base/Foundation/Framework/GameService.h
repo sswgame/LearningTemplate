@@ -44,7 +44,7 @@ namespace sw
             {
             };
 
-            SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceId id );
+            SW_GAMESERVICE_API void* getRawService( sw::internal::ModuleServiceID id );
             SW_GAMESERVICE_API void  bindRawLocalService( uint64 typeHash, void* pService );
             SW_GAMESERVICE_API void* getRawLocalService( uint64 typeHash );
         } // namespace internal
@@ -54,7 +54,7 @@ namespace sw
         /**
          * @brief 게임 서비스를 쓸 수 있는 상태인지 묻습니다. **SceneManager 슬롯 하나를 봅니다.**
          * @details 이름은 "서비스들이 붙었는가" 로 읽히지만 실제로 검사하는 것은
-         *          `ModuleServiceId::SceneManager` **하나**입니다. 그래서 이 함수가 true 면
+         *          `ModuleServiceID::SceneManager` **하나**입니다. 그래서 이 함수가 true 면
          *          `getService<SceneManager>()` 는 널일 수 없고, 반대로 다른 서비스에 대해서는
          *          **아무것도 보장하지 않습니다.** 주의: "필수 서비스 전체를 본다" 로 읽고 가드를 넣으면
          *          그 가드는 도달할 수 없습니다. 이름만 보고 판단하지 마십시오.
@@ -96,7 +96,7 @@ namespace sw
         template <typename T>
         T* getService()
         {
-            // 1) 게임 로컬 서비스 우선 조회 (RTTI-Free 컴파일타임 TypeId 해시 레지스트리)
+            // 1) 게임 로컬 서비스 우선 조회 (RTTI-Free 컴파일타임 TypeID 해시 레지스트리)
             void* pLocal = internal::getRawLocalService( internal::getServiceTypeHash<T>() );
             if ( pLocal != nullptr )
                 return static_cast<T*>( pLocal );

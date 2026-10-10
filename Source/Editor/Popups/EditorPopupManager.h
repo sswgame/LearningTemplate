@@ -26,7 +26,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorPopupRegistration
-     * @brief 팝업 한 종류의 등록 줄입니다. 팝업의 .cpp 가 `SW_EDITOR_POPUP` 으로 둡니다. id 는 팝업의 `kPopupId` 입니다.
+     * @brief 팝업 한 종류의 등록 줄입니다. 팝업의 .cpp 가 `SW_EDITOR_POPUP` 으로 둡니다. id 는 팝업의 `kPopupID` 입니다.
      */
     struct EditorPopupRegistration : EditorRegistration
     {
@@ -92,8 +92,8 @@ namespace sw::editor
 
 /**
  * @brief 팝업 종류를 그 팝업의 .cpp 에서 등록합니다. 예: `SW_EDITOR_POPUP( QuickLauncherPopup, 100 );`
- * @param TPopup 기본 생성자와 `static constexpr const utf8* kPopupId` 가 있는 `IEditorPopup` 구현
+ * @param TPopup 기본 생성자와 `static constexpr const utf8* kPopupID` 가 있는 `IEditorPopup` 구현
  * @param order  그리기 순서(작을수록 먼저 — 뒤의 것이 위에 그려집니다)
  */
 #define SW_EDITOR_POPUP( TPopup, order ) \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorPopupRegistration, Popup_##TPopup, { TPopup::kPopupId, order }, &::sw::editor::createEditorPopup<TPopup> )
+    SW_EDITOR_REGISTER( ::sw::editor::EditorPopupRegistration, Popup_##TPopup, { TPopup::kPopupID, order }, &::sw::editor::createEditorPopup<TPopup> )

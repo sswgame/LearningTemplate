@@ -81,10 +81,10 @@ namespace sw
         [[nodiscard]] bool setEquippedInstance( const hashed_string& slot, const InventorySlot& item );
 
         /** @brief 끼기의 결과를 바꾸지 않고 미리 봅니다 — 칸 종류 · 장착 조건 · 다른 장비의 거부까지. */
-        EquipResult evaluateEquip( const hashed_string& slot, const hashed_string& itemId ) const;
-        bool        canEquip( const hashed_string& slot, const hashed_string& itemId ) const { return evaluateEquip( slot, itemId ) == EquipResult::Ok; }
+        EquipResult evaluateEquip( const hashed_string& slot, const hashed_string& itemID ) const;
+        bool        canEquip( const hashed_string& slot, const hashed_string& itemID ) const { return evaluateEquip( slot, itemID ) == EquipResult::Ok; }
         /** @brief 그 아이템을 받는 칸 — 빈 칸 먼저, 없으면 첫 칸입니다. 없으면 빈 이름입니다. */
-        hashed_string        findSlotFor( const hashed_string& itemId ) const;
+        hashed_string        findSlotFor( const hashed_string& itemID ) const;
         const InventorySlot* findEquipped( const hashed_string& slot ) const;
         /** @brief 칸의 아이템이 조건이 깨져 숨김 상태인가입니다. */
         bool                         isSuppressed( const hashed_string& slot ) const;

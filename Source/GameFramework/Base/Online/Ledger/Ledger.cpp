@@ -27,7 +27,7 @@ namespace sw
             {
                 LedgerHolder _holder{};
                 string       _holderKey{};
-                string       _assetId{};
+                string       _assetID{};
                 int64        _delta{ 0 };
                 int32        _firstDebitIndex{ -1 };  ///< 이 보유자가 보낸 첫 다리(모자람 보고)
                 int32        _firstCreditIndex{ -1 }; ///< 이 보유자가 받은 첫 다리(상한 보고)
@@ -37,7 +37,7 @@ namespace sw
             {
                 if ( left._holderKey != right._holderKey )
                     return left._holderKey < right._holderKey;
-                return left._assetId < right._assetId;
+                return left._assetID < right._assetID;
             }
 
             static LedgerResult finish( LedgerTransferOutcome& outOutcome, LedgerResult result )
@@ -73,7 +73,7 @@ namespace sw
                 writer.writeVarUint( kJournalFormat );
                 writer.writeVarInt( request._timeMs );
                 writer.writeVarUint( static_cast<uint64>( request._actorKind ) );
-                writer.writeVarUint( request._actorId );
+                writer.writeVarUint( request._actorID );
                 writer.writeUint32( static_cast<uint32>( contentHash >> 32 ) );
                 writer.writeUint32( static_cast<uint32>( contentHash ) );
                 ServiceKeyUtil::writeString( writer, request._reason );
@@ -87,7 +87,7 @@ namespace sw
                 for ( const LedgerTransferOutcome::HolderBalance& holderBalance : listHolderBalance )
                 {
                     LedgerUtil::writeHolder( writer, holderBalance._holder );
-                    ServiceKeyUtil::writeString( writer, holderBalance._balance._assetId );
+                    ServiceKeyUtil::writeString( writer, holderBalance._balance._assetID );
                     writer.writeVarInt( holderBalance._balance._amount );
                 }
                 return writer.releaseBytes();
@@ -100,7 +100,7 @@ namespace sw
                     return false;
                 outEntry._timeMs       = reader.readVarInt();
                 const uint64 actorKind = reader.readVarUint();
-                outEntry._actorId      = reader.readVarUint();
+                outEntry._actorID      = reader.readVarUint();
                 const uint64 hashHigh  = reader.readUint32();
                 const uint64 hashLow   = reader.readUint32();
                 outEntry._contentHash  = ( hashHigh << 32 ) | hashLow;
@@ -130,7 +130,7 @@ namespace sw
                     LedgerTransferOutcome::HolderBalance holderBalance;
                     if ( LedgerUtil::readHolder( reader, holderBalance._holder ) == false )
                         return false;
-                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, holderBalance._balance._assetId ) == false )
+                    if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, holderBalance._balance._assetID ) == false )
                         return false;
                     holderBalance._balance._amount = reader.readVarInt();
                     if ( pOutListHolderBalance != nullptr )
@@ -155,7 +155,7 @@ namespace sw
                     const bool           bHolderOk   = posting._from.isValid() && posting._to.isValid() && posting._from != posting._to;
                     const bool           bSystemOnly = posting._from.isSystem() && posting._to.isSystem();
                     const bool           bAmountOk   = 1 <= posting._amount && posting._amount <= LedgerConstant::kMaxAmount;
-                    if ( bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetId( posting._assetId ) == false )
+                    if ( bHolderOk == false || bSystemOnly || bAmountOk == false || LedgerUtil::isValidAssetID( posting._assetID ) == false )
                     {
                         outFailedPostingIndex = postingIndex;
                         return LedgerResult::Invalid;
@@ -164,18 +164,18 @@ namespace sw
                 return LedgerResult::Ok;
             }
 
-            static Delta& findOrAddDelta( vector<Delta>& inoutListDelta, const LedgerHolder& holder, const string& assetId )
+            static Delta& findOrAddDelta( vector<Delta>& inoutListDelta, const LedgerHolder& holder, const string& assetID )
             {
                 const string holderKey = holder.makeKey();
                 for ( Delta& delta : inoutListDelta )
                 {
-                    if ( delta._holderKey == holderKey && delta._assetId == assetId )
+                    if ( delta._holderKey == holderKey && delta._assetID == assetID )
                         return delta;
                 }
                 Delta& delta     = inoutListDelta.emplace_back();
                 delta._holder    = holder;
                 delta._holderKey = holderKey;
-                delta._assetId   = assetId;
+                delta._assetID   = assetID;
                 return delta;
             }
 
@@ -188,14 +188,14 @@ namespace sw
                     const LedgerPosting& posting = request._listPosting[postingIndex];
                     if ( posting._from.isSystem() == false )
                     {
-                        Delta& debit = findOrAddDelta( outListDelta, posting._from, posting._assetId );
+                        Delta& debit = findOrAddDelta( outListDelta, posting._from, posting._assetID );
                         debit._delta -= posting._amount;
                         if ( debit._firstDebitIndex < 0 )
                             debit._firstDebitIndex = static_cast<int32>( postingIndex );
                     }
                     if ( posting._to.isSystem() == false )
                     {
-                        Delta& credit = findOrAddDelta( outListDelta, posting._to, posting._assetId );
+                        Delta& credit = findOrAddDelta( outListDelta, posting._to, posting._assetID );
                         credit._delta += posting._amount;
                         if ( credit._firstCreditIndex < 0 )
                             credit._firstCreditIndex = static_cast<int32>( postingIndex );
@@ -204,11 +204,11 @@ namespace sw
                 std::sort( outListDelta.begin(), outListDelta.end(), &LedgerInternal::isDeltaLess );
             }
 
-            static int64 computeCap( const LedgerTransferRequest& request, const LedgerHolder& holder, string_view assetId )
+            static int64 computeCap( const LedgerTransferRequest& request, const LedgerHolder& holder, string_view assetID )
             {
                 if ( holder._kind != LedgerHolderKind::Account || request._pPolicy == nullptr )
                     return LedgerConstant::kMaxBalance;
-                const int64 policyCap = request._pPolicy->getBalanceCap( assetId );
+                const int64 policyCap = request._pPolicy->getBalanceCap( assetID );
                 return 0 < policyCap && policyCap < LedgerConstant::kMaxBalance ? policyCap : LedgerConstant::kMaxBalance;
             }
 
@@ -221,11 +221,11 @@ namespace sw
                 return bDebtAllowed && -LedgerConstant::kMaxBalance <= nextAmount;
             }
 
-            static string makeBalanceKey( const string& holderKey, string_view assetId )
+            static string makeBalanceKey( const string& holderKey, string_view assetID )
             {
                 string key{ holderKey };
                 key.push_back( '/' );
-                key += assetId;
+                key += assetID;
                 return key;
             }
 
@@ -312,7 +312,7 @@ namespace sw
         ServiceTransaction pending;
         for ( const LedgerInternal::Delta& delta : listDelta )
         {
-            const string             balanceKey = LedgerInternal::makeBalanceKey( delta._holderKey, delta._assetId );
+            const string             balanceKey = LedgerInternal::makeBalanceKey( delta._holderKey, delta._assetID );
             ServiceRecord            balanceRecord;
             const ServiceStoreResult balanceRead = connection.readRecord( getBalanceTable(), balanceKey, balanceRecord );
             if ( balanceRead != ServiceStoreResult::Ok && balanceRead != ServiceStoreResult::NotFound )
@@ -330,7 +330,7 @@ namespace sw
                 return LedgerInternal::finish( outOutcome, LedgerResult::InsufficientFunds );
             }
             const bool bIncrease = delta._delta > 0;
-            if ( bIncrease && nextAmount > LedgerInternal::computeCap( request, delta._holder, delta._assetId ) )
+            if ( bIncrease && nextAmount > LedgerInternal::computeCap( request, delta._holder, delta._assetID ) )
             {
                 outOutcome._failedPostingIndex = delta._firstCreditIndex;
                 return LedgerInternal::finish( outOutcome, LedgerResult::CapExceeded );
@@ -344,7 +344,7 @@ namespace sw
             }
             LedgerTransferOutcome::HolderBalance& holderBalance = outOutcome._listHolderBalance.emplace_back();
             holderBalance._holder                               = delta._holder;
-            holderBalance._balance._assetId                     = delta._assetId;
+            holderBalance._balance._assetID                     = delta._assetID;
             holderBalance._balance._amount                      = nextAmount;
             holderBalance._balance._version                     = balanceRecord._version;
         }
@@ -429,7 +429,7 @@ namespace sw
             for ( ServiceRecord& record : listRecord )
             {
                 LedgerBalance& balance = outListBalance.emplace_back();
-                balance._assetId       = record._key.substr( prefix.size() );
+                balance._assetID       = record._key.substr( prefix.size() );
                 balance._version       = record._version;
                 if ( decodeBalanceRecord( record._bytes, balance._amount ) == false )
                 {
@@ -443,14 +443,14 @@ namespace sw
         }
     }
 
-    ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetId, LedgerBalance& outBalance )
+    ServiceStoreResult Ledger::readBalance( IServiceStoreConnection& connection, const LedgerHolder& holder, string_view assetID, LedgerBalance& outBalance )
     {
         outBalance          = LedgerBalance{};
-        outBalance._assetId = string( assetId );
-        if ( holder.isValid() == false || holder.isSystem() || LedgerUtil::isValidAssetId( assetId ) == false )
+        outBalance._assetID = string( assetID );
+        if ( holder.isValid() == false || holder.isSystem() || LedgerUtil::isValidAssetID( assetID ) == false )
             return ServiceStoreResult::Invalid;
         ServiceRecord            record;
-        const ServiceStoreResult read = connection.readRecord( getBalanceTable(), LedgerInternal::makeBalanceKey( holder.makeKey(), assetId ), record );
+        const ServiceStoreResult read = connection.readRecord( getBalanceTable(), LedgerInternal::makeBalanceKey( holder.makeKey(), assetID ), record );
         if ( read == ServiceStoreResult::NotFound )
             return ServiceStoreResult::Ok;
         if ( read != ServiceStoreResult::Ok )

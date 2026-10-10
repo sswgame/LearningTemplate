@@ -95,7 +95,7 @@ namespace sw
             SW_LOG_ERROR( "XGetWindowAttributes failed" );
             return false;
         }
-        const VisualID windowVisualId = XVisualIDFromVisual( windowAttributes.visual );
+        const VisualID windowVisualID = XVisualIDFromVisual( windowAttributes.visual );
 
         int32        fbcount{ 0 };
         GLXFBConfig* pFbcAll = glXGetFBConfigs( pDpy, DefaultScreen( pDpy ), &fbcount );
@@ -118,7 +118,7 @@ namespace sw
             XVisualInfo* pVi = glXGetVisualFromFBConfig( pDpy, pFbcAll[configIndex] );
             if ( pVi == nullptr )
                 continue;
-            const bool bMatch = ( pVi->visualid == windowVisualId );
+            const bool bMatch = ( pVi->visualid == windowVisualID );
             XFree( pVi );
             if ( bMatch )
             {

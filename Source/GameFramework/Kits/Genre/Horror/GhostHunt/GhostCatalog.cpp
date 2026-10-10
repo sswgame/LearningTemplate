@@ -82,11 +82,11 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Ghost" ); node; node = node.findNextSibling( "Ghost" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             GhostDef ghost;
-            ghost._id           = hashed_string( pId );
+            ghost._id           = hashed_string( pID );
             ghost._hp           = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", ghost._hp ) );
             ghost._hideTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "hideTime", ghost._hideTime ) );
             ghost._appearTime   = MathUtil::max( 0.0f, node.getAttributeFloat( "appearTime", ghost._appearTime ) );
@@ -102,49 +102,49 @@ namespace sw
         }
         for ( XmlNode node = root.findChild( "Room" ); node; node = node.findNextSibling( "Room" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             GhostRoomDef room;
-            room._id        = hashed_string( pId );
+            room._id        = hashed_string( pID );
             room._keyReward = GhostCatalogInternal::readName( node, "key" );
             room._lightFlag = GhostCatalogInternal::readName( node, "lightFlag" );
             if ( room._lightFlag.empty() )
             {
                 string flag( "lit." );
-                flag += pId;
+                flag += pID;
                 room._lightFlag = hashed_string( flag.c_str() );
             }
             GameDataXml::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
             {
-                const hashed_string ghostId( string( token.data(), token.size() ).c_str() );
-                if ( _ghostCatalog.find( ghostId ) == nullptr )
-                    SW_LOG_WARNING( "%#: room '%#' has an unknown ghost '%#' - skipped", sourceName, pId, token );
+                const hashed_string ghostID( string( token.data(), token.size() ).c_str() );
+                if ( _ghostCatalog.find( ghostID ) == nullptr )
+                    SW_LOG_WARNING( "%#: room '%#' has an unknown ghost '%#' - skipped", sourceName, pID, token );
                 else
-                    room._listGhost.push_back( ghostId );
+                    room._listGhost.push_back( ghostID );
             } );
             (void)_roomCatalog.add( room );
         }
         for ( XmlNode node = root.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             GhostDoorDef door;
-            door._id   = hashed_string( pId );
+            door._id   = hashed_string( pID );
             door._key  = GhostCatalogInternal::readName( node, "key" );
             door._flag = GhostCatalogInternal::readName( node, "flag" );
             if ( door._flag.empty() )
-                door._flag = hashed_string( string( "door." ) + pId );
+                door._flag = hashed_string( string( "door." ) + pID );
             (void)_doorCatalog.add( door );
         }
         for ( XmlNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             GhostFurnitureDef furniture;
-            furniture._id                = hashed_string( pId );
+            furniture._id                = hashed_string( pID );
             furniture._room              = GhostCatalogInternal::readName( node, "room" );
             furniture._lootTable         = GhostCatalogInternal::readName( node, "loot" );
             const string_view searchText = node.getAttributeText( "search" );
@@ -159,18 +159,18 @@ namespace sw
                     else if ( StringUtil::equals( token, string_view( "Shake" ), true ) )
                         furniture._bShake = SW_TRUE;
                     else
-                        SW_LOG_WARNING( "%#: furniture '%#' has an unknown search mode '%#'", sourceName, pId, token );
+                        SW_LOG_WARNING( "%#: furniture '%#' has an unknown search mode '%#'", sourceName, pID, token );
                 } );
             }
             (void)_furnitureCatalog.add( furniture );
         }
         for ( XmlNode node = root.findChild( "Boo" ); node; node = node.findNextSibling( "Boo" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             GhostBooDef boo;
-            boo._id         = hashed_string( pId );
+            boo._id         = hashed_string( pID );
             boo._room       = GhostCatalogInternal::readName( node, "room" );
             boo._furniture  = GhostCatalogInternal::readName( node, "furniture" );
             boo._hp         = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", boo._hp ) );

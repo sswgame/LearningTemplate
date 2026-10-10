@@ -19,7 +19,7 @@ namespace sw::editor
      */
     struct EditorRegistration
     {
-        const utf8* _pId;   ///< 종류 안에서 유일한 id. 같은 id 의 둘째 등록은 거절됩니다
+        const utf8* _pID;   ///< 종류 안에서 유일한 id. 같은 id 의 둘째 등록은 거절됩니다
         int32       _order; ///< 보이는 순서. 작을수록 앞이고, 같으면 id 사전순입니다
     };
 } // namespace sw::editor

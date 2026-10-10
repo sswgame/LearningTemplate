@@ -42,7 +42,7 @@ namespace sw
         INetConnectAuthenticator& operator=( const INetConnectAuthenticator& ) = delete;
 
         /** @brief 모르는 토큰이면 false 입니다. */
-        [[nodiscard]] virtual bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalId ) = 0;
+        [[nodiscard]] virtual bool findSessionSecret( const uint8* pToken, int32 tokenSize, NetSessionSecret& outSecret, uint64& outPrincipalID ) = 0;
     };
 } // namespace sw
 

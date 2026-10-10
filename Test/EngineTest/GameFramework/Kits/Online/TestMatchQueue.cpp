@@ -21,7 +21,7 @@ namespace
         static MatchModeDefinition makeDuoMode( int64 maxWaitMs = 120000 )
         {
             MatchModeDefinition mode;
-            mode._modeId    = "duo";
+            mode._modeID    = "duo";
             mode._teamCount = 2;
             mode._teamSize  = 2;
             mode._maxWaitMs = maxWaitMs;
@@ -31,7 +31,7 @@ namespace
         static void registerGameServer( EphemeralStoreRouter& router, ServerRegistration& registration, int64 nowMs )
         {
             ServerDescriptor descriptor;
-            descriptor._serverId = 50;
+            descriptor._serverID = 50;
             descriptor._kind     = "game";
             descriptor._region   = "kr";
             descriptor._address  = "10.0.0.5";
@@ -55,7 +55,7 @@ namespace
         vector<MatchQueueNotification> _listNotification;
         vector<MatchQueueCompletion>   _listCompletion;
 
-        QueueNode( MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverId, int64 maxWaitMs = 120000 )
+        QueueNode( MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverID, int64 maxWaitMs = 120000 )
             : _cache{ pCacheDatabase }
             , _router{}
             , _bus{}
@@ -66,13 +66,13 @@ namespace
         {
             _router.initialize( &_cache );
             if ( pHub != nullptr )
-                _bus = make_unique<LocalServerBus>( pHub, serverId );
-            _partyLobby.initialize( &_router, serverId );
+                _bus = make_unique<LocalServerBus>( pHub, serverID );
+            _partyLobby.initialize( &_router, serverID );
             MatchQueueDependencies dependencies;
             dependencies._pRouter     = &_router;
             dependencies._pBus        = _bus.get();
             dependencies._pPartyLobby = &_partyLobby;
-            dependencies._serverId    = serverId;
+            dependencies._serverID    = serverID;
             _service.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestInternal::makeDuoMode( maxWaitMs ) } );
         }
 
@@ -129,11 +129,11 @@ namespace
         LocalServerBus   _bus;
         MatchServerAgent _agent;
 
-        GameServerNode( LocalServerBusHub* pHub, uint64 serverId )
-            : _bus{ pHub, serverId }
+        GameServerNode( LocalServerBusHub* pHub, uint64 serverID )
+            : _bus{ pHub, serverID }
             , _agent{}
         {
-            _agent.initialize( serverId );
+            _agent.initialize( serverID );
             _bus.subscribe( _agent.getAssignTopic() );
         }
 
@@ -161,18 +161,18 @@ SW_TEST_CASE( MatchQueueTest, SingleServerPlacesMatchOnRegisteredGameServer )
     node.step( 0 );                                       // 서버 목록 읽기
     SW_EXPECT_TRUE( node._service.isAuthority( "duo" ) ); // 버스 없음 — 늘 권한
 
-    for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+    for ( AccountID accountID = 1; accountID <= 4; ++accountID )
     {
-        node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+        node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
     }
     node.step( 1000 );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 4 ) );
     for ( const MatchQueueNotification& notification : node._listNotification )
     {
         SW_EXPECT_TRUE( notification._assignment._outcome == MatchQueueOutcome::Found );
-        SW_EXPECT_EQUAL( notification._assignment._serverId, uint64( 50 ) );
+        SW_EXPECT_EQUAL( notification._assignment._serverID, uint64( 50 ) );
         SW_EXPECT_EQUAL( notification._assignment._port, uint16( 7777 ) );
-        SW_EXPECT_EQUAL( notification._assignment._matchId, node._listNotification[0]._assignment._matchId );
+        SW_EXPECT_EQUAL( notification._assignment._matchID, node._listNotification[0]._assignment._matchID );
         SW_EXPECT_EQUAL( notification._assignment._listTeammate.size(), size_t( 2 ) );
     }
     SW_EXPECT_EQUAL( node._service.getQueuedTicketCount( "duo" ), 0 );
@@ -212,9 +212,9 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
     SW_EXPECT_TRUE( first._service.isAuthority( "duo" ) );
     SW_EXPECT_FALSE( second._service.isAuthority( "duo" ) ); // 권한은 하나만
 
-    for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+    for ( AccountID accountID = 1; accountID <= 4; ++accountID )
     {
-        second._service.joinQueue( accountId, "duo", "kr", 1000, accountId );
+        second._service.joinQueue( accountID, "duo", "kr", 1000, accountID );
     }
     second.step( 1000 ); // 표를 mm.queue.duo 로
     SW_EXPECT_EQUAL( second._service.getQueuedTicketCount( "duo" ), 0 );
@@ -227,13 +227,13 @@ SW_TEST_CASE( MatchQueueTest, TicketsFromAnotherServerReachTheAuthorityAndResult
     for ( const MatchQueueNotification& notification : second._listNotification )
     {
         SW_EXPECT_TRUE( notification._assignment._outcome == MatchQueueOutcome::Found );
-        SW_EXPECT_EQUAL( notification._assignment._serverId, uint64( 50 ) );
+        SW_EXPECT_EQUAL( notification._assignment._serverID, uint64( 50 ) );
     }
-    uint64 matchId = 0;
+    uint64 matchID = 0;
     int32  team    = -1;
-    SW_ASSERT_TRUE( gameServer._agent.findExpected( 1, matchId, team ) );
-    SW_EXPECT_EQUAL( matchId, second._listNotification[0]._assignment._matchId );
-    SW_EXPECT_FALSE( gameServer._agent.findExpected( 99, matchId, team ) );
+    SW_ASSERT_TRUE( gameServer._agent.findExpected( 1, matchID, team ) );
+    SW_EXPECT_EQUAL( matchID, second._listNotification[0]._assignment._matchID );
+    SW_EXPECT_FALSE( gameServer._agent.findExpected( 99, matchID, team ) );
     SW_EXPECT_EQUAL( gameServer._agent.getExpectedCount(), 4 );
     gameServer.step( 1000 + MatchServerAgent::kExpectTtlMs ); // 오지 않은 사람은 지운다
     SW_EXPECT_EQUAL( gameServer._agent.getExpectedCount(), 0 );
@@ -274,7 +274,7 @@ SW_TEST_CASE( MatchQueueTest, AuthorityFailoverLosesQueuedTicketsWhichTimeOutAtT
     second.step( deadlineMs + 1 );
     SW_ASSERT_EQUAL( second._listNotification.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( second._listNotification[0]._assignment._outcome == MatchQueueOutcome::Timeout );
-    SW_EXPECT_EQUAL( second._listNotification[0]._recipientId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( second._listNotification[0]._recipientID, AccountID( 1 ) );
     second._service.joinQueue( 1, "duo", "kr", deadlineMs + 1, 2 ); // 다시 줄 설 수 있다
     second.step( deadlineMs + 1 );
     SW_EXPECT_TRUE( second._listCompletion.back()._result == MatchmakingResult::Ok );
@@ -288,9 +288,9 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         MemoryEphemeralDatabase cacheDatabase;
         cacheDatabase.setManualTimeMs( 0 );
         QueueNode node( &cacheDatabase, nullptr, 1 );
-        for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+        for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
-            node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+            node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
         }
         node.step( 1000 );
         SW_EXPECT_TRUE( node._listNotification.empty() ); // 경기는 만들었지만 자리가 없다 — 기다림
@@ -308,9 +308,9 @@ SW_TEST_CASE( MatchQueueTest, NoServerWaitsThenPlacesWhenOneAppears )
         MemoryEphemeralDatabase cacheDatabase;
         cacheDatabase.setManualTimeMs( 0 );
         QueueNode node( &cacheDatabase, nullptr, 1 );
-        for ( AccountId accountId = 1; accountId <= 4; ++accountId )
+        for ( AccountID accountID = 1; accountID <= 4; ++accountID )
         {
-            node._service.joinQueue( accountId, "duo", "kr", 0, accountId );
+            node._service.joinQueue( accountID, "duo", "kr", 0, accountID );
         }
         node.step( 1000 );
         node.step( 1000 + MatchQueueLimit::kNoServerGiveUpMs - 1 );
@@ -342,9 +342,9 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
     (void)probe.submit( EphemeralRequest::makeGet( PartyLobbyService::makeAccountPartyKey( 10 ) ) );
     vector<EphemeralReply> listReply;
     (void)probe.pollReplies( listReply );
-    uint64 partyId = 0;
-    SW_ASSERT_TRUE( listReply.size() == 1 && MatchmakingProtocol::decodeId( listReply[0]._value, partyId ) );
-    node._partyLobby.acceptPartyInvite( 11, partyId, 3 );
+    uint64 partyID = 0;
+    SW_ASSERT_TRUE( listReply.size() == 1 && MatchmakingProtocol::decodeID( listReply[0]._value, partyID ) );
+    node._partyLobby.acceptPartyInvite( 11, partyID, 3 );
     node.step( 0 );
 
     node._service.joinQueue( 11, "duo", "kr", 0, 20 ); // 장이 아니다
@@ -366,9 +366,9 @@ SW_TEST_CASE( MatchQueueTest, PartyLeaderQueuesTheWholePartyAsOneTeam )
     for ( const MatchQueueNotification& notification : node._listNotification )
     {
         SW_EXPECT_TRUE( notification._assignment._outcome == MatchQueueOutcome::Found );
-        if ( notification._recipientId == 10 )
+        if ( notification._recipientID == 10 )
             leaderTeam = notification._assignment._team;
-        if ( notification._recipientId == 11 )
+        if ( notification._recipientID == 11 )
             memberTeam = notification._assignment._team;
     }
     SW_EXPECT_EQUAL( leaderTeam, memberTeam ); // 파티는 쪼개지 않는다
@@ -382,7 +382,7 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     QueueNode     node( &cacheDatabase, nullptr, 1 );
     LobbySnapshot request;
     request._name           = "scrim";
-    request._modeId         = "duo";
+    request._modeID         = "duo";
     request._maxMemberCount = 4;
     node._partyLobby.createLobby( 10, request, 0, 1 );
     node.step( 0 );
@@ -394,13 +394,13 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     }
     node._partyLobby.drainCompletions( listCompletion );
     SW_ASSERT_TRUE( listCompletion.size() == 1 && listCompletion[0]._listLobby.size() == 1 );
-    const uint64 lobbyId = listCompletion[0]._listLobby[0]._lobbyId;
-    node._partyLobby.joinLobby( 11, lobbyId, 3 );
+    const uint64 lobbyID = listCompletion[0]._listLobby[0]._lobbyID;
+    node._partyLobby.joinLobby( 11, lobbyID, 3 );
     node.step( 0 );
-    node._partyLobby.setLobbyReady( 11, lobbyId, true, 4 );
+    node._partyLobby.setLobbyReady( 11, lobbyID, true, 4 );
     node.step( 0 );
 
-    node._partyLobby.startLobby( 10, lobbyId, 5 ); // 서버가 없다 — NoServer + 다시 Open
+    node._partyLobby.startLobby( 10, lobbyID, 5 ); // 서버가 없다 — NoServer + 다시 Open
     node.step( 0 );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._assignment._outcome == MatchQueueOutcome::NoServer );
@@ -409,10 +409,10 @@ SW_TEST_CASE( MatchQueueTest, LobbyStartPlacesTheLobbyTeams )
     Internal::registerGameServer( node._router, gameServer, 3000 );
     node.step( 3000 );
     node._listNotification.clear();
-    node._partyLobby.startLobby( 10, lobbyId, 6 ); // 다시 열렸으니 다시 시작할 수 있다
+    node._partyLobby.startLobby( 10, lobbyID, 6 ); // 다시 열렸으니 다시 시작할 수 있다
     node.step( 3000 );
     SW_ASSERT_EQUAL( node._listNotification.size(), size_t( 2 ) );
     SW_EXPECT_TRUE( node._listNotification[0]._assignment._outcome == MatchQueueOutcome::Found );
     SW_EXPECT_NOT_EQUAL( node._listNotification[0]._assignment._team, node._listNotification[1]._assignment._team ); // 로비의 편 그대로(방장 0 · 들어온 이 1)
-    SW_EXPECT_EQUAL( node._listNotification[0]._assignment._serverId, uint64( 50 ) );
+    SW_EXPECT_EQUAL( node._listNotification[0]._assignment._serverID, uint64( 50 ) );
 }

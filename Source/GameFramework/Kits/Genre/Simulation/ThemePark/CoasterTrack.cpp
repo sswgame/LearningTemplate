@@ -473,13 +473,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode layoutNode = root.findChild( "Layout" ); layoutNode; layoutNode = layoutNode.findNextSibling( "Layout" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( layoutNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( layoutNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             CoasterLayoutDef layout;
-            layout._id          = hashed_string( pId );
+            layout._id          = hashed_string( pID );
             const utf8* pName   = layoutNode.findAttribute( "name" );
-            layout._name        = pName != nullptr ? pName : pId;
+            layout._name        = pName != nullptr ? pName : pID;
             layout._startHeight = layoutNode.getAttributeFloat( "startHeight", 1.0f );
 
             for ( XmlNode pieceNode = layoutNode.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
@@ -488,7 +488,7 @@ namespace sw
                 const utf8*       pType = pieceNode.findAttribute( "type" );
                 if ( pType == nullptr || parseCoasterPieceType( string_view( pType ), piece._type ) == false )
                 {
-                    SW_LOG_WARNING( "%#: layout '%#' has an unknown piece type '%#' - skipped", sourceName, pId, pType != nullptr ? pType : "" );
+                    SW_LOG_WARNING( "%#: layout '%#' has an unknown piece type '%#' - skipped", sourceName, pID, pType != nullptr ? pType : "" );
                     continue;
                 }
                 piece._length = pieceNode.getAttributeFloat( "length", piece._length );
@@ -501,7 +501,7 @@ namespace sw
             }
             if ( layout._listPiece.empty() )
             {
-                SW_LOG_WARNING( "%#: layout '%#' has no pieces - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: layout '%#' has no pieces - skipped", sourceName, pID );
                 continue;
             }
             addLayout( layout );

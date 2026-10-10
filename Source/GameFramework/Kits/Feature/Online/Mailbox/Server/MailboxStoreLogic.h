@@ -28,7 +28,7 @@ namespace sw
     {
         string               _mailKey{};
         const ILedgerPolicy* _pPolicy{ nullptr };
-        uint64               _accountId{ 0 };
+        uint64               _accountID{ 0 };
         int64                _nowMs{ 0 };
     };
 } // namespace sw
@@ -54,13 +54,13 @@ namespace sw
         static constexpr int32 kMaxClaimAllCount = 16;
 
         /** @brief 개인 우편을 최근 것부터 + 활성이고 안 받은 캠페인(첫 쪽에만, 맨 앞)을 @p outReply 에 채웁니다. 만료된 것은 뺀다. */
-        static MailboxResult listMail( IServiceStoreConnection& connection, uint64 accountId, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
+        static MailboxResult listMail( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const vector<ServiceMailCampaign>& listActiveCampaign,
                                        const MailboxRequest& request, MailboxReply& outReply );
-        static MailboxResult markRead( IServiceStoreConnection& connection, uint64 accountId, string_view mailKey );
+        static MailboxResult markRead( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
         static MailboxResult claim( IServiceStoreConnection& connection, const MailboxClaimInput& input, MailboxReply& outReply );
         /** @brief 첨부 있는 안 받은 우편을 `kMaxClaimAllCount` 통까지, 우편마다 따로 커밋합니다(하나가 상한에 걸려도 나머지는 받는다). */
-        static MailboxResult claimAll( IServiceStoreConnection& connection, uint64 accountId, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxReply& outReply );
-        static MailboxResult deleteMail( IServiceStoreConnection& connection, uint64 accountId, string_view mailKey );
+        static MailboxResult claimAll( IServiceStoreConnection& connection, uint64 accountID, int64 nowMs, const ILedgerPolicy* pPolicy, MailboxReply& outReply );
+        static MailboxResult deleteMail( IServiceStoreConnection& connection, uint64 accountID, string_view mailKey );
         /** @brief 만료 색인을 시각 순으로 @p maxCount 개까지 처리합니다. */
         static void sweepExpired( IServiceStoreConnection& connection, int64 nowMs, int32 maxCount, MailboxSweepStats& outStats );
     };

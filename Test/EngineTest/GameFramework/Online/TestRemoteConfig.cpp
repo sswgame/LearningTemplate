@@ -49,9 +49,9 @@ namespace
         static int32 countEnabled( const RemoteConfig& config, string_view flag )
         {
             int32 enabledCount = 0;
-            for ( uint64 accountId = 1; accountId <= 1000; ++accountId )
+            for ( uint64 accountID = 1; accountID <= 1000; ++accountID )
             {
-                if ( config.isFeatureEnabled( flag, accountId ) )
+                if ( config.isFeatureEnabled( flag, accountID ) )
                     ++enabledCount;
             }
             return enabledCount;
@@ -105,9 +105,9 @@ SW_TEST_CASE( RemoteConfigTest, RolloutIsDeterministicPerAccount )
     SW_EXPECT_EQUAL( 1000, Internal::countEnabled( config, "feature.all" ) );
     const int32 halfCount = Internal::countEnabled( config, "feature.half" );
     SW_EXPECT_TRUE( 450 <= halfCount && halfCount <= 550 );
-    for ( uint64 accountId = 1; accountId <= 50; ++accountId )
+    for ( uint64 accountID = 1; accountID <= 50; ++accountID )
     {
-        SW_EXPECT_EQUAL( config.isFeatureEnabled( "feature.half", accountId ), config.isFeatureEnabled( "feature.half", accountId ) );
+        SW_EXPECT_EQUAL( config.isFeatureEnabled( "feature.half", accountID ), config.isFeatureEnabled( "feature.half", accountID ) );
     }
     SW_EXPECT_TRUE( config.isFeatureEnabled( "feature.missing", 7, true ) ); // 없는 플래그는 기본값
     SW_EXPECT_FALSE( config.isFeatureEnabled( "feature.missing", 7, false ) );

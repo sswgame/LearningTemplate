@@ -12,11 +12,11 @@ namespace sw
 {
     int32 WesternHunting::computePeltStars( const WesternCatalog& catalog, const WesternKill& kill )
     {
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( kill._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( kill._animalID );
         if ( pAnimal == nullptr )
             return 0;
         int32                       stars   = pAnimal->_quality;
-        const WesternHuntWeaponDef* pWeapon = catalog.findHuntWeapon( kill._weaponId );
+        const WesternHuntWeaponDef* pWeapon = catalog.findHuntWeapon( kill._weaponID );
         if ( pWeapon != nullptr )
         {
             if ( pWeapon->_bRuinsPelt != SW_FALSE )
@@ -25,7 +25,7 @@ namespace sw
             if ( ( pWeapon->_sizeMask & sizeBit ) == 0 )
                 --stars;
         }
-        const WesternHitZoneDef* pZone = catalog.findHitZone( kill._zoneId );
+        const WesternHitZoneDef* pZone = catalog.findHitZone( kill._zoneID );
         if ( pZone != nullptr )
             stars -= pZone->_penalty;
         stars -= MathUtil::max( 0, kill._hitCount - 1 ) * catalog.getExtraHitPenalty();
@@ -35,7 +35,7 @@ namespace sw
     WesternCarcass WesternHunting::makeCarcass( const WesternCatalog& catalog, const WesternKill& kill )
     {
         WesternCarcass carcass;
-        carcass._animalId = kill._animalId;
+        carcass._animalID = kill._animalID;
         carcass._stars    = computePeltStars( catalog, kill );
         return carcass;
     }
@@ -44,7 +44,7 @@ namespace sw
 
     int32 WesternHunting::computeCarcassStars( const WesternCatalog& catalog, const WesternCarcass& carcass )
     {
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
         if ( pAnimal == nullptr || carcass._ageHours >= pAnimal->_decayHours )
             return 0;
         const int32 spoiled = carcass._ageHours >= pAnimal->_decayHours * 0.5f ? 1 : 0;
@@ -53,7 +53,7 @@ namespace sw
 
     bool WesternHunting::isRotten( const WesternCatalog& catalog, const WesternCarcass& carcass )
     {
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
         return pAnimal == nullptr || carcass._ageHours >= pAnimal->_decayHours;
     }
 
@@ -62,10 +62,10 @@ namespace sw
     {
         if ( inoutCarcass._bSkinned != SW_FALSE || isRotten( catalog, inoutCarcass ) )
             return false;
-        outPelt._animalId               = inoutCarcass._animalId;
+        outPelt._animalID               = inoutCarcass._animalID;
         outPelt._stars                  = computeCarcassStars( catalog, inoutCarcass );
         inoutCarcass._bSkinned          = SW_TRUE;
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( inoutCarcass._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( inoutCarcass._animalID );
         if ( pLoot != nullptr && pAnimal != nullptr && pAnimal->_lootTable.empty() == false )
             (void)pLoot->roll( pAnimal->_lootTable, random, outItems );
         return true;
@@ -73,7 +73,7 @@ namespace sw
 
     int32 WesternHunting::computePeltPrice( const WesternCatalog& catalog, const WesternPelt& pelt )
     {
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( pelt._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( pelt._animalID );
         if ( pAnimal == nullptr )
             return 0;
         return static_cast<int32>( MathUtil::round( pAnimal->_peltPrice * catalog.getGradeScale( pelt._stars ) * 100.0f ) );
@@ -81,7 +81,7 @@ namespace sw
 
     int32 WesternHunting::computeCarcassPrice( const WesternCatalog& catalog, const WesternCarcass& carcass )
     {
-        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalId );
+        const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
         if ( pAnimal == nullptr || isRotten( catalog, carcass ) )
             return 0;
         // 사체 값은 고기 몫도 있어 등급 0 이어도 1 성 값을 준다. 벗긴 사체는 절반.

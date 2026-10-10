@@ -74,7 +74,7 @@ namespace sw::editor
         /** @brief 프리셋으로 테마를 바로 적용합니다. */
         static void applyPreset( EditorThemePreset preset );
         /** @brief 설정 파일에 적는 이름("ClassicDark" — 대소문자 무시)으로 프리셋을 찾습니다. 없으면 false 입니다. */
-        [[nodiscard]] static bool findPresetByConfigId( string_view configId, EditorThemePreset& outPreset );
+        [[nodiscard]] static bool findPresetByConfigID( string_view configID, EditorThemePreset& outPreset );
 
         /** @brief EditorConfig(JSON)에 저장된 테마 설정을 읽어 적용합니다. */
         static void loadFromConfig();

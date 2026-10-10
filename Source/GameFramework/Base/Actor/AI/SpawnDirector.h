@@ -81,13 +81,13 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Spawned = 0, ///< 게임이 `_entryId` 를 실제로 만든다 — 죽으면 `_spawnId` 로 `notifyDespawned`
+            Spawned = 0, ///< 게임이 `_entryID` 를 실제로 만든다 — 죽으면 `_spawnID` 로 `notifyDespawned`
             Despawned
         };
-        hashed_string _entryId{};
+        hashed_string _entryID{};
         float32       _time{ 0.0f };
         float32       _cost{ 0.0f }; ///< 낸 비용(Despawned 는 돌려받은 비용)
-        uint32        _spawnId{ 0 };
+        uint32        _spawnID{ 0 };
         Kind          _kind{ Kind::Spawned };
     };
 } // namespace sw
@@ -123,18 +123,18 @@ namespace sw
         /** @brief 시간을 흘리고 낼 수 있는 만큼 냅니다. 이번에 낸 수입니다. */
         int32 update( float32 deltaTime );
         /** @brief 게임 쪽 개체가 사라졌음을 알립니다. 모르는(이미 알린) id 면 false 입니다. */
-        bool notifyDespawned( uint32 spawnId );
+        bool notifyDespawned( uint32 spawnID );
         /** @brief 쌓인 일을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<SpawnEvent>& outListEvent );
 
         float32 getBudget() const { return _budget; }
         float32 getTime() const { return _time; }
-        int32   getAliveCount( const hashed_string& entryId ) const;
+        int32   getAliveCount( const hashed_string& entryID ) const;
         int32   getTotalAliveCount() const { return static_cast<int32>( _listAlive.size() ); }
         /** @brief 다음에 낼 것으로 골라 둔 항목입니다. 없으면 빈 이름입니다. */
         hashed_string getPendingEntry() const;
-        /** @brief 살아 있는 개체의 스폰 id 를 낸 순서로 @p outListSpawnId 에 채웁니다. */
-        void collectAliveSpawnIds( vector<uint32>& outListSpawnId ) const;
+        /** @brief 살아 있는 개체의 스폰 id 를 낸 순서로 @p outListSpawnID 에 채웁니다. */
+        void collectAliveSpawnIDs( vector<uint32>& outListSpawnID ) const;
         /** @brief 살아 있는 것 · 항목별 수 · 허용 태그 · 난수 · 예산 · 시간 · 골라 둔 것 · 다음 id · 환불을 씁니다. 표는 `initialize` 의 것이라 싣지 않고, 항목 수가 지금 표와 다르면 거절합니다. 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
         /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 테이블의 항목 수와 맞지 않거나 끝까지 읽지 못하면 false 이고 그대로입니다. */
@@ -144,7 +144,7 @@ namespace sw
         /** @brief 살아 있는 개체 하나입니다. */
         struct SpawnAlive
         {
-            uint32 _spawnId{ 0 };
+            uint32 _spawnID{ 0 };
             int32  _entryIndex{ -1 };
         };
 
@@ -161,7 +161,7 @@ namespace sw
         float32                 _budgetScale;
         float32                 _time;
         int32                   _pendingIndex; ///< −1 = 골라 둔 것 없음
-        uint32                  _nextSpawnId;
+        uint32                  _nextSpawnID;
         uint8                   _bRefundOnDespawn;
     };
 } // namespace sw

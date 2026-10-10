@@ -25,9 +25,9 @@ namespace sw
     {
     }
 
-    bool ActionStageRun::start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageId )
+    bool ActionStageRun::start( const ActionPlatformerCatalog* pCatalog, const hashed_string& stageID )
     {
-        const ActionStageDef* pStage = pCatalog != nullptr ? pCatalog->findStage( stageId ) : nullptr;
+        const ActionStageDef* pStage = pCatalog != nullptr ? pCatalog->findStage( stageID ) : nullptr;
         if ( pStage == nullptr )
             return false;
         _pCatalog = pCatalog;
@@ -56,13 +56,13 @@ namespace sw
             _elapsed += deltaTime;
     }
 
-    bool ActionStageRun::reachCheckpoint( const hashed_string& checkpointId )
+    bool ActionStageRun::reachCheckpoint( const hashed_string& checkpointID )
     {
         if ( _state != ActionStageState::Playing )
             return false;
         for ( size_t index = 0; index < _pStage->_listCheckpoint.size(); ++index )
         {
-            if ( _pStage->_listCheckpoint[index] != checkpointId )
+            if ( _pStage->_listCheckpoint[index] != checkpointID )
                 continue;
             // 앞 것으로 되돌아가지 않는다 — 이미 지난 체크포인트를 다시 밟아도 시작점은 그대로.
             if ( static_cast<int32>( index ) <= _checkpointIndex )
@@ -74,11 +74,11 @@ namespace sw
         return false;
     }
 
-    bool ActionStageRun::collectSecret( const hashed_string& secretId )
+    bool ActionStageRun::collectSecret( const hashed_string& secretID )
     {
-        if ( _state != ActionStageState::Playing || contains( _pStage->_listSecret, secretId ) == false || isSecretFound( secretId ) )
+        if ( _state != ActionStageState::Playing || contains( _pStage->_listSecret, secretID ) == false || isSecretFound( secretID ) )
             return false;
-        _listSecretPending.push_back( secretId );
+        _listSecretPending.push_back( secretID );
         return true;
     }
 
@@ -148,20 +148,20 @@ namespace sw
         return result;
     }
 
-    bool ActionStageRun::isSecretFound( const hashed_string& secretId ) const { return contains( _listSecretCommitted, secretId ) || contains( _listSecretPending, secretId ); }
+    bool ActionStageRun::isSecretFound( const hashed_string& secretID ) const { return contains( _listSecretCommitted, secretID ) || contains( _listSecretPending, secretID ); }
 
     void ActionStageRun::commitSecrets()
     {
-        for ( const hashed_string& secretId : _listSecretPending )
+        for ( const hashed_string& secretID : _listSecretPending )
         {
-            _listSecretCommitted.push_back( secretId );
+            _listSecretCommitted.push_back( secretID );
         }
         _listSecretPending.clear();
     }
 
-    bool ActionStageRun::contains( const vector<hashed_string>& listId, const hashed_string& id )
+    bool ActionStageRun::contains( const vector<hashed_string>& listID, const hashed_string& id )
     {
-        for ( const hashed_string& entry : listId )
+        for ( const hashed_string& entry : listID )
         {
             if ( entry == id )
                 return true;
@@ -179,27 +179,27 @@ namespace sw
         outArchive << _hitCount;
         outArchive << _deathCount;
         outArchive << static_cast<uint32>( _listSecretCommitted.size() );
-        for ( const hashed_string& secretId : _listSecretCommitted )
+        for ( const hashed_string& secretID : _listSecretCommitted )
         {
-            StateArchiveUtil::writeName( outArchive, secretId );
+            StateArchiveUtil::writeName( outArchive, secretID );
         }
         outArchive << static_cast<uint32>( _listSecretPending.size() );
-        for ( const hashed_string& secretId : _listSecretPending )
+        for ( const hashed_string& secretID : _listSecretPending )
         {
-            StateArchiveUtil::writeName( outArchive, secretId );
+            StateArchiveUtil::writeName( outArchive, secretID );
         }
     }
 
     bool ActionStageRun::readState( Archive& archive )
     {
-        hashed_string stageId;
+        hashed_string stageID;
         uint8         state = 0;
-        if ( StateArchiveUtil::readName( archive, stageId ) == false )
+        if ( StateArchiveUtil::readName( archive, stageID ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다.
         ActionStageRun restored = *this;
-        restored._pStage        = stageId.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findStage( stageId );
-        if ( stageId.empty() == false && restored._pStage == nullptr )
+        restored._pStage        = stageID.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findStage( stageID );
+        if ( stageID.empty() == false && restored._pStage == nullptr )
             return false;
         archive >> state;
         archive >> restored._elapsed;
@@ -222,9 +222,9 @@ namespace sw
             if ( StateArchiveUtil::readCount( archive, 4, secretCount ) == false )
                 return false;
             listSecret.assign( secretCount, hashed_string{} );
-            for ( hashed_string& secretId : listSecret )
+            for ( hashed_string& secretID : listSecret )
             {
-                const bool bSecretValid = StateArchiveUtil::readName( archive, secretId ) && restored._pStage != nullptr && contains( restored._pStage->_listSecret, secretId );
+                const bool bSecretValid = StateArchiveUtil::readName( archive, secretID ) && restored._pStage != nullptr && contains( restored._pStage->_listSecret, secretID );
                 if ( bSecretValid == false )
                     return false;
             }

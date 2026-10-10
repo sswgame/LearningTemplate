@@ -71,21 +71,21 @@ namespace sw::test
         /** @brief 지금까지 연 면 수입니다(같은 파일을 두 번 열지 않는지 본다). */
         uint32 getLoadCount() const { return _loadCount; }
 
-        FontFaceId loadFace( vector<uint8> fileBytes, uint32 faceIndex, string_view debugName ) override
+        FontFaceID loadFace( vector<uint8> fileBytes, uint32 faceIndex, string_view debugName ) override
         {
             (void)faceIndex;
             if ( fileBytes.empty() )
-                return kInvalidFontFaceId;
+                return kInvalidFontFaceID;
             ++_loadCount;
             const auto       iter   = _mapConfigByPath.find( string( debugName ) );
-            const FontFaceId faceId = _nextFaceId++;
-            _mapFace[faceId]        = iter != _mapConfigByPath.end() ? iter->second : FakeFontFaceConfig{};
-            return faceId;
+            const FontFaceID faceID = _nextFaceID++;
+            _mapFace[faceID]        = iter != _mapConfigByPath.end() ? iter->second : FakeFontFaceConfig{};
+            return faceID;
         }
 
-        void unloadFace( FontFaceId face ) override { _mapFace.erase( face ); }
+        void unloadFace( FontFaceID face ) override { _mapFace.erase( face ); }
 
-        bool findFaceMetrics( FontFaceId face, FontFaceMetrics& outMetrics ) const override
+        bool findFaceMetrics( FontFaceID face, FontFaceMetrics& outMetrics ) const override
         {
             const auto iter = _mapFace.find( face );
             if ( iter == _mapFace.end() )
@@ -97,7 +97,7 @@ namespace sw::test
             return true;
         }
 
-        uint32 findGlyphIndex( FontFaceId face, uint32 codepoint ) const override
+        uint32 findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
         {
             const auto iter = _mapFace.find( face );
             if ( iter == _mapFace.end() || iter->second.hasCodepoint( codepoint ) == false )
@@ -105,7 +105,7 @@ namespace sw::test
             return codepoint;
         }
 
-        bool findGlyphMetrics( FontFaceId face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
+        bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
         {
             if ( _mapFace.find( face ) == _mapFace.end() )
                 return false;
@@ -116,20 +116,20 @@ namespace sw::test
             return true;
         }
 
-        float32 getKerning( FontFaceId face, uint32 leftGlyph, uint32 rightGlyph ) const override
+        float32 getKerning( FontFaceID face, uint32 leftGlyph, uint32 rightGlyph ) const override
         {
             (void)face;
             const auto iter = _mapKerning.find( makePairKey( leftGlyph, rightGlyph ) );
             return iter != _mapKerning.end() ? iter->second : 0.0f;
         }
 
-        const vector<uint8>* findFaceBytes( FontFaceId face ) const override
+        const vector<uint8>* findFaceBytes( FontFaceID face ) const override
         {
             (void)face;
             return nullptr;
         }
 
-        bool rasterizeSdf( FontFaceId face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
+        bool rasterizeSdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
         {
             if ( _mapFace.find( face ) == _mapFace.end() )
                 return false;
@@ -154,9 +154,9 @@ namespace sw::test
         static uint64 makePairKey( uint32 left, uint32 right ) { return ( static_cast<uint64>( left ) << 32 ) | right; }
 
         unordered_map<string, FakeFontFaceConfig>     _mapConfigByPath{};
-        unordered_map<FontFaceId, FakeFontFaceConfig> _mapFace{};
+        unordered_map<FontFaceID, FakeFontFaceConfig> _mapFace{};
         unordered_map<uint64, float32>                _mapKerning{};
-        FontFaceId                                    _nextFaceId{ 1 };
+        FontFaceID                                    _nextFaceID{ 1 };
         uint32                                        _rasterizeCount{ 0 };
         uint32                                        _sdfSize{ kSdfSize };
         uint32                                        _loadCount{ 0 };

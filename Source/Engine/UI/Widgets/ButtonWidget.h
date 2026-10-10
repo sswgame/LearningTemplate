@@ -27,7 +27,7 @@ namespace sw
         REFLECT_BODY();
 
         /** @brief 클릭 알림입니다(인자는 버튼 번호). */
-        using ClickedDelegate = MulticastDelegate<void( WidgetId )>;
+        using ClickedDelegate = MulticastDelegate<void( WidgetID )>;
 
         ButtonWidget();
         ~ButtonWidget() override;

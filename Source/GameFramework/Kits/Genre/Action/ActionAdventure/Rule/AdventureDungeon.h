@@ -192,33 +192,33 @@ namespace sw
         void initialize( const AdventureDungeonCatalog* pCatalog );
 
         /** @brief 작은 열쇠를 줍습니다(상자 밖 — 적이 떨어뜨림). 모르는 던전이면 false 입니다. */
-        bool addSmallKey( const hashed_string& dungeonId, int32 count = 1 );
+        bool addSmallKey( const hashed_string& dungeonID, int32 count = 1 );
         /** @brief 문을 엽니다. 작은 열쇠 문은 열쇠 하나를 씁니다. */
-        AdventureDoorResult openDoor( const hashed_string& dungeonId, const hashed_string& doorId, GameFlags& flags );
+        AdventureDoorResult openDoor( const hashed_string& dungeonID, const hashed_string& doorID, GameFlags& flags );
         /**
          * @brief 상자를 엽니다. 던전 아이템(작은 열쇠 · 보스 열쇠 · 지도 · 나침반)은 여기서 거두고 나머지는 @p outReward 에 더합니다.
          * @return 처음 열었으면 true(모르는 상자 · 이미 연 상자는 false).
          */
-        [[nodiscard]] bool openTreasure( const hashed_string& dungeonId, const hashed_string& treasureId, GameFlags& flags, ItemStackList& outReward );
+        [[nodiscard]] bool openTreasure( const hashed_string& dungeonID, const hashed_string& treasureID, GameFlags& flags, ItemStackList& outReward );
         /** @brief 지도가 있으면 던전 지역의 방을 모두 드러냅니다. 새로 드러난 수입니다(지도가 없으면 0). */
-        int32 revealMap( const hashed_string& dungeonId, AreaGraph& areaGraph ) const;
+        int32 revealMap( const hashed_string& dungeonID, AreaGraph& areaGraph ) const;
         /** @brief 나침반이 있으면 아직 열지 않은 상자들입니다(없으면 비운다). */
-        void collectCompassMarker( const hashed_string& dungeonId, const GameFlags& flags, vector<const AdventureTreasureDef*>& outListTreasure ) const;
+        void collectCompassMarker( const hashed_string& dungeonID, const GameFlags& flags, vector<const AdventureTreasureDef*>& outListTreasure ) const;
 
         /** @brief 스위치 · 시간제 스위치를 칩니다(시간제는 다시 치면 시간이 처음부터). 켜졌으면 true 입니다. */
-        bool hitSwitch( const hashed_string& dungeonId, const hashed_string& deviceId, GameFlags& flags );
+        bool hitSwitch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags );
         /** @brief 눌림판 위에 무엇이 올라섰는가(사람 · 상자 · 쇠공)를 알립니다. */
-        void setPlatePressed( const hashed_string& dungeonId, const hashed_string& deviceId, bool bPressed, GameFlags& flags );
+        void setPlatePressed( const hashed_string& dungeonID, const hashed_string& deviceID, bool bPressed, GameFlags& flags );
         /** @brief 횃불 하나에 불을 붙입니다(불화살 · 디쿠의 막대). 이번에 하나가 새로 켜졌으면 true 입니다. */
-        bool lightTorch( const hashed_string& dungeonId, const hashed_string& deviceId, GameFlags& flags );
+        bool lightTorch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags );
         /** @brief 시간을 흘립니다 — 시간제 스위치가 꺼지고, 시간 안에 다 켜지 못한 횃불이 꺼집니다. */
         void update( float32 deltaTime, GameFlags& flags );
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<AdventureDungeonEvent>& outListEvent );
 
-        const AdventureDungeonProgress* findProgress( const hashed_string& dungeonId ) const;
-        bool                            isDeviceActive( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
-        int32                           getLitTorchCount( const hashed_string& dungeonId, const hashed_string& deviceId ) const;
+        const AdventureDungeonProgress* findProgress( const hashed_string& dungeonID ) const;
+        bool                            isDeviceActive( const hashed_string& dungeonID, const hashed_string& deviceID ) const;
+        int32                           getLitTorchCount( const hashed_string& dungeonID, const hashed_string& deviceID ) const;
 
         /**
          * @brief 던전마다 id · 진행(열쇠 · 지도 · 나침반) · 장치(남은 시간 · 켜진 횃불 수 · 활성)를 씁니다. 열린 문 · 상자 · 장치 플래그는 빌린
@@ -244,9 +244,9 @@ namespace sw
             vector<DeviceRuntime>    _listDevice{};
         };
 
-        DungeonRuntime* findRuntime( const hashed_string& dungeonId, const AdventureDungeonDef** ppOutDef );
+        DungeonRuntime* findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef );
         void            setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags );
-        void            pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonId, const hashed_string& id, const hashed_string& item = hashed_string{},
+        void            pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
                                    int32 count = 0 );
 
         const AdventureDungeonCatalog*     _pCatalog;

@@ -25,7 +25,7 @@ namespace sw
     struct ChatClientReply
     {
         ChatReply _reply{};
-        uint64    _requestId{ 0 };
+        uint64    _requestID{ 0 };
         uint16    _method{ 0 };
         uint16    _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_reply._result` 는 그 코드의 결과
     };
@@ -47,13 +47,13 @@ namespace sw
         /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이(초기화 전에). */
         void initialize( OnlineServiceClient* pClient );
 
-        /** @brief 요청 id 입니다(응답의 `_requestId`). */
-        uint64 join( string_view channelId, const ReplyDelegate& onReply );
-        uint64 leave( string_view channelId, const ReplyDelegate& onReply );
-        uint64 send( string_view channelId, string_view text, const ReplyDelegate& onReply );
-        uint64 whisper( AccountId recipientId, string_view text, const ReplyDelegate& onReply );
-        /** @brief @p channelId 는 채널 id 또는 귓속말 기록 키(`ChatChannelId::makeWhisper`), @p cursor 는 앞 응답의 `_nextCursor`(처음은 빈 글). */
-        uint64 requestHistory( string_view channelId, string_view cursor, int32 maxCount, const ReplyDelegate& onReply );
+        /** @brief 요청 id 입니다(응답의 `_requestID`). */
+        uint64 join( string_view channelID, const ReplyDelegate& onReply );
+        uint64 leave( string_view channelID, const ReplyDelegate& onReply );
+        uint64 send( string_view channelID, string_view text, const ReplyDelegate& onReply );
+        uint64 whisper( AccountID recipientID, string_view text, const ReplyDelegate& onReply );
+        /** @brief @p channelID 는 채널 id 또는 귓속말 기록 키(`ChatChannelID::makeWhisper`), @p cursor 는 앞 응답의 `_nextCursor`(처음은 빈 글). */
+        uint64 requestHistory( string_view channelID, string_view cursor, int32 maxCount, const ReplyDelegate& onReply );
 
         /** @brief 받은 메시지(채널 · 귓속말)를 @p outListMessage 끝에 넘깁니다. */
         void drainMessages( vector<ChatMessage>& outListMessage ) { _messageBuffer.drainTo( outListMessage ); }

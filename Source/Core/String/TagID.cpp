@@ -13,23 +13,23 @@ namespace sw
         struct TagRegistryInternal
         {
             static inline std::shared_mutex                  s_mutex;
-            static inline unordered_map<uint64, const utf8*> s_mapIdToStr;
+            static inline unordered_map<uint64, const utf8*> s_mapIDToStr;
 
-            static void registerTag( uint64 tagId, const utf8* pStr )
+            static void registerTag( uint64 tagID, const utf8* pStr )
             {
-                if ( tagId == 0 || pStr == nullptr )
+                if ( tagID == 0 || pStr == nullptr )
                     return;
                 std::unique_lock<std::shared_mutex> lock{ s_mutex };
-                s_mapIdToStr[tagId] = pStr;
+                s_mapIDToStr[tagID] = pStr;
             }
 
-            static const utf8* findString( uint64 tagId )
+            static const utf8* findString( uint64 tagID )
             {
-                if ( tagId == 0 )
+                if ( tagID == 0 )
                     return nullptr;
                 std::shared_lock<std::shared_mutex> lock{ s_mutex };
-                const auto                          iter = s_mapIdToStr.find( tagId );
-                return iter != s_mapIdToStr.end() ? iter->second : nullptr;
+                const auto                          iter = s_mapIDToStr.find( tagID );
+                return iter != s_mapIDToStr.end() ? iter->second : nullptr;
             }
         };
     } // namespace
@@ -46,12 +46,12 @@ namespace sw
 
     TagID TagID::request( string_view str )
     {
-        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다. ID 도 같은 규칙이라(`computeId`)
+        // intern 이 대소문자를 무시하므로 `Player` 와 `player` 는 같은 문자열을 돌려받는다. ID 도 같은 규칙이라(`computeID`)
         // 둘은 같은 태그가 된다.
         const hashed_string hashedName{ str };
-        const uint64        tagId = computeId( str.data(), str.size() );
+        const uint64        tagID = computeID( str.data(), str.size() );
 
-        TagRegistryInternal::registerTag( tagId, hashedName.c_str() );
-        return TagID{ tagId, hashedName.c_str() };
+        TagRegistryInternal::registerTag( tagID, hashedName.c_str() );
+        return TagID{ tagID, hashedName.c_str() };
     }
 } // namespace sw

@@ -189,7 +189,7 @@ namespace sw
         const IRigGroundQuery*           _pGroundQueryOverride;
         const SkeletalAnimatorComponent* _pFrameAnimator; ///< 이번 프레임의 같은 유닛 애니메이터(커브 출처, 프레임 시작에 찾음)
         SkeletalMeshComponent*           _pUnit;
-        uint64                           _boundContentId;
+        uint64                           _boundContentID;
         PROPERTY( Category = "Rig", DisplayName = "Enabled", Tooltip = "Evaluate the rig; disabled rigs cost nothing" )
         uint8                  _bRigEnabled : 1;
         [[maybe_unused]] uint8 _reserved    : 7;

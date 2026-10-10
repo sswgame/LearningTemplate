@@ -38,7 +38,7 @@ namespace sw
         , _authoredTextFontSize{ 0.0f }
         , _authoredSpeakerFontSize{ 0.0f }
         , _screen{ kInvalidUiScreenHandle }
-        , _nextLineId{ 1 }
+        , _nextLineID{ 1 }
         , _bDocumentFailed{ false }
     {
     }
@@ -52,7 +52,7 @@ namespace sw
         line._text             = string{ text };
         line._durationSeconds  = durationSeconds > 0.0f ? durationSeconds : computeReadingSeconds( text );
         line._remainingSeconds = line._durationSeconds;
-        line._id               = _nextLineId++;
+        line._id               = _nextLineID++;
         _listQueued.push_back( std::move( line ) );
         return _listQueued.back()._id;
     }

@@ -17,7 +17,7 @@ namespace sw
         struct GameSoundInternal
         {
             /** @brief 한 번 쓰는 에미터 id 의 시작입니다 — 컴포넌트 id(작은 수부터 센다)와 겹치지 않는 높은 자리. */
-            static constexpr AudioEmitterId kOneShotEmitterBase = AudioEmitterId{ 1 } << 62;
+            static constexpr AudioEmitterID kOneShotEmitterBase = AudioEmitterID{ 1 } << 62;
 
             /** @brief 오디오 엔진입니다. 서비스가 없거나 내려가 있으면 nullptr 입니다. */
             static AudioEngine* findEngine()
@@ -63,23 +63,23 @@ namespace sw
             pEngine->unloadEventLibrary( hashed_string( path ) );
     }
 
-    AudioPlayingId GameSound::postEvent( const hashed_string& eventName )
+    AudioPlayingID GameSound::postEvent( const hashed_string& eventName )
     {
         AudioEngine* pEngine = GameSoundInternal::findEngine();
         return pEngine != nullptr ? pEngine->postEvent( eventName, 0 ) : 0;
     }
 
-    AudioPlayingId GameSound::postEventAt( const hashed_string& eventName, const float3& position )
+    AudioPlayingID GameSound::postEventAt( const hashed_string& eventName, const float3& position )
     {
         AudioEngine* pEngine = GameSoundInternal::findEngine();
         if ( pEngine == nullptr )
             return 0;
         // 한 번 쓰는 에미터 — 자리를 두고 내고 바로 지운다. 엔진은 그 자리의 소리가 끝날 때까지 자리를 남긴다.
-        const AudioEmitterId emitterId = GameSoundInternal::kOneShotEmitterBase + GameSoundInternal::s_nextOneShotEmitter.fetch_add( 1 );
-        pEngine->setEmitter( emitterId, position, float3{} );
-        const AudioPlayingId playingId = pEngine->postEvent( eventName, emitterId );
-        pEngine->removeEmitter( emitterId );
-        return playingId;
+        const AudioEmitterID emitterID = GameSoundInternal::kOneShotEmitterBase + GameSoundInternal::s_nextOneShotEmitter.fetch_add( 1 );
+        pEngine->setEmitter( emitterID, position, float3{} );
+        const AudioPlayingID playingID = pEngine->postEvent( eventName, emitterID );
+        pEngine->removeEmitter( emitterID );
+        return playingID;
     }
 } // namespace sw
 

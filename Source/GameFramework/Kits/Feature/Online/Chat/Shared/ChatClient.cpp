@@ -17,40 +17,40 @@ namespace sw
 
     void ChatClient::initialize( OnlineServiceClient* pClient ) { _pClient = pClient; }
 
-    uint64 ChatClient::join( string_view channelId, const ReplyDelegate& onReply )
+    uint64 ChatClient::join( string_view channelID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, channelId );
+        ServiceKeyUtil::writeString( body, channelID );
         return sendCall( ChatMethod::kJoin, body, onReply );
     }
 
-    uint64 ChatClient::leave( string_view channelId, const ReplyDelegate& onReply )
+    uint64 ChatClient::leave( string_view channelID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, channelId );
+        ServiceKeyUtil::writeString( body, channelID );
         return sendCall( ChatMethod::kLeave, body, onReply );
     }
 
-    uint64 ChatClient::send( string_view channelId, string_view text, const ReplyDelegate& onReply )
+    uint64 ChatClient::send( string_view channelID, string_view text, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, channelId );
+        ServiceKeyUtil::writeString( body, channelID );
         ServiceKeyUtil::writeString( body, text );
         return sendCall( ChatMethod::kSend, body, onReply );
     }
 
-    uint64 ChatClient::whisper( AccountId recipientId, string_view text, const ReplyDelegate& onReply )
+    uint64 ChatClient::whisper( AccountID recipientID, string_view text, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( recipientId );
+        body.writeVarUint( recipientID );
         ServiceKeyUtil::writeString( body, text );
         return sendCall( ChatMethod::kWhisper, body, onReply );
     }
 
-    uint64 ChatClient::requestHistory( string_view channelId, string_view cursor, int32 maxCount, const ReplyDelegate& onReply )
+    uint64 ChatClient::requestHistory( string_view channelID, string_view cursor, int32 maxCount, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, channelId );
+        ServiceKeyUtil::writeString( body, channelID );
         ServiceKeyUtil::writeString( body, cursor );
         body.writeVarUint( static_cast<uint64>( maxCount > 0 ? maxCount : 0 ) );
         return sendCall( ChatMethod::kHistory, body, onReply );
@@ -83,10 +83,10 @@ namespace sw
     void ChatClient::onResponse( const OnlineResponse& response )
     {
         PendingCall call;
-        if ( _callTable.take( response._requestId, call ) == false )
+        if ( _callTable.take( response._requestID, call ) == false )
             return;
         ChatClientReply reply;
-        reply._requestId = response._requestId;
+        reply._requestID = response._requestID;
         reply._method    = call._method;
         reply._errorCode = response._errorCode;
         if ( response.isOk() == false )

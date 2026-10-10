@@ -23,26 +23,26 @@ namespace sw
 
     uint64 MatchmakingClient::createParty( const ReplyDelegate& onReply ) { return send( MatchmakingMethod::kPartyCreate, BitWriter{}, onReply ); }
 
-    uint64 MatchmakingClient::inviteToParty( AccountId targetId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::inviteToParty( AccountID targetID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( targetId );
+        body.writeVarUint( targetID );
         return send( MatchmakingMethod::kPartyInvite, body, onReply );
     }
 
-    uint64 MatchmakingClient::acceptPartyInvite( uint64 partyId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::acceptPartyInvite( uint64 partyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( partyId );
+        body.writeVarUint( partyID );
         return send( MatchmakingMethod::kPartyAccept, body, onReply );
     }
 
     uint64 MatchmakingClient::leaveParty( const ReplyDelegate& onReply ) { return send( MatchmakingMethod::kPartyLeave, BitWriter{}, onReply ); }
 
-    uint64 MatchmakingClient::kickFromParty( AccountId targetId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::kickFromParty( AccountID targetID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( targetId );
+        body.writeVarUint( targetID );
         return send( MatchmakingMethod::kPartyKick, body, onReply );
     }
 
@@ -53,46 +53,46 @@ namespace sw
         return send( MatchmakingMethod::kLobbyCreate, body, onReply );
     }
 
-    uint64 MatchmakingClient::listLobbies( string_view modeId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::listLobbies( string_view modeID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, modeId );
+        ServiceKeyUtil::writeString( body, modeID );
         return send( MatchmakingMethod::kLobbyList, body, onReply );
     }
 
-    uint64 MatchmakingClient::joinLobby( uint64 lobbyId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::joinLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( lobbyId );
+        body.writeVarUint( lobbyID );
         return send( MatchmakingMethod::kLobbyJoin, body, onReply );
     }
 
-    uint64 MatchmakingClient::leaveLobby( uint64 lobbyId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::leaveLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( lobbyId );
+        body.writeVarUint( lobbyID );
         return send( MatchmakingMethod::kLobbyLeave, body, onReply );
     }
 
-    uint64 MatchmakingClient::setLobbyReady( uint64 lobbyId, bool bReady, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::setLobbyReady( uint64 lobbyID, bool bReady, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( lobbyId );
+        body.writeVarUint( lobbyID );
         body.writeBool( bReady );
         return send( MatchmakingMethod::kLobbyReady, body, onReply );
     }
 
-    uint64 MatchmakingClient::startLobby( uint64 lobbyId, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::startLobby( uint64 lobbyID, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        body.writeVarUint( lobbyId );
+        body.writeVarUint( lobbyID );
         return send( MatchmakingMethod::kLobbyStart, body, onReply );
     }
 
-    uint64 MatchmakingClient::joinQueue( string_view modeId, string_view region, const ReplyDelegate& onReply )
+    uint64 MatchmakingClient::joinQueue( string_view modeID, string_view region, const ReplyDelegate& onReply )
     {
         BitWriter body;
-        ServiceKeyUtil::writeString( body, modeId );
+        ServiceKeyUtil::writeString( body, modeID );
         ServiceKeyUtil::writeString( body, region );
         return send( MatchmakingMethod::kQueueJoin, body, onReply );
     }
@@ -157,10 +157,10 @@ namespace sw
     void MatchmakingClient::onResponse( const OnlineResponse& response )
     {
         ReplyDelegate onReply;
-        if ( _callTable.take( response._requestId, onReply ) == false )
+        if ( _callTable.take( response._requestID, onReply ) == false )
             return;
         MatchmakingClientReply reply;
-        reply._requestId = response._requestId;
+        reply._requestID = response._requestID;
         reply._errorCode = response._errorCode;
         if ( response._errorCode != OnlineError::kOk || response.isOk() == false )
         {

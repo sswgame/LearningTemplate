@@ -150,7 +150,7 @@ namespace sw
         float3            _agentPosition;
         float3            _nextCorner;
         float3            _writtenPosition; ///< 마지막으로 오브젝트에 쓴 자리(바깥의 순간이동 판정)
-        NavCrowdAgentId   _crowdAgentId;
+        NavCrowdAgentID   _crowdAgentID;
         uint32            _navIndex;   ///< `SceneNavigation` 의 목록 자리
         uint32            _crowdIndex; ///< 든 군중(에이전트 종류) 자리
         NavMoveStatus     _moveStatus;

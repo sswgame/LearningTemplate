@@ -77,7 +77,7 @@ namespace sw::editor
         pEditorContext->markViewDrawn( EditorViewKind::Scene );
 
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        _viewportClient.draw( pEditorContext->getViewTarget( EditorViewKind::Scene )._pTextureId, float2{ size.x, size.y } );
+        _viewportClient.draw( pEditorContext->getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
 
         if ( size.x > 1.0f && size.y > 1.0f )
         {

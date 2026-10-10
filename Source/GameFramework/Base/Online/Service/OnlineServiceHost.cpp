@@ -195,49 +195,49 @@ namespace sw
         return _requestServer.respond( token, NetRequestStatus::ApplicationError, _responseBytes.data(), static_cast<int32>( _responseBytes.size() ) );
     }
 
-    bool OnlineServiceHost::bindAccount( StreamConnectionHandle connection, AccountId accountId )
+    bool OnlineServiceHost::bindAccount( StreamConnectionHandle connection, AccountID accountID )
     {
         const auto connectionIt = _mapConnection.find( connection.packed() );
-        if ( connectionIt == _mapConnection.end() || accountId == kInvalidAccountId )
+        if ( connectionIt == _mapConnection.end() || accountID == kInvalidAccountID )
             return false;
-        const auto boundIt = _mapAccountToConnection.find( accountId );
+        const auto boundIt = _mapAccountToConnection.find( accountID );
         if ( boundIt != _mapAccountToConnection.end() && boundIt->second != connection )
             return false;
-        if ( connectionIt->second._accountId != kInvalidAccountId && connectionIt->second._accountId != accountId )
+        if ( connectionIt->second._accountID != kInvalidAccountID && connectionIt->second._accountID != accountID )
             return false; // 한 연결에 계정 하나
-        connectionIt->second._accountId    = accountId;
-        _mapAccountToConnection[accountId] = connection;
-        _requestServer.setPrincipal( connection, accountId ); // 멱등 범위 = 계정(재접속한 재시도도 잡힌다)
+        connectionIt->second._accountID    = accountID;
+        _mapAccountToConnection[accountID] = connection;
+        _requestServer.setPrincipal( connection, accountID ); // 멱등 범위 = 계정(재접속한 재시도도 잡힌다)
         return true;
     }
 
-    void OnlineServiceHost::unbindAccount( AccountId accountId )
+    void OnlineServiceHost::unbindAccount( AccountID accountID )
     {
-        const auto boundIt = _mapAccountToConnection.find( accountId );
+        const auto boundIt = _mapAccountToConnection.find( accountID );
         if ( boundIt == _mapAccountToConnection.end() )
             return;
         const StreamConnectionHandle connection = boundIt->second;
         _mapAccountToConnection.erase( boundIt );
         const auto connectionIt = _mapConnection.find( connection.packed() );
         if ( connectionIt != _mapConnection.end() )
-            connectionIt->second._accountId = kInvalidAccountId;
+            connectionIt->second._accountID = kInvalidAccountID;
         _endpoint.close( connection, StreamCloseMode::Graceful );
-        notifyAccountLeft( accountId );
+        notifyAccountLeft( accountID );
     }
 
-    bool OnlineServiceHost::findConnection( AccountId accountId, StreamConnectionHandle& outConnection ) const
+    bool OnlineServiceHost::findConnection( AccountID accountID, StreamConnectionHandle& outConnection ) const
     {
-        const auto boundIt = _mapAccountToConnection.find( accountId );
+        const auto boundIt = _mapAccountToConnection.find( accountID );
         if ( boundIt == _mapAccountToConnection.end() )
             return false;
         outConnection = boundIt->second;
         return true;
     }
 
-    bool OnlineServiceHost::sendPush( AccountId accountId, uint16 kind, const BitWriter& body )
+    bool OnlineServiceHost::sendPush( AccountID accountID, uint16 kind, const BitWriter& body )
     {
         StreamConnectionHandle connection;
-        if ( findConnection( accountId, connection ) == false )
+        if ( findConnection( accountID, connection ) == false )
             return false;
         return sendPushToConnection( connection, kind, body );
     }
@@ -245,9 +245,9 @@ namespace sw
     int32 OnlineServiceHost::sendPushToAll( uint16 kind, const BitWriter& body )
     {
         int32 sentCount = 0;
-        for ( const auto& [accountId, connection] : _mapAccountToConnection )
+        for ( const auto& [accountID, connection] : _mapAccountToConnection )
         {
-            (void)accountId;
+            (void)accountID;
             sentCount += sendPushToConnection( connection, kind, body ) ? 1 : 0;
         }
         return sentCount;
@@ -314,15 +314,15 @@ namespace sw
         const auto connectionIt = _mapConnection.find( handle.packed() );
         if ( connectionIt == _mapConnection.end() )
             return;
-        const AccountId accountId = connectionIt->second._accountId;
+        const AccountID accountID = connectionIt->second._accountID;
         _mapConnection.erase( connectionIt );
-        if ( accountId == kInvalidAccountId )
+        if ( accountID == kInvalidAccountID )
             return;
-        const auto boundIt = _mapAccountToConnection.find( accountId );
+        const auto boundIt = _mapAccountToConnection.find( accountID );
         if ( boundIt != _mapAccountToConnection.end() && boundIt->second == handle )
         {
             _mapAccountToConnection.erase( boundIt );
-            notifyAccountLeft( accountId );
+            notifyAccountLeft( accountID );
         }
     }
 
@@ -346,7 +346,7 @@ namespace sw
         }
         // 도배 제한 — 로그인했으면 계정마다, 아니면 주소마다.
         int64      retryAfterMs = 0;
-        const bool bAllowed     = connection._accountId != kInvalidAccountId ? _accountBucket.tryConsume( connection._accountId, _nowMs, retryAfterMs )
+        const bool bAllowed     = connection._accountID != kInvalidAccountID ? _accountBucket.tryConsume( connection._accountID, _nowMs, retryAfterMs )
                                                                              : _remoteBucket.tryConsume( connection._remoteKey, _nowMs, retryAfterMs );
         if ( bAllowed == false )
         {
@@ -368,7 +368,7 @@ namespace sw
             (void)respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        if ( connection._accountId == kInvalidAccountId && pService->isAnonymousMethod( method ) == false )
+        if ( connection._accountID == kInvalidAccountID && pService->isAnonymousMethod( method ) == false )
         {
             (void)respondError( context._token, OnlineError::kUnauthenticated );
             return;
@@ -377,13 +377,13 @@ namespace sw
         callContext._token          = context._token;
         callContext._idempotencyKey = context._idempotencyKey;
         callContext._connection     = context._token._handle;
-        callContext._accountId      = connection._accountId;
+        callContext._accountID      = connection._accountID;
         callContext._remoteKey      = connection._remoteKey;
-        callContext._traceId        = context._traceId;
+        callContext._traceID        = context._traceID;
         callContext._nowMs          = _nowMs;
         callContext._method         = method;
         BitReader        body( context._pBody, context._bodySize );
-        ScopedLogContext scope( LogContext{ callContext._traceId, callContext._accountId } ); // 서비스가 맡긴 저장소 일까지 같은 꼬리표
+        ScopedLogContext scope( LogContext{ callContext._traceID, callContext._accountID } ); // 서비스가 맡긴 저장소 일까지 같은 꼬리표
         pService->onServiceRequest( *this, callContext, body );
     }
 
@@ -463,11 +463,11 @@ namespace sw
         }
     }
 
-    void OnlineServiceHost::notifyAccountLeft( AccountId accountId )
+    void OnlineServiceHost::notifyAccountLeft( AccountID accountID )
     {
         for ( IOnlineService* pService : _listService )
         {
-            pService->onAccountLeft( *this, accountId );
+            pService->onAccountLeft( *this, accountID );
         }
     }
 } // namespace sw

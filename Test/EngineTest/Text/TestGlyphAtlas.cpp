@@ -146,7 +146,7 @@ SW_TEST_CASE( GlyphAtlasTest, GlyphCacheReRasterizesAfterEviction )
 {
     sw::test::FakeFontRasterizer rasterizer;
     rasterizer.setSdfSize( GlyphAtlasTestUtil::kPageFillSize ); // 글리프 하나가 페이지 하나
-    const sw::FontFaceId face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
+    const sw::FontFaceID face = rasterizer.loadFace( sw::vector<uint8>( 1, static_cast<uint8>( 1 ) ), 0, "fake" );
     sw::GlyphCache       cache( rasterizer );
 
     for ( uint32 index = 0; index < sw::GlyphAtlas::kMaxPageCount; ++index )

@@ -145,9 +145,9 @@ namespace sw
 
     bool AppearanceSocketRig::computePlacement( const AppearancePlacement& placement, const CharacterBoneArray& bodyBones, float4x4& outInUnit, uint32& outUnitIndex ) const
     {
-        const SocketId socketId = _table.findFirstActiveSocket( vector_reference<const hashed_string>( placement._listSocket ) );
-        const SocketId target   = _table.resolveTarget( socketId );
-        if ( target == kInvalidSocketId )
+        const SocketID socketID = _table.findFirstActiveSocket( vector_reference<const hashed_string>( placement._listSocket ) );
+        const SocketID target   = _table.resolveTarget( socketID );
+        if ( target == kInvalidSocketID )
             return false;
         outUnitIndex                        = _table.getSocketUnit( target );
         const CharacterBoneArray& unitBones = outUnitIndex == kBodyUnit ? bodyBones : _rigidBones;
@@ -162,8 +162,8 @@ namespace sw
     bool AppearanceSocketRig::findSocketWorldTransform( const hashed_string& fullName, const CharacterBoneArray& bodyBones, vector_reference<const float4x4> listUnitWorld,
                                                         float4x4& outWorldTransform ) const
     {
-        const SocketId target = _table.resolveTarget( _table.findSocket( fullName ) );
-        if ( target == kInvalidSocketId )
+        const SocketID target = _table.resolveTarget( _table.findSocket( fullName ) );
+        if ( target == kInvalidSocketID )
             return false;
         const uint32 unitIndex = _table.getSocketUnit( target );
         if ( unitIndex >= listUnitWorld.size() )

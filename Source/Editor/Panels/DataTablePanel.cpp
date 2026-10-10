@@ -382,7 +382,7 @@ namespace sw::editor
             reloadGameDataFiles();
 
         editor::EditorSectionDesc listDesc{};
-        listDesc._pId       = "##DataFileList";
+        listDesc._pID       = "##DataFileList";
         listDesc._kind      = editor::EditorSectionKind::Child;
         listDesc._childSize = float2{ 200.0f, 0.0f };
         listDesc._flags     = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::ResizeX;

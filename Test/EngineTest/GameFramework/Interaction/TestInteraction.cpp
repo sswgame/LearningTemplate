@@ -37,36 +37,36 @@ namespace
     class BlockedLineOfSight final : public ILineOfSightQuery
     {
     public:
-        explicit BlockedLineOfSight( uint64 blockedObjectId )
-            : _blockedObjectId{ blockedObjectId }
+        explicit BlockedLineOfSight( uint64 blockedObjectID )
+            : _blockedObjectID{ blockedObjectID }
         {
         }
 
-        bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectId, uint64 targetObjectId ) const override
+        bool hasLineOfSight( const float3& from, const float3& to, uint64 viewerObjectID, uint64 targetObjectID ) const override
         {
             (void)from;
             (void)to;
-            (void)viewerObjectId;
-            return targetObjectId != _blockedObjectId;
+            (void)viewerObjectID;
+            return targetObjectID != _blockedObjectID;
         }
 
     private:
-        uint64 _blockedObjectId;
+        uint64 _blockedObjectID;
     };
 
     struct InteractionTestInternal
     {
-        static InteractionCandidate makeCandidate( uint64 objectId, const float3& position )
+        static InteractionCandidate makeCandidate( uint64 objectID, const float3& position )
         {
             InteractionCandidate candidate;
-            candidate._objectId    = objectId;
+            candidate._objectID    = objectID;
             candidate._position    = position;
             candidate._maxDistance = 5.0f;
             candidate._maxAngle    = 60.0f * MathUtil::kDegreeToRadian;
             return candidate;
         }
 
-        static InteractionDef makeDef( const utf8* pId, InteractionInputMode mode )
+        static InteractionDef makeDef( const utf8* pID, InteractionInputMode mode )
         {
             InteractionDef     def;
             InteractionStepDef step;
@@ -74,7 +74,7 @@ namespace
             step._duration = 1.0f;
             step._presses  = 4;
             step._decay    = 1.0f;
-            def._id        = hashed_string( pId );
+            def._id        = hashed_string( pID );
             def._listStep.push_back( step );
             def._maxDistance  = 3.0f;
             def._bLineOfSight = SW_FALSE;
@@ -100,7 +100,7 @@ SW_TEST_CASE( InteractionTest, SelectionPicksNearestInViewWithLineOfSight )
     InteractionViewer viewer;
     viewer._position                           = float3{ 0.0f, 0.0f, 0.0f };
     viewer._forward                            = float3{ 0.0f, 0.0f, 1.0f };
-    viewer._objectId                           = 99;
+    viewer._objectID                           = 99;
     vector<InteractionCandidate> listCandidate = {
         InteractionTestInternal::makeCandidate( 1, float3{ 0.0f, 0.0f, 3.0f } ),  // 앞 3 m
         InteractionTestInternal::makeCandidate( 2, float3{ 0.5f, 0.0f, 2.0f } ),  // 앞 2.06 m — 가장 가깝다
@@ -425,7 +425,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
 
     AssetManager  resources;
     ModuleService service{};
-    service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::AssetManager )] = &resources;
+    service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &resources;
     game::bindGameService( service );
 
     GameObjectManager      manager;
@@ -434,7 +434,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     if ( pInteractable != nullptr )
     {
         pInteractable->setCatalogPath( path );
-        pInteractable->setInteractionId( "Open" );
+        pInteractable->setInteractionID( "Open" );
     }
     IAssetCache*          pCache  = resources.findAssetCache( "InteractionCatalog" ); // 표 캐시는 처음 읽을 때 생겨 묶인 등록부에 오른다
     const InteractionDef* pBefore = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
@@ -471,7 +471,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
 
     AssetManager  resources;
     ModuleService service{};
-    service.arrServices[internal::toRawServiceId( internal::ModuleServiceId::AssetManager )] = &resources;
+    service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &resources;
     game::bindGameService( service );
 
     GameObjectManager     manager;
@@ -484,7 +484,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
     if ( pSmart != nullptr && pSitter != nullptr )
     {
         pSmart->setCatalogPath( path );
-        pSmart->setSmartObjectId( hashed_string( "Bench" ) );
+        pSmart->setSmartObjectID( hashed_string( "Bench" ) );
         before = pSmart->getSlotCount();
         (void)pSmart->claimSlot( *pSitter, 0 );
         SW_EXPECT_TRUE( FileUtil::writeTextFile(
@@ -544,7 +544,7 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
     {
         InteractionViewer viewer;
         viewer._space    = InteractionSpace::Space3D;
-        viewer._objectId = pPlayer->getObjectId();
+        viewer._objectID = pPlayer->getObjectID();
         viewer._position = pPlayer->getPrimarySceneComponent()->getWorldPosition();
         viewer._forward  = float3::transformVector( float3{ 0.0f, 0.0f, 1.0f }, pPlayer->getPrimarySceneComponent()->getWorldMatrix() );
         vector<InteractionCandidate> listCandidate;
@@ -555,14 +555,14 @@ SW_TEST_CASE( InteractionTest, RegistryCandidatesMatchFullSceneScan )
                 return;
             InteractionCandidate candidate;
             candidate._position    = pObject->getPrimarySceneComponent()->getWorldPosition();
-            candidate._objectId    = pObject->getObjectId();
+            candidate._objectID    = pObject->getObjectID();
             candidate._maxDistance = pInteractable->getDefinition()->_maxDistance;
             candidate._maxAngle    = pInteractable->getDefinition()->_maxAngle;
             candidate._priority    = pInteractable->getPriority();
             listCandidate.push_back( candidate );
         } );
         const int32 best = InteractionSelector::selectBest( viewer, listCandidate, nullptr );
-        return best >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( best )]._objectId ) : GameObjectHandle{};
+        return best >= 0 ? GameObjectHandle::make( listCandidate[static_cast<size_t>( best )]._objectID ) : GameObjectHandle{};
     };
 
     manager.beginPlay();

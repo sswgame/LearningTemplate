@@ -20,10 +20,10 @@ namespace sw
         {
             /**
              * @brief 이 파일 안에서 엔티티를 가리키는 id 입니다(유니티의 fileID 자리). 파일에 적힌 엔티티는 늘 0 이 아닙니다.
-             * @details 다른 엔티티의 부착(`SceneComponent::_attachOwnerId`)이 이 값으로 부모를 가리킵니다. 런타임 오브젝트 id 와 다른 공간입니다 —
+             * @details 다른 엔티티의 부착(`SceneComponent::_attachOwnerID`)이 이 값으로 부모를 가리킵니다. 런타임 오브젝트 id 와 다른 공간입니다 —
              *          씬이 런타임 id ↔ 파일 id 표를 들고 저장할 때마다 같은 값을 다시 씁니다(저장할 때마다 파일이 흔들리지 않게).
              */
-            uint64 _fileId{ 0 };
+            uint64 _fileID{ 0 };
             string _name;
             string _prefab;
             string _prefabGuid;

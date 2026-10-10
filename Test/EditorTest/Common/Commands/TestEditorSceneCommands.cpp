@@ -233,7 +233,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, AddComponentIsUndoableAndResolvesItsMesh 
 
     stack.undo();
     pManager->mergePendingAdds();
-    GameObject* pRestored = pManager->findGameObjectById( pObj->getObjectId() );
+    GameObject* pRestored = pManager->findGameObjectByID( pObj->getObjectID() );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_NULL( pRestored->getComponent<MeshComponent>() );
 }
@@ -267,7 +267,7 @@ SW_TEST_CASE( EditorSceneCommandsTest, SetActiveIsUndoable )
 
     stack.undo();
     pManager->mergePendingAdds();
-    GameObject* pRestored = pManager->findGameObjectById( pObj->getObjectId() );
+    GameObject* pRestored = pManager->findGameObjectByID( pObj->getObjectID() );
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_TRUE( pRestored->isActive() );
 }

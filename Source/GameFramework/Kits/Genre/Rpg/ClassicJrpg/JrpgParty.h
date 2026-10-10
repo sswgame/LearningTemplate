@@ -29,7 +29,7 @@ namespace sw
     /** @brief 비급 하나의 숙련입니다. */
     struct JrpgManualProgress
     {
-        hashed_string _manualId{};
+        hashed_string _manualID{};
         int32         _proficiency{ 0 };
     };
 } // namespace sw
@@ -40,7 +40,7 @@ namespace sw
     struct SW_GF_API JrpgMember
     {
         hashed_string              _id{};
-        hashed_string              _classId{};
+        hashed_string              _classID{};
         string                     _name{};
         vector<hashed_string>      _listSpell{}; ///< 배운 주문(전직해도 남는다)
         vector<JrpgManualProgress> _listManual{};
@@ -53,9 +53,9 @@ namespace sw
 
         bool  isAlive() const { return _hp > 0; }
         int32 getStat( JrpgStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
-        bool  knowsSpell( const hashed_string& spellId ) const;
+        bool  knowsSpell( const hashed_string& spellID ) const;
         /** @brief 비급 숙련입니다. 배우지 않았으면 −1 입니다. */
-        int32 findProficiency( const hashed_string& manualId ) const;
+        int32 findProficiency( const hashed_string& manualID ) const;
     };
 } // namespace sw
 
@@ -117,12 +117,12 @@ namespace sw
         void initialize( const JrpgCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
         /** @brief 멤버를 더합니다(직업의 레벨 1 능력치에서 @p level 까지 성장). 자리 번호, 못 더하면 −1 입니다. */
-        int32 addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level = 1 );
+        int32 addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level = 1 );
         /**
          * @brief 전직합니다(DQ3) — 레벨 1 · 경험치 0 으로 돌아가고 능력치는 지금의 절반(내림, 최대 HP 는 1 이상), 배운 주문은 남습니다.
          * @param minLevel 전직할 수 있는 최소 레벨입니다.
          */
-        JrpgClassChangeResult changeClass( int32 memberIndex, const hashed_string& classId, int32 minLevel = kClassChangeMinLevel );
+        JrpgClassChangeResult changeClass( int32 memberIndex, const hashed_string& classID, int32 minLevel = kClassChangeMinLevel );
         /** @brief 경험치를 더하고 오른 레벨 수입니다. 레벨마다 직업 성장치를 더하고 그 레벨의 주문을 배웁니다. */
         int32 addExp( int32 memberIndex, int64 amount );
         /** @brief 전투 보상 — 살아 있는 멤버가 경험치를 똑같이 나눠 받고(나머지 버림), 골드는 지갑으로 갑니다. 한 멤버의 몫입니다. */
@@ -132,9 +132,9 @@ namespace sw
         /** @brief 교회 — 레벨 × @p pricePerLevel 을 내고 쓰러진 멤버를 HP 가득 살립니다. */
         [[nodiscard]] bool reviveAtChurch( int32 memberIndex, int64 pricePerLevel );
         /** @brief 비급을 익힙니다(숙련 0 — 첫 단계가 0 이면 그 초식이 열린다). */
-        void learnManual( int32 memberIndex, const hashed_string& manualId );
+        void learnManual( int32 memberIndex, const hashed_string& manualID );
         /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이면 아무것도 하지 않습니다. */
-        void addProficiency( int32 memberIndex, const hashed_string& manualId, int32 amount );
+        void addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount );
         void drainEvents( vector<JrpgPartyEvent>& outListEvent );
         /** @brief 멤버(직업 · 이름 · 주문 · 비급 숙련 · 장비 아이템 id · 레벨 · 능력치 · HP/MP · 내공)를 씁니다. 가방 · 지갑은 빌린 것이라 싣지 않는다. */
         void writeState( Archive& outArchive ) const;
@@ -142,12 +142,12 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 이 주문 · 초식을 쓸 수 있는가입니다(배웠거나, 비급 숙련이 그 단계에 닿았다). */
-        bool  canUseSpell( int32 memberIndex, const hashed_string& spellId ) const;
-        bool  isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueId ) const;
+        bool  canUseSpell( int32 memberIndex, const hashed_string& spellID ) const;
+        bool  isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const;
         int32 computeAttack( int32 memberIndex ) const;
         int32 computeDefense( int32 memberIndex ) const;
         int32 countAlive() const;
-        int32 findMemberIndex( const hashed_string& memberId ) const;
+        int32 findMemberIndex( const hashed_string& memberID ) const;
 
         int32              getMemberCount() const { return static_cast<int32>( _listMember.size() ); }
         const JrpgMember&  getMember( int32 memberIndex ) const { return _listMember[static_cast<size_t>( memberIndex )]; }

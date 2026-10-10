@@ -24,13 +24,13 @@ namespace sw
                 return ( 3 - static_cast<int32>( info._kind ) ) * 4 + info._piValue;
             }
 
-            static void collectSameMonth( const CardPile& floor, uint8 month, vector<uint16>& outListCardId )
+            static void collectSameMonth( const CardPile& floor, uint8 month, vector<uint16>& outListCardID )
             {
-                outListCardId.clear();
+                outListCardID.clear();
                 for ( const Card& card : floor.getCards() )
                 {
                     if ( HwatuDeck::getMonth( card ) == month )
-                        outListCardId.push_back( card._id );
+                        outListCardID.push_back( card._id );
                 }
             }
 
@@ -109,12 +109,12 @@ namespace sw
         _eventBuffer.clear();
     }
 
-    bool MatgoGame::playCard( int32 player, uint16 cardId, uint16 targetId )
+    bool MatgoGame::playCard( int32 player, uint16 cardID, uint16 targetID )
     {
         if ( _phase != MatgoPhase::Play || player != _currentPlayer )
             return false;
         Card played;
-        if ( _listPlayer[static_cast<size_t>( player )]._hand.takeById( cardId, played ) == false )
+        if ( _listPlayer[static_cast<size_t>( player )]._hand.takeByID( cardID, played ) == false )
             return false;
         _eventBuffer.push( MatgoEvent{ player, 0, played._id, MatgoEvent::Kind::Played } );
 
@@ -140,9 +140,9 @@ namespace sw
             else
             {
                 // 쪽(바닥에 없었다) · 따닥(바닥에 둘) — 다 먹고 피를 뺏는다.
-                for ( const uint16 floorCardId : listSameMonth )
+                for ( const uint16 floorCardID : listSameMonth )
                 {
-                    captureFloorCard( player, floorCardId );
+                    captureFloorCard( player, floorCardID );
                 }
                 captureCard( player, played );
                 captureCard( player, flipped );
@@ -152,7 +152,7 @@ namespace sw
         }
         else
         {
-            resolveCard( player, played, targetId );
+            resolveCard( player, played, targetID );
             if ( bFlipped )
                 resolveCard( player, flipped, Card::kNoCard );
         }
@@ -160,7 +160,7 @@ namespace sw
         return true;
     }
 
-    void MatgoGame::resolveCard( int32 player, const Card& card, uint16 targetId )
+    void MatgoGame::resolveCard( int32 player, const Card& card, uint16 targetID )
     {
         vector<uint16> listSameMonth;
         MatgoGameInternal::collectSameMonth( _floor, HwatuDeck::getMonth( card ), listSameMonth );
@@ -172,30 +172,30 @@ namespace sw
         }
         if ( matchCount == 2 )
         {
-            uint16 chosenId     = listSameMonth[0];
+            uint16 chosenID     = listSameMonth[0];
             int32  bestPriority = -1;
-            for ( const uint16 floorCardId : listSameMonth )
+            for ( const uint16 floorCardID : listSameMonth )
             {
-                const int32 priority = MatgoGameInternal::computeCapturePriority( _floor.getAt( _floor.findIndexById( floorCardId ) ) );
-                if ( floorCardId == targetId )
+                const int32 priority = MatgoGameInternal::computeCapturePriority( _floor.getAt( _floor.findIndexByID( floorCardID ) ) );
+                if ( floorCardID == targetID )
                 {
-                    chosenId = floorCardId;
+                    chosenID = floorCardID;
                     break;
                 }
                 if ( priority > bestPriority )
                 {
                     bestPriority = priority;
-                    chosenId     = floorCardId;
+                    chosenID     = floorCardID;
                 }
             }
-            captureFloorCard( player, chosenId );
+            captureFloorCard( player, chosenID );
             captureCard( player, card );
             return;
         }
         // 한 장이면 그것, 셋(뻑)이면 다 먹고 피를 뺏는다.
-        for ( const uint16 floorCardId : listSameMonth )
+        for ( const uint16 floorCardID : listSameMonth )
         {
-            captureFloorCard( player, floorCardId );
+            captureFloorCard( player, floorCardID );
         }
         captureCard( player, card );
         if ( matchCount >= 3 )
@@ -211,10 +211,10 @@ namespace sw
         _eventBuffer.push( MatgoEvent{ player, 0, card._id, MatgoEvent::Kind::Captured } );
     }
 
-    void MatgoGame::captureFloorCard( int32 player, uint16 cardId )
+    void MatgoGame::captureFloorCard( int32 player, uint16 cardID )
     {
         Card card;
-        if ( _floor.takeById( cardId, card ) )
+        if ( _floor.takeByID( cardID, card ) )
             captureCard( player, card );
     }
 
@@ -331,7 +331,7 @@ namespace sw
         switch ( static_cast<MatgoActionKind>( action._kind ) )
         {
             case MatgoActionKind::Play:
-                return playCard( player, action._cardId, action._targetId );
+                return playCard( player, action._cardID, action._targetID );
             case MatgoActionKind::Go:
                 return declareGo( player );
             case MatgoActionKind::Stop:

@@ -59,27 +59,27 @@ namespace sw
 
     /**
      * @struct SubTickHandle
-     * @brief 컴포넌트의 틱 하나(서브틱, `_subTickId` 0 이면 주 틱 `onTick`)를 식별하고 선행 조건(prerequisite)을 잇는 데 쓰는 핸들입니다.
+     * @brief 컴포넌트의 틱 하나(서브틱, `_subTickID` 0 이면 주 틱 `onTick`)를 식별하고 선행 조건(prerequisite)을 잇는 데 쓰는 핸들입니다.
      */
     struct SubTickHandle
     {
-        uint64 _componentId{ 0 };
-        uint32 _subTickId{ 0 };
+        uint64 _componentID{ 0 };
+        uint32 _subTickID{ 0 };
         /**
          * @brief 그 컴포넌트를 가진 오브젝트입니다. 비교 · 해시에는 쓰지 않습니다.
          * @details 등록부가 선행 조건이 가리키는 항목을 씬 전체를 훑지 않고 그 오브젝트에서만 찾는 데 씁니다. 0 이면(소유자 없이 만든 핸들)
          *          선행 조건으로 받지 않습니다.
          */
-        uint64 _objectId{ 0 };
+        uint64 _objectID{ 0 };
 
         constexpr bool isValid() const
         {
-            return _componentId != 0;
+            return _componentID != 0;
         }
 
         constexpr bool operator==( const SubTickHandle& other ) const
         {
-            return _componentId == other._componentId && _subTickId == other._subTickId;
+            return _componentID == other._componentID && _subTickID == other._subTickID;
         }
 
         constexpr bool operator!=( const SubTickHandle& other ) const
@@ -95,7 +95,7 @@ namespace sw
     {
         size_t operator()( const SubTickHandle& handle ) const noexcept
         {
-            return static_cast<size_t>( handle._componentId ^ ( static_cast<uint64>( handle._subTickId ) << 32 ) );
+            return static_cast<size_t>( handle._componentID ^ ( static_cast<uint64>( handle._subTickID ) << 32 ) );
         }
     };
 } // namespace sw
@@ -123,7 +123,7 @@ namespace sw
      */
     struct SubTickInfo
     {
-        uint32                _subTickId;
+        uint32                _subTickID;
         TickGroup             _group;
         TickPhase             _phase;
         uint8                 _priority;
@@ -132,7 +132,7 @@ namespace sw
         vector<SubTickHandle> _listPrerequisite;
 
         SubTickInfo()
-            : _subTickId{ 0 }
+            : _subTickID{ 0 }
             , _group{ TickGroup::DuringPhysics }
             , _phase{ TickPhase::Normal }
             , _priority{ 0 }
@@ -143,7 +143,7 @@ namespace sw
         }
 
         SubTickInfo( const SubTickInfo& other )
-            : _subTickId{ other._subTickId }
+            : _subTickID{ other._subTickID }
             , _group{ other._group }
             , _phase{ other._phase }
             , _priority{ other._priority }
@@ -154,7 +154,7 @@ namespace sw
         }
 
         SubTickInfo( SubTickInfo&& other ) noexcept
-            : _subTickId{ other._subTickId }
+            : _subTickID{ other._subTickID }
             , _group{ other._group }
             , _phase{ other._phase }
             , _priority{ other._priority }
@@ -172,7 +172,7 @@ namespace sw
 
         SubTickInfo& operator=( SubTickInfo&& other ) noexcept
         {
-            _subTickId = other._subTickId;
+            _subTickID = other._subTickID;
             _group     = other._group;
             _phase     = other._phase;
             _priority  = other._priority;
@@ -303,7 +303,7 @@ namespace sw
 
         /**
          * @brief **옮기지 않습니다.** 컴포넌트는 풀 안의 제자리에서 만들고 없앱니다.
-         * @details 컴포넌트를 옮기는 곳은 없습니다. 옮기면 원본과 사본이 같은 `_componentId` 를 갖고 `findComponentById` 가
+         * @details 컴포넌트를 옮기는 곳은 없습니다. 옮기면 원본과 사본이 같은 `_componentID` 를 갖고 `findComponentByID` 가
          *          어느 쪽이든 내놓을 수 있으므로 막습니다. 파생 타입도 이동 연산을 선언하지 않습니다.
          * @see SceneComponent 도 계층 포인터까지 얽혀 있어 같은 이유로 막혀 있습니다.
          */
@@ -340,7 +340,7 @@ namespace sw
         /** @brief 프레임마다 불리는 주 업데이트 콜백입니다. */
         virtual void onTick( float32 deltaTime );
         /** @brief 프레임마다 서브틱별로 불리는 보조 업데이트 콜백입니다. */
-        virtual void onSubTick( uint32 subTickId, float32 deltaTime );
+        virtual void onSubTick( uint32 subTickID, float32 deltaTime );
         /**
          * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했습니다(유니티 `OnTriggerEnter2D` · 언리얼 `BeginOverlap`).
          * @details 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불립니다 — 스폰 · 파괴 · 구조 변경을 그 자리에서 해도 됩니다.
@@ -422,34 +422,34 @@ namespace sw
          *          실행 여부(서브틱 1~63 은 원자 마스크, 64 번부터는 `SubTickInfo::_bRunnable`)는 틱 중에 바꾸라고 원자다 — 해제 · 끄기는 그것을 바로
          *          내려 이번 틱의 남은 항목이 곧바로 건너뛴다.
          */
-        SubTickHandle registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
+        SubTickHandle registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase = TickPhase::Normal, uint8 priority = 0 );
         /** @brief 서브틱 하나의 등록을 해제합니다. 있었으면 true 입니다. 틱 중이면 마스크만 바로 내리고 목록은 틱 직후로 미루며 true(받아 둠)입니다. */
-        bool unregisterSubTick( uint32 subTickId );
+        bool unregisterSubTick( uint32 subTickID );
         /**
          * @brief 서브틱에 선행 조건을 추가합니다(prerequisiteHandle 이 먼저 실행되어야 합니다).
          * @details 선행 조건이 뒤 그룹에 있으면 이 서브틱이 그 그룹으로 옮겨 가 돕니다(언리얼 `ActualStartTickGroup`). 사슬을 따라 옮깁니다.
          *          선행 조건을 가진 서브틱만 스테이지로 가고, 이 컴포넌트의 다른 틱과 사슬 밖 오브젝트는 보통 길 그대로입니다. 앞에서 돈 선행 조건이
-         *          쓴 트랜스폼은 이 서브틱이 돌기 전에 적용되어 같은 프레임에 보입니다. 소유자 없이 만든 핸들(`_objectId` 0)은 받지 않습니다(false).
+         *          쓴 트랜스폼은 이 서브틱이 돌기 전에 적용되어 같은 프레임에 보입니다. 소유자 없이 만든 핸들(`_objectID` 0)은 받지 않습니다(false).
          *          틱 중이면 인자만 보고 틱 직후로 미루며 true(받아 둠)입니다.
          */
-        bool addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
+        bool addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle );
         /** @brief 선행 조건 하나를 뗍니다. 있었으면 true 입니다. 틱 중이면 틱 직후로 미루며 true(받아 둠)입니다 — 대상이 바뀌면 갈아 걸 때 씁니다. */
-        [[nodiscard]] bool removeSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle );
+        [[nodiscard]] bool removeSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle );
         /**
          * @brief 이 컴포넌트의 주 틱(`onTick`)을 가리키는 핸들입니다. 다른 컴포넌트의 서브틱 선행 조건으로 겁니다(언리얼 `AddTickPrerequisiteComponent` 의 대상).
          * @details 오브젝트에 붙은 뒤에 얻으십시오(소유 오브젝트 id 가 든다). 그 컴포넌트가 틱하지 않거나 꺼져 있으면 순서를 만들지 않습니다.
          */
         SubTickHandle getTickHandle() const { return makeTickHandle( 0 ); }
         /** @brief 서브틱의 활성 여부를 설정합니다. 틱 중이면 마스크(1~63)만 바로 바꾸고 목록의 값은 틱 직후로 미룹니다. */
-        void setSubTickActive( uint32 subTickId, bool bActive );
+        void setSubTickActive( uint32 subTickID, bool bActive );
         /** @brief 서브틱이 활성 상태인지 확인합니다(비트마스크로 O(1)). */
-        bool isSubTickActive( uint32 subTickId ) const
+        bool isSubTickActive( uint32 subTickID ) const
         {
-            if ( subTickId == 0 )
+            if ( subTickID == 0 )
                 return false;
-            if ( subTickId < 64 )
-                return ( _subTickActiveMask.load( std::memory_order_relaxed ) & ( 1ULL << subTickId ) ) != 0;
-            return isSubTickActiveSlow( subTickId );
+            if ( subTickID < 64 )
+                return ( _subTickActiveMask.load( std::memory_order_relaxed ) & ( 1ULL << subTickID ) ) != 0;
+            return isSubTickActiveSlow( subTickID );
         }
         /** @brief 등록된 모든 서브틱 목록을 반환합니다. */
         const vector<SubTickInfo>& getAllSubTicks() const { return _listSubTick; }
@@ -521,7 +521,7 @@ namespace sw
         bool isSceneComponent() const { return _bIsSceneComponent == SW_TRUE; }
 
         /** @brief 컴포넌트 고유 ID 를 반환합니다. */
-        uint64 getComponentId() const { return _componentId; }
+        uint64 getComponentID() const { return _componentID; }
 
         /** @brief 삭제 예정(묘비) 표시를 세웁니다. */
         void markPendingDestroy() { (void)tryMarkPendingDestroy(); } // 이미 표시돼 있어도 된다
@@ -542,21 +542,21 @@ namespace sw
         hashed_string getComponentName() const { return _componentName; }
 
     private:
-        bool isSubTickActiveSlow( uint32 subTickId ) const;
-        /** @brief 이 컴포넌트의 틱 하나(@p subTickId, 0 이면 주 틱)를 가리키는 핸들입니다. 소유 오브젝트 id 를 함께 담습니다(없으면 0). */
-        SubTickHandle makeTickHandle( uint32 subTickId ) const;
+        bool isSubTickActiveSlow( uint32 subTickID ) const;
+        /** @brief 이 컴포넌트의 틱 하나(@p subTickID, 0 이면 주 틱)를 가리키는 핸들입니다. 소유 오브젝트 id 를 함께 담습니다(없으면 0). */
+        SubTickHandle makeTickHandle( uint32 subTickID ) const;
         /** @brief 서브틱의 실행 여부를 바로 바꿉니다 — 1~63 은 원자 마스크, 64 번부터는 목록 원소의 원자 칸입니다. 틱 중에도 부를 수 있습니다. */
-        void setSubTickRunnable( uint32 subTickId, bool bRunnable );
+        void setSubTickRunnable( uint32 subTickID, bool bRunnable );
         /**
          * @brief 소유 매니저가 구조 변경을 얼려 두었으면(컴포넌트 틱 중) @p func 를 틱 직후 구조 변경 큐로 미루고 true 를 돌려줍니다. 아니면 false 입니다.
          * @details 핸들로 다시 찾으므로 그 사이 파괴돼도 안전합니다. 틱 설정(그룹 · 틱 여부 · 서브틱)이 `GameObject` 의 setName · addTag 와 같은 규칙을 지킵니다.
          */
         bool                  deferIfStructureFrozen( Delegate<void( Component& )> func );
-        static atomic<uint64> _s_nextComponentId; ///< ID 생성 카운터
+        static atomic<uint64> _s_nextComponentID; ///< ID 생성 카운터
 
     protected:
         GameObject* _pOwner;      ///< 소유자 GameObject
-        uint64      _componentId; ///< 컴포넌트 고유 일련번호
+        uint64      _componentID; ///< 컴포넌트 고유 일련번호
         /** @brief 이름표(기본은 타입 이름)입니다. 저장됩니다 — 컴포넌트 키(`ComponentStableKey`)가 이것으로 셉니다. 타입이 아니다 — `setComponentName` */
         PROPERTY( HideInInspector )
         hashed_string   _componentName;

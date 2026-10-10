@@ -40,7 +40,7 @@ namespace sw::editor
     RenderTargetPanel::RenderTargetPanel()
         : IEditorPanel( false )
         , _lastGeneration{ 0 }
-        , _pPreviewTextureId{ nullptr }
+        , _pPreviewTextureID{ nullptr }
         , _previewTexture{ 0 }
         , _previewZoom{ 0.0f } // 0 = 창에 맞춤
     {
@@ -53,14 +53,14 @@ namespace sw::editor
 
     void RenderTargetPanel::releasePreviewTexture()
     {
-        if ( _pPreviewTextureId == nullptr )
+        if ( _pPreviewTextureID == nullptr )
             return;
 
         EditorContext* pContext = EditorContext::get();
         // 컨텍스트가 이미 내려갔으면 놓아 줄 상대가 없다. 백엔드가 자기 힙을 통째로 버린 뒤다.
         if ( pContext != nullptr && pContext->getRendererBackend() != nullptr )
-            pContext->getRendererBackend()->unregisterTexture( _pPreviewTextureId );
-        _pPreviewTextureId = nullptr;
+            pContext->getRendererBackend()->unregisterTexture( _pPreviewTextureID );
+        _pPreviewTextureID = nullptr;
         _previewTexture    = 0;
     }
 
@@ -92,7 +92,7 @@ namespace sw::editor
         // 깊이 첨부는 등록하지 않는다. 아래 미리보기가 왜 그리지 못하는지 화면에 적는다.
         const bool   bPreviewable = ( pSelected != nullptr ) && ( pSelected->_bDepth == SW_FALSE );
         const uint64 texture      = bPreviewable ? pSelected->_texture : 0;
-        if ( texture == _previewTexture && _pPreviewTextureId != nullptr )
+        if ( texture == _previewTexture && _pPreviewTextureID != nullptr )
             return;
 
         releasePreviewTexture();
@@ -102,8 +102,8 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr || pContext->getRendererBackend() == nullptr )
             return;
-        _pPreviewTextureId = pContext->getRendererBackend()->registerTexture( texture );
-        _previewTexture    = ( _pPreviewTextureId != nullptr ) ? texture : 0;
+        _pPreviewTextureID = pContext->getRendererBackend()->registerTexture( texture );
+        _previewTexture    = ( _pPreviewTextureID != nullptr ) ? texture : 0;
     }
 
     void RenderTargetPanel::drawToolbar()
@@ -185,7 +185,7 @@ namespace sw::editor
             return;
         }
 
-        if ( _pPreviewTextureId == nullptr )
+        if ( _pPreviewTextureID == nullptr )
         {
             ImGui::TextDisabled( "Could not register this target as an ImGui texture." );
             ImGui::EndChild();
@@ -216,7 +216,7 @@ namespace sw::editor
             drawHeight = static_cast<float32>( pSelected->_height ) * _previewZoom;
         }
 
-        ImGui::Image( reinterpret_cast<ImTextureID>( _pPreviewTextureId ), ImVec2{ drawWidth, drawHeight } );
+        ImGui::Image( reinterpret_cast<ImTextureID>( _pPreviewTextureID ), ImVec2{ drawWidth, drawHeight } );
         ImGui::EndChild();
     }
 

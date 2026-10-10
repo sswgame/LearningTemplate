@@ -86,7 +86,7 @@ namespace sw
     {
         for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
         {
-            outBytes[byteIndex] = static_cast<uint8>( _sessionId >> ( byteIndex * 8 ) );
+            outBytes[byteIndex] = static_cast<uint8>( _sessionID >> ( byteIndex * 8 ) );
         }
         Memory::copy( outBytes + 8, _arrSecret, LoginConstant::kTokenSecretSize );
     }
@@ -95,12 +95,12 @@ namespace sw
     {
         if ( pData == nullptr || size != LoginConstant::kTokenWireSize )
             return false;
-        uint64 sessionId = 0;
+        uint64 sessionID = 0;
         for ( int32 byteIndex = 0; byteIndex < 8; ++byteIndex )
         {
-            sessionId |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
+            sessionID |= static_cast<uint64>( pData[byteIndex] ) << ( byteIndex * 8 );
         }
-        _sessionId = sessionId;
+        _sessionID = sessionID;
         Memory::copy( _arrSecret, pData + 8, LoginConstant::kTokenSecretSize );
         return true;
     }

@@ -29,7 +29,7 @@ namespace sw
 
         TypeInfo info{};
         info._name               = shortName;
-        info._typeId             = static_cast<uint32>( shortName.getHash() );
+        info._typeID             = static_cast<uint32>( shortName.getHash() );
         info._fullyQualifiedName = fqn;
         info._parentFQN          = parentFqn;
         info._size               = size;

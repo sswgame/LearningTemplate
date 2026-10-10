@@ -74,25 +74,25 @@ namespace sw
         [[nodiscard]] bool registerProvider( IPushNotificationProvider* pProvider );
 
         /** @brief 계정의 모든 기기에 보냅니다. 도배 제한에 걸리면 false(보내지 않음). */
-        bool notifyAccount( AccountId accountId, const PushNotificationMessage& message, int64 nowMs );
+        bool notifyAccount( AccountID accountID, const PushNotificationMessage& message, int64 nowMs );
         /** @brief 제공자 결과 거두기 · 물러남이 끝난 배달 다시. 저장소 완료는 호스트(또는 서버 루프)가 비운다. */
         void tick( int64 nowMs );
 
         // 기기 등록(바인딩이 부른다 — 완료는 꼬리표, 0 이면 완료 없음)
-        void registerDevice( AccountId accountId, const PushDeviceRegistration& registration, uint64 requestTag );
-        void unregisterDevice( AccountId accountId, string_view providerId, string_view token, uint64 requestTag );
+        void registerDevice( AccountID accountID, const PushDeviceRegistration& registration, uint64 requestTag );
+        void unregisterDevice( AccountID accountID, string_view providerID, string_view token, uint64 requestTag );
         void drainCompletions( vector<PushDeviceCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
 
         const PushDispatcherStats& getStats() const { return _stats; }
         int32                      getInFlightCount() const { return static_cast<int32>( _mapDelivery.size() ); }
         int32                      getPendingWorkCount() const { return _pendingWorkCount; }
-        bool                       hasProvider( string_view providerId ) const { return findProvider( providerId ) != nullptr; }
+        bool                       hasProvider( string_view providerID ) const { return findProvider( providerID ) != nullptr; }
 
-        static string makeDeviceKey( AccountId accountId, string_view providerId, string_view token );
-        static string makeAccountPrefix( AccountId accountId );
+        static string makeDeviceKey( AccountID accountID, string_view providerID, string_view token );
+        static string makeAccountPrefix( AccountID accountID );
 
         /** @brief 저장소 일의 `complete` 가 부른다(키트 안). */
-        void applyDevices( AccountId accountId, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs );
+        void applyDevices( AccountID accountID, const PushNotificationMessage& message, vector<PushDeviceRegistration>&& listDevice, int64 nowMs );
         void applyWrite( uint64 requestTag, LiveOpsResult result );
 
     private:
@@ -100,14 +100,14 @@ namespace sw
         {
             PushNotificationMessage _message{};
             PushDeviceRegistration  _device{};
-            AccountId               _accountId{ kInvalidAccountId };
+            AccountID               _accountID{ kInvalidAccountID };
             int64                   _nextAttemptMs{ 0 };
             int32                   _attempt{ 0 }; ///< 실패한 횟수
             uint8                   _bInFlight{ SW_FALSE };
         };
 
-        IPushNotificationProvider* findProvider( string_view providerId ) const;
-        void                       sendDelivery( uint64 deliveryId, Delivery& delivery );
+        IPushNotificationProvider* findProvider( string_view providerID ) const;
+        void                       sendDelivery( uint64 deliveryID, Delivery& delivery );
 
         unordered_map<uint64, Delivery>    _mapDelivery;
         vector<IPushNotificationProvider*> _listProvider;
@@ -116,7 +116,7 @@ namespace sw
         TokenBucketMap                     _accountBucketMap;
         PushDispatcherStats                _stats;
         IServiceStore*                     _pStore;
-        uint64                             _nextDeliveryId;
+        uint64                             _nextDeliveryID;
         int32                              _pendingWorkCount;
     };
 } // namespace sw

@@ -158,9 +158,9 @@ SW_TEST_CASE( ResolvedSocketTableTest, SlotPrefixedNamesStayStableAcrossResolve 
     SW_ASSERT_TRUE( table.addUnit( hashed_string(), 0, body, bodyBones, nullptr, nullptr ) );
     SW_ASSERT_TRUE( table.addUnit( hashed_string( "MainHand" ), 1, rifle, gunBones, nullptr, nullptr ) );
     table.endResolve();
-    const SocketId muzzleId = table.findSocket( hashed_string( "MainHand.Muzzle" ) );
-    SW_ASSERT_TRUE( muzzleId != kInvalidSocketId );
-    SW_EXPECT_TRUE( table.findSocket( hashed_string( "Muzzle" ) ) == kInvalidSocketId ); // 부품 것은 접두어가 붙는다
+    const SocketID muzzleID = table.findSocket( hashed_string( "MainHand.Muzzle" ) );
+    SW_ASSERT_TRUE( muzzleID != kInvalidSocketID );
+    SW_EXPECT_TRUE( table.findSocket( hashed_string( "Muzzle" ) ) == kInvalidSocketID ); // 부품 것은 접두어가 붙는다
     float4x4 world;
     SW_ASSERT_TRUE( table.getSocketTransform( hashed_string( "MainHand.Muzzle" ), pose, world ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 1.0f, 0.0f, 0.5f ), world.getTranslation(), 1.0e-5f ) );
@@ -172,8 +172,8 @@ SW_TEST_CASE( ResolvedSocketTableTest, SlotPrefixedNamesStayStableAcrossResolve 
     SW_ASSERT_TRUE( table.addUnit( hashed_string(), 0, body, bodyBones, nullptr, nullptr ) );
     SW_ASSERT_TRUE( table.addUnit( hashed_string( "MainHand" ), 1, shotgun, gunBones, nullptr, nullptr ) );
     table.endResolve();
-    SW_EXPECT_EQUAL( muzzleId, table.findSocket( hashed_string( "MainHand.Muzzle" ) ) );
-    SW_ASSERT_TRUE( table.getSocketTransform( muzzleId, pose, world ) );
+    SW_EXPECT_EQUAL( muzzleID, table.findSocket( hashed_string( "MainHand.Muzzle" ) ) );
+    SW_ASSERT_TRUE( table.getSocketTransform( muzzleID, pose, world ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 1.0f, 0.0f, 0.8f ), world.getTranslation(), 1.0e-5f ) );
     SW_EXPECT_TRUE( table.isSocketActive( table.findSocket( hashed_string( "MainHand.Ejector" ) ) ) );
 
@@ -181,9 +181,9 @@ SW_TEST_CASE( ResolvedSocketTableTest, SlotPrefixedNamesStayStableAcrossResolve 
     table.beginResolve();
     SW_ASSERT_TRUE( table.addUnit( hashed_string(), 0, body, bodyBones, nullptr, nullptr ) );
     table.endResolve();
-    SW_EXPECT_EQUAL( muzzleId, table.findSocket( hashed_string( "MainHand.Muzzle" ) ) );
-    SW_EXPECT_FALSE( table.isSocketActive( muzzleId ) );
-    SW_EXPECT_FALSE( table.getSocketTransform( muzzleId, pose, world ) );
+    SW_EXPECT_EQUAL( muzzleID, table.findSocket( hashed_string( "MainHand.Muzzle" ) ) );
+    SW_EXPECT_FALSE( table.isSocketActive( muzzleID ) );
+    SW_EXPECT_FALSE( table.getSocketTransform( muzzleID, pose, world ) );
 
     // 부모 본을 대조한다 — 없는 본이면 그 유닛은 들어가지 않는다.
     string error;
@@ -215,17 +215,17 @@ SW_TEST_CASE( ResolvedSocketTableTest, FallbackCandidatesPickFirstPresentSocket 
     SW_ASSERT_TRUE( table.addUnit( hashed_string(), 0, body, bodyBones, nullptr, nullptr ) );
     SW_ASSERT_TRUE( table.addUnit( hashed_string( "Belt" ), 1, belt, beltBones, nullptr, nullptr ) );
     table.endResolve();
-    const SocketId scabbardId = table.findSocket( hashed_string( "Scabbard" ) );
-    SW_EXPECT_EQUAL( table.findSocket( hashed_string( "Belt.Hook" ) ), table.resolveTarget( scabbardId ) );
+    const SocketID scabbardID = table.findSocket( hashed_string( "Scabbard" ) );
+    SW_EXPECT_EQUAL( table.findSocket( hashed_string( "Belt.Hook" ) ), table.resolveTarget( scabbardID ) );
     float4x4 world;
-    SW_ASSERT_TRUE( table.getSocketTransform( scabbardId, pose, world ) );
+    SW_ASSERT_TRUE( table.getSocketTransform( scabbardID, pose, world ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 0.2f, 0.9f, 0.0f ), world.getTranslation(), 1.0e-5f ) );
 
     table.beginResolve();
     SW_ASSERT_TRUE( table.addUnit( hashed_string(), 0, body, bodyBones, nullptr, nullptr ) );
     table.endResolve();
-    SW_EXPECT_EQUAL( scabbardId, table.resolveTarget( scabbardId ) );
-    SW_ASSERT_TRUE( table.getSocketTransform( scabbardId, pose, world ) );
+    SW_EXPECT_EQUAL( scabbardID, table.resolveTarget( scabbardID ) );
+    SW_ASSERT_TRUE( table.getSocketTransform( scabbardID, pose, world ) );
     SW_EXPECT_TRUE( Internal::isNear( float3( 0.0f, 0.85f, -0.1f ), world.getTranslation(), 1.0e-5f ) );
 
     const hashed_string arrCandidate[2] = { hashed_string( "Belt.Hook" ), hashed_string( "Waist" ) };

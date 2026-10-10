@@ -36,10 +36,10 @@ namespace sw
         void initialize( const MetroidvaniaCatalog* pCatalog, const PlatformerSettings& baseSettings );
 
         /** @brief 능력을 얻습니다 — 플래그를 켭니다. 새로 얻었으면 true, 이미 있거나 모르는 능력이면 false 입니다. */
-        bool grantAbility( const hashed_string& abilityId, GameFlags& flags );
+        bool grantAbility( const hashed_string& abilityID, GameFlags& flags );
         /** @brief 세이브에서 — 플래그가 켜진 능력을 카탈로그 순서로 되살립니다(지금 능력은 비운다). 되살린 수입니다. */
         int32 restoreFromFlags( const GameFlags& flags );
-        bool  hasAbility( const hashed_string& abilityId ) const;
+        bool  hasAbility( const hashed_string& abilityID ) const;
 
         /** @brief 잠긴 기본 설정에 얻은 능력의 값을 더한 몸 설정입니다. */
         void applyToSettings( PlatformerSettings& outSettings ) const;

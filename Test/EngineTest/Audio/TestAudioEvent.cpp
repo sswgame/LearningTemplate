@@ -178,7 +178,7 @@ SW_TEST_CASE( AudioEventTest, ContainersPickClipsByData )
 
     // 모르는 이벤트는 0 이다.
     SW_TEST_DEFENSIVE_SCOPE( "Posting an unknown event returns 0" );
-    SW_EXPECT_EQUAL( sw::AudioPlayingId{ 0 }, engine.postEvent( sw::hashed_string( "NoSuchEvent" ) ) );
+    SW_EXPECT_EQUAL( sw::AudioPlayingID{ 0 }, engine.postEvent( sw::hashed_string( "NoSuchEvent" ) ) );
 }
 
 /**
@@ -223,15 +223,15 @@ SW_TEST_CASE( AudioEventTest, CooldownDropsTooCloseRepeats )
 {
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioEventTestInternal::initializeEngine( engine ) );
-    const sw::AudioPlayingId first  = engine.postEvent( sw::hashed_string( "Cool" ) );
-    const sw::AudioPlayingId second = engine.postEvent( sw::hashed_string( "Cool" ) );
+    const sw::AudioPlayingID first  = engine.postEvent( sw::hashed_string( "Cool" ) );
+    const sw::AudioPlayingID second = engine.postEvent( sw::hashed_string( "Cool" ) );
     (void)test::AudioTestUtil::render( engine, 2400 );
     SW_EXPECT_TRUE( engine.isPlaying( first ) );
     SW_EXPECT_FALSE( engine.isPlaying( second ) );
     SW_EXPECT_EQUAL( 1u, engine.getStats()._instanceCount );
 
     (void)test::AudioTestUtil::render( engine, 4800 );
-    const sw::AudioPlayingId third = engine.postEvent( sw::hashed_string( "Cool" ) );
+    const sw::AudioPlayingID third = engine.postEvent( sw::hashed_string( "Cool" ) );
     (void)test::AudioTestUtil::render( engine, 256 );
     SW_EXPECT_TRUE( engine.isPlaying( third ) );
     SW_EXPECT_EQUAL( 2u, engine.getStats()._instanceCount );
@@ -244,10 +244,10 @@ SW_TEST_CASE( AudioEventTest, InstanceLimitStealsOrRejects )
 {
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioEventTestInternal::initializeEngine( engine ) );
-    sw::AudioPlayingId arrOldest[3] = {};
-    for ( sw::AudioPlayingId& playingId : arrOldest )
+    sw::AudioPlayingID arrOldest[3] = {};
+    for ( sw::AudioPlayingID& playingID : arrOldest )
     {
-        playingId = engine.postEvent( sw::hashed_string( "Oldest" ) );
+        playingID = engine.postEvent( sw::hashed_string( "Oldest" ) );
         (void)test::AudioTestUtil::render( engine, 256 );
     }
     (void)test::AudioTestUtil::render( engine, 512 );
@@ -255,10 +255,10 @@ SW_TEST_CASE( AudioEventTest, InstanceLimitStealsOrRejects )
     SW_EXPECT_TRUE( engine.isPlaying( arrOldest[1] ) );
     SW_EXPECT_TRUE( engine.isPlaying( arrOldest[2] ) );
 
-    sw::AudioPlayingId arrReject[3] = {};
-    for ( sw::AudioPlayingId& playingId : arrReject )
+    sw::AudioPlayingID arrReject[3] = {};
+    for ( sw::AudioPlayingID& playingID : arrReject )
     {
-        playingId = engine.postEvent( sw::hashed_string( "Reject" ) );
+        playingID = engine.postEvent( sw::hashed_string( "Reject" ) );
         (void)test::AudioTestUtil::render( engine, 256 );
     }
     SW_EXPECT_TRUE( engine.isPlaying( arrReject[0] ) );
@@ -270,14 +270,14 @@ SW_TEST_CASE( AudioEventTest, InstanceLimitStealsOrRejects )
     engine.setEmitter( 11, sw::float3( 2.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
     engine.setEmitter( 12, sw::float3( 8.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
     engine.setEmitter( 13, sw::float3( 4.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
-    const sw::AudioPlayingId nearId = engine.postEvent( sw::hashed_string( "Farthest" ), 11 );
-    const sw::AudioPlayingId farId  = engine.postEvent( sw::hashed_string( "Farthest" ), 12 );
+    const sw::AudioPlayingID nearID = engine.postEvent( sw::hashed_string( "Farthest" ), 11 );
+    const sw::AudioPlayingID farID  = engine.postEvent( sw::hashed_string( "Farthest" ), 12 );
     (void)test::AudioTestUtil::render( engine, 512 );
-    const sw::AudioPlayingId newId = engine.postEvent( sw::hashed_string( "Farthest" ), 13 );
+    const sw::AudioPlayingID newID = engine.postEvent( sw::hashed_string( "Farthest" ), 13 );
     (void)test::AudioTestUtil::render( engine, 512 );
-    SW_EXPECT_TRUE( engine.isPlaying( nearId ) );
-    SW_EXPECT_FALSE( engine.isPlaying( farId ) );
-    SW_EXPECT_TRUE( engine.isPlaying( newId ) );
+    SW_EXPECT_TRUE( engine.isPlaying( nearID ) );
+    SW_EXPECT_FALSE( engine.isPlaying( farID ) );
+    SW_EXPECT_TRUE( engine.isPlaying( newID ) );
 }
 
 /**
@@ -289,9 +289,9 @@ SW_TEST_CASE( AudioEventTest, VoiceLimitVirtualizesAndKeepsTime )
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioEventTestInternal::initializeEngine( engine ) );
     // Low 를 먼저 낸다 — 먼저 낸 순서가 아니라 우선순위가 고르는지 본다.
-    const sw::AudioPlayingId lowId  = engine.postEvent( sw::hashed_string( "Low" ) );
-    const sw::AudioPlayingId highId = engine.postEvent( sw::hashed_string( "High" ) );
-    const sw::AudioPlayingId midId  = engine.postEvent( sw::hashed_string( "Mid" ) );
+    const sw::AudioPlayingID lowID  = engine.postEvent( sw::hashed_string( "Low" ) );
+    const sw::AudioPlayingID highID = engine.postEvent( sw::hashed_string( "High" ) );
+    const sw::AudioPlayingID midID  = engine.postEvent( sw::hashed_string( "Mid" ) );
     (void)test::AudioTestUtil::render( engine, 512 );
     sw::AudioEngineStats stats = engine.getStats();
     SW_EXPECT_EQUAL( 2u, stats._realVoiceCount );
@@ -301,20 +301,20 @@ SW_TEST_CASE( AudioEventTest, VoiceLimitVirtualizesAndKeepsTime )
 
     // 0.5 초 동안 가상으로 흐른 뒤 자리가 나면 램프의 0.5 근처에서 이어진다(처음부터가 아니다).
     (void)test::AudioTestUtil::render( engine, 24000 - 512 - 768 );
-    engine.stop( highId, 0.0f );
-    engine.stop( midId, 0.0f );
+    engine.stop( highID, 0.0f );
+    engine.stop( midID, 0.0f );
     const float32 resumed = AudioEventTestInternal::renderSteadyLeft( engine );
     SW_EXPECT_TRUE( 0.5f < resumed && resumed < 0.56f );
-    SW_EXPECT_TRUE( engine.isPlaying( lowId ) );
+    SW_EXPECT_TRUE( engine.isPlaying( lowID ) );
 
     // 들리지 않는 자리(Linear 10 m 밖)는 가상이거나 정지다.
     AudioEventTestInternal::placeListener( engine );
     engine.setEmitter( 21, sw::float3( 50.0f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ) );
-    const sw::AudioPlayingId virtualId = engine.postEvent( sw::hashed_string( "FarVirtual" ), 21 );
-    const sw::AudioPlayingId stopId    = engine.postEvent( sw::hashed_string( "FarStop" ), 21 );
+    const sw::AudioPlayingID virtualID = engine.postEvent( sw::hashed_string( "FarVirtual" ), 21 );
+    const sw::AudioPlayingID stopID    = engine.postEvent( sw::hashed_string( "FarStop" ), 21 );
     (void)test::AudioTestUtil::render( engine, 512 );
-    SW_EXPECT_TRUE( engine.isPlaying( virtualId ) );
-    SW_EXPECT_FALSE( engine.isPlaying( stopId ) );
+    SW_EXPECT_TRUE( engine.isPlaying( virtualID ) );
+    SW_EXPECT_FALSE( engine.isPlaying( stopID ) );
     stats = engine.getStats();
     SW_EXPECT_TRUE( stats._virtualVoiceCount >= 1u );
 }

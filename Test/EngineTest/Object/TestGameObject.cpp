@@ -268,8 +268,8 @@ SW_TEST_CASE( GameObjectTest, ReflectionSupport )
     sw::GameObject&        actor    = *actorPtr;
     sw::MockMeshComponent* meshComp = actor.addComponent<sw::MockMeshComponent>();
 
-    SW_EXPECT_TRUE( actor.getObjectId() != 0 );
-    SW_EXPECT_TRUE( meshComp->getComponentId() != 0 );
+    SW_EXPECT_TRUE( actor.getObjectID() != 0 );
+    SW_EXPECT_TRUE( meshComp->getComponentID() != 0 );
 }
 
 // ------------------------------------------------------------------------------
@@ -425,11 +425,11 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
 
 /**
  * @brief [PostEditChangePropertyTest] 메시 id 를 바꾸면 그리는 메시가 바뀐다 — 런타임에 건 메시는 id 가 바뀔 때까지 남는다
- * @details 메시는 자기가 어느 id 의 것인지 들고(`_resolvedMeshId` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙) 다르면 다시 잡는다.
+ * @details 메시는 자기가 어느 id 의 것인지 들고(`_resolvedMeshID` — 머티리얼의 `_acquiredMaterialPath` 와 같은 규칙) 다르면 다시 잡는다.
  *          메시 해석이 "메시가 이미 있으면 그대로" 면 인스펙터에서 Mesh Asset 을 바꾸거나, 다른 id 를 붙여 넣거나, 되돌리기가 다른 id 를
  *          다시 읽어도 옛 메시를 그린다(플레이 · 씬 재로드 전까지).
  */
-SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIdChangesTheDrawnMesh )
+SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIDChangesTheDrawnMesh )
 {
     const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
     sw::GameObjectManager       manager;
@@ -437,23 +437,23 @@ SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIdChangesTheDrawnMesh )
     sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pMesh );
     pMesh->resolveRuntimeMesh();
-    const sw::PropertyInfo* pMeshId = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshId" ) );
-    SW_ASSERT_NOT_NULL( pMeshId );
+    const sw::PropertyInfo* pMeshID = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshID" ) );
+    SW_ASSERT_NOT_NULL( pMeshID );
 
     // 인스펙터 편집: 값을 쓰고 알린다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Sphere", ctx ) );
-    pMesh->onPropertyChanged( pMeshId->_name );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Sphere", ctx ) );
+    pMesh->onPropertyChanged( pMeshID->_name );
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Sphere" ).get() );
 
     // 런타임에 건 메시는 그때의 id 의 것이다 — 같은 id 로 다시 읽어도 남는다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Cube", ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cube", ctx ) );
     const sw::shared_ptr<sw::Mesh> custom = sw::MeshUtil::createPrimitive( "Cube" );
     pMesh->setMesh( custom );
     pMesh->onPostLoad();
     SW_EXPECT_TRUE( pMesh->getRawMesh() == custom.get() );
 
     // 다른 id 를 읽으면(되돌리기 · 붙여넣기) 그 id 의 메시가 된다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, "Cylinder", ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cylinder", ctx ) );
     pMesh->onPostLoad();
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Cylinder" ).get() );
 }
@@ -769,7 +769,7 @@ SW_TEST_CASE( GameObjectHandleTest, SafeDestruction )
 
 /**
  * @brief [GameObjectHandleTest] 이름을 바꿔도 핸들은 같은 오브젝트로 풀리고, 옛 이름의 새 오브젝트로 옮겨 가지 않는다
- * @details 이름으로 찾는 참조가 틀리는 두 경우다. 핸들은 objectId 로 찾고, id 는 다시 쓰지 않는다.
+ * @details 이름으로 찾는 참조가 틀리는 두 경우다. 핸들은 objectID 로 찾고, id 는 다시 쓰지 않는다.
  */
 SW_TEST_CASE( GameObjectHandleTest, SurvivesRename )
 {
@@ -1007,14 +1007,14 @@ SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
  * @brief 매니저 없이 만든 임시 오브젝트는 무효 id(0)를 든다 — id 는 매니저 하나가 발급한다.
  * @details 오브젝트가 id 를 스스로 발급하면 임시 오브젝트가 어느 매니저에도 없는 "유효해 보이는" id 를 든다.
  */
-SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidId )
+SW_TEST_CASE( GameObjectTest, StandaloneObjectHasInvalidID )
 {
     sw::GameObject standalone( sw::hashed_string( "Standalone" ) );
-    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), standalone.getObjectId() );
+    SW_EXPECT_EQUAL( static_cast<uint64>( 0 ), standalone.getObjectID() );
 
     sw::GameObjectManager manager;
     sw::GameObject*       pManaged = manager.createGameObject( sw::hashed_string( "Managed" ) );
-    SW_EXPECT_TRUE( pManaged->getObjectId() != 0 );
+    SW_EXPECT_TRUE( pManaged->getObjectID() != 0 );
 }
 
 /**
@@ -1130,7 +1130,7 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
     sw::GameObject*       pObj   = manager.createGameObject( sw::hashed_string( "LabelOwner" ) );
     sw::SceneComponent*   pScene = pObj->addComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pScene );
-    const uint64 componentId = pScene->getComponentId();
+    const uint64 componentID = pScene->getComponentID();
 
     pScene->setComponentName( sw::hashed_string( "Muzzle" ) );
     SW_EXPECT_STREQ( "Muzzle", pScene->getComponentName().c_str() );
@@ -1146,7 +1146,7 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, { &identity } ) );
     sw::SceneComponent* pRestored = pObj->getComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRestored );
-    SW_EXPECT_EQUAL( componentId, pRestored->getComponentId() );
+    SW_EXPECT_EQUAL( componentID, pRestored->getComponentID() );
 
     // 다른 타입의 이름을 붙여도 그 타입이 되지 않는다.
     pRestored->setComponentName( sw::hashed_string( "CameraComponent" ) );
@@ -1556,8 +1556,8 @@ SW_TEST_CASE( GameObjectTest, TickRegistryTracksMembershipPerObject )
     SW_EXPECT_EQUAL( pMeshB, static_cast<sw::MockMeshComponent*>( pTicker->getTickItems()[1]._pComponent ) );
     // 서브틱은 순서 키 순 — Early(8) 가 Late(7) 앞이다.
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( pSub->getTickItems().size() ) );
-    SW_EXPECT_EQUAL( 8u, pSub->getTickItems()[0]._subTickId );
-    SW_EXPECT_EQUAL( 7u, pSub->getTickItems()[1]._subTickId );
+    SW_EXPECT_EQUAL( 8u, pSub->getTickItems()[0]._subTickID );
+    SW_EXPECT_EQUAL( 7u, pSub->getTickItems()[1]._subTickID );
 
     // (2) 서브틱을 끄면 그 오브젝트의 항목만 줄고, 다른 오브젝트는 다시 짓지 않는다(세대는 오른다).
     const uint32 buildBefore = manager.getTickStageBuildCount();
@@ -2481,7 +2481,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
         listAliveObject.push_back( pObj );
     }
 
-    uint32           nextActorId  = kInitialObjectCount;
+    uint32           nextActorID  = kInitialObjectCount;
     constexpr uint32 kTotalRounds = 500;
 
     for ( uint32 roundIndex = 0; roundIndex < kTotalRounds; ++roundIndex )
@@ -2525,7 +2525,7 @@ SW_TEST_CASE( GameObjectTest, ChaoticHierarchyMutationAndActiveToggleStressTest 
             else
             {
                 // 5) 신규 오브젝트 동적 생성 후 임의 부모 연결
-                sw::GameObject* pNewObj = manager.createGameObject( sw::hashed_string( ( "ChaosActor_" + std::to_string( nextActorId++ ) ).c_str() ) );
+                sw::GameObject* pNewObj = manager.createGameObject( sw::hashed_string( ( "ChaosActor_" + std::to_string( nextActorID++ ) ).c_str() ) );
                 if ( pNewObj != nullptr )
                 {
                     sw::SceneComponent* pScene = pNewObj->addComponent<sw::SceneComponent>();
@@ -2759,7 +2759,7 @@ SW_TEST_CASE( GameObjectTest, ReadingTagsDoesNotAttachATagComponent )
 
 /**
  * @brief [GameObjectTest] 컴포넌트가 이동 불가로 남아 있는지 검증(회귀 가드)
- * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 이동 연산을 두면 `_componentId` 가 둘이 되거나
+ * @details 컴포넌트는 풀에서 제자리 생성·소멸하므로 옮겨질 일이 없다. 이동 연산을 두면 `_componentID` 가 둘이 되거나
  *          `SceneComponent` 의 자식 `_pParent` · 부모의 `_listChild` · 매니저의 루트 등록부가 옛 주소를 가리키기 쉽고,
  *          쓰는 곳이 없으니 틀려도 아무도 모른다. 진짜 방어선은 `= delete` 이고 이 케이스는 그것이 유지되는지 본다.
  */
@@ -2779,7 +2779,7 @@ SW_TEST_CASE( GameObjectTest, ComponentsStayNonMovable )
  * @details 매니저마다 1 부터 세면 씬 A 의 오브젝트를 같은 id 로 씬 B 에 옮길 때(영속 오브젝트 · `SceneManager::markPersistent`) B 의
  *          같은 id 와 부딪혀 새 id 를 받고, 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
  */
-SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
+SW_TEST_CASE( GameObjectTest, ObjectIDsAreUniqueAcrossManagers )
 {
     sw::GameObjectManager first;
     sw::GameObjectManager second;
@@ -2787,13 +2787,13 @@ SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
     const sw::GameObject* pB = second.createGameObject( sw::hashed_string( "B" ) );
     SW_ASSERT_NOT_NULL( pA );
     SW_ASSERT_NOT_NULL( pB );
-    SW_EXPECT_TRUE( pA->getObjectId() != pB->getObjectId() );
+    SW_EXPECT_TRUE( pA->getObjectID() != pB->getObjectID() );
     // 되살린 id 도 뒤의 발급과 겹치지 않는다 — 다른 매니저의 발급에서도.
-    const sw::GameObject* pRestored = first.createGameObjectWithId( sw::hashed_string( "Restored" ), pB->getObjectId() + 100 );
+    const sw::GameObject* pRestored = first.createGameObjectWithID( sw::hashed_string( "Restored" ), pB->getObjectID() + 100 );
     SW_ASSERT_NOT_NULL( pRestored );
     const sw::GameObject* pAfter = second.createGameObject( sw::hashed_string( "After" ) );
     SW_ASSERT_NOT_NULL( pAfter );
-    SW_EXPECT_TRUE( pAfter->getObjectId() > pRestored->getObjectId() );
+    SW_EXPECT_TRUE( pAfter->getObjectID() > pRestored->getObjectID() );
 }
 
 /**
@@ -2802,21 +2802,21 @@ SW_TEST_CASE( GameObjectTest, ObjectIdsAreUniqueAcrossManagers )
  *          모두 잠금 + 해시 맵으로 가서, 스폰이 잦은 게임은 몇 시간 뒤 모든 핸들 해석이 그 경로로 가고, 그런 세션에서 저장한 id 를
  *          되살리면(세이브 · 플레이 복원) 처음부터 그렇다.
  */
-SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
+SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIDsStayOnTheLockFreeTable )
 {
     sw::GameObjectManager manager;
-    constexpr uint64      kLargeId  = 5'000'000ull;
-    sw::GameObject*       pRestored = manager.createGameObjectWithId( sw::hashed_string( "Restored" ), kLargeId );
+    constexpr uint64      kLargeID  = 5'000'000ull;
+    sw::GameObject*       pRestored = manager.createGameObjectWithID( sw::hashed_string( "Restored" ), kLargeID );
     SW_ASSERT_NOT_NULL( pRestored );
-    SW_EXPECT_EQUAL( kLargeId, pRestored->getObjectId() );
-    SW_EXPECT_EQUAL( pRestored, manager.findGameObjectById( kLargeId ) );
+    SW_EXPECT_EQUAL( kLargeID, pRestored->getObjectID() );
+    SW_EXPECT_EQUAL( pRestored, manager.findGameObjectByID( kLargeID ) );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
 
     // 발급은 그 뒤로 이어지고(발급은 프로세스 전체라 다른 시험이 더 멀리 갔을 수 있다), 역시 표에 있다.
     sw::GameObject* pNext = manager.createGameObject( sw::hashed_string( "Next" ) );
     SW_ASSERT_NOT_NULL( pNext );
-    SW_EXPECT_TRUE( pNext->getObjectId() > kLargeId );
-    SW_EXPECT_EQUAL( pNext, manager.findGameObjectById( pNext->getObjectId() ) );
+    SW_EXPECT_TRUE( pNext->getObjectID() > kLargeID );
+    SW_EXPECT_EQUAL( pNext, manager.findGameObjectByID( pNext->getObjectID() ) );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
 }
 
@@ -2825,43 +2825,43 @@ SW_TEST_CASE( GameObjectTest, RestoredLargeObjectIdsStayOnTheLockFreeTable )
  * @details 뒤에 온 것은 맵으로 간다(드물다 — 오래 사는 오브젝트와 420 만 뒤의 id 가 겹칠 때). 칸 주인이 사라지면 칸이 비고, 맵의 것은 맵에서
  *          그대로 찾는다. 칸의 오브젝트가 다른 id 면 "없음" 이다 — 칸만 보고 답하면 엉뚱한 오브젝트를 준다.
  */
-SW_TEST_CASE( GameObjectTest, ObjectIdsThatShareATableSlotAreBothFound )
+SW_TEST_CASE( GameObjectTest, ObjectIDsThatShareATableSlotAreBothFound )
 {
     sw::GameObjectManager manager;
     constexpr uint64      kSlotCount = sw::GameObjectManager::kObjectSlotCount;
-    constexpr uint64      kOldId     = 7;
-    constexpr uint64      kNewId     = kOldId + kSlotCount;
+    constexpr uint64      kOldID     = 7;
+    constexpr uint64      kNewID     = kOldID + kSlotCount;
 
-    sw::GameObject* pOld = manager.createGameObjectWithId( sw::hashed_string( "Old" ), kOldId );
-    sw::GameObject* pNew = manager.createGameObjectWithId( sw::hashed_string( "New" ), kNewId );
+    sw::GameObject* pOld = manager.createGameObjectWithID( sw::hashed_string( "Old" ), kOldID );
+    sw::GameObject* pNew = manager.createGameObjectWithID( sw::hashed_string( "New" ), kNewID );
     SW_ASSERT_NOT_NULL( pOld );
     SW_ASSERT_NOT_NULL( pNew );
-    SW_EXPECT_EQUAL( pOld, manager.findGameObjectById( kOldId ) );
-    SW_EXPECT_EQUAL( pNew, manager.findGameObjectById( kNewId ) );
+    SW_EXPECT_EQUAL( pOld, manager.findGameObjectByID( kOldID ) );
+    SW_EXPECT_EQUAL( pNew, manager.findGameObjectByID( kNewID ) );
     SW_EXPECT_EQUAL( 1u, manager.getOverflowObjectCount() );
     // 같은 칸의 다른 id 는 없다.
-    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId + 2 * kSlotCount ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( kOldID + 2 * kSlotCount ) == nullptr );
 
     // 칸 주인이 사라져도 맵의 것은 찾는다.
     manager.destroyObject( pOld );
     manager.processDeferredDestruction();
-    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId ) == nullptr );
-    SW_EXPECT_EQUAL( pNew, manager.findGameObjectById( kNewId ) );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( kOldID ) == nullptr );
+    SW_EXPECT_EQUAL( pNew, manager.findGameObjectByID( kNewID ) );
 
     // 빈 칸은 다음 id 가 쓴다 — 맵으로 가지 않는다.
-    sw::GameObject* pThird = manager.createGameObjectWithId( sw::hashed_string( "Third" ), kOldId + 2 * kSlotCount );
+    sw::GameObject* pThird = manager.createGameObjectWithID( sw::hashed_string( "Third" ), kOldID + 2 * kSlotCount );
     SW_ASSERT_NOT_NULL( pThird );
-    SW_EXPECT_EQUAL( pThird, manager.findGameObjectById( kOldId + 2 * kSlotCount ) );
+    SW_EXPECT_EQUAL( pThird, manager.findGameObjectByID( kOldID + 2 * kSlotCount ) );
     SW_EXPECT_EQUAL( 1u, manager.getOverflowObjectCount() );
     // 사라진 작은 id 로 물으면 그 칸의 감긴 id 오브젝트를 주지 않는다(파괴된 대상을 가리키던 핸들).
-    SW_EXPECT_TRUE( manager.findGameObjectById( kOldId ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( kOldID ) == nullptr );
 
     // 맵의 것이 사라지면 맵이 빈다.
     manager.destroyObject( pNew );
     manager.processDeferredDestruction();
-    SW_EXPECT_TRUE( manager.findGameObjectById( kNewId ) == nullptr );
+    SW_EXPECT_TRUE( manager.findGameObjectByID( kNewID ) == nullptr );
     SW_EXPECT_EQUAL( 0u, manager.getOverflowObjectCount() );
-    SW_EXPECT_EQUAL( pThird, manager.findGameObjectById( kOldId + 2 * kSlotCount ) );
+    SW_EXPECT_EQUAL( pThird, manager.findGameObjectByID( kOldID + 2 * kSlotCount ) );
 }
 
 /**
@@ -2922,8 +2922,8 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
 
     const sw::string parentXml     = sw::ObjectStateSerializer::saveToXmlString( pParent );
     const sw::string childXml      = sw::ObjectStateSerializer::saveToXmlString( pChild );
-    const uint64     parentSavedId = pParent->getObjectId();
-    const uint64     childSavedId  = pChild->getObjectId();
+    const uint64     parentSavedID = pParent->getObjectID();
+    const uint64     childSavedID  = pChild->getObjectID();
     manager.clear();
     sw::GameObject* pNewParent = manager.createGameObject( sw::hashed_string( "TempParent" ) );
     sw::GameObject* pNewChild  = manager.createGameObject( sw::hashed_string( "TempChild" ) );
@@ -2932,9 +2932,9 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     // 자식을 먼저 읽는다 — 읽는 자리에서는 부모가 아직 읽히지 않았다.
     sw::MockPostLoadProbeComponent::s_postLoadCount           = 0;
     sw::MockPostLoadProbeComponent::s_postLoadWithParentCount = 0;
-    sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewChild, childXml, { nullptr, &batch, childSavedId } ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewParent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    sw::ObjectStateBatch batch( sw::ObjectIDSpace::Saved );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewChild, childXml, { nullptr, &batch, childSavedID } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewParent, parentXml, { nullptr, &batch, parentSavedID } ) );
     SW_EXPECT_EQUAL( 0, sw::MockPostLoadProbeComponent::s_postLoadCount ); // 묶음이 끝나기 전에는 부르지 않는다
     batch.finish();
 

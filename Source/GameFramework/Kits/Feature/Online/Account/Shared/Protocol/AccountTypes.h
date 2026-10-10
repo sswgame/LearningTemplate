@@ -82,14 +82,14 @@ namespace sw
     /** @brief 세션 토큰 — 선택자(세션 id) + 검증자(비밀)입니다. 클라이언트만 비밀을 갖고, 저장소에는 비밀의 다이제스트만 있다. */
     struct SW_GF_API LoginSessionToken
     {
-        uint64 _sessionId{ 0 };
+        uint64 _sessionID{ 0 };
         uint8  _arrSecret[LoginConstant::kTokenSecretSize]{};
 
         /** @brief 와이어 바이트(40 B — 세션 id LE ‖ 비밀)로 씁니다. */
         void writeBytes( uint8 ( &outBytes )[LoginConstant::kTokenWireSize] ) const;
         /** @brief 와이어 바이트에서 읽습니다. 크기가 다르면 false 입니다. */
         [[nodiscard]] bool readBytes( const uint8* pData, int32 size );
-        bool               isEmpty() const { return _sessionId == 0; }
+        bool               isEmpty() const { return _sessionID == 0; }
     };
 } // namespace sw
 
@@ -122,7 +122,7 @@ namespace sw
         int64             _retryAfterMs{ 0 };                       ///< AccountLocked · RateLimited — 이만큼 뒤에
         int64             _sanctionUntilMs{ 0 };                    ///< AccountSuspended — 끝 시각(영구 정지는 `ServiceSanctionState::kPermanentMs`)
         int64             _deletionDueMs{ 0 };                      ///< 탈퇴 예약 — 0 이 아니면 이 때 지운다(취소할 수 있다)
-        uint64            _replacedSessionId{ 0 };                  ///< KickExisting 으로 밀어낸 옛 세션(없으면 0)
+        uint64            _replacedSessionID{ 0 };                  ///< KickExisting 으로 밀어낸 옛 세션(없으면 0)
         LoginRevokeReason _revokeReason{ LoginRevokeReason::None }; ///< Revoked — 왜
         uint8             _bCreated{ SW_FALSE };                    ///< 게스트 · 외부 로그인이 새 계정을 만들었다
         uint8             _bUpdateRecommended{ SW_FALSE };          ///< 권장 빌드보다 낮다(로그인은 됐다)

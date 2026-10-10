@@ -972,12 +972,12 @@ SW_TEST_CASE( TaskManagerTest, TaskInheritsCreatorMemoryTag )
     sw::atomic<int32>     stackRunCount{ 0 };
     sw::atomic<int32>     stackWrongTagCount{ 0 };
     sw::atomic<int32>     workerChunkCount{ 0 };
-    const std::thread::id callerId = std::this_thread::get_id();
+    const std::thread::id callerID = std::this_thread::get_id();
     {
         SW_MEMORY_SCOPE( Material );
-        manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&stackRunCount, &stackWrongTagCount, &workerChunkCount, callerId]( uint32 start, uint32 end )
+        manager.runParallel( kCount, 1, SW_DELEGATE_LAMBDA( sw::ParallelBlockDelegate, [&stackRunCount, &stackWrongTagCount, &workerChunkCount, callerID]( uint32 start, uint32 end )
         {
-            if ( std::this_thread::get_id() == callerId )
+            if ( std::this_thread::get_id() == callerID )
             {
                 // 워커가 청크 하나를 실행할 때까지 호출 스레드를 붙든다 — 청크가 모두 호출 스레드에서 돌면 상속을 보지 못한다.
                 const sw::Deadline deadline = sw::Deadline::afterMilliseconds( kWaitTimeoutMs );

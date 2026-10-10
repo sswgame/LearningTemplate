@@ -169,11 +169,11 @@ SW_TEST_CASE( NavMeshBenchTest, CrowdUpdateWithHundredAndFiveHundredAgents )
         params._radius   = 0.4f;
         params._height   = 1.9f;
         params._maxSpeed = 3.0f;
-        sw::vector<sw::NavCrowdAgentId> listAgent;
+        sw::vector<sw::NavCrowdAgentID> listAgent;
         for ( uint32 index = 0; index < agentCount; ++index )
         {
-            const sw::NavCrowdAgentId agent = pCrowd->addAgent( random.nextPoint( 18.0f ), params );
-            if ( agent == sw::NavigationConstant::kInvalidAgentId )
+            const sw::NavCrowdAgentID agent = pCrowd->addAgent( random.nextPoint( 18.0f ), params );
+            if ( agent == sw::NavigationConstant::kInvalidAgentID )
                 continue;
             (void)pCrowd->requestMoveTarget( agent, random.nextPoint( 18.0f ) );
             listAgent.push_back( agent );

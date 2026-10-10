@@ -43,13 +43,13 @@ namespace sw
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
         void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override;
+        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
     private:
         void attachHost( OnlineServiceHost& host );
         void respond( OnlineServiceHost& host, uint64 requestTag, const MatchmakingReply& reply );
-        void push( OnlineServiceHost& host, AccountId accountId, uint16 kind, const BitWriter& body );
+        void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const BitWriter& body );
 
         ServicePendingTable            _pendingTable;
         vector<PartyLobbyCompletion>   _listPartyCompletionScratch;

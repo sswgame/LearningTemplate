@@ -9,7 +9,7 @@
 					                 _localRotation="0.16,-0.76,0"
 					                 _localScale="1,1,1"
 					                 _attachOwner="None"
-					                 _attachOwnerId="0"
+					                 _attachOwnerID="0"
 					                 _attachComponent="None"
 					                 _fovY="1"
 					                 _nearZ="0.2"
@@ -30,7 +30,7 @@
 					                           _localRotation="0.25,0.6,0"
 					                           _localScale="1,1,1"
 					                           _attachOwner="None"
-					                           _attachOwnerId="0"
+					                           _attachOwnerID="0"
 					                           _attachComponent="None"
 					                           _color="1,0.93,0.82"
 					                           _intensity="1.5"
@@ -63,7 +63,7 @@
 					                  _localRotation="0,0,0"
 					                  _localScale="1,1,1"
 					                  _attachOwner="None"
-					                  _attachOwnerId="0"
+					                  _attachOwnerID="0"
 					                  _attachComponent="None"
 					                  _heightfieldPath="game/empty/heightfields/valley.heightfield"
 					                  _materialPath="engine/materials/terrain.material"
@@ -96,7 +96,7 @@
 					                    _localRotation="0,0,0"
 					                    _localScale="1,1,1"
 					                    _attachOwner="None"
-					                    _attachOwnerId="0"
+					                    _attachOwnerID="0"
 					                    _attachComponent="None"
 					                    _shape="Lake"
 					                    _materialPath="engine/materials/water.material"
@@ -131,7 +131,7 @@
 					                    _localRotation="0,0,0"
 					                    _localScale="1,1,1"
 					                    _attachOwner="None"
-					                    _attachOwnerId="0"
+					                    _attachOwnerID="0"
 					                    _attachComponent="None"
 					                    _shape="River"
 					                    _materialPath="engine/materials/water.material"
@@ -169,7 +169,7 @@
 					                  _localRotation="0,0,0"
 					                  _localScale="1,1,1"
 					                  _attachOwner="None"
-					                  _attachOwnerId="0"
+					                  _attachOwnerID="0"
 					                  _attachComponent="None"
 					                  _regionSize="0,0"
 					                  _cellSize="32">
@@ -200,7 +200,7 @@
 								       _densityLayerIndex="0"
 								       _seed="11" />
 								<_listMesh>
-									<FoliageMesh _meshId="GrassClump" _weight="1" />
+									<FoliageMesh _meshID="GrassClump" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Flowers"
@@ -229,8 +229,8 @@
 								       _densityLayerIndex="-1"
 								       _seed="12" />
 								<_listMesh>
-									<FoliageMesh _meshId="game/empty/models/flower_red_a.mesh" _weight="1" />
-									<FoliageMesh _meshId="game/empty/models/flower_yellow_a.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/flower_red_a.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/flower_yellow_a.mesh" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Bushes"
@@ -259,7 +259,7 @@
 								       _densityLayerIndex="-1"
 								       _seed="13" />
 								<_listMesh>
-									<FoliageMesh _meshId="game/empty/models/plant_bush.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/plant_bush.mesh" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Trees"
@@ -288,8 +288,8 @@
 								       _densityLayerIndex="-1"
 								       _seed="14" />
 								<_listMesh>
-									<FoliageMesh _meshId="game/empty/models/tree_default.mesh" _weight="2" />
-									<FoliageMesh _meshId="game/empty/models/tree_default_fall.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/tree_default.mesh" _weight="2" />
+									<FoliageMesh _meshID="game/empty/models/tree_default_fall.mesh" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 							<FoliageLayer _name="Deadwood"
@@ -318,8 +318,8 @@
 								       _densityLayerIndex="-1"
 								       _seed="15" />
 								<_listMesh>
-									<FoliageMesh _meshId="game/empty/models/stump_round.mesh" _weight="1" />
-									<FoliageMesh _meshId="game/empty/models/log.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/stump_round.mesh" _weight="1" />
+									<FoliageMesh _meshID="game/empty/models/log.mesh" _weight="1" />
 								</_listMesh>
 							</FoliageLayer>
 						</_listLayer>

@@ -26,11 +26,11 @@ namespace
         vector<ServerDirectoryCompletion> _listCompletion;
         int32                             _statusChangeCount;
 
-        DirectoryNode( MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverId )
+        DirectoryNode( MemoryServiceDatabase* pDatabase, MemoryEphemeralDatabase* pCacheDatabase, LocalServerBusHub* pHub, uint64 serverID )
             : _store{ pDatabase }
             , _cache{ pCacheDatabase }
             , _router{}
-            , _bus{ pHub, serverId }
+            , _bus{ pHub, serverID }
             , _service{}
             , _listCompletion{}
             , _statusChangeCount{ 0 }
@@ -63,7 +63,7 @@ namespace
                 (void)_bus.pollMessages( listMessage );
                 for ( const ServerBusMessage& message : listMessage )
                 {
-                    if ( message._originServerId != _bus.getServerId() )
+                    if ( message._originServerID != _bus.getServerID() )
                         _service.notifyChanged();
                 }
                 _service.tick( nowMs );
@@ -77,10 +77,10 @@ namespace
 
     struct ServerDirectoryServiceTestInternal
     {
-        static void registerGameServer( EphemeralStoreRouter& router, ServerRegistration& registration, uint64 serverId, ServerState state )
+        static void registerGameServer( EphemeralStoreRouter& router, ServerRegistration& registration, uint64 serverID, ServerState state )
         {
             ServerDescriptor descriptor;
-            descriptor._serverId = serverId;
+            descriptor._serverID = serverID;
             descriptor._kind     = "game";
             descriptor._region   = "kr";
             descriptor._address  = "10.0.0.1";
@@ -118,7 +118,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignsOpenServerAndHonoursMaintenance
 
     ServerAssignment assignment = node._service.assignServer( 500, Internal::makeRequest(), 0 );
     SW_ASSERT_TRUE( assignment._result == ServerDirectoryResult::Ok );
-    SW_EXPECT_EQUAL( assignment._serverId, uint64( 10 ) );
+    SW_EXPECT_EQUAL( assignment._serverID, uint64( 10 ) );
     SW_EXPECT_EQUAL( assignment._port, uint16( 7777 ) );
     ServerAssignmentRequest unknownKind = Internal::makeRequest();
     unknownKind._kind                   = "chat";
@@ -187,12 +187,12 @@ SW_TEST_CASE( ServerDirectoryServiceTest, NoticeAppearsAndDisappearsAtItsWindowE
     LocalServerBusHub       hub;
     DirectoryNode           node( &database, &cacheDatabase, &hub, 1 );
     ServiceNotice           notice;
-    notice._noticeId = 3;
+    notice._noticeID = 3;
     notice._text     = "notice.event.halloween";
     notice._startMs  = 1000;
     notice._endMs    = 2000;
     ServiceNotice urgent;
-    urgent._noticeId = 4;
+    urgent._noticeID = 4;
     urgent._text     = "notice.urgent";
     urgent._priority = 10;
     node._service.postNotice( notice, 1, 0, 1 );
@@ -204,7 +204,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, NoticeAppearsAndDisappearsAtItsWindowE
     node.step( 1000 ); // 시작 경계 — 다시 읽지 않아도 바뀜
     const ServerDirectoryStatus during = node._service.makeStatus( 1000 );
     SW_ASSERT_EQUAL( during._listNotice.size(), size_t( 2 ) );
-    SW_EXPECT_EQUAL( during._listNotice[0]._noticeId, uint64( 4 ) ); // 우선순위가 위
+    SW_EXPECT_EQUAL( during._listNotice[0]._noticeID, uint64( 4 ) ); // 우선순위가 위
     SW_EXPECT_EQUAL( node._statusChangeCount, changesBefore + 1 );
     node.step( 2000 ); // 끝 경계
     SW_EXPECT_EQUAL( node._service.makeStatus( 2000 )._listNotice.size(), size_t( 1 ) );
@@ -236,7 +236,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailureLeavesNothingAndBadInputIs
     badScope._scope = "Game!";
     node._service.setMaintenance( badScope, 1, "", 20, 11 );
     ServiceNotice backwards;
-    backwards._noticeId = 5;
+    backwards._noticeID = 5;
     backwards._text     = "x";
     backwards._startMs  = 100;
     backwards._endMs    = 50;

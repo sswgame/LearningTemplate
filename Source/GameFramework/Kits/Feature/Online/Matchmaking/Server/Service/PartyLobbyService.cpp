@@ -32,7 +32,7 @@ namespace sw
                 const bool bNameOk  = request._name.empty() == false && request._name.size() <= static_cast<size_t>( PartyLobbyLimit::kMaxLobbyNameSize );
                 const bool bSizeOk  = PartyLobbyLimit::kMinLobbySize <= request._maxMemberCount && request._maxMemberCount <= PartyLobbyLimit::kMaxLobbySize;
                 const bool bCountOk = static_cast<int32>( request._listSetting.size() ) <= PartyLobbyLimit::kMaxLobbySetting;
-                if ( bNameOk == false || bSizeOk == false || bCountOk == false || isValidMatchModeId( request._modeId ) == false )
+                if ( bNameOk == false || bSizeOk == false || bCountOk == false || isValidMatchModeID( request._modeID ) == false )
                     return false;
                 for ( const LobbySetting& setting : request._listSetting )
                 {
@@ -73,23 +73,23 @@ namespace sw
             : _request{ request }
             , _snapshot{}
             , _pService{ pService }
-            , _removedId{ kInvalidAccountId }
-            , _brokenTicketId{ 0 }
+            , _removedID{ kInvalidAccountID }
+            , _brokenTicketID{ 0 }
         {
         }
 
         MatchmakingResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
         {
             PartySnapshot party;
-            _removedId      = kInvalidAccountId;
-            _brokenTicketId = 0;
+            _removedID      = kInvalidAccountID;
+            _brokenTicketID = 0;
             if ( _request._operation == PartyLobbyOperation::PartyCreate )
             {
                 if ( bExists )
                     return MatchmakingResult::Conflict; // id 가 겹쳤다(서버 id + 순번이라 있을 수 없다)
-                party._partyId        = _request._partyId;
+                party._partyID        = _request._partyID;
                 party._maxMemberCount = _pService->getMaxPartySize();
-                party._listMemberId.push_back( _request._actorId );
+                party._listMemberID.push_back( _request._actorID );
                 _snapshot   = party;
                 outNewBytes = MatchmakingProtocol::encodeParty( party );
                 return MatchmakingResult::Ok;
@@ -97,7 +97,7 @@ namespace sw
             if ( bExists == false || MatchmakingProtocol::decodeParty( oldBytes, party ) == false )
             {
                 _snapshot          = PartySnapshot{};
-                _snapshot._partyId = _request._partyId;
+                _snapshot._partyID = _request._partyID;
                 return MatchmakingResult::NotInParty;
             }
             _snapshot = party;
@@ -105,54 +105,54 @@ namespace sw
             {
                 case PartyLobbyOperation::PartyInvite:
                 {
-                    if ( party.getLeaderId() != _request._actorId )
+                    if ( party.getLeaderID() != _request._actorID )
                         return MatchmakingResult::NotPartyLeader;
-                    if ( party.hasMember( _request._targetId ) )
+                    if ( party.hasMember( _request._targetID ) )
                         return MatchmakingResult::AlreadyInParty;
-                    if ( static_cast<int32>( party._listMemberId.size() ) >= party._maxMemberCount )
+                    if ( static_cast<int32>( party._listMemberID.size() ) >= party._maxMemberCount )
                         return MatchmakingResult::PartyFull;
                     outNewBytes = oldBytes; // 같은 값으로 비교 후 쓰기 — 만료 연장 + 그새 해산되지 않았음을 확인
                     return MatchmakingResult::Ok;
                 }
                 case PartyLobbyOperation::PartyAccept:
                 {
-                    if ( party.hasMember( _request._actorId ) )
+                    if ( party.hasMember( _request._actorID ) )
                         return MatchmakingResult::AlreadyInParty;
-                    if ( static_cast<int32>( party._listMemberId.size() ) >= party._maxMemberCount )
+                    if ( static_cast<int32>( party._listMemberID.size() ) >= party._maxMemberCount )
                         return MatchmakingResult::PartyFull;
-                    if ( party._queuedTicketId != 0 )
+                    if ( party._queuedTicketID != 0 )
                         return MatchmakingResult::AlreadyQueued; // 줄 선 동안은 못 들어온다
-                    party._listMemberId.push_back( _request._actorId );
+                    party._listMemberID.push_back( _request._actorID );
                     break;
                 }
                 case PartyLobbyOperation::PartyLeave:
                 case PartyLobbyOperation::PartyKick:
                 {
                     const bool      bKick   = _request._operation == PartyLobbyOperation::PartyKick;
-                    const AccountId leaving = bKick ? _request._targetId : _request._actorId;
-                    if ( bKick && party.getLeaderId() != _request._actorId )
+                    const AccountID leaving = bKick ? _request._targetID : _request._actorID;
+                    if ( bKick && party.getLeaderID() != _request._actorID )
                         return MatchmakingResult::NotPartyLeader;
-                    if ( bKick && leaving == _request._actorId )
+                    if ( bKick && leaving == _request._actorID )
                         return MatchmakingResult::Invalid; // 장은 자신을 내보내지 않는다(떠나기)
                     if ( party.hasMember( leaving ) == false )
                         return MatchmakingResult::NotInParty;
-                    for ( size_t index = 0; index < party._listMemberId.size(); ++index )
+                    for ( size_t index = 0; index < party._listMemberID.size(); ++index )
                     {
-                        if ( party._listMemberId[index] == leaving )
+                        if ( party._listMemberID[index] == leaving )
                         {
-                            party._listMemberId.erase( party._listMemberId.begin() + static_cast<ptrdiff_t>( index ) ); // 장이 나가면 다음 사람이 첫째 — 장
+                            party._listMemberID.erase( party._listMemberID.begin() + static_cast<ptrdiff_t>( index ) ); // 장이 나가면 다음 사람이 첫째 — 장
                             break;
                         }
                     }
-                    _brokenTicketId       = party._queuedTicketId; // 사람이 바뀌면 대기열에서 빠진다
-                    party._queuedTicketId = 0;
-                    _removedId            = leaving;
-                    outbErase             = party._listMemberId.empty();
+                    _brokenTicketID       = party._queuedTicketID; // 사람이 바뀌면 대기열에서 빠진다
+                    party._queuedTicketID = 0;
+                    _removedID            = leaving;
+                    outbErase             = party._listMemberID.empty();
                     break;
                 }
                 case PartyLobbyOperation::PartySetTicket:
                 {
-                    party._queuedTicketId = _request._ticketId;
+                    party._queuedTicketID = _request._ticketID;
                     break;
                 }
                 default:
@@ -171,15 +171,15 @@ namespace sw
             if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
                 (void)MatchmakingProtocol::decodeParty( finalBytes, party );
             const bool bApplied = result == MatchmakingResult::Ok;
-            _pService->finishParty( _request, result, party, bApplied ? _removedId : kInvalidAccountId, bApplied ? _brokenTicketId : 0 );
+            _pService->finishParty( _request, result, party, bApplied ? _removedID : kInvalidAccountID, bApplied ? _brokenTicketID : 0 );
         }
 
     private:
         PartyLobbyService::Request _request;
         PartySnapshot              _snapshot;
         PartyLobbyService*         _pService;
-        AccountId                  _removedId;
-        uint64                     _brokenTicketId;
+        AccountID                  _removedID;
+        uint64                     _brokenTicketID;
     };
 } // namespace sw
 
@@ -193,7 +193,7 @@ namespace sw
             : _request{ request }
             , _snapshot{}
             , _pService{ pService }
-            , _removedId{ kInvalidAccountId }
+            , _removedID{ kInvalidAccountID }
             , _bErased{ SW_FALSE }
         {
         }
@@ -201,17 +201,17 @@ namespace sw
         MatchmakingResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) override
         {
             LobbySnapshot lobby;
-            _removedId = kInvalidAccountId;
+            _removedID = kInvalidAccountID;
             _bErased   = SW_FALSE;
             if ( _request._operation == PartyLobbyOperation::LobbyCreate )
             {
                 if ( bExists )
                     return MatchmakingResult::Conflict;
                 lobby          = _request._lobby;
-                lobby._lobbyId = _request._lobbyId;
+                lobby._lobbyID = _request._lobbyID;
                 lobby._state   = LobbyState::Open;
                 lobby._listMember.clear();
-                lobby._listMember.push_back( LobbyMember{ _request._actorId, 0, SW_FALSE } );
+                lobby._listMember.push_back( LobbyMember{ _request._actorID, 0, SW_FALSE } );
                 _snapshot   = lobby;
                 outNewBytes = MatchmakingProtocol::encodeLobby( lobby );
                 return MatchmakingResult::Ok;
@@ -219,7 +219,7 @@ namespace sw
             if ( bExists == false || MatchmakingProtocol::decodeLobby( oldBytes, lobby ) == false )
             {
                 _snapshot          = LobbySnapshot{};
-                _snapshot._lobbyId = _request._lobbyId;
+                _snapshot._lobbyID = _request._lobbyID;
                 return MatchmakingResult::NotInLobby;
             }
             _snapshot = lobby;
@@ -227,7 +227,7 @@ namespace sw
             {
                 case PartyLobbyOperation::LobbyJoin:
                 {
-                    if ( lobby.hasMember( _request._actorId ) )
+                    if ( lobby.hasMember( _request._actorID ) )
                     {
                         outNewBytes = oldBytes; // 이미 들어 있다 — 같은 값(만료 연장)
                         return MatchmakingResult::Ok;
@@ -236,7 +236,7 @@ namespace sw
                         return MatchmakingResult::Invalid;
                     if ( static_cast<int32>( lobby._listMember.size() ) >= lobby._maxMemberCount )
                         return MatchmakingResult::LobbyFull;
-                    lobby._listMember.push_back( LobbyMember{ _request._actorId, PartyLobbyServiceInternal::findSmallerTeam( lobby ), SW_FALSE } );
+                    lobby._listMember.push_back( LobbyMember{ _request._actorID, PartyLobbyServiceInternal::findSmallerTeam( lobby ), SW_FALSE } );
                     break;
                 }
                 case PartyLobbyOperation::LobbyLeave:
@@ -244,7 +244,7 @@ namespace sw
                     bool bRemoved = false;
                     for ( size_t index = 0; index < lobby._listMember.size(); ++index )
                     {
-                        if ( lobby._listMember[index]._accountId == _request._actorId )
+                        if ( lobby._listMember[index]._accountID == _request._actorID )
                         {
                             lobby._listMember.erase( lobby._listMember.begin() + static_cast<ptrdiff_t>( index ) ); // 방장이 나가면 다음 사람이 방장
                             bRemoved = true;
@@ -253,7 +253,7 @@ namespace sw
                     }
                     if ( bRemoved == false )
                         return MatchmakingResult::NotInLobby;
-                    _removedId = _request._actorId;
+                    _removedID = _request._actorID;
                     outbErase  = lobby._listMember.empty();
                     _bErased   = outbErase ? SW_TRUE : SW_FALSE;
                     break;
@@ -263,7 +263,7 @@ namespace sw
                     bool bFound = false;
                     for ( LobbyMember& member : lobby._listMember )
                     {
-                        if ( member._accountId == _request._actorId )
+                        if ( member._accountID == _request._actorID )
                         {
                             member._bReady = _request._bReady;
                             bFound         = true;
@@ -275,7 +275,7 @@ namespace sw
                 }
                 case PartyLobbyOperation::LobbyStart:
                 {
-                    if ( lobby.getOwnerId() != _request._actorId )
+                    if ( lobby.getOwnerID() != _request._actorID )
                         return MatchmakingResult::NotLobbyOwner;
                     if ( lobby._state != LobbyState::Open )
                         return MatchmakingResult::Invalid;
@@ -305,14 +305,14 @@ namespace sw
             if ( result == MatchmakingResult::Ok && finalBytes.empty() == false )
                 (void)MatchmakingProtocol::decodeLobby( finalBytes, lobby );
             const bool bApplied = result == MatchmakingResult::Ok;
-            _pService->finishLobby( _request, result, lobby, bApplied ? _removedId : kInvalidAccountId, bApplied && _bErased != SW_FALSE );
+            _pService->finishLobby( _request, result, lobby, bApplied ? _removedID : kInvalidAccountID, bApplied && _bErased != SW_FALSE );
         }
 
     private:
         PartyLobbyService::Request _request;
         LobbySnapshot              _snapshot;
         PartyLobbyService*         _pService;
-        AccountId                  _removedId;
+        AccountID                  _removedID;
         uint8                      _bErased;
     };
 } // namespace sw
@@ -322,15 +322,15 @@ namespace sw
     PartyLobbyService::PartyLobbyService()
         : _updater{}
         , _mapRequestToStep{}
-        , _mapListIdToList{}
+        , _mapListIDToList{}
         , _mapAccountToLobby{}
         , _completionBuffer{}
         , _notificationBuffer{}
         , _lobbyStartBuffer{}
         , _brokenTicketBuffer{}
         , _pRouter{ nullptr }
-        , _serverId{ 0 }
-        , _nextListId{ 1 }
+        , _serverID{ 0 }
+        , _nextListID{ 1 }
         , _maxPartySize{ 4 }
         , _sequence{ 0 }
     {
@@ -338,10 +338,10 @@ namespace sw
 
     PartyLobbyService::~PartyLobbyService() { shutdown(); }
 
-    void PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverId, int32 maxPartySize )
+    void PartyLobbyService::initialize( EphemeralStoreRouter* pRouter, uint64 serverID, int32 maxPartySize )
     {
         _pRouter      = pRouter;
-        _serverId     = serverId;
+        _serverID     = serverID;
         _maxPartySize = std::clamp( maxPartySize, 2, PartyLobbyLimit::kMaxPartySize );
         _updater.initialize( pRouter );
     }
@@ -351,38 +351,38 @@ namespace sw
         _updater.shutdown();
         if ( _pRouter != nullptr )
         {
-            for ( const auto& [requestId, step] : _mapRequestToStep )
+            for ( const auto& [requestID, step] : _mapRequestToStep )
             {
-                _pRouter->cancel( requestId );
+                _pRouter->cancel( requestID );
             }
         }
         _mapRequestToStep.clear();
-        _mapListIdToList.clear();
+        _mapListIDToList.clear();
         _pRouter = nullptr;
     }
 
-    string PartyLobbyService::makePartyKey( uint64 partyId ) { return "mm/party/" + ServiceKeyUtil::makeHex64( partyId ); }
+    string PartyLobbyService::makePartyKey( uint64 partyID ) { return "mm/party/" + ServiceKeyUtil::makeHex64( partyID ); }
 
-    string PartyLobbyService::makeAccountPartyKey( AccountId accountId ) { return "mm/acct/" + ServiceKeyUtil::makeHex64( accountId ); }
+    string PartyLobbyService::makeAccountPartyKey( AccountID accountID ) { return "mm/acct/" + ServiceKeyUtil::makeHex64( accountID ); }
 
-    string PartyLobbyService::makeInviteKey( AccountId accountId, uint64 partyId )
+    string PartyLobbyService::makeInviteKey( AccountID accountID, uint64 partyID )
     {
-        return "mm/pinv/" + ServiceKeyUtil::makeHex64( accountId ) + "/" + ServiceKeyUtil::makeHex64( partyId );
+        return "mm/pinv/" + ServiceKeyUtil::makeHex64( accountID ) + "/" + ServiceKeyUtil::makeHex64( partyID );
     }
 
-    string PartyLobbyService::makeLobbyKey( uint64 lobbyId ) { return "mm/lobby/" + ServiceKeyUtil::makeHex64( lobbyId ); }
+    string PartyLobbyService::makeLobbyKey( uint64 lobbyID ) { return "mm/lobby/" + ServiceKeyUtil::makeHex64( lobbyID ); }
 
-    string PartyLobbyService::makeLobbyListKey( string_view modeId ) { return "mm/lobbies/" + string( modeId ); }
+    string PartyLobbyService::makeLobbyListKey( string_view modeID ) { return "mm/lobbies/" + string( modeID ); }
 
-    void PartyLobbyService::submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listId, int32 slot )
+    void PartyLobbyService::submitStep( const EphemeralRequest& cacheRequest, StepKind kind, const Request& request, uint64 listID, int32 slot )
     {
         if ( _pRouter == nullptr )
             return;
-        const uint64 requestId = _pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate::create<&PartyLobbyService::onStepReply>( this ) );
-        PendingStep& step      = _mapRequestToStep[requestId];
+        const uint64 requestID = _pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate::create<&PartyLobbyService::onStepReply>( this ) );
+        PendingStep& step      = _mapRequestToStep[requestID];
         step._request          = request;
         step._kind             = kind;
-        step._listId           = listId;
+        step._listID           = listID;
         step._slot             = slot;
     }
 
@@ -392,76 +392,76 @@ namespace sw
             (void)_pRouter->submit( cacheRequest, EphemeralStoreRouter::ReplyDelegate{} );
     }
 
-    void PartyLobbyService::createParty( AccountId accountId, uint64 requestTag )
+    void PartyLobbyService::createParty( AccountID accountID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::PartyCreate;
-        request._actorId    = accountId;
-        request._partyId    = allocateId();
+        request._actorID    = accountID;
+        request._partyID    = allocateID();
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountId ), MatchmakingProtocol::encodeId( request._partyId ), PartyLobbyLimit::kPartyTtlMs,
+        submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( accountID ), MatchmakingProtocol::encodeID( request._partyID ), PartyLobbyLimit::kPartyTtlMs,
                                                EphemeralCondition::IfAbsent ),
                     StepKind::IndexReserve, request );
     }
 
-    void PartyLobbyService::inviteToParty( AccountId leaderId, AccountId targetId, uint64 requestTag )
+    void PartyLobbyService::inviteToParty( AccountID leaderID, AccountID targetID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::PartyInvite;
-        request._actorId    = leaderId;
-        request._targetId   = targetId;
+        request._actorID    = leaderID;
+        request._targetID   = targetID;
         request._requestTag = requestTag;
-        if ( targetId == kInvalidAccountId || targetId == leaderId )
+        if ( targetID == kInvalidAccountID || targetID == leaderID )
         {
             completeParty( request, MatchmakingResult::Invalid, PartySnapshot{} );
             return;
         }
-        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderId ) ), StepKind::IndexRead, request );
+        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::acceptPartyInvite( AccountId accountId, uint64 partyId, uint64 requestTag )
+    void PartyLobbyService::acceptPartyInvite( AccountID accountID, uint64 partyID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::PartyAccept;
-        request._actorId    = accountId;
-        request._partyId    = partyId;
+        request._actorID    = accountID;
+        request._partyID    = partyID;
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeGet( makeInviteKey( accountId, partyId ) ), StepKind::InviteRead, request );
+        submitStep( EphemeralRequest::makeGet( makeInviteKey( accountID, partyID ) ), StepKind::InviteRead, request );
     }
 
-    void PartyLobbyService::leaveParty( AccountId accountId, uint64 requestTag )
+    void PartyLobbyService::leaveParty( AccountID accountID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::PartyLeave;
-        request._actorId    = accountId;
+        request._actorID    = accountID;
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountId ) ), StepKind::IndexRead, request );
+        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::kickFromParty( AccountId leaderId, AccountId targetId, uint64 requestTag )
+    void PartyLobbyService::kickFromParty( AccountID leaderID, AccountID targetID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::PartyKick;
-        request._actorId    = leaderId;
-        request._targetId   = targetId;
+        request._actorID    = leaderID;
+        request._targetID   = targetID;
         request._requestTag = requestTag;
-        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderId ) ), StepKind::IndexRead, request );
+        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( leaderID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::setPartyTicket( uint64 partyId, uint64 ticketId )
+    void PartyLobbyService::setPartyTicket( uint64 partyID, uint64 ticketID )
     {
         Request request;
         request._operation = PartyLobbyOperation::PartySetTicket;
-        request._partyId   = partyId;
-        request._ticketId  = ticketId;
+        request._partyID   = partyID;
+        request._ticketID  = ticketID;
         startPartyMutation( request );
     }
 
-    void PartyLobbyService::findPartyOfAccount( AccountId accountId, uint64 lookupTag, const PartyFoundDelegate& onFound )
+    void PartyLobbyService::findPartyOfAccount( AccountID accountID, uint64 lookupTag, const PartyFoundDelegate& onFound )
     {
         Request request;
         request._operation    = PartyLobbyOperation::PartyFind;
-        request._actorId      = accountId;
+        request._actorID      = accountID;
         request._requestTag   = lookupTag;
         request._onPartyFound = onFound;
         if ( _pRouter == nullptr )
@@ -470,17 +470,17 @@ namespace sw
                 onFound( lookupTag, MatchmakingResult::Unavailable, PartySnapshot{} );
             return;
         }
-        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountId ) ), StepKind::IndexRead, request );
+        submitStep( EphemeralRequest::makeGet( makeAccountPartyKey( accountID ) ), StepKind::IndexRead, request );
     }
 
-    void PartyLobbyService::createLobby( AccountId accountId, const LobbySnapshot& lobbyRequest, int64 nowMs, uint64 requestTag )
+    void PartyLobbyService::createLobby( AccountID accountID, const LobbySnapshot& lobbyRequest, int64 nowMs, uint64 requestTag )
     {
         Request request;
         request._operation        = PartyLobbyOperation::LobbyCreate;
-        request._actorId          = accountId;
+        request._actorID          = accountID;
         request._lobby            = lobbyRequest;
         request._lobby._createdMs = nowMs;
-        request._lobbyId          = allocateId();
+        request._lobbyID          = allocateID();
         request._nowMs            = nowMs;
         request._requestTag       = requestTag;
         if ( PartyLobbyServiceInternal::isValidLobbyRequest( lobbyRequest ) == false )
@@ -491,90 +491,90 @@ namespace sw
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::listLobbies( string_view modeId, uint64 requestTag )
+    void PartyLobbyService::listLobbies( string_view modeID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::LobbyList;
-        request._modeId     = string( modeId );
+        request._modeID     = string( modeID );
         request._requestTag = requestTag;
-        if ( isValidMatchModeId( modeId ) == false )
+        if ( isValidMatchModeID( modeID ) == false )
         {
             completeLobby( request, MatchmakingResult::UnknownMode, LobbySnapshot{} );
             return;
         }
-        submitStep( EphemeralRequest::makeScoreRange( makeLobbyListKey( modeId ), 0, PartyLobbyLimit::kMaxLobbyList ), StepKind::ListRange, request );
+        submitStep( EphemeralRequest::makeScoreRange( makeLobbyListKey( modeID ), 0, PartyLobbyLimit::kMaxLobbyList ), StepKind::ListRange, request );
     }
 
-    void PartyLobbyService::joinLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag )
+    void PartyLobbyService::joinLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::LobbyJoin;
-        request._actorId    = accountId;
-        request._lobbyId    = lobbyId;
+        request._actorID    = accountID;
+        request._lobbyID    = lobbyID;
         request._requestTag = requestTag;
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::leaveLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag )
+    void PartyLobbyService::leaveLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::LobbyLeave;
-        request._actorId    = accountId;
-        request._lobbyId    = lobbyId;
+        request._actorID    = accountID;
+        request._lobbyID    = lobbyID;
         request._requestTag = requestTag;
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::setLobbyReady( AccountId accountId, uint64 lobbyId, bool bReady, uint64 requestTag )
+    void PartyLobbyService::setLobbyReady( AccountID accountID, uint64 lobbyID, bool bReady, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::LobbyReady;
-        request._actorId    = accountId;
-        request._lobbyId    = lobbyId;
+        request._actorID    = accountID;
+        request._lobbyID    = lobbyID;
         request._bReady     = bReady ? SW_TRUE : SW_FALSE;
         request._requestTag = requestTag;
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::startLobby( AccountId accountId, uint64 lobbyId, uint64 requestTag )
+    void PartyLobbyService::startLobby( AccountID accountID, uint64 lobbyID, uint64 requestTag )
     {
         Request request;
         request._operation  = PartyLobbyOperation::LobbyStart;
-        request._actorId    = accountId;
-        request._lobbyId    = lobbyId;
+        request._actorID    = accountID;
+        request._lobbyID    = lobbyID;
         request._requestTag = requestTag;
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::reopenLobby( uint64 lobbyId )
+    void PartyLobbyService::reopenLobby( uint64 lobbyID )
     {
         Request request;
         request._operation = PartyLobbyOperation::LobbyReopen;
-        request._lobbyId   = lobbyId;
+        request._lobbyID   = lobbyID;
         startLobbyMutation( request );
     }
 
-    void PartyLobbyService::removeAccount( AccountId accountId )
+    void PartyLobbyService::removeAccount( AccountID accountID )
     {
-        leaveParty( accountId, 0 );
-        const auto lobbyIt = _mapAccountToLobby.find( accountId );
+        leaveParty( accountID, 0 );
+        const auto lobbyIt = _mapAccountToLobby.find( accountID );
         if ( lobbyIt != _mapAccountToLobby.end() )
-            leaveLobby( accountId, lobbyIt->second, 0 );
+            leaveLobby( accountID, lobbyIt->second, 0 );
     }
 
     void PartyLobbyService::startPartyMutation( const Request& request )
     {
-        _updater.update( makePartyKey( request._partyId ), PartyLobbyLimit::kPartyTtlMs, make_unique<PartyMutation>( this, request ) );
+        _updater.update( makePartyKey( request._partyID ), PartyLobbyLimit::kPartyTtlMs, make_unique<PartyMutation>( this, request ) );
     }
 
     void PartyLobbyService::startLobbyMutation( const Request& request )
     {
-        _updater.update( makeLobbyKey( request._lobbyId ), PartyLobbyLimit::kLobbyTtlMs, make_unique<LobbyMutation>( this, request ) );
+        _updater.update( makeLobbyKey( request._lobbyID ), PartyLobbyLimit::kLobbyTtlMs, make_unique<LobbyMutation>( this, request ) );
     }
 
     void PartyLobbyService::onStepReply( const EphemeralReply& reply )
     {
-        const auto stepIt = _mapRequestToStep.find( reply._requestId );
+        const auto stepIt = _mapRequestToStep.find( reply._requestID );
         if ( stepIt == _mapRequestToStep.end() )
             return;
         const PendingStep step = std::move( stepIt->second );
@@ -609,7 +609,7 @@ namespace sw
                     completeParty( step._request, MatchmakingResult::InviteMissing, PartySnapshot{} );
                     break;
                 }
-                submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorId ), MatchmakingProtocol::encodeId( step._request._partyId ),
+                submitStep( EphemeralRequest::makeSet( makeAccountPartyKey( step._request._actorID ), MatchmakingProtocol::encodeID( step._request._partyID ),
                                                        PartyLobbyLimit::kPartyTtlMs, EphemeralCondition::IfAbsent ),
                             StepKind::IndexReserve, step._request );
                 break;
@@ -621,7 +621,7 @@ namespace sw
                 if ( bUnavailable )
                     result = MatchmakingResult::Unavailable;
                 else if ( reply._result != EphemeralResult::Ok || MatchmakingProtocol::decodeParty( reply._value, party ) == false ||
-                          party.hasMember( step._request._actorId ) == false )
+                          party.hasMember( step._request._actorID ) == false )
                     result = MatchmakingResult::NotInParty; // 색인만 남았다(파티 만료)
                 if ( step._request._onPartyFound.isBound() )
                     step._request._onPartyFound( step._request._requestTag, result, party );
@@ -639,31 +639,31 @@ namespace sw
                     completeLobby( step._request, MatchmakingResult::Ok, LobbySnapshot{} );
                     break;
                 }
-                const uint64 listId  = _nextListId++;
-                PendingList& list    = _mapListIdToList[listId];
-                list._modeId         = step._request._modeId;
+                const uint64 listID  = _nextListID++;
+                PendingList& list    = _mapListIDToList[listID];
+                list._modeID         = step._request._modeID;
                 list._requestTag     = step._request._requestTag;
                 list._remainingCount = static_cast<int32>( reply._listMember.size() );
                 list._listLobby.resize( reply._listMember.size() );
                 list._listFound.assign( reply._listMember.size(), SW_FALSE );
                 for ( size_t index = 0; index < reply._listMember.size(); ++index )
                 {
-                    uint64 lobbyId = 0;
-                    if ( ServiceKeyUtil::parseHex64( reply._listMember[index]._member, lobbyId ) == false )
-                        lobbyId = 0;
-                    list._listLobby[index]._lobbyId = lobbyId;
+                    uint64 lobbyID = 0;
+                    if ( ServiceKeyUtil::parseHex64( reply._listMember[index]._member, lobbyID ) == false )
+                        lobbyID = 0;
+                    list._listLobby[index]._lobbyID = lobbyID;
                 }
                 for ( size_t index = 0; index < reply._listMember.size(); ++index )
                 {
                     Request getRequest  = step._request;
-                    getRequest._lobbyId = list._listLobby[index]._lobbyId;
-                    submitStep( EphemeralRequest::makeGet( makeLobbyKey( getRequest._lobbyId ) ), StepKind::ListGet, getRequest, listId, static_cast<int32>( index ) );
+                    getRequest._lobbyID = list._listLobby[index]._lobbyID;
+                    submitStep( EphemeralRequest::makeGet( makeLobbyKey( getRequest._lobbyID ) ), StepKind::ListGet, getRequest, listID, static_cast<int32>( index ) );
                 }
                 break;
             }
             case StepKind::ListGet:
             {
-                handleListGet( step._listId, step._slot, reply );
+                handleListGet( step._listID, step._slot, reply );
                 break;
             }
         }
@@ -672,13 +672,13 @@ namespace sw
     void PartyLobbyService::handleIndexRead( const Request& request, const EphemeralReply& reply )
     {
         const bool        bFind   = request._operation == PartyLobbyOperation::PartyFind;
-        uint64            partyId = 0;
+        uint64            partyID = 0;
         MatchmakingResult result  = MatchmakingResult::Ok;
         if ( reply._result == EphemeralResult::NotFound )
             result = MatchmakingResult::NotInParty;
         else if ( reply._result != EphemeralResult::Ok )
             result = MatchmakingResult::Unavailable;
-        else if ( MatchmakingProtocol::decodeId( reply._value, partyId ) == false )
+        else if ( MatchmakingProtocol::decodeID( reply._value, partyID ) == false )
             result = MatchmakingResult::NotInParty;
         if ( result != MatchmakingResult::Ok )
         {
@@ -694,23 +694,23 @@ namespace sw
             return;
         }
         Request next  = request;
-        next._partyId = partyId;
+        next._partyID = partyID;
         if ( bFind )
         {
-            submitStep( EphemeralRequest::makeGet( makePartyKey( partyId ) ), StepKind::PartyRead, next );
+            submitStep( EphemeralRequest::makeGet( makePartyKey( partyID ) ), StepKind::PartyRead, next );
             return;
         }
         startPartyMutation( next );
     }
 
-    void PartyLobbyService::handleListGet( uint64 listId, int32 slot, const EphemeralReply& reply )
+    void PartyLobbyService::handleListGet( uint64 listID, int32 slot, const EphemeralReply& reply )
     {
-        const auto listIt = _mapListIdToList.find( listId );
-        if ( listIt == _mapListIdToList.end() )
+        const auto listIt = _mapListIDToList.find( listID );
+        if ( listIt == _mapListIDToList.end() )
             return;
         PendingList&  list    = listIt->second;
         const size_t  index   = static_cast<size_t>( slot );
-        const uint64  lobbyId = list._listLobby[index]._lobbyId;
+        const uint64  lobbyID = list._listLobby[index]._lobbyID;
         LobbySnapshot lobby;
         if ( reply._result == EphemeralResult::Ok && MatchmakingProtocol::decodeLobby( reply._value, lobby ) )
         {
@@ -719,7 +719,7 @@ namespace sw
         }
         else if ( reply._result == EphemeralResult::NotFound )
         {
-            submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( list._modeId ), ServiceKeyUtil::makeHex64( lobbyId ) ) ); // 만료로 사라진 로비
+            submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( list._modeID ), ServiceKeyUtil::makeHex64( lobbyID ) ) ); // 만료로 사라진 로비
         }
         if ( --list._remainingCount > 0 )
             return;
@@ -732,13 +732,13 @@ namespace sw
             if ( list._listFound[found] != SW_FALSE )
                 completion._listLobby.push_back( std::move( list._listLobby[found] ) );
         }
-        _mapListIdToList.erase( listIt );
+        _mapListIDToList.erase( listIt );
         _completionBuffer.push( std::move( completion ) );
     }
 
-    void PartyLobbyService::finishParty( const Request& request, MatchmakingResult result, const PartySnapshot& party, AccountId removedId, uint64 brokenTicketId )
+    void PartyLobbyService::finishParty( const Request& request, MatchmakingResult result, const PartySnapshot& party, AccountID removedID, uint64 brokenTicketID )
     {
-        const vector<uint8> indexValue = MatchmakingProtocol::encodeId( request._partyId );
+        const vector<uint8> indexValue = MatchmakingProtocol::encodeID( request._partyID );
         switch ( request._operation )
         {
             case PartyLobbyOperation::PartyCreate:
@@ -746,28 +746,28 @@ namespace sw
             {
                 if ( result != MatchmakingResult::Ok )
                 {
-                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorId ), indexValue ) ); // 잡아 둔 색인을 되돌린다
+                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) ); // 잡아 둔 색인을 되돌린다
                     break;
                 }
                 if ( request._operation == PartyLobbyOperation::PartyAccept )
                 {
-                    submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorId, request._partyId ) ) );
+                    submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorID, request._partyID ) ) );
                     refreshIndexTtl( party );
                 }
-                notifyParty( party, kInvalidAccountId ); // 만든 사람에게도 — 클라이언트의 "내 파티" 는 알림이 정본
+                notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 — 클라이언트의 "내 파티" 는 알림이 정본
                 break;
             }
             case PartyLobbyOperation::PartyInvite:
             {
                 if ( result != MatchmakingResult::Ok )
                     break;
-                submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetId, request._partyId ), MatchmakingProtocol::encodeId( request._actorId ),
+                submitFireAndForget( EphemeralRequest::makeSet( makeInviteKey( request._targetID, request._partyID ), MatchmakingProtocol::encodeID( request._actorID ),
                                                                 PartyLobbyLimit::kInviteTtlMs ) );
                 PartyLobbyNotification notification;
-                notification._recipientId       = request._targetId;
+                notification._recipientID       = request._targetID;
                 notification._pushKind          = MatchmakingMethod::kPushPartyInvite;
-                notification._invite._partyId   = request._partyId;
-                notification._invite._inviterId = request._actorId;
+                notification._invite._partyID   = request._partyID;
+                notification._invite._inviterID = request._actorID;
                 _notificationBuffer.push( std::move( notification ) );
                 refreshIndexTtl( party );
                 break;
@@ -775,26 +775,26 @@ namespace sw
             case PartyLobbyOperation::PartyLeave:
             case PartyLobbyOperation::PartyKick:
             {
-                if ( result == MatchmakingResult::NotInParty && request._operation == PartyLobbyOperation::PartyLeave && party._listMemberId.empty() )
+                if ( result == MatchmakingResult::NotInParty && request._operation == PartyLobbyOperation::PartyLeave && party._listMemberID.empty() )
                 {
                     // 색인만 남았다(파티 기록이 만료) — 색인을 지우면 떠난 것과 같다
-                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorId ), indexValue ) );
+                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) );
                     result = MatchmakingResult::Ok;
                     break;
                 }
                 if ( result != MatchmakingResult::Ok )
                     break;
-                submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( removedId ), indexValue ) );
-                if ( brokenTicketId != 0 )
-                    _brokenTicketBuffer.push( brokenTicketId );
+                submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( removedID ), indexValue ) );
+                if ( brokenTicketID != 0 )
+                    _brokenTicketBuffer.push( brokenTicketID );
                 refreshIndexTtl( party );
-                notifyParty( party, removedId );
+                notifyParty( party, removedID );
                 break;
             }
             case PartyLobbyOperation::PartySetTicket:
             {
                 if ( result == MatchmakingResult::Ok )
-                    notifyParty( party, kInvalidAccountId );
+                    notifyParty( party, kInvalidAccountID );
                 return; // 완료 없음
             }
             default:
@@ -805,7 +805,7 @@ namespace sw
         completeParty( request, result, party );
     }
 
-    void PartyLobbyService::finishLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby, AccountId removedId, bool bErased )
+    void PartyLobbyService::finishLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby, AccountID removedID, bool bErased )
     {
         if ( result == MatchmakingResult::Ok )
         {
@@ -813,41 +813,41 @@ namespace sw
             {
                 case PartyLobbyOperation::LobbyCreate:
                 {
-                    const string listKey = makeLobbyListKey( lobby._modeId );
-                    submitFireAndForget( EphemeralRequest::makeScoreSet( listKey, ServiceKeyUtil::makeHex64( lobby._lobbyId ), lobby._createdMs ) );
-                    _mapAccountToLobby[request._actorId] = lobby._lobbyId;
+                    const string listKey = makeLobbyListKey( lobby._modeID );
+                    submitFireAndForget( EphemeralRequest::makeScoreSet( listKey, ServiceKeyUtil::makeHex64( lobby._lobbyID ), lobby._createdMs ) );
+                    _mapAccountToLobby[request._actorID] = lobby._lobbyID;
                     break;
                 }
                 case PartyLobbyOperation::LobbyJoin:
                 {
-                    _mapAccountToLobby[request._actorId] = lobby._lobbyId;
-                    notifyLobby( lobby, kInvalidAccountId );
+                    _mapAccountToLobby[request._actorID] = lobby._lobbyID;
+                    notifyLobby( lobby, kInvalidAccountID );
                     break;
                 }
                 case PartyLobbyOperation::LobbyLeave:
                 {
-                    const auto lobbyIt = _mapAccountToLobby.find( request._actorId );
-                    if ( lobbyIt != _mapAccountToLobby.end() && lobbyIt->second == request._lobbyId )
+                    const auto lobbyIt = _mapAccountToLobby.find( request._actorID );
+                    if ( lobbyIt != _mapAccountToLobby.end() && lobbyIt->second == request._lobbyID )
                         _mapAccountToLobby.erase( lobbyIt );
                     if ( bErased )
-                        submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( lobby._modeId ), ServiceKeyUtil::makeHex64( request._lobbyId ) ) );
-                    notifyLobby( lobby, removedId );
+                        submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( lobby._modeID ), ServiceKeyUtil::makeHex64( request._lobbyID ) ) );
+                    notifyLobby( lobby, removedID );
                     break;
                 }
                 case PartyLobbyOperation::LobbyStart:
                 {
-                    notifyLobby( lobby, kInvalidAccountId );
+                    notifyLobby( lobby, kInvalidAccountID );
                     _lobbyStartBuffer.push( LobbyStartRequest{ lobby } );
                     break;
                 }
                 default:
                 {
-                    notifyLobby( lobby, kInvalidAccountId );
+                    notifyLobby( lobby, kInvalidAccountID );
                     break;
                 }
             }
             if ( bErased == false ) // 목록도 살아 있는 로비만큼 산다
-                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeId ), PartyLobbyLimit::kLobbyTtlMs ) );
+                submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), PartyLobbyLimit::kLobbyTtlMs ) );
         }
         if ( request._operation == PartyLobbyOperation::LobbyReopen )
             return; // 완료 없음
@@ -856,47 +856,47 @@ namespace sw
 
     void PartyLobbyService::refreshIndexTtl( const PartySnapshot& party )
     {
-        for ( const AccountId memberId : party._listMemberId )
+        for ( const AccountID memberID : party._listMemberID )
         {
-            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberId ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장
+            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장
         }
     }
 
-    void PartyLobbyService::notifyParty( const PartySnapshot& party, AccountId removedId )
+    void PartyLobbyService::notifyParty( const PartySnapshot& party, AccountID removedID )
     {
-        for ( const AccountId memberId : party._listMemberId )
+        for ( const AccountID memberID : party._listMemberID )
         {
             PartyLobbyNotification notification;
-            notification._recipientId = memberId;
+            notification._recipientID = memberID;
             notification._pushKind    = MatchmakingMethod::kPushParty;
             notification._party       = party;
             _notificationBuffer.push( std::move( notification ) );
         }
-        if ( removedId == kInvalidAccountId )
+        if ( removedID == kInvalidAccountID )
             return;
         PartyLobbyNotification removed;
-        removed._recipientId    = removedId;
+        removed._recipientID    = removedID;
         removed._pushKind       = MatchmakingMethod::kPushParty;
-        removed._party._partyId = party._partyId; // 빈 회원 — 이 파티에서 빠졌다
+        removed._party._partyID = party._partyID; // 빈 회원 — 이 파티에서 빠졌다
         _notificationBuffer.push( std::move( removed ) );
     }
 
-    void PartyLobbyService::notifyLobby( const LobbySnapshot& lobby, AccountId removedId )
+    void PartyLobbyService::notifyLobby( const LobbySnapshot& lobby, AccountID removedID )
     {
         for ( const LobbyMember& member : lobby._listMember )
         {
             PartyLobbyNotification notification;
-            notification._recipientId = member._accountId;
+            notification._recipientID = member._accountID;
             notification._pushKind    = MatchmakingMethod::kPushLobby;
             notification._lobby       = lobby;
             _notificationBuffer.push( std::move( notification ) );
         }
-        if ( removedId == kInvalidAccountId )
+        if ( removedID == kInvalidAccountID )
             return;
         PartyLobbyNotification removed;
-        removed._recipientId    = removedId;
+        removed._recipientID    = removedID;
         removed._pushKind       = MatchmakingMethod::kPushLobby;
-        removed._lobby._lobbyId = lobby._lobbyId;
+        removed._lobby._lobbyID = lobby._lobbyID;
         _notificationBuffer.push( std::move( removed ) );
     }
 

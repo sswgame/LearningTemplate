@@ -64,34 +64,34 @@ namespace sw
         ++_revision;
     }
 
-    float32 Inventory::getItemWeight( const hashed_string& itemId ) const
+    float32 Inventory::getItemWeight( const hashed_string& itemID ) const
     {
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemId ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
         return pDef != nullptr ? pDef->_weight : 0.0f;
     }
 
-    int32 Inventory::computeWeightRoom( const hashed_string& itemId, int32 count ) const
+    int32 Inventory::computeWeightRoom( const hashed_string& itemID, int32 count ) const
     {
-        const float32 weight = getItemWeight( itemId );
+        const float32 weight = getItemWeight( itemID );
         if ( _maxWeight <= 0.0f || weight <= 0.0f )
             return count;
         const float32 room = _maxWeight - computeWeight();
         return MathUtil::clamp( static_cast<int32>( ( room + 1.0e-4f ) / weight ), 0, count );
     }
 
-    int32 Inventory::addItem( const hashed_string& itemId, int32 count )
+    int32 Inventory::addItem( const hashed_string& itemID, int32 count )
     {
-        if ( itemId.empty() || count <= 0 )
+        if ( itemID.empty() || count <= 0 )
             return 0;
-        const ItemDef* pDef     = _pCatalog != nullptr ? _pCatalog->findItem( itemId ) : nullptr;
+        const ItemDef* pDef     = _pCatalog != nullptr ? _pCatalog->findItem( itemID ) : nullptr;
         const int32    maxStack = pDef != nullptr ? pDef->_maxStack : 1;
-        int32          left     = computeWeightRoom( itemId, count );
+        int32          left     = computeWeightRoom( itemID, count );
         const int32    wanted   = left;
         for ( InventorySlot& slot : _listSlot )
         {
             if ( left <= 0 )
                 break;
-            if ( slot.isEmpty() || slot._itemId != itemId || slot._count >= maxStack )
+            if ( slot.isEmpty() || slot._itemID != itemID || slot._count >= maxStack )
                 continue;
             const int32 moved = MathUtil::min( left, maxStack - slot._count );
             slot._count += moved;
@@ -104,7 +104,7 @@ namespace sw
             if ( slot.isEmpty() == false )
                 continue;
             const int32 moved = MathUtil::min( left, maxStack );
-            slot._itemId      = itemId;
+            slot._itemID      = itemID;
             slot._count       = moved;
             slot._durability  = pDef != nullptr ? pDef->_maxDurability : 0.0f;
             left -= moved;
@@ -119,15 +119,15 @@ namespace sw
     {
         if ( stack.isEmpty() )
             return true;
-        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( stack._itemId ) : nullptr;
+        const ItemDef* pDef = _pCatalog != nullptr ? _pCatalog->findItem( stack._itemID ) : nullptr;
         if ( ( pDef == nullptr || pDef->_maxDurability <= 0.0f ) && stack.hasInstanceState() == false )
         {
-            if ( hasRoomFor( stack._itemId, stack._count ) == false )
+            if ( hasRoomFor( stack._itemID, stack._count ) == false )
                 return false;
-            return addItem( stack._itemId, stack._count ) == stack._count;
+            return addItem( stack._itemID, stack._count ) == stack._count;
         }
         // 닳는 아이템 · 인스턴스 상태가 있는 아이템은 그것을 지닌 채 빈 칸 하나에.
-        if ( computeWeightRoom( stack._itemId, 1 ) < 1 )
+        if ( computeWeightRoom( stack._itemID, 1 ) < 1 )
             return false;
         for ( InventorySlot& slot : _listSlot )
         {
@@ -142,17 +142,17 @@ namespace sw
         return false;
     }
 
-    bool Inventory::removeItem( const hashed_string& itemId, int32 count )
+    bool Inventory::removeItem( const hashed_string& itemID, int32 count )
     {
         if ( count <= 0 )
             return true;
-        if ( getItemCount( itemId ) < count )
+        if ( getItemCount( itemID ) < count )
             return false;
         int32 left = count;
         for ( size_t index = _listSlot.size(); index > 0 && left > 0; --index )
         {
             InventorySlot& slot = _listSlot[index - 1];
-            if ( slot.isEmpty() || slot._itemId != itemId )
+            if ( slot.isEmpty() || slot._itemID != itemID )
                 continue;
             const int32 moved = MathUtil::min( left, slot._count );
             slot._count -= moved;
@@ -186,8 +186,8 @@ namespace sw
         InventorySlot& target = _listSlot[static_cast<size_t>( toSlot )];
         if ( source.isEmpty() )
             return false;
-        const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( source._itemId ) : 1;
-        if ( target.isEmpty() == false && target._itemId == source._itemId && maxStack > 1 )
+        const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( source._itemID ) : 1;
+        if ( target.isEmpty() == false && target._itemID == source._itemID && maxStack > 1 )
         {
             const int32 moved = MathUtil::min( source._count, maxStack - target._count );
             if ( moved <= 0 )
@@ -231,11 +231,11 @@ namespace sw
         {
             if ( slot.isEmpty() )
                 continue;
-            const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( slot._itemId ) : 1;
+            const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( slot._itemID ) : 1;
             int32       left     = slot._count;
             for ( InventorySlot& merged : listStack )
             {
-                if ( left > 0 && maxStack > 1 && merged._itemId == slot._itemId && merged._count < maxStack )
+                if ( left > 0 && maxStack > 1 && merged._itemID == slot._itemID && merged._count < maxStack )
                 {
                     const int32 moved = MathUtil::min( left, maxStack - merged._count );
                     merged._count += moved;
@@ -252,8 +252,8 @@ namespace sw
         const ItemCatalog* pCatalog = _pCatalog;
         std::stable_sort( listStack.begin(), listStack.end(), [pCatalog]( const InventorySlot& lhs, const InventorySlot& rhs )
         {
-            const ItemDef*    pLhs        = pCatalog != nullptr ? pCatalog->findItem( lhs._itemId ) : nullptr;
-            const ItemDef*    pRhs        = pCatalog != nullptr ? pCatalog->findItem( rhs._itemId ) : nullptr;
+            const ItemDef*    pLhs        = pCatalog != nullptr ? pCatalog->findItem( lhs._itemID ) : nullptr;
+            const ItemDef*    pRhs        = pCatalog != nullptr ? pCatalog->findItem( rhs._itemID ) : nullptr;
             const string_view lhsCategory = pLhs != nullptr ? string_view( pLhs->_category.c_str() ) : string_view();
             const string_view rhsCategory = pRhs != nullptr ? string_view( pRhs->_category.c_str() ) : string_view();
             if ( lhsCategory != rhsCategory )
@@ -262,7 +262,7 @@ namespace sw
             const int32 rhsRarity = pRhs != nullptr ? pRhs->_rarity : 0;
             if ( lhsRarity != rhsRarity )
                 return lhsRarity > rhsRarity;
-            return string_view( lhs._itemId.c_str() ) < string_view( rhs._itemId.c_str() );
+            return string_view( lhs._itemID.c_str() ) < string_view( rhs._itemID.c_str() );
         } );
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
@@ -295,12 +295,12 @@ namespace sw
         ++_revision;
     }
 
-    int32 Inventory::getItemCount( const hashed_string& itemId ) const
+    int32 Inventory::getItemCount( const hashed_string& itemID ) const
     {
         int32 count = 0;
         for ( const InventorySlot& slot : _listSlot )
         {
-            count += slot.isEmpty() == false && slot._itemId == itemId ? slot._count : 0;
+            count += slot.isEmpty() == false && slot._itemID == itemID ? slot._count : 0;
         }
         return count;
     }
@@ -309,23 +309,23 @@ namespace sw
     {
         for ( const auto& item : items.getItems() )
         {
-            if ( getItemCount( item._itemId ) < item._count )
+            if ( getItemCount( item._itemID ) < item._count )
                 return false;
         }
         return true;
     }
 
-    bool Inventory::hasRoomFor( const hashed_string& itemId, int32 count ) const
+    bool Inventory::hasRoomFor( const hashed_string& itemID, int32 count ) const
     {
-        if ( computeWeightRoom( itemId, count ) < count )
+        if ( computeWeightRoom( itemID, count ) < count )
             return false;
-        const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( itemId ) : 1;
+        const int32 maxStack = _pCatalog != nullptr ? _pCatalog->getMaxStack( itemID ) : 1;
         int32       room     = 0;
         for ( const InventorySlot& slot : _listSlot )
         {
             if ( slot.isEmpty() )
                 room += maxStack;
-            else if ( slot._itemId == itemId )
+            else if ( slot._itemID == itemID )
                 room += MathUtil::max( 0, maxStack - slot._count );
             if ( room >= count )
                 return true;
@@ -333,11 +333,11 @@ namespace sw
         return room >= count;
     }
 
-    int32 Inventory::findFirstSlot( const hashed_string& itemId ) const
+    int32 Inventory::findFirstSlot( const hashed_string& itemID ) const
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
-            if ( _listSlot[index].isEmpty() == false && _listSlot[index]._itemId == itemId )
+            if ( _listSlot[index].isEmpty() == false && _listSlot[index]._itemID == itemID )
                 return static_cast<int32>( index );
         }
         return -1;
@@ -359,7 +359,7 @@ namespace sw
         for ( const InventorySlot& slot : _listSlot )
         {
             if ( slot.isEmpty() == false )
-                weight += getItemWeight( slot._itemId ) * static_cast<float32>( slot._count );
+                weight += getItemWeight( slot._itemID ) * static_cast<float32>( slot._count );
         }
         return weight;
     }
@@ -369,7 +369,7 @@ namespace sw
         for ( const InventorySlot& slot : _listSlot )
         {
             if ( slot.isEmpty() == false )
-                outItems.addItem( slot._itemId, slot._count );
+                outItems.addItem( slot._itemID, slot._count );
         }
     }
 
@@ -379,7 +379,7 @@ namespace sw
         outArchive << static_cast<uint32>( _listSlot.size() );
         for ( const InventorySlot& slot : _listSlot )
         {
-            StateArchiveUtil::writeName( outArchive, slot._itemId );
+            StateArchiveUtil::writeName( outArchive, slot._itemID );
             outArchive << slot._count;
             outArchive << slot._durability;
             outArchive << slot._damage;
@@ -411,7 +411,7 @@ namespace sw
         for ( InventorySlot& slot : listSlot )
         {
             uint32 valueCount = 0;
-            if ( StateArchiveUtil::readName( archive, slot._itemId ) == false )
+            if ( StateArchiveUtil::readName( archive, slot._itemID ) == false )
                 return false;
             archive >> slot._count;
             archive >> slot._durability;
@@ -436,7 +436,7 @@ namespace sw
                 if ( StateArchiveUtil::readName( archive, part ) == false )
                     return false;
             }
-            const bool bValid = archive.isOk() && 0 <= slot._count && ( slot._count == 0 || slot._itemId.empty() == false );
+            const bool bValid = archive.isOk() && 0 <= slot._count && ( slot._count == 0 || slot._itemID.empty() == false );
             if ( bValid == false )
                 return false;
         }

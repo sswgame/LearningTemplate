@@ -95,7 +95,7 @@ namespace sw
         uint32     _glyphIndex{ 0 };            ///< 면 안의 글리프 번호(0 = 두부)
         uint32     _cluster{ 0 };               ///< 원문 바이트 위치
         uint32     _colorRgba{ 0xFFFFFFFFu };   ///< 리치 텍스트 색. 0xFFFFFFFF = 위젯 색 그대로
-        FontFaceId _face{ kInvalidFontFaceId }; ///< 글리프를 가진 면
+        FontFaceID _face{ kInvalidFontFaceID }; ///< 글리프를 가진 면
         uint8      _bFauxBold{ SW_FALSE };      ///< SDF 문턱을 옮겨 굵게 그린다
         uint8      _bFauxItalic{ SW_FALSE };    ///< 기울여 그린다
     };

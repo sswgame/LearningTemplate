@@ -28,10 +28,10 @@ namespace sw
     /** @brief 스풀 파일마다 첫 줄로 적는 이 실행의 문맥입니다. */
     struct TelemetryContext
     {
-        string _sessionId{};   ///< 크래시 보고 · 로그 파일과 같은 세션 id
+        string _sessionID{};   ///< 크래시 보고 · 로그 파일과 같은 세션 id
         string _buildConfig{}; ///< Debug · Release · Shipping
         string _platform{};
-        string _buildId{}; ///< 실행 파일의 빌드 id(PDB 서명 · GNU build-id — `ModuleBuildId`)
+        string _buildID{}; ///< 실행 파일의 빌드 id(PDB 서명 · GNU build-id — `ModuleBuildID`)
         string _game{};
     };
 } // namespace sw
@@ -112,7 +112,7 @@ namespace sw
     class SW_API TelemetryService
     {
     public:
-        static constexpr const utf8* kConsentSettingId  = "telemetry.enabled";
+        static constexpr const utf8* kConsentSettingID  = "telemetry.enabled";
         static constexpr const utf8* kSceneSummaryEvent = "perf.sceneSummary";
         static constexpr const utf8* kSessionStartEvent = "session.start";
         static constexpr const utf8* kSessionEndEvent   = "session.end";
@@ -136,7 +136,7 @@ namespace sw
          */
         void setConsent( bool bEnabled );
         bool hasConsent() const;
-        /** @brief 사용자 설정 `kConsentSettingId` 를 동의로 씁니다 — 지금 값을 읽고, 적용 · 되돌리기 · 로드 통보마다 다시 읽습니다. */
+        /** @brief 사용자 설정 `kConsentSettingID` 를 동의로 씁니다 — 지금 값을 읽고, 적용 · 되돌리기 · 로드 통보마다 다시 읽습니다. */
         void bindConsentSetting( UserSettingsManager& settings );
         /** @brief 업로더(빌림)입니다. nullptr 이면 `NullTelemetryUploader` 입니다. */
         void setUploader( ITelemetryUploader* pUploader );
@@ -144,8 +144,8 @@ namespace sw
         TelemetryRecordResult record( const TelemetryEvent& event );
         /** @brief 세션 시계를 흘리고 flush 시간이 되면 씁니다(게임 스레드). */
         void update( float32 deltaSeconds );
-        /** @brief 장면 @p sceneId(경로 · 이름)의 프레임 하나입니다. 동의가 꺼져 있으면 아무것도 하지 않습니다. */
-        void recordFrame( string_view sceneId, float32 deltaSeconds );
+        /** @brief 장면 @p sceneID(경로 · 이름)의 프레임 하나입니다. 동의가 꺼져 있으면 아무것도 하지 않습니다. */
+        void recordFrame( string_view sceneID, float32 deltaSeconds );
         /** @brief 묶음을 쓰고 상한을 지키고 닫힌 파일을 올립니다. */
         void flush();
 

@@ -50,8 +50,8 @@ namespace sw::editor
     {
         struct EditorSelfTestDevToolsInternal
         {
-            static constexpr const utf8* kSceneViewPanelId = "scene_view";
-            static constexpr const utf8* kGameViewPanelId  = "game_view";
+            static constexpr const utf8* kSceneViewPanelID = "scene_view";
+            static constexpr const utf8* kGameViewPanelID  = "game_view";
             static constexpr uint32      kMaxWaitFrame     = 60;
             static constexpr const utf8* kOverlayKey       = "selftest.overlay";
             static constexpr const utf8* kProbeTag         = "SelfTestDevTools";
@@ -60,13 +60,13 @@ namespace sw::editor
              * @brief 패널을 열고 그 탭을 앞으로 가져와 그 패널을 돌려줍니다. 없으면 실패로 적고 nullptr 입니다.
              * @details 씬 뷰와 게임 뷰는 같은 영역의 탭이라, 앞에 없는 쪽은 그려지지 않는다. 앞으로 오는 것은 다음 프레임부터다.
              */
-            static IEditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelId )
+            static IEditorPanel* openAndFocus( EditorSelfTestContext& context, const utf8* pPanelID )
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return nullptr;
-                (void)pContext->getPanelManager().setPanelOpen( pPanelId, true );
-                IEditorPanel* pPanel = pContext->getPanelManager().findPanel( pPanelId );
+                (void)pContext->getPanelManager().setPanelOpen( pPanelID, true );
+                IEditorPanel* pPanel = pContext->getPanelManager().findPanel( pPanelID );
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
@@ -76,12 +76,12 @@ namespace sw::editor
 
             static SceneViewPanel* openSceneView( EditorSelfTestContext& context )
             {
-                return static_cast<SceneViewPanel*>( openAndFocus( context, kSceneViewPanelId ) );
+                return static_cast<SceneViewPanel*>( openAndFocus( context, kSceneViewPanelID ) );
             }
 
             static GameViewPanel* openGameView( EditorSelfTestContext& context )
             {
-                return static_cast<GameViewPanel*>( openAndFocus( context, kGameViewPanelId ) );
+                return static_cast<GameViewPanel*>( openAndFocus( context, kGameViewPanelID ) );
             }
 
             // ------------------------------------------------------------------------------
@@ -281,7 +281,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runNamedLayoutRoundTrip( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelId    = "history";
+                constexpr const utf8* kPanelID    = "history";
                 constexpr const utf8* kLayoutName = "selftest";
                 EditorContext*        pContext    = EditorContext::get();
                 EditorDockLayout*     pDock       = pContext != nullptr ? pContext->findDockLayout() : nullptr;
@@ -292,7 +292,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex == 1 )
@@ -303,18 +303,18 @@ namespace sw::editor
                     (void)FileUtil::readTextFile( EditorLayoutStore::makeImguiIniPath( folder, kLayoutName ), iniText ); // 없으면 아래 단언이 알린다
                     (void)context.expect( iniText.find( "[Docking]" ) != string::npos && iniText.find( "[Window][Hierarchy]" ) != string::npos,
                                           "the saved layout has no docking section or no hierarchy window" );
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
                     (void)context.expect( pDock->requestLoadNamedLayout( kLayoutName, folder ), "could not load the named layout" );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < 4 )
                     return EditorSelfTestStep::Continue; // 다음 프레임 시작에 적용되고, 그 프레임에 창이 다시 선다
 
-                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( kPanelId );
+                const IEditorPanel* pPanel = pContext->getPanelManager().findPanel( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
                 const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( "Hierarchy" );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
-                (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더 — 남아도 다음 실행이 덮어쓴다
                 return EditorSelfTestStep::Done;
             }
@@ -324,9 +324,9 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct GizmoProbe
             {
-                uint64 _objectId{ 0 };
+                uint64 _objectID{ 0 };
                 float2 _pressAt{};
-                uint32 _viewportId{ 0 }; ///< 씬 뷰 캔버스의 뷰포트 — 움직일 때마다 함께 알린다(플랫폼이 실제 커서의 뷰포트를 넣는다)
+                uint32 _viewportID{ 0 }; ///< 씬 뷰 캔버스의 뷰포트 — 움직일 때마다 함께 알린다(플랫폼이 실제 커서의 뷰포트를 넣는다)
                 float3 _startPosition{};
                 bool   _bWasOver{ false };
                 bool   _bWasUsing{ false };
@@ -345,7 +345,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
                     pContext->getWorkspace().clearSelection();
-                GameObject* pObj = pManager != nullptr ? pManager->findGameObjectById( probe._objectId ) : nullptr;
+                GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
                 probe = GizmoProbe{};
@@ -370,14 +370,14 @@ namespace sw::editor
                     GameObject* pObj = EditorSceneCommands::create( pManager, nullptr );
                     if ( context.expect( pObj != nullptr && pObj->getPrimarySceneComponent() != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
-                    probe._objectId = pObj->getObjectId();
+                    probe._objectID = pObj->getObjectID();
                     static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )
                         ->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );
                     pManager->flushSceneTransforms();
                     probe._startPosition = static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->getWorldPosition();
                     return EditorSelfTestStep::Continue;
                 }
-                GameObject* pObj = pManager->findGameObjectById( probe._objectId );
+                GameObject* pObj = pManager->findGameObjectByID( probe._objectID );
                 if ( context.expect( pObj != nullptr, "the probe object vanished" ) == false )
                 {
                     finishGizmo( pManager );
@@ -405,14 +405,14 @@ namespace sw::editor
                         return EditorSelfTestStep::Done;
                     }
                     probe._pressAt    = float2{ screen.x, screen.y };
-                    probe._viewportId = canvas._viewportId;
-                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportId );
+                    probe._viewportID = canvas._viewportID;
+                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex == 4 )
                 {
                     probe._bWasOver = ImGuizmo::IsOver();
-                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportId );
+                    EditorSelfTestInput::moveMouse( probe._pressAt, probe._viewportID );
                     EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, true );
                     return EditorSelfTestStep::Continue;
                 }
@@ -420,12 +420,12 @@ namespace sw::editor
                 if ( stepIndex < 5 + kDragStepCount )
                 {
                     const float32 offset = kDragPixel * static_cast<float32>( stepIndex - 4 ) / static_cast<float32>( kDragStepCount );
-                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + offset, probe._pressAt._y }, probe._viewportId );
+                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + offset, probe._pressAt._y }, probe._viewportID );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex == 5 + kDragStepCount )
                 {
-                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + kDragPixel, probe._pressAt._y }, probe._viewportId );
+                    EditorSelfTestInput::moveMouse( float2{ probe._pressAt._x + kDragPixel, probe._pressAt._y }, probe._viewportID );
                     EditorSelfTestInput::setMouseButton( ImGuiMouseButton_Left, false );
                     return EditorSelfTestStep::Continue;
                 }
@@ -450,21 +450,21 @@ namespace sw::editor
                     return 0;
                 static_cast<SceneComponent*>( pObj->getPrimarySceneComponent() )->setLocalPosition( pCamera->getWorldPosition() + pCamera->getCameraForward() * 6.0f );
                 pManager->flushSceneTransforms();
-                return pObj->getObjectId();
+                return pObj->getObjectID();
             }
 
             /** @brief 시험 오브젝트를 지우고 선택을 비웁니다. */
-            static void destroyProbe( GameObjectManager* pManager, uint64 objectId )
+            static void destroyProbe( GameObjectManager* pManager, uint64 objectID )
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr )
                     pContext->getWorkspace().clearSelection();
-                GameObject* pObj = pManager != nullptr ? pManager->findGameObjectById( objectId ) : nullptr;
+                GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
             }
 
-            inline static uint64 _s_overlayProbeObjectId = 0;
+            inline static uint64 _s_overlayProbeObjectID = 0;
 
             static EditorSelfTestStep runGridAndGizmoDraw( EditorSelfTestContext& context )
             {
@@ -478,8 +478,8 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    _s_overlayProbeObjectId = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectId != 0, "could not create the probe object" );
+                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const int32                 frame     = ImGui::GetFrameCount();
@@ -493,8 +493,8 @@ namespace sw::editor
                 (void)context.expect( bSceneRan, "the scene view was not drawn while its tab was in front" );
                 (void)context.expect( bGrid, "the scene view did not draw the grid" );
                 (void)context.expect( bGizmo, "the scene view did not draw the gizmo of the selection" );
-                destroyProbe( pManager, _s_overlayProbeObjectId );
-                _s_overlayProbeObjectId = 0;
+                destroyProbe( pManager, _s_overlayProbeObjectID );
+                _s_overlayProbeObjectID = 0;
                 return EditorSelfTestStep::Done;
             }
 
@@ -502,7 +502,7 @@ namespace sw::editor
             // gameView.hidesEditorOverlays — 게임 뷰는 게임 카메라 그림만 그린다: 이미지 뒤에 격자 · 기즈모 · 시각화 그리기가 없고, 그동안 씬 뷰는 그리지 않는다
             // ------------------------------------------------------------------------------
             /** @brief 이번 프레임 "Game" 창 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 못 찾으면 false 입니다. */
-            static bool countVerticesAfterGameImage( ImTextureID textureId, int32& outVertexCount )
+            static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
                 const ImGuiWindow* pWindow = ImGui::FindWindowByName( "Game" );
                 if ( pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount() )
@@ -511,7 +511,7 @@ namespace sw::editor
                 int32             imageIndex{ -1 };
                 for ( int32 commandIndex = 0; commandIndex < pDrawList->CmdBuffer.Size; ++commandIndex )
                 {
-                    if ( pDrawList->CmdBuffer[commandIndex].ElemCount > 0 && pDrawList->CmdBuffer[commandIndex].GetTexID() == textureId )
+                    if ( pDrawList->CmdBuffer[commandIndex].ElemCount > 0 && pDrawList->CmdBuffer[commandIndex].GetTexID() == textureID )
                         imageIndex = commandIndex;
                 }
                 if ( imageIndex < 0 )
@@ -538,13 +538,13 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     // 선택이 있어야 "기즈모를 그리지 않는다" 가 뜻이 있다.
-                    _s_overlayProbeObjectId = createSelectedProbe( pManager, pCamera );
-                    (void)context.expect( _s_overlayProbeObjectId != 0, "could not create the probe object" );
+                    _s_overlayProbeObjectID = createSelectedProbe( pManager, pCamera );
+                    (void)context.expect( _s_overlayProbeObjectID != 0, "could not create the probe object" );
                     return EditorSelfTestStep::Continue;
                 }
                 const EditorViewTarget& view        = pContext->getViewTarget( EditorViewKind::Game );
                 int32                   vertexCount = 0;
-                const bool              bImage      = view._pTextureId != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureId ), vertexCount );
+                const bool              bImage      = view._pTextureID != nullptr && countVerticesAfterGameImage( reinterpret_cast<ImTextureID>( view._pTextureID ), vertexCount );
                 if ( ( bImage == false || stepIndex < kSettleFrameCount ) && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bImage, "the game view image was not drawn while its tab was in front" );
@@ -559,8 +559,8 @@ namespace sw::editor
                     what += " indices)";
                     (void)context.expect( vertexCount == 0, what.c_str() );
                 }
-                destroyProbe( pManager, _s_overlayProbeObjectId );
-                _s_overlayProbeObjectId = 0;
+                destroyProbe( pManager, _s_overlayProbeObjectID );
+                _s_overlayProbeObjectID = 0;
                 // 다음 시험이 기본 탭(씬 뷰)에서 시작하게 되돌린다.
                 ImGui::SetWindowFocus( "Scene" );
                 return EditorSelfTestStep::Done;

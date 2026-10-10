@@ -28,15 +28,15 @@ namespace sw
             static void runTickItem( float32 deltaTime, const TickItem& item )
             {
                 Component* pComp = item._pComponent;
-                if ( item._subTickId == 0 )
+                if ( item._subTickID == 0 )
                 {
                     if ( pComp->canEverTick() )
                         pComp->onTick( deltaTime );
                 }
                 else
                 {
-                    if ( pComp->isSubTickActive( item._subTickId ) )
-                        pComp->onSubTick( item._subTickId, deltaTime );
+                    if ( pComp->isSubTickActive( item._subTickID ) )
+                        pComp->onSubTick( item._subTickID, deltaTime );
                 }
             }
 

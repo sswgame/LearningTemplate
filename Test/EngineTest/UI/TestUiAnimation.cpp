@@ -167,8 +167,8 @@ SW_TEST_CASE( UiAnimationTest, TweenInterpolatesWithCurve )
     SW_ASSERT_NOT_NULL( pBox );
     fixture.runFrame( 0.0f );
 
-    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getId(), "_opacity", "0", 1.0f, sw::BlendCurve::Linear ) );
-    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getId(), "_renderTransform._translation", "100,0", 1.0f, sw::BlendCurve::EaseIn ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_opacity", "0", 1.0f, sw::BlendCurve::Linear ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_renderTransform._translation", "100,0", 1.0f, sw::BlendCurve::EaseIn ) );
     fixture.runFrame( 0.5f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pBox->getOpacity(), Util::kTolerance );
     SW_EXPECT_NEAR_EQUAL( 25.0f, pBox->getRenderTransform()._translation._x, Util::kTolerance );
@@ -178,8 +178,8 @@ SW_TEST_CASE( UiAnimationTest, TweenInterpolatesWithCurve )
     SW_EXPECT_EQUAL( 0u, pScreen->getAnimationPlayer().getTweenCount() );
 
     // 모르는 경로 · 읽지 못하는 값은 걸지 않는다
-    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getId(), "_noSuchProperty", "1", 1.0f ) );
-    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getId(), "_opacity", "not a number", 1.0f ) );
+    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_noSuchProperty", "1", 1.0f ) );
+    SW_EXPECT_FALSE( fixture._ui.tween( pBox->getID(), "_opacity", "not a number", 1.0f ) );
 }
 
 /** @brief [UiAnimationTest] 렌더 변환 트랙은 레이아웃을 다시 재지 않는다(measure 0) — 그래도 기하는 움직인다 */
@@ -331,7 +331,7 @@ SW_TEST_CASE( UiAnimationTest, ReduceMotionJumpsToEnd )
     SW_EXPECT_NEAR_EQUAL( 1.0f, pBox->getOpacity(), Util::kTolerance ); // Open 의 끝 값
     SW_EXPECT_FALSE( pScreen->getAnimationPlayer().isAnyPlaying() );
 
-    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getId(), "_opacity", "0.25", 2.0f ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_opacity", "0.25", 2.0f ) );
     SW_EXPECT_NEAR_EQUAL( 0.25f, pBox->getOpacity(), Util::kTolerance );
     SW_EXPECT_EQUAL( 0u, pScreen->getAnimationPlayer().getTweenCount() );
 
@@ -350,10 +350,10 @@ SW_TEST_CASE( UiAnimationTest, NewTweenReplacesOld )
     sw::Widget* pBox = pScreen->getTree().findWidgetByName( "Box" );
     SW_ASSERT_NOT_NULL( pBox );
 
-    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getId(), "_opacity", "0", 1.0f, sw::BlendCurve::Linear ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_opacity", "0", 1.0f, sw::BlendCurve::Linear ) );
     fixture.runFrame( 0.5f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pBox->getOpacity(), Util::kTolerance );
-    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getId(), "_opacity", "1", 1.0f, sw::BlendCurve::Linear ) );
+    SW_ASSERT_TRUE( fixture._ui.tween( pBox->getID(), "_opacity", "1", 1.0f, sw::BlendCurve::Linear ) );
     SW_EXPECT_EQUAL( 1u, pScreen->getAnimationPlayer().getTweenCount() );
     fixture.runFrame( 0.5f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, pBox->getOpacity(), Util::kTolerance );

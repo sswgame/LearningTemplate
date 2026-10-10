@@ -137,7 +137,7 @@ endif()
 if(MSVC)
 	target_link_options(sw_compiler_clang INTERFACE
 		$<$<CONFIG:Debug>:/INCREMENTAL:NO> # 단일 패스 결정론적 빠른 링킹
-		# Release 도 PDB 와 RSDS 서명을 만든다 — 크래시 덤프를 그 빌드의 심볼과 짝짓는 열쇠(`ModuleBuildId`). /DEBUG 는 /OPT:REF · /OPT:ICF 를 끄므로 아래에 다시 켠다.
+		# Release 도 PDB 와 RSDS 서명을 만든다 — 크래시 덤프를 그 빌드의 심볼과 짝짓는 열쇠(`ModuleBuildID`). /DEBUG 는 /OPT:REF · /OPT:ICF 를 끄므로 아래에 다시 켠다.
 		# PDB 경로는 이름만 적는다(/PDBALTPATH:%_PDB%) — 빌드 기계의 경로가 배포물에 새지 않고, 심볼 서버는 이름 + GUID 로 찾는다.
 		$<$<CONFIG:Release>:/DEBUG:FULL>
 		$<$<CONFIG:Release>:/PDBALTPATH:%_PDB%>
@@ -145,7 +145,7 @@ if(MSVC)
 		$<$<CONFIG:Release>:/OPT:ICF> # 동일한 코드의 중복 함수 병합
 	)
 else()
-	# build-id 노트를 늘 적는다(배포판 clang 의 기본에 기대지 않는다) — `ModuleBuildId` 가 읽고 `.build-id/` 심볼 배치의 열쇠다.
+	# build-id 노트를 늘 적는다(배포판 clang 의 기본에 기대지 않는다) — `ModuleBuildID` 가 읽고 `.build-id/` 심볼 배치의 열쇠다.
 	target_link_options(sw_compiler_clang INTERFACE -fuse-ld=lld LINKER:--build-id=sha1)
 endif()
 

@@ -43,12 +43,12 @@ namespace sw
 
     /**
      * @struct TickItem
-     * @brief 오브젝트가 낼 틱 하나입니다. 컴포넌트의 주 틱(`_subTickId` 0) 또는 서브틱입니다. 오브젝트가 (그룹, 순서 키) 순으로 듭니다.
+     * @brief 오브젝트가 낼 틱 하나입니다. 컴포넌트의 주 틱(`_subTickID` 0) 또는 서브틱입니다. 오브젝트가 (그룹, 순서 키) 순으로 듭니다.
      */
     struct TickItem
     {
         Component* _pComponent{ nullptr };
-        uint32     _subTickId{ 0 };
+        uint32     _subTickID{ 0 };
         uint8      _group{ 0 };                   ///< `TickGroup`
         uint8      _orderKey{ 64 };               ///< `TickPhase` + 우선순위(0..63)
         uint8      _bHasPrerequisite{ SW_FALSE }; ///< 선행 조건을 가진 서브틱 — 보통 길이 아니라 스테이지가 돈다
@@ -168,17 +168,17 @@ namespace sw
         void setMembership( GameObject* pObj, uint32 group, bool bMember, const TickObjectEntry& entry );
 
         vector<TickObjectEntry> _arrListEntry[kGroupCount]; ///< 그룹마다 틱할 것이 있고 켜진 오브젝트의 칸. 오브젝트를 소유하지 않습니다.
-        vector<uint64>          _listDirtyObjectId;         ///< 다시 훑을 오브젝트 id. 사라졌으면 해석이 비어 건너뜁니다
-        vector<uint64>          _listProcessingObjectId;    ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
-        mutex                   _dirtyMutex;                ///< `_listDirtyObjectId` 의 락. 워커에서 표시할 수 있습니다
+        vector<uint64>          _listDirtyObjectID;         ///< 다시 훑을 오브젝트 id. 사라졌으면 해석이 비어 건너뜁니다
+        vector<uint64>          _listProcessingObjectID;    ///< `refresh` 가 위 목록과 바꿔 쓰는 버퍼(할당 재사용)
+        mutex                   _dirtyMutex;                ///< `_listDirtyObjectID` 의 락. 워커에서 표시할 수 있습니다
         atomic<uint8>           _bAllDirty;                 ///< 전부 다시 훑을지 여부
         uint32                  _prerequisiteCount;         ///< 등록된 서브틱 선행 조건의 총수
         uint32                  _stageItemCount;            ///< 스테이지가 도는 항목 수
         uint32                  _stageBuildCount;           ///< 스테이지를 다시 지은 횟수(진단)
         uint64                  _stageGeneration;           ///< 선행 조건에 걸린 오브젝트가 바뀔 때마다 오릅니다
         uint64                  _builtStageGeneration;      ///< `_listStage` 를 지은 세대
-        unordered_set<uint64>   _uniqueDependentObjectId;   ///< 선행 조건을 가진 항목이 있는 오브젝트
-        unordered_set<uint64>   _uniqueReferencedObjectId;  ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 — 바뀌면 다시 짓는다
+        unordered_set<uint64>   _uniqueDependentObjectID;   ///< 선행 조건을 가진 항목이 있는 오브젝트
+        unordered_set<uint64>   _uniqueReferencedObjectID;  ///< 지난 스테이지 빌드에서 선행 조건이 가리킨 오브젝트 — 바뀌면 다시 짓는다
         vector<TickStage>       _listStage;                 ///< 선행 조건을 가진 항목의 스테이지(그룹 순)
     };
 } // namespace sw

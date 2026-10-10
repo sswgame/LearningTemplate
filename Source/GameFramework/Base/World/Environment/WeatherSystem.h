@@ -87,7 +87,7 @@ namespace sw
         /** @brief 시간을 흘립니다. 날씨가 바뀌었으면 true 입니다. */
         bool update( float32 gameSeconds, const hashed_string& season );
         /** @brief 날씨를 정합니다(이벤트 · 퀘스트). @p duration 0 이면 정의의 범위에서 고른다. */
-        void forceWeather( const hashed_string& weatherId, float32 duration = 0.0f, bool bImmediate = false );
+        void forceWeather( const hashed_string& weatherID, float32 duration = 0.0f, bool bImmediate = false );
         /** @brief 앞으로 올 날씨 @p count 개를 미리 봅니다(일기 예보 — 상태를 바꾸지 않는다). */
         void forecast( const hashed_string& season, int32 count, vector<hashed_string>& outListWeather ) const;
 

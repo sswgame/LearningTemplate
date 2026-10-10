@@ -49,7 +49,7 @@ namespace sw::editor
     /** @brief 섹션을 여는 설정입니다. */
     struct EditorSectionDesc
     {
-        const utf8*        _pId{ "##Section" };
+        const utf8*        _pID{ "##Section" };
         EditorSectionKind  _kind{ EditorSectionKind::Toolbar };
         float2             _childSize{ 0.0f, 0.0f };
         EditorSectionFlags _flags{ EditorSectionFlags::None };
@@ -73,7 +73,7 @@ namespace sw::editor
     /** @brief 플로팅 바를 여는 설정입니다. */
     struct EditorFloatingBarDesc
     {
-        const utf8*            _pId;
+        const utf8*            _pID;
         float2                 _anchorPos;
         float2                 _pivot;
         float32                _maxWidth; ///< 0 보다 크면 이 너비로 자르고 가로 스크롤로 넘긴다(부르는 패널보다 넓어지지 않게)
@@ -108,7 +108,7 @@ namespace sw::editor
     /** @brief 오버레이를 여는 설정입니다. */
     struct EditorOverlayDesc
     {
-        const utf8*        _pId{ "##Overlay" };
+        const utf8*        _pID{ "##Overlay" };
         bool*              _pOpen{ nullptr };
         float2             _anchorPos{ 0.0f, 0.0f };
         float2             _pivot{ 0.0f, 0.0f };
@@ -128,7 +128,7 @@ namespace sw::editor
     /** @brief 검색 오버레이를 여는 설정입니다. */
     struct EditorSearchOverlayDesc
     {
-        const utf8* _pId{ "##SearchOverlay" };
+        const utf8* _pID{ "##SearchOverlay" };
         bool*       _pOpen{ nullptr };
         float2      _size{ 580.0f, 360.0f };
         float32     _viewportYFrac{ 0.28f };
@@ -163,7 +163,7 @@ namespace sw::editor
         static void endSection();
 
         /** @brief 가로 툴바 섹션을 엽니다. 반환값과 관계없이 endToolbar() 를 불러야 합니다. */
-        static bool beginToolbar( const utf8* pId = "##Toolbar" );
+        static bool beginToolbar( const utf8* pID = "##Toolbar" );
         /** @brief beginToolbar()와 짝을 이룹니다. */
         static void endToolbar();
 

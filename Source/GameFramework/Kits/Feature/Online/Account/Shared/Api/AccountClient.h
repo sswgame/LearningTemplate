@@ -49,7 +49,7 @@ namespace sw
         LoginGrant             _grant{};
         NetGameTicket          _ticket{};
         AccountLinkSummary     _linkSummary{};
-        uint64                 _requestId{ 0 };
+        uint64                 _requestID{ 0 };
         uint16                 _errorCode{ 0 };
         LoginResult            _result{ LoginResult::Ok };
         AccountClientOperation _operation{ AccountClientOperation::Login };
@@ -90,7 +90,7 @@ namespace sw
         uint64 logout();
         uint64 linkCredential( string_view loginName, string_view password );
         uint64 linkPlatform( string_view provider, const vector<uint8>& ticketBytes );
-        uint64 issueGameTicket( string_view serverId );
+        uint64 issueGameTicket( string_view serverID );
         uint64 unlinkPlatform( string_view provider );
         uint64 listLinks();
         uint64 requestDeletion();
@@ -117,7 +117,7 @@ namespace sw
     private:
         struct PendingCall
         {
-            uint64                 _requestId{ 0 };
+            uint64                 _requestID{ 0 };
             AccountClientOperation _operation{ AccountClientOperation::Login };
             uint8                  _bAutomatic{ SW_FALSE };
         };
@@ -125,17 +125,17 @@ namespace sw
         struct DeferredCall
         {
             vector<uint8>          _bodyBytes{};
-            uint64                 _requestId{ 0 };
+            uint64                 _requestID{ 0 };
             uint16                 _method{ 0 };
             AccountClientOperation _operation{ AccountClientOperation::Logout };
         };
 
         uint64 send( AccountClientOperation operation, uint16 method, const BitWriter& body, bool bNeedsSession, bool bAutomatic = false );
-        void   transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestId, bool bAutomatic );
+        void   transmit( AccountClientOperation operation, uint16 method, const vector<uint8>& bodyBytes, uint64 requestID, bool bAutomatic );
         void   onResponse( const OnlineResponse& response );
         void   finishDeferred( LoginResult failure );
 
-        unordered_map<uint64, PendingCall> _mapClientIdToCall; ///< 서비스 클라이언트의 요청 id → 이 객체의 요청
+        unordered_map<uint64, PendingCall> _mapClientIDToCall; ///< 서비스 클라이언트의 요청 id → 이 객체의 요청
         vector<AccountClientReply>         _listReply;
         vector<AccountClientEvent>         _listEvent;
         vector<DeferredCall>               _listDeferred;
@@ -144,7 +144,7 @@ namespace sw
         LoginSessionToken                  _token;
         PendingCall                        _sendingCall; ///< `sendRequest` 가 그 자리에서 응답을 부를 때의 짝
         OnlineServiceClient*               _pClient;
-        uint64                             _nextRequestId;
+        uint64                             _nextRequestID;
         uint8                              _bLoggedIn;
         uint8                              _bResuming;
         uint8                              _bSending;

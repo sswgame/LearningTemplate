@@ -343,11 +343,11 @@ namespace sw
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "Preset", true ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-                if ( pId == nullptr )
+                const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+                if ( pID == nullptr )
                     continue;
                 CameraPresetDef def;
-                def._id      = hashed_string( pId );
+                def._id      = hashed_string( pID );
                 def._blendIn = _defaultBlend;
                 CameraPresetInternal::readPreset( node, def, sourceName );
                 addPreset( def );

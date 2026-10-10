@@ -33,7 +33,7 @@ namespace sw
         struct Entry
         {
             hashed_string _typeName{};
-            uint64        _componentId{ 0 };
+            uint64        _componentID{ 0 };
             vector<uint8> _bytes{};
         };
 
@@ -44,12 +44,12 @@ namespace sw
         void clear() { _listEntry.clear(); }
         bool isEmpty() const { return _listEntry.empty(); }
         /** @brief 상태 하나를 더합니다. 같은 (타입 · id) 가 이미 있으면 바꿉니다. */
-        void add( const hashed_string& typeName, uint64 componentId, vector<uint8>&& bytes );
+        void add( const hashed_string& typeName, uint64 componentID, vector<uint8>&& bytes );
         /**
          * @brief 컴포넌트 하나의 상태를 찾습니다. 없으면 nullptr 입니다.
          * @param orderInType 같은 타입 안에서 이 컴포넌트의 차례입니다 — id 가 맞는 것이 없을 때 그 차례의 항목을 씁니다(다른 실행의 세이브).
          */
-        const Entry*         findEntry( const hashed_string& typeName, uint64 componentId, uint32 orderInType ) const;
+        const Entry*         findEntry( const hashed_string& typeName, uint64 componentID, uint32 orderInType ) const;
         const vector<Entry>& getEntries() const { return _listEntry; }
 
         void write( Archive& outArchive ) const;
@@ -71,7 +71,7 @@ namespace sw
                 pComponent->writeState( archive );
                 vector<uint8> bytes;
                 archive.writeData( bytes );
-                add( typeName, pComponent->getComponentId(), std::move( bytes ) );
+                add( typeName, pComponent->getComponentID(), std::move( bytes ) );
                 ++count;
             } );
             return count;
@@ -92,7 +92,7 @@ namespace sw
             for ( uint32 order = 0; order < static_cast<uint32>( listComponent.size() ); ++order )
             {
                 TComponent*  pComponent = listComponent[order];
-                const Entry* pEntry     = findEntry( typeName, pComponent->getComponentId(), order );
+                const Entry* pEntry     = findEntry( typeName, pComponent->getComponentID(), order );
                 if ( pEntry == nullptr )
                     continue;
                 vector<uint8> bytes = pEntry->_bytes;

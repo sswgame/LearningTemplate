@@ -50,7 +50,7 @@ namespace
         {
             sw::GameObject*    pFloor = manager.createGameObject( sw::hashed_string( "Floor" ) );
             sw::MeshComponent* pMesh  = pFloor->addComponent<sw::MeshComponent>();
-            pMesh->setMeshId( "Cube" );
+            pMesh->setMeshID( "Cube" );
             pMesh->setLocalPosition( sw::float3{ 0.0f, -0.5f, 0.0f } );
             pMesh->setLocalScale( sw::float3{ 30.0f, 1.0f, 30.0f } );
             sw::GameObject* pSurfaceObject = manager.createGameObject( sw::hashed_string( "NavSurface" ) );

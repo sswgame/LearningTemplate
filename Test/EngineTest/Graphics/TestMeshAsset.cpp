@@ -140,11 +140,11 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
     sw::MeshCache cache;
     SW_EXPECT_TRUE( cache.isCached( path ) );
 
-    const uint64 contentBefore = first->getContentId();
+    const uint64 contentBefore = first->getContentID();
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 3, 0.5f ) ) );
     SW_EXPECT_TRUE( sw::MeshCache::reloadShared( path, nullptr ) );
     SW_EXPECT_EQUAL( 9u, first->getVertexCount() );
-    SW_EXPECT_TRUE( first->getContentId() != contentBefore ); // 정점 풀이 다시 올릴 근거
+    SW_EXPECT_TRUE( first->getContentID() != contentBefore ); // 정점 풀이 다시 올릴 근거
     SW_EXPECT_TRUE( sw::MeshCache::acquire( path ) == first );
 
     // 깨진 파일로 다시 읽으면 옛 정점을 지킨다.
@@ -158,7 +158,7 @@ SW_TEST_CASE( MeshAssetTest, CacheSharesOneMeshPerPathAndReloadsInPlace )
 }
 
 /**
- * @brief [MeshAssetTest] `_meshId` 가 `.mesh` 경로면 MeshComponent 는 그 에셋의 메시를 그린다 — 내장 도형 이름은 그대로 통한다
+ * @brief [MeshAssetTest] `_meshID` 가 `.mesh` 경로면 MeshComponent 는 그 에셋의 메시를 그린다 — 내장 도형 이름은 그대로 통한다
  */
 SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
 {
@@ -170,23 +170,23 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     sw::GameObject*             pProp = manager.createGameObject( sw::hashed_string( "Model" ) );
     sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pMesh );
-    const sw::PropertyInfo* pMeshId = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshId" ) );
-    SW_ASSERT_NOT_NULL( pMeshId );
+    const sw::PropertyInfo* pMeshID = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshID" ) );
+    SW_ASSERT_NOT_NULL( pMeshID );
 
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshId, pMesh, path, ctx ) );
-    pMesh->onPropertyChanged( pMeshId->_name );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, path, ctx ) );
+    pMesh->onPropertyChanged( pMeshID->_name );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshCache::acquire( path ).get() );
 
     // 세터도 같은 길이다.
-    pMesh->setMeshId( "Sphere" );
+    pMesh->setMeshID( "Sphere" );
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Sphere" ).get() );
 
     // 없는 에셋은 메시 없이 남는다(그리지 않는다).
     {
         test::ScopedDefensiveTestLog expected( "a missing mesh asset leaves the component without a mesh" );
-        pMesh->setMeshId( test::makeTempPath( "missing.mesh" ) );
+        pMesh->setMeshID( test::makeTempPath( "missing.mesh" ) );
     }
     SW_EXPECT_NULL( pMesh->getRawMesh() );
 }

@@ -21,7 +21,7 @@ using LRESULT = int64;
 namespace sw::constant::window
 {
     /** @brief 실행 파일 리소스의 앱 아이콘 id 입니다(`Source/App/Resources/App.rc`). 리소스가 없는 실행 파일(시험)은 Windows 기본 아이콘입니다. */
-    inline constexpr uint16 kAppIconResourceId = 1;
+    inline constexpr uint16 kAppIconResourceID = 1;
 } // namespace sw::constant::window
 
 namespace sw

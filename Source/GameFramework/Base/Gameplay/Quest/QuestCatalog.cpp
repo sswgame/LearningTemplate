@@ -16,7 +16,7 @@ namespace sw
     {
         struct QuestCatalogInternal
         {
-            static hashed_string readId( const XmlNode& node, const utf8* pName )
+            static hashed_string readID( const XmlNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
@@ -38,11 +38,11 @@ namespace sw
         };
     } // namespace
 
-    const QuestStage* QuestDef::findStage( const hashed_string& stageId ) const
+    const QuestStage* QuestDef::findStage( const hashed_string& stageID ) const
     {
         for ( const QuestStage& stage : _listStage )
         {
-            if ( stage._id == stageId )
+            if ( stage._id == stageID )
                 return &stage;
         }
         return nullptr;
@@ -53,13 +53,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( questNode, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( questNode, sourceName );
+            if ( pID == nullptr )
                 continue;
             QuestDef quest;
-            quest._id            = hashed_string( pId );
+            quest._id            = hashed_string( pID );
             const utf8* pName    = questNode.findAttribute( "name" );
-            quest._name          = pName != nullptr ? pName : pId;
+            quest._name          = pName != nullptr ? pName : pID;
             quest._requiredLevel = questNode.getAttributeInt( "level", 0 );
             quest._bRepeatable   = questNode.getAttributeBool( "repeatable", false ) ? SW_TRUE : SW_FALSE;
             GameDataXml::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
@@ -67,8 +67,8 @@ namespace sw
             for ( XmlNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
                 QuestStage stage;
-                stage._id         = QuestCatalogInternal::readId( stageNode, "id" );
-                stage._nextStage  = QuestCatalogInternal::readId( stageNode, "next" );
+                stage._id         = QuestCatalogInternal::readID( stageNode, "id" );
+                stage._nextStage  = QuestCatalogInternal::readID( stageNode, "next" );
                 const utf8* pText = stageNode.findAttribute( "text" );
                 stage._text       = pText != nullptr ? pText : "";
                 stage._timeLimit  = MathUtil::max( 0.0f, stageNode.getAttributeFloat( "time", 0.0f ) );
@@ -77,8 +77,8 @@ namespace sw
                 for ( XmlNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
                     QuestObjective objective;
-                    objective._kind      = QuestCatalogInternal::readId( node, "kind" );
-                    objective._target    = QuestCatalogInternal::readId( node, "target" );
+                    objective._kind      = QuestCatalogInternal::readID( node, "kind" );
+                    objective._target    = QuestCatalogInternal::readID( node, "target" );
                     const utf8* pObjText = node.findAttribute( "text" );
                     objective._text      = pObjText != nullptr ? pObjText : "";
                     objective._count     = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
@@ -87,27 +87,27 @@ namespace sw
                 }
                 for ( XmlNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
-                    stage._listBranch.push_back( QuestBranch{ QuestCatalogInternal::readId( node, "choice" ), QuestCatalogInternal::readId( node, "next" ) } );
+                    stage._listBranch.push_back( QuestBranch{ QuestCatalogInternal::readID( node, "choice" ), QuestCatalogInternal::readID( node, "next" ) } );
                 }
                 QuestCatalogInternal::readReward( stageNode, stage._reward );
                 if ( stage._id.empty() )
-                    SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pId );
+                    SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pID );
                 quest._listStage.push_back( stage );
             }
             // 다음 단계 · 분기가 가리키는 단계가 있는지.
             for ( const QuestStage& stage : quest._listStage )
             {
                 if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )
-                    SW_LOG_WARNING( "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pId, stage._id.c_str(), stage._nextStage.c_str() );
+                    SW_LOG_WARNING( "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
                 for ( const QuestBranch& branch : stage._listBranch )
                 {
                     if ( quest.findStage( branch._nextStage ) == nullptr )
-                        SW_LOG_WARNING( "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pId, branch._choice.c_str(), branch._nextStage.c_str() );
+                        SW_LOG_WARNING( "%#: quest '%#' branch '%#' goes to unknown '%#'", sourceName, pID, branch._choice.c_str(), branch._nextStage.c_str() );
                 }
             }
             if ( quest._listStage.empty() )
             {
-                SW_LOG_WARNING( "%#: quest '%#' has no stages", sourceName, pId );
+                SW_LOG_WARNING( "%#: quest '%#' has no stages", sourceName, pID );
                 continue;
             }
             (void)_catalog.add( quest );

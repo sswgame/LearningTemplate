@@ -32,7 +32,7 @@ XZ 평면의 점 엔티티를 2D 해시 그리드에 넣고, 한 점 주변 반�
 ```cpp
 SpatialHashGrid2D grid{ 16.0f }; // 셀 한 변 16 m
 
-const SlotHandle key = SlotHandle::make( entityId, 1u );
+const SlotHandle key = SlotHandle::make( entityID, 1u );
 grid.insert( key, position._x, position._z, position._x, position._z ); // 점은 최소와 최대가 같은 상자
 // 매 틱 위치가 바뀌면
 grid.update( key, position._x, position._z, position._x, position._z );

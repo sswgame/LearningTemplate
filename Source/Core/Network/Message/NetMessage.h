@@ -22,7 +22,7 @@ namespace sw
      * @code
      *     BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kInput );
      *     writer.writeVarUint( tick );
-     *     (void)_messageWriter.send( *_pHost, connectionId, NetChannelType::ReliableOrdered );
+     *     (void)_messageWriter.send( *_pHost, connectionID, NetChannelType::ReliableOrdered );
      * @endcode
      */
     class SW_API NetMessageWriter
@@ -32,9 +32,9 @@ namespace sw
 
         /** @brief 비우고 종류 바이트를 씁니다. 몸은 돌려준 쓰기에 이어 씁니다. */
         BitWriter&         begin( uint8 kind );
-        [[nodiscard]] bool send( NetHost& host, int32 connectionId, NetChannelType channel ) const;
-        /** @brief 연결된 모두에게(@p exceptId 는 빼고) 보냅니다. 보낸 수입니다. */
-        int32 broadcast( NetHost& host, NetChannelType channel, int32 exceptId = -1 ) const;
+        [[nodiscard]] bool send( NetHost& host, int32 connectionID, NetChannelType channel ) const;
+        /** @brief 연결된 모두에게(@p exceptID 는 빼고) 보냅니다. 보낸 수입니다. */
+        int32 broadcast( NetHost& host, NetChannelType channel, int32 exceptID = -1 ) const;
         /** @brief 상대 모두에게 보냅니다 — 서버는 연결된 모두에게, 클라이언트는 서버(연결 0)에게. 보낸 수입니다(락스텝 · 롤백처럼 모두가 같은 메시지를 나눌 때). */
         int32 sendToPeers( NetHost& host, NetChannelType channel ) const;
 
@@ -64,7 +64,7 @@ namespace sw
     {
         const uint8*   _pMessage{ nullptr }; ///< 처리기 호출 동안만 유효하다
         int32          _messageSize{ 0 };
-        int32          _connectionId{ -1 };
+        int32          _connectionID{ -1 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
         uint8          _kind{ 0 };
     };
@@ -98,11 +98,11 @@ namespace sw
          */
         virtual NetHandleResult handleNetMessage( const NetMessageContext& context, BitReader& body ) = 0;
         /** @brief 연결이 열렸습니다(서버 — 클라이언트, 클라이언트 — 서버 = 0). 이 연결 id 의 상태를 새로 시작한다. */
-        virtual void onConnectionOpened( int32 connectionId ) { (void)connectionId; }
+        virtual void onConnectionOpened( int32 connectionID ) { (void)connectionID; }
         /** @brief 연결이 닫혔습니다. 이 연결 id 의 상태를 놓는다(같은 id 는 다음 연결이 다시 쓴다). */
-        virtual void onConnectionClosed( int32 connectionId, NetDisconnectReason reason )
+        virtual void onConnectionClosed( int32 connectionID, NetDisconnectReason reason )
         {
-            (void)connectionId;
+            (void)connectionID;
             (void)reason;
         }
 
@@ -112,10 +112,10 @@ namespace sw
          * @brief 손 배달 — 메시지 하나(첫 바이트 = 종류)를 라우터 없이 넘깁니다(라우터를 쓰지 않는 게임 · 시험). 맡은 종류가 아니면 NotMine 입니다.
          * @details 손 배달하는 쪽은 연결 사건도 `onConnectionOpened` · `onConnectionClosed` 로 직접 넘긴다.
          */
-        NetHandleResult handleMessage( int32 connectionId, const uint8* pData, int32 size, NetChannelType channel = NetChannelType::ReliableOrdered );
-        NetHandleResult handleMessage( int32 connectionId, const vector<uint8>& buffer )
+        NetHandleResult handleMessage( int32 connectionID, const uint8* pData, int32 size, NetChannelType channel = NetChannelType::ReliableOrdered );
+        NetHandleResult handleMessage( int32 connectionID, const vector<uint8>& buffer )
         {
-            return handleMessage( connectionId, buffer.data(), static_cast<int32>( buffer.size() ) );
+            return handleMessage( connectionID, buffer.data(), static_cast<int32>( buffer.size() ) );
         }
     };
 } // namespace sw
@@ -126,7 +126,7 @@ namespace sw
     struct NetReceivedMessage
     {
         vector<uint8>  _buffer{};
-        int32          _connectionId{ -1 };
+        int32          _connectionID{ -1 };
         NetChannelType _channel{ NetChannelType::ReliableOrdered };
     };
 } // namespace sw

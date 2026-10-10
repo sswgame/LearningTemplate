@@ -67,13 +67,13 @@ namespace sw::editor
             }
 
             /** @brief 시험이 만든 오브젝트를 지우고 선택을 비웁니다. */
-            static void destroyProbeObject( uint64 objectId )
+            static void destroyProbeObject( uint64 objectID )
             {
                 EditorContext*     pContext = EditorContext::get();
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 if ( pContext != nullptr )
                     pContext->getWorkspace().clearSelection();
-                GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectById( objectId ) : nullptr;
+                GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
                     pManager->destroyObject( pObj );
             }
@@ -390,7 +390,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct InspectorProbe
             {
-                uint64 _objectId{ 0 };
+                uint64 _objectID{ 0 };
                 string _xmlBefore;
             };
 
@@ -417,7 +417,7 @@ namespace sw::editor
                         return EditorSelfTestStep::Done;
                     pCamera->setRole( CameraRole::Custom );
                     pCamera->setOrthographic( true );
-                    probe._objectId  = pObj->getObjectId();
+                    probe._objectID  = pObj->getObjectID();
                     probe._xmlBefore = ObjectStateSerializer::saveToXmlString( pObj );
                     (void)pContext->getPanelManager().setPanelOpen( "inspector", true );
                     pContext->getWorkspace().selectGameObject( pObj );
@@ -427,7 +427,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue; // 인스펙터가 두 번 그리게 둔다
 
                 GameObjectManager* pManager = editor::getActiveObjectManager();
-                GameObject*        pObj     = ( pManager != nullptr ) ? pManager->findGameObjectById( probe._objectId ) : nullptr;
+                GameObject*        pObj     = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( context.expect( pObj != nullptr, "the probe object disappeared" ) )
                 {
                     const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
@@ -437,7 +437,7 @@ namespace sw::editor
                 }
                 const ImGuiWindow* pInspector = ImGui::FindWindowByName( "Inspector" );
                 (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
-                destroyProbeObject( probe._objectId );
+                destroyProbeObject( probe._objectID );
                 probe = InspectorProbe{};
                 return EditorSelfTestStep::Done;
             }
@@ -471,7 +471,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct HierarchyProbe
             {
-                uint64 _objectId{ 0 };
+                uint64 _objectID{ 0 };
             };
 
             static HierarchyProbe& getHierarchyProbe()
@@ -514,7 +514,7 @@ namespace sw::editor
                     if ( context.expect( pObj != nullptr, "could not create the probe object" ) == false )
                         return EditorSelfTestStep::Done;
                     pObj->addTag( TagID::request( "SwSelfTest.Child" ) );
-                    probe._objectId = pObj->getObjectId();
+                    probe._objectID = pObj->getObjectID();
                 }
                 else
                 {
@@ -531,7 +531,7 @@ namespace sw::editor
                 }
 
                 pHierarchy->setFilterText( "" );
-                destroyProbeObject( probe._objectId );
+                destroyProbeObject( probe._objectID );
                 probe = HierarchyProbe{};
                 return EditorSelfTestStep::Done;
             }
@@ -541,7 +541,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             struct OffscreenRowProbe
             {
-                vector<uint64> _listObjectId;
+                vector<uint64> _listObjectID;
                 float32        _scrollMaxWithSkip{ 0.0f };
             };
 
@@ -592,9 +592,9 @@ namespace sw::editor
                         {
                             GameObject* pObj = pManager->createGameObject( hashed_string( "EditorSelfTestRow" ) );
                             if ( pObj != nullptr )
-                                probe._listObjectId.push_back( pObj->getObjectId() );
+                                probe._listObjectID.push_back( pObj->getObjectID() );
                         }
-                        (void)context.expect( probe._listObjectId.size() == kRootCount, "could not create the probe rows" );
+                        (void)context.expect( probe._listObjectID.size() == kRootCount, "could not create the probe rows" );
                         return EditorSelfTestStep::Continue;
                     }
                     case 1:
@@ -633,7 +633,7 @@ namespace sw::editor
                     }
                     default:
                     {
-                        (void)context.expect( probe._listObjectId.empty() == false && pHierarchy->getLastDrawnRootId() == probe._listObjectId.back(),
+                        (void)context.expect( probe._listObjectID.empty() == false && pHierarchy->getLastDrawnRootID() == probe._listObjectID.back(),
                                               "scrolled to the bottom, the last root was not drawn" );
                         (void)context.expect( pHierarchy->getDrawnRootCount() < pHierarchy->getVisibleRootCount(), "offscreen roots were drawn at the bottom" );
                         bDone = true;
@@ -645,9 +645,9 @@ namespace sw::editor
                 pHierarchy->setOffscreenRowSkipEnabled( true );
                 if ( pTree != nullptr )
                     ImGui::SetScrollY( pTree, 0.0f );
-                for ( const uint64 objectId : probe._listObjectId )
+                for ( const uint64 objectID : probe._listObjectID )
                 {
-                    destroyProbeObject( objectId );
+                    destroyProbeObject( objectID );
                 }
                 probe = OffscreenRowProbe{};
                 return EditorSelfTestStep::Done;
@@ -660,7 +660,7 @@ namespace sw::editor
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kSceneViewPanelId = "scene_view";
+                constexpr const utf8* kSceneViewPanelID = "scene_view";
                 constexpr uint32      kResizeFrameCount = 90;
 
                 EditorContext* pContext = EditorContext::get();
@@ -672,12 +672,12 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelId, false );
+                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelID, false );
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex > kResizeFrameCount )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kSceneViewPanelID, true );
                     return EditorSelfTestStep::Done;
                 }
 
@@ -686,12 +686,12 @@ namespace sw::editor
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
                 pContext->ensureViewTargetSize( EditorViewKind::Scene, width, height );
                 const EditorViewTarget& view = pContext->getViewTarget( EditorViewKind::Scene );
-                (void)context.expect( view._width == width && view._height == height && view._pTextureId != nullptr,
+                (void)context.expect( view._width == width && view._height == height && view._pTextureID != nullptr,
                                       "the scene view target was not recreated at the requested size" );
 
                 beginProbeWindow();
-                if ( view._pTextureId != nullptr )
-                    ImGui::Image( reinterpret_cast<ImTextureID>( view._pTextureId ), ImVec2{ static_cast<float32>( width ) * 0.5f, static_cast<float32>( height ) * 0.5f } );
+                if ( view._pTextureID != nullptr )
+                    ImGui::Image( reinterpret_cast<ImTextureID>( view._pTextureID ), ImVec2{ static_cast<float32>( width ) * 0.5f, static_cast<float32>( height ) * 0.5f } );
                 ImGui::End();
                 return EditorSelfTestStep::Continue;
             }
@@ -738,7 +738,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runProfilerGpuMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kProfilerPanelId = "profiler";
+                constexpr const utf8* kProfilerPanelID = "profiler";
                 constexpr uint32      kMaxStepCount    = 30;
 
                 EditorContext* pContext = EditorContext::get();
@@ -748,7 +748,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -762,7 +762,7 @@ namespace sw::editor
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
                 const RHIMemoryLedger& ledger = pContext->getRhiDevice()->getMemoryLedger();
                 (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
-                (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, false );
+                (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelID, false );
                 return EditorSelfTestStep::Done;
             }
 
@@ -877,7 +877,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runUserSettingsPanelDrawsEveryTab( EditorSelfTestContext& context )
             {
-                constexpr const utf8* kPanelId  = "user_settings";
+                constexpr const utf8* kPanelID  = "user_settings";
                 EditorContext*        pContext  = EditorContext::get();
                 UserSettingsManager*  pSettings = editor::getService<UserSettingsManager>();
                 const bool            bReady    = pContext != nullptr && pSettings != nullptr && pSettings->getCategories().empty() == false;
@@ -887,7 +887,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, true );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -896,7 +896,7 @@ namespace sw::editor
                 const uint32                          categoryIndex = ( stepIndex - 1 ) / 2;
                 if ( categoryIndex >= static_cast<uint32>( listCategory.size() ) )
                 {
-                    (void)pContext->getPanelManager().setPanelOpen( kPanelId, false );
+                    (void)pContext->getPanelManager().setPanelOpen( kPanelID, false );
                     return EditorSelfTestStep::Done;
                 }
                 if ( ( stepIndex % 2 ) == 1 )

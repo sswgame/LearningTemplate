@@ -56,7 +56,7 @@ namespace sw
         : _director{}
         , _airHeight{ 2.5f }
         , _lastPosition{ 0.0f, 0.0f, 0.0f }
-        , _unitId{}
+        , _unitID{}
         , _pShownLook{ nullptr }
         , _modelWidth{ 1.0f }
         , _yaw{ MathUtil::kPi }
@@ -73,21 +73,21 @@ namespace sw
         setTickGroup( TickGroup::PostUpdate );
     }
 
-    void SkirmishUnitComponent::assignUnit( GameObjectHandle director, SlotHandle unitId, float32 modelWidth )
+    void SkirmishUnitComponent::assignUnit( GameObjectHandle director, SlotHandle unitID, float32 modelWidth )
     {
         _director   = director;
-        _unitId     = unitId;
+        _unitID     = unitID;
         _modelWidth = modelWidth > 0.0f ? modelWidth : 1.0f;
         _pShownLook = nullptr;
         _yaw        = MathUtil::kPi; // 처음엔 카메라(남쪽) 쪽을 본다
         _bPlaced    = SW_FALSE;
     }
 
-    const SkirmishUnitModel* SkirmishUnitComponent::findUnitModel( const hashed_string& unitId )
+    const SkirmishUnitModel* SkirmishUnitComponent::findUnitModel( const hashed_string& unitID )
     {
         for ( const SkirmishUnitModel& entry : SkirmishUnitComponentInternal::kArrUnitModel )
         {
-            if ( unitId == hashed_string( entry._pUnitId ) )
+            if ( unitID == hashed_string( entry._pUnitID ) )
                 return &entry;
         }
         return nullptr;
@@ -108,7 +108,7 @@ namespace sw
         if ( pManager == nullptr || pMesh == nullptr )
             return;
         const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
-        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitId ) : nullptr;
+        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return;
 
@@ -143,7 +143,7 @@ namespace sw
         pMesh->setLocalPosition( position );
         pMesh->setLocalScale( scale );
         pMesh->setLocalRotation( float3{ 0.0f, _yaw, 0.0f } );
-        const shared_ptr<MaterialInstance>& look = pDirector->findUnitLook( *pUnit, pDirector->isSelected( _unitId ) );
+        const shared_ptr<MaterialInstance>& look = pDirector->findUnitLook( *pUnit, pDirector->isSelected( _unitID ) );
         if ( look != nullptr && look.get() != _pShownLook )
         {
             pMesh->setMaterialInstance( look );

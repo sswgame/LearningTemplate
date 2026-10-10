@@ -20,11 +20,11 @@ namespace sw
         const InventorySlot stack = inventory.getSlot( slot );
         if ( stack.isEmpty() )
             return result;
-        result._itemId                   = stack._itemId;
+        result._itemID                   = stack._itemID;
         result._damage                   = baseDamage;
         result._durabilityLeft           = stack._durability;
         const ItemCatalog* pCatalog      = inventory.getCatalog();
-        const ItemDef*     pItem         = pCatalog != nullptr ? pCatalog->findItem( stack._itemId ) : nullptr;
+        const ItemDef*     pItem         = pCatalog != nullptr ? pCatalog->findItem( stack._itemID ) : nullptr;
         const float32      maxDurability = pItem != nullptr ? pItem->_maxDurability : 0.0f;
         if ( maxDurability <= 0.0f || stack._durability <= 0.0f )
             return result; // 닳지 않는 무기

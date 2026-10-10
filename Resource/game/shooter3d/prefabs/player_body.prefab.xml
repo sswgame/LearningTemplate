@@ -7,9 +7,9 @@
 			                       _localRotation="0,0,0"
 			                       _localScale="1,1,1"
 			                       _attachOwner="None"
-			                       _attachOwnerId="0"
+			                       _attachOwnerID="0"
 			                       _attachComponent="None"
-			                       _meshId=""
+			                       _meshID=""
 			                       _materialPath="None"
 			                       _boundsRadius="2"
 			                       _blendMode="Opaque"
@@ -34,7 +34,7 @@
 			                           _bPlayOnBegin="true" />
 			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
 			                              _bActive="true"
-			                              _presetId="ShooterPlayer"
+			                              _presetID="ShooterPlayer"
 			                              _seed="0" />
 			<ShooterAvatarComponent _componentName="ShooterAvatarComponent"
 			                        _bActive="true"

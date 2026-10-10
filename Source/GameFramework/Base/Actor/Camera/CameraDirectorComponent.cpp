@@ -98,9 +98,9 @@ namespace sw
         }
         if ( _catalog.getPresets().empty() )
             return;
-        const hashed_string startId = resolveStartPreset();
-        if ( _director.activatePreset( _catalog, startId ) == false )
-            SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startId.c_str(), _catalogPath );
+        const hashed_string startID = resolveStartPreset();
+        if ( _director.activatePreset( _catalog, startID ) == false )
+            SW_LOG_WARNING( "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
         updateCamera( 0.0f );
     }
 
@@ -111,9 +111,9 @@ namespace sw
         const bool             bCapture = pCamera != nullptr && pCamera->getRole() == CameraRole::Capture;
         if ( gv_cameraPreset.empty() == false && bCapture == false )
         {
-            const hashed_string overrideId( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
-            if ( _catalog.findPreset( overrideId ) != nullptr )
-                return overrideId;
+            const hashed_string overrideID( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
+            if ( _catalog.findPreset( overrideID ) != nullptr )
+                return overrideID;
         }
         return _initialPreset.empty() ? _catalog.getPresets().front()._id : _initialPreset;
     }
@@ -142,15 +142,15 @@ namespace sw
         size_t nextIndex = 0;
         for ( size_t index = 0; index < listPreset.size(); ++index )
         {
-            if ( listPreset[index]._id == _director.getActivePresetId() )
+            if ( listPreset[index]._id == _director.getActivePresetID() )
             {
                 nextIndex = ( index + 1 ) % listPreset.size();
                 break;
             }
         }
-        const hashed_string nextId = listPreset[nextIndex]._id;
-        (void)_director.activatePreset( _catalog, nextId );
-        return nextId;
+        const hashed_string nextID = listPreset[nextIndex]._id;
+        (void)_director.activatePreset( _catalog, nextID );
+        return nextID;
     }
 
     void CameraDirectorComponent::updateCamera( float32 deltaTime )
@@ -178,8 +178,8 @@ namespace sw
         const InputMap& inputMap = pInput->getInputMap();
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
-            [[maybe_unused]] const hashed_string nextId = activateNextPreset(); // 로그는 Shipping 에서 빠진다
-            SW_LOG_INFO( "Camera preset -> '%#'", nextId.c_str() );
+            [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다
+            SW_LOG_INFO( "Camera preset -> '%#'", nextID.c_str() );
         }
         const CameraInputDef& inputDef = _director.getActivePreset()._input;
         CameraModeInput       input;
@@ -218,7 +218,7 @@ namespace sw
         if ( _pExternalProbe == nullptr && pManager != nullptr )
         {
             const GameObject*      pTarget = pManager->resolveGameObject( _target );
-            const SceneCameraProbe physicsProbe( *pManager, pTarget != nullptr ? pTarget->getObjectId() : 0 );
+            const SceneCameraProbe physicsProbe( *pManager, pTarget != nullptr ? pTarget->getObjectID() : 0 );
             _director.setCollisionProbe( &physicsProbe );
             (void)_director.step( deltaTime, target );
         }

@@ -26,7 +26,7 @@ namespace sw
              * @details 0 은 "주인 없음" 을 뜻하므로 쓸 수 없습니다. 해시가 0 으로 나오는 드문 경우에는 1 로 바꿉니다. 어떤 값이든
              *          스레드마다 다르기만 하면 되기 때문입니다.
              */
-            static uint64 currentThreadId()
+            static uint64 currentThreadID()
             {
                 const uint64 id = static_cast<uint64>( std::hash<std::thread::id>{}( std::this_thread::get_id() ) );
                 return ( id != 0 ) ? id : 1;
@@ -46,8 +46,8 @@ namespace sw
 #if defined( SW_DEBUG )
     bool RaceDetectContext::isOwnedByCurrentThread() const
     {
-        const uint64 ownerId = _ownerThreadId.load( std::memory_order_relaxed );
-        return ownerId != 0 && ownerId == DataRaceDetectorInternal::currentThreadId();
+        const uint64 ownerID = _ownerThreadID.load( std::memory_order_relaxed );
+        return ownerID != 0 && ownerID == DataRaceDetectorInternal::currentThreadID();
     }
 
     /**
@@ -64,7 +64,7 @@ namespace sw
         {
             // 처음 들어온 스레드가 주인이 된다. 읽기끼리는 서로 보고하지 않으므로 누가 주인이어도 상관없다.
             if ( readers == 0 )
-                _ownerThreadId.store( DataRaceDetectorInternal::currentThreadId(), std::memory_order_relaxed );
+                _ownerThreadID.store( DataRaceDetectorInternal::currentThreadID(), std::memory_order_relaxed );
             return;
         }
 
@@ -82,7 +82,7 @@ namespace sw
     {
         // 마지막 하나가 나가면 주인 자리를 비운다.
         if ( _state.fetch_sub( 1, std::memory_order_release ) == 1 )
-            _ownerThreadId.store( 0, std::memory_order_relaxed );
+            _ownerThreadID.store( 0, std::memory_order_relaxed );
     }
 
     /**
@@ -97,7 +97,7 @@ namespace sw
 
         if ( writers == 0 && readers == 0 )
         {
-            _ownerThreadId.store( DataRaceDetectorInternal::currentThreadId(), std::memory_order_relaxed );
+            _ownerThreadID.store( DataRaceDetectorInternal::currentThreadID(), std::memory_order_relaxed );
             return;
         }
 
@@ -120,7 +120,7 @@ namespace sw
     void RaceDetectContext::exitWrite()
     {
         if ( _state.fetch_sub( kWriterUnit, std::memory_order_release ) == kWriterUnit )
-            _ownerThreadId.store( 0, std::memory_order_relaxed );
+            _ownerThreadID.store( 0, std::memory_order_relaxed );
     }
 
     /**

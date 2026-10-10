@@ -18,14 +18,14 @@ namespace sw
     using NavPolyRef = uint64;
 
     /** @brief 군중 안의 에이전트 번호입니다. 음수는 없음입니다. */
-    using NavCrowdAgentId = int32;
+    using NavCrowdAgentID = int32;
 
     struct NavigationConstant
     {
         /** @brief 없는 폴리곤입니다. */
         static constexpr NavPolyRef kInvalidPolyRef = 0;
         /** @brief 없는 군중 에이전트입니다. */
-        static constexpr NavCrowdAgentId kInvalidAgentId = -1;
+        static constexpr NavCrowdAgentID kInvalidAgentID = -1;
         /** @brief 영역 표의 최대 줄 수입니다(영역 하나가 폴리곤 표시 비트 하나 — 16 비트). */
         static constexpr uint32 kMaxAreaCount = 16;
         /** @brief 걸을 수 없는 영역입니다(장애물 · 구멍 — 베이크에서 그 자리를 뺀다). 표의 번호가 아닙니다. */

@@ -73,7 +73,7 @@ namespace sw::editor
             {
                 const EditorSelfTestContext& context = state._context;
                 string                       line{ context.hasPassed() ? "EditorSelfTest|PASS|" : "EditorSelfTest|FAIL|" };
-                line += registration._pId;
+                line += registration._pID;
                 if ( context.hasPassed() )
                 {
                     ++state._passedCount;
@@ -160,7 +160,7 @@ namespace sw::editor
             EditorSelfTestMarks::setEnabled( true );
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
-                if ( matchesPattern( Registry::getAt( index )._pId, gv_editorSelfTest ) )
+                if ( matchesPattern( Registry::getAt( index )._pID, gv_editorSelfTest ) )
                     state._listSelectedIndex.push_back( index );
             }
             SW_LOG_INFO( "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), gv_editorSelfTest.c_str() );

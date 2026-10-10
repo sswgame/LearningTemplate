@@ -130,10 +130,10 @@ namespace sw
         return _report.hasErrors() == false;
     }
 
-    const ItemVisualDef* AppearanceDatabase::findItemVisual( const hashed_string& itemId ) const
+    const ItemVisualDef* AppearanceDatabase::findItemVisual( const hashed_string& itemID ) const
     {
-        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemId ) : nullptr;
-        return pItem != nullptr ? _visuals.findVisual( pItem->_visualId ) : nullptr;
+        const ItemDef* pItem = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+        return pItem != nullptr ? _visuals.findVisual( pItem->_visualID ) : nullptr;
     }
 
     bool AppearanceDatabase::isOwnerName( const hashed_string& name ) const
@@ -177,24 +177,24 @@ namespace sw
             return;
         for ( const ItemDef& item : _pItemCatalog->getItems() )
         {
-            if ( item._visualId.empty() == false && _visuals.findVisual( item._visualId ) == nullptr )
-                _report.addError( "item '%#' names unknown visual '%#'", item._id.c_str(), item._visualId.c_str() );
+            if ( item._visualID.empty() == false && _visuals.findVisual( item._visualID ) == nullptr )
+                _report.addError( "item '%#' names unknown visual '%#'", item._id.c_str(), item._visualID.c_str() );
             for ( const EquipCondition& condition : item._listEquipCondition )
             {
                 const bool bSetCondition = condition._kind == EquipConditionKind::SetComplete || condition._kind == EquipConditionKind::SetPieces;
-                if ( bSetCondition && _sets.hasSet( condition._setId ) == false )
-                    _report.addError( "item '%#' requires unknown set '%#'", item._id.c_str(), condition._setId.c_str() );
+                if ( bSetCondition && _sets.hasSet( condition._setID ) == false )
+                    _report.addError( "item '%#' requires unknown set '%#'", item._id.c_str(), condition._setID.c_str() );
             }
         }
         vector<hashed_string> listCycle;
         if ( EquipConditionUtil::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
         {
             string chain;
-            for ( const hashed_string& itemId : listCycle )
+            for ( const hashed_string& itemID : listCycle )
             {
                 if ( chain.empty() == false )
                     chain += " -> ";
-                chain += itemId.c_str();
+                chain += itemID.c_str();
             }
             _report.addError( "equip conditions form a cycle: %#", chain );
         }
@@ -221,10 +221,10 @@ namespace sw
             }
             vector<hashed_string> listItem;
             _sets.collectSetItems( set._id, listItem );
-            for ( const hashed_string& itemId : listItem )
+            for ( const hashed_string& itemID : listItem )
             {
-                if ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemId ) == nullptr )
-                    _report.addError( "set '%#' names unknown item '%#'", set._id.c_str(), itemId.c_str() );
+                if ( _pItemCatalog != nullptr && _pItemCatalog->findItem( itemID ) == nullptr )
+                    _report.addError( "set '%#' names unknown item '%#'", set._id.c_str(), itemID.c_str() );
             }
             if ( set._completeVisual.empty() == false && _visuals.findVisual( set._completeVisual ) == nullptr )
                 _report.addError( "set '%#' complete visual '%#' is unknown", set._id.c_str(), set._completeVisual.c_str() );
@@ -296,11 +296,11 @@ namespace sw
         }
     }
 
-    void AppearanceDatabase::validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaId, const utf8* pWhere )
+    void AppearanceDatabase::validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere )
     {
         if ( values.isEmpty() )
             return;
-        const CustomizationSchemaDef* pSchema = _schemas.findSchema( schemaId );
+        const CustomizationSchemaDef* pSchema = _schemas.findSchema( schemaID );
         if ( pSchema == nullptr )
         {
             _report.addError( "%# sets customization values but has no customization schema", pWhere );
@@ -310,7 +310,7 @@ namespace sw
         {
             const CustomizationParamDef* pParam = pSchema->findParameter( value._parameter );
             if ( pParam == nullptr )
-                _report.addError( "%# sets unknown parameter '%#' of schema '%#'", pWhere, value._parameter.c_str(), schemaId.c_str() );
+                _report.addError( "%# sets unknown parameter '%#' of schema '%#'", pWhere, value._parameter.c_str(), schemaID.c_str() );
             else if ( value._option.empty() == false && pParam->findOption( value._option ) == nullptr )
                 _report.addError( "%# sets unknown option '%#' of '%#'", pWhere, value._option.c_str(), value._parameter.c_str() );
         }
@@ -353,10 +353,10 @@ namespace sw
                         _report.addError( "%# value '%#' names unknown option '%#'", where, value._parameter.c_str(), option.c_str() );
                 }
             }
-            for ( const hashed_string& setId : preset._listSet )
+            for ( const hashed_string& setID : preset._listSet )
             {
-                if ( _sets.hasSet( setId ) == false )
-                    _report.addError( "%# equips unknown set '%#'", where, setId.c_str() );
+                if ( _sets.hasSet( setID ) == false )
+                    _report.addError( "%# equips unknown set '%#'", where, setID.c_str() );
             }
             for ( const hashed_string& body : preset._listBody )
             {
@@ -369,12 +369,12 @@ namespace sw
                     _report.addError( "%# equips unknown slot '%#'", where, slot._slot.c_str() );
                 if ( slot._visibleVisual.empty() == false && _visuals.findVisual( slot._visibleVisual ) == nullptr )
                     _report.addError( "%# slot '%#' shows unknown visual '%#'", where, slot._slot.c_str(), slot._visibleVisual.c_str() );
-                for ( const hashed_string& itemId : slot._listItem )
+                for ( const hashed_string& itemID : slot._listItem )
                 {
-                    const ItemDef*       pItem   = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemId ) : nullptr;
-                    const ItemVisualDef* pVisual = pItem != nullptr ? _visuals.findVisual( pItem->_visualId ) : nullptr;
+                    const ItemDef*       pItem   = _pItemCatalog != nullptr ? _pItemCatalog->findItem( itemID ) : nullptr;
+                    const ItemVisualDef* pVisual = pItem != nullptr ? _visuals.findVisual( pItem->_visualID ) : nullptr;
                     if ( _pItemCatalog != nullptr && pItem == nullptr )
-                        _report.addError( "%# slot '%#' names unknown item '%#'", where, slot._slot.c_str(), itemId.c_str() );
+                        _report.addError( "%# slot '%#' names unknown item '%#'", where, slot._slot.c_str(), itemID.c_str() );
                     else if ( pVisual != nullptr )
                         validateItemValues( slot._customization, pVisual->_customization, where.c_str() );
                 }

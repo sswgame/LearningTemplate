@@ -131,7 +131,7 @@ void ShooterComponent::onTick( float32 deltaTime )
         MeshComponent* pMesh = pBullet->addComponent<MeshComponent>();
         if ( pMesh != nullptr )
         {
-            pMesh->setMeshId( "Sphere" );
+            pMesh->setMeshID( "Sphere" );
             pMesh->setLocalPosition( muzzle );
             pMesh->setLocalScale( float3{ 0.2f, 0.2f, 0.2f } );
         }
@@ -149,7 +149,7 @@ void ShooterComponent::onTick( float32 deltaTime )
 ```cpp
 // 잘못된 예 — 틱 안에서는 pMesh 가 nullptr 이다
 MeshComponent* pMesh = pBullet->addComponent<MeshComponent>();
-pMesh->setMeshId( "Sphere" );
+pMesh->setMeshID( "Sphere" );
 ```
 
 람다가 `pOwner` 같은 포인터 대신 `muzzle` 값을 복사해 가져간 점도 눈여겨보세요. 블록이 실행되는 시점에는 쏜 오브젝트가 이미 지워졌을 수도 있습니다.
@@ -400,7 +400,7 @@ Debug 빌드에서는 `WalkScope` 가 단언으로 잡습니다. 그런 일이 �
 핸들은 그 핸들을 만든 씬의 매니저에서만 대상을 찾을 수 있습니다.
 
 **오브젝트 id가 연속이라고 가정하지 마세요.** 오브젝트 id는 프로세스 전체에서 하나로 셉니다. 테스트에서 "다음 id는 +1"을 가정하면 다른 테스트 순서에서 깨집니다.
-id를 보존하며 다시 만들 때는 `createGameObjectWithId` 를 쓰고, 컴포넌트 id는 `onRegister` **전에** `ComponentIdRestoreScope` 로 지정합니다. 다른 프로세스에서 저장한 id는 버립니다.
+id를 보존하며 다시 만들 때는 `createGameObjectWithID` 를 쓰고, 컴포넌트 id는 `onRegister` **전에** `ComponentIDRestoreScope` 로 지정합니다. 다른 프로세스에서 저장한 id는 버립니다.
 
 **이름으로 다른 오브젝트를 가리키는 값을 저장하지 마세요.** 매니저는 같은 이름이 생기면 `Rig_2` 처럼 이름을 바꿉니다.
 그래서 이름으로 찾으면 복제한 오브젝트가 원본을 가리키는 식의 오류가 생깁니다. 다른 오브젝트를 가리키는 `PROPERTY` 는 `GameObjectHandle` 로 두면 파일 id로 저장되고, 로드한 뒤에도 이어집니다.
@@ -418,7 +418,7 @@ id를 보존하며 다시 만들 때는 `createGameObjectWithId` 를 쓰고, 컴
 그래서 위치는 갱신되지 않고 메시도 다시 로드되지 않습니다. 상태 전체를 썼다면 `notifyStateWritten()`, 프로퍼티 하나를 썼다면 `onPropertyChanged( 이름 )` 을 부릅니다.
 값 하나를 복사하고 비교하는 일은 `SerializerUtil` 의 함수를 씁니다. 따로 바이트 단위로 비교하면 비트필드의 이웃 플래그까지 바뀐 것으로 보입니다.
 
-**자원을 다시 만들지는 "무엇으로 만들었는지" 와 비교해서 정하세요.** `MeshComponent` 는 `_resolvedMeshId` 와 `_acquiredMaterialPath` 를 보관합니다.
+**자원을 다시 만들지는 "무엇으로 만들었는지" 와 비교해서 정하세요.** `MeshComponent` 는 `_resolvedMeshID` 와 `_acquiredMaterialPath` 를 보관합니다.
 "이미 있으면 그대로" 로 판단하면 id를 바꿔도 예전 메시가 남습니다.
 
 ### 찾기와 레지스트리
@@ -438,7 +438,7 @@ id를 보존하며 다시 만들 때는 `createGameObjectWithId` 를 쓰고, 컴
 둘이 남으면 어느 쪽이 활성일지가 등록 순서에 달립니다.
 
 **태그 컨테이너를 `const_cast` 로 고치지 마세요.** 태그가 없는 오브젝트의 `getTags()` 는 공용 빈 상수를 돌려줍니다. 이것을 고치면 모든 오브젝트가 그 태그를 갖게 됩니다.
-태그 id는 리터럴(`"Player"_tag`)과 런타임 문자열(`TagID::request`) 모두 `TagID::computeId` 로 만듭니다. `Faction` 과 `Faction.Player` 같은 계층 비교에는 문자열도 필요합니다.
+태그 id는 리터럴(`"Player"_tag`)과 런타임 문자열(`TagID::request`) 모두 `TagID::computeID` 로 만듭니다. `Faction` 과 `Faction.Player` 같은 계층 비교에는 문자열도 필요합니다.
 
 ### 틱 선언과 순서
 

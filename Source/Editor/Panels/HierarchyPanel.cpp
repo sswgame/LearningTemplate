@@ -72,14 +72,14 @@ namespace sw::editor
                 // 2) 태그 문법 "tag:TagName"
                 if ( StringUtil::startsWith( pFilter, "tag:", true ) )
                 {
-                    // ID 의 정본은 `TagID::computeId` 다. 주의: `computeHash64` 를 기본 인자로 부르면 대소문자를 무시해
+                    // ID 의 정본은 `TagID::computeID` 다. 주의: `computeHash64` 를 기본 인자로 부르면 대소문자를 무시해
                     // 태그 쪽(구별한다)과 어긋나고, 대문자로 시작하는 태그를 **하나도 찾지 못한다.**
                     //
                     // 문자열도 함께 넘긴다. `isSubtagOf` 가 그것을 보므로 `tag:Faction` 이 `Faction.Player` 까지
                     // 잡는다. 리터럴 태그는 역조회 표에 등록되지 않아, ID 만 든 TagID 로는 계층 비교를 할 수
                     // 없다. 필터 버퍼는 이 호출 동안 살아 있다.
                     const string_view tagFilter{ pFilter + 4 };
-                    return pObj->hasTag( TagID{ TagID::computeId( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
+                    return pObj->hasTag( TagID{ TagID::computeID( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
                 }
 
                 // 3) 일반 이름 매칭
@@ -90,20 +90,20 @@ namespace sw::editor
              * @brief 이 루트 줄을 그리지 않고 자리만 둘 수 있는지 봅니다 — 접혀 있고, 이름을 바꾸는 중이 아니고, 줄이 창의 보이는 범위 밖일 때.
              * @details 트리 노드의 열림 상태는 drawGameObjectNode 와 같은 ID 로 읽는다(PushID( 오브젝트 id ) 안의 "###go<id>"). @p cursorY 는 이 줄이 놓일 화면 y 다.
              */
-            static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectId, float32 cursorY, float32 rowHeight )
+            static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectID, float32 cursorY, float32 rowHeight )
             {
-                const uint64 objectId = pObj->getObjectId();
-                if ( objectId == renamingObjectId )
+                const uint64 objectID = pObj->getObjectID();
+                if ( objectID == renamingObjectID )
                     return false;
                 const ImVec2 rowMin{ ImGui::GetCursorScreenPos().x, cursorY };
                 if ( ImGui::IsRectVisible( rowMin, ImVec2( rowMin.x + 1.0f, cursorY + rowHeight ) ) )
                     return false;
-                fixed_string<constant::kMaxBuffer64> nodeIdLabel;
-                formatstring( nodeIdLabel.data(), nodeIdLabel.capacity(), "###go%#", objectId );
-                ImGui::PushID( static_cast<int32>( objectId ) );
-                const ImGuiID nodeId = ImGui::GetID( nodeIdLabel.c_str() );
+                fixed_string<constant::kMaxBuffer64> nodeIDLabel;
+                formatstring( nodeIDLabel.data(), nodeIDLabel.capacity(), "###go%#", objectID );
+                ImGui::PushID( static_cast<int32>( objectID ) );
+                const ImGuiID nodeID = ImGui::GetID( nodeIDLabel.c_str() );
                 ImGui::PopID();
-                return ImGui::TreeNodeGetOpen( nodeId ) == false;
+                return ImGui::TreeNodeGetOpen( nodeID ) == false;
             }
 
             static bool subtreeMatchesFilter( GameObject* pObj, const utf8* pFilter )
@@ -130,8 +130,8 @@ namespace sw::editor
                 if ( pPayload->DataSize != static_cast<int32>( sizeof( uint64 ) ) )
                     return;
 
-                const uint64      draggedId = *static_cast<const uint64*>( pPayload->Data );
-                GameObject* const pDragged  = pManager->findGameObjectById( draggedId );
+                const uint64      draggedID = *static_cast<const uint64*>( pPayload->Data );
+                GameObject* const pDragged  = pManager->findGameObjectByID( draggedID );
                 EditorSceneCommands::reparent( pDragged, pTargetParent );
             }
 
@@ -142,7 +142,7 @@ namespace sw::editor
 
                 if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_None ) )
                 {
-                    const uint64 id = pObj->getObjectId();
+                    const uint64 id = pObj->getObjectID();
                     ImGui::SetDragDropPayload( kHierarchyGoPayload, &id, sizeof( id ) );
                     ImGui::TextUnformatted( pObj->getName().c_str() );
                     ImGui::EndDragDropSource();
@@ -349,10 +349,10 @@ namespace sw::editor
 
                 EditorContext* pContext             = EditorContext::get();
                 GameObject*    pSelected            = ( pContext != nullptr )
-                                                        ? pManager->findGameObjectById( pContext->getWorkspace().getSelectedObjectId() )
+                                                        ? pManager->findGameObjectByID( pContext->getWorkspace().getSelectedObjectID() )
                                                         : nullptr;
                 const bool     bCanParentToSelected = pContext != nullptr && pSelected != nullptr && pSelected != pObj &&
-                                                  pContext->getWorkspace().getSelectedComponentId() == 0;
+                                                  pContext->getWorkspace().getSelectedComponentID() == 0;
                 if ( bCanParentToSelected )
                 {
                     if ( EditorSceneCommands::wouldCreateParentCycle( pObj, pSelected ) == false )
@@ -386,18 +386,18 @@ namespace sw::editor
                 if ( pObj == nullptr || pSceneComp == nullptr )
                     return;
 
-                ImGui::PushID( static_cast<int32>( pSceneComp->getComponentId() ) );
+                ImGui::PushID( static_cast<int32>( pSceneComp->getComponentID() ) );
 
                 EditorWorkspace& ws        = pContext->getWorkspace();
-                const bool       bSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-                                         ws.getSelectedComponentId() == pSceneComp->getComponentId() );
+                const bool       bSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
+                                         ws.getSelectedComponentID() == pSceneComp->getComponentID() );
 
                 const utf8* pCompName = pSceneComp->getComponentName().empty() == false
                                           ? pSceneComp->getComponentName().c_str()
                                           : "SceneComponent";
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
-                formatstring( arrLabel.data(), arrLabel.capacity(), "%###sc%#", pCompName, pSceneComp->getComponentId() );
+                formatstring( arrLabel.data(), arrLabel.capacity(), "%###sc%#", pCompName, pSceneComp->getComponentID() );
 
                 bool                           hasChildOnOwner{ false };
                 const vector<SceneComponent*>& listChild = pSceneComp->getChildren();
@@ -433,7 +433,7 @@ namespace sw::editor
             }
 
             static void drawGameObjectNode( GameObject* pObj, GameObjectManager* pManager, const utf8* pFilter,
-                                            uint64& renamingObjectId, fixed_string<constant::kMaxBuffer256>& renameBuffer,
+                                            uint64& renamingObjectID, fixed_string<constant::kMaxBuffer256>& renameBuffer,
                                             bool& bFocusRenameInput )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -449,10 +449,10 @@ namespace sw::editor
                         return;
                 }
 
-                const uint64 objectId  = pObj->getObjectId();
+                const uint64 objectID  = pObj->getObjectID();
                 const bool   bSelected = pContext->getEditorSelection().hasObject( pObj );
 
-                ImGui::PushID( static_cast<int32>( objectId ) );
+                ImGui::PushID( static_cast<int32>( objectID ) );
 
                 // 1) 가시성 토글(눈) — 정사각 아이콘 단추라 DPI 배율을 받는다
                 const bool bActive = pObj->isActiveInHierarchy();
@@ -479,9 +479,9 @@ namespace sw::editor
 
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 if ( badgeStr.empty() == false )
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectId );
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectID );
                 else
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectId );
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectID );
 
                 const bool bHasChildGos   = pObj->hasChildren();
                 const bool bHasComponents = pObj->getComponentCount() > 0;
@@ -510,7 +510,7 @@ namespace sw::editor
                 }
 
                 // 제자리 이름 바꾸기 입력
-                if ( renamingObjectId == objectId && EditorUtil::areSceneEditsAllowed() )
+                if ( renamingObjectID == objectID && EditorUtil::areSceneEditsAllowed() )
                 {
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
@@ -523,15 +523,15 @@ namespace sw::editor
                                            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
                     {
                         (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
-                        renamingObjectId = 0;
+                        renamingObjectID = 0;
                     }
                     if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
                     {
                         (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
-                        renamingObjectId = 0;
+                        renamingObjectID = 0;
                     }
                     if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
-                        renamingObjectId = 0;
+                        renamingObjectID = 0;
                 }
 
                 drawGameObjectContextMenu( pObj, pManager );
@@ -543,7 +543,7 @@ namespace sw::editor
                     pObj->getChildren( listChild );
                     for ( GameObject* pChild : listChild )
                     {
-                        drawGameObjectNode( pChild, pManager, pFilter, renamingObjectId, renameBuffer,
+                        drawGameObjectNode( pChild, pManager, pFilter, renamingObjectID, renameBuffer,
                                             bFocusRenameInput );
                     }
 
@@ -564,18 +564,18 @@ namespace sw::editor
                             continue;
                         }
 
-                        ImGui::PushID( static_cast<int32>( pComp->getComponentId() ) );
+                        ImGui::PushID( static_cast<int32>( pComp->getComponentID() ) );
 
                         EditorWorkspace& ws            = pContext->getWorkspace();
-                        const bool       bCompSelected = ( ws.getSelectedObjectId() == pObj->getObjectId() &&
-                                                     ws.getSelectedComponentId() == pComp->getComponentId() );
+                        const bool       bCompSelected = ( ws.getSelectedObjectID() == pObj->getObjectID() &&
+                                                     ws.getSelectedComponentID() == pComp->getComponentID() );
 
                         const utf8* pCompName = pComp->getComponentName().empty() == false
                                                   ? pComp->getComponentName().c_str()
                                                   : "Component";
 
                         fixed_string<constant::kMaxBuffer256> arrCompLabel;
-                        formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentId() );
+                        formatstring( arrCompLabel.data(), arrCompLabel.capacity(), "%###c%#", pCompName, pComp->getComponentID() );
 
                         if ( ImGui::Selectable( arrCompLabel.c_str(), bCompSelected ) )
                             ws.selectComponent( pObj, pComp );
@@ -597,8 +597,8 @@ namespace sw::editor
     SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );
 
     HierarchyPanel::HierarchyPanel()
-        : _renamingObjectId{ 0 }
-        , _lastDrawnRootId{ 0 }
+        : _renamingObjectID{ 0 }
+        , _lastDrawnRootID{ 0 }
         , _filterBuffer{}
         , _renameBuffer{}
         , _visibleRootCount{ 0 }
@@ -650,7 +650,7 @@ namespace sw::editor
         ImGui::Separator();
 
         editor::EditorSectionDesc treeDesc{};
-        treeDesc._pId  = "##HierarchyTree";
+        treeDesc._pID  = "##HierarchyTree";
         treeDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( treeDesc ) )
         {
@@ -660,7 +660,7 @@ namespace sw::editor
             const bool             bFilterActive = treeFilter.isActive();
             uint32                 visibleRootCount{ 0 };
             uint32                 drawnRootCount{ 0 };
-            uint64                 lastDrawnRootId{ 0 };
+            uint64                 lastDrawnRootID{ 0 };
 
             // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈자리만 둔다 — 스크롤 막대와 다음 줄 위치는 그대로다. 큐브 8000 이면 노드 8000 개
             // (버튼 · 뱃지 문자열 · 트리 노드 · 드래그 드롭)를 프레임마다 다 그리던 자리다. 이어진 빈 줄은 빈자리 하나로 모은다.
@@ -687,7 +687,7 @@ namespace sw::editor
                 if ( bMatches == false )
                     continue;
                 ++visibleRootCount;
-                const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectId, nextRowY, ImGui::GetFrameHeight() );
+                const bool bSkip = _bSkipOffscreenRows && HierarchyPanelInternal::canSkipRootRow( pObj, _renamingObjectID, nextRowY, ImGui::GetFrameHeight() );
                 if ( bSkip )
                 {
                     ++pendingSkipRow;
@@ -695,14 +695,14 @@ namespace sw::editor
                     continue;
                 }
                 flushSkippedRows();
-                HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectId, _renameBuffer, _bFocusRenameInput );
+                HierarchyPanelInternal::drawGameObjectNode( pObj, pManager, _filterBuffer.c_str(), _renamingObjectID, _renameBuffer, _bFocusRenameInput );
                 nextRowY = ImGui::GetCursorScreenPos().y;
                 ++drawnRootCount;
-                lastDrawnRootId = pObj->getObjectId();
+                lastDrawnRootID = pObj->getObjectID();
             }
             flushSkippedRows();
             _drawnRootCount  = drawnRootCount;
-            _lastDrawnRootId = lastDrawnRootId;
+            _lastDrawnRootID = lastDrawnRootID;
 
             _visibleRootCount = visibleRootCount;
             if ( visibleRootCount == 0 && treeFilter.isActive() )
@@ -714,8 +714,8 @@ namespace sw::editor
                 const ImGuiPayload* pGoPayload = ImGui::AcceptDragDropPayload( HierarchyPanelInternal::kHierarchyGoPayload );
                 if ( pGoPayload != nullptr && pGoPayload->DataSize == static_cast<int32>( sizeof( uint64 ) ) )
                 {
-                    const uint64      draggedId = *static_cast<const uint64*>( pGoPayload->Data );
-                    GameObject* const pDragged  = pManager->findGameObjectById( draggedId );
+                    const uint64      draggedID = *static_cast<const uint64*>( pGoPayload->Data );
+                    GameObject* const pDragged  = pManager->findGameObjectByID( draggedID );
                     if ( pDragged != nullptr && pDragged->getParent() != nullptr )
                         EditorSceneCommands::unparent( pDragged, "Detach GameObject to Root" );
                 }
@@ -774,7 +774,7 @@ namespace sw::editor
                     GameObject* pSelected = listSel.back();
                     if ( pSelected != nullptr )
                     {
-                        _renamingObjectId = pSelected->getObjectId();
+                        _renamingObjectID = pSelected->getObjectID();
                         formatstring( _renameBuffer.data(), _renameBuffer.capacity(), "%#", pSelected->getName().c_str() );
                         _bFocusRenameInput = true;
                     }

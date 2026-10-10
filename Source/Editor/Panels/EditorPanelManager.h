@@ -44,7 +44,7 @@ namespace sw::editor
     /**
      * @struct EditorPanelRegistration
      * @brief 패널 한 종류의 등록 줄입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
-     * @details `_pId` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값입니다. `_order` 는 Panel 메뉴 · 그리기 순서이고,
+     * @details `_pID` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값입니다. `_order` 는 Panel 메뉴 · 그리기 순서이고,
      *          카테고리는 Panel 메뉴의 Panels / Tools 묶음을 정합니다.
      */
     struct EditorPanelRegistration : EditorRegistration
@@ -77,12 +77,12 @@ namespace sw::editor
 
         /** @brief 패널을 등록합니다. 메뉴에 보이는 이름은 패널의 `getPanelTitle()` 입니다. */
         void registerPanel( unique_ptr<IEditorPanel> pPanel,
-                            string_view              panelId,
+                            string_view              panelID,
                             EditorPanelCategory      category = EditorPanelCategory::Core );
 
         const vector<EditorPanelEntry>& getPanels() const { return _listPanel; }
-        IEditorPanel*                   findPanel( string_view panelId ) const;
-        bool                            setPanelOpen( string_view panelId, bool bOpen );
+        IEditorPanel*                   findPanel( string_view panelID ) const;
+        bool                            setPanelOpen( string_view panelID, bool bOpen );
         void                            clear();
         /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다(앞의 목록은 버립니다). */
         void registerDefaultPanels();
@@ -111,9 +111,9 @@ namespace sw::editor
 /**
  * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );`
  * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현
- * @param pId      가시성 저장 키(리터럴, 종류 안에서 유일)
+ * @param pID      가시성 저장 키(리터럴, 종류 안에서 유일)
  * @param category Panel 메뉴의 묶음
  * @param order    Panel 메뉴 · 그리기 순서(작을수록 앞)
  */
-#define SW_EDITOR_PANEL( TPanel, pId, category, order ) \
-    SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pId, order }, category, &::sw::editor::createEditorPanel<TPanel> )
+#define SW_EDITOR_PANEL( TPanel, pID, category, order ) \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pID, order }, category, &::sw::editor::createEditorPanel<TPanel> )

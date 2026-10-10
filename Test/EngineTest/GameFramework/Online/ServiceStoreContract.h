@@ -348,15 +348,15 @@ namespace test
     {                                                                                                                                    \
         FixtureType    fixture;                                                                                                          \
         sw::LogContext submitter;                                                                                                        \
-        submitter._traceId     = sw::LogTraceId{ 0x11, 0x22 };                                                                           \
-        submitter._principalId = 0x42;                                                                                                   \
+        submitter._traceID     = sw::LogTraceID{ 0x11, 0x22 };                                                                           \
+        submitter._principalID = 0x42;                                                                                                   \
         sw::LogContext seenInRun;                                                                                                        \
         sw::LogContext seenInComplete;                                                                                                   \
         SW_ASSERT_TRUE( test::ServiceStoreContract::executeLogContextWork( fixture.getStore(), submitter, seenInRun, seenInComplete ) ); \
-        SW_EXPECT_TRUE( seenInRun._traceId == submitter._traceId );                                                                      \
-        SW_EXPECT_EQUAL( seenInRun._principalId, uint64( 0x42 ) );                                                                       \
-        SW_EXPECT_TRUE( seenInComplete._traceId == submitter._traceId );                                                                 \
-        SW_EXPECT_EQUAL( seenInComplete._principalId, uint64( 0x42 ) );                                                                  \
+        SW_EXPECT_TRUE( seenInRun._traceID == submitter._traceID );                                                                      \
+        SW_EXPECT_EQUAL( seenInRun._principalID, uint64( 0x42 ) );                                                                       \
+        SW_EXPECT_TRUE( seenInComplete._traceID == submitter._traceID );                                                                 \
+        SW_EXPECT_EQUAL( seenInComplete._principalID, uint64( 0x42 ) );                                                                  \
         SW_EXPECT_TRUE( sw::LogContext::getCurrent().isEmpty() );                                                                        \
     }
 

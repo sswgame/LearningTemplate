@@ -322,7 +322,7 @@ namespace sw
         waitForAllBakes();
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
-            pAgent->_crowdAgentId = NavigationConstant::kInvalidAgentId;
+            pAgent->_crowdAgentID = NavigationConstant::kInvalidAgentID;
             pAgent->_crowdIndex   = kNotRegistered;
             pAgent->_bOnNavMesh   = SW_FALSE;
         }
@@ -382,11 +382,11 @@ namespace sw
 
     void SceneNavigation::releaseAgent( NavMeshAgentComponent* pAgent )
     {
-        if ( pAgent == nullptr || pAgent->_crowdAgentId == NavigationConstant::kInvalidAgentId )
+        if ( pAgent == nullptr || pAgent->_crowdAgentID == NavigationConstant::kInvalidAgentID )
             return;
         if ( pAgent->_crowdIndex < _listRuntime.size() && _listRuntime[pAgent->_crowdIndex]->_pCrowd != nullptr )
-            _listRuntime[pAgent->_crowdIndex]->_pCrowd->removeAgent( pAgent->_crowdAgentId );
-        pAgent->_crowdAgentId = NavigationConstant::kInvalidAgentId;
+            _listRuntime[pAgent->_crowdIndex]->_pCrowd->removeAgent( pAgent->_crowdAgentID );
+        pAgent->_crowdAgentID = NavigationConstant::kInvalidAgentID;
         pAgent->_crowdIndex   = kNotRegistered;
         pAgent->_bOnNavMesh   = SW_FALSE;
         pAgent->_velocity     = float3{};
@@ -962,7 +962,7 @@ namespace sw
         }
         for ( NavMeshAgentComponent* pAgent : _listAgent )
         {
-            if ( pAgent->_crowdAgentId != NavigationConstant::kInvalidAgentId && pAgent->_crowdIndex < _listRuntime.size() )
+            if ( pAgent->_crowdAgentID != NavigationConstant::kInvalidAgentID && pAgent->_crowdIndex < _listRuntime.size() )
                 writeAgentResult( *pAgent, *_listRuntime[pAgent->_crowdIndex], deltaTime );
         }
     }
@@ -975,7 +975,7 @@ namespace sw
         SceneComponent*               pScene          = pOwner->getPrimarySceneComponent();
         const float3                  currentPosition = pController != nullptr ? pController->getWorldPosition() : ( pScene != nullptr ? pScene->getWorldPosition() : agent._agentPosition );
         INavCrowd&                    crowd           = *runtime._pCrowd;
-        if ( agent._crowdAgentId == NavigationConstant::kInvalidAgentId )
+        if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
         {
             if ( agent._driveMode == NavAgentDriveMode::CharacterController && pController == nullptr )
                 SW_LOG_WARNING( "NavMesh agent '%#' drives a character controller but the object has none - it does not move", pOwner->getName().c_str() );
@@ -988,8 +988,8 @@ namespace sw
                 params._pathOptimizationRange = type._radius * 30.0f;
             }
             params._height      = type._height;
-            agent._crowdAgentId = crowd.addAgent( currentPosition, params );
-            if ( agent._crowdAgentId == NavigationConstant::kInvalidAgentId )
+            agent._crowdAgentID = crowd.addAgent( currentPosition, params );
+            if ( agent._crowdAgentID == NavigationConstant::kInvalidAgentID )
             {
                 SW_LOG_WARNING( "Navmesh '%#' crowd is full (%# agents) - '%#' does not move", runtime._agentType.c_str(), crowd.getMaxAgentCount(),
                                 pOwner->getName().c_str() );
@@ -1008,7 +1008,7 @@ namespace sw
         }
         else if ( agent._bWarpPending == SW_TRUE )
         {
-            crowd.teleportAgent( agent._crowdAgentId, agent._pendingWarp );
+            crowd.teleportAgent( agent._crowdAgentID, agent._pendingWarp );
             if ( pController == nullptr && pScene != nullptr )
                 pScene->setWorldPosition( agent._pendingWarp );
             else if ( pController != nullptr )
@@ -1019,11 +1019,11 @@ namespace sw
         else if ( agent._driveMode != NavAgentDriveMode::Transform )
         {
             // 컨트롤러 · 폰 이동이 옮긴 자리를 받아들인다(SteerOnly 는 군중이 낸 속도를 조종자가 의도로 바꿔 폰이 걸었다).
-            crowd.syncAgentPosition( agent._crowdAgentId, currentPosition );
+            crowd.syncAgentPosition( agent._crowdAgentID, currentPosition );
         }
         else if ( agent._bHasWritten == SW_TRUE && Internal::computeDistance2D( currentPosition, agent._writtenPosition ) > Internal::kTeleportDistance )
         {
-            crowd.teleportAgent( agent._crowdAgentId, currentPosition );
+            crowd.teleportAgent( agent._crowdAgentID, currentPosition );
             agent._bDestinationDirty = agent._bHasDestination;
         }
         agent._bWarpPending = SW_FALSE;
@@ -1033,16 +1033,16 @@ namespace sw
             if ( params._radius <= 0.0f )
                 params._radius = runtime._pNavMesh->getAgentType()._radius;
             params._height = runtime._pNavMesh->getAgentType()._height;
-            crowd.updateAgentParams( agent._crowdAgentId, params );
+            crowd.updateAgentParams( agent._crowdAgentID, params );
             agent._bParamsDirty = SW_FALSE;
         }
         if ( agent._bDestinationDirty == SW_TRUE )
         {
             agent._bDestinationDirty = SW_FALSE;
             if ( agent._bHasDestination == SW_TRUE )
-                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentId, agent._destination ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
+                agent._moveStatus = crowd.requestMoveTarget( agent._crowdAgentID, agent._destination ) ? NavMoveStatus::Moving : NavMoveStatus::Failed;
             else
-                crowd.resetMoveTarget( agent._crowdAgentId );
+                crowd.resetMoveTarget( agent._crowdAgentID );
         }
     }
 
@@ -1050,7 +1050,7 @@ namespace sw
     {
         using Internal = SceneNavigationInternal;
         NavCrowdAgentState state;
-        if ( runtime._pCrowd->findAgentState( agent._crowdAgentId, state ) == false )
+        if ( runtime._pCrowd->findAgentState( agent._crowdAgentID, state ) == false )
             return;
         agent._agentPosition   = state._position;
         agent._velocity        = state._velocity;
@@ -1081,7 +1081,7 @@ namespace sw
                 }
             }
             if ( agent._moveStatus == NavMoveStatus::Arrived )
-                runtime._pCrowd->resetMoveTarget( agent._crowdAgentId );
+                runtime._pCrowd->resetMoveTarget( agent._crowdAgentID );
         }
 
         GameObject*                   pOwner      = agent.getOwner();
@@ -1180,7 +1180,7 @@ namespace sw
         const float4 pathColor{ 1.0f, 0.55f, 0.05f, 1.0f };
         for ( const NavMeshAgentComponent* pAgent : _listAgent )
         {
-            if ( pAgent->_crowdAgentId == NavigationConstant::kInvalidAgentId || pAgent->_bHasDestination == SW_FALSE ||
+            if ( pAgent->_crowdAgentID == NavigationConstant::kInvalidAgentID || pAgent->_bHasDestination == SW_FALSE ||
                  pAgent->_moveStatus != NavMoveStatus::Moving )
                 continue;
             Internal::appendRibbon( pAgent->_agentPosition, pAgent->_nextCorner, pathColor, listVertex );
@@ -1249,10 +1249,10 @@ namespace sw
                          castTo<SkeletalMeshComponent>( pMeshComponent, pSkinnedType ) != nullptr )
                         return;
                     shared_ptr<Mesh> mesh = pMeshComponent->getMesh();
-                    if ( mesh == nullptr && pMeshComponent->getMeshId().empty() == false )
+                    if ( mesh == nullptr && pMeshComponent->getMeshID().empty() == false )
                     {
-                        const string& meshId = pMeshComponent->getMeshId();
-                        mesh                 = StringUtil::endsWith( meshId, MeshAssetFormat::kExtension, true ) ? MeshCache::acquire( meshId ) : MeshUtil::acquirePrimitive( meshId );
+                        const string& meshID = pMeshComponent->getMeshID();
+                        mesh                 = StringUtil::endsWith( meshID, MeshAssetFormat::kExtension, true ) ? MeshCache::acquire( meshID ) : MeshUtil::acquirePrimitive( meshID );
                     }
                     if ( mesh == nullptr || mesh->getVertexCount() < 3 )
                         return;

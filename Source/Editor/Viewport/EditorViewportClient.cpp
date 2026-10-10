@@ -358,11 +358,11 @@ namespace sw::editor
         EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, maxWidth, bHasSelection );
     }
 
-    void EditorViewportClient::draw( const void* pTextureId, const float2& canvasSize )
+    void EditorViewportClient::draw( const void* pTextureID, const float2& canvasSize )
     {
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
-        if ( pTextureId != nullptr )
-            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureId ), ImVec2{ canvasSize._x, canvasSize._y } );
+        if ( pTextureID != nullptr )
+            ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
         EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다(뷰포트 피킹 · 카메라 비행)

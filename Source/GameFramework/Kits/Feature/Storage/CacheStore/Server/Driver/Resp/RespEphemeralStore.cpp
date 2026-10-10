@@ -59,10 +59,10 @@ namespace sw
         , _nextSubscribeConnectNanoseconds{ 0 }
         , _commandBackoffMs{ 0 }
         , _subscribeBackoffMs{ 0 }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
         , _subscriptionAckCount{ 0 }
         , _subscriptionSentCount{ 0 }
-        , _blockingRequestId{ 0 }
+        , _blockingRequestID{ 0 }
         , _bInitialized{ SW_FALSE }
         , _bShutdown{ SW_FALSE }
     {
@@ -102,30 +102,30 @@ namespace sw
 
     uint64 RespEphemeralStore::submit( const EphemeralRequest& request )
     {
-        const uint64 requestId      = _nextRequestId++;
+        const uint64 requestID      = _nextRequestID++;
         Operation&   operation      = _listOperation.emplace_back();
         operation._request          = request;
-        operation._reply._requestId = requestId;
+        operation._reply._requestID = requestID;
         operation._reply._operation = request._operation;
         if ( _bInitialized == SW_FALSE || _bShutdown == SW_TRUE )
         {
             finishOperation( operation, EphemeralResult::Unavailable );
-            return requestId;
+            return requestID;
         }
         if ( request.isWellFormed() == false )
         {
             finishOperation( operation, EphemeralResult::Invalid );
-            return requestId;
+            return requestID;
         }
         if ( request._operation == EphemeralOperation::ScoreRange && request._count <= 0 )
         {
             finishOperation( operation, EphemeralResult::Ok );
-            return requestId;
+            return requestID;
         }
         // 비교 후 쓰기가 GET 답을 기다리는 동안은 내보내지 않는다(막힘이 풀리면 `sendDeferredOperations` 가 맡긴 순서대로 보낸다).
-        if ( _blockingRequestId == 0 )
+        if ( _blockingRequestID == 0 )
             sendOperation( operation );
-        return requestId;
+        return requestID;
     }
 
     int32 RespEphemeralStore::pollReplies( vector<EphemeralReply>& outListReply )
@@ -140,7 +140,7 @@ namespace sw
             }
             for ( const RespReplyRecord& record : listRecord )
             {
-                Operation* pOperation = findOperation( record._tag._requestId );
+                Operation* pOperation = findOperation( record._tag._requestID );
                 if ( pOperation == nullptr || pOperation->_bDone == SW_TRUE )
                     continue;
                 if ( record._bFailed == SW_TRUE )
@@ -250,7 +250,7 @@ namespace sw
         _transport->shutdown(); // 콜백이 우리 잠금을 잡으므로 잠금 밖에서
         _listChannel.clear();
         _listMessage.clear();
-        _blockingRequestId = 0;
+        _blockingRequestID = 0;
     }
 
     void RespEphemeralStore::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
@@ -299,21 +299,21 @@ namespace sw
             (void)_transport->pollIo( 0 );
     }
 
-    RespEphemeralStore::Operation* RespEphemeralStore::findOperation( uint64 requestId )
+    RespEphemeralStore::Operation* RespEphemeralStore::findOperation( uint64 requestID )
     {
         if ( _listOperation.empty() )
             return nullptr;
-        const uint64 firstRequestId = _listOperation.front()._reply._requestId;
-        if ( requestId < firstRequestId || requestId - firstRequestId >= _listOperation.size() )
+        const uint64 firstRequestID = _listOperation.front()._reply._requestID;
+        if ( requestID < firstRequestID || requestID - firstRequestID >= _listOperation.size() )
             return nullptr;
-        return &_listOperation[static_cast<size_t>( requestId - firstRequestId )];
+        return &_listOperation[static_cast<size_t>( requestID - firstRequestID )];
     }
 
     void RespEphemeralStore::sendDeferredOperations()
     {
         for ( Operation& operation : _listOperation )
         {
-            if ( _blockingRequestId != 0 )
+            if ( _blockingRequestID != 0 )
                 return;
             if ( operation._bDone == SW_TRUE || operation._bSent == SW_TRUE )
                 continue;
@@ -366,7 +366,7 @@ namespace sw
             case EphemeralOperation::CompareAndErase:
             {
                 // WATCH 는 이 연결의 상태다 — GET 답을 볼 때까지 뒤 요청을 내보내지 않는다.
-                _blockingRequestId = operation._reply._requestId;
+                _blockingRequestID = operation._reply._requestID;
                 sendCommand( operation, RespCommand{ "WATCH" }.addText( key ), RespEphemeralStoreInternal::kStepFirst );
                 sendCommand( operation, RespCommand{ "GET" }.addText( key ), RespEphemeralStoreInternal::kStepSecond );
                 break;
@@ -440,7 +440,7 @@ namespace sw
         bool bSent = false;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            bSent = _commandConnection.sendCommand( *_transport, command, RespCommandTag{ operation._reply._requestId, step } );
+            bSent = _commandConnection.sendCommand( *_transport, command, RespCommandTag{ operation._reply._requestID, step } );
         }
         if ( bSent )
             ++operation._awaitingReplyCount;
@@ -611,9 +611,9 @@ namespace sw
                 sendCommand( operation, RespCommand{ "EXEC" }, RespEphemeralStoreInternal::kStepCompareExec );
             }
             // 이 요청의 명령은 모두 선에 올랐다 — 뒤 요청이 이어 나가도 WATCH 사이에 끼지 않는다.
-            if ( _blockingRequestId == operation._reply._requestId )
+            if ( _blockingRequestID == operation._reply._requestID )
             {
-                _blockingRequestId = 0;
+                _blockingRequestID = 0;
                 sendDeferredOperations();
             }
             return;
@@ -636,9 +636,9 @@ namespace sw
         operation._reply._value.clear();
         operation._reply._listMember.clear();
         finishOperation( operation, EphemeralResult::Unavailable );
-        if ( _blockingRequestId == operation._reply._requestId )
+        if ( _blockingRequestID == operation._reply._requestID )
         {
-            _blockingRequestId = 0;
+            _blockingRequestID = 0;
             if ( _bShutdown == SW_FALSE )
                 sendDeferredOperations();
         }
@@ -709,7 +709,7 @@ namespace sw
         }
         for ( const RespReplyRecord& record : listRecord )
         {
-            Operation* pOperation = findOperation( record._tag._requestId );
+            Operation* pOperation = findOperation( record._tag._requestID );
             if ( pOperation != nullptr && pOperation->_bDone == SW_FALSE )
                 failOperation( *pOperation );
         }

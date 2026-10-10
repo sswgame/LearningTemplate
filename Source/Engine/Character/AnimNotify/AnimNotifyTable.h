@@ -126,7 +126,7 @@ namespace sw
     struct AnimNotifyStateData
     {
         vector<float3> _listPreviousPoint{};
-        vector<uint64> _listHitObjectId{};
+        vector<uint64> _listHitObjectID{};
         float32        _elapsed{ 0.0f };
         float32        _endTime{ 0.0f };
         uint8          _bHasPrevious{ SW_FALSE };

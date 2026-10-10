@@ -52,8 +52,8 @@ namespace sw
             return false;
         // 끈 플레이어에게는 띄우지 않는다 — 한 번 켜기를 바라는 볼륨도 발동한 것으로 치지 않는다(나중에 켜면 그때 보인다).
         const UserSettingsManager* pSettings = game::getService<UserSettingsManager>();
-        const hashed_string        settingId( TutorialHintComponentInternal::kShowTutorialsSetting );
-        if ( pSettings != nullptr && pSettings->findSetting( settingId ) != nullptr && pSettings->getBoolValue( settingId ) == false )
+        const hashed_string        settingID( TutorialHintComponentInternal::kShowTutorialsSetting );
+        if ( pSettings != nullptr && pSettings->findSetting( settingID ) != nullptr && pSettings->getBoolValue( settingID ) == false )
             return false;
         UiSystem* pUi = _pUiSystem != nullptr ? _pUiSystem : game::getService<UiSystem>();
         if ( pUi == nullptr )

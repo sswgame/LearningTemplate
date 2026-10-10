@@ -91,10 +91,10 @@ namespace sw
         hashed_string getName() const { return _name; }
 
         /** @brief 고유 오브젝트 ID(UID)를 반환합니다. */
-        uint64 getObjectId() const { return _objectId; }
+        uint64 getObjectID() const { return _objectID; }
 
         /** @brief 이 오브젝트를 가리키는 핸들을 반환합니다. 프레임을 넘겨 들고 있을 때는 포인터 대신 이것을 보관합니다. */
-        GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectId ); }
+        GameObjectHandle getHandle() const { return GameObjectHandle::make( _objectID ); }
 
         /** @brief 소유 매니저를 반환합니다. */
         GameObjectManager* getManager() const { return _pOwnerManager; }
@@ -289,8 +289,8 @@ namespace sw
         /** @brief 컴포넌트 인스턴스 하나를 제거합니다. 이 오브젝트의 것이 아니면 false, 틱 중이면 지연 제거로 넘기고 true 입니다. */
         [[nodiscard]] bool removeComponent( Component* pComp );
 
-        /** @brief componentId 로 소유 컴포넌트를 찾습니다. */
-        Component* findComponentById( uint64 componentId, bool bIncludePendingDestroy = false ) const;
+        /** @brief componentID 로 소유 컴포넌트를 찾습니다. */
+        Component* findComponentByID( uint64 componentID, bool bIncludePendingDestroy = false ) const;
 
         /** @brief 이 오브젝트의 틱 멤버십이 바뀌었다고 등록부에 알립니다. 다음 틱 전에 항목을 다시 짓습니다. */
         void markTickOrderDirty();
@@ -344,7 +344,7 @@ namespace sw
         void refreshActiveInHierarchy();
 
         /**
-         * @class ComponentIdRestoreScope
+         * @class ComponentIDRestoreScope
          * @brief 이 구간 동안 대상 오브젝트에 새로 붙는 컴포넌트가 `ObjectIdentity` 에 적힌 원래 ID 를 받게 합니다.
          * @details `ObjectStateSerializer` 가 상태를 되돌리는 로드를 이것으로 감쌉니다. 로드는 컴포넌트를 모두 지우고 팩토리로
          *          다시 만들기 때문에, 감싸지 않으면 속성 하나를 되돌려도 컴포넌트마다 새 ID 가 나가 `ComponentHandle` 이 끊깁니다.
@@ -352,16 +352,16 @@ namespace sw
          *          스레드의 생성과 섞이지 않고, 대상이 아닌 오브젝트에 붙는 컴포넌트는 건드리지 않습니다.
          *          ID 목록과 타입이 맞는 것만 차례로 가져갑니다. 목록에 없는 컴포넌트는 새 ID 를 받습니다.
          */
-        class ComponentIdRestoreScope
+        class ComponentIDRestoreScope
         {
         public:
             /** @brief @p pIdentity 가 nullptr 이면 아무것도 하지 않습니다(새 ID). */
-            ComponentIdRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity );
+            ComponentIDRestoreScope( const GameObject* pTarget, const ObjectIdentity* pIdentity );
             /** @brief 들어오기 전 상태로 되돌립니다. */
-            ~ComponentIdRestoreScope();
+            ~ComponentIDRestoreScope();
 
-            ComponentIdRestoreScope( const ComponentIdRestoreScope& )            = delete;
-            ComponentIdRestoreScope& operator=( const ComponentIdRestoreScope& ) = delete;
+            ComponentIDRestoreScope( const ComponentIDRestoreScope& )            = delete;
+            ComponentIDRestoreScope& operator=( const ComponentIDRestoreScope& ) = delete;
 
         private:
             const GameObject*     _pPreviousTarget;   ///< 바깥 구간의 대상(보통 nullptr)
@@ -370,7 +370,7 @@ namespace sw
         };
 
     private:
-        uint64 _objectId; ///< 오브젝트 고유 일련번호. 매니저가 만들 때 발급합니다 — 매니저 없이 만든 임시 오브젝트는 0(무효 핸들)입니다
+        uint64 _objectID; ///< 오브젝트 고유 일련번호. 매니저가 만들 때 발급합니다 — 매니저 없이 만든 임시 오브젝트는 0(무효 핸들)입니다
         PROPERTY()
         hashed_string      _name;          ///< 오브젝트 이름
         GameObjectManager* _pOwnerManager; ///< 소유 매니저(`GameObjectManager::createGameObject` 가 설정합니다)

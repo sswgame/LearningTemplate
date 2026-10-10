@@ -7,7 +7,7 @@
 `GT.*` 프로파일은 프레임 안만 보고, 로드는 프레임 밖에서 한 번 일어난다 — 재려면 먼저
 **잴 만한 워크로드**가 있어야 한다.
 
-무엇을 만드는가: 메시가 섞인 격자다. 도형을 여러 종류 섞는 이유는 `_meshId` 마다
+무엇을 만드는가: 메시가 섞인 격자다. 도형을 여러 종류 섞는 이유는 `_meshID` 마다
 `MeshUtil::createPrimitive` 가 다른 정점 수를 만들기 때문이다 — 큐브만 N 개면 로드 시간의
 메시 생성 몫이 한 종류에만 쏠려 실제 씬과 다른 그림이 나온다.
 
@@ -77,7 +77,7 @@ def buildMeshEntity(index: int, x: float, y: float, z: float, shape: str) -> str
         '\t\t\t\t\t               _localScale="1,1,1"\n'
         '\t\t\t\t\t               _attachOwner="None"\n'
         '\t\t\t\t\t               _attachComponent="None"\n'
-        '\t\t\t\t\t               _meshId="%s"\n'
+        '\t\t\t\t\t               _meshID="%s"\n'
         '\t\t\t\t\t               _boundsRadius="0.866"\n'
         '\t\t\t\t\t               _blendMode="null"\n'
         '\t\t\t\t\t               _gpuSpinSeed="%d" />\n'

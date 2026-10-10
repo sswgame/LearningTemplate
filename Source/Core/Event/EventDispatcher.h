@@ -61,7 +61,7 @@ namespace sw
         struct EventSubscription
         {
             hashed_string  _channel;
-            EventTypeId    _eventType;
+            EventTypeID    _eventType;
             DelegateHandle _handle;
         };
 
@@ -88,7 +88,7 @@ namespace sw
         {
             assertBusThread();
             std::scoped_lock<SpinLock>       lock{ _busSpinLock };
-            pair<hashed_string, EventTypeId> key( token._channel, token._eventType );
+            pair<hashed_string, EventTypeID> key( token._channel, token._eventType );
             auto                             iter = _mapChannelDispatchTable.find( key );
             if ( iter != _mapChannelDispatchTable.end() )
                 std::static_pointer_cast<IMulticastDelegateBase>( iter->second._pMulticast )->remove( token._handle );
@@ -267,7 +267,7 @@ namespace sw
         struct HashPair
         {
             /** @brief 채널 해시와 타입 ID 를 섞습니다. */
-            size_t operator()( const pair<hashed_string, EventTypeId>& pair ) const
+            size_t operator()( const pair<hashed_string, EventTypeID>& pair ) const
             {
                 size_t h1 = std::hash<hashed_string>{}( pair.first );
                 size_t h2 = std::hash<uint32>{}( pair.second );
@@ -326,7 +326,7 @@ namespace sw
         template <typename T>
         shared_ptr<MulticastDelegate<void( const T& )>> findOrCreateChannelDelegateUnlocked( hashed_string channel )
         {
-            pair<hashed_string, EventTypeId> key( channel, T::kType );
+            pair<hashed_string, EventTypeID> key( channel, T::kType );
 
             const auto iter = _mapChannelDispatchTable.find( key );
             if ( iter != _mapChannelDispatchTable.end() )
@@ -345,14 +345,14 @@ namespace sw
          * @details 같은 키로 멀티캐스트를 가리키는 표를 따로 두지 말 것 — 항상 함께 쓰이고 함께 비워지는 같은 표를 두 벌 두면,
          *          한쪽만 고친 날 디스패치가 이미 사라진 멀티캐스트를 부르게 됩니다.
          */
-        unordered_map<pair<hashed_string, EventTypeId>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
+        unordered_map<pair<hashed_string, EventTypeID>, ChannelDispatchEntry, HashPair> _mapChannelDispatchTable;
         unordered_map<hashed_string, unique_ptr<ChannelEventList>>                      _mapChannelQueue;
 
         /**
          * @brief 큐를 비우는 스레드입니다. 첫 `processEvents` 가 정합니다. 기본값이면 아직 주인이 없습니다.
          * @details `isBusThread` 가 배포본에서도 묻습니다 — 다른 스레드가 읽으므로 원자값입니다.
          */
-        atomic<std::thread::id> _busThreadId;
+        atomic<std::thread::id> _busThreadID;
 
         LinearAllocator _arrFrameAllocator[2];
         vector<void*>   _arrListOverflowAllocation[2];

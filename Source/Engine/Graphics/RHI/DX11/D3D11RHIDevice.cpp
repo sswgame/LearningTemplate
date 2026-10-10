@@ -28,7 +28,7 @@ namespace sw
         // 쓰지 않는다"(-Wunused-function)가 남는다.
 
         /** @brief 출력과 입력에 같은 리소스가 동시에 걸렸을 때 D3D11 이 내는 메시지 ID 목록입니다. */
-        constexpr D3D11_MESSAGE_ID arrHazardMessageId[] = {
+        constexpr D3D11_MESSAGE_ID arrHazardMessageID[] = {
             D3D11_MESSAGE_ID_DEVICE_VSSETSHADERRESOURCES_HAZARD,
             D3D11_MESSAGE_ID_DEVICE_PSSETSHADERRESOURCES_HAZARD,
             D3D11_MESSAGE_ID_DEVICE_GSSETSHADERRESOURCES_HAZARD,
@@ -52,9 +52,9 @@ namespace sw
         {
             // switch 로 적으면 -Wswitch-enum 이 나머지 1318개를 다루라고 요구한다. 경고를 끄는
             // 대신 목록을 순회한다. ID 를 더 넣을 때도 한 줄이다.
-            for ( const D3D11_MESSAGE_ID hazardId : arrHazardMessageId )
+            for ( const D3D11_MESSAGE_ID hazardID : arrHazardMessageID )
             {
-                if ( id == hazardId )
+                if ( id == hazardID )
                     return true;
             }
             return false;

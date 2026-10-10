@@ -254,9 +254,9 @@ namespace sw
         outListPoint.push_back( to._position );
     }
 
-    float3 AreaGraphSchedulePathing::computeAreaCenter( const hashed_string& areaId, const float3& fallback ) const
+    float3 AreaGraphSchedulePathing::computeAreaCenter( const hashed_string& areaID, const float3& fallback ) const
     {
-        const AreaDef* pArea = _pGraph != nullptr ? _pGraph->findArea( areaId ) : nullptr;
+        const AreaDef* pArea = _pGraph != nullptr ? _pGraph->findArea( areaID ) : nullptr;
         if ( pArea == nullptr )
             return fallback;
         const float32 centerU = pArea->_x + pArea->_width * 0.5f;

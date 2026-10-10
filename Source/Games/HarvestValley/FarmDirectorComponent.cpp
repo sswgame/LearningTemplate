@@ -92,11 +92,11 @@ namespace sw
             }
 
             /** @brief 다 자란 작물의 색입니다. 모르는 작물은 초록이다. */
-            static float4 findCropColor( const hashed_string& cropId )
+            static float4 findCropColor( const hashed_string& cropID )
             {
                 struct CropColor
                 {
-                    const utf8* _pId;
+                    const utf8* _pID;
                     float4      _color;
                 };
                 static constexpr CropColor kArrCropColor[] = {
@@ -115,7 +115,7 @@ namespace sw
                 };
                 for ( const CropColor& entry : kArrCropColor )
                 {
-                    if ( cropId == hashed_string( entry._pId ) )
+                    if ( cropID == hashed_string( entry._pID ) )
                         return entry._color;
                 }
                 return float4{ 0.3f, 0.7f, 0.3f, 1.0f };
@@ -398,7 +398,7 @@ namespace sw
         return _arrSoilLook[MathUtil::clamp( soilState, 0, 2 )];
     }
 
-    const shared_ptr<MaterialInstance>& FarmDirectorComponent::findCropLook( const hashed_string& cropId, bool bWithered, bool bCropColored ) const
+    const shared_ptr<MaterialInstance>& FarmDirectorComponent::findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const
     {
         if ( bWithered )
             return _witheredCropLook;
@@ -408,7 +408,7 @@ namespace sw
             const CropLook* pLook = _listCropLook.data();
             for ( size_t lookIndex = 0; lookIndex < _listCropLook.size(); ++lookIndex )
             {
-                if ( pLook[lookIndex]._cropId == cropId )
+                if ( pLook[lookIndex]._cropID == cropID )
                     return pLook[lookIndex]._instance;
             }
         }
@@ -600,7 +600,7 @@ namespace sw
         for ( const CropDef& crop : _cropCatalog.getCrops() )
         {
             CropLook look;
-            look._cropId   = crop._id;
+            look._cropID   = crop._id;
             look._instance = _tintCache.acquire( pCropMaterial, FarmDirectorComponentInternal::findCropColor( crop._id ) );
             _listCropLook.push_back( look );
         }

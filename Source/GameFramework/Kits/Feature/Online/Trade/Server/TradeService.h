@@ -57,20 +57,20 @@ namespace sw
     public:
         TradeService();
 
-        /** @brief 넘긴 것은 모두 빌려 쓴다. @p serverId 는 이 서버 프로세스의 id(0 아님 — 재시작 복구 색인). */
-        void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverId, const TradeSettings& settings );
+        /** @brief 넘긴 것은 모두 빌려 쓴다. @p serverID 는 이 서버 프로세스의 id(0 아님 — 재시작 복구 색인). */
+        void initialize( IServiceStore* pStore, const ITradePolicy* pPolicy, const ILedgerPolicy* pLedgerPolicy, uint64 serverID, const TradeSettings& settings );
         void shutdown();
         /** @brief 이 서버가 연 열린 거래를 모두 닫습니다(기동 때 한 번). 닫힌 거래는 `drainUpdates` 로. */
         void recoverOwnedTrades( int64 nowMs );
 
-        void invite( AccountId fromId, AccountId toId, int64 nowMs, uint64 requestTag );
-        void respondInvite( AccountId responderId, uint64 tradeId, bool bAccept, int64 nowMs, uint64 requestTag );
-        void setOffer( AccountId actorId, uint64 tradeId, const vector<TradeLeg>& listLeg, int64 nowMs, uint64 requestTag );
-        void lock( AccountId actorId, uint64 tradeId, int64 nowMs, uint64 requestTag );
-        void confirm( AccountId actorId, uint64 tradeId, uint32 seenOwnRevision, uint32 seenPeerRevision, int64 nowMs, uint64 requestTag );
-        void cancel( AccountId actorId, uint64 tradeId, int64 nowMs, uint64 requestTag );
+        void invite( AccountID fromID, AccountID toID, int64 nowMs, uint64 requestTag );
+        void respondInvite( AccountID responderID, uint64 tradeID, bool bAccept, int64 nowMs, uint64 requestTag );
+        void setOffer( AccountID actorID, uint64 tradeID, const vector<TradeLeg>& listLeg, int64 nowMs, uint64 requestTag );
+        void lock( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
+        void confirm( AccountID actorID, uint64 tradeID, uint32 seenOwnRevision, uint32 seenPeerRevision, int64 nowMs, uint64 requestTag );
+        void cancel( AccountID actorID, uint64 tradeID, int64 nowMs, uint64 requestTag );
         /** @brief 계정이 떠났다 · 제재됐다 — 그 계정의 열린 거래를 닫는다(완료 없음, 바뀜만). */
-        void closeForAccount( AccountId accountId, TradeCloseReason reason, int64 nowMs );
+        void closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs );
         /** @brief 아는 거래의 시한을 봅니다. */
         void tick( int64 nowMs );
 
@@ -83,7 +83,7 @@ namespace sw
         void applyCompletion( TradeCompletion&& completion, const vector<TradeSnapshot>& listChanged );
 
     private:
-        void submitCommand( TradeOperation operation, uint64 tradeId, const TradeCommand& command, int64 nowMs, uint64 requestTag );
+        void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, int64 nowMs, uint64 requestTag );
         void trackTrade( const TradeSnapshot& snapshot );
 
         EventBuffer<TradeCompletion> _completionBuffer;
@@ -93,7 +93,7 @@ namespace sw
         IServiceStore*               _pStore;
         const ITradePolicy*          _pPolicy;
         const ILedgerPolicy*         _pLedgerPolicy;
-        uint64                       _serverId;
+        uint64                       _serverID;
         uint64                       _nextSeed;
         int32                        _pendingCount;
     };

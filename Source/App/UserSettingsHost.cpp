@@ -71,12 +71,12 @@ namespace sw
             const size_t equalPos  = part.find( '=' );
             if ( equalPos == string_view::npos )
                 continue;
-            const hashed_string        settingId( StringUtil::trim( part.substr( 0, equalPos ) ) );
+            const hashed_string        settingID( StringUtil::trim( part.substr( 0, equalPos ) ) );
             const string_view          value  = StringUtil::trim( part.substr( equalPos + 1 ) );
-            const UserSettingSetResult result = settings.setPendingValue( settingId, value );
+            const UserSettingSetResult result = settings.setPendingValue( settingID, value );
             const bool                 bTaken = result == UserSettingSetResult::Accepted || result == UserSettingSetResult::Clamped || result == UserSettingSetResult::Unchanged;
             if ( bTaken == false )
-                SW_LOG_WARNING( "gv_userSettingsApply: '%#' = '%#' was not taken (result %#)", settingId.c_str(), value, static_cast<uint32>( result ) );
+                SW_LOG_WARNING( "gv_userSettingsApply: '%#' = '%#' was not taken (result %#)", settingID.c_str(), value, static_cast<uint32>( result ) );
         }
 
         const UserSettingsApplyResult applied = settings.applyPending();

@@ -79,7 +79,7 @@ namespace sw
         int32                 _requiredLevel{ 0 };
         uint8                 _bRepeatable{ SW_FALSE };
 
-        const QuestStage* findStage( const hashed_string& stageId ) const;
+        const QuestStage* findStage( const hashed_string& stageID ) const;
     };
 } // namespace sw
 

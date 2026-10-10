@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Module/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildID.h"
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/PlatformOsHeaders.h"
@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        struct ModuleBuildIdInternal
+        struct ModuleBuildIDInternal
         {
             static void appendHex( StringBuilder<constant::kMaxBuffer256>& text, const uint8* pBytes, size_t count, bool bUpper )
             {
@@ -42,10 +42,10 @@ namespace sw
 
             static constexpr DWORD kRsdsSignature = FourCcUtil::make( "RSDS" );
 #elif defined( SW_PLATFORM_LINUX )
-            struct BuildIdQuery
+            struct BuildIDQuery
             {
                 uintptr_t     _address{ 0 };
-                ModuleBuildId _result{};
+                ModuleBuildID _result{};
                 bool          _bMain{ false };
                 bool          _bFound{ false };
             };
@@ -67,7 +67,7 @@ namespace sw
 
             static int32 visitImage( dl_phdr_info* pInfo, size_t, void* pContext )
             {
-                BuildIdQuery* pQuery = static_cast<BuildIdQuery*>( pContext );
+                BuildIDQuery* pQuery = static_cast<BuildIDQuery*>( pContext );
                 if ( pQuery->_bMain == false && containsAddress( pInfo, pQuery->_address ) == false )
                     return 0;
                 pQuery->_bFound             = true;
@@ -106,10 +106,10 @@ namespace sw
 
 namespace sw
 {
-    ModuleBuildId ModuleBuildId::find( const void* pAddressInside )
+    ModuleBuildID ModuleBuildID::find( const void* pAddressInside )
     {
-        using Internal = ModuleBuildIdInternal;
-        ModuleBuildId result;
+        using Internal = ModuleBuildIDInternal;
+        ModuleBuildID result;
 #if defined( SW_PLATFORM_WINDOWS )
         HMODULE hModule = nullptr;
         if ( pAddressInside == nullptr )
@@ -151,7 +151,7 @@ namespace sw
             break;
         }
 #elif defined( SW_PLATFORM_LINUX )
-        Internal::BuildIdQuery query{};
+        Internal::BuildIDQuery query{};
         query._address = reinterpret_cast<uintptr_t>( pAddressInside );
         query._bMain   = pAddressInside == nullptr;
         dl_iterate_phdr( &Internal::visitImage, &query );

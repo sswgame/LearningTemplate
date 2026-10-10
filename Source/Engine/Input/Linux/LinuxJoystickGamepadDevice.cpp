@@ -112,7 +112,7 @@ namespace sw
         : GamepadDevice{ userIndex }
         , _fdJoystick{ invalid_index::kInt32 }
         , _fdForceFeedback{ invalid_index::kInt32 }
-        , _ffEffectId{ invalid_index::kInt16 }
+        , _ffEffectID{ invalid_index::kInt16 }
         , _ffStrongMagnitude{ 0 }
         , _ffWeakMagnitude{ 0 }
         , _reconnectTimer{ 1.0f }
@@ -214,10 +214,10 @@ namespace sw
     {
         if ( _fdForceFeedback >= 0 )
         {
-            if ( _ffEffectId >= 0 )
+            if ( _ffEffectID >= 0 )
             {
-                ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
-                _ffEffectId = invalid_index::kInt16;
+                ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
+                _ffEffectID = invalid_index::kInt16;
             }
             close( _fdForceFeedback );
             _fdForceFeedback = invalid_index::kInt32;
@@ -349,10 +349,10 @@ namespace sw
             return true;
 
         // evdev FF 이펙트는 세기를 직접 갱신하는 API 가 없어, 지우고 다시 만든다.
-        if ( _ffEffectId >= 0 )
+        if ( _ffEffectID >= 0 )
         {
-            ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
-            _ffEffectId = invalid_index::kInt16;
+            ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
+            _ffEffectID = invalid_index::kInt16;
         }
 
         if ( strongMagnitude == 0 && weakMagnitude == 0 )
@@ -376,11 +376,11 @@ namespace sw
             _bHasForceFeedback = SW_FALSE;
             return false;
         }
-        _ffEffectId = effect.id;
+        _ffEffectID = effect.id;
 
         input_event playEvent{};
         playEvent.type  = EV_FF;
-        playEvent.code  = static_cast<uint16>( _ffEffectId );
+        playEvent.code  = static_cast<uint16>( _ffEffectID );
         playEvent.value = 1; // 재생 시작
         if ( write( _fdForceFeedback, &playEvent, sizeof( playEvent ) ) < 0 )
         {
@@ -398,10 +398,10 @@ namespace sw
     {
         GamepadDevice::stopVibration();
 
-        if ( _fdForceFeedback >= 0 && _ffEffectId >= 0 )
+        if ( _fdForceFeedback >= 0 && _ffEffectID >= 0 )
         {
-            ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectId );
-            _ffEffectId = invalid_index::kInt16;
+            ioctl( _fdForceFeedback, EVIOCRMFF, _ffEffectID );
+            _ffEffectID = invalid_index::kInt16;
         }
         _ffStrongMagnitude = 0;
         _ffWeakMagnitude   = 0;

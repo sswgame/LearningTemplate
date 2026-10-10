@@ -67,7 +67,7 @@ namespace sw
 
     void MetroDuelist::pressParry() { _parryPressTime = _time; }
 
-    MetroDefenseOutcome MetroDuelist::receiveAttack( float32 damage, float32 poiseDamage, int32 attackerId )
+    MetroDefenseOutcome MetroDuelist::receiveAttack( float32 damage, float32 poiseDamage, int32 attackerID )
     {
         MetroDefenseOutcome outcome;
         if ( _pCatalog == nullptr || _vitality.isAlive() == false )
@@ -106,7 +106,7 @@ namespace sw
                 (void)_stamina.reduce( _stamina.getValue() );
             }
         }
-        const VitalityDamageResult damageResult = _vitality.applyDamage( healthDamage, poise, attackerId );
+        const VitalityDamageResult damageResult = _vitality.applyDamage( healthDamage, poise, attackerID );
         outcome._healthDamage                   = damageResult._healthDamage;
         outcome._bStaggered                     = damageResult._bPoiseBroken;
         return outcome;

@@ -70,51 +70,51 @@ namespace sw
         _skillCheckCountdown.start( _config._skillCheckInterval > 0.0f ? _config._skillCheckInterval * _random.nextRange( 0.5f, 1.5f ) : 0.0f );
     }
 
-    void InteractionProgress::pushEvent( InteractionEvent::Kind kind, uint32 actorId, float32 value )
+    void InteractionProgress::pushEvent( InteractionEvent::Kind kind, uint32 actorID, float32 value )
     {
         InteractionEvent event;
         event._kind    = kind;
-        event._actorId = actorId;
+        event._actorID = actorID;
         event._value   = value;
         _eventBuffer.push( event );
     }
 
-    bool InteractionProgress::hasParticipant( uint32 actorId ) const
+    bool InteractionProgress::hasParticipant( uint32 actorID ) const
     {
         for ( const uint32 participant : _listParticipant )
         {
-            if ( participant == actorId )
+            if ( participant == actorID )
                 return true;
         }
         return false;
     }
 
-    bool InteractionProgress::join( uint32 actorId )
+    bool InteractionProgress::join( uint32 actorID )
     {
         const bool bFull = static_cast<int32>( _listParticipant.size() ) >= _config._maxParticipants;
-        if ( _bCompleted == SW_TRUE || bFull || hasParticipant( actorId ) )
+        if ( _bCompleted == SW_TRUE || bFull || hasParticipant( actorID ) )
             return false;
-        _listParticipant.push_back( actorId );
+        _listParticipant.push_back( actorID );
         _bRegressing = SW_FALSE;
-        pushEvent( InteractionEvent::Kind::Joined, actorId, _progress );
+        pushEvent( InteractionEvent::Kind::Joined, actorID, _progress );
         return true;
     }
 
-    bool InteractionProgress::leave( uint32 actorId )
+    bool InteractionProgress::leave( uint32 actorID )
     {
         for ( size_t index = 0; index < _listParticipant.size(); ++index )
         {
-            if ( _listParticipant[index] != actorId )
+            if ( _listParticipant[index] != actorID )
                 continue;
             _listParticipant.erase( _listParticipant.begin() + static_cast<ptrdiff_t>( index ) );
-            if ( _bSkillCheckPending == SW_TRUE && _skillCheckActor == actorId )
+            if ( _bSkillCheckPending == SW_TRUE && _skillCheckActor == actorID )
                 _bSkillCheckPending = SW_FALSE; // 떠난 사람의 체크는 없던 일
-            pushEvent( InteractionEvent::Kind::Left, actorId, _progress );
+            pushEvent( InteractionEvent::Kind::Left, actorID, _progress );
             if ( _listParticipant.empty() && _bCompleted == SW_FALSE )
             {
                 if ( _config._bResetOnInterrupt == SW_TRUE )
                     _progress = 0.0f;
-                pushEvent( InteractionEvent::Kind::Interrupted, actorId, _progress );
+                pushEvent( InteractionEvent::Kind::Interrupted, actorID, _progress );
             }
             return true;
         }
@@ -182,9 +182,9 @@ namespace sw
         }
     }
 
-    bool InteractionProgress::respondSkillCheck( uint32 actorId, float32 pressTime )
+    bool InteractionProgress::respondSkillCheck( uint32 actorID, float32 pressTime )
     {
-        if ( _bSkillCheckPending == SW_FALSE || _skillCheckActor != actorId || _pJudge == nullptr )
+        if ( _bSkillCheckPending == SW_FALSE || _skillCheckActor != actorID || _pJudge == nullptr )
             return false;
         const TimingResult result = _pJudge->judge( _skillCheckTarget, pressTime );
         resolveSkillCheck( result.isHit(), result.isHit() ? result._pWindow->_grade : hashed_string{} );
@@ -193,7 +193,7 @@ namespace sw
 
     void InteractionProgress::resolveSkillCheck( bool bSuccess, const hashed_string& grade )
     {
-        const uint32 actorId = _skillCheckActor;
+        const uint32 actorID = _skillCheckActor;
         _bSkillCheckPending  = SW_FALSE;
         scheduleSkillCheck();
         if ( bSuccess )
@@ -201,7 +201,7 @@ namespace sw
             const float32    bonus = _config._gradeBonus.getValue( grade, _config._skillCheckBonus );
             InteractionEvent event;
             event._kind    = InteractionEvent::Kind::SkillCheckSucceeded;
-            event._actorId = actorId;
+            event._actorID = actorID;
             event._grade   = grade;
             event._value   = bonus;
             _eventBuffer.push( event );
@@ -210,7 +210,7 @@ namespace sw
         }
         InteractionEvent event;
         event._kind    = InteractionEvent::Kind::SkillCheckFailed;
-        event._actorId = actorId;
+        event._actorID = actorID;
         event._value   = -_config._skillCheckPenalty;
         event._bNoise  = _config._bSkillCheckFailNoise;
         _eventBuffer.push( event );

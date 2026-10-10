@@ -53,7 +53,7 @@ namespace sw
         CustomizationValueSet _customization{};    ///< 아이템 인스턴스 꾸미기 값
         vector<hashed_string> _listDetachedPart{}; ///< 떨어져 나간 부품
         hashed_string         _slot{};
-        hashed_string         _itemId{};                ///< 비면 빈 칸
+        hashed_string         _itemID{};                ///< 비면 빈 칸
         hashed_string         _visibleVisual{};         ///< 형상 변경 — 비면 아이템 자신의 외형
         hashed_string         _state{};                 ///< 외형 상태(뽑음 · 꽂음 · 켬 · 끔) — 비면 외형의 기본 상태
         float32               _damage{ 0.0f };          ///< 외형 피해 0..1

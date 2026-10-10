@@ -49,7 +49,7 @@ namespace sw
     private:
         ILocalStore*             _pStore;
         INetSecurityProvider*    _pProvider;
-        uint64                   _requestId;
+        uint64                   _requestID;
         uint8                    _arrSecret[LoginConstant::kDeviceSecretSize];
         AccountDeviceSecretState _state;
     };

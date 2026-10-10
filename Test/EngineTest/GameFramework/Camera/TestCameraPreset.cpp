@@ -46,10 +46,10 @@ namespace
             return spec;
         }
 
-        static CameraPresetDef makeFixed( const utf8* pId, const float3& position )
+        static CameraPresetDef makeFixed( const utf8* pID, const float3& position )
         {
             CameraPresetDef def;
-            def._id             = hashed_string( pId );
+            def._id             = hashed_string( pID );
             def._view._mode     = CameraPresetMode::Fixed;
             def._view._offset   = position;
             def._blendIn        = makeBlend( BlendCurve::Linear );
@@ -315,7 +315,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorContinuesFromTheBlendedPoseWhenReactivat
     (void)director.step( 0.016f, target );
     SW_EXPECT_FALSE( director.isBlending() ); // 처음 켠 프리셋은 바로 붙는다
     SW_EXPECT_FALSE( director.activatePreset( catalog, "missing" ) );
-    SW_EXPECT_TRUE( director.getActivePresetId() == hashed_string( "a" ) );
+    SW_EXPECT_TRUE( director.getActivePresetID() == hashed_string( "a" ) );
 
     SW_ASSERT_TRUE( director.activatePreset( catalog, "b" ) );
     SW_EXPECT_TRUE( director.isBlending() );
@@ -380,7 +380,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     pDirector->setTarget( pTargetObject->getHandle() );
     manager.beginPlay();
 
-    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "behind" ) );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "behind" ) );
     SW_EXPECT_FALSE( pCamera->isOrthographic() );
     SW_EXPECT_NEAR_EQUAL( 60.0f * MathUtil::kDegreeToRadian, pCamera->getFieldOfViewY(), 1.0e-5f );
     SW_EXPECT_NEAR_EQUAL( 400.0f, pCamera->getFarPlane(), 1.0e-4f );
@@ -427,14 +427,14 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
                                                              "cycle-action-test" ) );
     pDirector->setCycleAction( hashed_string( "CycleCamera" ) );
     manager.beginPlay();
-    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "first" ) );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "first" ) );
 
     pDirector->onTick( 0.016f ); // 누르지 않았다 — 그대로
-    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "first" ) );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "first" ) );
     input.postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
     input.beginFrame( 0.016f );
     pDirector->onTick( 0.016f );
-    SW_EXPECT_TRUE( pDirector->getActivePresetId() == hashed_string( "second" ) );
+    SW_EXPECT_TRUE( pDirector->getActivePresetID() == hashed_string( "second" ) );
 
     manager.endPlay();
     game::unbindLocalService<InputManager>();

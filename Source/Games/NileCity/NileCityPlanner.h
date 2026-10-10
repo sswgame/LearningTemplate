@@ -56,14 +56,14 @@ namespace sw
         /** @brief 순서표 한 칸 — 도로 한 줄(ㄱ 자) 또는 건물 하나입니다. */
         struct PlanStep
         {
-            hashed_string _buildingId{}; ///< 비면 도로
+            hashed_string _buildingID{}; ///< 비면 도로
             int2          _from{};
             int2          _to{};
             int32         _minPopulation{ 0 };
         };
 
         void addRoad( const int2& from, const int2& to, int32 minPopulation );
-        void addBuilding( const utf8* pBuildingId, int32 x, int32 y, int32 minPopulation );
+        void addBuilding( const utf8* pBuildingID, int32 x, int32 y, int32 minPopulation );
 
         vector<PlanStep> _listStep;
         int32            _nextStep;

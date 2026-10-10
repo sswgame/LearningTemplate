@@ -1,7 +1,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
-#include "Core/Module/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildID.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 
@@ -45,7 +45,7 @@ SW_TEST_CASE( DevCommandShippingTest, RegistryIsCompiledOutOfShipping )
     static_assert( SW_DEV_COMMANDS_ENABLED == 1, "Dev builds keep the dev command registry" );
     SW_EXPECT_STREQ( kRegistryImageMarker, DevCommandRegistry::getImageMarker() );
     // 등록부가 든 이미지를 이름이 아니라 주소로 찾는다 — 리눅스는 libEngine.so 가 Bin 이 아니라 Lib 에 있다.
-    const string imagePath = ModuleBuildId::find( reinterpret_cast<const void*>( &DevCommandRegistry::getImageMarker ) )._modulePath;
+    const string imagePath = ModuleBuildID::find( reinterpret_cast<const void*>( &DevCommandRegistry::getImageMarker ) )._modulePath;
 #endif
     if ( imagePath.empty() || FileUtil::exists( imagePath ) == false )
         SW_TEST_SKIP( "the image is not next to the test's working directory (run from Bin)" );

@@ -229,12 +229,12 @@ namespace sw
         }
 
         // DLC 소유권을 확인한다
-        const uint32 dlcAppId = pReader->getDlcAppId();
-        if ( dlcAppId > 0 )
+        const uint32 dlcAppID = pReader->getDlcAppID();
+        if ( dlcAppID > 0 )
         {
-            if ( _dlcValidator.isBound() && _dlcValidator( dlcAppId ) == false )
+            if ( _dlcValidator.isBound() && _dlcValidator( dlcAppID ) == false )
             {
-                SW_LOG_WARNING( "Access denied for DLC pack %# (DLC AppID %# not owned)", packFilePath, dlcAppId );
+                SW_LOG_WARNING( "Access denied for DLC pack %# (DLC AppID %# not owned)", packFilePath, dlcAppID );
                 return false;
             }
         }

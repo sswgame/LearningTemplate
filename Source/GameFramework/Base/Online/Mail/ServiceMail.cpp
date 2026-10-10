@@ -18,10 +18,10 @@ namespace sw
         {
             static constexpr uint64 kRecordFormat = 1;
 
-            static string makeMailKey( uint64 recipientAccountId, int64 createdMs, string_view idempotencyKey )
+            static string makeMailKey( uint64 recipientAccountID, int64 createdMs, string_view idempotencyKey )
             {
                 string key;
-                ServiceKeyUtil::appendHex64( key, recipientAccountId );
+                ServiceKeyUtil::appendHex64( key, recipientAccountID );
                 key.push_back( '/' );
                 ServiceKeyUtil::appendHex64( key, static_cast<uint64>( createdMs < 0 ? 0 : createdMs ) );
                 key.push_back( '.' );
@@ -29,10 +29,10 @@ namespace sw
                 return key;
             }
 
-            static string makeSentKey( uint64 recipientAccountId, string_view idempotencyKey )
+            static string makeSentKey( uint64 recipientAccountID, string_view idempotencyKey )
             {
                 string key;
-                ServiceKeyUtil::appendHex64( key, recipientAccountId );
+                ServiceKeyUtil::appendHex64( key, recipientAccountID );
                 key.push_back( '/' );
                 key += idempotencyKey;
                 return key;
@@ -81,7 +81,7 @@ namespace sw
         const bool bExpiryOk    = message._expiresMs == 0 || message._expiresMs > message._createdMs;
         const bool bFundingOk   = message._fundingHolder.isValid() && message._fundingHolder._kind != LedgerHolderKind::Sink;
         const bool bReturnOk    = message._expiryAction != ServiceMailExpiryAction::ReturnToSender || message._fundingHolder._kind == LedgerHolderKind::Account;
-        const bool bRecipientOk = message._recipientAccountId != 0 && message._fundingHolder != LedgerHolder::makeAccount( message._recipientAccountId );
+        const bool bRecipientOk = message._recipientAccountID != 0 && message._fundingHolder != LedgerHolder::makeAccount( message._recipientAccountID );
         if ( bTextOk == false || bExpiryOk == false || bFundingOk == false || bReturnOk == false || bRecipientOk == false )
             return false;
         if ( attachmentCount > ServiceMailConstant::kMaxAttachmentCount || LedgerUtil::isValidEscrowToken( message._idempotencyKey ) == false )
@@ -89,7 +89,7 @@ namespace sw
         for ( const ServiceMailAttachment& attachment : message._listAttachment )
         {
             const bool bAmountOk = 1 <= attachment._amount && attachment._amount <= LedgerConstant::kMaxAmount;
-            if ( bAmountOk == false || LedgerUtil::isValidAssetId( attachment._assetId ) == false )
+            if ( bAmountOk == false || LedgerUtil::isValidAssetID( attachment._assetID ) == false )
                 return false;
         }
         return true;
@@ -103,7 +103,7 @@ namespace sw
         if ( isValidMessage( message ) == false )
             return LedgerResult::Invalid;
 
-        const string             sentKey = ServiceMailInternal::makeSentKey( message._recipientAccountId, message._idempotencyKey );
+        const string             sentKey = ServiceMailInternal::makeSentKey( message._recipientAccountID, message._idempotencyKey );
         ServiceRecord            sentRecord;
         const ServiceStoreResult sentRead = connection.readRecord( getSentTable(), sentKey, sentRecord );
         if ( sentRead == ServiceStoreResult::Ok )
@@ -115,7 +115,7 @@ namespace sw
         if ( sentRead != ServiceStoreResult::NotFound )
             return LedgerResult::Unavailable;
 
-        const string       mailKey = ServiceMailInternal::makeMailKey( message._recipientAccountId, message._createdMs, message._idempotencyKey );
+        const string       mailKey = ServiceMailInternal::makeMailKey( message._recipientAccountID, message._createdMs, message._idempotencyKey );
         ServiceTransaction pending;
         const bool         bEscrow = message._fundingHolder._kind != LedgerHolderKind::Mint && message._listAttachment.empty() == false;
         if ( bEscrow )
@@ -125,7 +125,7 @@ namespace sw
                 return LedgerResult::Invalid;
             request._reason           = "mail.send";
             request._timeMs           = message._createdMs;
-            request._actorId          = message._actorId;
+            request._actorID          = message._actorID;
             request._actorKind        = message._actorKind;
             const LedgerHolder escrow = makeEscrowHolder( mailKey );
             for ( const ServiceMailAttachment& attachment : message._listAttachment )
@@ -133,7 +133,7 @@ namespace sw
                 LedgerPosting& posting = request._listPosting.emplace_back();
                 posting._from          = message._fundingHolder;
                 posting._to            = escrow;
-                posting._assetId       = attachment._assetId;
+                posting._assetID       = attachment._assetID;
                 posting._amount        = attachment._amount;
             }
             LedgerTransferOutcome outcome;
@@ -179,12 +179,12 @@ namespace sw
         return key;
     }
 
-    bool ServiceMail::parseRecipient( string_view mailKey, uint64& outAccountId )
+    bool ServiceMail::parseRecipient( string_view mailKey, uint64& outAccountID )
     {
         const size_t width = static_cast<size_t>( ServiceKeyUtil::kHexWidth );
         if ( mailKey.size() <= width || mailKey[width] != '/' )
             return false;
-        return ServiceKeyUtil::parseHex64( mailKey.substr( 0, width ), outAccountId );
+        return ServiceKeyUtil::parseHex64( mailKey.substr( 0, width ), outAccountID );
     }
 
     vector<uint8> ServiceMail::encodeRecord( const ServiceMailRecord& record )
@@ -196,8 +196,8 @@ namespace sw
         writer.writeVarUint( static_cast<uint64>( message._expiryAction ) );
         writer.writeVarUint( static_cast<uint64>( message._actorKind ) );
         writer.writeBool( message._bLiteralText == SW_TRUE );
-        writer.writeVarUint( message._recipientAccountId );
-        writer.writeVarUint( message._actorId );
+        writer.writeVarUint( message._recipientAccountID );
+        writer.writeVarUint( message._actorID );
         writer.writeVarInt( message._createdMs );
         writer.writeVarInt( message._expiresMs );
         LedgerUtil::writeHolder( writer, message._fundingHolder );
@@ -208,7 +208,7 @@ namespace sw
         writer.writeVarUint( message._listAttachment.size() );
         for ( const ServiceMailAttachment& attachment : message._listAttachment )
         {
-            ServiceKeyUtil::writeString( writer, attachment._assetId );
+            ServiceKeyUtil::writeString( writer, attachment._assetID );
             writer.writeVarInt( attachment._amount );
         }
         return writer.releaseBytes();
@@ -231,8 +231,8 @@ namespace sw
         message._expiryAction       = static_cast<ServiceMailExpiryAction>( expiryAction );
         message._actorKind          = static_cast<LedgerActorKind>( actorKind );
         message._bLiteralText       = reader.readBool() ? SW_TRUE : SW_FALSE;
-        message._recipientAccountId = reader.readVarUint();
-        message._actorId            = reader.readVarUint();
+        message._recipientAccountID = reader.readVarUint();
+        message._actorID            = reader.readVarUint();
         message._createdMs          = reader.readVarInt();
         message._expiresMs          = reader.readVarInt();
         if ( LedgerUtil::readHolder( reader, message._fundingHolder ) == false )
@@ -249,7 +249,7 @@ namespace sw
         message._listAttachment.resize( static_cast<size_t>( attachmentCount ) );
         for ( ServiceMailAttachment& attachment : message._listAttachment )
         {
-            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIdSize, attachment._assetId ) == false )
+            if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, attachment._assetID ) == false )
                 return false;
             attachment._amount = reader.readVarInt();
         }

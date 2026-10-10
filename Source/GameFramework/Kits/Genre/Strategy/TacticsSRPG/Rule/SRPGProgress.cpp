@@ -101,13 +101,13 @@ namespace sw
         _bFailed    = SW_FALSE;
     }
 
-    int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitId, const hashed_string& pilotId, int32 pilotLevel )
+    int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitID, const hashed_string& pilotID, int32 pilotLevel )
     {
-        if ( catalog.findUnit( unitId ) == nullptr || catalog.findPilot( pilotId ) == nullptr )
+        if ( catalog.findUnit( unitID ) == nullptr || catalog.findPilot( pilotID ) == nullptr )
             return -1;
         SRPGRosterEntry entry;
-        entry._unitId  = unitId;
-        entry._pilotId = pilotId;
+        entry._unitID  = unitID;
+        entry._pilotID = pilotID;
         entry._pilotLevel.setLevel( catalog.getPilotCurve(), pilotLevel );
         entry._unitLevel.setLevel( catalog.getUnitCurve(), 1 );
         _listRoster.push_back( entry );
@@ -131,7 +131,7 @@ namespace sw
             const SRPGRosterEntry& entry = _listRoster[rosterIndex];
             if ( entry._bLost == SW_TRUE )
                 continue;
-            const int32 unitIndex = field.addUnit( entry._unitId, entry._pilotId, SRPGTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
+            const int32 unitIndex = field.addUnit( entry._unitID, entry._pilotID, SRPGTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
             ++cellIndex;
             SRPGUnit* pUnit = field.findUnit( unitIndex );
             if ( pUnit == nullptr )
@@ -155,7 +155,7 @@ namespace sw
             SRPGRosterEntry& entry = _listRoster[static_cast<size_t>( unit._rosterIndex )];
             entry._pilotLevel      = unit._pilotLevel;
             entry._unitLevel       = unit._unitLevel;
-            entry._unitId          = unit._pDef->_id; // 작전 중 개발했으면 새 기체로
+            entry._unitID          = unit._pDef->_id; // 작전 중 개발했으면 새 기체로
             if ( unit._bAlive == SW_FALSE )
                 entry._bLost = SW_TRUE;
         }
@@ -185,8 +185,8 @@ namespace sw
         {
             entry._pilotLevel.writeState( outArchive );
             entry._unitLevel.writeState( outArchive );
-            StateArchiveUtil::writeName( outArchive, entry._unitId );
-            StateArchiveUtil::writeName( outArchive, entry._pilotId );
+            StateArchiveUtil::writeName( outArchive, entry._unitID );
+            StateArchiveUtil::writeName( outArchive, entry._pilotID );
             outArchive << entry._bLost;
         }
         outArchive << _seed;
@@ -205,7 +205,7 @@ namespace sw
         for ( SRPGRosterEntry& entry : listRoster )
         {
             const bool bEntryRead = entry._pilotLevel.readState( archive ) && entry._unitLevel.readState( archive ) &&
-                                    StateArchiveUtil::readName( archive, entry._unitId ) && StateArchiveUtil::readName( archive, entry._pilotId );
+                                    StateArchiveUtil::readName( archive, entry._unitID ) && StateArchiveUtil::readName( archive, entry._pilotID );
             if ( bEntryRead == false )
                 return false;
             archive >> entry._bLost;

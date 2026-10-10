@@ -17,6 +17,6 @@ namespace sw
     {
     public:
         ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity ) const override;
-        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountId accountId, AccountIdentity& outIdentity ) const override;
+        ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const override;
     };
 } // namespace sw

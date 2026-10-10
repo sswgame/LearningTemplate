@@ -505,20 +505,20 @@ namespace sw
             return;
         }
         if ( isPersistent( pRoot ) == false )
-            _listPersistentObjectId.push_back( pRoot->getObjectId() );
+            _listPersistentObjectID.push_back( pRoot->getObjectID() );
     }
 
     bool SceneManager::isPersistent( const GameObject* pObject ) const
     {
         return pObject != nullptr &&
-               std::find( _listPersistentObjectId.begin(), _listPersistentObjectId.end(), pObject->getObjectId() ) != _listPersistentObjectId.end();
+               std::find( _listPersistentObjectID.begin(), _listPersistentObjectID.end(), pObject->getObjectID() ) != _listPersistentObjectID.end();
     }
 
     void SceneManager::carryPersistentObjects( Scene* pFrom, Scene* pTo )
     {
         GameObjectManager* pSource = ( pFrom != nullptr ) ? pFrom->getObjectManager() : nullptr;
         GameObjectManager* pTarget = ( pTo != nullptr ) ? pTo->getObjectManager() : nullptr;
-        if ( pSource == nullptr || pTarget == nullptr || _listPersistentObjectId.empty() )
+        if ( pSource == nullptr || pTarget == nullptr || _listPersistentObjectID.empty() )
             return;
 
         struct CarriedObject
@@ -530,9 +530,9 @@ namespace sw
         };
 
         vector<uint64> listKept;
-        for ( const uint64 rootId : _listPersistentObjectId )
+        for ( const uint64 rootID : _listPersistentObjectID )
         {
-            GameObject* pRoot = pSource->findGameObjectById( rootId );
+            GameObject* pRoot = pSource->findGameObjectByID( rootID );
             if ( pRoot == nullptr )
                 continue; // 그새 파괴됐다
 
@@ -558,10 +558,10 @@ namespace sw
             }
             // 옮겨 심은 것끼리의 부착(부모 · 소켓 · 오브젝트 안)은 묶음이 **원래 id** 로 잇는다. 이름으로 찾지 않는다 — 들어오는 씬에 같은
             // 이름이 있으면 옮긴 오브젝트의 이름이 바뀌어(`MusicPlayer_2`), 이름으로 찾으면 들어오는 씬의 것에 붙는다.
-            ObjectStateBatch batch( ObjectIdSpace::Live );
+            ObjectStateBatch batch( ObjectIDSpace::Live );
             for ( CarriedObject& carried : listCarried )
             {
-                carried._pTarget = pTarget->createGameObjectWithId( carried._pSource->getName(), carried._identity._objectId );
+                carried._pTarget = pTarget->createGameObjectWithID( carried._pSource->getName(), carried._identity._objectID );
                 ObjectLoadContext context{};
                 context._pIdentity = &carried._identity;
                 context._pBatch    = &batch;
@@ -571,9 +571,9 @@ namespace sw
             }
             batch.finish();
             if ( listCarried.front()._pTarget != nullptr )
-                listKept.push_back( rootId );
+                listKept.push_back( rootID );
         }
-        _listPersistentObjectId = std::move( listKept );
+        _listPersistentObjectID = std::move( listKept );
     }
 
     void SceneManager::activateScene( Scene* pScene )
@@ -598,7 +598,7 @@ namespace sw
         _bWorldPlaying = bPlaying;
         // 플레이를 멈추면 영속 표시를 잊는다(유니티는 플레이 모드를 나가면 영속 씬을 비운다). 편집 중 씬을 바꿀 때 옮겨 가면 안 된다.
         if ( bPlaying == false )
-            _listPersistentObjectId.clear();
+            _listPersistentObjectID.clear();
         GameObjectManager* pObjects = ( _pActiveScene != nullptr ) ? _pActiveScene->getObjectManager() : nullptr;
         if ( pObjects == nullptr )
             return;

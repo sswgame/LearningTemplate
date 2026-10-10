@@ -32,7 +32,7 @@ namespace sw
     /** @brief 제공자 하나의 설정입니다. 시간은 밀리초입니다. */
     struct PlatformLoginProviderSettings
     {
-        vector<string>            _listClientId{};       ///< Oidc — `aud` 로 받아들이는 client id(플랫폼마다 다를 수 있다)
+        vector<string>            _listClientID{};       ///< Oidc — `aud` 로 받아들이는 client id(플랫폼마다 다를 수 있다)
         string                    _name{};               ///< `[a-z0-9_]` 16 자 이하 — 저장 키에 든다
         string                    _issuer{};             ///< Oidc — `iss` 와 같아야 한다
         string                    _jwksURL{};            ///< Oidc
@@ -56,7 +56,7 @@ namespace sw
         /** @brief 설정으로 공통 구현을 만듭니다. @p pHttpClient 는 빌려 쓰고 이 제공자 혼자 거둔다(응답을 다른 쪽과 나누지 않는다). 설정이 틀리면 nullptr. */
         static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HttpClient* pHttpClient );
         /**
-         * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIds":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
+         * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIDs":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
          * @details 모르는 키 · 빠진 필수 키 · 규칙 밖 이름은 오류(@p outError) — 철자가 틀린 설정이 조용히 기본값이 되지 않게.
          */
         [[nodiscard]] static bool readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError );

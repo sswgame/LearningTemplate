@@ -116,7 +116,7 @@ namespace sw
                     return UiReply::makeUnhandled();
                 _bDragging = true;
                 setValueFromUser( computeValueAt( event._position ) );
-                return UiReply::makeHandled().capturePointer().requestFocus( getId() );
+                return UiReply::makeHandled().capturePointer().requestFocus( getID() );
             }
             case UiPointerEventKind::Move:
             {

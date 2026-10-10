@@ -48,13 +48,13 @@ namespace sw
 
         while ( offset + 8 <= byteCount )
         {
-            const uint8* pChunkId  = pBytes + offset;
+            const uint8* pChunkID  = pBytes + offset;
             const uint32 chunkSize = Internal::readUint32LE( pBytes + offset + 4 );
             offset += 8;
             if ( chunkSize > byteCount - offset )
                 break;
 
-            if ( Memory::compare( pChunkId, "fmt ", 4 ) == 0 && chunkSize >= 16 )
+            if ( Memory::compare( pChunkID, "fmt ", 4 ) == 0 && chunkSize >= 16 )
             {
                 const uint8* pFmt  = pBytes + offset;
                 baseFormatTag      = Internal::readUint16LE( pFmt + 0 );
@@ -75,7 +75,7 @@ namespace sw
                 }
                 bHaveFmt = true;
             }
-            else if ( Memory::compare( pChunkId, "data", 4 ) == 0 )
+            else if ( Memory::compare( pChunkID, "data", 4 ) == 0 )
             {
                 pData    = pBytes + offset;
                 dataSize = chunkSize;

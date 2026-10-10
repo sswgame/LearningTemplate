@@ -37,7 +37,7 @@ namespace sw
         FreeTypeRasterizer()
             : _mapFace{}
             , _pLibrary{ nullptr }
-            , _nextFaceId{ 1 }
+            , _nextFaceID{ 1 }
         {
         }
 
@@ -65,9 +65,9 @@ namespace sw
 
         void shutdown()
         {
-            for ( auto& [faceId, entry] : _mapFace )
+            for ( auto& [faceID, entry] : _mapFace )
             {
-                (void)faceId;
+                (void)faceID;
                 FT_Done_Face( entry._pFace );
             }
             _mapFace.clear();
@@ -78,7 +78,7 @@ namespace sw
             }
         }
 
-        FontFaceId loadFace( vector<uint8> fileBytes, uint32 faceIndex, string_view debugName ) override
+        FontFaceID loadFace( vector<uint8> fileBytes, uint32 faceIndex, string_view debugName ) override
         {
             FaceEntry entry{};
             entry._bytes         = std::move( fileBytes );
@@ -87,22 +87,22 @@ namespace sw
             if ( error != 0 || pFace == nullptr )
             {
                 SW_LOG_ERROR( "[Text] Failed to open font face '%#' (index %#, FreeType error %#)", debugName, faceIndex, static_cast<int32>( error ) );
-                return kInvalidFontFaceId;
+                return kInvalidFontFaceID;
             }
             if ( FT_IS_SCALABLE( pFace ) == 0 )
             {
                 SW_LOG_ERROR( "[Text] Font face '%#' has no outlines; only scalable fonts are supported", debugName );
                 FT_Done_Face( pFace );
-                return kInvalidFontFaceId;
+                return kInvalidFontFaceID;
             }
             entry._pFace            = pFace;
             entry._unitsPerEm       = static_cast<float32>( pFace->units_per_EM );
-            const FontFaceId faceId = _nextFaceId++;
-            _mapFace[faceId]        = std::move( entry );
-            return faceId;
+            const FontFaceID faceID = _nextFaceID++;
+            _mapFace[faceID]        = std::move( entry );
+            return faceID;
         }
 
-        void unloadFace( FontFaceId face ) override
+        void unloadFace( FontFaceID face ) override
         {
             auto iter = _mapFace.find( face );
             if ( iter == _mapFace.end() )
@@ -111,7 +111,7 @@ namespace sw
             _mapFace.erase( iter );
         }
 
-        bool findFaceMetrics( FontFaceId face, FontFaceMetrics& outMetrics ) const override
+        bool findFaceMetrics( FontFaceID face, FontFaceMetrics& outMetrics ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
             if ( pEntry == nullptr )
@@ -126,13 +126,13 @@ namespace sw
             return true;
         }
 
-        uint32 findGlyphIndex( FontFaceId face, uint32 codepoint ) const override
+        uint32 findGlyphIndex( FontFaceID face, uint32 codepoint ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
             return pEntry != nullptr ? static_cast<uint32>( FT_Get_Char_Index( pEntry->_pFace, static_cast<FT_ULong>( codepoint ) ) ) : 0u;
         }
 
-        bool findGlyphMetrics( FontFaceId face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
+        bool findGlyphMetrics( FontFaceID face, uint32 glyphIndex, GlyphMetrics& outMetrics ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
             if ( pEntry == nullptr )
@@ -148,7 +148,7 @@ namespace sw
             return true;
         }
 
-        float32 getKerning( FontFaceId face, uint32 leftGlyph, uint32 rightGlyph ) const override
+        float32 getKerning( FontFaceID face, uint32 leftGlyph, uint32 rightGlyph ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
             if ( pEntry == nullptr || FT_HAS_KERNING( pEntry->_pFace ) == 0 )
@@ -159,13 +159,13 @@ namespace sw
             return static_cast<float32>( delta.x ) / pEntry->_unitsPerEm;
         }
 
-        const vector<uint8>* findFaceBytes( FontFaceId face ) const override
+        const vector<uint8>* findFaceBytes( FontFaceID face ) const override
         {
             const FaceEntry* pEntry = findEntry( face );
             return pEntry != nullptr ? &pEntry->_bytes : nullptr;
         }
 
-        bool rasterizeSdf( FontFaceId face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
+        bool rasterizeSdf( FontFaceID face, uint32 glyphIndex, const SdfRasterParams& params, SdfGlyphBitmap& outBitmap ) override
         {
             const FaceEntry* pEntry = findEntry( face );
             if ( pEntry == nullptr )
@@ -215,15 +215,15 @@ namespace sw
             float32       _unitsPerEm{ 1.0f }; ///< 글꼴 단위 → em 비율
         };
 
-        const FaceEntry* findEntry( FontFaceId face ) const
+        const FaceEntry* findEntry( FontFaceID face ) const
         {
             const auto iter = _mapFace.find( face );
             return iter != _mapFace.end() ? &iter->second : nullptr;
         }
 
-        unordered_map<FontFaceId, FaceEntry> _mapFace;
+        unordered_map<FontFaceID, FaceEntry> _mapFace;
         FT_Library                           _pLibrary;
-        FontFaceId                           _nextFaceId;
+        FontFaceID                           _nextFaceID;
     };
 } // namespace sw
 

@@ -35,16 +35,16 @@ namespace sw
                 return MechSkillTrigger::Manual;
             }
 
-            static MechWeaponSlotDef readWeapon( const XmlNode& node, const utf8* pId )
+            static MechWeaponSlotDef readWeapon( const XmlNode& node, const utf8* pID )
             {
                 MechWeaponSlotDef slot;
-                slot._id                = hashed_string( pId );
+                slot._id                = hashed_string( pID );
                 slot._kind              = parseWeaponKind( node.getAttributeText( "kind" ) );
-                const utf8* pWeaponId   = node.findAttribute( "weapon" );
-                slot._weaponId          = pWeaponId != nullptr ? hashed_string( pWeaponId ) : hashed_string{};
+                const utf8* pWeaponID   = node.findAttribute( "weapon" );
+                slot._weaponID          = pWeaponID != nullptr ? hashed_string( pWeaponID ) : hashed_string{};
                 const string_view moves = node.getAttributeText( "moves" );
                 GameDataXml::forEachToken( moves, ",; ", [&]( string_view token )
-                { slot._listMoveId.push_back( hashed_string( token ) ); } );
+                { slot._listMoveID.push_back( hashed_string( token ) ); } );
                 slot._damage          = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", slot._damage ) );
                 slot._downValue       = MathUtil::max( 0.0f, node.getAttributeFloat( "down", slot._downValue ) );
                 slot._knockback       = MathUtil::max( 0.0f, node.getAttributeFloat( "knockback", slot._knockback ) );
@@ -60,10 +60,10 @@ namespace sw
             {
                 for ( XmlNode node = parent.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
                 {
-                    const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-                    if ( pId == nullptr )
+                    const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+                    if ( pID == nullptr )
                         continue;
-                    outMode._listWeapon.push_back( readWeapon( node, pId ) );
+                    outMode._listWeapon.push_back( readWeapon( node, pID ) );
                 }
             }
         };
@@ -116,13 +116,13 @@ namespace sw
         _deckCostLimit = MathUtil::max( 0, root.getAttributeInt( "deckCostLimit", _deckCostLimit ) );
         for ( XmlNode node = root.findChild( "Class" ); node; node = node.findNextSibling( "Class" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
-            const MechRangeClass rangeClass = parseRangeClass( string_view( pId ), MechRangeClass::Count );
+            const MechRangeClass rangeClass = parseRangeClass( string_view( pID ), MechRangeClass::Count );
             if ( rangeClass == MechRangeClass::Count )
             {
-                SW_LOG_WARNING( "%#: unknown mech class '%#' - skipped", sourceName, pId );
+                SW_LOG_WARNING( "%#: unknown mech class '%#' - skipped", sourceName, pID );
                 continue;
             }
             StatBlock& modifier = _arrClassModifier[static_cast<size_t>( rangeClass )];
@@ -133,13 +133,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XmlNode node = root.findChild( "Mech" ); node; node = node.findNextSibling( "Mech" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MechDef def;
-            def._id                = hashed_string( pId );
+            def._id                = hashed_string( pID );
             const utf8* pName      = node.findAttribute( "name" );
-            def._name              = pName != nullptr ? pName : pId;
+            def._name              = pName != nullptr ? pName : pID;
             const utf8* pRank      = node.findAttribute( "rank" );
             def._rank              = pRank != nullptr ? hashed_string( pRank ) : hashed_string{};
             def._rangeClass        = parseRangeClass( node.getAttributeText( "class" ), def._rangeClass );
@@ -169,11 +169,11 @@ namespace sw
 
             for ( XmlNode modeNode = node.findChild( "Mode" ); modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
             {
-                const utf8* pModeId = GameDataXml::findRequiredId( modeNode, sourceName );
-                if ( pModeId == nullptr )
+                const utf8* pModeID = GameDataXml::findRequiredID( modeNode, sourceName );
+                if ( pModeID == nullptr )
                     continue;
                 MechModeDef mode;
-                mode._id             = hashed_string( pModeId );
+                mode._id             = hashed_string( pModeID );
                 mode._speed          = MathUtil::max( 0.0f, modeNode.getAttributeFloat( "speed", node.getAttributeFloat( "speed", mode._speed ) ) );
                 mode._boostCostScale = MathUtil::max( 0.0f, modeNode.getAttributeFloat( "boostCostScale", mode._boostCostScale ) );
                 MechCatalogInternal::readWeapons( modeNode, sourceName, mode );
@@ -193,11 +193,11 @@ namespace sw
 
         for ( XmlNode node = root.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId == nullptr )
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID == nullptr )
                 continue;
             MechSkillDef skill;
-            skill._id        = hashed_string( pId );
+            skill._id        = hashed_string( pID );
             skill._trigger   = MechCatalogInternal::parseSkillTrigger( node.getAttributeText( "trigger" ) );
             skill._threshold = MathUtil::saturate( node.getAttributeFloat( "threshold", skill._threshold ) );
             skill._duration  = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", skill._duration ) );

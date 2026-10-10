@@ -31,7 +31,7 @@ namespace sw
                     const MatchTicket& rightTicket = ( *_pListTicket )[static_cast<size_t>( right._ticketIndex )];
                     if ( leftTicket._enqueuedMs != rightTicket._enqueuedMs )
                         return leftTicket._enqueuedMs < rightTicket._enqueuedMs;
-                    return leftTicket._ticketId < rightTicket._ticketId;
+                    return leftTicket._ticketID < rightTicket._ticketID;
                 }
             };
 
@@ -42,7 +42,7 @@ namespace sw
                 {
                     if ( left._enqueuedMs != right._enqueuedMs )
                         return left._enqueuedMs < right._enqueuedMs;
-                    return left._ticketId < right._ticketId;
+                    return left._ticketID < right._ticketID;
                 }
             };
 
@@ -65,16 +65,16 @@ namespace sw
     MatchMaker::MatchMaker()
         : _listTicket{}
         , _definition{}
-        , _nextMatchId{ 1 }
+        , _nextMatchID{ 1 }
     {
     }
 
-    void MatchMaker::initialize( const MatchModeDefinition& definition, uint64 matchIdSeed )
+    void MatchMaker::initialize( const MatchModeDefinition& definition, uint64 matchIDSeed )
     {
         _definition            = definition;
         _definition._teamCount = std::clamp( definition._teamCount, 1, MatchmakingLimit::kMaxTeamCount );
         _definition._teamSize  = std::clamp( definition._teamSize, 1, MatchmakingLimit::kMaxTeamSize );
-        _nextMatchId           = ( matchIdSeed << 32 ) | 1u;
+        _nextMatchID           = ( matchIDSeed << 32 ) | 1u;
         _listTicket.clear();
     }
 
@@ -89,17 +89,17 @@ namespace sw
     {
         if ( ticket._listMember.empty() || static_cast<int32>( ticket._listMember.size() ) > _definition._teamSize )
             return MatchmakingResult::PartyTooLarge;
-        if ( hasTicket( ticket._ticketId ) )
+        if ( hasTicket( ticket._ticketID ) )
             return MatchmakingResult::AlreadyQueued;
         _listTicket.push_back( ticket );
         return MatchmakingResult::Ok;
     }
 
-    bool MatchMaker::removeTicket( uint64 ticketId )
+    bool MatchMaker::removeTicket( uint64 ticketID )
     {
         for ( size_t index = 0; index < _listTicket.size(); ++index )
         {
-            if ( _listTicket[index]._ticketId == ticketId )
+            if ( _listTicket[index]._ticketID == ticketID )
             {
                 _listTicket.erase( _listTicket.begin() + static_cast<ptrdiff_t>( index ) );
                 return true;
@@ -108,11 +108,11 @@ namespace sw
         return false;
     }
 
-    bool MatchMaker::hasTicket( uint64 ticketId ) const
+    bool MatchMaker::hasTicket( uint64 ticketID ) const
     {
         for ( const MatchTicket& ticket : _listTicket )
         {
-            if ( ticket._ticketId == ticketId )
+            if ( ticket._ticketID == ticketID )
                 return true;
         }
         return false;
@@ -142,7 +142,7 @@ namespace sw
             MatchFormed match;
             if ( tryFormMatch( anchorIndex, nowMs, listUsed, match ) == false )
                 continue;
-            match._matchId = _nextMatchId++;
+            match._matchID = _nextMatchID++;
             outListMatch.push_back( std::move( match ) );
         }
 
@@ -201,7 +201,7 @@ namespace sw
             inoutListUsed[static_cast<size_t>( index )] = 1;
             outMatch._listTicket.push_back( _listTicket[static_cast<size_t>( index )] );
         }
-        outMatch._modeId = _definition._modeId;
+        outMatch._modeID = _definition._modeID;
         outMatch._region = anchor._region;
         int64 ratingSum  = 0;
         for ( const vector<MatchMember>& team : outMatch._listTeam )

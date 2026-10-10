@@ -71,7 +71,7 @@ SW_TEST_CASE( CrashReportTest, RegisteredContextReachesTheContextFile )
     SW_EXPECT_TRUE( text.find( "8484" ) != sw::string::npos );
     SW_EXPECT_TRUE( text.find( "DX12" ) != sw::string::npos );
     SW_EXPECT_TRUE( text.find( "CrashReportTest" ) != sw::string::npos );
-    SW_EXPECT_TRUE( text.find( sw::CrashHandler::getSessionId() ) != sw::string::npos );
+    SW_EXPECT_TRUE( text.find( sw::CrashHandler::getSessionID() ) != sw::string::npos );
 }
 
 /**
@@ -167,10 +167,10 @@ SW_TEST_CASE( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereIsN
  * @brief [CrashReportTest] 세션 ID 는 한 프로세스에서 하나이고 리포트 경로에 들어간다
  * @details 고객이 보낸 덤프와 로그가 같은 실행의 것인지 확인하는 유일한 방법이다.
  */
-SW_TEST_CASE( CrashReportTest, SessionIdIsStableAndAppearsInReportPaths )
+SW_TEST_CASE( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
 {
-    const utf8* pFirst  = sw::CrashHandler::getSessionId();
-    const utf8* pSecond = sw::getCrashSessionId();
+    const utf8* pFirst  = sw::CrashHandler::getSessionID();
+    const utf8* pSecond = sw::getCrashSessionID();
 
     SW_ASSERT_NOT_NULL( pFirst );
     SW_EXPECT_STREQ( pFirst, pSecond );

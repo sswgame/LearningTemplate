@@ -43,7 +43,7 @@ namespace
             tileVisual._tintR           = static_cast<uint8>( 10 + tileIndex );
             tileVisual._tintG           = static_cast<uint8>( 20 + tileIndex );
             tileVisual._tintB           = static_cast<uint8>( 30 + tileIndex );
-            tileVisual._atlasId         = static_cast<uint8>( tileIndex % 4 );
+            tileVisual._atlasID         = static_cast<uint8>( tileIndex % 4 );
             data._listVisual[tileIndex] = tileVisual;
         }
 
@@ -53,7 +53,7 @@ namespace
         warp._targetMap   = "game/empty/maps/cave.tilemap.xml";
         warp._targetTileX = 5;
         warp._targetTileY = 7;
-        warp._pairId      = "cave-entrance";
+        warp._pairID      = "cave-entrance";
         data._listWarp.push_back( warp );
 
         return data;
@@ -88,7 +88,7 @@ namespace
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._tintR ), uint32( actual._listVisual[tileIndex]._tintR ) );
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._tintG ), uint32( actual._listVisual[tileIndex]._tintG ) );
             SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._tintB ), uint32( actual._listVisual[tileIndex]._tintB ) );
-            SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._atlasId ), uint32( actual._listVisual[tileIndex]._atlasId ) );
+            SW_EXPECT_EQUAL( uint32( expected._listVisual[tileIndex]._atlasID ), uint32( actual._listVisual[tileIndex]._atlasID ) );
         }
 
         SW_ASSERT_EQUAL( expected._listWarp.size(), actual._listWarp.size() );
@@ -99,7 +99,7 @@ namespace
             SW_EXPECT_TRUE( expected._listWarp[warpIndex]._targetMap == actual._listWarp[warpIndex]._targetMap );
             SW_EXPECT_EQUAL( expected._listWarp[warpIndex]._targetTileX, actual._listWarp[warpIndex]._targetTileX );
             SW_EXPECT_EQUAL( expected._listWarp[warpIndex]._targetTileY, actual._listWarp[warpIndex]._targetTileY );
-            SW_EXPECT_TRUE( expected._listWarp[warpIndex]._pairId == actual._listWarp[warpIndex]._pairId );
+            SW_EXPECT_TRUE( expected._listWarp[warpIndex]._pairID == actual._listWarp[warpIndex]._pairID );
         }
     }
 } // namespace

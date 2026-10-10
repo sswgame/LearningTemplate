@@ -12,14 +12,14 @@ namespace sw
     {
     }
 
-    size_t NetPrioritizer::findLowerIndex( uint32 entityId ) const
+    size_t NetPrioritizer::findLowerIndex( uint32 entityID ) const
     {
         size_t low  = 0;
         size_t high = _listEntry.size();
         while ( low < high )
         {
             const size_t middle = ( low + high ) / 2;
-            if ( _listEntry[middle]._entityId < entityId )
+            if ( _listEntry[middle]._entityID < entityID )
                 low = middle + 1;
             else
                 high = middle;
@@ -27,10 +27,10 @@ namespace sw
         return low;
     }
 
-    NetPrioritizer::Entry* NetPrioritizer::findEntry( uint32 entityId )
+    NetPrioritizer::Entry* NetPrioritizer::findEntry( uint32 entityID )
     {
-        const size_t index = findLowerIndex( entityId );
-        return index < _listEntry.size() && _listEntry[index]._entityId == entityId ? &_listEntry[index] : nullptr;
+        const size_t index = findLowerIndex( entityID );
+        return index < _listEntry.size() && _listEntry[index]._entityID == entityID ? &_listEntry[index] : nullptr;
     }
 
     void NetPrioritizer::beginAccumulate()
@@ -41,13 +41,13 @@ namespace sw
         }
     }
 
-    void NetPrioritizer::accumulate( uint32 entityId, float32 priority, float32 deltaTime )
+    void NetPrioritizer::accumulate( uint32 entityID, float32 priority, float32 deltaTime )
     {
-        const size_t index = findLowerIndex( entityId );
-        if ( index == _listEntry.size() || _listEntry[index]._entityId != entityId )
+        const size_t index = findLowerIndex( entityID );
+        if ( index == _listEntry.size() || _listEntry[index]._entityID != entityID )
         {
             Entry newEntry;
-            newEntry._entityId = entityId;
+            newEntry._entityID = entityID;
             _listEntry.insert( _listEntry.begin() + static_cast<ptrdiff_t>( index ), newEntry );
         }
         Entry& entry = _listEntry[index];
@@ -66,17 +66,17 @@ namespace sw
     {
         _listRankScratch.assign( _listEntry.begin(), _listEntry.end() );
         std::sort( _listRankScratch.begin(), _listRankScratch.end(), []( const Entry& lhs, const Entry& rhs )
-        { return lhs._accumulated != rhs._accumulated ? lhs._accumulated > rhs._accumulated : lhs._entityId < rhs._entityId; } );
+        { return lhs._accumulated != rhs._accumulated ? lhs._accumulated > rhs._accumulated : lhs._entityID < rhs._entityID; } );
         outListEntity.resize( _listRankScratch.size() );
         for ( size_t index = 0; index < _listRankScratch.size(); ++index )
         {
-            outListEntity[index] = _listRankScratch[index]._entityId;
+            outListEntity[index] = _listRankScratch[index]._entityID;
         }
     }
 
-    void NetPrioritizer::markSent( uint32 entityId )
+    void NetPrioritizer::markSent( uint32 entityID )
     {
-        Entry* pEntry = findEntry( entityId );
+        Entry* pEntry = findEntry( entityID );
         if ( pEntry == nullptr )
             return;
         pEntry->_accumulated            = 0.0f;
@@ -84,9 +84,9 @@ namespace sw
         pEntry->_bUnconfirmed           = SW_FALSE;
     }
 
-    void NetPrioritizer::markSentUnconfirmed( uint32 entityId, uint32 sentTick )
+    void NetPrioritizer::markSentUnconfirmed( uint32 entityID, uint32 sentTick )
     {
-        Entry* pEntry = findEntry( entityId );
+        Entry* pEntry = findEntry( entityID );
         if ( pEntry == nullptr )
             return;
         pEntry->_unconfirmedAccumulated += pEntry->_accumulated;
@@ -95,18 +95,18 @@ namespace sw
         pEntry->_bUnconfirmed    = SW_TRUE;
     }
 
-    bool NetPrioritizer::findUnconfirmedSendTick( uint32 entityId, uint32& outSentTick ) const
+    bool NetPrioritizer::findUnconfirmedSendTick( uint32 entityID, uint32& outSentTick ) const
     {
-        const size_t index = findLowerIndex( entityId );
-        if ( index == _listEntry.size() || _listEntry[index]._entityId != entityId || _listEntry[index]._bUnconfirmed == SW_FALSE )
+        const size_t index = findLowerIndex( entityID );
+        if ( index == _listEntry.size() || _listEntry[index]._entityID != entityID || _listEntry[index]._bUnconfirmed == SW_FALSE )
             return false;
         outSentTick = _listEntry[index]._unconfirmedTick;
         return true;
     }
 
-    void NetPrioritizer::resolveSend( uint32 entityId, bool bDelivered )
+    void NetPrioritizer::resolveSend( uint32 entityID, bool bDelivered )
     {
-        Entry* pEntry = findEntry( entityId );
+        Entry* pEntry = findEntry( entityID );
         if ( pEntry == nullptr || pEntry->_bUnconfirmed == SW_FALSE )
             return;
         if ( bDelivered == false )
@@ -115,9 +115,9 @@ namespace sw
         pEntry->_bUnconfirmed           = SW_FALSE;
     }
 
-    void NetPrioritizer::remove( uint32 entityId )
+    void NetPrioritizer::remove( uint32 entityID )
     {
-        Entry* pEntry = findEntry( entityId );
+        Entry* pEntry = findEntry( entityID );
         if ( pEntry != nullptr )
             _listEntry.erase( _listEntry.begin() + ( pEntry - _listEntry.data() ) );
     }
@@ -128,9 +128,9 @@ namespace sw
         _listRankScratch.clear();
     }
 
-    float32 NetPrioritizer::getAccumulated( uint32 entityId ) const
+    float32 NetPrioritizer::getAccumulated( uint32 entityID ) const
     {
-        const size_t index = findLowerIndex( entityId );
-        return index < _listEntry.size() && _listEntry[index]._entityId == entityId ? _listEntry[index]._accumulated : 0.0f;
+        const size_t index = findLowerIndex( entityID );
+        return index < _listEntry.size() && _listEntry[index]._entityID == entityID ? _listEntry[index]._accumulated : 0.0f;
     }
 } // namespace sw

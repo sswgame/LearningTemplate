@@ -37,7 +37,7 @@ namespace sw
         /** @brief 마지막 싸움 신호 뒤 지난 시간(s)입니다. */
         virtual float32 getCalmSeconds() const = 0;
         /** @brief 신호 값입니다(보상 풀의 "필요" 를 읽는다). 모르는 신호면 0 입니다. */
-        virtual float32 getSignal( const hashed_string& signalId ) const = 0;
+        virtual float32 getSignal( const hashed_string& signalID ) const = 0;
     };
 } // namespace sw
 
@@ -59,14 +59,14 @@ namespace sw
         /** @brief 스트레스 · 신호 · 싸움 시계를 처음으로 돌립니다(판을 다시 시작). */
         void reset();
         /** @brief Impulse 신호에 @p amount 를 넣습니다. 모르는 신호 · Impulse 가 아니면 false 입니다. */
-        bool addSignal( const hashed_string& signalId, float32 amount );
+        bool addSignal( const hashed_string& signalID, float32 amount );
         /** @brief Rate · Level 신호의 지금 값을 정합니다. 모르는 신호 · Impulse 면 false 입니다. */
-        bool setSignal( const hashed_string& signalId, float32 value );
+        bool setSignal( const hashed_string& signalID, float32 value );
 
         void    update( float32 deltaTime ) override;
         float32 getIntensity() const override;
         float32 getCalmSeconds() const override { return _calmSeconds; }
-        float32 getSignal( const hashed_string& signalId ) const override;
+        float32 getSignal( const hashed_string& signalID ) const override;
         float32 getStress() const { return _stress; }
         /** @brief 스트레스 · 싸움 뒤 시간 · 신호 값을 씁니다. */
         void writeState( Archive& outArchive ) const;
@@ -74,7 +74,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        int32   findSignalIndex( const hashed_string& signalId ) const;
+        int32   findSignalIndex( const hashed_string& signalID ) const;
         void    noteCombat();
         float32 computeLevelFloor() const;
 

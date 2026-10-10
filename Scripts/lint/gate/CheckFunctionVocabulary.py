@@ -249,7 +249,7 @@ class CheckFunctionVocabularyGate(LintGate):
         "BannedVerb:TestFramework::buildRunOrder": "개명 예정 makeRunOrder — 실행 순서 값을 돌려준다",
         "BannedVerb:ParserConfig::buildArgs": "개명 예정 makeArgs — 인자 목록 값을 돌려준다",
         "BannedVerb:DevConsoleController::buildVisibleLines": "개명 예정 collectVisibleLines — 보이는 줄을 out 으로 모은다",
-        "BannedVerb:GameObjectStore::generateNewId": "개명 예정 allocateId — 다음 id 를 내준다",
+        "BannedVerb:GameObjectStore::generateNewID": "개명 예정 allocateID — 다음 id 를 내준다",
         "BannedVerb:FrameRenderer::buildOutputPsoVariants": "개명 예정 createOutputPsoVariants — PSO 를 만들어 소유한다",
         "BannedVerb:JoltPhysicsScene::buildShape": "개명 예정 createShape — Jolt 셰이프를 만든다(참조 소유)",
         "BannedVerb:JoltPhysicsScene::buildSingleShape": "개명 예정 createSingleShape — Jolt 셰이프를 만든다(참조 소유)",
@@ -303,7 +303,7 @@ class CheckFunctionVocabularyGate(LintGate):
         },
         {
             "name": "make / create 대신 generate",
-            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static uint64 generateNewId();\n    };\n}\n"},
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        static uint64 generateNewID();\n    };\n}\n"},
         },
         {
             "name": "make / create 대신 construct",

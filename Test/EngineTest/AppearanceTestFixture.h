@@ -170,9 +170,9 @@ namespace appearancetest
         }
 
         /** @brief 프리셋을 펼칩니다. */
-        bool expand( const sw::hashed_string& presetId, uint32 seed, sw::CharacterAppearanceSpec& outSpec ) const
+        bool expand( const sw::hashed_string& presetID, uint32 seed, sw::CharacterAppearanceSpec& outSpec ) const
         {
-            return _database.getPresets().expand( presetId, seed, _database.getSlotTable(), _database.getSets(), _database.getSchemas(), outSpec );
+            return _database.getPresets().expand( presetID, seed, _database.getSlotTable(), _database.getSets(), _database.getSchemas(), outSpec );
         }
 
         /** @brief 슬롯 표 그대로의 장비를 만듭니다(세트 조건은 이 데이터의 세트로 본다). */
@@ -183,14 +183,14 @@ namespace appearancetest
         }
 
         /** @brief 칸에 아이템 하나를 둡니다(인스턴스 상태 없이). */
-        static void setSlot( sw::CharacterAppearanceSpec& inoutSpec, const sw::hashed_string& slot, const sw::hashed_string& itemId )
+        static void setSlot( sw::CharacterAppearanceSpec& inoutSpec, const sw::hashed_string& slot, const sw::hashed_string& itemID )
         {
             sw::AppearanceSlotRequest* pRequest = inoutSpec.findSlot( slot );
             if ( pRequest == nullptr )
                 return;
             *pRequest         = sw::AppearanceSlotRequest{};
             pRequest->_slot   = slot;
-            pRequest->_itemId = itemId;
+            pRequest->_itemID = itemID;
         }
     };
 } // namespace appearancetest

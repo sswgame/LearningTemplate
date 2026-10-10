@@ -33,21 +33,21 @@ namespace sw
 
 namespace sw
 {
-    bool JrpgMember::knowsSpell( const hashed_string& spellId ) const
+    bool JrpgMember::knowsSpell( const hashed_string& spellID ) const
     {
         for ( const hashed_string& entry : _listSpell )
         {
-            if ( entry == spellId )
+            if ( entry == spellID )
                 return true;
         }
         return false;
     }
 
-    int32 JrpgMember::findProficiency( const hashed_string& manualId ) const
+    int32 JrpgMember::findProficiency( const hashed_string& manualID ) const
     {
         for ( const JrpgManualProgress& progress : _listManual )
         {
-            if ( progress._manualId == manualId )
+            if ( progress._manualID == manualID )
                 return progress._proficiency;
         }
         return -1;
@@ -75,15 +75,15 @@ namespace sw
         _pWallet    = refs._pWallet;
     }
 
-    int32 JrpgParty::addMember( const hashed_string& memberId, string_view name, const hashed_string& classId, int32 level )
+    int32 JrpgParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
     {
-        const JrpgClassDef* pClass = _pCatalog != nullptr ? _pCatalog->findClass( classId ) : nullptr;
-        if ( pClass == nullptr || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberId ) >= 0 )
+        const JrpgClassDef* pClass = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
+        if ( pClass == nullptr || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0 )
             return -1;
 
         JrpgMember member;
-        member._id      = memberId;
-        member._classId = classId;
+        member._id      = memberID;
+        member._classID = classID;
         member._name    = string( name );
         member._equipment.initialize( _pItemCatalog, _equipLayout );
         for ( int32 index = 0; index < kJrpgStatCount; ++index )
@@ -108,15 +108,15 @@ namespace sw
         return memberIndex;
     }
 
-    JrpgClassChangeResult JrpgParty::changeClass( int32 memberIndex, const hashed_string& classId, int32 minLevel )
+    JrpgClassChangeResult JrpgParty::changeClass( int32 memberIndex, const hashed_string& classID, int32 minLevel )
     {
         if ( isValidIndex( memberIndex ) == false )
             return JrpgClassChangeResult::UnknownMember;
-        const JrpgClassDef* pClass = _pCatalog != nullptr ? _pCatalog->findClass( classId ) : nullptr;
+        const JrpgClassDef* pClass = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
         if ( pClass == nullptr )
             return JrpgClassChangeResult::UnknownClass;
         JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
-        if ( member._classId == classId )
+        if ( member._classID == classID )
             return JrpgClassChangeResult::SameClass;
         if ( member.isAlive() == false )
             return JrpgClassChangeResult::Dead;
@@ -125,7 +125,7 @@ namespace sw
         if ( pClass->_requiredItem.empty() == false && ( _pInventory == nullptr || _pInventory->hasItem( pClass->_requiredItem ) == false ) )
             return JrpgClassChangeResult::MissingItem;
 
-        member._classId = classId;
+        member._classID = classID;
         for ( int32 index = 0; index < kJrpgStatCount; ++index )
         {
             member._arrStat[index] /= 2;
@@ -134,7 +134,7 @@ namespace sw
         member._hp                                              = MathUtil::clamp( member._hp, 1, member.getStat( JrpgStat::MaxHp ) );
         member._mp                                              = MathUtil::clamp( member._mp, 0, member.getStat( JrpgStat::MaxMp ) );
         member._level.setLevel( _pCatalog->getCurve(), 1 );
-        pushEvent( JrpgPartyEvent::Kind::ClassChanged, memberIndex, 1, classId );
+        pushEvent( JrpgPartyEvent::Kind::ClassChanged, memberIndex, 1, classID );
         learnSpellsAtLevel( memberIndex, *pClass, 1 );
         return JrpgClassChangeResult::Ok;
     }
@@ -143,7 +143,7 @@ namespace sw
     {
         if ( isValidIndex( memberIndex ) == false || amount <= 0 || _pCatalog == nullptr )
             return 0;
-        const JrpgClassDef* pClass = _pCatalog->findClass( _listMember[static_cast<size_t>( memberIndex )]._classId );
+        const JrpgClassDef* pClass = _pCatalog->findClass( _listMember[static_cast<size_t>( memberIndex )]._classID );
         if ( pClass == nullptr )
             return 0;
         const int32 startLevel = _listMember[static_cast<size_t>( memberIndex )]._level.getLevel();
@@ -209,34 +209,34 @@ namespace sw
         return true;
     }
 
-    void JrpgParty::learnManual( int32 memberIndex, const hashed_string& manualId )
+    void JrpgParty::learnManual( int32 memberIndex, const hashed_string& manualID )
     {
-        if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr || _pCatalog->findManual( manualId ) == nullptr )
+        if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr || _pCatalog->findManual( manualID ) == nullptr )
             return;
         JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
-        if ( member.findProficiency( manualId ) >= 0 )
+        if ( member.findProficiency( manualID ) >= 0 )
             return;
-        member._listManual.push_back( JrpgManualProgress{ manualId, 0 } );
-        addProficiency( memberIndex, manualId, 0 );
+        member._listManual.push_back( JrpgManualProgress{ manualID, 0 } );
+        addProficiency( memberIndex, manualID, 0 );
     }
 
-    void JrpgParty::addProficiency( int32 memberIndex, const hashed_string& manualId, int32 amount )
+    void JrpgParty::addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount )
     {
         if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr )
             return;
-        const JrpgManualDef* pManual = _pCatalog->findManual( manualId );
+        const JrpgManualDef* pManual = _pCatalog->findManual( manualID );
         if ( pManual == nullptr )
             return;
         for ( JrpgManualProgress& progress : _listMember[static_cast<size_t>( memberIndex )]._listManual )
         {
-            if ( progress._manualId != manualId )
+            if ( progress._manualID != manualID )
                 continue;
             const int32 before    = amount == 0 ? -1 : progress._proficiency;
             progress._proficiency = MathUtil::max( 0, progress._proficiency + amount );
             for ( const JrpgManualStage& stage : pManual->_listStage )
             {
                 if ( stage._proficiency > before && stage._proficiency <= progress._proficiency )
-                    pushEvent( JrpgPartyEvent::Kind::TechniqueUnlocked, memberIndex, stage._proficiency, stage._techniqueId );
+                    pushEvent( JrpgPartyEvent::Kind::TechniqueUnlocked, memberIndex, stage._proficiency, stage._techniqueID );
             }
             return;
         }
@@ -253,17 +253,17 @@ namespace sw
         for ( const JrpgMember& member : _listMember )
         {
             StateArchiveUtil::writeName( outArchive, member._id );
-            StateArchiveUtil::writeName( outArchive, member._classId );
+            StateArchiveUtil::writeName( outArchive, member._classID );
             outArchive << string_view( member._name );
             outArchive << static_cast<uint32>( member._listSpell.size() );
-            for ( const hashed_string& spellId : member._listSpell )
+            for ( const hashed_string& spellID : member._listSpell )
             {
-                StateArchiveUtil::writeName( outArchive, spellId );
+                StateArchiveUtil::writeName( outArchive, spellID );
             }
             outArchive << static_cast<uint32>( member._listManual.size() );
             for ( const JrpgManualProgress& progress : member._listManual )
             {
-                StateArchiveUtil::writeName( outArchive, progress._manualId );
+                StateArchiveUtil::writeName( outArchive, progress._manualID );
                 outArchive << progress._proficiency;
             }
             // 장비는 칸 순서대로 아이템 id 만(빈 칸은 빈 이름) — 칸 구성은 `initialize` 의 것이다.
@@ -271,7 +271,7 @@ namespace sw
             outArchive << static_cast<uint32>( listSlot.size() );
             for ( const EquipSlot& slot : listSlot )
             {
-                StateArchiveUtil::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemId );
+                StateArchiveUtil::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemID );
             }
             member._level.writeState( outArchive );
             for ( const int32 stat : member._arrStat )
@@ -294,16 +294,16 @@ namespace sw
         for ( JrpgMember& member : listMember )
         {
             uint32     count     = 0;
-            const bool bHeadRead = StateArchiveUtil::readName( archive, member._id ) && StateArchiveUtil::readName( archive, member._classId );
-            if ( bHeadRead == false || _pCatalog->findClass( member._classId ) == nullptr )
+            const bool bHeadRead = StateArchiveUtil::readName( archive, member._id ) && StateArchiveUtil::readName( archive, member._classID );
+            if ( bHeadRead == false || _pCatalog->findClass( member._classID ) == nullptr )
                 return false;
             archive >> member._name;
             if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
                 return false;
             member._listSpell.resize( count );
-            for ( hashed_string& spellId : member._listSpell )
+            for ( hashed_string& spellID : member._listSpell )
             {
-                if ( StateArchiveUtil::readName( archive, spellId ) == false )
+                if ( StateArchiveUtil::readName( archive, spellID ) == false )
                     return false;
             }
             // 비급마다 이름(4) + 숙련(4)
@@ -312,7 +312,7 @@ namespace sw
             member._listManual.resize( count );
             for ( JrpgManualProgress& progress : member._listManual )
             {
-                if ( StateArchiveUtil::readName( archive, progress._manualId ) == false )
+                if ( StateArchiveUtil::readName( archive, progress._manualID ) == false )
                     return false;
                 archive >> progress._proficiency;
             }
@@ -322,13 +322,13 @@ namespace sw
                 return false;
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {
-                hashed_string itemId;
-                if ( StateArchiveUtil::readName( archive, itemId ) == false )
+                hashed_string itemID;
+                if ( StateArchiveUtil::readName( archive, itemID ) == false )
                     return false;
-                if ( itemId.empty() )
+                if ( itemID.empty() )
                     continue;
                 InventorySlot item;
-                item._itemId = itemId;
+                item._itemID = itemID;
                 item._count  = 1;
                 vector<InventorySlot> listRemoved;
                 const hashed_string&  slotName = member._equipment.getSlots()[slotIndex]._name;
@@ -353,27 +353,27 @@ namespace sw
         return true;
     }
 
-    bool JrpgParty::canUseSpell( int32 memberIndex, const hashed_string& spellId ) const
+    bool JrpgParty::canUseSpell( int32 memberIndex, const hashed_string& spellID ) const
     {
         if ( isValidIndex( memberIndex ) == false )
             return false;
-        return _listMember[static_cast<size_t>( memberIndex )].knowsSpell( spellId ) || isTechniqueUnlocked( memberIndex, spellId );
+        return _listMember[static_cast<size_t>( memberIndex )].knowsSpell( spellID ) || isTechniqueUnlocked( memberIndex, spellID );
     }
 
-    bool JrpgParty::isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueId ) const
+    bool JrpgParty::isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const
     {
         if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr )
             return false;
-        const JrpgSpellDef* pSpell = _pCatalog->findSpell( techniqueId );
-        if ( pSpell == nullptr || pSpell->_manualId.empty() )
+        const JrpgSpellDef* pSpell = _pCatalog->findSpell( techniqueID );
+        if ( pSpell == nullptr || pSpell->_manualID.empty() )
             return false;
-        const JrpgManualDef* pManual     = _pCatalog->findManual( pSpell->_manualId );
-        const int32          proficiency = _listMember[static_cast<size_t>( memberIndex )].findProficiency( pSpell->_manualId );
+        const JrpgManualDef* pManual     = _pCatalog->findManual( pSpell->_manualID );
+        const int32          proficiency = _listMember[static_cast<size_t>( memberIndex )].findProficiency( pSpell->_manualID );
         if ( pManual == nullptr || proficiency < 0 )
             return false;
         for ( const JrpgManualStage& stage : pManual->_listStage )
         {
-            if ( stage._techniqueId == techniqueId )
+            if ( stage._techniqueID == techniqueID )
                 return proficiency >= stage._proficiency;
         }
         return false;
@@ -409,11 +409,11 @@ namespace sw
         return count;
     }
 
-    int32 JrpgParty::findMemberIndex( const hashed_string& memberId ) const
+    int32 JrpgParty::findMemberIndex( const hashed_string& memberID ) const
     {
         for ( int32 index = 0; index < static_cast<int32>( _listMember.size() ); ++index )
         {
-            if ( _listMember[static_cast<size_t>( index )]._id == memberId )
+            if ( _listMember[static_cast<size_t>( index )]._id == memberID )
                 return index;
         }
         return -1;
@@ -439,10 +439,10 @@ namespace sw
         JrpgMember& member = _listMember[static_cast<size_t>( memberIndex )];
         for ( const JrpgLearnEntry& learn : classDef._listLearn )
         {
-            if ( learn._level != level || member.knowsSpell( learn._spellId ) )
+            if ( learn._level != level || member.knowsSpell( learn._spellID ) )
                 continue;
-            member._listSpell.push_back( learn._spellId );
-            pushEvent( JrpgPartyEvent::Kind::LearnedSpell, memberIndex, level, learn._spellId );
+            member._listSpell.push_back( learn._spellID );
+            pushEvent( JrpgPartyEvent::Kind::LearnedSpell, memberIndex, level, learn._spellID );
         }
     }
 

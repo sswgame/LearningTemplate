@@ -81,14 +81,14 @@ namespace sw
         [[nodiscard]] bool takeStateChange();
 
         /** @brief 이 계정에 지금 열린 이벤트입니다. @p bClientOnly 면 클라이언트에 보이는 것만. */
-        void computeActiveEvents( AccountId accountId, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
-        bool isEventActive( string_view eventId, AccountId accountId, string_view region, uint32 buildVersion, int64 nowMs ) const;
+        void computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs, bool bClientOnly, vector<LiveEventState>& outListEvent ) const;
+        bool isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, int64 nowMs ) const;
         /** @brief 매개변수 값(원격 설정까지 푼 값)입니다. 이벤트 · 키가 없으면 false. */
-        bool findParameter( string_view eventId, string_view key, string& outValue ) const;
+        bool findParameter( string_view eventID, string_view key, string& outValue ) const;
 
-        // 운영(게임 조립 — GF_Admin 명령이 부른다). 완료는 drainCompletions. @p actorId 는 감사 줄의 GM 계정(0 = system).
-        void putEvent( const LiveEventDefinition& definition, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag );
-        void removeEvent( string_view eventId, AccountId actorId, string_view memo, int64 nowMs, uint64 requestTag );
+        // 운영(게임 조립 — GF_Admin 명령이 부른다). 완료는 drainCompletions. @p actorID 는 감사 줄의 GM 계정(0 = system).
+        void putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
+        void removeEvent( string_view eventID, AccountID actorID, string_view memo, int64 nowMs, uint64 requestTag );
         void drainCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
 
         const vector<LiveEventDefinition>& getEvents() const { return _listEvent; }
@@ -104,7 +104,7 @@ namespace sw
         uint64                     computeOpenHash( int64 nowMs ) const;
         string                     resolveValue( const string& value ) const;
         bool                       isKillSwitchOff() const;
-        const LiveEventDefinition* findEvent( string_view eventId ) const;
+        const LiveEventDefinition* findEvent( string_view eventID ) const;
         void                       submitWrite( unique_ptr<LiveOpsWriteWork> work );
 
         vector<LiveEventDefinition>    _listEvent;

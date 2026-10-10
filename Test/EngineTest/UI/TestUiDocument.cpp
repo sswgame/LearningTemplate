@@ -316,7 +316,7 @@ SW_TEST_CASE( UiDocumentTest, CommandRoutesToScreen )
     SW_ASSERT_NOT_NULL( pCounting );
     sw::ButtonWidget* pGo = pCounting->getTree().findWidget<sw::ButtonWidget>( "Go" );
     SW_ASSERT_NOT_NULL( pGo );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pCounting->getTree(), pGo->getId() ) );
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pCounting->getTree(), pGo->getID() ) );
     sw::UiActionEvent accept{};
     accept._action = sw::hashed_string( sw::UiActionName::kAccept );
     SW_EXPECT_TRUE( pGo->onActionEvent( accept, sw::UiRoutePhase::Bubble ).isHandled() );
@@ -369,11 +369,11 @@ SW_TEST_CASE( UiDocumentTest, BindingAttributesAreExtracted )
 
     const sw::vector<sw::UiBindingDesc>& listBinding = pScreen->getBindings();
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listBinding.size() ) );
-    SW_EXPECT_EQUAL( pHealth->getId(), listBinding[0]._widget );
+    SW_EXPECT_EQUAL( pHealth->getID(), listBinding[0]._widget );
     SW_EXPECT_STREQ( "_text", listBinding[0]._propertyPath.c_str() );
     SW_EXPECT_STREQ( "{bind:_health}", listBinding[0]._expression.c_str() );
     SW_EXPECT_EQUAL( 3u, listBinding[0]._sourceLine );
-    SW_EXPECT_EQUAL( pBar->getId(), listBinding[1]._widget );
+    SW_EXPECT_EQUAL( pBar->getID(), listBinding[1]._widget );
     SW_EXPECT_STREQ( "_slot._widthOverride", listBinding[1]._propertyPath.c_str() );
     SW_EXPECT_STREQ( "{bind:_barWidth, mode=OneWay}", listBinding[1]._expression.c_str() );
     SW_EXPECT_EQUAL( 0.0f, pBar->getLayoutSlot()._widthOverride );
@@ -425,8 +425,8 @@ SW_TEST_CASE( UiDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     Util::runFrame( fixture._input, fixture._ui );
     sw::ButtonWidget* pOldB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
     SW_ASSERT_NOT_NULL( pOldB );
-    const sw::WidgetId oldId = pOldB->getId();
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), oldId ) );
+    const sw::WidgetID oldID = pOldB->getID();
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( pScreen->getTree(), oldID ) );
     sw::ScrollPanel* pScroll = pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" );
     SW_ASSERT_NOT_NULL( pScroll );
     pScroll->setScrollOffset( sw::float2{ 0.0f, 300.0f } );
@@ -437,10 +437,10 @@ SW_TEST_CASE( UiDocumentTest, ReloadRebuildsAndKeepsFocusByName )
     SW_ASSERT_TRUE( fixture._ui.findScreen( handle ) == pScreen ); // 같은 화면 · 새 트리
     const sw::ButtonWidget* pNewB = pScreen->getTree().findWidget<sw::ButtonWidget>( "B" );
     SW_ASSERT_NOT_NULL( pNewB );
-    SW_EXPECT_TRUE( pNewB->getId() != oldId );
+    SW_EXPECT_TRUE( pNewB->getID() != oldID );
     SW_EXPECT_STREQ( "New", pNewB->getCommand().c_str() );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
-    SW_EXPECT_EQUAL( pNewB->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( pNewB->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
     SW_EXPECT_EQUAL( 300.0f, pScreen->getTree().findWidget<sw::ScrollPanel>( "Scroll" )->getScrollOffset()._y );
     Util::runFrame( fixture._input, fixture._ui );
 }
@@ -453,7 +453,7 @@ SW_TEST_CASE( UiDocumentTest, FailedReloadKeepsOldTree )
     cache.registerMemoryDocument( "test/fail.ui.xml", UiReloadTestUtil::makeReloadDocument( false, "Old" ) );
     sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/fail.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pScreen );
-    const sw::WidgetId oldId = pScreen->getTree().findWidgetByName( "B" )->getId();
+    const sw::WidgetID oldID = pScreen->getTree().findWidgetByName( "B" )->getID();
 
     cache.registerMemoryDocument( "test/fail.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<BoxPanel _bogus=\"1\" />\n</UiDocument>\n" );
     {
@@ -461,7 +461,7 @@ SW_TEST_CASE( UiDocumentTest, FailedReloadKeepsOldTree )
         cache.reload( "test/fail.ui.xml", nullptr );
         SW_EXPECT_TRUE_MSG( logs.joined().find( "keeping the old one" ) != sw::string::npos, logs.joined().c_str() );
     }
-    SW_EXPECT_EQUAL( oldId, pScreen->getTree().findWidgetByName( "B" )->getId() );
+    SW_EXPECT_EQUAL( oldID, pScreen->getTree().findWidgetByName( "B" )->getID() );
 }
 
 /** @brief [UiDocumentTest] 스타일 시트를 다시 읽으면 위젯만 다시 맞춘다 — 트리(위젯 번호)는 그대로 */
@@ -483,7 +483,7 @@ SW_TEST_CASE( UiDocumentTest, StyleReloadRestylesOnly )
     Util::runFrame( fixture._input, fixture._ui );
     const sw::Widget* pGo = pScreen->getTree().findWidgetByName( "Go" );
     SW_ASSERT_NOT_NULL( pGo );
-    const sw::WidgetId goId = pGo->getId();
+    const sw::WidgetID goID = pGo->getID();
     SW_EXPECT_TRUE( pGo->getComputedStyle()->_value._backgroundColor == ( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
 
     fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
@@ -493,7 +493,7 @@ SW_TEST_CASE( UiDocumentTest, StyleReloadRestylesOnly )
     Util::runFrame( fixture._input, fixture._ui );
     const sw::Widget* pSame = pScreen->getTree().findWidgetByName( "Go" );
     SW_ASSERT_NOT_NULL( pSame );
-    SW_EXPECT_EQUAL( goId, pSame->getId() );
+    SW_EXPECT_EQUAL( goID, pSame->getID() );
     SW_EXPECT_TRUE( pSame->getComputedStyle()->_value._backgroundColor == ( sw::float4{ 0.0f, 1.0f, 0.0f, 1.0f } ) );
 }
 
@@ -513,14 +513,14 @@ SW_TEST_CASE( UiDocumentTest, UserWidgetChangeReloadsParents )
     sw::UiScreen* pOther  = fixture._ui.findScreen( fixture._ui.openScreen( "test/other.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pParent );
     SW_ASSERT_NOT_NULL( pOther );
-    const sw::WidgetId otherId = pOther->getTree().findWidgetByName( "Other" )->getId();
+    const sw::WidgetID otherID = pOther->getTree().findWidgetByName( "Other" )->getID();
 
     cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"New\" />\n</UiDocument>\n" );
     cache.reload( "test/part.ui.xml", nullptr );
     const sw::TextWidget* pLabel = pParent->getTree().findWidget<sw::TextWidget>( "Part.Label" );
     SW_ASSERT_NOT_NULL( pLabel );
     SW_EXPECT_STREQ( "New", pLabel->getText().c_str() );
-    SW_EXPECT_EQUAL( otherId, pOther->getTree().findWidgetByName( "Other" )->getId() );
+    SW_EXPECT_EQUAL( otherID, pOther->getTree().findWidgetByName( "Other" )->getID() );
 }
 
 /**
@@ -553,10 +553,10 @@ SW_TEST_CASE( UiDocumentTest, OffscreenScreenDrawsToItsTargetAndReloads )
     SW_EXPECT_NEAR_EQUAL( 1280.0f, listTarget[0]._list._targetSize._x, 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 640.0f, pScreen->getTree().getRoot()->getGeometry()._size._x, 1e-3f ); // 루트 = 미리보기 뷰포트(UI 단위)
 
-    const sw::WidgetId oldId = pScreen->getTree().findWidgetByName( "B" )->getId();
+    const sw::WidgetID oldID = pScreen->getTree().findWidgetByName( "B" )->getID();
     cache.registerMemoryDocument( "test/offscreen.ui.xml", UiReloadTestUtil::makeReloadDocument( true, "New" ) );
     cache.reload( "test/offscreen.ui.xml", nullptr );
-    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "B" )->getId() != oldId );
+    SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "B" )->getID() != oldID );
     SW_EXPECT_TRUE( pScreen->getTree().findWidgetByName( "C" ) != nullptr );
     fixture._ui.closeOffscreenScreen( handle );
     SW_EXPECT_TRUE( fixture._ui.findOffscreenScreen( handle ) == nullptr );

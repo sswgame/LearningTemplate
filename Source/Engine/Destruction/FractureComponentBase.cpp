@@ -611,7 +611,7 @@ namespace sw
         PhysicsCastHit3D hit;
         if ( pScene->raycast( origin, direction.normalize(), maxDistance, PhysicsQueryFilter{}, hit ) == false )
             return false;
-        GameObject*            pObject   = manager.findGameObjectById( hit._userData );
+        GameObject*            pObject   = manager.findGameObjectByID( hit._userData );
         FractureComponentBase* pFracture = pObject != nullptr ? pObject->getComponent<FractureComponentBase>() : nullptr;
         if ( pFracture == nullptr )
             return false;
@@ -812,14 +812,14 @@ namespace sw
         quaternion rotation{};
         float32    scale = 1.0f;
         readObjectPose( position, rotation, scale );
-        const uint64 selfId = getOwner() != nullptr ? getOwner()->getObjectId() : 0;
+        const uint64 selfID = getOwner() != nullptr ? getOwner()->getObjectID() : 0;
         for ( uint32 leaf = 0; leaf < asset.getPieceCount(); ++leaf )
         {
             bool bAnchored = false;
             if ( _anchorMode == FractureAnchorMode::Bottom )
                 bAnchored = asset._listPiece[leaf]._boundsMin._y <= asset._boundsMin._y + _anchorTolerance / scale;
             else if ( _anchorMode == FractureAnchorMode::World && _physics != nullptr )
-                bAnchored = _physics->overlapsStaticWorld( asset, leaf, scale, position, rotation, selfId );
+                bAnchored = _physics->overlapsStaticWorld( asset, leaf, scale, position, rotation, selfID );
             const float3& centroid = asset._graph._listNode[leaf]._centroid;
             for ( const FractureAnchorVolume& volume : _listAnchorVolume )
             {
@@ -890,8 +890,8 @@ namespace sw
         }
         if ( pending._kind == FracturePendingDamage::Kind::WorldPoint )
         {
-            const uint32                groupId  = findGroupOfBody( pending._hitBody );
-            const FractureGroupRuntime* pRuntime = groupId != 0 ? findRuntime( groupId ) : nullptr;
+            const uint32                groupID  = findGroupOfBody( pending._hitBody );
+            const FractureGroupRuntime* pRuntime = groupID != 0 ? findRuntime( groupID ) : nullptr;
             if ( pRuntime == nullptr )
             {
                 // 바디를 모르면(이미 빠진 파편 · 광선이 아닌 요청) 붙은 구조 기준.
@@ -909,7 +909,7 @@ namespace sw
             DestructionDamageEvent event = pending._event;
             event._position              = toMeshSpace( *pRuntime, pending._worldPoint );
             event._direction             = float3::transform( pending._worldDirection, FractureComponentBaseInternal::invert( pRuntime->_rotation ) );
-            event._groupId               = pRuntime->_groupId;
+            event._groupID               = pRuntime->_groupID;
             event._radius                = pending._event._kind == DestructionDamageKind::Impact ? _profile._impactRadius / _objectScale : pending._event._radius / _objectScale;
             outListEvent.push_back( event );
             return;
@@ -919,7 +919,7 @@ namespace sw
         {
             if ( runtime._bGone == SW_TRUE )
                 continue;
-            const DestructionGroup* pGroup = _state.findGroup( runtime._groupId );
+            const DestructionGroup* pGroup = _state.findGroup( runtime._groupID );
             if ( pGroup == nullptr )
                 continue;
             const float3  center = toMeshSpace( runtime, pending._worldPoint );
@@ -938,7 +938,7 @@ namespace sw
             DestructionDamageEvent event = pending._event;
             event._position              = center;
             event._radius                = radius;
-            event._groupId               = runtime._groupId;
+            event._groupID               = runtime._groupID;
             outListEvent.push_back( event );
         }
     }
@@ -947,10 +947,10 @@ namespace sw
     {
         // 맞은 떨어진 그룹 — 보낸 쪽 자세가 왔으면 그 자리로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
         FractureGroupPose     hitPose;
-        FractureGroupRuntime* pHit = event._groupId != 0 ? findRuntime( event._groupId ) : nullptr;
+        FractureGroupRuntime* pHit = event._groupID != 0 ? findRuntime( event._groupID ) : nullptr;
         if ( pHit != nullptr && pHit->_bAnchored == SW_FALSE )
         {
-            if ( pGroupPose != nullptr && pGroupPose->_groupId == event._groupId )
+            if ( pGroupPose != nullptr && pGroupPose->_groupID == event._groupID )
             {
                 pHit->_position = pGroupPose->_position;
                 pHit->_rotation = pGroupPose->_rotation;
@@ -961,7 +961,7 @@ namespace sw
                 }
                 _bPoseDirty = SW_TRUE;
             }
-            hitPose._groupId  = pHit->_groupId;
+            hitPose._groupID  = pHit->_groupID;
             hitPose._position = pHit->_position;
             hitPose._rotation = pHit->_rotation;
             hitPose._volume   = pHit->_volume;
@@ -1083,9 +1083,9 @@ namespace sw
         vector<FractureGroupRuntime> listRemoved;
         // 갓 쪼갰으면 런타임이 아직 없다 — 지금 그룹 모두가 오브젝트 자세에서 새로 선다.
         const bool bFirst = _listRuntime.empty();
-        for ( const uint32 groupId : change._listRemovedGroup )
+        for ( const uint32 groupID : change._listRemovedGroup )
         {
-            FractureGroupRuntime* pRuntime = findRuntime( groupId );
+            FractureGroupRuntime* pRuntime = findRuntime( groupID );
             if ( pRuntime == nullptr )
                 continue;
             listRemoved.push_back( *pRuntime );
@@ -1113,20 +1113,20 @@ namespace sw
         }
 
         DestructionRandom random{ DestructionRandom::combineSeed( _seed, eventIndex ) };
-        for ( const uint32 groupId : listCreated )
+        for ( const uint32 groupID : listCreated )
         {
-            const DestructionGroup* pGroup = _state.findGroup( groupId );
+            const DestructionGroup* pGroup = _state.findGroup( groupID );
             if ( pGroup == nullptr )
                 continue;
             FractureGroupRuntime runtime;
-            runtime._groupId       = groupId;
+            runtime._groupID       = groupID;
             runtime._position      = _objectPosition;
             runtime._rotation      = _objectRotation;
             float3 linearVelocity  = bFirst ? _intactLinearVelocity : float3{};
             float3 angularVelocity = bFirst ? _intactAngularVelocity : float3{};
             for ( const FractureGroupRuntime& parent : listRemoved )
             {
-                if ( parent._groupId != pGroup->_parentId )
+                if ( parent._groupID != pGroup->_parentID )
                     continue;
                 runtime._position = parent._position;
                 runtime._rotation = parent._rotation;
@@ -1168,7 +1168,7 @@ namespace sw
             _listRuntime.push_back( runtime );
         }
         std::sort( _listRuntime.begin(), _listRuntime.end(), []( const FractureGroupRuntime& lhs, const FractureGroupRuntime& rhs )
-        { return lhs._groupId < rhs._groupId; } );
+        { return lhs._groupID < rhs._groupID; } );
         syncStaticBodies( listDestroy );
         if ( listDestroy.empty() == false )
             _physics->destroyBodies( listDestroy );
@@ -1180,9 +1180,9 @@ namespace sw
         {
             bAnchoredChanged = bAnchoredChanged || removed._bAnchored == SW_TRUE;
         }
-        for ( const uint32 groupId : listCreated )
+        for ( const uint32 groupID : listCreated )
         {
-            const DestructionGroup* pGroup = _state.findGroup( groupId );
+            const DestructionGroup* pGroup = _state.findGroup( groupID );
             bAnchoredChanged               = bAnchoredChanged || ( pGroup != nullptr && pGroup->_bAnchored == SW_TRUE );
         }
         if ( bAnchoredChanged )
@@ -1222,9 +1222,9 @@ namespace sw
         const ScenePhysics* pScene = getScenePhysics();
         const uint8         layer  = pScene != nullptr ? pScene->resolveLayer( bChunk ? _chunkLayer : _debrisLayer ) : 0;
         inoutRuntime._layer        = layer;
-        const uint64 selfId        = getOwner() != nullptr ? getOwner()->getObjectId() : 0;
+        const uint64 selfID        = getOwner() != nullptr ? getOwner()->getObjectID() : 0;
         inoutRuntime._body         = _physics->createGroupBody( listLeaf, inoutRuntime._position, inoutRuntime._rotation, inoutRuntime._volume * _profile._density, linearVelocity,
-                                                                angularVelocity, layer, selfId, inoutRuntime._shape );
+                                                                angularVelocity, layer, selfID, inoutRuntime._shape );
         if ( inoutRuntime._body.isValid() )
             changeDebrisBodyCount( 1 );
     }
@@ -1250,7 +1250,7 @@ namespace sw
         const ScenePhysics*       pScene = getScenePhysics();
         const uint8               layer  = pScene != nullptr ? pScene->resolveLayer( _staticLayer ) : 0;
         vector<PhysicsBodyHandle> listBody;
-        _physics->createStaticLeafBodies( listCreate, _objectPosition, _objectRotation, layer, getOwner() != nullptr ? getOwner()->getObjectId() : 0, listBody );
+        _physics->createStaticLeafBodies( listCreate, _objectPosition, _objectRotation, layer, getOwner() != nullptr ? getOwner()->getObjectID() : 0, listBody );
         for ( size_t index = 0; index < listCreate.size() && index < listBody.size(); ++index )
         {
             _listLeafStaticBody[listCreate[index]] = listBody[index];
@@ -1262,7 +1262,7 @@ namespace sw
         _listRuntimeOfLeaf.assign( _asset->getPieceCount(), 0xFFFFFFFFu );
         for ( uint32 index = 0; index < static_cast<uint32>( _listRuntime.size() ); ++index )
         {
-            const DestructionGroup* pGroup = _state.findGroup( _listRuntime[index]._groupId );
+            const DestructionGroup* pGroup = _state.findGroup( _listRuntime[index]._groupID );
             if ( pGroup == nullptr )
                 continue;
             for ( const uint32 node : pGroup->_listNode )
@@ -1452,7 +1452,7 @@ namespace sw
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._body == body )
-                return runtime._groupId;
+                return runtime._groupID;
         }
         for ( uint32 leaf = 0; leaf < static_cast<uint32>( _listLeafStaticBody.size() ); ++leaf )
         {
@@ -1462,21 +1462,21 @@ namespace sw
         return 0;
     }
 
-    FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupId )
+    FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID )
     {
         for ( FractureGroupRuntime& runtime : _listRuntime )
         {
-            if ( runtime._groupId == groupId )
+            if ( runtime._groupID == groupID )
                 return &runtime;
         }
         return nullptr;
     }
 
-    const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupId ) const
+    const FractureGroupRuntime* FractureComponentBase::findRuntime( uint32 groupID ) const
     {
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
-            if ( runtime._groupId == groupId )
+            if ( runtime._groupID == groupID )
                 return &runtime;
         }
         return nullptr;
@@ -1581,8 +1581,8 @@ namespace sw
             pose._position                 = runtime._position;
             pose._rotation                 = runtime._rotation;
             pose._center                   = runtime._position;
-            pose._groupId                  = runtime._groupId;
-            const DestructionGroup* pGroup = _state.findGroup( runtime._groupId );
+            pose._groupID                  = runtime._groupID;
+            const DestructionGroup* pGroup = _state.findGroup( runtime._groupID );
             if ( pGroup != nullptr )
             {
                 float3 localCenter{};
@@ -1612,7 +1612,7 @@ namespace sw
         writer.writeVarUint( listPose.size() );
         for ( const FractureGroupPose& pose : listPose )
         {
-            writer.writeVarUint( pose._groupId );
+            writer.writeVarUint( pose._groupID );
             writer.writeBits( pose._bGone == SW_TRUE ? 1u : 0u, 1 );
             if ( pose._bGone == SW_TRUE )
                 continue;
@@ -1638,16 +1638,16 @@ namespace sw
         _listPendingDamage.push_back( std::move( pending ) );
     }
 
-    void FractureComponentBase::driveGroup( uint32 groupId, const float3& worldCenter, const quaternion& rotation )
+    void FractureComponentBase::driveGroup( uint32 groupID, const float3& worldCenter, const quaternion& rotation )
     {
         FractureGroupPose target;
-        target._groupId  = groupId;
+        target._groupID  = groupID;
         target._center   = worldCenter;
         target._rotation = rotation;
         std::scoped_lock<mutex> lock{ _pendingMutex };
         for ( FractureGroupPose& existing : _listPendingDrive )
         {
-            if ( existing._groupId == groupId )
+            if ( existing._groupID == groupID )
             {
                 existing = target;
                 return;
@@ -1667,10 +1667,10 @@ namespace sw
             return;
         for ( const FractureGroupPose& target : listDrive )
         {
-            FractureGroupRuntime* pRuntime = findRuntime( target._groupId );
+            FractureGroupRuntime* pRuntime = findRuntime( target._groupID );
             if ( pRuntime == nullptr || pRuntime->_bAnchored == SW_TRUE || pRuntime->_bGone == SW_TRUE )
                 continue;
-            const DestructionGroup* pGroup = _state.findGroup( target._groupId );
+            const DestructionGroup* pGroup = _state.findGroup( target._groupID );
             if ( pGroup == nullptr )
                 continue;
             // 질량 중심 → 그룹 원점(오브젝트 원점이 있는 자리).
@@ -1719,7 +1719,7 @@ namespace sw
         for ( uint64 index = 0; index < poseCount && reader.hasOverflowed() == false; ++index )
         {
             FractureGroupPose pose;
-            pose._groupId = static_cast<uint32>( reader.readVarUint() );
+            pose._groupID = static_cast<uint32>( reader.readVarUint() );
             pose._bGone   = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             if ( pose._bGone == SW_FALSE )
             {
@@ -1765,7 +1765,7 @@ namespace sw
         for ( const DestructionGroup& group : listGroup )
         {
             FractureGroupRuntime runtime;
-            runtime._groupId   = group._id;
+            runtime._groupID   = group._id;
             runtime._position  = _objectPosition;
             runtime._rotation  = _objectRotation;
             runtime._bAnchored = group._bAnchored;
@@ -1774,7 +1774,7 @@ namespace sw
                 const FractureGroupPose* pPose = nullptr;
                 for ( const FractureGroupPose& pose : listPose )
                 {
-                    if ( pose._groupId == group._id )
+                    if ( pose._groupID == group._id )
                         pPose = &pose;
                 }
                 if ( pPose != nullptr && pPose->_bGone == SW_TRUE )

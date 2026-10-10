@@ -155,7 +155,7 @@ namespace sw
         /** @brief 투명 배치를 반환합니다. */
         const vector<GpuMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
         /** @brief 이 추가 뷰의 투명 순서(스냅샷이 실은 것)입니다. 없으면 nullptr 입니다. */
-        const GpuViewTransparentOrder* findViewTransparentOrder( uint64 viewId ) const;
+        const GpuViewTransparentOrder* findViewTransparentOrder( uint64 viewID ) const;
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
         const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
@@ -270,7 +270,7 @@ namespace sw
          * @brief 뷰별 컬링 산출물입니다. 언리얼 FInstanceCullingContext 가 뷰마다 있는 것과 같은 자리입니다.
          * @details 컬링 컴퓨트가 살아남은 인스턴스의 **원본 인덱스**를 배치 구간에 압축해 넣고, 정점 셰이더는
          *          입력 어셈블러가 준 인스턴스 슬롯(간접 인자의 startInstance + 인스턴스 서수)으로
-         *          `g_SwVisibleInstanceIds[슬롯]` 을 읽습니다(binding.hlsli swResolveInstanceId). 이것이 없으면 컬링이
+         *          `g_SwVisibleInstanceIDs[슬롯]` 을 읽습니다(binding.hlsli swResolveInstanceId). 이것이 없으면 컬링이
          *          개수만 줄일 수 있어 **뒤쪽 인스턴스가 통째로 사라집니다**(보이는 것을 고를 수가 없습니다).
          *          목록은 절두체에 종속이므로 메인 카메라와 그림자 라이트 · 추가 뷰가 **각자** 갖습니다(칸 0 · 1 은 늘 있다).
          */

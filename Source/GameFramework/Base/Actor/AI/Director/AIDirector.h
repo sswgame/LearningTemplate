@@ -45,7 +45,7 @@ namespace sw
     enum class AIDirectorEventKind : uint8
     {
         PhaseChanged = 0, ///< `_id` = 새 단계, `_source` = 앞 단계(시작이면 빈 이름), `_detail` = 나간 길 번호(−1 = 시작 · 강제)
-        Spawned,          ///< `_id` = 스폰 항목 — 게임이 만든다, 죽으면 `_spawnId` 로 `notifyDespawned`
+        Spawned,          ///< `_id` = 스폰 항목 — 게임이 만든다, 죽으면 `_spawnID` 로 `notifyDespawned`
         Despawned,        ///< `_id` = 스폰 항목, `_cost` = 돌려받은 예산
         Encounter,        ///< `_id` = 조우 · 사건, `_source` = 풀, `_count` · `_scale` = 데이터의 값
         Reward            ///< `_id` = 보상, `_source` = 풀, `_count` · `_scale` = 데이터의 값
@@ -62,7 +62,7 @@ namespace sw
         float32             _intensity{ 0.0f };
         float32             _scale{ 1.0f };
         float32             _cost{ 0.0f };
-        uint32              _spawnId{ 0 };
+        uint32              _spawnID{ 0 };
         int32               _count{ 0 };
         int32               _detail{ -1 };
         AIDirectorEventKind _kind{ AIDirectorEventKind::PhaseChanged };
@@ -121,9 +121,9 @@ namespace sw
         /** @brief 시간을 흘리고 단계 · 스폰 · 풀을 돌립니다. */
         void update( float32 deltaTime );
         /** @brief 게임 쪽 스폰 개체가 사라졌음을 알립니다(스폰 감독으로). 모르는 id 면 false 입니다. */
-        bool notifyDespawned( uint32 spawnId );
+        bool notifyDespawned( uint32 spawnID );
         /** @brief 단계를 바로 바꿉니다(스크립트 사건 · 시험). 모르는 단계면 false 입니다. */
-        bool forcePhase( const hashed_string& phaseId );
+        bool forcePhase( const hashed_string& phaseID );
         /** @brief 쌓인 일을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<AIDirectorEvent>& outListEvent );
 
@@ -139,7 +139,7 @@ namespace sw
         /** @brief 페이싱이 시작 단계로 돌아온 수입니다(판의 "몇 번째 파도"). */
         int32   getCycle() const { return _cycle; }
         float32 getPoolBudget( int32 poolIndex ) const;
-        int32   findPoolIndex( const hashed_string& poolId ) const;
+        int32   findPoolIndex( const hashed_string& poolID ) const;
 
         /** @brief 풀 @p poolIndex 의 항목 @p encounterIndex 를 지금 막는 까닭(`AIDirectorBlock` 비트)입니다. 0 이면 고를 수 있습니다. */
         uint32 computeBlockMask( int32 poolIndex, int32 encounterIndex ) const;

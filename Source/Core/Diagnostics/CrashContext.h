@@ -69,7 +69,7 @@ namespace sw
     };
 
     /** @brief 이 실행을 식별하는 세션 ID 입니다(처음 부를 때 정해집니다). */
-    SW_API const utf8* getCrashSessionId();
+    SW_API const utf8* getCrashSessionID();
 
     /** @brief 덤프 · 리포트를 쓸 폴더입니다(setCrashReportFolder 로 정하지 않았으면 빈 문자열). */
     SW_API const utf8* getCrashReportFolder();
@@ -92,7 +92,7 @@ namespace sw
      *          "어떤 드라이버였는가" 를 알 수 없는데, 그것이 범위를 좁히는 첫 질문입니다. 세 플랫폼이 같은 형식을 쓰도록 여기에
      *          한 번만 둡니다.
      */
-    SW_API void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processId, uint64 threadId );
+    SW_API void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID );
 
     /**
      * @brief 심볼 변환한 콜 스택을 파일로 남깁니다.

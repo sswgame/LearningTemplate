@@ -40,7 +40,7 @@ namespace sw
         , _listEffect{}
         , _pCatalog{ nullptr }
         , _pRecipeCatalog{ nullptr }
-        , _oilId{}
+        , _oilID{}
         , _floatingToxicity{ 0.0f }
         , _oilHits{ 0 }
     {
@@ -53,52 +53,52 @@ namespace sw
         _crafter.initialize( pRecipeCatalog );
         _listCharge.clear();
         _listEffect.clear();
-        _oilId            = hashed_string{};
+        _oilID            = hashed_string{};
         _floatingToxicity = 0.0f;
         _oilHits          = 0;
     }
 
-    CraftResult WitcherAlchemy::brew( const hashed_string& recipeId, Inventory& inoutInventory, const hashed_string& station, int32 level )
+    CraftResult WitcherAlchemy::brew( const hashed_string& recipeID, Inventory& inoutInventory, const hashed_string& station, int32 level )
     {
-        const CraftResult result = _crafter.craft( recipeId, inoutInventory, station, level );
+        const CraftResult result = _crafter.craft( recipeID, inoutInventory, station, level );
         if ( result != CraftResult::Ok )
             return result;
-        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( recipeId ) : nullptr;
+        const RecipeDef* pRecipe = _pRecipeCatalog != nullptr ? _pRecipeCatalog->findRecipe( recipeID ) : nullptr;
         if ( pRecipe == nullptr )
             return result;
         for ( const auto& output : pRecipe->_outputs.getItems() )
         {
-            refill( output._itemId ); // 갓 만든 것은 가득 — 모르는 아이템(재료)은 `refill` 이 건너뛴다
+            refill( output._itemID ); // 갓 만든 것은 가득 — 모르는 아이템(재료)은 `refill` 이 건너뛴다
         }
         return result;
     }
 
-    WitcherUseResult WitcherAlchemy::evaluateDrink( const hashed_string& itemId, const Inventory& inventory ) const
+    WitcherUseResult WitcherAlchemy::evaluateDrink( const hashed_string& itemID, const Inventory& inventory ) const
     {
-        const WitcherAlchemyDef* pDef = findDef( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
         if ( pDef == nullptr )
             return WitcherUseResult::UnknownItem;
         if ( pDef->_kind != WitcherAlchemyKind::Potion && pDef->_kind != WitcherAlchemyKind::Decoction )
             return WitcherUseResult::WrongKind;
-        const WitcherUseResult result = evaluateUse( itemId, inventory, pDef->_kind );
+        const WitcherUseResult result = evaluateUse( itemID, inventory, pDef->_kind );
         if ( result != WitcherUseResult::Ok )
             return result;
-        if ( pDef->_kind == WitcherAlchemyKind::Decoction && isEffectActive( itemId ) )
+        if ( pDef->_kind == WitcherAlchemyKind::Decoction && isEffectActive( itemID ) )
             return WitcherUseResult::AlreadyActive;
         if ( getToxicity() + pDef->_toxicity > getMaxToxicity() + 1.0e-4f )
             return WitcherUseResult::TooToxic;
         return WitcherUseResult::Ok;
     }
 
-    WitcherUseResult WitcherAlchemy::drink( const hashed_string& itemId, const Inventory& inventory )
+    WitcherUseResult WitcherAlchemy::drink( const hashed_string& itemID, const Inventory& inventory )
     {
-        const WitcherUseResult result = evaluateDrink( itemId, inventory );
+        const WitcherUseResult result = evaluateDrink( itemID, inventory );
         if ( result != WitcherUseResult::Ok )
             return result;
-        const WitcherAlchemyDef* pDef = findDef( itemId );
-        spendCharge( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
+        spendCharge( itemID );
         WitcherActiveEffect effect;
-        effect._itemId = itemId;
+        effect._itemID = itemID;
         effect._remaining.start( pDef->_duration );
         if ( pDef->_kind == WitcherAlchemyKind::Decoction )
             effect._lockedToxicity = pDef->_toxicity;
@@ -107,7 +107,7 @@ namespace sw
         // 같은 물약을 다시 마시면 시간만 새로 — 효과는 겹치지 않는다(독성은 다시 오른다).
         for ( WitcherActiveEffect& active : _listEffect )
         {
-            if ( active._itemId == itemId )
+            if ( active._itemID == itemID )
             {
                 active._remaining.extendTo( effect._remaining.getRemaining() );
                 return WitcherUseResult::Ok;
@@ -117,30 +117,30 @@ namespace sw
         return WitcherUseResult::Ok;
     }
 
-    WitcherUseResult WitcherAlchemy::applyOil( const hashed_string& itemId, const Inventory& inventory )
+    WitcherUseResult WitcherAlchemy::applyOil( const hashed_string& itemID, const Inventory& inventory )
     {
-        const WitcherAlchemyDef* pDef = findDef( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
         if ( pDef == nullptr )
             return WitcherUseResult::UnknownItem;
-        const WitcherUseResult result = evaluateUse( itemId, inventory, WitcherAlchemyKind::Oil );
+        const WitcherUseResult result = evaluateUse( itemID, inventory, WitcherAlchemyKind::Oil );
         if ( result != WitcherUseResult::Ok )
             return result;
-        spendCharge( itemId );
-        _oilId   = itemId;
+        spendCharge( itemID );
+        _oilID   = itemID;
         _oilHits = pDef->_hits;
         return WitcherUseResult::Ok;
     }
 
-    WitcherUseResult WitcherAlchemy::throwBomb( const hashed_string& itemId, const Inventory& inventory, hashed_string& outElement )
+    WitcherUseResult WitcherAlchemy::throwBomb( const hashed_string& itemID, const Inventory& inventory, hashed_string& outElement )
     {
         outElement                    = hashed_string{};
-        const WitcherAlchemyDef* pDef = findDef( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
         if ( pDef == nullptr )
             return WitcherUseResult::UnknownItem;
-        const WitcherUseResult result = evaluateUse( itemId, inventory, WitcherAlchemyKind::Bomb );
+        const WitcherUseResult result = evaluateUse( itemID, inventory, WitcherAlchemyKind::Bomb );
         if ( result != WitcherUseResult::Ok )
             return result;
-        spendCharge( itemId );
+        spendCharge( itemID );
         outElement = pDef->_element;
         return WitcherUseResult::Ok;
     }
@@ -151,7 +151,7 @@ namespace sw
             return hashed_string{};
         const hashed_string element = getOilElement();
         if ( --_oilHits == 0 )
-            _oilId = hashed_string{};
+            _oilID = hashed_string{};
         return element;
     }
 
@@ -159,9 +159,9 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        for ( const hashed_string& alcoholId : _pCatalog->getAlchemy()._listAlcohol )
+        for ( const hashed_string& alcoholID : _pCatalog->getAlchemy()._listAlcohol )
         {
-            if ( inoutInventory.hasItem( alcoholId ) == false || inoutInventory.removeItem( alcoholId, 1 ) == false )
+            if ( inoutInventory.hasItem( alcoholID ) == false || inoutInventory.removeItem( alcoholID, 1 ) == false )
                 continue;
             for ( const WitcherAlchemyDef& def : _pCatalog->getAlchemyItems() )
             {
@@ -199,21 +199,21 @@ namespace sw
 
     float32 WitcherAlchemy::getMaxToxicity() const { return _pCatalog != nullptr ? _pCatalog->getAlchemy()._maxToxicity : 100.0f; }
 
-    int32 WitcherAlchemy::getCharges( const hashed_string& itemId ) const
+    int32 WitcherAlchemy::getCharges( const hashed_string& itemID ) const
     {
         for ( const ChargeEntry& entry : _listCharge )
         {
-            if ( entry._itemId == itemId )
+            if ( entry._itemID == itemID )
                 return entry._charges;
         }
         return 0;
     }
 
-    bool WitcherAlchemy::isEffectActive( const hashed_string& itemId ) const
+    bool WitcherAlchemy::isEffectActive( const hashed_string& itemID ) const
     {
         for ( const WitcherActiveEffect& effect : _listEffect )
         {
-            if ( effect._itemId == itemId )
+            if ( effect._itemID == itemID )
                 return true;
         }
         return false;
@@ -221,56 +221,56 @@ namespace sw
 
     hashed_string WitcherAlchemy::getOilElement() const
     {
-        const WitcherAlchemyDef* pDef = _oilHits > 0 ? findDef( _oilId ) : nullptr;
+        const WitcherAlchemyDef* pDef = _oilHits > 0 ? findDef( _oilID ) : nullptr;
         return pDef != nullptr ? pDef->_element : hashed_string{};
     }
 
-    const WitcherAlchemyDef* WitcherAlchemy::findDef( const hashed_string& itemId ) const
+    const WitcherAlchemyDef* WitcherAlchemy::findDef( const hashed_string& itemID ) const
     {
-        return _pCatalog != nullptr ? _pCatalog->findAlchemy( itemId ) : nullptr;
+        return _pCatalog != nullptr ? _pCatalog->findAlchemy( itemID ) : nullptr;
     }
 
-    WitcherAlchemy::ChargeEntry* WitcherAlchemy::findCharge( const hashed_string& itemId )
+    WitcherAlchemy::ChargeEntry* WitcherAlchemy::findCharge( const hashed_string& itemID )
     {
         for ( ChargeEntry& entry : _listCharge )
         {
-            if ( entry._itemId == itemId )
+            if ( entry._itemID == itemID )
                 return &entry;
         }
         return nullptr;
     }
 
-    WitcherUseResult WitcherAlchemy::evaluateUse( const hashed_string& itemId, const Inventory& inventory, WitcherAlchemyKind kind ) const
+    WitcherUseResult WitcherAlchemy::evaluateUse( const hashed_string& itemID, const Inventory& inventory, WitcherAlchemyKind kind ) const
     {
-        const WitcherAlchemyDef* pDef = findDef( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
         if ( pDef == nullptr )
             return WitcherUseResult::UnknownItem;
         if ( pDef->_kind != kind )
             return WitcherUseResult::WrongKind;
-        if ( inventory.hasItem( itemId ) == false )
+        if ( inventory.hasItem( itemID ) == false )
             return WitcherUseResult::NotInInventory;
-        if ( getCharges( itemId ) <= 0 )
+        if ( getCharges( itemID ) <= 0 )
             return WitcherUseResult::NoCharges;
         return WitcherUseResult::Ok;
     }
 
-    void WitcherAlchemy::refill( const hashed_string& itemId )
+    void WitcherAlchemy::refill( const hashed_string& itemID )
     {
-        const WitcherAlchemyDef* pDef = findDef( itemId );
+        const WitcherAlchemyDef* pDef = findDef( itemID );
         if ( pDef == nullptr )
             return;
-        ChargeEntry* pEntry = findCharge( itemId );
+        ChargeEntry* pEntry = findCharge( itemID );
         if ( pEntry == nullptr )
         {
-            _listCharge.push_back( ChargeEntry{ itemId, 0 } );
+            _listCharge.push_back( ChargeEntry{ itemID, 0 } );
             pEntry = &_listCharge.back();
         }
         pEntry->_charges = pDef->_charges;
     }
 
-    void WitcherAlchemy::spendCharge( const hashed_string& itemId )
+    void WitcherAlchemy::spendCharge( const hashed_string& itemID )
     {
-        ChargeEntry* pEntry = findCharge( itemId );
+        ChargeEntry* pEntry = findCharge( itemID );
         if ( pEntry != nullptr && pEntry->_charges > 0 )
             --pEntry->_charges;
     }
@@ -281,17 +281,17 @@ namespace sw
         outArchive << static_cast<uint32>( _listCharge.size() );
         for ( const ChargeEntry& charge : _listCharge )
         {
-            StateArchiveUtil::writeName( outArchive, charge._itemId );
+            StateArchiveUtil::writeName( outArchive, charge._itemID );
             outArchive << charge._charges;
         }
         outArchive << static_cast<uint32>( _listEffect.size() );
         for ( const WitcherActiveEffect& effect : _listEffect )
         {
-            StateArchiveUtil::writeName( outArchive, effect._itemId );
+            StateArchiveUtil::writeName( outArchive, effect._itemID );
             StateArchiveUtil::writeCountdown( outArchive, effect._remaining );
             outArchive << effect._lockedToxicity;
         }
-        StateArchiveUtil::writeName( outArchive, _oilId );
+        StateArchiveUtil::writeName( outArchive, _oilID );
         outArchive << _floatingToxicity;
         outArchive << _oilHits;
     }
@@ -309,7 +309,7 @@ namespace sw
         restored._listCharge.assign( count, ChargeEntry{} );
         for ( ChargeEntry& charge : restored._listCharge )
         {
-            if ( StateArchiveUtil::readName( archive, charge._itemId ) == false || _pCatalog->findAlchemy( charge._itemId ) == nullptr )
+            if ( StateArchiveUtil::readName( archive, charge._itemID ) == false || _pCatalog->findAlchemy( charge._itemID ) == nullptr )
                 return false;
             archive >> charge._charges;
         }
@@ -319,16 +319,16 @@ namespace sw
         restored._listEffect.assign( count, WitcherActiveEffect{} );
         for ( WitcherActiveEffect& effect : restored._listEffect )
         {
-            const bool bHeadRead = StateArchiveUtil::readName( archive, effect._itemId ) && StateArchiveUtil::readCountdown( archive, effect._remaining );
-            if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemId ) == nullptr )
+            const bool bHeadRead = StateArchiveUtil::readName( archive, effect._itemID ) && StateArchiveUtil::readCountdown( archive, effect._remaining );
+            if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemID ) == nullptr )
                 return false;
             archive >> effect._lockedToxicity;
         }
-        if ( StateArchiveUtil::readName( archive, restored._oilId ) == false )
+        if ( StateArchiveUtil::readName( archive, restored._oilID ) == false )
             return false;
         archive >> restored._floatingToxicity;
         archive >> restored._oilHits;
-        const bool bOilKnown = restored._oilId.empty() || _pCatalog->findAlchemy( restored._oilId ) != nullptr;
+        const bool bOilKnown = restored._oilID.empty() || _pCatalog->findAlchemy( restored._oilID ) != nullptr;
         const bool bValid    = archive.isOk() && bOilKnown && 0 <= restored._oilHits && 0.0f <= restored._floatingToxicity;
         if ( bValid == false )
             return false;

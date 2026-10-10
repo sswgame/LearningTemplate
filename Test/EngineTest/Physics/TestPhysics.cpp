@@ -580,10 +580,10 @@ namespace
         return state;
     }
 
-    /** @brief 이벤트에서 @p objectId 쪽 바디가 트리거인지입니다. */
-    bool isTriggerSide( const PhysicsOverlapEvent& event, uint64 objectId )
+    /** @brief 이벤트에서 @p objectID 쪽 바디가 트리거인지입니다. */
+    bool isTriggerSide( const PhysicsOverlapEvent& event, uint64 objectID )
     {
-        return ( event._objectA == objectId ) ? event._bTriggerA == SW_TRUE : event._bTriggerB == SW_TRUE;
+        return ( event._objectA == objectID ) ? event._bTriggerA == SW_TRUE : event._bTriggerB == SW_TRUE;
     }
 
     /** @brief 이벤트 목록에서 두 오브젝트 쌍의 시작(true) · 끝(false) 이벤트 수를 셉니다(순서 무관). */

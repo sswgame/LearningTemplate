@@ -35,10 +35,10 @@ namespace
         return sw::FileUtil::writeTextFile( filePath, "" );
     }
 
-    /** @brief @p processId 가 만든 것으로 이름 지은 SWGame 복사본 경로입니다. */
-    sw::string makeCopyPath( const sw::string& directory, int32 processId, uint32 serial )
+    /** @brief @p processID 가 만든 것으로 이름 지은 SWGame 복사본 경로입니다. */
+    sw::string makeCopyPath( const sw::string& directory, int32 processID, uint32 serial )
     {
-        return sw::FileUtil::joinPath( directory, sw::ModuleImageUtil::formatSharedLibraryName( sw::ShadowCopyName::make( "SWGame", processId, serial, 1234 ) ) );
+        return sw::FileUtil::joinPath( directory, sw::ModuleImageUtil::formatSharedLibraryName( sw::ShadowCopyName::make( "SWGame", processID, serial, 1234 ) ) );
     }
 } // namespace
 
@@ -50,23 +50,23 @@ SW_TEST_CASE( ShadowCopyNameTest, NameCarriesTheProcessThatMadeIt )
     const sw::string name = sw::ShadowCopyName::make( "GF_Overworld", 4120, 3, 13435508261ull );
     SW_EXPECT_STREQ( "GF_Overworld_temp_p4120_3_13435508261", name.c_str() );
 
-    int32 processId{ -1 };
-    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "D:/Bin/" + sw::ModuleImageUtil::formatSharedLibraryName( name ), processId ) );
-    SW_EXPECT_EQUAL( 4120, processId );
+    int32 processID{ -1 };
+    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "D:/Bin/" + sw::ModuleImageUtil::formatSharedLibraryName( name ), processID ) );
+    SW_EXPECT_EQUAL( 4120, processID );
     // 디버그 심볼과 원자적 쓰기의 임시 파일도 같은 복사본의 것이다.
-    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "GF_Overworld_temp_p4120_3_13435508261.pdb", processId ) );
-    SW_EXPECT_EQUAL( 4120, processId );
-    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "GF_Overworld_temp_p4120_3_13435508261.dll.tmp4120_7", processId ) );
-    SW_EXPECT_EQUAL( 4120, processId );
+    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "GF_Overworld_temp_p4120_3_13435508261.pdb", processID ) );
+    SW_EXPECT_EQUAL( 4120, processID );
+    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "GF_Overworld_temp_p4120_3_13435508261.dll.tmp4120_7", processID ) );
+    SW_EXPECT_EQUAL( 4120, processID );
 
     // 프로세스 ID 를 넣기 전 형식은 복사본이지만 주인을 모른다.
-    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "EditorModule_temp_34_13435507478.dll", processId ) );
-    SW_EXPECT_EQUAL( 0, processId );
+    SW_EXPECT_TRUE( sw::ShadowCopyName::parse( "EditorModule_temp_34_13435507478.dll", processID ) );
+    SW_EXPECT_EQUAL( 0, processID );
 
-    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame.dll", processId ) );
-    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "notes_temp_draft.txt", processId ) );
-    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame_temp_p_3_1.dll", processId ) );
-    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame_temp_pX1_3_1.dll", processId ) );
+    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame.dll", processID ) );
+    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "notes_temp_draft.txt", processID ) );
+    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame_temp_p_3_1.dll", processID ) );
+    SW_EXPECT_FALSE( sw::ShadowCopyName::parse( "SWGame_temp_pX1_3_1.dll", processID ) );
 }
 
 /**
@@ -85,24 +85,24 @@ SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
 
     ChildProcessScope liveChild;
     SW_ASSERT_TRUE( liveChild._process.launch( liveCommand ) );
-    const int32 liveProcessId = liveChild._process.getProcessId();
+    const int32 liveProcessID = liveChild._process.getProcessID();
 
     sw::Process doneChild;
     SW_ASSERT_TRUE( doneChild.launch( doneCommand ) );
-    const int32 doneProcessId = doneChild.getProcessId(); // POSIX 는 거둔 뒤 0 이 되므로 먼저 읽는다
+    const int32 doneProcessID = doneChild.getProcessID(); // POSIX 는 거둔 뒤 0 이 되므로 먼저 읽는다
     SW_EXPECT_EQUAL( 0, doneChild.waitForExit() );
 
-    SW_ASSERT_TRUE( liveProcessId > 0 );
-    SW_ASSERT_TRUE( doneProcessId > 0 );
-    SW_EXPECT_TRUE( sw::Process::isProcessAlive( liveProcessId ) );
-    SW_EXPECT_TRUE( sw::Process::isProcessAlive( sw::Process::getCurrentProcessId() ) );
-    SW_EXPECT_FALSE( sw::Process::isProcessAlive( doneProcessId ) );
+    SW_ASSERT_TRUE( liveProcessID > 0 );
+    SW_ASSERT_TRUE( doneProcessID > 0 );
+    SW_EXPECT_TRUE( sw::Process::isProcessAlive( liveProcessID ) );
+    SW_EXPECT_TRUE( sw::Process::isProcessAlive( sw::Process::getCurrentProcessID() ) );
+    SW_EXPECT_FALSE( sw::Process::isProcessAlive( doneProcessID ) );
     SW_EXPECT_FALSE( sw::Process::isProcessAlive( 0 ) );
 
     const sw::string directory     = test::makeTempDirectory( "shadow_copies" );
-    const sw::string livePath      = makeCopyPath( directory, liveProcessId, 1 );
-    const sw::string ownPath       = makeCopyPath( directory, sw::Process::getCurrentProcessId(), 2 );
-    const sw::string donePath      = makeCopyPath( directory, doneProcessId, 3 );
+    const sw::string livePath      = makeCopyPath( directory, liveProcessID, 1 );
+    const sw::string ownPath       = makeCopyPath( directory, sw::Process::getCurrentProcessID(), 2 );
+    const sw::string donePath      = makeCopyPath( directory, doneProcessID, 3 );
     const sw::string legacyPath    = sw::FileUtil::joinPath( directory, sw::ModuleImageUtil::formatSharedLibraryName( "SWGame_temp_4_1234" ) );
     const sw::string unrelatedPath = sw::FileUtil::joinPath( directory, "SWGame.txt" );
     for ( const sw::string* pPath : { &livePath, &ownPath, &donePath, &legacyPath, &unrelatedPath } )

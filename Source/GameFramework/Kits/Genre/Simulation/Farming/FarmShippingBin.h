@@ -35,7 +35,7 @@ namespace sw
         void                 setCurrency( const hashed_string& currency ) { _currency = currency; }
         const hashed_string& getCurrency() const { return _currency; }
         /** @brief @p inoutBag 에서 꺼내 출하함에 넣습니다. 가방에 모자라면 아무것도 바꾸지 않고 false 입니다. */
-        [[nodiscard]] bool shipItem( Inventory& inoutBag, const hashed_string& itemId, int32 count );
+        [[nodiscard]] bool shipItem( Inventory& inoutBag, const hashed_string& itemID, int32 count );
         int32              getShippedItemCount() const { return _bin.getTotalCount(); }
         /** @brief 하루 끝 정산 — 카탈로그 값으로 팔아 @p inoutWallet 에 더하고 비웁니다. 번 돈입니다(값을 모르는 아이템은 0 으로 팔린다). */
         int32 settleShipping( const CropCatalog& catalog, Wallet& inoutWallet );

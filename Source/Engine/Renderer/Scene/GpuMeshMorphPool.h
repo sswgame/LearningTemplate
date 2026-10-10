@@ -23,7 +23,7 @@
  *
  * [스키닝]
  * 결과 버퍼는 두 구간입니다: [모프 메시][스킨 인스턴스]. 모프 컴퓨트(meshmorph.hlsl)는 앞 구간을, 스키닝 컴퓨트(meshskin.hlsl)는 뒤 구간을
- * 씁니다. 스킨 데이터는 **원본**(`Mesh::getSkinDataId` 가 같은 메시들)마다 한 번만 올라갑니다 — 레스트 정점(`_skinRest`)과 정점마다 가중치 ·
+ * 씁니다. 스킨 데이터는 **원본**(`Mesh::getSkinDataID` 가 같은 메시들)마다 한 번만 올라갑니다 — 레스트 정점(`_skinRest`)과 정점마다 가중치 ·
  * 본 번호(`_skinWeight`, float4 둘). 스킨 **인스턴스**(그리는 메시 객체 — 캐릭터 · 군중 묶음 · 사본)는 결과 구간 · 원본 구간 · 정점 수 ·
  * 팔레트 시작을 인스턴스 표(`_skinInstance`, uint4 둘)에 한 줄씩 갖고, 팔레트(`_skinPalette`, 본 하나 = float4 셋)는 프레임마다 올라갑니다.
  * 컴퓨트는 디스패치 하나로 스킨 구간 전체를 돌며 정점마다 인스턴스를 이분 탐색해 찾습니다. 그래서 같은 캐릭터의 사본이 여럿이어도 레스트 ·
@@ -147,7 +147,7 @@ namespace sw
         /** @brief 결과 구간을 받은 스킨 인스턴스 수입니다. */
         uint32 getSkinInstanceCount() const { return static_cast<uint32>( _listSkinRow.size() ); }
         /** @brief 올린 스킨 원본(스킨 데이터 번호가 다른 메시) 수입니다. 같은 캐릭터의 사본이 레스트를 나누는지 시험이 봅니다. */
-        uint32 getSkinSourceCount() const { return static_cast<uint32>( _listSourceDataId.size() ); }
+        uint32 getSkinSourceCount() const { return static_cast<uint32>( _listSourceDataID.size() ); }
         /** @brief 올린 스킨 원본의 정점 수 합입니다. */
         uint32 getSkinSourceVertexCount() const { return _skinSourceVertexCount; }
         /** @brief 스킨 원본의 레스트 정점 버퍼입니다(정점 하나 = float4 둘, 그 뒤에 모프 차이 하나 = float4 둘). */
@@ -173,7 +173,7 @@ namespace sw
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
 
         /** @brief 목록이 지난 build 와 같은지(포인터 · 내용 번호) 봅니다. */
-        static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentId );
+        static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
         /** @brief 스킨 원본 집합을 맞춥니다. 바뀌었으면 레스트 · 가중치를 다시 올립니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
 
@@ -187,15 +187,15 @@ namespace sw
         unordered_map<const Mesh*, uint32> _mapBase;
         /// @brief 지난 build 의 모프 메시 목록 · 내용 번호입니다. 포인터가 같아도 내용 번호가 다르면 다른 메시다.
         vector<const Mesh*> _listBuiltMorph;
-        vector<uint64>      _listBuiltMorphContentId;
+        vector<uint64>      _listBuiltMorphContentID;
         /// @brief 지난 build 의 스킨 메시 목록 · 내용 번호입니다(받은 그대로 — 풀에 못 든 것도).
         vector<const Mesh*> _listBuiltSkin;
-        vector<uint64>      _listBuiltSkinContentId;
+        vector<uint64>      _listBuiltSkinContentID;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서) · 그 표 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
         vector<GpuSkinInstanceRow> _listSkinRow;
         /// @brief 올린 스킨 원본(스킨 데이터 번호)과 그 원본 버퍼 시작(정점)입니다.
-        vector<uint64> _listSourceDataId;
+        vector<uint64> _listSourceDataID;
         vector<uint32> _listSourceBase;
         /// @brief 메시 → 이번 프레임 팔레트 항목 자리입니다(`uploadSkinPalettes` 가 프레임마다 다시 짓는다 — 인스턴스마다 목록을 훑지 않게).
         unordered_map<const Mesh*, uint32> _mapScratchPaletteIndex;

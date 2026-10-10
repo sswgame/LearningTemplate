@@ -459,11 +459,11 @@ namespace sw
         _snapshot._bCpuDirty         = SW_TRUE;
     }
 
-    const GpuViewTransparentOrder* GpuScene::findViewTransparentOrder( uint64 viewId ) const
+    const GpuViewTransparentOrder* GpuScene::findViewTransparentOrder( uint64 viewID ) const
     {
         for ( const GpuViewTransparentOrder& order : _snapshot._listViewTransparentOrder )
         {
-            if ( order._viewId == viewId )
+            if ( order._viewID == viewID )
                 return &order;
         }
         return nullptr;

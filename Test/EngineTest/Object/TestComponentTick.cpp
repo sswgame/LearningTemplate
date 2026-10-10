@@ -503,7 +503,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
     pCompB->registerSubTick( sw::TickGroup::PostPhysics, 21, sw::TickPhase::Finalize );
 
     pCompA->_pTargetComp             = pCompB;
-    pCompA->_targetSubTickId         = 20;
+    pCompA->_targetSubTickID         = 20;
     pCompA->_selfSubTickToUnregister = 2;
 
     // Frame 1: A_1(Early) 실행 시 B_20과 A_2를 끔 -> B_20과 A_2는 스킵되고 B_21(Finalize)만 실행
@@ -519,7 +519,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
     // Frame 2: B의 SubTick 20을 다시 켜고 A의 동적 비활성화 트리거 해제
     listTickOrder.clear();
     pCompA->_pTargetComp     = nullptr;
-    pCompA->_targetSubTickId = 0;
+    pCompA->_targetSubTickID = 0;
     pCompB->setSubTickActive( 20, true );
 
     manager.tick( 0.016f );
@@ -539,7 +539,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickSubTickDeactivationAndCancellat
  * @details 1~63 은 컴포넌트의 원자 마스크가 바로 꺼진다. 64 번부터도 같아야 한다 — 활성이 목록 값뿐이라 틱 뒤에야 바뀌면 같은 틱의 뒤 단계
  *          항목이 그대로 돌아, id 크기에 따라 같은 호출의 결과가 달라진다.
  */
-SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTickIds )
+SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTickIDs )
 {
     sw::GameObjectManager manager;
     sw::RegisterMockComponents();
@@ -563,7 +563,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTic
     pCompB->registerSubTick( sw::TickGroup::PostPhysics, 120, sw::TickPhase::Normal );
     pCompB->registerSubTick( sw::TickGroup::PostPhysics, 121, sw::TickPhase::Finalize );
     pCompA->_pTargetComp             = pCompB;
-    pCompA->_targetSubTickId         = 120;
+    pCompA->_targetSubTickID         = 120;
     pCompA->_selfSubTickToUnregister = 101;
 
     manager.tick( 0.016f );
@@ -580,7 +580,7 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MidTickDeactivationAppliesToHighSubTic
     // 다시 켜면 다음 틱에 돈다.
     listTickOrder.clear();
     pCompA->_pTargetComp     = nullptr;
-    pCompA->_targetSubTickId = 0;
+    pCompA->_targetSubTickID = 0;
     pCompB->setSubTickActive( 120, true );
     SW_EXPECT_TRUE( pCompB->isSubTickActive( 120 ) );
 
@@ -687,8 +687,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 
     struct DagEdge
     {
-        uint32 _prereqGlobalId;
-        uint32 _dependentGlobalId;
+        uint32 _prereqGlobalID;
+        uint32 _dependentGlobalID;
     };
     vector<DagEdge> listDagEdge;
 
@@ -708,11 +708,11 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
 
         pCompA->_pGlobalTickSequence   = &globalTickSeq;
         pCompA->_pExecutionOrderArray  = arrExecutionOrder;
-        pCompA->_subTickGlobalIdOffset = static_cast<uint32>( actorIdx * 6 );
+        pCompA->_subTickGlobalIDOffset = static_cast<uint32>( actorIdx * 6 );
 
         pCompB->_pGlobalTickSequence   = &globalTickSeq;
         pCompB->_pExecutionOrderArray  = arrExecutionOrder;
-        pCompB->_subTickGlobalIdOffset = static_cast<uint32>( actorIdx * 6 + 3 );
+        pCompB->_subTickGlobalIDOffset = static_cast<uint32>( actorIdx * 6 + 3 );
 
         // SubTick 등록 (CompA: 1, 2 / CompB: 1, 2)
         listHandleA1.push_back( pCompA->registerSubTick( sw::TickGroup::DuringPhysics, 1, sw::TickPhase::Early ) );
@@ -736,9 +736,9 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
         auto* pCompB1 = listCompB[actorBIdx];
         SW_EXPECT_TRUE( pCompB1->addSubTickPrerequisite( 1, listHandleA1[actorAIdx] ) );
 
-        const uint32 gIdA = static_cast<uint32>( actorAIdx * 6 + 1 );
-        const uint32 gIdB = static_cast<uint32>( actorBIdx * 6 + 3 + 1 );
-        listDagEdge.push_back( { gIdA, gIdB } );
+        const uint32 gIDA = static_cast<uint32>( actorAIdx * 6 + 1 );
+        const uint32 gIDB = static_cast<uint32>( actorBIdx * 6 + 3 + 1 );
+        listDagEdge.push_back( { gIDA, gIDB } );
     }
 
     // 2. 10단계 긴 의존성 체인 생성 (PostPhysics)
@@ -748,9 +748,9 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
         auto* pCompDst = listCompA[chainIdx + 1];
         SW_EXPECT_TRUE( pCompDst->addSubTickPrerequisite( 2, listHandleA2[chainIdx] ) );
 
-        const uint32 gIdSrc = static_cast<uint32>( chainIdx * 6 + 2 );
-        const uint32 gIdDst = static_cast<uint32>( ( chainIdx + 1 ) * 6 + 2 );
-        listDagEdge.push_back( { gIdSrc, gIdDst } );
+        const uint32 gIDSrc = static_cast<uint32>( chainIdx * 6 + 2 );
+        const uint32 gIDDst = static_cast<uint32>( ( chainIdx + 1 ) * 6 + 2 );
+        listDagEdge.push_back( { gIDSrc, gIDDst } );
     }
 
     // 5 프레임 동안 멀티스레드 스트레스 틱 실행 및 매 프레임 DAG 위상 정렬 정밀 검증
@@ -763,8 +763,8 @@ SW_TEST_CASE( ComponentSubTickHybridTest, MassiveSubTickStressAndMultiThreadedDA
         // 모든 등록된 선행 의존성 엣지에 대해 선행 노드가 후행 노드보다 먼저 실행되었는지 검증
         for ( const DagEdge& edge : listDagEdge )
         {
-            const uint32 orderPrereq    = arrExecutionOrder[edge._prereqGlobalId].load( std::memory_order_acquire );
-            const uint32 orderDependent = arrExecutionOrder[edge._dependentGlobalId].load( std::memory_order_acquire );
+            const uint32 orderPrereq    = arrExecutionOrder[edge._prereqGlobalID].load( std::memory_order_acquire );
+            const uint32 orderDependent = arrExecutionOrder[edge._dependentGlobalID].load( std::memory_order_acquire );
 
             SW_EXPECT_TRUE( orderPrereq != 0 );
             SW_EXPECT_TRUE( orderDependent != 0 );

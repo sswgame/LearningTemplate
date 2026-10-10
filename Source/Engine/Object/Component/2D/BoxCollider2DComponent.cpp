@@ -200,7 +200,7 @@ namespace sw
             _pPhysics->updateBody( _physicsBody, state, bTeleported ? BodyMoveType::Teleport : BodyMoveType::Sweep );
             return;
         }
-        _physicsBody = _pPhysics->addBody( state, pOwner->getObjectId() );
+        _physicsBody = _pPhysics->addBody( state, pOwner->getObjectID() );
     }
 
 } // namespace sw

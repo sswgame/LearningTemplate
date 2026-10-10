@@ -45,14 +45,14 @@ namespace
 
     struct ServerRegistryTestInternal
     {
-        static ServerDescriptor makeDescriptor( uint64 serverId )
+        static ServerDescriptor makeDescriptor( uint64 serverID )
         {
             ServerDescriptor descriptor;
-            descriptor._serverId = serverId;
+            descriptor._serverID = serverID;
             descriptor._kind     = "game";
             descriptor._region   = "kr";
             descriptor._address  = "127.0.0.1";
-            descriptor._port     = static_cast<uint16>( 7000 + serverId );
+            descriptor._port     = static_cast<uint16>( 7000 + serverID );
             descriptor._capacity = 10;
             return descriptor;
         }
@@ -168,16 +168,16 @@ SW_TEST_CASE( ServerRegistryTest, ShutdownRemovesImmediatelyAndPickAddsPendingLo
     query._seatCount = 6;
     ServerStatus picked;
     SW_ASSERT_TRUE( reader.pickServer( query, 0, picked ) );
-    SW_EXPECT_EQUAL( picked._descriptor._serverId, uint64( 1 ) );
+    SW_EXPECT_EQUAL( picked._descriptor._serverID, uint64( 1 ) );
     SW_ASSERT_TRUE( reader.pickServer( query, 0, picked ) ); // 1 은 6/10 이 얹혀 2 가 덜 찼다
-    SW_EXPECT_EQUAL( picked._descriptor._serverId, uint64( 2 ) );
+    SW_EXPECT_EQUAL( picked._descriptor._serverID, uint64( 2 ) );
     SW_EXPECT_FALSE( reader.pickServer( query, 0, picked ) ); // 둘 다 6 + 6 > 10
 
     first.shutdown();
     (void)node._router.pump();
     Internal::refreshFully( node, reader, 1 );
     SW_ASSERT_EQUAL( reader.getSnapshot().size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( reader.getSnapshot()[0]._descriptor._serverId, uint64( 2 ) );
+    SW_EXPECT_EQUAL( reader.getSnapshot()[0]._descriptor._serverID, uint64( 2 ) );
     SW_EXPECT_EQUAL( reader.getSnapshot()[0]._load, 0 ); // 새 스냅숏 — 얹은 몫은 사라졌다
     reader.shutdown();
 }
@@ -213,7 +213,7 @@ SW_TEST_CASE( ServerRegistryTest, RecordRoundTripsAndRejectsBadInput )
     vector<uint8> bytes              = ServerRecord::encode( status );
     ServerStatus  decoded;
     SW_ASSERT_TRUE( ServerRecord::decode( bytes, decoded ) );
-    SW_EXPECT_EQUAL( decoded._descriptor._serverId, uint64( 0xABCD ) );
+    SW_EXPECT_EQUAL( decoded._descriptor._serverID, uint64( 0xABCD ) );
     SW_EXPECT_EQUAL( decoded._descriptor._buildVersion, uint32( 12 ) );
     SW_EXPECT_EQUAL( decoded._heartbeatMs, int64( 1234567 ) );
     SW_EXPECT_TRUE( decoded._state == ServerState::Draining );
@@ -222,9 +222,9 @@ SW_TEST_CASE( ServerRegistryTest, RecordRoundTripsAndRejectsBadInput )
     bytes[0] = static_cast<uint8>( ServerRecord::kFormatVersion + 1 );
     SW_EXPECT_FALSE( ServerRecord::decode( bytes, decoded ) ); // 다른 판
 
-    uint64 serverId = 0;
-    SW_EXPECT_TRUE( ServerRecord::parseMember( ServerRecord::makeMember( 77 ), serverId ) );
-    SW_EXPECT_EQUAL( serverId, uint64( 77 ) );
+    uint64 serverID = 0;
+    SW_EXPECT_TRUE( ServerRecord::parseMember( ServerRecord::makeMember( 77 ), serverID ) );
+    SW_EXPECT_EQUAL( serverID, uint64( 77 ) );
     SW_EXPECT_TRUE( ServerRecord::isValidName( "eu-west" ) );
     SW_EXPECT_FALSE( ServerRecord::isValidName( "Game" ) );
     SW_EXPECT_FALSE( ServerRecord::isValidName( "" ) );

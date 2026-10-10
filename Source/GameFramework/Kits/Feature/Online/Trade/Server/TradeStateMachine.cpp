@@ -6,7 +6,7 @@
 
 namespace sw
 {
-    bool DefaultTradePolicy::isTradable( string_view assetId ) const { return assetId.substr( 0, 5 ) == "item." || assetId.substr( 0, 4 ) == "cur."; }
+    bool DefaultTradePolicy::isTradable( string_view assetID ) const { return assetID.substr( 0, 5 ) == "item." || assetID.substr( 0, 4 ) == "cur."; }
 
     TradeResult TradeStateMachine::validateOffer( const vector<TradeLeg>& listLeg, const ITradePolicy& policy )
     {
@@ -16,13 +16,13 @@ namespace sw
         {
             const TradeLeg& leg       = listLeg[legIndex];
             const bool      bAmountOk = 1 <= leg._amount && leg._amount <= LedgerConstant::kMaxAmount;
-            if ( LedgerUtil::isValidAssetId( leg._assetId ) == false || bAmountOk == false )
+            if ( LedgerUtil::isValidAssetID( leg._assetID ) == false || bAmountOk == false )
                 return TradeResult::Invalid;
-            if ( policy.isTradable( leg._assetId ) == false )
+            if ( policy.isTradable( leg._assetID ) == false )
                 return TradeResult::NotTradable;
             for ( size_t otherIndex = 0; otherIndex < legIndex; ++otherIndex )
             {
-                if ( listLeg[otherIndex]._assetId == leg._assetId )
+                if ( listLeg[otherIndex]._assetID == leg._assetID )
                     return TradeResult::Invalid; // 같은 자산은 한 다리로
             }
         }
@@ -40,7 +40,7 @@ namespace sw
 
     TradeResult TradeStateMachine::apply( TradeSnapshot& inoutTrade, const TradeCommand& command, const ITradePolicy& policy, int64 nowMs )
     {
-        const int32 sideIndex = inoutTrade.findSideIndex( command._actorId );
+        const int32 sideIndex = inoutTrade.findSideIndex( command._actorID );
         if ( sideIndex < 0 )
             return TradeResult::NotParty;
         if ( inoutTrade.isClosed() )

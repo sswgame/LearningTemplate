@@ -17,7 +17,7 @@ namespace sw
     KeyRebindScreen::KeyRebindScreen( const UiScreenDesc& desc, unique_ptr<Widget> root )
         : UiScreen{ desc, std::move( root ) }
         , _capturedSlotText{}
-        , _settingId{}
+        , _settingID{}
         , _pSettings{ nullptr }
         , _openFrame{ 0 }
         , _escapeHeldSeconds{ 0.0f }
@@ -28,7 +28,7 @@ namespace sw
 
     KeyRebindScreen::~KeyRebindScreen() = default;
 
-    UiScreenHandle KeyRebindScreen::open( UiSystem& ui, UserSettingsManager& settings, const hashed_string& settingId, string_view documentPath )
+    UiScreenHandle KeyRebindScreen::open( UiSystem& ui, UserSettingsManager& settings, const hashed_string& settingID, string_view documentPath )
     {
         const UiScreenHandle handle  = ui.openScreen<KeyRebindScreen>( documentPath );
         UiScreen*            pScreen = ui.findScreen( handle );
@@ -36,7 +36,7 @@ namespace sw
             return kInvalidUiScreenHandle;
         KeyRebindScreen& screen = static_cast<KeyRebindScreen&>( *pScreen );
         screen._pSettings       = &settings;
-        screen._settingId       = settingId;
+        screen._settingID       = settingID;
         screen._openFrame       = ui.getInputManager() != nullptr ? ui.getInputManager()->getBeginFrameCount() : 0;
         return handle;
     }
@@ -46,7 +46,7 @@ namespace sw
         if ( command == hashed_string( "Swap" ) )
         {
             if ( _pSettings != nullptr && _capturedSlotText.empty() == false )
-                (void)_pSettings->setPendingBinding( _settingId, _capturedSlotText, UserSettingBindingPolicy::Swap );
+                (void)_pSettings->setPendingBinding( _settingID, _capturedSlotText, UserSettingBindingPolicy::Swap );
             close();
             return true;
         }
@@ -107,22 +107,22 @@ namespace sw
         _capturedSlotText = InputSlotUtil::toText( slot );
         _bListening       = false;
         UserSettingBindingConflict conflict{};
-        if ( _pSettings->findBindingConflict( _settingId, _capturedSlotText, conflict ) )
+        if ( _pSettings->findBindingConflict( _settingID, _capturedSlotText, conflict ) )
         {
-            showConflict( conflict._settingId, conflict._action );
+            showConflict( conflict._settingID, conflict._action );
             return;
         }
-        const UserSettingSetResult result = _pSettings->setPendingBinding( _settingId, _capturedSlotText, UserSettingBindingPolicy::Reject );
+        const UserSettingSetResult result = _pSettings->setPendingBinding( _settingID, _capturedSlotText, UserSettingBindingPolicy::Reject );
         if ( result != UserSettingSetResult::Accepted && result != UserSettingSetResult::Unchanged )
-            SW_LOG_WARNING( "[Ui] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingId.c_str() );
+            SW_LOG_WARNING( "[Ui] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingID.c_str() );
         close();
     }
 
-    void KeyRebindScreen::showConflict( const hashed_string& otherSettingId, const hashed_string& otherAction )
+    void KeyRebindScreen::showConflict( const hashed_string& otherSettingID, const hashed_string& otherAction )
     {
         WidgetTree& tree = getTree();
         // 상대 이름 — 설정이면 그 메뉴 이름(글 키 — 글 위젯이 푼다), 스키마 밖이면 액션 이름.
-        const UserSettingDef* pOther = otherSettingId.empty() ? nullptr : _pSettings->findSetting( otherSettingId );
+        const UserSettingDef* pOther = otherSettingID.empty() ? nullptr : _pSettings->findSetting( otherSettingID );
         if ( TextWidget* pTarget = tree.findWidget<TextWidget>( "ConflictTarget" ); pTarget != nullptr )
             pTarget->setText( pOther != nullptr && pOther->_textKey.empty() == false ? string_view( pOther->_textKey ) : string_view( otherAction.c_str() ) );
         if ( Widget* pRow = tree.findWidgetByName( "ConflictRow" ); pRow != nullptr )
@@ -140,6 +140,6 @@ namespace sw
             return;
         Widget* pFocus = pOther != nullptr ? pSwap : tree.findWidgetByName( "Cancel" );
         if ( pFocus != nullptr )
-            (void)pUi->getFocusManager().setFocus( tree, pFocus->getId() );
+            (void)pUi->getFocusManager().setFocus( tree, pFocus->getID() );
     }
 } // namespace sw

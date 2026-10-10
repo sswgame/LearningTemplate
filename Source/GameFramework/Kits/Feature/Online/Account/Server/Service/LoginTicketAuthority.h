@@ -23,8 +23,8 @@ namespace sw
     /** @brief 게임 서버가 표에서 읽은 것입니다. */
     struct NetGameTicketClaim
     {
-        uint64 _accountId{ 0 };
-        uint64 _sessionId{ 0 };
+        uint64 _accountID{ 0 };
+        uint64 _sessionID{ 0 };
         int64  _expiresAtMs{ 0 };
         uint8  _arrSecret[NetGameTicket::kSecretSize]{};
     };
@@ -46,9 +46,9 @@ namespace sw
         void initialize( ILoginCrypto* pCrypto, const uint8 ( &arrMasterKey )[kMasterKeySize] );
         void shutdown();
 
-        [[nodiscard]] bool issueTicket( uint64 accountId, uint64 sessionId, const hashed_string& serverId, int64 expiresAtMs, NetGameTicket& outTicket ) const;
+        [[nodiscard]] bool issueTicket( uint64 accountID, uint64 sessionID, const hashed_string& serverID, int64 expiresAtMs, NetGameTicket& outTicket ) const;
         /** @brief 태그 · 서버 · 시한을 봅니다. 틀리면 false 이고 @p outClaim 은 그대로입니다. */
-        [[nodiscard]] bool verifyTicket( const uint8* pToken, int32 tokenSize, const hashed_string& serverId, int64 nowMs, NetGameTicketClaim& outClaim ) const;
+        [[nodiscard]] bool verifyTicket( const uint8* pToken, int32 tokenSize, const hashed_string& serverID, int64 nowMs, NetGameTicketClaim& outClaim ) const;
 
         bool isInitialized() const { return _pCrypto != nullptr; }
 

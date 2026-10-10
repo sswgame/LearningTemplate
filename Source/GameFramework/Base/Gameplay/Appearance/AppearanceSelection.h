@@ -36,7 +36,7 @@ namespace sw
         CustomizationValueSet         _customization{};
         vector<AppearanceSlotRequest> _listSlot{};
         vector<hashed_string>         _listCategory{};
-        hashed_string                 _basePresetId{};
+        hashed_string                 _basePresetID{};
         hashed_string                 _schema{};
         hashed_string                 _bodyType{};
         hashed_string                 _bodyShape{};
@@ -94,7 +94,7 @@ namespace sw
         IAppearanceUnlockQuery( IAppearanceUnlockQuery&& ) noexcept            = default;
         IAppearanceUnlockQuery& operator=( IAppearanceUnlockQuery&& ) noexcept = default;
 
-        virtual bool isItemUnlocked( const hashed_string& itemId ) const = 0;
+        virtual bool isItemUnlocked( const hashed_string& itemID ) const = 0;
     };
 } // namespace sw
 

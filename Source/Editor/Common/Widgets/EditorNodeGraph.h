@@ -28,7 +28,7 @@ namespace sw::editor
         void shutdown();
 
         /** @brief 컨텍스트를 준비하고 캔버스를 엽니다. false 면 endCanvas 를 부르지 마십시오. */
-        bool beginCanvas( const utf8* pCanvasId, const utf8* pSettingsFileName );
+        bool beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName );
         /** @brief beginCanvas()와 짝을 이룹니다. */
         void endCanvas();
 

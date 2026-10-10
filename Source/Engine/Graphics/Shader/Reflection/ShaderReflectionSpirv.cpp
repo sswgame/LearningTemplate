@@ -29,22 +29,22 @@ namespace sw
                     Image,
                     Sampler,
                     SampledImage,
-                    Array,       ///< OpTypeArray. _subTypeId 원소, _count 길이(상수 id 를 풀어 둔 값), _arrayStride
+                    Array,       ///< OpTypeArray. _subTypeID 원소, _count 길이(상수 id 를 풀어 둔 값), _arrayStride
                     RuntimeArray ///< OpTypeRuntimeArray. 무제한 배열(bindless `T name[]`)
                 };
 
                 Kind           _kind  = Kind::Unknown;
                 uint32         _width = 32;
                 uint32         _count{ 0 };
-                uint32         _subTypeId{ 0 };
+                uint32         _subTypeID{ 0 };
                 uint32         _storageClass{ 0 };
-                vector<uint32> _listMemberTypeId;
+                vector<uint32> _listMemberTypeID;
                 uint32         _arrayStride{ 0 };
             };
 
-            static string resolveSpirvTypeName( uint32 typeId, const unordered_map<uint32, SpirvType>& mapType, uint32& outSize )
+            static string resolveSpirvTypeName( uint32 typeID, const unordered_map<uint32, SpirvType>& mapType, uint32& outSize )
             {
-                auto it = mapType.find( typeId );
+                auto it = mapType.find( typeID );
                 if ( it == mapType.end() )
                 {
                     outSize = 4;
@@ -77,14 +77,14 @@ namespace sw
                     case SpirvType::Kind::Vector:
                     {
                         uint32 subSize = 4;
-                        string subName = resolveSpirvTypeName( spirvType._subTypeId, mapType, subSize );
+                        string subName = resolveSpirvTypeName( spirvType._subTypeID, mapType, subSize );
                         outSize        = subSize * spirvType._count;
                         return subName + to_string( spirvType._count );
                     }
                     case SpirvType::Kind::Matrix:
                     {
                         uint32 columnSize = 16;
-                        resolveSpirvTypeName( spirvType._subTypeId, mapType, columnSize );
+                        resolveSpirvTypeName( spirvType._subTypeID, mapType, columnSize );
                         outSize = columnSize * spirvType._count;
                         if ( spirvType._count == 4 )
                             return "Float4x4";
@@ -94,7 +94,7 @@ namespace sw
                     {
                         // 배열 크기 = (원소 수 - 1) * stride + 원소 크기(마지막 원소 뒤 패딩 없음. DX 리플렉션과 같은 규칙).
                         uint32       elemSize = 4;
-                        const string elemName = resolveSpirvTypeName( spirvType._subTypeId, mapType, elemSize );
+                        const string elemName = resolveSpirvTypeName( spirvType._subTypeID, mapType, elemSize );
                         const uint32 stride   = spirvType._arrayStride > 0 ? spirvType._arrayStride : elemSize;
                         outSize               = spirvType._count > 0 ? ( spirvType._count - 1 ) * stride + elemSize : elemSize;
                         return elemName;
@@ -153,7 +153,7 @@ namespace sw
         struct VariableInfo
         {
             uint32 _storageClass{ 0 };
-            uint32 _typeId{ 0 };
+            uint32 _typeID{ 0 };
         };
         unordered_map<uint32, VariableInfo> mapVariable;
 
@@ -259,8 +259,8 @@ namespace sw
             {
                 const uint32 id       = pWords[offset + 1];
                 const uint32 elemType = pWords[offset + 2];
-                const uint32 lengthId = pWords[offset + 3];
-                const auto   lenIt    = mapConstantValue.find( lengthId );
+                const uint32 lengthID = pWords[offset + 3];
+                const auto   lenIt    = mapConstantValue.find( lengthID );
                 const uint32 length   = ( lenIt != mapConstantValue.end() ) ? lenIt->second : 0;
                 mapType[id]           = ShaderReflectionSpirvInternal::SpirvType{ ShaderReflectionSpirvInternal::SpirvType::Kind::Array, 0, length, elemType, 0, {}, 0 };
             }
@@ -276,7 +276,7 @@ namespace sw
                 ShaderReflectionSpirvInternal::SpirvType st{ ShaderReflectionSpirvInternal::SpirvType::Kind::Struct, 0, 0, 0, 0, {}, 0 };
                 for ( uint32 wordIndex = 2; wordIndex < instructionWordCount; ++wordIndex )
                 {
-                    st._listMemberTypeId.push_back( pWords[offset + wordIndex] );
+                    st._listMemberTypeID.push_back( pWords[offset + wordIndex] );
                 }
                 mapType[id] = std::move( st );
             }
@@ -294,19 +294,19 @@ namespace sw
             }
             else if ( opcode == spirv::kOpVariable && instructionWordCount >= 4 )
             {
-                const uint32 typeId       = pWords[offset + 1];
-                const uint32 resultId     = pWords[offset + 2];
+                const uint32 typeID       = pWords[offset + 1];
+                const uint32 resultID     = pWords[offset + 2];
                 const uint32 storageClass = pWords[offset + 3];
-                mapVariable[resultId]     = VariableInfo{ storageClass, typeId };
+                mapVariable[resultID]     = VariableInfo{ storageClass, typeID };
             }
 
             offset += instructionWordCount;
         }
 
         // ArrayStride 데코레이션은 타입 정의 앞에 온다. 지금 붙인다.
-        for ( const auto& [typeId, stride] : mapArrayStride )
+        for ( const auto& [typeID, stride] : mapArrayStride )
         {
-            auto it = mapType.find( typeId );
+            auto it = mapType.find( typeID );
             if ( it != mapType.end() )
                 it->second._arrayStride = stride;
         }
@@ -314,41 +314,41 @@ namespace sw
         // 변수의 포인터 → 배열(무제한/고정) → 구조체 순으로 벗겨 "블록 구조체" 타입 id 를 반환한다.
         // bindless `ConstantBuffer<T> name[]` 는 Uniform 포인터 → OpTypeRuntimeArray → Block 구조체다.
         // outIsArray 는 무제한/고정 배열이었으면 true 다(bindCount 0 으로 보고한다).
-        auto resolveBlockStruct = [&]( uint32 pointerTypeId, bool& outIsArray ) -> uint32
+        auto resolveBlockStruct = [&]( uint32 pointerTypeID, bool& outIsArray ) -> uint32
         {
             outIsArray = false;
-            auto ptrIt = mapType.find( pointerTypeId );
+            auto ptrIt = mapType.find( pointerTypeID );
             if ( ptrIt == mapType.end() || ptrIt->second._kind != ShaderReflectionSpirvInternal::SpirvType::Kind::Pointer )
                 return 0;
-            uint32 typeId = ptrIt->second._subTypeId;
+            uint32 typeID = ptrIt->second._subTypeID;
             for ( uint32 depth = 0; depth < 2; ++depth )
             {
-                auto it = mapType.find( typeId );
+                auto it = mapType.find( typeID );
                 if ( it == mapType.end() )
                     return 0;
                 if ( it->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray ||
                      it->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Array )
                 {
                     outIsArray = true;
-                    typeId     = it->second._subTypeId;
+                    typeID     = it->second._subTypeID;
                     continue;
                 }
                 break;
             }
-            return typeId;
+            return typeID;
         };
 
         /** 구조체 멤버들을 CB 멤버 표에 넣습니다(baseOffset 은 감싼 구조체 안에서의 시작 오프셋입니다). */
-        auto appendStructMembers = [&]( uint32 structTypeId, uint32 baseOffset, ShaderBufferInfo& outBuffer )
+        auto appendStructMembers = [&]( uint32 structTypeID, uint32 baseOffset, ShaderBufferInfo& outBuffer )
         {
-            auto structTypeIt = mapType.find( structTypeId );
+            auto structTypeIt = mapType.find( structTypeID );
             if ( structTypeIt == mapType.end() || structTypeIt->second._kind != ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
                 return;
-            const auto& memberNameMap   = mapMemberName[structTypeId];
-            const auto& memberOffsetMap = mapMemberOffset[structTypeId];
+            const auto& memberNameMap   = mapMemberName[structTypeID];
+            const auto& memberOffsetMap = mapMemberOffset[structTypeID];
 
             uint32 memberIdx{ 0 };
-            for ( uint32 memberTypeId : structTypeIt->second._listMemberTypeId )
+            for ( uint32 memberTypeID : structTypeIt->second._listMemberTypeID )
             {
                 ShaderVariableInfo varInfo{};
                 auto               mNameIt = memberNameMap.find( memberIdx );
@@ -359,7 +359,7 @@ namespace sw
 
                 auto mOffIt     = memberOffsetMap.find( memberIdx );
                 varInfo._offset = baseOffset + ( ( mOffIt != memberOffsetMap.end() ) ? mOffIt->second : 0 );
-                varInfo._type   = ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeId, mapType, varInfo._size );
+                varInfo._type   = ShaderReflectionSpirvInternal::resolveSpirvTypeName( memberTypeID, mapType, varInfo._size );
 
                 outBuffer._listVariable.push_back( varInfo );
                 outBuffer._totalSize = MathUtil::max( outBuffer._totalSize, varInfo._offset + varInfo._size );
@@ -385,7 +385,7 @@ namespace sw
             const uint32 bindPoint = bindingIt->second;
 
             bool         bIsArray{ false };
-            const uint32 blockTypeId = resolveBlockStruct( var._typeId, bIsArray );
+            const uint32 blockTypeID = resolveBlockStruct( var._typeID, bIsArray );
 
             // SSBO 는 SPIR-V 버전에 따라 **두 가지**로 표현된다. StorageBuffer 저장 클래스(1.4+ / Vulkan 1.1+
             // 타깃)이거나, 구식으로는 Uniform 저장 클래스에 구조체 타입이 BufferBlock 으로 데코레이션된다.
@@ -393,7 +393,7 @@ namespace sw
             // 걸고 bindStructuredBuffer 는 부르지 않는다(GL 에서 인스턴스 행렬이 모두 0 으로 읽혀 메시가 하나도 안 그려진다).
             bool bIsStorageBuffer = ( var._storageClass == spirv::kStorageClassStorageBuffer );
             if ( bIsStorageBuffer == false && var._storageClass == spirv::kStorageClassUniform &&
-                 blockTypeId != 0 && uniqueBufferBlockType.find( blockTypeId ) != uniqueBufferBlockType.end() )
+                 blockTypeID != 0 && uniqueBufferBlockType.find( blockTypeID ) != uniqueBufferBlockType.end() )
                 bIsStorageBuffer = true;
 
             // 진짜 cbuffer(Uniform storage class)만 "CB 레이아웃(멤버 오프셋 포함)" 으로 채운다.
@@ -410,29 +410,29 @@ namespace sw
                 buf._bindPoint     = bindPoint;
                 buf._totalSize     = 0;
 
-                auto blockIt = mapType.find( blockTypeId );
+                auto blockIt = mapType.find( blockTypeID );
                 if ( blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
                 {
                     // 엔진 cbuffer 는 맨 필드지만, `cbuffer { name_t x; }` 처럼 구조체 하나로 감싼 cbuffer 는 블록 멤버가
                     // 구조체 하나다. 엔진과 머티리얼 패커는 필드 이름으로 찾으므로 한 겹 벗긴다(DX 리플렉터와 같은 규칙).
-                    const auto& listMember = blockIt->second._listMemberTypeId;
-                    uint32      innerId{ 0 };
+                    const auto& listMember = blockIt->second._listMemberTypeID;
+                    uint32      innerID{ 0 };
                     if ( listMember.size() == 1 )
                     {
                         auto innerIt = mapType.find( listMember[0] );
                         if ( innerIt != mapType.end() && innerIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
-                            innerId = listMember[0];
+                            innerID = listMember[0];
                     }
-                    if ( innerId != 0 )
+                    if ( innerID != 0 )
                     {
-                        const auto&  offsetMap  = mapMemberOffset[blockTypeId];
+                        const auto&  offsetMap  = mapMemberOffset[blockTypeID];
                         const auto   offIt      = offsetMap.find( 0u ); // 키가 uint32 다. 부호 있는 리터럴이면 이종 키 오버로드로 샌다
                         const uint32 baseOffset = ( offIt != offsetMap.end() ) ? offIt->second : 0;
-                        appendStructMembers( innerId, baseOffset, buf );
+                        appendStructMembers( innerID, baseOffset, buf );
                     }
                     else
                     {
-                        appendStructMembers( blockTypeId, 0, buf );
+                        appendStructMembers( blockTypeID, 0, buf );
                     }
                     buf._totalSize = MathUtil::align( buf._totalSize, 256u );
                 }
@@ -442,25 +442,25 @@ namespace sw
 
             // StructuredBuffer<T> 의 원소 레이아웃: 블록 { T arr[] } 의 멤버 0 이 (런타임)배열이고 원소가 구조체면
             // 그 필드들을 원소 레이아웃으로 낸다. stride 는 배열 타입의 ArrayStride 다(std430: 예 float4+float+uint = 32).
-            if ( bIsStorageBuffer && blockTypeId != 0 )
+            if ( bIsStorageBuffer && blockTypeID != 0 )
             {
-                auto blockIt = mapType.find( blockTypeId );
+                auto blockIt = mapType.find( blockTypeID );
                 if ( blockIt != mapType.end() && blockIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct &&
-                     blockIt->second._listMemberTypeId.size() == 1 )
+                     blockIt->second._listMemberTypeID.size() == 1 )
                 {
-                    auto arrIt = mapType.find( blockIt->second._listMemberTypeId[0] );
+                    auto arrIt = mapType.find( blockIt->second._listMemberTypeID[0] );
                     if ( arrIt != mapType.end() &&
                          ( arrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::RuntimeArray ||
                            arrIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Array ) )
                     {
-                        auto elemIt = mapType.find( arrIt->second._subTypeId );
+                        auto elemIt = mapType.find( arrIt->second._subTypeID );
                         if ( elemIt != mapType.end() && elemIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Struct )
                         {
                             ShaderBufferInfo element{};
                             element._name          = name;
                             element._registerSpace = space;
                             element._bindPoint     = bindPoint;
-                            appendStructMembers( arrIt->second._subTypeId, 0, element );
+                            appendStructMembers( arrIt->second._subTypeID, 0, element );
                             element._totalSize = arrIt->second._arrayStride > 0 ? arrIt->second._arrayStride : element._totalSize;
                             if ( element._listVariable.empty() == false )
                                 data._listStructuredElement.push_back( std::move( element ) );
@@ -482,7 +482,7 @@ namespace sw
             {
                 // 포인터의 원소 타입으로 샘플러만 가른다. 배열(bindless)은 원소를 따라가서 본다.
                 res._type      = "TextureOrSampler";
-                auto pointeeIt = mapType.find( blockTypeId );
+                auto pointeeIt = mapType.find( blockTypeID );
                 if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Sampler )
                     res._type = "Sampler";
                 else if ( pointeeIt != mapType.end() && pointeeIt->second._kind == ShaderReflectionSpirvInternal::SpirvType::Kind::Image && pointeeIt->second._count == 2 )

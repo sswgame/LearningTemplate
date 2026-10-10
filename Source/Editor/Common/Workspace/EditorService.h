@@ -44,7 +44,7 @@ namespace sw::editor
             return StringUtil::computeHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
         }
 
-        void* getRawService( sw::internal::ModuleServiceId id );
+        void* getRawService( sw::internal::ModuleServiceID id );
         void  bindRawLocalService( uint64 typeHash, void* pService );
         void* getRawLocalService( uint64 typeHash );
     } // namespace internal

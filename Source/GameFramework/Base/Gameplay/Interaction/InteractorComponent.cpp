@@ -89,7 +89,7 @@ namespace sw
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         outViewer._space             = _space;
-        outViewer._objectId          = pOwner != nullptr ? pOwner->getObjectId() : 0;
+        outViewer._objectID          = pOwner != nullptr ? pOwner->getObjectID() : 0;
         if ( pScene == nullptr )
             return;
         outViewer._position = pScene->getWorldPosition() + _eyeOffset;
@@ -112,7 +112,7 @@ namespace sw
             const InteractionDef* pDef = pInteractable->getDefinition();
             InteractionCandidate  candidate;
             candidate._position             = pScene->getWorldPosition();
-            candidate._objectId             = pObject->getObjectId();
+            candidate._objectID             = pObject->getObjectID();
             candidate._maxDistance          = pDef->_maxDistance;
             candidate._maxAngle             = pDef->_maxAngle;
             candidate._priority             = pInteractable->getPriority();
@@ -194,7 +194,7 @@ namespace sw
             if ( best >= 0 )
             {
                 const size_t index = static_cast<size_t>( best );
-                setFocus( *pManager, GameObjectHandle::make( _listCandidate[index]._objectId ), _listCandidateComponent[index] );
+                setFocus( *pManager, GameObjectHandle::make( _listCandidate[index]._objectID ), _listCandidateComponent[index] );
             }
             else
             {
@@ -210,7 +210,7 @@ namespace sw
                 request._interactable = _focus;
                 request._interaction  = pDef->_id;
                 const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
-                if ( bAllowed && _session.begin( pDef, static_cast<uint32>( pOwner->getObjectId() ) ) )
+                if ( bAllowed && _session.begin( pDef, static_cast<uint32>( pOwner->getObjectID() ) ) )
                     InteractorComponentInternal::setAlignmentWarpTarget( *pOwner, *pTarget, *pDef );
             }
         }

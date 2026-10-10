@@ -121,7 +121,7 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     clientOfSecond.drainNotifications( listNotificationOfSecond );
     SW_ASSERT_EQUAL( listNotificationOfSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listNotificationOfSecond[0]._kind == SocialNotificationKind::FriendRequested );
-    SW_EXPECT_EQUAL( listNotificationOfSecond[0]._otherId, AccountId( 1 ) );
+    SW_EXPECT_EQUAL( listNotificationOfSecond[0]._otherID, AccountID( 1 ) );
 
     // 2) 수락 → 신청한 쪽에 FriendAdded, 목록에 친구 하나, 접속 상태가 친구에게 알려진다
     (void)clientOfSecond.respondFriend( 1, true, recorder.makeDelegate() );
@@ -153,16 +153,16 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     (void)clientOfFirst.createGuild( "Knights", recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 50 );
     SW_ASSERT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
-    const uint64 guildId = recorder.getLast()._reply._guild._guildId;
-    SW_EXPECT_NOT_EQUAL( guildId, uint64( 0 ) );
+    const uint64 guildID = recorder.getLast()._reply._guild._guildID;
+    SW_EXPECT_NOT_EQUAL( guildID, uint64( 0 ) );
     (void)clientOfFirst.inviteToGuild( 2, recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 60 );
     listNotificationOfSecond.clear();
     clientOfSecond.drainNotifications( listNotificationOfSecond );
     SW_ASSERT_EQUAL( listNotificationOfSecond.size(), size_t( 1 ) );
     SW_EXPECT_TRUE( listNotificationOfSecond[0]._kind == SocialNotificationKind::GuildInvited );
-    SW_EXPECT_EQUAL( listNotificationOfSecond[0]._guildId, guildId );
-    (void)clientOfSecond.acceptGuildInvite( guildId, recorder.makeDelegate() );
+    SW_EXPECT_EQUAL( listNotificationOfSecond[0]._guildID, guildID );
+    (void)clientOfSecond.acceptGuildInvite( guildID, recorder.makeDelegate() );
     test::tickAll( { &server }, clients, 70 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     (void)clientOfFirst.requestGuild( recorder.makeDelegate() );
@@ -189,6 +189,6 @@ SW_TEST_CASE( SocialStreamTest, FriendRequestNotificationAndGuildRoundTrip )
     test::tickAll( { &server }, clients, 110 );
     SW_EXPECT_TRUE( recorder.getLast()._reply._result == SocialResult::Ok );
     SW_ASSERT_EQUAL( server._presence._listRemotePush.size(), size_t( 1 ) );
-    SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountId, AccountId( 3 ) );
+    SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._accountID, AccountID( 3 ) );
     SW_EXPECT_EQUAL( server._presence._listRemotePush[0]._kind, SocialMethod::kPushNotification );
 }

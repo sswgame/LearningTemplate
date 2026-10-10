@@ -50,8 +50,8 @@ namespace sw
             MemberAttached
         };
 
-        AccountId _accountId{ kInvalidAccountId };
-        uint64    _guildId{ 0 };
+        AccountID _accountID{ kInvalidAccountID };
+        uint64    _guildID{ 0 };
         Kind      _kind{ Kind::Joined };
     };
 
@@ -64,9 +64,9 @@ namespace sw
     struct GuildRequest
     {
         string         _text{};                         ///< 이름 · 공지
-        AccountId      _accountId{ kInvalidAccountId }; ///< 요청한 이
-        AccountId      _targetId{ kInvalidAccountId };  ///< 초대 · 내보내기 · 역할 대상
-        uint64         _guildId{ 0 };                   ///< 수락
+        AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 이
+        AccountID      _targetID{ kInvalidAccountID };  ///< 초대 · 내보내기 · 역할 대상
+        uint64         _guildID{ 0 };                   ///< 수락
         int64          _nowMs{ 0 };
         GuildRole      _role{ GuildRole::Member };
         GuildOperation _operation{ GuildOperation::Get };
@@ -90,12 +90,12 @@ namespace sw
     struct GuildOutcome
     {
         GuildInfo         _info{};
-        vector<AccountId> _listNotifyMember{}; ///< GuildChanged 를 받을 회원
-        AccountId         _invitedId{ kInvalidAccountId };
-        AccountId         _joinedId{ kInvalidAccountId };
-        AccountId         _leftId{ kInvalidAccountId };
-        AccountId         _attachedId{ kInvalidAccountId };
-        uint64            _guildId{ 0 };
+        vector<AccountID> _listNotifyMember{}; ///< GuildChanged 를 받을 회원
+        AccountID         _invitedID{ kInvalidAccountID };
+        AccountID         _joinedID{ kInvalidAccountID };
+        AccountID         _leftID{ kInvalidAccountID };
+        AccountID         _attachedID{ kInvalidAccountID };
+        uint64            _guildID{ 0 };
         SocialResult      _result{ SocialResult::Ok };
     };
 } // namespace sw
@@ -116,7 +116,7 @@ namespace sw
 
         void submit( const GuildRequest& request, uint64 requestTag );
         /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 사건을 냅니다(완료 없음). */
-        void attachAccount( AccountId accountId, int64 nowMs );
+        void attachAccount( AccountID accountID, int64 nowMs );
         /** @brief 사건을 받을 곳입니다(게임 조립 — 비어 있으면 버린다). */
         void setEventDelegate( const GuildEventDelegate& onEvent ) { _onEvent = onEvent; }
 
@@ -131,7 +131,7 @@ namespace sw
         void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );
 
     private:
-        void raiseEvent( AccountId accountId, uint64 guildId, GuildEvent::Kind kind );
+        void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind );
 
         EventBuffer<GuildCompletion>    _completionBuffer;
         EventBuffer<SocialNotification> _notificationBuffer;

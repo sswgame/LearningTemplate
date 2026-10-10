@@ -45,7 +45,7 @@ namespace sw
     {
         MailboxRequest    _request{};
         NetIdempotencyKey _idempotencyKey{};
-        AccountId         _accountId{ kInvalidAccountId };
+        AccountID         _accountID{ kInvalidAccountID };
         int64             _nowMs{ 0 }; ///< 0 이면 마지막 `tick` 의 시각
         uint16            _method{ 0 };
     };
@@ -83,7 +83,7 @@ namespace sw
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
 
         /** @brief 일의 `complete` 가 부릅니다. */
-        void completeCall( uint64 callId, const MailboxReply& reply );
+        void completeCall( uint64 callID, const MailboxReply& reply );
         /** @brief 쓸기 일의 `complete` — 지표 `mailbox_expired_total{action}`, `_bMore` 면 다음 틱에 바로 또. */
         void completeSweep( const MailboxSweepStats& stats );
         /** @brief 캠페인 일의 `complete` — 활성 · 곧 열릴 캠페인만 남겨 캐시를 바꾼다. */
@@ -98,7 +98,7 @@ namespace sw
             ReplyDelegate      _onReply{};
             NetRequestToken    _token{};
             OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callId{ 0 };
+            uint64             _callID{ 0 };
             int64              _receivedNanoseconds{ 0 };
             int32              _methodIndex{ 0 };
         };
@@ -113,7 +113,7 @@ namespace sw
         MailboxServiceSettings      _settings;
         IServiceStore*              _pStore;
         MetricCounter*              _arrExpiredCounter[3]; ///< discarded · returned · removed
-        uint64                      _nextCallId;
+        uint64                      _nextCallID;
         int64                       _nowMs;
         int64                       _nextSweepMs;
         int64                       _nextCampaignRefreshMs;

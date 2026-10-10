@@ -20,8 +20,8 @@ namespace sw
         struct OrthoCameraRigComponentInternal
         {
             static constexpr float32     kOverrideNearPlane = 0.05f; ///< 탑승 시점은 차 바로 앞까지 보인다
-            static constexpr const utf8* kOrthoPresetId     = "rig.ortho";
-            static constexpr const utf8* kOverridePresetId  = "rig.override";
+            static constexpr const utf8* kOrthoPresetID     = "rig.ortho";
+            static constexpr const utf8* kOverridePresetID  = "rig.override";
         };
     } // namespace
 } // namespace sw
@@ -191,7 +191,7 @@ namespace sw
     CameraPresetDef OrthoCameraRigComponent::makeOrthoPreset() const
     {
         CameraPresetDef def;
-        def._id                = hashed_string( OrthoCameraRigComponentInternal::kOrthoPresetId );
+        def._id                = hashed_string( OrthoCameraRigComponentInternal::kOrthoPresetID );
         def._view._mode        = CameraPresetMode::OrthoTopDown;
         def._view._yaw         = 0.0f; // 요는 모드 상태의 회전 요(`_rotateYaw` = 리그의 요)가 준다 — 그래야 Q/E 가 부드럽게 돈다
         def._view._pitch       = _pitch;
@@ -206,7 +206,7 @@ namespace sw
     CameraPresetDef OrthoCameraRigComponent::makeOverridePreset() const
     {
         CameraPresetDef def;
-        def._id                 = hashed_string( OrthoCameraRigComponentInternal::kOverridePresetId );
+        def._id                 = hashed_string( OrthoCameraRigComponentInternal::kOverridePresetID );
         def._view._mode         = CameraPresetMode::Fixed;
         def._view._offset       = _overridePosition;
         def._view._pitch        = _overrideEuler._x;

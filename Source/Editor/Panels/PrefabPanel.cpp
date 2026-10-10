@@ -62,16 +62,16 @@ namespace sw::editor
     {
         EditorContext* pContext = EditorContext::get();
         const utf8*    pScanPath{ nullptr };
-        uint64         objectId{ 0 };
+        uint64         objectID{ 0 };
         if ( pContext != nullptr )
         {
             GameObject* pPrimary       = pContext->getEditorSelection().getPrimaryObject();
-            objectId                   = pPrimary != nullptr ? pPrimary->getObjectId() : 0;
+            objectID                   = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
             const string_view matching = EditorAssetTypeRegistry::matchingFocusedPath( EditorAssetType::Prefab );
             if ( matching.empty() == false )
                 pScanPath = matching.data();
         }
-        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectId ) )
+        if ( EditorAssetTypeRegistry::consumeWorkspaceFocusKey( _lastScanKey, objectID ) )
             scanPrefabOverrides( pScanPath );
 
         EditorThemeUtil::textInfo( "Prefab Asset:" );

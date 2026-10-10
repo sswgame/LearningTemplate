@@ -139,13 +139,13 @@ SW_TEST_CASE( UiScreenStackTest, ClosingRestoresLastFocus )
     UiScreenFixture          fixture;
     const sw::UiScreenHandle menu   = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
     sw::Widget*              pMenu1 = fixture.find( menu, "menu1" );
-    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( menu )->getTree(), pMenu1->getId() ) );
+    SW_ASSERT_TRUE( fixture._ui.getFocusManager().setFocus( fixture._ui.findScreen( menu )->getTree(), pMenu1->getID() ) );
 
     fixture._ui.setInputMode( sw::UiInputMode::Navigation );
     const sw::UiScreenHandle modal =
         fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Modal, true ), 300.0f, 300.0f, 300.0f, 100.0f, "modal", 1 ) );
     SW_EXPECT_FALSE( pMenu1->hasFocus() );
-    SW_EXPECT_EQUAL( fixture.find( modal, "modal0" )->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( fixture.find( modal, "modal0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
 
     fixture._ui.closeScreen( modal );
     Util::runFrame( fixture._input, fixture._ui );
@@ -162,21 +162,21 @@ SW_TEST_CASE( UiScreenStackTest, DefaultFocusOnOpenInNavigationMode )
         sw::UiScreenDesc desc         = Util::makeDesc( sw::UiLayer::Menu );
         desc._defaultFocus            = "menu2";
         const sw::UiScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( desc, 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu2" )->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu2" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
     }
     {
         UiScreenFixture fixture;
         fixture._ui.setInputMode( sw::UiInputMode::Navigation );
         const sw::UiScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
     }
     {
         UiScreenFixture          fixture;
         const sw::UiScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 3 ) );
-        SW_EXPECT_EQUAL( sw::kInvalidWidgetId, fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getFocusManager().getFocusedWidget() );
         // 포인터에서 탐색으로 바뀌는 순간 기본 포커스로.
         fixture._ui.setInputMode( sw::UiInputMode::Navigation );
-        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getId(), fixture._ui.getFocusManager().getFocusedWidget() );
+        SW_EXPECT_EQUAL( fixture.find( menu, "menu0" )->getID(), fixture._ui.getFocusManager().getFocusedWidget() );
     }
 }
 
@@ -210,7 +210,7 @@ SW_TEST_CASE( UiScreenStackTest, HUDLayerNeverTakesFocus )
     fixture._ui.setInputMode( sw::UiInputMode::Navigation );
     (void)fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::HUD ), 0.0f, 0.0f, 800.0f, 600.0f, "hud", 2 ) );
     SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
-    SW_EXPECT_EQUAL( sw::kInvalidWidgetId, fixture._ui.getFocusManager().getFocusedWidget() );
+    SW_EXPECT_EQUAL( sw::kInvalidWidgetID, fixture._ui.getFocusManager().getFocusedWidget() );
     SW_EXPECT_FALSE( fixture._ui.wantsCursor() );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
 

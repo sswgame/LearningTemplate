@@ -35,14 +35,14 @@ namespace sw
 {
     WidgetTree::WidgetTree()
         : _root{}
-        , _mapIdToWidget{}
+        , _mapIDToWidget{}
         , _mapNameToWidget{}
         , _listLayoutDirtyRoot{}
         , _listPaintDirty{}
         , _listStyleDirty{}
         , _pFocusManager{ nullptr }
         , _pScreen{ nullptr }
-        , _focusedWidget{ kInvalidWidgetId }
+        , _focusedWidget{ kInvalidWidgetID }
         , _layoutUiScale{ 0.0f }
         , _layoutTextScale{ 0.0f }
         , _layoutSafeInsets{}
@@ -84,10 +84,10 @@ namespace sw
         return iter != _mapNameToWidget.end() ? iter->second : nullptr;
     }
 
-    Widget* WidgetTree::findWidgetById( WidgetId id ) const
+    Widget* WidgetTree::findWidgetByID( WidgetID id ) const
     {
-        const auto iter = _mapIdToWidget.find( id );
-        return iter != _mapIdToWidget.end() ? iter->second : nullptr;
+        const auto iter = _mapIDToWidget.find( id );
+        return iter != _mapIDToWidget.end() ? iter->second : nullptr;
     }
 
     void WidgetTree::notifyDirty( Widget& widget, uint32 dirtyReason )
@@ -141,7 +141,7 @@ namespace sw
 
     void WidgetTree::clearAllDirty()
     {
-        for ( const auto& [id, pWidget] : _mapIdToWidget )
+        for ( const auto& [id, pWidget] : _mapIDToWidget )
         {
             pWidget->_dirtyFlags = WidgetDirty::kNone;
         }
@@ -160,18 +160,18 @@ namespace sw
 
     void WidgetTree::registerWidget( Widget& widget )
     {
-        _mapIdToWidget[widget._id] = &widget;
+        _mapIDToWidget[widget._id] = &widget;
         if ( widget._name.empty() == false )
             registerName( widget );
     }
 
     void WidgetTree::unregisterWidget( Widget& widget )
     {
-        _mapIdToWidget.erase( widget._id );
+        _mapIDToWidget.erase( widget._id );
         if ( widget._name.empty() == false )
             unregisterName( widget );
         if ( _focusedWidget == widget._id )
-            _focusedWidget = kInvalidWidgetId;
+            _focusedWidget = kInvalidWidgetID;
     }
 
     void WidgetTree::registerName( Widget& widget )

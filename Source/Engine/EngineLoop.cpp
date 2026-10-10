@@ -16,7 +16,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
-#include "Core/Module/ModuleBuildId.h"
+#include "Core/Module/ModuleBuildID.h"
 #include "Core/String/hashed_string.h"
 #include "Core/String/string_splitter.h"
 #include "Core/Task/TaskManager.h"
@@ -571,9 +571,9 @@ namespace sw
                 if ( settings.loadSchema( gameSchema ) == false )
                     SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
             }
-            for ( const auto& [settingId, value] : gameConfig._mapUserSettingDefault )
+            for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
             {
-                (void)settings.setGameDefault( hashed_string( settingId ), value );
+                (void)settings.setGameDefault( hashed_string( settingID ), value );
             }
 
             // 사용자 폴더의 파일이다(세이브 게임과 별개). 자동화는 `-gv_userSettingsFile` 로 사용자 폴더를 건드리지 않는다.
@@ -784,10 +784,10 @@ namespace sw
             // 문맥은 파일마다 첫 줄 — 크래시 보고 · 로그와 같은 세션 id, 심볼과 짝지을 빌드 id.
             const GameConfig& gameConfig = GameConfig::getActive();
             TelemetryContext  context;
-            context._sessionId   = CrashHandler::getSessionId();
+            context._sessionID   = CrashHandler::getSessionID();
             context._buildConfig = build::kConfigName;
             context._platform    = build::kPlatformName;
-            context._buildId     = ModuleBuildId::find( nullptr )._id;
+            context._buildID     = ModuleBuildID::find( nullptr )._id;
             context._game        = FileUtil::getFileNamePart( FileUtil::trimTrailingSlashes( gameConfig._packRoot ) );
             const string folder  = gv_telemetryFolder.empty()
                                      ? FileUtil::joinPath( FileUtil::getDirectoryPart( loop._owned._pUserSettingsManager->getUserFilePath() ), "telemetry" )
@@ -814,7 +814,7 @@ namespace sw
                 CrashReportService& crashReports = *loop._owned._pCrashReportService;
                 const string        reportsFolder =
                     FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
-                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionId() );
+                crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
                 crashReports.bindConsentSetting( *loop._owned._pUserSettingsManager );
                 crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
                 (void)crashReports.collectNewCrashes();
@@ -1257,10 +1257,10 @@ namespace sw
         if ( _owned._pTelemetryService != nullptr )
         {
             const Scene* pTelemetryScene = _owned._pSceneManager != nullptr ? _owned._pSceneManager->getActiveScene() : nullptr;
-            string_view  sceneId{};
+            string_view  sceneID{};
             if ( pTelemetryScene != nullptr )
-                sceneId = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
-            _owned._pTelemetryService->recordFrame( sceneId, deltaTime );
+                sceneID = pTelemetryScene->getSourcePath().empty() ? pTelemetryScene->getName() : pTelemetryScene->getSourcePath();
+            _owned._pTelemetryService->recordFrame( sceneID, deltaTime );
             _owned._pTelemetryService->update( deltaTime );
         }
 

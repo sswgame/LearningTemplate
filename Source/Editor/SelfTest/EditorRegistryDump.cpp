@@ -33,12 +33,12 @@ namespace sw::editor
 
             /** @brief 등록부의 id 를 순서대로 한 줄씩 남깁니다. */
             template <typename TRegistration>
-            static void dumpIds()
+            static void dumpIDs()
             {
                 using Registry = EditorRegistry<TRegistration>;
                 for ( uint32 index = 0; index < Registry::getCount(); ++index )
                 {
-                    SW_LOG_INFO( "EditorRegistry|%#|%#", TRegistration::kKindName, Registry::getAt( index )._pId );
+                    SW_LOG_INFO( "EditorRegistry|%#|%#", TRegistration::kKindName, Registry::getAt( index )._pID );
                 }
             }
         };
@@ -68,9 +68,9 @@ namespace sw::editor
             SW_LOG_INFO( "EditorRegistry|panel|%#|%#|%#", entry._id.c_str(), EditorRegistryDumpInternal::getCategoryName( entry._category ),
                          entry._title.c_str() );
         }
-        EditorRegistryDumpInternal::dumpIds<EditorPopupRegistration>();
-        EditorRegistryDumpInternal::dumpIds<EditorInspectorRegistration>();
-        EditorRegistryDumpInternal::dumpIds<EditorVisualizerRegistration>();
+        EditorRegistryDumpInternal::dumpIDs<EditorPopupRegistration>();
+        EditorRegistryDumpInternal::dumpIDs<EditorInspectorRegistration>();
+        EditorRegistryDumpInternal::dumpIDs<EditorVisualizerRegistration>();
 
         const EditorCommandRegistry& registry = pContext->getCommandRegistry();
         for ( const EditorMenu& menu : registry.getMenus() )

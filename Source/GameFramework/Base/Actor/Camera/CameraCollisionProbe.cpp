@@ -58,9 +58,9 @@ namespace sw
         return bHit;
     }
 
-    PhysicsWorldCameraProbe::PhysicsWorldCameraProbe( const PhysicsWorld& world, uint8 layer, uint64 ignoredObjectId )
+    PhysicsWorldCameraProbe::PhysicsWorldCameraProbe( const PhysicsWorld& world, uint8 layer, uint64 ignoredObjectID )
         : _pWorld{ &world }
-        , _ignoredObjectId{ ignoredObjectId }
+        , _ignoredObjectID{ ignoredObjectID }
         , _layer{ layer }
     {
     }
@@ -83,7 +83,7 @@ namespace sw
             PhysicsBody body{};
             if ( _pWorld->tryGetBody( handle, body ) == false || body._bTrigger == SW_TRUE )
                 continue;
-            if ( _ignoredObjectId != 0 && body._objectId == _ignoredObjectId )
+            if ( _ignoredObjectID != 0 && body._objectID == _ignoredObjectID )
                 continue;
             CameraCollisionProbeInternal::sweepAgainst( from, displacement, length, radius, body._aabb, nearest, bHit );
         }
@@ -91,9 +91,9 @@ namespace sw
         return bHit;
     }
 
-    SceneCameraProbe::SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectId )
+    SceneCameraProbe::SceneCameraProbe( const GameObjectManager& manager, uint64 ignoredObjectID )
         : _manager{ manager }
-        , _ignoredObjectId{ ignoredObjectId }
+        , _ignoredObjectID{ ignoredObjectID }
     {
     }
 
@@ -118,12 +118,12 @@ namespace sw
         float32         nearest = length;
         bool            bHit    = false;
         CharacterRayHit hit;
-        if ( CharacterHitUtil::sphereCast3D( _manager, from, displacement, length, radius, layerMask, _ignoredObjectId, hit ) )
+        if ( CharacterHitUtil::sphereCast3D( _manager, from, displacement, length, radius, layerMask, _ignoredObjectID, hit ) )
         {
             nearest = hit._distance;
             bHit    = true;
         }
-        const PhysicsWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsWorld(), 0, _ignoredObjectId );
+        const PhysicsWorldCameraProbe overlapProbe( _manager.getOverlapWorld2D().getPhysicsWorld(), 0, _ignoredObjectID );
         float32                       overlapDistance = 0.0f;
         if ( overlapProbe.sweepSphere( from, to, radius, overlapDistance ) && overlapDistance < nearest )
         {

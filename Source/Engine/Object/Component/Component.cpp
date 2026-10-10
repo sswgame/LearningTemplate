@@ -14,7 +14,7 @@ namespace sw
 
     Component::Component()
         : _pOwner{ nullptr }
-        , _componentId{ _s_nextComponentId.fetch_add( 1, std::memory_order_relaxed ) }
+        , _componentID{ _s_nextComponentID.fetch_add( 1, std::memory_order_relaxed ) }
         , _componentName{}
         , _pTypeInfo{ nullptr }
         , _pPool{ nullptr }
@@ -79,78 +79,78 @@ namespace sw
         (void)deltaTime;
     }
 
-    void Component::onSubTick( uint32 subTickId, float32 deltaTime )
+    void Component::onSubTick( uint32 subTickID, float32 deltaTime )
     {
-        (void)subTickId;
+        (void)subTickID;
         (void)deltaTime;
     }
 
-    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickId, TickPhase phase, uint8 priority )
+    SubTickHandle Component::registerSubTick( TickGroup group, uint32 subTickID, TickPhase phase, uint8 priority )
     {
-        if ( subTickId == 0 )
+        if ( subTickID == 0 )
             return {};
         if ( isValidTickGroup( group ) == false )
         {
-            SW_LOG_WARNING( "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickId, static_cast<uint32>( group ) );
+            SW_LOG_WARNING( "Sub-tick %# asks for tick group %#, which does not exist - not registered", subTickID, static_cast<uint32>( group ) );
             return {};
         }
         if ( priority > kMaxTickPriority )
         {
-            SW_LOG_WARNING( "Sub-tick %# priority %# is above %# - clamped (a priority must not cross into the next phase)", subTickId,
+            SW_LOG_WARNING( "Sub-tick %# priority %# is above %# - clamped (a priority must not cross into the next phase)", subTickID,
                             static_cast<uint32>( priority ), static_cast<uint32>( kMaxTickPriority ) );
             priority = kMaxTickPriority;
         }
         // 틱 중이면 목록 · 마스크 모두 틱 뒤로 — 핸들은 목록과 상관없이 정해지므로 바로 돌려준다(헤더 머리말).
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickId, phase, priority]( Component& self )
-        { self.registerSubTick( group, subTickId, phase, priority ); } ) ) )
-            return makeTickHandle( subTickId );
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [group, subTickID, phase, priority]( Component& self )
+        { self.registerSubTick( group, subTickID, phase, priority ); } ) ) )
+            return makeTickHandle( subTickID );
 
         for ( SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId == subTickId )
+            if ( info._subTickID == subTickID )
             {
                 info._group    = group;
                 info._phase    = phase;
                 info._priority = priority;
                 info._bActive  = SW_TRUE;
-                setSubTickRunnable( subTickId, true );
+                setSubTickRunnable( subTickID, true );
                 if ( _pOwner != nullptr )
                     _pOwner->markTickOrderDirty();
-                return makeTickHandle( subTickId );
+                return makeTickHandle( subTickID );
             }
         }
 
         SubTickInfo newInfo{};
-        newInfo._subTickId = subTickId;
+        newInfo._subTickID = subTickID;
         newInfo._group     = group;
         newInfo._phase     = phase;
         newInfo._priority  = priority;
         newInfo._bActive   = SW_TRUE;
         _listSubTick.push_back( std::move( newInfo ) );
-        setSubTickRunnable( subTickId, true );
+        setSubTickRunnable( subTickID, true );
 
         if ( _pOwner != nullptr )
             _pOwner->markTickOrderDirty();
 
-        return makeTickHandle( subTickId );
+        return makeTickHandle( subTickID );
     }
 
-    SubTickHandle Component::makeTickHandle( uint32 subTickId ) const
+    SubTickHandle Component::makeTickHandle( uint32 subTickID ) const
     {
-        return SubTickHandle{ _componentId, subTickId, ( _pOwner != nullptr ) ? _pOwner->getObjectId() : 0 };
+        return SubTickHandle{ _componentID, subTickID, ( _pOwner != nullptr ) ? _pOwner->getObjectID() : 0 };
     }
 
-    bool Component::unregisterSubTick( uint32 subTickId )
+    bool Component::unregisterSubTick( uint32 subTickID )
     {
         // 실행 여부는 바로 내린다 — 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록에서 빼는 것은 틱 뒤로.
-        setSubTickRunnable( subTickId, false );
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId]( Component& self )
-        { (void)self.unregisterSubTick( subTickId ); } ) ) )
+        setSubTickRunnable( subTickID, false );
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID]( Component& self )
+        { (void)self.unregisterSubTick( subTickID ); } ) ) )
             return true;
 
         for ( size_t index = 0; index < _listSubTick.size(); ++index )
         {
-            if ( _listSubTick[index]._subTickId == subTickId )
+            if ( _listSubTick[index]._subTickID == subTickID )
             {
                 _listSubTick.erase( _listSubTick.begin() + static_cast<ptrdiff_t>( index ) );
                 if ( _pOwner != nullptr )
@@ -161,27 +161,27 @@ namespace sw
         return false;
     }
 
-    bool Component::addSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle )
+    bool Component::addSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle )
     {
-        if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
+        if ( subTickID == 0 || prerequisiteHandle.isValid() == false )
             return false;
-        if ( prerequisiteHandle._objectId == 0 )
+        if ( prerequisiteHandle._objectID == 0 )
         {
             SW_LOG_WARNING( "Sub-tick %# prerequisite names component %# without its object - take the handle after the component is added to an object",
-                            subTickId, prerequisiteHandle._componentId );
+                            subTickID, prerequisiteHandle._componentID );
             return false;
         }
 
         // 자기 자신을 선행 조건으로 추가하지 못하게 한다
-        if ( prerequisiteHandle._componentId == _componentId && prerequisiteHandle._subTickId == subTickId )
+        if ( prerequisiteHandle._componentID == _componentID && prerequisiteHandle._subTickID == subTickID )
             return false;
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, prerequisiteHandle]( Component& self )
-        { (void)self.addSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) )
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID, prerequisiteHandle]( Component& self )
+        { (void)self.addSubTickPrerequisite( subTickID, prerequisiteHandle ); } ) ) )
             return true;
 
         for ( SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId == subTickId )
+            if ( info._subTickID == subTickID )
             {
                 for ( const SubTickHandle& existing : info._listPrerequisite )
                 {
@@ -197,17 +197,17 @@ namespace sw
         return false;
     }
 
-    bool Component::removeSubTickPrerequisite( uint32 subTickId, const SubTickHandle& prerequisiteHandle )
+    bool Component::removeSubTickPrerequisite( uint32 subTickID, const SubTickHandle& prerequisiteHandle )
     {
-        if ( subTickId == 0 || prerequisiteHandle.isValid() == false )
+        if ( subTickID == 0 || prerequisiteHandle.isValid() == false )
             return false;
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, prerequisiteHandle]( Component& self )
-        { (void)self.removeSubTickPrerequisite( subTickId, prerequisiteHandle ); } ) ) ) // 미룬 제거 — 그때 이미 빠졌으면 할 일이 없다
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID, prerequisiteHandle]( Component& self )
+        { (void)self.removeSubTickPrerequisite( subTickID, prerequisiteHandle ); } ) ) ) // 미룬 제거 — 그때 이미 빠졌으면 할 일이 없다
             return true;
 
         for ( SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId != subTickId )
+            if ( info._subTickID != subTickID )
                 continue;
             for ( size_t index = 0; index < info._listPrerequisite.size(); ++index )
             {
@@ -223,21 +223,21 @@ namespace sw
         return false;
     }
 
-    void Component::setSubTickActive( uint32 subTickId, bool bActive )
+    void Component::setSubTickActive( uint32 subTickID, bool bActive )
     {
-        if ( subTickId == 0 )
+        if ( subTickID == 0 )
             return;
 
         // 실행 여부는 바로 바꾼다 — 틱 중에 끄면 이번 틱의 남은 항목이 곧바로 건너뛴다(원자라 틱 중에 바꿔도 된다). 목록의 값은 틱 뒤로 미루고,
         // 미룬 호출이 실행 여부도 다시 적어 틱 안에서 여러 번 바꾼 순서가 그대로 남는다.
-        setSubTickRunnable( subTickId, bActive );
-        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickId, bActive]( Component& self )
-        { self.setSubTickActive( subTickId, bActive ); } ) ) )
+        setSubTickRunnable( subTickID, bActive );
+        if ( deferIfStructureFrozen( Delegate<void( Component& )>( [subTickID, bActive]( Component& self )
+        { self.setSubTickActive( subTickID, bActive ); } ) ) )
             return;
 
         for ( SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId == subTickId )
+            if ( info._subTickID == subTickID )
             {
                 info._bActive = bActive ? SW_TRUE : SW_FALSE;
                 if ( _pOwner != nullptr )
@@ -247,30 +247,30 @@ namespace sw
         }
     }
 
-    bool Component::isSubTickActiveSlow( uint32 subTickId ) const
+    bool Component::isSubTickActiveSlow( uint32 subTickID ) const
     {
         for ( const SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId == subTickId )
+            if ( info._subTickID == subTickID )
                 return info.isRunnable();
         }
         return false;
     }
 
-    void Component::setSubTickRunnable( uint32 subTickId, bool bRunnable )
+    void Component::setSubTickRunnable( uint32 subTickID, bool bRunnable )
     {
-        if ( subTickId < 64 )
+        if ( subTickID < 64 )
         {
             if ( bRunnable )
-                _subTickActiveMask.fetch_or( 1ULL << subTickId, std::memory_order_release );
+                _subTickActiveMask.fetch_or( 1ULL << subTickID, std::memory_order_release );
             else
-                _subTickActiveMask.fetch_and( ~( 1ULL << subTickId ), std::memory_order_release );
+                _subTickActiveMask.fetch_and( ~( 1ULL << subTickID ), std::memory_order_release );
             return;
         }
         // 틱 중에는 목록의 모양이 얼어 있다(구조 변경은 미룬다) — 다른 워커가 원소의 원자 칸만 쓴다.
         for ( SubTickInfo& info : _listSubTick )
         {
-            if ( info._subTickId == subTickId )
+            if ( info._subTickID == subTickID )
             {
                 info.setRunnable( bRunnable );
                 return;
@@ -364,7 +364,7 @@ namespace sw
     {
         if ( _pOwner == nullptr )
             return {};
-        return sw::ComponentHandle::makeOwned( _pOwner->getObjectId(), _componentId );
+        return sw::ComponentHandle::makeOwned( _pOwner->getObjectID(), _componentID );
     }
 
     const TypeInfo* Component::getTypeInfo() const
@@ -387,6 +387,6 @@ namespace sw
         return _pOwner == nullptr || _pOwner->isActiveInHierarchy();
     }
 
-    atomic<uint64> Component::_s_nextComponentId = 1;
+    atomic<uint64> Component::_s_nextComponentID = 1;
 
 } // namespace sw

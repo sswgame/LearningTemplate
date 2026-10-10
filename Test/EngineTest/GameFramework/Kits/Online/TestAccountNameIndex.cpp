@@ -17,22 +17,22 @@ namespace
     class NameLookupWork final : public IServiceStoreWork
     {
     public:
-        NameLookupWork( const IAccountNameIndex* pIndex, string displayName, AccountId accountId, AccountIdentity* pOutByName, AccountIdentity* pOutById,
-                        ServiceStoreResult* pOutNameResult, ServiceStoreResult* pOutIdResult )
+        NameLookupWork( const IAccountNameIndex* pIndex, string displayName, AccountID accountID, AccountIdentity* pOutByName, AccountIdentity* pOutByID,
+                        ServiceStoreResult* pOutNameResult, ServiceStoreResult* pOutIDResult )
             : _displayName{ std::move( displayName ) }
             , _pIndex{ pIndex }
             , _pOutByName{ pOutByName }
-            , _pOutById{ pOutById }
+            , _pOutByID{ pOutByID }
             , _pOutNameResult{ pOutNameResult }
-            , _pOutIdResult{ pOutIdResult }
-            , _accountId{ accountId }
+            , _pOutIDResult{ pOutIDResult }
+            , _accountID{ accountID }
         {
         }
 
         void run( IServiceStoreConnection& connection ) override
         {
             *_pOutNameResult = _pIndex->readIdentityByDisplayName( connection, _displayName, *_pOutByName );
-            *_pOutIdResult   = _pIndex->readIdentity( connection, _accountId, *_pOutById );
+            *_pOutIDResult   = _pIndex->readIdentity( connection, _accountID, *_pOutByID );
         }
 
         void complete() override {}
@@ -41,10 +41,10 @@ namespace
         string                   _displayName;
         const IAccountNameIndex* _pIndex;
         AccountIdentity*         _pOutByName;
-        AccountIdentity*         _pOutById;
+        AccountIdentity*         _pOutByID;
         ServiceStoreResult*      _pOutNameResult;
-        ServiceStoreResult*      _pOutIdResult;
-        AccountId                _accountId;
+        ServiceStoreResult*      _pOutIDResult;
+        AccountID                _accountID;
     };
 
     struct NameIndexRig
@@ -86,16 +86,16 @@ namespace
             return listCompletion.empty() ? LoginCompletion{} : listCompletion.back();
         }
 
-        void lookUp( string_view displayName, AccountId accountId, AccountIdentity& outByName, AccountIdentity& outById, ServiceStoreResult& outNameResult,
-                     ServiceStoreResult& outIdResult )
+        void lookUp( string_view displayName, AccountID accountID, AccountIdentity& outByName, AccountIdentity& outByID, ServiceStoreResult& outNameResult,
+                     ServiceStoreResult& outIDResult )
         {
-            _store.submit( sw::make_unique<NameLookupWork>( &_index, string( displayName ), accountId, &outByName, &outById, &outNameResult, &outIdResult ) );
+            _store.submit( sw::make_unique<NameLookupWork>( &_index, string( displayName ), accountID, &outByName, &outByID, &outNameResult, &outIDResult ) );
             (void)_store.pollCompletions();
         }
     };
 } // namespace
 
-SW_TEST_CASE( AccountNameIndexTest, FindsOfflineAccountsByNameAndId )
+SW_TEST_CASE( AccountNameIndexTest, FindsOfflineAccountsByNameAndID )
 {
     NameIndexRig    rig;
     LoginCredential credential;
@@ -104,27 +104,27 @@ SW_TEST_CASE( AccountNameIndexTest, FindsOfflineAccountsByNameAndId )
     rig._loginService.registerAccount( credential, 1000, rig._nextTag++ );
     const LoginCompletion registered = rig.settle();
     SW_ASSERT_TRUE( registered._result == LoginResult::Ok );
-    const AccountId heroId = registered._identity._accountId;
-    SW_ASSERT_TRUE( heroId != kInvalidAccountId );
+    const AccountID heroID = registered._identity._accountID;
+    SW_ASSERT_TRUE( heroID != kInvalidAccountID );
 
     AccountIdentity    byName;
-    AccountIdentity    byId;
+    AccountIdentity    byID;
     ServiceStoreResult nameResult = ServiceStoreResult::Invalid;
     ServiceStoreResult idResult   = ServiceStoreResult::Invalid;
-    rig.lookUp( "HERO_01", heroId, byName, byId, nameResult, idResult ); // 로그인하지 않았다 — 접속 상태에는 없다
+    rig.lookUp( "HERO_01", heroID, byName, byID, nameResult, idResult ); // 로그인하지 않았다 — 접속 상태에는 없다
     SW_ASSERT_TRUE( nameResult == ServiceStoreResult::Ok );
-    SW_EXPECT_EQUAL( heroId, byName._accountId );
+    SW_EXPECT_EQUAL( heroID, byName._accountID );
     SW_EXPECT_TRUE( byName._displayName == "Hero_01" );
     SW_ASSERT_TRUE( idResult == ServiceStoreResult::Ok );
-    SW_EXPECT_TRUE( byId._displayName == "Hero_01" );
+    SW_EXPECT_TRUE( byID._displayName == "Hero_01" );
 
-    rig.lookUp( "nobody", 0xBEEF, byName, byId, nameResult, idResult );
+    rig.lookUp( "nobody", 0xBEEF, byName, byID, nameResult, idResult );
     SW_EXPECT_TRUE( nameResult == ServiceStoreResult::NotFound );
     SW_EXPECT_TRUE( idResult == ServiceStoreResult::NotFound );
-    rig.lookUp( "bad name!", heroId, byName, byId, nameResult, idResult ); // 이름 규칙 밖 — 저장소를 읽지 않고 없음
+    rig.lookUp( "bad name!", heroID, byName, byID, nameResult, idResult ); // 이름 규칙 밖 — 저장소를 읽지 않고 없음
     SW_EXPECT_TRUE( nameResult == ServiceStoreResult::NotFound );
 
     rig._database.armFault( ServiceStoreFault::RejectRead );
-    rig.lookUp( "hero_01", heroId, byName, byId, nameResult, idResult );
+    rig.lookUp( "hero_01", heroID, byName, byID, nameResult, idResult );
     SW_EXPECT_TRUE( nameResult == ServiceStoreResult::Unavailable ); // 없음과 아픔을 가른다
 }

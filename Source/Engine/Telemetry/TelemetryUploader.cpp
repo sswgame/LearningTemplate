@@ -50,7 +50,7 @@ namespace sw
         request._url    = _endpoint;
         request._body   = batch._content;
         request._listHeader.push_back( { "Content-Type", "application/x-ndjson" } );
-        request._listHeader.push_back( { "X-Telemetry-Session", batch._sessionId } );
+        request._listHeader.push_back( { "X-Telemetry-Session", batch._sessionID } );
         request._listHeader.push_back( { "X-Telemetry-Events", std::to_string( batch._eventCount ) } );
         if ( _apiKey.empty() == false )
             request._listHeader.push_back( { "X-Api-Key", _apiKey } );

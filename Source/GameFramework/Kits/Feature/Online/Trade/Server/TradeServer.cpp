@@ -46,9 +46,9 @@ namespace sw
     {
         if ( _pPresence != nullptr ) // 맡긴 이름 찾기를 거둔다 — 접속 상태 창구가 이 객체보다 오래 살아도 부르지 않게
         {
-            for ( const auto& [lookupId, call] : _mapLookupToCall )
+            for ( const auto& [lookupID, call] : _mapLookupToCall )
             {
-                _pPresence->cancel( lookupId );
+                _pPresence->cancel( lookupID );
             }
         }
         _mapTagToCall.clear();
@@ -61,7 +61,7 @@ namespace sw
     {
         _nowMs                      = context._nowMs;
         const RemoteConfig* pConfig = host.getRemoteConfig();
-        if ( pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountId, true ) == false )
+        if ( pConfig != nullptr && pConfig->isFeatureEnabled( kFeatureFlag, context._accountID, true ) == false )
         {
             (void)host.respondError( context._token, OnlineError::kFeatureDisabled );
             return;
@@ -79,8 +79,8 @@ namespace sw
             AccountIdentity   peer;
             if ( _pDirectory != nullptr && _pDirectory->findIdentityByDisplayName( name, peer ) )
             {
-                _mapTagToCall[tag] = PendingCall{ context._token, context._accountId };
-                _pTradeService->invite( context._accountId, peer._accountId, context._nowMs, tag );
+                _mapTagToCall[tag] = PendingCall{ context._token, context._accountID };
+                _pTradeService->invite( context._accountID, peer._accountID, context._nowMs, tag );
                 return;
             }
             if ( _pPresence == nullptr )
@@ -88,12 +88,12 @@ namespace sw
                 respondImmediately( host, context._token, TradeResult::PeerOffline );
                 return;
             }
-            const uint64 lookupId      = _pPresence->submitFindByDisplayName( name, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
-            _mapLookupToCall[lookupId] = PendingLookup{ context._token, context._accountId, context._nowMs };
+            const uint64 lookupID      = _pPresence->submitFindByDisplayName( name, AccountPresenceDelegate::create<&TradeServer::onPresenceFound>( this ) );
+            _mapLookupToCall[lookupID] = PendingLookup{ context._token, context._accountID, context._nowMs };
             return;
         }
 
-        const uint64 tradeId  = body.readVarUint();
+        const uint64 tradeID  = body.readVarUint();
         bool         bDecoded = body.hasOverflowed() == false;
         switch ( context._method )
         {
@@ -101,7 +101,7 @@ namespace sw
             {
                 const bool bAccept = body.readBool();
                 if ( bDecoded )
-                    _pTradeService->respondInvite( context._accountId, tradeId, bAccept, context._nowMs, tag );
+                    _pTradeService->respondInvite( context._accountID, tradeID, bAccept, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kSetOffer:
@@ -109,13 +109,13 @@ namespace sw
                 vector<TradeLeg> listLeg;
                 bDecoded = bDecoded && TradeWire::readLegs( body, listLeg );
                 if ( bDecoded )
-                    _pTradeService->setOffer( context._accountId, tradeId, listLeg, context._nowMs, tag );
+                    _pTradeService->setOffer( context._accountID, tradeID, listLeg, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kLock:
             {
                 if ( bDecoded )
-                    _pTradeService->lock( context._accountId, tradeId, context._nowMs, tag );
+                    _pTradeService->lock( context._accountID, tradeID, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kConfirm:
@@ -124,13 +124,13 @@ namespace sw
                 const uint32 peerRevision = static_cast<uint32>( body.readVarUint() );
                 bDecoded                  = bDecoded && body.hasOverflowed() == false;
                 if ( bDecoded )
-                    _pTradeService->confirm( context._accountId, tradeId, ownRevision, peerRevision, context._nowMs, tag );
+                    _pTradeService->confirm( context._accountID, tradeID, ownRevision, peerRevision, context._nowMs, tag );
                 break;
             }
             case TradeMethod::kCancel:
             {
                 if ( bDecoded )
-                    _pTradeService->cancel( context._accountId, tradeId, context._nowMs, tag );
+                    _pTradeService->cancel( context._accountID, tradeID, context._nowMs, tag );
                 break;
             }
             default:
@@ -144,7 +144,7 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        _mapTagToCall[tag] = PendingCall{ context._token, context._accountId };
+        _mapTagToCall[tag] = PendingCall{ context._token, context._accountID };
     }
 
     void TradeServer::onServiceTick( OnlineServiceHost& host, int64 nowMs )
@@ -156,19 +156,19 @@ namespace sw
             _listFoundScratch.swap( _listFound );
             for ( const AccountPresenceResult& found : _listFoundScratch )
             {
-                const auto lookupIt = _mapLookupToCall.find( found._requestId );
+                const auto lookupIt = _mapLookupToCall.find( found._requestID );
                 if ( lookupIt == _mapLookupToCall.end() )
                     continue;
                 const PendingLookup lookup = lookupIt->second;
                 _mapLookupToCall.erase( lookupIt );
-                if ( found._identity._accountId == kInvalidAccountId )
+                if ( found._identity._accountID == kInvalidAccountID )
                 {
                     respondImmediately( host, lookup._token, TradeResult::PeerOffline );
                     continue;
                 }
                 const uint64 tag   = _nextTag++;
-                _mapTagToCall[tag] = PendingCall{ lookup._token, lookup._accountId };
-                _pTradeService->invite( lookup._accountId, found._identity._accountId, lookup._nowMs, tag );
+                _mapTagToCall[tag] = PendingCall{ lookup._token, lookup._accountID };
+                _pTradeService->invite( lookup._accountID, found._identity._accountID, lookup._nowMs, tag );
             }
         }
         _pTradeService->tick( nowMs );
@@ -178,7 +178,7 @@ namespace sw
         for ( const TradeCompletion& completion : _listCompletionScratch )
         {
             if ( completion._snapshot._state == TradeState::Settled && completion._ledger._listHolderBalance.empty() == false )
-                _mapTradeToLedger[completion._snapshot._tradeId] = completion._ledger;
+                _mapTradeToLedger[completion._snapshot._tradeID] = completion._ledger;
             const auto callIt = _mapTagToCall.find( completion._requestTag );
             if ( callIt == _mapTagToCall.end() )
                 continue;
@@ -190,7 +190,7 @@ namespace sw
                 continue;
             }
             vector<TradeBalance> listBalance;
-            collectBalances( completion._ledger, call._accountId, listBalance );
+            collectBalances( completion._ledger, call._accountID, listBalance );
             BitWriter reply;
             TradeReplyWire::writeReply( reply, completion._result, completion._snapshot, listBalance );
             (void)host.respondOk( call._token, reply );
@@ -203,10 +203,10 @@ namespace sw
         }
     }
 
-    void TradeServer::onAccountLeft( OnlineServiceHost& host, AccountId accountId )
+    void TradeServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
-        _pTradeService->closeForAccount( accountId, TradeCloseReason::PartyLeft, _nowMs );
+        _pTradeService->closeForAccount( accountID, TradeCloseReason::PartyLeft, _nowMs );
     }
 
     void TradeServer::pushSnapshot( OnlineServiceHost& host, const TradeSnapshot& snapshot )
@@ -216,19 +216,19 @@ namespace sw
             kind = TradeMethod::kPushInvited;
         else if ( snapshot.isClosed() )
             kind = TradeMethod::kPushClosed;
-        const auto ledgerIt = _mapTradeToLedger.find( snapshot._tradeId );
+        const auto ledgerIt = _mapTradeToLedger.find( snapshot._tradeID );
         for ( int32 sideIndex = 0; sideIndex < 2; ++sideIndex )
         {
             if ( kind == TradeMethod::kPushInvited && sideIndex == 0 )
                 continue; // 신청한 쪽은 응답으로 안다
-            const AccountId      accountId = snapshot._arrSide[sideIndex]._accountId;
+            const AccountID      accountID = snapshot._arrSide[sideIndex]._accountID;
             vector<TradeBalance> listBalance;
             if ( ledgerIt != _mapTradeToLedger.end() )
-                collectBalances( ledgerIt->second, accountId, listBalance );
+                collectBalances( ledgerIt->second, accountID, listBalance );
             BitWriter body;
             TradeReplyWire::writeReply( body, TradeResult::Ok, snapshot, listBalance );
-            if ( host.sendPush( accountId, kind, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( accountId, kind, body ); // 상대가 다른 서버에 붙어 있다
+            if ( host.sendPush( accountID, kind, body ) == false && _pPresence != nullptr )
+                (void)_pPresence->sendRemotePush( accountID, kind, body ); // 상대가 다른 서버에 붙어 있다
         }
     }
 
@@ -241,12 +241,12 @@ namespace sw
         (void)host.respondOk( token, reply );
     }
 
-    void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountId accountId, vector<TradeBalance>& outListBalance )
+    void TradeServer::collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance )
     {
         for ( const LedgerTransferOutcome::HolderBalance& holderBalance : ledger._listHolderBalance )
         {
-            if ( holderBalance._holder._kind == LedgerHolderKind::Account && holderBalance._holder._accountId == accountId )
-                outListBalance.push_back( TradeBalance{ holderBalance._balance._assetId, holderBalance._balance._amount } );
+            if ( holderBalance._holder._kind == LedgerHolderKind::Account && holderBalance._holder._accountID == accountID )
+                outListBalance.push_back( TradeBalance{ holderBalance._balance._assetID, holderBalance._balance._amount } );
         }
     }
 } // namespace sw

@@ -267,10 +267,10 @@ namespace sw
                                      const float3& point, const float3& normal, float32 impulse, PhysicsContactPhase phase, bool bSelfTrigger, bool bOtherTrigger,
                                      bool bIs2D )
     {
-        GameObject* pSelf = selfUserData != 0 ? manager.findGameObjectById( selfUserData ) : nullptr;
+        GameObject* pSelf = selfUserData != 0 ? manager.findGameObjectByID( selfUserData ) : nullptr;
         if ( pSelf == nullptr || pSelf->isActiveInHierarchy() == false )
             return;
-        GameObject* pOther = otherUserData != 0 ? manager.findGameObjectById( otherUserData ) : nullptr;
+        GameObject* pOther = otherUserData != 0 ? manager.findGameObjectByID( otherUserData ) : nullptr;
         // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.
         const vector<Component*> listTarget( pSelf->getComponents().begin(), pSelf->getComponents().end() );
         if ( bSelfTrigger || bOtherTrigger )

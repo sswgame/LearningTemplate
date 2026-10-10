@@ -33,12 +33,12 @@ namespace sw::editor
 
     namespace internal
     {
-        void* getRawService( sw::internal::ModuleServiceId id )
+        void* getRawService( sw::internal::ModuleServiceID id )
         {
-            const uint32 rawId = sw::internal::toRawServiceId( id );
-            if ( rawId >= sw::internal::kModuleServiceCount )
+            const uint32 rawID = sw::internal::toRawServiceID( id );
+            if ( rawID >= sw::internal::kModuleServiceCount )
                 return nullptr;
-            return const_cast<void*>( s_editorService.arrServices[rawId] );
+            return const_cast<void*>( s_editorService.arrServices[rawID] );
         }
 
         void bindRawLocalService( uint64 typeHash, void* pService )

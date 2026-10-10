@@ -46,7 +46,7 @@ namespace sw
         , _pProvider{ nullptr }
         , _pBrowser{ nullptr }
         , _nowMs{ 0 }
-        , _nextRequestId{ 1 }
+        , _nextRequestID{ 1 }
     {
     }
 
@@ -81,9 +81,9 @@ namespace sw
     uint64 LoopbackPkceLoginClient::beginLogin( string_view provider, int64 nowMs )
     {
         using Internal         = LoopbackPkceLoginClientInternal;
-        const uint64 requestId = _nextRequestId++;
+        const uint64 requestID = _nextRequestID++;
         PendingLogin pending;
-        pending._requestId                         = requestId;
+        pending._requestID                         = requestID;
         pending._provider                          = string( provider );
         const PkceLoginProviderSettings* pSettings = findSettings( provider );
         const bool                       bSecrets  = pSettings != nullptr && makeRandomText( Internal::kVerifierBytes, pending._codeVerifier ) &&
@@ -94,11 +94,11 @@ namespace sw
         if ( bChallenge == false )
         {
             finish( pending, false, false, pSettings == nullptr ? "unknown provider" : "could not make PKCE secrets", vector<uint8>{} );
-            return requestId;
+            return requestID;
         }
         vector<HttpHeader> listQuery;
         listQuery.push_back( HttpHeader{ "response_type", "code" } );
-        listQuery.push_back( HttpHeader{ "client_id", pSettings->_clientId } );
+        listQuery.push_back( HttpHeader{ "client_id", pSettings->_clientID } );
         listQuery.push_back( HttpHeader{ "redirect_uri", makeRedirectUri() } );
         listQuery.push_back( HttpHeader{ "scope", pSettings->_scope } );
         listQuery.push_back( HttpHeader{ "state", pending._state } );
@@ -110,11 +110,11 @@ namespace sw
         if ( _pBrowser->openURL( url ) == false )
         {
             finish( pending, false, false, "could not open the system browser", vector<uint8>{} );
-            return requestId;
+            return requestID;
         }
         pending._deadlineMs = nowMs + pSettings->_timeoutMs;
         _listPending.push_back( std::move( pending ) );
-        return requestId;
+        return requestID;
     }
 
     void LoopbackPkceLoginClient::tick( int64 nowMs )
@@ -129,12 +129,12 @@ namespace sw
             for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); ++pendingIndex )
             {
                 PendingLogin& pending = _listPending[pendingIndex];
-                if ( pending._tokenRequestId != response._requestId )
+                if ( pending._tokenRequestID != response._requestID )
                     continue;
                 const PkceLoginProviderSettings* pSettings = findSettings( pending._provider );
                 JsonDocument                     document;
                 const bool                       bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
-                const JsonValue                  token   = bParsed ? document.getRoot().get( pSettings->_bUseIdToken == SW_TRUE ? "id_token" : "access_token", false )
+                const JsonValue                  token   = bParsed ? document.getRoot().get( pSettings->_bUseIDToken == SW_TRUE ? "id_token" : "access_token", false )
                                                                    : JsonValue{};
                 if ( token.isString() == false || token.asString().empty() )
                 {
@@ -143,7 +143,7 @@ namespace sw
                 else
                 {
                     string ticketText = token.asString();
-                    if ( pSettings->_bUseIdToken == SW_TRUE )
+                    if ( pSettings->_bUseIDToken == SW_TRUE )
                         ticketText += "|" + pending._nonce;
                     finish( pending, true, false, "", vector<uint8>( ticketText.begin(), ticketText.end() ) );
                 }
@@ -154,7 +154,7 @@ namespace sw
         for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); )
         {
             PendingLogin& pending = _listPending[pendingIndex];
-            if ( nowMs < pending._deadlineMs || pending._tokenRequestId != 0 )
+            if ( nowMs < pending._deadlineMs || pending._tokenRequestID != 0 )
             {
                 ++pendingIndex;
                 continue;
@@ -187,7 +187,7 @@ namespace sw
         PendingLogin*     pFound = nullptr;
         for ( PendingLogin& pending : _listPending )
         {
-            if ( pState != nullptr && pending._tokenRequestId == 0 && pending._state == pState->_value )
+            if ( pState != nullptr && pending._tokenRequestID == 0 && pending._state == pState->_value )
                 pFound = &pending;
         }
         if ( pFound == nullptr )
@@ -218,7 +218,7 @@ namespace sw
         listForm.push_back( HttpHeader{ "grant_type", "authorization_code" } );
         listForm.push_back( HttpHeader{ "code", pCode->_value } );
         listForm.push_back( HttpHeader{ "redirect_uri", makeRedirectUri() } );
-        listForm.push_back( HttpHeader{ "client_id", pSettings->_clientId } );
+        listForm.push_back( HttpHeader{ "client_id", pSettings->_clientID } );
         listForm.push_back( HttpHeader{ "code_verifier", pFound->_codeVerifier } );
         HttpClientRequest tokenRequest;
         tokenRequest._method = HttpMethod::Post;
@@ -227,7 +227,7 @@ namespace sw
         tokenRequest._bodyBytes.assign( body.begin(), body.end() );
         tokenRequest._listHeader.push_back( HttpHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         tokenRequest._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );
-        pFound->_tokenRequestId = _httpClient.submitRequest( tokenRequest, _nowMs );
+        pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest, _nowMs );
     }
 
     const PkceLoginProviderSettings* LoopbackPkceLoginClient::findSettings( string_view provider ) const
@@ -252,7 +252,7 @@ namespace sw
     void LoopbackPkceLoginClient::finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes )
     {
         PlatformLoginClientResult& result = _listDone.emplace_back();
-        result._requestId                 = pending._requestId;
+        result._requestID                 = pending._requestID;
         result._provider                  = pending._provider;
         result._ticket                    = std::move( ticketBytes );
         result._failureText               = string( failureText );

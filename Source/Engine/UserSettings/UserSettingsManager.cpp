@@ -191,7 +191,7 @@ namespace sw
         // 품질 묶음의 기본 프리셋이 묶인 설정의 기본값이다 — 두 곳에 적은 기본값이 어긋나 첫 화면이 Custom 이 되는 일이 없게.
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
         {
-            const uint32 groupIndex = findIndex( group._settingId );
+            const uint32 groupIndex = findIndex( group._settingID );
             if ( groupIndex == invalid_index::kUint32 )
                 continue;
             const hashed_string presetName( _listState[groupIndex]._defaultValue );
@@ -201,7 +201,7 @@ namespace sw
                     continue;
                 for ( const ScalabilityPresetValue& value : preset._listValue )
                 {
-                    const uint32 memberIndex = findIndex( value._settingId );
+                    const uint32 memberIndex = findIndex( value._settingID );
                     string       normalized;
                     if ( memberIndex == invalid_index::kUint32 ||
                          UserSettingsSchema::normalizeValue( listSetting[memberIndex], value._value, normalized ) != UserSettingValueResult::Accepted )
@@ -216,18 +216,18 @@ namespace sw
         return true;
     }
 
-    bool UserSettingsManager::setGameDefault( const hashed_string& settingId, string_view value )
+    bool UserSettingsManager::setGameDefault( const hashed_string& settingID, string_view value )
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         if ( settingIndex == invalid_index::kUint32 )
         {
-            SW_LOG_ERROR( "game default for an unknown setting '%#'", settingId.c_str() );
+            SW_LOG_ERROR( "game default for an unknown setting '%#'", settingID.c_str() );
             return false;
         }
         string normalized;
         if ( UserSettingsSchema::normalizeValue( _schema.getSettings()[settingIndex], value, normalized ) != UserSettingValueResult::Accepted )
         {
-            SW_LOG_ERROR( "game default '%#' for '%#' is not a valid value", value, settingId.c_str() );
+            SW_LOG_ERROR( "game default '%#' for '%#' is not a valid value", value, settingID.c_str() );
             return false;
         }
         SettingState& state = _listState[settingIndex];
@@ -235,8 +235,8 @@ namespace sw
             state._committedValue = normalized;
         state._defaultValue = normalized;
 
-        const ScalabilityGroupDef* pGroup = _schema.findScalabilityGroupOf( settingId );
-        if ( pGroup != nullptr && pGroup->_settingId == settingId )
+        const ScalabilityGroupDef* pGroup = _schema.findScalabilityGroupOf( settingID );
+        if ( pGroup != nullptr && pGroup->_settingID == settingID )
             applyScalabilityPreset( *pGroup, hashed_string( normalized ), true );
         return true;
     }
@@ -419,7 +419,7 @@ namespace sw
         if ( presetName.empty() )
             return false;
         const ScalabilityGroupDef& group      = _schema.getScalabilityGroups().front();
-        const uint32               groupIndex = findIndex( group._settingId );
+        const uint32               groupIndex = findIndex( group._settingID );
         if ( groupIndex == invalid_index::kUint32 )
             return false;
         _listState[groupIndex]._committedValue = presetName.c_str();
@@ -446,56 +446,56 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 4) 메뉴 UI 바인딩
     // ------------------------------------------------------------------------------
-    void UserSettingsManager::collectSettings( const hashed_string& categoryId, vector<const UserSettingDef*>& outListSetting ) const
+    void UserSettingsManager::collectSettings( const hashed_string& categoryID, vector<const UserSettingDef*>& outListSetting ) const
     {
         outListSetting.clear();
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( listSetting.size() ); ++settingIndex )
         {
-            if ( listSetting[settingIndex]._category == categoryId && isAvailableAt( settingIndex ) )
+            if ( listSetting[settingIndex]._category == categoryID && isAvailableAt( settingIndex ) )
                 outListSetting.push_back( &listSetting[settingIndex] );
         }
     }
 
-    string_view UserSettingsManager::getValue( const hashed_string& settingId ) const
+    string_view UserSettingsManager::getValue( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 ? string_view( getEffectiveValue( settingIndex ) ) : string_view{};
     }
 
-    string_view UserSettingsManager::getAppliedValue( const hashed_string& settingId ) const
+    string_view UserSettingsManager::getAppliedValue( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 ? string_view( _listState[settingIndex]._committedValue ) : string_view{};
     }
 
-    string_view UserSettingsManager::getDefaultValue( const hashed_string& settingId ) const
+    string_view UserSettingsManager::getDefaultValue( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 ? string_view( _listState[settingIndex]._defaultValue ) : string_view{};
     }
 
-    bool UserSettingsManager::getBoolValue( const hashed_string& settingId ) const
+    bool UserSettingsManager::getBoolValue( const hashed_string& settingID ) const
     {
-        return StringUtil::parseBool( getValue( settingId ), false );
+        return StringUtil::parseBool( getValue( settingID ), false );
     }
 
-    int32 UserSettingsManager::getIntValue( const hashed_string& settingId ) const
+    int32 UserSettingsManager::getIntValue( const hashed_string& settingID ) const
     {
         int32 value{ 0 };
-        return StringUtil::parseInt( getValue( settingId ), value ) ? value : 0;
+        return StringUtil::parseInt( getValue( settingID ), value ) ? value : 0;
     }
 
-    float32 UserSettingsManager::getFloatValue( const hashed_string& settingId ) const
+    float32 UserSettingsManager::getFloatValue( const hashed_string& settingID ) const
     {
         float32 value{ 0.0f };
-        return StringUtil::parseFloat( getValue( settingId ), value ) ? value : 0.0f;
+        return StringUtil::parseFloat( getValue( settingID ), value ) ? value : 0.0f;
     }
 
-    void UserSettingsManager::collectOptions( const hashed_string& settingId, vector<UserSettingOption>& outListOption ) const
+    void UserSettingsManager::collectOptions( const hashed_string& settingID, vector<UserSettingOption>& outListOption ) const
     {
         outListOption.clear();
-        const UserSettingDef* pDef = findSetting( settingId );
+        const UserSettingDef* pDef = findSetting( settingID );
         if ( pDef == nullptr )
             return;
         if ( pDef->_optionProvider.empty() )
@@ -504,9 +504,9 @@ namespace sw
             (void)_registry.collectOptions( pDef->_optionProvider, outListOption );
     }
 
-    UserSettingSetResult UserSettingsManager::setPendingValue( const hashed_string& settingId, string_view value )
+    UserSettingSetResult UserSettingsManager::setPendingValue( const hashed_string& settingID, string_view value )
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         if ( settingIndex == invalid_index::kUint32 )
             return UserSettingSetResult::Unknown;
         if ( isEnabledAt( settingIndex ) == false )
@@ -538,7 +538,7 @@ namespace sw
         if ( def._type == UserSettingType::KeyBinding )
         {
             UserSettingBindingConflict conflict;
-            if ( findBindingConflict( settingId, normalized, conflict ) )
+            if ( findBindingConflict( settingID, normalized, conflict ) )
                 return UserSettingSetResult::Conflict;
         }
 
@@ -547,36 +547,36 @@ namespace sw
             return result;
 
         // 품질 묶음: 프리셋을 고르면 묶인 설정이 따라가고, 묶인 설정을 바꾸면 묶음이 프리셋 이름이나 Custom 이 된다.
-        const ScalabilityGroupDef* pGroup = _schema.findScalabilityGroupOf( settingId );
-        if ( pGroup != nullptr && pGroup->_settingId == settingId )
+        const ScalabilityGroupDef* pGroup = _schema.findScalabilityGroupOf( settingID );
+        if ( pGroup != nullptr && pGroup->_settingID == settingID )
             applyScalabilityPreset( *pGroup, hashed_string( normalized ), false );
         else if ( pGroup != nullptr )
             refreshScalabilityGroup( *pGroup, false );
         return result;
     }
 
-    UserSettingSetResult UserSettingsManager::setPendingBoolValue( const hashed_string& settingId, bool bValue )
+    UserSettingSetResult UserSettingsManager::setPendingBoolValue( const hashed_string& settingID, bool bValue )
     {
-        return setPendingValue( settingId, bValue ? "true" : "false" );
+        return setPendingValue( settingID, bValue ? "true" : "false" );
     }
 
-    UserSettingSetResult UserSettingsManager::setPendingIntValue( const hashed_string& settingId, int32 value )
+    UserSettingSetResult UserSettingsManager::setPendingIntValue( const hashed_string& settingID, int32 value )
     {
         utf8 arrBuffer[constant::kMaxBuffer32]{};
         StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer32, value );
-        return setPendingValue( settingId, arrBuffer );
+        return setPendingValue( settingID, arrBuffer );
     }
 
-    UserSettingSetResult UserSettingsManager::setPendingFloatValue( const hashed_string& settingId, float32 value )
+    UserSettingSetResult UserSettingsManager::setPendingFloatValue( const hashed_string& settingID, float32 value )
     {
         utf8 arrBuffer[constant::kMaxBuffer64]{};
         StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, value );
-        return setPendingValue( settingId, arrBuffer );
+        return setPendingValue( settingID, arrBuffer );
     }
 
-    bool UserSettingsManager::isPending( const hashed_string& settingId ) const
+    bool UserSettingsManager::isPending( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 && _listState[settingIndex]._bPending;
     }
 
@@ -590,15 +590,15 @@ namespace sw
         return false;
     }
 
-    bool UserSettingsManager::isSettingEnabled( const hashed_string& settingId ) const
+    bool UserSettingsManager::isSettingEnabled( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 && isEnabledAt( settingIndex );
     }
 
-    bool UserSettingsManager::isSettingAvailable( const hashed_string& settingId ) const
+    bool UserSettingsManager::isSettingAvailable( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         return settingIndex != invalid_index::kUint32 && isAvailableAt( settingIndex );
     }
 
@@ -675,12 +675,12 @@ namespace sw
         }
     }
 
-    void UserSettingsManager::resetCategoryToDefaults( const hashed_string& categoryId )
+    void UserSettingsManager::resetCategoryToDefaults( const hashed_string& categoryID )
     {
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
         {
-            if ( listSetting[settingIndex]._category != categoryId || isAvailableAt( settingIndex ) == false )
+            if ( listSetting[settingIndex]._category != categoryID || isAvailableAt( settingIndex ) == false )
                 continue;
             // 키 바인딩은 겹침 검사를 건너뛴다 — 모두 기본으로 돌아가면 기본 맵끼리는 겹치지 않는다.
             (void)setPendingAt( settingIndex, _listState[settingIndex]._defaultValue, UserSettingValueResult::Accepted );
@@ -744,9 +744,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 6) 키 바인딩
     // ------------------------------------------------------------------------------
-    bool UserSettingsManager::findBindingConflict( const hashed_string& settingId, string_view slotText, UserSettingBindingConflict& outConflict ) const
+    bool UserSettingsManager::findBindingConflict( const hashed_string& settingID, string_view slotText, UserSettingBindingConflict& outConflict ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         if ( settingIndex == invalid_index::kUint32 )
             return false;
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
@@ -772,7 +772,7 @@ namespace sw
                 continue;
             if ( otherSlot == slot )
             {
-                outConflict._settingId = other._id;
+                outConflict._settingID = other._id;
                 outConflict._action    = other._action;
                 return true;
             }
@@ -790,23 +790,23 @@ namespace sw
             if ( other._type == UserSettingType::KeyBinding && other._action == conflictingName )
                 return false;
         }
-        outConflict._settingId = {};
+        outConflict._settingID = {};
         outConflict._action    = conflictingName;
         return true;
     }
 
-    UserSettingSetResult UserSettingsManager::setPendingBinding( const hashed_string& settingId, string_view slotText, UserSettingBindingPolicy policy )
+    UserSettingSetResult UserSettingsManager::setPendingBinding( const hashed_string& settingID, string_view slotText, UserSettingBindingPolicy policy )
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         if ( settingIndex == invalid_index::kUint32 )
             return UserSettingSetResult::Unknown;
         if ( _schema.getSettings()[settingIndex]._type != UserSettingType::KeyBinding )
             return UserSettingSetResult::Rejected;
 
         UserSettingBindingConflict conflict;
-        if ( findBindingConflict( settingId, slotText, conflict ) == false )
-            return setPendingValue( settingId, slotText );
-        if ( policy == UserSettingBindingPolicy::Reject || conflict._settingId.empty() )
+        if ( findBindingConflict( settingID, slotText, conflict ) == false )
+            return setPendingValue( settingID, slotText );
+        if ( policy == UserSettingBindingPolicy::Reject || conflict._settingID.empty() )
             return UserSettingSetResult::Conflict;
 
         // 맞바꾸기: 겹친 설정이 이 설정의 지금 키를 받는다. 기본 키(빈 값)면 입력 맵에서 실제 키를 읽어 적는다.
@@ -817,13 +817,13 @@ namespace sw
         string normalized;
         if ( UserSettingsSchema::normalizeValue( _schema.getSettings()[settingIndex], slotText, normalized ) == UserSettingValueResult::Rejected )
             return UserSettingSetResult::Rejected;
-        (void)setPendingAt( findIndex( conflict._settingId ), currentText, UserSettingValueResult::Accepted );
+        (void)setPendingAt( findIndex( conflict._settingID ), currentText, UserSettingValueResult::Accepted );
         return setPendingAt( settingIndex, normalized, UserSettingValueResult::Accepted );
     }
 
-    string UserSettingsManager::getBindingGlyph( const hashed_string& settingId, InputGlyphStyle style ) const
+    string UserSettingsManager::getBindingGlyph( const hashed_string& settingID, InputGlyphStyle style ) const
     {
-        const uint32 settingIndex = findIndex( settingId );
+        const uint32 settingIndex = findIndex( settingID );
         InputSlot    slot;
         if ( settingIndex == invalid_index::kUint32 || findEffectiveSlot( settingIndex, slot ) == false )
             return "[ ? ]";
@@ -852,9 +852,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 내부
     // ------------------------------------------------------------------------------
-    uint32 UserSettingsManager::findIndex( const hashed_string& settingId ) const
+    uint32 UserSettingsManager::findIndex( const hashed_string& settingID ) const
     {
-        const uint32 settingIndex = _schema.findSettingIndex( settingId );
+        const uint32 settingIndex = _schema.findSettingIndex( settingID );
         return settingIndex < static_cast<uint32>( _listState.size() ) ? settingIndex : invalid_index::kUint32;
     }
 
@@ -875,7 +875,7 @@ namespace sw
             return false;
         for ( const UserSettingCondition& condition : _schema.getSettings()[settingIndex]._listEnabledCondition )
         {
-            const uint32 otherIndex = findIndex( condition._settingId );
+            const uint32 otherIndex = findIndex( condition._settingID );
             if ( otherIndex == invalid_index::kUint32 )
                 return false;
             const bool bEqual     = StringUtil::equals( getEffectiveValue( otherIndex ), condition._value, true );
@@ -961,7 +961,7 @@ namespace sw
 
     void UserSettingsManager::refreshScalabilityGroup( const ScalabilityGroupDef& group, bool bCommitted )
     {
-        const uint32 groupIndex = findIndex( group._settingId );
+        const uint32 groupIndex = findIndex( group._settingID );
         if ( groupIndex == invalid_index::kUint32 )
             return;
 
@@ -971,7 +971,7 @@ namespace sw
             bool bMatches = true;
             for ( const ScalabilityPresetValue& value : preset._listValue )
             {
-                const uint32 memberIndex = findIndex( value._settingId );
+                const uint32 memberIndex = findIndex( value._settingID );
                 string       normalized;
                 if ( memberIndex == invalid_index::kUint32 ||
                      UserSettingsSchema::normalizeValue( _schema.getSettings()[memberIndex], value._value, normalized ) == UserSettingValueResult::Rejected )
@@ -1007,7 +1007,7 @@ namespace sw
                 continue;
             for ( const ScalabilityPresetValue& value : preset._listValue )
             {
-                const uint32 memberIndex = findIndex( value._settingId );
+                const uint32 memberIndex = findIndex( value._settingID );
                 string       normalized;
                 if ( memberIndex == invalid_index::kUint32 ||
                      UserSettingsSchema::normalizeValue( _schema.getSettings()[memberIndex], value._value, normalized ) == UserSettingValueResult::Rejected )
@@ -1044,10 +1044,10 @@ namespace sw
         return layer.empty() ? pInputMap->getDefaultLayerName() : layer;
     }
 
-    void UserSettingsManager::broadcast( const hashed_string& settingId, UserSettingEventKind kind )
+    void UserSettingsManager::broadcast( const hashed_string& settingID, UserSettingEventKind kind )
     {
         UserSettingEvent event;
-        event._settingId = settingId;
+        event._settingID = settingID;
         event._kind      = kind;
         _onEvent.broadcast( event );
     }

@@ -35,7 +35,7 @@ namespace sw
         class ComboBoxPopupScreen final : public UiScreen
         {
         public:
-            ComboBoxPopupScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, UiScreenHandle ownerScreen, WidgetId combo )
+            ComboBoxPopupScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, UiScreenHandle ownerScreen, WidgetID combo )
                 : UiScreen{ desc, std::move( root ) }
                 , _ownerScreen{ ownerScreen }
                 , _combo{ combo }
@@ -46,7 +46,7 @@ namespace sw
             {
                 UiSystem* const pUi    = getUiSystem();
                 UiScreen* const pOwner = pUi != nullptr ? pUi->findScreen( _ownerScreen ) : nullptr;
-                Widget* const   pFound = pOwner != nullptr ? pOwner->getTree().findWidgetById( _combo ) : nullptr;
+                Widget* const   pFound = pOwner != nullptr ? pOwner->getTree().findWidgetByID( _combo ) : nullptr;
                 ComboBoxWidget* pCombo = pFound != nullptr ? castTo<ComboBoxWidget>( pFound ) : nullptr;
                 if ( pCombo != nullptr )
                     pCombo->choosePopupOption( index );
@@ -55,7 +55,7 @@ namespace sw
 
         private:
             UiScreenHandle _ownerScreen;
-            WidgetId       _combo;
+            WidgetID       _combo;
         };
 
         struct ComboBoxWidgetInternal
@@ -199,11 +199,11 @@ namespace sw
         desc._layer                            = UiLayer::Modal; // 메뉴 위 — 막지는 않는다(밖 클릭은 루트가 받아 닫는다)
         desc._bModal                           = false;
         desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != invalid_index::kUint32 ? _selectedIndex : 0 );
-        unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getId() );
+        unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getID() );
         ComboBoxPopupScreen* const      pPopup = popup.get();
         for ( uint32 index = 0; index < static_cast<uint32>( listButton.size() ); ++index )
         {
-            (void)listButton[index]->getOnClicked().add( [pPopup, index]( WidgetId )
+            (void)listButton[index]->getOnClicked().add( [pPopup, index]( WidgetID )
             { pPopup->choose( index ); } );
         }
         _popupScreen = pUi->pushScreen( std::move( popup ) );

@@ -92,9 +92,9 @@ namespace sw
         clear();
         for ( XmlNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
-            if ( pId != nullptr )
-                addElement( hashed_string( pId ) );
+            const utf8* pID = GameDataXml::findRequiredID( node, sourceName );
+            if ( pID != nullptr )
+                addElement( hashed_string( pID ) );
         }
         if ( _listElement.empty() )
         {

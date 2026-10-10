@@ -110,7 +110,7 @@ namespace sw
         void notifyAreaChanged( const hashed_string& areaName ) { requestSave( AutosaveTrigger::AreaChanged, areaName ); }
         void notifyBeforeBoss( const hashed_string& bossName ) { requestSave( AutosaveTrigger::BeforeBoss, bossName ); }
         /** @brief 체크포인트에 닿았습니다. 같은 체크포인트에 다시 닿으면 저장하지 않습니다. */
-        void reachCheckpoint( const hashed_string& checkpointId );
+        void reachCheckpoint( const hashed_string& checkpointID );
         /** @brief 게임을 끕니다 — 정책이 켜 두었으면 막기 · 최소 간격과 상관없이 지금 저장합니다. 저장했으면 true 입니다. */
         bool notifyQuit();
         /** @brief 지금 저장합니다(최소 간격 · 정책 무시, 막기는 지킨다). 저장했으면 true 입니다. */
@@ -134,7 +134,7 @@ namespace sw
 
         bool                    hasPendingRequest() const { return _bPending == SW_TRUE; }
         AutosaveTrigger         getPendingTrigger() const { return _pendingTrigger; }
-        const hashed_string&    getLastCheckpointId() const { return _lastCheckpointId; }
+        const hashed_string&    getLastCheckpointID() const { return _lastCheckpointID; }
         float64                 getPlayTime() const { return _playTime; }
         uint32                  getSaveCount() const { return _saveCount; }
         const AutosaveSettings& getSettings() const { return _settings; }
@@ -155,7 +155,7 @@ namespace sw
         vector<AutosaveSlotInfo> _listSlot; ///< 칸마다(칸 번호 자리) — 기록이 없으면 `_sequence` 0
         vector<hashed_string>    _listBlockReason;
         hashed_string            _pendingLabel;
-        hashed_string            _lastCheckpointId;
+        hashed_string            _lastCheckpointID;
         float64                  _playTime;
         float64                  _lastSaveTime; ///< 마지막 자동 저장의 플레이 시간(음수면 아직 없음)
         float32                  _intervalTimer;

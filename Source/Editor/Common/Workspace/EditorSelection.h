@@ -46,7 +46,7 @@ namespace sw::editor
         bool hasObject( const GameObject* pObj ) const;
         /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. */
         GameObject* getPrimaryObject() const;
-        uint64      getPrimaryObjectId() const;
+        uint64      getPrimaryObjectID() const;
         /** @brief 선택한 순서의 핸들입니다. 사라진 대상이 섞여 있을 수 있으니, 풀어 쓰려면 `getSelectedObjects` 를 쓰십시오. */
         const vector<GameObjectHandle>& getSelectedHandles() const { return _listSelectedObject; }
         /** @brief 아직 살아 있는 선택 오브젝트를 선택한 순서로 @p outListObject 에 채웁니다(먼저 비웁니다). */

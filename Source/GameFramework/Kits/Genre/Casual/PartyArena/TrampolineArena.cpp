@@ -649,13 +649,13 @@ namespace sw
             PartyItemInstance       item;
             if ( bOnBoard == false || _itemSpawner.tryPickUp( body._position, _settings._pickupRadius + _settings._bodyRadius, player, item ) == false )
                 continue;
-            const PartyItemDef* pDef = _itemSpawner.findItem( item._itemId );
+            const PartyItemDef* pDef = _itemSpawner.findItem( item._itemID );
             if ( pDef != nullptr )
                 applyItem( player, *pDef );
             TrampolineEvent event;
             event._kind   = TrampolineEvent::Kind::ItemPicked;
             event._player = player;
-            event._itemId = item._itemId;
+            event._itemID = item._itemID;
             _eventBuffer.push( event );
         }
     }

@@ -47,10 +47,10 @@ namespace sw
         /** @brief 요청을 맡깁니다. @p onReply 가 비어 있으면 답을 버립니다(발행 · 지우기처럼 결과를 보지 않는 쓰기). 요청 id 입니다. */
         uint64 submit( const EphemeralRequest& request, ReplyDelegate onReply );
         /** @brief 맡긴 요청의 델리게이트를 지웁니다 — 답은 와도 버린다(요청 자체는 캐시에서 이미 돌았을 수 있다). 없거나 끝난 요청이면 아무것도 하지 않는다. */
-        void cancel( uint64 requestId ) { _mapRequestToReply.erase( requestId ); }
+        void cancel( uint64 requestID ) { _mapRequestToReply.erase( requestID ); }
         /** @brief @p channel 을 구독합니다. 구독 id(0 = 실패 — 초기화 전)입니다. */
         uint64 subscribe( string_view channel, MessageDelegate onMessage );
-        void   unsubscribe( uint64 subscriptionId );
+        void   unsubscribe( uint64 subscriptionID );
 
         int32            getPendingCount() const { return static_cast<int32>( _mapRequestToReply.size() ); }
         IEphemeralStore* getStore() const { return _pStore; }
@@ -60,7 +60,7 @@ namespace sw
         {
             string          _channel{};
             MessageDelegate _onMessage{};
-            uint64          _subscriptionId{ 0 };
+            uint64          _subscriptionID{ 0 };
         };
 
         bool hasChannelSubscriber( string_view channel ) const;
@@ -71,6 +71,6 @@ namespace sw
         vector<Subscription>                 _listSubscription;
         unordered_map<uint64, ReplyDelegate> _mapRequestToReply;
         IEphemeralStore*                     _pStore;
-        uint64                               _nextSubscriptionId;
+        uint64                               _nextSubscriptionID;
     };
 } // namespace sw

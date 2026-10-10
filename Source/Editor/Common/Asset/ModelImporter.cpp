@@ -1395,7 +1395,7 @@ namespace sw::editor
                             return false;
                         }
                     }
-                    listTexturePath[textureIndex] = ResourceUtil::toResourceId( TextureImporter::makeImportedTexturePath( rawPath ) );
+                    listTexturePath[textureIndex] = ResourceUtil::toResourceID( TextureImporter::makeImportedTexturePath( rawPath ) );
                 }
 
                 for ( const ModelImportSection& section : result._listSection )
@@ -1416,8 +1416,8 @@ namespace sw::editor
                     }
                     // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
                     // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-                    const string resourceId = ResourceUtil::toResourceId( materialPath );
-                    if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceId ) + "\nsourcePath=" + resourceId + "\nimported=1\n" ) == false )
+                    const string resourceID = ResourceUtil::toResourceID( materialPath );
+                    if ( FileUtil::writeTextFile( materialPath + path::kMetaExtension, "guid=" + makeImportedGuid( resourceID ) + "\nsourcePath=" + resourceID + "\nimported=1\n" ) == false )
                     {
                         SW_LOG_ERROR( "Failed to write %#.meta", materialPath.c_str() );
                         return false;
@@ -1437,10 +1437,10 @@ namespace sw::editor
             }
 
             /** @brief 리소스 경로에서 정해지는 UUID 글입니다(버전 4 · 변형 비트 자리를 맞춘 FNV-1a 두 개). 같은 경로는 어디서 임포트해도 같은 GUID 입니다. */
-            static string makeImportedGuid( string_view resourceId )
+            static string makeImportedGuid( string_view resourceID )
             {
-                const uint64 high = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false );
-                const uint64 low  = StringUtil::computeHash64( resourceId.data(), resourceId.size(), false, high ^ HashUtil::kGoldenRatio64 );
+                const uint64 high = StringUtil::computeHash64( resourceID.data(), resourceID.size(), false );
+                const uint64 low  = StringUtil::computeHash64( resourceID.data(), resourceID.size(), false, high ^ HashUtil::kGoldenRatio64 );
                 // 8-4-4-4-12 자리 16 진. 셋째 묶음 첫 자리는 버전 4, 넷째 묶음 첫 자리는 변형(8..b)이다.
                 auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
                 {
@@ -1888,7 +1888,7 @@ namespace sw::editor
             }
             SkeletonAttachment entry{};
             entry._name           = attachment._name;
-            entry._meshPath       = ResourceUtil::toResourceId( partPath );
+            entry._meshPath       = ResourceUtil::toResourceID( partPath );
             entry._parentBone     = attachment._parentBone;
             entry._localTransform = attachment._localTransform;
             result._skeleton.addAttachment( entry );

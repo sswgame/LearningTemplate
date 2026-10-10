@@ -53,7 +53,7 @@ namespace sw
         static float32 computeAirTemperature( const WeatherSystem& weather, float32 regionBaseTemperature );
 
         /** @brief 음식을 먹습니다. 모르는 음식이면 false 입니다. */
-        bool eat( const hashed_string& foodId );
+        bool eat( const hashed_string& foodID );
         /** @brief 입은 옷을 통째로 바꿉니다(모르는 옷은 보온 0). */
         void    setClothing( const vector<hashed_string>& listClothing );
         float32 computeWarmth() const;
@@ -67,7 +67,7 @@ namespace sw
             _listMark.clear();
         }
         /** @brief 데드아이로 대상을 표시합니다. 꺼졌거나 단계의 표시 개수를 채웠으면 false 입니다. */
-        [[nodiscard]] bool markTarget( uint64 targetId );
+        [[nodiscard]] bool markTarget( uint64 targetID );
         void               setDeadEyeLevel( int32 level ) { _deadEyeLevel = level; }
         /** @brief 지금 시간 배율입니다(데드아이를 켰으면 단계의 배율, 아니면 1). */
         float32 getTimeScale() const;

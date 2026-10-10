@@ -312,7 +312,7 @@ namespace sw
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 건다. 아래 정렬 패스가 둘 다 갈아 끼우므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( getEnginePso( RenderPassType::GpuCull ) );
-        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
+        // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIDs(u1).
         // gpucull.hlsl 레지스터와 1:1 대응이다. 인스턴스 · 배치 구간은 뷰가 공유한다(절두체만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );

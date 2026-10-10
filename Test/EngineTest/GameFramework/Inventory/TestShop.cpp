@@ -269,7 +269,7 @@ SW_TEST_CASE( ShopTest, RestockEveryFewDaysUpToTheMaximum )
     listEvent.clear();
     scene._shop.drainEvents( listEvent );
     SW_ASSERT_TRUE( listEvent.size() == 1 );
-    SW_EXPECT_TRUE( listEvent[0]._kind == ShopEvent::Kind::Restocked && listEvent[0]._itemId == idPotion() );
+    SW_EXPECT_TRUE( listEvent[0]._kind == ShopEvent::Kind::Restocked && listEvent[0]._itemID == idPotion() );
     SW_EXPECT_EQUAL( 3, listEvent[0]._count );
 
     // 최대(처음 재고 5) 를 넘지 않는다.

@@ -23,7 +23,7 @@ namespace sw
     /** @brief 첨부 하나입니다. */
     struct ServiceMailAttachment
     {
-        string _assetId{};
+        string _assetID{};
         int64  _amount{ 0 };
     };
 } // namespace sw
@@ -73,8 +73,8 @@ namespace sw
         string                        _senderName{};
         string                        _idempotencyKey{}; ///< 필수 — 보내는 쪽이 정한다("trade.<id>.return" · "admin.<GM>.<요청>" · "reward.<퀘스트>.<계정>")
         LedgerHolder                  _fundingHolder{};  ///< 기본 발행
-        uint64                        _recipientAccountId{ 0 };
-        uint64                        _actorId{ 0 };
+        uint64                        _recipientAccountID{ 0 };
+        uint64                        _actorID{ 0 };
         int64                         _createdMs{ 0 };
         int64                         _expiresMs{ 0 }; ///< 0 = 만료 없음
         LedgerActorKind               _actorKind{ LedgerActorKind::System };
@@ -117,7 +117,7 @@ namespace sw
         static LedgerHolder makeEscrowHolder( string_view mailKey );
         static string       makeExpiryKey( int64 expiresMs, string_view mailKey );
         /** @brief 우편 키 앞의 받는 계정입니다. 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool parseRecipient( string_view mailKey, uint64& outAccountId );
+        [[nodiscard]] static bool parseRecipient( string_view mailKey, uint64& outAccountID );
 
         static vector<uint8> encodeRecord( const ServiceMailRecord& record );
         /** @brief 레코드 바이트를 읽습니다(@p outRecord 의 `_mailKey` · `_version` 은 부르는 쪽이 채운다). */

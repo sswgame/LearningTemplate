@@ -91,7 +91,7 @@ namespace sw
         static uint32 computeOldestTick( const ControlIntentTrack& track );
 
         vector<ControlIntentTrack>   _listTrack;
-        unordered_map<uint64, int32> _mapComponentIdToTrack; ///< 기록한 폰의 컴포넌트 id → 트랙 자리
+        unordered_map<uint64, int32> _mapComponentIDToTrack; ///< 기록한 폰의 컴포넌트 id → 트랙 자리
         int32                        _capacityTicks;
     };
 } // namespace sw

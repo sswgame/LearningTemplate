@@ -34,7 +34,7 @@ namespace sw
 {
     SW_LOG_CALLER( "GameObjectStore" );
 
-    atomic<uint64> GameObjectStore::_s_nextObjectId = 1;
+    atomic<uint64> GameObjectStore::_s_nextObjectID = 1;
 
     GameObjectStore::GameObjectStore( GameObjectManager& manager, SceneTickScheduler& tickScheduler, const StructuralChangeBuffer& structuralChangeBuffer )
         : _pManager{ &manager }
@@ -45,7 +45,7 @@ namespace sw
         , _listGameObject{}
         , _mapNameToObject{}
         , _mapNameSuffix{}
-        , _mapIdToObject{}
+        , _mapIDToObject{}
         , _objectSlotTable{}
         , _overflowObjectCount{ 0 }
         , _listPendingAdd{}
@@ -82,42 +82,42 @@ namespace sw
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        return createGameObjectUnlocked( name, generateNewId() );
+        return createGameObjectUnlocked( name, generateNewID() );
     }
 
-    GameObject* GameObjectStore::createGameObjectWithId( hashed_string name, uint64 objectId )
+    GameObject* GameObjectStore::createGameObjectWithID( hashed_string name, uint64 objectID )
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        if ( objectId == 0 )
-            return createGameObjectUnlocked( name, generateNewId() );
+        if ( objectID == 0 )
+            return createGameObjectUnlocked( name, generateNewID() );
 
         // 그 id 로 등록된 것이 아직 있으면(삭제 대기 포함) 쓰지 않는다. 옛 것의 지연 파괴가 id 로 정리하는 항목을 새 것 몫까지 지운다.
-        if ( findRegisteredUnlocked( objectId ) != nullptr )
+        if ( findRegisteredUnlocked( objectID ) != nullptr )
         {
-            SW_LOG_WARNING( "createGameObjectWithId: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.",
-                            objectId, name.c_str() );
-            return createGameObjectUnlocked( name, generateNewId() );
+            SW_LOG_WARNING( "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.",
+                            objectID, name.c_str() );
+            return createGameObjectUnlocked( name, generateNewID() );
         }
 
-        _s_nextObjectId.fetch_max( objectId + 1, std::memory_order_relaxed );
-        return createGameObjectUnlocked( name, objectId );
+        _s_nextObjectID.fetch_max( objectID + 1, std::memory_order_relaxed );
+        return createGameObjectUnlocked( name, objectID );
     }
 
-    GameObject* GameObjectStore::createGameObjectUnlocked( hashed_string name, uint64 objectId )
+    GameObject* GameObjectStore::createGameObjectUnlocked( hashed_string name, uint64 objectID )
     {
         NameEntry           nameEntry{};
         const hashed_string uniqueName = makeUniqueNameUnlocked( name, nameEntry );
         GameObject*         pObj       = _poolGameObject.create( uniqueName );
-        pObj->_objectId                = objectId;
+        pObj->_objectID                = objectID;
         pObj->_pOwnerManager           = _pManager;
 
         nameEntry._pObject = pObj;
         _mapNameToObject.insert_or_assign( uniqueName, nameEntry );
-        if ( _objectSlotTable.tryStore( objectId, pObj ) == false )
+        if ( _objectSlotTable.tryStore( objectID, pObj ) == false )
         {
-            _mapIdToObject.insert_or_assign( objectId, pObj );
-            _overflowObjectCount.store( static_cast<uint32>( _mapIdToObject.size() ), std::memory_order_release );
+            _mapIDToObject.insert_or_assign( objectID, pObj );
+            _overflowObjectCount.store( static_cast<uint32>( _mapIDToObject.size() ), std::memory_order_release );
         }
 
         _listPendingAdd.push_back( pObj );
@@ -134,7 +134,7 @@ namespace sw
         SW_ASSERT( WalkScope::isInsideWalk() == false );
 
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        if ( findRegisteredUnlocked( pObj->getObjectId() ) != pObj )
+        if ( findRegisteredUnlocked( pObj->getObjectID() ) != pObj )
             return;
 
         const auto oldIt         = _mapNameToObject.find( oldName );
@@ -172,43 +172,43 @@ namespace sw
         return ( pObj != nullptr && pObj->isPendingDestroy() == false ) ? pObj : nullptr;
     }
 
-    bool GameObjectStore::ObjectSlotTable::tryStore( uint64 objectId, GameObject* pObject )
+    bool GameObjectStore::ObjectSlotTable::tryStore( uint64 objectID, GameObject* pObject )
     {
         // 쓰기는 모두 매니저 락 안이라 여기서 두 스레드가 겹치지 않는다.
-        atomic<GameObject*>* pSlot = _listSlot.ensure( getSlotIndex( objectId ) );
+        atomic<GameObject*>* pSlot = _listSlot.ensure( getSlotIndex( objectID ) );
         if ( pSlot == nullptr )
             return false;
         const GameObject* pOccupant = pSlot->load( std::memory_order_relaxed );
         if ( pOccupant != nullptr && pOccupant != pObject )
             return false;
         // 칸을 발행하기 **전에** 적는다. 읽는 쪽은 칸을 acquire 로 읽은 뒤 이것을 보므로, 감긴 id 의 오브젝트를 보는 쪽은 반드시 true 를 본다.
-        if ( objectId >= kObjectSlotCount )
-            _compareFromId.store( 0, std::memory_order_relaxed );
+        if ( objectID >= kObjectSlotCount )
+            _compareFromID.store( 0, std::memory_order_relaxed );
         pSlot->store( pObject, std::memory_order_release );
         return true;
     }
 
-    bool GameObjectStore::ObjectSlotTable::tryRemove( uint64 objectId, const GameObject* pObject )
+    bool GameObjectStore::ObjectSlotTable::tryRemove( uint64 objectID, const GameObject* pObject )
     {
         // 지우는 길이라 청크를 새로 만들 이유가 없다.
-        atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectId ) );
+        atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectID ) );
         if ( pSlot == nullptr || pSlot->load( std::memory_order_relaxed ) != pObject )
             return false;
         pSlot->store( nullptr, std::memory_order_release );
         return true;
     }
 
-    GameObject* GameObjectStore::ObjectSlotTable::load( uint64 objectId ) const
+    GameObject* GameObjectStore::ObjectSlotTable::load( uint64 objectID ) const
     {
-        const atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectId ) );
+        const atomic<GameObject*>* pSlot = _listSlot.find( getSlotIndex( objectID ) );
         if ( pSlot == nullptr )
             return nullptr;
         GameObject* pObject = pSlot->load( std::memory_order_acquire );
         if ( pObject == nullptr )
             return nullptr;
         // 칸은 id 의 아래 비트라 같은 칸의 다른 id 가 들어 있을 수 있다 — 묻는 id 가 감긴 것이거나, 감긴 id 가 들어온 적이 있을 때
-        // (`_compareFromId` 가 0). 그때만 오브젝트의 id 로 견준다. 둘 다 아니면 이 칸에는 칸 번호와 같은 id 만 들어 있을 수 있다.
-        if ( objectId >= _compareFromId.load( std::memory_order_relaxed ) && pObject->getObjectId() != objectId )
+        // (`_compareFromID` 가 0). 그때만 오브젝트의 id 로 견준다. 둘 다 아니면 이 칸에는 칸 번호와 같은 id 만 들어 있을 수 있다.
+        if ( objectID >= _compareFromID.load( std::memory_order_relaxed ) && pObject->getObjectID() != objectID )
             return nullptr;
         return pObject;
     }
@@ -219,30 +219,30 @@ namespace sw
         {
             slot.store( nullptr, std::memory_order_release );
         } );
-        _compareFromId.store( kObjectSlotCount, std::memory_order_relaxed );
+        _compareFromID.store( kObjectSlotCount, std::memory_order_relaxed );
     }
 
-    GameObject* GameObjectStore::findRegisteredUnlocked( uint64 objectId ) const
+    GameObject* GameObjectStore::findRegisteredUnlocked( uint64 objectID ) const
     {
-        if ( GameObject* pSlotObject = _objectSlotTable.load( objectId ); pSlotObject != nullptr )
+        if ( GameObject* pSlotObject = _objectSlotTable.load( objectID ); pSlotObject != nullptr )
             return pSlotObject;
-        const auto it = _mapIdToObject.find( objectId );
-        return ( it != _mapIdToObject.end() ) ? it->second : nullptr;
+        const auto it = _mapIDToObject.find( objectID );
+        return ( it != _mapIDToObject.end() ) ? it->second : nullptr;
     }
 
-    GameObject* GameObjectStore::findGameObjectById( uint64 objectId ) const
+    GameObject* GameObjectStore::findGameObjectByID( uint64 objectID ) const
     {
         // **빠른 길: 락도 해시도 없다.** 핸들 해석이 프레임당 오브젝트 수만큼 도는 자리라
         // 공유 잠금 하나가 곧 밀리초가 된다(벤치 실측: 호출당 110ns → 프레임당 2.2ms).
-        if ( GameObject* pSlotObject = _objectSlotTable.load( objectId ); pSlotObject != nullptr )
+        if ( GameObject* pSlotObject = _objectSlotTable.load( objectID ); pSlotObject != nullptr )
             return ( pSlotObject->isPendingDestroy() == false ) ? pSlotObject : nullptr;
 
         // 칸이 막혀 맵에 든 오브젝트가 있을 때만 맵으로 간다(보통 없다). 없는 id 를 묻는 핸들(파괴된 대상)도 잠그지 않는다.
         if ( _overflowObjectCount.load( std::memory_order_acquire ) == 0 )
             return nullptr;
         std::shared_lock<std::shared_mutex> lock{ _mutex };
-        auto                                it = _mapIdToObject.find( objectId );
-        if ( it == _mapIdToObject.end() )
+        auto                                it = _mapIDToObject.find( objectID );
+        if ( it == _mapIDToObject.end() )
             return nullptr;
         GameObject* pObj = it->second;
         return ( pObj != nullptr && pObj->isPendingDestroy() == false ) ? pObj : nullptr;
@@ -352,10 +352,10 @@ namespace sw
     {
         if ( handle.isValid() == false )
             return nullptr;
-        GameObject* pObj = findGameObjectById( handle.objectId() );
+        GameObject* pObj = findGameObjectByID( handle.objectID() );
         if ( pObj == nullptr )
             return nullptr;
-        return pObj->findComponentById( handle.componentId(), true );
+        return pObj->findComponentByID( handle.componentID(), true );
     }
 
     void GameObjectStore::destroyObject( GameObject* pObj, bool bDestroyChildren )
@@ -462,8 +462,8 @@ namespace sw
         {
             // 소유 오브젝트가 삭제 대기면 건너뛴다 — 오브젝트를 없앨 때 컴포넌트도 함께 없앤다(아래). 즉시 경로가 이미 해제했으면
             // 목록에 없다. 둘 다 아니고 여전히 삭제 표시된 것만 뺀다.
-            GameObject* pOwner = findGameObjectById( handle.objectId() );
-            Component*  pComp  = ( pOwner != nullptr ) ? pOwner->findComponentById( handle.componentId(), true ) : nullptr;
+            GameObject* pOwner = findGameObjectByID( handle.objectID() );
+            Component*  pComp  = ( pOwner != nullptr ) ? pOwner->findComponentByID( handle.componentID(), true ) : nullptr;
             if ( pComp != nullptr && pComp->isPendingDestroy() )
                 (void)pOwner->removeComponent( pComp ); // 실패(목록에 없음)는 removeComponent 가 알린다
         }
@@ -500,10 +500,10 @@ namespace sw
                         releaseNameSuffixUnlocked( nameIt->second );
                         _mapNameToObject.erase( nameIt );
                     }
-                    if ( _objectSlotTable.tryRemove( pObj->getObjectId(), pObj ) == false )
+                    if ( _objectSlotTable.tryRemove( pObj->getObjectID(), pObj ) == false )
                     {
-                        _mapIdToObject.erase( pObj->getObjectId() );
-                        _overflowObjectCount.store( static_cast<uint32>( _mapIdToObject.size() ), std::memory_order_release );
+                        _mapIDToObject.erase( pObj->getObjectID() );
+                        _overflowObjectCount.store( static_cast<uint32>( _mapIDToObject.size() ), std::memory_order_release );
                     }
                 }
             }
@@ -548,7 +548,7 @@ namespace sw
             _listPendingAdd.clear();
             _mapNameToObject.clear();
             _mapNameSuffix.clear();
-            _mapIdToObject.clear();
+            _mapIDToObject.clear();
             _overflowObjectCount.store( 0, std::memory_order_release );
             _objectSlotTable.clear();
         }
@@ -642,9 +642,9 @@ namespace sw
     }
 #endif
 
-    uint64 GameObjectStore::generateNewId()
+    uint64 GameObjectStore::generateNewID()
     {
-        return _s_nextObjectId.fetch_add( 1, std::memory_order_relaxed );
+        return _s_nextObjectID.fetch_add( 1, std::memory_order_relaxed );
     }
 
     bool GameObjectStore::isNameTakenUnlocked( hashed_string name ) const

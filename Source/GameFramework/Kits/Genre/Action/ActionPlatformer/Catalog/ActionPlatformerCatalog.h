@@ -124,7 +124,7 @@ namespace sw
         vector<ActionPatternStateDef> _listState{};
 
         /** @brief 상태 자리입니다. 없으면 −1 입니다. */
-        int32 findStateIndex( const hashed_string& stateId ) const;
+        int32 findStateIndex( const hashed_string& stateID ) const;
     };
 } // namespace sw
 
@@ -157,7 +157,7 @@ namespace sw
     private:
         static constexpr const utf8* kXmlRootName = "ActionPlatformer"; ///< 루트 원소(`XmlCatalog`)
         uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadPattern( const XmlNode& node, const utf8* pId, string_view sourceName );
+        void                         loadPattern( const XmlNode& node, const utf8* pID, string_view sourceName );
 
         GameCatalog<ActionStageDef>   _stageCatalog;
         GameCatalog<ActionComboDef>   _comboCatalog;

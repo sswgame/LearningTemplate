@@ -378,7 +378,7 @@ namespace sw
         , _mapNameToMethod{}
         , _pParentType{ nullptr }
         , _parentMissGeneration{ 0 }
-        , _typeId{ 0 }
+        , _typeID{ 0 }
         , _arrAncestorNameIndex{}
         , _ancestorDepth{ constant::reflection::kAncestorDepthUnknown }
         , _bAlive{ SW_TRUE }
@@ -451,7 +451,7 @@ namespace sw
         _listMethod         = other._listMethod;
         _listEvent          = other._listEvent;
         _metadata           = other._metadata;
-        _typeId             = other._typeId;
+        _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
@@ -478,14 +478,14 @@ namespace sw
         _listMethod         = std::move( other._listMethod );
         _listEvent          = std::move( other._listEvent );
         _metadata           = std::move( other._metadata );
-        _typeId             = other._typeId;
+        _typeID             = other._typeID;
         _bAbstract          = other._bAbstract;
         _bStatic            = other._bStatic;
         _bPrimitive         = other._bPrimitive;
 
         invalidateDerivedCaches();
 
-        other._typeId          = 0;
+        other._typeID          = 0;
         other._size            = 0;
         other._destroyInstance = nullptr;
         other._addComponent    = nullptr;
@@ -647,7 +647,7 @@ namespace sw
     }
     TypeRegistry::~TypeRegistry() = default;
 
-    static atomic<uint32> _s_typeIdCounter{ 0 }; // 실행 중에만 쓰는 로컬 인덱스(직렬화하지 않으므로 플랫폼과 무관하다)
+    static atomic<uint32> _s_typeIDCounter{ 0 }; // 실행 중에만 쓰는 로컬 인덱스(직렬화하지 않으므로 플랫폼과 무관하다)
 
     void TypeRegistry::registerClass( const TypeInfo& info )
     {
@@ -667,9 +667,9 @@ namespace sw
 
         auto existingIt = _mapFqnToClassType.find( canonicalKey );
         if ( existingIt != _mapFqnToClassType.end() )
-            stored._typeId = existingIt->second->_typeId;
+            stored._typeID = existingIt->second->_typeID;
         else
-            stored._typeId = _s_typeIdCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
+            stored._typeID = _s_typeIDCounter.fetch_add( 1, std::memory_order_relaxed ) + 1;
 
         const hashed_string canonicalName = stored._name.empty() == false ? stored._name : stored._fullyQualifiedName;
         const hashed_string shortName     = stored._name; // 아래에서 `stored` 를 옮긴다

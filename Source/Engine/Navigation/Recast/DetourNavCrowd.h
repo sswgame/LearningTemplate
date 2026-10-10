@@ -32,22 +32,22 @@ namespace sw
         [[nodiscard]] bool initialize( RecastNavMesh& navMesh, uint32 maxAgentCount, float32 maxAgentRadius );
         void               shutdown();
 
-        NavCrowdAgentId    addAgent( const float3& position, const NavCrowdAgentParams& params ) override;
-        void               removeAgent( NavCrowdAgentId agentId ) override;
-        void               updateAgentParams( NavCrowdAgentId agentId, const NavCrowdAgentParams& params ) override;
-        bool               requestMoveTarget( NavCrowdAgentId agentId, const float3& target ) override;
-        void               resetMoveTarget( NavCrowdAgentId agentId ) override;
-        void               teleportAgent( NavCrowdAgentId agentId, const float3& position ) override;
-        void               syncAgentPosition( NavCrowdAgentId agentId, const float3& position ) override;
+        NavCrowdAgentID    addAgent( const float3& position, const NavCrowdAgentParams& params ) override;
+        void               removeAgent( NavCrowdAgentID agentID ) override;
+        void               updateAgentParams( NavCrowdAgentID agentID, const NavCrowdAgentParams& params ) override;
+        bool               requestMoveTarget( NavCrowdAgentID agentID, const float3& target ) override;
+        void               resetMoveTarget( NavCrowdAgentID agentID ) override;
+        void               teleportAgent( NavCrowdAgentID agentID, const float3& position ) override;
+        void               syncAgentPosition( NavCrowdAgentID agentID, const float3& position ) override;
         void               update( float32 deltaTime ) override;
-        [[nodiscard]] bool findAgentState( NavCrowdAgentId agentId, NavCrowdAgentState& outState ) const override;
+        [[nodiscard]] bool findAgentState( NavCrowdAgentID agentID, NavCrowdAgentState& outState ) const override;
         void               setQueryFilter( const NavQueryFilter& filter ) override;
         uint32             getActiveAgentCount() const override;
         uint32             getMaxAgentCount() const override { return _maxAgentCount; }
         void               drawDebug( IPhysicsDebugRenderer& renderer, bool bPath, bool bVelocity ) const override;
 
     private:
-        bool isActiveAgent( NavCrowdAgentId agentId ) const;
+        bool isActiveAgent( NavCrowdAgentID agentID ) const;
 
         dtCrowd*        _pCrowd;
         dtNavMeshQuery* _pQuery;     ///< 군중 밖 질의(목적지 붙이기 · 자리 맞추기) — 게임 스레드만

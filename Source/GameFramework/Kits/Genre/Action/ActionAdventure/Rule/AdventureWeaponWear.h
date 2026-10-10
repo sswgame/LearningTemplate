@@ -29,7 +29,7 @@ namespace sw
     /** @brief 한 번 친 결과입니다. */
     struct AdventureStrikeResult
     {
-        hashed_string _itemId{};
+        hashed_string _itemID{};
         float32       _damage{ 0.0f };
         float32       _durabilityLeft{ 0.0f };
         uint8         _bBroke{ SW_FALSE };

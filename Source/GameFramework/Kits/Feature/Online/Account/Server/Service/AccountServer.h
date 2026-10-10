@@ -59,14 +59,14 @@ namespace sw
         void   onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void   onServiceTick( OnlineServiceHost& host, int64 nowMs ) override;
         void   onHostShutdown( OnlineServiceHost& host ) override;
-        void   onAccountLeft( OnlineServiceHost& host, AccountId accountId ) override;
+        void   onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
         void   onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message ) override;
 
         // IAccountSessionControl
-        void revokeAccountSessions( AccountId accountId, string_view reasonCode, int64 nowMs ) override;
+        void revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs ) override;
 
         /** @brief 이 연결 계정의 지금 세션 id 입니다(시험 · 진단). 없으면 0. */
-        uint64 findSessionId( AccountId accountId ) const;
+        uint64 findSessionID( AccountID accountID ) const;
         /** @brief 접속 상태 창구입니다(거래 · 채팅이 빌려 쓴다 — 서버 한 대면 찾기는 "없음"). 이 객체와 같이 산다. */
         IAccountPresence* getPresence() { return &_presence; }
 
@@ -91,15 +91,15 @@ namespace sw
         /** @brief 업무 결과가 공통 오류(시도 제한 · 저장소 · 빌드 판)면 그것으로 답하고 true 입니다. */
         bool respondCommonError( OnlineServiceHost& host, const NetRequestToken& token, LoginResult result, const LoginGrant& grant );
         /** @brief 세션의 연결에 알림을 보내고 끊습니다(세션 표에서 먼저 빼 `onAccountLeft` 가 유예를 걸지 않게). */
-        void revokeBound( OnlineServiceHost& host, AccountId accountId, LoginRevokeReason reason );
+        void revokeBound( OnlineServiceHost& host, AccountID accountID, LoginRevokeReason reason );
         /** @brief 처음 틱 — 호스트의 캐시 · 버스를 붙이고 주제를 구독합니다. */
         void attachHost( OnlineServiceHost& host );
         /** @brief 다른 서버에 붙은 세션을 끊은 기록을 버스로 알립니다. */
         void publishRemoteRevocations( OnlineServiceHost& host );
 
         unordered_map<uint64, PendingCall>     _mapTagToCall;
-        unordered_map<AccountId, BoundSession> _mapAccountToSession;
-        unordered_map<AccountId, string>       _mapAccountToReasonCode;
+        unordered_map<AccountID, BoundSession> _mapAccountToSession;
+        unordered_map<AccountID, string>       _mapAccountToReasonCode;
         vector<LoginCompletion>                _listCompletionScratch;
         vector<LoginEvent>                     _listEventScratch;
         OnlinePresence                         _presence;

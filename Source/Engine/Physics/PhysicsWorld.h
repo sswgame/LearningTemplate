@@ -18,7 +18,7 @@ namespace sw
     {
         AABB   _aabb{};
         AABB   _stepAabb{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때 · 순간이동 때는 `_aabb` 와 같다
-        uint64 _objectId{ 0 };
+        uint64 _objectID{ 0 };
         uint8  _layer{ 0 };
         uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(ContinuousCollision) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
         uint8  _bTrigger{ SW_FALSE };    ///< 트리거면 SW_TRUE — 겹침은 내지만 막지 않는다(유니티 `isTrigger` · 언리얼 Overlap 반응). 받는 쪽이 이벤트에서 본다
@@ -81,9 +81,9 @@ namespace sw
         PhysicsWorld() = default;
 
         /** @brief 막는 · 이산 AABB 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
-        BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0 );
+        BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectID = 0 );
         /** @brief 판정 방식(연속 · 트리거)까지 정한 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
-        BodyHandle addBody( const PhysicsBodyState& state, uint64 objectId );
+        BodyHandle addBody( const PhysicsBodyState& state, uint64 objectID );
         /** @brief 바디를 제거합니다. */
         void removeBody( BodyHandle handle );
         /** @brief 바디 AABB 를 갱신합니다. 연속 바디는 다음 `step` 에서 지난 step 의 자리부터 여기까지 쓸립니다(`BodyMoveType::Sweep`). */
@@ -291,8 +291,8 @@ namespace sw
         {
             BodyHandle _first{};
             BodyHandle _second{};
-            uint64     _firstObjectId{ 0 };
-            uint64     _secondObjectId{ 0 };
+            uint64     _firstObjectID{ 0 };
+            uint64     _secondObjectID{ 0 };
             float32    _time{ 1.0f };
             uint8      _bFirstTrigger{ SW_FALSE };
             uint8      _bSecondTrigger{ SW_FALSE };
@@ -301,8 +301,8 @@ namespace sw
             static OverlapPair makeOrdered( BodyHandle a, const PhysicsBody& bodyA, BodyHandle b, const PhysicsBody& bodyB, float32 time ) noexcept
             {
                 if ( b < a )
-                    return OverlapPair{ b, a, bodyB._objectId, bodyA._objectId, time, bodyB._bTrigger, bodyA._bTrigger };
-                return OverlapPair{ a, b, bodyA._objectId, bodyB._objectId, time, bodyA._bTrigger, bodyB._bTrigger };
+                    return OverlapPair{ b, a, bodyB._objectID, bodyA._objectID, time, bodyB._bTrigger, bodyA._bTrigger };
+                return OverlapPair{ a, b, bodyA._objectID, bodyB._objectID, time, bodyA._bTrigger, bodyB._bTrigger };
             }
 
             bool operator<( const OverlapPair& other ) const noexcept

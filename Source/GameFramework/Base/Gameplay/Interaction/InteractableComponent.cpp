@@ -22,7 +22,7 @@ namespace sw
 namespace sw
 {
     InteractableComponent::InteractableComponent()
-        : _interactionId{}
+        : _interactionID{}
         , _catalogPath{}
         , _lastInteractor{}
         , _cooldownRemaining{ 0.0f }
@@ -46,12 +46,12 @@ namespace sw
         }
         _pDef                   = nullptr;
         _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
-        if ( _interactionId.empty() )
+        if ( _interactionID.empty() )
             return;
         const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath.empty() ? string_view( InteractionCatalog::kDefaultPath ) : string_view( _catalogPath ) );
-        _pDef                              = pCatalog != nullptr ? pCatalog->findInteraction( _interactionId ) : nullptr;
+        _pDef                              = pCatalog != nullptr ? pCatalog->findInteraction( _interactionID ) : nullptr;
         if ( _pDef == nullptr )
-            SW_LOG_ERROR( "Interaction '%#' is not in %#", _interactionId.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
+            SW_LOG_ERROR( "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.empty() ? InteractionCatalog::kDefaultPath : _catalogPath.c_str() );
     }
 
     void InteractableComponent::onRegister( GameObjectManager& manager )
@@ -104,9 +104,9 @@ namespace sw
 
     const InteractionDef* InteractableComponent::getDefinition() const { return _bHasOverride == SW_TRUE ? &_overrideDef : _pDef; }
 
-    void InteractableComponent::setInteractionId( const hashed_string& id )
+    void InteractableComponent::setInteractionID( const hashed_string& id )
     {
-        _interactionId = id;
+        _interactionID = id;
         resolveDefinition();
     }
 

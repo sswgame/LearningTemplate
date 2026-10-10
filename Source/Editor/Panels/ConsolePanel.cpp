@@ -309,7 +309,7 @@ namespace sw::editor
     void ConsolePanel::drawLogList( bool bNewLogs )
     {
         editor::EditorSectionDesc logDesc{};
-        logDesc._pId   = "##log_scroll";
+        logDesc._pID   = "##log_scroll";
         logDesc._kind  = editor::EditorSectionKind::Child;
         logDesc._flags = editor::EditorSectionFlags::Border | editor::EditorSectionFlags::FillRemaining |
                          editor::EditorSectionFlags::HorizontalScrollbar;
