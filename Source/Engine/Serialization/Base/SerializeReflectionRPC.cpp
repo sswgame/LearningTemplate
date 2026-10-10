@@ -1,10 +1,10 @@
 /**
- * @file SerializeReflectionRpc.cpp
- * @brief RPC 인자 마샬링입니다. `ReflectionRpc` 의 구현입니다.
+ * @file SerializeReflectionRPC.cpp
+ * @brief RPC 인자 마샬링입니다. `ReflectionRPC` 의 구현입니다.
  *
  * @details 이 파일이 **Serialization 에 있는 이유**: 내용 모두가 "인자를 바이트로 싣고 다시
  *          꺼내는" 일이고, 그 규약은 `SerializeContext` 의 핸들러 표와 `BinarySerializer` 가
- *          정합니다. 선언(`Reflection/ReflectionRpc.h`)은 리플렉션이 노출하는 API 로 남습니다.
+ *          정합니다. 선언(`Reflection/ReflectionRPC.h`)은 리플렉션이 노출하는 API 로 남습니다.
  *
  *          같은 규칙이 `SerializeReflectAny.cpp` 에도 적용됩니다.
  *          **리플렉션 타입의 인코딩은 Serialization 이 갖습니다.** 반대로 두면 Reflection 과
@@ -18,7 +18,7 @@
 #include "Core/Container/SlotHandle.h"
 
 #include "Engine/Common/EngineServices.h"
-#include "Engine/Reflection/ReflectionRpc.h"
+#include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
@@ -28,7 +28,7 @@ namespace sw
 {
     namespace
     {
-        struct ReflectionRpcInternal
+        struct ReflectionRPCInternal
         {
             static hashed_string resolveBuiltinHandlerKey( const hashed_string& typeHash, const SerializeContext& serializeContext )
             {
@@ -178,12 +178,12 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "ReflectionRpc" );
+    SW_LOG_CALLER( "ReflectionRPC" );
 
-    bool ReflectionRpc::packCall( RpcEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
+    bool ReflectionRPC::packCall( RPCEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
                                   const TaskArgs& args )
     {
-        out                       = RpcEnvelope{};
+        out                       = RPCEnvelope{};
         const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeFqn );
         if ( pTypeInfo == nullptr )
             return false;
@@ -212,13 +212,13 @@ namespace sw
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
         {
-            if ( ReflectionRpcInternal::packOneArg( out._argumentBytes, pFunc->_listParameter[argIndex]._typeName, args.get( argIndex ), serializeContext ) == false )
+            if ( ReflectionRPCInternal::packOneArg( out._argumentBytes, pFunc->_listParameter[argIndex]._typeName, args.get( argIndex ), serializeContext ) == false )
                 return false;
         }
         return true;
     }
 
-    TaskValue ReflectionRpc::unpackAndInvoke( void* pInstance, const TypeInfo& instanceType, const RpcEnvelope& envelope )
+    TaskValue ReflectionRPC::unpackAndInvoke( void* pInstance, const TypeInfo& instanceType, const RPCEnvelope& envelope )
     {
         if ( pInstance == nullptr || envelope._typeFqn.empty() || envelope._methodName.empty() )
             return {};
@@ -259,7 +259,7 @@ namespace sw
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
         {
-            if ( ReflectionRpcInternal::unpackOneArg( unpacked, pFunc->_listParameter[argIndex]._typeName, envelope._argumentBytes.data(),
+            if ( ReflectionRPCInternal::unpackOneArg( unpacked, pFunc->_listParameter[argIndex]._typeName, envelope._argumentBytes.data(),
                                                       envelope._argumentBytes.size(), offset, serializeContext ) == false )
                 return {};
         }

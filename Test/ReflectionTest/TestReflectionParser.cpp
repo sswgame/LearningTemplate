@@ -428,14 +428,14 @@ SW_TEST_CASE( ReflectionParserTest, ParserUtilExtremeEdgeCases )
 }
 
 /**
- * @brief [ReflectionParserTest] RpcDemoActor 메타데이터 및 Invoker 실행 검증
+ * @brief [ReflectionParserTest] RPCDemoActor 메타데이터 및 Invoker 실행 검증
  */
-SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
+SW_TEST_CASE( ReflectionParserTest, RPCMethodMetadataAndInvokerExecution )
 {
-    const sw::TypeInfo* pRpcType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
-    SW_ASSERT_NOT_NULL( pRpcType );
+    const sw::TypeInfo* pRPCType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
+    SW_ASSERT_NOT_NULL( pRPCType );
 
-    const sw::FunctionInfo* pMethod = pRpcType->findMethod( sw::hashed_string( "applyDamage" ) );
+    const sw::FunctionInfo* pMethod = pRPCType->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_NOT_NULL( pMethod );
 
     SW_EXPECT_TRUE( pMethod->_metadata._netRole == sw::FunctionNetRole::Server );
@@ -447,7 +447,7 @@ SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
 #endif
 
     // Invoker 실행 검증
-    sw::RpcDemoActor actor;
+    sw::RPCDemoActor actor;
     actor._hp = 100;
     sw::TaskArgs args;
     args.add( int32{ 35 } );

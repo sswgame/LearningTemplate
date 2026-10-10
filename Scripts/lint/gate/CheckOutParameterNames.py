@@ -83,7 +83,7 @@ class CheckOutParameterNamesGate(LintGate):
         "MaterialUtil::parsePermutationNode": "개명 예정 outDesc — 규칙 전부터 있던 선언",
         "ReflectAny::tryGet": "개명 예정 outValue — 규칙 전부터 있던 선언",
         "ReflectAny::tryGetFrom": "개명 예정 outValue — 규칙 전부터 있던 선언",
-        "ReflectionRpc::packCall": "개명 예정 outEnvelope — 규칙 전부터 있던 선언",
+        "ReflectionRPC::packCall": "개명 예정 outEnvelope — 규칙 전부터 있던 선언",
         "PhysicsWorld::tryGetBody": "개명 예정 outBody — 규칙 전부터 있던 선언",
         "ReflectionEnumNames::tryParseContainerKind": "개명 예정 outKind — 규칙 전부터 있던 선언",
         "ReflectionEnumNames::tryParseFunctionNetRole": "개명 예정 outRole — 규칙 전부터 있던 선언",

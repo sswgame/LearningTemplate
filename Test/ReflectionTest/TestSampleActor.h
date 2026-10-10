@@ -188,7 +188,7 @@ namespace sw
     // 2) FUNCTION / RPC / Abstract / Static / 생성자
     // ------------------------------------------------------------------------------
     REFLECT()
-    struct RpcDemoActor
+    struct RPCDemoActor
     {
         REFLECT_BODY();
         PROPERTY()

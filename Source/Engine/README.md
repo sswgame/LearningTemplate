@@ -109,7 +109,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 같은 원칙으로 정해진 위치가 몇 가지 더 있습니다. 기능 모듈은 오브젝트 위에 있고(`SequencePlayerComponent` 는 `Sequencer/`), 정책은 메커니즘 위에 있습니다.
 셰이더 쿠킹에서 무엇을 쿠킹할지는 `Renderer/Cook/ShaderCookDriver` 가 정하고, 컴파일 방법은 `Graphics/Shader` 에 있습니다.
-리플렉션 타입의 인코딩(`ReflectAny`, `Rpc`)은 Serialization에 있습니다. Core 기능만 쓰는 값 타입(`Core/String/TagID.h`, `Core/Container/ComponentHandle.h`)은 Core에 둡니다.
+리플렉션 타입의 인코딩(`ReflectAny`, `RPC`)은 Serialization에 있습니다. Core 기능만 쓰는 값 타입(`Core/String/TagID.h`, `Core/Container/ComponentHandle.h`)은 Core에 둡니다.
 설정은 `RHITypes.h` 대신 `Config/RHIBackendType.h` 만 봅니다.
 
 ## 작동 원리

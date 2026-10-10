@@ -3,7 +3,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Reflection/ReflectionRpc.h"
+#include "Engine/Reflection/ReflectionRPC.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/Serializer.h"
@@ -2506,10 +2506,10 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
 /**
  * @brief [ReflectionSerializationTest] Reflection RPC 팩·호출
  */
-SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
+SW_TEST_CASE( ReflectionSerializationTest, ReflectionRPCPackInvoke )
 {
     const sw::TypeInfo* typeInfo =
-        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
+        sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
     const sw::FunctionInfo* fn = typeInfo->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_TRUE( fn != nullptr );
@@ -2521,16 +2521,16 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
     SW_EXPECT_EQUAL( sw::string( "Combat" ), fn->_metadata._category );
 #endif
 
-    sw::RpcDemoActor actor;
+    sw::RPCDemoActor actor;
     actor._hp = 100;
     sw::TaskArgs args;
     args.add( int32{ 25 } );
 
     // 봉투를 싸고(pack) 다시 풀어(invoke) 왕복시킨다.
-    sw::RpcEnvelope envelope;
-    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
+    sw::RPCEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRPC::packCall( envelope, sw::hashed_string( "sw::RPCDemoActor" ),
                                                  sw::hashed_string( "applyDamage" ), args ) );
-    sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RpcDemoActor>(), envelope );
+    sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RPCDemoActor>(), envelope );
     SW_EXPECT_EQUAL( 75, actor._hp );
 }
 
@@ -2541,16 +2541,16 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectionRpcPackInvoke )
  *          핫리로드된 뒤, 또는 봉투가 망가진 채로) 같은 바이트를 다른 타입으로 읽어 **터지지 않고
  *          값만 조용히 달라진다** — `float32 1.5f` 를 `int32` 로 읽으면 `1069547520` 이 되는 식이다.
  */
-SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnArgumentTypeThatDoesNotMatchTheWire )
+SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAnArgumentTypeThatDoesNotMatchTheWire )
 {
-    sw::RpcDemoActor actor;
+    sw::RPCDemoActor actor;
     actor._hp = 100;
 
     sw::TaskArgs args;
     args.add( int32{ 25 } );
 
-    sw::RpcEnvelope envelope;
-    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ),
+    sw::RPCEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRPC::packCall( envelope, sw::hashed_string( "sw::RPCDemoActor" ),
                                                  sw::hashed_string( "applyDamage" ), args ) );
 
     // 봉투 앞머리는 [인자 수][타입 해시][크기][payload] 다 — 첫 인자의 타입 해시만 바꾼다.
@@ -2560,7 +2560,7 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnArgumentTypeThatDoesNotMa
 
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RpcDemoActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::RPCDemoActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( actor._hp == 100, "전선이 말한 타입과 다른데도 인자를 그대로 읽어 호출했습니다" );
 }
@@ -2768,18 +2768,18 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
  * @details 봉투는 믿을 수 없는 입력이다. 봉투가 적은 타입으로 메서드를 찾아 인스턴스가 그 타입인지 보지 않고 부르면, 다른 타입의
  *          메서드가 엉뚱한 객체의 메모리를 쓴다(타입 혼동).
  */
-SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnEnvelopeForAnotherType )
+SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAnEnvelopeForAnotherType )
 {
     sw::TaskArgs args;
     args.add( int32{ 25 } );
-    sw::RpcEnvelope envelope;
-    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::RpcDemoActor" ), sw::hashed_string( "applyDamage" ), args ) );
+    sw::RPCEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRPC::packCall( envelope, sw::hashed_string( "sw::RPCDemoActor" ), sw::hashed_string( "applyDamage" ), args ) );
 
     sw::SampleTestActor other;
     other._hp = 100;
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRpc::unpackAndInvoke( &other, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &other, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( other._hp == 100, "봉투가 적은 타입이 아닌 인스턴스에 RPC 를 불렀습니다" );
 }
@@ -2788,18 +2788,18 @@ SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAnEnvelopeForAnotherType )
  * @brief [ReflectionSerializationTest] RPC 로 표시되지 않은 메서드는 봉투로 부를 수 없다
  * @details `FUNCTION()` 만 적은 메서드의 NetRole 은 Local 이다. 그것도 부르면 모든 리플렉션 메서드가 원격 호출 표면이 된다.
  */
-SW_TEST_CASE( ReflectionSerializationTest, RpcRejectsAMethodThatIsNotAnRpc )
+SW_TEST_CASE( ReflectionSerializationTest, RPCRejectsAMethodThatIsNotAnRPC )
 {
     sw::TaskArgs args;
     args.add( int32{ 25 } );
-    sw::RpcEnvelope envelope;
-    SW_ASSERT_TRUE( sw::ReflectionRpc::packCall( envelope, sw::hashed_string( "sw::SampleTestActor" ), sw::hashed_string( "takeDamage" ), args ) );
+    sw::RPCEnvelope envelope;
+    SW_ASSERT_TRUE( sw::ReflectionRPC::packCall( envelope, sw::hashed_string( "sw::SampleTestActor" ), sw::hashed_string( "takeDamage" ), args ) );
 
     sw::SampleTestActor actor;
     actor._hp = 100;
     {
         test::ScopedLogSuppressor suppressor;
-        sw::ReflectionRpc::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
+        sw::ReflectionRPC::unpackAndInvoke( &actor, *sw::engine::getTypeRegistry().findType<sw::SampleTestActor>(), envelope );
     }
     SW_EXPECT_TRUE_MSG( actor._hp == 100, "RPC 가 아닌(Local) 메서드를 봉투로 불렀습니다" );
 }

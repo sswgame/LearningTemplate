@@ -4,7 +4,7 @@
  * @details
  * - 직접 만든 타입: REFLECT() / REFLECT_CONTAINER() 를 쓰고, 여기 넣지 않습니다.
  * - 손댈 수 없는 타입(sw::vector, int …): 이 파일에 한 번만 적습니다.
- * - Serialize/Rpc/TypeRegistry: include 하기 전에 SW_REFLECT_BUILTIN_* 를 정의하면 여러 번 include 할 수 있습니다
+ * - Serialize/RPC/TypeRegistry: include 하기 전에 SW_REFLECT_BUILTIN_* 를 정의하면 여러 번 include 할 수 있습니다
  *   (#pragma once 없음. X-macro 파일).
  *
  * SW_REFLECT_BUILTIN_TYPE( Canonical, CppType, TextConvOrNone, NamespaceOr-, aliases... )
