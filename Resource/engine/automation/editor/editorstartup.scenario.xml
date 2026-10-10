@@ -6,7 +6,7 @@
 -->
 <Scenario name="editor.editorstartup" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
 	<At frame="60">
-		<Expect probe="Editor.PanelCount" equals="27"/>
+		<Expect probe="Editor.PanelCount" equals="28"/>
 		<ExpectLog contains="[Error]" count="0"/>
 	</At>
 	<At frame="70"><Pass/></At>

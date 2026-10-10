@@ -27,6 +27,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Utility/DebugOverlayState.h"
 
 namespace sw::editor
@@ -119,6 +120,13 @@ namespace sw::editor
                 if ( FileUtil::isAbsolutePath( path ) )
                 {
                     outAbsolutePath = path;
+                    return true;
+                }
+                // 리소스 id(`engine/automation/...`)면 리소스 트리의 그 파일이다 — 시나리오가 작업 폴더를 몰라도 된다.
+                const string resourcePath = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), path );
+                if ( FileUtil::exists( resourcePath ) )
+                {
+                    outAbsolutePath = resourcePath;
                     return true;
                 }
                 return FileUtil::makeAbsolutePath( path, outAbsolutePath );
@@ -307,7 +315,8 @@ namespace sw::editor
     SW_DEV_COMMAND( Stop, "stop", "stop", "Stop the play session and restore the edited scene", &EditorDevCommandsInternal::runStop );
     SW_DEV_COMMAND( SaveSceneAs, "scene.saveAs", "scene.saveAs <path>", "Save the active scene to a file (relative paths start at the working folder)",
                     &EditorDevCommandsInternal::runSaveSceneAs );
-    SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>", "Open a scene file without the unsaved-changes prompt (relative paths start at the working folder)",
+    SW_DEV_COMMAND( OpenScene, "scene.open", "scene.open <path>",
+                    "Open a scene file without the unsaved-changes prompt (a resource id, or a path relative to the working folder)",
                     &EditorDevCommandsInternal::runOpenScene );
     SW_DEV_COMMAND( Theme, "editor.theme", "editor.theme <preset>", "Apply an editor theme preset for this session (ModernDark, DeepCharcoal, MidnightBlue, ClassicDark)",
                     &EditorDevCommandsInternal::runTheme );

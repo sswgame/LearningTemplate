@@ -6,6 +6,7 @@
 
 #include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 
 namespace sw
 {
@@ -36,6 +37,13 @@ namespace sw
         // 반경 0 은 셰이더에서 0 으로 나누는 자리다. 아주 작은 값으로 막는다.
         _radius = MathUtil::max( radius, 0.01f );
         onPropertyChanged( hashed_string( "_radius" ) );
+    }
+
+    void PointLightComponent::validateRadius( ValidationContext& context ) const
+    {
+        // 세터는 0 을 막지만 데이터(씬 · 프리팹)의 0 은 그대로 들어온다 — 셰이더가 반경으로 나누는 자리다.
+        if ( _radius <= 0.0f )
+            context.addError( "Radius is 0 - the light reaches nothing and the shader divides by it" );
     }
 
     void PointLightComponent::writeGPULightKindFields( GPULight& outLight ) const

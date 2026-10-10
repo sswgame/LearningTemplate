@@ -52,6 +52,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentManager.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/MapCheckRows.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerTimelineLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/EditorTestOutputParser.cpp"

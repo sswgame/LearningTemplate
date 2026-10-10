@@ -13,11 +13,13 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/ContentBrowserPanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/MapCheckPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionValidation.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
@@ -363,6 +365,77 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // mapCheck.selectsIssueObject — 결과 줄을 누르면 그 오브젝트가 골라진다. 검증 결과는 ValidationIssueLog::replaceIssues 로 넣는다(T2)
+            // ------------------------------------------------------------------------------
+            struct MapCheckProbe
+            {
+                uint64 _objectID{ 0 };
+                uint64 _previousSelectionID{ 0 };
+            };
+
+            static MapCheckProbe& getMapCheckProbe()
+            {
+                static MapCheckProbe s_probe;
+                return s_probe;
+            }
+
+            static EditorSelfTestStep runMapCheckSelectsIssueObject( EditorSelfTestContext& context )
+            {
+                constexpr uint32      kSettleStepCount = 2; ///< 패널이 열리고 줄을 다시 만드는 프레임
+                constexpr const utf8* kObjectName      = "MapCheckSelfTestObject";
+
+                EditorContext*     pContext  = EditorContext::get();
+                GameObjectManager* pManager  = editor::getActiveObjectManager();
+                MapCheckProbe&     probe     = getMapCheckProbe();
+                const uint32       stepIndex = context.getStepIndex();
+                if ( context.expect( pContext != nullptr && pManager != nullptr, "no editor context or active scene" ) == false )
+                    return EditorSelfTestStep::Done;
+                MapCheckPanel* pPanel = static_cast<MapCheckPanel*>( pContext->getPanelManager().findPanel( MapCheckPanel::kPanelID ) );
+                if ( context.expect( pPanel != nullptr, "no map check panel" ) == false )
+                    return EditorSelfTestStep::Done;
+
+                if ( stepIndex == 0 )
+                {
+                    GameObject* pObject = pManager->createGameObject( hashed_string( kObjectName ) );
+                    if ( context.expect( pObject != nullptr, "could not create the self test object" ) == false )
+                        return EditorSelfTestStep::Done;
+                    probe._objectID = pObject->getObjectID();
+                    ValidationIssue issue{};
+                    issue._message     = "self test issue";
+                    issue._sourceLabel = kObjectName;
+                    issue._typeName    = hashed_string( "sw::PointLightComponent" );
+                    issue._severity    = ValidationSeverity::Error;
+                    ValidationIssueLog::get().replaceIssues( probe._objectID, { issue } );
+                    pContext->getEditorSelection().clearObjectSelection();
+                    (void)pContext->getPanelManager().setPanelOpen( MapCheckPanel::kPanelID, true );
+                    pContext->getWorkspace().requestOpenPanel( pPanel->getPanelTitle() );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kSettleStepCount )
+                    return EditorSelfTestStep::Continue;
+
+                // 오류가 먼저이고 이 시험의 결과는 오류 하나다 — 첫 오류 줄들 가운데 이 오브젝트의 줄을 누른다.
+                bool bSelected = false;
+                for ( uint32 rowIndex = 0; rowIndex < pPanel->getRowCount() && bSelected == false; ++rowIndex )
+                {
+                    if ( pPanel->selectRowObject( rowIndex ) == false )
+                        continue;
+                    const GameObject* pPrimary = pContext->getEditorSelection().getPrimaryObject();
+                    bSelected                  = pPrimary != nullptr && pPrimary->getObjectID() == probe._objectID;
+                }
+                (void)context.expect( bSelected, "clicking the issue row did not select its object" );
+
+                ValidationIssueLog::get().removeSource( probe._objectID );
+                pContext->getEditorSelection().clearObjectSelection();
+                GameObject* pObject = pManager->findGameObjectByID( probe._objectID );
+                if ( pObject != nullptr )
+                    pManager->destroyObject( pObject );
+                (void)pContext->getPanelManager().setPanelOpen( MapCheckPanel::kPanelID, false );
+                probe = MapCheckProbe{};
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다(D16)
             // Prefab Editor 가 그 경로로 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남겼다.
             // ------------------------------------------------------------------------------
@@ -627,6 +700,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
     SW_EDITOR_SELF_TEST( ContentBrowserActivePack, "contentBrowser.showsActivePackOnly", 1130, &EditorSelfTestPanelCasesInternal::runShowsActivePackOnly );
+    SW_EDITOR_SELF_TEST( MapCheckSelect, "mapCheck.selectsIssueObject", 1140, &EditorSelfTestPanelCasesInternal::runMapCheckSelectsIssueObject );
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
     SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::runToolWindowsOpenAtAUsableSize );

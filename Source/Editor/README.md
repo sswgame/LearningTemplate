@@ -496,6 +496,11 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `_bShowAllPacksByDefault` 다. 참조 찾기(오른쪽 클릭 Find References · Show Dependencies, 삭제 확인의 참조 수)는 `EditorReferenceIndex` 다. 텍스트 에셋(xml, json, material, hlsl)의 글 가운데
   실제로 있는 파일의 리소스 id 만 세고, `Resource/` 변경 번호가 바뀌면 워커가 통째로 다시 훑는다(Debug 1.1 초, 377 파일). 바이너리 안의 경로와 확장자를 뗀 이름은 참조로 잡지 않는다.
   콘솔 `content.open <리소스 폴더>` 가 그 폴더를 연다. 시험 `EditorReferenceIndexTest`, 자체 시험 `contentBrowser.showsActivePackOnly`, 시나리오 `editor/contentbrowser`.
+- **맵 검사(Map Check 창, `map_check`)는 `ValidationIssueLog` 를 그대로 보인다** — 로드 · 저장 · 인스펙터 편집 때 모인 검증 결과이고, Check Map 단추는 활성 씬 전부를 다시 검증한다.
+  창과 상태줄(메뉴 막대 오른쪽의 경고 수 `statusBar.mapCheck`)은 `ValidationIssueLog::getRevision` 이 바뀔 때만 다시 센다. 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄운다.
+  줄 클릭은 그 오브젝트를 고르고 더블클릭은 씬 뷰를 그리로 옮긴다. 지운 오브젝트의 결과는 남아 있을 수 있어 그 줄은 고를 것이 없다(도구 설명).
+  판단은 `MapCheckRows`(ImGui 없음, `MapCheckRowsTest`), 자체 시험 `mapCheck.selectsIssueObject`, 시나리오 `editor/mapcheck`(시험 씬 `engine/automation/editor/mapcheck/` — 반경 0 점광).
+  일부러 검증 결과를 내는 시험 데이터는 `ResourceDataSchemaTest` 의 `kArrValidationFixture` 에 적는다(그 파일만 검증 경고를 받는다).
 - **콘텐츠 브라우저의 에셋 관리는 `EditorAssetFileCommands` 다**(Add > New Folder · Material · Scene · Prefab, 우클릭 · F2 Rename, Ctrl+D Duplicate, Del, 폴더 타일 · 트리로 끌어 놓기).
   이름 바꾸기와 옮기기는 역색인이 아는 텍스트 에셋의 글을 새 리소스 id 로 바로 고치고 짝 `.meta` 를 GUID 째 옮긴다(이름 칸은 확장자를 뺀 줄기다). 폴더 이름 바꾸기는 없다.
   지우기는 OS 휴지통이다(Windows `SHFileOperationW` + `FOF_ALLOWUNDO`, 다른 플랫폼은 지운다). 검색어가 있으면 목록이 하위 폴더의 파일까지다.

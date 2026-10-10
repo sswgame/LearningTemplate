@@ -5,6 +5,7 @@
  *          함수는 문제를 `context.addError` · `addWarning` 으로 적기만 합니다 — 값을 고치거나 로드를 멈추지 않습니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
@@ -113,11 +114,17 @@ namespace sw
         uint32 getIssueCount() const;
         /** @brief 모두 지웁니다. */
         void clear();
+        /**
+         * @brief 결과가 바뀔 때마다 하나씩 오르는 번호입니다. 맵 검사 패널 · 상태줄은 번호가 같으면 목록을 다시 모으지 않는다.
+         * @details 같은 결과로 바꾸거나 없는 출처를 지우면 오르지 않는다(인스펙터 편집이 프레임마다 다시 검증한다).
+         */
+        uint32 getRevision() const { return _revision.load( std::memory_order_acquire ); }
 
     private:
         ValidationIssueLog() = default;
 
         mutable mutex           _mutex;
         vector<ValidationIssue> _listIssue;
+        atomic<uint32>          _revision{ 0 };
     };
 } // namespace sw

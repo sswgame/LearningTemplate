@@ -90,8 +90,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
-| | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
+| **5 공용 편집 틀** | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
 | **추가 — 아이콘(12절)** | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
@@ -146,39 +145,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 유니티는 `AnimationCurve` + CurveField · Curve Editor 창, Console 의 클릭 → 오브젝트 핑, GraphView(셰이더 그래프 · VFX 그래프의 공용 틀), Build Settings 창. 우리는 노드 그래프 틀이 EditorModule 안에만 있고(애님 · 대화 둘이 쓴다),
 검증 결과 저장소(`ValidationIssueLog` — "맵 검사 패널이 읽는다" 고 주석에 적힌)는 있는데 패널이 없다.
 
-### T2 맵 검사 패널 — `ValidationIssueLog` 를 보이고, 누르면 그 오브젝트로
-
-**목적.** 검증 결과는 이미 모인다(`ObjectValidation` — 로드 · 저장 · 인스펙터 편집 때 `ValidationIssueLog` 에). 보는 곳이 경고 로그뿐이다.
-
-**바꿀 것.**
-1) `ValidationIssueLog` 에 바뀜 번호 — `uint32 getRevision() const`(바꿀 때마다 +1, 원자) — 패널이 프레임마다 목록을 다시 모으지 않게. (Engine 헤더 → 엔진 ABI 도장.)
-2) `Panels/MapCheckPanel.h` · `.cpp` — `SW_EDITOR_PANEL( MapCheckPanel, "map_check", EditorPanelCategory::Tool, 2040 );` 제목 `"Map Check"`. 표: 무게(아이콘) · 오브젝트(`_sourceLabel`) · 타입 · 프로퍼티 · 메시지,
-   무게 필터(Error · Warning) · 검색, 줄 클릭 = 그 오브젝트 선택(`_sourceID` = 오브젝트 id → `GameObjectManager::findGameObjectByID` → `EditorSelection::selectObject`) + 더블클릭 = 뷰포트 초점,
-   프로퍼티가 있으면 인스펙터가 그 프로퍼티 줄로 스크롤(그리드에 `requestFocusProperty( name )` 한 칸 — 다음 프레임 `SetScrollHereY`).
-   위 단추 "Check Map" = 활성 씬의 모든 오브젝트에 `ObjectValidation::reportGameObject( obj, false )`(오브젝트 1 만 개 기준 시간을 로그 — 길면 프레임 예산으로 나눈다).
-3) 상태줄(메뉴바 오른쪽 "Ready · RHI" 옆)에 `ICON_FA_TRIANGLE_EXCLAMATION N` — 오류가 있으면 빨강, 누르면 패널. 씬을 열었을 때 오류가 있으면 토스트 "Map Check: N errors"(언리얼과 같다).
-**시험.** 판단(필터 · 정렬 · 무게별 수)은 ImGui 없는 `MapCheckRows::build( listIssue, filter, outListRow )` → `MapCheckRowsTest`(EditorTest). 자체 시험 `mapCheck.selectsIssueObject` — 검증 함수가 있는 시험 컴포넌트
-(EngineTest 의 검증 시험이 쓰는 타입이 EditorModule 에 없으면 `ValidationIssueLog::replaceIssues` 로 가짜 결과를 넣는다)를 놓고 줄 클릭 → 선택이 그 오브젝트.
-**확인 = 에디터 시나리오.** `mapcheck.scenario.xml`: 검증 오류가 있는 시험 씬을 열고 상태줄의 경고 수(이름표 `statusBar.mapCheck`)를 눌러 패널을 연 뒤, 첫 줄(이름표 `mapCheck.row.0`)을 누르면
-탐침 `Editor.SelectionCount` 가 1 이고 선택된 오브젝트 이름이 오류 오브젝트인지 봅니다. 시험 씬은 `Resource/engine/` 아래의 에디터 시험 씬에 오류 하나를 일부러 둔 사본입니다.
-
-**남길 교훈.** 없음. **커밋 메시지:**
-```
-에디터 - Map Check 패널(ValidationIssueLog 표 · 클릭하면 오브젝트 선택 · Check Map · 상태줄 수)
-
-문제점:
-- 로드 · 저장 · 편집 때 검증 결과가 ValidationIssueLog 에 모이는데 보는 곳이 경고 로그뿐이었다. 어느 오브젝트의 어느 프로퍼티인지 찾아가는 길이 없었다.
-
-해결방안:
-- ValidationIssueLog::getRevision(바뀔 때만 다시 모은다).
-- Map Check 패널: 무게 · 오브젝트 · 타입 · 프로퍼티 · 메시지, 필터 · 검색, 클릭 = 선택, 더블클릭 = 초점 + 인스펙터 그 줄로, Check Map(활성 씬 전부).
-  상태줄의 경고 수(누르면 패널), 씬을 열 때 오류가 있으면 토스트.
-
-결과:
-- MapCheckRowsTest, 자체 시험 mapCheck.selectsIssueObject.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
 
 ### T4 패키징 창 — 타깃 · 프리셋 · 쿠킹 · 산출 폴더 · 진행 로그
 
@@ -262,7 +228,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 - **re-configure:** C1 · C4 · C5 · P2(새 `REFLECT` 헤더) · T1.
 - **자체 시험 기대 목록**(`AppSmokeTest.EditorSelfTestsPassInsideTheEditor`)에 더하는 id: `themepark.extensionPanelDraws` · `themepark.layoutPreviewLoads` · `preferences.searchFiltersSections` ·
   `shortcuts.captureAssignsCombo` · `modules.panelListsKits` · `inspector.multiEditAppliesToAll` · `contentBrowser.showsActivePackOnly` · `testRunner.runsSelfTestInPlace` · `curve.dragKeyRecordsOneUndo` ·
-  `mapCheck.selectsIssueObject` · `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
+  `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
 - **에디터 시나리오**: 단위마다 하나씩 더한다(머리말의 "확인 = 에디터 시나리오"). `AppScenarioTest` 가 모두 돌리므로 시나리오가 늘면 `AppTest` 의 `HOST_SHARDS` 를 늘린다.
 - **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGPUTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
   자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.

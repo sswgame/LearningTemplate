@@ -618,6 +618,44 @@ namespace
             return result;
         }
 
+        /**
+         * @brief 검증 결과를 일부러 내는 시험 데이터입니다(맵 검사 시나리오가 연다). 이 파일만 검증 경고 줄을 받고, 그 줄이 없으면 진다.
+         * @details 검증 결과 말고 다른 경고(모르는 이름)는 다른 파일과 똑같이 진다.
+         */
+        static constexpr const utf8* kArrValidationFixture[] = { "engine/automation/editor/mapcheck/mapcheck.scene.xml" };
+
+        static bool isValidationFixture( sw::string_view resourceID )
+        {
+            for ( const utf8* pFixture : kArrValidationFixture )
+            {
+                if ( resourceID == pFixture )
+                    return true;
+            }
+            return false;
+        }
+
+        /** @brief 로그 글에서 검증 결과 줄(`Validation error on` · `Validation warning on`)을 뺍니다. 뺀 줄 수를 @p outRemovedCount 에 둡니다. */
+        static sw::string removeValidationLines( const sw::string& joined, uint32& outRemovedCount )
+        {
+            sw::string result;
+            outRemovedCount  = 0;
+            size_t lineStart = 0;
+            while ( lineStart < joined.size() )
+            {
+                size_t lineEnd = joined.find( "\n  ", lineStart + 1 );
+                if ( lineEnd == sw::string::npos )
+                    lineEnd = joined.size();
+                const sw::string line        = joined.substr( lineStart, lineEnd - lineStart );
+                const bool       bValidation = line.find( "Validation error on" ) != sw::string::npos || line.find( "Validation warning on" ) != sw::string::npos;
+                if ( bValidation )
+                    ++outRemovedCount;
+                else
+                    result += line;
+                lineStart = lineEnd;
+            }
+            return result;
+        }
+
         /** @brief 데이터로 보는 확장자입니다. 이 확장자인데 표의 어느 줄에도 맞지 않는 파일은 시험이 집니다(새 종류가 검사를 비켜 가지 않게). */
         static bool isDataFile( sw::string_view resourceID )
         {
@@ -675,7 +713,13 @@ SW_TEST_CASE( ResourceDataSchemaTest, EveryResourceDataFileLoadsWithoutUnknownNa
         test::ScopedLogCollector logs;
         const bool               bLoaded = pKind->_pLoad( resourceID );
         SW_EXPECT_TRUE_MSG( bLoaded, ( sw::string( pKind->_pLabel ) + " 를 읽지 못했습니다: " + resourceID + logs.joined() ).c_str() );
-        const sw::string warnings = ResourceDataSchemaInternal::removeGameModuleTypeWarnings( logs.joined(), listGameTypeName );
+        sw::string warnings = ResourceDataSchemaInternal::removeGameModuleTypeWarnings( logs.joined(), listGameTypeName );
+        if ( ResourceDataSchemaInternal::isValidationFixture( resourceID ) )
+        {
+            uint32 validationLineCount{ 0 };
+            warnings = ResourceDataSchemaInternal::removeValidationLines( warnings, validationLineCount );
+            SW_EXPECT_TRUE_MSG( validationLineCount > 0, ( resourceID + " 는 검증 결과를 내야 하는 시험 데이터인데 결과가 없습니다" ).c_str() );
+        }
         SW_EXPECT_TRUE_MSG( warnings.empty(), ( resourceID + " 를 읽으며 경고가 났습니다:" + warnings ).c_str() );
         ++loadedCount;
     }

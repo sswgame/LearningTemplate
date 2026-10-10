@@ -196,12 +196,15 @@ namespace sw
             if ( issue._sourceID != sourceID )
                 listKept.push_back( std::move( issue ) );
         }
+        const bool bRemovedAny = listKept.size() != _listIssue.size();
         for ( const ValidationIssue& issue : listIssue )
         {
             listKept.push_back( issue );
             listKept.back()._sourceID = sourceID;
         }
         _listIssue = std::move( listKept );
+        if ( bRemovedAny || listIssue.empty() == false )
+            _revision.fetch_add( 1, std::memory_order_acq_rel );
     }
 
     void ValidationIssueLog::removeSource( const uint64 sourceID )
@@ -224,6 +227,8 @@ namespace sw
     void ValidationIssueLog::clear()
     {
         std::lock_guard<mutex> lock( _mutex );
+        if ( _listIssue.empty() == false )
+            _revision.fetch_add( 1, std::memory_order_acq_rel );
         _listIssue.clear();
     }
 } // namespace sw

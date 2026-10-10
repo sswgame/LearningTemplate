@@ -1,0 +1,38 @@
+<Scene formatVersion="1" name="MapCheck">
+	<entities>
+		<entity id="1" name="ZeroRadiusLight">
+			<GameObject _schemaVersion="0" _name="ZeroRadiusLight" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="0,1,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerID="0"
+					                     _attachComponent="None"
+					                     _color="1,0.9,0.7"
+					                     _intensity="2"
+					                     _radius="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="FineLight">
+			<GameObject _schemaVersion="0" _name="FineLight" _bActive="true">
+				<_listComponent>
+					<PointLightComponent _componentName="PointLightComponent"
+					                     _bActive="true"
+					                     _localPosition="3,1,0"
+					                     _localRotation="0,0,0"
+					                     _localScale="1,1,1"
+					                     _attachOwner="None"
+					                     _attachOwnerID="0"
+					                     _attachComponent="None"
+					                     _color="0.55,0.75,1"
+					                     _intensity="2"
+					                     _radius="6" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
