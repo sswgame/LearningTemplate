@@ -35,7 +35,7 @@ namespace sw
         Audio,       ///< 오디오 시스템 · 사운드 데이터
         Physics,     ///< 물리 월드 · 바디 · 충돌 구조
         Navigation,  ///< 내비메시 타일 · 베이크 중간 결과 · 질의 노드 · 군중
-        RenderCpu,   ///< 렌더러의 CPU 측(FrameRenderer · GPUScene · 렌더 그래프 · PSO 캐시 · RHI 디바이스 · 렌더 스레드)
+        RenderCPU,   ///< 렌더러의 CPU 측(FrameRenderer · GPUScene · 렌더 그래프 · PSO 캐시 · RHI 디바이스 · 렌더 스레드)
         UI,          ///< 런타임 UI(HUD · 위젯 · 대사 상자) — 에디터 UI 는 Editor
         Script,      ///< 데이터로 짠 실행 그래프(대사 그래프 · 시퀀스 · 이후의 스크립트 VM)
         Editor,      ///< 에디터 모듈

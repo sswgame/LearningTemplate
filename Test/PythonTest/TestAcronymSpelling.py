@@ -209,10 +209,10 @@ class AcronymGateTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
             (root / "Source" / "Probe").mkdir(parents=True)
-            (root / "Source" / "Probe" / "Probe.h").write_text("class UiProbe {};\nclass GPUScene {};\n", encoding="utf-8")
+            (root / "Source" / "Probe" / "Probe.h").write_text("class IdProbe {};\nclass GPUScene {};\n", encoding="utf-8")
             self.assertEqual(self.runGateInternal(root), 0)
             self.assertEqual(self.runGateInternal(root, "--enforce", "GPU"), 0)
-            self.assertEqual(self.runGateInternal(root, "--enforce", "UI"), 1)
+            self.assertEqual(self.runGateInternal(root, "--enforce", "ID"), 1)
 
 
 if __name__ == "__main__":

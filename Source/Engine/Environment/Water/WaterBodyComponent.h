@@ -52,7 +52,7 @@ namespace sw
      * @class WaterBodyComponent
      * @brief 수면 메시(격자) 하나를 `MeshInstanceBatch` 로 그리고(반투명 패스), 같은 파도 식으로 CPU 질의에 답합니다.
      * @details 파도는 월드 (x, z) 의 함수라 수면 메시를 어디에 두든 이어지고, CPU 질의(`computeSurfaceHeight`)와 정점 셰이더가 같은 값을 냅니다
-     *          (`WaterWaveMath` ↔ `gerstner.hlsli`, `RenderPassGPUTest.WaterWaveShaderMatchesCpu`). 파도 시간은 이 컴포넌트가 틱마다 쌓아 머티리얼에 싣고
+     *          (`WaterWaveMath` ↔ `gerstner.hlsli`, `RenderPassGPUTest.WaterWaveShaderMatchesCPU`). 파도 시간은 이 컴포넌트가 틱마다 쌓아 머티리얼에 싣고
      *          질의도 그 시간을 씁니다(`getWaveTime`).
      *          수면 아래 깊이는 메시를 만들 때 지형(`TerrainComponent`)을 읽어 정점 색 알파에 굽습니다 — 반투명 패스에는 장면 깊이 입력이 없어
      *          화면 공간에서 두께를 잴 수 없기 때문입니다. 지형이 없으면 깊은 물입니다. 강은 정점 색 rg 에 흐름 방향을 싣습니다(물결이 흐른다).

@@ -105,7 +105,7 @@ namespace sw::editor
         {
             if ( ImGui::BeginTabItem( "CPU Scopes" ) )
             {
-                drawScopeTab( ProfilerScopeKind::Cpu );
+                drawScopeTab( ProfilerScopeKind::CPU );
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( "GPU Passes" ) )

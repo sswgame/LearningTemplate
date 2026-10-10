@@ -197,7 +197,7 @@ namespace sw
         /** @brief 오프라인(CPU 전용) 뷰 힙의 index 번째 핸들을 반환합니다. */
         D3D12_CPU_DESCRIPTOR_HANDLE offlineDescriptorAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들을 반환합니다(복사 목적지). */
-        D3D12_CPU_DESCRIPTOR_HANDLE shaderVisibleCpuAt( uint32 index ) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE shaderVisibleCPUAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 GPU 핸들을 반환합니다(루트 테이블 인자). */
         D3D12_GPU_DESCRIPTOR_HANDLE shaderVisibleGPUAt( uint32 index ) const;
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷은 여기서 나옵니다. */
@@ -469,7 +469,7 @@ namespace sw
         {
             Microsoft::WRL::ComPtr<ID3D12Resource> _resource;
             D3D12_CPU_DESCRIPTOR_HANDLE            _cpuHandle{};        ///< 셰이더 가시 힙 (텍스처 배열이 인덱스로 읽는 자리)
-            D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCpuHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본(가시 힙은 복사 원본이 못 됨)
+            D3D12_CPU_DESCRIPTOR_HANDLE            _offlineCPUHandle{}; ///< 오프라인 힙의 같은 뷰. 슬롯 테이블 복사 원본(가시 힙은 복사 원본이 못 됨)
             RHIBufferHandle                        _buffer{ 0 };
             RHITextureHandle                       _texture{ 0 };
         };

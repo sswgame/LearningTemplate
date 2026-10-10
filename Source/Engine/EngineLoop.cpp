@@ -960,7 +960,7 @@ namespace sw
 #endif
             // 렌더러는 서비스 표에 실리므로(아래) 여기서 만든다. 초기화와 해제는 FrameRenderer 단계가 한다.
             {
-                SW_MEMORY_SCOPE( RenderCpu );
+                SW_MEMORY_SCOPE( RenderCPU );
                 _frameRenderer = make_unique<FrameRenderer>();
             }
 
@@ -1303,7 +1303,7 @@ namespace sw
 
         BLOCK( "RenderFramePacket 제출" )
         {
-            SW_MEMORY_SCOPE( RenderCpu );
+            SW_MEMORY_SCOPE( RenderCPU );
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
             packet._bValid = 1;
@@ -1409,7 +1409,7 @@ namespace sw
 
                 {
                     SW_PROFILE_SCOPE( "GT.Packet.export" );
-                    _gpuSceneBuilder->exportCpuSnapshot( packet._gpuScene );
+                    _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
                 }
             }
 

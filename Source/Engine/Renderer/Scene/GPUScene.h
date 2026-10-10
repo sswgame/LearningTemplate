@@ -1,7 +1,7 @@
 /**
  * @file GPUScene.h
  * @brief 렌더 스레드의 씬 GPU 데이터입니다. 스냅샷을 받아 인스턴스 · 배치 표 · 간접 인자 · 머티리얼 버퍼로 올립니다.
- * @details 씬(MeshComponent)을 보지 않습니다. 입력은 `GPUSceneSnapshot` 하나이고(`adoptCpuSnapshot`), 여기서 만드는
+ * @details 씬(MeshComponent)을 보지 않습니다. 입력은 `GPUSceneSnapshot` 하나이고(`adoptCPUSnapshot`), 여기서 만드는
  *          값(GPU 핸들 · 컬 뷰 · 간접 개수)은 스냅샷 타입에 없어 게임 스레드로 되돌아갈 수 없습니다. 스냅샷을 만드는
  *          쪽은 `GPUSceneBuilder` 입니다.
  */
@@ -101,7 +101,7 @@ namespace sw
 {
     /**
      * @class GPUScene
-     * @brief 렌더 스레드가 영속 소유하는 씬 GPU 상태입니다. 매 프레임 패킷의 스냅샷을 받아(`adoptCpuSnapshot`) 올립니다(`upload`).
+     * @brief 렌더 스레드가 영속 소유하는 씬 GPU 상태입니다. 매 프레임 패킷의 스냅샷을 받아(`adoptCPUSnapshot`) 올립니다(`upload`).
      * @details GPU 버퍼 · 핸들은 프레임을 넘어 재사용합니다. GPU 상태까지 통째로 바꿔 끼우면 직전 프레임에 올린 버퍼를
      *          `releaseGPU` 없이 잃어 매 프레임 새로 만드는 리크가 됩니다. 그래서 스냅샷만 갈아 끼우고 GPU 쪽은 여기 남깁니다.
      */
@@ -125,7 +125,7 @@ namespace sw
          * @details 옮겨 오기(move)만 하면 패킷 자리의 저장소가 비어, 다음에 GT 가 그 자리를 다시 채울 때 모두 새로
          *          할당합니다. 바꿔치기면 저장소가 GT → 링 → RT → 링 → GT 로 돌아 용량이 남습니다(프레임당 할당 0).
          */
-        void adoptCpuSnapshot( GPUSceneSnapshot& snapshot );
+        void adoptCPUSnapshot( GPUSceneSnapshot& snapshot );
         /**
          * @brief 스냅샷을 GPU 에 올립니다(RT). 인스턴스 버퍼 · 배치 표 · 간접 인자 · 머티리얼 그룹 버퍼 · 정점 풀을 맞춥니다.
          *        인스턴스 버퍼와 메인 뷰 간접 인자가 모두 있으면 true 를 반환합니다.

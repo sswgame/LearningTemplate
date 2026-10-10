@@ -90,7 +90,7 @@ namespace sw
          * @details GT 가 프레임마다 RenderFramePacket 에 담을 때 씁니다. 부른 뒤 dirty 플래그는 소비된 것으로 보고
          *          0 으로 되돌립니다(GPUScene::upload 의 재업로드 생략과 대칭되는 GT 쪽 소비 시점).
          */
-        void exportCpuSnapshot( GPUSceneSnapshot& outSnapshot );
+        void exportCPUSnapshot( GPUSceneSnapshot& outSnapshot );
         /**
          * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다(게임 스레드).
          * @details 렌더 스레드가 처음 그릴 때 만들 것을 **그리기 전에** 만들어 두기 위한 것입니다. 큐가 만들어
@@ -124,7 +124,7 @@ namespace sw
             return ( pList != nullptr && index < pList->size() ) ? &( *pList )[index] : nullptr;
         }
         /** @brief 마지막 buildFromScene 이 CPU 스냅샷을 바꿨으면 true 를 반환합니다(내보내면 다시 false). */
-        bool isCpuSnapshotDirty() const { return _snapshot._bCpuDirty != SW_FALSE; }
+        bool isCPUSnapshotDirty() const { return _snapshot._bCPUDirty != SW_FALSE; }
 
     private:
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
@@ -207,7 +207,7 @@ namespace sw
          */
         void collectSkinPalettes( GameObjectManager& objects );
 
-        /** @brief 기준 스냅샷입니다. 매 프레임 `exportCpuSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 표 · 머티리얼 그룹은 여기서 계속 자랍니다. */
+        /** @brief 기준 스냅샷입니다. 매 프레임 `exportCPUSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 표 · 머티리얼 그룹은 여기서 계속 자랍니다. */
         GPUSceneSnapshot _snapshot;
         /// @brief 셰이더 경로 → `_snapshot._listMaterialGroup` 인덱스입니다(배치마다 그룹 목록을 string 비교로 훑지 않습니다).
         unordered_map<string, uint32> _mapShaderPathToGroup;

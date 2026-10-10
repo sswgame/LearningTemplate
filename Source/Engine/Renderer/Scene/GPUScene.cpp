@@ -192,8 +192,8 @@ namespace sw
         // 계속 늘고, 이번 프레임에 쓰지 않은 가시 목록 자리를 읽는다). 움직이는 벤치와 한 프레임만
         // 그리는 테스트로는 드러나지 않는다.
         // 배치 표 · 간접 인자는 스냅샷이 그대로여도 풀 오프셋이 바뀌면(_bBatchTablesDirty) 다시 올린다.
-        const bool bCpuDirty = _snapshot._bCpuDirty != SW_FALSE || _instances._buffer == 0 || getIndirectArgsBuffer() == 0;
-        if ( bCpuDirty == false && _bBatchTablesDirty == SW_FALSE )
+        const bool bCPUDirty = _snapshot._bCPUDirty != SW_FALSE || _instances._buffer == 0 || getIndirectArgsBuffer() == 0;
+        if ( bCPUDirty == false && _bBatchTablesDirty == SW_FALSE )
         {
             if ( _bGPUFillsIndirectCounts != SW_FALSE )
                 refreshIndirectCounts( pDevice );
@@ -203,7 +203,7 @@ namespace sw
         const uint32 instanceCount = static_cast<uint32>( _snapshot.getInstances().size() );
         const uint32 argsCount     = static_cast<uint32>( _snapshot._listAllBatch.size() );
 
-        if ( bCpuDirty )
+        if ( bCPUDirty )
         {
             // UnorderedAccess 를 함께 요구한다. instanceanim 컴퓨트가 월드 행렬을 고쳐 쓴다. 못 만드는
             // 백엔드 · 드라이버면 슬롯이 SRV 전용으로 한 번 더 시도해 그리기는 그대로 살린다.
@@ -348,7 +348,7 @@ namespace sw
         }
 
         _indirectCommandCount = argsCount;
-        _snapshot._bCpuDirty  = SW_FALSE;
+        _snapshot._bCPUDirty  = SW_FALSE;
         _bBatchTablesDirty    = SW_FALSE;
 
         return _instances._buffer != 0 && getIndirectArgsBuffer() != 0;
@@ -408,7 +408,7 @@ namespace sw
         }
         _listCullView.resize( wanted );
         // 새 칸의 버퍼는 다음 업로드가 만든다 — 스냅샷이 그대로여도 다시 올리게 한다.
-        _snapshot._bCpuDirty = SW_TRUE;
+        _snapshot._bCPUDirty = SW_TRUE;
     }
 
     void GPUScene::setIndirectCountsFilledByGPU( bool bByGPU )
@@ -418,7 +418,7 @@ namespace sw
             return;
         _bGPUIndirectCountsRequested = value;
         // 간접 인자의 내용이 달라지므로 다음 upload 가 반드시 다시 올려야 한다.
-        _snapshot._bCpuDirty = SW_TRUE;
+        _snapshot._bCPUDirty = SW_TRUE;
     }
 
     void GPUScene::releaseGPU( IRHIDevice* pDevice )
@@ -456,7 +456,7 @@ namespace sw
         _bBatchTablesDirty           = SW_TRUE;
         _indirectCommandCount        = 0;
         _snapshot._spinInstanceCount = 0;
-        _snapshot._bCpuDirty         = SW_TRUE;
+        _snapshot._bCPUDirty         = SW_TRUE;
     }
 
     const GPUViewTransparentOrder* GPUScene::findViewTransparentOrder( uint64 viewId ) const
@@ -469,7 +469,7 @@ namespace sw
         return nullptr;
     }
 
-    void GPUScene::adoptCpuSnapshot( GPUSceneSnapshot& snapshot )
+    void GPUScene::adoptCPUSnapshot( GPUSceneSnapshot& snapshot )
     {
         // 바꿔치기다. 지난 스냅샷의 저장소가 패킷 자리로 돌아가 다음 프레임에 재사용된다(GPUScene.h 참고).
         std::swap( _snapshot, snapshot );

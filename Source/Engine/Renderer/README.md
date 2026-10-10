@@ -266,7 +266,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 | `MaterialInstance` | `MaterialInstance::create()` | 스냅샷이 함께 소유, `updateRhi` 호출 |
 | `Texture2D` | `TextureCache` | 직접 보지 않고 SRV 인덱스 값만 |
 | GPU 핸들 | `IRHIResourceFactory` | 해제는 펜스 뒤로 미룸 |
-| `GPUSceneSnapshot` | `GPUSceneBuilder::exportCpuSnapshot` | `GPUScene::adoptCpuSnapshot` 이 통째로 받음 |
+| `GPUSceneSnapshot` | `GPUSceneBuilder::exportCPUSnapshot` | `GPUScene::adoptCPUSnapshot` 이 통째로 받음 |
 | GPU 슬롯, 간접 개수 | `GPUScene::upload` | 스냅샷에 없어 옮겨지지 않음 |
 
 규칙은 일곱 가지입니다.
@@ -359,7 +359,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 패킷은 자기완결이어야 하고 소유(`shared_ptr`)를 함께 싣습니다.
 
 **`FrameRenderer` 하나로 두 씬을 번갈아 그리면 예전 배치가 나옵니다.** 빌더의 수집 캐시(프리미티브 집합 세대)가 씬마다 따로가 아니라서, 다른 매니저의 같은 세대 번호를 "그대로"로 봅니다.
-픽셀을 비교하는 테스트는 씬마다 렌더러를 따로 둡니다(`RenderPassGPUTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
+픽셀을 비교하는 테스트는 씬마다 렌더러를 따로 둡니다(`RenderPassGPUTest.SkinnedMeshFollowsPaletteLikeCPUSkinning`).
 
 **`GPUSceneBuilder` 의 수집 규칙을 지키세요.** 전체 수집과 부분 수집은 같은 `fillCandidateFromPrimitive` 를 씁니다.
 집합이나 퍼뮤테이션 세대가 바뀌거나 더티가 1/4을 넘으면 전체를 수집합니다. 부분 수집 프레임에는 회수 시계를 멈추지만 머티리얼 원소 회수는 계속합니다.
@@ -381,7 +381,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 레벨로 모으면 유닛 하나가 빠지는 프레임에 모든 스킨드 메시가 팔레트 없이 바인드 포즈(T 포즈)로 한 번 그려집니다(`GPUSceneTest.SkinPalettesSurviveAUnitLeavingTheFrame`).
 
 **팔레트 행은 행벡터 4x4 행렬의 열 세 개입니다.** 행을 넣으면 회전이 전치됩니다.
-모프 타깃은 같은 컴퓨트에서 스키닝 **앞에** 더합니다. 스키닝 뒤에 더하면 민 방향이 본과 함께 돌지 않습니다(`RenderPassGPUTest.MorphWeightsDeformBeforeSkinningLikeCpu`).
+모프 타깃은 같은 컴퓨트에서 스키닝 **앞에** 더합니다. 스키닝 뒤에 더하면 민 방향이 본과 함께 돌지 않습니다(`RenderPassGPUTest.MorphWeightsDeformBeforeSkinningLikeCPU`).
 
 **GPU 모프는 구조체 버퍼 풀과 정점 셰이더의 인덱스 읽기로 합니다.** 정점 버퍼에 UAV를 붙일 수 없고, DirectX 12 정점 버퍼는 UPLOAD 힙이며, DirectX 11은 겸용이 안 되기 때문입니다.
 `Mesh::setVertices` 는 매번 GPU 버퍼를 다시 만들므로 매 프레임 CPU에서 정점을 고치지 마세요.

@@ -105,11 +105,11 @@ namespace sw
         template <>
         constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<ShaderCache> = MemoryTag::Shader;
         template <>
-        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<RHIBackendRegistry> = MemoryTag::RenderCpu;
+        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<RHIBackendRegistry> = MemoryTag::RenderCPU;
         template <>
-        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<RenderTargetRegistry> = MemoryTag::RenderCpu;
+        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<RenderTargetRegistry> = MemoryTag::RenderCPU;
         template <>
-        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<DebugDrawQueue> = MemoryTag::RenderCpu;
+        constexpr MemoryTag EngineServiceCollectionInternal::kServiceMemoryTag<DebugDrawQueue> = MemoryTag::RenderCPU;
     } // namespace
 } // namespace sw
 

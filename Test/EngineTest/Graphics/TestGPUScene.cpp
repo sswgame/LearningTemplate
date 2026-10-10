@@ -100,7 +100,7 @@ SW_TEST_CASE( GPUSceneTest, BuildBatchesAndSortTransparent )
     SW_EXPECT_TRUE( d0 >= d1 ); // far then near within merged batch
 
     // 동일 내용·카메라 → CPU dirty 없이 early-out
-    SW_EXPECT_TRUE( gpuScene.isCpuSnapshotDirty() );
+    SW_EXPECT_TRUE( gpuScene.isCPUSnapshotDirty() );
     gpuScene.buildFromScene( &scene, camPos );
     // early-out 시 dirty 플래그는 이전 값 유지(업로드 전이면 여전히 dirty)
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
@@ -108,7 +108,7 @@ SW_TEST_CASE( GPUSceneTest, BuildBatchesAndSortTransparent )
     // 카메라만 이동 → transparent 재정렬 경로
     const sw::float3 camMoved{ 0.0f, 0.0f, 5.0f };
     gpuScene.buildFromScene( &scene, camMoved );
-    SW_EXPECT_TRUE( gpuScene.isCpuSnapshotDirty() );
+    SW_EXPECT_TRUE( gpuScene.isCPUSnapshotDirty() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
 }
 
@@ -232,7 +232,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
     sw::GPUSceneSnapshot snapshot;
     const sw::float3     camPos{ 0.0f, 0.0f, 0.0f };
     gpuScene.buildFromScene( &scene, camPos );
-    gpuScene.exportCpuSnapshot( snapshot );
+    gpuScene.exportCPUSnapshot( snapshot );
     SW_ASSERT_EQUAL( 4u, static_cast<uint32>( gpuScene.getInstances().size() ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( gpuScene.getTransparentBatches().size() ) );
     const uint32 tailBase = gpuScene.getTransparentBatches()[0]._instanceBase;
@@ -243,7 +243,7 @@ SW_TEST_CASE( GPUSceneTest, TransparentOrderChangeKeepsOpaqueSlots )
     // 먼 것을 가까운 것보다 앞으로 당긴다 — 키(메시·머티리얼·블렌드)는 그대로, 순서만 뒤집힌다.
     pFar->setLocalPosition( sw::float3( 0.0f, 0.0f, -1.5f ) );
     gpuScene.buildFromScene( &scene, camPos );
-    gpuScene.exportCpuSnapshot( snapshot );
+    gpuScene.exportCPUSnapshot( snapshot );
 
     const sw::vector<sw::GPUInstance>& instances = gpuScene.getInstances();
     SW_ASSERT_EQUAL( 4u, static_cast<uint32>( instances.size() ) );
@@ -317,21 +317,21 @@ SW_TEST_CASE( GPUSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
     // f1: 전체 빌드 → 발행본 1 (잠깐 들었다가 놓는다 — 이 슬롯이 f4 에서 되쓰인다).
     gpuScene.buildFromScene( &scene, camPos );
     sw::GPUSceneSnapshot snapshot1;
-    gpuScene.exportCpuSnapshot( snapshot1 );
+    gpuScene.exportCPUSnapshot( snapshot1 );
     SW_ASSERT_EQUAL( kMeshCount, static_cast<uint32>( snapshot1.getInstances().size() ) );
 
     // f2: 0 번만 이동 → 발행본 2 (렌더 스레드처럼 계속 든다).
     listMesh[0]->setLocalPosition( sw::float3( 100.0f, 0.0f, -1.0f ) );
     gpuScene.buildFromScene( &scene, camPos );
     sw::GPUSceneSnapshot snapshot2;
-    gpuScene.exportCpuSnapshot( snapshot2 );
+    gpuScene.exportCPUSnapshot( snapshot2 );
     SW_EXPECT_EQUAL( 1u, countAtX( snapshot2.getInstances(), 100.0f ) );
 
     // f3: 1 번만 이동 → 발행본 3 (역시 든다).
     listMesh[1]->setLocalPosition( sw::float3( 200.0f, 0.0f, -1.0f ) );
     gpuScene.buildFromScene( &scene, camPos );
     sw::GPUSceneSnapshot snapshot3;
-    gpuScene.exportCpuSnapshot( snapshot3 );
+    gpuScene.exportCPUSnapshot( snapshot3 );
     SW_EXPECT_EQUAL( 1u, countAtX( snapshot3.getInstances(), 200.0f ) );
 
     // 발행본 1 을 놓는다 — 그 슬롯만 "아무도 안 읽는" 슬롯이라 f4 가 그것을 되쓴다.
@@ -341,7 +341,7 @@ SW_TEST_CASE( GPUSceneTest, InstanceRingKeepsPublishedImmutableAndCatchesUp )
     listMesh[2]->setLocalPosition( sw::float3( 300.0f, 0.0f, -1.0f ) );
     gpuScene.buildFromScene( &scene, camPos );
     sw::GPUSceneSnapshot snapshot4;
-    gpuScene.exportCpuSnapshot( snapshot4 );
+    gpuScene.exportCPUSnapshot( snapshot4 );
     const sw::vector<sw::GPUInstance>& instances4 = snapshot4.getInstances();
     SW_ASSERT_EQUAL( kMeshCount, static_cast<uint32>( instances4.size() ) );
     SW_EXPECT_EQUAL( 1u, countAtX( instances4, 100.0f ) ); // f2 의 변경이 따라잡혔다
@@ -1195,7 +1195,7 @@ SW_TEST_CASE( GPUSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
 
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot first;
-    builder.exportCpuSnapshot( first );
+    builder.exportCPUSnapshot( first );
     SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( first.getInstances().size() ) );
 
     // 하나만 움직인다 — 나머지 일곱은 더티가 아니라 수집에서 건너뛴다.
@@ -1204,7 +1204,7 @@ SW_TEST_CASE( GPUSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
     builder.buildFromScene( &scene, cameraPos );
 
     sw::GPUSceneSnapshot moved;
-    builder.exportCpuSnapshot( moved );
+    builder.exportCPUSnapshot( moved );
     SW_ASSERT_EQUAL( kObjectCount, static_cast<uint32>( moved.getInstances().size() ) );
 
     // 1. 움직인 것이 실제로 갱신됐어야 한다 — 빠지면 화면에서 얼어붙는다.
@@ -1228,7 +1228,7 @@ SW_TEST_CASE( GPUSceneTest, PartialCollectUpdatesOnlyTheMovedPrimitive )
     // 3. 아무것도 안 움직인 프레임은 **같은 배열이 그대로 실려야 한다** — 수집도 발행도 하지 않는다.
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot idle;
-    builder.exportCpuSnapshot( idle );
+    builder.exportCPUSnapshot( idle );
     SW_EXPECT_TRUE( idle._pListInstance.get() == moved._pListInstance.get() );
 }
 
@@ -1309,7 +1309,7 @@ SW_TEST_CASE( GPUSceneTest, SwappedMeshesAndVisibilityTogglesKeepBatchesValid )
         builder.buildFromScene( &scene, cameraPos );
 
         sw::GPUSceneSnapshot snapshot;
-        builder.exportCpuSnapshot( snapshot );
+        builder.exportCPUSnapshot( snapshot );
         uint32 visibleCount = 0;
         for ( const sw::MeshComponent* pComp : listComp )
         {
@@ -1361,7 +1361,7 @@ SW_TEST_CASE( GPUSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
     // 1 프레임: 전체 빌드 -> 발행. 여기서 작업 배열이 비워진다.
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot first;
-    builder.exportCpuSnapshot( first );
+    builder.exportCPUSnapshot( first );
     SW_ASSERT_TRUE( first.getInstances().empty() == false );
     const float32 firstX = first.getInstances()[0]._world.getTranslation()._x;
     SW_EXPECT_NEAR_EQUAL( 1.0f, firstX, 0.001f );
@@ -1372,7 +1372,7 @@ SW_TEST_CASE( GPUSceneTest, InstancesStayLiveAfterPublishWhenObjectsMove )
     builder.buildFromScene( &scene, cameraPos );
 
     sw::GPUSceneSnapshot second;
-    builder.exportCpuSnapshot( second );
+    builder.exportCPUSnapshot( second );
     SW_ASSERT_TRUE( second.getInstances().empty() == false );
     SW_EXPECT_NEAR_EQUAL( 7.0f, second.getInstances()[0]._world.getTranslation()._x, 0.001f );
 
@@ -1417,7 +1417,7 @@ SW_TEST_CASE( GPUSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
     // 1 프레임: 전체 빌드 — 전부 더티여야 한다.
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot first;
-    builder.exportCpuSnapshot( first );
+    builder.exportCPUSnapshot( first );
     SW_ASSERT_EQUAL( 4u, static_cast<uint32>( first.getInstances().size() ) );
     SW_EXPECT_TRUE( first._bAllInstancesDirty != SW_FALSE );
 
@@ -1430,7 +1430,7 @@ SW_TEST_CASE( GPUSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
     builder.buildFromScene( &scene, cameraPos );
 
     sw::GPUSceneSnapshot moved;
-    builder.exportCpuSnapshot( moved );
+    builder.exportCPUSnapshot( moved );
     SW_ASSERT_EQUAL( 4u, static_cast<uint32>( moved.getInstances().size() ) );
 
     // 전부가 아니라 **구간 하나**여야 한다.
@@ -1462,7 +1462,7 @@ SW_TEST_CASE( GPUSceneTest, MovingOneObjectMarksOnlyItsInstanceRun )
  *          `MaterialPermutationDrivesBatchPso` 는 동기 `execute()` 경로만 태우므로 이 결함을 볼 수
  *          없다 — 두 경로를 가르는 것이 이 테스트의 존재 이유다. GPU 가 필요 없다.
  */
-SW_TEST_CASE( GPUSceneTest, CpuSnapshotCarriesShaderPermutations )
+SW_TEST_CASE( GPUSceneTest, CPUSnapshotCarriesShaderPermutations )
 {
     sw::shared_ptr<sw::Material> materialGlass = sw::Material::create();
     SW_ASSERT_TRUE( materialGlass->loadFromFile( "engine/materials/glassmaterial.material" ) );
@@ -1494,9 +1494,9 @@ SW_TEST_CASE( GPUSceneTest, CpuSnapshotCarriesShaderPermutations )
 
     // 패킷을 거쳐 렌더 스레드 쪽 GPUScene 으로 옮긴다 (EngineLoop 가 매 프레임 하는 그대로).
     sw::GPUSceneSnapshot packetScene;
-    gtScene.exportCpuSnapshot( packetScene );
+    gtScene.exportCPUSnapshot( packetScene );
     sw::GPUScene rtScene;
-    rtScene.adoptCpuSnapshot( packetScene ); // 바꿔치기 — 패킷 자리에는 RT 의 지난(빈) 스냅샷이 남는다
+    rtScene.adoptCPUSnapshot( packetScene ); // 바꿔치기 — 패킷 자리에는 RT 의 지난(빈) 스냅샷이 남는다
 
     const sw::vector<sw::GPUMeshBatch>& rtBatches = rtScene.getTransparentBatches();
     SW_EXPECT_TRUE_MSG( rtBatches.empty() == false, "스냅샷에 반투명 배치가 없다" );
@@ -2121,7 +2121,7 @@ SW_TEST_CASE( GPUSceneTest, IncrementalTransparentTailMatchesFreshBuild )
             placeAll( frame, frame >= kReverseFrame );
             // 이어 짓는 쪽이 먼저다 — 등록부의 더티 표시는 먼저 지은 빌더가 가져간다(처음 보는 빌더는 어차피 전부 모은다).
             persistent.buildFromScene( &scene, camPos );
-            persistent.exportCpuSnapshot( snapshot );
+            persistent.exportCPUSnapshot( snapshot );
             if ( frame > 0 )
             {
                 // 배치 키는 그대로다 — 제자리 갱신(+ 꼬리 다시 짓기)이어야 하고, 그러면 전부 더티가 아니라 구간으로 실린다.
@@ -2263,7 +2263,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
     const sw::float3    cameraPos{ 0.0f, 0.0f, 5.0f };
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot first;
-    builder.exportCpuSnapshot( first );
+    builder.exportCPUSnapshot( first );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( first.getInstances().size() ) );
     // 같은 텍스처(머티리얼 인스턴스)라 프레임 · 색이 달라도 배치 하나다. (디바이스 없는 시험이라 머티리얼 파일이 아직 안 읽혀 블렌드는 기본값이다 —
     // 반투명 배치인지는 RenderPassGPUTest.SpriteFramesAndTintsArePerInstance 가 실제 디바이스에서 본다.)
@@ -2283,7 +2283,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteFrameAndTintRideTheInstanceWithoutSplittingThe
     pMagenta->setUvRect( sw::float4{ 0.0f, 0.5f, 0.5f, 0.5f } );
     builder.buildFromScene( &scene, cameraPos );
     sw::GPUSceneSnapshot flipped;
-    builder.exportCpuSnapshot( flipped );
+    builder.exportCPUSnapshot( flipped );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listAllBatch.size() ) );
     SW_EXPECT_TRUE( flipped._bAllInstancesDirty == SW_FALSE );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( flipped._listDirtyInstanceRun.size() ) );
@@ -2328,7 +2328,7 @@ SW_TEST_CASE( GPUSceneTest, SpriteInstanceBatchEntriesCarryFrameTintAndHide )
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( builder.getInstances().size() ) ); // 스프라이트 컴포넌트 + 보인 항목 둘
     // 같은 텍스처 인스턴스 · 같은 사각형 · 같은 머티리얼 — 스프라이트 컴포넌트와 한 배치다.
     sw::GPUSceneSnapshot snapshot;
-    builder.exportCpuSnapshot( snapshot );
+    builder.exportCPUSnapshot( snapshot );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( snapshot._listAllBatch.size() ) );
     SW_EXPECT_EQUAL( 3u, snapshot._listAllBatch[0]._instanceCount );
 
@@ -2394,7 +2394,7 @@ SW_TEST_CASE( GPUSceneTest, SkinPalettesSurviveAUnitLeavingTheFrame )
     sw::GPUSceneBuilder gpuScene;
     gpuScene.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
     sw::GPUSceneSnapshot snapshot;
-    gpuScene.exportCpuSnapshot( snapshot );
+    gpuScene.exportCPUSnapshot( snapshot );
     bool bHeroHasPalette = false;
     for ( const sw::GPUSkinPalette& palette : snapshot._listSkinPalette )
     {

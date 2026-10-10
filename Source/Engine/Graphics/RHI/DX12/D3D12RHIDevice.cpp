@@ -178,7 +178,7 @@ namespace sw
         return handle;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleCpuAt( uint32 index ) const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleCPUAt( uint32 index ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle{};
         if ( _cbvHeap == nullptr || index >= kMaxShaderVisibleDescriptors )

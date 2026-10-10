@@ -172,7 +172,7 @@ namespace
             sw::RenderFramePacket packet{};
             packet._bValid = 1;
             gtGPUScene.buildFromScene( &scene, packet._cameraPos );
-            gtGPUScene.exportCpuSnapshot( packet._gpuScene );
+            gtGPUScene.exportCPUSnapshot( packet._gpuScene );
             if ( packet._gpuScene.getInstances().empty() )
                 return -1;
             pDevice->beginFrame( clear );
@@ -863,7 +863,7 @@ SW_TEST_CASE( RenderPassGPUTest, ShaderRecompileKeepsTaaHistory )
 
 /**
  * @brief executePacket()이 프레임마다 GPUScene GPU 버퍼를 재생성하지 않고 재사용하는지 검증.
- * @details GT/RT 소유권 분리(exportCpuSnapshot/adoptCpuSnapshot) 회귀 테스트 — FrameRenderer::_gpuScene 을
+ * @details GT/RT 소유권 분리(exportCPUSnapshot/adoptCPUSnapshot) 회귀 테스트 — FrameRenderer::_gpuScene 을
  *          매 프레임 통째로 덮어쓰면 인스턴스 버퍼 핸들이 매번 바뀌고, 직전 프레임 버퍼/디스크립터는
  *          releaseGPU() 없이 버려져 샌다.
  */
@@ -894,7 +894,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
         gtGPUScene.buildFromScene( &scene, packet._cameraPos );
-        gtGPUScene.exportCpuSnapshot( packet._gpuScene );
+        gtGPUScene.exportCPUSnapshot( packet._gpuScene );
 
         device->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
@@ -950,7 +950,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
         gtGPUScene.buildFromScene( &scene, packet._cameraPos );
-        gtGPUScene.exportCpuSnapshot( packet._gpuScene );
+        gtGPUScene.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
         device->endFrame( false, false );
@@ -961,7 +961,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     sw::RenderFramePacket lateePacket{};
     lateePacket._bValid = 1;
     gtGPUScene.buildFromScene( &scene, lateePacket._cameraPos );
-    gtGPUScene.exportCpuSnapshot( lateePacket._gpuScene );
+    gtGPUScene.exportCPUSnapshot( lateePacket._gpuScene );
     SW_ASSERT_FALSE( lateePacket._gpuScene.getInstances().empty() );
 
     mesh->setMaterialInstance( nullptr );
@@ -3149,7 +3149,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphPoolIdentityMatchesRest )
  *          스킨 없는 큐브와 같아야 하고, (B) 돌린 포즈는 바인드 포즈와 **달라야** 하며, (C) 같은 회전을 CPU 에서 정점에 걸어 둔 정적 큐브와 같아야 한다.
  *          (C) 가 지면 팔레트 행 · 팔레트 시작 · 행렬 열 순서 중 하나가 GPU 와 CPU 에서 다르다(meshskin.hlsl · `GPUMeshMorphPool::uploadSkinPalettes`).
  */
-SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
+SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
 {
     struct Snapshot
     {
@@ -3250,9 +3250,9 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
         sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
         SW_ASSERT_NOT_NULL( bindCube.get() );
         sw::vector<sw::MeshSkinVertex> listSkin;
-        sw::vector<sw::RHIVertex>      listCpuSkinned = bindCube->getVertices();
+        sw::vector<sw::RHIVertex>      listCPUSkinned = bindCube->getVertices();
         const sw::float4x4             bend           = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
-        for ( sw::RHIVertex& vertex : listCpuSkinned )
+        for ( sw::RHIVertex& vertex : listCPUSkinned )
         {
             sw::MeshSkinVertex skin{};
             skin._arrJoint[0] = vertex._arrPosition[1] > 0.0f ? 1u : 0u;
@@ -3272,7 +3272,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
         skinnedCube->setVertices( bindCube->getVertices() );
         skinnedCube->setSkin( listSkin, 2 );
         sw::shared_ptr<sw::Mesh> cpuCube = sw::Mesh::create();
-        cpuCube->setVertices( listCpuSkinned );
+        cpuCube->setVertices( listCPUSkinned );
 
         sw::Scene skinnedScene( "SkinnedCubeScene" );
         sw::Scene staticScene( "CpuSkinnedCubeScene" );
@@ -3339,7 +3339,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCpuSkinning )
  * @details 큐브의 위쪽 정점(본 1)을 +X 로 0.8 미는 타깃 `push` 와 아무것도 안 하는 타깃 `idle` 을 둔다. 가중치 0.6 · 본 1 을 Z 축 50° — 순서가
  *          "모프 → 스킨" 이 아니면(스킨 뒤에 더하면) 민 방향이 회전하지 않아 CPU 그림과 갈린다. 가중치 0 이면 모프 없는 굽힘과 같아야 한다.
  */
-SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCpu )
+SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
 {
     struct Snapshot
     {
@@ -4384,9 +4384,9 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             builder.setMergeBatchesAcrossMaterials( bNativeBindless );
             builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
             sw::GPUSceneSnapshot packet;
-            builder.exportCpuSnapshot( packet );
+            builder.exportCPUSnapshot( packet );
             sw::GPUScene rtScene;
-            rtScene.adoptCpuSnapshot( packet );
+            rtScene.adoptCPUSnapshot( packet );
             SW_ASSERT_EQUAL( size_t( 1 ), rtScene.getOpaqueBatches().size() );
 
             auto readPackedUint = [&]( const utf8* pProperty ) -> uint32
@@ -5858,7 +5858,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
             packet._viewportWidth      = kOutputWidth;
             packet._viewportHeight     = kOutputHeight;
             builder.buildFromScene( &stage._scene, packet._cameraPos );
-            builder.exportCpuSnapshot( packet._gpuScene );
+            builder.exportCPUSnapshot( packet._gpuScene );
             device->beginFrame( clear );
             bOk = renderer.executePacket( device.get(), packet );
             device->endFrame( false, false );
@@ -5947,7 +5947,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
         packet._viewportWidth      = kOutputWidth;
         packet._viewportHeight     = kOutputHeight;
         builder.buildFromScene( &stage._scene, packet._cameraPos );
-        builder.exportCpuSnapshot( packet._gpuScene );
+        builder.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
         bOk = renderer.executePacket( device.get(), packet );
         device->endFrame( false, false );
@@ -6605,7 +6605,7 @@ SW_TEST_CASE( RenderPassGPUTest, PartialStructuredBufferUploadReadsOnlyTheSource
  *          RGBA8 텍스처에 싣고, 읽어 CPU 값과 견준다. GPU 의 sin · cos 는 정확도가 낮아 비트가 같지는 않다 — 1 mm 안이면 같은 식이다.
  *          식 하나(항의 순서 · Q 나누기 · 분산)라도 갈리면 cm 단위로 벌어진다.
  */
-SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCpu )
+SW_TEST_CASE( RenderPassGPUTest, WaterWaveShaderMatchesCPU )
 {
     constexpr uint32  kSampleCount                                = 32;
     constexpr uint32  kTexelPerRow                                = 8;

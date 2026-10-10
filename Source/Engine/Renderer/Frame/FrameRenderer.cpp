@@ -717,8 +717,8 @@ namespace sw
         prepareExtraViews( _listDirectViewScratch );
         {
             // 스크래치 하나를 돌려 쓴다. 바꿔치기라 지난 스냅샷의 저장소가 여기로 돌아온다.
-            _sceneBuilder.exportCpuSnapshot( _sceneSnapshotScratch );
-            _gpuScene.adoptCpuSnapshot( _sceneSnapshotScratch );
+            _sceneBuilder.exportCPUSnapshot( _sceneSnapshotScratch );
+            _gpuScene.adoptCPUSnapshot( _sceneSnapshotScratch );
         }
         const bool bOk = uploadSceneAndSubmit( pDevice, "execute" );
         _pScene        = nullptr;
@@ -737,7 +737,7 @@ namespace sw
         // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · 머티리얼 데이터 버퍼 보존).
         // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
         // GPU 버퍼 · 디스크립터를 releaseGPU() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
-        _gpuScene.adoptCpuSnapshot( packet._gpuScene );
+        _gpuScene.adoptCPUSnapshot( packet._gpuScene );
         // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 바꿔치기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         setCanvasFrame( packet._canvas );
 

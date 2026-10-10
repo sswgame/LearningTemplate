@@ -112,7 +112,7 @@ namespace sw
         const D3D12RHIDevice::BindlessResourceRecord& record = listRegistry[index];
         if ( record._resource == nullptr )
             return D3D12_CPU_DESCRIPTOR_HANDLE{};
-        return record._offlineCpuHandle;
+        return record._offlineCPUHandle;
     }
 
     bool D3D12RHICommandContext::allocateOnlineDescriptors( uint32 count, uint32& outBase )
@@ -148,7 +148,7 @@ namespace sw
             arrSrc[slot]     = ( pSlots[slot].ptr != 0 ) ? pSlots[slot] : nullView;
             arrSrcSize[slot] = 1;
         }
-        const D3D12_CPU_DESCRIPTOR_HANDLE dst     = _pDevice->shaderVisibleCpuAt( base );
+        const D3D12_CPU_DESCRIPTOR_HANDLE dst     = _pDevice->shaderVisibleCPUAt( base );
         const UINT                        dstSize = count;
         _pDevice->_device->CopyDescriptors( 1, &dst, &dstSize, count, arrSrc, arrSrcSize, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
         outTable = _pDevice->shaderVisibleGPUAt( base );

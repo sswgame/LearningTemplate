@@ -170,7 +170,7 @@ namespace sw::editor
             return ProfilerScopeKind::Counter;
         if ( name.size() >= 4 && name.compare( 0, 4, "GPU." ) == 0 )
             return ProfilerScopeKind::GPU;
-        return ProfilerScopeKind::Cpu;
+        return ProfilerScopeKind::CPU;
     }
 
     void ProfilerScopeHistory::fillRow( const ScopeTrack& track, ProfilerScopeRow& outRow ) const

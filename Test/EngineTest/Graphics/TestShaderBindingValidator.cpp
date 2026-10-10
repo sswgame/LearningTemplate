@@ -530,7 +530,7 @@ SW_TEST_CASE( ShaderBindingValidatorTest, Dx12RootSignatureFitsBudget )
  *          어긋난다. 이름마다 적어도 한
  *          바이너리가 있어야 한다(없으면 그 셰이더가 이름을 바꿨고 검사가 눈을 감은 것이다).
  */
-SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCpuStruct )
+SW_TEST_CASE( ShaderBindingValidatorTest, InstanceElementLayoutMatchesCPUStruct )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string shaderDir = sw::ResourceUtil::getDomainFolderPath( "engine", "shaders" );

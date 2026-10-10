@@ -162,7 +162,7 @@ PSO 설명을 받으면 `ShaderBindingLayoutCache::getOrBuild( desc, backend )` 
 머티리얼 원소 레이아웃의 원본은 셰이더입니다. `Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride와 오프셋을 맞춥니다.
 SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인스턴스마다 자기 머티리얼 원소를 가지므로 DirectX 12와 Vulkan은 배치를 셰이더 종류 단위로 합칩니다.
 
-인스턴스 원소 레이아웃은 테스트가 확인합니다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의 stride와 필드 오프셋을 C++ `GPUInstance` 와 비교합니다.
+인스턴스 원소 레이아웃은 테스트가 확인합니다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct`(nogpu)가 쿠킹된 바이너리의 stride와 필드 오프셋을 C++ `GPUInstance` 와 비교합니다.
 컴퓨트 쪽 이름(`g_Instances`, `g_InstancesRW`)도 같은 표로 확인합니다.
 
 ## 확장하는 법

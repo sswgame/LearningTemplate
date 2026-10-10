@@ -311,7 +311,7 @@ SW_TEST_CASE( TaskManagerBenchTest, SmallTaskThroughput )
 /**
  * @brief [TaskManagerBenchTest] CPU 바운드 본문의 직렬 대 병렬 — 배속
  */
-SW_TEST_CASE( TaskManagerBenchTest, CpuBoundSpeedup )
+SW_TEST_CASE( TaskManagerBenchTest, CPUBoundSpeedup )
 {
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize() );

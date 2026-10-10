@@ -243,7 +243,7 @@
 #define SW_SKIN_UINT4_PER_INSTANCE     2u
 // 정점 애니메이션(VAT) 노멀 — 팔면체 한 칸의 해상도(12 비트). 굽는 쪽(MeshVertexAnimation)과 읽는 쪽(binding.hlsli)이 같아야 한다.
 #define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
-// 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGPUTest.WaterWaveShaderMatchesCpu).
+// 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGPUTest.WaterWaveShaderMatchesCPU).
 #define SW_GERSTNER_WAVE_COUNT         4
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

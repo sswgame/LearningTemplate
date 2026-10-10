@@ -57,7 +57,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, WindowStatisticsFollowRecentFrames )
     }
 
     sw::editor::ProfilerRowQuery query{};
-    query._kind = sw::editor::ProfilerScopeKind::Cpu;
+    query._kind = sw::editor::ProfilerScopeKind::CPU;
     sw::vector<sw::editor::ProfilerScopeRow> listRow;
     history.makeRows( query, listRow );
     const sw::editor::ProfilerScopeRow* pRow = findRowInternal( listRow, "GT.Work" );
@@ -110,7 +110,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, RowsAreSplitFilteredAndSorted )
 
     sw::vector<sw::editor::ProfilerScopeRow> listRow;
     sw::editor::ProfilerRowQuery             query{};
-    query._kind        = sw::editor::ProfilerScopeKind::Cpu;
+    query._kind        = sw::editor::ProfilerScopeKind::CPU;
     query._sortColumn  = sw::editor::ProfilerSortColumn::P99;
     query._bDescending = true;
     history.makeRows( query, listRow );

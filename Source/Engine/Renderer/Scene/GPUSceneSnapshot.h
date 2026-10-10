@@ -30,7 +30,7 @@ namespace sw
     /**
      * @brief GPU 인스턴스 하나입니다(월드 행렬 · 바운드 · 배치 인덱스 · 머티리얼 원소 인덱스 · 블렌드 · 회전 시드 · 스프라이트 프레임과 색).
      * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `SwInstanceData` 하나이고 그래픽스 · 컴퓨트가 함께 씁니다. 필드를
-     *          고치면 그 파일과 ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct 의 표를 함께 고칩니다(쿠킹된 바이너리로 대조합니다).
+     *          고치면 그 파일과 ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 의 표를 함께 고칩니다(쿠킹된 바이너리로 대조합니다).
      */
     struct GPUInstance
     {
@@ -312,7 +312,7 @@ namespace sw
         /**
          * @brief 인스턴스 배열입니다. **값이 아니라 공유합니다.** RT 는 읽기만 하므로 프레임마다 복사할 이유가 없습니다.
          *
-         * @details 값으로 두면 `exportCpuSnapshot` 이 매 프레임 통째로 복사합니다. 아무것도 움직이지 않는 정적 씬에서도
+         * @details 값으로 두면 `exportCPUSnapshot` 이 매 프레임 통째로 복사합니다. 아무것도 움직이지 않는 정적 씬에서도
          *          인스턴스당 55 ns(엔티티 8000 개면 441 us)이고, 그것이 정적 씬에서 **게임 스레드의 유일한 실제 작업**이 됩니다.
          *
          *          배치 · 머티리얼 목록은 그대로 값입니다. **RT 가 GPU 핸들을 거기에 덧칠하므로**
@@ -350,7 +350,7 @@ namespace sw
          */
         float32 _vertexAnimationTime{ 0.0f };
         /// @brief 마지막 buildFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.
-        uint8 _bCpuDirty{ SW_TRUE };
+        uint8 _bCPUDirty{ SW_TRUE };
         /**
          * @brief 1 이면 인스턴스 배열 **전체**가 바뀌었고, 0 이면 `_listDirtyInstanceRun` 만 바뀌었습니다.
          * @details 전체 재구축은 1, 물체만 움직인 프레임은 0 입니다. 버퍼를 새로 만든 프레임도 받는 쪽이

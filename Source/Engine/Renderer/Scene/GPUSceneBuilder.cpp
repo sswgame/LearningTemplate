@@ -109,7 +109,7 @@ namespace sw
         _lastTransparentSortAxis    = float3{};
         _lastPrimitiveSetGeneration = 0;
         _lastPermutationGeneration  = 0;
-        _snapshot._bCpuDirty        = SW_TRUE;
+        _snapshot._bCPUDirty        = SW_TRUE;
     }
 
     void GPUSceneBuilder::clear()
@@ -793,7 +793,7 @@ namespace sw
         _lastTransparentSortAxis    = _transparentSortAxis;
         _lastPrimitiveSetGeneration = setGeneration;
         _lastPermutationGeneration  = permutationGeneration;
-        _snapshot._bCpuDirty        = SW_TRUE;
+        _snapshot._bCPUDirty        = SW_TRUE;
 
         // **내용이 바뀐 이 자리에서만 발행한다.** 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
         // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GPUInstanceRing.h).
@@ -897,12 +897,12 @@ namespace sw
         _snapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
     }
 
-    void GPUSceneBuilder::exportCpuSnapshot( GPUSceneSnapshot& outSnapshot )
+    void GPUSceneBuilder::exportCPUSnapshot( GPUSceneSnapshot& outSnapshot )
     {
         // 옮겨지는 것은 GPUSceneSnapshot 이 든 것 **모두이고 그것뿐**이다. 복사다. 퍼뮤테이션 표는 GT 가
         // 계속 늘려 가는 기준이라 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
         outSnapshot          = _snapshot;
-        _snapshot._bCpuDirty = SW_FALSE;
+        _snapshot._bCPUDirty = SW_FALSE;
     }
 
     void GPUSceneBuilder::sortTransparent( const float3& cameraPos )
