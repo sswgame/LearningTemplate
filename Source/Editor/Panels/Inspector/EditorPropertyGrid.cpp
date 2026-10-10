@@ -10,10 +10,12 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -137,6 +139,32 @@ namespace sw::editor
         endTarget();
     }
 
+    void EditorPropertyGrid::resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance )
+    {
+        const string text = pDefaultInstance != nullptr ? SerializerUtil::formatPropertyText( prop, pDefaultInstance, SerializeContext::getDefault() )
+                                                        : prop._metadata._defaultValue;
+        applyPropertyTextAsEdit( pInstance, prop, text, "Reset to Default" );
+    }
+
+    void EditorPropertyGrid::applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel )
+    {
+        // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 주의: `{"이름":값}` 을 JSON 으로 읽히면 읽기가 빠진
+        // 프로퍼티마다 기본값을 채우므로 **다른 프로퍼티까지** 바뀐다 — 글 하나로 프로퍼티 하나만 쓴다.
+        GameObject*  pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
+        const string value{ text };
+        auto         apply = [this, &prop, pInstance, &value]()
+        {
+            if ( SerializerUtil::applyPropertyText( prop, pInstance, value, SerializeContext::getDefault() ) )
+                notifyPropertyEdited( prop );
+            else
+                SW_LOG_WARNING( "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
+        };
+        if ( pOwnerObj != nullptr )
+            EditorPropertyGridInternal::applyObjectEdit( pOwnerObj, pUndoLabel, apply );
+        else
+            apply();
+    }
+
     void EditorPropertyGrid::beginTarget( const EditorPropertyGridTarget& target )
     {
         _pEditTargetComponent = target._pComponent;
@@ -173,6 +201,11 @@ namespace sw::editor
 
         if ( pSectionTitle != nullptr )
             ImGui::SeparatorText( pSectionTitle );
+        // 컴포넌트면 그 타입의 기본 인스턴스(CDO)와 견준다. 중첩 구조체 · 씬 밖 객체는 메타의 기본값 글뿐이다.
+        const void*    pDefaultInstance = nullptr;
+        EditorContext* pDefaultContext  = EditorContext::get();
+        if ( _pEditTargetComponent != nullptr && pInstance == _pEditTargetComponent && pDefaultContext != nullptr )
+            pDefaultInstance = pDefaultContext->getDefaultObjects().findDefault( *pTypeInfo );
         for ( const InspectorPropertyGroup& group : listGroup )
         {
             const string& category = group._category;
@@ -207,32 +240,30 @@ namespace sw::editor
 
                     if ( ImGui::BeginPopupContextItem( "PropCtx" ) )
                     {
-                        if ( prop->_metadata._defaultValue.empty() == false )
+                        if ( pDefaultInstance != nullptr || prop->_metadata._defaultValue.empty() == false )
                         {
-                            fixed_string<constant::kMaxBuffer128> resetLabel;
-                            formatstring( resetLabel.data(), resetLabel.capacity(), "Reset to Default (%#)", prop->_metadata._defaultValue.c_str() );
-                            if ( ImGui::MenuItem( resetLabel.c_str() ) )
-                            {
-                                // 그 프로퍼티 하나만 쓰고(비트필드는 그 비트만) 알린 뒤 되돌리기에 남긴다. 주의: `{"이름":기본값}` 을 JSON 으로
-                                // 읽히면 읽기가 빠진 프로퍼티마다 기본값을 채우므로 **기본값이 있는 다른 프로퍼티까지** 되돌린다.
-                                const PropertyInfo& resetProp = *prop;
-                                GameObject*         pOwnerObj = _pEditTargetComponent != nullptr ? _pEditTargetComponent->getOwner() : _pEditTargetObject;
-                                auto                reset     = [this, &resetProp, pInstance]()
-                                {
-                                    if ( SerializerUtil::applyPropertyText( resetProp, pInstance, resetProp._metadata._defaultValue, SerializeContext::getDefault() ) )
-                                        notifyPropertyEdited( resetProp );
-                                    else
-                                        SW_LOG_WARNING( "Reset to Default could not apply '%#' to %#", resetProp._metadata._defaultValue.c_str(), resetProp._name.c_str() );
-                                };
-                                if ( pOwnerObj != nullptr )
-                                    EditorPropertyGridInternal::applyObjectEdit( pOwnerObj, "Reset to Default", reset );
-                                else
-                                    reset();
-                            }
+                            if ( ImGui::MenuItem( "Reset to Default" ) )
+                                resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
                         }
+                        if ( ImGui::MenuItem( "Copy Value" ) )
+                            ImGui::SetClipboardText( SerializerUtil::formatPropertyText( *prop, pInstance, SerializeContext::getDefault() ).c_str() );
+                        if ( ImGui::MenuItem( "Paste Value", nullptr, false, ImGui::GetClipboardText() != nullptr ) )
+                            applyPropertyTextAsEdit( pInstance, *prop, ImGui::GetClipboardText(), "Paste Value" );
                         if ( ImGui::MenuItem( "Copy Property Name" ) )
                             ImGui::SetClipboardText( prop->_name.c_str() );
                         ImGui::EndPopup();
+                    }
+
+                    // 기본값과 다르면 이름 칸 끝에 되돌리기 단추(언리얼의 노란 화살표). 기본값은 컴포넌트의 기본 인스턴스(CDO) — 없으면 메타 글.
+                    if ( EditorDefaultObjects::isDefaultValue( *prop, pInstance, pDefaultInstance ) == false )
+                    {
+                        ImGui::SameLine();
+                        if ( ImGui::SmallButton( editoricon::kRefresh ) )
+                            resetPropertyToDefault( pInstance, *prop, pDefaultInstance );
+                        EditorWidgets::drawTooltip( "Reset to Default" );
+                        fixed_string<constant::kMaxBuffer128> resetMark;
+                        formatstring( resetMark.data(), resetMark.capacity(), "inspector.reset.%#.%#", pTypeInfo->_name.c_str(), prop->_name.c_str() );
+                        EditorSelfTestMarks::note( resetMark.c_str() );
                     }
 
                     if ( prop->_metadata._bTransient == SW_TRUE )

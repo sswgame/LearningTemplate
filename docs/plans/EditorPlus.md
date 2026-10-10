@@ -91,8 +91,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **3 인스펙터 · 콘텐츠** | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
-| | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
+| **3 인스펙터 · 콘텐츠** | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
@@ -145,39 +144,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 "Revert", `PropertyDrawer`(`[CustomPropertyDrawer(typeof(T))]`). Godot 인스펙터도 다중 편집 · 되돌리기 아이콘 · `EditorInspectorPlugin`.
 콘텐츠 쪽: 언리얼 Content Browser 는 프로젝트 콘텐츠가 기본(엔진 · 플러그인 콘텐츠는 보기 옵션), **Reference Viewer**(참조하는 것 · 참조되는 것), 이름 바꾸면 리디렉터 + "Fix Up".
 유니티 Project 창 "Find References In Scene" · 의존 검색(`AssetDatabase.GetDependencies`). 우리 인스펙터는 다중 선택에서 첫 오브젝트만 고치고(O8), 되돌리기는 오른쪽 클릭 메뉴에만 숨어 있다.
-
-### I2 기본값과 다름 표시 · 되돌리기 화살표 · 프로퍼티 값 복사/붙여넣기 ★
-
-**목적.** "Reset to Default" 는 이미 있다 — 그러나 오른쪽 클릭 메뉴 안이라 **무엇이 기본과 다른지 보이지 않는다**(언리얼 노란 화살표 · 유니티 굵은 글씨). 값 복사도 없다.
-
-**바꿀 것 — `EditorPropertyGrid::drawProperties`(P1 뒤):**
-1) 이름 칸 오른쪽 끝에, `prop->_metadata._defaultValue` 가 있고 지금 값의 글(`SerializerUtil` 글 쓰기)이 그것과 다르면 작은 `ICON_FA_ROTATE_LEFT` 단추 — 누르면 기존 Reset 경로(같은 람다를 함수로 뺀 `resetPropertyToDefault`).
-   글 비교는 프레임마다 프로퍼티마다 하므로 **보이는 줄만**(테이블 클리퍼 안) 한다. 숫자는 글이 아니라 값 비교가 맞다(`1` vs `1.0`) — 판정은 ImGui 없는 `EditorPropertyDefaultUtil::isDefaultValue( prop, pInstance )` 하나
-   (기본값 글을 같은 타입 임시 값으로 읽어(`applyPropertyText` → 임시 인스턴스 대신 `PropertyInfo` 의 값 크기 버퍼) 값 비교 — 실수는 상대 1e-6).
-2) 오른쪽 클릭 메뉴에 "Copy Value"(프로퍼티 글을 클립보드로) · "Paste Value"(클립보드 글을 `applyPropertyText` — 실패하면 경고, Undo 기록은 Reset 과 같은 길).
-3) 기본값 메타가 없는 프로퍼티는 표시하지 않는다(리플렉션 파서가 기본값을 뽑지 못한 것 — 많으면 백로그 1-1 에 한 줄).
-
-**시험 — `Test/EditorTest/Panels/TestEditorPropertyDefault.cpp`(`EditorPropertyDefaultTest`):** `EditorPreviewProbe.h` 의 시험 구조체로 기본 그대로 → true, 바꾸면 false, `1.0` 기본에 `1` 이 들어 있어도 true(글이 아닌 값 비교).
-
-**확인 = 에디터 시나리오.** `propertyreset.scenario.xml`: 오브젝트를 고르고 프로퍼티 하나를 바꾼 뒤, 되돌리기 화살표(이름표 `inspector.reset.<컴포넌트>.<프로퍼티>`, 기본과 다를 때만 남음)를 `EditorClick` 으로 누르고 값 탐침이 기본값으로 돌아왔는지 봅니다.
-값이 기본과 같을 때는 그 이름표가 없어야 하므로, 클릭 단계가 이름표를 못 찾는 경우를 `Expect` 탐침(`Editor.MarkVisible.<이름>`)으로 따로 봅니다.
-
-**커밋 메시지:**
-```
-에디터 - 인스펙터가 기본값과 다른 프로퍼티에 되돌리기 화살표를 보이고 값 복사/붙여넣기를 둔다
-
-문제점:
-- Reset to Default 가 오른쪽 클릭 메뉴 안에만 있어 어느 값이 기본과 다른지 보이지 않았다. 프로퍼티 값을 다른 오브젝트로 옮길 길도 없었다.
-
-해결방안:
-- EditorPropertyDefaultUtil::isDefaultValue(ImGui 없음, 기본값 글을 같은 타입 값으로 읽어 값 비교 — 실수 상대 1e-6).
-- 그리드: 기본과 다르면 이름 칸 끝에 되돌리기 단추(보이는 줄만 판정), 메뉴에 Copy Value · Paste Value(글 — Undo 는 Reset 과 같은 길).
-
-결과:
-- EditorPropertyDefaultTest 셋.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
 
 ### I3 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER` — 유니티 PropertyDrawer
 

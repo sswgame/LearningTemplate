@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorDefaultObjects.h"
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -91,6 +92,7 @@ namespace sw::editor
         _pSourceControl             = sw::make_unique<EditorSourceControl>( EditorUtil::getProjectRootPath() );
         _pInspectorComponentManager = make_unique<InspectorComponentManager>();
         _pInspectorPropertyManager  = make_unique<InspectorPropertyManager>();
+        _pDefaultObjects            = make_unique<EditorDefaultObjects>();
 
         setActive( this );
         bindLocalService( this );
@@ -118,6 +120,7 @@ namespace sw::editor
             setActive( nullptr );
 
         _pModuleUnloadListener.reset(); // 매니저보다 먼저 — 언로드 훑기가 지워진 매니저를 밟지 않게
+        _pDefaultObjects.reset();
         _pInspectorPropertyManager.reset();
         _pInspectorComponentManager.reset();
         _pConfigHotReload.reset();

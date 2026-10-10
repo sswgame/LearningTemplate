@@ -78,6 +78,10 @@ namespace sw::editor
 
     private:
         void beginTarget( const EditorPropertyGridTarget& target );
+        /** @brief 프로퍼티 하나를 기본값(@p pDefaultInstance 의 값, 없으면 메타 글)으로 되돌립니다. 통지 · 되돌리기 기록은 편집과 같다. */
+        void resetPropertyToDefault( void* pInstance, const PropertyInfo& prop, const void* pDefaultInstance );
+        /** @brief 프로퍼티 하나에 글 값을 입혀 편집으로 남깁니다(통지 · 주인 오브젝트의 되돌리기). Reset · Paste Value 가 같이 쓴다. */
+        void applyPropertyTextAsEdit( void* pInstance, const PropertyInfo& prop, string_view text, const utf8* pUndoLabel );
         void endTarget();
         /**
          * @brief 타입의 반사 프로퍼티를 상속분까지 카테고리별로 그립니다(`InspectorPropertyLayout`). 그릴 것이 있을 때만 @p pSectionTitle 구분선을 둡니다.
