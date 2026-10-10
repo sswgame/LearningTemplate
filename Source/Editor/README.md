@@ -643,3 +643,6 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   한 곳에 있으므로 새 도구도 칸 목록만 만들고 `paintCell` 로 칠한다. 채우기가 "같다" 고 보는 값은 레이어마다 `collectCellValues` 가 정한다(Visual 은 높이 · 아틀라스 · 색 전부).
   칸 판단은 ImGui 없는 `TileMapPaintUtil` · `AtlasGridUtil`(EditorTest). 새 맵은 Walkable 이 모두 켜져 있다. 시나리오 `editor/tilemaptools`(탐침 `Editor.TileMapFlagCells` · `Editor.TileMapTool`).
 - **아틀라스 그림은 패널마다 `EditorThumbnailCache` 로 빌린다**(Tile Map 팔레트 · 캔버스, Sprite Clip 칸 고르기). 패널의 `shutdown` 에서 `clear` 해야 디바이스가 내려가기 전에 ImGui 등록과 텍스처 참조를 놓는다.
+- **머티리얼 패널의 구 미리보기는 CPU 셈이다**(`MaterialPreviewShading`, 결정은 docs/09 5-11). 관례 이름의 값(`color` · `baseColor` · `albedo`, `roughness`,
+  `metallic`, `emissive`)만 읽고 셰이더 코드는 보지 않으므로, 값 이름이 다른 셰이더의 머티리얼은 기본값으로 보인다. 시나리오 `editor/materialpreview`(탐침 `Editor.MaterialPreviewRedMinusBlue`).
+  `MaterialProperty` 는 Engine 이 내보내지 않아 EditorTest 가 만들 수 없다 — 값 읽기는 시나리오가 본다.

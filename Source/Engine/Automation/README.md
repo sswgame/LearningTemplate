@@ -251,6 +251,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.ReferenceCount` | 역색인에서 `gv_editorProbeAsset`(리소스 id)을 적은 텍스트 에셋 파일 수 |
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
+| `Editor.MaterialPreviewRedMinusBlue` | Material 패널의 구 미리보기 평균 (R - B)(0..255, 빨간 머티리얼이 크다). 패널이 닫혔거나 문서가 없으면 값이 없다 |
 | `Editor.TileMapFlagCells`, `Editor.TileMapTool` | Tile Map Tool 이 고른 플래그 레이어의 켜진 칸 수(다른 레이어면 0), 칠하기 도구(0 Brush · 1 Rect · 2 Fill · 3 Picker) |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 

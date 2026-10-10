@@ -6,15 +6,19 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
-#include "Core/String/string_splitter.h"
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/MaterialPreviewShading.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Resource/AssetManager.h"
@@ -27,26 +31,6 @@ namespace sw::editor
     {
         struct MaterialPanelInternal
         {
-            static uint32 parseFloats( string_view text, float32* pOut, uint32 count )
-            {
-                if ( pOut == nullptr || count == 0 )
-                    return 0;
-                for ( uint32 index = 0; index < count; ++index )
-                {
-                    pOut[index] = 0.0f;
-                }
-                if ( text.empty() )
-                    return 0;
-                string_splitter splitter( text, { ",", " ", "\t" } );
-                const uint32    tokenCount = splitter.getCount();
-                uint32          filled{ 0 };
-                for ( ; filled < count && filled < tokenCount; ++filled )
-                {
-                    (void)StringUtil::parseFloat( splitter.getSplitList()[filled], pOut[filled] ); // 화면 표시 — 못 읽은 칸은 0
-                }
-                return filled;
-            }
-
             static void writeFloats( string& out, const float32* pVal, uint32 count )
             {
                 fixed_string<constant::kMaxBuffer128> buf;
@@ -83,7 +67,7 @@ namespace sw::editor
                     case MaterialPropertyType::Range:
                     {
                         float32 fVal{ 0.0f };
-                        parseFloats( prop._value, &fVal, 1 );
+                        MaterialPreviewShading::parseFloats( prop._value, &fVal, 1 );
                         bool bChanged{ false };
                         if ( prop._type == MaterialPropertyType::Range && prop._min < prop._max )
                             bChanged = ImGui::SliderFloat( pLabel, &fVal, prop._min, prop._max );
@@ -96,7 +80,7 @@ namespace sw::editor
                     case MaterialPropertyType::Float2:
                     {
                         float32 arrVal[2]{ 0.0f, 0.0f };
-                        parseFloats( prop._value, arrVal, 2 );
+                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 2 );
                         const bool bChanged = ImGui::DragFloat2( pLabel, arrVal, 0.01f );
                         if ( bChanged )
                             writeFloats( prop._value, arrVal, 2 );
@@ -105,7 +89,7 @@ namespace sw::editor
                     case MaterialPropertyType::Float3:
                     {
                         float32 arrVal[3]{ 0.0f, 0.0f, 0.0f };
-                        parseFloats( prop._value, arrVal, 3 );
+                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 3 );
                         const bool bChanged = ImGui::DragFloat3( pLabel, arrVal, 0.01f );
                         if ( bChanged )
                             writeFloats( prop._value, arrVal, 3 );
@@ -115,7 +99,7 @@ namespace sw::editor
                     case MaterialPropertyType::Float4:
                     {
                         float32 arrVal[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
-                        parseFloats( prop._value, arrVal, 4 );
+                        MaterialPreviewShading::parseFloats( prop._value, arrVal, 4 );
                         Color4     color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
                         const bool bChanged = EditorWidgets::drawColorEdit( pLabel, color );
                         if ( bChanged )
@@ -194,6 +178,19 @@ namespace sw::editor
                     }
                 }
             }
+
+            [[nodiscard]] static bool readPreviewRedMinusBlue( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const MaterialPanel* pPanel = static_cast<const MaterialPanel*>( pContext->getPanelManager().findPanel( "material" ) );
+                float32              value{ 0.0f };
+                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findPreviewRedMinusBlue( value ) == false )
+                    return false;
+                outValue = static_cast<float64>( value );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -202,6 +199,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "MaterialPanel" );
     SW_EDITOR_PANEL( MaterialPanel, "material", EditorPanelCategory::Tool, 1300 );
+    SW_AUTOMATION_PROBE( editorMaterialPreviewRedMinusBlue, "Editor.MaterialPreviewRedMinusBlue",
+                         "Mean (R - B) of the Material panel's sphere preview in the last frame (0..255; red materials are high)",
+                         &MaterialPanelInternal::readPreviewRedMinusBlue );
 
     MaterialPanel::MaterialPanel()
         : EditorDocumentPanel{ EditorAssetType::Material, false }
@@ -209,6 +209,8 @@ namespace sw::editor
         , _name{}
         , _shaderPath{}
         , _status{}
+        , _previewRedMinusBlue{ 0.0f }
+        , _bPreviewDrawn{ false }
     {
     }
 
@@ -217,6 +219,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
         drawDocumentOpenBar( "material" );
+        _bPreviewDrawn = false;
 
         if ( getLoadedAssetPath().empty() )
         {
@@ -233,6 +236,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Apply to Selection" ) )
             applyLivePreview();
+        drawPreview();
 
         ImGui::InputText( "Name", _name.data(), _name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -273,6 +277,83 @@ namespace sw::editor
         }
 
         EditorWidgets::drawPanelStatus( _status.c_str() );
+    }
+
+    void MaterialPanel::drawPreview()
+    {
+        // 구를 고리 · 조각으로 나눈 삼각형 부채에 꼭짓점마다 셈한 색을 칠한다(ImGui 가 꼭짓점 색을 보간한다).
+        constexpr int32 kRingCount    = 20;
+        constexpr int32 kSegmentCount = 48;
+
+        const MaterialPreviewInputs inputs = MaterialPreviewShading::readInputs( _material->getProperties() );
+        const float32               side   = 160.0f * EditorThemeUtil::getDpiScale();
+        const ImVec2                minPos = ImGui::GetCursorScreenPos();
+        ImGui::Dummy( ImVec2( side, side ) );
+        EditorSelfTestMarks::note( "material.preview" );
+        EditorWidgets::drawTooltip( "머티리얼 값(기본색 · 거칠기 · 금속성 · 방출)으로 셈한 미리보기입니다. 셰이더 코드는 반영하지 않습니다 — Apply to Selection 으로 씬에서 확인합니다" );
+
+        ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
+        const float32 radius    = side * 0.5f - 2.0f;
+        const ImVec2  center( minPos.x + side * 0.5f, minPos.y + side * 0.5f );
+        pDrawList->AddRectFilled( minPos, ImVec2( minPos.x + side, minPos.y + side ), IM_COL32( 38, 38, 44, 255 ), 4.0f );
+
+        auto toColor = [&inputs]( float32 nx, float32 ny )
+        {
+            const float3 color = MaterialPreviewShading::shadePoint( inputs, nx, ny );
+            return ImGui::ColorConvertFloat4ToU32( ImVec4( color._x, color._y, color._z, 1.0f ) );
+        };
+
+        const ImVec2 whiteUv  = ImGui::GetFontTexUvWhitePixel();
+        const int32  vtxCount = 1 + kRingCount * kSegmentCount;
+        const int32  idxCount = 3 * kSegmentCount + 6 * kSegmentCount * ( kRingCount - 1 );
+        pDrawList->PrimReserve( idxCount, vtxCount );
+        const ImDrawIdx baseIndex = static_cast<ImDrawIdx>( pDrawList->_VtxCurrentIdx );
+        pDrawList->PrimWriteVtx( center, whiteUv, toColor( 0.0f, 0.0f ) );
+        for ( int32 ring = 1; ring <= kRingCount; ++ring )
+        {
+            // 가장자리일수록 촘촘하게 — 빛이 꺾이는 테두리가 매끈하다.
+            const float32 ringRatio = MathUtil::sin( static_cast<float32>( ring ) / static_cast<float32>( kRingCount ) * MathUtil::kHalfPi ) * 0.999f;
+            for ( int32 segment = 0; segment < kSegmentCount; ++segment )
+            {
+                const float32 angle = static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount ) * MathUtil::kTwoPi;
+                const float32 nx    = MathUtil::cos( angle ) * ringRatio;
+                const float32 ny    = MathUtil::sin( angle ) * ringRatio;
+                pDrawList->PrimWriteVtx( ImVec2( center.x + nx * radius, center.y + ny * radius ), whiteUv, toColor( nx, ny ) );
+            }
+        }
+        for ( int32 segment = 0; segment < kSegmentCount; ++segment )
+        {
+            const int32 next = ( segment + 1 ) % kSegmentCount;
+            pDrawList->PrimWriteIdx( baseIndex );
+            pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + 1 + segment ) );
+            pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + 1 + next ) );
+        }
+        for ( int32 ring = 1; ring < kRingCount; ++ring )
+        {
+            const int32 inner = 1 + ( ring - 1 ) * kSegmentCount;
+            const int32 outer = 1 + ring * kSegmentCount;
+            for ( int32 segment = 0; segment < kSegmentCount; ++segment )
+            {
+                const int32 next = ( segment + 1 ) % kSegmentCount;
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + inner + segment ) );
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + outer + segment ) );
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + outer + next ) );
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + inner + segment ) );
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + outer + next ) );
+                pDrawList->PrimWriteIdx( static_cast<ImDrawIdx>( baseIndex + inner + next ) );
+            }
+        }
+
+        _previewRedMinusBlue = MaterialPreviewShading::computeMeanRedMinusBlue( inputs );
+        _bPreviewDrawn       = true;
+    }
+
+    bool MaterialPanel::findPreviewRedMinusBlue( float32& outValue ) const
+    {
+        if ( _bPreviewDrawn == false )
+            return false;
+        outValue = _previewRedMinusBlue;
+        return true;
     }
 
     void MaterialPanel::applyLivePreview()
