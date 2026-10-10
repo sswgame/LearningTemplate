@@ -70,8 +70,18 @@ namespace sw::editor
         const ImVec2 available = ImGui::GetContentRegionAvail();
         _previousCanvasSize    = _canvasSize;
         _canvasSize            = float2{ available.x, available.y };
+        if ( isCanvasRegionUsable( _canvasSize ) == false )
+            return false;
 
         ed::SetCurrentEditor( _pEditor );
+
+        // 캔버스가 창의 첫 그리기면 노드 편집기가 자기 클립 사각형을 창의 빈 첫 그리기 명령에 덮어쓰고, 그 명령은 화면 좌표로 되돌리지 않는다
+        // (imgui_canvas 의 EnterLocalSpace 는 마지막 명령이 비어 있지 않을 때만 따로 명령을 연다). 확대 · 축소가 1 이 아니면 배경과 노드가
+        // 패널 일부에서 잘린다(패널 점검 D21). 같은 색의 배경을 먼저 그려 마지막 명령을 채운다 — 노드 편집기가 그 위를 다시 칠하므로 보이는 차이는 없다.
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        ImGui::GetWindowDrawList()->AddRectFilled( origin, ImVec2{ origin.x + available.x, origin.y + available.y },
+                                                   ImGui::ColorConvertFloat4ToU32( ed::GetStyle().Colors[ed::StyleColor_Bg] ) );
+
         ed::Begin( pCanvasID );
         return true;
     }

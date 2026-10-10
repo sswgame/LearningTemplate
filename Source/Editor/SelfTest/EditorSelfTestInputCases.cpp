@@ -5,6 +5,7 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -21,7 +22,6 @@
 
 #include "sw/config/ConfigConstants.h"
 
-#include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -386,7 +386,7 @@ namespace sw::editor
                 {
                     const float32 width     = mark._max._x - mark._min._x;
                     const float32 height    = mark._max._y - mark._min._y;
-                    const float32 iconWidth = ImGui::CalcTextSize( ICON_FA_EYE_SLASH ).x;
+                    const float32 iconWidth = ImGui::CalcTextSize( editoricon::kEyeSlash ).x;
                     string        what{ "the visibility toggle (" };
                     what += to_string( width ) + " px) is narrower than its icon (" + to_string( iconWidth ) + " px)";
                     (void)context.expect( width >= iconWidth, what.c_str() );

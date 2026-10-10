@@ -82,7 +82,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | O7 | 콘텐츠 브라우저가 **모든 게임 팩 폴더**(abilityarena … voxelcraft)를 보인다 — 활성 게임은 하나 | `ed3.png` | A1 |
 | O8 | 인스펙터의 다중 선택은 **"Multi-Selection (N objects)" 한 줄 + 첫 오브젝트만** 편집한다 | `InspectorPanel.cpp:133` | I1 |
 | O9 | `-gv_editorOpenPanel=all` 이면 모든 패널이 900×620 으로 같은 자리에 떠서 겹친다(도킹 공간 정점 0) | `ed5.log` 덤프 | 의도(덤프용 스위치 — `EditorDockLayout::beginDockspace` 주석). 고치지 않는다 |
-| O10 | ThemePark 게임으로 띄워도 에디터는 Empty 의 `editortest` 씬을 연다 | `tp1.png` | 이 PC 의 로컬 설정 탓일 수 있다(`-gv_editorStartupScene` 은 비어 있다) — 적용 담당이 깨끗한 `Saved/` 로 한 번 더 볼 것. 같으면 [백로그](../06_Backlog.md) 1-4 에 한 줄 |
 
 ---
 
@@ -2596,7 +2595,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
     (c) EditorModule SHARED 의 리눅스 링크(CI).
   - G1 Overdraw — RHI 에 가산 블렌드 상태가 있는지(없으면 ABI +1).
   - R4 — 오브젝트가 수천 개인 씬(`-gv_benchMeshes=8000 -EnableEditor`)에서 빌보드 수집이 1 ms 를 넘는지.
-- O10(ThemePark 로 띄워도 editortest 씬)은 그 PC 의 로컬 상태일 수 있다 — 깨끗한 `Saved/` 로 다시 볼 것.
 
 ---
 

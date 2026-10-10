@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Dialogue Graph 를 처음 열 때 캔버스가 패널을 다 덮는지 화면으로 본다(패널 점검 D21).
+  CaptureWindow 는 에디터 UI 까지 든 실제 화면을 찍는다 — Saved/Automation/editor.dialoguegraph/ 의 PNG 를 사람이(또는 에이전트가) 본다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/dialoguegraph.scenario.xml -dx12
+-->
+<Scenario name="editor.dialoguegraph" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="30"><RequireForeground/></At>
+	<At frame="40"><DevCommand line="panel.focus dialogue_graph"/></At>
+	<At frame="80"><CaptureWindow file="open.png"/></At>
+	<At frame="90"><Pass/></At>
+</Scenario>

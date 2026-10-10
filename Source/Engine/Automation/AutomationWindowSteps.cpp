@@ -1,6 +1,7 @@
 /**
  * @file AutomationWindowSteps.cpp
- * @brief 자동화 시나리오의 창 단계 — 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`) OS 커서 클립(`ExpectCursorClip`) · 전경(`RequireForeground`)을 봅니다.
+ * @brief 자동화 시나리오의 창 단계 — 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`) OS 커서 클립(`ExpectCursorClip`) · 전경(`RequireForeground`)을 보고,
+ *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`).
  * @details 사람 마우스 · 포그라운드와 무관하게 같은 창 처리기를 탑니다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). Windows 만 구현이 있고,
  *          다른 플랫폼에서는 같은 이름의 단계가 시나리오를 건너뜀(13)으로 끝냅니다 — 이 기계에서 볼 수 없는 것을 초록으로 두지 않는다.
  */
@@ -8,8 +9,12 @@
 
 #include "Engine/Automation/AutomationWindowSteps.h"
 
+#include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Resource/Image/ImageFileWriter.h"
 #include "Engine/Window/IWindow.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -69,6 +74,16 @@ namespace sw
             }
 
             static bool validateForeground( const AutomationStep& step, string& outError ) { return checkOnly( step, "", false, outError ); }
+
+            static bool validateCapture( const AutomationStep& step, string& outError )
+            {
+                if ( checkOnly( step, "file", true, outError ) == false )
+                    return false;
+                if ( StringUtil::endsWith( *step.findAttribute( "file" ), ".png", true ) )
+                    return true;
+                outError = step.describe() + ": file must end with .png";
+                return false;
+            }
 
 #if defined( SW_PLATFORM_WINDOWS )
             static HWND findWindowHandle()
@@ -144,6 +159,72 @@ namespace sw
                     runner.finish( AutomationResult::Skipped, "the window could not become the foreground window in this session" );
                 return true;
             }
+
+            /**
+             * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다 — 에디터 UI 까지 든 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력이다).
+             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 길이고, 창이 가려져 있으면 가린 것이 찍힌다. 시나리오가 `input="exclusive"` 로 전경을 잡은 뒤 쓴다.
+             */
+            static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
+            {
+                const HWND hwnd = findWindowHandle();
+                RECT       clientRect{};
+                POINT      origin{ 0, 0 };
+                if ( hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE )
+                {
+                    runner.finish( AutomationResult::Failed, step.describe() + ": no window to capture" );
+                    return true;
+                }
+                const int32 width  = clientRect.right - clientRect.left;
+                const int32 height = clientRect.bottom - clientRect.top;
+                if ( width <= 0 || height <= 0 )
+                {
+                    runner.finish( AutomationResult::Failed, step.describe() + ": the window has an empty client area" );
+                    return true;
+                }
+
+                const HDC     screenDC = GetDC( nullptr );
+                const HDC     memoryDC = CreateCompatibleDC( screenDC );
+                const HBITMAP bitmap   = CreateCompatibleBitmap( screenDC, width, height );
+                const HGDIOBJ previous = SelectObject( memoryDC, bitmap );
+                const BOOL    bCopied  = BitBlt( memoryDC, 0, 0, width, height, screenDC, origin.x, origin.y, SRCCOPY | CAPTUREBLT );
+
+                BITMAPINFO info{};
+                info.bmiHeader.biSize        = sizeof( BITMAPINFOHEADER );
+                info.bmiHeader.biWidth       = width;
+                info.bmiHeader.biHeight      = -height; // 위에서 아래로
+                info.bmiHeader.biPlanes      = 1;
+                info.bmiHeader.biBitCount    = 32;
+                info.bmiHeader.biCompression = BI_RGB;
+                vector<uint8> bytes( static_cast<size_t>( width ) * static_cast<size_t>( height ) * 4u );
+                const int32   lineCount = GetDIBits( memoryDC, bitmap, 0, static_cast<UINT>( height ), bytes.data(), &info, DIB_RGB_COLORS );
+
+                SelectObject( memoryDC, previous );
+                DeleteObject( bitmap );
+                DeleteDC( memoryDC );
+                ReleaseDC( nullptr, screenDC );
+
+                if ( bCopied == FALSE || lineCount != height )
+                {
+                    runner.finish( AutomationResult::Failed, step.describe() + ": BitBlt/GetDIBits failed" );
+                    return true;
+                }
+                for ( size_t offset = 0; offset < bytes.size(); offset += 4 )
+                {
+                    const uint8 blue  = bytes[offset];
+                    bytes[offset]     = bytes[offset + 2];
+                    bytes[offset + 2] = blue;
+                    bytes[offset + 3] = 255;
+                }
+                const string path = runner.resolveOutputPath( *step.findAttribute( "file" ) );
+                FileUtil::ensureParentDirectoryExists( path );
+                if ( ImageFileWriter::writePngRgba8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
+                {
+                    runner.finish( AutomationResult::Failed, step.describe() + ": could not write " + path );
+                    return true;
+                }
+                SW_LOG_INFO( "[Scenario] window capture %#x%# -> %#", width, height, path.c_str() );
+                return true;
+            }
 #else
             /** @brief 창 메시지 · 커서 클립을 볼 구현이 없는 플랫폼 — 시나리오를 건너뜀으로 끝낸다. */
             static bool runUnsupported( AutomationRunner& runner, const AutomationStep& step )
@@ -154,6 +235,7 @@ namespace sw
             static bool runMessage( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runClip( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runForeground( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runCapture( AutomationRunner& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #endif
         };
     } // namespace
@@ -166,4 +248,5 @@ namespace sw
     SW_AUTOMATION_STEP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
     SW_AUTOMATION_STEP( windowForeground, "RequireForeground", &AutomationWindowStepsInternal::runForeground, &AutomationWindowStepsInternal::validateForeground,
                         false );
+    SW_AUTOMATION_STEP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, false );
 } // namespace sw

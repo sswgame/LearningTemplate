@@ -27,8 +27,14 @@ namespace sw::editor
         /** @brief 노드 에디터 컨텍스트를 해제합니다. */
         void shutdown();
 
-        /** @brief 컨텍스트를 준비하고 캔버스를 엽니다. false 면 endCanvas 를 부르지 마십시오. */
+        /**
+         * @brief 컨텍스트를 준비하고 캔버스를 엽니다. false 면 endCanvas 를 부르지 마십시오.
+         * @details 남은 영역이 거의 없으면(도킹 직후의 첫 프레임은 높이가 음수다) 캔버스를 열지 않고 false 입니다. 컨텍스트 자체가 없어서 false 인지는
+         *          `hasContext` 로 가립니다. 캔버스가 창의 첫 그리기여도 배경과 노드가 잘리지 않게 같은 색 배경을 먼저 그립니다(구현 주석).
+         */
         bool beginCanvas( const utf8* pCanvasID, const utf8* pSettingsFileName );
+        /** @brief 노드 편집기 컨텍스트가 있는지 묻습니다(`beginCanvas` 가 false 일 때 실패와 "아직 그릴 자리가 없음" 을 가린다). */
+        bool hasContext() const { return _pEditor != nullptr; }
         /** @brief beginCanvas()와 짝을 이룹니다. */
         void endCanvas();
 
@@ -50,6 +56,10 @@ namespace sw::editor
          *          사각형으로 맞춘다는 가설(패널 점검 D21 — Dialogue Graph 캔버스가 일부만 덮고 링크가 패널 밖에 그려짐)에 따른 것이다.
          */
         void applyContentFitIfNeeded();
+        /** @brief 캔버스를 열어도 되는 크기인지 묻습니다. 한 변이라도 `kMinCanvasExtent` 보다 작으면 false 입니다. */
+        static bool isCanvasRegionUsable( const float2& available ) { return available._x >= kMinCanvasExtent && available._y >= kMinCanvasExtent; }
+        /** @brief 캔버스를 여는 최소 변 길이(픽셀)입니다. 노드 하나도 못 그리는 크기에서는 열지 않는다. */
+        static constexpr float32 kMinCanvasExtent = 16.0f;
         /** @brief 맞추기를 해도 되는 크기인지입니다 — 0 이 아니고 앞 프레임과 같다. */
         static bool isCanvasSizeSettled( const float2& previousSize, const float2& currentSize )
         {

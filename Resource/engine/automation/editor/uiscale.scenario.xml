@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — UI 배율 1, 1.5, 2 에서 기본 배치의 패널이 넘치거나 겹치지 않는지 화면으로 본다(패널 점검 D24 — 고정 픽셀에 배율을 곱한 곳).
+  배율마다 도크 칸이 화면 안 · 최소 변을 지키는지(EditorExpectDockLayout)를 확인하고, 화면을 PNG 로 남겨 사람이(또는 에이전트가) 본다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/uiscale.scenario.xml -dx12
+-->
+<Scenario name="editor.uiscale" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><RequireForeground/><ResizeWindow width="1600" height="900"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="60"><EditorExpectDockLayout/><CaptureWindow file="scale100.png"/></At>
+	<At frame="70"><Variable name="gv_editorUiScale" value="1.5"/></At>
+	<At frame="110"><Expect probe="Editor.UIScale" near="1.5" tolerance="0.01"/><EditorExpectDockLayout/><CaptureWindow file="scale150.png"/></At>
+	<At frame="120"><Variable name="gv_editorUiScale" value="2"/></At>
+	<At frame="160"><Expect probe="Editor.UIScale" near="2" tolerance="0.01"/><EditorExpectDockLayout/><CaptureWindow file="scale200.png"/></At>
+	<At frame="170"><Variable name="gv_editorUiScale" value="0"/></At>
+	<At frame="180"><Pass/></At>
+</Scenario>

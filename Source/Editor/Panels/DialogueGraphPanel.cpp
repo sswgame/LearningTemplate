@@ -162,7 +162,8 @@ namespace sw::editor
 
         if ( _nodeGraph.beginCanvas( "DialogueGraphCanvas", EditorUtil::kDialogueGraphCanvasFileName ) == false )
         {
-            ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
+            if ( _nodeGraph.hasContext() == false )
+                ImGui::TextUnformatted( "Failed to create Dialogue Node Editor context." );
             EditorChrome::endSection();
             return;
         }

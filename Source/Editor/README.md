@@ -424,8 +424,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **기본 배치의 앞 탭은 붙인 순서로 정해지지 않는다.** ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고 처음 나타난 창에 포커스를 준다. 열린 채 시작하는
   도구 패널(Prefab Editor)이 가운데 영역에 붙으면 그 탭이 앞에 서서 씬 뷰가 그려지지 않는다. 그래서 `EditorDockLayout::updateDefaultTabSelection` 이
   패널을 다 그린 뒤 Scene 탭이 골라질 때까지 포커스를 준다(첫 실행 · `layout.reset` · Reset Default Layout).
-  저장된 레이아웃(`Saved/Editor/imgui.ini` · `windows.ini`)이 있는 체크아웃에서는 이 결함이 드러나지 않는다. 새 워크트리 · 새 기계에서만 진다.
-  `AppScenarioTest` 는 사용자의 `Saved/Editor` 를 그대로 쓰므로, 기본 배치에 기대는 시나리오는 저장된 상태를 지운 채로도 한 번 돌린다(`defaultlayout` 시나리오가 이 경우를 지킨다).
+  저장된 레이아웃(`Saved/Editor/imgui.ini` · `windows.ini`)이 있으면 이 규칙은 돌지 않는다. `AppScenarioTest` 는 실행마다 빈 상태 폴더(`-gv_editorStateDir`)로
+  시작하므로 늘 기본 배치를 보고(`defaultlayout`), 저장된 배치를 읽는 분기는 묶음 시나리오 `savedstate.1` · `savedstate.2` 가 본다.
 - **주 출력은 게임 뷰다.** 게임 뷰가 보이면 그것이 엔진의 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 타깃 추가 뷰다.
   씬 뷰만 보이면 씬 뷰가 주 출력이 된다(화면 UI · 화면 사각형 뷰를 빼고). 그래서 `<Screenshot>` · `-gv_screenshot` 은 게임 뷰가 보일 때 게임 뷰를,
   아니면 씬 뷰를 찍고, 격자 · 기즈모는 ImGui 오버레이라 어느 쪽 그림에도 없다 — 격자는 창 캡처나 `Editor.Grid*` 탐침으로 본다.
@@ -454,6 +454,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `editoricon::k…` 상수만 쓴다(목록 순서가 코드포인트다). 아이콘 세트도 CC0 급 · 이 저장소 것만 — Font Awesome 같은 CC BY · OFL 세트는 넣지 않는다.
   `EditorFontSetup` 이 `editor/fonts/sweditoricons.ttf` 를 본문 폰트에 합친다(못 찾으면 오류 로그 한 줄, 화면은 빈 상자 — 자체 시험 `font.iconGlyphs`).
   상수는 `const utf8*` 라 문자열 리터럴과 이어 붙일 수 없다 — 라벨 앞에는 `EditorThemeUtil::makeIconLabel( editoricon::kSave, "Save" )`.
+  vcpkg 가 함께 설치하는 `IconsFontAwesome6.h` 의 `ICON_FA_*` 는 쓰지 않는다 — 그 글리프는 합친 폰트에 없어 화면에 `?` 상자로 나온다(Hierarchy 의 보이기 토글이 그랬다).
 - **모델 임포트의 옆 폴더(`models/<모델>/`)는 임포트마다 통째로 지워진다**(`ModelImporter::importModel`) — 손으로 쓴 캐릭터 데이터(소켓 · 알림 표 · 물리 에셋 ·
   몸 영역)는 `game/<게임>/characters/<캐릭터>/` 처럼 임포트 산출물 밖에 둔다. 클립 알림은 원본 옆 `<모델>.clips.json` 에 적고 `App --import-models`.
 - **Debug App 의 `--import-textures` 는 BC7 1024² 한 장에 20 분을 넘긴다**(CPU 압축기가 최적화 없이 돈다) — 색 칸 아틀라스(KayKit)는 BC1 규칙
@@ -533,3 +534,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **에디터 draw 스냅샷(`EditorDrawDataSnapshot`)은 ImGui 내부에 기댑니다.** `ImDrawList::CloneOutput()` 뒤 쓰기 커서를 "다 썼음" 으로 맞추고, `OwnerViewport` 는 원본 것을 두며, `Textures` 는 비우고 텍스처 갱신은 UI 스레드의 `processTextureUpdates` 가 합니다.
   떠 있는 뷰포트는 UI 스레드가 그리고, GL 처럼 컨텍스트가 스레드에 묶인 백엔드는 `requiresRenderThreadContext()` 가 참이라 그 GPU 호출을 렌더 스레드의 present 훅에서 합니다. ImGui 버전을 올리면 이 셋을 먼저 다시 확인합니다.
 - **`ed::EndCreate()` 는 `ed::BeginCreate()` 의 반환값과 상관없이 늘 부릅니다.** `BeginCreate` 는 false 를 돌려줘도 내부 활성 상태를 세워 두므로, if 안에서만 닫으면 다음 프레임에 라이브러리 단언으로 멈춥니다.
+- **노드 편집기 캔버스는 창의 첫 그리기가 되지 않게 한다.** imgui-node-editor 의 캔버스는 마지막 그리기 명령이 비어 있으면 자기 클립 사각형을 그 명령에 덮어쓰고
+  화면 좌표로 되돌리지 않는다. 그러면 확대 · 축소가 1 이 아닐 때 배경과 노드가 패널 일부에서 잘린다(Dialogue Graph 를 처음 열 때 그랬다).
+  `EditorNodeGraph::beginCanvas` 가 같은 색 배경을 먼저 그려 마지막 명령을 채우고, 남은 영역이 거의 없는 프레임(도킹 직후)에는 캔버스를 열지 않는다.
+  화면은 시나리오 단계 `CaptureWindow`(에디터 UI 까지 든 실제 화면 PNG)로 본다 — 시나리오 `editor/dialoguegraph` · `editor/uiscale`.

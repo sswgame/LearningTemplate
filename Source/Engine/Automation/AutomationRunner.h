@@ -106,6 +106,8 @@ namespace sw
         const string&             getFinishReason() const { return _finishReason; }
         /** @brief 이 시나리오의 산출물 폴더(`Saved/Automation/<이름>/`)입니다. */
         const string& getOutputDirectory() const { return _outputDirectory; }
+        /** @brief 상대 경로면 산출물 폴더 아래로 둡니다(단계 처리기가 파일을 쓸 때). */
+        string resolveOutputPath( string_view file ) const;
         /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
         GameObjectManager* findActiveObjectManager() const;
         /** @brief 활성 씬 대신 @p pManager 를 봅니다(시험 · 도구 — 씬 없이 매니저를 손으로 돌릴 때). nullptr 이면 활성 씬입니다. */
@@ -124,9 +126,7 @@ namespace sw
         void               runExpect( const AutomationStep& step );
         void               runExpectLog( const AutomationStep& step );
         void               runExpectImage( const AutomationStep& step );
-        /** @brief 상대 경로면 산출물 폴더 아래로 둡니다. */
-        string resolveOutputPath( string_view file ) const;
-        void   onLogWritten( const LogEntry& entry );
+        void               onLogWritten( const LogEntry& entry );
         /** @brief 끝 정리 — 가상 입력 · 로그 듣기를 떼고 요약 줄 · 보고를 쓴다. 한 번만 돈다. */
         void endRun( InputManager* pInput );
         void writeReport() const;

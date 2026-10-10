@@ -165,7 +165,8 @@ namespace sw::editor
     {
         if ( _nodeGraph.beginCanvas( "AnimGraphCanvas", EditorUtil::kAnimGraphCanvasFileName ) == false )
         {
-            ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
+            if ( _nodeGraph.hasContext() == false )
+                ImGui::TextUnformatted( "Failed to create Animation Graph editor context." );
             return;
         }
 

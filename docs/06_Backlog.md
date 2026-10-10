@@ -104,13 +104,6 @@
   패드 A · B · 십자키가 게임에도 간다(shooter3d 는 패드 `Back` 이 `CycleCamera` 와 겹친다), 플레이어별 재배치(`InputMap::loadUserBindings`)가 셸 맵에 걸려
   있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
-- **패널 점검(2026-10-07) 결함 중 실행으로 판정할 것** — 코드로만 고쳤거나 원인 후보만 있는 것이다. 다음 검증 세션이 에디터를 띄워 가른다.
-  (1) D21 Dialogue Graph 캔버스가 처음 열 때 일부만 덮는다 — 가설 고침(`30f18a1fc`: 캔버스 크기가 앞 프레임과 같을 때만 내용 맞추기). 열기 · Reload 직후
-  캔버스 배경이 패널을 다 덮는지 스크린샷으로 본다. 그대로면 다음 후보는 imgui-node-editor 의 `FinishNavigation` 이 옛 보기 사각형을 되돌리는 것이다.
-  (2) D26 자체 시험 `input.hierarchySearchTyping` 은 간헐로 진다(2026-10-10 Debug 세 번 중 두 번). 덮는 창 가설은 기각 — 진 판에서도 검색 칸이 활성(`active` = `field`,
-  `wantTextInput=1`)인데 입력한 글자가 칸에 닿지 않는다. 다음은 글자 이벤트를 넣는 프레임과 칸이 활성이 되는 프레임의 순서(`EditorSelfTestInput`)를 본다.
-  (3) D24 고정 픽셀에 배율을 곱한 64 곳(`EditorThemeUtil::getDpiScale`)은 배율 1.5 · 2 로 띄워 넘치거나 겹치는 곳이 없는지 본다.
-  D1(뷰포트 클릭) · D2(기즈모)는 실행으로 확인했다(`20b7b5df5` · `6777ef3ce`). D4(Play 전의 편집 내역이 Stop 뒤에 남는다)는 시나리오 `undosurvivesplay` 가 네 백엔드에서 통과한다(`layout.reset` 으로 기본 배치에서 시작).
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
 
 ### 1-5. 핫 리로드 · 모듈

@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -28,7 +29,6 @@
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include <IconsFontAwesome6.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -456,7 +456,7 @@ namespace sw::editor
 
                 // 1) 가시성 토글(눈) — 정사각 아이콘 단추라 DPI 배율을 받는다
                 const bool bActive = pObj->isActiveInHierarchy();
-                if ( EditorWidgets::drawToggleIconButton( "##active", bActive, ICON_FA_EYE, ICON_FA_EYE_SLASH, "Visible - click to deactivate",
+                if ( EditorWidgets::drawToggleIconButton( "##active", bActive, editoricon::kEye, editoricon::kEyeSlash, "Visible - click to deactivate",
                                                           "Inactive - click to activate" ) )
                     EditorSceneCommands::setActive( pObj, bActive == false ); // 되돌리기 · 씬 dirty 에 남는다
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
