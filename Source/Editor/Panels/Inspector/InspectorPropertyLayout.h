@@ -39,7 +39,7 @@ namespace sw::editor
 {
     /**
      * @brief 숫자 프로퍼티의 두 범위 — 위젯(슬라이더 · 드래그)이 움직이는 범위와 값이 머무는 허용 범위입니다. 값은 저장 단위입니다.
-     * @details 위젯 범위는 `UiMin` · `UiMax` 가 있으면 그것, 없으면 허용 범위(`Min` · `Max`)입니다. 허용 범위는 늘 `Min` · `Max` 이고, 위젯이
+     * @details 위젯 범위는 `UIMin` · `UIMax` 가 있으면 그것, 없으면 허용 범위(`Min` · `Max`)입니다. 허용 범위는 늘 `Min` · `Max` 이고, 위젯이
      *          그 밖의 값을 냈으면(직접 입력) 그 안으로 막습니다 — 언리얼 `UIMin`/`ClampMin` 의 나눔과 같습니다.
      */
     struct InspectorNumericRange
@@ -52,7 +52,7 @@ namespace sw::editor
         bool    _bHasWidgetMax{ false };
         bool    _bHasClampMin{ false };
         bool    _bHasClampMax{ false };
-        bool    _bSlider{ false }; ///< 슬라이더로 그린다(UiMin · UiMax 둘 다, 또는 Min · Max 둘 다 + `Meta = "Slider"`)
+        bool    _bSlider{ false }; ///< 슬라이더로 그린다(UIMin · UIMax 둘 다, 또는 Min · Max 둘 다 + `Meta = "Slider"`)
     };
 } // namespace sw::editor
 

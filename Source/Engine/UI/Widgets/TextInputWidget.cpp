@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Base/UiEvents.h"
+#include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw
@@ -61,7 +61,7 @@ namespace sw
         , _hintText{}
         , _maxLength{ 0 }
     {
-        UiBrush background      = UiBrush::makeSolid( float4{ 0.06f, 0.07f, 0.09f, 0.95f }, 4.0f );
+        UIBrush background      = UIBrush::makeSolid( float4{ 0.06f, 0.07f, 0.09f, 0.95f }, 4.0f );
         background._borderColor = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
         background._borderWidth = 1.0f;
         setBackground( background );
@@ -115,33 +115,33 @@ namespace sw
         invalidate( WidgetDirty::kPaint ); // 커서 자리
     }
 
-    UiReply TextInputWidget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply TextInputWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UiRoutePhase::Bubble || event._kind != UiPointerEventKind::Down || event._button != MouseButton::Left )
-            return UiReply::makeUnhandled();
-        return UiReply::makeHandled().requestFocus( getId() );
+        if ( phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || event._button != MouseButton::Left )
+            return UIReply::makeUnhandled();
+        return UIReply::makeHandled().requestFocus( getId() );
     }
 
-    UiReply TextInputWidget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
+    UIReply TextInputWidget::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UiRoutePhase::Bubble || event._action != hashed_string( UiActionName::kTextBackspace ) )
-            return UiReply::makeUnhandled();
+        if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kTextBackspace ) )
+            return UIReply::makeUnhandled();
         if ( _composition.empty() && TextInputWidgetInternal::popLastCodepoint( _text ) )
         {
             refreshDisplay();
             _onTextChanged.broadcast( _text );
             notifyValueEdited( "_text" );
         }
-        return UiReply::makeHandled();
+        return UIReply::makeHandled();
     }
 
-    UiReply TextInputWidget::onTextEvent( const UiTextEvent& event )
+    UIReply TextInputWidget::onTextEvent( const UITextEvent& event )
     {
         if ( event._bComposition == SW_TRUE )
         {
             _composition = event._text;
             refreshDisplay();
-            return UiReply::makeHandled();
+            return UIReply::makeHandled();
         }
         _composition.clear();
         bool   bChanged = false;
@@ -168,7 +168,7 @@ namespace sw
             _onTextChanged.broadcast( _text );
             notifyValueEdited( "_text" );
         }
-        return UiReply::makeHandled();
+        return UIReply::makeHandled();
     }
 
     void TextInputWidget::onFocusChanged( bool bFocused )
@@ -178,7 +178,7 @@ namespace sw
         refreshDisplay();
     }
 
-    void TextInputWidget::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
+    void TextInputWidget::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         if ( hasFocus() == false )

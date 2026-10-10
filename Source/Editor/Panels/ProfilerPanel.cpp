@@ -194,7 +194,7 @@ namespace sw::editor
         if ( ImGui::SmallButton( "RenderDoc Capture" ) )
             RenderDocCapture::triggerCapture();
         ImGui::SameLine();
-        if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUi() == false )
+        if ( ImGui::SmallButton( "Open UI" ) && RenderDocCapture::launchReplayUI() == false )
             SW_LOG_WARNING( "RenderDoc replay UI could not be started" );
         ImGui::EndDisabled();
         if ( bRenderDoc == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )

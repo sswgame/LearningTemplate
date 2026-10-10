@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/UiFocusManager.h"
+#include "Engine/UI/Base/UIFocusManager.h"
 
 namespace sw
 {
@@ -43,10 +43,10 @@ namespace sw
         , _pFocusManager{ nullptr }
         , _pScreen{ nullptr }
         , _focusedWidget{ kInvalidWidgetId }
-        , _layoutUiScale{ 0.0f }
+        , _layoutUIScale{ 0.0f }
         , _layoutTextScale{ 0.0f }
         , _layoutSafeInsets{}
-        , _paintUiScale{ 0.0f }
+        , _paintUIScale{ 0.0f }
         , _paintAtlasGeneration{ 0 }
         , _paintOutput{}
         , _bPaintOutputStale{ SW_TRUE }
@@ -181,7 +181,7 @@ namespace sw
         const auto iter = _mapNameToWidget.find( widget._name );
         if ( iter != _mapNameToWidget.end() && iter->second != &widget )
         {
-            SW_LOG_WARNING( "[Ui] Widget name '%#' is used twice in one tree - findWidget returns the first one", widget._name.c_str() );
+            SW_LOG_WARNING( "[UI] Widget name '%#' is used twice in one tree - findWidget returns the first one", widget._name.c_str() );
             return;
         }
         _mapNameToWidget[widget._name] = &widget;

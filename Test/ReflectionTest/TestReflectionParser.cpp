@@ -1728,7 +1728,7 @@ SW_TEST_CASE( ReflectionParserTest, DisplayMetadataIsValidated )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
     sw::vector<TempHeader> listHeader;
-    listHeader.push_back( TempHeader{ "DisplayGoodSample", makeReflectedHeader( "DisplayGoodSampleActor", "Units = \"m/s\", UiMin = 0, UiMax = 30, EditCondition = \"!_bLocked\"", "float32" ) } );
+    listHeader.push_back( TempHeader{ "DisplayGoodSample", makeReflectedHeader( "DisplayGoodSampleActor", "Units = \"m/s\", UIMin = 0, UIMax = 30, EditCondition = \"!_bLocked\"", "float32" ) } );
     listHeader.push_back( TempHeader{ "DisplayLabelSample", makeReflectedHeader( "DisplayLabelSampleActor", "Meta = \"Units=HP\"", "float32" ) } );
     listHeader.push_back( TempHeader{ "DisplayUnitSample", makeReflectedHeader( "DisplayUnitSampleActor", "Units = furlong", "float32" ) } );
     listHeader.push_back( TempHeader{ "DisplayMetaUnitSample", makeReflectedHeader( "DisplayMetaUnitSampleActor", "Meta = \"Units=m\"", "float32" ) } );

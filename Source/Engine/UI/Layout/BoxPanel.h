@@ -31,22 +31,22 @@ namespace sw
 
         const TypeInfo* getTypeInfo() const override;
 
-        UiOrientation getOrientation() const { return _orientation; }
+        UIOrientation getOrientation() const { return _orientation; }
         /** @brief 주축 방향을 바꿉니다. 바뀌면 kLayout. */
-        void    setOrientation( UiOrientation orientation );
+        void    setOrientation( UIOrientation orientation );
         float32 getSpacing() const { return _spacing; }
         /** @brief 자식 사이 간격(UI 단위)을 바꿉니다. 바뀌면 kLayout. */
         void setSpacing( float32 spacing );
-        bool isChildOrderTopToBottom() const override { return _orientation == UiOrientation::Vertical && _spacing >= 0.0f; }
+        bool isChildOrderTopToBottom() const override { return _orientation == UIOrientation::Vertical && _spacing >= 0.0f; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
         PROPERTY( DisplayName = "Spacing", Meta = "Units=ui" )
         float32 _spacing;
         PROPERTY( DisplayName = "Orientation" )
-        UiOrientation _orientation;
+        UIOrientation _orientation;
     };
 } // namespace sw

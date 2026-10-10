@@ -11,7 +11,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Widgets/UiBrush.h"
+#include "Engine/UI/Widgets/UIBrush.h"
 
 namespace sw
 {
@@ -44,8 +44,8 @@ namespace sw
         void          setImagePath( string_view imagePath );
         const string& getImagePath() const { return _imagePath; }
         /** @brief 브러시를 바꿉니다. kPaint 만. */
-        void           setBrush( const UiBrush& brush );
-        const UiBrush& getBrush() const { return _brush; }
+        void           setBrush( const UIBrush& brush );
+        const UIBrush& getBrush() const { return _brush; }
         /** @brief 원하는 크기를 정합니다(0 이면 텍스처 크기). kLayout. */
         void setImageSize( const float2& imageSize );
         /** @brief 오른쪽에서 왼쪽 배치에서 좌우로 뒤집는가를 바꿉니다. kPaint. */
@@ -53,15 +53,15 @@ namespace sw
         bool isMirroredInRtl() const { return _bMirrorInRtl; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
         shared_ptr<const Texture2D> _image; ///< 칠할 그림(패킷이 수명을 쥔다 — 그리기 목록의 텍스처 참조)
         PROPERTY( DisplayName = "Image", AssetPath, AssetType = "Texture", Tooltip = "Texture path; the canvas renderer resolves it on the render thread" )
         string _imagePath;
         PROPERTY( DisplayName = "Brush" )
-        UiBrush _brush;
+        UIBrush _brush;
         PROPERTY( DisplayName = "Image Size", Tooltip = "Desired size; 0 uses the texture size", Meta = "Units=ui" )
         float2 _imageSize;
         PROPERTY( DisplayName = "Mirror In Right To Left", Tooltip = "Flip horizontally when the flow direction is right to left" )

@@ -11,7 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Base/UiEvents.h"
+#include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Base/WidgetNavigation.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
@@ -20,10 +20,10 @@ namespace sw
 {
     struct PropertyInfo;
     struct TypeInfo;
-    struct UiComputedStyle;
-    struct UiLayoutContext;
-    struct UiPaintContext;
-    struct UiStyleTransitionState;
+    struct UIComputedStyle;
+    struct UILayoutContext;
+    struct UIPaintContext;
+    struct UIStyleTransitionState;
     struct WidgetPaintCache;
 
     class CanvasPainter;
@@ -83,8 +83,8 @@ namespace sw
         void                    setLayoutSlot( const WidgetLayoutSlot& slot );
         const WidgetLayoutSlot& getLayoutSlot() const { return _slot; }
         /** @brief 흐름 방향입니다. 바뀌면 kArrange — 자기와 자손의 자리를 다시 놓는다(크기는 그대로). */
-        void            setFlowDirection( UiFlowDirection flowDirection );
-        UiFlowDirection getFlowDirection() const { return _flowDirection; }
+        void            setFlowDirection( UIFlowDirection flowDirection );
+        UIFlowDirection getFlowDirection() const { return _flowDirection; }
         /**
          * @brief 오른쪽에서 왼쪽으로 배치되는가 — 자기 흐름 방향을 부모(루트면 문화권)로 푼 결과입니다. 마지막 arrange 가 정합니다(놓이기 전에는 false).
          * @details 이 위젯이 자식을 놓는 방향이고(패널의 거울 배치), 글 위젯의 문단 방향입니다. 자기 슬롯의 여백 · 정렬은 부모의 방향을 따릅니다.
@@ -145,11 +145,11 @@ namespace sw
 
         // --- 사건 — 기본은 모두 "처리 안 함" ---------------------------------
         /** @brief 포인터 사건입니다(히트 테스트 경로 — 터널링 다음 버블링). */
-        virtual UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase );
+        virtual UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase );
         /** @brief 행동 사건입니다(포커스 경로 — 터널링 다음 버블링). */
-        virtual UiReply onActionEvent( const UiActionEvent& event, UiRoutePhase phase );
+        virtual UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase );
         /** @brief 글자 사건입니다(포커스 위젯 하나에만). */
-        virtual UiReply onTextEvent( const UiTextEvent& event );
+        virtual UIReply onTextEvent( const UITextEvent& event );
         /** @brief 포커스를 얻었다 · 잃었다(알림). 상태 스타일 무효화(kStyle)는 부르는 쪽이 이미 했다. */
         virtual void onFocusChanged( bool bFocused );
         /** @brief 포인터가 들어왔다 · 나갔다(알림). 상태 스타일 무효화(kStyle)는 부르는 쪽이 이미 했다. */
@@ -159,7 +159,7 @@ namespace sw
         /** @brief 포인터가 이 위젯(또는 자손) 위에 있는가입니다(호버 경로 — 스타일 `:hover`). */
         bool isHovered() const { return _bHovered; }
         /**
-         * @brief 스타일 선택자가 보는 이 위젯의 상태(`UiStyleState` 비트)입니다. 기본은 호버 · 포커스 · 꺼짐이고, 누름 · 켜짐 · 고름은 그 위젯이 더합니다.
+         * @brief 스타일 선택자가 보는 이 위젯의 상태(`UIStyleState` 비트)입니다. 기본은 호버 · 포커스 · 꺼짐이고, 누름 · 켜짐 · 고름은 그 위젯이 더합니다.
          * @details 상태가 바뀌면 위젯이 `kStyle` 을 겁니다(스타일 걷기가 다시 계산한다).
          */
         virtual uint32 computeStyleStates() const;
@@ -167,24 +167,24 @@ namespace sw
          * @brief 계산된 스타일입니다(스타일 걷기가 정한다 — 스타일 시트 규칙과 부모에서 물려받은 글 칸). 걷기 전이면 nullptr 입니다.
          * @details 스타일 전환(`_transition`) 중이면 보간 중인 보이는 값입니다(위젯이 든 복사본). 전환이 끝나면 다시 나눠 쓰는 계산된 스타일입니다.
          */
-        const UiComputedStyle* getComputedStyle() const;
+        const UIComputedStyle* getComputedStyle() const;
         /** @brief 불투명도에 계산된 스타일의 `_opacity` 를 곱한 값입니다(그리기 걷기가 쓴다). */
         float32 computeEffectiveOpacity() const;
 
     protected:
         /**
-         * @brief 원하는 크기를 잽니다(레이아웃 measure). 패널은 여기서 자식을 `UiLayoutPass::measure` 로 잽니다. 기본은 0 입니다.
-         * @param availableSize 슬롯이 줄 수 있는 크기(여백 · 덮어쓰기 적용 뒤, UI 단위). 축이 `kUiUnbounded` 면 그 축은 원하는 만큼.
+         * @brief 원하는 크기를 잽니다(레이아웃 measure). 패널은 여기서 자식을 `UILayoutPass::measure` 로 잽니다. 기본은 0 입니다.
+         * @param availableSize 슬롯이 줄 수 있는 크기(여백 · 덮어쓰기 적용 뒤, UI 단위). 축이 `kUIUnbounded` 면 그 축은 원하는 만큼.
          */
-        virtual float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const;
+        virtual float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const;
         /**
-         * @brief 자기 그림을 칠합니다(그리기 — `UiPaintPass`). 자식은 트리가 칠한다. 기본은 아무것도 칠하지 않습니다.
+         * @brief 자기 그림을 칠합니다(그리기 — `UIPaintPass`). 자식은 트리가 칠한다. 기본은 아무것도 칠하지 않습니다.
          * @details 칠하기 도구의 변환은 이 위젯의 기하입니다 — 로컬 (0, 0) ~ 크기(`getGeometry()._size`, UI 단위)에 칠한다. 결과는 위젯의 그림 캐시에 남아
          *          그리기 더러움(`kPaint` · `kStyle` · 조상의 `kTransform`)이 없으면 다시 부르지 않습니다.
          */
-        virtual void paint( CanvasPainter& painter, const UiPaintContext& context ) const;
+        virtual void paint( CanvasPainter& painter, const UIPaintContext& context ) const;
         /** @brief 자식 위에 칠합니다(스크롤 막대 · 패널 테두리). 자르기 밖이다. 기본은 아무것도 칠하지 않습니다. */
-        virtual void paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const;
+        virtual void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const;
         /** @brief 트리에 붙었다(바인딩 · 애니메이션이 여기서 붙는다). 자손은 부모 다음에 불린다. */
         virtual void onAttachedToTree();
         /** @brief 트리에서 떨어지기 직전이다(바인딩 · 애니메이션을 뗀다). */
@@ -198,11 +198,11 @@ namespace sw
     private:
         friend class PanelWidget;
         friend class WidgetTree;
-        friend class UiLayoutPass;
-        friend class UiPaintPass;
-        friend class UiPointerState;
-        friend class UiStylePass;
-        friend class UiStyleTransition;
+        friend class UILayoutPass;
+        friend class UIPaintPass;
+        friend class UIPointerState;
+        friend class UIStylePass;
+        friend class UIStyleTransition;
 
         /** @brief 이 위젯과 자손을 @p pTree 에 붙입니다 — 번호를 이름표에 올리고 밀린 무효화를 트리에 넘깁니다. */
         void attachToTree( WidgetTree* pTree, PanelWidget* pParent );
@@ -221,10 +221,10 @@ namespace sw
         PROPERTY( DisplayName = "Navigation" )
         WidgetNavigation _navigation;
 
-        unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀) — `UiPaintPass` 가 채운다, 처음 칠할 때 만든다
-        shared_ptr<const UiComputedStyle>  _computedStyle;    ///< 계산된 스타일(같은 조건의 위젯이 나눠 쓴다 — `UiStylePass` 가 정한다)
-        unique_ptr<UiStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값(전환이 없으면 비었다 — `UiStyleTransition` 이 정한다)
-        uint64                             _styleAncestorKey; ///< 이 위젯이 맞는 "조상 쪽" 선택자 조각의 해시 — 바뀌면 자손을 다시 맞춘다(`UiStylePass`)
+        unique_ptr<WidgetPaintCache>       _paintCache;       ///< 마지막으로 칠한 사각형(물리 픽셀) — `UIPaintPass` 가 채운다, 처음 칠할 때 만든다
+        shared_ptr<const UIComputedStyle>  _computedStyle;    ///< 계산된 스타일(같은 조건의 위젯이 나눠 쓴다 — `UIStylePass` 가 정한다)
+        unique_ptr<UIStyleTransitionState> _styleTransition;  ///< 스타일 전환 중의 보이는 값(전환이 없으면 비었다 — `UIStyleTransition` 이 정한다)
+        uint64                             _styleAncestorKey; ///< 이 위젯이 맞는 "조상 쪽" 선택자 조각의 해시 — 바뀌면 자손을 다시 맞춘다(`UIStylePass`)
 
         WidgetGeometry _geometry;          ///< 마지막 arrange 결과
         float2         _desiredSize;       ///< 마지막 measure 결과
@@ -242,10 +242,10 @@ namespace sw
         PROPERTY( DisplayName = "Visibility" )
         WidgetVisibility _visibility;
         PROPERTY( DisplayName = "Flow Direction", Tooltip = "Inherit follows the parent (the culture at the root); fix LeftToRight for numbers and clocks" )
-        UiFlowDirection _flowDirection;
+        UIFlowDirection _flowDirection;
         PROPERTY( DisplayName = "Enabled" )
         bool _bEnabled;
-        bool _bRightToLeft; ///< 마지막 arrange 에서 푼 흐름 방향(UiLayoutPass 가 적는다)
-        bool _bHovered;     ///< 호버 경로 안이다(UiPointerState 가 적는다)
+        bool _bRightToLeft; ///< 마지막 arrange 에서 푼 흐름 방향(UILayoutPass 가 적는다)
+        bool _bHovered;     ///< 호버 경로 안이다(UIPointerState 가 적는다)
     };
 } // namespace sw

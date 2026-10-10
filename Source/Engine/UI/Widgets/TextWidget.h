@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    struct UiActionGlyphSource;
+    struct UIActionGlyphSource;
 
     class LocalizationManager;
 } // namespace sw
@@ -26,12 +26,12 @@ namespace sw
     /**
      * @class TextWidget
      * @brief 글을 배치(`TextLayoutEngine`)해 글리프 사각형으로 칠합니다.
-     * @details 원하는 크기 = 측정(글자 배율 `gv_uiTextScale` 을 곱한 크기 — 하한 `UiScaleUtil::kMinScaledFontSize`, 줄 바꿈이면 가용 너비 안). 칠하기는 위젯 너비로 배치하고 결과를 캐시합니다
+     * @details 원하는 크기 = 측정(글자 배율 `gv_uiTextScale` 을 곱한 크기 — 하한 `UIScaleUtil::kMinScaledFontSize`, 줄 바꿈이면 가용 너비 안). 칠하기는 위젯 너비로 배치하고 결과를 캐시합니다
      *          (글 · 스타일 · 너비 · 글자 배율 · 방향이 같으면 다시 배치하지 않는다). 글 · 스타일이 바뀌면 `kLayout`, 색만 바뀌면 `kPaint` 입니다.
      *          문단 방향은 이 위젯의 흐름 방향(`isRightToLeft`)입니다. `_bRichText` 면 `[b]` · `[i]` · `[color=]` · `[size=]` 표기를 읽습니다(`RichTextParser`).
      *          글리프 아틀라스를 쓰므로 페이지가 비워지면(세대가 오르면) 다시 칠합니다.
      *          `_text` 는 현지화 키 또는 글 그대로이고, 보이는 글은 측정 · 칠하기 때 문맥의 문화권으로 풀어 글 판과 함께 캐시합니다 — 언어가 바뀌면
-     *          `UiSystem` 이 `onTextRevisionChanged` 로 알려 다시 풀고 다시 잽니다(언리얼 FText 의 TextRevision).
+     *          `UISystem` 이 `onTextRevisionChanged` 로 알려 다시 풀고 다시 잽니다(언리얼 FText 의 TextRevision).
      */
     REFLECT( Category = "UI", DisplayName = "Text", Tooltip = "Draws a line or paragraph of text" )
     class SW_API TextWidget : public Widget
@@ -78,8 +78,8 @@ namespace sw
         const TextLayoutResult& getLastLayout() const { return _layoutCache; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
         /** @brief 글자 배율 · 이 위젯의 흐름 방향을 얹은 배치 스타일입니다. */
@@ -94,7 +94,7 @@ namespace sw
          * @brief 보이는 글을 문화권 @p pLocalization 의 판 @p textRevision 으로 풀고, 행동 태그(`[action=이름]`)를 @p pActionGlyphs 의 글리프로 바꿉니다
          *        (같은 판이면 캐시). 바뀌면 배치 · 리치 텍스트 캐시를 버린다.
          */
-        void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UiActionGlyphSource* pActionGlyphs ) const;
+        void resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UIActionGlyphSource* pActionGlyphs ) const;
 
     private:
         PROPERTY( DisplayName = "Text", Meta = "Localizable", Tooltip = "Localization key, or the text itself when the tables have no such key" )

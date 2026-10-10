@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -103,21 +103,21 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    void PanelWidget::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void PanelWidget::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         (void)context;
         (void)size;
     }
 
-    void PanelWidget::arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
+    void PanelWidget::arrangeChild( const UILayoutContext& context, Widget& child, const float2& localPosition, const float2& size )
     {
         _maxChildSlotHeight = MathUtil::max( _maxChildSlotHeight, size._y );
         if ( isRightToLeft() && mirrorsChildrenInRightToLeft() )
         {
             const float2 mirrored{ getGeometry()._size._x - localPosition._x - size._x, localPosition._y };
-            UiLayoutPass::arrange( child, context, getGeometry(), mirrored, size );
+            UILayoutPass::arrange( child, context, getGeometry(), mirrored, size );
             return;
         }
-        UiLayoutPass::arrange( child, context, getGeometry(), localPosition, size );
+        UILayoutPass::arrange( child, context, getGeometry(), localPosition, size );
     }
 } // namespace sw

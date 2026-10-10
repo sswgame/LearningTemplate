@@ -6,8 +6,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/UI/Base/UiEvents.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Base/UIEvents.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
         , _viewportSize{}
         , _dragStartLocal{}
         , _dragStartOffset{ 0.0f }
-        , _dragAxis{ UiOrientation::Vertical }
+        , _dragAxis{ UIOrientation::Vertical }
         , _bDraggingBar{ false }
         , _navigationMargin{ 8.0f }
         , _wheelStep{ 48.0f }
@@ -119,9 +119,9 @@ namespace sw
         return before != _scrollOffset;
     }
 
-    bool ScrollPanel::computeScrollBar( UiOrientation axis, ScrollBarLayout& outLayout ) const
+    bool ScrollPanel::computeScrollBar( UIOrientation axis, ScrollBarLayout& outLayout ) const
     {
-        const bool    bVertical  = axis == UiOrientation::Vertical;
+        const bool    bVertical  = axis == UIOrientation::Vertical;
         const bool    bScrolls   = bVertical ? _bScrollVertical : _bScrollHorizontal;
         const float2  maxOffset  = getMaxScrollOffset();
         const float32 axisMax    = bVertical ? maxOffset._y : maxOffset._x;
@@ -150,72 +150,72 @@ namespace sw
         return true;
     }
 
-    UiReply ScrollPanel::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply ScrollPanel::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
         float2 local{};
         if ( getGeometry().inverseTransformPoint( event._position, local ) == false )
-            return UiReply::makeUnhandled();
+            return UIReply::makeUnhandled();
         switch ( event._kind )
         {
-            case UiPointerEventKind::Wheel:
+            case UIPointerEventKind::Wheel:
             {
                 // 버블 — 안쪽 위젯(콤보 목록 · 안쪽 스크롤)이 먼저. 휠 위(+)는 내용을 내린다(오프셋이 준다). 세로가 없으면 가로로.
-                if ( phase != UiRoutePhase::Bubble )
-                    return UiReply::makeUnhandled();
+                if ( phase != UIRoutePhase::Bubble )
+                    return UIReply::makeUnhandled();
                 const float32 distance = -event._wheel * _wheelStep;
                 const float2  delta    = _bScrollVertical ? float2{ 0.0f, distance } : float2{ distance, 0.0f };
-                return applyScrollDelta( delta ) ? UiReply::makeHandled() : UiReply::makeUnhandled();
+                return applyScrollDelta( delta ) ? UIReply::makeHandled() : UIReply::makeUnhandled();
             }
-            case UiPointerEventKind::Down:
+            case UIPointerEventKind::Down:
             {
                 // 터널 — 막대는 내용 위에 겹쳐 그리므로 막대 위 누름은 내용(버튼)보다 먼저 받는다.
-                if ( phase != UiRoutePhase::Tunnel || event._button != MouseButton::Left || _bDraggingBar )
-                    return UiReply::makeUnhandled();
+                if ( phase != UIRoutePhase::Tunnel || event._button != MouseButton::Left || _bDraggingBar )
+                    return UIReply::makeUnhandled();
                 return beginScrollBarDrag( local );
             }
-            case UiPointerEventKind::Move:
+            case UIPointerEventKind::Move:
             {
-                if ( _bDraggingBar == false || phase != UiRoutePhase::Tunnel )
-                    return UiReply::makeUnhandled();
+                if ( _bDraggingBar == false || phase != UIRoutePhase::Tunnel )
+                    return UIReply::makeUnhandled();
                 ScrollBarLayout bar{};
                 if ( computeScrollBar( _dragAxis, bar ) == false )
-                    return UiReply::makeHandled();
-                const bool    bVertical = _dragAxis == UiOrientation::Vertical;
+                    return UIReply::makeHandled();
+                const bool    bVertical = _dragAxis == UIOrientation::Vertical;
                 const float32 moved     = bVertical ? local._y - _dragStartLocal._y : local._x - _dragStartLocal._x;
                 const float32 freeTrack = bVertical ? bar._trackSize._y - bar._thumbSize._y : bar._trackSize._x - bar._thumbSize._x;
                 const float2  maxOffset = getMaxScrollOffset();
                 const float32 axisMax   = bVertical ? maxOffset._y : maxOffset._x;
                 const float32 offset    = freeTrack > 0.0f ? _dragStartOffset + moved * axisMax / freeTrack : _dragStartOffset;
                 setScrollOffset( bVertical ? float2{ _scrollOffset._x, offset } : float2{ offset, _scrollOffset._y } );
-                return UiReply::makeHandled();
+                return UIReply::makeHandled();
             }
-            case UiPointerEventKind::Up:
+            case UIPointerEventKind::Up:
             {
                 if ( _bDraggingBar == false || event._button != MouseButton::Left )
-                    return UiReply::makeUnhandled();
+                    return UIReply::makeUnhandled();
                 _bDraggingBar = false;
                 invalidate( WidgetDirty::kPaint ); // 막대 누름 상태
-                return UiReply::makeHandled().releasePointer();
+                return UIReply::makeHandled().releasePointer();
             }
         }
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
-    UiReply ScrollPanel::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
+    UIReply ScrollPanel::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
         // 오른쪽 스틱(위 · 오른쪽이 +) — 버블이라 포커스 위젯이 먼저 쓸 수 있다(값 바꾸는 슬라이더 등). 위로 기울이면 내용이 내려온다.
-        if ( phase != UiRoutePhase::Bubble || event._action != hashed_string( UiActionName::kScroll ) )
-            return UiReply::makeUnhandled();
+        if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kScroll ) )
+            return UIReply::makeUnhandled();
         const float32 distance = _stickSpeed * event._deltaSeconds;
         const float2  delta{ event._value._x * distance, -event._value._y * distance };
-        return applyScrollDelta( delta ) ? UiReply::makeHandled() : UiReply::makeUnhandled();
+        return applyScrollDelta( delta ) ? UIReply::makeHandled() : UIReply::makeUnhandled();
     }
 
-    void ScrollPanel::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
+    void ScrollPanel::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
-        const UiOrientation arrAxis[] = { UiOrientation::Vertical, UiOrientation::Horizontal };
-        for ( const UiOrientation axis : arrAxis )
+        const UIOrientation arrAxis[] = { UIOrientation::Vertical, UIOrientation::Horizontal };
+        for ( const UIOrientation axis : arrAxis )
         {
             ScrollBarLayout bar{};
             if ( computeScrollBar( axis, bar ) == false )
@@ -235,15 +235,15 @@ namespace sw
         return before != _scrollOffset;
     }
 
-    UiReply ScrollPanel::beginScrollBarDrag( const float2& local )
+    UIReply ScrollPanel::beginScrollBarDrag( const float2& local )
     {
-        const UiOrientation arrAxis[] = { UiOrientation::Vertical, UiOrientation::Horizontal };
-        for ( const UiOrientation axis : arrAxis )
+        const UIOrientation arrAxis[] = { UIOrientation::Vertical, UIOrientation::Horizontal };
+        for ( const UIOrientation axis : arrAxis )
         {
             ScrollBarLayout bar{};
             if ( computeScrollBar( axis, bar ) == false || ScrollPanelInternal::isInside( local, bar._trackPosition, bar._trackSize ) == false )
                 continue;
-            const bool bVertical = axis == UiOrientation::Vertical;
+            const bool bVertical = axis == UIOrientation::Vertical;
             if ( ScrollPanelInternal::isInside( local, bar._thumbPosition, bar._thumbSize ) == false )
             {
                 // 트랙 — 누른 쪽으로 한 화면(Godot · 브라우저와 같다).
@@ -251,16 +251,16 @@ namespace sw
                 const float32 point      = bVertical ? local._y : local._x;
                 const float32 page       = ( bVertical ? _viewportSize._y : _viewportSize._x ) * ( point < thumbStart ? -1.0f : 1.0f );
                 (void)applyScrollDelta( bVertical ? float2{ 0.0f, page } : float2{ page, 0.0f } ); // 끝에 닿아 못 옮겨도 트랙 누름은 받은 것이다
-                return UiReply::makeHandled();
+                return UIReply::makeHandled();
             }
             _bDraggingBar    = true;
             _dragAxis        = axis;
             _dragStartLocal  = local;
             _dragStartOffset = bVertical ? _scrollOffset._y : _scrollOffset._x;
             invalidate( WidgetDirty::kPaint );
-            return UiReply::makeHandled().capturePointer();
+            return UIReply::makeHandled().capturePointer();
         }
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
     float2 ScrollPanel::clampOffset( const float2& scrollOffset ) const
@@ -270,7 +270,7 @@ namespace sw
                        _bScrollVertical ? MathUtil::clamp( scrollOffset._y, 0.0f, maxOffset._y ) : 0.0f };
     }
 
-    float2 ScrollPanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 ScrollPanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         if ( getChildCount() == 0 )
             return float2{};
@@ -278,19 +278,19 @@ namespace sw
         const float4& padding = content.getLayoutSlot()._padding;
         const float32 padX    = padding._x + padding._z;
         const float32 padY    = padding._y + padding._w;
-        const float2  contentAvailable{ _bScrollHorizontal ? kUiUnbounded : UiLayoutPass::computeRemaining( availableSize._x, padX ),
-                                       _bScrollVertical ? kUiUnbounded : UiLayoutPass::computeRemaining( availableSize._y, padY ) };
-        const float2 desired = UiLayoutPass::measure( content, context, contentAvailable );
+        const float2  contentAvailable{ _bScrollHorizontal ? kUIUnbounded : UILayoutPass::computeRemaining( availableSize._x, padX ),
+                                       _bScrollVertical ? kUIUnbounded : UILayoutPass::computeRemaining( availableSize._y, padY ) };
+        const float2 desired = UILayoutPass::measure( content, context, contentAvailable );
         float2       result{ desired._x + padX, desired._y + padY };
         // 스크롤 축은 가용 크기를 넘겨 원하지 않는다 — 넘치는 만큼이 스크롤 거리다.
-        if ( _bScrollHorizontal && UiLayoutPass::isUnbounded( availableSize._x ) == false )
+        if ( _bScrollHorizontal && UILayoutPass::isUnbounded( availableSize._x ) == false )
             result._x = MathUtil::min( result._x, availableSize._x );
-        if ( _bScrollVertical && UiLayoutPass::isUnbounded( availableSize._y ) == false )
+        if ( _bScrollVertical && UILayoutPass::isUnbounded( availableSize._y ) == false )
             result._y = MathUtil::min( result._y, availableSize._y );
         return result;
     }
 
-    void ScrollPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void ScrollPanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         const float2 previousContent  = _contentSize;
         const float2 previousViewport = _viewportSize;

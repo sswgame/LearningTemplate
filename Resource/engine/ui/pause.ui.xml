@@ -1,32 +1,32 @@
-<UiDocument _schemaVersion="1">
-	<UiScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _bPausesGame="true" _defaultFocus="Resume" />
 	<_listAnimation>
-		<UiAnimation _name="Open">
+		<UIAnimation _name="Open">
 			<_listTrack>
-				<UiAnimationTrack _widget="Window" _property="_opacity">
+				<UIAnimationTrack _widget="Window" _property="_opacity">
 					<_listKey>
-						<UiAnimationKey _time="0" _value="0" _curve="Linear" />
-						<UiAnimationKey _time="0.15" _value="1" _curve="EaseOut" />
+						<UIAnimationKey _time="0" _value="0" _curve="Linear" />
+						<UIAnimationKey _time="0.15" _value="1" _curve="EaseOut" />
 					</_listKey>
-				</UiAnimationTrack>
-				<UiAnimationTrack _widget="Window" _property="_renderTransform._translation">
+				</UIAnimationTrack>
+				<UIAnimationTrack _widget="Window" _property="_renderTransform._translation">
 					<_listKey>
-						<UiAnimationKey _time="0" _value="0,24" _curve="Linear" />
-						<UiAnimationKey _time="0.2" _value="0,0" _curve="EaseOut" />
+						<UIAnimationKey _time="0" _value="0,24" _curve="Linear" />
+						<UIAnimationKey _time="0.2" _value="0,0" _curve="EaseOut" />
 					</_listKey>
-				</UiAnimationTrack>
+				</UIAnimationTrack>
 			</_listTrack>
-		</UiAnimation>
-		<UiAnimation _name="Close">
+		</UIAnimation>
+		<UIAnimation _name="Close">
 			<_listTrack>
-				<UiAnimationTrack _widget="Window" _property="_opacity">
+				<UIAnimationTrack _widget="Window" _property="_opacity">
 					<_listKey>
-						<UiAnimationKey _time="0" _value="1" _curve="Linear" />
-						<UiAnimationKey _time="0.12" _value="0" _curve="EaseIn" />
+						<UIAnimationKey _time="0" _value="1" _curve="Linear" />
+						<UIAnimationKey _time="0.12" _value="0" _curve="EaseIn" />
 					</_listKey>
-				</UiAnimationTrack>
+				</UIAnimationTrack>
 			</_listTrack>
-		</UiAnimation>
+		</UIAnimation>
 	</_listAnimation>
 	<SafeZonePanel>
 		<CanvasPanel>
@@ -50,4 +50,4 @@
 			</BorderPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
-</UiDocument>
+</UIDocument>

@@ -222,7 +222,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UiSystem`, Shipping 에도 있다)"
+       "description": "런타임 UI 의 행동 맵 — 탐색 · 확인 · 뒤로 · 탭(`UISystem`, Shipping 에도 있다)"
       },
       {
        "name": "_userSettingsSchema",
@@ -276,7 +276,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UiScaleSettings`, 게임 프리셋이 덮어쓴다)"
+       "description": "런타임 UI 배율 규칙 — 해상도 → 배율(`UIScaleSettings`, 게임 프리셋이 덮어쓴다)"
       },
       {
        "name": "_uiThemes",
@@ -285,7 +285,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UiThemeCatalog`, 게임 프리셋이 덮어쓴다)"
+       "description": "런타임 UI 테마 목록 — 테마 이름 → 스타일 시트들(`UIThemeCatalog`, 게임 프리셋이 덮어쓴다)"
       },
       {
        "name": "_uiOptionsMenu",
@@ -303,7 +303,7 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "일시정지 메뉴 문서 — 게임 프리셋이 `_bUiPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)"
+       "description": "일시정지 메뉴 문서 — 게임 프리셋이 `_bUIPauseMenu` 를 켤 때 `UI.Pause` 가 연다(`PauseMenuScreen`)"
       },
       {
        "name": "_defaultForwardPipeline",
@@ -939,10 +939,10 @@
        "min": "",
        "max": "",
        "units": "",
-       "description": "엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUiPauseMenu` 가 켜졌을 때만 쓴다)."
+       "description": "엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUIPauseMenu` 가 켜졌을 때만 쓴다)."
       },
       {
-       "name": "_bUiPauseMenu",
+       "name": "_bUIPauseMenu",
        "type": "bool",
        "default": "false",
        "min": "",
@@ -2201,7 +2201,7 @@
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다)",
-   "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
+   "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
   {
    "name": "gv_benchUiMarkers",
@@ -2217,7 +2217,7 @@
    "default": "0",
    "kind": "시험 · 배포본에도",
    "description": "UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함)",
-   "source": "Source/Engine/UI/Debug/UiBenchScreen.cpp"
+   "source": "Source/Engine/UI/Debug/UIBenchScreen.cpp"
   },
   {
    "name": "gv_benchViews",
@@ -2881,7 +2881,7 @@
    "default": "0.0",
    "kind": "시험",
    "description": "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다",
-   "source": "Source/Engine/UI/Layout/UiScale.cpp"
+   "source": "Source/Engine/UI/Layout/UIScale.cpp"
   },
   {
    "name": "gv_uiDemo",
@@ -2889,7 +2889,7 @@
    "default": "false",
    "kind": "시험 · 배포본에도",
    "description": "UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글)",
-   "source": "Source/Engine/UI/Debug/UiDemoScreen.cpp"
+   "source": "Source/Engine/UI/Debug/UIDemoScreen.cpp"
   },
   {
    "name": "gv_uiOptionsMenu",

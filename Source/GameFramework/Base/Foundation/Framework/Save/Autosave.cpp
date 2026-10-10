@@ -9,8 +9,8 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/UI/Screen/UiNotificationService.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataXml.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -359,12 +359,12 @@ namespace sw
         _intervalTimer = 0.0f;
         SW_LOG_INFO( "Autosaved (%#%#%#) to %#", toString( trigger ), label.empty() ? "" : " ", label.c_str(), info._path.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 시험은 건너뛴다) — 같은 알림이 떠 있으면 센다.
-        if ( UiSystem* pUi = game::getService<UiSystem>(); pUi != nullptr )
+        if ( UISystem* pUI = game::getService<UISystem>(); pUI != nullptr )
         {
-            UiNotificationDesc notice{};
+            UINotificationDesc notice{};
             notice._text            = "Game saved";
             notice._durationSeconds = 3.0f;
-            pUi->getNotifications().post( notice );
+            pUI->getNotifications().post( notice );
         }
         return true;
     }

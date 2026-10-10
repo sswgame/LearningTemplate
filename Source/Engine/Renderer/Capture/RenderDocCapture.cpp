@@ -71,11 +71,11 @@ namespace sw
                 return true;
             }
 
-            static bool runUi( const vector<string>& listArgument, string& outReply )
+            static bool runUI( const vector<string>& listArgument, string& outReply )
             {
                 if ( listArgument.empty() == false )
                     return false;
-                if ( RenderDocCapture::launchReplayUi() == false )
+                if ( RenderDocCapture::launchReplayUI() == false )
                 {
                     outReply = "RenderDoc replay UI could not be started";
                     return false;
@@ -88,7 +88,7 @@ namespace sw
 
     SW_DEV_COMMAND( RenderDocCaptureFrame, "renderdoc.capture", "renderdoc.capture", "Capture the next frame with RenderDoc (needs -renderdoc or a RenderDoc launch)",
                     &RenderDocCaptureInternal::runCapture );
-    SW_DEV_COMMAND( RenderDocReplayUi, "renderdoc.ui", "renderdoc.ui", "Open the RenderDoc replay UI attached to this process", &RenderDocCaptureInternal::runUi );
+    SW_DEV_COMMAND( RenderDocReplayUI, "renderdoc.ui", "renderdoc.ui", "Open the RenderDoc replay UI attached to this process", &RenderDocCaptureInternal::runUI );
 #endif
 } // namespace sw
 
@@ -134,7 +134,7 @@ namespace sw
         SW_LOG_INFO( "RenderDoc capture requested for the next frame" );
     }
 
-    bool RenderDocCapture::launchReplayUi()
+    bool RenderDocCapture::launchReplayUI()
     {
         if ( RenderDocCaptureInternal::_s_pApi == nullptr )
             return false;
@@ -157,7 +157,7 @@ namespace sw
     {
     }
 
-    bool RenderDocCapture::launchReplayUi()
+    bool RenderDocCapture::launchReplayUI()
     {
         return false;
     }

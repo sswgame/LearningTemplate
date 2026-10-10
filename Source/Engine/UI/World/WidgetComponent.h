@@ -18,10 +18,10 @@
 
 namespace sw
 {
-    struct UiLayoutContext;
-    struct UiPaintContext;
+    struct UILayoutContext;
+    struct UIPaintContext;
 
-    class UiSystem;
+    class UISystem;
     class Widget;
     class WidgetTree;
 
@@ -52,7 +52,7 @@ namespace sw
 {
     /**
      * @class WidgetComponent
-     * @brief 오브젝트 위치에 위젯 하나를 띄웁니다. **Screen**: `UiSystem` 의 HUD 층 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 `UiSystem::update`
+     * @brief 오브젝트 위치에 위젯 하나를 띄웁니다. **Screen**: `UISystem` 의 HUD 층 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 `UISystem::update`
      *        (게임 틱 · 트랜스폼 적용 뒤 — 병렬 틱 밖)가 오브젝트의 월드 점을 게임 카메라로 투영해 그 슬롯을 옮긴다. **World**: 위젯 트리를 렌더 텍스처에 그려
      *        사각형 메시에 붙인다(렌더 텍스처 경로 `getRenderTargetPath`).
      * @details 위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 푸는 것은 5-1). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고
@@ -109,28 +109,28 @@ namespace sw
          */
         WidgetMarkerPlacement computeMarkerPlacement( const float4x4& viewProjection, const float3& cameraPosition, const float3& worldPosition,
                                                       const float2& viewportSize ) const;
-        /** @brief 이번 프레임의 마커 자리를 적용합니다(`UiSystem::update` 가 부른다 — 카메라 · 오브젝트 위치를 스스로 찾는다). */
-        void updateScreenMarker( const UiViewport& viewport );
+        /** @brief 이번 프레임의 마커 자리를 적용합니다(`UISystem::update` 가 부른다 — 카메라 · 오브젝트 위치를 스스로 찾는다). */
+        void updateScreenMarker( const UIViewport& viewport );
         /** @brief 계산한 자리를 마커 위젯 슬롯에 적습니다(시험이 카메라 없이 부른다). 보이면 끝에 `onMarkerPlaced` 를 부릅니다. */
         void applyPlacement( const WidgetMarkerPlacement& placement );
         /**
          * @brief 등록할 UI 시스템을 바꿉니다(옛 쪽에서 마커를 떼고 등록을 풀고, 새 쪽에 등록하고 마커를 붙인다). nullptr 이면 풀기만.
          * @details 시작할 때 엔진의 UI 시스템으로(서버처럼 없으면 아무것도 하지 않는다), 끝날 때 nullptr 로 부른다. 시험은 자기 UI 시스템을 넘긴다.
          */
-        void      bindUiSystem( UiSystem* pUiSystem );
-        UiSystem* getUiSystem() const { return _pUiSystem; }
-        /** @brief UI 시스템이 먼저 내려간다 — 등록 · 마커를 알림 없이 잊습니다(`UiSystem::shutdown` 이 부른다). */
-        void forgetUiSystem();
+        void      bindUISystem( UISystem* pUISystem );
+        UISystem* getUISystem() const { return _pUISystem; }
+        /** @brief UI 시스템이 먼저 내려간다 — 등록 · 마커를 알림 없이 잊습니다(`UISystem::shutdown` 이 부른다). */
+        void forgetUISystem();
 
         // --- World(렌더 텍스처 사각형) -----------------------------------------------
         /** @brief World 의 렌더 텍스처 크기(픽셀 = UI 단위, 배율 1)입니다 — `_drawSize`, 없으면 기본 256 × 128. */
         float2 getWorldTextureSize() const;
         /**
-         * @brief World 위젯 트리를 놓고 칠해 렌더 텍스처 목록을 갱신합니다(`UiSystem::update` 가 부른다 — 배율 1 · 뷰포트 = 텍스처 크기).
+         * @brief World 위젯 트리를 놓고 칠해 렌더 텍스처 목록을 갱신합니다(`UISystem::update` 가 부른다 — 배율 1 · 뷰포트 = 텍스처 크기).
          * @details 내용이 지난번과 같으면 번호를 올리지 않아 렌더러가 텍스처를 다시 그리지 않습니다.
          */
-        void updateWorldCanvas( const UiLayoutContext& baseLayout, const UiPaintContext& basePaint );
-        /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UiSystem::collectWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않는다. */
+        void updateWorldCanvas( const UILayoutContext& baseLayout, const UIPaintContext& basePaint );
+        /** @brief World 목록을 렌더 텍스처 대상으로 덧붙입니다(`UISystem::collectWorldCanvases`). World 가 아니거나 트리가 없으면 아무것도 하지 않는다. */
         void appendWorldCanvas( vector<CanvasTargetDrawList>& inoutListTarget ) const;
         /** @brief World 목록의 내용 번호입니다(시험). */
         uint64 getWorldCanvasRevision() const { return _worldRevision; }
@@ -155,7 +155,7 @@ namespace sw
         unique_ptr<Widget>     _pendingContent; ///< 아직 마커 화면에 붙이지 않은 위젯
         WidgetId               _markerWidget;   ///< 마커 화면에 붙인 위젯(없으면 무효)
         WidgetMarkerPlacement  _lastPlacement;
-        UiSystem*              _pUiSystem;     ///< 등록한 UI 시스템(없으면 nullptr)
+        UISystem*              _pUISystem;     ///< 등록한 UI 시스템(없으면 nullptr)
         unique_ptr<WidgetTree> _worldTree;     ///< World — 위젯 트리(루트 = 콘텐츠)
         CanvasDrawList         _worldCanvas;   ///< World — 마지막 그리기 목록(텍스처 픽셀)
         CanvasDrawList         _worldScratch;  ///< World — 칠하는 중의 목록

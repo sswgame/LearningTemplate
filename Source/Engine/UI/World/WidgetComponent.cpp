@@ -18,9 +18,9 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
-#include "Engine/UI/Render/UiPaintPass.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
+#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/UISystem.h"
 
 namespace sw
 {
@@ -40,10 +40,10 @@ namespace sw
             static constexpr float32 kDefaultWorldHeight = 128.0f;
 
             /** @brief 지금 UI 시스템입니다(서버처럼 없거나 시작 전이면 nullptr). */
-            static UiSystem* findUiSystem()
+            static UISystem* findUISystem()
             {
-                UiSystem* pUi = engine::getBoundEngineServices()._pUiSystem;
-                return pUi != nullptr && pUi->isInitialized() ? pUi : nullptr;
+                UISystem* pUI = engine::getBoundEngineServices()._pUISystem;
+                return pUI != nullptr && pUI->isInitialized() ? pUI : nullptr;
             }
         };
     } // namespace
@@ -56,7 +56,7 @@ namespace sw
         , _pendingContent{}
         , _markerWidget{ kInvalidWidgetId }
         , _lastPlacement{}
-        , _pUiSystem{ nullptr }
+        , _pUISystem{ nullptr }
         , _worldTree{}
         , _worldCanvas{}
         , _worldScratch{}
@@ -79,44 +79,44 @@ namespace sw
 
     WidgetComponent::~WidgetComponent()
     {
-        bindUiSystem( nullptr );
+        bindUISystem( nullptr );
     }
 
     void WidgetComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        UiSystem* pUi = WidgetComponentInternal::findUiSystem();
-        bindUiSystem( pUi );
-        if ( pUi != nullptr && _space == WidgetSpace::World )
+        UISystem* pUI = WidgetComponentInternal::findUISystem();
+        bindUISystem( pUI );
+        if ( pUI != nullptr && _space == WidgetSpace::World )
             createWorldQuad();
     }
 
     void WidgetComponent::onEndPlay()
     {
         destroyWorldQuad();
-        bindUiSystem( nullptr );
+        bindUISystem( nullptr );
         Component::onEndPlay();
     }
 
-    void WidgetComponent::bindUiSystem( UiSystem* pUiSystem )
+    void WidgetComponent::bindUISystem( UISystem* pUISystem )
     {
-        if ( _pUiSystem == pUiSystem )
+        if ( _pUISystem == pUISystem )
             return;
-        if ( _pUiSystem != nullptr )
+        if ( _pUISystem != nullptr )
         {
             detachMarker();
-            _pUiSystem->unregisterWidgetComponent( *this );
+            _pUISystem->unregisterWidgetComponent( *this );
         }
-        _pUiSystem = pUiSystem;
-        if ( _pUiSystem == nullptr )
+        _pUISystem = pUISystem;
+        if ( _pUISystem == nullptr )
             return;
-        _pUiSystem->registerWidgetComponent( *this );
+        _pUISystem->registerWidgetComponent( *this );
         attachMarker();
     }
 
-    void WidgetComponent::forgetUiSystem()
+    void WidgetComponent::forgetUISystem()
     {
-        _pUiSystem    = nullptr;
+        _pUISystem    = nullptr;
         _markerWidget = kInvalidWidgetId;
     }
 
@@ -133,7 +133,7 @@ namespace sw
             return _pendingContent.get();
         if ( _worldTree != nullptr )
             return _worldTree->getRoot();
-        return _pUiSystem != nullptr ? _pUiSystem->findScreenMarker( _markerWidget ) : nullptr;
+        return _pUISystem != nullptr ? _pUISystem->findScreenMarker( _markerWidget ) : nullptr;
     }
 
     void WidgetComponent::setScaleWithDistance( bool bScale, float32 referenceDistance )
@@ -149,8 +149,8 @@ namespace sw
 
     void WidgetComponent::attachMarker()
     {
-        UiSystem* const pUi = _pUiSystem;
-        if ( pUi == nullptr || _pendingContent == nullptr )
+        UISystem* const pUI = _pUISystem;
+        if ( pUI == nullptr || _pendingContent == nullptr )
             return;
         if ( _space == WidgetSpace::World )
         {
@@ -164,7 +164,7 @@ namespace sw
             return;
         // 첫 자리가 정해지기 전에는 접어 둔다(왼쪽 위에 한 프레임 보이지 않게).
         _pendingContent->setVisibility( WidgetVisibility::Collapsed );
-        _markerWidget = pUi->addScreenMarker( std::move( _pendingContent ) );
+        _markerWidget = pUI->addScreenMarker( std::move( _pendingContent ) );
     }
 
     void WidgetComponent::detachMarker()
@@ -172,8 +172,8 @@ namespace sw
         _worldTree.reset();
         if ( _markerWidget == kInvalidWidgetId )
             return;
-        if ( _pUiSystem != nullptr )
-            _pUiSystem->removeScreenMarker( _markerWidget );
+        if ( _pUISystem != nullptr )
+            _pUISystem->removeScreenMarker( _markerWidget );
         _markerWidget = kInvalidWidgetId;
     }
 
@@ -231,7 +231,7 @@ namespace sw
         return placement;
     }
 
-    void WidgetComponent::updateScreenMarker( const UiViewport& viewport )
+    void WidgetComponent::updateScreenMarker( const UIViewport& viewport )
     {
         if ( _markerWidget == kInvalidWidgetId || viewport._physicalSize._y <= 0.0f )
             return;
@@ -257,7 +257,7 @@ namespace sw
     void WidgetComponent::applyPlacement( const WidgetMarkerPlacement& placement )
     {
         _lastPlacement  = placement;
-        Widget* pMarker = _pUiSystem != nullptr ? _pUiSystem->findScreenMarker( _markerWidget ) : nullptr;
+        Widget* pMarker = _pUISystem != nullptr ? _pUISystem->findScreenMarker( _markerWidget ) : nullptr;
         if ( pMarker == nullptr )
             return;
         if ( placement._bVisible == SW_FALSE )
@@ -307,24 +307,24 @@ namespace sw
         return float2{ WidgetComponentInternal::kDefaultWorldWidth, WidgetComponentInternal::kDefaultWorldHeight };
     }
 
-    void WidgetComponent::updateWorldCanvas( const UiLayoutContext& baseLayout, const UiPaintContext& basePaint )
+    void WidgetComponent::updateWorldCanvas( const UILayoutContext& baseLayout, const UIPaintContext& basePaint )
     {
         if ( _space != WidgetSpace::World || _worldTree == nullptr )
             return;
         // 텍스처 픽셀 = UI 단위(배율 1). 안전 영역 없음. 글자 배율 · 방향은 화면 UI 와 같다.
         const float2    size   = getWorldTextureSize();
-        UiLayoutContext layout = baseLayout;
+        UILayoutContext layout = baseLayout;
         layout._viewportSize   = size;
         layout._safeInsets     = float4{};
         layout._uiScale        = 1.0f;
-        (void)UiLayoutPass::update( *_worldTree, layout );
+        (void)UILayoutPass::update( *_worldTree, layout );
 
-        UiPaintContext paint = basePaint;
+        UIPaintContext paint = basePaint;
         paint._uiScale       = 1.0f;
         _worldScratch.clear();
         _worldScratch._targetSize = size;
         CanvasPainter painter( _worldScratch, 1.0f );
-        (void)UiPaintPass::paint( *_worldTree, paint, painter, _worldScratch );
+        (void)UIPaintPass::paint( *_worldTree, paint, painter, _worldScratch );
         if ( _worldScratch.isSameContent( _worldCanvas ) && _worldScratch._targetSize == _worldCanvas._targetSize )
             return;
         std::swap( _worldCanvas, _worldScratch );

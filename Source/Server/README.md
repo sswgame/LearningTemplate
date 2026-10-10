@@ -69,7 +69,7 @@ build/Ninja-Shipping-Server/Bin/Server.exe -server-config=Config/Server/Empty.js
 
 ### 시작과 종료 순서
 
-1. `EngineLoop::initialize( …, EngineHostRole::DedicatedServer )` 가 `Client` 대상 단계를 건너뜁니다. 지금은 `Fonts`, `UserSettings`, `RHI`, `FrameRenderer`, `RenderThread`, `LiveShader`, `SceneRhi`, `Telemetry`, `Ui` 입니다.
+1. `EngineLoop::initialize( …, EngineHostRole::DedicatedServer )` 가 `Client` 대상 단계를 건너뜁니다. 지금은 `Fonts`, `UserSettings`, `RHI`, `FrameRenderer`, `RenderThread`, `LiveShader`, `SceneRhi`, `Telemetry`, `UI` 입니다.
    건너뛴 단계는 로그에 한 줄로 남깁니다. 오디오는 장치를 열지 않는 `NullAudioSystem` 을 쓰고, 모듈은 `Server` 대상 모듈만 로드합니다. Game 빌드에서도 에디터와 RHI 모듈은 로드하지 않습니다.
 2. 서버 설정(`ServerConfig`)을 읽습니다.
 3. `ModuleHost::initializeDedicatedServer` 가 창과 디바이스 없이(`nullptr`) 게임 인스턴스를 만듭니다.

@@ -1,5 +1,5 @@
-<UiDocument _schemaVersion="1">
-	<UiScreenDesc _bPausesGame="true" />
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _bPausesGame="true" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/options.uistyle.xml</item>
 	</_listStyleSheet>
@@ -40,4 +40,4 @@
 			</BorderPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
-</UiDocument>
+</UIDocument>

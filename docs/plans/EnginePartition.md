@@ -16,7 +16,7 @@
 | Graphics → Physics | 1 | 1 | `PhysicsDebugDraw.h` |
 | Resource → Animation | 5 | 2 | `AnimClip.h` · `RigAsset.h` |
 | Scene → Graphics | 3 | 2 | `MaterialCache.h` · `IRHIDevice.h` |
-| Automation → UI / UI → Automation | 2 / 3 | 1 / 1 | `UiSystem.h` / `AutomationRunner.h` — 게이트가 보고하는 유일한 사이클 |
+| Automation → UI / UI → Automation | 2 / 3 | 1 / 1 | `UISystem.h` / `AutomationRunner.h` — 게이트가 보고하는 유일한 사이클 |
 
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 10 · Navigation 5 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.

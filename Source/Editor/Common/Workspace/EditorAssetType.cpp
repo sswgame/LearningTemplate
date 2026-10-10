@@ -18,8 +18,8 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Resource/AssetFormat.h"
-#include "Engine/UI/Document/UiDocument.h"
-#include "Engine/UI/Style/UiStyleSheet.h"
+#include "Engine/UI/Document/UIDocument.h"
+#include "Engine/UI/Style/UIStyleSheet.h"
 
 namespace sw::editor
 {
@@ -61,8 +61,8 @@ namespace sw::editor
         constexpr string_view kArrHeightfieldRawExt[]  = { ".png", ".r16" };          ///< `heightfields_raw/` 의 원본 · 구멍 마스크 — 임포트하는 것이 리로드다
         constexpr string_view kArrHeightfieldExt[]     = { HeightfieldData::kExtension };
         constexpr string_view kArrLocalizationSuffix[] = { SourceStringTable::kExtension, TranslationTable::kExtension, LocalizationProject::kExtension }; ///< 올린 프로젝트를 다시 읽는다(`LocalizationManager`)
-        constexpr string_view kArrUiDocumentSuffix[]   = { UiDocumentAsset::kExtension };                                                                  ///< UI 문서 — 그 문서로 연 화면을 다시 짓는다(`UiSystem`)
-        constexpr string_view kArrUiStyleSuffix[]      = { UiStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트 — 쓰는 화면을 다시 맞춘다
+        constexpr string_view kArrUIDocumentSuffix[]   = { UIDocumentAsset::kExtension };                                                                  ///< UI 문서 — 그 문서로 연 화면을 다시 짓는다(`UISystem`)
+        constexpr string_view kArrUIStyleSuffix[]      = { UIStyleSheetAsset::kExtension };                                                                ///< UI 스타일 시트 — 쓰는 화면을 다시 맞춘다
         constexpr string_view kArrModuleDataSuffix[]   = { ".interactions.xml", ".elements.xml" };                                                         ///< 모듈이 올린 데이터 표 캐시(GameFramework 상호작용 · 원소 규칙 표)
         /**
          * @struct AssetMatchRow
@@ -109,8 +109,8 @@ namespace sw::editor
             {     EditorAssetType::Fracture,      MatchMode::Extension,        kArrFractureExt,        countOf( kArrFractureExt ),                             "Fracture",                                              nullptr},
             {  EditorAssetType::Heightfield,      MatchMode::Extension,     kArrHeightfieldExt,     countOf( kArrHeightfieldExt ),                                nullptr,                                              nullptr},
             {         EditorAssetType::Data,       MatchMode::EndsWith, kArrLocalizationSuffix, countOf( kArrLocalizationSuffix ),                          "StringTable",                                              nullptr},
-            {         EditorAssetType::Data,       MatchMode::EndsWith,   kArrUiDocumentSuffix,   countOf( kArrUiDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
-            {         EditorAssetType::Data,       MatchMode::EndsWith,      kArrUiStyleSuffix,      countOf( kArrUiStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
+            {         EditorAssetType::Data,       MatchMode::EndsWith,   kArrUIDocumentSuffix,   countOf( kArrUIDocumentSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
+            {         EditorAssetType::Data,       MatchMode::EndsWith,      kArrUIStyleSuffix,      countOf( kArrUIStyleSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {         EditorAssetType::Data,       MatchMode::EndsWith,   kArrModuleDataSuffix,   countOf( kArrModuleDataSuffix ), AssetReloadRoute::kAnyCacheHoldingPath,                                              nullptr},
             {         EditorAssetType::Data,      MatchMode::Extension,            kArrDataExt,            countOf( kArrDataExt ),                                nullptr,                                              nullptr},
         };

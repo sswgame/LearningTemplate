@@ -459,7 +459,7 @@ SW_TEST_CASE( AppSmokeTest, EditorStartupSceneIsTheSceneThatOpens )
     SW_EXPECT_TRUE_MSG( result._errorCount == 0, result._firstErrorLine.c_str() );
     SW_EXPECT_EQUAL( 0u, result._missingComponentLineCount );
     SW_ASSERT_TRUE_MSG( result._listMarkedLine.empty() == false, "no scene became active" );
-    SW_EXPECT_STREQ( "Active scene swapped to 'SpriteUi'", result._listMarkedLine.back().c_str() );
+    SW_EXPECT_STREQ( "Active scene swapped to 'SpriteUI'", result._listMarkedLine.back().c_str() );
 }
 
 /**

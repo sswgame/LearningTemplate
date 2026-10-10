@@ -248,7 +248,7 @@ namespace
         using LiveShaderStartupStep    = Defaults;
         using SceneRhiStartupStep      = Defaults;
         using TelemetryStartupStep     = Defaults;
-        using UiStartupStep            = Defaults; // UI 시험은 자기 UiSystem 을 만든다(자기 입력 관리자)
+        using UIStartupStep            = Defaults; // UI 시험은 자기 UISystem 을 만든다(자기 입력 관리자)
     };
 } // namespace
 

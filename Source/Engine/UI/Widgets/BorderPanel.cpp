@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -27,7 +27,7 @@ namespace sw
         return StaticType();
     }
 
-    void BorderPanel::setBackground( const UiBrush& brush )
+    void BorderPanel::setBackground( const UIBrush& brush )
     {
         _background = brush;
         invalidate( WidgetDirty::kPaint );
@@ -51,28 +51,28 @@ namespace sw
 
     float4 BorderPanel::computeEffectivePadding() const
     {
-        const UiComputedStyle* pStyle = getComputedStyle();
-        return pStyle != nullptr && pStyle->has( UiStyleField::Padding ) ? pStyle->_value._padding : _contentPadding;
+        const UIComputedStyle* pStyle = getComputedStyle();
+        return pStyle != nullptr && pStyle->has( UIStyleField::Padding ) ? pStyle->_value._padding : _contentPadding;
     }
 
-    UiBrush BorderPanel::computeEffectiveBrush() const
+    UIBrush BorderPanel::computeEffectiveBrush() const
     {
-        UiBrush                brush  = getBackgroundBrush();
-        const UiComputedStyle* pStyle = getComputedStyle();
+        UIBrush                brush  = getBackgroundBrush();
+        const UIComputedStyle* pStyle = getComputedStyle();
         if ( pStyle == nullptr )
             return brush;
-        if ( pStyle->has( UiStyleField::BackgroundColor ) )
+        if ( pStyle->has( UIStyleField::BackgroundColor ) )
             brush._color = pStyle->_value._backgroundColor;
-        if ( pStyle->has( UiStyleField::CornerRadius ) )
+        if ( pStyle->has( UIStyleField::CornerRadius ) )
             brush._cornerRadius = pStyle->_value._cornerRadius;
-        if ( pStyle->has( UiStyleField::BorderWidth ) )
+        if ( pStyle->has( UIStyleField::BorderWidth ) )
             brush._borderWidth = pStyle->_value._borderWidth;
-        if ( pStyle->has( UiStyleField::BorderColor ) )
+        if ( pStyle->has( UIStyleField::BorderColor ) )
             brush._borderColor = pStyle->_value._borderColor;
         return brush;
     }
 
-    float2 BorderPanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 BorderPanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         const float4  padding = computeEffectivePadding();
         const float32 padX    = padding._x + padding._z;
@@ -83,13 +83,13 @@ namespace sw
         const float4& childPadding = child.getLayoutSlot()._padding;
         const float32 childPadX    = childPadding._x + childPadding._z;
         const float32 childPadY    = childPadding._y + childPadding._w;
-        const float2  childAvailable{ UiLayoutPass::computeRemaining( availableSize._x, padX + childPadX ),
-                                     UiLayoutPass::computeRemaining( availableSize._y, padY + childPadY ) };
-        const float2  desired = UiLayoutPass::measure( child, context, childAvailable );
+        const float2  childAvailable{ UILayoutPass::computeRemaining( availableSize._x, padX + childPadX ),
+                                     UILayoutPass::computeRemaining( availableSize._y, padY + childPadY ) };
+        const float2  desired = UILayoutPass::measure( child, context, childAvailable );
         return float2{ desired._x + childPadX + padX, desired._y + childPadY + padY };
     }
 
-    void BorderPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void BorderPanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         if ( getChildCount() == 0 )
             return;
@@ -98,16 +98,16 @@ namespace sw
         arrangeChild( context, *getChild( 0 ), float2{ padding._x, padding._y }, inner );
     }
 
-    void BorderPanel::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void BorderPanel::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         const float2&          size        = getGeometry()._size;
-        const UiBrush          brush       = computeEffectiveBrush();
-        const UiComputedStyle* pStyle      = getComputedStyle();
+        const UIBrush          brush       = computeEffectiveBrush();
+        const UIComputedStyle* pStyle      = getComputedStyle();
         const bool             bHasStyle   = pStyle != nullptr;
-        const float4           shadowColor = bHasStyle && pStyle->has( UiStyleField::ShadowColor ) ? pStyle->_value._shadowColor : _shadowColor;
-        const float32          shadowBlur  = bHasStyle && pStyle->has( UiStyleField::ShadowBlur ) ? pStyle->_value._shadowBlur : _shadowBlur;
-        const float2           shadowShift = bHasStyle && pStyle->has( UiStyleField::ShadowOffset ) ? pStyle->_value._shadowOffset : _shadowOffset;
+        const float4           shadowColor = bHasStyle && pStyle->has( UIStyleField::ShadowColor ) ? pStyle->_value._shadowColor : _shadowColor;
+        const float32          shadowBlur  = bHasStyle && pStyle->has( UIStyleField::ShadowBlur ) ? pStyle->_value._shadowBlur : _shadowBlur;
+        const float2           shadowShift = bHasStyle && pStyle->has( UIStyleField::ShadowOffset ) ? pStyle->_value._shadowOffset : _shadowOffset;
         if ( shadowColor._w > 0.0f )
             painter.drawShadow( float2{}, size, brush._cornerRadius, shadowColor, shadowBlur, shadowShift );
         if ( brush.isInvisible() == false )

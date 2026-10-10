@@ -53,12 +53,12 @@ namespace sw
         bool clipsChildren() const { return _bClipChildren; }
         /** @brief 자른 자손을 내용을 옮겨 보이게 할 수 있는 패널이면 true 입니다(스크롤 패널) — 포커스 탐색은 이 패널이 자른 자손도 후보로 본다. */
         virtual bool canScrollIntoView() const { return false; }
-        /** @brief 자손 @p widget 이 보이도록 내용을 옮깁니다(포커스 탐색 뒤 — `UiFocusManager::navigate`). 옮겼으면 true 입니다. 기본은 아무것도 하지 않습니다. */
+        /** @brief 자손 @p widget 이 보이도록 내용을 옮깁니다(포커스 탐색 뒤 — `UIFocusManager::navigate`). 옮겼으면 true 입니다. 기본은 아무것도 하지 않습니다. */
         virtual bool scrollIntoView( const Widget& widget );
         void         setClipChildren( bool bClip );
         /**
          * @brief 자식 슬롯의 위 변이 자식 순서대로 내려가는(같거나 커지는) 패널이면 true 입니다(세로 상자 · 가로 흐름).
-         * @details 그리기가 자르기 안에 드는 자식 범위를 이분 탐색으로 찾습니다(`UiPaintPass`). 자식의 렌더 변환은 보지 않으므로,
+         * @details 그리기가 자르기 안에 드는 자식 범위를 이분 탐색으로 찾습니다(`UIPaintPass`). 자식의 렌더 변환은 보지 않으므로,
          *          렌더 변환으로 슬롯에서 멀리 옮긴 자식은 슬롯이 자르기 밖이면 그려지지 않습니다.
          */
         virtual bool isChildOrderTopToBottom() const { return false; }
@@ -70,21 +70,21 @@ namespace sw
          * @brief 자식을 배치합니다(레이아웃 — 패널마다 다르다). 각 자식에 `arrangeChild( context, child, 위치, 크기 )` 를 부릅니다. 기본은 아무것도 하지 않습니다.
          * @details 자식의 원하는 크기(`getDesiredSize`)는 같은 걷기의 `computeDesiredSize` 가 이미 쟀습니다. @p size 는 이 패널 자기 크기입니다.
          */
-        virtual void arrangeChildren( const UiLayoutContext& context, const float2& size );
+        virtual void arrangeChildren( const UILayoutContext& context, const float2& size );
         /**
-         * @brief 자식 하나를 이 패널의 로컬 슬롯 사각형에 놓습니다 — 자식 슬롯의 여백 · 정렬을 적용하고 자식의 자식까지 놓습니다(`UiLayoutPass::arrange`).
+         * @brief 자식 하나를 이 패널의 로컬 슬롯 사각형에 놓습니다 — 자식 슬롯의 여백 · 정렬을 적용하고 자식의 자식까지 놓습니다(`UILayoutPass::arrange`).
          * @details 패널은 늘 왼쪽에서 오른쪽으로 계산해 넘깁니다. 이 패널이 오른쪽에서 왼쪽이면 여기서 사각형을 패널 너비로 거울합니다
          *          (x → 너비 − x − 폭: 상자의 가로 순서 · 캔버스의 앵커와 오프셋 · 격자 열 · 흐름 줄이 한 번에 뒤집힌다 — Slate 패널의 FlowDirection 과 같은 결과).
          */
-        void arrangeChild( const UiLayoutContext& context, Widget& child, const float2& localPosition, const float2& size );
+        void arrangeChild( const UILayoutContext& context, Widget& child, const float2& localPosition, const float2& size );
         /** @brief 오른쪽에서 왼쪽일 때 자식 사각형을 거울로 놓는가입니다. 기본 true — 스크롤 패널은 내용 자리가 스크롤 오프셋이라 false. */
         virtual bool mirrorsChildrenInRightToLeft() const { return true; }
 
     private:
         friend class Widget;
         friend class WidgetTree;
-        friend class UiLayoutPass;
-        friend class UiPaintPass;
+        friend class UILayoutPass;
+        friend class UIPaintPass;
 
         vector<unique_ptr<Widget>> _listChild;
         PROPERTY( DisplayName = "Clip Children" )

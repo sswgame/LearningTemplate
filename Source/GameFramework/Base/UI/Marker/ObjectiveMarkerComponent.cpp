@@ -78,14 +78,14 @@ namespace sw
     {
         using Internal              = ObjectiveMarkerComponentInternal;
         unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
-        column->setOrientation( UiOrientation::Vertical );
+        column->setOrientation( UIOrientation::Vertical );
         column->setSpacing( 2.0f );
         unique_ptr<BorderPanel> arrow = make_unique<BorderPanel>();
-        arrow->setBackground( UiBrush::makeSolid( float4{ 1.0f, 0.82f, 0.25f, 1.0f }, 2.0f ) );
+        arrow->setBackground( UIBrush::makeSolid( float4{ 1.0f, 0.82f, 0.25f, 1.0f }, 2.0f ) );
         WidgetLayoutSlot arrowSlot     = arrow->getLayoutSlot();
         arrowSlot._widthOverride       = Internal::kArrowWidth;
         arrowSlot._heightOverride      = Internal::kArrowLength;
-        arrowSlot._horizontalAlignment = UiAlignment::Center;
+        arrowSlot._horizontalAlignment = UIAlignment::Center;
         arrow->setLayoutSlot( arrowSlot );
         arrow->setVisibility( WidgetVisibility::Hidden );
         (void)column->addChild( std::move( arrow ) );

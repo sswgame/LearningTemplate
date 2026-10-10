@@ -2416,14 +2416,14 @@ SW_TEST_CASE( GpuSceneTest, SortingLayerOrdersTransparentBeforeDepth )
     SW_ASSERT_TRUE( fixture.initialize() );
     const sw::Render2DSettings& settings = sw::Render2DSettings::getActive();
     uint32                      foregroundKey{ 0 };
-    uint32                      worldUiKey{ 0 };
+    uint32                      worldUIKey{ 0 };
     uint32                      defaultMinusOneKey{ 0 };
     SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "Foreground" ), 0, foregroundKey ) );
-    SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUiKey ) );
+    SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUIKey ) );
     SW_ASSERT_TRUE( settings.resolveSortKey( sw::hashed_string( "Default" ), -1, defaultMinusOneKey ) );
 
     // 카메라는 원점에서 -Z 를 본다. 거리만 보면 그리는 순서는 x=4(가장 멂) → 3 → 2 → 1 이다.
-    SW_ASSERT_NOT_NULL( fixture.addMesh( "WorldUiFarthest", sw::float3{ 4.0f, 0.0f, -20.0f }, worldUiKey ) );
+    SW_ASSERT_NOT_NULL( fixture.addMesh( "WorldUIFarthest", sw::float3{ 4.0f, 0.0f, -20.0f }, worldUIKey ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "ForegroundFar", sw::float3{ 3.0f, 0.0f, -10.0f }, foregroundKey ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "DefaultNear", sw::float3{ 2.0f, 0.0f, -2.0f }, sw::Render2DSettings::kDefaultSortKeyPlaceholder ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "DefaultBelowNearer", sw::float3{ 1.0f, 0.0f, -1.0f }, defaultMinusOneKey ) );
@@ -2451,16 +2451,16 @@ SW_TEST_CASE( GpuSceneTest, EqualDepthTransparentOrderIsStableUnderViewAxis )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     TransparentSortFixture fixture;
     SW_ASSERT_TRUE( fixture.initialize() );
-    uint32 worldUiKey{ 0 };
-    SW_ASSERT_TRUE( sw::Render2DSettings::getActive().resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUiKey ) );
+    uint32 worldUIKey{ 0 };
+    SW_ASSERT_TRUE( sw::Render2DSettings::getActive().resolveSortKey( sw::hashed_string( "WorldUI" ), 0, worldUIKey ) );
 
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteLeft", sw::float3{ -1.0f, 0.0f, 0.0f }, 0 ) );
     SW_ASSERT_NOT_NULL( fixture.addMesh( "SpriteRight", sw::float3{ 1.0f, 0.0f, 0.0f }, 0 ) );
     // 월드 UI 는 컴포넌트가 아니라 인스턴스 배치(HP 바 · 데미지 숫자와 같은 길)다. 같은 Z.
-    sw::unique_ptr<sw::MeshInstanceBatch> pWorldUi = sw::make_unique<sw::MeshInstanceBatch>( fixture._cube, fixture._glass.get(), nullptr, 1u );
-    pWorldUi->setWorld( 0, sw::float4x4::createTrs( sw::float3( 0.5f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
-    pWorldUi->setSortKey( worldUiKey );
-    fixture._scene.getObjectManager()->getPrimitiveRegistry().addInstanceBatch( pWorldUi.get() );
+    sw::unique_ptr<sw::MeshInstanceBatch> pWorldUI = sw::make_unique<sw::MeshInstanceBatch>( fixture._cube, fixture._glass.get(), nullptr, 1u );
+    pWorldUI->setWorld( 0, sw::float4x4::createTrs( sw::float3( 0.5f, 0.0f, 0.0f ), sw::float3( 0.0f, 0.0f, 0.0f ), sw::float3( 1.0f, 1.0f, 1.0f ) ) );
+    pWorldUI->setSortKey( worldUIKey );
+    fixture._scene.getObjectManager()->getPrimitiveRegistry().addInstanceBatch( pWorldUI.get() );
 
     const sw::float3 cameraLeft{ -6.0f, 0.0f, -8.0f };
     const sw::float3 cameraRight{ 6.0f, 0.0f, -8.0f };

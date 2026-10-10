@@ -44,9 +44,9 @@ namespace sw
         CheckedDelegate& getOnCheckedChanged() { return _onCheckedChanged; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
         void   handleClick() override;
         /** @brief 버튼 상태에 켜짐(`:checked`)을 더합니다. */
         uint32 computeStyleStates() const override;

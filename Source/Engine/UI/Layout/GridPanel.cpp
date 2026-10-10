@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -50,14 +50,14 @@ namespace sw
             }
 
             /** @brief 트랙 정의가 비었으면 @p count 개의 Fill 트랙을, 아니면 정의를 그대로 씁니다. */
-            static void makeTracks( const vector<UiGridTrack>& listDefined, uint32 count, vector<UiGridTrack>& outListTrack )
+            static void makeTracks( const vector<UIGridTrack>& listDefined, uint32 count, vector<UIGridTrack>& outListTrack )
             {
                 if ( listDefined.empty() == false )
                 {
                     outListTrack = listDefined;
                     return;
                 }
-                outListTrack.assign( count, UiGridTrack{} );
+                outListTrack.assign( count, UIGridTrack{} );
             }
 
             /** @brief 한 축의 칸 시작 · 넓이를 트랙 수 안으로 묶습니다. 밖이면 true(마지막 트랙으로 옮겼다). */
@@ -82,13 +82,13 @@ namespace sw
             }
 
             /** @brief 덮은 트랙이 모두 Fixed 면 그 합(가용 길이로 쓴다), 아니면 무한입니다. */
-            static float32 computeFixedSpan( const vector<UiGridTrack>& listTrack, uint32 start, uint32 span, float32 spacing )
+            static float32 computeFixedSpan( const vector<UIGridTrack>& listTrack, uint32 start, uint32 span, float32 spacing )
             {
                 float32 total = spacing * static_cast<float32>( span - 1 );
                 for ( uint32 index = start; index < start + span; ++index )
                 {
-                    if ( listTrack[index]._kind != UiGridTrackKind::Fixed )
-                        return kUiUnbounded;
+                    if ( listTrack[index]._kind != UIGridTrackKind::Fixed )
+                        return kUIUnbounded;
                     total += listTrack[index]._value;
                 }
                 return total;
@@ -99,14 +99,14 @@ namespace sw
              * @param listExtent 자리마다 그 축의 (원하는 크기 + 여백).
              * @param bShareFill true 면 Fill 트랙이 남은 길이를 무게로 나눈다(가용 길이가 무한이면 내용 크기). false 면 Fill 도 내용 크기(원하는 크기 계산).
              */
-            static void resolveTracks( const vector<UiGridTrack>& listTrack, float32 available, float32 spacing, const vector<GridPlacement>& listPlacement,
+            static void resolveTracks( const vector<UIGridTrack>& listTrack, float32 available, float32 spacing, const vector<GridPlacement>& listPlacement,
                                        const vector<float32>& listExtent, bool bColumn, bool bShareFill, vector<float32>& outListSize )
             {
                 const uint32 trackCount = static_cast<uint32>( listTrack.size() );
                 outListSize.assign( trackCount, 0.0f );
                 for ( uint32 index = 0; index < trackCount; ++index )
                 {
-                    if ( listTrack[index]._kind == UiGridTrackKind::Fixed )
+                    if ( listTrack[index]._kind == UIGridTrackKind::Fixed )
                         outListSize[index] = MathUtil::max( 0.0f, listTrack[index]._value );
                 }
                 // 1) 넓이 1 자식 — Auto · Fill 트랙의 내용 크기.
@@ -115,7 +115,7 @@ namespace sw
                     const GridPlacement& placement = listPlacement[index];
                     const uint32         start     = bColumn ? placement._column : placement._row;
                     const uint32         span      = bColumn ? placement._columnSpan : placement._rowSpan;
-                    if ( span != 1 || listTrack[start]._kind == UiGridTrackKind::Fixed )
+                    if ( span != 1 || listTrack[start]._kind == UIGridTrackKind::Fixed )
                         continue;
                     outListSize[start] = MathUtil::max( outListSize[start], listExtent[index] );
                 }
@@ -131,7 +131,7 @@ namespace sw
                     uint32        autoCount = 0;
                     for ( uint32 track = start; track < start + span; ++track )
                     {
-                        if ( listTrack[track]._kind == UiGridTrackKind::Auto )
+                        if ( listTrack[track]._kind == UIGridTrackKind::Auto )
                             ++autoCount;
                     }
                     if ( shortfall <= 0.0f || autoCount == 0 )
@@ -139,18 +139,18 @@ namespace sw
                     const float32 share = shortfall / static_cast<float32>( autoCount );
                     for ( uint32 track = start; track < start + span; ++track )
                     {
-                        if ( listTrack[track]._kind == UiGridTrackKind::Auto )
+                        if ( listTrack[track]._kind == UIGridTrackKind::Auto )
                             outListSize[track] += share;
                     }
                 }
                 // 3) Fill — 남은 길이를 무게로.
-                if ( bShareFill == false || UiLayoutPass::isUnbounded( available ) )
+                if ( bShareFill == false || UILayoutPass::isUnbounded( available ) )
                     return;
                 float32 used        = spacing * static_cast<float32>( trackCount > 0 ? trackCount - 1 : 0 );
                 float32 totalWeight = 0.0f;
                 for ( uint32 index = 0; index < trackCount; ++index )
                 {
-                    if ( listTrack[index]._kind == UiGridTrackKind::Fill )
+                    if ( listTrack[index]._kind == UIGridTrackKind::Fill )
                         totalWeight += MathUtil::max( 0.0f, listTrack[index]._value );
                     else
                         used += outListSize[index];
@@ -158,7 +158,7 @@ namespace sw
                 const float32 remaining = MathUtil::max( 0.0f, available - used );
                 for ( uint32 index = 0; index < trackCount; ++index )
                 {
-                    if ( listTrack[index]._kind != UiGridTrackKind::Fill )
+                    if ( listTrack[index]._kind != UIGridTrackKind::Fill )
                         continue;
                     outListSize[index] = totalWeight > 0.0f ? remaining * MathUtil::max( 0.0f, listTrack[index]._value ) / totalWeight : 0.0f;
                 }
@@ -192,13 +192,13 @@ namespace sw
         return StaticType();
     }
 
-    void GridPanel::setColumns( const vector<UiGridTrack>& listColumn )
+    void GridPanel::setColumns( const vector<UIGridTrack>& listColumn )
     {
         _listColumn = listColumn;
         invalidate( WidgetDirty::kLayout );
     }
 
-    void GridPanel::setRows( const vector<UiGridTrack>& listRow )
+    void GridPanel::setRows( const vector<UIGridTrack>& listRow )
     {
         _listRow = listRow;
         invalidate( WidgetDirty::kLayout );
@@ -212,13 +212,13 @@ namespace sw
         invalidate( WidgetDirty::kLayout );
     }
 
-    float2 GridPanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 GridPanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         uint32 columnCount = 0;
         uint32 rowCount    = 0;
         GridPanelInternal::countTracks( *this, columnCount, rowCount );
-        vector<UiGridTrack> listColumnTrack;
-        vector<UiGridTrack> listRowTrack;
+        vector<UIGridTrack> listColumnTrack;
+        vector<UIGridTrack> listRowTrack;
         GridPanelInternal::makeTracks( _listColumn, columnCount, listColumnTrack );
         GridPanelInternal::makeTracks( _listRow, rowCount, listRowTrack );
 
@@ -240,7 +240,7 @@ namespace sw
         if ( _outOfRangeCellCount > 0 && _bWarnedOutOfRange == false )
         {
             _bWarnedOutOfRange = true;
-            SW_LOG_WARNING( "[Ui] Grid panel '%#' has %# children outside its tracks - they are placed in the last track", getName().c_str(), _outOfRangeCellCount );
+            SW_LOG_WARNING( "[UI] Grid panel '%#' has %# children outside its tracks - they are placed in the last track", getName().c_str(), _outOfRangeCellCount );
         }
 
         // 1) 열: 덮은 트랙이 모두 Fixed 면 그 너비, 아니면 무한으로 잰다.
@@ -253,8 +253,8 @@ namespace sw
             const float32        padY            = padding._y + padding._w;
             const float32        columnAvailable = GridPanelInternal::computeFixedSpan( listColumnTrack, placement._column, placement._columnSpan, _cellSpacing._x );
             const float32        rowAvailable    = GridPanelInternal::computeFixedSpan( listRowTrack, placement._row, placement._rowSpan, _cellSpacing._y );
-            const float2         desired         = UiLayoutPass::measure( *placement._pChild, context,
-                                                                          float2{ UiLayoutPass::computeRemaining( columnAvailable, padX ), UiLayoutPass::computeRemaining( rowAvailable, padY ) } );
+            const float2         desired         = UILayoutPass::measure( *placement._pChild, context,
+                                                                          float2{ UILayoutPass::computeRemaining( columnAvailable, padX ), UILayoutPass::computeRemaining( rowAvailable, padY ) } );
             listExtent[index]                    = desired._x + padX;
         }
         vector<float32> listColumnSize;
@@ -271,9 +271,9 @@ namespace sw
             const float32        padY         = padding._y + padding._w;
             const float32        columnWidth  = GridPanelInternal::sumSpan( listColumnSize, placement._column, placement._columnSpan, _cellSpacing._x );
             const float32        rowAvailable = GridPanelInternal::computeFixedSpan( listRowTrack, placement._row, placement._rowSpan, _cellSpacing._y );
-            const float32        width        = UiLayoutPass::isUnbounded( availableSize._x ) ? kUiUnbounded : columnWidth;
-            const float2         desired      = UiLayoutPass::measure( *placement._pChild, context,
-                                                                       float2{ UiLayoutPass::computeRemaining( width, padX ), UiLayoutPass::computeRemaining( rowAvailable, padY ) } );
+            const float32        width        = UILayoutPass::isUnbounded( availableSize._x ) ? kUIUnbounded : columnWidth;
+            const float2         desired      = UILayoutPass::measure( *placement._pChild, context,
+                                                                       float2{ UILayoutPass::computeRemaining( width, padX ), UILayoutPass::computeRemaining( rowAvailable, padY ) } );
             listExtent[index]                 = desired._y + padY;
         }
         vector<float32> listRowContent;
@@ -281,13 +281,13 @@ namespace sw
         return float2{ GridPanelInternal::sumAll( listColumnContent, _cellSpacing._x ), GridPanelInternal::sumAll( listRowContent, _cellSpacing._y ) };
     }
 
-    void GridPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void GridPanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         uint32 columnCount = 0;
         uint32 rowCount    = 0;
         GridPanelInternal::countTracks( *this, columnCount, rowCount );
-        vector<UiGridTrack> listColumnTrack;
-        vector<UiGridTrack> listRowTrack;
+        vector<UIGridTrack> listColumnTrack;
+        vector<UIGridTrack> listRowTrack;
         GridPanelInternal::makeTracks( _listColumn, columnCount, listColumnTrack );
         GridPanelInternal::makeTracks( _listRow, rowCount, listRowTrack );
 

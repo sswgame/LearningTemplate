@@ -6,7 +6,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -16,9 +16,9 @@ namespace sw
         , _bChecked{ false }
     {
         // 상자가 겉모습이다 — 바탕은 투명, 호버 · 누름만 옅게.
-        setBackground( UiBrush::makeSolid( float4{}, 0.0f ) );
-        setStateBrushes( UiBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.06f }, 4.0f ), UiBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.12f }, 4.0f ),
-                         UiBrush::makeSolid( float4{}, 0.0f ) );
+        setBackground( UIBrush::makeSolid( float4{}, 0.0f ) );
+        setStateBrushes( UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.06f }, 4.0f ), UIBrush::makeSolid( float4{ 1.0f, 1.0f, 1.0f, 0.12f }, 4.0f ),
+                         UIBrush::makeSolid( float4{}, 0.0f ) );
         setContentPadding( float4{} );
     }
 
@@ -39,7 +39,7 @@ namespace sw
 
     uint32 CheckBoxWidget::computeStyleStates() const
     {
-        return ButtonWidget::computeStyleStates() | ( _bChecked ? UiStyleState::kChecked : UiStyleState::kNone );
+        return ButtonWidget::computeStyleStates() | ( _bChecked ? UIStyleState::kChecked : UIStyleState::kNone );
     }
 
     void CheckBoxWidget::onBoundPropertyChanged( const PropertyInfo& property )
@@ -60,17 +60,17 @@ namespace sw
         ButtonWidget::handleClick();
     }
 
-    float2 CheckBoxWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 CheckBoxWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         const float32 boxSpan = kBoxSize + kBoxGap;
         if ( getChildCount() == 0 )
             return float2{ kBoxSize, kBoxSize };
-        const float2 childAvailable{ UiLayoutPass::computeRemaining( availableSize._x, boxSpan ), availableSize._y };
-        const float2 desired = UiLayoutPass::measure( *getChild( 0 ), context, childAvailable );
+        const float2 childAvailable{ UILayoutPass::computeRemaining( availableSize._x, boxSpan ), availableSize._y };
+        const float2 desired = UILayoutPass::measure( *getChild( 0 ), context, childAvailable );
         return float2{ boxSpan + desired._x, MathUtil::max( kBoxSize, desired._y ) };
     }
 
-    void CheckBoxWidget::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void CheckBoxWidget::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         if ( getChildCount() == 0 )
             return;
@@ -79,7 +79,7 @@ namespace sw
         arrangeChild( context, *getChild( 0 ), float2{ boxSpan, 0.0f }, float2{ MathUtil::max( 0.0f, size._x - boxSpan ), size._y } );
     }
 
-    void CheckBoxWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void CheckBoxWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         ButtonWidget::paint( painter, context ); // 호버 · 누름 바탕
         const float2& size = getGeometry()._size;

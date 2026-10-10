@@ -77,11 +77,11 @@ namespace sw
         string _editCondition;
         /** @brief `FileFilter = "*.png;*.dds"` — 경로 칸이 받는 파일입니다. */
         string _fileFilter;
-        /** @brief `UiMin` · `UiMax` — 인스펙터 슬라이더 · 드래그 범위입니다. 허용 범위(`_minRange` · `_maxRange`)와 따로입니다. */
+        /** @brief `UIMin` · `UIMax` — 인스펙터 슬라이더 · 드래그 범위입니다. 허용 범위(`_minRange` · `_maxRange`)와 따로입니다. */
         float32                _uiMinRange;
         float32                _uiMaxRange;
-        uint8                  _bHasUiMinRange      : 1;
-        uint8                  _bHasUiMaxRange      : 1;
+        uint8                  _bHasUIMinRange      : 1;
+        uint8                  _bHasUIMaxRange      : 1;
         uint8                  _bEditConditionHides : 1; ///< 조건이 거짓이면 막지 않고 숨긴다
         uint8                  _bColorHdr           : 1; ///< 색을 HDR(1 을 넘는 값)로 고친다
         uint8                  _bMultiline          : 1; ///< 여러 줄 글 칸
@@ -148,11 +148,11 @@ namespace sw
         /** @brief 아래 · 위 경계가 둘 다 있으면(슬라이더로 그릴 수 있으면) true 입니다. */
         bool hasFullRange() const noexcept { return _bHasMinRange != SW_FALSE && _bHasMaxRange != SW_FALSE; }
 
-        /** @brief 슬라이더 범위(`UiMin` · `UiMax`)가 둘 다 있으면 true 입니다. Shipping 에는 없습니다. */
-        bool hasFullUiRange() const noexcept
+        /** @brief 슬라이더 범위(`UIMin` · `UIMax`)가 둘 다 있으면 true 입니다. Shipping 에는 없습니다. */
+        bool hasFullUIRange() const noexcept
         {
 #if !defined( SW_SHIPPING )
-            return _bHasUiMinRange != SW_FALSE && _bHasUiMaxRange != SW_FALSE;
+            return _bHasUIMinRange != SW_FALSE && _bHasUIMaxRange != SW_FALSE;
 #else
             return false;
 #endif

@@ -32,10 +32,10 @@ namespace sw
         virtual void shutdown() = 0;
 
         // ------------------------------------------------------------------------------
-        // 2) 프레임: updateUi(메인 스레드) → preRender / render / postPresent(렌더 스레드)
+        // 2) 프레임: updateUI(메인 스레드) → preRender / render / postPresent(렌더 스레드)
         // ------------------------------------------------------------------------------
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
-        virtual void updateUi() = 0;
+        virtual void updateUI() = 0;
         /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
         virtual void preRender( IRHIDevice* pRhiDevice ) = 0;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
@@ -44,9 +44,9 @@ namespace sw
         virtual void postPresent( IRHIDevice* pRhiDevice ) = 0;
         /**
          * @brief 렌더 대기 중인 draw 스냅샷 표시를 버립니다. **스냅샷을 읽을 쪽이 더 이상 없을 때** 부릅니다.
-         * @details `updateUi` 는 스냅샷을 내보내면서 "렌더 대기" 로 표시하고, 그 표시를 푸는 것은 렌더 스레드의 `postPresent`
+         * @details `updateUI` 는 스냅샷을 내보내면서 "렌더 대기" 로 표시하고, 그 표시를 푸는 것은 렌더 스레드의 `postPresent`
          *          뿐입니다. 모듈 리로드 · RHI 교체처럼 렌더 워커를 먼저 비우는 경로에서는 그 `postPresent` 가 영영 오지 않아, 다음
-         *          `updateUi` 나 `shutdown` 이 끝없이 기다립니다. 그래서 워커를 비운 쪽이 이 상태 변화를 알려 줍니다.
+         *          `updateUI` 나 `shutdown` 이 끝없이 기다립니다. 그래서 워커를 비운 쪽이 이 상태 변화를 알려 줍니다.
          */
         virtual void abandonPendingDraw() = 0;
 

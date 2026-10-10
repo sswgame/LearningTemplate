@@ -190,11 +190,11 @@ namespace sw
 
         // 래스터 픽셀 → UI 단위 → 물리 픽셀. 글리프 비트맵은 윤곽 둘레로 spread 만큼 넓고, 베어링은 그 비트맵의 왼쪽 위다(기준선 위가 +).
         const SdfRasterParams& rasterParams  = glyphCache.getRasterParams();
-        const float32          rasterToUi    = style._fontSize / static_cast<float32>( rasterParams._pixelSize );
-        const float32          rasterToPixel = rasterToUi * _uiScale;
+        const float32          rasterToUI    = style._fontSize / static_cast<float32>( rasterParams._pixelSize );
+        const float32          rasterToPixel = rasterToUI * _uiScale;
         const GlyphAtlasRect&  atlasRect     = pGlyph->_rect;
-        const float2           glyphPosition{ origin._x + pGlyph->_bearingPx._x * rasterToUi, origin._y - pGlyph->_bearingPx._y * rasterToUi };
-        const float2           glyphSize{ static_cast<float32>( atlasRect._width ) * rasterToUi, static_cast<float32>( atlasRect._height ) * rasterToUi };
+        const float2           glyphPosition{ origin._x + pGlyph->_bearingPx._x * rasterToUI, origin._y - pGlyph->_bearingPx._y * rasterToUI };
+        const float2           glyphSize{ static_cast<float32>( atlasRect._width ) * rasterToUI, static_cast<float32>( atlasRect._height ) * rasterToUI };
 
         CanvasQuad quad{};
         placeRect( glyphPosition, glyphSize, quad );

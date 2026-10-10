@@ -2,13 +2,13 @@
 
 #include "Engine/UI/Screen/SettingsConfirmScreen.h"
 
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 namespace sw
 {
     SettingsConfirmViewModel::SettingsConfirmViewModel()
-        : UiViewModel{}
+        : UIViewModel{}
         , _secondsLeft{ 0.0f }
     {
     }
@@ -25,8 +25,8 @@ namespace sw
         (void)setField( _secondsLeft, secondsLeft, "_secondsLeft" );
     }
 
-    SettingsConfirmScreen::SettingsConfirmScreen( const UiScreenDesc& desc, unique_ptr<Widget> root )
-        : UiScreen{ desc, std::move( root ) }
+    SettingsConfirmScreen::SettingsConfirmScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+        : UIScreen{ desc, std::move( root ) }
         , _viewModel{}
         , _pSettings{ nullptr }
     {
@@ -38,12 +38,12 @@ namespace sw
         setViewModel( nullptr );
     }
 
-    UiScreenHandle SettingsConfirmScreen::open( UiSystem& ui, UserSettingsManager& settings, string_view documentPath )
+    UIScreenHandle SettingsConfirmScreen::open( UISystem& ui, UserSettingsManager& settings, string_view documentPath )
     {
-        const UiScreenHandle handle  = ui.openScreen<SettingsConfirmScreen>( documentPath );
-        UiScreen*            pScreen = ui.findScreen( handle );
+        const UIScreenHandle handle  = ui.openScreen<SettingsConfirmScreen>( documentPath );
+        UIScreen*            pScreen = ui.findScreen( handle );
         if ( pScreen == nullptr )
-            return kInvalidUiScreenHandle;
+            return kInvalidUIScreenHandle;
         SettingsConfirmScreen& screen = static_cast<SettingsConfirmScreen&>( *pScreen );
         screen._pSettings             = &settings;
         screen._viewModel.setSecondsLeft( settings.getConfirmSecondsLeft() );
@@ -64,7 +64,7 @@ namespace sw
             revertNow();
             return true;
         }
-        return UiScreen::onCommand( command, source );
+        return UIScreen::onCommand( command, source );
     }
 
     bool SettingsConfirmScreen::onBack()

@@ -23,7 +23,7 @@
 	<!-- 3) UI 배율 1.5 — 큰 창에서 칸이 그대로 화면 안에 들고, 뷰가 그대로 그려진다 -->
 	<At frame="190"><ResizeWindow width="1600" height="900"/><Variable name="gv_editorUiScale" value="1.5"/></At>
 	<At frame="200">
-		<Expect probe="Editor.UiScale" near="1.5" tolerance="0.01"/>
+		<Expect probe="Editor.UIScale" near="1.5" tolerance="0.01"/>
 		<EditorExpectDockLayout/>
 	</At>
 	<At frame="210"><Screenshot file="gameview_scaled.ppm"/></At>

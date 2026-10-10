@@ -91,7 +91,7 @@ namespace sw
         /**
          * @brief OS 가 이 창에 권하는 배율입니다(96 DPI = 1). Win32 `GetDpiForWindow`(PerMonitorV2 매니페스트 — 모니터를 옮기면 따른다) ·
          *        X11 `Xft.dpi` 리소스. 모르면 1 입니다.
-         * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다 — `UiScaleSettings::_bApplyContentScale`).
+         * @details 게임 UI 는 기본으로 곱하지 않는다(해상도 규칙이 이미 창 크기를 따른다 — `UIScaleSettings::_bApplyContentScale`).
          */
         virtual float32 getContentScale() const { return 1.0f; }
 

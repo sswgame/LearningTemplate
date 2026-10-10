@@ -108,7 +108,7 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/Input/README.md"),
     ConfigFileEntry(
         page="", pathPattern="Resource/engine/input/ui.input.xml", layer=kLayerEngineDefault, fileFormat="xml",
-        reader="`InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UiSystem::initialize`)", readWhen="기동(Ui 단계)",
+        reader="`InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`)", readWhen="기동(UI 단계)",
         shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/UI/README.md"),
     ConfigFileEntry(
         page="UserSettings", pathPattern="Resource/engine/settings/engine.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",

@@ -220,14 +220,14 @@ namespace sw
             _editorApi.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
     }
 
-    void EditorModuleHost::updateEditorUi( float32 /*deltaTime*/ )
+    void EditorModuleHost::updateEditorUI( float32 /*deltaTime*/ )
     {
         SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
 
-        if ( _editorApi.updateUi != nullptr )
-            _editorApi.updateUi( _editor );
+        if ( _editorApi.updateUI != nullptr )
+            _editorApi.updateUI( _editor );
 
         // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.

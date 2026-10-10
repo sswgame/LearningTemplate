@@ -184,7 +184,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, ParameterListShowsNamesAndDefaults )
 }
 
 /**
- * @brief [InspectorPropertyLayoutTest] 위젯 범위(UiMin · UiMax)와 허용 범위(Min · Max)는 따로다 — 위젯은 Ui 범위로 움직이고 값은 Min · Max 로 막는다
+ * @brief [InspectorPropertyLayoutTest] 위젯 범위(UIMin · UIMax)와 허용 범위(Min · Max)는 따로다 — 위젯은 UI 범위로 움직이고 값은 Min · Max 로 막는다
  */
 SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange )
 {
@@ -195,8 +195,8 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     height._metadata._bHasMaxRange   = SW_TRUE;
     height._metadata._uiMinRange     = 50.0f;
     height._metadata._uiMaxRange     = 250.0f;
-    height._metadata._bHasUiMinRange = SW_TRUE;
-    height._metadata._bHasUiMaxRange = SW_TRUE;
+    height._metadata._bHasUIMinRange = SW_TRUE;
+    height._metadata._bHasUIMaxRange = SW_TRUE;
 
     const InspectorNumericRange range = InspectorPropertyLayout::getNumericRange( height );
     SW_EXPECT_TRUE( range._bSlider );
@@ -207,7 +207,7 @@ SW_TEST_CASE( InspectorPropertyLayoutTest, SliderRangeIsSeparateFromAllowedRange
     SW_EXPECT_NEAR_EQUAL( 1000.0, InspectorPropertyLayout::clampToAllowedRange( range, 2000.0 ), 1e-9 );
     SW_EXPECT_NEAR_EQUAL( 0.0, InspectorPropertyLayout::clampToAllowedRange( range, -5.0 ), 1e-9 );
 
-    // Ui 범위가 없으면 위젯도 허용 범위, 슬라이더는 `Meta = "Slider"` 일 때만(지금 규칙 그대로)
+    // UI 범위가 없으면 위젯도 허용 범위, 슬라이더는 `Meta = "Slider"` 일 때만(지금 규칙 그대로)
     PropertyInfo ratio;
     ratio._metadata._minRange     = 0.0f;
     ratio._metadata._maxRange     = 1.0f;

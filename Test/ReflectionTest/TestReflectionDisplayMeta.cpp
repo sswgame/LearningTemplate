@@ -107,7 +107,7 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, AnnotationsReachPropertyMetadata )
     const sw::string*       pUnits = height.findCustomMeta( "Units" );
     SW_ASSERT_NOT_NULL( pUnits );
     SW_EXPECT_EQUAL( sw::string( "cm" ), *pUnits );
-    SW_EXPECT_TRUE( height._metadata.hasFullRange() && height._metadata.hasFullUiRange() );
+    SW_EXPECT_TRUE( height._metadata.hasFullRange() && height._metadata.hasFullUIRange() );
     SW_EXPECT_NEAR_EQUAL( 1000.0f, height._metadata._maxRange, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 250.0f, height._metadata._uiMaxRange, 1e-4f );
 

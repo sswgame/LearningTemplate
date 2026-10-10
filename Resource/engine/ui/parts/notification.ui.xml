@@ -1,4 +1,4 @@
-<UiDocument _schemaVersion="1">
+<UIDocument _schemaVersion="1">
 	<BorderPanel _styleClass="notification">
 		<BoxPanel _spacing="8">
 			<TextWidget _name="Message" _bRichText="true">
@@ -9,4 +9,4 @@
 			</TextWidget>
 		</BoxPanel>
 	</BorderPanel>
-</UiDocument>
+</UIDocument>

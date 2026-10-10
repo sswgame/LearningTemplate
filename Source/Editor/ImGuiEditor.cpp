@@ -328,11 +328,11 @@ namespace sw::editor
             // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이
             // 따라간다(ImGui 1.92 동적 폰트).
             // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
-            const bool bFixedUiScale = gv_editorUiScale > 0.0f;
-            EditorThemeUtil::setDpiScale( bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
-            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
-            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
-            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI",
+            const bool bFixedUIScale = gv_editorUiScale > 0.0f;
+            EditorThemeUtil::setDpiScale( bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
+            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
+            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
+            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
                          ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
             // `-gv_editorStartupScene=<경로>`: 검증용이다 — 기동 검증이 오브젝트를 순회하는 코드까지 다루게 한다. 정의는 이 파일 위에 있다.
@@ -434,12 +434,12 @@ namespace sw::editor
         _editorContext->getPanelManager().preRenderOpenPanels( pRhiDevice );
     }
 
-    void ImGuiEditor::updateUi()
+    void ImGuiEditor::updateUI()
     {
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // 하위 구간 — `GT.Editor.updateUi`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
+        // 하위 구간 — `GT.Editor.updateUI`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
         {
             // 지난 UI 프레임을 렌더 스레드가 다 그릴(postPresent) 때까지 기다린다 — 큰 값은 UI 일이 아니라 RT · GPU · Present 대기다.
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
@@ -545,7 +545,7 @@ namespace sw::editor
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
 
-            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUi 는 상단 waitForDrawSnapshotIdle
+            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단 waitForDrawSnapshotIdle
             // 에서 postPresent 까지 막히므로, 렌더 스레드가 present 훅에서 ImGui 공유 상태
             // (텍스처 리스트·뷰포트)를 만지는 GL 경로에서도 UI 스레드와 겹치지 않는다.
             // (렌더 스레드 render() 도 같은 값을 다시 저장하지만 값이 같아 무해하다)
@@ -581,7 +581,7 @@ namespace sw::editor
         }
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
-        // (UI 스레드는 updateUi 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
+        // (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
         if ( bRenderThreadCtx )
         {
             const ImGuiIO& io = ImGui::GetIO();
@@ -594,7 +594,7 @@ namespace sw::editor
     {
         std::ignore = pRhiDevice;
         // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
-        // 보조 뷰포트는 updateUi 에서 UI 스레드가 이미 렌더·present 했다.
+        // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 
@@ -728,17 +728,17 @@ namespace sw::editor
         }
         // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔 · 시나리오 `<Variable>` · gv 패널) 바로 따른다 — 0 으로 돌리면 다시 모니터 DPI 를 따른다.
         {
-            const bool    bFixedUiScale = gv_editorUiScale > 0.0f;
-            const float32 wantedScale   = bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
+            const bool    bFixedUIScale = gv_editorUiScale > 0.0f;
+            const float32 wantedScale   = bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
                                                                                                                                  : 1.0f;
-            const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUiScale;
-            const bool    bFixedMoved   = bFixedUiScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUIScale;
+            const bool    bFixedMoved   = bFixedUIScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
             if ( bModeChanged || bFixedMoved )
             {
-                ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
-                ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
+                ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
+                ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
                 EditorThemeUtil::setDpiScale( wantedScale );
-                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI" );
+                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
             }
         }
         ImGuizmo::BeginFrame();

@@ -137,7 +137,7 @@ namespace sw
         void popOpacity();
 
         /** @brief UI 단위 → 물리 픽셀 배율입니다. */
-        float32 getUiScale() const { return _uiScale; }
+        float32 getUIScale() const { return _uiScale; }
         /**
          * @brief 칠할 목록을 바꿉니다 — 변환 · 자르기 · 불투명도 스택은 그대로입니다(위젯 그리기가 위젯마다 자기 그림 캐시로 바꾼다).
          * @details 가위를 대상 안으로 자르는 크기(`_targetSize`)는 새 목록의 것을 씁니다.

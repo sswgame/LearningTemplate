@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlEvents.h"
@@ -65,27 +65,27 @@ namespace sw
             return;
         InputManager&   input    = *context._pInput;
         const InputMap& inputMap = input.getInputMap();
-        const UiSystem* pUi      = context._pUiSystem;
+        const UISystem* pUI      = context._pUISystem;
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
-        const bool bUiWantsCursor = pUi != nullptr && pUi->wantsCursor();
-        bool       bLook          = bUiWantsCursor == false;
+        const bool bUIWantsCursor = pUI != nullptr && pUI->wantsCursor();
+        bool       bLook          = bUIWantsCursor == false;
         if ( pawn.wantsMouseLock() )
         {
-            if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pUi, _mouseLockAction ) )
+            if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pUI, _mouseLockAction ) )
             {
                 _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
                 SW_LOG_INFO( "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
             }
-            applyMouseLock( input, _bMouseLockRequested == SW_TRUE && bUiWantsCursor == false );
+            applyMouseLock( input, _bMouseLockRequested == SW_TRUE && bUIWantsCursor == false );
             // 잠금이 실제로 걸린 동안만 시선을 쌓는다. 배타 가상 입력(시나리오)은 OS 포인터를 쥐지 않으니 잠금 요청만 본다.
             bLook = bLook && _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOsInputSuppressed() );
         }
         // 모달 · 로딩 화면이 떠 있으면 게임 입력이 없다 — 의도는 0, 조종 회전은 그대로.
-        if ( pUi != nullptr && pUi->isGameInputBlocked() )
+        if ( pUI != nullptr && pUI->isGameInputBlocked() )
             return;
-        if ( pawn.getMoveAction().empty() == false && ( pUi == nullptr || pUi->isActionConsumed( inputMap, pawn.getMoveAction() ) == false ) )
+        if ( pawn.getMoveAction().empty() == false && ( pUI == nullptr || pUI->isActionConsumed( inputMap, pawn.getMoveAction() ) == false ) )
             outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
-        if ( pawn.getUpAction().empty() == false && ( pUi == nullptr || pUi->isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
+        if ( pawn.getUpAction().empty() == false && ( pUI == nullptr || pUI->isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
             outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
         if ( bLook && pawn.getLookAction().empty() == false )
         {
@@ -99,25 +99,25 @@ namespace sw
         for ( size_t buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex )
         {
             const hashed_string& name = listButton[buttonIndex];
-            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pUi, name ), wasActionTriggeredForGame( inputMap, pUi, name ) );
+            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pUI, name ), wasActionTriggeredForGame( inputMap, pUI, name ) );
         }
         const vector<hashed_string>& listAnalog  = pawn.getAnalogNames();
         const size_t                 analogCount = MathUtil::min( listAnalog.size(), static_cast<size_t>( ControlIntent::kAnalogCount ) );
         for ( size_t analogIndex = 0; analogIndex < analogCount; ++analogIndex )
         {
             const hashed_string& name         = listAnalog[analogIndex];
-            outIntent._arrAnalog[analogIndex] = pUi != nullptr && pUi->isActionConsumed( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
+            outIntent._arrAnalog[analogIndex] = pUI != nullptr && pUI->isActionConsumed( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
         }
     }
 
-    bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const UiSystem* pUiSystem, const hashed_string& action )
+    bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
     {
-        return inputMap.isActionDown( action ) && ( pUiSystem == nullptr || pUiSystem->isActionConsumed( inputMap, action ) == false );
+        return inputMap.isActionDown( action ) && ( pUISystem == nullptr || pUISystem->isActionConsumed( inputMap, action ) == false );
     }
 
-    bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const UiSystem* pUiSystem, const hashed_string& action )
+    bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
     {
-        return inputMap.wasActionTriggered( action ) && ( pUiSystem == nullptr || pUiSystem->isActionConsumed( inputMap, action ) == false );
+        return inputMap.wasActionTriggered( action ) && ( pUISystem == nullptr || pUISystem->isActionConsumed( inputMap, action ) == false );
     }
 
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )

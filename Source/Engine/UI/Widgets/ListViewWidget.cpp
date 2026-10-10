@@ -5,7 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -99,16 +99,16 @@ namespace sw
         return before != _scrollOffset;
     }
 
-    UiReply ListViewWidget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply ListViewWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        if ( event._kind != UiPointerEventKind::Wheel || phase != UiRoutePhase::Bubble )
-            return UiReply::makeUnhandled();
+        if ( event._kind != UIPointerEventKind::Wheel || phase != UIRoutePhase::Bubble )
+            return UIReply::makeUnhandled();
         const float32 before = _scrollOffset;
         setScrollOffset( _scrollOffset - event._wheel * _wheelStep );
-        return before != _scrollOffset ? UiReply::makeHandled() : UiReply::makeUnhandled();
+        return before != _scrollOffset ? UIReply::makeHandled() : UIReply::makeUnhandled();
     }
 
-    float2 ListViewWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 ListViewWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
         (void)availableSize;
@@ -129,7 +129,7 @@ namespace sw
         }
     }
 
-    void ListViewWidget::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void ListViewWidget::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         _viewportHeight          = size._y;
         _scrollOffset            = MathUtil::clamp( _scrollOffset, 0.0f, getMaxScrollOffset() );

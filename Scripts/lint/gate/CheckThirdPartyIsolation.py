@@ -90,7 +90,7 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("meshoptimizer", ("meshoptimizer.h",), ("Source/Editor/Common/Asset/",), ()),
     # 시험은 엔진 DDS 읽기를 독립된 디코더로 대조한다(같은 코드로 같은 코드를 시험하지 않으려고).
     LibraryRule("DirectXTex", ("DirectXTex",), ("Source/Editor/Common/Asset/", "Test/EditorTest/Common/Asset/"), ()),
-    LibraryRule("ImGui", ("imgui", "implot", "ImGuizmo", "imgui_node_editor", "ImGuiNotify"), ("Source/Editor/", "Test/EditorUiTest/"), ()),
+    LibraryRule("ImGui", ("imgui", "implot", "ImGuizmo", "imgui_node_editor", "ImGuiNotify"), ("Source/Editor/", "Test/EditorUITest/"), ()),
 )
 
 _kListSourceRoot = kLintTargetRelDirs

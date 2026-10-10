@@ -4,9 +4,9 @@
 
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Base/UiEvents.h"
+#include "Engine/UI/Base/UIEvents.h"
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Screen/UIScreen.h"
 
 namespace sw
 {
@@ -17,9 +17,9 @@ namespace sw
             /** @brief 기본 겉모습(스타일 시트 5-2 가 생기기 전 — 어두운 반투명 바탕 · 둥근 모서리)입니다. */
             static constexpr float32 kCornerRadius = 6.0f;
 
-            static UiBrush makeBrush( float32 shade, float32 alpha )
+            static UIBrush makeBrush( float32 shade, float32 alpha )
             {
-                return UiBrush::makeSolid( float4{ shade, shade * 1.1f, shade * 1.35f, alpha }, kCornerRadius );
+                return UIBrush::makeSolid( float4{ shade, shade * 1.1f, shade * 1.35f, alpha }, kCornerRadius );
             }
         };
     } // namespace
@@ -48,7 +48,7 @@ namespace sw
         return StaticType();
     }
 
-    void ButtonWidget::setStateBrushes( const UiBrush& hovered, const UiBrush& pressed, const UiBrush& disabled )
+    void ButtonWidget::setStateBrushes( const UIBrush& hovered, const UIBrush& pressed, const UIBrush& disabled )
     {
         _hoveredBrush  = hovered;
         _pressedBrush  = pressed;
@@ -56,7 +56,7 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    const UiBrush& ButtonWidget::getBackgroundBrush() const
+    const UIBrush& ButtonWidget::getBackgroundBrush() const
     {
         if ( isEnabledInHierarchy() == false )
             return _disabledBrush;
@@ -67,18 +67,18 @@ namespace sw
         return BorderPanel::getBackgroundBrush();
     }
 
-    UiReply ButtonWidget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply ButtonWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
         // 버블 — 안의 글 · 그림이 먼저 지나가고 버튼이 받는다. 누른 동안은 포인터를 잡아 경로의 잎이 버튼이다.
-        if ( phase != UiRoutePhase::Bubble || event._button != MouseButton::Left )
-            return UiReply::makeUnhandled();
-        if ( event._kind == UiPointerEventKind::Down )
+        if ( phase != UIRoutePhase::Bubble || event._button != MouseButton::Left )
+            return UIReply::makeUnhandled();
+        if ( event._kind == UIPointerEventKind::Down )
         {
             _bPressed = true;
             invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
-            return UiReply::makeHandled().capturePointer().requestFocus( getId() );
+            return UIReply::makeHandled().capturePointer().requestFocus( getId() );
         }
-        if ( event._kind == UiPointerEventKind::Up && _bPressed )
+        if ( event._kind == UIPointerEventKind::Up && _bPressed )
         {
             _bPressed = false;
             invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
@@ -86,29 +86,29 @@ namespace sw
             float2 local{};
             if ( getGeometry().inverseTransformPoint( event._position, local ) && getGeometry().containsLocal( local ) )
                 handleClick();
-            return UiReply::makeHandled().releasePointer();
+            return UIReply::makeHandled().releasePointer();
         }
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
-    UiReply ButtonWidget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
+    UIReply ButtonWidget::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UiRoutePhase::Bubble || event._action != hashed_string( UiActionName::kAccept ) )
-            return UiReply::makeUnhandled();
+        if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kAccept ) )
+            return UIReply::makeUnhandled();
         handleClick();
-        return UiReply::makeHandled();
+        return UIReply::makeHandled();
     }
 
     uint32 ButtonWidget::computeStyleStates() const
     {
-        return Widget::computeStyleStates() | ( _bPressed ? UiStyleState::kPressed : UiStyleState::kNone );
+        return Widget::computeStyleStates() | ( _bPressed ? UIStyleState::kPressed : UIStyleState::kNone );
     }
 
     void ButtonWidget::handleClick()
     {
         ++_clickCount;
         _onClicked.broadcast( getId() );
-        UiScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
+        UIScreen* pScreen = getTree() != nullptr ? getTree()->getScreen() : nullptr;
         if ( pScreen != nullptr )
             pScreen->dispatchCommand( _command, *this );
     }

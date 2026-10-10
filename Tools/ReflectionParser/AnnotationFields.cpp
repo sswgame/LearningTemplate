@@ -191,22 +191,22 @@ namespace sw
             }
 
             /** @brief 슬라이더 아래 경계입니다(허용 범위 `Min` 과 따로). */
-            static void applyUiMinRange( ParsedPropertyInfo& target, const string_view value )
+            static void applyUIMinRange( ParsedPropertyInfo& target, const string_view value )
             {
                 float32 parsed{ 0.0f };
                 if ( StringUtil::parseFloat( value, parsed ) == false )
                     return;
                 target._uiMinRange     = parsed;
-                target._bHasUiMinRange = SW_TRUE;
+                target._bHasUIMinRange = SW_TRUE;
             }
 
-            static void applyUiMaxRange( ParsedPropertyInfo& target, const string_view value )
+            static void applyUIMaxRange( ParsedPropertyInfo& target, const string_view value )
             {
                 float32 parsed{ 0.0f };
                 if ( StringUtil::parseFloat( value, parsed ) == false )
                     return;
                 target._uiMaxRange     = parsed;
-                target._bHasUiMaxRange = SW_TRUE;
+                target._bHasUIMaxRange = SW_TRUE;
             }
 
             /** @brief 넷 역할은 토큰 자체가 값입니다(`FUNCTION( Server )` → "Server"). */

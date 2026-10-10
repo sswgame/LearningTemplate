@@ -7,7 +7,7 @@
 
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Base/UiEvents.h"
+#include "Engine/UI/Base/UIEvents.h"
 
 namespace sw
 {
@@ -104,65 +104,65 @@ namespace sw
         return _minValue + fraction * ( _maxValue - _minValue );
     }
 
-    UiReply SliderWidget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply SliderWidget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UiRoutePhase::Bubble )
-            return UiReply::makeUnhandled();
+        if ( phase != UIRoutePhase::Bubble )
+            return UIReply::makeUnhandled();
         switch ( event._kind )
         {
-            case UiPointerEventKind::Down:
+            case UIPointerEventKind::Down:
             {
                 if ( event._button != MouseButton::Left )
-                    return UiReply::makeUnhandled();
+                    return UIReply::makeUnhandled();
                 _bDragging = true;
                 setValueFromUser( computeValueAt( event._position ) );
-                return UiReply::makeHandled().capturePointer().requestFocus( getId() );
+                return UIReply::makeHandled().capturePointer().requestFocus( getId() );
             }
-            case UiPointerEventKind::Move:
+            case UIPointerEventKind::Move:
             {
                 if ( _bDragging == false )
-                    return UiReply::makeUnhandled();
+                    return UIReply::makeUnhandled();
                 setValueFromUser( computeValueAt( event._position ) );
-                return UiReply::makeHandled();
+                return UIReply::makeHandled();
             }
-            case UiPointerEventKind::Up:
+            case UIPointerEventKind::Up:
             {
                 if ( _bDragging == false || event._button != MouseButton::Left )
-                    return UiReply::makeUnhandled();
+                    return UIReply::makeUnhandled();
                 _bDragging = false;
-                return UiReply::makeHandled().releasePointer();
+                return UIReply::makeHandled().releasePointer();
             }
-            case UiPointerEventKind::Wheel:
+            case UIPointerEventKind::Wheel:
             {
-                return UiReply::makeUnhandled();
+                return UIReply::makeUnhandled();
             }
         }
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
-    UiReply SliderWidget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
+    UIReply SliderWidget::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
-        if ( phase != UiRoutePhase::Bubble )
-            return UiReply::makeUnhandled();
-        const bool bLeft  = event._action == hashed_string( UiActionName::kNavigateLeft );
-        const bool bRight = event._action == hashed_string( UiActionName::kNavigateRight );
+        if ( phase != UIRoutePhase::Bubble )
+            return UIReply::makeUnhandled();
+        const bool bLeft  = event._action == hashed_string( UIActionName::kNavigateLeft );
+        const bool bRight = event._action == hashed_string( UIActionName::kNavigateRight );
         if ( bLeft == false && bRight == false )
-            return UiReply::makeUnhandled();
+            return UIReply::makeUnhandled();
         const float32 step = _step > 0.0f ? _step : ( _maxValue - _minValue ) * SliderWidgetInternal::kDefaultStepFraction;
         // 화면 왼쪽 = 최소(오른쪽에서 왼쪽이면 최대) — 행동 방향은 화면 기준이다.
         const bool bDecrease = bLeft != isRightToLeft();
         setValueFromUser( _value + ( bDecrease ? -step : step ) );
-        return UiReply::makeHandled();
+        return UIReply::makeHandled();
     }
 
-    float2 SliderWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 SliderWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
         (void)availableSize;
         return float2{ kDefaultLength, kDefaultThickness };
     }
 
-    void SliderWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void SliderWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         using Internal         = SliderWidgetInternal;
@@ -246,14 +246,14 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    float2 ProgressBarWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 ProgressBarWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
         (void)availableSize;
         return float2{ SliderWidget::kDefaultLength, 12.0f };
     }
 
-    void ProgressBarWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void ProgressBarWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         const float2& size   = getGeometry()._size;

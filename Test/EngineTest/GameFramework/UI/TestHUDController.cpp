@@ -3,8 +3,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/UI/Screen/UiScreen.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/SliderWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
@@ -16,20 +16,20 @@
 
 /**
  * @brief [HUDControllerTest] HUD 문서는 HUD 층 화면으로 열리고(포커스 · 게임 입력을 가져가지 않는다) 이름으로 위젯을 찾으며, UI 시스템을 풀면 닫힌다
- * @details `findWidget<T>( 이름 )` 은 바인딩으로 닿지 않는 일에 쓴다. 변이: `bindUiSystem` 이 옛 화면을 닫지 않으면 마지막 단언(화면 0)이 진다.
+ * @details `findWidget<T>( 이름 )` 은 바인딩으로 닿지 않는 일에 쓴다. 변이: `bindUISystem` 이 옛 화면을 닫지 않으면 마지막 단언(화면 0)이 진다.
  */
 SW_TEST_CASE( HUDControllerTest, OpensTheHUDDocumentOnTheHUDLayer )
 {
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    sw::UiSystem ui;
+    sw::UISystem ui;
     SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
-    ui.getDocumentCache().registerMemoryDocument( "test/hud.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
-                                                                     "\t<UiScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
+    ui.getDocumentCache().registerMemoryDocument( "test/hud.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
+                                                                     "\t<UIScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
                                                                      "\t<CanvasPanel>\n"
                                                                      "\t\t<TextWidget _name=\"Ammo\" />\n"
                                                                      "\t</CanvasPanel>\n"
-                                                                     "</UiDocument>\n" );
+                                                                     "</UIDocument>\n" );
     {
         sw::GameObjectManager manager;
         sw::GameObject*       pPlayer = manager.createGameObject( sw::hashed_string( "Player" ) );
@@ -37,11 +37,11 @@ SW_TEST_CASE( HUDControllerTest, OpensTheHUDDocumentOnTheHUDLayer )
         sw::HUDControllerComponent* pHUD = pPlayer->addComponent<sw::HUDControllerComponent>();
         SW_ASSERT_NOT_NULL( pHUD );
         pHUD->setDocumentPath( "test/hud.ui.xml" );
-        pHUD->bindUiSystem( &ui );
+        pHUD->bindUISystem( &ui );
 
-        const sw::UiScreen* pScreen = pHUD->getScreen();
+        const sw::UIScreen* pScreen = pHUD->getScreen();
         SW_ASSERT_NOT_NULL( pScreen );
-        SW_EXPECT_TRUE( pScreen->getDesc()._layer == sw::UiLayer::HUD );
+        SW_EXPECT_TRUE( pScreen->getDesc()._layer == sw::UILayer::HUD );
         SW_EXPECT_TRUE( ui.getActiveScreen() == nullptr ); // HUD 는 포커스를 받지 않는다
         SW_EXPECT_FALSE( ui.isGameInputBlocked() );
         sw::TextWidget* pAmmo = pHUD->findWidget<sw::TextWidget>( sw::hashed_string( "Ammo" ) );
@@ -49,9 +49,9 @@ SW_TEST_CASE( HUDControllerTest, OpensTheHUDDocumentOnTheHUDLayer )
         pAmmo->setText( "30 / 90" );
         SW_EXPECT_TRUE( pHUD->findWidget<sw::TextWidget>( sw::hashed_string( "Missing" ) ) == nullptr );
 
-        pHUD->bindUiSystem( nullptr );
+        pHUD->bindUISystem( nullptr );
         SW_EXPECT_TRUE( pHUD->getScreen() == nullptr );
-        ui.update( 1.0f / 60.0f, sw::UiViewport{
+        ui.update( 1.0f / 60.0f, sw::UIViewport{
                                      sw::float2{ 1920.0f, 1080.0f }
         } );
         SW_EXPECT_EQUAL( 0u, ui.getScreenCount() );
@@ -69,23 +69,23 @@ SW_TEST_CASE( HUDControllerTest, ViewModelDrivesTheHUDDocument )
 {
     struct HUDTestUtil
     {
-        static void runFrame( sw::InputManager& input, sw::UiSystem& ui )
+        static void runFrame( sw::InputManager& input, sw::UISystem& ui )
         {
             constexpr float32 kFrameSeconds = 1.0f / 60.0f;
             input.beginFrame( kFrameSeconds );
             ui.processInput( kFrameSeconds );
-            ui.update( kFrameSeconds, sw::UiViewport{
+            ui.update( kFrameSeconds, sw::UIViewport{
                                           sw::float2{ 1920.0f, 1080.0f }
             } );
         }
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
-    sw::UiSystem ui;
+    sw::UISystem ui;
     SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
     ui.getDocumentCache().registerMemoryDocument( "test/boundhud.ui.xml",
-                                                  "<UiDocument _schemaVersion=\"1\">\n"
-                                                  "\t<UiScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
+                                                  "<UIDocument _schemaVersion=\"1\">\n"
+                                                  "\t<UIScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
                                                   "\t<CanvasPanel>\n"
                                                   "\t\t<ImageWidget _name=\"Crosshair\" _visibility=\"{bind:_crosshairVisibility}\" />\n"
                                                   "\t\t<TextWidget _name=\"Health\" _text=\"{bind:_health}\" _bLocalized=\"false\" />\n"
@@ -94,7 +94,7 @@ SW_TEST_CASE( HUDControllerTest, ViewModelDrivesTheHUDDocument )
                                                   "\t\t<TextWidget _name=\"Reserve\" _text=\"{bind:_reserveAmmo}\" _bLocalized=\"false\" />\n"
                                                   "\t\t<TextWidget _name=\"Weapon\" _text=\"{bind:_weaponName}\" />\n"
                                                   "\t</CanvasPanel>\n"
-                                                  "</UiDocument>\n" );
+                                                  "</UIDocument>\n" );
     {
         sw::GameObjectManager manager;
         sw::GameObject*       pPlayer = manager.createGameObject( sw::hashed_string( "Player" ) );
@@ -102,7 +102,7 @@ SW_TEST_CASE( HUDControllerTest, ViewModelDrivesTheHUDDocument )
         sw::HUDControllerComponent* pHUD = pPlayer->addComponent<sw::HUDControllerComponent>();
         SW_ASSERT_NOT_NULL( pHUD );
         pHUD->setDocumentPath( "test/boundhud.ui.xml" );
-        pHUD->bindUiSystem( &ui );
+        pHUD->bindUISystem( &ui );
 
         sw::HUDViewModel& hud = pHUD->getViewModel();
         hud.setHealth( 72.4f, 0.724f );
@@ -134,14 +134,14 @@ SW_TEST_CASE( HUDControllerTest, ViewModelDrivesTheHUDDocument )
         SW_EXPECT_STREQ( "11", findText( "Magazine" ).c_str() );
 
         // 닫았다 다시 열면 새 화면이 지금 값을 바로 받는다(뷰모델이 화면보다 오래 산다).
-        pHUD->bindUiSystem( nullptr );
+        pHUD->bindUISystem( nullptr );
         HUDTestUtil::runFrame( input, ui );
         SW_EXPECT_EQUAL( 0u, ui.getScreenCount() );
-        pHUD->bindUiSystem( &ui );
+        pHUD->bindUISystem( &ui );
         HUDTestUtil::runFrame( input, ui );
         SW_EXPECT_STREQ( "11", findText( "Magazine" ).c_str() );
         SW_EXPECT_STREQ( "73", findText( "Health" ).c_str() );
-        pHUD->bindUiSystem( nullptr );
+        pHUD->bindUISystem( nullptr );
     }
     ui.shutdown();
     input.shutdown();

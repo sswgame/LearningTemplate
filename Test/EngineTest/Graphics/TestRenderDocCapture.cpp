@@ -13,5 +13,5 @@ SW_TEST_CASE( RenderDocCaptureTest, IsUnavailableWithoutRenderDoc )
     sw::RenderDocCapture::initialize( false );
     SW_EXPECT_FALSE( sw::RenderDocCapture::isAvailable() );
     sw::RenderDocCapture::triggerCapture();
-    SW_EXPECT_FALSE( sw::RenderDocCapture::launchReplayUi() );
+    SW_EXPECT_FALSE( sw::RenderDocCapture::launchReplayUI() );
 }

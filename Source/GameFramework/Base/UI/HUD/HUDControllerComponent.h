@@ -11,19 +11,19 @@
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Screen/UIScreen.h"
 
 #include "GameFramework/Base/UI/HUD/HUDViewModel.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class UiSystem;
+    class UISystem;
     class Widget;
 
     /**
      * @class HUDControllerComponent
-     * @brief HUD 문서(`_documentPath` — `*.ui.xml`, 문서의 `UiScreenDesc` 가 HUD 층)를 플레이 시작에 열고 끝에 닫습니다(언리얼 `AHUD` · Lyra HUD 레이아웃의 자리).
+     * @brief HUD 문서(`_documentPath` — `*.ui.xml`, 문서의 `UIScreenDesc` 가 HUD 층)를 플레이 시작에 열고 끝에 닫습니다(언리얼 `AHUD` · Lyra HUD 레이아웃의 자리).
      * @details 값은 게임 컴포넌트가 뷰모델(`getViewModel` — 이 컴포넌트가 소유)에 넣고, 문서의 `{bind:필드}` 가 위젯 칸에 잇습니다(위젯을 이름으로 찾지 않는다).
      *          화면을 열 때 뷰모델을 걸고 닫을 때 뗍니다. 뷰모델은 화면보다 오래 살므로 다시 열어도 마지막 값이 바로 보입니다.
      *          `findWidget` 은 바인딩으로 닿지 않는 일(포커스 · 애니메이션)에만 씁니다 — 포인터는 그 호출 안에서만(화면은 UI 시스템이 소유한다 — 모듈 내리기 ·
@@ -45,8 +45,8 @@ namespace sw
         void onEndPlay() override;
 
         /** @brief 쓸 UI 시스템을 바꿉니다(옛 쪽의 화면을 닫고 새 쪽에 연다). nullptr 이면 닫기만 합니다. 시험은 자기 것을 넘긴다. */
-        void      bindUiSystem( UiSystem* pUiSystem );
-        UiSystem* getUiSystem() const { return _pUiSystem; }
+        void      bindUISystem( UISystem* pUISystem );
+        UISystem* getUISystem() const { return _pUISystem; }
 
         const string& getDocumentPath() const { return _documentPath; }
         /** @brief 문서를 바꿉니다. 화면이 떠 있으면 새 문서로 다시 엽니다. */
@@ -56,7 +56,7 @@ namespace sw
         HUDViewModel&       getViewModel() { return *_viewModel; }
         const HUDViewModel& getViewModel() const { return *_viewModel; }
         /** @brief 띄운 HUD 화면입니다(없으면 nullptr). */
-        UiScreen* getScreen() const;
+        UIScreen* getScreen() const;
         /** @brief HUD 화면에서 이름의 위젯입니다(없으면 nullptr). */
         Widget* findWidget( const hashed_string& name ) const;
         /** @brief HUD 화면에서 이름의 위젯을 @p WidgetType 으로 찾습니다(이름이 없거나 타입이 다르면 nullptr). */
@@ -73,10 +73,10 @@ namespace sw
         void closeScreen();
 
     private:
-        UiSystem*                _pUiSystem; ///< 화면을 연 UI 시스템(없으면 nullptr)
-        UiScreenHandle           _screen;
+        UISystem*                _pUISystem; ///< 화면을 연 UI 시스템(없으면 nullptr)
+        UIScreenHandle           _screen;
         unique_ptr<HUDViewModel> _viewModel; ///< HUD 문서의 바인딩 소스(이 컴포넌트가 소유 — 화면은 가리키기만 한다)
-        PROPERTY( DisplayName = "Document", AssetPath, AssetType = "UiDocument", Tooltip = "HUD document (*.ui.xml) opened on the HUD layer" )
+        PROPERTY( DisplayName = "Document", AssetPath, AssetType = "UIDocument", Tooltip = "HUD document (*.ui.xml) opened on the HUD layer" )
         string _documentPath;
     };
 } // namespace sw

@@ -236,7 +236,7 @@ SW_TEST_CASE( CanvasDrawListTest, OpacityMultipliesColorAlpha )
 }
 
 /** @brief [CanvasDrawListTest] UI 배율이 위치 · 크기 · 둥근 모서리 · 테두리를 물리 픽셀로 바꾸고, 변환은 축(2×2)과 위치에 실린다 */
-SW_TEST_CASE( CanvasDrawListTest, UiScaleConvertsToPixels )
+SW_TEST_CASE( CanvasDrawListTest, UIScaleConvertsToPixels )
 {
     sw::CanvasDrawList list{};
     sw::CanvasPainter  painter( list, 2.0f );

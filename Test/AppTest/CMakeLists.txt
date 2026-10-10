@@ -24,7 +24,7 @@ sw_addTestExecutable(AppTest
 		TestAppCook.cpp
 		TestAppScenario.cpp
 		TestAppSmoke.cpp
-		TestAppUi.cpp
+		TestAppUI.cpp
 		TestDevCommandShipping.cpp
 	LIBS
 		Engine

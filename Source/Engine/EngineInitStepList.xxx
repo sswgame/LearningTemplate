@@ -41,7 +41,7 @@ SW_ENGINE_STARTUP_STEP( RenderThread,        RenderCpu,  Client, { FrameRenderer
 SW_ENGINE_STARTUP_STEP( LiveShader,          Shader,     Client, { FrameRenderer, RenderThread } ) // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
 SW_ENGINE_STARTUP_STEP( SceneRhi,            RenderCpu,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
 SW_ENGINE_STARTUP_STEP( Telemetry,           EngineMisc, Client, { UserSettings } )              // 동의는 사용자 설정 — 종료가 맨 처음이라 마지막 장면 요약 · 묶음을 쓴다 — 서버 크래시 묶기 · 텔레메트리는 후속(동의가 플레이어 설정이다)
-SW_ENGINE_STARTUP_STEP( Ui,                  EngineMisc, Client, { Fonts, Input, UserSettings } ) // 런타임 UI — 입력(행동 · 포인터)을 읽고 글꼴로 잰다, UI 배율 · 글자 크기는 사용자 설정
+SW_ENGINE_STARTUP_STEP( UI,                  EngineMisc, Client, { Fonts, Input, UserSettings } ) // 런타임 UI — 입력(행동 · 포인터)을 읽고 글꼴로 잰다, UI 배율 · 글자 크기는 사용자 설정
 
 // `AssetManager::shutdown` 은 Resource 단계의 해제에 있다 — 에셋을 드는 단계가 모두 Resource 뒤에 서므로, 역순 해제에서 그들의 소멸자가
 // 에셋을 놓은 뒤에 캐시를 비운다. 소멸자가 태스크를 기다리는 객체(에셋 스트리밍 큐)는 Task 에 의존하는 단계(Scene)가 해제한다.

@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Screen/UIScreen.h"
 
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiOptionsMenu );
 
@@ -31,21 +31,21 @@ namespace sw
      *          **적용**: `applyPending` — 확인 대기가 시작되면 카운트다운 창(`SettingsConfirmScreen`), 다음 실행에 닿는 값이면 다시 시작 알림. 닫을 때(닫기 · 뒤로)
      *          보류 값이 있으면 "적용 · 버리기 · 취소" 를 묻는다. 키 바인딩 행의 단추는 `KeyRebindScreen` 을 연다.
      */
-    class SW_API OptionsMenuScreen : public UiScreen
+    class SW_API OptionsMenuScreen : public UIScreen
     {
     public:
         static constexpr utf8 kConfirmDocument[] = "engine/ui/confirm_countdown.ui.xml";
         static constexpr utf8 kUnsavedDocument[] = "engine/ui/confirm_unsaved.ui.xml";
         static constexpr utf8 kRebindDocument[]  = "engine/ui/key_rebind.ui.xml";
 
-        OptionsMenuScreen( const UiScreenDesc& desc, unique_ptr<Widget> root );
+        OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root );
         ~OptionsMenuScreen() override;
 
         /**
-         * @brief UI 시스템의 옵션 메뉴 문서(`UiSystem::getOptionsMenuDocument`)로 메뉴를 엽니다. 설정 출처(`UiSystem::findUserSettings`)가 없거나
+         * @brief UI 시스템의 옵션 메뉴 문서(`UISystem::getOptionsMenuDocument`)로 메뉴를 엽니다. 설정 출처(`UISystem::findUserSettings`)가 없거나
          *        문서를 짓지 못하면 오류를 남기고 무효 핸들입니다.
          */
-        static UiScreenHandle open( UiSystem& ui );
+        static UIScreenHandle open( UISystem& ui );
         /** @brief 설정 @p setting 의 형식에 맞는 행 견본 문서 경로입니다(`engine/ui/parts/setting_*.ui.xml`). */
         static const utf8* findRowDocument( const UserSettingDef& setting );
 
@@ -65,7 +65,7 @@ namespace sw
         /** @brief 설정 @p settingId 행의 값 위젯(`Value`)입니다. 지금 탭에 없으면 nullptr 입니다. */
         Widget* findRowValueWidget( const hashed_string& settingId ) const;
         /** @brief 이 메뉴가 연 확인 창(카운트다운 · 변경 확인 · 키 받기)입니다. 없으면 무효입니다. */
-        UiScreenHandle getPromptScreen() const { return _promptScreen; }
+        UIScreenHandle getPromptScreen() const { return _promptScreen; }
 
         /** @brief 보류 값을 적용합니다(확인 대기면 카운트다운 창). */
         void apply();
@@ -101,7 +101,7 @@ namespace sw
         vector<WidgetId>      _listTabButton; ///< 탭 단추(같은 순서)
         vector<RowEntry>      _listRow;       ///< 지금 탭의 행
         UserSettingsManager*  _pSettings;     ///< 설정 출처(엔진 서비스 · 시험 — 메뉴보다 오래 산다)
-        UiScreenHandle        _promptScreen;  ///< 이 메뉴가 연 확인 창
+        UIScreenHandle        _promptScreen;  ///< 이 메뉴가 연 확인 창
         uint32                _selectedTab;
     };
 } // namespace sw
