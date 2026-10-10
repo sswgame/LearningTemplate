@@ -258,7 +258,8 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
-Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를 남깁니다.
+Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를, 도구 문서 패널(Material · Tile Map · Sprite Clip)의 열기 단추는
+`<material|tileMap|spriteClip>.open` · 그 팝업의 검색 칸 `<…>.open.search` · 줄 `<…>.open.<파일 이름>` 을 남깁니다.
 
 ## 확장하는 법
 

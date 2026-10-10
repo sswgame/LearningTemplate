@@ -2,13 +2,18 @@
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Commands/EditorResourceIndex.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
 
@@ -22,6 +27,9 @@ namespace sw::editor
         , _pendingFocusPath{}
         , _documentUndoBaseline{}
         , _lastSavedDocumentText{}
+        , _listRecentPath{}
+        , _listOpenCandidate{}
+        , _openFilter{}
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
@@ -55,6 +63,7 @@ namespace sw::editor
         if ( focused.empty() )
             return;
         _loadedAssetPath = string{ focused };
+        rememberRecentDocument( _loadedAssetPath );
         _pendingFocusPath.clear();
         _bLoaded        = SW_FALSE;
         _bConfirmSwitch = SW_FALSE;
@@ -82,6 +91,109 @@ namespace sw::editor
         }
 
         acceptFocusedDocument();
+    }
+
+    void EditorDocumentPanel::drawDocumentOpenBar( const utf8* pMarkPrefix )
+    {
+        const string markOpen = string{ pMarkPrefix } + ".open";
+        if ( ImGui::Button( "Open..." ) )
+        {
+            // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
+            vector<EditorResourceIndexEntry> listEntry;
+            EditorResourceIndex::collectEntries( listEntry );
+            _listOpenCandidate.clear();
+            for ( const EditorResourceIndexEntry& entry : listEntry )
+            {
+                if ( entry._kind == _kind )
+                    _listOpenCandidate.push_back( entry._path );
+            }
+            std::sort( _listOpenCandidate.begin(), _listOpenCandidate.end() );
+            _openFilter.clear();
+            ImGui::OpenPopup( "##DocumentOpen" );
+        }
+        EditorSelfTestMarks::note( markOpen.c_str() );
+        EditorWidgets::drawTooltip( "이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)" );
+        drawOpenDocumentPopup( pMarkPrefix );
+
+        ImGui::SameLine();
+        const utf8* pPreview = _loadedAssetPath.empty() ? "(no document)" : _loadedAssetPath.c_str();
+        ImGui::SetNextItemWidth( -1.0f );
+        if ( ImGui::BeginCombo( "##RecentDocuments", pPreview ) )
+        {
+            if ( _listRecentPath.empty() )
+                ImGui::TextDisabled( "No recent documents" );
+            string openPath;
+            for ( const string& path : _listRecentPath )
+            {
+                if ( ImGui::Selectable( path.c_str(), path == _loadedAssetPath ) )
+                    openPath = path;
+            }
+            ImGui::EndCombo();
+            if ( openPath.empty() == false )
+                requestOpenDocument( openPath );
+        }
+        EditorWidgets::drawTooltip( "최근에 연 문서" );
+    }
+
+    void EditorDocumentPanel::drawOpenDocumentPopup( const utf8* pMarkPrefix )
+    {
+        if ( ImGui::BeginPopup( "##DocumentOpen" ) == false )
+            return;
+        const string markPrefix = string{ pMarkPrefix } + ".open.";
+        if ( ImGui::IsWindowAppearing() )
+            ImGui::SetKeyboardFocusHere();
+        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, "Search assets", 360.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorSelfTestMarks::note( ( markPrefix + "search" ).c_str() );
+
+        const EditorListFilter filter{ _openFilter.c_str() };
+        string                 openPath;
+        uint32                 shownCount{ 0 };
+        for ( const string& path : _listOpenCandidate )
+        {
+            if ( filter.matchesAny( { string_view{ path } } ) == false )
+                continue;
+            ++shownCount;
+            if ( ImGui::Selectable( path.c_str(), path == _loadedAssetPath ) )
+                openPath = path;
+            EditorSelfTestMarks::note( ( markPrefix + FileUtil::getFileNamePart( path ) ).c_str() );
+        }
+        if ( shownCount == 0 )
+        {
+            if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else
+                EditorWidgets::drawEmptyHint( "No assets of this kind under Resource/." );
+        }
+        if ( openPath.empty() == false )
+        {
+            requestOpenDocument( openPath );
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    void EditorDocumentPanel::requestOpenDocument( string_view assetPath )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext != nullptr )
+            pContext->getWorkspace().setFocusedAssetPath( string{ assetPath }.c_str() );
+    }
+
+    void EditorDocumentPanel::rememberRecentDocument( string_view assetPath )
+    {
+        if ( assetPath.empty() )
+            return;
+        for ( auto it = _listRecentPath.begin(); it != _listRecentPath.end(); ++it )
+        {
+            if ( *it == assetPath )
+            {
+                _listRecentPath.erase( it );
+                break;
+            }
+        }
+        _listRecentPath.insert( _listRecentPath.begin(), string{ assetPath } );
+        if ( _listRecentPath.size() > kMaxRecentDocumentCount )
+            _listRecentPath.resize( kMaxRecentDocumentCount );
     }
 
     void EditorDocumentPanel::markDocumentLoaded()

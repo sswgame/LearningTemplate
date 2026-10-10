@@ -278,9 +278,10 @@ namespace sw::editor
                 if ( prop._metadata._bTransient == SW_TRUE )
                     return;
                 PrefabOverrideItem item{};
-                item._componentName   = pTypeInfo->_name.c_str();
+                item._componentName   = pTypeInfo->getDisplayName();
                 item._componentKey    = key;
                 item._propertyName    = prop._name.c_str();
+                item._propertyLabel   = prop._metadata._displayName.empty() ? prop._name.c_str() : prop._metadata._displayName.c_str();
                 item._defaultValue    = SerializerUtil::formatPropertyText( prop, pCdoComp, context );
                 item._overriddenValue = SerializerUtil::formatPropertyText( prop, pInstanceComponent, context );
                 item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, context ) == false );

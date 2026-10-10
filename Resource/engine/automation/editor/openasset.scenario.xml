@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 도구 문서 열기(N7): Quick Open(Ctrl+P)에 타일맵 이름을 치고 Enter 를 누르면 콘텐츠 브라우저 더블클릭처럼 Tile Map Tool 이 열린다.
+  패널을 닫은 뒤 같은 에셋을 다시 골라도(포커스가 그대로여도) 패널이 다시 열린다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/openasset.scenario.xml -dx12
+-->
+<Scenario name="editor.openasset" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
+	<At frame="20"><Variable name="gv_editorProbePanel" value="tile_map"/></At>
+	<At frame="40"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="60"><EditorKey key="Ctrl+P"/></At>
+	<At frame="75"><EditorText value="twod.tilemap"/></At>
+	<!-- 파일 목록(일 스레드)이 오기 전에 Enter 를 눌러도 목록이 오는 대로 연다 — 확인은 목록이 올 넉넉한 뒤에 한다 -->
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="330"><Expect probe="Editor.PanelOpen" equals="1"/></At>
+	<At frame="335"><DevCommand line="panel.close tile_map"/></At>
+	<At frame="350"><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="360"><EditorKey key="Ctrl+P"/></At>
+	<At frame="375"><EditorText value="twod.tilemap"/></At>
+	<At frame="390"><EditorKey key="Enter"/></At>
+	<At frame="630"><Expect probe="Editor.PanelOpen" equals="1"/></At>
+	<At frame="635"><Pass/></At>
+</Scenario>

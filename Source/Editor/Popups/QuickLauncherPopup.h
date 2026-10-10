@@ -64,5 +64,6 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         int32                                 _selectedIndex;
         bool                                  _bJustOpened;
+        bool                                  _bExecuteWhenIndexed; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
     };
 } // namespace sw::editor

@@ -46,7 +46,7 @@ namespace sw::editor
         , _lastScanKey{}
         , _listOverride{}
         , _listNestedPrefab{}
-        , _bShowOnlyModified{ false }
+        , _bShowOnlyModified{ true }
     {
         scanPrefabOverrides( nullptr );
     }
@@ -185,12 +185,12 @@ namespace sw::editor
                 if ( item._bModified )
                 {
                     EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
-                    ImGui::Text( "* %s", item._propertyName.c_str() );
+                    ImGui::Text( "* %s", item._propertyLabel.c_str() );
                     EditorThemeUtil::popTextColor();
                 }
                 else
                 {
-                    ImGui::Text( "%s", item._propertyName.c_str() );
+                    ImGui::Text( "%s", item._propertyLabel.c_str() );
                 }
 
                 ImGui::TableNextColumn();

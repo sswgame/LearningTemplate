@@ -7,6 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
@@ -39,6 +40,14 @@ namespace sw::editor
         void acceptFocusedDocument();
         /** @brief dirty면 확인 팝업, 아니면 포커스 경로를 받아들입니다. */
         void updateFocusedDocument();
+        /**
+         * @brief "Open..." 단추(이 종류의 에셋을 찾아 고르는 팝업)와 최근 문서 콤보를 한 줄에 그립니다.
+         * @details 고른 문서는 워크스페이스 포커스로 넘깁니다. 바꾸기 · 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 합니다.
+         *          이름표는 `<패널 id>.open`, 팝업 검색 칸 `<패널 id>.open.search`, 목록 줄 `<패널 id>.open.<파일 이름>` 입니다.
+         */
+        void drawDocumentOpenBar( const utf8* pMarkPrefix );
+        /** @brief 최근에 연 문서(새 것이 앞, 최대 `kMaxRecentDocumentCount`)입니다. */
+        const vector<string>& getRecentDocumentPaths() const { return _listRecentPath; }
 
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
         bool          isDocumentLoaded() const;
@@ -83,6 +92,14 @@ namespace sw::editor
         }
 
     private:
+        static constexpr uint32 kMaxRecentDocumentCount = 8;
+
+        /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
+        void drawOpenDocumentPopup( const utf8* pMarkPrefix );
+        /** @brief 문서를 엽니다(워크스페이스 포커스로 넘긴다). */
+        void requestOpenDocument( string_view assetPath );
+        /** @brief 최근 문서 목록 맨 앞에 @p assetPath 를 둡니다(중복은 뺀다). */
+        void rememberRecentDocument( string_view assetPath );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
         /** @brief 읽었다(또는 새 문서) — 저장을 허용하고 되돌리기 기준을 맞춥니다. */
@@ -90,14 +107,17 @@ namespace sw::editor
         /** @brief 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다. */
         void markDocumentLoadFailed( string_view reason );
 
-        EditorAssetType        _kind;
-        string                 _loadedAssetPath;
-        string                 _pendingFocusPath;
-        string                 _documentUndoBaseline;
-        string                 _lastSavedDocumentText;
-        uint8                  _bLoaded        : 1;
-        uint8                  _bConfirmSwitch : 1;
-        uint8                  _bLoadFailed    : 1;
-        [[maybe_unused]] uint8 _reserved       : 5;
+        EditorAssetType                       _kind;
+        string                                _loadedAssetPath;
+        string                                _pendingFocusPath;
+        string                                _documentUndoBaseline;
+        string                                _lastSavedDocumentText;
+        vector<string>                        _listRecentPath;
+        vector<string>                        _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
+        fixed_string<constant::kMaxBuffer128> _openFilter;
+        uint8                                 _bLoaded        : 1;
+        uint8                                 _bConfirmSwitch : 1;
+        uint8                                 _bLoadFailed    : 1;
+        [[maybe_unused]] uint8                _reserved       : 5;
     };
 } // namespace sw::editor

@@ -7,7 +7,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -53,6 +52,7 @@ namespace sw::editor
         , _searchBuffer{}
         , _selectedIndex{ 0 }
         , _bJustOpened{ false }
+        , _bExecuteWhenIndexed{ false }
     {
     }
 
@@ -87,8 +87,9 @@ namespace sw::editor
 
     void QuickLauncherPopup::onOpen()
     {
-        _bJustOpened   = true;
-        _selectedIndex = 0;
+        _bJustOpened         = true;
+        _selectedIndex       = 0;
+        _bExecuteWhenIndexed = false;
         _searchBuffer.clear();
         rebuildIndex();
     }
@@ -150,9 +151,9 @@ namespace sw::editor
             return;
         }
 
-        // 여는 동작이 있는 종류(씬)는 연다 — 실패는 그 동작이 알린다. 나머지는 콘텐츠 브라우저에서 고른다.
-        const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActions( item._kind );
-        if ( pActions != nullptr && pActions->open( item._path ) )
+        // 콘텐츠 브라우저 더블클릭과 같이 연다 — 도구 패널이 있는 종류는 그 패널을, 여는 동작이 있는 종류(씬)는 그 동작을.
+        // 둘 다 없는 종류는 포커스만 옮긴다(인스펙터 · 콘텐츠 브라우저가 따라간다).
+        if ( EditorAssetCommands::openPath( item._path ) )
             return;
         EditorAssetCommands::focusPath( item._path );
     }
@@ -280,6 +281,18 @@ namespace sw::editor
 
         EditorChrome::endSearchOverlay();
 
+        // 이름을 치고 바로 Enter 를 누르면 파일 목록(일 스레드)이 아직 안 왔을 수 있다 — 그때는 목록이 오는 대로 연다.
+        // 목록이 비면 `updateListSelection` 이 Enter 를 보지 않으므로 키를 직접 본다.
+        const bool bEnterPressed = ImGui::IsKeyPressed( ImGuiKey_Enter, false ) || ImGui::IsKeyPressed( ImGuiKey_KeypadEnter, false );
+        if ( bEnterPressed && filteredCount == 0 && _fileIndexJob.isPending() )
+            _bExecuteWhenIndexed = true;
+        if ( _bExecuteWhenIndexed && filteredCount > 0 )
+        {
+            _bExecuteWhenIndexed = false;
+            bExecute             = true;
+        }
+        if ( _bExecuteWhenIndexed && _fileIndexJob.isPending() == false )
+            _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
         if ( bExecute && filteredCount > 0 && 0 <= _selectedIndex && _selectedIndex < filteredCount )
         {
             const QuickLauncherItem* pTarget = listFiltered[static_cast<size_t>( _selectedIndex )];

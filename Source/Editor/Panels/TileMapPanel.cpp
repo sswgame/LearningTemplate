@@ -70,6 +70,7 @@ namespace sw::editor
         if ( isDocumentLoaded() == false )
             _pathBuffer = getLoadedAssetPath().c_str();
         ensureDocumentLoaded();
+        drawDocumentOpenBar( "tileMap" );
 
         drawTileMapFileControls();
         ImGui::Checkbox( "Erase", &_bErase );

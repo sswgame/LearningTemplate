@@ -264,17 +264,6 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 **확인 = 에디터 시나리오.** `playedit.scenario.xml`: Play 를 누르고 인스펙터에서 오브젝트 위치를 바꾼 뒤 Stop 을 눌러 위치 탐침이 원래 값으로 돌아오는지, 같은 절차에서 "Keep" 명령을 쓰면 남는지 봅니다.
 
-### N7 도구 문서 열기 흐름(S)
-
-**무엇.** Material, Sequencer, Tile Map, Sprite Clip 도구 패널에 "열기" 단추와 최근 문서 목록을 둡니다. Quick Open 이나 콘텐츠 브라우저 더블클릭으로 에셋을 고르면 그 도구가 열립니다.
-Prefab Editor 의 오버라이드 표는 "바뀐 것만" 을 기본으로 하고 표시 이름을 씁니다.
-
-**왜.** 지금 도구 패널은 "포커스된 에셋" 이 있어야 열리고, Quick Open 으로 타일맵을 골라도 포커스만 바뀌고 Tile Map Tool 은 열리지 않습니다.
-
-**상용 비교.** 유니티와 언리얼은 에셋을 열면 그 편집기가 열립니다. 유니티 Overrides 드롭다운은 바뀐 것만 보입니다.
-
-**확인 = 에디터 시나리오.** `openasset.scenario.xml`: Quick Open(`EditorKey key="P" mods="ctrl"`)에 타일맵 이름을 치고 `EditorKey key="Enter"` 를 보낸 뒤 탐침 `Editor.PanelOpen.tilemap` 이 1 인지 봅니다.
-
 ### N8 Animation Graph 를 런타임 기능에 맞추기(M, 선행 T3)
 
 **무엇.** 패널 점검은 Animation Graph 를 "미완성" 으로 분류했습니다. 노드 추가, 끌기, 연결, 저장과 dirty 표시는 동작합니다.

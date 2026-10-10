@@ -216,10 +216,11 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
+        drawDocumentOpenBar( "material" );
 
         if ( getLoadedAssetPath().empty() )
         {
-            EditorWidgets::drawEmptyHint( "Focus a .mat / .material asset to edit." );
+            EditorWidgets::drawEmptyHint( "Open a material (Open..., Quick Open or a Content Browser double-click) to edit." );
             return;
         }
 

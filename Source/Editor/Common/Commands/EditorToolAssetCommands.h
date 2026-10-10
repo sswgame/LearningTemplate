@@ -26,9 +26,10 @@ namespace sw::editor
     /** @brief 프리팹 인스턴스 컴포넌트 프로퍼티 오버라이드 항목 */
     struct PrefabOverrideItem
     {
-        string _componentName; ///< 보이는 이름(타입)입니다
+        string _componentName; ///< 보이는 이름(타입의 표시 이름)입니다
         string _componentKey;  ///< 어느 컴포넌트인지(`ComponentStableKey`). 같은 타입이 둘이어도 갈립니다
-        string _propertyName;
+        string _propertyName;  ///< 프로퍼티 이름(되돌리기가 찾는 키)
+        string _propertyLabel; ///< 보이는 이름(`DisplayName` 메타, 없으면 프로퍼티 이름) — 인스펙터와 같다
         string _defaultValue;
         string _overriddenValue;
         bool   _bModified{ false };

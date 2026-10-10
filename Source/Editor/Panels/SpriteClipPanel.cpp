@@ -44,6 +44,7 @@ namespace sw::editor
     {
         updateFocusedDocument();
         ensureDocumentLoaded();
+        drawDocumentOpenBar( "spriteClip" );
 
         ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )

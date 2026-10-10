@@ -635,3 +635,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다. 시나리오 `editor/graphaddnode`(탐침 `Editor.GraphNodeCount` 는 가장 최근에 그린 캔버스의 노드 수).
 - **Output Log 의 따라가기는 스크롤 위치로 정한다.** 지난 프레임 배치의 `GetScrollY` 가 `GetScrollMaxY` 에 붙어 있을 때만 새 로그에 맨 아래로 내린다.
   "새 로그가 오면 늘 내린다" 로 되돌리면 위로 올려 읽는 중에 끌려 내려간다. 명령을 친 뒤에는 답을 보도록 한 번 내린다.
+- **도구 문서 패널은 열기 단추와 최근 목록을 기반이 그린다**(`EditorDocumentPanel::drawDocumentOpenBar`). 고른 문서는 워크스페이스 포커스로 넘기고,
+  바꾸기 · 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 한다 — 패널이 직접 읽으면 미저장 확인을 건너뛴다. 최근 목록은 패널이 들고 있어 에디터를 다시 켜면 빈다.
+  Quick Open 은 콘텐츠 브라우저 더블클릭과 같은 `EditorAssetCommands::openPath` 로 연다(포커스만 옮기면 도구 패널이 열리지 않는다).
+  파일 목록이 오기 전에 Enter 를 누르면 목록이 오는 대로 첫 줄을 연다. 시나리오 `editor/openasset`.
