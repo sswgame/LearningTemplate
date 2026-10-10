@@ -113,7 +113,7 @@ namespace sw
 namespace sw
 {
     /** @brief 나눈 URL 입니다. */
-    struct SW_GF_API HttpUrl
+    struct SW_GF_API HttpURL
     {
         string _host{};
         string _target{ "/" }; ///< 경로 + 쿼리(요청 줄에 그대로)
@@ -121,7 +121,7 @@ namespace sw
         uint8  _bSecure{ SW_FALSE };
 
         /** @brief `http(s)://호스트[:포트][/경로][?쿼리]` 를 나눕니다. 사용자 정보 · 조각(`#`) · 빈 호스트 · 틀린 포트는 false 입니다. */
-        [[nodiscard]] static bool parse( string_view url, HttpUrl& outUrl );
+        [[nodiscard]] static bool parse( string_view url, HttpURL& outURL );
     };
 } // namespace sw
 
@@ -224,7 +224,7 @@ namespace sw
     /** @brief 메시지 쓰기 도우미입니다. */
     struct SW_GF_API HttpWriteUtil
     {
-        static void        writeRequest( const HttpClientRequest& request, const HttpUrl& url, vector<uint8>& outBytes );
+        static void        writeRequest( const HttpClientRequest& request, const HttpURL& url, vector<uint8>& outBytes );
         static void        writeResponse( const HttpServerResponse& response, vector<uint8>& outBytes );
         static const utf8* getReasonPhrase( int32 statusCode );
     };

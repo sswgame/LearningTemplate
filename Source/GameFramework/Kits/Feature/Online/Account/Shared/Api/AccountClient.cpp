@@ -276,7 +276,7 @@ namespace sw
             reply._result = AccountClientInternal::toResult( response._errorCode );
             BitReader detail( response._pBody, response._bodySize );
             if ( response._errorCode == OnlineError::kUpdateRequired )
-                (void)AccountWire::readText( detail, 512, reply._grant._storeUrl ); // 상세가 깨졌으면 상점 주소만 빈다 — 결과 코드는 위에서 정했다
+                (void)AccountWire::readText( detail, 512, reply._grant._storeURL ); // 상세가 깨졌으면 상점 주소만 빈다 — 결과 코드는 위에서 정했다
             else if ( response._errorCode == OnlineError::kRateLimited )
                 reply._grant._retryAfterMs = static_cast<int64>( detail.readVarUint() );
         }

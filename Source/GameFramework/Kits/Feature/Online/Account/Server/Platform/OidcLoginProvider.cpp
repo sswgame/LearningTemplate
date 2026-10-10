@@ -110,7 +110,7 @@ namespace sw
     void OidcLoginProvider::startJwksFetch( int64 nowMs )
     {
         HttpClientRequest request;
-        request._url       = _settings._jwksUrl;
+        request._url       = _settings._jwksURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );
         _jwksRequestId    = _pHttpClient->submitRequest( request, nowMs );

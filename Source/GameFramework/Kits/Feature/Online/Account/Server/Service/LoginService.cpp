@@ -21,7 +21,7 @@ namespace sw
         {
             static constexpr utf8 kMinimumBuildKey[]     = "account.minimum_build.";
             static constexpr utf8 kRecommendedBuildKey[] = "account.recommended_build.";
-            static constexpr utf8 kStoreUrlKey[]         = "account.store_url.";
+            static constexpr utf8 kStoreURLKey[]         = "account.store_url.";
 
             /** @brief 돌아가며 다시 읽는 차례가 해시맵 순서에 기대지 않게(결정적) 계정 id 로 정렬한다. */
             struct SessionRefLess
@@ -48,7 +48,7 @@ namespace sw
                 string            _provider;
                 string            _subject;
                 string            _displayNameHint;
-                string            _storeUrl;
+                string            _storeURL;
                 uint64            _accountId;
                 LoginRevokeReason _revokeReason;
                 uint8             _arrDeviceSecret[LoginConstant::kDeviceSecretSize];
@@ -61,7 +61,7 @@ namespace sw
                     , _provider{}
                     , _subject{}
                     , _displayNameHint{}
-                    , _storeUrl{}
+                    , _storeURL{}
                     , _accountId{ 0 }
                     , _revokeReason{ LoginRevokeReason::Administrative }
                     , _arrDeviceSecret{}
@@ -164,7 +164,7 @@ namespace sw
                     if ( _completion._result == LoginResult::Ok && _bUpdateRecommended == SW_TRUE )
                     {
                         _completion._grant._bUpdateRecommended = SW_TRUE;
-                        _completion._grant._storeUrl           = _storeUrl;
+                        _completion._grant._storeURL           = _storeURL;
                     }
                     // 워커를 떠나면 비밀번호 · 장치 비밀 · 외부 주체를 들고 있지 않는다(지우기 · wipe 는 하지 않는다 — 서버 관례).
                     _credential._password.clear();
@@ -345,7 +345,7 @@ namespace sw
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Login, requestTag, nowMs );
         work->_credential                                = credential;
         work->_bUpdateRecommended                        = buildGrant._bUpdateRecommended;
-        work->_storeUrl                                  = buildGrant._storeUrl;
+        work->_storeURL                                  = buildGrant._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -369,7 +369,7 @@ namespace sw
             make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::GuestLogin, requestTag, nowMs );
         Memory::copy( work->_arrDeviceSecret, arrDeviceSecret, LoginConstant::kDeviceSecretSize );
         work->_bUpdateRecommended = buildGrant._bUpdateRecommended;
-        work->_storeUrl           = buildGrant._storeUrl;
+        work->_storeURL           = buildGrant._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -409,7 +409,7 @@ namespace sw
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Resume, requestTag, nowMs );
         work->_token                                     = token;
         work->_bUpdateRecommended                        = buildGrant._bUpdateRecommended;
-        work->_storeUrl                                  = buildGrant._storeUrl;
+        work->_storeURL                                  = buildGrant._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -658,7 +658,7 @@ namespace sw
             return LoginResult::Ok; // 플랫폼을 모르면 판 확인을 할 수 없다 — 프로토콜 판(Hello)이 따로 막는다
         string minimumBuild;
         string recommendedBuild;
-        (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreUrlKey, clientInfo._platform ), outGrant._storeUrl );
+        (void)_pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kStoreURLKey, clientInfo._platform ), outGrant._storeURL );
         const bool bMinimum     = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kMinimumBuildKey, clientInfo._platform ), minimumBuild );
         const bool bRecommended = _pRemoteConfig->findText( LoginServiceInternal::makeConfigKey( LoginServiceInternal::kRecommendedBuildKey, clientInfo._platform ),
                                                             recommendedBuild );
@@ -667,7 +667,7 @@ namespace sw
         if ( bRecommended && AccountUtil::compareBuild( clientInfo._build, recommendedBuild ) < 0 )
             outGrant._bUpdateRecommended = SW_TRUE;
         else
-            outGrant._storeUrl.clear();
+            outGrant._storeURL.clear();
         return LoginResult::Ok;
     }
 
@@ -699,7 +699,7 @@ namespace sw
         PendingVerification& pending = _listPendingVerification.emplace_back();
         pending._token               = token;
         pending._provider            = string( provider );
-        pending._storeUrl            = buildGrant._storeUrl;
+        pending._storeURL            = buildGrant._storeURL;
         pending._pProvider           = pProvider;
         pending._requestTag          = requestTag;
         pending._nowMs               = nowMs;
@@ -723,7 +723,7 @@ namespace sw
         work->_subject            = verification._subject;
         work->_displayNameHint    = verification._displayName;
         work->_bUpdateRecommended = pending._bUpdateRecommended;
-        work->_storeUrl           = pending._storeUrl;
+        work->_storeURL           = pending._storeURL;
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }

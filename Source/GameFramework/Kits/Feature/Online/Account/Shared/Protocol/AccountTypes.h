@@ -55,7 +55,7 @@ namespace sw
         StoreUnavailable,    ///< 저장소에 닿지 못했다 · 레코드가 깨졌다 — 다시 시도
         AlreadyLinked,       ///< 연동 — 이름 · 외부 계정이 이미 다른 계정에 묶였다(자동 합치기 없음) · 이 계정에 이미 이름이 있다
         AccountSuspended,    ///< 정지 · 영구 정지 — `_sanctionUntilMs` · `_sanctionReasonCode`
-        UpdateRequired,      ///< 클라이언트 빌드가 최소 판보다 낮다 — `_storeUrl`
+        UpdateRequired,      ///< 클라이언트 빌드가 최소 판보다 낮다 — `_storeURL`
         ProviderUnavailable, ///< 없는 제공자 · 제공자 서버에 닿지 못했다 — 다시 시도
         ProviderRejected,    ///< 제공자가 표를 거절했다(서명 · 만료 · 대상)
         LastLoginMethod,     ///< 연동 해제 — 마지막 로그인 수단은 풀 수 없다
@@ -117,7 +117,7 @@ namespace sw
         AccountIdentity   _identity{};
         LoginSessionToken _token{};
         string            _sanctionReasonCode{};                    ///< AccountSuspended — 사유 코드
-        string            _storeUrl{};                              ///< UpdateRequired · 권장 — 원격 설정의 상점 주소
+        string            _storeURL{};                              ///< UpdateRequired · 권장 — 원격 설정의 상점 주소
         int64             _expiresAtMs{ 0 };                        ///< 세션의 절대 시한
         int64             _retryAfterMs{ 0 };                       ///< AccountLocked · RateLimited — 이만큼 뒤에
         int64             _sanctionUntilMs{ 0 };                    ///< AccountSuspended — 끝 시각(영구 정지는 `ServiceSanctionState::kPermanentMs`)

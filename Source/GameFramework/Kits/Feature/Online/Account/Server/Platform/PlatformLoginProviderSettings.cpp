@@ -96,8 +96,8 @@ namespace sw
                 return false;
             }
             settings._issuer          = Internal::readText( entry, "issuer", "" );
-            settings._jwksUrl         = Internal::readText( entry, "jwksUrl", "" );
-            settings._profileUrl      = Internal::readText( entry, "profileUrl", "" );
+            settings._jwksURL         = Internal::readText( entry, "jwksUrl", "" );
+            settings._profileURL      = Internal::readText( entry, "profileUrl", "" );
             settings._subjectPath     = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
             settings._displayNamePath = Internal::readText( entry, "displayNamePath", "" );
             settings._bRequireNonce   = entry.get( "requireNonce", false ).asBool( false ) ? SW_TRUE : SW_FALSE;
@@ -120,7 +120,7 @@ namespace sw
         if ( AccountUtil::isValidLowerToken( settings._name, LoginConstant::kMaxProviderNameSize ) == false || settings._subjectPath.empty() )
             return false;
         if ( settings._kind == PlatformLoginProviderKind::Oidc )
-            return settings._issuer.empty() == false && settings._jwksUrl.empty() == false && settings._listClientId.empty() == false;
-        return settings._profileUrl.empty() == false;
+            return settings._issuer.empty() == false && settings._jwksURL.empty() == false && settings._listClientId.empty() == false;
+        return settings._profileURL.empty() == false;
     }
 } // namespace sw

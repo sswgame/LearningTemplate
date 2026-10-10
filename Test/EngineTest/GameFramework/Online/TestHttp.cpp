@@ -93,25 +93,25 @@ namespace
             return lost;
         }
 
-        string makeUrl( const utf8* pScheme, const utf8* pPath ) const { return string( pScheme ) + "://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
+        string makeURL( const utf8* pScheme, const utf8* pPath ) const { return string( pScheme ) + "://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
     };
 } // namespace
 
-SW_TEST_CASE( HttpTest, UrlFormAndPercentRules )
+SW_TEST_CASE( HttpTest, URLFormAndPercentRules )
 {
-    HttpUrl url;
-    SW_ASSERT_TRUE( HttpUrl::parse( "https://example.com:8443/a/b?x=1", url ) );
+    HttpURL url;
+    SW_ASSERT_TRUE( HttpURL::parse( "https://example.com:8443/a/b?x=1", url ) );
     SW_EXPECT_EQUAL( string( "example.com" ), url._host );
     SW_EXPECT_EQUAL( uint16( 8443 ), url._port );
     SW_EXPECT_EQUAL( string( "/a/b?x=1" ), url._target );
     SW_EXPECT_TRUE( url._bSecure == SW_TRUE );
-    SW_ASSERT_TRUE( HttpUrl::parse( "http://127.0.0.1?q", url ) );
+    SW_ASSERT_TRUE( HttpURL::parse( "http://127.0.0.1?q", url ) );
     SW_EXPECT_EQUAL( uint16( 80 ), url._port );
     SW_EXPECT_EQUAL( string( "/?q" ), url._target );
-    SW_EXPECT_FALSE( HttpUrl::parse( "ftp://example.com/", url ) );
-    SW_EXPECT_FALSE( HttpUrl::parse( "https://user@example.com/", url ) );
-    SW_EXPECT_FALSE( HttpUrl::parse( "https://example.com:0/", url ) );
-    SW_EXPECT_FALSE( HttpUrl::parse( "https://example.com/#frag", url ) );
+    SW_EXPECT_FALSE( HttpURL::parse( "ftp://example.com/", url ) );
+    SW_EXPECT_FALSE( HttpURL::parse( "https://user@example.com/", url ) );
+    SW_EXPECT_FALSE( HttpURL::parse( "https://example.com:0/", url ) );
+    SW_EXPECT_FALSE( HttpURL::parse( "https://example.com/#frag", url ) );
 
     const vector<HttpHeader> listPair = {
         {"redirect_uri", "http://127.0.0.1:5/callback"},
@@ -205,7 +205,7 @@ SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
         const utf8* pScheme = bSecure ? "https" : "http";
 
         HttpClientRequest get;
-        get._url                          = pair.makeUrl( pScheme, "/echo?name=r%C3%A9" );
+        get._url                          = pair.makeURL( pScheme, "/echo?name=r%C3%A9" );
         const HttpClientResponse response = pair.run( get );
         SW_ASSERT_TRUE( response.isSuccess() );
         SW_EXPECT_EQUAL( string( "GET:ré:" ), string( response.getBodyText() ) );
@@ -213,7 +213,7 @@ SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
 
         HttpClientRequest post;
         post._method      = HttpMethod::Post;
-        post._url         = pair.makeUrl( pScheme, "/echo" );
+        post._url         = pair.makeURL( pScheme, "/echo" );
         const string body = "grant_type=authorization_code";
         post._bodyBytes.assign( body.begin(), body.end() );
         const HttpClientResponse postResponse = pair.run( post );
@@ -221,13 +221,13 @@ SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
         SW_EXPECT_EQUAL( string( "POST::grant_type=authorization_code" ), string( postResponse.getBodyText() ) );
 
         HttpClientRequest chunked;
-        chunked._url                             = pair.makeUrl( pScheme, "/chunked" );
+        chunked._url                             = pair.makeURL( pScheme, "/chunked" );
         const HttpClientResponse chunkedResponse = pair.run( chunked );
         SW_ASSERT_TRUE( chunkedResponse.isSuccess() );
         SW_EXPECT_EQUAL( string( "this body arrives in seven byte chunks" ), string( chunkedResponse.getBodyText() ) );
 
         HttpClientRequest missing;
-        missing._url                             = pair.makeUrl( pScheme, "/nothing" );
+        missing._url                             = pair.makeURL( pScheme, "/nothing" );
         const HttpClientResponse missingResponse = pair.run( missing );
         SW_EXPECT_FALSE( missingResponse.isSuccess() );
         SW_EXPECT_EQUAL( 404, missingResponse._statusCode );
@@ -241,14 +241,14 @@ SW_TEST_CASE( HttpTest, TransportFailuresAreReportedOnce )
     SW_ASSERT_TRUE( pair.initialize( nullptr, 16 ) );
 
     HttpClientRequest slow;
-    slow._url                         = pair.makeUrl( "http", "/echo" );
+    slow._url                         = pair.makeURL( "http", "/echo" );
     slow._timeoutMs                   = 500;
     const HttpClientResponse timedOut = pair.run( slow, false ); // 서버가 답하지 않는다
     SW_EXPECT_TRUE( timedOut._bTransportFailed == SW_TRUE );
     SW_EXPECT_EQUAL( string( "timed out" ), timedOut._failureText );
 
     HttpClientRequest tooLarge;
-    tooLarge._url                          = pair.makeUrl( "http", "/chunked" ); // 몸이 상한 16 바이트를 넘는다
+    tooLarge._url                          = pair.makeURL( "http", "/chunked" ); // 몸이 상한 16 바이트를 넘는다
     const HttpClientResponse largeResponse = pair.run( tooLarge );
     SW_EXPECT_TRUE( largeResponse._bTransportFailed == SW_TRUE );
 
@@ -258,7 +258,7 @@ SW_TEST_CASE( HttpTest, TransportFailuresAreReportedOnce )
     SW_EXPECT_TRUE( namedResponse._bTransportFailed == SW_TRUE ); // 이름 해석 없음 — 분명한 실패
 
     HttpClientRequest noTLS;
-    noTLS._url                             = pair.makeUrl( "https", "/echo" ); // 그 호스트의 TLS 컨텍스트를 올리지 않았다
+    noTLS._url                             = pair.makeURL( "https", "/echo" ); // 그 호스트의 TLS 컨텍스트를 올리지 않았다
     const HttpClientResponse noTLSResponse = pair.run( noTLS );
     SW_EXPECT_TRUE( noTLSResponse._bTransportFailed == SW_TRUE );
 

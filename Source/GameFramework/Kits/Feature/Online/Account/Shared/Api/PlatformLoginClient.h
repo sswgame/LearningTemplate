@@ -63,7 +63,7 @@ namespace sw
         IExternalBrowser( const IExternalBrowser& )            = delete;
         IExternalBrowser& operator=( const IExternalBrowser& ) = delete;
 
-        [[nodiscard]] virtual bool openUrl( string_view url ) = 0;
+        [[nodiscard]] virtual bool openURL( string_view url ) = 0;
     };
 } // namespace sw
 

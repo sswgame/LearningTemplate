@@ -432,11 +432,11 @@ SW_TEST_CASE( AccountStreamTest, ServerRestartKeepsSessionsAndOldBuildsAreToldTo
     RemoteConfigValue minimum;
     minimum._type = RemoteConfigValueType::Text;
     minimum._text = "2.0";
-    RemoteConfigValue storeUrl;
-    storeUrl._type = RemoteConfigValueType::Text;
-    storeUrl._text = "https://store.example/app";
+    RemoteConfigValue storeURL;
+    storeURL._type = RemoteConfigValueType::Text;
+    storeURL._text = "https://store.example/app";
     rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.minimum_build.windows", minimum, audit );
-    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.store_url.windows", storeUrl, audit );
+    rig._remoteConfig.submitSet( rig._server->_store, nullptr, "account.store_url.windows", storeURL, audit );
     (void)rig._server->_store.pollCompletions();
     AccountClientInfo oldBuild;
     oldBuild._build    = "1.9";
@@ -447,7 +447,7 @@ SW_TEST_CASE( AccountStreamTest, ServerRestartKeepsSessionsAndOldBuildsAreToldTo
     const AccountClientReply refused = rig.waitReply( stale, stale._account.login( "survivor", "password123" ) );
     SW_EXPECT_EQUAL( OnlineError::kUpdateRequired, refused._errorCode );
     SW_EXPECT_TRUE( refused._result == LoginResult::UpdateRequired );
-    SW_EXPECT_EQUAL( string( "https://store.example/app" ), refused._grant._storeUrl );
+    SW_EXPECT_EQUAL( string( "https://store.example/app" ), refused._grant._storeURL );
 }
 
 SW_TEST_CASE( AccountStreamTest, AdministrativeRevokeCarriesTheReasonCodeAndGuestSecretComesFromLocalStore )

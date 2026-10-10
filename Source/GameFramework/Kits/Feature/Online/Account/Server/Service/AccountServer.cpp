@@ -397,7 +397,7 @@ namespace sw
             }
             case LoginResult::UpdateRequired:
             {
-                AccountWire::writeText( detail, grant._storeUrl );
+                AccountWire::writeText( detail, grant._storeURL );
                 (void)host.respondError( token, OnlineError::kUpdateRequired, &detail );
                 return true;
             }

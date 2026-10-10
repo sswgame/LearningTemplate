@@ -532,14 +532,14 @@ namespace sw
         {
             bytes.push_back( static_cast<uint8>( ( crc >> ( byteIndex * 8 ) ) & 0xffu ) );
         }
-        return Base64Util::encodeUrl( bytes.data(), bytes.size() );
+        return Base64Util::encodeURL( bytes.data(), bytes.size() );
     }
 
     bool AppearanceShareCode::decode( string_view code, const AppearanceDatabase& database, AppearanceSelection& outSelection, string* pOutReason )
     {
         using Internal = AppearanceSelectionInternal;
         vector<uint8> bytes;
-        if ( Base64Util::decodeUrl( StringUtil::trim( code ), bytes ) == false || bytes.size() <= Internal::kChecksumBytes )
+        if ( Base64Util::decodeURL( StringUtil::trim( code ), bytes ) == false || bytes.size() <= Internal::kChecksumBytes )
         {
             if ( pOutReason != nullptr )
                 *pOutReason = "not a share code";

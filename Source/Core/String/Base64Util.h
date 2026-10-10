@@ -16,10 +16,10 @@ namespace sw
         /** @brief 표준 알파벳 · `=` 채움으로 씁니다. */
         static string encode( const uint8* pData, size_t size );
         /** @brief URL 안전 알파벳 · 채움 없이 씁니다. */
-        static string encodeUrl( const uint8* pData, size_t size );
+        static string encodeURL( const uint8* pData, size_t size );
         /** @brief 표준 알파벳을 읽습니다(끝의 `=` 채움은 있어도 없어도 된다). 알파벳 밖 글자 · 남는 비트가 0 이 아니면 false 입니다. */
         [[nodiscard]] static bool decode( string_view text, vector<uint8>& outBytes );
         /** @brief URL 안전 알파벳을 읽습니다(채움 없이 · 있어도 된다). 알파벳 밖 글자 · 남는 비트가 0 이 아니면 false 입니다. */
-        [[nodiscard]] static bool decodeUrl( string_view text, vector<uint8>& outBytes );
+        [[nodiscard]] static bool decodeURL( string_view text, vector<uint8>& outBytes );
     };
 } // namespace sw

@@ -9,7 +9,7 @@ namespace sw
         struct Base64UtilInternal
         {
             static constexpr utf8  kStandardAlphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-            static constexpr utf8  kUrlAlphabet[]      = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+            static constexpr utf8  kURLAlphabet[]      = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
             static constexpr int32 kInvalidDigit       = -1;
 
             static string encode( const uint8* pData, size_t size, const utf8* pAlphabet, bool bPad )
@@ -83,9 +83,9 @@ namespace sw
 {
     string Base64Util::encode( const uint8* pData, size_t size ) { return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kStandardAlphabet, true ); }
 
-    string Base64Util::encodeUrl( const uint8* pData, size_t size ) { return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kUrlAlphabet, false ); }
+    string Base64Util::encodeURL( const uint8* pData, size_t size ) { return Base64UtilInternal::encode( pData, size, Base64UtilInternal::kURLAlphabet, false ); }
 
     bool Base64Util::decode( string_view text, vector<uint8>& outBytes ) { return Base64UtilInternal::decode( text, Base64UtilInternal::kStandardAlphabet, outBytes ); }
 
-    bool Base64Util::decodeUrl( string_view text, vector<uint8>& outBytes ) { return Base64UtilInternal::decode( text, Base64UtilInternal::kUrlAlphabet, outBytes ); }
+    bool Base64Util::decodeURL( string_view text, vector<uint8>& outBytes ) { return Base64UtilInternal::decode( text, Base64UtilInternal::kURLAlphabet, outBytes ); }
 } // namespace sw

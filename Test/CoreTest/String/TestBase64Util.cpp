@@ -13,10 +13,10 @@ namespace
     {
         static string encodeText( const utf8* pText ) { return Base64Util::encode( reinterpret_cast<const uint8*>( pText ), string_view( pText ).size() ); }
 
-        static string decodeText( string_view text, bool bUrl )
+        static string decodeText( string_view text, bool bURL )
         {
             vector<uint8> bytes;
-            const bool    bDecoded = bUrl ? Base64Util::decodeUrl( text, bytes ) : Base64Util::decode( text, bytes );
+            const bool    bDecoded = bURL ? Base64Util::decodeURL( text, bytes ) : Base64Util::decode( text, bytes );
             return bDecoded ? string( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() ) : string( "<fail>" );
         }
     };
@@ -37,13 +37,13 @@ SW_TEST_CASE( Base64UtilTest, MatchesRfc4648Vectors )
     SW_EXPECT_EQUAL( string( "fooba" ), Internal::decodeText( "Zm9vYmE", false ) ); // 채움 없이도
 }
 
-SW_TEST_CASE( Base64UtilTest, UrlAlphabetHasNoPaddingAndRoundTrips )
+SW_TEST_CASE( Base64UtilTest, URLAlphabetHasNoPaddingAndRoundTrips )
 {
     const uint8 arrByte[] = { 0xFB, 0xFF, 0xBF, 0x00, 0x10 };
-    SW_EXPECT_EQUAL( string( "-_-_ABA" ), Base64Util::encodeUrl( arrByte, sizeof( arrByte ) ) );
+    SW_EXPECT_EQUAL( string( "-_-_ABA" ), Base64Util::encodeURL( arrByte, sizeof( arrByte ) ) );
     SW_EXPECT_EQUAL( string( "+/+/ABA=" ), Base64Util::encode( arrByte, sizeof( arrByte ) ) );
     vector<uint8> decoded;
-    SW_ASSERT_TRUE( Base64Util::decodeUrl( "-_-_ABA", decoded ) );
+    SW_ASSERT_TRUE( Base64Util::decodeURL( "-_-_ABA", decoded ) );
     SW_ASSERT_EQUAL( sizeof( arrByte ), decoded.size() );
     for ( size_t index = 0; index < decoded.size(); ++index )
     {
@@ -54,14 +54,14 @@ SW_TEST_CASE( Base64UtilTest, UrlAlphabetHasNoPaddingAndRoundTrips )
     {
         listByte.push_back( static_cast<uint8>( value ) );
     }
-    SW_ASSERT_TRUE( Base64Util::decodeUrl( Base64Util::encodeUrl( listByte.data(), listByte.size() ), decoded ) );
+    SW_ASSERT_TRUE( Base64Util::decodeURL( Base64Util::encodeURL( listByte.data(), listByte.size() ), decoded ) );
     SW_EXPECT_TRUE( decoded == listByte );
 }
 
 SW_TEST_CASE( Base64UtilTest, RejectsForeignCharactersAndNonZeroLeftoverBits )
 {
     vector<uint8> decoded;
-    SW_EXPECT_FALSE( Base64Util::decodeUrl( "ab+c", decoded ) ); // 표준 글자는 URL 알파벳 밖
+    SW_EXPECT_FALSE( Base64Util::decodeURL( "ab+c", decoded ) ); // 표준 글자는 URL 알파벳 밖
     SW_EXPECT_FALSE( Base64Util::decode( "ab-c", decoded ) );
     SW_EXPECT_FALSE( Base64Util::decode( "Zm9v!", decoded ) );
     SW_EXPECT_FALSE( Base64Util::decode( "Z", decoded ) );  // 6 비트 하나

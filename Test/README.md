@@ -59,15 +59,15 @@ CMake는 하위 폴더까지 glob으로 찾으므로 새 파일을 만들어도 
 
 **2단계 — 케이스를 씁니다.**
 
-<!-- snippet: Test/CoreTest/String/TestBase64Util.cpp 의 UrlAlphabetHasNoPaddingAndRoundTrips — 5b U7 에서 대조 -->
+<!-- snippet: Test/CoreTest/String/TestBase64Util.cpp 의 URLAlphabetHasNoPaddingAndRoundTrips — 5b U7 에서 대조 -->
 ```cpp
-SW_TEST_CASE( Base64UtilTest, UrlAlphabetHasNoPaddingAndRoundTrips )
+SW_TEST_CASE( Base64UtilTest, URLAlphabetHasNoPaddingAndRoundTrips )
 {
     const uint8 arrByte[] = { 0xFB, 0xFF, 0xBF, 0x00, 0x10 };
-    SW_EXPECT_EQUAL( string( "-_-_ABA" ), Base64Util::encodeUrl( arrByte, sizeof( arrByte ) ) );
+    SW_EXPECT_EQUAL( string( "-_-_ABA" ), Base64Util::encodeURL( arrByte, sizeof( arrByte ) ) );
     SW_EXPECT_EQUAL( string( "+/+/ABA=" ), Base64Util::encode( arrByte, sizeof( arrByte ) ) );
     vector<uint8> decoded;
-    SW_ASSERT_TRUE( Base64Util::decodeUrl( "-_-_ABA", decoded ) );
+    SW_ASSERT_TRUE( Base64Util::decodeURL( "-_-_ABA", decoded ) );
     SW_ASSERT_EQUAL( sizeof( arrByte ), decoded.size() );
     for ( size_t index = 0; index < decoded.size(); ++index )
         SW_EXPECT_EQUAL( arrByte[index], decoded[index] );

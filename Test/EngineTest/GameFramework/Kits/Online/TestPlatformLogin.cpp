@@ -84,7 +84,7 @@ namespace
                 uint8      arrDigest[NetSecurityConstant::kSha256Size];
                 const bool bHashed = NetSecurity::getProvider().computeSha256( reinterpret_cast<const uint8*>( verifier.data() ),
                                                                                static_cast<int32>( verifier.size() ), arrDigest );
-                const bool bPkceOk = bForm && bHashed && code == _expectedCode && Base64Util::encodeUrl( arrDigest, sizeof( arrDigest ) ) == _expectedChallenge;
+                const bool bPkceOk = bForm && bHashed && code == _expectedCode && Base64Util::encodeURL( arrDigest, sizeof( arrDigest ) ) == _expectedChallenge;
                 if ( bPkceOk == false )
                 {
                     outResponse._statusCode = 400;
@@ -102,11 +102,11 @@ namespace
     class RecordingBrowser final : public IExternalBrowser
     {
     public:
-        string _lastUrl{};
+        string _lastURL{};
 
-        [[nodiscard]] bool openUrl( string_view url ) override
+        [[nodiscard]] bool openURL( string_view url ) override
         {
-            _lastUrl = string( url );
+            _lastURL = string( url );
             return true;
         }
     };
@@ -216,7 +216,7 @@ namespace
             _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
-        string makeUrl( const utf8* pPath ) const { return "https://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
+        string makeURL( const utf8* pPath ) const { return "https://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
 
         PlatformLoginProviderSettings makeOidcSettings() const
         {
@@ -224,7 +224,7 @@ namespace
             settings._name    = "google";
             settings._kind    = PlatformLoginProviderKind::Oidc;
             settings._issuer  = "https://issuer.test";
-            settings._jwksUrl = makeUrl( "/jwks" );
+            settings._jwksURL = makeURL( "/jwks" );
             settings._listClientId.push_back( "client-a" );
             settings._displayNamePath = "name";
             return settings;
@@ -274,8 +274,8 @@ SW_TEST_CASE( PlatformLoginTest, OidcAcceptsValidTokenAndRejectsBadOnes )
     SW_EXPECT_TRUE( fixture.verify( provider, Internal::makeToken( key, "https://evil.test", "client-a", 2000, "user-1", nullptr ) )._bRejected == SW_TRUE );   // iss
     SW_EXPECT_TRUE( fixture.verify( provider, Internal::makeToken( key, "https://issuer.test", "client-a", 900, "user-1", nullptr ) )._bRejected == SW_TRUE );  // exp(+60 초 허용 넘음)
     // alg none — 서명 없는 토큰은 머리에서 거절
-    const string noneHeader = Base64Util::encodeUrl( reinterpret_cast<const uint8*>( "{\"alg\":\"none\"}" ), 14 );
-    const string body       = Base64Util::encodeUrl( reinterpret_cast<const uint8*>( "{\"sub\":\"x\"}" ), 11 );
+    const string noneHeader = Base64Util::encodeURL( reinterpret_cast<const uint8*>( "{\"alg\":\"none\"}" ), 14 );
+    const string body       = Base64Util::encodeURL( reinterpret_cast<const uint8*>( "{\"sub\":\"x\"}" ), 11 );
     SW_EXPECT_TRUE( fixture.verify( provider, noneHeader + "." + body + ".AA" )._bRejected == SW_TRUE );
     SW_EXPECT_TRUE( fixture.verify( provider, "not-a-token" )._bRejected == SW_TRUE );
 
@@ -331,7 +331,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
     PlatformLoginProviderSettings settings;
     settings._name            = "naver";
     settings._kind            = PlatformLoginProviderKind::AccessTokenProfile;
-    settings._profileUrl      = fixture.makeUrl( "/profile" );
+    settings._profileURL      = fixture.makeURL( "/profile" );
     settings._subjectPath     = "response.id";
     settings._displayNamePath = "response.nickname";
     SW_ASSERT_TRUE( PlatformLoginProviderFactory::isValidSettings( settings ) );
@@ -379,8 +379,8 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     LoopbackPkceLoginClient   client;
     PkceLoginProviderSettings settings;
     settings._provider         = "google";
-    settings._authorizationUrl = fixture.makeUrl( "/authorize?prompt=select_account" );
-    settings._tokenUrl         = fixture.makeUrl( "/token" );
+    settings._authorizationURL = fixture.makeURL( "/authorize?prompt=select_account" );
+    settings._tokenURL         = fixture.makeURL( "/token" );
     settings._clientId         = "client-a";
     StreamTransportSettings transportSettings;
     transportSettings._ioThreadCount = 0;
@@ -390,14 +390,14 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
     const uint64     requestId = client.beginLogin( "google", kNowMs );
-    SW_ASSERT_FALSE( browser._lastUrl.empty() );
-    SW_EXPECT_EQUAL( string( "select_account" ), Internal::findQuery( browser._lastUrl, "prompt" ) ); // 설정의 쿼리를 지킨다
-    SW_EXPECT_EQUAL( string( "S256" ), Internal::findQuery( browser._lastUrl, "code_challenge_method" ) );
-    const string state       = Internal::findQuery( browser._lastUrl, "state" );
-    const string nonce       = Internal::findQuery( browser._lastUrl, "nonce" );
-    const string redirectUri = Internal::findQuery( browser._lastUrl, "redirect_uri" );
+    SW_ASSERT_FALSE( browser._lastURL.empty() );
+    SW_EXPECT_EQUAL( string( "select_account" ), Internal::findQuery( browser._lastURL, "prompt" ) ); // 설정의 쿼리를 지킨다
+    SW_EXPECT_EQUAL( string( "S256" ), Internal::findQuery( browser._lastURL, "code_challenge_method" ) );
+    const string state       = Internal::findQuery( browser._lastURL, "state" );
+    const string nonce       = Internal::findQuery( browser._lastURL, "nonce" );
+    const string redirectUri = Internal::findQuery( browser._lastURL, "redirect_uri" );
     SW_EXPECT_TRUE( StringUtil::startsWith( redirectUri, "http://127.0.0.1:" ) );
-    fixture._handler._expectedChallenge = Internal::findQuery( browser._lastUrl, "code_challenge" );
+    fixture._handler._expectedChallenge = Internal::findQuery( browser._lastURL, "code_challenge" );
     fixture._handler._idToken           = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "pc-user", nonce.c_str() );
 
     // "브라우저" — 위조 state 로 한 번(무시), 진짜 state 로 한 번 리다이렉트를 부른다.
@@ -433,7 +433,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
 
     // 사용자가 거절했다 — 취소로 끝난다.
     (void)client.beginLogin( "google", kNowMs );
-    const string      secondState = Internal::findQuery( browser._lastUrl, "state" );
+    const string      secondState = Internal::findQuery( browser._lastURL, "state" );
     HttpClientRequest denied;
     denied._url = redirectUri + "?error=access_denied&state=" + HttpUtil::encodePercent( secondState );
     (void)browserClient.submitRequest( denied, kNowMs );

@@ -26,8 +26,8 @@ namespace sw
     struct PkceLoginProviderSettings
     {
         string _provider{};         ///< 계정 서버의 제공자 이름과 같다
-        string _authorizationUrl{}; ///< 인증 주소(브라우저가 연다)
-        string _tokenUrl{};         ///< 토큰 주소(이 객체가 POST)
+        string _authorizationURL{}; ///< 인증 주소(브라우저가 연다)
+        string _tokenURL{};         ///< 토큰 주소(이 객체가 POST)
         string _clientId{};
         string _scope{ "openid" };
         int64  _timeoutMs{ 300000 };    ///< 사용자가 브라우저에서 끝낼 때까지(5 분)

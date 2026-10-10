@@ -35,8 +35,8 @@ namespace sw
         vector<string>            _listClientId{};       ///< Oidc — `aud` 로 받아들이는 client id(플랫폼마다 다를 수 있다)
         string                    _name{};               ///< `[a-z0-9_]` 16 자 이하 — 저장 키에 든다
         string                    _issuer{};             ///< Oidc — `iss` 와 같아야 한다
-        string                    _jwksUrl{};            ///< Oidc
-        string                    _profileUrl{};         ///< AccessTokenProfile
+        string                    _jwksURL{};            ///< Oidc
+        string                    _profileURL{};         ///< AccessTokenProfile
         string                    _subjectPath{ "sub" }; ///< 응답 JSON(프로필) · 토큰 몸(Oidc)에서 주체 id 의 점 경로("response.id")
         string                    _displayNamePath{};    ///< 표시 이름 힌트의 점 경로(비우면 없음)
         int64                     _clockSkewMs{ 60000 }; ///< exp · iat 허용 오차

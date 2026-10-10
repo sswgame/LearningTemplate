@@ -20,18 +20,18 @@ namespace sw
             [[nodiscard]] static bool decodeJson( string_view encoded, JsonDocument& outDocument )
             {
                 vector<uint8> bytes;
-                if ( Base64Util::decodeUrl( encoded, bytes ) == false )
+                if ( Base64Util::decodeURL( encoded, bytes ) == false )
                     return false;
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
                 return outDocument.tryParse( text ) && outDocument.getRoot().isObject();
             }
 
-            static string encodeText( string_view text ) { return Base64Util::encodeUrl( reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
+            static string encodeText( string_view text ) { return Base64Util::encodeURL( reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
 
             [[nodiscard]] static bool decodeField( const JsonValue& key, const utf8* pName, vector<uint8>& outBytes )
             {
                 const JsonValue field = key.get( pName, false );
-                return field.isString() && Base64Util::decodeUrl( field.asString(), outBytes ) && outBytes.empty() == false;
+                return field.isString() && Base64Util::decodeURL( field.asString(), outBytes ) && outBytes.empty() == false;
             }
         };
     } // namespace
@@ -64,7 +64,7 @@ namespace sw
             return false;
         if ( Internal::decodeJson( compact.substr( firstDot + 1, secondDot - firstDot - 1 ), *_payload ) == false )
             return false;
-        if ( Base64Util::decodeUrl( compact.substr( secondDot + 1 ), _signatureBytes ) == false || _signatureBytes.empty() )
+        if ( Base64Util::decodeURL( compact.substr( secondDot + 1 ), _signatureBytes ) == false || _signatureBytes.empty() )
             return false;
         const JsonValue algorithm = header.getRoot().get( "alg", false );
         if ( algorithm.isString() == false )
@@ -136,7 +136,7 @@ namespace sw
         if ( provider.signData( algorithm, privateKeyPem, reinterpret_cast<const uint8*>( signingInput.data() ), static_cast<int32>( signingInput.size() ), signature ) ==
              false )
             return false;
-        outCompact = signingInput + "." + Base64Util::encodeUrl( signature.data(), signature.size() );
+        outCompact = signingInput + "." + Base64Util::encodeURL( signature.data(), signature.size() );
         return true;
     }
 
@@ -145,12 +145,12 @@ namespace sw
         string jwk = "{\"kid\":\"" + JsonDocument::escapeString( keyId ) + "\",\"use\":\"sig\",";
         if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
         {
-            jwk += "\"kty\":\"RSA\",\"alg\":\"RS256\",\"n\":\"" + Base64Util::encodeUrl( publicKey._modulus.data(), publicKey._modulus.size() ) + "\",\"e\":\"" +
-                   Base64Util::encodeUrl( publicKey._exponent.data(), publicKey._exponent.size() ) + "\"}";
+            jwk += "\"kty\":\"RSA\",\"alg\":\"RS256\",\"n\":\"" + Base64Util::encodeURL( publicKey._modulus.data(), publicKey._modulus.size() ) + "\",\"e\":\"" +
+                   Base64Util::encodeURL( publicKey._exponent.data(), publicKey._exponent.size() ) + "\"}";
             return jwk;
         }
-        jwk += "\"kty\":\"EC\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"" + Base64Util::encodeUrl( publicKey._x.data(), publicKey._x.size() ) + "\",\"y\":\"" +
-               Base64Util::encodeUrl( publicKey._y.data(), publicKey._y.size() ) + "\"}";
+        jwk += "\"kty\":\"EC\",\"alg\":\"ES256\",\"crv\":\"P-256\",\"x\":\"" + Base64Util::encodeURL( publicKey._x.data(), publicKey._x.size() ) + "\",\"y\":\"" +
+               Base64Util::encodeURL( publicKey._y.data(), publicKey._y.size() ) + "\"}";
         return jwk;
     }
 

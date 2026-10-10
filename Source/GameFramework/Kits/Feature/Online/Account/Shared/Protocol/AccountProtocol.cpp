@@ -10,7 +10,7 @@ namespace sw
     {
         struct AccountProtocolInternal
         {
-            static constexpr int32 kMaxUrlSize = 512;
+            static constexpr int32 kMaxURLSize = 512;
 
             [[nodiscard]] static bool readResult( BitReader& reader, LoginResult& outResult )
             {
@@ -85,7 +85,7 @@ namespace sw
         outWriter.writeBool( grant._identity._bGuest == SW_TRUE );
         writeToken( outWriter, grant._token );
         writeText( outWriter, grant._sanctionReasonCode );
-        writeText( outWriter, grant._storeUrl );
+        writeText( outWriter, grant._storeURL );
         outWriter.writeVarInt( grant._expiresAtMs );
         outWriter.writeVarInt( grant._retryAfterMs );
         outWriter.writeVarInt( grant._sanctionUntilMs );
@@ -107,7 +107,7 @@ namespace sw
         outGrant._identity._bGuest = reader.readBool() ? SW_TRUE : SW_FALSE;
         if ( readToken( reader, outGrant._token ) == false || readText( reader, LoginConstant::kMaxReasonCodeSize, outGrant._sanctionReasonCode ) == false )
             return false;
-        if ( readText( reader, AccountProtocolInternal::kMaxUrlSize, outGrant._storeUrl ) == false )
+        if ( readText( reader, AccountProtocolInternal::kMaxURLSize, outGrant._storeURL ) == false )
             return false;
         outGrant._expiresAtMs       = reader.readVarInt();
         outGrant._retryAfterMs      = reader.readVarInt();

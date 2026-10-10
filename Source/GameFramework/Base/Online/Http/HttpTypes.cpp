@@ -111,19 +111,19 @@ namespace sw
         return nullptr;
     }
 
-    bool HttpUrl::parse( string_view url, HttpUrl& outUrl )
+    bool HttpURL::parse( string_view url, HttpURL& outURL )
     {
-        outUrl = HttpUrl{};
+        outURL = HttpURL{};
         string_view rest;
         if ( url.substr( 0, 8 ) == "https://" )
         {
-            outUrl._bSecure = SW_TRUE;
-            outUrl._port    = 443;
+            outURL._bSecure = SW_TRUE;
+            outURL._port    = 443;
             rest            = url.substr( 8 );
         }
         else if ( url.substr( 0, 7 ) == "http://" )
         {
-            outUrl._port = 80;
+            outURL._port = 80;
             rest         = url.substr( 7 );
         }
         else
@@ -137,21 +137,21 @@ namespace sw
         if ( authority.empty() || authority.find( '@' ) != string_view::npos )
             return false;
         const size_t colon = authority.rfind( ':' );
-        outUrl._host       = string( authority.substr( 0, colon ) );
+        outURL._host       = string( authority.substr( 0, colon ) );
         if ( colon != string_view::npos )
         {
             int64 port = 0;
             if ( HttpTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535 )
                 return false;
-            outUrl._port = static_cast<uint16>( port );
+            outURL._port = static_cast<uint16>( port );
         }
-        if ( outUrl._host.empty() )
+        if ( outURL._host.empty() )
             return false;
         if ( slash != string_view::npos )
         {
-            outUrl._target = string( rest.substr( slash ) );
-            if ( outUrl._target.front() == '?' )
-                outUrl._target.insert( outUrl._target.begin(), '/' );
+            outURL._target = string( rest.substr( slash ) );
+            if ( outURL._target.front() == '?' )
+                outURL._target.insert( outURL._target.begin(), '/' );
         }
         return true;
     }
@@ -508,7 +508,7 @@ namespace sw
         return _state;
     }
 
-    void HttpWriteUtil::writeRequest( const HttpClientRequest& request, const HttpUrl& url, vector<uint8>& outBytes )
+    void HttpWriteUtil::writeRequest( const HttpClientRequest& request, const HttpURL& url, vector<uint8>& outBytes )
     {
         using Internal = HttpTypesInternal;
         outBytes.clear();

@@ -156,7 +156,7 @@ namespace sw
         {
             LoginSessionToken       _token{}; ///< LinkPlatform
             string                  _provider{};
-            string                  _storeUrl{};
+            string                  _storeURL{};
             IPlatformLoginProvider* _pProvider{ nullptr };
             uint64                  _verificationId{ 0 };
             uint64                  _requestTag{ 0 };

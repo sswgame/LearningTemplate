@@ -69,13 +69,13 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const uint64            requestId = _nextRequestId++;
-        HttpUrl                 url;
+        HttpURL                 url;
         if ( _bInitialized == SW_FALSE )
         {
             failImmediately( requestId, "client is not running" );
             return requestId;
         }
-        if ( HttpUrl::parse( request._url, url ) == false )
+        if ( HttpURL::parse( request._url, url ) == false )
         {
             failImmediately( requestId, "malformed URL" );
             return requestId;

@@ -103,11 +103,11 @@ namespace sw
         listQuery.push_back( HttpHeader{ "scope", pSettings->_scope } );
         listQuery.push_back( HttpHeader{ "state", pending._state } );
         listQuery.push_back( HttpHeader{ "nonce", pending._nonce } );
-        listQuery.push_back( HttpHeader{ "code_challenge", Base64Util::encodeUrl( arrChallenge, sizeof( arrChallenge ) ) } );
+        listQuery.push_back( HttpHeader{ "code_challenge", Base64Util::encodeURL( arrChallenge, sizeof( arrChallenge ) ) } );
         listQuery.push_back( HttpHeader{ "code_challenge_method", "S256" } );
-        const bool   bHasQuery = pSettings->_authorizationUrl.find( '?' ) != string::npos;
-        const string url       = pSettings->_authorizationUrl + ( bHasQuery ? "&" : "?" ) + HttpUtil::encodeForm( listQuery );
-        if ( _pBrowser->openUrl( url ) == false )
+        const bool   bHasQuery = pSettings->_authorizationURL.find( '?' ) != string::npos;
+        const string url       = pSettings->_authorizationURL + ( bHasQuery ? "&" : "?" ) + HttpUtil::encodeForm( listQuery );
+        if ( _pBrowser->openURL( url ) == false )
         {
             finish( pending, false, false, "could not open the system browser", vector<uint8>{} );
             return requestId;
@@ -222,7 +222,7 @@ namespace sw
         listForm.push_back( HttpHeader{ "code_verifier", pFound->_codeVerifier } );
         HttpClientRequest tokenRequest;
         tokenRequest._method = HttpMethod::Post;
-        tokenRequest._url    = pSettings->_tokenUrl;
+        tokenRequest._url    = pSettings->_tokenURL;
         const string body    = HttpUtil::encodeForm( listForm );
         tokenRequest._bodyBytes.assign( body.begin(), body.end() );
         tokenRequest._listHeader.push_back( HttpHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
@@ -245,7 +245,7 @@ namespace sw
         vector<uint8> bytes( static_cast<size_t>( byteCount ), 0 );
         if ( _pProvider->fillRandomBytes( bytes.data(), byteCount ) == false )
             return false;
-        outText = Base64Util::encodeUrl( bytes.data(), bytes.size() );
+        outText = Base64Util::encodeURL( bytes.data(), bytes.size() );
         return true;
     }
 

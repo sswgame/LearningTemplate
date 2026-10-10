@@ -21,7 +21,7 @@ namespace sw
     {
         const uint64      verificationId = _nextVerificationId++;
         HttpClientRequest request;
-        request._url       = _settings._profileUrl;
+        request._url       = _settings._profileURL;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HttpHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
         request._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );

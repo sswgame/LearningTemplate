@@ -864,20 +864,20 @@ SW_TEST_CASE( LoginServiceTest, OldBuildIsToldToUpdate )
     oldClient._platform = "windows";
     LoginGrant grant;
     SW_EXPECT_TRUE( fixture->guestLogin( 5, 0, grant, oldClient ) == LoginResult::UpdateRequired );
-    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeUrl );
+    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeURL );
     SW_EXPECT_EQUAL( 0, fixture._database.countRecords( hashed_string( "account_guest" ) ) ); // 일을 맡기지 않았다
 
     AccountClientInfo behind = oldClient;
     behind._build            = "1.9.9";
     SW_ASSERT_TRUE( fixture->guestLogin( 5, 10, grant, behind ) == LoginResult::Ok );
     SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_TRUE );
-    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeUrl );
+    SW_EXPECT_EQUAL( string( "https://store.example/game" ), grant._storeURL );
 
     AccountClientInfo current = oldClient;
     current._build            = "1.10.0";
     SW_ASSERT_TRUE( fixture->guestLogin( 5, 20, grant, current ) == LoginResult::Ok );
     SW_EXPECT_TRUE( grant._bUpdateRecommended == SW_FALSE );
-    SW_EXPECT_TRUE( grant._storeUrl.empty() );
+    SW_EXPECT_TRUE( grant._storeURL.empty() );
 }
 
 SW_TEST_CASE( LoginServiceTest, SuspendedAccountCannotLoginAndIsKicked )
