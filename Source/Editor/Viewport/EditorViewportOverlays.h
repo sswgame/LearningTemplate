@@ -51,6 +51,11 @@ namespace sw::editor
         bool setBarVisible( string_view barID, bool bVisible );
 
         const EditorViewportOverlayLayout& getLayout() const { return _layout; }
+        /**
+         * @brief 오른쪽 위 구석을 가리는 바의 안쪽 여백(픽셀, 지난 프레임 자리)입니다 — x 는 오른쪽에 붙은 바의 폭, y 는 위에 붙은 바의 아래 끝.
+         *        씬 뷰 HUD 상자 · 방향 큐브가 바 아래에 놓이게 한다.
+         */
+        float2 computeTopRightInset() const;
         /** @brief 바의 이번 실행 상태입니다(탐침). 없으면 nullptr 입니다. */
         const EditorOverlayBarRuntime* findRuntime( string_view barID ) const;
 

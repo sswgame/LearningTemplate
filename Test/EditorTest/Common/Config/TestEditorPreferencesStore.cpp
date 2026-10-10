@@ -48,7 +48,7 @@ SW_TEST_CASE( EditorPreferencesStoreTest, ApplyKeepsMissingKeysAndReportsUnknown
 SW_TEST_CASE( EditorPreferencesStoreTest, RoundTripThroughTheFile )
 {
     const EditorRegistrar<EditorSettingsRegistration> registrar{
-        EditorSettingsRegistration{ { "probe", 0 }, "Test/Probe", &EditorPreferencesProbe::StaticType, &EditorSettingsInstance<EditorPreferencesProbe>::getInstance, &EditorSettingsInstance<EditorPreferencesProbe>::getDefault, nullptr }
+        EditorSettingsRegistration{ { "probe", 0 }, "Test/Probe", &EditorPreferencesProbe::StaticType, &EditorSettingsInstance<EditorPreferencesProbe>::getInstance, &EditorSettingsInstance<EditorPreferencesProbe>::getDefault, nullptr, nullptr }
     };
     EditorPreferencesProbe& probe = *static_cast<EditorPreferencesProbe*>( EditorSettingsInstance<EditorPreferencesProbe>::getInstance() );
     probe._speed                  = 7.0f;

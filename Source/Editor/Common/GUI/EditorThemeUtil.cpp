@@ -772,5 +772,5 @@ namespace sw::editor
 {
     // 테마는 환경설정 섹션 "Editor/Appearance" 다 — 저장은 EditorPreferences.json 하나, 값을 고치면(창 · 파일 다시 읽기) 테마를 다시 적용한다.
     SW_EDITOR_REGISTER( EditorSettingsRegistration, Settings_EditorConfig, { "appearance", 200 }, "Editor/Appearance", &EditorConfig::StaticType,
-                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeUtil::loadFromConfig );
+                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeUtil::loadFromConfig, nullptr );
 } // namespace sw::editor

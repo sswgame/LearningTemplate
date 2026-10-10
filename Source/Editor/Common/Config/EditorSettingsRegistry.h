@@ -33,6 +33,22 @@ namespace sw::editor
         void* ( *_pfnGetInstance )();
         const void* ( *_pfnGetDefault )();
         void ( *_pfnOnChanged )(); ///< 값이 바뀐 뒤(창에서 고침 · 파일을 다시 읽음 · 섹션 되돌리기). nullptr 이면 부르지 않습니다
+        /**
+         * @brief 리플렉션 구조체가 아닌 쪽을 그리는 함수입니다(`SW_EDITOR_SETTINGS_PAGE`). 이 쪽은 타입이 없어(`_pfnGetType` 이 nullptr) 이 파일에 저장하지 않는다 —
+         *        값의 주인이 따로 있다(예: 디버그 HUD 는 엔진 사용자 설정). nullptr 이면 리플렉션 그리드를 그린다.
+         */
+        void ( *_pfnDrawPage )();
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 그리기 함수 쪽(`SW_EDITOR_SETTINGS_PAGE`)의 타입 · 인스턴스 자리입니다 — 모두 nullptr 입니다. */
+    struct EditorSettingsPageNone
+    {
+        static const TypeInfo* getType() { return nullptr; }
+        static void*           getInstance() { return nullptr; }
+        static const void*     getDefault() { return nullptr; }
     };
 } // namespace sw::editor
 
@@ -111,4 +127,13 @@ namespace sw::editor
  */
 #define SW_EDITOR_SETTINGS( TSettings, pID, pLabel, order, pfnOnChanged )                                                               \
     SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##TSettings, { pID, order }, pLabel, &TSettings::StaticType, \
-                        &::sw::editor::EditorSettingsInstance<TSettings>::getInstance, &::sw::editor::EditorSettingsInstance<TSettings>::getDefault, pfnOnChanged )
+                        &::sw::editor::EditorSettingsInstance<TSettings>::getInstance, &::sw::editor::EditorSettingsInstance<TSettings>::getDefault, pfnOnChanged, nullptr )
+
+/**
+ * @brief 그리기 함수 하나로 된 환경설정 쪽을 등록합니다(값의 주인이 에디터 환경설정 파일 밖에 있을 때).
+ * @code SW_EDITOR_SETTINGS_PAGE( DebugHUD, "debug_hud", "Editor/Debug HUD", 360, &draw ); @endcode
+ */
+#define SW_EDITOR_SETTINGS_PAGE( name, pID, pLabel, order, pfnDraw )                                                        \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorSettingsRegistration, Settings_##name, { pID, order }, pLabel,                  \
+                        &::sw::editor::EditorSettingsPageNone::getType, &::sw::editor::EditorSettingsPageNone::getInstance, \
+                        &::sw::editor::EditorSettingsPageNone::getDefault, nullptr, pfnDraw )

@@ -334,4 +334,20 @@ namespace sw::editor
         ImGui::PopStyleVar( 3 );
         ImGui::PopStyleColor();
     }
+
+    float2 EditorViewportOverlays::computeTopRightInset() const
+    {
+        float2 inset{};
+        for ( const EditorOverlayBarState& state : _layout._listBar )
+        {
+            const EditorOverlayBarRuntime* pRuntime = findRuntime( state._id );
+            if ( state._bVisible == false || pRuntime == nullptr )
+                continue;
+            if ( state._dock == EditorOverlayDock::Top )
+                inset._y = MathUtil::max( inset._y, pRuntime->_lastPosition._y + pRuntime->_lastSize._y );
+            else if ( state._dock == EditorOverlayDock::Right )
+                inset._x = MathUtil::max( inset._x, pRuntime->_lastSize._x );
+        }
+        return inset;
+    }
 } // namespace sw::editor

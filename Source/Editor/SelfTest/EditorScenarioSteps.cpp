@@ -52,6 +52,7 @@
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/FloatCurve.h"
@@ -1064,6 +1065,33 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 씬 뷰 HUD 상자가 지난 프레임에 그린 섹션 수입니다(상자를 껐으면 0). */
+            [[nodiscard]] static bool readSceneViewHUDSections( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                outValue = pClient->getToolbarSettings()._bShowHUD ? static_cast<float64>( pClient->getHUDView().getDrawnSectionCount() ) : 0.0;
+                return true;
+            }
+
+            /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`)입니다 — 화면이 열렸는지(엔진 탐침 `DebugHUD.Shown`)와 달리 멈춤에도 켜짐을 답한다. 조종자가 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readDebugHUDEnabled( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const DebugHUD* pHUD = DebugHUD::findActive();
+                if ( pHUD == nullptr )
+                    return false;
+                outValue = pHUD->isShown() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 켜진 디버그 HUD 섹션 수입니다(HUD 가 꺼져 있어도 센다). */
+            [[nodiscard]] static bool readDebugHUDShownSections( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( DebugHUD::getShownSectionCount() );
+                return true;
+            }
+
             /** @brief 씬 뷰의 호버 오브젝트입니다: `-gv_editorProbeObject` 오브젝트면 1, 없으면 0, 다른 오브젝트면 -1. */
             [[nodiscard]] static bool readHoveredObject( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1449,6 +1477,12 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewOrthographic );
     SW_AUTOMATION_PROBE( editorSceneViewMaximized, "Editor.SceneViewMaximized", "1 while the scene view is maximized (Shift+Space)",
                          &EditorScenarioStepsInternal::readSceneViewMaximized );
+    SW_AUTOMATION_PROBE( editorSceneViewHUDSections, "Editor.SceneViewHUDSections", "Debug HUD sections the scene view HUD box drew (0 when the box is off)",
+                         &EditorScenarioStepsInternal::readSceneViewHUDSections );
+    SW_AUTOMATION_PROBE( editorDebugHUDEnabled, "Editor.DebugHUDEnabled", "1 when the game debug HUD is switched on (debug.hud), even while stopped",
+                         &EditorScenarioStepsInternal::readDebugHUDEnabled );
+    SW_AUTOMATION_PROBE( editorDebugHUDShownSections, "Editor.DebugHUDShownSections", "Debug HUD sections switched on (debug.hudSections plus defaults)",
+                         &EditorScenarioStepsInternal::readDebugHUDShownSections );
     SW_AUTOMATION_PROBE( editorHoveredObject, "Editor.HoveredObject",
                          "Scene view hover: 1 when it is the object named by gv_editorProbeObject, 0 when nothing, -1 when another object",
                          &EditorScenarioStepsInternal::readHoveredObject );

@@ -352,7 +352,7 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 유니티의 Scene · Game 뷰와 같습니다. 이름에 `Game` 은 게임 카메라 출력에만 씁니다.
 
 - **씬 뷰**(`SceneViewPanel`, 제목 "Scene"): 에디터 카메라(`EditorCamera::ensure`)로 그린 씬 위에 격자 · 기즈모 · 피킹 · 눈금자 · 시각화 · 디버그 선 ·
-  통계 · 방향 큐브를 ImGui 로 얹는다(`EditorViewportClient`). Play · Simulate 중에도 에디터 카메라라 둘러보며 볼 수 있다.
+  HUD 상자 · 방향 큐브를 ImGui 로 얹는다(`EditorViewportClient`). Play · Simulate 중에도 에디터 카메라라 둘러보며 볼 수 있다.
 - **게임 뷰**(`GameViewPanel`, 제목 "Game"): 활성 씬의 게임 카메라 출력만 — 화면 UI · 화면 사각형 뷰(분할 화면)까지 든 게임 화면이고 편집 보조선이 없다.
   화면 비율은 자유 · 16:9(레터박스). 게임 카메라가 없거나 꺼져 있으면 "No camera rendering". Play 중 게임 입력은 이 패널이 포커스 · 호버일 때만 게임으로 간다.
 - **상단 툴바**(`EditorPlayToolbar`, 메뉴 막대 아래): 어느 뷰를 열어 두든 같은 자리의 재생 단추.
@@ -372,7 +372,10 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
   같은 임시 레이아웃 `maximize-restore` 를 쓴다. 상태 전이는 `EditorPlayCommands::tick` 이 프레임 끝에 한 번 본다. 시나리오 `editor/playedit`.
 - **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 씬 뷰의 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
   지속 시간(초)과 카테고리를 받는다. 씬 뷰 툴바의 `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
-- **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 게임 뷰 왼쪽 아래에 키 순서로 그린다.
+- **디버그 HUD**: 게임 HUD(`Engine/UI/Debug/DebugHUD`)는 런타임 UI 라 게임 뷰에 그대로 그려진다(플레이 중 — 멈춤 · 일시정지에는 숨는다). 게임 뷰 툴바의 HUD 단추가
+  켜고 끄고(Ctrl+F3 과 같은 `debug.hud`), 오른쪽 클릭 팝업이 섹션 · 모서리 · 불투명도를 고친다(`EditorDebugHUDControls`). 게임 값(`DebugOverlayState`)은 HUD 의 overlay 섹션이다.
+  씬 뷰는 같은 섹션 본문을 4 Hz 로 불러 오른쪽 위 상자에 ImGui 로 그린다(`EditorDebugHUDView` — 붙은 오버레이 바 아래, 켜고 끄기는 뷰마다, 섹션 켜짐은 게임 HUD 와 같은 설정).
+  환경설정 Editor/Debug HUD 쪽은 그리기 함수 쪽(`SW_EDITOR_SETTINGS_PAGE`)이라 EditorPreferences.json 에 적지 않는다 — 값의 주인은 엔진 사용자 설정이다. 시나리오 `editor/debughudcontrols`.
 - 시험: `EditorPlaySessionTest`(Simulate · Step N · 카메라에서 시작), `EditorViewTargetUtilTest`, `DebugDrawQueueTest`, `DebugOverlayStateTest`, `FixedTimestepTest.TimeScale…`,
   에디터 자체 시험 `sceneView.*` · `gameView.*` · `toolbar.*`, 에디터 시나리오 `sceneviewgameview`.
 

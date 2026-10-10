@@ -38,7 +38,6 @@
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Utility/DebugOverlayState.h"
 #include "Engine/Utility/GameAutoplay.h"
 #include "Engine/Utility/GameTimeScale.h"
 
@@ -79,7 +78,6 @@ namespace sw::editor
             static constexpr const utf8* kSceneViewPanelID = "scene_view";
             static constexpr const utf8* kGameViewPanelID  = "game_view";
             static constexpr uint32      kMaxWaitFrame     = 60;
-            static constexpr const utf8* kOverlayKey       = "selftest.overlay";
             static constexpr const utf8* kProbeTag         = "SelfTestDevTools";
 
             /**
@@ -143,32 +141,6 @@ namespace sw::editor
                 if ( bDrawn == false && stepIndex < kMaxWaitFrame )
                     return EditorSelfTestStep::Continue;
                 (void)context.expect( bDrawn, "the debug_draw visualizer never drew the queued box, arrow and text" );
-                return EditorSelfTestStep::Done;
-            }
-
-            // ------------------------------------------------------------------------------
-            // gameView.debugOverlay — 게임이 DebugOverlayState 에 쓴 값을 게임 뷰가 게임 화면 위에 그린다
-            // ------------------------------------------------------------------------------
-            static EditorSelfTestStep runDebugOverlayIsDrawn( EditorSelfTestContext& context )
-            {
-                GameViewPanel* pPanel = openGameView( context );
-                if ( pPanel == nullptr )
-                    return EditorSelfTestStep::Done;
-                DebugOverlayState* pOverlay = getService<DebugOverlayState>();
-                if ( context.expect( pOverlay != nullptr, "no DebugOverlayState service" ) == false )
-                    return EditorSelfTestStep::Done;
-
-                const uint32 stepIndex = context.getStepIndex();
-                if ( stepIndex == 0 )
-                {
-                    pOverlay->setFloat( hashed_string( kOverlayKey ), 42.0f );
-                    return EditorSelfTestStep::Continue;
-                }
-                const bool bDrawn = pPanel->getLastOverlayRowCount() >= 1;
-                if ( bDrawn == false && stepIndex < kMaxWaitFrame )
-                    return EditorSelfTestStep::Continue;
-                (void)context.expect( bDrawn, "the game view never drew the DebugOverlayState rows" );
-                pOverlay->remove( hashed_string( kOverlayKey ) );
                 return EditorSelfTestStep::Done;
             }
 
@@ -577,8 +549,8 @@ namespace sw::editor
                 (void)context.expect( pContext->wasViewDrawn( EditorViewKind::Game ), "the game view did not mark itself drawn" );
                 (void)context.expect( pContext->wasViewDrawn( EditorViewKind::Scene ) == false, "the scene view was drawn behind the game view tab" );
                 (void)context.expect( EditorGridStats::get()._frame != ImGui::GetFrameCount(), "the grid was drawn while only the game view was visible" );
-                // HUD 줄 · 카메라 없음 안내가 없으면 이미지 뒤에 그린 것이 하나도 없어야 한다(격자 · 기즈모 · 시각화 · 통계 · 방향 큐브는 씬 뷰 몫).
-                if ( pPanel->getLastOverlayRowCount() == 0 && pPanel->wasNoCameraHintShown() == false )
+                // 카메라 없음 안내가 없으면 이미지 뒤에 그린 것이 하나도 없어야 한다(격자 · 기즈모 · 시각화 · 통계 · 방향 큐브는 씬 뷰 몫).
+                if ( pPanel->wasNoCameraHintShown() == false )
                 {
                     string what{ "the game view drew editor overlays over the game image (" };
                     what += to_string( vertexCount );
@@ -595,7 +567,6 @@ namespace sw::editor
     } // namespace
 
     SW_EDITOR_SELF_TEST( SceneViewDebugDraw, "sceneView.debugDraw", 710, &EditorSelfTestDevToolsInternal::runDebugDrawReachesTheSceneView );
-    SW_EDITOR_SELF_TEST( GameViewDebugOverlay, "gameView.debugOverlay", 720, &EditorSelfTestDevToolsInternal::runDebugOverlayIsDrawn );
     SW_EDITOR_SELF_TEST( ToolbarAutoplay, "toolbar.autoplayButton", 725, &EditorSelfTestDevToolsInternal::runAutoplayButton );
     SW_EDITOR_SELF_TEST( ConsoleTagFilter, "console.tagFilter", 730, &EditorSelfTestDevToolsInternal::runConsoleTagFilter );
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );

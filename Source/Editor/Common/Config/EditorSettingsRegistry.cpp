@@ -70,7 +70,7 @@ namespace sw::editor
         for ( const string& sectionID : root.getMemberNames() )
         {
             const EditorSettingsRegistration* pRegistration = EditorSettingsRegistryInternal::SettingsRegistry::find( sectionID );
-            if ( pRegistration == nullptr )
+            if ( pRegistration == nullptr || pRegistration->_pfnGetType() == nullptr )
             {
                 SW_LOG_WARNING( "Editor preferences: unknown section '%#' skipped (its module may be off)", sectionID.c_str() );
                 continue;

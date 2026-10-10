@@ -42,6 +42,8 @@ namespace sw::editor
                     return true;
                 if ( filter.matches( registration._pLabel ) )
                     return true;
+                if ( registration._pfnGetType() == nullptr )
+                    return false; // 그리기 함수 쪽은 이름으로만 찾는다
                 vector<InspectorPropertyGroup> listGroup;
                 InspectorPropertyLayout::collectPropertyGroups( *registration._pfnGetType(), {}, filter, listGroup );
                 return listGroup.empty() == false;
@@ -103,6 +105,13 @@ namespace sw::editor
         // 오른쪽: 고른 섹션의 그리드. "Modified only" 면 기본값과 같은 프로퍼티를 이미 그린 것으로 넘겨 숨긴다.
         ImGui::SameLine();
         ImGui::BeginChild( "##PreferenceProperties", ImVec2{ 0.0f, 0.0f } );
+        if ( _pSelected != nullptr && _pSelected->_pfnDrawPage != nullptr )
+        {
+            _pSelected->_pfnDrawPage();
+            ImGui::EndChild();
+            savePendingChanges( false );
+            return;
+        }
         if ( _pSelected == nullptr || _pSelected->_pfnGetType() == nullptr )
         {
             EditorWidgets::drawEmptyHint( "No section matches the search." );

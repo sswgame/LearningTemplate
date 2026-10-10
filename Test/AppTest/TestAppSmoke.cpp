@@ -721,7 +721,6 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|hierarchy.offscreenRootsKeepTheirPlace",
         "EditorSelfTest|PASS|sceneView.resizeEveryFrame",
         "EditorSelfTest|PASS|sceneView.debugDraw",
-        "EditorSelfTest|PASS|gameView.debugOverlay",
         "EditorSelfTest|PASS|toolbar.autoplayButton",
         "EditorSelfTest|PASS|console.tagFilter",
         "EditorSelfTest|PASS|console.devCommands",

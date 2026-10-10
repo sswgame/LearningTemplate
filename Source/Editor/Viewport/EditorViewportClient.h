@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Viewport/EditorDebugHUDView.h"
 #include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
@@ -44,6 +45,8 @@ namespace sw::editor
         void                          drawOverlaysMenu() { _overlays.drawOverlaysMenu(); }
         EditorViewportOverlays&       getOverlays() { return _overlays; }
         const EditorViewportOverlays& getOverlays() const { return _overlays; }
+        /** @brief 씬 뷰 HUD 상자입니다(탐침). */
+        const EditorDebugHUDView& getHUDView() const { return _hudView; }
 
         /** @brief 뷰 행렬을 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const;
@@ -96,7 +99,6 @@ namespace sw::editor
          *          redo 가 잘렸으며, 그것을 되돌리면 A 의 XML(컴포넌트 id 포함)이 B 에 들어갔습니다.
          */
         void endGizmoDrag();
-        void drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawOrientationCube( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize );
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize,
                                const float32* pView, const float32* pProj );
@@ -118,7 +120,9 @@ namespace sw::editor
         float32                 _nearZ;
         float32                 _farZ;
         ViewportToolbarSettings _toolbarSettings;
-        EditorViewportOverlays  _overlays; ///< 씬 뷰 위의 오버레이 바들
+        EditorViewportOverlays  _overlays;     ///< 씬 뷰 위의 오버레이 바들
+        EditorDebugHUDView      _hudView;      ///< 오른쪽 위 HUD 상자
+        float32                 _hudBoxHeight; ///< 지난 프레임 HUD 상자 높이(방향 큐브를 그 아래에 둔다)
         ObjectSnapshot          _gizmoUndoBefore;
         GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
         /**

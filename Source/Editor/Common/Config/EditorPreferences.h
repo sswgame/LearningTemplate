@@ -47,8 +47,8 @@ namespace sw::editor
         PROPERTY( Min = 0.01, Tooltip = "Scale snap step" )
         float32 _scaleSnapValue{ 0.1f };
 
-        PROPERTY( Tooltip = "Show the frame statistics overlay" )
-        bool _bShowStats{ true };
+        PROPERTY( Tooltip = "Show the Debug HUD box (the same sections as the game HUD) in new scene views" )
+        bool _bShowHUD{ true };
 
         PROPERTY( Tooltip = "Show the viewport grid" )
         bool _bShowGrid{ true };

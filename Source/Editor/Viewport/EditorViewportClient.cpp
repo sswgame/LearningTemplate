@@ -125,45 +125,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorViewportClient::drawStatsOverlay( ImDrawList* pDrawList, const float2& canvasPos,
-                                                 const float2& canvasSize )
-    {
-        if ( pDrawList == nullptr )
-            return;
-
-        const float32 fps         = ImGui::GetIO().Framerate;
-        const float32 frameTimeMs = ( fps > 0.0f ) ? ( 1000.0f / fps ) : 0.0f;
-
-        // 개수만 필요하므로 이 프레임에 이미 만들어 둔 스냅샷을 본다(씬 전체를 다시 복사하지 않는다).
-        const uint32 totalObjects = static_cast<uint32>( _listSceneObject.size() );
-
-        constexpr float32 overlayW = 160.0f;
-        constexpr float32 overlayH = 72.0f;
-        const float32     x0       = canvasPos._x + canvasSize._x - overlayW - 12.0f;
-        const float32     y0       = canvasPos._y + 12.0f;
-        const float32     x1       = x0 + overlayW;
-        const float32     y1       = y0 + overlayH;
-
-        // 배경과 테두리
-        pDrawList->AddRectFilled( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 15, 17, 22, 210 ), 6.0f );
-        pDrawList->AddRect( ImVec2( x0, y0 ), ImVec2( x1, y1 ), IM_COL32( 50, 60, 80, 180 ), 6.0f );
-
-        // 텍스트 줄
-        fixed_string<constant::kMaxBuffer32> arrFps;
-        formatstring( arrFps.data(), arrFps.capacity(), "FPS: %# (%# ms)", Fmt( static_cast<float64>( fps ), Format().precision( 1 ) ),
-                      Fmt( static_cast<float64>( frameTimeMs ), Format().precision( 2 ) ) );
-        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 8.0f ), IM_COL32( 80, 230, 120, 240 ), arrFps.c_str() );
-
-        fixed_string<constant::kMaxBuffer32> arrObj;
-        formatstring( arrObj.data(), arrObj.capacity(), "Objects: %u", totalObjects );
-        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 28.0f ), IM_COL32( 210, 215, 230, 230 ), arrObj.c_str() );
-
-        fixed_string<constant::kMaxBuffer32> arrResolutionText;
-        formatstring( arrResolutionText.data(), arrResolutionText.capacity(), "Res: %#×%#", Fmt( static_cast<float64>( canvasSize._x ), Format().precision( 0 ) ),
-                      Fmt( static_cast<float64>( canvasSize._y ), Format().precision( 0 ) ) );
-        pDrawList->AddText( ImVec2( x0 + 10.0f, y0 + 48.0f ), IM_COL32( 140, 160, 190, 220 ), arrResolutionText.c_str() );
-    }
-
     EditorViewportClient::EditorViewportClient()
         : _cameraPos{ 0.0f, 3.0f, -6.0f }
         , _cameraRot{ 20.0f, 0.0f, 0.0f }
@@ -178,6 +139,8 @@ namespace sw::editor
         , _farZ{ 1000.0f }
         , _toolbarSettings{}
         , _overlays{}
+        , _hudView{}
+        , _hudBoxHeight{ 0.0f }
         , _gizmoUndoBefore{}
         , _gizmoObject{}
         , _listGizmoObject{}
@@ -203,7 +166,7 @@ namespace sw::editor
         _toolbarSettings._gridSnapValue              = preferences._gridSnapValue;
         _toolbarSettings._rotationSnapValue          = preferences._rotationSnapValue;
         _toolbarSettings._scaleSnapValue             = preferences._scaleSnapValue;
-        _toolbarSettings._bShowStats                 = preferences._bShowStats;
+        _toolbarSettings._bShowHUD                   = preferences._bShowHUD;
         _toolbarSettings._bShowGrid                  = preferences._bShowGrid;
         _toolbarSettings._bShowOrientationCube       = preferences._bShowOrientationCube;
     }
@@ -543,8 +506,10 @@ namespace sw::editor
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
-            if ( _toolbarSettings._bShowStats )
-                drawStatsOverlay( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
+            // 위 · 오른쪽에 붙은 오버레이 바 아래에 둔다(지난 프레임 자리). 방향 큐브는 그 아래다.
+            const float2 topRightInset = _overlays.computeTopRightInset();
+            _hudBoxHeight              = _toolbarSettings._bShowHUD ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, ImGui::GetIO().DeltaTime )
+                                                                    : topRightInset._y;
 
             if ( _toolbarSettings._bShowOrientationCube )
                 drawOrientationCube( ImGui::GetWindowDrawList(), canvasPos, canvasSize );
@@ -902,7 +867,7 @@ namespace sw::editor
             return;
 
         const float32     cubeCenterX = canvasPos._x + canvasSize._x - 45.0f;
-        const float32     cubeCenterY = canvasPos._y + ( _toolbarSettings._bShowStats ? 128.0f : 45.0f );
+        const float32     cubeCenterY = canvasPos._y + _hudBoxHeight + 45.0f; // HUD 상자 아래
         constexpr float32 cubeRadius  = 26.0f;
 
         // 원형 배경

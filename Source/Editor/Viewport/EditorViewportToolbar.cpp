@@ -12,6 +12,7 @@
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorDebugHUDControls.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -126,8 +127,11 @@ namespace sw::editor
 
     void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
     {
-        if ( EditorWidgets::drawIconToggle( "##stats", editoricon::kChart, settings._bShowStats, "Stats overlay (FPS, objects, resolution)" ) )
-            settings._bShowStats = ( settings._bShowStats == false );
+        // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 자리). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
+        if ( EditorWidgets::drawIconToggle( "##hud", editoricon::kChart, settings._bShowHUD, "Debug HUD box (view size + HUD sections) - right click for sections" ) )
+            settings._bShowHUD = ( settings._bShowHUD == false );
+        EditorSelfTestMarks::note( "viewport.hud" );
+        EditorDebugHUDControls::drawSectionPopupOnRightClick( "##sceneHUDSections" );
         nextItem( bVertical );
         if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, "Grid" ) )
             settings._bShowGrid = ( settings._bShowGrid == false );

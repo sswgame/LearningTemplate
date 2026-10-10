@@ -9,8 +9,6 @@
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Viewport/EditorViewTargetUtil.h"
 
-#include "Engine/Utility/DebugOverlayState.h"
-
 namespace sw::editor
 {
     /**
@@ -34,22 +32,15 @@ namespace sw::editor
         /** @brief 창이 숨겨지면 게임 뷰 포커스를 해제합니다(게임 입력이 끊긴다). */
         void onPanelCollapsed() override;
 
-        /** @brief 마지막 프레임에 그린 디버그 오버레이(`DebugOverlayState`) 줄 수입니다(에디터 자체 시험이 읽습니다). */
-        uint32 getLastOverlayRowCount() const { return _lastOverlayRowCount; }
         /** @brief 마지막 프레임에 "No camera rendering" 안내를 띄웠으면 true 입니다. */
         bool wasNoCameraHintShown() const { return _bNoCameraHintShown; }
 
     private:
         /** @brief 화면 비율 고르기와 HUD 토글을 그립니다. */
         void drawToolbar();
-        /** @brief 캔버스 왼쪽 아래에 `DebugOverlayState` 의 값을 그립니다. */
-        void drawDebugOverlay( const float2& canvasPos, const float2& canvasSize );
 
     private:
-        vector<DebugOverlayRow> _listOverlayRow;      ///< 오버레이 줄 재사용 버퍼
-        uint32                  _lastOverlayRowCount; ///< 마지막으로 그린 오버레이 줄 수
-        EditorGameViewAspect    _aspect;              ///< 이미지 화면 비율(자유 · 16:9)
-        bool                    _bShowOverlay;        ///< 디버그 오버레이(게임이 쓰는 값)를 그린다
-        bool                    _bNoCameraHintShown;  ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
+        EditorGameViewAspect _aspect;             ///< 이미지 화면 비율(자유 · 16:9)
+        bool                 _bNoCameraHintShown; ///< 마지막 프레임에 카메라 없음 안내를 띄웠다
     };
 } // namespace sw::editor
