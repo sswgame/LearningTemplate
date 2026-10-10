@@ -151,7 +151,11 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 - **Pick the string type by what it holds, not by habit.** A name on a per-frame path is a `hashed_string` or a
   `string_view` into storage that already exists — return a view, not a copy. `fixed_string<N>` is only for text whose
   bound is a code constant (never data, a path or user input) where the heap is off limits (crash, log and signal
-  paths) or a fixed buffer is required (ImGui input); it truncates past `N` with a warning and `size()` is a `strlen`.
+  paths) or a fixed buffer is required (ImGui input). It has no length field: `size()` scans the first `N` characters for a
+  null (O(length), so not in a loop condition), and outside code may write up to `max_size()` characters into `data()`
+  with or without a terminator. Overflow truncates with a warning; use `try_assign` / `try_append` where a truncated
+  value is a wrong value. A null is never data in it — null-separated lists (Win32 filters, multi-select results) go in
+  a `wstring` / `vector` that carries its own length.
   Up to 15 characters `string` is already heap-free (SSO), so `fixed_string` buys nothing there. No bulk rewrites.
 
 - **A predicate reads as a question.** Start with `is` / `has` / `was` / `can` / `should`, or use a

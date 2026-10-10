@@ -10,15 +10,41 @@
 
 namespace sw
 {
+    wstring WindowsFileDialog::makeFilterText( const FileDialogParams& params )
+    {
+        // 널이 구분자인 다중 문자열이다 — 널을 데이터로 담으므로 길이를 따로 드는 `wstring` 에 짓는다(`fixed_string` 은 첫 널에서 끝난다).
+        wstring filterText = StringUtil::utf8ToUtf16( params._description.empty() ? "All Files" : params._description.c_str() );
+        filterText.push_back( L'\0' );
+
+        bool bHasPattern{ false };
+        for ( const string& ext : params._listFilterExtension )
+        {
+            if ( ext.empty() )
+                continue;
+            if ( bHasPattern )
+                filterText.push_back( L';' );
+            filterText.append( ext[0] == '.' ? L"*" : L"*." );
+            filterText.append( StringUtil::utf8ToUtf16( ext.c_str() ) );
+            bHasPattern = true;
+        }
+        if ( bHasPattern == false )
+            filterText.append( L"*.*" );
+
+        filterText.push_back( L'\0' );
+        filterText.push_back( L'\0' );
+        return filterText;
+    }
+
     bool WindowsFileDialog::open( const FileDialogParams& params, vector<string>& outListPath )
     {
-        fixed_wstring<constant::kMaxBuffer8192> szFile;
+        // 다중 선택 결과는 "dir\0file1\0file2\0\0" 처럼 널이 구분자라 맨 배열로 받는다.
+        utf16 arrFileBuffer[constant::kMaxBuffer8192]{};
 
         OPENFILENAMEW ofn{};
         ofn.lStructSize  = sizeof( ofn );
         ofn.hwndOwner    = nullptr;
-        ofn.lpstrFile    = szFile.data();
-        ofn.nMaxFile     = static_cast<DWORD>( szFile.capacity() );
+        ofn.lpstrFile    = arrFileBuffer;
+        ofn.nMaxFile     = static_cast<DWORD>( constant::kMaxBuffer8192 );
         ofn.nFilterIndex = 1;
 
         wstring titleW;
@@ -36,34 +62,9 @@ namespace sw
             ofn.lpstrInitialDir       = initialDirW.c_str();
         }
 
-        fixed_string<constant::kMaxBuffer4096> filter;
-        const utf8*                            desc = params._description.empty() ? "All Files" : params._description.c_str();
-        filter.append( desc );
-        filter.push_back( 0 );
-
-        if ( params._listFilterExtension.empty() )
-        {
-            filter.append( "*.*" );
-            filter.push_back( 0 );
-        }
-        else
-        {
-            for ( const string& ext : params._listFilterExtension )
-            {
-                if ( ext.empty() )
-                    continue;
-                if ( ext[0] == '.' )
-                    filter.append( "*" );
-                filter.append( ext );
-                filter.append( ";" );
-            }
-            filter.push_back( 0 );
-        }
-        filter.push_back( 0 );
-
-        const wstring filterW = StringUtil::utf8ToUtf16( filter.c_str() );
-        ofn.lpstrFilter       = filterW.c_str();
-        ofn.Flags             = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+        const wstring filterText = makeFilterText( params );
+        ofn.lpstrFilter          = filterText.c_str();
+        ofn.Flags                = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
         if ( params._bEnableMultiselect && params._type == FileDialogParams::Type::Open )
             ofn.Flags |= OFN_ALLOWMULTISELECT;
 
@@ -85,7 +86,7 @@ namespace sw
         if ( result == FALSE )
             return false;
 
-        const utf16* pCurrent = szFile.data();
+        const utf16* pCurrent = arrFileBuffer;
         if ( pCurrent == nullptr || *pCurrent == L'\0' )
             return false;
 
