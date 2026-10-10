@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "Editor/Common/EditorExports.h"
+
 // ImGui 헤더를 프로젝트 헤더에서 include 하지 않는다. 화면 좌표 out 파라미터는 참조로만
 // 받으므로 전방 선언으로 충분하다 (EditorViewportClient.h 의 ImDrawList 와 같은 방식).
 
@@ -23,7 +25,7 @@ namespace sw::editor
      * @class EditorViewportProjectionUtil
      * @brief 뷰포트 캔버스 좌표 변환입니다. 그리드 · 자 · 컴포넌트 시각화가 함께 씁니다.
      */
-    class EditorViewportProjectionUtil
+    class SW_EDITOR_API EditorViewportProjectionUtil
     {
     public:
         /** @brief 월드 점을 캔버스 좌표로 옮깁니다. 카메라 뒤면 false 입니다. */

@@ -1,6 +1,6 @@
 # Editor (개발자용 에디터 모듈)
 
-씬을 편집하고 디버깅하는 **에디터 UI(ImGui)** 입니다. Dev에서만 `EditorModule` MODULE로 빌드됩니다.
+씬을 편집하고 디버깅하는 **에디터 UI(ImGui)** 입니다. Dev에서만 `EditorModule` SHARED 로 빌드됩니다(확장 모듈이 링크하고 `SW_EDITOR_API` 로 내보낸 API 를 씁니다).
 
 루트에는 모듈 진입점만 둡니다: `IEditor.h` (`sw`, App 계약), `ImGuiEditor.*` (`sw::editor`, 구현).
 에디터 폴더의 나머지 타입은 `sw::editor`에 둡니다.
@@ -96,7 +96,7 @@
 - **순서는 등록 순서가 아니라 순서 키**입니다(같으면 id 사전순). 번역 단위 사이의 정적 초기화 순서는 정해지지 않습니다.
   지금 값은 100 간격이니 사이에 끼우려면 그 사이 값을 씁니다.
 - 같은 종류의 같은 id 는 둘째 등록이 오류와 함께 거절됩니다. 패널 id 는 `windows.ini` 가시성 키이자 `-gv_editorOpenPanel` 값입니다.
-- EditorModule 은 MODULE DLL 이라 아무도 참조하지 않는 등록자도 링크에서 버려지지 않습니다. 정적 라이브러리로 묶는 구성이
+- EditorModule 은 DLL 이라 아무도 참조하지 않는 등록자도 링크에서 버려지지 않습니다. 정적 라이브러리로 묶는 구성이
   생기면 그 전제가 깨지므로 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 부터 확인하십시오.
 - 확인은 `App.exe -EnableEditor -gv_editorRegistryDump=1` — 등록부를 `EditorRegistry|<종류>|<id>|…` 한 줄씩 남깁니다.
   `AppSmokeTest.EditorRegistriesKeepTheirOrder` 가 그 줄을 기대 목록과 대조합니다(새 줄이 끼는 것은 괜찮고, 기존 줄의 순서 ·
@@ -385,7 +385,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 시험: `DevConsoleTest` · `DevCommandRegistryTest` · `DevConsoleControllerTest`(EngineTest), `DevCommandShippingTest`(AppTest), 자체 시험 `console.devCommands`.
 
 ## ⚠️ 핵심 특징 및 규칙
-- **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `MODULE DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
+- **Dev 모드 전용**: 이 폴더의 코드는 개발(Dev) 모드에서만 `SHARED DLL`로 빌드되고 동작합니다. 배포(Shipping) 빌드를 할 때는 **코드가 통째로 날아갑니다.**
 - **게임 로직 분리**: **절대 게임(Game) 로직이 이 폴더의 코드에 의존해서는 안 됩니다.** 게임 코드에서 `#include "Editor/"` 등을 호출하면 Shipping 빌드가 100% 터집니다.
 에디터에서만 써야 할 기능이라면 매크로를 신중하게 사용하세요.
 

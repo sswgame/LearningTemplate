@@ -107,3 +107,39 @@ SW_TEST_CASE( EditorRegistryTest, SecondRegistrationOfAnIDIsRejected )
     SW_EXPECT_EQUAL( 1u, FakeRegistry::getCount() );
     SW_EXPECT_TRUE( FakeRegistry::find( "panel_id" ) == &first.getRegistration() );
 }
+
+/**
+ * @brief [EditorRegistryTest] 종류 이름이 같으면 어느 템플릿 인스턴스에서 찾든 같은 목록이다
+ * @details 확장 모듈(DLL)의 등록이 EditorModule 의 목록에 올라야 에디터에 보인다. 목록을 템플릿 함수 정적으로 두면 DLL 마다 사본이 생긴다.
+ */
+SW_TEST_CASE( EditorRegistryTest, KindNameResolvesToOneList )
+{
+    EditorRegistrationList& first  = getEditorRegistrationList( "test.kind" );
+    EditorRegistrationList& second = getEditorRegistrationList( "test.kind" );
+    SW_EXPECT_TRUE( &first == &second );
+    SW_EXPECT_TRUE( &first != &getEditorRegistrationList( "test.other" ) );
+    SW_EXPECT_TRUE( &FakeRegistry::getList() == &getEditorRegistrationList( FakeRegistration::kKindName ) );
+}
+
+/**
+ * @brief [EditorRegistryTest] 넣고 빼면 세대가 오르고, 거절된 등록은 세대를 올리지 않는다
+ * @details 매니저(패널 · 인스펙터 · 팝업 · 커맨드)는 세대가 바뀌었을 때만 인스턴스를 다시 맞춘다.
+ */
+SW_TEST_CASE( EditorRegistryTest, GenerationCountsChanges )
+{
+    EditorRegistrationList&         list   = getEditorRegistrationList( "test.generation" );
+    const uint32                    before = list.getGeneration();
+    static const EditorRegistration kFirst{ "a", 1 };
+    static const EditorRegistration kDuplicate{ "a", 2 };
+    SW_EXPECT_TRUE( list.addRegistration( kFirst ) );
+    SW_EXPECT_EQUAL( before + 1, list.getGeneration() );
+    {
+        test::ScopedDefensiveTestLog expected( "a second registration of one editor id" );
+        SW_EXPECT_FALSE( list.addRegistration( kDuplicate ) );
+    }
+    SW_EXPECT_EQUAL( before + 1, list.getGeneration() );
+    list.removeRegistration( kDuplicate ); // 올라 있지 않은 줄 — 세대는 그대로
+    SW_EXPECT_EQUAL( before + 1, list.getGeneration() );
+    list.removeRegistration( kFirst );
+    SW_EXPECT_EQUAL( before + 2, list.getGeneration() );
+}

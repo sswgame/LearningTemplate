@@ -712,6 +712,16 @@ namespace sw::editor
                 outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
                 return true;
             }
+
+            /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
+            [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pContext->getPanelManager().getPanels().size() );
+                return true;
+            }
         };
     } // namespace
 
@@ -764,4 +774,6 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSceneViewDrawn, "Editor.SceneViewDrawn", "1 when the Scene panel drew the scene view this UI frame (its tab is in front)",
                          &EditorScenarioStepsInternal::readSceneViewDrawn );
     SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
+    SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
+                         &EditorScenarioStepsInternal::readPanelCount );
 } // namespace sw::editor

@@ -9,6 +9,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw
 {
     class GameObject;
@@ -32,11 +34,13 @@ namespace sw::editor
      *          (`editor::findGameObject`). 입력도 `GameObject*` 로 받고 반환하는 것도 푼 포인터입니다. 이번 호출 안에서만
      *          쓰십시오. 되돌리기 · 플레이 세션 복원은 같은 id 로 오브젝트를 되살리므로 그 너머로도 선택이 이어집니다.
      */
-    class EditorSelection
+    class SW_EDITOR_API EditorSelection
     {
     public:
-        EditorSelection()  = default;
-        ~EditorSelection() = default;
+        EditorSelection()                                    = default;
+        EditorSelection( const EditorSelection& )            = delete;
+        EditorSelection& operator=( const EditorSelection& ) = delete;
+        ~EditorSelection()                                   = default;
 
         // ------------------------------------------------------------------------------
         // 멤버 메서드

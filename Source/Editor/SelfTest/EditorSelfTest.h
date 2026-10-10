@@ -12,6 +12,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorRegistry.h"
 
 namespace sw::editor
@@ -27,7 +28,7 @@ namespace sw::editor
      * @class EditorSelfTestContext
      * @brief 시험 하나가 실행되는 동안의 상태입니다 — 몇 번째 프레임인지, 실패 이유.
      */
-    class EditorSelfTestContext
+    class SW_EDITOR_API EditorSelfTestContext
     {
     public:
         EditorSelfTestContext();

@@ -7,6 +7,8 @@
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/StringUtil.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "RuntimeAPI/Service/ModuleService.h"
 
 #include <type_traits>
@@ -44,9 +46,9 @@ namespace sw::editor
             return StringUtil::computeHash64( SW_FUNCTION_SIGNATURE, sizeof( SW_FUNCTION_SIGNATURE ) - 1, false );
         }
 
-        void* getRawService( sw::internal::ModuleServiceID id );
-        void  bindRawLocalService( uint64 typeHash, void* pService );
-        void* getRawLocalService( uint64 typeHash );
+        SW_EDITOR_API void* getRawService( sw::internal::ModuleServiceID id );
+        SW_EDITOR_API void  bindRawLocalService( uint64 typeHash, void* pService );
+        SW_EDITOR_API void* getRawLocalService( uint64 typeHash );
     } // namespace internal
 
     void bindEditorService( const ModuleService& service );
@@ -94,15 +96,15 @@ namespace sw::editor
     // 그때만 조용히 죽는다. 원하는 것을 호출 한 번으로 반환하고, 실패는 nullptr 하나로 합친다.
     // ------------------------------------------------------------------------------
     /** @brief 지금 편집 중인 씬입니다. 씬이 없으면 nullptr 입니다. */
-    Scene* getActiveScene();
+    SW_EDITOR_API Scene* getActiveScene();
     /** @brief 지금 편집 중인 씬의 GameObjectManager 입니다. 씬이 없으면 nullptr 입니다. */
-    GameObjectManager* getActiveObjectManager();
+    SW_EDITOR_API GameObjectManager* getActiveObjectManager();
     /**
      * @brief 지금 편집 중인 씬에서 핸들이 가리키는 오브젝트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr 입니다.
      * @details 에디터가 프레임을 넘겨 드는 참조(선택 · 기즈모 대상 · 인스펙터 되돌리기)는 모두 핸들이고, 쓸 때마다 이것으로
      *          풉니다.
      */
-    GameObject* findGameObject( GameObjectHandle handle );
+    SW_EDITOR_API GameObject* findGameObject( GameObjectHandle handle );
     /** @brief 지금 편집 중인 씬에서 핸들이 가리키는 컴포넌트를 찾습니다. 씬이 없거나 대상이 사라졌으면 nullptr 입니다. */
-    Component* findComponent( ComponentHandle handle );
+    SW_EDITOR_API Component* findComponent( ComponentHandle handle );
 } // namespace sw::editor

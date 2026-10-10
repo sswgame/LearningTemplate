@@ -13,6 +13,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
@@ -65,7 +66,7 @@ namespace sw::editor
      * @class EditorWorkspace
      * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다(EditorContext 소유).
      */
-    class EditorWorkspace
+    class SW_EDITOR_API EditorWorkspace
     {
     public:
         explicit EditorWorkspace( EditorSelection* pEditorSelection );

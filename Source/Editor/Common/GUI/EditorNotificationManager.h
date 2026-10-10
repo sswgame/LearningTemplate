@@ -7,6 +7,8 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw::editor
 {
     /** @brief 알림 유형 */
@@ -36,11 +38,13 @@ namespace sw::editor
      * @class EditorNotificationManager
      * @brief 화면 오른쪽 아래의 비동기 토스트 알림과 진행 막대를 그립니다.
      */
-    class EditorNotificationManager
+    class SW_EDITOR_API EditorNotificationManager
     {
     public:
-        EditorNotificationManager()  = default;
-        ~EditorNotificationManager() = default;
+        EditorNotificationManager()                                              = default;
+        EditorNotificationManager( const EditorNotificationManager& )            = delete;
+        EditorNotificationManager& operator=( const EditorNotificationManager& ) = delete;
+        ~EditorNotificationManager()                                             = default;
 
         /**
          * @brief 알림을 하나 쌓습니다. **메인 스레드에서만 부릅니다.**

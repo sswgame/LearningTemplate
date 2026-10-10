@@ -8,6 +8,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
 
 namespace sw
@@ -26,7 +27,7 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 2) 공유 위젯 클래스 — Vec3 / 컴포넌트 카드 / 헤더 / 칩 / 프로퍼티 행
     // ------------------------------------------------------------------------------
-    class EditorWidgets
+    class SW_EDITOR_API EditorWidgets
     {
     public:
         /**

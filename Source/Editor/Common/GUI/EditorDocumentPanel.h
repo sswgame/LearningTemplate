@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 
@@ -17,7 +18,7 @@ namespace sw::editor
      * @class EditorDocumentPanel
      * @brief 워크스페이스 포커스 경로가 지정 애셋 종류와 맞으면 문서를 바꿉니다.
      */
-    class EditorDocumentPanel : public IEditorPanel
+    class SW_EDITOR_API EditorDocumentPanel : public IEditorPanel
     {
     public:
         bool        isToolPanel() const override { return true; }

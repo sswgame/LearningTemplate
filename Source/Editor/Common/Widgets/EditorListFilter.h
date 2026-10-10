@@ -6,6 +6,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include <initializer_list>
 
 namespace sw::editor
@@ -24,7 +26,7 @@ namespace sw::editor
      * @note 필터 문자열을 **복사하지 않습니다.** 생성할 때 넘긴 버퍼가 이 객체보다 오래 살아야 합니다.
      *       패널 멤버 버퍼를 프레임마다 감싸 쓰는 용도입니다.
      */
-    class EditorListFilter
+    class SW_EDITOR_API EditorListFilter
     {
     public:
         /** @brief 검색 문자열을 받아 앞뒤 공백을 뗀 상태로 보관합니다. nullptr 은 빈 필터입니다. */

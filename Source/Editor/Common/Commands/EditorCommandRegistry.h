@@ -11,6 +11,8 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw::editor
 {
     /**
@@ -172,11 +174,13 @@ namespace sw::editor
      * @class EditorCommandRegistry
      * @brief 에디터 커맨드 정의를 모아 두고 id 로 찾아 실행합니다 (EditorContext 소유).
      */
-    class EditorCommandRegistry
+    class SW_EDITOR_API EditorCommandRegistry
     {
     public:
-        EditorCommandRegistry()  = default;
-        ~EditorCommandRegistry() = default;
+        EditorCommandRegistry()                                          = default;
+        EditorCommandRegistry( const EditorCommandRegistry& )            = delete;
+        EditorCommandRegistry& operator=( const EditorCommandRegistry& ) = delete;
+        ~EditorCommandRegistry()                                         = default;
 
         /** @brief 등록된 커맨드를 모두 버립니다. */
         void clear();

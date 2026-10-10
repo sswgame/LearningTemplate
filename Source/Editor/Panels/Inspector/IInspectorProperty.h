@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Common/Types.h"
 
+#include "Editor/Common/EditorExports.h"
+
 namespace sw
 {
     struct PropertyInfo;
@@ -13,10 +15,13 @@ namespace sw
 namespace sw::editor
 {
     /** @brief 프로퍼티 타입 하나의 인스펙터 위젯 */
-    class IInspectorProperty
+    class SW_EDITOR_API IInspectorProperty
     {
     public:
-        virtual ~IInspectorProperty() = default;
+        IInspectorProperty()                                       = default;
+        virtual ~IInspectorProperty()                              = default;
+        IInspectorProperty( const IInspectorProperty& )            = delete;
+        IInspectorProperty& operator=( const IInspectorProperty& ) = delete;
 
         /**
          * @brief 프로퍼티 UI를 그립니다.

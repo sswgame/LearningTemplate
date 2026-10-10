@@ -298,8 +298,8 @@ py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules st
 **Target graph.** `App.exe` is a thin launcher (`EngineLoop` + `ModuleHost`) that links only `Engine` and
 `RuntimeAPI` — it has no compile-time knowledge of game or editor classes. `Core` (static, foundation:
 log/memory/string/file/task/compression) is compiled as an OBJECT library that `Engine` absorbs and
-re-exports. In **Dev**, `Engine` is a DLL and `EditorModule` / `SWGame` / `GF_*` kits / `RHI_*` backends
-are dynamically loaded MODULEs supporting hot reload; in **Shipping** the editor is dropped and everything
+re-exports. In **Dev**, `Engine` is a DLL; `SWGame` and `RHI_*` backends are MODULEs, while `EditorModule`, `GameFramework`
+and `GF_*` kits are SHARED (others link them) — all dynamically loaded with hot reload; in **Shipping** the editor is dropped and everything
 links statically into one exe.
 `Server` is the dedicated-server launcher (Game · Server targets, `Source/Server`): the same `EngineLoop` in the `DedicatedServer` role
 (no window · RHI · user-settings steps, a null audio device) + `ModuleHost` through the shared `ModuleHost` static library (`Source/ModuleHost`), ticking the game
@@ -310,7 +310,8 @@ implementations. It includes no Engine or App header (`CheckEngineLayers.py`); t
 the service ids (`Source/RuntimeAPI/Service/EngineServiceList.xxx`) lives here and Engine includes it.
 Everything crossing App ↔ module goes through it. Export macros are distinct and not
 interchangeable: `SW_API` (Engine.dll symbols), `SW_MODULE_API` (C-ABI entry points of any loadable plugin),
-`SW_GF_API` (GameFramework.dll classes), `SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
+`SW_GF_API` (GameFramework.dll classes), `SW_EDITOR_API` (EditorModule symbols, used by editor extension modules),
+`SW_GAMESERVICE_API` (the RuntimeAPI GameService locator only).
 
 **Engine internal layers.** `Source/Engine` is one link unit but its folder include graph is a DAG, linted by
 `CheckEngineLayers.py`: foundation (`Common`) at the bottom, `Renderer` and the root files (`EngineLoop`) at the top.

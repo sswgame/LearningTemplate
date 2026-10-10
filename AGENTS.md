@@ -27,6 +27,7 @@ project conventions unless the user explicitly requests otherwise.
   - `SW_API`: Used to export/import symbols from **Engine.dll**. Responds to the `SW_EXPORTS` definition.
   - `SW_MODULE_API`: A generic C-ABI entry point macro used across **all dynamically loaded plugin modules** (EditorModule.dll, SWGame.dll, RHI backends, etc.). Responds to `SW_MODULE_EXPORTS`.
   - `SW_GF_API`: Used to export/import **GameFramework.dll** class symbols. Responds to `SW_GF_EXPORTS`.
+  - `SW_EDITOR_API`: Used to export/import **EditorModule.dll** symbols (registries, widgets, selection, undo) for editor extension modules. Responds to `SW_EDITOR_EXPORTS`.
   - `SW_GAMESERVICE_API`: Used by the GameService locator (`bindGameService` / `getRawService`) in RuntimeAPI. This is not the GameFramework class-export macro.
 
 ## Build workflow

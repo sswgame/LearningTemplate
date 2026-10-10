@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 
 namespace sw
@@ -19,14 +20,16 @@ namespace sw::editor
      * @class IEditorPanel
      * @brief 도킹 가능한 ImGui 패널입니다. 파생 클래스는 drawContent() 만 구현합니다.
      */
-    class IEditorPanel
+    class SW_EDITOR_API IEditorPanel
     {
     public:
         // ------------------------------------------------------------------------------
         // 1) 생명주기 (GPU 리소스를 쓰는 파생은 shutdown 을 재정의한다)
         // ------------------------------------------------------------------------------
         /** @brief 파생 패널이 리소스를 해제할 수 있게 합니다. */
-        virtual ~IEditorPanel() = default;
+        virtual ~IEditorPanel()                        = default;
+        IEditorPanel( const IEditorPanel& )            = delete;
+        IEditorPanel& operator=( const IEditorPanel& ) = delete;
 
         // ------------------------------------------------------------------------------
         // 2) IEditorPanel: 제목 / 크롬 / 내용

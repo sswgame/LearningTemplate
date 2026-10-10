@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 에디터가 [Error] 없이 뜨고 패널 매니저가 등록된 패널을 모두 가진다(확장 지점 C1: EditorModule 이 SHARED 이고 등록 목록이 EditorModule 하나에 있다).
+  등록 목록이 DLL 마다 갈라지면 패널 수가 줄어 이 시나리오가 진다. 패널을 더하거나 빼면 기대 수를 고친다. 뒤의 C 단계 시나리오가 이 파일을 바탕으로 쓴다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/editorstartup.scenario.xml -dx12
+-->
+<Scenario name="editor.editorstartup" fixedDelta="0.0166667" timeoutFrames="200" startAfter="Immediately" input="exclusive">
+	<At frame="60">
+		<Expect probe="Editor.PanelCount" equals="22"/>
+		<ExpectLog contains="[Error]" count="0"/>
+	</At>
+	<At frame="70"><Pass/></At>
+</Scenario>

@@ -2,6 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Editor/Common/EditorExports.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewTargetUtil.h"
@@ -45,7 +46,7 @@ namespace sw::editor
      * @class EditorContext
      * @brief 에디터의 중앙 컨텍스트입니다. 에디터 셸(ImGuiEditor)이 직접 만들고 없앱니다.
      */
-    class EditorContext
+    class SW_EDITOR_API EditorContext
     {
     public:
         EditorContext();

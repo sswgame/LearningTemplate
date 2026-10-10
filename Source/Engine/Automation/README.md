@@ -219,6 +219,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.HierarchyVisibleRoots` | Hierarchy 가 마지막 프레임에 보인 루트 수(필터 뒤) |
 | `Editor.NoSearchResultHintShown` | 검색어가 있는 0 건 안내를 이번 또는 지난 프레임에 그렸으면 1 |
 | `Editor.ThemePreset`, `Editor.AccentColor`, `Editor.UIScale` | 테마 프리셋(0 ModernDark … 3 ClassicDark), 액센트 색(0xRRGGBB), UI 배율 |
+| `Editor.PanelCount` | 패널 매니저가 가진 패널 수(등록 줄 + 직접 넣은 패널) |
 | `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |
 | `Editor.SceneViewCameraX`, `Editor.SceneViewCameraY` | 씬 뷰 카메라(에디터 카메라)의 월드 X · Y — Play 중에도 에디터 카메라다 |
 | `Editor.GameViewCameraX`, `Editor.GameViewCameraY` | 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 X · Y |

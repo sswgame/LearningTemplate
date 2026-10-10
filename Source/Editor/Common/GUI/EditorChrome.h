@@ -7,6 +7,8 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
@@ -145,7 +147,7 @@ namespace sw::editor
     // ------------------------------------------------------------------------------
     // 6) EditorChrome 클래스
     // ------------------------------------------------------------------------------
-    class EditorChrome
+    class SW_EDITOR_API EditorChrome
     {
     public:
         /** @brief 도킹 패널을 엽니다. false 면 접혔거나 탭이 가려진 상태입니다. 반환값과 관계없이 endPanel() 을 불러야 합니다. */

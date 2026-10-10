@@ -4,6 +4,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 
+#include "Editor/Common/EditorExports.h"
+
 #include "Engine/Scene/ObjectUndoUtil.h"
 
 namespace sw
@@ -23,7 +25,7 @@ namespace sw::editor
      * @details 오브젝트 편집(수정 · 생성 · 삭제)은 엔진의 데이터 명령(`ObjectUndoUtil`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 문서 편집
      *          (`push` · `recordDocumentText`)은 패널의 코드를 쥔 모듈 명령이라 모듈이 내려갈 때 떼어집니다(`ImGuiEditor::shutdown`).
      */
-    class EditorTransaction
+    class SW_EDITOR_API EditorTransaction
     {
     public:
         /** @brief 오브젝트 수명 편집의 방향입니다(엔진의 `ObjectLifetimeEdit`). */

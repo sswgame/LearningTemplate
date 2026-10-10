@@ -6,6 +6,7 @@
 #include "Core/Common/Types.h"
 
 #include "Editor/Common/EditorColor.h"
+#include "Editor/Common/EditorExports.h"
 
 namespace sw::editor
 {
@@ -53,7 +54,7 @@ namespace sw::editor
      * @class EditorThemeUtil
      * @brief 에디터 전체의 Look & Feel(색상 팔레트, 라운딩, 여백, 경계선)을 일관되게 제어하는 유틸리티
      */
-    class EditorThemeUtil
+    class SW_EDITOR_API EditorThemeUtil
     {
     public:
         /** @brief 현재 적용된 테마 설정을 반환합니다. */
