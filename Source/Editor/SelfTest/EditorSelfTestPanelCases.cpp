@@ -319,6 +319,50 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
+            // contentBrowser.showsActivePackOnly — 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나이고, All packs 를 켜면 game/ 의 팩마다 하나다(O7)
+            // ------------------------------------------------------------------------------
+            static bool& wasShowingAllPacks()
+            {
+                static bool s_bWasShowingAllPacks = false;
+                return s_bWasShowingAllPacks;
+            }
+
+            static EditorSelfTestStep runShowsActivePackOnly( EditorSelfTestContext& context )
+            {
+                constexpr uint32 kSettleStepCount = 2; ///< 루트는 다음 그리기에서 다시 만든다
+
+                const uint32         stepIndex = context.getStepIndex();
+                ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
+                if ( pPanel == nullptr )
+                    return EditorSelfTestStep::Done;
+                if ( stepIndex == 0 )
+                {
+                    wasShowingAllPacks() = pPanel->isShowingAllPacks();
+                    pPanel->setShowAllPacks( false );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kSettleStepCount )
+                    return EditorSelfTestStep::Continue;
+                if ( stepIndex == kSettleStepCount )
+                {
+                    const string& packRoot = GameConfig::getActive()._packRoot;
+                    (void)context.expect( pPanel->hasRoot( packRoot ), "the active game pack is not a content root" );
+                    (void)context.expect( pPanel->getGameRootCount() == 1, "the content browser lists game packs other than the active one" );
+                    pPanel->setShowAllPacks( true );
+                    return EditorSelfTestStep::Continue;
+                }
+                if ( stepIndex < kSettleStepCount * 2 )
+                    return EditorSelfTestStep::Continue;
+
+                vector<string> listPackFolder;
+                (void)FileUtil::collectFolders( ResourceUtil::getDomainFolderPath( "game" ), listPackFolder, false ); // 없으면 아래 기대가 진다
+                (void)context.expect( listPackFolder.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackFolder.size() ),
+                                      "All packs does not list every game pack" );
+                pPanel->setShowAllPacks( wasShowingAllPacks() );
+                return EditorSelfTestStep::Done;
+            }
+
+            // ------------------------------------------------------------------------------
             // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다(D16)
             // Prefab Editor 가 그 경로로 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남겼다.
             // ------------------------------------------------------------------------------
@@ -582,6 +626,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::runDeleteRefreshesTheList );
     SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
+    SW_EDITOR_SELF_TEST( ContentBrowserActivePack, "contentBrowser.showsActivePackOnly", 1130, &EditorSelfTestPanelCasesInternal::runShowsActivePackOnly );
     SW_EDITOR_SELF_TEST( PrefabOtherFocus, "prefab.ignoresOtherFocusedAssets", 1200, &EditorSelfTestPanelCasesInternal::runPrefabIgnoresOtherFocusedAssets );
     SW_EDITOR_SELF_TEST( GlobalVariableGroups, "globalVariables.groupsStack", 1300, &EditorSelfTestPanelCasesInternal::runGlobalVariableGroupsStack );
     SW_EDITOR_SELF_TEST( ToolWindowSize, "panels.toolWindowsOpenAtAUsableSize", 1400, &EditorSelfTestPanelCasesInternal::runToolWindowsOpenAtAUsableSize );

@@ -492,6 +492,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   (`recenter: xz`)은 모양이 치우친 모델을 옮기므로 원점이 정해진 키트에는 `translation` 이 맞다.
 - **머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다(`AssetDatabase::ensureMeta`)** — 임포트 결과 옆 폴더(`models/<이름>/`)에 머티리얼을 쓰면 첫 실행이 실행마다 다른 GUID 의 `.meta` 를 만들어 스탬프가 "손으로 바꿨다" 가 된다. 임포터가 경로에서 정해지는 GUID 로 `.meta` 를 미리 쓴다(`ModelImporterInternal::makeImportedGuid`).
 - **`.meta`(GUID)는 그 에셋을 쓰는 시스템이 만듭니다**(머티리얼 캐시 · 프리팹 · 씬 저장 · 임포트). 목록을 보기만 하는 화면(콘텐츠 브라우저)이 `.meta` 를 쓰면 폴더를 한 번 연 것만으로 추적되지 않는 파일이 수십 개 생깁니다. 시험 `contentBrowser.browsingWritesNoMeta`.
+- **콘텐츠 브라우저의 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나가 기본이다.** 툴바 All packs 를 켜면 `game/` 의 팩마다 루트 하나가 붙고, 처음 값은 환경설정 Content Browser 의
+  `_bShowAllPacksByDefault` 다. 참조 찾기(오른쪽 클릭 Find References · Show Dependencies, 삭제 확인의 참조 수)는 `EditorReferenceIndex` 다. 텍스트 에셋(xml, json, material, hlsl)의 글 가운데
+  실제로 있는 파일의 리소스 id 만 세고, `Resource/` 변경 번호가 바뀌면 워커가 통째로 다시 훑는다(Debug 1.1 초, 377 파일). 바이너리 안의 경로와 확장자를 뗀 이름은 참조로 잡지 않는다.
+  콘솔 `content.open <리소스 폴더>` 가 그 폴더를 연다. 시험 `EditorReferenceIndexTest`, 자체 시험 `contentBrowser.showsActivePackOnly`, 시나리오 `editor/contentbrowser`.
 - **콘텐츠 브라우저는 디스크 목록을 들고 있으므로 `AssetHotReload::getContentChangeSerial` 이 바뀌면 다시 읽습니다** — 탐색기 · git 의 변경도 이 번호가 셉니다. 에디터 안의 삭제처럼 결과를 바로 아는 경로는 번호를 기다리지 않고 그 자리에서 다시 읽기로 합니다(감시는 한두 프레임 늦다). 시험 `contentBrowser.deleteRefreshesTheList`.
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).

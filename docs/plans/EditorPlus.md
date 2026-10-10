@@ -79,7 +79,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | # | 본 것 | 증거 | 단위 |
 |---|-------|------|------|
-| O7 | 콘텐츠 브라우저가 **모든 게임 팩 폴더**(abilityarena … voxelcraft)를 보인다 — 활성 게임은 하나 | `ed3.png` | A1 |
 | O8 | 인스펙터의 다중 선택은 **"Multi-Selection (N objects)" 한 줄 + 첫 오브젝트만** 편집한다 | `InspectorPanel.cpp:133` | I1 |
 | O9 | `-gv_editorOpenPanel=all` 이면 모든 패널이 900×620 으로 같은 자리에 떠서 겹친다(도킹 공간 정점 0) | `ed5.log` 덤프 | 의도(덤프용 스위치 — `EditorDockLayout::beginDockspace` 주석). 고치지 않는다 |
 
@@ -91,11 +90,10 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **3 인스펙터 · 콘텐츠** | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
-| **추가 — 아이콘(12절)** | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
+| **추가 — 아이콘(12절)** | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
 원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 21 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 4, 5 단계 4)입니다.
@@ -139,97 +137,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 콘텐츠 쪽: 언리얼 Content Browser 는 프로젝트 콘텐츠가 기본(엔진 · 플러그인 콘텐츠는 보기 옵션), **Reference Viewer**(참조하는 것 · 참조되는 것), 이름 바꾸면 리디렉터 + "Fix Up".
 유니티 Project 창 "Find References In Scene" · 의존 검색(`AssetDatabase.GetDependencies`). 우리 인스펙터는 다중 선택에서 첫 오브젝트만 고치고(O8), 되돌리기는 오른쪽 클릭 메뉴에만 숨어 있다.
 
-### A1 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 ★
-
-**목적.** (1) O7 — `game` 뿌리가 `Resource/game/`(게임 여덟 팩 전부)라 다른 게임 폴더가 늘 보이고 검색에도 섞인다. (2) 에셋을 지우거나 고치기 전에 **누가 이것을 쓰는가**를 볼 길이 없다
-(검증 규칙 `references-exist` 는 "없는 참조" 만 본다 — 역방향이 없다).
-
-**바꿀 것.**
-1) 뿌리 — `ContentBrowserPanel::refreshRoots` 의 `addRoot( "game", … )` 를:
-```cpp
-        // 기본은 활성 게임 팩 하나다(언리얼 Content Browser 가 프로젝트 콘텐츠만 보이는 것과 같다). "All packs" 를 켜면 game/ 전체.
-        const string& packRoot = GameConfig::getActive()._packRoot;            // "game/themepark"
-        if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
-            addRoot( "game", ResourceUtil::getDomainFolderPath( "game" ) );
-        else
-            addRoot( packRoot.c_str(), ResourceUtil::resolveResourcePath( packRoot ) );   // 경로 풀이 함수 이름은 ResourceUtil 에 맞춘다
-```
-툴바 끝에 체크박스 "All packs"(`_bShowAllPacks` — uint8, 바뀌면 `_bRootsDirty`). 환경설정 Viewport 처럼 "Content Browser" 섹션(P2)에 `_bShowAllPacksByDefault` 하나.
-2) 역색인 — 새 `Common/Commands/EditorReferenceIndex.h` · `.cpp`(ImGui 없음):
-```cpp
-namespace sw::editor
-{
-    /** @brief 참조 하나 — @p _referrerPath 가 글 안에서 @p _targetPath 를 적었다. */
-    struct EditorAssetReference
-    {
-        string _referrerPath; ///< 리소스 id(`game/themepark/maps/park.scene.xml`)
-        string _targetPath;   ///< 리소스 id(정규화 · 소문자)
-        uint32 _line{ 0 };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @class EditorReferenceIndex
-     * @brief 리소스 트리의 텍스트 에셋(xml · json · material · scene · prefab · uidoc …)을 훑어 "누가 무엇을 적었나" 를 모읍니다(유니티 Find References 와 같은 텍스트 검색).
-     * @details 글 안의 따옴표 문자열 가운데 **실제로 있는 리소스 id**(`engine/` · `common/` · `game/` 로 시작하고 파일이 있는 것)만 참조로 셉니다 — 이름 붙은 글이 우연히 경로와 같아도
-     *          파일이 없으면 세지 않는다. 바이너리(dds · mesh · bin)는 훑지 않는다. 짓기는 백그라운드(`EditorBackgroundTask`), 질의는 짓기가 끝난 뒤.
-     *          파일 감시가 텍스트 에셋을 알리면 그 파일 줄만 다시 훑는다.
-     */
-    class SW_EDITOR_API EditorReferenceIndex
-    {
-    public:
-        /** @brief @p resourceRoot 아래를 모두 훑어 새로 짓습니다(백그라운드 스레드에서 부른다). */
-        void build( string_view resourceRoot );
-        /** @brief 파일 하나의 줄을 다시 훑습니다(지워졌으면 그 파일이 적은 참조를 뺀다). */
-        void refreshFile( string_view resourceRoot, string_view resourcePath );
-        /** @brief @p targetPath 를 적은 참조를 모읍니다(먼저 비운다). */
-        void findReferrers( string_view targetPath, vector<EditorAssetReference>& outListReference ) const;
-        /** @brief @p referrerPath 가 적은 참조를 모읍니다(먼저 비운다) — "이 에셋이 쓰는 것". */
-        void findDependencies( string_view referrerPath, vector<EditorAssetReference>& outListReference ) const;
-        /** @brief 글 하나에서 리소스 id 후보를 뽑습니다(시험이 쓰는 반쪽). @p pfnExists 가 true 인 것만. */
-        static void extractReferences( string_view referrerPath, string_view text, bool ( *pfnExists )( string_view resourcePath ), vector<EditorAssetReference>& outListReference );
-
-    private:
-        mutable mutex                _mutex;
-        vector<EditorAssetReference> _listReference; ///< 대상 경로 순 정렬(질의는 이분 탐색)
-    };
-} // namespace sw::editor
-```
-콘텐츠 브라우저 오른쪽 클릭에 "Find References"(참조하는 것) · "Show Dependencies"(이것이 쓰는 것) — 결과는 작은 팝업 표(경로 · 줄), 더블클릭 = 그 에셋 열기(기존 `openAsset`).
-색인은 EditorContext 가 하나 들고 에디터가 뜬 뒤 백그라운드로 짓는다(진행 중이면 "Indexing… (n files)"). 지우기(Delete) 확인 대화상자에 "이 에셋을 쓰는 곳 N 개" 를 함께 보인다.
-**이름 바꾸기 + 참조 고침은 하지 않는다** — 카탈로그 편집기(F, 6 단계)가 같은 색인 위에 한다(9절 로드맵 7).
-
-**시험 — `Test/EditorTest/Common/Commands/TestEditorReferenceIndex.cpp`(`EditorReferenceIndexTest`):**
-- `ExtractKeepsOnlyExistingResourceIds` — 글 `<Mesh path="engine/models/cube.mesh"/> <Name value="engine/not/a/file"/>` 에서 있는 것만(시험 `pfnExists` 가 첫 경로만 true).
-- `ReferrersAndDependenciesAreInverse` — 시험 리소스 폴더(임시 폴더에 파일 셋)로 `build` → A 가 B 를 적었으면 `findReferrers( B )` 에 A, `findDependencies( A )` 에 B.
-- `RefreshFileDropsRemovedReferences` — A 를 고쳐 B 를 지우고 `refreshFile` → B 의 참조자 0.
-자체 시험 `contentBrowser.showsActivePackOnly` — `game` 뿌리 줄 이름이 `_packRoot` 인지(Empty 게임이면 `game/empty`).
-
-**확인 = 에디터 시나리오.** `contentbrowser.scenario.xml`: 탐침 `Editor.ContentRootCount.game` 이 1(활성 팩 하나)인지 보고, "All packs" 체크박스(이름표 `contentBrowser.allPacks`)를 누른 뒤 게임 팩 수만큼 늘었는지 봅니다.
-이어서 색인이 끝나기를 기다린 뒤(탐침 `Editor.ReferenceIndexReady`) 쓰이는 메시 하나의 타일을 오른쪽 클릭하고 "Find References" 를 눌러 결과 수 탐침이 1 이상인지 봅니다.
-
-**남길 교훈.** 9절 로드맵 7 카탈로그 편집기 줄에 "역색인은 `EditorReferenceIndex` 를 쓴다" 를 덧붙인다. `Source/Editor/README.md` 함정 · 계약 절에 한 줄: `- **콘텐츠 브라우저는 활성 팩이 기본**(All packs 토글). 참조 찾기는 EditorReferenceIndex — 텍스트 에셋의 따옴표 글 가운데 실제로 있는 리소스 id 만 센다.`
-**커밋 메시지:**
-```
-에디터 - 콘텐츠 브라우저가 활성 게임 팩만 보이고 "어디서 쓰이나" 를 찾는다
-
-문제점:
-- game 뿌리가 Resource/game 전체라 다른 게임 여덟 팩이 늘 보이고 검색에 섞였다.
-- 에셋을 지우거나 고치기 전에 누가 그것을 쓰는지 볼 길이 없었다(검증은 없는 참조만 본다).
-
-해결방안:
-- 뿌리를 GameConfig 의 _packRoot 로(All packs 토글, 환경설정 기본값).
-- EditorReferenceIndex(ImGui 없음): 텍스트 에셋의 따옴표 글 가운데 실제로 있는 리소스 id 만 참조로, 백그라운드로 짓고 파일 감시로
-  파일 줄만 갱신. 메뉴 Find References · Show Dependencies, 지우기 확인에 참조 수.
-
-결과:
-- EditorReferenceIndexTest 셋, 자체 시험 contentBrowser.showsActivePackOnly.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** `EditorTest --test_filter=EditorReferenceIndexTest.*`, 에디터에서 쓰이는 메시 하나로 Find References(엔진 팩에는 메시가 없으니 게임 팩의 것). 색인 짓기 시간을 로그로 한 번 잰다(저장소 전체 — 수 초면 둔다, 길면 시작 지연을 백로그 1-4 에).
 ---
 
 ## 8. 단계 5 — 공용 편집 틀(커브 · 맵 검사 · 노드 그래프 · 패키징)
@@ -327,7 +234,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | 4 | **오디오 믹서 패널**(백로그 1-6 오디오) | EditorModule — 버스 미터 · 음소거/솔로 · 볼륨, 이벤트 라이브러리 다시 읽기 | S~M | — | 언리얼 Audio Mixer · 유니티 Audio Mixer 창 |
 | 5 | **GM 도구 패널**(online-ops D4) | `GF_Editor_Admin`(온라인 GF_Admin 의 확장) — `AdminClient` 로 조회 · 지급 · 제재 · 감사 열람 | M | C · online-ops | (상용 엔진 밖 — 운영 도구) |
 | 6 | **기믹 회로 그래프 편집 창**(백로그 1-6 기믹) | `GF_Editor_Base` — T3 의 틀, 노드 · 배선 · 검증 오류 · 대상 오브젝트 고르기 | M~L | T3 | 언리얼 블루프린트 그래프 · 유니티 Visual Scripting |
-| 7 | **카탈로그 편집기(F)** | EditorModule — 카탈로그 계약 하나 · enum 이름 표 · DataTablePanel 확장 · 저장 시 검증 · A1 역색인으로 이름 바꾸기 참조 고침 | L | A1 · P1 | 언리얼 DataTable/DataAsset 편집 + Fix Up Redirectors |
+| 7 | **카탈로그 편집기(F)** | EditorModule — 카탈로그 계약 하나 · enum 이름 표 · DataTablePanel 확장 · 저장 시 검증 · 역색인(`EditorReferenceIndex`)으로 이름 바꾸기 참조 고침 | L | P1 | 언리얼 DataTable/DataAsset 편집 + Fix Up Redirectors |
 | 8 | **지형 칠하기**(백로그 1-3 환경) | EditorModule — 뷰포트 도구 모드(올리기 · 깎기 · 다듬기 · 레이어 칠하기), 높이장 · 스플랫 저장 | L | 뷰포트 도구 모드 틀 | 언리얼 Landscape 모드 · 유니티 Terrain 도구 |
 | 9 | **다중 월드 툴 창** 과 그 위의 애니메이션 · 리그 · 프리팹 · 머티리얼 미리보기 창 | Engine(다중 월드) + EditorModule(툴 창 틀 — 창마다 선택 · Undo 범위) | L | 카메라 4 단계 | 언리얼 FPreviewScene · Asset Editor Toolkit, 유니티 Prefab Stage |
 | 10 | **UI 문서 디자이너**(4 차 8-5 다음) | EditorModule — 팔레트 → 끌어 놓기 · 앵커 손잡이 | L | 4 차 · 9 | 언리얼 UMG 디자이너 · 유니티 UI Builder |
@@ -367,7 +274,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | `InspectorPanel.cpp` | P1(이동) · I1 · I2 · R3 · N4 | P1 이동을 먼저 넣는다 |
 | `HierarchyPanel.cpp` | R3 · N2 · N12 | R3(라벨 줄) 뒤에 N2 · N12 |
 | `EditorViewportClient.cpp` · `EditorViewportToolbar.*` | C2 · G1 · R4 · R5 · N1 | C2(마스크 → id) 먼저. R4 의 `getMaskBitById` 는 C2 의 `EditorVisualizerToggles` 로 바꿔 쓴다 |
-| `ContentBrowserPanel.*` | A1 · R9 · N3 | A1 의 역색인 뒤에 N3(이름 바꾸기 · 옮기기) |
+| `ContentBrowserPanel.*` | R9 · N3 | R9 뒤에 N3(이름 바꾸기 · 옮기기) |
 | `ModuleHost.cpp` · `ModuleCatalog.*` · `ModuleManifest.cmake` · `ModuleTargets.cmake` | C4 · P4 | 게이트(`CheckModuleTargets`)는 한 커밋에서 |
 | `EditorCommandGUI.cpp` · `EditorCommandRegistry.*` | C3 · P3 · R5 · 여러 단위의 표 한 줄 | 표 줄은 메뉴 순서 값이 겹치지 않게(`validate` 가 잡는다) |
 | `EditorSelfTestCases.cpp` · `AppSmokeTest` 기대 목록 | 11 줄 | 줄 더하기 — 순서 키 겹침만 본다 |
@@ -389,7 +296,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | C1 ~ C5 | `Source/Editor/README.md` 함정 · 계약, `Source/Engine/Module/README.md` 함정 · 계약 | 확장 모듈 위치, 등록 세대, 언로드 리스너, 결속기, `SW_EDITOR_COMMAND`, EditorExtension 종류 |
 | P2 · P3 · P4 | 에디터 README, 모듈 README | 에디터 설정은 환경설정 섹션, 사용자 단축키 덮어쓰기, 매니페스트 내용도 configure 의존 |
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |
-| A1 | 에디터 README | 활성 팩 기본, 참조 찾기는 `EditorReferenceIndex` |
 | T1 | [백로그](../06_Backlog.md) 1-6 | `GameCurve` 는 `FloatCurve` 로 옮기지 않음(남은 일) |
 | R3 · R4 | 에디터 README | 컴포넌트 아이콘 테이블, 빌보드 클릭이 레이 피킹보다 먼저 |
 | 9절 로드맵 | [백로그](../06_Backlog.md) 1-4 | 이 문서를 지울 때 남은 로드맵 줄을 옮긴다 |
@@ -447,10 +353,10 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 **확인 = 에디터 시나리오.** `hierarchyedit.scenario.xml`: 형제 셋을 둔 시험 씬에서 첫 줄을 고르고 `EditorClick mods="shift"` 로 셋째 줄까지 골라 탐침 `Editor.SelectionCount` 가 3 인지 보고,
 `EditorKey key="C" mods="ctrl"` 와 `EditorKey key="V" mods="ctrl"` 뒤 오브젝트 수 탐침이 3 늘었는지, `EditorKey key="Z" mods="ctrl"` 한 번에 돌아오는지 봅니다. 끌어 바꾸기는 끌기 단계가 생기면 더합니다.
 
-### N3 콘텐츠 브라우저 에셋 관리 ★(M, 선행 5b D12 ~ D15 · A1)
+### N3 콘텐츠 브라우저 에셋 관리 ★(M, 선행 5b D12 ~ D15)
 
 **무엇.** 새 폴더와 새 에셋(머티리얼, 씬, 프리팹), 이름 바꾸기(F2), 복제(Ctrl+D), 폴더로 끌어 옮기기, 하위 폴더까지 검색, OS 휴지통으로 삭제를 더합니다.
-이름 바꾸기와 옮기기는 참조를 고쳐야 하므로 A1 의 역색인 뒤에 둡니다. 텍스처 썸네일은 R9 입니다.
+이름 바꾸기와 옮기기는 참조를 고쳐야 하므로 역색인(`EditorReferenceIndex`)을 씁니다. 텍스처 썸네일은 R9 입니다.
 
 **왜.** 지금 오른쪽 클릭 메뉴는 탐색기 보기, 경로 복사, 잠금, 삭제뿐이고 검색은 지금 폴더만 봅니다.
 

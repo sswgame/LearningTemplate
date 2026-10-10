@@ -1,6 +1,6 @@
 /**
  * @file ContentBrowserPanel.h
- * @brief Engine / Common / Game / Editor 애셋 트리를 탐색하는 콘텐츠 브라우저 창입니다.
+ * @brief 활성 게임 팩과 Engine / Common / Editor 애셋 트리를 탐색하고 참조를 찾는 콘텐츠 브라우저 창입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
+#include "Editor/Common/Commands/EditorReferenceIndex.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowserLogic.h"
 
@@ -50,6 +51,29 @@ namespace sw::editor
         bool confirmDeleteAsset();
         /** @brief 폴더 트리가 읽어 둔 하위 폴더를 버립니다(다음 그리기가 디스크를 다시 읽는다 — Refresh 와 같다). */
         void clearFolderTreeCache() { _folderCache.clear(); }
+
+        // ------------------------------------------------------------------------------
+        // 1-2) 게임 팩 루트 · 참조 찾기 — 툴바 "All packs" 와 우클릭 Find References · Show Dependencies 가 부르는 것과 같다
+        // ------------------------------------------------------------------------------
+        /** @brief 게임 팩을 모두 보일지 정합니다. 끄면 활성 게임 팩(`GameConfig::_packRoot`) 하나만 루트에 둡니다. */
+        void setShowAllPacks( bool bShowAllPacks );
+        /** @brief 모든 게임 팩을 보이는 중이면 true 입니다. */
+        bool isShowingAllPacks() const { return _bShowAllPacks == SW_TRUE; }
+        /** @brief `game/` 아래 루트의 수입니다(활성 팩만이면 1). */
+        uint32 getGameRootCount() const;
+        /** @brief 루트 목록에 그 표시 이름(`game/empty`, `engine`)의 루트가 있으면 true 입니다. */
+        bool hasRoot( string_view displayName ) const;
+        /** @brief 참조 역색인이 한 번이라도 다 만들어졌으면 true 입니다. */
+        bool isReferenceIndexReady() const { return _referenceIndex.isReady(); }
+        /** @brief 참조 역색인입니다. */
+        const EditorReferenceIndex& getReferenceIndex() const { return _referenceIndex; }
+        /**
+         * @brief 에셋의 참조를 찾아 결과 창을 엽니다.
+         * @param bDependencies false 면 그 에셋을 쓰는 곳(Find References), true 면 그 에셋이 쓰는 것(Show Dependencies)입니다.
+         */
+        void showReferences( string_view absolutePath, bool bDependencies );
+        /** @brief 마지막 참조 찾기의 결과 줄 수입니다. */
+        uint32 getReferenceResultCount() const { return static_cast<uint32>( _listReferenceResult.size() ); }
 
     private:
         // ------------------------------------------------------------------------------
@@ -108,6 +132,10 @@ namespace sw::editor
         void drawDeleteConfirmModal();
         /** @brief `Resource/` 가 바뀌었으면(에디터 밖 변경 포함) 폴더 목록을 다시 읽게 합니다. */
         void syncWithContentChanges();
+        /** @brief 워커가 만든 역색인을 받고, 처음이거나 `Resource/` 가 바뀌었으면 다시 훑기를 요청합니다. */
+        void syncReferenceIndex();
+        /** @brief 참조 찾기 결과 창을 그립니다(`showReferences` 가 연다). */
+        void drawReferenceResults();
         /** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
@@ -174,6 +202,11 @@ namespace sw::editor
         vector<ContentBrowserCrumb>           _listCrumb; /**< 지금 폴더의 경로 줄. 예: "Favorites / Shaders / bin" */
         string                                _selectedAssetAbs;
         string                                _pendingDeleteAbs; /**< 삭제 확인을 기다리는 에셋(비면 없음) */
+        string                                _referenceQueryID; /**< 마지막 참조 찾기의 대상 리소스 id */
+        vector<EditorAssetReference>          _listReferenceResult;
+        EditorReferenceIndex                  _referenceIndex;
+        EditorReferenceIndexJob               _referenceIndexJob;
+        uint64                                _referenceIndexSerial; /**< 역색인 훑기를 요청할 때의 `AssetHotReload::getContentChangeSerial` */
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
         uint64                                _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
         float32                               _tileSize;
@@ -184,9 +217,13 @@ namespace sw::editor
         vector<string>                        _listPendingImportPath;
         EditorFolderListingJob                _folderJob;
         ContentBrowserFolderCache             _folderCache; /**< 폴더 트리의 하위 폴더 — 그리기마다 디스크를 읽지 않게 */
-        uint8                                 _bRootsDirty        : 1;
-        uint8                                 _bFolderDirty       : 1;
-        uint8                                 _bOpenDeleteConfirm : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다(우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없다) */
-        [[maybe_unused]] uint8                _reservedFlags      : 5;
+        uint8                                 _bRootsDirty                 : 1;
+        uint8                                 _bFolderDirty                : 1;
+        uint8                                 _bOpenDeleteConfirm          : 1; /**< 다음 그리기에서 삭제 확인 모달을 연다(우클릭 메뉴 안에서는 창 단위 팝업을 열 수 없다) */
+        uint8                                 _bShowAllPacks               : 1; /**< 게임 팩을 모두 보인다(끄면 활성 팩 하나) */
+        uint8                                 _bShowAllPacksInitialized    : 1; /**< 환경설정의 기본값을 한 번 읽었다(그 뒤는 툴바가 정한다) */
+        uint8                                 _bReferenceIndexRequested    : 1; /**< 역색인 훑기를 한 번이라도 요청했다 */
+        uint8                                 _bOpenReferenceResults       : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
+        uint8                                 _bReferenceQueryDependencies : 1; /**< 마지막 질의가 Show Dependencies 였다 */
     };
 } // namespace sw::editor

@@ -12,4 +12,5 @@ namespace sw::editor
 {
     SW_EDITOR_SETTINGS( EditorGeneralPreferences, "general", "Editor/General", 100, nullptr );
     SW_EDITOR_SETTINGS( EditorViewportPreferences, "viewport", "Editor/Viewport", 300, nullptr );
+    SW_EDITOR_SETTINGS( EditorContentBrowserPreferences, "content_browser", "Editor/Content Browser", 400, nullptr );
 } // namespace sw::editor

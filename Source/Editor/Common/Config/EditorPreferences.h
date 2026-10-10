@@ -1,6 +1,6 @@
 /**
  * @file EditorPreferences.h
- * @brief 에디터 환경설정의 기본 섹션입니다(General · Viewport). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @brief 에디터 환경설정의 기본 섹션입니다(General, Viewport, Content Browser). 테마(Appearance)는 `EditorConfig` 입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -55,5 +55,18 @@ namespace sw::editor
 
         PROPERTY( Tooltip = "Show the orientation cube" )
         bool _bShowOrientationCube{ true };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 콘텐츠 브라우저 — 창을 열 때의 기본값입니다(연 창은 툴바에서 바꿉니다). */
+    REFLECT()
+    struct EditorContentBrowserPreferences
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Show every game pack under game/ instead of the active one only" )
+        bool _bShowAllPacksByDefault{ false };
     };
 } // namespace sw::editor

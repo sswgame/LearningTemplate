@@ -177,6 +177,33 @@ namespace sw::editor
     }
 
     // ======================================================================
+    // EditorReferenceIndexJob
+    // ======================================================================
+
+    void EditorReferenceIndexJob::request( string_view resourceRoot )
+    {
+        const uint32 generation = beginRequest( string{ resourceRoot } );
+        EditorBackgroundIOInternal::submitOrRun( "EditorReferenceIndex",
+                                                 SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorReferenceIndexJob::runJob ),
+                                                 MakeTaskArgs( _pState, generation ) );
+    }
+
+    void EditorReferenceIndexJob::runJob( const TaskArgs& args )
+    {
+        const shared_ptr<State> pState     = args.get<shared_ptr<State>>( 0 );
+        const uint32            generation = args.get<uint32>( 1 );
+
+        string resourceRoot;
+        if ( readInput( pState, generation, resourceRoot ) == false )
+            return;
+
+        EditorReferenceIndexData data{};
+        EditorReferenceIndex::scan( resourceRoot, data );
+
+        publish( pState, generation, std::move( data ) );
+    }
+
+    // ======================================================================
     // EditorResourceCatalogJob
     // ======================================================================
 

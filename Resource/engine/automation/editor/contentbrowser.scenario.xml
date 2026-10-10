@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저(A1): 게임 루트는 활성 팩 하나이고, All packs 를 켜면 game/ 의 팩이 모두 루트가 된다.
+  참조 역색인이 다 만들어지면 활성 팩의 crate_medium.mesh 를 오른쪽 클릭해 Find References 를 누르고, 그 메시를 쓰는 씬이 결과에 나오는지 본다.
+  CaptureWindow 의 PNG(Saved/Automation/editor.contentbrowser/)는 결과 창까지 든 화면이다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/contentbrowser.scenario.xml -dx12
+-->
+<Scenario name="editor.contentbrowser" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<At frame="20"><RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="40"><DevCommand line="panel.focus content_browser"/></At>
+	<At frame="60"><Expect probe="Editor.ContentGameRootCount" equals="1"/></At>
+	<!-- 체크박스는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<At frame="65"><EditorClick mark="contentBrowser.allPacks" state="down"/></At>
+	<At frame="68"><EditorClick mark="contentBrowser.allPacks" state="up"/></At>
+	<At frame="80"><Expect probe="Editor.ContentGameRootCount" atLeast="2"/></At>
+	<At frame="85"><EditorClick mark="contentBrowser.allPacks" state="down"/></At>
+	<At frame="88"><EditorClick mark="contentBrowser.allPacks" state="up"/></At>
+	<At frame="100"><Expect probe="Editor.ContentGameRootCount" equals="1"/></At>
+	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
+	<At frame="600"><Expect probe="Editor.ReferenceIndexReady" equals="1"/></At>
+	<!-- 폴더로 가서 검색으로 그 메시만 남긴다(도킹 칸이 낮아 타일 한 줄만 보인다) -->
+	<At frame="605"><DevCommand line="content.open game/empty/models"/></At>
+	<At frame="615"><EditorClick mark="contentBrowser.search"/></At>
+	<At frame="620"><EditorText value="crate_medium.mesh"/></At>
+	<At frame="640"><EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="down"/></At>
+	<At frame="643"><EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="up"/></At>
+	<At frame="655"><EditorClick mark="contentBrowser.menu.findReferences" state="down"/></At>
+	<At frame="658"><EditorClick mark="contentBrowser.menu.findReferences" state="up"/></At>
+	<At frame="675">
+		<Expect probe="Editor.ReferenceResultCount" atLeast="1"/>
+		<CaptureWindow file="references.png"/>
+	</At>
+	<At frame="690"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

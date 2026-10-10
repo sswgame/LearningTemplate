@@ -740,6 +740,7 @@ SW_TEST_CASE( AppSmokeTest, EditorSelfTestsPassInsideTheEditor )
         "EditorSelfTest|PASS|contentBrowser.deleteRefreshesTheList",
         "EditorSelfTest|PASS|contentBrowser.browsingWritesNoMeta",
         "EditorSelfTest|PASS|contentBrowser.treeDoesNotReadTheDiskEveryFrame",
+        "EditorSelfTest|PASS|contentBrowser.showsActivePackOnly",
         "EditorSelfTest|PASS|prefab.ignoresOtherFocusedAssets",
         "EditorSelfTest|PASS|globalVariables.groupsStack",
         "EditorSelfTest|PASS|panels.toolWindowsOpenAtAUsableSize",

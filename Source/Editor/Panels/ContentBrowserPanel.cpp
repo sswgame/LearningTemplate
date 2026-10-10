@@ -9,6 +9,8 @@
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Config/EditorPreferences.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -20,9 +22,12 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
@@ -52,6 +57,75 @@ namespace sw::editor
                 const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( EditorAssetTypeRegistry::findKind( path ) );
                 return pInfo != nullptr ? pInfo->_pBrowserLabel : "File";
             }
+
+            /** @brief 참조 찾기 결과 창의 팝업 이름입니다. */
+            static constexpr const utf8* kReferenceResultsPopupName = "References##ContentBrowserReferences";
+            /** @brief 게임 팩 루트의 표시 이름 접두입니다(`game/<팩>`). */
+            static constexpr const utf8* kGameDomainPrefix = "game/";
+            /** @brief 참조 결과 표가 스크롤 없이 보이는 최대 줄 수입니다. */
+            static constexpr size_t kReferenceVisibleRowCount = 12;
+
+            /** @brief 시험이 켜졌을 때 바로 앞 위젯에 `<접두><이름>` 이름표를 남깁니다(꺼져 있으면 글을 만들지 않는다). */
+            static void noteMark( const utf8* pPrefix, string_view name )
+            {
+                if ( EditorSelfTestMarks::isEnabled() == false )
+                    return;
+                const string key = string( pPrefix ) + string( name );
+                EditorSelfTestMarks::note( key.c_str() );
+            }
+
+            /** @brief 콘텐츠 브라우저 패널입니다. 없으면 nullptr. */
+            static const ContentBrowserPanel* findPanel()
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return nullptr;
+                return static_cast<const ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+            }
+
+            [[nodiscard]] static bool readGameRootCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getGameRootCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readReferenceIndexReady( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->isReferenceIndexReady() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief `content.open <리소스 폴더>` — 콘텐츠 브라우저를 열고 그 폴더로 갑니다(언리얼 Sync to Content Browser 와 같다). */
+            static bool runContentOpen( const vector<string>& listArgument, string& outReply )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( listArgument.size() != 1 || pContext == nullptr )
+                    return false;
+                const string folderAbs = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), FileUtil::normalizePath( listArgument[0] ) );
+                if ( FileUtil::isDirectory( folderAbs ) == false || pContext->getPanelManager().setPanelOpen( "content_browser", true ) == false )
+                    return false;
+                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+                if ( pPanel == nullptr )
+                    return false;
+                pPanel->openFolder( folderAbs );
+                outReply = "content browser at " + listArgument[0];
+                return true;
+            }
+
+            [[nodiscard]] static bool readReferenceResultCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getReferenceResultCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -60,6 +134,14 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ContentBrowserPanel" );
     SW_EDITOR_PANEL( ContentBrowserPanel, "content_browser", EditorPanelCategory::Core, 600 );
+    SW_AUTOMATION_PROBE( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
+                         &ContentBrowserPanelInternal::readGameRootCount );
+    SW_AUTOMATION_PROBE( editorReferenceIndexReady, "Editor.ReferenceIndexReady", "1 once the Content Browser reference index has been built",
+                         &ContentBrowserPanelInternal::readReferenceIndexReady );
+    SW_AUTOMATION_PROBE( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",
+                         &ContentBrowserPanelInternal::readReferenceResultCount );
+    SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
+                    &ContentBrowserPanelInternal::runContentOpen );
 
     void ContentBrowserPanel::drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                                   const AssetEntry& entry )
@@ -191,6 +273,18 @@ namespace sw::editor
             if ( ImGui::MenuItem( "Copy Absolute Path" ) )
                 ImGui::SetClipboardText( entry._absolutePath.c_str() );
 
+            // 참조 — 텍스트 에셋을 훑은 역색인으로 찾는다. 결과 창은 이 메뉴 밖, 창 단위에서 연다.
+            if ( entry._bIsDirectory == false )
+            {
+                ImGui::Separator();
+                if ( ImGui::MenuItem( "Find References" ) )
+                    showReferences( entry._absolutePath, false );
+                EditorSelfTestMarks::note( "contentBrowser.menu.findReferences" );
+                if ( ImGui::MenuItem( "Show Dependencies", nullptr, false, EditorReferenceIndex::isTextAsset( entry._absolutePath ) ) )
+                    showReferences( entry._absolutePath, true );
+                EditorSelfTestMarks::note( "contentBrowser.menu.showDependencies" );
+            }
+
             // 버전 관리 — 사용자가 고른 파일만 잠그고 푼다(공급자가 없으면 메뉴가 꺼져 있다).
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr && entry._bIsDirectory == false )
@@ -223,6 +317,11 @@ namespace sw::editor
         , _listCrumb{}
         , _selectedAssetAbs{}
         , _pendingDeleteAbs{}
+        , _referenceQueryID{}
+        , _listReferenceResult{}
+        , _referenceIndex{}
+        , _referenceIndexJob{}
+        , _referenceIndexSerial{ 0 }
         , _searchBuffer{}
         , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
@@ -236,7 +335,11 @@ namespace sw::editor
         , _bRootsDirty{ SW_TRUE }
         , _bFolderDirty{ SW_TRUE }
         , _bOpenDeleteConfirm{ SW_FALSE }
-        , _reservedFlags{ 0 }
+        , _bShowAllPacks{ SW_FALSE }
+        , _bShowAllPacksInitialized{ SW_FALSE }
+        , _bReferenceIndexRequested{ SW_FALSE }
+        , _bOpenReferenceResults{ SW_FALSE }
+        , _bReferenceQueryDependencies{ SW_FALSE }
     {
     }
 
@@ -273,6 +376,19 @@ namespace sw::editor
             return;
 
         ImGui::Text( "Delete '%s'? This cannot be undone.", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
+        // 지우기 전에 이것을 쓰는 곳을 보인다(언리얼 Delete Assets 대화상자의 참조 수와 같다).
+        if ( _referenceIndex.isReady() )
+        {
+            const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourceUtil::toResourceID( _pendingDeleteAbs ) );
+            if ( referrerCount > 0 )
+                ImGui::TextColored( ImVec4( 1.0f, 0.7f, 0.25f, 1.0f ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
+            else
+                ImGui::TextDisabled( "No text asset names it." );
+        }
+        else
+        {
+            ImGui::TextDisabled( "The reference index is still building." );
+        }
         ImGui::Separator();
         if ( ImGui::Button( "Delete" ) )
         {
@@ -299,6 +415,99 @@ namespace sw::editor
         _seenContentChangeSerial = serial;
         _bFolderDirty            = SW_TRUE;
         _folderCache.clear();
+    }
+
+    void ContentBrowserPanel::syncReferenceIndex()
+    {
+        EditorReferenceIndexData data{};
+        if ( _referenceIndexJob.take( data ) )
+        {
+            SW_LOG_INFO( "Reference index ready: %# text asset(s), %# reference(s) in %# ms", data._scannedFileCount, data._listReference.size(), data._scanMilliseconds );
+            _referenceIndex.assign( std::move( data ) );
+        }
+
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr || _referenceIndexJob.isPending() )
+            return;
+        // 훑는 동안 바뀐 것은 끝난 뒤 번호가 달라 다시 훑는다. 저장이 몰려도 훑기는 하나씩 돈다.
+        const uint64 serial = pContext->getAssetHotReload().getContentChangeSerial();
+        if ( _bReferenceIndexRequested == SW_TRUE && serial == _referenceIndexSerial )
+            return;
+        _referenceIndexSerial     = serial;
+        _bReferenceIndexRequested = SW_TRUE;
+        _referenceIndexJob.request( ResourceUtil::getRootFolderPath() );
+    }
+
+    void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
+    {
+        _referenceQueryID            = ResourceUtil::toResourceID( absolutePath );
+        _bReferenceQueryDependencies = bDependencies ? SW_TRUE : SW_FALSE;
+        _bOpenReferenceResults       = SW_TRUE;
+        if ( bDependencies )
+            _referenceIndex.findDependencies( _referenceQueryID, _listReferenceResult );
+        else
+            _referenceIndex.findReferrers( _referenceQueryID, _listReferenceResult );
+    }
+
+    void ContentBrowserPanel::drawReferenceResults()
+    {
+        if ( _bOpenReferenceResults == SW_TRUE )
+        {
+            ImGui::OpenPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName );
+            _bOpenReferenceResults = SW_FALSE;
+            // 마우스 위치에 열면 아래 도킹 칸에서 표가 화면 밖으로 나간다. 주 뷰포트 가운데에 연다.
+            ImGui::SetNextWindowPos( ImGui::GetMainViewport()->GetCenter(), ImGuiCond_Always, ImVec2( 0.5f, 0.5f ) );
+        }
+        if ( ImGui::BeginPopup( ContentBrowserPanelInternal::kReferenceResultsPopupName ) == false )
+            return;
+
+        const bool bDependencies = _bReferenceQueryDependencies == SW_TRUE;
+        ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
+        ImGui::SameLine();
+        ImGui::TextColored( ImVec4( 0.55f, 0.8f, 1.0f, 1.0f ), "%s", _referenceQueryID.c_str() );
+        if ( _referenceIndex.isReady() == false )
+        {
+            ImGui::TextDisabled( "Indexing references. Try again in a moment." );
+            ImGui::EndPopup();
+            return;
+        }
+        if ( _listReferenceResult.empty() )
+        {
+            EditorWidgets::drawEmptyHint( bDependencies ? "This asset names no other asset." : "No text asset names this asset." );
+            ImGui::EndPopup();
+            return;
+        }
+
+        constexpr ImGuiTableFlags kTableFlags  = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        const float32             dpiScale     = EditorThemeUtil::getDpiScale();
+        const size_t              visibleCount = std::min( _listReferenceResult.size(), ContentBrowserPanelInternal::kReferenceVisibleRowCount );
+        const float32             tableHeight  = ImGui::GetTextLineHeightWithSpacing() * static_cast<float32>( visibleCount + 2 );
+        string                    openPath;
+        if ( ImGui::BeginTable( "##cb_references", 2, kTableFlags, ImVec2( 560.0f * dpiScale, tableHeight ) ) )
+        {
+            ImGui::TableSetupColumn( "Asset", ImGuiTableColumnFlags_WidthStretch );
+            ImGui::TableSetupColumn( "Line", ImGuiTableColumnFlags_WidthFixed, 48.0f * dpiScale );
+            ImGui::TableHeadersRow();
+            for ( size_t rowIndex = 0; rowIndex < _listReferenceResult.size(); ++rowIndex )
+            {
+                const EditorAssetReference& reference = _listReferenceResult[rowIndex];
+                const string&               shownPath = bDependencies ? reference._targetPath : reference._referrerPath;
+                ImGui::PushID( static_cast<int32>( rowIndex ) );
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex( 0 );
+                ImGui::Selectable( shownPath.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
+                if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
+                    openPath = shownPath;
+                EditorWidgets::drawTooltip( "Double-click to open" );
+                ImGui::TableSetColumnIndex( 1 );
+                ImGui::Text( "%u", reference._line );
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        ImGui::EndPopup();
+        if ( openPath.empty() == false )
+            (void)EditorAssetCommands::openPath( openPath ); // 실패는 openPath 가 알린다
     }
 
     void ContentBrowserPanel::openFolder( string_view absolutePath )
@@ -332,6 +541,7 @@ namespace sw::editor
             refreshRoots();
         processPendingImports();
         syncWithContentChanges();
+        syncReferenceIndex();
         if ( _bFolderDirty == SW_TRUE )
             refreshCurrentFolder();
         vector<EditorFolderListingEntry> listNewEntry;
@@ -345,30 +555,61 @@ namespace sw::editor
         ImGui::SameLine();
         drawAssetView();
         drawDeleteConfirmModal();
+        drawReferenceResults();
     }
 
     void ContentBrowserPanel::refreshRoots()
     {
         _listRoot.clear();
 
-        const auto addRoot = [this]( const utf8* pName, string_view path )
+        const auto addRoot = [this]( string_view name, string_view path )
         {
             if ( path.empty() )
                 return;
             if ( FileUtil::isDirectory( path ) == false )
                 return;
             ContentRoot root;
-            root._displayName  = pName;
+            root._displayName  = string{ name };
             root._absolutePath = FileUtil::normalizeSeparators( path );
             _listRoot.push_back( std::move( root ) );
         };
 
-        addRoot( "game", ResourceUtil::getDomainFolderPath( "game" ) );
+        // 기본은 활성 게임 팩 하나다(언리얼 Content Browser 가 프로젝트 콘텐츠만 보이는 것과 같다). All packs 를 켜면 game/ 의 팩마다 루트 하나.
+        if ( _bShowAllPacksInitialized == SW_FALSE )
+        {
+            _bShowAllPacks            = getPreferences<EditorContentBrowserPreferences>()._bShowAllPacksByDefault ? SW_TRUE : SW_FALSE;
+            _bShowAllPacksInitialized = SW_TRUE;
+        }
+        const string& packRoot = GameConfig::getActive()._packRoot;
+        if ( packRoot.empty() == false )
+            addRoot( packRoot, ResourceUtil::getDomainFolderPath( packRoot ) );
+        if ( _bShowAllPacks == SW_TRUE || packRoot.empty() )
+        {
+            vector<string> listPackFolder;
+            (void)FileUtil::collectFolders( ResourceUtil::getDomainFolderPath( "game" ), listPackFolder, false ); // game/ 이 없으면 팩 루트가 없다
+            std::sort( listPackFolder.begin(), listPackFolder.end() );
+            for ( const string& packFolder : listPackFolder )
+            {
+                const string packName = string( ContentBrowserPanelInternal::kGameDomainPrefix ) + FileUtil::normalizePath( FileUtil::getFileNamePart( packFolder ) );
+                if ( packName != FileUtil::normalizePath( packRoot ) )
+                    addRoot( packName, packFolder );
+            }
+        }
         addRoot( "engine", ResourceUtil::getDomainFolderPath( "engine" ) );
         addRoot( "common", ResourceUtil::getDomainFolderPath( "common" ) );
         addRoot( "editor", ResourceUtil::getDomainFolderPath( "editor" ) );
 
-        if ( _selectedFolderAbs.empty() && _listRoot.empty() == false )
+        // 지금 폴더가 숨긴 팩 안이면 첫 루트로 간다.
+        bool bSelectedIsUnderRoot = false;
+        for ( const ContentRoot& root : _listRoot )
+        {
+            if ( FileUtil::startsWithPathComponent( FileUtil::normalizePath( _selectedFolderAbs ), FileUtil::normalizePath( root._absolutePath ) ) )
+            {
+                bSelectedIsUnderRoot = true;
+                break;
+            }
+        }
+        if ( bSelectedIsUnderRoot == false && _listRoot.empty() == false )
         {
             vector<ContentBrowserCrumb> listCrumb;
             makeTrailForFolder( _listRoot.front()._absolutePath, listCrumb );
@@ -376,6 +617,34 @@ namespace sw::editor
         }
 
         _bRootsDirty = SW_FALSE;
+    }
+
+    void ContentBrowserPanel::setShowAllPacks( bool bShowAllPacks )
+    {
+        _bShowAllPacks            = bShowAllPacks ? SW_TRUE : SW_FALSE;
+        _bShowAllPacksInitialized = SW_TRUE;
+        _bRootsDirty              = SW_TRUE;
+    }
+
+    uint32 ContentBrowserPanel::getGameRootCount() const
+    {
+        uint32 gameRootCount{ 0 };
+        for ( const ContentRoot& root : _listRoot )
+        {
+            if ( StringUtil::startsWith( root._displayName, ContentBrowserPanelInternal::kGameDomainPrefix ) )
+                ++gameRootCount;
+        }
+        return gameRootCount;
+    }
+
+    bool ContentBrowserPanel::hasRoot( string_view displayName ) const
+    {
+        for ( const ContentRoot& root : _listRoot )
+        {
+            if ( FileUtil::normalizePath( root._displayName ) == FileUtil::normalizePath( displayName ) )
+                return true;
+        }
+        return false;
     }
 
     void ContentBrowserPanel::refreshCurrentFolder()
@@ -447,6 +716,7 @@ namespace sw::editor
 
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, "Search Content", 160.0f, false );
+            EditorSelfTestMarks::note( "contentBrowser.search" );
             EditorWidgets::drawTooltip( "에셋 이름 또는 확장자로 필터링하여 검색합니다" );
 
             ImGui::SameLine();
@@ -515,6 +785,13 @@ namespace sw::editor
                 refreshCurrentFolder();
             }
             EditorWidgets::drawTooltip( "디스크 파일 및 리소스 루트 목록을 새로고침합니다" );
+
+            ImGui::SameLine();
+            bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
+            if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
+                setShowAllPacks( bShowAllPacks );
+            EditorSelfTestMarks::note( "contentBrowser.allPacks" );
+            EditorWidgets::drawTooltip( "끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)" );
         }
         EditorChrome::endToolbar();
     }
@@ -599,6 +876,8 @@ namespace sw::editor
         ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( folderColor._r, folderColor._g, folderColor._b, 1.0f ) );
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
+        if ( EditorSelfTestMarks::isEnabled() )
+            ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourceUtil::toResourceID( absPath ) );
 
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
@@ -654,6 +933,11 @@ namespace sw::editor
         EditorChrome::endSection();
 
         EditorWidgets::drawCountLabel( static_cast<uint32>( listVisible.size() ), 0, "items" );
+        if ( _referenceIndexJob.isPending() && _referenceIndex.isReady() == false )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "|  Indexing references..." );
+        }
         if ( _selectedAssetAbs.empty() == false )
         {
             ImGui::SameLine();
@@ -752,6 +1036,7 @@ namespace sw::editor
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
                     if ( ImGui::Button( "##tile", ImVec2( cell, cell ) ) )
                         selectAsset( entry );
+                    ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
                     if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
                         openAsset( entry );
@@ -814,6 +1099,7 @@ namespace sw::editor
                     }
                     if ( statusText.empty() == false && ImGui::IsItemHovered() )
                         ImGui::SetTooltip( "%s", statusText.c_str() );
+                    ContentBrowserPanelInternal::noteMark( "contentBrowser.asset.", entry._name );
                     drawAssetContextMenu( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );

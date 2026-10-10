@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorBackgroundTask.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
+#include "Editor/Common/Commands/EditorReferenceIndex.h"
 #include "Editor/Common/Commands/EditorResourceIndex.h"
 
 namespace sw
@@ -119,6 +120,23 @@ namespace sw::editor
     public:
         /** @brief 워커에 폴더 목록 스캔을 요청합니다. */
         void request( string_view folderAbs );
+
+    private:
+        static void runJob( const TaskArgs& args );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class EditorReferenceIndexJob
+     * @brief 리소스 트리의 참조 역색인(`EditorReferenceIndex::scan`)을 워커에서 만듭니다.
+     */
+    class EditorReferenceIndexJob final : public EditorBackgroundTask<string, EditorReferenceIndexData>
+    {
+    public:
+        /** @brief 워커에 @p resourceRoot 아래 훑기를 요청합니다. 이미 대기 중이면 세대를 올린다(낡은 결과는 버린다). */
+        void request( string_view resourceRoot );
 
     private:
         static void runJob( const TaskArgs& args );
