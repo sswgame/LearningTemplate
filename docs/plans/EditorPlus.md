@@ -22,7 +22,6 @@
 - 5b 는 패널 점검의 결함 단위(D1 ~ D26)와 에디터 시나리오 기반(B0), editor-res 의 R1, R2, R6, R7, R8 도 넣기로 했습니다. 시작하기 전에 `git log` 로 실제로 들어갔는지 확인합니다.
   들어가지 않은 것이 있으면 이 문서의 해당 단위보다 먼저 넣습니다.
 - 2차, 3차, 4차 제안의 이름(gfx-editor-rest 단위 8, 3차 B2, config-docs, server-target, runtime-ui 8-5)은 선행 조건으로 적혀 있습니다. 모두 main 에 들어갔으므로 충족된 것으로 읽습니다.
-  예외는 T4 의 패키징 진입점입니다. 아직 없으므로 T4 가 먼저 만듭니다.
 
 ### 원문과 달라진 이름
 
@@ -90,7 +89,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **5 공용 편집 틀** | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
 | **추가 — 아이콘(12절)** | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
@@ -146,41 +144,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 검증 결과 저장소(`ValidationIssueLog` — "맵 검사 패널이 읽는다" 고 주석에 적힌)는 있는데 패널이 없다.
 
 
-### T4 패키징 창 — 타깃 · 프리셋 · 쿠킹 · 산출 폴더 · 진행 로그
-
-**목적.** 배포본 만들기가 손 절차(Shipping 프리셋 구성 · 빌드 → 쿠킹 → 폴더에 모으기)다. 언리얼 Package Project · 유니티 Build Settings 처럼 창 하나에서 고르고 누른다.
-**선행:** 패키징 **진입점 하나**(명령줄 — CI 와 창이 같이 쓴다). 2 차 server-target 정정 결정("패키징 때 타깃별로 에셋 종류를 뺀다")을 적용할 때 그 진입점이 생겼으면 그것을 부른다.
-지금은 없으므로 이 단위가 먼저 `Scripts/dev/MakePackage.py` 를 만든다:
-```
-py -3 Scripts/dev/MakePackage.py --target Client|Server --game <프리셋 이름> [--rhi <백엔드>] [--output Saved/Packages] [--skip-build] [--skip-cook]
-  1) cmake --preset Ninja-Shipping(게임 · RHI 캐시 값) → cmake --build   (진행 줄: "[package] step 1/4 build")
-  2) Scripts/generate/CookAssets.py --all --output <스테이징>/Cooked        ("[package] step 2/4 cook")
-  3) 스테이징: Bin 의 exe · DLL(Shipping 은 한 exe) + 팩 + 설정(Config/Game/<게임>.json · 서버면 서버 설정) + THIRD_PARTY_NOTICES,
-     타깃별 제외 표(server-target 결정 — Server: 텍스처 · 셰이더 바이너리 · 오디오)    ("[package] step 3/4 stage")
-  4) 검사: 스테이징의 exe 를 --version · --check-pack 으로 한 번 띄운다             ("[package] step 4/4 verify")
-  끝: "[package] done <폴더> <크기>" · 실패면 "[package] FAILED <단계> <이유>" 와 종료 코드
-```
-창 — `Panels/PackagingPanel.h` · `.cpp` `SW_EDITOR_PANEL( PackagingPanel, "packaging", EditorPanelCategory::Tool, 2050 );` 제목 `"Packaging"`: 타깃(Client · Server) · 게임(활성 기본) · RHI(쿠킹 표의 이름) · 산출 폴더 ·
-"Skip build/cook" 체크 · "Package" 단추 → 진입점을 새 프로세스로(`EditorExternalToolJob`), `[package] step k/n` 줄로 진행 막대, 로그 창(오류 줄 빨강 · 더블클릭 IDE), 끝나면 "Open Folder".
-줄 읽기는 ImGui 없는 `PackagingProgressParser` → EditorTest.
-**시험.** `PackagingProgressParserTest`(단계 · done · FAILED 줄), 진입점은 `PythonTest_TestPackage`(파이썬 시험 — `--skip-build --skip-cook` 로 스테이징 · 제외 표만, 임시 폴더). 실제 Shipping 패키징은 손 확인(시간이 길다).
-**확인 = 에디터 시나리오.** `packaging.scenario.xml`: Packaging 창을 열고 "Skip build" 와 "Skip cook" 을 켠 뒤 "Package" 를 눌러 진행 탐침 `Editor.PackagingState` 가 끝(성공)이 될 때까지 기다립니다.
-빌드와 쿠킹을 건너뛰므로 스테이징만 돌아 수십 초 안에 끝납니다. 실제 Shipping 패키징은 `PythonTest_TestPackage` 와 손 확인으로 둡니다.
-
-**남길 교훈.** 없음. **커밋 메시지:**
-```
-에디터 · 스크립트 - 패키징 진입점(Scripts/dev/MakePackage.py)과 Packaging 창
-
-문제점:
-- 배포본 만들기가 Shipping 구성 · 빌드 → 쿠킹 → 폴더 모으기의 손 절차였고, 창도 진입점도 없었다.
-
-해결방안:
-- Scripts/dev/MakePackage.py: 빌드 · 쿠킹 · 스테이징(타깃별 제외 표 · 설정 · 서드파티 고지) · 검사, 단계마다 "[package] step k/n" 줄과 종료 코드.
-- Packaging 창: 타깃 · 게임 · RHI · 산출 폴더 · 건너뛰기, 새 프로세스로 실행하고 단계 줄로 진행 · 로그 · Open Folder. 줄 읽기는 ImGui 없는
-  PackagingProgressParser.
-
-결과:
-- PackagingProgressParserTest, PythonTest_TestPackage(스테이징 · 제외 표).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```

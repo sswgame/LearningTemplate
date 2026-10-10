@@ -20,13 +20,6 @@ namespace sw::editor
             /** @brief 검증 스크립트(저장소 루트 기준)입니다. */
             static constexpr string_view kScriptRelativePath = "Scripts/qa/ValidateAssets.py";
 
-            /** @brief 파이썬 실행기입니다 — 저장소 스크립트가 쓰는 것과 같다(Windows 는 런처 `py -3`). */
-#if defined( SW_PLATFORM_WINDOWS )
-            static constexpr string_view kPythonCommand = "py -3";
-#else
-            static constexpr string_view kPythonCommand = "python3";
-#endif
-
             /** @brief 결과 줄의 심각도 낱말(대문자, 출력 형식 `Finding.format`)을 소문자 이름으로 바꿉니다. */
             [[nodiscard]] static bool parseSeverity( string_view word, string& outSeverity )
             {
@@ -109,7 +102,7 @@ namespace sw::editor
 
     string EditorAssetValidation::makeCommand( string_view projectRoot, const vector<string>& listResourcePath )
     {
-        string command{ EditorAssetValidationInternal::kPythonCommand };
+        string command{ EditorUtil::kPythonCommand };
         command += " \"";
         command += FileUtil::joinPath( projectRoot, EditorAssetValidationInternal::kScriptRelativePath );
         command += "\" --severity warning --files";

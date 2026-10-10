@@ -631,6 +631,7 @@ SW_TEST_CASE( AppSmokeTest, EditorRegistriesKeepTheirOrder )
         "EditorRegistry|panel|data_table|Tool|Data Table Editor",
         "EditorRegistry|panel|input_map|Tool|Input Map Editor",
         "EditorRegistry|panel|map_check|Tool|Map Check",
+        "EditorRegistry|panel|packaging|Tool|Packaging",
         "EditorRegistry|popup|QuickLauncher",
         "EditorRegistry|popup|CommandPalette",
         "EditorRegistry|popup|BoneHierarchy",

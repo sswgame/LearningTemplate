@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 패키징 창(T4): Skip build 와 Skip cook 을 켜고 Package 를 누르면 Scripts/dev/MakePackage.py 가 새 프로세스로 돌아
+  이 에디터의 Bin 을 Saved/Packages/<게임>-Client 에 스테이징하고 검사한다(빌드 · 쿠킹이 없어 수 초). 끝나면 Editor.PackagingState 가 2(성공)다.
+  실제 Shipping 패키징은 PythonTest_TestMakePackage 와 손 실행(Scripts/dev/MakePackage.py 를 Client 타깃으로)으로 본다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/packaging.scenario.xml -dx12
+-->
+<Scenario name="editor.packaging" fixedDelta="0.0166667" timeoutFrames="2400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="30"><DevCommand line="panel.focus packaging"/></At>
+	<At frame="60"><Expect probe="Editor.PackagingState" equals="0"/></At>
+	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
+	<At frame="65"><EditorClick mark="packaging.skipBuild" state="down"/></At>
+	<At frame="68"><EditorClick mark="packaging.skipBuild" state="up"/></At>
+	<At frame="75"><EditorClick mark="packaging.skipCook" state="down"/></At>
+	<At frame="78"><EditorClick mark="packaging.skipCook" state="up"/></At>
+	<At frame="85"><EditorClick mark="packaging.package" state="down"/></At>
+	<At frame="88"><EditorClick mark="packaging.package" state="up"/></At>
+	<At frame="100"><Expect probe="Editor.PackagingState" equals="1"/></At>
+	<At frame="1500">
+		<Expect probe="Editor.PackagingState" equals="2"/>
+		<ExpectLog contains="Packaging done:" count="1"/>
+		<CaptureWindow file="packaging.png"/>
+	</At>
+	<At frame="1510"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

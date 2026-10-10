@@ -496,6 +496,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `_bShowAllPacksByDefault` 다. 참조 찾기(오른쪽 클릭 Find References · Show Dependencies, 삭제 확인의 참조 수)는 `EditorReferenceIndex` 다. 텍스트 에셋(xml, json, material, hlsl)의 글 가운데
   실제로 있는 파일의 리소스 id 만 세고, `Resource/` 변경 번호가 바뀌면 워커가 통째로 다시 훑는다(Debug 1.1 초, 377 파일). 바이너리 안의 경로와 확장자를 뗀 이름은 참조로 잡지 않는다.
   콘솔 `content.open <리소스 폴더>` 가 그 폴더를 연다. 시험 `EditorReferenceIndexTest`, 자체 시험 `contentBrowser.showsActivePackOnly`, 시나리오 `editor/contentbrowser`.
+- **패키징 창(Packaging, `packaging`)은 `Scripts/dev/MakePackage.py` 를 새 프로세스로 띄울 뿐이다** — 사람과 CI 가 같은 진입점을 쓴다. 진행은 그 스크립트의 `[package] step k/n` ·
+  `done <폴더> <바이트>` · `FAILED <단계> <이유>` 줄을 `PackagingProgressParser`(ImGui 없음)가 읽는다. `EditorExternalToolJob` 은 끝난 뒤 줄을 한꺼번에 주므로 도는 동안의 막대는 단계가 아니라 움직이는 표시다.
+  Skip build 는 이 에디터의 Bin 을 스테이징한다(그 타깃의 Shipping 빌드가 없어도 흐름을 본다). 스테이징은 그 타깃의 실행 파일, 맨 위 DLL, `Packs/`, 서드파티 고지와 서버의 `Config/Server/<게임>.json` 만 베낀다.
+  시험 `PackagingProgressParserTest`, `PythonTest_TestMakePackage`, 시나리오 `editor/packaging`.
 - **맵 검사(Map Check 창, `map_check`)는 `ValidationIssueLog` 를 그대로 보인다** — 로드 · 저장 · 인스펙터 편집 때 모인 검증 결과이고, Check Map 단추는 활성 씬 전부를 다시 검증한다.
   창과 상태줄(메뉴 막대 오른쪽의 경고 수 `statusBar.mapCheck`)은 `ValidationIssueLog::getRevision` 이 바뀔 때만 다시 센다. 활성 씬이 바뀐 첫 프레임에 오류가 있으면 토스트를 한 번 띄운다.
   줄 클릭은 그 오브젝트를 고르고 더블클릭은 씬 뷰를 그리로 옮긴다. 지운 오브젝트의 결과는 남아 있을 수 있어 그 줄은 고를 것이 없다(도구 설명).
@@ -578,6 +582,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **에디터 환경설정은 섹션 하나가 리플렉션 구조체 하나다**(`SW_EDITOR_SETTINGS` — 확장 모듈도 등록한다). 저장은 `Saved/Editor/EditorPreferences.json` 에 기본과 다른 값만(`EditorPreferencesStore`),
   테마(`EditorConfig`)도 섹션 Appearance 다. 창은 Edit > Preferences(`PreferencesPanel` — 전체 검색 · Modified only · Reset Section, 저장 단추 없이 0.5 초 뒤 저장).
   `-gv_editorUiScale` · `-gv_editorStartupScene` 은 주어지면 환경설정을 이긴다(자동화). 섹션의 바뀐 뒤 동작은 ImGui 컨텍스트보다 먼저 불릴 수 있다(기동 때 파일을 읽는다). 시나리오 `editor/preferences`.
+- **저장소 파이썬 스크립트는 `EditorUtil::kPythonCommand`(Windows `py -3`)로 띄운다**(에셋 검증, 패키징). 실행기를 파일마다 따로 적지 않는다.
 - **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorPreferences.json` 환경설정 · 테마, 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. 씬 뷰 · 게임 뷰 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
   되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.

@@ -199,6 +199,7 @@ Scripts/
   │     ├── MakeTerrainShowcase.py    # 지형 쇼케이스의 절차 생성 원본(heightfields_raw · textures_raw)
   │     ├── MakeNoiseTexture.py       # 엔진 잡음 텍스처 원본(engine/textures_raw/perlin.png — 이음매 없는 Perlin fBm)
   │     ├── MakeBrandImages.py        # 에디터 스플래시 원본과 앱 아이콘(app.ico)을 같은 SW 모노그램에서 그린다
+  │     ├── MakePackage.py            # 배포 패키지(Shipping 빌드 → 쿠킹 → 스테이징 → 검사, `[package]` 줄) — 에디터 Packaging 창이 같은 것을 부른다
   │     ├── MakeWorktree.py           # 작업 단위용 git 워크트리 + main 과 나눠 쓰는 도구 · vcpkg 폴더 링크(docs/11_Workflow.md)
   │     ├── RemoveWorktree.py         # 워크트리 지우기 — 나눠 쓰는 링크를 먼저 끊는다
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)

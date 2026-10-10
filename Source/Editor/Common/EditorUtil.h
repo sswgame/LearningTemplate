@@ -40,6 +40,12 @@ namespace sw::editor
         static constexpr const utf8* kFontsFolderName = "fonts";
         /** @brief 에디터 팩의 `fonts/` 안에 있는 아이콘 폰트 파일 이름입니다(`Scripts/generate/GenerateEditorIcons.py` 가 만든다). */
         static constexpr const utf8* kIconFontFileName = "sweditoricons.ttf";
+        /** @brief 저장소 파이썬 스크립트를 띄우는 실행기입니다. 저장소 스크립트가 쓰는 것과 같다(Windows 는 런처 `py -3`). */
+#if defined( SW_PLATFORM_WINDOWS )
+        static constexpr const utf8* kPythonCommand = "py -3";
+#else
+        static constexpr const utf8* kPythonCommand = "python3";
+#endif
 
         /**
          * @brief 프로젝트 루트(<Project>, Resource 의 부모)를 반환합니다.
