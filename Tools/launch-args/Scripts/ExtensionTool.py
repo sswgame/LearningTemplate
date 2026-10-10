@@ -44,7 +44,7 @@ _kMapContentType = {
 
 
 def findCodeExecutable(explicitPath: str | None) -> Path:
-    """VS Code 실행 파일(Electron)을 찾습니다. 없으면 SystemExit 입니다."""
+    """VS Code 실행 파일(Electron)을 찾습니다. 없으면 sys.exit 로 끝냅니다."""
     listCandidate: list[Path] = []
     if explicitPath:
         listCandidate.append(Path(explicitPath))
@@ -63,7 +63,7 @@ def findCodeExecutable(explicitPath: str | None) -> Path:
     for candidate in listCandidate:
         if candidate.is_file():
             return candidate
-    raise SystemExit("VS Code executable not found - pass --code <path to Code.exe> or set VSCODE_EXECUTABLE")
+    sys.exit("VS Code executable not found - pass --code <path to Code.exe> or set VSCODE_EXECUTABLE")
 
 
 def makeCleanEnvironmentInternal() -> dict[str, str]:
@@ -177,7 +177,7 @@ def collectPackagedFilesInternal() -> list[Path]:
         listFile += sorted(path for path in (_kExtensionRoot / folderName).rglob("*") if path.is_file())
     for filePath in listFile:
         if filePath.is_file() is False:
-            raise SystemExit(f"missing file for the package: {filePath}")
+            sys.exit(f"missing file for the package: {filePath}")
     return listFile
 
 
@@ -206,7 +206,7 @@ def installVsixInternal(codePath: Path, vsixPath: Path) -> int:
     if launcher.is_file() is False:
         launcher = Path(shutil.which("code") or "")
     if launcher.is_file() is False:
-        raise SystemExit("VS Code command-line launcher (bin/code) not found")
+        sys.exit("VS Code command-line launcher (bin/code) not found")
     return subprocess.run([str(launcher), "--install-extension", str(vsixPath), "--force"], env=makeCleanEnvironmentInternal()).returncode
 
 

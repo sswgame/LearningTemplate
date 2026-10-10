@@ -11,15 +11,16 @@
 사용법: py -3 Scripts/generate/GenerateThirdPartyNotices.py --manifest vcpkg.json --installed build/vcpkg_installed
         --triplet x64-windows --out build/Ninja-Debug/Bin/THIRD_PARTY_NOTICES.txt [--vendored-root ThirdParty]
 """
+from __future__ import annotations
+
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common import writeGeneratedFile  # noqa: E402
 
@@ -55,20 +56,20 @@ kMapTripletWordTest = {
 }
 
 
-def evaluatePlatformInternal(expression, triplet):
+def evaluatePlatformInternal(expression: str, triplet: str) -> bool:
     """vcpkg 플랫폼 식(`!` · `&` · `|` · `,` · 괄호)을 @p triplet 으로 풉니다. 모르는 낱말은 거짓입니다."""
     listToken = re.findall(r"[A-Za-z0-9_-]+|[!&|,()]", expression)
     position = [0]
 
-    def peekInternal():
+    def peekInternal() -> str:
         return listToken[position[0]] if position[0] < len(listToken) else ""
 
-    def takeInternal():
+    def takeInternal() -> str:
         token = peekInternal()
         position[0] += 1
         return token
 
-    def parsePrimaryInternal():
+    def parsePrimaryInternal() -> bool:
         token = takeInternal()
         if token == "!":
             return not parsePrimaryInternal()
@@ -79,14 +80,14 @@ def evaluatePlatformInternal(expression, triplet):
         test = kMapTripletWordTest.get(token)
         return test(triplet) if test is not None else False
 
-    def parseAndInternal():
+    def parseAndInternal() -> bool:
         value = parsePrimaryInternal()
         while peekInternal() == "&":
             takeInternal()
             value = parsePrimaryInternal() and value
         return value
 
-    def parseOrInternal():
+    def parseOrInternal() -> bool:
         value = parseAndInternal()
         while peekInternal() in ("|", ","):
             takeInternal()
@@ -96,11 +97,11 @@ def evaluatePlatformInternal(expression, triplet):
     return parseOrInternal() if listToken else True
 
 
-def readManifestPortsInternal(manifestPath, triplet):
+def readManifestPortsInternal(manifestPath: str, triplet: str) -> set[str]:
     """매니페스트의 직접 의존 중 이 트리플릿에 해당하는 포트 이름입니다."""
     with open(manifestPath, "r", encoding="utf-8") as handle:
         manifest = json.load(handle)
-    setPort = set()
+    setPort: set[str] = set()
     for dependency in manifest.get("dependencies", []):
         if isinstance(dependency, str):
             setPort.add(dependency)
@@ -109,13 +110,13 @@ def readManifestPortsInternal(manifestPath, triplet):
     return setPort
 
 
-def readStatusDependsInternal(statusPath, triplet):
+def readStatusDependsInternal(statusPath: Path, triplet: str) -> dict[str, list[str]]:
     """`vcpkg/status` 에서 이 트리플릿에 깔린 포트마다 의존 이름(핵심 + 깔린 기능 전부)을 모읍니다."""
-    mapDepends = {}
+    mapDepends: dict[str, list[str]] = {}
     with open(statusPath, "r", encoding="utf-8") as handle:
         listParagraph = handle.read().replace("\r\n", "\n").split("\n\n")
     for paragraph in listParagraph:
-        mapField = {}
+        mapField: dict[str, str] = {}
         for line in paragraph.split("\n"):
             if ": " in line and line[0] != " ":
                 key, value = line.split(": ", 1)
@@ -132,9 +133,9 @@ def readStatusDependsInternal(statusPath, triplet):
     return mapDepends
 
 
-def collectPortsInternal(setRoot, mapDepends):
+def collectPortsInternal(setRoot: set[str], mapDepends: dict[str, list[str]]) -> list[str]:
     """직접 의존에서 시작해 깔린 의존을 따라 닫은 포트 이름을 정렬해 돌려줍니다."""
-    setVisited = set()
+    setVisited: set[str] = set()
     listPending = sorted(setRoot)
     while listPending:
         name = listPending.pop()
@@ -145,26 +146,26 @@ def collectPortsInternal(setRoot, mapDepends):
     return sorted(name for name in setVisited if name.startswith(kBuildHelperPrefix) is False)
 
 
-def collectVendoredLicensesInternal(vendoredRoot):
+def collectVendoredLicensesInternal(vendoredRoot: str | None) -> list[tuple[str, Path]]:
     """`<vendoredRoot>/<이름>/LICENSE.md` 가 있는 폴더마다 (이름, 라이선스 경로)입니다. 이름 순서입니다."""
-    if vendoredRoot is None or os.path.isdir(vendoredRoot) is False:
+    if vendoredRoot is None or Path(vendoredRoot).is_dir() is False:
         return []
-    listVendored = []
-    for name in sorted(os.listdir(vendoredRoot)):
-        licensePath = os.path.join(vendoredRoot, name, kVendoredLicenseFileName)
-        if os.path.isfile(licensePath):
+    listVendored: list[tuple[str, Path]] = []
+    for name in sorted(path.name for path in Path(vendoredRoot).iterdir()):
+        licensePath = Path(vendoredRoot) / name / kVendoredLicenseFileName
+        if licensePath.is_file():
             listVendored.append((name, licensePath))
     return listVendored
 
 
-def makeNoticeTextInternal(listPort, shareRoot, listVendored=()):
+def makeNoticeTextInternal(listPort: list[str], shareRoot: Path, listVendored: Sequence[tuple[str, Path]] = ()) -> str:
     """포트마다 절 하나(이름 + copyright 전문)를 이어 붙이고, 저장소에 둔 코드의 라이선스를 뒤에 붙입니다. copyright 가 없는 포트는 그 사실을 적습니다."""
     listLine = list(kListPrefaceLine)
     listLine += ["", "Included: " + ", ".join(list(listPort) + [name for name, _ in listVendored]), ""]
     for port in listPort:
         listLine += [kSectionRule, port, kSectionRule, ""]
-        copyrightPath = os.path.join(shareRoot, port, "copyright")
-        if os.path.isfile(copyrightPath):
+        copyrightPath = shareRoot / port / "copyright"
+        if copyrightPath.is_file():
             with open(copyrightPath, "r", encoding="utf-8", errors="replace") as handle:
                 listLine.append(handle.read().replace("\r\n", "\n").rstrip("\n"))
         else:
@@ -187,14 +188,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--vendored-root", default=None, help="저장소에 둔 서드파티 코드 폴더(하위 폴더의 LICENSE.md 를 붙인다)")
     args = parser.parse_args(argv)
 
-    statusPath = os.path.join(args.installed, "vcpkg", "status")
-    if os.path.isfile(statusPath) is False:
+    statusPath = Path(args.installed) / "vcpkg" / "status"
+    if statusPath.is_file() is False:
         print(f"[ThirdPartyNotices] no vcpkg status file: {statusPath}", file=sys.stderr)
         return 1
     mapDepends = readStatusDependsInternal(statusPath, args.triplet)
     listPort = collectPortsInternal(readManifestPortsInternal(args.manifest, args.triplet), mapDepends)
     listVendored = collectVendoredLicensesInternal(args.vendored_root)
-    text = makeNoticeTextInternal(listPort, os.path.join(args.installed, args.triplet, "share"), listVendored)
+    text = makeNoticeTextInternal(listPort, Path(args.installed) / args.triplet / "share", listVendored)
 
     writeGeneratedFile(Path(args.out), text, tag="ThirdPartyNotices", summary=f"{len(listPort) + len(listVendored)} libraries", newline="\n",
                        bReportUnchanged=False)

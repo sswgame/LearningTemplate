@@ -119,7 +119,7 @@ class EngineConfig:
 # 2) 통합 환경 구성 매니저 (Class)
 # ==============================================================================
 class EnvironmentSetupManager:
-    def __init__(self, force_refresh: bool = False):
+    def __init__(self, force_refresh: bool = False) -> None:
         self.force_refresh = force_refresh
         self.project_root = getProjectRoot()
         self.config_dir = self.project_root / kDirConfigEnv

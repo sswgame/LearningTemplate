@@ -38,6 +38,11 @@ kFamilyName = "SW Editor Icons"
 kPostScriptName = "SWEditorIcons-Regular"
 kVersionText = "Version 1.000"
 
+#: 격자 좌표의 점(x, y) · 윤곽 점(x, y, 곡선 위인가) · 폰트 단위 윤곽 점.
+GridPoint = tuple[float, float]
+ContourPoint = tuple[float, float, bool]
+FontPoint = tuple[int, int, bool]
+
 
 # ------------------------------------------------------------------------------
 # 1) 윤곽 — 점 목록 (x, y, bOnCurve), 격자 좌표(y 아래로)
@@ -45,26 +50,26 @@ kVersionText = "Version 1.000"
 class Glyph:
     """아이콘 하나의 윤곽 모음입니다. 그리기 함수가 채웁니다."""
 
-    def __init__(self):
-        self.listContour = []   # (listPoint, bCut)
+    def __init__(self) -> None:
+        self.listContour: list[tuple[list[ContourPoint], bool]] = []   # (listPoint, bCut)
 
     # -- 기본 윤곽 ---------------------------------------------------------------
-    def poly(self, listPoint, bCut=False):
+    def poly(self, listPoint: list[GridPoint], bCut: bool = False) -> None:
         """다각형(꼭짓점만)."""
         self.listContour.append(([(float(x), float(y), True) for x, y in listPoint], bCut))
 
-    def cut(self, listPoint):
+    def cut(self, listPoint: list[GridPoint]) -> None:
         """다각형 구멍."""
         self.poly(listPoint, bCut=True)
 
-    def circle(self, cx, cy, r, bCut=False):
+    def circle(self, cx: float, cy: float, r: float, bCut: bool = False) -> None:
         """채운 원(2차 곡선 여덟 조각)."""
         self.listContour.append((arcPoints(cx, cy, r, 0.0, 360.0, bClose=True), bCut))
 
-    def cutCircle(self, cx, cy, r):
+    def cutCircle(self, cx: float, cy: float, r: float) -> None:
         self.circle(cx, cy, r, bCut=True)
 
-    def rect(self, x, y, w, h, r=0.0, bCut=False):
+    def rect(self, x: float, y: float, w: float, h: float, r: float = 0.0, bCut: bool = False) -> None:
         """채운 사각형. r 은 모서리 반지름."""
         if r <= 0.0:
             self.poly([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], bCut)
@@ -77,11 +82,11 @@ class Glyph:
         listPoint += arcPoints(x + r, y + r, r, 180.0, 270.0)
         self.listContour.append((listPoint, bCut))
 
-    def cutRect(self, x, y, w, h, r=0.0):
+    def cutRect(self, x: float, y: float, w: float, h: float, r: float = 0.0) -> None:
         self.rect(x, y, w, h, r, bCut=True)
 
     # -- 선 ------------------------------------------------------------------------
-    def line(self, x0, y0, x1, y1, w=kStroke, cap="round"):
+    def line(self, x0: float, y0: float, x1: float, y1: float, w: float = kStroke, cap: str = "round") -> None:
         """두께 w 의 선분. cap = round · butt · square."""
         dx, dy = x1 - x0, y1 - y0
         length = math.hypot(dx, dy)
@@ -98,7 +103,7 @@ class Glyph:
             self.circle(x0, y0, w * 0.5)
             self.circle(x1, y1, w * 0.5)
 
-    def polyline(self, listPoint, w=kStroke, cap="round", bClosed=False):
+    def polyline(self, listPoint: list[GridPoint], w: float = kStroke, cap: str = "round", bClosed: bool = False) -> None:
         """꺾인 선. 꺾이는 점은 둥글게 연결한다."""
         listSeg = list(zip(listPoint, listPoint[1:] + (listPoint[:1] if bClosed else [])))
         for index, ((x0, y0), (x1, y1)) in enumerate(listSeg):
@@ -115,7 +120,7 @@ class Glyph:
                     length = math.hypot(dx, dy)
                     self.line(x, y, x + dx / length * w * 0.5, y + dy / length * w * 0.5, w, "butt")
 
-    def arc(self, cx, cy, r, a0, a1, w=kStroke, cap="round"):
+    def arc(self, cx: float, cy: float, r: float, a0: float, a1: float, w: float = kStroke, cap: str = "round") -> None:
         """고리 조각(각도는 도, 0 = 오른쪽, 화면 시계 방향으로 커진다)."""
         span = a1 - a0
         count = max(1, int(math.ceil(abs(span) / 180.0 - 1e-9)))
@@ -130,10 +135,10 @@ class Glyph:
             for a in (a0, a1):
                 self.circle(cx + r * math.cos(math.radians(a)), cy + r * math.sin(math.radians(a)), w * 0.5)
 
-    def ring(self, cx, cy, r, w=kStroke):
+    def ring(self, cx: float, cy: float, r: float, w: float = kStroke) -> None:
         self.arc(cx, cy, r, 0.0, 360.0, w, "butt")
 
-    def frame(self, x, y, w, h, r=0.0, sw=kStroke):
+    def frame(self, x: float, y: float, w: float, h: float, r: float = 0.0, sw: float = kStroke) -> None:
         """사각 테두리(선 중심이 x, y, w, h 위)."""
         if r <= 0.0:
             self.polyline([(x, y), (x + w, y), (x + w, y + h), (x, y + h)], sw, bClosed=True)
@@ -147,7 +152,7 @@ class Glyph:
         self.arc(x + r, y + h - r, r, 90.0, 180.0, sw, "butt")
         self.arc(x + r, y + r, r, 180.0, 270.0, sw, "butt")
 
-    def dashedFrame(self, x, y, w, h, dash=3.0, gap=2.0, sw=kStroke):
+    def dashedFrame(self, x: float, y: float, w: float, h: float, dash: float = 3.0, gap: float = 2.0, sw: float = kStroke) -> None:
         """점선 사각 테두리 — 모서리에서 시작하는 ㄱ 자 네 개 + 변 가운데 조각."""
         for (px, py, qx, qy) in ((x, y, x + w, y), (x + w, y, x + w, y + h), (x + w, y + h, x, y + h), (x, y + h, x, y)):
             length = math.hypot(qx - px, qy - py)
@@ -158,17 +163,17 @@ class Glyph:
                 self.line(px + ux * pos, py + uy * pos, px + ux * end, py + uy * end, sw, "square" if pos == 0.0 else "butt")
                 pos = end + gap
 
-    def arrowHead(self, tipX, tipY, angle, size=4.0, spread=40.0, sw=kStroke):
+    def arrowHead(self, tipX: float, tipY: float, angle: float, size: float = 4.0, spread: float = 40.0, sw: float = kStroke) -> None:
         """화살촉(V 자 선). angle 은 화살이 가리키는 방향(도)."""
         for sign in (-1.0, 1.0):
             a = math.radians(angle + 180.0 + sign * spread)
             self.line(tipX, tipY, tipX + size * math.cos(a), tipY + size * math.sin(a), sw)
 
-    def triangle(self, x0, y0, x1, y1, x2, y2, bCut=False):
+    def triangle(self, x0: float, y0: float, x1: float, y1: float, x2: float, y2: float, bCut: bool = False) -> None:
         self.poly([(x0, y0), (x1, y1), (x2, y2)], bCut)
 
 
-def arcPoints(cx, cy, r, a0, a1, bClose=False):
+def arcPoints(cx: float, cy: float, r: float, a0: float, a1: float, bClose: bool = False) -> list[ContourPoint]:
     """중심 · 반지름 · 각도 구간의 2차 곡선 점들(시작 점 포함, 끝 점 포함 — bClose 면 끝 점은 시작과 같아 뺀다)."""
     span = a1 - a0
     count = max(1, int(math.ceil(abs(span) / 45.0 - 1e-9)))
@@ -190,56 +195,56 @@ def arcPoints(cx, cy, r, a0, a1, bClose=False):
 # 2) 아이콘 목록 — (이름, 그리기 함수). 이름은 C++ 상수 kName 이 되고, 순서가 코드포인트(E000 부터)다. **항목을 지우거나 중간에 넣으면 뒤의
 #    코드포인트가 밀린다** — 헤더를 같이 다시 만들므로 C++ 은 상수 이름으로만 쓰면 문제없다(글리프 바이트를 손으로 쓰지 말 것).
 # ------------------------------------------------------------------------------
-def drawFile(g):
+def drawFile(g: Glyph) -> None:
     g.polyline([(13, 3), (6, 3), (6, 21), (18, 21), (18, 8), (13, 3)], bClosed=True)
     g.polyline([(13, 3), (13, 8), (18, 8)])
 
 
-def drawFolder(g):
+def drawFolder(g: Glyph) -> None:
     g.poly([(3, 5), (9, 5), (11, 7), (21, 7), (21, 19), (3, 19)])
 
 
-def drawFolderOpen(g):
+def drawFolderOpen(g: Glyph) -> None:
     g.poly([(3, 5), (9, 5), (11, 7), (19, 7), (19, 10), (6, 10), (3, 18)])
     g.poly([(6.5, 11.5), (22.5, 11.5), (19.5, 19), (3, 19)])
 
 
-def drawSave(g):
+def drawSave(g: Glyph) -> None:
     g.poly([(4, 4), (17, 4), (20, 7), (20, 20), (4, 20)])
     g.cutRect(7, 5.5, 8, 4.5)
     g.cutCircle(12, 15, 2.5)
 
 
-def drawUndo(g):
+def drawUndo(g: Glyph) -> None:
     g.arc(13, 13, 6, 180.0, 450.0, cap="butt")
     g.line(13, 19, 9, 19, cap="round")
     g.triangle(3, 13, 10, 13, 6.5, 8)
 
 
-def drawRedo(g):
+def drawRedo(g: Glyph) -> None:
     g.arc(11, 13, 6, 90.0, 360.0, cap="butt")
     g.line(11, 19, 15, 19, cap="round")
     g.triangle(14, 13, 21, 13, 17.5, 8)
 
 
-def drawSearch(g):
+def drawSearch(g: Glyph) -> None:
     g.ring(10, 10, 6)
     g.line(14.5, 14.5, 20, 20, 3.0)
 
 
-def drawTerminal(g):
+def drawTerminal(g: Glyph) -> None:
     g.frame(3, 4, 18, 16, 2)
     g.polyline([(7, 9), (10, 12), (7, 15)])
     g.line(12, 15, 17, 15)
 
 
-def drawExit(g):
+def drawExit(g: Glyph) -> None:
     g.polyline([(13, 4), (5, 4), (5, 20), (13, 20)])
     g.line(10, 12, 20, 12)
     g.arrowHead(20, 12, 0.0, 4.0, 45.0)
 
 
-def drawSettings(g):
+def drawSettings(g: Glyph) -> None:
     for index in range(8):
         a = math.radians(index * 45.0)
         g.line(12 + 6.5 * math.cos(a), 12 + 6.5 * math.sin(a), 12 + 9 * math.cos(a), 12 + 9 * math.sin(a), 3.5, "butt")
@@ -247,7 +252,7 @@ def drawSettings(g):
     g.circle(12, 12, 1.5)
 
 
-def drawPalette(g):
+def drawPalette(g: Glyph) -> None:
     g.poly([(12, 3), (17, 4), (20.5, 7.5), (21, 12), (19, 14.5), (15.5, 14.5), (14, 16.5), (15, 19), (13, 21), (8, 20), (4.5, 17), (3, 12), (4.5, 7), (8, 4)])
     g.cutCircle(8, 10, 1.6)
     g.cutCircle(12, 7, 1.6)
@@ -255,13 +260,13 @@ def drawPalette(g):
     g.cutCircle(8, 15, 1.6)
 
 
-def drawLayout(g):
+def drawLayout(g: Glyph) -> None:
     g.frame(3, 4, 18, 16, 2)
     g.line(3, 9, 21, 9, cap="butt")
     g.line(10, 9, 10, 20, cap="butt")
 
 
-def drawTable(g):
+def drawTable(g: Glyph) -> None:
     g.frame(3, 4, 18, 16, 2)
     g.line(3, 9.5, 21, 9.5, cap="butt")
     g.line(3, 14.5, 21, 14.5, cap="butt")
@@ -269,72 +274,72 @@ def drawTable(g):
     g.line(15, 9.5, 15, 20, cap="butt")
 
 
-def drawHammer(g):
+def drawHammer(g: Glyph) -> None:
     g.poly([(3.8, 9.5), (9.5, 3.8), (13.4, 7.7), (7.7, 13.4)])
     g.line(10.5, 10.5, 19.5, 19.5, 3.0)
 
 
-def drawWrench(g):
+def drawWrench(g: Glyph) -> None:
     g.line(4.5, 19.5, 13, 11, 3.5)
     # 머리 = 원에서 오른쪽 위 입을 뺀 한 윤곽(구멍 윤곽은 채움 하나 안에만 둘 수 있어서 윤곽을 직접 만든다)
     g.listContour.append((arcPoints(16, 8, 5.2, -20.0, 250.0) + [(16.8, 7.2, True)], False))
 
 
-def drawBuildAll(g):
+def drawBuildAll(g: Glyph) -> None:
     g.rect(3, 13, 8, 7, 1)
     g.rect(13, 13, 8, 7, 1)
     g.rect(8, 4, 8, 7, 1)
 
 
-def drawCancel(g):
+def drawCancel(g: Glyph) -> None:
     g.ring(12, 12, 8)
     g.line(6.5, 6.5, 17.5, 17.5, cap="butt")
 
 
-def drawSpinner(g):
+def drawSpinner(g: Glyph) -> None:
     for index in range(8):
         a = math.radians(index * 45.0 - 90.0)
         g.circle(12 + 7.5 * math.cos(a), 12 + 7.5 * math.sin(a), 2.2 - index * 0.17)
 
 
-def drawCheck(g):
+def drawCheck(g: Glyph) -> None:
     g.polyline([(4, 12.5), (9.5, 18), (20, 6.5)], 3.0)
 
 
-def drawClose(g):
+def drawClose(g: Glyph) -> None:
     g.line(6, 6, 18, 18, 3.0)
     g.line(18, 6, 6, 18, 3.0)
 
 
-def drawSuccess(g):
+def drawSuccess(g: Glyph) -> None:
     g.circle(12, 12, 9.5)
     g.cut([(6.6, 12.2), (8.4, 10.4), (10.6, 12.6), (15.6, 7.6), (17.4, 9.4), (10.6, 16.2)])
 
 
-def drawWarning(g):
+def drawWarning(g: Glyph) -> None:
     g.poly([(12, 2.5), (22.5, 20.5), (1.5, 20.5)])
     g.cutRect(10.8, 8.5, 2.4, 6.5, 1.1)
     g.cutCircle(12, 17.5, 1.4)
 
 
-def drawError(g):
+def drawError(g: Glyph) -> None:
     g.circle(12, 12, 9.5)
     g.cutRect(10.8, 6, 2.4, 7.5, 1.1)
     g.cutCircle(12, 16.8, 1.4)
 
 
-def drawInfo(g):
+def drawInfo(g: Glyph) -> None:
     g.circle(12, 12, 9.5)
     g.cutRect(10.8, 10.5, 2.4, 7.5, 1.1)
     g.cutCircle(12, 7.3, 1.4)
 
 
-def cutKeyhole(g):
+def cutKeyhole(g: Glyph) -> None:
     """자물쇠 열쇠 구멍 — 원 + 다리를 한 윤곽으로(구멍끼리 겹치면 거꾸로 칠해진다)."""
     g.listContour.append((arcPoints(12, 14.5, 1.6, 120.0, 420.0) + [(12.8, 18.0, True), (11.2, 18.0, True)], True))
 
 
-def drawLock(g):
+def drawLock(g: Glyph) -> None:
     g.rect(5, 10, 14, 11, 2)
     g.arc(12, 9, 4.5, 180.0, 360.0, 2.5, "butt")
     g.line(7.5, 9, 7.5, 10.5, 2.5, "butt")
@@ -342,23 +347,23 @@ def drawLock(g):
     cutKeyhole(g)
 
 
-def drawUnlock(g):
+def drawUnlock(g: Glyph) -> None:
     g.rect(5, 10, 14, 11, 2)
     g.arc(12, 7, 4.5, 180.0, 360.0, 2.5, "butt")
     g.line(16.5, 7, 16.5, 10.5, 2.5, "butt")
     cutKeyhole(g)
 
 
-def drawPlus(g):
+def drawPlus(g: Glyph) -> None:
     g.line(12, 4, 12, 20, 3.0)
     g.line(4, 12, 20, 12, 3.0)
 
 
-def drawMinus(g):
+def drawMinus(g: Glyph) -> None:
     g.line(4, 12, 20, 12, 3.0)
 
 
-def drawTrash(g):
+def drawTrash(g: Glyph) -> None:
     g.line(4, 6, 20, 6)
     g.polyline([(9, 6), (9, 3.5), (15, 3.5), (15, 6)])
     g.polyline([(6, 6), (7, 21), (17, 21), (18, 6)], cap="butt")
@@ -366,21 +371,21 @@ def drawTrash(g):
     g.line(14, 10, 14, 17)
 
 
-def drawCopy(g):
+def drawCopy(g: Glyph) -> None:
     g.frame(8, 8, 12, 13, 2)
     g.polyline([(5, 16), (4, 16), (4, 3), (16, 3), (16, 4)], cap="butt")
 
 
-def drawRefresh(g):
+def drawRefresh(g: Glyph) -> None:
     g.arc(12, 12, 7, -40.0, 230.0, cap="butt")
     g.triangle(14.5, 3, 21, 7.5, 14, 10.5)
 
 
-def drawFilter(g):
+def drawFilter(g: Glyph) -> None:
     g.poly([(3, 4), (21, 4), (14, 12), (14, 20), (10, 18), (10, 12)])
 
 
-def drawStar(g):
+def drawStar(g: Glyph) -> None:
     listPoint = []
     for index in range(10):
         r = 9.5 if index % 2 == 0 else 4.2
@@ -389,7 +394,7 @@ def drawStar(g):
     g.poly(listPoint)
 
 
-def drawLink(g):
+def drawLink(g: Glyph) -> None:
     for (cx, cy) in ((8.5, 15.5), (15.5, 8.5)):
         a = math.radians(-45.0)
         ux, uy = math.cos(a), math.sin(a)
@@ -402,55 +407,55 @@ def drawLink(g):
             g.line(cx - ux * L + nx, cy - uy * L + ny, cx + ux * L + nx, cy + uy * L + ny, cap="butt")
 
 
-def drawEye(g):
+def drawEye(g: Glyph) -> None:
     g.arc(12, 20, 12.0, 213.0, 327.0, cap="butt")
     g.arc(12, 4, 12.0, 33.0, 147.0, cap="butt")
     g.circle(12, 12, 3.2)
 
 
-def drawEyeSlash(g):
+def drawEyeSlash(g: Glyph) -> None:
     drawEye(g)
     g.line(4, 3.5, 20, 20.5, 2.0)
 
 
-def drawPlay(g):
+def drawPlay(g: Glyph) -> None:
     g.poly([(6, 3.5), (20, 12), (6, 20.5)])
 
 
-def drawPause(g):
+def drawPause(g: Glyph) -> None:
     g.rect(5.5, 4, 4.5, 16, 1)
     g.rect(14, 4, 4.5, 16, 1)
 
 
-def drawStop(g):
+def drawStop(g: Glyph) -> None:
     g.rect(5, 5, 14, 14, 1.5)
 
 
-def drawStepForward(g):
+def drawStepForward(g: Glyph) -> None:
     g.poly([(4, 4), (16, 12), (4, 20)])
     g.rect(17, 4, 3.5, 16, 0.8)
 
 
-def drawTranslate(g):
+def drawTranslate(g: Glyph) -> None:
     g.line(12, 3, 12, 21)
     g.line(3, 12, 21, 12)
     for (x, y, a) in ((12, 3, -90.0), (12, 21, 90.0), (3, 12, 180.0), (21, 12, 0.0)):
         g.arrowHead(x, y, a, 3.5, 45.0)
 
 
-def drawRotate(g):
+def drawRotate(g: Glyph) -> None:
     g.arc(12, 12, 8, 120.0, 400.0, cap="butt")
     g.triangle(14.5, 1.5, 20, 6.5, 13.5, 9.5)
     g.circle(12, 12, 2)
 
 
-def drawScale(g):
+def drawScale(g: Glyph) -> None:
     g.frame(3, 9, 12, 12, 1)
     g.line(11, 13, 20, 4)
     g.polyline([(14, 4), (20, 4), (20, 10)])
 
 
-def drawGlobe(g):
+def drawGlobe(g: Glyph) -> None:
     g.ring(12, 12, 9)
     g.line(3, 12, 21, 12, cap="butt")
     # 경선 하나 = 세로로 눌린 타원 — 두 원호로 흉내 낸다
@@ -458,7 +463,7 @@ def drawGlobe(g):
     g.arc(1.5, 12, 13.0, -44.0, 44.0, cap="butt")
 
 
-def drawAxes(g):
+def drawAxes(g: Glyph) -> None:
     g.line(6, 18, 6, 4)
     g.line(6, 18, 20, 18)
     g.line(6, 18, 14, 12)
@@ -467,7 +472,7 @@ def drawAxes(g):
     g.circle(14.5, 11.5, 2.2)
 
 
-def drawMagnet(g):
+def drawMagnet(g: Glyph) -> None:
     g.arc(12, 11, 6, 0.0, 180.0, 4.0, "butt")
     g.line(6, 7.2, 6, 11, 4.0, "butt")
     g.line(18, 7.2, 18, 11, 4.0, "butt")
@@ -475,36 +480,36 @@ def drawMagnet(g):
     g.rect(16, 3, 4, 3, 0.4)
 
 
-def drawGrid(g):
+def drawGrid(g: Glyph) -> None:
     for v in (4, 9.33, 14.67, 20):
         g.line(v, 4, v, 20, 1.5, "square")
         g.line(4, v, 20, v, 1.5, "square")
 
 
-def drawBookmark(g):
+def drawBookmark(g: Glyph) -> None:
     g.poly([(6, 3), (18, 3), (18, 21), (12, 16), (6, 21)])
 
 
-def drawAlign(g):
+def drawAlign(g: Glyph) -> None:
     g.line(4, 3, 4, 21)
     g.rect(7, 5, 13, 5, 1)
     g.rect(7, 14, 8, 5, 1)
 
 
-def drawChart(g):
+def drawChart(g: Glyph) -> None:
     g.polyline([(3, 3), (3, 21), (21, 21)], cap="butt")
     g.rect(6.5, 13, 3.5, 6, 0.5)
     g.rect(12, 8, 3.5, 11, 0.5)
     g.rect(17.5, 11, 3.5, 8, 0.5)
 
 
-def drawCamera(g):
+def drawCamera(g: Glyph) -> None:
     g.rect(2, 7, 15, 12, 2)
     g.poly([(17, 11), (22, 7.5), (22, 18.5), (17, 15)])
     g.cutCircle(9.5, 13, 3)
 
 
-def drawCube(g):
+def drawCube(g: Glyph) -> None:
     top = [(12, 2.5), (20.5, 7), (12, 11.5), (3.5, 7)]
     g.polyline(top, 1.8, bClosed=True)
     g.line(3.5, 7, 3.5, 17, 1.8)
@@ -514,37 +519,37 @@ def drawCube(g):
     g.line(20.5, 17, 12, 21.5, 1.8)
 
 
-def drawScene(g):
+def drawScene(g: Glyph) -> None:
     g.rect(3, 10, 18, 11, 1.5)
     g.poly([(3, 9), (3.5, 5.5), (20, 3), (20.5, 6.5)])
     g.cut([(7.2, 5.4), (9.9, 5.0), (8.6, 7.9), (5.9, 8.3)])
     g.cut([(13.1, 4.5), (15.8, 4.1), (14.5, 7.0), (11.8, 7.4)])
 
 
-def drawPrefab(g):
+def drawPrefab(g: Glyph) -> None:
     for (x, y) in ((3, 12), (13, 12), (8, 3)):
         g.rect(x, y, 8, 8, 1.5)
         g.cutRect(x + 2, y + 2, 4, 4, 0.5)
 
 
-def drawTexture(g):
+def drawTexture(g: Glyph) -> None:
     g.frame(3, 4, 18, 16, 2)
     g.circle(15.5, 9, 2)
     g.poly([(4, 19), (9.5, 11.5), (13.5, 16.5), (16, 14), (20, 19)])
 
 
-def drawShader(g):
+def drawShader(g: Glyph) -> None:
     g.polyline([(8, 6), (3, 12), (8, 18)], 2.5)
     g.polyline([(16, 6), (21, 12), (16, 18)], 2.5)
     g.line(13.5, 4, 10.5, 20, 2.5)
 
 
-def drawMaterial(g):
+def drawMaterial(g: Glyph) -> None:
     g.circle(12, 12, 9.5)
     g.cutCircle(8.5, 8.5, 2.5)
 
 
-def drawAudio(g):
+def drawAudio(g: Glyph) -> None:
     g.circle(7, 17.5, 3.5)
     g.circle(17, 15.5, 3.5)
     g.line(9.6, 17.5, 9.6, 5.5, 2.2, "butt")
@@ -552,7 +557,7 @@ def drawAudio(g):
     g.poly([(8.5, 4.5), (20.7, 2.2), (20.7, 5.4), (8.5, 7.7)])
 
 
-def drawAnimGraph(g):
+def drawAnimGraph(g: Glyph) -> None:
     g.rect(2, 3, 7, 6, 1)
     g.rect(15, 9, 7, 6, 1)
     g.rect(2, 15, 7, 6, 1)
@@ -560,25 +565,25 @@ def drawAnimGraph(g):
     g.polyline([(9, 18), (12, 18), (12, 12)], 1.6, "butt")
 
 
-def drawDialogue(g):
+def drawDialogue(g: Glyph) -> None:
     g.rect(2, 3, 14, 10, 2)
     g.triangle(5, 12, 9, 12, 5, 16)
     g.poly([(18, 7), (20, 7), (22, 9), (22, 15), (20, 17), (19, 17), (19, 21), (15, 17), (10, 17), (8, 15), (17.5, 15), (18, 14.5)])
 
 
-def drawSprite(g):
+def drawSprite(g: Glyph) -> None:
     for (x, y) in ((3, 3), (13, 3), (3, 13), (13, 13)):
         g.frame(x, y, 8, 8, 1, 1.6)
     g.poly([(15.5, 15), (19, 17), (15.5, 19)])
 
 
-def drawTileMap(g):
+def drawTileMap(g: Glyph) -> None:
     for (x, y) in ((3, 3), (10, 3), (17, 3), (3, 10), (17, 10), (3, 17), (10, 17), (17, 17)):
         g.rect(x, y, 4.5, 4.5, 0.6)
     g.frame(10.5, 10.5, 3.5, 3.5, 0, 1.2)
 
 
-def drawSequence(g):
+def drawSequence(g: Glyph) -> None:
     g.rect(2, 4, 20, 16, 1.5)
     for y in (6, 16):
         for x in (4, 8, 12, 16, 20):
@@ -586,7 +591,7 @@ def drawSequence(g):
     g.cutRect(4, 9.5, 16, 5, 0.5)
 
 
-def drawSkeleton(g):
+def drawSkeleton(g: Glyph) -> None:
     g.line(7, 17, 17, 7, 3.0, "butt")
     g.circle(4.5, 16.5, 2.3)
     g.circle(7.5, 19.5, 2.3)
@@ -594,7 +599,7 @@ def drawSkeleton(g):
     g.circle(19.5, 7.5, 2.3)
 
 
-def drawPerson(g, pose="stand"):
+def drawPerson(g: Glyph, pose: str = "stand") -> None:
     g.circle(12, 4.5, 2.5)
     if pose == "stand":
         g.line(12, 8.5, 12, 14.5, 3.0)
@@ -615,7 +620,7 @@ def drawPerson(g, pose="stand"):
         g.polyline([(11, 14), (8.5, 18), (4, 18.5)], 2.5)
 
 
-def drawRig(g):
+def drawRig(g: Glyph) -> None:
     g.polyline([(12, 5), (12, 13)], 1.6)
     g.polyline([(5, 9), (12, 7.5), (19, 9)], 1.6)
     g.polyline([(8, 21), (12, 13), (16, 21)], 1.6)
@@ -623,12 +628,12 @@ def drawRig(g):
         g.circle(x, y, 2.0)
 
 
-def drawHeightfield(g):
+def drawHeightfield(g: Glyph) -> None:
     g.poly([(1.5, 20), (8.5, 7), (12.5, 13.5), (15.5, 9.5), (22.5, 20)])
     g.cut([(6.9, 10.4), (8.5, 7.6), (10.1, 10.4), (9.2, 11.2), (8.5, 10.4), (7.8, 11.2)])
 
 
-def drawFracture(g):
+def drawFracture(g: Glyph) -> None:
     listPoint = []
     for index in range(16):
         r = 10.0 if index % 2 == 0 else 4.5
@@ -639,18 +644,18 @@ def drawFracture(g):
     g.poly(listPoint)
 
 
-def drawWidget(g):
+def drawWidget(g: Glyph) -> None:
     g.frame(3, 4, 18, 16, 2)
     g.line(3, 8.5, 21, 8.5, cap="butt")
     g.rect(6, 11, 6, 2.2, 0.6)
     g.rect(6, 15, 12, 2.2, 0.6)
 
 
-def drawComponent(g):
+def drawComponent(g: Glyph) -> None:
     g.poly([(4, 8), (9, 8), (9, 6.5), (10.5, 4.5), (13.5, 4.5), (15, 6.5), (15, 8), (20, 8), (20, 12.5), (18.5, 12.5), (16.5, 14), (16.5, 16), (18.5, 17.5), (20, 17.5), (20, 21), (4, 21)])
 
 
-def drawLightPoint(g):
+def drawLightPoint(g: Glyph) -> None:
     g.arc(12, 9.5, 6.5, 145.0, 395.0, 2.2, "butt")
     g.line(8.6, 14.5, 9.2, 17.5, 2.2, "butt")
     g.line(15.4, 14.5, 14.8, 17.5, 2.2, "butt")
@@ -658,21 +663,21 @@ def drawLightPoint(g):
     g.line(10, 20.8, 14, 20.8, 2.0, "round")
 
 
-def drawLightDirectional(g):
+def drawLightDirectional(g: Glyph) -> None:
     g.circle(12, 12, 4.5)
     for index in range(8):
         a = math.radians(index * 45.0)
         g.line(12 + 7.3 * math.cos(a), 12 + 7.3 * math.sin(a), 12 + 9.8 * math.cos(a), 12 + 9.8 * math.sin(a), 2.0)
 
 
-def drawLightSpot(g):
+def drawLightSpot(g: Glyph) -> None:
     g.rect(9, 2.5, 6, 4.5, 1)
     g.poly([(9.5, 7), (14.5, 7), (19, 15), (5, 15)])
     for x0, x1 in ((7, 4.5), (12, 12), (17, 19.5)):
         g.line(x0, 17.5, x1, 21, 1.8)
 
 
-def drawLightGlobal(g):
+def drawLightGlobal(g: Glyph) -> None:
     g.arc(12, 17, 7, 180.0, 360.0, 2.2, "butt")
     g.line(2.5, 17, 21.5, 17, 2.0)
     for a in (-160.0, -125.0, -90.0, -55.0, -20.0):
@@ -681,25 +686,25 @@ def drawLightGlobal(g):
     g.line(6, 21, 18, 21, 1.6)
 
 
-def drawAudioEmitter(g):
+def drawAudioEmitter(g: Glyph) -> None:
     g.poly([(3, 9), (7, 9), (12, 4.5), (12, 19.5), (7, 15), (3, 15)])
     g.arc(13, 12, 4, -45.0, 45.0, 2.0)
     g.arc(13, 12, 8, -45.0, 45.0, 2.0)
 
 
-def drawAudioListener(g):
+def drawAudioListener(g: Glyph) -> None:
     g.arc(12, 13, 8, 180.0, 360.0, 2.0, "butt")
     g.rect(3, 13, 4.5, 8, 1.5)
     g.rect(16.5, 13, 4.5, 8, 1.5)
 
 
-def drawAudioZone(g):
+def drawAudioZone(g: Glyph) -> None:
     g.dashedFrame(2.5, 2.5, 19, 19, 3.2, 2.2, 1.6)
     g.poly([(6, 10), (8.5, 10), (11.5, 7.5), (11.5, 16.5), (8.5, 14), (6, 14)])
     g.arc(12, 12, 4, -45.0, 45.0, 1.8)
 
 
-def drawPhysics(g):
+def drawPhysics(g: Glyph) -> None:
     g.circle(14, 12, 6.5)
     g.line(2, 9, 5.5, 9, 2.0)
     g.line(3, 13, 5.5, 13, 2.0)
@@ -707,23 +712,23 @@ def drawPhysics(g):
     g.cutCircle(12, 10, 1.8)
 
 
-def drawCollider(g):
+def drawCollider(g: Glyph) -> None:
     g.dashedFrame(3, 3, 18, 18, 3.4, 2.2)
     g.rect(8, 8, 8, 8, 1)
 
 
-def drawCharacter(g):
+def drawCharacter(g: Glyph) -> None:
     drawPerson(g, "stand")
 
 
-def drawController(g):
+def drawController(g: Glyph) -> None:
     g.poly([(7, 6), (17, 6), (20.5, 8), (22.5, 17), (20.5, 19.5), (18, 19), (15.5, 15.5), (8.5, 15.5), (6, 19), (3.5, 19.5), (1.5, 17), (3.5, 8)])
     g.cut([(7.2, 8.1), (8.8, 8.1), (8.8, 9.8), (10.5, 9.8), (10.5, 11.4), (8.8, 11.4), (8.8, 13.1), (7.2, 13.1), (7.2, 11.4), (5.5, 11.4), (5.5, 9.8), (7.2, 9.8)])
     g.cutCircle(16, 9.5, 1.2)
     g.cutCircle(18, 12.0, 1.2)
 
 
-def drawAi(g):
+def drawAi(g: Glyph) -> None:
     g.rect(4, 7, 16, 13, 2.5)
     g.line(12, 7, 12, 3.5, 2.0, "butt")
     g.circle(12, 3, 1.8)
@@ -734,7 +739,7 @@ def drawAi(g):
     g.rect(20.5, 11, 2, 5, 0.5)
 
 
-def drawNavigation(g):
+def drawNavigation(g: Glyph) -> None:
     for (cx, cy) in ((6, 6), (18, 13)):
         g.circle(cx, cy, 3.5)
         g.triangle(cx - 3.0, cy + 1.8, cx + 3.0, cy + 1.8, cx, cy + 6.5)
@@ -743,18 +748,18 @@ def drawNavigation(g):
         g.line(x0, y0, x1, y1, 1.8)
 
 
-def drawTrigger(g):
+def drawTrigger(g: Glyph) -> None:
     g.dashedFrame(3, 3, 18, 18, 3.4, 2.2)
     g.poly([(13.5, 5.5), (8, 13), (11.5, 13), (10.5, 18.5), (16, 11), (12.5, 11)])
 
 
-def drawSpawnPoint(g):
+def drawSpawnPoint(g: Glyph) -> None:
     g.line(6, 3, 6, 21, 2.2)
     g.poly([(7, 3.5), (19, 6.5), (7, 12)])
     g.line(3, 21, 11, 21, 2.0)
 
 
-def drawSpline(g):
+def drawSpline(g: Glyph) -> None:
     listPoint = []
     for index in range(17):
         t = index / 16.0
@@ -766,7 +771,7 @@ def drawSpline(g):
     g.rect(18, 3, 4, 4, 0.5)
 
 
-def drawWater(g):
+def drawWater(g: Glyph) -> None:
     for y in (6, 12, 18):
         listPoint = []
         for index in range(21):
@@ -775,12 +780,12 @@ def drawWater(g):
         g.polyline(listPoint, 2.0)
 
 
-def drawFoliage(g):
+def drawFoliage(g: Glyph) -> None:
     g.poly([(4, 20), (5, 12), (9, 6.5), (15, 4), (20.5, 3.5), (20, 9), (17.5, 15), (12, 19), (6.5, 19.5)])
     g.cut([(6.6, 17.6), (13.6, 10.2), (14.4, 11.0), (7.4, 18.4)])
 
 
-def drawWind(g):
+def drawWind(g: Glyph) -> None:
     g.polyline([(3, 9), (15, 9)], 2.0)
     g.arc(15, 6, 3, -180.0, 90.0, 2.0)
     g.polyline([(3, 14), (18, 14)], 2.0)
@@ -788,13 +793,13 @@ def drawWind(g):
     g.line(3, 19, 10, 19, 2.0)
 
 
-def drawHealth(g):
+def drawHealth(g: Glyph) -> None:
     g.circle(8, 9, 4.8)
     g.circle(16, 9, 4.8)
     g.poly([(3.6, 11), (12, 20.5), (20.4, 11), (12, 9)])
 
 
-def drawAbility(g):
+def drawAbility(g: Glyph) -> None:
     for (cx, cy, r) in ((10, 13, 8.0), (18.5, 5.5, 3.6)):
         listPoint = []
         for index in range(8):
@@ -804,7 +809,7 @@ def drawAbility(g):
         g.poly(listPoint)
 
 
-def drawVehicle(g):
+def drawVehicle(g: Glyph) -> None:
     g.poly([(2, 16), (2, 12), (5, 11.5), (8, 7), (16, 7), (19, 11.5), (22, 12.5), (22, 16)])
     g.cut([(9, 8.6), (11.4, 8.6), (11.4, 11.4), (7.2, 11.4)])
     g.cut([(12.6, 8.6), (15.2, 8.6), (17, 11.4), (12.6, 11.4)])
@@ -812,12 +817,12 @@ def drawVehicle(g):
     g.circle(17, 17, 2.8)
 
 
-def drawTag(g):
+def drawTag(g: Glyph) -> None:
     g.poly([(3, 3), (12, 3), (21, 12), (12, 21), (3, 12)])
     g.cutCircle(7.5, 7.5, 1.8)
 
 
-def drawMissing(g):
+def drawMissing(g: Glyph) -> None:
     g.dashedFrame(3, 3, 18, 18, 3.4, 2.2)
     g.arc(12, 9.5, 3.2, 180.0, 405.0, 2.3, "butt")
     g.line(14.3, 11.8, 12, 13.6, 2.3, "butt")
@@ -825,12 +830,12 @@ def drawMissing(g):
     g.circle(12, 17.6, 1.4)
 
 
-def drawGameObject(g):
+def drawGameObject(g: Glyph) -> None:
     g.frame(4, 4, 16, 16, 2)
     g.circle(12, 12, 3)
 
 
-def drawBug(g):
+def drawBug(g: Glyph) -> None:
     g.circle(12, 6.5, 2.6)
     g.rect(7.5, 9, 9, 12, 4.5)
     g.cutRect(11.4, 11, 1.2, 8.5, 0.5)
@@ -841,13 +846,13 @@ def drawBug(g):
     g.line(13.5, 4.5, 15, 2.5, 1.6)
 
 
-def drawMap(g):
+def drawMap(g: Glyph) -> None:
     g.poly([(2.5, 5.5), (8.5, 3.5), (8.5, 18.5), (2.5, 20.5)])
     g.poly([(9.7, 3.5), (14.3, 5.5), (14.3, 20.5), (9.7, 18.5)])
     g.poly([(15.5, 5.5), (21.5, 3.5), (21.5, 18.5), (15.5, 20.5)])
 
 
-def drawFont(g):
+def drawFont(g: Glyph) -> None:
     g.poly([(3, 20), (8.5, 4), (11, 4), (16.5, 20), (13.8, 20), (12.4, 15.5), (7.1, 15.5), (5.7, 20)])
     g.cut([(7.9, 13), (11.6, 13), (9.75, 7.2)])
     g.circle(18.5, 16.5, 3.2)
@@ -893,13 +898,13 @@ kMapNotifyCodepoint = {0xF058: "success", 0xF071: "warning", 0xF06A: "error", 0x
 # ------------------------------------------------------------------------------
 # 3) TrueType 쓰기
 # ------------------------------------------------------------------------------
-def toFontPoint(x, y):
+def toFontPoint(x: float, y: float) -> tuple[int, int]:
     # 소수 넷째 자리에서 먼저 반올림한다. 플랫폼마다 libm 의 sin · cos 마지막 비트가 달라도 같은 정수가 나와야
     # Windows 와 리눅스 CI 가 같은 바이트를 만들고 게이트가 통과한다.
     return int(math.floor(round(x * kUnit, 4) + 0.5)), int(math.floor(round(kAscent - y * kUnit, 4) + 0.5))
 
 
-def signedAreaInternal(listPoint):
+def signedAreaInternal(listPoint: list[FontPoint]) -> float:
     area = 0.0
     for index in range(len(listPoint)):
         x0, y0 = listPoint[index][0], listPoint[index][1]
@@ -908,7 +913,7 @@ def signedAreaInternal(listPoint):
     return area * 0.5
 
 
-def buildGlyphContours(glyph: Glyph):
+def buildGlyphContours(glyph: Glyph) -> list[list[FontPoint]]:
     """폰트 좌표의 윤곽 목록. 채움은 시계 방향(TrueType 바깥 윤곽), 구멍은 반시계."""
     listOut = []
     for listPoint, bCut in glyph.listContour:
@@ -934,7 +939,7 @@ def buildGlyphContours(glyph: Glyph):
     return listOut
 
 
-def encodeGlyph(listContour):
+def encodeGlyph(listContour: list[list[FontPoint]]) -> tuple[bytes, tuple[int, int, int, int], int]:
     """단순 글리프 바이트(명령 없음)."""
     if not listContour:
         return b"", (0, 0, 0, 0), 0
@@ -977,7 +982,7 @@ def tableChecksum(data: bytes) -> int:
     return sum(struct.unpack(">%dI" % (len(data) // 4), data)) & 0xFFFFFFFF
 
 
-def buildCmapInternal(mapCodepointGlyph):
+def buildCmapInternal(mapCodepointGlyph: dict[int, int]) -> bytes:
     listCode = sorted(mapCodepointGlyph)
     listSegment = []  # (start, end, delta)
     for code in listCode:
@@ -1001,7 +1006,7 @@ def buildCmapInternal(mapCodepointGlyph):
     return struct.pack(">HH", 0, 2) + struct.pack(">HHI", 0, 3, 20) + struct.pack(">HHI", 3, 1, 20) + sub
 
 
-def buildNameInternal():
+def buildNameInternal() -> bytes:
     listRecord = [
         (0, "Public domain (CC0 1.0). Drawn by the SWEngine project."),
         (1, kFamilyName), (2, "Regular"), (3, kPostScriptName), (4, kFamilyName + " Regular"), (5, kVersionText), (6, kPostScriptName),
@@ -1017,7 +1022,7 @@ def buildNameInternal():
     return header + records + strings
 
 
-def buildFont(listIcon) -> tuple[bytes, list[tuple[str, int]]]:
+def buildFont(listIcon: list[tuple[str, Callable[[Glyph], None]]]) -> tuple[bytes, list[tuple[str, int]]]:
     listGlyphData = [encodeGlyph([])]  # .notdef — 빈 글리프
     listNamed = []
     for index, (name, draw) in enumerate(listIcon):
@@ -1086,11 +1091,11 @@ def buildFont(listIcon) -> tuple[bytes, list[tuple[str, int]]]:
 # ------------------------------------------------------------------------------
 # 4) C++ 헤더
 # ------------------------------------------------------------------------------
-def utf8Literal(code):
+def utf8Literal(code: int) -> str:
     return "".join("\\x%02x" % b for b in chr(code).encode("utf-8"))
 
 
-def buildHeader(listNamed) -> str:
+def buildHeader(listNamed: list[tuple[str, int]]) -> str:
     lines = [
         "/**",
         " * @file EditorIconGlyphs.h",

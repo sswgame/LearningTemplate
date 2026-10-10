@@ -66,7 +66,7 @@ class RuleDataSubsetReaderTest(unittest.TestCase):
 class RuleDataSchemaTest(unittest.TestCase):
     """스키마 검사 — 모르는 키 · 빈 이유 · 종류가 다른 값 · 빠진 필수 키 · 없는 파일."""
 
-    def readWith(self, text: str, schema: dict[str, str], **kwargs) -> dict:
+    def readWith(self, text: str, schema: dict[str, str], **kwargs: object) -> dict:
         RuleData.readRawRuleFileInternal.cache_clear()
         with unittest.mock.patch.object(RuleData, "readRawRuleFileInternal", lambda _path: readTomlSubset(text, "probe")), \
                 unittest.mock.patch.object(Path, "is_file", lambda _self: True):

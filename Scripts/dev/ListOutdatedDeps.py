@@ -62,7 +62,7 @@ def readBaselineInternal(vcpkgRoot: Path, revision: str) -> dict[str, dict]:
     """레지스트리 커밋 하나의 `versions/baseline.json` 의 default 표입니다."""
     result = runGit(["-C", str(vcpkgRoot), "show", f"{revision}:versions/baseline.json"])
     if not result.bSucceeded:
-        raise SystemExit(f"[deps-outdated] cannot read versions/baseline.json at {revision}: {result.stderr.strip()}")
+        sys.exit(f"[deps-outdated] cannot read versions/baseline.json at {revision}: {result.stderr.strip()}")
     return json.loads(result.stdout).get("default", {})
 
 

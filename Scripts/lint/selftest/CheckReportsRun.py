@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 
 from common import mapConcurrent, runProcess  # noqa: E402
-from LintCatalog import discoverLintScripts  # noqa: E402
+from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 from LintReport import findReportClass  # noqa: E402
 
@@ -38,7 +38,7 @@ class CheckReportsRunGate(LintGate):
         listViolation = [f"{script.relPath}: LintReport 하위 클래스가 없다 — report/ 의 스크립트는 보고서다(`main = XxxReport.run`)"
                          for script in listScript if findReportClass(script.module) is None]
 
-        def runHelpInternal(script) -> str:
+        def runHelpInternal(script: LintScript) -> str:
             result = runProcess([sys.executable, script.scriptPath, "--help"], timeoutSeconds=60)
             if result.bSucceeded:
                 return ""

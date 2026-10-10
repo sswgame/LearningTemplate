@@ -9,14 +9,16 @@
 
 사용법: py -3 Scripts/generate/GenerateSpriteTextures.py [--root <repo>]
 """
+from __future__ import annotations
+
 import argparse
 import json
-import os
 import struct
 import sys
+from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(common/__init__.py)
 
@@ -41,7 +43,7 @@ def makeDdsBytes(width: int, height: int, rgbaBytes: bytes | bytearray) -> bytes
     return b"DDS " + header + bytes(rgbaBytes)
 
 
-def makeQuadrantTextureInternal():
+def makeQuadrantTextureInternal() -> tuple[int, int, bytearray, list[dict]]:
     """네 칸 시험 텍스처의 픽셀과, 칸마다 한 프레임(250 ms)인 클립 프레임 목록을 만듭니다."""
     half = kQuadrantSize // 2
     pixels = bytearray()
@@ -58,7 +60,7 @@ def makeQuadrantTextureInternal():
     return kQuadrantSize, kQuadrantSize, pixels, listFrame
 
 
-def makeMissingTextureInternal():
+def makeMissingTextureInternal() -> tuple[int, int, bytearray]:
     """누락 텍스처(마젠타 · 검정 체커)의 픽셀을 만듭니다."""
     pixels = bytearray()
     for y in range(kMissingTextureSize):
@@ -76,29 +78,28 @@ def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
     return json.dumps(clip, indent=2) + "\n"
 
 
-def writeFileInternal(path: str, data: bytes) -> None:
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "wb") as handle:
-        handle.write(data)
+def writeFileInternal(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
     print(f"wrote {path} ({len(data)} bytes)")
 
 
 def generate(repositoryRoot: str) -> None:
     """세 파일을 씁니다. 리소스 경로는 소문자입니다(CheckResourceCasing)."""
-    resourceRoot = os.path.join(repositoryRoot, "Resource")
+    resourceRoot = Path(repositoryRoot) / "Resource"
 
     width, height, pixels, listFrame = makeQuadrantTextureInternal()
-    writeFileInternal(os.path.join(resourceRoot, kQuadrantsTexturePath), makeDdsBytes(width, height, pixels))
+    writeFileInternal(resourceRoot / kQuadrantsTexturePath, makeDdsBytes(width, height, pixels))
     listAnimation = [{"name": "cycle", "start": 0, "count": 4, "loop": True}]
-    writeFileInternal(os.path.join(resourceRoot, "engine/textures/test/quadrants.sprite.json"),
+    writeFileInternal(resourceRoot / "engine/textures/test/quadrants.sprite.json",
                       makeClipText(kQuadrantsTexturePath, listFrame, listAnimation).encode("utf-8"))
     width, height, pixels = makeMissingTextureInternal()
-    writeFileInternal(os.path.join(resourceRoot, kMissingTexturePath), makeDdsBytes(width, height, pixels))
+    writeFileInternal(resourceRoot / kMissingTexturePath, makeDdsBytes(width, height, pixels))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--root", default=os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")), help="repository root")
+    parser.add_argument("--root", default=str(Path(__file__).resolve().parents[2]), help="repository root")
     args = parser.parse_args(argv)
     generate(args.root)
     return 0

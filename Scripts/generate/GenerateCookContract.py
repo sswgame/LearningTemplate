@@ -13,6 +13,7 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -113,7 +114,7 @@ def generateCookContract(headerPath: Path, cmakePath: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    def addArgumentsInternal(parser) -> None:
+    def addArgumentsInternal(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("header", type=Path, help="쓸 C++ 헤더")
         parser.add_argument("cmake", type=Path, help="쓸 CMake 표(RHI 백엔드)")
 
@@ -123,4 +124,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

@@ -12,13 +12,13 @@ from __future__ import annotations
 
 import importlib.util
 import math
-import os
 import random
 import sys
 import tempfile
 import types
 import unittest
 import xml.etree.ElementTree as ElementTree
+from typing import Sequence
 from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
@@ -46,7 +46,7 @@ SocketXml = kAddon.SocketXml
 EngineImport = kAddon.EngineImport
 
 
-def assertMatrixNear(testCase: unittest.TestCase, expected, actual, places: int = 5) -> None:
+def assertMatrixNear(testCase: unittest.TestCase, expected: Sequence[Sequence[float]], actual: Sequence[Sequence[float]], places: int = 5) -> None:
     for row in range(3):
         for column in range(3):
             testCase.assertAlmostEqual(expected[row][column], actual[row][column], places=places, msg=f"[{row}][{column}]")
@@ -146,12 +146,12 @@ class SocketXmlTest(unittest.TestCase):
     def testDraftIsWrittenOnlyOnce(self) -> None:
         identity = [[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
         with tempfile.TemporaryDirectory() as tempDir:
-            path = os.path.join(tempDir, "models", "rifle.sockets.xml")
+            path = str(Path(tempDir) / "models" / "rifle.sockets.xml")
             self.assertTrue(SocketXml.writeSocketXmlIfMissing(path, [SocketXml.makeSocketDraft("SOCKET_A", "", identity)]))
             Path(path).write_text("<SocketSet><!-- hand edited --></SocketSet>\n", encoding="utf-8")
             self.assertFalse(SocketXml.writeSocketXmlIfMissing(path, [SocketXml.makeSocketDraft("SOCKET_B", "", identity)]))
             self.assertIn("hand edited", Path(path).read_text(encoding="utf-8"))
-            self.assertFalse(SocketXml.writeSocketXmlIfMissing(os.path.join(tempDir, "none.sockets.xml"), []))
+            self.assertFalse(SocketXml.writeSocketXmlIfMissing(str(Path(tempDir) / "none.sockets.xml"), []))
 
     def testEngineSocketKindsKnowTheDefaultKind(self) -> None:
         kinds = ElementTree.parse(kRepositoryRoot / "Resource/engine/character/default.socketkinds.xml").getroot()

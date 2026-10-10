@@ -27,6 +27,7 @@ import ast
 import re
 import sys
 from pathlib import Path
+from typing import Iterator
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
@@ -46,7 +47,7 @@ def isTableValueInternal(value: ast.expr | None) -> bool:
     return isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id in _kTableFactoryName
 
 
-def iterAssignmentsInternal(listStatement: list[ast.stmt]):
+def iterAssignmentsInternal(listStatement: list[ast.stmt]) -> Iterator[tuple[str, ast.expr | None, int]]:
     """대입문의 (이름, 값, 줄)을 돌려줍니다 — 모듈 수준과 클래스 몸통만."""
     for statement in listStatement:
         if isinstance(statement, ast.Assign):

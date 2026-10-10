@@ -19,7 +19,7 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Sequence
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -309,7 +309,7 @@ def extractTarMinimalInternal(archive: Path, destRootDir: Path) -> None:
     try:
         with tarfile.open(archive, "r:*") as tarHandle:
             members = []
-            topDirectory: Optional[str] = None
+            topDirectory: str | None = None
             for member in tarHandle.getmembers():
                 parts = Path(member.name).parts
                 if not parts:

@@ -11,7 +11,6 @@ import os
 import platform
 import re
 from pathlib import Path
-from typing import Dict, Optional
 
 PathLike = str | Path
 
@@ -50,7 +49,7 @@ def startsWithPathComponent(path: PathLike, component: PathLike) -> bool:
     return pathPosix.startswith(componentPosix + "/")
 
 
-def expandPathTemplate(template: str, extras: Optional[Dict[str, str]] = None) -> str:
+def expandPathTemplate(template: str, extras: dict[str, str] | None = None) -> str:
     """
     경로 템플릿 내의 예약된 변수(${sourceDir}, ${ProjectRoot})와
     추가 변수(extras), 환경 변수를 실제 값으로 확장하여 반환합니다.

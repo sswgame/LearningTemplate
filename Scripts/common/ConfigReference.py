@@ -24,6 +24,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Iterator
 from xml.etree import ElementTree
 
 from .CodeText import blankCommentsAndLiterals, blankMatch
@@ -196,7 +197,7 @@ class SourceIndex:
     mapEnum: dict[str, tuple[str, str, re.Match]] = field(default_factory=dict)
 
 
-def iterSourceFilesInternal(repositoryRoot: Path, listRoot: tuple[str, ...], listSuffix: tuple[str, ...]):
+def iterSourceFilesInternal(repositoryRoot: Path, listRoot: tuple[str, ...], listSuffix: tuple[str, ...]) -> Iterator[tuple[str, str]]:
     """저장소 상대 경로(정렬)와 글을 냅니다. 남의 코드 · 빌드 산출물은 뺀다."""
     listPath: list[Path] = []
     for rootName in listRoot:

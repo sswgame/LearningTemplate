@@ -53,7 +53,7 @@ class LintGateSelectionTest(unittest.TestCase):
     def tearDown(self) -> None:
         self._tempDir.cleanup()
 
-    def select(self, listFile: list[str] | None, **kwargs) -> list[str]:
+    def select(self, listFile: list[str] | None, **kwargs: object) -> list[str]:
         listPath = LintGate.selectTargetFiles(self.root, listFile, suffixes=(".h", ".cpp"), **kwargs)
         return [path.relative_to(self.root).as_posix() for path in listPath]
 

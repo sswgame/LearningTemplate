@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import types
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -61,7 +62,7 @@ class LintReport:
     bUsesFilter: bool = False
     bUsesOut: bool = False
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         if not cls.name:
             cls.name = cls.__name__.removesuffix("Report")
@@ -108,7 +109,7 @@ class LintReport:
             return 2
 
 
-def findReportClass(module) -> type[LintReport] | None:
+def findReportClass(module: types.ModuleType) -> type[LintReport] | None:
     """모듈 안에 정의된 보고서 클래스(한 파일에 하나) — `findGateClass` · `findFixerClass` 의 짝."""
     for value in vars(module).values():
         if isinstance(value, type) and issubclass(value, LintReport) and value is not LintReport and value.__module__ == module.__name__:

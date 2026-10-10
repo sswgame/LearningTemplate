@@ -37,7 +37,7 @@ import struct
 import xml.etree.ElementTree as ElementTree
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Iterator
 
 #: 심각도 — 앞일수록 무겁다. 게이트는 `error` 만 막는다.
 kSeverityOrder: tuple[str, ...] = ("error", "warning", "info")
@@ -355,7 +355,7 @@ def checkXmlWellFormedInternal(rule: Rule, relPath: str, context: ValidationCont
     return []
 
 
-def iterateXmlValuesInternal(root: ElementTree.Element):
+def iterateXmlValuesInternal(root: ElementTree.Element) -> Iterator[tuple[ElementTree.Element, str | None, str]]:
     """(요소, 속성 이름 또는 None, 값) — 속성 값과 요소 본문 텍스트를 모두 냅니다."""
     for element in root.iter():
         for name, value in element.attrib.items():
@@ -457,7 +457,7 @@ def checkMaterialKeywordsInternal(rule: Rule, relPath: str, context: ValidationC
     return listMessage
 
 
-def iterateComponentElementsInternal(root: ElementTree.Element):
+def iterateComponentElementsInternal(root: ElementTree.Element) -> Iterator[ElementTree.Element]:
     for listComponent in root.iter("_listComponent"):
         yield from list(listComponent)
 

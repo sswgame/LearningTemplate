@@ -48,6 +48,7 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
@@ -147,12 +148,12 @@ class LibClang:
         self._declareInternal("clang_CXXMethod_isVirtual", ctypes.c_uint, [CxCursor])
         self._declareInternal("clang_getTypeDeclaration", CxCursor, [CxType])
 
-    def _declareInternal(self, name: str, resultType, listArgumentType: list) -> None:
+    def _declareInternal(self, name: str, resultType: Any, listArgumentType: list) -> None:
         function = getattr(self._library, name)
         function.restype = resultType
         function.argtypes = listArgumentType
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         return getattr(self._library, name)
 
     def toText(self, cxString: CxString) -> str:
@@ -174,9 +175,9 @@ class LibClang:
             return "", 0
         return self.toText(self._library.clang_getFileName(fileHandle)), int(line.value)
 
-    def visitChildren(self, cursor: CxCursor, callback) -> None:
+    def visitChildren(self, cursor: CxCursor, callback: Callable[[CxCursor], int]) -> None:
         """`callback(child) -> _kVisit*` 로 자식을 훑는다."""
-        def trampolineInternal(child: CxCursor, parent: CxCursor, clientData) -> int:
+        def trampolineInternal(child: CxCursor, parent: CxCursor, clientData: object) -> int:
             return callback(child)
         self._library.clang_visitChildren(cursor, _kVisitorType(trampolineInternal), None)
 
@@ -253,7 +254,7 @@ class RecordCollector:
         self._listRecord: list[RecordLayout] = []
         self._uniqueSeen: set[tuple[str, int, str]] = set()
 
-    def collect(self, translationUnit) -> list[RecordLayout]:
+    def collect(self, translationUnit: int) -> list[RecordLayout]:
         self._clang.visitChildren(self._clang.clang_getTranslationUnitCursor(translationUnit), self._visitInternal)
         return self._listRecord
 

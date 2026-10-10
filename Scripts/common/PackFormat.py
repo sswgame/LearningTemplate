@@ -102,7 +102,7 @@ class PackStruct:
             raise ValueError(f"{structName}: 알 수 없는 타입 '{typeName}'")
         return scalarType, arrayCount
 
-    def pack(self, **mapValue) -> bytes:
+    def pack(self, **mapValue: int | bytes) -> bytes:
         """
         필드 **이름**으로 값을 받아 바이트로 찍습니다. 빠뜨린 배열 필드는 0 으로 채웁니다.
 

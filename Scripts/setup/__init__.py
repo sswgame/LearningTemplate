@@ -1,1 +1,1 @@
-# Scripts/setup package
+"""설치 · 환경 준비 — 도구 체인 · vcpkg · sccache · 커밋 훅을 갖추는 스크립트입니다."""

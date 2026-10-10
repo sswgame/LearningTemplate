@@ -13,6 +13,8 @@ Include 순서 및 스타일 검사 린터.
   python Scripts/lint/gate/CheckIncludeOrder.py [--root <repo>] [--files <path> ...]
 """
 
+from __future__ import annotations
+
 import argparse
 import re
 import sys

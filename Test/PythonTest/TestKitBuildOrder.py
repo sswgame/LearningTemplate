@@ -14,7 +14,6 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -93,4 +92,4 @@ class KitBuildOrderTest(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    sys.exit(unittest.main())
+    unittest.main()

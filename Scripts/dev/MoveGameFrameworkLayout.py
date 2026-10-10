@@ -182,7 +182,7 @@ _kSteps: dict[int, list[Dir | Files]] = {
 def listTrackedInternal(root: Path) -> list[str]:
     result = runGit(["ls-files", "-z"], cwd=root)
     if result.returnCode != 0:
-        raise SystemExit(f"git ls-files 실패: {result.stderr}")
+        sys.exit(f"git ls-files 실패: {result.stderr}")
     return [path for path in result.stdout.split("\0") if path]
 
 
@@ -276,7 +276,7 @@ def moveFilesInternal(root: Path, listPending: list[tuple[str, str]], bDryRun: b
         for index in range(0, len(listSource), 100):
             result = runGit(["mv", *listSource[index:index + 100], f"{_kGameFrameworkRoot}/{targetFolder}/"], cwd=root)
             if result.returnCode != 0:
-                raise SystemExit(f"git mv 실패({targetFolder}): {result.stderr}")
+                sys.exit(f"git mv 실패({targetFolder}): {result.stderr}")
     if bDryRun:
         return
     # 비운 옛 폴더를 지운다(깊은 쪽부터) — 빈 폴더가 남으면 게이트가 모르는 기반 폴더로 본다.

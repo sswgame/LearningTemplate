@@ -24,7 +24,8 @@ from common.ImageMetrics import (RgbImage, compareMetrics, computeMetrics, decod
 from qa.PerfRegression import compareInternal  # noqa: E402
 
 
-def makeSceneInternal(width: int = 160, height: int = 90, boxX: int = 60, boxColor=(200, 40, 40), background=(30, 40, 60),
+def makeSceneInternal(width: int = 160, height: int = 90, boxX: int = 60, boxColor: tuple[int, int, int] = (200, 40, 40),
+                      background: tuple[int, int, int] = (30, 40, 60),
                       bBox: bool = True) -> RgbImage:
     pixels = bytearray(width * height * 3)
     for y in range(height):

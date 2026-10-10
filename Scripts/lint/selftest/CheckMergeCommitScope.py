@@ -90,7 +90,7 @@ def removeTreeInternal(root: Path) -> None:
     """임시 저장소를 지웁니다. git 객체 파일은 읽기 전용이라 윈도우에서는 쓰기 속성을 먼저 줘야 지워진다."""
     for current, _, listFileName in os.walk(root):
         for fileName in listFileName:
-            os.chmod(os.path.join(current, fileName), stat.S_IWRITE)
+            os.chmod(Path(current) / fileName, stat.S_IWRITE)
     shutil.rmtree(root, ignore_errors=True)
 
 

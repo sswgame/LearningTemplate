@@ -8,6 +8,7 @@ Scripts/generate/GenerateShippingHostDefaults.py
 """
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -67,7 +68,7 @@ namespace sw::shipping_host
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    def addArgumentsInternal(parser) -> None:
+    def addArgumentsInternal(parser: argparse.ArgumentParser) -> None:
         parser.add_argument("output", type=Path, help="쓸 헤더")
         parser.add_argument("gamePreset", help="게임 프리셋(저장소 기준 — Config/Game/<게임>.json)")
 
@@ -77,4 +78,4 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

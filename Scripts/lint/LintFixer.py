@@ -185,7 +185,7 @@ class LintFixer:
     listScopeRelDir: tuple[str, ...] = ()
     fileKind: FixerFileKind | None = None
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         if not cls.name:
             cls.name = cls.__name__.removesuffix("Fixer")

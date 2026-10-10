@@ -207,7 +207,7 @@ def moveInternal(root: Path, source: Path, target: Path, bDryRun: bool) -> None:
         return
     result = runGit(["mv", source.relative_to(root).as_posix(), target.relative_to(root).as_posix()], cwd=root)
     if result.returnCode != 0:
-        raise SystemExit(f"git mv 실패: {source} -> {target}\n{result.stderr}")
+        sys.exit(f"git mv 실패: {source} -> {target}\n{result.stderr}")
 
 
 def buildPatternInternal(oldPath: str, bStem: bool) -> re.Pattern[str]:
@@ -218,7 +218,7 @@ def buildPatternInternal(oldPath: str, bStem: bool) -> re.Pattern[str]:
 def listTrackedTextFileInternal(root: Path) -> list[Path]:
     result = runGit(["ls-files", "-z"], cwd=root)
     if result.returnCode != 0:
-        raise SystemExit(f"git ls-files 실패: {result.stderr}")
+        sys.exit(f"git ls-files 실패: {result.stderr}")
     listFile = []
     for name in result.stdout.split("\0"):
         if not name:

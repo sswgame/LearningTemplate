@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from pathlib import Path
 
 #: App 이 있을 수 있는 빌드 폴더 — `Scripts/common/AppBinary.py` 의 `kAppBuildBinDir` 과 같은 순서다(Dev 빌드만: 임포트는 에디터 모듈의 일이다).
 kAppBuildBinDir: tuple[str, ...] = (
@@ -26,18 +27,18 @@ kAppExecutableName: tuple[str, ...] = ("App.exe", "App")
 def findAppExecutable(repositoryRoot: str, explicitPath: str = "") -> str:
     """App 실행 파일 경로입니다. 명시한 경로가 있으면 그것만 봅니다. 못 찾으면 빈 문자열입니다."""
     if explicitPath:
-        return explicitPath if os.path.isfile(explicitPath) else ""
+        return explicitPath if Path(explicitPath).is_file() else ""
     for binDir in kAppBuildBinDir:
         for name in kAppExecutableName:
-            candidate = os.path.normpath(os.path.join(repositoryRoot, binDir, name))
-            if os.path.isfile(candidate):
+            candidate = os.path.normpath(Path(repositoryRoot, binDir, name))
+            if Path(candidate).is_file():
                 return candidate
     return ""
 
 
 def makeImportCommand(appPath: str) -> tuple[list[str], str]:
     """(명령 인자 목록, 작업 폴더) — 작업 폴더는 App 이 있는 `Bin` 이다."""
-    return [appPath, "--import-models"], os.path.dirname(appPath)
+    return [appPath, "--import-models"], str(Path(appPath).parent)
 
 
 def startImport(appPath: str) -> subprocess.Popen:

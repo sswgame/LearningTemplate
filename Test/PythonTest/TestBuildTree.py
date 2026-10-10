@@ -70,14 +70,14 @@ class BuildTreeTest(unittest.TestCase):
         self.assertIsNone(BuildTree.fromPreset("C", self.root).readUnbuiltSources())
 
     def testArgumentsBuildDirWinsAndIsRepositoryRelative(self) -> None:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description="BuildTree 인자 시험")
         addBuildTreeArguments(parser)
         self.assertEqual(BuildTree.fromArguments(parser.parse_args(["--build-dir", "x"]), self.root).path, self.root / "x")
         self.assertEqual(BuildTree.fromArguments(parser.parse_args(["--preset", "C", "--build-dir", "build/A"]), self.root).name, "A")
         self.assertEqual(BuildTree.fromArguments(parser.parse_args([]), self.root).name, "Ninja-Debug")
 
     def testArgumentsWithoutDefaultPresetUseClangd(self) -> None:
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(description="BuildTree 인자 시험")
         addBuildTreeArguments(parser, defaultPreset=None)
         self.assertEqual(BuildTree.fromArguments(parser.parse_args([]), self.root).name, "A")
 

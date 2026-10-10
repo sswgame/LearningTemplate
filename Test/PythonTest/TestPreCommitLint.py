@@ -19,7 +19,7 @@ from LintGate import LintGate  # noqa: E402
 from PreCommitLint import StagedContentProbe, selectGatesForStaged  # noqa: E402
 
 
-def makeScript(name: str, **mapAttribute) -> LintScript:
+def makeScript(name: str, **mapAttribute: object) -> LintScript:
     """게이트 클래스 하나가 든 가짜 모듈 — 훅은 파일이 아니라 클래스의 선언만 본다."""
     module = types.ModuleType(name)
     gateClass = type(f"{name}Gate", (LintGate,), {"__module__": name, "description": name, **mapAttribute})

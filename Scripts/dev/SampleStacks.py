@@ -66,7 +66,7 @@ if sys.platform == "win32":
 class StackSampler:
     """프로세스 하나의 스레드 스택을 뜹니다."""
 
-    def __init__(self, pid: int, symbolPath: str | None):
+    def __init__(self, pid: int, symbolPath: str | None) -> None:
         self._kernel = ctypes.WinDLL("kernel32", use_last_error=True)
         self._dbgHelp = ctypes.WinDLL("dbghelp", use_last_error=True)
         self._kernel.OpenProcess.restype = wt.HANDLE

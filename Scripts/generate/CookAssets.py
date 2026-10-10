@@ -127,7 +127,7 @@ def resolveCompressionCodecInternal(packConfig: dict | None) -> tuple[int, int]:
 
     if name not in _gPackFormat.mapCodec:
         known = ", ".join(sorted(_gPackFormat.mapCodec))
-        raise SystemExit(
+        sys.exit(
             f"[Pack] PackConfig.compression.codec='{name}' 은 팩 포맷에 없는 코덱입니다. 가능한 값: {known}"
         )
     return int(_gPackFormat.mapCodec[name]), level
@@ -145,10 +145,10 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
     if compression == _gPackFormat.mapCodec.get("LZ4"):
         try:
             import lz4.block  # type: ignore
-        except ImportError as exc:
-            raise SystemExit(
+        except ImportError:
+            sys.exit(
                 "[Pack] LZ4 로 쿠킹하도록 설정돼 있는데 파이썬 lz4 모듈이 없습니다.  py -3 -m pip install lz4"
-            ) from exc
+            )
         # 리더는 raw LZ4 블록을 기대한다(엔트리 헤더에 원본 크기가 이미 있다).
         mode = "high_compression" if level > 0 else "default"
         if mode == "high_compression":
@@ -158,17 +158,17 @@ def compressPayloadInternal(rawBytes: bytes, compression: int, level: int) -> by
     if compression == _gPackFormat.mapCodec.get("Zstd"):
         try:
             import zstandard  # type: ignore
-        except ImportError as exc:
-            raise SystemExit(
+        except ImportError:
+            sys.exit(
                 "[Pack] Zstd 로 쿠킹하도록 설정돼 있는데 파이썬 zstandard 모듈이 없습니다.  py -3 -m pip install zstandard"
-            ) from exc
+            )
         compressor = zstandard.ZstdCompressor(level=level if level > 0 else 3)
         return compressor.compress(rawBytes)
 
     if compression == _gPackFormat.codecNone:
         return rawBytes
 
-    raise SystemExit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
+    sys.exit(f"[Pack] 쿠커가 모르는 압축 코덱 값입니다: {compression}")
 
 
 def resolveTargetRhi(cliRhi: str = "", projectRoot: Path | None = None) -> str:

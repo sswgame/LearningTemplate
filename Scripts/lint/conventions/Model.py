@@ -85,7 +85,7 @@ class ConventionRule:
     badSampleFile: str = "Source/Probe/Sample.cpp"
     extraSamples: tuple[tuple[str, str], ...] = ()
 
-    def __init_subclass__(cls, **kwargs) -> None:
+    def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
         if cls.scope not in _kRulesByScope:
             raise ValueError(f"{cls.__name__}: 알 수 없는 scope '{cls.scope}'")

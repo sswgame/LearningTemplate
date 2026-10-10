@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+import types
 import unittest
 from pathlib import Path
 
@@ -21,7 +22,7 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 from common import CookContractSpec, kFilePackConfig  # noqa: E402
 
 
-def loadCookerInternal():
+def loadCookerInternal() -> types.ModuleType:
     """쿠커 스크립트를 모듈로 불러옵니다."""
     cookerPath = kRepositoryRoot / "Scripts" / "generate" / "CookAssets.py"
     moduleSpec = importlib.util.spec_from_file_location("CookAssetsUnderTest", cookerPath)

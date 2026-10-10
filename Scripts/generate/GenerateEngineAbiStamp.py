@@ -10,6 +10,8 @@ Ninja 의 restat 이 그 뒤를 멈춥니다.
 
 사용법: py -3 Scripts/generate/GenerateEngineAbiStamp.py --root <repo> --out <path/EngineAbiStamp.gen.h>
 """
+from __future__ import annotations
+
 import argparse
 import hashlib
 import os
@@ -17,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))   # Scripts — common
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common import writeGeneratedFile  # noqa: E402
 
@@ -31,16 +33,15 @@ kHeaderExtensions = (".h", ".hpp", ".inl", ".xxx")
 kStampMarker = "swEngineAbiStamp:"
 
 
-def collectHeaderPathsInternal(repositoryRoot):
+def collectHeaderPathsInternal(repositoryRoot: Path) -> list[str]:
     """해시할 헤더를 저장소 기준 경로 순으로 모읍니다. 순서가 도장에 들어가므로 정렬합니다."""
-    listPath = []
+    listPath: list[str] = []
     for headerRoot in kHeaderRoots:
-        absoluteRoot = os.path.join(repositoryRoot, headerRoot)
-        for dirPath, _, listFileName in os.walk(absoluteRoot):
+        for dirPath, _, listFileName in os.walk(repositoryRoot / headerRoot):
             for fileName in listFileName:
                 if not fileName.endswith(kHeaderExtensions):
                     continue
-                relativePath = os.path.relpath(os.path.join(dirPath, fileName), repositoryRoot).replace("\\", "/")
+                relativePath = (Path(dirPath) / fileName).relative_to(repositoryRoot).as_posix()
                 if relativePath.startswith(tuple(excludedRoot + "/" for excludedRoot in kExcludedRoots)):
                     continue
                 listPath.append(relativePath)
@@ -48,12 +49,11 @@ def collectHeaderPathsInternal(repositoryRoot):
     return listPath
 
 
-def computeStampInternal(repositoryRoot):
+def computeStampInternal(repositoryRoot: Path) -> str:
     """헤더 경로와 내용(줄 끝은 LF 로 맞춤)을 차례로 넣은 SHA-1 입니다. 체크아웃마다 다른 CRLF 가 도장을 바꾸지 않게 합니다."""
     digest = hashlib.sha1()
     for relativePath in collectHeaderPathsInternal(repositoryRoot):
-        with open(os.path.join(repositoryRoot, relativePath), "rb") as handle:
-            content = handle.read().replace(b"\r\n", b"\n")
+        content = (repositoryRoot / relativePath).read_bytes().replace(b"\r\n", b"\n")
         digest.update(relativePath.encode("utf-8"))
         digest.update(b"\0")
         digest.update(content)
@@ -61,7 +61,7 @@ def computeStampInternal(repositoryRoot):
     return digest.hexdigest()
 
 
-def makeHeaderTextInternal(stamp):
+def makeHeaderTextInternal(stamp: str) -> str:
     return (
         "// 생성 파일 - Scripts/generate/GenerateEngineAbiStamp.py. 고치지 마십시오.\n"
         "// Core · Engine 헤더 내용의 지문입니다. Engine 과 모듈이 같은 값을 박고, 핫 리로드가 올리기 전에 대조합니다.\n"
@@ -76,7 +76,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", required=True, help="쓸 헤더 경로")
     args = parser.parse_args(argv)
 
-    text = makeHeaderTextInternal(computeStampInternal(os.path.abspath(args.root)))
+    text = makeHeaderTextInternal(computeStampInternal(Path(os.path.normpath(Path(args.root).absolute()))))
     # 빌드마다 도는 단계라 바뀐 때만 한 줄 찍는다. 줄끝은 LF(어느 체크아웃에서나 같은 바이트).
     writeGeneratedFile(Path(args.out), text, tag="GenerateEngineAbiStamp", newline="\n", bReportUnchanged=False)
     return 0

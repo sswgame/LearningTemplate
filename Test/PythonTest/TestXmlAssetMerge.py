@@ -15,12 +15,13 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import xml.etree.ElementTree as ElementTree
 from pathlib import Path
 
 kRepositoryRoot = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(kRepositoryRoot / "Scripts"))
 
-from common.XmlAssetMerge import (computeChildKeys, diffAssets, kConflictMarker, mergeAssets, parseXmlAsset,  # noqa: E402
+from common.XmlAssetMerge import (XmlAsset, computeChildKeys, diffAssets, kConflictMarker, mergeAssets, parseXmlAsset,  # noqa: E402
                                   serializeXmlAsset)
 
 #: 손으로 고친 흔적이 있어 엔진 서식과 바이트가 다른 파일 — 의미로는 같아야 한다.
@@ -41,7 +42,7 @@ def readResourceInternal(relPath: str) -> str:
     return (kRepositoryRoot / "Resource" / relPath).read_text(encoding="utf-8").replace("\r\n", "\n")
 
 
-def findEntityInternal(asset, entityID: str):
+def findEntityInternal(asset: XmlAsset, entityID: str) -> ElementTree.Element:
     return next(entity for entity in asset.root.iter("entity") if entity.get("id") == entityID)
 
 

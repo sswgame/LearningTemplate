@@ -173,7 +173,7 @@ def _findConditionEndInternal(listMasked: list[str], startIndex: int) -> int:
     return -1
 
 
-def _parseBranchBodyInternal(listMasked: list[str], listRaw: list[str], bodyStartIndex: int):
+def _parseBranchBodyInternal(listMasked: list[str], listRaw: list[str], bodyStartIndex: int) -> tuple[int | None, int | None, bool] | None:
     """
     분기 본문 하나를 읽는다.
 

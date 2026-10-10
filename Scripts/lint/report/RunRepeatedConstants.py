@@ -89,7 +89,7 @@ def nameTail(name: str) -> str:
     return "".join(words[-2:]) if len(words) >= 2 else "".join(words)
 
 
-def collect(repositoryRoot: Path, filterText: str):
+def collect(repositoryRoot: Path, filterText: str) -> tuple[list[Decl], dict[str, set[str]], dict[str, list[str]], dict[str, set[str]]]:
     listPath = []
     for scanRoot in kListScanRoot:
         listPath.extend(p for p in (repositoryRoot / scanRoot).rglob("*") if p.suffix in kSuffixes and p.is_file())

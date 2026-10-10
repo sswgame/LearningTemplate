@@ -11,7 +11,8 @@ SW Engine glTF 내보내기 — 고른 오브젝트 · 아마추어 · 애니메
 
 from __future__ import annotations
 
-import os
+from pathlib import Path
+from typing import Sequence
 
 import bpy
 from bpy.props import BoolProperty, StringProperty
@@ -36,20 +37,20 @@ class SwEngineExporterPreferences(AddonPreferences):
     repository_root: StringProperty(name="Engine repository", subtype="DIR_PATH", description="Folder that holds Resource/ and build/")
     app_path: StringProperty(name="App executable", subtype="FILE_PATH", description="Optional: App.exe to run --import-models with")
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context) -> None:
         self.layout.prop(self, "repository_root")
         self.layout.prop(self, "app_path")
 
 
-def getPreferencesInternal(context) -> SwEngineExporterPreferences:
+def getPreferencesInternal(context: bpy.types.Context) -> SwEngineExporterPreferences:
     return context.preferences.addons[__package__].preferences
 
 
-def toListMatrixInternal(matrix) -> list[list[float]]:
+def toListMatrixInternal(matrix: Sequence[Sequence[float]]) -> list[list[float]]:
     return [[float(matrix[row][column]) for column in range(4)] for row in range(4)]
 
 
-def collectSocketsInternal(listObject) -> list[SocketXml.SocketDraft]:
+def collectSocketsInternal(listObject: Sequence[bpy.types.Object]) -> list[SocketXml.SocketDraft]:
     """고른 오브젝트(와 그 자식) 가운데 소켓 엠프티를 엔진 공간 소켓으로 바꿉니다. 부모 본이 있으면 본 기준, 없으면 뿌리 기준입니다."""
     listSocket: list[SocketXml.SocketDraft] = []
     uniqueVisited: set[str] = set()
@@ -87,15 +88,15 @@ class SW_OT_export_engine_gltf(Operator):
     export_animations: BoolProperty(name="Animations", default=True)
     run_import: BoolProperty(name="Import into the engine", default=True, description="Run App --import-models after exporting")
 
-    def invoke(self, context, event):
+    def invoke(self, context: bpy.types.Context, event: bpy.types.Event) -> set[str]:
         if not self.asset_name and context.active_object is not None:
             self.asset_name = context.active_object.name
         return context.window_manager.invoke_props_dialog(self)
 
-    def execute(self, context):
+    def execute(self, context: bpy.types.Context) -> set[str]:
         preferences = getPreferencesInternal(context)
         repositoryRoot = bpy.path.abspath(preferences.repository_root).rstrip("/\\")
-        if not repositoryRoot or not os.path.isdir(os.path.join(repositoryRoot, "Resource")):
+        if not repositoryRoot or not Path(repositoryRoot, "Resource").is_dir():
             self.report({"ERROR"}, "Set the engine repository (the folder with Resource/) in the add-on preferences")
             return {"CANCELLED"}
         listSelected = list(context.selected_objects)
@@ -109,7 +110,7 @@ class SW_OT_export_engine_gltf(Operator):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
 
-        os.makedirs(os.path.dirname(paths["source"]), exist_ok=True)
+        Path(paths["source"]).parent.mkdir(parents=True, exist_ok=True)
         # 축 · 단위: glTF 내보내기의 Y-up 변환을 쓰고 엔진 임포터가 X 를 뒤집는다(Conventions 머리말). 소켓 엠프티는 메시에 넣지 않는다.
         bpy.ops.export_scene.gltf(
             filepath=paths["source"],
@@ -150,25 +151,25 @@ class SW_PT_engine_exporter(Panel):
     bl_region_type = "UI"
     bl_category = "SW Engine"
 
-    def draw(self, context):
+    def draw(self, context: bpy.types.Context) -> None:
         self.layout.operator(SW_OT_export_engine_gltf.bl_idname, icon="EXPORT")
         self.layout.label(text="Sockets: empties named SOCKET_<Name>")
 
 
-def drawExportMenuInternal(self, context):
+def drawExportMenuInternal(self: bpy.types.Menu, context: bpy.types.Context) -> None:
     self.layout.operator(SW_OT_export_engine_gltf.bl_idname, text="SW Engine (.glb)")
 
 
 _kClass = (SwEngineExporterPreferences, SW_OT_export_engine_gltf, SW_PT_engine_exporter)
 
 
-def register():
+def register() -> None:
     for cls in _kClass:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_export.append(drawExportMenuInternal)
 
 
-def unregister():
+def unregister() -> None:
     bpy.types.TOPBAR_MT_file_export.remove(drawExportMenuInternal)
     for cls in reversed(_kClass):
         bpy.utils.unregister_class(cls)

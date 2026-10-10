@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import io
 import os
@@ -46,7 +47,7 @@ class GeneratedFileTest(unittest.TestCase):
         self.assertEqual(formatCMakeSet("SW_X", False), 'set(SW_X "FALSE")')
 
     def testGeneratorErrorIsOneLineAndExitCodeOne(self) -> None:
-        def generate(_args) -> None:
+        def generate(_args: argparse.Namespace) -> None:
             raise GeneratorError("x")
 
         stderr = io.StringIO()

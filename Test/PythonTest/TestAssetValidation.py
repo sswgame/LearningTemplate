@@ -60,7 +60,7 @@ class AssetValidationFixture(unittest.TestCase):
         else:
             path.write_bytes(content)
 
-    def run(self, result=None):  # noqa: D401 — unittest 의 이름
+    def run(self, result: unittest.TestResult | None = None) -> unittest.TestResult | None:  # noqa: D401 — unittest 의 이름
         return super().run(result)
 
     def findMessages(self, ruleEntry: dict, listTarget: list[str] | None = None) -> list[str]:

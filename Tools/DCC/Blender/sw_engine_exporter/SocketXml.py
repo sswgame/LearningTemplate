@@ -8,8 +8,8 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from xml.sax.saxutils import quoteattr
 
 from . import Conventions
@@ -69,9 +69,9 @@ def makeSocketXml(listSocket: list[SocketDraft]) -> str:
 
 def writeSocketXmlIfMissing(path: str, listSocket: list[SocketDraft]) -> bool:
     """파일이 없을 때만 씁니다. 썼으면 True, 이미 있어 두었으면 False 입니다(소켓이 없으면 쓰지 않고 False)."""
-    if not listSocket or os.path.exists(path):
+    if not listSocket or Path(path).exists():
         return False
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8", newline="\n") as file:
         file.write(makeSocketXml(listSocket))
     return True
