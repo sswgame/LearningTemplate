@@ -14,7 +14,7 @@
 | `Base/Control` · `Input` · `Movement` · `Vehicle` · `Navigation` | 25 · 6 · 6 · 16 · 12 | "조종 → 이동" 한 흐름이 다섯 폴더로 갈라져 있다 |
 | `Base/Online` + `Kits/Online` | 89 + 172 | GameFramework 의 28% 가 온라인. 같은 서비스(예: Account)가 `Kits/Online/Account`(클라이언트) · `Kits/Online/Server/Account`(서버, 28)로 나뉘고 `Base/Online/{Service,Store,…}` 가 공통 |
 | 키트 14 개 | 폴더 안이 평평(루트 10~16 파일, 하위 폴더 0) | `CardGame` 한 키트에 Klondike · Matgo · Poker · Uno · Hwatu 가 들어 있다 — 키트 하나가 게임 여럿 |
-| 키트 그룹 | `Rpg` 에 `Overworld`(타일 월드 라이브러리 성격), `Simulation` 에 `Voxel`, `Storage`(SqlStore) | 장르 키트와 기능 키트가 섞였다 |
+| 키트 그룹 | `Rpg` 에 `Overworld`(타일 월드 라이브러리 성격), `Simulation` 에 `Voxel`, `Storage`(SQLStore) | 장르 키트와 기능 키트가 섞였다 |
 
 ## 단계
 
@@ -48,7 +48,7 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
 
 ### 5. 온라인 짝 맞추기 — 끝남(2026-10-10)
 - 온라인 서비스 11 개와 저장 드라이버를 기능 폴더 하나 아래 `Shared/`(공유 키트 GF_<기능>) · `Server/`(GF_Server_<기능>)로 묶었다
-  (`Kits/Feature/Online/<서비스>/Shared|Server`, `Kits/Feature/Storage/SqlStore/Shared|Server`, `Kits/Feature/Storage/CacheStore/Server`).
+  (`Kits/Feature/Online/<서비스>/Shared|Server`, `Kits/Feature/Storage/SQLStore/Shared|Server`, `Kits/Feature/Storage/CacheStore/Server`).
   공유 키트는 클라이언트 전용이 아니라 양쪽에 들어가므로 `Client/` 가 아니라 `Shared/` 이고, `Client/` 는 GF_Client_<기능> 자리로 남는다.
 - 옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 `CheckGameFrameworkLayers` 가 막는다. `Base/Online` 의 `Service` · `Store` · `Config` 등은 그대로.
 

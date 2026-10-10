@@ -5,11 +5,11 @@ Scripts/lint/gate/CheckProductNames.py
 
 제품 이름(SQLite · PostgreSQL · Valkey · OpenSSL · XAudio2 · Tracy · Jolt …)은 그 제품을 감싼 드라이버 · 제공자 · 백엔드 폴더에만 있다.
 
-키트 · 엔진의 나머지는 인터페이스(`ISqlDriver` · `INetSecurityProvider` · `IAudioSystem` · `IPhysicsScene3D` …)와 등록부를 쓴다. 제품 이름이
-그 밖의 식별자에 새면 제품을 바꿀 때 그 자리가 모두 따라 바뀐다 — `SqlLocalSlotStorage` 가 등록부(`SqlDriverRegistry::findDriver`)를 두고
-`SqliteDriver::getInstance()` 를 직접 부르고 있었다.
+키트 · 엔진의 나머지는 인터페이스(`ISQLDriver` · `INetSecurityProvider` · `IAudioSystem` · `IPhysicsScene3D` …)와 등록부를 쓴다. 제품 이름이
+그 밖의 식별자에 새면 제품을 바꿀 때 그 자리가 모두 따라 바뀐다 — `SQLLocalSlotStorage` 가 등록부(`SQLDriverRegistry::findDriver`)를 두고
+`SQLiteDriver::getInstance()` 를 직접 부르고 있었다.
 
-  1) 주석 · 문자열 밖의 식별자에 제품 낱말이 들면 위반이다 — 낱말 머리(`SqliteDriver`)든 camelCase 가운데(`getTracyPort`)든.
+  1) 주석 · 문자열 밖의 식별자에 제품 낱말이 들면 위반이다 — 낱말 머리(`SQLiteDriver`)든 camelCase 가운데(`getTracyPort`)든.
      `Resp` 는 `Response` 와 겹쳐 `Resp` + 대문자만 본다.
   2) 허용 자리: 그 제품을 감싼 라이브러리의 허용 뿌리(`CheckThirdPartyIsolation._kListLibraryRule` — 목록을 두 벌 두지 않는다)와
      `*/Driver/*` · `*/Windows/*` · `*/Linux/*` 폴더(드라이버 · 플랫폼 구현).
@@ -60,8 +60,8 @@ class CheckProductNamesGate(LintGate):
 
     #: 제품을 골라 올리는 조립점(fnmatch) → 이유.
     mapExemption = {
-        "Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriverRegistry.cpp": "등록부 — 키트가 든 드라이버(SQLite)를 올리는 자리",
-        "Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/ServiceStoreFactory.cpp": "서버 키트의 조립점 — PostgreSQL 드라이버를 올린다",
+        "Source/GameFramework/Kits/Feature/Storage/SQLStore/Shared/SQL/SQLDriverRegistry.cpp": "등록부 — 키트가 든 드라이버(SQLite)를 올리는 자리",
+        "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/ServiceStoreFactory.cpp": "서버 키트의 조립점 — PostgreSQL 드라이버를 올린다",
         "Source/GameFramework/Base/Online/Security/NetSecurity.cpp": "보안 제공자 조립점 — OpenSSL 제공자를 고른다",
         "Source/Engine/Audio/IAudioSystem.cpp": "오디오 백엔드 팩토리 — XAudio2 를 고른다",
         "Source/Editor/Common/Commands/EditorTracyLauncher.*": "외부 프로파일러 GUI 를 띄우는 실행기 — 이름이 곧 대상 도구",
@@ -77,12 +77,12 @@ class CheckProductNamesGate(LintGate):
     preCommitPattern = tuple(f"{root}/*" for root in kLintTargetRelDirs)
     preCommitFileArgument = "--files"
     violationHeader = "드라이버 · 백엔드 폴더 밖의 제품 이름"
-    hint = ("  인터페이스(ISqlDriver · INetSecurityProvider · IAudioSystem …)와 등록부(SqlDriverRegistry::findDriver 등)로 고릅니다.\n"
+    hint = ("  인터페이스(ISQLDriver · INetSecurityProvider · IAudioSystem …)와 등록부(SQLDriverRegistry::findDriver 등)로 고릅니다.\n"
             "  제품을 골라 올리는 조립점이면 CheckProductNames.py 의 mapExemption 에 이유와 함께 한 줄.")
     selfTestCases = [
         {
             "name": "키트 저장소가 SQLite 드라이버를 직접 부른다",
-            "files": {"Source/GameFramework/Kits/Feature/Storage/Probe/ProbeStorage.cpp": "void probe()\n{\n    SqliteDriver& driver = SqliteDriver::getInstance();\n}\n"},
+            "files": {"Source/GameFramework/Kits/Feature/Storage/Probe/ProbeStorage.cpp": "void probe()\n{\n    SQLiteDriver& driver = SQLiteDriver::getInstance();\n}\n"},
         },
         {
             "name": "엔진 씬이 Jolt 형식을 든다",

@@ -177,7 +177,7 @@ namespace sw
     /**
      * @class IServiceStore
      * @brief 저장소의 앞(front)입니다 — 일을 맡고(`submit`, 아무 스레드) 끝난 일을 거둡니다(`pollCompletions`, 맡긴 서비스 스레드 하나).
-     * @details 서버 프로세스 하나에 앞 하나. 프로세스 둘이 같은 DB 를 쓰면 앞이 둘이다. 구현: `MemoryServiceStore`(시험 · 개발), SQL 구현(GF_Server_SqlStore).
+     * @details 서버 프로세스 하나에 앞 하나. 프로세스 둘이 같은 DB 를 쓰면 앞이 둘이다. 구현: `MemoryServiceStore`(시험 · 개발), SQL 구현(GF_Server_SQLStore).
      */
     class SW_GF_API IServiceStore
     {

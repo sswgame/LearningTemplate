@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/PostgresDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -34,7 +34,7 @@ namespace test
             _schemaName = sw::string( name.view() );
             sw::string error;
             _admin = sw::PostgresDriver::getInstance().openConnection( _baseConnection, "", error );
-            if ( _admin == nullptr || _admin->executeScript( "CREATE SCHEMA " + _schemaName ) != sw::SqlResult::Ok )
+            if ( _admin == nullptr || _admin->executeScript( "CREATE SCHEMA " + _schemaName ) != sw::SQLResult::Ok )
             {
                 _admin.reset();
                 return;
@@ -63,6 +63,6 @@ namespace test
         sw::string                         _baseConnection;
         sw::string                         _schemaName;
         sw::string                         _connection;
-        sw::unique_ptr<sw::ISqlConnection> _admin;
+        sw::unique_ptr<sw::ISQLConnection> _admin;
     };
 } // namespace test

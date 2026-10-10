@@ -75,7 +75,7 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | `Feature/World` | `Overworld` | 타일 걷기 필드와 존 | |
 | | `Voxel` | 마인크래프트 류 복셀 샌드박스 | VoxelCraft |
 | `Feature/Online` | `Account` 외 10개 | 온라인 서비스 | [Online](../Base/Online/README.md) |
-| `Feature/Storage` | `SqlStore`, 서버 `CacheStore` | 서비스 저장 드라이버 | [Online](../Base/Online/README.md) |
+| `Feature/Storage` | `SQLStore`, 서버 `CacheStore` | 서비스 저장 드라이버 | [Online](../Base/Online/README.md) |
 
 쓰는 게임이 비어 있는 키트는 테스트(`Test/EngineTest/GameFramework/Kits/`)만 씁니다. 그런 키트도 기반을 쓰는 방식은 같으므로, 새 게임을 만들 때 그대로 링크할 수 있습니다.
 

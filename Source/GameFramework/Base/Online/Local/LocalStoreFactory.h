@@ -1,6 +1,6 @@
 /**
  * @file LocalStoreFactory.h
- * @brief 로컬 저장 설정 → 앞입니다. "file" · "memory" 는 기반이 만들고, 그 밖(예: "sqlite" — 키트 `GF_SqlStore`)은 그 키트가 등록한 바닥을 씁니다.
+ * @brief 로컬 저장 설정 → 앞입니다. "file" · "memory" 는 기반이 만들고, 그 밖(예: "sqlite" — 키트 `GF_SQLStore`)은 그 키트가 등록한 바닥을 씁니다.
  * @details 기반은 키트를 include 하지 못하므로 등록 창구를 둔다. 등록되지 않은 이름은 기동 오류다(다른 저장소로 바꾸지 않는다).
  *          모든 저장소는 전용 스레드 하나(`ThreadedLocalStore`) 위에 선다. 경로는 `UserDataPath::resolve( 게임 이름, _root )`.
  */

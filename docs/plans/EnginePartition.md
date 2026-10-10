@@ -90,7 +90,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - 2 단계 뒤에 한다 — 월드가 코어 위의 소유자가 되려면 코어가 기능을 모르는 상태여야 한다.
 
 ### 5. 모듈 확장 창구와 상태 규칙
-- 모듈이 서비스 · 렌더 패스 · 레지스트리를 등록하는 공식 창구. 리로드되는 모듈의 변경 가능한 정적 변수를 막는 게이트(허용 목록 + 이유)와, `GameDataCache` · `SqlDriverRegistry` · `LocalStoreFactory` 의 등록 표를 서비스로 올리는 일.
+- 모듈이 서비스 · 렌더 패스 · 레지스트리를 등록하는 공식 창구. 리로드되는 모듈의 변경 가능한 정적 변수를 막는 게이트(허용 목록 + 이유)와, `GameDataCache` · `SQLDriverRegistry` · `LocalStoreFactory` 의 등록 표를 서비스로 올리는 일.
 
 ## 건드리지 않는 것
 - 키트 DLL 병합(핫 리로드 단위와 키트별 켜기 · 끄기가 깨진다). 산출물 폴더 정리는 별도 진행.

@@ -6,9 +6,9 @@
 #include "EngineTest/GameFramework/Online/ServiceStoreContract.h"
 
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
-#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/PostgresDriver.h"
-#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/ServiceStoreFactory.h"
-#include "GameFramework/Kits/Feature/Storage/SqlStore/Server/SqlServiceStore.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresDriver.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Server/SQLServiceStore.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Server/ServiceStoreFactory.h"
 
 // SQL 서비스 저장소(PostgreSQL) — 메모리 · SQLite 와 같은 IServiceStore 계약 일곱(픽스처마다 무작위 스키마). 서버가 있어야 돈다(SW_TEST_POSTGRES_URL).
 
@@ -71,9 +71,9 @@ SW_TEST_CASE( ServiceStorePostgresTest, MigrationsApplyOnceInTheTestSchema )
         SW_ASSERT_TRUE_MSG( store != nullptr, error.c_str() );
         store->shutdown();
     }
-    unique_ptr<ISqlConnection> connection = PostgresDriver::getInstance().openConnection( schema.getConnection(), "", error );
+    unique_ptr<ISQLConnection> connection = PostgresDriver::getInstance().openConnection( schema.getConnection(), "", error );
     SW_ASSERT_TRUE_MSG( connection != nullptr, error.c_str() );
-    SqlRowSet rowSet;
-    SW_ASSERT_TRUE( connection->execute( "SELECT COUNT(*) FROM sw_schema_migration", nullptr, 0, &rowSet ) == SqlResult::Ok );
+    SQLRowSet rowSet;
+    SW_ASSERT_TRUE( connection->execute( "SELECT COUNT(*) FROM sw_schema_migration", nullptr, 0, &rowSet ) == SQLResult::Ok );
     SW_EXPECT_EQUAL( int64( 2 ), rowSet._listRow[0][0]._integer );
 }

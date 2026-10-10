@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Server_SQLStore",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "SQL 저장 키트(서버) — 서비스 저장소(IServiceStore)의 SQL 구현 · 서버 설정 → 저장소 (계정 · 경제 · 거래 서버)",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_SQLStore"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

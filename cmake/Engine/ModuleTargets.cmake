@@ -99,7 +99,7 @@ function(sw_linkWholeArchive TARGET_NAME)
 			continue()
 		endif()
 
-		# 링크 옵션만 걸면 그 라이브러리의 링크 의존(키트가 PRIVATE 로 링크한 서드파티 — GF_SqlStore 의 sqlite3 · GF_Server_SqlStore 의
+		# 링크 옵션만 걸면 그 라이브러리의 링크 의존(키트가 PRIVATE 로 링크한 서드파티 — GF_SQLStore 의 sqlite3 · GF_Server_SQLStore 의
 		# libpq)이 따라오지 않는다. 타깃으로도 링크해 전이 의존을 링크 줄에 올린다(같은 아카이브가 한 번 더 나와도 이미 올라온 멤버는 다시 올리지 않는다).
 		target_link_libraries(${TARGET_NAME} PRIVATE ${reflLib})
 		if(MSVC)
