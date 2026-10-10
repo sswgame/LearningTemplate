@@ -257,8 +257,8 @@ namespace sw::editor
         }
 
         EditorContext* pContext   = EditorContext::get();
-        IRHIDevice*    pRhiDevice = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
-        const utf8*    pBackend   = ( pRhiDevice != nullptr ) ? pRhiDevice->getBackendName() : "n/a";
+        IRHIDevice*    pRHIDevice = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
+        const utf8*    pBackend   = ( pRHIDevice != nullptr ) ? pRHIDevice->getBackendName() : "n/a";
         ImGui::TextDisabled( "RHI %s | %.0f FPS", pBackend, static_cast<float64>( ImGui::GetIO().Framerate ) );
         if ( ImGui::IsItemHovered() )
         {

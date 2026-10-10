@@ -66,7 +66,7 @@ namespace sw
         ++entry._refCount;
 
         // "올라갔나" 는 머티리얼에게 묻는다. 캐시가 따로 세면 디바이스가 죽었을 때 그 표식이 거짓말이 된다.
-        if ( pDevice != nullptr && entry._material->isRhiValid() == false )
+        if ( pDevice != nullptr && entry._material->isRHIValid() == false )
         {
             if ( entry._material->initialize( pDevice, key ) == false )
             {
@@ -124,7 +124,7 @@ namespace sw
         const string                        key = FileUtil::normalizePath( relativePath );
         std::unique_lock<std::shared_mutex> lock{ _impl->_mutex };
         const auto                          it = _impl->_mapEntry.find( key );
-        if ( it == _impl->_mapEntry.end() || it->second._material->isRhiValid() )
+        if ( it == _impl->_mapEntry.end() || it->second._material->isRHIValid() )
             return;
         for ( const string& pendingKey : _impl->_listPendingKey )
         {
@@ -159,7 +159,7 @@ namespace sw
                     continue; // 그새 놓였다
                 material = it->second._material;
             }
-            if ( material->isRhiValid() )
+            if ( material->isRHIValid() )
                 continue;
             if ( material->initialize( pDevice, key ) == false )
                 SW_LOG_ERROR( "Failed to initialize Material %#", key.c_str() );
@@ -193,14 +193,14 @@ namespace sw
         auto                                it{ _impl->_mapEntry.find( key ) };
         if ( it != _impl->_mapEntry.end() )
         {
-            if ( it->second._material->isRhiValid() && pDevice != nullptr )
+            if ( it->second._material->isRHIValid() && pDevice != nullptr )
             {
                 // 아직 이전 프레임(들)이 GPU 에서 이 Material 의 bindless 상수버퍼 인덱스를 참조하고
-                // 있을 수 있다. releaseRhi() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
+                // 있을 수 있다. releaseRHI() 의 unregisterBindlessResource 는 인덱스를 즉시 프리리스트로
                 // 반환해서, waitIdle 없이 바로 initialize() 가 같은 인덱스를 재할당하면 아직 그 인덱스를
                 // 읽는 중인 드로우가 다른 머티리얼의 값을 읽는 조용한 데이터 오염이 될 수 있다.
                 pDevice->waitIdle();
-                it->second._material->releaseRhi( pDevice );
+                it->second._material->releaseRHI( pDevice );
             }
 
             if ( pDevice != nullptr && it->second._material->initialize( pDevice, key ) == false )
@@ -213,11 +213,11 @@ namespace sw
      * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** 이유는 `TextureCache::clear()` 와 같습니다.
      *          `IAssetCache::clear()` 는 디바이스를 인자로 받지 않고(이 파일 헤더의 머리말 참고:
      *          캐시가 디바이스를 들고 있으면 백엔드 교체 때 죽은 포인터가 됩니다) 캐시도 들고 있지
-     *          않으므로 여기서 `releaseRhi` 를 부를 방법이 없습니다.
+     *          않으므로 여기서 `releaseRHI` 를 부를 방법이 없습니다.
      *
      *          지금 이 함수로 오는 길은 `AssetManager::shutdown` → `clearAssetCaches()` 하나뿐이고,
      *          `EngineLoop::shutdown` 이 그보다 **먼저** `_rhi->shutdown()` 을 불러 등록부 전체에
-     *          `releaseRhi` 를 밀어 둡니다. 평소 경로는 참조가 0 이 되는 `release()` 쪽입니다.
+     *          `releaseRHI` 를 밀어 둡니다. 평소 경로는 참조가 0 이 되는 `release()` 쪽입니다.
      */
     void MaterialCache::clear()
     {

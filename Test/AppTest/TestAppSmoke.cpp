@@ -61,7 +61,7 @@ namespace
         vector<string> _listMarkedLine{};
         uint32         _missingComponentLineCount{ 0 }; /**< `MissingComponent` 가 든 줄 수 — 씬이 모르는 타입을 만났다. */
         bool           _bLaunched{ false };
-        bool           _bBackendUnusableHere{ false };     /**< App 이 종료 코드 kRhiUnusableHereExitCode 로 "이 기계에서 그 백엔드를 못 돌린다" 고 알렸다(RHIInitResult). */
+        bool           _bBackendUnusableHere{ false };     /**< App 이 종료 코드 kRHIUnusableHereExitCode 로 "이 기계에서 그 백엔드를 못 돌린다" 고 알렸다(RHIInitResult). */
         bool           _bVulkanValidationEnabled{ false }; /**< Vulkan 디바이스가 검증 레이어를 켜고 섰다(그래야 잘못된 사용이 [Error] 로 나온다). */
     };
 
@@ -111,7 +111,7 @@ namespace
 
         result._exitCode = process.waitForExit();
         // App 이 RHI 를 세우다 환경 탓(이 빌드에 없다 · 드라이버가 기능을 안 준다)으로 물러나면 이 코드로 끝난다. 로그 문구는 보지 않는다.
-        result._bBackendUnusableHere = ( result._exitCode == kRhiUnusableHereExitCode );
+        result._bBackendUnusableHere = ( result._exitCode == kRHIUnusableHereExitCode );
         return result;
     }
 

@@ -378,7 +378,7 @@ namespace sw
     {
         if ( _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
-        if ( isRhiTextureShapeValid( desc ) == false )
+        if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                           desc._arraySize, desc._width, desc._height );
@@ -717,7 +717,7 @@ namespace sw
                           mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return false;
         }
-        if ( computeRhiTextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        if ( computeRHITextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
             SW_LOG_ERROR( "readbackTexture2D: unsupported format %# for %#x%# mip %#",
                           pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );

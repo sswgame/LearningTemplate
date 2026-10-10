@@ -206,7 +206,7 @@ Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인의 present 
 - **엔진 밖 네이티브 리소스**는 `IRHIDevice::enqueueGPURelease( delegate )` 로 백엔드 해제 큐(`RHIReleaseQueue`)에 넣습니다. DirectX 12와 Vulkan은 GPU 펜스를, DirectX 11과 OpenGL은 프레임 지연을 기준으로 해제합니다.
   펜스 값을 올리는 스레드가 읽어야 "이 프레임"이 맞으므로 렌더 스레드에서 부릅니다. 에디터의 `EditorDrawReleaseQueue` 가 ImGui 디스크립터와 렌더 타깃을 이것으로 넘깁니다.
 - **디바이스 수명 이벤트**는 `RHIRenderResource` 레지스트리가 전합니다. GPU 리소스를 보관하는 객체는 이 클래스를 상속하고, 언리얼의 `FRenderResource` 에 해당합니다.
-  디바이스가 살아 있으면 `releaseRhi`, 이미 없으면 `forgetRhi` 가 불립니다. 새 디바이스가 만들어지면 `EngineLoop` 이 `initAllFor( device )` 를 부르고, 각 객체의 `initRhi` 는 여러 번 불러도 결과가 같습니다.
+  디바이스가 살아 있으면 `releaseRHI`, 이미 없으면 `forgetRHI` 가 불립니다. 새 디바이스가 만들어지면 `EngineLoop` 이 `initAllFor( device )` 를 부르고, 각 객체의 `initRHI` 는 여러 번 불러도 결과가 같습니다.
   통보 도중에 다른 객체가 해제될 수 있으므로(머티리얼이 텍스처 참조를 놓으면 그 자리에서 `Texture2D` 가 사라진다) 레지스트리는 부르기 직전에 객체가 아직 있는지 잠금 아래에서 다시 확인합니다.
 
 ### 엔진 밖 모듈이 디바이스를 쓰는 법

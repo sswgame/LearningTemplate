@@ -661,7 +661,7 @@ namespace sw
      * @brief 서술체의 모양과 면 수가 맞는지 확인합니다 — Texture2D 는 1, TextureCube 는 6 이고 정사각형, Texture2DArray 는 1 이상.
      * @details 네 백엔드의 `createTexture2D` 가 이 판정 하나로 거부합니다(맞지 않으면 백엔드마다 다르게 무너진다).
      */
-    inline constexpr bool isRhiTextureShapeValid( const RHITextureDesc& desc )
+    inline constexpr bool isRHITextureShapeValid( const RHITextureDesc& desc )
     {
         switch ( desc._dimension )
         {
@@ -755,7 +755,7 @@ namespace sw
 namespace sw
 {
     /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기 · 행 바이트를 같은 규칙으로 계산하는 유일한 출처입니다. */
-    inline constexpr RHIFormatBlockInfo getRhiFormatBlockInfo( RHIFormat format )
+    inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
     {
         switch ( format )
         {
@@ -786,9 +786,9 @@ namespace sw
     }
 
     /** @brief 블록 압축 포맷인지 확인합니다. */
-    inline constexpr bool isRhiFormatBlockCompressed( RHIFormat format )
+    inline constexpr bool isRHIFormatBlockCompressed( RHIFormat format )
     {
-        return getRhiFormatBlockInfo( format )._blockWidth > 1;
+        return getRHIFormatBlockInfo( format )._blockWidth > 1;
     }
 
     /**
@@ -796,7 +796,7 @@ namespace sw
      * @details 블록 압축 · Unknown 은 첨부가 될 수 없고, R32G32B32_FLOAT 는 D3D11 · D3D12 · Vulkan 모두 렌더 타깃 지원이 선택 사항이라 뺍니다.
      *          포맷을 더하면 -Wswitch-enum 이 이 자리를 알립니다(열거자를 모두 적는다).
      */
-    inline constexpr bool isRhiFormatRenderable( RHIFormat format )
+    inline constexpr bool isRHIFormatRenderable( RHIFormat format )
     {
         switch ( format )
         {
@@ -822,9 +822,9 @@ namespace sw
     }
 
     /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축 · 깊이 · Unknown 은 0 입니다. */
-    inline constexpr uint32 getRhiFormatBytesPerPixel( RHIFormat format )
+    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
     {
-        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
         return info._blockWidth == 1 ? info._blockBytes : 0;
     }
 
@@ -833,9 +833,9 @@ namespace sw
      * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지합니다.
      * @return 포맷이 대상이 아니거나 크기가 0 이면 false.
      */
-    inline bool computeRhiTextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
+    inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
     {
-        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
         if ( info._blockBytes == 0 || width == 0 || height == 0 )
             return false;
         const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
@@ -871,7 +871,7 @@ namespace sw
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             RHITextureMipSpan& span = pOutSpan[mip];
-            if ( computeRhiTextureMipLayout( format, width, height, mip, span ) == false )
+            if ( computeRHITextureMipLayout( format, width, height, mip, span ) == false )
                 return 0;
             if ( offset + span._sizeBytes > desc._sizeBytes )
                 return 0;

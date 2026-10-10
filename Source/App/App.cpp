@@ -439,7 +439,7 @@ namespace sw
         if ( _moduleHost == nullptr )
             _moduleHost = make_unique<EditorModuleHost>();
         if ( _moduleHost->initialize( getLiveReloadManager(),
-                                      _engineLoop.getRhi(),
+                                      _engineLoop.getRHI(),
                                       _window.get(),
                                       _engineLoop.getRenderThread(),
                                       _bEnableEditor == SW_TRUE ) == false )
@@ -618,7 +618,7 @@ namespace sw
     int32 App::getInitFailureExitCode() const
     {
         // 환경 탓(백엔드가 이 빌드에 없다 · 드라이버가 기능을 안 준다)은 시험 · 스크립트가 건너뜀으로 읽는 코드로 끝낸다. 그 밖은 결함일 수 있다.
-        return RHIInitResultUtil::isUnusableHere( _engineLoop.getRhiInitResult() ) ? kRhiUnusableHereExitCode : -1;
+        return RHIInitResultUtil::isUnusableHere( _engineLoop.getRHIInitResult() ) ? kRHIUnusableHereExitCode : -1;
     }
 
     int32 App::getExitCode() const
@@ -654,7 +654,7 @@ namespace sw
 
     void App::onResize( const uint32 width, const uint32 height )
     {
-        RHI* pRHI = _engineLoop.getRhi();
+        RHI* pRHI = _engineLoop.getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 

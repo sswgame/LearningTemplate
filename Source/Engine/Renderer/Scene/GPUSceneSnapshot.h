@@ -129,7 +129,7 @@ namespace sw
          */
         RHIDescriptorIndex _arrMaterialTexSrv[shaderslot::kMaterialTextureCount] = {
             kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex, kInvalidDescriptorIndex };
-        /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRhi 합니다. 수명은 이 shared_ptr 이 쥐어, 패킷이 살아 있는 동안 삽니다. */
+        /** @brief 배치의 머티리얼 인스턴스입니다. RT 가 upload() 에서 updateRHI 합니다. 수명은 이 shared_ptr 이 쥐어, 패킷이 살아 있는 동안 삽니다. */
         shared_ptr<MaterialInstance> _materialInstance;
 
         /**

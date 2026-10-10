@@ -700,7 +700,7 @@ namespace sw::editor
         DDSImageData dds;
         SW_ASSERT_TRUE( DDSLoader::loadFromFile( ddsPath, dds ) );
         SW_EXPECT_EQUAL( static_cast<uint32>( DXGI_FORMAT_BC6H_UF16 ), dds._dxgiFormat );
-        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
+        SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
         SW_ASSERT_TRUE( dds._bytes.size() >= 16 );
         // 풀어서 값을 본다 — BC6H 블록 하나(4x4)의 첫 픽셀.
         DirectX::Image block{};
@@ -723,7 +723,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );
         DDSImageData halfDDS;
         SW_ASSERT_TRUE( DDSLoader::loadFromFile( halfDDSPath, halfDDS ) );
-        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
+        SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
         rule._format = "bc7";

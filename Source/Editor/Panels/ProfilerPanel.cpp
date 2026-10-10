@@ -424,7 +424,7 @@ namespace sw::editor
     void ProfilerPanel::drawGPUMemoryTab()
     {
         EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
         if ( pDevice == nullptr )
         {
             EditorWidgets::drawEmptyHint( "No RHI device." );

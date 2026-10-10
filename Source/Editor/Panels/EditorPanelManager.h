@@ -87,8 +87,8 @@ namespace sw::editor
         /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다(앞의 목록은 버립니다). */
         void registerDefaultPanels();
         void drawOpenPanels();
-        void preRenderOpenPanels( IRHIDevice* pRhiDevice );
-        void shutdownAllPanels( IRHIDevice* pRhiDevice );
+        void preRenderOpenPanels( IRHIDevice* pRHIDevice );
+        void shutdownAllPanels( IRHIDevice* pRHIDevice );
         /** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
         /** @brief 모든 더티 도구 문서를 저장합니다. 하나라도 실패하면 false입니다. */

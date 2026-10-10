@@ -41,12 +41,12 @@ namespace sw
 
     void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
-        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRhi`)에서 만든다.
+        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRHI`)에서 만든다.
         // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 쥔 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
         if ( _bParallel == SW_FALSE )
             return;
         // 이미 이 디바이스에 올라가 있으면 할 일이 없다. 상주 판단은 Mesh 가 세대로 한다.
-        if ( mesh == nullptr || _pDevice == nullptr || mesh->isRhiValid() )
+        if ( mesh == nullptr || _pDevice == nullptr || mesh->isRHIValid() )
             return;
         if ( mesh->getVertexCount() == 0 )
             return;
@@ -80,7 +80,7 @@ namespace sw
         {
             const shared_ptr<Mesh>& mesh = listMesh[index];
             if ( mesh != nullptr )
-                (void)mesh->initRhi( pDevice );
+                (void)mesh->initRHI( pDevice );
         };
 
         if ( _bParallel == SW_TRUE && count > 1 && _pTaskManager != nullptr )

@@ -22,7 +22,7 @@ namespace sw::editor
         class SpriteComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRhiDevice*/ ) override
+            void drawFooter( Component* /*pComponent*/, IRHIDevice* /*pRHIDevice*/ ) override
             {
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )

@@ -263,7 +263,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 |---|---|---|
 | `Mesh` | `Mesh::create*()` | 스냅샷이 `shared_ptr` 로 함께 소유 |
 | `Material` | `Material::create()`, `MaterialCache` | 스냅샷이 `shared_ptr` 로 함께 소유 |
-| `MaterialInstance` | `MaterialInstance::create()` | 스냅샷이 함께 소유, `updateRhi` 호출 |
+| `MaterialInstance` | `MaterialInstance::create()` | 스냅샷이 함께 소유, `updateRHI` 호출 |
 | `Texture2D` | `TextureCache` | 직접 보지 않고 SRV 인덱스 값만 |
 | GPU 핸들 | `IRHIResourceFactory` | 해제는 펜스 뒤로 미룸 |
 | `GPUSceneSnapshot` | `GPUSceneBuilder::exportCPUSnapshot` | `GPUScene::adoptCPUSnapshot` 이 통째로 받음 |
@@ -293,7 +293,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 
 GPU 리소스는 그리기 전에 만듭니다. 게임 스레드가 이번 프레임에 그릴 것을 알고 있으므로, 스냅샷을 넘기기 전에 `GPUUploadQueue` 로 넘겨 워커가 병렬로 만듭니다.
 워커에서 만들 수 있는지는 백엔드가 `_bThreadSafeResourceCreation` 으로 답합니다. OpenGL은 컨텍스트가 스레드에 묶여 있어 큐가 받지 않고, 렌더 스레드가 그 프레임에 만듭니다.
-큐는 미리 만드는 장치일 뿐 유일한 경로가 아닙니다. 큐가 처리하지 못한 것은 렌더 스레드가 그 자리에서 만들고, `Mesh::initRhi` 는 여러 번 불러도 결과가 같습니다. `-gv_gpuUploadQueue=0` 으로 끌 수 있습니다.
+큐는 미리 만드는 장치일 뿐 유일한 경로가 아닙니다. 큐가 처리하지 못한 것은 렌더 스레드가 그 자리에서 만들고, `Mesh::initRHI` 는 여러 번 불러도 결과가 같습니다. `-gv_gpuUploadQueue=0` 으로 끌 수 있습니다.
 
 옮겨지는 값의 집합은 `GPUSceneSnapshot` 타입이, 생성과 소유 방식은 `CreateKey` 생성자가 컴파일 시점에 지킵니다.
 C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드를 더하는 일 하나이고, 이것은 `Scripts/lint/gate/CheckRenderOwnership.py` 가 막습니다.

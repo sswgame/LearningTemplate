@@ -86,7 +86,7 @@ XML의 프로퍼티 순서가 아니라 셰이더 구조체가 기준이므로, 
 ### 머티리얼 인스턴스
 
 `MaterialInstance::create( Material* )` 로 만들고 `setScalarParameter`, `setVectorParameter`, `setTextureParameter`, `setParameter` 로 값을 덮어씁니다.
-`updateRhi` 가 부모 기본값에 덮어쓴 값을 합쳐 인스턴스 버퍼를 만들거나 갱신하고, 렌더 스레드가 이것을 부릅니다.
+`updateRHI` 가 부모 기본값에 덮어쓴 값을 합쳐 인스턴스 버퍼를 만들거나 갱신하고, 렌더 스레드가 이것을 부릅니다.
 텍스처는 텍스처 에셋 경로로 덮어씁니다(`setTextureParameter( name, "engine/textures/perlin.dds" )`). 언리얼의 `SetTextureParameterValue` 와 같습니다.
 
 인스턴스가 다르면 머티리얼 원소가 달라지지만, DirectX 12와 Vulkan은 셰이더 종류 단위로 배치를 합치므로 드로우 콜이 늘지 않습니다.
@@ -182,7 +182,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 렌더러는 `GPUSceneBuilder::refreshReloadedTextures` 로 반영합니다. DirectX 11과 OpenGL은 인덱스를 바로 재사용해서 이 종류의 결함이 숨으므로 DirectX 12나 Vulkan으로 확인합니다.
 디바이스 없이 잡은 머티리얼은 `MaterialCache::requestInitialize` 로 표시해야 GPU에 올라갑니다.
 
-**`Material::forgetRhi` 는 `releaseRhi` 와 같은 상태를 남겨야 합니다.** 빌린 텍스처 목록이 남으면 DirectX 11과 OpenGL의 t5..t8 서수가 밀립니다.
+**`Material::forgetRHI` 는 `releaseRHI` 와 같은 상태를 남겨야 합니다.** 빌린 텍스처 목록이 남으면 DirectX 11과 OpenGL의 t5..t8 서수가 밀립니다.
 디바이스 세대 번호나 "전체 GPU 해제", "전체 재초기화" 같은 함수를 다시 만들지 않습니다. 디바이스 수명은 `RHIRenderResource` 통보가 처리합니다.
 
 **화면에 마젠타 · 검정 체커가 보이면 렌더러보다 데이터 경로를 먼저 봅니다.** 못 읽은 텍스처는 `EngineDefaultAssets::_missingTexture`, 못 읽은 머티리얼은 `_missingMaterial` 을 빌립니다(Shipping 도 같습니다). 머티리얼은 요청 경로(`_listAcquiredTexturePath`)와 실제로 빌린 경로(`_listBorrowedTexturePath`)를 따로 적고, 찾기 · 놓기는 빌린 경로로 합니다. 그 텍스처 파일을 나중에 만들어도 핫 리로드는 체커를 바꾸지 않습니다 — 캐시에 있는 경로만 다시 읽으므로 머티리얼을 다시 엽니다. `MeshComponent` 는 요청 경로(`_requestedMaterialPath`)를 기억해 같은 요청을 다시 시도 · 경고하지 않습니다.

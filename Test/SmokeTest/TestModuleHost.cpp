@@ -38,7 +38,7 @@ using namespace sw;
  * @details 디바이스를 확인하지 않으면 `shutdown()` 안의 `drainRenderWorkers` 가 널 참조를 물어 프로세스가 죽는다.
  *          배포 구성에서는 초기화가 게임 인스턴스를 만들려다 같은 자리에서 죽는다.
  */
-SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
+SW_TEST_CASE( ModuleHostTest, SurvivesAnRHIThatHasNoDevice )
 {
     RHI rhi; // 디바이스 없음 — initialize() 를 부르지 않는다.
     SW_ASSERT_FALSE( rhi.hasDevice() );
@@ -49,7 +49,7 @@ SW_TEST_CASE( ModuleHostTest, SurvivesAnRhiThatHasNoDevice )
     SW_EXPECT_TRUE( host.initialize( nullptr, &rhi, nullptr, nullptr, false ) );
 
     // 디바이스가 없으면 재생성도 거절한다 — 여기서 true 를 돌려주면 호출자가 인스턴스가 있다고 믿는다.
-    SW_EXPECT_FALSE( host.reinitializeAfterRhiSwap( nullptr, nullptr ) );
+    SW_EXPECT_FALSE( host.reinitializeAfterRHISwap( nullptr, nullptr ) );
 
     host.shutdown(); // 디바이스를 확인하지 않으면 여기서 죽는다.
 }

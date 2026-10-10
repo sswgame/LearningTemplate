@@ -48,7 +48,7 @@ namespace sw
          *          복사하므로, 넘기면 프레임 슬롯 밖(또는 버퍼 밖)까지 씁니다. GL 만 `glBufferSubData`
          *          가 `GL_INVALID_VALUE` 로 막아 줍니다. 즉 **한 백엔드에서만 조용히 안전합니다.**
          *          버퍼가 작아졌다면 갱신하지 말고 **다시 만들어야 합니다**
-         *          (`MaterialInstance::updateRhi` 가 셰이더 재컴파일로 레이아웃이 커지는 경우를
+         *          (`MaterialInstance::updateRHI` 가 셰이더 재컴파일로 레이아웃이 커지는 경우를
          *          그렇게 처리합니다).
          */
         virtual void updateConstantBuffer( RHIBufferHandle buffer, const void* pData, uint32 size ) = 0;
@@ -140,7 +140,7 @@ namespace sw
          *          (flushPendingUploads), Vulkan 은 제출하고 기다립니다. DX11 · GL 은 즉시 컨텍스트에 들어가 있습니다.
          *          어느 쪽이든 뒤이은 드로우보다 먼저 실행됩니다. 매 프레임 갱신 용도가 아닙니다.
          *          createTexture2D 가 _bIsShaderResource 로 만든 컬러 포맷(비압축 · BC)만 받고, 깊이 · Unknown 은
-         *          받지 않습니다(getRhiFormatBlockInfo 참고). 밉 크기 · 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정합니다.
+         *          받지 않습니다(getRHIFormatBlockInfo 참고). 밉 크기 · 오프셋 규칙은 resolveTextureUploadMips 한 곳이 정합니다.
          * @return 포맷이 업로드 불가이거나 데이터가 모자라면 false.
          */
         virtual bool uploadTexture2D( RHITextureHandle texture, const RHITextureUploadDesc& desc ) = 0;

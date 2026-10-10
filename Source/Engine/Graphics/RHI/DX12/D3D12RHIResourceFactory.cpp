@@ -523,7 +523,7 @@ namespace sw
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
             return false;
-        if ( computeRhiTextureMipLayout( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
+        if ( computeRHITextureMipLayout( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
             return false;
 
         const UINT                         subresource = mip + arraySlice * resourceDesc.MipLevels;
@@ -670,7 +670,7 @@ namespace sw
 
     RHITextureHandle D3D12RHIResourceFactory::createTexture2D( const RHITextureDesc& desc )
     {
-        if ( isRhiTextureShapeValid( desc ) == false )
+        if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                           desc._arraySize, desc._width, desc._height );

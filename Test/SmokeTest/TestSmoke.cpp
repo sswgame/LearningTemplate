@@ -217,9 +217,9 @@ namespace sw
  */
 SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
 {
-    const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* kRHIModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
-    for ( const utf8* modName : kRhiModules )
+    for ( const utf8* modName : kRHIModules )
     {
         const sw::string path = sw::modulePath( modName );
         if ( sw::FileUtil::exists( path ) == false )
@@ -1405,11 +1405,11 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
  */
 SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 {
-    const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* const kRHIBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {
-        for ( const utf8* backendName : kRhiBackends )
+        for ( const utf8* backendName : kRHIBackends )
         {
             const sw::string modPath = sw::modulePath( backendName );
             if ( sw::FileUtil::exists( modPath ) == false )

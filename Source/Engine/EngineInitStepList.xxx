@@ -39,7 +39,7 @@ SW_ENGINE_STARTUP_STEP( RHI,                 RenderCPU,  Client, { Config, Headl
 SW_ENGINE_STARTUP_STEP( FrameRenderer,       RenderCPU,  Client, { RHI, Task } )                
 SW_ENGINE_STARTUP_STEP( RenderThread,        RenderCPU,  Client, { FrameRenderer } )            
 SW_ENGINE_STARTUP_STEP( LiveShader,          Shader,     Client, { FrameRenderer, RenderThread } ) // 재컴파일이 렌더 스레드를 세우고 렌더러에 알린다(Debug)
-SW_ENGINE_STARTUP_STEP( SceneRhi,            RenderCPU,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
+SW_ENGINE_STARTUP_STEP( SceneRHI,            RenderCPU,  Client, { RHI, Scene } )                // 씬에 디바이스를 건다 — 종료는 이것을 떼는 것이 처음
 SW_ENGINE_STARTUP_STEP( Telemetry,           EngineMisc, Client, { UserSettings } )              // 동의는 사용자 설정 — 종료가 맨 처음이라 마지막 장면 요약 · 묶음을 쓴다 — 서버 크래시 묶기 · 텔레메트리는 후속(동의가 플레이어 설정이다)
 SW_ENGINE_STARTUP_STEP( Ui,                  EngineMisc, Client, { Fonts, Input, UserSettings } ) // 런타임 UI — 입력(행동 · 포인터)을 읽고 글꼴로 잰다, UI 배율 · 글자 크기는 사용자 설정
 

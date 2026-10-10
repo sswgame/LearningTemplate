@@ -97,7 +97,7 @@ namespace sw
             return kRHIMemoryUnknownBytes;
 
         // 깊이 첨부는 서술의 포맷과 상관없이 D24S8 로 만든다(블록 표는 깊이를 "업로드 대상 아님" 으로 0 바이트라 한다).
-        RHIFormatBlockInfo block = getRhiFormatBlockInfo( desc._format );
+        RHIFormatBlockInfo block = getRHIFormatBlockInfo( desc._format );
         if ( desc._bIsDepthStencil != SW_FALSE )
             block = RHIFormatBlockInfo{ 1, 1, static_cast<uint32>( RHIMemoryLedgerInternal::kDepthStencilTexelBytes ) };
         if ( block._blockBytes == 0 )

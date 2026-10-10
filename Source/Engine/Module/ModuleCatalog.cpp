@@ -15,7 +15,7 @@ namespace sw
         struct ModuleCatalogInternal
         {
             /** @brief 종류 낱말 표입니다(`ModuleKind` 값 순서 — CMake `ModuleManifest.cmake` 와 같은 낱말). */
-            static constexpr const utf8* kArrKindName[] = { "GameFramework", "Kit", "Game", "Editor", "Rhi" };
+            static constexpr const utf8* kArrKindName[] = { "GameFramework", "Kit", "Game", "Editor", "RHI" };
 
             /** @brief 매니페스트가 가질 수 있는 키입니다. 모르는 키는 오류다(오타를 기본값으로 삼키지 않는다). */
             static constexpr const utf8* kArrManifestKey[]   = { "_name", "_version", "_kind",

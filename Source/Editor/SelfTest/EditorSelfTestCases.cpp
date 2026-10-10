@@ -742,7 +742,7 @@ namespace sw::editor
                 constexpr uint32      kMaxStepCount    = 30;
 
                 EditorContext* pContext = EditorContext::get();
-                if ( context.expect( pContext != nullptr && pContext->getRhiDevice() != nullptr, "no editor context or RHI device" ) == false )
+                if ( context.expect( pContext != nullptr && pContext->getRHIDevice() != nullptr, "no editor context or RHI device" ) == false )
                     return EditorSelfTestStep::Done;
 
                 const uint32 stepIndex = context.getStepIndex();
@@ -760,7 +760,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 (void)context.expect( pTable != nullptr, "the profiler GPU Memory tab never drew its ledger table" );
-                const RHIMemoryLedger& ledger = pContext->getRhiDevice()->getMemoryLedger();
+                const RHIMemoryLedger& ledger = pContext->getRHIDevice()->getMemoryLedger();
                 (void)context.expect( ledger.getTrackedBytes() > 0, "the GPU memory ledger is empty in a running editor" );
                 (void)pContext->getPanelManager().setPanelOpen( kProfilerPanelId, false );
                 return EditorSelfTestStep::Done;
@@ -851,9 +851,9 @@ namespace sw::editor
                     HWND           hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
                     RECT           client{};
                     EditorContext* pContext = EditorContext::get();
-                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getRhiDevice() != nullptr )
+                    if ( hWnd != nullptr && GetClientRect( hWnd, &client ) && pContext != nullptr && pContext->getRHIDevice() != nullptr )
                     {
-                        const IRHIDevice* pDevice    = pContext->getRhiDevice();
+                        const IRHIDevice* pDevice    = pContext->getRHIDevice();
                         const bool        bGrew      = ( probe._suggestedRect.right - probe._suggestedRect.left ) > ( probe._originalRect.right - probe._originalRect.left );
                         const bool        bMatchesBb = pDevice->getBackBufferWidth() == static_cast<uint32>( client.right ) &&
                                                 pDevice->getBackBufferHeight() == static_cast<uint32>( client.bottom );

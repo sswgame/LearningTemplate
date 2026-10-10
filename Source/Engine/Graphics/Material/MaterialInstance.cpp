@@ -91,14 +91,14 @@ namespace sw
         // 소멸은 디바이스가 죽은 뒤에도 일어난다(씬 teardown 순서). 든 디바이스 포인터는 생 포인터라
         // 살아 있는지 스스로 알 수 없으므로 세대를 함께 본다. Mesh::releaseVertexBuffer 와 같은 함정이다.
         if ( IRHIDevice* pLiveDevice = _constant.getLiveDevice() )
-            releaseRhi( pLiveDevice );
-        // 텍스처를 빌린 디바이스가 죽었으면 forgetRhi 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
+            releaseRHI( pLiveDevice );
+        // 텍스처를 빌린 디바이스가 죽었으면 forgetRHI 가 이미 비웠다 — 남아 있으면 살아 있는 디바이스다.
         releaseTextureOverrides( _pTextureDevice );
         _constant.forget();
         _descriptorIndex = kInvalidDescriptorIndex;
     }
 
-    void MaterialInstance::forgetRhi( IRHIDevice* pDevice )
+    void MaterialInstance::forgetRHI( IRHIDevice* pDevice )
     {
         std::scoped_lock<mutex> lock{ _overrideMutex };
         // 텍스처는 디바이스와 함께 갔다(TextureCache 의 Texture2D 도 같은 통보를 받는다). 참조만 놓는다.
@@ -113,22 +113,22 @@ namespace sw
         _bGPUDirty        = SW_TRUE;
     }
 
-    void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
+    void MaterialInstance::releaseRHI( IRHIDevice* pRHI )
     {
         std::scoped_lock<mutex> lock{ _overrideMutex };
-        if ( pRhi == nullptr || _pTextureDevice == pRhi )
-            releaseTextureOverrides( pRhi );
+        if ( pRHI == nullptr || _pTextureDevice == pRHI )
+            releaseTextureOverrides( pRHI );
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
-        if ( pRhi != nullptr && _constant._buffer != 0 && _constant._pDevice != pRhi )
+        if ( pRHI != nullptr && _constant._buffer != 0 && _constant._pDevice != pRHI )
             return;
 
-        if ( pRhi != nullptr )
+        if ( pRHI != nullptr )
         {
             // 마지막 소유를 게임 스레드가 놓을 수 있다(GPUScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
+                pRHI->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
             if ( _constant._buffer != 0 )
-                pRhi->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
+                pRHI->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
         }
         _constant.forget();
         _descriptorIndex  = kInvalidDescriptorIndex;
@@ -196,9 +196,9 @@ namespace sw
         return doc.saveFile( absPath );
     }
 
-    bool MaterialInstance::updateRhi( IRHIDevice* pRhi )
+    bool MaterialInstance::updateRHI( IRHIDevice* pRHI )
     {
-        if ( pRhi == nullptr || _pParentMaterial == nullptr )
+        if ( pRHI == nullptr || _pParentMaterial == nullptr )
             return false;
         std::scoped_lock<mutex> lock{ _overrideMutex };
 
@@ -213,12 +213,12 @@ namespace sw
         }
 
         // 부모 레이아웃을 **먼저** 셰이더에 맞춘다. 복사한 뒤에 맞추면 첫 프레임의 인스턴스가 XML 순서 바이트를 들고 있다.
-        (void)_pParentMaterial->ensureShaderLayout( pRhi );
+        (void)_pParentMaterial->ensureShaderLayout( pRHI );
         // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 인스턴스가 더러워질 때만 다시 복사하면 오버라이드가
         // 없는 파라미터에서 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
         if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
             _bGPUDirty = SW_TRUE;
-        if ( syncTextureOverrides( pRhi ) )
+        if ( syncTextureOverrides( pRHI ) )
             _bGPUDirty = SW_TRUE;
 
         if ( _bGPUDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
@@ -235,7 +235,7 @@ namespace sw
         }
 
         // 덮어쓴 텍스처: 네이티브 bindless 는 지금 SRV 인덱스를, 슬롯 바인딩 백엔드(DX11 · GL)는 슬롯 서수를 넣는다(부모와 같은 규칙).
-        const bool bNativeBindless = pRhi->supportsNativeBindlessSampling();
+        const bool bNativeBindless = pRHI->supportsNativeBindlessSampling();
         for ( const TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture == nullptr )
@@ -254,8 +254,8 @@ namespace sw
         if ( _constant._buffer != 0 && size > _constantByteSize )
         {
             if ( _descriptorIndex != kInvalidDescriptorIndex )
-                pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
-            pRhi->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
+                pRHI->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
+            pRHI->releaseHandle( RHIHandleKind::Buffer, _constant._buffer );
             _constant.forget();
             _descriptorIndex  = kInvalidDescriptorIndex;
             _constantByteSize = 0;
@@ -263,44 +263,44 @@ namespace sw
 
         if ( _constant._buffer == 0 )
         {
-            const RHIBufferHandle constantBuffer = pRhi->getResourceFactory()->createConstantBuffer( size );
+            const RHIBufferHandle constantBuffer = pRHI->getResourceFactory()->createConstantBuffer( size );
             if ( constantBuffer == 0 )
                 return false;
-            _constant.adopt( pRhi, constantBuffer );
-            _descriptorIndex  = pRhi->getResourceFactory()->registerBindlessResource( constantBuffer );
+            _constant.adopt( pRHI, constantBuffer );
+            _descriptorIndex  = pRHI->getResourceFactory()->registerBindlessResource( constantBuffer );
             _constantByteSize = size;
         }
-        pRhi->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
+        pRHI->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
         _bGPUDirty = SW_FALSE;
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
-    bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRhi )
+    bool MaterialInstance::syncTextureOverrides( IRHIDevice* pRHI )
     {
         if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
             return false;
         TextureCache& textures = engine::getAssetManager().getTextureManager();
         bool          bChanged{ false };
-        // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRhi 가 먼저 와서 비웠다).
-        if ( _pTextureDevice != nullptr && _pTextureDevice != pRhi )
+        // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
+        if ( _pTextureDevice != nullptr && _pTextureDevice != pRHI )
         {
             releaseTextureOverrides( _pTextureDevice );
             bChanged = true;
         }
-        _pTextureDevice = pRhi;
+        _pTextureDevice = pRHI;
 
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._acquiredPath == texture._assetPath )
                 continue;
             if ( texture._pTexture != nullptr )
-                textures.release( texture._acquiredPath, pRhi );
+                textures.release( texture._acquiredPath, pRHI );
             texture._pTexture     = nullptr;
             texture._acquiredPath = texture._assetPath;
             bChanged              = true;
             if ( texture._assetPath.empty() )
                 continue;
-            texture._pTexture = textures.acquire( texture._assetPath, pRhi );
+            texture._pTexture = textures.acquire( texture._assetPath, pRHI );
             if ( texture._pTexture == nullptr )
                 SW_LOG_WARNING( "MaterialInstance '%#': texture '%#' for '%#' could not be loaded — the parent's texture stays.", _desc._name.c_str(),
                                 texture._assetPath.c_str(), texture._name.c_str() );
@@ -321,13 +321,13 @@ namespace sw
         return bChanged;
     }
 
-    void MaterialInstance::releaseTextureOverrides( IRHIDevice* pRhi )
+    void MaterialInstance::releaseTextureOverrides( IRHIDevice* pRHI )
     {
         const bool bServicesBound = engine::areEngineServicesBound();
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture != nullptr && bServicesBound )
-                engine::getAssetManager().getTextureManager().release( texture._acquiredPath, pRhi );
+                engine::getAssetManager().getTextureManager().release( texture._acquiredPath, pRHI );
             texture._pTexture = nullptr;
             texture._acquiredPath.clear();
         }
@@ -449,7 +449,7 @@ namespace sw
 
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
-        // 게임 스레드는 원하는 경로만 적는다. 빌리고 돌려주는 것은 렌더 스레드의 updateRhi 다(syncTextureOverrides).
+        // 게임 스레드는 원하는 경로만 적는다. 빌리고 돌려주는 것은 렌더 스레드의 updateRHI 다(syncTextureOverrides).
         std::scoped_lock<mutex> lock{ _overrideMutex };
         _bGPUDirty = SW_TRUE;
         for ( TextureOverride& texture : _listTextureOverride )

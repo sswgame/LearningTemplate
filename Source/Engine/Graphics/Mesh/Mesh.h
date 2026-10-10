@@ -63,7 +63,7 @@ namespace sw
 {
     /**
      * @class Mesh
-     * @brief 삼각형 리스트 메시입니다(정점 = 위치 · 노멀 · UV · 색). initRhi() 로 올린 GPU 정점 버퍼를 소유합니다.
+     * @brief 삼각형 리스트 메시입니다(정점 = 위치 · 노멀 · UV · 색). initRHI() 로 올린 GPU 정점 버퍼를 소유합니다.
      */
     class SW_API Mesh final : public RHIRenderResource
     {
@@ -84,15 +84,15 @@ namespace sw
         explicit Mesh( CreateKey ) noexcept {}
         /**
          * @brief 정점 버퍼를 놓습니다. 디바이스가 살아 있으면 돌려주고, 이미 없으면 핸들만 잊습니다.
-         * @note 디바이스가 먼저 죽었다면 통보(`releaseRhi` · `forgetRhi`)가 먼저 와서 핸들을 비워 두므로,
+         * @note 디바이스가 먼저 죽었다면 통보(`releaseRHI` · `forgetRHI`)가 먼저 와서 핸들을 비워 두므로,
          *       소멸 순서와 상관없이 죽은 디바이스로 destroy 하지 않습니다.
          */
         ~Mesh() override;
 
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 정점 버퍼를 돌려줍니다. */
-        void releaseRhi( IRHIDevice* pDevice ) override;
+        void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetRhi( IRHIDevice* pDevice ) override;
+        void forgetRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 복사를 금지합니다. */
         Mesh( const Mesh& ) = delete;
@@ -187,7 +187,7 @@ namespace sw
         uint64 getContentId() const { return _contentId; }
 
         /** @brief 디바이스에 업로드(또는 재업로드)합니다. 같은 디바이스면 멱등입니다. */
-        bool initRhi( IRHIDevice* pDevice ) override;
+        bool initRHI( IRHIDevice* pDevice ) override;
 
         /** @brief GPU 정점 버퍼 핸들을 반환합니다. */
         RHIBufferHandle getVertexBuffer() const { return _vertex._buffer; }
@@ -196,7 +196,7 @@ namespace sw
          * @details 옛 디바이스가 죽으면 통보(`RHIRenderResource`)가 먼저 와서 핸들을 비웁니다. 그래서 값이 남아
          *          있다는 것만으로 "살아 있는 디바이스의 것" 임이 보장됩니다(업로드 큐가 백엔드 교체 뒤 다시 올릴 것을 이것으로 고릅니다).
          */
-        bool isRhiValid() const { return _vertex.isResident(); }
+        bool isRHIValid() const { return _vertex.isResident(); }
 
     private:
         /** @brief 정점 버퍼를 실제로 놓습니다. 살아 있는 디바이스면 돌려주고, 아니면 잊습니다. */

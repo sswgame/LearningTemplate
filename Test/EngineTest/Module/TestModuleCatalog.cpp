@@ -147,7 +147,7 @@ SW_TEST_CASE( ModuleCatalogTest, DisabledAndUnavailableModulesAreSkipped )
     project._listModuleOverride.push_back( sw::ModuleOverride{ "GF_Voxel", false } );
     project._listModuleOverride.push_back( sw::ModuleOverride{ "GF_Optional", true } );
 
-    sw::ModuleManifest windowsOnly  = makeManifest( "RHI_DX12", sw::ModuleKind::Rhi, {} );
+    sw::ModuleManifest windowsOnly  = makeManifest( "RHI_DX12", sw::ModuleKind::RHI, {} );
     windowsOnly._platformMask       = static_cast<uint8>( sw::ModulePlatform::Windows );
     sw::ModuleManifest devOnly      = makeManifest( "EditorModule", sw::ModuleKind::Editor, {} );
     devOnly._configurationMask      = static_cast<uint8>( sw::ModuleConfiguration::Dev );

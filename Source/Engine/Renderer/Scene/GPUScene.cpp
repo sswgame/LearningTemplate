@@ -28,7 +28,7 @@ namespace sw
                 {
                     if ( batch._materialInstance == nullptr )
                         continue;
-                    if ( batch._materialInstance->updateRhi( pDevice ) == false )
+                    if ( batch._materialInstance->updateRHI( pDevice ) == false )
                         continue;
                     batch._materialCb = batch._materialInstance->getDescriptorIndex();
                     // 슬롯 바인딩 백엔드(DX11 · GL)는 배치마다 텍스처 슬롯을 건다. 인스턴스가 덮어쓴 텍스처를 얹는다(렌더 스레드가 빌린 것이라 여기서).
@@ -40,7 +40,7 @@ namespace sw
              * @brief 머티리얼 원소 표의 인스턴스를 올립니다(합친 배치의 인스턴스).
              * @details 네이티브 bindless 에서는 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 원소 표(`_listEntry`)에만 있다.
              *          주의: 여기를 돌지 않으면 그 인스턴스들의 바이트가 만들어지지 않아 원소 업로드가 부모 바이트로 폴백하고,
-             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라진다**. updateRhi 는 바뀐 것이 없으면 곧바로 돌아온다.
+             *          **DX12 · Vulkan 에서 불투명 인스턴스의 오버라이드가 통째로 사라진다**. updateRHI 는 바뀐 것이 없으면 곧바로 돌아온다.
              */
             static void applyElementInstancesVal( IRHIDevice* pDevice, vector<GPUMaterialGroup>& listGroup )
             {
@@ -49,7 +49,7 @@ namespace sw
                     for ( GPUMaterialElement& element : group._listEntry )
                     {
                         if ( element._instance != nullptr )
-                            (void)element._instance->updateRhi( pDevice );
+                            (void)element._instance->updateRHI( pDevice );
                     }
                 }
             }
@@ -58,7 +58,7 @@ namespace sw
             {
                 for ( GPUMeshBatch& batch : listBatch )
                 {
-                    if ( batch._mesh != nullptr && batch._mesh->initRhi( pDevice ) )
+                    if ( batch._mesh != nullptr && batch._mesh->initRHI( pDevice ) )
                         batch._vertexBuffer = batch._mesh->getVertexBuffer();
                 }
             }
@@ -127,7 +127,7 @@ namespace sw
         if ( pDevice == nullptr || _snapshot.getInstances().empty() || _snapshot._listAllBatch.empty() )
             return false;
 
-        // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRhi), 메시를 GPU 에 올린다(initRhi).
+        // RT 에서만 하는 두 가지: 머티리얼 인스턴스의 오버라이드를 CB 에 반영하고(updateRHI), 메시를 GPU 에 올린다(initRHI).
         {
             SW_PROFILE_SCOPE( "RT.GPUScene.applyInstanceCbs" );
             GPUSceneInternal::applyInstanceCbsVal( pDevice, _snapshot._listAllBatch );
@@ -495,7 +495,7 @@ namespace sw
                 if ( pMaterial == nullptr )
                     continue;
                 // 레이아웃의 기준은 셰이더다. 이 백엔드의 리플렉션으로 오프셋 · stride 를 맞춘 뒤 바이트를 읽는다(맞춰져 있으면 그냥 지나간다 —
-                // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRhi 가 이미 맞췄다).
+                // 인스턴스가 있는 머티리얼은 위 applyInstanceCbs 의 updateRHI 가 이미 맞췄다).
                 pMaterial->ensureShaderLayout( pDevice );
                 uint32 entryStride = pMaterial->getElementStride();
                 if ( entryStride == 0 )

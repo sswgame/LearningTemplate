@@ -31,7 +31,7 @@ namespace sw
              */
             static bool unpackRgba8( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, vector<uint8>& outRgbaBytes )
             {
-                const uint32 bytesPerPixel = getRhiFormatBytesPerPixel( format );
+                const uint32 bytesPerPixel = getRHIFormatBytesPerPixel( format );
                 if ( bytesPerPixel < 3 )
                     return false;
                 const bool bHalf = ( format == RHIFormat::R16G16B16A16_FLOAT );

@@ -82,7 +82,7 @@ namespace sw::editor
     {
     }
 
-    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         _nodeGraph.shutdown();
     }

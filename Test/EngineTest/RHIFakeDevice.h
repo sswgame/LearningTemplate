@@ -126,7 +126,7 @@ namespace test
         uint32                                     _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
         uint32                                     _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
         sw::vector<FakeRHICommandList*>            _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
-        sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRhi` 도 여기 적는다 */
+        sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRHI` 도 여기 적는다 */
         void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
         sw::vector<sw::RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */

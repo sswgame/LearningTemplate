@@ -69,7 +69,7 @@ namespace sw
         void tick( float32 deltaTime );
 
         /** @brief 비동기 로드로 만든 씬 초기화에 쓸 디바이스를 설정합니다. */
-        void setRhiDevice( IRHIDevice* pRhiDevice ) { _pRHIDevice = pRhiDevice; }
+        void setRHIDevice( IRHIDevice* pRHIDevice ) { _pRHIDevice = pRHIDevice; }
         /** @brief 현재 활성 씬을 반환합니다. */
         Scene* getActiveScene() const { return _pActiveScene; }
         /**

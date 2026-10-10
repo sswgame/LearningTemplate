@@ -208,7 +208,7 @@ namespace sw
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT · 씬 틱 여부). */
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
         LiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
-        RHI*               getRhi() const { return _pRHI; }
+        RHI*               getRHI() const { return _pRHI; }
         IWindow*           getWindow() const { return _pWindow; }
 
         // 호스트 모듈(App 의 에디터)이 끼어드는 자리 — 이 클래스만으로는(전용 서버) 모두 아무 일도 하지 않습니다.

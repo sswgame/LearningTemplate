@@ -338,7 +338,7 @@ SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
 /**
  * @brief [SceneTest] RHI 없이 update 안전
  */
-SW_TEST_CASE( SceneTest, UpdateWithoutRhiIsSafe )
+SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
 {
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );

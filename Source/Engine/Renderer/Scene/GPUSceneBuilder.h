@@ -94,7 +94,7 @@ namespace sw
         /**
          * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다(게임 스레드).
          * @details 렌더 스레드가 처음 그릴 때 만들 것을 **그리기 전에** 만들어 두기 위한 것입니다. 큐가 만들어
-         *          두면 RT 의 `Mesh::initRhi` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가
+         *          두면 RT 의 `Mesh::initRHI` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가
          *          그 자리에서 만듭니다. 앞당기는 장치이지 유일한 통로가 아닙니다.
          */
         void requestGPUUploads( GPUUploadQueue& queue ) const;

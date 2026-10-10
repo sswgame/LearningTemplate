@@ -113,21 +113,21 @@ namespace sw::editor
         }
     }
 
-    void EditorPanelManager::preRenderOpenPanels( IRHIDevice* pRhiDevice )
+    void EditorPanelManager::preRenderOpenPanels( IRHIDevice* pRHIDevice )
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance != nullptr && entry._pInstance->isOpen() )
-                entry._pInstance->preRender( pRhiDevice );
+                entry._pInstance->preRender( pRHIDevice );
         }
     }
 
-    void EditorPanelManager::shutdownAllPanels( IRHIDevice* pRhiDevice )
+    void EditorPanelManager::shutdownAllPanels( IRHIDevice* pRHIDevice )
     {
         for ( const EditorPanelEntry& entry : _listPanel )
         {
             if ( entry._pInstance != nullptr )
-                entry._pInstance->shutdown( pRhiDevice );
+                entry._pInstance->shutdown( pRHIDevice );
         }
     }
 

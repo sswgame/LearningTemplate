@@ -23,7 +23,7 @@ namespace sw::editor
         class SceneComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawSection( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+            void drawSection( Component* pComponent, IRHIDevice* /*pRHIDevice*/ ) override
             {
                 SceneComponent* pSceneComp = static_cast<SceneComponent*>( pComponent );
                 if ( pSceneComp == nullptr )

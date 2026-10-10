@@ -32,7 +32,7 @@ namespace sw::editor
         virtual ~ImGuiVulkanRendererBackend() override = default;
 
         /** @brief Vulkan ImGui 렌더러를 초기화합니다. */
-        bool initialize( IRHIDevice* pRhiDevice ) override;
+        bool initialize( IRHIDevice* pRHIDevice ) override;
         /** @brief Vulkan ImGui 렌더러를 종료합니다. */
         void shutdown() override;
 
@@ -46,7 +46,7 @@ namespace sw::editor
         /** @brief RHI 디바이스의 그래픽스 큐 잠금을 쥡니다. */
         std::unique_lock<mutex> lockSubmissionQueue() override;
         /** @brief ImGui draw data를 Vulkan으로 그립니다. */
-        void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
+        void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) override;
 
         /** @brief RHI 텍스처를 ImGui용으로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;

@@ -52,7 +52,7 @@ namespace sw
     GameInstanceBase::GameInstanceBase()
         : _bootstrap{}
         , _pWindow{ nullptr }
-        , _pRhiDevice{ nullptr }
+        , _pRHIDevice{ nullptr }
         , _listPendingSceneLoad{}
         , _listStatefulType{}
         , _pComponentStateStore{ make_unique<ComponentStateStore>() }
@@ -77,10 +77,10 @@ namespace sw
         return ( pActiveScene != nullptr ) ? pActiveScene->getObjectManager() : nullptr;
     }
 
-    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
+    bool GameInstanceBase::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
         _pWindow        = pWindow;
-        _pRhiDevice     = pRhiDevice;
+        _pRHIDevice     = pRHIDevice;
         _bResumingWorld = findActiveObjectManager() != nullptr ? SW_TRUE : SW_FALSE;
         configureBootstrap( _bootstrap );
         const GameConfig& gameCfg = GameConfig::getActive();
@@ -116,7 +116,7 @@ namespace sw
         _pLoadingScreen->bindUiSystem( nullptr );
         _screenTransition.reset();
         _pWindow    = nullptr;
-        _pRhiDevice = nullptr;
+        _pRHIDevice = nullptr;
     }
 
     void GameInstanceBase::applyBootstrap()

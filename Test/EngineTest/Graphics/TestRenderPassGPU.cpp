@@ -200,7 +200,7 @@ namespace
 
     /**
      * @brief 파이프라인끼리 그림을 맞출 때의 공통 입력입니다 — 기본 카메라, 주광, 색을 준 기본 머티리얼의 큐브 하나와 그림자를 받는 바닥.
-     * @details 메시는 디바이스를 내리기 전에 `releaseRhi` 해야 합니다(static 메시 캐시가 죽은 디바이스를 붙잡지 않게).
+     * @details 메시는 디바이스를 내리기 전에 `releaseRHI` 해야 합니다(static 메시 캐시가 죽은 디바이스를 붙잡지 않게).
      */
     struct LitCubeScene
     {
@@ -439,7 +439,7 @@ namespace
             outMeanRedMinusBlue           = 0;
             outDrawnCount                 = 0;
             const sw::Texture2D* pTexture = sw::engine::getAssetManager().getTextureManager().find( pPath );
-            if ( pTexture == nullptr || pTexture->isRhiValid() == false )
+            if ( pTexture == nullptr || pTexture->isRHIValid() == false )
                 return false;
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
@@ -913,7 +913,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
  * @brief [RenderPassGPUTest] 패킷에 실린 머티리얼·인스턴스는 GT 가 소유를 놓아도 RT 가 그 패킷을 다 쓸 때까지 산다.
  * @details 렌더 스레드는 씬을 못 보고 스냅샷만 받는다. 스냅샷이 생포인터만 들고 있으면 GT 가 오브젝트를
  *          지우거나 인스턴스를 바꾼 직후 ≤ 패킷 링 깊이 프레임 동안 RT 가 해제된 메모리를 읽는다
- *          (`applyInstanceCbsVal` 의 updateRhi, `uploadMaterialGroups` 의 getBuffer). 여기서는 패킷을
+ *          (`applyInstanceCbsVal` 의 updateRHI, `uploadMaterialGroups` 의 getBuffer). 여기서는 패킷을
  *          내보낸 **뒤에** GT 쪽 소유를 전부 놓고 그 패킷을 실행한다 — ASAN 빌드에서 use-after-free 로
  *          잡히는 순서다. 스냅샷이 소유를 함께 실어야만 통과한다.
  */
@@ -1119,7 +1119,7 @@ SW_TEST_CASE( RenderPassGPUTest, FrameRendererDeferredPipelineParallelLevels )
         }
 
         if ( cube != nullptr )
-            cube->releaseRhi( device.get() );
+            cube->releaseRHI( device.get() );
         renderer.shutdown();
         taskManager.shutdown();
     }
@@ -1302,7 +1302,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
                 pSprite->resolveRenderAssets();
                 // 엔진 루프가 패킷을 내기 전에 하는 일 — 컴포넌트가 디바이스 없이 잡은 머티리얼을 올린다.
                 sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
-                bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRhiValid();
+                bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRHIValid();
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 스프라이트 머티리얼이 올라가지 않았다" ).c_str() );
             }
             if ( bOk )
@@ -2346,8 +2346,8 @@ SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
 
     // ---- 앱의 교체 경로와 같은 순서로 내린다 ----
     renderer.shutdown();
-    material->releaseRhi( device.get() );
-    cube->releaseRhi( device.get() );
+    material->releaseRHI( device.get() );
+    cube->releaseRHI( device.get() );
     gtGPUScene.clear();
     device.shutdownDevice();
 
@@ -2361,7 +2361,7 @@ SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
 
     // 대조군: 새 렌더러 객체라면 그려지는가.
     renderer.shutdown();
-    cube->releaseRhi( device.get() );
+    cube->releaseRHI( device.get() );
     gtGPUScene.clear();
     sw::FrameRenderer freshRenderer;
     SW_ASSERT_TRUE( freshRenderer.initialize( device.get() ) );
@@ -2371,7 +2371,7 @@ SW_TEST_CASE( RenderPassGPUTest, RendererSurvivesDeviceRecreate )
 
 /**
  * @brief 업로드 큐가 그리기 **전에** 정점 버퍼를 만들어 두는지 — 그리고 두 번 만들지 않는지.
- * @details 렌더 스레드는 그리기만 해야 한다. 큐가 먼저 만들어 두면 RT 의 `Mesh::initRhi` 는 핸들을 읽는 일이 된다.
+ * @details 렌더 스레드는 그리기만 해야 한다. 큐가 먼저 만들어 두면 RT 의 `Mesh::initRHI` 는 핸들을 읽는 일이 된다.
  *          여기서는 (1) flush 뒤에 상주하는지, (2) 같은 메시를 여러 배치가 써도 한 번만 만드는지(중복 요청이
  *          워커 둘을 돌려 버퍼 하나를 새게 하면 안 된다), (3) 이미 상주하면 요청 자체가 쌓이지 않는지를 본다.
  */
@@ -2390,7 +2390,7 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueMakesMeshesResidentBeforeDraw )
     {
         arrMesh[meshIndex] = sw::MeshUtil::createUnitCube();
         SW_ASSERT_NOT_NULL( arrMesh[meshIndex].get() );
-        SW_EXPECT_FALSE( arrMesh[meshIndex]->isRhiValid() );
+        SW_EXPECT_FALSE( arrMesh[meshIndex]->isRHIValid() );
         queue.requestMesh( arrMesh[meshIndex] );
         // 같은 메시를 한 번 더 요청해도 대기열은 늘지 않는다 — 워커 둘이 같은 메시를 만들면 버퍼 하나가 샌다.
         queue.requestMesh( arrMesh[meshIndex] );
@@ -2402,7 +2402,7 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
     {
-        SW_EXPECT_TRUE_MSG( arrMesh[meshIndex]->isRhiValid(),
+        SW_EXPECT_TRUE_MSG( arrMesh[meshIndex]->isRHIValid(),
                             ( "flush 뒤에도 상주하지 않는다 (index " + sw::to_string( meshIndex ) + ")" ).c_str() );
         SW_EXPECT_TRUE( arrMesh[meshIndex]->getVertexBuffer() != 0 );
     }
@@ -2417,7 +2417,7 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueMakesMeshesResidentBeforeDraw )
 
     for ( uint32 meshIndex = 0; meshIndex < kMeshCount; ++meshIndex )
     {
-        arrMesh[meshIndex]->releaseRhi( device.get() );
+        arrMesh[meshIndex]->releaseRHI( device.get() );
     }
 }
 
@@ -2441,11 +2441,11 @@ SW_TEST_CASE( RenderPassGPUTest, UploadQueueLeavesMeshesToTheRenderThreadWithout
     queue.requestMesh( mesh );
     SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
     SW_EXPECT_EQUAL( 0u, queue.flush() );
-    SW_EXPECT_FALSE( mesh->isRhiValid() );
+    SW_EXPECT_FALSE( mesh->isRHIValid() );
 
     // 렌더 스레드 자리(여기서는 컨텍스트를 쥔 시험 스레드)에서 만든다 — GPUScene 업로드가 하는 일이다.
-    SW_EXPECT_TRUE( mesh->initRhi( device.get() ) );
-    mesh->releaseRhi( device.get() );
+    SW_EXPECT_TRUE( mesh->initRHI( device.get() ) );
+    mesh->releaseRHI( device.get() );
 }
 
 /**
@@ -2461,7 +2461,7 @@ SW_TEST_CASE( RenderPassGPUTest, MeshReleaseWaitsForTheRenderThreadFrame )
         const sw::string         label = sw::string( device->getBackendName() );
         sw::shared_ptr<sw::Mesh> mesh  = sw::MeshUtil::createUnitCube();
         SW_ASSERT_NOT_NULL( mesh.get() );
-        SW_EXPECT_TRUE_MSG( mesh->initRhi( device.get() ), label.c_str() );
+        SW_EXPECT_TRUE_MSG( mesh->initRHI( device.get() ), label.c_str() );
 
         // 렌더 스레드가 프레임을 들고 있다. 이 시험 스레드는 렌더 스레드가 아니다(묶인 렌더 스레드가 없다).
         const size_t deferredBefore = device->getDeferredHandleCount();
@@ -2489,27 +2489,27 @@ SW_TEST_CASE( RenderPassGPUTest, RegistryRestoresResourcesOnNewDevice )
 
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
-    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
-    SW_EXPECT_TRUE( cube->isRhiValid() );
+    SW_EXPECT_TRUE( cube->initRHI( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRHIValid() );
 
     device.shutdownDevice();
-    SW_EXPECT_TRUE( cube->isRhiValid() == false );
+    SW_EXPECT_TRUE( cube->isRHIValid() == false );
 
     SW_ASSERT_TRUE( device.recreateDevice() );
 
     // 여기가 요점이다 — 큐브를 **이름으로 부르지 않는다.** 등록부가 알아서 되살린다.
     sw::RHIRenderResource::initAllFor( device.get() );
-    SW_EXPECT_TRUE_MSG( cube->isRhiValid(), "새 디바이스가 섰는데 등록부가 리소스를 되살리지 않았다" );
+    SW_EXPECT_TRUE_MSG( cube->isRHIValid(), "새 디바이스가 섰는데 등록부가 리소스를 되살리지 않았다" );
 
-    // 남의 디바이스가 죽었다는 통보는 내 핸들을 건드리면 안 된다. forgetRhi 는 이 주소를 **비교만** 한다
+    // 남의 디바이스가 죽었다는 통보는 내 핸들을 건드리면 안 된다. forgetRHI 는 이 주소를 **비교만** 한다
     // (역참조하지 않는다) — 그래서 실재하지 않는 디바이스 주소로 계약을 그대로 확인할 수 있다.
     sw::IRHIDevice* pStranger = reinterpret_cast<sw::IRHIDevice*>( static_cast<std::uintptr_t>( 0x1 ) );
     sw::RHIRenderResource::forgetAllFor( pStranger );
-    SW_EXPECT_TRUE_MSG( cube->isRhiValid(), "남의 디바이스가 죽었다는 통보에 내 핸들까지 비웠다" );
+    SW_EXPECT_TRUE_MSG( cube->isRHIValid(), "남의 디바이스가 죽었다는 통보에 내 핸들까지 비웠다" );
 
     // 내 디바이스의 통보에는 반응해야 한다.
     sw::RHIRenderResource::releaseAllFor( device.get() );
-    SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "내 디바이스의 해제 통보를 받고도 상주라고 답한다" );
+    SW_EXPECT_TRUE_MSG( cube->isRHIValid() == false, "내 디바이스의 해제 통보를 받고도 상주라고 답한다" );
 }
 
 /**
@@ -2528,8 +2528,8 @@ SW_TEST_CASE( RenderPassGPUTest, DeviceDeathInvalidatesGPUHandles )
 
     sw::shared_ptr<sw::Mesh> cube = sw::MeshUtil::createUnitCube();
     SW_ASSERT_NOT_NULL( cube.get() );
-    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
-    SW_EXPECT_TRUE( cube->isRhiValid() );
+    SW_EXPECT_TRUE( cube->initRHI( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRHIValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 
     // **releaseGPU 를 부르지 않고** 디바이스를 죽인다 — 실수로 잊은 경우가 바로 이 카운터가 막아야 할 상황이다.
@@ -2537,12 +2537,12 @@ SW_TEST_CASE( RenderPassGPUTest, DeviceDeathInvalidatesGPUHandles )
 
     // **동작으로 단언한다** — 세대 번호든 수명 토큰이든 구현은 바뀔 수 있다. 바뀌면 안 되는 것은
     // "디바이스가 죽으면 그 핸들은 더 이상 상주가 아니다" 뿐이다.
-    SW_EXPECT_TRUE_MSG( cube->isRhiValid() == false, "죽은 디바이스의 핸들을 아직 상주 라고 답한다" );
+    SW_EXPECT_TRUE_MSG( cube->isRHIValid() == false, "죽은 디바이스의 핸들을 아직 상주 라고 답한다" );
 
     // 새 디바이스에는 **새로** 올라가야 한다. 옛 핸들을 그대로 돌려주면 그 드로우는 남의 버퍼를 읽는다.
     SW_ASSERT_TRUE( device.recreateDevice() );
-    SW_EXPECT_TRUE( cube->initRhi( device.get() ) );
-    SW_EXPECT_TRUE( cube->isRhiValid() );
+    SW_EXPECT_TRUE( cube->initRHI( device.get() ) );
+    SW_EXPECT_TRUE( cube->isRHIValid() );
     SW_EXPECT_TRUE( cube->getVertexBuffer() != 0 );
 }
 
@@ -3595,9 +3595,9 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
 }
 
 /**
- * @brief [RenderPassGPUTest] forgetRhi 뒤 다시 올려도 텍스처 서수가 **처음부터** 다시 센다
- * @details `forgetRhi` 와 `releaseRhi` 는 둘 다 "디바이스가 사라졌다" 는 통보라 남기는 상태가 같아야 한다 —
- *          `releaseRhi` 만 빌린 텍스처 목록을 비우면 forget 뒤에 `initRhi` 가 올 때 `resolveTextureAssets` 가
+ * @brief [RenderPassGPUTest] forgetRHI 뒤 다시 올려도 텍스처 서수가 **처음부터** 다시 센다
+ * @details `forgetRHI` 와 `releaseRHI` 는 둘 다 "디바이스가 사라졌다" 는 통보라 남기는 상태가 같아야 한다 —
+ *          `releaseRHI` 만 빌린 텍스처 목록을 비우면 forget 뒤에 `initRHI` 가 올 때 `resolveTextureAssets` 가
  *          목록에 **덧붙인다.**
  *
  *          그러면 `ordinal`(= `_listMaterialTextureSrv.size()`)이 0 이 아닌 값에서 시작한다.
@@ -3605,8 +3605,8 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
  *          쓰므로 엉뚱한 텍스처를 읽거나, 한도(`kMaterialTextureCount`)를 넘어 흰색으로 남는다 —
  *          "백엔드를 바꾸면 화면이 이상해진다" 로만 보이는 종류다.
  *
- *          `forgetRhi` 는 `~IRHIDevice()` 의 안전망 경로에서 온다(shutdown 을 거치지 않고 사라지는
- *          디바이스). 정상 종료는 `releaseRhi` 라서 평소에는 드러나지 않는다.
+ *          `forgetRHI` 는 `~IRHIDevice()` 의 안전망 경로에서 온다(shutdown 을 거치지 않고 사라지는
+ *          디바이스). 정상 종료는 `releaseRHI` 라서 평소에는 드러나지 않는다.
  */
 SW_TEST_CASE( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdinals )
 {
@@ -3622,12 +3622,12 @@ SW_TEST_CASE( RenderPassGPUTest, ForgetThenInitDoesNotDoubleMaterialTextureOrdin
             SW_ASSERT_TRUE( firstCount > 0 );
 
             // 디바이스가 정상 종료를 거치지 않고 사라진 경우의 통보.
-            material->forgetRhi( device.get() );
+            material->forgetRHI( device.get() );
             SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs().empty(),
-                                "forgetRhi 가 빌린 텍스처 목록을 남겼습니다" );
+                                "forgetRHI 가 빌린 텍스처 목록을 남겼습니다" );
 
             // 새 디바이스가 서서 다시 올린다.
-            SW_EXPECT_TRUE( material->initRhi( device.get() ) );
+            SW_EXPECT_TRUE( material->initRHI( device.get() ) );
             SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs().size() == firstCount,
                                 "다시 올린 뒤 텍스처 서수가 누적됐습니다 — DX11 · GL 이 엉뚱한 슬롯을 읽습니다" );
         }
@@ -3657,20 +3657,20 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater 
         SW_ASSERT_NOT_NULL( pMaterial );
         // 표시 전에는 올리지 않는다(미리보기 길).
         cache.initializePending( device.get() );
-        SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+        SW_EXPECT_FALSE( pMaterial->isRHIValid() );
         SW_EXPECT_FALSE( cache.hasPendingInitialize() );
 
         // 올릴 것이 있는 동안만 표시가 선다 — 엔진 루프는 이것이 true 인 프레임에만 렌더 스레드를 기다린다(병렬 기록 중에 bindless 표를 바꾸지 않게).
         cache.requestInitialize( kPath );
         SW_EXPECT_TRUE( cache.hasPendingInitialize() );
         cache.initializePending( nullptr ); // 디바이스가 없으면 표시를 그대로 둔다
-        SW_EXPECT_FALSE( pMaterial->isRhiValid() );
+        SW_EXPECT_FALSE( pMaterial->isRHIValid() );
         SW_EXPECT_TRUE( cache.hasPendingInitialize() );
         cache.initializePending( device.get() );
-        SW_EXPECT_TRUE_MSG( pMaterial->isRhiValid(), device->getBackendName() );
+        SW_EXPECT_TRUE_MSG( pMaterial->isRHIValid(), device->getBackendName() );
         SW_EXPECT_FALSE( cache.hasPendingInitialize() );
 
-        pMaterial->releaseRhi( device.get() );
+        pMaterial->releaseRHI( device.get() );
         cache.release( kPath );
         SW_EXPECT_FALSE( cache.isCached( kPath ) );
     }
@@ -3754,7 +3754,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
  *          쓴다. GL 만 `glBufferSubData` 가 막아 준다 — 한 백엔드에서만 조용히 안전하다.
  *
  *          그런데 부모 머티리얼의 상수버퍼는 **셰이더를 다시 구우면 커질 수 있다**(레이아웃이
- *          바뀐다). `MaterialInstance::updateRhi` 가 `_constant._buffer` 가 0 이 아니라고 그대로
+ *          바뀐다). `MaterialInstance::updateRHI` 가 `_constant._buffer` 가 0 이 아니라고 그대로
  *          쓰고 새 크기로 갱신하면, 라이브 셰이더 편집 + 파라미터 변경이 겹칠 때 그 자리를 밟는다.
  *
  *          GPU 메모리로 넘치는 것이라 ASan 도 단언도 잡지 못한다. 대신 **버퍼를 다시 만들었는지**
@@ -3772,7 +3772,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
             SW_ASSERT_TRUE( parent->initialize( device.get(), "engine/materials/defaultmaterial.material" ) );
 
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
-            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
 
             const sw::RHIBufferHandle firstBuffer = instance->getConstantBufferHandle();
             const size_t              firstSize   = instance->getBuffer().size();
@@ -3797,7 +3797,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
 
             // 파라미터를 건드려 인스턴스를 더럽힌다 — 이것이 실제로 겹치는 조합이다.
             instance->setScalarParameter( sw::hashed_string( "roughness" ), 0.75f );
-            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
 
             SW_EXPECT_TRUE_MSG( instance->getBuffer().size() > firstSize,
                                 "인스턴스가 커진 부모 레이아웃을 따라가지 않았습니다" );
@@ -3852,14 +3852,14 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 
             // 인스턴스가 먼저 올라가도(GPUScene 의 순서) 셰이더 레이아웃의 바이트를 집는다.
             sw::shared_ptr<sw::MaterialInstance> instance = sw::MaterialInstance::create( parent.get() );
-            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
             SW_EXPECT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
             SW_EXPECT_NEAR_EQUAL( 0.5f, readFloat( instance->getBuffer(), 16 ), 1e-6f ); // roughness 는 셰이더의 16 자리
             SW_EXPECT_NEAR_EQUAL( 0.0f, readFloat( instance->getBuffer(), 0 ), 1e-6f );  // color.x
 
             // 부모 값만 바꾼다(인스턴스 오버라이드 없음) — 인스턴스가 따라와야 한다.
             SW_ASSERT_TRUE( parent->setParameter( device.get(), sw::hashed_string( "roughness" ), "0.125" ) );
-            SW_ASSERT_TRUE( instance->updateRhi( device.get() ) );
+            SW_ASSERT_TRUE( instance->updateRHI( device.get() ) );
             SW_EXPECT_NEAR_EQUAL( 0.125f, readFloat( instance->getBuffer(), 16 ), 1e-6f );
 
             // 리플렉션 캐시를 비우면(다시 쿠킹 · 라이브 셰이더 편집) 맞춘 레이아웃은 낡은 것이다 — 다시 맞춘다.
@@ -4345,7 +4345,7 @@ SW_TEST_CASE( RenderPassGPUTest, RenamedGBufferAttachmentsRenderTheSameImage )
  * @brief [RenderPassGPUTest] 머티리얼 인스턴스의 덮어쓰기가 네 백엔드 모두에서 GPU 에 닿는다 — 값 · 텍스처 에셋 · 텍스처 리로드 · 지우기
  * @details 셋이 함께 지켜져야 한다.
  *          (1) 네이티브 bindless(DX12 · Vulkan)는 불투명 배치를 머티리얼끼리 합치고 배치에 인스턴스를 싣지 않는다 — 인스턴스는 머티리얼 원소 표에만
- *              있으므로 누군가 그것을 `updateRhi` 해야 한다. 아니면 원소 업로드가 부모 바이트로 폴백해 **오버라이드가 통째로 사라진다**.
+ *              있으므로 누군가 그것을 `updateRHI` 해야 한다. 아니면 원소 업로드가 부모 바이트로 폴백해 **오버라이드가 통째로 사라진다**.
  *          (2) 텍스처 덮어쓰기를 날 디스크립터 인덱스로 들면 텍스처를 다시 올릴 때 돌려준 자리를 읽고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀
  *              엉뚱한 슬롯이 된다.
  *          (3) 언리얼 MIC · 유니티 MaterialPropertyBlock 은 텍스처 **자체**를 덮어쓴다. 여기서도 에셋 경로로 덮어쓰고, 값은 그때마다 지금 텍스처에서 읽는다.
@@ -4476,7 +4476,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
         SW_ASSERT_TRUE_MSG( slot < material->getMaterialTextureSrvs().size(), ( label + "albedoMap 이 슬롯 목록에 없습니다 — 흰색으로 샘플합니다" ).c_str() );
         SW_EXPECT_TRUE_MSG( material->getMaterialTextureSrvs()[slot] == pChecker->getSrv(), ( label + "albedoMap 슬롯이 누락 텍스처가 아닙니다" ).c_str() );
 
-        material->releaseRhi( device.get() );
+        material->releaseRHI( device.get() );
         if ( bHeldBefore == false )
             SW_EXPECT_TRUE_MSG( textures.find( missingTexture ) == nullptr, ( label + "빌린 누락 텍스처를 돌려주지 않았습니다(요청 경로로 놓았다)" ).c_str() );
     }
@@ -4862,7 +4862,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
     sw::string referenceName;
     // 기준(네이티브 bindless)을 먼저 잰다. 목록 순서(DX11 이 먼저)를 그대로 쓰면 비교할 기준이 없다.
     sw::vector<sw::RHIBackend> listBackend;
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
         if ( backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan )
             listBackend.insert( listBackend.begin(), backend );
@@ -4909,8 +4909,8 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
                 SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
             }
         }
-        quad->releaseRhi( device.get() );
-        material->releaseRhi( device.get() );
+        quad->releaseRHI( device.get() );
+        material->releaseRHI( device.get() );
         if ( bOk == false )
             continue;
 
@@ -4983,7 +4983,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
 
     // 기준(네이티브 bindless)을 먼저 그린다.
     sw::vector<sw::RHIBackend> listBackend;
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
         if ( backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan )
             listBackend.insert( listBackend.begin(), backend );
@@ -5065,7 +5065,7 @@ SW_TEST_CASE( RenderPassGPUTest, EngineTextureSlotsAreSampledLinearClamp )
             bOk = bOk && capture._sceneColor.readTransient( renderer, "SceneColor" ) && capture._bloomColor.readTransient( renderer, "BloomColor" );
             SW_EXPECT_TRUE_MSG( bOk, ( label + "그리거나 되읽지 못했다" ).c_str() );
         }
-        material->releaseRhi( device.get() );
+        material->releaseRHI( device.get() );
         if ( bOk == false )
             continue;
 
@@ -7625,9 +7625,9 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
                                     .c_str() );
         }
         if ( quadMesh != nullptr )
-            quadMesh->releaseRhi( device.get() );
+            quadMesh->releaseRHI( device.get() );
         if ( sprite != nullptr )
-            sprite->releaseRhi( device.get() );
+            sprite->releaseRHI( device.get() );
         renderer.shutdown();
     }
     if ( sweep.getReadyCount() == 0 )

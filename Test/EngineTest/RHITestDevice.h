@@ -17,7 +17,7 @@ namespace test
      * @brief 네 백엔드 전부. 이 호스트에 없는 것(리눅스의 DX)은 `RHITestDevice` 가 창을 띄우기 전에 거르므로 목록을 플랫폼마다
      *        가를 필요가 없다.
      */
-    inline constexpr sw::RHIBackend kArrAllRhiBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan,
+    inline constexpr sw::RHIBackend kArrAllRHIBackend[] = { sw::RHIBackend::DirectX11, sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan,
                                                             sw::RHIBackend::OpenGL };
 
     /**
@@ -134,7 +134,7 @@ namespace test
             RHIBackendSweep* _pSweep;
         };
 
-        /** @brief 네 백엔드 전부(`kArrAllRhiBackend`)를 돈다. */
+        /** @brief 네 백엔드 전부(`kArrAllRHIBackend`)를 돈다. */
         RHIBackendSweep();
         /** @brief 이 순서로 돈다. */
         explicit RHIBackendSweep( std::initializer_list<sw::RHIBackend> listBackend );

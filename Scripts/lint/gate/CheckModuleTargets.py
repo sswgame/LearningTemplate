@@ -42,7 +42,7 @@ _kListNamePrefixTarget = (
     ("GF_Client_", frozenset({"Client"})),
 )
 #: 종류가 곧 클라이언트 전용인 모듈(창 · GPU) — 접두 없이 `["Client"]` 여야 한다.
-_kClientOnlyKinds = ("Editor", "Rhi")
+_kClientOnlyKinds = ("Editor", "RHI")
 #: 매니페스트가 없는 폴더의 대상입니다.
 _kListFolderTarget = (
     ("Source/App/", frozenset({"Client"})),

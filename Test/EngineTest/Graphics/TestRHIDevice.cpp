@@ -278,7 +278,7 @@ SW_TEST_CASE( RHIDeviceTest, CapabilityMatrixNativeVsEmulated )
  */
 SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 {
-    for ( sw::RHIBackend backend : test::kArrAllRhiBackend )
+    for ( sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
         if ( test::isBackendInThisBuild( backend ) == false )
             continue;
@@ -299,7 +299,7 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 SW_TEST_CASE( RHIDeviceTest, BackendSweepVisitsEveryBackendThatStandsUp )
 {
     sw::vector<sw::RHIBackend> listExpected;
-    for ( const sw::RHIBackend backend : test::kArrAllRhiBackend )
+    for ( const sw::RHIBackend backend : test::kArrAllRHIBackend )
     {
         test::RHITestDevice device( backend );
         if ( device.isReady() )
@@ -2172,12 +2172,12 @@ SW_TEST_CASE( RHIDeviceTest, RegionUploadReadsBackOnEveryBackend )
                 continue;
 
             // 모든 면 · 밉을 0 으로.
-            const uint32 bytesPerPixel = sw::getRhiFormatBytesPerPixel( testCase._format );
+            const uint32 bytesPerPixel = sw::getRHIFormatBytesPerPixel( testCase._format );
             uint32       chainBytes{ 0 };
             for ( uint32 mip = 0; mip < testCase._mips; ++mip )
             {
                 sw::RHITextureMipSpan span{};
-                SW_ASSERT_TRUE( sw::computeRhiTextureMipLayout( testCase._format, testCase._width, testCase._height, mip, span ) );
+                SW_ASSERT_TRUE( sw::computeRHITextureMipLayout( testCase._format, testCase._width, testCase._height, mip, span ) );
                 chainBytes += span._sizeBytes;
             }
             const sw::vector<uint8> zeros( chainBytes, 0 );

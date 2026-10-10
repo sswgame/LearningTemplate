@@ -71,7 +71,7 @@ namespace sw::editor
     {
     }
 
-    void AnimGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void AnimGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         _nodeGraph.shutdown();
     }

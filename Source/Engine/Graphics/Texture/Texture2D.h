@@ -24,7 +24,7 @@ namespace sw
     public:
         /** @brief 빈 텍스처로 만듭니다. */
         Texture2D();
-        /** @brief GPU 자원이 남아 있으면 경고만 남깁니다. 해제는 releaseRhi 로 명시합니다. */
+        /** @brief GPU 자원이 남아 있으면 경고만 남깁니다. 해제는 releaseRHI 로 명시합니다. */
         ~Texture2D() override;
         Texture2D( const Texture2D& )            = delete;
         Texture2D& operator=( const Texture2D& ) = delete;
@@ -37,13 +37,13 @@ namespace sw
          */
         [[nodiscard]] bool createRenderTarget( IRHIDevice* pDevice, string_view name, uint32 width, uint32 height, RHIFormat format );
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 텍스처를 돌려줍니다. */
-        void releaseRhi( IRHIDevice* pDevice ) override;
+        void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetRhi( IRHIDevice* pDevice ) override;
+        void forgetRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 새 디바이스에 같은 경로의 DDS 를 다시 올립니다(렌더 타깃이면 같은 크기로 다시 만듭니다). */
-        bool initRhi( IRHIDevice* pDevice ) override;
+        bool initRHI( IRHIDevice* pDevice ) override;
 
-        bool               isRhiValid() const { return _handle != 0 && _srv != kInvalidDescriptorIndex; }
+        bool               isRHIValid() const { return _handle != 0 && _srv != kInvalidDescriptorIndex; }
         RHITextureHandle   getHandle() const { return _handle; }
         RHIDescriptorIndex getSrv() const { return _srv; }
         uint32             getWidth() const { return _width; }
@@ -54,7 +54,7 @@ namespace sw
         bool isRenderTarget() const { return _bRenderTarget == SW_TRUE; }
 
         /** @brief DDS 가 알려 주는 DXGI 포맷 번호를 RHIFormat 으로 바꿉니다. 대응이 없으면 Unknown 입니다. */
-        static RHIFormat toRhiFormatFromDxgi( uint32 dxgiFormat );
+        static RHIFormat toRHIFormatFromDxgi( uint32 dxgiFormat );
 
     private:
         /** @brief 이 텍스처를 올린 디바이스. 통보가 내 것인지 가릴 때 씁니다. */

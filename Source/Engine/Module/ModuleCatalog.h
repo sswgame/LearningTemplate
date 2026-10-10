@@ -28,7 +28,7 @@ namespace sw
         Kit,           ///< 장르 키트(`GF_*`)
         Game,          ///< 게임 모듈(`SWGame`) — 프로젝트다
         Editor,        ///< 에디터 모듈(Dev 전용)
-        Rhi,           ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
+        RHI,           ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
     };
 
     /** @brief 모듈이 도는 플랫폼 비트입니다. */

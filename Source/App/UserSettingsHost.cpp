@@ -88,7 +88,7 @@ namespace sw
 
     void UserSettingsHost::applyDisplayRequest( const DisplaySettingsRequest& request )
     {
-        RHI* pRHI = _pEngineLoop->getRhi();
+        RHI* pRHI = _pEngineLoop->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return;
 

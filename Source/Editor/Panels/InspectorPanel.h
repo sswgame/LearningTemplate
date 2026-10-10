@@ -65,7 +65,7 @@ namespace sw::editor
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
-        void drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice );
+        void drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice );
 
         // ------------------------------------------------------------------------------
         // 3) 리플렉션 위젯
@@ -120,8 +120,8 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer256>                 _lastInvokeResult;
         /** @brief 이름 칸이 편집 중인 글입니다(편집 중이 아니면 프레임마다 오브젝트 이름으로 채운다 — 칸을 떠날 때 적용할 글을 잡아 둔다). */
         fixed_string<constant::kMaxBuffer256> _nameEditBuffer;
-        EditorFileCollectJob                                  _componentPresetJob;
-        vector<string>                                        _listComponentPresetFile;
+        EditorFileCollectJob                  _componentPresetJob;
+        vector<string>                        _listComponentPresetFile;
         /** @brief 지금 프로퍼티를 그리는 중인 컴포넌트입니다. 편집 통지를 받습니다. */
         Component* _pEditTargetComponent;
         /** @brief 지금 프로퍼티를 그리는 중인 GameObject 입니다. 컴포넌트가 없을 때만 씁니다. */

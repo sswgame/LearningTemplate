@@ -11,10 +11,10 @@
  *          "내 디바이스가 아직 살아 있나" 를 되묻는 전역 세대 번호가 필요 없습니다.
  *
  * @note 두 가지 통보를 구분합니다. 이것이 이 파일에서 가장 중요한 구분입니다:
- *       - `releaseRhi( pDevice )`: 디바이스가 **아직 살아 있습니다.** 자기 GPU 리소스를 제대로 돌려주고 핸들을 비웁니다.
- *       - `forgetRhi( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
+ *       - `releaseRHI( pDevice )`: 디바이스가 **아직 살아 있습니다.** 자기 GPU 리소스를 제대로 돌려주고 핸들을 비웁니다.
+ *       - `forgetRHI( pDevice )`: 디바이스가 **이미 없습니다.** 돌려줄 곳이 없으니 핸들만 비웁니다(destroy 하면 해제 후 사용입니다).
  *       정상 경로는 언제나 전자입니다. 후자는 `shutdown()` 없이 사라진 디바이스에 대한 안전망입니다.
- *       되살리는 절반은 `initRhi( pDevice )` 이고, 새 디바이스가 선 직후 `initAllFor` 가 같은 목록에 밀어 넣습니다.
+ *       되살리는 절반은 `initRHI( pDevice )` 이고, 새 디바이스가 선 직후 `initAllFor` 가 같은 목록에 밀어 넣습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -43,16 +43,16 @@ namespace sw
          * @brief 살아 있는 디바이스에 GPU 리소스를 돌려주고 핸들을 비웁니다.
          * @param pDevice 이 리소스를 만들어 준 디바이스. 아직 유효합니다.
          */
-        virtual void releaseRhi( IRHIDevice* pDevice ) = 0;
+        virtual void releaseRHI( IRHIDevice* pDevice ) = 0;
 
         /**
          * @brief 디바이스가 이미 사라졌을 때, 그 디바이스의 핸들만 비웁니다.
          * @param pDevice 사라진 디바이스. **내 것이 아니면 아무것도 하지 않아야 합니다.**
          * @details GPU 메모리는 디바이스가 내려가며 함께 갔습니다. 여기서 destroy 를 부르면 해제 후 사용입니다.
-         *          디바이스 주소를 받는 이유는 `releaseRhi` 와 같습니다. 테스트처럼 디바이스가 여럿 살아 있는
+         *          디바이스 주소를 받는 이유는 `releaseRHI` 와 같습니다. 테스트처럼 디바이스가 여럿 살아 있는
          *          자리에서, 남이 죽었다고 내 핸들까지 비우면 멀쩡한 리소스를 잃습니다.
          */
-        virtual void forgetRhi( IRHIDevice* pDevice ) = 0;
+        virtual void forgetRHI( IRHIDevice* pDevice ) = 0;
 
         /**
          * @brief 새 디바이스에 자기 GPU 리소스를 다시 만듭니다.
@@ -61,15 +61,15 @@ namespace sw
          *          **이미 올라가 있으면 그대로 true 를 반환해야 합니다.** 통보 순서는 정해져 있지 않아서, 머티리얼이
          *          먼저 살아나며 자기 텍스처를 올려 놓은 뒤에 그 텍스처가 이 통보를 받는 일이 실제로 일어납니다.
          */
-        virtual bool initRhi( IRHIDevice* pDevice );
+        virtual bool initRHI( IRHIDevice* pDevice );
 
-        /** @brief 이 디바이스의 리소스를 든 객체 전부에게 `releaseRhi` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
+        /** @brief 이 디바이스의 리소스를 든 객체 전부에게 `releaseRHI` 를 보냅니다. 디바이스가 살아 있을 때 부릅니다. */
         static void releaseAllFor( IRHIDevice* pDevice );
 
-        /** @brief 이 디바이스의 리소스를 든 객체 전부에게 `forgetRhi` 를 보냅니다. 디바이스가 이미 사라진 뒤의 안전망입니다. */
+        /** @brief 이 디바이스의 리소스를 든 객체 전부에게 `forgetRHI` 를 보냅니다. 디바이스가 이미 사라진 뒤의 안전망입니다. */
         static void forgetAllFor( IRHIDevice* pDevice );
 
-        /** @brief 등록된 객체 전부에게 `initRhi` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
+        /** @brief 등록된 객체 전부에게 `initRHI` 를 보냅니다. 디바이스가 새로 생긴 직후에 부릅니다. */
         static void initAllFor( IRHIDevice* pDevice );
 
         /**

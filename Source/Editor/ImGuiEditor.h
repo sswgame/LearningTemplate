@@ -35,17 +35,17 @@ namespace sw::editor
         // 2) IEditor — 초기화 / 프레임 / 이벤트 / 텍스처
         // ------------------------------------------------------------------------------
         /** @brief 플랫폼 백엔드·렌더러·폰트를 초기화합니다. */
-        bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) override;
+        bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) override;
         /** @brief 에디터 리소스를 해제합니다. */
         void shutdown() override;
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         void updateUi() override;
         /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
-        void preRender( IRHIDevice* pRhiDevice ) override;
+        void preRender( IRHIDevice* pRHIDevice ) override;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
-        void render( IRHIDevice* pRhiDevice ) override;
+        void render( IRHIDevice* pRHIDevice ) override;
         /** @brief 메인 스왑체인 Present 뒤에 멀티 뷰포트를 그립니다. */
-        void postPresent( IRHIDevice* pRhiDevice ) override;
+        void postPresent( IRHIDevice* pRHIDevice ) override;
         void abandonPendingDraw() override;
         /** @brief 네이티브 이벤트를 ImGui 플랫폼 레이어로 전달합니다. */
         bool processEvent( const NativeWindowEvent& event ) override;
@@ -85,7 +85,7 @@ namespace sw::editor
         /** @brief ImGui 프레임을 종료합니다. */
         void endFrame();
         /** @brief ImGui 렌더러 백엔드로 주어진 DrawData 를 그립니다. */
-        void renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData );
+        void renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData );
         /** @brief 렌더 스레드가 이전 스냅샷을 쓰는 동안 NewFrame을 미룹니다. */
         void waitForDrawSnapshotIdle();
 

@@ -241,7 +241,7 @@ cd build/Ninja-Debug/Bin
   쿠킹한 바이너리 씬만 읽는다(씬 · 프리팹 시험은 `SceneDocument::saveBinary` 로 `.bin` 도 쓴다). 풀 블록을 힙으로 반납하는 손상은 Shipping 에서만 터진다 — 풀 자유 목록이
   LIFO 인 것을 써서 "다음 할당이 같은 주소" 로 검사하면 Debug 에서도 잡힌다.
 - **시험 도우미**: `test::makeTempPath` · `makeTempDirectory`(케이스 폴더, 끝나면 지우고 못 지우면 진다), `test::ScopedLogCollector`, `test::ScopedFailureCapture`,
-  `test::ScopedDefensiveTestLog`, `SW_ASSERT_TRUE_MSG`, `test::runThisExecutableAsChild`, `test::RHITestDevice`(`kArrAllRhiBackend`), `test::RHITestImage`,
+  `test::ScopedDefensiveTestLog`, `SW_ASSERT_TRUE_MSG`, `test::runThisExecutableAsChild`, `test::RHITestDevice`(`kArrAllRHIBackend`), `test::RHITestImage`,
   `test::FakeRHIDevice`(병렬 기록 nogpu), `LitCubeScene` · `renderPresentCaptureOf` · `compareCaptures`(TestRenderPassGPU.cpp), 에디터 지역 서비스 `Test/EditorTest/EditorTestServices.h`, 네트워크 호스트 묶음 `test::LoopbackCluster`(`TestFramework/TestLoopbackCluster.h` — 루프백 +
   끝점마다 흉내, 손 시각 `step` · 호스트 스레드, CoreTest 도 쓴다. 씬 · 라우터까지 필요하면 `NetSimHarness`).
 - **시험 실행기 규칙** — 필터로 고른 스위트의 케이스가 전부 스킵되면 실패다(`--allow_empty_suite`). 테스트는 `Bin` 에 쓰지 않는다. `RUN_SERIAL` 은 이유와 함께만.

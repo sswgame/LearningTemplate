@@ -43,7 +43,7 @@ namespace sw
          *          게임플레이 입력 맵(`_inputMap`)을 여기서 적용합니다. 커스텀 칸을 읽는 킷 코드는
          *          이 서비스로 읽습니다 — 서비스로 묶지 않으면 제품에서 늘 기본값을 씁니다.
          */
-        bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) final;
+        bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) final;
         /** @brief onShutdown 뒤에 `GameSettings` 서비스를 풀고 윈도우 · RHI 포인터를 끊습니다. */
         void shutdown() final;
         /**
@@ -202,7 +202,7 @@ namespace sw
 
         BootstrapConfig _bootstrap;  ///< 팩 루트와 gamesettings
         IWindow*        _pWindow;    ///< 호스트 윈도우 (App 이 소유)
-        IRHIDevice*     _pRhiDevice; ///< 활성 RHI 디바이스
+        IRHIDevice*     _pRHIDevice; ///< 활성 RHI 디바이스
 
     private:
         /** @brief 상태 스냅샷에 오른 컴포넌트 타입 하나의 일입니다(`register*`). 없는 일은 nullptr 입니다. */

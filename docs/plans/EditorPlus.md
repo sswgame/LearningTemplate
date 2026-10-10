@@ -413,12 +413,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
          * @brief 등록부와 맞춥니다 — 새 줄은 인스턴스를 만들고(지난번에 열려 있던 id 면 열린 채로), 사라진 줄의 인스턴스는 내립니다. 세대가 같으면 바로 돌아갑니다.
          * @details 에디터 프레임 앞에서 부릅니다(`ImGuiEditor::updateUi`). 처음 부르면 `registerDefaultPanels` 와 같습니다.
          */
-        void syncWithRegistry( IRHIDevice* pRhiDevice );
+        void syncWithRegistry( IRHIDevice* pRHIDevice );
         /**
          * @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 패널을 내립니다 — `shutdown` 후 소멸. 미저장 문서는 경고하고 버립니다. 내린 수입니다.
          * @details 이미지를 내리기 **전에**(`IModuleUnloadListener`) 부릅니다. 열림 상태는 id 로 기억해 같은 id 가 다시 오르면 되살립니다.
          */
-        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRhiDevice );
+        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice );
     private:
         vector<EditorPanelEntry> _listPanel;
         vector<string>           _listRememberedOpenId; ///< 내린 패널 가운데 열려 있던 id(다시 오르면 연다)
@@ -426,7 +426,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 `EditorPanelManager.cpp`:
 ```cpp
-    void EditorPanelManager::syncWithRegistry( IRHIDevice* pRhiDevice )
+    void EditorPanelManager::syncWithRegistry( IRHIDevice* pRHIDevice )
     {
         using PanelRegistry               = EditorRegistry<EditorPanelRegistration>;
         const EditorRegistrationList& list = PanelRegistry::getList();
@@ -441,7 +441,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
             if ( entry._pRegistration == nullptr || PanelRegistry::find( entry._id ) == entry._pRegistration )
                 continue;
             if ( entry._pInstance != nullptr )
-                entry._pInstance->shutdown( pRhiDevice );
+                entry._pInstance->shutdown( pRHIDevice );
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
         }
         // 2) 새 줄은 만든다. 순서는 등록부 순서 그대로 — 그리기 순서 · Panel 메뉴 순서가 등록부와 같다
@@ -475,7 +475,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
         _listPanel = std::move( listSorted );
     }
 
-    uint32 EditorPanelManager::releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRhiDevice )
+    uint32 EditorPanelManager::releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice )
     {
         uint32 releasedCount{ 0 };
         for ( size_t index = _listPanel.size(); index-- > 0; )
@@ -489,7 +489,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
                     SW_LOG_WARNING( "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
                 if ( entry._pInstance->isOpen() )
                     _listRememberedOpenId.push_back( entry._id );
-                entry._pInstance->shutdown( pRhiDevice );
+                entry._pInstance->shutdown( pRHIDevice );
             }
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
             ++releasedCount;
@@ -531,8 +531,8 @@ namespace sw::editor
 ```cpp
     uint32 EditorModuleUnloadListener::onModuleUnloading( const void* pBegin, const void* pEnd, bool& /*outKeepImageMapped*/ )
     {
-        IRHIDevice* pRhiDevice = _context.getRhiDevice();
-        uint32 releasedCount   = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, pRhiDevice );
+        IRHIDevice* pRHIDevice = _context.getRHIDevice();
+        uint32 releasedCount   = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, pRHIDevice );
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorPropertyManager().releaseDrawersWithin( pBegin, pEnd );   // I3 뒤
@@ -1702,7 +1702,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 `ModuleCatalog` 이 프로젝트 덮어쓰기를 바꿔 다시 풀 수 있게 `ModuleCatalog::setProjectOverride( name, bEnabled )`(사본에서) 를 더한다 — 적용 때 `ModuleCatalog.h` 의 `resolve` 가 덮어쓰기를 어디서 읽는지 보고 맞춘다.
 3) 창 — `Panels/ModulesPanel.h` · `.cpp` `SW_EDITOR_PANEL( ModulesPanel, "modules", EditorPanelCategory::Tool, 2020 );` 제목 `"Modules"`. `Bin/Modules/*.module.json`(빌드가 복사한 카탈로그)을 읽어
-   종류별 묶음(GameFramework · Kit · EditorExtension · Rhi · Editor · Game) 표: 이름 · 판 · 설명 · 의존 · 상태(켜짐 · 꺼짐 + 이유 — `ModuleResolution::_listInactive` 의 이유 글).
+   종류별 묶음(GameFramework · Kit · EditorExtension · RHI · Editor · Game) 표: 이름 · 판 · 설명 · 의존 · 상태(켜짐 · 꺼짐 + 이유 — `ModuleResolution::_listInactive` 의 이유 글).
    체크박스를 바꾸면 미리보기 팝업("이것도 함께 꺼진다: GF_Editor_ThemePark (needs GF_ThemePark)") → 확인하면 **프로젝트 매니페스트 소스**(`Source/Games/<활성 게임>/SWGame.module.json`)를 고쳐 쓴다
    (`EditorSourceControl` 의 체크아웃 상태를 먼저 본다 — 읽기 전용이면 이유를 알린다). 위에 노란 띠: "Module set changed — Build to apply, then restart" + "Build" 단추(= `build.compileAll`,
    1) 덕에 ninja 가 다시 구성한다) + "Restart Editor" 단추(빌드 성공 뒤 활성 — 지금 실행 인자 그대로 새 프로세스를 띄우고 이 프로세스는 종료 확인 경로로 닫는다).

@@ -9,7 +9,7 @@ namespace sw
 {
     /**
      * @brief RHI 를 세운 결과입니다. 실패가 환경 탓(이 빌드 · 드라이버에 없다)인지, 결함일 수 있는지를 가릅니다.
-     * @details `AppSmokeTest` · `Scripts/common/AppRun.py` 는 로그 문구가 아니라 이 값에서 나온 종료 코드(`kRhiUnusableHereExitCode`)로 판을 건너뜁니다.
+     * @details `AppSmokeTest` · `Scripts/common/AppRun.py` 는 로그 문구가 아니라 이 값에서 나온 종료 코드(`kRHIUnusableHereExitCode`)로 판을 건너뜁니다.
      */
     enum class RHIInitResult : uint8
     {
@@ -21,7 +21,7 @@ namespace sw
     };
 
     /** @brief App 이 "이 기계에서 그 백엔드를 못 돌린다" 로 끝날 때의 종료 코드입니다(automake · CTest `SKIP_RETURN_CODE` 의 건너뜀 관례). */
-    inline constexpr int32 kRhiUnusableHereExitCode = 77;
+    inline constexpr int32 kRHIUnusableHereExitCode = 77;
 
     /**
      * @struct RHIInitResultUtil

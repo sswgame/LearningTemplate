@@ -71,7 +71,7 @@ namespace test
 
     RHIBackendSweep::RHIBackendSweep()
         : _device{}
-        , _listBackend( std::begin( kArrAllRhiBackend ), std::end( kArrAllRhiBackend ) )
+        , _listBackend( std::begin( kArrAllRHIBackend ), std::end( kArrAllRHIBackend ) )
         , _nextIndex{ 0 }
         , _readyCount{ 0 }
     {

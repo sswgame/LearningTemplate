@@ -128,7 +128,7 @@ namespace sw
 
         /** @brief 활성 IRHIDevice 를 반환합니다. */
         IRHIDevice& getDevice() const { return *_device; }
-        /** @brief 마지막 `initialize` 의 결과입니다. App 이 "이 기계에서 그 백엔드를 못 돌린다" 를 종료 코드로 알릴 때 읽습니다(`EngineLoop::getRhiInitResult`). */
+        /** @brief 마지막 `initialize` 의 결과입니다. App 이 "이 기계에서 그 백엔드를 못 돌린다" 를 종료 코드로 알릴 때 읽습니다(`EngineLoop::getRHIInitResult`). */
         RHIInitResult getInitResult() const { return _initResult; }
 
     private:

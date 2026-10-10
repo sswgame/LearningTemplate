@@ -33,7 +33,7 @@ namespace sw::editor
         virtual ~ImGuiDX12RendererBackend() override = default;
 
         /** @brief D3D12 ImGui 렌더러와 SRV 힙을 초기화합니다. */
-        bool initialize( IRHIDevice* pRhiDevice ) override;
+        bool initialize( IRHIDevice* pRHIDevice ) override;
         /** @brief D3D12 ImGui 렌더러를 종료합니다. */
         void shutdown() override;
 
@@ -45,7 +45,7 @@ namespace sw::editor
         /** @brief 대기 중인 폰트 아틀라스/텍스처 갱신을 UI 스레드에서 처리합니다. */
         void processTextureUpdates() override;
         /** @brief ImGui draw data를 D3D12로 그립니다. */
-        void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
+        void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) override;
         /** @brief RHI 텍스처를 ImGui용 SRV로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;
         /** @brief 등록된 ImGui SRV 디스크립터를 풀에 반환합니다. 반환은 그 디스크립터를 그린 마지막 프레임의 GPU 완료 뒤입니다. */

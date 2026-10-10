@@ -41,7 +41,7 @@ namespace sw::editor
         float2      getInitialPanelSize() const override { return float2{ 1100.0f, 680.0f }; }
         bool        isToolPanel() const override { return true; }
         /** @brief 미리보기 화면을 닫고 ImGui 텍스처를 놓습니다. */
-        void shutdown( IRHIDevice* pRhiDevice ) override;
+        void shutdown( IRHIDevice* pRHIDevice ) override;
 
     private:
         /** @brief 문서 · 뷰포트가 바뀌었으면 오프스크린 화면을 다시 열고(크기가 바뀌면 렌더 텍스처 경로도), 이번 프레임의 보기를 겁니다. */

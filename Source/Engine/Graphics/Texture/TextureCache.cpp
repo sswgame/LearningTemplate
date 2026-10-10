@@ -52,7 +52,7 @@ namespace sw
         Impl::Entry&                        entry = _impl->_mapEntry[key];
         if ( entry._texture == nullptr )
             entry._texture = make_unique<Texture2D>();
-        bool bReady = entry._texture->isRhiValid();
+        bool bReady = entry._texture->isRHIValid();
         if ( bReady == false && isRenderTargetPath( key ) )
         {
             // 렌더 텍스처 — 파일이 없다. 알린 크기(없으면 기본)로 렌더 타깃을 만든다.
@@ -103,11 +103,11 @@ namespace sw
         if ( it == _impl->_mapEntry.end() || it->second._texture == nullptr )
             return;
 
-        // 이전 프레임이 아직 이 텍스처의 bindless SRV 인덱스를 읽고 있을 수 있다. releaseRhi() 는
+        // 이전 프레임이 아직 이 텍스처의 bindless SRV 인덱스를 읽고 있을 수 있다. releaseRHI() 는
         // 인덱스를 곧바로 프리리스트로 돌려주므로, 기다리지 않고 다시 올리면 같은 인덱스를 받은
         // 다른 텍스처를 읽는 조용한 오염이 된다(MaterialCache::reload 와 같은 이유).
         pDevice->waitIdle();
-        it->second._texture->releaseRhi( pDevice );
+        it->second._texture->releaseRHI( pDevice );
         if ( it->second._texture->loadFromResource( pDevice, key ) == false )
             SW_LOG_ERROR( "Hot-Reload failed for Texture %#", key.c_str() );
         // 다시 올린 텍스처는 새 SRV 인덱스를 받았다(실패했으면 인덱스가 없다). 옛 인덱스는 이미 돌려줬으므로 빌려 간 머티리얼이 다시 받게 한다.
@@ -143,7 +143,7 @@ namespace sw
         if ( it->second._refCount == 0 )
         {
             if ( it->second._texture != nullptr )
-                it->second._texture->releaseRhi( pDevice );
+                it->second._texture->releaseRHI( pDevice );
             _impl->_mapEntry.erase( it );
         }
     }
@@ -171,12 +171,12 @@ namespace sw
      * @warning **디바이스가 죽은 뒤에만 부를 수 있습니다.** `IAssetCache::clear()` 는 디바이스를
      *          인자로 받지 않고(그 이유는 `MaterialCache.h` 머리말에 있습니다. 캐시가 디바이스를
      *          들고 있으면 백엔드 교체 때 죽은 포인터가 됩니다), 캐시도 들고 있지 않으므로 여기서
-     *          `releaseRhi` 를 부를 방법이 없습니다. 살아 있는 디바이스에서 부르면 텍스처 핸들과
+     *          `releaseRHI` 를 부를 방법이 없습니다. 살아 있는 디바이스에서 부르면 텍스처 핸들과
      *          **bindless SRV 인덱스**가 그대로 샙니다. 후자는 프리리스트로 영영 안 돌아옵니다.
      *
      *          지금 이 함수로 오는 길은 하나뿐이고 그 순서가 이 계약을 지킵니다:
      *          `EngineLoop::shutdown` 이 `_rhi->shutdown()` 을 **먼저** 부르고, 그것이
-     *          `RHIRenderResource` 등록부 전체에 `releaseRhi` 를 밀어 둔 뒤에야
+     *          `RHIRenderResource` 등록부 전체에 `releaseRHI` 를 밀어 둔 뒤에야
      *          `AssetManager::shutdown` → `clearAssetCaches()` 가 여기에 닿습니다.
      *          참조가 0 이 되어 내리는 평소 경로는 `release()` 이고, 그쪽은 제대로 돌려줍니다.
      */

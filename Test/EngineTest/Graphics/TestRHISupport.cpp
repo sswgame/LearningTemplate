@@ -20,7 +20,7 @@
 
 namespace
 {
-    /** @brief `releaseRhi` 를 받으면 디바이스의 종료 단계 목록에 적는 시험 자원입니다. */
+    /** @brief `releaseRHI` 를 받으면 디바이스의 종료 단계 목록에 적는 시험 자원입니다. */
     class ShutdownStepRecordingResource final : public sw::RHIRenderResource
     {
     public:
@@ -29,12 +29,12 @@ namespace
         {
         }
 
-        void releaseRhi( sw::IRHIDevice* pDevice ) override
+        void releaseRHI( sw::IRHIDevice* pDevice ) override
         {
             if ( pDevice == _pDevice )
-                _pDevice->_listShutdownStep.push_back( "releaseRhi" );
+                _pDevice->_listShutdownStep.push_back( "releaseRHI" );
         }
-        void forgetRhi( sw::IRHIDevice* ) override {}
+        void forgetRHI( sw::IRHIDevice* ) override {}
 
     private:
         test::FakeRHIDevice* _pDevice;
@@ -343,7 +343,7 @@ SW_TEST_CASE( RHIDeviceShutdownTest, StepsRunInContractOrder )
 
     device.shutdown();
 
-    const utf8* const arrExpected[] = { "releaseRhi", "waitIdleInternal", "detachCommandRecordingInternal", "shutdownInternal" };
+    const utf8* const arrExpected[] = { "releaseRHI", "waitIdleInternal", "detachCommandRecordingInternal", "shutdownInternal" };
     SW_ASSERT_EQUAL( static_cast<size_t>( std::size( arrExpected ) ), device._listShutdownStep.size() );
     for ( size_t index = 0; index < std::size( arrExpected ); ++index )
     {

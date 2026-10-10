@@ -342,7 +342,7 @@ namespace sw
         pRecord->_texture->GetDesc( &texDesc );
         if ( mip >= texDesc.MipLevels || arraySlice >= texDesc.ArraySize )
             return false;
-        if ( computeRhiTextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
+        if ( computeRHITextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
             return false;
 
         // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map 한다. Map 이 GPU 를 기다린다.
@@ -381,7 +381,7 @@ namespace sw
     {
         if ( _pDevice == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
-        if ( isRhiTextureShapeValid( desc ) == false )
+        if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                           desc._arraySize, desc._width, desc._height );

@@ -66,15 +66,15 @@ namespace sw
         Material& operator=( Material&& ) = delete;
 
         /** @brief 머티리얼 에셋을 로드하고 GPU 자원(상수버퍼 · 텍스처)을 올립니다. */
-        bool initialize( IRHIDevice* pRhi, string_view assetRelativePath );
+        bool initialize( IRHIDevice* pRHI, string_view assetRelativePath );
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 GPU 자원을 돌려줍니다. */
-        void releaseRhi( IRHIDevice* pRhi ) override;
+        void releaseRHI( IRHIDevice* pRHI ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetRhi( IRHIDevice* pDevice ) override;
+        void forgetRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 새 디바이스에 상수버퍼 · 텍스처를 다시 올립니다. */
-        bool initRhi( IRHIDevice* pDevice ) override;
+        bool initRHI( IRHIDevice* pDevice ) override;
         /** @brief GPU 자원이 올라가 있으면 true 입니다. 캐시가 따로 세지 않고 이것을 봅니다. */
-        bool isRhiValid() const { return _constantBuffer != 0; }
+        bool isRHIValid() const { return _constantBuffer != 0; }
 
         /** @brief 파일에서 머티리얼을 로드합니다. */
         [[nodiscard]] bool loadFromFile( string_view assetRelativePath );
@@ -92,7 +92,7 @@ namespace sw
         static bool hasMaterialSchema( const ShaderReflectionData& reflectionData );
         /**
          * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
-         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GPUScene 과 인스턴스(`MaterialInstance::updateRhi`)가 바이트를
+         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GPUScene 과 인스턴스(`MaterialInstance::updateRHI`)가 바이트를
          *          읽기 전에 부릅니다. 레이아웃의 기준은 셰이더입니다.
          * @return 원소 stride 를 얻었으면 true 입니다.
          */
@@ -112,9 +112,9 @@ namespace sw
          */
         void packPropertiesIntoBytes( uint32 minimumByteSize );
         /** @brief 한 프로퍼티를 `_defaultValue` 로 되돌리고 CB 를 다시 올립니다. */
-        bool resetParameterToDefault( IRHIDevice* pRhi, hashed_string name );
+        bool resetParameterToDefault( IRHIDevice* pRHI, hashed_string name );
         /** @brief 모든 프로퍼티를 기본값으로 되돌립니다. */
-        void resetAllToDefaults( IRHIDevice* pRhi );
+        void resetAllToDefaults( IRHIDevice* pRHI );
         /**
          * @brief 이 머티리얼 레이아웃으로 외부 버퍼에 값을 패킹합니다.
          * @details MaterialInstance 가 마스터를 건드리지 않고 오버라이드 CB 를 만들 때 씁니다.
@@ -132,18 +132,18 @@ namespace sw
         bool packRawDataIntoBuffer( hashed_string name, const void* pData, uint32 byteSize, vector<uint8>& inoutBuffer ) const;
 
         /** @brief 패킹 버퍼 오프셋에 바이트를 그대로 씁니다. */
-        void setParameterData( IRHIDevice* pRhi, uint32 offset, uint32 size, const void* pData );
+        void setParameterData( IRHIDevice* pRHI, uint32 offset, uint32 size, const void* pData );
         /** @brief 이름으로 찾은 프로퍼티 값을 텍스트로 설정합니다. */
-        bool setParameter( IRHIDevice* pRhi, hashed_string name, string_view value );
+        bool setParameter( IRHIDevice* pRHI, hashed_string name, string_view value );
         /** @brief 텍스처 슬롯에 디스크립터를 넣습니다. */
-        bool setTextureParameter( IRHIDevice* pRhi, hashed_string name, RHIDescriptorIndex descIdx );
+        bool setTextureParameter( IRHIDevice* pRHI, hashed_string name, RHIDescriptorIndex descIdx );
         /**
          * @brief Texture2D 프로퍼티 중 assetPath 가 있는 것을 TextureCache 에서 빌려 SRV 인덱스를 패킹합니다.
-         * @details initialize 끝에서 부릅니다(CB 가 있어야 인덱스가 GPU 에 올라갑니다). releaseRhi · forgetRhi 가 releaseTextureAssets 로 되돌립니다.
+         * @details initialize 끝에서 부릅니다(CB 가 있어야 인덱스가 GPU 에 올라갑니다). releaseRHI · forgetRHI 가 releaseTextureAssets 로 되돌립니다.
          */
-        void resolveTextureAssets( IRHIDevice* pRhi );
+        void resolveTextureAssets( IRHIDevice* pRHI );
         /** @brief resolveTextureAssets 가 빌린 텍스처를 캐시에 돌려줍니다. */
-        void releaseTextureAssets( IRHIDevice* pRhi );
+        void releaseTextureAssets( IRHIDevice* pRHI );
         /**
          * @brief 빌린 텍스처가 다시 올라왔으면(`TextureCache::reload`) 새 SRV 인덱스를 받아 다시 패킹합니다.
          * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스는 돌려줍니다. resolve 때 받은
@@ -181,7 +181,7 @@ namespace sw
         /** @brief 블렌드 모드를 설정합니다. */
         void setBlendMode( RHIBlendMode mode );
         /** @brief float32 파라미터를 설정합니다. */
-        bool setScalarParameter( IRHIDevice* pRhi, hashed_string name, float32 value );
+        bool setScalarParameter( IRHIDevice* pRHI, hashed_string name, float32 value );
 
         /** @brief 디스크립터를 반환합니다. */
         const MaterialDesc& getDesc() const { return _desc; }
@@ -197,7 +197,7 @@ namespace sw
         const vector<uint8>& getBuffer() const { return _data._bytes; }
         /**
          * @brief `getBuffer()` 의 바이트가 바뀔 때마다 오르는 세대입니다(값 · 레이아웃 · 크기).
-         * @details 인스턴스는 부모 바이트의 복사본을 들고 있어, 이 값이 바뀌면 다시 복사합니다(`MaterialInstance::updateRhi`).
+         * @details 인스턴스는 부모 바이트의 복사본을 들고 있어, 이 값이 바뀌면 다시 복사합니다(`MaterialInstance::updateRHI`).
          */
         uint32 getBufferGeneration() const { return _bufferGeneration; }
         /** @brief 이름으로 프로퍼티를 찾습니다. */

@@ -139,6 +139,6 @@ namespace test
 
     bool AppTestUtil::isSkippedExitCode( int32 exitCode )
     {
-        return exitCode == kSkippedExitCode || exitCode == sw::kRhiUnusableHereExitCode || exitCode == kNotLaunchedExitCode;
+        return exitCode == kSkippedExitCode || exitCode == sw::kRHIUnusableHereExitCode || exitCode == kNotLaunchedExitCode;
     }
 } // namespace test

@@ -75,7 +75,7 @@ namespace sw
                     break;
                 }
             }
-            if ( pState == nullptr || pState->_pTexture == nullptr || pState->_pTexture->isRhiValid() == false )
+            if ( pState == nullptr || pState->_pTexture == nullptr || pState->_pTexture->isRHIValid() == false )
                 continue;
             // 텍스처는 그린 것을 지킨다 — 내용이 같고 같은 텍스처면 다시 그리지 않는다(언리얼 위젯 컴포넌트의 다시 그리기 조건과 같은 자리).
             const RHITextureHandle texture = pState->_pTexture->getHandle();

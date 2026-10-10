@@ -46,7 +46,7 @@ namespace sw::editor
     {
     }
 
-    void RenderTargetPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void RenderTargetPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         releasePreviewTexture();
     }

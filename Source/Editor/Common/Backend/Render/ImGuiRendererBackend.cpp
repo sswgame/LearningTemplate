@@ -25,10 +25,10 @@ namespace sw::editor
         }
     }
 
-    void IImGuiRendererBackend::flushDrawReleases( IRHIDevice* pRhiDevice )
+    void IImGuiRendererBackend::flushDrawReleases( IRHIDevice* pRHIDevice )
     {
-        if ( pRhiDevice != nullptr )
-            pRhiDevice->waitIdle();
+        if ( pRHIDevice != nullptr )
+            pRHIDevice->waitIdle();
         _drawReleaseQueue.flushAll();
     }
 

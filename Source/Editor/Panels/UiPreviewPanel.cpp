@@ -57,7 +57,7 @@ namespace sw::editor
     {
     }
 
-    void UiPreviewPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void UiPreviewPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         releaseTexture();
         closePreview();
@@ -112,7 +112,7 @@ namespace sw::editor
     {
         AssetManager*    pAssets  = editor::getService<AssetManager>();
         const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getTextureManager().find( _targetPath ) : nullptr;
-        const uint64     texture  = pTexture != nullptr && pTexture->isRhiValid() ? pTexture->getHandle() : 0;
+        const uint64     texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
         if ( texture == _texture && _pTextureId != nullptr )
             return;
         releaseTexture();

@@ -47,7 +47,7 @@ namespace test
         /** @brief 픽셀 하나의 **저장된 그대로의** 바이트(`getBytesPerPixel` 개) — 형식을 풀지 않고 값이 같은지만 볼 때. 범위 밖이면 널. */
         const uint8* getRawPixel( uint32 x, uint32 y ) const;
         /** @brief 저장 형식의 픽셀당 바이트 수. */
-        uint32 getBytesPerPixel() const { return sw::getRhiFormatBytesPerPixel( _format ); }
+        uint32 getBytesPerPixel() const { return sw::getRHIFormatBytesPerPixel( _format ); }
 
         uint32        getWidth() const { return _layout._width; }
         uint32        getHeight() const { return _layout._height; }

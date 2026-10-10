@@ -22,7 +22,7 @@ namespace sw::editor
         class TagComponentInspector final : public IInspectorComponent
         {
         public:
-            void drawFooter( Component* pComponent, IRHIDevice* /*pRhiDevice*/ ) override
+            void drawFooter( Component* pComponent, IRHIDevice* /*pRHIDevice*/ ) override
             {
                 auto* pTagComp = static_cast<TagComponent*>( pComponent );
                 if ( pTagComp == nullptr )

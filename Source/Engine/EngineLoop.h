@@ -182,7 +182,7 @@ namespace sw
         // ----------------------------------------------------------------------
         ConfigManager*      getConfigManager() const { return _configManager.get(); }
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
-        RHI*                getRhi() const { return _rhi.get(); }
+        RHI*                getRHI() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
         bool                isHeadless() const { return _bHeadless; }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
@@ -196,7 +196,7 @@ namespace sw
         /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
         /** @brief RHI 기동 단계의 결과입니다. 그 단계가 돌지 않았으면(헤드리스 · 앞 단계 실패) `NotStarted` 입니다. App 이 기동 실패의 종료 코드를 고를 때 읽습니다. */
-        RHIInitResult getRhiInitResult() const { return _rhiInitResult; }
+        RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 
     private:
         /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
@@ -272,7 +272,7 @@ namespace sw
         bool           _bHeadless;
         bool           _bHeadlessTaskFailed;
         bool           _bQuitRequested;
-        /** @brief RHI 기동 단계의 결과입니다(getRhiInitResult 참고). */
+        /** @brief RHI 기동 단계의 결과입니다(getRHIInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;

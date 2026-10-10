@@ -30,7 +30,7 @@ namespace sw
         virtual ~Scene();
 
         /** @brief 씬을 초기화합니다. */
-        virtual bool initialize( IRHIDevice* pRhiDevice );
+        virtual bool initialize( IRHIDevice* pRHIDevice );
         /** @brief 붙들고 있던 GPU · 머티리얼 자원을 놓습니다. 파괴하기 전이나 비동기 로드 결과를 버릴 때 부릅니다. */
         virtual void shutdown();
 

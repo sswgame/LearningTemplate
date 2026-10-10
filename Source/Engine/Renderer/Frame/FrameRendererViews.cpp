@@ -73,7 +73,7 @@ namespace sw
             }
             if ( bRenderTexture )
             {
-                if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRhiValid() == false )
+                if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
                 {
                     view._bRenderThisFrame = SW_FALSE;
                     continue;

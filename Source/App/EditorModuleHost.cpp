@@ -350,9 +350,9 @@ namespace sw
     }
 #endif
 
-    bool EditorModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
+    bool EditorModuleHost::reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule )
     {
-        RHI* const pRHI = getRhi();
+        RHI* const pRHI = getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return false;
 
@@ -399,6 +399,6 @@ namespace sw
     bool EditorModuleHost::createEditorInstance()
     {
         SW_MEMORY_SCOPE( Editor );
-        return ModuleInstanceUtil::createInstance( _editorApi, _editor, getWindow(), getRhi(), true, "Editor" );
+        return ModuleInstanceUtil::createInstance( _editorApi, _editor, getWindow(), getRHI(), true, "Editor" );
     }
 } // namespace sw

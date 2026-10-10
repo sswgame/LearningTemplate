@@ -80,13 +80,13 @@ cmake --build --preset Ninja-Debug
 
   | Verb | Meaning |
   | --- | --- |
-  | `initRhi( pDevice )` | Create this object's GPU resources on `pDevice`. Idempotent: return `true` when already resident. |
-  | `updateRhi( pDevice )` | Push changed CPU data to resources that already exist. |
-  | `releaseRhi( pDevice )` | `pDevice` is **still alive** — hand the resources back and clear the handles. |
-  | `forgetRhi( pDevice )` | `pDevice` is **already gone** — clear the handles only; calling destroy here is use-after-free. |
-  | `isRhiValid()` | Are this object's GPU resources live right now? |
+  | `initRHI( pDevice )` | Create this object's GPU resources on `pDevice`. Idempotent: return `true` when already resident. |
+  | `updateRHI( pDevice )` | Push changed CPU data to resources that already exist. |
+  | `releaseRHI( pDevice )` | `pDevice` is **still alive** — hand the resources back and clear the handles. |
+  | `forgetRHI( pDevice )` | `pDevice` is **already gone** — clear the handles only; calling destroy here is use-after-free. |
+  | `isRHIValid()` | Are this object's GPU resources live right now? |
 
-  `releaseRhi` / `forgetRhi` / `initRhi` are never called in a loop from outside. `IRHIDevice` broadcasts
+  `releaseRHI` / `forgetRHI` / `initRHI` are never called in a loop from outside. `IRHIDevice` broadcasts
   them to the whole registry (`RHIRenderResource::releaseAllFor` / `forgetAllFor` / `initAllFor`), so a
   new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
   (`GPUScene`) keep their own vocabulary — they are not registry members.
@@ -110,7 +110,7 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
   their spelling. The tree moves one acronym at a time and only the acronyms in `kEnforced` are enforced
   (`CheckAcronymSpelling.py` — Pascal spellings and touching capitals; `AcronymRun` — a capital run in a function name must be
-  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`initRhi`, `bindComputeUav`) until
+  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`initRHI`, `bindComputeUav`) until
   `FormatAcronymSpelling.py` rewrites it across the tree.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 

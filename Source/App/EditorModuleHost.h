@@ -103,7 +103,7 @@ namespace sw
 #endif
 
         /** @brief RHI 핫스왑 뒤 게임 → 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 입니다. */
-        bool reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule );
+        bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 
     protected:
         /**

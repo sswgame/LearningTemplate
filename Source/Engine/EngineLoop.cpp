@@ -625,10 +625,10 @@ namespace sw
             loop._rhi = make_unique<RHI>();
             loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
             // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            const bool bRhiReady = loop._rhi->initialize( IWindow::getActiveWindow() );
+            const bool bRHIReady = loop._rhi->initialize( IWindow::getActiveWindow() );
             // 단계가 내려가면(destroy 는 모든 단계를 돈다) _rhi 가 사라진다 — 실패의 이유를 그 전에 남긴다. App 이 이것으로 종료 코드를 고른다.
             loop._rhiInitResult = loop._rhi->getInitResult();
-            if ( bRhiReady == false )
+            if ( bRHIReady == false )
                 return EngineInitResult::Failed;
             // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
             // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
@@ -647,7 +647,7 @@ namespace sw
             if ( loop._rhi->hasDevice() )
                 loop._rhi->getDevice().waitIdle();
             // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다. IRHIDevice::shutdown 이 내려가기 직전에
-            // 등록부 전체에 releaseRhi 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
+            // 등록부 전체에 releaseRHI 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
             loop._rhi->shutdown();
         }
         // 종료가 디바이스와 백엔드 모듈을 이미 내렸다. 남은 것은 디바이스가 없는 팩토리 객체다.
@@ -766,15 +766,15 @@ namespace sw
         }
     };
 
-    struct EngineLoop::SceneRhiStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::SceneRHIStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            loop._owned._pSceneManager->setRhiDevice( &loop._rhi->getDevice() );
+            loop._owned._pSceneManager->setRHIDevice( &loop._rhi->getDevice() );
             return EngineInitResult::Succeeded;
         }
         // 종료는 씬에서 디바이스를 떼는 것이 처음이다(표의 마지막 줄).
-        static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRhiDevice( nullptr ); }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRHIDevice( nullptr ); }
     };
 
     struct EngineLoop::TelemetryStartupStep : EngineInitStepDefaults<EngineLoop>

@@ -27,10 +27,10 @@ namespace sw
     Texture2D::~Texture2D()
     {
         if ( _handle != 0 )
-            SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRhi first.", _path.c_str() );
+            SW_LOG_WARNING( "Texture2D '%#' destroyed with a live GPU texture — call releaseRHI first.", _path.c_str() );
     }
 
-    RHIFormat Texture2D::toRhiFormatFromDxgi( uint32 dxgiFormat )
+    RHIFormat Texture2D::toRHIFormatFromDxgi( uint32 dxgiFormat )
     {
         // DDSLoader 가 쓰는 DXGI 번호(DirectX 헤더 없이 상수로 둔다). 여기 없는 번호는 Unknown.
         switch ( dxgiFormat )
@@ -80,7 +80,7 @@ namespace sw
         if ( pDevice == nullptr || relativePath.empty() )
             return false;
         if ( _handle != 0 )
-            releaseRhi( pDevice );
+            releaseRHI( pDevice );
 
         AssetLoadScope loadScope( "Texture", relativePath );
         DDSImageData   image;
@@ -90,7 +90,7 @@ namespace sw
             return false;
         }
 
-        const RHIFormat format = toRhiFormatFromDxgi( image._dxgiFormat );
+        const RHIFormat format = toRHIFormatFromDxgi( image._dxgiFormat );
         if ( format == RHIFormat::Unknown )
         {
             SW_LOG_ERROR( "Texture2D: '%#' uses DXGI format %# which RHIFormat does not cover yet", relativePath, image._dxgiFormat );
@@ -141,7 +141,7 @@ namespace sw
         }
 
         // `_pDevice` 는 **성공한 뒤에만** 적는다. 먼저 적으면 실패하고 돌아간 뒤에도 "이 디바이스에 올라가 있다" 는
-        // 표시가 남는다. `isRhiValid` 는 핸들을 보지만 `releaseRhi` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
+        // 표시가 남는다. `isRHIValid` 는 핸들을 보지만 `releaseRHI` 는 이 값으로 **남의 디바이스 통보인지**를 가른다.
         // 가진 것이 없는데 주인만 적혀 있는 상태를 애초에 만들지 않는다.
         _pDevice  = pDevice;
         _path     = string{ relativePath };
@@ -160,7 +160,7 @@ namespace sw
         if ( pDevice == nullptr || name.empty() || width == 0 || height == 0 )
             return false;
         if ( _handle != 0 )
-            releaseRhi( pDevice );
+            releaseRHI( pDevice );
 
         RHITextureDesc desc{};
         desc._width                    = width;
@@ -195,10 +195,10 @@ namespace sw
         return true;
     }
 
-    bool Texture2D::initRhi( IRHIDevice* pDevice )
+    bool Texture2D::initRHI( IRHIDevice* pDevice )
     {
         // 머티리얼이 먼저 살아나며 이 텍스처를 이미 올려 놓았을 수 있다. 두 번 올리면 그대로 새는 것이다.
-        if ( isRhiValid() )
+        if ( isRHIValid() )
             return true;
         if ( pDevice == nullptr || _path.empty() )
             return true;
@@ -208,7 +208,7 @@ namespace sw
         return loadFromResource( pDevice, _path );
     }
 
-    void Texture2D::forgetRhi( IRHIDevice* pDevice )
+    void Texture2D::forgetRHI( IRHIDevice* pDevice )
     {
         if ( _pDevice != pDevice )
             return;
@@ -218,7 +218,7 @@ namespace sw
         _pDevice = nullptr;
     }
 
-    void Texture2D::releaseRhi( IRHIDevice* pDevice )
+    void Texture2D::releaseRHI( IRHIDevice* pDevice )
     {
         // 남의 디바이스가 죽는 통보라면 내 것이 아니다.
         if ( pDevice != nullptr && _pDevice != nullptr && _pDevice != pDevice )
@@ -235,7 +235,7 @@ namespace sw
         _handle  = 0;
         _srv     = kInvalidDescriptorIndex;
         _pDevice = nullptr;
-        // 렌더 타깃은 크기 · 포맷이 곧 정의다 — 새 디바이스에서 다시 만들 때(`initRhi`) 쓴다.
+        // 렌더 타깃은 크기 · 포맷이 곧 정의다 — 새 디바이스에서 다시 만들 때(`initRHI`) 쓴다.
         if ( _bRenderTarget == SW_TRUE )
             return;
         _width    = 0;

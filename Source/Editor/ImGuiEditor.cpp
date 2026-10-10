@@ -192,13 +192,13 @@ namespace sw::editor
         ImGuiEditor::shutdown();
     }
 
-    bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
+    bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE( "Initialize start." );
         if ( _bInitialized != SW_FALSE )
             return true;
 
-        if ( pWindow == nullptr || pRhiDevice == nullptr )
+        if ( pWindow == nullptr || pRHIDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
             shutdownPartialInitialization();
@@ -251,7 +251,7 @@ namespace sw::editor
             }
 
             SW_LOG_TRACE( "Initializing Platform Backend" );
-            if ( _platformBackend->initialize( pWindow, pRhiDevice->getBackendType() ) == false )
+            if ( _platformBackend->initialize( pWindow, pRHIDevice->getBackendType() ) == false )
             {
                 SW_LOG_ERROR( "Platform backend initialization failed" );
                 shutdownPartialInitialization();
@@ -262,8 +262,8 @@ namespace sw::editor
         BLOCK( "Renderer Backend create / init" )
         {
             SW_LOG_TRACE( "Creating Renderer Backend" );
-            _rendererBackend = IImGuiRendererBackend::createRendererBackend( pRhiDevice->getBackendType() );
-            if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRhiDevice ) == false )
+            _rendererBackend = IImGuiRendererBackend::createRendererBackend( pRHIDevice->getBackendType() );
+            if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRHIDevice ) == false )
             {
                 SW_LOG_ERROR( "Renderer backend initialization failed" );
                 shutdownPartialInitialization();
@@ -313,7 +313,7 @@ namespace sw::editor
             // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다. 테마 상태를 컨텍스트가 들고 있으므로, 앞에서 부르면 적용한 테마가 갈 곳이
             // 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
             EditorThemeUtil::loadFromConfig();
-            _editorContext->setRhiDevice( pRhiDevice );
+            _editorContext->setRHIDevice( pRHIDevice );
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
@@ -426,12 +426,12 @@ namespace sw::editor
         _bInitialized = SW_FALSE;
     }
 
-    void ImGuiEditor::preRender( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::preRender( IRHIDevice* pRHIDevice )
     {
         if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
             return;
 
-        _editorContext->getPanelManager().preRenderOpenPanels( pRhiDevice );
+        _editorContext->getPanelManager().preRenderOpenPanels( pRHIDevice );
     }
 
     void ImGuiEditor::updateUi()
@@ -553,9 +553,9 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::render( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::render( IRHIDevice* pRHIDevice )
     {
-        if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
+        if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
             return;
 
         // GL: 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 유일한 지점이다.
@@ -573,11 +573,11 @@ namespace sw::editor
         {
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
             if ( pDrawData != nullptr )
-                renderBackend( pRhiDevice, pDrawData );
+                renderBackend( pRHIDevice, pDrawData );
 
             // 이 프레임이 그린 스냅샷보다 먼저 놓인 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 완료 뒤에 놓이도록 디바이스로 넘긴다.
             if ( _rendererBackend != nullptr )
-                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRhiDevice, _arrDrawSnapshot[slot].getSequence() );
+                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
         }
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
@@ -590,9 +590,9 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
     {
-        std::ignore = pRhiDevice;
+        std::ignore = pRHIDevice;
         // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
         // 보조 뷰포트는 updateUi 에서 UI 스레드가 이미 렌더·present 했다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
@@ -771,13 +771,13 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
+    void ImGuiEditor::renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
         if ( _bInitialized == SW_FALSE )
             return;
 
         if ( _rendererBackend != nullptr )
-            _rendererBackend->render( pRhiDevice, pDrawData );
+            _rendererBackend->render( pRHIDevice, pDrawData );
     }
 } // namespace sw::editor
 

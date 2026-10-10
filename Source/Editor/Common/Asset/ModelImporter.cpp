@@ -653,7 +653,7 @@ namespace sw::editor
             }
 
             /** @brief 생성기 정점을 RHI 정점으로 바꿉니다. 노멀이 없던 정점은 @p faceNormal 을 받습니다. */
-            static RHIVertex makeRhiVertex( const ImportVertex& source, const float3& faceNormal )
+            static RHIVertex makeRHIVertex( const ImportVertex& source, const float3& faceNormal )
             {
                 const float3 normal = source._bHasNormal ? source._normal : faceNormal;
                 RHIVertex    vertex{};
@@ -709,7 +709,7 @@ namespace sw::editor
                     const float3        faceNormal   = normalizeOrZero( ( arrCorner[1]->_position - arrCorner[0]->_position ).cross( arrCorner[2]->_position - arrCorner[0]->_position ) );
                     for ( const ImportVertex* pCorner : arrCorner )
                     {
-                        outData._listVertex.push_back( makeRhiVertex( *pCorner, faceNormal ) );
+                        outData._listVertex.push_back( makeRHIVertex( *pCorner, faceNormal ) );
                         if ( skinBoneCount > 0 )
                             outData._listSkinVertex.push_back( makeSkinVertex( *pCorner ) );
                     }

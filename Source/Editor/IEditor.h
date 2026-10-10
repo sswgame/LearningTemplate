@@ -27,7 +27,7 @@ namespace sw
         virtual ~IEditor() = default;
 
         /** @brief 플랫폼 백엔드·렌더러·폰트를 초기화합니다. */
-        virtual bool initialize( IWindow* pWindow, IRHIDevice* pRhiDevice ) = 0;
+        virtual bool initialize( IWindow* pWindow, IRHIDevice* pRHIDevice ) = 0;
         /** @brief 에디터 리소스를 해제합니다. */
         virtual void shutdown() = 0;
 
@@ -37,11 +37,11 @@ namespace sw
         /** @brief 메인 스레드에서 ImGui 프레임을 갱신하고, 패널을 그리고, 플랫폼 창을 갱신합니다. */
         virtual void updateUi() = 0;
         /** @brief UI 를 그리기 전에 패널의 GPU 작업을 합니다. */
-        virtual void preRender( IRHIDevice* pRhiDevice ) = 0;
+        virtual void preRender( IRHIDevice* pRHIDevice ) = 0;
         /** @brief 에디터 UI 의 DrawData 를 GPU 로 그립니다. */
-        virtual void render( IRHIDevice* pRhiDevice ) = 0;
+        virtual void render( IRHIDevice* pRHIDevice ) = 0;
         /** @brief 메인 스왑체인 Present 뒤에 불립니다(멀티 뷰포트의 보조 창을 그립니다). */
-        virtual void postPresent( IRHIDevice* pRhiDevice ) = 0;
+        virtual void postPresent( IRHIDevice* pRHIDevice ) = 0;
         /**
          * @brief 렌더 대기 중인 draw 스냅샷 표시를 버립니다. **스냅샷을 읽을 쪽이 더 이상 없을 때** 부릅니다.
          * @details `updateUi` 는 스냅샷을 내보내면서 "렌더 대기" 로 표시하고, 그 표시를 푸는 것은 렌더 스레드의 `postPresent`
