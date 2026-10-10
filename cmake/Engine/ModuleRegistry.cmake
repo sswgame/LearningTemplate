@@ -22,7 +22,9 @@ function(sw_addServerOnlyMarker TARGET_NAME)
 	if(NOT swTargets STREQUAL "Server")
 		return()
 	endif()
-	set(swMarkerSource "${CMAKE_BINARY_DIR}/generated/moduletarget/${TARGET_NAME}ServerOnlyMarker.cpp")
+	# 파일 이름에 타깃 이름을 넣지 않는다 — 빌드 폴더 밖 소스의 오브젝트 경로는 "<타깃 폴더>/<해시>/<파일 이름>.obj" 라
+	# 긴 타깃(`GF_Server_ServerDirectory`)과 긴 프리셋 이름이 CMAKE_OBJECT_PATH_MAX(250)를 넘겼다.
+	set(swMarkerSource "${CMAKE_BINARY_DIR}/generated/moduletarget/${TARGET_NAME}/ServerOnlyMarker.cpp")
 	file(CONFIGURE OUTPUT "${swMarkerSource}" CONTENT
 "// 생성 파일 - sw_addServerOnlyMarker (cmake/Engine/ModuleRegistry.cmake). 고치지 마십시오.
 // 서버 전용 모듈의 표식입니다. 클라이언트 산출물에 이 글이 있으면 서버 코드가 새어 든 것입니다(BuildTargetImageTest).

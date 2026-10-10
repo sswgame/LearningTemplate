@@ -63,7 +63,9 @@ function(sw_addModuleEngineStamp TARGET_NAME)
 	endif()
 
 	sw_defineEngineAbiStamp()
-	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}EngineStamp.cpp")
+	# 파일 이름에 타깃 이름을 넣지 않는다 — 빌드 폴더 밖 소스의 오브젝트 경로("<타깃 폴더>/<해시>/<파일 이름>.obj")가 긴 타깃 · 프리셋 이름에서
+	# CMAKE_OBJECT_PATH_MAX(250)를 넘는다(`sw_addServerOnlyMarker` 와 같다).
+	set(swStampSource "${CMAKE_BINARY_DIR}/generated/moduleidentity/${TARGET_NAME}/EngineStamp.cpp")
 	file(CONFIGURE OUTPUT "${swStampSource}" CONTENT
 "// 생성 파일 - sw_addModuleEngineStamp (cmake/Engine/EngineAbiStamp.cmake). 고치지 마십시오.
 // 이 모듈이 빌드된 Core · Engine 헤더의 지문입니다. 핫 리로드가 올리기 전에 돌고 있는 엔진의 것과 대조하고,

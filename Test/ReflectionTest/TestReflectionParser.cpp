@@ -1052,6 +1052,17 @@ SW_TEST_CASE( ReflectionParserTest, SameFileNameInOneOutputDirIsRejected )
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( headerA ) );
     SW_EXPECT_TRUE_MSG( runParser( headerB ) == 0,
                         "옛 헤더가 사라졌는데도 산출물 갱신을 막았습니다 — 파일을 옮길 때마다 빌드가 막힙니다" );
+
+#if defined( SW_PLATFORM_WINDOWS )
+    // **폴더 이름의 대소문자만 바꾼 것도 같은 파일이다**(`Gui` → `GUI`). Windows 에서는 옛 철자 경로로도 exists 가 참이라
+    // 경로 글자만 비교하면 "다른 헤더" 로 읽혀 빌드가 선다.
+    // 내용을 바꿔 "이미 최신" 으로 건너뛰지 않게 한다.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( headerB, makeHeader( "CollidingSampleRenamedCase" ) ) );
+    const sw::string headerBOtherCase = sw::FileUtil::joinPath( sw::FileUtil::joinPath( caseRoot, "b" ), "CollidingSample.h" );
+    SW_EXPECT_TRUE_MSG( runParser( headerBOtherCase ) == 0, outLog.c_str() );
+    SW_ASSERT_TRUE( sw::FileUtil::readTextFile( genCppPath, generated ) );
+    SW_EXPECT_TRUE( generated.find( "CollidingSampleRenamedCase" ) != sw::string::npos );
+#endif
 }
 
 /**

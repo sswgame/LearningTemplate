@@ -50,7 +50,7 @@ _kQueryContent = {"requests": [{"kind": "codemodel", "version": 2}, {"kind": "ca
 _kGeneratedGlob = (
     "generated/sw/config/*",
     "generated/*/ReflectionInputs.list",
-    "generated/moduleidentity/*",
+    "generated/moduleidentity/*/*",
     "Bin/Modules/*",
 )
 #: 캐시에서 견주지 않는 종류 — CMake 가 스스로 쓰는 값이라 리팩터와 무관하게 바뀐다.

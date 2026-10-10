@@ -491,8 +491,8 @@ namespace sw
         if ( FileUtil::exists( paths._cppPath ) && FileUtil::readTextFile( paths._cppPath, existingCpp ) )
         {
             const string_view recordedSource = GeneratedFileUtil::findRecordedSourcePath( existingCpp, config );
-            const bool        bOtherOwner    = recordedSource.empty() == false &&
-                                     FileUtil::normalizeSeparators( recordedSource ) != FileUtil::normalizeSeparators( inputFile ) &&
+            // 대소문자만 바뀐 폴더 이름(`Gui` → `GUI`)은 같은 파일이다 — Windows 에서는 옛 철자로도 exists 가 참이다.
+            const bool bOtherOwner = recordedSource.empty() == false && FileUtil::pathsEqualNormalized( recordedSource, inputFile ) == false &&
                                      FileUtil::exists( recordedSource );
             if ( bOtherOwner )
             {
