@@ -10,7 +10,7 @@
   1) `#include <Jolt/...>` 는 `Source/Engine/Physics/Jolt/` 안에서만, `<box2d/...>` 는 `Source/Engine/Physics/Box2D/` 안에서만,
      `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/ACL/` 안에서만, `<tracy/...>` 는 `Source/Engine/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
-     `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSsl/` 안에서만,
+     `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSSL/` 안에서만,
      `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/`
      안에서만, `<libpq-fe.h>` 는 서버 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Server/Driver/Postgres/` 안에서만 쓴다
      (시험 · 도구 · 게임도 예외 없이 인터페이스를 쓴다 — Tracy 는 `IProfilerBackend` · `SW_PROFILE_SCOPE`, Recast 는 `INavMesh`).
@@ -66,7 +66,7 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
         ("recastnavigation", "RecastNavigation::Recast", "RecastNavigation::Detour", "RecastNavigation::DetourCrowd",
          "RecastNavigation::DetourTileCache", "RecastNavigation::DebugUtils"),
     ),
-    LibraryRule("OpenSSL", ("openssl/",), ("Source/GameFramework/Base/Online/Security/OpenSsl/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto"),
+    LibraryRule("OpenSSL", ("openssl/",), ("Source/GameFramework/Base/Online/Security/OpenSSL/",), ("openssl", "OpenSSL::SSL", "OpenSSL::Crypto"),
                 "Source/GameFramework/CMakeLists.txt"),
     LibraryRule("FreeType", ("ft2build.h", "freetype/"), ("Source/Engine/Text/FreeType/",), ("freetype", "Freetype::Freetype")),
     LibraryRule("RenderDoc", ("renderdoc_app.h",), ("Source/Engine/Renderer/Capture/",), ("renderdoc",)),

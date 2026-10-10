@@ -1,5 +1,5 @@
 /**
- * @file OpenSslNetSecurityProvider.h
+ * @file OpenSSLNetSecurityProvider.h
  * @brief OpenSSL 3 로 구현한 `INetSecurityProvider` 입니다. OpenSSL 헤더는 이 폴더의 .cpp 에서만 include 한다(CheckThirdPartyIsolation).
  * @details 다른 코드는 이 헤더가 아니라 `NetSecurity::getProvider()` 로 받는다. 모든 함수는 스레드 안전(문맥을 호출마다 만들거나, 세션 · AEAD 는 한 스레드 몫).
  */
@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    class OpenSslNetSecurityProvider final : public INetSecurityProvider
+    class OpenSSLNetSecurityProvider final : public INetSecurityProvider
     {
     public:
         const utf8* getName() const override { return "OpenSSL"; }

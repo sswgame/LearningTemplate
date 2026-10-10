@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Security/OpenSsl/OpenSslNetSecurityProvider.h"
+#include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 #include "Core/Container/vector.h"
 #include "Core/Log/Logger.h"
@@ -22,11 +22,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpenSslNetSecurity" );
+    SW_LOG_CALLER( "OpenSSLNetSecurity" );
 
     namespace
     {
-        struct OpenSslNetSecurityInternal
+        struct OpenSSLNetSecurityInternal
         {
             /** @brief 자체 서명 인증서에 붙이는 확장 하나입니다. */
             struct ExtensionRow
@@ -48,7 +48,7 @@ namespace sw
                 return text.empty() ? string( "unknown OpenSSL error" ) : text;
             }
 
-            static int32 toOpenSslVersion( TlsVersion version ) { return version == TlsVersion::Tls12 ? TLS1_2_VERSION : TLS1_3_VERSION; }
+            static int32 toOpenSSLVersion( TlsVersion version ) { return version == TlsVersion::Tls12 ? TLS1_2_VERSION : TLS1_3_VERSION; }
 
             static string toHex( const uint8* pData, int32 size )
             {
@@ -105,10 +105,10 @@ namespace sw
         };
 
         /** @brief AEAD 하나 — 키를 박은 암호 · 복호 문맥 둘을 들고, 호출마다 nonce 만 바꾼다. */
-        class OpenSslAead final : public INetAead
+        class OpenSSLAead final : public INetAead
         {
         public:
-            OpenSslAead( const EVP_CIPHER* pCipher, const uint8* pKey )
+            OpenSSLAead( const EVP_CIPHER* pCipher, const uint8* pKey )
                 : _pEncrypt{ EVP_CIPHER_CTX_new() }
                 , _pDecrypt{ EVP_CIPHER_CTX_new() }
                 , _bValid{ SW_FALSE }
@@ -117,14 +117,14 @@ namespace sw
                                     EVP_DecryptInit_ex( _pDecrypt, pCipher, nullptr, pKey, nullptr ) == 1;
                 _bValid = bReady ? SW_TRUE : SW_FALSE;
             }
-            ~OpenSslAead() override
+            ~OpenSSLAead() override
             {
                 EVP_CIPHER_CTX_free( _pEncrypt );
                 EVP_CIPHER_CTX_free( _pDecrypt );
             }
 
-            OpenSslAead( const OpenSslAead& )            = delete;
-            OpenSslAead& operator=( const OpenSslAead& ) = delete;
+            OpenSSLAead( const OpenSSLAead& )            = delete;
+            OpenSSLAead& operator=( const OpenSSLAead& ) = delete;
 
             bool isValid() const { return _bValid == SW_TRUE; }
 
@@ -165,10 +165,10 @@ namespace sw
         };
 
         /** @brief 메모리 BIO 둘 위의 TLS 세션 — 핸드셰이크 전에 쓴 평문은 모아 두었다가 핸드셰이크가 끝나면 보낸다. */
-        class OpenSslTlsSession final : public ITlsSession
+        class OpenSSLTlsSession final : public ITlsSession
         {
         public:
-            OpenSslTlsSession( SSL_CTX* pContext, TlsRole role, const string& serverName, const string& pinnedSha256Hex )
+            OpenSSLTlsSession( SSL_CTX* pContext, TlsRole role, const string& serverName, const string& pinnedSha256Hex )
                 : _pendingBytes{}
                 , _pinnedSha256Hex{ pinnedSha256Hex }
                 , _failureText{}
@@ -197,7 +197,7 @@ namespace sw
                 advanceHandshake(); // ClientHello
             }
 
-            ~OpenSslTlsSession() override
+            ~OpenSSLTlsSession() override
             {
                 if ( _pSsl != nullptr )
                 {
@@ -208,8 +208,8 @@ namespace sw
                 BIO_free( _pWriteBio );
             }
 
-            OpenSslTlsSession( const OpenSslTlsSession& )            = delete;
-            OpenSslTlsSession& operator=( const OpenSslTlsSession& ) = delete;
+            OpenSSLTlsSession( const OpenSSLTlsSession& )            = delete;
+            OpenSSLTlsSession& operator=( const OpenSSLTlsSession& ) = delete;
 
             TlsSessionState getState() const override { return _state; }
             const utf8*     getFailureText() const override { return _failureText.c_str(); }
@@ -246,7 +246,7 @@ namespace sw
                         _state = TlsSessionState::Closed; // 저쪽 close_notify
                         return true;
                     }
-                    return fail( OpenSslNetSecurityInternal::takeErrorText() ); // 변조된 레코드는 여기(bad record mac)
+                    return fail( OpenSSLNetSecurityInternal::takeErrorText() ); // 변조된 레코드는 여기(bad record mac)
                 }
             }
 
@@ -298,7 +298,7 @@ namespace sw
                 {
                     const int32 written = SSL_write( _pSsl, pData + offset, size - offset ); // 메모리 BIO 라 늘 다 받는다
                     if ( written <= 0 )
-                        return fail( OpenSslNetSecurityInternal::takeErrorText() );
+                        return fail( OpenSSLNetSecurityInternal::takeErrorText() );
                     offset += written;
                 }
                 return true;
@@ -327,7 +327,7 @@ namespace sw
                 if ( error == SSL_ERROR_WANT_READ || error == SSL_ERROR_WANT_WRITE )
                     return;
                 const bool bVerifyFailed = SSL_get_verify_result( _pSsl ) != X509_V_OK;
-                (void)fail( bVerifyFailed ? string( X509_verify_cert_error_string( SSL_get_verify_result( _pSsl ) ) ) : OpenSslNetSecurityInternal::takeErrorText() );
+                (void)fail( bVerifyFailed ? string( X509_verify_cert_error_string( SSL_get_verify_result( _pSsl ) ) ) : OpenSSLNetSecurityInternal::takeErrorText() );
                 ERR_clear_error();
             }
 
@@ -337,7 +337,7 @@ namespace sw
                 if ( pPeer == nullptr )
                     return false;
                 string     hex;
-                const bool bComputed = OpenSslNetSecurityInternal::computeSha256Hex( pPeer, hex );
+                const bool bComputed = OpenSSLNetSecurityInternal::computeSha256Hex( pPeer, hex );
                 X509_free( pPeer );
                 return bComputed && hex == _pinnedSha256Hex;
             }
@@ -351,22 +351,22 @@ namespace sw
             TlsSessionState _state;
         };
 
-        class OpenSslTlsContext final : public ITlsContext
+        class OpenSSLTlsContext final : public ITlsContext
         {
         public:
-            OpenSslTlsContext( SSL_CTX* pContext, const TlsContextSettings& settings )
+            OpenSSLTlsContext( SSL_CTX* pContext, const TlsContextSettings& settings )
                 : _serverName{ settings._serverName }
                 , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
                 , _pContext{ pContext }
                 , _role{ settings._role }
             {
             }
-            ~OpenSslTlsContext() override { SSL_CTX_free( _pContext ); }
+            ~OpenSSLTlsContext() override { SSL_CTX_free( _pContext ); }
 
-            OpenSslTlsContext( const OpenSslTlsContext& )            = delete;
-            OpenSslTlsContext& operator=( const OpenSslTlsContext& ) = delete;
+            OpenSSLTlsContext( const OpenSSLTlsContext& )            = delete;
+            OpenSSLTlsContext& operator=( const OpenSSLTlsContext& ) = delete;
 
-            unique_ptr<ITlsSession> createSession() override { return sw::make_unique<OpenSslTlsSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
+            unique_ptr<ITlsSession> createSession() override { return sw::make_unique<OpenSSLTlsSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
             TlsRole                 getRole() const override { return _role; }
 
         private:
@@ -377,7 +377,7 @@ namespace sw
         };
 
         /** @brief 서명 확인 · 서명 · 키 쌍 — EVP_PKEY 를 JWK 구성 요소에서 만들고 ES256 의 r ‖ s 와 DER 를 오간다. */
-        struct OpenSslSignatureInternal
+        struct OpenSSLSignatureInternal
         {
             static constexpr int32 kEcCoordinateSize = 32;
             static constexpr int32 kMinRsaBits       = 2048;
@@ -493,9 +493,9 @@ namespace sw
 
 namespace sw
 {
-    bool OpenSslNetSecurityProvider::fillRandomBytes( uint8* pOut, int32 size ) { return size <= 0 || RAND_bytes( pOut, size ) == 1; }
+    bool OpenSSLNetSecurityProvider::fillRandomBytes( uint8* pOut, int32 size ) { return size <= 0 || RAND_bytes( pOut, size ) == 1; }
 
-    bool OpenSslNetSecurityProvider::makeX25519KeyPair( NetX25519KeyPair& outKeyPair )
+    bool OpenSSLNetSecurityProvider::makeX25519KeyPair( NetX25519KeyPair& outKeyPair )
     {
         EVP_PKEY* pKey = EVP_PKEY_Q_keygen( nullptr, nullptr, "X25519" );
         if ( pKey == nullptr )
@@ -508,7 +508,7 @@ namespace sw
         return bExtracted;
     }
 
-    bool OpenSslNetSecurityProvider::computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret )
+    bool OpenSSLNetSecurityProvider::computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret )
     {
         EVP_PKEY*     pPrivate = EVP_PKEY_new_raw_private_key( EVP_PKEY_X25519, nullptr, pPrivateKey, NetSecurityConstant::kX25519KeySize );
         EVP_PKEY*     pPeer    = EVP_PKEY_new_raw_public_key( EVP_PKEY_X25519, nullptr, pPeerPublicKey, NetSecurityConstant::kX25519KeySize );
@@ -531,7 +531,7 @@ namespace sw
         return bDerived;
     }
 
-    bool OpenSslNetSecurityProvider::computeHkdfSha256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
+    bool OpenSSLNetSecurityProvider::computeHkdfSha256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize,
                                                         uint8* pOut, int32 outSize )
     {
         EVP_KDF*     pKdf     = EVP_KDF_fetch( nullptr, OSSL_KDF_NAME_HKDF, nullptr );
@@ -551,12 +551,12 @@ namespace sw
         arrParam[paramCount] = OSSL_PARAM_construct_end();
         const bool bDerived  = EVP_KDF_derive( pContext, pOut, static_cast<size_t>( outSize ), arrParam ) == 1;
         if ( bDerived == false )
-            SW_LOG_ERROR( "HKDF-SHA256 failed: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "HKDF-SHA256 failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_KDF_CTX_free( pContext );
         return bDerived;
     }
 
-    bool OpenSslNetSecurityProvider::computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
+    bool OpenSSLNetSecurityProvider::computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
                                                           uint8* pOut, int32 outSize )
     {
         // Argon2id 는 OpenSSL 3.2 부터(EVP_KDF "ARGON2ID"). 스레드는 1 — 서버가 요청마다 스레드를 늘리지 않게(병렬도는 레인 수로만, 결과는 스레드 수와 무관).
@@ -565,7 +565,7 @@ namespace sw
         EVP_KDF_free( pKdf );
         if ( pContext == nullptr )
         {
-            SW_LOG_ERROR( "Argon2id is not available in this OpenSSL build: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "Argon2id is not available in this OpenSSL build: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
             return false;
         }
         uint8      emptyPassword  = 0; // 빈 비밀번호에도 널이 아닌 포인터를 준다
@@ -583,31 +583,31 @@ namespace sw
                                       OSSL_PARAM_construct_end() };
         const bool bDerived       = EVP_KDF_derive( pContext, pOut, static_cast<size_t>( outSize ), arrParam ) == 1;
         if ( bDerived == false )
-            SW_LOG_ERROR( "Argon2id failed: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "Argon2id failed: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_KDF_CTX_free( pContext );
         return bDerived;
     }
 
-    unique_ptr<INetAead> OpenSslNetSecurityProvider::createAead( NetAeadAlgorithm algorithm, const uint8* pKey )
+    unique_ptr<INetAead> OpenSSLNetSecurityProvider::createAead( NetAeadAlgorithm algorithm, const uint8* pKey )
     {
         const EVP_CIPHER*       pCipher = algorithm == NetAeadAlgorithm::Aes256Gcm ? EVP_aes_256_gcm() : EVP_chacha20_poly1305();
-        unique_ptr<OpenSslAead> aead    = sw::make_unique<OpenSslAead>( pCipher, pKey );
+        unique_ptr<OpenSSLAead> aead    = sw::make_unique<OpenSSLAead>( pCipher, pKey );
         if ( aead->isValid() == false )
         {
-            SW_LOG_ERROR( "Could not create an AEAD context: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "Could not create an AEAD context: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
             return nullptr;
         }
         return aead;
     }
 
-    unique_ptr<ITlsContext> OpenSslNetSecurityProvider::createTlsContext( const TlsContextSettings& settings, string& outError )
+    unique_ptr<ITlsContext> OpenSSLNetSecurityProvider::createTlsContext( const TlsContextSettings& settings, string& outError )
     {
-        using Internal = OpenSslNetSecurityInternal;
+        using Internal = OpenSSLNetSecurityInternal;
         ERR_clear_error();
         const bool bServer  = settings._role == TlsRole::Server;
         SSL_CTX*   pContext = SSL_CTX_new( bServer ? TLS_server_method() : TLS_client_method() );
-        bool       bReady   = pContext != nullptr && SSL_CTX_set_min_proto_version( pContext, Internal::toOpenSslVersion( settings._minVersion ) ) == 1 &&
-                      SSL_CTX_set_max_proto_version( pContext, Internal::toOpenSslVersion( settings._maxVersion ) ) == 1;
+        bool       bReady   = pContext != nullptr && SSL_CTX_set_min_proto_version( pContext, Internal::toOpenSSLVersion( settings._minVersion ) ) == 1 &&
+                      SSL_CTX_set_max_proto_version( pContext, Internal::toOpenSSLVersion( settings._maxVersion ) ) == 1;
         if ( bReady && bServer )
         {
             vector<X509*> listCertificate = Internal::readCertificates( settings._certificatePem );
@@ -648,12 +648,12 @@ namespace sw
             SSL_CTX_free( pContext );
             return nullptr;
         }
-        return sw::make_unique<OpenSslTlsContext>( pContext, settings );
+        return sw::make_unique<OpenSSLTlsContext>( pContext, settings );
     }
 
-    bool OpenSslNetSecurityProvider::createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem )
+    bool OpenSSLNetSecurityProvider::createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem )
     {
-        using Internal         = OpenSslNetSecurityInternal;
+        using Internal         = OpenSSLNetSecurityInternal;
         utf8      arrCurve[]   = "P-256"; // 가변 인자 keygen 이 const 가 아닌 문자열을 받는다
         EVP_PKEY* pKey         = EVP_PKEY_Q_keygen( nullptr, nullptr, "EC", arrCurve );
         X509*     pCertificate = X509_new();
@@ -715,10 +715,10 @@ namespace sw
         return bSigned;
     }
 
-    bool OpenSslNetSecurityProvider::computeCertificateSha256( const string& certificatePem, string& outHex )
+    bool OpenSSLNetSecurityProvider::computeCertificateSha256( const string& certificatePem, string& outHex )
     {
-        vector<X509*> listCertificate = OpenSslNetSecurityInternal::readCertificates( certificatePem );
-        const bool    bComputed       = listCertificate.empty() == false && OpenSslNetSecurityInternal::computeSha256Hex( listCertificate[0], outHex );
+        vector<X509*> listCertificate = OpenSSLNetSecurityInternal::readCertificates( certificatePem );
+        const bool    bComputed       = listCertificate.empty() == false && OpenSSLNetSecurityInternal::computeSha256Hex( listCertificate[0], outHex );
         for ( X509* pCertificate : listCertificate )
         {
             X509_free( pCertificate );
@@ -726,7 +726,7 @@ namespace sw
         return bComputed;
     }
 
-    bool OpenSslNetSecurityProvider::computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
+    bool OpenSSLNetSecurityProvider::computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest )
     {
         if ( pOutDigest == nullptr || dataSize < 0 || ( pData == nullptr && dataSize > 0 ) )
             return false;
@@ -734,9 +734,9 @@ namespace sw
         return EVP_Digest( pData, static_cast<size_t>( dataSize ), pOutDigest, &digestSize, EVP_sha256(), nullptr ) == 1 && digestSize == 32;
     }
 
-    bool OpenSslNetSecurityProvider::verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize )
+    bool OpenSSLNetSecurityProvider::verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize )
     {
-        using Internal = OpenSslSignatureInternal;
+        using Internal = OpenSSLSignatureInternal;
         if ( pSignature == nullptr || signatureSize <= 0 || dataSize < 0 )
             return false;
         EVP_PKEY* pKey = Internal::createPublicKey( publicKey );
@@ -760,9 +760,9 @@ namespace sw
         return bVerified;
     }
 
-    bool OpenSslNetSecurityProvider::createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey )
+    bool OpenSSLNetSecurityProvider::createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey )
     {
-        using Internal          = OpenSslSignatureInternal;
+        using Internal          = OpenSSLSignatureInternal;
         outPublicKey            = NetPublicKey{};
         outPublicKey._algorithm = algorithm;
         utf8       arrCurve[]   = "P-256";
@@ -800,16 +800,16 @@ namespace sw
         }
         else
         {
-            SW_LOG_ERROR( "Could not create a signing key pair: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "Could not create a signing key pair: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         }
         BIO_free( pKeyBio );
         EVP_PKEY_free( pKey );
         return bMade;
     }
 
-    bool OpenSslNetSecurityProvider::signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes )
+    bool OpenSSLNetSecurityProvider::signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes )
     {
-        using Internal = OpenSslSignatureInternal;
+        using Internal = OpenSSLSignatureInternal;
         outSignatureBytes.clear();
         if ( dataSize < 0 || ( pData == nullptr && dataSize > 0 ) )
             return false;
@@ -828,7 +828,7 @@ namespace sw
         else if ( bSigned )
             outSignatureBytes = std::move( signature );
         if ( bSigned == false )
-            SW_LOG_ERROR( "Could not sign: %#", OpenSslNetSecurityInternal::takeErrorText().c_str() );
+            SW_LOG_ERROR( "Could not sign: %#", OpenSSLNetSecurityInternal::takeErrorText().c_str() );
         EVP_MD_CTX_free( pDigest );
         EVP_PKEY_free( pKey );
         BIO_free( pKeyBio );

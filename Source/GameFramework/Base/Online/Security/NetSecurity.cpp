@@ -8,7 +8,7 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 
-#include "GameFramework/Base/Online/Security/OpenSsl/OpenSslNetSecurityProvider.h"
+#include "GameFramework/Base/Online/Security/OpenSSL/OpenSSLNetSecurityProvider.h"
 
 namespace sw
 {
@@ -46,7 +46,7 @@ namespace sw
 {
     INetSecurityProvider& NetSecurity::getProvider()
     {
-        static OpenSslNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
+        static OpenSSLNetSecurityProvider s_provider; // GameFramework 안 — 게임 · 키트 모듈 리로드에 살아남는다
         return s_provider;
     }
 
