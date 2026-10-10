@@ -126,6 +126,14 @@ namespace sw
         bool isActive() const { return _bActive.load( std::memory_order_relaxed ); }
 
         /**
+         * @brief 에디터에서만 숨깁니다(언리얼 bHiddenEd · 유니티 Scene Visibility). 저장되지 않고 게임 동작(활성 · 틱)은 그대로입니다.
+         * @details 렌더러의 프리미티브 수집이 이 비트를 봅니다. 바꾼 쪽이 그 오브젝트의 메시 렌더 상태를 더럽힙니다(`EditorSceneCommands::setHiddenInEditor`).
+         */
+        void setHiddenInEditor( bool bHidden ) { _bHiddenInEditor.store( bHidden, std::memory_order_relaxed ); }
+        /** @brief 에디터에서만 숨겼으면 true 입니다. */
+        bool isHiddenInEditor() const { return _bHiddenInEditor.load( std::memory_order_relaxed ); }
+
+        /**
          * @brief 계층까지 반영한 최종 활성 여부를 반환합니다.
          * @details `_bActive && _bIsActiveInHierarchy`. 부모 GameObject 가 비활성이면 자식도 false 입니다.
          */
@@ -378,6 +386,7 @@ namespace sw
         atomic<bool> _bActive;              ///< 자기 활성 비트
         atomic<bool> _bIsActiveInHierarchy; ///< 계층을 반영한 활성 비트
         atomic<bool> _bIsPendingDestroy;    ///< 삭제 예정(묘비) 표시
+        atomic<bool> _bHiddenInEditor;      ///< 에디터에서만 숨김 — PROPERTY 가 아니라 저장되지 않는다(플래그 뒤 구멍을 쓴다)
         uint32       _managerIndex;         ///< 저장소(`GameObjectStore`)의 `_listGameObject` 안 인덱스(플래그 뒤 구멍 — 끝에 두면 크기가 8 B 는다)
         /// @brief 이 액터가 소유한 컴포넌트입니다(= `ComponentList`, 인라인 네 칸). 별칭으로 적으면 리플렉션 파서가 컨테이너로 보지 못합니다.
         PROPERTY()

@@ -605,6 +605,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **컴포넌트 아이콘은 `EditorComponentIcon` 표 하나다**(Hierarchy 오브젝트 · 컴포넌트 줄, 인스펙터 카드 머리, 다음의 뷰포트 빌보드가 같이 쓴다). 찾는 순서는 타입 이름(자신 → 부모)
   → 리플렉션 Category → 기본. 에디터는 GameFramework 를 링크하지 않아 짧은 타입 이름으로 맞추므로 타입 이름을 바꾸면 그 줄이 조용히 죽는다 —
   `EditorComponentIconTest` 가 표의 이름이 레지스트리에 있는지 본다. 오브젝트 줄은 빌보드 종류(빛 · 카메라 · 오디오)가 있으면 그 아이콘이다(시나리오 `editor/componenticons`).
+- **Hierarchy 의 눈은 에디터에서만 숨긴다**(`GameObject::setHiddenInEditor` — PROPERTY 가 아니라 저장 · 되돌리기 · 씬 dirty 에 남지 않고 게임 동작도 그대로).
+  렌더러의 프리미티브 수집이 그 비트를 보므로 숨기는 쪽(`EditorSceneCommands::setHiddenInEditor`)이 메시 렌더 상태를 더럽혀야 다음 프레임에 빠진다.
+  활성 비트는 인스펙터의 Active 체크박스로만 바꾼다. 자물쇠는 워크스페이스의 잠금 목록이고 뷰포트(빌보드 · 레이 피킹)만 막는다(시나리오 `editor/hidelock`).
 - **뷰포트 빌보드(`EditorViewportBillboard`, 시각화 `billboard` · 툴바 Icons)는 등록부만 훑는다**(카메라 · 빛 · 바람). 모든 오브젝트의 컴포넌트를 훑으면
   오브젝트 8000 개 벤치에서 Debug 로 프레임마다 약 10.7 ms 였고 등록부로 37 us 가 됐다 — 등록부가 없는 종류(오디오 · 2D 빛)는 등록부가 생길 때 더한다.
   클릭 선택은 레이 피킹보다 먼저 빌보드를 화면 거리로 찾는다(메시가 없어 레이로 안 집힌다). 시나리오 `editor/billboardpick`.

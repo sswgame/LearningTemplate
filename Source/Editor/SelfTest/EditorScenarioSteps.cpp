@@ -945,6 +945,33 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbeObject` 이름의 오브젝트입니다(활성 씬). */
+            static const GameObject* findProbedObject()
+            {
+                const GameObjectManager* pManager = editor::getActiveObjectManager();
+                return pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) ) : nullptr;
+            }
+
+            /** @brief `-gv_editorProbeObject` 오브젝트의 자기 활성 비트(1 · 0)입니다. */
+            [[nodiscard]] static bool readObjectActive( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObject* pObject = findProbedObject();
+                if ( pObject == nullptr )
+                    return false;
+                outValue = pObject->isActive() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief `-gv_editorProbeObject` 오브젝트를 에디터에서만 숨겼으면 1 입니다. */
+            [[nodiscard]] static bool readObjectHiddenInEditor( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObject* pObject = findProbedObject();
+                if ( pObject == nullptr )
+                    return false;
+                outValue = pObject->isHiddenInEditor() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1121,6 +1148,9 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
     SW_AUTOMATION_PROBE( editorHierarchyRowIcon, "Editor.HierarchyRowIcon", "Icon code point of the Hierarchy row of the object named by gv_editorProbeObject",
                          &EditorScenarioStepsInternal::readHierarchyRowIcon );
+    SW_AUTOMATION_PROBE( editorObjectActive, "Editor.ObjectActive", "Own active bit of the object named by gv_editorProbeObject", &EditorScenarioStepsInternal::readObjectActive );
+    SW_AUTOMATION_PROBE( editorObjectHiddenInEditor, "Editor.ObjectHiddenInEditor", "1 when the object named by gv_editorProbeObject is hidden in the editor only",
+                         &EditorScenarioStepsInternal::readObjectHiddenInEditor );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );

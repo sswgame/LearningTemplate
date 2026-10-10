@@ -67,6 +67,11 @@ namespace sw::editor
          *          기록도 dirty 도 없어 되돌릴 수 없고 저장을 묻지 않고 사라지며, 붙인 메시는 플레이 전까지 그려지지 않는다.
          */
         static Component* addComponent( GameObject* pObj, const hashed_string& typeName );
+        /**
+         * @brief 오브젝트를 에디터에서만 숨기거나 보입니다(저장 · 되돌리기 · 씬 dirty 에 남지 않는다 — 언리얼 · 유니티의 눈 아이콘). 자식 오브젝트도 같이입니다.
+         * @details 그 오브젝트들의 메시 렌더 상태를 더럽혀 다음 프레임 수집에 반영합니다.
+         */
+        static void setHiddenInEditor( GameObject* pObj, bool bHidden );
         /** @brief 소유 오브젝트에서 컴포넌트를 제거합니다. */
         static bool destroyComponent( GameObjectManager* pManager, GameObject* pObj, Component* pComp );
         /** @brief 워크스페이스 선택을 바꿉니다. */

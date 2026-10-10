@@ -500,14 +500,19 @@ namespace sw::editor
             const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
             if ( index != invalid_index::kUint32 )
             {
-                pContext->getWorkspace().selectComponent( listItem[index]._pObject, listItem[index]._pComponent );
+                // 잠근 오브젝트는 고르지 않는다(Hierarchy 에서만). 빌보드가 맞았으면 뒤의 레이 피킹으로 넘기지 않는다.
+                if ( pContext->getWorkspace().isObjectLocked( listItem[index]._pObject->getObjectID() ) )
+                    pContext->getWorkspace().clearSelection();
+                else
+                    pContext->getWorkspace().selectComponent( listItem[index]._pObject, listItem[index]._pComponent );
                 return;
             }
         }
 
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
         EditorPickResult pickResult{};
-        if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) )
+        if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) && pickResult._pObject != nullptr &&
+             pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) == false && pickResult._pObject->isHiddenInEditor() == false )
         {
             pContext->getWorkspace().selectComponent( pickResult._pObject,
                                                       pickResult._pComponent );

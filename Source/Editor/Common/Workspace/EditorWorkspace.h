@@ -101,6 +101,10 @@ namespace sw::editor
         void  setGizmoOperation( int32 op ) { _gizmoOperation = op; }
 
         bool isGizmoLocalSpace() const { return _bGizmoLocalSpace == SW_TRUE; }
+        /** @brief 뷰포트에서 고르지 못하게 잠갔으면 true 입니다(Hierarchy 에서는 고를 수 있다 — 유니티 Pickability · 언리얼 잠금). 저장되지 않습니다. */
+        bool isObjectLocked( uint64 objectID ) const;
+        /** @brief 뷰포트 고르기 잠금을 걸거나 풉니다. */
+        void setObjectLocked( uint64 objectID, bool bLocked );
         void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }
 
         // ------------------------------------------------------------------------------
@@ -194,6 +198,7 @@ namespace sw::editor
         mutex                        _pendingSceneMutex;
         array<CameraBookmark, 9>     _arrCameraBookmark;
         vector<PrefabIsolationFrame> _listPrefabIsolationFrame;
+        vector<uint64>               _listLockedObjectID; ///< 뷰포트 고르기를 잠근 오브젝트 id
         int32                        _gizmoOperation;
         EditorPendingSceneAction     _pendingSceneAction;
         uint8                        _bGizmoLocalSpace  : 1;

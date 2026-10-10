@@ -39,6 +39,7 @@ namespace sw::editor
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
         , _listPrefabIsolationFrame{}
+        , _listLockedObjectID{}
         , _gizmoOperation{ 0 }
         , _pendingSceneAction{ EditorPendingSceneAction::None }
         , _bGizmoLocalSpace{ SW_TRUE }
@@ -322,5 +323,29 @@ namespace sw::editor
     {
         _listPrefabIsolationFrame.clear();
         _bPrefabIsolation = SW_FALSE;
+    }
+
+    bool EditorWorkspace::isObjectLocked( uint64 objectID ) const
+    {
+        for ( const uint64 lockedID : _listLockedObjectID )
+        {
+            if ( lockedID == objectID )
+                return true;
+        }
+        return false;
+    }
+
+    void EditorWorkspace::setObjectLocked( uint64 objectID, bool bLocked )
+    {
+        for ( size_t index = 0; index < _listLockedObjectID.size(); ++index )
+        {
+            if ( _listLockedObjectID[index] != objectID )
+                continue;
+            if ( bLocked == false )
+                _listLockedObjectID.erase( _listLockedObjectID.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+        if ( bLocked )
+            _listLockedObjectID.push_back( objectID );
     }
 } // namespace sw::editor

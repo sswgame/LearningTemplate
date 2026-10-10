@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -584,4 +585,21 @@ namespace sw::editor
         return stats;
     }
 
+    void EditorSceneCommands::setHiddenInEditor( GameObject* pObj, bool bHidden )
+    {
+        if ( pObj == nullptr )
+            return;
+        pObj->setHiddenInEditor( bHidden );
+        for ( Component* pComponent : pObj->getComponents() )
+        {
+            if ( pComponent != nullptr && isA<MeshComponent>( pComponent ) )
+                static_cast<MeshComponent*>( pComponent )->markRenderStateDirty();
+        }
+        vector<GameObject*> listChild;
+        pObj->getChildren( listChild );
+        for ( GameObject* pChild : listChild )
+        {
+            setHiddenInEditor( pChild, bHidden );
+        }
+    }
 } // namespace sw::editor

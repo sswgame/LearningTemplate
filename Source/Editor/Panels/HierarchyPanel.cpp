@@ -457,14 +457,22 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
-                // 1) 가시성 토글(눈) — 정사각 아이콘 단추라 DPI 배율을 받는다
-                const bool bActive = pObj->isActiveInHierarchy();
-                if ( EditorWidgets::drawToggleIconButton( "##active", bActive, editoricon::kEye, editoricon::kEyeSlash, "Visible - click to deactivate",
-                                                          "Inactive - click to activate" ) )
-                    EditorSceneCommands::setActive( pObj, bActive == false ); // 되돌리기 · 씬 dirty 에 남는다
+                // 1) 눈 — 에디터에서만 숨김(저장 · 되돌리기 · 게임 동작에 남지 않는다 — 언리얼 · 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
+                const bool bVisible = pObj->isHiddenInEditor() == false;
+                if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, "Visible in the editor - click to hide (not saved)",
+                                                          "Hidden in the editor - click to show" ) )
+                    EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
+                ImGui::SameLine();
+                // 2) 자물쇠 — 뷰포트에서 고르지 못하게(Hierarchy 에서는 고른다). 저장하지 않는다.
+                const bool bLocked = pContext->getWorkspace().isObjectLocked( objectID );
+                if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, "Locked - the viewport does not pick it; click to unlock",
+                                                          "Pickable in the viewport - click to lock" ) )
+                    pContext->getWorkspace().setObjectLocked( objectID, bLocked == false );
+                if ( EditorSelfTestMarks::isEnabled() )
+                    EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
 
                 // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
