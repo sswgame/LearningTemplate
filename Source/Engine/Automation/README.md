@@ -228,6 +228,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SelectedPropertySum` | 선택한 오브젝트 모두의 `gv_editorProbeProperty` 값 합(다중 편집) |
 | `Editor.SelectedCurveKeyCount` | 주 선택 오브젝트의 `gv_editorProbeProperty` 커브(`FloatCurve`) 키 수 |
 | `Editor.HierarchyRowIcon` | `gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘 코드 포인트 |
+| `Editor.GizmoOperation` | 기즈모 조작(0 이동 · 1 회전 · 2 크기) |
 | `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
 | `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |
@@ -241,7 +242,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
-`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, 뷰포트 빌보드 `viewport.billboard.<오브젝트 이름>` · 시각화 체크박스 `viewport.visualizer.<id>`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 시험 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
+`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, 기즈모 단추 `gizmo.translate` · `gizmo.rotate` · `gizmo.scale` · `gizmo.space`, 2D/3D 토글 `viewport.dimension`, 뷰포트 빌보드 `viewport.billboard.<오브젝트 이름>` · 시각화 체크박스 `viewport.visualizer.<id>`, 노드 그래프 캔버스 `graph.canvas`(빈 곳은 `anchor` 로) · 찾아 넣기 검색 칸 `graph.addNode.search`, 커브 미리보기 `inspector.curve.<프로퍼티>` · 편집기 캔버스 `curve.canvas` · 키 `curve.key.<n>` · 메뉴 `curve.menu.addKey`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`, Test Runner 검색 칸 `testRunner.filter` · 자체 시험 체크 `testRunner.select.<id>` · `testRunner.runSelected`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.

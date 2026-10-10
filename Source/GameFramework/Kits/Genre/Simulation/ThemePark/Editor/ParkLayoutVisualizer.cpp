@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
@@ -47,6 +48,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, "Park", "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙", false,
+    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, editoricon::kMap, "Park", "ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙", false,
                           &ParkLayoutVisualizerInternal::draw );
 } // namespace sw::editor

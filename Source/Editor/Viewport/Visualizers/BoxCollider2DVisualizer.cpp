@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
@@ -55,6 +56,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, "Col", "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,
+    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, editoricon::kCollider, "Col", "BoxCollider2D 사각형을 와이어프레임으로 표시합니다", true,
                           &BoxCollider2DVisualizerInternal::draw );
 } // namespace sw::editor

@@ -945,6 +945,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
+            [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pContext->getWorkspace().getGizmoOperation() );
+                return true;
+            }
+
             /** @brief 가장 최근에 그린 노드 그래프 캔버스의 노드 수입니다(대화 · 애니메이션 그래프 · 확장의 그래프 문서 패널). */
             [[nodiscard]] static bool readGraphNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1111,6 +1121,7 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
     SW_AUTOMATION_PROBE( editorHierarchyRowIcon, "Editor.HierarchyRowIcon", "Icon code point of the Hierarchy row of the object named by gv_editorProbeObject",
                          &EditorScenarioStepsInternal::readHierarchyRowIcon );
+    SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",

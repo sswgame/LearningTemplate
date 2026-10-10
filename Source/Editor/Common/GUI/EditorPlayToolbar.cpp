@@ -94,7 +94,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    if ( ImGui::Button( "Play" ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlay, "Play" ) ) )
                         requestSession( PendingSession::Play, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.play" );
                     EditorWidgets::drawTooltip( "게임 플레이 모드를 시작합니다 (게임 뷰 입력 및 플레이어 컨트롤 활성화)" );
@@ -108,7 +108,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    if ( ImGui::Button( "Simulate" ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kGlobe, "Simulate" ) ) )
                         requestSession( PendingSession::Simulate, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.simulate" );
                     EditorWidgets::drawTooltip( "시뮬레이션 모드를 시작합니다 (씬만 틱 — 게임 모듈 업데이트 · 게임 입력 없음)" );
@@ -122,14 +122,14 @@ namespace sw::editor
                 }
                 else
                 {
-                    if ( ImGui::Button( "Pause" ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPause, "Pause" ) ) )
                         EditorPlaySession::pause();
                     EditorSelfTestMarks::note( "toolbar.pause" );
                     EditorWidgets::drawTooltip( "게임 실행을 일시 정지합니다" );
                 }
 
                 ImGui::SameLine();
-                if ( ImGui::Button( "Step" ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step" ) ) )
                     EditorPlaySession::stepOnce();
                 EditorWidgets::drawTooltip( "게임을 정확히 1프레임 전진시킵니다" );
 
@@ -139,12 +139,12 @@ namespace sw::editor
                 _s_stepFrameCount = MathUtil::clamp( _s_stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
                 EditorWidgets::drawTooltip( "'Step N' 이 진행할 프레임 수" );
                 ImGui::SameLine();
-                if ( ImGui::Button( "Step N" ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStepForward, "Step N" ) ) )
                     EditorPlaySession::stepFrames( static_cast<uint32>( _s_stepFrameCount ) );
                 EditorWidgets::drawTooltip( "왼쪽 칸의 프레임 수만큼 진행한 뒤 일시 정지합니다" );
 
                 ImGui::SameLine();
-                if ( ImGui::Button( "Stop" ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kStop, "Stop" ) ) )
                 {
                     EditorPlaySession::stop();
                     GameObjectManager* pObjectManager = editor::getActiveObjectManager();

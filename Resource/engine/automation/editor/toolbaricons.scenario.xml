@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 재생 · 기즈모 · 뷰포트 툴바 아이콘(R5): 창을 960 px 로 줄여도 상단 툴바의 Play(toolbar.play)가 보이고 눌리며(Editor.PlayState 1),
+  멈춘 뒤 오브젝트를 고르면 떠 있는 변환 막대의 기즈모 아이콘 단추(gizmo.rotate · gizmo.scale)가 보이고 눌린다(Editor.GizmoOperation).
+  버튼이 잘려 숨겨지면 이름표가 없어 시나리오가 진다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/toolbaricons.scenario.xml -dx12
+-->
+<Scenario name="editor.toolbaricons" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="960" height="720"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="60"><EditorClick mark="toolbar.play"/></At>
+	<At frame="120"><Expect probe="Editor.PlayState" equals="1"/></At>
+	<At frame="125"><EditorClick mark="toolbar.stop"/></At>
+	<At frame="170">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<EditorClick mark="hierarchy.row.TestMesh"/>
+	</At>
+	<At frame="190"><EditorClick mark="gizmo.rotate"/></At>
+	<At frame="205"><Expect probe="Editor.GizmoOperation" equals="1"/></At>
+	<At frame="210"><EditorClick mark="gizmo.scale"/></At>
+	<At frame="225"><Expect probe="Editor.GizmoOperation" equals="2"/></At>
+	<At frame="230"><EditorClick mark="gizmo.translate"/></At>
+	<At frame="245">
+		<Expect probe="Editor.GizmoOperation" equals="0"/>
+		<CaptureWindow file="toolbar.png"/>
+	</At>
+	<At frame="250"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

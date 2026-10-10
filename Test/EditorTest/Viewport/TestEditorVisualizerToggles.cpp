@@ -15,6 +15,7 @@ SW_TEST_CASE( EditorVisualizerTogglesTest, DefaultsComeFromTheRegistration )
 {
     const EditorVisualizerRegistration kOnByDefault{
         { "on", 100 },
+        nullptr,
         "On",
         "",
         true,
@@ -22,6 +23,7 @@ SW_TEST_CASE( EditorVisualizerTogglesTest, DefaultsComeFromTheRegistration )
     };
     const EditorVisualizerRegistration kOffByDefault{
         { "off", 200 },
+        nullptr,
         "Off",
         "",
         false,
@@ -39,6 +41,7 @@ SW_TEST_CASE( EditorVisualizerTogglesTest, StateFollowsTheIDNotTheOrder )
 {
     const EditorVisualizerRegistration kInserted{
         { "inserted", 150 },
+        nullptr,
         "B",
         "",
         false,
@@ -46,6 +49,7 @@ SW_TEST_CASE( EditorVisualizerTogglesTest, StateFollowsTheIDNotTheOrder )
     }; // 확장 모듈이 사이에 끼운 줄
     const EditorVisualizerRegistration kSecond{
         { "second", 200 },
+        nullptr,
         "C",
         "",
         false,

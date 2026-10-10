@@ -72,6 +72,11 @@ namespace sw::editor
         static bool drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,
                                           const utf8* pTooltipOff );
         /**
+         * @brief 켜진 상태를 색으로 보이는 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다(상태는 부르는 쪽이 바꾼다).
+         * @details 기즈모 모드 · 뷰포트 토글처럼 "지금 켜졌나" 가 색으로 보여야 하는 자리에 씁니다. 툴팁은 @p pTooltip 입니다.
+         */
+        static bool drawIconToggle( const utf8* pID, const utf8* pIcon, bool bActive, const utf8* pTooltip );
+        /**
          * @brief @p width 안에 이름을 최대 @p maxLineCount 줄로 그립니다. 넘치면 마지막 줄 끝을 말줄임으로 줄이고 툴팁에 전체를 보입니다.
          * @details 줄 바꿈은 공백 · '_' · '-' · '.' 뒤에서 먼저 찾고, 없을 때만 글자 단위다(`EditorLabelLayoutUtil::breakLines`).
          *          높이는 늘 @p maxLineCount 줄이다 — 타일 격자의 줄 높이가 이름마다 달라지지 않게.

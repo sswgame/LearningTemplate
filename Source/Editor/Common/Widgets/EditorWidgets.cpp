@@ -7,10 +7,12 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -193,20 +195,35 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 라디오 값은 `EditorWorkspace` 의 기즈모 조작 번호다. 여기 숫자는 그 표현일 뿐이고,
-        // 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
-        int32 operation = pContext->getWorkspace().getGizmoOperation();
-        ImGui::RadioButton( "Translate", &operation, 0 );
-        ImGui::SameLine();
-        ImGui::RadioButton( "Rotate", &operation, 1 );
-        ImGui::SameLine();
-        ImGui::RadioButton( "Scale", &operation, 2 );
-        ImGui::SameLine();
-        pContext->getWorkspace().setGizmoOperation( operation );
+        // 값은 `EditorWorkspace` 의 기즈모 조작 번호다. 여기 숫자는 그 표현일 뿐이고, 뜻은 워크스페이스가 정한다(ImGuizmo OPERATION 과 짝이다).
+        // 세 엔진 모두 이동 · 회전 · 크기를 아이콘 단추로 둔다 — 글자 라디오는 좁은 뷰포트에서 잘린다.
+        struct GizmoButton
+        {
+            const utf8* _pID;
+            const utf8* _pIcon;
+            const utf8* _pTooltip;
+            const utf8* _pMark;
+        };
+        static constexpr GizmoButton kArrGizmoButton[] = {
+            {"##gizmoTranslate", editoricon::kTranslate, "Translate (W)", "gizmo.translate"},
+            {   "##gizmoRotate",    editoricon::kRotate,    "Rotate (E)",    "gizmo.rotate"},
+            {    "##gizmoScale",     editoricon::kScale,     "Scale (R)",     "gizmo.scale"},
+        };
+        const int32 operation = pContext->getWorkspace().getGizmoOperation();
+        for ( int32 index = 0; index < 3; ++index )
+        {
+            const GizmoButton& button = kArrGizmoButton[index];
+            if ( drawIconToggle( button._pID, button._pIcon, operation == index, button._pTooltip ) )
+                pContext->getWorkspace().setGizmoOperation( index );
+            EditorSelfTestMarks::note( button._pMark );
+            ImGui::SameLine();
+        }
 
-        bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();
-        if ( ImGui::Checkbox( "Local", &bLocalSpace ) )
-            pContext->getWorkspace().setGizmoLocalSpace( bLocalSpace );
+        const bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();
+        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe, "Local space - click for world space",
+                                   "World space - click for local space" ) )
+            pContext->getWorkspace().setGizmoLocalSpace( bLocalSpace == false );
+        EditorSelfTestMarks::note( "gizmo.space" );
     }
 
     void EditorWidgets::drawToolbarSeparator()
@@ -223,6 +240,23 @@ namespace sw::editor
         const bool bClicked = ImGui::Button( pLabel );
         ImGui::PopStyleColor();
         return bClicked;
+    }
+
+    bool EditorWidgets::drawIconToggle( const utf8* pID, const utf8* pIcon, bool bActive, const utf8* pTooltip )
+    {
+        const float32 side = ImGui::GetFrameHeight();
+        if ( bActive )
+        {
+            const Color4& accent = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ accent._r, accent._g, accent._b, 0.85f } );
+        }
+        ImGui::PushID( pID );
+        const bool bPressed = ImGui::Button( pIcon, ImVec2{ side, side } );
+        ImGui::PopID();
+        if ( bActive )
+            ImGui::PopStyleColor();
+        drawTooltip( pTooltip );
+        return bPressed;
     }
 
     bool EditorWidgets::drawToggleIconButton( const utf8* pID, bool bOn, const utf8* pIconOn, const utf8* pIconOff, const utf8* pTooltipOn,

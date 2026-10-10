@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -111,10 +112,10 @@ namespace sw::editor
 
         {
             const bool b2D = settings._bIs2DMode;
-            if ( EditorWidgets::drawToggleButton( b2D ? "2D Mode" : "3D Mode", b2D ) )
+            if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, editoricon::kSprite, editoricon::kCube, "2D view (XY plane grid) - click for 3D",
+                                                      "3D view (XZ plane grid) - click for 2D" ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
-
-            EditorWidgets::drawTooltip( "Toggle 2D (XY Plane Grid) / 3D (XZ Plane Grid) View Mode" );
+            EditorSelfTestMarks::note( "viewport.dimension" );
         }
 
         EditorWidgets::drawToolbarSeparator();
@@ -126,41 +127,53 @@ namespace sw::editor
             ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
         }
 
-        if ( viewportWidth > 320.0f )
+        // 숨김 문턱은 DPI 배율을 받는다(아이콘 단추의 한 변이 글꼴 높이를 따른다). 아이콘 단추라 글자 체크박스보다 좁아 문턱을 낮췄다.
+        const float32 dpiScale = EditorThemeUtil::getDpiScale();
+        if ( viewportWidth > 220.0f * dpiScale )
         {
             EditorWidgets::drawToolbarSeparator();
-            ImGui::Checkbox( "Stats", &settings._bShowStats );
+            if ( EditorWidgets::drawIconToggle( "##stats", editoricon::kChart, settings._bShowStats, "Stats overlay (FPS, objects, resolution)" ) )
+                settings._bShowStats = ( settings._bShowStats == false );
             ImGui::SameLine();
-            ImGui::Checkbox( "Grid", &settings._bShowGrid );
+            if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, "Grid" ) )
+                settings._bShowGrid = ( settings._bShowGrid == false );
             ImGui::SameLine();
-            ImGui::Checkbox( "Cube", &settings._bShowOrientationCube );
+            if ( EditorWidgets::drawIconToggle( "##cube", editoricon::kAxes, settings._bShowOrientationCube, "Orientation cube" ) )
+                settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
 
-            // 컴포넌트 시각화 체크박스는 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
+            // 컴포넌트 시각화 토글은 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
             for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
             {
                 const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );
-                bool                                bOn        = settings._visualizerToggles.isOn( visualizer );
+                const bool                          bOn        = settings._visualizerToggles.isOn( visualizer );
 
                 ImGui::SameLine();
                 ImGui::PushID( visualizer._pID );
-                if ( ImGui::Checkbox( visualizer._pToggleLabel, &bOn ) )
-                    settings._visualizerToggles.setOn( visualizer, bOn );
+                fixed_string<constant::kMaxBuffer256> tooltip;
+                formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
+                const bool bPressed = visualizer._pIcon != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", visualizer._pIcon, bOn, tooltip.c_str() )
+                                                                   : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
+                if ( bPressed )
+                    settings._visualizerToggles.setOn( visualizer, bOn == false );
                 fixed_string<constant::kMaxBuffer64> mark;
                 formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
                 EditorSelfTestMarks::note( mark.c_str() );
-                EditorWidgets::drawTooltip( visualizer._pTooltip );
+                if ( visualizer._pIcon == nullptr )
+                    EditorWidgets::drawTooltip( tooltip.c_str() );
                 ImGui::PopID();
             }
 
             ImGui::SameLine();
-            ImGui::Checkbox( "Surf", &settings._bSurfaceSnap );
+            if ( EditorWidgets::drawIconToggle( "##surfaceSnap", editoricon::kMagnet, settings._bSurfaceSnap, "Surface snap - dragged objects land on surfaces" ) )
+                settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
         }
 
-        if ( viewportWidth > 420.0f )
+        if ( viewportWidth > 270.0f * dpiScale )
         {
             EditorWidgets::drawToolbarSeparator();
-            if ( ImGui::Button( "Bookmarks" ) )
+            if ( ImGui::Button( editoricon::kBookmark, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
                 ImGui::OpenPopup( "##ViewportBookmarksPopup" );
+            EditorWidgets::drawTooltip( "Camera bookmarks (Ctrl+1~9)" );
 
             if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
             {
@@ -197,14 +210,15 @@ namespace sw::editor
             }
         }
 
-        if ( viewportWidth > 520.0f )
+        if ( viewportWidth > 300.0f * dpiScale )
         {
             EditorContext* pContext = EditorContext::get();
             if ( pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() >= 2 )
             {
                 EditorWidgets::drawToolbarSeparator();
-                if ( ImGui::Button( "Align..." ) )
+                if ( ImGui::Button( editoricon::kAlign, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
                     ImGui::OpenPopup( "##ViewportAlignPopup" );
+                EditorWidgets::drawTooltip( "Align and distribute the selected objects" );
 
                 if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
                 {

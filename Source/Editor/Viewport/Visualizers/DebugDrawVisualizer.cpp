@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/EditorVisualizerGeometry.h"
@@ -62,6 +63,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, "Dbg", "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다", true,
+    SW_EDITOR_VISUALIZER( DebugDraw, "debug_draw", 300, editoricon::kBug, "Dbg", "게임 코드가 DebugDrawQueue 에 넣은 선 · 구 · 상자 · 화살표 · 글자를 표시합니다", true,
                           &DebugDrawVisualizerInternal::draw );
 } // namespace sw::editor

@@ -6,6 +6,7 @@
 
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 
@@ -65,6 +66,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, "Cam", "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다", true,
+    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, editoricon::kCamera, "Cam", "활성 카메라를 제외한 카메라의 프러스텀을 표시합니다", true,
                           &CameraFrustumVisualizerInternal::draw );
 } // namespace sw::editor

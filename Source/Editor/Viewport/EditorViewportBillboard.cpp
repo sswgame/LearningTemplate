@@ -7,6 +7,7 @@
 
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -151,6 +152,6 @@ namespace sw::editor
         return EditorViewportBillboardInternal::kDiameter * EditorThemeUtil::getDpiScale();
     }
 
-    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, "Icons", "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다", true,
+    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, editoricon::kLightPoint, "Icons", "빛 · 카메라 · 오디오처럼 메시가 없는 컴포넌트를 아이콘으로 표시하고 눌러 고르게 합니다", true,
                           &EditorViewportBillboardInternal::draw );
 } // namespace sw::editor
