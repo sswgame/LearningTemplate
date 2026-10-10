@@ -361,6 +361,23 @@ namespace sw
         return true;
     }
 
+    bool SceneManager::saveActiveSceneCopy( string_view path )
+    {
+        if ( _saveBlockReason.empty() == false )
+        {
+            SW_LOG_WARNING( "Scene copy refused — %#", _saveBlockReason );
+            return false;
+        }
+        Scene* pScene = getActiveScene();
+        if ( pScene == nullptr || pScene->getObjectManager() == nullptr || path.empty() )
+            return false;
+        SceneDocument doc{};
+        if ( pScene->serializeToDocument( doc ) == false )
+            return false;
+        doc._sourcePath = string( path );
+        return doc.saveXML( path );
+    }
+
     /**
      * @brief 백그라운드에서 끝난 비동기 로드 결과를 메인 스레드의 안전한 시점에 활성 씬으로 바꿔 넣습니다.
      */

@@ -97,8 +97,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
-| **4 캡처 · 디버그 · 품질** | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
-| | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
+| **4 캡처 · 디버그 · 품질** | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T3 | 공용 노드 그래프 틀을 확장에 공개(`EditorGraphDocumentPanel` 내보내기 + 노드 찾아 넣기 · 핀 타입 색 · 검증 표시) | S | C1 | |
@@ -604,70 +603,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실행에선 로그만), `BugIt`(스크린샷 + 카메라 자리 + 로그를 `Saved/BugIt/` 에, `BugItGo` 로 재현), Session Frontend > Automation(시험 목록 · 실행 · 결과).
 유니티: Scene view Draw Mode(Shaded · Wireframe · Overdraw · Mipmaps · Normals …), Game view 스크린샷(`ScreenCapture`), Frame Debugger · RenderDoc 캡처 단추, Profiler Timeline(에디터 안), Test Runner 창(EditMode · PlayMode).
 우리: 보기 모드 셋(Lit, Unlit, Wireframe), Tracy(바깥), 자체 시험 · 시나리오는 명령줄로만, assert 는 디버거 없으면 프로세스가 죽는다.
-
-### H2 `bugit` / `bugitgo` — 버그 리포트 한 방 ★
-
-**목적.** 버그를 남길 때 스크린샷 · 로그 · 씬 · 카메라 자리 · 입력을 손으로 모은다. 언리얼 `BugIt` 처럼 명령 하나로 폴더에 모으고 `BugItGo` 로 그 자리에 돌아간다(D13).
-
-**바꿀 것 — 엔진 개발 명령(게임 창 · 에디터 모두), 새 `Engine/DevTools/BugItCommands.cpp` · `BugItReport.h` · `.cpp`:**
-```cpp
-namespace sw
-{
-    /** @brief bugit 한 번에 남길 것입니다(ImGui 없음 · 파일 쓰기는 BugItReport::write). */
-    struct BugItReport
-    {
-        string _note;
-        string _scenePath;
-        string _rhiBackend;
-        string _adapterName;
-        string _buildConfiguration; ///< SW_BUILD_CONFIG_NAME
-        string _gamePreset;
-        float3 _cameraPosition{};
-        float3 _cameraRotationDegrees{}; ///< pitch · yaw · roll
-        uint64 _frameNumber{ 0 };
-
-        /** @brief `info.txt`(키 = 값 한 줄씩)를 씁니다. */
-        [[nodiscard]] bool writeInfo( string_view directory ) const;
-        /** @brief `info.txt` 를 읽습니다(bugitgo). 모르는 키는 건너뛴다. */
-        [[nodiscard]] static bool readInfo( string_view directory, BugItReport& outReport );
-        /** @brief `Saved/BugIt/<yyyyMMdd-HHmmss>` 를 만듭니다(같은 초면 `-2` …). */
-        static string makeDirectory( string_view savedRoot, uint64 unixSeconds );
-    };
-} // namespace sw
-```
-`bugit [메모…]` 가 하는 일(순서대로): 폴더 만들기 → `info.txt`(위 칸 — 카메라는 활성 카메라(에디터면 에디터 카메라)) → `RenderThread::requestScreenshot( dir/screenshot.png )` →
-로그를 비우고(`Logger::flush` — 로거가 비동기라 비우지 않으면 마지막 줄이 빠진다) 지금 로그 파일을 `log.txt` 로 복사(`FileLogOutput::getFilePath()` 를 더한다) →
-입력 녹화가 돌고 있으면(3 차 A2 `InputReplay` — 녹화 중) 지금까지를 `input.swreplay` 로 → 에디터면 씬이 더러우면 사본을 `scene.scene.xml` 로(`SceneManager` 의 다른 이름 저장 — 활성 씬 경로는 바꾸지 않는 판 —
-없으면 `saveSceneCopy( path )` 를 더한다) → `repro.txt`:
-```
-App.exe -<backend> [-EnableEditor] -gv_devConsoleExec="bugitgo <폴더>"
-```
-→ 답 `"bugit -> Saved/BugIt/20261006-101530 (screenshot next frame)"`, 에디터면 토스트 + "Show in Explorer".
-`bugitgo <폴더>`: `info.txt` 를 읽어 씬이 다르면 연다(사본 `scene.scene.xml` 이 있으면 그것을 — 읽기 전용으로 열고 경고), 카메라를 그 자리 · 각도로(에디터 카메라 또는 플레이어 카메라 `teleport` 길).
-에디터: Help 메뉴(없으면 `MainMenu/Edit` 끝)에 "Report Bug (BugIt)…" — 메모 한 줄 입력 팝업 → `bugit <메모>`, 단축키 Ctrl+Shift+F12. 게임 창: `~` 콘솔에서 `bugit`.
-**시험 — `BugItReportTest`(EngineTest nogpu):** `writeInfo` → `readInfo` 왕복(한글 메모 · 공백 · 소수 카메라 값), `makeDirectory` 가 같은 초에 두 번이면 `-2`, 모르는 키 무시.
-`DevCommandRegistryTest` 에 `bugit` · `bugitgo` 등록 확인. 스크린샷 · 로그 복사는 손 확인(적용 뒤: 게임 창 `bugit 테스트` → 폴더 내용 다섯 · `bugitgo` 로 같은 자리).
-**확인 = 에디터 시나리오.** `bugit.scenario.xml`: 개발 콘솔에 `bugit scenario` 를 넣고(Output Log 입력 줄, 이름표 `console.input` 에 `EditorText` 와 `EditorKey key="Enter"`) 답 줄의 폴더를 `ExpectLog` 로 봅니다.
-같은 폴더로 `bugitgo` 를 넣은 뒤 에디터 카메라 위치 탐침이 기록과 같은지 봅니다. 게임 창 쪽은 엔진 시나리오 하나(에디터 없이)로 같은 두 명령을 봅니다.
-
-**남길 교훈.** 없음. **커밋 메시지:**
-```
-개발 도구 - bugit / bugitgo: 스크린샷 · 로그 · 씬 · 카메라 · 입력을 폴더 하나에 모으고 그 자리로 돌아간다
-
-문제점:
-- 버그를 남길 때 스크린샷 · 로그 · 씬 · 카메라 자리 · 재현 명령을 손으로 모았다. 그 자리로 돌아가는 길도 없었다.
-
-해결방안:
-- 개발 명령 bugit [메모](게임 창 · 에디터): Saved/BugIt/<시각>/ 에 info.txt(씬 · 백엔드 · 어댑터 · 구성 · 프리셋 · 카메라 · 프레임 · 메모) ·
-  screenshot.png(다음 프레임) · log.txt(로거를 비운 뒤 사본) · 입력 녹화(녹화 중이면) · 더러운 씬 사본 · repro.txt.
-- bugitgo <폴더>: 씬을 열고 카메라를 그 자리로. 에디터 메뉴 Report Bug(메모 팝업) · Ctrl+Shift+F12.
-
-결과:
-- BugItReportTest 셋, DevCommandRegistryTest 에 등록 확인.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**겹침:** 3 차 A2(`InputReplay` 판 4). 스크린샷 요청 창구(`RenderThread::requestScreenshot` · `ScreenshotPathUtil`)는 이미 있다.
 
 ### H3 시험 패널 — 자체 시험 · 시나리오 · 시험 실행 파일을 에디터에서
 

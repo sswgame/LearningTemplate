@@ -45,6 +45,11 @@ namespace sw
 
     string ScreenshotPathUtil::makeDefaultPathNow()
     {
+        return makeDefaultPath( getLocalTimeNow() );
+    }
+
+    ScreenshotLocalTime ScreenshotPathUtil::getLocalTimeNow()
+    {
         const std::time_t timeSeconds = std::time( nullptr );
         std::tm           calendar{};
 #if defined( SW_PLATFORM_WINDOWS )
@@ -59,6 +64,6 @@ namespace sw
         localTime._hour   = calendar.tm_hour;
         localTime._minute = calendar.tm_min;
         localTime._second = calendar.tm_sec;
-        return makeDefaultPath( localTime );
+        return localTime;
     }
 } // namespace sw

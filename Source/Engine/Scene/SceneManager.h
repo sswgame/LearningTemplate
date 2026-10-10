@@ -56,6 +56,11 @@ namespace sw
          */
         [[nodiscard]] bool saveActiveScene( string_view path = {} );
         /**
+         * @brief 활성 씬의 사본을 @p path 에 저장합니다. 씬 소스 경로는 바꾸지 않습니다(다음 저장은 원래 자리로 간다 — BugIt 의 씬 사본).
+         * @details 저장이 막혀 있으면(`setSaveBlockReason`) 쓰지 않고 false 입니다.
+         */
+        [[nodiscard]] bool saveActiveSceneCopy( string_view path );
+        /**
          * @brief 씬 저장을 막거나(사유) 풉니다(빈 문자열).
          * @details 호스트가 모듈 컴포넌트를 씬에서 걷어 낸 채 아직 되돌리지 못한 동안 세웁니다(게임 모듈 리로드 · 그 실패). 그 사이에 저장하면
          *          그 컴포넌트가 빠진 씬이 저장됩니다. 막혀 있으면 `saveActiveScene` 이 사유를 알리고 false 를 반환합니다.

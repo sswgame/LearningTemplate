@@ -107,6 +107,9 @@ namespace sw::editor
             {
                 return EditorCamera::ensure( editor::getActiveScene() );
             }
+
+            /** @brief 에디터 카메라가 지난 프레임에 건 자리에서 이만큼(m) 넘게 떨어져 있으면 바깥이 옮긴 것으로 본다(부동소수 왕복 오차보다 크다). */
+            static constexpr float32 kExternalMoveTolerance = 0.001f;
         };
     } // namespace
 } // namespace sw::editor
@@ -158,6 +161,8 @@ namespace sw::editor
         , _orbitTarget{ 0.0f, 0.0f, 0.0f }
         , _rulerStartWorld{ 0.0f, 0.0f, 0.0f }
         , _rulerEndWorld{ 0.0f, 0.0f, 0.0f }
+        , _lastAppliedCameraPos{ 0.0f, 0.0f, 0.0f }
+        , _lastAppliedCameraID{ 0 }
         , _orbitDistance{ 8.0f }
         , _fovY{ 60.0f }
         , _nearZ{ 0.1f }
@@ -279,12 +284,28 @@ namespace sw::editor
         CameraComponent* pCam = EditorViewportClientInternal::getSceneViewCamera();
         if ( pCam != nullptr )
         {
+            // 바깥(개발 명령 bugitgo · teleport)이 에디터 카메라를 옮겼으면 씬 뷰가 그 자리 · 시선을 이어받는다 — 덮어쓰면 명령이 한 프레임도 남지 않는다.
+            const bool bSameCamera   = _lastAppliedCameraID == pCam->getComponentID();
+            const bool bMovedOutside = bSameCamera && ( pCam->getLocalPosition() - _lastAppliedCameraPos ).getLength() > EditorViewportClientInternal::kExternalMoveTolerance;
+            if ( bMovedOutside )
+            {
+                const float3  forward = pCam->getCameraForward();
+                const float32 length  = forward.getLength();
+                _cameraPos            = pCam->getLocalPosition();
+                if ( length > 0.0f )
+                {
+                    _cameraRot._x = MathUtil::toDegree( MathUtil::asin( MathUtil::clamp( -forward._y / length, -1.0f, 1.0f ) ) );
+                    _cameraRot._y = MathUtil::toDegree( MathUtil::atan2( forward._x, forward._z ) );
+                }
+            }
             pCam->setLocalPosition( _cameraPos );
             const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
             const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
             const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
                                   MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
             pCam->lookAt( _cameraPos + forward );
+            _lastAppliedCameraPos = _cameraPos;
+            _lastAppliedCameraID  = pCam->getComponentID();
         }
     }
 

@@ -453,6 +453,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **에디터 실행의 스크린샷은 게임 뷰 그림이다.** `-EnableEditor` 에서 `-gv_screenshot` 과 시나리오 `<Screenshot>` 은 Present 캡처가 게임 뷰 렌더 타깃을 복사한 것이라 에디터 UI 는 들어가지 않는다.
   스크린샷 단추(게임 뷰 `gameView.screenshot` · 씬 뷰 `sceneView.screenshot` · F9 `viewport.screenshot`)는 `EditorScreenshotCommands` 가 `RenderThread::requestScreenshot` 에 넘긴다 —
   게임 뷰는 Present 캡처(주 출력), 씬 뷰는 씬 뷰 RT 를 직접 읽는다. 단축키는 패널보다 먼저 처리되므로 "포커스가 있는 뷰" 는 패널이 그릴 때 적어 둔 마지막 포커스(`noteFocusedView`)다. 시나리오 `editor/screenshotbutton`.
+- **버그 리포트는 엔진 명령 하나다.** Edit 메뉴 Report Bug (BugIt) · Ctrl+Shift+F12(`help.reportBug`)와 콘솔 `bugit <메모>` 가 같은 `BugItReport::capture` 를 부른다.
+  `bugitgo` 가 에디터 카메라를 옮기면 씬 뷰가 그 자리를 이어받는다 — `EditorViewportClient` 는 지난 프레임에 건 자리와 다른 에디터 카메라 자리를 바깥이 옮긴 것으로 받아들인다(`teleport` 도 같다). 시나리오 `editor/bugit`.
 - **RenderDoc 단추(상단 툴바 `toolbar.renderDoc` · Ctrl+F12 `viewport.renderDocCapture` · 프로파일러 패널)는 RenderDoc 이 붙었을 때만 산다**(`RenderDocCapture::isAvailable` — `-renderdoc` 또는 RenderDoc 에서 실행).
   회색 단추의 이유는 `ImGuiHoveredFlags_AllowWhenDisabled` 로 띄운다 — `EditorWidgets::drawTooltip` 은 회색 위젯 위에서 뜨지 않는다. 시나리오 `editor/renderdocbutton` 은 붙지 않은 쪽만 본다.
 - **창 제목(`<게임> — <씬>[*] — SW Editor`)은 셸이 프레임마다 다시 건다**(`EditorWindowTitleUtil::makeTitle` → `IWindow::setTitle`, 같은 제목이면 건너뛴다). 게임 이름은 `GameConfig::_windowTitle` 하나에서 오고, 에디터가 내려가면 그 값으로 되돌린다.

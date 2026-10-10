@@ -38,5 +38,7 @@ namespace sw
         static string makeDefaultPath( const ScreenshotLocalTime& localTime );
         /** @brief 지금 지역 시각의 기본 경로입니다. */
         static string makeDefaultPathNow();
+        /** @brief 지금 지역 시각입니다(BugIt 폴더 이름도 같은 꼴을 쓴다). */
+        static ScreenshotLocalTime getLocalTimeNow();
     };
 } // namespace sw

@@ -91,6 +91,8 @@ namespace sw::editor
         float3                  _orbitTarget;
         float3                  _rulerStartWorld;
         float3                  _rulerEndWorld;
+        float3                  _lastAppliedCameraPos; ///< 지난 프레임에 에디터 카메라에 건 로컬 자리 — 바깥(bugitgo · teleport)이 옮겼는지 가린다
+        uint64                  _lastAppliedCameraID;  ///< 그 카메라 컴포넌트 id(0 이면 아직 걸지 않았다 — 씬이 바뀌어 새 카메라면 받아들이지 않는다)
         float32                 _orbitDistance;
         float32                 _fovY;
         float32                 _nearZ;

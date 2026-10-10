@@ -231,6 +231,8 @@ namespace sw
         void setSceneViewMode( RenderViewMode viewMode );
         /** @brief 에디터 씬 뷰의 보기 모드입니다. */
         RenderViewMode getSceneViewMode() const;
+        /** @brief 이 렌더러가 그리는 디바이스입니다(초기화 전이면 nullptr). 백엔드 이름 같은 정보를 읽을 때 씁니다. */
+        IRHIDevice* getDevice() const { return _pDevice; }
 
         /** @brief 패스 타입에 대응하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;

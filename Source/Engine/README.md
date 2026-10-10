@@ -184,7 +184,8 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 개발 콘솔과 개발 명령은 Shipping에 없습니다(`SW_DEV_COMMANDS_ENABLED`). 명령 레지스트리는 `Console/DevCommandRegistry` 하나이고, 모듈을 언로드하면 그 모듈의 명령이 빠집니다.
 명령은 자기 `.cpp` 에 `SW_DEV_COMMAND( 변수, "이름", "사용법", "설명", &본문 )` 한 줄로 등록하고, 본문은 `#if SW_DEV_COMMANDS_ENABLED` 안에 둡니다.
-게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령도 소유 코드 옆에 있습니다 — `timescale` 은 `Utility/GameTimeScale.cpp`, `autoplay` 는 `Utility/GameAutoplay.cpp`, `debugdraw.category` 는 `Graphics/Debug/DebugDrawQueue.cpp`, `screenshot [file]`(다음 프레임을 PNG 로 — `RenderThread::requestScreenshot`)은 `Renderer/Capture/ScreenshotPathUtil.cpp`, `renderdoc.capture` · `renderdoc.ui`(RenderDoc 이 붙었을 때 — `-renderdoc`)는 `Renderer/Capture/RenderDocCapture.cpp`, 활성 씬을 찾는 `teleport` · `tag.add` · `anim.rewind*` 는 `Scene/SceneDevCommands.cpp`(컴포넌트 모델은 씬을 모른다).
+게임과 키트의 치트(무적, 아이템 주기)도 같은 방식으로 그 게임과 키트에 둡니다. 엔진 명령도 소유 코드 옆에 있습니다 — `timescale` 은 `Utility/GameTimeScale.cpp`, `autoplay` 는 `Utility/GameAutoplay.cpp`, `debugdraw.category` 는 `Graphics/Debug/DebugDrawQueue.cpp`, `screenshot [file]`(다음 프레임을 PNG 로 — `RenderThread::requestScreenshot`)은 `Renderer/Capture/ScreenshotPathUtil.cpp`, `renderdoc.capture` · `renderdoc.ui`(RenderDoc 이 붙었을 때 — `-renderdoc`)는 `Renderer/Capture/RenderDocCapture.cpp`,
+버그 리포트 `bugit [메모]` · `bugitgo [폴더]`(언리얼 BugIt · BugItGo — `Saved/BugIt/<시각>/` 에 info · 스크린샷 · 로그 사본 · 씬 사본 · 재현 명령, 카메라는 에디터 카메라가 있으면 그것)는 `Renderer/Capture/BugItReport.cpp`, 활성 씬을 찾는 `teleport` · `tag.add` · `anim.rewind*` 는 `Scene/SceneDevCommands.cpp`(컴포넌트 모델은 씬을 모른다).
 Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTest`(AppTest)가 바이너리를 검사해 확인합니다.
 
 `Console/DevConsole` 은 한 줄을 해석하고(`help`, `get`, `set`, 명령, `gv_이름 [값]`), 자동 완성과 기록을 맡습니다. 에디터 Output Log의 입력 줄과 게임 창 콘솔이 함께 씁니다.

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 게임 창(에디터 없이)의 버그 리포트 한 방: 개발 명령 bugit 이 Saved/BugIt/<시각>/ 에 모으고 bugitgo 가 그 폴더를 읽어 카메라를 그 자리로 둔다.
+  게임 카메라는 게임이 다시 옮길 수 있으므로 자리는 보지 않고 두 명령의 결과 줄만 본다(카메라 자리는 에디터 시나리오 editor/bugit 이 본다).
+  실행: App.exe -scenario=engine/automation/bugit.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.bugit" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="10"><DevCommand line="bugit game window"/></At>
+	<At frame="15"><ExpectLog contains="BugIt report saved to" atLeast="1"/></At>
+	<At frame="20"><DevCommand line="bugitgo"/></At>
+	<At frame="25"><ExpectLog contains="BugItGo moved the view camera" atLeast="1"/></At>
+	<At frame="30"><Pass/></At>
+</Scenario>
