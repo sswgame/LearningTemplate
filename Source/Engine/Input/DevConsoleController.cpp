@@ -140,7 +140,7 @@ namespace sw
         // 창 위치는 게임 창을 따라가야 해서(창을 옮기거나 크기를 바꾼다) 열려 있는 동안 프레임마다 넘긴다.
         vector<string> listLine;
         vector<uint8>  listErrorFlag;
-        buildVisibleLines( listLine, listErrorFlag );
+        collectVisibleLines( listLine, listErrorFlag );
         _pWindow->present( listLine, listErrorFlag );
     }
 
@@ -211,7 +211,7 @@ namespace sw
         return _bShellMapComplete == SW_TRUE;
     }
 
-    void DevConsoleController::buildVisibleLines( vector<string>& outListLine, vector<uint8>& outListErrorFlag ) const
+    void DevConsoleController::collectVisibleLines( vector<string>& outListLine, vector<uint8>& outListErrorFlag ) const
     {
         outListLine.clear();
         outListErrorFlag.clear();

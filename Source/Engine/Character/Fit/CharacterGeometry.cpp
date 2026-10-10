@@ -136,7 +136,7 @@ namespace sw
 
     float4x4 CharacterGeometryUtil::makeTransform( const float3& translation, const quaternion& rotation, const float3& scale )
     {
-        return float4x4::createTrs( translation, rotation, scale );
+        return float4x4::makeTrs( translation, rotation, scale );
     }
 
     float4x4 CharacterGeometryUtil::blendTransforms( const float4x4& from, const float4x4& to, float32 weight )

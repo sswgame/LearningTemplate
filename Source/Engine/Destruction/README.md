@@ -122,7 +122,7 @@ pFracture->applyRadialDamageAtWorld( center, 1.2f /*반경*/, 400.0f /*변형*/,
 - 무게 중심, 부피, 경계 상자
 
 연결의 넓이는 두 조각이 서로를 향해 낸 안쪽 면 넓이 중 작은 값입니다.
-클러스터 계층은 `FractureGraphUtil::buildHierarchy` 가 아래에서 위로 만듭니다. 가장 먼 점 고르기로 시작점을 정하고 k-평균으로 묶습니다.
+클러스터 계층은 `FractureGraphUtil::populateHierarchy` 가 아래에서 위로 만듭니다. 가장 먼 점 고르기로 시작점을 정하고 k-평균으로 묶습니다.
 연결로 이어지지 않은 클러스터는 덩어리마다 나누고, 잎 번호를 깊이 우선 순서로 다시 매겨 노드마다 잎 번호가 연속 구간이 되게 합니다.
 난수는 `DestructionRandom`(splitmix64)으로 뽑고 표준 라이브러리 분포를 쓰지 않습니다. 그래서 같은 메시와 규칙, 씨앗이면 바이트까지 같은 결과가 나옵니다.
 

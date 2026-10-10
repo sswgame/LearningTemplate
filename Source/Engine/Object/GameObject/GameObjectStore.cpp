@@ -82,7 +82,7 @@ namespace sw
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
-        return createGameObjectUnlocked( name, generateNewID() );
+        return createGameObjectUnlocked( name, allocateID() );
     }
 
     GameObject* GameObjectStore::createGameObjectWithID( hashed_string name, uint64 objectID )
@@ -90,14 +90,14 @@ namespace sw
         SW_ASSERT( WalkScope::isInsideWalk() == false );
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         if ( objectID == 0 )
-            return createGameObjectUnlocked( name, generateNewID() );
+            return createGameObjectUnlocked( name, allocateID() );
 
         // 그 id 로 등록된 것이 아직 있으면(삭제 대기 포함) 쓰지 않는다. 옛 것의 지연 파괴가 id 로 정리하는 항목을 새 것 몫까지 지운다.
         if ( findRegisteredUnlocked( objectID ) != nullptr )
         {
             SW_LOG_WARNING( "createGameObjectWithID: id %# is still registered, so '%#' gets a new id. Handles to the old object will not follow it.",
                             objectID, name.c_str() );
-            return createGameObjectUnlocked( name, generateNewID() );
+            return createGameObjectUnlocked( name, allocateID() );
         }
 
         _s_nextObjectID.fetch_max( objectID + 1, std::memory_order_relaxed );
@@ -642,7 +642,7 @@ namespace sw
     }
 #endif
 
-    uint64 GameObjectStore::generateNewID()
+    uint64 GameObjectStore::allocateID()
     {
         return _s_nextObjectID.fetch_add( 1, std::memory_order_relaxed );
     }

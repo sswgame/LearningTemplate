@@ -700,8 +700,8 @@ SW_TEST_CASE( SpatialTest, BVHTree3DFrustumQueryKeepsOnlyVisibleBoxes )
     tree.insert( sw::SlotHandle::make( 3, 1 ), makeBox( 60.0f, 0.0f, 0.0f ) );   // 옆으로 멀리
     tree.insert( sw::SlotHandle::make( 4, 1 ), makeBox( 0.0f, 0.0f, -500.0f ) ); // 원평면 너머
 
-    const sw::float4x4 view = sw::float4x4::createLookAt( sw::float3{ 0.0f, 0.0f, 5.0f }, sw::float3::Zero, sw::float3::Up );
-    const sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
+    const sw::float4x4 view = sw::float4x4::makeLookAt( sw::float3{ 0.0f, 0.0f, 5.0f }, sw::float3::Zero, sw::float3::Up );
+    const sw::float4x4 proj = sw::float4x4::makePerspectiveFieldOfView( 0.8f, 1.0f, 0.5f, 100.0f );
 
     sw::vector<sw::SlotHandle> listVisible;
     tree.queryFrustum( view * proj, listVisible );

@@ -72,8 +72,8 @@ namespace sw
         // 렌더 텍스처의 크기를 먼저 알린다 — 그 텍스처를 읽는 머티리얼이 카메라보다 먼저 빌려도 같은 크기로 만들어지게.
         if ( _renderOutput._target != CameraOutputTarget::RenderTexture || _renderOutput._renderTexture.empty() || engine::areEngineServicesBound() == false )
             return;
-        engine::getAssetManager().getTextureManager().declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth,
-                                                                           _renderOutput._renderTextureHeight );
+        engine::getAssetManager().getTextureCache().declareRenderTarget( _renderOutput._renderTexture, _renderOutput._renderTextureWidth,
+                                                                         _renderOutput._renderTextureHeight );
     }
 
     void CameraComponent::onUnregister( GameObjectManager& manager )
@@ -101,7 +101,7 @@ namespace sw
         quaternion worldRotation{};
         float3     worldTranslation{};
         world.decompose( worldScale, worldRotation, worldTranslation );
-        setWorldTransform( float4x4::createTrs( eye, quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f ), worldScale ) );
+        setWorldTransform( float4x4::makeTrs( eye, quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f ), worldScale ) );
     }
 
     float4x4 CameraComponent::getViewMatrix() const
@@ -111,7 +111,7 @@ namespace sw
         const float3   forward  = float3::transformVector( float3( 0.0f, 0.0f, 1.0f ), worldMat );
         const float3   up       = float3::transformVector( float3( 0.0f, 1.0f, 0.0f ), worldMat );
         const float3   target   = eye + forward;
-        return float4x4::createLookAt( eye, target, up );
+        return float4x4::makeLookAt( eye, target, up );
     }
 
     float3 CameraComponent::getCameraForward() const
@@ -133,10 +133,10 @@ namespace sw
         {
             const float32 height = _orthoHeight > 1e-4f ? _orthoHeight : 10.0f;
             const float32 width  = height * aspect;
-            return float4x4::createOrthographic( width, height, nearZ, farZ );
+            return float4x4::makeOrthographic( width, height, nearZ, farZ );
         }
         const float32 fov = _fovY > 1e-4f ? _fovY : 0.70f;
-        return float4x4::createPerspectiveFieldOfView( fov, aspect, nearZ, farZ );
+        return float4x4::makePerspectiveFieldOfView( fov, aspect, nearZ, farZ );
     }
 
     float4x4 CameraComponent::getViewProjectionMatrix( float32 aspectRatio ) const

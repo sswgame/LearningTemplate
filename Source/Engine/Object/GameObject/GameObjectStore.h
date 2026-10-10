@@ -242,7 +242,7 @@ namespace sw
         };
 
         /** @brief 새 ObjectID 를 발급합니다. */
-        static uint64 generateNewID();
+        static uint64 allocateID();
         /** @brief `_mutex` 를 쥔 채 @p objectID 로 오브젝트를 만들어 이름 맵 · id 표 · 병합 대기 목록에 올립니다. */
         GameObject* createGameObjectUnlocked( hashed_string name, uint64 objectID );
         /**

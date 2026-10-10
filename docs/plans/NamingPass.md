@@ -21,24 +21,18 @@
 | 열거형 `Auto` · `Normal` · `Custom` · `Count` | 열거형 안에서만 뜻이 서고 각자 문맥이 분명하다. `Misc = 0`(`HorrorCatalog.h`) 하나만 이름을 바꾼다 |
 | 통지 동사(`notify` · `broadcast` · `publish` …) 규칙화 | 추정에 그친다 |
 
-### 문서로 해결 — 남은 것
+### 문서로 해결
 어휘표(`acquire` · `tryGet` · `getOrCreate` · `ensure` · 프레임 진행 동사)와 접미사 표 · `RT` 는 AGENTS.md "Function names" 와 [코딩 규칙 예시](../04_CodingGuidelines.md) 2 절에 올렸다.
-- `BlendCurveSpec` 은 접미사 표와 뜻이 반대라 `BlendCurveDef` 로 바꾼다(`AbilitySpec` 은 언리얼 `FGameplayAbilitySpec` 이라 그대로).
 
-### 린트 예외 표 비우기
-`CheckFunctionVocabulary` 가 `build` · `generate` · `construct` 와 함수 이름의 `Attr` 를, `CheckOutParameterNames` 가 맨이름 `out` 매개변수를 새 선언에서 막는다.
-기존 선언은 두 게이트의 `mapExemption` 에 "개명 예정 <새 이름>" 으로 올라 있다 — 기계적 치환 묶음에서 바꾸고 표에서 지운다.
+### 끝난 것 (2026-10-10 기계적 치환)
+`MatrixMath::create*` → `make*`, `ctx` · `*Ctx` → `context` · `*Context`, `BlendCurveSpec` → `BlendCurveDef`, 스윕 비율 `_time` → `_hitFraction`,
+부정형 불린(`_bCollideConnectedBodies` · `_bCollideJointedBodies` — 데이터도 다시 썼다 · `_bTCPNoDelay` · `_bIgnoreCost`), 동작과 어긋난 함수 넷,
+`getMaterialCache` / `getTextureCache`, `RegistrationResult` 한 이름, `NetHost` 의 `nowSeconds` · `_timeoutSeconds`,
+두 린트 예외 표의 "개명 예정" 59 줄(`build*` · `generateNewID` · `Attr` · 맨이름 `out`). 예외 표에는 "도메인 용어" 일곱 줄만 남았다.
 
-### 채택 — 기계적 치환 (한 묶음씩, 약어 코드모드 틀에)
-- `MatrixMath::create*` 21 개(참조 81) → `make*`: 값을 반환하므로 AGENTS 표(`create` 소유 · `make` 값)대로.
-- `ctx` → `context`(선언 257 곳 — `SerializeContext& ctx` 195, `FramePassContext` 44, `ModuleContext` 15): "opaque abbreviation 금지" 규칙대로.
+### 채택 — 남은 치환 (건별 판단)
+- `HorrorCatalog.h` 의 `Misc = 0`.
 - 바이트 크기: 버퍼·메모리 필드만 `sizeBytes` 로(맨 `size` 354 곳은 컨테이너 크기라 대상 아님). 시간 필드는 단위 없는 것 약 66 개 가운데 초·밀리초가 모호한 것만 접미사를 붙인다 — 사전 목록을 뽑아 건별 판단.
-- `NetHost::update( float64 time )` → 절대 시각이면 `nowSeconds`, `_timeout` → `_timeoutSeconds`.
-- `_time` 이 0..1 스윕 비율인 3 곳(`Component.h` · `PhysicsWorld.h` · `ContinuousCollision.h`) → `_hitFraction`(언리얼 `FHitResult::Time` 도 같은 값이지만 이 저장소에서는 애님 초와 겹친다).
-- 부정형 불린 → 긍정형: `_bDisableCollision`(16 곳) → `_bCollideConnectedBodies`, `_bDisableJointedCollision` · `_bNoDelay` → `_bTCPNoDelay` · `_bUnlimitedCost` → `_bIgnoreCost`. 데이터 키가 달라지므로 같은 커밋에서 데이터를 다시 쓴다(별칭 없음).
-- 이름과 동작이 어긋난 함수: `MonsterBattle::canActThisTurn`(비-const, 상태이상 해제) → `resolveStatusBeforeAct`; `BehaviorTreeRunner::hasHigherPriorityTrigger`(조건 목록 갱신) → `pollHigherPriorityTrigger`; `ContentBrowserFolderCache::getChildFolders`(캐시를 채움) → `getOrScanChildFolders`; `RigJSONReader::findMember( key, bRequired )`(사용 키 기록 + 오류 로그) → `readMember`.
-- `AssetManager::getMaterialManager` / `getTextureManager` 가 `MaterialCache` / `TextureCache` 를 돌려준다 → `getMaterialCache` / `getTextureCache`(참조 62).
-- `RegisterResult` / `RegistrationResult` 두 이름 → 하나.
 - 파일 이름과 타입이 어긋난 곳: `EditorColor.h` 의 `Color4`, `EventType.h` 의 `IEvent`, `Crafting.h` 의 `RecipeDef` 외, `AnimNotifyHandlers.h` 의 `CameraShakeRequest` — 파일을 타입 이름에 맞춰 나누거나 옮긴다(건별).
 
 ### 채택 — 구조와 얽힌 큰 이름 (건별 결정 뒤)

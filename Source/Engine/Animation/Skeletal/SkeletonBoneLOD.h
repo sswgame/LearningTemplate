@@ -34,7 +34,7 @@ namespace sw
      * @details 형식: `{ "levels": [ { "max_screen_size": 0.12, "remove": [ "kneeIK.l", ... ] }, ... ] }`. 단계는 화면 크기가 작아지는 순이고(앞 단계보다
      *          `max_screen_size` 가 작아야 한다), 뒤 단계는 앞 단계가 뺀 본을 이어받습니다. 화면 크기는 경계 구의 지름이 화면 높이에서 차지하는 비율입니다
      *          (`AnimationLODUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라갑니다 — 스키닝에는 그대로 쓰입니다.
-     *          모르는 키 · 스켈레톤에 없는 본 이름은 오류입니다(`buildMasks`).
+     *          모르는 키 · 스켈레톤에 없는 본 이름은 오류입니다(`computeMasks`).
      */
     class SW_API SkeletonBoneLOD
     {
@@ -59,7 +59,7 @@ namespace sw
          * @brief 단계마다 본 마스크(본 수, 1 = 푼다)를 만듭니다. `outListMask[n]` 은 단계 n + 1 의 마스크입니다(단계 0 은 마스크가 없다).
          * @return 스켈레톤에 없는 본 이름이 있으면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool buildMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const;
+        [[nodiscard]] bool computeMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const;
 
         /**
          * @brief 스켈레톤 경로 곁의 본 LOD 경로입니다. `a/knight/knight.skeleton.json`(임포트 옆 폴더 — 폴더 이름 = 파일 이름) → `a/knight.bonelod.json`,

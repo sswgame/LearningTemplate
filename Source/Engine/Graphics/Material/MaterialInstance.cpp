@@ -179,7 +179,7 @@ namespace sw
             {
                 XMLNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", keywordItem._name );
-                MaterialUtil::appendBoolAttr( item, "bEnabled", keywordItem._bEnabled );
+                MaterialUtil::appendBoolAttribute( item, "bEnabled", keywordItem._bEnabled );
             }
         }
         if ( _desc._listMultiCompile.empty() == false )
@@ -279,7 +279,7 @@ namespace sw
     {
         if ( _listTextureOverride.empty() || engine::areEngineServicesBound() == false )
             return false;
-        TextureCache& textures = engine::getAssetManager().getTextureManager();
+        TextureCache& textures = engine::getAssetManager().getTextureCache();
         bool          bChanged{ false };
         // 디바이스가 바뀌었으면 옛 디바이스로 빌린 것을 돌려주고 새로 빌린다(옛 것이 이미 죽었으면 forgetRHI 가 먼저 와서 비웠다).
         if ( _pTextureDevice != nullptr && _pTextureDevice != pRHI )
@@ -327,7 +327,7 @@ namespace sw
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._pTexture != nullptr && bServicesBound )
-                engine::getAssetManager().getTextureManager().release( texture._acquiredPath, pRHI );
+                engine::getAssetManager().getTextureCache().release( texture._acquiredPath, pRHI );
             texture._pTexture = nullptr;
             texture._acquiredPath.clear();
         }

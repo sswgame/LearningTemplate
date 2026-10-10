@@ -88,9 +88,9 @@ namespace sw
 
             static SOCKET openStreamSocket() { return WSASocketW( AF_INET, SOCK_STREAM, IPPROTO_TCP, nullptr, 0, WSA_FLAG_OVERLAPPED ); }
 
-            static void setNoDelay( SOCKET socket, bool bNoDelay )
+            static void setNoDelay( SOCKET socket, bool bTCPNoDelay )
             {
-                const BOOL value = bNoDelay ? TRUE : FALSE;
+                const BOOL value = bTCPNoDelay ? TRUE : FALSE;
                 (void)setsockopt( socket, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const utf8*>( &value ), sizeof( value ) );
             }
 
@@ -437,7 +437,7 @@ namespace sw
                 if ( bSucceeded && connection._socket != INVALID_SOCKET && connection._state == IocpConnectionState::Connecting )
                 {
                     (void)setsockopt( connection._socket, SOL_SOCKET, SO_UPDATE_CONNECT_CONTEXT, nullptr, 0 );
-                    Internal::setNoDelay( connection._socket, _settings._bNoDelay == SW_TRUE );
+                    Internal::setNoDelay( connection._socket, _settings._bTCPNoDelay == SW_TRUE );
                     connection._state                  = IocpConnectionState::Open;
                     connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
                     bOpened                            = true;
@@ -502,7 +502,7 @@ namespace sw
                 }
                 else
                 {
-                    Internal::setNoDelay( accepted, _settings._bNoDelay == SW_TRUE );
+                    Internal::setNoDelay( accepted, _settings._bTCPNoDelay == SW_TRUE );
                     IocpConnection*              pConnection = nullptr;
                     const NetAddress             address     = Internal::makeNetAddress( remote );
                     const StreamConnectionHandle handle      = allocateConnection( accepted, address, true, IocpConnectionState::Open, pConnection );

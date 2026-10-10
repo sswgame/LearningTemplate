@@ -47,7 +47,7 @@ namespace sw
             _translationUnit = nullptr;
         }
 
-        const vector<string> listArgString = _pConfig->buildArgs( listIncludePath );
+        const vector<string> listArgString = _pConfig->makeArgs( listIncludePath );
         vector<const utf8*>  listArgPtr;
         listArgPtr.reserve( listArgString.size() );
         for ( const string& arg : listArgString )

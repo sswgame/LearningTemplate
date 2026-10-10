@@ -145,8 +145,8 @@ namespace sw
         return lod;
     }
 
-    void TerrainMeshBuilder::buildChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                                 const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex )
+    void TerrainMeshBuilder::makeChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
+                                                const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex )
     {
         using Internal = TerrainMeshBuilderInternal;
         outListVertex.clear();

@@ -64,7 +64,7 @@ SW_TEST_CASE( PhysicsWiringTest, SocketReleaseDropsRigidBodyAndReturns )
     SW_ASSERT_NOT_NULL( pSword );
     SocketBindingComponent* pBinding = pSword->getOwner()->addComponent<SocketBindingComponent>();
     SW_ASSERT_NOT_NULL( pBinding );
-    BlendCurveSpec blend;
+    BlendCurveDef blend;
     blend._curve    = BlendCurve::Linear;
     blend._duration = 0.5f;
     pBinding->setReturnBlend( blend );

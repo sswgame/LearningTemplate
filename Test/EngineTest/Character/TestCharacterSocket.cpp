@@ -148,7 +148,7 @@ SW_TEST_CASE( ResolvedSocketTableTest, SlotPrefixedNamesStayStableAcrossResolve 
     const SocketSet          shotgun   = Internal::loadSockets( "<SocketSet><Socket name='Muzzle' translation='0 0 0.8'/><Socket name='Ejector' translation='0 0.1 0.2'/></SocketSet>" );
 
     const CharacterBoneArray* arrBones[2] = { &bodyBones, &gunBones };
-    const float4x4            arrWorld[2] = { float4x4::createTranslation( 10.0f, 0.0f, 0.0f ), float4x4::createTranslation( 1.0f, 0.0f, 0.0f ) };
+    const float4x4            arrWorld[2] = { float4x4::makeTranslation( 10.0f, 0.0f, 0.0f ), float4x4::makeTranslation( 1.0f, 0.0f, 0.0f ) };
     SocketPoseView            pose;
     pose._listUnitBones = vector_reference<const CharacterBoneArray* const>( arrBones, 2 );
     pose._listUnitWorld = vector_reference<const float4x4>( arrWorld, 2 );
@@ -285,9 +285,9 @@ SW_TEST_CASE( ResolvedSocketTableTest, SocketsFollowBodyShape )
 SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
 {
     CharacterBoneArray bones;
-    const int32        root = bones.addBone( hashed_string( "root" ), -1, float4x4::createTranslation( 0.0f, 1.0f, 0.0f ) );
-    (void)bones.addBone( hashed_string( "arm_l" ), root, float4x4::createTranslation( -0.2f, 0.0f, 0.0f ) );
-    (void)bones.addBone( hashed_string( "arm_r" ), root, float4x4::createTranslation( 0.2f, 0.0f, 0.0f ) );
+    const int32        root = bones.addBone( hashed_string( "root" ), -1, float4x4::makeTranslation( 0.0f, 1.0f, 0.0f ) );
+    (void)bones.addBone( hashed_string( "arm_l" ), root, float4x4::makeTranslation( -0.2f, 0.0f, 0.0f ) );
+    (void)bones.addBone( hashed_string( "arm_r" ), root, float4x4::makeTranslation( 0.2f, 0.0f, 0.0f ) );
 
     ReferencePoseOverride pose;
     SW_ASSERT_TRUE( pose.loadFromXMLText( "<ReferencePose mirrorAxis='X'>"
@@ -330,7 +330,7 @@ SW_TEST_CASE( SocketImportTest, CreatesDraftAndNeverOverwritesHumanFile )
     node._name           = hashed_string( "Muzzle" );
     node._parentBone     = hashed_string( "barrel" );
     node._kind           = hashed_string( "Attach" );
-    node._localTransform = float4x4::createTranslation( 0.0f, 0.0f, 0.42f );
+    node._localTransform = float4x4::makeTranslation( 0.0f, 0.0f, 0.42f );
     SocketSet draft;
     SocketImportUtil::createSocketSet( vector_reference<const SocketImportNode>( &node, 1 ), draft );
     SW_ASSERT_NOT_NULL( draft.findSocket( hashed_string( "Muzzle" ) ) );
@@ -342,7 +342,7 @@ SW_TEST_CASE( SocketImportTest, CreatesDraftAndNeverOverwritesHumanFile )
     SW_EXPECT_TRUE( bWritten );
 
     // 사람이 고친 뒤 다시 임포트 — 파일은 그대로다.
-    node._localTransform = float4x4::createTranslation( 0.0f, 0.0f, 0.9f );
+    node._localTransform = float4x4::makeTranslation( 0.0f, 0.0f, 0.9f );
     SocketImportUtil::createSocketSet( vector_reference<const SocketImportNode>( &node, 1 ), draft );
     SW_ASSERT_TRUE( SocketImportUtil::writeIfMissing( path, draft, bWritten ) );
     SW_EXPECT_FALSE( bWritten );
@@ -409,7 +409,7 @@ SW_TEST_CASE( BodyShapeTest, BoneProportionLayersOverAnimationAndSkinsGeometry )
     const CharacterBoneArray bindBones = test::CharacterTestUtil::makeArmBones();
     CharacterBoneArray       animated  = bindBones;
     // 애니메이션: 아래팔을 Z 축으로 90° 굽힘.
-    animated._listLocal[2] = float4x4::createRotationZ( MathUtil::kHalfPi ) * float4x4::createTranslation( 0.0f, 0.5f, 0.0f );
+    animated._listLocal[2] = float4x4::makeRotationZ( MathUtil::kHalfPi ) * float4x4::makeTranslation( 0.0f, 0.5f, 0.0f );
     animated.computeModelTransforms();
     BoneProportion proportion;
     proportion.setBone( hashed_string( "hand" ), float3( 1.0f ), float3( 0.0f, 0.1f, 0.0f ) ); // 아래팔 길이 +0.1

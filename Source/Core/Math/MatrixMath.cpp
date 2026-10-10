@@ -20,7 +20,7 @@ namespace sw
             }
 
             /**
-             * @brief 앞 · 위 방향으로 직교 기저(오른쪽 · 위 · 앞)를 만듭니다. 뷰 행렬(`createLookAt`)과 월드 행렬(`createWorld`)이 같은 기저를 씁니다.
+             * @brief 앞 · 위 방향으로 직교 기저(오른쪽 · 위 · 앞)를 만듭니다. 뷰 행렬(`makeLookAt`)과 월드 행렬(`makeWorld`)이 같은 기저를 씁니다.
              * @details 앞이 0 이면 +Z, 위가 0 이면 +Y 로 둡니다. 앞과 위가 나란하면(바로 위나 아래를 볼 때) 외적이 0 이 되므로 다른 위 방향으로
              *          다시 잡습니다. 두 함수가 함께 씁니다 — 한쪽의 폴백만 고치면 카메라와 오브젝트가 같은 방향에서 서로 다르게 돌게 됩니다.
              */
@@ -50,14 +50,14 @@ namespace sw
 
     const quaternion quaternion::Identity{ 0.f, 0.f, 0.f, 1.f };
 
-    quaternion quaternion::createFromAxisAngle( const float3& axis, float32 angle ) noexcept
+    quaternion quaternion::makeFromAxisAngle( const float3& axis, float32 angle ) noexcept
     {
         const float3 normalizedAxis = axis.normalize();
         const float3 halfAngle      = normalizedAxis * MathUtil::sin( angle * 0.5f );
         return quaternion{ halfAngle._x, halfAngle._y, halfAngle._z, MathUtil::cos( angle * 0.5f ) };
     }
 
-    quaternion quaternion::createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept
+    quaternion quaternion::makeFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept
     {
         const float32 halfYaw   = yaw * 0.5f;
         const float32 sinYaw    = MathUtil::sin( halfYaw );
@@ -76,12 +76,12 @@ namespace sw
             ( cosYaw * cosPitch * cosRoll ) + ( sinYaw * sinPitch * sinRoll ) };
     }
 
-    quaternion quaternion::createFromYawPitchRoll( const float3& angles ) noexcept
+    quaternion quaternion::makeFromYawPitchRoll( const float3& angles ) noexcept
     {
-        return createFromYawPitchRoll( angles._y, angles._x, angles._z );
+        return makeFromYawPitchRoll( angles._y, angles._x, angles._z );
     }
 
-    quaternion quaternion::createFromRotationMatrix( const float4x4& matrix ) noexcept
+    quaternion quaternion::makeFromRotationMatrix( const float4x4& matrix ) noexcept
     {
         const float32 trace = matrix._11 + matrix._22 + matrix._33;
         if ( trace > 0.f )
@@ -183,7 +183,7 @@ namespace sw
             float3 axis = float3::Right.cross( f );
             if ( axis.getLengthSquared() < MathUtil::kEpsilon )
                 axis = float3::Up.cross( f );
-            return createFromAxisAngle( axis, MathUtil::kPi );
+            return makeFromAxisAngle( axis, MathUtil::kPi );
         }
 
         const float3 c = f.cross( t );
@@ -209,7 +209,7 @@ namespace sw
 
         const float3   u = f.cross( r );
         const float4x4 m{ r._x, r._y, r._z, 0.f, u._x, u._y, u._z, 0.f, f._x, f._y, f._z, 0.f, 0.f, 0.f, 0.f, 1.f };
-        return createFromRotationMatrix( m );
+        return makeFromRotationMatrix( m );
     }
 
     float32 quaternion::getAngleBetween( const quaternion& lhs, const quaternion& rhs ) noexcept
@@ -308,7 +308,7 @@ namespace sw
 
     float4x4 quaternion::toMatrix() const noexcept
     {
-        return float4x4::createFromQuaternion( *this );
+        return float4x4::makeFromQuaternion( *this );
     }
 
     bool quaternion::operator==( const quaternion& other ) const noexcept { return MathUtil::nearEqual( _x, other._x ) && MathUtil::nearEqual( _y, other._y ) && MathUtil::nearEqual( _z, other._z ) && MathUtil::nearEqual( _w, other._w ); }
@@ -387,59 +387,59 @@ namespace sw
             Memory::copy( &_11, pArray, sizeof( float32 ) * 16 );
     }
 
-    float4x4 float4x4::createTranslation( const float3& position ) noexcept
+    float4x4 float4x4::makeTranslation( const float3& position ) noexcept
     {
-        return createTranslation( position._x, position._y, position._z );
+        return makeTranslation( position._x, position._y, position._z );
     }
 
-    float4x4 float4x4::createTranslation( float32 x, float32 y, float32 z ) noexcept
+    float4x4 float4x4::makeTranslation( float32 x, float32 y, float32 z ) noexcept
     {
         return float4x4{ 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, x, y, z, 1.f };
     }
 
-    float4x4 float4x4::createScale( const float3& scales ) noexcept
+    float4x4 float4x4::makeScale( const float3& scales ) noexcept
     {
-        return createScale( scales._x, scales._y, scales._z );
+        return makeScale( scales._x, scales._y, scales._z );
     }
 
-    float4x4 float4x4::createScale( float32 x, float32 y, float32 z ) noexcept
+    float4x4 float4x4::makeScale( float32 x, float32 y, float32 z ) noexcept
     {
         return float4x4{ x, 0.f, 0.f, 0.f, 0.f, y, 0.f, 0.f, 0.f, 0.f, z, 0.f, 0.f, 0.f, 0.f, 1.f };
     }
 
-    float4x4 float4x4::createScale( float32 scale ) noexcept
+    float4x4 float4x4::makeScale( float32 scale ) noexcept
     {
-        return createScale( scale, scale, scale );
+        return makeScale( scale, scale, scale );
     }
 
-    float4x4 float4x4::createRotationX( float32 radians ) noexcept
+    float4x4 float4x4::makeRotationX( float32 radians ) noexcept
     {
         const float32 s = MathUtil::sin( radians );
         const float32 c = MathUtil::cos( radians );
         return float4x4{ 1.f, 0.f, 0.f, 0.f, 0.f, c, s, 0.f, 0.f, -s, c, 0.f, 0.f, 0.f, 0.f, 1.f };
     }
 
-    float4x4 float4x4::createRotationY( float32 radians ) noexcept
+    float4x4 float4x4::makeRotationY( float32 radians ) noexcept
     {
         const float32 s = MathUtil::sin( radians );
         const float32 c = MathUtil::cos( radians );
         return float4x4{ c, 0.f, -s, 0.f, 0.f, 1.f, 0.f, 0.f, s, 0.f, c, 0.f, 0.f, 0.f, 0.f, 1.f };
     }
 
-    float4x4 float4x4::createRotationZ( float32 radians ) noexcept
+    float4x4 float4x4::makeRotationZ( float32 radians ) noexcept
     {
         const float32 s = MathUtil::sin( radians );
         const float32 c = MathUtil::cos( radians );
         return float4x4{ c, s, 0.f, 0.f, -s, c, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f };
     }
 
-    float4x4 float4x4::createFromAxisAngle( const float3& axis, float32 angle ) noexcept
+    float4x4 float4x4::makeFromAxisAngle( const float3& axis, float32 angle ) noexcept
     {
-        const quaternion q = quaternion::createFromAxisAngle( axis, angle );
-        return createFromQuaternion( q );
+        const quaternion q = quaternion::makeFromAxisAngle( axis, angle );
+        return makeFromQuaternion( q );
     }
 
-    float4x4 float4x4::createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
+    float4x4 float4x4::makePerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept
     {
         const float32 safeFov    = MathUtil::clamp( fov, 0.001f, MathUtil::kPi - 0.001f );
         const float32 safeAspect = aspectRatio > MathUtil::kEpsilon ? aspectRatio : 1.0f;
@@ -450,7 +450,7 @@ namespace sw
         return float4x4{ xScale, 0.f, 0.f, 0.f, 0.f, yScale, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }
 
-    float4x4 float4x4::createPerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
+    float4x4 float4x4::makePerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
     {
         const float32 safeW    = MatrixMathInternal::getNonZeroSpan( width );
         const float32 safeH    = MatrixMathInternal::getNonZeroSpan( height );
@@ -458,7 +458,7 @@ namespace sw
         return float4x4{ 2.f * nearPlane / safeW, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeH, 0.f, 0.f, 0.f, 0.f, farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }
 
-    float4x4 float4x4::createPerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
+    float4x4 float4x4::makePerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
     {
         const float32 safeX    = MatrixMathInternal::getNonZeroSpan( right - left );
         const float32 safeY    = MatrixMathInternal::getNonZeroSpan( top - bottom );
@@ -466,7 +466,7 @@ namespace sw
         return float4x4{ 2.f * nearPlane / safeX, 0.f, 0.f, 0.f, 0.f, 2.f * nearPlane / safeY, 0.f, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), farPlane / safeSpan, 1.f, 0.f, 0.f, -nearPlane * farPlane / safeSpan, 0.f };
     }
 
-    float4x4 float4x4::createOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
+    float4x4 float4x4::makeOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept
     {
         const float32 safeW    = MatrixMathInternal::getNonZeroSpan( width );
         const float32 safeH    = MatrixMathInternal::getNonZeroSpan( height );
@@ -474,7 +474,7 @@ namespace sw
         return float4x4{ 2.f / safeW, 0.f, 0.f, 0.f, 0.f, 2.f / safeH, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, 0.f, 0.f, -nearPlane / safeSpan, 1.f };
     }
 
-    float4x4 float4x4::createOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
+    float4x4 float4x4::makeOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept
     {
         const float32 safeX    = MatrixMathInternal::getNonZeroSpan( right - left );
         const float32 safeY    = MatrixMathInternal::getNonZeroSpan( top - bottom );
@@ -482,7 +482,7 @@ namespace sw
         return float4x4{ 2.f / safeX, 0.f, 0.f, 0.f, 0.f, 2.f / safeY, 0.f, 0.f, 0.f, 0.f, 1.f / safeSpan, 0.f, ( left + right ) / ( -safeX ), ( top + bottom ) / ( -safeY ), -nearPlane / safeSpan, 1.f };
     }
 
-    float4x4 float4x4::createLookAt( const float3& position, const float3& target, const float3& up ) noexcept
+    float4x4 float4x4::makeLookAt( const float3& position, const float3& target, const float3& up ) noexcept
     {
         float3 xAxis{};
         float3 yAxis{};
@@ -492,7 +492,7 @@ namespace sw
         return float4x4{ xAxis._x, yAxis._x, zAxis._x, 0.f, xAxis._y, yAxis._y, zAxis._y, 0.f, xAxis._z, yAxis._z, zAxis._z, 0.f, -xAxis.dot( position ), -yAxis.dot( position ), -zAxis.dot( position ), 1.f };
     }
 
-    float4x4 float4x4::createWorld( const float3& position, const float3& forward, const float3& up ) noexcept
+    float4x4 float4x4::makeWorld( const float3& position, const float3& forward, const float3& up ) noexcept
     {
         float3 xAxis{};
         float3 yAxis{};
@@ -502,7 +502,7 @@ namespace sw
         return float4x4{ xAxis._x, xAxis._y, xAxis._z, 0.f, yAxis._x, yAxis._y, yAxis._z, 0.f, zAxis._x, zAxis._y, zAxis._z, 0.f, position._x, position._y, position._z, 1.f };
     }
 
-    float4x4 float4x4::createFromQuaternion( const quaternion& q ) noexcept
+    float4x4 float4x4::makeFromQuaternion( const quaternion& q ) noexcept
     {
         const float32 xx = q._x * q._x;
         const float32 yy = q._y * q._y;
@@ -517,29 +517,29 @@ namespace sw
         return float4x4{ 1.f - 2.f * ( yy + zz ), 2.f * ( xy + wz ), 2.f * ( xz - wy ), 0.f, 2.f * ( xy - wz ), 1.f - 2.f * ( xx + zz ), 2.f * ( yz + wx ), 0.f, 2.f * ( xz + wy ), 2.f * ( yz - wx ), 1.f - 2.f * ( xx + yy ), 0.f, 0.f, 0.f, 0.f, 1.f };
     }
 
-    float4x4 float4x4::createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept
+    float4x4 float4x4::makeFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept
     {
-        const quaternion q = quaternion::createFromYawPitchRoll( yaw, pitch, roll );
-        return createFromQuaternion( q );
+        const quaternion q = quaternion::makeFromYawPitchRoll( yaw, pitch, roll );
+        return makeFromQuaternion( q );
     }
 
-    float4x4 float4x4::createFromYawPitchRoll( const float3& angles ) noexcept
+    float4x4 float4x4::makeFromYawPitchRoll( const float3& angles ) noexcept
     {
-        return createFromYawPitchRoll( angles._y, angles._x, angles._z );
+        return makeFromYawPitchRoll( angles._y, angles._x, angles._z );
     }
 
-    float4x4 float4x4::createTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept
+    float4x4 float4x4::makeTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept
     {
         // 회전만 행렬로 만든 뒤 각 행에 스케일을 곱하고 마지막 행에 위치를 놓는다.
         // S * R * T 를 곱해서 구한 것과 같은 값이다(헤더 설명 참고).
-        const float4x4 rotationMatrix = createFromQuaternion( rotation );
+        const float4x4 rotationMatrix = makeFromQuaternion( rotation );
         return float4x4{ rotationMatrix._11 * scale._x, rotationMatrix._12 * scale._x, rotationMatrix._13 * scale._x, 0.f,
                          rotationMatrix._21 * scale._y, rotationMatrix._22 * scale._y, rotationMatrix._23 * scale._y, 0.f,
                          rotationMatrix._31 * scale._z, rotationMatrix._32 * scale._z, rotationMatrix._33 * scale._z, 0.f,
                          position._x, position._y, position._z, 1.f };
     }
 
-    float4x4 float4x4::createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept
+    float4x4 float4x4::makeTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept
     {
         // 회전이 없으면 회전 행렬은 단위 행렬이다. 삼각 함수 여섯 번과 쿼터니언 -> 행렬 변환을 건너뛰고 대각선에 스케일만 놓는다.
         // 움직이는 컴포넌트가 월드 행렬을 다시 만들 때마다 지나는 자리이고, 회전 없는 물체(격자 배치 · 파티클 · 떠다니는 소품)가 흔하다.
@@ -549,7 +549,7 @@ namespace sw
         {
             return float4x4{ scale._x, 0.f, 0.f, 0.f, 0.f, scale._y, 0.f, 0.f, 0.f, 0.f, scale._z, 0.f, position._x, position._y, position._z, 1.f };
         }
-        return createTrs( position, quaternion::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ), scale );
+        return makeTrs( position, quaternion::makeFromYawPitchRoll( rotation._y, rotation._x, rotation._z ), scale );
     }
 
     float4x4 float4x4::lerp( const float4x4& from, const float4x4& to, float32 t ) noexcept
@@ -559,7 +559,7 @@ namespace sw
 
     float4x4 float4x4::transform( const float4x4& matrix, const quaternion& rotation ) noexcept
     {
-        return matrix * createFromQuaternion( rotation );
+        return matrix * makeFromQuaternion( rotation );
     }
 
     bool float4x4::decompose( float3& outScale, quaternion& outRotation, float3& outTranslation ) const noexcept
@@ -594,7 +594,7 @@ namespace sw
         rotMat._43 = 0.f;
         rotMat._44 = 1.f;
 
-        outRotation = quaternion::createFromRotationMatrix( rotMat );
+        outRotation = quaternion::makeFromRotationMatrix( rotMat );
         return true;
     }
 
@@ -678,7 +678,7 @@ namespace sw
     {
         const float3   curScale = getScale();
         const float3   curTrans = getTranslation();
-        const float4x4 rotMat   = createFromQuaternion( rotation );
+        const float4x4 rotMat   = makeFromQuaternion( rotation );
 
         _11 = rotMat._11 * curScale._x;
         _12 = rotMat._12 * curScale._x;

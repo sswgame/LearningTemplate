@@ -254,7 +254,7 @@ namespace sw
         return s_reportDeadlineSeconds.load();
     }
 
-    void buildCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension )
+    void makeCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension )
     {
         if ( pOutPath == nullptr || outSize == 0 )
             return;
@@ -267,7 +267,7 @@ namespace sw
     void writeCrashContextFile( const utf8* pReason, const void* pFaultAddress, uint64 processID, uint64 threadID )
     {
         utf8 arrPath[constant::kMaxBuffer1024]{};
-        buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "txt" );
+        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "txt" );
 
         // 버퍼 하나에 모두 만든 뒤 **한 번에** 쓴다. 줄마다 fprintf 를 부르면 그때마다 스트림 락과 내부 버퍼가 걸리고,
         // 도중에 죽으면 반쯤 쓰인 파일이 남는다.
@@ -302,7 +302,7 @@ namespace sw
         if ( length == 0 )
             return;
         utf8 arrPath[constant::kMaxBuffer1024]{};
-        buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "breadcrumbs.txt" );
+        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "breadcrumbs.txt" );
         writeWholeFile( arrPath, arrText, length );
     }
 
@@ -311,7 +311,7 @@ namespace sw
         if ( pStackText == nullptr )
             return;
         utf8 arrPath[constant::kMaxBuffer1024]{};
-        buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
+        makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "stack.txt" );
         writeWholeFile( arrPath, pStackText, static_cast<uint32>( StringUtil::strlen( pStackText ) ) );
     }
 
@@ -340,14 +340,14 @@ namespace sw
             utf8 arrReportPath[constant::kMaxBuffer1024]{};
             if ( bMiniDumpWritten )
             {
-                buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "dmp" );
+                makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "dmp" );
                 builder.append( arrReportPath );
                 builder.append( "\n" );
             }
-            buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "txt" );
+            makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "txt" );
             builder.append( arrReportPath );
             builder.append( "\n" );
-            buildCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "stack.txt" );
+            makeCrashReportPath( arrReportPath, constant::kMaxBuffer1024, "stack.txt" );
             builder.append( arrReportPath );
             builder.append( "\n" );
         }

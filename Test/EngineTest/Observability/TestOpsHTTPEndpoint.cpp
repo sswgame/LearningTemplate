@@ -121,25 +121,25 @@ SW_TEST_CASE( OpsHTTPEndpointTest, RoutesAndStatusCodes )
     ServiceHealthRegistry health;
     metrics.registerCounter( "probe_total", "Probe" )->add( 2 );
     string response;
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1\r\nHost: x", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1\r\nHost: x", &metrics, &health, 0, response ), 200 );
     SW_EXPECT_TRUE( StringUtil::startsWith( response, "HTTP/1.1 200 OK\r\n" ) );
     SW_EXPECT_TRUE( response.find( "Content-Type: text/plain; version=0.0.4" ) != string::npos );
     SW_EXPECT_TRUE( response.find( "probe_total 2\n" ) != string::npos );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 틱 없음
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 틱 없음
     health.markTick( 0 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz?verbose=1 HTTP/1.1", &metrics, &health, 0, response ), 200 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "POST /metrics HTTP/1.1", &metrics, &health, 0, response ), 405 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /nothing HTTP/1.1", &metrics, &health, 0, response ), 404 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "garbage", &metrics, &health, 0, response ), 400 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 등록부 없는 경로
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /healthz?verbose=1 HTTP/1.1", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "POST /metrics HTTP/1.1", &metrics, &health, 0, response ), 405 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /nothing HTTP/1.1", &metrics, &health, 0, response ), 404 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "garbage", &metrics, &health, 0, response ), 400 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 등록부 없는 경로
     const int32 store = health.registerCheck( "service_store", true );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 필수 검사 미확인
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 필수 검사 미확인
     health.setCheck( store, HealthState::Ok, "" );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 200 );
     SW_EXPECT_TRUE( response.find( "check service_store ok\n" ) != string::npos );
     health.setDraining( true );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 );
-    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 200 ); // 비우는 중에도 살아 있다
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::makeResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 200 ); // 비우는 중에도 살아 있다
 }
 
 SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
@@ -147,7 +147,7 @@ SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
     MetricRegistry metrics;
     metrics.registerGauge( "g", "G" )->set( 1.5 );
     string response;
-    (void)OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, response );
+    (void)OpsHTTPEndpoint::makeResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, response );
     const size_t headEnd = response.find( "\r\n\r\n" );
     SW_ASSERT_TRUE( headEnd != string::npos );
     const string               body = response.substr( headEnd + 4 );

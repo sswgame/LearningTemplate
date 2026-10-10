@@ -286,7 +286,7 @@ namespace sw
         template <typename TSerializer>
         [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**
-         * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 세 로더(XML · JSON · 바이너리)는 포맷 읽기만 `deserializeState( version, ctx )` 로 넘깁니다.
+         * @brief 오브젝트의 상태를 제자리에서 다시 읽습니다. 세 로더(XML · JSON · 바이너리)는 포맷 읽기만 `deserializeState( version, context )` 로 넘깁니다.
          * @details 자식 연결을 적어 두고 컴포넌트를 비운 뒤, 컴포넌트 ID 를 되살리는 범위 안에서 읽습니다. 읽으면 묶음에 적고(묶음이 없으면 한 개짜리
          *          묶음으로 바로 잇습니다), 읽기에 실패해도 적어 둔 자식은 되붙입니다.
          *          정의는 .cpp 에만 있습니다(ID 범위가 `GameObject` 의 비공개 타입이라 이 클래스의 멤버여야 합니다).

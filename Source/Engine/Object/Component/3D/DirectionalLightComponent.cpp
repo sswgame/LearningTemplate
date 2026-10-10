@@ -124,7 +124,7 @@ namespace sw
         onPropertyChanged( hashed_string( "_bCastShadow" ) );
     }
 
-    float4x4 DirectionalLightComponent::buildShadowViewProj() const
+    float4x4 DirectionalLightComponent::computeShadowViewProj() const
     {
         const float3 lightDir = getLightDirection();
 
@@ -134,32 +134,32 @@ namespace sw
         const float3 eye = lightDir * -_shadowDistance;
 
         // **깊이 범위는 눈을 기준으로 잡는다.** 눈이 원점에서 거리만큼 떨어져 원점을 보고 있으므로 씬의 뷰 z 는
-        // 거리 언저리다. 주의: `(-거리, +거리)` 로 잡으면 `createOrthographic` 은 `z' = (z_view - near) / (far - near)` 라
+        // 거리 언저리다. 주의: `(-거리, +거리)` 로 잡으면 `makeOrthographic` 은 `z' = (z_view - near) / (far - near)` 라
         // 씬 전체가 z' ≈ 1(원평면)로 뭉개지고, 깊이 비교가 늘 "가려지지 않음" 이 되어 **그림자가 지지 않는다**.
         // 원점에서 반경 `_shadowExtent` 안의 점은 뷰 z 가 [거리 - 반경, 거리 + 반경] 이므로 그대로 쓴다.
         // (거리가 반경보다 작으면 near 가 음수가 되는데, 직교 투영에는 문제가 되지 않는다. 선형 사상일 뿐이다.)
         const float32 extent    = _shadowExtent * 2.0f;
         const float32 nearPlane = _shadowDistance - _shadowExtent;
         const float32 farPlane  = _shadowDistance + _shadowExtent;
-        return float4x4::createLookAt( eye, float3::Zero, up ) *
-               float4x4::createOrthographic( extent, extent, nearPlane, farPlane );
+        return float4x4::makeLookAt( eye, float3::Zero, up ) *
+               float4x4::makeOrthographic( extent, extent, nearPlane, farPlane );
     }
 
-    DirectionalShadowProjection DirectionalLightComponent::buildShadowProjection( uint32 shadowMapResolution ) const
+    DirectionalShadowProjection DirectionalLightComponent::computeShadowProjection( uint32 shadowMapResolution ) const
     {
         DirectionalShadowProjection projection{};
-        projection._viewProj       = buildShadowViewProj();
+        projection._viewProj       = computeShadowViewProj();
         projection._resolution     = MathUtil::max( shadowMapResolution, 1u );
         projection._texelWorldSize = _shadowExtent * 2.0f / static_cast<float32>( projection._resolution );
-        projection._depthRange     = _shadowExtent * 2.0f; // buildShadowViewProj 의 [거리 - 반경, 거리 + 반경]
+        projection._depthRange     = _shadowExtent * 2.0f; // computeShadowViewProj 의 [거리 - 반경, 거리 + 반경]
         return projection;
     }
 
-    DirectionalShadowProjection DirectionalLightComponent::buildShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution ) const
+    DirectionalShadowProjection DirectionalLightComponent::computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution ) const
     {
         using Internal = DirectionalLightComponentInternal;
         if ( _shadowViewDistance <= 0.0f )
-            return buildShadowProjection( shadowMapResolution );
+            return computeShadowProjection( shadowMapResolution );
 
         // (1) 카메라 절두체의 꼭짓점 여덟 — NDC 상자(x · y ∈ [-1, 1], z ∈ [0, 1])를 역행렬로 되돌린다. 직교 · 원근이 같은 식이다.
         const float4x4 invViewProj = cameraViewProj.invert();
@@ -210,12 +210,12 @@ namespace sw
         }
         // 카메라가 띠를 보지 않으면(하늘만 본다) 받는 면이 없다 — 고정 볼륨으로 돌아간다.
         if ( pointCount == 0 )
-            return buildShadowProjection( shadowMapResolution );
+            return computeShadowProjection( shadowMapResolution );
 
         // (4) 빛 공간 상자 — 회전만 있는 뷰(눈 = 원점)로 옮겨 x · y · 깊이의 최소 · 최대를 잰다.
         const float3   lightDir  = getLightDirection();
         const float3   up        = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
-        const float4x4 lightView = float4x4::createLookAt( float3::Zero, lightDir, up );
+        const float4x4 lightView = float4x4::makeLookAt( float3::Zero, lightDir, up );
         float3         minPoint  = float3::transform( arrPoint[0], lightView );
         float3         maxPoint  = minPoint;
         for ( uint32 pointIndex = 1; pointIndex < pointCount; ++pointIndex )
@@ -239,7 +239,7 @@ namespace sw
         const float32 farPlane  = maxPoint._z + Internal::kShadowFitDepthMargin;
 
         DirectionalShadowProjection projection{};
-        projection._viewProj       = lightView * float4x4::createOrthographicOffCenter( left, left + width, bottom, bottom + height, nearPlane, farPlane );
+        projection._viewProj       = lightView * float4x4::makeOrthographicOffCenter( left, left + width, bottom, bottom + height, nearPlane, farPlane );
         projection._resolution     = resolution;
         projection._texelWorldSize = MathUtil::max( texelX, texelY );
         projection._depthRange     = farPlane - nearPlane;

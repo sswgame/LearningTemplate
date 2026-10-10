@@ -49,7 +49,7 @@ namespace sw
         int32         _score{ 0 };
         int32         _costPool{ 0 };  ///< 부활 비용을 내는 전력 게이지(0 으로 시작하면 무제한)
         int32         _placement{ 0 }; ///< 탈락 · 끝에서 정한 순위(1 = 우승, 0 = 아직)
-        uint8         _bUnlimitedCost{ SW_TRUE };
+        uint8         _bIgnoreCost{ SW_TRUE };
         uint8         _bEliminated{ SW_FALSE };
     };
 } // namespace sw

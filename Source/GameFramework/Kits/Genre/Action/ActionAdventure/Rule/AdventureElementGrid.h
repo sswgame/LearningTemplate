@@ -130,7 +130,7 @@ namespace sw
 
     private:
         /** @brief 설정 값으로 규칙표를 짓습니다(`default.elements.xml` 과 같은 모양 — 재질 번호 = `AdventureMaterial`). */
-        void buildRuleTable();
+        void populateRuleTable();
 
         AdventureElementSettings      _settings;
         ElementRuleTable              _table;

@@ -20,8 +20,8 @@ namespace sw
     {
     public:
         /** @brief 출력 버퍼를 받아 이미터를 구성합니다. */
-        explicit CodeEmit( CodeEmitBuffer& out ) noexcept
-            : _out{ out }
+        explicit CodeEmit( CodeEmitBuffer& outBuffer ) noexcept
+            : _out{ outBuffer }
             , _indent{ 0 }
         {
         }

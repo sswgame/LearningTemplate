@@ -76,7 +76,7 @@ namespace sw
             return false;
 
         // 확장 값은 KB 단위이고, 다른 프로세스 몫까지 든 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖" 을 내지 않는다(Scope Device).
-        ScopedOpenGLContext ctxScope( this );
+        ScopedOpenGLContext contextScope( this );
         constexpr uint64    kKilobyte = 1024;
         outBudget._scope              = RHIMemoryScope::Device;
         if ( _bNvxMemoryInfo == SW_TRUE )

@@ -173,7 +173,7 @@ SW_TEST_CASE( AnimationTest, AnimPlayerCrossfade )
 SW_TEST_CASE( AnimationTest, DualQuaternion_TransformAndDLB )
 {
     const float3     transA{ 10.0f, 20.0f, 30.0f };
-    const quaternion rotA = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 0.0f );
+    const quaternion rotA = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 0.0f );
     DualQuaternion   dqA  = DualQuaternion::fromTransform( transA, rotA );
 
     const float3 recoveredTransA = dqA.getTranslation();
@@ -193,7 +193,7 @@ SW_TEST_CASE( AnimationTest, DualQuaternion_TransformAndDLB )
     SW_EXPECT_NEAR_EQUAL( 45.0f, midTrans._z, 1e-2f );
 
     // 회전 변환 복원 검증
-    const quaternion rot90 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 3.14159265f * 0.5f );
+    const quaternion rot90 = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 3.14159265f * 0.5f );
     DualQuaternion   dqRot = DualQuaternion::fromTransform( float3{ 5.0f, 5.0f, 5.0f }, rot90 );
     SW_EXPECT_NEAR_EQUAL( rot90._y, dqRot.getRotation()._y, 1e-3f );
 }
@@ -207,7 +207,7 @@ SW_TEST_CASE( AnimationTest, Skeleton_BoneHierarchyAndSkinningMatrices )
     SW_EXPECT_EQUAL( 0u, skeleton.getBoneCount() );
     SW_EXPECT_EQUAL( 0, skeleton.addBone( hashed_string( "Hips" ), -1, test::makeBoneTransform( float3{ 0.0f, 10.0f, 0.0f } ), float4x4::Identity ) );
     // 자식은 부모 기준 Z 축 90 도 회전 + Y 5 — 모델 공간 위치는 (0, 15, 0), 손자 X 1 은 회전을 받아 (0, 16, 0) 이다.
-    const quaternion turn = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi );
+    const quaternion turn = quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi );
     SW_EXPECT_EQUAL( 1, skeleton.addBone( hashed_string( "Spine" ), 0, test::makeBoneTransform( float3{ 0.0f, 5.0f, 0.0f }, turn ), float4x4::Identity ) );
     SW_EXPECT_EQUAL( 2, skeleton.addBone( hashed_string( "Chest" ), 1, test::makeBoneTransform( float3{ 1.0f, 0.0f, 0.0f } ), float4x4::Identity ) );
     skeleton.computeInverseBindFromReference();
@@ -237,9 +237,9 @@ SW_TEST_CASE( AnimationTest, Skeleton_BoneHierarchyAndSkinningMatrices )
 SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 {
     BlendSpace1D bs1D;
-    bs1D.addSample( 0.0f, "Idle", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    bs1D.addSample( 5.0f, "Walk", float4x4::createTranslation( float3{ 0.0f, 0.0f, 5.0f } ) );
-    bs1D.addSample( 10.0f, "Run", float4x4::createTranslation( float3{ 0.0f, 0.0f, 15.0f } ) );
+    bs1D.addSample( 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+    bs1D.addSample( 5.0f, "Walk", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 5.0f } ) );
+    bs1D.addSample( 10.0f, "Run", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 15.0f } ) );
 
     // 1) Idle 경계
     float4x4 pose0 = bs1D.evaluate( 0.0f );
@@ -251,9 +251,9 @@ SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 
     // 3) 2D Blend Space (IDW)
     BlendSpace2D bs2D;
-    bs2D.addSample( 0.0f, 0.0f, "Idle", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    bs2D.addSample( 1.0f, 0.0f, "Right", float4x4::createTranslation( float3{ 10.0f, 0.0f, 0.0f } ) );
-    bs2D.addSample( -1.0f, 0.0f, "Left", float4x4::createTranslation( float3{ -10.0f, 0.0f, 0.0f } ) );
+    bs2D.addSample( 0.0f, 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+    bs2D.addSample( 1.0f, 0.0f, "Right", float4x4::makeTranslation( float3{ 10.0f, 0.0f, 0.0f } ) );
+    bs2D.addSample( -1.0f, 0.0f, "Left", float4x4::makeTranslation( float3{ -10.0f, 0.0f, 0.0f } ) );
 
     float4x4 pose2D = bs2D.evaluate( 1.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, pose2D._41, 1e-2f );
@@ -261,13 +261,13 @@ SW_TEST_CASE( AnimationTest, BlendSpace_ParametricMotionInterpolation )
 
 /**
  * @brief [AnimationTest] 스케일이 섞인 행렬에서도 회전을 제대로 뽑는지 검증
- * @details 축 길이로 나누지 않고 `createFromRotationMatrix` 를 바로 걸면 스케일이 회전에 새어 든다.
+ * @details 축 길이로 나누지 않고 `makeFromRotationMatrix` 를 바로 걸면 스케일이 회전에 새어 든다.
  *          스케일 (2,1,1) + Z 90도는 그렇게 읽으면 112.6도가 된다.
  */
 SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
 {
-    const float4x4 rotationOnly = float4x4::createRotationZ( MathUtil::kHalfPi );
-    const float4x4 scaledPose   = float4x4::createScale( float3{ 2.0f, 1.0f, 1.0f } ) * rotationOnly;
+    const float4x4 rotationOnly = float4x4::makeRotationZ( MathUtil::kHalfPi );
+    const float4x4 scaledPose   = float4x4::makeScale( float3{ 2.0f, 1.0f, 1.0f } ) * rotationOnly;
 
     const quaternion expected = DualQuaternion::fromMatrix( rotationOnly ).getRotation();
     const quaternion actual   = DualQuaternion::fromMatrix( scaledPose ).getRotation();
@@ -285,8 +285,8 @@ SW_TEST_CASE( AnimationTest, DualQuaternionKeepsRotationOfScaledMatrix )
  */
 SW_TEST_CASE( AnimationTest, BlendSpace1DKeepsScaleBetweenSamples )
 {
-    const float4x4 poseA = float4x4::createScale( 2.0f ) * float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } );
-    const float4x4 poseB = float4x4::createScale( 2.0f ) * float4x4::createTranslation( float3{ 0.0f, 0.0f, 10.0f } );
+    const float4x4 poseA = float4x4::makeScale( 2.0f ) * float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } );
+    const float4x4 poseB = float4x4::makeScale( 2.0f ) * float4x4::makeTranslation( float3{ 0.0f, 0.0f, 10.0f } );
 
     BlendSpace1D blendSpace;
     blendSpace.addSample( 0.0f, "A", poseA );
@@ -312,10 +312,10 @@ SW_TEST_CASE( AnimationTest, BlendSpace2DUsesSamplesBeyondThirtyTwo )
     BlendSpace2D blendSpace;
     for ( int32 index = 0; index < 32; ++index )
     {
-        blendSpace.addSample( 100.0f + static_cast<float32>( index ), 100.0f, "Far", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+        blendSpace.addSample( 100.0f + static_cast<float32>( index ), 100.0f, "Far", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
     }
 
-    blendSpace.addSample( 0.1f, 0.0f, "Near", float4x4::createTranslation( float3{ 0.0f, 0.0f, 100.0f } ) );
+    blendSpace.addSample( 0.1f, 0.0f, "Near", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 100.0f } ) );
     SW_EXPECT_EQUAL( 33u, static_cast<uint32>( blendSpace.getSampleCount() ) );
 
     // 목표(0,0)에서 가장 가까운 표본이 결과를 지배해야 한다.
@@ -613,10 +613,10 @@ SW_TEST_CASE( AnimationTest, SpriteAnimatorAppliesClipTransformKeys )
 SW_TEST_CASE( AnimationTest, BlendSpace2DClampsFarParametersToTheSampleRange )
 {
     BlendSpace2D blendSpace;
-    blendSpace.addSample( 0.0f, 0.0f, "Idle", float4x4::createTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
-    blendSpace.addSample( 600.0f, 0.0f, "Run", float4x4::createTranslation( float3{ 600.0f, 0.0f, 0.0f } ) );
-    blendSpace.addSample( 0.0f, 600.0f, "Strafe", float4x4::createTranslation( float3{ 0.0f, 600.0f, 0.0f } ) );
-    blendSpace.addSample( 600.0f, 600.0f, "RunStrafe", float4x4::createTranslation( float3{ 600.0f, 600.0f, 0.0f } ) );
+    blendSpace.addSample( 0.0f, 0.0f, "Idle", float4x4::makeTranslation( float3{ 0.0f, 0.0f, 0.0f } ) );
+    blendSpace.addSample( 600.0f, 0.0f, "Run", float4x4::makeTranslation( float3{ 600.0f, 0.0f, 0.0f } ) );
+    blendSpace.addSample( 0.0f, 600.0f, "Strafe", float4x4::makeTranslation( float3{ 0.0f, 600.0f, 0.0f } ) );
+    blendSpace.addSample( 600.0f, 600.0f, "RunStrafe", float4x4::makeTranslation( float3{ 600.0f, 600.0f, 0.0f } ) );
 
     const float4x4 dashPose = blendSpace.evaluate( 2500.0f, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 600.0f, dashPose._41, 1e-2f );

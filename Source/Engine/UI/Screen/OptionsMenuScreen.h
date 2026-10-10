@@ -84,9 +84,9 @@ namespace sw
         /** @brief 설정에서 탭을 다시 짓고 지금 탭(범위 밖이면 0)의 행을 짓습니다. */
         void rebuild();
         /** @brief 지금 탭의 행을 다시 짓습니다(옛 행 · 그 바인딩을 지운다). */
-        void buildRows();
+        void populateRows();
         /** @brief 설정 하나의 행을 지어 @p rows 에 붙입니다. 견본을 짓지 못하면 오류를 남기고 false 입니다. */
-        bool buildRow( PanelWidget& rows, const UserSettingDef& setting );
+        [[nodiscard]] bool createRow( PanelWidget& rows, const UserSettingDef& setting );
         /** @brief 키 바인딩 행의 글리프를 지금 입력 방식으로 다시 씁니다(바뀐 것만). */
         void refreshGlyphs();
         /** @brief 다시 시작 알림 줄을 `isRestartRequired` 에 맞춥니다. */

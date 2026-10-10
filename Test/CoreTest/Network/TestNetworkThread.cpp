@@ -268,7 +268,7 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
 {
     // 타임아웃 0.5 초 — 게임 스레드가 1 초 멈춰도(로딩 · 긴 프레임) 네트워크 스레드가 유지 패킷을 주고받아 끊기지 않는다.
     NetHostSettings settings;
-    settings._timeout = 0.5;
+    settings._timeoutSeconds = 0.5;
     test::LoopbackCluster cluster( 3u );
     SW_ASSERT_TRUE( startThreadedCluster( cluster, 1, settings ) );
     SW_ASSERT_TRUE( cluster.getClient( 0 ).connectAsync( NetAddress::makeLoopback( 4000 ) ).waitFor( kFutureWaitMilli ) );
@@ -289,7 +289,7 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     SW_ASSERT_TRUE( cluster.getClient( 0 ).getConnectionStats( 0, stats ) );
     // 확인이 게임 프레임을 기다리지 않는다 — 기다렸다면 왕복 시간이 멈춘 길이(1 초)에 닿는다. 상한은 절대 지연이 아니라 멈춤과 가르는 선이라
     // 부하 아래의 루프백 지연(수십 ms)에 넉넉하게 연결 타임아웃(0.5 초)으로 둔다.
-    SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < static_cast<float32>( settings._timeout ) );
+    SW_EXPECT_TRUE( stats._rtt > 0.0f && stats._rtt < static_cast<float32>( settings._timeoutSeconds ) );
     int32          received     = 0;
     int32          connectionID = -1;
     NetChannelType channel      = NetChannelType::Unreliable;

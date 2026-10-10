@@ -35,7 +35,7 @@ namespace sw
             /** @brief 강체 변환과 스케일을 포즈 행렬로 되돌립니다. */
             static float4x4 makePose( const DualQuaternion& rigid, const float3& scale )
             {
-                return float4x4::createScale( scale ) * rigid.toMatrix4x4();
+                return float4x4::makeScale( scale ) * rigid.toMatrix4x4();
             }
         };
     } // namespace

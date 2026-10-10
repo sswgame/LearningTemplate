@@ -19,7 +19,7 @@ namespace sw
             const float3& centroid = asset._graph._listNode[piece]._centroid;
             BoneTransform reference;
             reference._translation = centroid;
-            (void)skeleton->addBone( hashed_string( name.c_str() ), -1, reference, float4x4::createTranslation( -centroid ) );
+            (void)skeleton->addBone( hashed_string( name.c_str() ), -1, reference, float4x4::makeTranslation( -centroid ) );
         }
         return skeleton;
     }

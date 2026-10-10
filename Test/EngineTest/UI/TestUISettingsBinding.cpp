@@ -37,13 +37,13 @@ namespace
     <Setting id="video.vsync" category="video" type="bool" default="true" enabledWhen="video.mode!=windowed"/>
 </UserSettingsSchema>)";
         static constexpr const utf8* kDocumentPath = "test/settingsbinding/options.ui.xml";
-        static constexpr const utf8* kDocumentText = "<UiDocument _schemaVersion=\"1\">\n"
+        static constexpr const utf8* kDocumentText = "<UIDocument _schemaVersion=\"1\">\n"
                                                      "\t<BoxPanel>\n"
                                                      "\t\t<SliderWidget _name=\"Master\" _value=\"{setting:audio.master}\" />\n"
                                                      "\t\t<ComboBoxWidget _name=\"Mode\" _selectedIndex=\"{setting:video.mode}\" />\n"
                                                      "\t\t<CheckBoxWidget _name=\"VSync\" _bChecked=\"{setting:video.vsync}\" />\n"
                                                      "\t</BoxPanel>\n"
-                                                     "</UiDocument>\n";
+                                                     "</UIDocument>\n";
 
         static void runFrame( sw::InputManager& input, sw::UISystem& ui )
         {
@@ -214,9 +214,9 @@ SW_TEST_CASE( UISettingsBindingTest, ListenerRemovedOnScreenClose )
 SW_TEST_CASE( UISettingsBindingTest, UnknownSettingIsError )
 {
     UISettingsBindingFixture fixture;
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/settingsbinding/unknown.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/settingsbinding/unknown.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                                   "\t<SliderWidget _value=\"{setting:audio.missing}\" />\n"
-                                                                                                  "</UiDocument>\n" );
+                                                                                                  "</UIDocument>\n" );
     const sw::UIScreenHandle handle = fixture._ui.openScreen( "test/settingsbinding/unknown.ui.xml" );
     {
         SW_TEST_DEFENSIVE_SCOPE( "an unknown setting id is a bind error" );

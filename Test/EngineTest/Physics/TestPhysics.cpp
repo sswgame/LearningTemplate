@@ -209,7 +209,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
     SW_EXPECT_TRUE( bCollided );
     SW_EXPECT_TRUE( hit._bHit );
     // 충돌 시각 t는 약 49.3 / 100 = 0.493
-    SW_EXPECT_NEAR_EQUAL( 0.493f, hit._time, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.493f, hit._hitFraction, 0.01f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, hit._hitNormal._z, 1e-3f );
 }
 
@@ -232,7 +232,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptSphere )
     SW_EXPECT_TRUE( bHit );
     SW_EXPECT_TRUE( hit._bHit );
     // 구 앞면이 targetBox minX(20.0)에 닿을 때 center = 19.0 -> t = 19.0 / 40.0 = 0.475
-    SW_EXPECT_NEAR_EQUAL( 0.475f, hit._time, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.475f, hit._hitFraction, 0.01f );
     SW_EXPECT_NEAR_EQUAL( -1.0f, hit._hitNormal._x, 1e-3f );
 }
 
@@ -269,7 +269,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_PhysicsWorldSweepTest )
     SW_EXPECT_TRUE( hit._bHit );
     SW_EXPECT_EQUAL( hNear, hit._hitBody );
     // near obstacle에 먼저 닿음 (Z near ~ 30.0 -> t ~ 0.29)
-    SW_EXPECT_NEAR_EQUAL( 0.29f, hit._time, 0.02f );
+    SW_EXPECT_NEAR_EQUAL( 0.29f, hit._hitFraction, 0.02f );
 }
 
 /**
@@ -304,7 +304,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
     SW_EXPECT_TRUE( bDiagHit );
     SW_EXPECT_TRUE( diagHit._bHit );
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
-    SW_EXPECT_NEAR_EQUAL( 0.3f, diagHit._time, 0.01f );
+    SW_EXPECT_NEAR_EQUAL( 0.3f, diagHit._hitFraction, 0.01f );
 }
 
 /**
@@ -337,7 +337,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     };
     SW_EXPECT_FALSE( sw::ContinuousCollision::sweepAABB( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
-    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._time, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, hit._hitFraction, 1e-4f );
 
     // 3) 구 스윕도 같은 약속이다.
     SW_EXPECT_TRUE( sw::ContinuousCollision::sweepSphere( sw::float3{ 0.0f, 10.5f, 10.5f }, 0.5f, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
@@ -671,7 +671,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
     // 앞면에 닿은 때 — 중심 0.5 가 부푼 벽(4.5)에 닿을 때까지 10 가운데 4 를 갔다.
-    SW_EXPECT_NEAR_EQUAL( 0.4f, world.getOverlapEvents()[0]._time, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.4f, world.getOverlapEvents()[0]._hitFraction, 1e-4f );
 
     // 이미 지나갔으니 다음 step 에 끝난다.
     world.step( 0.016f );
@@ -704,7 +704,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
 
 /**
  * @brief [PhysicsTest] 한 step 에 둘을 지나간 연속 바디의 겹침은 먼저 닿은 것부터 온다
- * @details 목록은 닿은 때(`_time`) 순서다. 쌍(핸들) 순서로 내면 총알이 한 step 에 적 둘을 지나갈 때 받는 쪽이 첫 이벤트에 반응해 사라지므로,
+ * @details 목록은 닿은 때(`_hitFraction`) 순서다. 쌍(핸들) 순서로 내면 총알이 한 step 에 적 둘을 지나갈 때 받는 쪽이 첫 이벤트에 반응해 사라지므로,
  *          핸들이 앞선 **뒤의** 적이 맞을 수 있다. 먼 벽을 먼저 더해 핸들 순서와 거리 순서를 거꾸로 둔다.
  */
 SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
@@ -721,7 +721,7 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listEvent.size() ) );
     const bool bNearWallFirst = listEvent[0]._objectA == 2ull || listEvent[0]._objectB == 2ull;
     SW_EXPECT_TRUE( bNearWallFirst );
-    SW_EXPECT_TRUE( listEvent[0]._time < listEvent[1]._time );
+    SW_EXPECT_TRUE( listEvent[0]._hitFraction < listEvent[1]._hitFraction );
 }
 
 /**
@@ -756,7 +756,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
-    SW_EXPECT_NEAR_EQUAL( 0.495f, world.getOverlapEvents()[0]._time, 1e-3f );
+    SW_EXPECT_NEAR_EQUAL( 0.495f, world.getOverlapEvents()[0]._hitFraction, 1e-3f );
 }
 
 /**

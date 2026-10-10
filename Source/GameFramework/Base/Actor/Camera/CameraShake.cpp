@@ -73,8 +73,8 @@ namespace sw
         const float3 up      = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, pose._rotation );
         const float3 forward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, pose._rotation );
         shaken._position     = pose._position + right * offset._position._x + up * offset._position._y + forward * offset._position._z;
-        // 회전은 카메라 로컬에서 먼저 돈다 — 해밀턴 곱 `포즈 × 로컬` 은 로컬을 먼저 적용한다(`createFromYawPitchRoll` = 요 × 피치 와 같은 규약).
-        const quaternion local = quaternion::createFromYawPitchRoll( offset._rotation._y, offset._rotation._x, offset._rotation._z );
+        // 회전은 카메라 로컬에서 먼저 돈다 — 해밀턴 곱 `포즈 × 로컬` 은 로컬을 먼저 적용한다(`makeFromYawPitchRoll` = 요 × 피치 와 같은 규약).
+        const quaternion local = quaternion::makeFromYawPitchRoll( offset._rotation._y, offset._rotation._x, offset._rotation._z );
         shaken._rotation       = pose._rotation * local;
         return shaken;
     }

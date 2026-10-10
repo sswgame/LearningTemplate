@@ -114,7 +114,7 @@ namespace test
          * @details 섞을 때는 gtest 처럼 **스위트 순서를 섞고 스위트 안의 케이스를 섞는다**(스위트는 붙어 있다). 회차마다 씨앗에 회차를
          *          더한다 — 같은 `--test_shuffle=<씨앗>` 이면 같은 순서가 다시 나온다.
          */
-        sw::vector<const TestCaseInfo*> buildRunOrder( uint32 iteration ) const;
+        sw::vector<const TestCaseInfo*> makeRunOrder( uint32 iteration ) const;
 
         /**
          * @brief 이 실행이 맡은 케이스 — 고른 케이스(`isSelected`) 중 이 샤드의 것을 등록 순서로.

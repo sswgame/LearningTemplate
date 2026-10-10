@@ -16,7 +16,7 @@ namespace sw
             return false;
 
         outDiffBytes.clear();
-        const SerializeContext& ctx = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault();
         vector<uint8>           cdoBytes;
         vector<uint8>           modifiedBytes;
 
@@ -35,18 +35,18 @@ namespace sw
             {
                 const bool bCdo      = prop.getValue<bool>( pCdoInstance );
                 const bool bModified = prop.getValue<bool>( pModifiedInstance );
-                SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, ctx );
-                SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, ctx );
+                SerializerUtil::serializeValueBinary( &bCdo, hashed_string( "bool" ), cdoBytes, context );
+                SerializerUtil::serializeValueBinary( &bModified, hashed_string( "bool" ), modifiedBytes, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
-                SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, ctx );
-                SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, ctx );
+                SerializerUtil::serializeNestedContainerBinary( pCdoPtr, prop.getContainerShape(), cdoBytes, context );
+                SerializerUtil::serializeNestedContainerBinary( pModifiedValue, prop.getContainerShape(), modifiedBytes, context );
             }
             else
             {
-                SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, ctx );
-                SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, ctx );
+                SerializerUtil::serializeValueBinary( pCdoPtr, prop._typeName, cdoBytes, context );
+                SerializerUtil::serializeValueBinary( pModifiedValue, prop._typeName, modifiedBytes, context );
             }
             if ( cdoBytes == modifiedBytes )
                 return;
@@ -68,7 +68,7 @@ namespace sw
         if ( pTargetInstance == nullptr || pDiffData == nullptr )
             return false;
 
-        const SerializeContext& ctx = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault();
         size_t                  offset{ 0 };
         while ( offset + sizeof( uint32 ) * 2 <= diffSize )
         {
@@ -100,7 +100,7 @@ namespace sw
                 if ( pProp->_bIsBitField == SW_TRUE )
                 {
                     bool bVal = false;
-                    bOk       = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, ctx );
+                    bOk       = SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pDiffData + offset, payload, local, context );
                     if ( bOk )
                         pProp->setValue<bool>( pTargetInstance, bVal );
                 }
@@ -109,10 +109,10 @@ namespace sw
                     if ( pProp->_bIsContainer && pProp->hasContainerWrapper() )
                     {
                         bOk = SerializerUtil::deserializeNestedContainerBinary( pDest, pProp->getContainerShape(), pDiffData + offset, payload,
-                                                                                local, ctx );
+                                                                                local, context );
                     }
                     else
-                        bOk = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, ctx );
+                        bOk = SerializerUtil::deserializeValueBinary( pDest, pProp->_typeName, pDiffData + offset, payload, local, context );
                 }
                 if ( bOk == false )
                     return false;

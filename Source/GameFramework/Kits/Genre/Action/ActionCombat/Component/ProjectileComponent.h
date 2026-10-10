@@ -16,7 +16,7 @@ namespace sw
      *          켜므로(`BoxCollider2DComponent::setContinuous`), 한 프레임에 얇은 적을 건너뛸 만큼 빨라도 지나간 길에서 맞습니다. 콜라이더가 없으면
      *          날기만 하므로 시작할 때 경고합니다(프리팹을 고쳐야 한다).
      *
-     *          닿은 것마다(먼저 닿은 것부터 — `OverlapInfo::_time`):
+     *          닿은 것마다(먼저 닿은 것부터 — `OverlapInfo::_hitFraction`):
      *          - 상대 콜라이더가 트리거면 지나칩니다(감지 범위 · 구역 볼륨이 총알을 먹지 않는다 — 유니티 `isTrigger` · 언리얼 Overlap 반응).
      *          - 쏜 쪽(`setInstigator`)과 거기 붙은 오브젝트는 지나칩니다 — 총구에서 나온 총알이 쏜 몸에 맞지 않습니다.
      *          - 다른 투사체는 **요격탄만** 맞힙니다(`setInterceptor` — 언리얼의 채널별 충돌 반응). 같은 쪽이 쏜 것끼리는 요격탄이어도 지나칩니다

@@ -27,7 +27,7 @@ namespace sw
     {
         (void)context;
         if ( phase == AnimationPhase::BasePose )
-            _owner.buildBasePose( unit );
+            _owner.populateBasePose( unit );
     }
 
     void PoseRetargetBinding::onAnimationUnitDetached( SkeletalMeshComponent& unit )
@@ -142,7 +142,7 @@ namespace sw
             _pUnit->addAnimationPhaseTask( &_binding );
     }
 
-    void PoseRetargetComponent::buildBasePose( SkeletalMeshComponent& unit )
+    void PoseRetargetComponent::populateBasePose( SkeletalMeshComponent& unit )
     {
         const SkeletalMeshComponent* pSource = findSource();
         if ( pSource == nullptr || _bProfileReady == SW_FALSE )

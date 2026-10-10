@@ -1438,7 +1438,7 @@ namespace sw
         FractureGraphUtil::normalizeLinks( graph._listLink );
 
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::buildHierarchy( graph, settings._listLevelCount, listLeafOrder );
+        FractureGraphUtil::populateHierarchy( graph, settings._listLevelCount, listLeafOrder );
 
         outAsset._graph = std::move( graph );
         outAsset._seed  = settings._seed;

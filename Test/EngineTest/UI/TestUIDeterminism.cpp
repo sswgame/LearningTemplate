@@ -71,7 +71,7 @@ namespace
 </UserSettingsSchema>)";
 
         /** @brief HUD 견본 — 네 모서리 앵커 · 진행 막대 · 글 · 가운데 조준 상자(게임 팩에 기대지 않는 엔진 시험 문서). */
-        static constexpr utf8 kHUDDocument[] = "<UiDocument _schemaVersion=\"1\">\n"
+        static constexpr utf8 kHUDDocument[] = "<UIDocument _schemaVersion=\"1\">\n"
                                                "\t<UIScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
                                                "\t<SafeZonePanel _visibility=\"SelfHitTestInvisible\">\n"
                                                "\t\t<CanvasPanel _visibility=\"SelfHitTestInvisible\">\n"
@@ -94,7 +94,7 @@ namespace
                                                "\t\t\t</TextWidget>\n"
                                                "\t\t</CanvasPanel>\n"
                                                "\t</SafeZonePanel>\n"
-                                               "</UiDocument>\n";
+                                               "</UIDocument>\n";
 
         /** @brief 골든 폴더(`Test/EngineTest/UI/Golden`)의 절대 경로 — 작업 폴더(`build/<프리셋>/Bin`)에서 위로 올라가며 찾는다. 못 찾으면 빈 글. */
         static sw::string findGoldenDirectory()

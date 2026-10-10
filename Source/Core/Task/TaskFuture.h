@@ -477,31 +477,31 @@ namespace sw
             size_t                 _remaining{ 0 };
         };
 
-        auto pCtx = sw::make_shared<WhenAllContext>();
-        pCtx->_listResult.resize( listFuture.size() );
-        pCtx->_remaining = validCount;
+        auto pContext = sw::make_shared<WhenAllContext>();
+        pContext->_listResult.resize( listFuture.size() );
+        pContext->_remaining = validCount;
 
         for ( size_t futureIndex = 0; futureIndex < listFuture.size(); ++futureIndex )
         {
             if ( listFuture[futureIndex].isValid() == false )
                 continue;
 
-            listFuture[futureIndex].then( [pCtx, futureIndex]( const T& val )
+            listFuture[futureIndex].then( [pContext, futureIndex]( const T& val )
             {
                 bool bDone = false;
                 {
-                    std::scoped_lock<mutex> lock{ pCtx->_mutex };
-                    pCtx->_listResult[futureIndex] = val;
-                    --pCtx->_remaining;
-                    if ( pCtx->_remaining == 0 )
+                    std::scoped_lock<mutex> lock{ pContext->_mutex };
+                    pContext->_listResult[futureIndex] = val;
+                    --pContext->_remaining;
+                    if ( pContext->_remaining == 0 )
                         bDone = true;
                 }
                 if ( bDone )
-                    pCtx->_promise.setValue( pCtx->_listResult );
+                    pContext->_promise.setValue( pContext->_listResult );
             } );
         }
 
-        return pCtx->_promise.getFuture();
+        return pContext->_promise.getFuture();
     }
 
     /**
@@ -534,22 +534,22 @@ namespace sw
             TaskPromise<T> _promise{};
         };
 
-        auto pCtx = sw::make_shared<WhenAnyContext>();
+        auto pContext = sw::make_shared<WhenAnyContext>();
 
         for ( size_t futureIndex = 0; futureIndex < listFuture.size(); ++futureIndex )
         {
             if ( listFuture[futureIndex].isValid() == false )
                 continue;
 
-            listFuture[futureIndex].then( [pCtx]( const T& val )
+            listFuture[futureIndex].then( [pContext]( const T& val )
             {
                 bool expected = false;
-                if ( pCtx->_bTriggered.compare_exchange_strong( expected, true ) )
-                    pCtx->_promise.setValue( val );
+                if ( pContext->_bTriggered.compare_exchange_strong( expected, true ) )
+                    pContext->_promise.setValue( val );
             } );
         }
 
-        return pCtx->_promise.getFuture();
+        return pContext->_promise.getFuture();
     }
 
 } // namespace sw

@@ -89,13 +89,13 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderCacheReadsEachFolderOnce )
     TestContentBrowserLogicInternal::getScanCount() = 0;
     ContentBrowserFolderCache cache{ &TestContentBrowserLogicInternal::scanTwoChildren };
 
-    const sw::vector<sw::string>& listRootChild = cache.getChildFolders( "D:/Res/engine" );
+    const sw::vector<sw::string>& listRootChild = cache.getOrScanChildFolders( "D:/Res/engine" );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listRootChild.size() ) );
     SW_EXPECT_STREQ( "D:/Res/engine/alpha", listRootChild[0].c_str() ); // 정렬해 둔다
     for ( uint32 frameIndex = 0; frameIndex < 10; ++frameIndex )
     {
-        (void)cache.getChildFolders( "D:/Res/engine" );
-        (void)cache.getChildFolders( "D:\\Res\\Engine\\" ); // 대소문자 · 구분자 · 끝 슬래시가 달라도 같은 폴더
+        (void)cache.getOrScanChildFolders( "D:/Res/engine" );
+        (void)cache.getOrScanChildFolders( "D:\\Res\\Engine\\" ); // 대소문자 · 구분자 · 끝 슬래시가 달라도 같은 폴더
     }
     SW_EXPECT_EQUAL( 1u, TestContentBrowserLogicInternal::getScanCount() );
 
@@ -105,13 +105,13 @@ SW_TEST_CASE( ContentBrowserLogicTest, FolderCacheReadsEachFolderOnce )
         sw::string folder{ "D:/Res/f" };
         folder.push_back( static_cast<utf8>( 'a' + folderIndex / 26 ) );
         folder.push_back( static_cast<utf8>( 'a' + folderIndex % 26 ) );
-        (void)cache.getChildFolders( folder );
+        (void)cache.getOrScanChildFolders( folder );
     }
     SW_EXPECT_EQUAL( 65u, TestContentBrowserLogicInternal::getScanCount() );
     SW_EXPECT_EQUAL( 65u, cache.getCachedFolderCount() );
     SW_EXPECT_STREQ( "D:/Res/engine/alpha", listRootChild[0].c_str() );
 
     cache.clear();
-    (void)cache.getChildFolders( "D:/Res/engine" );
+    (void)cache.getOrScanChildFolders( "D:/Res/engine" );
     SW_EXPECT_EQUAL( 66u, TestContentBrowserLogicInternal::getScanCount() );
 }

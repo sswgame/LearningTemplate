@@ -33,7 +33,7 @@ namespace sw
             }
 
             template <typename T>
-            static void regBuiltinBin( SerializeContext& ctx, const utf8* pName )
+            static void regBuiltinBin( SerializeContext& context, const utf8* pName )
             {
                 if constexpr ( std::is_same_v<T, string> || std::is_same_v<T, hashed_string> ||
                                std::is_same_v<T, atomic<bool>> || std::is_same_v<T, TagID> )
@@ -56,7 +56,7 @@ namespace sw
                     offset += sizeof( T );
                     return true;
                 };
-                ctx.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
+                context.registerBinaryHandler( hashed_string( pName ), writeFn, readFn );
             }
 
             /**
@@ -117,9 +117,9 @@ namespace sw
             }
 
             template <typename T>
-            static void registerNumericTextHandler( SerializeContext& ctx, const hashed_string& typeName )
+            static void registerNumericTextHandler( SerializeContext& context, const hashed_string& typeName )
             {
-                ctx.registerTextHandler(
+                context.registerTextHandler(
                     typeName,
                     []( const void* pPtr )
                 { return sw::to_string( *static_cast<const T*>( pPtr ) ); },
@@ -130,9 +130,9 @@ namespace sw
             }
 
             template <typename TVec, typename TElem, int32 kCount>
-            static void registerVectorTextHandler( SerializeContext& ctx, const hashed_string& typeName )
+            static void registerVectorTextHandler( SerializeContext& context, const hashed_string& typeName )
             {
-                ctx.registerTextHandler(
+                context.registerTextHandler(
                     typeName,
                     []( const void* pPtr )
                 {
@@ -168,11 +168,11 @@ namespace sw
                 } );
             }
 
-            static void registerFloatVectorTextHandlers( SerializeContext& ctx )
+            static void registerFloatVectorTextHandlers( SerializeContext& context )
             {
-                registerVectorTextHandler<float2, float32, 2>( ctx, hashed_string( PredefinedNameType::NameType_float2 ) );
-                registerVectorTextHandler<float3, float32, 3>( ctx, hashed_string( PredefinedNameType::NameType_float3 ) );
-                registerVectorTextHandler<float4, float32, 4>( ctx, hashed_string( PredefinedNameType::NameType_float4 ) );
+                registerVectorTextHandler<float2, float32, 2>( context, hashed_string( PredefinedNameType::NameType_float2 ) );
+                registerVectorTextHandler<float3, float32, 3>( context, hashed_string( PredefinedNameType::NameType_float3 ) );
+                registerVectorTextHandler<float4, float32, 4>( context, hashed_string( PredefinedNameType::NameType_float4 ) );
             }
         };
     } // namespace
@@ -226,23 +226,23 @@ namespace sw
 
     SerializeContext SerializeContext::deriveFromDefault()
     {
-        const SerializeContext& defaultCtx = getDefault();
+        const SerializeContext& defaultContext = getDefault();
 
         SerializeContext derived;
-        derived._pHandlerFallback = &defaultCtx;
+        derived._pHandlerFallback = &defaultContext;
         // 표만 빌리고 **설정은 물려받는다**(`= getDefault()` 와 같은 동작).
-        derived.setIgnoreCaseKeys( defaultCtx.ignoresCaseKeys() );
-        derived.setAllowUnknownProperties( defaultCtx.allowsUnknownProperties() );
+        derived.setIgnoreCaseKeys( defaultContext.ignoresCaseKeys() );
+        derived.setAllowUnknownProperties( defaultContext.allowsUnknownProperties() );
         return derived;
     }
 
     const SerializeContext& SerializeContext::getDefault()
     {
-        static SerializeContext s_defaultCtx = []()
+        static SerializeContext s_defaultContext = []()
         {
-            SerializeContext ctx;
+            SerializeContext context;
 
-#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SerializeContextInternal::regBuiltinBin<CppType>( ctx, #Canon );
+#define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SerializeContextInternal::regBuiltinBin<CppType>( context, #Canon );
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 
@@ -266,7 +266,7 @@ namespace sw
                 return true;
             };
 
-            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
+            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteBin, strReadBin );
 
             BinaryWriteFn hashedStrWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
             {
@@ -287,7 +287,7 @@ namespace sw
                 return true;
             };
 
-            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
+            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteBin, hashedStrReadBin );
 
             BinaryWriteFn atomicBoolWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
             {
@@ -302,7 +302,7 @@ namespace sw
                 offset += sizeof( uint8 );
                 return true;
             };
-            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
+            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWriteBin, atomicBoolReadBin );
 
             BinaryWriteFn tagIDWriteBin = []( const void* pPtr, vector<uint8>& listBuf )
             {
@@ -326,15 +326,15 @@ namespace sw
                 offset = reader.getOffset();
                 return true;
             };
-            ctx.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
+            context.registerBinaryHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWriteBin, tagIDReadBin );
 
 #define SW_BUILTIN_TEXT_none( Canon, CppType )
-#define SW_BUILTIN_TEXT_stoi( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoll( Canon, CppType )  SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoul( Canon, CppType )  SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stoull( Canon, CppType ) SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stof( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
-#define SW_BUILTIN_TEXT_stod( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( ctx, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoi( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoll( Canon, CppType )  SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoul( Canon, CppType )  SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stoull( Canon, CppType ) SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stof( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
+#define SW_BUILTIN_TEXT_stod( Canon, CppType )   SerializeContextInternal::registerNumericTextHandler<CppType>( context, hashed_string( PredefinedNameType::NameType_##Canon ) );
 
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) SW_BUILTIN_TEXT_##TextConv( Canon, CppType )
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -357,7 +357,7 @@ namespace sw
             {
                 return StringUtil::tryParseBool( strView, *static_cast<bool*>( pPtr ) );
             };
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
+            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_bool ), boolWrite, boolRead );
 
             auto atomicBoolWrite = []( const void* pPtr )
             { return static_cast<const atomic<bool>*>( pPtr )->load() ? "true" : "false"; };
@@ -369,7 +369,7 @@ namespace sw
                 static_cast<atomic<bool>*>( pPtr )->store( bValue );
                 return true;
             };
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
+            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_atomic_bool ), atomicBoolWrite, atomicBoolRead );
 
             auto tagIDWrite = []( const void* pPtr ) -> string
             {
@@ -389,7 +389,7 @@ namespace sw
                 *static_cast<TagID*>( pPtr ) = TagID::request( text );
                 return true;
             };
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
+            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_TagID ), tagIDWrite, tagIDRead );
 
             TextWriteFn strWriteTxt = []( const void* pPtr )
             { return string( static_cast<const string*>( pPtr )->c_str() ); };
@@ -399,7 +399,7 @@ namespace sw
                 return true;
             };
 
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
+            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_string ), strWriteTxt, strReadTxt );
 
             TextWriteFn hashedStrWriteTxt = []( const void* pPtr )
             { return string( static_cast<const hashed_string*>( pPtr )->c_str() ); };
@@ -410,7 +410,7 @@ namespace sw
                 return true;
             };
 
-            ctx.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
+            context.registerTextHandler( hashed_string( PredefinedNameType::NameType_hashed_string ), hashedStrWriteTxt, hashedStrReadTxt );
 
             auto packedWrite = []( const void* pPtr ) -> string
             {
@@ -425,9 +425,9 @@ namespace sw
                 *static_cast<SlotHandle*>( pPtr ) = SlotHandle::fromPacked( packed );
                 return true;
             };
-            ctx.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
+            context.registerTextHandler( hashed_string( "SlotHandle" ), packedWrite, packedRead );
 
-            ctx.registerTextHandler(
+            context.registerTextHandler(
                 hashed_string( "ComponentHandle" ),
                 []( const void* pPtr )
             {
@@ -452,7 +452,7 @@ namespace sw
                 return true;
             } );
 
-            ctx.registerTextHandler(
+            context.registerTextHandler(
                 hashed_string( "GameObjectHandle" ),
                 []( const void* pPtr )
             { return sw::to_string( static_cast<const GameObjectHandle*>( pPtr )->objectID() ); },
@@ -465,12 +465,12 @@ namespace sw
                 return true;
             } );
 
-            SerializeContextInternal::registerFloatVectorTextHandlers( ctx );
-            registerReflectAnyHandlers( ctx );
-            return ctx;
+            SerializeContextInternal::registerFloatVectorTextHandlers( context );
+            registerReflectAnyHandlers( context );
+            return context;
         }();
 
-        return s_defaultCtx;
+        return s_defaultContext;
     }
 
 } // namespace sw

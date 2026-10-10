@@ -120,7 +120,7 @@ namespace sw
                 const sw::float3 forward{ sw::MathUtil::cos( kPitch ) * sw::MathUtil::sin( kYaw ), -sw::MathUtil::sin( kPitch ),
                                           sw::MathUtil::cos( kPitch ) * sw::MathUtil::cos( kYaw ) };
                 const sw::float3 eye = focus - forward * kDistance;
-                return sw::float4x4::createLookAt( eye, focus, sw::float3::Up ) * sw::float4x4::createOrthographic( orthoHeight * 16.0f / 9.0f, orthoHeight, 0.1f, 625.0f );
+                return sw::float4x4::makeLookAt( eye, focus, sw::float3::Up ) * sw::float4x4::makeOrthographic( orthoHeight * 16.0f / 9.0f, orthoHeight, 0.1f, 625.0f );
             }
 
             /** @brief 카메라가 보는 바닥(y = 0) 점들 — NDC 격자의 광선이 바닥과 만나는 곳입니다. */
@@ -642,7 +642,7 @@ SW_TEST_CASE( SceneTest, ShadowMatrixDepthRangeContainsScene )
     pLight->setShadowExtent( kExtent );
     pLight->setShadowDistance( kDistance );
 
-    const sw::float4x4 lightViewProj = pLight->buildShadowViewProj();
+    const sw::float4x4 lightViewProj = pLight->computeShadowViewProj();
 
     auto ndcDepthOf = [&lightViewProj]( const sw::float3& worldPos ) -> float32
     {
@@ -688,7 +688,7 @@ SW_TEST_CASE( SceneTest, ShadowBiasStaysInWorldUnits )
     {
         pLight->setShadowExtent( extent );
         pLight->setShadowDistance( extent * 2.0f );
-        const sw::DirectionalShadowProjection projection     = pLight->buildShadowProjection( kResolution );
+        const sw::DirectionalShadowProjection projection     = pLight->computeShadowProjection( kResolution );
         const sw::float4                      params         = projection.computeShaderParams();
         const float32                         depthBiasWorld = params._x * projection._depthRange;
         const sw::string                      label          = "extent " + sw::to_string( extent ) + ": depth bias " + sw::to_string( depthBiasWorld ) + " m, normal offset " +
@@ -729,7 +729,7 @@ SW_TEST_CASE( SceneTest, ShadowVolumeFollowsOrthoCamera )
     for ( const ViewCase& viewCase : kArrCase )
     {
         const sw::float4x4                    viewProj   = Internal::makeCameraViewProj( viewCase._focus, viewCase._orthoHeight );
-        const sw::DirectionalShadowProjection projection = pLight->buildShadowProjectionForView( viewProj, Internal::kResolution );
+        const sw::DirectionalShadowProjection projection = pLight->computeShadowProjectionForView( viewProj, Internal::kResolution );
         const sw::vector<sw::float3>          listGround = Internal::collectVisibleGroundPoints( viewProj );
         SW_ASSERT_TRUE( listGround.size() > 40 );
 
@@ -768,7 +768,7 @@ SW_TEST_CASE( SceneTest, ShadowVolumeSnapsToTexelsWhilePanning )
     auto             texelPhaseOf = [&]( const sw::float3& focus ) -> sw::float2
     {
         const sw::DirectionalShadowProjection projection =
-            pLight->buildShadowProjectionForView( Internal::makeCameraViewProj( focus, 110.0f ), Internal::kResolution );
+            pLight->computeShadowProjectionForView( Internal::makeCameraViewProj( focus, 110.0f ), Internal::kResolution );
         const sw::float3 ndc    = Internal::projectToNdc( worldPoint, projection._viewProj );
         const float32    texelX = ( ndc._x * 0.5f + 0.5f ) * static_cast<float32>( Internal::kResolution );
         const float32    texelY = ( ndc._y * 0.5f + 0.5f ) * static_cast<float32>( Internal::kResolution );

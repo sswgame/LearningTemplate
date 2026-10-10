@@ -40,7 +40,7 @@ namespace sw
          * @brief VAT 가 걸린 메시 목록으로 풀을 맞춥니다. 목록(포인터 · 내용 번호)이 그대로면 아무것도 하지 않습니다.
          * @param listMesh 소유하지 않는 포인터들 — 스냅샷 배치가 소유를 들고 있는 동안만 유효합니다. VAT 가 없는 메시는 건너뜁니다.
          */
-        void build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
         /** @brief 메시의 머리 원소 번호입니다. 풀에 없으면 `kInvalidBase` 입니다. */
         uint32 baseOf( const Mesh* pMesh ) const;
         /** @brief 표 버퍼입니다. 정점 셰이더가 SRV 로 읽습니다. */

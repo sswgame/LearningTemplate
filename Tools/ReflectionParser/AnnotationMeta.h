@@ -41,13 +41,13 @@ namespace sw
 namespace sw
 {
     /** @brief 철자 토큰을 AnnotationBinding::Kind 로 파싱합니다. */
-    [[nodiscard]] inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& out ) noexcept
+    [[nodiscard]] inline bool tryParseAnnotationKind( const string_view spelling, AnnotationBinding::Kind& outKind ) noexcept
     {
-#define REGISTER_ANNOTATION_KIND( Name, Token ) \
-    if ( spelling == #Token )                   \
-    {                                           \
-        out = AnnotationBinding::Kind::Name;    \
-        return true;                            \
+#define REGISTER_ANNOTATION_KIND( Name, Token )  \
+    if ( spelling == #Token )                    \
+    {                                            \
+        outKind = AnnotationBinding::Kind::Name; \
+        return true;                             \
     }
 #include "Core/Predefined/PredefinedAnnotationKind.xxx"
 #undef REGISTER_ANNOTATION_KIND

@@ -4,7 +4,7 @@
  * @details
  *  PSO 를 만들 때 이 캐시로 레이아웃을 얻습니다. 안에서 활성 백엔드 타깃 포맷의 리플렉션을 얻고
  *  (쿠킹된 매니페스트가 먼저이고, 개발 빌드는 ShaderCache 로 컴파일한 뒤 런타임 리플렉션으로 폴백합니다)
- *  ShaderBindingLayout::build 합니다. 핫 리로드 때는 파일 경로로 무효화합니다.
+ *  ShaderBindingLayout::make 합니다. 핫 리로드 때는 파일 경로로 무효화합니다.
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"

@@ -12,7 +12,7 @@ namespace test
 {
     PropertyCarryReport makePropertyCarryReport()
     {
-        const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+        const sw::SerializeContext& context = sw::SerializeContext::getDefault();
 
         sw::vector<const sw::TypeInfo*> listType;
         sw::engine::getTypeRegistry().forEachType( [&listType]( const sw::TypeInfo& typeInfo )
@@ -27,7 +27,7 @@ namespace test
                 if ( prop._metadata._bTransient == SW_TRUE )
                     continue;
                 ++report._checkedCount;
-                if ( sw::SerializerUtil::canCarryProperty( prop, ctx ) )
+                if ( sw::SerializerUtil::canCarryProperty( prop, context ) )
                     continue;
                 report._offender += sw::string( pType->_fullyQualifiedName.c_str() ) + "::" + prop._name.c_str() + " (" + prop._typeName.c_str() + ")\n";
             }

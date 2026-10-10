@@ -70,7 +70,7 @@ namespace sw
          *       (400개 358us → 1us, 20,000개 219us → 99us). 다시 나누자고 제안하기 전에 그 숫자를 볼 것.
          *       수집과 전체 제자리 갱신은 문턱을 넘으면 병렬로 돕니다(`kParallelCollectPrimitiveCount` · `refreshInstancesInPlace`).
          */
-        void buildFromScene( Scene* pScene, const float3& cameraPos );
+        void populateFromScene( Scene* pScene, const float3& cameraPos );
         /**
          * @brief 투명 정렬의 깊이를 잴 축입니다. 영벡터(기본)면 카메라까지의 거리, 아니면 카메라에서 그 축으로 잰 깊이입니다.
          * @details 직교 2D 카메라에서 거리로 재면 같은 Z 의 두 스프라이트가 카메라의 XY 위치에 따라 앞뒤가 바뀝니다. `EngineLoop` 가
@@ -78,11 +78,11 @@ namespace sw
          */
         void setTransparentSortAxis( const float3& axis );
         /**
-         * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 눈으로 다시 정렬해 스냅샷에 싣습니다. `buildFromScene` **뒤**, 내보내기 전에 부릅니다.
+         * @brief 추가 뷰마다 투명 꼬리를 그 뷰의 눈으로 다시 정렬해 스냅샷에 싣습니다. `populateFromScene` **뒤**, 내보내기 전에 부릅니다.
          * @details 씬이 그대로인 프레임에도 부른다 — 뷰 카메라만 움직여도 순서가 바뀐다. 그리지 않는 뷰(`_bRender` 0)는 건너뛴다.
          *          키는 주 뷰와 같은 규칙(`makeTransparentSortKey` · `isDrawnBefore`)이다.
          */
-        void buildViewTransparentOrders( const vector<RenderViewRequest>& listView );
+        void computeViewTransparentOrders( const vector<RenderViewRequest>& listView );
         /** @brief 투명 정렬의 깊이 축입니다(영벡터 = 거리). */
         const float3& getTransparentSortAxis() const { return _transparentSortAxis; }
         /**
@@ -103,7 +103,7 @@ namespace sw
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽으므로, 텍스처를 인덱스로 고를 수 있는 백엔드
          *          (DX12 · Vulkan 의 네이티브 bindless)에서는 같은 메시 · 같은 퍼뮤테이션이면 머티리얼이 달라도 한 드로우입니다.
          *          DX11 · GL 은 머티리얼 텍스처를 t5..t8 슬롯에 걸어야 해서 배치가 머티리얼 단위로 남습니다. FrameRenderer · EngineLoop 가
-         *          디바이스 caps(supportsNativeBindlessSampling)로 정합니다. 바꾸면 다음 buildFromScene 이 다시 묶습니다.
+         *          디바이스 caps(supportsNativeBindlessSampling)로 정합니다. 바꾸면 다음 populateFromScene 이 다시 묶습니다.
          */
         void setMergeBatchesAcrossMaterials( bool bMerge );
         /** @brief 불투명 배치를 셰이더 퍼뮤테이션 단위로 묶고 있으면 true 입니다(`setMergeBatchesAcrossMaterials`). */
@@ -123,14 +123,14 @@ namespace sw
             const vector<GPUShaderPermutation>* pList = _snapshot._pListShaderPermutation.get();
             return ( pList != nullptr && index < pList->size() ) ? &( *pList )[index] : nullptr;
         }
-        /** @brief 마지막 buildFromScene 이 CPU 스냅샷을 바꿨으면 true 를 반환합니다(내보내면 다시 false). */
+        /** @brief 마지막 populateFromScene 이 CPU 스냅샷을 바꿨으면 true 를 반환합니다(내보내면 다시 false). */
         bool isCPUSnapshotDirty() const { return _snapshot._bCPUDirty != SW_FALSE; }
 
     private:
         /** @brief 수집된 인스턴스를 배치로 묶습니다. */
-        void buildBatches();
+        void populateBatches();
         /**
-         * @brief 정렬된 투명 후보를 배치로 방출합니다(buildBatches 의 뒷부분). 불투명 뒤에 이어 붙습니다.
+         * @brief 정렬된 투명 후보를 배치로 방출합니다(populateBatches 의 뒷부분). 불투명 뒤에 이어 붙습니다.
          * @details 전체 재구축과 **투명 꼬리만 다시 짓기**(`rebuildTransparentTail`)가 이 함수를 함께 씁니다.
          */
         void emitTransparentBatches();
@@ -149,17 +149,17 @@ namespace sw
         void freeUnusedMaterialElements();
         /** @brief 머티리얼 원소 등록부를 통째로 비웁니다(그룹 기준이 바뀌었을 때). */
         void resetMaterialRegistry();
-        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(buildBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
+        /** @brief 머티리얼의 셰이더 타입 그룹 인덱스를 찾거나 만듭니다(populateBatches 안). 머티리얼이 없으면 kInvalidMaterialGroup 입니다. */
         uint32 materialGroupFor( const Material* pMaterial );
         /**
          * @brief (머티리얼, 인스턴스)의 퍼뮤테이션 해시를 반환합니다. 셰이더 경로와 정적 define 을 함께 봅니다.
          * @details 인스턴스는 키워드를 덮어쓸 수 있으므로 인스턴스가 있으면 그 해시를 씁니다(부모 것을 이미 포함합니다).
          */
         static uint64 permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance );
-        /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다(buildBatches 안). 머티리얼이 없으면 kInvalidShaderPermutation 입니다. */
+        /** @brief 퍼뮤테이션 인덱스를 찾거나 만듭니다(populateBatches 안). 머티리얼이 없으면 kInvalidShaderPermutation 입니다. */
         uint32 shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance );
         /**
-         * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 반환합니다(buildBatches 안).
+         * @brief (머티리얼, 인스턴스) 쌍을 그룹에 넣고 원소 인덱스(materialIndex)를 반환합니다(populateBatches 안).
          * @details 같은 쌍은 같은 원소를 공유합니다. 인스턴스마다 부릅니다. 배치를 합치면 한 배치 안에 여러 원소가 삽니다.
          */
         uint32 assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex );
@@ -246,7 +246,7 @@ namespace sw
         /// @brief 퍼뮤테이션 해시 → `_snapshot._pListShaderPermutation` 의 인덱스입니다.
         unordered_map<uint64, uint32> _mapPermutationToIndex;
 
-        /// 그릴 후보 하나(트랜스폼 · 바운드 · 메시 · 머티리얼 · 인스턴스 · 블렌드)입니다. buildFromScene 이 배열을 재사용해 프레임당 힙 할당을 줄입니다.
+        /// 그릴 후보 하나(트랜스폼 · 바운드 · 메시 · 머티리얼 · 인스턴스 · 블렌드)입니다. populateFromScene 이 배열을 재사용해 프레임당 힙 할당을 줄입니다.
         struct DrawCandidate
         {
             float4x4                     _world{};
@@ -368,7 +368,7 @@ namespace sw
          */
         void moveTransformSlotsWithoutCandidate( uint32 meshCount );
         /**
-         * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(buildBatches 안).
+         * @brief 후보 [begin,end) 를 배치 하나로 방출하고 인스턴스를 작업 배열에 붙입니다(populateBatches 안).
          * @details 불투명과 투명이 **같은 함수**를 씁니다(따로 들면 한쪽에 넣은 고침 — 역매핑 · 회전 수 · 머티리얼 원소 — 이
          *          다른 쪽에 안 갑니다). 다른 것은 인자로 줍니다:
          *          배치가 실을 머티리얼 · 인스턴스(불투명은 합치기 대표, 투명은 머리 후보의 것)와 블렌드 모드.
@@ -389,7 +389,7 @@ namespace sw
          *          해시 찍기 · 배치 키 비교를 위해 같은 칸들을 다시 지나가지 않습니다).
          *          해시는 (머티리얼, 인스턴스, 퍼뮤테이션 세대) 의 함수라 셋이 같으면 지난 값이 그대로 맞습니다.
          *          Release · 큐브 8000 모두 이동 · 300 프레임 ×2: 빌드 p50 786/851 → 720/720 us, 배치 키 비교
-         *          65~81 → 0, 수집은 늘지 않았습니다(245/262 → 229/245). raw 채우기는 여기 넣지 않습니다(`buildFromScene` 본문 주석).
+         *          65~81 → 0, 수집은 늘지 않았습니다(245/262 → 229/245). raw 채우기는 여기 넣지 않습니다(`populateFromScene` 본문 주석).
          */
         enum CollectFlag : uint8
         {
@@ -514,7 +514,7 @@ namespace sw
         void syncWriteSlotFromPublished() { _instanceRing.syncWriteFromPublished(); }
 
         /**
-         * @brief `getInstances()[i]` 가 어느 후보에서 왔는지입니다(buildBatches 가 채웁니다).
+         * @brief `getInstances()[i]` 가 어느 후보에서 왔는지입니다(populateBatches 가 채웁니다).
          * @details 배치 구성이 그대로면 이 매핑도 그대로입니다. 그러면 배치를 다시 나눌 필요 없이 인스턴스
          *          값만 **제자리에서** 갱신하면 됩니다. 언리얼 GPUScene 이 프리미티브가 움직였을 때
          *          자료구조를 다시 만들지 않고 그 원소만 갱신하는 것과 같은 자리입니다.
@@ -544,7 +544,7 @@ namespace sw
          * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않습니다.
          */
         static bool isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB );
-        /** @brief 투명 인스턴스 하나의 정렬 키를 채웁니다 — 주 뷰(`sortTransparent`)와 추가 뷰(`buildViewTransparentOrders`)가 같은 규칙을 쓴다. */
+        /** @brief 투명 인스턴스 하나의 정렬 키를 채웁니다 — 주 뷰(`sortTransparent`)와 추가 뷰(`computeViewTransparentOrders`)가 같은 규칙을 쓴다. */
         static TransparentSortKey makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis, uint32 orderIndex );
         /**
          * @brief 투명 정렬의 작업 배열입니다.

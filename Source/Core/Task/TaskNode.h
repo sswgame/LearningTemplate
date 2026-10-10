@@ -74,7 +74,7 @@ namespace sw
         static constexpr uint64 kCountMask   = 0xFFFFFFFFull;
         static constexpr uint32 kWaiterShift = 32;
 
-        enum class RegisterResult : uint8
+        enum class RegistrationResult : uint8
         {
             Registered,  ///< 이 스레드가 대기자로 등록됐다(또는 이미 등록돼 있었다)
             AlreadyDone, ///< 남은 것이 없다. 잠들 필요가 없다
@@ -115,21 +115,21 @@ namespace sw
         static uint32 waiterSlotPlusOne( uint64 packedBeforeFinish ) { return static_cast<uint32>( packedBeforeFinish >> kWaiterShift ); }
 
         /** @brief 이 스레드(슬롯 + 1)를 대기자로 등록합니다. 남은 것이 없거나 다른 대기자가 있으면 그렇다고 알려 줍니다. */
-        RegisterResult tryRegisterWaiter( uint32 slotPlusOne )
+        RegistrationResult tryRegisterWaiter( uint32 slotPlusOne )
         {
             uint64 current = _packed.load( std::memory_order_acquire );
             for ( ;; )
             {
                 if ( ( current & kCountMask ) == 0 )
-                    return RegisterResult::AlreadyDone;
+                    return RegistrationResult::AlreadyDone;
                 const uint32 waiter = static_cast<uint32>( current >> kWaiterShift );
                 if ( waiter == slotPlusOne )
-                    return RegisterResult::Registered;
+                    return RegistrationResult::Registered;
                 if ( waiter != 0 )
-                    return RegisterResult::Busy;
+                    return RegistrationResult::Busy;
                 const uint64 next = current | ( static_cast<uint64>( slotPlusOne ) << kWaiterShift );
                 if ( _packed.compare_exchange_weak( current, next, std::memory_order_acq_rel, std::memory_order_acquire ) )
-                    return RegisterResult::Registered;
+                    return RegistrationResult::Registered;
             }
         }
     };

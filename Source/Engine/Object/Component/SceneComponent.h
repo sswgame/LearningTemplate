@@ -134,7 +134,7 @@ namespace sw
         void teleportTo( const float3& worldPosition );
         /**
          * @brief 월드 트랜스폼(행렬)을 정합니다. 부모 기준으로 분해해 로컬 위치 · 회전 · 스케일을 씁니다(언리얼 `SetWorldTransform`).
-         * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `createFromYawPitchRoll` 의 역)으로 적습니다. 주의: ImGuizmo 의 XYZ
+         * @details 회전은 이 엔진의 오일러 규칙(`quaternion::getEulerAngles` — `makeFromYawPitchRoll` 의 역)으로 적습니다. 주의: ImGuizmo 의 XYZ
          *          오일러로 분해해 넣으면 두 축 이상이 섞인 회전이 다른 회전으로 들어간다. 부모의 부등 스케일과 회전이 만든 기울임은
          *          TRS 로 나타낼 수 없어 버립니다(언리얼 · 유니티도 같습니다).
          */

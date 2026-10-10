@@ -49,14 +49,14 @@ namespace sw
 
         /** @brief 저장된 값을 T로 꺼냅니다. */
         template <typename T>
-        [[nodiscard]] bool tryGet( T& out ) const
+        [[nodiscard]] bool tryGet( T& outValue ) const
         {
             if constexpr ( HasReflectStaticType<T>::value )
             {
                 const TypeInfo* pInfo = ReflectTypeTraits<T>::StaticType();
                 if ( pInfo == nullptr )
                     return false;
-                return tryGetFrom( *pInfo, &out );
+                return tryGetFrom( *pInfo, &outValue );
             }
             else
                 return false;

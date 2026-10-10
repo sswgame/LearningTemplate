@@ -47,7 +47,7 @@ namespace sw
         return shaderBindingKindFromTypeLabel( typeLabel );
     }
 
-    ShaderBindingLayout ShaderBindingLayout::build( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
+    ShaderBindingLayout ShaderBindingLayout::make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection )
     {
         ShaderBindingLayout layout;
 
@@ -147,11 +147,11 @@ namespace sw
         }
 
         layout.rebuildIndex();
-        layout.buildBindPlan();
+        layout.computeBindPlan();
         return layout;
     }
 
-    void ShaderBindingLayout::buildBindPlan()
+    void ShaderBindingLayout::computeBindPlan()
     {
         _engineCbSize = 0;
         _listEngineCbMember.clear();

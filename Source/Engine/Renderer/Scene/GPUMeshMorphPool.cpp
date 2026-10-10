@@ -67,14 +67,14 @@ namespace sw
                _skinWeight._srv != kInvalidDescriptorIndex && _skinInstance._srv != kInvalidDescriptorIndex && _skinPalette._srv != kInvalidDescriptorIndex;
     }
 
-    void GPUMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUMeshMorphPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
-        build( pDevice, listMesh, vector<Mesh*>{} );
+        rebuild( pDevice, listMesh, vector<Mesh*>{} );
     }
 
     bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID )
     {
-        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::build 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
+        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::rebuild 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
         if ( listBuilt.size() != listMesh.size() )
             return false;
         for ( size_t index = 0; index < listMesh.size(); ++index )
@@ -168,7 +168,7 @@ namespace sw
         GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
     }
 
-    void GPUMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
+    void GPUMeshMorphPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
     {
         if ( pDevice == nullptr )
             return;

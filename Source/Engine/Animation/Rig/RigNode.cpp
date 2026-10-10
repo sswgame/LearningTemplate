@@ -47,7 +47,7 @@ namespace sw
         _bOk = SW_FALSE;
     }
 
-    JSONValue RigJSONReader::findMember( string_view key, bool bRequired )
+    JSONValue RigJSONReader::readMember( string_view key, bool bRequired )
     {
         _listUsedKey.push_back( string{ key } );
         if ( _object.isObject() == false )
@@ -65,7 +65,7 @@ namespace sw
 
     bool RigJSONReader::readName( string_view key, hashed_string& outValue, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isString() == false || value.asString().empty() )
@@ -79,7 +79,7 @@ namespace sw
 
     bool RigJSONReader::readFloat( string_view key, float32& outValue, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isNumber() == false )
@@ -109,7 +109,7 @@ namespace sw
 
     bool RigJSONReader::readBool( string_view key, bool& outValue, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isBool() == false )
@@ -123,7 +123,7 @@ namespace sw
 
     bool RigJSONReader::readFloat3( string_view key, float3& outValue, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         float32 arrValue[3]{};
@@ -141,13 +141,13 @@ namespace sw
         float3 degrees{};
         if ( readFloat3( key, degrees, bRequired ) == false )
             return false;
-        outValue = quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
+        outValue = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
         return true;
     }
 
     bool RigJSONReader::readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isArray() == false || value.size() == 0 )
@@ -171,7 +171,7 @@ namespace sw
 
     JSONValue RigJSONReader::readArray( string_view key, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isArray() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an array" ) );
@@ -182,7 +182,7 @@ namespace sw
 
     JSONValue RigJSONReader::readObject( string_view key, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() && value.isObject() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an object" ) );
@@ -193,7 +193,7 @@ namespace sw
 
     bool RigJSONReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
     {
-        const JSONValue value = findMember( key, bRequired );
+        const JSONValue value = readMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         const string text = value.isString() ? value.asString() : string{};

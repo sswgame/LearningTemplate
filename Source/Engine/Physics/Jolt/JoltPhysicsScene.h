@@ -238,7 +238,7 @@ namespace sw
             float3                           _anchorA{}; ///< Distance 의 현재 길이를 재는 A 쪽 로컬 점
             float3                           _anchorB{};
             PhysicsJointType                 _type{ PhysicsJointType::Fixed };
-            bool                             _bDisableCollision{ false };
+            bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다 — 지울 때 되돌린다
         };
 
         struct CharacterRecord
@@ -283,9 +283,9 @@ namespace sw
         };
 
         /** @brief 셰이프 서술자 묶음을 Jolt 셰이프 하나로 짓습니다(둘 이상이면 정적 컴파운드). 실패하면 오류를 남기고 nullptr 입니다. */
-        JPH::RefConst<JPH::Shape> buildShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
+        JPH::RefConst<JPH::Shape> createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const;
         /** @brief 셰이프 하나를 로컬 자리 · 회전 없이 짓습니다. */
-        JPH::RefConst<JPH::Shape> buildSingleShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
+        JPH::RefConst<JPH::Shape> createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material, const JPH::PhysicsMaterial* pMaterial ) const;
         /** @brief 재질 이름을 풉니다. 없으면 오류를 남기고 첫 재질입니다. */
         const PhysicsMaterialDef&   resolveMaterial( const hashed_string& name, const hashed_string& fallback ) const;
         const JPH::PhysicsMaterial* findJoltMaterial( const hashed_string& name ) const;

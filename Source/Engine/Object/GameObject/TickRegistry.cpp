@@ -317,7 +317,7 @@ namespace sw
 
         // 선행 조건에 걸린 오브젝트(가진 쪽 · 가리켜진 쪽)가 바뀌었을 때만 스테이지를 다시 짓는다 — 스폰이 잦아도 사슬 밖이면 오르지 않는다.
         if ( _builtStageGeneration != _stageGeneration )
-            buildStages( manager );
+            rebuildStages( manager );
         return bRefreshedAny;
     }
 
@@ -467,7 +467,7 @@ namespace sw
         _bAllDirty.store( SW_TRUE, std::memory_order_release );
     }
 
-    void TickRegistry::buildStages( GameObjectManager& manager )
+    void TickRegistry::rebuildStages( GameObjectManager& manager )
     {
         _builtStageGeneration = _stageGeneration;
         ++_stageBuildCount;

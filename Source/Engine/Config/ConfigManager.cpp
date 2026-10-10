@@ -112,10 +112,10 @@ namespace sw
     bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
         // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
-        SerializeContext ctx = SerializeContext::deriveFromDefault();
-        ctx.setIgnoreCaseKeys( false );
+        SerializeContext context = SerializeContext::deriveFromDefault();
+        context.setIgnoreCaseKeys( false );
         vector<SchemaOrphanValue> listOrphan;
-        if ( JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, ctx ) == false )
+        if ( JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, context ) == false )
         {
             SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;

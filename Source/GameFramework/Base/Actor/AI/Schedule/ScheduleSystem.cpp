@@ -848,7 +848,7 @@ namespace sw
         npc._originMinute = originMinute;
         npc._planDay      = ScheduleSystemInternal::toDay( originMinute );
         vector<ScheduleSegment> listSegment;
-        buildPlan( npcIndex, npc._planDay, ScheduleSystemInternal::toMinuteOfDay( originMinute ), origin, listSegment );
+        makePlan( npcIndex, npc._planDay, ScheduleSystemInternal::toMinuteOfDay( originMinute ), origin, listSegment );
         releaseUnused( npc._listSegment, listSegment );
         npc._listSegment = std::move( listSegment );
         npc._routeKey    = 0;
@@ -864,7 +864,7 @@ namespace sw
         {
             // 같은 출발점으로 다시 세워 지금 칸까지 같으면 그대로 쓴다 — 바뀐 조건이 앞날만 바꾸면 지금 가는 길을 끊지 않는다.
             vector<ScheduleSegment> listTrial;
-            buildPlan( npcIndex, npc._planDay, Internal::toMinuteOfDay( npc._originMinute ), npc._origin, listTrial );
+            makePlan( npcIndex, npc._planDay, Internal::toMinuteOfDay( npc._originMinute ), npc._origin, listTrial );
             const float32 minuteOfDay = static_cast<float32>( Internal::toMinuteOfDay( minute ) );
             const int32   oldActive   = Internal::findActiveSegment( npc._listSegment, minuteOfDay );
             const int32   newActive   = Internal::findActiveSegment( listTrial, minuteOfDay );
@@ -886,7 +886,7 @@ namespace sw
         planNpc( npcIndex, minute, computeLogicLocation( npcIndex, minute ) );
     }
 
-    void ScheduleSystem::buildPlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment )
+    void ScheduleSystem::makePlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment )
     {
         outListSegment.clear();
         vector<BlockCandidate> listCandidate;

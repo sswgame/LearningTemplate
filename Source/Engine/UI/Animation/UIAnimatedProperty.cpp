@@ -190,7 +190,7 @@ namespace sw
 
     float32 evaluateUICurve( BlendCurve curve, float32 normalizedTime )
     {
-        BlendCurveSpec spec{};
+        BlendCurveDef spec{};
         spec._curve    = curve;
         spec._duration = 1.0f;
         return evaluateBlendWeight( spec, normalizedTime );

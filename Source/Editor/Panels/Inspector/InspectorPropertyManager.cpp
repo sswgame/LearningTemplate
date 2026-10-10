@@ -214,7 +214,7 @@ namespace sw::editor
                 float3 degrees = value.getEulerAngles() * MathUtil::kRadianToDegree;
                 if ( ImGui::DragFloat3( pLabel, &degrees._x, 0.5f, 0.0f, 0.0f, "%.1f deg" ) == false )
                     return false;
-                value = quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
+                value = quaternion::makeFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
                 return true;
             }
             else if constexpr ( kWidget == InspectorValueWidget::Handle )

@@ -82,7 +82,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Player", DisplayName = "View Blend", Tooltip = "Blend used when the view target follows possession" )
-        BlendCurveSpec _viewBlend;
+        BlendCurveDef _viewBlend;
         PROPERTY( Category = "Player", DisplayName = "Player Index", Min = 0, Max = 3, Tooltip = "Local player this controller serves" )
         uint32 _playerIndex;
         PROPERTY( Category = "Player", DisplayName = "Look Sensitivity", Min = 0.0, Tooltip = "Radians per unit of the pawn's look action (mouse pixels, stick)" )

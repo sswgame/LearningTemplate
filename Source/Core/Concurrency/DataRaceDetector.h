@@ -23,7 +23,7 @@ namespace sw
 {
     // ------------------------------------------------------------------------------
     // 1) RaceDetectContext — 읽기 · 쓰기 수를 센다. 쓰기끼리 겹치거나 읽기와 쓰기가 겹치면 Fatal
-    //    컨테이너 멤버(_raceCtx)는 Debug 전용이라 Release 에서는 공간을 차지하지 않는다
+    //    컨테이너 멤버(_raceContext)는 Debug 전용이라 Release 에서는 공간을 차지하지 않는다
     // ------------------------------------------------------------------------------
     /**
      * @class RaceDetectContext
@@ -132,16 +132,16 @@ namespace sw
     struct ScopedRaceRead
     {
 #if defined( SW_DEBUG )
-        RaceDetectContext& _ctx;
-        /** @brief ctx 에 읽기 진입을 알립니다. */
-        SW_INLINE explicit ScopedRaceRead( RaceDetectContext& ctx )
-            : _ctx{ ctx }
+        RaceDetectContext& _context;
+        /** @brief context 에 읽기 진입을 알립니다. */
+        SW_INLINE explicit ScopedRaceRead( RaceDetectContext& context )
+            : _context{ context }
         {
-            _ctx.enterRead();
+            _context.enterRead();
         }
 
         /** @brief 읽기를 끝냅니다. */
-        SW_INLINE ~ScopedRaceRead() { _ctx.exitRead(); }
+        SW_INLINE ~ScopedRaceRead() { _context.exitRead(); }
 #else
         /** @brief Release 에서는 추적하지 않습니다. */
         SW_INLINE explicit ScopedRaceRead( const RaceDetectContext& ) {}
@@ -158,16 +158,16 @@ namespace sw
     struct ScopedRaceWrite
     {
 #if defined( SW_DEBUG )
-        RaceDetectContext& _ctx;
-        /** @brief ctx 에 쓰기 진입을 알립니다. */
-        SW_INLINE explicit ScopedRaceWrite( RaceDetectContext& ctx )
-            : _ctx{ ctx }
+        RaceDetectContext& _context;
+        /** @brief context 에 쓰기 진입을 알립니다. */
+        SW_INLINE explicit ScopedRaceWrite( RaceDetectContext& context )
+            : _context{ context }
         {
-            _ctx.enterWrite();
+            _context.enterWrite();
         }
 
         /** @brief 쓰기를 끝냅니다. */
-        SW_INLINE ~ScopedRaceWrite() { _ctx.exitWrite(); }
+        SW_INLINE ~ScopedRaceWrite() { _context.exitWrite(); }
 #else
         /** @brief Release 에서는 추적하지 않습니다. */
         SW_INLINE explicit ScopedRaceWrite( const RaceDetectContext& ) {}
@@ -180,16 +180,16 @@ namespace sw
 //    [[no_unique_address]] 는 C++20 기능이라 쓰지 않는다
 // ------------------------------------------------------------------------------
 #if defined( SW_DEBUG )
-    #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceCtx{};
+    #define SW_RACE_CTX_MEMBER mutable ::sw::RaceDetectContext _raceContext{};
 
     #define SW_SCOPED_RACE_READ() \
-        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) { _raceCtx }
+        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceRead_, __LINE__ ) { _raceContext }
     #define SW_SCOPED_RACE_WRITE() \
-        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWrite_, __LINE__ ) { _raceCtx }
+        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWrite_, __LINE__ ) { _raceContext }
     #define SW_SCOPED_RACE_READ_OTHER( otherObj ) \
-        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceReadOther_, __LINE__ ) { ( otherObj )._raceCtx }
+        const ::sw::ScopedRaceRead SW_CONCAT( _swRaceReadOther_, __LINE__ ) { ( otherObj )._raceContext }
     #define SW_SCOPED_RACE_WRITE_OTHER( otherObj ) \
-        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWriteOther_, __LINE__ ) { ( otherObj )._raceCtx }
+        const ::sw::ScopedRaceWrite SW_CONCAT( _swRaceWriteOther_, __LINE__ ) { ( otherObj )._raceContext }
 #else
     #define SW_RACE_CTX_MEMBER
     #define SW_SCOPED_RACE_READ()

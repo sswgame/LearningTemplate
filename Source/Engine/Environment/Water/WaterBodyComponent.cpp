@@ -294,9 +294,9 @@ namespace sw
         vector<RHIVertex> listVertex;
         float32           boundsRadius{ 0.0f };
         if ( _shape == WaterBodyShape::River )
-            buildRiverVertices( pField, listVertex, boundsRadius );
+            makeRiverVertices( pField, listVertex, boundsRadius );
         else
-            buildLakeVertices( pField, listVertex, boundsRadius );
+            makeLakeVertices( pField, listVertex, boundsRadius );
         if ( listVertex.empty() )
             return;
 
@@ -313,13 +313,13 @@ namespace sw
         mesh->setVertices( std::move( listVertex ) );
         _batch = sw::make_unique<MeshInstanceBatch>( std::move( mesh ), _material.getMaterial(), _material.getInstance(), 1u );
         _batch->setOwnerComponent( this );
-        _batch->setWorld( 0, float4x4::createTranslation( _surfaceOrigin ) );
+        _batch->setWorld( 0, float4x4::makeTranslation( _surfaceOrigin ) );
         _batch->setBoundsRadius( 0, boundsRadius );
         _pPrimitiveRegistry->addInstanceBatch( _batch.get() );
         writeMaterialValues();
     }
 
-    void WaterBodyComponent::buildLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
+    void WaterBodyComponent::makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
     {
         using Internal         = WaterBodyComponentInternal;
         const float32 cellSize = MathUtil::max( _cellSize, 0.1f );
@@ -344,7 +344,7 @@ namespace sw
         outBoundsRadius = 0.5f * MathUtil::sqrt( _size._x * _size._x + _size._y * _size._y );
     }
 
-    void WaterBodyComponent::buildRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
+    void WaterBodyComponent::makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const
     {
         using Internal = WaterBodyComponentInternal;
         vector<Internal::RiverSample> listSample;

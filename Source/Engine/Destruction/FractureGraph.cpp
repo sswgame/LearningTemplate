@@ -343,7 +343,7 @@ namespace sw
         inoutListLink = std::move( listMerged );
     }
 
-    void FractureGraphUtil::buildHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder )
+    void FractureGraphUtil::populateHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder )
     {
         using BuildNode        = FractureGraphInternal::BuildNode;
         const uint32 leafCount = inoutGraph._leafCount;

@@ -578,7 +578,7 @@ namespace sw
         if ( installCooked( *pRuntime, *pType, inputHash ) )
         {
             // 쿠킹본에는 장애물이 없다 — 장애물 자리의 타일만 다시 베이크한다.
-            pGeometry->buildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
+            pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
             vector<int2> listTile;
             for ( const NavConvexVolume& volume : *pVolume )
             {
@@ -821,7 +821,7 @@ namespace sw
             {
                 shared_ptr<NavMeshGeometry> pGeometry = make_shared<NavMeshGeometry>();
                 collectGeometry( *_pManager, pRuntime->_pSurface, _settings, _listGeometrySource, *pGeometry );
-                pGeometry->buildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
+                pGeometry->rebuildSpatialIndex( MathUtil::max( 1.0f, pRuntime->_pNavMesh->getTileGrid()._tileWorldSize * 0.25f ) );
                 pRuntime->_pGeometry = std::move( pGeometry );
             }
         }
@@ -1271,7 +1271,7 @@ namespace sw
                     quaternion rotation{};
                     float3     scale{};
                     PhysicsComponentUtil::readWorldPose( *pBody, position, rotation, scale );
-                    const float4x4 world = float4x4::createTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
+                    const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
                     {
                         outGeometry.addPhysicsShape( PhysicsComponentUtil::makeScaledShape( shape, scale ), world, verdict._area );

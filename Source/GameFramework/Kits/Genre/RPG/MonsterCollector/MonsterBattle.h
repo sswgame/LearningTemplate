@@ -231,7 +231,7 @@ namespace sw
         void             executeRun();
         void             switchTo( int32 side, int32 partyIndex );
         /** @brief 행동 전 상태이상(수면 · 얼음 · 마비)입니다. 행동할 수 있으면 true 입니다. */
-        bool    canActThisTurn( int32 side );
+        bool    resolveStatusBeforeAct( int32 side );
         void    applyStatus( int32 targetSide, MonsterStatus status );
         void    applyStatChange( int32 targetSide, MonsterStat stat, int32 stages );
         void    applyDamage( int32 side, int32 amount, MonsterBattleEvent::Kind kind, const hashed_string& id );

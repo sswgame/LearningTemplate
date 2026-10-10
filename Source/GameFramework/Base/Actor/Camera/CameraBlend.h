@@ -1,6 +1,6 @@
 /**
  * @file CameraBlend.h
- * @brief 두 카메라 포즈 섞기(`blendPoses`)입니다. 곡선 · 길이 · 가중치는 엔진의 `BlendCurveSpec` · `evaluateBlendWeight`(`Engine/Animation/Graph/BlendCurve.h`)입니다.
+ * @brief 두 카메라 포즈 섞기(`blendPoses`)입니다. 곡선 · 길이 · 가중치는 엔진의 `BlendCurveDef` · `evaluateBlendWeight`(`Engine/Animation/Graph/BlendCurve.h`)입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -40,7 +40,7 @@ namespace sw
          * @brief 새 전환을 시작합니다. 컷(곡선 `Cut` · 길이 0 · 낸 포즈 없음)이면 다음 `step` 이 들어오는 포즈를 그대로 냅니다.
          * @return 나가는 쪽을 살려 두어야 하면(블렌드가 없던 때 시작한 블렌드) true — 부르는 쪽이 다음 `step` 부터 나가는 포즈를 줍니다.
          */
-        bool start( const BlendCurveSpec& blend );
+        bool start( const BlendCurveDef& blend );
         /** @brief 시간을 흘려 이번 포즈를 냅니다. @p pLiveFrom 은 살아 있는 나가는 쪽의 이번 포즈입니다(없으면 고정한 출발점을 씁니다). */
         const CameraPose& step( float32 deltaTime, const CameraPose& incoming, const CameraPose* pLiveFrom );
 
@@ -55,7 +55,7 @@ namespace sw
         bool consumeCut();
 
     private:
-        BlendCurveSpec         _blend;
+        BlendCurveDef          _blend;
         CameraPose             _fromPose; ///< 고정한 출발점 · 살아 있으면 마지막으로 받은 나가는 포즈
         CameraPose             _outputPose;
         float32                _elapsed;

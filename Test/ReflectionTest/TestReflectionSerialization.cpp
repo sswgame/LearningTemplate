@@ -665,16 +665,16 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserv
     SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( json, "_title", false ).empty() );
 
     // 옵트아웃: 대소문자 구분 키 조회는 다른 대소문자를 바인딩하면 안 된다.
-    sw::SerializeContext strictCtx = sw::SerializeContext::getDefault();
-    strictCtx.setIgnoreCaseKeys( false );
+    sw::SerializeContext strictContext = sw::SerializeContext::getDefault();
+    strictContext.setIgnoreCaseKeys( false );
 
     sw::ComplexData strictJSON;
-    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &strictJSON, *typeInfo, json, strictCtx ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &strictJSON, *typeInfo, json, strictContext ) );
     SW_EXPECT_EQUAL( 101, strictJSON._id ); // ComplexData 기본값, 77 아님
     SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictJSON._title );
 
     sw::ComplexData strictXML;
-    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &strictXML, *typeInfo, xml, strictCtx ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &strictXML, *typeInfo, xml, strictContext ) );
     SW_EXPECT_EQUAL( 101, strictXML._id );
     SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXML._title );
     // 시퀀스 원소는 이름으로 조회하지 않고 순서대로 읽는다(원소 태그는 타입에 따라 달라짐).
@@ -1368,9 +1368,9 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomXMLBackend )
  */
 SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
 {
-    sw::SerializeContext customCtx = sw::SerializeContext::getDefault();
+    sw::SerializeContext customContext = sw::SerializeContext::getDefault();
 
-    customCtx.registerTextHandler(
+    customContext.registerTextHandler(
         sw::hashed_string( "int32" ),
         []( const void* pPtr )
     { return sw::to_string( ( *static_cast<const int32*>( pPtr ) ) * 10 ); },
@@ -1392,11 +1392,11 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
     sw::ComplexData src;
     src._id = 50;
 
-    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo, customCtx );
+    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo, customContext );
     SW_EXPECT_TRUE( json.find( "\"_id\":500" ) != sw::string::npos );
 
     sw::ComplexData dst;
-    bool            success = sw::JSONSerializer::deserialize( &dst, *typeInfo, json, customCtx );
+    bool            success = sw::JSONSerializer::deserialize( &dst, *typeInfo, json, customContext );
     SW_EXPECT_TRUE( success );
     SW_EXPECT_EQUAL( 50, dst._id );
 }
@@ -1678,12 +1678,12 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
     // fromVersion != currentVersion → migrate 콜백
     static bool s_migrateCalled{ false };
     s_migrateCalled = false;
-    auto migrateFn  = []( const sw::SchemaMigrateContext& ctx ) -> bool
+    auto migrateFn  = []( const sw::SchemaMigrateContext& context ) -> bool
     {
         s_migrateCalled = true;
-        SW_EXPECT_EQUAL( 102u, ctx._fromVersion );
-        SW_EXPECT_EQUAL( 103u, ctx._toVersion );
-        static_cast<VersionedActor*>( ctx._pInstance )->_fieldA += 1;
+        SW_EXPECT_EQUAL( 102u, context._fromVersion );
+        SW_EXPECT_EQUAL( 103u, context._toVersion );
+        static_cast<VersionedActor*>( context._pInstance )->_fieldA += 1;
         return true;
     };
     restored._fieldA = 0;
@@ -1962,17 +1962,17 @@ SW_TEST_CASE( ReflectionSerializationTest, ApplyOrphanWithOtherWireTypeKeepsNeig
     // int32 5 로 기록된 `_small` 을 int16 자리에 적용한다. 뒤의 `_neighbor` 는 그대로여야 한다.
     const sw::vector<sw::SchemaOrphanValue> listPairOrphan{ makeInt32Orphan( "_small", 5 ) };
     NarrowPair                              target;
-    sw::SchemaMigrateContext                ctx;
-    ctx._pInstance = &target;
-    ctx._pTypeInfo = &pairInfo;
-    ctx._pOrphans  = &listPairOrphan;
-    const bool bTo = ctx.applyOrphanTo( sw::hashed_string( "_small" ) );
+    sw::SchemaMigrateContext                context;
+    context._pInstance = &target;
+    context._pTypeInfo = &pairInfo;
+    context._pOrphans  = &listPairOrphan;
+    const bool bTo     = context.applyOrphanTo( sw::hashed_string( "_small" ) );
     SW_EXPECT_TRUE( bTo );
     SW_EXPECT_TRUE_MSG( target._small == 5, "int32 5 가 int16 으로 옮겨지지 않았습니다" );
     SW_EXPECT_TRUE_MSG( target._neighbor == 99, "applyOrphanTo 가 기록 타입(int32)으로 제자리에 써서 이웃 필드를 덮었습니다" );
 
     target           = NarrowPair{};
-    const bool bPath = ctx.applyOrphanToPath( "_small" );
+    const bool bPath = context.applyOrphanToPath( "_small" );
     SW_EXPECT_TRUE( bPath );
     SW_EXPECT_TRUE_MSG( target._small == 5, "점 경로 판이 int32 5 를 옮기지 않았습니다" );
     SW_EXPECT_TRUE_MSG( target._neighbor == 99, "applyOrphanToPath 가 프로퍼티 타입으로 가정해 제자리에 읽었습니다" );
@@ -1980,11 +1980,11 @@ SW_TEST_CASE( ReflectionSerializationTest, ApplyOrphanWithOtherWireTypeKeepsNeig
     // string 자리. 힙에 사는 긴 문자열이어야 제자리 쓰기가 객체를 부순다(짧으면 SSO 라 티가 안 난다).
     const sw::vector<sw::SchemaOrphanValue> listTextOrphan{ makeInt32Orphan( "_label", 42 ) };
     TextHolder                              holder;
-    holder._label  = "a label long enough to live on the heap";
-    ctx._pInstance = &holder;
-    ctx._pTypeInfo = &textInfo;
-    ctx._pOrphans  = &listTextOrphan;
-    SW_EXPECT_TRUE( ctx.applyOrphanTo( sw::hashed_string( "_label" ) ) );
+    holder._label      = "a label long enough to live on the heap";
+    context._pInstance = &holder;
+    context._pTypeInfo = &textInfo;
+    context._pOrphans  = &listTextOrphan;
+    SW_EXPECT_TRUE( context.applyOrphanTo( sw::hashed_string( "_label" ) ) );
     SW_EXPECT_TRUE_MSG( holder._label == "42", "int32 42 가 문자열 \"42\" 로 옮겨지지 않았습니다" );
 }
 
@@ -2141,10 +2141,10 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
 
     // ③ 이관이 찾아 본 orphan 은 이관이 처리한 것이다 — 줄에는 아무도 찾지 않은 칸만 남는다. 타입이 모르는 키는 전역 이름 표에
     //    올리지 않지만(intern 하지 않는다) 적힌 이름 그대로 찍힌다 — `_dropProbeJunk` 는 이 시험의 어디서도 hashed_string 이 되지 않는다.
-    auto moveHealth = []( const sw::SchemaMigrateContext& ctx ) -> bool
+    auto moveHealth = []( const sw::SchemaMigrateContext& context ) -> bool
     {
-        const sw::SchemaOrphanValue* pHealth = ctx.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
-        return pHealth != nullptr && ctx.setPropertyFromText( sw::hashed_string( "_hp" ), pHealth->_text );
+        const sw::SchemaOrphanValue* pHealth = context.findOrphan( sw::hashed_string( "_dropProbeHealth" ) );
+        return pHealth != nullptr && context.setPropertyFromText( sw::hashed_string( "_hp" ), pHealth->_text );
     };
     DropProbe migrated;
     ver = 0;
@@ -2200,9 +2200,9 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
     // JSON orphan `_hp` → `_stats._hp`
     NestedActor nested{};
     uint32      ver{ 0 };
-    auto        moveOrphan = []( const sw::SchemaMigrateContext& ctx ) -> bool
+    auto        moveOrphan = []( const sw::SchemaMigrateContext& context ) -> bool
     {
-        return ctx.applyOrphanToPath( "_stats._hp" );
+        return context.applyOrphanToPath( "_stats._hp" );
     };
     SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})",
                                                               2u, +moveOrphan ) );
@@ -3000,9 +3000,9 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
 
     // 고아는 여전히 이름으로 찾는다 — 마이그레이션이 옛 이름을 물을 때 그 이름은 **그때** intern 되고, 고아는 해시로 맞춘다.
     SW_EXPECT_EQUAL( size_t( 2 ), listOrphan.size() );
-    sw::SchemaMigrateContext ctx;
-    ctx._pOrphans                           = &listOrphan;
-    const sw::SchemaOrphanValue* pOrphanTag = ctx.findOrphan( sw::hashed_string( "R8NoSuchTagProbe" ) );
+    sw::SchemaMigrateContext context;
+    context._pOrphans                       = &listOrphan;
+    const sw::SchemaOrphanValue* pOrphanTag = context.findOrphan( sw::hashed_string( "R8NoSuchTagProbe" ) );
     SW_ASSERT_NOT_NULL( pOrphanTag );
     SW_EXPECT_STREQ( "2", pOrphanTag->_text.c_str() );
 }
@@ -3054,8 +3054,8 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
  */
 SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwnBit )
 {
-    const sw::SerializeContext& ctx   = sw::SerializeContext::getDefault();
-    const sw::TypeInfo*         pBits = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
+    const sw::TypeInfo*         pBits   = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
     SW_ASSERT_NOT_NULL( pBits );
     const sw::PropertyInfo* pActive  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bActive" ) );
     const sw::PropertyInfo* pInvuln  = pBits->findPropertyInHierarchy( sw::hashed_string( "_bInvulnerable" ) );
@@ -3072,23 +3072,23 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
     target._bCanJump      = SW_FALSE;
 
     // 같은 바이트의 다른 비트가 달라도 그 비트가 같으면 같다.
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, &source, &target, ctx ) );
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, ctx ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pInvuln, &source, &target, context ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pActive, &source, &target, context ) );
 
     // 옮기면 그 비트만 바뀐다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, &source, &target, ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pActive, &source, &target, context ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bInvulnerable ) );
 
     // 글은 불리언이어야 한다 — 아니면 값은 그대로다.
-    SW_EXPECT_FALSE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "ture", ctx ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "ture", context ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( target._bCanJump ) );
-    SW_EXPECT_TRUE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "Yes", ctx ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::applyPropertyText( *pCanJump, &target, "Yes", context ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bCanJump ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( target._bActive ) );
-    SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, &target, ctx ).c_str() );
-    SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, &target, ctx ).c_str() );
+    SW_EXPECT_STREQ( "true", sw::SerializerUtil::formatPropertyText( *pCanJump, &target, context ).c_str() );
+    SW_EXPECT_STREQ( "false", sw::SerializerUtil::formatPropertyText( *pInvuln, &target, context ).c_str() );
 
     // 컨테이너는 원소째 옮기고 견준다.
     const sw::TypeInfo* pNested = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
@@ -3101,12 +3101,12 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyValueHelpersTouchOnlyTheirOwn
         { 3 }
     };
     sw::NestedContainerActor gridTarget;
-    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, ctx ) );
-    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, &gridSource, &gridTarget, ctx ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::copyPropertyValue( *pGrid, &gridSource, &gridTarget, context ) );
     SW_ASSERT_EQUAL( size_t( 2 ), gridTarget._grid.size() );
     SW_EXPECT_EQUAL( 3, gridTarget._grid[1][0] );
-    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, ctx ) );
-    SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, &gridTarget, ctx ).c_str() );
+    SW_EXPECT_TRUE( sw::SerializerUtil::arePropertyValuesEqual( *pGrid, &gridSource, &gridTarget, context ) );
+    SW_EXPECT_STREQ( "[2]", sw::SerializerUtil::formatPropertyText( *pGrid, &gridTarget, context ).c_str() );
 }
 
 /**
@@ -3159,11 +3159,11 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
  */
 SW_TEST_CASE( ReflectionSerializationTest, EveryPropertyHasATypeTheSerializersCanCarry )
 {
-    const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
     // 판정 자체가 늘 참이면 이 시험은 아무것도 지키지 않는다.
-    SW_EXPECT_FALSE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "void *" ), ctx ) );
-    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), ctx ) );
-    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "sw::RHIBlendMode" ), ctx ) );
+    SW_EXPECT_FALSE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "void *" ), context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "float3" ), context ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::canCarryValueType( sw::hashed_string( "sw::RHIBlendMode" ), context ) );
 
     const test::PropertyCarryReport report = test::makePropertyCarryReport();
     SW_ASSERT_TRUE( report._typeCount > 50 );

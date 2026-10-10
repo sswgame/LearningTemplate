@@ -12,7 +12,7 @@ namespace sw
 {
     SW_LOG_CALLER( "GPUVertexAnimationPool" );
 
-    void GPUVertexAnimationPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUVertexAnimationPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
         if ( pDevice == nullptr )
             return;

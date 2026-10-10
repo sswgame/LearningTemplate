@@ -229,8 +229,8 @@ SW_TEST_CASE( EditorViewportPickTest, EmptySceneAndNullManagerAreSafe )
  */
 SW_TEST_CASE( EditorViewportPickTest, RayFromCanvasCenterLooksAlongCameraForward )
 {
-    const float4x4 view        = float4x4::createLookAt( float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } );
-    const float4x4 proj        = float4x4::createPerspectiveFieldOfView( 60.0f * MathUtil::kDegreeToRadian, 16.0f / 9.0f, 0.1f, 100.0f );
+    const float4x4 view        = float4x4::makeLookAt( float3{ 0.0f, 0.0f, -10.0f }, float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 1.0f, 0.0f } );
+    const float4x4 proj        = float4x4::makePerspectiveFieldOfView( 60.0f * MathUtil::kDegreeToRadian, 16.0f / 9.0f, 0.1f, 100.0f );
     const float4x4 invViewProj = ( view * proj ).invert();
 
     EditorPickRay center{};
@@ -252,7 +252,7 @@ SW_TEST_CASE( EditorViewportPickTest, RayFromCanvasCenterLooksAlongCameraForward
 
     // 퇴화한 행렬(w 가 늘 0)은 레이를 내지 않는다 — 기본 생성은 항등이라 넷째 열을 지운다
     EditorPickRay none{};
-    float4x4      degenerate = float4x4::createScale( 1.0f );
+    float4x4      degenerate = float4x4::makeScale( 1.0f );
     degenerate._14 = degenerate._24 = degenerate._34 = degenerate._44 = 0.0f;
     SW_EXPECT_TRUE( EditorViewportPick::makeRay( degenerate, 0.5f, 0.5f, none ) == false );
 }

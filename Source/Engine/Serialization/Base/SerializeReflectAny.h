@@ -17,5 +17,5 @@ namespace sw
     class SerializeContext;
 
     /** @brief SerializeContext 에 ReflectAny 텍스트/바이너리 핸들러를 등록합니다. */
-    SW_API void registerReflectAnyHandlers( SerializeContext& ctx );
+    SW_API void registerReflectAnyHandlers( SerializeContext& context );
 } // namespace sw

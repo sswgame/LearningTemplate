@@ -98,7 +98,7 @@ namespace sw
         return *this;
     }
 
-    void AdventureElementGrid::buildRuleTable()
+    void AdventureElementGrid::populateRuleTable()
     {
         using Internal = AdventureElementGridInternal;
         _table.clear();
@@ -183,7 +183,7 @@ namespace sw
         _settings._woodBurnSteps    = MathUtil::clamp( _settings._woodBurnSteps, 1, 255 );
         _settings._spreadDelaySteps = MathUtil::clamp( _settings._spreadDelaySteps, 1, 255 );
         _settings._chargeSteps      = MathUtil::clamp( _settings._chargeSteps, 1, 255 );
-        buildRuleTable();
+        populateRuleTable();
         _grid.initialize( width, height, &_table );
         _listEvent.clear();
     }

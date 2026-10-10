@@ -180,10 +180,10 @@ namespace sw
 {
     SW_LOG_CALLER( "ReflectionRPC" );
 
-    bool ReflectionRPC::packCall( RPCEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
+    bool ReflectionRPC::packCall( RPCEnvelope& outEnvelope, const hashed_string& typeFqn, const hashed_string& methodName,
                                   const TaskArgs& args )
     {
-        out                       = RPCEnvelope{};
+        outEnvelope               = RPCEnvelope{};
         const TypeInfo* pTypeInfo = engine::getTypeRegistry().findType( typeFqn );
         if ( pTypeInfo == nullptr )
             return false;
@@ -196,23 +196,23 @@ namespace sw
             return false;
         }
 
-        out._typeFqn     = typeFqn.c_str();
-        out._methodName  = methodName.c_str();
-        out._typeFqnHash = typeFqn.getHash();
-        out._methodHash  = methodName.getHash();
-        out._netRole     = static_cast<uint8>( pFunc->_metadata._netRole );
-        out._bReliable   = pFunc->_metadata._bReliable;
+        outEnvelope._typeFqn     = typeFqn.c_str();
+        outEnvelope._methodName  = methodName.c_str();
+        outEnvelope._typeFqnHash = typeFqn.getHash();
+        outEnvelope._methodHash  = methodName.getHash();
+        outEnvelope._netRole     = static_cast<uint8>( pFunc->_metadata._netRole );
+        outEnvelope._bReliable   = pFunc->_metadata._bReliable;
 
         const SerializeContext& serializeContext = SerializeContext::getDefault();
         const uint32            count            = args.getCount();
         const uint8*            pCountBytes      = reinterpret_cast<const uint8*>( &count );
 
-        out._argumentBytes.reserve( sizeof( uint32 ) + static_cast<size_t>( count ) * 32 );
-        out._argumentBytes.insert( out._argumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
+        outEnvelope._argumentBytes.reserve( sizeof( uint32 ) + static_cast<size_t>( count ) * 32 );
+        outEnvelope._argumentBytes.insert( outEnvelope._argumentBytes.end(), pCountBytes, pCountBytes + sizeof( uint32 ) );
 
         for ( uint32 argIndex = 0; argIndex < count; ++argIndex )
         {
-            if ( ReflectionRPCInternal::packOneArg( out._argumentBytes, pFunc->_listParameter[argIndex]._typeName, args.get( argIndex ), serializeContext ) == false )
+            if ( ReflectionRPCInternal::packOneArg( outEnvelope._argumentBytes, pFunc->_listParameter[argIndex]._typeName, args.get( argIndex ), serializeContext ) == false )
                 return false;
         }
         return true;

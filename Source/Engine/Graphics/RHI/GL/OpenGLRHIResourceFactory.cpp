@@ -103,7 +103,7 @@ namespace sw
         // 프레임 동안만 쥐고 executePacket 끝에 놓으므로(RenderThread), 여기서도 createBuffer 처럼 잠깐 빌려야 한다.
         // 주의: 가드 없이는 glGenBuffers 가 조용히 아무것도 안 해 초기화 안 된 이름이 그대로 저장되고(0xFFFFFFFF),
         // 이후 update 도 무시돼 PS 가 color=0 을 읽어 큐브가 모두 검게 나온다. GL 에러도, 로그도 없이.
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         const uint32        alignedSize = MathUtil::align( size, constant::kConstantBufferAlignment );
         GLuint              ubo{ 0 };
         glGenBuffers( 1, &ubo );
@@ -123,7 +123,7 @@ namespace sw
         GLuint ubo = _pDevice->resolveGlBuffer( buffer );
         if ( ubo == 0 )
             return;
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         glBindBuffer( GL_UNIFORM_BUFFER, ubo );
         glBufferSubData( GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>( size ), pData );
         glBindBuffer( GL_UNIFORM_BUFFER, 0 );
@@ -158,7 +158,7 @@ namespace sw
             return;
 
         // GL 은 제출 · 배리어가 없어 조각마다 부르는 비용이 거의 없다. 바인딩만 한 번 하고 돈다.
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         glBindBuffer( GL_SHADER_STORAGE_BUFFER, ssbo );
         const uint8* pBase = static_cast<const uint8*>( pBaseSource );
         for ( uint32 regionIndex = 0; regionIndex < regionCount; ++regionIndex )
@@ -177,7 +177,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
 
         if ( EnumUtil::hasFlag( desc._usage, RHIBufferUsage::Vertex ) && desc._pInitialData != nullptr && desc._sizeBytes > 0 )
             return createVertexBuffer( desc._pInitialData, desc._sizeBytes );
@@ -228,7 +228,7 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         return _pDevice->createIndexBuffer( pData, sizeBytes, ( indexStride == 2 ) ? 2u : 4u );
     }
 
@@ -237,7 +237,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE || pData == nullptr || sizeBytes == 0 )
             return 0;
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         GLuint              vbo{ 0 };
         glGenBuffers( 1, &vbo );
         glBindBuffer( GL_ARRAY_BUFFER, vbo );
@@ -252,7 +252,7 @@ namespace sw
         if ( buffer == 0 )
             return;
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         if ( buffer == _pDevice->_recordingState._boundMeshVb )
             _pDevice->_recordingState._boundMeshVb = 0;
         if ( buffer == _pDevice->_recordingState._boundIndexBuffer )
@@ -309,7 +309,7 @@ namespace sw
             return false;
         }
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         const bool          bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
         const GLenum        glInternal  = toGlInternalFormat( pRecord->_format );
         const GLenum        glFormat    = toGlFormat( pRecord->_format );
@@ -368,7 +368,7 @@ namespace sw
         if ( validateTextureRegionUpload( pRecord->_format, pRecord->_width, pRecord->_height, pRecord->_mipLevels, pRecord->_arraySize, desc, rowBytes ) == false )
             return false;
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         const GLenum        glFormat = toGlFormat( pRecord->_format );
         const GLenum        glType   = toGlType( pRecord->_format );
         // 행이 빈틈없이 이어진 데이터라 기본 4바이트 행 정렬을 끈다(R8 12픽셀 행 = 12바이트).
@@ -407,7 +407,7 @@ namespace sw
         if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         outBytes.assign( outLayout._sizeBytes, 0 );
         glPixelStorei( GL_PACK_ALIGNMENT, 1 );
         if ( pRecord->_target == GL_TEXTURE_2D )
@@ -450,7 +450,7 @@ namespace sw
             return 0;
         }
 
-        ScopedOpenGLContext ctxScope( _pDevice );
+        ScopedOpenGLContext contextScope( _pDevice );
         const uint32        mipLevels   = desc._mipLevels > 0 ? desc._mipLevels : 1;
         const GLenum        internalFmt = toGlInternalFormat( desc._format );
         const bool          bDepth      = desc._bIsDepthStencil || desc._format == RHIFormat::D24_UNORM_S8_UINT;
@@ -557,7 +557,7 @@ namespace sw
         if ( texture == 0 )
             return;
 
-        ScopedOpenGLContext                  ctxScope( _pDevice );
+        ScopedOpenGLContext                  contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLTextureRecord owned;
         if ( _pDevice->_gpuTextures.take( texture, owned ) == false )
             return;

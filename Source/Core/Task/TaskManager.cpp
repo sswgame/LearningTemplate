@@ -886,11 +886,11 @@ namespace sw
 
         switch ( join.tryRegisterWaiter( slotIndex + 1 ) )
         {
-            case JoinCounter::RegisterResult::AlreadyDone:
+            case JoinCounter::RegistrationResult::AlreadyDone:
             {
                 return;
             }
-            case JoinCounter::RegisterResult::Busy:
+            case JoinCounter::RegistrationResult::Busy:
             {
                 // 같은 것을 두 번째로 기다린다. 드문 경우다. 브로드캐스트를 기다리며 잠들되 짧게 끊어 폴링한다(완료되면 브로드캐스트도 보낸다).
                 const uint32 epoch = prepareBroadcastWait();
@@ -900,7 +900,7 @@ namespace sw
                     cancelBroadcastWait();
                 return;
             }
-            case JoinCounter::RegisterResult::Registered:
+            case JoinCounter::RegistrationResult::Registered:
             {
                 break;
             }

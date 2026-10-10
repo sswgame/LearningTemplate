@@ -381,7 +381,7 @@ namespace sw
         }
     }
 
-    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out )
+    void ActionRoom::updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
     {
         for ( Actor& actor : _listActor )
         {
@@ -400,7 +400,7 @@ namespace sw
                 continue;
             // 늦음을 이어 발사 빈도가 fps 에 매이지 않게 한다(한 간격까지 — 멈춘 프레임 뒤에 몰아 쏘지 않는다).
             actor._attackTimer.restart( def._attackCoolTime );
-            ++out._enemyVolleyCount;
+            ++outResult._enemyVolleyCount;
 
             // 탄은 정의의 줄마다 한 발 — 겨냥 방향을 `_angleDegrees` 만큼 돌린 쪽으로 난다(0 은 겨냥, 90 은 (−y, x)).
             const float2 aim = float2{ playerX - actor._position._x, playerY - actor._position._y }.normalize();
@@ -443,7 +443,7 @@ namespace sw
             _listProjectile.end() );
     }
 
-    void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& out )
+    void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
     {
         if ( _invulnerable.isActive() )
             return;
@@ -456,7 +456,7 @@ namespace sw
                 continue;
             if ( queryOverlaps( hurt, kLayerPlayer, computeActorBounds( actor ), kLayerEnemy, _layers ) == false )
                 continue;
-            out._damageToPlayer += _listMonsterDef[actor._defIndex]._atk;
+            outResult._damageToPlayer += _listMonsterDef[actor._defIndex]._atk;
             _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
             return;
         }
@@ -466,28 +466,28 @@ namespace sw
                 continue;
             if ( queryOverlaps( hurt, kLayerPlayer, projectile.bounds(), kLayerProjectile, _layers ) == false )
                 continue;
-            out._damageToPlayer += projectile._damage;
+            outResult._damageToPlayer += projectile._damage;
             projectile._bAlive = SW_FALSE;
             _invulnerable.start( ActionRoomTuning::kHitInvulnerable );
             return;
         }
     }
 
-    void ActionRoom::refreshCleared( ActionRoomFrameResult& out )
+    void ActionRoom::refreshCleared( ActionRoomFrameResult& outResult )
     {
         if ( _bCleared == SW_TRUE )
             return;
         if ( getAliveEnemyCount() > 0 )
             return;
-        _bCleared              = SW_TRUE;
-        out._bClearedThisFrame = SW_TRUE;
+        _bCleared                    = SW_TRUE;
+        outResult._bClearedThisFrame = SW_TRUE;
         if ( _kind == ActionRoomKind::Boss )
-            out._bBossDefeated = SW_TRUE;
+            outResult._bBossDefeated = SW_TRUE;
 
         // 클리어는 한 번만 알린다(위의 `_bCleared` 가 막는다). 결과를 알리고 문을 연다.
         RoomClearedEvent cleared;
         cleared._mapPath       = _site._mapPath;
-        cleared._bBossDefeated = out._bBossDefeated;
+        cleared._bBossDefeated = outResult._bBossDefeated;
         GameEventUtil::send( cleared );
         sendGateState( false, false );
     }

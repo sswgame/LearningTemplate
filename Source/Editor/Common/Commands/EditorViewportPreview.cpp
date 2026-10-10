@@ -191,13 +191,13 @@ namespace sw::editor
                 // 같은 경로를 다시 걸 때는 이미 들고 있는 참조를 그대로 쓴다. 부를 때마다 올리면 편집 한 번에 참조가 하나씩 쌓이고,
                 // 그 머티리얼은 캐시에서 영영 지워지지 않는다.
                 const bool bAlreadyHeld = ( s_acquiredPreviewMaterialPath == assetPath );
-                Material*  pCached      = pResources->getMaterialManager().acquire( assetPath, nullptr );
+                Material*  pCached      = pResources->getMaterialCache().acquire( assetPath, nullptr );
                 if ( pCached != nullptr )
                 {
                     if ( bAlreadyHeld )
                     {
                         // 방금 올린 참조는 곧바로 되돌린다. 프리뷰가 드는 참조는 언제나 하나다.
-                        pResources->getMaterialManager().release( assetPath );
+                        pResources->getMaterialCache().release( assetPath );
                     }
                     else
                     {
@@ -228,7 +228,7 @@ namespace sw::editor
         {
             AssetManager* pResources = editor::getService<AssetManager>();
             if ( pResources != nullptr )
-                pResources->getMaterialManager().release( previousAcquiredPath );
+                pResources->getMaterialCache().release( previousAcquiredPath );
         }
 
         if ( pPrimary == nullptr )

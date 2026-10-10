@@ -341,7 +341,7 @@ namespace sw
         // 계획
         void                     planNpc( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin );
         void                     replanNpc( int32 npcIndex, int32 minute, bool bKeepOriginIfSame );
-        void                     buildPlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment );
+        void                     makePlan( int32 npcIndex, int32 day, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& outListSegment );
         void                     collectCandidates( int32 npcIndex, int32 day, vector<BlockCandidate>& outListCandidate ) const;
         void                     resolveTarget( int32 npcIndex, int32 day, const BlockCandidate* pCandidate, int32 startMinute, int32 endMinute, vector<ScheduleSegment>& outListSegment );
         void                     planTravel( int32 npcIndex, int32 originMinuteOfDay, const ScheduleLocation& origin, vector<ScheduleSegment>& inoutListSegment ) const;

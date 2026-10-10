@@ -45,7 +45,7 @@ namespace sw
         if ( engine::areEngineServicesBound() )
         {
             const hashed_string resolvedPath = materialPath.empty() ? SpriteRenderUtil::getSpriteMaterialPath() : hashed_string( materialPath );
-            MaterialCache&      cache        = engine::getAssetManager().getMaterialManager();
+            MaterialCache&      cache        = engine::getAssetManager().getMaterialCache();
             pMaterial                        = cache.acquire( resolvedPath.c_str(), nullptr );
             if ( pMaterial != nullptr )
             {
@@ -91,7 +91,7 @@ namespace sw
         if ( _acquiredMaterialPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getMaterialManager().release( _acquiredMaterialPath.c_str() );
+            engine::getAssetManager().getMaterialCache().release( _acquiredMaterialPath.c_str() );
         _acquiredMaterialPath = hashed_string{};
     }
 
@@ -143,6 +143,6 @@ namespace sw
 
     float4x4 SpriteInstanceBatch::makeQuadWorld( const float3& center, float32 width, float32 height )
     {
-        return float4x4::createScale( width, height, 1.0f ) * float4x4::createTranslation( center );
+        return float4x4::makeScale( width, height, 1.0f ) * float4x4::makeTranslation( center );
     }
 } // namespace sw

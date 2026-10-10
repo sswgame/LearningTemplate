@@ -20,7 +20,7 @@ namespace sw
     /**
      * @brief 파일 하나를 읽는 동안의 오류 모음과 칸 읽기 도우미입니다.
      * @details 숫자 · 벡터 칸은 비어 있으면 @p fallback, 글이 숫자가 아니면 오류를 남기고 @p fallback 입니다. 벡터는 공백이나 쉼표로 나눈 세 수,
-     *          회전은 도 단위 오일러(피치 · 요 · 롤 — `quaternion::createFromYawPitchRoll( float3 )` 과 같은 배치)입니다.
+     *          회전은 도 단위 오일러(피치 · 요 · 롤 — `quaternion::makeFromYawPitchRoll( float3 )` 과 같은 배치)입니다.
      */
     class SW_API CharacterDataReader
     {

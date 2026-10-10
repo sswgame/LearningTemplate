@@ -40,7 +40,7 @@
   속성 순서는 리플렉션 순서(기반 타입 먼저)이므로, 손으로 쓰는 문서도 그 순서로 적습니다.
 - **데이터 검사.** `ResourceDataSchemaTest` 가 저장소의 모든 `*.ui.xml` 을 읽어 위젯 트리까지 만듭니다.
   번역할 글 수집은 엔진 현지화 프로젝트의 `assetRoots` 에 `engine/ui` 가 있어서 이루어집니다. `TextWidget::_text` 가 `Meta = "Localizable"` 이고, 바인딩 식은 수집하지 않습니다.
-- 문서 캐시는 `UISystem` 이 소유하고, 기동 단계 `UI` 가 에셋 캐시 레지스트리에 종류 `UiDocument` 로 등록합니다.
+- 문서 캐시는 `UISystem` 이 소유하고, 기동 단계 `UI` 가 에셋 캐시 레지스트리에 종류 `UIDocument` 로 등록합니다.
 
 ### 스타일과 테마
 
@@ -167,7 +167,7 @@
 
 <!-- snippet: 문서의 Open 애니메이션(트랙 하나, 키 둘, 사건 하나) — 5b U7 에서 Resource/engine/ui/pause.ui.xml 구간과 대조 -->
 ```xml
-<UiDocument _schemaVersion="1">
+<UIDocument _schemaVersion="1">
 	<_listAnimation>
 		<UIAnimation _name="Open">                                          <!-- Open 과 Close 는 화면 스택이 재생한다 -->
 			<_listTrack>
@@ -182,7 +182,7 @@
 		</UIAnimation>
 	</_listAnimation>
 	…
-</UiDocument>
+</UIDocument>
 ```
 
 - **값.** 키의 `_value` 는 그 필드의 글 표기로, XML 속성과 같습니다. 실수, `float2`, `float3`, `float4` 필드는 키 사이를 곡선(`BlendCurve`)으로 보간합니다. 카메라와 시퀀서가 쓰는 곡선과 같습니다.

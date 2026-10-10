@@ -33,7 +33,7 @@ namespace sw
         return true;
     }
 
-    bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const BlendCurveSpec& blend )
+    bool CameraDirector::activatePreset( const CameraPresetCatalog& catalog, const hashed_string& id, const BlendCurveDef& blend )
     {
         const CameraPresetDef* pDef = catalog.findPreset( id );
         if ( pDef == nullptr )
@@ -42,7 +42,7 @@ namespace sw
         return true;
     }
 
-    void CameraDirector::activatePreset( const CameraPresetDef& def, const BlendCurveSpec& blend )
+    void CameraDirector::activatePreset( const CameraPresetDef& def, const BlendCurveDef& blend )
     {
         // 나가는 쪽을 살려 두는 블렌드면 지금 프리셋과 그 모드 상태를 그대로 넘겨 계속 굴린다.
         if ( _blender.start( blend ) )

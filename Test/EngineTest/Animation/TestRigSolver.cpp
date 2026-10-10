@@ -85,7 +85,7 @@ SW_TEST_CASE( RigSolverTest, PoseBufferMatchesModelSpaceAndWritesBack )
     for ( uint32 boneIndex = 0; boneIndex < 4; ++boneIndex )
     {
         BoneTransform local = pose.getBoneTransform( boneIndex );
-        local._rotation     = quaternion::createFromYawPitchRoll( 0.3f * static_cast<float32>( boneIndex ), 0.2f, -0.1f * static_cast<float32>( boneIndex ) );
+        local._rotation     = quaternion::makeFromYawPitchRoll( 0.3f * static_cast<float32>( boneIndex ), 0.2f, -0.1f * static_cast<float32>( boneIndex ) );
         local._scale        = float3{ 1.25f, 1.25f, 1.25f };
         pose.setBoneTransform( boneIndex, local );
     }
@@ -103,7 +103,7 @@ SW_TEST_CASE( RigSolverTest, PoseBufferMatchesModelSpaceAndWritesBack )
     }
 
     // 모델 공간 회전 · 위치를 쓰면 그대로 읽히고, 자식의 모델 위치는 새 부모를 따른다.
-    const quaternion wanted = quaternion::createFromAxisAngle( float3::UnitZ, 1.0f );
+    const quaternion wanted = quaternion::makeFromAxisAngle( float3::UnitZ, 1.0f );
     buffer.setModelRotation( 1, wanted );
     SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( wanted.dot( buffer.getModelRotation( 1 ) ) ), 1e-5f );
     buffer.setModelPosition( 2, float3{ 3.0f, 1.0f, -2.0f } );
@@ -231,7 +231,7 @@ SW_TEST_CASE( RigSolverTest, AimClampsToMaxAngleAndConeLimitsSwing )
     cone._swingLimit = 20.0f * MathUtil::kDegreeToRadian;
     cone._twistLimit = 5.0f * MathUtil::kDegreeToRadian;
     TestRigSolverInternal::openReference( skeleton, buffer );
-    buffer.setLocalRotation( 1, quaternion::createFromAxisAngle( float3::UnitX, 60.0f * MathUtil::kDegreeToRadian ) * quaternion::createFromAxisAngle( float3::UnitY, 0.5f ) );
+    buffer.setLocalRotation( 1, quaternion::makeFromAxisAngle( float3::UnitX, 60.0f * MathUtil::kDegreeToRadian ) * quaternion::makeFromAxisAngle( float3::UnitY, 0.5f ) );
     RigIKSolver::applyJointLimit( buffer, 1, cone );
     const float3 boneAxis = float3::transform( float3::UnitY, buffer.getLocalRotation( 1 ) );
     SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), boneAxis._y, 1e-3f );

@@ -286,7 +286,7 @@ SW_TEST_CASE( RigAssetTest, TwistDistributionSpreadsForearmTwist )
     Pose pose;
     pose.setToReference( skeleton );
     BoneTransform hand = pose.getBoneTransform( 2 );
-    hand._rotation     = quaternion::createFromAxisAngle( float3::UnitY, MathUtil::kHalfPi ) * quaternion::createFromAxisAngle( float3::UnitX, 0.3f );
+    hand._rotation     = quaternion::makeFromAxisAngle( float3::UnitY, MathUtil::kHalfPi ) * quaternion::makeFromAxisAngle( float3::UnitX, 0.3f );
     pose.setBoneTransform( 2, hand );
     vector<float4x4> listBefore;
     pose.computeModelSpace( skeleton.getParentIndices(), listBefore );
@@ -322,7 +322,7 @@ SW_TEST_CASE( RigAssetTest, PoseDriverInterpolatesCorrectives )
         Pose pose;
         pose.setToReference( skeleton );
         BoneTransform elbow = pose.getBoneTransform( 1 );
-        elbow._rotation     = quaternion::createFromYawPitchRoll( 0.0f, arrDegree[index] * MathUtil::kDegreeToRadian, 0.0f );
+        elbow._rotation     = quaternion::makeFromYawPitchRoll( 0.0f, arrDegree[index] * MathUtil::kDegreeToRadian, 0.0f );
         pose.setBoneTransform( 1, elbow );
         instance.evaluate( pose, skeleton.getParentIndices(), float4x4::Identity );
         SW_ASSERT_EQUAL( 1u, static_cast<uint32>( instance.getMorphWeights().size() ) );

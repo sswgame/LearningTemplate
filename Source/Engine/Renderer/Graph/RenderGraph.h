@@ -278,7 +278,7 @@ namespace sw
 
         /**
          * @brief 각 리소스의 수명(처음 ~ 마지막 사용 패스 인덱스)입니다. compile() 이 계산해 둔 것을 반환합니다.
-         * @details compile() 이 채우면서 `buildResourceLifetimes` 가 그 자리에서 쓰이지 않는 · 쓰인 적 없는 자원을 검사합니다.
+         * @details compile() 이 채우면서 `computeResourceLifetimes` 가 그 자리에서 쓰이지 않는 · 쓰인 적 없는 자원을 검사합니다.
          *          수명은 그래프의 산출물입니다.
          */
         const vector<RenderGraphResourceLifetime>& getResourceLifetimes() const { return _listResourceLifetime; }
@@ -334,6 +334,6 @@ namespace sw
         /** @brief 추린 배리어를 레벨 콜백에 넘깁니다. 콜백이 없거나 낼 것이 없으면 아무 일도 하지 않습니다. */
         void issueBarriers( IRHICommandList* pCmdList );
         /** @brief compile() 끝에서 리소스 수명을 채우고, 쓰이지 않는 · 쓰인 적 없는 자원을 로그로 알립니다. */
-        void buildResourceLifetimes();
+        void computeResourceLifetimes();
     };
 } // namespace sw

@@ -11,7 +11,6 @@ SWCOOK 3
 63d2e93ed89908c3 gbuffer.hlsl
 7b589f7f72d93a5b fullscreenblit.hlsl
 81be55ec58b2843d forwardlit.hlsl
-81e87a5e8b4e9fe6 instancesort.hlsl
 84403afb817fe363 bindingslots.hlsli
 946297eca5cf31fa deferredlighting.hlsl
 94c48c72e58dff6e postoutline.hlsl
@@ -22,6 +21,7 @@ a00d052bf5dfc4aa terrain.hlsl
 a16db7b2113a3424 colorvision.hlsli
 a865e7dfd3370575 gpucull.hlsl
 b0b646918a263241 lighting.hlsli
+b36e262f0b0e2701 instancesort.hlsl
 b54c618d8734fa38 tonemap.hlsl
 bfc1abf7672a9a07 ssao.hlsl
 c597f42214903f5e instancedata.hlsli

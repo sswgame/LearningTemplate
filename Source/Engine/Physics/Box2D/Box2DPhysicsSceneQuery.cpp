@@ -173,7 +173,7 @@ namespace sw
         const b2BodyId bodyIDA           = pRecordA->_bodyID;
         const b2BodyId bodyIDB           = pRecordB != nullptr ? pRecordB->_bodyID : _groundBodyID;
         const b2Vec2   anchor            = Box2DUtil::toBox2D( desc._anchor );
-        const bool     bCollideConnected = desc._bDisableCollision == false;
+        const bool     bCollideConnected = desc._bCollideConnectedBodies;
         const float32  referenceAngle    = b2Rot_GetAngle( b2InvMulRot( b2Body_GetRotation( bodyIDA ), b2Body_GetRotation( bodyIDB ) ) );
 
         b2JointId jointID = b2_nullJointId;

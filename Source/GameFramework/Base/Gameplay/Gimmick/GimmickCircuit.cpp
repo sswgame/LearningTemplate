@@ -115,10 +115,10 @@ namespace sw
     bool GimmickCircuit::validate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
     {
         GimmickCircuit circuit;
-        return circuit.build( def, registry, outListError );
+        return circuit.populate( def, registry, outListError );
     }
 
-    bool GimmickCircuit::build( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
+    bool GimmickCircuit::populate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError )
     {
         using Internal         = GimmickCircuitInternal;
         const size_t errorBase = outListError.size();

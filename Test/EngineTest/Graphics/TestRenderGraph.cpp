@@ -15,11 +15,11 @@ namespace
     /** @brief 패스마다 몇 번 돌았는지 세고, 받은 가짜 리스트에 자기 이름을 적는 콜백을 만듭니다. */
     sw::RenderGraphPassExecuteFn makeCountingPass( sw::atomic<int32>& callCount )
     {
-        return SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&callCount]( const sw::RenderGraphPassContext& ctx )
+        return SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&callCount]( const sw::RenderGraphPassContext& context )
         {
             callCount.fetch_add( 1 );
-            if ( ctx._pCmdList != nullptr )
-                static_cast<test::FakeRHICommandList*>( ctx._pCmdList )->_passName = ctx._passName;
+            if ( context._pCmdList != nullptr )
+                static_cast<test::FakeRHICommandList*>( context._pCmdList )->_passName = context._passName;
         } );
     }
 } // namespace
@@ -50,11 +50,11 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
     SW_ASSERT_TRUE( graph.compile() );
 
     sw::vector<sw::RenderGraphBarrier> listIssuedBarrier;
-    graph.setLevelPrologue( sw::RenderGraphLevelPrologueFn( [&listIssuedBarrier]( const sw::RenderGraphLevelContext& levelCtx )
+    graph.setLevelPrologue( sw::RenderGraphLevelPrologueFn( [&listIssuedBarrier]( const sw::RenderGraphLevelContext& levelContext )
     {
-        if ( levelCtx._pListBarrier == nullptr )
+        if ( levelContext._pListBarrier == nullptr )
             return;
-        for ( const sw::RenderGraphBarrier& barrier : *levelCtx._pListBarrier )
+        for ( const sw::RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
             listIssuedBarrier.push_back( barrier );
         }

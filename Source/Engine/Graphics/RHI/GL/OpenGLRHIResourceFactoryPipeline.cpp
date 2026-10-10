@@ -29,7 +29,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        ScopedOpenGLContext                        ctxScope( _pDevice );
+        ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
@@ -115,7 +115,7 @@ namespace sw
         if ( _pDevice->_bInitialized == SW_FALSE )
             return 0;
 
-        ScopedOpenGLContext                        ctxScope( _pDevice );
+        ScopedOpenGLContext                        contextScope( _pDevice );
         OpenGLRHIDevice::OpenGLPipelineStateRecord record{};
 
         ShaderCompileDesc csDesc{};

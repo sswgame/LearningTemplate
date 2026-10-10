@@ -50,14 +50,14 @@ namespace sw
         static MaterialProperty   parsePropertyNode( XMLNode item );
 
         static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
-        static void appendBoolAttr( XMLNode parent, const utf8* pName, bool value );
+        static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
 
         static RHIBlendMode         parseBlendMode( string_view modeName );
         static const utf8*          blendModeToString( RHIBlendMode mode );
         static MaterialQualityLevel parseQuality( string_view qualityName );
         static const utf8*          qualityToString( MaterialQualityLevel quality );
 
-        static void parsePermutationNode( XMLNode root, MaterialPermutationDesc& out );
+        static void parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );
         static void appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
 
         static void   appendUniqueDefine( vector<string>& outListDefine, string_view define );

@@ -237,7 +237,7 @@ namespace sw
         }
     }
 
-    bool MonsterBattle::canActThisTurn( int32 side )
+    bool MonsterBattle::resolveStatusBeforeAct( int32 side )
     {
         MonsterInstance& monster = getActiveMutable( side );
         switch ( monster._status )
@@ -283,7 +283,7 @@ namespace sw
 
     void MonsterBattle::executeMove( int32 side, int32 slot )
     {
-        if ( getActive( side ).isFainted() || canActThisTurn( side ) == false )
+        if ( getActive( side ).isFainted() || resolveStatusBeforeAct( side ) == false )
             return;
         const int32           foeSide  = 1 - side;
         MonsterInstance&      attacker = getActiveMutable( side );

@@ -586,7 +586,7 @@ namespace sw::editor
             flags |= ImGuiTreeNodeFlags_DefaultOpen;
 
         // 하위 폴더는 처음 그릴 때 한 번만 디스크에서 읽는다(Refresh · 파일 감시가 비운다). 참조는 재귀 중에도 산다.
-        const vector<string>& listChild    = _folderCache.getChildFolders( absPath );
+        const vector<string>& listChild    = _folderCache.getOrScanChildFolders( absPath );
         const bool            hasChildDirs = listChild.empty() == false;
         if ( hasChildDirs == false )
             flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;

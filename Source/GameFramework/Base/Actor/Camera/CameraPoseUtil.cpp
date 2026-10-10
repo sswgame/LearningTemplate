@@ -32,7 +32,7 @@ namespace sw
         float3     worldTranslation{};
         if ( camera.getWorldMatrix().decompose( worldScale, worldRotation, worldTranslation ) == false )
             worldScale = float3{ 1.0f, 1.0f, 1.0f };
-        camera.setWorldTransform( float4x4::createTrs( pose._position, pose._rotation, worldScale ) );
+        camera.setWorldTransform( float4x4::makeTrs( pose._position, pose._rotation, worldScale ) );
     }
 
     CameraPose CameraPoseUtil::makePoseFromCamera( const CameraComponent& camera )

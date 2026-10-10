@@ -22,8 +22,8 @@ namespace
     {
         sw::vector<sw::hashed_string> _listName{ sw::hashed_string( "pelvis" ), sw::hashed_string( "spine" ), sw::hashed_string( "head" ), sw::hashed_string( "hat" ) };
         sw::vector<int32>             _listParent{ -1, 0, 1, 2 };
-        sw::vector<sw::float4x4>      _listModel{ sw::float4x4::createTranslation( 0.0f, 2.0f, 0.0f ), sw::float4x4::createTranslation( 0.0f, 2.5f, 0.0f ),
-                                             sw::float4x4::createTranslation( 0.0f, 3.0f, 0.0f ), sw::float4x4::createTranslation( 0.0f, 3.2f, 0.0f ) };
+        sw::vector<sw::float4x4>      _listModel{ sw::float4x4::makeTranslation( 0.0f, 2.0f, 0.0f ), sw::float4x4::makeTranslation( 0.0f, 2.5f, 0.0f ),
+                                             sw::float4x4::makeTranslation( 0.0f, 3.0f, 0.0f ), sw::float4x4::makeTranslation( 0.0f, 3.2f, 0.0f ) };
 
         sw::PhysicsSkeletonView makeView() const
         {
@@ -175,7 +175,7 @@ SW_TEST_CASE( PhysicsRagdollTest, KinematicHitboxesFollowPoseThenRagdoll )
     SW_ASSERT_TRUE( sw::PhysicsRagdollBuilder::create( *pScene, asset, skeleton.makeView(), sw::float4x4{}, options, ragdoll ) );
 
     // 캐릭터가 x 로 1 m 움직였다 — 월드 행렬만 바꿔 같은 포즈를 보낸다.
-    const sw::float4x4 moved = sw::float4x4::createTranslation( 1.0f, 0.0f, 0.0f );
+    const sw::float4x4 moved = sw::float4x4::makeTranslation( 1.0f, 0.0f, 0.0f );
     sw::PhysicsRagdollBuilder::driveToPose( *pScene, ragdoll, skeleton.makeView(), moved, kRagdollStep );
     pScene->step( kRagdollStep );
     sw::float3     position{};

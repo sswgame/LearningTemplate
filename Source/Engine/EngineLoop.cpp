@@ -1289,7 +1289,7 @@ namespace sw
         // 처음 쓰는 머티리얼의 스폰)만 렌더 스레드를 기다린다.
         if ( _rhi != nullptr && _rhi->hasDevice() )
         {
-            MaterialCache& materials = _owned._pAssetManager->getMaterialManager();
+            MaterialCache& materials = _owned._pAssetManager->getMaterialCache();
             if ( materials.hasPendingInitialize() && _renderThread != nullptr )
                 _renderThread->waitIdle();
             materials.initializePending( &_rhi->getDevice() );
@@ -1364,8 +1364,8 @@ namespace sw
                 {
                     const uint32                      shadowResolution = FrameRenderer::getShadowMapResolution();
                     const DirectionalShadowProjection shadow           = packet._bHasViewProj == SW_TRUE
-                                                                           ? pShadowLight->buildShadowProjectionForView( packet._viewProj, shadowResolution )
-                                                                           : pShadowLight->buildShadowProjection( shadowResolution );
+                                                                           ? pShadowLight->computeShadowProjectionForView( packet._viewProj, shadowResolution )
+                                                                           : pShadowLight->computeShadowProjection( shadowResolution );
                     packet._lightViewProj                              = shadow._viewProj;
                     packet._shadowParams                               = shadow.computeShaderParams();
                 }
@@ -1395,9 +1395,9 @@ namespace sw
                     }
                     pActiveScene->getObjectManager()->getAnimationSystem().setLODViews( _listAnimationLODView );
                 }
-                _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
+                _gpuSceneBuilder->populateFromScene( pActiveScene, packet._cameraPos );
                 // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.
-                _gpuSceneBuilder->buildViewTransparentOrders( packet._listView );
+                _gpuSceneBuilder->computeViewTransparentOrders( packet._listView );
 
                 // 그릴 것이 정해졌으니 **스냅샷을 내보내기 전에** GPU 쪽을 만들어 둔다. 렌더 스레드는 그리기만
                 // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).

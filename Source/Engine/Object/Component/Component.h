@@ -199,12 +199,12 @@ namespace sw
      */
     struct OverlapInfo
     {
-        GameObject*            _pOther{ nullptr }; ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
-        PhysicsBodyHandle      _selfBody{};        ///< 강체 물리의 트리거면 이 오브젝트 쪽 바디(히트 존 · 래그돌 뼈를 가린다). 겹침 월드(`PhysicsWorld`)면 무효
-        PhysicsBodyHandle      _otherBody{};       ///< 강체 물리의 트리거면 상대 쪽 바디
-        float32                _time{ 1.0f };      ///< 이번 물리 step 안에서 닿은 때(0..1). 연속 바디가 쓸려서 닿은 시작만 1 보다 작다
-        uint8                  _bSelfTrigger  : 1; ///< 이 오브젝트 쪽 콜라이더가 트리거인지
-        uint8                  _bOtherTrigger : 1; ///< 상대 쪽 콜라이더가 트리거인지
+        GameObject*            _pOther{ nullptr };   ///< 상대 오브젝트. 끝 이벤트에서 상대가 이미 사라졌으면 nullptr
+        PhysicsBodyHandle      _selfBody{};          ///< 강체 물리의 트리거면 이 오브젝트 쪽 바디(히트 존 · 래그돌 뼈를 가린다). 겹침 월드(`PhysicsWorld`)면 무효
+        PhysicsBodyHandle      _otherBody{};         ///< 강체 물리의 트리거면 상대 쪽 바디
+        float32                _hitFraction{ 1.0f }; ///< 이번 물리 step 안에서 닿은 때(0..1). 연속 바디가 쓸려서 닿은 시작만 1 보다 작다
+        uint8                  _bSelfTrigger  : 1;   ///< 이 오브젝트 쪽 콜라이더가 트리거인지
+        uint8                  _bOtherTrigger : 1;   ///< 상대 쪽 콜라이더가 트리거인지
         [[maybe_unused]] uint8 _reserved      : 6;
 
         /** @brief 상대 없음 · 막는 콜라이더끼리로 둡니다. */
@@ -344,7 +344,7 @@ namespace sw
         /**
          * @brief 이 오브젝트의 콜라이더가 다른 오브젝트의 콜라이더와 겹치기 시작했습니다(유니티 `OnTriggerEnter2D` · 언리얼 `BeginOverlap`).
          * @details 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 오브젝트의 켜진 컴포넌트마다 불립니다 — 스폰 · 파괴 · 구조 변경을 그 자리에서 해도 됩니다.
-         *          한 step 의 겹침은 닿은 때(`OverlapInfo::_time`) 순서로 옵니다.
+         *          한 step 의 겹침은 닿은 때(`OverlapInfo::_hitFraction`) 순서로 옵니다.
          */
         virtual void onOverlapBegin( const OverlapInfo& overlap ) { (void)overlap; }
         /** @brief 겹침이 끝났습니다(떨어짐 · 꺼짐 · 사라짐). 상대가 이미 사라졌으면 `OverlapInfo::_pOther` 는 nullptr 입니다. */

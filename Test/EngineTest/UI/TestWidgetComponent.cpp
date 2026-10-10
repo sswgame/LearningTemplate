@@ -29,8 +29,8 @@ namespace
         /** @brief 원점에서 +z 를 보는 카메라(세로 시야 1 rad, 16:9)의 뷰 · 투영입니다. */
         static sw::float4x4 makeViewProjection()
         {
-            const sw::float4x4 view = sw::float4x4::createLookAt( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, sw::float3{ 0.0f, 1.0f, 0.0f } );
-            return view * sw::float4x4::createPerspectiveFieldOfView( 1.0f, kWidth / kHeight, 0.1f, 100.0f );
+            const sw::float4x4 view = sw::float4x4::makeLookAt( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, sw::float3{ 0.0f, 1.0f, 0.0f } );
+            return view * sw::float4x4::makePerspectiveFieldOfView( 1.0f, kWidth / kHeight, 0.1f, 100.0f );
         }
 
         static sw::WidgetMarkerPlacement place( const sw::WidgetComponent& component, const sw::float3& worldPosition )

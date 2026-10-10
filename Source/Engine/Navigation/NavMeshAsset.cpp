@@ -197,7 +197,7 @@ namespace sw
         const NavTileGrid& grid      = navMesh.getTileGrid();
         const uint32       tileCount = static_cast<uint32>( grid.getTileCount() );
         // 색인 칸은 타일보다 잘게 — 타일 하나가 몇 칸만 훑는다.
-        geometry.buildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * 0.25f ) );
+        geometry.rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * 0.25f ) );
 
         vector<NavTileData>           listTile( tileCount );
         vector<uint8>                 listSucceeded( tileCount, SW_FALSE );

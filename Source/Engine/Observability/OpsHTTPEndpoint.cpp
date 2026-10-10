@@ -122,8 +122,8 @@ namespace sw
 
     uint16 OpsHTTPEndpoint::getListenPort() const { return _pTransport != nullptr ? _pTransport->getListenPort() : 0; }
 
-    int32 OpsHTTPEndpoint::buildResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
-                                          string& outResponse )
+    int32 OpsHTTPEndpoint::makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
+                                         string& outResponse )
     {
         const string_view requestLine = requestHead.substr( 0, requestHead.find( "\r\n" ) );
         const size_t      firstSpace  = requestLine.find( ' ' );
@@ -179,8 +179,8 @@ namespace sw
             const size_t headEnd = pConnection->_buffer.find( OpsHTTPEndpointInternal::kHeadEnd );
             if ( headEnd != string::npos )
             {
-                (void)buildResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry, _pHealthRegistry,
-                                     OpsHTTPEndpointInternal::nowMonotonicMs(), response );
+                (void)makeResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry, _pHealthRegistry,
+                                    OpsHTTPEndpointInternal::nowMonotonicMs(), response );
             }
             else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings._maxRequestBytes )
             {

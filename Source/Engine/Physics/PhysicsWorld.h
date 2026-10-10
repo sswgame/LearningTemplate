@@ -52,14 +52,14 @@ namespace sw
 
     /**
      * @brief `step` 이 낸 겹침 시작 · 끝 하나입니다. 두 바디의 오브젝트 id 와 각 바디가 트리거인지입니다(순서는 정해져 있지 않다).
-     * @details 목록은 `_time` 순서입니다 — 빠른 연속 바디가 한 step 에 둘을 지나가면 **먼저 닿은 쪽**이 먼저 옵니다(총알이 뒤의 적부터 맞지 않는다).
+     * @details 목록은 `_hitFraction` 순서입니다 — 빠른 연속 바디가 한 step 에 둘을 지나가면 **먼저 닿은 쪽**이 먼저 옵니다(총알이 뒤의 적부터 맞지 않는다).
      *          한 오브젝트에 콜라이더가 여럿이면 바디 쌍마다 하나씩 옵니다 — 트리거 여부로 어느 콜라이더였는지 가립니다.
      */
     struct PhysicsOverlapEvent
     {
         uint64  _objectA{ 0 };
         uint64  _objectB{ 0 };
-        float32 _time{ 1.0f };          ///< 이번 step 안에서 닿은 때(0..1). 쓸려서 닿은 시작만 1 보다 작다 — 끝 · 제자리 겹침은 1
+        float32 _hitFraction{ 1.0f };   ///< 이번 step 안에서 닿은 때(0..1). 쓸려서 닿은 시작만 1 보다 작다 — 끝 · 제자리 겹침은 1
         uint8   _bBegin{ SW_FALSE };    ///< 시작이면 SW_TRUE, 끝이면 SW_FALSE
         uint8   _bTriggerA{ SW_FALSE }; ///< A 쪽 바디가 트리거인지
         uint8   _bTriggerB{ SW_FALSE }; ///< B 쪽 바디가 트리거인지
@@ -95,7 +95,7 @@ namespace sw
          */
         void updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType = BodyMoveType::Sweep );
         /** @brief 핸들이 유효하면 out 에 복사하고 true 를 반환합니다. */
-        [[nodiscard]] bool tryGetBody( BodyHandle handle, PhysicsBody& out ) const;
+        [[nodiscard]] bool tryGetBody( BodyHandle handle, PhysicsBody& outBody ) const;
         /**
          * @brief 바디 쌍의 겹침을 다시 재고, 지난 step 과 달라진 쌍을 시작 · 끝 이벤트로 냅니다(`getOverlapEvents`).
          * @details 유니티 `OnTriggerEnter2D/Exit2D` · 언리얼 `BeginOverlap/EndOverlap` 의 자리입니다. 계속 겹친 쌍은 다시 내지 않고, 바디가 사라진
@@ -284,7 +284,7 @@ namespace sw
 
         /**
          * @brief 겹친 쌍 하나 — 두 핸들(작은 쪽이 먼저)과 그 오브젝트 id · 트리거 여부입니다. 바디가 사라진 뒤에도 끝 이벤트를 낼 수 있게 함께 든다.
-         * @details `_time` 은 이번 step 안에서 닿은 때입니다(제자리 겹침은 1). 같은 쌍이 제자리 겹침과 쓸림(또는 연속 바디 둘의 양쪽 쓸림)으로
+         * @details `_hitFraction` 은 이번 step 안에서 닿은 때입니다(제자리 겹침은 1). 같은 쌍이 제자리 겹침과 쓸림(또는 연속 바디 둘의 양쪽 쓸림)으로
          *          두 번 들 수 있어, 줄 세운 뒤 가장 이른 것 하나만 남깁니다(`isEarlierInOrder`).
          */
         struct OverlapPair
@@ -293,7 +293,7 @@ namespace sw
             BodyHandle _second{};
             uint64     _firstObjectID{ 0 };
             uint64     _secondObjectID{ 0 };
-            float32    _time{ 1.0f };
+            float32    _hitFraction{ 1.0f };
             uint8      _bFirstTrigger{ SW_FALSE };
             uint8      _bSecondTrigger{ SW_FALSE };
 
@@ -313,7 +313,7 @@ namespace sw
             static bool isEarlierInOrder( const OverlapPair& lhs, const OverlapPair& rhs ) noexcept
             {
                 if ( lhs.isSamePair( rhs ) )
-                    return lhs._time < rhs._time;
+                    return lhs._hitFraction < rhs._hitFraction;
                 return lhs < rhs;
             }
             bool isSamePair( const OverlapPair& other ) const noexcept { return _first == other._first && _second == other._second; }

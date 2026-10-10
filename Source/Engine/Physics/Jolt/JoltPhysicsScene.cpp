@@ -237,8 +237,8 @@ namespace sw
         return _listJoltMaterial.front().GetPtr();
     }
 
-    JPH::RefConst<JPH::Shape> JoltPhysicsScene::buildSingleShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material,
-                                                                  const JPH::PhysicsMaterial* pMaterial ) const
+    JPH::RefConst<JPH::Shape> JoltPhysicsScene::createSingleJoltShape( const PhysicsShapeDesc3D& shape, const PhysicsMaterialDef& material,
+                                                                       const JPH::PhysicsMaterial* pMaterial ) const
     {
         JPH::Shape::ShapeResult result;
         switch ( shape._type )
@@ -311,7 +311,7 @@ namespace sw
         return result.Get();
     }
 
-    JPH::RefConst<JPH::Shape> JoltPhysicsScene::buildShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const
+    JPH::RefConst<JPH::Shape> JoltPhysicsScene::createJoltShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& defaultMaterial, bool bAllowMesh ) const
     {
         if ( listShape.empty() )
         {
@@ -329,7 +329,7 @@ namespace sw
                 return nullptr;
             }
             const PhysicsMaterialDef& material = resolveMaterial( shape._material, defaultMaterial );
-            JPH::RefConst<JPH::Shape> pShape   = buildSingleShape( shape, material, findJoltMaterial( material._name ) );
+            JPH::RefConst<JPH::Shape> pShape   = createSingleJoltShape( shape, material, findJoltMaterial( material._name ) );
             if ( pShape == nullptr )
                 return nullptr;
             if ( listShape.size() == 1 )
@@ -338,7 +338,7 @@ namespace sw
                 if ( JoltPhysicsSceneInternal::isIdentityLocal( shape ) )
                     return pSingle;
                 JPH::RotatedTranslatedShapeSettings offset{ JoltUtil::toJolt( shape._localPosition ),
-                                                            JoltUtil::toJolt( quaternion::createFromYawPitchRoll( shape._localRotation ) ), pSingle.GetPtr() };
+                                                            JoltUtil::toJolt( quaternion::makeFromYawPitchRoll( shape._localRotation ) ), pSingle.GetPtr() };
                 offset.SetEmbedded();
                 JPH::Shape::ShapeResult result = offset.Create();
                 if ( result.HasError() )
@@ -348,7 +348,7 @@ namespace sw
                 }
                 return result.Get();
             }
-            compound.AddShape( JoltUtil::toJolt( shape._localPosition ), JoltUtil::toJolt( quaternion::createFromYawPitchRoll( shape._localRotation ) ), pShape.GetPtr() );
+            compound.AddShape( JoltUtil::toJolt( shape._localPosition ), JoltUtil::toJolt( quaternion::makeFromYawPitchRoll( shape._localRotation ) ), pShape.GetPtr() );
         }
         JPH::Shape::ShapeResult result = compound.Create();
         if ( result.HasError() )
@@ -362,7 +362,7 @@ namespace sw
     PhysicsShapeHandle JoltPhysicsScene::createShape( span<const PhysicsShapeDesc3D> listShape, const hashed_string& material )
     {
         ShapeRecord record;
-        record._pShape = buildShape( listShape, material, true );
+        record._pShape = createJoltShape( listShape, material, true );
         if ( record._pShape == nullptr )
             return PhysicsShapeHandle{};
         record._pListShape = make_shared<const ShapeDescList>( listShape.begin(), listShape.end() );
@@ -454,7 +454,7 @@ namespace sw
         }
         else
         {
-            pShape = buildShape( span<const PhysicsShapeDesc3D>{ desc._listShape.data(), desc._listShape.size() }, desc._material, desc._type != PhysicsBodyType::Dynamic );
+            pShape = createJoltShape( span<const PhysicsShapeDesc3D>{ desc._listShape.data(), desc._listShape.size() }, desc._material, desc._type != PhysicsBodyType::Dynamic );
             if ( pShape == nullptr )
                 return PhysicsBodyHandle{};
             record._pListShape = make_shared<const ShapeDescList>( desc._listShape );

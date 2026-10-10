@@ -26,7 +26,7 @@ namespace sw
             static Frame3D makeShapeFrame( const PhysicsShapeDesc3D& shape, const float3& bodyPosition, const quaternion& bodyRotation )
             {
                 Frame3D frame;
-                frame._rotation = bodyRotation * quaternion::createFromYawPitchRoll( shape._localRotation );
+                frame._rotation = bodyRotation * quaternion::makeFromYawPitchRoll( shape._localRotation );
                 frame._position = bodyPosition + float3::transform( shape._localPosition, bodyRotation );
                 return frame;
             }
@@ -164,8 +164,8 @@ namespace sw
     {
         // 2D 는 Z 축 둘레 회전 하나라 3D 자세로 바꿔 같은 도우미를 쓴다.
         PhysicsDebugDrawInternal::Frame3D frame;
-        const quaternion                  bodyRotation = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, bodyAngle );
-        frame._rotation                                = bodyRotation * quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, shape._localAngle );
+        const quaternion                  bodyRotation = quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, bodyAngle );
+        frame._rotation                                = bodyRotation * quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, shape._localAngle );
         frame._position                                = float3{ bodyPosition._x, bodyPosition._y, 0.0f } + float3::transform( float3{ shape._localPosition._x, shape._localPosition._y, 0.0f }, bodyRotation );
         const float3 axisX{ 1.0f, 0.0f, 0.0f };
         const float3 axisY{ 0.0f, 1.0f, 0.0f };

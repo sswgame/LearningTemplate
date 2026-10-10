@@ -359,8 +359,8 @@ namespace sw
         const float2 textureSize = getWorldTextureSize();
         if ( engine::areEngineServicesBound() )
         {
-            engine::getAssetManager().getTextureManager().declareRenderTarget( getRenderTargetPath(), static_cast<uint32>( textureSize._x ),
-                                                                               static_cast<uint32>( textureSize._y ) );
+            engine::getAssetManager().getTextureCache().declareRenderTarget( getRenderTargetPath(), static_cast<uint32>( textureSize._x ),
+                                                                             static_cast<uint32>( textureSize._y ) );
         }
         pMesh->setMeshID( "Sprite" );
         pMesh->setMaterialPath( SpriteRenderUtil::getSpriteMaterialPath().c_str() );

@@ -25,7 +25,7 @@ namespace sw
                 return 1.0f - decay;
             }
 
-            static float32 evaluateSpring( const BlendCurveSpec& spec, float32 normalizedTime )
+            static float32 evaluateSpring( const BlendCurveDef& spec, float32 normalizedTime )
             {
                 const float32 angularFrequency = MathUtil::max( 0.01f, spec._springFrequency ) * MathUtil::kTwoPi;
                 const float32 dampingRatio     = MathUtil::max( 1.0f, spec._springDamping );
@@ -61,7 +61,7 @@ namespace sw
 
 namespace sw
 {
-    float32 evaluateBlendWeight( const BlendCurveSpec& spec, float32 normalizedTime )
+    float32 evaluateBlendWeight( const BlendCurveDef& spec, float32 normalizedTime )
     {
         const float32 time     = MathUtil::saturate( normalizedTime );
         const float32 exponent = MathUtil::max( 0.01f, spec._exponent );

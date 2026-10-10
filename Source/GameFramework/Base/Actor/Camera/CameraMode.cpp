@@ -15,7 +15,7 @@ namespace sw
             /** @brief 프레이밍이 화면 가로를 셀 때의 비율입니다. 모드는 화면을 모르므로 흔한 16:9 로 셉니다(세로 위치 · 존은 정확하다). */
             static constexpr float32 kComposeAspect = 16.0f / 9.0f;
 
-            static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::createFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
+            static float3 rotateByYaw( const float3& value, float32 yaw ) { return float3::transform( value, quaternion::makeFromYawPitchRoll( yaw, 0.0f, 0.0f ) ); }
 
             static float3 computeForward( float32 yaw, float32 pitch )
             {
@@ -229,7 +229,7 @@ namespace sw
                     pose._position = CameraModeInternal::clampToBounds( confiner, pose._position );
                 if ( view._aim == CameraAimMode::Angles )
                 {
-                    pose._rotation = quaternion::createFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
+                    pose._rotation = quaternion::makeFromYawPitchRoll( yaw, CameraModeInternal::clampPitch( confiner, pitch ), 0.0f );
                     return pose;
                 }
                 // 점 · 대상을 보는 고정 카메라(CCTV) — 보는 각에 훑기 · 입력을 더한다.
@@ -244,7 +244,7 @@ namespace sw
             {
                 yaw            = target._yaw + yaw;
                 pitch          = CameraModeInternal::clampPitch( confiner, target._pitch + pitch );
-                pose._rotation = quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f );
+                pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
                 pose._position = target._focus + CameraModeInternal::rotateByYaw( view._offset, target._yaw );
                 return pose;
             }
@@ -317,11 +317,11 @@ namespace sw
                 inoutState._aimPitch = CameraModeInternal::composeAxis( inoutState._aimPitch, desiredPitch, CameraModeInternal::computeAtan( framing._deadZone._y * tanHalfY ),
                                                                         CameraModeInternal::computeAtan( framing._softZone._y * tanHalfY ), alpha );
             }
-            pose._rotation = quaternion::createFromYawPitchRoll( inoutState._aimYaw, inoutState._aimPitch, 0.0f );
+            pose._rotation = quaternion::makeFromYawPitchRoll( inoutState._aimYaw, inoutState._aimPitch, 0.0f );
         }
         else
         {
-            pose._rotation = quaternion::createFromYawPitchRoll( yaw, pitch, 0.0f );
+            pose._rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, 0.0f );
         }
 
         if ( confiner._bBounds && view._mode != CameraPresetMode::OrthoTopDown && view._mode != CameraPresetMode::Fixed )

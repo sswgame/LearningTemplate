@@ -21,7 +21,7 @@ namespace
             GimmickCircuitDef def;
             if ( def.loadFromXMLText( pXML, "test.gimmick.xml" ) == false )
                 return false;
-            return outCircuit.build( def, GimmickNodeRegistry::getDefault(), outListError );
+            return outCircuit.populate( def, GimmickNodeRegistry::getDefault(), outListError );
         }
 
         static bool buildFromXML( GimmickCircuit& outCircuit, const utf8* pXML )

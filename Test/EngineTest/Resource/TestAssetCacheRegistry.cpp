@@ -82,8 +82,8 @@ SW_TEST_CASE( AssetCacheRegistryTest, BuiltInCachesAreReachableThroughTheRegistr
     SW_EXPECT_NULL( resources.findAssetCache( "" ) );
 
     // 찾은 것이 실제로 그 캐시다 — 이름만 맞고 다른 것을 주면 진단이 거짓말을 한다.
-    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialManager() ) );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getTextureManager() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialCache() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Texture" ) == static_cast<sw::IAssetCache*>( &resources.getTextureCache() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "Prefab" ) == static_cast<sw::IAssetCache*>( &resources.getPrefabCache() ) );
     SW_EXPECT_TRUE( resources.findAssetCache( "PrimitiveMesh" ) == &sw::MeshUtil::getPrimitiveCache() );
     SW_EXPECT_TRUE( resources.findAssetCache( "SlicedSpriteMesh" ) == &sw::SpriteMeshBuilder::getSlicedMeshCache() );
@@ -151,7 +151,7 @@ SW_TEST_CASE( AssetCacheRegistryTest, SecondCacheWithTheSameKindNameIsRejected )
         resources.registerAssetCache( &impostor );
     }
     SW_EXPECT_EQUAL( builtInCount, resources.getAllAssetCache().size() );
-    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialManager() ) );
+    SW_EXPECT_TRUE( resources.findAssetCache( "Material" ) == static_cast<sw::IAssetCache*>( &resources.getMaterialCache() ) );
     resources.unregisterAssetCache( &impostor ); // 올라 있지 않아도 조용하다
 }
 

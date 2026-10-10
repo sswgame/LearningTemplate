@@ -361,7 +361,7 @@ namespace sw
         const XMLNode                root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIDocumentAsset::kRootElementName, true ) == false )
         {
-            outError = Internal::makeError( path, 1, "the root element must be <UiDocument>" );
+            outError = Internal::makeError( path, 1, "the root element must be <UIDocument>" );
             return false;
         }
 
@@ -370,14 +370,14 @@ namespace sw
         for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
-                return Internal::fail( context, root, string( "UiDocument has unknown attribute '" ) + attribute.getName() + "'" );
+                return Internal::fail( context, root, string( "UIDocument has unknown attribute '" ) + attribute.getName() + "'" );
             int32 version{ 0 };
             if ( StringUtil::parseInt( string( attribute.getValue() ), version ) == false || version != static_cast<int32>( UIDocumentAsset::kVersion ) )
                 return Internal::fail( context, root, string( "_schemaVersion '" ) + attribute.getValue() + "' is not supported (expected " + to_string( UIDocumentAsset::kVersion ) + ")" );
             bVersioned = true;
         }
         if ( bVersioned == false )
-            return Internal::fail( context, root, "UiDocument needs _schemaVersion" );
+            return Internal::fail( context, root, "UIDocument needs _schemaVersion" );
 
         bool bScreenDesc{ false };
         bool bRootWidget{ false };
@@ -387,7 +387,7 @@ namespace sw
             if ( StringUtil::equals( pName, Internal::kScreenDescElement, true ) )
             {
                 if ( bScreenDesc )
-                    return Internal::fail( context, child, "UiDocument has more than one UIScreenDesc" );
+                    return Internal::fail( context, child, "UIDocument has more than one UIScreenDesc" );
                 bScreenDesc = true;
                 if ( Internal::parseScreenDesc( context, child ) == false )
                     return false;
@@ -406,16 +406,16 @@ namespace sw
                 continue;
             }
             if ( Internal::findWidgetType( pName ) == nullptr )
-                return Internal::fail( context, child, string( "UiDocument has unknown element <" ) + pName + "> (not a widget type)" );
+                return Internal::fail( context, child, string( "UIDocument has unknown element <" ) + pName + "> (not a widget type)" );
             if ( bRootWidget )
-                return Internal::fail( context, child, "UiDocument has more than one root widget" );
+                return Internal::fail( context, child, "UIDocument has more than one root widget" );
             bRootWidget = true;
             uint32 rootIndex{ 0 };
             if ( Internal::parseWidget( context, child, rootIndex ) == false )
                 return false;
         }
         if ( bRootWidget == false )
-            return Internal::fail( context, root, "UiDocument has no root widget" );
+            return Internal::fail( context, root, "UIDocument has no root widget" );
 
         outAsset = std::move( asset );
         return true;

@@ -251,7 +251,7 @@ namespace sw
          * @note 레지스트리 잠금을 **잡지 않은 채** 만듭니다. 상속 병합이 부모를 찾으려고 레지스트리를
          *       다시 잠그는데 `shared_mutex` 는 재귀가 아니라서 잠금 안에서 부르면 그 자리에서 멈춥니다.
          */
-        void buildLookupCaches() const;
+        void populateLookupCaches() const;
 
         /** @brief 등록된 모든 고유 TypeInfo를 순회합니다. */
         template <typename Func>

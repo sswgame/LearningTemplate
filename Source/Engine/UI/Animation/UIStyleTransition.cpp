@@ -280,8 +280,8 @@ namespace sw
                 }
                 if ( tokenCount == 3 )
                 {
-                    BlendCurveSpec      scratch{};
-                    const PropertyInfo* pCurve = BlendCurveSpec::StaticType()->findProperty( hashed_string( "_curve" ) );
+                    BlendCurveDef       scratch{};
+                    const PropertyInfo* pCurve = BlendCurveDef::StaticType()->findProperty( hashed_string( "_curve" ) );
                     if ( pCurve == nullptr || SerializerUtil::applyPropertyText( *pCurve, &scratch, arrToken[2], SerializeContext::getDefault() ) == false )
                     {
                         outError = "transition item '" + string( item ) + "' has an unknown curve '" + string( arrToken[2] ) + "'";

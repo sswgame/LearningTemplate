@@ -277,7 +277,7 @@ namespace sw
     /**
      * @struct GPUViewTransparentOrder
      * @brief 추가 뷰 하나의 투명 그리기 순서입니다. 주 뷰의 순서(꼬리 인스턴스 배치)는 그대로 두고 이 뷰가 다르게 그릴 것만 싣습니다.
-     * @details GT 가 그 뷰의 눈 · 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::buildViewTransparentOrders`). RT 는 순번 표를 정렬 디스패치에,
+     * @details GT 가 그 뷰의 눈 · 시선 축으로 꼬리를 다시 정렬해 만든다(`GPUSceneBuilder::computeViewTransparentOrders`). RT 는 순번 표를 정렬 디스패치에,
      *          꼬리 슬롯 표를 컬링이 없는 백엔드의 인스턴스 슬롯 스트림에, 배치 순서를 투명 패스 드로우 순서에 쓴다.
      */
     struct GPUViewTransparentOrder
@@ -349,7 +349,7 @@ namespace sw
          *        본 클립 시각과 같습니다. 패스마다 PassCB `g_SwVertexAnimationTime` 으로 갑니다.
          */
         float32 _vertexAnimationTime{ 0.0f };
-        /// @brief 마지막 buildFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.
+        /// @brief 마지막 populateFromScene 이 내용을 바꿨는지입니다. RT 는 0 이면 인스턴스 재업로드를 생략합니다.
         uint8 _bCPUDirty{ SW_TRUE };
         /**
          * @brief 1 이면 인스턴스 배열 **전체**가 바뀌었고, 0 이면 `_listDirtyInstanceRun` 만 바뀌었습니다.

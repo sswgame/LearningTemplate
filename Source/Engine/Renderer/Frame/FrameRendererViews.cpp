@@ -64,7 +64,7 @@ namespace sw
             const bool bRenderTexture = view._outputKind == RenderViewOutputKind::RenderTexture;
             if ( bRenderTexture && ( view._outputPath == request._renderTexture ) == false && engine::areEngineServicesBound() )
             {
-                TextureCache& textures = engine::getAssetManager().getTextureManager();
+                TextureCache& textures = engine::getAssetManager().getTextureCache();
                 if ( view._pOutputTexture != nullptr )
                     textures.release( view._outputPath.view(), _pDevice );
                 textures.declareRenderTarget( request._renderTexture.view(), request._outputWidth, request._outputHeight );
@@ -128,7 +128,7 @@ namespace sw
         releaseViewTransparentOrder( view );
         view._commandList.reset();
         if ( view._pOutputTexture != nullptr && engine::areEngineServicesBound() )
-            engine::getAssetManager().getTextureManager().release( view._outputPath.view(), _pDevice );
+            engine::getAssetManager().getTextureCache().release( view._outputPath.view(), _pDevice );
         view._pOutputTexture = nullptr;
         view._outputPath     = hashed_string{};
     }
@@ -203,12 +203,12 @@ namespace sw
             return;
 
         // 주 시점의 시드에서 출발해 이 뷰의 것(뷰-투영 · 풀 크기 · 플래그 · 컬링 칸)만 덮어쓴다. 라이트 · 그림자 행렬은 프레임 공통이다.
-        _pActiveView = &view;
-        _frameCtx    = _mainSeedScratch;
-        applyViewProjection( _frameCtx, view._cullInput._viewProj );
-        applyViewPassConstants( _frameCtx );
-        _frameCtx._cullViewIndex = view._cullSlot;
-        _frameCtx._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
+        _pActiveView  = &view;
+        _frameContext = _mainSeedScratch;
+        applyViewProjection( _frameContext, view._cullInput._viewProj );
+        applyViewPassConstants( _frameContext );
+        _frameContext._cullViewIndex = view._cullSlot;
+        _frameContext._pCmd          = pCmd; // 직렬 경로의 패스는 시드의 리스트에 기록한다
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 

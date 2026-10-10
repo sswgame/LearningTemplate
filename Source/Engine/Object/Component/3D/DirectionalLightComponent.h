@@ -35,7 +35,7 @@ namespace sw
      * @class DirectionalLightComponent
      * @brief 방향광 하나입니다. 빛 방향은 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
      * @details 주광의 방향 · 색 · 세기와 그림자 직교 볼륨(`_shadowExtent`)을 씬이 정합니다. 카메라가 CameraComponent 로
-     *          선언되듯 빛도 컴포넌트로 선언합니다. 볼륨을 카메라가 보는 곳에 맞추려면 `_shadowViewDistance` 를 줍니다(`buildShadowProjectionForView`).
+     *          선언되듯 빛도 컴포넌트로 선언합니다. 볼륨을 카메라가 보는 곳에 맞추려면 `_shadowViewDistance` 를 줍니다(`computeShadowProjectionForView`).
      * @note 방향은 기본 방향(위에서 비스듬히)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약).
      *       회전이 없는 루트면 기본 방향 그대로이고, 부모가 돌면 따라 돕니다.
      */
@@ -74,16 +74,16 @@ namespace sw
         void setCastShadow( bool bCastShadow );
 
         /** @brief 이 라이트의 그림자 view-projection 행렬을 만듭니다. */
-        float4x4 buildShadowViewProj() const;
+        float4x4 computeShadowViewProj() const;
         /** @brief 고정 볼륨(원점 둘레 반경 `_shadowExtent`)의 그림자 투영입니다. `shadowMapResolution` 은 그림자 맵 한 변의 텍셀 수입니다. */
-        DirectionalShadowProjection buildShadowProjection( uint32 shadowMapResolution ) const;
+        DirectionalShadowProjection computeShadowProjection( uint32 shadowMapResolution ) const;
         /**
-         * @brief 카메라 뷰-투영에 맞춘 그림자 투영입니다. `_shadowViewDistance` 가 0 이면 고정 볼륨(`buildShadowProjection`)입니다.
+         * @brief 카메라 뷰-투영에 맞춘 그림자 투영입니다. `_shadowViewDistance` 가 0 이면 고정 볼륨(`computeShadowProjection`)입니다.
          * @details 볼륨 = 카메라 절두체(가까운 면에서 `_shadowViewDistance` 까지) ∩ 받는 높이 띠(`_shadowReceiverMinHeight` ~ `_shadowReceiverMaxHeight`,
          *          두 값이 같으면 띠 없음)의 빛 공간 상자. 원점은 텍셀 격자에 스냅하고 크기는 2 m 단위로 올린다. 빛 쪽 깊이는 `_shadowDistance` 만큼
          *          당겨 화면 밖 · 띠 위의 가리는 물체를 담는다. 직교 탑다운 카메라는 절두체가 수백 m 깊이라 띠가 없으면 볼륨이 바닥 몇 배로 커진다.
          */
-        DirectionalShadowProjection buildShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution ) const;
+        DirectionalShadowProjection computeShadowProjectionForView( const float4x4& cameraViewProj, uint32 shadowMapResolution ) const;
 
         /** @brief 볼륨을 카메라에 맞출 때 카메라에서 잰 그림자 거리입니다. 0 이면 고정 볼륨입니다. */
         float32 getShadowViewDistance() const { return _shadowViewDistance; }

@@ -271,7 +271,7 @@ namespace sw
         _boneLODRevision      = _boneLOD->getRevision();
         _pBoneLODMaskSkeleton = _skeleton.get();
         // 스켈레톤에 없는 본 이름은 데이터 오류다 — 알리고 본 LOD 없이 간다.
-        if ( _boneLOD->buildMasks( *_skeleton, _listBoneLODMask, _skeletonPath ) == false )
+        if ( _boneLOD->computeMasks( *_skeleton, _listBoneLODMask, _skeletonPath ) == false )
             _listBoneLODMask.clear();
     }
 

@@ -3,7 +3,7 @@
  * @brief 내비메시를 베이크하는 입력 — 월드 공간 삼각형(영역 번호 하나씩)과 영역을 덮어쓰는 볼록 부피(장애물 · 영역 표시)입니다.
  * @details 씬에서 모으는 일(메시 · 물리 셰이프 · 파괴 조각)은 위층(`SceneNavigation`)이 하고, 여기는 값만 듭니다. 베이크하는 백엔드는 이것만 읽으므로
  *          워커가 읽는 동안 바꾸지 않습니다 — 바꿀 일이 있으면 사본을 만들어 바꾸고 바꿔 끼웁니다(`shared_ptr<const NavMeshGeometry>`).
- *          타일 하나에 닿는 삼각형은 XZ 칸 색인(`buildSpatialIndex`)으로 찾습니다 — 타일마다 전체를 훑지 않는다.
+ *          타일 하나에 닿는 삼각형은 XZ 칸 색인(`rebuildSpatialIndex`)으로 찾습니다 — 타일마다 전체를 훑지 않는다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -66,7 +66,7 @@ namespace sw
          * @brief 삼각형을 XZ 칸(@p cellSize 미터)에 나눠 둡니다. 다시 부르면 다시 짓습니다. 베이크 전에 한 번 부릅니다.
          * @details 칸 수는 상한(백만)을 넘지 않게 칸 크기를 키웁니다.
          */
-        void buildSpatialIndex( float32 cellSize );
+        void rebuildSpatialIndex( float32 cellSize );
         /**
          * @brief XZ 상자 [@p min, @p max] 와 칸이 겹치는 삼각형 번호를 @p outListTriangle 에 채웁니다(겹친 칸의 삼각형을 한 번씩 — 실제 겹침은 베이크하는 쪽이 다시 본다).
          * @details 색인이 없으면 모든 삼각형입니다. 여러 스레드가 같이 불러도 됩니다(읽기만 한다).

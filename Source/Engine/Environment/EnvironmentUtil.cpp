@@ -55,7 +55,7 @@ namespace sw
         if ( path.empty() || engine::areEngineServicesBound() == false )
             return false;
         const hashed_string hashedPath( string{ path }.c_str() );
-        MaterialCache&      cache = engine::getAssetManager().getMaterialManager();
+        MaterialCache&      cache = engine::getAssetManager().getMaterialCache();
         _pMaterial                = cache.acquire( hashedPath.c_str(), nullptr );
         if ( _pMaterial == nullptr )
         {
@@ -76,7 +76,7 @@ namespace sw
         if ( _acquiredPath.empty() )
             return;
         if ( engine::areEngineServicesBound() )
-            engine::getAssetManager().getMaterialManager().release( _acquiredPath.c_str() );
+            engine::getAssetManager().getMaterialCache().release( _acquiredPath.c_str() );
         _acquiredPath = hashed_string{};
     }
 

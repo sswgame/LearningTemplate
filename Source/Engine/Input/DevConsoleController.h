@@ -63,7 +63,7 @@ namespace sw
         DevConsole&   getConsole() { return _console; }
 
         /** @brief 그릴 줄입니다 — 마지막 출력 `kVisibleOutputCount` 줄과 입력 줄(`] 입력_`). */
-        void buildVisibleLines( vector<string>& outListLine, vector<uint8>& outListErrorFlag ) const;
+        void collectVisibleLines( vector<string>& outListLine, vector<uint8>& outListErrorFlag ) const;
 
     private:
         /** @brief 포커스가 콘솔일 때 오는 글자입니다. 프레임 안에서 모았다가 `update` 가 붙이거나 버립니다. */

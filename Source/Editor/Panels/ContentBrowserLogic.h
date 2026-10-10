@@ -67,7 +67,7 @@ namespace sw::editor
          * @brief 폴더의 하위 폴더(절대 경로, 정렬)입니다. 처음 묻는 폴더만 디스크를 읽습니다. 경로의 대소문자 · 구분자는 같은 폴더로 봅니다.
          * @warning 돌려준 참조는 `clear` 전까지 유효합니다 — 다른 폴더를 물어 표가 커져도 옮겨지지 않는다(트리 그리기가 재귀 중에 든다).
          */
-        const vector<string>& getChildFolders( string_view folderAbs );
+        const vector<string>& getOrScanChildFolders( string_view folderAbs );
         /** @brief 읽어 둔 것을 모두 버립니다(다음 물음이 다시 읽는다). */
         void clear() { _mapChildFolder.clear(); }
         /** @brief 읽어 둔 폴더 수입니다. */

@@ -165,7 +165,7 @@ cd build/Ninja-Debug/Bin
 
 1. `GimmickNodeKind` 하나를 채웁니다. 입력과 출력 포트 이름(각각 32개까지), 매개변수 테이블, 상태 크기, 걸음 함수가 필요합니다.
    걸음 함수는 `GimmickNodeContext` 로 입력을 읽고 `setOutput` 으로 출력을 냅니다. 시간은 `toSteps` 로 걸음 수로 바꿉니다.
-2. `GimmickNodeRegistry::getDefault()` 를 복사한 레지스트리에 `registerKind` 로 더하고, `GimmickCircuit::build` 에 그 레지스트리를 넘깁니다.
+2. `GimmickNodeRegistry::getDefault()` 를 복사한 레지스트리에 `registerKind` 로 더하고, `GimmickCircuit::populate` 에 그 레지스트리를 넘깁니다.
 3. 씬의 `GimmickCircuitComponent` 는 내장 레지스트리(`getDefault`)로 만듭니다. 씬 데이터에서 새 종류를 쓰려면 내장 종류(`registerBuiltinKinds`)에 더해야 합니다.
 
 ### 새 장르 장치

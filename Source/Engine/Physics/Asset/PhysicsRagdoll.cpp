@@ -156,7 +156,7 @@ namespace sw
             desc._swingLimitPlane            = joint._swingLimitPlane;
             desc._type                       = joint._type;
             desc._bLimitsEnabled             = true;
-            desc._bDisableCollision          = asset._bDisableJointedCollision;
+            desc._bCollideConnectedBodies    = asset._bCollideJointedBodies;
             outRagdoll._listJoint[bodyIndex] = scene.createJoint( desc );
         }
 
@@ -238,8 +238,8 @@ namespace sw
                     inputScale = float3{ 1.0f, 1.0f, 1.0f };
                 float3     modelPosition{};
                 quaternion modelRotation{};
-                PhysicsRagdollInternal::decomposePose( float4x4::createTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } ) * modelFromWorld, modelPosition, modelRotation );
-                outListModelSpaceBone[boneIndex] = float4x4::createTrs( modelPosition, modelRotation, inputScale );
+                PhysicsRagdollInternal::decomposePose( float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } ) * modelFromWorld, modelPosition, modelRotation );
+                outListModelSpaceBone[boneIndex] = float4x4::makeTrs( modelPosition, modelRotation, inputScale );
                 continue;
             }
             if ( parent < 0 )

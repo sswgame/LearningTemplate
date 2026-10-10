@@ -106,8 +106,8 @@ namespace test
                 if ( boneIndex == 0 )
                     transform._translation = sw::float3{ 0.0f, 0.0f, time };
                 else
-                    transform._rotation = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f },
-                                                                               amplitude * sw::MathUtil::sin( time * 6.0f + static_cast<float32>( boneIndex ) ) );
+                    transform._rotation = sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f },
+                                                                             amplitude * sw::MathUtil::sin( time * 6.0f + static_cast<float32>( boneIndex ) ) );
                 clip._listSample.push_back( transform );
             }
         }

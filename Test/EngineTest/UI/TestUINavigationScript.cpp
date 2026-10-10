@@ -24,9 +24,9 @@
 
 #include "TestFramework/TestFramework.h"
 
-// UINavigationScriptTest — 탐색 열(자동화 시나리오 형식 — `<At frame><Tap slot/></At>` + `<ExpectUi focus screen screens/>`)을 가상 입력으로 재생해
+// UINavigationScriptTest — 탐색 열(자동화 시나리오 형식 — `<At frame><Tap slot/></At>` + `<ExpectUI focus screen screens/>`)을 가상 입력으로 재생해
 // 포커스 결과를 단언하고(닫으면 돌아오는가 · 모달 밖으로 새지 않는가), 모든 엔진 문서에서 패드 네 방향만으로 포커스 가능한 위젯 전부에 닿는지 본다.
-// ExpectUi 판정은 실기동 시나리오 단계와 같은 함수(UIAutomationSteps::isExpectUIMet)다. 디바이스 없음(nogpu).
+// ExpectUI 판정은 실기동 시나리오 단계와 같은 함수(UIAutomationSteps::isExpectUIMet)다. 디바이스 없음(nogpu).
 
 namespace
 {
@@ -103,7 +103,7 @@ namespace
 
         /**
          * @brief 시나리오 형식의 탐색 열 @p xmlText 를 재생합니다 — 입력 단계(`Tap` · `Press` · `Release`)는 가상 입력으로 그 프레임의 `beginFrame` 에,
-         *        `ExpectUi` 는 그 프레임의 UI update 뒤에(실행기와 같은 자리). `Pass` 에서 끝납니다. 다른 단계 · 형식 오류는 실패입니다.
+         *        `ExpectUI` 는 그 프레임의 UI update 뒤에(실행기와 같은 자리). `Pass` 에서 끝납니다. 다른 단계 · 형식 오류는 실패입니다.
          */
         void runScript( sw::string_view xmlText )
         {
@@ -130,7 +130,7 @@ namespace
                     SW_ASSERT_TRUE_MSG( sw::UIAutomationSteps::validateExpectUI( step, error ), error.c_str() );
                     continue;
                 }
-                SW_ASSERT_TRUE_MSG( step._kind == "Pass", ( step.describe() + ": navigation scripts use Tap · Press · Release · ExpectUi · Pass" ).c_str() );
+                SW_ASSERT_TRUE_MSG( step._kind == "Pass", ( step.describe() + ": navigation scripts use Tap · Press · Release · ExpectUI · Pass" ).c_str() );
                 bPass = true;
             }
             SW_ASSERT_TRUE_MSG( bPass, "navigation script has no <Pass/>" );
@@ -217,17 +217,17 @@ SW_TEST_CASE( UINavigationScriptTest, PauseOptionsBackRestoresFocus )
     fixture.runFrame();
     fixture.runScript( R"(<Scenario name="ui.pause.back" startAfter="Immediately">
         <At frame="1"><Tap slot="Key.Escape"/></At>
-        <At frame="3"><ExpectUi screen="engine/ui/pause.ui.xml" focus="Resume" screens="1"/></At>
+        <At frame="3"><ExpectUI screen="engine/ui/pause.ui.xml" focus="Resume" screens="1"/></At>
         <At frame="4"><Tap slot="Gamepad.DPadDown"/></At>
-        <At frame="6"><ExpectUi focus="Options"/></At>
+        <At frame="6"><ExpectUI focus="Options"/></At>
         <At frame="7"><Tap slot="Gamepad.A"/></At>
-        <At frame="9"><ExpectUi screen="engine/ui/options.ui.xml" focus="audio.master.Value" screens="2"/></At>
+        <At frame="9"><ExpectUI screen="engine/ui/options.ui.xml" focus="audio.master.Value" screens="2"/></At>
         <At frame="10"><Tap slot="Key.Down"/></At>
-        <At frame="12"><ExpectUi focus="audio.music.Value"/></At>
+        <At frame="12"><ExpectUI focus="audio.music.Value"/></At>
         <At frame="13"><Tap slot="Gamepad.B"/></At>
-        <At frame="15"><ExpectUi screen="engine/ui/pause.ui.xml" focus="Options" screens="1"/></At>
+        <At frame="15"><ExpectUI screen="engine/ui/pause.ui.xml" focus="Options" screens="1"/></At>
         <At frame="16"><Tap slot="Key.Escape"/></At>
-        <At frame="40"><ExpectUi screens="0" focus="none" screen="none"/><Pass/></At>
+        <At frame="40"><ExpectUI screens="0" focus="none" screen="none"/><Pass/></At>
     </Scenario>)" );
 }
 
@@ -239,23 +239,23 @@ SW_TEST_CASE( UINavigationScriptTest, ModalKeepsFocusInsideAndReturnsOnCancel )
 {
     UINavigationFixture fixture;
     fixture._ui.setInputMode( sw::UIInputMode::Navigation ); // 패드 사용자 — 메뉴가 첫 행에 포커스를 둔다
-    (void)sw::OptionsMenuScreen::open( fixture._ui );        // 핸들은 쓰지 않는다 — 열린 화면은 아래 ExpectUi 가 본다
+    (void)sw::OptionsMenuScreen::open( fixture._ui );        // 핸들은 쓰지 않는다 — 열린 화면은 아래 ExpectUI 가 본다
     fixture.runFrame();
     fixture.runScript( R"(<Scenario name="ui.modal" startAfter="Immediately">
-        <At frame="1"><ExpectUi screen="engine/ui/options.ui.xml" focus="audio.master.Value"/></At>
+        <At frame="1"><ExpectUI screen="engine/ui/options.ui.xml" focus="audio.master.Value"/></At>
         <At frame="2"><Tap slot="Gamepad.DPadRight"/></At>
         <At frame="4"><Tap slot="Gamepad.B"/></At>
-        <At frame="6"><ExpectUi screen="engine/ui/confirm_unsaved.ui.xml" focus="Apply" screens="2"/></At>
+        <At frame="6"><ExpectUI screen="engine/ui/confirm_unsaved.ui.xml" focus="Apply" screens="2"/></At>
         <At frame="7"><Tap slot="Gamepad.DPadUp"/></At>
         <At frame="9"><Tap slot="Gamepad.DPadLeft"/></At>
         <At frame="11"><Tap slot="Gamepad.DPadDown"/></At>
-        <At frame="13"><ExpectUi screen="engine/ui/confirm_unsaved.ui.xml" focus="Apply"/></At>
+        <At frame="13"><ExpectUI screen="engine/ui/confirm_unsaved.ui.xml" focus="Apply"/></At>
         <At frame="14"><Tap slot="Gamepad.DPadRight"/></At>
         <At frame="16"><Tap slot="Gamepad.DPadRight"/></At>
         <At frame="18"><Tap slot="Gamepad.DPadRight"/></At>
-        <At frame="20"><ExpectUi screen="engine/ui/confirm_unsaved.ui.xml" focus="Cancel"/></At>
+        <At frame="20"><ExpectUI screen="engine/ui/confirm_unsaved.ui.xml" focus="Cancel"/></At>
         <At frame="21"><Tap slot="Gamepad.A"/></At>
-        <At frame="23"><ExpectUi screen="engine/ui/options.ui.xml" focus="audio.master.Value" screens="1"/><Pass/></At>
+        <At frame="23"><ExpectUI screen="engine/ui/options.ui.xml" focus="audio.master.Value" screens="1"/><Pass/></At>
     </Scenario>)" );
 }
 
@@ -309,7 +309,7 @@ SW_TEST_CASE( UINavigationScriptTest, ExpectUIRejectsMalformedSteps )
     sw::AutomationScenario scenario;
     sw::string             error;
     SW_ASSERT_TRUE_MSG( scenario.parse( R"(<Scenario name="ui.bad" startAfter="Immediately">
-        <At frame="0"><ExpectUi/><ExpectUi focused="Resume"/><ExpectUi screens="two"/><ExpectUi focus="Resume" screens="1"/><Pass/></At>
+        <At frame="0"><ExpectUI/><ExpectUI focused="Resume"/><ExpectUI screens="two"/><ExpectUI focus="Resume" screens="1"/><Pass/></At>
     </Scenario>)",
                                         "bad", error ),
                         error.c_str() );

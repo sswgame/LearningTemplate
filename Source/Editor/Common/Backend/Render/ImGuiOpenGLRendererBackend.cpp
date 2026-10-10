@@ -24,7 +24,7 @@ static HGLRC s_MainWindowRC{ nullptr };
 struct GLX_WindowData
 {
     Display*   _pDisplay{ nullptr };
-    GLXContext _ctx{ nullptr };
+    GLXContext _context{ nullptr };
     Window     _win{ 0 };
 };
 static Display*   s_MainDisplay{ nullptr };
@@ -121,7 +121,7 @@ namespace
         }
         if ( pVi != nullptr )
         {
-            pData->_ctx = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, 1 );
+            pData->_context = glXCreateContext( pData->_pDisplay, pVi, s_MainContext, 1 );
             XFree( pVi );
         }
         pViewport->RendererUserData = pData;
@@ -132,8 +132,8 @@ namespace
         if ( pViewport == nullptr || pViewport->RendererUserData == nullptr )
             return;
         GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
-        if ( pData->_ctx != nullptr )
-            glXDestroyContext( pData->_pDisplay, pData->_ctx );
+        if ( pData->_context != nullptr )
+            glXDestroyContext( pData->_pDisplay, pData->_context );
         sw_delete( pData );
         pViewport->RendererUserData = nullptr;
     }
@@ -142,7 +142,7 @@ namespace
     {
         GLX_WindowData* pData = static_cast<GLX_WindowData*>( pViewport->RendererUserData );
         if ( pData != nullptr )
-            glXMakeCurrent( pData->_pDisplay, pData->_win, pData->_ctx ? pData->_ctx : s_MainContext );
+            glXMakeCurrent( pData->_pDisplay, pData->_win, pData->_context ? pData->_context : s_MainContext );
     }
 
     void Hook_Renderer_SwapBuffers_GLX( ImGuiViewport* pViewport, void* )

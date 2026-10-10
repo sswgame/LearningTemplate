@@ -48,7 +48,7 @@ namespace navtest
     {
         const sw::float3 center = ( minPoint + maxPoint ) * 0.5f;
         const sw::float3 half   = ( maxPoint - minPoint ) * 0.5f;
-        geometry.addBox( half, sw::float4x4::createTrs( center, sw::float3{}, sw::float3{ 1.0f, 1.0f, 1.0f } ), area );
+        geometry.addBox( half, sw::float4x4::makeTrs( center, sw::float3{}, sw::float3{ 1.0f, 1.0f, 1.0f } ), area );
     }
 
     /** @brief 윗면이 y = 0 인 바닥 상자([x0, x1] × [z0, z1], 두께 0.2)입니다. */

@@ -225,11 +225,11 @@ namespace sw
         }
 
         JointRecord record;
-        record._pConstraint       = pConstraint;
-        record._bodyA             = desc._bodyA;
-        record._bodyB             = desc._bodyB;
-        record._type              = desc._type;
-        record._bDisableCollision = desc._bDisableCollision && desc._bodyB.isValid();
+        record._pConstraint    = pConstraint;
+        record._bodyA          = desc._bodyA;
+        record._bodyB          = desc._bodyB;
+        record._type           = desc._type;
+        record._bPairFilterSet = desc._bCollideConnectedBodies == false && desc._bodyB.isValid();
         if ( desc._type == PhysicsJointType::Distance )
         {
             // 지금 길이를 재려고 두 점을 각 바디의 로컬로 적어 둔다.
@@ -250,7 +250,7 @@ namespace sw
         JoltPhysicsSceneQueryInternal::applyMotor( *pConstraint, desc._type, desc._motor );
         _system.AddConstraint( pConstraint );
         bodyInterface.ActivateConstraint( pConstraint );
-        if ( record._bDisableCollision )
+        if ( record._bPairFilterSet )
             _pairFilter.setPairCollision( desc._bodyA, desc._bodyB, false );
         return PhysicsJointHandle::fromSlot( _joints.insert( std::move( record ) ) );
     }
@@ -267,7 +267,7 @@ namespace sw
             wakeBody( record._bodyA );
             wakeBody( record._bodyB );
         }
-        if ( record._bDisableCollision )
+        if ( record._bPairFilterSet )
             _pairFilter.setPairCollision( record._bodyA, record._bodyB, true );
     }
 
@@ -441,7 +441,7 @@ namespace sw
     bool JoltPhysicsScene::shapeCast( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const float3& direction, float32 maxDistance,
                                       const PhysicsQueryFilter& filter, PhysicsCastHit3D& outHit ) const
     {
-        const JPH::RefConst<JPH::Shape> pShape = buildShape( span<const PhysicsShapeDesc3D>{ &shape, 1 }, hashed_string{}, false );
+        const JPH::RefConst<JPH::Shape> pShape = createJoltShape( span<const PhysicsShapeDesc3D>{ &shape, 1 }, hashed_string{}, false );
         if ( pShape == nullptr )
             return false;
         const BodyRecord*                                          pIgnore = findBody( filter._ignoreBody );
@@ -467,7 +467,7 @@ namespace sw
     uint32 JoltPhysicsScene::overlapShape( const PhysicsShapeDesc3D& shape, const float3& position, const quaternion& rotation, const PhysicsQueryFilter& filter,
                                            vector<PhysicsBodyHandle>& outListBody ) const
     {
-        const JPH::RefConst<JPH::Shape> pShape = buildShape( span<const PhysicsShapeDesc3D>{ &shape, 1 }, hashed_string{}, false );
+        const JPH::RefConst<JPH::Shape> pShape = createJoltShape( span<const PhysicsShapeDesc3D>{ &shape, 1 }, hashed_string{}, false );
         if ( pShape == nullptr )
             return 0;
         const BodyRecord*                                    pIgnore = findBody( filter._ignoreBody );

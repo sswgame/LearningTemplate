@@ -85,16 +85,16 @@ namespace sw
              * @brief 기록 enum 의 payload 를 열거자 이름(글)으로 만듭니다 — XML 이 그 칸에 적었을 글입니다(비트플래그는 `A | B`).
              * @details payload 를 끝까지 읽지 못하거나 모르는 열거자면 false 입니다. enum 은 제 크기만큼만 쓰이므로 0 으로 둔 int64 자리에 읽습니다.
              */
-            static bool formatWireEnumToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, const SerializeContext& ctx,
+            static bool formatWireEnumToString( const uint8* pPayload, size_t payloadSize, hashed_string wireTypeName, const SerializeContext& context,
                                                 BinaryWireVersion wireVersion, string& outText )
             {
                 int64  wireValue{ 0 };
                 size_t offset{ 0 };
-                if ( SerializerUtil::deserializeValueBinary( &wireValue, wireTypeName, pPayload, payloadSize, offset, ctx, wireVersion ) == false ||
+                if ( SerializerUtil::deserializeValueBinary( &wireValue, wireTypeName, pPayload, payloadSize, offset, context, wireVersion ) == false ||
                      offset != payloadSize )
                     return false;
                 StringBuilder<constant::kMaxBuffer8192> ss;
-                SerializerUtil::valueToText( ss, &wireValue, wireTypeName, ctx );
+                SerializerUtil::valueToText( ss, &wireValue, wireTypeName, context );
                 outText = ss.c_str();
                 return true;
             }
@@ -216,7 +216,7 @@ namespace sw
              * @param wireTypeName 기록 타입. 모르면 비웁니다(그때는 이관이 제 타입 읽기부터 합니다).
              */
             [[nodiscard]] static bool applyOrphanBinary( void* pPropPtr, hashed_string propTypeName, const SchemaOrphanValue& orphan,
-                                                         hashed_string wireTypeName, const SerializeContext& ctx )
+                                                         hashed_string wireTypeName, const SerializeContext& context )
             {
                 const uint8* pPayload    = orphan._listBinary.data();
                 const size_t payloadSize = orphan._listBinary.size();
@@ -224,10 +224,10 @@ namespace sw
                 if ( wireTypeName == propTypeName )
                 {
                     size_t offset{ 0 };
-                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, ctx, orphan._wireVersion ) )
+                    if ( SerializerUtil::deserializeValueBinary( pPropPtr, propTypeName, pPayload, payloadSize, offset, context, orphan._wireVersion ) )
                         return true;
                 }
-                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, ctx, wireTypeName, orphan._wireVersion );
+                return tryCoerceBinaryPayload( pPropPtr, propTypeName, pPayload, payloadSize, context, wireTypeName, orphan._wireVersion );
             }
 
             /**
@@ -237,7 +237,7 @@ namespace sw
              *          그 비트 그대로 제자리에 읽게 됩니다.
              */
             [[nodiscard]] static bool applyOrphanAt( void* pInstance, const TypeInfo& typeInfo, const utf8* pPath, const SchemaOrphanValue& orphan,
-                                                     hashed_string wireTypeHint, const SerializeContext& ctx )
+                                                     hashed_string wireTypeHint, const SerializeContext& context )
             {
                 void*               pPtr{ nullptr };
                 const PropertyInfo* pProp = nullptr;
@@ -245,7 +245,7 @@ namespace sw
                     return false;
 
                 if ( orphan._text.empty() == false )
-                    return parseTextValueCoerced( pPtr, pProp->_typeName, orphan._text, ctx );
+                    return parseTextValueCoerced( pPtr, pProp->_typeName, orphan._text, context );
                 if ( orphan._listBinary.empty() )
                     return false;
 
@@ -255,7 +255,7 @@ namespace sw
                 // 기록 타입이 적혀 있는데 모르면(지운 enum · 타입) 바이트의 뜻을 모른다 — 크기로 짐작해 옮기지 않는다(바이너리 칸 읽기와 같은 규칙).
                 if ( hint.empty() && orphan._wireTypeHash != 0 )
                     return false;
-                return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, ctx );
+                return applyOrphanBinary( pPtr, pProp->_typeName, orphan, hint, context );
             }
 
             /** @brief orphan 의 이름 해시입니다. 이름을 intern 하지 않은 orphan 은 해시만 듭니다. */
@@ -438,8 +438,8 @@ namespace sw
         if ( pOrphan == nullptr || _pInstance == nullptr || _pTypeInfo == nullptr )
             return false;
 
-        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, ctx );
+        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, propName.c_str(), *pOrphan, wireTypeHint, context );
     }
 
     bool SchemaMigrateContext::applyOrphanToPath( const utf8* pDottedPath, hashed_string wireTypeHint ) const
@@ -459,8 +459,8 @@ namespace sw
         if ( pOrphan == nullptr )
             return false;
 
-        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, ctx );
+        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        return SchemaMigrateInternal::applyOrphanAt( _pInstance, *_pTypeInfo, pDottedPath, *pOrphan, wireTypeHint, context );
     }
 
     bool SchemaMigrateContext::moveProperty( hashed_string fromProp, hashed_string toProp ) const
@@ -473,7 +473,7 @@ namespace sw
         if ( _pInstance == nullptr || _pTypeInfo == nullptr || pFromPath == nullptr || pToPath == nullptr )
             return false;
 
-        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
+        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
 
         void*               pSrcPtr{ nullptr };
         const PropertyInfo* pSrcProp = nullptr;
@@ -488,8 +488,8 @@ namespace sw
             return false;
 
         StringBuilder<constant::kMaxBuffer8192> ss;
-        SerializerUtil::valueToText( ss, pSrcPtr, pSrcProp->_typeName, ctx );
-        return parseTextValueCoerced( pDstPtr, pDstProp->_typeName, ss.view(), ctx );
+        SerializerUtil::valueToText( ss, pSrcPtr, pSrcProp->_typeName, context );
+        return parseTextValueCoerced( pDstPtr, pDstProp->_typeName, ss.view(), context );
     }
 
     bool SchemaMigrateContext::setPropertyFromText( hashed_string propName, string_view text ) const
@@ -500,8 +500,8 @@ namespace sw
         const PropertyInfo* pProp = nullptr;
         if ( resolvePropertyPath( _pInstance, *_pTypeInfo, propName.c_str(), pPtr, pProp ) == false )
             return false;
-        const SerializeContext& ctx = _pSerializeCtx != nullptr ? *_pSerializeCtx : SerializeContext::getDefault();
-        return parseTextValueCoerced( pPtr, pProp->_typeName, text, ctx );
+        const SerializeContext& context = _pSerializeContext != nullptr ? *_pSerializeContext : SerializeContext::getDefault();
+        return parseTextValueCoerced( pPtr, pProp->_typeName, text, context );
     }
 
     bool isValueOnlyCoercion( hashed_string targetTypeName, hashed_string wireTypeName )
@@ -527,7 +527,7 @@ namespace sw
     }
 
     bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName, const uint8* pPayload, size_t payloadSize,
-                                 const SerializeContext& ctx, hashed_string wireTypeName, BinaryWireVersion wireVersion )
+                                 const SerializeContext& context, hashed_string wireTypeName, BinaryWireVersion wireVersion )
     {
         if ( pPropPtr == nullptr || pPayload == nullptr )
             return false;
@@ -542,15 +542,15 @@ namespace sw
         {
             string     wireText;
             const bool bWireEnum  = SchemaMigrateInternal::findOtherWireEnum( targetTypeName, wireTypeName ) != nullptr;
-            const bool bFormatted = bWireEnum ? SchemaMigrateInternal::formatWireEnumToString( pPayload, payloadSize, wireTypeName, ctx, wireVersion, wireText )
+            const bool bFormatted = bWireEnum ? SchemaMigrateInternal::formatWireEnumToString( pPayload, payloadSize, wireTypeName, context, wireVersion, wireText )
                                               : SchemaMigrateInternal::formatWirePodToString( pPayload, payloadSize, wireTypeName, wireText );
             if ( bFormatted == false )
                 return false;
-            return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, ctx );
+            return parseTextValueCoerced( pPropPtr, targetTypeName, wireText, context );
         }
 
         size_t offset{ 0 };
-        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, ctx, wireVersion ) &&
+        if ( SerializerUtil::deserializeValueBinary( pPropPtr, targetTypeName, pPayload, payloadSize, offset, context, wireVersion ) &&
              offset == payloadSize )
             return true;
 
@@ -559,7 +559,7 @@ namespace sw
         {
             string asText;
             if ( SchemaMigrateInternal::formatPodToString( pPayload, payloadSize, asText ) )
-                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, ctx );
+                return parseTextValueCoerced( pPropPtr, targetTypeName, asText, context );
 
             // 길이 접두 문자열 blob 은 맨 앞의 제 타입 읽기가 이미 다뤘다. 여기서는 길이가 맞으면 접두 뒤 바이트를 텍스트로 읽어 본다
             if ( payloadSize >= sizeof( uint32 ) )
@@ -569,7 +569,7 @@ namespace sw
                 if ( sizeof( uint32 ) + len == payloadSize )
                 {
                     const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                    return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, ctx );
+                    return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, context );
                 }
             }
         }
@@ -582,13 +582,13 @@ namespace sw
             if ( sizeof( uint32 ) + len == payloadSize )
             {
                 const string_view textValue{ reinterpret_cast<const utf8*>( pPayload + sizeof( uint32 ) ), len };
-                return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, ctx );
+                return parseTextValueCoerced( pPropPtr, targetTypeName, textValue, context );
             }
         }
 
         // 크기가 같은 POD 를 그대로 재해석한다(int32↔float32 등). 마지막 수단이다.
         offset                                        = 0;
-        const SerializeContext::BinaryReadFn* pReader = ctx.findBinaryReader( targetTypeName );
+        const SerializeContext::BinaryReadFn* pReader = context.findBinaryReader( targetTypeName );
         if ( pReader != nullptr )
         {
             if ( ( *pReader )( pPropPtr, pPayload, payloadSize, offset ) && offset == payloadSize )
@@ -599,17 +599,17 @@ namespace sw
     }
 
     bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-                                const SerializeContext& ctx )
+                                const SerializeContext& context )
     {
         if ( pValPtr == nullptr )
             return false;
 
         const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
-        if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, ctx ) )
+        if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, context ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )
         {
-            if ( SerializerUtil::parseTextValue( pValPtr, typeName, stripped, ctx ) )
+            if ( SerializerUtil::parseTextValue( pValPtr, typeName, stripped, context ) )
                 return true;
         }
 
@@ -676,21 +676,21 @@ namespace sw
     bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
                                void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
                                const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
-                               bool bWarnWhenNoMigrate, const SerializeContext& ctx )
+                               bool bWarnWhenNoMigrate, const SerializeContext& context )
     {
         const bool needsMigrate =
             migrate != nullptr && ( fromVersion != currentVersion || listOrphan.empty() == false || pLegacyInstance != nullptr );
         if ( needsMigrate )
         {
             SchemaMigrateContext migrateContext;
-            migrateContext._fromVersion     = fromVersion;
-            migrateContext._toVersion       = currentVersion;
-            migrateContext._pInstance       = pInstance;
-            migrateContext._pTypeInfo       = &typeInfo;
-            migrateContext._pLegacyInstance = pLegacyInstance;
-            migrateContext._pLegacyTypeInfo = pLegacyTypeInfo;
-            migrateContext._pOrphans        = &listOrphan;
-            migrateContext._pSerializeCtx   = &ctx;
+            migrateContext._fromVersion       = fromVersion;
+            migrateContext._toVersion         = currentVersion;
+            migrateContext._pInstance         = pInstance;
+            migrateContext._pTypeInfo         = &typeInfo;
+            migrateContext._pLegacyInstance   = pLegacyInstance;
+            migrateContext._pLegacyTypeInfo   = pLegacyTypeInfo;
+            migrateContext._pOrphans          = &listOrphan;
+            migrateContext._pSerializeContext = &context;
             if ( migrate( migrateContext ) == false )
                 return false;
             // 이관이 받아 준 로드다. 이관이 찾아 보지 않은 orphan 은 버려진다.

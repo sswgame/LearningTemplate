@@ -588,7 +588,7 @@ namespace test
         return listSelected;
     }
 
-    sw::vector<const TestCaseInfo*> TestRegistry::buildRunOrder( uint32 iteration ) const
+    sw::vector<const TestCaseInfo*> TestRegistry::makeRunOrder( uint32 iteration ) const
     {
         sw::vector<const TestCaseInfo*> listRun = selectCasesForThisShard();
         if ( _bShuffle == false )
@@ -719,7 +719,7 @@ namespace test
         int32   skippedCount{ 0 };
         float64 totalMs{ 0.0 };
 
-        const uint32 runnableCount = static_cast<uint32>( buildRunOrder( 0 ).size() );
+        const uint32 runnableCount = static_cast<uint32>( makeRunOrder( 0 ).size() );
         const uint32 filteredOut   = static_cast<uint32>( _listTest.size() ) - runnableCount;
 
         SW_LOG_INFO( "====================================================" );
@@ -757,7 +757,7 @@ namespace test
                 std::fflush( stdout );
             }
 
-            for ( const TestCaseInfo* pTestInfo : buildRunOrder( iteration ) )
+            for ( const TestCaseInfo* pTestInfo : makeRunOrder( iteration ) )
             {
                 const TestCaseInfo& testInfo = *pTestInfo;
                 if ( mapSuiteRanSkipped.find( testInfo._groupName ) == mapSuiteRanSkipped.end() )

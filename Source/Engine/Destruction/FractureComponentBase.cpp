@@ -152,7 +152,7 @@ namespace sw
                 return MathUtil::atan2( axis._y, axis._x );
             }
 
-            static quaternion makeRotationZ( float32 angle ) { return quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle ); }
+            static quaternion makeRotationZ( float32 angle ) { return quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle ); }
 
             /** @brief 역회전입니다(const 로 불러 제자리 뒤집기가 아니라 값을 받는다). */
             static quaternion invert( const quaternion& rotation ) { return rotation.inverse(); }
@@ -1199,7 +1199,7 @@ namespace sw
 
     float4x4 FractureComponentBase::makeFracturedObjectMatrix() const
     {
-        return float4x4::createTrs( _objectPosition, _objectRotation, float3{ _objectScale, _objectScale, _objectScale } );
+        return float4x4::makeTrs( _objectPosition, _objectRotation, float3{ _objectScale, _objectScale, _objectScale } );
     }
 
     void FractureComponentBase::spawnGroup( FractureGroupRuntime& inoutRuntime, const DestructionGroup& group, const float3& linearVelocity, const float3& angularVelocity )

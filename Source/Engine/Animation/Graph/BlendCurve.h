@@ -1,6 +1,6 @@
 /**
  * @file BlendCurve.h
- * @brief 전환 하나의 곡선과 길이(`BlendCurveSpec`)와, 시간 → 가중치 순수 함수(`evaluateBlendWeight`)입니다.
+ * @brief 전환 하나의 곡선과 길이(`BlendCurveDef`)와, 시간 → 가중치 순수 함수(`evaluateBlendWeight`)입니다.
  * @details 컴포넌트를 모르는 함수라 카메라 디렉터 · 시퀀서 · 소켓 부착(`SocketBindingComponent` 의 되돌아가기)이 같은 곡선을 씁니다.
  *          참고: Cinemachine 의 Blend List · Custom Blends, 언리얼 `EViewTargetBlendFunction` · `EAlphaBlendOption`.
  */
@@ -52,7 +52,7 @@ namespace sw
      * @details 카메라 XML 은 `<BlendIn curve="EaseInOut" duration="0.8" exponent="2"/>`, `Custom` 은 안에 `<Key time="0.5" value="0.8"/>` 를 적습니다.
      */
     REFLECT()
-    struct SW_API BlendCurveSpec
+    struct SW_API BlendCurveDef
     {
         REFLECT_BODY();
 
@@ -75,5 +75,5 @@ namespace sw
      * @details `Spring` 은 초 단위 시간(진행 × 길이)으로 스프링을 풀고 끝(길이)의 값으로 나눠 1 에서 1 이 되게 합니다. 감쇠비는 1 이상으로 묶어
      *          넘치지 않습니다. `Custom` 의 키가 없으면 `Linear` 입니다.
      */
-    SW_API float32 evaluateBlendWeight( const BlendCurveSpec& spec, float32 normalizedTime );
+    SW_API float32 evaluateBlendWeight( const BlendCurveDef& spec, float32 normalizedTime );
 } // namespace sw

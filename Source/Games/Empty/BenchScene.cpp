@@ -496,7 +496,7 @@ namespace sw
                 const float3       position{ origin + static_cast<float32>( col ) * kBenchSpacing, 0.0f, origin + static_cast<float32>( row ) * kBenchSpacing };
                 MeshInstanceBatch& batch = *_listInstanceBatch[index % meshVariantCount];
                 const uint32       entry = index / meshVariantCount;
-                batch.setWorld( entry, float4x4::createTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
+                batch.setWorld( entry, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ 1.0f, 1.0f, 1.0f } ) );
                 if ( gv_benchAnimate != 0 )
                     batch.setSpinSeed( entry, index + 1u );
             }
@@ -1125,7 +1125,7 @@ namespace sw
                                        origin + static_cast<float32>( index / side ) * kBenchSpacing };
                 const float32 scale = 0.6f + 0.4f * MathUtil::abs( wave );
                 _listInstanceBatch[index % variantCount]->setWorld(
-                    index / variantCount, float4x4::createTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ scale, scale, scale } ) );
+                    index / variantCount, float4x4::makeTrs( position, float3{ 0.0f, 0.0f, 0.0f }, float3{ scale, scale, scale } ) );
             }
             return;
         }

@@ -70,7 +70,7 @@ namespace sw::editor
     {
     }
 
-    const vector<string>& ContentBrowserFolderCache::getChildFolders( string_view folderAbs )
+    const vector<string>& ContentBrowserFolderCache::getOrScanChildFolders( string_view folderAbs )
     {
         const string key = FileUtil::normalizePath( FileUtil::trimTrailingSlashes( folderAbs ) );
         const auto   it  = _mapChildFolder.find( key );

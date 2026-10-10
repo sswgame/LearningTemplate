@@ -79,7 +79,7 @@ namespace
             }
         };
 
-        static float4x4 makeSocket() { return float4x4::createTranslation( 0.0f, 1.0f, 0.5f ); }
+        static float4x4 makeSocket() { return float4x4::makeTranslation( 0.0f, 1.0f, 0.5f ); }
 
         static bool isNear( const float4x4& expected, const float4x4& actual, float32 tolerance )
         {
@@ -114,7 +114,7 @@ SW_TEST_CASE( SocketBindingTest, BoundUnitFollowsHolderWithoutTicking )
     SW_EXPECT_FALSE( rig._pBinding->canEverTick() );
 
     // 본이 움직이면 애니메이션 시스템이 한 번 알린다.
-    const float4x4 movedSocket = float4x4::createTranslation( 0.2f, 1.0f, 0.5f );
+    const float4x4 movedSocket = float4x4::makeTranslation( 0.2f, 1.0f, 0.5f );
     rig._pBinding->updateSocketTransform( movedSocket );
     SW_EXPECT_TRUE( Internal::isNear( movedSocket * rig._pHolderScene->getWorldMatrix(), rig._pUnitScene->getWorldMatrix(), 1.0e-4f ) );
 }
@@ -174,8 +174,8 @@ SW_TEST_CASE( SocketBindingTest, PhysicsReleaseStartsBodyAtBoundTransform )
 SW_TEST_CASE( SocketBindingTest, ReturnBlendsFromCurrentTransformToSocket )
 {
     using Internal = SocketBindingTestInternal;
-    Internal::Rig  rig;
-    BlendCurveSpec blend;
+    Internal::Rig rig;
+    BlendCurveDef blend;
     blend._curve    = BlendCurve::Linear;
     blend._duration = 1.0f;
     rig._pBinding->setReturnBlend( blend );
@@ -237,7 +237,7 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
     using Internal = SocketBindingTestInternal;
     CharacterBoneArray bones2D;
     const int32        root = bones2D.addBone( hashed_string( "root" ), -1, float4x4::Identity );
-    (void)bones2D.addBone( hashed_string( "arm" ), root, float4x4::createRotationZ( MathUtil::kHalfPi ) * float4x4::createTranslation( 1.0f, 0.0f, 0.0f ) );
+    (void)bones2D.addBone( hashed_string( "arm" ), root, float4x4::makeRotationZ( MathUtil::kHalfPi ) * float4x4::makeTranslation( 1.0f, 0.0f, 0.0f ) );
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );
     SocketSet sockets;

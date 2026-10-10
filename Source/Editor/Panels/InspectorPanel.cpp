@@ -842,7 +842,7 @@ namespace sw::editor
 
     void InspectorPanel::drawMapContainer( void* pContainer, const PropertyInfo& prop, IMapContainerWrapper& mapWrapper, bool bReadOnly )
     {
-        const SerializeContext&               ctx = SerializeContext::getDefault();
+        const SerializeContext&               context = SerializeContext::getDefault();
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%# -> %#] (%# entries)", prop._keyTypeName.c_str(), prop._elementTypeName.c_str(),
                       mapWrapper.getSize( pContainer ) );
@@ -866,7 +866,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted( SerializerUtil::formatPropertyText( keyProp, pKey, ctx ).c_str() );
+            ImGui::TextUnformatted( SerializerUtil::formatPropertyText( keyProp, pKey, context ).c_str() );
             ImGui::SameLine();
             ImGui::BeginDisabled( bElementEditable == false );
             ImGui::SetNextItemWidth( -FLT_MIN );
@@ -891,13 +891,13 @@ namespace sw::editor
             void* pValue = Memory::allocateAligned( mapWrapper.getValueSize(), alignof( std::max_align_t ) );
             mapWrapper.defaultConstructKey( pKey );
             mapWrapper.defaultConstructValue( pValue );
-            if ( SerializerUtil::applyPropertyText( keyProp, pKey, keyText, ctx ) )
+            if ( SerializerUtil::applyPropertyText( keyProp, pKey, keyText, context ) )
             {
-                const string stagedText = SerializerUtil::formatPropertyText( keyProp, pKey, ctx );
+                const string stagedText = SerializerUtil::formatPropertyText( keyProp, pKey, context );
                 bool         bExists    = false;
                 mapWrapper.forEach( pContainer, SW_DELEGATE_LAMBDA( MapForEachDelegate, [&]( const void* pExistingKey, const void* )
                 {
-                    if ( SerializerUtil::formatPropertyText( keyProp, pExistingKey, ctx ) == stagedText )
+                    if ( SerializerUtil::formatPropertyText( keyProp, pExistingKey, context ) == stagedText )
                         bExists = true;
                 } ) );
                 if ( bExists == false )
@@ -917,8 +917,8 @@ namespace sw::editor
 
     void InspectorPanel::drawKeyedSequenceContainer( void* pContainer, const PropertyInfo& prop, ISequenceContainerWrapper& sequence, bool bReadOnly )
     {
-        const SerializeContext&               ctx   = SerializeContext::getDefault();
-        const size_t                          count = sequence.getSize( pContainer );
+        const SerializeContext&               context = SerializeContext::getDefault();
+        const size_t                          count   = sequence.getSize( pContainer );
         fixed_string<constant::kMaxBuffer128> headerBuf;
         formatstring( headerBuf.data(), headerBuf.capacity(), "[%#] (%# elements)", prop._elementTypeName.c_str(), count );
         if ( ImGui::TreeNodeEx( "##value", ImGuiTreeNodeFlags_SpanFullWidth, "%s", headerBuf.c_str() ) == false )
@@ -937,7 +937,7 @@ namespace sw::editor
             if ( bReadOnly == false )
                 ImGui::SameLine();
             // 원소는 글 칸이다. Enter 로 낸 글을 원소 타입으로 읽어 지우고 다시 넣는다 — 원소가 곧 정렬 키라 제자리 쓰기는 트리를 망친다.
-            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatPropertyText( elementProp, sequence.getElementConst( pContainer, elemIndex ), ctx ).c_str() };
+            fixed_string<constant::kMaxBuffer256> elementText{ SerializerUtil::formatPropertyText( elementProp, sequence.getElementConst( pContainer, elemIndex ), context ).c_str() };
             const ImGuiInputTextFlags             flags = bElementEditable ? ImGuiInputTextFlags_EnterReturnsTrue : ImGuiInputTextFlags_ReadOnly;
             ImGui::SetNextItemWidth( -FLT_MIN );
             if ( ImGui::InputText( "##element", elementText.data(), elementText.capacity(), flags ) && bElementEditable )
@@ -953,7 +953,7 @@ namespace sw::editor
             InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Edit Set Element", [&]()
             {
                 (void)sequence.replaceElement( pContainer, replaceIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::applyPropertyText( elementProp, pElement, replaceText, ctx ); } ) );
+                { return SerializerUtil::applyPropertyText( elementProp, pElement, replaceText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }
@@ -970,7 +970,7 @@ namespace sw::editor
             InspectorPanelInternal::applyContainerEdit( getEditOwner(), "Add Set Element", [&]()
             {
                 (void)sequence.appendElement( pContainer, sequence.getSize( pContainer ), SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
-                { return SerializerUtil::applyPropertyText( elementProp, pElement, addText, ctx ); } ) );
+                { return SerializerUtil::applyPropertyText( elementProp, pElement, addText, context ); } ) );
             } );
             notifyPropertyEdited( prop );
         }

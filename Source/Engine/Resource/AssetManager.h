@@ -169,11 +169,11 @@ namespace sw
         const AssetFormatRegistry& getAssetFormatRegistry() const { return _assetFormatRegistry; }
 
         /** @brief 경로 키 Material 인스턴스 캐시(GPU 수명 포함)를 반환합니다. */
-        MaterialCache&       getMaterialManager();
-        const MaterialCache& getMaterialManager() const;
+        MaterialCache&       getMaterialCache();
+        const MaterialCache& getMaterialCache() const;
         /** @brief 경로 키 Texture2D 인스턴스 캐시(GPU 수명 포함)를 반환합니다. 머티리얼의 Texture2D 프로퍼티(assetPath)가 여기서 빌립니다. */
-        TextureCache&       getTextureManager();
-        const TextureCache& getTextureManager() const;
+        TextureCache&       getTextureCache();
+        const TextureCache& getTextureCache() const;
 
         /** @brief 경로 키 메시 에셋(`.mesh`) 캐시를 반환합니다. 표는 프로세스에 하나라 `MeshCache::acquire` 를 바로 불러도 같습니다. */
         MeshCache&       getMeshCache();

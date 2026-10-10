@@ -82,7 +82,7 @@ namespace sw
          * @param listLevelCount 레벨마다 묶음 수(위 → 아래). 비면 뿌리 하나가 모든 잎을 듭니다.
          * @param outListLeafOrder 새 잎 번호 → 옛 잎 번호. 잎 데이터(형상 · 껍질)를 이 순서로 옮깁니다.
          */
-        static void buildHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder );
+        static void populateHierarchy( FractureGraph& inoutGraph, vector_reference<const uint32> listLevelCount, vector<uint32>& outListLeafOrder );
         /** @brief 연결 목록을 A < B · A · B 순으로 정렬하고 같은 쌍을 합칩니다(넓이 더함). */
         static void normalizeLinks( vector<FractureLink>& inoutListLink );
     };

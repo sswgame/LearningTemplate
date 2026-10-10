@@ -58,11 +58,11 @@ namespace sw
             SweepHit sweep;
             if ( ContinuousCollision::sweepAABB( rayBox, displacement, target, sweep ) == false )
                 continue;
-            if ( bHit && sweep._time >= outHit._fraction )
+            if ( bHit && sweep._hitFraction >= outHit._fraction )
                 continue;
             bHit             = true;
-            outHit._fraction = sweep._time;
-            outHit._point    = from + displacement * sweep._time;
+            outHit._fraction = sweep._hitFraction;
+            outHit._point    = from + displacement * sweep._hitFraction;
             outHit._objectID = body._objectID;
         }
         return bHit;

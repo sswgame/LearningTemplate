@@ -7,7 +7,7 @@
  *          셰이프 · 관절 축은 **뼈 로컬**입니다(바디의 틀 = 뼈의 틀). 관절은 그 뼈의 바디와, 부모 사슬에서 가장 가까운 바디가 있는 뼈를 잇고,
  *          자리는 이 뼈의 원점입니다. 루트 바디(부모 쪽 바디가 없는 것)의 관절은 쓰지 않습니다.
  * @code
- *     <PhysicsAsset _defaultLayer="Ragdoll" _bDisableJointedCollision="true">
+ *     <PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
  *         <_listBody>
  *             <PhysicsAssetBodyDef _bone="spine" _mass="20" _material="Flesh">
  *                 <_listShape><PhysicsShapeDesc3D _type="Capsule" _radius="0.15" _halfHeight="0.1" _localPosition="0,0.2,0" /></_listShape>
@@ -126,8 +126,8 @@ namespace sw
         vector<PhysicsAssetBodyDef> _listBody;
         PROPERTY( Tooltip = "Bone pairs that never collide" )
         vector<PhysicsAssetPairDef> _listDisabledPair;
-        PROPERTY( Tooltip = "Bodies connected by a joint never collide" )
-        bool _bDisableJointedCollision{ true };
+        PROPERTY( Tooltip = "Bodies connected by a joint collide with each other" )
+        bool _bCollideJointedBodies{ false };
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키 · 열거자 · 겹친 뼈 · 셰이프 없는 바디 · 모르는 쌍 뼈는 오류이고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );

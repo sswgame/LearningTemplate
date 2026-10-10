@@ -116,7 +116,7 @@ namespace sw
         /**
          * @brief XML/JSON 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
          * @details XMLSerializer::deserialize 가 이 값을 IXMLBackend 에 넘깁니다.
-         *          끄려면: `SerializeContext ctx = SerializeContext::deriveFromDefault(); ctx.setIgnoreCaseKeys( false );`
+         *          끄려면: `SerializeContext context = SerializeContext::deriveFromDefault(); context.setIgnoreCaseKeys( false );`
          */
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }
         /** @brief 스키마에 없는 프로퍼티를 건너뛰고 계속하는지 반환합니다. */
@@ -187,7 +187,7 @@ namespace sw
         /**
          * @brief 기본 컨텍스트의 **핸들러를 빌려 쓰는** 빈 컨텍스트를 만듭니다.
          *
-         * `SerializeContext ctx = getDefault();` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
+         * `SerializeContext context = getDefault();` 는 등록된 핸들러 표 네 벌(`unordered_map`)을 통째로
          * 복사합니다. 객체 하나당 659 ns 였고, 씬 로드는 그것을 엔티티마다 합니다(4000 개면 2.6 ms).
          * 표는 만들어진 뒤 바뀌지 않으므로 복사할 이유가 없습니다. 이쪽은 표를 가리키기만 하고,
          * 필요하면 자기 표에 더 등록합니다(조회는 자기 것 먼저, 없으면 빌려 온 쪽).

@@ -2,7 +2,7 @@
  * @file GimmickCircuitDef.h
  * @brief 기믹 회로의 정의(데이터) — 노드(센서 · 연산자 · 액추에이터, 종류는 이름) · 매개변수 · 배선입니다.
  * @details 소스 엔진의 엔티티 입출력 · 포탈 2 퍼즐 메이커 · 마리오 메이커의 배선과 같은 자리입니다. 정의는 코드를 모르고, 종류 이름 · 포트 이름 ·
- *          매개변수 이름의 뜻은 `GimmickNodeRegistry` 가 정합니다 — 회로를 지을 때(`GimmickCircuit::build`) 모르는 이름은 모두 오류입니다.
+ *          매개변수 이름의 뜻은 `GimmickNodeRegistry` 가 정합니다 — 회로를 지을 때(`GimmickCircuit::populate`) 모르는 이름은 모두 오류입니다.
  *          XML 모양(시험 · 도구):
  * @code
  *     <GimmickCircuit stepTime="0.0166667">
@@ -77,7 +77,7 @@ namespace sw
         /** @brief 기본 고정 스텝(초) — 60 Hz 입니다. */
         static constexpr float32 kDefaultStepTime = 1.0f / 60.0f;
 
-        /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다(이름의 뜻은 `GimmickCircuit::build` 가 본다). */
+        /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다(이름의 뜻은 `GimmickCircuit::populate` 가 본다). */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief XML 글을 읽습니다(시험 · 에디터). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

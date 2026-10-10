@@ -217,7 +217,7 @@ namespace sw
         return NetProtocolFeature::kEncrypted | ( bTokenBound ? NetProtocolFeature::kTokenBound : 0u );
     }
 
-    int64 NetHost::computeChallengeWindow( float64 time ) { return static_cast<int64>( MathUtil::floor( time / kChallengeWindowSeconds ) ); }
+    int64 NetHost::computeChallengeWindow( float64 nowSeconds ) { return static_cast<int64>( MathUtil::floor( nowSeconds / kChallengeWindowSeconds ) ); }
 
     uint64 NetHost::makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const
     {
@@ -662,7 +662,7 @@ namespace sw
         return true;
     }
 
-    void NetHost::sendPayload( float64 time, Slot& slot )
+    void NetHost::sendPayload( float64 nowSeconds, Slot& slot )
     {
         if ( slot._security != nullptr )
         {
@@ -670,10 +670,10 @@ namespace sw
             _plainWriter.clear();
             const int32 maxBytes =
                 slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize - NetHostInternal::kSecureHeadSize - NetSecurityConstant::kAeadTagSize : 0;
-            slot._connection.writePacket( time, _plainWriter, maxBytes, _settings._keepAliveInterval );
+            slot._connection.writePacket( nowSeconds, _plainWriter, maxBytes, _settings._keepAliveInterval );
             const int32 sentBytes = sendSealed( slot, PacketType::Payload, _plainWriter.getBytes().data(), _plainWriter.getByteCount() );
             slot._sendCredit -= static_cast<float64>( sentBytes );
-            slot._lastSendTime = time;
+            slot._lastSendTime = nowSeconds;
             return;
         }
         BitWriter& writer = _packetWriter;
@@ -684,13 +684,13 @@ namespace sw
         writer.writeBits( static_cast<uint32>( token ), 32 );
         // 대역폭 몫을 다 썼으면 머리(확인 · 유지)만 — 메시지는 다음 차례에 간다.
         const int32 maxBytes = slot._sendCredit > 0.0 ? kNetMaxPacketSize - NetHostInternal::kHeaderSize : 0;
-        slot._connection.writePacket( time, writer, maxBytes, _settings._keepAliveInterval );
+        slot._connection.writePacket( nowSeconds, writer, maxBytes, _settings._keepAliveInterval );
         sendFramed( slot._address, _protocolID );
         slot._sendCredit -= static_cast<float64>( writer.getByteCount() + NetHostInternal::kHeaderSize );
-        slot._lastSendTime = time;
+        slot._lastSendTime = nowSeconds;
     }
 
-    void NetHost::refillSendCredit( float64 time, Slot& slot ) const
+    void NetHost::refillSendCredit( float64 nowSeconds, Slot& slot ) const
     {
         const float64 rate = static_cast<float64>( MathUtil::max( kNetMaxPacketSize, _settings._maxBytesPerSecond ) );
         // 쌓아 둘 수 있는 몫은 보내기 간격 두 번어치(최소 패킷 하나) — 한가했다고 몰아 보내 회선을 넘치게 하지 않는다.
@@ -698,8 +698,8 @@ namespace sw
         if ( slot._lastCreditTime < 0.0 )
             slot._sendCredit = capacity;
         else
-            slot._sendCredit = MathUtil::min( capacity, slot._sendCredit + rate * MathUtil::max( 0.0, time - slot._lastCreditTime ) );
-        slot._lastCreditTime = time;
+            slot._sendCredit = MathUtil::min( capacity, slot._sendCredit + rate * MathUtil::max( 0.0, nowSeconds - slot._lastCreditTime ) );
+        slot._lastCreditTime = nowSeconds;
     }
 
     bool NetHost::waitForReceive( float64 timeoutSeconds )
@@ -715,7 +715,7 @@ namespace sw
         return false;
     }
 
-    void NetHost::update( float64 time )
+    void NetHost::update( float64 nowSeconds )
     {
         const uint32 depth = _updateDepth.fetch_add( 1, std::memory_order_acq_rel );
         SW_ASSERT( depth == 0 && "NetHost::update called from two threads at once" );
@@ -728,7 +728,7 @@ namespace sw
         if ( pTransport != nullptr )
         {
             // 1) 받기 — 잠금 밖. 받은 버퍼는 다시 쓴다.
-            pTransport->update( time );
+            pTransport->update( nowSeconds );
             int32 receivedCount = 0;
             while ( receivedCount < kMaxDatagramPerUpdate )
             {
@@ -745,9 +745,9 @@ namespace sw
                 for ( int32 index = 0; index < receivedCount; ++index )
                 {
                     const ReceivedDatagram& datagram = _listReceived[static_cast<size_t>( index )];
-                    handlePacket( time, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
+                    handlePacket( nowSeconds, datagram._from, datagram._buffer.data(), static_cast<int32>( datagram._buffer.size() ) );
                 }
-                updateSlots( time );
+                updateSlots( nowSeconds );
                 takePending( _flushBatch, _listDeliver );
             }
             // 3) 보내기 · 비동기 연결 결과 — 잠금 밖.
@@ -757,7 +757,7 @@ namespace sw
         _updateDepth.fetch_sub( 1, std::memory_order_acq_rel );
     }
 
-    void NetHost::updateSlots( float64 time )
+    void NetHost::updateSlots( float64 nowSeconds )
     {
         for ( size_t index = 0; index < _listSlot.size(); ++index )
         {
@@ -767,13 +767,13 @@ namespace sw
                 case NetConnectionState::Connecting:
                 {
                     if ( slot._connectStartTime < 0.0 )
-                        slot._connectStartTime = time;
-                    if ( time - slot._connectStartTime > _settings._connectTimeout )
+                        slot._connectStartTime = nowSeconds;
+                    if ( nowSeconds - slot._connectStartTime > _settings._connectTimeout )
                     {
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
-                    if ( slot._lastSendTime < 0.0 || time - slot._lastSendTime >= _settings._connectRetryInterval )
+                    if ( slot._lastSendTime < 0.0 || nowSeconds - slot._lastSendTime >= _settings._connectRetryInterval )
                     {
                         // 도전을 받았으면 응답을, 아니면 요청을 되풀이한다.
                         if ( slot._serverSalt != 0 )
@@ -781,32 +781,32 @@ namespace sw
                         else
                             sendControl( slot._address, PacketType::ConnectRequest, slot._clientSalt,
                                          ( static_cast<uint64>( _settings._gameID ) << 32 ) | _protocolID );
-                        slot._lastSendTime = time;
+                        slot._lastSendTime = nowSeconds;
                     }
                     break;
                 }
                 case NetConnectionState::Connected:
                 {
-                    if ( time - slot._lastReceiveTime > _settings._timeout )
+                    if ( nowSeconds - slot._lastReceiveTime > _settings._timeoutSeconds )
                     {
                         closeSlot( static_cast<int32>( index ), NetDisconnectReason::Timeout, false );
                         break;
                     }
                     // 보낼 것이 있으면 `_sendInterval` 마다, 없으면 `_keepAliveInterval` 마다만(유지 · RTT · 상대의 확인용). 대역폭 몫을 다 썼으면
                     // 메시지는 기다리고 확인할 것만 "보낼 것" 이다.
-                    refillSendCredit( time, slot );
+                    refillSendCredit( nowSeconds, slot );
                     const bool    bCanCarry = slot._sendCredit > 0.0;
-                    const bool    bHasData  = bCanCarry ? slot._connection.hasDataToSend( time ) : slot._connection.isAckPending();
-                    const float64 sinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : time - slot._lastSendTime;
+                    const bool    bHasData  = bCanCarry ? slot._connection.hasDataToSend( nowSeconds ) : slot._connection.isAckPending();
+                    const float64 sinceSend = slot._lastSendTime < 0.0 ? 1.0e9 : nowSeconds - slot._lastSendTime;
                     const bool    bDue      = sinceSend >= _settings._sendInterval && ( sinceSend >= _settings._keepAliveInterval || bHasData );
                     if ( bDue == false )
                         break;
-                    sendPayload( time, slot );
+                    sendPayload( nowSeconds, slot );
                     // 몫이 남고 실을 것이 더 있으면 같은 차례에 더 — 큰 신뢰 메시지 · 몰린 스냅샷의 속도는 상한이 정한다.
-                    for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( time );
+                    for ( int32 packetCount = 1; packetCount < kMaxPacketsPerSend && slot._sendCredit > 0.0 && slot._connection.hasDataToSend( nowSeconds );
                           ++packetCount )
                     {
-                        sendPayload( time, slot );
+                        sendPayload( nowSeconds, slot );
                     }
                     break;
                 }
@@ -819,7 +819,7 @@ namespace sw
         }
     }
 
-    void NetHost::handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size )
+    void NetHost::handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size )
     {
         const uint32 headerID = size > NetHostInternal::kHeaderSize ? NetHostInternal::readUint32( pData ) : 0u;
         if ( size <= NetHostInternal::kHeaderSize || ( headerID != _protocolID && headerID != NetProtocol::kHandshakeID ) ||
@@ -839,7 +839,7 @@ namespace sw
         const int32 slotIndex = findSlotByAddress( from );
         if ( isEncrypted() && ( type == PacketType::Payload || type == PacketType::Disconnect ) )
         {
-            handleSealedPacket( time, type, slotIndex, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
+            handleSealedPacket( nowSeconds, type, slotIndex, pData + NetHostInternal::kHeaderSize, size - NetHostInternal::kHeaderSize );
             return;
         }
         if ( type == PacketType::Payload )
@@ -854,7 +854,7 @@ namespace sw
                      token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
                 {
                     sendChallengeResponse( *pSlot );
-                    pSlot->_lastSendTime = time;
+                    pSlot->_lastSendTime = nowSeconds;
                     return;
                 }
                 ++_rejectedPacketCount;
@@ -866,8 +866,8 @@ namespace sw
                 ++_rejectedPacketCount;
                 return;
             }
-            if ( slot._connection.readPacket( time, reader ) )
-                slot._lastReceiveTime = time;
+            if ( slot._connection.readPacket( nowSeconds, reader ) )
+                slot._lastReceiveTime = nowSeconds;
             return;
         }
 
@@ -917,7 +917,7 @@ namespace sw
                     return;
                 }
                 // 자리를 잡지 않는다 — 도전 값만 돌려준다. 그 값은 이 주소로 간 패킷에만 있으므로, 되돌려 준 응답이 와야 주소가 진짜다.
-                sendControl( from, PacketType::Challenge, valueA, makeChallengeToken( from, valueA, computeChallengeWindow( time ) ) );
+                sendControl( from, PacketType::Challenge, valueA, makeChallengeToken( from, valueA, computeChallengeWindow( nowSeconds ) ) );
                 return;
             }
             case PacketType::Challenge:
@@ -929,7 +929,7 @@ namespace sw
                     return;
                 slot._serverSalt = valueB;
                 sendChallengeResponse( slot );
-                slot._lastSendTime = time;
+                slot._lastSendTime = nowSeconds;
                 return;
             }
             case PacketType::ChallengeResponse:
@@ -943,13 +943,13 @@ namespace sw
                     if ( slot._clientSalt == valueA && slot._serverSalt == valueB )
                     {
                         // 확장 바이트(공개 키 · 토큰)는 다시 읽지 않는다 — 기억한 키 확인 태그로 같은 수락을 보낸다.
-                        slot._lastReceiveTime = time;
+                        slot._lastReceiveTime = nowSeconds;
                         sendAccepted( slotIndex );
                     }
                     return;
                 }
                 // 도전 값을 다시 만들어 맞춰 본다 — 이번 칸이나 바로 앞 칸에 만든 것만(5~10 초).
-                const int64 window = computeChallengeWindow( time );
+                const int64 window = computeChallengeWindow( nowSeconds );
                 if ( valueB != makeChallengeToken( from, valueA, window ) && valueB != makeChallengeToken( from, valueA, window - 1 ) )
                 {
                     ++_rejectedPacketCount; // 위조 · 만료된 응답
@@ -972,7 +972,7 @@ namespace sw
                 slot._clientSalt      = valueA;
                 slot._serverSalt      = valueB;
                 slot._state           = NetConnectionState::Connected;
-                slot._lastReceiveTime = time;
+                slot._lastReceiveTime = nowSeconds;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
                 slot._security = std::move( security );
@@ -999,7 +999,7 @@ namespace sw
                 if ( slot._security != nullptr && acceptSecureAccepted( reader, slot, slotIndex, static_cast<uint32>( valueA ) ) == false )
                     return; // 키 확인이 틀렸다 — 그 안에서 닫았다
                 slot._state           = NetConnectionState::Connected;
-                slot._lastReceiveTime = time;
+                slot._lastReceiveTime = nowSeconds;
                 slot._lastSendTime    = -1.0;
                 slot._connection.reset();
                 _clientIndex = static_cast<int32>( valueA );
@@ -1037,7 +1037,7 @@ namespace sw
         }
     }
 
-    void NetHost::handleSealedPacket( float64 time, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
+    void NetHost::handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize )
     {
         // 몸 = [종류 · 0][연결 값 4][패킷 번호 8][AEAD + 태그] — 바이트 정렬이라 BitReader 를 거치지 않는다.
         const uint32 token  = bodySize >= 5 ? NetHostInternal::readUint32( pBody + 1 ) : 0u;
@@ -1051,7 +1051,7 @@ namespace sw
                  token == static_cast<uint32>( pSlot->_clientSalt ^ pSlot->_serverSalt ) )
             {
                 sendChallengeResponse( *pSlot );
-                pSlot->_lastSendTime = time;
+                pSlot->_lastSendTime = nowSeconds;
                 return;
             }
             ++_rejectedPacketCount;
@@ -1066,8 +1066,8 @@ namespace sw
             return;
         }
         BitReader plainReader( _listOpenScratch.data(), static_cast<int32>( _listOpenScratch.size() ) );
-        if ( pSlot->_connection.readPacket( time, plainReader ) )
-            pSlot->_lastReceiveTime = time;
+        if ( pSlot->_connection.readPacket( nowSeconds, plainReader ) )
+            pSlot->_lastReceiveTime = nowSeconds;
     }
 
     void NetHost::closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote )

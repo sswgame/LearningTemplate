@@ -139,13 +139,13 @@ namespace sw
                 listTarget.push_back( pMesh );
         }
 
-        _meshMorphPool.build( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
+        _meshMorphPool.rebuild( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
         _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
 
         // 배치에 구간을 적어 둔다. upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
         _gpuScene.assignMorphBases( _meshMorphPool );
-        _vertexAnimationPool.build( _pDevice, _listScratchVertexAnimationMesh );
+        _vertexAnimationPool.rebuild( _pDevice, _listScratchVertexAnimationMesh );
         _gpuScene.assignVertexAnimationBases( _vertexAnimationPool );
         SW_PROFILE_COUNT( "RT.Skin.instances", _meshMorphPool.getSkinInstanceCount() );
         SW_PROFILE_COUNT( "RT.Skin.vertices", _meshMorphPool.getSkinVertexCount() );

@@ -77,7 +77,7 @@ namespace sw
         /** @brief 원본 유닛입니다(없으면 nullptr). */
         SkeletalMeshComponent* findSource() const;
         /** @brief 기본 포즈 단계입니다(워커). */
-        void buildBasePose( SkeletalMeshComponent& unit );
+        void populateBasePose( SkeletalMeshComponent& unit );
 
         PROPERTY( Category = "Retarget", DisplayName = "Profile", AssetPath, AssetType = "RetargetProfile", Tooltip = "Retarget profile (*.retarget.json)" )
         string _profilePath;

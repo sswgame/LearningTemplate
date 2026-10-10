@@ -53,9 +53,9 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( IXMLBackend& backend, const SerializeContext& ctx )
+                ContainerWriter( IXMLBackend& backend, const SerializeContext& context )
                     : _backend{ backend }
-                    , _ctx{ ctx }
+                    , _context{ context }
                 {
                 }
 
@@ -67,7 +67,7 @@ namespace sw
                 void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
-                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _ctx );
+                    SerializerUtil::valueToText( keyText, pKey, keyTypeName, _context );
                     _backend.beginMap( kXMLEntryTag );
                     _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
@@ -93,31 +93,31 @@ namespace sw
                         return;
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
                     SerializeContext::OpaqueElementView opaque{};
-                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::XML )
+                    if ( _context.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::XML )
                     {
                         _backend.writeRawElement( opaque._text );
                         return;
                     }
                     // 다형 원소만 태그 이름이 곧 런타임 타입 정보다.
-                    const TypeInfo* pRuntimeType = _ctx.getRuntimeTypeInfo( pObject );
+                    const TypeInfo* pRuntimeType = _context.getRuntimeTypeInfo( pObject );
                     if ( pRuntimeType == nullptr )
                         return;
                     _backend.beginMap( pRuntimeType->_name.c_str() );
-                    writeXMLProperties( pObject, *pRuntimeType, _backend, _ctx );
+                    writeXMLProperties( pObject, *pRuntimeType, _backend, _context );
                     _backend.endMap();
                 }
 
                 void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
                     _backend.beginMap( typeInfo._name.c_str() );
-                    writeXMLProperties( pValue, typeInfo, _backend, _ctx );
+                    writeXMLProperties( pValue, typeInfo, _backend, _context );
                     _backend.endMap();
                 }
 
                 void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
-                    SerializerUtil::valueToText( text, pValue, typeName, _ctx );
+                    SerializerUtil::valueToText( text, pValue, typeName, _context );
                     if ( slot == ContainerSlot::SequenceElement )
                         _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
@@ -126,16 +126,16 @@ namespace sw
 
             private:
                 IXMLBackend&            _backend;
-                const SerializeContext& _ctx;
+                const SerializeContext& _context;
             };
 
             /** @brief 지금 노드 "안의" 컨테이너를 읽습니다 — 자식 태그 이름에 기대지 않고 차례로 훑습니다(다형 원소만 이름 = 타입). */
             class ContainerReader final : public IContainerReader
             {
             public:
-                ContainerReader( IXMLBackend& backend, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+                ContainerReader( IXMLBackend& backend, const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
                     : _backend{ backend }
-                    , _ctx{ ctx }
+                    , _context{ context }
                     , _pOutListOrphan{ pOutListOrphan }
                     , _propForOrphan{ propForOrphan }
                     , _currentTagName{}
@@ -182,7 +182,7 @@ namespace sw
                     // 태그 이름이 런타임 타입이다. 파일의 이름을 전역 이름 표에 넣지 않는다(`findInterned`).
                     const hashed_string typeName = hashed_string::findInterned( _currentTagName );
                     const TypeInfo*     pType    = typeName.empty() ? nullptr : engine::getTypeRegistry().findType( typeName );
-                    void*               pObject  = ( pType != nullptr ) ? _ctx.createOwnedPointer( typeName ) : nullptr;
+                    void*               pObject  = ( pType != nullptr ) ? _context.createOwnedPointer( typeName ) : nullptr;
                     if ( pObject == nullptr )
                     {
                         // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
@@ -193,22 +193,22 @@ namespace sw
                             opaque._typeName = _currentTagName;
                             opaque._format   = SerializeContext::OpaqueFormat::XML;
                             opaque._text     = rawXML;
-                            (void)_ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
+                            (void)_context.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                         }
                         return ContainerReadResult::Read;
                     }
                     // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다.
-                    return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _ctx, _pOutListOrphan ) );
+                    return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _context, _pOutListOrphan ) );
                 }
 
                 ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
                     if ( slot == ContainerSlot::SequenceElement )
-                        return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan ) );
+                        return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan ) );
                     // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
                     if ( _backend.pushFirstChild() == false )
                         return ContainerReadResult::Read;
-                    const bool bRead = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan );
+                    const bool bRead = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _context, _pOutListOrphan );
                     _backend.popChild();
                     return toResult( bRead );
                 }
@@ -236,21 +236,21 @@ namespace sw
                 /** @brief 글 하나를 값으로 읽습니다. 못 읽으면 그 글을 orphan 으로 남기고 FieldFailed 입니다(조용히 버리지 않는다). */
                 ContainerReadResult readText( void* pValue, const hashed_string& typeName, const string& text ) const
                 {
-                    if ( parseTextValueCoerced( pValue, typeName, text, _ctx ) )
+                    if ( parseTextValueCoerced( pValue, typeName, text, _context ) )
                         return ContainerReadResult::Read;
                     recordDroppedText( _pOutListOrphan, _propForOrphan, text );
                     return ContainerReadResult::FieldFailed;
                 }
 
                 IXMLBackend&               _backend;
-                const SerializeContext&    _ctx;
+                const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
                 const PropertyInfo&        _propForOrphan;
                 string_view                _currentTagName;
             };
 
             static void writeXMLProperties( const void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend,
-                                            const SerializeContext& ctx )
+                                            const SerializeContext& context )
             {
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
                 {
@@ -270,23 +270,23 @@ namespace sw
                     {
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
                         backend.beginMap( prop._name.c_str() );
-                        ContainerWriter writer( backend, ctx );
-                        ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, ctx );
+                        ContainerWriter writer( backend, context );
+                        ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, context );
                         backend.endMap();
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, ctx );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
-                            writeXMLProperties( pPropPtr, *pNestedType, backend, ctx );
+                            writeXMLProperties( pPropPtr, *pNestedType, backend, context );
                             backend.endMap();
                         }
                         else
                         {
                             StringBuilder<constant::kMaxBuffer8192> ss;
-                            SerializerUtil::valueToText( ss, pPropPtr, prop._typeName, ctx );
+                            SerializerUtil::valueToText( ss, pPropPtr, prop._typeName, context );
 
                             // 기본은 "모두 쓴다" 이다. 그래야 파일에 없음과 명시적으로 비어 있음이
                             // 구분된다. 생략해도 좋다고 **스키마가 선언한** 필드만 비었을 때 뺀다.
@@ -321,16 +321,16 @@ namespace sw
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
              *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
              */
-            [[nodiscard]] static bool readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& ctx,
+            [[nodiscard]] static bool readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
                                                                  vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                const bool bRead = readXMLIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan );
+                const bool bRead = readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
                     appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
                 return bRead;
             }
 
-            [[nodiscard]] static bool readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& ctx,
+            [[nodiscard]] static bool readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& context,
                                                            vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 bool bFieldError{ false };
@@ -350,17 +350,17 @@ namespace sw
                         } );
                         if ( entered )
                         {
-                            ContainerReader reader( backend, ctx, pOutListOrphan, prop );
-                            if ( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, ctx ) != ContainerReadResult::Read )
+                            ContainerReader reader( backend, context, pOutListOrphan, prop );
+                            if ( ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, context ) != ContainerReadResult::Read )
                                 bFieldError = true;
                             backend.popChild();
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
+                            SerializerUtil::applyPropertyDefault( prop, pInstance, context );
                     }
                     else
                     {
-                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, ctx );
+                        const TypeInfo* pNestedType = SerializerUtil::findNestedObjectType( prop._typeName, context );
                         if ( pNestedType != nullptr )
                         {
                             const bool entered = tryNameOrAlias( prop, [&]( const utf8* pName )
@@ -369,12 +369,12 @@ namespace sw
                             } );
                             if ( entered )
                             {
-                                if ( readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
+                                if ( readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, context, pOutListOrphan ) == false )
                                     bFieldError = true;
                                 backend.popChild();
                             }
                             else
-                                SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
+                                SerializerUtil::applyPropertyDefault( prop, pInstance, context );
                             return;
                         }
 
@@ -389,20 +389,20 @@ namespace sw
                             // 비트필드는 그 비트만 쓴다. 불리언이 아닌 글("ture")은 false 로 삼키지 않고 실패로 남긴다.
                             if ( prop._bIsBitField == SW_TRUE )
                             {
-                                if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, ctx ) == false )
+                                if ( SerializerUtil::applyPropertyText( prop, pInstance, strValue, context ) == false )
                                 {
                                     bFieldError = true;
                                     recordDroppedText( pOutListOrphan, prop, strValue );
                                 }
                             }
-                            else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, ctx ) == false )
+                            else if ( parseTextValueCoerced( pPropPtr, prop._typeName, strValue, context ) == false )
                             {
                                 bFieldError = true;
                                 recordDroppedText( pOutListOrphan, prop, strValue );
                             }
                         }
                         else
-                            SerializerUtil::applyPropertyDefault( prop, pInstance, ctx );
+                            SerializerUtil::applyPropertyDefault( prop, pInstance, context );
                     }
                 }, true /* 상속 PROPERTY 포함 */ );
 
@@ -471,7 +471,7 @@ namespace sw
             }
 
             [[nodiscard]] static bool tryAppendUnknownXMLChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
-                                                                       const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
+                                                                       const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 if ( xmlStr.empty() || pOutListOrphan == nullptr )
                     return false;
@@ -480,7 +480,7 @@ namespace sw
                 if ( doc.parse( xmlStr ) == false )
                     return false;
 
-                const bool bIgnore = ctx.ignoresCaseKeys();
+                const bool bIgnore = context.ignoresCaseKeys();
                 XMLNode    root    = doc.getRoot( typeInfo._name.c_str(), bIgnore );
                 if ( root.isValid() == false )
                     root = doc.getRoot( nullptr, bIgnore );
@@ -738,76 +738,76 @@ namespace sw
     }
 
     string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
-                                     IXMLBackend& backend, const SerializeContext& ctx )
+                                     IXMLBackend& backend, const SerializeContext& context )
     {
         backend.initializeXMLSerialization( typeInfo._name.c_str() );
-        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, ctx );
+        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, context );
         return backend.endSerialize();
     }
 
     bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo,
                                      IXMLBackend& backend, string_view xmlStr,
-                                     const SerializeContext& ctx )
+                                     const SerializeContext& context )
     {
         if ( xmlStr.empty() )
             return false;
 
-        backend.setIgnoreCaseKeys( ctx.ignoresCaseKeys() );
+        backend.setIgnoreCaseKeys( context.ignoresCaseKeys() );
 
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, nullptr ) == false )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
-        if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, ctx, &listOrphan ) && listOrphan.empty() == false )
+        if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, context, &listOrphan ) && listOrphan.empty() == false )
             return false;
         return true;
     }
 
-    string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         XMLDocumentBackend backend;
-        return serialize( pInstance, typeInfo, backend, ctx );
+        return serialize( pInstance, typeInfo, backend, context );
     }
 
-    bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& ctx )
+    bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& context )
     {
         if ( xmlStr.empty() )
             return false;
         vector<SchemaOrphanValue> listOrphan;
-        if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, ctx ) == false )
+        if ( deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == false )
             return false;
         return listOrphan.empty();
     }
 
     bool XMLSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
-                                  const SerializeContext& ctx )
+                                  const SerializeContext& context )
     {
         if ( absPath.empty() )
             return false;
-        return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, ctx ) );
+        return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, context ) );
     }
 
-    bool XMLSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool XMLSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         string text;
         if ( ResourceUtil::readTextResource( path, text ) == false && FileUtil::readTextFile( path, text ) == false )
             return false;
-        return deserialize( pInstance, typeInfo, text, ctx );
+        return deserialize( pInstance, typeInfo, text, context );
     }
 
     bool XMLSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                          vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
-                                         const SerializeContext& ctx )
+                                         const SerializeContext& context )
     {
         if ( xmlStr.empty() )
             return false;
 
         // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
         // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
-        const bool         bIgnore = ctx.ignoresCaseKeys();
+        const bool         bIgnore = context.ignoresCaseKeys();
         XMLDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
@@ -830,7 +830,7 @@ namespace sw
             }
         }
 
-        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, context, pOutListOrphan ) == false )
             return false;
 
         if ( pOutListOrphan != nullptr )
@@ -840,35 +840,35 @@ namespace sw
     }
 
     string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
-                                              const SerializeContext& ctx )
+                                              const SerializeContext& context )
     {
         XMLDocumentBackend backend;
         backend.initializeXMLSerialization( typeInfo._name.c_str() );
-        serializeVersionedInto( backend, version, pInstance, typeInfo, ctx );
+        serializeVersionedInto( backend, version, pInstance, typeInfo, context );
         return backend.endSerialize();
     }
 
     void XMLSerializer::serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance,
-                                                const TypeInfo& typeInfo, const SerializeContext& ctx )
+                                                const TypeInfo& typeInfo, const SerializeContext& context )
     {
         const string verStr = to_string( version );
         backend.writeAttribute( kSchemaVersionKey, verStr.c_str() );
-        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, ctx );
+        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, context );
     }
 
     bool XMLSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
                                               string_view xmlStr, uint32 currentVersion, SchemaMigrateFn migrate,
-                                              const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
+                                              const TypeInfo* pLegacyTypeInfo, const SerializeContext& context )
     {
         // 절차는 JSON · XML · Binary 가 공통이다(`runVersionedDeserialize`). 여기서 정하는 것은 두 가지뿐이다.
         // **버전이 어디서 오는가**(본문 안의 `_schemaVersion`)와 **orphan 만 있을 때의 정책**이다.
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,
+            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, context,
             SchemaVersionSource::Payload, SchemaOrphanPolicy::Ignore,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& outSoftVersion ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, xmlStr, &listOrphan, &outSoftVersion, ctx );
+            return deserializeSoft( pTarget, targetType, xmlStr, &listOrphan, &outSoftVersion, context );
         } ) );
     }
 

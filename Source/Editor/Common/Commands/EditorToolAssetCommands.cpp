@@ -261,7 +261,7 @@ namespace sw::editor
     {
         if ( pInstance == nullptr || pCdo == nullptr )
             return;
-        const SerializeContext& ctx = SerializeContext::getDefault();
+        const SerializeContext& context = SerializeContext::getDefault();
         for ( Component* pInstanceComponent : pInstance->getComponents() )
         {
             if ( pInstanceComponent == nullptr || pInstanceComponent->getTypeInfo() == nullptr )
@@ -281,9 +281,9 @@ namespace sw::editor
                 item._componentName   = pTypeInfo->_name.c_str();
                 item._componentKey    = key;
                 item._propertyName    = prop._name.c_str();
-                item._defaultValue    = SerializerUtil::formatPropertyText( prop, pCdoComp, ctx );
-                item._overriddenValue = SerializerUtil::formatPropertyText( prop, pInstanceComponent, ctx );
-                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, ctx ) == false );
+                item._defaultValue    = SerializerUtil::formatPropertyText( prop, pCdoComp, context );
+                item._overriddenValue = SerializerUtil::formatPropertyText( prop, pInstanceComponent, context );
+                item._bModified       = ( SerializerUtil::arePropertyValuesEqual( prop, pCdoComp, pInstanceComponent, context ) == false );
                 outListOverride.push_back( std::move( item ) );
             },
                 true );

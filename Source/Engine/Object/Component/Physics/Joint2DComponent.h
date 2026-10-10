@@ -69,8 +69,8 @@ namespace sw
         float32 _motorMaxForce;
         PROPERTY( Category = "Joint", Tooltip = "Hinge / slider / distance limits are applied" )
         bool _bLimitsEnabled;
-        PROPERTY( Category = "Joint", Tooltip = "The two connected bodies do not collide with each other" )
-        bool _bDisableCollision;
+        PROPERTY( Category = "Joint", Tooltip = "The two connected bodies collide with each other" )
+        bool _bCollideConnectedBodies;
         PROPERTY( Category = "Joint", Tooltip = "Connect to the world instead of the parent's body" )
         bool _bConnectToWorld;
 

@@ -44,10 +44,10 @@ SW_TEST_CASE( EditorViewportMathTest, ViewportProjectionMatrixAspectScaling )
     float32 farZ  = 1000.0f;
 
     float32  aspectWide = 16.0f / 9.0f;
-    float4x4 projWide   = float4x4::createPerspectiveFieldOfView( fovY, aspectWide, nearZ, farZ );
+    float4x4 projWide   = float4x4::makePerspectiveFieldOfView( fovY, aspectWide, nearZ, farZ );
 
     float32  aspectSquare = 1.0f;
-    float4x4 projSquare   = float4x4::createPerspectiveFieldOfView( fovY, aspectSquare, nearZ, farZ );
+    float4x4 projSquare   = float4x4::makePerspectiveFieldOfView( fovY, aspectSquare, nearZ, farZ );
 
     // 와이드 종횡비의 X 스케일(_11)은 정사각형 대비 작아야 함 (스케일 = 1 / (aspect * tan(fov/2)))
     SW_EXPECT_TRUE( projWide._11 < projSquare._11 );

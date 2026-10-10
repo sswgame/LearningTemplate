@@ -53,7 +53,7 @@ namespace sw
          * @brief @p nested 의 원소를 @p slot 자리에 둘 때의 계획을 만듭니다. 판정 순서는 중첩 → 소유 포인터 → 값 구조체 → 스칼라입니다.
          * @details 맵 값은 소유 포인터가 되지 않습니다 — 세 형식 모두 맵 값의 다형을 싣지 않고, 그 이름은 스칼라 길로 흐릅니다.
          */
-        static ContainerElementPlan make( const NestedContainerInfo& nested, ContainerSlot slot, const SerializeContext& ctx );
+        static ContainerElementPlan make( const NestedContainerInfo& nested, ContainerSlot slot, const SerializeContext& context );
     };
 } // namespace sw
 
@@ -144,14 +144,14 @@ namespace sw
     struct SW_API ContainerVisitor
     {
         /** @brief @p pContainer 를 @p writer 의 형식으로 적습니다. 컨테이너나 래퍼가 없으면 아무것도 적지 않습니다. */
-        static void write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& ctx );
+        static void write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context );
 
         /**
          * @brief @p reader 의 지금 자리에서 컨테이너를 읽어 @p pContainer 를 채웁니다.
          * @details 소유 포인터 원소의 컨테이너는 비우지 않습니다 — 원소를 넣는 것은 팩토리(소유자)이고, 비우면 팩토리가 방금 붙인 것까지 날아갑니다.
          *          그 밖의 컨테이너는 모양을 확인한 뒤 비우고 채웁니다. 원소를 넣는 방법은 컨테이너가 정합니다(`appendElement`).
          */
-        [[nodiscard]] static ContainerReadResult read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& ctx );
+        [[nodiscard]] static ContainerReadResult read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context );
 
         /** @brief 두 결과 중 나쁜 쪽입니다(StreamBroken > FieldFailed > Read). */
         static ContainerReadResult mergeResult( ContainerReadResult lhs, ContainerReadResult rhs ) noexcept;

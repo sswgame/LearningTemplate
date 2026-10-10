@@ -53,7 +53,7 @@ namespace sw
         uint32              _gameID{ NetProtocol::kDefaultGameID }; ///< 게임마다 다르게 — 다르면 연결을 Rejected 로 거절한다
         uint32              _wireVersion{ 0 };                      ///< 게임 · 키트 층의 판(`NetWireVersion::combine`) — 다르면 VersionMismatch. Core 판은 저절로 섞인다
         uint64              _saltSeed{ 0 };                         ///< 도전 값 씨앗 — 0 이면 운영체제 난수(위조 연결을 막는다). 시험은 고정해도 된다
-        float64             _timeout{ 5.0 };
+        float64             _timeoutSeconds{ 5.0 };
         float64             _connectTimeout{ 5.0 };
         float64             _connectRetryInterval{ 0.2 };
         float64             _sendInterval{ 1.0 / 30.0 }; ///< 연결마다 패킷을 보내는 가장 짧은 간격
@@ -130,7 +130,7 @@ namespace sw
      * @code
      *     host.initialize( &transport, settings );
      *     (void)host.listen();
-     *     host.update( time );                                    // 또는 netThread.start( &host ) — 그러면 update 를 부르지 않는다
+     *     host.update( nowSeconds );                                    // 또는 netThread.start( &host ) — 그러면 update 를 부르지 않는다
      *     while ( host.receiveMessage( connectionID, channel, buffer ) ) { ... }
      *
      *     TaskFuture<NetConnectResult> future = client.connectAsync( serverAddress );
@@ -164,7 +164,7 @@ namespace sw
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress );
         TaskFuture<NetConnectResult> connectAsync( const NetAddress& serverAddress, const NetConnectCredentials& credentials );
         /** @brief 받기(잠금 밖) → 처리 · 타임아웃 · 보낼 패킷 만들기(잠금 안) → 보내기(잠금 밖)입니다. 한 번에 한 스레드만 부른다. */
-        void update( float64 time );
+        void update( float64 nowSeconds );
         /** @brief 받을 데이터그램이 생기거나 @p timeoutSeconds 가 지날 때까지 잠듭니다(`update` 를 도는 스레드가 부른다). */
         bool waitForReceive( float64 timeoutSeconds );
 
@@ -299,8 +299,8 @@ namespace sw
         };
 
         // 아래는 모두 잠금을 잡은 채로 부른다.
-        void handlePacket( float64 time, const NetAddress& from, const uint8* pData, int32 size );
-        void updateSlots( float64 time );
+        void handlePacket( float64 nowSeconds, const NetAddress& from, const uint8* pData, int32 size );
+        void updateSlots( float64 nowSeconds );
         void sendControl( const NetAddress& to, PacketType type, uint64 valueA, uint64 valueB );
         /** @brief 연결 요청을 거절합니다 — 이유와 이 호스트의 프로토콜 id, 요청의 클라이언트 소금(위조 거절을 거르는 값)을 싣는다. */
         void sendDenied( const NetAddress& to, NetDisconnectReason reason, uint64 clientSalt );
@@ -317,16 +317,16 @@ namespace sw
         /** @brief 암호화된 데이터 · 끊기 몸(머리 8 바이트 뒤)을 엽니다 — 재전송 창 · 태그 검사. 연 평문은 `_listOpenScratch` 입니다. */
         [[nodiscard]] bool openSealed( Slot& slot, const uint8* pBody, int32 bodySize );
         /** @brief 암호화 방식의 데이터 · 끊기 패킷(머리 8 바이트 뒤 몸)을 처리합니다. */
-        void handleSealedPacket( float64 time, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize );
+        void handleSealedPacket( float64 nowSeconds, PacketType type, int32 slotIndex, const uint8* pBody, int32 bodySize );
         /** @brief 이 호스트의 기능 마스크(`NetProtocolFeature`)입니다 — 역할 · 자격이 정해진 뒤(listen · connect) 프로토콜 id 에 섞는다. */
         uint32 computeFeatureMask() const;
         bool   isEncrypted() const { return _settings._security._mode == NetSecurityMode::Encrypted; }
         /** @brief `_packetWriter` 의 몸에 헤더(머리 값 · 체크섬)를 붙여 보낼 묶음에 넣습니다. */
         void sendFramed( const NetAddress& to, uint32 headerID );
         /** @brief 패킷 하나를 씁니다 — 몫이 남았으면 메시지까지, 다 썼으면 머리(확인)만. 몫에서 보낸 바이트를 뺀다. */
-        void sendPayload( float64 time, Slot& slot );
+        void sendPayload( float64 nowSeconds, Slot& slot );
         /** @brief 지난 채움 뒤 흐른 시간만큼 대역폭 몫을 채웁니다(상한 — 보내기 간격 두 번어치, 최소 패킷 하나). */
-        void                         refillSendCredit( float64 time, Slot& slot ) const;
+        void                         refillSendCredit( float64 nowSeconds, Slot& slot ) const;
         void                         closeSlot( int32 slotIndex, NetDisconnectReason reason, bool bNotifyRemote );
         bool                         startConnect( const NetAddress& serverAddress );
         bool                         connectLocked( const NetAddress& serverAddress, const NetConnectCredentials* pCredentials );
@@ -347,7 +347,7 @@ namespace sw
         uint64 nextSalt();
         /** @brief 상태 없는 도전 값 — 비밀 키 · 주소 · 클라이언트 소금 · 시간 칸을 섞는다. 0 이 아니다. */
         uint64       makeChallengeToken( const NetAddress& address, uint64 clientSalt, int64 window ) const;
-        static int64 computeChallengeWindow( float64 time );
+        static int64 computeChallengeWindow( float64 nowSeconds );
         bool         isValidSlot( int32 slotIndex ) const { return slotIndex >= 0 && slotIndex < static_cast<int32>( _listSlot.size() ); }
 
         mutable mutex                 _mutex; ///< 아래 상태 모두(잠금 밖 전용이라고 적은 것은 빼고)

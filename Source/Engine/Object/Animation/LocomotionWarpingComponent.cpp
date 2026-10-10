@@ -171,10 +171,10 @@ namespace sw
             const int32      parentIndex = skeleton.getBone( static_cast<uint32>( boneIndex ) )._parentIndex;
             const float4x4   parentModel = parentIndex >= 0 ? listModel[static_cast<size_t>( parentIndex )] : float4x4::Identity;
             const float3     axis        = float3::transformVector( characterUp, parentModel.invert() ).normalize();
-            const quaternion turn        = quaternion::createFromAxisAngle( axis, _orientationAngle * entry._weight );
+            const quaternion turn        = quaternion::makeFromAxisAngle( axis, _orientationAngle * entry._weight );
             BoneTransform    local       = pose.getBoneTransform( static_cast<uint32>( boneIndex ) );
-            float4x4         rotation    = float4x4::createTrs( float3{}, local._rotation, float3{ 1.0f, 1.0f, 1.0f } ) *
-                                float4x4::createTrs( float3{}, turn, float3{ 1.0f, 1.0f, 1.0f } );
+            float4x4         rotation    = float4x4::makeTrs( float3{}, local._rotation, float3{ 1.0f, 1.0f, 1.0f } ) *
+                                float4x4::makeTrs( float3{}, turn, float3{ 1.0f, 1.0f, 1.0f } );
             float3     scale{};
             quaternion turned{};
             float3     translation{};

@@ -112,7 +112,7 @@ SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapU
 
     // 빌더가 그 칸을 GPU 인스턴스로 옮긴다.
     sw::GPUSceneBuilder builder;
-    builder.buildFromScene( &scene, pCamera->getCameraPosition() );
+    builder.populateFromScene( &scene, pCamera->getCameraPosition() );
     bool bAllSnapped = builder.getInstances().empty() == false;
     for ( const sw::GPUInstance& instance : builder.getInstances() )
     {

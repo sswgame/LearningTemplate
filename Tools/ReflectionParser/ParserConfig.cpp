@@ -541,7 +541,7 @@ namespace sw
         return true;
     }
 
-    vector<string> ParserConfig::buildArgs( const vector<string>& listIncludePath ) const
+    vector<string> ParserConfig::makeArgs( const vector<string>& listIncludePath ) const
     {
         vector<string> listArg = _listBaseArg;
         listArg.reserve( listArg.size() + listIncludePath.size() + _listForceInclude.size() * 2 );

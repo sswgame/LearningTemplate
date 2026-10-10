@@ -84,7 +84,7 @@ namespace sw
      * @brief 리포트 파일 경로 `<폴더>/crash_<세션ID>.<확장자>` 를 만듭니다.
      * @details **할당하지 않습니다.** 크래시 시점에 힙을 건드리지 않도록 호출하는 쪽의 버퍼에 씁니다.
      */
-    SW_API void buildCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension );
+    SW_API void makeCrashReportPath( utf8* pOutPath, uint32 outSize, const utf8* pExtension );
 
     /**
      * @brief 크래시 컨텍스트(백엔드 · GPU · 빌드 등 미리 등록해 둔 값)를 텍스트로 씁니다.

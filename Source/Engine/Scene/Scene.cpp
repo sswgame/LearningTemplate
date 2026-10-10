@@ -70,7 +70,7 @@ namespace sw
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
-                engine::getAssetManager().getMaterialManager().initializePending( pRHIDevice );
+                engine::getAssetManager().getMaterialCache().initializePending( pRHIDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -152,7 +152,7 @@ namespace sw
             {
                 releaseDefaultMaterial();
                 _defaultMaterialPath = materialPath;
-                _pMaterial           = engine::getAssetManager().getMaterialManager().acquire( materialPath, pRHIDevice );
+                _pMaterial           = engine::getAssetManager().getMaterialCache().acquire( materialPath, pRHIDevice );
                 if ( _pMaterial == nullptr )
                 {
                     SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
@@ -468,7 +468,7 @@ namespace sw
     void Scene::releaseDefaultMaterial()
     {
         if ( _defaultMaterialPath.empty() == false )
-            engine::getAssetManager().getMaterialManager().release( _defaultMaterialPath );
+            engine::getAssetManager().getMaterialCache().release( _defaultMaterialPath );
         _pMaterial = nullptr;
         _defaultMaterialPath.clear();
     }

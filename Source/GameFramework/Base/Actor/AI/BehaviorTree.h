@@ -181,7 +181,7 @@ namespace sw
         /** @brief 도는 노드와 그 아래를 중단합니다 — 작업은 `_bAborted` 로 한 번 불린다. */
         void abortNode( int32 index );
         /** @brief 우선순위가 높은 가지의 조건이 거짓 → 참이 됐으면 true 입니다(관찰 중단 LowerPriority). */
-        bool hasHigherPriorityTrigger();
+        bool pollHigherPriorityTrigger();
 
         const BehaviorTree* _pTree;
         BehaviorContext     _context;

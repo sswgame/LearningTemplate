@@ -18,7 +18,7 @@ namespace sw
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
     }
 
-    bool GPUMeshVertexPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    bool GPUMeshVertexPool::rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;

@@ -32,8 +32,8 @@ namespace
         /** @brief 원점에서 +Z 를 보는 시야각 90° · 비율 1 의 뷰입니다(투영 y 배율 = 1). */
         static AnimationLODView makeForwardView( const float3& eye, const float3& target )
         {
-            const float4x4 view       = float4x4::createLookAt( eye, target, float3{ 0.0f, 1.0f, 0.0f } );
-            const float4x4 projection = float4x4::createPerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 1000.0f );
+            const float4x4 view       = float4x4::makeLookAt( eye, target, float3{ 0.0f, 1.0f, 0.0f } );
+            const float4x4 projection = float4x4::makePerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 1000.0f );
             return AnimationLODView::make( view * projection, eye );
         }
 
@@ -58,7 +58,7 @@ namespace
                     return;
                 ++_poseCallCount;
                 BoneTransform root = unit.getLocalPose().getBoneTransform( 0 );
-                root._rotation     = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _step * static_cast<float32>( _poseCallCount ) );
+                root._rotation     = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _step * static_cast<float32>( _poseCallCount ) );
                 unit.getLocalPose().setBoneTransform( 0, root );
             }
 
@@ -111,8 +111,8 @@ SW_TEST_CASE( AnimationLODTest, ScreenSizeFromViewProjection )
     SW_EXPECT_NEAR_EQUAL( 0.0f, AnimationLODUtil::computeScreenSize( view, float3{ 50.0f, 0.0f, 10.0f }, 1.0f ), 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, AnimationLODUtil::computeScreenSize( view, float3{ 0.0f, 0.0f, 0.5f }, 1.0f ), 1e-6f );
 
-    const float4x4         lookAt = float4x4::createLookAt( float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, float3{ 0.0f, 1.0f, 0.0f } );
-    const AnimationLODView ortho  = AnimationLODView::make( lookAt * float4x4::createOrthographic( 10.0f, 10.0f, 0.1f, 1000.0f ), float3{} );
+    const float4x4         lookAt = float4x4::makeLookAt( float3{ 0.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f }, float3{ 0.0f, 1.0f, 0.0f } );
+    const AnimationLODView ortho  = AnimationLODView::make( lookAt * float4x4::makeOrthographic( 10.0f, 10.0f, 0.1f, 1000.0f ), float3{} );
     SW_EXPECT_NEAR_EQUAL( 0.2f, AnimationLODUtil::computeScreenSize( ortho, float3{ 0.0f, 0.0f, 10.0f }, 1.0f ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.2f, AnimationLODUtil::computeScreenSize( ortho, float3{ 0.0f, 0.0f, 300.0f }, 1.0f ), 1e-3f );
 }
@@ -193,7 +193,7 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
                                                        { "max_screen_size": 0.05, "remove": [ "bone2" ] } ] })",
                                        "test" ) );
     vector<vector<uint8>> listMask;
-    SW_ASSERT_TRUE( boneLOD.buildMasks( skeleton, listMask, "test" ) );
+    SW_ASSERT_TRUE( boneLOD.computeMasks( skeleton, listMask, "test" ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listMask.size() ) );
     const uint8 arrLevel1[4] = { 1, 1, 1, 0 };
     const uint8 arrLevel2[4] = { 1, 1, 0, 0 };
@@ -217,13 +217,13 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
     // 자손까지 — bone1 을 빼면 bone2 · bone3 도 빠진다.
     SkeletonBoneLOD parentOnly;
     SW_ASSERT_TRUE( parentOnly.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "bone1" ] } ] })", "test" ) );
-    SW_ASSERT_TRUE( parentOnly.buildMasks( skeleton, listMask, "test" ) );
+    SW_ASSERT_TRUE( parentOnly.computeMasks( skeleton, listMask, "test" ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listMask[0][3] ) );
 
     test::ScopedDefensiveTestLog expected( "bone LOD tables naming unknown bones or out of order are rejected" );
     SkeletonBoneLOD              unknownBone;
     SW_ASSERT_TRUE( unknownBone.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "nope" ] } ] })", "test" ) );
-    SW_EXPECT_FALSE( unknownBone.buildMasks( skeleton, listMask, "test" ) );
+    SW_EXPECT_FALSE( unknownBone.computeMasks( skeleton, listMask, "test" ) );
     SkeletonBoneLOD badOrder;
     SW_EXPECT_FALSE( badOrder.parseJSON( R"({ "levels": [ { "max_screen_size": 0.05, "remove": [ "bone3" ] },
                                                          { "max_screen_size": 0.2, "remove": [ "bone2" ] } ] })",
@@ -239,7 +239,7 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
     // bone3 의 레퍼런스는 X 축 0.3 라디안이다 — 빠진 본이 "단위" 가 아니라 "레퍼런스" 로 남는지 가른다.
     Skeleton         skeleton;
-    const quaternion referenceTilt = quaternion::createFromAxisAngle( float3{ 1.0f, 0.0f, 0.0f }, 0.3f );
+    const quaternion referenceTilt = quaternion::makeFromAxisAngle( float3{ 1.0f, 0.0f, 0.0f }, 0.3f );
     for ( uint32 boneIndex = 0; boneIndex < 4; ++boneIndex )
     {
         const string name = string( "bone" ) + to_string( boneIndex ).c_str();

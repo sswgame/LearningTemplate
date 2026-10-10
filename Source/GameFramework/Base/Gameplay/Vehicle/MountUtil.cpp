@@ -133,7 +133,7 @@ namespace sw
             return MountResult::NotPossessed;
 
         // 소켓 변환 — 탈것 외형의 소켓, 이름이 비면 좌석 오프셋(탈것 루트 기준).
-        float4x4 socketInVehicle = float4x4::createTranslation( seat.getSeatOffset() );
+        float4x4 socketInVehicle = float4x4::makeTranslation( seat.getSeatOffset() );
         if ( seat.getSocketName().empty() == false )
         {
             const CharacterAppearanceComponent* pAppearance = pVehicle->getComponent<CharacterAppearanceComponent>();

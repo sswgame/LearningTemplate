@@ -23,8 +23,8 @@ namespace sw
         quaternion _rotation{};
         float3     _scale{ 1.0f, 1.0f, 1.0f };
 
-        /** @brief 행렬로 합성합니다(`float4x4::createTrs`). */
-        float4x4 toMatrix() const { return float4x4::createTrs( _translation, _rotation, _scale ); }
+        /** @brief 행렬로 합성합니다(`float4x4::makeTrs`). */
+        float4x4 toMatrix() const { return float4x4::makeTrs( _translation, _rotation, _scale ); }
         /** @brief 행렬을 분해합니다. 스케일이 0 인 축이 있으면 회전은 단위입니다. */
         static BoneTransform makeFromMatrix( const float4x4& matrix );
         /** @brief 두 변환을 섞습니다 — 이동 · 스케일은 선형, 회전은 짧은 쪽 nlerp 입니다. */

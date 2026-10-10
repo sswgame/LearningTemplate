@@ -642,7 +642,7 @@ SW_TEST_CASE( NetworkTest, HostsRejectFullServersForeignProtocolsAndDetectDiscon
 {
     NetHostSettings settings;
     settings._maxConnections = 1;
-    settings._timeout        = 1.0;
+    settings._timeoutSeconds = 1.0;
     LoopbackNetwork network;
     NetHost         server;
     NetHost         first;

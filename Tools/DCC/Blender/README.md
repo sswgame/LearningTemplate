@@ -44,13 +44,13 @@ Blender에서 만든 모델을 엔진에 넣으려면 glTF로 내보내고, 축�
 - `sw_socket_kind` 는 소켓 종류입니다. 기본은 `Attach` 이고, 종류 목록은 `Resource/engine/character/default.socketkinds.xml` 에 있습니다.
 - `sw_socket_preview` 는 에디터에서 보여 줄 미리보기 메시 id입니다.
 
-회전은 엔진이 읽는 형식(`rotation="피치 요 롤"`, 도 단위, `quaternion::createFromYawPitchRoll` 순서)으로 씁니다.
+회전은 엔진이 읽는 형식(`rotation="피치 요 롤"`, 도 단위, `quaternion::makeFromYawPitchRoll` 순서)으로 씁니다.
 
 **이름.** 파일 이름은 `Config/Editor/AssetValidationRules.json` 의 `file-names` 규칙과 같은 문자 집합을 씁니다.
 
 **코드 구성.** bpy를 쓰는 코드는 `__init__.py`(오퍼레이터, 패널, 설정)뿐입니다. 규약과 좌표 변환은 `Conventions.py`, 소켓 XML은 `SocketXml.py`, 임포트 명령은 `EngineImport.py` 에 있고 bpy 없이 동작합니다.
 그래서 Blender가 없는 CI에서도 `Test/PythonTest/TestBlenderExporter.py`(`ctest -R PythonTest_TestBlenderExporter`)가 이 부분을 테스트합니다.
-좌표 변환은 엔진의 `quaternion::createFromYawPitchRoll` 을 옮긴 식과 비교합니다.
+좌표 변환은 엔진의 `quaternion::makeFromYawPitchRoll` 을 옮긴 식과 비교합니다.
 
 ## 함정과 주의
 

@@ -526,7 +526,7 @@ namespace sw
         return serializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
     }
 
-    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool Archive::serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pInstance == nullptr )
         {
@@ -534,7 +534,7 @@ namespace sw
             return false;
         }
 
-        BinarySerializer::serialize( pInstance, typeInfo, _bytes, ctx );
+        BinarySerializer::serialize( pInstance, typeInfo, _bytes, context );
         _pData    = _bytes.data();
         _dataSize = _bytes.size();
         return true;
@@ -545,7 +545,7 @@ namespace sw
         return deserializeObject( pInstance, typeInfo, SerializeContext::getDefault() );
     }
 
-    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool Archive::deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pInstance == nullptr || _pData == nullptr )
         {
@@ -560,7 +560,7 @@ namespace sw
         }
 
         // 객체 끝까지만 읽고 읽기 자리를 옮긴다 — 뒤에 이어 쓴 값을 다음 읽기가 읽는다.
-        return BinarySerializer::deserialize( pInstance, typeInfo, *this, ctx );
+        return BinarySerializer::deserialize( pInstance, typeInfo, *this, context );
     }
 
     bool Archive::writeCompressedSection( const void* pData, uint32 byteSize, CompressionCodecType codecType )
@@ -884,7 +884,7 @@ namespace sw
         return bOk;
     }
 
-    bool Archive::serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool Archive::serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pInstance == nullptr )
         {
@@ -892,12 +892,12 @@ namespace sw
             return false;
         }
         vector<uint8> compactBytes;
-        BinarySerializer::serializeCompact( pInstance, typeInfo, compactBytes, ctx );
+        BinarySerializer::serializeCompact( pInstance, typeInfo, compactBytes, context );
         writeSection( compactBytes.data(), static_cast<uint32>( compactBytes.size() ) );
         return isOk();
     }
 
-    bool Archive::deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool Archive::deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context )
     {
         if ( pInstance == nullptr )
         {
@@ -910,7 +910,7 @@ namespace sw
             _bError = SW_TRUE;
             return false;
         }
-        const bool bOk = BinarySerializer::deserializeCompact( pInstance, typeInfo, compactBytes.data(), compactBytes.size(), ctx );
+        const bool bOk = BinarySerializer::deserializeCompact( pInstance, typeInfo, compactBytes.data(), compactBytes.size(), context );
         if ( bOk == false )
             _bError = SW_TRUE;
         return bOk;

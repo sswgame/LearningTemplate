@@ -102,7 +102,7 @@ namespace
         static void rotateLocal( Pose& inoutPose, uint32 bone, const float3& axis, float32 angle )
         {
             BoneTransform local = inoutPose.getBoneTransform( bone );
-            local._rotation     = ( local._rotation * quaternion::createFromAxisAngle( axis, angle ) ).normalize();
+            local._rotation     = ( local._rotation * quaternion::makeFromAxisAngle( axis, angle ) ).normalize();
             inoutPose.setBoneTransform( bone, local );
         }
 
@@ -160,7 +160,7 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
 SW_TEST_CASE( RetargetTest, RotationTransfersAcrossLocalAxisConventions )
 {
     const Skeleton   source = test::makeChainSkeleton( 3 );
-    const quaternion turned = quaternion::createFromAxisAngle( float3::UnitX, MathUtil::kHalfPi );
+    const quaternion turned = quaternion::makeFromAxisAngle( float3::UnitX, MathUtil::kHalfPi );
     Skeleton         target;
     (void)target.addBone( "bone0", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
     (void)target.addBone( "bone1", 0, test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f }, turned ), float4x4::Identity );

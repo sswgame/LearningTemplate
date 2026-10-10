@@ -264,13 +264,13 @@ namespace sw
         _context._pBlackboard = &blackboard;
         _context._pOwner      = pOwner;
         _context._deltaTime   = deltaTime;
-        if ( hasHigherPriorityTrigger() )
+        if ( pollHigherPriorityTrigger() )
             abortNode( 0 ); // 우선순위 높은 가지가 깨어났다 — 처음부터 다시 고른다
         _activeLeaf = -1;
         return tickNode( 0 );
     }
 
-    bool BehaviorTreeRunner::hasHigherPriorityTrigger()
+    bool BehaviorTreeRunner::pollHigherPriorityTrigger()
     {
         bool bTriggered = false;
         for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )

@@ -220,7 +220,7 @@ namespace sw
             if ( pButton != nullptr )
                 pButton->setStyleClass( tabIndex == index ? OptionsMenuScreenInternal::kSelectedTabClass : OptionsMenuScreenInternal::kTabClass );
         }
-        buildRows();
+        populateRows();
         // 탐색 방식이면 첫 행으로 — 탭을 바꾼 패드 사용자가 바로 행을 고른다.
         UISystem* pUI = getUISystem();
         if ( pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this )
@@ -300,7 +300,7 @@ namespace sw
         selectTab( _selectedTab < getTabCount() ? _selectedTab : 0 );
     }
 
-    void OptionsMenuScreen::buildRows()
+    void OptionsMenuScreen::populateRows()
     {
         PanelWidget* pRows = getTree().findWidget<PanelWidget>( OptionsMenuScreenInternal::kRowsName );
         if ( pRows == nullptr || _pSettings == nullptr )
@@ -317,11 +317,11 @@ namespace sw
         _pSettings->collectSettings( _listCategory[_selectedTab], listSetting );
         for ( const UserSettingDef* pSetting : listSetting )
         {
-            (void)buildRow( *pRows, *pSetting );
+            (void)createRow( *pRows, *pSetting ); // 실패는 createRow 가 오류로 남기고, 남은 행은 계속 짓는다
         }
     }
 
-    bool OptionsMenuScreen::buildRow( PanelWidget& rows, const UserSettingDef& setting )
+    bool OptionsMenuScreen::createRow( PanelWidget& rows, const UserSettingDef& setting )
     {
         using Internal = OptionsMenuScreenInternal;
         UISystem* pUI  = getUISystem();

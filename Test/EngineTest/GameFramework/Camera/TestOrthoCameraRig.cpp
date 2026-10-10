@@ -35,7 +35,7 @@ namespace
 
 /**
  * @brief [OrthoCameraRigTest] 리그가 놓은 카메라는 어느 요 · 피치에서든 초점을 정면으로 보고, 초점에서 거리만큼 떨어져 있다
- * @details 오일러 → 쿼터니언(엔진의 `createFromYawPitchRoll`)으로 +Z 를 돌려 본 방향이 초점 쪽과 같은지 본다 — 계산식을 다시 쓰지 않고
+ * @details 오일러 → 쿼터니언(엔진의 `makeFromYawPitchRoll`)으로 +Z 를 돌려 본 방향이 초점 쪽과 같은지 본다 — 계산식을 다시 쓰지 않고
  *          엔진의 회전 규칙으로 대조한다.
  */
 SW_TEST_CASE( OrthoCameraRigTest, ViewLooksAtTheFocusFromItsDistance )
@@ -49,7 +49,7 @@ SW_TEST_CASE( OrthoCameraRigTest, ViewLooksAtTheFocusFromItsDistance )
 
         const float3 toFocus = focus - view._position;
         SW_EXPECT_NEAR_EQUAL( 250.0f, toFocus.getLength(), 1.0e-2f );
-        const float3 lookDirection = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, quaternion::createFromYawPitchRoll( view._euler ) );
+        const float3 lookDirection = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, quaternion::makeFromYawPitchRoll( view._euler ) );
         const float3 expected      = toFocus * ( 1.0f / toFocus.getLength() );
         SW_EXPECT_NEAR_EQUAL( expected._x, lookDirection._x, 1.0e-4f );
         SW_EXPECT_NEAR_EQUAL( expected._y, lookDirection._y, 1.0e-4f );

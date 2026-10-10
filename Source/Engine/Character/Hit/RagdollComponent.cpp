@@ -569,7 +569,7 @@ namespace sw
             RagdollComponentInternal::computePlanarYaw( listStartModel[static_cast<size_t>( upperBone )].getTranslation() - clipPelvis, clipYaw );
         const bool       bRagdollDirection = RagdollComponentInternal::computePlanarYaw( upperWorld.getTranslation() - pelvisWorld.getTranslation(), ragdollYaw );
         const float32    yaw               = ( bClipDirection && bRagdollDirection ) ? ragdollYaw - clipYaw : 0.0f;
-        const quaternion rotation          = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, yaw );
+        const quaternion rotation          = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, yaw );
         const float3     offset            = float3::transform( float3{ clipPelvis._x, 0.0f, clipPelvis._z }, rotation );
         const float3     pelvis            = pelvisWorld.getTranslation();
         const float3     rootPosition{ pelvis._x - offset._x, pRoot->getWorldPosition()._y, pelvis._z - offset._z };

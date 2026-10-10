@@ -151,7 +151,7 @@ namespace sw
                 }
             }
             // 끈 상태면 빈 목록으로 빌드해 풀이 비워진다. 배치는 아래에서 자기 정점 버퍼(오프셋 0)로 돌아간다.
-            if ( _vertexPool.build( pDevice, _listScratchPoolMesh ) )
+            if ( _vertexPool.rebuild( pDevice, _listScratchPoolMesh ) )
                 _bBatchTablesDirty = SW_TRUE;
             for ( GPUMeshBatch& batch : _snapshot._listAllBatch )
             {

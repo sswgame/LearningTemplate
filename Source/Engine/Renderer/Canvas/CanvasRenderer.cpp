@@ -208,7 +208,7 @@ namespace sw
         }
         if ( _listPathTexture.empty() == false && engine::areEngineServicesBound() )
         {
-            TextureCache& textures = engine::getAssetManager().getTextureManager();
+            TextureCache& textures = engine::getAssetManager().getTextureCache();
             for ( const PathTexture& pathTexture : _listPathTexture )
             {
                 if ( pathTexture._pTexture != nullptr )
@@ -380,7 +380,7 @@ namespace sw
                     continue;
                 PathTexture& added = _listPathTexture.emplace_back();
                 added._path        = path;
-                added._pTexture    = engine::getAssetManager().getTextureManager().acquire( path.view(), &device );
+                added._pTexture    = engine::getAssetManager().getTextureCache().acquire( path.view(), &device );
             }
         }
     }

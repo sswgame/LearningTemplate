@@ -110,11 +110,11 @@ namespace sw
             node._matchLength = std::max( node._matchLength, length );
             ++_wordCount;
         }
-        buildFailLinks();
+        computeFailLinks();
         return _wordCount;
     }
 
-    void ChatWordFilter::buildFailLinks()
+    void ChatWordFilter::computeFailLinks()
     {
         // 너비 우선 — 부모의 실패 고리를 따라가며 같은 글자의 자식을 찾는다. 뿌리의 자식은 뿌리로 실패한다.
         vector<int32> listQueue;

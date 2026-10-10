@@ -226,13 +226,13 @@ SW_TEST_CASE( MathTest, Float4x4FullTest )
     SW_EXPECT_NEAR_EQUAL( 0.0f, identity._12, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, identity.determinant(), 1e-4f );
 
-    sw::float4x4 transM = sw::float4x4::createTranslation( 10.0f, 20.0f, 30.0f );
+    sw::float4x4 transM = sw::float4x4::makeTranslation( 10.0f, 20.0f, 30.0f );
     sw::float3   pos    = transM.getTranslation();
     SW_EXPECT_NEAR_EQUAL( 10.0f, pos._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 20.0f, pos._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 30.0f, pos._z, 1e-4f );
 
-    sw::float4x4 scaleM = sw::float4x4::createScale( 2.0f, 3.0f, 4.0f );
+    sw::float4x4 scaleM = sw::float4x4::makeScale( 2.0f, 3.0f, 4.0f );
     sw::float3   scale  = scaleM.getScale();
     SW_EXPECT_NEAR_EQUAL( 2.0f, scale._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, scale._y, 1e-4f );
@@ -248,10 +248,10 @@ SW_TEST_CASE( MathTest, Float4x4FullTest )
     SW_EXPECT_NEAR_EQUAL( 0.0f, identityCheck._12, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, identityCheck._41, 1e-4f );
 
-    sw::float4x4 projM = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::toRadian( 60.0f ), 16.0f / 9.0f, 0.1f, 1000.0f );
+    sw::float4x4 projM = sw::float4x4::makePerspectiveFieldOfView( sw::MathUtil::toRadian( 60.0f ), 16.0f / 9.0f, 0.1f, 1000.0f );
     SW_EXPECT_TRUE( projM.determinant() != 0.0f );
 
-    sw::float4x4 viewM = sw::float4x4::createLookAt( sw::float3( 0.0f, 0.0f, -10.0f ), sw::float3::Zero, sw::float3::Up );
+    sw::float4x4 viewM = sw::float4x4::makeLookAt( sw::float3( 0.0f, 0.0f, -10.0f ), sw::float3::Zero, sw::float3::Up );
     SW_EXPECT_TRUE( viewM.determinant() != 0.0f );
 }
 
@@ -268,7 +268,7 @@ SW_TEST_CASE( MathTest, QuaternionFullTest )
     SW_EXPECT_NEAR_EQUAL( 1.0f, identity._w, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, identity.norm(), 1e-4f );
 
-    sw::quaternion qRot = sw::quaternion::createFromAxisAngle( sw::float3::Up, sw::MathUtil::toRadian( 90.0f ) );
+    sw::quaternion qRot = sw::quaternion::makeFromAxisAngle( sw::float3::Up, sw::MathUtil::toRadian( 90.0f ) );
     SW_EXPECT_NEAR_EQUAL( 1.0f, qRot.norm(), 1e-4f );
 
     sw::float3 forward( 0.0f, 0.0f, 1.0f );
@@ -285,7 +285,7 @@ SW_TEST_CASE( MathTest, QuaternionFullTest )
     sw::quaternion slerpQ = sw::quaternion::slerp( identity, qRot, 0.5f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, slerpQ.norm(), 1e-4f );
 
-    sw::quaternion qYawPitchRoll = sw::quaternion::createFromYawPitchRoll( sw::MathUtil::toRadian( 45.0f ), 0.0f, 0.0f );
+    sw::quaternion qYawPitchRoll = sw::quaternion::makeFromYawPitchRoll( sw::MathUtil::toRadian( 45.0f ), 0.0f, 0.0f );
     sw::float3     euler         = qYawPitchRoll.getEulerAngles();
     SW_EXPECT_NEAR_EQUAL( sw::MathUtil::toRadian( 45.0f ), euler._y, 1e-3f );
 }
@@ -335,7 +335,7 @@ SW_TEST_CASE( MathTest, MathUtilFunctionsFull )
 SW_TEST_CASE( MathTest, Matrix4x4TRSAndInversion )
 {
     // 1) 이동 행렬과 벡터 변환 (Row-Major)
-    const sw::float4x4 trans = sw::float4x4::createTranslation( sw::float3( 10.0f, 20.0f, 30.0f ) );
+    const sw::float4x4 trans = sw::float4x4::makeTranslation( sw::float3( 10.0f, 20.0f, 30.0f ) );
     const sw::float4   point( 1.0f, 2.0f, 3.0f, 1.0f );
     const sw::float4   transformed = sw::float4::transform( point, trans );
 
@@ -345,7 +345,7 @@ SW_TEST_CASE( MathTest, Matrix4x4TRSAndInversion )
     SW_EXPECT_NEAR_EQUAL( 1.0f, transformed._w, 1e-4f );
 
     // 2) 스케일 행렬
-    const sw::float4x4 scale  = sw::float4x4::createScale( sw::float3( 2.0f, 3.0f, 4.0f ) );
+    const sw::float4x4 scale  = sw::float4x4::makeScale( sw::float3( 2.0f, 3.0f, 4.0f ) );
     const sw::float4   scaled = sw::float4::transform( point, scale );
     SW_EXPECT_NEAR_EQUAL( 2.0f, scaled._x, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 6.0f, scaled._y, 1e-4f );
@@ -398,12 +398,12 @@ SW_TEST_CASE( MathTest, MathUtilAlignZeroAndRandomRangeEdgeCases )
 }
 
 /**
- * @brief [MathTest] float4x4::createPerspectiveFieldOfView Near >= Far 입력 시 안전 클램핑 검증
+ * @brief [MathTest] float4x4::makePerspectiveFieldOfView Near >= Far 입력 시 안전 클램핑 검증
  */
 SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 {
     // Near >= Far 시 near/far 역전 크래시 방지 및 유효한 투영 행렬 생성
-    sw::float4x4 proj = sw::float4x4::createPerspectiveFieldOfView( sw::MathUtil::kPi / 4.0f, 1.777f, 100.0f, 10.0f );
+    sw::float4x4 proj = sw::float4x4::makePerspectiveFieldOfView( sw::MathUtil::kPi / 4.0f, 1.777f, 100.0f, 10.0f );
     SW_EXPECT_TRUE( proj._33 != 0.0f );
     SW_EXPECT_TRUE( proj._34 != 0.0f );
 }
@@ -415,10 +415,10 @@ SW_TEST_CASE( MathTest, PerspectiveFieldOfViewNearFarEdgeCase )
 SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
 {
     const sw::float4x4 arrProj[] = {
-        sw::float4x4::createPerspective( 0.0f, 0.0f, 1.0f, 1.0f ),
-        sw::float4x4::createPerspectiveOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 1.0f, 1.0f ),
-        sw::float4x4::createOrthographic( 0.0f, 0.0f, 5.0f, 5.0f ),
-        sw::float4x4::createOrthographicOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 5.0f, 5.0f ),
+        sw::float4x4::makePerspective( 0.0f, 0.0f, 1.0f, 1.0f ),
+        sw::float4x4::makePerspectiveOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 1.0f, 1.0f ),
+        sw::float4x4::makeOrthographic( 0.0f, 0.0f, 5.0f, 5.0f ),
+        sw::float4x4::makeOrthographicOffCenter( 2.0f, 2.0f, 3.0f, 3.0f, 5.0f, 5.0f ),
     };
     for ( const sw::float4x4& proj : arrProj )
     {
@@ -441,15 +441,15 @@ SW_TEST_CASE( MathTest, ProjectionWithZeroSpanStaysFinite )
  */
 SW_TEST_CASE( MathTest, VectorTransformIsADirectionTransform )
 {
-    const sw::float4x4 scaleThenMove = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } ) *
-                                       sw::float4x4::createTranslation( sw::float3{ 10.0f, 20.0f, 30.0f } );
+    const sw::float4x4 scaleThenMove = sw::float4x4::makeScale( sw::float3{ 2.0f, 5.0f, 2.0f } ) *
+                                       sw::float4x4::makeTranslation( sw::float3{ 10.0f, 20.0f, 30.0f } );
     const sw::float3 moved = sw::float3::transformVector( sw::float3{ 1.0f, 1.0f, 0.0f }, scaleThenMove );
     SW_EXPECT_NEAR_EQUAL( 2.0f, moved._x, 1e-4f ); // 스케일은 걸리고
     SW_EXPECT_NEAR_EQUAL( 5.0f, moved._y, 1e-4f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, moved._z, 1e-4f ); // 평행 이동은 없다
 
     // 기운 면(법선 (1,1,0)/√2, 면 위의 방향 (1,-1,0))에 비균등 스케일 — 방향 변환으로 옮긴 법선은 옮긴 면 방향과 수직이 아니다.
-    const sw::float4x4 nonUniformScale = sw::float4x4::createScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
+    const sw::float4x4 nonUniformScale = sw::float4x4::makeScale( sw::float3{ 2.0f, 5.0f, 2.0f } );
     const sw::float3   normal          = sw::float3{ 1.0f, 1.0f, 0.0f }.normalize();
     const sw::float3   tangent         = sw::float3::transformVector( sw::float3{ 1.0f, -1.0f, 0.0f }, nonUniformScale );
     const sw::float3   wrongNormal     = sw::float3::transformVector( normal, nonUniformScale ).normalize();
@@ -539,7 +539,7 @@ SW_TEST_CASE( MathTest, SingularMatrixInvertsToIdentity )
 }
 
 /**
- * @brief [MathTest] `createTrs` 는 행렬 셋을 곱한 것과 **같은 값**이다
+ * @brief [MathTest] `makeTrs` 는 행렬 셋을 곱한 것과 **같은 값**이다
  * @details 곱을 생략하는 지름길이라 "빠른데 값이 다르다" 가 가장 무서운 실패다. 비교 대상을 손으로
  *          적지 않고 **원래 식 그대로**(S * R * T) 두어, 규격(행-벡터 · 요/피치/롤 해석)이 바뀌면
  *          둘이 함께 움직이게 한다. 비대칭 스케일·세 축 회전·0 이 아닌 이동을 섞어야 행이 뒤바뀐
@@ -551,10 +551,10 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
     const sw::float3 rotation{ 0.37f, -1.1f, 0.62f }; // 피치 · 요 · 롤 (라디안)
     const sw::float3 scale{ 2.0f, 0.5f, 3.25f };      // 축마다 달라야 행을 바꿔치기한 구현이 걸린다
 
-    const sw::float4x4 expected = sw::float4x4::createScale( scale ) *
-                                  sw::float4x4::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
-                                  sw::float4x4::createTranslation( position );
-    const sw::float4x4 actual = sw::float4x4::createTrs( position, rotation, scale );
+    const sw::float4x4 expected = sw::float4x4::makeScale( scale ) *
+                                  sw::float4x4::makeFromYawPitchRoll( rotation._y, rotation._x, rotation._z ) *
+                                  sw::float4x4::makeTranslation( position );
+    const sw::float4x4 actual = sw::float4x4::makeTrs( position, rotation, scale );
 
     const float32* pExpected = &expected._11;
     const float32* pActual   = &actual._11;
@@ -565,8 +565,8 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
 
     // 쿼터니언 오버로드도 같은 값이어야 한다 — 오일러 쪽이 그쪽으로 넘기므로 둘이 갈라지면
     // 애니메이션(쿼터니언)과 컴포넌트(오일러)가 서로 다른 행렬을 쓰게 된다.
-    const sw::quaternion rotationQuat = sw::quaternion::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
-    const sw::float4x4   fromQuat     = sw::float4x4::createTrs( position, rotationQuat, scale );
+    const sw::quaternion rotationQuat = sw::quaternion::makeFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
+    const sw::float4x4   fromQuat     = sw::float4x4::makeTrs( position, rotationQuat, scale );
     const float32*       pFromQuat    = &fromQuat._11;
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
     {
@@ -583,7 +583,7 @@ SW_TEST_CASE( MathTest, CreateTrsMatchesTheProductOfThree )
 }
 
 /**
- * @brief [MathTest] 회전이 없는 `createTrs` 지름길은 단위 사원수를 거친 값과 **같다**
+ * @brief [MathTest] 회전이 없는 `makeTrs` 지름길은 단위 사원수를 거친 값과 **같다**
  * @details 오일러 오버로드는 세 각이 모두 0 이면 사원수를 만들지 않고 대각선에 스케일만 놓는다(움직이는 컴포넌트마다 지나는
  *          자리라 삼각 함수 여섯 번이 아깝다). 지름길이 틀리면 회전 없는 물체만 조용히 틀어지므로, 원래 경로(단위 사원수 오버로드)와
  *          성분마다 정확히 견준다. 음수 스케일과 -0 각도도 섞는다 — 둘 다 "0 인가" 판정과 부호가 엇갈리기 쉬운 자리다.
@@ -603,11 +603,11 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
 
     for ( const sw::float3& scale : arrScale )
     {
-        const sw::float4x4 expected  = sw::float4x4::createTrs( position, sw::quaternion{ 0.0f, 0.0f, 0.0f, 1.0f }, scale );
+        const sw::float4x4 expected  = sw::float4x4::makeTrs( position, sw::quaternion{ 0.0f, 0.0f, 0.0f, 1.0f }, scale );
         const float32*     pExpected = &expected._11;
         for ( const sw::float3& rotation : arrRotation )
         {
-            const sw::float4x4 actual  = sw::float4x4::createTrs( position, rotation, scale );
+            const sw::float4x4 actual  = sw::float4x4::makeTrs( position, rotation, scale );
             const float32*     pActual = &actual._11;
             for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
             {
@@ -619,9 +619,9 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
     // 한 축이라도 돌면 지름길을 타지 않는다 — 요만 준 회전이 곱 셋과 같은 값인지로 본다.
     const sw::float3   yawOnly{ 0.0f, 0.8f, 0.0f };
     const sw::float3   scale{ 2.0f, 0.5f, 3.25f };
-    const sw::float4x4 expectedYaw = sw::float4x4::createScale( scale ) * sw::float4x4::createFromYawPitchRoll( yawOnly._y, yawOnly._x, yawOnly._z ) *
-                                     sw::float4x4::createTranslation( position );
-    const sw::float4x4 actualYaw  = sw::float4x4::createTrs( position, yawOnly, scale );
+    const sw::float4x4 expectedYaw = sw::float4x4::makeScale( scale ) * sw::float4x4::makeFromYawPitchRoll( yawOnly._y, yawOnly._x, yawOnly._z ) *
+                                     sw::float4x4::makeTranslation( position );
+    const sw::float4x4 actualYaw  = sw::float4x4::makeTrs( position, yawOnly, scale );
     const float32*     pExpected  = &expectedYaw._11;
     const float32*     pActualYaw = &actualYaw._11;
     for ( int32 elementIndex = 0; elementIndex < 16; ++elementIndex )
@@ -637,7 +637,7 @@ SW_TEST_CASE( MathTest, CreateTrsWithoutRotationMatchesIdentityQuaternion )
  */
 SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
 {
-    const sw::float4x4 tinyScale = sw::float4x4::createScale( 0.001f ) * sw::float4x4::createTranslation( 5.f, -3.f, 2.f );
+    const sw::float4x4 tinyScale = sw::float4x4::makeScale( 0.001f ) * sw::float4x4::makeTranslation( 5.f, -3.f, 2.f );
     const sw::float4x4 roundTrip = tinyScale * tinyScale.invert();
     for ( uint32 row = 0; row < 4; ++row )
     {
@@ -649,19 +649,19 @@ SW_TEST_CASE( MathTest, SmallDeterminantMirrorRefractAndNullConstruct )
     }
 
     // 높이 200 · 깊이 1000 인 직교 투영
-    const sw::float4x4 ortho        = sw::float4x4::createScale( 2.f / 355.f, 2.f / 200.f, 1.f / 1000.f );
+    const sw::float4x4 ortho        = sw::float4x4::makeScale( 2.f / 355.f, 2.f / 200.f, 1.f / 1000.f );
     const sw::float4x4 orthoInverse = ortho.invert();
     SW_EXPECT_NEAR_EQUAL( 355.f / 2.f, orthoInverse._11, 1e-2f );
     SW_EXPECT_NEAR_EQUAL( 100.f, orthoInverse._22, 1e-2f );
 
     // 거울(X 반전) 행렬을 분해해 다시 합치면 원래 행렬이다.
-    const sw::float4x4 mirrored = sw::float4x4::createScale( -2.f, 3.f, 4.f ) * sw::float4x4::createRotationY( 0.7f ) * sw::float4x4::createTranslation( 1.f, 2.f, 3.f );
+    const sw::float4x4 mirrored = sw::float4x4::makeScale( -2.f, 3.f, 4.f ) * sw::float4x4::makeRotationY( 0.7f ) * sw::float4x4::makeTranslation( 1.f, 2.f, 3.f );
     sw::float3         scale{};
     sw::quaternion     rotation{};
     sw::float3         translation{};
     SW_ASSERT_TRUE( mirrored.decompose( scale, rotation, translation ) );
     SW_EXPECT_TRUE( scale._x < 0.f );
-    const sw::float4x4 recomposed = sw::float4x4::createScale( scale ) * sw::float4x4::createFromQuaternion( rotation ) * sw::float4x4::createTranslation( translation );
+    const sw::float4x4 recomposed = sw::float4x4::makeScale( scale ) * sw::float4x4::makeFromQuaternion( rotation ) * sw::float4x4::makeTranslation( translation );
     for ( uint32 row = 0; row < 4; ++row )
     {
         for ( uint32 column = 0; column < 4; ++column )

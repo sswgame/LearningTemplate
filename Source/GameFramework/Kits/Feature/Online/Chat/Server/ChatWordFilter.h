@@ -71,7 +71,7 @@ namespace sw
 
         /** @brief @p nodeIndex 의 @p codepoint 자식 번호입니다. 없으면 -1. */
         int32 findChild( int32 nodeIndex, uint32 codepoint ) const;
-        void  buildFailLinks();
+        void  computeFailLinks();
 
         vector<Node>   _listNode;
         int32          _wordCount;

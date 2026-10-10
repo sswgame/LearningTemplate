@@ -156,8 +156,8 @@ namespace test
             sw::CharacterBoneArray bones;
             const int32            root     = bones.addBone( sw::hashed_string( "root" ), -1, sw::float4x4::Identity );
             const int32            upperarm = bones.addBone( sw::hashed_string( "upperarm" ), root, sw::float4x4::Identity );
-            const int32            lowerarm = bones.addBone( sw::hashed_string( "lowerarm" ), upperarm, sw::float4x4::createTranslation( 0.0f, 0.5f, 0.0f ) );
-            (void)bones.addBone( sw::hashed_string( "hand" ), lowerarm, sw::float4x4::createTranslation( 0.0f, 0.5f, 0.0f ) );
+            const int32            lowerarm = bones.addBone( sw::hashed_string( "lowerarm" ), upperarm, sw::float4x4::makeTranslation( 0.0f, 0.5f, 0.0f ) );
+            (void)bones.addBone( sw::hashed_string( "hand" ), lowerarm, sw::float4x4::makeTranslation( 0.0f, 0.5f, 0.0f ) );
             return bones;
         }
 

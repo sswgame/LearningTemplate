@@ -9,7 +9,7 @@ glTF → 엔진(X 를 뒤집는다)을 한다. 그래서 메시는 이 애드온
 단위는 미터 그대로다(Blender 1 = 엔진 1 m).
 
 회전은 엔진 `CharacterDataReader::readRotation` 이 읽는 꼴로 쓴다: "x y z" 도(degree), x = 피치, y = 요, z = 롤이고
-`quaternion::createFromYawPitchRoll` 이 그것을 쓴다(열벡터로 R = Ry(요) · Rx(피치) · Rz(롤)).
+`quaternion::makeFromYawPitchRoll` 이 그것을 쓴다(열벡터로 R = Ry(요) · Rx(피치) · Rz(롤)).
 """
 
 from __future__ import annotations
@@ -142,7 +142,7 @@ def computeEngineEulerDegrees(rotation: Matrix3) -> list[float]:
 
 
 def makeEngineQuaternion(pitch: float, yaw: float, roll: float) -> list[float]:
-    """엔진 `quaternion::createFromYawPitchRoll` 을 그대로 옮긴 것(x, y, z, w) — 시험이 변환을 엔진 식과 맞춰 보는 데 쓴다."""
+    """엔진 `quaternion::makeFromYawPitchRoll` 을 그대로 옮긴 것(x, y, z, w) — 시험이 변환을 엔진 식과 맞춰 보는 데 쓴다."""
     halfYaw, halfPitch, halfRoll = yaw * 0.5, pitch * 0.5, roll * 0.5
     sinYaw, cosYaw = math.sin(halfYaw), math.cos(halfYaw)
     sinPitch, cosPitch = math.sin(halfPitch), math.cos(halfPitch)

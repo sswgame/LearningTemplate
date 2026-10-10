@@ -82,40 +82,40 @@ namespace sw
         }
     }
 
-    void FrameRenderer::onGraphLevelPrologue( const RenderGraphLevelContext& levelCtx )
+    void FrameRenderer::onGraphLevelPrologue( const RenderGraphLevelContext& levelContext )
     {
-        if ( _pDevice == nullptr || levelCtx._pCmdList == nullptr )
+        if ( _pDevice == nullptr || levelContext._pCmdList == nullptr )
             return;
 
-        if ( levelCtx._pListBarrier == nullptr )
+        if ( levelContext._pListBarrier == nullptr )
             return;
 
         // 그래프가 **실제로 바뀌는 전이만** 추려서 준다. 여기서는 이름을 텍스처로 풀어 그대로 건다.
         // 같은 자원을 여러 패스가 읽어도, 이미 맞는 상태여도 다시 걸지 않는다.
-        for ( const RenderGraphBarrier& barrier : *levelCtx._pListBarrier )
+        for ( const RenderGraphBarrier& barrier : *levelContext._pListBarrier )
         {
             if ( barrier._after == RenderGraphResourceState::Write )
             {
                 // 스왑체인은 전용 경로가 있다(핸들 0). 이름으로는 트랜지언트에 없다.
                 if ( barrier._resource == attachmentNames()._swapchain )
                 {
-                    levelCtx._pCmdList->prepareTextureForRenderTarget( 0 );
+                    levelContext._pCmdList->prepareTextureForRenderTarget( 0 );
                     continue;
                 }
                 const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
                 if ( texture != 0 )
-                    levelCtx._pCmdList->prepareTextureForRenderTarget( texture );
+                    levelContext._pCmdList->prepareTextureForRenderTarget( texture );
             }
             else if ( barrier._after == RenderGraphResourceState::Read )
             {
                 const RHITextureHandle texture = findTransient( barrier._resource.c_str() );
                 if ( texture != 0 )
-                    levelCtx._pCmdList->prepareTextureForShaderRead( texture );
+                    levelContext._pCmdList->prepareTextureForShaderRead( texture );
             }
         }
     }
 
-    void FrameRenderer::onGraphPassExecute( const RenderGraphPassContext& graphCtx )
+    void FrameRenderer::onGraphPassExecute( const RenderGraphPassContext& graphContext )
     {
         if ( _pDevice == nullptr )
             return;
@@ -126,28 +126,28 @@ namespace sw
         // 패스 슬롯의 컨텍스트에 프레임 시드를 **대입**한다. 복사본을 새로 만들면 값 목록 · 레지스트리가 프레임마다 다시
         // 자란다. 슬롯 수는 submitGraph 가 기록 전에 맞춰 둔다. 이름을 못 찾으면 마지막 칸이다(직렬 경로에서만 온다).
         const size_t passCount    = _pipelineResource.getGraphPass().size();
-        const auto   passSlotIter = _mapPassNameToIndex.find( graphCtx._passName );
+        const auto   passSlotIter = _mapPassNameToIndex.find( graphContext._passName );
         const size_t passSlot     = ( passSlotIter != _mapPassNameToIndex.end() && passSlotIter->second < passCount ) ? passSlotIter->second : passCount;
         if ( _listPassContext.size() <= passSlot )
             _listPassContext.resize( passCount + 1 );
         // 벡터 **자체**는 병렬 기록 중 읽기만 한다(칸은 패스마다 다르다). 비-const 인덱싱 · data() 는 컨테이너 레이스
         // 탐지기가 벡터에 대한 쓰기로 잡아 워커 둘이 동시에 들어오면 울린다. const 로 읽고 칸만 고쳐 쓴다.
-        FramePassContext& passCtx = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
-        passCtx                   = _frameCtx;
-        if ( graphCtx._pCmdList != nullptr )
-            passCtx._pCmd = graphCtx._pCmdList;
+        FramePassContext& passContext = const_cast<FramePassContext&>( std::as_const( _listPassContext ).data()[passSlot] );
+        passContext                   = _frameContext;
+        if ( graphContext._pCmdList != nullptr )
+            passContext._pCmd = graphContext._pCmdList;
         // 상수 버퍼도 패스마다 따로 잡는다. 커맨드 기록은 지연인데 상수 쓰기는 즉시라,
         // 하나를 공유하면 재생 시점에 마지막 패스 값만 남는다.
-        acquirePassCb( passCtx );
+        acquirePassCb( passContext );
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와
         // PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
         RenderPassType             passType  = RenderPassType::Invalid;
-        const utf8*                pPassName = graphCtx._passName.c_str() != nullptr ? graphCtx._passName.c_str() : "";
+        const utf8*                pPassName = graphContext._passName.c_str() != nullptr ? graphContext._passName.c_str() : "";
         hashed_string              depthAttachment;
         const RenderGraphPassDesc* pPassDesc{ nullptr };
-        const auto                 iter = _mapPassNameToIndex.find( graphCtx._passName );
+        const auto                 iter = _mapPassNameToIndex.find( graphContext._passName );
         [[maybe_unused]] size_t    passIndex{ listPass.size() };
         if ( iter != _mapPassNameToIndex.end() && iter->second < listPass.size() )
         {
@@ -168,19 +168,19 @@ namespace sw
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 찍는다(`-gv_profileFrames`).
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 적는다(추가 뷰가 같은 칸을 다시 쓰면 주 시점의 시간이 덮인다).
-        const bool bWriteGPUTime = _pDevice != nullptr && passCtx._pCmd != nullptr && isRenderingExtraView() == false &&
+        const bool bWriteGPUTime = _pDevice != nullptr && passContext._pCmd != nullptr && isRenderingExtraView() == false &&
                                    engine::getFrameProfiler().isEnabled() &&
                                    static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
         if ( bWriteGPUTime )
-            passCtx._pCmd->writeTimestamp( timestampBegin );
+            passContext._pCmd->writeTimestamp( timestampBegin );
 #endif
 
-        executePass( passCtx, passType, pPassName, depthAttachment, pPassDesc );
+        executePass( passContext, passType, pPassName, depthAttachment, pPassDesc );
 
 #if SW_PROFILE_COMPILED
         if ( bWriteGPUTime )
-            passCtx._pCmd->writeTimestamp( timestampBegin + 1u );
+            passContext._pCmd->writeTimestamp( timestampBegin + 1u );
 #endif
     }
 
@@ -216,23 +216,23 @@ namespace sw
         }
     }
 
-    void FrameRenderer::registerDeclaredInputs( FramePassContext& ctx, const RenderGraphPassDesc& passDesc )
+    void FrameRenderer::registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc )
     {
         for ( const RenderGraphPassDesc::ResolvedAttachment& input : passDesc._listResolvedInput )
         {
             const RenderPassInputRole role = static_cast<RenderPassInputRole>( input._role );
             if ( ( _disabledInputRoleMask & ( 1u << input._role ) ) != 0 )
                 continue;
-            registerPassTexture( ctx, inputRoleName( role ), input._attachment.view() );
+            registerPassTexture( context, inputRoleName( role ), input._attachment.view() );
         }
     }
 
-    void FrameRenderer::executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
+    void FrameRenderer::executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                                      const RenderGraphPassDesc* pPassDesc )
     {
         SW_PROFILE_SCOPE( "RT.Pass.execute" );
 
-        if ( ctx._pCmd == nullptr )
+        if ( context._pCmd == nullptr )
         {
             SW_LOG_ERROR( "executePass: no active IRHICommandList" );
             return;
@@ -244,13 +244,13 @@ namespace sw
             const size_t copyLen = ( passName.size() < sizeof( arrPassName ) - 1 ) ? passName.size() : ( sizeof( arrPassName ) - 1 );
             Memory::copy( arrPassName, passName.data(), copyLen );
             arrPassName[copyLen] = '\0';
-            ctx._pCmd->beginEventMarker( arrPassName );
+            context._pCmd->beginEventMarker( arrPassName );
         }
-        ctx._resourceRegistry.reset();
-        ctx._passType = passType;
+        context._resourceRegistry.reset();
+        context._passType = passType;
         // 라이트는 **패스 종류를 가리지 않는다.** 포워드 지오메트리도, 디퍼드 풀스크린 조명도 읽는다.
         // 그래서 인스턴스 버퍼(지오메트리 패스 전용)와 달리 여기서 모든 패스에 건다.
-        registerLightBuffer( ctx );
+        registerLightBuffer( context );
 
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
@@ -263,14 +263,14 @@ namespace sw
 
         // b0 에 들어갈 패스 상수. 머티리얼 CB 로 폴백하면 안 된다. 레이아웃이 다르다.
         // 머티리얼 상수는 드로우마다 메시 · 배치에서 직접 넘긴다.
-        const RHIDescriptorIndex passCb = ctx._passCbIndex;
+        const RHIDescriptorIndex passCb = context._passCbIndex;
 
         auto executeFullscreenPass = [&]( RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
         {
-            if ( beginColorPass( ctx, targetName.view(), "", passClearColor, colorLoadFor( targetName, false ), RHIRenderPassLoadOp::Load ) == false )
+            if ( beginColorPass( context, targetName.view(), "", passClearColor, colorLoadFor( targetName, false ), RHIRenderPassLoadOp::Load ) == false )
                 return;
-            drawFullscreen( ctx, pso, passCb );
-            ctx._pCmd->endRenderPass();
+            drawFullscreen( context, pso, passCb );
+            context._pCmd->endRenderPass();
         };
 
         // 이 패스가 바인딩할 뎁스. 파이프라인 XML 의 `_depthAttachment` 가 기준이고, 비어 있으면
@@ -310,7 +310,7 @@ namespace sw
             // 일반 풀스크린 패스(표의 kGenericFullscreen: Lighting · SSAO · Bloom · Outline · Tonemap). **선언이 곧 바인딩**이다:
             // 입력은 역할 이름으로 모두 걸고, 타깃은 선언한 출력 중 첫 번째로 있는 것이다. 계약(RenderPassInputSignature)이
             // 로드 시점에 같은 목록을 검사했다. 새 포스트 패스는 표의 한 줄로 여기를 탄다.
-            registerDeclaredInputs( ctx, *pPassDesc );
+            registerDeclaredInputs( context, *pPassDesc );
 
             const AttachmentNames& names   = attachmentNames();
             const hashed_string*   pTarget = &names._sceneColor;
@@ -346,12 +346,12 @@ namespace sw
                                    _pDevice->getResourceFactory()->getTextureFormat( source ) == _pDevice->getResourceFactory()->getTextureFormat( target );
                 if ( bCopy )
                 {
-                    ctx._pCmd->blitTexture( source, target );
+                    context._pCmd->blitTexture( source, target );
                     (void)markAttachmentCleared( *pTarget );
                 }
-                else if ( beginColorPass( ctx, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
+                else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
                 {
-                    ctx._pCmd->endRenderPass();
+                    context._pCmd->endRenderPass();
                 }
             }
             else
@@ -367,25 +367,25 @@ namespace sw
                 {
                     // 클리어 값은 실제로 거는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-                    beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
+                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
                     // 그림자를 끈 뷰는 지우기만 한다 — 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
                     {
                         // 그림자는 라이트 절두체로 거른 목록을 쓴다(언리얼의 뷰별 인스턴스 컬링과 같은 자리). 끝나면 지금 뷰의 칸으로 돌아간다.
-                        const uint32 viewCull = ctx._cullViewIndex;
-                        ctx._cullViewIndex    = static_cast<uint32>( RenderViewType::Shadow );
-                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::Shadow ), passCb, bTransparentBatch );
-                        ctx._cullViewIndex = viewCull;
+                        const uint32 viewCull  = context._cullViewIndex;
+                        context._cullViewIndex = static_cast<uint32>( RenderViewType::Shadow );
+                        drawSceneMeshes( context, getEnginePSO( RenderPassType::Shadow ), passCb, bTransparentBatch );
+                        context._cullViewIndex = viewCull;
                     }
-                    ctx._pCmd->endRenderPass();
+                    context._pCmd->endRenderPass();
                     break;
                 }
                 case RenderPassType::DepthPrepass:
                 {
                     const float4 clearVal = getAttachmentClearColorOrDefault( passDepth.view(), float4{ 1.0f, 0.0f, 0.0f, 0.0f } );
-                    beginDepthOnlyPass( ctx, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
-                    drawSceneMeshes( ctx, findPassPSO( RenderPassType::DepthPrepass ), passCb, bTransparentBatch );
-                    ctx._pCmd->endRenderPass();
+                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth, false ) );
+                    drawSceneMeshes( context, findPassPSO( RenderPassType::DepthPrepass ), passCb, bTransparentBatch );
+                    context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
                     break;
                 }
@@ -404,17 +404,17 @@ namespace sw
                             }
                         }
                     }
-                    registerPassTexture( ctx, attachmentNames()._shadowMap,
+                    registerPassTexture( context, attachmentNames()._shadowMap,
                                          pShadowInput != nullptr ? pShadowInput->_attachment.view() : string_view{ FrameRendererUtil::Attachment::kShadowMap } );
                     const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
-                    if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
+                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
                         const RHIPipelineStateHandle psoForward = ( _bHasExecutedDepthPrepass.load() != 0 && getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite ) != 0 )
                                                                     ? getEnginePSO( RenderPassType::ForwardOpaqueNoDepthWrite )
                                                                     : getEnginePSO( RenderPassType::ForwardOpaque );
-                        drawSceneMeshes( ctx, psoForward, passCb, bTransparentBatch );
-                        ctx._pCmd->endRenderPass();
+                        drawSceneMeshes( context, psoForward, passCb, bTransparentBatch );
+                        context._pCmd->endRenderPass();
                     }
                     break;
                 }
@@ -435,10 +435,10 @@ namespace sw
                     const string_view         arrNames[]   = { albedoTarget.view(), pNormalTarget->view() };
                     const float4              arrClears[2] = { clearColor, normalClear };
                     const RHIRenderPassLoadOp arrLoads[]   = { colorLoadFor( albedoTarget, false ), colorLoadFor( *pNormalTarget, false ) };
-                    if ( beginColorPassMrt( ctx, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
+                    if ( beginColorPassMrt( context, arrNames, arrClears, arrLoads, 2, passDepth.view(), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::GBuffer ), passCb, bTransparentBatch );
-                        ctx._pCmd->endRenderPass();
+                        drawSceneMeshes( context, getEnginePSO( RenderPassType::GBuffer ), passCb, bTransparentBatch );
+                        context._pCmd->endRenderPass();
                     }
                     break;
                 }
@@ -456,14 +456,14 @@ namespace sw
                         const RHITextureHandle litColor = findTransient( FrameRendererUtil::Attachment::kLitColor );
                         const RHITextureHandle src      = litColor != 0 ? litColor : findTransient( FrameRendererUtil::Attachment::kSceneColor );
                         if ( src != 0 )
-                            ctx._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
+                            context._pCmd->blitTexture( src, findTransient( FrameRendererUtil::Attachment::kTransparentColor ) );
                         markAttachmentCleared( attachmentNames()._transparentColor );
                     }
 
-                    if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
+                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), _clearColor, RHIRenderPassLoadOp::Load, RHIRenderPassLoadOp::Load ) )
                     {
-                        drawSceneMeshes( ctx, findPassPSO( RenderPassType::Transparent ), passCb, bTransparentBatch );
-                        ctx._pCmd->endRenderPass();
+                        drawSceneMeshes( context, findPassPSO( RenderPassType::Transparent ), passCb, bTransparentBatch );
+                        context._pCmd->endRenderPass();
                     }
                     break;
                 }
@@ -475,10 +475,10 @@ namespace sw
                         break;
                     const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
-                    if ( beginColorPass( ctx, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
+                    if ( beginColorPass( context, colorTarget.view(), passDepth.view(), sceneClear, colorLoadFor( colorTarget, false ), colorLoadFor( passDepth, false ) ) )
                     {
-                        drawSceneMeshes( ctx, getEnginePSO( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
-                        ctx._pCmd->endRenderPass();
+                        drawSceneMeshes( context, getEnginePSO( RenderPassType::MeshOutline ), passCb, bTransparentBatch );
+                        context._pCmd->endRenderPass();
                     }
                     break;
                 }
@@ -503,7 +503,7 @@ namespace sw
                     const utf8*          pSrcName{ nullptr };
                     if ( pPassDesc != nullptr )
                     {
-                        registerDeclaredInputs( ctx, *pPassDesc );
+                        registerDeclaredInputs( context, *pPassDesc );
                         for ( const RenderGraphPassDesc::ResolvedAttachment& input : pPassDesc->_listResolvedInput )
                         {
                             if ( static_cast<RenderPassInputRole>( input._role ) == RenderPassInputRole::SourceColor )
@@ -519,7 +519,7 @@ namespace sw
                     {
                         const RHITextureHandle target = findTransient( taaTarget.view() );
                         if ( source != 0 && target != 0 && source != target )
-                            ctx._pCmd->blitTexture( source, target );
+                            context._pCmd->blitTexture( source, target );
                         break;
                     }
                     // 컷 프레임(언리얼 `bCameraCut`): 지난 화면의 기록을 버린다 — 이번 프레임은 기록 자리에 **이번 원본**을 걸어 섞어도 이번 그림만 남게
@@ -527,22 +527,22 @@ namespace sw
                     // 포맷만 받는다). 패스 끝의 복사(TAA 출력 → 기록)가 기록을 새로 채운다.
                     const bool bCut = activeView._settings._bCut == SW_TRUE && pSrcName != nullptr;
                     if ( bCut )
-                        registerPassTexture( ctx, attachmentNames()._gbufferAlbedo, pSrcName );
+                        registerPassTexture( context, attachmentNames()._gbufferAlbedo, pSrcName );
                     else if ( activeView._taaHistory != 0 )
-                        ctx._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
-                    if ( beginColorPass( ctx, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load ) )
+                        context._resourceRegistry.registerTexture( attachmentNames()._gbufferAlbedo, activeView._taaHistory, activeView._taaHistorySrv );
+                    if ( beginColorPass( context, taaTarget.view(), "", _clearColor, colorLoadFor( taaTarget, false ), RHIRenderPassLoadOp::Load ) )
                     {
                         const RHIPipelineStateHandle taaPSO = getEnginePSO( RenderPassType::TAA );
                         if ( taaPSO != 0 )
-                            drawFullscreen( ctx, taaPSO, passCb );
+                            drawFullscreen( context, taaPSO, passCb );
                         else if ( pSrcName != nullptr && taaTarget.view() != pSrcName )
-                            ctx._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
-                        ctx._pCmd->endRenderPass();
+                            context._pCmd->blitTexture( findTransient( pSrcName ), findTransient( taaTarget.view() ) );
+                        context._pCmd->endRenderPass();
                     }
 
                     const RHITextureHandle taaOut = findTransient( taaTarget.view() );
                     if ( taaOut != 0 && activeView._taaHistory != 0 )
-                        ctx._pCmd->blitTexture( taaOut, activeView._taaHistory );
+                        context._pCmd->blitTexture( taaOut, activeView._taaHistory );
                     break;
                 }
                 case RenderPassType::Present:
@@ -567,11 +567,11 @@ namespace sw
                     const RHIPipelineStateHandle psoBlit = findOutputPSO( RenderPassType::Present, target._format );
                     if ( src != 0 && psoBlit != 0 )
                     {
-                        registerPassTexture( ctx, attachmentNames()._sourceColor, srcName );
+                        registerPassTexture( context, attachmentNames()._sourceColor, srcName );
                         // 선언한 입력을 **모두** 건다. Present 가 후처리 체인을 겸하면 깊이(외곽선) · AO 가 필요하고,
                         // 그냥 블릿이면 선언이 컬러 하나뿐이라 위 등록을 덮어쓸 뿐이다.
                         if ( pPassDesc != nullptr )
-                            registerDeclaredInputs( ctx, *pPassDesc );
+                            registerDeclaredInputs( context, *pPassDesc );
                         RHIRenderPassBeginInfo beginInfo{};
                         beginInfo._bBindColor        = SW_TRUE;
                         beginInfo._arrColorTarget[0] = dstTarget;
@@ -580,7 +580,7 @@ namespace sw
                         beginInfo._arrClearColor[0]  = _clearColor;
                         beginInfo._width             = outputWidth;
                         beginInfo._height            = outputHeight;
-                        ctx._pCmd->beginRenderPass( beginInfo );
+                        context._pCmd->beginRenderPass( beginInfo );
                         // 사각형이면 뷰포트로 그 안에만 그린다 — 전체 화면 삼각형이 사각형을 채우고 원본 전체를 그 안에 늘인다.
                         if ( bFullRect == false )
                         {
@@ -590,30 +590,30 @@ namespace sw
                             viewport._y      = rect._y * static_cast<float32>( outputHeight );
                             viewport._width  = rect._z * static_cast<float32>( outputWidth );
                             viewport._height = rect._w * static_cast<float32>( outputHeight );
-                            ctx._pCmd->setViewport( viewport );
+                            context._pCmd->setViewport( viewport );
                         }
-                        drawFullscreen( ctx, psoBlit, passCb );
-                        ctx._pCmd->endRenderPass();
+                        drawFullscreen( context, psoBlit, passCb );
+                        context._pCmd->endRenderPass();
                         if ( bCaptureToBack )
-                            ctx._pCmd->blitTexture( dstTarget, 0 );
+                            context._pCmd->blitTexture( dstTarget, 0 );
                     }
                     else if ( src != 0 )
                     {
-                        ctx._pCmd->blitTexture( src, dstTarget );
+                        context._pCmd->blitTexture( src, dstTarget );
                         if ( bCaptureToBack )
-                            ctx._pCmd->blitTexture( dstTarget, 0 );
+                            context._pCmd->blitTexture( dstTarget, 0 );
                     }
                     else
                     {
                         RHIRenderPassBeginInfo beginInfo{};
                         beginInfo.setColorTarget( dstTarget, _clearColor, RHIRenderPassLoadOp::Load );
                         beginInfo._bBindColor = SW_TRUE;
-                        ctx._pCmd->beginRenderPass( beginInfo );
-                        drawFullscreen( ctx, 0, passCb );
-                        ctx._pCmd->endRenderPass();
+                        context._pCmd->beginRenderPass( beginInfo );
+                        drawFullscreen( context, 0, passCb );
+                        context._pCmd->endRenderPass();
                     }
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        copyOutputToPresentCapture( ctx, target );
+                        copyOutputToPresentCapture( context, target );
                     break;
                 }
                 case RenderPassType::Canvas:
@@ -633,15 +633,15 @@ namespace sw
                         beginInfo._arrLoadOp[0]      = RHIRenderPassLoadOp::Load;
                         beginInfo._width             = target._width;
                         beginInfo._height            = target._height;
-                        ctx._pCmd->beginRenderPass( beginInfo );
-                        (void)_canvasRenderer.drawList( *ctx._pCmd, _canvasFrame._mainOutput, 0, psoCanvas, target._width, target._height,
+                        context._pCmd->beginRenderPass( beginInfo );
+                        (void)_canvasRenderer.drawList( *context._pCmd, _canvasFrame._mainOutput, 0, psoCanvas, target._width, target._height,
                                                         _pDevice->supportsNativeBindlessSampling(), _canvasFrame._colorVisionMode );
-                        ctx._pCmd->endRenderPass();
+                        context._pCmd->endRenderPass();
                     }
                     if ( target._bCaptureToBack == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        ctx._pCmd->blitTexture( target._texture, 0 );
+                        context._pCmd->blitTexture( target._texture, 0 );
                     if ( target._bCaptureFromOutput == SW_TRUE && isLastSwapchainWriter( pPassDesc ) )
-                        copyOutputToPresentCapture( ctx, target );
+                        copyOutputToPresentCapture( context, target );
                     break;
                 }
                 // 실행 코드가 없는 타입: 일반 풀스크린 패스인데 패스 서술이 없거나, PSO 슬롯만 있는 엔진 내부 타입이다.
@@ -664,22 +664,22 @@ namespace sw
             }
         }
 
-        ctx._pCmd->endEventMarker();
+        context._pCmd->endEventMarker();
     }
 
-    bool FrameRenderer::beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
+    bool FrameRenderer::beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
                                         RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad )
     {
         const string_view         arrName[]  = { colorName };
         const float4              arrClear[] = { clearColor };
         const RHIRenderPassLoadOp arrLoad[]  = { colorLoad };
-        return beginColorPassMrt( ctx, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
+        return beginColorPassMrt( context, arrName, arrClear, arrLoad, 1, depthName, depthLoad );
     }
 
-    bool FrameRenderer::beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
+    bool FrameRenderer::beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor, const RHIRenderPassLoadOp* pColorLoad,
                                            uint32 colorCount, string_view depthName, RHIRenderPassLoadOp depthLoad )
     {
-        if ( _pDevice == nullptr || ctx._pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )
+        if ( _pDevice == nullptr || context._pCmd == nullptr || pColorNames == nullptr || colorCount == 0 )
             return false;
 
         RHIRenderPassBeginInfo beginInfo{};
@@ -713,13 +713,13 @@ namespace sw
             if ( pTargetClearColor != nullptr )
                 beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
         }
-        ctx._pCmd->beginRenderPass( beginInfo );
+        context._pCmd->beginRenderPass( beginInfo );
         return true;
     }
 
-    void FrameRenderer::beginDepthOnlyPass( FramePassContext& ctx, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad )
+    void FrameRenderer::beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad )
     {
-        if ( ctx._pCmd == nullptr )
+        if ( context._pCmd == nullptr )
             return;
         RHIRenderPassBeginInfo beginInfo{};
         beginInfo._bBindColor                           = SW_FALSE;
@@ -730,33 +730,33 @@ namespace sw
         beginInfo._clearDepth                           = clearDepth;
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
-        ctx._pCmd->beginRenderPass( beginInfo );
+        context._pCmd->beginRenderPass( beginInfo );
     }
 
-    void FrameRenderer::registerPassTexture( FramePassContext& ctx, const hashed_string& canonicalName, string_view attachmentName )
+    void FrameRenderer::registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName )
     {
         const TransientAttachmentPool::Attachment attachment = findTransientAttachment( attachmentName );
-        if ( attachment._texture != 0 && ctx._pCmd != nullptr )
-            ctx._pCmd->prepareTextureForShaderRead( attachment._texture );
-        ctx._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
-        // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀로 비켜야 한다 — 반해상도 첨부면 프레임 텍셀의 두 배다. ctx 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
+        if ( attachment._texture != 0 && context._pCmd != nullptr )
+            context._pCmd->prepareTextureForShaderRead( attachment._texture );
+        context._resourceRegistry.registerTexture( canonicalName, attachment._texture, attachment._srv );
+        // 원본을 비켜 읽는 효과(블룸)는 그 원본의 텍셀로 비켜야 한다 — 반해상도 첨부면 프레임 텍셀의 두 배다. context 는 패스마다 시드의 사본이라 다음 패스로 새지 않는다.
         if ( canonicalName == attachmentNames()._sourceColor && attachment._width > 0 && attachment._height > 0 )
         {
             const float32 width  = static_cast<float32>( attachment._width );
             const float32 height = static_cast<float32>( attachment._height );
-            ctx._passValues.setFloat4( passConstantNames()._sourceTexel, float4{ 1.0f / width, 1.0f / height, width, height } );
+            context._passValues.setFloat4( passConstantNames()._sourceTexel, float4{ 1.0f / width, 1.0f / height, width, height } );
         }
     }
 
-    void FrameRenderer::commitBindlessTextureBindings( FramePassContext& ctx )
+    void FrameRenderer::commitBindlessTextureBindings( FramePassContext& context )
     {
-        if ( _pDevice == nullptr || ctx._pCmd == nullptr )
+        if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
         // 주의: 여기서 updatePassConstants 를 부르지 않는다. 이 함수는 드로우 루프 안에서 불리므로 그러면
         // 드로우마다 라이트 · 뷰 행렬을 다시 만들고(정규화 · 외적 · 4x4 곱 두 번) 카메라를 다시 찾고
         // hashed_string 을 여덟 개씩 intern 한다. 그 값들은 모두 프레임 상수라 execute/executePacket
-        // 이 프레임 시드(_frameCtx)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
+        // 이 프레임 시드(_frameContext)에 한 번만 채우면 되고, 패스 컨텍스트는 그 시드를 복사해 간다.
         // 드로우마다 바뀌는 것은 g_World 하나뿐이고 그것은 bindForDraw 가 넣는다.
 
         // DX11 · GL: PassCB 인덱스를 t0..t3 에 건다(bindless 에뮬레이션).
@@ -766,9 +766,9 @@ namespace sw
 
         // 이 함수는 드로우 루프 안에서 불린다. 이름은 attachmentNames() 의 intern 된 것으로 찾는다. 주의: 이름을
         // 문자열로 받으면 **드로우마다** intern 하게 된다(FNV 해시 + 32-way 샤드 뮤텍스 x 4).
-        auto srvOf = [&ctx]( const hashed_string& name ) -> RHIDescriptorIndex
+        auto srvOf = [&context]( const hashed_string& name ) -> RHIDescriptorIndex
         {
-            const RegisteredTexture* pTex = ctx._resourceRegistry.findTexture( name );
+            const RegisteredTexture* pTex = context._resourceRegistry.findTexture( name );
             return pTex != nullptr ? pTex->_srv : kInvalidDescriptorIndex;
         };
 
@@ -788,13 +788,13 @@ namespace sw
         const RHIDescriptorIndex slot3 = ( depth != kInvalidDescriptorIndex ) ? depth : shadow;
 
         if ( shadow != kInvalidDescriptorIndex || source != kInvalidDescriptorIndex )
-            ctx._pCmd->bindShaderResource( slot0, 0 );
+            context._pCmd->bindShaderResource( slot0, 0 );
         if ( albedo != kInvalidDescriptorIndex || ao != kInvalidDescriptorIndex )
-            ctx._pCmd->bindShaderResource( slot1, 1 );
+            context._pCmd->bindShaderResource( slot1, 1 );
         if ( normal != kInvalidDescriptorIndex )
-            ctx._pCmd->bindShaderResource( slot2, 2 );
+            context._pCmd->bindShaderResource( slot2, 2 );
         if ( depth != kInvalidDescriptorIndex || shadow != kInvalidDescriptorIndex )
-            ctx._pCmd->bindShaderResource( slot3, 3 );
+            context._pCmd->bindShaderResource( slot3, 3 );
     }
 
     FrameRenderer::PresentTarget FrameRenderer::resolvePresentTarget() const
@@ -829,7 +829,7 @@ namespace sw
         return target;
     }
 
-    void FrameRenderer::copyOutputToPresentCapture( const FramePassContext& ctx, const PresentTarget& target )
+    void FrameRenderer::copyOutputToPresentCapture( const FramePassContext& context, const PresentTarget& target )
     {
         // 캡처는 계약 포맷(kBackBufferFormat)으로 출력 크기에 맞춰 만든다(ensurePresentCapture) — 게임 뷰 RT 도 같은 포맷이라 그대로 복사된다.
         const bool bSameSize   = _presentCaptureWidth == target._width && _presentCaptureHeight == target._height;
@@ -842,7 +842,7 @@ namespace sw
                                 static_cast<uint32>( constant::kBackBufferFormat ) );
             return;
         }
-        ctx._pCmd->blitTexture( target._texture, _presentCapture );
+        context._pCmd->blitTexture( target._texture, _presentCapture );
     }
 
     bool FrameRenderer::isLastSwapchainWriter( const RenderGraphPassDesc* pPassDesc ) const

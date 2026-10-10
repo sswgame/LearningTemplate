@@ -33,7 +33,7 @@
 
 ### 9-슬라이스와 타일 메시
 
-`SpriteMeshBuilder` 가 9-슬라이스(Sliced)와 타일(Tiled) 메시를 만듭니다. 정점은 `buildSlicedVertices` 가 만들고, 같은 값의 메시는 약한 참조 테이블(`acquireSlicedMesh`)로 나눠 씁니다.
+`SpriteMeshBuilder` 가 9-슬라이스(Sliced)와 타일(Tiled) 메시를 만듭니다. 정점은 `makeSlicedVertices` 가 만들고, 같은 값의 메시는 약한 참조 테이블(`acquireSlicedMesh`)로 나눠 씁니다.
 
 - 테두리는 **프레임 비율**(0..1, 왼쪽, 아래, 오른쪽, 위)입니다. 스프라이트의 자연 크기가 1 × 1이라 그 비율이 곧 모서리의 월드 크기입니다.
 - UV는 프레임 안의 0..1이고 셰이더가 인스턴스의 아틀라스 프레임으로 옮깁니다. 그래서 애니메이션 프레임이 바뀌어도 테두리가 같으면 메시는 그대로입니다.

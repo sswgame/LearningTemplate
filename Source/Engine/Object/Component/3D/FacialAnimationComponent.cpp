@@ -506,7 +506,7 @@ namespace sw
         Pose&                     pose       = unit.getLocalPose();
         quaternion*               pRotation  = pose.getRotationData();
         const float32             maxAngle   = MathUtil::toRadian( gaze._maxAngleDegrees );
-        const quaternion          saccade    = quaternion::createFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
+        const quaternion          saccade    = quaternion::makeFromYawPitchRoll( _saccadeOffset._x, _saccadeOffset._y, 0.0f );
         for ( const int32 boneIndex : _listEyeBone )
         {
             if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModel.size() || static_cast<uint32>( boneIndex ) >= pose.getBoneCount() )

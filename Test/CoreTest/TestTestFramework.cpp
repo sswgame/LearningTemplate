@@ -594,7 +594,7 @@ SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed 
 
     test::TestRegistry plainRegistry;
     registerProbes( plainRegistry );
-    const sw::vector<sw::string> listPlain = toNames( plainRegistry.buildRunOrder( 0 ) );
+    const sw::vector<sw::string> listPlain = toNames( plainRegistry.makeRunOrder( 0 ) );
     SW_ASSERT_EQUAL( size_t{ 20 }, listPlain.size() );
     SW_EXPECT_STREQ( "AlphaProbeTest.One", listPlain.front() );
     SW_EXPECT_STREQ( "DeltaProbeTest.Five", listPlain.back() );
@@ -602,9 +602,9 @@ SW_TEST_CASE( TestFrameworkTest, ShuffleKeepsEveryCaseAndReplaysWithTheSameSeed 
     test::TestRegistry shuffledRegistry;
     registerProbes( shuffledRegistry );
     configureWithArgument( shuffledRegistry, "--test_shuffle=7" );
-    const sw::vector<sw::string> listFirst  = toNames( shuffledRegistry.buildRunOrder( 0 ) );
-    const sw::vector<sw::string> listReplay = toNames( shuffledRegistry.buildRunOrder( 0 ) );
-    const sw::vector<sw::string> listNext   = toNames( shuffledRegistry.buildRunOrder( 1 ) );
+    const sw::vector<sw::string> listFirst  = toNames( shuffledRegistry.makeRunOrder( 0 ) );
+    const sw::vector<sw::string> listReplay = toNames( shuffledRegistry.makeRunOrder( 0 ) );
+    const sw::vector<sw::string> listNext   = toNames( shuffledRegistry.makeRunOrder( 1 ) );
 
     SW_EXPECT_TRUE_MSG( listFirst == listReplay, "같은 씨앗 · 같은 회차인데 순서가 다르다 — 진 순서를 다시 만들 수 없다" );
     SW_EXPECT_TRUE_MSG( listFirst != listPlain, "섞었는데 등록 순서 그대로다" );

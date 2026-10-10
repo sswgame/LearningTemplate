@@ -127,7 +127,7 @@ const utf8*     pText   = engine::getTypeRegistry().enumToString( DoorMode::Slid
 이 시점에는 아직 레지스트리에 아무것도 들어가지 않습니다. 정적 초기화 순서는 모듈마다 다르고, 레지스트리가 먼저 만들어졌다는 보장이 없기 때문입니다.
 
 모듈을 로드한 뒤 엔진이 `engine::registerModuleTypes( 모듈 이름 )` 을 부르면, 체인을 따라 등록 함수를 차례로 실행합니다.
-한 모듈의 등록이 끝나면 조회 캐시를 한 번에 만듭니다(`buildLookupCaches`). 타입마다 캐시를 고치면 부모가 자식보다 늦게 등록되는 경우를 따로 처리해야 하기 때문입니다.
+한 모듈의 등록이 끝나면 조회 캐시를 한 번에 만듭니다(`populateLookupCaches`). 타입마다 캐시를 고치면 부모가 자식보다 늦게 등록되는 경우를 따로 처리해야 하기 때문입니다.
 
 엔진 기동 단계 `ModuleTypes` 가 모든 타입 공급자(엔진, GameFramework, 키트, 게임 모듈)의 등록을 끝낸 뒤에야 씬을 읽습니다.
 그 전에 씬을 읽으면 아직 로드되지 않은 모듈의 컴포넌트가 `MissingComponent` 로 만들어집니다.

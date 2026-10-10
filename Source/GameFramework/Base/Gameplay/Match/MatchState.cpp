@@ -38,9 +38,9 @@ namespace sw
     int32 MatchState::addTeam( const hashed_string& name, int32 costPool )
     {
         MatchTeam team;
-        team._name           = name;
-        team._costPool       = MathUtil::max( 0, costPool );
-        team._bUnlimitedCost = costPool <= 0 ? SW_TRUE : SW_FALSE;
+        team._name        = name;
+        team._costPool    = MathUtil::max( 0, costPool );
+        team._bIgnoreCost = costPool <= 0 ? SW_TRUE : SW_FALSE;
         _listTeam.push_back( team );
         return static_cast<int32>( _listTeam.size() ) - 1;
     }
@@ -160,7 +160,7 @@ namespace sw
         dead._listDamage.clear();
 
         MatchTeam& team = _listTeam[static_cast<size_t>( dead._team )];
-        if ( team._bUnlimitedCost == SW_FALSE )
+        if ( team._bIgnoreCost == SW_FALSE )
             team._costPool -= dead._respawnCost;
         if ( _settings._bRespawn == SW_FALSE )
         {
@@ -169,7 +169,7 @@ namespace sw
         else
         {
             dead._respawnTimer.start( _settings._respawnDelay );
-            if ( team._bUnlimitedCost == SW_FALSE && team._costPool <= 0 )
+            if ( team._bIgnoreCost == SW_FALSE && team._costPool <= 0 )
                 eliminateTeam( dead._team ); // 전력 게이지가 바닥났다
         }
         resolveEndConditions();
@@ -243,7 +243,7 @@ namespace sw
         bool bAnyCostLoss = false;
         for ( const MatchTeam& team : _listTeam )
         {
-            bAnyCostLoss = bAnyCostLoss || ( team._bEliminated && team._bUnlimitedCost == SW_FALSE && team._costPool <= 0 );
+            bAnyCostLoss = bAnyCostLoss || ( team._bEliminated && team._bIgnoreCost == SW_FALSE && team._costPool <= 0 );
         }
         if ( standingCount == 0 )
             endMatch( -1 );
@@ -262,7 +262,7 @@ namespace sw
             if ( team._bEliminated )
                 continue;
             // 코스트제는 남은 게이지가 점수다.
-            const int32 score = team._bUnlimitedCost ? team._score : team._costPool;
+            const int32 score = team._bIgnoreCost ? team._score : team._costPool;
             if ( bestTeam < 0 || score > bestScore )
             {
                 bestTeam  = static_cast<int32>( index );
@@ -330,7 +330,7 @@ namespace sw
             outArchive << team._score;
             outArchive << team._costPool;
             outArchive << team._placement;
-            outArchive << team._bUnlimitedCost;
+            outArchive << team._bIgnoreCost;
             outArchive << team._bEliminated;
         }
         outArchive << static_cast<uint32>( _listParticipant.size() );
@@ -373,9 +373,9 @@ namespace sw
             archive >> team._score;
             archive >> team._costPool;
             archive >> team._placement;
-            archive >> team._bUnlimitedCost;
+            archive >> team._bIgnoreCost;
             archive >> team._bEliminated;
-            if ( archive.isError() || team._bUnlimitedCost > SW_TRUE || team._bEliminated > SW_TRUE )
+            if ( archive.isError() || team._bIgnoreCost > SW_TRUE || team._bEliminated > SW_TRUE )
                 return false;
         }
         uint32 participantCount = 0;

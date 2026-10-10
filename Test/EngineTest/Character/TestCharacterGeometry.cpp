@@ -149,7 +149,7 @@ SW_TEST_CASE( MeshMergerTest, RestingRigidPartIsBoundToSocketBoneAndExtracted )
     arrSource[1]._name          = hashed_string( "Sword" );
     arrSource[1]._pGeometry     = &sword;
     arrSource[1]._socketBone    = 2;
-    arrSource[1]._restTransform = float4x4::createRotationZ( MathUtil::kHalfPi ) * float4x4::createTranslation( 0.1f, 0.8f, -0.1f );
+    arrSource[1]._restTransform = float4x4::makeRotationZ( MathUtil::kHalfPi ) * float4x4::makeTranslation( 0.1f, 0.8f, -0.1f );
     MergedMesh merged;
     SW_ASSERT_TRUE( MeshMerger::merge( vector_reference<const MeshMergeSource>( arrSource, 2 ), nullptr, merged, nullptr ) );
     const MergedPartRange& swordRange = merged._listPart[1];

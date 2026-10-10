@@ -14,7 +14,7 @@ namespace
     /** @brief 오일러(피치 · 요 · 롤)로 돌린 앞 · 위가 기대와 같은지 봅니다. */
     bool rotatesTo( const float3& euler, const float3& forward, const float3& up )
     {
-        const quaternion rotation   = quaternion::createFromYawPitchRoll( euler._y, euler._x, euler._z );
+        const quaternion rotation   = quaternion::makeFromYawPitchRoll( euler._y, euler._x, euler._z );
         const float3     gotForward = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, rotation );
         const float3     gotUp      = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, rotation );
         return float3::getDistance( gotForward, forward ) < 1.0e-3f && float3::getDistance( gotUp, up ) < 1.0e-3f;
@@ -22,7 +22,7 @@ namespace
 } // namespace
 
 /**
- * @brief [OrientationUtilTest] 앞 · 위로 구한 오일러는 엔진 회전(`createFromYawPitchRoll`)으로 같은 앞 · 위를 낸다 — 롤 · 뒤집힘 · 수직 앞 포함
+ * @brief [OrientationUtilTest] 앞 · 위로 구한 오일러는 엔진 회전(`makeFromYawPitchRoll`)으로 같은 앞 · 위를 낸다 — 롤 · 뒤집힘 · 수직 앞 포함
  * @details 코스터 차량 · 탑승 카메라가 루프에서 뒤집히는 자리다. 카메라 `lookAt` 은 롤이 없어 그 자리를 못 맞춘다.
  */
 SW_TEST_CASE( OrientationUtilTest, EulerReproducesForwardAndUp )
@@ -37,7 +37,7 @@ SW_TEST_CASE( OrientationUtilTest, EulerReproducesForwardAndUp )
         {
             for ( const float32 roll : arrRoll )
             {
-                const quaternion rotation = quaternion::createFromYawPitchRoll( yaw, pitch, roll );
+                const quaternion rotation = quaternion::makeFromYawPitchRoll( yaw, pitch, roll );
                 const float3     forward  = float3::transform( float3{ 0.0f, 0.0f, 1.0f }, rotation );
                 const float3     up       = float3::transform( float3{ 0.0f, 1.0f, 0.0f }, rotation );
                 bAllMatch                 = bAllMatch && rotatesTo( OrientationUtil::computeEulerFromForwardUp( forward, up ), forward, up );

@@ -65,7 +65,7 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
 
     // 실린 인스턴스: 칠한 칸 넷만(빈 칸 넷은 숨긴 항목).
     sw::GPUSceneBuilder builder;
-    builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
+    builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( builder.getInstances().size() ) );
 
     // 칠하면 아래 이웃의 모습 · 바디 · 외곽선이 따라 바뀐다.
@@ -73,7 +73,7 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     SW_EXPECT_EQUAL( 5, pTiles->getDisplayedCell( 1, 1 ) );
     SW_EXPECT_EQUAL( 1, pTiles->getDisplayedCell( 1, 0 ) );
     SW_EXPECT_EQUAL( 2u, pTiles->getPhysicsBodyCount() );
-    builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
+    builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( builder.getInstances().size() ) );
     // 이웃 칸의 GPU 인스턴스도 새 모습(아틀라스 칸 5)의 UV 를 싣는다 — 칠한 칸만 다시 놓으면 이웃은 옛 모습("위가 빔")으로 남는다.
     const sw::float3 neighborCenter = pTiles->computeCellCenter( 1, 1 );

@@ -43,7 +43,7 @@ namespace
     [[nodiscard]] bool readReportFileInternal( const utf8* pExtension, sw::string& outText )
     {
         utf8 arrPath[sw::constant::kMaxBuffer1024]{};
-        sw::buildCrashReportPath( arrPath, sw::constant::kMaxBuffer1024, pExtension );
+        sw::makeCrashReportPath( arrPath, sw::constant::kMaxBuffer1024, pExtension );
         return sw::FileUtil::readTextFile( arrPath, outText );
     }
 } // namespace
@@ -138,9 +138,9 @@ SW_TEST_CASE( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereIsN
     utf8 arrContextPath[sw::constant::kMaxBuffer1024]{};
     utf8 arrStackPath[sw::constant::kMaxBuffer1024]{};
     utf8 arrDumpPath[sw::constant::kMaxBuffer1024]{};
-    sw::buildCrashReportPath( arrContextPath, sw::constant::kMaxBuffer1024, "txt" );
-    sw::buildCrashReportPath( arrStackPath, sw::constant::kMaxBuffer1024, "stack.txt" );
-    sw::buildCrashReportPath( arrDumpPath, sw::constant::kMaxBuffer1024, "dmp" );
+    sw::makeCrashReportPath( arrContextPath, sw::constant::kMaxBuffer1024, "txt" );
+    sw::makeCrashReportPath( arrStackPath, sw::constant::kMaxBuffer1024, "stack.txt" );
+    sw::makeCrashReportPath( arrDumpPath, sw::constant::kMaxBuffer1024, "dmp" );
 
     // 1) 덤프가 없을 때 — 컨텍스트와 스택 파일만 적혀야 한다.
     sw::writeCrashReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, false );
@@ -178,7 +178,7 @@ SW_TEST_CASE( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
     const sw::string folder = prepareReportFolderInternal();
 
     utf8 arrPath[sw::constant::kMaxBuffer1024]{};
-    sw::buildCrashReportPath( arrPath, sw::constant::kMaxBuffer1024, "dmp" );
+    sw::makeCrashReportPath( arrPath, sw::constant::kMaxBuffer1024, "dmp" );
 
     const sw::string path{ arrPath };
     SW_EXPECT_TRUE( path.find( folder ) != sw::string::npos );

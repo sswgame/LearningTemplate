@@ -153,7 +153,7 @@ namespace sw
         parent.appendAttribute( pName, value );
     }
 
-    void MaterialUtil::appendBoolAttr( XMLNode parent, const utf8* pName, bool value )
+    void MaterialUtil::appendBoolAttribute( XMLNode parent, const utf8* pName, bool value )
     {
         parent.appendAttribute( pName, value );
     }
@@ -189,9 +189,9 @@ namespace sw
         return "High";
     }
 
-    void MaterialUtil::parsePermutationNode( XMLNode root, MaterialPermutationDesc& out )
+    void MaterialUtil::parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc )
     {
-        out = MaterialPermutationDesc{};
+        outDesc = MaterialPermutationDesc{};
         if ( root.isValid() == false )
             return;
         XMLNode permutationsNode = root.findChild( "_permutations" );
@@ -200,14 +200,14 @@ namespace sw
 
         const string quality = MaterialUtil::fieldText( permutationsNode, "quality" );
         if ( quality.empty() == false )
-            out._quality = MaterialUtil::parseQuality( quality );
+            outDesc._quality = MaterialUtil::parseQuality( quality );
         const string lod = MaterialUtil::fieldText( permutationsNode, "shaderLOD" );
         if ( lod.empty() == false )
         {
             uint64 lodVal{ 0 };
             if ( StringUtil::parseUint64( lod, lodVal, 10 ) == false )
                 SW_LOG_WARNING( "Material shader LOD '%#' is not a number - using 0", lod );
-            out._shaderLOD = static_cast<uint32>( lodVal );
+            outDesc._shaderLOD = static_cast<uint32>( lodVal );
         }
         const string usage = MaterialUtil::fieldText( permutationsNode, "usage" );
         if ( usage.empty() == false )
@@ -216,13 +216,13 @@ namespace sw
             int64           usageValue{ 0 };
             // 모르는 토큰이 하나라도 있으면 아는 토큰만 남기지 않고 기본값을 둔다(`EnumInfo::tryParseText`).
             if ( pUsageEnum != nullptr && pUsageEnum->tryParseText( usage, usageValue ) )
-                out._usage = static_cast<MaterialUsageFlags>( usageValue );
+                outDesc._usage = static_cast<MaterialUsageFlags>( usageValue );
             else
                 SW_LOG_WARNING( "Material usage '%#' has an unknown flag - keeping the default", usage );
         }
 
         XMLNode always = permutationsNode.findChild( "_alwaysDefines" );
-        MaterialXMLInternal::parseStringListItems( always, out._listAlwaysDefine );
+        MaterialXMLInternal::parseStringListItems( always, outDesc._listAlwaysDefine );
 
         XMLNode switches = permutationsNode.findChild( "_staticSwitches" );
         if ( switches.isValid() )
@@ -238,7 +238,7 @@ namespace sw
                 if ( entry._name.empty() && entry._keyword.empty() == false )
                     entry._name = entry._keyword;
                 if ( entry._keyword.empty() == false || entry._name.empty() == false )
-                    out._listStaticSwitch.push_back( std::move( entry ) );
+                    outDesc._listStaticSwitch.push_back( std::move( entry ) );
             }
         }
 
@@ -253,7 +253,7 @@ namespace sw
                 XMLNode optionsNode    = item.findChild( "_options" );
                 MaterialXMLInternal::parseStringListItems( optionsNode, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
-                    out._listMultiCompile.push_back( std::move( multiCompile ) );
+                    outDesc._listMultiCompile.push_back( std::move( multiCompile ) );
             }
         }
     }
@@ -280,8 +280,8 @@ namespace sw
                 MaterialUtil::appendAttribute( item, "keyword", entry._keyword );
                 if ( entry._keywordOff.empty() == false )
                     MaterialUtil::appendAttribute( item, "keywordOff", entry._keywordOff );
-                MaterialUtil::appendBoolAttr( item, "bEnabled", entry._bEnabled );
-                MaterialUtil::appendBoolAttr( item, "bShaderFeature", entry._bShaderFeature );
+                MaterialUtil::appendBoolAttribute( item, "bEnabled", entry._bEnabled );
+                MaterialUtil::appendBoolAttribute( item, "bShaderFeature", entry._bShaderFeature );
             }
         }
 
@@ -386,15 +386,15 @@ namespace sw
             }
             if ( prop._type == MaterialPropertyType::Color )
             {
-                MaterialUtil::appendBoolAttr( item, "bHdr", prop._bHdr );
-                MaterialUtil::appendBoolAttr( item, "bSrgb", prop._bSrgb );
+                MaterialUtil::appendBoolAttribute( item, "bHdr", prop._bHdr );
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSrgb );
             }
             if ( MaterialUtil::isTextureType( prop._type ) )
-                MaterialUtil::appendBoolAttr( item, "bSrgb", prop._bSrgb );
+                MaterialUtil::appendBoolAttribute( item, "bSrgb", prop._bSrgb );
             if ( prop._bHidden )
-                MaterialUtil::appendBoolAttr( item, "bHidden", true );
+                MaterialUtil::appendBoolAttribute( item, "bHidden", true );
             if ( prop._bAdvanced )
-                MaterialUtil::appendBoolAttr( item, "bAdvanced", true );
+                MaterialUtil::appendBoolAttribute( item, "bAdvanced", true );
 
             if ( prop._listEnumEntry.empty() == false )
             {

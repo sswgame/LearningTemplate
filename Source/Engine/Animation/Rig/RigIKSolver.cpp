@@ -253,7 +253,7 @@ namespace sw
             float3 axis = fromUnit.cross( float3::Right );
             if ( axis.getLengthSquared() < 1e-6f )
                 axis = fromUnit.cross( float3::Up );
-            return quaternion::createFromAxisAngle( axis.normalize(), MathUtil::kPi );
+            return quaternion::makeFromAxisAngle( axis.normalize(), MathUtil::kPi );
         }
         const float3 axis = fromUnit.cross( toUnit );
         return quaternion{ axis._x, axis._y, axis._z, 1.0f + cosine }.normalize();
@@ -301,13 +301,13 @@ namespace sw
             if ( swingAngle > limit._swingLimit && swingAngle > MathUtil::kEpsilon )
                 swing = RigIKSolverInternal::scaleRotation( swing, limit._swingLimit / swingAngle );
             const float32 twistAngle = MathUtil::clamp( computeTwistAngle( twist, limit._boneAxis ), -limit._twistLimit, limit._twistLimit );
-            limited                  = swing * quaternion::createFromAxisAngle( limit._boneAxis, twistAngle );
+            limited                  = swing * quaternion::makeFromAxisAngle( limit._boneAxis, twistAngle );
         }
         else
         {
             decomposeSwingTwist( delta, limit._hingeAxis, swing, twist );
             const float32 angle = MathUtil::clamp( computeTwistAngle( twist, limit._hingeAxis ), limit._minAngle, limit._maxAngle );
-            limited             = quaternion::createFromAxisAngle( limit._hingeAxis, angle );
+            limited             = quaternion::makeFromAxisAngle( limit._hingeAxis, angle );
         }
         pose.setLocalRotation( bone, ( limit._referenceRotation * limited ).normalize() );
     }

@@ -294,7 +294,7 @@ namespace sw
             }
             chunk._batch = sw::make_unique<MeshInstanceBatch>( Mesh::create(), _material.getMaterial(), _material.getInstance(), 1u );
             chunk._batch->setOwnerComponent( this );
-            chunk._batch->setWorld( 0, float4x4::createTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
+            chunk._batch->setWorld( 0, float4x4::makeTranslation( TerrainMeshBuilder::computeChunkTranslation( _heightfield, _layout, chunkX, chunkZ ) ) );
             chunk._batch->setBoundsRadius( 0, TerrainMeshBuilder::computeChunkBoundsRadius( _heightfield, _layout, chunkX, chunkZ ) );
             rebuildChunkMesh( chunkIndex );
             if ( _pPrimitiveRegistry != nullptr )
@@ -308,7 +308,7 @@ namespace sw
         const uint32      chunkX = chunkIndex % _layout._chunkCountX;
         const uint32      chunkZ = chunkIndex / _layout._chunkCountX;
         vector<RHIVertex> listVertex;
-        TerrainMeshBuilder::buildChunkVertices( _heightfield, _layout, chunkX, chunkZ, chunk._lod, chunk._arrNeighborLOD, listVertex );
+        TerrainMeshBuilder::makeChunkVertices( _heightfield, _layout, chunkX, chunkZ, chunk._lod, chunk._arrNeighborLOD, listVertex );
         chunk._vertexCount    = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );

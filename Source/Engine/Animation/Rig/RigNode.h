@@ -173,7 +173,7 @@ namespace sw
         string_view        getContext() const { return _context; }
 
     private:
-        JSONValue findMember( string_view key, bool bRequired );
+        JSONValue readMember( string_view key, bool bRequired );
 
         JSONValue      _object; ///< 값으로 든다 — `array.at( i )` 같은 임시를 받아도 리더보다 먼저 죽지 않게(핸들이라 복사가 싸다)
         vector<string> _listUsedKey;

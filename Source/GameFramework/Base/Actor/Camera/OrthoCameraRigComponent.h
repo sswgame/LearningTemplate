@@ -104,7 +104,7 @@ namespace sw
         /** @brief 시간을 흘려 블렌드 · 회전 따라가기를 진행하고 카메라를 둡니다. */
         void updateCamera( float32 deltaTime );
         /** @brief 덮어쓰기 · 직교로 오가는 블렌드입니다. */
-        void setOverrideBlend( const BlendCurveSpec& blend ) { _overrideBlend = blend; }
+        void setOverrideBlend( const BlendCurveDef& blend ) { _overrideBlend = blend; }
 
     private:
         void applyInput( float32 deltaTime );
@@ -155,7 +155,7 @@ namespace sw
         PROPERTY( Category = "Rig", DisplayName = "Rotate Time", Tooltip = "Time constant the shown yaw follows a Q/E step with", Min = 0.0, Units = s )
         float32 _rotateTime;
         PROPERTY( Category = "Rig", DisplayName = "Override Blend", Tooltip = "Blend into and out of a view override (ride camera)" )
-        BlendCurveSpec _overrideBlend;
+        BlendCurveDef _overrideBlend;
 
         float3         _overridePosition;
         float3         _overrideEuler;

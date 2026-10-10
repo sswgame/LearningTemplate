@@ -150,7 +150,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
 
-        ScopedOpenGLContext ctxScope( this );
+        ScopedOpenGLContext contextScope( this );
         glFinish();
         _releaseQueue.flushAll();
     }

@@ -18,7 +18,7 @@ namespace sw
         , _motorTarget{ 0.0f }
         , _motorMaxForce{ 0.0f }
         , _bLimitsEnabled{ false }
-        , _bDisableCollision{ true }
+        , _bCollideConnectedBodies{ false }
         , _bConnectToWorld{ false }
         , _joint{}
         , _jointBodyA{}
@@ -112,17 +112,17 @@ namespace sw
         desc._anchorB = desc._anchor;
         if ( _jointType == PhysicsJointType::Distance && pBodyB != nullptr )
             desc._anchorB = float2{ pBodyB->getWorldPosition()._x, pBodyB->getWorldPosition()._y };
-        const float3 axis       = float3::transform( float3{ _axis._x, _axis._y, 0.0f }, rotation );
-        desc._axis              = float2{ axis._x, axis._y }.normalize();
-        desc._motor             = PhysicsJointMotor{ _motorTarget, _motorMaxForce, _motorMode };
-        desc._minLimit          = _minLimit;
-        desc._maxLimit          = _maxLimit;
-        desc._type              = _jointType;
-        desc._bLimitsEnabled    = _bLimitsEnabled;
-        desc._bDisableCollision = _bDisableCollision;
-        _joint                  = pScene->createJoint( desc );
-        _jointBodyA             = bodyA;
-        _jointBodyB             = bodyB;
+        const float3 axis             = float3::transform( float3{ _axis._x, _axis._y, 0.0f }, rotation );
+        desc._axis                    = float2{ axis._x, axis._y }.normalize();
+        desc._motor                   = PhysicsJointMotor{ _motorTarget, _motorMaxForce, _motorMode };
+        desc._minLimit                = _minLimit;
+        desc._maxLimit                = _maxLimit;
+        desc._type                    = _jointType;
+        desc._bLimitsEnabled          = _bLimitsEnabled;
+        desc._bCollideConnectedBodies = _bCollideConnectedBodies;
+        _joint                        = pScene->createJoint( desc );
+        _jointBodyA                   = bodyA;
+        _jointBodyB                   = bodyB;
     }
 
     void Joint2DComponent::releasePhysics( ScenePhysics& physics )

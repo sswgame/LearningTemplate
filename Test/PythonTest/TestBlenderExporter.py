@@ -4,7 +4,7 @@
 Blender 내보내기 애드온(`Tools/DCC/Blender/sw_engine_exporter`)의 bpy 없는 부분 — 이름 · 경로 규약, 좌표계 변환, 소켓 XML, 임포트 명령.
 
 CI 에는 Blender 가 없다. 그래서 bpy 를 쓰는 `__init__.py` 는 읽지 않고, 패키지 자리에 빈 모듈을 세워 나머지만 올린다.
-좌표계 변환은 **엔진의 식**과 맞춰 본다: 엔진 `quaternion::createFromYawPitchRoll` 을 옮긴 식으로 만든 회전이 이 애드온이 쓴 각에서
+좌표계 변환은 **엔진의 식**과 맞춰 본다: 엔진 `quaternion::makeFromYawPitchRoll` 을 옮긴 식으로 만든 회전이 이 애드온이 쓴 각에서
 같은 행렬로 돌아와야 한다.
 """
 

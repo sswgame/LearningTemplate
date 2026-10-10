@@ -62,7 +62,7 @@ namespace sw
                 return;
             OverlapInfo overlap;
             overlap._pOther        = manager.findGameObjectByID( otherID );
-            overlap._time          = event._time;
+            overlap._hitFraction   = event._hitFraction;
             overlap._bSelfTrigger  = bSelfTrigger ? SW_TRUE : SW_FALSE;
             overlap._bOtherTrigger = bOtherTrigger ? SW_TRUE : SW_FALSE;
             // 처리가 컴포넌트를 붙이고 뗄 수 있으므로 목록을 베껴 돈다.

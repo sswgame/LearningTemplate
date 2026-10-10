@@ -475,7 +475,7 @@ namespace sw
                     }
                 }
                 pState[0] = MathUtil::clamp( pState[0], 0, totalSteps );
-                BlendCurveSpec spec;
+                BlendCurveDef spec;
                 spec._curve             = static_cast<BlendCurve>( pState[4] );
                 const float32 weight    = evaluateBlendWeight( spec, static_cast<float32>( pState[0] ) / static_cast<float32>( totalSteps ) );
                 context._pFloatState[0] = bCanMove ? weight * length : 0.0f;

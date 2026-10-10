@@ -98,7 +98,7 @@ namespace sw
         , _mainView{}
         , _listExtraView{}
         , _pActiveView{ &_mainView }
-        , _frameCtx{}
+        , _frameContext{}
         , _mainSeedScratch{}
         , _directViewScheduler{}
         , _listDirectViewScratch{}
@@ -406,10 +406,10 @@ namespace sw
             _renderPipelineAssetCache->shutdown();
             _renderPipelineAssetCache.reset();
         }
-        _pCmdOwnerDevice = nullptr;
-        _pCmd            = nullptr;
-        _frameCtx._pCmd  = nullptr;
-        _pDevice         = nullptr;
+        _pCmdOwnerDevice    = nullptr;
+        _pCmd               = nullptr;
+        _frameContext._pCmd = nullptr;
+        _pDevice            = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 서도 옛 시계 기준을 쓰지 않게 잊는다.
         _gpuTimeline.forgetContext();
         _pGPUTimelineFailedDevice = nullptr;
@@ -503,7 +503,7 @@ namespace sw
         _pCmdOwnerDevice = pDevice;
         _pCmd            = _frameCmd.get();
         // 패스 컨텍스트 시드도 같은 리스트를 가리키게 한다(직렬 경로가 이것을 쓴다).
-        _frameCtx._pCmd = _pCmd;
+        _frameContext._pCmd = _pCmd;
 
         if ( _pCmd == nullptr )
         {
@@ -569,7 +569,7 @@ namespace sw
         _pCmd = nullptr;
 
         // 주 시점이 읽는 렌더 텍스처(CCTV 모니터)를 먼저 그린다. 주 시점의 패스 시드는 추가 뷰가 덮어쓰므로 지켜 둔다.
-        _mainSeedScratch          = _frameCtx;
+        _mainSeedScratch          = _frameContext;
         uint32 renderedExtraCount = 0;
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
@@ -579,7 +579,7 @@ namespace sw
             ++renderedExtraCount;
         }
         // 주 시점의 시드 · 클리어 기록으로 돌아온다(추가 뷰가 자기 값을 덮어썼다).
-        _frameCtx = _mainSeedScratch;
+        _frameContext = _mainSeedScratch;
         _bHasExecutedDepthPrepass.store( 0 );
 
         // 병렬 기록이 가능하면(백엔드 capability + TaskManager + 레벨이 나올 만큼 컴파일된 그래프) 레벨마다 여러 리스트로 기록한다.
@@ -601,7 +601,7 @@ namespace sw
             if ( pMainCmd != nullptr )
             {
                 // 직렬 경로의 패스는 시드의 리스트에 기록한다(그래프가 패스에 리스트를 주지 않는다) — 시드를 이 리스트로 돌린다.
-                _frameCtx._pCmd = pMainCmd;
+                _frameContext._pCmd = pMainCmd;
                 pMainCmd->beginCommandList();
                 bOk = _graph.execute( _graphContext, pMainCmd );
                 pMainCmd->endCommandList();
@@ -625,7 +625,7 @@ namespace sw
             renderExtraView( pDevice, *pView );
             ++renderedExtraCount;
         }
-        _frameCtx                   = _mainSeedScratch;
+        _frameContext               = _mainSeedScratch;
         _lastRenderedExtraViewCount = renderedExtraCount;
         return bOk;
     }
@@ -669,10 +669,10 @@ namespace sw
                 const uint32                      shadowResolution = getShadowMapResolution();
                 const DirectionalShadowProjection shadow =
                     pMainCamera != nullptr
-                        ? pShadowLight->buildShadowProjectionForView(
+                        ? pShadowLight->computeShadowProjectionForView(
                               pMainCamera->getViewProjectionMatrix( RenderViewCollector::computeAspect( _mainView._settings, _directOutputWidth, _directOutputHeight ) ),
                               shadowResolution )
-                        : pShadowLight->buildShadowProjection( shadowResolution );
+                        : pShadowLight->computeShadowProjection( shadowResolution );
                 _frameLight._shadowViewProj = shadow._viewProj;
                 _frameLight._shadowParams   = shadow.computeShaderParams();
             }
@@ -690,9 +690,9 @@ namespace sw
         ensurePassResources();
         ensureTransientResources( _directOutputWidth, _directOutputHeight );
         resetPassCbRing();
-        setIdentityWorld( _frameCtx );
+        setIdentityWorld( _frameContext );
 
-        updatePassConstants( _frameCtx );
+        updatePassConstants( _frameContext );
         resetClearedAttachments();
         _bHasExecutedDepthPrepass.store( 0 );
 
@@ -712,8 +712,8 @@ namespace sw
         // 주 카메라의 정렬 축도 패킷 경로(EngineLoop)처럼 건다 — 직교 카메라는 시선 축, 원근은 거리.
         if ( pMainCamera != nullptr )
             _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
-        _sceneBuilder.buildFromScene( pScene, cameraPos );
-        _sceneBuilder.buildViewTransparentOrders( _listDirectViewScratch );
+        _sceneBuilder.populateFromScene( pScene, cameraPos );
+        _sceneBuilder.computeViewTransparentOrders( _listDirectViewScratch );
         prepareExtraViews( _listDirectViewScratch );
         {
             // 스크래치 하나를 돌려 쓴다. 바꿔치기라 지난 스냅샷의 저장소가 여기로 돌아온다.
@@ -761,13 +761,13 @@ namespace sw
         ensurePassResources();
         ensureTransientResources( packet._viewportWidth, packet._viewportHeight );
         resetPassCbRing();
-        setIdentityWorld( _frameCtx );
+        setIdentityWorld( _frameContext );
         // 시드는 씬 경로와 같은 updatePassConstants 로 채운다. 따로 채우면 라이트 · 블룸 · 아웃라인 색 상수가
         // 빠지기 쉽다. 패킷이 자기 뷰 행렬을 갖고 있을 때만 그 위에 덮어쓴다.
         // _pScene 이 null 이라 updatePassConstants 는 폴백 뷰를 세운다.
-        updatePassConstants( _frameCtx );
+        updatePassConstants( _frameContext );
         if ( packet._bHasViewProj != SW_FALSE )
-            applyViewProjection( _frameCtx, packet._viewProj ); // 역행렬 · 절두체도 함께 갱신된다
+            applyViewProjection( _frameContext, packet._viewProj ); // 역행렬 · 절두체도 함께 갱신된다
         view( RenderViewType::Main )._position = packet._cameraPos;
         // 추가 뷰의 풀 · 텍스처 · 컬링 칸을 업로드 전에 맞춘다(기록 중에는 만들 수 없다).
         prepareExtraViews( packet._listView );

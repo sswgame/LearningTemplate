@@ -50,7 +50,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, SlicedCornersKeepTheirSizeAndTheCenterStret
     desc._size   = sw::float2{ 4.0f, 2.0f };
     desc._border = sw::float4{ 0.25f, 0.25f, 0.25f, 0.25f };
     sw::vector<sw::RHIVertex> listVertex;
-    sw::SpriteMeshBuilder::buildSlicedVertices( desc, listVertex );
+    sw::SpriteMeshBuilder::makeSlicedVertices( desc, listVertex );
     SW_ASSERT_EQUAL( 9u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
 
     // 행은 아래 → 위, 열은 왼 → 오른. 사각형 6 = 위 행의 왼쪽 열.
@@ -90,7 +90,7 @@ SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
     tiled._size   = sw::float2{ 2.5f, 1.0f };
     tiled._bTiled = SW_TRUE;
     sw::vector<sw::RHIVertex> listVertex;
-    sw::SpriteMeshBuilder::buildSlicedVertices( tiled, listVertex );
+    sw::SpriteMeshBuilder::makeSlicedVertices( tiled, listVertex );
     SW_ASSERT_EQUAL( 3u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
     const QuadBounds first = readQuad( listVertex, 0 );
     const QuadBounds last  = readQuad( listVertex, 2 );
@@ -102,14 +102,14 @@ SW_TEST_CASE( SpriteMeshBuilderTest, TiledRepeatsTheMiddleAndCropsTheLastTile )
     // Sliced 로 같은 크기면 칸 하나가 늘어난다.
     sw::SlicedSpriteDesc stretched = tiled;
     stretched._bTiled              = SW_FALSE;
-    sw::SpriteMeshBuilder::buildSlicedVertices( stretched, listVertex );
+    sw::SpriteMeshBuilder::makeSlicedVertices( stretched, listVertex );
     SW_ASSERT_EQUAL( 1u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
 
     // 테두리 합보다 작은 크기.
     sw::SlicedSpriteDesc tiny{};
     tiny._size   = sw::float2{ 0.2f, 1.0f };
     tiny._border = sw::float4{ 0.25f, 0.0f, 0.25f, 0.0f };
-    sw::SpriteMeshBuilder::buildSlicedVertices( tiny, listVertex );
+    sw::SpriteMeshBuilder::makeSlicedVertices( tiny, listVertex );
     SW_ASSERT_EQUAL( 2u * 6u * 2u, static_cast<uint32>( listVertex.size() ) );
     const QuadBounds leftBorder = readQuad( listVertex, 0 );
     SW_EXPECT_TRUE( isNear( -0.1f, leftBorder._left ) && isNear( 0.0f, leftBorder._right ) );

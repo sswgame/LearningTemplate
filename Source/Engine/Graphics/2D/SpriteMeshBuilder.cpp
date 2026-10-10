@@ -136,7 +136,7 @@ namespace sw
             static shared_ptr<Mesh> createSlicedMesh( const SlicedSpriteDesc& desc )
             {
                 vector<RHIVertex> listVertex;
-                SpriteMeshBuilder::buildSlicedVertices( desc, listVertex );
+                SpriteMeshBuilder::makeSlicedVertices( desc, listVertex );
                 if ( listVertex.empty() )
                     return {};
                 shared_ptr<Mesh> mesh = Mesh::create();
@@ -162,7 +162,7 @@ namespace sw
                _bTiled == other._bTiled;
     }
 
-    void SpriteMeshBuilder::buildSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex )
+    void SpriteMeshBuilder::makeSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex )
     {
         using Internal = SpriteMeshBuilderInternal;
         outListVertex.clear();

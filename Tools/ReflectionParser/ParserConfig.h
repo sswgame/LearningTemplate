@@ -77,6 +77,6 @@ namespace sw
          * @brief 기본 인자에 포함 경로와 강제 include 를 붙여 최종 clang 인자를 만듭니다.
          * @param listIncludePath 추가 include 경로 목록
          */
-        vector<string> buildArgs( const vector<string>& listIncludePath ) const;
+        vector<string> makeArgs( const vector<string>& listIncludePath ) const;
     };
 } // namespace sw

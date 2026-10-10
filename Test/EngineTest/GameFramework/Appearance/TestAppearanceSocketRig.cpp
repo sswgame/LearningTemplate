@@ -94,8 +94,8 @@ namespace
         {
             CharacterBoneArray bones;
             const int32        root = bones.addBone( hashed_string( "root" ), -1, float4x4::Identity );
-            (void)bones.addBone( hashed_string( "hand.r" ), root, float4x4::createTranslation( float3{ 1.0f, 1.0f, 0.0f } ) );
-            (void)bones.addBone( hashed_string( "hand.l" ), root, float4x4::createTranslation( float3{ -1.0f, 1.0f, 0.0f } ) );
+            (void)bones.addBone( hashed_string( "hand.r" ), root, float4x4::makeTranslation( float3{ 1.0f, 1.0f, 0.0f } ) );
+            (void)bones.addBone( hashed_string( "hand.l" ), root, float4x4::makeTranslation( float3{ -1.0f, 1.0f, 0.0f } ) );
             bones.computeModelTransforms();
             return bones;
         }
@@ -148,7 +148,7 @@ SW_TEST_CASE( AppearanceSocketRigTest, WeaponSitsOnTheBodySocketAndExposesItsMuz
 
     // 포즈 — 오른손이 위로 0.5 올라가면 무기 자리도 올라간다.
     CharacterBoneArray posed = bindBones;
-    posed._listModel[1]      = float4x4::createTranslation( float3{ 1.0f, 1.5f, 0.0f } );
+    posed._listModel[1]      = float4x4::makeTranslation( float3{ 1.0f, 1.5f, 0.0f } );
     SW_ASSERT_TRUE( rig.computePlacement( resolved._listPart[static_cast<size_t>( gunPart )]._placement, posed, inBody, holderUnit ) );
     SW_EXPECT_NEAR_EQUAL( 1.55f, inBody.getTranslation()._y, 1.0e-5f );
 
@@ -156,7 +156,7 @@ SW_TEST_CASE( AppearanceSocketRigTest, WeaponSitsOnTheBodySocketAndExposesItsMuz
     const SocketID muzzleID = rig.getTable().findSocket( hashed_string( "MainHand.Muzzle" ) );
     SW_ASSERT_TRUE( muzzleID != kInvalidSocketID );
     SW_EXPECT_FALSE( rig.getTable().findSocket( hashed_string( "Muzzle" ) ) != kInvalidSocketID ); // 접두어 없는 이름은 몸 소켓뿐
-    const float4x4 arrUnitWorld[2] = { float4x4::Identity, float4x4::createTranslation( float3{ 10.0f, 0.0f, 0.0f } ) };
+    const float4x4 arrUnitWorld[2] = { float4x4::Identity, float4x4::makeTranslation( float3{ 10.0f, 0.0f, 0.0f } ) };
     float4x4       muzzleWorld;
     SW_ASSERT_TRUE( rig.findSocketWorldTransform( hashed_string( "MainHand.Muzzle" ), posed, vector_reference<const float4x4>( arrUnitWorld ), muzzleWorld ) );
     SW_EXPECT_NEAR_EQUAL( 10.0f, muzzleWorld.getTranslation()._x, 1.0e-5f );
@@ -262,7 +262,7 @@ SW_TEST_CASE( CharacterPoseTest, UnitPoseIsCopiedAndForeignBonesAreRebuilt )
     SW_EXPECT_TRUE( bones._listName[0] == hashed_string( "root" ) );
 
     // 같은 모양이면 다시 짓지 않고 모델 칸만 덮는다 — 엉뚱한 값이 유닛의 값으로 돌아온다.
-    bones._listModel[1] = float4x4::createTranslation( float3{ 9.0f, 9.0f, 9.0f } );
+    bones._listModel[1] = float4x4::makeTranslation( float3{ 9.0f, 9.0f, 9.0f } );
     SW_ASSERT_TRUE( CharacterPoseUtil::copyUnitPose( *pUnit, bones ) );
     SW_EXPECT_NEAR_EQUAL( pUnit->getModelSpaceTransforms()[1].getTranslation()._x, bones._listModel[1].getTranslation()._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, bones._listModel[1].getTranslation()._x, 1.0e-6f );

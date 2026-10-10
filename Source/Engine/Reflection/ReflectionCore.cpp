@@ -676,7 +676,7 @@ namespace sw
 
         // **주소는 고정이다.** 같은 FQN 이 있으면(재등록 · 묘비) 그 객체에 덮어써 되살린다. 밖에서 든 포인터
         // (`TypeLookupCache` · `_pParentType` · 컴포넌트 풀 키)가 모두 그대로 맞는다. 새 타입은 새 객체다.
-        // 캐시는 배치 끝(`buildLookupCaches`)이 단일 스레드에서 만든다.
+        // 캐시는 배치 끝(`populateLookupCaches`)이 단일 스레드에서 만든다.
         if ( existingIt != _mapFqnToClassType.end() )
         {
             *existingIt->second = stored;
@@ -688,7 +688,7 @@ namespace sw
         }
         _mapHashToCanonicalName.insert_or_assign( canonicalKey.getHash(), canonicalName );
         // 사슬이 바뀌었을 수 있다. 재등록은 부모를 바꿀 수 있고, 새 타입은 누군가의 비어 있던 부모일 수 있다.
-        // 조상 표와 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 buildLookupCaches 나 첫 조회가 다시 세운다.
+        // 조상 표와 부모에게서 복사해 온 프로퍼티 목록을 모두 비운다. 배치 끝의 populateLookupCaches 나 첫 조회가 다시 세운다.
         for ( const auto& [storedFqn, pStoredInfo] : _mapFqnToClassType )
         {
             (void)storedFqn;
@@ -788,7 +788,7 @@ namespace sw
         _activeModuleName = hashed_string();
 
         // 이 배치의 마지막 삽입까지 끝난 지금 캐시를 만든다. 여기는 아직 단일 스레드다.
-        buildLookupCaches();
+        populateLookupCaches();
     }
 
     string TypeRegistry::describeType( const hashed_string& nameOrFqn ) const
@@ -914,7 +914,7 @@ namespace sw
         return string( out.view() );
     }
 
-    void TypeRegistry::buildLookupCaches() const
+    void TypeRegistry::populateLookupCaches() const
     {
         vector<const TypeInfo*> listType;
         {
@@ -936,14 +936,14 @@ namespace sw
                 continue;
             // 부모 포인터부터 푼다. 아래 두 캐시가 부모를 따라가고, 캐스트의 핫패스는 이것만 본다.
             pType->resolveParentType();
-            pType->buildLookupCache();
+            pType->populateLookupCache();
             (void)pType->getPropertiesWithBase();
         }
         // 부모 포인터가 **모두** 풀린 뒤에 조상 표를 세운다. 표는 사슬 끝까지 따라가므로 한 바퀴 뒤여야 한다.
         for ( const TypeInfo* pType : listType )
         {
             if ( pType != nullptr )
-                (void)pType->buildAncestorDisplay();
+                (void)pType->computeAncestorDisplay();
         }
         // 지연 판정(세이브 옵트인 · 검증 함수 유무)도 여기서 한 번 — 로드 워커가 처음 물을 때 같은 바이트의 캐시 비트를 함께 쓰지 않게.
         for ( const TypeInfo* pType : listType )
@@ -1280,10 +1280,10 @@ namespace sw
         // 헤더의 인라인 버전이 nullptr · 자기 자신 · 양쪽 모두 표가 있는 경우를 걸렀다. 아직 세우지 않은 쪽은 여기서
         // 세운다(배치 밖에서 등록된 타입 · 레지스트리 밖 사본 · 해제 뒤 첫 조회). 세울 수 없는 쪽은 아래 걷기가 답한다.
         uint8 selfDepth = _ancestorDepth.load( std::memory_order_acquire );
-        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && buildAncestorDisplay() )
+        if ( selfDepth == constant::reflection::kAncestorDepthUnknown && computeAncestorDisplay() )
             selfDepth = _ancestorDepth.load( std::memory_order_acquire );
         uint8 targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
-        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->buildAncestorDisplay() )
+        if ( targetDepth == constant::reflection::kAncestorDepthUnknown && pTarget->computeAncestorDisplay() )
             targetDepth = pTarget->_ancestorDepth.load( std::memory_order_acquire );
         if ( selfDepth < constant::reflection::kAncestorDisplayDepth && targetDepth < constant::reflection::kAncestorDisplayDepth )
         {
@@ -1324,7 +1324,7 @@ namespace sw
         _pValidate                  = nullptr;
     }
 
-    bool TypeInfo::buildAncestorDisplay() const
+    bool TypeInfo::computeAncestorDisplay() const
     {
         constexpr uint32 kDepth = constant::reflection::kAncestorDisplayDepth;
         constexpr uint32 kNone  = static_cast<uint32>( PredefinedNameType::NameType_None );

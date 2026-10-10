@@ -18,7 +18,7 @@
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
 - **GameFramework 폴더 재배치 — 계획은 [docs/plans/GameFrameworkLayout.md](plans/GameFrameworkLayout.md).** `Base` 24 개 폴더를 층으로 묶고, 평평한 폴더와 키트 안을 나눈다. 엔진 분할 0-3 뒤에 한다. 단위를 끝내면 계획 문서에서 지운다.
-- **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 이름 점검 제안을 채택 · 기각 · 문서화로 가린 결과와 순서. 린트 · 어휘표가 먼저, 기계적 치환은 약어 코드모드 틀에.
+- **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 기계적 치환과 두 린트의 "개명 예정" 예외는 끝났다. 남은 것은 건별 판단(바이트 · 시간 단위 접미사, 파일 이름과 타입이 어긋난 곳)과 구조와 얽힌 큰 이름(`ResourceUtil` → `ResourcePaths` · `ResourceIO`, `EditorUtil` 경로 → `EditorPaths`).
 - **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 컴파일이 CPU 시간의 85 %, 헤더 파싱이 한 TU 의 57 %, PCH 가 타깃마다 86 개. 1 단계(시험 빌드 분리)와 0 단계 도구(`RunBuildBaseline` · `RunIncludeCost`)는 끝났고, 기준선 측정은 다른 빌드가 없을 때 남았다.
 
 ### 1-1. 직렬화 · 리플렉션
@@ -82,6 +82,8 @@
 
 ### 1-4. 에디터
 
+- **씬 뷰 시나리오 셋이 진다(2026-10-10 확인, main 기준선 `10b5009ea` 에서도).** `sceneviewgameview` · `viewportgrid` · `viewportpick` 이 네 백엔드 모두 exit 10 —
+  `sceneView.canvas` 표지가 없고 `Editor.GridStep` 값이 없다(씬 뷰 캔버스 `EditorViewportClient::draw` 가 불리지 않는다). Debug `-L hostgpu` 의 `AppTest_HostOnly` 가 이것으로 진다.
 - **에디터 보강 — 계획은 [docs/plans/EditorPlus.md](plans/EditorPlus.md).** 다음 세션이 할 일이다(사용자 결정, 2026-10-07). 확장 지점(EditorModule SHARED · 확장 모듈),
   환경설정 · 단축키 · 모듈 창, 인스펙터 다중 편집 · 콘텐츠 브라우저 역색인, 보기 모드 · 스크린샷 · RenderDoc · 타임라인 · assert 대화상자 · bugit · Test Runner,
   커브 · 맵 검사 · 노드 그래프 틀 · 패키징, 아이콘(R3 · R4 · R5 · R9), 패널 점검의 부족한 점(N1 ~ N12)을 단위마다 "확인 = 에디터 시나리오" 와 함께 적었다.
@@ -91,7 +93,7 @@
 - **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UIDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
-  에셋 종류 `UiDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
+  에셋 종류 `UIDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고

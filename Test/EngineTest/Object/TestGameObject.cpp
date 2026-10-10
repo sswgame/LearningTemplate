@@ -431,7 +431,7 @@ SW_TEST_CASE( PostEditChangePropertyTest, CallbackOnPropertyChanged )
  */
 SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIDChangesTheDrawnMesh )
 {
-    const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
     sw::GameObjectManager       manager;
     sw::GameObject*             pProp = manager.createGameObject( sw::hashed_string( "Prop" ) );
     sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();
@@ -441,19 +441,19 @@ SW_TEST_CASE( PostEditChangePropertyTest, ChangingTheMeshIDChangesTheDrawnMesh )
     SW_ASSERT_NOT_NULL( pMeshID );
 
     // 인스펙터 편집: 값을 쓰고 알린다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Sphere", ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Sphere", context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Sphere" ).get() );
 
     // 런타임에 건 메시는 그때의 id 의 것이다 — 같은 id 로 다시 읽어도 남는다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cube", ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cube", context ) );
     const sw::shared_ptr<sw::Mesh> custom = sw::MeshUtil::createPrimitive( "Cube" );
     pMesh->setMesh( custom );
     pMesh->onPostLoad();
     SW_EXPECT_TRUE( pMesh->getRawMesh() == custom.get() );
 
     // 다른 id 를 읽으면(되돌리기 · 붙여넣기) 그 id 의 메시가 된다.
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cylinder", ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, "Cylinder", context ) );
     pMesh->onPostLoad();
     SW_EXPECT_TRUE( pMesh->getRawMesh() == sw::MeshUtil::acquirePrimitive( "Cylinder" ).get() );
 }

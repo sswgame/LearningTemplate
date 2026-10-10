@@ -213,7 +213,7 @@ namespace sw
         /** @brief 시간 단계입니다. */
         void advanceTime( const AnimationFrameContext& context );
         /** @brief 기본 포즈 단계입니다. */
-        void buildBasePose( SkeletalMeshComponent& unit );
+        void populateBasePose( SkeletalMeshComponent& unit );
         /** @brief 이름 → 파일 경로입니다(`_clipFolder/<소문자>.animclip`). */
         string makeClipPath( const hashed_string& clipName ) const;
         /** @brief 이번 프레임의 알림을 받는 쪽에 넘깁니다(게임 스레드). */

@@ -24,9 +24,9 @@ namespace sw
 
     } // namespace
 
-    void FrameRenderer::updatePassConstants( FramePassContext& ctx )
+    void FrameRenderer::updatePassConstants( FramePassContext& context )
     {
-        // **프레임당 한 번** 프레임 시드(_frameCtx)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
+        // **프레임당 한 번** 프레임 시드(_frameContext)에만 채운다. 패스 컨텍스트는 이 시드를 복사해
         // 가므로(onGraphPassExecute) 패스마다 다시 계산할 필요가 없고, 드로우마다는 더더욱 없다.
         //
         // 뷰 · 라이트 행렬은 씬이 없으면(렌더 스레드 패킷 경로) 폴백으로 세운다. 패킷이 자기
@@ -40,7 +40,7 @@ namespace sw
         }
         else
         {
-            buildLightViewProj( ctx, lightViewProj );
+            computeLightViewProj( context, lightViewProj );
             // 폴백 볼륨(한 변 kLightOrthoExtent · 깊이 같은 길이)의 크기로 바이어스를 환산한다 — 빛이 있는 경로와 같은 식이다.
             DirectionalShadowProjection fallback{};
             fallback._resolution     = getShadowMapResolution();
@@ -48,48 +48,48 @@ namespace sw
             fallback._depthRange     = kLightOrthoExtent;
             shadowParams             = fallback.computeShaderParams();
         }
-        ctx._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
+        context._passValues.setMatrix( passConstantNames()._lightViewProj, lightViewProj );
         view( RenderViewType::Shadow ).setViewProjection( lightViewProj );
 
         CameraComponent* pCam = ( _pScene != nullptr ) ? _pScene->getActiveGameCamera() : nullptr;
         if ( pCam != nullptr )
         {
-            applyViewFromCamera( ctx, pCam );
+            applyViewFromCamera( context, pCam );
         }
         else
         {
             float4x4 viewProj = float4x4::Identity;
-            buildViewProj( viewProj );
-            applyViewProjection( ctx, viewProj );
+            computeViewProj( viewProj );
+            applyViewProjection( context, viewProj );
         }
-        ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
+        context._passValues.setMatrix( passConstantNames()._world, context._world );
 
-        ctx._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
-        ctx._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
-        ctx._passValues.setFloat4( passConstantNames()._shadowParams, shadowParams );
-        ctx._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
-        ctx._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
-        applyViewPassConstants( ctx );
+        context._passValues.setFloat4( passConstantNames()._keyLightDirIntensity, _frameLight._dirIntensity );
+        context._passValues.setFloat4( passConstantNames()._keyLightColor, _frameLight._colorAmbient );
+        context._passValues.setFloat4( passConstantNames()._shadowParams, shadowParams );
+        context._passValues.setFloat4( passConstantNames()._bloomParams, kDefaultBloomParams );
+        context._passValues.setFloat4( passConstantNames()._outlineColor, kDefaultOutlineColor );
+        applyViewPassConstants( context );
     }
 
-    void FrameRenderer::applyViewPassConstants( FramePassContext& ctx )
+    void FrameRenderer::applyViewPassConstants( FramePassContext& context )
     {
         // 화면 텍셀 크기는 지금 그리는 뷰의 풀 크기다(뷰마다 해상도가 다르다).
         const TransientAttachmentPool& pool     = activePool();
         const float32                  outlineY = pool.getWidth() > 0 ? ( 1.0f / static_cast<float32>( pool.getWidth() ) ) : 0.001f;
         const float32                  outlineZ = pool.getHeight() > 0 ? ( 1.0f / static_cast<float32>( pool.getHeight() ) ) : 0.001f;
-        ctx._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
+        context._passValues.setFloat4( passConstantNames()._outlineParams, float4{ 0.02f, outlineY, outlineZ, 0.0f } );
         // 원본 텍셀의 기본값은 프레임 텍셀이다 — 원본 역할 입력을 거는 패스가 그 첨부의 실제 크기로 덮는다(registerPassTexture).
-        ctx._passValues.setFloat4( passConstantNames()._sourceTexel,
-                                   float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
+        context._passValues.setFloat4( passConstantNames()._sourceTexel,
+                                       float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
         // 패스 플래그 — 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 정본이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
         if ( _pActiveView->_settings._bPostProcess == SW_FALSE )
             flags |= shaderslot::kPassFlagSkipPost;
-        ctx._passValues.setUint( passConstantNames()._flags, flags );
+        context._passValues.setUint( passConstantNames()._flags, flags );
     }
 
-    void FrameRenderer::applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera )
+    void FrameRenderer::applyViewFromCamera( FramePassContext& context, CameraComponent* pCamera )
     {
         if ( pCamera == nullptr )
             return;
@@ -97,22 +97,22 @@ namespace sw
         const float32                  aspect   = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
                                                                            : ( 16.0f / 9.0f );
         const float4x4                 viewProj = pCamera->getViewProjectionMatrix( aspect );
-        applyViewProjection( ctx, viewProj );
+        applyViewProjection( context, viewProj );
     }
 
-    void FrameRenderer::applyViewProjection( FramePassContext& ctx, const float4x4& viewProj )
+    void FrameRenderer::applyViewProjection( FramePassContext& context, const float4x4& viewProj )
     {
-        ctx._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
+        context._passValues.setMatrix( passConstantNames()._viewProj, viewProj );
         // 역행렬은 **여기서만** 만든다. 디퍼드 조명이 깊이에서 월드 위치를 복원하는 데 쓰는데,
         // 뷰와 따로 채우면 언젠가 한쪽만 갱신되고 그 증상은 "빛이 한 프레임 늦게 따라온다" 다.
-        ctx._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
+        context._passValues.setMatrix( passConstantNames()._invViewProj, viewProj.invert() );
         // 컬링은 기록 시작 전에 도는데 그때는 상수버퍼에서 도로 꺼낼 수 없다. 지금 그리는 뷰에 같은 값을 남긴다.
         activeCullInput().setViewProjection( viewProj );
     }
 
-    void FrameRenderer::buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const
+    void FrameRenderer::computeLightViewProj( const FramePassContext& context, float4x4& outMat ) const
     {
-        (void)ctx;
+        (void)context;
         // **이번 프레임의 라이트**를 쓴다. 주의: 여기서 따로 둔 상수를 보면 패킷이 다른 방향을
         // 실어 줄 때 셰이딩(_frameLight 를 쓴다)과 그림자 행렬이 서로 다른 빛을 보게 된다. 기본값은
         // FrameLightState 의 멤버 초기값 하나뿐이다(값을 두 군데 두면 언젠가 갈라진다).
@@ -126,21 +126,21 @@ namespace sw
         const float3 up  = MathUtil::abs( lightDir._y ) > 0.99f ? float3::Forward : float3::Up;
         const float3 eye = lightDir * -kLightDistance;
 
-        // 행렬은 createLookAt · createOrthographic 으로 만든다. view · ortho 성분을 손으로 쓰면 어떤 규약(좌수,
+        // 행렬은 makeLookAt · makeOrthographic 으로 만든다. view · ortho 성분을 손으로 쓰면 어떤 규약(좌수,
         // 행벡터)인지 읽어서 알아내야 하고, CameraComponent 가 쓰는 규약과 어긋나도 드러나지 않는다.
-        // 깊이 범위는 **눈을 기준으로** 잡는다(DirectionalLightComponent::buildShadowViewProj 와 같은 규칙).
+        // 깊이 범위는 **눈을 기준으로** 잡는다(DirectionalLightComponent::computeShadowViewProj 와 같은 규칙).
         constexpr float32 kLightOrthoHalf = kLightOrthoExtent * 0.5f;
-        outMat                            = float4x4::createLookAt( eye, float3::Zero, up ) *
-                 float4x4::createOrthographic( kLightOrthoExtent, kLightOrthoExtent,
-                                               kLightDistance - kLightOrthoHalf, kLightDistance + kLightOrthoHalf );
+        outMat                            = float4x4::makeLookAt( eye, float3::Zero, up ) *
+                 float4x4::makeOrthographic( kLightOrthoExtent, kLightOrthoExtent,
+                                             kLightDistance - kLightOrthoHalf, kLightDistance + kLightOrthoHalf );
     }
 
-    void FrameRenderer::buildViewProj( float4x4& outMat ) const
+    void FrameRenderer::computeViewProj( float4x4& outMat ) const
     {
         // CameraComponent 가 없을 때만 쓰는 폴백 궤도 카메라다. 원점을 바라본다.
-        // CameraComponent::getViewMatrix 와 같은 createLookAt 으로 만든다. 주의: view 행렬을 직접 채우며 z축을
+        // CameraComponent::getViewMatrix 와 같은 makeLookAt 으로 만든다. 주의: view 행렬을 직접 채우며 z축을
         // eye.normalize() 로 잡으면 원점을 등지고 보는 셈이라, 이 엔진이 쓰는 좌수 투영
-        // (createPerspectiveFieldOfView, w' = z_view)에서는 원점이 뷰 z = -|eye| 로 카메라 뒤에
+        // (makePerspectiveFieldOfView, w' = z_view)에서는 원점이 뷰 z = -|eye| 로 카메라 뒤에
         // 떨어져 아무것도 그려지지 않는다.
         constexpr float3 eye{ 2.15f, 1.55f, 2.65f };
 
@@ -148,11 +148,11 @@ namespace sw
         const float32                  aspect = ( pool.getHeight() > 0 ) ? ( static_cast<float32>( pool.getWidth() ) / static_cast<float32>( pool.getHeight() ) )
                                                                          : ( 16.0f / 9.0f );
 
-        outMat = float4x4::createLookAt( eye, float3::Zero, float3::Up ) * float4x4::createPerspectiveFieldOfView( CameraComponent::kDefaultFovY, aspect, CameraComponent::kDefaultNearZ, CameraComponent::kDefaultFarZ );
+        outMat = float4x4::makeLookAt( eye, float3::Zero, float3::Up ) * float4x4::makePerspectiveFieldOfView( CameraComponent::kDefaultFovY, aspect, CameraComponent::kDefaultNearZ, CameraComponent::kDefaultFarZ );
     }
 
-    void FrameRenderer::setIdentityWorld( FramePassContext& ctx )
+    void FrameRenderer::setIdentityWorld( FramePassContext& context )
     {
-        ctx._world = float4x4::Identity;
+        context._world = float4x4::Identity;
     }
 } // namespace sw

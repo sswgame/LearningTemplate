@@ -24,7 +24,7 @@ namespace sw
                 SweepHit hit{};
                 if ( ContinuousCollision::sweepSphere( from, radius, displacement, box, hit ) == false )
                     return;
-                const float32 distance = hit._time * length;
+                const float32 distance = hit._hitFraction * length;
                 if ( inoutHit == false || distance < inoutNearest )
                 {
                     inoutNearest = distance;

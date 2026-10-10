@@ -47,7 +47,7 @@ namespace sw
         static constexpr uint32 kMaxTileCountPerAxis = 64;
 
         /** @brief 앞면 · 뒷면 삼각형 목록(인덱스 없음)을 짓습니다. 앞면이 먼저이고 사각형마다 정점 여섯입니다. */
-        static void buildSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex );
+        static void makeSlicedVertices( const SlicedSpriteDesc& desc, vector<RHIVertex>& outListVertex );
 
         /**
          * @brief 같은 값의 메시를 나눠 줍니다. 없으면 짓습니다. 여러 스레드에서 불러도 됩니다(잠급니다).

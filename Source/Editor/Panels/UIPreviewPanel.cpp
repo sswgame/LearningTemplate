@@ -111,7 +111,7 @@ namespace sw::editor
     void UIPreviewPanel::syncTexture()
     {
         AssetManager*    pAssets  = editor::getService<AssetManager>();
-        const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getTextureManager().find( _targetPath ) : nullptr;
+        const Texture2D* pTexture = pAssets != nullptr && _targetPath.empty() == false ? pAssets->getTextureCache().find( _targetPath ) : nullptr;
         const uint64     texture  = pTexture != nullptr && pTexture->isRHIValid() ? pTexture->getHandle() : 0;
         if ( texture == _texture && _pTextureID != nullptr )
             return;

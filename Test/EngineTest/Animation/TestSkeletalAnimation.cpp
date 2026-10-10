@@ -66,7 +66,7 @@ namespace
                 if ( _pOrder != nullptr )
                     _pOrder->push_back( &unit );
                 BoneTransform root = unit.getLocalPose().getBoneTransform( 0 );
-                root._rotation     = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _rootAngle );
+                root._rotation     = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _rootAngle );
                 unit.getLocalPose().setBoneTransform( 0, root );
             }
 
@@ -109,7 +109,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
     {
         raw._listSample.push_back( test::makeBoneTransform( float3{ arrX[sampleIndex], 0.0f, 0.0f } ) );
         raw._listSample.push_back(
-            test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f }, quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, arrAngle[sampleIndex] ) ) );
+            test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, arrAngle[sampleIndex] ) ) );
     }
 
     AnimClip clip;
@@ -120,12 +120,12 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
     Pose pose;
     SW_ASSERT_TRUE( clip.sampleTracks( 0.25f, pose ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, pose.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.25f );
+    const quaternion expected45 = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.25f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected45, pose.getBoneTransform( 1 )._rotation, 1e-5f ) );
 
     SW_ASSERT_TRUE( clip.sampleTracks( 0.75f, pose ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, pose.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected135 = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.75f );
+    const quaternion expected135 = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, MathUtil::kPi * 0.75f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected135, pose.getBoneTransform( 1 )._rotation, 1e-5f ) );
 
     SW_ASSERT_TRUE( clip.sampleTracks( 5.0f, pose ) );
@@ -274,7 +274,7 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
     from.resize( 2 );
     to.resize( 2 );
     to.setBoneTransform( 0, test::makeBoneTransform( float3{ 4.0f, 0.0f, 0.0f } ) );
-    to.setBoneTransform( 1, test::makeBoneTransform( float3{ 0.0f, 8.0f, 0.0f }, quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi ) ) );
+    to.setBoneTransform( 1, test::makeBoneTransform( float3{ 0.0f, 8.0f, 0.0f }, quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kHalfPi ) ) );
 
     Pose blended;
     Pose::blend( from, to, 0.25f, blended );
@@ -296,7 +296,7 @@ SW_TEST_CASE( SkeletalAnimationTest, BlendWeightsMaskAndAdditive )
     Pose layered = from;
     layered.applyAdditive( additive, 0.5f, nullptr );
     SW_EXPECT_NEAR_EQUAL( 2.0f, layered.getBoneTransform( 0 )._translation._x, 1e-5f );
-    const quaternion expected45 = quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kPi * 0.25f );
+    const quaternion expected45 = quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, MathUtil::kPi * 0.25f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected45, layered.getBoneTransform( 1 )._rotation, 1e-4f ) );
     // 가중치 1 이면 정확히 to.
     Pose full = from;
@@ -496,7 +496,7 @@ SW_TEST_CASE( SkeletalAnimationTest, FollowerReadsLeaderPose )
     SW_EXPECT_TRUE( pFollower->findLeaderPose() == pLeader );
 
     manager.getAnimationSystem().evaluate( 0.016f );
-    const quaternion expected = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 0.7f );
+    const quaternion expected = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, 0.7f );
     SW_EXPECT_TRUE( TestSkeletalAnimationInternal::isSameRotation( expected, pFollower->getLocalPose().getBoneTransform( 0 )._rotation, 1e-5f ) );
     float4x4 leaderBone{};
     float4x4 followerBone{};

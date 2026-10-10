@@ -904,7 +904,7 @@ namespace sw
         /**
          * @brief `_parentFQN` 을 한 번 풀어 둔 부모 `TypeInfo` 입니다. 없거나 아직 풀지 못했으면 nullptr 입니다.
          * @details `isDerivedFrom` 이 조상마다 `findType(_parentFQN)`(shared_mutex 잠금 + 해시맵 조회)을 부르지 않도록,
-         *          등록 배치 끝(`TypeRegistry::buildLookupCaches`)에서 한 번 풀어 둡니다. 걷는 일은 포인터 역참조 몇 번입니다.
+         *          등록 배치 끝(`TypeRegistry::populateLookupCaches`)에서 한 번 풀어 둡니다. 걷는 일은 포인터 역참조 몇 번입니다.
          *
          *          **해제 때 비워집니다.** `TypeInfo` 의 주소는 고정이라 옮겨지지는 않지만, 모듈 해제 뒤에는
          *          묘비가 된 부모를 가리킬 수 있습니다. 그래서 해제가 남은 타입 모두의 이 칸을 비우고, 비어 있으면
@@ -924,7 +924,7 @@ namespace sw
          * @details 캐스트의 핫패스가 이것만 봅니다: `표[pTarget 의 깊이] == pTarget 의 이름`. 포인터가 아니라 이름이라, 레지스트리 밖
          *          사본(테스트 목의 손으로 만든 `StaticType()`)도 같은 이름이면 같은 타입으로 봅니다. 걷기의 `isSameTypeName` 과
          *          같은 규칙입니다. `_typeID` 를 쓰지 않는 이유도 그 사본입니다. 사본은 자기 id 를 따로 가집니다. 등록 · 해제로
-         *          사슬이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고, 배치 끝(`buildLookupCaches`)
+         *          사슬이 바뀔 수 있으면 `TypeRegistry` 가 깊이를 `kAncestorDepthUnknown` 으로 비우고, 배치 끝(`populateLookupCaches`)
          *          이나 첫 상속 검사가 다시 세웁니다.
          *          원자값인 이유는 `_pParentType` 과 같습니다. 첫 조회는 여러 스레드에서 올 수 있고 같은 값을 씁니다. 등록과
          *          캐스트가 겹치는 것은 `_pParentType` 과 마찬가지로 전제하지 않습니다(모듈 로드는 단일 스레드).
@@ -1085,7 +1085,7 @@ namespace sw
          *          모듈)는 사슬의 끝으로 봅니다. 그 부모가 등록되는 순간 `registerClass` 가 표를 비웁니다.
          *          등록 배치 끝에서 `TypeRegistry` 가 부르고, 배치 밖 타입은 첫 상속 검사가 부릅니다.
          */
-        bool buildAncestorDisplay() const;
+        bool computeAncestorDisplay() const;
         /** @brief 조상 표를 비웁니다. 사슬이 바뀔 수 있는 등록 · 해제 뒤에 `TypeRegistry` 가 부릅니다. */
         void clearAncestorDisplay() const
         {
@@ -1123,11 +1123,11 @@ namespace sw
          * @brief 이름→프로퍼티/메서드 조회 캐시를 만듭니다.
          * @warning **여러 스레드가 동시에 부르면 안 됩니다.** `mutable` 맵 둘을 잠금 없이 채웁니다.
          *          두 스레드가 같은 `TypeInfo` 를 처음 조회하면 같은 맵에 동시에 삽입합니다.
-         *          그래서 `TypeRegistry::buildLookupCaches()` 가 **등록 배치가 끝난 직후 단일
+         *          그래서 `TypeRegistry::populateLookupCaches()` 가 **등록 배치가 끝난 직후 단일
          *          스레드에서** 한 번 만듭니다. 등록된 타입을 병렬로 조회하는 것은 그 뒤이므로 안전합니다.
          *          (등록하지 않은 임시 사본은 만든 스레드가 알아서 씁니다.)
          */
-        void buildLookupCache() const
+        void populateLookupCache() const
         {
             if ( _bIsCacheBuilt != SW_FALSE )
                 return;
@@ -1153,7 +1153,7 @@ namespace sw
             _bIsCacheBuilt = SW_TRUE;
         }
 
-        /** @brief 조회 캐시가 이미 만들어져 있는지 반환합니다 (`buildLookupCaches` 뒤에는 true). */
+        /** @brief 조회 캐시가 이미 만들어져 있는지 반환합니다 (`populateLookupCaches` 뒤에는 true). */
         bool isLookupCacheBuilt() const { return _bIsCacheBuilt != SW_FALSE; }
 
         /** @brief 이름 또는 alias로 프로퍼티를 찾습니다. */
@@ -1169,7 +1169,7 @@ namespace sw
                 return nullptr;
             }
 
-            buildLookupCache();
+            populateLookupCache();
             auto it = _mapNameToProperty.find( propertyNameOrAlias );
             return it != _mapNameToProperty.end() ? it->second : nullptr;
         }
@@ -1187,7 +1187,7 @@ namespace sw
                 return nullptr;
             }
 
-            buildLookupCache();
+            populateLookupCache();
             auto it = _mapNameToMethod.find( methodName );
             return it != _mapNameToMethod.end() ? it->second : nullptr;
         }

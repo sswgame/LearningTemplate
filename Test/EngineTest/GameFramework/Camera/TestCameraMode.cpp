@@ -41,9 +41,9 @@ namespace
             return def;
         }
 
-        static BlendCurveSpec makeLinear( float32 duration )
+        static BlendCurveDef makeLinear( float32 duration )
         {
-            BlendCurveSpec blend;
+            BlendCurveDef blend;
             blend._curve    = BlendCurve::Linear;
             blend._duration = duration;
             return blend;
@@ -400,7 +400,7 @@ SW_TEST_CASE( CameraModeTest, ViewTargetBlendContinuesFromTheCurrentPose )
     SW_EXPECT_NEAR_EQUAL( 1.2f, pOutput->getFieldOfViewY(), 1.0e-5f ); // 렌즈도 타깃의 것
 
     // 블렌드 없는 전환은 렌더러에 컷을 알린다(TAA 기록 버리기).
-    BlendCurveSpec cut;
+    BlendCurveDef cut;
     cut._curve = BlendCurve::Cut;
     pCameraManager->setViewTarget( pA->getHandle(), cut );
     pCameraManager->updateCamera( 0.016f );
@@ -427,7 +427,7 @@ SW_TEST_CASE( CameraModeTest, DirectorReportsCutsOnce )
     CameraPresetDef b = a;
     b._id             = hashed_string( "b" );
     b._view._offset   = float3{ 3.0f, 0.0f, 0.0f };
-    BlendCurveSpec cut;
+    BlendCurveDef cut;
     cut._curve = BlendCurve::Cut;
 
     CameraDirector director;

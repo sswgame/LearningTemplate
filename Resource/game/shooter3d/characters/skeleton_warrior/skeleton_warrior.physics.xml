@@ -3,7 +3,7 @@
 	셰이프 · 관절 축은 뼈 로컬(+Y 가 뼈 방향)이고, 크기는 스킨 정점이 그 뼈(바디 없는 자식 뼈 포함)를 가장 많이 따르는 범위에서 골랐다.
 	히트 존: 머리 ×2 · 몸통 ×1 · 골반 ×1 · 팔 ×0.6 · 다리 ×0.7. RagdollComponent 가 쓴다.
 -->
-<PhysicsAsset _defaultLayer="Ragdoll" _bDisableJointedCollision="true">
+<PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
 	<_listBody>
 		<PhysicsAssetBodyDef _bone="hips" _mass="10" _material="Flesh">
 			<_listShape>

@@ -259,22 +259,22 @@ namespace sw
         return releasedCount;
     }
 
-    MaterialCache& AssetManager::getMaterialManager()
+    MaterialCache& AssetManager::getMaterialCache()
     {
         return *_materialCache;
     }
 
-    const MaterialCache& AssetManager::getMaterialManager() const
+    const MaterialCache& AssetManager::getMaterialCache() const
     {
         return *_materialCache;
     }
 
-    TextureCache& AssetManager::getTextureManager()
+    TextureCache& AssetManager::getTextureCache()
     {
         return *_textureCache;
     }
 
-    const TextureCache& AssetManager::getTextureManager() const
+    const TextureCache& AssetManager::getTextureCache() const
     {
         return *_textureCache;
     }

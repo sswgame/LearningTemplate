@@ -132,7 +132,7 @@ namespace sw
         PFNGLXCREATECONTEXTATTRIBSARBPROC glXCreateContextAttribsARB =
             (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddressARB( (const GLubyte*)"glXCreateContextAttribsARB" );
 
-        GLXContext ctx{ nullptr };
+        GLXContext context{ nullptr };
         {
             GlxPlatformContextInternal::GlxXErrorScope trap( pDpy );
             if ( glXCreateContextAttribsARB )
@@ -159,49 +159,49 @@ namespace sw
                         GLX_CONTEXT_FLAGS_ARB, GLX_CONTEXT_DEBUG_BIT_ARB,
     #endif
                         0 };
-                    ctx = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
-                    if ( ctx != nullptr && trap.failed() == false )
+                    context = glXCreateContextAttribsARB( pDpy, chosen, nullptr, 1, arrContextAttrib );
+                    if ( context != nullptr && trap.failed() == false )
                     {
                         SW_LOG_TRACE( "GLX core context %#.%#", ver[0], ver[1] );
                         break;
                     }
-                    if ( ctx != nullptr )
+                    if ( context != nullptr )
                     {
-                        glXDestroyContext( pDpy, ctx );
-                        ctx = nullptr;
+                        glXDestroyContext( pDpy, context );
+                        context = nullptr;
                     }
                     trap.failed(); // 실패 표시를 비운다
                 }
             }
-            if ( ctx == nullptr )
+            if ( context == nullptr )
             {
-                ctx = glXCreateNewContext( pDpy, chosen, GLX_RGBA_TYPE, nullptr, 1 );
-                if ( ctx == nullptr || trap.failed() )
+                context = glXCreateNewContext( pDpy, chosen, GLX_RGBA_TYPE, nullptr, 1 );
+                if ( context == nullptr || trap.failed() )
                 {
-                    if ( ctx != nullptr )
+                    if ( context != nullptr )
                     {
-                        glXDestroyContext( pDpy, ctx );
-                        ctx = nullptr;
+                        glXDestroyContext( pDpy, context );
+                        context = nullptr;
                     }
                 }
             }
         }
         XFree( pFbcAll );
 
-        if ( ctx == nullptr )
+        if ( context == nullptr )
         {
             SW_LOG_ERROR( "Failed to create GLX context (WSLg often lacks GL 4.x — use -vk)" );
             return false;
         }
-        if ( glXMakeCurrent( pDpy, win, ctx ) == 0 )
+        if ( glXMakeCurrent( pDpy, win, context ) == 0 )
         {
             SW_LOG_ERROR( "glXMakeCurrent failed" );
-            glXDestroyContext( pDpy, ctx );
+            glXDestroyContext( pDpy, context );
             return false;
         }
         _pDisplay       = pDpy;
         _windowHandle   = static_cast<uint64>( win );
-        _pRenderContext = ctx;
+        _pRenderContext = context;
 
         outHandles._pDeviceContext = _pDisplay;
         outHandles._pRenderContext = _pRenderContext;

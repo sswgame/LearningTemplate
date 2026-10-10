@@ -7,7 +7,7 @@
  *          (바뀌지 않으면 아무 일도 없다). 애니메이션 시스템이 저절로 부르는 경로는 아직 없습니다. 틱은 물리 · 되돌아가기 동안만 켭니다.
  *
  *          전환은 언제나 **지금 월드 변환**에서 출발합니다 — 떼는 순간 월드 자리를 지키고(튀지 않음), 되돌아가기는 그 자리에서 소켓까지 블렌드
- *          곡선(`BlendCurveSpec` — 카메라 블렌드와 같은 구현)으로 섞습니다. 물리는 `ISocketPhysicsBody` 를 구현한 컴포넌트(강체)가 맡고, 이
+ *          곡선(`BlendCurveDef` — 카메라 블렌드와 같은 구현)으로 섞습니다. 물리는 `ISocketPhysicsBody` 를 구현한 컴포넌트(강체)가 맡고, 이
  *          컴포넌트는 그 인터페이스만 압니다. 주인을 바꾸는 일(땅에 떨어진 무기를 집기 · 다른 캐릭터에게 넘기기)은 다시 스폰하지 않고
  *          `transferTo` 한 번입니다.
  */
@@ -111,9 +111,9 @@ namespace sw
         /** @brief 되돌아가기 진행(0..1)입니다. 되돌아가는 중이 아니면 0 입니다. */
         float32 getReturnProgress() const;
         /** @brief 되돌아가기 곡선 · 길이입니다. */
-        const BlendCurveSpec& getReturnBlend() const { return _returnBlend; }
+        const BlendCurveDef& getReturnBlend() const { return _returnBlend; }
         /** @brief 되돌아가기 곡선 · 길이를 정합니다. */
-        void setReturnBlend( const BlendCurveSpec& blend ) { _returnBlend = blend; }
+        void setReturnBlend( const BlendCurveDef& blend ) { _returnBlend = blend; }
 
     private:
         SceneComponent*     findOwnerScene() const;
@@ -126,7 +126,7 @@ namespace sw
 
     private:
         PROPERTY( Category = "Socket", DisplayName = "Return Blend", Tooltip = "Curve and length of the blend from the released transform back to the socket" )
-        BlendCurveSpec _returnBlend;
+        BlendCurveDef _returnBlend;
         PROPERTY( Category = "Socket", DisplayName = "State", ReadOnly, Transient )
         SocketBindingState _state;
 

@@ -534,7 +534,7 @@ SW_TEST_CASE( SceneComponentTest, RotationCacheFollowsEveryRotationChange )
     {
         comp.setLocalRotation( rotation );
         const sw::float4x4 world    = comp.getWorldMatrix();
-        const sw::float4x4 expected = sw::float4x4::createTrs( position, rotation, scale );
+        const sw::float4x4 expected = sw::float4x4::makeTrs( position, rotation, scale );
         if ( sw::Memory::compare( &world, &expected, sizeof( sw::float4x4 ) ) != 0 )
             ++mismatchCount;
     }
@@ -751,7 +751,7 @@ SW_TEST_CASE( SceneComponentTest, WorldSettersRespectARotatedScaledParent )
     SW_EXPECT_NEAR_EQUAL( 2.0f, world._z, 1e-4f );
 
     // 세 축이 모두 섞인 회전 · 균등 스케일(기울임 없음) — 행렬이 그대로 돌아와야 한다.
-    const sw::float4x4 target = sw::float4x4::createTrs( sw::float3( 3.0f, 4.0f, 5.0f ), sw::float3( 0.3f, 0.7f, -0.4f ), sw::float3( 1.5f, 1.5f, 1.5f ) );
+    const sw::float4x4 target = sw::float4x4::makeTrs( sw::float3( 3.0f, 4.0f, 5.0f ), sw::float3( 0.3f, 0.7f, -0.4f ), sw::float3( 1.5f, 1.5f, 1.5f ) );
     pChild->setWorldTransform( target );
     manager.flushSceneTransforms();
     const sw::float4x4 result    = pChild->getWorldMatrix();

@@ -54,7 +54,7 @@ namespace sw
          * @param listMesh 소유하지 않는 포인터들. 스냅샷 배치가 소유를 들고 있는 동안에만 유효합니다.
          * @return 풀을 다시 만들었으면 true. 배치의 시작 오프셋이 바뀌었으니 표를 다시 올려야 합니다.
          */
-        bool build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        bool rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
 
         /** @brief 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. */
         uint32 baseOf( const Mesh* pMesh ) const;
@@ -74,11 +74,11 @@ namespace sw
         RHIBufferHandle _vertexBuffer{ 0 };
         /// @brief 메시 → 풀 시작 오프셋(정점 단위)입니다.
         unordered_map<const Mesh*, uint32> _mapBase;
-        /// @brief 지난 build 의 메시 집합(포인터 오름차순)입니다. 같으면 다시 만들지 않습니다.
+        /// @brief 지난 rebuild 의 메시 집합(포인터 오름차순)입니다. 같으면 다시 만들지 않습니다.
         vector<const Mesh*> _listBuilt;
         /// @brief `_listBuilt` 와 같은 순서의 내용 번호(`Mesh::getContentID`)입니다. 포인터가 같아도 이것이 다르면 다른 메시다.
         vector<uint64> _listBuiltContentID;
-        /// @brief build 가 집합을 정렬해 두는 스크래치입니다. 프레임마다 할당하지 않습니다.
+        /// @brief rebuild 가 집합을 정렬해 두는 스크래치입니다. 프레임마다 할당하지 않습니다.
         vector<const Mesh*> _listScratchSorted;
         uint32              _vertexCount{ 0 };
     };

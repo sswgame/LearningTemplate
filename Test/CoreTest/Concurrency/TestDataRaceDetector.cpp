@@ -67,26 +67,26 @@ SW_TEST_CASE( DataRaceDetectorTest, DataRaceDetector_ReadReadSafe )
  */
 SW_TEST_CASE( DataRaceDetectorTest, DataRaceDetector_ScopedRAIILifecycle )
 {
-    sw::RaceDetectContext ctx;
+    sw::RaceDetectContext context;
 
     // 순차 읽기 스코프
     {
-        sw::ScopedRaceRead r1( ctx );
+        sw::ScopedRaceRead r1( context );
         {
-            sw::ScopedRaceRead r2( ctx );
+            sw::ScopedRaceRead r2( context );
         }
     }
 
     // 순차 쓰기 스코프
     {
-        sw::ScopedRaceWrite w1( ctx );
+        sw::ScopedRaceWrite w1( context );
     }
 
     // 복사/이동 시 독립된 컨텍스트 상태 유지
-    sw::RaceDetectContext copyCtx = ctx;
-    sw::RaceDetectContext moveCtx = std::move( ctx );
-    (void)copyCtx;
-    (void)moveCtx;
+    sw::RaceDetectContext copiedContext = context;
+    sw::RaceDetectContext movedContext  = std::move( context );
+    (void)copiedContext;
+    (void)movedContext;
 }
 
 /**

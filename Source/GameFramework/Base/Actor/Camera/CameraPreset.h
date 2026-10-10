@@ -285,7 +285,7 @@ namespace sw
         PROPERTY()
         hashed_string _id{};
         PROPERTY()
-        BlendCurveSpec _blendIn{};
+        BlendCurveDef _blendIn{};
         PROPERTY()
         CameraViewDef _view{};
         PROPERTY()
@@ -312,9 +312,9 @@ namespace sw
     /** @brief 프리셋 사이 블렌드 덮어쓰기 한 줄(`<Blend from="a" to="b" curve="Cut"/>`)입니다. `*` 는 아무 프리셋입니다. */
     struct CameraBlendRule
     {
-        hashed_string  _from{};
-        hashed_string  _to{};
-        BlendCurveSpec _blend{};
+        hashed_string _from{};
+        hashed_string _to{};
+        BlendCurveDef _blend{};
     };
 } // namespace sw
 
@@ -372,9 +372,9 @@ namespace sw
          * @brief @p from 에서 @p to 로 갈 때의 블렌드입니다. 덮어쓰기 표(정확히 맞는 줄 → `from="*"` → `to="*"`) → @p to 프리셋의 들어오기 블렌드 →
          *        카탈로그 기본 순으로 찾습니다(Cinemachine Custom Blends 와 같은 순서).
          */
-        const BlendCurveSpec& getBlend( const hashed_string& from, const hashed_string& to ) const;
-        const BlendCurveSpec& getDefaultBlend() const { return _defaultBlend; }
-        void                  setDefaultBlend( const BlendCurveSpec& blend ) { _defaultBlend = blend; }
+        const BlendCurveDef& getBlend( const hashed_string& from, const hashed_string& to ) const;
+        const BlendCurveDef& getDefaultBlend() const { return _defaultBlend; }
+        void                 setDefaultBlend( const BlendCurveDef& blend ) { _defaultBlend = blend; }
 
     private:
         static constexpr const utf8* kXMLRootName = "CameraPresets"; ///< 루트 원소(`XMLCatalog`)
@@ -383,6 +383,6 @@ namespace sw
     private:
         GameCatalog<CameraPresetDef> _catalog;
         vector<CameraBlendRule>      _listBlendRule;
-        BlendCurveSpec               _defaultBlend;
+        BlendCurveDef                _defaultBlend;
     };
 } // namespace sw

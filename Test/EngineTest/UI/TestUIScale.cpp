@@ -46,7 +46,7 @@ namespace
     struct UIScaleTestUtil
     {
         /** @brief 가로 상자(간격 10) · 고정 위젯 둘을 짓고 @p uiScale 배율 뷰포트로 잽니다. */
-        static void buildRow( sw::test::UILayoutFixture& fixture, const sw::UIViewport& viewport )
+        static void createRow( sw::test::UILayoutFixture& fixture, const sw::UIViewport& viewport )
         {
             fixture.getContext()._viewportSize = viewport._size;
             fixture.getContext()._uiScale      = viewport._uiScale;
@@ -93,7 +93,7 @@ SW_TEST_CASE( UIScaleTest, LayoutScalesUniformly )
         const sw::UIViewport viewport = sw::UIScaleUtil::makeViewport( settings, sw::float2{ 1920.0f * scale, 1080.0f * scale }, 1.0f, 1.0f, 0.0f );
         SW_EXPECT_NEAR_EQUAL( scale, viewport._uiScale, 0.0001f );
         sw::test::UILayoutFixture fixture( 0.0f, 0.0f );
-        UIScaleTestUtil::buildRow( fixture, viewport );
+        UIScaleTestUtil::createRow( fixture, viewport );
         SW_EXPECT_STREQ( "row 0.00 0.00 1920.00 1080.00\n"
                          "  a 0.00 0.00 50.00 1080.00\n"
                          "  b 60.00 0.00 70.00 1080.00\n",

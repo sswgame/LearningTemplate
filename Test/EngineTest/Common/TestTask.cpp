@@ -700,9 +700,9 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAllMassiveConcurrencyStress )
 
     for ( int32 index = 0; index < kTaskCount; ++index )
     {
-        auto pCtx = sw::make_shared<SharedTaskContext>();
-        listFuture.push_back( pCtx->_promise.getFuture() );
-        listContext.push_back( pCtx );
+        auto pContext = sw::make_shared<SharedTaskContext>();
+        listFuture.push_back( pContext->_promise.getFuture() );
+        listContext.push_back( pContext );
     }
 
     sw::TaskFuture<sw::vector<int32>> allFuture = sw::whenAllFutures( listFuture );
@@ -714,14 +714,14 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAllMassiveConcurrencyStress )
         const int32 val = static_cast<int32>( ( index + 1 ) * 10 );
         expectedSum += val;
 
-        auto pCtx = listContext[index];
+        auto pContext = listContext[index];
         taskMgr.emplaceTask(
                    "WhenAllWorker",
                    SW_DELEGATE_LAMBDA(
                        sw::TaskDelegate,
-                       [pCtx, val]()
+                       [pContext, val]()
         {
-            pCtx->_promise.setValue( val );
+            pContext->_promise.setValue( val );
         } ),
                    sw::TaskThreadAffinity::Any )
             .submit();
@@ -764,9 +764,9 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
 
     for ( int32 index = 0; index < kRacers; ++index )
     {
-        auto pCtx = sw::make_shared<SharedRacerContext>();
-        listFuture.push_back( pCtx->_promise.getFuture() );
-        listContext.push_back( pCtx );
+        auto pContext = sw::make_shared<SharedRacerContext>();
+        listFuture.push_back( pContext->_promise.getFuture() );
+        listContext.push_back( pContext );
     }
 
     sw::TaskFuture<int32> anyFuture = sw::whenAnyFuture( listFuture );
@@ -774,15 +774,15 @@ SW_TEST_CASE( TaskTest, TaskFutureWhenAnyRaceStress )
 
     for ( size_t index = 0; index < static_cast<size_t>( kRacers ); ++index )
     {
-        auto        pCtx       = listContext[index];
+        auto        pContext   = listContext[index];
         const int32 racerIndex = static_cast<int32>( index );
         taskMgr.emplaceTask(
                    "RacerTask",
                    SW_DELEGATE_LAMBDA(
                        sw::TaskDelegate,
-                       [pCtx, racerIndex]()
+                       [pContext, racerIndex]()
         {
-            pCtx->_promise.setValue( racerIndex );
+            pContext->_promise.setValue( racerIndex );
         } ),
                    sw::TaskThreadAffinity::Any )
             .submit();

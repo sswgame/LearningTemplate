@@ -506,12 +506,12 @@ namespace sw::editor
 
             // GL 처럼 컨텍스트가 렌더 스레드 전용이면 GPU 작업(텍스처 갱신·보조 뷰포트 렌더)을
             // present 훅으로 옮긴다. 그 외 백엔드는 여기 UI 스레드에서 처리한다.
-            const bool bRenderThreadCtx =
+            const bool bRenderThreadContext =
                 _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
 
             // ImGui 1.92 동적 아틀라스: 폰트/텍스처 생성·갱신을 그리기 전에 마친다.
             // (메인 스냅샷은 Textures==nullptr 로 넘겨 렌더 스레드가 이 리스트를 만지지 않는다)
-            if ( _rendererBackend != nullptr && bRenderThreadCtx == false )
+            if ( _rendererBackend != nullptr && bRenderThreadContext == false )
                 _rendererBackend->processTextureUpdates();
 
             ImGuiIO& io = ImGui::GetIO();
@@ -524,7 +524,7 @@ namespace sw::editor
                 const std::unique_lock<mutex> queueLock =
                     ( _rendererBackend != nullptr ) ? _rendererBackend->lockSubmissionQueue() : std::unique_lock<mutex>{};
                 ImGui::UpdatePlatformWindows();
-                if ( bRenderThreadCtx == false )
+                if ( bRenderThreadContext == false )
                     ImGui::RenderPlatformWindowsDefault();
             }
 
@@ -559,9 +559,9 @@ namespace sw::editor
             return;
 
         // GL: 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 유일한 지점이다.
-        const bool bRenderThreadCtx =
+        const bool bRenderThreadContext =
             _rendererBackend != nullptr && _rendererBackend->requiresRenderThreadContext();
-        if ( bRenderThreadCtx )
+        if ( bRenderThreadContext )
         {
             _rendererBackend->newFrame();
             _rendererBackend->processTextureUpdates();
@@ -582,7 +582,7 @@ namespace sw::editor
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
         // (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
-        if ( bRenderThreadCtx )
+        if ( bRenderThreadContext )
         {
             const ImGuiIO& io = ImGui::GetIO();
             if ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable )

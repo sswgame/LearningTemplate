@@ -20,7 +20,7 @@ namespace sw
     {
     }
 
-    void X11SplashWindow::buildScaledImage()
+    void X11SplashWindow::createScaledImage()
     {
         _listScaledPixel.clear();
         if ( _splashData.isValid() == false || _splashData.getPixels() == nullptr )
@@ -54,7 +54,7 @@ namespace sw
         _width  = width;
         _height = height;
         (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시다 — 로드가 이유를 알린다
-        buildScaledImage();
+        createScaledImage();
 
         Display* pDisplay = XOpenDisplay( nullptr );
         if ( pDisplay == nullptr )

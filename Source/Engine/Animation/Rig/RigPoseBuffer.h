@@ -52,7 +52,7 @@ namespace sw
         quaternion getModelRotation( uint32 boneIndex );
         /** @brief 모델 공간 스케일입니다. */
         float3 getModelScale( uint32 boneIndex );
-        /** @brief 모델 공간 행렬입니다(`createTrs`). */
+        /** @brief 모델 공간 행렬입니다(`makeTrs`). */
         float4x4 getModelMatrix( uint32 boneIndex );
 
         /** @brief 모델 공간 회전을 정합니다(로컬 회전 = 부모 모델 회전의 역 * 회전). */

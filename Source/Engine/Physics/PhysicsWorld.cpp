@@ -278,13 +278,13 @@ namespace sw
     /**
      * @brief 바디 핸들로 물리 바디 정보를 찾아 복사합니다(스레드 안전).
      */
-    bool PhysicsWorld::tryGetBody( BodyHandle handle, PhysicsBody& out ) const
+    bool PhysicsWorld::tryGetBody( BodyHandle handle, PhysicsBody& outBody ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         const PhysicsBody*                  pBody = _bodies.get( handle );
         if ( pBody != nullptr )
         {
-            out = *pBody;
+            outBody = *pBody;
             return true;
         }
         return false;
@@ -372,7 +372,7 @@ namespace sw
             {
                 const OverlapPair& pair = _listScratchPair[currentIndex++];
                 _listOverlapEvent.push_back(
-                    PhysicsOverlapEvent{ pair._firstObjectID, pair._secondObjectID, pair._time, SW_TRUE, pair._bFirstTrigger, pair._bSecondTrigger } );
+                    PhysicsOverlapEvent{ pair._firstObjectID, pair._secondObjectID, pair._hitFraction, SW_TRUE, pair._bFirstTrigger, pair._bSecondTrigger } );
                 continue;
             }
             // 끝 이벤트의 트리거 여부는 겹쳐 있던 때의 것이다 — 바디가 이미 사라졌을 수 있다.
@@ -383,7 +383,7 @@ namespace sw
         // **먼저 닿은 것이 먼저 간다.** 빠른 총알이 한 step 에 적 둘을 지나가면 받는 쪽은 앞의 이벤트에 반응해 사라진다 — 핸들 순서로 두면
         // 뒤의 적이 맞을 수 있다. 같은 때끼리는 쌍 순서 그대로다(안정 정렬).
         std::stable_sort( _listOverlapEvent.begin(), _listOverlapEvent.end(), []( const PhysicsOverlapEvent& lhs, const PhysicsOverlapEvent& rhs )
-        { return lhs._time < rhs._time; } );
+        { return lhs._hitFraction < rhs._hitFraction; } );
 
         // 이번 자리가 다음 step 의 출발점이다(연속 바디가 여기서부터 쓸린다).
         _bodies.forEachHandle( []( SlotHandle, PhysicsBody& body )
@@ -435,10 +435,10 @@ namespace sw
         // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
         // 끝이 한 step 늦는다.
         SweepHit   hit{};
-        const bool bEnteredWhileMoving = ContinuousCollision::sweepAABB( body._stepAABB, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
+        const bool bEnteredWhileMoving = ContinuousCollision::sweepAABB( body._stepAABB, relativeDisplacement, otherFrom, hit ) && hit._hitFraction > 0.0f;
         if ( bEnteredWhileMoving == false )
             return;
-        _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._time ) );
+        _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._hitFraction ) );
     }
 
     bool PhysicsWorld::isFarMover( const PhysicsBody& body )
@@ -504,8 +504,8 @@ namespace sw
     bool PhysicsWorld::sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
-        outHit._bHit = false;
-        outHit._time = 1.0f;
+        outHit._bHit        = false;
+        outHit._hitFraction = 1.0f;
 
         if ( movingBox.isValid() == false )
             return false;
@@ -518,7 +518,7 @@ namespace sw
 
         bool     bFoundHit = false;
         SweepHit nearestHit{};
-        nearestHit._time = 1.0f;
+        nearestHit._hitFraction = 1.0f;
 
         if ( shouldScanAllBodies( range ) )
         {
@@ -529,7 +529,7 @@ namespace sw
                     SweepHit hit{};
                     if ( ContinuousCollision::sweepAABB( movingBox, displacement, body._aabb, hit ) )
                     {
-                        if ( hit._time < nearestHit._time || bFoundHit == false )
+                        if ( hit._hitFraction < nearestHit._hitFraction || bFoundHit == false )
                         {
                             bFoundHit               = true;
                             nearestHit              = hit;
@@ -559,7 +559,7 @@ namespace sw
                 SweepHit hit{};
                 if ( ContinuousCollision::sweepAABB( movingBox, displacement, pBody->_aabb, hit ) )
                 {
-                    if ( hit._time < nearestHit._time || bFoundHit == false )
+                    if ( hit._hitFraction < nearestHit._hitFraction || bFoundHit == false )
                     {
                         bFoundHit               = true;
                         nearestHit              = hit;

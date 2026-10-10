@@ -35,7 +35,7 @@ namespace sw
         void              collectNavGeometry( NavMeshGeometry& outGeometry, uint8 area ) const override
         {
             if ( _bPresent )
-                outGeometry.addBox( float3{ 1.0f, 1.0f, 6.0f }, float4x4::createTrs( float3{ 0.0f, 1.0f, 0.0f }, float3{}, float3{ 1.0f, 1.0f, 1.0f } ), area );
+                outGeometry.addBox( float3{ 1.0f, 1.0f, 6.0f }, float4x4::makeTrs( float3{ 0.0f, 1.0f, 0.0f }, float3{}, float3{ 1.0f, 1.0f, 1.0f } ), area );
         }
     };
 } // namespace sw

@@ -36,7 +36,7 @@ namespace sw
     {
     }
 
-    bool CameraPoseBlender::start( const BlendCurveSpec& blend )
+    bool CameraPoseBlender::start( const BlendCurveDef& blend )
     {
         const bool bCut = _bHasPose == SW_FALSE || blend._curve == BlendCurve::Cut || blend._duration <= 0.0f;
         if ( bCut )

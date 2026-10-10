@@ -82,7 +82,7 @@ namespace sw
         quaternion currentRotation{};
         float3     scale{};
         readWorldPose( component, currentPosition, currentRotation, scale );
-        component.setWorldTransform( float4x4::createTrs( position, rotation, scale ) );
+        component.setWorldTransform( float4x4::makeTrs( position, rotation, scale ) );
         readWorldPose( component, outWrittenPosition, outWrittenRotation, scale );
     }
 
@@ -102,7 +102,7 @@ namespace sw
 
     quaternion PhysicsComponentUtil::makeRotation2D( float32 angle )
     {
-        return quaternion::createFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle );
+        return quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle );
     }
 
     PhysicsShapeDesc3D PhysicsComponentUtil::makeScaledShape( const PhysicsShapeDesc3D& shape, const float3& scale )

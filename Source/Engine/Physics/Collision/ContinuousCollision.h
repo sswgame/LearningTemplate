@@ -14,7 +14,7 @@ namespace sw
     struct SweepHit
     {
         bool       _bHit{ false };
-        float32    _time{ 1.0f };
+        float32    _hitFraction{ 1.0f };
         float3     _hitPoint{ 0.0f, 0.0f, 0.0f };
         float3     _hitNormal{ 0.0f, 0.0f, 0.0f };
         uint64     _hitObjectID{ 0 };

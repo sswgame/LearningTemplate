@@ -185,7 +185,7 @@ namespace sw
 
         vector<string> listName;
         listName.reserve( _mapModule.size() );
-        for ( const auto& [name, ctx] : _mapModule )
+        for ( const auto& [name, context] : _mapModule )
         {
             listName.push_back( name );
         }
@@ -194,9 +194,9 @@ namespace sw
         if ( topoSortSubgraph( listName, listOrder ) == false )
         {
             SW_LOG_ERROR( "Topological sort failed during shutdown — unloading in arbitrary order" );
-            for ( auto& [name, ctx] : _mapModule )
+            for ( auto& [name, context] : _mapModule )
             {
-                unloadModule( ctx );
+                unloadModule( context );
             }
             _mapModule.clear();
             return;
@@ -297,14 +297,14 @@ namespace sw
         if ( iter == _mapModule.end() )
             return;
 
-        ModuleContext& ctx = iter->second;
+        ModuleContext& context = iter->second;
         SW_LOG_INFO( "Manual Live Reload queued for %# (debounce %#ms)...",
                      moduleName, kMtimeDebounceMs );
-        ctx._debounceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
-        ctx._debounceTimer.resetTimer();
-        ctx._debounceTimer.startTimer();
-        ctx._bMtimeDebouncing = true;
-        ctx._bForceReload     = true;
+        context._debounceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
+        context._debounceTimer.resetTimer();
+        context._debounceTimer.startTimer();
+        context._bMtimeDebouncing = true;
+        context._bForceReload     = true;
     }
 
     void LiveReloadManager::notifyBuildStarted()
@@ -335,12 +335,12 @@ namespace sw
             if ( notice._bSucceeded == false )
             {
                 // 실패한 빌드가 다시 쓴 모듈은 반쯤 된 집합일 수 있다 — 올리지 않는다. 파일은 그대로라 다음에 성공한 빌드의 변경과 함께 올라간다.
-                for ( auto& [name, ctx] : _mapModule )
+                for ( auto& [name, context] : _mapModule )
                 {
-                    if ( ctx._bMtimeDebouncing || ctx._bForceReload )
-                        SW_LOG_WARNING( "Build failed - %# is not reloaded from its partial output", ctx._moduleName );
-                    ctx._bMtimeDebouncing = false;
-                    ctx._bForceReload     = false;
+                    if ( context._bMtimeDebouncing || context._bForceReload )
+                        SW_LOG_WARNING( "Build failed - %# is not reloaded from its partial output", context._moduleName );
+                    context._bMtimeDebouncing = false;
+                    context._bForceReload     = false;
                 }
             }
             else if ( notice._targetName.empty() == false && _mapModule.find( notice._targetName ) != _mapModule.end() )
@@ -386,31 +386,31 @@ namespace sw
 
         // 이 프로세스가 시킨 빌드가 도는 동안은 변경을 모아 두기만 한다 — 연쇄 빌드의 반쯤 된 집합을 올리지 않는다(`notifyBuildStarted`).
         const bool bBuildInProgress = consumeBuildNotice();
-        for ( auto& [name, ctx] : _mapModule )
+        for ( auto& [name, context] : _mapModule )
         {
-            if ( ctx._bMtimeDebouncing == false || bBuildInProgress )
+            if ( context._bMtimeDebouncing == false || bBuildInProgress )
                 continue;
 
-            ctx._debounceTimer.updateTimer();
-            const float32 elapsedSec = ctx._debounceTimer.getTotalTime();
+            context._debounceTimer.updateTimer();
+            const float32 elapsedSec = context._debounceTimer.getTotalTime();
             if ( elapsedSec < static_cast<float32>( kMtimeDebounceMs ) / 1000.0f )
                 continue;
 
-            const uint64 sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
-            if ( sourceMtime != ctx._debounceMtime )
+            const uint64 sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
+            if ( sourceMtime != context._debounceMtime )
             {
-                ctx._debounceMtime = sourceMtime;
-                ctx._debounceTimer.resetTimer();
-                ctx._debounceTimer.startTimer();
+                context._debounceMtime = sourceMtime;
+                context._debounceTimer.resetTimer();
+                context._debounceTimer.startTimer();
                 continue;
             }
 
-            ctx._bMtimeDebouncing = false;
-            const bool bForce     = ctx._bForceReload.exchange( false );
-            if ( bForce || sourceMtime > ctx._loadedSourceMtime )
+            context._bMtimeDebouncing = false;
+            const bool bForce         = context._bForceReload.exchange( false );
+            if ( bForce || sourceMtime > context._loadedSourceMtime )
             {
-                SW_LOG_TRACE( "FileWatcher settled — queuing reload for %#", ctx._moduleName );
-                ctx._bPendingReload = true;
+                SW_LOG_TRACE( "FileWatcher settled — queuing reload for %#", context._moduleName );
+                context._bPendingReload = true;
             }
         }
 
@@ -420,12 +420,12 @@ namespace sw
         vector<string> listPendingRoot;
         BLOCK( "Collect Pending Reloads" )
         {
-            for ( auto& [name, ctx] : _mapModule )
+            for ( auto& [name, context] : _mapModule )
             {
-                if ( ctx._bPendingReload )
+                if ( context._bPendingReload )
                 {
-                    ctx._bPendingReload = false;
-                    listPendingRoot.push_back( ctx._moduleName );
+                    context._bPendingReload = false;
+                    listPendingRoot.push_back( context._moduleName );
                 }
             }
         }
@@ -474,12 +474,12 @@ namespace sw
 
     void LiveReloadManager::clearReloadCallbacks()
     {
-        for ( auto& [name, ctx] : _mapModule )
+        for ( auto& [name, context] : _mapModule )
         {
-            ctx._onBeforeReload  = {};
-            ctx._onAfterReload   = {};
-            ctx._onReloadFault   = {};
-            ctx._onValidateImage = {};
+            context._onBeforeReload  = {};
+            context._onAfterReload   = {};
+            context._onReloadFault   = {};
+            context._onValidateImage = {};
         }
     }
 
@@ -523,24 +523,24 @@ namespace sw
         return it != _mapModule.end() ? it->second._pLibraryModule : nullptr;
     }
 
-    void LiveReloadManager::rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes )
+    void LiveReloadManager::rewriteShadowSonames( ModuleContext& context, vector<uint8>& inoutBytes )
     {
         // 복사본은 원본에서 막 복사했으므로 SONAME 은 늘 원본 이름이다. 처음 한 번 읽어 둔다(의존 모듈의 NEEDED 가 이 이름을 적고 있다).
-        if ( ctx._soname._original.empty() )
-            (void)ModuleImagePatch::readSoname( inoutBytes, ctx._soname._original ); // 못 읽으면(ELF 가 아님) 이름이 비어 아래가 건너뛴다
+        if ( context._soname._original.empty() )
+            (void)ModuleImagePatch::readSoname( inoutBytes, context._soname._original ); // 못 읽으면(ELF 가 아님) 이름이 비어 아래가 건너뛴다
 
-        if ( ctx._soname._original.empty() == false )
+        if ( context._soname._original.empty() == false )
         {
-            const string generationName = ModuleImagePatch::makeGenerationName( ctx._soname._original, ++LiveReloadManagerInternal::s_sonameGeneration );
+            const string generationName = ModuleImagePatch::makeGenerationName( context._soname._original, ++LiveReloadManagerInternal::s_sonameGeneration );
             const bool   bRenamed       = generationName.empty() == false &&
-                                  ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagSoname, ctx._soname._original, generationName ) > 0;
+                                  ModuleImagePatch::replaceDynamicString( inoutBytes, ModuleImagePatch::kTagSoname, context._soname._original, generationName ) > 0;
             if ( bRenamed )
-                ctx._soname._current = generationName;
+                context._soname._current = generationName;
         }
 
         // 의존 모듈의 NEEDED 를 그 의존의 지금 이름으로. 연쇄 리로드는 의존 순서로 prepare 하므로, 같은 연쇄에서 바뀌는 의존은 이미
         // 새 이름을 들고 있다(`_current`). 이 매니저가 올리지 않은 의존(Engine 등)은 원래 이름 그대로 둔다.
-        for ( const string& dependencyName : ctx._listDependsOn )
+        for ( const string& dependencyName : context._listDependsOn )
         {
             const auto dependencyIt = _mapModule.find( dependencyName );
             if ( dependencyIt == _mapModule.end() )
@@ -552,42 +552,42 @@ namespace sw
         }
     }
 
-    bool LiveReloadManager::loadShadowCopyModule( ModuleContext& ctx )
+    bool LiveReloadManager::loadShadowCopyModule( ModuleContext& context )
     {
         PreparedShadow prepared;
-        if ( prepareShadowCopy( ctx, prepared ) == false )
+        if ( prepareShadowCopy( context, prepared ) == false )
             return false;
-        if ( commitShadowCopy( ctx, prepared ) )
+        if ( commitShadowCopy( context, prepared ) )
             return true;
-        abortShadowCopy( ctx, prepared );
+        abortShadowCopy( context, prepared );
         return false;
     }
 
-    bool LiveReloadManager::prepareShadowCopy( ModuleContext& ctx, PreparedShadow& out )
+    bool LiveReloadManager::prepareShadowCopy( ModuleContext& context, PreparedShadow& outShadow )
     {
-        out = {};
+        outShadow = {};
         BLOCK( "Check Original Module" )
         {
-            if ( FileUtil::exists( ctx._originalModulePath ) == false )
+            if ( FileUtil::exists( context._originalModulePath ) == false )
             {
-                SW_LOG_ERROR( "Original module not found: %#", ctx._originalModulePath.c_str() );
+                SW_LOG_ERROR( "Original module not found: %#", context._originalModulePath.c_str() );
                 return false;
             }
         }
 
-        out._sourceMtime = FileUtil::getFileTimestamp( ctx._originalModulePath );
+        outShadow._sourceMtime = FileUtil::getFileTimestamp( context._originalModulePath );
 
         ++LiveReloadManagerInternal::s_reloadCount;
-        const string tempName = ShadowCopyName::make( ctx._moduleName, Process::getCurrentProcessID(), LiveReloadManagerInternal::s_reloadCount, out._sourceMtime );
-        const string execDir  = FileUtil::getDirectoryPart( ctx._originalModulePath );
+        const string tempName = ShadowCopyName::make( context._moduleName, Process::getCurrentProcessID(), LiveReloadManagerInternal::s_reloadCount, outShadow._sourceMtime );
+        const string execDir  = FileUtil::getDirectoryPart( context._originalModulePath );
 
         BLOCK( "Create Shadow Copy" )
         {
             // 원본을 한 번 읽어 대조하고(리눅스는 고치고) 복사본으로 쓴다. 대조에 걸리면 복사본을 만들기 전이라 치울 것이 없다.
             vector<uint8> bytes;
-            if ( LiveReloadManagerInternal::readFileWithRetry( ctx._originalModulePath, bytes ) == false )
+            if ( LiveReloadManagerInternal::readFileWithRetry( context._originalModulePath, bytes ) == false )
             {
-                SW_LOG_ERROR( "Failed to read the module for a shadow copy (locked): %#", ctx._originalModulePath.c_str() );
+                SW_LOG_ERROR( "Failed to read the module for a shadow copy (locked): %#", context._originalModulePath.c_str() );
                 return false;
             }
 
@@ -599,27 +599,27 @@ namespace sw
             if ( bEngineAbiMismatch )
             {
                 // 첫 로드면 지킬 옛 모듈이 없다 — 엔진과 모듈 중 한쪽만 다시 빌드된 것이라 둘을 함께 빌드해야 한다.
-                const utf8* pHint = ctx._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
-                                                                   : "rebuild the engine and its modules together";
+                const utf8* pHint = context._pLibraryModule != nullptr ? "keeping the old module; restart to pick up the engine change"
+                                                                       : "rebuild the engine and its modules together";
                 SW_LOG_ERROR( "Module %# was built against different Core/Engine headers than the running engine (module %#, engine %#) — %#",
-                              ctx._moduleName, moduleStamp, engine::getEngineAbiStamp(), pHint );
+                              context._moduleName, moduleStamp, engine::getEngineAbiStamp(), pHint );
                 return false;
             }
 #if defined( SW_PLATFORM_LINUX )
-            rewriteShadowSonames( ctx, bytes );
+            rewriteShadowSonames( context, bytes );
 #endif
 
-            out._tempPath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( tempName ) );
-            if ( FileUtil::writeFile( out._tempPath, bytes.data(), bytes.size() ) == false )
+            outShadow._tempPath = FileUtil::joinPath( execDir, ModuleImageUtil::formatSharedLibraryName( tempName ) );
+            if ( FileUtil::writeFile( outShadow._tempPath, bytes.data(), bytes.size() ) == false )
             {
-                ctx._soname._current = ctx._soname._loaded;
-                SW_LOG_ERROR( "Failed to write the shadow copy: %#", out._tempPath.c_str() );
-                LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
-                out = {};
+                context._soname._current = context._soname._loaded;
+                SW_LOG_ERROR( "Failed to write the shadow copy: %#", outShadow._tempPath.c_str() );
+                LiveReloadManagerInternal::tryDeleteShadowArtifacts( outShadow._tempPath );
+                outShadow = {};
                 return false;
             }
 
-            LiveReloadManagerInternal::copyDebugSymbolsIfPresent( ctx._originalModulePath, out._tempPath );
+            LiveReloadManagerInternal::copyDebugSymbolsIfPresent( context._originalModulePath, outShadow._tempPath );
         }
 
         BLOCK( "Load Dynamic Library" )
@@ -627,23 +627,23 @@ namespace sw
             // 불변 조건: engine::registerModuleTypes 가 로드할 때마다 전역 헤드를 nullptr 로 비우므로, 여기에 들어올 때 세 헤드는
             // 항상 nullptr 이다(연쇄 교체의 두 번째 모듈 이후도 마찬가지다). abort 는 이 스냅샷을 되돌리므로, 정상 상태에서는
             // nullptr 로 되돌리는 것이 올바른 결과다. (검증: SmokeTest Architecture.LiveReloadRegistrarContentLifecycle)
-            out._pPreviousTypeHead     = TypeRegistrar::getHead();
-            out._pPreviousEnumHead     = EnumRegistrar::getHead();
-            out._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
+            outShadow._pPreviousTypeHead     = TypeRegistrar::getHead();
+            outShadow._pPreviousEnumHead     = EnumRegistrar::getHead();
+            outShadow._pPreviousVariableHead = GlobalVariableRegistrar::getHead();
 
-            out._pHandle = ModuleImageUtil::loadDynamicLibrary( out._tempPath );
-            if ( out._pHandle == nullptr )
+            outShadow._pHandle = ModuleImageUtil::loadDynamicLibrary( outShadow._tempPath );
+            if ( outShadow._pHandle == nullptr )
             {
-                ctx._soname._current = ctx._soname._loaded;
-                SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", out._tempPath.c_str() );
-                LiveReloadManagerInternal::tryDeleteShadowArtifacts( out._tempPath );
-                out = {};
+                context._soname._current = context._soname._loaded;
+                SW_LOG_ERROR( "Failed to load dynamic library (keeping old): %#", outShadow._tempPath.c_str() );
+                LiveReloadManagerInternal::tryDeleteShadowArtifacts( outShadow._tempPath );
+                outShadow = {};
                 return false;
             }
 
-            out._pTypeHead     = TypeRegistrar::getHead();
-            out._pEnumHead     = EnumRegistrar::getHead();
-            out._pVariableHead = GlobalVariableRegistrar::getHead();
+            outShadow._pTypeHead     = TypeRegistrar::getHead();
+            outShadow._pEnumHead     = EnumRegistrar::getHead();
+            outShadow._pVariableHead = GlobalVariableRegistrar::getHead();
 
             TypeRegistrar::getHead()           = nullptr;
             EnumRegistrar::getHead()           = nullptr;
@@ -654,27 +654,27 @@ namespace sw
         {
             // 옛 이미지가 아직 도는 동안 호스트가 새 이미지를 거절할 자리다. 거절은 적용 전 실패라 옛 것을 두고 그래프를 막지 않는다.
             // 새 이미지의 코드가 불리므로 onAfterReload 와 같이 지킨다.
-            if ( ctx._onValidateImage.isBound() )
+            if ( context._onValidateImage.isBound() )
             {
                 bool        bAccepted{ false };
                 uint32      faultCode{ 0 };
-                void* const pNewHandle = out._pHandle;
+                void* const pNewHandle = outShadow._pHandle;
                 const bool  bCompleted = ModuleCallGuard::run(
-                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&ctx, &bAccepted, pNewHandle]()
+                    SW_DELEGATE_LAMBDA( Delegate<void()>, [&context, &bAccepted, pNewHandle]()
                  {
-                    bAccepted = ctx._onValidateImage( pNewHandle );
+                    bAccepted = context._onValidateImage( pNewHandle );
                 } ),
                     faultCode );
                 if ( bCompleted == false || bAccepted == false )
                 {
-                    const utf8* pOutcome = ( ctx._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
+                    const utf8* pOutcome = ( context._pLibraryModule != nullptr ) ? "keeping the old module" : "it is not loaded";
                     if ( bCompleted == false )
-                        SW_LOG_ERROR( "Module %# faulted (code 0x%#) while the host checked it — %#", ctx._moduleName,
+                        SW_LOG_ERROR( "Module %# faulted (code 0x%#) while the host checked it — %#", context._moduleName,
                                       Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), pOutcome );
                     else
-                        SW_LOG_ERROR( "Module %# was rejected by the host before it took over — %#", ctx._moduleName, pOutcome );
-                    abortShadowCopy( ctx, out );
-                    out = {};
+                        SW_LOG_ERROR( "Module %# was rejected by the host before it took over — %#", context._moduleName, pOutcome );
+                    abortShadowCopy( context, outShadow );
+                    outShadow = {};
                     return false;
                 }
             }
@@ -683,13 +683,13 @@ namespace sw
         return true;
     }
 
-    bool LiveReloadManager::commitShadowCopy( ModuleContext& ctx, PreparedShadow& prepared )
+    bool LiveReloadManager::commitShadowCopy( ModuleContext& context, PreparedShadow& prepared )
     {
         if ( prepared._pHandle == nullptr )
             return false;
 
-        const string previousTempModule = ctx._tempModulePath;
-        void*        pPreviousHandle    = ctx._pLibraryModule;
+        const string previousTempModule = context._tempModulePath;
+        void*        pPreviousHandle    = context._pLibraryModule;
         bool         bKeepPreviousImage{ false };
 
         BLOCK( "Swap Module Handles" )
@@ -698,28 +698,28 @@ namespace sw
             if ( pPreviousHandle != nullptr && drainTasksBeforeUnload() == false )
                 return false;
 
-            if ( ctx._onBeforeReload.isBound() && pPreviousHandle != nullptr )
-                ctx._onBeforeReload();
+            if ( context._onBeforeReload.isBound() && pPreviousHandle != nullptr )
+                context._onBeforeReload();
 
             if ( pPreviousHandle != nullptr )
             {
                 // onBefore 뒤에 남은 작업을 비운다. 이미 모듈을 내렸으면 교체를 계속하고, 제한 시간을 넘기면 그래프를 깨진 상태로 표시만 한다.
                 drainTasksBeforeUnload();
-                engine::unregisterModuleTypes( ctx._moduleName );
-                bKeepPreviousImage = ModuleImageUtil::releaseImageCode( ctx._moduleName, pPreviousHandle ) == false;
+                engine::unregisterModuleTypes( context._moduleName );
+                bKeepPreviousImage = ModuleImageUtil::releaseImageCode( context._moduleName, pPreviousHandle ) == false;
             }
 
-            ctx._pLibraryModule = prepared._pHandle;
+            context._pLibraryModule = prepared._pHandle;
             // 이 이미지의 코드가 처음 돌기 전, 의존 이미지(먼저 커밋됨)가 등록된 뒤에 지연 import 를 묶는다 — 첫 호출이 묶으면 첫 float 인자가 망가진다.
-            (void)ModuleImageUtil::bindDelayLoadImports( ctx._pLibraryModule ); // 못 묶으면 경고했다
-            ctx._tempModulePath    = prepared._tempPath;
-            ctx._loadedSourceMtime = prepared._sourceMtime;
-            ctx._soname._loaded    = ctx._soname._current;
-            prepared._pHandle      = nullptr;
+            (void)ModuleImageUtil::bindDelayLoadImports( context._pLibraryModule ); // 못 묶으면 경고했다
+            context._tempModulePath    = prepared._tempPath;
+            context._loadedSourceMtime = prepared._sourceMtime;
+            context._soname._loaded    = context._soname._current;
+            prepared._pHandle          = nullptr;
             prepared._tempPath.clear();
 
             engine::registerModuleTypes(
-                ctx._moduleName,
+                context._moduleName,
                 prepared._pTypeHead,
                 prepared._pEnumHead,
                 prepared._pVariableHead );
@@ -727,43 +727,43 @@ namespace sw
             prepared._pEnumHead     = nullptr;
             prepared._pVariableHead = nullptr;
 
-            invokeAfterReload( ctx );
+            invokeAfterReload( context );
 
             // 옛 이미지는 바로 내리지 않고 언로드를 미룬다. 그래프가 깨진 경우도 같다(핸들을 잃지 않는다).
             if ( pPreviousHandle != nullptr )
-                deferImageUnload( ctx._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
+                deferImageUnload( context._moduleName, pPreviousHandle, previousTempModule, bKeepPreviousImage );
         }
 
         if ( _bReloadGraphBroken == SW_TRUE )
         {
             SW_LOG_ERROR( "Module %# committed but onAfter marked the graph broken",
-                          ctx._moduleName );
+                          context._moduleName );
             return false;
         }
 
-        SW_LOG_INFO( "Module loaded (shadow: %#)", ctx._tempModulePath.c_str() );
+        SW_LOG_INFO( "Module loaded (shadow: %#)", context._tempModulePath.c_str() );
         return true;
     }
 
-    void LiveReloadManager::invokeAfterReload( ModuleContext& ctx )
+    void LiveReloadManager::invokeAfterReload( ModuleContext& context )
     {
         // 새 이미지의 코드가 처음 도는 자리다. 여기서 죽으면 에디터째 내려가 저장하지 않은 작업을 잃으므로 지킨다.
-        if ( ctx._onAfterReload.isBound() == false )
+        if ( context._onAfterReload.isBound() == false )
             return;
         uint32     faultCode{ 0 };
         const bool bCompleted = ModuleCallGuard::run(
-            SW_DELEGATE_LAMBDA( Delegate<void()>, [&ctx]()
+            SW_DELEGATE_LAMBDA( Delegate<void()>, [&context]()
         {
-            ctx._onAfterReload( ctx._pLibraryModule );
+            context._onAfterReload( context._pLibraryModule );
         } ),
             faultCode );
         if ( bCompleted == false )
         {
             SW_LOG_ERROR( "Module %# faulted (code 0x%#) while starting after the reload — dropping what it handed out; save your work and restart",
-                          ctx._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
+                          context._moduleName, Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ) );
             markGraphBroken( "a module faulted in onAfterReload" );
-            if ( ctx._onReloadFault.isBound() )
-                ctx._onReloadFault( faultCode );
+            if ( context._onReloadFault.isBound() )
+                context._onReloadFault( faultCode );
         }
     }
 
@@ -779,15 +779,15 @@ namespace sw
         return _bReloadGraphBroken == SW_FALSE;
     }
 
-    void LiveReloadManager::abortShadowCopy( ModuleContext& ctx, PreparedShadow& prepared )
+    void LiveReloadManager::abortShadowCopy( ModuleContext& context, PreparedShadow& prepared )
     {
-        ctx._soname._current = ctx._soname._loaded;
+        context._soname._current = context._soname._loaded;
         if ( prepared._pHandle != nullptr )
         {
             TypeRegistrar::getHead()           = prepared._pPreviousTypeHead;
             EnumRegistrar::getHead()           = prepared._pPreviousEnumHead;
             GlobalVariableRegistrar::getHead() = prepared._pPreviousVariableHead;
-            if ( ModuleImageUtil::releaseImageCode( ctx._moduleName, prepared._pHandle ) )
+            if ( ModuleImageUtil::releaseImageCode( context._moduleName, prepared._pHandle ) )
                 ModuleImageUtil::unloadDynamicLibrary( prepared._pHandle );
             prepared._pHandle = nullptr;
         }
@@ -803,24 +803,24 @@ namespace sw
         prepared._sourceMtime = 0;
     }
 
-    void LiveReloadManager::unloadModule( ModuleContext& ctx )
+    void LiveReloadManager::unloadModule( ModuleContext& context )
     {
-        if ( ctx._onBeforeReload.isBound() && ctx._pLibraryModule != nullptr )
-            ctx._onBeforeReload();
+        if ( context._onBeforeReload.isBound() && context._pLibraryModule != nullptr )
+            context._onBeforeReload();
 
-        if ( ctx._pLibraryModule != nullptr )
+        if ( context._pLibraryModule != nullptr )
         {
-            SW_LOG_INFO( "Unloading module %# (handle=%#)", ctx._moduleName.c_str(), ctx._pLibraryModule );
+            SW_LOG_INFO( "Unloading module %# (handle=%#)", context._moduleName.c_str(), context._pLibraryModule );
             drainTasksBeforeUnload();
 
-            engine::unregisterModuleTypes( ctx._moduleName );
-            if ( ModuleImageUtil::releaseImageCode( ctx._moduleName, ctx._pLibraryModule ) )
-                ModuleImageUtil::unloadDynamicLibrary( ctx._pLibraryModule );
-            ctx._pLibraryModule = nullptr;
+            engine::unregisterModuleTypes( context._moduleName );
+            if ( ModuleImageUtil::releaseImageCode( context._moduleName, context._pLibraryModule ) )
+                ModuleImageUtil::unloadDynamicLibrary( context._pLibraryModule );
+            context._pLibraryModule = nullptr;
         }
 
-        LiveReloadManagerInternal::tryDeleteShadowArtifacts( ctx._tempModulePath );
-        ctx._tempModulePath.clear();
+        LiveReloadManagerInternal::tryDeleteShadowArtifacts( context._tempModulePath );
+        context._tempModulePath.clear();
     }
 
     void LiveReloadManager::deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped )
@@ -919,9 +919,9 @@ namespace sw
             if ( _mapModule.find( cur ) == _mapModule.end() )
                 continue;
             outListUnique.push_back( cur );
-            for ( const auto& [moduleName, ctx] : _mapModule )
+            for ( const auto& [moduleName, context] : _mapModule )
             {
-                for ( const string& dep : ctx._listDependsOn )
+                for ( const string& dep : context._listDependsOn )
                 {
                     if ( dep == cur )
                         listStack.push_back( moduleName );
@@ -1036,7 +1036,7 @@ namespace sw
 
         struct PreparedEntry
         {
-            ModuleContext* _pCtx{ nullptr };
+            ModuleContext* _pContext{ nullptr };
             PreparedShadow _shadow;
         };
         vector<PreparedEntry> listPrepared;
@@ -1049,8 +1049,8 @@ namespace sw
             if ( found == _mapModule.end() )
                 continue;
             PreparedEntry entry;
-            entry._pCtx = &found->second;
-            if ( prepareShadowCopy( *entry._pCtx, entry._shadow ) == false )
+            entry._pContext = &found->second;
+            if ( prepareShadowCopy( *entry._pContext, entry._shadow ) == false )
             {
                 SW_LOG_ERROR( "Cascade prepare failed for %# — aborting, previous modules kept",
                               name );
@@ -1064,7 +1064,7 @@ namespace sw
         {
             for ( PreparedEntry& entry : listPrepared )
             {
-                abortShadowCopy( *entry._pCtx, entry._shadow );
+                abortShadowCopy( *entry._pContext, entry._shadow );
             }
             return;
         }
@@ -1075,7 +1075,7 @@ namespace sw
             SW_LOG_ERROR( "Cascade reload refused before the first commit — keeping the previous modules" );
             for ( PreparedEntry& entry : listPrepared )
             {
-                abortShadowCopy( *entry._pCtx, entry._shadow );
+                abortShadowCopy( *entry._pContext, entry._shadow );
             }
             return;
         }
@@ -1089,29 +1089,29 @@ namespace sw
             if ( _bReloadGraphBroken == SW_TRUE )
             {
                 SW_LOG_ERROR( "Cascade abort before commit of %# — graph already broken",
-                              entry._pCtx->_moduleName );
-                abortShadowCopy( *entry._pCtx, entry._shadow );
+                              entry._pContext->_moduleName );
+                abortShadowCopy( *entry._pContext, entry._shadow );
                 for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
                 {
-                    abortShadowCopy( *listPrepared[otherModuleIndex]._pCtx, listPrepared[otherModuleIndex]._shadow );
+                    abortShadowCopy( *listPrepared[otherModuleIndex]._pContext, listPrepared[otherModuleIndex]._shadow );
                 }
                 if ( committed > 0 )
                     markGraphBroken( "partial cascade commit" );
                 return;
             }
 
-            if ( commitShadowCopy( *entry._pCtx, entry._shadow ) )
+            if ( commitShadowCopy( *entry._pContext, entry._shadow ) )
             {
                 ++committed;
                 continue;
             }
 
             SW_LOG_ERROR( "Cascade commit failed for %# — aborting remaining commits",
-                          entry._pCtx->_moduleName );
-            abortShadowCopy( *entry._pCtx, entry._shadow );
+                          entry._pContext->_moduleName );
+            abortShadowCopy( *entry._pContext, entry._shadow );
             for ( size_t otherModuleIndex = moduleIndex + 1; otherModuleIndex < listPrepared.size(); ++otherModuleIndex )
             {
-                abortShadowCopy( *listPrepared[otherModuleIndex]._pCtx, listPrepared[otherModuleIndex]._shadow );
+                abortShadowCopy( *listPrepared[otherModuleIndex]._pContext, listPrepared[otherModuleIndex]._shadow );
             }
 
             if ( committed > 0 || _bReloadGraphBroken == SW_FALSE )

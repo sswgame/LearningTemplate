@@ -116,7 +116,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 **커서**(`AnimClipCursor`)는 재생 시각, 반복 여부, 끝났는지를 관리합니다. 클립이든 스프라이트 구간이든 `IAnimPlayable` 이면 같은 커서로 재생합니다.
 
 **플레이어**(`AnimPlayer`)는 슬롯 두 개로 크로스페이드합니다. 새 클립을 틀면 지금 클립에서 새 클립으로 정해진 시간 동안 가중치를 옮깁니다.
-전환 곡선은 `BlendCurve`(`BlendCurveSpec`, `evaluateBlendWeight`)이고, 카메라 디렉터, 시퀀서, 소켓 부착의 되돌아가기도 같은 구현을 씁니다.
+전환 곡선은 `BlendCurve`(`BlendCurveDef`, `evaluateBlendWeight`)이고, 카메라 디렉터, 시퀀서, 소켓 부착의 되돌아가기도 같은 구현을 씁니다.
 
 **상태 기계**(`AnimGraphPlayer`)는 JSON 그래프(`AnimGraphAsset`)를 실행합니다. 노드가 상태이고 링크가 전이입니다.
 전이 조건은 파라미터(`AnimParameterSet`)와 비교 연산자(`>`, `<`, `>=`, `<=`, `==`, `!=`) 또는 `trigger` 로 적습니다. 전이마다 블렌드 시간이 있고, 노드마다 반복 여부가 있습니다.

@@ -184,14 +184,14 @@ namespace sw::editor
 
         const float3   forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
                               MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
-        const float4x4 viewMat = float4x4::createLookAt( _cameraPos, _cameraPos + forward, float3::Up );
+        const float4x4 viewMat = float4x4::makeLookAt( _cameraPos, _cameraPos + forward, float3::Up );
         EditorViewportClientInternal::storeGizmoMatrix( pOutMatrix, viewMat );
     }
 
     void EditorViewportClient::getProjectionMatrix( float32* pOutMatrix, float32 aspect ) const
     {
         const float32  effectiveAspect = aspect > 0.001f ? aspect : 1.0f;
-        const float4x4 projMat         = float4x4::createPerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
+        const float4x4 projMat         = float4x4::makePerspectiveFieldOfView( MathUtil::toRadian( _fovY ), effectiveAspect, _nearZ, _farZ );
         EditorViewportClientInternal::storeGizmoMatrix( pOutMatrix, projMat );
     }
 

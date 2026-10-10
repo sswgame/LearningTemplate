@@ -112,7 +112,7 @@ namespace
     struct UIAccessibilityTestUtil
     {
         /** @brief 견본 옵션 메뉴 — 640×400 창 안 세로 스크롤에 "이름 · 슬라이더" 줄 여덟. 이름은 줄 바꿈 없이 줄임표로 자른다. */
-        static constexpr utf8   kOptionsDocument[] = "<UiDocument _schemaVersion=\"1\">\n"
+        static constexpr utf8   kOptionsDocument[] = "<UIDocument _schemaVersion=\"1\">\n"
                                                      "\t<UIScreenDesc _bPausesGame=\"false\" />\n"
                                                      "\t<CanvasPanel>\n"
                                                      "\t\t<BorderPanel _name=\"Window\" _contentPadding=\"24,24,24,24\">\n"
@@ -124,7 +124,7 @@ namespace
                                                      "\t\t\t</ScrollPanel>\n"
                                                      "\t\t</BorderPanel>\n"
                                                      "\t</CanvasPanel>\n"
-                                                     "</UiDocument>\n";
+                                                     "</UIDocument>\n";
         static constexpr uint32 kOptionRowCount    = 8;
 
         static sw::string makeOptionsDocument()

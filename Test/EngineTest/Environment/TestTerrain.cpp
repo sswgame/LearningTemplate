@@ -220,7 +220,7 @@ SW_TEST_CASE( TerrainTest, HolesAreQueryableAndCutFromTheMesh )
     SW_ASSERT_TRUE( TerrainMeshBuilder::makeLayout( 17, 16, layout ) );
     const uint32      arrNeighbor[4] = { 0, 0, 0, 0 };
     vector<RHIVertex> listVertex;
-    TerrainMeshBuilder::buildChunkVertices( field, layout, 0, 0, 0, arrNeighbor, listVertex );
+    TerrainMeshBuilder::makeChunkVertices( field, layout, 0, 0, 0, arrNeighbor, listVertex );
     SW_EXPECT_NEAR_EQUAL( 16.0f * 16.0f - 1.0f, TerrainTestUtil::computeCoveredArea( listVertex ), 1.0e-3f );
 }
 
@@ -278,8 +278,8 @@ SW_TEST_CASE( TerrainTest, LODEdgesAreCrackFree )
         {
             const uint32 arrLeftNeighbor[4]  = { leftLOD, rightLOD, leftLOD, leftLOD };
             const uint32 arrRightNeighbor[4] = { leftLOD, rightLOD, rightLOD, rightLOD };
-            TerrainMeshBuilder::buildChunkVertices( field, layout, 1, 1, leftLOD, arrLeftNeighbor, listLeft );
-            TerrainMeshBuilder::buildChunkVertices( field, layout, 2, 1, rightLOD, arrRightNeighbor, listRight );
+            TerrainMeshBuilder::makeChunkVertices( field, layout, 1, 1, leftLOD, arrLeftNeighbor, listLeft );
+            TerrainMeshBuilder::makeChunkVertices( field, layout, 2, 1, rightLOD, arrRightNeighbor, listRight );
             TerrainTestUtil::collectEdgeVertices( listLeft, TerrainMeshBuilder::computeChunkTranslation( field, layout, 1, 1 ), edgeX, listLeftKey );
             TerrainTestUtil::collectEdgeVertices( listRight, TerrainMeshBuilder::computeChunkTranslation( field, layout, 2, 1 ), edgeX, listRightKey );
             const uint32 coarseStep = 1u << MathUtil::max( leftLOD, rightLOD );
@@ -377,20 +377,20 @@ SW_TEST_CASE( TerrainTest, ChunksLeaveTheGPUSceneWhenTheComponentOrOwnerIsOff )
 
     GPUSceneBuilder gpuScene;
     const float3    camPos{ 0.0f, 50.0f, 0.0f };
-    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.populateFromScene( &scene, camPos );
     SW_ASSERT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
 
     pTerrain->setActive( false );
-    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
     pTerrain->setActive( true );
-    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
 
     pObject->setActive( false );
-    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( gpuScene.getInstances().size() ) );
     pObject->setActive( true );
-    gpuScene.buildFromScene( &scene, camPos );
+    gpuScene.populateFromScene( &scene, camPos );
     SW_EXPECT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );
 }

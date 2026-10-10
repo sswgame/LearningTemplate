@@ -25,7 +25,7 @@ namespace sw
                 CallStackCapture::capture( callStack, 2 );
                 string stackTrace = CallStackCapture::symbolize( callStack );
 
-                SW_LOG_ERROR( "%s (ctx: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
+                SW_LOG_ERROR( "%s (context: %p, readers: %u, writers: %u)", pMessage, pContext, readerCount, writerCount );
 
                 size_t start{ 0 };
                 while ( start < stackTrace.size() )

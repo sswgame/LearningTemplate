@@ -21,7 +21,7 @@ namespace sw
         , _motorTarget{ 0.0f }
         , _motorMaxForce{ 0.0f }
         , _bLimitsEnabled{ false }
-        , _bDisableCollision{ true }
+        , _bCollideConnectedBodies{ false }
         , _bConnectToWorld{ false }
         , _joint{}
         , _jointBodyA{}
@@ -122,19 +122,19 @@ namespace sw
         desc._anchorB = position;
         if ( _jointType == PhysicsJointType::Distance && pBodyB != nullptr )
             desc._anchorB = pBodyB->getWorldPosition();
-        desc._axis              = float3::transform( _axis, rotation ).normalize();
-        desc._normalAxis        = float3::transform( _normalAxis, rotation ).normalize();
-        desc._motor             = PhysicsJointMotor{ _motorTarget, _motorMaxForce, _motorMode };
-        desc._minLimit          = _minLimit;
-        desc._maxLimit          = _maxLimit;
-        desc._swingLimitNormal  = _swingLimitNormal;
-        desc._swingLimitPlane   = _swingLimitPlane;
-        desc._type              = _jointType;
-        desc._bLimitsEnabled    = _bLimitsEnabled;
-        desc._bDisableCollision = _bDisableCollision;
-        _joint                  = pScene->createJoint( desc );
-        _jointBodyA             = bodyA;
-        _jointBodyB             = bodyB;
+        desc._axis                    = float3::transform( _axis, rotation ).normalize();
+        desc._normalAxis              = float3::transform( _normalAxis, rotation ).normalize();
+        desc._motor                   = PhysicsJointMotor{ _motorTarget, _motorMaxForce, _motorMode };
+        desc._minLimit                = _minLimit;
+        desc._maxLimit                = _maxLimit;
+        desc._swingLimitNormal        = _swingLimitNormal;
+        desc._swingLimitPlane         = _swingLimitPlane;
+        desc._type                    = _jointType;
+        desc._bLimitsEnabled          = _bLimitsEnabled;
+        desc._bCollideConnectedBodies = _bCollideConnectedBodies;
+        _joint                        = pScene->createJoint( desc );
+        _jointBodyA                   = bodyA;
+        _jointBodyB                   = bodyB;
     }
 
     void JointComponent::releasePhysics( ScenePhysics& physics )

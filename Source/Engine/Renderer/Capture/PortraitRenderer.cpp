@@ -119,7 +119,7 @@ namespace sw
             return false;
         }
         // 스폰이 경로로 잡은 머티리얼을 GPU 에 올린다 — 게임 루프에서는 틱마다 하는 일(`MaterialCache::initializePending`)인데 스튜디오는 틱하지 않는다.
-        engine::getAssetManager().getMaterialManager().initializePending( _pDevice );
+        engine::getAssetManager().getMaterialCache().initializePending( _pDevice );
         float3  center{};
         float32 radius = 1.0f;
         if ( PortraitRendererInternal::computeSubjectSphere( *pManager, center, radius ) == false )

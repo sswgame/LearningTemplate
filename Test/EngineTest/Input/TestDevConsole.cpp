@@ -301,7 +301,7 @@ SW_TEST_CASE( DevConsoleControllerTest, KeysEditAndSubmitTheLine )
     SW_EXPECT_TRUE( rig._controller.getInputLine().empty() );
     vector<string> listLine;
     vector<uint8>  listErrorFlag;
-    rig._controller.buildVisibleLines( listLine, listErrorFlag );
+    rig._controller.collectVisibleLines( listLine, listErrorFlag );
     SW_ASSERT_TRUE( listLine.size() >= 3 );
     SW_EXPECT_STREQ( "> gv_x", listLine[listLine.size() - 3].c_str() );
     SW_EXPECT_TRUE( listErrorFlag[listLine.size() - 2] != 0 ); // 모르는 명령은 오류 색

@@ -71,7 +71,7 @@ namespace sw
     {
         /**
          * @brief 에셋의 바디 · 관절을 스켈레톤 포즈 자리에 세웁니다(바디는 한 번에 넣는다 — `createBodies`).
-         * @details 관절로 이은 바디끼리(`_bDisableJointedCollision`)와 에셋이 적은 쌍은 서로 부딪히지 않습니다. 에셋의 뼈가 스켈레톤에 없거나 배열이
+         * @details 관절로 이은 바디끼리(`_bCollideJointedBodies` 가 거짓일 때)와 에셋이 적은 쌍은 서로 부딪히지 않습니다. 에셋의 뼈가 스켈레톤에 없거나 배열이
          *          어긋나면 오류를 남기고 아무것도 만들지 않고 false 입니다.
          * @param worldFromModel 모델 공간 → 월드(캐릭터의 월드 행렬)
          */

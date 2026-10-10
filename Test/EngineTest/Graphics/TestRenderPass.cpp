@@ -257,9 +257,9 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteCallbacks )
     auto makeCb = [&executed]( const utf8* pName ) -> sw::RenderGraphPassExecuteFn
     {
         return sw::RenderGraphPassExecuteFn(
-            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executed, pName]( const sw::RenderGraphPassContext& ctx )
+            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executed, pName]( const sw::RenderGraphPassContext& context )
         {
-            SW_EXPECT_STREQ( pName, ctx._passName.c_str() );
+            SW_EXPECT_STREQ( pName, context._passName.c_str() );
             executed.push_back( pName );
         } ) );
     };
@@ -290,9 +290,9 @@ SW_TEST_CASE( RenderPassTest, RenderGraphExecuteParallel )
     auto makeParallelCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
     {
         return sw::RenderGraphPassExecuteFn(
-            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
+            SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& context )
         {
-            SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
+            SW_EXPECT_STREQ( pExpectedName, context._passName.c_str() );
             executeCount.fetch_add( 1, std::memory_order_relaxed );
         } ) );
     };

@@ -28,18 +28,18 @@ namespace
 {
     struct CameraPresetTestInternal
     {
-        static BlendCurveSpec makeBlend( BlendCurve curve, float32 duration = 1.0f, float32 exponent = 2.0f )
+        static BlendCurveDef makeBlend( BlendCurve curve, float32 duration = 1.0f, float32 exponent = 2.0f )
         {
-            BlendCurveSpec spec;
+            BlendCurveDef spec;
             spec._curve    = curve;
             spec._duration = duration;
             spec._exponent = exponent;
             return spec;
         }
 
-        static BlendCurveSpec makeCustomBlend()
+        static BlendCurveDef makeCustomBlend()
         {
-            BlendCurveSpec spec = makeBlend( BlendCurve::Custom );
+            BlendCurveDef spec = makeBlend( BlendCurve::Custom );
             spec._listCustomKey.push_back( BlendCurveKey{ 0.0f, 0.0f } );
             spec._listCustomKey.push_back( BlendCurveKey{ 0.5f, 0.8f } );
             spec._listCustomKey.push_back( BlendCurveKey{ 1.0f, 1.0f } );
@@ -71,8 +71,8 @@ SW_TEST_CASE( CameraPresetTest, EveryCurveRunsFromZeroToOneWithoutGoingBack )
                                     BlendCurve::SmoothStep, BlendCurve::Custom };
     for ( const BlendCurve curve : arrCurve )
     {
-        const BlendCurveSpec spec  = curve == BlendCurve::Custom ? CameraPresetTestInternal::makeCustomBlend() : CameraPresetTestInternal::makeBlend( curve );
-        const utf8*          pName = engine::getTypeRegistry().enumToString( curve );
+        const BlendCurveDef spec  = curve == BlendCurve::Custom ? CameraPresetTestInternal::makeCustomBlend() : CameraPresetTestInternal::makeBlend( curve );
+        const utf8*         pName = engine::getTypeRegistry().enumToString( curve );
         SW_EXPECT_NEAR_EQUAL( 0.0f, evaluateBlendWeight( spec, 0.0f ), 1.0e-6f );
         SW_EXPECT_NEAR_EQUAL( 1.0f, evaluateBlendWeight( spec, 1.0f ), 1.0e-5f );
         float32 previous = 0.0f;
@@ -123,12 +123,12 @@ SW_TEST_CASE( CameraPresetTest, BlendPosesTakesTheShortArcAndSwitchesProjectionA
 {
     CameraPose from;
     from._position      = float3{ 0.0f, 0.0f, 0.0f };
-    from._rotation      = quaternion::createFromYawPitchRoll( 170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
+    from._rotation      = quaternion::makeFromYawPitchRoll( 170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
     from._fieldOfViewY  = 1.0f;
     from._bOrthographic = SW_TRUE;
     CameraPose to;
     to._position      = float3{ 10.0f, 4.0f, -2.0f };
-    to._rotation      = quaternion::createFromYawPitchRoll( -170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
+    to._rotation      = quaternion::makeFromYawPitchRoll( -170.0f * MathUtil::kDegreeToRadian, 0.0f, 0.0f );
     to._fieldOfViewY  = 2.0f;
     to._bOrthographic = SW_FALSE;
 
@@ -220,7 +220,7 @@ SW_TEST_CASE( CameraPresetTest, DampingIsFrameRateIndependent )
     CameraPose start;
     CameraPose goal;
     goal._position = float3{ 10.0f, 0.0f, 0.0f };
-    goal._rotation = quaternion::createFromYawPitchRoll( 1.0f, 0.0f, 0.0f );
+    goal._rotation = quaternion::makeFromYawPitchRoll( 1.0f, 0.0f, 0.0f );
 
     const CameraPose once  = dampPose( start, goal, damping, 0.1f );
     CameraPose       steps = start;

@@ -302,7 +302,7 @@ namespace sw
         }
         FractureGraphUtil::normalizeLinks( graph._listLink );
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::buildHierarchy( graph, settings._listLevelCount, listLeafOrder );
+        FractureGraphUtil::populateHierarchy( graph, settings._listLevelCount, listLeafOrder );
 
         float2 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
         float2 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };

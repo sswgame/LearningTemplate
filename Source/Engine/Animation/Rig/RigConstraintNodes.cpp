@@ -328,7 +328,7 @@ namespace sw
                                       MathUtil::clamp( euler._z, _minAngle._z, _maxAngle._z ) };
                 if ( clamped == euler )
                     return;
-                pose.setLocalRotation( _bone, ( _reference * quaternion::createFromYawPitchRoll( clamped * MathUtil::kDegreeToRadian ) ).normalize() );
+                pose.setLocalRotation( _bone, ( _reference * quaternion::makeFromYawPitchRoll( clamped * MathUtil::kDegreeToRadian ) ).normalize() );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override { inoutListBone.push_back( _bone ); }
@@ -405,11 +405,11 @@ namespace sw
                 const float32 angle = RigIKSolver::computeTwistAngle( twist, _axis );
                 for ( const TwistBone& entry : _listTwist )
                 {
-                    const quaternion share = quaternion::createFromAxisAngle( _axis, angle * entry._weight );
+                    const quaternion share = quaternion::makeFromAxisAngle( _axis, angle * entry._weight );
                     pose.setLocalRotation( entry._bone, ( pose.getLocalRotation( entry._bone ) * share ).normalize() );
                 }
                 // 조상이 더 돈 만큼 소스의 로컬 앞(부모 쪽)에서 되돌린다 — 손의 모델 방향이 그대로 남는다.
-                const quaternion ancestorShare = quaternion::createFromAxisAngle( _axis, -angle * _ancestorWeight );
+                const quaternion ancestorShare = quaternion::makeFromAxisAngle( _axis, -angle * _ancestorWeight );
                 pose.setLocalRotation( _source, ( ancestorShare * pose.getLocalRotation( _source ) ).normalize() );
             }
 

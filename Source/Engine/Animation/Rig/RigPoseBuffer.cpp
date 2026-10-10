@@ -166,7 +166,7 @@ namespace sw
     float4x4 RigPoseBuffer::getModelMatrix( uint32 boneIndex )
     {
         refreshModel();
-        return float4x4::createTrs( _listModelPosition[boneIndex], _listModelRotation[boneIndex], _listModelScale[boneIndex] );
+        return float4x4::makeTrs( _listModelPosition[boneIndex], _listModelRotation[boneIndex], _listModelScale[boneIndex] );
     }
 
     void RigPoseBuffer::setModelRotation( uint32 boneIndex, const quaternion& rotation )

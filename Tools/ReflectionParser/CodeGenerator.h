@@ -36,9 +36,9 @@ namespace sw
         // 2) emit — Type/Property/Method/Enum 골격
         // ------------------------------------------------------------------------------
         /** @brief 파일 상단 배너·include 를 출력합니다. */
-        void emitFileHeader( CodeEmitBuffer& out ) const;
+        void emitFileHeader( CodeEmitBuffer& outBuffer ) const;
         /** @brief TypeRegistrar 본문을 출력합니다. */
-        void emitTypeRegistrar( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+        void emitTypeRegistrar( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief PropertyInfo 한 항목을 출력합니다. */
         void emitPropertyInfoEntry( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedPropertyInfo& prop ) const;
         /** @brief 프로퍼티 메타데이터(필드 표 + 범위)를 출력합니다. */
@@ -53,11 +53,11 @@ namespace sw
         void emitMethodInvoker( CodeEmit& emit, const ParsedTypeInfo& typeInfo, const ParsedFunctionInfo& method,
                                 const string& returnType, const string& callArgs ) const;
         /** @brief ReflectTypeTraits 특수화를 출력합니다. */
-        void emitReflectTypeTraits( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+        void emitReflectTypeTraits( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief StaticType / getTypeInfo 접근자를 출력합니다. */
-        void emitTypeInfoAccessors( CodeEmitBuffer& out, const ParsedTypeInfo& typeInfo ) const;
+        void emitTypeInfoAccessors( CodeEmitBuffer& outBuffer, const ParsedTypeInfo& typeInfo ) const;
         /** @brief EnumRegistrar 본문을 출력합니다. */
-        void emitEnumRegistrar( CodeEmitBuffer& out, const ParsedEnumInfo& enumInfo ) const;
+        void emitEnumRegistrar( CodeEmitBuffer& outBuffer, const ParsedEnumInfo& enumInfo ) const;
         /**
          * @brief 소스 파일 경로로부터 모듈 이름을 판별합니다(생성자에서 한 번).
          * @details parser_config 의 parsing.module_rules 를 위에서부터 적용합니다. 매칭은 sourceRoot 기준 상대 경로로
@@ -75,7 +75,7 @@ namespace sw
         static string sanitizeIdentifier( string_view fqn );
 
         /** @brief 로드된 EmitTemplateStore 골격을 렌더해 버퍼에 붙입니다. */
-        void appendTemplate( CodeEmitBuffer& out, const string_view name, const EmitTemplateStore::TemplateVars vars ) const;
+        void appendTemplate( CodeEmitBuffer& outBuffer, const string_view name, const EmitTemplateStore::TemplateVars vars ) const;
 
     private:
         const ParsedHeader&  _header;

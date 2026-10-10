@@ -55,8 +55,8 @@ namespace sw
          * @param monotonicMs 상태 판정 시각(단조 밀리초)
          * @return HTTP 상태 코드
          */
-        static int32 buildResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
-                                    string& outResponse );
+        static int32 makeResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
+                                   string& outResponse );
 
         // IStreamHandler — I/O 스레드
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override;

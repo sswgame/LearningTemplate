@@ -3,7 +3,7 @@
 	관절은 그 뼈의 바디를 부모 사슬에서 가장 가까운 바디가 있는 뼈에 잇는다(루트 바디의 관절은 쓰지 않는다).
 	PhysicsRagdollTest.SampleAssetLoadsAndBuilds 가 읽는다.
 -->
-<PhysicsAsset _defaultLayer="Ragdoll" _bDisableJointedCollision="true">
+<PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
 	<_listBody>
 		<PhysicsAssetBodyDef _bone="pelvis" _mass="10" _material="Flesh">
 			<_listShape>

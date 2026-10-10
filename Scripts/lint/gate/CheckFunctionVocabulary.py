@@ -219,10 +219,9 @@ class CheckFunctionVocabularyGate(LintGate):
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
     # 예외 표 — **새 위반만 막는다.** 규칙 전부터 있던 선언만 올리고, 고치면 지운다(전체 훑기가 낡은 줄을 잡는다).
-    # 키는 `규칙:헤더 파일 이름(확장자 없음)::함수 이름` — 폴더를 옮겨도 그대로다. 이유가 "개명 예정 X" 이면 기계적 치환에서 X 로 바꾸고,
-    # "도메인 용어" 면 그 분야에서 그 동사가 곧 용어라 그대로 둔다.
+    # 키는 `규칙:헤더 파일 이름(확장자 없음)::함수 이름` — 폴더를 옮겨도 그대로다. 남은 줄은 모두 "도메인 용어" 다 —
+    # 그 분야에서 그 동사가 곧 용어라 그대로 둔다.
     mapExemption = {
-        # BannedVerb
         "BannedVerb:FrameArenaAllocator::construct": "도메인 용어 — STL 할당자 계약(allocator_traits::construct)과 같은 이름",
         "BannedVerb:ReflectionContainers::constructEmpty": "도메인 용어 — 주어진 메모리에 빈 컨테이너를 배치 생성(C++ 객체 수명 시작)",
         "BannedVerb:UUID::generate": "도메인 용어 — UUID 생성(RFC 9562)",
@@ -230,47 +229,6 @@ class CheckFunctionVocabularyGate(LintGate):
         "BannedVerb:SurfaceBvh::build": "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)",
         "BannedVerb:ThemePark::buildRide": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
         "BannedVerb:ParkDirectorComponent::build*": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
-        "BannedVerb:CrashContext::buildCrashReportPath": "개명 예정 makeCrashReportPath — 경로 문자열을 만든다",
-        "BannedVerb:SkeletonBoneLOD::buildMasks": "개명 예정 computeMasks — 마스크를 계산한다",
-        "BannedVerb:SpriteMeshBuilder::buildSlicedVertices": "개명 예정 makeSlicedVertices — 정점 값을 만든다",
-        "BannedVerb:TerrainMeshBuilder::buildChunkVertices": "개명 예정 makeChunkVertices — 정점 값을 만든다",
-        "BannedVerb:WaterBodyComponent::build*Vertices": "개명 예정 make*Vertices — 정점 값을 만든다",
-        "BannedVerb:FrameRenderer::buildLightViewProj": "개명 예정 computeLightViewProj — 행렬을 계산한다",
-        "BannedVerb:FrameRenderer::buildViewProj": "개명 예정 computeViewProj — 행렬을 계산한다",
-        "BannedVerb:RenderGraph::buildResourceLifetimes": "개명 예정 computeResourceLifetimes — 수명 구간을 계산한다",
-        "BannedVerb:GPUSceneBuilder::buildViewTransparentOrders": "개명 예정 computeViewTransparentOrders — 정렬 순서를 계산한다",
-        "BannedVerb:ShaderBindingLayout::build": "개명 예정 make — 레이아웃 값을 돌려준다",
-        "BannedVerb:ShaderBindingLayout::buildBindPlan": "개명 예정 computeBindPlan — 바인딩 계획을 계산한다",
-        "BannedVerb:DirectionalLightComponent::buildShadow*": "개명 예정 computeShadow* — 행렬 · 투영을 계산한다",
-        "BannedVerb:ReflectionTypes::buildAncestorDisplay": "개명 예정 computeAncestorDisplay — 표시 문자열을 계산한다",
-        "BannedVerb:OpsHTTPEndpoint::buildResponse": "개명 예정 makeResponse — 응답 문자열을 만든다",
-        "BannedVerb:ScheduleSystem::buildPlan": "개명 예정 makePlan — 일정 구간을 out 으로 만든다",
-        "BannedVerb:ChatWordFilter::buildFailLinks": "개명 예정 computeFailLinks — 실패 링크를 계산한다(Aho-Corasick)",
-        "BannedVerb:TestFramework::buildRunOrder": "개명 예정 makeRunOrder — 실행 순서 값을 돌려준다",
-        "BannedVerb:ParserConfig::buildArgs": "개명 예정 makeArgs — 인자 목록 값을 돌려준다",
-        "BannedVerb:DevConsoleController::buildVisibleLines": "개명 예정 collectVisibleLines — 보이는 줄을 out 으로 모은다",
-        "BannedVerb:GameObjectStore::generateNewID": "개명 예정 allocateID — 다음 id 를 내준다",
-        "BannedVerb:FrameRenderer::buildOutputPSOVariants": "개명 예정 createOutputPSOVariants — PSO 를 만들어 소유한다",
-        "BannedVerb:JoltPhysicsScene::buildShape": "개명 예정 createShape — Jolt 셰이프를 만든다(참조 소유)",
-        "BannedVerb:JoltPhysicsScene::buildSingleShape": "개명 예정 createSingleShape — Jolt 셰이프를 만든다(참조 소유)",
-        "BannedVerb:OptionsMenuScreen::buildRow": "개명 예정 createRow — 행 위젯을 만든다",
-        "BannedVerb:X11SplashWindow::buildScaledImage": "개명 예정 createScaledImage — X11 이미지를 만든다",
-        "BannedVerb:ObjectiveMarkerComponent::buildContent": "개명 예정 createContent — 위젯을 만들어 돌려준다",
-        "BannedVerb:GPU*Pool::build": "개명 예정 rebuild — 메시 목록으로 풀을 다시 채운다(GPUMeshVertexPool · GPUMeshMorphPool · GPUVertexAnimationPool)",
-        "BannedVerb:TickRegistry::buildStages": "개명 예정 rebuildStages — 단계 표를 다시 채운다",
-        "BannedVerb:NavMeshGeometry::buildSpatialIndex": "개명 예정 rebuildSpatialIndex — 공간 색인을 다시 채운다",
-        "BannedVerb:GPUSceneBuilder::buildFromScene": "개명 예정 populateFromScene — 씬에서 프레임 데이터를 채운다",
-        "BannedVerb:GPUSceneBuilder::buildBatches": "개명 예정 populateBatches — 배치 표를 채운다",
-        "BannedVerb:FractureGraph::buildHierarchy": "개명 예정 populateHierarchy — 그래프 계층을 채운다",
-        "BannedVerb:PoseRetargetComponent::buildBasePose": "개명 예정 populateBasePose — 기준 포즈를 채운다",
-        "BannedVerb:SkeletalAnimatorComponent::buildBasePose": "개명 예정 populateBasePose — 기준 포즈를 채운다",
-        "BannedVerb:TypeRegistry::buildLookupCaches": "개명 예정 populateLookupCaches — 조회 캐시를 채운다",
-        "BannedVerb:ReflectionTypes::buildLookupCache": "개명 예정 populateLookupCache — 조회 캐시를 채운다",
-        "BannedVerb:OptionsMenuScreen::buildRows": "개명 예정 populateRows — 행 목록을 채운다",
-        "BannedVerb:AdventureElementGrid::buildRuleTable": "개명 예정 populateRuleTable — 규칙 표를 채운다",
-        "BannedVerb:GimmickCircuit::build": "개명 예정 populate — 정의로 회로를 채운다",
-        # Abbreviation
-        "Abbreviation:MaterialUtil::appendBoolAttr": "개명 예정 appendBoolAttribute — XML 특성을 붙인다",
     }
     selfTestCases = [
         {

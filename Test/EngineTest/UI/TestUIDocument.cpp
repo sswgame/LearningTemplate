@@ -108,7 +108,7 @@ namespace
         /** @brief 버튼 셋(A · B · 넣으면 C)과 긴 스크롤 목록이 든 문서 글입니다. */
         static sw::string makeReloadDocument( bool bWithC, const utf8* pBCommand )
         {
-            sw::string text = "<UiDocument _schemaVersion=\"1\">\n"
+            sw::string text = "<UIDocument _schemaVersion=\"1\">\n"
                               "\t<BoxPanel _orientation=\"Vertical\">\n"
                               "\t\t<ButtonWidget _name=\"A\" />\n";
             text += sw::string( "\t\t<ButtonWidget _name=\"B\" _command=\"" ) + pBCommand + "\" />\n";
@@ -121,7 +121,7 @@ namespace
                     "\t\t\t</BorderPanel>\n"
                     "\t\t</ScrollPanel>\n"
                     "\t</BoxPanel>\n"
-                    "</UiDocument>\n";
+                    "</UIDocument>\n";
             return text;
         }
     };
@@ -151,19 +151,19 @@ SW_TEST_CASE( UIDocumentTest, LoadsPauseMenuDocument )
 SW_TEST_CASE( UIDocumentTest, UnknownElementIsLoadError )
 {
     sw::UIDocumentCache cache;
-    cache.registerMemoryDocument( "test/unknownelement.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/unknownelement.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                 "\t<BoxPanel>\n"
                                                                 "\t\t<Bogus />\n"
                                                                 "\t</BoxPanel>\n"
-                                                                "</UiDocument>\n" );
+                                                                "</UIDocument>\n" );
     sw::string error;
     SW_EXPECT_TRUE( cache.findOrLoad( "test/unknownelement.ui.xml", error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "test/unknownelement.ui.xml:3:" ) != sw::string::npos, error.c_str() );
     SW_EXPECT_TRUE_MSG( error.find( "unknown element <Bogus>" ) != sw::string::npos, error.c_str() );
 
-    cache.registerMemoryDocument( "test/unknownroot.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/unknownroot.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                              "\t<NotAWidget />\n"
-                                                             "</UiDocument>\n" );
+                                                             "</UIDocument>\n" );
     SW_EXPECT_TRUE( cache.findOrLoad( "test/unknownroot.ui.xml", error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "test/unknownroot.ui.xml:2:" ) != sw::string::npos, error.c_str() );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( cache.getCachedCount() ) ); // 실패는 캐시에 남지 않는다
@@ -173,28 +173,28 @@ SW_TEST_CASE( UIDocumentTest, UnknownElementIsLoadError )
 SW_TEST_CASE( UIDocumentTest, UnknownAttributeIsLoadError )
 {
     sw::UIDocumentCache cache;
-    cache.registerMemoryDocument( "test/unknownattribute.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/unknownattribute.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                   "\t<BoxPanel>\n"
                                                                   "\t\t<TextWidget _txet=\"Hello\" />\n"
                                                                   "\t</BoxPanel>\n"
-                                                                  "</UiDocument>\n" );
+                                                                  "</UIDocument>\n" );
     sw::string error;
     SW_EXPECT_TRUE( cache.findOrLoad( "test/unknownattribute.ui.xml", error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "test/unknownattribute.ui.xml:3:" ) != sw::string::npos, error.c_str() );
     SW_EXPECT_TRUE_MSG( error.find( "unknown attribute '_txet'" ) != sw::string::npos, error.c_str() );
 
-    cache.registerMemoryDocument( "test/unknownenumerator.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/unknownenumerator.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                    "\t<BoxPanel _orientation=\"Diagonal\" />\n"
-                                                                   "</UiDocument>\n" );
+                                                                   "</UIDocument>\n" );
     sw::vector<sw::UIBindingDesc> listBinding;
     test::ScopedLogCollector      logs; // 열거자 경고는 문구로 본다
     SW_EXPECT_TRUE( UIDocumentTestUtil::build( cache, "test/unknownenumerator.ui.xml", listBinding, error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "test/unknownenumerator.ui.xml:2:" ) != sw::string::npos, error.c_str() );
     SW_EXPECT_TRUE_MSG( error.find( "Diagonal" ) != sw::string::npos, error.c_str() );
 
-    cache.registerMemoryDocument( "test/version.ui.xml", "<UiDocument _schemaVersion=\"0\">\n"
+    cache.registerMemoryDocument( "test/version.ui.xml", "<UIDocument _schemaVersion=\"0\">\n"
                                                          "\t<BoxPanel />\n"
-                                                         "</UiDocument>\n" );
+                                                         "</UIDocument>\n" );
     SW_EXPECT_TRUE( cache.findOrLoad( "test/version.ui.xml", error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "_schemaVersion" ) != sw::string::npos, error.c_str() );
 }
@@ -203,11 +203,11 @@ SW_TEST_CASE( UIDocumentTest, UnknownAttributeIsLoadError )
 SW_TEST_CASE( UIDocumentTest, NonPanelWithChildrenIsError )
 {
     sw::UIDocumentCache cache;
-    cache.registerMemoryDocument( "test/textchild.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/textchild.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                            "\t<TextWidget>\n"
                                                            "\t\t<TextWidget />\n"
                                                            "\t</TextWidget>\n"
-                                                           "</UiDocument>\n" );
+                                                           "</UIDocument>\n" );
     sw::string error;
     SW_EXPECT_TRUE( cache.findOrLoad( "test/textchild.ui.xml", error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "test/textchild.ui.xml:3:" ) != sw::string::npos, error.c_str() );
@@ -218,23 +218,23 @@ SW_TEST_CASE( UIDocumentTest, NonPanelWithChildrenIsError )
 SW_TEST_CASE( UIDocumentTest, RecursiveUserWidgetIsError )
 {
     sw::UIDocumentCache cache;
-    cache.registerMemoryDocument( "test/a.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/a.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                    "\t<UserWidget _name=\"B\" _document=\"test/b.ui.xml\" />\n"
-                                                   "</UiDocument>\n" );
-    cache.registerMemoryDocument( "test/b.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                   "</UIDocument>\n" );
+    cache.registerMemoryDocument( "test/b.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                    "\t<BoxPanel>\n"
                                                    "\t\t<UserWidget _name=\"A\" _document=\"test/a.ui.xml\" />\n"
                                                    "\t</BoxPanel>\n"
-                                                   "</UiDocument>\n" );
+                                                   "</UIDocument>\n" );
     sw::vector<sw::UIBindingDesc> listBinding;
     sw::string                    error;
     SW_EXPECT_TRUE( UIDocumentTestUtil::build( cache, "test/a.ui.xml", listBinding, error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "fragment includes itself" ) != sw::string::npos, error.c_str() );
     SW_EXPECT_TRUE_MSG( error.find( "test/b.ui.xml:3:" ) != sw::string::npos, error.c_str() );
 
-    cache.registerMemoryDocument( "test/self.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/self.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                       "\t<UserWidget _document=\"test/self.ui.xml\" />\n"
-                                                      "</UiDocument>\n" );
+                                                      "</UIDocument>\n" );
     SW_EXPECT_TRUE( UIDocumentTestUtil::build( cache, "test/self.ui.xml", listBinding, error ) == nullptr );
     SW_EXPECT_TRUE_MSG( error.find( "fragment includes itself" ) != sw::string::npos, error.c_str() );
 }
@@ -243,21 +243,21 @@ SW_TEST_CASE( UIDocumentTest, RecursiveUserWidgetIsError )
 SW_TEST_CASE( UIDocumentTest, UserWidgetNamesAreScoped )
 {
     UIDocumentFixture fixture;
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/part.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                "\t<BoxPanel>\n"
                                                                                "\t\t<TextWidget _name=\"Label\" _text=\"Part\" />\n"
                                                                                "\t</BoxPanel>\n"
-                                                                               "</UiDocument>\n" );
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/outer.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                                               "</UIDocument>\n" );
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/outer.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                 "\t<UserWidget _name=\"Inner\" _document=\"test/part.ui.xml\" />\n"
-                                                                                "</UiDocument>\n" );
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/twice.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                                                "</UIDocument>\n" );
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/twice.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                 "\t<BoxPanel>\n"
                                                                                 "\t\t<UserWidget _name=\"A\" _document=\"test/part.ui.xml\" />\n"
                                                                                 "\t\t<UserWidget _name=\"B\" _document=\"test/part.ui.xml\" />\n"
                                                                                 "\t\t<UserWidget _name=\"C\" _document=\"test/outer.ui.xml\" />\n"
                                                                                 "\t</BoxPanel>\n"
-                                                                                "</UiDocument>\n" );
+                                                                                "</UIDocument>\n" );
     sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/twice.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pScreen );
     const sw::WidgetTree& tree = pScreen->getTree();
@@ -276,13 +276,13 @@ SW_TEST_CASE( UIDocumentTest, CommandRoutesToScreen )
 {
     using Util = UIDocumentTestUtil;
     UIDocumentFixture fixture;
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/command.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/command.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                   "\t<CanvasPanel>\n"
                                                                                   "\t\t<ButtonWidget _name=\"Go\" _command=\"Go\">\n"
                                                                                   "\t\t\t<_slot _offsetMin=\"100,100\" _offsetMax=\"300,160\" />\n"
                                                                                   "\t\t</ButtonWidget>\n"
                                                                                   "\t</CanvasPanel>\n"
-                                                                                  "</UiDocument>\n" );
+                                                                                  "</UIDocument>\n" );
     // 기본 화면 — 등록한 함수로
     uint32                   goCount = 0;
     const sw::UIScreenHandle handle  = fixture._ui.openScreen( "test/command.ui.xml" );
@@ -329,15 +329,15 @@ SW_TEST_CASE( UIDocumentTest, CacheParsesOnce )
 {
     UIDocumentFixture    fixture;
     sw::UIDocumentCache& cache = fixture._ui.getDocumentCache();
-    cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/part.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                       "\t<TextWidget _name=\"Label\" />\n"
-                                                      "</UiDocument>\n" );
-    cache.registerMemoryDocument( "test/menu.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+                                                      "</UIDocument>\n" );
+    cache.registerMemoryDocument( "test/menu.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                       "\t<BoxPanel>\n"
                                                       "\t\t<UserWidget _name=\"A\" _document=\"test/part.ui.xml\" />\n"
                                                       "\t\t<UserWidget _name=\"B\" _document=\"test/part.ui.xml\" />\n"
                                                       "\t</BoxPanel>\n"
-                                                      "</UiDocument>\n" );
+                                                      "</UIDocument>\n" );
     const sw::UIScreenHandle first  = fixture._ui.openScreen( "test/menu.ui.xml" );
     const sw::UIScreenHandle second = fixture._ui.openScreen( "test/menu.ui.xml" );
     SW_EXPECT_TRUE( fixture._ui.findScreen( first ) != nullptr );
@@ -351,14 +351,14 @@ SW_TEST_CASE( UIDocumentTest, CacheParsesOnce )
 SW_TEST_CASE( UIDocumentTest, BindingAttributesAreExtracted )
 {
     UIDocumentFixture fixture;
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/binding.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/binding.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                   "\t<BoxPanel>\n"
                                                                                   "\t\t<TextWidget _name=\"Health\" _text=\"{bind:_health}\" />\n"
                                                                                   "\t\t<TextWidget _name=\"Bar\">\n"
                                                                                   "\t\t\t<_slot _widthOverride=\"{bind:_barWidth, mode=OneWay}\" />\n"
                                                                                   "\t\t</TextWidget>\n"
                                                                                   "\t</BoxPanel>\n"
-                                                                                  "</UiDocument>\n" );
+                                                                                  "</UIDocument>\n" );
     sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/binding.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pScreen );
     const sw::TextWidget* pHealth = pScreen->getTree().findWidget<sw::TextWidget>( "Health" );
@@ -398,11 +398,11 @@ SW_TEST_CASE( UIDocumentTest, RoundTripSaveMatchesSource )
     SW_EXPECT_STREQ( source.saveToString().c_str(), written.c_str() );
 
     // 바인딩 식이 든 문서도 식 그대로 돌아온다
-    const utf8* kBindingText = "<UiDocument _schemaVersion=\"1\">\n"
+    const utf8* kBindingText = "<UIDocument _schemaVersion=\"1\">\n"
                                "\t<BoxPanel _spacing=\"4\">\n"
                                "\t\t<TextWidget _name=\"Health\" _text=\"{bind:_health}\" />\n"
                                "\t</BoxPanel>\n"
-                               "</UiDocument>\n";
+                               "</UIDocument>\n";
     fixture._ui.getDocumentCache().registerMemoryDocument( "test/roundtrip.ui.xml", kBindingText );
     sw::UIScreen* pBound = fixture._ui.findScreen( fixture._ui.openScreen( "test/roundtrip.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pBound );
@@ -455,7 +455,7 @@ SW_TEST_CASE( UIDocumentTest, FailedReloadKeepsOldTree )
     SW_ASSERT_NOT_NULL( pScreen );
     const sw::WidgetID oldID = pScreen->getTree().findWidgetByName( "B" )->getID();
 
-    cache.registerMemoryDocument( "test/fail.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<BoxPanel _bogus=\"1\" />\n</UiDocument>\n" );
+    cache.registerMemoryDocument( "test/fail.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<BoxPanel _bogus=\"1\" />\n</UIDocument>\n" );
     {
         test::ScopedLogCollector logs; // 다시 읽기 실패 오류는 기대한 것이다
         cache.reload( "test/fail.ui.xml", nullptr );
@@ -472,12 +472,12 @@ SW_TEST_CASE( UIDocumentTest, StyleReloadRestylesOnly )
     fixture._ui.getStyleSheetCache().registerMemorySheet( "test/reload.uistyle.xml", "<UiStyleSheet _schemaVersion=\"1\">\n"
                                                                                      "\t<Rule _selector=\"ButtonWidget\" _backgroundColor=\"1,0,0,1\" />\n"
                                                                                      "</UiStyleSheet>\n" );
-    fixture._ui.getDocumentCache().registerMemoryDocument( "test/styled.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    fixture._ui.getDocumentCache().registerMemoryDocument( "test/styled.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                                                  "\t<_listStyleSheet><item>test/reload.uistyle.xml</item></_listStyleSheet>\n"
                                                                                  "\t<BoxPanel>\n"
                                                                                  "\t\t<ButtonWidget _name=\"Go\" />\n"
                                                                                  "\t</BoxPanel>\n"
-                                                                                 "</UiDocument>\n" );
+                                                                                 "</UIDocument>\n" );
     sw::UIScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/styled.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pScreen );
     Util::runFrame( fixture._input, fixture._ui );
@@ -502,20 +502,20 @@ SW_TEST_CASE( UIDocumentTest, UserWidgetChangeReloadsParents )
 {
     UIDocumentFixture    fixture;
     sw::UIDocumentCache& cache = fixture._ui.getDocumentCache();
-    cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"Old\" />\n</UiDocument>\n" );
-    cache.registerMemoryDocument( "test/parent.ui.xml", "<UiDocument _schemaVersion=\"1\">\n"
+    cache.registerMemoryDocument( "test/part.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"Old\" />\n</UIDocument>\n" );
+    cache.registerMemoryDocument( "test/parent.ui.xml", "<UIDocument _schemaVersion=\"1\">\n"
                                                         "\t<BoxPanel>\n"
                                                         "\t\t<UserWidget _name=\"Part\" _document=\"test/part.ui.xml\" />\n"
                                                         "\t</BoxPanel>\n"
-                                                        "</UiDocument>\n" );
-    cache.registerMemoryDocument( "test/other.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Other\" />\n</UiDocument>\n" );
+                                                        "</UIDocument>\n" );
+    cache.registerMemoryDocument( "test/other.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Other\" />\n</UIDocument>\n" );
     sw::UIScreen* pParent = fixture._ui.findScreen( fixture._ui.openScreen( "test/parent.ui.xml" ) );
     sw::UIScreen* pOther  = fixture._ui.findScreen( fixture._ui.openScreen( "test/other.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pParent );
     SW_ASSERT_NOT_NULL( pOther );
     const sw::WidgetID otherID = pOther->getTree().findWidgetByName( "Other" )->getID();
 
-    cache.registerMemoryDocument( "test/part.ui.xml", "<UiDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"New\" />\n</UiDocument>\n" );
+    cache.registerMemoryDocument( "test/part.ui.xml", "<UIDocument _schemaVersion=\"1\">\n\t<TextWidget _name=\"Label\" _text=\"New\" />\n</UIDocument>\n" );
     cache.reload( "test/part.ui.xml", nullptr );
     const sw::TextWidget* pLabel = pParent->getTree().findWidget<sw::TextWidget>( "Part.Label" );
     SW_ASSERT_NOT_NULL( pLabel );

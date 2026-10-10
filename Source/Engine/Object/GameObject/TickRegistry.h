@@ -21,7 +21,7 @@
  * **선행 조건(`addSubTickPrerequisite`)을 가진 항목만 스테이지로 갑니다.** 그런 항목은 오브젝트 항목 목록에서 그룹의 끝에 모이고 칸은 그 앞까지만
  * 들므로, 나머지 항목과 선행 조건이 없는 오브젝트는 모두 보통 길(오브젝트 칸 포크-조인)로 돕니다. 매니저는 그룹마다 보통 길을 먼저, 그 그룹의
  * 스테이지를 뒤에 돌립니다 — 그래서 선행 조건이 보통 길의 항목(다른 오브젝트의 주 틱 · 서브틱)이어도 순서가 맞습니다. 스테이지는 **이 등록부가
- * 짓고 듭니다**(`buildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 짓습니다 — 사슬 밖 오브젝트의 스폰 ·
+ * 짓고 듭니다**(`rebuildStages`). 선행 조건을 가진 오브젝트와 그것이 가리키는 오브젝트가 바뀔 때만 다시 짓습니다 — 사슬 밖 오브젝트의 스폰 ·
  * 파괴는 스테이지를 건드리지 않습니다. 언리얼이 선행 조건 없는 틱 함수를 그룹 안에서 바로 내고 선행 조건이 있는 것만 기다리게 하는 것과 같습니다.
  *
  * `PhysicsWorld` · `PrimitiveRegistry` · `SceneTransformHierarchy` 와 같은 자리입니다. 능력은 별도 타입이 갖고, 매니저는 순서만 정합니다.
@@ -131,7 +131,7 @@ namespace sw
 
         /**
          * @brief 표시된 오브젝트의 항목을 다시 짓고 그룹 목록을 맞춥니다. 게임 스레드에서 틱 밖에 부릅니다.
-         * @details 선행 조건에 걸린 오브젝트가 바뀌었으면 이어서 스테이지를 다시 짓습니다(`buildStages`).
+         * @details 선행 조건에 걸린 오브젝트가 바뀌었으면 이어서 스테이지를 다시 짓습니다(`rebuildStages`).
          * @return 하나라도 다시 지었으면 true 입니다.
          */
         bool refresh( GameObjectManager& manager );
@@ -161,7 +161,7 @@ namespace sw
          *          오브젝트의 항목이 한 스테이지에서 나란히 돌지 않습니다. 기다리는 레벨의 첫 스테이지에 `TickStage::_bApplyBefore` 를 세웁니다.
          *          순환은 남은 것을 순서 키 순으로 마지막 스테이지에 붙여 방어합니다.
          */
-        void buildStages( GameObjectManager& manager );
+        void rebuildStages( GameObjectManager& manager );
         /** @brief 오브젝트 하나의 항목을 컴포넌트에서 다시 짓고 그룹 멤버십을 맞춥니다. */
         void refreshObject( GameObject* pObj );
         /** @brief 그룹 목록에 넣거나 뺍니다(O(1), 오브젝트가 자기 자리를 듭니다). 넣을 때(이미 있으면 그 자리에) 칸 내용을 @p entry 로 씁니다. */

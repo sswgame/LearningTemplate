@@ -39,7 +39,7 @@ namespace sw
 
     private:
         /** @brief 막대 · 이름 · 거리 글을 세로로 쌓은 내용입니다. */
-        unique_ptr<Widget> buildContent() const;
+        unique_ptr<Widget> createContent() const;
 
     private:
         PROPERTY( Category = "Objective", DisplayName = "Label", Meta = "Localizable", Tooltip = "Objective name or localization key shown above the distance" )

@@ -34,7 +34,7 @@ namespace sw
         if ( phase == AnimationPhase::Time )
             _owner.advanceTime( context );
         else if ( phase == AnimationPhase::BasePose )
-            _owner.buildBasePose( unit );
+            _owner.populateBasePose( unit );
     }
 
     AnimPlayer* SkeletalAnimatorBinding::findSyncPlayer( hashed_string& outGroupName, float32& outWeight )
@@ -443,7 +443,7 @@ namespace sw
         }
         if ( frame._rotation != quaternion::Identity )
         {
-            const quaternion turned = ( quaternion::createFromYawPitchRoll( pRoot->getLocalRotation() ) * frame._rotation ).normalize();
+            const quaternion turned = ( quaternion::makeFromYawPitchRoll( pRoot->getLocalRotation() ) * frame._rotation ).normalize();
             pRoot->setLocalRotation( turned.getEulerAngles() );
         }
     }
@@ -581,7 +581,7 @@ namespace sw
             sampleClipIntoPose( *layer._clip, 0.0f, skeleton, layer._additiveReference );
     }
 
-    void SkeletalAnimatorComponent::buildBasePose( SkeletalMeshComponent& unit )
+    void SkeletalAnimatorComponent::populateBasePose( SkeletalMeshComponent& unit )
     {
         const Skeleton&   skeleton = unit.getSkeleton();
         Pose&             pose     = unit.getLocalPose();

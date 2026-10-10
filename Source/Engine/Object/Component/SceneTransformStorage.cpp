@@ -144,7 +144,7 @@ namespace sw
         const float3 rotation = page._arrLocalRotation[pageIndex];
         const float3 scale    = page._arrLocalScale[pageIndex];
 
-        // DirectX 행-벡터 규격: Scale * Rotation * Translation. 행렬 셋을 곱하지 않고 결과를 바로 적는다(`float4x4::createTrs` 주석).
+        // DirectX 행-벡터 규격: Scale * Rotation * Translation. 행렬 셋을 곱하지 않고 결과를 바로 적는다(`float4x4::makeTrs` 주석).
         // 회전이 없으면 회전 행렬은 단위 행렬이라 대각선에 스케일만 놓는다(격자 배치 · 파티클 · 떠다니는 소품이 흔하다).
         float4x4 localTrs;
         if ( rotation._x == 0.0f && rotation._y == 0.0f && rotation._z == 0.0f )
@@ -159,10 +159,10 @@ namespace sw
             quaternion& quat   = page._arrRotationQuat[pageIndex];
             if ( source._x != rotation._x || source._y != rotation._y || source._z != rotation._z )
             {
-                quat   = quaternion::createFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
+                quat   = quaternion::makeFromYawPitchRoll( rotation._y, rotation._x, rotation._z );
                 source = rotation;
             }
-            localTrs = float4x4::createTrs( position, quat, scale );
+            localTrs = float4x4::makeTrs( position, quat, scale );
         }
 
         float4x4& world = page._arrWorldMatrix[pageIndex];

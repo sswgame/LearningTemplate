@@ -131,7 +131,7 @@ namespace sw
         [[nodiscard]] bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadID )
         {
             utf8 arrPath[constant::kMaxBuffer1024]{};
-            buildCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
+            makeCrashReportPath( arrPath, constant::kMaxBuffer1024, "dmp" );
 
             // 경로는 UTF-8 이다 — 힙 없이 스택에서 UTF-16 으로 바꿔 W 판에 넘긴다.
             utf16 arrWidePath[constant::kMaxBuffer1024]{};

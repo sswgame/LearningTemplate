@@ -27,7 +27,7 @@ namespace sw
         // 패스마다 자기 상수 버퍼를 갖도록 슬롯을 미리 만들어 둔다.
         _passCbRing.initialize( _pDevice );
         // 직렬 경로 시드는 0번 슬롯을 쓴다(패스별 경로는 acquirePassCb 로 덮어쓴다).
-        _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
+        _passCbRing.getSeedSlot( _frameContext._passCb, _frameContext._passCbIndex );
 
         // 만들지 못한 상수버퍼는 `isValid()` 가 걸러 그 디스패치만 꺼진다(그리기는 산다). 꺼진 이유는 여기서 한 번 알린다.
         ComputeConstantBufferRow arrComputeCb[_s_kComputeConstantBufferCount]{};
@@ -72,7 +72,7 @@ namespace sw
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
-        buildOutputPSOVariants();
+        createOutputPSOVariants();
 
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
@@ -108,7 +108,7 @@ namespace sw
     {
         // PSO · 레이아웃 · 패스 CB 가 여기서 사라진다. 그것을 가리키던 드로우 캐시도 같이 잊는다.
         // (새 디바이스의 핸들이 옛 값과 겹치면 캐시가 "그대로" 라고 속는다. 백엔드 교체 뒤 빈 화면의 원인이다.)
-        _frameCtx.resetBindingCache();
+        _frameContext.resetBindingCache();
 
         // 목록은 하나다. 디바이스가 없으면(초기화 실패) 각 release 가 핸들만 잊는다.
         // 병렬 기록용 커맨드 리스트는 이 디바이스의 것이다. 디바이스가 살아 있을 때 놓는다.
@@ -124,8 +124,8 @@ namespace sw
         releaseCanvasTargets();
 
         _passCbRing.release( _pDevice );
-        _frameCtx._passCb      = 0;
-        _frameCtx._passCbIndex = kInvalidDescriptorIndex;
+        _frameContext._passCb      = 0;
+        _frameContext._passCbIndex = kInvalidDescriptorIndex;
         ComputeConstantBufferRow arrComputeCb[_s_kComputeConstantBufferCount]{};
         collectComputeConstantBuffers( arrComputeCb );
         for ( const ComputeConstantBufferRow& row : arrComputeCb )
@@ -154,15 +154,15 @@ namespace sw
     void FrameRenderer::resetPassCbRing()
     {
         _passCbRing.beginFrame();
-        _passCbRing.getSeedSlot( _frameCtx._passCb, _frameCtx._passCbIndex );
+        _passCbRing.getSeedSlot( _frameContext._passCb, _frameContext._passCbIndex );
     }
 
-    void FrameRenderer::acquirePassCb( FramePassContext& ctx )
+    void FrameRenderer::acquirePassCb( FramePassContext& context )
     {
         // 패스 진입 시의 기본 슬롯. 실제 드로우는 bindForDraw 가 드로우마다 새 슬롯을 잡는다.
-        _passCbRing.acquire( ctx._passCb, ctx._passCbIndex );
+        _passCbRing.acquire( context._passCb, context._passCbIndex );
         // 값은 드로우 직전 ShaderParameterBinder::bindGraphics 가 리플렉션 오프셋으로 채운다
-        // (ctx._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
+        // (context._passValues 에 이미 프레임 시드가 들어 있으므로 따로 먼저 올릴 필요가 없다).
     }
 
     void FrameRenderer::ensurePassCbCapacityForFrame()
@@ -236,7 +236,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::buildOutputPSOVariants()
+    void FrameRenderer::createOutputPSOVariants()
     {
         if ( _pDevice == nullptr )
             return;
@@ -265,7 +265,7 @@ namespace sw
         // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
-        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildOutputPSOVariants 가 셋업에서 만든다.
+        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 createOutputPSOVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
             return getEnginePSO( passType );
         RHIPipelineStateHandle pso{ 0 };
@@ -274,7 +274,7 @@ namespace sw
 
         if ( _bOutputPSOMissingLogged.exchange( 1 ) == 0 )
         {
-            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to buildOutputPSOVariants", passType,
+            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to createOutputPSOVariants", passType,
                           static_cast<uint32>( targetFormat ) );
         }
         return getEnginePSO( passType );

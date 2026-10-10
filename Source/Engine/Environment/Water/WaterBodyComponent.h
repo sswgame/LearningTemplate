@@ -123,9 +123,9 @@ namespace sw
         /** @brief (x, z) 의 파도 없는 기준면 높이입니다. 덮지 않으면 false 입니다. */
         bool findBaseHeight( float32 worldX, float32 worldZ, float32& outBaseHeight ) const;
         /** @brief 호수 격자 정점을 만듭니다(깊이는 @p pTerrain 에서). */
-        void buildLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
+        void makeLakeVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 강 띠 정점을 만듭니다. */
-        void buildRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
+        void makeRiverVertices( const TerrainHeightfield* pTerrain, vector<RHIVertex>& outListVertex, float32& outBoundsRadius ) const;
         /** @brief 머티리얼 인스턴스에 파도 · 색 · 시간을 싣습니다. */
         void writeMaterialValues();
 

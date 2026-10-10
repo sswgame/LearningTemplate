@@ -37,7 +37,7 @@ namespace
             }
             sw::FractureGraphUtil::normalizeLinks( graph._listLink );
             sw::vector<uint32> listOrder;
-            sw::FractureGraphUtil::buildHierarchy( graph, listLevelCount, listOrder );
+            sw::FractureGraphUtil::populateHierarchy( graph, listLevelCount, listOrder );
             return graph;
         }
 

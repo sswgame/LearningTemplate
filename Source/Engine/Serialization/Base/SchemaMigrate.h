@@ -107,7 +107,7 @@ namespace sw
         void*                            _pLegacyInstance{ nullptr };
         const TypeInfo*                  _pLegacyTypeInfo{ nullptr };
         const vector<SchemaOrphanValue>* _pOrphans{ nullptr };
-        const SerializeContext*          _pSerializeCtx{ nullptr };
+        const SerializeContext*          _pSerializeContext{ nullptr };
 
         // ------------------------------------------------------------------------------
         // 3) orphan 조회 · 현재 인스턴스에 적용
@@ -141,7 +141,7 @@ namespace sw
     };
 
     /** @brief fromVersion 에서 toVersion 으로 옮기는 이관 함수입니다. false 를 반환하면 deserializeVersioned 가 실패합니다. */
-    using SchemaMigrateFn = bool ( * )( const SchemaMigrateContext& ctx );
+    using SchemaMigrateFn = bool ( * )( const SchemaMigrateContext& context );
 
     /**
      * @brief deserializeVersioned 의 마지막 단계입니다. migrate 를 부를 조건을 판정해 부르거나, migrate 가 없으면 경고합니다.
@@ -156,7 +156,7 @@ namespace sw
     SW_API bool runSchemaMigrateStep( uint32 fromVersion, uint32 currentVersion, void* pInstance, const TypeInfo& typeInfo,
                                       void* pLegacyInstance, const TypeInfo* pLegacyTypeInfo,
                                       const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
-                                      bool bWarnWhenNoMigrate, const SerializeContext& ctx );
+                                      bool bWarnWhenNoMigrate, const SerializeContext& context );
 
     /** @brief JSON/XML 루트에 기록하는 스키마 버전 키입니다. */
     inline constexpr auto kSchemaVersionKey = "_schemaVersion";
@@ -195,7 +195,7 @@ namespace sw
      */
     [[nodiscard]] SW_API bool tryCoerceBinaryPayload( void* pPropPtr, hashed_string targetTypeName,
                                                       const uint8* pPayload, size_t payloadSize,
-                                                      const SerializeContext& ctx,
+                                                      const SerializeContext& context,
                                                       hashed_string           wireTypeName = hashed_string{},
                                                       BinaryWireVersion       wireVersion  = kCurrentBinaryWireVersion );
 
@@ -210,7 +210,7 @@ namespace sw
      * @brief 텍스트 토큰을 대상 타입으로 파싱합니다(따옴표 제거 · 숫자↔문자열 강제 변환).
      */
     [[nodiscard]] SW_API bool parseTextValueCoerced( void* pValPtr, hashed_string typeName, string_view valStr,
-                                                     const SerializeContext& ctx );
+                                                     const SerializeContext& context );
 
     /** @brief 점 경로로 프로퍼티 포인터를 찾습니다. */
     SW_API bool resolvePropertyPath( void* pRoot, const TypeInfo& typeInfo, const utf8* pDottedPath,

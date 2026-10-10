@@ -173,7 +173,7 @@ namespace sw
         GimmickCircuitDef def;
         makeDef( def, _listError );
         const bool bParsed = _listError.empty();
-        const bool bBuilt  = _circuit.build( def, GimmickNodeRegistry::getDefault(), _listError ) && bParsed;
+        const bool bBuilt  = _circuit.populate( def, GimmickNodeRegistry::getDefault(), _listError ) && bParsed;
         if ( bBuilt == false )
             _circuit.clear();
         for ( const string& error : _listError )

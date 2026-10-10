@@ -42,7 +42,7 @@ namespace
                 if ( phase != AnimationPhase::BasePose )
                     return;
                 BoneTransform root = unit.getLocalPose().getBoneTransform( 0 );
-                root._rotation     = quaternion::createFromAxisAngle( float3::UnitY, _angle );
+                root._rotation     = quaternion::makeFromAxisAngle( float3::UnitY, _angle );
                 unit.getLocalPose().setBoneTransform( 0, root );
             }
             float32 _angle{ 0.0f };
@@ -280,7 +280,7 @@ SW_TEST_CASE( PoseModifierTest, FootPlacementUsesScenePhysics )
         manager.tick( 1.0f / 60.0f );
     }
     // 면: 상자 윗면 가운데와 법선을 같은 회전(오일러 → 쿼터니언)으로 구해 발 X · Z 의 높이를 잰다.
-    const quaternion tilt        = quaternion::createFromYawPitchRoll( float3{ 0.0f, 0.0f, 0.25f } );
+    const quaternion tilt        = quaternion::makeFromYawPitchRoll( float3{ 0.0f, 0.0f, 0.25f } );
     const float3     normal      = float3::transform( float3::UnitY, tilt );
     const float3     top         = float3{ 0.0f, -0.5f, 0.0f } + float3::transform( float3{ 0.0f, 0.5f, 0.0f }, tilt );
     const float3     leftFoot    = TestPoseModifierInternal::getBoneModel( *pUnit, 4 );
@@ -404,7 +404,7 @@ SW_TEST_CASE( PoseModifierTest, PoseDriverCorrectiveMorphDrivesMeshMorphWeight )
             if ( phase != AnimationPhase::BasePose )
                 return;
             BoneTransform elbow = unit.getLocalPose().getBoneTransform( 1 );
-            elbow._rotation     = quaternion::createFromYawPitchRoll( 0.0f, _degrees * MathUtil::kDegreeToRadian, 0.0f );
+            elbow._rotation     = quaternion::makeFromYawPitchRoll( 0.0f, _degrees * MathUtil::kDegreeToRadian, 0.0f );
             unit.getLocalPose().setBoneTransform( 1, elbow );
         }
         float32 _degrees{ 90.0f };

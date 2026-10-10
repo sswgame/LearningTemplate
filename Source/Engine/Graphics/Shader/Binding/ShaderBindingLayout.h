@@ -91,7 +91,7 @@ namespace sw
     {
     public:
         /** @brief 스테이지별 리플렉션 데이터를 합쳐 레이아웃을 만듭니다. */
-        static ShaderBindingLayout build( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection );
+        static ShaderBindingLayout make( const vector<pair<ShaderStage, const ShaderReflectionData*>>& listStageReflection );
 
         /// @brief 리플렉션 문자열 타입 라벨("Texture", "StorageBuffer", …)을 ShaderBindingKind 로 바꿉니다. 계약 검증기도 같은 분류를 씁니다.
         static ShaderBindingKind kindFromTypeLabel( string_view typeLabel );
@@ -105,7 +105,7 @@ namespace sw
         bool isEmpty() const { return _listSlot.empty(); }
 
         // ------------------------------------------------------------------------------
-        // 드로우 경로용 사전 계산: buildBindPlan() 이 한 번만 채운다
+        // 드로우 경로용 사전 계산: computeBindPlan() 이 한 번만 채운다
         // ------------------------------------------------------------------------------
         /** @brief 엔진 CB(= Material 이 아닌 CB) 전체를 담는 데 필요한 바이트 수입니다. */
         uint32 getEngineCbSize() const { return _engineCbSize; }
@@ -116,8 +116,8 @@ namespace sw
 
     private:
         void rebuildIndex();
-        /** @brief 드로우마다 반복하던 계산을 여기서 한 번만 합니다(build 끝에서 부릅니다). */
-        void buildBindPlan();
+        /** @brief 드로우마다 반복하던 계산을 여기서 한 번만 합니다(make 끝에서 부릅니다). */
+        void computeBindPlan();
 
         vector<ShaderBindingSlot>            _listSlot;
         unordered_map<hashed_string, uint32> _mapNameToSlot;

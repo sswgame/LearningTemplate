@@ -489,7 +489,7 @@ namespace sw::editor
         {
             if ( sweepHit._hitObjectID != pObj->getObjectID() )
             {
-                hitY = movingBox._min._y + displacement._y * sweepHit._time;
+                hitY = movingBox._min._y + displacement._y * sweepHit._hitFraction;
                 bHit = true;
             }
         }

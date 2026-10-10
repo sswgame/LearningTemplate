@@ -64,7 +64,7 @@ SW_TEST_CASE( SpriteComponentTest, SpriteDrawsATexturedQuadWithTheSpriteMaterial
 
     // 스프라이트 머티리얼. 저장된 머티리얼 참조가 비어 있으면 이것이 기본이다.
     SW_ASSERT_NOT_NULL( pSprite->getMaterial() );
-    SW_EXPECT_TRUE( sw::engine::getAssetManager().getMaterialManager().isCached( kSpriteMaterialPath ) );
+    SW_EXPECT_TRUE( sw::engine::getAssetManager().getMaterialCache().isCached( kSpriteMaterialPath ) );
 
     // 텍스처는 그 머티리얼의 인스턴스로 덮어쓴다.
     sw::MaterialInstance* pInstance = pSprite->getRawMaterialInstance();

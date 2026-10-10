@@ -105,8 +105,8 @@ namespace sw
         float32           _swingLimitNormal{ 0.0f }; ///< Cone 만: `_normalAxis` 둘레 스윙 반각(라디안)
         float32           _swingLimitPlane{ 0.0f };  ///< Cone 만: 나머지 축 둘레 스윙 반각(라디안)
         PhysicsJointType  _type{ PhysicsJointType::Fixed };
-        bool              _bLimitsEnabled{ false };   ///< Hinge · Slider · Distance 의 한계를 건다(Cone 은 늘 건다)
-        bool              _bDisableCollision{ true }; ///< 이어진 두 바디끼리는 부딪히지 않는다(래그돌 이웃 뼈)
+        bool              _bLimitsEnabled{ false };          ///< Hinge · Slider · Distance 의 한계를 건다(Cone 은 늘 건다)
+        bool              _bCollideConnectedBodies{ false }; ///< 이어진 두 바디끼리 부딪힌다(기본은 거짓 — 래그돌 이웃 뼈)
     };
 
     using PhysicsJointDesc3D = PhysicsJointDesc<PhysicsDimension3D>;

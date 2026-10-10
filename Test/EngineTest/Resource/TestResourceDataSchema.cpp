@@ -420,7 +420,7 @@ namespace
             sw::SkeletonBoneLOD           boneLOD;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
-            return boneLOD.loadFromResource( resourceID ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.buildMasks( skeleton, listMask, resourceID );
+            return boneLOD.loadFromResource( resourceID ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.computeMasks( skeleton, listMask, resourceID );
         }
 
         /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */

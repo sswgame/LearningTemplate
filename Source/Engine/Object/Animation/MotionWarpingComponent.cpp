@@ -203,7 +203,7 @@ namespace sw
                 const float32    frameYaw     = MotionWarpingComponentInternal::computeYaw( inoutFrame._rotation );
                 const float32    remainingYaw = MotionWarpingComponentInternal::computeYaw( remaining._rotation );
                 const float32    needed       = MathUtil::wrapAngle( pTarget->_yaw - currentYaw - frameYaw - remainingYaw );
-                const quaternion turn         = quaternion::createFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, needed * fraction );
+                const quaternion turn         = quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, needed * fraction );
                 inoutFrame._rotation          = ( inoutFrame._rotation * turn ).normalize();
             }
         }

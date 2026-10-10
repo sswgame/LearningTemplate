@@ -62,13 +62,13 @@ namespace sw
             , _w{ pArray[3] } {}
 
         /** @brief 축(axis)과 각(angle, 라디안)으로 회전을 만듭니다. 축은 정규화해서 씁니다. */
-        static quaternion createFromAxisAngle( const float3& axis, float32 angle ) noexcept;
+        static quaternion makeFromAxisAngle( const float3& axis, float32 angle ) noexcept;
         /** @brief 요 · 피치 · 롤(라디안)로 회전을 만듭니다. */
-        static quaternion createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
+        static quaternion makeFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
         /** @brief 오일러 각(라디안)으로 회전을 만듭니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤입니다. */
-        static quaternion createFromYawPitchRoll( const float3& angles ) noexcept;
+        static quaternion makeFromYawPitchRoll( const float3& angles ) noexcept;
         /** @brief 회전 행렬의 위 3x3 에서 쿼터니언을 뽑습니다. 스케일이 섞인 행렬이면 decompose() 를 쓰십시오. */
-        static quaternion createFromRotationMatrix( const float4x4& matrix ) noexcept;
+        static quaternion makeFromRotationMatrix( const float4x4& matrix ) noexcept;
 
         /** @brief from 에서 to 쪽으로 최대 maxAngle(라디안)만큼 돌린 회전을 구합니다. to 를 지나치지는 않습니다. */
         static quaternion rotateTowards( const quaternion& from, const quaternion& to, float32 maxAngle ) noexcept;
@@ -113,7 +113,7 @@ namespace sw
         /** @brief 다른 쿼터니언과의 내적을 구합니다. */
         float32 dot( const quaternion& other ) const noexcept;
 
-        /** @brief 오일러 각(라디안)을 구합니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤로, createFromYawPitchRoll( angles ) 와 같은 배치입니다. */
+        /** @brief 오일러 각(라디안)을 구합니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤로, makeFromYawPitchRoll( angles ) 와 같은 배치입니다. */
         float3 getEulerAngles() const noexcept;
         /** @brief 회전 행렬로 바꿉니다. */
         float4x4 toMatrix() const noexcept;
@@ -267,66 +267,66 @@ namespace sw
         explicit float4x4( const float32* pArray ) noexcept;
 
         /** @brief 이동 행렬을 만듭니다. */
-        static float4x4 createTranslation( const float3& position ) noexcept;
+        static float4x4 makeTranslation( const float3& position ) noexcept;
         /** @brief 이동 행렬을 만듭니다. */
-        static float4x4 createTranslation( float32 x, float32 y, float32 z ) noexcept;
+        static float4x4 makeTranslation( float32 x, float32 y, float32 z ) noexcept;
 
         /** @brief 축별 스케일 행렬을 만듭니다. */
-        static float4x4 createScale( const float3& scales ) noexcept;
+        static float4x4 makeScale( const float3& scales ) noexcept;
         /** @brief 축별 스케일 행렬을 만듭니다. */
-        static float4x4 createScale( float32 x, float32 y, float32 z ) noexcept;
+        static float4x4 makeScale( float32 x, float32 y, float32 z ) noexcept;
         /** @brief 세 축에 같은 값을 거는 스케일 행렬을 만듭니다. */
-        static float4x4 createScale( float32 scale ) noexcept;
+        static float4x4 makeScale( float32 scale ) noexcept;
 
         /** @brief X축 회전 행렬(라디안)을 만듭니다. */
-        static float4x4 createRotationX( float32 radians ) noexcept;
+        static float4x4 makeRotationX( float32 radians ) noexcept;
         /** @brief Y축 회전 행렬(라디안)을 만듭니다. */
-        static float4x4 createRotationY( float32 radians ) noexcept;
+        static float4x4 makeRotationY( float32 radians ) noexcept;
         /** @brief Z축 회전 행렬(라디안)을 만듭니다. */
-        static float4x4 createRotationZ( float32 radians ) noexcept;
+        static float4x4 makeRotationZ( float32 radians ) noexcept;
 
         /** @brief 축(axis)과 각(angle, 라디안)으로 회전 행렬을 만듭니다. */
-        static float4x4 createFromAxisAngle( const float3& axis, float32 angle ) noexcept;
+        static float4x4 makeFromAxisAngle( const float3& axis, float32 angle ) noexcept;
 
         /** @brief 세로 시야각(fov, 라디안)과 종횡비로 원근 투영 행렬을 만듭니다. 깊이는 D3D 규약대로 [0, 1] 입니다. */
-        static float4x4 createPerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept;
+        static float4x4 makePerspectiveFieldOfView( float32 fov, float32 aspectRatio, float32 nearPlane, float32 farPlane ) noexcept;
         /** @brief 가까운 면의 너비 · 높이로 원근 투영 행렬을 만듭니다. */
-        static float4x4 createPerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
+        static float4x4 makePerspective( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
         /** @brief 가까운 면의 left · right · bottom · top 으로 비대칭 원근 투영 행렬을 만듭니다. */
-        static float4x4 createPerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
+        static float4x4 makePerspectiveOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
 
         /** @brief 너비 · 높이로 직교 투영 행렬을 만듭니다. */
-        static float4x4 createOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
+        static float4x4 makeOrthographic( float32 width, float32 height, float32 nearPlane, float32 farPlane ) noexcept;
         /** @brief left · right · bottom · top 으로 비대칭 직교 투영 행렬을 만듭니다. */
-        static float4x4 createOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
+        static float4x4 makeOrthographicOffCenter( float32 left, float32 right, float32 bottom, float32 top, float32 nearPlane, float32 farPlane ) noexcept;
 
         /** @brief position 에서 target 을 바라보는 뷰 행렬을 만듭니다. */
-        static float4x4 createLookAt( const float3& position, const float3& target, const float3& up ) noexcept;
+        static float4x4 makeLookAt( const float3& position, const float3& target, const float3& up ) noexcept;
         /** @brief 위치 · 앞 방향 · 위 방향으로 월드 행렬을 만듭니다. */
-        static float4x4 createWorld( const float3& position, const float3& forward, const float3& up ) noexcept;
+        static float4x4 makeWorld( const float3& position, const float3& forward, const float3& up ) noexcept;
 
         /** @brief 쿼터니언 회전을 4x4 행렬로 바꿉니다. */
-        static float4x4 createFromQuaternion( const quaternion& quaternion ) noexcept;
+        static float4x4 makeFromQuaternion( const quaternion& quaternion ) noexcept;
         /** @brief 요 · 피치 · 롤(라디안)로 회전 행렬을 만듭니다. */
-        static float4x4 createFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
+        static float4x4 makeFromYawPitchRoll( float32 yaw, float32 pitch, float32 roll ) noexcept;
         /** @brief 오일러 각(라디안)으로 회전 행렬을 만듭니다. `_x` 가 피치, `_y` 가 요, `_z` 가 롤입니다. */
-        static float4x4 createFromYawPitchRoll( const float3& angles ) noexcept;
+        static float4x4 makeFromYawPitchRoll( const float3& angles ) noexcept;
 
         /**
          * @brief 스케일 · 회전 · 이동을 한 번에 합성합니다(행벡터 규약의 S * R * T).
-         * @details `createScale( s ) * createFromYawPitchRoll( … ) * createTranslation( p )` 와 같은 값이지만 행렬 곱을 하지 않습니다.
+         * @details `makeScale( s ) * makeFromYawPitchRoll( … ) * makeTranslation( p )` 와 같은 값이지만 행렬 곱을 하지 않습니다.
          *          스케일은 대각 행렬이고 이동은 마지막 행에만 있어서 결과의 모양이 이미 정해져 있기 때문입니다. 위 3x3 은 회전
          *          행렬의 각 행에 스케일을 곱한 것이고, 마지막 행이 곧 위치입니다. 행렬 곱 두 번(실수 곱 128번)이 곱 아홉 번으로
          *          줄어듭니다. 움직이는 컴포넌트가 모두 매 프레임 지나가는 자리라 이 차이가 프레임 시간에 드러납니다.
          */
-        static float4x4 createTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept;
+        static float4x4 makeTrs( const float3& position, const quaternion& rotation, const float3& scale ) noexcept;
         /**
          * @brief 스케일 · 오일러 회전(요 · 피치 · 롤) · 이동을 한 번에 합성합니다.
          * @param rotation 라디안 단위 오일러 각. `_x` 가 피치, `_y` 가 요, `_z` 가 롤입니다
-         *                 (`createFromYawPitchRoll( angles )` 와 같은 해석입니다).
+         *                 (`makeFromYawPitchRoll( angles )` 와 같은 해석입니다).
          * @details 세 각이 모두 0 이면 쿼터니언을 거치지 않고 대각선의 스케일과 위치만 채웁니다. 회전 없는 물체가 흔하기 때문입니다.
          */
-        static float4x4 createTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept;
+        static float4x4 makeTrs( const float3& position, const float3& rotation, const float3& scale ) noexcept;
 
         /** @brief 성분별로 선형 보간합니다. 회전이 든 행렬이면 결과가 더는 직교하지 않을 수 있습니다. */
         static float4x4 lerp( const float4x4& from, const float4x4& to, float32 t ) noexcept;

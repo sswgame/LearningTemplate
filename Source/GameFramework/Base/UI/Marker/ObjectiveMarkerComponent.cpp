@@ -48,7 +48,7 @@ namespace sw
     void ObjectiveMarkerComponent::onBeginPlay()
     {
         if ( getContent() == nullptr )
-            setContent( buildContent() );
+            setContent( createContent() );
         WidgetComponent::onBeginPlay();
     }
 
@@ -74,7 +74,7 @@ namespace sw
             pDistance->setText( to_string( meters ) + " m" );
     }
 
-    unique_ptr<Widget> ObjectiveMarkerComponent::buildContent() const
+    unique_ptr<Widget> ObjectiveMarkerComponent::createContent() const
     {
         using Internal              = ObjectiveMarkerComponentInternal;
         unique_ptr<BoxPanel> column = make_unique<BoxPanel>();

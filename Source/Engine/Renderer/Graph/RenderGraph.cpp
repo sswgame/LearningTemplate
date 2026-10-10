@@ -25,12 +25,12 @@ namespace sw
                 // 레벨의 첫 리스트는 렌더 스레드가 이미 열어 배리어를 앞머리에 기록해 뒀다. 이어서 기록한다.
                 if ( bAlreadyBegun == false )
                     pCmdList->beginCommandList();
-                RenderGraphPassContext ctx;
-                ctx._passName     = pNode->_name;
-                ctx._pListInputs  = &pNode->_listInput;
-                ctx._pListOutputs = &pNode->_listOutput;
-                ctx._pCmdList     = pCmdList;
-                pNode->_execute( ctx );
+                RenderGraphPassContext passContext;
+                passContext._passName     = pNode->_name;
+                passContext._pListInputs  = &pNode->_listInput;
+                passContext._pListOutputs = &pNode->_listOutput;
+                passContext._pCmdList     = pCmdList;
+                pNode->_execute( passContext );
                 pCmdList->endCommandList();
             }
         };
@@ -287,7 +287,7 @@ namespace sw
         }
 
         // 수명은 실행 순서가 정해진 **뒤에야** 뜻이 있다. "몇 번째 패스에서 처음 · 마지막으로 쓰이나" 이므로.
-        buildResourceLifetimes();
+        computeResourceLifetimes();
 
         return true;
     }
@@ -328,11 +328,11 @@ namespace sw
 
             if ( node._execute.isBound() )
             {
-                RenderGraphPassContext ctx;
-                ctx._passName     = node._name;
-                ctx._pListInputs  = &node._listInput;
-                ctx._pListOutputs = &node._listOutput;
-                node._execute( ctx );
+                RenderGraphPassContext passContext;
+                passContext._passName     = node._name;
+                passContext._pListInputs  = &node._listInput;
+                passContext._pListOutputs = &node._listOutput;
+                node._execute( passContext );
             }
         }
 
@@ -697,13 +697,13 @@ namespace sw
         if ( _listLevelBarrier.empty() || _levelPrologue.isBound() == false )
             return;
 
-        RenderGraphLevelContext levelCtx;
-        levelCtx._pListBarrier = &_listLevelBarrier;
-        levelCtx._pCmdList     = pCmdList;
-        _levelPrologue( levelCtx );
+        RenderGraphLevelContext levelContext;
+        levelContext._pListBarrier = &_listLevelBarrier;
+        levelContext._pCmdList     = pCmdList;
+        _levelPrologue( levelContext );
     }
 
-    void RenderGraph::buildResourceLifetimes()
+    void RenderGraph::computeResourceLifetimes()
     {
         _listResourceLifetime.clear();
         _mapResourceLifetimeIndex.clear();

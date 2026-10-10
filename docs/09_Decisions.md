@@ -140,7 +140,7 @@
 | `transformNormal` | `transformVector`(방향 변환) |
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
 | `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
-| `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveSpec`(`Engine/Animation/BlendCurve.h`) |
+| `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveDef`(`Engine/Animation/BlendCurve.h`) |
 | `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
 | `Graphics/Renderer/Debug/` | `Graphics/Debug/` |

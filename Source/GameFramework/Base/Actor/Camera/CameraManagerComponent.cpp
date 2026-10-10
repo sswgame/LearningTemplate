@@ -72,7 +72,7 @@ namespace sw
         updateCamera( deltaTime );
     }
 
-    void CameraManagerComponent::setViewTarget( const GameObjectHandle& target, const BlendCurveSpec& blend )
+    void CameraManagerComponent::setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend )
     {
         if ( target == _viewTarget )
             return;

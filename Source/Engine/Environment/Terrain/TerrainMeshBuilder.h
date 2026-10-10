@@ -72,7 +72,7 @@ namespace sw
          *        자기 LOD 를 넣습니다. 구멍 칸을 덮는 사각형은 만들지 않습니다.
          * @details 정점: 위치(청크 이동 기준) · 노멀(샘플 중앙 차분) · UV(지형 정규 좌표 u = 샘플 x / (N−1)) · 색(흰색). 삼각형 목록(인덱스 없음)입니다.
          */
-        static void buildChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                        const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
+        static void makeChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
+                                       const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
     };
 } // namespace sw

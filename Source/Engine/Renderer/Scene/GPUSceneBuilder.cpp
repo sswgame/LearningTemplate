@@ -414,7 +414,7 @@ namespace sw
         _listTransformDirtyPrimitive.resize( keptCount );
     }
 
-    void GPUSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
+    void GPUSceneBuilder::populateFromScene( Scene* pScene, const float3& cameraPos )
     {
         SW_PROFILE_SCOPE( "GT.GPUScene.build" );
 
@@ -730,7 +730,7 @@ namespace sw
         {
             SW_PROFILE_SCOPE( "GT.GPUScene.build.fill" );
             // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다**. 원소당 일이
-            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GPUSceneBuilder.h buildFromScene 주석의 숫자).
+            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GPUSceneBuilder.h populateFromScene 주석의 숫자).
             //
             // 부분 수집을 했으면 **바뀐 후보만** 옮긴다. raw 는 후보에서 1:1 로 나오는 값이라, 손대지
             // 않은 후보의 raw 는 지난 프레임 것이 그대로 맞다. (전체 수집 프레임에는 raw 자체가
@@ -778,7 +778,7 @@ namespace sw
                 _snapshot._listOpaqueBatch.clear();
                 _snapshot._listTransparentBatch.clear();
                 _snapshot._listAllBatch.clear();
-                buildBatches();
+                populateBatches();
             }
             {
                 SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
@@ -805,7 +805,7 @@ namespace sw
     {
         if ( engine::areEngineServicesBound() == false )
             return;
-        const uint32 generation = engine::getAssetManager().getTextureManager().getReloadGeneration();
+        const uint32 generation = engine::getAssetManager().getTextureCache().getReloadGeneration();
         if ( generation == _lastTextureReloadGeneration )
             return;
         _lastTextureReloadGeneration = generation;
@@ -979,7 +979,7 @@ namespace sw
         _transparentSortAxis = axis;
     }
 
-    void GPUSceneBuilder::buildViewTransparentOrders( const vector<RenderViewRequest>& listView )
+    void GPUSceneBuilder::computeViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
         const vector<GPUInstance>*  pInstance = _instanceRing.getPublished();
@@ -1363,7 +1363,7 @@ namespace sw
         }
     }
 
-    void GPUSceneBuilder::buildBatches()
+    void GPUSceneBuilder::populateBatches()
     {
         // 전체 재구축이다. 구간을 적어 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
         _snapshot._bAllInstancesDirty = SW_TRUE;

@@ -130,7 +130,7 @@ namespace sw
 
         /**
          * @brief 타일 하나를 베이크합니다. 입력만 읽고 내비메시를 바꾸지 않으므로 워커에서 여럿이 같이 돌 수 있습니다.
-         * @details @p geometry 는 색인(`buildSpatialIndex`)을 지어 둔 것이어야 빠릅니다. @p pExtraVolume(없어도 된다)은 입력의 부피 뒤에 칠하는
+         * @details @p geometry 는 색인(`rebuildSpatialIndex`)을 지어 둔 것이어야 빠릅니다. @p pExtraVolume(없어도 된다)은 입력의 부피 뒤에 칠하는
          *          부피입니다 — 움직이는 장애물을 정적 입력과 따로 들고 다닌다. 걸을 곳이 없으면 바이트가 빈 결과로 true 입니다.
          * @return 베이크하다가 실패(메모리 · 정점 상한)하면 false 입니다.
          */

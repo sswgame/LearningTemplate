@@ -131,7 +131,7 @@ namespace sw
         }
 
         unique_ptr<CacheEntry> entry = make_unique<CacheEntry>();
-        entry->_layout               = ShaderBindingLayout::build( listStage );
+        entry->_layout               = ShaderBindingLayout::make( listStage );
         entry->_listSourcePath       = std::move( listSourcePath );
 
         std::scoped_lock<mutex> lock{ _mutex };

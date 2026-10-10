@@ -54,7 +54,7 @@ namespace sw
              *          그러면 **그 경로로 읽은 객체만 필드가 비는** 재현하기 어려운 차이가 됩니다.
              */
             [[nodiscard]] static bool applyPropertyPayload( void* pInstance, const PropertyInfo& prop, const uint8* pData,
-                                                            size_t payloadStart, size_t payloadSize, const SerializeContext& ctx,
+                                                            size_t payloadStart, size_t payloadSize, const SerializeContext& context,
                                                             bool bRequireExactConsume, BinaryWireVersion wireVersion )
             {
                 void* pPropPtr = prop.getRawPtr( pInstance );
@@ -64,7 +64,7 @@ namespace sw
                     // 비트필드는 주소를 가질 수 없어 값으로 읽고 setter 로 넣는다.
                     bool   bVal  = false;
                     size_t local = payloadStart;
-                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, ctx, wireVersion ) == false )
+                    if ( SerializerUtil::deserializeValueBinary( &bVal, hashed_string( "bool" ), pData, payloadStart + payloadSize, local, context, wireVersion ) == false )
                         return false;
                     prop.setValue<bool>( pInstance, bVal );
                     return true;
@@ -75,9 +75,9 @@ namespace sw
                 size_t local = payloadStart;
                 bool   bRead = false;
                 if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                    bRead = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, ctx, wireVersion );
+                    bRead = SerializerUtil::deserializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), pData, payloadStart + payloadSize, local, context, wireVersion );
                 else
-                    bRead = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, ctx, wireVersion );
+                    bRead = SerializerUtil::deserializeValueBinary( pPropPtr, prop._typeName, pData, payloadStart + payloadSize, local, context, wireVersion );
                 if ( bRead == false )
                     return false;
                 return bRequireExactConsume == false || local == payloadStart + payloadSize;
@@ -146,7 +146,7 @@ namespace sw
              *          신뢰할 수 없는 스트림의 경계 검사가 이 안에 있습니다. 사본이 하나여야 그 검사가 한쪽에서만 빠지는 일이 없습니다.
              */
             [[nodiscard]] static bool deserializeTagged( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                                         const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
+                                                         const SerializeContext& context, vector<SchemaOrphanValue>* pOutListOrphan, bool bStrict )
             {
                 BinaryStreamReader reader( pData, dataSize );
                 uint32             header{ 0 };
@@ -198,7 +198,7 @@ namespace sw
 
                     if ( pTargetProp == nullptr )
                     {
-                        if ( bStrict && ctx.allowsUnknownProperties() == false )
+                        if ( bStrict && context.allowsUnknownProperties() == false )
                             return false;
                         if ( bStrict == false )
                             pushOrphanVal( pOutListOrphan, {}, tagHash, wireTypeHash, pData + payloadStart, payloadSize, wireVersion );
@@ -215,7 +215,7 @@ namespace sw
                         uniqueMatchedPropHashes.insert( prop.getNameHash() );
 
                     // 세이브 읽기에서 옵트인 타입의 SaveGame 이 아닌 칸은 읽지 않는다 — 세이브가 지금 값을 덮지 않는다(쓰기도 적지 않는다).
-                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
+                    if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                     {
                         reader.skip( payloadSize );
                         continue;
@@ -233,19 +233,19 @@ namespace sw
                         // 4 바이트가 int32 로 바뀐 칸에 그대로 읽히게 된다).
                         if ( wireTypeName.empty() == false )
                         {
-                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
+                            bApplied = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                             if ( bApplied == false && bStrict == false && isValueOnlyCoercion( prop._typeName, wireTypeName ) == false )
-                                bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, false, wireVersion );
+                                bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, context, false, wireVersion );
                         }
                     }
                     else
                     {
-                        bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, ctx, bStrict, wireVersion );
+                        bApplied = applyPropertyPayload( pInstance, prop, pData, payloadStart, payloadSize, context, bStrict, wireVersion );
                         if ( bApplied == false && bStrict == false )
                         {
                             void*               pPropPtr     = prop.getRawPtr( pInstance );
                             const hashed_string wireTypeName = findWireTypeName( wireTypeHash );
-                            bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, ctx, wireTypeName, wireVersion );
+                            bApplied                         = tryCoerceBinaryPayload( pPropPtr, prop._typeName, pData + payloadStart, payloadSize, context, wireTypeName, wireVersion );
                         }
                     }
 
@@ -253,7 +253,7 @@ namespace sw
                     {
                         // 엄격한 읽기도 모르는 칸을 받는 문맥(오브젝트 상태)이면 **이 칸만** 건너뛴다 — 크기를 알아 다음 칸 자리는 맞다. 모르는 열거자 하나가
                         // 컴포넌트를, 그래서 그 뒤 컴포넌트까지 버리던 자리다.
-                        if ( bStrict && ctx.allowsUnknownProperties() == false )
+                        if ( bStrict && context.allowsUnknownProperties() == false )
                             return false;
                         if ( bStrict )
                             warnUnreadableFieldOnce( typeInfo, prop );
@@ -273,9 +273,9 @@ namespace sw
                     else
                         bMatched = uniqueMatchedPropHashes.find( listProp[propIdx].getNameHash() ) != uniqueMatchedPropHashes.end();
                     // 세이브 읽기가 다루지 않는 칸(옵트인 타입의 SaveGame 이 아닌 것)은 지금 값 그대로다 — 기본값으로 되돌리지 않는다.
-                    const bool bOutsideSaveGame = ctx.isSaveGameOnly() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], ctx ) == false;
+                    const bool bOutsideSaveGame = context.isSaveGameOnly() && SerializerUtil::shouldSerializeProperty( typeInfo, listProp[propIdx], context ) == false;
                     if ( bMatched == false && bOutsideSaveGame == false )
-                        SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, ctx );
+                        SerializerUtil::applyPropertyDefault( listProp[propIdx], pInstance, context );
                 }
                 return true;
             }
@@ -290,7 +290,7 @@ namespace sw
              */
             [[nodiscard]] static bool readAndApplyProperty( void* pInstance, uint64 propIndex, const vector<PropertyInfo>& listProp,
                                                             BinaryStreamReader& reader, const uint8* pData, size_t dataSize,
-                                                            const SerializeContext& ctx, BinaryWireVersion wireVersion )
+                                                            const SerializeContext& context, BinaryWireVersion wireVersion )
             {
                 uint64 payloadSize = 0;
                 if ( reader.readVarUint( payloadSize ) == false )
@@ -306,7 +306,7 @@ namespace sw
                 if ( propIndex < listProp.size() && SerializerUtil::shouldSerializeProperty( listProp[static_cast<size_t>( propIndex )] ) )
                 {
                     if ( applyPropertyPayload( pInstance, listProp[static_cast<size_t>( propIndex )],
-                                               pData, payloadStart, payloadSize, ctx, false, wireVersion ) == false )
+                                               pData, payloadStart, payloadSize, context, false, wireVersion ) == false )
                         return false;
                 }
 
@@ -480,14 +480,14 @@ namespace sw
     SW_LOG_CALLER( "BinarySerializer" );
 
     void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
-                                      const SerializeContext& ctx )
+                                      const SerializeContext& context )
     {
         BinaryStreamWriter          writer( outListBuffer );
         const vector<PropertyInfo>& listProp = typeInfo.getPropertiesWithBase();
         uint32                      propCount{ 0 };
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 continue;
             ++propCount;
         }
@@ -498,7 +498,7 @@ namespace sw
 
         for ( const PropertyInfo& prop : listProp )
         {
-            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, ctx ) == false )
+            if ( SerializerUtil::shouldSerializeProperty( typeInfo, prop, context ) == false )
                 continue;
             const void* pPropPtr = prop.getRawPtr( pInstance );
 
@@ -517,12 +517,12 @@ namespace sw
             if ( prop._bIsBitField == SW_TRUE )
             {
                 const bool bVal = prop.getValue<bool>( pInstance );
-                SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, ctx );
+                SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), outListBuffer, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
-                SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, ctx );
+                SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), outListBuffer, context );
             else
-                SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, ctx );
+                SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, outListBuffer, context );
 
             uint32 payloadSize = static_cast<uint32>( writer.getOffset() - payloadStart );
             writer.writeAt( sizeHeaderPos, payloadSize );
@@ -546,36 +546,36 @@ namespace sw
         if ( t_listCloneBuffer.capacity() < targetCapacity )
             t_listCloneBuffer.reserve( targetCapacity );
 
-        SerializeContext ctx;
-        serialize( pSrcData, typeInfo, t_listCloneBuffer, ctx );
-        return deserialize( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(), ctx );
+        SerializeContext context;
+        serialize( pSrcData, typeInfo, t_listCloneBuffer, context );
+        return deserialize( pDstData, typeInfo, t_listCloneBuffer.data(), t_listCloneBuffer.size(), context );
     }
 
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                        const SerializeContext& ctx )
+                                        const SerializeContext& context )
     {
-        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, ctx, nullptr, true );
+        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, nullptr, true );
     }
 
     bool BinarySerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
-                                            vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& ctx )
+                                            vector<SchemaOrphanValue>* pOutOrphans, const SerializeContext& context )
     {
         if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
             return false;
-        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, ctx, pOutOrphans, false );
+        return BinarySerializerInternal::deserializeTagged( pInstance, typeInfo, pData, dataSize, context, pOutOrphans, false );
     }
 
     void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, vector<uint8>& outListBuffer,
-                                               const SerializeContext& ctx )
+                                               const SerializeContext& context )
     {
         BinaryStreamWriter writer( outListBuffer );
         writer.write( version );
-        serialize( pInstance, typeInfo, outListBuffer, ctx );
+        serialize( pInstance, typeInfo, outListBuffer, context );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, const uint8* pData, size_t dataSize,
                                                  uint32 currentVersion, SchemaMigrateFn migrate, const TypeInfo* pLegacyTypeInfo,
-                                                 const SerializeContext& ctx )
+                                                 const SerializeContext& context )
     {
         BinaryStreamReader reader( pData, dataSize );
         if ( reader.read( outVersion ) == false )
@@ -589,12 +589,12 @@ namespace sw
         // 거절한다. 바이너리는 손으로 고치는 포맷이 아니라, 모르는 필드가 있다는 것은 스키마가
         // 바뀌었다는 뜻이기 때문이다.
         return runVersionedDeserialize(
-            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, ctx,
+            outVersion, pInstance, typeInfo, currentVersion, migrate, pLegacyTypeInfo, context,
             SchemaVersionSource::Stream, SchemaOrphanPolicy::Reject,
             SW_DELEGATE_LAMBDA( SoftDeserializeFn,
                                 [&]( void* pTarget, const TypeInfo& targetType, vector<SchemaOrphanValue>& listOrphan, uint32& ) -> bool
         {
-            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, ctx );
+            return deserializeSoft( pTarget, targetType, pBody, bodySize, &listOrphan, context );
         } ) );
     }
 
@@ -602,11 +602,11 @@ namespace sw
                                                 const TypeInfo&         typeInfo,
                                                 vector<uint8>&          outListBuffer,
                                                 CompressionCodecType    codecType,
-                                                const SerializeContext& ctx )
+                                                const SerializeContext& context )
     {
         return BinarySerializerInternal::serializeThenCompress( pInstance, outListBuffer, codecType, [&]( vector<uint8>& outListRaw )
         {
-            serialize( pInstance, typeInfo, outListRaw, ctx );
+            serialize( pInstance, typeInfo, outListRaw, context );
         } );
     }
 
@@ -614,48 +614,48 @@ namespace sw
                                                   const TypeInfo&         typeInfo,
                                                   const uint8*            pData,
                                                   size_t                  dataSize,
-                                                  const SerializeContext& ctx )
+                                                  const SerializeContext& context )
     {
         return BinarySerializerInternal::decompressThenDeserialize( pInstance, pData, dataSize, [&]( const uint8* pRaw, size_t rawSize )
         {
-            return deserialize( pInstance, typeInfo, pRaw, rawSize, ctx );
+            return deserialize( pInstance, typeInfo, pRaw, rawSize, context );
         } );
     }
 
     void BinarySerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                      const SerializeContext& ctx )
+                                      const SerializeContext& context )
     {
         vector<uint8> buffer;
-        serialize( pInstance, typeInfo, buffer, ctx );
+        serialize( pInstance, typeInfo, buffer, context );
         BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
     bool BinarySerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
-                                        const SerializeContext& ctx )
+                                        const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureTaggedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserialize( pInstance, typeInfo, pData, dataSize, ctx );
+            return deserialize( pInstance, typeInfo, pData, dataSize, context );
         } );
     }
 
     void BinarySerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo, Archive& outArchive,
-                                               const SerializeContext& ctx )
+                                               const SerializeContext& context )
     {
         vector<uint8> buffer;
-        serializeVersioned( version, pInstance, typeInfo, buffer, ctx );
+        serializeVersioned( version, pInstance, typeInfo, buffer, context );
         BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
     bool BinarySerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo, Archive& inArchive,
                                                  uint32 currentVersion, SchemaMigrateFn migrate,
-                                                 const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
+                                                 const TypeInfo* pLegacyTypeInfo, const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureVersionedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, ctx );
+            return deserializeVersioned( outVersion, pInstance, typeInfo, pData, dataSize, currentVersion, migrate, pLegacyTypeInfo, context );
         } );
     }
 
@@ -663,10 +663,10 @@ namespace sw
                                                 const TypeInfo&         typeInfo,
                                                 Archive&                outArchive,
                                                 CompressionCodecType    codecType,
-                                                const SerializeContext& ctx )
+                                                const SerializeContext& context )
     {
         vector<uint8> buffer;
-        if ( serializeCompressed( pInstance, typeInfo, buffer, codecType, ctx ) == false )
+        if ( serializeCompressed( pInstance, typeInfo, buffer, codecType, context ) == false )
             return false;
 
         BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
@@ -676,19 +676,19 @@ namespace sw
     bool BinarySerializer::deserializeCompressed( void*                   pInstance,
                                                   const TypeInfo&         typeInfo,
                                                   Archive&                inArchive,
-                                                  const SerializeContext& ctx )
+                                                  const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureCompressedStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeCompressed( pInstance, typeInfo, pData, dataSize, ctx );
+            return deserializeCompressed( pInstance, typeInfo, pData, dataSize, context );
         } );
     }
 
     void BinarySerializer::serializeCompact( const void*             pInstance,
                                              const TypeInfo&         typeInfo,
                                              vector<uint8>&          outBuffer,
-                                             const SerializeContext& ctx )
+                                             const SerializeContext& context )
     {
         if ( pInstance == nullptr )
             return;
@@ -721,15 +721,15 @@ namespace sw
             if ( prop._bIsBitField == SW_TRUE )
             {
                 const bool bVal = prop.getValue<bool>( pInstance );
-                SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), t_scratchPayload, ctx );
+                SerializerUtil::serializeValueBinary( &bVal, hashed_string( "bool" ), t_scratchPayload, context );
             }
             else if ( prop._bIsContainer && prop.hasContainerWrapper() )
             {
-                SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), t_scratchPayload, ctx );
+                SerializerUtil::serializeNestedContainerBinary( pPropPtr, prop.getContainerShape(), t_scratchPayload, context );
             }
             else
             {
-                SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, t_scratchPayload, ctx );
+                SerializerUtil::serializeValueBinary( pPropPtr, prop._typeName, t_scratchPayload, context );
             }
 
             const uint32 payloadSize = static_cast<uint32>( t_scratchPayload.size() - payloadStart );
@@ -783,10 +783,10 @@ namespace sw
     void BinarySerializer::serializeCompact( const void*             pInstance,
                                              const TypeInfo&         typeInfo,
                                              Archive&                outArchive,
-                                             const SerializeContext& ctx )
+                                             const SerializeContext& context )
     {
         vector<uint8> buffer;
-        serializeCompact( pInstance, typeInfo, buffer, ctx );
+        serializeCompact( pInstance, typeInfo, buffer, context );
         BinarySerializerInternal::writeBufferToArchive( buffer, outArchive );
     }
 
@@ -794,7 +794,7 @@ namespace sw
                                                const TypeInfo&         typeInfo,
                                                const uint8*            pData,
                                                size_t                  dataSize,
-                                               const SerializeContext& ctx )
+                                               const SerializeContext& context )
     {
         if ( pInstance == nullptr || pData == nullptr || dataSize == 0 )
             return false;
@@ -842,7 +842,7 @@ namespace sw
                 if ( bPresent == false )
                     continue;
 
-                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx, wireVersion ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, context, wireVersion ) == false )
                     return false;
             }
             return true;
@@ -859,7 +859,7 @@ namespace sw
                 if ( reader.readVarUint( propIndex ) == false )
                     return false;
 
-                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, ctx, wireVersion ) == false )
+                if ( BinarySerializerInternal::readAndApplyProperty( pInstance, propIndex, listProp, reader, pData, dataSize, context, wireVersion ) == false )
                     return false;
             }
             return true;
@@ -871,12 +871,12 @@ namespace sw
     bool BinarySerializer::deserializeCompact( void*                   pInstance,
                                                const TypeInfo&         typeInfo,
                                                Archive&                inArchive,
-                                               const SerializeContext& ctx )
+                                               const SerializeContext& context )
     {
         return BinarySerializerInternal::deserializeArchiveStream( inArchive, &BinarySerializerInternal::measureCompactStream,
                                                                    [&]( const uint8* pData, size_t dataSize )
         {
-            return deserializeCompact( pInstance, typeInfo, pData, dataSize, ctx );
+            return deserializeCompact( pInstance, typeInfo, pData, dataSize, context );
         } );
     }
 } // namespace sw

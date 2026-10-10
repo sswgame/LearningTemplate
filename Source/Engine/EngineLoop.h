@@ -232,7 +232,7 @@ namespace sw
         unique_ptr<IAudioSystem>  _audioSystem;
         unique_ptr<FrameRenderer> _frameRenderer;
         unique_ptr<RenderThread>  _renderThread;
-        /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
+        /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
          *         (헤드리스 작업에는 없습니다).
          *         프레임마다 CPU 스냅샷만 exportCPUSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
          *         패킷과 함께 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다). */

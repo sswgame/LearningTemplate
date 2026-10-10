@@ -77,7 +77,7 @@ namespace sw
         float64 _idleTimeoutSeconds{ 60.0 }; ///< 0 = 끈다. 위 층의 핑 간격보다 길게
         float64 _connectTimeoutSeconds{ 10.0 };
         float64 _closeLingerSeconds{ 5.0 }; ///< 우아한 종료가 저쪽 FIN 을 기다리는 상한
-        uint8   _bNoDelay{ SW_TRUE };       ///< TCP_NODELAY — 요청-응답은 지연 확인과 Nagle 이 겹치면 40 ms 씩 늦는다
+        uint8   _bTCPNoDelay{ SW_TRUE };    ///< TCP_NODELAY — 요청-응답은 지연 확인과 Nagle 이 겹치면 40 ms 씩 늦는다
     };
 } // namespace sw
 

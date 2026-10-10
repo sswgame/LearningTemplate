@@ -117,7 +117,7 @@ namespace sw
         return level;
     }
 
-    bool SkeletonBoneLOD::buildMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
+    bool SkeletonBoneLOD::computeMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
     {
         outListMask.clear();
         const uint32  boneCount = skeleton.getBoneCount();

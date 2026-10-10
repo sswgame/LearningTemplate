@@ -421,9 +421,9 @@ namespace
         LeaveLockstepGame game( 4, 10, 10 );
         NetSimHarness     harness;
         NetSimSettings    settings;
-        settings._seed                       = seed;
-        settings._hostSettings._timeout      = 1.0;
-        settings._hostSettings._sendInterval = 1.0 / 60.0;
+        settings._seed                         = seed;
+        settings._hostSettings._timeoutSeconds = 1.0;
+        settings._hostSettings._sendInterval   = 1.0 / 60.0;
         LockstepLeaveResult result;
         if ( harness.initialize( settings, &game ) == false )
             return result;

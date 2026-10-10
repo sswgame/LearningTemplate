@@ -165,7 +165,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     const sw::string path = test::makeTempPath( "component.mesh" );
     SW_ASSERT_TRUE( sw::MeshAssetFormat::saveToFile( path, makeTestTriangles( 2, 1.0f ) ) );
 
-    const sw::SerializeContext& ctx = sw::SerializeContext::getDefault();
+    const sw::SerializeContext& context = sw::SerializeContext::getDefault();
     sw::GameObjectManager       manager;
     sw::GameObject*             pProp = manager.createGameObject( sw::hashed_string( "Model" ) );
     sw::MeshComponent*          pMesh = pProp->addComponent<sw::MeshComponent>();
@@ -173,7 +173,7 @@ SW_TEST_CASE( MeshAssetTest, MeshComponentResolvesMeshAssetPath )
     const sw::PropertyInfo* pMeshID = pMesh->getTypeInfo()->findPropertyInHierarchy( sw::hashed_string( "_meshID" ) );
     SW_ASSERT_NOT_NULL( pMeshID );
 
-    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, path, ctx ) );
+    SW_ASSERT_TRUE( sw::SerializerUtil::applyPropertyText( *pMeshID, pMesh, path, context ) );
     pMesh->onPropertyChanged( pMeshID->_name );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
     SW_EXPECT_EQUAL( 6u, pMesh->getRawMesh()->getVertexCount() );

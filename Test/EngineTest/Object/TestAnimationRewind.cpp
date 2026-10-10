@@ -107,7 +107,7 @@ SW_TEST_CASE( AnimationRewindTest, PoseEncodingRoundTripsWithinQuantization )
     {
         BoneTransform transform{};
         transform._translation = float3{ 0.3f * static_cast<float32>( boneIndex ), -1.7f + static_cast<float32>( boneIndex ), 0.05f };
-        transform._rotation    = quaternion::createFromYawPitchRoll( 0.4f * static_cast<float32>( boneIndex ), -0.9f, 2.5f );
+        transform._rotation    = quaternion::makeFromYawPitchRoll( 0.4f * static_cast<float32>( boneIndex ), -0.9f, 2.5f );
         pose.setBoneTransform( boneIndex, transform );
     }
     AnimationRewindFrame frame{};

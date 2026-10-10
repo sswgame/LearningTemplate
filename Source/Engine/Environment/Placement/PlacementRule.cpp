@@ -217,9 +217,9 @@ namespace sw
     float4x4 PlacementScatter::makeWorldMatrix( const PlacementInstance& instance, const float3& origin )
     {
         const float3   position{ origin._x + instance._planePosition._x, instance._height, origin._z + instance._planePosition._y };
-        const float4x4 yawScale = float4x4::createTrs( float3::Zero, float3{ 0.0f, instance._yaw, 0.0f }, float3{ instance._scale, instance._scale, instance._scale } );
+        const float4x4 yawScale = float4x4::makeTrs( float3::Zero, float3{ 0.0f, instance._yaw, 0.0f }, float3{ instance._scale, instance._scale, instance._scale } );
         if ( instance._alignToNormal <= 0.0f )
-            return yawScale * float4x4::createTranslation( position );
+            return yawScale * float4x4::makeTranslation( position );
 
         // 위쪽을 (위쪽 → 노멀) 로 alignToNormal 만큼 돌린다. 요는 기울이기 전에 건다(기울어진 축이 아니라 표면 위에서 돈다).
         const float3  normal = instance._normal.normalize();
@@ -227,8 +227,8 @@ namespace sw
         const float3  axis   = float3::Up.cross( target );
         const float32 sine   = axis.getLength();
         if ( sine <= MathUtil::kEpsilon )
-            return yawScale * float4x4::createTranslation( position );
+            return yawScale * float4x4::makeTranslation( position );
         const float32 angle = MathUtil::atan2( sine, float3::Up.dot( target ) );
-        return yawScale * float4x4::createFromAxisAngle( axis * ( 1.0f / sine ), angle ) * float4x4::createTranslation( position );
+        return yawScale * float4x4::makeFromAxisAngle( axis * ( 1.0f / sine ), angle ) * float4x4::makeTranslation( position );
     }
 } // namespace sw

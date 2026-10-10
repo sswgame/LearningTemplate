@@ -171,7 +171,7 @@ namespace
         {
             sw::RenderFramePacket packet{};
             packet._bValid = 1;
-            gtGPUScene.buildFromScene( &scene, packet._cameraPos );
+            gtGPUScene.populateFromScene( &scene, packet._cameraPos );
             gtGPUScene.exportCPUSnapshot( packet._gpuScene );
             if ( packet._gpuScene.getInstances().empty() )
                 return -1;
@@ -438,7 +438,7 @@ namespace
         {
             outMeanRedMinusBlue           = 0;
             outDrawnCount                 = 0;
-            const sw::Texture2D* pTexture = sw::engine::getAssetManager().getTextureManager().find( pPath );
+            const sw::Texture2D* pTexture = sw::engine::getAssetManager().getTextureCache().find( pPath );
             if ( pTexture == nullptr || pTexture->isRHIValid() == false )
                 return false;
             sw::vector<uint8>     bytes;
@@ -893,7 +893,7 @@ SW_TEST_CASE( RenderPassGPUTest, GPUSceneBufferReusedAcrossPackets )
     {
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
-        gtGPUScene.buildFromScene( &scene, packet._cameraPos );
+        gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
 
         device->beginFrame( clear );
@@ -949,7 +949,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     {
         sw::RenderFramePacket packet{};
         packet._bValid = 1;
-        gtGPUScene.buildFromScene( &scene, packet._cameraPos );
+        gtGPUScene.populateFromScene( &scene, packet._cameraPos );
         gtGPUScene.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
         SW_EXPECT_TRUE( renderer.executePacket( device.get(), packet ) );
@@ -960,7 +960,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialLifetimeFollowsPacket )
     // 오브젝트 삭제·인스턴스 교체가 RT 보다 먼저 일어나는 순서다.
     sw::RenderFramePacket lateePacket{};
     lateePacket._bValid = 1;
-    gtGPUScene.buildFromScene( &scene, lateePacket._cameraPos );
+    gtGPUScene.populateFromScene( &scene, lateePacket._cameraPos );
     gtGPUScene.exportCPUSnapshot( lateePacket._gpuScene );
     SW_ASSERT_FALSE( lateePacket._gpuScene.getInstances().empty() );
 
@@ -1005,10 +1005,10 @@ SW_TEST_CASE( RenderPassGPUTest, RenderGraphExecuteParallelRunsOnRealDevice )
         auto makeCb = [&executeCount]( const utf8* pExpectedName ) -> sw::RenderGraphPassExecuteFn
         {
             return sw::RenderGraphPassExecuteFn(
-                SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& ctx )
+                SW_DELEGATE_LAMBDA( sw::RenderGraphPassExecuteFn, [&executeCount, pExpectedName]( const sw::RenderGraphPassContext& context )
             {
-                SW_EXPECT_STREQ( pExpectedName, ctx._passName.c_str() );
-                SW_EXPECT_TRUE( ctx._pCmdList != nullptr );
+                SW_EXPECT_STREQ( pExpectedName, context._passName.c_str() );
+                SW_EXPECT_TRUE( context._pCmdList != nullptr );
                 executeCount.fetch_add( 1, std::memory_order_relaxed );
             } ) );
         };
@@ -1301,7 +1301,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteDrawsWithTheSpriteShader )
                 pSprite->setTextureName( "engine/textures/perlin.dds" );
                 pSprite->resolveRenderAssets();
                 // 엔진 루프가 패킷을 내기 전에 하는 일 — 컴포넌트가 디바이스 없이 잡은 머티리얼을 올린다.
-                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
                 bOk = pSprite->getMaterial() != nullptr && pSprite->getMaterial()->isRHIValid();
                 SW_EXPECT_TRUE_MSG( bOk, ( label + ": 스프라이트 머티리얼이 올라가지 않았다" ).c_str() );
             }
@@ -3223,7 +3223,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
             if ( phase != sw::AnimationPhase::BasePose )
                 return;
             sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
-            bone._rotation         = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
+            bone._rotation         = sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
             unit.getLocalPose().setBoneTransform( 1, bone );
         }
         float32 _angle;
@@ -3251,7 +3251,7 @@ SW_TEST_CASE( RenderPassGPUTest, SkinnedMeshFollowsPaletteLikeCPUSkinning )
         SW_ASSERT_NOT_NULL( bindCube.get() );
         sw::vector<sw::MeshSkinVertex> listSkin;
         sw::vector<sw::RHIVertex>      listCPUSkinned = bindCube->getVertices();
-        const sw::float4x4             bend           = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
+        const sw::float4x4             bend           = sw::float4x4::makeFromQuaternion( sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
         for ( sw::RHIVertex& vertex : listCPUSkinned )
         {
             sw::MeshSkinVertex skin{};
@@ -3412,7 +3412,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
             if ( phase != sw::AnimationPhase::BasePose )
                 return;
             sw::BoneTransform bone = unit.getLocalPose().getBoneTransform( 1 );
-            bone._rotation         = sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
+            bone._rotation         = sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, _angle );
             unit.getLocalPose().setBoneTransform( 1, bone );
             unit.setMorphWeight( 0, _weight );
         }
@@ -3441,7 +3441,7 @@ SW_TEST_CASE( RenderPassGPUTest, MorphWeightsDeformBeforeSkinningLikeCPU )
         // 스킨 + 모프 큐브와, (레스트 + 가중치 × 차이) 를 CPU 에서 굽혀 둔 정적 큐브 · 모프 없이 굽힌 정적 큐브.
         sw::shared_ptr<sw::Mesh> bindCube = sw::MeshUtil::createUnitCube();
         SW_ASSERT_NOT_NULL( bindCube.get() );
-        const sw::float4x4             bend = sw::float4x4::createFromQuaternion( sw::quaternion::createFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
+        const sw::float4x4             bend = sw::float4x4::makeFromQuaternion( sw::quaternion::makeFromAxisAngle( sw::float3{ 0.0f, 0.0f, 1.0f }, kBendAngle ) );
         sw::vector<sw::MeshSkinVertex> listSkin;
         sw::MeshMorphTarget            push{};
         push._name = sw::hashed_string( "push" );
@@ -3566,9 +3566,9 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
 
             sw::GPUMeshVertexPool vertexPool;
             sw::GPUMeshMorphPool  morphPool;
-            SW_EXPECT_TRUE( vertexPool.build( device.get(), listMesh ) );
-            SW_EXPECT_FALSE( vertexPool.build( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
-            morphPool.build( device.get(), listMesh );
+            SW_EXPECT_TRUE( vertexPool.rebuild( device.get(), listMesh ) );
+            SW_EXPECT_FALSE( vertexPool.rebuild( device.get(), listMesh ) ); // 그대로면 다시 만들지 않는다
+            morphPool.rebuild( device.get(), listMesh );
             SW_EXPECT_EQUAL( cubeVertexCount, vertexPool.getVertexCount() );
             SW_EXPECT_EQUAL( cubeVertexCount, morphPool.getVertexCount() );
 
@@ -3580,8 +3580,8 @@ SW_TEST_CASE( RenderPassGPUTest, MeshPoolsRebuildWhenMeshContentChanges )
             }
             mesh->setVertices( listTriangle );
 
-            SW_EXPECT_TRUE_MSG( vertexPool.build( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
-            morphPool.build( device.get(), listMesh );
+            SW_EXPECT_TRUE_MSG( vertexPool.rebuild( device.get(), listMesh ), "정점 풀이 바뀐 내용을 같은 집합으로 봤습니다" );
+            morphPool.rebuild( device.get(), listMesh );
             SW_EXPECT_EQUAL( 3u, vertexPool.getVertexCount() );
             SW_EXPECT_EQUAL( 3u, morphPool.getVertexCount() );
 
@@ -3648,7 +3648,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialRequestedWithoutADeviceIsUploadedLater 
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
-    sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialManager();
+    sw::MaterialCache&    cache = sw::engine::getAssetManager().getMaterialCache();
 
     test::RHIBackendSweep sweep( { sw::RHIBackend::DirectX12, sw::RHIBackend::Vulkan, sw::RHIBackend::DirectX11, sw::RHIBackend::OpenGL } );
     for ( test::RHITestDevice& device : sweep )
@@ -3710,10 +3710,10 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
 
             sw::GPUSceneBuilder builder;
             const sw::float3    camPos{ 0.0f, 0.0f, -5.0f };
-            builder.buildFromScene( &scene, camPos );
+            builder.populateFromScene( &scene, camPos );
             SW_ASSERT_EQUAL( size_t( 1 ), builder.getOpaqueBatches().size() );
 
-            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureManager();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureCache();
             textures.reload( kTexturePath, device.get() );
             const sw::Texture2D* pTexture = textures.find( kTexturePath );
             SW_ASSERT_NOT_NULL( pTexture );
@@ -3722,7 +3722,7 @@ SW_TEST_CASE( RenderPassGPUTest, ReloadedTextureIsReboundToMaterialsAndBatches )
                 ++changedIndexCount;
 
             // 다음 씬 빌드가 새 인덱스를 받게 한다 — 머티리얼(바이트 · 슬롯 목록)과 배치(슬롯 바인딩 백엔드가 값으로 든 SRV).
-            builder.buildFromScene( &scene, camPos );
+            builder.populateFromScene( &scene, camPos );
             SW_EXPECT_EQUAL( after, material->getMaterialTextureSrvs()[0] );
             if ( device->supportsNativeBindlessSampling() )
             {
@@ -4382,7 +4382,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
             // 앱과 같은 구성: 네이티브 bindless 에서는 배치를 머티리얼끼리 합친다(EngineLoop · FrameRenderer).
             sw::GPUSceneBuilder builder;
             builder.setMergeBatchesAcrossMaterials( bNativeBindless );
-            builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
+            builder.populateFromScene( &scene, sw::float3{ 0.0f, 0.0f, -5.0f } );
             sw::GPUSceneSnapshot packet;
             builder.exportCPUSnapshot( packet );
             sw::GPUScene rtScene;
@@ -4397,7 +4397,7 @@ SW_TEST_CASE( RenderPassGPUTest, InstanceOverridesReachTheGPUOnEveryBackend )
                     sw::Memory::copy( &value, instance->getBuffer().data() + pProp->_offset, sizeof( value ) );
                 return value;
             };
-            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureManager();
+            sw::TextureCache& textures = sw::engine::getAssetManager().getTextureCache();
             // 텍스처가 셰이더에 닿았는가 — 네이티브는 인스턴스 바이트의 SRV 인덱스, 슬롯 바인딩 백엔드는 배치 슬롯(부모의 albedoMap 자리 0).
             auto expectTextureReachesShader = [&]( sw::RHIDescriptorIndex expectedSrv, const utf8* pWhen )
             {
@@ -4459,7 +4459,7 @@ SW_TEST_CASE( RenderPassGPUTest, MissingTextureSamplesTheChecker )
     for ( test::RHITestDevice& device : sweep )
     {
         const sw::string             label       = sw::string( device->getBackendName() ) + ": ";
-        sw::TextureCache&            textures    = sw::engine::getAssetManager().getTextureManager();
+        sw::TextureCache&            textures    = sw::engine::getAssetManager().getTextureCache();
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
         SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
@@ -4899,7 +4899,7 @@ SW_TEST_CASE( RenderPassGPUTest, MaterialTexturesAreSampledLinearWrap )
             if ( bOk )
             {
                 renderer.setViewMode( sw::RenderViewMode::Unlit );
-                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
                 {
@@ -5179,7 +5179,7 @@ SW_TEST_CASE( RenderPassGPUTest, SpriteFramesAndTintsArePerInstance )
             if ( bOk )
             {
                 scene.getObjectManager()->flushSceneTransforms();
-                sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+                sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
                 // 첫 프레임에는 GPUScene 업로드 · 텍스처가 아직이라 몇 장 돌린다.
                 constexpr uint32 kWarmupFrameCount = 4;
                 for ( uint32 frameIndex = 0; frameIndex < kWarmupFrameCount && bOk; ++frameIndex )
@@ -5857,7 +5857,7 @@ SW_TEST_CASE( RenderPassGPUTest, PresentCaptureFollowsOffscreenOutput )
             packet._outputRenderTarget = outputTarget;
             packet._viewportWidth      = kOutputWidth;
             packet._viewportHeight     = kOutputHeight;
-            builder.buildFromScene( &stage._scene, packet._cameraPos );
+            builder.populateFromScene( &stage._scene, packet._cameraPos );
             builder.exportCPUSnapshot( packet._gpuScene );
             device->beginFrame( clear );
             bOk = renderer.executePacket( device.get(), packet );
@@ -5946,7 +5946,7 @@ SW_TEST_CASE( RenderPassGPUTest, ScreenshotDumpWritesPngAndPpm )
         packet._outputRenderTarget = outputTarget;
         packet._viewportWidth      = kOutputWidth;
         packet._viewportHeight     = kOutputHeight;
-        builder.buildFromScene( &stage._scene, packet._cameraPos );
+        builder.populateFromScene( &stage._scene, packet._cameraPos );
         builder.exportCPUSnapshot( packet._gpuScene );
         device->beginFrame( clear );
         bOk = renderer.executePacket( device.get(), packet );
@@ -6125,7 +6125,7 @@ SW_TEST_CASE( RenderPassGPUTest, ExtraViewSortsTransparencyFromItsOwnEye )
         test::RHITestImage viewImage;
         if ( bOk )
         {
-            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getTextureManager().find( "rendertarget/test_extraviewtransparency" );
+            const sw::Texture2D*  pTexture = sw::engine::getAssetManager().getTextureCache().find( "rendertarget/test_extraviewtransparency" );
             sw::vector<uint8>     bytes;
             sw::RHITextureMipSpan layout{};
             bOk = pTexture != nullptr && device->getResourceFactory()->readbackTexture2D( pTexture->getHandle(), 0, 0, bytes, layout );
@@ -6769,7 +6769,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
             pSprite->setMaterialPath( "engine/materials/sprite2dpixel.material" );
             pSprite->setTextureName( kStripeTexture );
             pSprite->resolveRenderAssets();
-            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
             // 첫 프레임으로 그리는 크기를 안다 — 배율 4 가 되게 기준 해상도를 그 크기의 4 분의 1 로 둔다.
             bOk = renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
         }
@@ -6793,7 +6793,7 @@ SW_TEST_CASE( RenderPassGPUTest, PixelArtSpritesSnapToTheAssetPixelGrid )
         {
             pSprite->setLocalPosition( sw::float3{ assetPixelX / kPixelsPerUnit, 0.0f, 0.0f } );
             scene.getObjectManager()->flushSceneTransforms();
-            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
             for ( uint32 frame = 0; frame < 3; ++frame )
             {
                 (void)renderSceneFrame( renderer, device.get(), scene, sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -6928,7 +6928,7 @@ SW_TEST_CASE( RenderPassGPUTest, Light2DFalloffAndShadowOnEveryBackend )
 
             bOk = scene.ensureDefaultCameras();
             scene.getObjectManager()->flushSceneTransforms();
-            sw::engine::getAssetManager().getMaterialManager().initializePending( device.get() );
+            sw::engine::getAssetManager().getMaterialCache().initializePending( device.get() );
         }
 
         // 가운데 줄을 그려 읽고, 픽셀 X → 월드 X 로 옮긴 값의 빨강을 돌려준다.
@@ -7565,7 +7565,7 @@ SW_TEST_CASE( RenderPassGPUTest, WorldWidgetRenderTextureIsSampled )
         renderer.setPresentCaptureEnabled( true );
 
         // 카메라 앞 1.5 m 에 카메라와 같은 방향으로 선 1 m 사각형. 렌더 텍스처 크기는 위젯 컴포넌트처럼 먼저 알린다(먼저 빌리는 쪽이 크기를 정한다).
-        sw::engine::getAssetManager().getTextureManager().declareRenderTarget( kTargetPath, 64, 64 );
+        sw::engine::getAssetManager().getTextureCache().declareRenderTarget( kTargetPath, 64, 64 );
         sw::shared_ptr<sw::Material> sprite = sw::Material::create();
         bOk                                 = bOk && sprite->loadFromFile( "engine/materials/sprite2d.material" );
         const sw::CameraComponent* pCamera  = stage._scene.getObjectManager()->getCameraRegistry().selectCamera( sw::CameraRole::Game );

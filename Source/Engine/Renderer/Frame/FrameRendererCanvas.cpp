@@ -39,7 +39,7 @@ namespace sw
             if ( pState->_pTexture != nullptr || bServices == false || _pDevice == nullptr )
                 continue;
             // 머티리얼과 같은 경로로 캐시에서 빌린다 — 크기는 처음 만들 때 정해진다(위젯의 그리기 크기).
-            TextureCache& textures = engine::getAssetManager().getTextureManager();
+            TextureCache& textures = engine::getAssetManager().getTextureCache();
             textures.declareRenderTarget( target._targetPath.view(), static_cast<uint32>( target._list._targetSize._x ),
                                           static_cast<uint32>( target._list._targetSize._y ) );
             pState->_pTexture      = textures.acquire( target._targetPath.view(), _pDevice );
@@ -53,7 +53,7 @@ namespace sw
             if ( state._bSeen == SW_TRUE )
                 continue;
             if ( state._pTexture != nullptr && bServices )
-                engine::getAssetManager().getTextureManager().release( state._path.view(), _pDevice );
+                engine::getAssetManager().getTextureCache().release( state._path.view(), _pDevice );
             _listCanvasTarget.erase( _listCanvasTarget.begin() + static_cast<ptrdiff_t>( index - 1 ) );
         }
     }
@@ -110,7 +110,7 @@ namespace sw
             for ( const CanvasTargetState& state : _listCanvasTarget )
             {
                 if ( state._pTexture != nullptr )
-                    engine::getAssetManager().getTextureManager().release( state._path.view(), _pDevice );
+                    engine::getAssetManager().getTextureCache().release( state._path.view(), _pDevice );
             }
         }
         _listCanvasTarget.clear();

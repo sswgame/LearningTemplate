@@ -183,7 +183,7 @@ namespace sw
     void NavMeshGeometry::addPhysicsShape( const PhysicsShapeDesc3D& shape, const float4x4& bodyWorld, uint8 area )
     {
         using Internal       = NavMeshGeometryInternal;
-        const float4x4 local = float4x4::createTrs( shape._localPosition, shape._localRotation, float3{ 1.0f, 1.0f, 1.0f } );
+        const float4x4 local = float4x4::makeTrs( shape._localPosition, shape._localRotation, float3{ 1.0f, 1.0f, 1.0f } );
         const float4x4 world = local * bodyWorld;
         switch ( shape._type )
         {
@@ -207,7 +207,7 @@ namespace sw
                 float3 center{};
                 float3 halfExtents{};
                 if ( Internal::computePointBox( shape._listPoint, center, halfExtents ) )
-                    addBox( halfExtents, float4x4::createTrs( center, float3{}, float3{ 1.0f, 1.0f, 1.0f } ) * world, area );
+                    addBox( halfExtents, float4x4::makeTrs( center, float3{}, float3{ 1.0f, 1.0f, 1.0f } ) * world, area );
                 break;
             }
             case PhysicsShapeType3D::TriangleMesh:
@@ -229,7 +229,7 @@ namespace sw
         expandBounds( bounds._max );
     }
 
-    void NavMeshGeometry::buildSpatialIndex( float32 cellSize )
+    void NavMeshGeometry::rebuildSpatialIndex( float32 cellSize )
     {
         using Internal = NavMeshGeometryInternal;
         _listCellStart.clear();

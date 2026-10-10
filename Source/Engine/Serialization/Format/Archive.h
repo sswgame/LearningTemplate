@@ -207,11 +207,11 @@ namespace sw
         /** @brief 타입 정보를 이용해 객체를 직렬화합니다. */
         [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo );
         /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 직렬화합니다. */
-        [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx );
+        [[nodiscard]] bool serializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context );
         /** @brief 타입 정보를 이용해 객체를 역직렬화합니다. */
         [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo );
         /** @brief 문맥(세이브 직렬화 등)을 주어 객체를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx );
+        [[nodiscard]] bool deserializeObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context );
 
         /** @brief REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
@@ -223,10 +223,10 @@ namespace sw
 
         /** @brief 문맥을 주어 REFLECT 타입을 직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
-        [[nodiscard]] bool serializeObject( const T& instance, const SerializeContext& ctx )
+        [[nodiscard]] bool serializeObject( const T& instance, const SerializeContext& context )
         {
             const TypeInfo* pTypeInfo = T::StaticType();
-            return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo, ctx );
+            return pTypeInfo != nullptr && serializeObject( const_cast<T*>( &instance ), *pTypeInfo, context );
         }
 
         /** @brief REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
@@ -239,10 +239,10 @@ namespace sw
 
         /** @brief 문맥을 주어 REFLECT 타입을 역직렬화합니다. 타입이 등록되지 않았으면 false 입니다. */
         template <typename T>
-        [[nodiscard]] bool deserializeObject( T& instance, const SerializeContext& ctx )
+        [[nodiscard]] bool deserializeObject( T& instance, const SerializeContext& context )
         {
             const TypeInfo* pTypeInfo = T::StaticType();
-            return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo, ctx );
+            return pTypeInfo != nullptr && deserializeObject( &instance, *pTypeInfo, context );
         }
 
         // ------------------------------------------------------------------------------
@@ -378,20 +378,20 @@ namespace sw
         // 8) 적응형 컴팩트 직렬화 (Presence Bitmask & Sparse Index)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 적응형 컴팩트 바이너리(Dense Bitmask 또는 Sparse Index)로 직렬화합니다. */
-        [[nodiscard]] bool serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] bool serializeCompactObject( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context = SerializeContext::getDefault() );
         /** @brief 아카이브에서 적응형 컴팩트 바이너리를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx = SerializeContext::getDefault() );
+        [[nodiscard]] bool deserializeCompactObject( void* pInstance, const TypeInfo& typeInfo, const SerializeContext& context = SerializeContext::getDefault() );
 
         template <typename T>
-        [[nodiscard]] bool serializeCompactObject( const T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
+        [[nodiscard]] bool serializeCompactObject( const T& instance, const SerializeContext& context = SerializeContext::getDefault() )
         {
-            return serializeCompactObject( &instance, *T::StaticType(), ctx );
+            return serializeCompactObject( &instance, *T::StaticType(), context );
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeCompactObject( T& instance, const SerializeContext& ctx = SerializeContext::getDefault() )
+        [[nodiscard]] bool deserializeCompactObject( T& instance, const SerializeContext& context = SerializeContext::getDefault() )
         {
-            return deserializeCompactObject( &instance, *T::StaticType(), ctx );
+            return deserializeCompactObject( &instance, *T::StaticType(), context );
         }
 
     private:

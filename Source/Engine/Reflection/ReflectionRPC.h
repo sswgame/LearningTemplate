@@ -50,7 +50,7 @@ namespace sw
         // 2) pack · invoke — FunctionInfo 파라미터 타입, TypeRegistry::invokeMethod
         // ------------------------------------------------------------------------------
         /** @brief typeFqn 메서드의 인자를 봉투에 담습니다(매개변수 타입은 FunctionInfo 에서 얻습니다). */
-        static bool packCall( RPCEnvelope& out, const hashed_string& typeFqn, const hashed_string& methodName,
+        static bool packCall( RPCEnvelope& outEnvelope, const hashed_string& typeFqn, const hashed_string& methodName,
                               const TaskArgs& args );
 
         /**

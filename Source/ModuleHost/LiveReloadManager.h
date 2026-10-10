@@ -218,24 +218,24 @@ namespace sw
         };
 
         /** @brief 섀도 복사본을 LoadLibrary 합니다. */
-        [[nodiscard]] bool loadShadowCopyModule( ModuleContext& ctx );
+        [[nodiscard]] bool loadShadowCopyModule( ModuleContext& context );
         /** @brief 섀도 복사본을 만들고 로드만 합니다(아직 교체하지 않습니다). */
-        bool prepareShadowCopy( ModuleContext& ctx, PreparedShadow& out );
+        bool prepareShadowCopy( ModuleContext& context, PreparedShadow& outShadow );
         /** @brief 섀도 핸들로 교체하고 콜백을 부릅니다. */
-        bool commitShadowCopy( ModuleContext& ctx, PreparedShadow& prepared );
-        /** @brief @p ctx 의 리로드 직후 콜백을 `ModuleCallGuard` 안에서 부릅니다. 결함이 나면 그래프를 막고 결함 콜백을 부릅니다. */
-        void invokeAfterReload( ModuleContext& ctx );
+        bool commitShadowCopy( ModuleContext& context, PreparedShadow& prepared );
+        /** @brief @p context 의 리로드 직후 콜백을 `ModuleCallGuard` 안에서 부릅니다. 결함이 나면 그래프를 막고 결함 콜백을 부릅니다. */
+        void invokeAfterReload( ModuleContext& context );
         /** @brief prepare 가 실패하면 새 이미지를 버리고, 바꿔 둔 SONAME 을 commit 된 이름으로 되돌립니다. */
-        void abortShadowCopy( ModuleContext& ctx, PreparedShadow& prepared );
+        void abortShadowCopy( ModuleContext& context, PreparedShadow& prepared );
         /**
          * @brief (리눅스) 섀도 복사본의 SONAME 을 세대 이름으로, 의존 모듈의 NEEDED 를 그 의존의 **지금** 이름으로 바꿉니다.
          * @details 복사본은 원본의 SONAME 을 그대로 들고 있어서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지에 새 모듈을 묶습니다
          *          (연쇄 리로드의 prepare 에서는 그것이 아직 내려가지 않은 옛 이미지입니다). 이름을 세대마다 고유하게 하면 NEEDED 가
          *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(`ModuleImagePatch`).
          */
-        void rewriteShadowSonames( ModuleContext& ctx, vector<uint8>& inoutBytes );
+        void rewriteShadowSonames( ModuleContext& context, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */
-        void unloadModule( ModuleContext& ctx );
+        void unloadModule( ModuleContext& context );
         /** @brief 교체된 옛 이미지를 지연 언로드 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
         void deferImageUnload( string_view moduleName, void* pHandle, string_view tempPath, bool bKeepMapped );
         /**

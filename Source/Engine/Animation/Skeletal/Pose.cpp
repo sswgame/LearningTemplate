@@ -149,7 +149,7 @@ namespace sw
         outListModel.resize( boneCount );
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
         {
-            const float4x4 local       = float4x4::createTrs( _listTranslation[boneIndex], _listRotation[boneIndex], _listScale[boneIndex] );
+            const float4x4 local       = float4x4::makeTrs( _listTranslation[boneIndex], _listRotation[boneIndex], _listScale[boneIndex] );
             const int32    parentIndex = listParent[boneIndex];
             // 행벡터 규약: 자식의 로컬이 먼저, 부모의 모델 공간이 나중이다.
             if ( 0 <= parentIndex && static_cast<uint32>( parentIndex ) < boneIndex )

@@ -113,13 +113,13 @@ namespace sw
          *          언리얼 스킨 캐시가 가득 차면 일반 경로로 되돌리는 것과 같습니다.
          * @param listMesh 소유하지 않는 포인터들. 스냅샷 배치가 소유를 들고 있는 동안에만 유효합니다.
          */
-        void build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
+        void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMesh );
         /**
          * @brief 모프 메시와 스킨드 메시를 함께 받아 풀을 맞춥니다. 모프가 앞 구간, 스킨 인스턴스가 뒤 구간입니다.
          * @details 세 가지를 따로 봅니다 — 모프 집합이 바뀌면 모프 레스트를, 스킨 원본(스킨 데이터 번호) 집합이 바뀌면 원본 레스트 · 가중치를,
          *          스킨 인스턴스 목록이 바뀌면 인스턴스 표만 다시 올립니다. 결과 버퍼는 컴퓨트가 프레임마다 채우므로 배치가 바뀌어도 올릴 것이 없습니다.
          */
-        void build( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
+        void rebuild( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh );
         /**
          * @brief 이번 프레임 팔레트를 풀의 스킨 인스턴스 순서로 올립니다. 팔레트가 없는 메시는 단위 행렬(바인드 포즈)입니다.
          * @param pListRow 스냅샷의 팔레트 행(본 하나 = float4 셋). nullptr 이면 모두 단위입니다.
@@ -172,7 +172,7 @@ namespace sw
         /// @brief 풀 상한(결과 정점 수)입니다. 언리얼의 `r.SkinCache.SceneMemoryLimitInMB` 자리이며, 여기서는 고정값입니다.
         static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
 
-        /** @brief 목록이 지난 build 와 같은지(포인터 · 내용 번호) 봅니다. */
+        /** @brief 목록이 지난 rebuild 와 같은지(포인터 · 내용 번호) 봅니다. */
         static bool isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentID );
         /** @brief 스킨 원본 집합을 맞춥니다. 바뀌었으면 레스트 · 가중치를 다시 올립니다. */
         void rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh );
@@ -185,10 +185,10 @@ namespace sw
         RHIStructuredBufferSlot _skinPalette;
         /// @brief 메시 → 결과 시작 오프셋(정점 단위)입니다.
         unordered_map<const Mesh*, uint32> _mapBase;
-        /// @brief 지난 build 의 모프 메시 목록 · 내용 번호입니다. 포인터가 같아도 내용 번호가 다르면 다른 메시다.
+        /// @brief 지난 rebuild 의 모프 메시 목록 · 내용 번호입니다. 포인터가 같아도 내용 번호가 다르면 다른 메시다.
         vector<const Mesh*> _listBuiltMorph;
         vector<uint64>      _listBuiltMorphContentID;
-        /// @brief 지난 build 의 스킨 메시 목록 · 내용 번호입니다(받은 그대로 — 풀에 못 든 것도).
+        /// @brief 지난 rebuild 의 스킨 메시 목록 · 내용 번호입니다(받은 그대로 — 풀에 못 든 것도).
         vector<const Mesh*> _listBuiltSkin;
         vector<uint64>      _listBuiltSkinContentID;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서) · 그 표 줄입니다.

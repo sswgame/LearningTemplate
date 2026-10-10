@@ -2,7 +2,15 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다.
 
-## 지금 상태 (2026-10-10 저녁 — 5 차 b 검증은 끝났고, 그 뒤 구조 정리 묶음은 컴파일과 린트만 봤다)
+## 지금 상태 (2026-10-10 밤 — 이름 정리 기계적 치환까지 들어갔다)
+
+- 이름 정리 기계적 치환(2026-10-10 밤): [이름 정리](NamingPass.md) "끝난 것" 절. 두 린트의 "개명 예정" 59 줄을 고치고 표에서 지웠다(`CheckOutParameterNames` 예외 표는 비었다).
+  약어 통일이 남긴 문자열 `UiDocument` · `ExpectUi` 도 `UIDocument` · `ExpectUI` 로 고쳤다(UI 시험 셋이 지고 있었다).
+  검증: Debug 경고 0, `ctest --preset Ninja-Debug-lint` 62/62, Debug `-L nogpu` 44/44, Shipping 빌드 · `-L hostgpu` 5/5, `Ninja-Debug-Shooter3D` · `Ninja-Debug-NileCity` 빌드,
+  네 백엔드 × Empty · 에디터 · Shooter3D · NileCity(종료 코드 0, `[Error]` 0), `App --cook-shaders` [Error] 0.
+  **지는 것(main 기준선에서도 같다 — 이 묶음과 무관)**: Debug `-L hostgpu` 의 `AppScenarioTest.EditorScenariosPassOnEveryBackend` — `sceneviewgameview` · `viewportgrid` · `viewportpick` 이
+  네 백엔드 모두 exit 10(`no editor widget is marked 'sceneView.canvas'`, `Editor.GridStep has no value`). 씬 뷰 캔버스가 안 그려진다 — 에디터 소단위 병합 뒤 회귀로 보인다. 다음 세션 맨 먼저.
+  Shipping 빌드 경고 하나도 기준선부터 있다: `ScreenshotPathUtil.cpp(20)` unused member function `runScreenshot`.
 
 - Scripts 정리(2026-10-10, 파이썬만 — 빌드 없음): 게이트 공용 글 읽기를 `Scripts/common/CodeText.py` 로(include 줄 · 층 폴더 · `IncludeResolver` ·
   `lineOf` · `blankMatch`), `CheckCodeConventions` 를 `Scripts/lint/conventions/` 일곱 모듈로, 죽은 정의 일곱 개 삭제. 린트 묶음 117.7 → 67.1 s,
@@ -44,14 +52,11 @@
 작업 방식은 [작업 흐름](../11_Workflow.md). 이 세션에서 쓴 규칙: 도우미 여럿은 워크트리(`py -3 -m Scripts worktree-make <이름>`)에서만 일하고 push 하지 않으며, 적용 담당 하나가 `git merge --ff-only wt/<이름>` 으로 `main` 에 넣고 push 한다.
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`.slot1~3`)을 쓴다. 사용 한도에 두 번 걸렸으니 도우미는 셋 안팎으로 둔다. **검증은 마지막에 한 번**(사용자 결정), 큰 이동 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
-1. **약어 철자 통일 — 끝났다(2026-10-10).** 등록부의 약어 32개를 모두 대문자로 바꾸고 강제한다(`kEnforced` = `kAcronym`, 규칙은 AGENTS.md "Function names").
-   검증은 Debug 풀 빌드(all + AllTests) 경고 0 · `App --cook-shaders` [Error] 0 · `ctest --preset Ninja-Debug-lint` 62/62 까지다.
-   **검증 대기(아직 돌리지 않았다)**: Debug `-L nogpu` · `-L hostgpu`, Shipping 빌드 · `-L hostgpu`, 게임별 프리셋(`Ninja-Debug-<Game>`), 서버 프리셋 `-L nogpu`,
-   네 백엔드 × 대표 셋 실행, 리눅스(CI — `IOUring` · `Epoll` · `LinuxAsyncFileIOBackend` 등 리눅스 전용 파일은 이름이 바뀐 뒤 한 번도 컴파일되지 않았다).
-   바뀐 것 가운데 실행으로 볼 것: 모듈 이름(`GF_TacticsSRPG` · `GF_SQLStore` · `GF_Server_SQLStore` · `GF_NetMMO` · `GF_WitcherRPG` · `GF_ClassicJRPG`),
-   모듈 내보내기 심볼(`exportGameAPI` · `exportEditorAPI`) · 엔진 서비스(`getAsyncFileIO`) — 모든 모듈을 같이 다시 지어야 한다, 시험 실행 파일 `EditorUITest`,
-   데이터에 든 이름(UI 문서 루트 `UIDocument` · 레이어 `HUD` · 리그 노드 `TwoBoneIK` · 프리팹 이름 · 리플렉션 키 `_meshID` 등), 셰이더 이름 `g_*VisibleInstanceIDs`.
-2. **이름 정리 — 기계적 치환.** 계획 [이름 정리](NamingPass.md)(린트와 어휘표는 들어갔다). 예외 표 66줄(`CheckFunctionVocabulary` · `CheckOutParameterNames`)의 "개명 예정"을 줄여 간다: `build*` 38종, `MatrixMath::create*` 21개 → `make*`, `ctx` → `context`(257곳), bare `out`(19), `Attr` → `Attribute`, 부정형 불린 → 긍정형(데이터 재작성), `_time` 스윕 비율 → `_hitFraction`, 부작용 숨은 함수 개명, `AssetManager::getMaterialManager`/`getTextureManager`. 큰 이름: `ResourceUtil` → `ResourcePaths` + `ResourceIO`(313), `EditorUtil` 경로 → `EditorPaths`. 약어 통일은 끝났으니 바로 할 수 있다.
+1. **에디터 씬 뷰 회귀(맨 먼저).** 위 "지는 것" — `AppScenarioTest.EditorScenariosPassOnEveryBackend` 의 씬 뷰 시나리오 셋. main 기준선에서도 진다.
+   약어 통일 뒤 남은 검증 대기: 서버 프리셋 `-L nogpu`, 리눅스(CI — `IOUring` · `Epoll` · `LinuxAsyncFileIOBackend` 등 리눅스 전용 파일은 이름이 바뀐 뒤 한 번도 컴파일되지 않았다), 핫 리로드.
+   (Debug `-L nogpu`, Shipping `-L hostgpu`, Shooter3D · NileCity 프리셋, 네 백엔드 × 대표 셋은 이름 정리 묶음에서 통과했다.)
+2. **이름 정리 — 남은 것.** 계획 [이름 정리](NamingPass.md) "채택 — 남은 치환"(바이트 · 시간 단위 접미사 건별 판단, 파일 이름과 타입이 어긋난 곳, `Misc = 0`)과
+   큰 이름 `ResourceUtil` → `ResourcePaths` + `ResourceIO`(313), `EditorUtil` 경로 → `EditorPaths`(사용자 결정 5-4 로 정해졌다).
 3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 0 단계 기준선(Debug, Ryzen 7 6800H, 3회 중앙값: 풀 131.5 s · 헤더 하나 수정 131.6 s · `.cpp` 하나 7.2 s · 워크트리 콜드 142.9 s)과 상위 헤더 20개(헤더 파싱 비율 82 %, 1위 `Engine/pch.h`, 2위 `CoreMinimal.h`)는 `docs/08_Verification.md` 빌드 속도 절과 `BuildSpeed.md` 에 있다. **헤더 하나를 고치면 풀 빌드와 같은 시간이 든다**(Core 기본 헤더 — 헤더 다이어트의 근거). Release 는 풀 한 번(192 s)만 재었다. Jolt 래퍼 TU 는 자기 PCH 를 가진 OBJECT 라이브러리로 11.1 → 5.5 s 로 줄었다(6 단계 끝). 헤더 다이어트 → PCH 공유(타깃마다 86개) → 개발 증분(PCH)과 콜드(PCH 없이 유니티 + sccache) 구성 분리 → 유니티 확대. 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 4. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`(Engine · Editor 용은 Core 나 Engine 쪽으로 올리는 선결 과제), 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
 5. **엔진 분할 1단계 이후.** 계획 [엔진 분할](EnginePartition.md): 작은 고리(`Automation ↔ UI`, `Text` 티어 불일치), `Object` 코어와 기능 컴포넌트 가르기(`GameObject/` 코어가 `Graphics` 15 · `Physics` 10 · `Navigation` 5 · `Audio` 2 를 include), `OBJECT` 라이브러리 분할 → (빌드 속도 측정으로 이득이 확인되면) DLL 승격, 다중 월드. 에디터는 `GameFramework` 를, 서버 실행 파일도 `GameFramework` 를 include 할 수 없다 — 그래서 에디터 · 서버가 쓰는 폴더는 Engine 에 남는다.

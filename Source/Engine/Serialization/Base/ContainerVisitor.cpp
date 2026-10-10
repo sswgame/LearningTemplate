@@ -18,14 +18,14 @@ namespace sw
             static constexpr size_t kMaxReserveElementCount = MathUtil::kMaxUInt16;
 
             static void writeElement( const void* pElement, const NestedContainerInfo& nested, const ContainerElementPlan& plan, const ContainerSlot slot,
-                                      IContainerWriter& writer, const SerializeContext& ctx )
+                                      IContainerWriter& writer, const SerializeContext& context )
             {
                 switch ( plan._kind )
                 {
                     case ContainerElementKind::NestedContainer:
                     {
                         writer.beginNestedContainer( slot );
-                        ContainerVisitor::write( pElement, *nested._elementNested, writer, ctx );
+                        ContainerVisitor::write( pElement, *nested._elementNested, writer, context );
                         writer.endNestedContainer( slot );
                         break;
                     }
@@ -49,12 +49,12 @@ namespace sw
             }
 
             [[nodiscard]] static ContainerReadResult readElementValue( void* pElement, const NestedContainerInfo& nested, const ContainerElementPlan& plan,
-                                                                       const ContainerSlot slot, IContainerReader& reader, const SerializeContext& ctx )
+                                                                       const ContainerSlot slot, IContainerReader& reader, const SerializeContext& context )
             {
                 switch ( plan._kind )
                 {
                     case ContainerElementKind::NestedContainer:
-                        return ContainerVisitor::read( pElement, *nested._elementNested, reader, ctx );
+                        return ContainerVisitor::read( pElement, *nested._elementNested, reader, context );
                     case ContainerElementKind::OwnedPointer:
                         return ContainerReadResult::StreamBroken; // 시퀀스만 — readSequence 가 먼저 가른다(맵 값 계획은 이 모양을 만들지 않는다)
                     case ContainerElementKind::ValueObject:
@@ -66,14 +66,14 @@ namespace sw
             }
 
             [[nodiscard]] static ContainerReadResult readSequence( void* pContainer, const ISequenceContainerWrapper& sequence, const NestedContainerInfo& nested,
-                                                                   IContainerReader& reader, const SerializeContext& ctx )
+                                                                   IContainerReader& reader, const SerializeContext& context )
             {
                 size_t                    countHint{ 0 };
                 const ContainerReadResult opened = reader.beginSequence( countHint );
                 if ( opened != ContainerReadResult::Read )
                     return opened;
 
-                const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::SequenceElement, ctx );
+                const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::SequenceElement, context );
                 if ( plan._kind == ContainerElementKind::OwnedPointer )
                 {
                     return reader.forEachElement( SW_DELEGATE_LAMBDA( ContainerElementVisitDelegate, [&reader]( size_t ) -> ContainerReadResult
@@ -94,7 +94,7 @@ namespace sw
                     const bool          bAppended = sequence.appendElement( pContainer, elementIndex, SW_DELEGATE_LAMBDA( ElementFillDelegate, [&]( void* pElement ) -> bool
                              {
                         bFilled = true;
-                        result  = readElementValue( pElement, nested, plan, ContainerSlot::SequenceElement, reader, ctx );
+                        result  = readElementValue( pElement, nested, plan, ContainerSlot::SequenceElement, reader, context );
                         return result == ContainerReadResult::Read;
                     } ) );
                     // 넣을 칸이 없었다(고정 배열보다 원소가 많다) — 형식이 그 원소를 지나간다.
@@ -105,7 +105,7 @@ namespace sw
             }
 
             [[nodiscard]] static ContainerReadResult readMap( void* pContainer, const IMapContainerWrapper& map, const NestedContainerInfo& nested,
-                                                              IContainerReader& reader, const SerializeContext& ctx )
+                                                              IContainerReader& reader, const SerializeContext& context )
             {
                 size_t                    countHint{ 0 };
                 const ContainerReadResult opened = reader.beginMap( countHint );
@@ -113,7 +113,7 @@ namespace sw
                     return opened;
 
                 map.clear( pContainer );
-                const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::MapValue, ctx );
+                const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::MapValue, context );
                 vector<uint8>              keyBytes( map.getKeySize() );
                 vector<uint8>              valueBytes( map.getValueSize() );
                 return reader.forEachElement( SW_DELEGATE_LAMBDA( ContainerElementVisitDelegate, [&]( size_t ) -> ContainerReadResult
@@ -124,7 +124,7 @@ namespace sw
                     // 키를 못 읽어도 자리를 알면 값을 읽는다 — 바이너리는 값을 지나야 다음 항목 자리에 선다.
                     ContainerReadResult valueResult{ ContainerReadResult::StreamBroken };
                     if ( keyResult != ContainerReadResult::StreamBroken )
-                        valueResult = readElementValue( valueBytes.data(), nested, plan, ContainerSlot::MapValue, reader, ctx );
+                        valueResult = readElementValue( valueBytes.data(), nested, plan, ContainerSlot::MapValue, reader, context );
 
                     const bool bInsert = keyResult == ContainerReadResult::Read && valueResult == ContainerReadResult::Read;
                     if ( bInsert )
@@ -142,7 +142,7 @@ namespace sw
 
 namespace sw
 {
-    ContainerElementPlan ContainerElementPlan::make( const NestedContainerInfo& nested, const ContainerSlot slot, const SerializeContext& ctx )
+    ContainerElementPlan ContainerElementPlan::make( const NestedContainerInfo& nested, const ContainerSlot slot, const SerializeContext& context )
     {
         ContainerElementPlan plan{};
         if ( nested._elementNested != nullptr )
@@ -155,13 +155,13 @@ namespace sw
         }
         else
         {
-            plan._pElementType = SerializerUtil::findNestedObjectType( nested._elementTypeName, ctx );
+            plan._pElementType = SerializerUtil::findNestedObjectType( nested._elementTypeName, context );
             plan._kind         = ( plan._pElementType != nullptr ) ? ContainerElementKind::ValueObject : ContainerElementKind::Scalar;
         }
         return plan;
     }
 
-    void ContainerVisitor::write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& ctx )
+    void ContainerVisitor::write( const void* pContainer, const NestedContainerInfo& nested, IContainerWriter& writer, const SerializeContext& context )
     {
         if ( pContainer == nullptr || nested._wrapper == nullptr )
             return;
@@ -169,12 +169,12 @@ namespace sw
         const ISequenceContainerWrapper* pSequence = nested._wrapper->asSequence();
         if ( pSequence != nullptr )
         {
-            const ContainerElementPlan plan         = ContainerElementPlan::make( nested, ContainerSlot::SequenceElement, ctx );
+            const ContainerElementPlan plan         = ContainerElementPlan::make( nested, ContainerSlot::SequenceElement, context );
             const size_t               elementCount = pSequence->getSize( pContainer );
             writer.beginSequence( elementCount );
             for ( size_t elementIndex = 0; elementIndex < elementCount; ++elementIndex )
             {
-                ContainerVisitorInternal::writeElement( pSequence->getElementConst( pContainer, elementIndex ), nested, plan, ContainerSlot::SequenceElement, writer, ctx );
+                ContainerVisitorInternal::writeElement( pSequence->getElementConst( pContainer, elementIndex ), nested, plan, ContainerSlot::SequenceElement, writer, context );
             }
             writer.endSequence();
             return;
@@ -183,28 +183,28 @@ namespace sw
         const IMapContainerWrapper* pMap = nested._wrapper->asMap();
         if ( pMap == nullptr )
             return;
-        const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::MapValue, ctx );
+        const ContainerElementPlan plan = ContainerElementPlan::make( nested, ContainerSlot::MapValue, context );
         writer.beginMap( pMap->getSize( pContainer ) );
         pMap->forEach( pContainer, [&]( const void* pKey, const void* pValue )
         {
             writer.beginMapEntry( pKey, nested._keyTypeName );
-            ContainerVisitorInternal::writeElement( pValue, nested, plan, ContainerSlot::MapValue, writer, ctx );
+            ContainerVisitorInternal::writeElement( pValue, nested, plan, ContainerSlot::MapValue, writer, context );
             writer.endMapEntry();
         } );
         writer.endMap();
     }
 
-    ContainerReadResult ContainerVisitor::read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& ctx )
+    ContainerReadResult ContainerVisitor::read( void* pContainer, const NestedContainerInfo& nested, IContainerReader& reader, const SerializeContext& context )
     {
         if ( pContainer == nullptr || nested._wrapper == nullptr )
             return ContainerReadResult::StreamBroken;
 
         const ISequenceContainerWrapper* pSequence = nested._wrapper->asSequence();
         if ( pSequence != nullptr )
-            return ContainerVisitorInternal::readSequence( pContainer, *pSequence, nested, reader, ctx );
+            return ContainerVisitorInternal::readSequence( pContainer, *pSequence, nested, reader, context );
         const IMapContainerWrapper* pMap = nested._wrapper->asMap();
         if ( pMap != nullptr )
-            return ContainerVisitorInternal::readMap( pContainer, *pMap, nested, reader, ctx );
+            return ContainerVisitorInternal::readMap( pContainer, *pMap, nested, reader, context );
         return ContainerReadResult::StreamBroken;
     }
 

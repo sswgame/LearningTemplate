@@ -55,21 +55,21 @@ namespace sw
         return _psoCache.findLayout( pso );
     }
 
-    void FrameRenderer::registerInstanceBuffer( FramePassContext& ctx )
+    void FrameRenderer::registerInstanceBuffer( FramePassContext& context )
     {
         if ( _gpuScene.getInstanceBuffer() == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex )
             return;
         // 이름 "SwInstances" ↔ binding.hlsli 의 g_SwInstances / PassCB g_SwInstancesIndex (canonical 매칭).
-        ctx._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
-                                              _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
-        ctx._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
+        context._resourceRegistry.registerBuffer( passConstantNames()._swInstances,
+                                                  _gpuScene.getInstanceBuffer(), _gpuScene.getInstanceSrv() );
+        context._passValues.setUint( passConstantNames()._swInstanceCount, static_cast<uint32>( _gpuScene.getInstances().size() ) );
 
         // 배치 표. **패스당 한 번** 건다. 배치마다 다른 값(인스턴스 시작 · 모프 풀 시작 · 정점 풀 시작)이 모두 여기 있어
         // 드로우는 배치 번호만 실어 나른다. 그래서 같은 PSO 의 배치들을 멀티 드로우 하나로 낼 수 있다.
         if ( _gpuScene.getBatchInfoBuffer() != 0 && _gpuScene.getBatchInfoSrv() != kInvalidDescriptorIndex )
         {
-            ctx._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSrv() );
-            ctx._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swBatches, _gpuScene.getBatchInfoBuffer(), _gpuScene.getBatchInfoSrv() );
+            context._passValues.setUint( passConstantNames()._swBatchCount, _gpuScene.getIndirectCommandCount() );
         }
 
         // 모프 결과 풀. **패스당 한 번** 건다. 배치는 시작 오프셋을 배치 표에 싣는다(드로우 사이에
@@ -79,44 +79,44 @@ namespace sw
                                                                                       : _meshMorphPool.getMorphBuffer();
         if ( morphBuffer._buffer != 0 && morphBuffer._srv != kInvalidDescriptorIndex )
         {
-            ctx._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swMorphVertices, morphBuffer._buffer, morphBuffer._srv );
             // 진단(레스트를 그대로 물림)이면 레스트 버퍼는 모프 구간만 담는다 — 스킨 구간 번호는 범위 밖으로 걸러 입력 스트림을 쓴다.
             const uint32 morphElementCount = ( _bMorphBindsRest != SW_FALSE ) ? _meshMorphPool.getMorphVertexCount() : _meshMorphPool.getVertexCount();
-            ctx._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
+            context._passValues.setUint( passConstantNames()._swMorphVertexCount, morphElementCount );
         }
 
         // 정점 애니메이션(VAT) 표 — 패스당 한 번. 시계는 게임 스레드의 군중 시계(스냅샷)라 인스턴스 시각 오프셋과 더하면 CPU 의 클립 시각이다.
         const RHIStructuredBufferSlot& vertexAnimationBuffer = _vertexAnimationPool.getBuffer();
         if ( vertexAnimationBuffer._buffer != 0 && vertexAnimationBuffer._srv != kInvalidDescriptorIndex )
         {
-            ctx._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
-            ctx._passValues.setUint( passConstantNames()._swVertexAnimationCount, _vertexAnimationPool.getElementCount() );
-            ctx._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swVertexAnimation, vertexAnimationBuffer._buffer, vertexAnimationBuffer._srv );
+            context._passValues.setUint( passConstantNames()._swVertexAnimationCount, _vertexAnimationPool.getElementCount() );
+            context._passValues.setFloat( passConstantNames()._swVertexAnimationTime, _gpuScene.getVertexAnimationTime() );
         }
 
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIDsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        const GPUCullViewResources& cullView = _gpuScene.getCullView( ctx._cullViewIndex );
+        const GPUCullViewResources& cullView = _gpuScene.getCullView( context._cullViewIndex );
         if ( _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
              cullView._visibleInstances._srv != kInvalidDescriptorIndex )
         {
-            ctx._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
-                                                  cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
+            context._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIDs,
+                                                      cullView._visibleInstances._buffer, cullView._visibleInstances._srv );
         }
     }
 
-    void FrameRenderer::registerLightBuffer( FramePassContext& ctx )
+    void FrameRenderer::registerLightBuffer( FramePassContext& context )
     {
         // 개수는 버퍼가 없어도 채운다. 셰이더는 0 이면 PassCB 키라이트로 폴백한다.
-        ctx._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
+        context._passValues.setUint( passConstantNames()._swLightCount, _lightBuffer.isBindable() ? _lightBuffer.getCount() : 0u );
         if ( _lightBuffer.isBindable() == false )
             return;
         const RHIStructuredBufferSlot& buffer = _lightBuffer.getBuffer();
-        ctx._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
+        context._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
     }
 
-    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
+    void FrameRenderer::registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
@@ -125,15 +125,15 @@ namespace sw
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
             // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
-            const ShaderBindingLayout* pLayout = ( ctx._lastLayoutPSO == pso ) ? ctx._pLastLayout : layoutForPSO( pso );
+            const ShaderBindingLayout* pLayout = ( context._lastLayoutPSO == pso ) ? context._pLastLayout : layoutForPSO( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
             const auto it = _mapMaterialFallback.find( pSlot->_elementStride );
             if ( it != _mapMaterialFallback.end() && it->second.isValid() && it->second._srv != kInvalidDescriptorIndex )
             {
-                ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
-                ctx._drawMaterialCount = 1u;
+                context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, it->second._buffer, it->second._srv );
+                context._drawMaterialCount = 1u;
             }
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
             {
@@ -144,63 +144,63 @@ namespace sw
             }
             return;
         }
-        ctx._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSrv );
-        ctx._drawMaterialCount = batch._materialCount;
+        context._resourceRegistry.registerBuffer( passConstantNames()._swMaterials, batch._materialBuffer, batch._materialSrv );
+        context._drawMaterialCount = batch._materialCount;
     }
 
-    void FrameRenderer::bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+    void FrameRenderer::bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
                                      const RHIDescriptorIndex* pMaterialTexSrv )
     {
-        if ( _pDevice == nullptr || ctx._pCmd == nullptr )
+        if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
-        ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
+        context._passValues.setMatrix( passConstantNames()._world, context._world );
 
         // 같은 PSO 로 연속 드로우하는 것이 흔한 패턴이라, 패스 로컬 1칸 캐시로
         // layoutForPSO() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
-        if ( ctx._lastLayoutPSO != pso )
+        if ( context._lastLayoutPSO != pso )
         {
-            ctx._pLastLayout   = layoutForPSO( pso );
-            ctx._lastLayoutPSO = pso;
+            context._pLastLayout   = layoutForPSO( pso );
+            context._lastLayoutPSO = pso;
         }
-        const ShaderBindingLayout* pLayout = ctx._pLastLayout;
+        const ShaderBindingLayout* pLayout = context._pLastLayout;
         if ( pLayout == nullptr || pLayout->isEmpty() )
             return; // 레이아웃을 못 얻었다(컴파일 실패 등). 조용히 건너뛴다
 
         // 배치마다 바뀌는 값은 **루트/푸시 상수**로 싣는다. 커맨드 리스트에 값이 그대로 들어가므로 드로우끼리
         // 덮어쓸 수 없다. 그래서 PassCB 는 패스당 하나면 충분하다(PassCB 에 넣으면 드로우마다 버퍼를 새로 잡아야
         // 한다). 언리얼의 드로우별 느슨한 파라미터와 같은 자리다.
-        const uint32 arrDrawRootConstant[] = { ctx._drawMaterialCount };
-        ctx._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
-                                             arrDrawRootConstant );
+        const uint32 arrDrawRootConstant[] = { context._drawMaterialCount };
+        context._pCmd->setGraphicsRootConstants( 0, static_cast<uint32>( sizeof( arrDrawRootConstant ) / sizeof( arrDrawRootConstant[0] ) ),
+                                                 arrDrawRootConstant );
 
-        const EngineConstantBufferSlot engineCb{ ctx._passCb, ctx._passCbIndex };
+        const EngineConstantBufferSlot engineCb{ context._passCb, context._passCbIndex };
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
         // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPSO 참고).
-        const uint32 valuesVersion   = ctx._passValues.getVersion();
-        const uint32 registryVersion = ctx._resourceRegistry.getVersion();
-        const bool   bUpToDate       = ( ctx._lastBindPSO == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
-                               ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
+        const uint32 valuesVersion   = context._passValues.getVersion();
+        const uint32 registryVersion = context._resourceRegistry.getVersion();
+        const bool   bUpToDate       = ( context._lastBindPSO == pso ) && ( context._lastCbBuffer == engineCb._buffer ) &&
+                               ( context._lastCbValuesVersion == valuesVersion ) && ( context._lastCbRegistryVersion == registryVersion );
 
-        ShaderParameterBinder::bindGraphics( *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
+        ShaderParameterBinder::bindGraphics( *context._pCmd, *pLayout, context._resourceRegistry, context._passValues,
                                              engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
 
-        ctx._lastBindPSO           = pso;
-        ctx._lastCbBuffer          = engineCb._buffer;
-        ctx._lastCbValuesVersion   = valuesVersion;
-        ctx._lastCbRegistryVersion = registryVersion;
+        context._lastBindPSO           = pso;
+        context._lastCbBuffer          = engineCb._buffer;
+        context._lastCbValuesVersion   = valuesVersion;
+        context._lastCbRegistryVersion = registryVersion;
     }
 
-    void FrameRenderer::drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
-        if ( _pDevice == nullptr || ctx._pCmd == nullptr )
+        if ( _pDevice == nullptr || context._pCmd == nullptr )
             return;
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGPUBatches( ctx, pso, cbIndex, bTransparentPass );
+            drawGPUBatches( context, pso, cbIndex, bTransparentPass );
             return;
         }
 
@@ -210,25 +210,25 @@ namespace sw
         // 네 백엔드가 모두 인다이렉트 드로우를 지원하고, 경로가 둘이면 새 기능(컬링 · 정렬 · 인스턴스 애니메이션)이
         // 한쪽에만 들어가 다른 쪽이 조용히 다른 그림을 낸다.
         if ( pso != 0 )
-            ctx._pCmd->setPipelineState( pso );
+            context._pCmd->setPipelineState( pso );
 
-        setIdentityWorld( ctx );
-        commitBindlessTextureBindings( ctx );
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
     }
 
-    void FrameRenderer::drawGPUBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
         (void)cbIndex;
-        if ( _pDevice == nullptr || ctx._pCmd == nullptr || _gpuScene.isUploaded() == false )
+        if ( _pDevice == nullptr || context._pCmd == nullptr || _gpuScene.isUploaded() == false )
             return;
 
         if ( pso != 0 )
-            ctx._pCmd->setPipelineState( pso );
+            context._pCmd->setPipelineState( pso );
 
-        setIdentityWorld( ctx );
-        commitBindlessTextureBindings( ctx );
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
 
         // 지금 커맨드 리스트에 걸려 있는 PSO. 배치마다 퍼뮤테이션이 다를 수 있으므로 **바뀔 때만** 다시 건다.
         RHIPipelineStateHandle boundPSO = pso;
@@ -236,7 +236,7 @@ namespace sw
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
         if ( bInstanced )
-            registerInstanceBuffer( ctx );
+            registerInstanceBuffer( context );
 
         const vector<GPUMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
@@ -271,7 +271,7 @@ namespace sw
         };
 
         // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
-        const RenderPassType passType      = ctx._passType;
+        const RenderPassType passType      = context._passType;
         auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GPUMeshBatch& head, const GPUMeshBatch& other ) -> bool
         {
             if ( other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false )
@@ -283,7 +283,7 @@ namespace sw
             return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
         };
 
-        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullViewIndex )._indirectArgs._buffer;
+        const RHIBufferHandle argsBuffer = _gpuScene.getCullView( context._cullViewIndex )._indirectArgs._buffer;
         // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
         const bool            bExtraView = isRenderingExtraView();
         const vector<uint32>* pOrder =
@@ -293,7 +293,7 @@ namespace sw
         const RHIBufferHandle slotStream =
             ( bExtraView && _pActiveView->_bUsesViewSlotStream == SW_TRUE ) ? _pActiveView->_instanceSlotStream : _gpuScene.getInstanceSlotStream();
         if ( slotStream != 0 )
-            ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
+            context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, slotStream, constant::kInstanceSlotStreamStride, 0 );
         RHIBufferHandle boundVertexBuffer{ 0 };
         uint32          drawCallCount{ 0 };
         uint32          orderIndex{ 0 };
@@ -322,7 +322,7 @@ namespace sw
             // 정점 풀 하나라 보통 패스당 한 번 걸린다. 풀 밖 메시(예산 초과)만 자기 버퍼를 건다.
             if ( head._vertexBuffer != boundVertexBuffer )
             {
-                ctx._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
+                context._pCmd->setVertexBuffer( 0, head._vertexBuffer, sizeof( RHIVertex ), 0 );
                 boundVertexBuffer = head._vertexBuffer;
             }
 
@@ -332,16 +332,16 @@ namespace sw
             const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head );
             if ( batchPSO != boundPSO && batchPSO != 0 )
             {
-                ctx._pCmd->setPipelineState( batchPSO );
+                context._pCmd->setPipelineState( batchPSO );
                 boundPSO = batchPSO;
             }
 
             // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
-            registerMaterialBuffer( ctx, head, batchPSO );
-            bindForDraw( ctx, batchPSO, head._materialCb, head._arrMaterialTexSrv );
+            registerMaterialBuffer( context, head, batchPSO );
+            bindForDraw( context, batchPSO, head._materialCb, head._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
-            ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
+            context._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );
             ++drawCallCount;
             orderIndex += groupCount;
         }
@@ -349,18 +349,18 @@ namespace sw
         _indirectDrawCallCount.fetch_add( drawCallCount, std::memory_order_relaxed );
     }
 
-    void FrameRenderer::drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
+    void FrameRenderer::drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex )
     {
         (void)cbIndex;
-        if ( ctx._pCmd == nullptr )
+        if ( context._pCmd == nullptr )
             return;
-        setIdentityWorld( ctx );
-        commitBindlessTextureBindings( ctx );
-        ctx._pCmd->setVertexBuffer( 0, 0, 0, 0 );
-        ctx._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
+        setIdentityWorld( context );
+        commitBindlessTextureBindings( context );
+        context._pCmd->setVertexBuffer( 0, 0, 0, 0 );
+        context._pCmd->setVertexBuffer( constant::kInstanceSlotStreamSlot, 0, 0, 0 );
         if ( pso != 0 )
-            ctx._pCmd->setPipelineState( pso );
-        bindForDraw( ctx, pso, kInvalidDescriptorIndex );
-        ctx._pCmd->draw( 3, 0 );
+            context._pCmd->setPipelineState( pso );
+        bindForDraw( context, pso, kInvalidDescriptorIndex );
+        context._pCmd->draw( 3, 0 );
     }
 } // namespace sw

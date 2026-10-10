@@ -32,7 +32,7 @@ namespace sw
          * @details 검증: 빈 · 겹친 노드 id, 모르는 종류, 모르는 매개변수 · 숫자가 아닌 숫자 매개변수, 배선의 모르는 노드 · 포트(출력 → 입력 방향),
          *          종류의 초기화가 거절한 매개변수, 지연(Delay)을 지나지 않는 고리. 등록부는 빌려 들고 회로보다 오래 살아야 합니다.
          */
-        [[nodiscard]] bool build( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError );
+        [[nodiscard]] bool populate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError );
         /** @brief 짓지 않고 검증만 합니다(로드 때 · 에디터 저장 때). */
         [[nodiscard]] static bool validate( const GimmickCircuitDef& def, const GimmickNodeRegistry& registry, vector<string>& outListError );
         void                      clear();

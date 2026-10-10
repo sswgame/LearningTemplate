@@ -99,9 +99,9 @@ namespace sw
 
         if ( expanded.contains( movingCenter ) )
         {
-            outHit._bHit     = true;
-            outHit._time     = 0.0f;
-            outHit._hitPoint = movingCenter;
+            outHit._bHit        = true;
+            outHit._hitFraction = 0.0f;
+            outHit._hitPoint    = movingCenter;
             // 이미 겹친 상태에서는 진입면이 없다. 밀어내는 방향으로 위를 준다.
             outHit._hitNormal = float3{ 0.0f, 1.0f, 0.0f };
             return true;
@@ -115,10 +115,10 @@ namespace sw
         if ( tNear < 0.0f || tNear > 1.0f )
             return false;
 
-        outHit._bHit      = true;
-        outHit._time      = tNear;
-        outHit._hitPoint  = movingCenter + displacement * tNear;
-        outHit._hitNormal = nearNormal;
+        outHit._bHit        = true;
+        outHit._hitFraction = tNear;
+        outHit._hitPoint    = movingCenter + displacement * tNear;
+        outHit._hitNormal   = nearNormal;
         return true;
     }
 
@@ -132,11 +132,11 @@ namespace sw
         const float32 distSqInitial   = toCenterInitial.getLengthSquared();
         if ( distSqInitial <= radius * radius )
         {
-            outHit._bHit      = true;
-            outHit._time      = 0.0f;
-            outHit._hitPoint  = initialClosest;
-            const float32 len = MathUtil::sqrt( distSqInitial );
-            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
+            outHit._bHit        = true;
+            outHit._hitFraction = 0.0f;
+            outHit._hitPoint    = initialClosest;
+            const float32 len   = MathUtil::sqrt( distSqInitial );
+            outHit._hitNormal   = len > MathUtil::kEpsilon ? float3{ toCenterInitial._x / len, toCenterInitial._y / len, toCenterInitial._z / len } : float3{ 0.0f, 1.0f, 0.0f };
             return true;
         }
 
@@ -164,11 +164,11 @@ namespace sw
 
         if ( distSqHit <= ( radius * radius + 0.01f ) )
         {
-            outHit._bHit      = true;
-            outHit._time      = tNear;
-            outHit._hitPoint  = closestOnBox;
-            const float32 len = MathUtil::sqrt( distSqHit );
-            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
+            outHit._bHit        = true;
+            outHit._hitFraction = tNear;
+            outHit._hitPoint    = closestOnBox;
+            const float32 len   = MathUtil::sqrt( distSqHit );
+            outHit._hitNormal   = len > MathUtil::kEpsilon ? float3{ toCenter._x / len, toCenter._y / len, toCenter._z / len } : nearNormal;
             return true;
         }
 
@@ -183,11 +183,11 @@ namespace sw
         const float32 edgeDistSq = diff.getLengthSquared();
         if ( edgeDistSq <= radius * radius && clampedProj <= 1.0f )
         {
-            outHit._bHit      = true;
-            outHit._time      = clampedProj;
-            outHit._hitPoint  = closestOnBox;
-            const float32 len = MathUtil::sqrt( edgeDistSq );
-            outHit._hitNormal = len > MathUtil::kEpsilon ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
+            outHit._bHit        = true;
+            outHit._hitFraction = clampedProj;
+            outHit._hitPoint    = closestOnBox;
+            const float32 len   = MathUtil::sqrt( edgeDistSq );
+            outHit._hitNormal   = len > MathUtil::kEpsilon ? float3{ diff._x / len, diff._y / len, diff._z / len } : nearNormal;
             return true;
         }
 

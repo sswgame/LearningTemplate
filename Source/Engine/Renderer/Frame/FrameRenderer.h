@@ -414,12 +414,12 @@ namespace sw
         /** @brief 이번 프레임의 클리어 기록을 비웁니다(프레임 시작). */
         void resetClearedAttachments();
         /**
-         * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 집어 ctx 에 붙입니다.
+         * @brief 이번 프레임의 패스 상수 버퍼 슬롯을 하나 집어 context 에 붙입니다.
          * @details 커맨드 기록은 지연이고 상수 버퍼 쓰기는 즉시라, 패스마다 별도 버퍼를
          *          써야 재생 시점에 각 패스의 상수가 살아남습니다. 커서는 원자적이라
          *          병렬 기록에서도 안전합니다. 슬롯이 모자라면 마지막 슬롯을 공유합니다.
          */
-        void acquirePassCb( FramePassContext& ctx );
+        void acquirePassCb( FramePassContext& context );
         /** @brief 프레임 시작마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
         void resetPassCbRing();
         /** @brief 주 시점의 일시 텍스처를 확보합니다(출력 크기 × 사각형 × 해상도 배율). 출력 크기는 덮어쓴 크기, 없으면 백버퍼입니다. */
@@ -474,13 +474,13 @@ namespace sw
          * @details 백버퍼 출력은 캡처에 그린 뒤 백버퍼로 복사하지만(백버퍼는 읽을 핸들이 없다), RT 출력은 그 RT 가 곧 읽을 수 있는 텍스처라
          *          그린 뒤 복사한다 — RT 에 그린 그림이 에디터 게임 뷰에 그대로 나가야 하므로 대상을 캡처로 바꿔치지 않는다.
          */
-        void copyOutputToPresentCapture( const FramePassContext& ctx, const PresentTarget& target );
+        void copyOutputToPresentCapture( const FramePassContext& context, const PresentTarget& target );
         /** @brief 일시 텍스처를 해제합니다. */
         void releaseTransientResources();
         /** @brief 그래프 패스 콜백을 한 번 바인딩합니다. */
         void bindPassCallbacks();
         /** @brief RenderGraph 패스 실행 콜백입니다. */
-        void onGraphPassExecute( const RenderGraphPassContext& ctx );
+        void onGraphPassExecute( const RenderGraphPassContext& context );
 
         /**
          * @brief 레벨을 기록하기 **직전에**(직렬 경로에서는 패스마다) 그 레벨이 만질 자원의 배리어를 미리 발행합니다.
@@ -491,22 +491,22 @@ namespace sw
          *          이렇게 하면 패스 콜백은 이미 맞는 상태를 보게 되어 기록 중에 리소스 상태를 바꾸지
          *          않습니다. 주의: 배리어를 병렬 기록 스레드가 정하게 하면 중복 배리어 · 레이아웃 불일치가 생깁니다.
          */
-        void onGraphLevelPrologue( const RenderGraphLevelContext& ctx );
+        void onGraphLevelPrologue( const RenderGraphLevelContext& context );
         /** @brief 패스 타입에 맞는 실행을 합니다. */
-        void executePass( FramePassContext& ctx, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
+        void executePass( FramePassContext& context, RenderPassType passType, string_view passName, const hashed_string& depthAttachment,
                           const RenderGraphPassDesc* pPassDesc );
         /**
          * @brief XML 이 선언한 입력을 **역할 이름으로** 모두 겁니다. 풀스크린 패스 공통입니다.
          * @details 역할은 로드 시점에 해석돼 있습니다(`_listResolvedInput`). 여기서 거는 것과 검증이 대조한 것이 같은 목록이라
          *          "선언은 했는데 안 걸리는 입력" 이 생길 자리가 없습니다. 쇼 플래그로 끈 역할은 건너뜁니다.
          */
-        void registerDeclaredInputs( FramePassContext& ctx, const RenderGraphPassDesc& passDesc );
+        void registerDeclaredInputs( FramePassContext& context, const RenderGraphPassDesc& passDesc );
         /** @brief 역할의 셰이더 이름(intern 된 hashed_string)입니다. */
         const hashed_string& inputRoleName( RenderPassInputRole role ) const;
         /** @brief 패스 상수 값(PassConstantValues)을 채웁니다. 업로드 · 바인딩은 ShaderParameterBinder 가 합니다. */
-        void updatePassConstants( FramePassContext& ctx );
+        void updatePassConstants( FramePassContext& context );
         /** @brief 지금 그리는 뷰에 따라 다른 패스 상수(외곽선 텍셀 크기 · 패스 플래그 — 후처리 끄기)를 채웁니다. */
-        void applyViewPassConstants( FramePassContext& ctx );
+        void applyViewPassConstants( FramePassContext& context );
 
         /**
          * @brief 이번 프레임의 주광 값입니다. 패킷이 실어 주면 그 값, 아니면 기본값입니다.
@@ -521,66 +521,66 @@ namespace sw
             uint8    _bHasShadowViewProj{ SW_FALSE };
         };
         /** @brief 카메라에서 뷰 · 투영을 적용합니다. */
-        void applyViewFromCamera( FramePassContext& ctx, CameraComponent* pCamera );
+        void applyViewFromCamera( FramePassContext& context, CameraComponent* pCamera );
         /**
          * @brief 뷰-투영과 **그 역행렬**을 함께 적용합니다.
          * @details 둘을 따로 채우면 언젠가 한쪽만 갱신됩니다. 그러면 디퍼드가 복원한 월드 위치가
          *          지난 프레임의 카메라를 가리키고, 증상은 "빛이 한 프레임 늦게 따라온다" 입니다.
          */
-        void applyViewProjection( FramePassContext& ctx, const float4x4& viewProj );
+        void applyViewProjection( FramePassContext& context, const float4x4& viewProj );
         /** @brief 키라이트 뷰-투영 행렬을 만듭니다. */
-        void buildLightViewProj( const FramePassContext& ctx, float4x4& outMat ) const;
+        void computeLightViewProj( const FramePassContext& context, float4x4& outMat ) const;
         /** @brief 카메라 뷰-투영 행렬을 만듭니다. */
-        void buildViewProj( float4x4& outMat ) const;
+        void computeViewProj( float4x4& outMat ) const;
         /** @brief 월드 행렬을 항등으로 둡니다. */
-        void setIdentityWorld( FramePassContext& ctx );
+        void setIdentityWorld( FramePassContext& context );
         /** @brief 드로우 직전에 리플렉션 기반 바인딩을 합니다(PassCB/MaterialCB/텍스처/인스턴스 버퍼). */
-        void bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
+        void bindForDraw( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
                           const RHIDescriptorIndex* pMaterialTexSrv = nullptr );
         /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr 입니다. */
         const ShaderBindingLayout* layoutForPSO( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 핸들에 매핑합니다. */
         void registerPSOLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
-        void registerInstanceBuffer( FramePassContext& ctx );
+        void registerInstanceBuffer( FramePassContext& context );
         /**
          * @brief 씬 라이트 구조버퍼를 "SwLights" 로 등록합니다. **모든 패스**에 겁니다.
          * @details 인스턴스 버퍼와 달리 지오메트리 패스 전용이 아닙니다. 디퍼드 조명은 풀스크린
          *          패스라 `registerInstanceBuffer` 를 타지 않는데, 라이트는 바로 거기서 필요합니다.
          */
-        void registerLightBuffer( FramePassContext& ctx );
+        void registerLightBuffer( FramePassContext& context );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 로 등록합니다. */
-        void registerMaterialBuffer( FramePassContext& ctx, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
+        void registerMaterialBuffer( FramePassContext& context, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
         /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
-        void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawSceneMeshes( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
-        void drawGPUBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        void drawGPUBatches( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
-        void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
+        void drawFullscreen( FramePassContext& context, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
         /** @brief 뷰의 풀에 일시 텍스처를 할당합니다. */
         void allocateTransient( TransientAttachmentPool& pool, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
                                 uint32 resolutionDivisor = 1 );
         /** @brief 컬러(+깊이) 패스를 시작합니다. 열지 못하면 false 이고, 그때는 그리거나 닫지 않습니다(`beginColorPassMrt`). */
-        bool beginColorPass( FramePassContext& ctx, string_view colorName, string_view depthName, const float4& clearColor,
+        bool beginColorPass( FramePassContext& context, string_view colorName, string_view depthName, const float4& clearColor,
                              RHIRenderPassLoadOp colorLoad, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief MRT 컬러 패스를 시작합니다.
          * @return 열었으면 true. 컬러 타깃 이름 중 이번 프레임에 없는 것이 있으면 **열지 않고** false 를 돌려줍니다(오류는 한 번 남깁니다) —
          *         없는 첨부의 핸들 0 은 백버퍼라, 그대로 열면 패스가 화면에 그립니다.
          */
-        bool beginColorPassMrt( FramePassContext& ctx, const string_view* pColorNames, const float4* pTargetClearColor,
+        bool beginColorPassMrt( FramePassContext& context, const string_view* pColorNames, const float4* pTargetClearColor,
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
-        void beginDepthOnlyPass( FramePassContext& ctx, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
+        void beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief 일시 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다(bindless SRV 자동 매칭).
          * @param canonicalName **미리 intern 된** 이름. 문자열을 받으면 패스마다 다시 intern 하게 됩니다.
          *        attachmentNames() 의 캐시를 넘기십시오.
          */
-        void registerPassTexture( FramePassContext& ctx, const hashed_string& canonicalName, string_view attachmentName );
+        void registerPassTexture( FramePassContext& context, const hashed_string& canonicalName, string_view attachmentName );
         /** @brief bindless 텍스처 바인딩을 커밋합니다(PassConstantValues 갱신 + 에뮬 백엔드 폴백 바인딩). */
-        void commitBindlessTextureBindings( FramePassContext& ctx );
+        void commitBindlessTextureBindings( FramePassContext& context );
 
         // ------------------------------------------------------------------------------
         // 5) 커맨드 리스트 · 그래프 제출
@@ -678,7 +678,7 @@ namespace sw
          */
         RHIPipelineStateHandle findOutputPSO( RenderPassType passType, RHIFormat targetFormat );
         /** @brief 주 출력에 그리는 패스(Present · Canvas)가 그릴 수 있는 대상 포맷(백버퍼 · 오프스크린 · 캡처)의 PSO 를 셋업에서 미리 만듭니다. */
-        void buildOutputPSOVariants();
+        void createOutputPSOVariants();
 
     private:
         IRHIDevice* _pDevice;
@@ -710,9 +710,9 @@ namespace sw
          * @brief 프레임 단위 패스 상태입니다(직렬 경로에서 쓰고, 병렬 패스의 시드가 됩니다).
          * @details 병렬 기록에서는 패스마다 이것을 복사해 각자의 커맨드 리스트 · 상수 버퍼를 붙입니다.
          */
-        FramePassContext _frameCtx;
+        FramePassContext _frameContext;
         /**
-         * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameCtx` 를 **대입**해 씁니다(용량이 남아 힙을 만지지 않습니다).
+         * @brief 패스 슬롯별 컨텍스트입니다. 프레임마다 `_frameContext` 를 **대입**해 씁니다(용량이 남아 힙을 만지지 않습니다).
          * @details 패스마다 지역 복사본을 만들면 상수 값 목록 · 레지스트리 맵이 프레임마다 패스 수만큼 새로
          *          자랍니다. 크기는 병렬 기록 **전**(`submitGraph`)에 맞춥니다. 기록 중에 늘리면 워커끼리 경합합니다.
          *          마지막 칸은 이름을 못 찾은 패스의 몫입니다.

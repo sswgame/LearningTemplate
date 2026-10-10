@@ -135,18 +135,18 @@ namespace sw
         return BinarySerializer::deserialize( pOut, info, _bytes.data(), _bytes.size() );
     }
 
-    void registerReflectAnyHandlers( SerializeContext& ctx )
+    void registerReflectAnyHandlers( SerializeContext& context )
     {
         const hashed_string typeName( "sw::ReflectAny" );
-        ctx.registerBinaryHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
-                                   SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
-        ctx.registerTextHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
-                                 SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
-        ctx.registerBinaryHandler( hashed_string( "ReflectAny" ),
-                                   SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
-                                   SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
-        ctx.registerTextHandler( hashed_string( "ReflectAny" ),
-                                 SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
-                                 SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
+        context.registerBinaryHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
+                                       SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
+        context.registerTextHandler( typeName, SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
+                                     SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
+        context.registerBinaryHandler( hashed_string( "ReflectAny" ),
+                                       SW_DELEGATE_FUNCTION( SerializeContext::BinaryWriteFn, ReflectAnyInternal::writeReflectAnyBinary ),
+                                       SW_DELEGATE_FUNCTION( SerializeContext::BinaryReadFn, ReflectAnyInternal::readReflectAnyBinary ) );
+        context.registerTextHandler( hashed_string( "ReflectAny" ),
+                                     SW_DELEGATE_FUNCTION( SerializeContext::TextWriteFn, ReflectAnyInternal::writeReflectAnyText ),
+                                     SW_DELEGATE_FUNCTION( SerializeContext::TextReadFn, ReflectAnyInternal::readReflectAnyText ) );
     }
 } // namespace sw

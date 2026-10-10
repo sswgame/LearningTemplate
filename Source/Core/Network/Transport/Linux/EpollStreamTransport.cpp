@@ -58,9 +58,9 @@ namespace sw
                 native.sin_addr.s_addr = htonl( address._ipv4 );
                 return native;
             }
-            static void setNoDelay( int32 fd, bool bNoDelay )
+            static void setNoDelay( int32 fd, bool bTCPNoDelay )
             {
-                const int32 value = bNoDelay ? 1 : 0;
+                const int32 value = bTCPNoDelay ? 1 : 0;
                 (void)setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &value, sizeof( value ) );
             }
             static void closeAbortive( int32 fd )
@@ -375,7 +375,7 @@ namespace sw
                     closeFdLocked( connection, StreamCloseReason::ConnectFailed, true );
                     return;
                 }
-                Internal::setNoDelay( connection._fd, _settings._bNoDelay == SW_TRUE );
+                Internal::setNoDelay( connection._fd, _settings._bTCPNoDelay == SW_TRUE );
                 connection._state                  = EpollConnectionState::Open;
                 connection._lastReceiveNanoseconds = MonotonicClock::nowNanoseconds();
                 handle                             = StreamConnectionHandle::make( index, connection._generation );
@@ -482,7 +482,7 @@ namespace sw
                     Internal::closeAbortive( fd );
                     continue;
                 }
-                Internal::setNoDelay( fd, _settings._bNoDelay == SW_TRUE );
+                Internal::setNoDelay( fd, _settings._bTCPNoDelay == SW_TRUE );
                 EpollConnection*             pConnection = nullptr;
                 const NetAddress             address     = Internal::makeNetAddress( remote );
                 const StreamConnectionHandle handle      = allocateConnection( fd, address, true, EpollConnectionState::Open, pConnection );

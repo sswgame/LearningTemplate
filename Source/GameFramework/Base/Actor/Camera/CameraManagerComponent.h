@@ -46,7 +46,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
         /** @brief 뷰 타깃을 @p blend 로 바꿉니다. 같은 타깃이면 아무것도 하지 않습니다. */
-        void setViewTarget( const GameObjectHandle& target, const BlendCurveSpec& blend );
+        void setViewTarget( const GameObjectHandle& target, const BlendCurveDef& blend );
         /** @brief 뷰 타깃을 기본 블렌드로 바꿉니다. */
         void                    setViewTarget( const GameObjectHandle& target ) { setViewTarget( target, _defaultBlend ); }
         const GameObjectHandle& getViewTarget() const { return _viewTarget; }
@@ -79,7 +79,7 @@ namespace sw
         PROPERTY( Category = "Camera", DisplayName = "View Target", Tooltip = "Object whose camera this player looks through" )
         GameObjectHandle _viewTarget;
         PROPERTY( Category = "Camera", DisplayName = "Default Blend", Tooltip = "Blend used by setViewTarget without an explicit blend" )
-        BlendCurveSpec _defaultBlend;
+        BlendCurveDef _defaultBlend;
         PROPERTY( Category = "Camera", DisplayName = "Local Player", Tooltip = "Local player index this manager serves" )
         uint32 _localPlayerIndex;
         PROPERTY( Category = "Camera", DisplayName = "Cycle Action", Tooltip = "InputMap action that cycles the view target through cameras of Cycle Role (empty: none)" )

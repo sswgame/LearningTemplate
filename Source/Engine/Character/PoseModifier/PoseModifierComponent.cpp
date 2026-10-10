@@ -559,7 +559,7 @@ namespace sw
                     }
                     else if ( shape._type == PhysicsShapeType3D::Capsule )
                     {
-                        const float3 axis = float3::transform( float3{ 0.0f, shape._halfHeight, 0.0f }, quaternion::createFromYawPitchRoll( shape._localRotation ) );
+                        const float3 axis = float3::transform( float3{ 0.0f, shape._halfHeight, 0.0f }, quaternion::makeFromYawPitchRoll( shape._localRotation ) );
                         collider._shape   = RigSpringColliderShape::Capsule;
                         collider._pointA  = shape._localPosition + axis;
                         collider._pointB  = shape._localPosition - axis;

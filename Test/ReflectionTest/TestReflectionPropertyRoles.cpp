@@ -33,9 +33,9 @@ namespace
 
     sw::SerializeContext makeSaveContext()
     {
-        sw::SerializeContext ctx = sw::SerializeContext::deriveFromDefault();
-        ctx.setSaveGameOnly( true );
-        return ctx;
+        sw::SerializeContext context = sw::SerializeContext::deriveFromDefault();
+        context.setSaveGameOnly( true );
+        return context;
     }
 } // namespace
 
@@ -159,7 +159,7 @@ SW_TEST_CASE( ReflectionPropertyRoleTest, InterpBlendsNumbersVectorsAndRotations
     SW_EXPECT_NEAR_EQUAL( -4.0f, actor._offset._z, 1e-5f );
 
     const sw::quaternion rotationFrom = sw::quaternion::Identity;
-    const sw::quaternion rotationTo   = sw::quaternion::createFromYawPitchRoll( sw::float3( 1.0f, 0.0f, 0.0f ) );
+    const sw::quaternion rotationTo   = sw::quaternion::makeFromYawPitchRoll( sw::float3( 1.0f, 0.0f, 0.0f ) );
     SW_ASSERT_TRUE( sw::PropertyRoleUtil::applyInterpolated( getRoleProperty( "_rotation" ), &actor, &rotationFrom, &rotationTo, 1.0f ) );
     SW_EXPECT_NEAR_EQUAL( rotationTo._w, actor._rotation._w, 1e-4f );
 

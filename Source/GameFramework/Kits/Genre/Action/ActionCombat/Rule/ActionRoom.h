@@ -226,14 +226,14 @@ namespace sw
         int32 findOrAddMonsterDef( const hashed_string& monsterID );
         /** @brief 플레이어 공격을 시도합니다. */
         void tryPlayerAttack( const ActionRoomFrameInput& input );
-        /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p out 에 더합니다. */
-        void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& out );
+        /** @brief 액터를 갱신합니다. 적이 쏜 횟수를 @p outResult 에 더합니다. */
+        void updateActors( float32 deltaTime, float32 playerX, float32 playerY, ActionRoomFrameResult& outResult );
         /** @brief 투사체를 갱신합니다. */
         void updateProjectiles( float32 deltaTime );
         /** @brief 플레이어 피격을 처리합니다. */
-        void resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& out );
+        void resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& outResult );
         /** @brief 클리어 상태를 갱신합니다. 이 프레임에 클리어했으면 룸 이벤트를 냅니다. */
-        void refreshCleared( ActionRoomFrameResult& out );
+        void refreshCleared( ActionRoomFrameResult& outResult );
         /** @brief 전투를 시작합니다 — 룸을 비우고 종류를 정한 뒤 게이트가 닫혔음을 알립니다. 적 스폰은 부른 쪽이 한다. */
         void startFight( ActionRoomKind kind );
         /** @brief 클리어 게이트가 바뀌었음을 알립니다(`ClearGateStateChangedEvent`). */
