@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/TagID.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Config/GameConfig.h"
@@ -443,7 +443,7 @@ SW_TEST_CASE( SceneTest, PrefabGuidRoundtripAndResolve )
     node._name              = "HeroInstance";
     node._fileId            = 2;
     node._prefab            = "prefabs/old_hero.prefab.xml";
-    const sw::Uuid heroGuid = sw::Uuid::generate();
+    const sw::UUID heroGuid = sw::UUID::generate();
     node._prefabGuid        = heroGuid.toString();
     doc._listSceneObjectNode.push_back( node );
 

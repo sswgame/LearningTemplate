@@ -311,7 +311,7 @@ namespace sw
 
             if ( node._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                const Uuid guid = engine::getAssetManager().getAssetDatabase().ensureMeta( node._prefab );
+                const UUID guid = engine::getAssetManager().getAssetDatabase().ensureMeta( node._prefab );
                 if ( guid.isNull() == false )
                     node._prefabGuid = guid.toString();
             }

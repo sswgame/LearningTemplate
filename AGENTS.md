@@ -99,7 +99,7 @@ verbs below (`BannedVerb`), abbreviations in function names (`Abbreviation`: `At
 predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`) and bare getters (`BareGetter`).
 Declarations that predate a check sit in the gate's `mapExemption` (key `<Rule>:<HeaderStem>::<function>`, the reason
 "개명 예정 <new name>" or "도메인 용어"; `CheckOutParameterNames.py` does the same for bare `out`); a new declaration is never added there unless the verb is
-the domain's own term (`Uuid::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
+the domain's own term (`UUID::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
 reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,

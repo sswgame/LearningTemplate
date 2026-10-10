@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct UuidInternal
+        struct UUIDInternal
         {
             static int32 hexNibble( utf8 c )
             {
@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    Uuid Uuid::generate()
+    UUID UUID::generate()
     {
         // 난수는 운영체제에서 곧바로 받는다(std::random_device — Windows 는 RtlGenRandom, 리눅스는 getrandom). 32 비트 씨앗 하나로
         // 시작한 mt19937_64 에서 뽑으면 서로 다른 실행이 같은 씨앗을 뽑을 때 **같은 GUID 열**이 다시 나온다(씨앗이 2^32 가지뿐이라 편집기를 수만
@@ -37,7 +37,7 @@ namespace sw
         // FGuid::NewGuid 도 OS 의 GUID 를 쓴다. random_device 는 스레드 안전이 약속되지 않아 스레드마다 둔다.
         thread_local std::random_device t_randomDevice;
 
-        Uuid uuid{};
+        UUID uuid{};
         for ( uint32 wordIndex = 0; wordIndex < 4; ++wordIndex )
         {
             const uint32 randomWord = static_cast<uint32>( t_randomDevice() );
@@ -51,14 +51,14 @@ namespace sw
         return uuid;
     }
 
-    bool Uuid::tryParse( string_view text, Uuid& outUuid )
+    bool UUID::tryParse( string_view text, UUID& outUUID )
     {
         if ( text.size() != 36 )
             return false;
         if ( text[8] != '-' || text[13] != '-' || text[18] != '-' || text[23] != '-' )
             return false;
 
-        Uuid   uuid{};
+        UUID   uuid{};
         uint32 byteIndex{ 0 };
         for ( size_t charIndex = 0; charIndex < text.size(); ++charIndex )
         {
@@ -66,8 +66,8 @@ namespace sw
                 continue;
             if ( charIndex + 1 >= text.size() )
                 return false;
-            const int32 hi = UuidInternal::hexNibble( text[charIndex] );
-            const int32 lo = UuidInternal::hexNibble( text[charIndex + 1] );
+            const int32 hi = UUIDInternal::hexNibble( text[charIndex] );
+            const int32 lo = UUIDInternal::hexNibble( text[charIndex + 1] );
             if ( hi < 0 || lo < 0 || byteIndex >= 16 )
                 return false;
             uuid._arrBytes[byteIndex++] = static_cast<uint8>( ( hi << 4 ) | lo );
@@ -75,11 +75,11 @@ namespace sw
         }
         if ( byteIndex != 16 )
             return false;
-        outUuid = uuid;
+        outUUID = uuid;
         return true;
     }
 
-    string Uuid::toString() const
+    string UUID::toString() const
     {
         static constexpr utf8 kArrHex[] = "0123456789abcdef";
         string                out;
@@ -95,7 +95,7 @@ namespace sw
         return out;
     }
 
-    bool Uuid::isNull() const
+    bool UUID::isNull() const
     {
         for ( uint8 byteVal : _arrBytes )
         {
@@ -105,9 +105,9 @@ namespace sw
         return true;
     }
 
-    bool Uuid::operator==( const Uuid& other ) const { return Memory::compare( _arrBytes, other._arrBytes, sizeof( _arrBytes ) ) == 0; }
+    bool UUID::operator==( const UUID& other ) const { return Memory::compare( _arrBytes, other._arrBytes, sizeof( _arrBytes ) ) == 0; }
 
-    bool Uuid::operator<( const Uuid& other ) const
+    bool UUID::operator<( const UUID& other ) const
     {
         return Memory::compare( _arrBytes, other._arrBytes, sizeof( _arrBytes ) ) < 0;
     }

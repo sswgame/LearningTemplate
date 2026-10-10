@@ -225,7 +225,7 @@ class CheckFunctionVocabularyGate(LintGate):
         # BannedVerb
         "BannedVerb:FrameArenaAllocator::construct": "도메인 용어 — STL 할당자 계약(allocator_traits::construct)과 같은 이름",
         "BannedVerb:ReflectionContainers::constructEmpty": "도메인 용어 — 주어진 메모리에 빈 컨테이너를 배치 생성(C++ 객체 수명 시작)",
-        "BannedVerb:Uuid::generate": "도메인 용어 — UUID 생성(RFC 9562)",
+        "BannedVerb:UUID::generate": "도메인 용어 — UUID 생성(RFC 9562)",
         "BannedVerb:RunMap::generate": "도메인 용어 — 절차적 생성(PCG)",
         "BannedVerb:SurfaceBvh::build": "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)",
         "BannedVerb:ThemePark::buildRide": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",

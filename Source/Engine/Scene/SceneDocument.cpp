@@ -5,7 +5,7 @@
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
@@ -44,8 +44,8 @@ namespace sw
                 if ( node._prefabGuid.empty() || engine::areEngineServicesBound() == false )
                     return;
 
-                Uuid guid{};
-                if ( Uuid::tryParse( node._prefabGuid, guid ) == false || guid.isNull() )
+                UUID guid{};
+                if ( UUID::tryParse( node._prefabGuid, guid ) == false || guid.isNull() )
                     return;
 
                 string resolved;
@@ -182,7 +182,7 @@ namespace sw
             }
             else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                Uuid prefabGuid{};
+                UUID prefabGuid{};
                 if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
                     sceneObjectNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
@@ -329,7 +329,7 @@ namespace sw
             string prefabGuid = entity._prefabGuid;
             if ( prefabGuid.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound() )
             {
-                Uuid resolvedGuid{};
+                UUID resolvedGuid{};
                 if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, resolvedGuid ) && resolvedGuid.isNull() == false )
                     prefabGuid = resolvedGuid.toString();
             }

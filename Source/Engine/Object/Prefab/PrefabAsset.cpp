@@ -4,7 +4,7 @@
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -35,9 +35,9 @@ namespace sw
                 if ( engine::areEngineServicesBound() == false )
                     return string{ assetReference };
 
-                Uuid   guid{};
+                UUID   guid{};
                 string resolvedPath{ assetReference };
-                if ( Uuid::tryParse( assetReference, guid ) == false || guid.isNull() )
+                if ( UUID::tryParse( assetReference, guid ) == false || guid.isNull() )
                     return resolvedPath;
 
                 string mappedPath;

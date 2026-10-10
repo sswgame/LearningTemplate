@@ -547,11 +547,11 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
     sw::AssetDatabase db;
     SW_EXPECT_EQUAL( 0u, db.getAssetCount() );
 
-    const sw::Uuid testGuid = sw::Uuid::generate();
+    const sw::UUID testGuid = sw::UUID::generate();
     db.registerMapping( "prefabs/player.prefab.xml", testGuid );
     SW_EXPECT_EQUAL( 1u, db.getAssetCount() );
 
-    sw::Uuid outGuid{};
+    sw::UUID outGuid{};
     SW_EXPECT_TRUE( db.tryGetGuid( "prefabs/player.prefab.xml", outGuid ) );
     SW_EXPECT_TRUE( testGuid == outGuid );
 
@@ -559,7 +559,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseThreadSafeLookupAndMapping )
     SW_EXPECT_TRUE( db.tryGetPath( testGuid, outPath ) );
     SW_EXPECT_STREQ( "prefabs/player.prefab.xml", outPath.c_str() );
 
-    sw::Uuid missingGuid{};
+    sw::UUID missingGuid{};
     SW_EXPECT_FALSE( db.tryGetGuid( "nonexistent.xml", missingGuid ) );
 
     db.clear();
@@ -577,7 +577,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseLookupNormalizesPath )
 {
     sw::AssetDatabase db;
 
-    const sw::Uuid guid = sw::Uuid::generate();
+    const sw::UUID guid = sw::UUID::generate();
     db.registerMapping( "Prefabs/Player.Prefab.XML", guid );
 
     // 등록은 정규화된 키로 들어간다.
@@ -588,7 +588,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseLookupNormalizesPath )
     // 그러므로 어떤 표기로 물어도 같은 것을 찾아야 한다.
     for ( const utf8* pQuery : { "prefabs/player.prefab.xml", "Prefabs/Player.Prefab.XML", "PREFABS\\PLAYER.PREFAB.XML" } )
     {
-        sw::Uuid found{};
+        sw::UUID found{};
         SW_EXPECT_TRUE_MSG( db.tryGetGuid( pQuery, found ), pQuery );
         SW_EXPECT_TRUE( guid == found );
     }
@@ -739,7 +739,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaNeverRewritesExistingMetaFile )
     const uint64     mtimeBefore = metaAbsPath.empty() ? 0 : sw::FileUtil::getFileTimestamp( metaAbsPath );
 
     sw::AssetDatabase db;
-    const sw::Uuid    guid = db.ensureMeta( pAsset );
+    const sw::UUID    guid = db.ensureMeta( pAsset );
 #if defined( SW_SHIPPING )
     SW_EXPECT_TRUE_MSG( guid.isNull(), "배포 빌드가 .meta 없이 GUID 를 지어냈다" );
 #else
@@ -812,7 +812,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
     SW_ASSERT_FALSE( absolute.empty() );
 
     sw::AssetDatabase db;
-    const sw::Uuid    fromAbsolute = db.ensureMeta( absolute );
+    const sw::UUID    fromAbsolute = db.ensureMeta( absolute );
 #if !defined( SW_SHIPPING )
     SW_ASSERT_FALSE( fromAbsolute.isNull() );
     sw::string path;
@@ -820,7 +820,7 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
     SW_EXPECT_STREQ( pAsset, path.c_str() );
 
     // id 로 물어도 같은 GUID 이고, 표에는 한 줄뿐이다.
-    sw::Uuid fromId{};
+    sw::UUID fromId{};
     SW_EXPECT_TRUE( db.tryGetGuid( pAsset, fromId ) );
     SW_EXPECT_TRUE( fromId == fromAbsolute );
     SW_EXPECT_TRUE( db.ensureMeta( pAsset ) == fromAbsolute );
@@ -837,8 +837,8 @@ SW_TEST_CASE( ResourceTest, EnsureMetaKeysAnAbsolutePathInsideTheRootByItsId )
 SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
 {
     sw::AssetDatabase db;
-    const sw::Uuid    guidA = sw::Uuid::generate();
-    const sw::Uuid    guidB = sw::Uuid::generate();
+    const sw::UUID    guidA = sw::UUID::generate();
+    const sw::UUID    guidB = sw::UUID::generate();
     const sw::string  text  = sw::string( "# header comment\r\n" ) + guidA.toString() + " game/empty/readme.md\r\n" + "\n" +
                             "not-a-guid engine/materials/x.material\n" + guidB.toString() + " engine/materials/defaultmaterial.material\n" +
                             guidB.toString() + "\n";
@@ -850,7 +850,7 @@ SW_TEST_CASE( ResourceTest, AssetRegistryTextRegistersMappings )
     SW_EXPECT_TRUE( db.tryGetPath( guidA, outPath ) );
     SW_EXPECT_STREQ( "game/empty/readme.md", outPath.c_str() );
 
-    sw::Uuid outGuid{};
+    sw::UUID outGuid{};
     SW_EXPECT_TRUE( db.tryGetGuid( "engine/materials/defaultmaterial.material", outGuid ) );
     SW_EXPECT_TRUE( outGuid == guidB );
 }
@@ -865,8 +865,8 @@ SW_TEST_CASE( ResourceTest, ShippedAssetRegistryNamesTheAssetWhereItsMetaLives )
 {
     const sw::string root   = test::makeTempDirectory( "registry_root" );
     const sw::string cooked = test::makeTempDirectory( "registry_cooked" );
-    const sw::Uuid   moved  = sw::Uuid::generate();
-    const sw::Uuid   stayed = sw::Uuid::generate();
+    const sw::UUID   moved  = sw::UUID::generate();
+    const sw::UUID   stayed = sw::UUID::generate();
     // 프리팹을 하위 폴더로 옮긴다 — .meta 는 따라오지만 안의 sourcePath 는 옛 경로 그대로다.
     const sw::string movedMeta = sw::FileUtil::joinPath( root, "game/demo/prefabs/moved/Crate.prefab.xml.meta" );
     sw::FileUtil::ensureParentDirectoryExists( movedMeta );
@@ -974,7 +974,7 @@ SW_TEST_CASE( ResourceTest, AssetDatabaseKnowsAssetsBeforeTheyAreLoaded )
         expected.pop_back();
     }
 
-    sw::Uuid   guid{};
+    sw::UUID   guid{};
     const bool bFound = sw::engine::getAssetManager().getAssetDatabase().tryGetGuid( pAsset, guid );
     SW_EXPECT_TRUE_MSG( bFound, "시작 시점에 toonshowcase_ground.material 의 GUID 를 모른다 — 레지스트리/.meta 스캔이 안 돌았다" );
     if ( bFound )

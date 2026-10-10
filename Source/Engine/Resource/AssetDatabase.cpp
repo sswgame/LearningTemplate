@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -84,9 +84,9 @@ namespace sw
         return result;
     }
 
-    Uuid AssetDatabase::ensureMeta( string_view relativePath, bool bImported )
+    UUID AssetDatabase::ensureMeta( string_view relativePath, bool bImported )
     {
-        Uuid   result{};
+        UUID   result{};
         string path = FileUtil::normalizePath( relativePath );
         if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return result;
@@ -131,7 +131,7 @@ namespace sw
                 // 에셋 파일이 없는 경로에는 식별자를 지어내지 않는다. 지어 쓰면 없는 머티리얼을 acquire 만 해도 Resource/ 에 고아 `.meta` 가 생긴다.
                 if ( ResourceUtil::getResourcePath( path ).empty() )
                     return result;
-                result = Uuid::generate();
+                result = UUID::generate();
                 if ( writeMetaFile( path, result, bImported ) == false )
                 {
                     result = {};
@@ -151,7 +151,7 @@ namespace sw
         return result;
     }
 
-    void AssetDatabase::registerMapping( string_view relativePath, const Uuid& guid )
+    void AssetDatabase::registerMapping( string_view relativePath, const UUID& guid )
     {
         string path = FileUtil::normalizePath( relativePath );
         if ( path.empty() || guid.isNull() )
@@ -168,7 +168,7 @@ namespace sw
         if ( path.empty() || FileUtil::hasExtension( path, path::kMetaExtension ) )
             return false;
 
-        Uuid guid{};
+        UUID guid{};
         if ( loadMetaFile( path, guid ) == false )
             return false;
 
@@ -178,7 +178,7 @@ namespace sw
         return true;
     }
 
-    bool AssetDatabase::tryGetGuid( string_view relativePath, Uuid& outGuid ) const
+    bool AssetDatabase::tryGetGuid( string_view relativePath, UUID& outGuid ) const
     {
         // **넣을 때 정규화했으면 찾을 때도 정규화해야 한다.** `ensureMeta` · `registerMapping` ·
         // `registerExisting` 은 모두 `normalizePath` 를 거친 키를 넣는다(소문자 · `/` 구분자). 받은 문자열을 그대로 찾으면
@@ -193,7 +193,7 @@ namespace sw
         return true;
     }
 
-    bool AssetDatabase::tryGetPath( const Uuid& guid, string& outPath ) const
+    bool AssetDatabase::tryGetPath( const UUID& guid, string& outPath ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         const auto                          it = _mapGuidToPath.find( guid );
@@ -302,11 +302,11 @@ namespace sw
             const string assetUnderDomain = normalizedMeta.substr( domainRoot.size() + 1, normalizedMeta.size() - domainRoot.size() - 1 - metaExtension.size() );
 
             KeyValueMap mapData;
-            Uuid        guid{};
+            UUID        guid{};
             const utf8* pGuidText = nullptr;
             if ( KeyValueFile::loadFile( metaAbs, mapData ) )
                 pGuidText = KeyValueFile::get( mapData, "guid", nullptr );
-            if ( pGuidText == nullptr || Uuid::tryParse( pGuidText, guid ) == false || guid.isNull() )
+            if ( pGuidText == nullptr || UUID::tryParse( pGuidText, guid ) == false || guid.isNull() )
             {
                 SW_LOG_ERROR( "Asset registry: '%#' has no readable guid - the asset is left out of the shipped registry", metaAbs );
                 ++outFailedCount;
@@ -381,8 +381,8 @@ namespace sw
             if ( space == string_view::npos || space + 1 >= line.size() )
                 continue;
 
-            Uuid guid{};
-            if ( Uuid::tryParse( string( line.substr( 0, space ) ).c_str(), guid ) == false || guid.isNull() )
+            UUID guid{};
+            if ( UUID::tryParse( string( line.substr( 0, space ) ).c_str(), guid ) == false || guid.isNull() )
                 continue;
 
             registerMapping( line.substr( space + 1 ), guid );
@@ -398,7 +398,7 @@ namespace sw
         _mapGuidToPath.clear();
     }
 
-    bool AssetDatabase::writeMetaFile( string_view relativePath, const Uuid& guid, bool bImported ) const
+    bool AssetDatabase::writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
         const string absMeta = AssetDatabaseInternal::absoluteForRelative( metaRel );
@@ -418,7 +418,7 @@ namespace sw
         return FileUtil::writeTextFile( absMeta, sb.view() );
     }
 
-    bool AssetDatabase::loadMetaFile( string_view relativePath, Uuid& outGuid, bool* pOutImported ) const
+    bool AssetDatabase::loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported ) const
     {
         const string metaRel = metaPathFor( relativePath );
         if ( ResourceUtil::hasResource( metaRel ) == false )
@@ -429,7 +429,7 @@ namespace sw
             return false;
 
         const utf8* pGuidStr = KeyValueFile::get( mapData, "guid", nullptr );
-        if ( pGuidStr == nullptr || Uuid::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull() )
+        if ( pGuidStr == nullptr || UUID::tryParse( pGuidStr, outGuid ) == false || outGuid.isNull() )
             return false;
         if ( pOutImported != nullptr )
             *pOutImported = KeyValueFile::getInt( mapData, "imported", 0 ) != 0;

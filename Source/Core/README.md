@@ -35,7 +35,7 @@ Engine은 같은 OBJECT를 링크해 Dev 구성에서 `Engine.dll` 로 Core의 �
 | `Predefined/` | Engine과 ReflectionParser가 함께 읽는 X-macro 목록 |
 
 폴더는 층을 이룹니다. 아래 층은 위 층을 include 하지 않습니다(`.cpp` 포함, `CheckCoreLayers.py` 가 막는다).
-`Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `Uuid` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time`
+`Common` · `Predefined` → `Concurrency` · `Math` → `Memory` → `Container` → `Delegate` · `UUID` → `Log` → `CommandLine` · `Compression` · `Process` · `String` · `Time`
 → `GlobalVariable` · `Task` → `File` · `Network` → `Module` → `Diagnostics` · `Event` → `LogSink` 순입니다. 표를 다시 계산하는 도구는 `Scripts/lint/report/RunCoreLayerGraph.py` 입니다.
 
 이 문서에서 기억할 개념은 네 가지입니다.

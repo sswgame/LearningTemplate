@@ -35,7 +35,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 건수만 줄이는 순서(`Concurrency` 를 `Memory` · `Container` 아래에 두는 쪽)를 그대로 쓰지 않고, 아래 순서로 확정한다. 남는 간선이 설계 문제 몇 개로 모이기 때문이다.
 
 **확정한 층(밑에서 위로, 같은 줄은 서로 include 하지 않는다):**
-`Common` · `Predefined` → `Math` · `Concurrency`(원시 동기화: `atomic` · `mutex` · `SpinLock` · `Futex` · 경합 검출 훅) → `Memory`(할당기와 메모리 태그) → `Container`(+ `StringUtil` · `formatString` · 동시 큐) · `Uuid` → `Delegate` → `Log`(로그 파사드와 매크로) → `Time` · `String`(이름 · 고정 문자열) · `Process`(프로세스 · 스레드 크래시 스택) · `Compression` · `CommandLine` → `Task` · `GlobalVariable` → `File` → `Module` → `Diagnostics`(호출 스택 · 크래시 · 메모리 프로파일러 · 교착 · 경합 보고) · `Event` → `LogSink`(기본 싱크와 출력 장치) → `Network`.
+`Common` · `Predefined` → `Math` · `Concurrency`(원시 동기화: `atomic` · `mutex` · `SpinLock` · `Futex` · 경합 검출 훅) → `Memory`(할당기와 메모리 태그) → `Container`(+ `StringUtil` · `formatString` · 동시 큐) · `UUID` → `Delegate` → `Log`(로그 파사드와 매크로) → `Time` · `String`(이름 · 고정 문자열) · `Process`(프로세스 · 스레드 크래시 스택) · `Compression` · `CommandLine` → `Task` · `GlobalVariable` → `File` → `Module` → `Diagnostics`(호출 스택 · 크래시 · 메모리 프로파일러 · 교착 · 경합 보고) · `Event` → `LogSink`(기본 싱크와 출력 장치) → `Network`.
 
 | 거꾸로 가는 방향 | 건수 | 예 | 풀이 |
 |---|---|---|---|

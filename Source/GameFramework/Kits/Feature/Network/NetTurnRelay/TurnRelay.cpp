@@ -7,7 +7,7 @@
 #include "Core/Network/BitStream.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/NetTypes.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 namespace sw
 {
@@ -17,10 +17,10 @@ namespace sw
     {
         struct TurnRelayInternal
         {
-            /** @brief 운영체제 난수 64 비트(`Uuid::generate`) — 실행마다 · 서버마다 다르고 미리 알 수 없다. */
+            /** @brief 운영체제 난수 64 비트(`UUID::generate`) — 실행마다 · 서버마다 다르고 미리 알 수 없다. */
             static uint64 makeRandomSeed()
             {
-                const Uuid uuid  = Uuid::generate();
+                const UUID uuid  = UUID::generate();
                 uint64     value = 0;
                 for ( const uint8 byte : uuid._arrBytes )
                 {

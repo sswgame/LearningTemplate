@@ -4,7 +4,7 @@
 #include "Core/Container/map.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include <shared_mutex>
 
@@ -50,10 +50,10 @@ namespace sw
          * @details 새로 만드는 것은 에셋 파일이 리소스 루트 안에 **있을 때만**입니다(개발 빌드). 저장하는 쪽은 파일을 쓴 뒤에 부릅니다.
          * @return GUID 입니다. 실패하거나, 에셋 파일이 없거나, 루트 밖이면 null UUID 입니다.
          */
-        Uuid ensureMeta( string_view relativePath, bool bImported = false );
+        UUID ensureMeta( string_view relativePath, bool bImported = false );
 
         /** @brief 상대 경로와 GUID 매핑을 직접 등록하거나 갱신합니다(테스트 · 커스텀 로더용). */
-        void registerMapping( string_view relativePath, const Uuid& guid );
+        void registerMapping( string_view relativePath, const UUID& guid );
 
         /** @brief .meta 가 있으면 로드하고 등록합니다. 없거나 무효면 false 입니다. */
         bool registerExisting( string_view relativePath );
@@ -65,10 +65,10 @@ namespace sw
          *          돌려주면 다른 스레드의 등록 하나가 원소를 통째로 옮깁니다(앞 키 자리에 하나만 끼어들어도
          *          그 뒤가 모두 밀립니다).
          */
-        [[nodiscard]] bool tryGetGuid( string_view relativePath, Uuid& outGuid ) const;
+        [[nodiscard]] bool tryGetGuid( string_view relativePath, UUID& outGuid ) const;
 
         /** @brief GUID 의 상대 경로를 찾아 복사합니다(스레드 안전). */
-        [[nodiscard]] bool tryGetPath( const Uuid& guid, string& outPath ) const;
+        [[nodiscard]] bool tryGetPath( const UUID& guid, string& outPath ) const;
 
         /** @brief 등록된 에셋 총 개수를 반환합니다. */
         size_t getAssetCount() const;
@@ -115,14 +115,14 @@ namespace sw
         // 4) .meta I/O
         // ------------------------------------------------------------------------------
         /** @brief .meta 파일을 씁니다. */
-        [[nodiscard]] bool writeMetaFile( string_view relativePath, const Uuid& guid, bool bImported ) const;
+        [[nodiscard]] bool writeMetaFile( string_view relativePath, const UUID& guid, bool bImported ) const;
 
         /** @brief .meta 파일을 로드합니다. */
-        [[nodiscard]] bool loadMetaFile( string_view relativePath, Uuid& outGuid, bool* pOutImported = nullptr ) const;
+        [[nodiscard]] bool loadMetaFile( string_view relativePath, UUID& outGuid, bool* pOutImported = nullptr ) const;
 
     private:
         mutable std::shared_mutex      _mutex;
-        map<string, Uuid, std::less<>> _mapPathToGuid;
-        unordered_map<Uuid, string>    _mapGuidToPath;
+        map<string, UUID, std::less<>> _mapPathToGuid;
+        unordered_map<UUID, string>    _mapGuidToPath;
     };
 } // namespace sw

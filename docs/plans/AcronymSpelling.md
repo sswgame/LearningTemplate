@@ -69,7 +69,7 @@
 | `GameFramework/Base/Online/Security/OpenSsl` | `OpenSSL` | `CheckThirdPartyIsolation` · 그 폴더의 CMake(이름은 서드파티 제품 이름 `OpenSSL` 을 따른다) |
 | `GameFramework/Base/UI/HUD` | `HUD` | include 경로 |
 | `Online/Account/Shared/Api` · `Online/Economy/Shared/Api` (키트) | `API` | include 경로 |
-| `Core/Uuid` · `Test/CoreTest/Uuid` | `UUID` | include 경로 |
+| `Core/UUID` · `Test/CoreTest/UUID` | `UUID` | include 경로 |
 | `Test/Qa` | `QA` | `Test/QA/Golden` · `Test/QA/Perf` · `Games.json` 을 읽는 `Scripts/qa/*.py` 의 경로, `Test/PythonTest/CMakeLists.txt` · `Test/README.md` · docs 의 `Test/Qa` 서른 곳 안팎 |
 | `Engine/Audio/Dsp` | `DSP` | include 경로 |
 | `Kits/Feature/Network/NetMmo` | `NetMMO` | 모듈 `GF_NetMMO` |

@@ -3,7 +3,7 @@
 """
 Core 폴더 층 검사 — `Source/Core/` 바로 아래 폴더가 곧 층이고, 아래 층은 위 층을 include 하지 못한다.
 
-  0 Common · Predefined → 1 Concurrency · Math → 2 Memory → 3 Container → 4 Delegate · Uuid → 5 Log
+  0 Common · Predefined → 1 Concurrency · Math → 2 Memory → 3 Container → 4 Delegate · UUID → 5 Log
   → 6 CommandLine · Compression · Process · String · Time → 7 GlobalVariable · Task → 8 File · Network → 9 Module
   → 10 Diagnostics · Event → 11 LogSink
 
@@ -44,7 +44,7 @@ _kCoreTier: dict[str, int] = {
     "Memory": 2,          # 할당기 · 메모리 태그 · 할당 기록기 인터페이스
     "Container": 3,       # 컨테이너 · 문자열 타입과 StringUtil · formatString · 동시 큐
     "Delegate": 4,
-    "Uuid": 4,
+    "UUID": 4,
     "Log": 5,             # 로그 매크로와 전역 창구(Logger) — 기본 싱크는 LogSink
     "CommandLine": 6,
     "Compression": 6,

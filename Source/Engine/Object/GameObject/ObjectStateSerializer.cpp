@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/Uuid/Uuid.h"
+#include "Core/UUID/UUID.h"
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -163,10 +163,10 @@ namespace sw
                 return pComp->getTypeInfo();
             }
 
-            /** @brief 프로세스 토큰을 새로 정합니다(`Uuid` 의 무작위 바이트 8 개). 0 은 "토큰 없음" 과 구분되지 않아 피합니다. */
+            /** @brief 프로세스 토큰을 새로 정합니다(`UUID` 의 무작위 바이트 8 개). 0 은 "토큰 없음" 과 구분되지 않아 피합니다. */
             static uint64 makeProcessToken()
             {
-                const Uuid uuid  = Uuid::generate();
+                const UUID uuid  = UUID::generate();
                 uint64     token = 0;
                 Memory::copy( &token, uuid._arrBytes, sizeof( token ) );
                 return ( token != 0 ) ? token : 1;
