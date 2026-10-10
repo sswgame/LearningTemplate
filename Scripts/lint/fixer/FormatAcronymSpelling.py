@@ -19,6 +19,9 @@ Scripts/lint/fixer/FormatAcronymSpelling.py
   py -3 Scripts/lint/fixer/FormatAcronymSpelling.py --apply-files [--acronym Ui] [--check]
         # 파일 이름 바꾸기(대소문자만 바뀌면 임시 이름을 거치는 두 단계 git mv) · 파일 이름을 적은 곳(include · CMake · 문서) 치환 ·
         #   데이터 파일(Resource · Config · Test 의 XML · JSON …)의 리플렉션 이름 치환. --check 면 하지 않고 목록만.
+  py -3 Scripts/lint/fixer/FormatAcronymSpelling.py --apply-text [--acronym Ui] [--strings] [--check]
+        # 코드모드 뒤에 — 주석 · 문서(.md) · CMake · 스크립트의 옛 이름을 새 철자로(새 철자가 코드에 있는 낱말만).
+        #   코드의 문자열 리터럴은 목록만 내고 --strings 일 때 고친다. 새 철자가 코드에 없는 낱말은 "남은 철자" 로 알린다.
   py -3 Scripts/lint/fixer/FormatAcronymSpelling.py --rename-folders [--acronym Rpg]
         # 폴더 · 모듈 이름 변경 표(사전 목록) — 옮기지 않는다
 
@@ -381,6 +384,96 @@ def applyFiles(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool) -
     return listLine
 
 
+# --- 글 적용(주석 · 문자열 · 문서) ---------------------------------------------------
+
+#: `--apply-text` 가 고치는 글 파일(코드 파일은 주석 · 문자열만). 셰이더는 이름을 문자열로 묶어 쓰므로 고치지 않는다(`--report` 가 알린다).
+_kProseSuffix: tuple[str, ...] = (".md", ".cmake", ".py", ".txt", ".natvis", ".yml", ".yaml", ".in", ".json", ".xml", ".ps1", ".toml")
+
+#: 옛 철자를 일부러 적는 파일 — 규칙 · 도구 · 시험 · 계획 문서.
+_kTextExcludedRel: frozenset[str] = frozenset({
+    "Scripts/lint/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
+    "Test/PythonTest/TestAcronymSpelling.py", "docs/plans/AcronymSpelling.md",
+})
+
+_kIncludeLineRe = re.compile(r"^[ \t]*#[ \t]*include\b")
+
+
+@dataclass
+class TextEdit:
+    """글 한 자리 — `kind` 는 `comment` · `string` · `prose` · `leftover`(새 철자가 코드에 없어 그대로 둔 것)."""
+
+    relPath: str
+    line: int
+    kind: str
+    old: str
+    new: str
+
+
+def rewriteText(relPath: str, text: str, mapRename: dict[str, str], setIdentifier: set[str], acronyms: tuple[str, ...],
+                bCode: bool, bStrings: bool) -> tuple[str, list[TextEdit]]:
+    """
+    글 하나의 옛 이름을 새 철자로 — (새 글, 자리 목록). 판정은 데이터와 같다(`dataTokenRename` — 코드에서 바뀌는 이름이거나 새 철자가 코드에 있는 이름).
+    코드 파일은 식별자(코드모드 몫)와 `#include` 줄(`--apply-files` 몫)을 건너뛰고 주석 · 문자열만 본다. 문자열은 `bStrings` 일 때만 고친다.
+    """
+    masked = registry.maskCode(text) if bCode else ""
+    commentBlanked = blankComments(text) if bCode else ""
+    listEdit: list[TextEdit] = []
+    pieces: list[str] = []
+    cursor = 0
+    for match in _kWordRe.finditer(text):
+        token = match.group(0)
+        if registry.respellName(token, acronyms) == token or registry.isExternalName(token):
+            continue
+        start = match.start()
+        kind = "prose"
+        if bCode:
+            if masked[start] != " " or _kIncludeLineRe.match(text, text.rfind("\n", 0, start) + 1):
+                continue
+            kind = "comment" if commentBlanked[start] == " " else "string"
+        newToken = dataTokenRename(token, mapRename, setIdentifier, acronyms)
+        line = text.count("\n", 0, start) + 1
+        if newToken == token:
+            listEdit.append(TextEdit(relPath, line, "leftover", token, registry.respellName(token, acronyms)))
+            continue
+        listEdit.append(TextEdit(relPath, line, kind, token, newToken))
+        if kind != "string" or bStrings:
+            pieces += [text[cursor:start], newToken]
+            cursor = match.end()
+    pieces.append(text[cursor:])
+    return "".join(pieces), listEdit
+
+
+def applyText(repositoryRoot: Path, acronyms: tuple[str, ...], bDryRun: bool, bStrings: bool) -> list[TextEdit]:
+    """주석 · 문서 · 스크립트의 옛 이름을 새 철자로. 바꾼(또는 남긴) 자리를 돌려준다."""
+    listScan = scanTree(repositoryRoot, acronyms)
+    mapRename, setIdentifier = buildDataRenameMap(listScan, acronyms)
+    listPath = collectRepositoryFiles(repositoryRoot, ("",), suffixes=(*registry.kCodeSuffix, *_kProseSuffix), fileNames=("CMakeLists.txt",),
+                                      excludedDirNames=kNotOurCodeDirNames)
+    listAll: list[TextEdit] = []
+    for path in listPath:
+        relPath = path.relative_to(repositoryRoot).as_posix()
+        if relPath in _kTextExcludedRel:
+            continue
+        text = readTextInternal(path)
+        if text is None:
+            continue
+        newText, listEdit = rewriteText(relPath, text, mapRename, setIdentifier, acronyms, path.suffix.lower() in registry.kCodeSuffix, bStrings)
+        listAll += listEdit
+        if not bDryRun and newText != text:
+            writeTextInternal(path, newText)
+    return listAll
+
+
+def formatTextEdits(listEdit: list[TextEdit], bStrings: bool) -> list[str]:
+    """요약 줄 + (고치지 않은) 문자열 · 남은 철자 목록."""
+    counter = Counter(edit.kind for edit in listEdit)
+    listLine = [f"주석 {counter['comment']} · 문서 {counter['prose']} · 문자열 {counter['string']}"
+                f"({'고침' if bStrings else '고치지 않음 — 아래 목록, --strings 로 고친다'}) · 남은 철자 {counter['leftover']}"]
+    for kind in (() if bStrings else ("string",)) + ("leftover",):
+        listLine += [f"{kind} {edit.relPath}:{edit.line}: {edit.old} → {edit.new}" for edit in listEdit if edit.kind == kind]
+    return listLine
+
+
 # --- 폴더 표 ---------------------------------------------------------------------
 
 #: 폴더 이름 표에서 빼는 뿌리 — `Resource/` 는 경로가 에셋 id 라 소문자이고, `Scripts/` 는 파이썬 패키지 이름 규칙이 따로 있다.
@@ -445,6 +538,9 @@ class FormatAcronymSpellingFixer(LintFixer):
         parser.add_argument("--out", type=Path, default=None, help="--report 의 상세 목록을 쓸 파일")
         parser.add_argument("--apply-files", action="store_true", help="파일 이름 · 파일 이름을 적은 곳 · 데이터 파일을 바꾼다")
         parser.add_argument("--rename-folders", action="store_true", help="폴더 · 모듈 이름 변경 표를 찍는다(옮기지 않는다)")
+        parser.add_argument("--apply-text", action="store_true",
+                            help="주석 · 문서 · 스크립트의 옛 이름을 새 철자로(코드모드 뒤에 돌린다). 문자열과 남은 철자는 목록만 — --check 면 고치지 않는다")
+        parser.add_argument("--strings", action="store_true", help="--apply-text 에서 코드의 문자열 리터럴도 고친다(목록을 먼저 본 뒤)")
         parser.add_argument("--no-external-scan", action="store_true", help="--report 에서 외부 헤더를 훑지 않는다(의심 목록을 내지 않는다)")
         parser.add_argument("--refresh-external", action="store_true", help="--report 의 외부 헤더 훑기를 담아 둔 파일을 다시 만든다")
         args = parser.parse_args(argv)
@@ -484,6 +580,11 @@ class FormatAcronymSpellingFixer(LintFixer):
                 print(f"[{self.tag}] {error}", file=sys.stderr)
                 return 2
             print("\n".join(f"[{self.tag}] {line}" for line in listLine) or f"[{self.tag}] 바꿀 파일이 없습니다")
+            return 0
+
+        if args.apply_text:
+            listEdit = applyText(repositoryRoot, acronyms, args.check, args.strings)
+            print("\n".join(f"[{self.tag}] {line}" for line in formatTextEdits(listEdit, args.strings)))
             return 0
 
         listFile = selectFixerTargetFiles(args, repositoryRoot, self.tag, self.fileKind)

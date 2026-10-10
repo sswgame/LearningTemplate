@@ -179,6 +179,27 @@ class AcronymApplyTest(unittest.TestCase):
         self.assertIn('type="UIThing" _ownerID="3"', (self.root / "Resource/game/probe/scene.xml").read_text(encoding="utf-8"))
 
 
+class AcronymTextTest(unittest.TestCase):
+    """`--apply-text` — 코드가 바뀐 뒤 주석 · 문서는 고치고, 문자열은 묻고, 코드에 없는 철자(남의 이름)는 남긴다."""
+
+    def testCommentsAndProseFollowTheCode(self) -> None:
+        mapRename: dict[str, str] = {}
+        setIdentifier = {"UIThing", "updateUI"}
+        code = '#include "UI/UiThing.h"\n// UiThing 을 쓴다\nconst char* k = "UiThing";\nint UIThingX = 0;\n'
+        newCode, listEdit = codemod.rewriteText("a.cpp", code, mapRename, setIdentifier, registry.kSelectable, bCode=True, bStrings=False)
+        self.assertIn('#include "UI/UiThing.h"', newCode)
+        self.assertIn("// UIThing 을 쓴다", newCode)
+        self.assertIn('"UiThing"', newCode)
+        self.assertEqual([edit.kind for edit in listEdit], ["comment", "string"])
+        newCode, _ = codemod.rewriteText("a.cpp", code, mapRename, setIdentifier, registry.kSelectable, bCode=True, bStrings=True)
+        self.assertIn('"UIThing"', newCode)
+
+        prose = "`UiThing` 과 `updateUi` 는 바뀌고, 언리얼의 `FJsonObject` 는 남는다.\n"
+        newProse, listEdit = codemod.rewriteText("a.md", prose, mapRename, setIdentifier, registry.kSelectable, bCode=False, bStrings=False)
+        self.assertEqual(newProse, "`UIThing` 과 `updateUI` 는 바뀌고, 언리얼의 `FJsonObject` 는 남는다.\n")
+        self.assertEqual([edit.old for edit in listEdit if edit.kind == "leftover"], ["FJsonObject"])
+
+
 class AcronymGateTest(unittest.TestCase):
     def runGateInternal(self, root: Path, *arguments: str) -> int:
         result = runProcess([sys.executable, kRepositoryRoot / "Scripts" / "lint" / "gate" / "CheckAcronymSpelling.py", "--root", root, *arguments])

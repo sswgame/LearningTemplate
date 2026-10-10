@@ -9,9 +9,11 @@
 
 규칙은 AGENTS.md "Function names" 에 적혀 있고 여기서 강제한다.
 
-  1) AcronymRun  — 두문자어는 camelCase 낱말 하나다. `initRhi`, `queryAabb`, `bindComputeUav`.
-                   대문자가 연달아 셋 이상이거나, 이름 **끝**이 대문자 둘 이상이면 잡는다.
-                   (타입 이름 `IRHIDevice` · `AABB` 는 대상이 아니다 — 여기는 camelCase 식별자만 본다.)
+  1) AcronymRun  — 함수 이름의 대문자 묶음은 등록부(`Scripts/lint/AcronymRegistry.py`)의 강제 약어 하나여야 한다
+                   (`updateUI` · `queryAABB` — 약어는 대문자, docs/plans/AcronymSpelling.md). 등록부에 없거나 아직 강제하지 않은
+                   약어의 대문자 묶음(`bindComputeUAV`)은 잡는다. 마지막 대문자가 다음 낱말의 첫 글자면 묶음에서 뺀다
+                   (`getHUDScale` 의 묶음은 `HUD`, `bindVector2DCallback` 의 `DC` 는 묶음이 아니다). 강제 약어를 Pascal 로 쓴 이름
+                   (`updateHud`)과 이어 붙은 약어(`RHIUI`)는 `CheckAcronymSpelling.py` 가 본다.
   2) BannedVerb  — 한 개념에 동사 하나. `setup`/`startup`/`cleanup` → `initialize`/`shutdown`,
                    `alloc` → `allocate`, `fetch`/`retrieve`/`lookup`/`obtain` → `get`/`find`,
                    `build`/`generate`/`construct` → `make`/`create`/`compute` (다시 채우면 `rebuild`/`populate`).
@@ -41,6 +43,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs, mapConcurrent  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
@@ -55,10 +58,23 @@ _kDeclRe = re.compile(
     r"[A-Za-z_][\w:<>,\t &*]*?[\t &*]([a-z]\w*)[\t ]*\("
 )
 
-# camelCase 이름 안의 대문자 달리기. 셋 이상은 어디서든, 둘은 이름 끝일 때 잡는다.
-#   - `getGLTextureName`("GLT") · `queryAABB`("AABB") · `updateUI`(끝의 "UI") → 위반
-#   - `bindVector2DCallback`("DC" = D + Callback) · `isVSyncEnabled`("VS" = V + Sync) → 위반 아님
-_kAcronymRunRe = re.compile(r"[A-Z]{3,}|[A-Z]{2,}$")
+# camelCase 이름 안의 대문자 묶음. 묶음 뒤가 소문자면 마지막 대문자는 다음 낱말의 첫 글자다(복수 `s` 는 낱말이 아니다).
+#   - `getGLTextureName`("GL") · `bindComputeUAV`("UAV") → 강제 약어가 아니라 위반
+#   - `updateHUD` · `getHUDScale`("HUD") → 강제 약어면 위반 아님
+#   - `bindVector2DCallback`("DC" = D + Callback) · `isVSyncEnabled`("VS" = V + Sync) → 묶음이 아님
+_kUpperRunRe = re.compile(r"[A-Z]{2,}")
+
+
+def findAcronymRunInternal(name: str) -> str | None:
+    """강제 약어 하나가 아닌 대문자 묶음(없으면 None)."""
+    for match in _kUpperRunRe.finditer(name):
+        run = match.group(0)
+        after = name[match.end():match.end() + 2]
+        if after[:1].islower() and not (after[:1] == "s" and not after[1:2].islower()):
+            run = run[:-1]
+        if len(run) >= 2 and run not in registry.kEnforced:
+            return run
+    return None
 
 # 금지 동사 → 써야 할 동사. 접두사 뒤에 대문자가 오거나 이름이 거기서 끝날 때만 본다
 # (`allocate` 는 `alloc` + 소문자라 걸리지 않고, `fetch_add` 는 `_` 라 걸리지 않는다).
@@ -141,10 +157,11 @@ def scanFileInternal(filePath: Path, repositoryRoot: Path) -> list[str]:
             continue
         seenName.add(name)
 
-        if _kAcronymRunRe.search(name):
+        acronymRun = findAcronymRunInternal(name)
+        if acronymRun is not None:
             violations.append(
-                f"{relativePath}:{lineIndex}: [AcronymRun] '{name}' — 두문자어는 camelCase 낱말 하나로 씁니다"
-                f" (예: RHI→Rhi, AABB→Aabb, UAV→Uav, API→Api, UI→Ui)."
+                f"{relativePath}:{lineIndex}: [AcronymRun] '{name}' — 대문자 묶음 '{acronymRun}' 은 강제 약어가 아닙니다."
+                f" 등록부(Scripts/lint/AcronymRegistry.py)의 kEnforced 에 오르기 전에는 camelCase 낱말 하나로 씁니다(UAV→Uav)."
             )
 
         verbMatch = _kBannedVerbRe.match(name)
@@ -257,8 +274,8 @@ class CheckFunctionVocabularyGate(LintGate):
     }
     selfTestCases = [
         {
-            "name": "두문자어가 대문자로 달린다",
-            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void queryAABB( int32 a );\n    };\n}\n"},
+            "name": "강제 약어가 아닌 대문자 묶음",
+            "files": {"Source/Engine/Probe.h": "namespace sw\n{\n    struct Probe\n    {\n        void bindComputeUAV( int32 a );\n    };\n}\n"},
         },
         {
             "name": "initialize 대신 setup",

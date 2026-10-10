@@ -102,11 +102,16 @@ Declarations that predate a check sit in the gate's `mapExemption` (key `<Rule>:
 the domain's own term (`Uuid::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
 reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
-- **An acronym inside a function name is one camelCase word**, not a run of capitals: `initRhi`,
-  `queryAabb`, `bindComputeUav`, `exportGameApi`, `updateUi`, `isValidUtf8`, `parseUint64`.
-  **Type names keep their established spelling** (`IRHIDevice`, `AABB`, `TagID`) — the rule is about
-  `camelCase` identifiers, where a capital run hides the word boundary — without it `queryAABB` and
-  `queryAabb` end up side by side.
+- **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
+  `Scripts/lint/AcronymRegistry.py` (`kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
+  enums, folders, modules and test executables: `UISystem`, `GPUScene`, `HTTPClient`, `UISystem.h`. Functions, variables and
+  members: capitals in the middle or at the end (`updateUI`, `queryAABB`, `entityID`, `pUISystem`, `_pGPUScene`), all lower case
+  as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one
+  out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
+  their spelling. The tree moves one acronym at a time and only the acronyms in `kEnforced` are enforced
+  (`CheckAcronymSpelling.py` — Pascal spellings and touching capitals; `AcronymRun` — a capital run in a function name must be
+  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`initRhi`, `bindComputeUav`) until
+  `FormatAcronymSpelling.py` rewrites it across the tree.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
   | Concept | Verb | Never |

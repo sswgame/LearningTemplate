@@ -46,7 +46,8 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_useRenderThread );                // extern 
 
 | 쓰지 않는 것 | 쓰는 것 | 규칙 |
 | :--- | :--- | :--- |
-| `queryAABB` · `initRHI` · `updateUI` | `queryAabb` · `initRhi` · `updateUi` | 두문자어는 camelCase 낱말 하나(타입 이름 `AABB` · `IRHIDevice` 는 그대로) |
+| `updateHud` · `HudViewModel` · `pHud` | `updateHUD` · `HUDViewModel` · `pHUD` | 약어는 대문자(이름 맨 앞만 소문자 — `hudLayer`). 등록부 `kEnforced` 에 오른 약어부터 |
+| `RHIUIPass` | `RHIOverlayPass` | 대문자 약어 둘을 이어 붙이지 않는다 |
 | `setupDevice` · `cleanup` | `initialize` · `shutdown` | 한 개념에 동사 하나 |
 | `fetchAsset` · `lookupAsset` | `getAsset`(반드시 있다) · `findAsset`(없을 수 있다) | |
 | `calcBounds` · `calculateBounds` | `computeBounds` | |
