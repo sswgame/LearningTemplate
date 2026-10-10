@@ -58,6 +58,7 @@ Scripts/
   │     ├── AppRun.py                 # App 한 판 — 출력 모으기 · 못 도는 백엔드 판정 · 프로파일 표 읽기 · 밖에서 메모리 · 핸들 재기(qa/ 셋이 쓴다)
   │     ├── AssetValidation.py        # 에셋 검증 규칙 — 규칙 표(Config/Editor/AssetValidationRules.json)의 `check` 이름이 고르는 연산자들
   │     ├── EditorIconFont.py         # 에디터 아이콘 99 개의 그리기 함수 + 표준 라이브러리만으로 TrueType 폰트 · C++ 헤더 쓰기
+  │     ├── ReflectionAnnotationKeys.py # 편집기용 리플렉션 어노테이션 키 헤더 내용(AnnotationMeta.txt · 단위 표에서) — 생성기와 게이트가 같이 쓴다
   │     ├── ImageMetrics.py           # 스크린샷 비교 — PPM · PNG 읽기/쓰기, 축소, 배경을 뺀 지표 · 잡음 바닥에서 정한 허용 오차
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
@@ -88,6 +89,7 @@ Scripts/
   │     ├── GenerateLintTargets.py    # lint/gate · selftest 폴더 → CMake 린트 타깃 · 테스트
   │     ├── GenerateEngineAbiStamp.py # Core · Engine 헤더 지문 → 핫 리로드 ABI 도장 헤더
   │     ├── GenerateEditorIcons.py    # 에디터 아이콘 폰트 · 글리프 상수 헤더(그림은 common/EditorIconFont.py) — 손으로 돌리고 결과를 커밋한다
+  │     ├── GenerateReflectionAnnotationKeys.py # 편집기용 어노테이션 키 헤더(ReflectionAnnotationKeys.h) — 손으로 돌리고 결과를 커밋한다
   │     ├── GenerateSpriteTextures.py # 엔진 스프라이트 텍스처(DDS) · 클립 — 손으로 돌리고 결과를 커밋한다
   │     └── GenerateDocs.py           # Doxygen 레퍼런스 생성
   │
@@ -107,6 +109,7 @@ Scripts/
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
   │     │     ├── CheckProductNames.py        # 제품 이름 식별자는 드라이버 · 제공자 · 백엔드 · 플랫폼 폴더 안에서만
   │     │     ├── CheckEditorIcons.py         # 에디터 아이콘 폰트 · 글리프 헤더가 그림 정의와 같은지
+  │     │     ├── CheckReflectionAnnotationKeys.py # 편집기용 어노테이션 키 헤더가 AnnotationMeta.txt · 단위 표와 같은지
   │     │     ├── CheckResourceCredits.py     # Resource 원본 자산이 도메인 credits.md 에 있고 라이선스가 CC0 1.0 · 이 저장소인지
   │     │     ├── CheckFunctionVocabulary.py  # 함수 이름 어휘 (한 개념 한 동사 · 대문자 묶음은 등록부 약어)
   │     │     ├── CheckAcronymSpelling.py     # 약어 철자 (등록부 kEnforced · --enforce 약어만 막고 나머지는 숫자로만 — 고치기는 fixer/FormatAcronymSpelling.py)

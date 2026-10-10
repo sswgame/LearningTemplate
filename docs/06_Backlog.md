@@ -30,6 +30,13 @@
 - **JSON 소유 포인터 원소가 `{ "타입이름": {...} }` 꼴이 아니면 말없이 건너뛴다**(`JSONSerializerInternal::ContainerReader::readOwnedPointer`). 실패로 알리면 `_listComponent`
   칸 전체가 실패하므로 그 원소만 orphan 으로 남기는 길이 필요하다(XML 은 태그가 곧 타입이라 이 모양이 없다).
 
+- **어노테이션 키 완성은 clangd 만 켜져 있다 — Visual Studio IntelliSense(EDG)는 확인하지 못했다.** `ReflectionMacros.h` 의 조건에
+  `defined( __INTELLISENSE__ )` 를 더하면 VS 도 같은 풀이(`ReflectionIntellisense.h`)를 읽는다. 풀이는 MS 호환 모드의 dependent base 찾기 ·
+  `_Pragma( "clang diagnostic" )` · static_assert 안의 제네릭 람다 지역 클래스에 기댄다. EDG 가 이것을 오류 없이 읽는지 먼저 본다.
+  DTE `ErrorList.ErrorItems` 로는 IntelliSense 오류가 나오지 않아(일부러 넣은 오류도 0건) 자동 확인 길을 찾지 못했다.
+  손 확인 순서: 조건에 `__INTELLISENSE__` 를 더하고 VS 로 저장소 폴더를 연다 → `CameraComponent.h` 의 `PROPERTY( ` 안에서 Ctrl+Space 로 키 목록을 본다 →
+  오류 목록(IntelliSense 만)에서 어노테이션 헤더에 새 오류가 없는지 본다.
+
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리
 
 - **중첩 프리팹이 정식으로 없다.** 프리팹은 GameObject 하나(컴포넌트 트리)라 메시 · 이펙트 여럿을 담을 수는 있지만, 프리팹 안에 다른 프리팹의

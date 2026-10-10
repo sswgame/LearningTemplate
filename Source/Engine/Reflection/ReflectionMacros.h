@@ -92,3 +92,8 @@ namespace sw
     };
 
 } // namespace sw
+
+// clangd(.clangd 가 SW_REFLECT_INTELLISENSE 를 정의)에서만 인자 키 완성 · 오타 오류를 준다. 빌드와 생성기는 읽지 않는다.
+#if !defined( __REFLECT_PARSER__ ) && defined( SW_REFLECT_INTELLISENSE )
+    #include "Engine/Reflection/ReflectionIntellisense.h"
+#endif

@@ -45,6 +45,9 @@ CompileFlags:
     - -Wno-c2y-extensions
     # 헤더에서 선언만 제공하는 매크로의 미사용 진단 억제
     - -Wno-unused-macros
+    # REFLECT · PROPERTY · FUNCTION · ENUM 인자의 키 완성 · 호버 · 오타 오류 (Source/Engine/Reflection/ReflectionIntellisense.h).
+    # 컴파일 DB 가 아니라 여기서만 정의하므로 빌드는 바뀌지 않는다.
+    - -DSW_REFLECT_INTELLISENSE
 
 Diagnostics:
   # ----------------------------------------------------------------------------

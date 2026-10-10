@@ -323,6 +323,11 @@ ENUM( ValueAlias = "OldSwing:Swing" ) // 열거자
 
 **`REFLECT_BODY()` 를 쓰는 줄 안에 주석을 넣지 마세요.** 매크로 본문의 주석 줄에 줄 이음(`\`)이 빠지면 매크로가 거기서 끊기고 나머지 줄이 네임스페이스 범위로 새어 나갑니다.
 
+**편집기의 인자 키 완성 · 오타 오류는 `ReflectionIntellisense.h` 가 줍니다.** `.clangd` 가 정의하는 `SW_REFLECT_INTELLISENSE` 가 있을 때만(clangd) 매크로 인자를 C++ 식으로 풀고, 빌드와 생성기는 이 헤더를 읽지 않습니다.
+키 목록 `ReflectionAnnotationKeys.h` 는 `AnnotationMeta.txt` 와 단위 표에서 생성하므로, 철자를 더하거나 지우면 `py -3 Scripts/generate/GenerateReflectionAnnotationKeys.py` 를 다시 실행합니다(낡으면 `CheckReflectionAnnotationKeys` 가 실패).
+`PROPERTY( RepNotify = onHealthReplicated )` 처럼 값이 메서드 이름이면 그 메서드를 프로퍼티 **뒤에** 선언해야 편집기가 오류로 보이지 않습니다(빌드에는 영향이 없습니다).
+REFLECT · PROPERTY · ENUM 은 키 오타를 잡으려고 인자를 두 번 펼치므로 clangd 호버가 키를 가리키지 못합니다. 키 설명은 완성 목록에 나옵니다.
+
 **`.gen.cpp` 를 손으로 고치지 마세요.** 다음 빌드에서 생성기가 덮어씁니다. 헤더의 표시나 생성기의 템플릿을 고칩니다.
 
 **직렬화할 때는 부모의 프로퍼티까지 도세요.** `TypeInfo::forEachProperty` 의 기본값은 `bIncludeBase=false` 입니다.
@@ -364,6 +369,7 @@ ENUM( ValueAlias = "OldSwing:Swing" ) // 열거자
 | 파일 | 내용 |
 |---|---|
 | `ReflectionMacros.h` | `REFLECT`, `PROPERTY`, `FUNCTION`, `ENUM`, `REFLECT_BODY` |
+| `ReflectionIntellisense.h` | 편집기에서만 쓰는 매크로 풀이(키 완성 · 오타 오류). 키 목록은 생성 파일 `ReflectionAnnotationKeys.h` |
 | `ReflectionTypes.h` | `TypeInfo`, `PropertyInfo`, `FunctionInfo`, `EventInfo` |
 | `TypeRegistry.h` | 등록, 조회, 별칭, enum 글자 변환 |
 | `ReflectionInvoke.h` | 이름으로 부르기, 이벤트 연결 |

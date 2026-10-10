@@ -212,6 +212,7 @@ libclang 은 기본 타깃, 즉 생성기를 빌드한 기계로 헤더를 읽�
 
 2번과 4번이 1번과 맞지 않으면 생성기가 시작할 때 멈춥니다(`AnnotationFields::validateBindings`).
 철자는 있는데 필드 줄이 없거나, 필드 줄은 있는데 철자가 없거나, 종류와 멤버 타입이 다른 경우입니다. 이미 있는 필드에 다른 철자만 더 받으려면 4번만 고칩니다.
+4번을 고쳤으면 `py -3 Scripts/generate/GenerateReflectionAnnotationKeys.py` 로 편집기용 키 목록도 다시 만듭니다([Reflection 의 함정](../../Source/Engine/Reflection/README.md#함정과-주의)).
 
 `AnnotationMeta.txt` 의 `flag.X` 한 줄은 단독 토큰 `X` 와 `X = true` 를 함께 등록합니다. 두 형태를 따로 적지 않습니다.
 
