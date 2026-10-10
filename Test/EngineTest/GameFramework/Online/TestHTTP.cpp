@@ -27,14 +27,14 @@ namespace
                 const HTTPHeader* pName = request.findQuery( "name" );
                 string            text  = string( toString( request._method ) ) + ":" + ( pName != nullptr ? pName->_value : string() ) + ":";
                 text += request.getBodyText();
-                outResponse._bodyBytes.assign( text.begin(), text.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
                 outResponse._listHeader.push_back( HTTPHeader{ "X-Test", "yes" } );
                 return;
             }
             if ( request._path == "/chunked" )
             {
                 const string text = "this body arrives in seven byte chunks";
-                outResponse._bodyBytes.assign( text.begin(), text.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
                 outResponse._bChunked = SW_TRUE;
                 return;
             }
@@ -215,7 +215,7 @@ SW_TEST_CASE( HTTPTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
         post._method      = HTTPMethod::Post;
         post._url         = pair.makeURL( pScheme, "/echo" );
         const string body = "grant_type=authorization_code";
-        post._bodyBytes.assign( body.begin(), body.end() );
+        post._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         const HTTPClientResponse postResponse = pair.run( post );
         SW_ASSERT_TRUE( postResponse.isSuccess() );
         SW_EXPECT_EQUAL( string( "POST::grant_type=authorization_code" ), string( postResponse.getBodyText() ) );

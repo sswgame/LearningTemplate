@@ -227,12 +227,12 @@ namespace test
         }
 
         // ---- 답 바이트 ----
-        static void appendText( sw::vector<uint8>& outBytes, sw::string_view text ) { outBytes.insert( outBytes.end(), text.begin(), text.end() ); }
+        static void appendText( sw::vector<uint8>& outBytes, sw::string_view text ) { outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() ); }
         static void appendNumber( sw::vector<uint8>& outBytes, int64 value )
         {
             utf8                       arrBuffer[sw::constant::kMaxBuffer32];
             const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + sw::constant::kMaxBuffer32, value );
-            outBytes.insert( outBytes.end(), arrBuffer, result.ptr );
+            outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( arrBuffer ), reinterpret_cast<const uint8*>( result.ptr ) );
         }
         static void replySimple( sw::vector<uint8>& outBytes, sw::string_view text )
         {

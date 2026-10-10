@@ -234,7 +234,7 @@ namespace
         /** @brief 외부 로그인 — 제공자 확인은 다음 `tick` 에 끝나고 저장 일이 그 자리에서 돈다. */
         LoginResult platformLogin( string_view provider, string_view ticketText, int64 nowMs, LoginGrant& outGrant )
         {
-            const vector<uint8> ticket( ticketText.begin(), ticketText.end() );
+            const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->platformLogin( provider, ticket, AccountClientInfo{}, 1, nowMs, _nextTag++ );
             _service->tick( nowMs );
             const LoginCompletion completion = settle();
@@ -252,7 +252,7 @@ namespace
 
         LoginResult linkPlatform( const LoginSessionToken& token, string_view provider, string_view ticketText, int64 nowMs )
         {
-            const vector<uint8> ticket( ticketText.begin(), ticketText.end() );
+            const vector<uint8> ticket( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() );
             _service->linkPlatform( token, provider, ticket, nowMs, _nextTag++ );
             _service->tick( nowMs );
             return settle()._result;

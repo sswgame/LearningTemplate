@@ -20,7 +20,7 @@ namespace sw
             {
                 utf8                       arrBuffer[constant::kMaxBuffer32];
                 const std::to_chars_result result = std::to_chars( arrBuffer, arrBuffer + constant::kMaxBuffer32, value );
-                outBytes.insert( outBytes.end(), arrBuffer, result.ptr );
+                outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( arrBuffer ), reinterpret_cast<const uint8*>( result.ptr ) );
             }
 
             static void appendCrlf( vector<uint8>& outBytes )

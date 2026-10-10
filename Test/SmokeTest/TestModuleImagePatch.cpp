@@ -165,16 +165,16 @@ SW_TEST_CASE( ModuleImagePatchTest, EngineAbiStampIsFoundOnlyWithAFullDigest )
     const sw::string stamp  = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + digest;
     const sw::string text   = sw::string{ "junk" } + sw::ModuleImagePatch::kEngineAbiStampMarker + " more junk " + stamp + " tail";
 
-    sw::vector<uint8> bytes( text.begin(), text.end() );
+    sw::vector<uint8> bytes( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
     sw::string        found;
     SW_ASSERT_TRUE( sw::ModuleImagePatch::findEngineAbiStamp( bytes, found ) );
     SW_EXPECT_STREQ( stamp.c_str(), found.c_str() );
 
     const sw::string  shortText = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + "0123";
-    sw::vector<uint8> shortBytes( shortText.begin(), shortText.end() );
+    sw::vector<uint8> shortBytes( reinterpret_cast<const uint8*>( shortText.data() ), reinterpret_cast<const uint8*>( shortText.data() ) + shortText.size() );
     SW_EXPECT_FALSE( sw::ModuleImagePatch::findEngineAbiStamp( shortBytes, found ) );
 
     const sw::string  upperText = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + "0123456789ABCDEF0123456789ABCDEF01234567";
-    sw::vector<uint8> upperBytes( upperText.begin(), upperText.end() );
+    sw::vector<uint8> upperBytes( reinterpret_cast<const uint8*>( upperText.data() ), reinterpret_cast<const uint8*>( upperText.data() ) + upperText.size() );
     SW_EXPECT_FALSE( sw::ModuleImagePatch::findEngineAbiStamp( upperBytes, found ) );
 }

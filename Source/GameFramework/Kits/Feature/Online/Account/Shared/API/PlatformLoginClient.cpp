@@ -51,7 +51,7 @@ namespace sw
             }
             else
             {
-                result._ticket.assign( pPreset->_ticketText.begin(), pPreset->_ticketText.end() );
+                result._ticket.assign( reinterpret_cast<const uint8*>( pPreset->_ticketText.data() ), reinterpret_cast<const uint8*>( pPreset->_ticketText.data() ) + pPreset->_ticketText.size() );
                 result._bSucceeded = SW_TRUE;
             }
             _listDone.push_back( std::move( result ) );

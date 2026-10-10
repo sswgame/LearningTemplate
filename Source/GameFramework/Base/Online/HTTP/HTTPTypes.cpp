@@ -44,7 +44,7 @@ namespace sw
                 return string::npos;
             }
 
-            static void   appendText( vector<uint8>& outBytes, string_view text ) { outBytes.insert( outBytes.end(), text.begin(), text.end() ); }
+            static void   appendText( vector<uint8>& outBytes, string_view text ) { outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() ); }
             static string makeHex( size_t value )
             {
                 string text;

@@ -158,7 +158,7 @@ namespace sw
         {
             const string_view name = target._name.c_str();
             MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( name.size() ) );
-            outBytes.insert( outBytes.end(), name.begin(), name.end() );
+            outBytes.insert( outBytes.end(), reinterpret_cast<const uint8*>( name.data() ), reinterpret_cast<const uint8*>( name.data() ) + name.size() );
             MeshAssetFormatInternal::appendUint32( outBytes, static_cast<uint32>( target._listDelta.size() ) );
             for ( const MeshMorphDelta& delta : target._listDelta )
             {

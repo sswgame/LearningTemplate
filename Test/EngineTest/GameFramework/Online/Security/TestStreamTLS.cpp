@@ -166,7 +166,7 @@ SW_TEST_CASE( StreamTLSTest, FramesFlowAfterHandshakeAndWireIsCiphertext )
     SW_EXPECT_TRUE( pair._client.sendMessage( pair._clientHandle, arrSecond, 4 ) != StreamSendResult::Closed );
     pair.step( 20 );
     SW_ASSERT_EQUAL( 2, static_cast<int32>( serverRecord._listMessage.size() ) );
-    SW_EXPECT_TRUE( serverRecord._listMessage[0] == vector<uint8>( pMarker, pMarker + size ) );
+    SW_EXPECT_TRUE( serverRecord._listMessage[0] == vector<uint8>( reinterpret_cast<const uint8*>( pMarker ), reinterpret_cast<const uint8*>( pMarker + size ) ) );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( serverRecord._listMessage[1].size() ) );
 
     const TapStreamTransport& tap = static_cast<const TapStreamTransport&>( *pair._clientTransport );

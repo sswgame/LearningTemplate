@@ -257,6 +257,10 @@ Win32 문자열 변환은 `utf8ToUtf16` 을 씁니다. `ImmGetCompositionStringW
 
 **`sw::vector` 는 `is_bitwise_copyable_v` 타입을 `Memory::copy` 한 번으로 옮깁니다.** ReflectionParser도 이 동작에 의존합니다. 함수 인자로 받는 연속 뷰는 `vector_reference<const T>` 로 씁니다.
 
+**`vector<uint8>` 에 문자열을 담을 때는 반복자 쌍 대신 `reinterpret_cast<const uint8*>( s.data() )` 포인터 쌍을 넘깁니다.** `char` 반복자를 넘기면
+`vector.h` 템플릿 본문이 `char` → `unsigned char` 로 인스턴스화되어 `-Wsign-conversion` 경고가 납니다. 정수 인자를 부호 없는 매개변수로 넘기는 `emplace_back` · `make_unique` · `try_emplace` 도
+`size_t{ n }` · `5u` 처럼 맞는 타입으로 적습니다. 경고 위치는 `Core` 헤더지만 고칠 곳은 부르는 쪽입니다. PCH 를 켜면 이 경고가 보이지 않으니 `-DSW_ENABLE_PCH=OFF` 빌드에서 확인합니다.
+
 **완료를 모으는 줄에 고정 용량 큐(`ConcurrentQueue`)를 쓰지 마세요.** 가득 차면 `enqueue` 가 false를 돌려주고 그 완료는 조용히 사라집니다.
 에셋 스트리밍 큐가 그렇게 한 경로의 콜백 중 1024개를 넘는 것을 잃었습니다(`AssetStreamingTest.ManyCallbacksOnOnePathAreAllDelivered`). 상한 없는 잠금과 deque로 둡니다.
 

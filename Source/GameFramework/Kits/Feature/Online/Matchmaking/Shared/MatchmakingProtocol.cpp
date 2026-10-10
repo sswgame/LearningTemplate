@@ -188,7 +188,7 @@ namespace sw
     vector<uint8> MatchmakingProtocol::encodeID( uint64 id )
     {
         const string text = ServiceKeyUtil::makeHex64( id );
-        return vector<uint8>( text.begin(), text.end() );
+        return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
     }
 
     bool MatchmakingProtocol::decodeID( const vector<uint8>& bytes, uint64& outID )

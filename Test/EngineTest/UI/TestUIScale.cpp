@@ -113,7 +113,7 @@ SW_TEST_CASE( UIScaleTest, TextScaleGrowsTextOnly )
 {
     sw::test::UILayoutFixture fixture( 400.0f, 100.0f );
     sw::BoxPanel*             pRow   = fixture.setRoot<sw::BoxPanel>( "row" );
-    sw::Widget*               pText  = pRow->addChild( sw::make_unique<sw::test::TestWrapWidget>( "text", 5 ) );
+    sw::Widget*               pText  = pRow->addChild( sw::make_unique<sw::test::TestWrapWidget>( "text", 5u ) );
     sw::Widget*               pFixed = fixture.addFixed( pRow, "fixed", 30.0f, 30.0f );
     fixture.update();
     SW_EXPECT_NEAR_EQUAL( 50.0f, pText->getDesiredSize()._x, 0.001f );

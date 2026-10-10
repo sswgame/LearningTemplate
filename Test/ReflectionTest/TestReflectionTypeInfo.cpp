@@ -938,9 +938,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
     typeRoot._name               = sw::hashed_string( "MapRoot" );
     typeRoot._fullyQualifiedName = sw::hashed_string( "swtest::MapRoot" );
     typeRoot._moduleName         = sw::hashed_string( "TestHierarchyMap" );
-    typeRoot._listProperty.emplace_back( sw::hashed_string( "_alpha" ), sw::hashed_string( "int32" ), 0 );
-    typeRoot._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), 4 );
-    typeRoot._listProperty.emplace_back( sw::hashed_string( "_gamma" ), sw::hashed_string( "int32" ), 8 );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_alpha" ), sw::hashed_string( "int32" ), size_t{ 0 } );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), size_t{ 4 } );
+    typeRoot._listProperty.emplace_back( sw::hashed_string( "_gamma" ), sw::hashed_string( "int32" ), size_t{ 8 } );
     typeRoot._listProperty.back()._listAlias.push_back( sw::hashed_string( "_gammaOld" ) );
 
     sw::TypeInfo typeLeaf;
@@ -948,9 +948,9 @@ SW_TEST_CASE( ReflectionTypeInfoTest, FindPropertyInHierarchyUsesMergedMapWhenLa
     typeLeaf._fullyQualifiedName = sw::hashed_string( "swtest::MapLeaf" );
     typeLeaf._parentFQN          = sw::hashed_string( "swtest::MapRoot" );
     typeLeaf._moduleName         = sw::hashed_string( "TestHierarchyMap" );
-    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_delta" ), sw::hashed_string( "int32" ), 12 );
-    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), 16 ); // 기반 이름을 다시 적는다
-    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_epsilon" ), sw::hashed_string( "int32" ), 20 );
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_delta" ), sw::hashed_string( "int32" ), size_t{ 12 } );
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_beta" ), sw::hashed_string( "int32" ), size_t{ 16 } ); // 기반 이름을 다시 적는다
+    typeLeaf._listProperty.emplace_back( sw::hashed_string( "_epsilon" ), sw::hashed_string( "int32" ), size_t{ 20 } );
 
     registry.registerClass( typeRoot );
     registry.registerClass( typeLeaf );

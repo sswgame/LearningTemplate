@@ -426,10 +426,10 @@ SW_TEST_CASE( NetCompressionBenchTest, ChatMessages )
             messageBytes.push_back( static_cast<uint8>( channel >> ( byte * 8 ) ) );
         }
         messageBytes.push_back( static_cast<uint8>( nameSize ) );
-        messageBytes.insert( messageBytes.end(), pName, pName + nameSize );
+        messageBytes.insert( messageBytes.end(), reinterpret_cast<const uint8*>( pName ), reinterpret_cast<const uint8*>( pName + nameSize ) );
         messageBytes.push_back( static_cast<uint8>( text.size() ) );
         messageBytes.push_back( static_cast<uint8>( text.size() >> 8 ) );
-        messageBytes.insert( messageBytes.end(), text.begin(), text.end() );
+        messageBytes.insert( messageBytes.end(), reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() );
         listMessage.push_back( std::move( messageBytes ) );
     }
     measureSet( "chat", listMessage );

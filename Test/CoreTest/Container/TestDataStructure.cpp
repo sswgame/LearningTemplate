@@ -1543,7 +1543,7 @@ SW_TEST_CASE( DataStructureTest, TryEmplaceKeepsArgumentsAndMapUpperBound )
     SW_EXPECT_EQUAL( 10, *mapOwned.find( 1 )->second );
 
     sw::unordered_map<int32, sw::vector<int32>> mapList;
-    mapList.try_emplace( 7, 5 );
+    mapList.try_emplace( 7, size_t{ 5 } );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( mapList.find( 7 )->second.size() ) );
 
     sw::map<int32, int32> mapSorted;

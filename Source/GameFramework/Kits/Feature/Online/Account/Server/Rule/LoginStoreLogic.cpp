@@ -682,7 +682,7 @@ namespace sw
                     return LoginResult::StoreUnavailable;
                 profile._displayName = Internal::makePlatformDisplayName( displayNameHint, accountID );
                 transaction.put( Internal::getExternalTable(), externalKey, Internal::encodeID( accountID ), ServiceRecord::kAbsentVersion );
-                transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), vector<uint8>( digestHex.begin(), digestHex.end() ),
+                transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), vector<uint8>( reinterpret_cast<const uint8*>( digestHex.data() ), reinterpret_cast<const uint8*>( digestHex.data() ) + digestHex.size() ),
                                  ServiceRecord::kAbsentVersion );
                 transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( accountID ), Internal::encodeProfile( profile ), ServiceRecord::kAbsentVersion );
             }
@@ -969,7 +969,7 @@ namespace sw
             transaction.put( Internal::getExternalTable(), Internal::makeExternalKey( provider, digestHex ), Internal::encodeID( identity._accountID ),
                              ServiceRecord::kAbsentVersion );
             transaction.put( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( identity._accountID, provider ),
-                             vector<uint8>( digestHex.begin(), digestHex.end() ), ServiceRecord::kAbsentVersion );
+                             vector<uint8>( reinterpret_cast<const uint8*>( digestHex.data() ), reinterpret_cast<const uint8*>( digestHex.data() ) + digestHex.size() ), ServiceRecord::kAbsentVersion );
             transaction.put( Internal::getAccountIDTable(), ServiceKeyUtil::makeHex64( identity._accountID ), Internal::encodeProfile( profile ), profileVersion );
             ServiceAuditEntry audit = Internal::makeAuditEntry( identity._accountID, "account.link.platform", nowMs );
             audit._after            = string( provider );

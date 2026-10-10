@@ -29,7 +29,7 @@ namespace sw
                 outResponse._listHeader.push_back( HTTPHeader{ "Content-Type", "text/html; charset=utf-8" } );
                 outResponse._listHeader.push_back( HTTPHeader{ "Cache-Control", "no-store" } );
                 const string_view page{ kDonePage };
-                outResponse._bodyBytes.assign( page.begin(), page.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( page.data() ), reinterpret_cast<const uint8*>( page.data() ) + page.size() );
             }
         };
     } // namespace
@@ -145,7 +145,7 @@ namespace sw
                     string ticketText = token.asString();
                     if ( pSettings->_bUseIDToken == SW_TRUE )
                         ticketText += "|" + pending._nonce;
-                    finish( pending, true, false, "", vector<uint8>( ticketText.begin(), ticketText.end() ) );
+                    finish( pending, true, false, "", vector<uint8>( reinterpret_cast<const uint8*>( ticketText.data() ), reinterpret_cast<const uint8*>( ticketText.data() ) + ticketText.size() ) );
                 }
                 _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
                 break;
@@ -224,7 +224,7 @@ namespace sw
         tokenRequest._method = HTTPMethod::Post;
         tokenRequest._url    = pSettings->_tokenURL;
         const string body    = HTTPUtil::encodeForm( listForm );
-        tokenRequest._bodyBytes.assign( body.begin(), body.end() );
+        tokenRequest._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
         tokenRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         pFound->_tokenRequestID = _httpClient.submitRequest( tokenRequest, _nowMs );

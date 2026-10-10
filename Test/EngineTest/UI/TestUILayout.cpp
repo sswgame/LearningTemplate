@@ -226,7 +226,7 @@ SW_TEST_CASE( UILayoutTest, WrappedTextHeightFollowsFillWidth )
     pColumn->setOrientation( sw::UIOrientation::Vertical );
     sw::BoxPanel* pRow = fixture.addPanel<sw::BoxPanel>( pColumn, "row" );
     fixture.addFixed( pRow, "icon", 100.0f, 20.0f );
-    sw::Widget*          pText = pRow->addChild( sw::make_unique<sw::test::TestWrapWidget>( "text", 50 ) );
+    sw::Widget*          pText = pRow->addChild( sw::make_unique<sw::test::TestWrapWidget>( "text", 50u ) );
     sw::WidgetLayoutSlot slot  = pText->getLayoutSlot();
     slot._sizeRule             = sw::UISizeRule::Fill;
     pText->setLayoutSlot( slot );

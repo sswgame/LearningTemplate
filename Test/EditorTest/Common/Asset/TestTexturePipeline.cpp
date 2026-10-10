@@ -682,7 +682,7 @@ namespace sw::editor
         // RGBE: 값 = 가수 / 256 × 2^(지수 − 128). (128, 128, 128, 131) = 0.5 × 8 = 4.0.
         const string  sourcePath = test::makeTempPath( "bright.hdr" );
         const string  header     = "#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 4 +X 4\n";
-        vector<uint8> bytes( header.begin(), header.end() );
+        vector<uint8> bytes( reinterpret_cast<const uint8*>( header.data() ), reinterpret_cast<const uint8*>( header.data() ) + header.size() );
         for ( uint32 pixel = 0; pixel < 16; ++pixel )
         {
             const uint8 arrRgbe[4] = { 128, 128, 128, 131 };

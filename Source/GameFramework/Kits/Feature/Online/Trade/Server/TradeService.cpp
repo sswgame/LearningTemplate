@@ -134,7 +134,7 @@ namespace sw
     void TradeService::recoverOwnedTrades( int64 nowMs )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Recover, 0, nowMs );
+            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Recover, uint64{ 0 }, nowMs );
         ++_pendingCount;
         _pStore->submit( std::move( work ) );
     }
@@ -197,7 +197,7 @@ namespace sw
     void TradeService::closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs )
     {
         unique_ptr<TradeServiceInternal::TradeWork> work =
-            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Leave, 0, nowMs );
+            make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Leave, uint64{ 0 }, nowMs );
         work->_fromID          = accountID;
         work->_command._reason = reason;
         ++_pendingCount;
@@ -214,7 +214,7 @@ namespace sw
                 continue;
             }
             unique_ptr<TradeServiceInternal::TradeWork> work =
-                make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Expire, 0, nowMs );
+                make_unique<TradeServiceInternal::TradeWork>( this, _pPolicy, _pLedgerPolicy, _serverID, TradeOperation::Expire, uint64{ 0 }, nowMs );
             work->_tradeID = tradeIt->first;
             ++_pendingCount;
             tradeIt = _mapTradeToDeadline.erase( tradeIt ); // 결과(닫힘 · 아직)가 다시 넣는다

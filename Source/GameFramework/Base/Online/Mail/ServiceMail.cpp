@@ -151,7 +151,7 @@ namespace sw
         record._message = message;
         record._state   = ServiceMailState::Unread;
         pending.put( getMailTable(), mailKey, encodeRecord( record ), ServiceRecord::kAbsentVersion );
-        pending.put( getSentTable(), sentKey, vector<uint8>( mailKey.begin(), mailKey.end() ), ServiceRecord::kAbsentVersion );
+        pending.put( getSentTable(), sentKey, vector<uint8>( reinterpret_cast<const uint8*>( mailKey.data() ), reinterpret_cast<const uint8*>( mailKey.data() ) + mailKey.size() ), ServiceRecord::kAbsentVersion );
         if ( message._expiresMs > 0 )
             pending.put( getExpiryTable(), makeExpiryKey( message._expiresMs, mailKey ), vector<uint8>{}, ServiceRecord::kAbsentVersion );
 

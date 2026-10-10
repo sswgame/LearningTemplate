@@ -777,7 +777,7 @@ namespace sw
         submitCacheScore( makeRankKey( boardID, periodID ), accountID, toCacheScore( pBoard->_order, finalScore ) );
         if ( displayName.empty() == false )
             (void)_dependencies._pRouter->submit( EphemeralRequest::makeSet( LeaderboardServiceInternal::makeNameKey( accountID ),
-                                                                             vector<uint8>( displayName.begin(), displayName.end() ), LeaderboardLimit::kNameTtlMs ),
+                                                                             vector<uint8>( reinterpret_cast<const uint8*>( displayName.data() ), reinterpret_cast<const uint8*>( displayName.data() ) + displayName.size() ), LeaderboardLimit::kNameTtlMs ),
                                                   EphemeralStoreRouter::ReplyDelegate{} );
     }
 

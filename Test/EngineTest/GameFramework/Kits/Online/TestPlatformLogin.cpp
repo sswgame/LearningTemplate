@@ -51,7 +51,7 @@ namespace
             if ( request._path == "/jwks" )
             {
                 ++_jwksHitCount;
-                outResponse._bodyBytes.assign( _jwks.begin(), _jwks.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( _jwks.data() ), reinterpret_cast<const uint8*>( _jwks.data() ) + _jwks.size() );
                 outResponse._bChunked = SW_TRUE; // 실제 제공자처럼 chunked 로도 읽힌다
                 return;
             }
@@ -64,7 +64,7 @@ namespace
                     return;
                 }
                 const string body = "{\"resultcode\":\"00\",\"response\":{\"id\":\"n-1\",\"nickname\":\"Nick\"}}";
-                outResponse._bodyBytes.assign( body.begin(), body.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
                 return;
             }
             if ( request._path == "/token" && request._method == HTTPMethod::Post )
@@ -91,7 +91,7 @@ namespace
                     return;
                 }
                 const string body = "{\"token_type\":\"Bearer\",\"access_token\":\"good\",\"id_token\":\"" + _idToken + "\"}";
-                outResponse._bodyBytes.assign( body.begin(), body.end() );
+                outResponse._bodyBytes.assign( reinterpret_cast<const uint8*>( body.data() ), reinterpret_cast<const uint8*>( body.data() ) + body.size() );
                 return;
             }
             outResponse._statusCode = 404;
@@ -155,7 +155,7 @@ namespace
             return compact;
         }
 
-        static vector<uint8> toBytes( string_view text ) { return vector<uint8>( text.begin(), text.end() ); }
+        static vector<uint8> toBytes( string_view text ) { return vector<uint8>( reinterpret_cast<const uint8*>( text.data() ), reinterpret_cast<const uint8*>( text.data() ) + text.size() ); }
 
         static string findQuery( const string& url, const utf8* pName )
         {

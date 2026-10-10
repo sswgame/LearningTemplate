@@ -143,7 +143,7 @@ namespace
                     }
                     const string_view replacement = kArrInterestingNumberText[random.below( std::size( kArrInterestingNumberText ) )];
                     inoutBytes.erase( inoutBytes.begin() + static_cast<ptrdiff_t>( start ), inoutBytes.begin() + static_cast<ptrdiff_t>( end ) );
-                    inoutBytes.insert( inoutBytes.begin() + static_cast<ptrdiff_t>( start ), replacement.begin(), replacement.end() );
+                    inoutBytes.insert( inoutBytes.begin() + static_cast<ptrdiff_t>( start ), reinterpret_cast<const uint8*>( replacement.data() ), reinterpret_cast<const uint8*>( replacement.data() ) + replacement.size() );
                     break;
                 }
                 case 8: // (텍스트) 구조 글자 하나 지우기
