@@ -89,6 +89,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphCache.h"
+#include "Engine/UI/Debug/DebugHUD.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -571,6 +572,11 @@ namespace sw
                 if ( settings.loadSchema( gameSchema ) == false )
                     SW_LOG_ERROR( "Game user settings schema '%#' is not loaded", gameSchema.c_str() );
             }
+#if SW_DEV_COMMANDS_ENABLED
+            // 디버그 HUD 설정(개발 도구) — Dev 만 덧붙인다. 사용자 파일보다 먼저 읽어야 저장된 HUD 값이 버려지지 않는다.
+            if ( settings.loadSchema( DebugHUD::kSettingsSchemaPath ) == false )
+                SW_LOG_ERROR( "Debug HUD user settings schema '%#' is not loaded", DebugHUD::kSettingsSchemaPath );
+#endif
             for ( const auto& [settingID, value] : gameConfig._mapUserSettingDefault )
             {
                 (void)settings.setGameDefault( hashed_string( settingID ), value );
@@ -864,10 +870,19 @@ namespace sw
             if ( gameConfig._bUIPauseMenu )
                 ui.setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu )
                                                                          : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
+#if SW_DEV_COMMANDS_ENABLED
+            loop._debugHUD = make_unique<DebugHUD>();
+            loop._debugHUD->initialize( ui, loop._owned._pUserSettingsManager.get() );
+#endif
             return EngineInitResult::Succeeded;
         }
         static void shutdown( EngineLoop& loop )
         {
+#if SW_DEV_COMMANDS_ENABLED
+            if ( loop._debugHUD != nullptr )
+                loop._debugHUD->shutdown();
+            loop._debugHUD.reset();
+#endif
             UISystem& ui = *loop._owned._pUISystem;
             loop._owned._pAssetManager->unregisterAssetCache( &ui.getStyleSheetCache() );
             loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
@@ -1268,6 +1283,11 @@ namespace sw
         // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
         if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
         {
+#if SW_DEV_COMMANDS_ENABLED
+            // 디버그 HUD — 꺼져 있으면 셸 맵 액션 하나를 읽고 끝난다. 켜져 있으면 HUD 화면이 아래 update 의 틱에서 섹션을 부른다.
+            if ( _debugHUD != nullptr )
+                _debugHUD->update( _mapDebugAction.get() );
+#endif
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 시험 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
             const float32        contentScale = pWindow != nullptr ? pWindow->getContentScale() : 1.0f;

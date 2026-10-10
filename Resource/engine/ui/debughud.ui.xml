@@ -1,0 +1,44 @@
+<UIDocument _schemaVersion="1">
+	<!-- 디버그 HUD 설정 창(Dev 전용 — `hud window`). 모달이라 열린 동안만 UI 가 입력을 가진다. 섹션 체크 상자는 DebugHUD 가 등록부에서 `Sections` 아래에 짓는다. -->
+	<UIScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Shown" />
+	<_listStyleSheet>
+		<item>engine/ui/styles/options.uistyle.xml</item>
+	</_listStyleSheet>
+	<CanvasPanel>
+		<BorderPanel _name="Window" _styleClass="window modal">
+			<_slot _anchorMin="0.5,0.5"
+			       _anchorMax="0.5,0.5"
+			       _offsetMax="0,0"
+			       _bAutoSize="true"
+			       _growHorizontal="Both"
+			       _growVertical="Both" />
+			<BoxPanel _spacing="10" _orientation="Vertical">
+				<TextWidget _name="Title" _styleClass="title" _text="Debug HUD" _bLocalized="false" />
+				<CheckBoxWidget _name="Shown" _bChecked="{setting:debug.hud}">
+					<TextWidget _text="Show HUD (Ctrl+F3)" _bLocalized="false" />
+				</CheckBoxWidget>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Corner" _bLocalized="false">
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<ComboBoxWidget _name="Corner" _selectedIndex="{setting:debug.hudCorner}">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</ComboBoxWidget>
+				</BoxPanel>
+				<BoxPanel _spacing="12">
+					<TextWidget _text="Opacity" _bLocalized="false">
+						<_slot _widthOverride="140" _verticalAlignment="Center" />
+					</TextWidget>
+					<SliderWidget _name="Opacity" _value="{setting:debug.hudOpacity}">
+						<_slot _sizeRule="Fill" _verticalAlignment="Center" />
+					</SliderWidget>
+				</BoxPanel>
+				<TextWidget _text="Sections" _bLocalized="false" />
+				<BoxPanel _name="Sections" _spacing="4" _orientation="Vertical" />
+				<ButtonWidget _name="Close" _styleClass="primary" _command="Close">
+					<TextWidget _text="Close" _bLocalized="false" />
+				</ButtonWidget>
+			</BoxPanel>
+		</BorderPanel>
+	</CanvasPanel>
+</UIDocument>

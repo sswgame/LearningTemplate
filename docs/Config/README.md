@@ -25,6 +25,7 @@
 | `Resource/engine/input/default.input.xml` | `InputMap::loadFromResource` (셸 입력 맵 — `EngineDefaultAssets::_shellInputMap`) — 기동 · 에셋 핫 리로드 | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/Input/README.md) |
 | `Resource/engine/input/ui.input.xml` | `InputMap::loadFromResource` (런타임 UI 행동 맵 — `EngineDefaultAssets::_uiInputMap`, `UISystem::initialize`) — 기동(UI 단계) | 엔진 팩에 실림 | 한다 | [형식 설명](../../Source/Engine/UI/README.md) |
 | `Resource/engine/settings/engine.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계) — 기동. 플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md` | 엔진 팩에 실림 | 한다 | [UserSettings](UserSettings.md) |
+| `Resource/engine/settings/debughud.settings.xml` | `UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만) — 기동. 디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다 | 엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다) | 한다 | [UserSettings](UserSettings.md) |
 
 ## 게임 프리셋
 

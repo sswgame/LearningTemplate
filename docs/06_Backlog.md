@@ -326,6 +326,11 @@
 
 ### 1-7. Core · 태스크
 
+- **명령줄로 준 Engine 전역 변수를 사용자 설정 기동 적용이 덮는다**(2026-10-11, 디버그 HUD 확인 중). `UserSettingsManager::applyToTarget` 은
+  `CommandLineManager::findPendingGlobalValue` 로 "명령줄 값이면 건너뛴다" 를 묻는데, 보류표에는 **모듈** 전역 변수만 남고 Engine 전역 변수(파싱 때 이미 등록된 것)는 없다.
+  그래서 `-gv_debugHUD=1` · `-gv_uiScale=1.5` 같은 설정 대상 변수는 기동 적용이 기본값 · 저장값으로 덮는다(App `-gv_debugHUD=1` 스크린샷에 HUD 가 없었다).
+  고칠 곳은 명령줄이 준 이름 전부를 묻는 질의(등록된 변수 포함)다. 지금은 HUD 를 `hud on` · Ctrl+F3 로 켠다.
+
 - **네트워크 — 파괴 · 가상 서버에서 남은 것**(2026-10-05, `GF_NetSimulation` · `GF_NetDestruction`). ① 파괴 사건은 "신뢰 · 순서 없음" 채널(N21b) — 250 ms · 손실 15 % 의 사건 지연
   평균 · 최대 전/후는 `NetSimDestructionMatrixTest` 로그(`max event lag … mean …`)로 잴 것(빌드 뒤). 남은 최대는 한 메시지가 거듭 잃는 몫이다. 덩어리 멈춤 확정(신뢰 자세)도
   받는 쪽이 틱으로 끼우므로 옮길 수 있다 — 재고 나서. ② 전용 서버 프로세스(`Server`, 타깃 Game · Server)는 섰다 — 남은 것은 그 위에 파괴 시뮬레이션을 UDP 서버로

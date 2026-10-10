@@ -160,6 +160,7 @@
 |---|---|---|---|---|---|
 | `gv_benchUiChurn` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 프레임마다 글을 바꾸는 셀 수(앞쪽 보이는 셀 안에서 돈다) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
 | `gv_benchUiWidgets` | `int32` | `0` | 시험 · 배포본에도 | UI 벤치 — 격자 셀 수(셀마다 테두리 · 아이콘 · 글, 대부분 스크롤 밖) (0=사용 안 함) | [UIBenchScreen.cpp](../../Source/Engine/UI/Debug/UIBenchScreen.cpp) |
+| `gv_debugHUDProbeSection` | `string` | — | 시험 | 자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름 | [DebugHUD.cpp](../../Source/Engine/UI/Debug/DebugHUD.cpp) |
 | `gv_uiDebugSafeZone` | `float32` | `0.0` | 시험 | UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다 | [UIScale.cpp](../../Source/Engine/UI/Layout/UIScale.cpp) |
 | `gv_uiDemo` | `bool` | `false` | 시험 · 배포본에도 | UI 시험 화면을 띄운다 — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 필드 · 그리기 견본(둥근 상자 · 자르기 · 9-슬라이스 · 오른쪽에서 왼쪽 글) | [UIDemoScreen.cpp](../../Source/Engine/UI/Debug/UIDemoScreen.cpp) |
 | `gv_uiOptionsMenu` | `bool` | `false` | 시험 · 배포본에도 | 옵션 메뉴를 띄운다 — 사용자 설정 스키마에서 만든 탭 · 행(개발 확인 · 스크린샷) | [OptionsMenuScreen.cpp](../../Source/Engine/UI/Screen/OptionsMenuScreen.cpp) |
@@ -172,6 +173,10 @@
 | `gv_cameraHeadBob` | `bool` | `true` | 일반 | 걷기 머리 흔들림 (사용자 설정 gameplay.headBob) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_cameraShakeScale` | `float32` | `1.0` | 일반 | 카메라 흔들림 배율 0~1 (사용자 설정 gameplay.cameraShake) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_colorVisionMode` | `int32` | `0` | 일반 | 색각 보정 0 끔 1 적색약 2 녹색약 3 청색약 (사용자 설정 accessibility.colorVision, UI 캔버스만 — 톤맵 미구현) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_debugHUD` | `bool` | `false` | 일반 | 디버그 HUD 표시 — Dev 전용, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_debugHUDCorner` | `int32` | `0` | 일반 | 디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_debugHUDOpacity` | `float32` | `0.85` | 일반 | 디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
+| `gv_debugHUDSections` | `string` | — | 일반 | 디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_effectsQuality` | `int32` | `2` | 일반 | 이펙트 품질 0~3 (사용자 설정 graphics.effectsQuality) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_foliageDensity` | `float32` | `1.0` | 일반 | 식생 밀도 배율 (사용자 설정 graphics.foliageDensity) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |
 | `gv_motionBlur` | `bool` | `true` | 일반 | 모션 블러 (사용자 설정 graphics.motionBlur) | [UserSettingsVariables.cpp](../../Source/Engine/UserSettings/UserSettingsVariables.cpp) |

@@ -115,6 +115,11 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계)", readWhen="기동",
         shipping="엔진 팩에 실림", bCommitted=True, ownerDoc="Source/Engine/UserSettings/README.md",
         note="플레이어 옵션 메뉴의 스키마 — 설정 표는 생성 페이지 `UserSettings.md`"),
+    ConfigFileEntry(
+        page="UserSettings", pathPattern="Resource/engine/settings/debughud.settings.xml", layer=kLayerEngineDefault, fileFormat="xml",
+        reader="`UserSettingsManager::loadSchema` (`EngineLoop` UserSettings 단계 — Dev 만)", readWhen="기동",
+        shipping="엔진 팩에 실리지만 Shipping 은 읽지 않음(디버그 HUD 가 없다)", bCommitted=True, ownerDoc="Source/Engine/UI/README.md",
+        note="디버그 HUD 상태(`debug.*`) — 엔진 스키마에 덧붙는다"),
     # --- 게임 프리셋 --------------------------------------------------------------------------------------------------------
     ConfigFileEntry(
         page="GameConfig", pathPattern="Config/Game/*.json", layer=kLayerGamePreset, fileFormat="json",

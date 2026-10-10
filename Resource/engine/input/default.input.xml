@@ -38,6 +38,10 @@
 			<bind source="gamepad" code="Back"/>
 			<bind source="key" modifier="Ctrl" code="F1"/>
 		</action>
+		<!-- 디버그 HUD(DebugHUD) 마스터 단축키 — 게임의 F1~F12 와 겹치지 않게 Ctrl 조합, 콘솔(Ctrl+F1) · 리로드(Ctrl+F6~F8) · 에디터 BugIt(Ctrl+Shift+F12)와도 다르다 -->
+		<action name="DebugHUDToggle" trigger="Pressed">
+			<bind source="key" modifier="Ctrl" code="F3"/>
+		</action>
 	</layer>
 	<layer name="DevConsole" enabled="0" blockLower="0">
 		<action name="DevConsoleClose" trigger="Pressed">

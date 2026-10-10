@@ -28,4 +28,10 @@ SW_GLOBAL_VARIABLE( bool, gv_subtitles, true, "자막 표시 (사용자 설정 a
 SW_GLOBAL_VARIABLE( int32, gv_subtitleSize, 1, "자막 크기 0 작게 1 보통 2 크게 (사용자 설정 accessibility.subtitleSize)" );
 SW_GLOBAL_VARIABLE( float32, gv_subtitleBackgroundOpacity, 0.5f, "자막 배경 불투명도 0~1 (사용자 설정 accessibility.subtitleBackground)" );
 
+// 개발 도구 — 스키마는 `engine/settings/debughud.settings.xml` 이고 Dev 만 읽는다.
+SW_GLOBAL_VARIABLE( bool, gv_debugHUD, false, "디버그 HUD 표시 — Dev 전용, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud)" );
+SW_GLOBAL_VARIABLE( sw::string, gv_debugHUDSections, "", "디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections)" );
+SW_GLOBAL_VARIABLE( int32, gv_debugHUDCorner, 0, "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)" );
+SW_GLOBAL_VARIABLE( float32, gv_debugHUDOpacity, 0.85f, "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)" );
+
 SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_userSettingsFile, "", "사용자 설정 파일 경로 (비면 사용자 폴더의 usersettings.json)" );

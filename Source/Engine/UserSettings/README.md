@@ -178,6 +178,8 @@ const string_view difficulty = pSettings->getValue( "gameplay.difficulty" ); // 
 - **오디오 버스 `voice`, `ambient`, `ui` 는 값만 저장됩니다.** `IAudioSystem::setBusVolume` 에 값이 들어가지만, 재생 API가 아직 버스를 받지 않습니다.
 - **해상도 선택지는 데이터의 고정 목록입니다.** 모니터 모드를 열거하지 않습니다. 전용 전체 화면도 없고, `borderless`(모니터를 덮는 창)를 씁니다.
 - **키 바인딩의 빈 값은 "입력 맵의 기본 바인딩"입니다.** 그래서 카테고리를 기본값으로 되돌리면 이전 리바인딩이 남지 않습니다.
+- **Dev 구성은 디버그 HUD 스키마(`engine/settings/debughud.settings.xml`, 카테고리 `debug`)를 엔진 · 게임 스키마 뒤에 덧붙입니다.** 그래서 Dev 옵션 메뉴에는 `debug` 탭이 있고 Shipping 에는 없습니다.
+  사용자 파일보다 먼저 읽어야 저장된 HUD 값이 "모르는 키" 로 버려지지 않습니다([UI README](../UI/README.md#디버그-hud)).
 - **개인 정보 설정은 대상이 없습니다.** `telemetry.enabled`(기본 false)와 `telemetry.crashReports`(기본 `local`)는 `TelemetryService` 와 `CrashReportService` 의 `bindConsentSetting` 이 확정된 값을 직접 읽습니다([Telemetry README](../Telemetry/README.md)).
 
 ## 더 볼 곳

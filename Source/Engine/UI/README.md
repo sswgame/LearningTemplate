@@ -467,6 +467,32 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 공통으로, 컴포넌트는 시작할 때 엔진의 UI 시스템에 연결하고(`bindUISystem`) 끝날 때 해제합니다. 서버처럼 UI 시스템이 없으면 아무것도 하지 않습니다. UI 시스템이 먼저 종료되면 `forgetUISystem` 이 불립니다.
 렌더 변환(`setRenderTransform`)은 기하 위에 적용되는 값이라 그 위젯을 배치 루트로 기록합니다(`kArrange`). 다시 측정하지 않고 다시 배치만 합니다. 불투명도는 그리기만 다시 합니다.
 
+### 디버그 HUD
+
+| 이 엔진 | 언리얼 | 유니티 | Godot |
+|---|---|---|---|
+| `DebugHUD`, `SW_DEBUG_HUD_SECTION` | `stat fps` · `stat unit` · `stat <그룹>` | Rendering Statistics(Game 뷰 Stats) | 디버그 모니터(`Performance`) |
+
+Dev 구성에서 게임 창 · 에디터 게임 뷰 · 모든 Dev 실행의 런타임 UI 위에 개발용 수치를 띄웁니다. Shipping 에는 없습니다(`SW_DEV_COMMANDS_ENABLED`).
+조종자는 `Debug/DebugHUD` 이고 `EngineLoop` 가 UI 기동 단계에서 만들어 `UISystem::update` 앞에서 부릅니다. 화면은 코드로 짓는 오버레이 층 화면이라 포커스 · 포인터 · 게임 입력을 받지 않습니다.
+
+- **섹션.** 섹션은 `Console/DebugHUDRegistry` 에 `SW_DEBUG_HUD_SECTION( 변수, "이름", "제목", 순서, 플래그, &본문 )` 한 줄로 올립니다. `SW_DEV_COMMAND` 와 같은 모양이라 모듈을 내리면 그 섹션이 빠집니다.
+  엔진 기본 섹션은 `Debug/DebugHUDEngineSections.cpp` 의 `fps`(프레임 시간 그래프) · `timing`(GT · RT · GPU) · `draw`(드로우 · GPU 배치 · 인스턴스 · UI 사각형) · `memory`(태그 상위 넷) · `objects` · `physics` · `audio` · `input` · `camera` · `overlay`(게임이 쓴 `DebugOverlayState`)입니다.
+  네트워크 핑은 엔진에 연결 서비스가 없어 온라인 키트가 자기 섹션으로 답니다. 본문은 이미 있는 서비스에서 읽기만 합니다.
+- **갱신.** HUD 가 켜져 있을 때 켜진 섹션의 본문만 4 Hz 로 부릅니다(목록 · 설정이 바뀌면 바로). 줄 수가 그대로면 위젯을 다시 짓지 않고 글만 바꿉니다.
+  `kUsesFrameProfiler` 섹션(`timing`, `draw`)이 보이는 동안은 `FrameProfiler` 를 켜고, HUD 가 켠 것이면 감출 때 끕니다(언리얼 `stat unit` 이 통계를 켜는 것과 같다).
+- **켜고 끄기.** 마스터 단축키는 셸 입력 맵 Debug 레이어의 `DebugHUDToggle`(Ctrl+F3)입니다. 게임 맵이 F1~F12 를 스킬 키로 쓰므로(nile · skirmish · park 의 F1) Ctrl 조합이고,
+  개발 콘솔(\` · Ctrl+F1) · 리로드(Ctrl+F6~F8) · 에디터 BugIt(Ctrl+Shift+F12) · 에디터 패널 F2(이름 바꾸기)와 겹치지 않으며, F3 은 마인크래프트 · 여러 엔진의 디버그 화면 키라 찾기 쉽습니다.
+  개발 명령은 `hud [on|off|list|window]` · `hud <섹션> [on|off]`(섹션을 켜면 HUD 도 켠다) · `hud corner <topLeft|topRight|bottomLeft|bottomRight>` · `hud opacity <0.2..1>` 입니다.
+- **설정 창.** `hud window` 가 문서 `engine/ui/debughud.ui.xml` 을 모달로 엽니다. 표시 · 모서리 · 불투명도는 설정 바인딩(`{setting:debug.*}`)이고, 섹션 체크 상자는 `DebugHUD` 가 등록부에서 `Sections` 아래에 짓습니다.
+  모달이라 열린 동안만 UI 가 입력을 가집니다(`isGameInputBlocked`). 닫히면 창의 보류 값을 확정해 저장합니다.
+- **저장.** 상태는 사용자 설정 `debug.hud` · `debug.hudSections` · `debug.hudCorner` · `debug.hudOpacity`(스키마 `engine/settings/debughud.settings.xml`, Dev 만 덧붙여 읽는다)이고 대상은 `gv_debugHUD*` 입니다.
+  `debug.hudSections` 는 기본과 다른 섹션만 `이름`(켬) · `-이름`(끔)으로 적어서, 새 모듈의 섹션은 자기 기본으로 뜨고 내린 모듈의 낱말은 남습니다.
+- **글자.** HUD · 설정 창의 글은 영어 고정입니다(`setLocalized( false )` · `_bLocalized="false"`). 배포본에 없는 개발 도구라 번역 대상이 아니고, 로그 문자열과 같은 규칙입니다.
+- **확인.** `DebugHUDTest`(nogpu)와 시나리오 `engine/automation/debughud.scenario.xml` 이 봅니다. 탐침은 `DebugHUD.Shown` · `DebugHUD.WindowOpen` · `DebugHUD.SectionCount` ·
+  `DebugHUD.SectionShown`(`gv_debugHUDProbeSection` 의 섹션) · `DebugHUD.Corner`(패널이 실제로 놓인 4 분면, 0 왼위 · 1 오위 · 2 왼아래 · 3 오아래)입니다.
+- **꺼진 상태의 비용.** 프레임마다 셸 맵 액션 하나를 읽고 켜짐 값 하나를 비교하는 것뿐이고 할당이 없습니다. 측정값은 [검증과 측정](../../../docs/08_Verification.md) 2절에 있습니다.
+
 ### 테스트와 결정성
 
 | 이 엔진 | 언리얼 | 유니티 |
@@ -549,6 +575,10 @@ Empty 게임의 `-gv_benchUiMarkers=K` 는 벤치 큐브에 화면 마커를 붙
 
 **세로 상자 · 가로 흐름의 자식 64 개 이상은 보이는 범위만 걷습니다.** 그리기가 슬롯 위 변으로 이분 탐색하므로 자식의 렌더 변환은 보지 않습니다.
 그런 패널에서 렌더 변환으로 자식을 슬롯 밖 멀리 옮기면, 슬롯이 자르기 밖일 때 그 자식은 그려지지 않습니다.
+
+**디버그 HUD 섹션 본문은 섹션 등록이 아닌 곳에서 부르지 않습니다.** 본문 함수는 등록한 모듈의 것이라, 등록부에서 그 갱신 안에 찾은 포인터로만 부릅니다.
+HUD 화면도 등록 포인터를 프레임을 넘겨 들지 않고 섹션 이름만 둡니다 — 모듈이 내려간 뒤 사라진 본문을 부르지 않게 하기 위해서입니다(`DebugHUDTest.UnloadedSectionLeavesTheScreen`).
+HUD 상태를 바꾸는 시나리오는 사용자 파일에 남으므로 끝에서 기본값으로 되돌립니다(`AppScenarioTest` 는 `-gv_userSettingsFile` 을 주지 않는다).
 
 **게임 스레드에서 텍스처를 빌리지 않습니다.** 위젯은 디바이스가 없어 `TextureCache::acquire` 를 부를 수 없습니다.
 경로 이미지는 그리기 목록에 경로(`CanvasTextureRef::_texturePath`)로 넣고, 렌더 스레드의 `CanvasRenderer::prepareFrame` 이 기록 전에 빌립니다.

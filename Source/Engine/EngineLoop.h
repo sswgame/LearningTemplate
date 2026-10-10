@@ -36,6 +36,7 @@ namespace sw
     class CompressionCodecRegistry;
     class ConfigManager;
     class DebugDrawQueue;
+    class DebugHUD;
     class EventDispatcher;
     class FrameProfiler;
     class FrameRenderer;
@@ -253,6 +254,8 @@ namespace sw
          */
 #if !defined( SW_SHIPPING )
         unique_ptr<ShaderRecompiler> _shaderRecompiler;
+        /** @brief 디버그 HUD 조종자입니다(Dev 전용 — UI 기동 단계가 만들고, 프레임마다 `UISystem::update` 앞에서 셸 맵 단축키와 함께 돈다). */
+        unique_ptr<DebugHUD> _debugHUD;
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;

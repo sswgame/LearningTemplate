@@ -117,6 +117,9 @@ cd build/Ninja-Debug/Bin
   `GT.UI.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 같은 날 다른 PC(워커 14) 세 번: 전 `GT.UI.Paint` p50 0.26~0.29 · Layout 0.06 ms(합 0.32~0.35) →
   후(바뀐 그리기 목록 맞바꾸기 · 빈 위젯 캐시 건너뛰기 · `Widget::asPanel`) Paint p50 0.23 · p99 0.52 ms, Layout 0.06 ms(합 0.29 ms). 걷기 분해(임시 구간):
   걷기 ~180 us(보이는 위젯 1150 · 캐시 일괄 860 — 이어 붙이기 ~90 · 자르기 검사 ~20), 트리 출력 → 프레임 목록 30 us, 같은 내용 비교 8 us, 프레임 목록 복사 55~65 us(→ 0, 맞바꾼다). 구간 `GT.UI.*` · `RT.Canvas.*`, 카운터 `UI.LayoutWidgets` · `UI.PaintWidgets` · `UI.CanvasQuads`(값은 per_frame 열).
+- **디버그 HUD**(2026-10-11, Empty · DX12 · 600 프레임): 꺼진 상태 `GT.DebugHUD`(셸 맵 액션 하나 + 켜짐 비교) Release p50 · p99 0 us(1 us 미만, 세 번), 할당 0
+  (Debug `-gv_profileAllocSites` 에 HUD 자리 없음, alloc/frame 12.5). 켜짐(기본 섹션 넷): 섹션 갱신 `GT.DebugHUD.Sections` Release 17~36 us · Debug 84 us(4 Hz 라 프레임당 그 1/15),
+  Debug alloc/frame 12.5 → 14.6.
 - **텍스처 임포트 압축**(2026-10-10, Release App `--import-textures`, 워커 14 개 PC, 세 번): 띠 병렬 압축(`BandCompressJobInternal`) 전 → 후로
   BC7 512² 밉 10 단(`engine/textures_raw/random/grass.jpg`) 61.7~62.6 → 8.1~8.3 s, BC3 1024² 밉 11 단(`f00_000_face_00`) 17 → 2 ms,
   BC3 2048² 밉 12 단(`f00_001_body_00`) 70~72 → 9~10 ms, 원본 39 장 전체 3 분 35 초 → 40 초. 결과 DDS 는 스탬프 해시까지 바이트가 같다(스탬프를 비우고 전부 다시 임포트해

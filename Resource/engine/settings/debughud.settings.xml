@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디버그 HUD 사용자 설정 스키마 — Dev 구성만 엔진 · 게임 스키마 뒤에 덧붙여 읽는다(Shipping 에는 HUD 가 없다). 형식은 engine.settings.xml 머리말.
+  개발 도구라 글 키(text)를 두지 않는다 — 옵션 메뉴의 debug 탭 · HUD 설정 창은 id 와 선택지 값을 그대로 보인다.
+  hudSections 는 공백으로 나눈 '이름'(켬) · '-이름'(끔) 목록이고, 적지 않은 섹션은 등록의 기본을 따른다(DebugHUDSectionState).
+-->
+<UserSettingsSchema version="1">
+	<Category id="debug"/>
+	<Setting id="debug.hud" category="debug" type="bool" default="false" apply="immediate" target="gv:gv_debugHUD"/>
+	<Setting id="debug.hudSections" category="debug" type="string" default="" apply="immediate" target="gv:gv_debugHUDSections"/>
+	<Setting id="debug.hudCorner" category="debug" type="enum" default="topLeft" apply="immediate" target="gv:gv_debugHUDCorner">
+		<Option value="topLeft"/>
+		<Option value="topRight"/>
+		<Option value="bottomLeft"/>
+		<Option value="bottomRight"/>
+	</Setting>
+	<Setting id="debug.hudOpacity" category="debug" type="float" default="0.85" min="0.2" max="1" step="0.05" apply="immediate" target="gv:gv_debugHUDOpacity"/>
+</UserSettingsSchema>

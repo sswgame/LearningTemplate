@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 디버그 HUD(Dev 전용): 마스터 단축키 Ctrl+F3 로 켜고, 개발 명령 hud 로 섹션 · 모서리를 바꾸고, 설정 창을 열어 B(UI.Back)로 닫고, 다시 Ctrl+F3 로 끈다.
+  탐침은 HUD 화면이 실제로 그린 것을 본다 — DebugHUD.SectionShown(gv_debugHUDProbeSection 의 섹션 상자) · DebugHUD.Corner(패널이 놓인 4 분면).
+  HUD 상태는 사용자 설정이라 사용자 파일에 남는다 — 끝에서 기본값(꺼짐 · 기본 섹션 · 왼위 · 0.85)으로 되돌려 파일에 남는 값이 없게 한다.
+  실행: App.exe -scenario=engine/automation/debughud.scenario.xml -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="engine.debughud" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<At frame="0">
+		<DevCommand line="hud off"/>
+		<DevCommand line="hud physics off"/>
+		<DevCommand line="hud corner topLeft"/>
+		<Variable name="gv_debugHUDProbeSection" value="physics"/>
+	</At>
+	<At frame="3"><Expect probe="DebugHUD.Shown" equals="0"/></At>
+	<!-- 마스터 단축키 — Ctrl 을 누른 채 F3 -->
+	<At frame="5"><Press slot="Key.LeftControl"/></At>
+	<At frame="6"><Tap slot="Key.F3"/></At>
+	<At frame="9"><Release slot="Key.LeftControl"/></At>
+	<At frame="30">
+		<Expect probe="DebugHUD.Shown" equals="1"/>
+		<Expect probe="DebugHUD.SectionCount" atLeast="1"/>
+		<Expect probe="DebugHUD.SectionShown" equals="0"/>
+		<Expect probe="DebugHUD.Corner" equals="0"/>
+		<UILayoutDump file="debughud.layout.txt"/>
+		<Screenshot file="debughud.ppm"/>
+	</At>
+	<!-- 왼위에 패널 · 글 · 프레임 그래프가 실제로 그려졌다 -->
+	<At frame="31"><ExpectImage file="debughud.ppm" metric="meanLuma" region="0,0,0.3,0.45" atLeast="0.05"/></At>
+	<!-- 섹션 켜기 · 모서리 -->
+	<At frame="32"><DevCommand line="hud physics on"/></At>
+	<At frame="40"><Expect probe="DebugHUD.SectionShown" equals="1"/></At>
+	<At frame="41"><DevCommand line="hud corner bottomRight"/></At>
+	<At frame="50"><Expect probe="DebugHUD.Corner" equals="3"/></At>
+	<At frame="51"><DevCommand line="hud corner topRight"/></At>
+	<At frame="60"><Expect probe="DebugHUD.Corner" equals="1"/></At>
+	<!-- 섹션 끄기 -->
+	<At frame="61"><DevCommand line="hud physics off"/></At>
+	<At frame="70"><Expect probe="DebugHUD.SectionShown" equals="0"/></At>
+	<!-- 설정 창(모달) — 열린 동안 활성 화면, B 로 닫는다 -->
+	<At frame="71"><DevCommand line="hud window"/></At>
+	<At frame="78">
+		<Expect probe="DebugHUD.WindowOpen" equals="1"/>
+		<ExpectUI screen="engine/ui/debughud.ui.xml"/>
+	</At>
+	<At frame="80"><Tap slot="Gamepad.B"/></At>
+	<At frame="95"><Expect probe="DebugHUD.WindowOpen" equals="0"/></At>
+	<!-- 마스터 단축키로 끈다 -->
+	<At frame="100"><Press slot="Key.LeftControl"/></At>
+	<At frame="101"><Tap slot="Key.F3"/></At>
+	<At frame="104"><Release slot="Key.LeftControl"/></At>
+	<At frame="115"><Expect probe="DebugHUD.Shown" equals="0"/></At>
+	<At frame="116"><DevCommand line="hud corner topLeft"/><DevCommand line="hud opacity 0.85"/></At>
+	<At frame="120"><Pass/></At>
+</Scenario>

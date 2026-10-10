@@ -2197,6 +2197,46 @@
    "source": "Source/Engine/EngineLoop.cpp"
   },
   {
+   "name": "gv_debugHUD",
+   "type": "bool",
+   "default": "false",
+   "kind": "일반",
+   "description": "디버그 HUD 표시 — Dev 전용, 단축키 Ctrl+F3 · 명령 hud (사용자 설정 debug.hud)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_debugHUDCorner",
+   "type": "int32",
+   "default": "0",
+   "kind": "일반",
+   "description": "디버그 HUD 모서리 0 왼위 1 오위 2 왼아래 3 오아래 (사용자 설정 debug.hudCorner)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_debugHUDOpacity",
+   "type": "float32",
+   "default": "0.85",
+   "kind": "일반",
+   "description": "디버그 HUD 불투명도 0.2~1 (사용자 설정 debug.hudOpacity)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
+   "name": "gv_debugHUDProbeSection",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "자동화 탐침 DebugHUD.SectionShown 이 볼 디버그 HUD 섹션 이름",
+   "source": "Source/Engine/UI/Debug/DebugHUD.cpp"
+  },
+  {
+   "name": "gv_debugHUDSections",
+   "type": "string",
+   "default": "",
+   "kind": "일반",
+   "description": "디버그 HUD 섹션 켬 · 끔 — 공백으로 나눈 '이름'(켬) · '-이름'(끔), 적지 않은 섹션은 기본 (사용자 설정 debug.hudSections)",
+   "source": "Source/Engine/UserSettings/UserSettingsVariables.cpp"
+  },
+  {
    "name": "gv_defaultMaterial",
    "type": "string",
    "default": "",
