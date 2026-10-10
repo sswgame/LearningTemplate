@@ -51,3 +51,22 @@ namespace sw::editortest
         int32 _previewCount = 0;
     };
 } // namespace sw::editortest
+
+namespace sw::editortest
+{
+    /** @brief 환경설정 저장소 시험용 섹션입니다(EditorPreferencesStoreTest). */
+    REFLECT()
+    struct EditorPreferencesProbe
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _speed{ 5.0f };
+
+        PROPERTY()
+        string _path{};
+
+        PROPERTY()
+        bool _bFlag{ true };
+    };
+} // namespace sw::editortest

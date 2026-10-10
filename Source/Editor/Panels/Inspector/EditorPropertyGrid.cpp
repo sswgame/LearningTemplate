@@ -107,8 +107,14 @@ namespace sw::editor
     {
     }
 
-    void EditorPropertyGrid::drawSearchBar()
+    void EditorPropertyGrid::drawSearchBar( const utf8* pMarkKey )
     {
+        if ( pMarkKey != nullptr )
+        {
+            EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, "Search properties...", 0.0f, false );
+            EditorSelfTestMarks::note( pMarkKey );
+            return;
+        }
         EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, "Search properties..." );
     }
 

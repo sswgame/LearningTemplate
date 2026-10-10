@@ -59,11 +59,6 @@ namespace sw::editor
         return stateDir;
     }
 
-    string EditorUtil::getEditorConfigFilePath()
-    {
-        return resolveEditorStateFile( FileUtil::getFileNamePart( config::kFileRuntimeEditorConfig ).c_str() );
-    }
-
     string EditorUtil::resolveEditorStateFile( const utf8* pFileName )
     {
         if ( StringUtil::isNullOrEmpty( pFileName ) )

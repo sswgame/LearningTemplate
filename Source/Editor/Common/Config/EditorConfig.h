@@ -1,10 +1,9 @@
 /**
  * @file EditorConfig.h
- * @brief **앱이 다시 쓰는** 에디터 상태입니다(Saved/Editor/EditorConfig.json — git 무시, 사람이 쓰는 설정은 Config/).
+ * @brief 에디터 테마입니다. 환경설정 섹션 "Editor/Appearance" 로 등록되어 `Saved/Editor/EditorPreferences.json` 에 기본과 다른 값만 저장됩니다.
  *
- * @details 여기 있는 값은 에디터가 `saveToHost()` 로 **파일 전체를 다시 만들어** 덮어씁니다(테마 대화 상자의 저장).
- *          그래서 손으로 적은 것(주석 · 순서 · 손으로 고른 목록)은 여기 두면 안 됩니다. 그런 설정은 읽기 전용인
- *          `EditorToolDefaults`(editortooldefaults.json)에 있습니다.
+ * @details 저장 파일은 앱이 통째로 다시 씁니다. 손으로 적은 것(주석 · 순서)은 남지 않으므로, 사람이 커밋하는 설정은
+ *          `EditorToolDefaults`(editortooldefaults.json)에 둡니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -47,9 +46,9 @@ namespace sw::editor
 
         static void                setActive( const EditorConfig& config );
         static const EditorConfig& getActive();
-        /** @brief Host JSON을 읽어 active 설정을 채웁니다. 파일이 없으면 cpp 기본값입니다. */
-        static void loadFromHost();
-        /** @brief active 설정을 Host JSON 파일에 저장합니다. */
-        static void saveToHost();
+        /** @brief 활성 설정의 주소입니다(환경설정 섹션 Appearance 가 이 인스턴스를 그린다). */
+        static EditorConfig* getActiveInstance();
+        /** @brief 지금 테마를 환경설정 파일에 저장합니다(`EditorPreferencesStore::saveAll`). 테마 대화상자가 부릅니다. */
+        static void saveToPreferences();
     };
 } // namespace sw::editor

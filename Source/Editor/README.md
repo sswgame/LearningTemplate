@@ -371,13 +371,13 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
 ## Output Log · 설정 · 선택 · 레이아웃
 
 - **로그 줄 → IDE**: 줄을 더블 클릭(또는 오른쪽 클릭 `Open in IDE`)하면 그 줄이 가리키는 소스 위치를 IDE 로 연다. 메시지 안의 위치
-  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 `Config/Editor/editortooldefaults.json`(기본값과 다른 값만 적는 파일 — 없으면 기본값)의
+  (`경로(줄,열)` · `경로:줄:열` — 컴파일러 · 셰이더 오류)가 먼저, 없으면 로그를 쓴 자리다. 명령 틀은 환경설정 General 의
   `_ideOpenCommand`(`{file}` · `{line}`), 비우면 VS Code(`code -g`, Windows 는 `cmd /c`)다. 판정은 `Common/Commands/EditorLogCommands`.
 - **카테고리 필터**: 툴바 `Tags` 팝업이 로그 카테고리(로그를 쓴 자리 `SW_LOG_CALLER`, 없으면 모듈 태그)마다 보이기를 켜고 끈다(`EditorLogTagFilter`).
 - **설정 파일 핫 리로드**: `Common/Workspace/ConfigHotReload` 가 `Config/` 의 `.json` 을 감시한다(에셋과 같은 `FileWatchDispatcher`, 루트만 다름).
   호스트 설정(`ConfigManager` 가 파일에서 읽은 EngineConfig · GameConfig)은 `ConfigManager::reloadConfigFile` 이 **제자리에서** 다시 읽고
   `onConfigReloaded` 로 알린다 — App 은 프레임 시간 정책, EngineLoop 는 게임 설정 활성본 · 선호 수직 동기화(다음 스왑체인부터). 에디터 도구 시드
-  (`editortooldefaults.json`)는 에디터가 다시 읽는다. 앱이 다시 쓰는 `EditorConfig.json` 은 다시 읽지 않는다.
+  (`editortooldefaults.json`)는 에디터가 다시 읽는다. 앱이 다시 쓰는 `EditorPreferences.json` 은 다시 읽지 않는다.
 - **같은 종류 · 태그 모두 선택**: Hierarchy 오른쪽 클릭 `Select All With` — 그 오브젝트의 컴포넌트 종류(파생 포함) · 태그(아래 계층 포함)마다
   (`EditorSceneCommands::collectObjectsWithComponent` · `collectObjectsWithTag` · `selectObjects`).
 - **이름 붙인 레이아웃**: `Panel > Layouts` — 이름을 적고 Save, 목록에서 고르면 불러오고 `x` 로 지운다. 도킹 배치(`<이름>.imgui.ini`)와 패널
@@ -540,7 +540,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   목록을 지운다).
 - **ImGui 수명 짝** — 플랫폼 백엔드 `shutdown()` 은 `BackendPlatformUserData` 를 확인한 뒤에만, 초기화 실패 경로도 전역을 걷는다, 팝업에 `p_open=&_bOpen` 을 넘기지 말 것(X 버튼이 `onClose`
   를 건너뛴다). 모달이 떠 있으면 키가 `InputManager` 까지 오지 않는다. 에디터 draw 스냅샷은 획득 → present **또는 포기**(`abandonPendingDraw`)로 끝난다. 입력 위젯은 `drawTextField` 하나.
-- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorConfig.json` 테마 · 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. 씬 뷰 · 게임 뷰 클리어 색은
+- **에디터 환경설정은 섹션 하나가 리플렉션 구조체 하나다**(`SW_EDITOR_SETTINGS` — 확장 모듈도 등록한다). 저장은 `Saved/Editor/EditorPreferences.json` 에 기본과 다른 값만(`EditorPreferencesStore`),
+  테마(`EditorConfig`)도 섹션 Appearance 다. 창은 Edit > Preferences(`PreferencesPanel` — 전체 검색 · Modified only · Reset Section, 저장 단추 없이 0.5 초 뒤 저장).
+  `-gv_editorUiScale` · `-gv_editorStartupScene` 은 주어지면 환경설정을 이긴다(자동화). 섹션의 바뀐 뒤 동작은 ImGui 컨텍스트보다 먼저 불릴 수 있다(기동 때 파일을 읽는다). 시나리오 `editor/preferences`.
+- **에디터 상태 · 설정** — 설정 파일 경계는 "앱이 다시 쓰는가": 앱이 쓰는 상태(`EditorPreferences.json` 환경설정 · 테마, 도킹 · 레이아웃 · 캔버스 · gv 프리셋)는 `Saved/Editor/`(git 무시), 사람이 쓰는 것만 `Config/Editor/`, 에디터 자기 파일 · 폴더 이름은 코드 상수(`EditorUtil::k…FileName`, `config::kDirConfigEditor`) — 설정 파일이 제 위치를 정하지 않는다. 씬 뷰 · 게임 뷰 클리어 색은
   `_clearColor`. 상태를 소유자에게 옮길 때는 그 소유자가 언제 서는지부터 본다(테마가 `EditorContext::initialize()` 전에 읽혀 조용히 버려졌다). DPI: 96 DPI 기준값 × 배율, 테마에서 곱하고
   되읽을 때 나눈다(짝이 깨지면 이중 배율). 모니터를 옮기면 ImGui 는 FontScaleDpi 만 덮는다 — `beginFrame` 이 그 값을 따라 `setDpiScale` 로 여백까지 맞춘다.
   WM_DPICHANGED 는 게시(PostMessage)하면 창 프로시저에 닿지 않는다 — 시험은 보내기(SendMessage)로. 에셋 핫 리로드는 에디터 소유(`FileWatchDispatcher`), 감시 접두어는 절대 경로.

@@ -13,6 +13,8 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorViewportPick.h"
+#include "Editor/Common/Config/EditorPreferences.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -173,7 +175,15 @@ namespace sw::editor
         , _bGizmoTracking{ SW_FALSE }
         , _reservedGizmo{ 0 }
     {
-        // 어떤 시각화가 기본으로 켜지는지는 시각화 표가 정한다.
+        // 어떤 시각화가 기본으로 켜지는지는 시각화 등록 줄이 정한다. 스냅 · 카메라 속도 · 표시 기본값은 환경설정(Editor/Viewport)에서 온다.
+        const EditorViewportPreferences& preferences = getPreferences<EditorViewportPreferences>();
+        _toolbarSettings._cameraSpeed                = preferences._cameraSpeed;
+        _toolbarSettings._gridSnapValue              = preferences._gridSnapValue;
+        _toolbarSettings._rotationSnapValue          = preferences._rotationSnapValue;
+        _toolbarSettings._scaleSnapValue             = preferences._scaleSnapValue;
+        _toolbarSettings._bShowStats                 = preferences._bShowStats;
+        _toolbarSettings._bShowGrid                  = preferences._bShowGrid;
+        _toolbarSettings._bShowOrientationCube       = preferences._bShowOrientationCube;
     }
 
     void EditorViewportClient::getViewMatrix( float32* pOutMatrix ) const

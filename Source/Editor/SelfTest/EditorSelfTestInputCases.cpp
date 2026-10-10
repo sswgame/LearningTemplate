@@ -4,6 +4,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
@@ -57,6 +58,11 @@ namespace sw::editor
                 string _pressDiagnosis{}; ///< 누른 프레임 뒤의 입력 대상(`describeInputTarget`) — 실패 이유에 붙인다
                 uint64 _objectID{ 0 };
                 uint32 _hintCountBefore{ 0 };
+                uint32 _phase{ 0 };      ///< 지금 단계(프레임 번호가 아니다 — 글자를 기다리는 동안 머문다)
+                uint32 _waitFrames{ 0 }; ///< 글자가 칸에 닿기를 기다린 프레임 수
+
+                /** @brief 글자가 칸에 닿기를 기다리는 최대 프레임 수입니다. */
+                static constexpr uint32 kMaxWaitFrames = 8;
             };
 
             /**
@@ -112,7 +118,9 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
 
                 TypingProbe& probe = getTypingProbe();
-                switch ( context.getStepIndex() )
+                if ( context.getStepIndex() == 0 )
+                    probe = TypingProbe{};
+                switch ( probe._phase )
                 {
                     case 0:
                     {
@@ -122,6 +130,7 @@ namespace sw::editor
                         pObj->addTag( TagID::request( "SwSelfTest.Typed" ) );
                         probe._objectID = pObj->getObjectID();
                         pHierarchy->setFilterText( "" );
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue; // 패널이 한 번 그려져 이름표가 생기게
                     }
                     case 1:
@@ -133,23 +142,33 @@ namespace sw::editor
                             finishTyping( pHierarchy, pManager );
                             return EditorSelfTestStep::Done;
                         }
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue;
                     }
                     case 2:
                     case 6:
                     {
-                        if ( context.getStepIndex() == 2 )
+                        if ( probe._phase == 2 )
                             probe._pressDiagnosis = describeInputTarget( "hierarchy.filter" );
                         (void)pressOnMark( "hierarchy.filter", false );
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue;
                     }
                     case 3:
                     {
                         EditorSelfTestInput::typeText( "tag:SwSelfTest" );
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue;
                     }
                     case 4:
                     {
+                        // 글자 사건은 마우스 사건과 같은 프레임에 들면 ImGui 가 다음 프레임으로 흘려 보낸다(io.ConfigInputTrickleEventQueue) — 몇 프레임 기다린다.
+                        if ( pHierarchy->getFilterText() != "tag:SwSelfTest" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                        {
+                            ++probe._waitFrames;
+                            return EditorSelfTestStep::Continue;
+                        }
+                        probe._waitFrames = 0;
                         // 글자가 든 프레임에 패널이 칸 → 트리 순으로 그렸다. 칸에 닿았는지 · 필터가 탐침을 찾았는지 본다.
                         // 실패하면 이유에 누른 뒤 · 지금의 입력 대상을 붙인다 — 실행 한 번으로 "클릭이 칸을 못 잡았다" 와 "글자가 안 들어갔다" 가 갈린다(패널 점검 D26).
                         string what{ "typing did not reach the search field [after press: " };
@@ -162,16 +181,23 @@ namespace sw::editor
                         // 지우고 없는 이름을 친다 — 입력 중인 칸은 ImGui 가 든 글을 쓰므로 먼저 놓고 지운 뒤 다시 누른다.
                         ImGui::ClearActiveID();
                         pHierarchy->setFilterText( "" );
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue;
                     }
                     case 7:
                     {
                         probe._hintCountBefore = EditorWidgets::getNoSearchResultHintCount();
                         EditorSelfTestInput::typeText( "zzSelfTestNoSuchObject" );
+                        ++probe._phase;
                         return EditorSelfTestStep::Continue;
                     }
                     default:
                     {
+                        if ( pHierarchy->getFilterText() != "zzSelfTestNoSuchObject" && probe._waitFrames < TypingProbe::kMaxWaitFrames )
+                        {
+                            ++probe._waitFrames;
+                            return EditorSelfTestStep::Continue;
+                        }
                         (void)context.expect( pHierarchy->getFilterText() == "zzSelfTestNoSuchObject", "the second typing did not reach the search field" );
                         (void)context.expect( pHierarchy->getVisibleRootCount() == 0, "a name that matches nothing still shows roots" );
                         (void)context.expect( EditorWidgets::getNoSearchResultHintCount() > probe._hintCountBefore, "zero matches did not draw the no-result hint" );
@@ -272,7 +298,7 @@ namespace sw::editor
                 return s_probe;
             }
 
-            static string getEditorConfigPath() { return EditorUtil::getEditorConfigFilePath(); }
+            static string getEditorConfigPath() { return EditorPreferencesStore::getDefaultFilePath(); }
 
             static EditorSelfTestStep runClassicDarkSwatch( EditorSelfTestContext& context )
             {

@@ -158,11 +158,10 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         typeName="EditorToolDefaults", header="Source/Editor/Common/Config/EditorToolDefaults.h", keyStyle=kKeyStyleJsonMember, bOptional=True,
         note="기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값"),
     ConfigFileEntry(
-        page="EditorConfig", pathPattern="Saved/Editor/EditorConfig.json", layer=kLayerEditor, fileFormat="json",
-        reader="`EditorConfig::loadFromHost` · `saveToHost`", readWhen="에디터 기동 · 테마 저장 때 **앱이 통째로 다시 쓴다**",
-        shipping="없음(에디터 없음)", bCommitted=False,
-        typeName="EditorConfig", header="Source/Editor/Common/Config/EditorConfig.h", keyStyle=kKeyStyleJsonMember, bOutsideRepo=True,
-        note="앱이 쓰는 상태(`Saved/`, git 무시) — 사람이 고치지 않는다"),
+        page="", pathPattern="Saved/Editor/EditorPreferences.json", layer=kLayerEditor, fileFormat="json",
+        reader="`EditorPreferencesStore::loadAll` · `saveAll`", readWhen="에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**",
+        shipping="없음(에디터 없음)", bCommitted=False, ownerDoc="Source/Editor/README.md", bOutsideRepo=True,
+        note="환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시)"),
     ConfigFileEntry(
         page="TextureImportConfig", pathPattern="Config/Editor/TextureImportConfig.json", layer=kLayerEditor, fileFormat="json",
         reader="`TextureImportConfig::loadFromFile` (손으로 읽음)", readWhen="텍스처 임포트(에디터 · `App --import-textures`)",

@@ -35,6 +35,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/SequenceTimingUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorSettingsRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorPlaySession.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/EditorUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorLabelLayout.cpp"
@@ -98,6 +99,7 @@ target_include_directories(EditorTest PRIVATE "${CMAKE_SOURCE_DIR}/Source")
 sw_addReflectionStep(EditorTest
 	HEADERS
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorConfig.h"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorPreferences.h"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/EditorPreviewProbe.h"
 	INCLUDES

@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -20,6 +21,15 @@ namespace sw::editor
     {
         struct EditorThemeInternal
         {
+            /** @brief 환경설정 섹션 Appearance 의 인스턴스입니다(활성 EditorConfig). */
+            static void* getAppearanceInstance() { return EditorConfig::getActiveInstance(); }
+            /** @brief 환경설정 섹션 Appearance 의 기본값입니다. */
+            static const void* getAppearanceDefault()
+            {
+                static const EditorConfig s_default{};
+                return &s_default;
+            }
+
             /**
              * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. **상수이므로 상태가 아닙니다.**
              * @details 색 게터들이 `const Color4&` 를 반환하므로 임시 객체를 참조로 넘길 수 없습니다.
@@ -399,6 +409,9 @@ namespace sw::editor
 
     void EditorThemeUtil::loadFromConfig()
     {
+        // 환경설정 파일은 ImGui 컨텍스트보다 먼저 읽는다(섹션의 바뀐 뒤 동작이 여기로 온다) — 테마는 컨텍스트를 만든 뒤 ImGuiEditor 가 다시 적용한다.
+        if ( ImGui::GetCurrentContext() == nullptr )
+            return;
         const EditorConfig& editorConfig = EditorConfig::getActive();
 
         const EditorThemePreset preset = EditorThemeInternal::findRowByConfigID( editorConfig._themePreset )._preset;
@@ -439,7 +452,7 @@ namespace sw::editor
         editorConfig._themeTabRounding    = themeConfig._tabRounding;
 
         EditorConfig::setActive( editorConfig );
-        EditorConfig::saveToHost();
+        EditorConfig::saveToPreferences();
     }
 
     void EditorThemeUtil::setAccentColor( const Color4& accentColor )
@@ -732,4 +745,11 @@ namespace sw::editor
         formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
         return s_label.c_str();
     }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    // 테마는 환경설정 섹션 "Editor/Appearance" 다 — 저장은 EditorPreferences.json 하나, 값을 고치면(창 · 파일 다시 읽기) 테마를 다시 적용한다.
+    SW_EDITOR_REGISTER( EditorSettingsRegistration, Settings_EditorConfig, { "appearance", 200 }, "Editor/Appearance", &EditorConfig::StaticType,
+                        &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeUtil::loadFromConfig );
 } // namespace sw::editor

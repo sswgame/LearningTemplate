@@ -45,12 +45,12 @@ namespace sw::editor
         /** @brief IDE 명령 틀(`code -g {file}:{line}`)의 자리를 채웁니다. 틀이 비면 빈 문자열입니다. */
         static string makeOpenCommand( string_view commandTemplate, const EditorSourceLocation& location );
         /**
-         * @brief 쓸 IDE 명령 틀입니다 — `editortooldefaults.json` 의 `_ideOpenCommand`, 비었으면 플랫폼 기본값(VS Code)입니다.
+         * @brief 쓸 IDE 명령 틀입니다 — 환경설정 General 의 `_ideOpenCommand`, 비었으면 플랫폼 기본값(VS Code)입니다.
          * @details Windows 의 `code` 는 `code.cmd` 라 `CreateProcess` 가 바로 띄우지 못해 `cmd /c` 를 붙입니다.
          */
         static string getOpenCommandTemplate();
         /**
-         * @brief 위치를 IDE 로 엽니다. 명령 틀은 `editortooldefaults.json` 의 `_ideOpenCommand` 입니다.
+         * @brief 위치를 IDE 로 엽니다. 명령 틀은 환경설정 General 의 `_ideOpenCommand` 입니다.
          * @return 프로세스를 띄웠으면 true
          */
         [[nodiscard]] static bool openInIde( const EditorSourceLocation& location );

@@ -6,6 +6,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Process/Process.h"
 
+#include "Editor/Common/Config/EditorPreferences.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -127,7 +129,7 @@ namespace sw::editor
 
     string EditorLogCommands::getOpenCommandTemplate()
     {
-        const string& configured = getEditorToolDefaults()._ideOpenCommand;
+        const string& configured = getPreferences<EditorGeneralPreferences>()._ideOpenCommand;
         if ( configured.empty() == false )
             return configured;
 #if SW_PLATFORM_WINDOWS
@@ -142,7 +144,7 @@ namespace sw::editor
         const string command = makeOpenCommand( getOpenCommandTemplate(), location );
         if ( command.empty() )
         {
-            SW_LOG_WARNING( "Open in IDE: no command template (_ideOpenCommand in editortooldefaults.json) or no file." );
+            SW_LOG_WARNING( "Open in IDE: no command template (Editor/General IDE open command in Preferences) or no file." );
             return false;
         }
         if ( Process::launchDetached( command ) == false )

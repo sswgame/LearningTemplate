@@ -19,15 +19,15 @@ SW_TEST_CASE( EditorToolDefaultsTest, MissingFileIsNotAFailure )
     SW_ASSERT_FALSE( sw::FileUtil::exists( missingPath ) );
 
     EditorToolDefaults defaults{};
-    defaults._ideOpenCommand = "stale";
+    defaults._defaultMap = "stale";
     SW_EXPECT_TRUE( defaults.loadFromHostPath( missingPath ) );
-    SW_EXPECT_EQUAL( EditorToolDefaults{}._ideOpenCommand, defaults._ideOpenCommand ); // 파일이 없으면 내장 기본값
+    SW_EXPECT_EQUAL( EditorToolDefaults{}._defaultMap, defaults._defaultMap ); // 파일이 없으면 내장 기본값
 
     // 깨진 파일은 실패이고 앞 값을 그대로 둔다.
     const sw::string brokenPath = sw::FileUtil::joinPath( test::makeTempDirectory( "editor_tool_defaults_broken" ), "editortooldefaults.json" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( brokenPath, "{ not json" ) );
-    defaults._ideOpenCommand = "kept";
+    defaults._defaultMap = "kept";
     SW_TEST_DEFENSIVE_SCOPE( "a broken editortooldefaults.json is reported" );
     SW_EXPECT_FALSE( defaults.loadFromHostPath( brokenPath ) );
-    SW_EXPECT_EQUAL( sw::string( "kept" ), defaults._ideOpenCommand );
+    SW_EXPECT_EQUAL( sw::string( "kept" ), defaults._defaultMap );
 }

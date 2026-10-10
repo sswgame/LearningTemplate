@@ -34,6 +34,7 @@ sw_addModuleLibrary(EditorModule
 	UNITY_BATCH 8
 	REFLECTION_HEADERS
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorPreferences.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
 )

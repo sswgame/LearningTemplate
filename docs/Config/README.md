@@ -52,7 +52,7 @@
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
 | `Config/Editor/editortooldefaults.json` | `EditorToolDefaults::loadFromHostPath` (에디터 모듈 기동) — 에디터 기동 · 에디터 핫 리로드. 기본값과 다른 값이 있을 때만 만든다 — 없으면 기본값 | 없음(에디터 없음) | 한다 | [EditorToolDefaults](EditorToolDefaults.md) |
-| `Saved/Editor/EditorConfig.json` | `EditorConfig::loadFromHost` · `saveToHost` — 에디터 기동 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 앱이 쓰는 상태(`Saved/`, git 무시) — 사람이 고치지 않는다 | 없음(에디터 없음) | 안 한다 | [EditorConfig](EditorConfig.md) |
+| `Saved/Editor/EditorPreferences.json` | `EditorPreferencesStore::loadAll` · `saveAll` — 에디터 기동 · 환경설정 창에서 값을 바꾼 0.5 초 뒤 · 테마 저장 때 **앱이 통째로 다시 쓴다**. 환경설정 섹션(`SW_EDITOR_SETTINGS`)마다 기본과 다른 값만 — 앱이 쓰는 상태(`Saved/`, git 무시) | 없음(에디터 없음) | 안 한다 | [형식 설명](../../Source/Editor/README.md) |
 | `Config/Editor/TextureImportConfig.json` | `TextureImportConfig::loadFromFile` (손으로 읽음) — 텍스처 임포트(에디터 · `App --import-textures`) | 없음(임포트는 Dev 만) | 한다 | [TextureImportConfig](TextureImportConfig.md) |
 | `Config/Editor/ModelImportConfig.json` | `ModelImportConfig::loadFromFile` (손으로 읽음) — 모델 임포트(에디터 · `App --import-models`) | 없음(임포트는 Dev 만) | 한다 | [ModelImportConfig](ModelImportConfig.md) |
 | `Config/Editor/AssetValidationRules.json` | `Scripts/common/AssetValidation.py` (에디터 `EditorAssetValidation` 도 이것을 돌린다) — 저장 · 임포트 직후(에디터) · `CheckAssetRules` 게이트 · `py -3 -m Scripts validate-assets` | 없음 | 한다 | [형식 설명](../../Scripts/common/AssetValidation.py) |

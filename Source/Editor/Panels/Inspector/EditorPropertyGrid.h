@@ -60,8 +60,13 @@ namespace sw::editor
         EditorPropertyGrid( const EditorPropertyGrid& )            = delete;
         EditorPropertyGrid& operator=( const EditorPropertyGrid& ) = delete;
 
-        /** @brief 검색 칸을 그립니다(그리드 위 한 줄). */
-        void drawSearchBar();
+        /**
+         * @brief 검색 칸을 그립니다(그리드 위 한 줄).
+         * @param pMarkKey 주면 지우기 단추 없이 그리고 입력 칸에 이 이름표를 남깁니다(시나리오가 누른다).
+         */
+        void drawSearchBar( const utf8* pMarkKey = nullptr );
+        /** @brief 지금 검색어입니다(비면 빈 글). 환경설정 창이 섹션을 거를 때 씁니다. */
+        const utf8* getFilterText() const { return _propertyFilter.c_str(); }
         /**
          * @brief 대상의 프로퍼티를 그립니다. @p listDrawnName 은 이미 다른 곳(인스펙터 확장)이 그린 이름이라 다시 그리지 않습니다.
          * @param pSectionTitle 그릴 것이 있을 때만 위에 두는 구분선 제목입니다. nullptr 이면 없습니다.

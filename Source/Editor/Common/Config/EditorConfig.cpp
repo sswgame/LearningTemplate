@@ -2,19 +2,10 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 
-#include "Core/File/FileUtil.h"
-
-#include "Editor/Common/EditorUtil.h"
-
-#include "Engine/Config/ConfigManager.h"
-#include "Engine/Serialization/Format/JSONSerializer.h"
-
-#include "sw/config/ConfigConstants.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 
 namespace sw::editor
 {
-    SW_LOG_CALLER( "Editor" );
-
     namespace
     {
         EditorConfig s_activeEditorConfig{};
@@ -30,32 +21,13 @@ namespace sw::editor
         return s_activeEditorConfig;
     }
 
-    void EditorConfig::loadFromHost()
+    EditorConfig* EditorConfig::getActiveInstance()
     {
-        EditorConfig config{};
-        const string configPath = EditorUtil::getEditorConfigFilePath();
-
-        // 틀린 파일은 칸 하나도 쓰지 않는다 — 읽은 데까지만 쓰면 무엇이 기본값인지 아무도 모른다. 오류는 키 이름과 함께 readConfigFile 이 남긴다.
-        const ConfigReadResult result = ConfigManager::readConfigFile( config, configPath );
-        if ( result == ConfigReadResult::Loaded )
-            SW_LOG_TRACE( "EditorConfig source=file (%#)", configPath.c_str() );
-        else if ( result == ConfigReadResult::Missing )
-            SW_LOG_INFO( "EditorConfig 파일이 없어 내장 기본값을 씁니다: %#", configPath.c_str() );
-        else
-            config = EditorConfig{};
-
-        setActive( config );
+        return &s_activeEditorConfig;
     }
 
-    void EditorConfig::saveToHost()
+    void EditorConfig::saveToPreferences()
     {
-        const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
-        const string    configPath = EditorUtil::getEditorConfigFilePath();
-
-        FileUtil::ensureParentDirectoryExists( configPath );
-        if ( pTypeInfo != nullptr && JSONSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
-            SW_LOG_TRACE( "EditorConfig saved to file (%#)", configPath.c_str() );
-        else
-            SW_LOG_WARNING( "Failed to save EditorConfig to %#", configPath.c_str() );
+        (void)EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ); // 실패는 saveAll 이 경고로 알린다
     }
 } // namespace sw::editor

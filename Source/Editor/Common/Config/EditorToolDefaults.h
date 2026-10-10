@@ -72,13 +72,6 @@ namespace sw::editor
         vector<string> _listHotReloadExtension{};
 
         /**
-         * @brief 출력 로그 줄을 IDE 로 여는 명령 틀입니다. `{file}` · `{line}` 이 위치로 바뀝니다(예: `code -g "{file}:{line}"`,
-         *        `rider64 --line {line} "{file}"`). 비우면 VS Code 입니다(`EditorLogCommands::getOpenCommandTemplate`).
-         */
-        PROPERTY()
-        string _ideOpenCommand{};
-
-        /**
          * @brief 프로젝트 루트 기준 Host 경로에서 에디터 시드를 로드합니다.
          * @param hostRelativePath 비어 있으면 `config::kFileRuntimeEditorToolDefaults`(Config/Editor/editortooldefaults.json)
          * @return 읽었거나 파일이 없어 기본값을 쓰면 true. 파일이 깨졌으면 false 이고 값은 그대로다(오류는 `ConfigManager::readConfigFile` 이 키 이름과 남긴다).

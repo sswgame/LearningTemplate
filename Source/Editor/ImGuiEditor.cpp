@@ -16,6 +16,8 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
+#include "Editor/Common/Config/EditorPreferences.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
@@ -207,9 +209,11 @@ namespace sw::editor
         }
 
 #if !defined( SW_SHIPPING )
-        BLOCK( "EditorConfig host load" )
+        BLOCK( "Editor preferences load" )
         {
-            EditorConfig::loadFromHost();
+            // 처음 실행이면 파일이 없다 — 기본값 그대로다.
+            if ( EditorPreferencesStore::loadAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
+                SW_LOG_INFO( "Editor preferences: no saved file yet - using defaults" );
             _editorToolDefaults = make_unique<EditorToolDefaults>();
             if ( _editorToolDefaults->loadFromHostPath() == false )
                 SW_LOG_WARNING( "Editor data could not be read - using defaults" );
@@ -331,19 +335,23 @@ namespace sw::editor
             // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이
             // 따라간다(ImGui 1.92 동적 폰트).
             // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
-            const bool bFixedUIScale = gv_editorUiScale > 0.0f;
-            EditorThemeUtil::setDpiScale( bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
+            // 스위치가 이기고(자동화), 없으면 환경설정(General 의 UI 배율), 그것도 0 이면 모니터 DPI 다.
+            const float32 fixedUIScale  = gv_editorUiScale > 0.0f ? static_cast<float32>( gv_editorUiScale ) : getPreferences<EditorGeneralPreferences>()._uiScale;
+            const bool    bFixedUIScale = fixedUIScale > 0.0f;
+            EditorThemeUtil::setDpiScale( bFixedUIScale ? fixedUIScale : _platformBackend->getDpiScale() );
             ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
             ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
             SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
                          ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
             // `-gv_editorStartupScene=<경로>`: 검증용이다 — 기동 검증이 오브젝트를 순회하는 코드까지 다루게 한다. 정의는 이 파일 위에 있다.
-            if ( gv_editorStartupScene.empty() == false )
+            // 스위치가 이기고, 없으면 환경설정(General 의 시작 씬)이다.
+            const string startupScene = gv_editorStartupScene.empty() == false ? string( gv_editorStartupScene ) : getPreferences<EditorGeneralPreferences>()._startupScene;
+            if ( startupScene.empty() == false )
             {
-                SW_LOG_INFO( "시작 씬을 엽니다: %#", gv_editorStartupScene.c_str() );
-                if ( EditorAssetCommands::loadScene( gv_editorStartupScene ) == false )
-                    SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", gv_editorStartupScene.c_str() );
+                SW_LOG_INFO( "시작 씬을 엽니다: %#", startupScene.c_str() );
+                if ( EditorAssetCommands::loadScene( startupScene ) == false )
+                    SW_LOG_ERROR( "시작 씬을 열지 못했습니다: %#", startupScene.c_str() );
             }
         }
 

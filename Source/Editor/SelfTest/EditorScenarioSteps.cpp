@@ -11,6 +11,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -21,6 +22,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
@@ -783,6 +785,20 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 환경설정 창의 섹션 목록에 지난 프레임 보인 섹션 수입니다(검색이 거른 뒤). */
+            [[nodiscard]] static bool readPreferencesVisibleSections( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( PreferencesPanel::getVisibleSectionCount() );
+                return true;
+            }
+
+            /** @brief 환경설정 파일에 저장된 키 수입니다(모든 섹션 합 — 기본과 다른 값만 저장된다). */
+            [[nodiscard]] static bool readPreferencesSavedKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( EditorPreferencesStore::countSavedKeys( EditorPreferencesStore::getDefaultFilePath() ) );
+                return true;
+            }
+
             /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -850,6 +866,10 @@ namespace sw::editor
                          "Numeric value of gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection", &EditorScenarioStepsInternal::readSelectedProperty );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
+    SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",
+                         &EditorScenarioStepsInternal::readPreferencesVisibleSections );
+    SW_AUTOMATION_PROBE( editorPreferencesSavedKeyCount, "Editor.PreferencesSavedKeyCount", "Keys saved in EditorPreferences.json (only values that differ from the defaults)",
+                         &EditorScenarioStepsInternal::readPreferencesSavedKeyCount );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
 } // namespace sw::editor
