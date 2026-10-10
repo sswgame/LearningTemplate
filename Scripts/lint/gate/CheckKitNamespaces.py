@@ -12,7 +12,7 @@
   4) 키트가 평판 세력 id 로 쓰는 글자 리터럴(`changeValue( "x"` · `…Faction{ "x" }` · `k…FactionID = "x"`)은 키트 이름의 소문자 낱말 접두
      `<접두>.` 로 시작한다(`restaurant.guests` · `western.honor`) — 평판을 나눠 쓰면 세력 id 가 한 이름 공간이다.
   5) 키트 클래스는 기반 공유 상태(지갑 · 가방 · 플래그 · 일지 · 시계 · 날씨 · 평판 · 땅 · 값 목록)를 값으로 들지 않는다 — 빌린다(`GameStateRefs`).
-     예외는 이유와 함께 `mapExemption`(`<파일>:<멤버>`) 에(참가자마다의 가방 · 팔릴 목록 · 시뮬레이션 수치), 정의 구조체(`…Def` · `…Recipe` · `…Reward`) 안의 값 목록은 보지 않는다.
+     예외는 이유와 함께 예외 표(`Scripts/lint/rules/CheckKitNamespaces.toml`, `<파일>:<멤버>`)에(참가자마다의 가방 · 팔릴 목록 · 시뮬레이션 수치), 정의 구조체(`…Def` · `…Recipe` · `…Reward`) 안의 값 목록은 보지 않는다.
   6) 키트는 빌린 객체의 알림을 꺼내지 않는다(`_pWallet->drainEvents(` · `refs._pX->drainEvents(`) — 알림 버퍼는 소비자 하나라 게임 화면의 것이다.
   7) 로그 범주(`SW_LOG_CALLER( "x" )`)는 GameFramework · Games 안에서 파일 하나에만 — 키트 · 게임을 섞으면 같은 범주의 로그가 어디서 왔는지 갈리지 않는다.
      (엔진 · RHI 는 모듈마다 한 범주를 여러 파일이 나눠 쓰는 것이 설계라 보지 않는다.)
@@ -67,13 +67,6 @@ def findKitNameInternal(relativePath: str) -> str:
 
 class CheckKitNamespacesGate(LintGate):
     """`selfTestCases` 는 이 린트가 반드시 잡아야 하는 조각이다."""
-
-    #: `<키트 파일>:<멤버>` → 키트가 공유 상태를 값으로 들어도 되는 까닭.
-    mapExemption = {
-        "Source/GameFramework/Kits/Genre/Action/BattleRoyale/Rule/BrMatch.h:_inventory": "참가자마다의 가방(멀티플레이 참가자 — 공유 상태가 아니다)",
-        "Source/GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h:_bin": "팔릴 목록(값 목록 — 가방이 아니다)",
-        "Source/GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h:_stock": "도시 건물의 물자(시뮬레이션 수치 — 플레이어가 드는 것이 아니다)",
-    }
 
     description = "키트를 섞을 때 부딪히는 이름 공간 · 소유 검사(상태 표 · 입력 · 설정 칸 · 세력 · 공유 상태 소유 · 빌린 알림 · 로그 범주 · 전역 변수)"
     buildComment = "Checking kit namespaces (state tags, input, settings keys, ownership, log callers)..."
@@ -210,7 +203,7 @@ class CheckKitNamespacesGate(LintGate):
                         self.useExemption(f"{relativePath}:{member}")
                         continue
                     listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
-                                         f"`const GameStateRefs&` 로 빌리세요(정말 제 것이면 mapExemption 에 까닭과 함께)")
+                                         f"`const GameStateRefs&` 로 빌리세요(정말 제 것이면 rules/CheckKitNamespaces.toml 의 [exemption] 에 까닭과 함께)")
             # 6) 빌린 객체의 알림
             for match in _kBorrowedDrainRe.finditer(code):
                 listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "

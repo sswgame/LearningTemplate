@@ -216,7 +216,7 @@ NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않�
 
 **아래 층이 위 층을 알아야 하면 include 하지 말고 인터페이스나 함수 포인터를 받으세요.** `mutex` 는 교착 검출기를 `ILockObserver` 로, 할당기는 `MemoryProfiler` 를 `IAllocationTracker` 로, 경합 검출 훅은 보고기를 `RaceDetectContext::setReportFunction` 으로 압니다.
 작업 스레드를 띄우는 곳은 크래시 보고기(`Diagnostics/CrashHandler`)가 아니라 `Process/ThreadCrashStack::initializeCurrentThread` 를 부릅니다.
-**`.cpp` 는 pch 로 `Logger.h` 를 include 없이 받습니다.** Log 아래 층(`Math` · `Memory` · `Container` …)의 `.cpp` 가 로그 매크로를 쓰면 include 간선에 보이지 않는 거꾸로 가는 의존이 됩니다. 이미 있는 다섯 파일은 `CheckCoreLayers.py` 의 `_kHiddenLogUse` 에 있고, Core 를 라이브러리로 나누기 전에 줄입니다.
+**`.cpp` 는 pch 로 `Logger.h` 를 include 없이 받습니다.** Log 아래 층(`Math` · `Memory` · `Container` …)의 `.cpp` 가 로그 매크로를 쓰면 include 간선에 보이지 않는 거꾸로 가는 의존이 됩니다. 이미 있는 다섯 파일은 `Scripts/lint/rules/CheckCoreLayers.toml` 의 `[exemption]` 에 있고, Core 를 라이브러리로 나누기 전에 줄입니다.
 **경합 보고기는 정적 등록으로 걸립니다.** `Core` STATIC 을 링크하는 실행 파일(ReflectionParser)은 그 목적 파일이 빠질 수 있어 진입점에서 `DataRaceReporter::install()` 을 부릅니다.
 
 ### 문자열과 이름

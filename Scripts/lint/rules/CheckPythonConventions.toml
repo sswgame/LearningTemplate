@@ -1,0 +1,7 @@
+# CheckPythonConventions 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckPythonConventions.py.
+
+# `module:<파일 줄기>` · `variable:<모듈 변수>` → 이름 규칙에서 빼는 까닭.
+[exemption]
+"module:__init__" = "패키지 표시 파일 — 이름이 정해져 있다"
+"module:__main__" = "`python -m` 진입점 — 이름이 정해져 있다"
+"variable:main" = "게이트 · 픽서 · 보고서의 진입점(`main = XxxGate.run`) — 상수가 아니다"

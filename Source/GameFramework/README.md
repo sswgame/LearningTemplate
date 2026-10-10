@@ -119,7 +119,7 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 | 4 `UI` | `HUD` · `Marker` · `Dialogue` | HUD, HP 바 · 데미지 숫자 · 목표 마커, 대화 |
 | 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `GameState` · `Vehicle`(2) | 그 위의 규칙 |
 
-표의 원본은 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의 `_kBaseLayer` 와 `_kBaseFolderOrder` 입니다.
+표의 원본은 `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 의 `[base_layer]` 와 `[base_folder_order]` 입니다.
 UI 는 게임플레이 아래에 있습니다. 언리얼에서 UMG 가 게임플레이 모듈 아래에 있고 게임 코드가 위젯을 만드는 것과 같은 방향이라, 어빌리티가 데미지 숫자를 띄웁니다.
 아래에서 위로 알려야 할 때는 신호를 씁니다. 체력 원천(`Actor/Combat`)은 HP 바(`UI`)를 모르고, 같은 오브젝트의 `HealthListenerComponent` 에 알립니다.
 HP 바가 그 리스너를 상속해 알림을 받습니다.
@@ -228,7 +228,7 @@ HP 바(`HealthBarComponent`)와 데미지 숫자(`DamageNumberComponent`)는 같
 
 1. 그 폴더가 include 할 것을 보고 층을 고른 뒤 `Base/<층>/<폴더>/` 를 만듭니다. 폴더는 컴포넌트냐 아니냐 같은 형식이 아니라 기능으로 나눕니다.
    형식으로 묶으면 그 폴더가 어느 기능에 의존하는지가 숨습니다.
-2. `CheckGameFrameworkLayers.py` 의 `_kBaseFolderOrder` 에 `<층>/<폴더>` 와 층 안 순서를 넣습니다. 표에 없는 폴더는 게이트가 실패시킵니다.
+2. `Scripts/lint/rules/CheckGameFrameworkLayers.toml` 의 `[base_folder_order]` 에 `<층>/<폴더>` 와 층 안 순서를 넣습니다. 표에 없는 폴더는 게이트가 실패시킵니다.
 3. 헤더에 처음 `REFLECT` 를 넣었으면 다시 configure 합니다. 리플렉션 대상 헤더는 `Base/` 전체를 재귀로 모으므로 새 폴더도 자동으로 들어가지만, 목록은 configure 때 만듭니다.
 
 GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. 다른 폴더가 생기면 같은 게이트가 실패합니다.

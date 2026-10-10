@@ -16,6 +16,8 @@ clang-cl 은 `__clang__` 과 `_MSC_VER` 를 둘 다 정의해서 `_MSC_VER` 가 
 지원하지 않는 플랫폼의 SW_ 매크로(`SW_PLATFORM_MACOS`)도 막는다. CMake 가 정의하지 않으므로 그 갈래는 어느 구성에서도 컴파일되지 않는
 죽은 코드다 — 검사 헤더도 예외가 아니다.
 
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckTargetMacros.toml` 에 있다.
+
   python Scripts/lint/gate/CheckTargetMacros.py [--root <repo>] [--files a.cpp b.h]
 """
 
@@ -30,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common.RuleData import kKindText  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 내장 매크로를 읽어도 되는 유일한 파일(CMake 판정과 실제 컴파일러를 대조한다).
@@ -38,32 +41,9 @@ _kCheckHeader = "Source/Core/Common/TargetMacroCheck.h"
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".tpl")
 
-#: 내장 매크로 → 대신 쓸 것.
-_kMapBuiltinToReplacement = {
-    "_WIN32": "SW_PLATFORM_WINDOWS",
-    "_WIN64": "SW_PLATFORM_WINDOWS",
-    "__linux__": "SW_PLATFORM_LINUX",
-    "__linux": "SW_PLATFORM_LINUX",
-    "__APPLE__": "지원하지 않는 플랫폼(Windows · Linux 만 짓는다)",
-    "__MINGW32__": "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)",
-    "__MINGW64__": "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)",
-    "_M_X64": "SW_X64",
-    "_M_AMD64": "SW_X64",
-    "__x86_64__": "SW_X64",
-    "__amd64__": "SW_X64",
-    "_M_ARM64": "SW_ARM64",
-    "_M_ARM64EC": "SW_ARM64",
-    "__aarch64__": "SW_ARM64",
-    "__arm64__": "SW_ARM64",
-    "_M_IX86": "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)",
-    "__i386__": "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)",
-    "_M_ARM": "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)",
-    "__arm__": "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)",
-    "__clang__": "SW_COMPILER_CLANG",
-    "__GNUC__": "SW_COMPILER_GCC (Clang 도 정의한다 — 둘 다면 SW_COMPILER_CLANG || SW_COMPILER_GCC)",
-    "__GNUG__": "SW_COMPILER_GCC (Clang 도 정의한다 — 둘 다면 SW_COMPILER_CLANG || SW_COMPILER_GCC)",
-    "_MSC_VER": "MSVC 확장(intrinsic · __declspec · __FUNCSIG__)이면 SW_PLATFORM_WINDOWS, cl.exe 만이면 SW_COMPILER_MSVC",
-}
+#: 내장 매크로 → 대신 쓸 것(`rules/CheckTargetMacros.toml`).
+_kRuleSchema = {"builtin": kKindText}
+_kMapBuiltinToReplacement: dict[str, str] = LintGate.readRules("CheckTargetMacros", _kRuleSchema, requiredKeys=("builtin",))["builtin"]
 
 _kBuiltinRe = re.compile(r"(?<![\w$])(" + "|".join(re.escape(name) for name in _kMapBuiltinToReplacement) + r")(?![\w$])")
 
@@ -100,6 +80,8 @@ def findBuiltinMacroUses(repositoryRoot: Path, listTargetFile: list[str] | None)
 
 class CheckTargetMacrosGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
+
+    ruleSchema = _kRuleSchema
 
     description = "플랫폼 · 아키텍처 · 컴파일러를 내장 매크로가 아니라 SW_ 매크로로 묻는지 검사"
     buildComment = "Checking that platform/architecture/compiler checks use SW_ macros..."

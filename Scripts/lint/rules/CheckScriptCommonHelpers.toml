@@ -1,0 +1,7 @@
+# CheckScriptCommonHelpers 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckScriptCommonHelpers.py.
+
+# `<규칙 이름>:<경로>`(`*:` 는 모든 규칙) → 이유.
+[exemption]
+"subprocess:Scripts/lint/report/RunBuildWarnings.py" = "컴파일 DB 의 셸 명령 문자열을 그대로 넘기는 훑기 — Process.py 머리말의 \"쓰지 않는 곳\""
+"*:Scripts/lint/gate/CheckScriptCommonHelpers.py" = "규칙의 정규식 · 조각을 글로 드는 게이트 자신"
+"*:Scripts/lint/report/RunBuildScriptInventory.py" = "같은 정규식으로 숫자를 세는 보고서"

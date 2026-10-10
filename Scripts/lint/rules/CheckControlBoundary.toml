@@ -1,0 +1,35 @@
+# CheckControlBoundary 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckControlBoundary.py.
+
+# 입력 층(장치)을 직접 묻는 조회 — `InputManager` 의 키 · 버튼 · 휠 · 이동량 · 패드 창구와 장치 꺼내기. 액션이 아니라 장치를 읽는다.
+# 커서 화면 위치(`getMousePositionNormalized`)만 뺀다 — 이름이 `getMousePosition` 으로 시작해도 `(` 가 바로 붙어야 걸린다.
+raw_input_query = [
+    "isKeyDown", "wasKeyPressed", "wasKeyReleased",
+    "isMouseButtonDown", "wasMouseButtonPressed", "wasMouseButtonReleased",
+    "getMousePosition", "getMouseDelta", "getMouseWheel", "isPointerOverRect",
+    "getGamepadLeftTrigger", "getGamepadRightTrigger",
+    "getKeyboard", "getMouse", "getGamepad", "getDevice",
+    "getLastFrameEvents", "wasAnyInputPressed",
+]
+
+# 허용 표에 들 수 없는 폰 쪽 파일.
+pawn_side = [
+    "Source/GameFramework/Base/Actor/Control/*MovementComponent*",
+    "Source/GameFramework/Base/Actor/Control/*VehicleComponent*",
+    "Source/GameFramework/Base/Actor/Control/Pawn*",
+    "Source/GameFramework/Base/Gameplay/Vehicle/*MovementComponent*",
+    "Source/GameFramework/Base/Gameplay/Vehicle/*VehicleComponent*",
+    "Source/GameFramework/Base/Gameplay/Vehicle/Pawn*",
+]
+
+# 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
+[exemption]
+"Source/GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.*" = "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자"
+"Source/GameFramework/Base/Actor/Control/ControlSystem.*" = "조종 시스템 — 플레이어 조종자에게 입력 관리자를 건넨다(스스로 액션을 읽지 않는다)"
+"Source/GameFramework/Base/Actor/Camera/*" = "플레이어 뷰 카메라(시점 고르기 · 팬 · 줌) — 폰이 아니다"
+"Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.*" = "입력 맵 파일을 싣는다(매핑 층을 세움)"
+"Source/GameFramework/Base/Foundation/Data/GameSettings.h" = "입력 맵 경로 설정"
+"Source/Games/NileCity/NileDirectorComponent.*" = "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)"
+"Source/Games/StarSkirmish/SkirmishDirectorComponent.*" = "명령 조종자 — RTS 는 폰이 없다(입력 → RTSWorld 명령)"
+"Source/Games/ThemeParkTycoon/ParkDirectorComponent.*" = "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)"
+"Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*" = "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)"
+"Source/Games/MeadowVillage/MeadowTownDirectorComponent.*" = "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)"

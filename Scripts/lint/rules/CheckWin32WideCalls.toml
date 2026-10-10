@@ -1,0 +1,49 @@
+# CheckWin32WideCalls 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckWin32WideCalls.py.
+
+# `UNICODE` 에 따라 `A` · `W` 로 바뀌는 Win32 일반 이름(함수 매크로)입니다. 새로 쓰는 API 가 여기 없으면 더합니다.
+generic_name = [
+    # 창 · 메시지
+    "DefWindowProc", "CallWindowProc", "RegisterClass", "RegisterClassEx", "UnregisterClass", "GetClassInfo", "GetClassInfoEx",
+    "CreateWindow", "CreateWindowEx", "FindWindow", "FindWindowEx", "SetWindowText", "GetWindowText", "GetWindowTextLength",
+    "GetClassName", "GetWindowLong", "SetWindowLong", "GetWindowLongPtr", "SetWindowLongPtr", "GetClassLong", "SetClassLong",
+    "GetClassLongPtr", "SetClassLongPtr", "PeekMessage", "GetMessage", "DispatchMessage", "PostMessage", "SendMessage",
+    "SendMessageTimeout", "SendNotifyMessage", "PostThreadMessage", "RegisterWindowMessage", "IsDialogMessage",
+    "TranslateAccelerator", "SetWindowsHookEx", "SystemParametersInfo", "GetMonitorInfo", "EnumDisplaySettings",
+    "EnumDisplaySettingsEx", "EnumDisplayDevices", "ChangeDisplaySettings", "ChangeDisplaySettingsEx",
+    # 자원 · 대화 상자 · 글꼴
+    "LoadCursor", "LoadCursorFromFile", "LoadIcon", "MAKEINTRESOURCE","LoadImage", "LoadBitmap", "LoadString", "LoadMenu", "LoadAccelerators",
+    "MessageBox", "MessageBoxEx", "DialogBoxParam", "CreateDialogParam", "DrawText", "DrawTextEx", "TextOut", "CreateFont",
+    "CreateFontIndirect", "GetObject", "GetTextExtentPoint32", "GetTextMetrics", "CreateDC", "AddFontResource",
+    "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",
+    "SHGetPathFromIDList", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
+    # 키보드
+    "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower", "ImmGetCompositionString",
+    # 모듈 · 파일 · 프로세스
+    "GetModuleHandle", "GetModuleHandleEx", "GetModuleFileName", "LoadLibrary", "LoadLibraryEx", "SetDllDirectory",
+    "GetDllDirectory", "CreateFile", "CreateFileMapping", "OpenFileMapping", "DeleteFile", "CopyFile", "CopyFileEx", "MoveFile",
+    "MoveFileEx", "ReplaceFile", "CreateDirectory", "RemoveDirectory", "GetFileAttributes", "GetFileAttributesEx",
+    "SetFileAttributes", "FindFirstFile", "FindFirstFileEx", "FindNextFile", "GetFullPathName", "GetCurrentDirectory",
+    "SetCurrentDirectory", "GetTempPath", "GetTempFileName", "GetLongPathName", "GetShortPathName", "GetFinalPathNameByHandle",
+    "CreateHardLink", "CreateSymbolicLink", "GetDriveType", "GetVolumeInformation", "GetDiskFreeSpace", "GetDiskFreeSpaceEx",
+    "FindFirstChangeNotification", "ReadDirectoryChanges", "SearchPath", "GetSystemDirectory", "GetWindowsDirectory", "GetEnvironmentVariable",
+    "SetEnvironmentVariable", "ExpandEnvironmentStrings", "GetEnvironmentStrings", "FreeEnvironmentStrings",
+    "CreateProcess", "GetCommandLine", "GetStartupInfo", "CreateNamedPipe", "WaitNamedPipe", "CallNamedPipe",
+    "Process32First", "Process32Next", "Module32First", "Module32Next",
+    # 동기화 객체 · 진단 · 시스템
+    "CreateEvent", "CreateEventEx", "OpenEvent", "CreateMutex", "CreateMutexEx", "OpenMutex", "CreateSemaphore",
+    "CreateSemaphoreEx", "OpenSemaphore", "CreateWaitableTimer", "CreateWaitableTimerEx", "OutputDebugString", "FormatMessage",
+    "GetComputerName", "GetUserName", "GetVersionEx", "RegOpenKeyEx", "RegCreateKeyEx", "RegQueryValueEx", "RegSetValueEx",
+    "RegDeleteKey", "RegDeleteValue", "RegEnumKeyEx", "RegEnumValue", "RegGetValue", "SymGetSearchPath", "SymSetSearchPath",
+    # 서비스
+    "RegisterServiceCtrlHandlerEx", "StartServiceCtrlDispatcher",
+    # 소켓
+    "WSASocket",
+    # 콘솔
+    "SetConsoleTitle", "GetConsoleTitle", "WriteConsole", "ReadConsole", "ReadConsoleInput", "PeekConsoleInput",
+    "FillConsoleOutputCharacter", "WriteConsoleOutput", "WriteConsoleOutputCharacter",
+]
+
+# 이름으로 불러도 되는 `A` 판 → 이유. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
+[exemption]
+OutputDebugStringA = "디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다"
+ElfW = "glibc <link.h> 의 ElfW(type) 매크로 — Win32 가 아니다"

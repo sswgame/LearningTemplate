@@ -339,7 +339,8 @@ def fixMarkdownLinkInternal(root: Path, step: MoveStep, bDryRun: bool) -> list[P
     return listChanged
 
 
-_kTierEntryRe = re.compile(r'^\s*(?:"([^"]+)"|(_k\w+))\s*:\s*(\d+),\s*$')
+#: 티어 표(`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]`) 한 줄 — `이름 = 숫자` 또는 `"<root>" = 숫자`, 끝 주석은 그대로 둔다.
+_kTierEntryRe = re.compile(r'^(?:"([^"]+)"|([A-Za-z0-9_-]+))\s*=\s*(\d+)(\s*#.*)?$')
 
 
 def computeLayerTierInternal(root: Path) -> dict[str, int]:
@@ -380,8 +381,8 @@ def computeLayerTierInternal(root: Path) -> dict[str, int]:
 
 
 def syncTierTableInternal(root: Path, bDryRun: bool) -> None:
-    """게이트의 `_kEngineTier` 숫자를 계산값으로 바꾸고 (티어, 원래 순서)로 다시 줄 세운다. 항목 = 바로 위 주석 줄 + 키 줄."""
-    gatePath = root / "Scripts/lint/gate/CheckEngineLayers.py"
+    """티어 표(`rules/CheckEngineLayers.toml` 의 `[tier]`) 숫자를 계산값으로 바꾸고 (티어, 원래 순서)로 다시 줄 세운다. 항목 = 바로 위 주석 줄 + 키 줄."""
+    gatePath = root / "Scripts/lint/rules/CheckEngineLayers.toml"
     sys.path.insert(0, str(root / "Scripts/lint/gate"))
     import CheckEngineLayers as gate  # noqa: E402
 
@@ -390,8 +391,8 @@ def syncTierTableInternal(root: Path, bDryRun: bool) -> None:
         text = stream.read()
     newline = "\r\n" if "\r\n" in text else "\n"
     listLine = text.split(newline)
-    beginIndex = next(index for index, line in enumerate(listLine) if line.startswith("_kEngineTier: dict[str, int] = {"))
-    endIndex = next(index for index in range(beginIndex, len(listLine)) if listLine[index] == "}")
+    beginIndex = next(index for index, line in enumerate(listLine) if line == "[tier]")
+    endIndex = next((index for index in range(beginIndex + 1, len(listLine)) if listLine[index].startswith("[")), len(listLine))
     listEntry: list[tuple[int, int, str, list[str]]] = []
     listComment: list[str] = []
     for line in listLine[beginIndex + 1 : endIndex]:
@@ -399,12 +400,12 @@ def syncTierTableInternal(root: Path, bDryRun: bool) -> None:
         if not match:
             listComment.append(line)
             continue
-        layerName = match.group(1) or getattr(gate, match.group(2))
+        layerName = match.group(1) or match.group(2)
         tier = mapTier.get(layerName, int(match.group(3)))
         if layerName == gate._kRootLayerName and layerName not in mapTier:
             tier = max(mapTier.values(), default=0) + 1
         keyText = f'"{match.group(1)}"' if match.group(1) else match.group(2)
-        listEntry.append((tier, len(listEntry), layerName, listComment + [f"    {keyText}: {tier},"]))
+        listEntry.append((tier, len(listEntry), layerName, listComment + [f"{keyText} = {tier}{match.group(4) or ''}"]))
         listComment = []
     listEntry.sort(key=lambda entry: (entry[0], entry[1]))
     listBody = [line for entry in listEntry for line in entry[3]] + listComment
@@ -418,12 +419,13 @@ def syncTierTableInternal(root: Path, bDryRun: bool) -> None:
     if newText != text and not bDryRun:
         with gatePath.open("w", encoding="utf-8", newline="") as stream:
             stream.write(newText)
-        print("  게이트 표를 고쳤다")
+        print("  티어 표(rules/CheckEngineLayers.toml)를 고쳤다")
 
     # Source/Engine/README.md "머릿속 그림" 의 `| 티어 | 폴더 |` 표를 같은 값으로 다시 쓴다.
     readmePath = root / _kEngineRoot / "README.md"
     with readmePath.open("r", encoding="utf-8", newline="") as stream:
         readmeText = stream.read()
+    newline = "\r\n" if "\r\n" in readmeText else "\n"
     listReadmeLine = readmeText.split(newline)
     headerIndex = next((index for index, line in enumerate(listReadmeLine) if line.startswith("| 티어 | 폴더 |")), None)
     if headerIndex is None:

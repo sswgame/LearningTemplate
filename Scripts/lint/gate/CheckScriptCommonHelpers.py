@@ -6,6 +6,8 @@ Scripts/lint/gate/CheckScriptCommonHelpers.py
 `Scripts/common` 에 한 자리가 있는 일을 스크립트가 스스로 하는지 봅니다. 공통부를 만들어도 새 스크립트가 옛 모양을 복사해 오면 다시 갈라진다
 (빌드 폴더 고르기가 열 군데로 불어난 경위). 규칙 하나 = 표 한 줄: 무엇을 보면 · 무엇을 대신 쓰나 · 어디는 예외인가(이유와 함께).
 
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckScriptCommonHelpers.toml` 에 있다.
+
   python Scripts/lint/gate/CheckScriptCommonHelpers.py [--files <path> ...]
 """
 
@@ -33,7 +35,7 @@ class HelperRule:
     - `pattern`     : 그 모양(줄 단위 정규식, `#` 로 시작하는 주석 줄은 보지 않는다)
     - `instead`     : 대신 쓸 것
 
-    예외는 게이트의 `mapExemption` 에 `<규칙 이름>:<경로>` 로 이유와 함께 둔다.
+    예외는 `Scripts/lint/rules/CheckScriptCommonHelpers.toml` 의 `[exemption]` 에 `<규칙 이름>:<경로>` 로 이유와 함께 둔다.
     """
 
     name: str
@@ -50,24 +52,18 @@ _kRule: tuple[HelperRule, ...] = (
     HelperRule("CMakeCache 읽기", re.compile(r"[\"']CMakeCache\.txt[\"']"), "BuildTree.readCacheValue"),
 )
 
-#: `mapExemption` 에서 모든 규칙을 빼는 키의 앞말 — 규칙의 정규식 · 조각을 글로 드는 파일.
+#: 예외 표에서 모든 규칙을 빼는 키의 앞말 — 규칙의 정규식 · 조각을 글로 드는 파일.
 _kAllRulePrefix = "*:"
 
 
 class CheckScriptCommonHelpersGate(LintGate):
-    #: `<규칙 이름>:<경로>`(`*:` 는 모든 규칙) → 이유.
-    mapExemption = {
-        "subprocess:Scripts/lint/report/RunBuildWarnings.py": "컴파일 DB 의 셸 명령 문자열을 그대로 넘기는 훑기 — Process.py 머리말의 \"쓰지 않는 곳\"",
-        "*:Scripts/lint/gate/CheckScriptCommonHelpers.py": "규칙의 정규식 · 조각을 글로 드는 게이트 자신",
-        "*:Scripts/lint/report/RunBuildScriptInventory.py": "같은 정규식으로 숫자를 세는 보고서",
-    }
 
     description = "Scripts/ 가 common 의 한 자리(프로세스 · 빌드 폴더 · 콘솔 · 생성 파일)를 비켜 가지 않는지"
     buildComment = "Checking that scripts use the shared helpers in Scripts/common..."
     timeoutSeconds = 30
     preCommitPattern = ("Scripts/*.py",)
     preCommitFileArgument = "--files"
-    hint = "  common 의 한 자리를 쓰십시오. 정말 예외면 mapExemption 에 '<규칙 이름>:<경로>' 와 이유를 적습니다."
+    hint = "  common 의 한 자리를 쓰십시오. 정말 예외면 Scripts/lint/rules/CheckScriptCommonHelpers.toml 의 [exemption] 에 '<규칙 이름>:<경로>' 와 이유를 적습니다."
     selfTestCases = [
         {"name": "subprocess 직접", "files": {"Scripts/dev/Probe.py": "import subprocess\nsubprocess.run(['x'])\n"}},
         {"name": "build/<preset> 조립", "files": {"Scripts/dev/Probe.py": "path = root / \"build\" / preset\n"}},

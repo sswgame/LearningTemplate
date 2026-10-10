@@ -1,0 +1,6 @@
+# CheckCmakeConventions 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckCmakeConventions.py.
+
+# SHARED · MODULE `add_library` 를 직접 불러도 되는 파일 → 이유.
+[exemption]
+"cmake/Engine/ModuleTargets.cmake" = "팩토리 sw_addModuleLibrary 자신"
+"Source/Engine/CMakeLists.txt" = "Engine 자신 — Dev 에서는 DLL, Shipping 에서는 정적이라 팩토리가 부르는 쪽이 아니다"

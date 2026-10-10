@@ -1,0 +1,11 @@
+# CheckFallibleNodiscard 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckFallibleNodiscard.py.
+
+fallible_verb = [
+    "load", "save", "read", "write", "parse", "deserialize", "serialize", "apply", "restore", "import", "export",
+    "cook", "compile", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
+    "remove", "copy", "create", "delete", "move", "rename",
+]
+
+# 폴더 패턴(fnmatch) 또는 `<파일>:<이름>` → 속성을 달지 않는 까닭.
+[exemption]
+"Source/RuntimeAPI/*" = "C-ABI 계약(extern \"C\" 함수 포인터 표) — 속성을 달 자리가 아니다"

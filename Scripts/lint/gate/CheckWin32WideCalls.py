@@ -9,7 +9,7 @@ Win32 는 문자열을 받는 함수마다 `xxxA`(ANSI 코드 페이지) · `xxx
 
 문자열은 `utf8` 로 들고 경계에서 UTF-16 으로 바꾸므로 TCHAR 전환으로 얻는 것이 없다 — 일반 이름은 부르지 않고 `W` 를 쓴다.
 `A` 판을 이름으로 부르는 것도 막는다: `A` 판은 문자열을 ANSI 코드 페이지로 읽어, UTF-8 경로(한글 사용자 폴더 · 설치 경로)를 깨뜨린다.
-예외는 `mapExemption`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 `A` 판 이름)뿐이다.
+예외는 `Scripts/lint/rules/CheckWin32WideCalls.toml` 의 `[exemption]`(디버거 출력처럼 깨져도 동작이 바뀌지 않는 `A` 판 이름)뿐이다.
 `->GetMessage(` · `.GetMessage(` 처럼 멤버로 부르는 같은 이름(COM 인터페이스 메서드)은 보지 않는다. 주석 · 문자열 안의 언급도 보지 않는다.
 일반 이름 표는 닫혀 있지 않다 — 저장소가 부르는 `XxxW(` 의 `Xxx` 가 표에 없으면 그것도 위반이다(새 API 가 들어올 때 표가 같이 자란다).
 
@@ -27,53 +27,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankCommentsAndLiterals, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
 _kSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
 
-#: `UNICODE` 에 따라 `A` · `W` 로 바뀌는 Win32 일반 이름(함수 매크로)입니다. 새로 쓰는 API 가 여기 없으면 더합니다.
-_kListGenericName = (
-    # 창 · 메시지
-    "DefWindowProc", "CallWindowProc", "RegisterClass", "RegisterClassEx", "UnregisterClass", "GetClassInfo", "GetClassInfoEx",
-    "CreateWindow", "CreateWindowEx", "FindWindow", "FindWindowEx", "SetWindowText", "GetWindowText", "GetWindowTextLength",
-    "GetClassName", "GetWindowLong", "SetWindowLong", "GetWindowLongPtr", "SetWindowLongPtr", "GetClassLong", "SetClassLong",
-    "GetClassLongPtr", "SetClassLongPtr", "PeekMessage", "GetMessage", "DispatchMessage", "PostMessage", "SendMessage",
-    "SendMessageTimeout", "SendNotifyMessage", "PostThreadMessage", "RegisterWindowMessage", "IsDialogMessage",
-    "TranslateAccelerator", "SetWindowsHookEx", "SystemParametersInfo", "GetMonitorInfo", "EnumDisplaySettings",
-    "EnumDisplaySettingsEx", "EnumDisplayDevices", "ChangeDisplaySettings", "ChangeDisplaySettingsEx",
-    # 자원 · 대화 상자 · 글꼴
-    "LoadCursor", "LoadCursorFromFile", "LoadIcon", "MAKEINTRESOURCE","LoadImage", "LoadBitmap", "LoadString", "LoadMenu", "LoadAccelerators",
-    "MessageBox", "MessageBoxEx", "DialogBoxParam", "CreateDialogParam", "DrawText", "DrawTextEx", "TextOut", "CreateFont",
-    "CreateFontIndirect", "GetObject", "GetTextExtentPoint32", "GetTextMetrics", "CreateDC", "AddFontResource",
-    "AddFontResourceEx", "RegisterClipboardFormat", "GetOpenFileName", "GetSaveFileName", "SHBrowseForFolder",
-    "SHGetPathFromIDList", "SHGetFolderPath", "SHFileOperation", "ShellExecute", "ShellExecuteEx",
-    # 키보드
-    "MapVirtualKey", "MapVirtualKeyEx", "GetKeyNameText", "VkKeyScan", "VkKeyScanEx", "CharUpper", "CharLower", "ImmGetCompositionString",
-    # 모듈 · 파일 · 프로세스
-    "GetModuleHandle", "GetModuleHandleEx", "GetModuleFileName", "LoadLibrary", "LoadLibraryEx", "SetDllDirectory",
-    "GetDllDirectory", "CreateFile", "CreateFileMapping", "OpenFileMapping", "DeleteFile", "CopyFile", "CopyFileEx", "MoveFile",
-    "MoveFileEx", "ReplaceFile", "CreateDirectory", "RemoveDirectory", "GetFileAttributes", "GetFileAttributesEx",
-    "SetFileAttributes", "FindFirstFile", "FindFirstFileEx", "FindNextFile", "GetFullPathName", "GetCurrentDirectory",
-    "SetCurrentDirectory", "GetTempPath", "GetTempFileName", "GetLongPathName", "GetShortPathName", "GetFinalPathNameByHandle",
-    "CreateHardLink", "CreateSymbolicLink", "GetDriveType", "GetVolumeInformation", "GetDiskFreeSpace", "GetDiskFreeSpaceEx",
-    "FindFirstChangeNotification", "ReadDirectoryChanges", "SearchPath", "GetSystemDirectory", "GetWindowsDirectory", "GetEnvironmentVariable",
-    "SetEnvironmentVariable", "ExpandEnvironmentStrings", "GetEnvironmentStrings", "FreeEnvironmentStrings",
-    "CreateProcess", "GetCommandLine", "GetStartupInfo", "CreateNamedPipe", "WaitNamedPipe", "CallNamedPipe",
-    "Process32First", "Process32Next", "Module32First", "Module32Next",
-    # 동기화 객체 · 진단 · 시스템
-    "CreateEvent", "CreateEventEx", "OpenEvent", "CreateMutex", "CreateMutexEx", "OpenMutex", "CreateSemaphore",
-    "CreateSemaphoreEx", "OpenSemaphore", "CreateWaitableTimer", "CreateWaitableTimerEx", "OutputDebugString", "FormatMessage",
-    "GetComputerName", "GetUserName", "GetVersionEx", "RegOpenKeyEx", "RegCreateKeyEx", "RegQueryValueEx", "RegSetValueEx",
-    "RegDeleteKey", "RegDeleteValue", "RegEnumKeyEx", "RegEnumValue", "RegGetValue", "SymGetSearchPath", "SymSetSearchPath",
-    # 서비스
-    "RegisterServiceCtrlHandlerEx", "StartServiceCtrlDispatcher",
-    # 소켓
-    "WSASocket",
-    # 콘솔
-    "SetConsoleTitle", "GetConsoleTitle", "WriteConsole", "ReadConsole", "ReadConsoleInput", "PeekConsoleInput",
-    "FillConsoleOutputCharacter", "WriteConsoleOutput", "WriteConsoleOutputCharacter",
-)
+#: `UNICODE` 에 따라 `A` · `W` 로 바뀌는 Win32 일반 이름(`rules/CheckWin32WideCalls.toml` — 새로 쓰는 API 가 없으면 거기 더한다).
+_kRuleSchema = {"generic_name": kKindTextList}
+_kListGenericName: tuple[str, ...] = LintGate.readRules("CheckWin32WideCalls", _kRuleSchema, requiredKeys=("generic_name",))["generic_name"]
 
 _kSetGenericName = frozenset(_kListGenericName)
 
@@ -102,7 +64,7 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
                 if baseName + "W" in gate.mapExemption:
                     gate.useExemption(baseName + "W")
                     continue
-                listViolation.append(f"{relative}:{lineIndex}: {baseName}W 의 일반 이름 '{baseName}' 이 _kListGenericName 에 없습니다 — 표에 더합니다"
+                listViolation.append(f"{relative}:{lineIndex}: {baseName}W 의 일반 이름 '{baseName}' 이 rules/CheckWin32WideCalls.toml 의 generic_name 에 없습니다 — 거기 더합니다"
                                      f"  | {listOriginalLine[lineIndex - 1].strip()}")
             for match in _kGenericCallRe.finditer(line):
                 # 멤버 호출(`queue->GetMessage(` · `x.GetObject(`)은 COM · 클래스 메서드다 — 매크로가 바꿔도 선언과 함께 바뀐다.
@@ -123,11 +85,7 @@ def findGenericWin32Calls(repositoryRoot: Path, listTargetFile: list[str] | None
 class CheckWin32WideCallsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    #: 이름으로 불러도 되는 `A` 판 → 이유. 글이 깨져도 동작이 바뀌지 않는 자리만 둡니다.
-    mapExemption = {
-        "OutputDebugStringA": "디버거 출력 창에 보내는 로그 한 줄 — 로그 문자열은 영어이고, 깨져도 아무것도 실패하지 않는다",
-        "ElfW": "glibc <link.h> 의 ElfW(type) 매크로 — Win32 가 아니다",
-    }
+    ruleSchema = _kRuleSchema
 
     description = "Win32 API 를 문자 집합 일반 이름(A/W 매크로) · A 판이 아니라 W 판 이름으로 부르는지 검사"
     buildComment = "Checking that Win32 calls name the W variant..."

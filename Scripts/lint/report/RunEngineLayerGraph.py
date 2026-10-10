@@ -4,7 +4,7 @@
 Engine 폴더 간 include 그래프를 다시 재서 **강결합 묶음과 티어를 계산**한다.
 
 [왜 필요한가 — 티어 표는 손으로 고른 순서가 아니다]
-`CheckEngineLayers.py` 의 `_kEngineTier` 는 include 그래프를 위상 정렬한 결과다. 코드가 바뀌면 표도
+`Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]` 는 include 그래프를 위상 정렬한 결과다. 코드가 바뀌면 표도
 다시 계산해야 하는데, 그 계산을 매번 손으로 하면 "지금 표가 참인가" 를 아무도 확인하지 않게 된다.
 이 스크립트는 **게이트와 같은 규칙**으로(prelude·배선 예외, 레이어 이름 — 전부 게이트
 모듈에서 그대로 가져온다) 묶음(Tarjan SCC)과 티어를 찍는다. 그래서 여기 답과 게이트 표가 다르면
@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintReport
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "gate"))   # 게이트 모듈의 규칙을 그대로 쓴다
 
-from common import kDirSourceEngine, normalizePath  # noqa: E402
+from common import iterIncludes, kDirSourceEngine, normalizePath  # noqa: E402
 from LintReport import LintReport, ReportContext  # noqa: E402
 import CheckEngineLayers as gate  # noqa: E402
 
@@ -51,7 +51,7 @@ def collectEdgesInternal(repositoryRoot: Path) -> dict[str, dict[str, list[str]]
             continue
         sourceLayer = gate.engineLayerOfInternal(filePath.relative_to(engineDir).as_posix())
         text = filePath.read_text(encoding="utf-8", errors="replace")
-        for includePath in gate._kIncludeRe.findall(text):
+        for _, includePath in iterIncludes(text):
             normalizedInclude = normalizePath(includePath)
             if not normalizedInclude.startswith("Engine/") or gate._kPreludePrefix + normalizedInclude in mapExemption:
                 continue
@@ -149,7 +149,7 @@ class RunEngineLayerGraphReport(LintReport):
             print("[RunEngineLayerGraph] 강결합 묶음 없음 — DAG")
 
         mapTier = computeTiersInternal(listEdge)
-        print("\n티어 (0 = 토대). 게이트의 _kEngineTier 와 다르면 표가 낡은 것이다:")
+        print("\n티어 (0 = 토대). rules/CheckEngineLayers.toml 의 [tier] 와 다르면 표가 낡은 것이다:")
         for layer in sorted(mapTier, key=lambda name: (mapTier[name], name)):
             expected = gate._kEngineTier.get(layer)
             marker = "" if expected == mapTier[layer] else f"   <- 게이트 표는 {expected}"

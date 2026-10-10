@@ -68,9 +68,9 @@ def findTableViolationsInternal(relPath: str, text: str, bGateFolder: bool) -> l
             if bGateFolder and _kTableNameRe.match(name) and isTableValueInternal(value):
                 listViolation.append(f"{relPath}:{lineNumber}: 예외 표 '{name}' 를 따로 둡니다 — {kRuleDataRelDir}/{stem}.toml 의 "
                                      f"[{kExemptionKey}] 에 이유와 함께 둡니다(이유 · 낡은 줄 · 표 크기를 기반이 본다)")
-            if name == "mapExemption" and isinstance(value, ast.Dict) and len(value.keys) > _kMaxExemptionRow:
-                listViolation.append(f"{relPath}:{lineNumber}: mapExemption 이 {len(value.keys)} 줄입니다(> {_kMaxExemptionRow}) — "
-                                     f"예외가 규칙보다 많다, 규칙을 고칩니다")
+            if name == "mapExemption" and listStatement is not tree.body:
+                listViolation.append(f"{relPath}:{lineNumber}: mapExemption 을 클래스에 직접 적습니다 — {kRuleDataRelDir}/{stem}.toml 의 "
+                                     f"[{kExemptionKey}] 에 둡니다(기반이 읽어 채운다)")
     return listViolation
 
 

@@ -64,7 +64,7 @@
 
 - **prelude와 경로 헬퍼**(`EngineMinimal.h`, `Resource/ResourceUtil.h`)는 어느 티어에서든 씁니다. 타입 별칭과 전방 선언을 모은 헤더, 리소스 경로를 해석하는 헬퍼이기 때문입니다. `Common/Common.h` 는 티어 0 이라 예외가 필요 없습니다.
 - **배선 파일**(`Reflection/ReflectGenerated.h`, `Resource/AssetManager.cpp`)은 노출하는 모든 서브시스템을 알아야 하는 곳입니다.
-- 두 목록은 `CheckEngineLayersGate.mapExemption` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
+- 두 목록은 `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[exemption]` 이 정본입니다. 더는 위 티어를 include 하지 않는 줄은 낡은 예외로 실패합니다.
 
 ## 따라 해 보기 — 새 코드가 들어갈 폴더 고르기
 
@@ -225,7 +225,7 @@ XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serializat
 ### 새 최상위 폴더 만들기
 
 1. 폴더가 include할 폴더 중 가장 높은 티어를 확인합니다. 그 티어 이상이 이 폴더의 티어입니다.
-2. `Scripts/lint/gate/CheckEngineLayers.py` 의 `_kEngineTier` 에 한 줄을 더합니다. 표에 없는 폴더는 게이트가 실패시킵니다.
+2. `Scripts/lint/rules/CheckEngineLayers.toml` 의 `[tier]` 에 한 줄을 더합니다. 표에 없는 폴더는 게이트가 실패시킵니다.
 3. 이 문서의 티어 표와 `docs/02_DocumentMap.md` 에 README 줄을 더합니다.
 4. 엔진 루트에는 새 파일을 두지 않습니다. 허용 목록은 `CheckEngineRootFiles` 가 가지고 있습니다.
 

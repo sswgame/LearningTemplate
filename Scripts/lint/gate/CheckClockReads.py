@@ -13,7 +13,7 @@
 기간 값(`std::chrono::milliseconds( n )` · `sleep_for`)은 시계 읽기가 아니므로 보지 않는다. 파일 시계
 (`std::filesystem::file_time_type::clock`)도 보지 않는다 — 파일 시각과 견줄 때만 쓴다. 주석 · 문자열 안의 언급은 보지 않는다.
 
-예외는 `mapExemption` 표 한 곳이다. 예외 파일이 더는 std 시계를 읽지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).
+예외는 `Scripts/lint/rules/CheckClockReads.toml` 의 `[exemption]` 한 곳이다. 예외 파일이 더는 std 시계를 읽지 않으면 그 줄은 낡은 예외로 실패한다(`LintGate` 기반이 본다).
 
   python Scripts/lint/gate/CheckClockReads.py [--root <repo>] [--files a.cpp b.h]
 """
@@ -64,11 +64,6 @@ def findClockReads(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
 class CheckClockReadsGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    #: std 시계를 읽어도 되는 파일 → 이유.
-    mapExemption = {
-        "Source/Core/Time/WallClock.cpp": "UTC 벽시계의 유일한 자리 — 서버의 기간 · 만료 · 기록 시각은 기준점(epoch)이 있어야 한다. 경과 시간은 MonotonicClock",
-    }
-
     description = "엔진 · 시험 코드가 std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline 을 읽는지 검사"
     buildComment = "Checking that code reads time through MonotonicClock, not std::chrono clocks..."
     timeoutSeconds = 30
@@ -80,7 +75,7 @@ class CheckClockReadsGate(LintGate):
         "      지금 시각   MonotonicClock::nowNanoseconds()\n"
         "      걸린 시간   Stopwatch stopwatch; ... stopwatch.getElapsedMilliseconds()\n"
         "      기다림 기한 Deadline::afterMilliseconds( ms ) · isExpired()\n"
-        "  정말 std 시계가 필요하면 Scripts/lint/gate/CheckClockReads.py 의 mapExemption 에 이유와 함께 적습니다."
+        "  정말 std 시계가 필요하면 Scripts/lint/rules/CheckClockReads.toml 의 [exemption] 에 이유와 함께 적습니다."
     )
     selfTestCases = [
         {

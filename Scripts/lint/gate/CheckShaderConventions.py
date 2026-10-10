@@ -21,6 +21,8 @@ Scripts/lint/gate/CheckShaderConventions.py
 **정규식으로 본다.** HLSL 파서를 두지 않는다 — 셰이더 문법은 작고, 이 게이트가 보는 것은 선언의 이름뿐이다. 먼저 주석 · 문자열을
 지우고(예시 코드를 위반으로 읽지 않게), 중괄호 깊이와 선언은 전처리 지시문까지 지운 글로 센다 — 매크로 본문의 짝 없는 `{`
 (`SW_ROOT_CONSTANTS_BEGIN`)가 파일 나머지를 "구조체 안" 으로 만들어 함수 지역 변수를 필드로 읽기 때문이다.
+
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckShaderConventions.toml` 에 있다.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 셰이더 확장자.
@@ -47,12 +50,9 @@ kStringBoundName = {
     "CSMain": "컴퓨트 진입점 — createComputePipelineState · ShaderCookRequest 가 문자열로 부른다",
 }
 
-#: 불투명한 줄임말 — 이름을 camelCase 단어로 쪼갰을 때 이 단어가 하나라도 있으면 위반이다(`texColor` · `restNrm` · `instId`).
-#: C++ 의 "읽히는 이름" 규칙(AGENTS.md: 루프 변수 `i` `j` `k` 금지, 줄임말은 풀어 쓴다)을 옮긴 것이다.
-kOpaqueWord = {
-    "pos", "wpos", "nrm", "norm", "col", "clr", "vid", "idx", "tmp", "tex", "dir", "ao", "lum", "inst", "trans", "dtid",
-    "gid", "gtid", "enc", "diff", "ndot", "ndotl", "cmp", "coord", "dummy", "cnt", "num", "val", "buf", "src", "dst",
-}
+#: 불투명한 줄임말 — 이름을 camelCase 단어로 쪼갰을 때 이 단어가 하나라도 있으면 위반이다(`rules/CheckShaderConventions.toml`).
+_kRuleSchema = {"opaque_word": kKindTextList}
+kOpaqueWord: frozenset[str] = frozenset(LintGate.readRules("CheckShaderConventions", _kRuleSchema, requiredKeys=("opaque_word",))["opaque_word"])
 
 #: 이름으로 쓰면 안 되는 HLSL 키워드 · 예약어(컴파일러가 받아 주는 자리도 있지만 읽는 사람이 헷갈린다).
 kHlslKeyword = {
@@ -370,6 +370,8 @@ kProbeHeader = "Resource/engine/shaders/probe.hlsli"
 
 class CheckShaderConventionsGate(LintGate):
     """`AGENTS.md` 의 HLSL 규칙 — C++ 규칙을 셰이더에 옮긴 것이다."""
+
+    ruleSchema = _kRuleSchema
 
     description = "Resource/ 셰이더(HLSL) 명명 규칙 검사 (AGENTS.md '### HLSL')"
     buildComment = "Checking HLSL naming conventions (AGENTS.md)..."

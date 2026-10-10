@@ -1,0 +1,5 @@
+# CheckClockReads 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckClockReads.py.
+
+# std 시계를 읽어도 되는 파일 → 이유.
+[exemption]
+"Source/Core/Time/WallClock.cpp" = "UTC 벽시계의 유일한 자리 — 서버의 기간 · 만료 · 기록 시각은 기준점(epoch)이 있어야 한다. 경과 시간은 MonotonicClock"

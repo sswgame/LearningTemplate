@@ -7,7 +7,7 @@ AGENTS.md "Naming › C++" 는 out 매개변수를 `out` + 채우는 것(`outBod
 쓰게 한다. 맨이름 `out` 은 접두사만 있고 무엇을 채우는지가 빠져, 호출부와 본문에서 같은 함수의 다른 out 과 구별되지 않는다.
 
 **헤더 선언만 본다.** 참조 · 포인터 바로 뒤의 이름이 딱 `out` 이면 잡는다(`Body& out )`). 선언이 여러 줄이면
-매개변수 줄 앞에서 마지막으로 연 `이름(` 을 함수 이름으로 쓴다. 예외 표(`mapExemption`)는 비어 있다 — 기존 선언은 모두 고쳤다.
+매개변수 줄 앞에서 마지막으로 연 `이름(` 을 함수 이름으로 쓴다. 예외 표(`Scripts/lint/rules/CheckOutParameterNames.toml`, 키는 `헤더 파일 이름::함수 이름`)는 두지 않는다 — 기존 선언은 모두 고쳤다.
 
   python Scripts/lint/gate/CheckOutParameterNames.py [--root <repo>] [--files <path>...]
 """
@@ -77,9 +77,6 @@ class CheckOutParameterNamesGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "out 매개변수 이름 위반"
     hint = "\n규칙은 AGENTS.md 의 'Naming › C++' 절(Output parameters)에 있습니다."
-    # 예외 — 키는 `헤더 파일 이름(확장자 없음)::함수 이름`. 비어 있다(새 선언은 이름을 고쳐 쓴다).
-    mapExemption = {
-    }
     selfTestCases = [
         {
             "name": "맨이름 out 참조 매개변수",

@@ -1,0 +1,19 @@
+# CheckEngineRootFiles 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckEngineRootFiles.py.
+
+# 엔진 루트에 둘 수 있는 파일. 늘리기 전에 그 파일이 기동 · 종료를 엮는 자리인지 묻는다 — 아니면 기능 폴더로 간다.
+root_file = [
+    "CMakeLists.txt",
+    "README.md",
+    "pch.h",
+    "pch.cpp",
+    "EngineMinimal.h",
+    "EngineLoop.h",
+    "EngineLoop.cpp",
+    "EngineBootstrap.h",
+    "EngineBootstrap.cpp",
+    "EngineInitSequence.h",
+    "EngineInitSequence.cpp",
+    "EngineInitStepList.xxx",
+    "EngineServiceCollection.h",
+    "EngineServiceCollection.cpp",
+]

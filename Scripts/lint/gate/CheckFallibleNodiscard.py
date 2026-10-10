@@ -23,6 +23,8 @@
 
 `friend` 선언(정의가 아니면 속성을 달 수 없다)과 C-ABI 계약(`Source/RuntimeAPI`)은 보지 않는다.
 
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckFallibleNodiscard.toml` 에 있다.
+
   python Scripts/lint/gate/CheckFallibleNodiscard.py [--root <repo>] [--files a.h b.cpp]
 """
 
@@ -37,13 +39,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import kLintTargetRelDirs, normalizePath  # noqa: E402
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
-_kListFallibleVerb = (
-    "load", "save", "read", "write", "parse", "deserialize", "serialize", "apply", "restore", "import", "export",
-    "cook", "compile", "revert", "convert", "try", "open", "attach", "spawn", "instantiate", "reload",
-    "remove", "copy", "create", "delete", "move", "rename",
-)
+# 실패할 수 있는 동사(`rules/CheckFallibleNodiscard.toml`).
+_kRuleSchema = {"fallible_verb": kKindTextList}
+_kListFallibleVerb: tuple[str, ...] = LintGate.readRules("CheckFallibleNodiscard", _kRuleSchema, requiredKeys=("fallible_verb",))["fallible_verb"]
 
 # 실패할 수 있는 동사로(또는 `re` + 그 동사로) 시작하는 이름.
 _kFallibleNamePattern = r"(?P<name>(?:re)?(?:" + "|".join(_kListFallibleVerb) + r")(?:[A-Z0-9]\w*)?)"
@@ -148,10 +149,7 @@ def findFallibleDeclarationsWithoutNodiscard(repositoryRoot: Path, listTargetFil
 class CheckFallibleNodiscardGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있다."""
 
-    #: 폴더 패턴(fnmatch) 또는 `<파일>:<이름>` → 속성을 달지 않는 까닭.
-    mapExemption = {
-        "Source/RuntimeAPI/*": "C-ABI 계약(extern \"C\" 함수 포인터 표) — 속성을 달 자리가 아니다",
-    }
+    ruleSchema = _kRuleSchema
 
     description = "실패 가능 bool 함수의 [[nodiscard]] 검사"
     buildComment = "Checking fallible bool declarations for [[nodiscard]]..."

@@ -14,7 +14,7 @@ Scripts/lint/gate/CheckResourceCredits.py
 
 판정: 파일의 도메인(`Resource/game/<팩>/` 또는 `Resource/<engine|common|editor>/`)의 `credits.md` 표(`| 파일 | 원본 | 라이선스 |`)에서 첫 칸의
 백틱 패턴(`→` 앞, 도메인 기준 fnmatch)이 맞는 줄을 찾는다. 줄이 없으면 위반, 마지막 칸(라이선스)이 `CC0 1.0` · `이 저장소` 가 아니면 위반,
-원본이 있는 도메인에 `credits.md` 가 없으면 위반. 출처를 아직 모르는 파일은 `mapExemption`(저장소 경로 → 이유)에 둔다.
+원본이 있는 도메인에 `credits.md` 가 없으면 위반. 출처를 아직 모르는 파일은 `Scripts/lint/rules/CheckResourceCredits.toml` 의 `[exemption]`(저장소 경로 → 이유)에 둔다.
 
   python Scripts/lint/gate/CheckResourceCredits.py [--root <repo>]
 """

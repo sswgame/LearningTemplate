@@ -1,0 +1,27 @@
+# CheckTargetMacros 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckTargetMacros.py.
+
+# 내장 매크로 → 대신 쓸 것.
+[builtin]
+_WIN32 = "SW_PLATFORM_WINDOWS"
+_WIN64 = "SW_PLATFORM_WINDOWS"
+__linux__ = "SW_PLATFORM_LINUX"
+__linux = "SW_PLATFORM_LINUX"
+__APPLE__ = "지원하지 않는 플랫폼(Windows · Linux 만 짓는다)"
+__MINGW32__ = "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)"
+__MINGW64__ = "지원하지 않는 툴체인(Windows 는 MS ABI 만 짓는다)"
+_M_X64 = "SW_X64"
+_M_AMD64 = "SW_X64"
+__x86_64__ = "SW_X64"
+__amd64__ = "SW_X64"
+_M_ARM64 = "SW_ARM64"
+_M_ARM64EC = "SW_ARM64"
+__aarch64__ = "SW_ARM64"
+__arm64__ = "SW_ARM64"
+_M_IX86 = "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)"
+__i386__ = "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)"
+_M_ARM = "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)"
+__arm__ = "지원하지 않는 아키텍처(엔진은 64 비트만 짓는다)"
+__clang__ = "SW_COMPILER_CLANG"
+__GNUC__ = "SW_COMPILER_GCC (Clang 도 정의한다 — 둘 다면 SW_COMPILER_CLANG || SW_COMPILER_GCC)"
+__GNUG__ = "SW_COMPILER_GCC (Clang 도 정의한다 — 둘 다면 SW_COMPILER_CLANG || SW_COMPILER_GCC)"
+_MSC_VER = "MSVC 확장(intrinsic · __declspec · __FUNCSIG__)이면 SW_PLATFORM_WINDOWS, cl.exe 만이면 SW_COMPILER_MSVC"

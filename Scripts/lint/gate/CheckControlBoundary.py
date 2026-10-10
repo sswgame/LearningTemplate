@@ -17,6 +17,8 @@
 Games 어디서든 위반이고, 클릭 · 끌기 · 시점 · 확대는 입력 맵 액션(`Camera.Look` · `Camera.Zoom` · `Skirmish.Select` …)으로 읽는다.
 남는 장치 조회는 **커서 화면 위치 하나** — `getMousePositionNormalized()`(언리얼 `GetMousePosition` 자리, 커서 아래 땅 고르기)뿐이다.
 
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckControlBoundary.toml` 에 있다.
+
   python Scripts/lint/gate/CheckControlBoundary.py [--root <repo>] [--files a.cpp b.h]
 """
 
@@ -32,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import normalizePath  # noqa: E402
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = ("Source/GameFramework", "Source/Games")
@@ -43,27 +46,13 @@ _kInputReadRe = re.compile(
     r"|\bgetInputMap\s*\(\s*\)"
 )
 
-# 입력 층(장치)을 직접 묻는 조회 — `InputManager` 의 키 · 버튼 · 휠 · 이동량 · 패드 창구와 장치 꺼내기. 액션이 아니라 장치를 읽는다.
-# 커서 화면 위치(`getMousePositionNormalized`)만 뺀다 — 이름이 `getMousePosition` 으로 시작해도 `(` 가 바로 붙어야 걸린다.
-_kListRawInputQuery = (
-    "isKeyDown", "wasKeyPressed", "wasKeyReleased",
-    "isMouseButtonDown", "wasMouseButtonPressed", "wasMouseButtonReleased",
-    "getMousePosition", "getMouseDelta", "getMouseWheel", "isPointerOverRect",
-    "getGamepadLeftTrigger", "getGamepadRightTrigger",
-    "getKeyboard", "getMouse", "getGamepad", "getDevice",
-    "getLastFrameEvents", "wasAnyInputPressed",
-)
+# 입력 층(장치)을 직접 묻는 조회 · 허용 표에 들 수 없는 폰 쪽 파일(`rules/CheckControlBoundary.toml`).
+_kRuleSchema = {"raw_input_query": kKindTextList, "pawn_side": kKindTextList}
+_kRuleData = LintGate.readRules("CheckControlBoundary", _kRuleSchema, requiredKeys=("raw_input_query", "pawn_side"))
+_kListRawInputQuery: tuple[str, ...] = _kRuleData["raw_input_query"]
 _kRawInputQueryRe = re.compile(r"(?:\.|->)\s*(" + "|".join(_kListRawInputQuery) + r")\s*\(")
 
-# 허용 표에 들 수 없는 폰 쪽 파일.
-_kListPawnSidePattern = (
-    "Source/GameFramework/Base/Actor/Control/*MovementComponent*",
-    "Source/GameFramework/Base/Actor/Control/*VehicleComponent*",
-    "Source/GameFramework/Base/Actor/Control/Pawn*",
-    "Source/GameFramework/Base/Gameplay/Vehicle/*MovementComponent*",
-    "Source/GameFramework/Base/Gameplay/Vehicle/*VehicleComponent*",
-    "Source/GameFramework/Base/Gameplay/Vehicle/Pawn*",
-)
+_kListPawnSidePattern: tuple[str, ...] = _kRuleData["pawn_side"]
 
 
 def isPawnSideInternal(relative: str) -> bool:
@@ -109,19 +98,7 @@ def findViolations(repositoryRoot: Path, listTargetFile: list[str] | None) -> li
 class CheckControlBoundaryGate(LintGate):
     """입력을 읽는 파일은 허용 표에만 — 폰은 의도만 읽는다."""
 
-    #: 입력을 읽어도 되는 파일(fnmatch, 저장소 상대 경로) → 이유.
-    mapExemption = {
-        "Source/GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.*": "플레이어 조종자 — 입력 → 매핑 → 의도를 만드는 유일한 조종자",
-        "Source/GameFramework/Base/Actor/Control/ControlSystem.*": "조종 시스템 — 플레이어 조종자에게 입력 관리자를 건넨다(스스로 액션을 읽지 않는다)",
-        "Source/GameFramework/Base/Actor/Camera/*": "플레이어 뷰 카메라(시점 고르기 · 팬 · 줌) — 폰이 아니다",
-        "Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
-        "Source/GameFramework/Base/Foundation/Data/GameSettings.h": "입력 맵 경로 설정",
-        "Source/Games/NileCity/NileDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)",
-        "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RTSWorld 명령)",
-        "Source/Games/ThemeParkTycoon/ParkDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)",
-        "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)",
-        "Source/Games/MeadowVillage/MeadowTownDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)",
-    }
+    ruleSchema = _kRuleSchema
 
     description = ("GameFramework · Games 에서 입력(InputManager · InputMap)을 읽는 파일이 허용 표(플레이어 조종자 · 플레이어 뷰 · 명령 조종자)에 있는지, "
                    "그리고 어디서도 장치(키 · 버튼 · 휠 · 이동량 · 패드)를 직접 묻지 않는지 검사")
@@ -133,7 +110,7 @@ class CheckControlBoundaryGate(LintGate):
     hint = (
         "  폰(몸 · 이동 · 탈것)은 PawnComponent::getIntent() 의 ControlIntent 만 읽습니다.\n"
         "  입력 → 액션 → 의도는 PlayerControllerComponent 가 만들고, AI 는 AIControllerComponent 로 같은 의도를 냅니다.\n"
-        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 mapExemption 에 이유와 함께 한 줄.\n"
+        "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 Scripts/lint/rules/CheckControlBoundary.toml 의 [exemption] 에 이유와 함께 한 줄.\n"
         "  허용 파일도 장치를 직접 묻지 않습니다 — 클릭 · 끌기 · 시점 · 확대는 입력 맵(*.input.xml)에 액션을 두고 InputMap 으로 읽고,\n"
         "  커서 화면 위치만 InputManager::getMousePositionNormalized() 로 읽습니다."
     )

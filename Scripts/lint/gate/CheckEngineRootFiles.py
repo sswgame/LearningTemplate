@@ -8,6 +8,8 @@ prelude · PCH · 빌드 파일뿐이다. 기능은 자기 폴더에 둔다 — 
 무엇이든 include 할 수 있어서, 기능 파일이 루트에 앉으면 그 기능이 어느 층을 올려다보는지가 감춰진다.
 새 기능 파일의 자리는 `Source/Engine/README.md` 의 티어 표에서 그 파일이 include 하는 폴더보다 높거나 같은 폴더다.
 
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckEngineRootFiles.toml` 에 있다.
+
   python Scripts/lint/gate/CheckEngineRootFiles.py [--root <repo>]
 """
 
@@ -21,27 +23,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import kDirSourceEngine  # noqa: E402
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
-# 엔진 루트에 둘 수 있는 파일. 늘리기 전에 그 파일이 기동 · 종료를 엮는 자리인지 묻는다 — 아니면 기능 폴더로 간다.
-_kSetRootFileName: frozenset[str] = frozenset(
-    {
-        "CMakeLists.txt",
-        "README.md",
-        "pch.h",
-        "pch.cpp",
-        "EngineMinimal.h",
-        "EngineLoop.h",
-        "EngineLoop.cpp",
-        "EngineBootstrap.h",
-        "EngineBootstrap.cpp",
-        "EngineInitSequence.h",
-        "EngineInitSequence.cpp",
-        "EngineInitStepList.xxx",
-        "EngineServiceCollection.h",
-        "EngineServiceCollection.cpp",
-    }
-)
+# 엔진 루트에 둘 수 있는 파일(`rules/CheckEngineRootFiles.toml`).
+_kRuleSchema = {"root_file": kKindTextList}
+_kSetRootFileName: frozenset[str] = frozenset(LintGate.readRules("CheckEngineRootFiles", _kRuleSchema, requiredKeys=("root_file",))["root_file"])
 
 
 def collectUnexpectedRootFiles(repositoryRoot: Path) -> list[str]:
@@ -58,6 +45,8 @@ def collectUnexpectedRootFiles(repositoryRoot: Path) -> list[str]:
 
 class CheckEngineRootFilesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
+
+    ruleSchema = _kRuleSchema
 
     description = "엔진 루트 허용 목록 검사"
     buildComment = "Checking that the Engine root holds only the startup wiring files..."

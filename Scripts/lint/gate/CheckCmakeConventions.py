@@ -18,6 +18,8 @@ Python 과 같은 이유로 여기 있다 — C++ 게이트는 `.cmake` 를 열�
 - `if(COMMAND sw_…)` 가드를 두지 않는다 — 우리 함수는 include 순서로 늘 정의돼 있다(가드가 있으면 정의 순서를 고친다)
 
 **서드파티는 보지 않는다.** `ThirdParty/` 와 `Tools/vcpkg/` 는 남의 규칙으로 쓰인 코드다.
+
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckCmakeConventions.toml` 에 있다.
 """
 
 from __future__ import annotations
@@ -171,12 +173,6 @@ def checkCmakeFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
 
 class CheckCmakeConventionsGate(LintGate):
     """`AGENTS.md` 의 CMake 규칙 — Python 과 함께, 지금까지 아무도 보지 않던 자리다."""
-
-    #: SHARED · MODULE `add_library` 를 직접 불러도 되는 파일 → 이유.
-    mapExemption = {
-        "cmake/Engine/ModuleTargets.cmake": "팩토리 sw_addModuleLibrary 자신",
-        "Source/Engine/CMakeLists.txt": "Engine 자신 — Dev 에서는 DLL, Shipping 에서는 정적이라 팩토리가 부르는 쪽이 아니다",
-    }
 
     description = "CMake 명명 규칙 검사 (AGENTS.md '### CMake')"
     buildComment = "Checking CMake naming conventions (AGENTS.md)..."

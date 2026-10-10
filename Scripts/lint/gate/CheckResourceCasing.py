@@ -10,6 +10,8 @@ Linux ext4 등 대소문자 구분 파일시스템 호환성 및 엔진 에셋 �
 - Resource/ 하위의 모든 디렉터리 이름은 소문자여야 합니다 (대문자 금지).
 - Resource/ 하위의 모든 파일 이름은 소문자여야 합니다 (대문자 금지, README.md 제외).
 - 위반 사항 발견 시 0이 아닌 종료 코드를 반환하여 Git 커밋 및 CI를 중단시킵니다.
+
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckResourceCasing.toml` 에 있다.
 """
 
 from __future__ import annotations
@@ -41,11 +43,6 @@ def findCasingViolations(repositoryRoot: Path, listPath: Sequence[Path]) -> list
 
 class CheckResourceCasingGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다 — 규칙과 증거가 한 자리에 있어 어긋날 수 없다."""
-
-    #: 대문자를 둬도 되는 경로 조각(파일 · 폴더 이름) → 이유.
-    mapExemption = {
-        "README.md": "GitHub 이 폴더 설명으로 읽는 이름",
-    }
 
     description = "Resource 하위 소문자 명명 규칙 검사"
     buildComment = "Checking Resource lowercase casing rules..."

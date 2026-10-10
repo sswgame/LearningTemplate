@@ -58,7 +58,7 @@ def filesInternal(folder: str, newFolder: str, stems: str) -> Files:
 
 
 # ------------------------------------------------------------------------------
-# 1 단계 — Base 를 층으로 묶는다(Base/<층>/<폴더>/). 층 순서와 근거는 Scripts/lint/gate/CheckGameFrameworkLayers.py 의 _kBaseLayer.
+# 1 단계 — Base 를 층으로 묶는다(Base/<층>/<폴더>/). 층 순서와 근거는 Scripts/lint/rules/CheckGameFrameworkLayers.toml 의 [base_layer].
 # ------------------------------------------------------------------------------
 _kListLayer: dict[str, tuple[str, ...]] = {
     "Foundation": ("Utility", "Data", "Framework"),

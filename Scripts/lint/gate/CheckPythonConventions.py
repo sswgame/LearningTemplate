@@ -16,6 +16,8 @@ Scripts/lint/gate/CheckPythonConventions.py
 
 **AST 로 본다, 정규식이 아니라.** 함수 이름·모듈 수준 대입은 구문 트리가 정확히 답해 주는
 질문이라 굳이 틀릴 이유가 없다. 문자열 안의 예시 코드를 위반으로 읽는 사고도 이걸로 사라진다.
+
+규칙 데이터(예외 표 · 목록)는 `Scripts/lint/rules/CheckPythonConventions.toml` 에 있다.
 """
 
 from __future__ import annotations
@@ -194,13 +196,6 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
 
 class CheckPythonConventionsGate(LintGate):
     """`AGENTS.md` 의 Python 규칙 — 지금까지 아무 게이트도 보지 않던 자리다."""
-
-    #: `module:<파일 줄기>` · `variable:<모듈 변수>` → 이름 규칙에서 빼는 까닭.
-    mapExemption = {
-        "module:__init__": "패키지 표시 파일 — 이름이 정해져 있다",
-        "module:__main__": "`python -m` 진입점 — 이름이 정해져 있다",
-        "variable:main": "게이트 · 픽서 · 보고서의 진입점(`main = XxxGate.run`) — 상수가 아니다",
-    }
 
     description = "Scripts/ 및 Tools/ 파이썬 명명 규칙 검사 (AGENTS.md '### Python')"
     buildComment = "Checking Python naming conventions (AGENTS.md)..."

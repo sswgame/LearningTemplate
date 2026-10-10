@@ -1,0 +1,8 @@
+# CheckShaderConventions 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckShaderConventions.py.
+
+# 불투명한 줄임말 — 이름을 camelCase 단어로 쪼갰을 때 이 단어가 하나라도 있으면 위반이다(`texColor` · `restNrm` · `instId`).
+# C++ 의 "읽히는 이름" 규칙(AGENTS.md: 루프 변수 `i` `j` `k` 금지, 줄임말은 풀어 쓴다)을 옮긴 것이다.
+opaque_word = [
+    "pos", "wpos", "nrm", "norm", "col", "clr", "vid", "idx", "tmp", "tex", "dir", "ao", "lum", "inst", "trans", "dtid",
+    "gid", "gtid", "enc", "diff", "ndot", "ndotl", "cmp", "coord", "dummy", "cnt", "num", "val", "buf", "src", "dst",
+]
