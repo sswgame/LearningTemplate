@@ -53,6 +53,15 @@ namespace sw::editor
         static void collectRootsInOrder( GameObjectManager& manager, vector<GameObject*>& outListRoot );
         /** @brief 고른 오브젝트들을 되돌리기 한 단계로 복제하고 새 오브젝트를 @p outListCreated 에 담습니다(먼저 비운다). */
         static void duplicateObjects( GameObjectManager* pManager, const vector<GameObject*>& listObject, vector<GameObject*>& outListCreated );
+        /**
+         * @brief 오브젝트를 에디터 클립보드에 복사합니다(서브트리째 — 고른 것 안의 자손은 한 번만). 복사한 루트 수입니다.
+         * @details 클립보드는 상태 바이트라 씬을 바꿔도 남는다 — 다른 씬에 붙여 넣을 수 있다(유니티 · 언리얼의 Ctrl+C/V).
+         */
+        static uint32 copyObjects( const vector<GameObject*>& listObject );
+        /** @brief 클립보드의 오브젝트를 @p pManager 의 루트로 붙여 넣습니다(되돌리기 한 줄, 붙여 넣은 루트를 고른다). */
+        static void pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated );
+        /** @brief 붙여 넣을 오브젝트가 있으면 true 입니다. */
+        static bool hasCopiedObjects();
         /** @brief 이름을 바꾸고 Undo에 기록합니다. */
         [[nodiscard]] static bool rename( GameObject* pObj, const utf8* pNewName );
         /**

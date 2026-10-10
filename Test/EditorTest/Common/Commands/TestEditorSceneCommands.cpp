@@ -472,3 +472,37 @@ SW_TEST_CASE( EditorSceneCommandsTest, CollectObjectsByComponentTypeAndTag )
     EditorSceneCommands::collectObjectsWithTag( manager, TagID{}, listObject );
     SW_EXPECT_TRUE( listObject.empty() );
 }
+
+/**
+ * @brief [EditorSceneCommandsTest] 복사한 서브트리를 다른 씬에 붙여 넣으면 루트로 들어가고 자식은 사본 부모에 붙는다(되돌리기 한 단계)
+ */
+SW_TEST_CASE( EditorSceneCommandsTest, CopyPasteAcrossScenesKeepsTheSubtree )
+{
+    SceneManager sceneManager;
+    Scene*       pSource = sceneManager.createEmptyActiveScene( "CopySource" );
+    SW_ASSERT_NOT_NULL( pSource );
+    GameObjectManager* pSourceManager = pSource->getObjectManager();
+    GameObject*        pParent        = pSourceManager->createGameObject( hashed_string( "Crate" ) );
+    GameObject*        pChild         = pSourceManager->createGameObject( hashed_string( "Lid" ) );
+    SW_ASSERT_TRUE( pParent->addComponent<SceneComponent>() != nullptr && pChild->addComponent<SceneComponent>() != nullptr );
+    pSourceManager->mergePendingAdds();
+    SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
+    SW_EXPECT_EQUAL( 1u, EditorSceneCommands::copyObjects( { pParent, pChild } ) ); // 자식은 부모의 서브트리로 한 번만
+    SW_EXPECT_TRUE( EditorSceneCommands::hasCopiedObjects() );
+
+    Scene* pTarget = sceneManager.createEmptyActiveScene( "PasteTarget" );
+    SW_ASSERT_NOT_NULL( pTarget );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    CommandStack              stack;
+    ScopedCommandStackService scopedStack{ stack };
+    GameObjectManager*        pTargetManager = pTarget->getObjectManager();
+    vector<GameObject*>       listPasted;
+    EditorSceneCommands::pasteObjects( pTargetManager, listPasted );
+    pTargetManager->mergePendingAdds();
+    SW_ASSERT_EQUAL( size_t{ 1 }, listPasted.size() );
+    SW_EXPECT_TRUE( listPasted[0]->getParent() == nullptr );
+    GameObject* pPastedLid = pTargetManager->findGameObjectByName( hashed_string( "Lid" ) );
+    SW_ASSERT_NOT_NULL( pPastedLid );
+    SW_EXPECT_TRUE( pPastedLid->getParent() == listPasted[0] );
+    SW_EXPECT_EQUAL( size_t{ 1 }, stack.getCommandCount() );
+}

@@ -88,6 +88,34 @@ namespace sw::editor
                 return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
             }
 
+            /** @brief 이번 프레임에 그린 오브젝트 줄(위에서 아래 순서) — Shift 범위 선택 · Ctrl+A · 화살표가 지난 프레임의 것을 본다. */
+            struct RowState
+            {
+                vector<uint64> _listDrawnRow;
+                vector<uint64> _listPreviousRow;
+                uint64         _anchorObjectID{ 0 }; ///< 범위 선택의 시작(마지막으로 그냥 · Ctrl 누른 줄)
+                uint64         _revealObjectID{ 0 }; ///< 펼쳐서 보여 줄 오브젝트(뷰포트에서 골랐다)
+                uint64         _lastPrimaryID{ 0 };  ///< 지난 프레임의 주 선택 — 바깥에서 바뀌었는지 가린다
+                bool           _bClickedThisFrame{ false };
+            };
+
+            static RowState& getRowState()
+            {
+                static RowState s_state;
+                return s_state;
+            }
+
+            /** @brief @p pObj 가 @p pTarget 의 조상이면 true 입니다. */
+            static bool isAncestorOf( const GameObject* pObj, const GameObject* pTarget )
+            {
+                for ( const GameObject* pParent = pTarget != nullptr ? pTarget->getParent() : nullptr; pParent != nullptr; pParent = pParent->getParent() )
+                {
+                    if ( pParent == pObj )
+                        return true;
+                }
+                return false;
+            }
+
             /**
              * @brief 이 루트 줄을 그리지 않고 자리만 둘 수 있는지 봅니다 — 접혀 있고, 이름을 바꾸는 중이 아니고, 줄이 창의 보이는 범위 밖일 때.
              * @details 트리 노드의 열림 상태는 drawGameObjectNode 와 같은 ID 로 읽는다(PushID( 오브젝트 id ) 안의 "###go<id>"). @p cursorY 는 이 줄이 놓일 화면 y 다.
@@ -95,7 +123,7 @@ namespace sw::editor
             static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectID, float32 cursorY, float32 rowHeight )
             {
                 const uint64 objectID = pObj->getObjectID();
-                if ( objectID == renamingObjectID )
+                if ( objectID == renamingObjectID || getRowState()._revealObjectID != 0 )
                     return false;
                 const ImVec2 rowMin{ ImGui::GetCursorScreenPos().x, cursorY };
                 if ( ImGui::IsRectVisible( rowMin, ImVec2( rowMin.x + 1.0f, cursorY + rowHeight ) ) )
@@ -413,11 +441,28 @@ namespace sw::editor
                 const bool bHasComponents = pObj->getComponentCount() > 0;
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
+                // 뷰포트에서 고른 오브젝트는 조상을 펼쳐 그 줄까지 보인다(언리얼 Outliner 의 선택 따라가기).
+                RowState&         rowState      = getRowState();
+                const GameObject* pRevealTarget = rowState._revealObjectID != 0 ? pManager->findGameObjectByID( rowState._revealObjectID ) : nullptr;
+                if ( pRevealTarget != nullptr && isAncestorOf( pObj, pRevealTarget ) )
+                    ImGui::SetNextItemOpen( true );
+                // 프리팹 인스턴스는 이름을 파랗게(유니티 Hierarchy).
+                const bool bPrefabInstance = pContext->getWorkspace().getGameObjectPrefabPath( objectID ).empty() == false;
+                if ( bPrefabInstance )
+                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.45f, 0.70f, 1.0f, 1.0f } );
                 // SpanAvailWidth — 선택 배경 · 클릭 영역이 앞의 가시성 토글 오른쪽부터다(SpanFullWidth 면 창 왼쪽부터 칠해 토글을 덮는다).
                 const bool bOpen = ImGui::TreeNodeEx(
                     arrLabel.c_str(),
                     ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
                         ( bSelected ? ImGuiTreeNodeFlags_Selected : 0 ) | ( bLeaf ? ImGuiTreeNodeFlags_Leaf : 0 ) );
+                if ( bPrefabInstance )
+                    ImGui::PopStyleColor();
+                rowState._listDrawnRow.push_back( objectID );
+                if ( pRevealTarget == pObj )
+                {
+                    ImGui::SetScrollHereY( 0.5f );
+                    rowState._revealObjectID = 0;
+                }
                 if ( bSelected )
                     EditorSelfTestMarks::note( "hierarchy.selectedRow" ); // 시나리오가 오른쪽 클릭으로 오브젝트 메뉴를 연다
                 if ( EditorSelfTestMarks::isEnabled() )
@@ -425,14 +470,45 @@ namespace sw::editor
 
                 if ( ImGui::IsItemClicked() )
                 {
-                    ImGuiIO&      io   = ImGui::GetIO();
-                    SelectionMode mode = SelectionMode::Replace;
-                    if ( io.KeyCtrl )
-                        mode = SelectionMode::Toggle;
-                    else if ( io.KeyShift )
-                        mode = SelectionMode::Add;
-
-                    pContext->getWorkspace().selectGameObject( pObj, mode );
+                    ImGuiIO& io                 = ImGui::GetIO();
+                    rowState._bClickedThisFrame = true;
+                    if ( io.KeyShift && rowState._anchorObjectID != 0 )
+                    {
+                        // Shift — 시작 줄부터 이 줄까지(지난 프레임에 그린 순서) 모두 고른다(유니티 · 언리얼 · 윈도 탐색기).
+                        const vector<uint64>& listRow     = rowState._listPreviousRow;
+                        size_t                anchorIndex = listRow.size();
+                        size_t                clickIndex  = listRow.size();
+                        for ( size_t rowIndex = 0; rowIndex < listRow.size(); ++rowIndex )
+                        {
+                            if ( listRow[rowIndex] == rowState._anchorObjectID )
+                                anchorIndex = rowIndex;
+                            if ( listRow[rowIndex] == objectID )
+                                clickIndex = rowIndex;
+                        }
+                        if ( anchorIndex < listRow.size() && clickIndex < listRow.size() )
+                        {
+                            const size_t first = MathUtil::min( anchorIndex, clickIndex );
+                            const size_t last  = MathUtil::max( anchorIndex, clickIndex );
+                            if ( io.KeyCtrl == false )
+                                pContext->getEditorSelection().clearObjectSelection();
+                            for ( size_t rowIndex = first; rowIndex <= last; ++rowIndex )
+                            {
+                                GameObject* pRow = pManager->findGameObjectByID( listRow[rowIndex] );
+                                if ( pRow != nullptr )
+                                    pContext->getWorkspace().selectGameObject( pRow, SelectionMode::Add );
+                            }
+                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add ); // 누른 줄이 주 선택
+                        }
+                        else
+                        {
+                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add );
+                        }
+                    }
+                    else
+                    {
+                        pContext->getWorkspace().selectGameObject( pObj, io.KeyCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
+                        rowState._anchorObjectID = objectID;
+                    }
                 }
 
                 // 제자리 이름 바꾸기 입력
@@ -545,6 +621,20 @@ namespace sw::editor
 
         GameObjectManager* pManager = pScene->getObjectManager();
         EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만, id 순 — 지우고 되돌려도 자리가 그대로다
+
+        // 줄 순서를 프레임마다 다시 모은다. 주 선택이 바깥(뷰포트 · 다른 패널)에서 바뀌었으면 그 줄을 펼쳐 보인다.
+        HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
+        rowState._listPreviousRow.swap( rowState._listDrawnRow );
+        rowState._listDrawnRow.clear();
+        {
+            EditorContext*    pContext  = EditorContext::get();
+            const GameObject* pPrimary  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+            const uint64      primaryID = pPrimary != nullptr ? pPrimary->getObjectID() : 0;
+            if ( primaryID != rowState._lastPrimaryID && rowState._bClickedThisFrame == false && primaryID != 0 )
+                rowState._revealObjectID = primaryID;
+            rowState._lastPrimaryID     = primaryID;
+            rowState._bClickedThisFrame = false;
+        }
 
         // 상단 툴바: 생성 버튼 + 검색창
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
@@ -671,7 +761,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 단축키(Ctrl+D 복제, F2 이름 바꾸기, Delete 삭제)
+        // 단축키(Ctrl+D 복제, Ctrl+C/V 복사 · 붙여 넣기, Ctrl+A 모두, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제)
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
             const ImGuiIO&   io              = ImGui::GetIO();
@@ -679,6 +769,52 @@ namespace sw::editor
             // 사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
             vector<GameObject*> listSel;
             editorSelection.getSelectedObjects( listSel );
+            HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
+            const vector<uint64>&             listRow  = rowState._listPreviousRow;
+
+            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_V, false ) && EditorSceneCommands::hasCopiedObjects() )
+            {
+                vector<GameObject*> listPasted;
+                EditorSceneCommands::pasteObjects( pManager, listPasted ); // 되돌리기 한 단계 · 붙여 넣은 것을 고른다
+                return;
+            }
+            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_A, false ) )
+            {
+                // 지난 프레임에 보인 줄을 모두 고른다(접힌 자식은 빠진다 — 유니티와 같다).
+                editorSelection.clearObjectSelection();
+                for ( const uint64 rowID : listRow )
+                {
+                    GameObject* pRow = pManager->findGameObjectByID( rowID );
+                    if ( pRow != nullptr )
+                        editorSelection.selectObject( pRow, SelectionMode::Add );
+                }
+                return;
+            }
+            if ( io.KeyCtrl == false && ( ImGui::IsKeyPressed( ImGuiKey_UpArrow ) || ImGui::IsKeyPressed( ImGuiKey_DownArrow ) ) && listRow.empty() == false )
+            {
+                const GameObject* pPrimary = editorSelection.getPrimaryObject();
+                size_t            current  = listRow.size();
+                for ( size_t rowIndex = 0; pPrimary != nullptr && rowIndex < listRow.size(); ++rowIndex )
+                {
+                    if ( listRow[rowIndex] == pPrimary->getObjectID() )
+                        current = rowIndex;
+                }
+                const bool   bUp   = ImGui::IsKeyPressed( ImGuiKey_UpArrow );
+                const size_t next  = current >= listRow.size() ? 0 : ( bUp ? ( current > 0 ? current - 1 : 0 ) : MathUtil::min( current + 1, listRow.size() - 1 ) );
+                GameObject*  pNext = pManager->findGameObjectByID( listRow[next] );
+                if ( pNext != nullptr )
+                {
+                    pContext->getWorkspace().selectGameObject( pNext, SelectionMode::Replace );
+                    rowState._anchorObjectID    = pNext->getObjectID();
+                    rowState._bClickedThisFrame = true; // 키로 고른 것 — 펼쳐 보이기 대상이 아니다
+                }
+                return;
+            }
+            if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_C, false ) && listSel.empty() == false )
+            {
+                (void)EditorSceneCommands::copyObjects( listSel ); // 복사한 수는 붙여 넣을 때 보인다
+                return;
+            }
 
             if ( listSel.empty() == false )
             {

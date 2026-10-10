@@ -612,6 +612,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   (다른 패널을 닫고 직전 배치를 상태 폴더의 Temp 레이아웃으로 둔다), 오른쪽 단추 + 휠은 비행 속도. 선택 표시는 후처리 외곽선이 아니라 경계 상자(시각화 `selection_bounds`,
   Godot 의 선택 상자)다. 이름 붙인 레이아웃을 읽으면 다시 연 패널이 포커스를 가져가므로 Scene 탭을 두 프레임 이상 앞으로 당긴다(`updateDefaultTabSelection`).
   시나리오는 가운데 단추를 씬 뷰 빈 곳에 누른 채(`state="down"` 이 커서를 붙잡는다) 키를 보낸다(`editor/viewportbasics`).
+- **Hierarchy 의 줄 순서는 지난 프레임에 그린 순서다**(Shift 범위 선택 · Ctrl+A · ↑↓ 가 그것을 본다 — 접힌 자식은 빠진다). Ctrl+C/V 는 상태 바이트 클립보드라
+  씬을 바꿔도 붙여 넣고(루트로 들어간다), 바깥(뷰포트)에서 주 선택이 바뀌면 조상을 펼쳐 그 줄로 스크롤한다. 프리팹 인스턴스 이름은 파랗다(시나리오 `editor/hierarchyedit`).
 - **Hierarchy 의 눈은 에디터에서만 숨긴다**(`GameObject::setHiddenInEditor` — PROPERTY 가 아니라 저장 · 되돌리기 · 씬 dirty 에 남지 않고 게임 동작도 그대로).
   렌더러의 프리미티브 수집이 그 비트를 보므로 숨기는 쪽(`EditorSceneCommands::setHiddenInEditor`)이 메시 렌더 상태를 더럽혀야 다음 프레임에 빠진다.
   활성 비트는 인스펙터의 Active 체크박스로만 바꾼다. 자물쇠는 워크스페이스의 잠금 목록이고 뷰포트(빌보드 · 레이 피킹)만 막는다(시나리오 `editor/hidelock`).

@@ -9,6 +9,7 @@
 
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
@@ -47,6 +48,37 @@ namespace sw::editor
                         collectSubtreeChildFirst( pChild, outListObject );
                 }
                 outListObject.push_back( pObj );
+            }
+
+            /** @brief 클립보드의 오브젝트 하나(서브트리의 한 줄)입니다. */
+            struct CopiedObject
+            {
+                hashed_string _name;
+                uint64        _savedID{ 0 };
+                vector<uint8> _stateBytes;
+                string        _prefabPath;
+                bool          _bRoot{ false }; ///< 복사한 루트(붙여 넣을 때 씬의 루트로 둔다)
+            };
+
+            /** @brief 오브젝트 클립보드입니다. 에디터 모듈 안이라 모듈을 다시 올리면 비워진다. */
+            static vector<CopiedObject>& getObjectClipboard()
+            {
+                static vector<CopiedObject> s_listCopied;
+                return s_listCopied;
+            }
+
+            /** @brief @p pObj 의 조상이 @p listObject 안에 있으면 true 입니다(그 조상의 서브트리로 이미 복사된다). */
+            static bool hasSelectedAncestor( const GameObject* pObj, const vector<GameObject*>& listObject )
+            {
+                for ( const GameObject* pParent = pObj->getParent(); pParent != nullptr; pParent = pParent->getParent() )
+                {
+                    for ( const GameObject* pSelected : listObject )
+                    {
+                        if ( pSelected == pParent )
+                            return true;
+                    }
+                }
+                return false;
             }
         };
     } // namespace
@@ -600,6 +632,107 @@ namespace sw::editor
         for ( GameObject* pChild : listChild )
         {
             setHiddenInEditor( pChild, bHidden );
+        }
+    }
+
+    uint32 EditorSceneCommands::copyObjects( const vector<GameObject*>& listObject )
+    {
+        vector<EditorSceneCommandsInternal::CopiedObject> listCopied;
+        EditorContext*                                    pContext = EditorContext::get();
+        uint32                                            rootCount{ 0 };
+        for ( GameObject* pRoot : listObject )
+        {
+            if ( pRoot == nullptr || EditorSceneCommandsInternal::hasSelectedAncestor( pRoot, listObject ) )
+                continue;
+            vector<GameObject*> listSubtree;
+            EditorSceneCommandsInternal::collectSubtreeChildFirst( pRoot, listSubtree );
+            std::reverse( listSubtree.begin(), listSubtree.end() ); // 부모부터 — 붙여 넣을 때 자식이 먼저 만든 부모에 붙는다
+            for ( GameObject* pObj : listSubtree )
+            {
+                EditorSceneCommandsInternal::CopiedObject copied{};
+                copied._name    = pObj->getName();
+                copied._savedID = pObj->getObjectID();
+                copied._bRoot   = pObj == pRoot;
+                if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, copied._stateBytes ) == false )
+                    return 0;
+                if ( pContext != nullptr )
+                    copied._prefabPath = pContext->getWorkspace().getGameObjectPrefabPath( pObj->getObjectID() );
+                listCopied.push_back( std::move( copied ) );
+            }
+            ++rootCount;
+        }
+        if ( rootCount > 0 )
+            EditorSceneCommandsInternal::getObjectClipboard() = std::move( listCopied );
+        return rootCount;
+    }
+
+    bool EditorSceneCommands::hasCopiedObjects()
+    {
+        return EditorSceneCommandsInternal::getObjectClipboard().empty() == false;
+    }
+
+    void EditorSceneCommands::pasteObjects( GameObjectManager* pManager, vector<GameObject*>& outListCreated )
+    {
+        outListCreated.clear();
+        const vector<EditorSceneCommandsInternal::CopiedObject>& listCopied = EditorSceneCommandsInternal::getObjectClipboard();
+        if ( EditorSceneCommandsInternal::canMutateScene() == false || pManager == nullptr || listCopied.empty() )
+            return;
+        // 복제와 같은 길이다 — 묶음이 **복사한 때의 id** 로 사본끼리 잇는다. 루트는 씬의 루트로 둔다(다른 씬이면 원래 부모가 없다).
+        ObjectStateBatch    batch( ObjectIDSpace::Live );
+        vector<GameObject*> listCopy;
+        listCopy.reserve( listCopied.size() );
+        bool bAllLoaded = true;
+        for ( const EditorSceneCommandsInternal::CopiedObject& copied : listCopied )
+        {
+            // 같은 씬에 붙이면 이름이 겹친다 — 저장소가 번호를 붙인다(`<이름>_2`, 유니티의 붙여 넣기와 같다).
+            GameObject* pCopy = pManager->createGameObject( copied._name );
+            if ( pCopy == nullptr )
+            {
+                bAllLoaded = false;
+                break;
+            }
+            listCopy.push_back( pCopy );
+            ObjectLoadContext context{};
+            context._pBatch  = &batch;
+            context._savedID = copied._savedID;
+            bAllLoaded       = ObjectStateSerializer::loadFromBinaryBuffer( pCopy, copied._stateBytes.data(), copied._stateBytes.size(), context ) != 0;
+            if ( bAllLoaded == false )
+                break;
+        }
+        batch.finish();
+        if ( bAllLoaded == false )
+        {
+            SW_LOG_WARNING( "Paste failed to read a copied object - nothing was pasted" );
+            for ( GameObject* pCopy : listCopy )
+            {
+                pManager->destroyObject( pCopy );
+            }
+            return;
+        }
+        EditorContext* pContext = EditorContext::get();
+        const string   label    = "Paste " + to_string( listCopy.size() ) + " GameObject(s)";
+        EditorTransaction::beginTransaction( label );
+        for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
+        {
+            GameObject* pCopy = listCopy[copyIndex];
+            if ( listCopied[copyIndex]._bRoot )
+            {
+                if ( pCopy->getParent() != nullptr )
+                    pCopy->detachFromParent();
+                outListCreated.push_back( pCopy );
+            }
+            if ( listCopied[copyIndex]._prefabPath.empty() == false && pContext != nullptr )
+                pContext->getWorkspace().setGameObjectPrefabPath( pCopy->getObjectID(), listCopied[copyIndex]._prefabPath );
+            EditorTransaction::recordCreation( pCopy, label );
+        }
+        EditorTransaction::endTransaction();
+        if ( pContext != nullptr )
+        {
+            pContext->getEditorSelection().clearObjectSelection();
+            for ( GameObject* pRoot : outListCreated )
+            {
+                pContext->getEditorSelection().selectObject( pRoot, SelectionMode::Add );
+            }
         }
     }
 } // namespace sw::editor
