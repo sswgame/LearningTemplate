@@ -10,8 +10,8 @@
 #   MODULE : MODULE 이면 SW_MODULE_EXPORTS(PRIVATE)                       — C-ABI 진입점을 내보내는 플러그인(RHI · 게임 · 에디터)
 # ------------------------------------------------------------------------------
 function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
-	if(NOT KIND MATCHES "^(ENGINE|GF|MODULE|EDITOR)$")
-		message(FATAL_ERROR "sw_configureDllExports(${TARGET_NAME}): KIND 는 ENGINE | GF | MODULE | EDITOR 이다 (받은 값: ${KIND})")
+	if(NOT KIND MATCHES "^(ENGINE|GF|MODULE|MODULE_SHARED|EDITOR)$")
+		message(FATAL_ERROR "sw_configureDllExports(${TARGET_NAME}): KIND 는 ENGINE | GF | MODULE | MODULE_SHARED | EDITOR 이다 (받은 값: ${KIND})")
 	endif()
 
 	if(KIND STREQUAL "ENGINE" AND LIB_TYPE STREQUAL "SHARED")
@@ -19,6 +19,9 @@ function(sw_configureDllExports TARGET_NAME LIB_TYPE KIND)
 	elseif(KIND STREQUAL "GF" AND LIB_TYPE STREQUAL "SHARED")
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_GF_EXPORTS INTERFACE SW_GF_IMPORTS)
 	elseif(KIND STREQUAL "MODULE" AND LIB_TYPE STREQUAL "MODULE")
+		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
+	elseif(KIND STREQUAL "MODULE_SHARED" AND LIB_TYPE STREQUAL "SHARED")
+		# 다른 모듈을 링크하는 SHARED 모듈(에디터 확장) — 자기 C-ABI 진입점만 내보낸다.
 		target_compile_definitions(${TARGET_NAME} PRIVATE SW_MODULE_EXPORTS)
 	elseif(KIND STREQUAL "EDITOR" AND LIB_TYPE STREQUAL "SHARED")
 		# EditorModule: 호스트가 부르는 C-ABI 진입점(SW_MODULE_API)과, 확장 모듈이 링크하는 에디터 API(SW_EDITOR_API)를 함께 내보낸다.

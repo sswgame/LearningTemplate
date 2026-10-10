@@ -26,7 +26,7 @@ endfunction()
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
 # ------------------------------------------------------------------------------
 function(sw_addReflectionStep TARGET_NAME)
-	cmake_parse_arguments(ARG "" "OUTPUT_DIR" "HEADERS;INCLUDES" ${ARGN})
+	cmake_parse_arguments(ARG "" "OUTPUT_DIR;EXCLUDE_REGEX" "HEADERS;INCLUDES" ${ARGN})
 
 	sw_skipWithoutReflectionParser(${TARGET_NAME} swSkip)
 	if(swSkip)
@@ -40,6 +40,10 @@ function(sw_addReflectionStep TARGET_NAME)
 	if(NOT ARG_HEADERS)
 		message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
 		file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+		# 하위 폴더의 다른 모듈(키트 · 게임의 Editor/ 확장)은 그 모듈이 따로 훑는다.
+		if(ARG_EXCLUDE_REGEX)
+			list(FILTER listCandidateHeader EXCLUDE REGEX "${ARG_EXCLUDE_REGEX}")
+		endif()
 
 		foreach(hdr IN LISTS listCandidateHeader)
 			file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")

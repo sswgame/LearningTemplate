@@ -80,6 +80,7 @@ namespace sw
         : ModuleHost{}
         , _editorAPI{}
         , _editor{ nullptr }
+        , _listEditorExtension{}
         , _bEnableEditor{ SW_FALSE }
         , _bEditorModuleActive{ SW_TRUE }
         , _reserved{ 0 }
@@ -95,6 +96,21 @@ namespace sw
     bool EditorModuleHost::loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
+        // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다 — 카탈로그는 initialize 에 없다.
+        _listEditorExtension.clear();
+        for ( const string& moduleName : resolution._listLoadOrder )
+        {
+            const ModuleManifest* pManifest = catalog.findManifest( moduleName );
+            if ( pManifest == nullptr || pManifest->_kind != ModuleKind::EditorExtension )
+                continue;
+            EditorExtensionModule extension{};
+            extension._name = moduleName;
+            for ( const ModuleDependency& dependency : pManifest->_listDependency )
+            {
+                extension._listDependency.push_back( dependency._name );
+            }
+            _listEditorExtension.push_back( std::move( extension ) );
+        }
         return ModuleHost::loadModuleImages( pLiveReloadManager, catalog, resolution );
     }
 
@@ -134,6 +150,8 @@ namespace sw
                     return false;
                 }
 
+                registerEditorExtensions( pLiveReloadManager );
+
                 if ( pLiveReloadManager->isGraphBroken() )
                 {
                     SW_LOG_ERROR( "LiveReload graph broken during module registration — aborting initialize" );
@@ -144,6 +162,26 @@ namespace sw
 #endif
 
         return true;
+    }
+
+    void EditorModuleHost::registerEditorExtensions( LiveReloadManager* pLiveReloadManager )
+    {
+#if defined( SW_SHIPPING )
+        (void)pLiveReloadManager; // 배포본에는 에디터 · 확장이 없다
+#else
+        // 확장 모듈은 EditorModule 과 자기 키트에 의존한다 — 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다(키트 → SWGame 과 같다).
+        // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorContext::syncExtensionRegistrations).
+        for ( const EditorExtensionModule& extension : _listEditorExtension )
+        {
+            if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
+            {
+                // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다 — 에디터는 뜬다.
+                SW_LOG_ERROR( "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
+                continue;
+            }
+            SW_LOG_INFO( "Editor extension module %# loaded", extension._name.c_str() );
+        }
+#endif
     }
 
     bool EditorModuleHost::importAssetsWithEditorModule( EditorImportKind kind, bool bCheckOnly )

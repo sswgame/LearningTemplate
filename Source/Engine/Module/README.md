@@ -38,6 +38,9 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   든 씬은 쿠킹하지 않고 실패(종료 코드 → CookAssets)로 센다.
 - **모듈 코드를 쥘 수 있는 등록부는 `IModuleUnloadListener` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
+- **에디터 확장 모듈(종류 `EditorExtension`)은 EditorModule 과 자기 키트에 의존해 리로드 그래프에 오른다.** 인스턴스가 없고(정적 등록자),
+  에디터를 켤 때만 로드한다(`EditorModuleHost::registerEditorExtensions`). 하나가 실패해도 에디터는 뜬다. 매니페스트는 Dev 전용 · EditorModule 의존이 필수이고
+  (`ModuleCatalog::parseManifest` 와 CMake 가 같은 검사), 의존이 꺼지면 확장도 오류 없이 함께 꺼진다(쓰지 않아 뺀 키트의 확장은 매니페스트도 복사하지 않는다).
 - **`ModuleImageUtil::releaseModuleCode` 는 델리게이트 스텁 주소로** 그 이미지가 단 등록을 뗀다. 뗀 것이 있다는 경고는 모듈의 손 정리가 빠졌다는 뜻이고 늘 0 이어야 한다. 시험 함정: 몸통이 같은
   람다는 ICF 가 접어 주소가 겹친다.
 - **엔진 ABI 도장**(`Scripts/generate/GenerateEngineAbiStamp.py`, 엔진 헤더 + `.xxx` + RuntimeAPI + GameFramework 의 SHA-1)은 섀도 복사본을 올리기 **전에** 파일 바이트에서 대조한다. 주석만

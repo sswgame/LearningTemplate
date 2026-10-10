@@ -5,6 +5,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "ModuleHost/ModuleHost.h"
 
@@ -150,8 +151,19 @@ namespace sw
         [[nodiscard]] bool recreateEditorInstance( void* pEditorModule );
 
     private:
-        EditorAPI    _editorAPI;
-        EditorHandle _editor;
+        /** @brief 에디터를 켤 때 EditorModule 다음에 로드할 확장 모듈(종류 EditorExtension) 하나입니다. */
+        struct EditorExtensionModule
+        {
+            string         _name;
+            vector<string> _listDependency; ///< 매니페스트의 의존(EditorModule · 키트) — 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다
+        };
+
+        /** @brief 확장 모듈을 의존과 함께 리로드 그래프에 올립니다. 하나가 실패해도 에디터는 뜹니다(그 확장만 없다). */
+        void registerEditorExtensions( LiveReloadManager* pLiveReloadManager );
+
+        EditorAPI                     _editorAPI;
+        EditorHandle                  _editor;
+        vector<EditorExtensionModule> _listEditorExtension; ///< 켜진 확장 모듈(적재 순서 — `loadModuleImages` 가 모은다)
 
         uint8                  _bEnableEditor       : 1;
         uint8                  _bEditorModuleActive : 1; ///< 매니페스트가 에디터 모듈을 켰는가(`loadModuleImages` 가 정한다)

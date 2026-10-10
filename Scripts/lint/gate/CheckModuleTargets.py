@@ -4,6 +4,7 @@
 
   1) 모든 모듈 매니페스트(`Source/**/<이름>.module.json`)는 `_listTarget` 을 갖고, 값은 `Client` · `Server` 중 하나 이상이다.
   2) 이름 규칙 — 서버 전용 키트는 `GF_Server_<X>`, 클라이언트 전용 키트는 `GF_Client_<X>`, 공유는 `GF_<X>`(사용자 결정 2026-10-06).
+     에디터 확장(`_kind: EditorExtension`)은 `GF_Editor_<키트>` · `SWGameEditor` 이고 `[Client]` 뿐이다.
      `GF_Server_` 접두면 `_listTarget` 은 `["Server"]` 뿐이고, `["Server"]` 뿐인 키트는 `GF_Server_` 로 시작한다(Client 도 같다).
      에디터 · RHI 모듈은 종류가 곧 클라이언트 전용이라 접두를 요구하지 않는다(`["Client"]` 여야 한다).
   3) 의존 방향 — 모듈이 들어가는 타깃마다 그 의존 모듈도 들어가야 한다. 공유 모듈이 서버 전용 모듈에 의존하면 클라이언트 타깃이
@@ -41,7 +42,10 @@ _kListNamePrefixTarget = (
     ("GF_Client_", frozenset({"Client"})),
 )
 #: 종류가 곧 클라이언트 전용인 모듈(창 · GPU) — 접두 없이 `["Client"]` 여야 한다.
-_kClientOnlyKinds = ("Editor", "RHI")
+_kClientOnlyKinds = ("Editor", "RHI", "EditorExtension")
+#: 에디터 확장 모듈의 이름 — 키트의 것은 `GF_Editor_<키트>`, 게임의 것은 `SWGameEditor`(언리얼 플러그인의 `<X>Editor` 모듈과 같은 자리).
+_kEditorExtensionPrefix = "GF_Editor_"
+_kGameEditorExtensionName = "SWGameEditor"
 #: 매니페스트가 없는 폴더의 대상입니다.
 _kListFolderTarget = (
     ("Source/App/", frozenset({"Client"})),
@@ -77,6 +81,10 @@ def findNamingViolationsInternal(relative: str, name: str, kind: str, setTarget:
         if name.startswith(prefix) and setTarget != setPrefixTarget:
             listViolation.append(f"{relative}: {name} 은 `{prefix}` 로 시작하므로 `_listTarget` 이 [{formatTargets(setPrefixTarget)}] 뿐이어야 합니다"
                                  f"(지금 [{formatTargets(setTarget)}])")
+    if kind == "EditorExtension" and name.startswith(_kEditorExtensionPrefix) is False and name != _kGameEditorExtensionName:
+        listViolation.append(f"{relative}: 에디터 확장 모듈 {name} 의 이름은 `{_kEditorExtensionPrefix}<키트>`(키트) 또는 `{_kGameEditorExtensionName}`(게임)입니다")
+    if kind != "EditorExtension" and (name.startswith(_kEditorExtensionPrefix) or name == _kGameEditorExtensionName):
+        listViolation.append(f"{relative}: {name} 은 에디터 확장의 이름이므로 `_kind` 가 EditorExtension 이어야 합니다(지금 {kind})")
     if kind in _kClientOnlyKinds:
         if setTarget != frozenset({"Client"}):
             listViolation.append(f"{relative}: {kind} 모듈 {name} 은 창 · GPU 를 쓰므로 `_listTarget` 이 [Client] 뿐이어야 합니다")
@@ -233,6 +241,12 @@ class CheckModuleTargetsGate(LintGate):
                     ' "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Server" ] }\n',
                 "Source/GameFramework/Kits/Probe/Server/Probe/SessionStore.h": "#pragma once\ninline int sessionCount() { return 0; }\n",
             },
+        },
+        {
+            "name": "에디터 확장 모듈의 이름에 GF_Editor_ 접두가 없다",
+            "files": {"Source/GameFramework/Kits/Probe/Probe/Editor/ProbeEditor.module.json":
+                      '{ "_name": "ProbeEditor", "_version": "1.0.0", "_kind": "EditorExtension", "_listPlatform": [ "Windows" ],'
+                      ' "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] }\n'},
         },
         {
             "name": "App(클라이언트)이 서버 실행 파일 헤더를 include 한다",

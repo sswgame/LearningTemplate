@@ -8,6 +8,8 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
+#include "sw/config/ConfigConstants.h"
+
 namespace sw
 {
     namespace
@@ -15,7 +17,7 @@ namespace sw
         struct ModuleCatalogInternal
         {
             /** @brief 종류 낱말 표입니다(`ModuleKind` 값 순서 — CMake `ModuleManifest.cmake` 와 같은 낱말). */
-            static constexpr const utf8* kArrKindName[] = { "GameFramework", "Kit", "Game", "Editor", "RHI" };
+            static constexpr const utf8* kArrKindName[] = { "GameFramework", "Kit", "Game", "Editor", "RHI", "EditorExtension" };
 
             /** @brief 매니페스트가 가질 수 있는 키입니다. 모르는 키는 오류다(오타를 기본값으로 삼키지 않는다). */
             static constexpr const utf8* kArrManifestKey[]   = { "_name", "_version", "_kind",
@@ -295,6 +297,26 @@ namespace sw
                 outManifest._listModuleOverride.push_back( ModuleOverride{ entry.get( "_name" ).asString(), entry.get( "_bEnabled" ).asBool() } );
             }
         }
+
+        // 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_readModuleManifest` 와 같은 검사.
+        if ( outManifest._kind == ModuleKind::EditorExtension )
+        {
+            if ( outManifest._configurationMask != static_cast<uint8>( ModuleConfiguration::Dev ) )
+            {
+                outError = context + ": an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])";
+                return false;
+            }
+            bool bDependsOnEditor = false;
+            for ( const ModuleDependency& dependency : outManifest._listDependency )
+            {
+                bDependsOnEditor = bDependsOnEditor || dependency._name == config::kTargetEditorModule;
+            }
+            if ( bDependsOnEditor == false )
+            {
+                outError = context + ": an EditorExtension module must list " + string( config::kTargetEditorModule ) + " in _listDependency";
+                return false;
+            }
+        }
         return true;
     }
 
@@ -388,6 +410,27 @@ namespace sw
                 listReason[index] = unavailable;
             else
                 listActive[index] = SW_TRUE;
+        }
+
+        // 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolveModuleManifests` 와 같다.
+        for ( size_t index = 0; index < manifestCount; ++index )
+        {
+            const ModuleManifest& manifest = _listManifest[index];
+            if ( listActive[index] == SW_FALSE || manifest._kind != ModuleKind::EditorExtension )
+                continue;
+            for ( const ModuleDependency& dependency : manifest._listDependency )
+            {
+                const ModuleManifest* pDependency = findManifest( dependency._name );
+                if ( pDependency == nullptr )
+                    break; // 없는 의존은 아래 3) 이 오류로 알린다
+                const size_t dependencyIndex = static_cast<size_t>( pDependency - _listManifest.data() );
+                if ( listActive[dependencyIndex] == SW_FALSE )
+                {
+                    listActive[index] = SW_FALSE;
+                    listReason[index] = "needs " + dependency._name + ", which is " + listReason[dependencyIndex];
+                    break;
+                }
+            }
         }
 
         // 3) 켜진 모듈의 의존은 모두 있고 · 켜져 있고 · 버전이 맞아야 한다.

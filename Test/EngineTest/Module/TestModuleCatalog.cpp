@@ -323,3 +323,58 @@ SW_TEST_CASE( ModuleCatalogTest, TargetMaskSeparatesClientAndServerModules )
     SW_ASSERT_TRUE_MSG( catalog.resolve( game, gameResolution, error ), error.c_str() );
     SW_EXPECT_TRUE( gameResolution.isActive( "GF_Server_Login" ) && gameResolution.isActive( "EditorModule" ) );
 }
+
+/**
+ * @brief [ModuleCatalogTest] 에디터 확장(EditorExtension) 매니페스트는 Dev 전용이고 EditorModule 에 의존해야 한다
+ */
+SW_TEST_CASE( ModuleCatalogTest, EditorExtensionManifestIsDevOnlyAndNeedsTheEditor )
+{
+    const utf8*        pGood = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+                             "_listDependency": [ { "_name": "EditorModule" }, { "_name": "GF_Farm" } ],
+                             "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })";
+    sw::ModuleManifest manifest;
+    sw::string         error;
+    SW_ASSERT_TRUE_MSG( sw::ModuleCatalog::parseManifest( pGood, "Source/X/GF_Editor_Farm.module.json", manifest, error ), error.c_str() );
+    SW_EXPECT_TRUE( manifest._kind == sw::ModuleKind::EditorExtension );
+
+    const utf8* pShipping = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+                             "_listDependency": [ { "_name": "EditorModule" } ],
+                             "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev", "Shipping" ], "_listTarget": [ "Client" ] })";
+    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pShipping, "Source/X/GF_Editor_Farm.module.json", manifest, error ) );
+
+    const utf8* pNoEditor = R"({ "_name": "GF_Editor_Farm", "_version": "1.0.0", "_kind": "EditorExtension",
+                             "_listDependency": [ { "_name": "GF_Farm" } ],
+                             "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })";
+    SW_EXPECT_FALSE( sw::ModuleCatalog::parseManifest( pNoEditor, "Source/X/GF_Editor_Farm.module.json", manifest, error ) );
+}
+
+/**
+ * @brief [ModuleCatalogTest] 의존(EditorModule · 키트)이 꺼진 에디터 확장은 오류가 아니라 함께 꺼진다
+ * @details 배포본 · 서버 타깃 · 에디터를 끈 프로젝트에서 확장이 구성을 세우면 안 된다. 그 확장만 없다(언리얼이 에디터 모듈을 빼는 것과 같다).
+ */
+SW_TEST_CASE( ModuleCatalogTest, EditorExtensionFollowsItsDependencies )
+{
+    sw::ModuleManifest project = makeManifest( "SWGame", sw::ModuleKind::Game, { "GameFramework" } );
+    project._listModuleOverride.push_back( sw::ModuleOverride{ "GF_Farm", false } );
+    sw::ModuleManifest editor         = makeManifest( "EditorModule", sw::ModuleKind::Editor, {} );
+    editor._configurationMask         = static_cast<uint8>( sw::ModuleConfiguration::Dev );
+    sw::ModuleManifest extension      = makeManifest( "GF_Editor_Farm", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Farm" } );
+    extension._configurationMask      = static_cast<uint8>( sw::ModuleConfiguration::Dev );
+    sw::ModuleManifest otherExtension = makeManifest( "GF_Editor_Mine", sw::ModuleKind::EditorExtension, { "EditorModule", "GF_Mine" } );
+    otherExtension._configurationMask = static_cast<uint8>( sw::ModuleConfiguration::Dev );
+
+    const sw::ModuleCatalog catalog = makeCatalog( { project, editor, extension, otherExtension,
+                                                     makeManifest( "GF_Farm", sw::ModuleKind::Kit, { "GameFramework" } ),
+                                                     makeManifest( "GF_Mine", sw::ModuleKind::Kit, { "GameFramework" } ),
+                                                     makeManifest( "GameFramework", sw::ModuleKind::GameFramework, {} ) } );
+    sw::ModuleResolution    resolution;
+    sw::string              error;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( sw::ModuleResolveContext{}, resolution, error ), error.c_str() );
+    SW_EXPECT_FALSE( resolution.isActive( "GF_Editor_Farm" ) ); // 키트가 꺼졌다
+    SW_EXPECT_TRUE( resolution.isActive( "GF_Editor_Mine" ) );
+
+    sw::ModuleResolveContext shipping{};
+    shipping._configuration = sw::ModuleConfiguration::Shipping;
+    SW_ASSERT_TRUE_MSG( catalog.resolve( shipping, resolution, error ), error.c_str() );
+    SW_EXPECT_FALSE( resolution.isActive( "GF_Editor_Mine" ) ); // 배포본에는 에디터도 확장도 없다
+}

@@ -24,11 +24,12 @@ namespace sw
     /** @brief 모듈 종류입니다(CMake 동적 모듈 레지스트리의 종류와 같은 낱말). */
     enum class ModuleKind : uint8
     {
-        GameFramework, ///< 장르 공통 게임플레이 프레임워크(공유 모듈 — 리로드하지 않는다)
-        Kit,           ///< 장르 키트(`GF_*`)
-        Game,          ///< 게임 모듈(`SWGame`) — 프로젝트다
-        Editor,        ///< 에디터 모듈(Dev 전용)
-        RHI,           ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
+        GameFramework,   ///< 장르 공통 게임플레이 프레임워크(공유 모듈 — 리로드하지 않는다)
+        Kit,             ///< 장르 키트(`GF_*`)
+        Game,            ///< 게임 모듈(`SWGame`) — 프로젝트다
+        Editor,          ///< 에디터 모듈(Dev 전용)
+        RHI,             ///< RHI 백엔드(`RHI_*`, Dev 에서만 모듈)
+        EditorExtension, ///< 에디터 확장(`GF_Editor_<키트>` · `SWGameEditor`) — Dev 전용, `-EnableEditor` 일 때만 로드한다
     };
 
     /** @brief 모듈이 도는 플랫폼 비트입니다. */

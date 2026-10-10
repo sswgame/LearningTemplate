@@ -14,7 +14,7 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
      `GF_<기능>`) · `Server/`(`GF_Server_<기능>`) · `Client/`(`GF_Client_<기능>`)로 짝을 두고, 셋이 각각 키트 하나다. 예외는 하나 — 서버 · 클라이언트
      키트는 같은 기능의 `Shared/` 를 include 해도 된다(서버 → 공유 ← 클라이언트). 서버 키트끼리 · 다른 기능의 키트는 여전히 안 된다.
      옛 꼴 `Kits/<성격>/<묶음>/Server/<키트>/` 는 실패다.
-  4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다.
+  4) GameFramework 의 어느 파일도 `Games/` · `Editor/` 를 include 하지 않는다. 키트의 에디터 확장 폴더(`<키트>/Editor/`)만 `Editor/` 를 include 한다.
 
 키트 → 기반은 어느 층이든 된다(키트는 기반 위의 층이다). 기반을 DLL 여럿으로 나누지는 않는다 — 층은 폴더로만 지킨다
 (docs/09_Decisions.md 2절 "안 하기로 한 것").
@@ -191,8 +191,12 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         listViolation.append(f"{relativeFilePath}: 기반 '{sourceName}' 가 층 표(_kBaseLayer) · 폴더 순서 표(_kBaseFolderOrder)에 없습니다"
                              " — 기반 파일은 Base/<층>/<폴더>/ 에 둔다")
         return listViolation
+    # 키트의 에디터 확장(`Kits/…/<키트>/Editor/` — 모듈 GF_Editor_<키트>, Dev 전용)은 에디터 API 를 쓴다. 게임은 여전히 모른다.
+    bEditorExtension = sourceKind == "kit" and "/Editor/" in gameFrameworkRelative
     for _, includePath in iterIncludes(text):
         include = includePath.replace("\\", "/")
+        if bEditorExtension and include.startswith("Editor/"):
+            continue
         if include.startswith(_kForbiddenPrefixes):
             listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (GameFramework 는 Games · Editor 를 모른다)')
             continue

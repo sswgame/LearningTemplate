@@ -137,7 +137,7 @@ namespace sw::editor
             {
                 IModuleCompiler* pCompiler = getService<IModuleCompiler>();
                 if ( pCompiler != nullptr )
-                    pCompiler->compileModule( "EditorModule" );
+                    pCompiler->compileModule( "EditorAll" ); // EditorModule + 확장 모듈(sw_addEditorExtension 이 의존을 더한다)
             }
 
             static void commandCompileAll()

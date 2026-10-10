@@ -24,7 +24,7 @@ endif()
 
 # 매니페스트 키 · 종류 낱말(런타임 `ModuleCatalogInternal` 과 같은 표).
 set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
-set(SW_MODULE_KINDS GameFramework Kit Game Editor RHI)
+set(SW_MODULE_KINDS GameFramework Kit Game Editor RHI EditorExtension)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)
@@ -99,6 +99,17 @@ function(sw_readModuleManifest MANIFEST_PATH)
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown target '${swTarget}' (Client | Server)")
 		endif()
 	endforeach()
+
+	# 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — 런타임 `ModuleCatalog::parseManifest` 와 같은 검사.
+	if(swKind STREQUAL "EditorExtension")
+		if(NOT swValues__listConfiguration STREQUAL "Dev")
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])")
+		endif()
+		string(FIND "${swJson}" "\"EditorModule\"" swEditorDependencyAt)
+		if(swEditorDependencyAt EQUAL -1)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module must list EditorModule in _listDependency")
+		endif()
+	endif()
 
 	string(JSON swEnabled ERROR_VARIABLE swError GET "${swJson}" _bEnabledByDefault)
 
@@ -273,6 +284,32 @@ function(sw_resolveModuleManifests)
 		endforeach()
 	endif()
 
+	# 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). 런타임 `ModuleCatalog::resolve` 와 같다.
+	# 의존이 쓰지 않아 뺀 키트(2-1)면 확장도 그 목록에 넣는다 — 그 매니페스트도 `Bin/Modules` 에 두지 않는다.
+	foreach(swName IN LISTS swActive)
+		get_property(swKind GLOBAL PROPERTY SW_MODULE_${swName}_KIND)
+		if(NOT swKind STREQUAL "EditorExtension")
+			continue()
+		endif()
+		get_property(swDependencies GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES)
+		foreach(swDependency IN LISTS swDependencies)
+			if(NOT swDependency IN_LIST swNames)
+				break()
+			endif()
+			get_property(swDependencyActive GLOBAL PROPERTY SW_MODULE_${swDependency}_ACTIVE)
+			if(NOT swDependencyActive)
+				get_property(swDependencyReason GLOBAL PROPERTY SW_MODULE_${swDependency}_REASON)
+				set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
+				set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "needs ${swDependency}, which is ${swDependencyReason}")
+				list(REMOVE_ITEM swActive ${swName})
+				if(swDependency IN_LIST swUnusedKits)
+					list(APPEND swUnusedKits ${swName})
+				endif()
+				break()
+			endif()
+		endforeach()
+	endforeach()
+
 	# 3) 켜진 모듈의 의존 — 있고 · 켜져 있고 · 버전이 맞아야 한다.
 	foreach(swName IN LISTS swActive)
 		get_property(swDependencies GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES)
@@ -428,7 +465,10 @@ function(sw_collectUnusedKits ACTIVE_LIST_VAR OUT_VAR)
 		get_property(swKind GLOBAL PROPERTY SW_MODULE_${swName}_KIND)
 		set(swSeed OFF)
 
-		if(NOT swKind STREQUAL "Kit")
+		if(swKind STREQUAL "EditorExtension")
+			# 에디터 확장은 자기 키트를 쓰는 쪽이 아니다 — 키트가 쓰이지 않으면 확장이 따라 꺼진다(sw_resolveModuleManifests 2-2).
+			set(swSeed OFF)
+		elseif(NOT swKind STREQUAL "Kit")
 			set(swSeed ON)
 		else()
 			list(FIND swOverrideNames ${swName} swOverrideIndex)
