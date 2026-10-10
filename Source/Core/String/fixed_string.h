@@ -14,6 +14,43 @@
 
 namespace sw
 {
+    /**
+     * @struct FixedStringWarningGuard
+     * @brief 이 스레드가 지금 `basic_fixed_string` 의 잘림 경고를 남기는 중인지 지키는 가드입니다.
+     * @details 잘림 경고는 로거를 부르고, 로그 싱크가 다시 `basic_fixed_string` 에 넘치게 쓰면 경고가 경고를 부른다(끝없는 재귀).
+     *          가드가 서 있는 동안의 잘림은 경고 없이 자르기만 합니다. 용량이 다른 인스턴스끼리도 같은 플래그를 봐야 하므로
+     *          템플릿 밖에 둡니다.
+     */
+    struct FixedStringWarningGuard
+    {
+        FixedStringWarningGuard()
+            : _bEntered{ _s_bWarning == false }
+        {
+            if ( _bEntered )
+                _s_bWarning = true;
+        }
+
+        ~FixedStringWarningGuard()
+        {
+            if ( _bEntered )
+                _s_bWarning = false;
+        }
+
+        FixedStringWarningGuard( const FixedStringWarningGuard& )            = delete;
+        FixedStringWarningGuard& operator=( const FixedStringWarningGuard& ) = delete;
+
+        explicit operator bool() const { return _bEntered; }
+
+        bool _bEntered;
+
+    private:
+        /** @brief 이 스레드가 지금 잘림 경고 안인지입니다. */
+        static inline thread_local bool _s_bWarning{ false };
+    };
+} // namespace sw
+
+namespace sw
+{
     // ------------------------------------------------------------------------------
     // 1) basic_fixed_string — 최대 N 문자. 넘치면 잘라 내고 경고, 힙 할당 없음
     // ------------------------------------------------------------------------------
@@ -23,8 +60,16 @@ namespace sw
      * @tparam T 문자 타입(`utf8` 또는 `utf16`)
      * @tparam N 담을 수 있는 최대 문자 수(널 종료 문자 `\0` 자리 하나는 안에서 따로 잡습니다)
      * @details
+     * - **길이 필드가 없습니다**:
+     *   객체는 배열 하나뿐이라 `sizeof` 는 `(N + 1) * sizeof( T )` 입니다. `size()` 는 앞 N 칸에서 첫 널을 찾는 경계 있는
+     *   검색이고(O(길이)), const 호출은 아무것도 쓰지 않아 여러 스레드가 동시에 읽어도 됩니다.
+     * - **`data()` 로 바로 써도 됩니다**:
+     *   바깥(ImGui 입력칸 · `formatstring` · Win32 API)은 `data()` 에 `max_size()` 자까지 널 종료 여부와 상관없이 쓸 수 있고, 그 뒤
+     *   `size()` 가 맞습니다. 이를 위해 모든 생성자가 배열 전체를 0 으로 채우고, 길이를 정하는 연산(대입 · `clear` · `erase` ·
+     *   `pop_back`)은 새 끝 뒤의 꼬리를 0 으로 채웁니다. 끝 칸(`_arrData[N]`)은 늘 널이라 `c_str()` 은 언제나 종료됩니다.
      * - **용량을 넘으면 자릅니다**:
      *   `N` 을 넘는 입력은 `N` 까지만 담고 경고를 남깁니다. 넘는 부분은 **버려지고**, 버퍼 밖은 절대 건드리지 않습니다.
+     *   잘림이 문제인 곳은 `try_assign` · `try_append`(넘치면 바꾸지 않고 false, 로그 없음)를 씁니다.
      *   길이를 잃으면 안 되는 문자열에는 `sw::string` 을 쓰십시오.
      * - **할당 없음과 캐시 지역성**:
      *   문자열 데이터를 객체 안에 바로 들고 있어 힙 단편화가 생기지 않고 캐시 적중률이 높습니다.
@@ -58,10 +103,9 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 생성 · 대입
         // ------------------------------------------------------------------------------
-        /** @brief 빈 문자열로 초기화합니다. */
+        /** @brief 빈 문자열로 초기화합니다(배열 전체가 0). */
         constexpr basic_fixed_string() noexcept
-            : _arrData{ T{ 0 } }
-            , _size{ 0 } {}
+            : _arrData{} {}
 
         /** @brief 소멸자입니다. */
         ~basic_fixed_string() = default;
@@ -78,26 +122,23 @@ namespace sw
         /** @brief 문자 ch 를 count 개 채워 만듭니다. */
         basic_fixed_string( uint32 count, T ch );
 
-        /** @brief 복사 생성자입니다. */
-        basic_fixed_string( const basic_fixed_string& rhs );
+        /** @brief 복사 생성자입니다. 배열 전체(0 으로 채운 꼬리 포함)를 그대로 복사합니다. */
+        basic_fixed_string( const basic_fixed_string& rhs ) = default;
 
         /** @brief 용량이 다른 고정 문자열을 복사해 만듭니다. */
         template <uint32 M>
         basic_fixed_string( const basic_fixed_string<T, M>& rhs )
             : _arrData{}
-            , _size{ 0 }
         {
             const uint32 length = clampToCapacity( rhs.c_str(), rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
-            _size           = length;
-            _arrData[_size] = T{ 0 };
         }
 
         /** @brief 이동 생성자입니다. */
         basic_fixed_string( basic_fixed_string&& rhs ) noexcept = default;
 
-        /** @brief 다른 고정 문자열을 복사 대입합니다. */
-        basic_fixed_string& operator=( const basic_fixed_string& rhs );
+        /** @brief 다른 고정 문자열을 복사 대입합니다. 배열 전체를 그대로 복사합니다. */
+        basic_fixed_string& operator=( const basic_fixed_string& rhs ) = default;
 
         /** @brief 용량이 다른 고정 문자열을 복사 대입합니다. */
         template <uint32 M>
@@ -105,8 +146,7 @@ namespace sw
         {
             const uint32 length = clampToCapacity( rhs.c_str(), rhs.size() );
             Memory::copy( _arrData, rhs.c_str(), sizeof( T ) * length );
-            _size           = length;
-            _arrData[_size] = T{ 0 };
+            fillZeroFrom( length );
             return *this;
         }
 
@@ -167,11 +207,14 @@ namespace sw
         /** @brief 비어 있는지 반환합니다(O(1)). */
         bool empty() const noexcept { return _arrData[0] == T{ 0 }; }
 
-        /** @brief 현재 문자 수(널 제외)를 반환합니다. */
+        /**
+         * @brief 현재 문자 수(널 제외)를 반환합니다.
+         * @details 앞 N 칸에서 첫 널을 찾습니다(O(길이)). `data()` 로 N 자를 널 없이 채웠어도 N 을 넘지 않고, 아무것도 쓰지 않습니다.
+         */
         uint32 size() const noexcept
         {
-            _size = static_cast<uint32>( StringUtil::strlen( _arrData ) );
-            return _size;
+            const T* pTerminator = std::char_traits<T>::find( _arrData, N, T{ 0 } );
+            return ( pTerminator != nullptr ) ? static_cast<uint32>( pTerminator - _arrData ) : N;
         }
         uint32 length() const noexcept { return size(); }
 
@@ -179,7 +222,7 @@ namespace sw
         static constexpr uint32 max_size() noexcept { return N; }
         static constexpr uint32 capacity() noexcept { return N; }
 
-        /** @brief 빈 문자열로 되돌립니다. */
+        /** @brief 빈 문자열로 되돌립니다. 배열 전체를 0 으로 채웁니다(O(N)). */
         void clear() noexcept;
 
         // ------------------------------------------------------------------------------
@@ -216,6 +259,17 @@ namespace sw
         basic_fixed_string& append( uint32 count, T c );
         basic_fixed_string& append( const std::basic_string_view<T>& str );
         basic_fixed_string& append( const std::basic_string<T>& str ) { return append( std::basic_string_view<T>( str ) ); }
+
+        /**
+         * @brief 용량 안에 들어가면 대입하고 true 를 반환합니다. 넘치면 바꾸지 않고 false 를 반환하며 경고를 남기지 않습니다.
+         * @details 잘린 글이 틀린 값이 되는 곳(경로 · 식별자)에서 씁니다. `nullptr` 은 빈 글입니다. 자기 버퍼 안쪽도 맞게 옮깁니다.
+         */
+        [[nodiscard]] bool try_assign( const T* pStr ) noexcept;
+        [[nodiscard]] bool try_assign( const std::basic_string_view<T>& str ) noexcept;
+
+        /** @brief 남은 자리에 들어가면 끝에 붙이고 true 를 반환합니다. 넘치면 바꾸지 않고 false 를 반환하며 경고를 남기지 않습니다. */
+        [[nodiscard]] bool try_append( const T* pStr ) noexcept;
+        [[nodiscard]] bool try_append( const std::basic_string_view<T>& str ) noexcept;
 
         /** @brief pos 부터 C 문자열이 처음 나오는 위치를 찾습니다. */
         uint32 find( const T* pStr, uint32 pos = 0 ) const;
@@ -286,14 +340,17 @@ namespace sw
          * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
          * @details 단언은 실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 알리기만 하고 원래 길이로 복사하면 `_arrData` 뒤를
          *          덮어쓰는 버퍼 오버플로입니다. 넘치는 길이는 **데이터에서 옵니다**(긴 대사 · 긴 경로). 프로그래밍 계약 위반이 아니므로
-         *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다.
+         *          단언으로 멈추지 않고, 잘라 낸 뒤 경고를 남깁니다. 경고는 Shipping 에도 남습니다. 경고 안에서 다시 넘치면(로그 싱크가
+         *          fixed_string 에 쓰는 경우) 경고 없이 자릅니다(`FixedStringWarningGuard`).
          */
         static uint32 clampToCapacity( const T* pSource, size_t length )
         {
             if ( length <= static_cast<size_t>( N ) )
                 return static_cast<uint32>( length );
 
-            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
+            const FixedStringWarningGuard guard;
+            if ( guard )
+                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded by length %# - truncated", N, static_cast<uint32>( length ) );
             return backOffToCharacterStart( pSource, N );
         }
 
@@ -304,8 +361,12 @@ namespace sw
             if ( length <= remaining )
                 return static_cast<uint32>( length );
 
-            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
-                            static_cast<uint32>( length ) );
+            const FixedStringWarningGuard guard;
+            if ( guard )
+            {
+                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - %# of %# characters truncated", N, static_cast<uint32>( length - remaining ),
+                                static_cast<uint32>( length ) );
+            }
             return backOffToCharacterStart( pSource, static_cast<uint32>( remaining ) );
         }
 
@@ -335,8 +396,40 @@ namespace sw
             return cut;
         }
 
-        T              _arrData[N + 1];
-        mutable uint32 _size;
+        /**
+         * @brief `length` 칸부터 끝 칸(`_arrData[N]`)까지를 0 으로 채웁니다. 길이를 정하는 연산이 끝에 부릅니다.
+         * @details 꼬리가 0 이어야 바깥이 `data()` 에 널 없이 짧게 써도 `size()` 가 맞습니다(클래스 주석의 계약). `Memory::set` 이 아니라
+         *          `std::fill_n` 인 것은 컴파일러가 그 자리에 펼치게 하려는 것입니다 — `Memory::set` 은 Engine.dll 을 건너는 호출이라 짧은 꼬리에서
+         *          대입 한 번이 눈에 띄게 느려집니다.
+         */
+        void fillZeroFrom( uint32 length ) noexcept { std::fill_n( _arrData + length, N + 1 - length, T{ 0 } ); }
+
+        /**
+         * @brief 길이를 알고 있는 글을 대입합니다(`length` <= N). 자기 버퍼 안쪽일 수 있어 겹쳐도 맞는 `move`(memmove)로 옮깁니다.
+         * @details 배열이 작으면(`kWholeFillBytes` 이하) 바깥 글은 배열 전체를 먼저 0 으로 채우고 복사합니다. 크기가 컴파일 때 정해진
+         *          채우기는 그 자리에 펼쳐지지만, 길이가 실행 때 정해지는 꼬리 채우기는 memset 호출이 하나 더 듭니다.
+         */
+        void assignKnownLength( const T* pSource, uint32 length ) noexcept
+        {
+            const bool bSourceInside = ( _arrData <= pSource ) && ( pSource < _arrData + N + 1 );
+            if constexpr ( sizeof( _arrData ) <= kWholeFillBytes )
+            {
+                if ( bSourceInside == false )
+                {
+                    std::fill_n( _arrData, N + 1, T{ 0 } );
+                    std::char_traits<T>::copy( _arrData, pSource, length );
+                    return;
+                }
+            }
+            if ( pSource != _arrData )
+                std::char_traits<T>::move( _arrData, pSource, length );
+            fillZeroFrom( length );
+        }
+
+        /** @brief 대입이 배열 전체를 먼저 0 으로 채우는 크기 상한(바이트)입니다. */
+        static constexpr size_t kWholeFillBytes = 256;
+
+        T _arrData[N + 1];
     };
 
     template <uint32 N>
@@ -350,109 +443,64 @@ namespace sw
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const T* pStr )
         : _arrData{}
-        , _size{ 0 }
     {
         if ( pStr != nullptr )
         {
             const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
             Memory::copy( _arrData, pStr, sizeof( T ) * length );
-            _size = length;
         }
-        _arrData[_size] = T{ 0 };
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string<T>& str )
         : _arrData{}
-        , _size{ clampToCapacity( str.data(), str.length() ) }
     {
-        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
-        _arrData[_size] = T{ 0 };
+        const uint32 length = clampToCapacity( str.data(), str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * length );
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const std::basic_string_view<T>& str )
         : _arrData{}
-        , _size{ clampToCapacity( str.data(), str.length() ) }
     {
-        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
-        _arrData[_size] = T{ 0 };
+        const uint32 length = clampToCapacity( str.data(), str.length() );
+        Memory::copy( _arrData, str.data(), sizeof( T ) * length );
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>::basic_fixed_string( const uint32 count, T ch )
         : _arrData{}
-        , _size{ clampToCapacity( nullptr, count ) }
     {
-        std::fill_n( _arrData, _size, ch );
-        _arrData[_size] = T{ 0 };
+        std::fill_n( _arrData, clampToCapacity( nullptr, count ), ch );
     }
 
-    template <typename T, uint32 N>
-    basic_fixed_string<T, N>::basic_fixed_string( const basic_fixed_string& rhs )
-        : _arrData{}
-        , _size{ rhs.size() }
-    {
-        // 길이는 다시 잰다(`size()`). `data()` 로 버퍼에 직접 쓴 뒤라면(ImGui 입력칸 · formatstring) 캐시된 `_size` 가 틀려 있고, 그
-        // 값으로 복사하면 글자가 잘리거나 종료 문자 없이 옛 글자와 섞인다(`"world"` 에 캐시 0 인 `"hello"` 를 대입하면 `"horld"`).
-        Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
-    }
-
-    // 자기 대입은 아래의 `this != &rhs` 로 막는다. copy-and-swap 이 아니라서 검사기가 짚지만, 고정 버퍼라 교환할 동적
-    // 자원이 없으므로 가드로 충분하다.
-    template <typename T, uint32 N>
-    // NOLINTNEXTLINE(bugprone-unhandled-self-assignment) — 위 주석 참고. template 줄 위에 두면 적용되지 않는다.
-    basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const basic_fixed_string& rhs )
-    {
-        if ( this != &rhs )
-        {
-            _size = rhs.size(); // 복사 생성자와 같은 이유로 다시 잰다.
-            Memory::copy( _arrData, rhs._arrData, sizeof( T ) * ( _size + 1 ) );
-        }
-        return *this;
-    }
-
-    // 자기 대입은 `fs = fs.c_str()` 처럼 들어온다. 자기 버퍼를 자기에게 memcpy 하는 것은 UB 라 아래에서 주소를 비교해
-    // 막는다. 검사기는 copy-and-swap 이 아니라고 짚지만, 고정 버퍼에는 교환할 동적 자원이 없다.
+    // 자기 대입은 `fs = fs.c_str()` 처럼 들어온다. 시작 주소가 같으면 옮길 것이 없고, 자기 버퍼 **안쪽**(`s = s.c_str() + 2`)은 겹치므로
+    // `assignKnownLength` 가 memmove 로 옮긴다. 검사기는 copy-and-swap 이 아니라고 짚지만, 고정 버퍼에는 교환할 동적 자원이 없다.
     // NOLINTNEXTLINE(bugprone-unhandled-self-assignment)
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const T* pStr )
     {
-        if ( pStr == _arrData )
+        if ( pStr == nullptr )
+        {
+            clear();
             return *this;
-
-        if ( pStr != nullptr )
-        {
-            // `move`(memmove) 다 — `s = s.c_str() + 2` 처럼 자기 버퍼 **안쪽**을 대입하면 두 영역이 겹친다. 시작 주소가 같은 경우만 위에서
-            // 걸렀고, 그 밖을 memcpy 로 옮기면 겹친 복사(정의되지 않은 동작)다. Windows 의 memcpy 는 우연히 맞게 옮겨 드러나지 않는다.
-            const uint32 length = clampToCapacity( pStr, StringUtil::strlen( pStr ) );
-            Memory::move( _arrData, pStr, sizeof( T ) * length );
-            _size = length;
         }
-        else
-        {
-            _size = 0;
-        }
-        _arrData[_size] = T{ 0 };
+        assignKnownLength( pStr, clampToCapacity( pStr, StringUtil::strlen( pStr ) ) );
         return *this;
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string<T>& str )
     {
-        _size = clampToCapacity( str.data(), str.length() );
-        Memory::copy( _arrData, str.data(), sizeof( T ) * _size );
-        _arrData[_size] = T{ 0 };
+        assignKnownLength( str.data(), clampToCapacity( str.data(), str.length() ) );
         return *this;
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::operator=( const std::basic_string_view<T>& str )
     {
-        // 뷰가 자기 버퍼를 볼 수 있다(`s = s.view().substr( 1 )`) — 겹쳐도 맞는 `move` 로 옮긴다.
-        _size = clampToCapacity( str.data(), str.length() );
-        Memory::move( _arrData, str.data(), sizeof( T ) * _size );
-        _arrData[_size] = T{ 0 };
+        // 뷰가 자기 버퍼를 볼 수 있다(`s = s.view().substr( 1 )`).
+        assignKnownLength( str.data(), clampToCapacity( str.data(), str.length() ) );
         return *this;
     }
 
@@ -515,8 +563,7 @@ namespace sw
     template <typename T, uint32 N>
     void basic_fixed_string<T, N>::clear() noexcept
     {
-        _size       = 0;
-        _arrData[0] = T{ 0 };
+        fillZeroFrom( 0 );
     }
 
     template <typename T, uint32 N>
@@ -547,9 +594,9 @@ namespace sw
             pStr = arrSource;
         }
 
+        // 종료 문자까지 민다(`currentSize + fitLength` <= N 이라 끝 칸 안이다).
         Memory::move( _arrData + pos + fitLength, _arrData + pos, sizeof( T ) * ( currentSize - pos + 1 ) );
         Memory::copy( _arrData + pos, pStr, sizeof( T ) * fitLength );
-        _size = currentSize + fitLength;
 
         return *this;
     }
@@ -568,13 +615,12 @@ namespace sw
         // 엉뚱한 주소를 읽는다. `pos < currentSize` 는 위에서 걸렀으므로 이 뺄셈은 안전하다(형제 함수인 `substr` 도 같은 형태다).
         if ( length == npos || length >= currentSize - pos )
         {
-            _size           = pos;
-            _arrData[_size] = T{ 0 };
+            fillZeroFrom( pos );
         }
         else
         {
-            Memory::move( _arrData + pos, _arrData + pos + length, sizeof( T ) * ( currentSize - pos - length + 1 ) );
-            _size = currentSize - length;
+            Memory::move( _arrData + pos, _arrData + pos + length, sizeof( T ) * ( currentSize - pos - length ) );
+            fillZeroFrom( currentSize - length );
         }
 
         return *this;
@@ -586,13 +632,14 @@ namespace sw
         const uint32 currentSize = size();
         if ( currentSize >= N )
         {
-            SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - push_back dropped", N );
+            const FixedStringWarningGuard guard;
+            if ( guard )
+                SW_LOG_WARNING( "basic_fixed_string capacity %# exceeded - push_back dropped", N );
             return;
         }
 
-        _arrData[currentSize] = ch;
-        _size                 = currentSize + 1;
-        _arrData[_size]       = T{ 0 };
+        _arrData[currentSize]     = ch;
+        _arrData[currentSize + 1] = T{ 0 };
     }
 
     template <typename T, uint32 N>
@@ -601,21 +648,14 @@ namespace sw
         const uint32 currentSize = size();
         if ( currentSize == 0 )
             return;
-        _size           = currentSize - 1;
-        _arrData[_size] = T{ 0 };
+        fillZeroFrom( currentSize - 1 );
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const T* pStr )
     {
         if ( pStr != nullptr )
-        {
-            const uint32 currentSize = size();
-            const uint32 length      = clampToRemaining( currentSize, pStr, StringUtil::strlen( pStr ) );
-            Memory::copy( _arrData + currentSize, pStr, sizeof( T ) * length );
-            _size           = currentSize + length;
-            _arrData[_size] = T{ 0 };
-        }
+            append( std::basic_string_view<T>( pStr ) );
         return *this;
     }
 
@@ -627,20 +667,58 @@ namespace sw
         const uint32 currentSize = size();
         const uint32 fitCount    = clampToRemaining( currentSize, nullptr, count );
         std::fill_n( _arrData + currentSize, fitCount, c );
-        _size           = currentSize + fitCount;
-        _arrData[_size] = T{ 0 };
+        _arrData[currentSize + fitCount] = T{ 0 };
         return *this;
     }
 
     template <typename T, uint32 N>
     basic_fixed_string<T, N>& basic_fixed_string<T, N>::append( const std::basic_string_view<T>& str )
     {
+        // 붙일 글이 자기 버퍼면(`s.append( s.view() )`) 원본 [0, size) 와 대상 [size, size + length) 는 겹치지 않는다.
         const uint32 currentSize = size();
         const uint32 length      = clampToRemaining( currentSize, str.data(), str.length() );
         Memory::copy( _arrData + currentSize, str.data(), sizeof( T ) * length );
-        _size           = currentSize + length;
-        _arrData[_size] = T{ 0 };
+        _arrData[currentSize + length] = T{ 0 };
         return *this;
+    }
+
+    template <typename T, uint32 N>
+    bool basic_fixed_string<T, N>::try_assign( const T* pStr ) noexcept
+    {
+        if ( pStr == nullptr )
+        {
+            clear();
+            return true;
+        }
+        return try_assign( std::basic_string_view<T>( pStr ) );
+    }
+
+    template <typename T, uint32 N>
+    bool basic_fixed_string<T, N>::try_assign( const std::basic_string_view<T>& str ) noexcept
+    {
+        if ( str.length() > static_cast<size_t>( N ) )
+            return false;
+        assignKnownLength( str.data(), static_cast<uint32>( str.length() ) );
+        return true;
+    }
+
+    template <typename T, uint32 N>
+    bool basic_fixed_string<T, N>::try_append( const T* pStr ) noexcept
+    {
+        if ( pStr == nullptr )
+            return true;
+        return try_append( std::basic_string_view<T>( pStr ) );
+    }
+
+    template <typename T, uint32 N>
+    bool basic_fixed_string<T, N>::try_append( const std::basic_string_view<T>& str ) noexcept
+    {
+        const uint32 currentSize = size();
+        if ( str.length() > static_cast<size_t>( N - currentSize ) )
+            return false;
+        Memory::copy( _arrData + currentSize, str.data(), sizeof( T ) * str.length() );
+        _arrData[currentSize + str.length()] = T{ 0 };
+        return true;
     }
 
     template <typename T, uint32 N>
@@ -674,14 +752,7 @@ namespace sw
 
         const uint32       actualLength = MathUtil::min( length, currentSize - pos );
         basic_fixed_string result{};
-
-        if ( actualLength > 0 )
-        {
-            Memory::copy( result._arrData, _arrData + pos, sizeof( T ) * actualLength );
-            result._size                  = actualLength;
-            result._arrData[actualLength] = T{ 0 };
-        }
-
+        Memory::copy( result._arrData, _arrData + pos, sizeof( T ) * actualLength );
         return result;
     }
 

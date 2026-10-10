@@ -22,17 +22,13 @@
     </Expand>
   </Type>
 
-  <!-- sw::fixed_string<T, N> -->
-  <Type Name="sw::fixed_string&lt;*,*&gt;">
-    <DisplayString>{_buffer,s}</DisplayString>
-    <StringView>_buffer,s</StringView>
+  <!-- sw::basic_fixed_string<T, N> (fixed_string · fixed_wstring) — 길이 필드가 없다. 길이는 첫 널까지다 -->
+  <Type Name="sw::basic_fixed_string&lt;*,*&gt;">
+    <DisplayString>{_arrData,na}</DisplayString>
+    <StringView>_arrData,na</StringView>
     <Expand>
-      <Item Name="Length">_length</Item>
       <Item Name="Capacity">$T2</Item>
-      <ArrayItems>
-        <Size>_length</Size>
-        <ValuePointer>_buffer</ValuePointer>
-      </ArrayItems>
+      <Item Name="Data">_arrData</Item>
     </Expand>
   </Type>
 

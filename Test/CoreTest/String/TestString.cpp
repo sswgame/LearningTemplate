@@ -812,7 +812,7 @@ SW_TEST_CASE( StringTest, FixedStringExtendedOperations )
 }
 
 /**
- * @brief [StringTest] fixed_string formatstring 및 data() 수정 후 자동 sync_size 검증
+ * @brief [StringTest] fixed_string 에 formatstring · data() 로 쓴 뒤 size() 와 뷰가 맞다
  */
 SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
 {
@@ -825,7 +825,7 @@ SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
     SW_EXPECT_EQUAL( strFmt.size(), strFmt.length() );
     SW_EXPECT_EQUAL( std::string_view( "Item #42: Potion (12.50)" ), strFmt.view() );
 
-    // 2) data() 버퍼에 직접 C-API 스타일로 작성했을 때 자동 sync_size 동작
+    // 2) data() 버퍼에 C API 처럼 직접 쓴다
     sw::fixed_string<sw::constant::kMaxBuffer32> rawBuf;
     SW_EXPECT_TRUE( rawBuf.empty() );
     SW_EXPECT_EQUAL( 0u, rawBuf.size() );
@@ -833,7 +833,7 @@ SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
     // data()에 strcpy (ImGui::InputText 동작 모사)
     sw::StringUtil::strncpy( rawBuf.data(), "HeroPlayer", rawBuf.capacity() );
 
-    // sync_size()를 명시적으로 호출하지 않아도 empty(), size(), length(), view(), basic_string 변환 자동 동기화
+    // 길이 필드가 없으므로 empty(), size(), length(), view(), basic_string 변환이 버퍼를 바로 읽는다
     SW_EXPECT_FALSE( rawBuf.empty() );
     SW_EXPECT_EQUAL( 10u, rawBuf.size() );
     SW_EXPECT_EQUAL( 10u, rawBuf.length() );
@@ -845,7 +845,7 @@ SW_TEST_CASE( StringTest, FixedStringFormatAndAutoSync )
     const sw::string swStr{ rawBuf.c_str() };
     SW_EXPECT_EQUAL( sw::string( "HeroPlayer" ), swStr );
 
-    // Range-based for loop 자동 동기화
+    // 범위 기반 for 도 같은 길이를 본다
     size_t iteratedCount = 0;
     for ( const utf8 ch : rawBuf )
     {
@@ -1152,9 +1152,9 @@ SW_TEST_CASE( StringTest, StringBuilderBoundaryAvailableMinusOne )
 }
 
 /**
- * @brief [StringTest] basic_fixed_string C 문자열 좌측 덧셈 연산자 및 O(1) size() 일관성 검증
+ * @brief [StringTest] basic_fixed_string C 문자열 좌측 덧셈 연산자와 그 뒤 size()
  */
-SW_TEST_CASE( StringTest, FixedStringOperatorPlusWithCStringLhsAndSizeO1 )
+SW_TEST_CASE( StringTest, FixedStringOperatorPlusWithCStringLhs )
 {
     sw::fixed_string<32> rhs( "World" );
     SW_EXPECT_EQUAL( 5u, rhs.size() );
@@ -1683,6 +1683,50 @@ namespace
         Negative = -1,
         Positive = 3
     };
+
+    /** @brief 경고를 받으면 그 글을 작은 fixed_string 에 넘치게 담는 싱크 — 잘림 경고가 다시 이 싱크로 들어오는지 센다. */
+    class OverflowingLogSink final : public sw::ILogSink
+    {
+    public:
+        void initialize() override {}
+        void shutdown() override {}
+
+        void writeLog( sw::LogLevel level, const utf8* pTag, const utf8* pCaller, const utf8* pMessage, const utf8* pFile, int32 line ) override
+        {
+            (void)level;
+            (void)pTag;
+            (void)pCaller;
+            (void)pFile;
+            (void)line;
+            ++_writeCount;
+            // 가드가 없으면 아래 대입이 경고 → 이 함수 → 대입 … 으로 끝없이 돈다. 시험이 스택을 넘기지 않도록 여기서 끊는다.
+            if ( _writeCount > kMaxWriteCount )
+                return;
+            sw::fixed_string<4> tiny;
+            tiny          = ( pMessage != nullptr ) ? pMessage : "";
+            _lastTinySize = tiny.size();
+        }
+
+        sw::DelegateHandle addLogWrittenListener( const sw::LogWrittenDelegate& listener ) override
+        {
+            (void)listener;
+            return sw::DelegateHandle{};
+        }
+        void   removeLogWrittenListener( const sw::DelegateHandle& handle ) override { (void)handle; }
+        uint32 releaseListenerCodeWithin( const void* pBegin, const void* pEnd ) override
+        {
+            (void)pBegin;
+            (void)pEnd;
+            return 0;
+        }
+        const sw::string& getLogFolderPath() override { return _folderPath; }
+
+        static constexpr uint32 kMaxWriteCount = 8;
+
+        uint32     _writeCount{ 0 };
+        uint32     _lastTinySize{ 0 };
+        sw::string _folderPath;
+    };
 } // namespace
 
 /**
@@ -1711,7 +1755,7 @@ SW_TEST_CASE( StringTest, FormatSignPaddingSignedEnumAndUtf8Truncation )
 SW_TEST_CASE( StringTest, FixedStringAndBuilderSelfReference )
 {
     sw::fixed_string<sw::constant::kMaxBuffer64> source;
-    std::memcpy( source.data(), "hello", 6 ); // ImGui 입력칸처럼 버퍼에 직접 쓴다 — 캐시된 길이는 0 그대로다
+    std::memcpy( source.data(), "hello", 6 ); // ImGui 입력칸처럼 버퍼에 직접 쓴다
     sw::fixed_string<sw::constant::kMaxBuffer64> target = "world";
     target                                              = source;
     SW_EXPECT_STREQ( "hello", target.c_str() );
@@ -1831,6 +1875,190 @@ SW_TEST_CASE( StringTest, FixedStringAssignFromItsOwnInterior )
 
     text = sw::string_view( text.c_str() + 1, 2 );
     SW_EXPECT_STREQ( "de", text.c_str() );
+}
+
+/**
+ * @brief [StringTest] fixed_string 은 배열 하나뿐이다 — `sizeof` 는 `(N + 1)` 문자를 정렬로 올린 값이고 비트 복사로 옮길 수 있다
+ * @details 길이 캐시 필드가 있으면 `fixed_string<15>` 가 16 이 아니라 20 바이트가 되고, const `size()` 가 그 필드를 써 두 스레드의 읽기가 레이스가 된다.
+ */
+SW_TEST_CASE( StringTest, FixedStringSizeIsTheArrayOnly )
+{
+    static_assert( sizeof( sw::fixed_string<15> ) == 16, "fixed_string<15> holds 16 bytes" );
+    static_assert( sizeof( sw::fixed_string<31> ) == 32, "fixed_string<31> holds 32 bytes" );
+    static_assert( sizeof( sw::fixed_string<63> ) == 64, "fixed_string<63> holds 64 bytes" );
+    static_assert( sizeof( sw::fixed_wstring<15> ) == 16 * sizeof( utf16 ), "fixed_wstring<15> holds 16 units" );
+    static_assert( std::is_trivially_copyable_v<sw::fixed_string<15>>, "fixed_string copies as bytes" );
+
+    SW_EXPECT_EQUAL( 16u, static_cast<uint32>( sizeof( sw::fixed_string<15> ) ) );
+}
+
+/**
+ * @brief [StringTest] data() 로 널 없이 · 널과 함께 · 줄인 뒤 더 짧게 써도 size() 가 맞다
+ * @details 바깥(ImGui · formatstring · Win32)은 API 를 모르고 `data()` 에 `max_size()` 자까지 쓴다. 길이를 정하는 연산(clear · 대입 · erase ·
+ *          pop_back)이 새 끝 뒤를 0 으로 채우지 않으면 줄인 뒤 짧게 쓴 글 뒤에 옛 글자가 붙어 길이가 틀린다.
+ */
+SW_TEST_CASE( StringTest, FixedStringSizeAfterWritingThroughData )
+{
+    sw::fixed_string<8> text;
+
+    // 널 없이 N 자 — 끝 칸(_arrData[N])은 늘 널이다.
+    sw::Memory::copy( text.data(), "abcdefgh", 8 );
+    SW_EXPECT_EQUAL( 8u, text.size() );
+    SW_EXPECT_STREQ( "abcdefgh", text.c_str() );
+
+    // 널과 함께 짧게.
+    sw::Memory::copy( text.data(), "abc", 4 );
+    SW_EXPECT_EQUAL( 3u, text.size() );
+    SW_EXPECT_STREQ( "abc", text.c_str() );
+
+    // clear 뒤 널 없이 짧게.
+    text = "abcdefgh";
+    text.clear();
+    sw::Memory::copy( text.data(), "xyz", 3 );
+    SW_EXPECT_EQUAL( 3u, text.size() );
+    SW_EXPECT_STREQ( "xyz", text.c_str() );
+
+    // 짧은 대입(C 문자열 · 뷰 · 다른 용량) 뒤 널 없이 쓴다.
+    text = "abcdefgh";
+    text = "ab";
+    sw::Memory::copy( text.data(), "pqr", 3 );
+    SW_EXPECT_EQUAL( 3u, text.size() );
+
+    text = "abcdefgh";
+    text = sw::string_view( "ab" );
+    sw::Memory::copy( text.data(), "pqrs", 4 );
+    SW_EXPECT_EQUAL( 4u, text.size() );
+
+    text                              = "abcdefgh";
+    const sw::fixed_string<4> shorter = "wx"; // 다른 용량에서 대입
+    text                              = shorter;
+    sw::Memory::copy( text.data(), "12345", 5 );
+    SW_EXPECT_EQUAL( 5u, text.size() );
+
+    // erase(끝까지 · 가운데) 뒤.
+    text = "abcdefgh";
+    text.erase( 2 );
+    sw::Memory::copy( text.data(), "1234", 4 );
+    SW_EXPECT_EQUAL( 4u, text.size() );
+
+    text = "abcdefgh";
+    text.erase( 1, 3 ); // "aefgh"
+    SW_EXPECT_STREQ( "aefgh", text.c_str() );
+    sw::Memory::copy( text.data(), "123456", 6 );
+    SW_EXPECT_EQUAL( 6u, text.size() );
+
+    // pop_back 뒤.
+    text = "abcd";
+    text.pop_back();
+    sw::Memory::copy( text.data(), "1234", 4 );
+    SW_EXPECT_EQUAL( 4u, text.size() );
+
+    // 길이를 정하는 연산 뒤 꼬리는 모두 0 이다.
+    text = "abcdefgh";
+    text = "a";
+    for ( uint32 index = 1; index <= text.max_size(); ++index )
+    {
+        SW_EXPECT_EQUAL( '\0', std::as_const( text ).data()[index] );
+    }
+}
+
+/**
+ * @brief [StringTest] 두 스레드가 같은 const fixed_string 의 size() 를 동시에 불러도 맞는 값을 읽는다
+ * @details const `size()` 는 아무것도 쓰지 않는다. 길이 캐시를 `mutable` 로 쓰면 읽기끼리 데이터 레이스다 — 리눅스 TSan CI(`CI-Debug-TSAN`)가
+ *          이 케이스에서 그것을 잡는다(Windows Debug 의 경합 검출기는 맨 배열 접근을 보지 않는다).
+ */
+SW_TEST_CASE( StringTest, FixedStringConcurrentSizeReadsWriteNothing )
+{
+    const sw::fixed_string<64> shared( "concurrent readers" );
+    constexpr uint32           kReadCount = 20000;
+
+    uint32      arrMismatch[2] = { 0, 0 };
+    std::thread first( [&shared, &arrMismatch]()
+    {
+        for ( uint32 index = 0; index < kReadCount; ++index )
+        {
+            arrMismatch[0] += ( shared.size() == 18u ) ? 0u : 1u;
+        }
+    } );
+    std::thread second( [&shared, &arrMismatch]()
+    {
+        for ( uint32 index = 0; index < kReadCount; ++index )
+        {
+            arrMismatch[1] += ( shared.view().size() == 18u ) ? 0u : 1u;
+        }
+    } );
+    first.join();
+    second.join();
+
+    SW_EXPECT_EQUAL( 0u, arrMismatch[0] );
+    SW_EXPECT_EQUAL( 0u, arrMismatch[1] );
+}
+
+/**
+ * @brief [StringTest] 로그 싱크 안에서 fixed_string 이 넘쳐도 잘림 경고가 자기를 다시 부르지 않는다
+ * @details 잘림 경고는 로거를 부른다. 싱크가 받은 글을 작은 fixed_string 에 담다 또 넘치면 경고가 경고를 부르는 재귀가 된다 — 스레드 로컬
+ *          가드(`FixedStringWarningGuard`)가 서 있는 동안의 잘림은 경고 없이 자르기만 한다.
+ */
+SW_TEST_CASE( StringTest, FixedStringTruncationWarningDoesNotReenter )
+{
+    OverflowingLogSink sink;
+    sw::ILogSink*      pOldSink = sw::Logger::getGlobalSink();
+    sw::Logger::setGlobalSink( &sink );
+    {
+        const sw::fixed_string<4> overflowed( "longer than four" );
+        SW_EXPECT_EQUAL( 4u, overflowed.size() );
+    }
+    sw::Logger::setGlobalSink( pOldSink );
+
+    SW_EXPECT_EQUAL( 1u, sink._writeCount );
+    SW_EXPECT_EQUAL( 4u, sink._lastTinySize );
+
+    // 가드는 경고가 끝나면 내려간다 — 다음 잘림은 다시 경고한다.
+    sw::Logger::setGlobalSink( &sink );
+    {
+        sw::fixed_string<4> again;
+        again.append( "overflow again" );
+    }
+    sw::Logger::setGlobalSink( pOldSink );
+    SW_EXPECT_EQUAL( 2u, sink._writeCount );
+}
+
+/**
+ * @brief [StringTest] try_assign · try_append 는 넘치면 바꾸지 않고 false 를 돌려주며 경고하지 않는다
+ */
+SW_TEST_CASE( StringTest, FixedStringTryAssignAndAppend )
+{
+    OverflowingLogSink sink;
+    sw::ILogSink*      pOldSink = sw::Logger::getGlobalSink();
+    sw::Logger::setGlobalSink( &sink );
+
+    sw::fixed_string<5> text;
+    SW_EXPECT_TRUE( text.try_assign( "abc" ) );
+    SW_EXPECT_STREQ( "abc", text.c_str() );
+    SW_EXPECT_FALSE( text.try_assign( "abcdef" ) );
+    SW_EXPECT_STREQ( "abc", text.c_str() );
+    SW_EXPECT_TRUE( text.try_append( "de" ) );
+    SW_EXPECT_STREQ( "abcde", text.c_str() );
+    SW_EXPECT_FALSE( text.try_append( "f" ) );
+    SW_EXPECT_STREQ( "abcde", text.c_str() );
+
+    // 짧게 대입하면 꼬리가 0 이 된다.
+    SW_EXPECT_TRUE( text.try_assign( sw::string_view( "xy" ) ) );
+    SW_EXPECT_EQUAL( 2u, text.size() );
+    sw::Memory::copy( text.data(), "123", 3 );
+    SW_EXPECT_EQUAL( 3u, text.size() );
+
+    // nullptr 는 빈 글이다. 자기 버퍼 안쪽도 맞게 옮긴다.
+    SW_EXPECT_TRUE( text.try_assign( static_cast<const utf8*>( nullptr ) ) );
+    SW_EXPECT_TRUE( text.empty() );
+    SW_EXPECT_TRUE( text.try_assign( "abcde" ) );
+    SW_EXPECT_TRUE( text.try_assign( text.c_str() + 2 ) );
+    SW_EXPECT_STREQ( "cde", text.c_str() );
+    SW_EXPECT_TRUE( text.try_append( text.view() ) == false );
+    SW_EXPECT_STREQ( "cde", text.c_str() );
+
+    sw::Logger::setGlobalSink( pOldSink );
+    SW_EXPECT_EQUAL( 0u, sink._writeCount );
 }
 
 /**

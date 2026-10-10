@@ -247,6 +247,24 @@
 - **파일 존재 술어는 `FileUtil::exists`(무엇이든), `isDirectory`, `isRegularFile` 셋입니다**(2026-10-06). `exists` 는 `std::filesystem::exists` 와 같은 뜻입니다. 경로 전용 타입(`FilePath`)은 만들지 않습니다.
   파일 오류는 그 자리에서 경고하고 `[[nodiscard]] bool` 로 돌려주며, 실패를 알리지 않는 시도는 `FileUtil::tryRemoveFile` 하나입니다. 언리얼 `IFileManager::Delete` 의 `bQuiet` 에 해당합니다.
 - **`std::hash<fixed_string>` 은 대소문자를 구분합니다**(2026-10-06). `string` 과 `wstring` 의 해시와 같은 규칙입니다.
+- **`fixed_string` 은 길이 필드 없이 배열 하나만 듭니다**(2026-10-11). `size()` 는 앞 N 칸의 경계 있는 검색이고, 길이를 정하는 연산이 꼬리를 0 으로 채워
+  바깥이 `data()` 에 널 없이 써도 길이가 맞습니다. 캐시하던 `mutable` 길이는 const `size()` 가 써서 읽기끼리 데이터 레이스였습니다.
+  EASTL `fixed_string` · folly `FixedString` 은 길이를 들지만 바깥이 버퍼에 직접 쓰는 계약이 없습니다. 이 저장소는 ImGui · `formatstring` · Win32 가 `data()` 에 쓰므로 C 배열과 같은 계약을 택했습니다.
+  넘침은 지금처럼 잘라 경고하고, 잘림이 틀린 값이면 `try_assign` · `try_append` 를 씁니다. 측정은 Release, 같은 PC 에서 옛 · 새 바이너리를 번갈아 세 번 돌린 중앙값입니다(`FixedStringBenchTest`).
+
+  | 항목 | 전 | 후 |
+  |---|---|---|
+  | `sizeof` `fixed_string<15>` · `<31>` · `<63>` · `<160>` | 20 · 36 · 68 · 168 | 16 · 32 · 64 · 161 |
+  | `sizeof` `fixed_wstring<15>` | 36 | 32 |
+  | `sizeof` `CrashBreadcrumbStore` · `CrashContextStore` | 5380 · 4996 | 5156 · 4660 |
+  | `fixed_string<64>::size()`(길이 8~47) | 5.7 ns | 5.7 ns |
+  | `fixed_string<64> = const utf8*` | 8.6 ns | 8.8 ns |
+  | `fixed_string<64> = fixed_string<64>` | 8.4 ns | 2.0 ns |
+  | `fixed_string<64> == fixed_string<64>` | 6.1 ns | 5.5 ns |
+  | `clear()` + 짧은 `append` — `<64>` · `<8192>` | 7.9 · 10.1 ns | 5.5 · 68.7 ns |
+
+  `clear()` 가 O(N)이 된 것이 유일한 손해입니다. `fixed_string<8192>` 를 되풀이해 비우는 호출처는 없습니다(8KB 는 로그 줄 버퍼 하나이고 만들 때 한 번 0 으로 채웁니다).
+  꼬리를 길이만큼만 채우는 안은 ImGui 가 널 뒤에 남긴 옛 글자를 지우지 못해 기각했습니다. 작은 배열(256 바이트 이하)의 대입은 배열 전체를 먼저 0 으로 채웁니다. 크기가 컴파일 때 정해져 그 자리에 펼쳐지기 때문입니다.
 - **Win32 API 는 W 버전을 이름으로 부르고, A 버전도 막습니다**(2026-10-06). 전역 `UNICODE` 정의는 대상마다 정의가 빠지면 말없이 A 버전으로 돌아가서 택하지 않았습니다. 언리얼, 유니티, Godot 모두 Windows 경계에서는 W 버전만 씁니다.
   X11 창 제목은 `XStoreName` 과 `_NET_WM_NAME` 을 함께 적습니다. SDL2, GLFW, Godot 과 같은 방식입니다.
 - **벽시계는 `WallClock` 하나만 읽습니다**(2026-10-06). 서비스는 현재 시각을 매개변수로 받고, 테스트는 가짜 시각을 넣습니다.
