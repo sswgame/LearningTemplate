@@ -40,19 +40,76 @@ namespace sw
     };
 
     /**
+     * @enum RenderViewMode
+     * @brief 씬 지오메트리를 어떻게 보여 줄지입니다. 에디터 씬 뷰 툴바의 보기 모드입니다.
+     * @details 렌더 상태(채우기 · 블렌드 · 깊이)와 셰이더 퍼뮤테이션(조명 항)을 함께 가르는 값이라 어느 한쪽에만 둘 수 없습니다.
+     *          뷰마다의 설정(`RenderViewSettings::_viewMode`)이고, 배치 PSO 를 고를 때 머티리얼 퍼뮤테이션과 **같은 자리**에서 적용됩니다.
+     *          그래서 와이어프레임이 머티리얼 변형을 잃지 않습니다. 언리얼 뷰포트(뷰 패밀리)마다의 View Mode, 유니티 Scene 뷰의 Draw Mode 와 같습니다.
+     * @note 에디터 전용이 아닙니다. 헤드리스에서도 `-gv_viewMode=<n>` 로 주 출력의 모드를 골라 스크린샷으로 검증합니다.
+     */
+    enum class RenderViewMode : uint8
+    {
+        Lit = 0,   ///< 조명 · 그림자를 모두 계산한 기본 화면
+        Unlit,     ///< 알베도만. 조명 항이 셰이더에서 컴파일 아웃됨
+        Wireframe, ///< 삼각형 외곽선만(RHIFillMode::Wireframe)
+        Normals,   ///< 월드 노멀을 색으로(0.5 + 0.5 n)
+        Depth,     ///< 카메라에서의 거리(뷰 공간 깊이, `kViewModeDepthRange` 에서 흰색)
+        Overdraw,  ///< 겹쳐 그린 횟수 — 단색을 깊이를 쓰지 않고 더한다(유니티 Overdraw)
+
+        Count
+    };
+
+    /** @brief 보기 모드 하나의 표 줄입니다. 셰이더 define · PSO 조정 · 후처리 · 이름이 한 줄에 있습니다. */
+    struct RenderViewModeInfo
+    {
+        const utf8* _pName;
+        const utf8* _pShaderDefine;    ///< nullptr 이면 셰이더를 바꾸지 않는다(Lit · Wireframe). `.hlsl` 의 `#if defined(...)` 와 이름이 같아야 한다
+        bool        _bWireframe;       ///< 채우기 모드 와이어프레임 · 컬링 끔
+        bool        _bAdditiveNoDepth; ///< Overdraw — 더하기 블렌드(알파 0 의 프리멀티플라이), 깊이 쓰기 끔(클리어 값 1 이 남아 모든 면이 통과), 컬링 끔
+        bool        _bShowsBuffer;     ///< 표면 값 그대로를 보인다(Normals · Depth · Overdraw) — 후처리 · 톤맵 · 외곽선 껍질을 건너뛴다
+    };
+
+    /** @brief 보기 모드 표 — 쿠커 · PSO 변형 · 툴바 · 로그가 모두 이것을 읽습니다. 줄 순서 = 열거값. */
+    inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
+        {      "Lit",                  nullptr, false, false, false},
+        {    "Unlit",    "SW_VIEWMODE_UNLIT=1", false, false, false},
+        {"Wireframe",                  nullptr,  true, false, false},
+        {  "Normals",  "SW_VIEWMODE_NORMALS=1", false, false,  true},
+        {    "Depth",    "SW_VIEWMODE_DEPTH=1", false, false,  true},
+        { "Overdraw", "SW_VIEWMODE_OVERDRAW=1", false,  true,  true},
+    };
+    static_assert( sizeof( kArrRenderViewModeInfo ) / sizeof( kArrRenderViewModeInfo[0] ) == static_cast<size_t>( RenderViewMode::Count ),
+                   "보기 모드 표와 열거형의 개수가 다릅니다" );
+
+    /** @brief 보기 모드의 표 줄입니다. 범위 밖이면 Lit 줄입니다. */
+    inline const RenderViewModeInfo& getRenderViewModeInfo( RenderViewMode viewMode )
+    {
+        const uint8 index = static_cast<uint8>( viewMode );
+        return kArrRenderViewModeInfo[index < static_cast<uint8>( RenderViewMode::Count ) ? index : 0];
+    }
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct RenderViewSettings
-     * @brief 뷰 하나의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시입니다. 주 시점과 추가 뷰가 같은 묶음을 씁니다(값, 게임 스레드 → 렌더 스레드).
+     * @brief 뷰 하나의 출력 사각형 · 해상도 배율 · 끌 기능 · 컷 표시 · 보기 모드입니다. 주 시점과 추가 뷰가 같은 묶음을 씁니다(값, 게임 스레드 → 렌더 스레드).
      */
     struct RenderViewSettings
     {
-        float4  _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이 — 0..1, 왼쪽 위 원점). 렌더 텍스처는 늘 전체
-        float32 _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
-        uint8   _bShadows{ SW_TRUE };                  ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 한다 — 모두 밝다)
-        uint8   _bPostProcess{ SW_TRUE };              ///< 후처리(블룸 · 외곽선 · 톤맵 · TAA)를 건다
-        uint8   _bCut{ SW_FALSE };                     ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`) — TAA 기록을 버린다
+        float4         _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 출력 안의 사각형(x, y, 너비, 높이 — 0..1, 왼쪽 위 원점). 렌더 텍스처는 늘 전체
+        float32        _resolutionScale{ 1.0f };              ///< 출력 크기에 곱하는 내부 해상도
+        uint8          _bShadows{ SW_TRUE };                  ///< 그림자를 그린다(끄면 그림자 맵을 지우기만 한다 — 모두 밝다)
+        uint8          _bPostProcess{ SW_TRUE };              ///< 후처리(블룸 · 외곽선 · 톤맵 · TAA)를 건다
+        uint8          _bCut{ SW_FALSE };                     ///< 이번 프레임에 화면이 끊겼다(언리얼 `bCameraCut`) — TAA 기록을 버린다
+        RenderViewMode _viewMode{ RenderViewMode::Lit };      ///< 이 뷰의 보기 모드(에디터 씬 뷰만 바꾼다 — 게임 뷰는 Lit)
 
         /** @brief 사각형이 출력 전체인지입니다. */
         bool isFullRect() const { return _screenRect._x <= 0.0f && _screenRect._y <= 0.0f && _screenRect._z >= 1.0f && _screenRect._w >= 1.0f; }
+        /** @brief 효과 후처리(블룸 · 외곽선 · SSAO · TAA)를 거는지입니다. 끈 뷰와 표면 값을 보이는 보기 모드는 원본을 넘깁니다. */
+        bool usesPostProcess() const { return _bPostProcess == SW_TRUE && getRenderViewModeInfo( _viewMode )._bShowsBuffer == false; }
+        /** @brief 톤맵을 거는지입니다. 표면 값을 보이는 보기 모드(Normals · Depth · Overdraw)는 색을 바꾸지 않습니다. */
+        bool usesTonemap() const { return getRenderViewModeInfo( _viewMode )._bShowsBuffer == false; }
     };
 } // namespace sw
 

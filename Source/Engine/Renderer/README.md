@@ -186,7 +186,7 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
 
 - `FrameRendererReadback` 은 GPU를 기다리므로 프레임 경로에서 쓰지 않습니다.
 - `FrameRendererCompute` 의 프리패스는 다섯 가지입니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬입니다. 그래프 패스가 아니라 그리기 전에 커맨드 리스트에 직접 기록합니다.
-- 뷰 모드(`RenderViewMode`: Lit, Unlit, Wireframe)가 더하는 define은 `FrameRendererUtil::findViewModeDefine` 하나가 정하고, 셰이더 쿠킹 요청도 같은 함수를 부릅니다.
+- 보기 모드(`RenderViewMode`: Lit, Unlit, Wireframe, Normals, Depth, Overdraw)는 표 하나(`kArrRenderViewModeInfo`, `RenderView.h`)가 define · PSO 조정 · 후처리 여부 · 이름을 정하고, 셰이더 쿠킹 요청도 같은 표를 읽습니다.
   쿠커가 쿠킹하지 않은 define은 Shipping에서 PSO를 만들 수 없기 때문입니다.
 
 `FrameRenderer` 는 자기 뮤텍스와 수명을 가진 상태 세 개를 클래스로 분리해 소유합니다.
@@ -235,6 +235,8 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 - 패스 상수는 주 뷰의 값에서 출발해 뷰-투영 행렬, 풀 크기, 플래그, 컬링 슬롯만 덮어씁니다. 라이트와 그림자 행렬은 프레임 공통입니다.
 - 그림자 볼륨은 주 카메라에 맞춥니다(`DirectionalLightComponent::computeShadowProjectionForView`). 추가 뷰가 다른 곳을 보면 주 볼륨 밖의 그림자는 그 뷰에서 빠집니다.
 - 그림자를 끈 뷰는 그림자 맵을 지우기만 하고, 후처리를 끈 뷰는 `SW_PASS_FLAG_SKIP_POST` 로 후처리 사슬이 원본을 고릅니다.
+- **보기 모드는 뷰마다입니다**(`RenderViewSettings::_viewMode`). 게임 스레드가 패킷을 만들 때 싣습니다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 `FrameRenderer::getSceneViewMode`, 게임 화면은 `getViewMode`(`-gv_viewMode`, 기본 Lit).
+  드로우는 그리는 뷰의 모드로 PSO 를 고르고, `ensureMaterialPSOs` 는 이번 프레임 뷰들의 모드를 모두 준비합니다. 표면 값 모드(Normals · Depth · Overdraw)는 후처리 · 톤맵을 건너뜁니다(`usesPostProcess` · `usesTonemap`).
 - **컷 프레임**(`RenderViewSettings::_bCut`, `CameraComponent::markCut`)에서는 TAA가 기록 대신 이번 원본을 바인딩해 지난 화면이 섞이지 않습니다. 모션 벡터와 자동 노출은 아직 없습니다.
 
 ### Capture/ — 초상화 베이크
@@ -445,7 +447,8 @@ Vulkan PSO는 셰이더가 읽는 정점 속성만 바인딩합니다.
 
 **직렬 경로의 패스는 `_frameContext._pCmd` 리스트에 기록합니다.** 프리패스 리스트는 이미 닫혀 있으므로 뷰마다 그 자리를 뷰의 리스트로 바꿔 둡니다. 바꾸지 않으면 Vulkan은 크래시가 나고 나머지는 0을 그립니다.
 
-**D3D의 `CopyResource` 는 포맷과 크기가 같은 리소스끼리만 복사합니다.** 그래서 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에 원본을 바인딩합니다. 캡처를 백버퍼로 옮기는 것도 출력이 백버퍼 크기일 때만 합니다.
+**D3D의 `CopyResource` 는 포맷과 크기가 같은 리소스끼리만 복사합니다.** 그래서 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에 원본을 바인딩합니다.
+후처리를 끈 뷰(CCTV · 표면 값 보기 모드)도 같습니다 — 효과 패스 · TAA 는 포맷이 같을 때만 복사하고, 다르면 그 패스 셰이더가 건너뛰기 비트를 보고 원본을 옮깁니다(디퍼드는 BloomColor R16F → OutlineColor R8 이라, 복사하면 D3D 에서 조용히 실패해 화면이 한 색이 된다). 캡처를 백버퍼로 옮기는 것도 출력이 백버퍼 크기일 때만 합니다.
 OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤집습니다. 오프스크린 FBO는 그대로입니다.
 창에 나간 이미지는 `blitTexture( 0, 텍스처 )` 로 읽습니다. 원본 0이 백버퍼이고, Present 전에 프레임 스트림에서 읽습니다(`RenderPassGPUTest.PresentedBackBufferMatchesTheCapture`, `ScreenRectViewLandsInItsCornerOfTheBackBuffer`).
 

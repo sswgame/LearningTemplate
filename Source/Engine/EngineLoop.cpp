@@ -1358,6 +1358,9 @@ namespace sw
                     _gpuSceneBuilder->setTransparentSortAxis(
                         Render2DSettings::getActive().computeTransparentSortAxis( pCam->isOrthographic(), pCam->getCameraForward() ) );
                 }
+                // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).
+                const RenderViewMode sceneViewMode = _frameRenderer != nullptr ? _frameRenderer->getSceneViewMode() : RenderViewMode::Lit;
+                packet._mainView._viewMode         = bSceneMain ? sceneViewMode : ( _frameRenderer != nullptr ? _frameRenderer->getViewMode() : RenderViewMode::Lit );
                 // 그림자 행렬과 그 바이어스는 한 볼륨에서 같이, 카메라가 정해진 **뒤에** 만든다 — `_shadowViewDistance` 를 준 빛은 볼륨을
                 // 카메라가 보는 곳에 맞춘다. 텍셀 스냅 · 바이어스는 렌더 스레드가 만들 그림자 맵과 같은 해상도로 잰다.
                 if ( pLight != nullptr && pShadowLight != nullptr )
@@ -1380,7 +1383,7 @@ namespace sw
                 if ( bSceneMain )
                     RenderViewCollector::removeScreenRectViews( packet._listView );
                 else if ( pSceneViewCamera != nullptr && pSceneViewCamera != pCam )
-                    RenderViewCollector::appendHostView( *pSceneViewCamera, views._scene, packet._listView );
+                    RenderViewCollector::appendHostView( *pSceneViewCamera, views._scene, sceneViewMode, packet._listView );
                 // 애니메이션 LOD 의 뷰 — 주 시점과 이번 프레임에 그리는 추가 뷰(CCTV · 분할 화면). 다음 프레임 평가가 이것으로 가시성 · 화면 크기를 본다.
                 // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
                 if ( pActiveScene->getObjectManager() != nullptr )

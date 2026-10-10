@@ -37,6 +37,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
+#include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/Utility/CommandStack.h"
@@ -808,6 +809,20 @@ namespace sw::editor
                 outValue = static_cast<float64>( pContext->getPanelManager().getPanels().size() );
                 return true;
             }
+
+            /** @brief 씬 뷰(툴바) · 주 출력(게임 뷰)의 보기 모드 번호입니다(`RenderViewMode`). 렌더러가 없으면 false. */
+            [[nodiscard]] static bool readViewMode( bool bSceneView, float64& outValue )
+            {
+                const FrameRenderer* pRenderer = editor::getService<FrameRenderer>();
+                if ( pRenderer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( bSceneView ? pRenderer->getSceneViewMode() : pRenderer->getViewMode() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSceneViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( true, outValue ); }
+
+            [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
         };
     } // namespace
 
@@ -872,4 +887,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readPreferencesSavedKeyCount );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
+    SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw",
+                         &EditorScenarioStepsInternal::readSceneViewMode );
+    SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
+                         &EditorScenarioStepsInternal::readGameViewMode );
 } // namespace sw::editor

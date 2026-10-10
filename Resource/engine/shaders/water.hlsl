@@ -113,8 +113,8 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	alpha                   = max( alpha, foam );
 
 #if defined( MATERIAL_BLEND_TRANSLUCENT )
-	return swStoreSurface( float4( color, alpha ), float4( input.waterColor.rgb, 1.0f ), normal );
+	return swStoreSurface( float4( color, alpha ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition );
 #else
-	return swStoreSurface( float4( color, 1.0f ), float4( input.waterColor.rgb, 1.0f ), normal );
+	return swStoreSurface( float4( color, 1.0f ), float4( input.waterColor.rgb, 1.0f ), normal, input.worldPosition );
 #endif
 }

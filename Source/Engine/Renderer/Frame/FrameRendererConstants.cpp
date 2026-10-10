@@ -84,8 +84,10 @@ namespace sw
                                        float4{ outlineY, outlineZ, static_cast<float32>( pool.getWidth() ), static_cast<float32>( pool.getHeight() ) } );
         // 패스 플래그 — 비트는 bindingslots.hlsli 의 SW_PASS_FLAG_*(C++ 는 shaderslot::kPassFlag*)가 정본이다. 후처리는 뷰마다 끌 수 있다(CCTV).
         uint32 flags = ( _pDevice != nullptr && _pDevice->supportsNativeBindlessSampling() ) ? shaderslot::kPassFlagNativeBindless : 0u;
-        if ( _pActiveView->_settings._bPostProcess == SW_FALSE )
+        if ( _pActiveView->_settings.usesPostProcess() == false )
             flags |= shaderslot::kPassFlagSkipPost;
+        if ( _pActiveView->_settings.usesTonemap() == false )
+            flags |= shaderslot::kPassFlagSkipTonemap;
         context._passValues.setUint( passConstantNames()._flags, flags );
     }
 

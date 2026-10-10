@@ -75,12 +75,12 @@ namespace sw
     SW_GLOBAL_VARIABLE( int32, gv_vertexPool, 1, "씬 메시 정점 풀 (0=메시마다 정점 버퍼, 진단용)" );
 
     /**
-     * @brief `-gv_viewMode=<0|1|2>` 는 씬 지오메트리 보기 방식입니다(0 Lit / 1 Unlit / 2 Wireframe).
-     * @details 에디터 뷰포트 콤보와 같은 값을 가리킵니다(`RenderViewMode`). 여기 있는 이유는 **검증**입니다.
+     * @brief `-gv_viewMode=<n>` 는 주 출력(게임 창)의 보기 모드입니다(0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw).
+     * @details 에디터 씬 뷰 툴바와 같은 값을 가리킵니다(`RenderViewMode`). 여기 있는 이유는 **검증**입니다.
      *          뷰 모드가 정말로 픽셀을 바꾸는지 `-gv_screenshot` 으로 확인하려면 에디터를 띄우지 않고
      *          모드를 고를 수 있어야 합니다. 없으면 이 기능은 사람 눈으로만 확인되는 기능이 됩니다.
      */
-    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "씬 보기 방식 (0 Lit / 1 Unlit / 2 Wireframe)" );
+    SW_GLOBAL_VARIABLE( int32, gv_viewMode, 0, "주 출력 보기 모드 (0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw)" );
 
     FrameRenderer::FrameRenderer()
         : _pDevice{ nullptr }
@@ -149,6 +149,7 @@ namespace sw
         , _bPassResourcesReady{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
+        , _sceneViewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
         , _bOutputPSOMissingLogged{ 0 }
         , _bCaptureMismatchLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
@@ -197,8 +198,7 @@ namespace sw
             return false;
         }
 
-        // 커맨드라인이 뷰 모드를 정했으면 여기서 받는다. 에디터가 있으면 툴바가 다시 덮어쓴다.
-        // 초기값이므로 순서가 맞다.
+        // 커맨드라인이 주 출력의 보기 모드를 정했으면 여기서 받는다(에디터 씬 뷰는 툴바가 따로 정한다).
         if ( gv_viewMode > 0 )
             setViewMode( static_cast<RenderViewMode>( gv_viewMode ) );
 
@@ -647,7 +647,8 @@ namespace sw
             pScene->ensureDefaultCameras();
             pMainCamera = pScene->getActiveGameCamera();
         }
-        _mainView._settings = RenderViewCollector::makeMainSettings( pMainCamera );
+        _mainView._settings           = RenderViewCollector::makeMainSettings( pMainCamera );
+        _mainView._settings._viewMode = getViewMode(); // 직접 경로(시험)는 주 출력 모드 — 패킷 경로는 EngineLoop 가 싣는다
         // 씬 직접 경로(에디터 · 테스트)도 패킷 경로와 **같은 라이트 버퍼**를 쓴다. 경로마다 조명이
         // 다르면 에디터에서 본 그림과 게임 화면이 갈린다.
         collectSceneLights( pScene, _listScratchLight );

@@ -196,7 +196,9 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 ## 함정과 주의
 
 - **보기 모드 define 은 조명을 하는 모든 셰이더가 읽는다.** Unlit 을 toon 만 읽어 기본 파이프라인에서 Lit 과 픽셀이 하나도 다르지 않았다.
-  셰이더를 더하면 `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 디퍼드는 G버퍼 알베도 알파(셰이딩 모델 `SW_GBUFFER_SHADING`)로 조명 패스에 넘긴다(조명 패스에는 뷰 모드 변형이 없다). `RenderPassGPUTest.UnlitViewModeChangesThePicture` 가 포워드와 디퍼드를 본다.
+  셰이더를 더하면 `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 표면은 `swStoreSurface( 색, 알베도, 노멀, 월드 위치 )` 로 내보낸다 — 보기 모드(Unlit · Normals · Depth · Overdraw)의 색은 그 함수가 바꾼다.
+  디퍼드는 그 색을 G버퍼 알베도에 셰이딩 모델 Unlit(`SW_GBUFFER_SHADING`)으로 넘긴다(조명 패스에는 뷰 모드 변형이 없다). `RenderPassGPUTest.ViewModesProduceDistinctPictures` 가 포워드와 디퍼드를 본다.
+- **효과 패스 셰이더(postbloom · postoutline · postchain · tonemap)는 `g_Flags` 의 건너뛰기 비트를 본다.** 후처리를 끈 뷰는 포맷이 달라 복사할 수 없을 때 그 셰이더로 원본을 옮기므로, 비트를 무시하면 후처리를 끈 디퍼드 뷰가 효과를 다시 건다.
 ### 쿠킹과 산출물
 
 **`.hlsl` 이나 `.hlsli` 를 고쳤으면 `App.exe --cook-shaders` 를 다시 돌리세요.** 빌드는 HLSL을 쿠킹하지 않습니다. 개발 빌드는 낡은 매니페스트를 버리고 런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 쿠킹된 바이너리를 봅니다.

@@ -73,10 +73,10 @@ float4 PSMain(PSInput input) : SV_TARGET
 	}
 
 #if SW_VIEWMODE_SKIPS_LIGHTING
-	// 보기 모드 Unlit — 2D 빛 · 노멀 맵 없이 알베도 그대로.
-	const float3 lit = albedo.rgb;
+	// 보기 모드(Unlit · Normals · Depth · Overdraw) — 2D 빛 없이 보기 모드의 색. 스프라이트 평면은 Z 0 이다.
+	return swComputeViewModeColor(albedo, albedo, normal, float3(input.worldPosition, 0.0f));
 #else
 	const float3 lit = swShadeLights2d(albedo.rgb, input.worldPosition, normal, bHasNormal);
-#endif
 	return float4(lit, albedo.a);
+#endif
 }

@@ -2,6 +2,7 @@
 
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
@@ -79,22 +80,31 @@ namespace sw::editor
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.28f, 0.28f, 0.32f, 1.0f } );
 
         {
-            // 렌더러가 뷰 모드를 실제로 읽는다(`FrameRenderer::setViewMode`). 값이 아니라 **렌더러 상태**가
-            // 정본이므로 프레임마다 렌더러에서 읽어 표시한다. 그래야 커맨드라인(`-gv_viewMode`)이나 다른 경로가
-            // 모드를 바꿨을 때 툴바가 틀린 값을 보이지 않는다.
-            FrameRenderer* pRenderer = EditorViewportToolbarInternal::findFrameRenderer();
+            // 씬 뷰의 보기 모드다(`FrameRenderer::setSceneViewMode`) — 게임 뷰는 늘 주 출력 모드(Lit)로 그린다(언리얼 뷰포트마다의 View Mode).
+            // 값이 아니라 **렌더러 상태**가 정본이므로 프레임마다 렌더러에서 읽어 표시한다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
+            FrameRenderer*       pRenderer   = EditorViewportToolbarInternal::findFrameRenderer();
+            const RenderViewMode currentMode = ( pRenderer != nullptr ) ? pRenderer->getSceneViewMode() : RenderViewMode::Lit;
 
             ImGui::BeginDisabled( pRenderer == nullptr );
-            ImGui::SetNextItemWidth( 85.0f * EditorThemeUtil::getDpiScale() );
-            const utf8* arrModeLabel[] = { "Lit", "Unlit", "Wireframe" };
-            int32       modeIndex =
-                ( pRenderer != nullptr ) ? static_cast<int32>( pRenderer->getViewMode() ) : static_cast<int32>( RenderViewMode::Lit );
-            if ( ImGui::Combo( "##ViewMode", &modeIndex, arrModeLabel, 3 ) && pRenderer != nullptr )
-                pRenderer->setViewMode( static_cast<RenderViewMode>( modeIndex ) );
+            ImGui::SetNextItemWidth( 95.0f * EditorThemeUtil::getDpiScale() );
+            const bool bOpen = ImGui::BeginCombo( "##ViewMode", getRenderViewModeInfo( currentMode )._pName );
+            EditorSelfTestMarks::note( "viewport.viewMode" ); // 시나리오가 콤보를 열고 항목(`viewport.viewMode.<이름>`)을 누른다
+            if ( bOpen )
+            {
+                for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
+                {
+                    const RenderViewMode mode  = static_cast<RenderViewMode>( modeIndex );
+                    const utf8*          pName = getRenderViewModeInfo( mode )._pName;
+                    if ( ImGui::Selectable( pName, mode == currentMode ) && pRenderer != nullptr )
+                        pRenderer->setSceneViewMode( mode );
+                    const string markKey = string( "viewport.viewMode." ) + StringUtil::toLower( pName );
+                    EditorSelfTestMarks::note( markKey.c_str() );
+                }
+                ImGui::EndCombo();
+            }
             ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( pRenderer != nullptr
-                                            ? "Lit / Unlit(알베도만) / Wireframe — 씬 지오메트리 보기 방식"
-                                            : "렌더러가 아직 붙지 않았습니다" );
+            EditorWidgets::drawTooltip( pRenderer != nullptr ? "씬 뷰 보기 모드 — Lit / Unlit / Wireframe / Normals / Depth / Overdraw (게임 뷰는 늘 Lit)"
+                                                             : "렌더러가 아직 붙지 않았습니다" );
         }
 
         EditorWidgets::drawToolbarSeparator();

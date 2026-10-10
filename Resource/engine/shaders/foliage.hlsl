@@ -114,12 +114,12 @@ SW_SURFACE_OUTPUT PSMain( PSInput input )
 	const float3 normal = normalize( input.normal );
 	const float4 albedo = input.color * swSampleMaterialTexture( input.albedoMap, input.uv );
 #if defined( SW_PASS_GBUFFER )
-	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal );
+	return swStoreSurface( float4( 0.0f, 0.0f, 0.0f, 0.0f ), albedo, normal, input.worldPosition );
 #elif SW_VIEWMODE_SKIPS_LIGHTING
-	return swStoreSurface( float4( albedo.rgb, 1.0f ), albedo, normal );
+	return swStoreSurface( float4( albedo.rgb, 1.0f ), albedo, normal, input.worldPosition );
 #else
 	const float  shadow = swSampleShadowAtWorld( input.worldPosition, normal );
 	const float3 lit    = swShadeLights( albedo.rgb, input.worldPosition, normal, shadow );
-	return swStoreSurface( float4( lit, 1.0f ), albedo, normal );
+	return swStoreSurface( float4( lit, 1.0f ), albedo, normal, input.worldPosition );
 #endif
 }

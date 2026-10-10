@@ -142,7 +142,7 @@ namespace sw
         }
     }
 
-    void RenderViewCollector::appendHostView( CameraComponent& camera, const HostViewTarget& target, vector<RenderViewRequest>& inoutListView )
+    void RenderViewCollector::appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView )
     {
         if ( target.isValid() == false )
             return;
@@ -150,6 +150,7 @@ namespace sw
         request._settings             = RenderViewCollectorInternal::makeSettings( camera.getRenderOutput() );
         request._settings._screenRect = float4{ 0.0f, 0.0f, 1.0f, 1.0f };
         request._settings._bCut       = camera.consumeCut() ? SW_TRUE : SW_FALSE;
+        request._settings._viewMode   = viewMode;
         request._viewID               = camera.getComponentID();
         request._outputKind           = RenderViewOutputKind::HostTarget;
         request._hostTarget           = target._renderTarget;

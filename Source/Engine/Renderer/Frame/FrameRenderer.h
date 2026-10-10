@@ -216,14 +216,21 @@ namespace sw
         bool readbackTransient( string_view attachmentName, vector<uint8>& outBytes, RHITextureMipSpan& outLayout, RHIFormat& outFormat );
 
         /**
-         * @brief 씬 지오메트리 보기 방식을 정합니다(Lit/Unlit/Wireframe).
-         * @details 다음 프레임의 `ensureMaterialPSOs` 가 그 모드의 PSO 변형을 만들고 드로우가 그것을 고릅니다.
-         *          모드를 바꾼 프레임에 셰이더 컴파일이 한 번 끼고, 그 뒤로는 캐시에서 나옵니다.
-         *          렌더 스레드가 드로우마다 읽으므로 atomic 입니다(락을 걸 자리가 아닙니다).
+         * @brief 주 출력(게임 창 · 에디터 게임 뷰)의 보기 모드를 정합니다(`-gv_viewMode`, 시험).
+         * @details 보기 모드는 뷰마다의 설정(`RenderViewSettings::_viewMode`)입니다. 이 값은 주 출력 뷰의 설정에 실리고,
+         *          에디터 씬 뷰는 `setSceneViewMode` 의 값을 씁니다. 다음 프레임의 `ensureMaterialPSOs` 가 이번 프레임 뷰들의 모드로
+         *          PSO 변형을 만들고 드로우가 그리는 뷰의 모드로 고릅니다. 모드를 바꾼 프레임에 셰이더 컴파일이 한 번 낍니다.
          */
         void setViewMode( RenderViewMode viewMode );
-        /** @brief 현재 보기 방식입니다. */
+        /** @brief 주 출력의 보기 모드입니다. */
         RenderViewMode getViewMode() const;
+        /**
+         * @brief 에디터 씬 뷰의 보기 모드를 정합니다(씬 뷰 툴바). 게임 뷰에는 걸리지 않습니다.
+         * @details 씬 뷰가 호스트 타깃 추가 뷰이든 주 출력이든(게임 뷰가 가려졌을 때) 씬 뷰의 설정에 실립니다(`EngineLoop::tick`).
+         */
+        void setSceneViewMode( RenderViewMode viewMode );
+        /** @brief 에디터 씬 뷰의 보기 모드입니다. */
+        RenderViewMode getSceneViewMode() const;
 
         /** @brief 패스 타입에 대응하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
@@ -948,12 +955,12 @@ namespace sw
         uint8                  _bPassResourcesReady : 1;
         [[maybe_unused]] uint8 _reservedFlags       : 5;
         /**
-         * @brief 현재 보기 방식(`RenderViewMode`)입니다.
-         * @details 드로우 경로가 배치마다 읽고 UI 스레드가 씁니다. 값 하나뿐이라 atomic 으로 충분합니다.
-         *          프레임 중간에 바뀌어도 최악은 한 프레임이 섞여 그려지는 것이고, PSO 변형은
-         *          `ensureMaterialPSOs` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있습니다.
+         * @brief 주 출력의 보기 모드(`RenderViewMode`)입니다.
+         * @details 게임 스레드(패킷) · 직접 경로가 프레임 시작에 읽어 뷰 설정에 싣고, 드로우는 뷰 설정만 봅니다. 쓰는 쪽은 다른 스레드라 atomic 입니다.
          */
         atomic<uint8> _viewMode;
+        /** @brief 에디터 씬 뷰의 보기 모드(`RenderViewMode`)입니다. UI 스레드가 쓰고 게임 스레드가 패킷을 만들 때 읽습니다. */
+        atomic<uint8> _sceneViewMode;
         /// @brief 셋업에 없는 출력 대상 포맷(Present · Canvas)을 만났다고 한 번만 알리기 위한 래치입니다.
         atomic<uint8> _bOutputPSOMissingLogged;
         /// @brief 출력 RT 와 Present 캡처의 크기 · 포맷이 달라 복사를 건너뛴다고 한 번만 알리기 위한 래치입니다.

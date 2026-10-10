@@ -745,6 +745,40 @@ namespace
         if ( comparedCount == 0 )
             SW_TEST_SKIP( "No RHI backend could run the shadow pipelines" );
     }
+
+    /** @brief 위를 보는 면의 노멀 색(0.5 + 0.5 · +Y = 초록이 가장 밝다)인 픽셀 수입니다. RGBA8 · BGRA8 모두 G 는 둘째 칸입니다. */
+    uint32 countUpFacingNormalPixels( const sw::vector<uint8>& bytes )
+    {
+        uint32 count{ 0 };
+        for ( size_t index = 0; index + 3 < bytes.size(); index += 4 )
+        {
+            const int32 first  = bytes[index];
+            const int32 green  = bytes[index + 1];
+            const int32 third  = bytes[index + 2];
+            const bool  bUpish = green > 200 && green > first + 50 && green > third + 50;
+            if ( bUpish )
+                ++count;
+        }
+        return count;
+    }
+
+    /** @brief 첫 픽셀(배경)과 다른 픽셀 가운데 첫 칸 값의 최대 · 최소 차입니다. 겹쳐 그린 자리가 하나뿐인 자리보다 밝으면 큽니다. */
+    uint32 computeForegroundFirstChannelSpread( const sw::vector<uint8>& bytes )
+    {
+        if ( bytes.size() < 4 )
+            return 0;
+        uint32 minValue{ 255 };
+        uint32 maxValue{ 0 };
+        for ( size_t index = 0; index + 3 < bytes.size(); index += 4 )
+        {
+            const bool bBackground = bytes[index] == bytes[0] && bytes[index + 1] == bytes[1] && bytes[index + 2] == bytes[2];
+            if ( bBackground )
+                continue;
+            minValue = sw::MathUtil::min( minValue, static_cast<uint32>( bytes[index] ) );
+            maxValue = sw::MathUtil::max( maxValue, static_cast<uint32>( bytes[index] ) );
+        }
+        return maxValue > minValue ? maxValue - minValue : 0u;
+    }
 } // namespace
 
 /**
@@ -5787,38 +5821,65 @@ SW_TEST_CASE( RenderPassGPUTest, PresentedBackBufferMatchesTheCapture )
 }
 
 /**
- * @brief [RenderPassGPUTest] 보기 모드 Unlit 은 Lit 과 다른 그림이다(조명 · 그림자 · 림이 빠진다) — 포워드 · 디퍼드, 4 백엔드
- * @details PSO 변형은 `SW_VIEWMODE_UNLIT` 을 받는다. 그 define 을 읽지 않는 셰이더는 Lit 과 같은 그림을 낸다(조용한 실패).
- *          디퍼드는 조명 패스가 뷰 모드를 모르므로 G버퍼 알베도 알파(셰이딩 모델)로 넘긴다. Unlit 은 큐브의 면마다 밝기가 같아진다.
+ * @brief [RenderPassGPUTest] 보기 모드 Unlit · Normals · Depth · Overdraw 는 Lit 과 서로 다른 그림이다 — 포워드 · 디퍼드, 4 백엔드
+ * @details PSO 변형은 표(`kArrRenderViewModeInfo`)의 define 을 받는다. 그 define 을 읽지 않는 셰이더는 Lit 과 같은 그림을 낸다(조용한 실패).
+ *          디퍼드는 조명 패스가 뷰 모드를 모르므로 G버퍼 알베도(셰이딩 모델 Unlit)로 넘긴다.
+ *          Normals 는 바닥(+Y)이 초록으로 보이고(톤맵을 건너뛰어 G = 255), Overdraw 는 큐브와 바닥이 겹친 자리가 바닥만 있는 자리보다 밝다.
  */
-SW_TEST_CASE( RenderPassGPUTest, UnlitViewModeChangesThePicture )
+SW_TEST_CASE( RenderPassGPUTest, ViewModesProduceDistinctPictures )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
         for ( const utf8* pPipeline : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
         {
-            const sw::string      label = sw::string( device->getBackendName() ) + " " + pPipeline + ": ";
-            LitCubeScene          stage;
-            sw::vector<uint8>     listLit;
-            sw::vector<uint8>     listUnlit;
-            sw::RHITextureMipSpan layoutLit{};
-            sw::RHITextureMipSpan layoutUnlit{};
-            bool                  bOk = stage.populate();
-            bOk                       = bOk && renderPresentCaptureOf( device.get(), stage._scene, pPipeline, listLit, layoutLit, sw::RenderViewMode::Lit );
-            bOk                       = bOk && renderPresentCaptureOf( device.get(), stage._scene, pPipeline, listUnlit, layoutUnlit, sw::RenderViewMode::Unlit );
-            SW_EXPECT_TRUE_MSG( bOk, ( label + "Lit · Unlit 캡처" ).c_str() );
+            const sw::string label = sw::string( device->getBackendName() ) + " " + pPipeline + ": ";
+            LitCubeScene     stage;
+            if ( stage.populate() == false )
+            {
+                SW_EXPECT_TRUE_MSG( false, ( label + "장면 준비" ).c_str() );
+                continue;
+            }
+            constexpr sw::RenderViewMode arrMode[] = { sw::RenderViewMode::Lit, sw::RenderViewMode::Unlit, sw::RenderViewMode::Normals,
+                                                       sw::RenderViewMode::Depth, sw::RenderViewMode::Overdraw };
+            sw::vector<uint8>            arrCapture[std::size( arrMode )];
+            bool                         bOk = true;
+            for ( size_t modeIndex = 0; modeIndex < std::size( arrMode ) && bOk; ++modeIndex )
+            {
+                sw::RHITextureMipSpan layout{};
+                bOk = renderPresentCaptureOf( device.get(), stage._scene, pPipeline, arrCapture[modeIndex], layout, arrMode[modeIndex] );
+            }
+            SW_EXPECT_TRUE_MSG( bOk, ( label + "보기 모드 다섯 장 캡처" ).c_str() );
             if ( bOk == false )
                 continue;
-            const CaptureDifference difference = compareCaptures( listLit, listUnlit );
-            SW_LOG_INFO( "%#lit vs unlit: %#", label, difference.describe() );
-            SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "Lit 그림이 배경뿐이다 — 비교가 뜻이 없다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( difference._differCount * 100u > difference._compareCount,
-                                ( label + "Unlit 이 Lit 과 같은 그림이다 (" + difference.describe() + ")" ).c_str() );
+
+            for ( size_t first = 0; first < std::size( arrMode ); ++first )
+            {
+                for ( size_t second = first + 1; second < std::size( arrMode ); ++second )
+                {
+                    const CaptureDifference difference = compareCaptures( arrCapture[first], arrCapture[second] );
+                    const sw::string        pairName   = sw::string( sw::getRenderViewModeInfo( arrMode[first] )._pName ) + " vs " +
+                                                sw::getRenderViewModeInfo( arrMode[second] )._pName;
+                    SW_LOG_INFO( "%#%#: %#", label, pairName, difference.describe() );
+                    if ( first == 0 && second == 1 )
+                        SW_EXPECT_TRUE_MSG( difference._notBackgroundCount > 0, ( label + "Lit 그림이 배경뿐이다 — 비교가 뜻이 없다" ).c_str() );
+                    SW_EXPECT_TRUE_MSG( difference._differCount > 100u, ( label + pairName + " 가 같은 그림이다 (" + difference.describe() + ")" ).c_str() );
+                }
+            }
+
+            const uint32 pixelCount    = static_cast<uint32>( arrCapture[2].size() / 4 );
+            const uint32 upFacingCount = countUpFacingNormalPixels( arrCapture[2] );
+            SW_LOG_INFO( "%#Normals up-facing pixels %# / %#", label, upFacingCount, pixelCount );
+            SW_EXPECT_TRUE_MSG( upFacingCount * 100u > pixelCount, ( label + "Normals 에서 바닥(+Y)이 초록으로 보이지 않는다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( countUpFacingNormalPixels( arrCapture[0] ) * 100u <= pixelCount, ( label + "Lit 그림이 이미 노멀 색이다 — 비교가 뜻이 없다" ).c_str() );
+
+            const uint32 overdrawSpread = computeForegroundFirstChannelSpread( arrCapture[4] );
+            SW_LOG_INFO( "%#Overdraw spread %#", label, overdrawSpread );
+            SW_EXPECT_TRUE_MSG( overdrawSpread >= 30u, ( label + "Overdraw 에서 겹친 자리가 하나뿐인 자리보다 밝지 않다 (차 " + sw::to_string( overdrawSpread ) + ")" ).c_str() );
         }
     }
     if ( sweep.getReadyCount() == 0 )
-        SW_TEST_SKIP( "No RHI backend for the unlit view mode test" );
+        SW_TEST_SKIP( "No RHI backend for the view mode test" );
 }
 
 /**

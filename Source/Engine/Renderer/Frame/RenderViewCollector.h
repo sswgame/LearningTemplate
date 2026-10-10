@@ -43,8 +43,9 @@ namespace sw
         /**
          * @brief 호스트 타깃 뷰(에디터 씬 뷰) 요청을 @p inoutListView 끝에 더합니다. 예산 · 갱신 주기와 무관하게 매 프레임 그립니다.
          * @details 목록이 가득 찼으면(`kMaxExtraRenderView`) 마지막 추가 뷰 자리를 씁니다 — 호스트 뷰는 빠지면 패널이 멈춰 보입니다.
+         * @param viewMode 이 뷰의 보기 모드(씬 뷰 툴바 — `FrameRenderer::getSceneViewMode`).
          */
-        static void appendHostView( CameraComponent& camera, const HostViewTarget& target, vector<RenderViewRequest>& inoutListView );
+        static void appendHostView( CameraComponent& camera, const HostViewTarget& target, RenderViewMode viewMode, vector<RenderViewRequest>& inoutListView );
         /** @brief 화면 사각형 뷰(분할 화면 · PiP)를 뺍니다. 주 출력이 게임 화면이 아닐 때(씬 뷰만 그리는 프레임) 씁니다. */
         static void removeScreenRectViews( vector<RenderViewRequest>& inoutListView );
     };

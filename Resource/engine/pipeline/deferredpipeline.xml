@@ -1,6 +1,6 @@
 <RenderPipelineDesc _name="DeferredPipeline" _shadingModel="Deferred">
 	<_listAttachment>
-		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="GBufferNormal" _format="R16G16B16A16_FLOAT" _clearColor="0.5,0.5,1,0" _bClear="true" />
 		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
 		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />

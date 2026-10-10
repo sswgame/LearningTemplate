@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 씬 뷰 툴바의 보기 모드(Unlit · Wireframe · Normals · Depth · Overdraw)는 씬 뷰에만 걸린다(뷰마다의 설정, 언리얼 뷰포트 View Mode).
+  ① 게임 뷰를 앞에 두고 Lit 기준을 찍는다. ② 씬 뷰를 앞에 두고 Lit 을 찍은 뒤, 툴바 콤보(viewport.viewMode)로 모드를 하나씩 골라 찍는다 —
+  모두 씬 뷰 Lit 과 다르다. ③ Normals 로 둔 채 게임 뷰를 앞에 두고 찍으면 ①과 같다(게임 뷰는 Lit 그대로, Editor.GameViewMode 0).
+  스크린샷은 주 출력이다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/viewmodes.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12   (AppScenarioTest 가 백엔드마다 돈다)
+-->
+<Scenario name="editor.viewmodes" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<At frame="10"><ResizeWindow width="1440" height="810"/></At>
+	<At frame="20"><ResizeWindow width="1600" height="900"/></At>
+
+	<!-- ① 게임 뷰 Lit 기준 -->
+	<At frame="40"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="70">
+		<Expect probe="Editor.GameViewRequested" equals="1"/>
+		<Expect probe="Editor.GameViewMode" equals="0"/>
+		<Screenshot file="viewmodes_game_lit.ppm"/>
+	</At>
+
+	<!-- ② 씬 뷰 Lit 과 보기 모드마다 -->
+	<At frame="80"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="110">
+		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
+		<Expect probe="Editor.SceneViewMode" equals="0"/>
+		<Screenshot file="viewmodes_scene_lit.ppm"/>
+	</At>
+
+	<At frame="120"><EditorClick mark="viewport.viewMode"/></At>
+	<At frame="130"><EditorClick mark="viewport.viewMode.unlit"/></At>
+	<At frame="160">
+		<Expect probe="Editor.SceneViewMode" equals="1"/>
+		<Screenshot file="viewmodes_scene_unlit.ppm"/>
+	</At>
+
+	<At frame="170"><EditorClick mark="viewport.viewMode"/></At>
+	<At frame="180"><EditorClick mark="viewport.viewMode.wireframe"/></At>
+	<At frame="210">
+		<Expect probe="Editor.SceneViewMode" equals="2"/>
+		<Screenshot file="viewmodes_scene_wireframe.ppm"/>
+	</At>
+
+	<At frame="220"><EditorClick mark="viewport.viewMode"/></At>
+	<At frame="230"><EditorClick mark="viewport.viewMode.depth"/></At>
+	<At frame="260">
+		<Expect probe="Editor.SceneViewMode" equals="4"/>
+		<Screenshot file="viewmodes_scene_depth.ppm"/>
+	</At>
+
+	<At frame="270"><EditorClick mark="viewport.viewMode"/></At>
+	<At frame="280"><EditorClick mark="viewport.viewMode.overdraw"/></At>
+	<At frame="310">
+		<Expect probe="Editor.SceneViewMode" equals="5"/>
+		<Screenshot file="viewmodes_scene_overdraw.ppm"/>
+	</At>
+
+	<At frame="320"><EditorClick mark="viewport.viewMode"/></At>
+	<At frame="330"><EditorClick mark="viewport.viewMode.normals"/></At>
+	<At frame="360">
+		<Expect probe="Editor.SceneViewMode" equals="3"/>
+		<Expect probe="Editor.GameViewMode" equals="0"/>
+		<Screenshot file="viewmodes_scene_normals.ppm"/>
+	</At>
+	<At frame="365">
+		<ExpectImage file="viewmodes_scene_unlit.ppm" metric="differentFrom" reference="viewmodes_scene_lit.ppm" atLeast="0.003"/>
+		<ExpectImage file="viewmodes_scene_wireframe.ppm" metric="differentFrom" reference="viewmodes_scene_lit.ppm" atLeast="0.003"/>
+		<ExpectImage file="viewmodes_scene_depth.ppm" metric="differentFrom" reference="viewmodes_scene_lit.ppm" atLeast="0.003"/>
+		<ExpectImage file="viewmodes_scene_overdraw.ppm" metric="differentFrom" reference="viewmodes_scene_lit.ppm" atLeast="0.003"/>
+		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differentFrom" reference="viewmodes_scene_lit.ppm" atLeast="0.003"/>
+		<ExpectImage file="viewmodes_scene_normals.ppm" metric="differentFrom" reference="viewmodes_scene_depth.ppm" atLeast="0.003"/>
+	</At>
+
+	<!-- ③ 씬 뷰가 Normals 여도 게임 뷰는 Lit 그대로 -->
+	<At frame="370"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="400">
+		<Expect probe="Editor.GameViewRequested" equals="1"/>
+		<Expect probe="Editor.SceneViewMode" equals="3"/>
+		<Expect probe="Editor.GameViewMode" equals="0"/>
+		<Screenshot file="viewmodes_game_after.ppm"/>
+	</At>
+	<At frame="405">
+		<ExpectImage file="viewmodes_game_after.ppm" metric="differentFrom" reference="viewmodes_game_lit.ppm" atMost="0.002"/>
+		<ExpectImage file="viewmodes_game_after.ppm" metric="differentFrom" reference="viewmodes_scene_normals.ppm" atLeast="0.003"/>
+	</At>
+	<At frame="410"><DevCommand line="panel.focus scene_view"/></At>
+	<At frame="420"><Pass/></At>
+</Scenario>

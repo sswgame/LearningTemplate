@@ -97,8 +97,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
-| **4 캡처 · 디버그 · 품질** | G1 | 보기 모드 Normals · Depth · Overdraw | M | E3 | ★ |
-| | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
+| **4 캡처 · 디버그 · 품질** | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
 | | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
 | | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
@@ -607,124 +606,6 @@ Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실�
 유니티: Scene view Draw Mode(Shaded · Wireframe · Overdraw · Mipmaps · Normals …), Game view 스크린샷(`ScreenCapture`), Frame Debugger · RenderDoc 캡처 단추, Profiler Timeline(에디터 안), Test Runner 창(EditMode · PlayMode).
 우리: 보기 모드 셋(Lit, Unlit, Wireframe), Tracy(바깥), 자체 시험 · 시나리오는 명령줄로만, assert 는 디버거 없으면 프로세스가 죽는다.
 
-### G1 보기 모드 Normals · Depth · Overdraw ★
-
-**바꿀 것.**
-1) `Engine/Renderer/Frame/FrameRendererUtil.h` — 열거형과 define 표:
-```cpp
-    enum class RenderViewMode : uint8
-    {
-        Lit = 0,   ///< 조명 · 그림자를 모두 계산한 기본 화면
-        Unlit,     ///< 알베도만. 조명 항이 셰이더에서 컴파일 아웃됨
-        Wireframe, ///< 삼각형 외곽선만(RHIFillMode::Wireframe)
-        Normals,   ///< 월드 노멀을 색으로(0.5 + 0.5 n)
-        Depth,     ///< 카메라에서의 거리(선형, kViewModeDepthRange 에서 흰색)
-        Overdraw,  ///< 겹쳐 그린 횟수 — 단색을 깊이 테스트 없이 가산(유니티 Overdraw)
-
-        Count
-    };
-
-    /** @brief 보기 모드 하나의 표 줄입니다. 셰이더 define · PSO 조정 · 이름이 한 줄에 있다. */
-    struct RenderViewModeInfo
-    {
-        const utf8* _pName;
-        const utf8* _pShaderDefine;   ///< nullptr 이면 셰이더를 바꾸지 않는다(Lit · Wireframe)
-        bool        _bWireframe;
-        bool        _bAdditiveNoDepth; ///< Overdraw — 가산 블렌드, 깊이 테스트 · 쓰기 끔, 컬링 끔
-    };
-
-    /** @brief 보기 모드 표 — 쿠커 · PSO 변형 · 툴바 · 로그가 모두 이것을 읽는다. 줄 순서 = 열거값. */
-    inline constexpr RenderViewModeInfo kArrRenderViewModeInfo[] = {
-        { "Lit", nullptr, false, false },
-        { "Unlit", "SW_VIEWMODE_UNLIT=1", false, false },
-        { "Wireframe", nullptr, true, false },
-        { "Normals", "SW_VIEWMODE_NORMALS=1", false, false },
-        { "Depth", "SW_VIEWMODE_DEPTH=1", false, false },
-        { "Overdraw", "SW_VIEWMODE_OVERDRAW=1", false, true },
-    };
-    static_assert( std::size( kArrRenderViewModeInfo ) == static_cast<size_t>( RenderViewMode::Count ), "보기 모드 표와 열거형의 개수가 다릅니다" );
-```
-`kViewModeUnlitDefine` 상수와 `findViewModeDefine` 은 표를 읽게 바꾼다(`return kArrRenderViewModeInfo[index]._pShaderDefine;`). `FrameRendererPSO.cpp` `applyViewModeToDesc`:
-```cpp
-            const RenderViewModeInfo& info = kArrRenderViewModeInfo[static_cast<uint8>( viewMode )];
-            if ( info._bWireframe )
-            {
-                desc._fillMode = RHIFillMode::Wireframe;
-                desc._cullMode = RHICullMode::None;
-                bChanged       = true;
-            }
-            if ( info._bAdditiveNoDepth )
-            {
-                // 겹쳐 그린 수를 세려면 가려진 것도 그려야 한다 — 깊이를 끄고 단색을 더한다(유니티 Overdraw 와 같다).
-                desc._bEnableBlend      = 1;
-                desc._blendMode         = RHIBlendMode::Additive;   // RHI 블렌드 칸 이름은 RHIPipelineStateDesc 에 맞춘다
-                desc._bEnableDepthTest  = 0;
-                desc._bEnableDepthWrite = 0;
-                desc._cullMode          = RHICullMode::None;
-                bChanged                = true;
-            }
-```
-(`RHIPipelineStateDesc` 에 가산 블렌드가 없으면 — 2 차 d9a5ffd7 의 머티리얼 블렌드 모드 표에 `Additive` 가 있는지 본다. 없으면 이 단위가 표에 한 줄 더하고 ABI +1.)
-`setViewMode` 로그의 이름 배열 → 표의 `_pName`. 에디터 툴바 콤보(`EditorViewportToolbar.cpp:80` 근처)도 표를 돈다. `gv_viewMode` 설명 글 "(0 Lit / 1 Unlit / 2 Wireframe / 3 Normals / 4 Depth / 5 Overdraw)".
-2) 셰이더 — `lighting.hlsli`(E3 의 매크로 옆):
-```hlsl
-static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 거리(m)에서 흰색
-static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
-
-// 보기 모드가 셰이딩을 바꾸면 그 색을 돌려준다(true). Lit 은 false — 부르는 쪽이 조명을 계산한다.
-bool swApplyViewMode( float3 albedo, float3 worldNormal, float3 worldPosition, out float3 outColor )
-{
-#if defined( SW_VIEWMODE_UNLIT )
-	outColor = albedo;
-	return true;
-#elif defined( SW_VIEWMODE_NORMALS )
-	outColor = worldNormal * 0.5f + 0.5f;
-	return true;
-#elif defined( SW_VIEWMODE_DEPTH )
-	outColor = saturate( length( worldPosition - g_CameraPos.xyz ) / kViewModeDepthRange ).xxx;
-	return true;
-#elif defined( SW_VIEWMODE_OVERDRAW )
-	outColor = float3( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f );
-	return true;
-#else
-	outColor = float3( 0.0f, 0.0f, 0.0f );
-	return false;
-#endif
-}
-```
-(카메라 위치 상수는 `g_CameraPos`. E3 은 5b 에서 들어가므로 아래의 매크로 이름과 시험 이름은 5b 가 실제로 둔 것에 맞춘다.) E3 의 `#if SW_VIEWMODE_SKIPS_LIGHTING` 갈래를 `float3 viewModeColor; if ( swApplyViewMode( albedo.rgb, normal, input.worldPosition, viewModeColor ) ) return swStoreSurface( float4( viewModeColor, 1.0f ), albedo, normal );` 로 바꾼다
-(define 마다 컴파일 아웃되므로 런타임 분기가 아니다). `SW_VIEWMODE_SKIPS_LIGHTING` 는 이 함수로 대체되어 지운다. 디퍼드: `deferredlighting.hlsl` 이 G버퍼 노멀 · 깊이로 같은 함수를 부른다(Normals · Depth),
-Overdraw 는 G버퍼 패스가 가산(알베도 칸에 단색)이고 Lighting 은 알베도를 그대로. 톤맵이 색을 바꾸지 않게 보기 모드가 Lit 이 아니면 톤맵 패스는 통과(`tonemap.hlsl` 에 같은 define — Present 패스 종류에 kAppliesViewMode).
-3) **적용 뒤 `App.exe --cook-shaders`** — 쿠커가 표를 끝까지 돈다(셰이더 변형 수가 모드 수만큼 는다: 머티리얼 셰이더 × 셋 — 매니페스트 크기를 커밋 메시지에 적는다).
-
-**시험.** `RenderPassGPUTest.ViewModesProduceDistinctPictures`(E3 의 시험을 넓힌다): 포워드 · 디퍼드에서 Lit · Unlit · Normals · Depth · Overdraw 다섯 장이 서로 100 픽셀 넘게 다르다,
-Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 = 1.0), Overdraw 는 겹친 큐브 둘의 겹친 자리가 하나뿐인 자리보다 밝다(모서리 기준 배경을 빼고 평균으로 비교한다. 특정 색 픽셀 수는 톤매핑에 무너진다).
-
-**확인 = 에디터 시나리오.** `viewmodes.scenario.xml`: 뷰포트 툴바의 보기 모드 콤보(이름표 `viewport.viewMode`)로 모드를 하나씩 고르고 그때마다 `Screenshot` 을 찍습니다.
-`ExpectImage metric="differentFrom"` 으로 각 장이 Lit 장과 다른지 보고, Normals 장은 위를 보는 면 영역의 지표로 봅니다. 에디터 실행의 스크린샷은 주 출력 그림입니다 — 게임 뷰가 보이면 게임 뷰, 씬 뷰만 보이면 씬 뷰(V1). 보기 모드는 씬 뷰 툴바에 있으므로 Scene 탭을 앞에 둔 채 찍습니다.
-지금 보기 모드는 `FrameRenderer` 전역이라 씬 뷰와 게임 뷰가 같이 보일 때 게임 뷰에도 걸린다(V1 에서 남긴 것) — G1 에서 `RenderViewSettings` 로 뷰마다 갖게 해 게임 뷰는 늘 Lit 으로 둔다(유니티 Scene 뷰 Draw Mode 와 같다).
-
-**커밋 메시지:**
-```
-렌더러 - 보기 모드 Normals · Depth · Overdraw(표 하나로 define · PSO 조정 · 이름)
-
-문제점:
-- 보기 모드가 Lit · Unlit · Wireframe 셋이라 노멀 · 깊이 · 겹쳐 그리기를 볼 길이 없었다. 모드마다 define 상수 · 로그 이름 배열 · 툴바
-  목록이 따로였다.
-
-해결방안:
-- RenderViewModeInfo 표(이름 · 셰이더 define · 와이어프레임 · 가산/깊이 끔) 하나를 쿠커 · PSO 변형 · 툴바 · 로그가 읽는다.
-- lighting.hlsli swApplyViewMode — 다섯 셰이더 · deferredlighting · tonemap 이 define 으로 갈래를 고른다(런타임 분기 없음).
-  Overdraw 는 깊이를 끄고 단색을 더한다.
-- 셰이더 다시 쿠킹(변형 수 증가: …).
-
-결과:
-- RenderPassGPUTest.ViewModesProduceDistinctPictures(다섯 장 서로 다름 · 위 면 노멀 G · 겹친 자리 밝기).
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** 쿠킹 → host 시험 네 백엔드, `-gv_viewMode=3/4/5` 스크린샷 넷 × 셋을 눈으로. **겹침:** E3(앞), gfx-editor-rest 3 · shadow-fix(셰이더 다른 줄), 4 차 runtime-ui(UI 패스는 보기 모드를 받지 않는다 — 표 플래그 확인).
-
 ### G4 프로파일러 스레드 미니 타임라인
 
 **바꿀 것.**
@@ -1189,7 +1070,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
   - C 단계 — (a) 확장이 EditorModule 보다 먼저 언로드되는지(종료 · 리로드): 순서가 틀리면 등록자 소멸이 지운 목록을 만진다 → `ModuleHost::shutdown` 에서 확장 이름을 먼저 언로드한다.
     (b) 결속기: `themepark.extensionPanelDraws` 가 PASS(정점 > 0)면 맞다. 실패하면 확장 DLL 의 `GImGui` 가 null 이거나 다른 컨텍스트 — 결속 소스가 생성 · 링크됐는지(`<모듈>UIBinder.cpp`).
     (c) EditorModule SHARED 의 리눅스 링크(CI).
-  - G1 Overdraw — RHI 에 가산 블렌드 상태가 있는지(없으면 ABI +1).
   - R4 — 오브젝트가 수천 개인 씬(`-gv_benchMeshes=8000 -EnableEditor`)에서 빌보드 수집이 1 ms 를 넘는지.
 
 ---
@@ -1198,7 +1078,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 
 | 단위 | 남길 곳 | 남길 것 |
 |---|---|---|
-| G1 | `Source/Engine/Renderer/README.md` 함정과 주의 | 보기 모드는 표 하나, 조명하는 셰이더는 모두 `swApplyViewMode` |
 | C1 ~ C5 | `Source/Editor/README.md` 함정 · 계약, `Source/Engine/Module/README.md` 함정 · 계약 | 확장 모듈 위치, 등록 세대, 언로드 리스너, 결속기, `SW_EDITOR_COMMAND`, EditorExtension 종류 |
 | P2 · P3 · P4 | 에디터 README, 모듈 README | 에디터 설정은 환경설정 섹션, 사용자 단축키 덮어쓰기, 매니페스트 내용도 configure 의존 |
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |

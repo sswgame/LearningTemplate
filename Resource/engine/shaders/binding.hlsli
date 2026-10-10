@@ -781,13 +781,37 @@ struct SwSurfaceOutput
 #endif
 #define SW_SURFACE_OUTPUT SwSurfaceOutput
 
-// 보기 모드 Unlit — 조명 · 그림자 · 림 · 반사를 컴파일 아웃하고 알베도를 그대로 낸다. 조명을 하는 셰이더는 **모두** 이 매크로로 가른다.
-// C++ 정본은 FrameRendererUtil 의 kViewModeUnlitDefine 이다 — 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.UnlitViewModeChangesThePicture).
-#if defined( SW_VIEWMODE_UNLIT )
+// 보기 모드 Unlit · Normals · Depth · Overdraw — 조명 · 그림자 · 림 · 반사를 컴파일 아웃한다. 조명을 하는 셰이더는 **모두** 이 매크로로 가르고,
+// 내보낼 색은 swStoreSurface 가 보기 모드대로 바꾼다(swComputeViewModeColor). C++ 정본은 RenderView.h 의 보기 모드 표(kArrRenderViewModeInfo)다 —
+// 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.ViewModesProduceDistinctPictures).
+#if defined( SW_VIEWMODE_UNLIT ) || defined( SW_VIEWMODE_NORMALS ) || defined( SW_VIEWMODE_DEPTH ) || defined( SW_VIEWMODE_OVERDRAW )
 #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else
 #define SW_VIEWMODE_SKIPS_LIGHTING 0
 #endif
+
+static const float kViewModeDepthRange   = 100.0f; // Depth 보기: 이 뷰 공간 깊이(m)에서 흰색
+static const float kViewModeOverdrawStep = 0.08f;  // Overdraw 보기: 한 번 그릴 때 더하는 밝기(12 겹이면 흰색)
+
+/**
+ * @brief 보기 모드가 바꾼 표면 색이다. Lit 에서는 부르지 않는다(SW_VIEWMODE_SKIPS_LIGHTING 이 0).
+ * @details Overdraw 는 알파 0 을 낸다 — PSO 가 프리멀티플라이 블렌드(색 One / InvSrcAlpha)라 알파 0 이 더하기가 된다.
+ *          Depth 는 클립 w(원근 카메라의 뷰 공간 깊이)다. 직교 카메라는 w 가 1 이라 한 색이다.
+ */
+float4 swComputeViewModeColor( float4 shadedColor, float4 albedo, float3 worldNormal, float3 worldPosition )
+{
+#if defined( SW_VIEWMODE_NORMALS )
+	return float4( normalize( worldNormal ) * 0.5f + 0.5f, 1.0f );
+#elif defined( SW_VIEWMODE_DEPTH )
+	const float viewDepth = swComputeClipPosition( float4( worldPosition, 1.0f ), g_ViewProj ).w;
+	return float4( saturate( viewDepth / kViewModeDepthRange ).xxx, 1.0f );
+#elif defined( SW_VIEWMODE_OVERDRAW )
+	return float4( kViewModeOverdrawStep, kViewModeOverdrawStep * 0.5f, kViewModeOverdrawStep * 0.15f, 0.0f );
+#else
+	// Unlit — 셰이더가 조명 없이 만든 색(알베도) 그대로.
+	return float4( albedo.rgb, shadedColor.a );
+#endif
+}
 
 // G버퍼 알베도의 알파는 **셰이딩 모델**이다 — 1 은 조명, 0 은 조명 없이 알베도 그대로(deferredlighting 이 읽는다).
 // 디퍼드 조명 패스는 머티리얼 PSO 가 아니라 뷰 모드를 모르므로, 뷰 모드를 받는 G버퍼 패스가 픽셀마다 적어 넘긴다(언리얼 G버퍼의 ShadingModelID 와 같은 자리).
@@ -803,9 +827,15 @@ struct SwSurfaceOutput
  * @brief 표면을 **패스가 원하는 모양**으로 내보낸다.
  * @details 포워드는 셰이딩한 색 하나, G버퍼는 알베도(알파 = 셰이딩 모델)와 월드 노멀 둘. 노멀 인코딩은 한 군데뿐이어야
  *          한다 — 쓰는 쪽(여기)과 읽는 쪽(deferredlighting)이 어긋나면 조명이 조용히 틀린다.
+ *          보기 모드(Unlit · Normals · Depth · Overdraw)의 색도 여기서 바꾼다. G버퍼는 그 색을 알베도 칸에 셰이딩 모델 Unlit 으로 적어
+ *          디퍼드 조명 패스가 그대로 낸다 — 조명 패스는 보기 모드 변형이 없다.
  */
-SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal )
+SW_SURFACE_OUTPUT swStoreSurface( float4 litColor, float4 albedo, float3 worldNormal, float3 worldPosition )
 {
+#if SW_VIEWMODE_SKIPS_LIGHTING
+	litColor = swComputeViewModeColor( litColor, albedo, worldNormal, worldPosition );
+	albedo   = float4( litColor.rgb, albedo.a );
+#endif
 #if defined( SW_PASS_GBUFFER )
 	SwSurfaceOutput output;
 	output.albedo = float4( albedo.rgb, SW_GBUFFER_SHADING );

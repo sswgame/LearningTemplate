@@ -24,8 +24,9 @@ namespace sw
          */
         [[nodiscard]] bool applyViewModeToDesc( RHIPipelineStateDesc& desc, RenderViewMode viewMode )
         {
-            bool bChanged{ false };
-            if ( viewMode == RenderViewMode::Wireframe )
+            bool                      bChanged{ false };
+            const RenderViewModeInfo& info = getRenderViewModeInfo( viewMode );
+            if ( info._bWireframe )
             {
                 desc._fillMode = RHIFillMode::Wireframe;
                 // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
@@ -33,9 +34,21 @@ namespace sw
                 desc._cullMode = RHICullMode::None;
                 bChanged       = true;
             }
+            if ( info._bAdditiveNoDepth )
+            {
+                // 겹쳐 그린 수를 세려면 가려진 것도 그려야 한다 — 깊이를 쓰지 않고 단색을 더한다(유니티 Overdraw 와 같다).
+                // 깊이 테스트는 남긴다: 패스가 깊이를 클리어(1)하고 아무도 쓰지 않으니 모든 면이 통과한다. 테스트를 끄면 백엔드가 깊이 첨부 없는
+                // PSO 로 만들어(Vulkan 렌더 패스 호환) 깊이를 건 패스에서 검증 오류가 난다. 깊이 프리패스가 있는 파이프라인에서는 보이는 면만 센다.
+                // RHI 에 더하기 블렌드가 따로 없다. 프리멀티플라이(색 One / InvSrcAlpha)에 셰이더가 알파 0 을 내면 그것이 더하기다.
+                desc._bEnableBlend        = 1;
+                desc._bPremultipliedAlpha = SW_TRUE;
+                desc._bEnableDepthWrite   = 0;
+                desc._cullMode            = RHICullMode::None;
+                bChanged                  = true;
+            }
 
-            // Unlit 은 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이라 그림자 샘플링 · 림 라이트까지
-            // 같이 빠진다. define 은 쿠커와 같은 정본(findViewModeDefine)에서 얻는다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
+            // 셰이딩을 바꾸는 모드(Unlit · Normals · Depth · Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
+            // define 은 쿠커와 같은 정본(findViewModeDefine)에서 얻는다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
             const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( viewMode );
             if ( pViewModeDefine == nullptr )
                 return bChanged;
@@ -254,9 +267,14 @@ namespace sw
         if ( _pDevice == nullptr )
             return;
 
-        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 모드는 프레임 시작에 한 번만
-        // 읽는다. 기록 중에 바뀌어도 이 프레임이 고르는 PSO 는 여기서 준비한 집합 안에 있어야 한다.
-        const RenderViewMode viewMode = getViewMode();
+        // 이번 프레임에 만들 변형은 (패스, 퍼뮤테이션, 뷰 모드)로 정해진다. 보기 모드는 뷰마다의 설정이라 이번 프레임에 그리는 뷰들의 모드를 모은다.
+        // 뷰 설정은 프레임 시작에 정해지고 기록 중에 바뀌지 않으므로, 드로우가 고르는 PSO 는 여기서 준비한 집합 안에 있다.
+        uint32 viewModeMask = 1u << static_cast<uint32>( _mainView._settings._viewMode );
+        for ( const unique_ptr<ViewTarget>& pView : _listExtraView )
+        {
+            if ( pView->_bRenderThisFrame == SW_TRUE )
+                viewModeMask |= 1u << static_cast<uint32>( pView->_settings._viewMode );
+        }
 
         // 이번 프레임 배치가 실제로 쓰는 (퍼뮤테이션, 컬 반전) 조합만 본다. 불투명 패스와 반투명 패스는 배치 목록이 다르므로
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
@@ -292,8 +310,8 @@ namespace sw
 
         // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의
         // 조회를 붙잡으면 안 된다. 세 자리가 같은 절차를 반복하던 것을 여기 하나로 모았다.
-        auto ensureVariant = [this, viewMode, &bCreatedVariant]( RHIPipelineStateHandle passPSO, RenderPassType passType,
-                                                                 const GPUShaderPermutation* pPermutation, uint64 permutationHash, bool bReverseCulling )
+        auto ensureVariant = [this, &bCreatedVariant]( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
+                                                       uint64 permutationHash, bool bReverseCulling, RenderViewMode viewMode )
         {
             const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
             if ( _psoCache.hasMaterialPSO( key ) )
@@ -318,19 +336,24 @@ namespace sw
                     ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
                 if ( FrameRendererUtil::drawsMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
                     continue;
-                if ( request._shaderPermutation == kInvalidShaderPermutation )
+                for ( uint32 modeIndex = 0; modeIndex < static_cast<uint32>( RenderViewMode::Count ); ++modeIndex )
                 {
-                    // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드 · 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
-                    // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
-                    const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
-                    if ( bAppliesViewMode || bReverseCulling )
-                        ensureVariant( passPSO, passType, nullptr, 0, bReverseCulling );
-                    continue;
+                    if ( ( viewModeMask & ( 1u << modeIndex ) ) == 0 )
+                        continue;
+                    const RenderViewMode viewMode = static_cast<RenderViewMode>( modeIndex );
+                    if ( request._shaderPermutation == kInvalidShaderPermutation )
+                    {
+                        // 퍼뮤테이션이 없는 배치를 위한 변형. 얹는 것이 뷰 모드 · 컬 반전뿐이다. Lit 이고 거울이 아니면 만들 것이 없다
+                        // (그때는 패스 PSO 가 그대로 정답이고 psoForBatch 도 캐시를 보지 않는다).
+                        const bool bAppliesViewMode = ( viewMode != RenderViewMode::Lit ) && FrameRendererUtil::appliesViewMode( passType );
+                        if ( bAppliesViewMode || bReverseCulling )
+                            ensureVariant( passPSO, passType, nullptr, 0, bReverseCulling, viewMode );
+                        continue;
+                    }
+                    if ( pRequestPermutation == nullptr )
+                        continue;
+                    ensureVariant( passPSO, passType, pRequestPermutation, pRequestPermutation->_hash, bReverseCulling, viewMode );
                 }
-                const GPUShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( request._shaderPermutation );
-                if ( pPermutation == nullptr )
-                    continue;
-                ensureVariant( passPSO, passType, pPermutation, pPermutation->_hash, bReverseCulling );
             }
         }
 
@@ -353,7 +376,8 @@ namespace sw
         if ( passPSO == 0 )
             return passPSO;
 
-        const RenderViewMode viewMode = getViewMode();
+        // 보기 모드는 지금 그리는 뷰의 설정이다(씬 뷰만 Normals 이고 게임 뷰는 Lit 일 수 있다).
+        const RenderViewMode viewMode = _pActiveView->_settings._viewMode;
 
         uint64 permutationHash{ 0 };
         if ( batch._shaderPermutation != kInvalidShaderPermutation )
@@ -393,18 +417,29 @@ namespace sw
         if ( previous == static_cast<uint8>( viewMode ) )
             return;
 
-        // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태인데 바꾸는 주체가 셋이다(툴바 · 커맨드라인 · 코드).
-        // 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
-        // 배포본에서는 SW_LOG_INFO 가 사라지므로 이름표까지 함께 컴파일 아웃한다(안 그러면 미사용 경고).
-#if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
-        static const utf8* s_arrName[] = { "Lit", "Unlit", "Wireframe" };
-        SW_LOG_INFO( "뷰 모드: %#", s_arrName[static_cast<uint8>( viewMode )] );
-#endif
+        // 바뀔 때만 남긴다. 뷰 모드는 화면 전체를 바꾸는 상태다 — 로그가 없으면 "왜 와이어프레임인가" 를 화면만 보고 되짚어야 한다.
+        SW_LOG_INFO( "Main output view mode: %#", getRenderViewModeInfo( viewMode )._pName );
     }
 
     RenderViewMode FrameRenderer::getViewMode() const
     {
         const uint8 raw = _viewMode.load( std::memory_order_relaxed );
+        return ( raw < static_cast<uint8>( RenderViewMode::Count ) ) ? static_cast<RenderViewMode>( raw ) : RenderViewMode::Lit;
+    }
+
+    void FrameRenderer::setSceneViewMode( RenderViewMode viewMode )
+    {
+        if ( viewMode >= RenderViewMode::Count )
+            viewMode = RenderViewMode::Lit;
+        const uint8 previous = _sceneViewMode.exchange( static_cast<uint8>( viewMode ), std::memory_order_relaxed );
+        if ( previous == static_cast<uint8>( viewMode ) )
+            return;
+        SW_LOG_INFO( "Scene view mode: %#", getRenderViewModeInfo( viewMode )._pName );
+    }
+
+    RenderViewMode FrameRenderer::getSceneViewMode() const
+    {
+        const uint8 raw = _sceneViewMode.load( std::memory_order_relaxed );
         return ( raw < static_cast<uint8>( RenderViewMode::Count ) ) ? static_cast<RenderViewMode>( raw ) : RenderViewMode::Lit;
     }
 } // namespace sw

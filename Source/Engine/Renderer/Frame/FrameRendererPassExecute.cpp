@@ -329,9 +329,10 @@ namespace sw
             // 기본 클리어는 표의 값(SSAO 는 흰색 = 가림 없음)이고 없으면 렌더러의 클리어 색이다. 첨부가 클리어 색을 선언했으면 그것이 우선이다.
             const float4 defaultClear = info._pDefaultClear != nullptr ? *info._pDefaultClear : _clearColor;
             const float4 targetClear  = getAttachmentClearColorOrDefault( pTarget->view(), defaultClear );
-            // 후처리를 끈 뷰(CCTV): 효과 패스(SSAO · 블룸 · 외곽선)는 그리지 않는다 — 원본을 그대로 넘기거나(포맷이 같으면 복사) 지우기만 한다(SSAO 는 흰색 = 가림 없음).
+            // 후처리를 끈 뷰(CCTV · 표면 값 보기 모드): 효과 패스(SSAO · 블룸 · 외곽선)는 효과를 걸지 않는다 — 포맷이 같으면 원본을 복사하고,
+            // 다르면 그 패스 셰이더가 SW_PASS_FLAG_SKIP_POST 를 보고 원본을 그대로 낸다(복사는 같은 포맷끼리만 된다). SSAO 는 지우기만 한다(흰색 = 가림 없음).
             // 조명 · 톤맵은 효과가 아니라 그림을 만드는 단계라 그대로 돈다.
-            const bool bSkipEffect = _pActiveView->_settings._bPostProcess == SW_FALSE &&
+            const bool bSkipEffect = _pActiveView->_settings.usesPostProcess() == false &&
                                      ( passType == RenderPassType::SSAO || passType == RenderPassType::Bloom || passType == RenderPassType::Outline );
             if ( bSkipEffect )
             {
@@ -348,6 +349,10 @@ namespace sw
                 {
                     context._pCmd->blitTexture( source, target );
                     (void)markAttachmentCleared( *pTarget );
+                }
+                else if ( passType != RenderPassType::SSAO && source != 0 )
+                {
+                    executeFullscreenPass( pso, *pTarget, targetClear );
                 }
                 else if ( beginColorPass( context, pTarget->view(), "", targetClear, RHIRenderPassLoadOp::Clear, RHIRenderPassLoadOp::Load ) )
                 {
@@ -470,8 +475,9 @@ namespace sw
                 case RenderPassType::MeshOutline:
                 {
                     // 뒤집은 껍질 외곽선 — 불투명 패스가 그린 색 · 깊이 위에, 외곽선을 켠 머티리얼의 배치만 앞면을 컬링해 그린다(drawsBatchInPass).
-                    // 와이어프레임 보기에서는 빠진다(껍질이 선 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
-                    if ( getViewMode() == RenderViewMode::Wireframe )
+                    // 와이어프레임 · 표면 값 보기(Normals · Depth · Overdraw)에서는 빠진다(껍질이 선 · 값 위를 덮는다). 타깃은 선언한 컬러 출력이다(불투명 패스와 같은 규칙).
+                    const RenderViewModeInfo& viewModeInfo = getRenderViewModeInfo( _pActiveView->_settings._viewMode );
+                    if ( viewModeInfo._bWireframe || viewModeInfo._bShowsBuffer )
                         break;
                     const hashed_string& colorTarget = pDeclaredColor != nullptr ? ( *pDeclaredColor )[0]._attachment : attachmentNames()._sceneColor;
                     const float4         sceneClear  = getAttachmentClearColorOrDefault( colorTarget.view(), _clearColor );
@@ -514,18 +520,25 @@ namespace sw
                     // 병렬 기록에서 태스크 스레드가 돌리므로 여기서 레지스트리를 건드리면 안 된다. 히스토리는 뷰마다 하나다.
                     const ViewTarget&      activeView = *_pActiveView;
                     const RHITextureHandle source     = pSrcName != nullptr ? findTransient( pSrcName ) : RHITextureHandle{ 0 };
-                    // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다).
-                    if ( activeView._settings._bPostProcess == SW_FALSE )
+                    // 후처리를 끈 뷰는 시간 누적 없이 원본을 넘긴다(히스토리도 건드리지 않는다). 포맷이 같으면 복사하고, 다르면(원본 R8G8B8A8 · 출력
+                    // R16G16B16A16 — D3D 의 복사는 같은 포맷만 받는다) 아래 컷 프레임과 같이 기록 자리에 원본을 걸어 TAA 셰이더가 원본을 옮기게 한다.
+                    const bool bSkipPost = activeView._settings.usesPostProcess() == false;
+                    if ( bSkipPost )
                     {
-                        const RHITextureHandle target = findTransient( taaTarget.view() );
-                        if ( source != 0 && target != 0 && source != target )
-                            context._pCmd->blitTexture( source, target );
-                        break;
+                        const RHITextureHandle target      = findTransient( taaTarget.view() );
+                        IRHIResourceFactory*   pFactory    = _pDevice->getResourceFactory();
+                        const bool             bSameFormat = source != 0 && target != 0 && pFactory->getTextureFormat( source ) == pFactory->getTextureFormat( target );
+                        if ( bSameFormat || source == 0 || target == 0 || source == target )
+                        {
+                            if ( bSameFormat && source != target )
+                                context._pCmd->blitTexture( source, target );
+                            break;
+                        }
                     }
                     // 컷 프레임(언리얼 `bCameraCut`): 지난 화면의 기록을 버린다 — 이번 프레임은 기록 자리에 **이번 원본**을 걸어 섞어도 이번 그림만 남게
                     // 한다. 원본을 기록 텍스처에 복사하지 않는 것은 포맷이 다를 수 있어서다(원본 R8G8B8A8 · 기록 R16G16B16A16 — D3D 의 복사는 같은
                     // 포맷만 받는다). 패스 끝의 복사(TAA 출력 → 기록)가 기록을 새로 채운다.
-                    const bool bCut = activeView._settings._bCut == SW_TRUE && pSrcName != nullptr;
+                    const bool bCut = ( activeView._settings._bCut == SW_TRUE || bSkipPost ) && pSrcName != nullptr;
                     if ( bCut )
                         registerPassTexture( context, attachmentNames()._gbufferAlbedo, pSrcName );
                     else if ( activeView._taaHistory != 0 )
@@ -541,7 +554,7 @@ namespace sw
                     }
 
                     const RHITextureHandle taaOut = findTransient( taaTarget.view() );
-                    if ( taaOut != 0 && activeView._taaHistory != 0 )
+                    if ( taaOut != 0 && activeView._taaHistory != 0 && bSkipPost == false )
                         context._pCmd->blitTexture( taaOut, activeView._taaHistory );
                     break;
                 }

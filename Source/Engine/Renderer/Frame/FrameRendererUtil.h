@@ -12,37 +12,12 @@
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
 {
-    /**
-     * @enum RenderViewMode
-     * @brief 씬 지오메트리를 어떻게 보여 줄지입니다. 에디터 뷰포트의 Lit/Unlit/Wireframe 입니다.
-     * @details 렌더 상태(채우기 모드)와 셰이더 퍼뮤테이션(조명 항)을 함께 가르는 값이라 어느 한쪽에만
-     *          둘 수 없습니다. `FrameRenderer` 가 PSO 변형 키의 한 축으로 들고 있고, 배치 PSO 를 고를 때
-     *          머티리얼 퍼뮤테이션과 **같은 자리**에서 적용됩니다. 그래서 와이어프레임이 머티리얼 변형을
-     *          잃지 않습니다(반투명 유리가 와이어프레임에서도 반투명 퍼뮤테이션으로 그려집니다).
-     * @note 에디터 전용이 아닙니다. 헤드리스에서도 `-gv_viewMode=<0|1|2>` 로 고를 수 있어 스크린샷
-     *       비교로 검증됩니다. 뷰 모드가 픽셀을 바꾸는지를 에디터를 띄우지 않고 확인할 수 있습니다.
-     */
-    enum class RenderViewMode : uint8
-    {
-        Lit = 0,   ///< 조명 · 그림자를 모두 계산한 기본 화면
-        Unlit,     ///< 알베도만. 조명 항이 셰이더에서 컴파일 아웃됨
-        Wireframe, ///< 삼각형 외곽선만(RHIFillMode::Wireframe)
-
-        Count
-    };
-
-    /**
-     * @brief Unlit 뷰 모드가 셰이더에 넘기는 define 입니다.
-     * @details 여기가 유일한 기준입니다. 이 문자열과 `.hlsl` 의 `#if defined(...)` 가 어긋나면
-     *          컴파일은 되고 화면만 안 바뀝니다(조용한 실패). 셰이더를 더할 때 이 이름을 보십시오.
-     */
-    inline constexpr const utf8* kViewModeUnlitDefine = "SW_VIEWMODE_UNLIT=1";
-
     /** @brief FrameRenderer TU 들이 함께 쓰는 패스 · 어태치먼트 이름과 도우미입니다. */
     struct FrameRendererUtil
     {
@@ -328,7 +303,7 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스에 뷰 모드(Unlit/Wireframe)를 적용하는지 반환합니다.
+         * @brief 이 패스에 뷰 모드(Unlit · Wireframe · Normals · Depth · Overdraw)를 적용하는지 반환합니다.
          * @details 화면 색을 만드는 지오메트리 패스만입니다. 그림자 · 뎁스 프리패스는 **제외합니다**.
          *          와이어프레임으로 그림자를 구우면 그림자가 선 몇 개로 남고, 뎁스 프리패스를
          *          와이어프레임으로 채우면 이후 패스의 뎁스 테스트가 삼각형 내부를 모두 버려 화면이 빕니다.
@@ -345,10 +320,7 @@ namespace sw
          * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 함께 보는 정본입니다. 쿠커는
          *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 쿠킹합니다 — 모드를 더하면 쿠킹하는 목록이 따라옵니다.
          */
-        static const utf8* findViewModeDefine( RenderViewMode viewMode )
-        {
-            return ( viewMode == RenderViewMode::Unlit ) ? kViewModeUnlitDefine : nullptr;
-        }
+        static const utf8* findViewModeDefine( RenderViewMode viewMode ) { return getRenderViewModeInfo( viewMode )._pShaderDefine; }
 
         /**
          * @brief 패스 서술 없이 패스 종류 표만으로 만든 엔진 PSO 에 픽셀 스테이지가 있는지 반환합니다.
