@@ -31,15 +31,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate · AcronymRegistry
 
 import AcronymRegistry as registry  # noqa: E402
-from common import kLintTargetRelDirs, kNotOurCodeDirNames  # noqa: E402
+from common import kLintTargetRelDirs, kNotOurCodeDirNames, lineOf  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 #: 대문자 셋 이상이 이어진 이름 — 규칙 4 후보를 찾는 앞 거르기.
 _kUpperRunRe = re.compile(r"[A-Z]{3,}")
-
-
-def lineOfInternal(text: str, offset: int) -> int:
-    return text.count("\n", 0, offset) + 1
 
 
 def expandNameInternal(text: str, start: int, end: int) -> tuple[int, int]:
@@ -132,7 +128,7 @@ class CheckAcronymSpellingGate(LintGate):
                 continue
             for acronym in registry.changedAcronyms(site.name):
                 if acronym in setEnforced:
-                    listViolation.append(f"{relPath}:{lineOfInternal(text, site.start)}: '{site.name}' → "
+                    listViolation.append(f"{relPath}:{lineOf(text, site.start)}: '{site.name}' → "
                                          f"'{registry.respellName(site.name, (acronym,))}' (약어 {acronym})")
                 else:
                     counterPending[acronym] += 1
@@ -148,7 +144,7 @@ class CheckAcronymSpellingGate(LintGate):
                     continue
                 for run in registry.findAdjacentAcronyms(name):
                     if setEnforced & set(registry.splitIntoAcronyms(run)):
-                        listViolation.append(f"{relPath}:{lineOfInternal(text, start)}: '{name}' — 대문자 약어 {run} 이 이어 붙었습니다"
+                        listViolation.append(f"{relPath}:{lineOf(text, start)}: '{name}' — 대문자 약어 {run} 이 이어 붙었습니다"
                                              f"(한 쪽을 풀어 쓰거나 사이에 낱말을 둡니다, 규칙 4)")
         return listViolation
 

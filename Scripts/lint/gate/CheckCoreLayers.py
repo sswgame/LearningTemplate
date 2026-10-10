@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import blankComments, firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kCorePrefix = "Core/"
@@ -73,38 +73,25 @@ _kHiddenLogUse: dict[str, str] = {
 }
 
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*"(Core/[^"]+)"')
 _kLogUseRe = re.compile(r"\bSW_LOG_(?:ERROR|WARNING|INFO|TRACE|ASSERT|CALLER)\b|\bLogger::")
 
 
-def coreLayerOf(pathAfterCore: str) -> str:
-    """`Core/` 뒤의 경로 → 폴더 이름. 루트 파일이면 빈 이름."""
-    listPart = pathAfterCore.split("/")
-    return listPart[0] if len(listPart) > 1 else ""
-
-
-def stripComments(text: str) -> str:
-    text = re.sub(r"/\*.*?\*/", lambda match: "\n" * match.group(0).count("\n"), text, flags=re.DOTALL)
-    return re.sub(r"//[^\n]*", "", text)
-
-
 def findViolationsInFile(relative: str, text: str) -> list[str]:
-    folder = coreLayerOf(relative[len(_kSourceCorePrefix):])
+    folder = firstFolderAfter(relative, _kSourceCorePrefix)
     if folder == "":
         return []
     if folder not in _kCoreTier:
         return [f"{relative}: 'Core/{folder}/' 는 티어 표(_kCoreTier)에 없는 폴더입니다"]
     tier = _kCoreTier[folder]
     listViolation: list[str] = []
-    for lineNumber, line in enumerate(text.splitlines(), start=1):
-        match = _kIncludeRe.match(line)
-        if match is None:
+    for lineNumber, rawInclude in iterIncludes(text, bQuotedOnly=True):
+        if rawInclude.startswith(_kCorePrefix) is False:
             continue
-        includePath = normalizePath(match.group(1))
+        includePath = normalizePath(rawInclude)
         if includePath in _kRootAggregate:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 폴더 파일이 루트 모음 헤더를 include 합니다")
             continue
-        includeFolder = coreLayerOf(includePath[len(_kCorePrefix):])
+        includeFolder = firstFolderAfter(includePath, _kCorePrefix)
         if includeFolder == folder or includeFolder == "":
             continue
         includeTier = _kCoreTier.get(includeFolder)
@@ -112,7 +99,7 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 티어 표에 없는 폴더입니다")
         elif includeTier >= tier:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 티어 {tier}('{folder}')가 티어 {includeTier}('{includeFolder}')를 include 합니다")
-    if tier < _kCoreTier["Log"] and relative not in _kHiddenLogUse and _kLogUseRe.search(stripComments(text)):
+    if tier < _kCoreTier["Log"] and relative not in _kHiddenLogUse and _kLogUseRe.search(blankComments(text)):
         listViolation.append(f"{relative}: 티어 {tier}('{folder}')가 로그 매크로를 씁니다 — Log(티어 {_kCoreTier['Log']}) 아래 층은 로그를 쓰지 않습니다")
     return listViolation
 

@@ -29,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import blankMatch, collectSourceFiles, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kListScanRoot = kLintTargetRelDirs
@@ -61,17 +61,12 @@ def normalizeTypeInternal(typeText: str) -> str:
     return typeName.removeprefix("sw::")
 
 
-def blankInternal(match: re.Match) -> str:
-    """맞은 부분을 줄바꿈만 남기고 공백으로 바꿉니다."""
-    return re.sub(r"[^\n]", " ", match.group(0))
-
-
 def stripNonCodeInternal(text: str) -> str:
     """주석 · 문자열 · `#define` 을 지웁니다. 매크로 정의 안의 이름과 설명 문자열 안의 쉼표를 세지 않게 합니다."""
-    text = _kBlockCommentRe.sub(blankInternal, text)
-    text = _kLineCommentRe.sub(blankInternal, text)
-    text = _kStringRe.sub(blankInternal, text)
-    return _kDefineRe.sub(blankInternal, text)
+    text = _kBlockCommentRe.sub(blankMatch, text)
+    text = _kLineCommentRe.sub(blankMatch, text)
+    text = _kStringRe.sub(blankMatch, text)
+    return _kDefineRe.sub(blankMatch, text)
 
 
 def findClosingParenInternal(text: str, openIndex: int) -> int:

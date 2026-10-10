@@ -36,7 +36,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import iterIncludes, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 
@@ -99,7 +99,6 @@ _kListCmakeRoot = kLintTargetRelDirs + ("cmake",)
 _kCmakeSuffixes = (".cmake",)
 _kCmakeFileNames = ("CMakeLists.txt",)
 
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
 _kLinkCallRe = re.compile(r"\btarget_link_libraries\s*\(", re.IGNORECASE)
 
 
@@ -109,11 +108,8 @@ def findIncludeViolations(repositoryRoot: Path, listFileArgument: list[str] | No
     listViolation: list[str] = []
     for path, text in LintGate.readFiles(listPath):
         relative = normalizePath(str(path.relative_to(repositoryRoot)))
-        for lineNumber, line in enumerate(text.splitlines(), start=1):
-            match = _kIncludeRe.match(line)
-            if match is None:
-                continue
-            includePath = normalizePath(match.group(1))
+        for lineNumber, rawInclude in iterIncludes(text):
+            includePath = normalizePath(rawInclude)
             for rule in _kListLibraryRule:
                 if includePath.startswith(rule.listIncludePrefix) and relative.startswith(rule.listAllowedRoot) is False:
                     listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> {rule.name} 헤더는 {' · '.join(rule.listAllowedRoot)} 안에서만 include 합니다")

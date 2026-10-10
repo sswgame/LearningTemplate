@@ -21,14 +21,13 @@ X11 은 `Convex` · `None` · `Success` · `KeyPress` · `Always` 같은 흔한 
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import iterIncludes, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: X11 매크로를 정의하는 시스템 헤더의 접두어입니다.
@@ -43,7 +42,6 @@ _kListSourceRoot = kLintTargetRelDirs
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
 _kTranslationUnitSuffixes = (".c", ".cc", ".cpp", ".cxx")
 
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
 
 
 def isX11System(includePath: str) -> bool:
@@ -59,11 +57,8 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     lastUndefLine = 0
     firstX11Line = 0
     listThirdParty: list[tuple[int, str]] = []
-    for lineNumber, line in enumerate(text.splitlines(), start=1):
-        match = _kIncludeRe.match(line)
-        if match is None:
-            continue
-        includePath = normalizePath(match.group(1))
+    for lineNumber, rawInclude in iterIncludes(text):
+        includePath = normalizePath(rawInclude)
         bRaw = isX11System(includePath)
         if bRaw or includePath == _kX11Wrapper:
             firstX11Line = firstX11Line or lineNumber

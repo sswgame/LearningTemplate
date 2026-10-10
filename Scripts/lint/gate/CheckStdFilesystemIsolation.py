@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import kLintTargetRelDirs, normalizePath  # noqa: E402
+from common import blankComments, kLintTargetRelDirs, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: `std::filesystem` 을 써도 되는 유일한 폴더입니다.
@@ -34,14 +34,6 @@ _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx", ".ipp")
 
 _kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"](experimental/)?filesystem[>"]')
 _kTokenRe = re.compile(r"\bstd\s*::\s*(experimental\s*::\s*)?filesystem\b")
-_kBlockCommentRe = re.compile(r"/\*.*?\*/", re.DOTALL)
-_kLineCommentRe = re.compile(r"//[^\n]*")
-
-
-def stripComments(text: str) -> str:
-    """블록 · 줄 주석을 지웁니다. 줄 번호가 그대로이도록 블록 주석은 같은 수의 줄바꿈으로 바꿉니다."""
-    text = _kBlockCommentRe.sub(lambda match: "\n" * match.group(0).count("\n"), text)
-    return _kLineCommentRe.sub("", text)
 
 
 def findViolationsInFile(relative: str, text: str) -> list[str]:
@@ -49,7 +41,7 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     if relative.startswith(_kStdFilesystemHome):
         return []
     listViolation: list[str] = []
-    for lineNumber, line in enumerate(stripComments(text).splitlines(), start=1):
+    for lineNumber, line in enumerate(blankComments(text).splitlines(), start=1):
         if _kIncludeRe.match(line) is not None:
             listViolation.append(f"{relative}:{lineNumber}: <filesystem> -> {_kStdFilesystemHome} 안에서만 include 합니다")
         elif _kTokenRe.search(line) is not None:

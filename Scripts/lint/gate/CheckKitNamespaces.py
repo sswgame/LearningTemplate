@@ -32,7 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankComments, kLintTargetRelDirs  # noqa: E402
+from common import blankComments, kLintTargetRelDirs, lineOf  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kTagRe = re.compile(r"\b(k[A-Z]\w*Tag)\s*=\s*(?:sw::)?FourCcUtil::make\s*\(\s*\"([^\"\n]{4})\"\s*\)")
@@ -59,10 +59,6 @@ def findKitNameInternal(relativePath: str) -> str:
         return ""
     listPart = relativePath[len(_kKitPrefix):].split("/")
     return listPart[2] if len(listPart) >= 4 else ""
-
-
-def lineOfInternal(text: str, offset: int) -> int:
-    return text.count("\n", 0, offset) + 1
 
 
 class CheckKitNamespacesGate(LintGate):
@@ -169,9 +165,9 @@ class CheckKitNamespacesGate(LintGate):
             if "Tag" in text:
                 code1 = blankComments(text)
                 for match in _kTagRe.finditer(code1):
-                    mapTagToSite[match.group(2)].append(f"{relativePath}:{lineOfInternal(code1, match.start())}")
+                    mapTagToSite[match.group(2)].append(f"{relativePath}:{lineOf(code1, match.start())}")
                 for match in _kHexTagRe.finditer(code1):
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code1, match.start())}: {match.group(1)} 를 16 진 리터럴로 적었습니다 — "
+                    listViolation.append(f"{relativePath}:{lineOf(code1, match.start())}: {match.group(1)} 를 16 진 리터럴로 적었습니다 — "
                                          f"FourCcUtil::make( \"ABCD\" ) 로")
             bKit  = relativePath.startswith(_kKitPrefix)
             bGame = relativePath.startswith(_kGamePrefix)
@@ -181,17 +177,17 @@ class CheckKitNamespacesGate(LintGate):
             code = blankComments(text)
             # 7) 로그 범주 — GameFramework · Games
             for match in _kLogCallerRe.finditer(code):
-                mapLogCallerToSite[match.group(1)].append(f"{relativePath}:{lineOfInternal(code, match.start())}")
+                mapLogCallerToSite[match.group(1)].append(f"{relativePath}:{lineOf(code, match.start())}")
             # 9) 게임도 키를 직접 읽지 않는다
             if bGame:
                 for match in _kRawKeyRe.finditer(code):
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 게임이 키를 직접 읽습니다({match.group(0).strip()}) — "
+                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임이 키를 직접 읽습니다({match.group(0).strip()}) — "
                                          f"팩의 입력 맵(data/<게임>.input.xml) 액션으로 읽으세요")
             if bKit is False:
                 continue
             # 2) · 3) 키트
             for match in _kRawKeyRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 키를 직접 읽습니다({match.group(0).strip()}) — "
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 키를 직접 읽습니다({match.group(0).strip()}) — "
                                      f"입력 맵 액션을 키트 설정 칸으로 받으세요")
             # 5) 기반 공유 상태를 값으로 든다(헤더의 멤버)
             if relativePath.endswith(".h"):
@@ -207,30 +203,30 @@ class CheckKitNamespacesGate(LintGate):
                     if f"{relativePath}:{member}" in self.mapExemption:
                         self.useExemption(f"{relativePath}:{member}")
                         continue
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
+                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 공유 상태 {match.group(1)} 를 값으로 듭니다({member}) — "
                                          f"`const GameStateRefs&` 로 빌리세요(정말 제 것이면 mapExemption 에 까닭과 함께)")
             # 6) 빌린 객체의 알림
             for match in _kBorrowedDrainRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 빌린 객체의 알림을 꺼냅니다 — "
                                      f"알림은 게임 화면의 것이다, 상태(getStatus …)를 보세요")
             # 8) 전역 변수
             for match in _kGlobalVariableRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 전역 변수를 정의합니다 — "
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 전역 변수를 정의합니다 — "
                                      f"스위치는 게임 · 엔진에, 키트는 설정 칸으로 받으세요")
             for match in _kActionLiteralRe.finditer(code):
-                listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 키트가 입력 맵 액션 이름을 글자로 박았습니다 — "
+                listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 키트가 입력 맵 액션 이름을 글자로 박았습니다 — "
                                      f"키트 설정 칸(hashed_string)으로 받으세요")
             kitName = findKitNameInternal(relativePath)
             for match in _kCustomPropertyRe.finditer(code):
                 key = match.group(1)
                 if kitName and not key.startswith(kitName + "."):
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 게임 설정 칸 '{key}' 에 키트 접두가 없습니다 — "
+                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 게임 설정 칸 '{key}' 에 키트 접두가 없습니다 — "
                                          f"'{kitName}.{key}'")
             for match in _kFactionLiteralRe.finditer(code):
                 factionID = next(group for group in match.groups() if group is not None)
                 prefix = factionID.split(".", 1)[0] if "." in factionID else ""
                 if kitName and (prefix == "" or prefix.islower() is False or prefix not in kitName.lower()):
-                    listViolation.append(f"{relativePath}:{lineOfInternal(code, match.start())}: 평판 세력 '{factionID}' 에 키트 접두가 없습니다 — "
+                    listViolation.append(f"{relativePath}:{lineOf(code, match.start())}: 평판 세력 '{factionID}' 에 키트 접두가 없습니다 — "
                                          f"'<{kitName} 의 소문자 낱말>.{factionID}'")
         for tagText, listSite in sorted(mapTagToSite.items()):
             if len(listSite) > 1:

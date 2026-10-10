@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from xml.etree import ElementTree
 
+from .CodeText import blankCommentsAndLiterals, blankMatch
 from .ConfigCatalog import (ConfigFileEntry, kKeyStyleJsonMember, kKeyStyleKeyTable, kKeyStyleXmlElementBare, kKeyStyleXmlMember,
                             kListConfigFile, kListLayerOrder, kListResourceSettingPattern, kSetConfigFolderNonConfig)
 
@@ -44,18 +45,17 @@ _kListSkipPart = ("/ThirdParty/", "/build/", "/Tools/vcpkg/", "/.git/")
 # ------------------------------------------------------------------------------
 # 1) C++ 글 다루기 — 주석 · 문자열을 같은 길이의 공백으로 지워 괄호 깊이를 센다
 # ------------------------------------------------------------------------------
-_kCommentOrLiteralRe = re.compile(r"//[^\n]*|/\*.*?\*/|\"(?:\\.|[^\"\\\n])*\"|'(?:\\.|[^'\\\n])*'", re.DOTALL)
 _kCommentRe = re.compile(r"//[^\n]*|/\*.*?\*/", re.DOTALL)
 
 
 def blankCodeInternal(text: str, bKeepLiterals: bool = False) -> str:
-    """주석(과 `bKeepLiterals` 가 아니면 문자열)을 줄바꿈만 남긴 공백으로 바꿉니다. 길이와 위치는 그대로입니다."""
-    pattern = _kCommentRe if bKeepLiterals else _kCommentOrLiteralRe
-
-    def blankInternal(match: re.Match) -> str:
-        return re.sub(r"[^\n]", " ", match.group(0))
-
-    return pattern.sub(blankInternal, text)
+    """
+    주석(과 `bKeepLiterals` 가 아니면 문자열)을 줄바꿈만 남긴 공백으로 바꿉니다. 길이와 위치는 그대로입니다.
+    `bKeepLiterals` 는 문자열 안의 `//` 도 주석으로 읽는다(`CodeText.blankComments` 와 다르다) — 생성 문서가 그 결과에 맞춰져 있다.
+    """
+    if bKeepLiterals:
+        return _kCommentRe.sub(blankMatch, text)
+    return blankCommentsAndLiterals(text)
 
 
 def findClosingInternal(blanked: str, openIndex: int, openChar: str, closeChar: str) -> int:

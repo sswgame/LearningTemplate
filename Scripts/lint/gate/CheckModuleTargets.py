@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,7 +29,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import IncludeResolver, iterIncludes, normalizePath  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
 
 _kTargetWords = ("Client", "Server")
@@ -56,7 +55,6 @@ _kListFolderTarget = (
     ("Source/RuntimeAPI/Export/EditorModuleExports.h", frozenset({"Client"})),
 )
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".c", ".cc", ".cpp", ".cxx")
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*"([^"]+)"')
 
 
 @dataclass(frozen=True)
@@ -153,26 +151,19 @@ def findOwner(listOwner: list[TargetOwner], relative: str) -> TargetOwner | None
 
 def findIncludeViolations(repositoryRoot: Path, listOwner: list[TargetOwner]) -> list[str]:
     listAllOwner = listOwner + [TargetOwner(label=folder.rstrip("/"), folder=folder, setTarget=setTarget) for folder, setTarget in _kListFolderTarget]
-    sourceRoot = repositoryRoot / "Source"
-    resolvedRoot = repositoryRoot.resolve()
+    resolver = IncludeResolver(repositoryRoot, "Source")
     listPath = LintGate.selectTargetFiles(repositoryRoot, None, listScanRoot=("Source",), suffixes=_kSourceSuffixes)
     listViolation: list[str] = []
-    for path, text in LintGate.readFiles(listPath):
-        relative = normalizePath(str(path.relative_to(repositoryRoot)))
+    for path, text in LintGate.readFiles(listPath, mustContain="#"):
+        relative = path.relative_to(repositoryRoot).as_posix()
         owner = findOwner(listAllOwner, relative)
         if owner is None:
             continue
-        for lineNumber, line in enumerate(text.splitlines(), start=1):
-            match = _kIncludeRe.match(line)
-            if match is None:
+        for lineNumber, rawInclude in iterIncludes(text, bQuotedOnly=True):
+            includePath = normalizePath(rawInclude)
+            includedRelative = resolver.resolveInclude(relative, includePath)
+            if includedRelative is None:
                 continue
-            includePath = normalizePath(match.group(1))
-            candidate = path.parent / includePath
-            if candidate.is_file() is False:
-                candidate = sourceRoot / includePath
-            if candidate.is_file() is False:
-                continue
-            includedRelative = normalizePath(str(candidate.resolve().relative_to(resolvedRoot)))
             includedOwner = findOwner(listAllOwner, includedRelative)
             if includedOwner is None or includedOwner is owner:
                 continue

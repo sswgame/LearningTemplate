@@ -17,14 +17,13 @@ Core 네트워크 층 검사 — `Source/Core/Network/` 의 폴더가 곧 층이
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import normalizePath  # noqa: E402
+from common import firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kNetworkPrefix = "Core/Network/"
@@ -41,29 +40,19 @@ _kNetworkTier: dict[str, int] = {
 }
 
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp")
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]')
-
-
-def findFolderOf(pathAfterNetwork: str) -> str:
-    """`Core/Network/` 뒤의 경로 → 폴더 이름(뿌리 파일이면 빈 이름)입니다."""
-    listPart = pathAfterNetwork.split("/")
-    return listPart[0] if len(listPart) > 1 else ""
 
 
 def findViolationsInFile(relative: str, text: str) -> list[str]:
-    folder = findFolderOf(relative[len(_kSourceNetworkPrefix):])
+    folder = firstFolderAfter(relative, _kSourceNetworkPrefix)
     if folder not in _kNetworkTier:
         return [f"{relative}: 'Core/Network/{folder}/' 는 층 표에 없는 폴더입니다"]
     tier = _kNetworkTier[folder]
     listViolation: list[str] = []
-    for lineNumber, line in enumerate(text.splitlines(), start=1):
-        match = _kIncludeRe.match(line)
-        if match is None:
-            continue
-        includePath = normalizePath(match.group(1))
+    for lineNumber, rawInclude in iterIncludes(text):
+        includePath = normalizePath(rawInclude)
         if includePath.startswith(_kNetworkPrefix) is False:
             continue
-        includeFolder = findFolderOf(includePath[len(_kNetworkPrefix):])
+        includeFolder = firstFolderAfter(includePath, _kNetworkPrefix)
         includeTier = _kNetworkTier.get(includeFolder)
         if includeTier is None:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 층 표에 없는 폴더입니다")

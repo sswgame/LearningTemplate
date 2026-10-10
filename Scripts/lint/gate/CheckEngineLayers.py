@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import functools
-import re
 import sys
 from pathlib import Path
 
@@ -44,12 +43,12 @@ from common import (  # noqa: E402
     kDirSourceRuntimeAPI,
     kDirSourceServer,
     kFileEngineServices,
+    iterIncludes,
     mapConcurrent,
     normalizePath,
     startsWithPathComponent,
 )
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 
 @functools.lru_cache(maxsize=None)
@@ -235,17 +234,18 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         raise GateError(f"읽기 실패: {relativeFilePath}: {exception}") from exception
 
     fileViolations: list[str] = []
+    listRawInclude = [rawInclude for _, rawInclude in iterIncludes(text)]
 
     for rulePrefix, bannedList in _kForbiddenRules:
         if not startsWithPathComponent(relativeFilePath, rulePrefix):
             continue
-        for includePath in _kIncludeRe.findall(text):
+        for includePath in listRawInclude:
             normalizedInclude = normalizePath(includePath)
             for bannedPattern in bannedList:
                 if includeHitsBanInternal(normalizedInclude, bannedPattern):
                     fileViolations.append(f'{relativeFilePath}: #include "{includePath}"  (금지: {bannedPattern})')
 
-    listInclude = [normalizePath(includePath) for includePath in _kIncludeRe.findall(text)]
+    listInclude = [normalizePath(includePath) for includePath in listRawInclude]
     for rulePrefix, listBannedPrefix in _kForbiddenPrefixRules:
         if not startsWithPathComponent(relativeFilePath, rulePrefix):
             continue
@@ -278,7 +278,7 @@ def processFile(filePath: Path, repositoryRoot: Path) -> list[str]:
         fileViolations.append(f"{relativeFilePath}: Engine 최상위 폴더 '{sourceLayer}' 가 티어 표(_kEngineTier)에 없습니다.")
         return fileViolations
 
-    for includePath in _kIncludeRe.findall(text):
+    for includePath in listRawInclude:
         normalizedInclude = normalizePath(includePath)
         if normalizedInclude.startswith("Engine/") is False:
             continue

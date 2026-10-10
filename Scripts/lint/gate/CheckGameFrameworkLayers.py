@@ -25,17 +25,14 @@ GameFramework 층 검사 — 기반의 층 · 폴더 순서(DAG)와 키트의 �
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import collectSourceFiles, kDirSourceGameFramework  # noqa: E402
+from common import collectSourceFiles, iterIncludes, kDirSourceGameFramework  # noqa: E402
 from LintGate import GateError, GateResult, LintGate  # noqa: E402
-
-_kIncludeRe = re.compile(r'^\s*#\s*include\s*[<"]([^>"]+)[>"]', re.MULTILINE)
 
 _kKitsFolderName = "Kits"
 _kBaseFolderName = "Base"
@@ -194,7 +191,7 @@ def checkFileInternal(relativeFilePath: str, text: str) -> list[str]:
         listViolation.append(f"{relativeFilePath}: 기반 '{sourceName}' 가 층 표(_kBaseLayer) · 폴더 순서 표(_kBaseFolderOrder)에 없습니다"
                              " — 기반 파일은 Base/<층>/<폴더>/ 에 둔다")
         return listViolation
-    for includePath in _kIncludeRe.findall(text):
+    for _, includePath in iterIncludes(text):
         include = includePath.replace("\\", "/")
         if include.startswith(_kForbiddenPrefixes):
             listViolation.append(f'{relativeFilePath}: #include "{includePath}"  (GameFramework 는 Games · Editor 를 모른다)')

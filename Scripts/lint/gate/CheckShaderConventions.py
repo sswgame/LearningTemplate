@@ -33,7 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
-from common import blankCommentsAndLiterals  # noqa: E402
+from common import blankCommentsAndLiterals, blankMatch, lineOf  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 셰이더 확장자.
@@ -111,15 +111,6 @@ kDeclareMacroRe = re.compile(r"\b(?P<macro>SW_DECLARE_\w+)\s*\((?P<args>[^()]*(?
 kGuardRe = re.compile(r"^[ \t]*#[ \t]*ifndef[ \t]+(?P<name>\w+)[ \t]*\n[ \t]*#[ \t]*define[ \t]+(?P=name)\b", re.MULTILINE)
 kStructBodyRe = re.compile(r"\bstruct\s+\w+\s*\{|\bSW_MATERIAL_BEGIN\s*\{")
 kCbufferBodyRe = re.compile(r"\bcbuffer\s+\w+[^{;]*\{|\bSW_DECLARE_CBUFFER\s*\([^()]*\)\s*\{")
-
-
-def blankInternal(match: re.Match) -> str:
-    """일치한 글을 같은 길이의 공백으로 바꾼다(줄바꿈은 남겨 줄 번호 · 오프셋을 지킨다)."""
-    return re.sub(r"[^\n]", " ", match.group(0))
-
-
-def lineOfInternal(text: str, offset: int) -> int:
-    return text.count("\n", 0, offset) + 1
 
 
 def computeDepthMapInternal(code: str) -> list[int]:
@@ -232,14 +223,14 @@ def checkShaderTextInternal(text: str, relPath: str) -> list[str]:
     listViolation: list[str] = []
     bSharedHeader = relPath.endswith(".hlsli")
     code = blankCommentsAndLiterals(text)
-    codeBody = kDirectiveRe.sub(blankInternal, code)   # 지시문까지 지운 글 — 깊이 · 함수 · 선언은 이것으로 본다
+    codeBody = kDirectiveRe.sub(blankMatch, code)   # 지시문까지 지운 글 — 깊이 · 함수 · 선언은 이것으로 본다
     listDepth = computeDepthMapInternal(codeBody)
     listStructSpan = computeBodySpanInternal(codeBody, kStructBodyRe)
     listCbufferSpan = computeBodySpanInternal(codeBody, kCbufferBodyRe)
     listParamSpan: list[tuple[int, int]] = []
 
     def report(offset: int, message: str) -> None:
-        listViolation.append(f"{relPath}:{lineOfInternal(code, offset)} {message} — AGENTS.md '### HLSL'")
+        listViolation.append(f"{relPath}:{lineOf(code, offset)} {message} — AGENTS.md '### HLSL'")
 
     # 함수와 매개변수
     for match in kFunctionRe.finditer(codeBody):

@@ -27,7 +27,7 @@ from typing import Iterable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
-from common.CodeText import blankCommentsAndLiterals  # noqa: E402
+from common.CodeText import blankCommentsAndLiterals, blankMatch  # noqa: E402
 
 #: 등록된 약어(대문자 철자). 계획 1절의 목록 + 폴더 표(2-2)의 `RPG` · `JRPG`.
 kAcronym: tuple[str, ...] = (
@@ -265,12 +265,9 @@ def splitIntoAcronyms(run: str) -> tuple[str, ...]:
 
 def maskCode(text: str) -> str:
     """주석 · 문자열 · 원시 문자열 · `#include` 같은 글 줄을 같은 길이의 공백으로 가립니다(줄바꿈은 남긴다)."""
-    def blank(match: re.Match[str]) -> str:
-        return "\n".join(" " * len(part) for part in match.group(0).split("\n"))
-
-    masked = _kRawStringRe.sub(blank, text)
+    masked = _kRawStringRe.sub(blankMatch, text)
     masked = blankCommentsAndLiterals(masked)
-    return _kDirectiveTextRe.sub(blank, masked)
+    return _kDirectiveTextRe.sub(blankMatch, masked)
 
 
 @dataclass(frozen=True)
