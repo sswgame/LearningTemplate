@@ -90,6 +90,15 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
+namespace sw::editor
+{
+    /** @brief 선택 상자 시각화(`Visualizers/SelectionBoundsVisualizer.cpp`)가 지난 프레임에 그린 상자 수입니다 — 탐침 `Editor.SelectionOutlineBoxes`. */
+    struct SW_EDITOR_API EditorSelectionBounds
+    {
+        static uint32 getDrawnBoxCount();
+    };
+} // namespace sw::editor
+
 /**
  * @brief 뷰포트 시각화를 그 시각화의 .cpp 에서 등록합니다.
  * @param name         파일 안에서 유일한 이름 조각(변수 이름용)

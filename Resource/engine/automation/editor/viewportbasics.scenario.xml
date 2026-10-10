@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 뷰포트 조작 기본기(N1): 메시 오브젝트를 고르면 씬 뷰에 선택 상자가 그려지고(Editor.SelectionOutlineBoxes), 씬 뷰 위에서 E · R · W · Q 로
+  기즈모 모드가 바뀐다. 키패드 7 은 위에서 보는 직교 보기, 5 는 원근으로 되돌린다. Shift+Space 는 씬 뷰를 최대화하고(다른 패널이 닫힘) 다시 누르면 되살린다.
+  키 입력은 씬 뷰의 호버를 보므로 가운데 단추를 씬 뷰 빈 곳에 누른 채 둔다(state="down" 이 커서를 그 자리에 붙잡는다 — 가운데 단추는 뷰포트가 쓰지 않는다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/viewportbasics.scenario.xml -dx12
+-->
+<Scenario name="editor.viewportbasics" fixedDelta="0.0166667" timeoutFrames="500" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="50"><DevCommand line="select.type MeshComponent"/></At>
+	<At frame="60"><EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/></At>
+	<At frame="75">
+		<Expect probe="Editor.SelectionOutlineBoxes" atLeast="1"/>
+		<Variable name="gv_editorProbePanel" value="hierarchy"/>
+	</At>
+	<At frame="80"><EditorKey key="E"/></At>
+	<At frame="90"><Expect probe="Editor.GizmoOperation" equals="1"/></At>
+	<At frame="95"><EditorKey key="R"/></At>
+	<At frame="105"><Expect probe="Editor.GizmoOperation" equals="2"/></At>
+	<At frame="110"><EditorKey key="Q"/></At>
+	<At frame="120"><Expect probe="Editor.GizmoOperation" equals="0"/></At>
+	<At frame="125"><EditorKey key="Keypad7"/></At>
+	<At frame="135"><Expect probe="Editor.SceneViewOrthographic" equals="1"/></At>
+	<At frame="140"><EditorKey key="Keypad5"/></At>
+	<At frame="150"><Expect probe="Editor.SceneViewOrthographic" equals="0"/></At>
+	<At frame="155"><EditorKey key="Shift+Space"/></At>
+	<At frame="175">
+		<Expect probe="Editor.SceneViewMaximized" equals="1"/>
+		<Expect probe="Editor.PanelOpen" equals="0"/>
+	</At>
+	<At frame="180"><EditorClick mark="sceneView.canvas" button="2" state="up"/></At>
+	<At frame="185"><EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/></At>
+	<At frame="195"><EditorKey key="Shift+Space"/></At>
+	<At frame="220">
+		<Expect probe="Editor.SceneViewMaximized" equals="0"/>
+		<Expect probe="Editor.PanelOpen" equals="1"/>
+	</At>
+	<At frame="200"><EditorClick mark="toolbar.play" button="2" state="up"/></At>
+	<At frame="225"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

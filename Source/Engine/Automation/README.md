@@ -230,6 +230,8 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.HierarchyRowIcon` | `gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘 코드 포인트 |
 | `Editor.ObjectActive`, `Editor.ObjectHiddenInEditor` | `gv_editorProbeObject` 이름 오브젝트의 자기 활성 비트, 에디터에서만 숨김(1 · 0) |
 | `Editor.SelectedComponentCount` | 주 선택 오브젝트의 컴포넌트 수 |
+| `Editor.SceneViewOrthographic`, `Editor.SceneViewMaximized` | 씬 뷰가 직교 보기면 1, 최대화했으면 1 |
+| `Editor.SelectionOutlineBoxes` | 씬 뷰가 지난 프레임에 그린 선택 상자 수 |
 | `Editor.GizmoOperation` | 기즈모 조작(0 이동 · 1 회전 · 2 크기) |
 | `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |

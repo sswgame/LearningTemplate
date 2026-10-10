@@ -983,6 +983,41 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 씬 뷰 클라이언트입니다(씬 뷰 패널이 없으면 nullptr). */
+            static const EditorViewportClient* findSceneViewClient()
+            {
+                EditorContext*        pContext = EditorContext::get();
+                const SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<const SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) ) : nullptr;
+                return pPanel != nullptr ? &pPanel->getViewportClient() : nullptr;
+            }
+
+            /** @brief 씬 뷰가 직교 보기면 1 입니다. */
+            [[nodiscard]] static bool readSceneViewOrthographic( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                outValue = pClient->isOrthographicView() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 씬 뷰를 최대화했으면 1 입니다. */
+            [[nodiscard]] static bool readSceneViewMaximized( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                outValue = pClient->isMaximized() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 선택 상자 시각화가 지난 프레임에 그린 상자 수입니다. */
+            [[nodiscard]] static bool readSelectionOutlineBoxes( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( EditorSelectionBounds::getDrawnBoxCount() );
+                return true;
+            }
+
             /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1164,6 +1199,12 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readObjectHiddenInEditor );
     SW_AUTOMATION_PROBE( editorSelectedComponentCount, "Editor.SelectedComponentCount", "Components on the primary selection",
                          &EditorScenarioStepsInternal::readSelectedComponentCount );
+    SW_AUTOMATION_PROBE( editorSceneViewOrthographic, "Editor.SceneViewOrthographic", "1 when the scene view uses an orthographic axis view",
+                         &EditorScenarioStepsInternal::readSceneViewOrthographic );
+    SW_AUTOMATION_PROBE( editorSceneViewMaximized, "Editor.SceneViewMaximized", "1 while the scene view is maximized (Shift+Space)",
+                         &EditorScenarioStepsInternal::readSceneViewMaximized );
+    SW_AUTOMATION_PROBE( editorSelectionOutlineBoxes, "Editor.SelectionOutlineBoxes", "Selection boxes the scene view drew in the last frame",
+                         &EditorScenarioStepsInternal::readSelectionOutlineBoxes );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );

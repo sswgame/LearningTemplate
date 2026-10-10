@@ -16,12 +16,14 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
@@ -177,8 +179,11 @@ namespace sw::editor
         , _arrGizmoGroupMatrix{}
         , _lastGizmoFrame{ -1 }
         , _lastGizmoObjectCount{ 0 }
+        , _orthoHeight{ 10.0f }
         , _bRulerActive{ SW_FALSE }
         , _bGizmoTracking{ SW_FALSE }
+        , _bOrthographicView{ SW_FALSE }
+        , _bMaximized{ SW_FALSE }
         , _reservedGizmo{ 0 }
     {
         // 어떤 시각화가 기본으로 켜지는지는 시각화 등록 줄이 정한다. 스냅 · 카메라 속도 · 표시 기본값은 환경설정(Editor/Viewport)에서 온다.
@@ -274,12 +279,16 @@ namespace sw::editor
 
                 if ( ImGui::IsKeyPressed( ImGuiKey_F, false ) && io.KeyCtrl == false && io.KeyAlt == false )
                     frameSelected();
+                if ( io.MouseDown[1] == false )
+                    processShortcutKeys();
             }
 
             if ( io.KeyAlt )
                 processOrbitInput();
             else if ( io.MouseDown[1] )
                 processFlyInput( deltaTime );
+            else if ( _bOrthographicView == SW_TRUE && bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f )
+                _orthoHeight = MathUtil::clamp( _orthoHeight * MathUtil::pow( 0.9f, io.MouseWheel ), 0.5f, 1000.0f ); // 직교 보기의 휠은 확대
         }
 
         CameraComponent* pCam = EditorViewportClientInternal::getSceneViewCamera();
@@ -300,6 +309,8 @@ namespace sw::editor
                 }
             }
             pCam->setLocalPosition( _cameraPos );
+            pCam->setOrthographic( _bOrthographicView == SW_TRUE );
+            pCam->setOrthoHeight( _orthoHeight );
             const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
             const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
             const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ),
@@ -342,8 +353,99 @@ namespace sw::editor
         if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
             moveDir -= up;
 
+        // 오른쪽 단추를 누른 채 휠로 비행 속도를 바꾼다(언리얼 · 유니티) — 툴바 슬라이더와 같은 값이다.
+        if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
+            _toolbarSettings._cameraSpeed = MathUtil::clamp( _toolbarSettings._cameraSpeed * MathUtil::pow( 1.2f, io.MouseWheel ), 0.5f, 20.0f );
+        // 직교 보기에서 날기 시작하면 원근으로 돌아간다(Godot 의 직교 보기와 같다 — 직교로 둘러보기는 의미가 적다).
+        _bOrthographicView = SW_FALSE;
+
         const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
         _cameraPos += moveDir * speed;
+    }
+
+    void EditorViewportClient::processShortcutKeys()
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        if ( io.KeyCtrl || io.KeyAlt )
+            return;
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr )
+            return;
+        // 기즈모 모드(유니티 · 언리얼 · Godot 모두 W · E · R). Q 와 Space 는 다음 모드로 돈다(Space 는 언리얼).
+        EditorWorkspace& ws = pContext->getWorkspace();
+        if ( io.KeyShift == false )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_W, false ) )
+                ws.setGizmoOperation( 0 );
+            if ( ImGui::IsKeyPressed( ImGuiKey_E, false ) )
+                ws.setGizmoOperation( 1 );
+            if ( ImGui::IsKeyPressed( ImGuiKey_R, false ) )
+                ws.setGizmoOperation( 2 );
+            if ( ImGui::IsKeyPressed( ImGuiKey_Q, false ) || ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
+                ws.setGizmoOperation( ( ws.getGizmoOperation() + 1 ) % 3 );
+        }
+        else if ( ImGui::IsKeyPressed( ImGuiKey_Space, false ) )
+        {
+            toggleMaximize();
+        }
+        // 직교 보기(Blender · Godot 키패드): 7 위 · 1 앞 · 3 오른쪽, 5 는 직교 ↔ 원근.
+        if ( ImGui::IsKeyPressed( ImGuiKey_Keypad7, false ) )
+            setOrthographicView( 89.9f, 0.0f );
+        if ( ImGui::IsKeyPressed( ImGuiKey_Keypad1, false ) )
+            setOrthographicView( 0.0f, 0.0f );
+        if ( ImGui::IsKeyPressed( ImGuiKey_Keypad3, false ) )
+            setOrthographicView( 0.0f, -90.0f );
+        if ( ImGui::IsKeyPressed( ImGuiKey_Keypad5, false ) )
+            _bOrthographicView = _bOrthographicView == SW_TRUE ? SW_FALSE : SW_TRUE;
+    }
+
+    void EditorViewportClient::setOrthographicView( float32 pitch, float32 yaw )
+    {
+        // 지금 보는 점(시선 앞 궤도 거리)을 축에서 다시 바라본다 — 화면 가운데가 그대로 남는다.
+        const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
+        const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
+        const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ), MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
+        const float3  focus       = _cameraPos + forward * _orbitDistance;
+        _cameraRot._x             = pitch;
+        _cameraRot._y             = yaw;
+        const float32 newPitchRad = MathUtil::toRadian( pitch );
+        const float32 newYawRad   = MathUtil::toRadian( yaw );
+        const float3  newForward{ MathUtil::sin( newYawRad ) * MathUtil::cos( newPitchRad ), -MathUtil::sin( newPitchRad ),
+                                 MathUtil::cos( newYawRad ) * MathUtil::cos( newPitchRad ) };
+        _cameraPos         = focus - newForward * _orbitDistance;
+        _orbitTarget       = focus;
+        _bOrthographicView = SW_TRUE;
+    }
+
+    void EditorViewportClient::toggleMaximize()
+    {
+        EditorContext*    pContext = EditorContext::get();
+        EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
+        if ( pDock == nullptr )
+            return;
+        // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
+        const string folder = FileUtil::joinPath( EditorUtil::getEditorStateDirectory(), "Temp" );
+        if ( _bMaximized == SW_TRUE )
+        {
+            _bMaximized = SW_FALSE;
+            if ( pDock->requestLoadNamedLayout( "maximize-restore", folder ) == false )
+                SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
+            return;
+        }
+        if ( pDock->saveNamedLayout( "maximize-restore", folder ) == false )
+            return;
+        EditorPanelManager& panelManager = pContext->getPanelManager();
+        vector<string>      listCloseID;
+        for ( const EditorPanelEntry& entry : panelManager.getPanels() )
+        {
+            if ( entry._id != "scene_view" && entry._pInstance != nullptr && entry._pInstance->isOpen() )
+                listCloseID.push_back( entry._id );
+        }
+        for ( const string& panelID : listCloseID )
+        {
+            (void)panelManager.setPanelOpen( panelID, false ); // 이미 닫혔으면 할 일이 없다
+        }
+        _bMaximized = SW_TRUE;
     }
 
     void EditorViewportClient::processOrbitInput()

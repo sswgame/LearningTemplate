@@ -190,6 +190,9 @@ namespace sw::editor
             SW_LOG_WARNING( "The layout predates the Scene / Game view split - applying the default dock layout" );
         _bApplied      = bLegacyLayout ? SW_FALSE : SW_TRUE;
         _bResetDefault = bLegacyLayout ? SW_TRUE : SW_FALSE;
+        // 다시 연 패널의 창은 처음 나타나며 포커스를 받아 그 탭이 앞에 선다(씬 뷰 최대화를 풀면 Prefab Editor 가 앞에 섰다) — 기본 배치처럼 Scene 탭을 앞으로.
+        _bFrontTabPending   = SW_TRUE;
+        _frontTabFrameCount = 0;
         _pendingLayoutIni.clear();
         _pendingLayoutVisibility.clear();
     }
@@ -376,8 +379,10 @@ namespace sw::editor
             return;
         }
 
-        // DockTabIsVisible 는 이번 프레임 Begin 이 정한 값이다 — 도킹된 창이 탭 막대에서 골라져 보이면 참이다.
-        if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible )
+        // DockTabIsVisible 는 이번 프레임 Begin 이 정한 값이다 — 도킹된 창이 탭 막대에서 골라져 보이면 참이다. 주의: 같은 프레임에 뒤에서 처음 나타난
+        // 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀐다 — 그래서 두 프레임은 포커스를 주고 나서 본다.
+        constexpr uint32 kMinFocusFrames = 2;
+        if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
         {
             _bFrontTabPending = SW_FALSE;
             return;

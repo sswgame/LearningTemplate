@@ -59,10 +59,20 @@ namespace sw::editor
 
         /** @brief 툴바 설정(스냅 · 시각화 켬/끔 …)입니다. */
         const ViewportToolbarSettings& getToolbarSettings() const { return _toolbarSettings; }
+        /** @brief 직교 보기(키패드 7 위 · 1 앞 · 3 오른쪽, 5 는 직교 ↔ 원근)이면 true 입니다. */
+        bool isOrthographicView() const { return _bOrthographicView == SW_TRUE; }
+        /** @brief 씬 뷰를 최대화했으면 true 입니다(Shift+Space). */
+        bool isMaximized() const { return _bMaximized == SW_TRUE; }
 
     private:
         void processFlyInput( float32 deltaTime );
         void processOrbitInput();
+        /** @brief 비행 중이 아닐 때의 단축키입니다: W · E · R 기즈모(Q · Space 는 순환), 키패드 직교 보기, Shift+Space 최대화. */
+        void processShortcutKeys();
+        /** @brief 직교 보기로 바꿉니다. @p pitch · @p yaw 는 도(°)입니다. */
+        void setOrthographicView( float32 pitch, float32 yaw );
+        /** @brief 씬 뷰 최대화를 켜고 끕니다(다른 패널을 닫았다가 직전 배치를 되살린다 — 유니티 Shift+Space). */
+        void toggleMaximize();
         void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
         void drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize );
 
@@ -112,8 +122,11 @@ namespace sw::editor
         float32                  _arrGizmoGroupMatrix[16];
         int32                    _lastGizmoFrame;
         uint32                   _lastGizmoObjectCount;
-        uint8                    _bRulerActive   : 1;
-        uint8                    _bGizmoTracking : 1;
-        [[maybe_unused]] uint8   _reservedGizmo  : 6;
+        float32                  _orthoHeight; ///< 직교 보기의 화면 높이(월드 단위) — 휠이 바꾼다
+        uint8                    _bRulerActive      : 1;
+        uint8                    _bGizmoTracking    : 1;
+        uint8                    _bOrthographicView : 1;
+        uint8                    _bMaximized        : 1;
+        [[maybe_unused]] uint8   _reservedGizmo     : 4;
     };
 } // namespace sw::editor
