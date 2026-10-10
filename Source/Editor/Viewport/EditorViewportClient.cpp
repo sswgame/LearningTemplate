@@ -176,6 +176,7 @@ namespace sw::editor
         , _nearZ{ 0.1f }
         , _farZ{ 1000.0f }
         , _toolbarSettings{}
+        , _overlays{}
         , _gizmoUndoBefore{}
         , _gizmoObject{}
         , _listGizmoObject{}
@@ -485,19 +486,11 @@ namespace sw::editor
         _cameraPos = _orbitTarget - forward * _orbitDistance;
     }
 
-    void EditorViewportClient::drawViewportToolbar( float32 viewportWidth )
+    void EditorViewportClient::drawOverlays( const float2& canvasMin, const float2& canvasSize )
     {
-        EditorViewportToolbar::draw( _toolbarSettings, viewportWidth );
-    }
-
-    void EditorViewportClient::drawTransformBar( const float2& anchorPos, float32 maxWidth )
-    {
-        EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-
-        const bool bHasSelection = pContext->getEditorSelection().getSelectedObjectCount() > 0;
-        EditorViewportToolbar::drawTransformBar( _toolbarSettings, anchorPos, maxWidth, bHasSelection );
+        EditorContext* pContext      = EditorContext::get();
+        const bool     bHasSelection = pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() > 0;
+        _overlays.draw( canvasMin, canvasSize, _toolbarSettings, bHasSelection );
     }
 
     void EditorViewportClient::draw( const void* pTextureID, const float2& canvasSize )

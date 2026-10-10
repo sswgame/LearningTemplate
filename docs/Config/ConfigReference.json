@@ -2301,6 +2301,14 @@
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
   {
+   "name": "gv_editorProbeOverlay",
+   "type": "string",
+   "default": "view",
+   "kind": "시험",
+   "description": "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)",
+   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+  },
+  {
    "name": "gv_editorProbePanel",
    "type": "string",
    "default": "",

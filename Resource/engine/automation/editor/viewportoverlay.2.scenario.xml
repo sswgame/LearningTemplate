@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 묶음 viewportoverlay(2/2) — 1/2 가 남긴 오버레이 상태가 다시 켜도 그대로다(보기 바는 왼쪽 3, 트랜스폼 바는 접힘, 도구 바는 숨김).
+  overlay.reset 이면 모두 기본 자리 · 보임으로 돌아온다.
+  실행: 1/2 와 같은 -gv_editorStateDir 로 이어서.
+-->
+<Scenario name="editor.viewportoverlay.2" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="40">
+		<Variable name="gv_editorProbeOverlay" value="view"/>
+		<Expect probe="Editor.OverlayDock" equals="3"/>
+		<Expect probe="Editor.OverlayVertical" equals="1"/>
+		<Variable name="gv_editorProbeOverlay" value="transform"/>
+	</At>
+	<At frame="42"><Expect probe="Editor.OverlayFlags" equals="11"/><Variable name="gv_editorProbeOverlay" value="tools"/></At>
+	<At frame="44"><Expect probe="Editor.OverlayFlags" equals="0"/></At>
+	<At frame="50"><DevCommand line="overlay.reset"/></At>
+	<At frame="65">
+		<Expect probe="Editor.OverlayFlags" equals="1"/>
+		<Variable name="gv_editorProbeOverlay" value="view"/>
+	</At>
+	<At frame="67"><Expect probe="Editor.OverlayDock" equals="1"/></At>
+	<At frame="70"><Pass/></At>
+</Scenario>

@@ -50,6 +50,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Widgets/EditorNodeGraphRules.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ConsoleLogRows.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ContentBrowserLogic.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Viewport/EditorViewportOverlayLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorBuiltinValue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorComponentManager.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/Inspector/InspectorPropertyLayout.cpp"

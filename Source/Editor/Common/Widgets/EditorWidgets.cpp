@@ -189,7 +189,7 @@ namespace sw::editor
         ImGui::Separator();
     }
 
-    void EditorWidgets::drawGizmoOperationControls()
+    void EditorWidgets::drawGizmoOperationControls( bool bVertical )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -216,7 +216,8 @@ namespace sw::editor
             if ( drawIconToggle( button._pID, button._pIcon, operation == index, button._pTooltip ) )
                 pContext->getWorkspace().setGizmoOperation( index );
             EditorSelfTestMarks::note( button._pMark );
-            ImGui::SameLine();
+            if ( bVertical == false )
+                ImGui::SameLine();
         }
 
         const bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();

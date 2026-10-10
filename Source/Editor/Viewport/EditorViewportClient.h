@@ -7,6 +7,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Workspace/EditorTransaction.h"
+#include "Editor/Viewport/EditorViewportOverlays.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 
 namespace sw
@@ -37,10 +38,12 @@ namespace sw::editor
         /** @brief 뷰포트 UI 와 ImGuizmo 를 그립니다. */
         void draw( const void* pTextureID, const float2& canvasSize );
 
-        /** @brief 뷰포트 렌더 모드/카메라 속도 툴바를 그립니다. */
-        void drawViewportToolbar( float32 viewportWidth );
-        /** @brief 기즈모 트랜스폼 플로팅 바를 그립니다. */
-        void drawTransformBar( const float2& anchorPos, float32 maxWidth );
+        /** @brief 씬 뷰 오버레이 바(보기 · 표시 · 도구 · 트랜스폼)를 뷰포트 이미지 위에 그립니다. 이미지를 그린 뒤 부릅니다. */
+        void drawOverlays( const float2& canvasMin, const float2& canvasSize );
+        /** @brief 씬 뷰 툴바의 Overlays 메뉴입니다. */
+        void                          drawOverlaysMenu() { _overlays.drawOverlaysMenu(); }
+        EditorViewportOverlays&       getOverlays() { return _overlays; }
+        const EditorViewportOverlays& getOverlays() const { return _overlays; }
 
         /** @brief 뷰 행렬을 계산합니다. */
         void getViewMatrix( float32* pOutMatrix ) const;
@@ -115,6 +118,7 @@ namespace sw::editor
         float32                 _nearZ;
         float32                 _farZ;
         ViewportToolbarSettings _toolbarSettings;
+        EditorViewportOverlays  _overlays; ///< 씬 뷰 위의 오버레이 바들
         ObjectSnapshot          _gizmoUndoBefore;
         GameObjectHandle        _gizmoObject; ///< `_gizmoUndoBefore` 의 대상. 드래그가 여러 프레임을 넘기므로 핸들로 듭니다
         /**

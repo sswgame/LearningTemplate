@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 묶음 viewportoverlay(1/2) — 씬 뷰 오버레이 바(유니티 씬 뷰 Overlays): 보기 바는 처음에 위쪽 왼편(붙은 쪽 1)이다. 손잡이를 끌어 가운데에 놓으면
+  떠 있는 바(0)가 되고 자리가 옮겨지며, 왼쪽 가장자리로 끌면 붙어(3) 세로로 쌓인다. 트랜스폼 바를 접고 도구 바를 숨긴 채 끝낸다(2/2 가 다시 켜서 본다).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/viewportoverlay.1.scenario.xml -dx12
+-->
+<Scenario name="editor.viewportoverlay.1" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="50">
+		<Variable name="gv_editorProbeOverlay" value="view"/>
+		<Expect probe="Editor.OverlayDock" equals="1"/>
+		<Expect probe="Editor.OverlayX" atMost="10"/>
+		<Expect probe="Editor.OverlayY" atMost="10"/>
+		<Expect probe="Editor.OverlayVertical" equals="0"/>
+	</At>
+	<At frame="55"><EditorDrag mark="overlay.grip.view" dx="300" dy="200"/></At>
+	<At frame="75">
+		<Expect probe="Editor.OverlayDock" equals="0"/>
+		<Expect probe="Editor.OverlayX" atLeast="250"/>
+		<Expect probe="Editor.OverlayY" atLeast="150"/>
+	</At>
+	<At frame="80"><EditorDrag mark="overlay.grip.view" dx="-600" dy="0"/></At>
+	<At frame="100">
+		<Expect probe="Editor.OverlayDock" equals="3"/>
+		<Expect probe="Editor.OverlayVertical" equals="1"/>
+		<Variable name="gv_editorProbeOverlay" value="transform"/>
+	</At>
+	<At frame="105"><EditorClick mark="overlay.collapse.transform"/></At>
+	<At frame="120">
+		<Expect probe="Editor.OverlayFlags" equals="11"/>
+		<DevCommand line="overlay.show tools 0"/>
+		<Variable name="gv_editorProbeOverlay" value="tools"/>
+	</At>
+	<At frame="130"><Expect probe="Editor.OverlayFlags" equals="0"/></At>
+	<At frame="135"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

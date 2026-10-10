@@ -19,6 +19,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/Viewport/EditorCamera.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
@@ -262,6 +263,33 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 씬 뷰 오버레이입니다(씬 뷰 패널이 없으면 nullptr). */
+            static EditorViewportOverlays* findSceneOverlays()
+            {
+                EditorContext*  pContext = EditorContext::get();
+                SceneViewPanel* pPanel   = pContext != nullptr ? static_cast<SceneViewPanel*>( pContext->getPanelManager().findPanel( "scene_view" ) ) : nullptr;
+                return pPanel != nullptr ? &pPanel->getViewportClient().getOverlays() : nullptr;
+            }
+
+            static bool runOverlayReset( const vector<string>& /*listArgument*/, string& outReply )
+            {
+                EditorViewportOverlays* pOverlays = findSceneOverlays();
+                if ( pOverlays == nullptr )
+                    return false;
+                pOverlays->resetToDefault();
+                outReply = "scene view overlays reset";
+                return true;
+            }
+
+            static bool runOverlayShow( const vector<string>& listArgument, string& outReply )
+            {
+                EditorViewportOverlays* pOverlays = findSceneOverlays();
+                if ( listArgument.size() != 2 || pOverlays == nullptr || pOverlays->setBarVisible( listArgument[0], listArgument[1] != "0" ) == false )
+                    return false;
+                outReply = "overlay " + listArgument[0] + ( listArgument[1] != "0" ? " shown" : " hidden" );
+                return true;
+            }
+
             static bool runLayoutLoad( const vector<string>& listArgument, string& outReply )
             {
                 EditorContext*    pContext = EditorContext::get();
@@ -330,6 +358,10 @@ namespace sw::editor
                     &EditorDevCommandsInternal::runDebugDrawDemo );
     SW_DEV_COMMAND( LayoutSave, "layout.save", "layout.save <name>", "Save the dock layout and panel visibility under a name",
                     &EditorDevCommandsInternal::runLayoutSave );
+    SW_DEV_COMMAND( OverlayReset, "overlay.reset", "overlay.reset", "Put the scene view overlay bars back where they start (and show them all)",
+                    &EditorDevCommandsInternal::runOverlayReset );
+    SW_DEV_COMMAND( OverlayShow, "overlay.show", "overlay.show <view|transform|display|tools> <0|1>", "Show or hide a scene view overlay bar",
+                    &EditorDevCommandsInternal::runOverlayShow );
     SW_DEV_COMMAND( LayoutLoad, "layout.load", "layout.load <name>", "Load a named layout on the next frame", &EditorDevCommandsInternal::runLayoutLoad );
     SW_DEV_COMMAND( PanelFocus, "panel.focus", "panel.focus <panelID>", "Open a panel and bring its window (its tab) to the front on the next frame",
                     &EditorDevCommandsInternal::runPanelFocus );

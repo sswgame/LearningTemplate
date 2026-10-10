@@ -57,7 +57,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( "DebugDrawQueue 카테고리를 켜고 끕니다" );
             drawDebugCategoryPopup();
             EditorWidgets::drawToolbarSeparator();
-            _viewportClient.drawViewportToolbar( ImGui::GetContentRegionAvail().x );
+            _viewportClient.drawOverlaysMenu(); // 보기 · 표시 · 도구 · 트랜스폼 바는 씬 뷰 위에 떠 있다(`EditorViewportOverlays`)
         }
         EditorChrome::endToolbar();
 
@@ -79,12 +79,7 @@ namespace sw::editor
         const ImVec2 imagePos = ImGui::GetCursorScreenPos();
         _viewportClient.draw( pEditorContext->getViewTarget( EditorViewKind::Scene )._pTextureID, float2{ size.x, size.y } );
 
-        if ( size.x > 1.0f && size.y > 1.0f )
-        {
-            const float2  barAnchor{ imagePos.x + size.x * 0.5f, imagePos.y + 8.0f };
-            const float32 barMaxWidth = size.x - 16.0f; // 씬 뷰 양쪽에 8 px 씩 남긴다
-            _viewportClient.drawTransformBar( barAnchor, barMaxWidth );
-        }
+        _viewportClient.drawOverlays( float2{ imagePos.x, imagePos.y }, float2{ size.x, size.y } );
     }
 
     void SceneViewPanel::drawDebugCategoryPopup()

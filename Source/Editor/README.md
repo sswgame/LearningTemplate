@@ -616,6 +616,11 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   (다른 패널을 닫고 직전 배치를 상태 폴더의 Temp 레이아웃으로 둔다), 오른쪽 단추 + 휠은 비행 속도. 선택 표시는 후처리 외곽선이 아니라 경계 상자(시각화 `selection_bounds`,
   Godot 의 선택 상자)다. 이름 붙인 레이아웃을 읽으면 다시 연 패널이 포커스를 가져가므로 Scene 탭을 두 프레임 이상 앞으로 당긴다(`updateDefaultTabSelection`).
   시나리오는 가운데 단추를 씬 뷰 빈 곳에 누른 채(`state="down"` 이 커서를 붙잡는다) 키를 보낸다(`editor/viewportbasics`).
+- **씬 뷰 툴바는 뷰포트 위에 떠 있는 오버레이 바 넷이다**(`EditorViewportOverlays` — 보기 · 트랜스폼 · 표시 · 도구, 유니티 씬 뷰 Overlays). 손잡이를 끌어 옮기고
+  가장자리 16 px(× DPI) 안에 놓으면 붙는다(왼쪽 · 오른쪽은 세로로 쌓는다). 자리는 남는 자리에 대한 비율이라 뷰포트가 줄어도 안에 남고, 같은 가장자리에 붙은 바끼리
+  겹치면 먼 쪽으로 한 줄씩 밀어 낸다(좁은 씬 뷰에서 트랜스폼 바가 보기 바를 덮었다). 바는 자식 창이라 그 위의 마우스는 피킹 · 호버로 새지 않는다.
+  상태는 `Saved/Editor/ViewportOverlays.ini` 의 `scene.` 칸(게임 뷰에는 바가 없다), 판단은 ImGui 없는 `EditorViewportOverlayLayout`(EditorTest).
+  메뉴는 손잡이 오른쪽 클릭과 씬 뷰 툴바의 Overlays, 개발 명령 `overlay.reset` · `overlay.show`(시나리오 묶음 `editor/viewportoverlay`).
 - **씬 뷰 호버 강조는 클릭 선택과 같은 피킹(`findObjectUnderMouse` — 빌보드 → 레이)을 마우스가 움직인 프레임에만 한 번 부른다.** 재 보니 시험 씬(Debug)에서
   한 번에 72 us, 메시 8000 개(`-gv_benchMeshes=8000`, Debug)에서 20.5 ms 였다(레이 피킹이 오브젝트 수에 비례) — 2 ms 를 넘으면 움직이는 동안 0.1 초에 한 번만 찾는다.
   캔버스 위가 아니거나(다른 창 · 팝업) 끌기 · 비행 · 궤도 · 기즈모 위면 비우고, 고른 오브젝트는 호버가 아니다. 캔버스의 호버 · 클릭은 이미지 바로 뒤에 읽는다 —

@@ -59,7 +59,7 @@ namespace sw::editor
          * @details 뷰포트 툴바와 인스펙터가 함께 씁니다 — 각자 그리면 한쪽만 고쳤을 때 **두 화면이 서로 다른 모드를
          *          가리킵니다.** 값은 워크스페이스가 들고 있으므로(`getGizmoOperation`), 그리는 방법만 여기로 모읍니다.
          */
-        static void drawGizmoOperationControls();
+        static void drawGizmoOperationControls( bool bVertical = false );
 
         /**
          * @brief 활성 · 비활성 색이 바뀌는 토글 · 필터 칩 버튼입니다. 클릭되면 true 입니다.

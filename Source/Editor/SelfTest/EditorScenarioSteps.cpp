@@ -62,6 +62,7 @@ namespace sw::editor
     /** @brief 탐침 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject, "", "탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeOverlay, "view", "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)" );
     /** @brief 탐침 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty, "", "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)" );
 } // namespace sw::editor
@@ -1070,6 +1071,72 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbeOverlay` 바의 상태 · 이번 실행 상태입니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
+            static bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
+            {
+                const EditorViewportClient* pClient = findSceneViewClient();
+                if ( pClient == nullptr )
+                    return false;
+                pOutState   = pClient->getOverlays().getLayout().findBar( gv_editorProbeOverlay );
+                pOutRuntime = pClient->getOverlays().findRuntime( gv_editorProbeOverlay );
+                return pOutState != nullptr;
+            }
+
+            /** @brief 바가 붙은 쪽입니다(0 떠 있음 · 1 위 · 2 아래 · 3 왼쪽 · 4 오른쪽). */
+            [[nodiscard]] static bool readOverlayDock( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorOverlayBarState*   pState   = nullptr;
+                const EditorOverlayBarRuntime* pRuntime = nullptr;
+                if ( findProbedOverlay( pState, pRuntime ) == false )
+                    return false;
+                outValue = static_cast<float64>( pState->_dock );
+                return true;
+            }
+
+            /** @brief 바의 왼쪽 위 X(뷰포트 왼쪽 기준 픽셀, 지난 프레임)입니다. */
+            [[nodiscard]] static bool readOverlayX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorOverlayBarState*   pState   = nullptr;
+                const EditorOverlayBarRuntime* pRuntime = nullptr;
+                if ( findProbedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRuntime->_lastPosition._x );
+                return true;
+            }
+
+            /** @brief 바의 왼쪽 위 Y(뷰포트 위 기준 픽셀, 지난 프레임)입니다. */
+            [[nodiscard]] static bool readOverlayY( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorOverlayBarState*   pState   = nullptr;
+                const EditorOverlayBarRuntime* pRuntime = nullptr;
+                if ( findProbedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pRuntime->_lastPosition._y );
+                return true;
+            }
+
+            /** @brief 바가 세로로 쌓였으면(키 > 폭) 1 입니다. */
+            [[nodiscard]] static bool readOverlayVertical( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorOverlayBarState*   pState   = nullptr;
+                const EditorOverlayBarRuntime* pRuntime = nullptr;
+                if ( findProbedOverlay( pState, pRuntime ) == false || pRuntime == nullptr )
+                    return false;
+                outValue = pRuntime->_lastSize._y > pRuntime->_lastSize._x ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief 바가 보이면 1, 접혔으면 10 을 더한다(보임 1 · 숨김 0, 접힘이면 +10). */
+            [[nodiscard]] static bool readOverlayFlags( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const EditorOverlayBarState*   pState   = nullptr;
+                const EditorOverlayBarRuntime* pRuntime = nullptr;
+                if ( findProbedOverlay( pState, pRuntime ) == false )
+                    return false;
+                outValue = ( pState->_bVisible ? 1.0 : 0.0 ) + ( pState->_bCollapsed ? 10.0 : 0.0 );
+                return true;
+            }
+
             /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1261,6 +1328,14 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readHoveredObject );
     SW_AUTOMATION_PROBE( editorSelectionOutlineBoxes, "Editor.SelectionOutlineBoxes", "Selection boxes the scene view drew in the last frame",
                          &EditorScenarioStepsInternal::readSelectionOutlineBoxes );
+    SW_AUTOMATION_PROBE( editorOverlayDock, "Editor.OverlayDock", "Docked side of the scene view overlay bar gv_editorProbeOverlay: 0 free, 1 top, 2 bottom, 3 left, 4 right",
+                         &EditorScenarioStepsInternal::readOverlayDock );
+    SW_AUTOMATION_PROBE( editorOverlayX, "Editor.OverlayX", "Left of the overlay bar gv_editorProbeOverlay, pixels from the scene view's left", &EditorScenarioStepsInternal::readOverlayX );
+    SW_AUTOMATION_PROBE( editorOverlayY, "Editor.OverlayY", "Top of the overlay bar gv_editorProbeOverlay, pixels from the scene view's top", &EditorScenarioStepsInternal::readOverlayY );
+    SW_AUTOMATION_PROBE( editorOverlayVertical, "Editor.OverlayVertical", "1 when the overlay bar gv_editorProbeOverlay is taller than wide (stacked vertically)",
+                         &EditorScenarioStepsInternal::readOverlayVertical );
+    SW_AUTOMATION_PROBE( editorOverlayFlags, "Editor.OverlayFlags", "Overlay bar gv_editorProbeOverlay: 1 when visible, plus 10 when collapsed",
+                         &EditorScenarioStepsInternal::readOverlayFlags );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );

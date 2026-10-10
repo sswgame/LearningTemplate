@@ -32,13 +32,13 @@ namespace sw::editor
         {
             static void drawSnapToggleCombo( const utf8* pButtonLabel, const utf8* pComboID, bool& bEnabled, float32& value,
                                              const float32* arrValue, const utf8* const* arrLabel, int32 valueCount,
-                                             float32 comboWidth, int32 fallbackIndex )
+                                             float32 comboWidth, int32 fallbackIndex, bool bVertical )
             {
                 if ( EditorWidgets::drawToggleButton( pButtonLabel, bEnabled ) )
                     bEnabled = ( bEnabled == false );
 
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth( comboWidth );
+                EditorViewportToolbar::nextItem( bVertical );
+                ImGui::SetNextItemWidth( comboWidth * EditorThemeUtil::getDpiScale() );
 
                 int32 currentIndex = fallbackIndex;
                 for ( int32 index = 0; index < valueCount; ++index )
@@ -73,13 +73,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorViewportToolbar::draw( ViewportToolbarSettings& settings, float32 viewportWidth )
+    void EditorViewportToolbar::nextItem( bool bVertical )
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_FrameRounding, 4.0f );
-        ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2{ 6.0f, 2.0f } );
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.18f, 0.22f, 0.85f } );
-        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.28f, 0.28f, 0.32f, 1.0f } );
+        if ( bVertical == false )
+            ImGui::SameLine();
+    }
 
+    void EditorViewportToolbar::drawViewBar( ViewportToolbarSettings& settings, bool bVertical )
+    {
         {
             // 씬 뷰의 보기 모드다(`FrameRenderer::setSceneViewMode`) — 게임 뷰는 늘 주 출력 모드(Lit)로 그린다(언리얼 뷰포트마다의 View Mode).
             // 값이 아니라 **렌더러 상태**가 정본이므로 프레임마다 렌더러에서 읽어 표시한다. 항목 목록은 보기 모드 표(kArrRenderViewModeInfo)를 돈다.
@@ -108,8 +109,7 @@ namespace sw::editor
                                                              : "렌더러가 아직 붙지 않았습니다" );
         }
 
-        EditorWidgets::drawToolbarSeparator();
-
+        nextItem( bVertical );
         {
             const bool b2D = settings._bIs2DMode;
             if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, editoricon::kSprite, editoricon::kCube, "2D view (XY plane grid) - click for 3D",
@@ -118,155 +118,123 @@ namespace sw::editor
             EditorSelfTestMarks::note( "viewport.dimension" );
         }
 
-        EditorWidgets::drawToolbarSeparator();
+        nextItem( bVertical );
+        ImGui::SetNextItemWidth( 70.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
+        EditorWidgets::drawTooltip( "Camera fly speed (right mouse + wheel also changes it)" );
+    }
 
+    void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
+    {
+        if ( EditorWidgets::drawIconToggle( "##stats", editoricon::kChart, settings._bShowStats, "Stats overlay (FPS, objects, resolution)" ) )
+            settings._bShowStats = ( settings._bShowStats == false );
+        nextItem( bVertical );
+        if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, "Grid" ) )
+            settings._bShowGrid = ( settings._bShowGrid == false );
+        nextItem( bVertical );
+        if ( EditorWidgets::drawIconToggle( "##cube", editoricon::kAxes, settings._bShowOrientationCube, "Orientation cube" ) )
+            settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
+
+        // 컴포넌트 시각화 토글은 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
+        for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
         {
-            ImGui::TextDisabled( "Cam:" );
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth( 70.0f * EditorThemeUtil::getDpiScale() );
-            ImGui::SliderFloat( "##CamSpeed", &settings._cameraSpeed, 0.5f, 20.0f, "%.1f" );
+            const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );
+            const bool                          bOn        = settings._visualizerToggles.isOn( visualizer );
+
+            nextItem( bVertical );
+            ImGui::PushID( visualizer._pID );
+            fixed_string<constant::kMaxBuffer256> tooltip;
+            formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
+            const bool bPressed = visualizer._pIcon != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", visualizer._pIcon, bOn, tooltip.c_str() )
+                                                               : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
+            if ( bPressed )
+                settings._visualizerToggles.setOn( visualizer, bOn == false );
+            fixed_string<constant::kMaxBuffer64> mark;
+            formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
+            EditorSelfTestMarks::note( mark.c_str() );
+            if ( visualizer._pIcon == nullptr )
+                EditorWidgets::drawTooltip( tooltip.c_str() );
+            ImGui::PopID();
         }
 
-        // 숨김 문턱은 DPI 배율을 받는다(아이콘 단추의 한 변이 글꼴 높이를 따른다). 아이콘 단추라 글자 체크박스보다 좁아 문턱을 낮췄다.
-        const float32 dpiScale = EditorThemeUtil::getDpiScale();
-        if ( viewportWidth > 220.0f * dpiScale )
+        nextItem( bVertical );
+        if ( EditorWidgets::drawIconToggle( "##surfaceSnap", editoricon::kMagnet, settings._bSurfaceSnap, "Surface snap - dragged objects land on surfaces" ) )
+            settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
+    }
+
+    void EditorViewportToolbar::drawToolsBar( ViewportToolbarSettings& settings, bool bVertical )
+    {
+        const float32 side = ImGui::GetFrameHeight();
+        if ( ImGui::Button( editoricon::kBookmark, ImVec2{ side, side } ) )
+            ImGui::OpenPopup( "##ViewportBookmarksPopup" );
+        EditorWidgets::drawTooltip( "Camera bookmarks (Ctrl+1~9)" );
+
+        if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
         {
-            EditorWidgets::drawToolbarSeparator();
-            if ( EditorWidgets::drawIconToggle( "##stats", editoricon::kChart, settings._bShowStats, "Stats overlay (FPS, objects, resolution)" ) )
-                settings._bShowStats = ( settings._bShowStats == false );
-            ImGui::SameLine();
-            if ( EditorWidgets::drawIconToggle( "##grid", editoricon::kGrid, settings._bShowGrid, "Grid" ) )
-                settings._bShowGrid = ( settings._bShowGrid == false );
-            ImGui::SameLine();
-            if ( EditorWidgets::drawIconToggle( "##cube", editoricon::kAxes, settings._bShowOrientationCube, "Orientation cube" ) )
-                settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
-
-            // 컴포넌트 시각화 토글은 시각화 등록부에서 만든다. 시각화를 더해도 여기는 그대로다.
-            for ( uint32 index = 0; index < EditorViewportVisualizer::getCount(); ++index )
+            ImGui::Text( "Camera Bookmarks (Ctrl+1~9)" );
+            ImGui::Separator();
+            EditorContext* pContext = EditorContext::get();
+            if ( pContext != nullptr )
             {
-                const EditorVisualizerRegistration& visualizer = EditorViewportVisualizer::getAt( index );
-                const bool                          bOn        = settings._visualizerToggles.isOn( visualizer );
-
-                ImGui::SameLine();
-                ImGui::PushID( visualizer._pID );
-                fixed_string<constant::kMaxBuffer256> tooltip;
-                formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", visualizer._pToggleLabel, visualizer._pTooltip );
-                const bool bPressed = visualizer._pIcon != nullptr ? EditorWidgets::drawIconToggle( "##visualizer", visualizer._pIcon, bOn, tooltip.c_str() )
-                                                                   : EditorWidgets::drawToggleButton( visualizer._pToggleLabel, bOn );
-                if ( bPressed )
-                    settings._visualizerToggles.setOn( visualizer, bOn == false );
-                fixed_string<constant::kMaxBuffer64> mark;
-                formatstring( mark.data(), mark.capacity(), "viewport.visualizer.%#", visualizer._pID );
-                EditorSelfTestMarks::note( mark.c_str() );
-                if ( visualizer._pIcon == nullptr )
-                    EditorWidgets::drawTooltip( tooltip.c_str() );
-                ImGui::PopID();
-            }
-
-            ImGui::SameLine();
-            if ( EditorWidgets::drawIconToggle( "##surfaceSnap", editoricon::kMagnet, settings._bSurfaceSnap, "Surface snap - dragged objects land on surfaces" ) )
-                settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
-        }
-
-        if ( viewportWidth > 270.0f * dpiScale )
-        {
-            EditorWidgets::drawToolbarSeparator();
-            if ( ImGui::Button( editoricon::kBookmark, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
-                ImGui::OpenPopup( "##ViewportBookmarksPopup" );
-            EditorWidgets::drawTooltip( "Camera bookmarks (Ctrl+1~9)" );
-
-            if ( ImGui::BeginPopup( "##ViewportBookmarksPopup" ) )
-            {
-                ImGui::Text( "Camera Bookmarks (Ctrl+1~9)" );
-                ImGui::Separator();
-                EditorContext* pContext = EditorContext::get();
-                if ( pContext != nullptr )
+                EditorWorkspace& ws = pContext->getWorkspace();
+                for ( uint32 slot = 0; slot < 9; ++slot )
                 {
-                    EditorWorkspace& ws = pContext->getWorkspace();
-                    for ( uint32 slot = 0; slot < 9; ++slot )
+                    const bool                           bHas = ws.hasCameraBookmark( slot );
+                    fixed_string<constant::kMaxBuffer64> arrLabel;
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1, bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
+                    if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
+                        settings._requestedBookmarkSlot = static_cast<int32>( slot );
+                    if ( ImGui::IsItemHovered() && bHas )
                     {
-                        const bool                           bHas = ws.hasCameraBookmark( slot );
-                        fixed_string<constant::kMaxBuffer64> arrLabel;
-                        formatstring( arrLabel.data(), arrLabel.capacity(), "Slot %u: %s", slot + 1,
-                                      bHas ? ws.getCameraBookmark( slot )->_name.c_str() : "<Empty>" );
-                        if ( ImGui::Selectable( arrLabel.c_str(), false ) && bHas )
-                            settings._requestedBookmarkSlot = static_cast<int32>( slot );
-                        if ( ImGui::IsItemHovered() && bHas )
+                        const CameraBookmark* pBm = ws.getCameraBookmark( slot );
+                        if ( pBm != nullptr )
                         {
-                            const CameraBookmark* pBm = ws.getCameraBookmark( slot );
-                            if ( pBm != nullptr )
-                            {
-                                fixed_string<constant::kMaxBuffer128> tooltipText;
-                                formatstring( tooltipText.data(), tooltipText.capacity(), "Pos: (%.1f, %.1f, %.1f)",
-                                              static_cast<float64>( pBm->_position._x ),
-                                              static_cast<float64>( pBm->_position._y ),
-                                              static_cast<float64>( pBm->_position._z ) );
-                                EditorWidgets::drawTooltip( tooltipText.c_str() );
-                            }
+                            fixed_string<constant::kMaxBuffer128> tooltipText;
+                            formatstring( tooltipText.data(), tooltipText.capacity(), "Pos: (%.1f, %.1f, %.1f)", static_cast<float64>( pBm->_position._x ),
+                                          static_cast<float64>( pBm->_position._y ), static_cast<float64>( pBm->_position._z ) );
+                            EditorWidgets::drawTooltip( tooltipText.c_str() );
                         }
                     }
                 }
-                ImGui::EndPopup();
             }
+            ImGui::EndPopup();
         }
 
-        if ( viewportWidth > 300.0f * dpiScale )
+        // 정렬은 둘 이상 골랐을 때만 쓴다 — 단추는 늘 두고 막아 둔다(바 크기가 선택마다 바뀌지 않게).
+        EditorContext* pContext  = EditorContext::get();
+        const bool     bCanAlign = pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() >= 2;
+        nextItem( bVertical );
+        ImGui::BeginDisabled( bCanAlign == false );
+        if ( ImGui::Button( editoricon::kAlign, ImVec2{ side, side } ) )
+            ImGui::OpenPopup( "##ViewportAlignPopup" );
+        ImGui::EndDisabled();
+        EditorWidgets::drawTooltip( "Align and distribute the selected objects (two or more)" );
+        if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
         {
-            EditorContext* pContext = EditorContext::get();
-            if ( pContext != nullptr && pContext->getEditorSelection().getSelectedObjectCount() >= 2 )
-            {
-                EditorWidgets::drawToolbarSeparator();
-                if ( ImGui::Button( editoricon::kAlign, ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
-                    ImGui::OpenPopup( "##ViewportAlignPopup" );
-                EditorWidgets::drawTooltip( "Align and distribute the selected objects" );
-
-                if ( ImGui::BeginPopup( "##ViewportAlignPopup" ) )
-                {
-                    ImGui::Text( "Multi-Object Alignment" );
-                    ImGui::Separator();
-                    // 항목 · 구분선은 커맨드 표의 메뉴 경로 칸(`commandmenu::kViewportAlign`)에서 나온다.
-                    EditorCommandGUI::drawMenuItems( commandmenu::kViewportAlign );
-                    ImGui::EndPopup();
-                }
-            }
+            ImGui::Text( "Multi-Object Alignment" );
+            ImGui::Separator();
+            // 항목 · 구분선은 커맨드 표의 메뉴 경로 칸(`commandmenu::kViewportAlign`)에서 나온다.
+            EditorCommandGUI::drawMenuItems( commandmenu::kViewportAlign );
+            ImGui::EndPopup();
         }
-
-        ImGui::PopStyleColor( 2 );
-        ImGui::PopStyleVar( 2 );
     }
 
-    void EditorViewportToolbar::drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, float32 maxWidth,
-                                                  bool bEnabled )
+    void EditorViewportToolbar::drawTransformBar( ViewportToolbarSettings& settings, bool bVertical, bool bEnabled )
     {
-        editor::EditorFloatingBarDesc barDesc{};
-        barDesc._pID       = "##EditorTransformBar";
-        barDesc._anchorPos = anchorPos;
-        barDesc._pivot     = float2{ 0.5f, 0.0f };
-        barDesc._maxWidth  = maxWidth;
-        barDesc._bEnabled  = bEnabled;
+        ImGui::BeginDisabled( bEnabled == false );
+        EditorWidgets::drawGizmoOperationControls( bVertical );
 
-        if ( EditorChrome::beginFloatingBar( barDesc ) == false )
-        {
-            EditorChrome::endFloatingBar();
-            return;
-        }
-
-        EditorWidgets::drawGizmoOperationControls();
-
-        EditorWidgets::drawToolbarSeparator();
-
+        nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue,
-                                                            arrSnapLabel, 5, 65.0f, 2 );
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "Grid Snap", "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5,
+                                                            65.0f, 2, bVertical );
 
-        EditorWidgets::drawToolbarSeparator();
-
+        nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5 deg", "15 deg", "45 deg", "90 deg" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue,
-                                                            arrRotValue, arrRotLabel, 4, 60.0f, 1 );
-
-        EditorChrome::endFloatingBar();
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "Rot Snap", "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
+                                                            4, 60.0f, 1, bVertical );
+        ImGui::EndDisabled();
     }
 } // namespace sw::editor

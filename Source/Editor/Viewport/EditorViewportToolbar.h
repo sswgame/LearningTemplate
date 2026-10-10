@@ -39,14 +39,21 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportToolbar
-     * @brief 뷰포트 상단 툴바와 기즈모 트랜스폼 바입니다.
+     * @brief 씬 뷰 오버레이 바들의 내용입니다(보기 · 표시 · 도구 · 트랜스폼). 바 창 · 자리는 `EditorViewportOverlays` 가 정합니다.
+     * @details 바가 왼쪽 · 오른쪽에 붙으면 @p bVertical 이 참이고 항목을 세로로 쌓는다.
      */
     class EditorViewportToolbar
     {
     public:
-        /** @brief 뷰포트 상단 뷰모드/카메라 속도 툴바를 그립니다. */
-        static void draw( ViewportToolbarSettings& settings, float32 viewportWidth );
-        /** @brief 선택된 오브젝트의 Translate/Rotate/Scale 및 스냅 플로팅 바를 그립니다. @p maxWidth 보다 넓으면 가로 스크롤로 넘깁니다. */
-        static void drawTransformBar( ViewportToolbarSettings& settings, const float2& anchorPos, float32 maxWidth, bool bEnabled );
+        /** @brief 보기 바: 보기 모드 · 2D/3D · 카메라 속도. */
+        static void drawViewBar( ViewportToolbarSettings& settings, bool bVertical );
+        /** @brief 표시 바: 통계 · 격자 · 방향 큐브 · 시각화 토글 · 표면 스냅. */
+        static void drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical );
+        /** @brief 도구 바: 카메라 북마크 · 정렬. */
+        static void drawToolsBar( ViewportToolbarSettings& settings, bool bVertical );
+        /** @brief 트랜스폼 바: 기즈모 이동 · 회전 · 크기 · 로컬 · 스냅. 고른 오브젝트가 없으면 막는다. */
+        static void drawTransformBar( ViewportToolbarSettings& settings, bool bVertical, bool bEnabled );
+        /** @brief 가로면 같은 줄에, 세로면 다음 줄에 둡니다. */
+        static void nextItem( bool bVertical );
     };
 } // namespace sw::editor
