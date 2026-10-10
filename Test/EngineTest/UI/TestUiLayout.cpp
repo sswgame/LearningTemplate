@@ -425,7 +425,7 @@ SW_TEST_CASE( UiLayoutTest, UiSystemLaysOutScreenTrees )
     sw::Widget*                      pLabel = root->addChild( sw::make_unique<sw::test::TestFixedWidget>( "label", sw::float2{ 100.0f, 40.0f } ) );
     UiLayoutTestUtil::setAlignment( *pLabel, sw::UiAlignment::Center, sw::UiAlignment::Center, sw::float4{} );
     sw::UiScreenDesc desc{};
-    desc._layer = sw::UiLayer::Hud;
+    desc._layer = sw::UiLayer::HUD;
     (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( desc, std::move( root ) ) );
 
     sw::UiViewport viewport{};
@@ -556,7 +556,7 @@ SW_TEST_CASE( UiLayoutTest, UiSystemFollowsCultureDirection )
     sw::unique_ptr<sw::BoxPanel> root = sw::make_unique<sw::BoxPanel>();
     sw::Widget*                  pA   = root->addChild( sw::make_unique<sw::test::TestFixedWidget>( "a", sw::float2{ 50.0f, 20.0f } ) );
     sw::UiScreenDesc             desc{};
-    desc._layer = sw::UiLayer::Hud;
+    desc._layer = sw::UiLayer::HUD;
     (void)ui.pushScreen( sw::make_unique<sw::UiScreen>( desc, std::move( root ) ) );
     sw::UiViewport viewport{};
     viewport._size         = sw::float2{ 400.0f, 100.0f };

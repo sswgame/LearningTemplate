@@ -71,8 +71,8 @@ namespace
 </UserSettingsSchema>)";
 
         /** @brief HUD 견본 — 네 모서리 앵커 · 진행 막대 · 글 · 가운데 조준 상자(게임 팩에 기대지 않는 엔진 시험 문서). */
-        static constexpr utf8 kHudDocument[] = "<UiDocument _schemaVersion=\"1\">\n"
-                                               "\t<UiScreenDesc _layer=\"Hud\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
+        static constexpr utf8 kHUDDocument[] = "<UiDocument _schemaVersion=\"1\">\n"
+                                               "\t<UiScreenDesc _layer=\"HUD\" _bTakesFocus=\"false\" _bShowCursor=\"false\" />\n"
                                                "\t<SafeZonePanel _visibility=\"SelfHitTestInvisible\">\n"
                                                "\t\t<CanvasPanel _visibility=\"SelfHitTestInvisible\">\n"
                                                "\t\t\t<BorderPanel _name=\"Crosshair\">\n"
@@ -171,7 +171,7 @@ namespace
     {
         Pause,
         Options,
-        Hud,
+        HUD,
         Notifications,
     };
 
@@ -245,9 +245,9 @@ namespace
                 {
                     return sw::OptionsMenuScreen::open( _ui );
                 }
-                case UiDeterminismSample::Hud:
+                case UiDeterminismSample::HUD:
                 {
-                    _ui.getDocumentCache().registerMemoryDocument( "test/hud.ui.xml", UiDeterminismTestUtil::kHudDocument );
+                    _ui.getDocumentCache().registerMemoryDocument( "test/hud.ui.xml", UiDeterminismTestUtil::kHUDDocument );
                     return _ui.openScreen( "test/hud.ui.xml" );
                 }
                 case UiDeterminismSample::Notifications:
@@ -285,7 +285,7 @@ namespace
                     return "pause";
                 case UiDeterminismSample::Options:
                     return "options";
-                case UiDeterminismSample::Hud:
+                case UiDeterminismSample::HUD:
                     return "hud";
                 case UiDeterminismSample::Notifications:
                     return "notifications";
@@ -396,7 +396,7 @@ namespace
                 (void)root->addChild( std::move( cell ) );
             }
             sw::UiScreenDesc desc{};
-            desc._layer = sw::UiLayer::Hud;
+            desc._layer = sw::UiLayer::HUD;
             return sw::make_unique<sw::UiScreen>( desc, std::move( root ) );
         }
     };
@@ -415,9 +415,9 @@ SW_TEST_CASE( UiDeterminismTest, OptionsMatchesGolden )
 }
 
 /** @brief [UiDeterminismTest] HUD 견본(네 모서리 앵커 · 안전 영역)의 덤프가 골든과 같다 */
-SW_TEST_CASE( UiDeterminismTest, HudMatchesGolden )
+SW_TEST_CASE( UiDeterminismTest, HUDMatchesGolden )
 {
-    UiDeterminismSampleUtil::expectSampleGolden( UiDeterminismSample::Hud );
+    UiDeterminismSampleUtil::expectSampleGolden( UiDeterminismSample::HUD );
 }
 
 /** @brief [UiDeterminismTest] 알림 화면(항목 둘 · 합친 "x2")의 덤프가 골든과 같다 */
@@ -430,7 +430,7 @@ SW_TEST_CASE( UiDeterminismTest, NotificationsMatchGolden )
 SW_TEST_CASE( UiDeterminismTest, RebuildGivesSameDump )
 {
     for ( const UiDeterminismSample sample :
-          { UiDeterminismSample::Pause, UiDeterminismSample::Options, UiDeterminismSample::Hud, UiDeterminismSample::Notifications } )
+          { UiDeterminismSample::Pause, UiDeterminismSample::Options, UiDeterminismSample::HUD, UiDeterminismSample::Notifications } )
     {
         UiDeterminismSampleUtil::expectRebuildIsSame( sample );
     }

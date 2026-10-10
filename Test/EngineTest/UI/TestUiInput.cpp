@@ -174,7 +174,7 @@ SW_TEST_CASE( UiInputTest, UnhandledActionReachesGame )
 {
     UiInputFixture   fixture;
     sw::UiScreenDesc hudDesc{};
-    hudDesc._layer = sw::UiLayer::Hud;
+    hudDesc._layer = sw::UiLayer::HUD;
     auto hudRoot   = sw::make_unique<sw::uitest::TestPanelWidget>( "hud" );
     (void)hudRoot->addChild( sw::make_unique<sw::uitest::TestBoxWidget>( "hudButton", true ) );
     (void)fixture._ui.pushScreen( sw::make_unique<sw::UiScreen>( hudDesc, std::move( hudRoot ) ) );

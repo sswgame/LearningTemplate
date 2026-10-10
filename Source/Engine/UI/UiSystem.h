@@ -176,7 +176,7 @@ namespace sw
         const hashed_string& getThemeName() const { return _themeName; }
         // --- 화면 마커(WidgetComponent Screen) -------------------------------------------
         /**
-         * @brief 마커 화면(Hud 층 · 캔버스 패널 루트 · 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 돌려줍니다. 마커 화면은 처음 붙일 때 만들고 마지막을 뗄 때 닫는다.
+         * @brief 마커 화면(HUD 층 · 캔버스 패널 루트 · 클릭을 막지 않음)에 위젯을 붙이고 그 번호를 돌려줍니다. 마커 화면은 처음 붙일 때 만들고 마지막을 뗄 때 닫는다.
          * @details 위치는 붙인 쪽이 슬롯 앵커 · 오프셋으로 매 프레임 정한다(`WidgetComponent::applyPlacement`).
          */
         WidgetId addScreenMarker( unique_ptr<Widget> widget );
@@ -434,7 +434,7 @@ namespace sw
         UiScreenHandle               _activeScreen;
         UiScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
         UiScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면(없으면 무효)
-        UiScreenHandle               _markerScreen;        ///< 화면 마커를 담는 Hud 화면(없으면 무효)
+        UiScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면(없으면 무효)
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)
         vector<UiScreenHandle>       _listTickScratch;     ///< `tickScreens` 가 도는 번호(프레임마다 다시 쓴다)
         string                       _optionsMenuDocument; ///< 옵션 메뉴 문서

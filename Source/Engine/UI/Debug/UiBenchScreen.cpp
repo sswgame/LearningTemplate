@@ -83,7 +83,7 @@ namespace sw
         (void)scroll->addChild( std::move( grid ) );
         (void)root->addChild( std::move( scroll ) );
         UiScreenDesc desc{};
-        desc._layer       = UiLayer::Hud;
+        desc._layer       = UiLayer::HUD;
         desc._bTakesFocus = false;
         desc._bShowCursor = false;
         return sw::make_unique<UiBenchScreen>( desc, std::move( root ), std::move( listCellText ) );

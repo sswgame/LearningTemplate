@@ -28,7 +28,7 @@ namespace sw
 
     /**
      * @class ShooterPlayerComponent
-     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · HUD(`HudControllerComponent`)와
+     * @brief 플레이어 오브젝트(카메라 · `FirstPersonCameraComponent` · `PawnComponent` · `ShooterBodyMovementComponent` · 1인칭 손에 든 총 · HUD(`HUDControllerComponent`)와
      *        같은 오브젝트)의 게임 규칙입니다.
      * @details 기본 틱 그룹(`DuringPhysics`)에서 돕니다 — 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 둔 뒤라, 그 시점으로
      *          걷고 쏘고 `setEyePosition` 으로 눈 자리를 넣습니다. **폰의 의도만 읽습니다**(버튼 Jump · Sprint · Fire · Reload · SwitchWeapon · Weapon1..3, 아날로그
@@ -40,7 +40,7 @@ namespace sw
      *          시점 카메라의 프리셋이 1인칭(`CameraPresetMode::FirstPerson`)이면 몸을 숨기고 손에 든 총 · 조준선을 보이고, 아니면 반대입니다. 눈높이는 몸 소켓
      *          `Eyes` 의 바인드 포즈 높이입니다(없으면 `_eyeHeight`).
      *
-     *          **HUD**: 같은 오브젝트의 `HudControllerComponent` 의 뷰모델(`HudViewModel`)에 틱 뒤에 값을 넣습니다 — 조준선(1인칭 · 살아 있을 때) ·
+     *          **HUD**: 같은 오브젝트의 `HUDControllerComponent` 의 뷰모델(`HUDViewModel`)에 틱 뒤에 값을 넣습니다 — 조준선(1인칭 · 살아 있을 때) ·
      *          맞음 표시(맞힌 직후 · 1인칭) · 체력 · 탄약(탄창 · 예비) · 무기 이름(무기 표의 이름 = 현지화 키). 위젯은 문서(`game/shooter3d/ui/hud.ui.xml`)의
      *          `{bind:필드}` 가 잇는다 — 이 컴포넌트는 위젯 이름을 모른다.
      *
@@ -142,14 +142,14 @@ namespace sw
         /** @brief 시점 카메라(대상이 이 오브젝트인 게임 카메라 디렉터)의 프리셋이 1인칭인지 봅니다. */
         bool queryFirstPerson() const;
         /** @brief 같은 오브젝트의 HUD 뷰모델에 조준선 · 맞음 표시 보임과 체력 · 탄약 · 무기 이름을 넣습니다(게임 스레드 — 틱 뒤). HUD 가 없으면 아무것도 하지 않는다. */
-        void updateHud();
+        void updateHUD();
         void resetRound();
         void scheduleFlush();
         void flushPending();
         bool hasPending() const;
         /** @brief 몸을 세웁니다(게임 스레드, 틱 밖). */
         void spawnBody();
-        /** @brief 1인칭 / 그 밖 — 손에 든 총 · 몸 보임을 맞춥니다(게임 스레드). 조준선은 `updateHud` 가 맞춘다. */
+        /** @brief 1인칭 / 그 밖 — 손에 든 총 · 몸 보임을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춘다. */
         void applyViewMode();
 
     private:

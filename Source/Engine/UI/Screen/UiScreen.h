@@ -30,7 +30,7 @@ namespace sw
     ENUM()
     enum class UiLayer : uint8
     {
-        Hud,      ///< 게임 HUD — 포커스를 받지 않는다(마커 · 체력 · 조준선)
+        HUD,      ///< 게임 HUD — 포커스를 받지 않는다(마커 · 체력 · 조준선)
         GameMenu, ///< 게임 안 메뉴(가방 · 지도) — 게임은 멈추지 않는다
         Menu,     ///< 일시정지 · 옵션
         Modal,    ///< 확인 창("유지할까요? N 초") — 아래를 모두 막는다
@@ -59,7 +59,7 @@ namespace sw
         UiLayer _layer{ UiLayer::Menu };
         PROPERTY( DisplayName = "Modal", Tooltip = "Blocks input to screens below and to the game" )
         bool _bModal{ false };
-        PROPERTY( DisplayName = "Takes Focus", Tooltip = "Receives focus and UI actions (never on the Hud and Overlay layers)" )
+        PROPERTY( DisplayName = "Takes Focus", Tooltip = "Receives focus and UI actions (never on the HUD and Overlay layers)" )
         bool _bTakesFocus{ true };
         PROPERTY( DisplayName = "Show Cursor", Tooltip = "Show the OS cursor while this screen is the active screen" )
         bool _bShowCursor{ true };

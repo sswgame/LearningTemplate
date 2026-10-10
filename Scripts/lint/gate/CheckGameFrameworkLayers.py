@@ -87,7 +87,7 @@ _kBaseFolderOrder: dict[str, int] = {
     "Actor/Camera": 0,
     "Actor/AI": 1,
     "Actor/Control": 1,
-    "UI/Hud": 0,
+    "UI/HUD": 0,
     "UI/Marker": 0,
     "UI/Dialogue": 0,
     "Gameplay/Inventory": 0,

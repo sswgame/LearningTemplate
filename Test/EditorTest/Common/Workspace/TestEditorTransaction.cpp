@@ -379,7 +379,7 @@ SW_TEST_CASE( EditorTransactionTest, UndoOfDestroyReattachesToTheOriginalParentN
     ScopedCommandStackService scopedStack{ stack };
 
     GameObject* pCamera = pManager->createGameObject( hashed_string( "Lookout" ) );
-    GameObject* pAnchor = pManager->createGameObject( hashed_string( "HudAnchor" ) );
+    GameObject* pAnchor = pManager->createGameObject( hashed_string( "HUDAnchor" ) );
     SW_ASSERT_NOT_NULL( pCamera->addComponent<SceneComponent>() );
     SW_ASSERT_NOT_NULL( pAnchor->addComponent<SceneComponent>() );
     pManager->mergePendingAdds();

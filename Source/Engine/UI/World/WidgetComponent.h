@@ -52,7 +52,7 @@ namespace sw
 {
     /**
      * @class WidgetComponent
-     * @brief 오브젝트 위치에 위젯 하나를 띄웁니다. **Screen**: `UiSystem` 의 Hud 층 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 `UiSystem::update`
+     * @brief 오브젝트 위치에 위젯 하나를 띄웁니다. **Screen**: `UiSystem` 의 HUD 층 마커 화면(캔버스 패널)에 위젯을 자식으로 두고, 매 프레임 `UiSystem::update`
      *        (게임 틱 · 트랜스폼 적용 뒤 — 병렬 틱 밖)가 오브젝트의 월드 점을 게임 카메라로 투영해 그 슬롯을 옮긴다. **World**: 위젯 트리를 렌더 텍스처에 그려
      *        사각형 메시에 붙인다(렌더 텍스처 경로 `getRenderTargetPath`).
      * @details 위젯은 `setContent` 로 코드가 넘긴다(문서 `_documentPath` 를 푸는 것은 5-1). 화면 마커는 `_drawSize` 가 있으면 그 크기로 고정해 레이아웃 경계가 되고

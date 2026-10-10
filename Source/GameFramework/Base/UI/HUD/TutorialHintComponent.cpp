@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/UI/Hud/TutorialHintComponent.h"
+#include "GameFramework/Base/UI/HUD/TutorialHintComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/UI/Screen/UiNotificationService.h"

@@ -116,7 +116,7 @@ void FarmerBodyComponent::onTick( float32 deltaTime )
 | 1 `Foundation` | `Utility`(0) · `Data`(1) · `Framework`(2) | 계산 도구, 데이터 틀, 게임 모듈의 수명 · 서비스 창구 · 저장 |
 | 2 `World` | `Environment` · `Query` · `Lifetime` · `Spline`(0), `Land`(1) | 월드 상태(시계 · 날씨 · 중력 · 땅 · 플래그 · 질의)와 곡선 |
 | 3 `Actor` | `Input` · `Movement` · `Navigation` · `Combat` · `Camera`(0), `AI` · `Control`(1) | 액터 하나: 입력, 조종, 이동, 길 찾기, AI, 카메라, 전투 수치 |
-| 4 `UI` | `Hud` · `Marker` · `Dialogue` | HUD, HP 바 · 데미지 숫자 · 목표 마커, 대화 |
+| 4 `UI` | `HUD` · `Marker` · `Dialogue` | HUD, HP 바 · 데미지 숫자 · 목표 마커, 대화 |
 | 5 `Gameplay` | `Inventory` · `Progression` · `Match` · `Ability` · `Interaction`(0), `Quest` · `Appearance` · `Gimmick`(1), `GameState` · `Vehicle`(2) | 그 위의 규칙 |
 
 표의 원본은 `Scripts/lint/gate/CheckGameFrameworkLayers.py` 의 `_kBaseLayer` 와 `_kBaseFolderOrder` 입니다.
@@ -204,7 +204,7 @@ PROPERTY 는 리플렉션이 저장하지만, 디렉터가 가진 키트 객체�
 
 ### 화면에 뜨는 것
 
-HUD 는 `HudControllerComponent` 가 플레이하는 동안 HUD 문서를 Hud 레이어에 엽니다. 게임은 `HudViewModel` 의 세터만 부르고, 문서의 `{bind:필드}` 가 그 값을 위젯에 연결합니다.
+HUD 는 `HUDControllerComponent` 가 플레이하는 동안 HUD 문서를 HUD 레이어에 엽니다. 게임은 `HUDViewModel` 의 세터만 부르고, 문서의 `{bind:필드}` 가 그 값을 위젯에 연결합니다.
 언리얼의 `AHUD` 와 MVVM 뷰모델을 합친 것에 해당합니다.
 
 HP 바(`HealthBarComponent`)와 데미지 숫자(`DamageNumberComponent`)는 같은 오브젝트의 화면 마커(`WidgetComponent` Screen 모드)에 위젯을 넣어 그립니다.

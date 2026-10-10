@@ -95,7 +95,7 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
         label = SW_LOCTEXT( "Menu", "Start", "Start " "Game" );
         title = SW_LOCTEXT( "Menu", "Quote", "Say \"hi\"\tnow" );
         raw   = SW_LOCTEXT( "Menu", "Raw", R"(Use {count} keys)" );
-        line  = SW_LOCFORMAT( "Hud", "Ammo", "{n, plural, one {# round} other {# rounds}}", args );
+        line  = SW_LOCFORMAT( "HUD", "Ammo", "{n, plural, one {# round} other {# rounds}}", args );
         bad   = SW_LOCTEXT( "Menu", kKey, "dynamic key" );
     )code";
 
@@ -109,7 +109,7 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
     SW_EXPECT_STREQ( "Source/Test/Probe.cpp", pStart->_listOrigin.front().c_str() );
     SW_EXPECT_STREQ( "Say \"hi\"\tnow", TextGathererTestInternal::findText( gatherer, "Menu.Quote" )->_source.c_str() );
     SW_EXPECT_STREQ( "Use {count} keys", TextGathererTestInternal::findText( gatherer, "Menu.Raw" )->_source.c_str() );
-    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "Hud.Ammo" ) );
+    SW_EXPECT_NOT_NULL( TextGathererTestInternal::findText( gatherer, "HUD.Ammo" ) );
     SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "Comment.Line" ) );
     SW_EXPECT_NULL( TextGathererTestInternal::findText( gatherer, "String.Literal" ) );
 

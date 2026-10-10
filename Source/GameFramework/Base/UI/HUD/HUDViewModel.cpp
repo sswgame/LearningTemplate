@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "GameFramework/Base/UI/Hud/HudViewModel.h"
+#include "GameFramework/Base/UI/HUD/HUDViewModel.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    HudViewModel::HudViewModel()
+    HUDViewModel::HUDViewModel()
         : UiViewModel{}
         , _health{ 0 }
         , _healthRatio{ 0.0f }
@@ -18,41 +18,41 @@ namespace sw
     {
     }
 
-    HudViewModel::~HudViewModel() = default;
+    HUDViewModel::~HUDViewModel() = default;
 
-    const TypeInfo* HudViewModel::getTypeInfo() const
+    const TypeInfo* HUDViewModel::getTypeInfo() const
     {
         return StaticType();
     }
 
-    void HudViewModel::setHealth( float32 health, float32 ratio )
+    void HUDViewModel::setHealth( float32 health, float32 ratio )
     {
         (void)setField( _health, static_cast<int32>( MathUtil::ceil( MathUtil::max( 0.0f, health ) ) ), "_health" );
         (void)setField( _healthRatio, MathUtil::clamp( ratio, 0.0f, 1.0f ), "_healthRatio" );
     }
 
-    void HudViewModel::setAmmo( int32 magazineAmmo, int32 reserveAmmo )
+    void HUDViewModel::setAmmo( int32 magazineAmmo, int32 reserveAmmo )
     {
         (void)setField( _magazineAmmo, magazineAmmo, "_magazineAmmo" );
         (void)setField( _reserveAmmo, reserveAmmo, "_reserveAmmo" );
     }
 
-    void HudViewModel::setWeaponName( string_view weaponName )
+    void HUDViewModel::setWeaponName( string_view weaponName )
     {
         (void)setField( _weaponName, string( weaponName ), "_weaponName" );
     }
 
-    void HudViewModel::setCrosshairShown( bool bShown )
+    void HUDViewModel::setCrosshairShown( bool bShown )
     {
         (void)setField( _crosshairVisibility, toVisibility( bShown ), "_crosshairVisibility" );
     }
 
-    void HudViewModel::setHitMarkerShown( bool bShown )
+    void HUDViewModel::setHitMarkerShown( bool bShown )
     {
         (void)setField( _hitMarkerVisibility, toVisibility( bShown ), "_hitMarkerVisibility" );
     }
 
-    WidgetVisibility HudViewModel::toVisibility( bool bShown )
+    WidgetVisibility HUDViewModel::toVisibility( bool bShown )
     {
         return bShown ? WidgetVisibility::HitTestInvisible : WidgetVisibility::Collapsed;
     }

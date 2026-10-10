@@ -34,7 +34,7 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
 ### 2. 큰 평평한 폴더를 안쪽으로 나눈다 — 끝남(2026-10-10)
 - `Foundation/Framework`: `Save` · `Flow` · `Presentation`, 루트에는 서비스 창구 · 이벤트 · 디렉터 베이스 · `GameStateRefs`.
 - `Foundation/Utility`: `Time` · `Random` · `Grid` · `Math`, 루트에는 `EventBuffer` · `StateArchiveUtil`. `Time` · `Random` · `Grid` 는 중복 정리 단계에서 Core 로 내릴 후보라 코드는 그대로 두었다.
-- `World` 층은 `Environment` · `Land` · `Query` · `Lifetime` · `Spline`, `UI` 층은 `Hud` · `Marker` · `Dialogue` 로 풀어 `World/World` · `UI/UI` 두 겹을 없앴다.
+- `World` 층은 `Environment` · `Land` · `Query` · `Lifetime` · `Spline`, `UI` 층은 `HUD` · `Marker` · `Dialogue` 로 풀어 `World/World` · `UI/UI` 두 겹을 없앴다.
 - `Actor/Control`: `Pawn` · `Controller` · `Intent`, `Actor/Combat`: `Health` · `Weapon` · `Damage`.
 
 ### 3. 키트 안을 나눈다 — 끝남(2026-10-10)

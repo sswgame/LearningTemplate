@@ -1397,7 +1397,7 @@ namespace sw
             unique_ptr<CanvasPanel> root = make_unique<CanvasPanel>();
             root->setVisibility( WidgetVisibility::SelfHitTestInvisible ); // 빈 곳 클릭은 아래로(게임으로)
             UiScreenDesc desc{};
-            desc._layer       = UiLayer::Hud;
+            desc._layer       = UiLayer::HUD;
             desc._bTakesFocus = false;
             desc._bShowCursor = false;
             _markerScreen     = pushScreen( sw::make_unique<UiScreen>( desc, std::move( root ) ) );

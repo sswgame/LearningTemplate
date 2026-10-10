@@ -105,7 +105,7 @@
 
 ```xml
 <SliderWidget _value="{bind:_volume, mode=TwoWay}" />              <!-- 사용자가 움직이면 뷰모델에 되쓴다 -->
-<TextWidget _text="{bind:_ammo, format=Hud.Ammo}" />               <!-- 현지화 패턴 "Ammo: {value}" -->
+<TextWidget _text="{bind:_ammo, format=HUD.Ammo}" />               <!-- 현지화 패턴 "Ammo: {value}" -->
 <TextWidget _text="{bind:_health, converter=Percent}" />           <!-- 0.75 → "75%" -->
 <ProgressBarWidget _percent="{bind:_health}" />
 ```

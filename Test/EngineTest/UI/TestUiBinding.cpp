@@ -24,10 +24,10 @@
 namespace
 {
     /** @brief 손으로 지은 리플렉션 표를 가진 시험 뷰모델입니다. */
-    class TestHudViewModel : public sw::UiViewModel
+    class TestHUDViewModel : public sw::UiViewModel
     {
     public:
-        TestHudViewModel()
+        TestHUDViewModel()
             : sw::UiViewModel{}
             , _name{}
             , _tint{ 1.0f, 1.0f, 1.0f, 1.0f }
@@ -58,13 +58,13 @@ namespace
         static sw::TypeInfo makeTypeInternal()
         {
             sw::TypeInfo info{};
-            info._name               = sw::hashed_string( "TestHudViewModel" );
-            info._fullyQualifiedName = sw::hashed_string( "TestHudViewModel" );
-            info._listProperty.push_back( { sw::hashed_string( "_name" ), sw::hashed_string( "string" ), SW_OFFSET_OF( TestHudViewModel, _name ) } );
-            info._listProperty.push_back( { sw::hashed_string( "_tint" ), sw::hashed_string( "float4" ), SW_OFFSET_OF( TestHudViewModel, _tint ) } );
-            info._listProperty.push_back( { sw::hashed_string( "_health" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( TestHudViewModel, _health ) } );
-            info._listProperty.push_back( { sw::hashed_string( "_ammo" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestHudViewModel, _ammo ) } );
-            info._listProperty.push_back( { sw::hashed_string( "_bAlive" ), sw::hashed_string( "bool" ), SW_OFFSET_OF( TestHudViewModel, _bAlive ) } );
+            info._name               = sw::hashed_string( "TestHUDViewModel" );
+            info._fullyQualifiedName = sw::hashed_string( "TestHUDViewModel" );
+            info._listProperty.push_back( { sw::hashed_string( "_name" ), sw::hashed_string( "string" ), SW_OFFSET_OF( TestHUDViewModel, _name ) } );
+            info._listProperty.push_back( { sw::hashed_string( "_tint" ), sw::hashed_string( "float4" ), SW_OFFSET_OF( TestHUDViewModel, _tint ) } );
+            info._listProperty.push_back( { sw::hashed_string( "_health" ), sw::hashed_string( "float32" ), SW_OFFSET_OF( TestHUDViewModel, _health ) } );
+            info._listProperty.push_back( { sw::hashed_string( "_ammo" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( TestHUDViewModel, _ammo ) } );
+            info._listProperty.push_back( { sw::hashed_string( "_bAlive" ), sw::hashed_string( "bool" ), SW_OFFSET_OF( TestHUDViewModel, _bAlive ) } );
             return info;
         }
     };
@@ -160,7 +160,7 @@ SW_TEST_CASE( UiBindingTest, ExpressionParses )
 SW_TEST_CASE( UiBindingTest, OneWayUpdatesOnlyOnNotify )
 {
     UiBindingFixture fixture;
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     sw::TextWidget*  pText    = nullptr;
     viewModel._name           = "Alice";
     sw::UiScreenHandle handle = fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_name}", pText ) );
@@ -180,7 +180,7 @@ SW_TEST_CASE( UiBindingTest, OneWayUpdatesOnlyOnNotify )
 /** @brief [UiBindingTest] 같은 값을 넣으면 알리지 않는다 — 알림 번호가 오르지 않고 칸 쓰기도 없다 */
 SW_TEST_CASE( UiBindingTest, SameValueDoesNotNotify )
 {
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel.setAmmo( 5 );
     const uint64 serial = viewModel.getChangeSerial();
     SW_EXPECT_FALSE( viewModel.setField( viewModel._ammo, 5, "_ammo" ) );
@@ -200,7 +200,7 @@ SW_TEST_CASE( UiBindingTest, TwoWaySliderWritesBack )
                                                            "\t\t<TextWidget _name=\"Label\" _text=\"{bind:_health}\" />\n"
                                                            "\t</BoxPanel>\n"
                                                            "</UiDocument>\n" );
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._health                = 40.0f;
     const sw::UiScreenHandle handle  = fixture._ui.openScreen( "test/binding/slider.ui.xml" );
     sw::UiScreen*            pScreen = fixture._ui.findScreen( handle );
@@ -228,17 +228,17 @@ SW_TEST_CASE( UiBindingTest, TwoWaySliderWritesBack )
 SW_TEST_CASE( UiBindingTest, FormatUsesLocalizedPattern )
 {
     UiBindingFixture fixture;
-    fixture._localization.setString( "qa", sw::hashed_string( "Hud.Ammo" ), "Ammo: {value}" );
+    fixture._localization.setString( "qa", sw::hashed_string( "HUD.Ammo" ), "Ammo: {value}" );
     SW_ASSERT_TRUE( fixture._localization.setCurrentLanguage( "qa" ) );
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._ammo        = 12;
     sw::TextWidget* pText  = nullptr;
     sw::TextWidget* pPlain = nullptr;
     sw::UiScreen*   pScreen =
-        fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_ammo, format=Hud.Ammo}", pText ) ) );
+        fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_ammo, format=HUD.Ammo}", pText ) ) );
     pScreen->setViewModel( &viewModel );
     sw::UiScreen* pMissing =
-        fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_ammo, format=Hud.Missing}", pPlain ) ) );
+        fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_ammo, format=HUD.Missing}", pPlain ) ) );
     pMissing->setViewModel( &viewModel );
     UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
     SW_EXPECT_STREQ( "Ammo: 12", pText->getText().c_str() );
@@ -249,7 +249,7 @@ SW_TEST_CASE( UiBindingTest, FormatUsesLocalizedPattern )
 SW_TEST_CASE( UiBindingTest, ConverterByName )
 {
     UiBindingFixture fixture;
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._health       = 0.75f;
     viewModel._ammo         = 125;
     sw::TextWidget* pText   = nullptr;
@@ -282,7 +282,7 @@ SW_TEST_CASE( UiBindingTest, ConverterByName )
 SW_TEST_CASE( UiBindingTest, TypeMismatchWithoutConverterIsError )
 {
     UiBindingFixture fixture;
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._name                           = "abc";
     sw::unique_ptr<sw::SliderWidget> slider   = sw::make_unique<sw::SliderWidget>();
     const sw::WidgetId               sliderId = slider->getId();
@@ -312,7 +312,7 @@ SW_TEST_CASE( UiBindingTest, TypeMismatchWithoutConverterIsError )
 /** @brief [UiBindingTest] 바인딩이 쓴 칸에 맞는 무효화 — 글은 레이아웃, 색은 그리기만 */
 SW_TEST_CASE( UiBindingTest, LayoutFieldMakesLayoutDirty )
 {
-    TestHudViewModel               viewModel;
+    TestHUDViewModel               viewModel;
     sw::unique_ptr<sw::TextWidget> text  = sw::make_unique<sw::TextWidget>();
     sw::TextWidget*                pText = text.get();
     sw::UiScreen                   screen( sw::UiScreenDesc{}, std::move( text ) );
@@ -340,7 +340,7 @@ SW_TEST_CASE( UiBindingTest, LayoutFieldMakesLayoutDirty )
 SW_TEST_CASE( UiBindingTest, ManyNotifiesInOneFrameUpdateOnce )
 {
     UiBindingFixture fixture;
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     sw::TextWidget*  pText   = nullptr;
     sw::UiScreen*    pScreen = fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_ammo}", pText ) ) );
     pScreen->setViewModel( &viewModel );
@@ -361,7 +361,7 @@ SW_TEST_CASE( UiBindingTest, ManyNotifiesInOneFrameUpdateOnce )
 SW_TEST_CASE( UiBindingTest, PollBindingDetectsChange )
 {
     UiBindingFixture fixture;
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._ammo         = 3;
     sw::TextWidget* pText   = nullptr;
     sw::UiScreen*   pScreen = fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{poll:_ammo}", pText ) ) );
@@ -386,7 +386,7 @@ SW_TEST_CASE( UiBindingTest, DestroyedViewModelIsReleased )
     sw::UiScreen*    pScreen =
         fixture._ui.findScreen( fixture._ui.pushScreen( UiBindingTestUtil::makeTextScreen( "_text", "{bind:_name}", pText ) ) );
     {
-        TestHudViewModel viewModel;
+        TestHUDViewModel viewModel;
         viewModel._name = "Gone";
         pScreen->setViewModel( &viewModel );
         UiBindingTestUtil::runFrame( fixture._input, fixture._ui );
@@ -406,7 +406,7 @@ SW_TEST_CASE( UiBindingTest, DocumentReloadRebindsViewModel )
                                                                 "\t\t<TextWidget _name=\"Label\" _text=\"{bind:_name}\" />\n"
                                                                 "\t</BoxPanel>\n"
                                                                 "</UiDocument>\n" );
-    TestHudViewModel viewModel;
+    TestHUDViewModel viewModel;
     viewModel._name       = "Before";
     sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( "test/binding/reload.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pScreen );

@@ -101,7 +101,7 @@ SW_TEST_CASE( WidgetComponentTest, ScaleWithDistance )
 }
 
 /**
- * @brief [WidgetComponentTest] 화면 마커는 UI 시스템의 Hud 마커 화면에 붙고, 자리 = 기준점 − 피벗 × 크기, 배율은 피벗 둘레 렌더 변환으로 기하에 얹힌다 · 숨김은 접기 ·
+ * @brief [WidgetComponentTest] 화면 마커는 UI 시스템의 HUD 마커 화면에 붙고, 자리 = 기준점 − 피벗 × 크기, 배율은 피벗 둘레 렌더 변환으로 기하에 얹힌다 · 숨김은 접기 ·
  *        등록을 풀면 마커 화면이 닫힌다
  * @details 변이: `Widget::setRenderTransform` 의 kArrange 를 빼면 배율만 바뀐 프레임에 기하가 그대로라 진다.
  */
@@ -117,7 +117,7 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
     component.setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "hp" ) );
     component.bindUiSystem( &ui );
     SW_ASSERT_EQUAL( 1u, ui.getScreenCount() );
-    SW_EXPECT_TRUE( ui.getActiveScreen() == nullptr ); // Hud — 포커스를 받지 않는다
+    SW_EXPECT_TRUE( ui.getActiveScreen() == nullptr ); // HUD — 포커스를 받지 않는다
 
     sw::WidgetMarkerPlacement placement{};
     placement._position = sw::float2{ 500.0f, 300.0f };

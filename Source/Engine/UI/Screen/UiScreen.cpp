@@ -38,7 +38,7 @@ namespace sw
 
     bool UiScreen::takesFocus() const
     {
-        return _desc._bTakesFocus && _desc._layer != UiLayer::Hud && _desc._layer != UiLayer::Overlay;
+        return _desc._bTakesFocus && _desc._layer != UiLayer::HUD && _desc._layer != UiLayer::Overlay;
     }
 
     void UiScreen::close()

@@ -74,7 +74,7 @@
 
 HUD와 로딩 화면은 GameFramework에 있습니다. 엔진 UI의 문서와 뷰모델 위에 만들어졌습니다.
 
-- **HUD**는 플레이어 오브젝트의 `HudControllerComponent` 가 `_documentPath` 문서를 Hud 층에 열고 `HudViewModel` 을 연결합니다. 게임은 뷰모델 세터만 부릅니다(Shooter3D의 `ShooterPlayerComponent::updateHud`).
+- **HUD**는 플레이어 오브젝트의 `HUDControllerComponent` 가 `_documentPath` 문서를 HUD 층에 열고 `HUDViewModel` 을 연결합니다. 게임은 뷰모델 세터만 부릅니다(Shooter3D의 `ShooterPlayerComponent::updateHUD`).
 - **로딩 화면**은 `LoadingScreenController` 가 씬을 비동기로 바꾸는 동안 팩의 `gamesettings.xml` 에 적힌 `_loadingScreen` 문서(기본 `engine/ui/loading.ui.xml`)를 Loading 층에 엽니다.
   `UiSystem::isLoadingScreenShown` 이 참인 동안 게임 입력이 막히고, 자동화의 "씬 플레이 중" 판정도 로딩 화면이 닫힌 뒤입니다.
 

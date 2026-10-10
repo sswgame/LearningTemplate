@@ -22,7 +22,7 @@ namespace sw
      * @brief 스크롤 패널 안 줄 바꿈 격자 — 칸마다 테두리(바탕) + 아이콘 상자 + 글, 고정 크기(칸이 레이아웃 경계). 대부분은 스크롤 밖(잘린다).
      * @details `onTick` 이 프레임마다 앞쪽(보이는) 칸 `gv_benchUiChurn` 개의 글을 바꾼다 — 무효화 · 그림 캐시가 비용을 그 칸으로 가두는지 잰다.
      *          잴 구간은 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Text.GlyphsRasterized`(값은 per_frame 열).
-     *          `UiSystem::update` 가 `gv_benchUiWidgets` 를 보고 열고 닫는다(Hud 층 — 포커스 · 입력을 받지 않는다).
+     *          `UiSystem::update` 가 `gv_benchUiWidgets` 를 보고 열고 닫는다(HUD 층 — 포커스 · 입력을 받지 않는다).
      */
     class SW_API UiBenchScreen final : public UiScreen
     {

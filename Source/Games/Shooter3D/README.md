@@ -134,7 +134,7 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 플레이어의 몸 | 프리팹 `player_body.prefab.xml`. 플레이어가 플레이 시작에 만듭니다. 장비는 `prefabs/kaykit/*`, `prefabs/blaster_*` |
 | 페이싱, 쓰러뜨린 수, 효과 풀, 로그, 자동 플레이 빙의 | `ShooterDirectorComponent` |
 | 무기 셋, 히트스캔(적은 캡슐), 체력, 탄도선 요청 | `ShooterPlayerComponent`. 카메라, 폰, 몸 이동, 손에 든 총, HUD 와 같은 오브젝트입니다 |
-| HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름) | 플레이어 오브젝트의 `HudControllerComponent` 가 `ui/hud.ui.xml` 을 열고, `ShooterPlayerComponent::updateHud` 가 틱 뒤에 `HudViewModel` 에 값을 넣습니다 |
+| HUD(조준선, 맞음 표시, 체력, 탄약, 무기 이름) | 플레이어 오브젝트의 `HUDControllerComponent` 가 `ui/hud.ui.xml` 을 열고, `ShooterPlayerComponent::updateHUD` 가 틱 뒤에 `HUDViewModel` 에 값을 넣습니다 |
 | 걷기, 달리기, 점프, 중력, 상자에 미끄러지기 | `ShooterBodyMovementComponent`. 스스로 틱하지 않고 같은 오브젝트의 규칙 컴포넌트가 자기 틱에서 부릅니다 |
 | 몸이 플레이어를 따르기, 애니메이터 파라미터, 상체 레이어 | `ShooterAvatarComponent`(몸 오브젝트) |
 | 적 하나 | `ShooterEnemyComponent`. 일어나기, 쫓기, 휘두르기, 움찔, 쓰러짐 |

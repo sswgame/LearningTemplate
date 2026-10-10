@@ -29,7 +29,7 @@ flowchart TD
     direction LR
     PI["UiSystem::processInput<br/>입력 → UI 사건"] --> GT["게임 틱"] --> UP["UiSystem::update<br/>애니메이션 → 바인딩 → 스타일 → 레이아웃 → 그리기"] --> RP["렌더 패킷의 캔버스"]
   end
-  UI["UiSystem"] --> Stack["층별 화면 스택<br/>Hud, GameMenu, Menu, Modal, Overlay, Loading"]
+  UI["UiSystem"] --> Stack["층별 화면 스택<br/>HUD, GameMenu, Menu, Modal, Overlay, Loading"]
   Stack --> Screen["UiScreen<br/>문서 하나로 만든 화면"]
   Screen --> Tree["WidgetTree"]
   Screen --> VM["UiViewModel<br/>게임이 소유"]
@@ -55,7 +55,7 @@ HUD는 포커스를 받지 않으므로 HUD만 떠 있을 때는 패드 입력�
 
 점수와 남은 시간을 보여 주고, 버튼을 누르면 게임이 반응하는 작은 화면을 만들어 봅니다.
 문서 작성, 뷰모델 정의, 화면 열기, 값 넣기, 명령 받기, 화면 닫기를 모두 거칩니다.
-저장소에 같은 구조로 동작하는 예가 있습니다. Shooter3D의 HUD(`Resource/game/shooter3d/ui/hud.ui.xml`)와 GameFramework의 `HudViewModel`, `HudControllerComponent` 입니다.
+저장소에 같은 구조로 동작하는 예가 있습니다. Shooter3D의 HUD(`Resource/game/shooter3d/ui/hud.ui.xml`)와 GameFramework의 `HUDViewModel`, `HUDControllerComponent` 입니다.
 
 ### 1단계 — 문서 쓰기
 
@@ -88,7 +88,7 @@ HUD는 포커스를 받지 않으므로 HUD만 떠 있을 때는 패드 입력�
 
 뷰모델 필드는 리플렉션 PROPERTY 입니다. 세터는 `setField` 로 쓰면 값이 같을 때 알림을 보내지 않습니다.
 
-<!-- snippet: ScoreViewModel(REFLECT, getTypeInfo 재정의, setField 세터 둘) — 5b U7 에서 실제 소스(HudViewModel)나 문서 예시 테스트로 대조 -->
+<!-- snippet: ScoreViewModel(REFLECT, getTypeInfo 재정의, setField 세터 둘) — 5b U7 에서 실제 소스(HUDViewModel)나 문서 예시 테스트로 대조 -->
 ```cpp
 REFLECT()
 class ScoreViewModel : public UiViewModel
@@ -118,7 +118,7 @@ private:
 
 게임 컴포넌트가 플레이를 시작할 때 화면을 엽니다. 화면은 `UiSystem` 이 소유하므로 핸들(`UiScreenHandle`)만 보관합니다.
 
-<!-- snippet: onBeginPlay 에서 화면 열기와 뷰모델, 명령 연결 — 5b U7 에서 HudControllerComponent::openScreen 과 대조 -->
+<!-- snippet: onBeginPlay 에서 화면 열기와 뷰모델, 명령 연결 — 5b U7 에서 HUDControllerComponent::openScreen 과 대조 -->
 ```cpp
 void ScoreBoardComponent::onBeginPlay()
 {
@@ -279,7 +279,7 @@ UI는 키와 버튼을 직접 보지 않고 **행동(action)**을 받습니다. 
 
 ### 화면 스택
 
-층(`UiLayer`)은 `Hud`, `GameMenu`, `Menu`, `Modal`, `Overlay`, `Loading` 여섯이고, 층마다 스택이 있습니다.
+층(`UiLayer`)은 `HUD`, `GameMenu`, `Menu`, `Modal`, `Overlay`, `Loading` 여섯이고, 층마다 스택이 있습니다.
 그리기 순서는 층 순서, 그 안에서는 쌓인 순서입니다. 입력은 그 역순입니다.
 
 - **활성 화면**은 맨 위의 포커스 받는 화면입니다. HUD와 오버레이 층은 포커스를 받지 않습니다. 막는 화면이 있으면 그 아래로는 내려가지 않습니다.
@@ -444,7 +444,7 @@ arrange가 결과 방향을 위젯에 기록하고(`isRightToLeft`), 글 위젯�
 
 `WidgetComponent` 는 게임 오브젝트에 위젯을 붙이는 컴포넌트이고, 두 방식이 있습니다.
 
-**Screen 방식**은 위젯을 `UiSystem` 의 Hud 층에 있는 **마커 화면**에 자식으로 붙입니다. 마커 화면은 캔버스 패널이 루트이고 클릭을 막지 않으며, 처음 붙일 때 만들고 마지막 위젯을 분리할 때 닫습니다.
+**Screen 방식**은 위젯을 `UiSystem` 의 HUD 층에 있는 **마커 화면**에 자식으로 붙입니다. 마커 화면은 캔버스 패널이 루트이고 클릭을 막지 않으며, 처음 붙일 때 만들고 마지막 위젯을 분리할 때 닫습니다.
 `UiSystem::update` 가 레이아웃 전에, 등록된 컴포넌트마다 오브젝트의 월드 위치를 게임 카메라로 투영해 슬롯을 옮깁니다(`computeMarkerPlacement`, 순수 함수).
 게임 틱과 트랜스폼 적용이 끝난 뒤이므로 병렬 틱과 겹치지 않습니다. 2D(직교)와 3D가 같은 코드입니다.
 

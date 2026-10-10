@@ -26,7 +26,7 @@
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
-#include "GameFramework/Base/UI/Hud/HudControllerComponent.h"
+#include "GameFramework/Base/UI/HUD/HUDControllerComponent.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
@@ -628,15 +628,15 @@ namespace sw
         return bFirstPerson;
     }
 
-    void ShooterPlayerComponent::updateHud()
+    void ShooterPlayerComponent::updateHUD()
     {
         GameObject*             pOwner = getOwner();
-        HudControllerComponent* pHud   = pOwner != nullptr ? pOwner->getComponent<HudControllerComponent>() : nullptr;
-        if ( pHud == nullptr )
+        HUDControllerComponent* pHUD   = pOwner != nullptr ? pOwner->getComponent<HUDControllerComponent>() : nullptr;
+        if ( pHUD == nullptr )
             return;
         // 값만 넣는다 — 위젯은 HUD 문서의 바인딩이 잇는다(같은 값이면 알리지 않는다). 조준선은 1인칭에서만(다른 시점에서는 몸이 보인다),
         // 맞음 표시는 맞힌 직후 1인칭에서만. 무기 이름은 무기 표의 이름(원문)이 현지화 키다 — 글 위젯이 문화권으로 푼다.
-        HudViewModel& hud        = pHud->getViewModel();
+        HUDViewModel& hud        = pHUD->getViewModel();
         const bool    bCrosshair = _bFirstPerson == SW_TRUE && _vitality.isAlive();
         hud.setCrosshairShown( bCrosshair );
         hud.setHitMarkerShown( bCrosshair && _hitMarkerTimer > 0.0f );
@@ -741,7 +741,7 @@ namespace sw
         }
         if ( _bViewModeDirty == SW_TRUE )
             applyViewMode();
-        updateHud();
+        updateHUD();
         // 쓰러짐 클립이 끝났다 — 디렉터가 적을 걷고 감독을 처음부터, 플레이어는 처음 자리에서.
         if ( _vitality.isAlive() == false && _downTimer >= _downTime )
         {

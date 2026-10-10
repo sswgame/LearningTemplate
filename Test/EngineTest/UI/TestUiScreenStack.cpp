@@ -203,12 +203,12 @@ SW_TEST_CASE( UiScreenStackTest, CloseDuringEventIsDeferred )
 }
 
 /** @brief [UiScreenStackTest] HUD 층 화면만 있으면 활성 화면이 없다 — 포커스 · 커서 · 게임 입력 막기 모두 없다 */
-SW_TEST_CASE( UiScreenStackTest, HudLayerNeverTakesFocus )
+SW_TEST_CASE( UiScreenStackTest, HUDLayerNeverTakesFocus )
 {
     using Util = UiScreenTestUtil;
     UiScreenFixture fixture;
     fixture._ui.setInputMode( sw::UiInputMode::Navigation );
-    (void)fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Hud ), 0.0f, 0.0f, 800.0f, 600.0f, "hud", 2 ) );
+    (void)fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::HUD ), 0.0f, 0.0f, 800.0f, 600.0f, "hud", 2 ) );
     SW_EXPECT_TRUE( fixture._ui.getActiveScreen() == nullptr );
     SW_EXPECT_EQUAL( sw::kInvalidWidgetId, fixture._ui.getFocusManager().getFocusedWidget() );
     SW_EXPECT_FALSE( fixture._ui.wantsCursor() );
@@ -249,7 +249,7 @@ SW_TEST_CASE( UiScreenStackTest, ModuleUnloadClosesScreensWithItsWidgets )
     UiScreenFixture          fixture;
     const sw::UiScreenHandle menu = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Menu ), 0.0f, 0.0f, 800.0f, 600.0f, "menu", 1 ) );
     // 버튼 없는 화면(시험 패널만) — 시험 상자의 vtable 범위에 들지 않아 남는다.
-    const sw::UiScreenHandle other   = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::Hud ), 0.0f, 0.0f, 800.0f, 600.0f, "other", 0 ) );
+    const sw::UiScreenHandle other   = fixture._ui.pushScreen( Util::makeScreen( Util::makeDesc( sw::UiLayer::HUD ), 0.0f, 0.0f, 800.0f, 600.0f, "other", 0 ) );
     const sw::Widget*        pButton = fixture.find( menu, "menu0" );
     const uint8*             pVtable = static_cast<const uint8*>( sw::IModuleUnloadListener::findVtableAddress( pButton ) );
 

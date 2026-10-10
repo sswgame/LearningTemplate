@@ -92,7 +92,7 @@ _kStep2: list[Dir | Files] = [
     filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Health", "HealthSourceComponent HealthListenerComponent Vitality ResourceGauge"),
     filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Weapon", "Weapon WeaponMath Ballistics"),
     filesInternal("Base/Actor/Combat", "Base/Actor/Combat/Damage", "DamageMath ElementChart"),
-    filesInternal("Base/UI/UI", "Base/UI/Hud", "HudControllerComponent HudViewModel TutorialHintComponent"),
+    filesInternal("Base/UI/UI", "Base/UI/HUD", "HUDControllerComponent HUDViewModel TutorialHintComponent"),
     filesInternal("Base/UI/UI", "Base/UI/Marker", "HealthBarComponent DamageNumberComponent ObjectiveMarkerComponent"),
     filesInternal("Base/UI/UI", "Base/UI/Dialogue", "DialogueRunnerComponent"),
 ]
