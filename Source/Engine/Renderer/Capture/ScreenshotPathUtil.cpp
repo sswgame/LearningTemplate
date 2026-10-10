@@ -10,6 +10,7 @@
 
 #include <ctime>
 
+#if SW_DEV_COMMANDS_ENABLED
 namespace sw
 {
     namespace
@@ -32,6 +33,7 @@ namespace sw
     SW_DEV_COMMAND( Screenshot, "screenshot", "screenshot [file]", "Save the next frame as PNG (default Saved/Screenshots/<time>.png)",
                     &ScreenshotPathUtilInternal::runScreenshot );
 } // namespace sw
+#endif
 
 namespace sw
 {

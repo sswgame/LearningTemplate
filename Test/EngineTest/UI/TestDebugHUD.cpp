@@ -1,17 +1,21 @@
 #include "pch.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/GlobalVariable/GlobalVariableManager.h"
+// 디버그 HUD 는 개발 도구라 Shipping 에는 없다(`SW_DEV_COMMANDS_ENABLED`) — 이 시험도 없다.
 
-#include "Engine/Common/EngineServices.h"
-#include "Engine/Console/DebugHUDRegistry.h"
-#include "Engine/Input/InputManager.h"
-#include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Debug/DebugHUD.h"
-#include "Engine/UI/UISystem.h"
-#include "Engine/UserSettings/UserSettingsManager.h"
+#if !defined( SW_SHIPPING )
 
-#include "TestFramework/TestFramework.h"
+    #include "Core/Container/StringUtil.h"
+    #include "Core/GlobalVariable/GlobalVariableManager.h"
+
+    #include "Engine/Common/EngineServices.h"
+    #include "Engine/Console/DebugHUDRegistry.h"
+    #include "Engine/Input/InputManager.h"
+    #include "Engine/UI/Base/PanelWidget.h"
+    #include "Engine/UI/Debug/DebugHUD.h"
+    #include "Engine/UI/UISystem.h"
+    #include "Engine/UserSettings/UserSettingsManager.h"
+
+    #include "TestFramework/TestFramework.h"
 
 // DebugHUDTest — 디버그 HUD: 섹션 등록부(등록 · 순서 · 거절 · 모듈 언로드), 설정 글(켬 · 끔 낱말), 사용자 설정 왕복(파일까지),
 // HUD 화면이 켜진 섹션만 그리고 모서리를 따르는지, 설정 창이 열린 동안만 게임 입력을 막는지. 디바이스 없음(nogpu).
@@ -288,3 +292,5 @@ SW_TEST_CASE( DebugHUDTest, WindowBlocksGameInputOnlyWhileOpen )
     SW_EXPECT_FALSE( fixture._hud.isWindowOpen() );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
 }
+
+#endif // !SW_SHIPPING

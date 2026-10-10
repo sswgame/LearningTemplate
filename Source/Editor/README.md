@@ -203,7 +203,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **에디터 자체 시험**은 자기 .cpp 의 `SW_EDITOR_SELF_TEST( 이름, "id", 순서, &본문 )` 한 줄로 등록합니다. 본문은 패널을 그린 뒤 프레임마다 불리고 `Continue` 를 돌려주면 다음 프레임에 다시 불립니다.
   `App.exe -dx12 -EnableEditor "-gv_editorSelfTest=*" -gv_profileFrames=1200` 로 돌리고, 결과는 `EditorSelfTest|PASS|<id>` 줄입니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor` 가 기대 목록과 대조합니다.
 - **에디터 시나리오**는 `Resource/engine/automation/editor/*.scenario.xml` 입니다. 레이블(`EditorSelfTestMarks::note`)를 누르고 탐침(`SW_AUTOMATION_PROBE` — `Editor.*`)으로 결과를 봅니다.
-  단계와 탐침의 목록은 [Automation README](../Engine/Automation/README.md) "에디터 시나리오" 절에 있고, `AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 네 백엔드에서 모두 돌립니다.
+  단계와 탐침의 목록은 [Automation README](../Engine/Automation/README.md) "에디터 시나리오" 절에 있고, `AppScenarioTest.EditorScenariosPassOn<Backend>` 가 네 백엔드에서 모두 돌립니다.
 
 같은 실행기를 Test Runner 창(`test_runner`)이 그 자리에서 돌립니다. 화면을 볼 수 없을 때는 `-gv_editorPanelDump=N` 이 N 번째 프레임에 창마다 정점 수를 로그에 남깁니다. 보이는데 정점이 0 인 창이 빈 창입니다.
 
@@ -276,6 +276,7 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 
 - **등록 순서에 기대지 않습니다.** 순서는 순서 키로 정합니다. 번역 단위 사이의 정적 초기화 순서는 빌드마다 달라질 수 있습니다.
 - **EditorModule 을 정적 라이브러리로 묶지 않습니다.** 지금은 DLL 이라 아무도 참조하지 않는 등록 객체도 링크에 남습니다. 정적으로 묶으면 링커가 등록 줄을 버릴 수 있으므로, 그런 구성을 만들면 `AppSmokeTest.EditorRegistriesKeepTheirOrder` 부터 확인합니다.
+- **EditorTest 는 Shipping 프리셋에서도 지어집니다.** `Test/EditorTest/CMakeLists.txt` 가 고른 Editor 파일은 Shipping 정의로 컴파일되므로, 에디터 메타데이터(`_displayName` · 카테고리 · 숨김 — `#if !defined( SW_SHIPPING )`)를 읽는 코드는 같은 가드 안에 둡니다. 에디터를 고친 묶음은 Shipping 빌드까지 돌려야 이 깨짐이 보입니다.
 - **확장 모듈의 ImGui 호출은 CMake 가 만든 결속기가 에디터 컨텍스트에 겁니다.** vcpkg imgui 는 정적 라이브러리라 DLL 마다 `GImGui` 와 할당자 사본이 있습니다(`EditorUIContext::publish`, `cmake/Engine/EditorExtensionUIBinder.cpp.in`).
   ImGuizmo 를 쓰는 확장은 그리기 전에 `ImGuizmo::SetImGuiContext( ImGui::GetCurrentContext() )` 를 부릅니다.
 - **확장 모듈은 ImDrawList 콜백(`AddCallback`)을 쓰지 않습니다.** 렌더 스레드가 늦게 부르므로 그때는 확장이 이미 언로드되었을 수 있습니다.

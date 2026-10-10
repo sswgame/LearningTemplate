@@ -89,9 +89,9 @@ namespace sw::editor
 
     bool EditorPreferencesStore::saveAll( string_view filePath )
     {
-        JSONDocument    document;
-        const JSONValue root = document.makeObject();
-        uint32          keyCount{ 0 };
+        JSONDocument            document;
+        const JSONValue         root = document.makeObject();
+        [[maybe_unused]] uint32 keyCount{ 0 }; // Shipping 은 SW_LOG_INFO 가 빠져 쓰는 곳이 없다
         using SettingsRegistry = EditorSettingsRegistryInternal::SettingsRegistry;
         for ( uint32 index = 0; index < SettingsRegistry::getCount(); ++index )
         {
