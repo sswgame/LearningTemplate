@@ -90,7 +90,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
-| **추가 — 아이콘(12절)** | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
 원문의 합계는 단위 29 였습니다. E1 ~ E5 를 빼고 남은 editor-plus 단위는 21 개(1 단계 5, 2 단계 4, 3 단계 4, 4 단계 4, 5 단계 4)입니다.
@@ -237,21 +236,6 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 아래 넷을 이 계획으로 넘겼습니다. 아이콘은 모두 5b 의 R1 이 만든 아이콘 폰트(`Resource/editor/fonts/sweditoricons.ttf`, 글리프 이름은 `editoricon::k*`)를 씁니다.
 새 아이콘이 필요하면 `Scripts/common/EditorIconFont.py` 에 그리기 함수를 더하고 `Scripts/generate/GenerateEditorIcons.py` 를 실행합니다(5b R1 이 둔 스크립트입니다).
 
-### R9 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일
-
-**무엇.** 두 부분입니다.
-1. 썸네일을 그리는 동작이 없는 종류(Mesh, Skeleton, AnimClip, Rig, Heightfield, Data)는 지금 회색 사각형 위에 종류 글자를 씁니다. 대신 종류 아이콘 글리프를 타일 크기의 절반으로, 종류 색으로 가운데에 그립니다.
-   가운데 맞춤은 R4 의 글리프 사각형 계산을 `EditorThemeUtil::drawCenteredGlyph` 로 떼어 함께 씁니다. 손그림 썸네일이 있는 종류(머티리얼, 씬, 프리팹, 셰이더, 오디오)는 그대로 둡니다.
-2. 텍스처 썸네일은 지금 실제 텍스처가 아니라 체크무늬 위의 해와 산 그림입니다. 실제 텍스처를 보이려면 먼저 `TextureCache::acquire` 를 UI 스레드에서 불러도 되는지(업로드 큐 경로)를 확인합니다.
-   그다음 썸네일 캐시(경로 → ImGui 텍스처 id, LRU 64 개, 해제는 `EditorDrawReleaseQueue`)를 두고, `IEditorAssetTypeActions::drawThumbnail` 에 경로 인자를 더합니다.
-
-**왜.** 글자 대체는 종류를 한눈에 가리기 어렵고, 텍스처 폴더는 썸네일이 모두 같아 고를 수가 없습니다.
-
-**상용 비교.** 언리얼 Content Browser 의 클래스 썸네일과 텍스처 미리보기, 유니티 Project 창 아이콘과 미리보기, Godot FileSystem 아이콘과 같습니다.
-
-**확인 = 에디터 시나리오.** `contentthumbnails.scenario.xml`: 콘텐츠 브라우저를 타일 보기로 `engine/textures/` 를 열고 몇 프레임 기다린 뒤, 탐침 `Editor.ThumbnailCacheCount` 가 1 이상인지(실제 텍스처가 올라갔는지),
-`Editor.ThumbnailFallbackGlyphCount` 가 Data 같은 종류에서 0 보다 큰지 봅니다. `Screenshot` 을 찍어 둡니다.
-
 ---
 
 ## 13. 추가 단위 — 패널 점검의 부족한 점(N1 ~ N12, Animation Graph)
@@ -281,17 +265,6 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 **확인 = 에디터 시나리오.** `hierarchyedit.scenario.xml`: 형제 셋을 둔 시험 씬에서 첫 줄을 고르고 `EditorClick mods="shift"` 로 셋째 줄까지 골라 탐침 `Editor.SelectionCount` 가 3 인지 보고,
 `EditorKey key="C" mods="ctrl"` 와 `EditorKey key="V" mods="ctrl"` 뒤 오브젝트 수 탐침이 3 늘었는지, `EditorKey key="Z" mods="ctrl"` 한 번에 돌아오는지 봅니다. 끌어 바꾸기는 끌기 단계가 생기면 더합니다.
-
-### N3 콘텐츠 브라우저 에셋 관리 ★(M, 선행 5b D12 ~ D15)
-
-**무엇.** 새 폴더와 새 에셋(머티리얼, 씬, 프리팹), 이름 바꾸기(F2), 복제(Ctrl+D), 폴더로 끌어 옮기기, 하위 폴더까지 검색, OS 휴지통으로 삭제를 더합니다.
-이름 바꾸기와 옮기기는 참조를 고쳐야 하므로 역색인(`EditorReferenceIndex`)을 씁니다. 텍스처 썸네일은 R9 입니다.
-
-**왜.** 지금 오른쪽 클릭 메뉴는 탐색기 보기, 경로 복사, 잠금, 삭제뿐이고 검색은 지금 폴더만 봅니다.
-
-**상용 비교.** 언리얼의 Fix Up Redirectors, 유니티 Project 창의 Create 메뉴와 F2 이름 바꾸기, 두 엔진의 프로젝트 전체 검색과 같습니다.
-
-**확인 = 에디터 시나리오.** `assetmanage.scenario.xml`: 임시 폴더를 콘텐츠 루트로 연 상태에서 새 머티리얼을 만들고(`EditorClick` 메뉴), F2 로 이름을 바꾼 뒤, 그 머티리얼을 쓰는 시험 씬의 참조가 새 이름으로 바뀌었는지 탐침 `Editor.ReferenceCount.<경로>` 로 봅니다.
 
 ### N4 인스펙터 기본기 ★(S, 선행 I1)
 
