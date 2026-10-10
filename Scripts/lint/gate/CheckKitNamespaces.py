@@ -112,7 +112,7 @@ class CheckKitNamespacesGate(LintGate):
         {
             "name": "키트 설정 칸에 키트 접두가 없다",
             "files": {
-                "Source/GameFramework/Kits/Genre/Rpg/Probe/ProbeSave.cpp": "int32 f( const GameSettings& settings ) { return settings.getCustomPropertyInt( \"maxPartySize\", 6 ); }\n",
+                "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeSave.cpp": "int32 f( const GameSettings& settings ) { return settings.getCustomPropertyInt( \"maxPartySize\", 6 ); }\n",
             },
         },
         {
@@ -130,7 +130,7 @@ class CheckKitNamespacesGate(LintGate):
         {
             "name": "키트가 빌린 일지의 알림을 꺼낸다",
             "files": {
-                "Source/GameFramework/Kits/Genre/Rpg/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
+                "Source/GameFramework/Kits/Genre/RPG/Probe/ProbeTown.cpp": "void ProbeTown::tick() { vector<QuestEvent> list; _pQuestLog->drainEvents( list ); }\n",
             },
         },
         {

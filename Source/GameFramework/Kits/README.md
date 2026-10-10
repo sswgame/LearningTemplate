@@ -20,7 +20,7 @@ Kits/<성격>/<그룹>/<기능>/Server/     →  모듈 GF_Server_<기능>   (�
 Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (클라이언트 전용, 필요할 때만)
 ```
 
-**성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)이고,
+**성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `RPG` · `Simulation` · `Strategy`)이고,
 `Feature/` 는 장르를 가리지 않고 쓰는 기능 키트(`Network` · `Online` · `Storage`, 타일 월드와 복셀 월드의 `World`)입니다.
 경로만 다르고 모듈 이름은 `GF_<키트>` 그대로입니다. 성격 폴더 밖에 키트를 두면 `CheckGameFrameworkLayers` 가 실패시킵니다.
 
@@ -50,10 +50,10 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | | `AsymmetricHorror` | 1 대 4 비대칭 공포 | |
 | | `CoopScavenger` | 협동 수집 공포 | |
 | | `GhostHunt` | 루이지 맨션 류 유령 사냥 | |
-| `Genre/Rpg` | `ClassicJrpg` | 클래식 JRPG | |
+| `Genre/RPG` | `ClassicJrpg` | 클래식 JRPG | |
 | | `MonsterCollector` | 포켓몬 류 몬스터 수집 | |
 | | `OpenWorldWestern` | 오픈월드 서부극 | |
-| | `WitcherRpg` | 위쳐 류 RPG | |
+| | `WitcherRPG` | 위쳐 류 RPG | |
 | `Genre/Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
 | | `CityBuilder` | 파라오 류 도시 건설 | NileCity |
 | | `TacticsSrpg` | 택틱스 SRPG | |
