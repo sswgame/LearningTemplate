@@ -339,7 +339,9 @@ SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &runHierarchyTagF
 ```
 
 패턴은 `*` 와 쉼표(`hierarchy.*,theme.*`)를 받습니다. 시험마다 `EditorSelfTest|PASS|<id>` · `EditorSelfTest|FAIL|<id>|<이유>` 한 줄, 끝에
-`EditorSelfTest|DONE|<통과>|<실패>` 를 로그와 보고서에 남기고 앱을 닫습니다. 실행 중에는 저장된 레이아웃(`imgui.ini` · `windows.ini`)을 읽지도
+`EditorSelfTest|DONE|<통과>|<실패>` 를 로그와 보고서에 남기고 앱을 닫습니다. 같은 실행기를 **Test Runner 창**(Panel 메뉴, `test_runner`)이 `EditorSelfTestRunner::requestRun( 패턴, false )` 로
+그 자리에서 돌린다(앱을 닫지 않는다, 도는 동안 창은 입력을 받지 않는다). 그 창의 Scenarios · Unit Tests 탭은 시나리오(`App -scenario … -unattended`)와 `TestBin/<이름>Test.exe --test_filter=`(작업 폴더 Bin)를
+새 프로세스로 돌리고 출력을 `EditorTestOutputParser` 로 읽는다. 시나리오 `editor/testrunner`. 실행 중에는 저장된 레이아웃(`imgui.ini` · `windows.ini`)을 읽지도
 쓰지도 않고 기본 가시성 · 기본 도킹 배치로 뜹니다. `AppSmokeTest.EditorSelfTestsPassInsideTheEditor`(hostgpu)가 이렇게 띄워 알려진 시험이 모두
 PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니다.
 

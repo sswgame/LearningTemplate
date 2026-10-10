@@ -24,6 +24,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
+#include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
@@ -825,6 +826,19 @@ namespace sw::editor
 
             [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
 
+            /** @brief 마지막(또는 지금) 자체 시험 실행에서 통과한 시험 수입니다(Test Runner 창 · 명령줄 실행 모두). */
+            [[nodiscard]] static bool readTestRunnerPassCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                uint32 passedCount{ 0 };
+                for ( const EditorSelfTestResult& result : EditorSelfTestRunner::getResults() )
+                {
+                    if ( result._bPassed )
+                        ++passedCount;
+                }
+                outValue = static_cast<float64>( passedCount );
+                return true;
+            }
+
             /** @brief 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -903,6 +917,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &EditorScenarioStepsInternal::readGameViewMode );
+    SW_AUTOMATION_PROBE( editorTestRunnerPassCount, "Editor.TestRunnerPassCount", "Editor self tests that passed in the last (or current) self test run",
+                         &EditorScenarioStepsInternal::readTestRunnerPassCount );
     SW_AUTOMATION_PROBE( editorProfilerTimelineThreadCount, "Editor.ProfilerTimelineThreadCount",
                          "Threads with profile scopes in the profiler timeline over the last 4 frames (0 while not recording)",
                          &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );

@@ -502,7 +502,7 @@ namespace sw::editor
                 _editorContext->getPopupManager().drawOpenPopups();
                 _editorContext->getNotificationManager().updateAndDraw( ImGui::GetIO().DeltaTime, 1920.0f, 1080.0f );
             }
-            // -gv_editorSelfTest=<패턴> 이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
+            // 자체 시험 실행(-gv_editorSelfTest · Test Runner 창)이 없으면 아무것도 하지 않는다. 패널을 그린 뒤라 시험이 이번 프레임의 패널 상태를 본다.
             EditorSelfTestRunner::runFrame();
             ImGuiEditorInternal::updateWindowTitle( _editorContext.get() );
             EditorScreenshotCommands::update();

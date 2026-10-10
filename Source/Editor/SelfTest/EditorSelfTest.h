@@ -11,6 +11,7 @@
 #pragma once
 #include "Core/Common/Types.h"
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Workspace/EditorRegistry.h"
@@ -71,16 +72,39 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief 에디터 자체 시험 하나의 결과입니다(Test Runner 창 · 탐침이 읽는다). */
+    struct EditorSelfTestResult
+    {
+        string _id;
+        string _reason;          ///< 실패 이유(통과면 빈 글)
+        uint32 _frameCount{ 0 }; ///< 걸린 에디터 프레임 수
+        bool   _bPassed{ false };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @struct EditorSelfTestRunner
-     * @brief `-gv_editorSelfTest` 로 켜는 실행기입니다. `ImGuiEditor::updateUI` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.
+     * @brief 에디터 자체 시험 실행기입니다. `ImGuiEditor::updateUI` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.
+     * @details 길은 둘이다 — 명령줄 `-gv_editorSelfTest=<패턴>`(끝나면 보고서를 쓰고 앱을 닫는다)과 Test Runner 창의 `requestRun`(그 자리에서 돌고 앱은 그대로).
+     *          한 번에 한 실행만 돈다. 실행하는 동안 위젯 이름표 기록을 켜고, 끝나면 시작 전 상태로 되돌린다(시나리오가 켠 기록을 끄지 않게).
      */
-    struct EditorSelfTestRunner
+    struct SW_EDITOR_API EditorSelfTestRunner
     {
         /** @brief `-gv_editorSelfTest` 가 주어졌으면 true 입니다. 이때 에디터는 저장된 레이아웃을 읽지도 쓰지도 않습니다(`EditorDockLayout`). */
         static bool isRequested();
-        /** @brief 시험이 켜져 있으면 지금 시험의 한 단계를 돌립니다. 모두 끝나면 보고서를 쓰고 앱을 닫습니다. ImGui 프레임 안에서 부릅니다. */
+        /** @brief 실행이 있으면 지금 시험의 한 단계를 돌립니다. 끝나면 결과를 남기고, 끝나면 닫으라는 실행이면 보고서를 쓰고 앱을 닫습니다. ImGui 프레임 안에서 부릅니다. */
         static void runFrame();
+        /**
+         * @brief 패턴 @p pattern 에 맞는 시험을 다음 프레임부터 돌립니다. 이미 도는 실행이 있으면 false 입니다.
+         * @param bQuitWhenDone true 면 끝난 뒤 `-gv_editorSelfTestReport` 에 보고서를 쓰고 앱을 닫는다(명령줄 길).
+         */
+        [[nodiscard]] static bool requestRun( string_view pattern, bool bQuitWhenDone );
+        /** @brief 실행이 도는 중이면 true 입니다. */
+        static bool isRunning();
+        /** @brief 마지막(또는 지금) 실행의 결과입니다. 끝난 시험만 담깁니다. */
+        static const vector<EditorSelfTestResult>& getResults();
         /** @brief @p id 가 패턴 @p pattern 에 맞는지 봅니다. `*` 는 아무 글자열, 쉼표로 여러 패턴을 잇습니다. 빈 패턴은 아무것도 맞지 않습니다. */
         static bool matchesPattern( string_view id, string_view pattern );
     };

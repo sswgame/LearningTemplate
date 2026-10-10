@@ -24,15 +24,20 @@ namespace sw::editor
             /** @brief 실행기 상태입니다. 모듈이 다시 올라오면 새로 시작합니다. */
             struct RunState
             {
-                EditorSelfTestContext _context;
-                vector<uint32>        _listSelectedIndex;
-                string                _report;
-                uint32                _warmupFrameCount{ 0 };
-                uint32                _cursor{ 0 };
-                uint32                _passedCount{ 0 };
-                uint32                _failedCount{ 0 };
-                bool                  _bStarted{ false };
-                bool                  _bFinished{ false };
+                EditorSelfTestContext        _context;
+                vector<uint32>               _listSelectedIndex;
+                vector<EditorSelfTestResult> _listResult;
+                string                       _pattern;
+                string                       _report;
+                uint32                       _warmupFrameCount{ 0 };
+                uint32                       _cursor{ 0 };
+                uint32                       _passedCount{ 0 };
+                uint32                       _failedCount{ 0 };
+                bool                         _bActive{ false }; ///< 실행이 있다(시작 전 워밍업 포함)
+                bool                         _bStarted{ false };
+                bool                         _bQuitWhenDone{ false };
+                bool                         _bCommandLineConsumed{ false }; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다
+                bool                         _bMarksWereEnabled{ false };    ///< 시작 전 이름표 기록 상태(끝나면 되돌린다)
             };
 
             static RunState& getState()
@@ -72,7 +77,13 @@ namespace sw::editor
             static void recordResult( RunState& state, const EditorSelfTestRegistration& registration )
             {
                 const EditorSelfTestContext& context = state._context;
-                string                       line{ context.hasPassed() ? "EditorSelfTest|PASS|" : "EditorSelfTest|FAIL|" };
+                EditorSelfTestResult         result;
+                result._id         = registration._pID;
+                result._reason     = context.getFailure();
+                result._frameCount = context.getStepIndex();
+                result._bPassed    = context.hasPassed();
+                state._listResult.push_back( result );
+                string line{ context.hasPassed() ? "EditorSelfTest|PASS|" : "EditorSelfTest|FAIL|" };
                 line += registration._pID;
                 if ( context.hasPassed() )
                 {
@@ -141,10 +152,43 @@ namespace sw::editor
         return false;
     }
 
+    bool EditorSelfTestRunner::requestRun( string_view pattern, bool bQuitWhenDone )
+    {
+        EditorSelfTestInternal::RunState& state = EditorSelfTestInternal::getState();
+        if ( state._bActive || pattern.empty() )
+            return false;
+        const bool bCommandLineConsumed = state._bCommandLineConsumed;
+        state                           = EditorSelfTestInternal::RunState{};
+        state._bCommandLineConsumed     = bCommandLineConsumed;
+        state._pattern                  = string( pattern );
+        state._bQuitWhenDone            = bQuitWhenDone;
+        state._bActive                  = true;
+        // 창에서 누른 실행은 패널이 이미 다 그려져 있다 — 워밍업은 명령줄 기동 때만.
+        if ( bQuitWhenDone == false )
+            state._warmupFrameCount = EditorSelfTestInternal::kWarmupFrameCount;
+        return true;
+    }
+
+    bool EditorSelfTestRunner::isRunning()
+    {
+        return EditorSelfTestInternal::getState()._bActive;
+    }
+
+    const vector<EditorSelfTestResult>& EditorSelfTestRunner::getResults()
+    {
+        return EditorSelfTestInternal::getState()._listResult;
+    }
+
     void EditorSelfTestRunner::runFrame()
     {
         EditorSelfTestInternal::RunState& state = EditorSelfTestInternal::getState();
-        if ( gv_editorSelfTest.empty() || state._bFinished )
+        if ( state._bCommandLineConsumed == false )
+        {
+            state._bCommandLineConsumed = true;
+            if ( gv_editorSelfTest.empty() == false )
+                (void)requestRun( gv_editorSelfTest, true ); // 기동 직후라 도는 실행이 없다
+        }
+        if ( state._bActive == false )
             return;
         if ( state._warmupFrameCount < EditorSelfTestInternal::kWarmupFrameCount )
         {
@@ -156,14 +200,15 @@ namespace sw::editor
         if ( state._bStarted == false )
         {
             state._bStarted = true;
-            // 시험이 도는 동안만 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note).
+            // 시험이 도는 동안 패널이 누를 위젯의 이름표를 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
+            state._bMarksWereEnabled = EditorSelfTestMarks::isEnabled();
             EditorSelfTestMarks::setEnabled( true );
             for ( uint32 index = 0; index < Registry::getCount(); ++index )
             {
-                if ( matchesPattern( Registry::getAt( index )._pID, gv_editorSelfTest ) )
+                if ( matchesPattern( Registry::getAt( index )._pID, state._pattern ) )
                     state._listSelectedIndex.push_back( index );
             }
-            SW_LOG_INFO( "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), gv_editorSelfTest.c_str() );
+            SW_LOG_INFO( "Running %# editor self tests matching '%#'", static_cast<uint32>( state._listSelectedIndex.size() ), state._pattern.c_str() );
         }
 
         if ( state._cursor < state._listSelectedIndex.size() )
@@ -185,8 +230,8 @@ namespace sw::editor
         }
 
         // 모두 끝났다. 하나도 맞지 않은 패턴은 실패다 — 이름을 잘못 적은 실행이 초록으로 보이면 안 된다.
-        state._bFinished = true;
-        EditorSelfTestMarks::setEnabled( false );
+        state._bActive = false;
+        EditorSelfTestMarks::setEnabled( state._bMarksWereEnabled );
         if ( state._listSelectedIndex.empty() )
             ++state._failedCount;
         string doneLine{ "EditorSelfTest|DONE|" };
@@ -194,6 +239,8 @@ namespace sw::editor
         doneLine += "|";
         doneLine += to_string( state._failedCount );
         EditorSelfTestInternal::appendLine( state, doneLine, state._failedCount > 0 );
+        if ( state._bQuitWhenDone == false )
+            return;
 
         if ( gv_editorSelfTestReport.empty() == false )
         {

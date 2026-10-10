@@ -97,7 +97,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
-| **4 캡처 · 디버그 · 품질** | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T3 | 공용 노드 그래프 틀을 확장에 공개(`EditorGraphDocumentPanel` 내보내기 + 노드 찾아 넣기 · 핀 타입 색 · 검증 표시) | S | C1 | |
@@ -595,53 +594,6 @@ namespace sw::editor
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 **적용 뒤 확인:** `EditorTest --test_filter=EditorReferenceIndexTest.*`, 에디터에서 쓰이는 메시 하나로 Find References(엔진 팩에는 메시가 없으니 게임 팩의 것). 색인 짓기 시간을 로그로 한 번 잰다(저장소 전체 — 수 초면 둔다, 길면 시작 지연을 백로그 1-4 에).
----
-
-## 7. 단계 4 — 캡처 · 디버그 · 품질 ★
-
-**상용 비교.** 언리얼: 뷰포트 View Mode(Lit · Unlit · Wireframe · World Normal · Scene Depth · Quad Overdraw · Shader Complexity), `HighResShot` · 뷰포트 스크린샷, RenderDoc 플러그인(뷰포트 단추 · `renderdoc.CaptureFrame`),
-Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실행에선 로그만), `BugIt`(스크린샷 + 카메라 자리 + 로그를 `Saved/BugIt/` 에, `BugItGo` 로 재현), Session Frontend > Automation(시험 목록 · 실행 · 결과).
-유니티: Scene view Draw Mode(Shaded · Wireframe · Overdraw · Mipmaps · Normals …), Game view 스크린샷(`ScreenCapture`), Frame Debugger · RenderDoc 캡처 단추, Profiler Timeline(에디터 안), Test Runner 창(EditMode · PlayMode).
-우리: 보기 모드 셋(Lit, Unlit, Wireframe), Tracy(바깥), 자체 시험 · 시나리오는 명령줄로만, assert 는 디버거 없으면 프로세스가 죽는다.
-
-### H3 시험 패널 — 자체 시험 · 시나리오 · 시험 실행 파일을 에디터에서
-
-**목적.** 시험을 돌리는 길이 명령줄뿐이다(`-gv_editorSelfTest` 는 기동 때만, 끝나면 앱을 닫는다). 언리얼 Session Frontend > Automation · 유니티 Test Runner 처럼 목록에서 골라 돌리고 결과를 본다.
-
-**바꿀 것.**
-1) `EditorSelfTestRunner` 에 실행 중 요청 — `requestRun( string_view pattern, bool bQuitWhenDone )`: 지금의 `-gv_editorSelfTest` 경로는 `bQuitWhenDone = true` 로 같은 함수를 부르고, 패널은 false.
-   결과는 `EditorSelfTestRunner::getResults()`(id · 통과 · 이유 · 걸린 프레임). 시험이 패널을 열고 닫으므로 **도는 동안 시험 패널은 자기 창만 그리고 입력을 받지 않는다**(시험이 그린 결과를 해치지 않게).
-2) `Panels/TestRunnerPanel.h` · `.cpp` — `SW_EDITOR_PANEL( TestRunnerPanel, "test_runner", EditorPanelCategory::Tool, 2030 );` 제목 `"Test Runner"`, 탭 셋:
-   - **Editor Self Tests** — 등록부 목록(확장 모듈 것 포함, id 의 '.' 앞으로 묶음), 체크 · 검색 · "Run Selected" · "Run All", 결과 색(통과 초록 · 실패 빨강 + 이유).
-   - **Scenarios** — `Resource/**/automation/*.scenario.xml`(3 차 B2 의 자리) 목록. 시나리오는 프로세스 하나를 통째로 쓰므로 **새 프로세스로** 돌린다:
-     `App.exe -<지금 백엔드> -scenario=<경로> -unattended`(`EditorExternalToolJob` — 전용 스레드), 결과 = 종료 코드 + 로그 끝 40 줄 + `[Error]` 수, 실패 줄 더블클릭 = 로그 줄 IDE 열기(기존 Output Log 의 판정 재사용).
-   - **Unit Tests** — `build/<지금 프리셋>/Bin`(Shipping 은 `TestBin`)의 `*Test.exe` 를 `--test_list` 로 펼쳐 스위트 · 케이스 나무, 선택을 `--test_filter=` 로 새 프로세스(작업 디렉터리 `Bin` — CLAUDE.md 규칙),
-     출력의 `[ RUN ]` · `[  FAILED  ]` 줄을 읽어 케이스마다 결과. host 스위트는 `--host_suites=` 를 붙이지 않는다(이 PC 에는 GPU 가 있다).
-   출력 줄 읽기(`[ RUN ]` · `[       OK ]` · `[  FAILED  ]` · 요약)는 ImGui 없는 `EditorTestOutputParser`(EditorTest 가 본다).
-3) 커맨드 `editor.testRunner`(메뉴 `MainMenu/Tools` 또는 Panel).
-**시험.** `EditorTestOutputParserTest`(EditorTest): 실제 시험 출력 견본(통과 · 실패 · 건너뜀 · 반복 `--test_repeat` 의 반복 번호)을 케이스 결과로. 자체 시험 `testRunner.runsSelfTestInPlace` — 패널에서 다른 자체 시험 하나(`hierarchy.tagFilter`)를 돌려 결과가 PASS 로 차는지.
-**확인 = 에디터 시나리오.** `testrunner.scenario.xml`: Test Runner 창의 Editor Self Tests 탭에서 자체 시험 하나(`hierarchy.tagFilter`)를 골라 "Run Selected" 를 누르고, 결과 탐침 `Editor.TestRunnerPassCount` 가 1 인지 봅니다.
-시나리오와 단위 테스트 탭은 새 프로세스를 띄우므로 시나리오 안에서 돌리지 않습니다.
-
-**남길 교훈.** 없음.
-**커밋 메시지:**
-```
-에디터 - Test Runner 창(자체 시험은 그 자리에서, 시나리오 · 단위 시험은 새 프로세스로)
-
-문제점:
-- 자체 시험 · 자동화 시나리오 · 단위 시험을 돌리는 길이 명령줄뿐이었다. 자체 시험은 기동 때만 돌고 끝나면 앱을 닫았다.
-
-해결방안:
-- EditorSelfTestRunner::requestRun( 패턴, 끝나면 닫을지 ) · getResults — -gv_editorSelfTest 도 같은 함수.
-- Test Runner 창: 자체 시험(등록부 · 확장 포함, 그 자리에서), 시나리오(App -scenario -unattended 새 프로세스 — 종료 코드 · 로그 끝 · Error 수),
-  단위 시험(*Test.exe --test_list 나무 → --test_filter 새 프로세스, 작업 디렉터리 Bin). 출력 읽기는 ImGui 없는 EditorTestOutputParser.
-
-결과:
-- EditorTestOutputParserTest, 자체 시험 testRunner.runsSelfTestInPlace.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**겹침:** 3 차 B2(시나리오 자리 · `-scenario`), 2 차 단위 8(자체 시험 입력). 시험 실행은 `-unattended` 를 준다(단언 대화상자를 걸지 않는다).
 ---
 
 ## 8. 단계 5 — 공용 편집 틀(커브 · 맵 검사 · 노드 그래프 · 패키징)
