@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 저장된 상태 ②: savedstate.1 이 남긴 상태 폴더로 다시 시작하면 저장된 배치(Prefab Editor 탭이 앞)와 액센트 색이 돌아온다.
+  기본 배치 규칙(EditorDockLayout::updateDefaultTabSelection)은 저장된 레이아웃이 없을 때만 탭을 고른다 — 저장된 배치를 덮지 않는다.
+  실행: savedstate.1 다음에 같은 -gv_editorStateDir 로 App.exe -EnableEditor -scenario=engine/automation/editor/savedstate.2.scenario.xml -dx12
+-->
+<Scenario name="editor.savedstate.2" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="60">
+		<Expect probe="Editor.SceneViewDrawn" equals="0"/>
+		<Expect probe="Editor.AccentColor" equals="10902002"/>
+	</At>
+	<At frame="70"><Pass/></At>
+</Scenario>

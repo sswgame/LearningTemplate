@@ -46,7 +46,7 @@
 	<At frame="270"><Screenshot file="gameview_classicdark.ppm"/></At>
 	<At frame="271"><ExpectImage file="gameview_classicdark.ppm" metric="meanLuma" atLeast="0.02"/></At>
 
-	<!-- 되돌리기 — 사용자 에디터 설정 파일은 AppScenarioTest 가 바이트째 되돌린다 -->
+	<!-- 되돌리기 — 같은 상태 폴더를 이어 쓰는 묶음이 아니어도 배율 · 테마를 기본으로 둔다 -->
 	<At frame="280"><DevCommand line="editor.theme ModernDark"/><Variable name="gv_editorUiScale" value="0"/></At>
 	<At frame="290"><Pass/></At>
 </Scenario>

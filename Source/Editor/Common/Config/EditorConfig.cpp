@@ -33,7 +33,7 @@ namespace sw::editor
     void EditorConfig::loadFromHost()
     {
         EditorConfig config{};
-        const string configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
+        const string configPath = EditorUtil::getEditorConfigFilePath();
 
         // 틀린 파일은 칸 하나도 쓰지 않는다 — 읽은 데까지만 쓰면 무엇이 기본값인지 아무도 모른다. 오류는 키 이름과 함께 readConfigFile 이 남긴다.
         const ConfigReadResult result = ConfigManager::readConfigFile( config, configPath );
@@ -50,7 +50,7 @@ namespace sw::editor
     void EditorConfig::saveToHost()
     {
         const TypeInfo* pTypeInfo  = EditorConfig::StaticType();
-        const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
+        const string    configPath = EditorUtil::getEditorConfigFilePath();
 
         FileUtil::ensureParentDirectoryExists( configPath );
         if ( pTypeInfo != nullptr && JSONSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )

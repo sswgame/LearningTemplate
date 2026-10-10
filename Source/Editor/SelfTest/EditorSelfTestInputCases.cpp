@@ -272,7 +272,7 @@ namespace sw::editor
                 return s_probe;
             }
 
-            static string getEditorConfigPath() { return EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig ); }
+            static string getEditorConfigPath() { return EditorUtil::getEditorConfigFilePath(); }
 
             static EditorSelfTestStep runClassicDarkSwatch( EditorSelfTestContext& context )
             {

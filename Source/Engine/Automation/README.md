@@ -199,7 +199,10 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 ### 에디터 시나리오
 
 에디터 동작은 `Resource/engine/automation/editor/` 의 시나리오로 확인합니다(작업 흐름 `workflow`, 화면 `screen`, Hierarchy 검색 `hierarchyfilter`).
-`AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 `-EnableEditor` 로 백엔드마다 돌리고, 사용자 에디터 상태(`Saved/Editor`)를 앞뒤로 바이트째 되돌립니다.
+`AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 `-EnableEditor` 로 백엔드마다 돌립니다. 실행마다 빈 에디터 상태 폴더(`-gv_editorStateDir=Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
+사용자의 `Saved/Editor`(레이아웃, 테마, 최근 씬)가 결과를 바꾸지 않고, 시나리오도 그 폴더를 건드리지 않습니다.
+저장된 상태를 읽는 분기는 `<묶음>.<n>.scenario.xml` 으로 확인합니다. 같은 묶음의 파일은 이름순으로 같은 상태 폴더를 이어 쓰므로, 앞 실행이 저장한 배치와 설정을 뒤 실행이 읽습니다(`savedstate.1` · `savedstate.2`).
+손으로 돌릴 때도 `-gv_editorStateDir=<빈 폴더>` 를 주면 같은 조건이 됩니다.
 편집 씬은 플레이를 시작하지 않으므로 시작 조건은 `Immediately` 이고, 패널이 한 번씩 그려지도록 첫 단계를 60 프레임쯤 뒤에 둡니다.
 
 에디터 프로브는 다음과 같습니다.

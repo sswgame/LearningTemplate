@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 저장된 상태 ①: 빈 에디터 상태 폴더로 시작하면 기본 배치(Scene 탭이 앞)이다. Prefab Editor 탭을 앞으로 가져오고,
+  테마 대화상자에서 액센트 스와치를 누른 뒤 끝낸다. 끝낼 때 도킹 배치(imgui.ini · windows.ini)와 EditorConfig.json 이 그 폴더에 저장된다.
+  AppScenarioTest 는 savedstate.1 과 savedstate.2 를 같은 상태 폴더로 이어 돌린다(묶음 이름 savedstate).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/savedstate.1.scenario.xml -dx12
+-->
+<Scenario name="editor.savedstate.1" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="40"><Expect probe="Editor.SceneViewDrawn" equals="1"/></At>
+	<At frame="45"><DevCommand line="panel.focus prefab_editor"/></At>
+	<At frame="70">
+		<Expect probe="Editor.SceneViewDrawn" equals="0"/>
+		<DevCommand line="editor editor.themeSettings"/>
+	</At>
+	<At frame="85"><EditorClick mark="theme.swatch.violet"/></At>
+	<At frame="100"><Expect probe="Editor.AccentColor" equals="10902002"/></At>
+	<At frame="110"><Pass/></At>
+</Scenario>

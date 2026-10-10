@@ -42,6 +42,7 @@
 |---|---|---|---|---|---|
 | `gv_editorOpenPanel` | `string` | — | 시험 | 시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함) | [EditorDockLayout.cpp](../../Source/Editor/Common/GUI/EditorDockLayout.cpp) |
 | `gv_editorPanelDump` | `int32` | `0` | 시험 | N 번째 프레임에 에디터 ImGui 창별 드로우 통계를 덤프 (0=사용 안 함) | [EditorPanelDump.cpp](../../Source/Editor/Common/GUI/EditorPanelDump.cpp) |
+| `gv_editorStateDir` | `string` | — | 시험 | 에디터 상태 폴더(Saved/Editor 대신, 프로젝트 루트 기준 상대 또는 절대 경로) — 자동화가 빈 폴더로 시작할 때 쓴다 (비우면 Saved/Editor) | [EditorUtil.cpp](../../Source/Editor/Common/EditorUtil.cpp) |
 | `gv_tracyViewerPath` | `string` | — | 일반 | Tracy 뷰어(tracy-profiler 0.14.1) 경로 — 파일이나 폴더 (비우면 Tools/Tracy) | [EditorTracyLauncher.cpp](../../Source/Editor/Common/Commands/EditorTracyLauncher.cpp) |
 
 ## `Source/Editor/Panels`

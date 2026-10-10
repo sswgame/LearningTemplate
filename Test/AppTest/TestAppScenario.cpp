@@ -11,7 +11,6 @@
 
 #include "TestFramework/TestFramework.h"
 
-#include "sw/config/ConfigConstants.h"
 #include "sw/config/CookContract.gen.h"
 
 // 실제 App.exe 를 시나리오마다 · 백엔드마다 띄운다 — GPU · 창 · 셰이더가 필요하다. CI 러너엔 없다.
@@ -97,58 +96,64 @@ namespace
 
 #if !defined( SW_SHIPPING )
     /**
-     * @struct EditorStateSnapshot
-     * @brief 에디터 상태 폴더(`<저장소>/Saved/Editor`)의 파일 바이트를 들고 있다가 되돌립니다 — 에디터 시나리오가 테마 · 레이아웃 · 최근 씬을
-     *        다시 써도 사용자의 에디터 설정이 바뀌지 않게. 시나리오 동안 새로 생긴 파일은 지운다.
+     * @struct EditorScenarioRunInternal
+     * @brief 에디터 시나리오를 빈 에디터 상태 폴더(`-gv_editorStateDir`)로 돌립니다 — 사용자의 `Saved/Editor`(레이아웃 · 테마 · 최근 씬)와 무관하게 시작한다.
+     * @details 이름이 `<묶음>.<n>.scenario.xml` 인 파일은 묶음 하나로 같은 상태 폴더를 이어 쓴다(이름순). 첫 실행이 저장한 레이아웃 · 설정을
+     *          다음 실행이 읽는 "저장된 상태" 분기를 그렇게 확인한다. 묶음 이름이 없는 파일은 혼자 한 묶음이다.
      */
-    struct EditorStateSnapshot
+    struct EditorScenarioRunInternal
     {
-        struct SavedFile
+        /** @brief 시나리오 경로의 묶음 이름(파일 이름의 첫 `.` 앞)입니다. */
+        static sw::string getGroupName( const sw::string& scenarioPath )
         {
-            sw::string        _path;
-            sw::vector<uint8> _bytes;
-        };
-
-        sw::string            _folder;
-        sw::vector<SavedFile> _listFile;
-
-        void capture()
-        {
-            _listFile.clear();
-            _folder = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::ResourceUtil::getRootFolderPath() ), sw::config::kDirSavedEditor );
-            sw::vector<sw::string> listPath;
-            if ( sw::FileUtil::isDirectory( _folder ) == false || sw::FileUtil::collectFiles( _folder, "", listPath, true ) == false )
-                return;
-            for ( const sw::string& path : listPath )
-            {
-                SavedFile file;
-                file._path = path;
-                if ( sw::FileUtil::readFile( path, file._bytes ) )
-                    _listFile.push_back( std::move( file ) );
-            }
+            sw::string   fileName = sw::FileUtil::getFileNamePart( scenarioPath );
+            const size_t dot      = fileName.find( '.' );
+            if ( dot != sw::string::npos )
+                fileName.resize( dot );
+            return fileName;
         }
 
-        void restore() const
+        /** @brief 묶음마다 · 백엔드마다 빈 상태 폴더를 만들어 묶음의 시나리오를 차례로 돌립니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
+        static uint32 runEditorGroups( const sw::vector<sw::string>& listScenario )
         {
-            sw::vector<sw::string> listPath;
-            if ( sw::FileUtil::isDirectory( _folder ) && sw::FileUtil::collectFiles( _folder, "", listPath, true ) )
+    #define SW_APP_SCENARIO_EDITOR_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
+            constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_EDITOR_SWITCH ) };
+    #undef SW_APP_SCENARIO_EDITOR_SWITCH
+            uint32 ranCount = 0;
+            size_t begin    = 0;
+            while ( begin < listScenario.size() )
             {
-                for ( const sw::string& path : listPath )
+                const sw::string group = getGroupName( listScenario[begin] );
+                size_t           end   = begin + 1;
+                while ( end < listScenario.size() && getGroupName( listScenario[end] ) == group )
                 {
-                    bool bKnown = false;
-                    for ( const SavedFile& file : _listFile )
-                    {
-                        bKnown = bKnown || sw::FileUtil::pathsEqualNormalized( file._path, path );
-                    }
-                    if ( bKnown == false )
-                        (void)sw::FileUtil::tryRemoveFile( path ); // 정리일 뿐이라 남아도 다음 실행이 다시 지운다
+                    ++end;
                 }
+                for ( const utf8* pSwitch : kArrBackendSwitch )
+                {
+                    sw::string stateFolder;
+                    const bool bAbsolute = sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + group + "_" + ( pSwitch + 1 ), stateFolder );
+                    SW_EXPECT_TRUE( bAbsolute );
+                    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+                    const sw::string arguments = "-EnableEditor -gv_editorStateDir=" + stateFolder;
+                    for ( size_t index = begin; index < end; ++index )
+                    {
+                        sw::string       scenarioLines;
+                        const int32      exitCode = test::AppTestUtil::runScenario( listScenario[index], pSwitch, scenarioLines, arguments );
+                        const sw::string label    = listScenario[index] + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
+                        SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
+                        if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
+                        {
+                            SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+                            break; // 묶음의 뒤 실행은 앞 실행이 남긴 상태를 본다 — 앞이 건너뛰면 뒤도 건너뛴다
+                        }
+                        SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+                        ++ranCount;
+                    }
+                }
+                begin = end;
             }
-            for ( const SavedFile& file : _listFile )
-            {
-                const bool bWritten = sw::FileUtil::writeFile( file._path, file._bytes.data(), file._bytes.size() );
-                SW_EXPECT_TRUE_MSG( bWritten, ( "에디터 상태 파일을 되돌리지 못했습니다: " + file._path ).c_str() );
-            }
+            return ranCount;
         }
     };
 #endif
@@ -169,8 +174,8 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
 
 /**
  * @brief [AppScenarioTest] 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)가 에디터를 켠 실행(`-EnableEditor`)에서 모든 백엔드로 통과한다
- * @details 에디터 동작을 바꿨으면 이 시나리오로 확인한다 — 오브젝트 만들기 · 컴포넌트 · 인스펙터 · 되돌리기 · 저장 · 열기 · 플레이, 창 크기 · 배율 · 테마 · 스크린샷,
- *          Hierarchy 필터. 사용자의 에디터 상태(`Saved/Editor`)는 앞뒤로 바이트째 되돌린다. 배포본에는 에디터가 없다.
+ * @details 에디터 동작을 바꿨으면 이 시나리오로 확인한다. 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
+ *          사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다. `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.
  */
 SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnEveryBackend )
 {
@@ -179,10 +184,7 @@ SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnEveryBackend )
 #else
     const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { "engine/automation/editor" } );
     SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "engine/automation/editor 에 에디터 시나리오가 없습니다" );
-    EditorStateSnapshot snapshot;
-    snapshot.capture();
-    const uint32 ranCount = AppScenarioTestInternal::runEveryBackend( listScenario, "-EnableEditor" );
-    snapshot.restore();
+    const uint32 ranCount = EditorScenarioRunInternal::runEditorGroups( listScenario );
     if ( ranCount == 0 )
         SW_TEST_SKIP( "no editor scenario could run on this machine" );
 #endif

@@ -2,7 +2,7 @@
 <!--
   에디터 시나리오 — 기본 배치(Reset Default Layout)는 가운데 영역의 앞 탭이 Scene 이다. 열린 도구 패널(Prefab Editor)이 같은 영역에 붙어도 그렇다.
   ImGui 는 새로 붙은 탭 가운데 마지막 것을 고르고 처음 나타난 창에 포커스를 주므로, 붙인 순서로는 Scene 이 앞에 서지 않는다(EditorDockLayout::updateDefaultTabSelection).
-  저장된 레이아웃이 없는 워크트리 · 새 기계에서는 Prefab Editor 가 열린 채 시작해 씬 뷰가 그려지지 않았다 — 사용자 레이아웃이 있으면 드러나지 않는다.
+  저장된 레이아웃이 없으면(AppScenarioTest 는 늘 빈 상태 폴더로 시작한다) 이 규칙이 Scene 탭을 앞에 둔다.
   실행: App.exe -EnableEditor -scenario=engine/automation/editor/defaultlayout.scenario.xml -dx12
 -->
 <Scenario name="editor.defaultlayout" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
@@ -19,7 +19,5 @@
 	</At>
 	<At frame="85"><EditorClick mark="sceneView.canvas"/></At>
 
-	<!-- 뒤 시나리오가 같은 레이아웃 파일을 읽는다 — 연 패널을 닫아 둔다 -->
-	<At frame="95"><DevCommand line="panel.close prefab_editor"/></At>
 	<At frame="100"><Pass/></At>
 </Scenario>
