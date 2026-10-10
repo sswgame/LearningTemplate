@@ -84,10 +84,10 @@ SW_TEST_CASE( ShooterTest, RaysHitSpheresAndBoxesInFrontOnly )
     SW_EXPECT_TRUE( RayMath::intersectSphere( ray, float3{ 0.0f, 0.0f, 0.5f }, 1.0f, 100.0f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, distance, 1.0e-6f );
 
-    SW_EXPECT_TRUE( RayMath::intersectAabb( ray, float3{ -1.0f, -1.0f, 4.0f }, float3{ 1.0f, 1.0f, 6.0f }, 100.0f, distance ) );
+    SW_EXPECT_TRUE( RayMath::intersectAABB( ray, float3{ -1.0f, -1.0f, 4.0f }, float3{ 1.0f, 1.0f, 6.0f }, 100.0f, distance ) );
     SW_EXPECT_NEAR_EQUAL( 4.0f, distance, 1.0e-4f );
-    SW_EXPECT_FALSE( RayMath::intersectAabb( ray, float3{ 2.0f, -1.0f, 4.0f }, float3{ 3.0f, 1.0f, 6.0f }, 100.0f, distance ) );
-    SW_EXPECT_FALSE( RayMath::intersectAabb( ray, float3{ -1.0f, -1.0f, -6.0f }, float3{ 1.0f, 1.0f, -4.0f }, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectAABB( ray, float3{ 2.0f, -1.0f, 4.0f }, float3{ 3.0f, 1.0f, 6.0f }, 100.0f, distance ) );
+    SW_EXPECT_FALSE( RayMath::intersectAABB( ray, float3{ -1.0f, -1.0f, -6.0f }, float3{ 1.0f, 1.0f, -4.0f }, 100.0f, distance ) );
 }
 
 /**

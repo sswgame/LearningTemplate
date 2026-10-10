@@ -76,7 +76,7 @@ cmake --build --preset Ninja-Debug
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
   `RHIRenderResource` and names its device-lifecycle methods from this table only. Do not invent
-  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGPU`):
+  synonyms (`upload`, `applyToGPU`, `shutdownAllGPU`, `isUploaded`, `isReady`, `releaseGPU`):
 
   | Verb | Meaning |
   | --- | --- |
@@ -110,7 +110,7 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   out or put a word between). Lower-case extensions and resource paths (`*.ui.xml`), `gv_` prefixes and third-party names keep
   their spelling. The tree moves one acronym at a time and only the acronyms in `kEnforced` are enforced
   (`CheckAcronymSpelling.py` — Pascal spellings and touching capitals; `AcronymRun` — a capital run in a function name must be
-  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`initRHI`, `bindComputeUav`) until
+  one enforced acronym). An acronym not yet enforced keeps its current one-word spelling (`getOwnerId`, `bindComputeUav`) until
   `FormatAcronymSpelling.py` rewrites it across the tree.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 

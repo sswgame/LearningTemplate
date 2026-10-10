@@ -9,7 +9,7 @@
 
 using namespace sw;
 
-SW_TEST_CASE( PhysicsTest, AabbIntersectsAndContains )
+SW_TEST_CASE( PhysicsTest, AABBIntersectsAndContains )
 {
     AABB box;
     box._min = float3( 0.0f, 0.0f, 0.0f );
@@ -32,7 +32,7 @@ SW_TEST_CASE( PhysicsTest, AabbIntersectsAndContains )
 /**
  * @brief [PhysicsTest] 빈 AABB(`AABB::empty`)의 `getExtents()` 는 무한대 차가 아니라 0 이다
  */
-SW_TEST_CASE( PhysicsTest, EmptyAabbHasZeroExtents )
+SW_TEST_CASE( PhysicsTest, EmptyAABBHasZeroExtents )
 {
     const AABB emptyBox = AABB::empty();
     SW_EXPECT_FALSE( emptyBox.isValid() );
@@ -88,7 +88,7 @@ SW_TEST_CASE( PhysicsTest, PhysicsWorldOverlapAndGeneration )
     SW_EXPECT_TRUE( world.overlaps( reused, b ) );
 
     vector<PhysicsWorld::BodyHandle> hits;
-    world.queryAabb( boxA, 0, hits );
+    world.queryAABB( boxA, 0, hits );
     SW_EXPECT_TRUE( hits.size() >= 1u );
 }
 
@@ -111,14 +111,14 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMultiCellQuery )
     AABB                             queryBox;
     queryBox._min = float3( 5.0f, 5.0f, 5.0f );
     queryBox._max = float3( 15.0f, 15.0f, 15.0f );
-    world.queryAabb( queryBox, 0, hits );
+    world.queryAABB( queryBox, 0, hits );
 
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), hits.size() );
     if ( hits.empty() == false )
         SW_EXPECT_EQUAL( hNear, hits[0] );
 }
 
-SW_TEST_CASE( PhysicsTest, BodyAabbDynamicRelocation )
+SW_TEST_CASE( PhysicsTest, BodyAABBDynamicRelocation )
 {
     PhysicsWorld world;
     AABB         initialBox;
@@ -129,23 +129,23 @@ SW_TEST_CASE( PhysicsTest, BodyAabbDynamicRelocation )
 
     // 원래 위치 질의
     vector<PhysicsWorld::BodyHandle> hits;
-    world.queryAabb( initialBox, 0, hits );
+    world.queryAABB( initialBox, 0, hits );
     SW_EXPECT_EQUAL( 1u, hits.size() );
 
     // AABB를 아주 먼 곳으로 동적 이동
     AABB movedBox;
     movedBox._min = float3( 500.0f, 500.0f, 500.0f );
     movedBox._max = float3( 510.0f, 510.0f, 510.0f );
-    world.setAabb( handle, movedBox );
+    world.setAABB( handle, movedBox );
 
     // 이전 위치에서는 더 이상 검색되지 않아야 함
     hits.clear();
-    world.queryAabb( initialBox, 0, hits );
+    world.queryAABB( initialBox, 0, hits );
     SW_EXPECT_EQUAL( 0u, hits.size() );
 
     // 새 위치에서는 정상 검색되어야 함
     hits.clear();
-    world.queryAabb( movedBox, 0, hits );
+    world.queryAABB( movedBox, 0, hits );
     SW_EXPECT_EQUAL( 1u, hits.size() );
     if ( hits.empty() == false )
         SW_EXPECT_EQUAL( handle, hits[0] );
@@ -181,7 +181,7 @@ SW_TEST_CASE( PhysicsTest, SpatialGridMassiveBodiesStressTest )
     queryBox._max = float3( 120.0f, 120.0f, 120.0f );
 
     vector<PhysicsWorld::BodyHandle> hits;
-    world.queryAabb( queryBox, 0, hits );
+    world.queryAABB( queryBox, 0, hits );
     SW_EXPECT_EQUAL( 8u, hits.size() );
 }
 
@@ -204,7 +204,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_SweptAABBTunnelingPrevention )
     float3 bulletDisplacement{ 0.0f, 0.0f, 100.0f };
 
     SweepHit hit{};
-    bool     bCollided = ContinuousCollision::sweepAabb( bulletBox, bulletDisplacement, wallBox, hit );
+    bool     bCollided = ContinuousCollision::sweepAABB( bulletBox, bulletDisplacement, wallBox, hit );
 
     SW_EXPECT_TRUE( bCollided );
     SW_EXPECT_TRUE( hit._bHit );
@@ -289,7 +289,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
     };
     float3   missDisp{ 0.0f, 0.0f, 50.0f };
     SweepHit missHit{};
-    bool     bMiss = ContinuousCollision::sweepAabb( missBox, missDisp, targetBox, missHit );
+    bool     bMiss = ContinuousCollision::sweepAABB( missBox, missDisp, targetBox, missHit );
     SW_EXPECT_FALSE( bMiss );
     SW_EXPECT_FALSE( missHit._bHit );
 
@@ -300,7 +300,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
     };
     float3   diagDisp{ 30.0f, 30.0f, 30.0f };
     SweepHit diagHit{};
-    bool     bDiagHit = ContinuousCollision::sweepAabb( diagBox, diagDisp, targetBox, diagHit );
+    bool     bDiagHit = ContinuousCollision::sweepAABB( diagBox, diagDisp, targetBox, diagHit );
     SW_EXPECT_TRUE( bDiagHit );
     SW_EXPECT_TRUE( diagHit._bHit );
     // min corner (10, 10, 10)에 max (1, 1, 1)이 닿는 시각: (10 - 1) / 30 = 9 / 30 = 0.3
@@ -309,7 +309,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousCollision_CornerGrazingAndParallelMiss )
 
 /**
  * @brief [PhysicsTest] 빗나간 스윕이 결과 구조체에 이전 충돌을 남기지 않는지 검증
- * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. `sweepAabb` 가 시작할 때 결과를
+ * @details 결과 구조체를 재사용해 여러 대상을 훑는 것은 자연스러운 쓰임이다. `sweepAABB` 가 시작할 때 결과를
  *          비우지 않으면 빗나가고도 **이전 호출의 `_bHit` 이 그대로 남는다** — 형제 함수 `sweepSphere` 와 같은
  *          약속이어야 호출자마다 관례가 갈리지 않는다.
  */
@@ -327,7 +327,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
     sw::SweepHit hit{};
 
     // 1) 먼저 맞힌다 — 결과가 채워진다.
-    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepAabb( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_TRUE( sw::ContinuousCollision::sweepAABB( hittingBox, sw::float3{ 30.0f, 0.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_TRUE( hit._bHit );
 
     // 2) **같은 구조체로** 완전히 빗나가는 스윕을 한다.
@@ -335,7 +335,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
         sw::float3{-100.0f, -100.0f, -100.0f},
         sw::float3{ -99.0f,  -99.0f,  -99.0f}
     };
-    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepAabb( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
+    SW_EXPECT_FALSE( sw::ContinuousCollision::sweepAABB( missingBox, sw::float3{ 0.0f, -10.0f, 0.0f }, targetBox, hit ) );
     SW_EXPECT_FALSE( hit._bHit );
     SW_EXPECT_NEAR_EQUAL( 1.0f, hit._time, 1e-4f );
 
@@ -356,7 +356,7 @@ SW_TEST_CASE( PhysicsTest, MissedSweepLeavesNoStaleHit )
  *          쓰는 것이 중요하다: 넓은 박스는 셀 수가 바디 수를 넘어 **전수 검사 갈래**로 새기 때문에
  *          그리드를 아예 보지 않는다.
  *
- *          옮긴 뒤를 같이 보는 이유는 `setAabb` 의 "덮는 셀이 그대로면 그리드를 안 건드린다" 지름길이
+ *          옮긴 뒤를 같이 보는 이유는 `setAABB` 의 "덮는 셀이 그대로면 그리드를 안 건드린다" 지름길이
  *          삽입과 **같은 범위 계산**을 써야 하기 때문이다. 어긋나면 새 셀에 등록되지 않은 채 넘어간다.
  */
 SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
@@ -378,7 +378,7 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
         probe._max = float3( x + 1.0f, y + 1.0f, z + 1.0f );
 
         vector<PhysicsWorld::BodyHandle> listHit;
-        world.queryAabb( probe, 0, listHit );
+        world.queryAABB( probe, 0, listHit );
         return listHit.size();
     };
 
@@ -396,7 +396,7 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
         AABB movedBox;
         movedBox._min = float3( 5000.0f, 5000.0f, 5000.0f );
         movedBox._max = float3( 5200.0f, 5200.0f, 5200.0f );
-        world.setAabb( handle, movedBox );
+        world.setAABB( handle, movedBox );
 
         SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 5010.0f, 5010.0f, 5010.0f ) );
         SW_EXPECT_EQUAL( size_t( 1 ), findAtPoint( 5190.0f, 5190.0f, 5190.0f ) );
@@ -410,7 +410,7 @@ SW_TEST_CASE( PhysicsTest, MultiCellBodyIsFoundInEveryCellItSpans )
  * @brief [PhysicsTest] 큰 바디 하나가 셀 표를 불리지 않는지, 그러면서도 여전히 찾아지는지 검증
  * @details 질의 쪽의 셀 상한(`kMaxQueryCellCount`)처럼 **삽입 쪽에도** 상한이 있어야 한다. `insertBodyToGrid` 가 AABB 가 덮는
  *          모든 셀에 핸들을 적으면 20,000 유닛짜리 바닥 콜라이더 하나가 64 유닛 셀 기준으로 셀 표에 **십만 칸 가까이** 생긴다 —
- *          바디는 하나인데. `setAabb` 로 움직이면 그만큼을 매번 지웠다 다시 적는다.
+ *          바디는 하나인데. `setAABB` 로 움직이면 그만큼을 매번 지웠다 다시 적는다.
  *
  *          큰 바디는 그리드에 흩뿌리는 대신 목록 하나에 모으고, 그리드로 가는 질의가 그것을
  *          항상 함께 본다. 그래서 이 케이스는 **둘 다** 본다: 표가 작게 남는가, 그리고
@@ -445,7 +445,7 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
     probe._max = float3( 1.5f, 1.0f, 1.5f );
 
     vector<PhysicsWorld::BodyHandle> listHit;
-    world.queryAabb( probe, 0, listHit );
+    world.queryAABB( probe, 0, listHit );
 
     bool bFoundGround = false;
     bool bFoundCrate  = false;
@@ -461,7 +461,7 @@ SW_TEST_CASE( PhysicsTest, OversizedBodyDoesNotInflateTheGrid )
 
     // 큰 바디를 지우면 목록에서도 빠져야 한다 — 넣을 때와 뺄 때의 판단이 같아야 성립한다.
     world.removeBody( groundHandle );
-    world.queryAabb( probe, 0, listHit );
+    world.queryAABB( probe, 0, listHit );
     for ( const PhysicsWorld::BodyHandle& handle : listHit )
     {
         SW_EXPECT_TRUE( handle != groundHandle );
@@ -498,7 +498,7 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
     probe._max = float3( 1.0f, 1.0f, 1.0f );
 
     vector<PhysicsWorld::BodyHandle> listHit;
-    world.queryAabb( probe, 0, listHit );
+    world.queryAABB( probe, 0, listHit );
 
     bool bFound = false;
     for ( const PhysicsWorld::BodyHandle& handle : listHit )
@@ -509,7 +509,7 @@ SW_TEST_CASE( PhysicsTest, BodyBeyondCellCoordinateRangeIsStillFound )
     SW_EXPECT_TRUE( bFound );
 
     world.removeBody( enormousHandle );
-    world.queryAabb( probe, 0, listHit );
+    world.queryAABB( probe, 0, listHit );
     for ( const PhysicsWorld::BodyHandle& handle : listHit )
     {
         SW_EXPECT_TRUE( handle != enormousHandle );
@@ -532,7 +532,7 @@ SW_TEST_CASE( PhysicsTest, BodyAtTheCellRangeLimitDoesNotHang )
     SW_ASSERT_TRUE( handle.isValid() );
 
     vector<PhysicsWorld::BodyHandle> hits;
-    world.queryAabb( farBox, 0, hits );
+    world.queryAABB( farBox, 0, hits );
     bool bFound{ false };
     for ( const PhysicsWorld::BodyHandle& hit : hits )
     {
@@ -620,10 +620,10 @@ SW_TEST_CASE( PhysicsTest, StepReportsOverlapsThatBeginAndEnd )
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 
     // 떨어지면 끝, 다시 겹치면 시작.
-    world.setAabb( b, makeUnitBox( 10.0f ) );
+    world.setAABB( b, makeUnitBox( 10.0f ) );
     world.step( 0.016f );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, false ) );
-    world.setAabb( b, makeUnitBox( 0.5f ) );
+    world.setAABB( b, makeUnitBox( 0.5f ) );
     world.step( 0.016f );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 11, 22, true ) );
 
@@ -650,7 +650,7 @@ SW_TEST_CASE( PhysicsTest, StepRespectsTheLayerMatrix )
 /**
  * @brief [PhysicsTest] 연속 바디는 한 step 에 건너뛴 얇은 바디와도 겹친다 — 그 step 에 시작하고 다음 step 에 끝난다
  * @details 겹침을 step 마다 끝 자리만 보면 한 프레임에 두께 0.1 벽보다 멀리 가는 총알은 벽과 한 번도 겹치지 않아 맞음 처리가 불리지
- *          않는다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`ContinuousCollision::sweepAabb`). 같은 길을 간 이산 바디는 여전히 지나치고,
+ *          않는다(터널링). 연속 바디는 지난 step 의 자리에서 지금 자리까지 쓸린다(`ContinuousCollision::sweepAABB`). 같은 길을 간 이산 바디는 여전히 지나치고,
  *          레이어가 막은 벽은 쓸려도 닿지 않는다. 지나간 뒤 더 가도 다시 닿지 않는다 — 출발점은 지난 step 의 자리다(더한 자리가 아니다).
  */
 SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
@@ -665,8 +665,8 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 
     // 한 step 에 x 0 → 10 — 두 바디 모두 벽 둘을 통째로 건너뛴다.
-    world.setAabb( fast, makeBoxAt( 10.0f, 0.0f ) );
-    world.setAabb( slow, makeBoxAt( 10.0f, 10.0f ) );
+    world.setAABB( fast, makeBoxAt( 10.0f, 0.0f ) );
+    world.setAABB( slow, makeBoxAt( 10.0f, 10.0f ) );
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
@@ -679,7 +679,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyOverlapsWhatItPassedThroughInOneStep )
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, false ) );
 
     // 더 가도 다시 닿지 않는다.
-    world.setAabb( fast, makeBoxAt( 20.0f, 0.0f ) );
+    world.setAABB( fast, makeBoxAt( 20.0f, 0.0f ) );
     world.step( 0.016f );
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 }
@@ -697,7 +697,7 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyLeavingAnOverlapEndsItInThatStep )
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );
 
-    world.setAabb( fast, makeBoxAt( 30.0f, 0.0f ) );
+    world.setAABB( fast, makeBoxAt( 30.0f, 0.0f ) );
     world.step( 0.016f );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, false ) );
 }
@@ -715,7 +715,7 @@ SW_TEST_CASE( PhysicsTest, SweptOverlapsComeInTheOrderTheyWereTouched )
     const PhysicsWorld::BodyHandle fast = world.addBody( makeContinuousState( makeBoxAt( 0.0f, 0.0f ) ), 3 );
     world.step( 0.016f );
 
-    world.setAabb( fast, makeBoxAt( 10.0f, 0.0f ) );
+    world.setAABB( fast, makeBoxAt( 10.0f, 0.0f ) );
     world.step( 0.016f );
     const vector<PhysicsOverlapEvent>& listEvent = world.getOverlapEvents();
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listEvent.size() ) );
@@ -748,11 +748,11 @@ SW_TEST_CASE( PhysicsTest, ContinuousBodyMeetsABodyThatCrossesItsPathInOneStep )
     SW_EXPECT_TRUE( world.getOverlapEvents().empty() );
 
     // 한 step 에 총알은 x 0 → 200, 적은 y -100 → 100 — 둘은 x 100 · y 0 근처에서 같은 때(t 0.495) 만난다. 끝 자리는 서로 멀다.
-    world.setAabb( fast, makeBoxAt( 200.0f, 0.0f ) );
+    world.setAABB( fast, makeBoxAt( 200.0f, 0.0f ) );
     AABB crossed = crosser;
     crossed._min._y += 200.0f;
     crossed._max._y += 200.0f;
-    world.setAabb( enemy, crossed );
+    world.setAABB( enemy, crossed );
     world.step( 0.016f );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( world.getOverlapEvents().size() ) );
     SW_EXPECT_EQUAL( 1u, countOverlapEvent( world.getOverlapEvents(), 3, 1, true ) );

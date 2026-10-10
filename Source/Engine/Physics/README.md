@@ -194,7 +194,7 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 [이동 경로 검사]  총알 ● ═════════════>|벽|                             → t = 0.47 에서 충돌
 ```
 
-`ContinuousCollision::sweepAabb` 는 이동하는 AABB 의 반 크기만큼 대상 AABB 를 늘린(민코프스키 합) 뒤, 이동 중심에서 이동 벡터 방향으로 슬랩 광선을 쏩니다.
+`ContinuousCollision::sweepAABB` 는 이동하는 AABB 의 반 크기만큼 대상 AABB 를 늘린(민코프스키 합) 뒤, 이동 중심에서 이동 벡터 방향으로 슬랩 광선을 쏩니다.
 진입 시각 `t` 가 0 과 1 사이에 있으면 충돌이고, 그 시각과 접촉점, 접촉 법선을 `SweepHit` 에 담아 돌려줍니다. 구를 쓸 때는 `sweepSphere` 를 씁니다.
 `PhysicsWorld::sweepTest` 는 월드의 바디 가운데 이동 경로의 경계에 걸치는 것을 공간 그리드로 먼저 고르고, 가장 먼저 닿는 바디를 찾습니다.
 
@@ -208,12 +208,12 @@ Jolt 의 `VehicleConstraint` 와 `WheeledVehicleController` 를 스텝 리스너
 3. 이벤트마다 두 오브젝트의 켜진 컴포넌트에 `onOverlapBegin` 이나 `onOverlapEnd` 를 부릅니다. `OverlapInfo` 에는 상대 오브젝트(끝에서 사라졌으면 nullptr), 양쪽이 트리거인지, 닿은 시각이 들어 있습니다.
 
 콜라이더는 틱하지 않습니다. 병렬 틱에서 콜라이더가 자기 바디를 고치면, 같은 그룹에서 겹침을 묻는 쪽이 실행 순서에 따라 옛 위치나 새 위치를 보게 되기 때문입니다.
-그래서 틱 안의 질의(`queryAabb`, `sweepTest`)는 지난 step 의 위치를 봅니다. 유니티의 물리 질의와 같습니다.
+그래서 틱 안의 질의(`queryAABB`, `sweepTest`)는 지난 step 의 위치를 봅니다. 유니티의 물리 질의와 같습니다.
 
 **트리거.** 콜라이더를 트리거로 두면(`setTrigger`) 겹침은 똑같이 나지만, 받는 쪽은 `OverlapInfo::_bOtherTrigger` 로 상대가 몸이 아니라 감지 범위였다는 것을 압니다.
 투사체와 공격 판정은 상대의 트리거에 막히지도 않고 피해를 주지도 않습니다. 한 오브젝트에 몸과 감지 범위가 함께 있으면 같은 상대에게서 이벤트가 둘 옵니다. `OverlapInfo` 로 그 둘을 구별합니다.
 
-**연속 바디.** 콜라이더를 연속으로 두면(`BoxCollider2DComponent::setContinuous`) `step` 이 그 바디를 지난 step 의 위치(`PhysicsBody::_stepAabb`)에서 지금 위치까지 쓸어 봅니다.
+**연속 바디.** 콜라이더를 연속으로 두면(`BoxCollider2DComponent::setContinuous`) `step` 이 그 바디를 지난 step 의 위치(`PhysicsBody::_stepAABB`)에서 지금 위치까지 쓸어 봅니다.
 그 사이에 처음 닿은 바디도 이번 step 의 겹침으로 셉니다. 투사체는 시작할 때 스스로 연속을 켭니다. 유니티의 `CollisionDetectionMode2D.Continuous` 에 해당합니다.
 
 - 지나간 쌍은 이번 step 에 시작하고, 이미 떨어졌으면 다음 step 에 끝납니다.

@@ -15,7 +15,7 @@ namespace sw
     {
         struct BoxCollider2DComponentInternal
         {
-            static AABB makeColliderAabb( const float2& minB, const float2& maxB )
+            static AABB makeColliderAABB( const float2& minB, const float2& maxB )
             {
                 AABB box;
                 box._min = float3( minB._x, minB._y, 0.0f );
@@ -142,8 +142,8 @@ namespace sw
         float2 aMin{}, aMax{}, bMin{}, bMax{};
         getBounds( aMin, aMax );
         pOther->getBounds( bMin, bMax );
-        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAabb( aMin, aMax ), static_cast<uint8>( _colliderType ),
-                              BoxCollider2DComponentInternal::makeColliderAabb( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
+        return queryOverlaps( BoxCollider2DComponentInternal::makeColliderAABB( aMin, aMax ), static_cast<uint8>( _colliderType ),
+                              BoxCollider2DComponentInternal::makeColliderAABB( bMin, bMax ), static_cast<uint8>( pOther->_colliderType ), layers );
     }
 
     bool BoxCollider2DComponent::containsPoint( const float2& point ) const
@@ -187,7 +187,7 @@ namespace sw
         getBounds( minB, maxB );
 
         PhysicsBodyState state{};
-        state._aabb        = BoxCollider2DComponentInternal::makeColliderAabb( minB, maxB );
+        state._aabb        = BoxCollider2DComponentInternal::makeColliderAABB( minB, maxB );
         state._layer       = static_cast<uint8>( _colliderType );
         state._bContinuous = _bContinuous ? SW_TRUE : SW_FALSE;
         state._bTrigger    = _bTrigger ? SW_TRUE : SW_FALSE;

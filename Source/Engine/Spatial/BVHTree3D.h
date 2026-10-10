@@ -50,7 +50,7 @@ namespace sw
          * @brief 상자에 겹치는 핸들을 찾습니다.
          * @param outListHandle 결과입니다. **부르기 전 내용은 지워집니다**(`Spatial/README.md` 의 공통 규약).
          */
-        void queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const;
+        void queryAABB( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const;
         /**
          * @brief 광선에 걸리는 핸들을 찾습니다. `outListHandle` 의 기존 내용은 지워집니다.
          * @param direction 방향입니다. 단위 길이가 아니어도 됩니다. 안에서 맞춥니다.
@@ -73,7 +73,7 @@ namespace sw
         void  removeLeaf( int32 leafIndex );
         int32 balance( int32 nodeIndex );
 
-        static AABB    combineAabb( const AABB& a, const AABB& b );
+        static AABB    combineAABB( const AABB& a, const AABB& b );
         static float32 getSurfaceArea( const AABB& box );
 
         vector<BVHNode3D>                _listNode;

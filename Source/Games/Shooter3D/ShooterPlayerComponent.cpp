@@ -538,7 +538,7 @@ namespace sw
         for ( const ShooterArenaBox& box : director.getBoxes() )
         {
             float32 distance = 0.0f;
-            if ( RayMath::intersectAabb( ray, box._min, box._max, nearest, distance ) && distance < nearest )
+            if ( RayMath::intersectAABB( ray, box._min, box._max, nearest, distance ) && distance < nearest )
                 nearest = distance;
         }
         // 바닥

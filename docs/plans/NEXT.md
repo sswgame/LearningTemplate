@@ -41,10 +41,10 @@
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`.slot1~3`)을 쓴다. 사용 한도에 두 번 걸렸으니 도우미는 셋 안팎으로 둔다. **검증은 마지막에 한 번**(사용자 결정), 큰 이동 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
 1. **약어 철자 통일 — 실제 치환.** 계획 [약어 철자 통일](AcronymSpelling.md), 도구는 `Scripts/lint/fixer/FormatAcronymSpelling.py`(`--report` 사전 실행 · `--acronym <약어>` · `--apply-files` · `--rename-folders`), 등록부 `Scripts/lint/AcronymRegistry.py`, 게이트 `CheckAcronymSpelling`(`kEnforced` 에 오른 약어만 강제).
-   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → GPU → Ui → CPU → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
+   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → Gpu → Ui → Cpu → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
    약어 단계마다: 코드모드 → 셰이더(HLSL)와 문자열은 손으로 맞춘다(코드모드가 안 고친다) → reconfigure(코드젠) → Debug 풀 컴파일 경고 0 → 린트 → `kEnforced` 에 올림 → 커밋.
    첫 단계에서 `CheckFunctionVocabulary` 의 `AcronymRun` 검사를 반대로(약어는 대문자) 고치고 AGENTS.md 의 약어 문안을 바꾼다. 폴더 · 모듈 이름 14곳(`--rename-folders`)은 모듈 DLL 이름이 바뀌므로 `Bin/Modules` 산출물 정리(configure)와 모듈 ABI 판을 같이 본다.
-   의심 충돌: 새 철자가 이미 있는 이름(`Id` · `Ui` · `RHI` · `pRHI` · `editorApi` · `platformIo` · `textureId`), 외부 헤더와 겹치는 91개(Box2D `shapeIdA` · `bodyIdA` 와 `HttpResponse` 확인), 이어 붙은 대문자 약어 19개(`RHIGPUTimestamp` · `RTSAICommander` · `XMLJSON…` — 풀어 쓴다).
+   의심 충돌: 새 철자가 이미 있는 이름(`Id` · `Ui` · `Rhi` · `pRhi` · `editorApi` · `platformIo` · `textureId`), 외부 헤더와 겹치는 91개(Box2D `shapeIdA` · `bodyIdA` 와 `HttpResponse` 확인), 이어 붙은 대문자 약어 19개(`RHIGPUTimestamp` · `RTSAICommander` · `XMLJSON…` — 풀어 쓴다).
 2. **이름 정리 — 기계적 치환.** 계획 [이름 정리](NamingPass.md)(린트와 어휘표는 들어갔다). 예외 표 66줄(`CheckFunctionVocabulary` · `CheckOutParameterNames`)의 "개명 예정"을 줄여 간다: `build*` 38종, `MatrixMath::create*` 21개 → `make*`, `ctx` → `context`(257곳), bare `out`(19), `Attr` → `Attribute`, 부정형 불린 → 긍정형(데이터 재작성), `_time` 스윕 비율 → `_hitFraction`, 부작용 숨은 함수 개명, `AssetManager::getMaterialManager`/`getTextureManager`. 큰 이름: `ResourceUtil` → `ResourcePaths` + `ResourceIO`(313), `EditorUtil` 경로 → `EditorPaths`. 약어 통일이 끝난 뒤에 한다(같은 식별자를 두 번 바꾸지 않게).
 3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 0 단계 기준선(Debug, Ryzen 7 6800H, 3회 중앙값: 풀 131.5 s · 헤더 하나 수정 131.6 s · `.cpp` 하나 7.2 s · 워크트리 콜드 142.9 s)과 상위 헤더 20개(헤더 파싱 비율 82 %, 1위 `Engine/pch.h`, 2위 `CoreMinimal.h`)는 `docs/08_Verification.md` 빌드 속도 절과 `BuildSpeed.md` 에 있다. **헤더 하나를 고치면 풀 빌드와 같은 시간이 든다**(Core 기본 헤더 — 헤더 다이어트의 근거). Release 는 풀 한 번(192 s)만 재었다. Jolt 래퍼 TU 는 자기 PCH 를 가진 OBJECT 라이브러리로 11.1 → 5.5 s 로 줄었다(6 단계 끝). 헤더 다이어트 → PCH 공유(타깃마다 86개) → 개발 증분(PCH)과 콜드(PCH 없이 유니티 + sccache) 구성 분리 → 유니티 확대. 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 4. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`(Engine · Editor 용은 Core 나 Engine 쪽으로 올리는 선결 과제), 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
@@ -63,7 +63,7 @@
 
 ### 에디터 작은 단위(E5 · G2 · G3 · H1)가 남긴 검증 대기
 
-`main` 에 있다(`0a4376257` ~ `6f748f3ba`). 단위마다 Debug 경고 0, 새 시험은 통과(`EditorWindowTitleTest` 4 · `ScreenshotPathUtilTest` 2 · `RenderPassGPUTest.ScreenshotDumpWritesPngAndPpm` · `RenderDocCaptureTest` 1 · `AssertDialogTest` 4). 새 시나리오 `windowtitle` · `screenshotbutton` · `renderdocbutton` · `assertdialog` 는 폴더 이동 전 바이너리로 DX12 단독 PASS.
+`main` 에 있다(`0a4376257` ~ `6f748f3ba`). 단위마다 Debug 경고 0, 새 시험은 통과(`EditorWindowTitleTest` 4 · `ScreenshotPathUtilTest` 2 · `RenderPassGpuTest.ScreenshotDumpWritesPngAndPpm` · `RenderDocCaptureTest` 1 · `AssertDialogTest` 4). 새 시나리오 `windowtitle` · `screenshotbutton` · `renderdocbutton` · `assertdialog` 는 폴더 이동 전 바이너리로 DX12 단독 PASS.
 **전체 검증 때 돌릴 것**: rebase 뒤 전체 빌드, 새 시나리오 넷 재실행, 기존 `sceneviewgameview` · `workflow` 회귀, `AppScenarioTest` 전체(네 백엔드), `AppTest`(`-unattended` 추가), 리눅스 X11 · dlopen 갈래, 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다), 단언 대화상자 세 단추(모달이라 손으로만).
 남은 작은 일: 스크린샷 토스트 "Show in Explorer" 단추(알림 관리자에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로 확인, 시나리오가 늘어 `AppTest` 의 `HOST_SHARDS` 조정 검토.
 RenderDoc 은 기동 단계를 따로 두지 않고 RHI 단계 맨 앞에서 올린다. `ThirdParty/renderdoc` 에 원문 헤더를 넣었고 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.

@@ -43,7 +43,7 @@ namespace sw
 
 namespace sw
 {
-    PhysicsWorld::CellRange PhysicsWorld::CellRange::fromAabb( const AABB& aabb, float32 cellSize )
+    PhysicsWorld::CellRange PhysicsWorld::CellRange::fromAABB( const AABB& aabb, float32 cellSize )
     {
         // 뒤집힌 AABB(min > max)도 받는다. 부르는 쪽마다 정규화를 적으면 그중 하나가 빠진다.
         const float3 normMin = float3::min( aabb._min, aabb._max );
@@ -89,7 +89,7 @@ namespace sw
 
     bool PhysicsWorld::isOversizedForGrid( const AABB& aabb )
     {
-        const int64 cellCount = CellRange::fromAabb( aabb, kCellSize ).getCellCount();
+        const int64 cellCount = CellRange::fromAABB( aabb, kCellSize ).getCellCount();
         return cellCount <= 0 || cellCount > kMaxBodyCellCount;
     }
 
@@ -133,7 +133,7 @@ namespace sw
             return;
         }
 
-        CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
+        CellRange::fromAABB( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
         {
             _mapGrid[coord].push_back( handle );
         } );
@@ -156,7 +156,7 @@ namespace sw
         }
 
         // **넣을 때와 같은 범위를 훑는다.** 이것이 이 타입이 있는 이유다. 덜 훑으면 죽은 핸들이 남는다.
-        CellRange::fromAabb( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
+        CellRange::fromAABB( aabb, kCellSize ).forEachCell( [this, handle]( const CellCoord& coord )
         {
             auto it = _mapGrid.find( coord );
             if ( it == _mapGrid.end() )
@@ -203,7 +203,7 @@ namespace sw
         SW_MEMORY_SCOPE( Physics );
         PhysicsBody body{};
         body._aabb        = state._aabb;
-        body._stepAabb    = state._aabb; // 출발점은 더한 자리다 — 더하기 전 어딘가에서 쓸려 오지 않는다
+        body._stepAABB    = state._aabb; // 출발점은 더한 자리다 — 더하기 전 어딘가에서 쓸려 오지 않는다
         body._layer       = state._layer;
         body._objectId    = objectId;
         body._bContinuous = state._bContinuous;
@@ -229,13 +229,13 @@ namespace sw
     /**
      * @brief 바디의 위치 · 크기(AABB)를 갱신하고 공간 그리드에서 차지하는 셀을 다시 맞춥니다.
      */
-    void PhysicsWorld::setAabb( BodyHandle handle, const AABB& aabb )
+    void PhysicsWorld::setAABB( BodyHandle handle, const AABB& aabb )
     {
         std::unique_lock<std::shared_mutex> lock{ _mutex };
         PhysicsBody*                        pBody = _bodies.get( handle );
         if ( pBody == nullptr )
             return;
-        setAabbLocked( handle, *pBody, aabb );
+        setAABBLocked( handle, *pBody, aabb );
     }
 
     void PhysicsWorld::updateBody( BodyHandle handle, const PhysicsBodyState& state, BodyMoveType moveType )
@@ -248,21 +248,21 @@ namespace sw
         pBody->_layer       = state._layer;
         pBody->_bContinuous = state._bContinuous;
         pBody->_bTrigger    = state._bTrigger;
-        setAabbLocked( handle, *pBody, state._aabb );
+        setAABBLocked( handle, *pBody, state._aabb );
         // 순간이동은 그 길을 지나가지 않았다 — 새 자리를 다음 쓸림의 출발점으로 둔다(언리얼 `TeleportPhysics`).
         if ( moveType == BodyMoveType::Teleport )
-            pBody->_stepAabb = state._aabb;
+            pBody->_stepAABB = state._aabb;
     }
 
-    void PhysicsWorld::setAabbLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb )
+    void PhysicsWorld::setAABBLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb )
     {
         const AABB oldAABB = body._aabb;
         if ( oldAABB.isValid() && aabb.isValid() )
         {
             // 지름길: 덮는 셀이 그대로면 그리드를 건드릴 필요가 없다. 이 판단이 삽입 · 제거와 **같은
             // 계산**을 써야 한다. 아니면 바디가 틀린 셀에 앉은 채로 남는다.
-            const CellRange oldRange = CellRange::fromAabb( oldAABB, kCellSize );
-            const CellRange newRange = CellRange::fromAabb( aabb, kCellSize );
+            const CellRange oldRange = CellRange::fromAABB( oldAABB, kCellSize );
+            const CellRange newRange = CellRange::fromAABB( aabb, kCellSize );
             if ( oldRange == newRange )
             {
                 body._aabb = aabb;
@@ -315,14 +315,14 @@ namespace sw
         vector<BodyHandle> listFarMover;
         for ( const BodyEntry& entry : listBody )
         {
-            if ( entry._body._aabb.isValid() == false || entry._body._stepAabb.isValid() == false )
+            if ( entry._body._aabb.isValid() == false || entry._body._stepAABB.isValid() == false )
                 continue;
             if ( isFarMover( entry._body ) )
             {
                 listFarMover.push_back( entry._handle );
                 continue;
             }
-            const float3 displacement = entry._body._aabb.getCenter() - entry._body._stepAabb.getCenter();
+            const float3 displacement = entry._body._aabb.getCenter() - entry._body._stepAABB.getCenter();
             maxDisplacement           = float3::max( maxDisplacement, float3{ MathUtil::abs( displacement._x ), MathUtil::abs( displacement._y ),
                                                                     MathUtil::abs( displacement._z ) } );
         }
@@ -333,7 +333,7 @@ namespace sw
         {
             if ( entry._body._aabb.isValid() == false )
                 continue;
-            gatherStepCandidates( CellRange::fromAabb( entry._body._aabb, kCellSize ), listCandidate );
+            gatherStepCandidates( CellRange::fromAABB( entry._body._aabb, kCellSize ), listCandidate );
             for ( const BodyHandle candidate : listCandidate )
             {
                 // 쌍마다 한 번 — 작은 핸들 쪽에서만 센다.
@@ -387,14 +387,14 @@ namespace sw
 
         // 이번 자리가 다음 step 의 출발점이다(연속 바디가 여기서부터 쓸린다).
         _bodies.forEachHandle( []( SlotHandle, PhysicsBody& body )
-        { body._stepAabb = body._aabb; } );
+        { body._stepAABB = body._aabb; } );
         _listOverlapPair.swap( _listScratchPair );
     }
 
     void PhysicsWorld::addSweptPairs( BodyHandle handle, const PhysicsBody& body, const float3& maxNearDisplacement, const vector<BodyHandle>& listFarMover,
                                       vector<BodyHandle>& inoutListCandidate )
     {
-        const AABB& from = body._stepAabb;
+        const AABB& from = body._stepAABB;
         if ( from.isValid() == false || body._aabb.isValid() == false )
             return;
         const float3 displacement = body._aabb.getCenter() - from.getCenter();
@@ -403,7 +403,7 @@ namespace sw
         // 안에 있다 — 그래서 셀 하나 이내로 움직인 바디들의 가장 큰 거리만큼 넓혀 모으면 그 바디들 가운데 빠지는 상대가 없다.
         const AABB swept = from.unionWith( body._aabb );
         const AABB range{ swept._min - maxNearDisplacement, swept._max + maxNearDisplacement };
-        gatherStepCandidates( CellRange::fromAabb( range, kCellSize ), inoutListCandidate );
+        gatherStepCandidates( CellRange::fromAABB( range, kCellSize ), inoutListCandidate );
         for ( const BodyHandle candidate : inoutListCandidate )
         {
             // 멀리 간 바디는 아래에서 한 번만 잰다.
@@ -427,7 +427,7 @@ namespace sw
         if ( bCanTouch == false )
             return;
         // 상대 운동: 둘 다 출발점에서, 이 바디의 이동에서 상대의 이동을 뺀 만큼 쓴다(Box2D 총알 TOI). 상대가 가만히 있었으면 그냥 쓸림과 같다.
-        const AABB&  otherFrom            = pOther->_stepAabb.isValid() ? pOther->_stepAabb : pOther->_aabb;
+        const AABB&  otherFrom            = pOther->_stepAABB.isValid() ? pOther->_stepAABB : pOther->_aabb;
         const float3 otherDisplacement    = pOther->_aabb.getCenter() - otherFrom.getCenter();
         const float3 relativeDisplacement = displacement - otherDisplacement;
         if ( relativeDisplacement.getLengthSquared() <= 0.0f )
@@ -435,7 +435,7 @@ namespace sw
         // 닿은 때 0 은 출발점에서 이미 겹쳐 있던 것이다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리 겹침이 잇는다. 넣으면 떠난 쌍의
         // 끝이 한 step 늦는다.
         SweepHit   hit{};
-        const bool bEnteredWhileMoving = ContinuousCollision::sweepAabb( body._stepAabb, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
+        const bool bEnteredWhileMoving = ContinuousCollision::sweepAABB( body._stepAABB, relativeDisplacement, otherFrom, hit ) && hit._time > 0.0f;
         if ( bEnteredWhileMoving == false )
             return;
         _listScratchPair.push_back( OverlapPair::makeOrdered( handle, body, candidate, *pOther, hit._time ) );
@@ -443,9 +443,9 @@ namespace sw
 
     bool PhysicsWorld::isFarMover( const PhysicsBody& body )
     {
-        if ( body._aabb.isValid() == false || body._stepAabb.isValid() == false )
+        if ( body._aabb.isValid() == false || body._stepAABB.isValid() == false )
             return false;
-        const float3 displacement = body._aabb.getCenter() - body._stepAabb.getCenter();
+        const float3 displacement = body._aabb.getCenter() - body._stepAABB.getCenter();
         return MathUtil::abs( displacement._x ) > kCellSize || MathUtil::abs( displacement._y ) > kCellSize || MathUtil::abs( displacement._z ) > kCellSize;
     }
 
@@ -468,7 +468,7 @@ namespace sw
      * 1. 박스가 걸치는 그리드 셀을 돌며 중복 없는 후보 바디 목록을 모읍니다(범위가 비었거나 너무 넓으면 모든 바디를 봅니다).
      * 2. 후보마다 레이어 마스크와 정확한 AABB 교차를 검사해 outListHandle 에 넣습니다.
      */
-    void PhysicsWorld::queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const
+    void PhysicsWorld::queryAABB( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const
     {
         std::shared_lock<std::shared_mutex> lock{ _mutex };
         outListHandle.clear();
@@ -476,7 +476,7 @@ namespace sw
         if ( box.isValid() == false )
             return;
 
-        const CellRange range = CellRange::fromAabb( box, kCellSize );
+        const CellRange range = CellRange::fromAABB( box, kCellSize );
         if ( shouldScanAllBodies( range ) )
         {
             _bodies.forEachHandle( [&]( SlotHandle handle, const PhysicsBody& body )
@@ -514,7 +514,7 @@ namespace sw
             float3::min( movingBox._min, movingBox._min + displacement ),
             float3::max( movingBox._max, movingBox._max + displacement ) };
 
-        const CellRange range = CellRange::fromAabb( sweptBounds, kCellSize );
+        const CellRange range = CellRange::fromAABB( sweptBounds, kCellSize );
 
         bool     bFoundHit = false;
         SweepHit nearestHit{};
@@ -527,7 +527,7 @@ namespace sw
                 if ( _layers.shouldCollide( layer, body._layer ) )
                 {
                     SweepHit hit{};
-                    if ( ContinuousCollision::sweepAabb( movingBox, displacement, body._aabb, hit ) )
+                    if ( ContinuousCollision::sweepAABB( movingBox, displacement, body._aabb, hit ) )
                     {
                         if ( hit._time < nearestHit._time || bFoundHit == false )
                         {
@@ -557,7 +557,7 @@ namespace sw
             if ( pBody != nullptr && _layers.shouldCollide( layer, pBody->_layer ) )
             {
                 SweepHit hit{};
-                if ( ContinuousCollision::sweepAabb( movingBox, displacement, pBody->_aabb, hit ) )
+                if ( ContinuousCollision::sweepAABB( movingBox, displacement, pBody->_aabb, hit ) )
                 {
                     if ( hit._time < nearestHit._time || bFoundHit == false )
                     {

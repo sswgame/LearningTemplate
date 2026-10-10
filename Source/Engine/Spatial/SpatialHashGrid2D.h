@@ -47,14 +47,14 @@ namespace sw
         void insert( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
         /**
          * @brief 핸들의 경계를 바꿉니다. 없던 핸들이면 넣습니다.
-         * @details 새 경계가 덮는 셀 범위가 지금과 같으면 셀 목록은 건드리지 않고 경계만 바꿉니다(`PhysicsWorld::setAabbLocked` 와 같은
+         * @details 새 경계가 덮는 셀 범위가 지금과 같으면 셀 목록은 건드리지 않고 경계만 바꿉니다(`PhysicsWorld::setAABBLocked` 와 같은
          *          지름길) — 틱마다 조금씩 움직이는 점 엔티티는 거의 늘 이 길입니다. 좁힘 판정은 언제나 새 경계로 합니다.
          */
         void update( SlotHandle handle, float32 minX, float32 minY, float32 maxX, float32 maxY );
         void remove( SlotHandle handle );
         void clear();
 
-        void queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const;
+        void queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const;
         void queryCircle( float32 centerX, float32 centerY, float32 radius, vector<SlotHandle>& outListHandle ) const;
         void queryRay( float32 startX, float32 startY, float32 dirX, float32 dirY, float32 maxDist, vector<SlotHandle>& outListHandle ) const;
 
@@ -66,7 +66,7 @@ namespace sw
         /**
          * @struct CellRange
          * @brief 경계 상자 하나가 덮는 셀 범위입니다. **삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리**입니다.
-         * @details 삽입 · 제거 · `queryAabb` · `queryCircle` 이 이 계산 하나를 씁니다.
+         * @details 삽입 · 제거 · `queryAABB` · `queryCircle` 이 이 계산 하나를 씁니다.
          *          삽입이 덜 훑으면 그 핸들을 **질의가 찾지 못하고**, 제거가 덜 훑으면 죽은 핸들이 셀에
          *          남아 표가 끝없이 자랍니다. 둘 다 그 자리에서 터지지 않습니다.
          */

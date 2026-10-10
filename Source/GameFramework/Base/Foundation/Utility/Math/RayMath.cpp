@@ -84,7 +84,7 @@ namespace sw
         return bHit;
     }
 
-    bool RayMath::intersectAabb( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance )
+    bool RayMath::intersectAABB( const GameRay& ray, const float3& boxMin, const float3& boxMax, float32 maxDistance, float32& outDistance )
     {
         const float32 arrOrigin[3]    = { ray._origin._x, ray._origin._y, ray._origin._z };
         const float32 arrDirection[3] = { ray._direction._x, ray._direction._y, ray._direction._z };

@@ -82,7 +82,7 @@ namespace sw
     {
     }
 
-    AABB BVHTree3D::combineAabb( const AABB& a, const AABB& b )
+    AABB BVHTree3D::combineAABB( const AABB& a, const AABB& b )
     {
         return AABB{
             float3::min( a._min, b._min ),
@@ -185,7 +185,7 @@ namespace sw
             const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
 
             const float32 area         = getSurfaceArea( _listNode[static_cast<size_t>( index )]._bounds );
-            const AABB    combinedAABB = combineAabb( _listNode[static_cast<size_t>( index )]._bounds, leafAABB );
+            const AABB    combinedAABB = combineAABB( _listNode[static_cast<size_t>( index )]._bounds, leafAABB );
             const float32 combinedArea = getSurfaceArea( combinedAABB );
 
             const float32 cost            = BVHTree3DInternal::kSurfaceAreaFactor * combinedArea;
@@ -195,12 +195,12 @@ namespace sw
             float32 costLeft = 0.0f;
             if ( _listNode[static_cast<size_t>( leftChild )].isLeaf() )
             {
-                const AABB aabb = combineAabb( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
+                const AABB aabb = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
                 costLeft        = getSurfaceArea( aabb ) + inheritanceCost;
             }
             else
             {
-                const AABB    aabb    = combineAabb( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
+                const AABB    aabb    = combineAABB( _listNode[static_cast<size_t>( leftChild )]._bounds, leafAABB );
                 const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( leftChild )]._bounds );
                 const float32 newArea = getSurfaceArea( aabb );
                 costLeft              = ( newArea - oldArea ) + inheritanceCost;
@@ -210,12 +210,12 @@ namespace sw
             float32 costRight = 0.0f;
             if ( _listNode[static_cast<size_t>( rightChild )].isLeaf() )
             {
-                const AABB aabb = combineAabb( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
+                const AABB aabb = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
                 costRight       = getSurfaceArea( aabb ) + inheritanceCost;
             }
             else
             {
-                const AABB    aabb    = combineAabb( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
+                const AABB    aabb    = combineAABB( _listNode[static_cast<size_t>( rightChild )]._bounds, leafAABB );
                 const float32 oldArea = getSurfaceArea( _listNode[static_cast<size_t>( rightChild )]._bounds );
                 const float32 newArea = getSurfaceArea( aabb );
                 costRight             = ( newArea - oldArea ) + inheritanceCost;
@@ -234,7 +234,7 @@ namespace sw
         const int32 newParent = allocateNode();
 
         _listNode[static_cast<size_t>( newParent )]._parent     = oldParent;
-        _listNode[static_cast<size_t>( newParent )]._bounds     = combineAabb( leafAABB, _listNode[static_cast<size_t>( sibling )]._bounds );
+        _listNode[static_cast<size_t>( newParent )]._bounds     = combineAABB( leafAABB, _listNode[static_cast<size_t>( sibling )]._bounds );
         _listNode[static_cast<size_t>( newParent )]._height     = _listNode[static_cast<size_t>( sibling )]._height + 1;
         _listNode[static_cast<size_t>( newParent )]._leftChild  = sibling;
         _listNode[static_cast<size_t>( newParent )]._rightChild = leafIndex;
@@ -266,7 +266,7 @@ namespace sw
             _listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
                                                                       _listNode[static_cast<size_t>( leftChild )]._height,
                                                                       _listNode[static_cast<size_t>( rightChild )]._height );
-            _listNode[static_cast<size_t>( index )]._bounds = combineAabb(
+            _listNode[static_cast<size_t>( index )]._bounds = combineAABB(
                 _listNode[static_cast<size_t>( leftChild )]._bounds,
                 _listNode[static_cast<size_t>( rightChild )]._bounds );
 
@@ -306,7 +306,7 @@ namespace sw
                 const int32 leftChild  = _listNode[static_cast<size_t>( index )]._leftChild;
                 const int32 rightChild = _listNode[static_cast<size_t>( index )]._rightChild;
 
-                _listNode[static_cast<size_t>( index )]._bounds = combineAabb(
+                _listNode[static_cast<size_t>( index )]._bounds = combineAABB(
                     _listNode[static_cast<size_t>( leftChild )]._bounds,
                     _listNode[static_cast<size_t>( rightChild )]._bounds );
                 _listNode[static_cast<size_t>( index )]._height = 1 + MathUtil::max(
@@ -367,8 +367,8 @@ namespace sw
                 C._rightChild = iF;
                 A._rightChild = iG;
                 G._parent     = nodeIndex;
-                A._bounds     = combineAabb( B._bounds, G._bounds );
-                C._bounds     = combineAabb( A._bounds, F._bounds );
+                A._bounds     = combineAABB( B._bounds, G._bounds );
+                C._bounds     = combineAABB( A._bounds, F._bounds );
 
                 A._height = 1 + MathUtil::max( B._height, G._height );
                 C._height = 1 + MathUtil::max( A._height, F._height );
@@ -378,8 +378,8 @@ namespace sw
                 C._rightChild = iG;
                 A._rightChild = iF;
                 F._parent     = nodeIndex;
-                A._bounds     = combineAabb( B._bounds, F._bounds );
-                C._bounds     = combineAabb( A._bounds, G._bounds );
+                A._bounds     = combineAABB( B._bounds, F._bounds );
+                C._bounds     = combineAABB( A._bounds, G._bounds );
 
                 A._height = 1 + MathUtil::max( B._height, F._height );
                 C._height = 1 + MathUtil::max( A._height, G._height );
@@ -417,8 +417,8 @@ namespace sw
                 B._rightChild = iD;
                 A._leftChild  = iE;
                 E._parent     = nodeIndex;
-                A._bounds     = combineAabb( C._bounds, E._bounds );
-                B._bounds     = combineAabb( A._bounds, D._bounds );
+                A._bounds     = combineAABB( C._bounds, E._bounds );
+                B._bounds     = combineAABB( A._bounds, D._bounds );
 
                 A._height = 1 + MathUtil::max( C._height, E._height );
                 B._height = 1 + MathUtil::max( A._height, D._height );
@@ -428,8 +428,8 @@ namespace sw
                 B._rightChild = iE;
                 A._leftChild  = iD;
                 D._parent     = nodeIndex;
-                A._bounds     = combineAabb( C._bounds, D._bounds );
-                B._bounds     = combineAabb( A._bounds, E._bounds );
+                A._bounds     = combineAABB( C._bounds, D._bounds );
+                B._bounds     = combineAABB( A._bounds, E._bounds );
 
                 A._height = 1 + MathUtil::max( C._height, D._height );
                 B._height = 1 + MathUtil::max( A._height, E._height );
@@ -441,7 +441,7 @@ namespace sw
         return nodeIndex;
     }
 
-    void BVHTree3D::queryAabb( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
+    void BVHTree3D::queryAABB( const AABB& queryBox, vector<SlotHandle>& outListHandle ) const
     {
         // **먼저 비운다**(트리가 비어도). 덧붙이기만 하면 부르는 쪽이 벡터 하나를 돌려 쓸 때 지난 질의의 답이 이번 답인 척 남는다.
         // 형제들(`SpatialHashGrid2D` · `PhysicsWorld`)도 비우고 시작한다.

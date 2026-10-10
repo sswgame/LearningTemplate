@@ -266,9 +266,9 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
     grid.insert( eTarget2, 40.0f, 40.0f, 60.0f, 60.0f );
     grid.insert( eFarAway, 500.0f, 500.0f, 520.0f, 520.0f );
 
-    sw::vector<sw::SlotHandle> listAabb;
-    grid.queryAabb( 0.0f, 0.0f, 70.0f, 70.0f, listAabb );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
+    sw::vector<sw::SlotHandle> listAABB;
+    grid.queryAABB( 0.0f, 0.0f, 70.0f, 70.0f, listAABB );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAABB.size() ) );
 
     sw::vector<sw::SlotHandle> listCircle;
     grid.queryCircle( 20.0f, 20.0f, 20.0f, listCircle );
@@ -283,7 +283,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DAABBCircleAndRayQueries )
 
 /**
  * @brief [SpatialTest] 광선 질의가 **스치지도 않은 것**을 돌려주지 않는다
- * @details 형제 둘처럼 `queryRay` 도 좁힘 판정을 거친다 — `queryAabb` 는 `intersects`, `queryCircle` 은 가장 가까운
+ * @details 형제 둘처럼 `queryRay` 도 좁힘 판정을 거친다 — `queryAABB` 는 `intersects`, `queryCircle` 은 가장 가까운
  *          점까지의 거리. 좁힘이 없으면 광선이 지나간 **셀** 안의 핸들을 전부 담아, 걸러 주지 않는 호출부가 틀린 답을 받는다.
  * @note 셀 크기(64)보다 작은 상자 둘을 **같은 셀**에 넣고 그 중 하나만 지나는 광선을 쏜다.
  *       좁힘이 없으면 같은 셀에 있다는 이유로 둘 다 나온다.
@@ -401,13 +401,13 @@ SW_TEST_CASE( SpatialTest, BVHTree3DAABBRaySphereQueries )
     bvh.insert( eFar, boxFar );
     bvh.insert( eBeyondRange, boxBeyondRange );
 
-    sw::vector<sw::SlotHandle> listAabb;
+    sw::vector<sw::SlotHandle> listAABB;
     const sw::AABB             testBox{
                     {-1.0f, -1.0f,  0.0f},
                     { 6.0f,  5.0f, 15.0f}
     };
-    bvh.queryAabb( testBox, listAabb );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAabb.size() ) );
+    bvh.queryAABB( testBox, listAABB );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listAABB.size() ) );
 
     sw::vector<sw::SlotHandle> listRay;
     bvh.queryRay( sw::float3{ 1.0f, 1.0f, 0.0f }, sw::float3{ 0.0f, 0.0f, 1.0f }, 20.0f, listRay );
@@ -443,7 +443,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2D_SpanningMultiCellsDuplicateFilterin
     grid.insert( h2, 5.0f, 5.0f, 8.0f, 8.0f );
 
     sw::vector<sw::SlotHandle> listResults;
-    grid.queryAabb( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
+    grid.queryAABB( -5.0f, -5.0f, 30.0f, 30.0f, listResults );
 
     // 중복 없이 h1, h2 총 2개만 반환되어야 함
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listResults.size() ) );
@@ -535,7 +535,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
 
     // 셀에 없어도 세 질의 모두가 큰 핸들을 본다.
     sw::vector<sw::SlotHandle> listHandle;
-    grid.queryAabb( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
+    grid.queryAABB( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eHuge ) );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eSmall ) );
 
@@ -548,7 +548,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DOversizedBoundsStayQueryable )
     // 제거도 같은 계산을 써야 한다 — 어긋나면 큰 핸들이 목록에 영영 남는다.
     grid.remove( eHuge );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( grid.getHandleCount() ) );
-    grid.queryAabb( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
+    grid.queryAABB( 10.0f, 10.0f, 11.0f, 11.0f, listHandle );
     SW_EXPECT_FALSE( sw::containsHandle( listHandle, eHuge ) );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eSmall ) );
 }
@@ -571,11 +571,11 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DInfiniteBoundsTerminate )
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getActiveBucketCount() ) );
 
     sw::vector<sw::SlotHandle> listHandle;
-    grid.queryAabb( 0.0f, 0.0f, 1.0f, 1.0f, listHandle );
+    grid.queryAABB( 0.0f, 0.0f, 1.0f, 1.0f, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
 
     // 질의 쪽 범위가 무한대여도 마찬가지다 — 셀을 도는 대신 등록된 핸들 전부를 훑는다.
-    grid.queryAabb( infinite._min._x, infinite._min._y, infinite._max._x, infinite._max._y, listHandle );
+    grid.queryAABB( infinite._min._x, infinite._min._y, infinite._max._x, infinite._max._y, listHandle );
     SW_EXPECT_TRUE( sw::containsHandle( listHandle, eInfinite ) );
 
     // 사거리가 아주 긴 광선도 걸음 수 상한에 걸려 끝난다.
@@ -613,11 +613,11 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
         bvh.insert( sw::SlotHandle::make( 1, 1 ), box );
 
         sw::vector<sw::SlotHandle> listHit;
-        bvh.queryAabb( probe, listHit );
+        bvh.queryAABB( probe, listHit );
         SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
 
         // 같은 벡터로 한 번 더 — 답은 여전히 하나다.
-        bvh.queryAabb( probe, listHit );
+        bvh.queryAABB( probe, listHit );
         SW_EXPECT_EQUAL( size_t( 1 ), listHit.size() );
 
         bvh.querySphere( sw::float3{ 1.5f, 1.5f, 1.5f }, 1.0f, listHit );
@@ -625,7 +625,7 @@ SW_TEST_CASE( SpatialTest, QueriesOverwriteTheOutListInsteadOfAppending )
 
         // 빈 트리에 물으면 빈 답이어야 한다 — 이른 반환으로 벡터를 안 건드리면 안 된다.
         bvh.clear();
-        bvh.queryAabb( probe, listHit );
+        bvh.queryAABB( probe, listHit );
         SW_EXPECT_TRUE( listHit.empty() );
 
         bvh.queryRay( sw::float3{ 0.0f, 0.0f, 0.0f }, sw::float3{ 1.0f, 0.0f, 0.0f }, 100.0f, listHit );
@@ -720,7 +720,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
     grid.insert( entity, 1.0e12f, 1.0e12f, 1.0e12f, 1.0e12f );
 
     sw::vector<sw::SlotHandle> hits;
-    grid.queryAabb( 1.0e12f, 1.0e12f, 1.0e12f, 1.0e12f, hits );
+    grid.queryAABB( 1.0e12f, 1.0e12f, 1.0e12f, 1.0e12f, hits );
     SW_EXPECT_EQUAL( size_t( 1 ), hits.size() );
     grid.remove( entity );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( grid.getHandleCount() ) );
@@ -728,7 +728,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
 
 /**
  * @brief [SpatialTest] 같은 셀 안의 update 는 경계만 바꾸고, 셀을 넘는 update 는 옮긴다(점 엔티티 · 음수 셀)
- * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(`PhysicsWorld::setAabbLocked` 와 같은 지름길). 그 길에서도 좁힘 판정은
+ * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(`PhysicsWorld::setAABBLocked` 와 같은 지름길). 그 길에서도 좁힘 판정은
  *          **새 경계**로 해야 한다 — 경계를 안 바꾸면 셀 안에서 움직인 것이 옛 자리로 판정된다. NetMmo 관심 영역이 이 모양(점 · 반경)으로 쓴다.
  * @note 변이 검사: 지름길에서 경계 대입을 빼면 두 번째 (0, 0) 원 질의가 eNear 를 돌려줘 실패한다. 셀을 넘는 update 가 옛 셀에서 빼지 않으면 활성 버킷이 5 가 된다.
  */
