@@ -223,6 +223,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.SelectedProperty` | 주 선택 오브젝트의 `gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 숫자 값 |
 | `Editor.PreferencesVisibleSections`, `Editor.PreferencesSavedKeyCount` | 환경설정 창이 보인 섹션 수(검색 뒤), `EditorPreferences.json` 에 저장된 키 수 |
 | `Editor.ShortcutConflictCount`, `Editor.ShortcutOverrideCount` | 단축키 편집기가 묻는 충돌 수, 사용자 단축키 덮어쓰기 수 |
+| `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
 | `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |
 | `Editor.GridStep`, `Editor.GridMajorLines`, `Editor.GridMisplacedMajorLines` | 뷰포트 격자 간격(1 · 10 · 100 m), 지난 프레임에 그린 굵은 선 수, 그중 월드 5 배수 선이 아닌 수(0 이 정상) |

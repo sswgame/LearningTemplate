@@ -24,6 +24,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/ModulesPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/Panels/ShortcutsPanel.h"
@@ -819,6 +820,13 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수입니다. */
+            [[nodiscard]] static bool readModulePreviewNewlyInactive( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( ModulesPanel::getPreviewNewlyInactiveCount() );
+                return true;
+            }
+
             /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -932,6 +940,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readShortcutConflictCount );
     SW_AUTOMATION_PROBE( editorShortcutOverrideCount, "Editor.ShortcutOverrideCount", "Commands whose shortcut the user changed",
                          &EditorScenarioStepsInternal::readShortcutOverrideCount );
+    SW_AUTOMATION_PROBE( editorModulePreviewNewlyInactive, "Editor.ModulePreviewNewlyInactive", "Modules the Modules window's preview would turn off (0 when not asking)",
+                         &EditorScenarioStepsInternal::readModulePreviewNewlyInactive );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
     SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw",

@@ -38,6 +38,8 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   든 씬은 쿠킹하지 않고 실패(종료 코드 → CookAssets)로 센다.
 - **모듈 코드를 쥘 수 있는 등록부는 `IModuleUnloadListener` 를 상속해 스스로 등록한다**(`releaseModuleCode` 에 손 목록을 다시 만들지 말 것). 보유자 객체는
   엔진(또는 App) 코드가 만들고 생성자를 .cpp 에 둔다 — 모듈 안에서 만든 보유자가 모듈보다 오래 살면 훑기가 내려간 vtable 로 뛴다.
+- **매니페스트 내용도 구성 의존이다**(`CMAKE_CONFIGURE_DEPENDS`) — 켜짐을 바꾸면 다음 빌드가 다시 구성한다. 켜고 끄기는 에디터의 Modules 창이
+  프로젝트 `_listModuleOverride` 를 고쳐 쓴다(기본과 다를 때만 줄, `EditorModuleOverrideUtil`). 적용은 빌드 뒤 다시 시작이다(실행 중에 켜지 않는다).
 - **에디터 확장 모듈(종류 `EditorExtension`)은 EditorModule 과 자기 키트에 의존해 리로드 그래프에 오른다.** 인스턴스가 없고(정적 등록자),
   에디터를 켤 때만 로드한다(`EditorModuleHost::registerEditorExtensions`). 하나가 실패해도 에디터는 뜬다. 매니페스트는 Dev 전용 · EditorModule 의존이 필수이고
   (`ModuleCatalog::parseManifest` 와 CMake 가 같은 검사), 의존이 꺼지면 확장도 오류 없이 함께 꺼진다(쓰지 않아 뺀 키트의 확장은 매니페스트도 복사하지 않는다).

@@ -186,6 +186,8 @@ endfunction()
 function(sw_resolveModuleManifests)
 	file(GLOB_RECURSE swListManifest CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/*.module.json")
 	list(SORT swListManifest)
+	# 매니페스트의 **내용**(켜짐 · 의존 · 종류)이 무엇을 지을지 정한다 — 내용이 바뀌면 다시 구성해야 한다(GLOB 의 CONFIGURE_DEPENDS 는 목록만 본다).
+	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${swListManifest})
 
 	foreach(swManifest IN LISTS swListManifest)
 		if(swManifest MATCHES "/Source/Games/([^/]+)/" AND NOT CMAKE_MATCH_1 STREQUAL SW_ACTIVE_GAME)

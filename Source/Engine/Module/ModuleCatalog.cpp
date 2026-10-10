@@ -363,6 +363,26 @@ namespace sw
         return true;
     }
 
+    bool ModuleCatalog::setProjectOverride( string_view projectModule, string_view moduleName, bool bEnabled )
+    {
+        for ( ModuleManifest& manifest : _listManifest )
+        {
+            if ( manifest._name != projectModule )
+                continue;
+            for ( ModuleOverride& entry : manifest._listModuleOverride )
+            {
+                if ( entry._name == moduleName )
+                {
+                    entry._bEnabled = bEnabled;
+                    return true;
+                }
+            }
+            manifest._listModuleOverride.push_back( ModuleOverride{ string( moduleName ), bEnabled } );
+            return true;
+        }
+        return false;
+    }
+
     const ModuleManifest* ModuleCatalog::findManifest( string_view name ) const
     {
         for ( const ModuleManifest& manifest : _listManifest )

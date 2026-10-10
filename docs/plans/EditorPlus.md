@@ -91,7 +91,6 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **2 에디터 설정** | P4 | 모듈 창(켜고 끄기 · 의존 미리보기 · 구성/빌드 버튼) | M | C4 | |
 | **3 인스펙터 · 콘텐츠** | I1 | 다중 선택 편집(공통 프로퍼티 · 다른 값 표시 · 한 트랜잭션) | M | P1 | ★ |
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
@@ -138,74 +137,6 @@ EditorModule 을 언리얼 `UnrealEd` 처럼 내보내고, 키트 확장이 리�
 Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · 섹션 트리 · "바뀐 것만 보기") · Shortcuts 탭 · Project Settings > Plugins.
 공통점: **(1) 설정 = 리플렉션 객체, 그리기는 인스펙터와 같은 위젯 (2) 섹션은 등록으로 늘어난다(확장 모듈도) (3) 사용자 파일에는 바뀐 것만.**
 
-### P4 모듈 창 — 켜고 끄기 · 의존 미리보기 · 구성/빌드
-
-**목적.** 모듈(키트 · 에디터 확장 · RHI 백엔드)을 켜고 끄는 길은 프로젝트 매니페스트(`SWGame.module.json` 의 `_listModuleOverride`)를 손으로 고치고 re-configure 하는 것뿐이다.
-게다가 **매니페스트 내용을 바꿔도 CMake 가 다시 구성되지 않는다**(`GLOB_RECURSE CONFIGURE_DEPENDS` 는 파일 목록만 본다 — `file(READ)` 한 내용은 구성 의존이 아니다) — 손으로 고쳐도 빌드가 옛 답으로 돈다.
-
-**바꿀 것.**
-1) (작은 결함) `cmake/Engine/ModuleManifest.cmake:135` 뒤 한 줄 — 매니페스트 내용이 바뀌면 다음 빌드가 다시 구성한다:
-```cmake
-	# 매니페스트의 **내용**(켜짐 · 의존 · 종류)이 무엇을 지을지 정한다 — 내용이 바뀌면 다시 구성해야 한다(GLOB 의 CONFIGURE_DEPENDS 는 목록만 본다).
-	set_property(DIRECTORY "${CMAKE_SOURCE_DIR}" APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${swListManifest})
-```
-2) ImGui 없는 도우미 — `Common/Commands/EditorModuleOverrides.h` · `.cpp`:
-```cpp
-    struct SW_EDITOR_API EditorModuleOverrideUtil
-    {
-        /**
-         * @brief 프로젝트 매니페스트 글(@p manifestJson)의 `_listModuleOverride` 에서 @p moduleName 을 @p bEnabled 로 둔 새 글을 씁니다.
-         * @details 그 모듈의 기본(`_bEnabledByDefault`)과 같아지면 줄을 지운다 — 덮어쓰기는 기본과 다를 때만 남는다(설정 파일 원칙).
-         *          키 순서 · 들여쓰기는 저장소의 JSON 모양(4 칸)으로 다시 쓴다. 형식이 틀리면 false.
-         */
-        [[nodiscard]] static bool setOverride( string_view manifestJson, string_view moduleName, bool bEnabled, bool bEnabledByDefault, string& outManifestJson );
-        /**
-         * @brief @p catalog 를 지금 덮어쓰기에 @p moduleName = @p bEnabled 를 더한 것으로 다시 풀어, 켜짐이 바뀌는 모듈(그 모듈 + 의존 때문에 함께 바뀌는 것)을 모읍니다.
-         * @return 풀기에 실패하면(순환 · 없는 의존) false 이고 @p outError 에 이유
-         */
-        [[nodiscard]] static bool previewToggle( const ModuleCatalog& catalog, const ModuleResolveContext& context, string_view moduleName, bool bEnabled,
-                                                 vector<ModuleInactiveEntry>& outListNewlyInactive, vector<string>& outListNewlyActive, string& outError );
-    };
-```
-`ModuleCatalog` 이 프로젝트 덮어쓰기를 바꿔 다시 풀 수 있게 `ModuleCatalog::setProjectOverride( name, bEnabled )`(사본에서) 를 더한다 — 적용 때 `ModuleCatalog.h` 의 `resolve` 가 덮어쓰기를 어디서 읽는지 보고 맞춘다.
-3) 창 — `Panels/ModulesPanel.h` · `.cpp` `SW_EDITOR_PANEL( ModulesPanel, "modules", EditorPanelCategory::Tool, 2020 );` 제목 `"Modules"`. `Bin/Modules/*.module.json`(빌드가 복사한 카탈로그)을 읽어
-   종류별 묶음(GameFramework · Kit · EditorExtension · RHI · Editor · Game) 표: 이름 · 판 · 설명 · 의존 · 상태(켜짐 · 꺼짐 + 이유 — `ModuleResolution::_listInactive` 의 이유 글).
-   체크박스를 바꾸면 미리보기 팝업("이것도 함께 꺼진다: GF_Editor_ThemePark (needs GF_ThemePark)") → 확인하면 **프로젝트 매니페스트 소스**(`Source/Games/<활성 게임>/SWGame.module.json`)를 고쳐 쓴다
-   (`EditorSourceControl` 의 체크아웃 상태를 먼저 본다 — 읽기 전용이면 이유를 알린다). 위에 노란 띠: "Module set changed — Build to apply, then restart" + "Build" 단추(= `build.compileAll`,
-   1) 덕에 ninja 가 다시 구성한다) + "Restart Editor" 단추(빌드 성공 뒤 활성 — 지금 실행 인자 그대로 새 프로세스를 띄우고 이 프로세스는 종료 확인 경로로 닫는다).
-   Editor · Game 종류 줄은 끌 수 없다(회색 — 끄면 이 창이 사라진다). RHI 백엔드를 끄면 "이 백엔드로 실행 중" 이면 막는다.
-
-**시험 — `Test/EditorTest/Common/Commands/TestEditorModuleOverrides.cpp`(`EditorModuleOverridesTest`):**
-- `SetOverrideAddsAndRemovesLine` — 기본 켜짐 모듈을 끄면 줄 하나, 다시 켜면 줄이 사라진다(빈 배열).
-- `PreviewIncludesDependents` — 시험 카탈로그(키트 A, A 에 의존하는 확장 B)에서 A 를 끄면 새로 꺼지는 목록이 A · B, B 의 이유가 의존.
-- `PreviewReportsCycleError` — 순환 카탈로그면 false 와 이유.
-(`ModuleCatalog::addManifest` 로 시험 카탈로그를 만든다 — `ModuleCatalogTest` 가 쓰는 길.)
-자체 시험 `modules.panelListsKits` — 창을 열어 `GF_ThemePark` 줄이 있는지(쓰기는 하지 않는다).
-
-**확인 = 에디터 시나리오.** `modules.scenario.xml`: Modules 창을 열고 `GF_ThemePark` 의 체크박스(이름표 `modules.toggle.GF_ThemePark`)를 눌러 미리보기 팝업이 뜨는지(탐침 `Editor.ModulePreviewNewlyInactive` 가 2 — 키트와 그 확장)를 봅니다.
-"Cancel" 을 눌러 매니페스트를 쓰지 않고 끝냅니다. 실제 끄기, 빌드, 재시작은 시나리오로 돌리지 않습니다(빌드 시간이 길고 소스 파일을 바꿉니다). 그 부분은 `EditorModuleOverridesTest` 가 봅니다.
-
-**남길 교훈.** `Source/Engine/Module/README.md` 함정 · 계약 절에 한 줄: `- **매니페스트 내용도 구성 의존이다**(CMAKE_CONFIGURE_DEPENDS) — 켜짐을 바꾸면 다음 빌드가 다시 구성한다. 켜고 끄기는 Modules 창(프로젝트 _listModuleOverride, 기본과 다를 때만 줄).`
-**커밋 메시지:**
-```
-에디터 - 모듈 창(켜고 끄기 · 의존 미리보기 · 빌드/재시작)과 매니페스트 내용을 구성 의존으로
-
-문제점:
-- 모듈을 켜고 끄려면 프로젝트 매니페스트를 손으로 고치고 re-configure 해야 했다. 매니페스트 내용은 구성 의존이 아니라
-  고쳐도 다음 빌드가 옛 답으로 돌았다(GLOB CONFIGURE_DEPENDS 는 파일 목록만 본다).
-
-해결방안:
-- ModuleManifest.cmake: 매니페스트 파일을 CMAKE_CONFIGURE_DEPENDS 에 더한다.
-- EditorModuleOverrideUtil: 프로젝트 매니페스트의 _listModuleOverride 고쳐 쓰기(기본과 같으면 줄 삭제) · 켜고 끔의 미리보기(카탈로그를 다시 풀어
-  함께 바뀌는 모듈과 이유).
-- Modules 창: 종류별 표 · 상태와 이유 · 미리보기 확인 · 소스 매니페스트 쓰기(체크아웃 확인) · Build · Restart Editor.
-
-결과:
-- EditorModuleOverridesTest 셋, 자체 시험 modules.panelListsKits.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** `EditorTest --test_filter=EditorModuleOverridesTest.*`, 손으로: 키트 하나 끄기 → Build(ninja 가 cmake 를 다시 도는지 로그) → Restart → 그 키트 DLL 이 안 올라옴. **WSL:** CI 로 확인(CMake 변경).
 ---
 
 ## 6. 단계 3 — 인스펙터 · 콘텐츠 브라우저 ★

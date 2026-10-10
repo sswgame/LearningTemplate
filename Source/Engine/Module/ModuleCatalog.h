@@ -176,6 +176,13 @@ namespace sw
         const ModuleManifest* findManifest( string_view name ) const;
         /** @brief 담긴 매니페스트 수입니다. */
         size_t getManifestCount() const { return _listManifest.size(); }
+        /** @brief 담긴 매니페스트 전부입니다(읽은 순서). */
+        const vector<ModuleManifest>& getManifests() const { return _listManifest; }
+        /**
+         * @brief 프로젝트 모듈 @p projectModule 의 켜기/끄기 표에서 @p moduleName 을 @p bEnabled 로 둡니다(사본에서 미리 풀어 볼 때 — 모듈 창).
+         * @return 프로젝트 매니페스트가 없으면 false 입니다.
+         */
+        [[nodiscard]] bool setProjectOverride( string_view projectModule, string_view moduleName, bool bEnabled );
 
         /**
          * @brief 켜진 모듈과 적재 순서를 정합니다.
