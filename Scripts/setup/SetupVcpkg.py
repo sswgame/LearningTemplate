@@ -11,6 +11,7 @@ vcpkg: VCPKG_ROOT → PATH → vcpkg_search_roots → Tools/vcpkg → opt-in clo
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -48,6 +49,22 @@ kVcpkgToolSpec = ToolSpec(
     env_vars=("VCPKG_ROOT", "VCPKG_INSTALLATION_ROOT"),
     validate_func=isVcpkgRoot,
 )
+
+
+def resolveVcpkgCommitInternal(search: dict) -> str:
+    """
+    Tools/vcpkg 를 고정할 커밋을 정합니다. `search_paths.json` 의 `vcpkg_git_commit` 이 있으면 그것이고, 비어 있으면
+    저장소 루트 `vcpkg.json` 의 `builtin-baseline` 입니다 — 기준선보다 오래된 체크아웃은 configure 가 "no version database entry" 로 진다.
+    """
+    explicit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
+    if explicit:
+        return explicit
+    manifestPath = Path(__file__).resolve().parents[2] / "vcpkg.json"
+    try:
+        manifest = json.loads(manifestPath.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    return str(manifest.get("builtin-baseline", "")).strip()
 
 
 def pinVcpkgCommitInternal(vcpkgRoot: Path, commit: str, gitExe: str) -> None:
@@ -193,7 +210,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
     if foundRoot := findToolRoot(kVcpkgToolSpec, search):
         if foundRoot == toolsDir:
             gitExe = ensureGitOnPath()
-            gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
+            gitCommit = resolveVcpkgCommitInternal(search)
             if gitExe is not None and gitCommit:
                 pinVcpkgCommitInternal(toolsDir, gitCommit, gitExe)
             print(f"[SetupVcpkg] Using project kit: {toolsDir}", file=sys.stderr)
@@ -230,7 +247,7 @@ def setupVcpkg(allowBootstrap: bool = False) -> Path | None:
         return None
 
     gitUrl = str(search[kKeyVcpkgGitUrl])
-    gitCommit = str(search.get(kKeyVcpkgGitCommit, "")).strip()
+    gitCommit = resolveVcpkgCommitInternal(search)
     if not bootstrapVcpkgInternal(toolsDir, gitUrl, gitCommit, gitExe):
         return None
     return Path(recordEnginePath(kKeyVcpkgRoot, toolsDir))

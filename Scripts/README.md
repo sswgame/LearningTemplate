@@ -292,7 +292,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
 - **`CheckCodeConventions` 의 출력 매개변수 검사는 `outP…` 를 원시 포인터 출력(`pOut`)으로 읽는다** — `outPSO` 같은 대문자 약어 이름은 풀어 쓴다(`outPipelineState`).
 - **Windows SDK 의 전역 이름과 약어 철자가 겹친다**(`UUID` · `XMLDocument`) — `using namespace sw;` 를 쓰는 전역 범위에서는 `sw::` 를 붙이고, 클래스 앞의 `friend class X;` 는 같은 이름공간에 먼저 선언한다(안 하면 전역 이름을 friend 로 잡는다).
 - **파이썬 조각은 heredoc 이 아니라 파일로**(정규식 백슬래시가 뭉개져 287 파일을 망친 적이 있다), 셸 파이프에서 표준 입력을 읽는 명령(`cat` · `py -3 -`)은 `< /dev/null` 이나 heredoc 으로 입력을 닫는다(입력을 기다리며 멈춘다).
-- **`SetupVcpkg.py --install` 은 `search_paths.json` 의 `vcpkg_git_commit` 이 비면 `Tools/vcpkg` 체크아웃을 옮기지 않는다** — `vcpkg.json` 의 `builtin-baseline` 보다 오래된 체크아웃이면 configure 가 "no version database entry" 로 진다. 기준선으로 옮기면 포트 전체를 다시 짓는다(이 PC 에서 약 2 시간).
+- **`SetupVcpkg.py` 는 `Tools/vcpkg` 를 `search_paths.json` 의 `vcpkg_git_commit` 으로, 비어 있으면 `vcpkg.json` 의 `builtin-baseline` 으로 고정한다**(`resolveVcpkgCommitInternal`). 기준선보다 오래된 체크아웃은 configure 가 "no version database entry" 로 지기 때문이다. 기준선을 올리면 포트 전체를 다시 짓는다(이 PC 에서 약 2 시간) — 다른 빌드가 없을 때 main 에서 먼저 한다.
 - **키트 커밋은 저장소가 고정한 clang-format(`Tools/LLVM/bin/clang-format`, 20)으로.** 시스템의 18 은 멤버 포인터(`float32 Foo::*_pMember`) 줄을 다르게 맞춰 린트가 막는다.
 - **clang-format 은 고정 바이너리 `Tools/LLVM/bin/clang-format.exe`(20.1.8)** 로만 센다(`clang_format_version` 키로 LLVM 과 따로 고정, `Scripts/common/ClangFormat.py`).
   PATH 의 것으로 세면 틀린다(정답은 0 개). `--dry-run` 에 파일 여럿을 한꺼번에 주면 보고가 조용히 잘린다 — 파일마다 한 번씩 센다:
