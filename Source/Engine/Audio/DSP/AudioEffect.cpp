@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Audio/Dsp/AudioEffect.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Audio/Dsp/AudioBiquad.h"
+#include "Engine/Audio/DSP/AudioBiquad.h"
 
 namespace sw
 {

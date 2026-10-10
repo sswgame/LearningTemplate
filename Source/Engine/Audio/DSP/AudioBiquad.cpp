@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Audio/Dsp/AudioBiquad.h"
+#include "Engine/Audio/DSP/AudioBiquad.h"
 
 #include "Core/Math/MathUtil.h"
 

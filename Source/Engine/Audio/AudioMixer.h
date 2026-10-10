@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Audio/AudioMixerDesc.h"
-#include "Engine/Audio/Dsp/AudioEffect.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 
 namespace sw
 {

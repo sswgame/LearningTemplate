@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Audio/AudioClip.h"
-#include "Engine/Audio/Dsp/AudioBiquad.h"
+#include "Engine/Audio/DSP/AudioBiquad.h"
 
 namespace sw
 {

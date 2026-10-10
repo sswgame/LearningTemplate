@@ -2,7 +2,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 
-#include "Engine/Audio/Dsp/AudioEffect.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/XmlSerializer.h"
 
