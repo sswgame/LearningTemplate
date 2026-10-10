@@ -48,8 +48,6 @@ _kTransportedHeaders: list[str] = [
 ]
 
 _kRawPointerMember = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w:<>]*\s*\*\s+(?P<name>_\w+)\s*(?:\{|;|=)")
-# 선언 시작 — 줄 맨 앞의 `struct X`. 주석 안의 `@struct X` 를 잡지 않으려고 줄 시작을 요구한다.
-_kStructDecl = re.compile(r"^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b[^;{]*$|^[ \t]*struct\s+(?:SW_API\s+)?(\w+)\b[^;]*\{", re.M)
 _kExemptMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\s*\(\s*(?P<members>[^)]*)\)\s*:\s*(?P<reason>\S.*)")
 #: 멤버를 적지 않은 옛 모양 — 구조체 통째 면제라 받지 않는다.
 _kBareMarker = re.compile(r"//\s*SW_OWNERSHIP_RAW_OK\b(?!\s*\()")

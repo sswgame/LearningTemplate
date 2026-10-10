@@ -322,14 +322,6 @@ class EnvironmentSetupManager:
         )
 
 
-def setupEnvironment(force_refresh: bool = False) -> dict[str, Any]:
-    """
-    개발 환경 설정을 탐색 및 구성하고 toolchain_config.json / parser_config.json에 저장합니다.
-    """
-    manager = EnvironmentSetupManager(force_refresh=force_refresh)
-    return asdict(manager.run())
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="SW Engine Setup Environment Script")
     parser.add_argument(

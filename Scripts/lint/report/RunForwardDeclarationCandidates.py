@@ -50,14 +50,12 @@ _kStringLiteral = re.compile(r'"(?:\\.|[^"\\\n])*"')
 _kInclude = re.compile(r'^[ \t]*#include[ \t]+"([^"]+)"[ \t]*$', re.M)
 _kNamespaceOpen = re.compile(r"\bnamespace\s+([A-Za-z_][\w:]*)\s*\{")
 _kClassDef = re.compile(r"\b(class|struct)\s+(?:SW_[A-Z_]*API\s+)?([A-Za-z_]\w*)\s*(?:final\s*)?(?::|\{)")
-_kTemplateHead = re.compile(r"\btemplate\s*<")
 _kEnumDef = re.compile(r"\benum\s+(?:class\s+|struct\s+)?([A-Za-z_]\w*)")
 _kAliasDef = re.compile(r"\busing\s+([A-Za-z_]\w*)\s*=")
 _kTypedefDef = re.compile(r"\btypedef\b[^;]*?\b([A-Za-z_]\w*)\s*;")
 _kMacroDef = re.compile(r"^[ \t]*#define[ \t]+([A-Za-z_]\w*)", re.M)
 _kFunctionDef = re.compile(r"^[ \t]*(?!return\b|else\b|case\b)(?:[A-Za-z_][\w:<>,\s\*&]*?)\s+\b([A-Za-z_]\w*)\s*\([^;{]*\)\s*(?:const\s*)?(?:noexcept\s*)?(?:\{|;)", re.M)
 _kConstantDef = re.compile(r"\b(?:inline\s+)?constexpr\s+[\w:<>]+\s+([A-Za-z_]\w*)\s*(?:=|\{|\[)")
-_kForwardDecl = re.compile(r"^[ \t]*(class|struct)\s+([A-Za-z_]\w*)\s*;[ \t]*$", re.M)
 
 
 def stripCode(text: str) -> str:

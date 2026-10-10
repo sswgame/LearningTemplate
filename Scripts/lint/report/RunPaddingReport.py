@@ -54,7 +54,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 from common import TranslationUnitSweep, runProcess  # noqa: E402
 from LintReport import LintReport, ReportContext  # noqa: E402
 
-_kDefaultPreset = "Ninja-Debug"
 _kTag = "RunPaddingReport"
 
 #: 결과물을 만드는 인자 · PCH 사용 인자. libclang 은 문법만 보고, MSVC PCH(`/Yu` · `/Fp`)는 읽지 못한다.

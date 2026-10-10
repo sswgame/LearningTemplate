@@ -29,7 +29,6 @@ kDirRuntimeGamePreset = "Config/Game"
 kDirRuntimeServerPreset = "Config/Server"
 # 사람이 쓰는 에디터 도구 값 — 기본값과 다른 값이 있을 때만 만든다(없으면 기본값).
 kFileRuntimeEditorToolDefaults = "Config/Editor/editortooldefaults.json"
-kFileShippingHostDefaultsHeader = "ShippingHostDefaults.h"
 kFilePackConfig = "Config/Engine/PackConfig.json"
 
 # =============================================================================
@@ -75,7 +74,6 @@ kDirToolsReflectionTemplates = "Tools/ReflectionParser/Templates"
 
 kScriptSetupVcpkg = "Scripts/setup/SetupVcpkg.py"
 kScriptSetupEnvironment = "Scripts/setup/SetupEnvironment.py"
-kScriptGenerateShippingHostDefaults = "Scripts/generate/GenerateShippingHostDefaults.py"
 kScriptCookAssets = "Scripts/generate/CookAssets.py"
 kScriptGenerateDocs = "Scripts/generate/GenerateDocs.py"
 

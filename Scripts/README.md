@@ -6,7 +6,7 @@ CMake는 빌드만 담당하고, 도구 탐색·설정·보조 생성 및 코드
 
 | 대상 | 규칙 | 예 |
 |------|------|-----|
-| 공개 함수 | `camelCase` | `setupEnvironment`, `getProjectRoot` |
+| 공개 함수 | `camelCase` | `runProcess`, `getProjectRoot` |
 | 비공개 | `camelCaseInternal` | `exeNameInternal` |
 | JSON 키 | `snake_case` | `"llvm_path"` |
 | 파일명 | `PascalCase.py` | `SetupEnvironment.py` |
