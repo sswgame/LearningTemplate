@@ -47,6 +47,23 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct RenderTargetReadback
+     * @brief 렌더 타깃 하나를 CPU 로 읽은 결과입니다(에디터 렌더 타깃 창의 채널 · 깊이 보기와 픽셀 값).
+     * @details 바이트 배치는 `IRHIResourceFactory::readbackTexture2D` 그대로입니다 — 깊이는 `kRHIDepthReadbackFormat`(0..1 float32)입니다.
+     */
+    struct RenderTargetReadback
+    {
+        vector<uint8>     _byte;                   ///< 첫 밉 · 첫 면의 픽셀(행은 빈틈없이)
+        RHITextureMipSpan _layout{};               ///< 크기와 행 바이트
+        RHITextureHandle  _texture{ 0 };           ///< 읽은 텍스처
+        uint32            _serial{ 0 };            ///< 요청 번호(`requestReadback` 이 돌려준 값)
+        uint8             _bSucceeded{ SW_FALSE }; ///< 읽기에 성공했으면 1
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @class RenderTargetRegistry
      * @brief 이번 프레임 구성의 렌더 타깃 목록을 담아 두고 스냅샷으로 반환합니다.
      * @note 매 프레임 갱신하지 않습니다. 트랜지언트는 **구성이 바뀔 때만** 다시 만들어지므로
@@ -70,9 +87,33 @@ namespace sw
         /** @brief 목록이 바뀔 때마다 오르는 번호. 값이 같으면 다시 읽을 이유가 없습니다. */
         uint64 getGeneration() const { return _generation.load( std::memory_order_acquire ); }
 
+        // ------------------------------------------------------------------------------
+        // CPU 읽기 — UI 가 요청하고 렌더 스레드가 프레임 끝(endFrame 뒤)에 읽어 둔다
+        // ------------------------------------------------------------------------------
+        /**
+         * @brief @p texture 를 CPU 로 읽어 달라고 요청합니다(UI 스레드). 아직 처리하지 않은 요청은 이 요청으로 바뀝니다.
+         * @return 요청 번호. 결과의 `_serial` 이 이 값이면 그 요청의 결과입니다.
+         */
+        uint32 requestReadback( RHITextureHandle texture );
+        /** @brief 처리할 요청을 꺼냅니다(렌더 스레드). 없으면 false 입니다. */
+        [[nodiscard]] bool takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial );
+        /** @brief 읽은 결과를 둡니다(렌더 스레드). 이전 결과는 버립니다. */
+        void publishReadback( RenderTargetReadback readback );
+        /** @brief 마지막 결과의 번호입니다. 0 이면 아직 결과가 없습니다. */
+        uint32 getReadbackSerial() const { return _readbackSerial.load( std::memory_order_acquire ); }
+        /** @brief 마지막 결과를 복사해 줍니다(UI 스레드). 결과가 없으면 false 입니다. */
+        [[nodiscard]] bool copyReadback( RenderTargetReadback& outReadback ) const;
+
     private:
         mutable mutex            _mutex;
         vector<RenderTargetInfo> _listTarget;
         atomic<uint64>           _generation{ 0 };
+
+        mutable mutex        _readbackMutex;
+        RenderTargetReadback _readback;                    ///< 마지막 결과(`_readbackMutex`)
+        RHITextureHandle     _pendingReadbackTexture{ 0 }; ///< 처리할 요청(0 이면 없음, `_readbackMutex`)
+        uint32               _pendingReadbackSerial{ 0 };  ///< 그 요청의 번호(`_readbackMutex`)
+        uint32               _lastRequestSerial{ 0 };      ///< 마지막으로 낸 요청 번호(`_readbackMutex`)
+        atomic<uint32>       _readbackSerial{ 0 };         ///< 마지막 결과의 번호
     };
 } // namespace sw

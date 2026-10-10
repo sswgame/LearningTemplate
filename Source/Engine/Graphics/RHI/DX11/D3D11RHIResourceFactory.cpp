@@ -335,14 +335,15 @@ namespace sw
         D3D11RHIDevice::TextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == nullptr || _pDevice->_device == nullptr || _pDevice->_deviceContext == nullptr )
             return false;
-        if ( pRecord->_bDepth != SW_FALSE )
-            return false;
 
         D3D11_TEXTURE2D_DESC texDesc{};
         pRecord->_texture->GetDesc( &texDesc );
         if ( mip >= texDesc.MipLevels || arraySlice >= texDesc.ArraySize )
             return false;
-        if ( computeRHITextureMipLayout( fromDxgiFormat( texDesc.Format ), texDesc.Width, texDesc.Height, mip, outLayout ) == false )
+        // 깊이는 typeless(R24G8)로 만들어져 있다. 같은 포맷의 스테이징으로 통째로 복사하고 아래에서 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
+        const bool      bDepth       = pRecord->_bDepth != SW_FALSE;
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( texDesc.Format );
+        if ( computeRHITextureMipLayout( layoutFormat, texDesc.Width, texDesc.Height, mip, outLayout ) == false )
             return false;
 
         // 밉 하나 크기의 스테이징 텍스처로 복사한 뒤 Map 한다. Map 이 GPU 를 기다린다.
@@ -374,6 +375,8 @@ namespace sw
                           static_cast<const uint8*>( mapped.pData ) + static_cast<uint64>( row ) * mapped.RowPitch, outLayout._rowBytes );
         }
         _pDevice->_deviceContext->Unmap( staging.Get(), 0 );
+        if ( bDepth )
+            convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
         return true;
     }
 

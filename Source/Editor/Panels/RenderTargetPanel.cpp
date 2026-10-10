@@ -11,7 +11,11 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 
 #include <imgui.h>
@@ -24,6 +28,8 @@ namespace sw::editor
     {
         /// @brief 목록 칸의 너비입니다. 이름이 길어도(GBufferAlbedo) 잘리지 않을 만큼 잡습니다.
         constexpr float32 kListWidth = 220.0f;
+        /// @brief Auto 일 때 스냅샷을 다시 읽는 간격(UI 프레임)입니다. 읽기는 GPU 를 기다리므로 매 프레임 하지 않는다.
+        constexpr uint32 kAutoRefreshFrames = 30;
 
         /** @brief 고른 타깃을 이름으로 찾습니다. 없으면 nullptr 입니다. */
         const RenderTargetInfo* findByName( const vector<RenderTargetInfo>& listTarget, const string& name )
@@ -43,12 +49,68 @@ namespace sw::editor
         , _pPreviewTextureID{ nullptr }
         , _previewTexture{ 0 }
         , _previewZoom{ 0.0f } // 0 = 창에 맞춤
+        , _viewSettings{}
+        , _snapshot{}
+        , _snapshotTexture{ 0 }
+        , _pSnapshotTextureID{ nullptr }
+        , _snapshotDepthRange{ 0.0f, 1.0f }
+        , _probedPixel{}
+        , _probedTexel{}
+        , _pendingReadbackSerial{ 0 }
+        , _autoRefreshCountdown{ 0 }
+        , _bRefreshRequested{ SW_FALSE }
+        , _bSnapshotImageDirty{ SW_FALSE }
+        , _bAutoRefresh{ SW_FALSE }
+        , _bProbedPixel{ SW_FALSE }
     {
+        // 선형화의 기본 면은 카메라 기본값이다. 다른 카메라를 보면 창에서 고친다.
+        _viewSettings._nearPlane = CameraComponent::kDefaultNearZ;
+        _viewSettings._farPlane  = CameraComponent::kDefaultFarZ;
     }
 
-    void RenderTargetPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    void RenderTargetPanel::shutdown( IRHIDevice* pRHIDevice )
     {
         releasePreviewTexture();
+        releaseSnapshotTexture( pRHIDevice );
+    }
+
+    bool RenderTargetPanel::hasSnapshot() const
+    {
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        return pSelected != nullptr && _snapshot._bSucceeded != SW_FALSE && _snapshot._texture == pSelected->_texture;
+    }
+
+    bool RenderTargetPanel::isSelectedDepth() const
+    {
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        return pSelected != nullptr && pSelected->_bDepth != SW_FALSE;
+    }
+
+    void RenderTargetPanel::releaseSnapshotTexture( IRHIDevice* pRHIDevice )
+    {
+        EditorContext*         pContext = EditorContext::get();
+        IImGuiRendererBackend* pBackend = pContext != nullptr ? pContext->getRendererBackend() : nullptr;
+        IRHIDevice*            pDevice  = pRHIDevice != nullptr ? pRHIDevice : ( pContext != nullptr ? pContext->getRHIDevice() : nullptr );
+        if ( _pSnapshotTextureID != nullptr && pBackend != nullptr )
+            pBackend->unregisterTexture( _pSnapshotTextureID );
+        _pSnapshotTextureID = nullptr;
+
+        if ( _snapshotTexture != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
+        {
+            // 이미 낸 draw 스냅샷이 이 텍스처를 그릴 수 있다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의 GPU 완료 뒤에 부순다.
+            IRHIResourceFactory*   pResource = pDevice->getResourceFactory();
+            const RHITextureHandle texture   = _snapshotTexture;
+            if ( pBackend != nullptr )
+            {
+                pBackend->getDrawReleaseQueue().enqueue( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pResource, texture]()
+                { pResource->destroyTexture( texture ); } ) );
+            }
+            else
+            {
+                pResource->destroyTexture( texture );
+            }
+        }
+        _snapshotTexture = 0;
     }
 
     void RenderTargetPanel::releasePreviewTexture()
@@ -89,7 +151,7 @@ namespace sw::editor
     void RenderTargetPanel::syncPreviewTexture()
     {
         const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
-        // 깊이 첨부는 등록하지 않는다. 아래 미리보기가 왜 그리지 못하는지 화면에 적는다.
+        // 깊이 첨부는 등록하지 않는다. 색으로 샘플링할 수 없어 CPU 스냅샷(선형화한 회색)으로 본다.
         const bool   bPreviewable = ( pSelected != nullptr ) && ( pSelected->_bDepth == SW_FALSE );
         const uint64 texture      = bPreviewable ? pSelected->_texture : 0;
         if ( texture == _previewTexture && _pPreviewTextureID != nullptr )
@@ -106,6 +168,91 @@ namespace sw::editor
         _previewTexture    = ( _pPreviewTextureID != nullptr ) ? texture : 0;
     }
 
+    void RenderTargetPanel::syncSnapshot()
+    {
+        RenderTargetRegistry*   pRegistry = editor::getService<RenderTargetRegistry>();
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        if ( pRegistry == nullptr || pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false )
+            return;
+
+        // 도착한 결과를 받는다. 다른 타깃의 결과(고르기를 바꾼 사이 도착)는 버리고 다시 읽는다.
+        if ( _pendingReadbackSerial != 0 && pRegistry->getReadbackSerial() == _pendingReadbackSerial )
+        {
+            _pendingReadbackSerial = 0;
+            if ( pRegistry->copyReadback( _snapshot ) && _snapshot._texture == pSelected->_texture )
+                _bSnapshotImageDirty = SW_TRUE;
+        }
+
+        // 다시 읽을 때: 고른 타깃의 스냅샷이 없을 때, Refresh, Auto 간격.
+        bool bWantReadback = ( _snapshot._texture != pSelected->_texture ) || ( _bRefreshRequested != SW_FALSE );
+        if ( _bAutoRefresh != SW_FALSE )
+        {
+            if ( _autoRefreshCountdown == 0 )
+            {
+                bWantReadback         = true;
+                _autoRefreshCountdown = kAutoRefreshFrames;
+            }
+            else
+            {
+                --_autoRefreshCountdown;
+            }
+        }
+        if ( bWantReadback && _pendingReadbackSerial == 0 )
+        {
+            _pendingReadbackSerial = pRegistry->requestReadback( pSelected->_texture );
+            _bRefreshRequested     = SW_FALSE;
+        }
+
+        if ( _bSnapshotImageDirty != SW_FALSE )
+        {
+            _bSnapshotImageDirty = SW_FALSE;
+            rebuildSnapshotTexture();
+        }
+    }
+
+    void RenderTargetPanel::rebuildSnapshotTexture()
+    {
+        const RenderTargetInfo* pSelected = findByName( _listTarget, _selectedName );
+        releaseSnapshotTexture( nullptr );
+        if ( pSelected == nullptr || hasSnapshot() == false )
+            return;
+
+        RenderTargetPreviewImage image{};
+        if ( RenderTargetViewUtil::makePreviewImage( _snapshot._byte, _snapshot._layout, pSelected->_format, pSelected->_bDepth != SW_FALSE, _viewSettings,
+                                                     image ) == false )
+            return;
+        _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
+
+        EditorContext* pContext = EditorContext::get();
+        IRHIDevice*    pDevice  = pContext != nullptr ? pContext->getRHIDevice() : nullptr;
+        if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr || pContext->getRendererBackend() == nullptr )
+            return;
+
+        // 스냅샷마다 새 텍스처를 만든다. 쓰던 것에 다시 올리면 아직 그것을 그리는 프레임과 겹친다(옛 것은 해제 큐가 그 뒤에 부순다).
+        RHITextureDesc desc{};
+        desc._width                    = image._width;
+        desc._height                   = image._height;
+        desc._format                   = RHIFormat::R8G8B8A8_UNORM;
+        desc._bIsShaderResource        = SW_TRUE;
+        desc._mipLevels                = 1;
+        IRHIResourceFactory* pResource = pDevice->getResourceFactory();
+        _snapshotTexture               = pResource->createTexture2D( desc );
+        if ( _snapshotTexture == 0 )
+            return;
+
+        RHITextureUploadDesc upload{};
+        upload._pData     = image._byte.data();
+        upload._sizeBytes = static_cast<uint32>( image._byte.size() );
+        upload._mipLevels = 1;
+        if ( pResource->uploadTexture2D( _snapshotTexture, upload ) == false )
+        {
+            SW_LOG_WARNING( "Render target preview %#x%# could not be uploaded", image._width, image._height );
+            releaseSnapshotTexture( pDevice );
+            return;
+        }
+        _pSnapshotTextureID = pContext->getRendererBackend()->registerTexture( _snapshotTexture );
+    }
+
     void RenderTargetPanel::drawToolbar()
     {
         EditorWidgets::drawSearchField( "##rtsearch", _searchFilter, "Search render targets...", 260.0f );
@@ -116,6 +263,17 @@ namespace sw::editor
         ImGui::SetNextItemWidth( 160.0f * EditorThemeUtil::getDpiScale() );
         // 0 = 창에 맞춤. 원본 해상도로 보고 싶을 때만 배율을 준다(1:1 픽셀 검사).
         ImGui::SliderFloat( "Zoom", &_previewZoom, 0.0f, 2.0f, _previewZoom <= 0.0f ? "fit" : "%.2fx" );
+
+        // 채널 · 깊이 · 픽셀 값은 CPU 로 읽은 스냅샷이다. 다시 읽기는 GPU 를 기다리므로 누를 때(또는 Auto 간격)만 한다.
+        ImGui::SameLine();
+        if ( ImGui::Button( "Refresh" ) )
+            _bRefreshRequested = SW_TRUE;
+        EditorSelfTestMarks::note( "renderTargets.refresh" );
+        ImGui::SameLine();
+        bool bAuto = _bAutoRefresh != SW_FALSE;
+        if ( ImGui::Checkbox( "Auto", &bAuto ) )
+            _bAutoRefresh = bAuto ? SW_TRUE : SW_FALSE;
+        EditorSelfTestMarks::note( "renderTargets.auto" );
     }
 
     void RenderTargetPanel::drawTargetList()
@@ -135,6 +293,8 @@ namespace sw::editor
             const bool bSelected = ( info._name == _selectedName );
             if ( ImGui::Selectable( info._name.c_str(), bSelected ) )
                 _selectedName = info._name;
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( "renderTargets.row." + info._name ).c_str() );
 
             if ( info._bDepth != SW_FALSE )
             {
@@ -155,6 +315,102 @@ namespace sw::editor
         ImGui::EndChild();
     }
 
+    void RenderTargetPanel::drawViewControls( const RenderTargetInfo& selected )
+    {
+        if ( selected._bDepth != SW_FALSE )
+        {
+            // 깊이는 한 채널이다. 원근 깊이는 먼 쪽에 몰려 있어 그대로 보면 거의 흰색이라, 거리로 되돌리고 화면의 범위로 늘린다.
+            bool bChanged   = false;
+            bool bLinearize = _viewSettings._bLinearizeDepth != SW_FALSE;
+            bool bAutoRange = _viewSettings._bAutoDepthRange != SW_FALSE;
+            if ( ImGui::Checkbox( "Linearize", &bLinearize ) )
+            {
+                _viewSettings._bLinearizeDepth = bLinearize ? SW_TRUE : SW_FALSE;
+                bChanged                       = true;
+            }
+            EditorSelfTestMarks::note( "renderTargets.linearize" );
+            ImGui::SameLine();
+            if ( ImGui::Checkbox( "Auto range", &bAutoRange ) )
+            {
+                _viewSettings._bAutoDepthRange = bAutoRange ? SW_TRUE : SW_FALSE;
+                bChanged                       = true;
+            }
+            EditorSelfTestMarks::note( "renderTargets.autoRange" );
+            if ( bLinearize )
+            {
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
+                float32 arrPlane[2]{ _viewSettings._nearPlane, _viewSettings._farPlane };
+                if ( ImGui::DragFloat2( "Near/Far", arrPlane, 0.1f, 0.001f, 100000.0f, "%.3f" ) )
+                {
+                    _viewSettings._nearPlane = MathUtil::max( arrPlane[0], 0.001f );
+                    _viewSettings._farPlane  = MathUtil::max( arrPlane[1], _viewSettings._nearPlane + 0.001f );
+                    bChanged                 = true;
+                }
+            }
+            if ( hasSnapshot() )
+            {
+                ImGui::SameLine();
+                ImGui::TextDisabled( "range %.3f .. %.3f", static_cast<float64>( _snapshotDepthRange._x ), static_cast<float64>( _snapshotDepthRange._y ) );
+            }
+            if ( bChanged )
+                _bSnapshotImageDirty = SW_TRUE;
+            return;
+        }
+
+        for ( uint32 channelIndex = 0; channelIndex < static_cast<uint32>( RenderTargetChannel::Count ); ++channelIndex )
+        {
+            const RenderTargetChannel channel = static_cast<RenderTargetChannel>( channelIndex );
+            if ( channelIndex > 0 )
+                ImGui::SameLine();
+            if ( ImGui::RadioButton( RenderTargetViewUtil::getChannelLabel( channel ), _viewSettings._channel == channel ) && _viewSettings._channel != channel )
+            {
+                _viewSettings._channel = channel;
+                _bSnapshotImageDirty   = SW_TRUE;
+            }
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( string{ "renderTargets.channel." } + RenderTargetViewUtil::getChannelLabel( channel ) ).c_str() );
+        }
+    }
+
+    void RenderTargetPanel::probeHoveredPixel( const RenderTargetInfo& selected, const float2& imageMin, const float2& imageSize )
+    {
+        if ( ImGui::IsItemHovered() == false || hasSnapshot() == false )
+            return;
+        const ImVec2 mouse = ImGui::GetMousePos();
+        int2         texel{};
+        if ( RenderTargetViewUtil::mapPreviewToTexel( float2{ mouse.x - imageMin._x, mouse.y - imageMin._y }, imageSize, _snapshot._layout._width,
+                                                      _snapshot._layout._height, texel ) == false )
+            return;
+        float4     value{};
+        const bool bDepth = selected._bDepth != SW_FALSE;
+        if ( RenderTargetViewUtil::readPixel( _snapshot._byte, _snapshot._layout, selected._format, bDepth, static_cast<uint32>( texel._x ),
+                                              static_cast<uint32>( texel._y ), value ) == false )
+            return;
+        _probedPixel  = value;
+        _probedTexel  = texel;
+        _bProbedPixel = SW_TRUE;
+
+        ImGui::BeginTooltip();
+        ImGui::Text( "(%d, %d)", texel._x, texel._y );
+        if ( bDepth )
+        {
+            ImGui::Text( "depth %.6f", static_cast<float64>( value._x ) );
+            ImGui::Text( "linear %.3f", static_cast<float64>( RenderTargetViewUtil::linearizeDepth( value._x, _viewSettings._nearPlane, _viewSettings._farPlane ) ) );
+        }
+        else
+        {
+            const uint32  channelCount = RenderTargetViewUtil::getChannelCount( selected._format, false );
+            const float32 arrValue[4]{ value._x, value._y, value._z, value._w };
+            const utf8*   arrLabel[4]{ "R", "G", "B", "A" };
+            for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
+            {
+                ImGui::Text( "%s %.4f", arrLabel[channelIndex], static_cast<float64>( arrValue[channelIndex] ) );
+            }
+        }
+        ImGui::EndTooltip();
+    }
+
     void RenderTargetPanel::drawPreview()
     {
         ImGui::BeginChild( "##rtpreview", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders );
@@ -172,22 +428,36 @@ namespace sw::editor
         ImGui::TextDisabled( "%ux%u  %s", pSelected->_width, pSelected->_height,
                              FrameRendererUtil::attachmentFormatName( pSelected->_format ) );
 
-        if ( pSelected->_bDepth != SW_FALSE )
+        const bool bDepth     = pSelected->_bDepth != SW_FALSE;
+        const bool bDecodable = RenderTargetViewUtil::isDecodableFormat( pSelected->_format, bDepth );
+        if ( bDecodable )
+            drawViewControls( *pSelected );
+
+        // 마지막으로 읽은 픽셀 값 줄. 미리보기 밖으로 나가도 남아 값을 옮겨 적을 수 있다.
+        if ( _bProbedPixel != SW_FALSE )
         {
-            // 깊이 첨부는 색으로 볼 수 없다. 백엔드마다 깊이 SRV 를 ImGui 텍스처로 받아 주는 방식이
-            // 다르고, 받아도 D24S8 은 정규화 깊이라 거의 흰 화면이 된다. 있는 척하지 않고 무엇을
-            // 못 하는지, 대신 무엇을 쓰면 되는지를 적는다.
-            ImGui::Separator();
-            ImGui::TextWrapped( "Depth attachments have no preview. Dump it instead: "
-                                "-gv_screenshotAttachment=%s",
-                                pSelected->_name.c_str() );
-            ImGui::EndChild();
-            return;
+            if ( bDepth )
+            {
+                ImGui::TextDisabled( "Pixel (%d, %d): depth %.6f", _probedTexel._x, _probedTexel._y, static_cast<float64>( _probedPixel._x ) );
+            }
+            else
+            {
+                ImGui::TextDisabled( "Pixel (%d, %d): %.4f %.4f %.4f %.4f", _probedTexel._x, _probedTexel._y, static_cast<float64>( _probedPixel._x ),
+                                     static_cast<float64>( _probedPixel._y ), static_cast<float64>( _probedPixel._z ), static_cast<float64>( _probedPixel._w ) );
+            }
         }
 
-        if ( _pPreviewTextureID == nullptr )
+        // 색 그대로(RGBA)는 GPU 텍스처를 그대로 보인다(매 프레임 최신). 깊이 · 채널 하나는 CPU 스냅샷으로 만든 그림이다.
+        const bool bLive      = ( bDepth == false ) && ( _viewSettings._channel == RenderTargetChannel::RGBA );
+        void*      pTextureID = bLive ? _pPreviewTextureID : _pSnapshotTextureID;
+        if ( pTextureID == nullptr )
         {
-            ImGui::TextDisabled( "Could not register this target as an ImGui texture." );
+            if ( bLive )
+                ImGui::TextDisabled( "Could not register this target as an ImGui texture." );
+            else if ( bDecodable == false )
+                ImGui::TextDisabled( "This format cannot be read back." );
+            else
+                ImGui::TextDisabled( "Reading the target..." );
             ImGui::EndChild();
             return;
         }
@@ -216,7 +486,10 @@ namespace sw::editor
             drawHeight = static_cast<float32>( pSelected->_height ) * _previewZoom;
         }
 
-        ImGui::Image( reinterpret_cast<ImTextureID>( _pPreviewTextureID ), ImVec2{ drawWidth, drawHeight } );
+        const ImVec2 imageMin = ImGui::GetCursorScreenPos();
+        ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ drawWidth, drawHeight } );
+        EditorSelfTestMarks::note( "renderTargets.preview" );
+        probeHoveredPixel( *pSelected, float2{ imageMin.x, imageMin.y }, float2{ drawWidth, drawHeight } );
         ImGui::EndChild();
     }
 
@@ -228,6 +501,10 @@ namespace sw::editor
         // 미리보기가 영영 빈 채로 남는다.
         if ( _selectedName.empty() == false && findByName( _listTarget, _selectedName ) == nullptr )
             _selectedName.clear();
+
+        // 고른 타깃이 바뀌면 읽어 둔 픽셀 값은 다른 그림의 것이다.
+        if ( _snapshot._texture != 0 && hasSnapshot() == false )
+            _bProbedPixel = SW_FALSE;
 
         // 아무것도 고르지 않았으면 **화면에 나가는 것**을 고른다. 열자마자 지금 보이는 그림이 뜬다.
         // 이름순 첫 번째로 두면 AOColor 가 잡혀서 "이게 뭐지" 부터 시작하게 된다.
@@ -255,6 +532,7 @@ namespace sw::editor
         }
 
         syncPreviewTexture();
+        syncSnapshot();
 
         drawToolbar();
         ImGui::Separator();

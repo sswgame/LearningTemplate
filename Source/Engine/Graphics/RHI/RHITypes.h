@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/Common/Common.h"
 #include "Engine/Common/EngineDefines.h"
@@ -850,6 +851,29 @@ namespace sw
         outSpan._height        = mipHeight;
         outSpan._mip           = mip;
         return true;
+    }
+
+    /**
+     * @brief 깊이 텍스처를 `readbackTexture2D` 로 읽을 때 채우는 배치의 포맷입니다 — 텍셀마다 0..1 깊이 float32 하나, 스텐실은 버립니다.
+     * @details 네 백엔드가 같은 배치를 내야 읽는 쪽(에디터 렌더 타깃 창)이 백엔드를 묻지 않습니다. Vulkan 이 D32 계열 깊이를 골라도 같습니다.
+     */
+    inline constexpr RHIFormat kRHIDepthReadbackFormat = RHIFormat::R32_FLOAT;
+
+    /**
+     * @brief D24 깊이 텍셀(32비트, 아래 24비트가 깊이) @p count 개를 제자리에서 0..1 float32 로 바꿉니다. 위 8비트(스텐실 · 미정)는 버립니다.
+     * @details D3D11 · D3D12 의 깊이 평면 복사와 Vulkan `D24_UNORM_S8_UINT` 의 깊이 aspect 복사가 이 배치를 냅니다.
+     */
+    inline void convertRHIDepth24ToFloat( uint8* pTexel, uint32 count )
+    {
+        constexpr uint32  kDepth24Mask = 0x00FFFFFFu;
+        constexpr float32 kDepth24Max  = static_cast<float32>( kDepth24Mask );
+        for ( uint32 texelIndex = 0; texelIndex < count; ++texelIndex )
+        {
+            uint32 packed = 0;
+            Memory::copy( &packed, pTexel + static_cast<size_t>( texelIndex ) * 4u, sizeof( packed ) );
+            const float32 depth = static_cast<float32>( packed & kDepth24Mask ) / kDepth24Max;
+            Memory::copy( pTexel + static_cast<size_t>( texelIndex ) * 4u, &depth, sizeof( depth ) );
+        }
     }
 
     /**

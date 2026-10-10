@@ -711,13 +711,15 @@ namespace sw
             SW_LOG_ERROR( "readbackTexture2D: texture %# or the device is not usable", texture );
             return false;
         }
-        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
+        if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arrayLayers )
         {
-            SW_LOG_ERROR( "readbackTexture2D: depth-stencil readback is unsupported, or mip %# / slice %# is out of range (%# mips, %# slices)",
-                          mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
+            SW_LOG_ERROR( "readbackTexture2D: mip %# / slice %# is out of range (%# mips, %# slices)", mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return false;
         }
-        if ( computeRHITextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        // 깊이는 깊이 aspect 만 복사한다(텍셀마다 4 바이트). D24 는 아래 24비트가 깊이라 0..1 float32 로 바꾸고, D32 계열은 이미 float32 다(kRHIDepthReadbackFormat).
+        const bool      bDepth       = pRecord->_bDepthStencil != SW_FALSE;
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : static_cast<RHIFormat>( pRecord->_rhiFormat );
+        if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
             SW_LOG_ERROR( "readbackTexture2D: unsupported format %# for %#x%# mip %#",
                           pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
@@ -743,18 +745,21 @@ namespace sw
         }
         const VkCommandBuffer cmd = oneShot.get();
 
-        VkImageMemoryBarrier barrier = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
-        barrier.oldLayout            = static_cast<VkImageLayout>( pRecord->_layout );
-        barrier.newLayout            = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask        = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
-        barrier.dstAccessMask        = VK_ACCESS_TRANSFER_READ_BIT;
+        const VkImageLayout  layoutBefore = static_cast<VkImageLayout>( pRecord->_layout );
+        VkImageMemoryBarrier barrier      = makeWholeImageBarrier( pRecord->_image, pRecord->_mipLevels, pRecord->_arrayLayers );
+        if ( bDepth )
+            barrier.subresourceRange.aspectMask = _pDevice->depthAspectMask();
+        barrier.oldLayout     = layoutBefore;
+        barrier.newLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_MEMORY_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
         VkBufferImageCopy region{};
         region.bufferOffset                    = 0;
         region.bufferRowLength                 = 0;
         region.bufferImageHeight               = 0;
-        region.imageSubresource.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.aspectMask     = bDepth ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
         region.imageSubresource.mipLevel       = mip;
         region.imageSubresource.baseArrayLayer = arraySlice;
         region.imageSubresource.layerCount     = 1;
@@ -762,10 +767,12 @@ namespace sw
         vkCmdCopyImageToBuffer( cmd, pRecord->_image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, pStaging->_buffer, 1, &region );
 
         // 읽기 뒤에는 샘플링 레이아웃으로 둔다. 한 번도 안 올린 텍스처(UNDEFINED)도 이제부터는 정의된 레이아웃을 갖는다.
-        barrier.oldLayout     = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout     = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        // 깊이는 읽기 전 레이아웃으로 되돌린다 — 렌더 패스 · 그림자 샘플링이 추적 레이아웃에서 출발한다(UNDEFINED 였으면 샘플링 레이아웃).
+        const VkImageLayout layoutAfter = ( bDepth && layoutBefore != VK_IMAGE_LAYOUT_UNDEFINED ) ? layoutBefore : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.oldLayout               = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout               = layoutAfter;
+        barrier.srcAccessMask           = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask           = VK_ACCESS_SHADER_READ_BIT;
         vkCmdPipelineBarrier( cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier );
 
         const bool bSubmitted = oneShot.endSubmitAndWait();
@@ -779,13 +786,15 @@ namespace sw
                 outBytes.assign( outLayout._sizeBytes, 0 );
                 Memory::copy( outBytes.data(), pMapped, outLayout._sizeBytes );
                 vkUnmapMemory( _pDevice->_device, pStaging->_memory );
+                if ( bDepth && static_cast<VkFormat>( pRecord->_format ) == VK_FORMAT_D24_UNORM_S8_UINT )
+                    convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
                 bOk = true;
             }
             else
             {
                 SW_LOG_ERROR( "readbackTexture2D: failed to map the staging memory (%# bytes)", outLayout._sizeBytes );
             }
-            pRecord->_layout = static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL );
+            pRecord->_layout = static_cast<uint32>( layoutAfter );
         }
         else
         {

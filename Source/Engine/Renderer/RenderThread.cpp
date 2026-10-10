@@ -12,8 +12,10 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/RHI/IRHICommandContext.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/ProfilerBackend.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -533,6 +535,8 @@ namespace sw
 
         // 실행 중 요청(`requestScreenshot` — 개발 명령 screenshot · 에디터 단추).
         writeRequestedScreenshot();
+        // 에디터 렌더 타깃 창의 CPU 읽기 요청. 스크린샷과 같은 자리 — endFrame 뒤라 이 프레임이 그린 내용이 들어 있다.
+        readRequestedRenderTarget();
 
         return true;
     }
@@ -614,6 +618,26 @@ namespace sw
         mailbox._completedSerial.fetch_add( 1, std::memory_order_acq_rel );
         _requestedScreenshotPath.clear();
         _requestedScreenshotTexture = 0;
+    }
+
+    void RenderThread::readRequestedRenderTarget()
+    {
+        RenderTargetRegistry* pRegistry = engine::getRenderTargetRegistry();
+        if ( pRegistry == nullptr || _pDevice == nullptr || _pDevice->getResourceFactory() == nullptr )
+            return;
+        RHITextureHandle texture = 0;
+        uint32           serial  = 0;
+        if ( pRegistry->takeReadbackRequest( texture, serial ) == false )
+            return;
+
+        SW_PROFILE_SCOPE( "RT.ReadRenderTarget" );
+        RenderTargetReadback readback{};
+        readback._texture    = texture;
+        readback._serial     = serial;
+        readback._bSucceeded = _pDevice->getResourceFactory()->readbackTexture2D( texture, 0, 0, readback._byte, readback._layout ) ? SW_TRUE : SW_FALSE;
+        if ( readback._bSucceeded == SW_FALSE )
+            readback._byte.clear();
+        pRegistry->publishReadback( std::move( readback ) );
     }
 
     bool RenderThread::ensureContextOnCurrentThread()

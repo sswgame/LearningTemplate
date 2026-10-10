@@ -31,6 +31,7 @@
 #include "Editor/Panels/ModulesPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
+#include "Editor/Panels/RenderTargetPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/Panels/SequencerPanel.h"
 #include "Editor/Panels/ShortcutsPanel.h"
@@ -1362,6 +1363,53 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerCapturePaused( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 2, outValue ); }
             [[nodiscard]] static bool readProfilerCapturedFrames( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 3, outValue ); }
 
+            /** @brief 렌더 타깃 창 값 하나입니다(열려 있지 않으면 값을 내지 않는다). 픽셀 값은 읽은 적이 없으면 내지 않는다. */
+            [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
+            {
+                EditorContext*           pContext = EditorContext::get();
+                const RenderTargetPanel* pPanel   = pContext != nullptr ? static_cast<const RenderTargetPanel*>( pContext->getPanelManager().findPanel( "render_targets" ) )
+                                                                        : nullptr;
+                if ( pPanel == nullptr || pPanel->isOpen() == false )
+                    return false;
+                switch ( which )
+                {
+                    case 0:
+                    {
+                        outValue = pPanel->hasSnapshot() ? 1.0 : 0.0;
+                        break;
+                    }
+                    case 1:
+                    {
+                        outValue = pPanel->isSelectedDepth() ? 1.0 : 0.0;
+                        break;
+                    }
+                    case 2:
+                    {
+                        outValue = static_cast<float64>( pPanel->getChannel() );
+                        break;
+                    }
+                    case 3:
+                    {
+                        outValue = pPanel->isDepthLinearized() ? 1.0 : 0.0;
+                        break;
+                    }
+                    default:
+                    {
+                        if ( pPanel->hasProbedPixel() == false )
+                            return false;
+                        outValue = static_cast<float64>( pPanel->getProbedPixel()._x );
+                        break;
+                    }
+                }
+                return true;
+            }
+
+            [[nodiscard]] static bool readRenderTargetSnapshotReady( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 0, outValue ); }
+            [[nodiscard]] static bool readRenderTargetSelectedDepth( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 1, outValue ); }
+            [[nodiscard]] static bool readRenderTargetChannel( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 2, outValue ); }
+            [[nodiscard]] static bool readRenderTargetLinearized( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 3, outValue ); }
+            [[nodiscard]] static bool readRenderTargetPixelRed( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 4, outValue ); }
+
             /** @brief 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1529,6 +1577,17 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readInputMapSelectedTrigger );
     SW_AUTOMATION_PROBE( editorInputMapConflicts, "Editor.InputMapConflicts", "Binding conflicts the Input Map Editor found (same key, same layer, two actions)",
                          &EditorScenarioStepsInternal::readInputMapConflicts );
+    SW_AUTOMATION_PROBE( editorRenderTargetSnapshotReady, "Editor.RenderTargetSnapshotReady", "1 when the Render Targets panel holds a CPU snapshot of the picked target",
+                         &EditorScenarioStepsInternal::readRenderTargetSnapshotReady );
+    SW_AUTOMATION_PROBE( editorRenderTargetSelectedDepth, "Editor.RenderTargetSelectedDepth", "1 when the Render Targets panel shows a depth attachment",
+                         &EditorScenarioStepsInternal::readRenderTargetSelectedDepth );
+    SW_AUTOMATION_PROBE( editorRenderTargetChannel, "Editor.RenderTargetChannel", "Channel the Render Targets panel shows: 0 RGBA, 1 R, 2 G, 3 B, 4 A",
+                         &EditorScenarioStepsInternal::readRenderTargetChannel );
+    SW_AUTOMATION_PROBE( editorRenderTargetLinearized, "Editor.RenderTargetLinearized", "1 when the Render Targets panel linearizes depth",
+                         &EditorScenarioStepsInternal::readRenderTargetLinearized );
+    SW_AUTOMATION_PROBE( editorRenderTargetPixelRed, "Editor.RenderTargetPixelRed",
+                         "First channel (depth for a depth target) of the pixel last read under the mouse in the Render Targets panel; no value before one is read",
+                         &EditorScenarioStepsInternal::readRenderTargetPixelRed );
     SW_AUTOMATION_PROBE( editorProfilerCallTreeNodes, "Editor.ProfilerCallTreeNodes", "Nodes of the profiler call tree drawn last", &EditorScenarioStepsInternal::readProfilerCallTreeNodes );
     SW_AUTOMATION_PROBE( editorProfilerSelectedFrame, "Editor.ProfilerSelectedFrame", "Frame the profiler table shows: 0 latest, n frames ago",
                          &EditorScenarioStepsInternal::readProfilerSelectedFrame );

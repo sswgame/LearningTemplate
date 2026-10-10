@@ -112,6 +112,8 @@ namespace sw
         void takeScreenshotRequest();
         /** @brief 받은 `requestScreenshot` 요청을 이 프레임에 쓸 차례면 씁니다. `endFrame` 뒤에 부릅니다. */
         void writeRequestedScreenshot();
+        /** @brief 에디터 렌더 타깃 창이 `RenderTargetRegistry::requestReadback` 으로 요청한 타깃을 CPU 로 읽어 등록부에 둡니다. `endFrame` 뒤에 부릅니다. */
+        void readRequestedRenderTarget();
         /** @brief 지금 스레드에 그래픽스 컨텍스트가 있는지 확인합니다(없으면 붙입니다). */
         bool ensureContextOnCurrentThread();
         /** @brief `IRHIDevice::setRenderThreadDrain` 에 거는 함수입니다(`pContext` 는 이 객체). */

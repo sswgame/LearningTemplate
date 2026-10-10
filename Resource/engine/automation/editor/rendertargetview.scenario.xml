@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 렌더 타깃 창의 깊이 · 채널 보기와 픽셀 값(에디터 보강 "그 밖에": 렌더 타깃 보기).
+  1) 창을 열면 화면에 나가는 타깃을 고르고 CPU 스냅샷을 읽는다(Editor.RenderTargetSnapshotReady).
+  2) SceneDepth 를 고르면 깊이를 읽어 선형화한 회색으로 보이고, 미리보기 위의 마우스 아래 깊이가 0 ~ 1 로 읽힌다. Linearize 를 끄면 원래 깊이로 본다.
+  3) SceneColor 에서 G 채널을 고르면 그 채널을 회색으로 보이고, 픽셀 값도 읽힌다. Refresh 는 다시 읽는다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/rendertargetview.scenario.xml -dx12 (-dx11 · -vulkan · -opengl 도 같다)
+-->
+<Scenario name="editor.rendertargetview" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<At frame="10"><ResizeWindow width="1600" height="900"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="30"><DevCommand line="panel.focus render_targets"/></At>
+	<At frame="70"><Expect probe="Editor.RenderTargetSnapshotReady" equals="1"/></At>
+	<!-- 2) 깊이 -->
+	<At frame="75"><EditorClick mark="renderTargets.row.SceneDepth"/></At>
+	<At frame="110">
+		<Expect probe="Editor.RenderTargetSelectedDepth" equals="1"/>
+		<Expect probe="Editor.RenderTargetSnapshotReady" equals="1"/>
+		<Expect probe="Editor.RenderTargetLinearized" equals="1"/>
+	</At>
+	<At frame="115"><EditorHover mark="renderTargets.preview" anchor="0.5,0.6"/></At>
+	<At frame="130"><Expect probe="Editor.RenderTargetPixelRed" atLeast="0"/><Expect probe="Editor.RenderTargetPixelRed" atMost="1"/></At>
+	<At frame="135"><EditorClick mark="renderTargets.linearize"/></At>
+	<At frame="150"><Expect probe="Editor.RenderTargetLinearized" equals="0"/><EditorClick mark="renderTargets.refresh"/></At>
+	<At frame="180"><Expect probe="Editor.RenderTargetSnapshotReady" equals="1"/></At>
+	<!-- 3) 채널 -->
+	<At frame="185"><EditorClick mark="renderTargets.row.SceneColor"/></At>
+	<At frame="215">
+		<Expect probe="Editor.RenderTargetSelectedDepth" equals="0"/>
+		<Expect probe="Editor.RenderTargetSnapshotReady" equals="1"/>
+	</At>
+	<At frame="220"><EditorClick mark="renderTargets.channel.G"/></At>
+	<At frame="240"><Expect probe="Editor.RenderTargetChannel" equals="2"/></At>
+	<At frame="245"><EditorHover mark="renderTargets.preview" anchor="0.5,0.5"/></At>
+	<At frame="260">
+		<Expect probe="Editor.RenderTargetPixelRed" atLeast="0"/>
+		<Expect probe="Editor.RenderTargetPixelRed" atMost="1"/>
+		<ExpectLog contains="[Error]" count="0"/>
+	</At>
+	<At frame="270"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

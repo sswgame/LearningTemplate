@@ -9,10 +9,11 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Panels/RenderTargetViewUtil.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
-// `vector<RenderTargetInfo>` 를 멤버로 들고 있으므로 **완전한 타입**이 필요하다(전방 선언으로는 안 된다).
+// `vector<RenderTargetInfo>` · `RenderTargetReadback` 을 멤버로 들고 있으므로 **완전한 타입**이 필요하다(전방 선언으로는 안 된다).
 
 namespace sw
 {
@@ -25,7 +26,8 @@ namespace sw::editor
      * @class RenderTargetPanel
      * @brief 파이프라인이 만든 렌더 타깃을 나열 · 검색하고, 하나를 골라 미리 봅니다.
      * @details "지금 G버퍼에 뭐가 들어 있나" 를 앱을 다시 띄우지 않고 봅니다(앱 밖에서는 `-gv_screenshotAttachment` 로
-     *          PPM 을 한 장 찍습니다).
+     *          PPM 을 한 장 찍습니다). 색 그대로(RGBA)는 GPU 텍스처를 그대로 보이고, 채널 하나 · 깊이(선형화) · 픽셀 값은 렌더 스레드가
+     *          CPU 로 읽은 **스냅샷**으로 봅니다(고를 때 · Refresh · Auto 때 다시 읽습니다).
      * @note 목록은 `RenderTargetRegistry` 의 **스냅샷**입니다. 렌더 스레드가 트랜지언트를 다시 만드는 동안 UI 가 이미
      *       사라진 핸들을 들고 있지 않도록, 세대 번호가 바뀌면 다시 가져옵니다.
      */
@@ -51,6 +53,22 @@ namespace sw::editor
         /** @brief ImGui 에 등록한 미리보기 텍스처를 해제합니다. */
         void shutdown( IRHIDevice* pRHIDevice ) override;
 
+        // ------------------------------------------------------------------------------
+        // 2) 시험 탐침 — 시나리오가 읽는 값
+        // ------------------------------------------------------------------------------
+        /** @brief 고른 타깃의 CPU 스냅샷이 있으면 true 입니다. */
+        bool hasSnapshot() const;
+        /** @brief 고른 타깃이 깊이 첨부면 true 입니다. */
+        bool isSelectedDepth() const;
+        /** @brief 지금 보는 채널입니다. */
+        RenderTargetChannel getChannel() const { return _viewSettings._channel; }
+        /** @brief 깊이를 선형화해 보면 true 입니다. */
+        bool isDepthLinearized() const { return _viewSettings._bLinearizeDepth != SW_FALSE; }
+        /** @brief 마우스 아래 픽셀 값을 마지막으로 읽었으면 true 입니다(미리보기 밖으로 나가도 값은 남습니다). */
+        bool hasProbedPixel() const { return _bProbedPixel != SW_FALSE; }
+        /** @brief 마지막으로 읽은 픽셀 값입니다. */
+        const float4& getProbedPixel() const { return _probedPixel; }
+
     private:
         /** @brief 레지스트리 세대가 바뀌었으면 목록을 다시 가져옵니다. */
         void refreshTargetsIfStale();
@@ -64,6 +82,16 @@ namespace sw::editor
         void syncPreviewTexture();
         /** @brief 등록한 미리보기 텍스처를 놓습니다. 여러 번 불러도 안전합니다. */
         void releasePreviewTexture();
+        /** @brief 채널 · 깊이 보기 줄을 그립니다. */
+        void drawViewControls( const RenderTargetInfo& selected );
+        /** @brief 스냅샷을 다시 읽을 때면 요청하고, 도착한 결과를 받아 미리보기 이미지를 다시 만듭니다. */
+        void syncSnapshot();
+        /** @brief 스냅샷으로 미리보기 RGBA8 텍스처를 다시 만듭니다. */
+        void rebuildSnapshotTexture();
+        /** @brief 스냅샷 미리보기 텍스처와 그 ImGui 등록을 놓습니다. */
+        void releaseSnapshotTexture( IRHIDevice* pRHIDevice );
+        /** @brief 그린 미리보기 위의 마우스가 가리키는 픽셀 값을 읽어 툴팁으로 보입니다. */
+        void probeHoveredPixel( const RenderTargetInfo& selected, const float2& imageMin, const float2& imageSize );
 
     private:
         vector<RenderTargetInfo>              _listTarget;
@@ -78,5 +106,32 @@ namespace sw::editor
         uint64 _previewTexture;
         /** @brief 미리보기 확대 배율입니다. 0 이면 창에 맞춥니다. */
         float32 _previewZoom;
+
+        /** @brief 채널 · 깊이 선형화 설정입니다. */
+        RenderTargetViewSettings _viewSettings;
+        /** @brief 고른 타깃을 CPU 로 읽은 마지막 결과입니다. `_texture` 가 고른 타깃과 다르면 쓰지 않습니다. */
+        RenderTargetReadback _snapshot;
+        /** @brief 스냅샷으로 만든 미리보기 RGBA8 텍스처입니다(이 패널 소유). */
+        uint64 _snapshotTexture;
+        /** @brief 그 텍스처의 ImGui 등록 id 입니다. */
+        void* _pSnapshotTextureID;
+        /** @brief 미리보기 이미지를 만들 때 쓴 깊이 범위입니다(회색 0 ~ 1). */
+        float2 _snapshotDepthRange;
+        /** @brief 마지막으로 읽은 픽셀 값입니다. */
+        float4 _probedPixel;
+        /** @brief 마지막으로 읽은 픽셀 좌표입니다. */
+        int2 _probedTexel;
+        /** @brief 처리를 기다리는 읽기 요청 번호입니다. 0 이면 없습니다. */
+        uint32 _pendingReadbackSerial;
+        /** @brief Auto 일 때 다음 읽기까지 남은 UI 프레임 수입니다. */
+        uint32 _autoRefreshCountdown;
+        /** @brief 다음 프레임에 스냅샷을 다시 읽습니다(Refresh). */
+        uint8 _bRefreshRequested;
+        /** @brief 스냅샷 미리보기 이미지를 다시 만들어야 합니다(설정이 바뀌었거나 새 스냅샷). */
+        uint8 _bSnapshotImageDirty;
+        /** @brief 일정 간격으로 스냅샷을 다시 읽습니다. */
+        uint8 _bAutoRefresh;
+        /** @brief `_probedPixel` 이 유효하면 1 입니다. */
+        uint8 _bProbedPixel;
     };
 } // namespace sw::editor

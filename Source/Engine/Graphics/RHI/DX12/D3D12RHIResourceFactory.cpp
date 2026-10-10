@@ -523,9 +523,13 @@ namespace sw
         const D3D12_RESOURCE_DESC resourceDesc = pTexture->GetDesc();
         if ( mip >= resourceDesc.MipLevels || arraySlice >= resourceDesc.DepthOrArraySize )
             return false;
-        if ( computeRHITextureMipLayout( fromDxgiFormat( resourceDesc.Format ), static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
+        // 깊이는 typeless(R24G8)로 만들어져 있다. 깊이 평면(평면 0)만 복사하고 아래에서 0..1 float32 로 바꾼다(kRHIDepthReadbackFormat).
+        const bool      bDepth       = resourceDesc.Format == DXGI_FORMAT_R24G8_TYPELESS || resourceDesc.Format == DXGI_FORMAT_D24_UNORM_S8_UINT;
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : fromDxgiFormat( resourceDesc.Format );
+        if ( computeRHITextureMipLayout( layoutFormat, static_cast<uint32>( resourceDesc.Width ), resourceDesc.Height, mip, outLayout ) == false )
             return false;
 
+        // 평면 0 의 서브리소스 번호는 평면이 하나인 텍스처와 같다.
         const UINT                         subresource = mip + arraySlice * resourceDesc.MipLevels;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint{};
         UINT                               rowCount{ 0 };
@@ -590,6 +594,8 @@ namespace sw
         }
         D3D12_RANGE noWrite{ 0, 0 };
         readback->Unmap( 0, &noWrite );
+        if ( bDepth )
+            convertRHIDepth24ToFloat( outBytes.data(), outLayout._width * outLayout._height );
         return true;
     }
 

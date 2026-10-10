@@ -370,6 +370,10 @@ VRM 은 같은 길로 임포트하고, MToon 머티리얼이 있으면 머티리
 - **아틀라스와 텍스처 썸네일은 `EditorThumbnailCache` 로 엔진 텍스처를 빌립니다.** 패널의 `shutdown` 에서 `clear` 해야 디바이스가 내려가기 전에 ImGui 등록과 텍스처 참조를 놓습니다. DDS 읽기가 UI 스레드에서 돌므로 프레임마다 하나만 읽습니다.
 - **머티리얼 패널의 구 미리보기는 CPU 셈입니다**(`MaterialPreviewShading`). 관례 이름의 값만 읽고 셰이더 코드는 보지 않습니다.
 - **Sequencer 미리보기는 편집 씬의 오브젝트를 그대로 옮깁니다.** 키를 찍은 오브젝트를 저장하면 미리보기 자리가 씬에 남습니다(언리얼 Restore State 없음).
+- **렌더 타깃 창의 채널, 깊이, 픽셀 값은 CPU 스냅샷입니다**(`RenderTargetViewUtil`). 창이 `RenderTargetRegistry::requestReadback` 으로 요청하면 렌더 스레드가 endFrame 뒤에 `readbackTexture2D` 로 읽어 둡니다.
+  깊이는 네 백엔드 모두 `kRHIDepthReadbackFormat`(0..1 float32)으로 읽습니다. 읽기는 GPU 를 기다리므로 고를 때와 Refresh 와 Auto(30 UI 프레임)에만 합니다.
+  미리보기 RGBA8 텍스처는 스냅샷마다 새로 만들고 옛 것은 draw 해제 큐로 놓습니다. 쓰던 텍스처에 다시 올리면 아직 그것을 그리는 프레임과 겹칩니다.
+  자동 범위는 지운 깊이(1)를 빼고 잡습니다. 선형화는 원근 투영을 가정하므로 직교 그림자 맵은 Linearize 를 끄고 봅니다. 시나리오 `editor/rendertargetview`.
 - **프로파일러 캡처 파일은 패널 표의 창 하나입니다**(`Saved/Profiler/ProfilerCapture.txt`). 긴 분석은 Tracy 캡처가 맡습니다. 호출 트리는 Timeline 녹화를 접어 만듭니다.
 
 ### 콘텐츠 브라우저와 에셋

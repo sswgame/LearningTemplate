@@ -402,9 +402,14 @@ namespace sw
         OpenGLRHIDevice::OpenGLTextureRecord* pRecord = _pDevice->resolveTexture( texture );
         if ( pRecord == nullptr || pRecord->_texture == 0 || _pDevice->_bInitialized == SW_FALSE )
             return false;
-        if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
+        if ( mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
             return false;
-        if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        // 깊이는 깊이 성분만 0..1 float32 로 읽는다(kRHIDepthReadbackFormat). 스텐실은 버린다.
+        const bool      bDepth       = pRecord->_bDepthStencil != SW_FALSE;
+        const RHIFormat layoutFormat = bDepth ? kRHIDepthReadbackFormat : pRecord->_format;
+        const GLenum    pixelFormat  = bDepth ? GL_DEPTH_COMPONENT : toGlFormat( pRecord->_format );
+        const GLenum    pixelType    = bDepth ? GL_FLOAT : toGlType( pRecord->_format );
+        if ( computeRHITextureMipLayout( layoutFormat, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
         ScopedOpenGLContext contextScope( _pDevice );
@@ -416,7 +421,7 @@ namespace sw
             if ( isRHIFormatBlockCompressed( pRecord->_format ) )
                 glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
             else
-                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );
+                glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), pixelFormat, pixelType, outBytes.data() );
             glBindTexture( GL_TEXTURE_2D, 0 );
         }
         else
@@ -431,7 +436,7 @@ namespace sw
             else
             {
                 glGetTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ), static_cast<GLsizei>( outLayout._width ),
-                                      static_cast<GLsizei>( outLayout._height ), 1, toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), bufferBytes,
+                                      static_cast<GLsizei>( outLayout._height ), 1, pixelFormat, pixelType, bufferBytes,
                                       outBytes.data() );
             }
         }

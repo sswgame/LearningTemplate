@@ -159,7 +159,8 @@ namespace sw
          *        BC 는 블록 행) 채웁니다.
          * @details GPU 를 기다리는 **동기** 경로입니다. 테스트 · 도구 · 스크린샷 용도이지 프레임 경로가 아닙니다.
          *          outLayout 에 밉 크기와 행 바이트가 채워집니다(_pData 는 outBytes.data() 를 가리키지 않습니다).
-         * @return 포맷이 대상이 아니거나(깊이) 밉 · 면이 범위 밖이면 false.
+         *          깊이 텍스처는 네 백엔드 모두 `kRHIDepthReadbackFormat` 배치(텍셀마다 0..1 깊이 float32, 스텐실 없음)로 채웁니다.
+         * @return 포맷이 대상이 아니거나 밉 · 면이 범위 밖이면 false.
          */
         virtual bool readbackTexture2D( RHITextureHandle texture, uint32 mip, uint32 arraySlice, vector<uint8>& outBytes, RHITextureMipSpan& outLayout ) = 0;
 

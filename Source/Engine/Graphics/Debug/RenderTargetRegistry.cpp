@@ -28,4 +28,44 @@ namespace sw
         std::scoped_lock<mutex> lock{ _mutex };
         outList = _listTarget;
     }
+
+    uint32 RenderTargetRegistry::requestReadback( RHITextureHandle texture )
+    {
+        std::scoped_lock<mutex> lock{ _readbackMutex };
+        ++_lastRequestSerial;
+        _pendingReadbackTexture = texture;
+        _pendingReadbackSerial  = _lastRequestSerial;
+        return _lastRequestSerial;
+    }
+
+    bool RenderTargetRegistry::takeReadbackRequest( RHITextureHandle& outTexture, uint32& outSerial )
+    {
+        std::scoped_lock<mutex> lock{ _readbackMutex };
+        if ( _pendingReadbackSerial == 0 )
+            return false;
+        outTexture              = _pendingReadbackTexture;
+        outSerial               = _pendingReadbackSerial;
+        _pendingReadbackTexture = 0;
+        _pendingReadbackSerial  = 0;
+        return true;
+    }
+
+    void RenderTargetRegistry::publishReadback( RenderTargetReadback readback )
+    {
+        const uint32 serial = readback._serial;
+        {
+            std::scoped_lock<mutex> lock{ _readbackMutex };
+            _readback = std::move( readback );
+        }
+        _readbackSerial.store( serial, std::memory_order_release );
+    }
+
+    bool RenderTargetRegistry::copyReadback( RenderTargetReadback& outReadback ) const
+    {
+        std::scoped_lock<mutex> lock{ _readbackMutex };
+        if ( _readback._serial == 0 )
+            return false;
+        outReadback = _readback;
+        return true;
+    }
 } // namespace sw
