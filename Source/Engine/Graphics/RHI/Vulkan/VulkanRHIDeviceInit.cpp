@@ -536,7 +536,12 @@ namespace sw
         // 실패하는 동안 한 번이다.
         const utf8* pFailedStep{ nullptr };
         if ( _swapChain.create( _physicalDevice, _device, _width, _height ) == false )
+        {
+            // 서피스 크기 0 은 최소화 중이라는 정상 상태다. 오류 없이 다음 프레임에 다시 본다.
+            if ( _swapChain.isSurfaceEmpty() )
+                return false;
             pFailedStep = "swapchain";
+        }
         else if ( _swapChain.createFramebuffers( _device, _renderPass ) == false )
             pFailedStep = "swapchain framebuffers";
         else if ( _swapChain.createSemaphores( _device, constant::kMaxFrameCountInFlight ) == false )

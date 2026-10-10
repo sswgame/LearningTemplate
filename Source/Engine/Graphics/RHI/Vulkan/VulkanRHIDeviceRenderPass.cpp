@@ -40,7 +40,39 @@ namespace sw
         reportBarrierDuringRecording( "transitionTextureLayout" );
 
         transitionImageLayout( cmd, record._image, record._layout, targetLayout, aspect );
+        // 프레임 밖에서 기록한 리스트는 제출되지 않을 수 있다(시작되지 못한 프레임). 리스트마다 처음 바꾸는 이미지의 옛 레이아웃을 적어 두어 다음 프레임이 되돌린다.
+        if ( _bFrameStarted == SW_FALSE )
+        {
+            bool bKnown{ false };
+            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+            {
+                bKnown = bKnown || ( entry._cmd == cmd && entry._image == record._image );
+            }
+            if ( bKnown == false )
+                _listDroppedFrameLayout.push_back( VulkanPendingLayout{ cmd, record._image, record._layout } );
+        }
         record._layout = targetLayout;
+    }
+
+    void VulkanRHIDevice::restoreDroppedFrameLayouts()
+    {
+        std::scoped_lock<mutex> lock{ _imageLayoutMutex };
+        if ( _listDroppedFrameLayout.empty() )
+            return;
+        // 그 사이 지워진 텍스처는 찾지 못하고 넘어간다.
+        _gpuTextures.forEach( [this]( VulkanTextureRecord& record )
+        {
+            // 같은 이미지를 여러 리스트가 바꿨으면 가장 먼저 기록된 옛 값이 원래 값이다.
+            for ( const VulkanPendingLayout& entry : _listDroppedFrameLayout )
+            {
+                if ( entry._image == record._image )
+                {
+                    record._layout = entry._oldLayout;
+                    break;
+                }
+            }
+        } );
+        _listDroppedFrameLayout.clear();
     }
 
     SW_LOG_CALLER( "Vulkan" );

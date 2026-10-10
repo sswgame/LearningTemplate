@@ -98,6 +98,8 @@ namespace sw
         VulkanSwapChainStatus present( VkQueue queue );
 
         bool isValid() const { return _swapChain != nullptr; }
+        /** @brief 마지막 `create` 가 서피스 크기 0(최소화 · 종료 중)이라 물러났는지입니다. 오류가 아니라 기다릴 상태입니다. */
+        bool isSurfaceEmpty() const { return _bSurfaceEmpty; }
 
         uint32 getImageIndex() const { return _imageIndex; }
         uint32 getImageCount() const { return static_cast<uint32>( _listImage.size() ); }
@@ -148,5 +150,7 @@ namespace sw
         uint32 _requestedBufferCount{ 0 };
         /// @brief 요청한 VSync 입니다. Vulkan 에서는 present 모드가 이 역할을 합니다(FIFO = 켬).
         bool _bRequestedVSync{ true };
+        /// @brief 마지막 `create` 가 서피스 크기 0 이라 물러났는지입니다. `create` 가 매번 다시 정합니다.
+        bool _bSurfaceEmpty{ false };
     };
 } // namespace sw

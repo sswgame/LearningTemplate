@@ -85,10 +85,6 @@
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 - **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
-- **Vulkan 을 최소화 창으로 띄우면 `[Error]` 둘**(2026-10-11 전체 검증, `App -vk` 를 `Start-Process -WindowStyle Minimized` 로): 서피스 크기가 0 이라
-  `Failed to recreate the swapchain (1280x720) — retrying every frame`(Error)이 나고, 그 사이 `-gv_screenshot` 이 그린 적 없는 스왑체인 이미지(레이아웃 UNDEFINED)를
-  복사해 검증 레이어 Error 가 난다. DX12 · DX11 · GL 은 같은 조건에서 0. 최소화는 정상 상태라(주석도 그렇게 적는다) 서피스 `currentExtent` 가 0 이면 오류 없이 기다리고,
-  그동안 스크린샷 요청은 미룬다. 네 백엔드 × 최소화 · 복원 실행으로 확인한다.
 - **월드 좌표 UV(트라이플래너) 프로토타입 머티리얼** — `engine/materials/prototypegrid_*` 는 메시 UV 를 따라 큐브 크기마다 칸이 늘어난다. 언리얼 `WorldGridMaterial` 처럼 월드 1 m 격자로 보이려면 셰이더 분기(월드 위치로 샘플)가 필요하다.
 
 ### 1-4. 에디터

@@ -258,6 +258,10 @@ py -3 Scripts/dev/RunBackendSmoke.py
   로그의 `백버퍼 포맷: 요청 → 채택` 줄이 실제로 채택된 포맷입니다.
 - 스왑체인이나 Present를 고쳤다면 창 크기를 실제로 바꿔 봅니다. `ResizeBuffers` 의 플래그가 생성 때와 다르면 그 뒤의 Present가 `INVALID_CALL` 이 되는데, 리사이즈를 하지 않으면 드러나지 않습니다.
   창을 700×520으로 바꾸고 `-gv_screenshot` 을 찍으면 PPM 헤더가 클라이언트 영역 크기인 `684 481` 로 따라와야 하고, 로그의 `[Error]` 는 0이어야 합니다.
+- 창을 최소화한 채 띄워도 봅니다(`Start-Process -WindowStyle Minimized`, 네 백엔드 × `-gv_screenshot` 유무). Vulkan 은 서피스 크기 0 이라 `beginFrame` 이 프레임을 시작하지 못하는데,
+  기록된 커맨드 리스트는 그대로 만들어지고 `executeCommandList` 가 버립니다. 그래서 (1) 백버퍼 패스가 안 열렸으면 draw 를 기록하지 않아야 하고(`bindActiveGraphicsPipeline`),
+  (2) 버려진 리스트가 `VulkanTextureRecord::_layout` 만 앞서 바꿔 놓지 않도록 `_listDroppedFrameLayout` 이 옛 값을 적어 두었다 `endFrame` · `beginFrame` 에서 되돌립니다.
+  서피스 크기 0 은 오류가 아니라 정상 상태라 `VulkanRHISwapChain::isSurfaceEmpty` 로 가려 로그를 내지 않습니다. 이 상태에서 찍은 스크린샷은 그린 적 없는 캡처라 내용이 비어 있습니다.
 
 ## 함정과 주의
 

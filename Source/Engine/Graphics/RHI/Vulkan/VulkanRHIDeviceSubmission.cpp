@@ -139,6 +139,8 @@ namespace sw
 
     void VulkanRHIDevice::beginFrame( const float4& clearColor )
     {
+        // 앞 프레임이 시작되지 못해 버려진 리스트가 있었으면 그 리스트가 앞서 바꾼 레이아웃 기록부터 되돌린다.
+        restoreDroppedFrameLayouts();
         _bFrameStarted = SW_FALSE;
         if ( _width == 0 || _height == 0 )
             return;
@@ -276,7 +278,11 @@ namespace sw
     {
         (void)vsync;
         if ( _bFrameStarted == SW_FALSE )
+        {
+            // 건너뛴 프레임이다. 버려진 리스트가 앞서 바꾼 레이아웃 기록을 바로 되돌려야 이 프레임 뒤의 읽기(스크린샷)가 실제 레이아웃을 본다.
+            restoreDroppedFrameLayouts();
             return;
+        }
 
         if ( _recordingState._bRenderPassActive == SW_TRUE )
         {
@@ -498,6 +504,14 @@ namespace sw
         std::scoped_lock<mutex> queueLock{ _queueMutex };
         if ( vkQueueSubmit( _graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE ) == VK_SUCCESS )
             vkQueueWaitIdle( _graphicsQueue );
+
+        // 제출한 리스트가 바꾼 레이아웃은 실제로 일어났으므로 되돌릴 기록에서 뺀다.
+        std::scoped_lock<mutex> layoutLock{ _imageLayoutMutex };
+        for ( size_t index = _listDroppedFrameLayout.size(); index > 0; --index )
+        {
+            if ( _listDroppedFrameLayout[index - 1]._cmd == listBuffer )
+                _listDroppedFrameLayout.erase( _listDroppedFrameLayout.begin() + static_cast<std::ptrdiff_t>( index - 1 ) );
+        }
     }
 
     void VulkanRHIDevice::executeCommandList( IRHICommandList* pCmdList )

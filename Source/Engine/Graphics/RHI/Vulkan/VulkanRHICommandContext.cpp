@@ -758,7 +758,8 @@ namespace sw
     bool VulkanRHICommandContext::bindActiveGraphicsPipeline()
     {
         VkCommandBuffer cmd = commandBuffer();
-        if ( cmd == VK_NULL_HANDLE )
+        // 패스가 안 열렸으면 그리지 않는다. 백버퍼 프레임버퍼가 없을 때(최소화 · 스왑체인 재생성 중) beginRenderPass 가 조용히 물러나므로 그 뒤의 draw 가 여기서 걸린다.
+        if ( cmd == VK_NULL_HANDLE || _pState->_bRenderPassActive == SW_FALSE )
             return false;
 
         VkPipeline                                        pipeline = _pDevice->_pipeline;

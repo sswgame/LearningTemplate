@@ -23,7 +23,6 @@ PC `SW`(Ryzen 7 6800H), main `603653abc` + 이 검증의 고침. WSL 리눅스�
 - **파일 대화상자**: `WindowsFileDialogHostTest`(EngineTest 호스트 스위트)가 실제 열기 · 저장 대화상자를 띄워 Win32 메시지로 파일 이름을 넣고 확인 · 취소를 누른다 — 통과.
 - **못 한 것**: 리눅스(CI 결과로 — 특히 Core 의 Posix 파일과 약어 개명 뒤 처음 컴파일되는 리눅스 전용 파일), 실제 RenderDoc 캡처(이 PC 에 없다), 단언 대화상자 세 단추(모달),
   Tracy 0.14.1 뷰어 연결, 배율 1.5 · 2 에디터(D24), Dialogue Graph 첫 열기(D21), 리눅스 RPATH(TestBin 이 Bin 의 공유 라이브러리를 찾는지).
-- **새로 찾은 남은 일**: Vulkan 을 최소화 창으로 띄우면 `[Error]` 둘(백로그 1-3).
 - 빌드 폴더 함정: 옛 대소문자 이름의 CMake 폴더(`Test/EditorUiTest`)가 남아 있으면 `-Wnonportable-include-path` 경고가 난다 — 그 폴더를 지우고 다시 구성한다.
 
 ## 에디터 보강 끝(2026-10-11)

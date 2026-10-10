@@ -142,6 +142,7 @@ namespace sw
 
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
     {
+        _bSurfaceEmpty = false;
         VkSurfaceCapabilitiesKHR capabilities;
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities );
 
@@ -230,6 +231,7 @@ namespace sw
         {
             SW_LOG_TRACE( "createSwapChain: 서피스 크기가 0 (%#×%#) — 창이 최소화/종료 중입니다. 스왑체인 생성을 건너뜁니다.",
                           extent.width, extent.height );
+            _bSurfaceEmpty = true;
             return false;
         }
 

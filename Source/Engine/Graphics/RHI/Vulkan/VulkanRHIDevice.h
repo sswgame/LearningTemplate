@@ -540,6 +540,21 @@ namespace sw
 
         /// @brief 텍스처 레이아웃 확인 + 전이를 보호합니다(transitionTextureLayout 참고).
         mutable mutex _imageLayoutMutex;
+        /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
+        struct VulkanPendingLayout
+        {
+            VkCommandBuffer _cmd{ nullptr };
+            VkImage         _image{ nullptr };
+            uint32          _oldLayout{ 0 };
+        };
+        /**
+         * @brief 시작되지 못한 프레임(최소화 · 스왑체인 재생성 중)에 기록되다 버려진 리스트가 바꾼 레이아웃의 원래 값입니다.
+         * @details 리스트가 제출되지 않으므로 `VulkanTextureRecord::_layout` 만 앞서 나갑니다. 다음 `beginFrame` 이 되돌립니다.
+         *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지웁니다. `_imageLayoutMutex` 가 지킵니다.
+         */
+        vector<VulkanPendingLayout> _listDroppedFrameLayout;
+        /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
+        void restoreDroppedFrameLayouts();
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀입니다. 펜스를 통과한 것만 들어 있습니다.
         mutable mutex                  _cmdListPoolMutex;
         vector<VulkanCommandListEntry> _listFreeCmdListEntry;
