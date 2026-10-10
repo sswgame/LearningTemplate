@@ -138,7 +138,7 @@ namespace sw
 
             /**
              * @brief 크래시 보고 프로세스(`-crash-reporter=<폴더>`)입니다. 엔진은 명령줄까지만 섰다(서비스 · 게임 모듈 없음). 묶음만 보내고 끝냅니다.
-             * @note 이 저장소는 네트워크 창구를 싣지 않습니다 — 게임이 IHttpClient 를 구현하면 여기서 HttpCrashReportUploader 를 씁니다.
+             * @note 이 저장소는 네트워크 창구를 싣지 않습니다 — 게임이 IHTTPClient 를 구현하면 여기서 HTTPCrashReportUploader 를 씁니다.
              */
             static TaskResult runCrashReporter( const CommandLineManager& commandLine )
             {

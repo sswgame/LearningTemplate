@@ -1,17 +1,17 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Http/HttpClient.h"
+#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 
 #include "Core/Network/NetTypes.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "HttpClient" );
+    SW_LOG_CALLER( "HTTPClient" );
 } // namespace sw
 
 namespace sw
 {
-    HttpClient::HttpClient()
+    HTTPClient::HTTPClient()
         : _mutex{}
         , _mapCall{}
         , _mapHostToTlsContext{}
@@ -24,9 +24,9 @@ namespace sw
     {
     }
 
-    HttpClient::~HttpClient() { shutdown(); }
+    HTTPClient::~HTTPClient() { shutdown(); }
 
-    bool HttpClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HttpClientSettings& settings )
+    bool HTTPClient::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPClientSettings& settings )
     {
         if ( transport == nullptr || _bInitialized == SW_TRUE )
             return false;
@@ -43,7 +43,7 @@ namespace sw
         return true;
     }
 
-    void HttpClient::shutdown()
+    void HTTPClient::shutdown()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -59,23 +59,23 @@ namespace sw
         _bInitialized = SW_FALSE;
     }
 
-    void HttpClient::registerTlsContext( string_view host, ITlsContext* pTlsContext )
+    void HTTPClient::registerTlsContext( string_view host, ITlsContext* pTlsContext )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         _mapHostToTlsContext[string( host )] = pTlsContext;
     }
 
-    uint64 HttpClient::submitRequest( const HttpClientRequest& request, int64 nowMs )
+    uint64 HTTPClient::submitRequest( const HTTPClientRequest& request, int64 nowMs )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const uint64            requestId = _nextRequestId++;
-        HttpUrl                 url;
+        HTTPAddress                 url;
         if ( _bInitialized == SW_FALSE )
         {
             failImmediately( requestId, "client is not running" );
             return requestId;
         }
-        if ( HttpUrl::parse( request._url, url ) == false )
+        if ( HTTPAddress::parse( request._url, url ) == false )
         {
             failImmediately( requestId, "malformed URL" );
             return requestId;
@@ -104,9 +104,9 @@ namespace sw
         }
         unique_ptr<Call> call = make_unique<Call>();
         call->_requestId      = requestId;
-        call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HttpConstant::kDefaultTimeoutMs );
-        call->_parser.reset( HttpMessageKind::Response, _settings._maxResponseBodyBytes );
-        HttpWriteUtil::writeRequest( request, url, call->_requestBytes );
+        call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
+        call->_parser.reset( HTTPMessageKind::Response, _settings._maxResponseBodyBytes );
+        HTTPWriteUtil::writeRequest( request, url, call->_requestBytes );
         if ( call->_link.initialize( pTlsContext ) == false )
         {
             failImmediately( requestId, "could not create a TLS session" );
@@ -123,7 +123,7 @@ namespace sw
         return requestId;
     }
 
-    void HttpClient::tick( int64 nowMs )
+    void HTTPClient::tick( int64 nowMs )
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -147,11 +147,11 @@ namespace sw
         }
     }
 
-    int32 HttpClient::pollResponses( vector<HttpClientResponse>& outListResponse )
+    int32 HTTPClient::pollResponses( vector<HTTPClientResponse>& outListResponse )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const int32             count = static_cast<int32>( _listDone.size() );
-        for ( HttpClientResponse& response : _listDone )
+        for ( HTTPClientResponse& response : _listDone )
         {
             outListResponse.push_back( std::move( response ) );
         }
@@ -159,7 +159,7 @@ namespace sw
         return count;
     }
 
-    int32 HttpClient::getPendingCount() const
+    int32 HTTPClient::getPendingCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         int32                   count = 0;
@@ -171,7 +171,7 @@ namespace sw
         return count;
     }
 
-    void HttpClient::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
+    void HTTPClient::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {
         (void)remote;
         (void)bAccepted;
@@ -189,7 +189,7 @@ namespace sw
         call._requestBytes.clear();
     }
 
-    void HttpClient::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
+    void HTTPClient::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              callIt = _mapCall.find( handle.packed() );
@@ -203,14 +203,14 @@ namespace sw
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }
-        const HttpParseState state = call._parser.append( call._plainBytes.data(), call._plainBytes.size() );
-        if ( state == HttpParseState::NeedMore )
+        const HTTPParseState state = call._parser.append( call._plainBytes.data(), call._plainBytes.size() );
+        if ( state == HTTPParseState::NeedMore )
             return;
-        finishLocked( call, state == HttpParseState::Failed ? call._parser.getFailureText().c_str() : nullptr );
+        finishLocked( call, state == HTTPParseState::Failed ? call._parser.getFailureText().c_str() : nullptr );
         _transport->close( handle, StreamCloseMode::Graceful );
     }
 
-    void HttpClient::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
+    void HTTPClient::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              callIt = _mapCall.find( handle.packed() );
@@ -219,8 +219,8 @@ namespace sw
         Call& call = *callIt->second;
         if ( call._requestId != 0 )
         {
-            const HttpParseState state = call._parser.finishOnClose();
-            if ( state == HttpParseState::Complete )
+            const HTTPParseState state = call._parser.finishOnClose();
+            if ( state == HTTPParseState::Complete )
                 finishLocked( call, nullptr );
             else
                 finishLocked( call, call._bOpened == SW_TRUE ? toString( reason ) : "could not connect" );
@@ -228,11 +228,11 @@ namespace sw
         _mapCall.erase( callIt );
     }
 
-    void HttpClient::finishLocked( Call& call, const utf8* pFailure )
+    void HTTPClient::finishLocked( Call& call, const utf8* pFailure )
     {
         if ( call._requestId == 0 )
             return;
-        HttpClientResponse& response = _listDone.emplace_back();
+        HTTPClientResponse& response = _listDone.emplace_back();
         response._requestId          = call._requestId;
         call._requestId              = 0; // 한 번만 — 닫힘 콜백이 다시 끝내지 않게
         if ( pFailure != nullptr )
@@ -246,9 +246,9 @@ namespace sw
         response._bodyBytes  = std::move( call._parser.getBody() );
     }
 
-    void HttpClient::failImmediately( uint64 requestId, const utf8* pFailure )
+    void HTTPClient::failImmediately( uint64 requestId, const utf8* pFailure )
     {
-        HttpClientResponse& response = _listDone.emplace_back();
+        HTTPClientResponse& response = _listDone.emplace_back();
         response._requestId          = requestId;
         response._bTransportFailed   = SW_TRUE;
         response._failureText        = pFailure;

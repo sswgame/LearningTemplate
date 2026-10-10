@@ -12,7 +12,7 @@
 언리얼 Online Services, PlayFab, Nakama 가 제공하는 기능과 같은 범위를 엔진 안에서 직접 구현한 것입니다.
 
 이 폴더는 기반의 층 1 이라서 Core 만 봅니다. 엔진 오브젝트나 씬을 모르므로 전용 서버도, 테스트도, 부하 테스트 봇도 같은 코드를 씁니다.
-클라이언트의 로컬 저장(`Local/`)과 HTTP 클라이언트(`Http/`)도 같은 이유로 이 폴더에 있습니다.
+클라이언트의 로컬 저장(`Local/`)과 HTTP 클라이언트(`HTTP/`)도 같은 이유로 이 폴더에 있습니다.
 
 ## 머릿속 그림
 
@@ -88,7 +88,7 @@ py -3 -m Scripts test ChatStreamTest.*
 | `Sanction` | 계정 제재 레코드 |
 | `Observability` | 서비스 표준 지표 |
 | `Local` | 클라이언트 로컬 저장 슬롯 |
-| `Http` | 최소 HTTP/1.1 클라이언트와 테스트 서버 |
+| `HTTP` | 최소 HTTP/1.1 클라이언트와 테스트 서버 |
 
 메모리 구현(`MemoryServiceStore`, `MemoryEphemeralStore`)은 테스트와 개발 서버가 씁니다. 실제 드라이버는 저장 키트에 있습니다.
 SQL 은 `GF_SqlStore`(SQLite)와 `GF_Server_SqlStore`(PostgreSQL), 캐시는 `GF_Server_CacheStore`(RESP) 입니다.

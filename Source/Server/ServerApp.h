@@ -32,7 +32,7 @@ namespace sw
     class MetricHistogram;
     class MetricRegistry;
     class ModuleHost;
-    class OpsHttpEndpoint;
+    class OpsHTTPEndpoint;
     class ServiceHealthRegistry;
 
     /**
@@ -84,7 +84,7 @@ namespace sw
         unique_ptr<MetricRegistry>        _metricRegistry;
         unique_ptr<ServiceHealthRegistry> _healthRegistry;
         unique_ptr<IStreamTransport>      _opsTransport; ///< 운영 HTTP 의 스트림 전송(끝점이 빌려 쓴다 — 끝점을 내린 뒤 지운다)
-        unique_ptr<OpsHttpEndpoint>       _opsEndpoint;
+        unique_ptr<OpsHTTPEndpoint>       _opsEndpoint;
         vector<string>                    _listPendingCommand;  ///< 콘솔에서 꺼낸 줄(틱마다 재사용)
         const ServerConfig*               _pServerConfig;       // ConfigManager 가 소유한다
         MetricHistogram*                  _pTickHistogram;      ///< server_tick_seconds — 틱 본문 시간

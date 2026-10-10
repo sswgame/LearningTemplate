@@ -1,5 +1,5 @@
 /**
- * @file OpsHttpEndpoint.h
+ * @file OpsHTTPEndpoint.h
  * @brief 운영 HTTP 끝점 — 스트림 전송 위의 아주 작은 HTTP/1.1(GET 만, 요청 하나 뒤 닫기): `/metrics`(Prometheus 텍스트) · `/healthz` · `/readyz`.
  * @details - 전송의 처리기가 되어 I/O 스레드에서 요청 머리를 읽고 바로 답한다(서비스 스레드를 기다리지 않는다 — 지표는 원자 값, 상태는 잠금 하나).
  *          - 머리가 `_maxRequestBytes` 를 넘으면 431, GET 이 아니면 405, 모르는 경로는 404, 요청 줄이 깨지면 400 — 모두 답한 뒤 닫는다.
@@ -24,7 +24,7 @@ namespace sw
 namespace sw
 {
     /** @brief 운영 HTTP 끝점 설정입니다. */
-    struct OpsHttpEndpointSettings
+    struct OpsHTTPEndpointSettings
     {
         NetAddress _bindAddress{ NetAddress::makeLoopback( 9100 ) }; ///< 받을 주소 — 기본은 이 기계만. 포트 0 = 아무 포트(시험)
         int32      _maxRequestBytes{ 8 * 1024 };                     ///< 요청 머리 상한(넘으면 431)
@@ -33,18 +33,18 @@ namespace sw
 
 namespace sw
 {
-    /** @class OpsHttpEndpoint @brief 운영 HTTP 끝점입니다. 전송은 빌려 쓴다(부르는 쪽이 만들고, 이것을 내린 뒤 지운다). */
-    class SW_API OpsHttpEndpoint final : public IStreamHandler
+    /** @class OpsHTTPEndpoint @brief 운영 HTTP 끝점입니다. 전송은 빌려 쓴다(부르는 쪽이 만들고, 이것을 내린 뒤 지운다). */
+    class SW_API OpsHTTPEndpoint final : public IStreamHandler
     {
     public:
-        OpsHttpEndpoint();
-        ~OpsHttpEndpoint() override;
+        OpsHTTPEndpoint();
+        ~OpsHTTPEndpoint() override;
 
-        OpsHttpEndpoint( const OpsHttpEndpoint& )            = delete;
-        OpsHttpEndpoint& operator=( const OpsHttpEndpoint& ) = delete;
+        OpsHTTPEndpoint( const OpsHTTPEndpoint& )            = delete;
+        OpsHTTPEndpoint& operator=( const OpsHTTPEndpoint& ) = delete;
 
         /** @brief 전송의 처리기가 되어 설정의 주소에서 받습니다. 등록부 둘은 빌려 쓴다(null 이면 그 경로는 404). */
-        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHttpEndpointSettings& settings,
+        [[nodiscard]] bool initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHTTPEndpointSettings& settings,
                                        const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry );
         /** @brief 전송을 내립니다(남은 연결의 `onStreamClosed` 가 여기서 끝난다). 두 번 불러도 됩니다. */
         void   shutdown();
@@ -74,7 +74,7 @@ namespace sw
         Connection* findConnection( uint64 packedHandle );
 
         vector<Connection>           _listConnection;
-        OpsHttpEndpointSettings      _settings;
+        OpsHTTPEndpointSettings      _settings;
         mutex                        _mutex;
         IStreamTransport*            _pTransport;
         const MetricRegistry*        _pMetricRegistry;

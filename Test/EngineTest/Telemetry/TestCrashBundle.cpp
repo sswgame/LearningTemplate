@@ -7,7 +7,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Observability/HttpClient.h"
+#include "Engine/Observability/HTTPClient.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
@@ -43,18 +43,18 @@ namespace
             CrashReportUploadResult         _result{ CrashReportUploadResult::Sent };
         };
 
-        class RecordingHttpClient final : public IHttpClient
+        class RecordingHTTPClient final : public IHTTPClient
         {
         public:
-            HttpResponse send( const HttpRequest& request ) override
+            HTTPResponse send( const HTTPRequest& request ) override
             {
                 _listRequest.push_back( request );
-                HttpResponse response;
+                HTTPResponse response;
                 response._status = 200;
                 return response;
             }
 
-            vector<HttpRequest> _listRequest{};
+            vector<HTTPRequest> _listRequest{};
         };
 
         /** @brief 크래시 핸들러가 남기는 모양 그대로의 가짜 크래시 파일을 씁니다. */
@@ -264,7 +264,7 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
 /**
  * @brief [CrashBundleTest] HTTP 업로더 — multipart/form-data 로 매니페스트와 파일을 보내고 덤프는 `upload_file_minidump` 이다. 기본 창구는 보내지 않는다
  */
-SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
+SW_TEST_CASE( CrashBundleTest, HTTPUploaderSendsMultipartMinidump )
 {
     using Internal                   = CrashBundleTestInternal;
     const string       crashFolder   = test::makeTempDirectory( "Logs" );
@@ -275,11 +275,11 @@ SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
     Internal::writeFakeCrash( crashFolder, "multipart", "abort" );
     SW_ASSERT_EQUAL( 1u, service.collectNewCrashes() );
 
-    Internal::RecordingHttpClient client;
-    HttpCrashReportUploader       uploader( client, "https://crash.invalid/api/minidump" );
+    Internal::RecordingHTTPClient client;
+    HTTPCrashReportUploader       uploader( client, "https://crash.invalid/api/minidump" );
     SW_EXPECT_EQUAL( 1u, CrashReportService::runReporter( reportsFolder, uploader ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( client._listRequest.size() ) );
-    const HttpRequest& request = client._listRequest[0];
+    const HTTPRequest& request = client._listRequest[0];
     SW_EXPECT_TRUE( request._url == "https://crash.invalid/api/minidump" );
     SW_EXPECT_TRUE( StringUtil::startsWith( request.findHeader( "Content-Type" ), "multipart/form-data; boundary=" ) );
     SW_EXPECT_TRUE( request.findHeader( "X-Crash-Session" ) == "multipart" );
@@ -287,9 +287,9 @@ SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
     SW_EXPECT_TRUE( request._body.find( "name=\"upload_file_minidump\"; filename=\"crash.dmp\"" ) != string::npos );
     SW_EXPECT_TRUE( request._body.find( string( "MDMP\0\x01\x02", 7 ) ) != string::npos );
     SW_EXPECT_TRUE( request._body.find( "crash.breadcrumbs.txt" ) != string::npos );
-    SW_EXPECT_TRUE( StringUtil::endsWith( request._body, string( "--" ) + HttpCrashReportUploader::kBoundary + "--\r\n" ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( request._body, string( "--" ) + HTTPCrashReportUploader::kBoundary + "--\r\n" ) );
 
-    HttpCrashReportUploader offline( NullHttpClient::get(), "https://crash.invalid/api/minidump" );
+    HTTPCrashReportUploader offline( NullHTTPClient::get(), "https://crash.invalid/api/minidump" );
     CrashReportUploadBundle bundle;
     SW_EXPECT_TRUE( offline.upload( bundle ) == CrashReportUploadResult::Failed );
 }

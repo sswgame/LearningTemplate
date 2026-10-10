@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Http/HttpServer.h"
+#include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "HttpServer" );
+    SW_LOG_CALLER( "HTTPServer" );
 } // namespace sw
 
 namespace sw
 {
-    HttpServer::HttpServer()
+    HTTPServer::HTTPServer()
         : _mutex{}
         , _mapPeer{}
         , _listReady{}
@@ -22,10 +22,10 @@ namespace sw
     {
     }
 
-    HttpServer::~HttpServer() { shutdown(); }
+    HTTPServer::~HTTPServer() { shutdown(); }
 
-    bool HttpServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HttpServerSettings& settings,
-                                 IHttpRequestHandler* pHandler )
+    bool HTTPServer::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const HTTPServerSettings& settings,
+                                 IHTTPRequestHandler* pHandler )
     {
         if ( transport == nullptr || pHandler == nullptr || _bInitialized == SW_TRUE )
             return false;
@@ -44,7 +44,7 @@ namespace sw
         return true;
     }
 
-    void HttpServer::shutdown()
+    void HTTPServer::shutdown()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -57,7 +57,7 @@ namespace sw
         _bInitialized = SW_FALSE;
     }
 
-    void HttpServer::tick()
+    void HTTPServer::tick()
     {
         if ( _bInitialized == SW_FALSE )
             return;
@@ -70,14 +70,14 @@ namespace sw
         }
         for ( ReadyRequest& ready : listReady )
         {
-            HttpServerResponse response;
+            HTTPServerResponse response;
             if ( ready._bMalformed == SW_TRUE )
                 response._statusCode = 400;
             else
-                _pHandler->onHttpRequest( ready._request, response );
+                _pHandler->onHTTPRequest( ready._request, response );
             ++_handledCount;
             vector<uint8> bytes;
-            HttpWriteUtil::writeResponse( response, bytes );
+            HTTPWriteUtil::writeResponse( response, bytes );
             std::scoped_lock<mutex> lock{ _mutex };
             const auto              peerIt = _mapPeer.find( ready._handle.packed() );
             if ( peerIt == _mapPeer.end() )
@@ -87,9 +87,9 @@ namespace sw
         }
     }
 
-    uint16 HttpServer::getListenPort() const { return _transport != nullptr ? _transport->getListenPort() : 0; }
+    uint16 HTTPServer::getListenPort() const { return _transport != nullptr ? _transport->getListenPort() : 0; }
 
-    void HttpServer::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
+    void HTTPServer::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {
         (void)remote;
         if ( bAccepted == false )
@@ -102,11 +102,11 @@ namespace sw
             return;
         }
         peer->_link.setHandle( handle );
-        peer->_parser.reset( HttpMessageKind::Request, _settings._maxRequestBodyBytes );
+        peer->_parser.reset( HTTPMessageKind::Request, _settings._maxRequestBodyBytes );
         _mapPeer[handle.packed()] = std::move( peer );
     }
 
-    void HttpServer::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
+    void HTTPServer::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const auto              peerIt = _mapPeer.find( handle.packed() );
@@ -119,13 +119,13 @@ namespace sw
             _transport->close( handle, StreamCloseMode::Abort );
             return;
         }
-        const HttpParseState state = peer._parser.append( peer._plainBytes.data(), peer._plainBytes.size() );
-        if ( state == HttpParseState::NeedMore )
+        const HTTPParseState state = peer._parser.append( peer._plainBytes.data(), peer._plainBytes.size() );
+        if ( state == HTTPParseState::NeedMore )
             return;
         peer._bComplete     = SW_TRUE;
         ReadyRequest& ready = _listReady.emplace_back();
         ready._handle       = handle;
-        if ( state == HttpParseState::Failed )
+        if ( state == HTTPParseState::Failed )
         {
             ready._bMalformed = SW_TRUE;
             return;
@@ -136,11 +136,11 @@ namespace sw
         ready._request._path       = target.substr( 0, question );
         ready._request._listHeader = peer._parser.getHeaders();
         ready._request._bodyBytes  = std::move( peer._parser.getBody() );
-        const bool bQueryOk        = question == string::npos || HttpUtil::decodeForm( string_view( target ).substr( question + 1 ), ready._request._listQuery );
+        const bool bQueryOk        = question == string::npos || HTTPUtil::decodeForm( string_view( target ).substr( question + 1 ), ready._request._listQuery );
         ready._bMalformed          = bQueryOk ? SW_FALSE : SW_TRUE;
     }
 
-    void HttpServer::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
+    void HTTPServer::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         (void)reason;
         std::scoped_lock<mutex> lock{ _mutex };

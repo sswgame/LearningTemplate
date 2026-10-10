@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class HttpClient;
+    class HTTPClient;
     class INetSecurityProvider;
 
     /**
@@ -27,8 +27,8 @@ namespace sw
     class SW_GF_API OidcLoginProvider final : public IPlatformLoginProvider
     {
     public:
-        /** @brief @p pProvider · @p pHttpClient 는 빌려 쓴다. @p pHttpClient 의 응답은 이 객체 혼자 거둔다. */
-        OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HttpClient* pHttpClient );
+        /** @brief @p pProvider · @p pHTTPClient 는 빌려 쓴다. @p pHTTPClient 의 응답은 이 객체 혼자 거둔다. */
+        OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
         uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
@@ -61,7 +61,7 @@ namespace sw
         vector<PendingTicket>             _listPending;
         vector<PlatformLoginVerification> _listDone;
         INetSecurityProvider*             _pProvider;
-        HttpClient*                       _pHttpClient;
+        HTTPClient*                       _pHTTPClient;
         uint64                            _nextVerificationId;
         uint64                            _jwksRequestId;
         int64                             _lastFetchStartMs;

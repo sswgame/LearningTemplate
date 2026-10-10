@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Http/HttpTypes.h"
+#include "GameFramework/Base/Online/HTTP/HTTPTypes.h"
 
 #include "Core/Container/StringUtil.h"
 
@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        struct HttpTypesInternal
+        struct HTTPTypesInternal
         {
             static constexpr utf8  kHexDigit[]     = "0123456789ABCDEF";
             static constexpr int32 kMaxChunkLine   = 64;
@@ -85,25 +85,25 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( HttpMethod method )
+    const utf8* toString( HTTPMethod method )
     {
         switch ( method )
         {
-            case HttpMethod::Get:
+            case HTTPMethod::Get:
                 return "GET";
-            case HttpMethod::Post:
+            case HTTPMethod::Post:
                 return "POST";
         }
         return "GET";
     }
 
-    const HttpHeader* HttpClientResponse::findHeader( string_view name ) const { return HttpUtil::findHeader( _listHeader, name ); }
+    const HTTPHeader* HTTPClientResponse::findHeader( string_view name ) const { return HTTPUtil::findHeader( _listHeader, name ); }
 
-    const HttpHeader* HttpServerRequest::findHeader( string_view name ) const { return HttpUtil::findHeader( _listHeader, name ); }
+    const HTTPHeader* HTTPServerRequest::findHeader( string_view name ) const { return HTTPUtil::findHeader( _listHeader, name ); }
 
-    const HttpHeader* HttpServerRequest::findQuery( string_view name ) const
+    const HTTPHeader* HTTPServerRequest::findQuery( string_view name ) const
     {
-        for ( const HttpHeader& pair : _listQuery )
+        for ( const HTTPHeader& pair : _listQuery )
         {
             if ( pair._name == name )
                 return &pair;
@@ -111,19 +111,19 @@ namespace sw
         return nullptr;
     }
 
-    bool HttpUrl::parse( string_view url, HttpUrl& outUrl )
+    bool HTTPAddress::parse( string_view url, HTTPAddress& outAddress )
     {
-        outUrl = HttpUrl{};
+        outAddress = HTTPAddress{};
         string_view rest;
         if ( url.substr( 0, 8 ) == "https://" )
         {
-            outUrl._bSecure = SW_TRUE;
-            outUrl._port    = 443;
+            outAddress._bSecure = SW_TRUE;
+            outAddress._port    = 443;
             rest            = url.substr( 8 );
         }
         else if ( url.substr( 0, 7 ) == "http://" )
         {
-            outUrl._port = 80;
+            outAddress._port = 80;
             rest         = url.substr( 7 );
         }
         else
@@ -137,45 +137,45 @@ namespace sw
         if ( authority.empty() || authority.find( '@' ) != string_view::npos )
             return false;
         const size_t colon = authority.rfind( ':' );
-        outUrl._host       = string( authority.substr( 0, colon ) );
+        outAddress._host       = string( authority.substr( 0, colon ) );
         if ( colon != string_view::npos )
         {
             int64 port = 0;
-            if ( HttpTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535 )
+            if ( HTTPTypesInternal::parseUnsigned( authority.substr( colon + 1 ), 10, port ) == false || port <= 0 || port > 65535 )
                 return false;
-            outUrl._port = static_cast<uint16>( port );
+            outAddress._port = static_cast<uint16>( port );
         }
-        if ( outUrl._host.empty() )
+        if ( outAddress._host.empty() )
             return false;
         if ( slash != string_view::npos )
         {
-            outUrl._target = string( rest.substr( slash ) );
-            if ( outUrl._target.front() == '?' )
-                outUrl._target.insert( outUrl._target.begin(), '/' );
+            outAddress._target = string( rest.substr( slash ) );
+            if ( outAddress._target.front() == '?' )
+                outAddress._target.insert( outAddress._target.begin(), '/' );
         }
         return true;
     }
 
-    string HttpUtil::encodePercent( string_view text )
+    string HTTPUtil::encodePercent( string_view text )
     {
         string encoded;
         encoded.reserve( text.size() );
         for ( const utf8 ch : text )
         {
-            if ( HttpTypesInternal::isUnreserved( ch ) )
+            if ( HTTPTypesInternal::isUnreserved( ch ) )
             {
                 encoded.push_back( ch );
                 continue;
             }
             const uint8 byteValue = static_cast<uint8>( ch );
             encoded.push_back( '%' );
-            encoded.push_back( HttpTypesInternal::kHexDigit[byteValue >> 4] );
-            encoded.push_back( HttpTypesInternal::kHexDigit[byteValue & 0xFu] );
+            encoded.push_back( HTTPTypesInternal::kHexDigit[byteValue >> 4] );
+            encoded.push_back( HTTPTypesInternal::kHexDigit[byteValue & 0xFu] );
         }
         return encoded;
     }
 
-    bool HttpUtil::decodePercent( string_view text, bool bForm, string& outText )
+    bool HTTPUtil::decodePercent( string_view text, bool bForm, string& outText )
     {
         outText.clear();
         outText.reserve( text.size() );
@@ -194,8 +194,8 @@ namespace sw
             }
             if ( index + 2 >= text.size() )
                 return false;
-            const int32 high = HttpTypesInternal::findHexValue( text[index + 1] );
-            const int32 low  = HttpTypesInternal::findHexValue( text[index + 2] );
+            const int32 high = HTTPTypesInternal::findHexValue( text[index + 1] );
+            const int32 low  = HTTPTypesInternal::findHexValue( text[index + 2] );
             if ( high < 0 || low < 0 )
                 return false;
             outText.push_back( static_cast<utf8>( high * 16 + low ) );
@@ -204,10 +204,10 @@ namespace sw
         return true;
     }
 
-    string HttpUtil::encodeForm( const vector<HttpHeader>& listPair )
+    string HTTPUtil::encodeForm( const vector<HTTPHeader>& listPair )
     {
         string text;
-        for ( const HttpHeader& pair : listPair )
+        for ( const HTTPHeader& pair : listPair )
         {
             if ( text.empty() == false )
                 text.push_back( '&' );
@@ -218,7 +218,7 @@ namespace sw
         return text;
     }
 
-    bool HttpUtil::decodeForm( string_view text, vector<HttpHeader>& outListPair )
+    bool HTTPUtil::decodeForm( string_view text, vector<HTTPHeader>& outListPair )
     {
         outListPair.clear();
         while ( text.empty() == false )
@@ -229,7 +229,7 @@ namespace sw
             if ( part.empty() )
                 continue;
             const size_t equal = part.find( '=' );
-            HttpHeader&  pair  = outListPair.emplace_back();
+            HTTPHeader&  pair  = outListPair.emplace_back();
             if ( decodePercent( part.substr( 0, equal ), true, pair._name ) == false )
                 return false;
             if ( equal != string_view::npos && decodePercent( part.substr( equal + 1 ), true, pair._value ) == false )
@@ -238,9 +238,9 @@ namespace sw
         return true;
     }
 
-    const HttpHeader* HttpUtil::findHeader( const vector<HttpHeader>& listHeader, string_view name )
+    const HTTPHeader* HTTPUtil::findHeader( const vector<HTTPHeader>& listHeader, string_view name )
     {
-        for ( const HttpHeader& header : listHeader )
+        for ( const HTTPHeader& header : listHeader )
         {
             if ( isEqualIgnoreCase( header._name, name ) )
                 return &header;
@@ -248,7 +248,7 @@ namespace sw
         return nullptr;
     }
 
-    bool HttpUtil::isEqualIgnoreCase( string_view left, string_view right )
+    bool HTTPUtil::isEqualIgnoreCase( string_view left, string_view right )
     {
         if ( left.size() != right.size() )
             return false;
@@ -260,23 +260,23 @@ namespace sw
         return true;
     }
 
-    HttpMessageParser::HttpMessageParser()
+    HTTPMessageParser::HTTPMessageParser()
         : _listHeader{}
         , _buffer{}
         , _bodyBytes{}
         , _target{}
         , _failureText{}
         , _remainingBytes{ 0 }
-        , _maxBodyBytes{ HttpConstant::kDefaultMaxBodyBytes }
+        , _maxBodyBytes{ HTTPConstant::kDefaultMaxBodyBytes }
         , _statusCode{ 0 }
-        , _method{ HttpMethod::Get }
-        , _kind{ HttpMessageKind::Response }
-        , _state{ HttpParseState::NeedMore }
+        , _method{ HTTPMethod::Get }
+        , _kind{ HTTPMessageKind::Response }
+        , _state{ HTTPParseState::NeedMore }
         , _phase{ Phase::Head }
     {
     }
 
-    void HttpMessageParser::reset( HttpMessageKind kind, int32 maxBodyBytes )
+    void HTTPMessageParser::reset( HTTPMessageKind kind, int32 maxBodyBytes )
     {
         _listHeader.clear();
         _buffer.clear();
@@ -286,42 +286,42 @@ namespace sw
         _remainingBytes = 0;
         _maxBodyBytes   = maxBodyBytes;
         _statusCode     = 0;
-        _method         = HttpMethod::Get;
+        _method         = HTTPMethod::Get;
         _kind           = kind;
-        _state          = HttpParseState::NeedMore;
+        _state          = HTTPParseState::NeedMore;
         _phase          = Phase::Head;
     }
 
-    HttpParseState HttpMessageParser::append( const uint8* pData, size_t size )
+    HTTPParseState HTTPMessageParser::append( const uint8* pData, size_t size )
     {
-        if ( _state != HttpParseState::NeedMore )
+        if ( _state != HTTPParseState::NeedMore )
             return _state;
         _buffer.insert( _buffer.end(), pData, pData + size );
         return advance();
     }
 
-    HttpParseState HttpMessageParser::finishOnClose()
+    HTTPParseState HTTPMessageParser::finishOnClose()
     {
-        if ( _state != HttpParseState::NeedMore )
+        if ( _state != HTTPParseState::NeedMore )
             return _state;
         if ( _phase == Phase::UntilClose )
         {
             _phase = Phase::Done;
-            _state = HttpParseState::Complete;
+            _state = HTTPParseState::Complete;
             return _state;
         }
         return fail( "connection closed before the message ended" );
     }
 
-    HttpParseState HttpMessageParser::fail( const utf8* pReason )
+    HTTPParseState HTTPMessageParser::fail( const utf8* pReason )
     {
         _failureText = pReason;
-        _state       = HttpParseState::Failed;
+        _state       = HTTPParseState::Failed;
         _buffer.clear();
         return _state;
     }
 
-    bool HttpMessageParser::parseHead( string_view head )
+    bool HTTPMessageParser::parseHead( string_view head )
     {
         const size_t      firstEnd  = head.find( "\r\n" );
         const string_view firstLine = head.substr( 0, firstEnd );
@@ -329,12 +329,12 @@ namespace sw
         const size_t      space     = firstLine.find( ' ' );
         if ( space == string_view::npos )
             return false;
-        if ( _kind == HttpMessageKind::Response )
+        if ( _kind == HTTPMessageKind::Response )
         {
             if ( firstLine.substr( 0, 7 ) != "HTTP/1." || firstLine.size() < space + 4 )
                 return false;
             int64 statusCode = 0;
-            if ( HttpTypesInternal::parseUnsigned( firstLine.substr( space + 1, 3 ), 10, statusCode ) == false )
+            if ( HTTPTypesInternal::parseUnsigned( firstLine.substr( space + 1, 3 ), 10, statusCode ) == false )
                 return false;
             _statusCode = static_cast<int32>( statusCode );
         }
@@ -345,13 +345,13 @@ namespace sw
             if ( secondSpace == string_view::npos || firstLine.substr( secondSpace + 1, 7 ) != "HTTP/1." )
                 return false;
             if ( method == "GET" )
-                _method = HttpMethod::Get;
+                _method = HTTPMethod::Get;
             else if ( method == "POST" )
-                _method = HttpMethod::Post;
+                _method = HTTPMethod::Post;
             else
                 return false;
             _target = string( firstLine.substr( space + 1, secondSpace - space - 1 ) );
-            if ( _target.empty() || _target.front() != '/' || static_cast<int32>( _target.size() ) > HttpTypesInternal::kMaxTargetBytes )
+            if ( _target.empty() || _target.front() != '/' || static_cast<int32>( _target.size() ) > HTTPTypesInternal::kMaxTargetBytes )
                 return false;
         }
         while ( rest.empty() == false )
@@ -364,17 +364,17 @@ namespace sw
             const size_t colon = line.find( ':' );
             if ( colon == string_view::npos || colon == 0 )
                 return false;
-            HttpHeader& header = _listHeader.emplace_back();
+            HTTPHeader& header = _listHeader.emplace_back();
             header._name       = string( StringUtil::trim( line.substr( 0, colon ) ) );
             header._value      = string( StringUtil::trim( line.substr( colon + 1 ) ) );
         }
         return true;
     }
 
-    HttpParseState HttpMessageParser::advance()
+    HTTPParseState HTTPMessageParser::advance()
     {
-        using Internal = HttpTypesInternal;
-        while ( _state == HttpParseState::NeedMore )
+        using Internal = HTTPTypesInternal;
+        while ( _state == HTTPParseState::NeedMore )
         {
             switch ( _phase )
             {
@@ -391,7 +391,7 @@ namespace sw
                     }
                     if ( headEnd == string::npos )
                     {
-                        if ( static_cast<int32>( _buffer.size() ) > HttpConstant::kMaxHeaderBytes )
+                        if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
                             return fail( "header is too large" );
                         return _state;
                     }
@@ -399,9 +399,9 @@ namespace sw
                     if ( parseHead( head ) == false )
                         return fail( "malformed head" );
                     _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( headEnd + 4 ) );
-                    const HttpHeader* pEncoding = HttpUtil::findHeader( _listHeader, "Transfer-Encoding" );
-                    const HttpHeader* pLength   = HttpUtil::findHeader( _listHeader, "Content-Length" );
-                    if ( pEncoding != nullptr && HttpUtil::isEqualIgnoreCase( pEncoding->_value, "chunked" ) )
+                    const HTTPHeader* pEncoding = HTTPUtil::findHeader( _listHeader, "Transfer-Encoding" );
+                    const HTTPHeader* pLength   = HTTPUtil::findHeader( _listHeader, "Content-Length" );
+                    if ( pEncoding != nullptr && HTTPUtil::isEqualIgnoreCase( pEncoding->_value, "chunked" ) )
                     {
                         _phase = Phase::ChunkSize;
                     }
@@ -420,7 +420,7 @@ namespace sw
                     else
                     {
                         // 요청은 길이가 없으면 몸이 없다. 응답은 닫힐 때까지가 몸이다(1xx · 204 · 304 는 쓰지 않는다).
-                        _phase = _kind == HttpMessageKind::Request ? Phase::Done : Phase::UntilClose;
+                        _phase = _kind == HTTPMessageKind::Request ? Phase::Done : Phase::UntilClose;
                     }
                     break;
                 }
@@ -480,7 +480,7 @@ namespace sw
                     const size_t lineEnd = Internal::findLineEnd( _buffer, 0 );
                     if ( lineEnd == string::npos )
                     {
-                        if ( static_cast<int32>( _buffer.size() ) > HttpConstant::kMaxHeaderBytes )
+                        if ( static_cast<int32>( _buffer.size() ) > HTTPConstant::kMaxHeaderBytes )
                             return fail( "trailer is too large" );
                         return _state;
                     }
@@ -500,7 +500,7 @@ namespace sw
                 case Phase::Done:
                 {
                     _buffer.clear();
-                    _state = HttpParseState::Complete;
+                    _state = HTTPParseState::Complete;
                     break;
                 }
             }
@@ -508,9 +508,9 @@ namespace sw
         return _state;
     }
 
-    void HttpWriteUtil::writeRequest( const HttpClientRequest& request, const HttpUrl& url, vector<uint8>& outBytes )
+    void HTTPWriteUtil::writeRequest( const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes )
     {
-        using Internal = HttpTypesInternal;
+        using Internal = HTTPTypesInternal;
         outBytes.clear();
         Internal::appendText( outBytes, toString( request._method ) );
         Internal::appendText( outBytes, " " );
@@ -521,12 +521,12 @@ namespace sw
             host += ":" + to_string( static_cast<int32>( url._port ) );
         Internal::appendHeader( outBytes, "Host", host );
         Internal::appendHeader( outBytes, "Connection", "close" );
-        if ( request._method == HttpMethod::Post || request._bodyBytes.empty() == false )
+        if ( request._method == HTTPMethod::Post || request._bodyBytes.empty() == false )
             Internal::appendHeader( outBytes, "Content-Length", to_string( static_cast<int64>( request._bodyBytes.size() ) ) );
-        for ( const HttpHeader& header : request._listHeader )
+        for ( const HTTPHeader& header : request._listHeader )
         {
-            const bool bOwned = HttpUtil::isEqualIgnoreCase( header._name, "Host" ) || HttpUtil::isEqualIgnoreCase( header._name, "Connection" ) ||
-                                HttpUtil::isEqualIgnoreCase( header._name, "Content-Length" );
+            const bool bOwned = HTTPUtil::isEqualIgnoreCase( header._name, "Host" ) || HTTPUtil::isEqualIgnoreCase( header._name, "Connection" ) ||
+                                HTTPUtil::isEqualIgnoreCase( header._name, "Content-Length" );
             if ( bOwned == false )
                 Internal::appendHeader( outBytes, header._name, header._value );
         }
@@ -534,9 +534,9 @@ namespace sw
         outBytes.insert( outBytes.end(), request._bodyBytes.begin(), request._bodyBytes.end() );
     }
 
-    void HttpWriteUtil::writeResponse( const HttpServerResponse& response, vector<uint8>& outBytes )
+    void HTTPWriteUtil::writeResponse( const HTTPServerResponse& response, vector<uint8>& outBytes )
     {
-        using Internal = HttpTypesInternal;
+        using Internal = HTTPTypesInternal;
         outBytes.clear();
         Internal::appendText( outBytes, "HTTP/1.1 " );
         Internal::appendText( outBytes, to_string( response._statusCode ) );
@@ -548,7 +548,7 @@ namespace sw
             Internal::appendHeader( outBytes, "Transfer-Encoding", "chunked" );
         else
             Internal::appendHeader( outBytes, "Content-Length", to_string( static_cast<int64>( response._bodyBytes.size() ) ) );
-        for ( const HttpHeader& header : response._listHeader )
+        for ( const HTTPHeader& header : response._listHeader )
         {
             Internal::appendHeader( outBytes, header._name, header._value );
         }
@@ -571,7 +571,7 @@ namespace sw
         Internal::appendText( outBytes, "0\r\n\r\n" );
     }
 
-    const utf8* HttpWriteUtil::getReasonPhrase( int32 statusCode )
+    const utf8* HTTPWriteUtil::getReasonPhrase( int32 statusCode )
     {
         switch ( statusCode )
         {

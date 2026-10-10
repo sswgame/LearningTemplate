@@ -38,17 +38,17 @@ namespace sw
 namespace sw
 {
     unique_ptr<IPlatformLoginProvider> PlatformLoginProviderFactory::create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider,
-                                                                             HttpClient* pHttpClient )
+                                                                             HTTPClient* pHTTPClient )
     {
-        if ( isValidSettings( settings ) == false || pHttpClient == nullptr )
+        if ( isValidSettings( settings ) == false || pHTTPClient == nullptr )
             return nullptr;
         if ( settings._kind == PlatformLoginProviderKind::Oidc )
         {
             if ( pProvider == nullptr )
                 return nullptr;
-            return make_unique<OidcLoginProvider>( settings, pProvider, pHttpClient );
+            return make_unique<OidcLoginProvider>( settings, pProvider, pHTTPClient );
         }
-        return make_unique<ProfileAPILoginProvider>( settings, pHttpClient );
+        return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
     bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError )

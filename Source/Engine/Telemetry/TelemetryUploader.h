@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class IHttpClient;
+    class IHTTPClient;
 
     /** @brief 올리기 결과입니다. */
     enum class TelemetryUploadResult : uint8
@@ -70,21 +70,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @class HttpTelemetryUploader
+     * @class HTTPTelemetryUploader
      * @brief 묶음을 `POST <endpoint>` 한 번으로 보냅니다 — 본문은 파일 그대로(`application/x-ndjson`), 헤더에 세션 · 사건 수 · API 키.
-     * @details 보내기는 `IHttpClient`(빌림)가 합니다. 엔진의 기본 창구(`NullHttpClient`)는 보내지 않으므로 이 업로더도 실제로는 아무 데도 닿지 않습니다.
+     * @details 보내기는 `IHTTPClient`(빌림)가 합니다. 엔진의 기본 창구(`NullHTTPClient`)는 보내지 않으므로 이 업로더도 실제로는 아무 데도 닿지 않습니다.
      *          2xx 면 `Sent`, 그 밖은 `Failed` 입니다.
      */
-    class SW_API HttpTelemetryUploader final : public ITelemetryUploader
+    class SW_API HTTPTelemetryUploader final : public ITelemetryUploader
     {
     public:
-        HttpTelemetryUploader( IHttpClient& client, string_view endpoint, string_view apiKey );
+        HTTPTelemetryUploader( IHTTPClient& client, string_view endpoint, string_view apiKey );
 
         TelemetryUploadResult upload( const TelemetryUploadBatch& batch ) override;
 
     private:
         string       _endpoint;
         string       _apiKey;
-        IHttpClient* _pClient;
+        IHTTPClient* _pClient;
     };
 } // namespace sw

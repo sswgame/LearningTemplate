@@ -1,22 +1,22 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Online/Http/HttpLink.h"
+#include "GameFramework/Base/Online/HTTP/HTTPLink.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 
 namespace sw
 {
-    HttpLink::HttpLink()
+    HTTPLink::HTTPLink()
         : _cipherBytes{}
         , _tlsSession{}
         , _handle{}
     {
     }
 
-    HttpLink::~HttpLink() = default;
+    HTTPLink::~HTTPLink() = default;
 
-    bool HttpLink::initialize( ITlsContext* pTlsContext )
+    bool HTTPLink::initialize( ITlsContext* pTlsContext )
     {
         _tlsSession.reset();
         if ( pTlsContext == nullptr )
@@ -25,7 +25,7 @@ namespace sw
         return _tlsSession != nullptr;
     }
 
-    bool HttpLink::writePlain( IStreamTransport& transport, const uint8* pData, size_t size )
+    bool HTTPLink::writePlain( IStreamTransport& transport, const uint8* pData, size_t size )
     {
         if ( _tlsSession == nullptr )
         {
@@ -37,7 +37,7 @@ namespace sw
         return flushCiphertext( transport );
     }
 
-    bool HttpLink::readReceived( IStreamTransport& transport, const uint8* pData, int32 size, vector<uint8>& outPlainBytes )
+    bool HTTPLink::readReceived( IStreamTransport& transport, const uint8* pData, int32 size, vector<uint8>& outPlainBytes )
     {
         if ( _tlsSession == nullptr )
         {
@@ -51,11 +51,11 @@ namespace sw
         return bRead;
     }
 
-    bool HttpLink::flushHandshake( IStreamTransport& transport ) { return _tlsSession == nullptr || flushCiphertext( transport ); }
+    bool HTTPLink::flushHandshake( IStreamTransport& transport ) { return _tlsSession == nullptr || flushCiphertext( transport ); }
 
-    const utf8* HttpLink::getFailureText() const { return _tlsSession != nullptr ? _tlsSession->getFailureText() : "stream failure"; }
+    const utf8* HTTPLink::getFailureText() const { return _tlsSession != nullptr ? _tlsSession->getFailureText() : "stream failure"; }
 
-    bool HttpLink::flushCiphertext( IStreamTransport& transport )
+    bool HTTPLink::flushCiphertext( IStreamTransport& transport )
     {
         _cipherBytes.clear();
         _tlsSession->takeCiphertext( _cipherBytes );

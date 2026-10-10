@@ -12,8 +12,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Transport/StreamTypes.h"
 
-#include "GameFramework/Base/Online/Http/HttpClient.h"
-#include "GameFramework/Base/Online/Http/HttpServer.h"
+#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/API/PlatformLoginClient.h"
 
@@ -41,7 +41,7 @@ namespace sw
      * @class LoopbackPkceLoginClient
      * @brief PC 루프백 + PKCE 외부 로그인 클라이언트입니다.
      */
-    class SW_GF_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHttpRequestHandler
+    class SW_GF_API LoopbackPkceLoginClient final : public IPlatformLoginClient, public IHTTPRequestHandler
     {
     public:
         LoopbackPkceLoginClient();
@@ -49,7 +49,7 @@ namespace sw
 
         /**
          * @brief 리다이렉트 서버(127.0.0.1:0)와 토큰 교환 클라이언트를 띄웁니다. 전송 둘은 넘겨받고, @p pProvider(난수 · SHA-256) · @p pBrowser 는 빌려 쓴다.
-         * @details 토큰 주소가 `https://` 면 그 호스트의 TLS 컨텍스트를 `getHttpClient().registerTlsContext` 로 올린다.
+         * @details 토큰 주소가 `https://` 면 그 호스트의 TLS 컨텍스트를 `getHTTPClient().registerTlsContext` 로 올린다.
          */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> serverTransport, unique_ptr<IStreamTransport> clientTransport,
                                        const StreamTransportSettings& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,
@@ -60,11 +60,11 @@ namespace sw
         void   tick( int64 nowMs ) override;
         int32  pollResults( vector<PlatformLoginClientResult>& outListResult ) override;
 
-        HttpClient& getHttpClient() { return _httpClient; }
+        HTTPClient& getHTTPClient() { return _httpClient; }
         uint16      getRedirectPort() const { return _redirectServer.getListenPort(); }
 
-        // IHttpRequestHandler — `tick` 의 스레드
-        void onHttpRequest( const HttpServerRequest& request, HttpServerResponse& outResponse ) override;
+        // IHTTPRequestHandler — `tick` 의 스레드
+        void onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse ) override;
 
     private:
         struct PendingLogin
@@ -83,8 +83,8 @@ namespace sw
         void                             finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
         string                           makeRedirectUri() const;
 
-        HttpServer                        _redirectServer;
-        HttpClient                        _httpClient;
+        HTTPServer                        _redirectServer;
+        HTTPClient                        _httpClient;
         vector<PkceLoginProviderSettings> _listProviderSettings;
         vector<PendingLogin>              _listPending;
         vector<PlatformLoginClientResult> _listDone;

@@ -2,7 +2,7 @@
 
 #include "Engine/Telemetry/TelemetryUploader.h"
 
-#include "Engine/Observability/HttpClient.h"
+#include "Engine/Observability/HTTPClient.h"
 
 namespace sw
 {
@@ -36,16 +36,16 @@ namespace sw
         return s_uploader;
     }
 
-    HttpTelemetryUploader::HttpTelemetryUploader( IHttpClient& client, string_view endpoint, string_view apiKey )
+    HTTPTelemetryUploader::HTTPTelemetryUploader( IHTTPClient& client, string_view endpoint, string_view apiKey )
         : _endpoint{ endpoint }
         , _apiKey{ apiKey }
         , _pClient{ &client }
     {
     }
 
-    TelemetryUploadResult HttpTelemetryUploader::upload( const TelemetryUploadBatch& batch )
+    TelemetryUploadResult HTTPTelemetryUploader::upload( const TelemetryUploadBatch& batch )
     {
-        HttpRequest request;
+        HTTPRequest request;
         request._method = "POST";
         request._url    = _endpoint;
         request._body   = batch._content;
@@ -54,7 +54,7 @@ namespace sw
         request._listHeader.push_back( { "X-Telemetry-Events", std::to_string( batch._eventCount ) } );
         if ( _apiKey.empty() == false )
             request._listHeader.push_back( { "X-Api-Key", _apiKey } );
-        const HttpResponse response = _pClient->send( request );
+        const HTTPResponse response = _pClient->send( request );
         if ( response.isSuccess() )
             return TelemetryUploadResult::Sent;
         SW_LOG_INFO( "Telemetry upload of '%#' was not accepted (status %#, %#)", batch._filePath.c_str(), response._status, response._error.c_str() );

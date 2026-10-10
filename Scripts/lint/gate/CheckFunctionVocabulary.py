@@ -243,7 +243,7 @@ class CheckFunctionVocabularyGate(LintGate):
         "BannedVerb:ShaderBindingLayout::buildBindPlan": "개명 예정 computeBindPlan — 바인딩 계획을 계산한다",
         "BannedVerb:DirectionalLightComponent::buildShadow*": "개명 예정 computeShadow* — 행렬 · 투영을 계산한다",
         "BannedVerb:ReflectionTypes::buildAncestorDisplay": "개명 예정 computeAncestorDisplay — 표시 문자열을 계산한다",
-        "BannedVerb:OpsHttpEndpoint::buildResponse": "개명 예정 makeResponse — 응답 문자열을 만든다",
+        "BannedVerb:OpsHTTPEndpoint::buildResponse": "개명 예정 makeResponse — 응답 문자열을 만든다",
         "BannedVerb:ScheduleSystem::buildPlan": "개명 예정 makePlan — 일정 구간을 out 으로 만든다",
         "BannedVerb:ChatWordFilter::buildFailLinks": "개명 예정 computeFailLinks — 실패 링크를 계산한다(Aho-Corasick)",
         "BannedVerb:TestFramework::buildRunOrder": "개명 예정 makeRunOrder — 실행 순서 값을 돌려준다",

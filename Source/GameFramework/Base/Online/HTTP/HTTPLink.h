@@ -1,7 +1,7 @@
 /**
- * @file HttpLink.h
+ * @file HTTPLink.h
  * @brief HTTP 연결 하나의 바이트 길 — 스트림 핸들 + 선택 TLS 세션. 평문을 선에 올리고(TLS 면 세션을 지나) 받은 바이트를 평문으로 풉니다. 클라이언트 · 서버가 같이 씁니다.
- * @details 스레드 안전하지 않다 — 주인(`HttpClient` · `HttpServer`)이 잠금을 쥐고 부른다.
+ * @details 스레드 안전하지 않다 — 주인(`HTTPClient` · `HTTPServer`)이 잠금을 쥐고 부른다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -18,17 +18,17 @@ namespace sw
     class ITlsSession;
 
     /**
-     * @class HttpLink
+     * @class HTTPLink
      * @brief 바이트 길 하나입니다.
      */
-    class SW_GF_API HttpLink
+    class SW_GF_API HTTPLink
     {
     public:
-        HttpLink();
-        ~HttpLink();
+        HTTPLink();
+        ~HTTPLink();
 
-        HttpLink( const HttpLink& )            = delete;
-        HttpLink& operator=( const HttpLink& ) = delete;
+        HTTPLink( const HTTPLink& )            = delete;
+        HTTPLink& operator=( const HTTPLink& ) = delete;
 
         /** @brief @p pTlsContext 가 있으면 세션을 만든다(실패하면 false). 핸들은 연결을 건 · 받은 뒤 `setHandle`. */
         [[nodiscard]] bool initialize( ITlsContext* pTlsContext );

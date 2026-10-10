@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Observability/OpsHttpEndpoint.h"
+#include "Engine/Observability/OpsHTTPEndpoint.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Time/MonotonicClock.h"
@@ -12,11 +12,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "OpsHttpEndpoint" );
+    SW_LOG_CALLER( "OpsHTTPEndpoint" );
 
     namespace
     {
-        struct OpsHttpEndpointInternal
+        struct OpsHTTPEndpointInternal
         {
             static constexpr const utf8* kHeadEnd           = "\r\n\r\n";
             static constexpr string_view kMetricContentType = "text/plain; version=0.0.4; charset=utf-8";
@@ -73,7 +73,7 @@ namespace sw
 
 namespace sw
 {
-    OpsHttpEndpoint::OpsHttpEndpoint()
+    OpsHTTPEndpoint::OpsHTTPEndpoint()
         : _listConnection{}
         , _settings{}
         , _mutex{}
@@ -83,9 +83,9 @@ namespace sw
     {
     }
 
-    OpsHttpEndpoint::~OpsHttpEndpoint() { SW_ASSERT( _pTransport == nullptr ); }
+    OpsHTTPEndpoint::~OpsHTTPEndpoint() { SW_ASSERT( _pTransport == nullptr ); }
 
-    bool OpsHttpEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHttpEndpointSettings& settings,
+    bool OpsHTTPEndpoint::initialize( IStreamTransport* pTransport, const StreamTransportSettings& transportSettings, const OpsHTTPEndpointSettings& settings,
                                       const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry )
     {
         if ( pTransport == nullptr )
@@ -111,7 +111,7 @@ namespace sw
         return true;
     }
 
-    void OpsHttpEndpoint::shutdown()
+    void OpsHTTPEndpoint::shutdown()
     {
         if ( _pTransport != nullptr )
             _pTransport->shutdown();
@@ -120,44 +120,44 @@ namespace sw
         _listConnection.clear();
     }
 
-    uint16 OpsHttpEndpoint::getListenPort() const { return _pTransport != nullptr ? _pTransport->getListenPort() : 0; }
+    uint16 OpsHTTPEndpoint::getListenPort() const { return _pTransport != nullptr ? _pTransport->getListenPort() : 0; }
 
-    int32 OpsHttpEndpoint::buildResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
+    int32 OpsHTTPEndpoint::buildResponse( string_view requestHead, const MetricRegistry* pMetricRegistry, const ServiceHealthRegistry* pHealthRegistry, int64 monotonicMs,
                                           string& outResponse )
     {
         const string_view requestLine = requestHead.substr( 0, requestHead.find( "\r\n" ) );
         const size_t      firstSpace  = requestLine.find( ' ' );
         const size_t      secondSpace = firstSpace == string_view::npos ? string_view::npos : requestLine.find( ' ', firstSpace + 1 );
         if ( firstSpace == string_view::npos || secondSpace == string_view::npos )
-            return OpsHttpEndpointInternal::writeResponse( 400, OpsHttpEndpointInternal::kTextContentType, "bad request line\n", outResponse );
+            return OpsHTTPEndpointInternal::writeResponse( 400, OpsHTTPEndpointInternal::kTextContentType, "bad request line\n", outResponse );
         const string_view method = requestLine.substr( 0, firstSpace );
         string_view       target = requestLine.substr( firstSpace + 1, secondSpace - firstSpace - 1 );
         target                   = target.substr( 0, target.find( '?' ) );
         if ( method != "GET" )
-            return OpsHttpEndpointInternal::writeResponse( 405, OpsHttpEndpointInternal::kTextContentType, "only GET\n", outResponse );
+            return OpsHTTPEndpointInternal::writeResponse( 405, OpsHTTPEndpointInternal::kTextContentType, "only GET\n", outResponse );
 
         if ( target == "/metrics" && pMetricRegistry != nullptr )
         {
             string body;
             pMetricRegistry->writePrometheusText( body );
-            return OpsHttpEndpointInternal::writeResponse( 200, OpsHttpEndpointInternal::kMetricContentType, body, outResponse );
+            return OpsHTTPEndpointInternal::writeResponse( 200, OpsHTTPEndpointInternal::kMetricContentType, body, outResponse );
         }
         if ( target == "/healthz" && pHealthRegistry != nullptr )
         {
             const bool bLive = pHealthRegistry->isLive( monotonicMs );
-            return OpsHttpEndpointInternal::writeResponse( bLive ? 200 : 503, OpsHttpEndpointInternal::kTextContentType, bLive ? "ok\n" : "stalled\n", outResponse );
+            return OpsHTTPEndpointInternal::writeResponse( bLive ? 200 : 503, OpsHTTPEndpointInternal::kTextContentType, bLive ? "ok\n" : "stalled\n", outResponse );
         }
         if ( target == "/readyz" && pHealthRegistry != nullptr )
         {
             string body;
             pHealthRegistry->writeReport( body, monotonicMs );
             const bool bReady = pHealthRegistry->isReady( monotonicMs );
-            return OpsHttpEndpointInternal::writeResponse( bReady ? 200 : 503, OpsHttpEndpointInternal::kTextContentType, body, outResponse );
+            return OpsHTTPEndpointInternal::writeResponse( bReady ? 200 : 503, OpsHTTPEndpointInternal::kTextContentType, body, outResponse );
         }
-        return OpsHttpEndpointInternal::writeResponse( 404, OpsHttpEndpointInternal::kTextContentType, "not found\n", outResponse );
+        return OpsHTTPEndpointInternal::writeResponse( 404, OpsHTTPEndpointInternal::kTextContentType, "not found\n", outResponse );
     }
 
-    void OpsHttpEndpoint::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
+    void OpsHTTPEndpoint::onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted )
     {
         (void)remote;
         if ( bAccepted == false )
@@ -167,7 +167,7 @@ namespace sw
         connection._packedHandle           = handle.packed();
     }
 
-    void OpsHttpEndpoint::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
+    void OpsHTTPEndpoint::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
         string response;
         {
@@ -176,16 +176,16 @@ namespace sw
             if ( pConnection == nullptr || pConnection->_bAnswered == SW_TRUE )
                 return;
             pConnection->_buffer.append( reinterpret_cast<const utf8*>( pData ), static_cast<size_t>( size ) );
-            const size_t headEnd = pConnection->_buffer.find( OpsHttpEndpointInternal::kHeadEnd );
+            const size_t headEnd = pConnection->_buffer.find( OpsHTTPEndpointInternal::kHeadEnd );
             if ( headEnd != string::npos )
             {
                 (void)buildResponse( string_view( pConnection->_buffer ).substr( 0, headEnd ), _pMetricRegistry, _pHealthRegistry,
-                                     OpsHttpEndpointInternal::nowMonotonicMs(), response );
+                                     OpsHTTPEndpointInternal::nowMonotonicMs(), response );
             }
             else if ( static_cast<int32>( pConnection->_buffer.size() ) > _settings._maxRequestBytes )
             {
                 // 돌려주는 것은 상태 코드다 — 응답은 response 에 담긴다
-                (void)OpsHttpEndpointInternal::writeResponse( 431, OpsHttpEndpointInternal::kTextContentType, "request head too large\n", response );
+                (void)OpsHTTPEndpointInternal::writeResponse( 431, OpsHTTPEndpointInternal::kTextContentType, "request head too large\n", response );
             }
             else
             {
@@ -198,7 +198,7 @@ namespace sw
         _pTransport->close( handle, StreamCloseMode::Graceful );
     }
 
-    void OpsHttpEndpoint::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
+    void OpsHTTPEndpoint::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
     {
         (void)reason;
         std::scoped_lock<mutex> lock{ _mutex };
@@ -212,7 +212,7 @@ namespace sw
         }
     }
 
-    OpsHttpEndpoint::Connection* OpsHttpEndpoint::findConnection( uint64 packedHandle )
+    OpsHTTPEndpoint::Connection* OpsHTTPEndpoint::findConnection( uint64 packedHandle )
     {
         for ( Connection& connection : _listConnection )
         {

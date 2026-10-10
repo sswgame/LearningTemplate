@@ -4,15 +4,15 @@
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
-#include "GameFramework/Base/Online/Http/HttpClient.h"
+#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {
-    ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HttpClient* pHttpClient )
+    ProfileAPILoginProvider::ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _mapRequestToVerification{}
         , _listDone{}
-        , _pHttpClient{ pHttpClient }
+        , _pHTTPClient{ pHTTPClient }
         , _nextVerificationId{ 1 }
     {
     }
@@ -20,12 +20,12 @@ namespace sw
     uint64 ProfileAPILoginProvider::submitVerification( const vector<uint8>& ticketBytes, int64 nowMs )
     {
         const uint64      verificationId = _nextVerificationId++;
-        HttpClientRequest request;
+        HTTPClientRequest request;
         request._url       = _settings._profileUrl;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._listHeader.push_back( HttpHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
-        request._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );
-        _mapRequestToVerification[_pHttpClient->submitRequest( request, nowMs )] = verificationId;
+        request._listHeader.push_back( HTTPHeader{ "Authorization", "Bearer " + string( reinterpret_cast<const utf8*>( ticketBytes.data() ), ticketBytes.size() ) } );
+        request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
+        _mapRequestToVerification[_pHTTPClient->submitRequest( request, nowMs )] = verificationId;
         return verificationId;
     }
 
@@ -42,10 +42,10 @@ namespace sw
 
     void ProfileAPILoginProvider::tick( int64 nowMs )
     {
-        _pHttpClient->tick( nowMs );
-        vector<HttpClientResponse> listResponse;
-        (void)_pHttpClient->pollResponses( listResponse );
-        for ( const HttpClientResponse& response : listResponse )
+        _pHTTPClient->tick( nowMs );
+        vector<HTTPClientResponse> listResponse;
+        (void)_pHTTPClient->pollResponses( listResponse );
+        for ( const HTTPClientResponse& response : listResponse )
         {
             const auto requestIt = _mapRequestToVerification.find( response._requestId );
             if ( requestIt == _mapRequestToVerification.end() )
@@ -53,7 +53,7 @@ namespace sw
             PlatformLoginVerification& verification = _listDone.emplace_back();
             verification._verificationId            = requestIt->second;
             _mapRequestToVerification.erase( requestIt );
-            const bool bDenied = response._statusCode == HttpConstant::kStatusUnauthorized || response._statusCode == HttpConstant::kStatusForbidden;
+            const bool bDenied = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
             if ( bDenied )
             {
                 verification._bRejected = SW_TRUE;

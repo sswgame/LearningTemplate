@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Observability/HttpClient.h"
+#include "Engine/Observability/HTTPClient.h"
 
 #include "Core/Container/StringUtil.h"
 
 namespace sw
 {
-    string_view HttpRequest::findHeader( string_view name ) const
+    string_view HTTPRequest::findHeader( string_view name ) const
     {
         for ( const pair<string, string>& header : _listHeader )
         {
@@ -16,18 +16,18 @@ namespace sw
         return {};
     }
 
-    HttpResponse NullHttpClient::send( const HttpRequest& request )
+    HTTPResponse NullHTTPClient::send( const HTTPRequest& request )
     {
         (void)request;
-        HttpResponse response;
+        HTTPResponse response;
         response._status = 0;
         response._error  = "network disabled";
         return response;
     }
 
-    NullHttpClient& NullHttpClient::get()
+    NullHTTPClient& NullHTTPClient::get()
     {
-        static NullHttpClient s_client;
+        static NullHTTPClient s_client;
         return s_client;
     }
 } // namespace sw

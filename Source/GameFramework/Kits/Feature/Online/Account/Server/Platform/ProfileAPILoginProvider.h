@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class HttpClient;
+    class HTTPClient;
     class JSONValue;
 
     /**
@@ -24,8 +24,8 @@ namespace sw
     class SW_GF_API ProfileAPILoginProvider final : public IPlatformLoginProvider
     {
     public:
-        /** @brief @p pHttpClient 는 빌려 쓰고 그 응답은 이 객체 혼자 거둔다. */
-        ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HttpClient* pHttpClient );
+        /** @brief @p pHTTPClient 는 빌려 쓰고 그 응답은 이 객체 혼자 거둔다. */
+        ProfileAPILoginProvider( const PlatformLoginProviderSettings& settings, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
         uint64      submitVerification( const vector<uint8>& ticketBytes, int64 nowMs ) override;
@@ -39,7 +39,7 @@ namespace sw
         PlatformLoginProviderSettings     _settings;
         unordered_map<uint64, uint64>     _mapRequestToVerification;
         vector<PlatformLoginVerification> _listDone;
-        HttpClient*                       _pHttpClient;
+        HTTPClient*                       _pHTTPClient;
         uint64                            _nextVerificationId;
     };
 } // namespace sw

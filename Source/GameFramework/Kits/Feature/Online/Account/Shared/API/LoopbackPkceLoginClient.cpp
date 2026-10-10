@@ -23,11 +23,11 @@ namespace sw
             static constexpr utf8  kCallbackPath[] = "/callback";
             static constexpr utf8  kDonePage[]     = "<html><body>Sign-in finished. You can close this window and return to the game.</body></html>";
 
-            static void setPage( HttpServerResponse& outResponse, int32 statusCode )
+            static void setPage( HTTPServerResponse& outResponse, int32 statusCode )
             {
                 outResponse._statusCode = statusCode;
-                outResponse._listHeader.push_back( HttpHeader{ "Content-Type", "text/html; charset=utf-8" } );
-                outResponse._listHeader.push_back( HttpHeader{ "Cache-Control", "no-store" } );
+                outResponse._listHeader.push_back( HTTPHeader{ "Content-Type", "text/html; charset=utf-8" } );
+                outResponse._listHeader.push_back( HTTPHeader{ "Cache-Control", "no-store" } );
                 const string_view page{ kDonePage };
                 outResponse._bodyBytes.assign( page.begin(), page.end() );
             }
@@ -61,10 +61,10 @@ namespace sw
         _pProvider            = pProvider;
         _pBrowser             = pBrowser;
         _listProviderSettings = listProviderSettings;
-        HttpServerSettings serverSettings; // 127.0.0.1:0 — 다른 기계에서 닿지 않고 포트는 OS 가 고른다
+        HTTPServerSettings serverSettings; // 127.0.0.1:0 — 다른 기계에서 닿지 않고 포트는 OS 가 고른다
         if ( _redirectServer.initialize( std::move( serverTransport ), transportSettings, serverSettings, this ) == false )
             return false;
-        return _httpClient.initialize( std::move( clientTransport ), transportSettings, HttpClientSettings{} );
+        return _httpClient.initialize( std::move( clientTransport ), transportSettings, HTTPClientSettings{} );
     }
 
     void LoopbackPkceLoginClient::shutdown()
@@ -96,17 +96,17 @@ namespace sw
             finish( pending, false, false, pSettings == nullptr ? "unknown provider" : "could not make PKCE secrets", vector<uint8>{} );
             return requestId;
         }
-        vector<HttpHeader> listQuery;
-        listQuery.push_back( HttpHeader{ "response_type", "code" } );
-        listQuery.push_back( HttpHeader{ "client_id", pSettings->_clientId } );
-        listQuery.push_back( HttpHeader{ "redirect_uri", makeRedirectUri() } );
-        listQuery.push_back( HttpHeader{ "scope", pSettings->_scope } );
-        listQuery.push_back( HttpHeader{ "state", pending._state } );
-        listQuery.push_back( HttpHeader{ "nonce", pending._nonce } );
-        listQuery.push_back( HttpHeader{ "code_challenge", Base64Util::encodeUrl( arrChallenge, sizeof( arrChallenge ) ) } );
-        listQuery.push_back( HttpHeader{ "code_challenge_method", "S256" } );
+        vector<HTTPHeader> listQuery;
+        listQuery.push_back( HTTPHeader{ "response_type", "code" } );
+        listQuery.push_back( HTTPHeader{ "client_id", pSettings->_clientId } );
+        listQuery.push_back( HTTPHeader{ "redirect_uri", makeRedirectUri() } );
+        listQuery.push_back( HTTPHeader{ "scope", pSettings->_scope } );
+        listQuery.push_back( HTTPHeader{ "state", pending._state } );
+        listQuery.push_back( HTTPHeader{ "nonce", pending._nonce } );
+        listQuery.push_back( HTTPHeader{ "code_challenge", Base64Util::encodeUrl( arrChallenge, sizeof( arrChallenge ) ) } );
+        listQuery.push_back( HTTPHeader{ "code_challenge_method", "S256" } );
         const bool   bHasQuery = pSettings->_authorizationUrl.find( '?' ) != string::npos;
-        const string url       = pSettings->_authorizationUrl + ( bHasQuery ? "&" : "?" ) + HttpUtil::encodeForm( listQuery );
+        const string url       = pSettings->_authorizationUrl + ( bHasQuery ? "&" : "?" ) + HTTPUtil::encodeForm( listQuery );
         if ( _pBrowser->openUrl( url ) == false )
         {
             finish( pending, false, false, "could not open the system browser", vector<uint8>{} );
@@ -122,9 +122,9 @@ namespace sw
         _nowMs = nowMs;
         _redirectServer.tick();
         _httpClient.tick( nowMs );
-        vector<HttpClientResponse> listResponse;
+        vector<HTTPClientResponse> listResponse;
         (void)_httpClient.pollResponses( listResponse );
-        for ( const HttpClientResponse& response : listResponse )
+        for ( const HTTPClientResponse& response : listResponse )
         {
             for ( size_t pendingIndex = 0; pendingIndex < _listPending.size(); ++pendingIndex )
             {
@@ -175,15 +175,15 @@ namespace sw
         return count;
     }
 
-    void LoopbackPkceLoginClient::onHttpRequest( const HttpServerRequest& request, HttpServerResponse& outResponse )
+    void LoopbackPkceLoginClient::onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
     {
         using Internal = LoopbackPkceLoginClientInternal;
-        if ( request._method != HttpMethod::Get || request._path != Internal::kCallbackPath )
+        if ( request._method != HTTPMethod::Get || request._path != Internal::kCallbackPath )
         {
-            outResponse._statusCode = HttpConstant::kStatusNotFound;
+            outResponse._statusCode = HTTPConstant::kStatusNotFound;
             return;
         }
-        const HttpHeader* pState = request.findQuery( "state" );
+        const HTTPHeader* pState = request.findQuery( "state" );
         PendingLogin*     pFound = nullptr;
         for ( PendingLogin& pending : _listPending )
         {
@@ -196,9 +196,9 @@ namespace sw
             outResponse._statusCode = 400;
             return;
         }
-        Internal::setPage( outResponse, HttpConstant::kStatusOk );
-        const HttpHeader*                pError    = request.findQuery( "error" );
-        const HttpHeader*                pCode     = request.findQuery( "code" );
+        Internal::setPage( outResponse, HTTPConstant::kStatusOk );
+        const HTTPHeader*                pError    = request.findQuery( "error" );
+        const HTTPHeader*                pCode     = request.findQuery( "code" );
         const PkceLoginProviderSettings* pSettings = findSettings( pFound->_provider );
         if ( pError != nullptr || pCode == nullptr || pCode->_value.empty() || pSettings == nullptr )
         {
@@ -214,19 +214,19 @@ namespace sw
             }
             return;
         }
-        vector<HttpHeader> listForm;
-        listForm.push_back( HttpHeader{ "grant_type", "authorization_code" } );
-        listForm.push_back( HttpHeader{ "code", pCode->_value } );
-        listForm.push_back( HttpHeader{ "redirect_uri", makeRedirectUri() } );
-        listForm.push_back( HttpHeader{ "client_id", pSettings->_clientId } );
-        listForm.push_back( HttpHeader{ "code_verifier", pFound->_codeVerifier } );
-        HttpClientRequest tokenRequest;
-        tokenRequest._method = HttpMethod::Post;
+        vector<HTTPHeader> listForm;
+        listForm.push_back( HTTPHeader{ "grant_type", "authorization_code" } );
+        listForm.push_back( HTTPHeader{ "code", pCode->_value } );
+        listForm.push_back( HTTPHeader{ "redirect_uri", makeRedirectUri() } );
+        listForm.push_back( HTTPHeader{ "client_id", pSettings->_clientId } );
+        listForm.push_back( HTTPHeader{ "code_verifier", pFound->_codeVerifier } );
+        HTTPClientRequest tokenRequest;
+        tokenRequest._method = HTTPMethod::Post;
         tokenRequest._url    = pSettings->_tokenUrl;
-        const string body    = HttpUtil::encodeForm( listForm );
+        const string body    = HTTPUtil::encodeForm( listForm );
         tokenRequest._bodyBytes.assign( body.begin(), body.end() );
-        tokenRequest._listHeader.push_back( HttpHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
-        tokenRequest._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );
+        tokenRequest._listHeader.push_back( HTTPHeader{ "Content-Type", "application/x-www-form-urlencoded" } );
+        tokenRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
         pFound->_tokenRequestId = _httpClient.submitRequest( tokenRequest, _nowMs );
     }
 

@@ -120,7 +120,7 @@ _kMapStep: dict[int, MoveStep] = {
     6: MoveStep(
         "이름 정리 — HTTP 는 Observability 한 곳, UI/Screens 를 UI/Screen 에, Core 와 겹치는 하위 폴더 이름은 Base",
         (
-            ("Telemetry/HttpClient", "Observability/HttpClient"),
+            ("Telemetry/HTTPClient", "Observability/HTTPClient"),
             ("UI/Screens", "UI/Screen"),
             ("Serialization/Core", "Serialization/Base"),
             ("UI/Core", "UI/Base"),

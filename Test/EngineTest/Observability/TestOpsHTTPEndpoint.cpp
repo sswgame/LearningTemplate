@@ -7,7 +7,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Observability/OpsHttpEndpoint.h"
+#include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
 
 #include "TestFramework/TestFramework.h"
@@ -22,7 +22,7 @@ using namespace sw;
 namespace
 {
     /** @brief 받은 바이트와 닫힘을 모으는 클라이언트입니다. 실제 전송에서는 I/O 스레드가 쓴다. */
-    class OpsHttpProbe final : public IStreamHandler
+    class OpsHTTPProbe final : public IStreamHandler
     {
     public:
         void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
@@ -75,8 +75,8 @@ namespace
         unique_ptr<IStreamTransport> _clientTransport{ _network.createTransport() };
         MetricRegistry               _metrics{};
         ServiceHealthRegistry        _health{};
-        OpsHttpEndpoint              _endpoint{};
-        OpsHttpProbe                 _probe{};
+        OpsHTTPEndpoint              _endpoint{};
+        OpsHTTPProbe                 _probe{};
 
         ~OpsLoopbackRig()
         {
@@ -88,7 +88,7 @@ namespace
         {
             StreamTransportSettings settings;
             settings._ioThreadCount = 0;
-            OpsHttpEndpointSettings opsSettings;
+            OpsHTTPEndpointSettings opsSettings;
             opsSettings._bindAddress = NetAddress::makeLoopback( 0 );
             const bool bEndpoint     = _endpoint.initialize( _serverTransport.get(), settings, opsSettings, &_metrics, &_health );
             const bool bClient       = _clientTransport->initialize( &_probe, settings );
@@ -115,39 +115,39 @@ namespace
     };
 } // namespace
 
-SW_TEST_CASE( OpsHttpEndpointTest, RoutesAndStatusCodes )
+SW_TEST_CASE( OpsHTTPEndpointTest, RoutesAndStatusCodes )
 {
     MetricRegistry        metrics;
     ServiceHealthRegistry health;
     metrics.registerCounter( "probe_total", "Probe" )->add( 2 );
     string response;
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /metrics HTTP/1.1\r\nHost: x", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1\r\nHost: x", &metrics, &health, 0, response ), 200 );
     SW_EXPECT_TRUE( StringUtil::startsWith( response, "HTTP/1.1 200 OK\r\n" ) );
     SW_EXPECT_TRUE( response.find( "Content-Type: text/plain; version=0.0.4" ) != string::npos );
     SW_EXPECT_TRUE( response.find( "probe_total 2\n" ) != string::npos );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 틱 없음
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 틱 없음
     health.markTick( 0 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /healthz?verbose=1 HTTP/1.1", &metrics, &health, 0, response ), 200 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "POST /metrics HTTP/1.1", &metrics, &health, 0, response ), 405 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /nothing HTTP/1.1", &metrics, &health, 0, response ), 404 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "garbage", &metrics, &health, 0, response ), 400 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 등록부 없는 경로
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz?verbose=1 HTTP/1.1", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "POST /metrics HTTP/1.1", &metrics, &health, 0, response ), 405 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /nothing HTTP/1.1", &metrics, &health, 0, response ), 404 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "garbage", &metrics, &health, 0, response ), 400 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1", nullptr, &health, 0, response ), 404 ); // 등록부 없는 경로
     const int32 store = health.registerCheck( "service_store", true );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 필수 검사 미확인
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 ); // 필수 검사 미확인
     health.setCheck( store, HealthState::Ok, "" );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 200 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 200 );
     SW_EXPECT_TRUE( response.find( "check service_store ok\n" ) != string::npos );
     health.setDraining( true );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 );
-    SW_EXPECT_EQUAL( OpsHttpEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 200 ); // 비우는 중에도 살아 있다
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /readyz HTTP/1.1", &metrics, &health, 0, response ), 503 );
+    SW_EXPECT_EQUAL( OpsHTTPEndpoint::buildResponse( "GET /healthz HTTP/1.1", &metrics, &health, 0, response ), 200 ); // 비우는 중에도 살아 있다
 }
 
-SW_TEST_CASE( OpsHttpEndpointTest, ContentLengthMatchesTheBody )
+SW_TEST_CASE( OpsHTTPEndpointTest, ContentLengthMatchesTheBody )
 {
     MetricRegistry metrics;
     metrics.registerGauge( "g", "G" )->set( 1.5 );
     string response;
-    (void)OpsHttpEndpoint::buildResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, response );
+    (void)OpsHTTPEndpoint::buildResponse( "GET /metrics HTTP/1.1", &metrics, nullptr, 0, response );
     const size_t headEnd = response.find( "\r\n\r\n" );
     SW_ASSERT_TRUE( headEnd != string::npos );
     const string               body = response.substr( headEnd + 4 );
@@ -158,7 +158,7 @@ SW_TEST_CASE( OpsHttpEndpointTest, ContentLengthMatchesTheBody )
     SW_EXPECT_TRUE( response.find( "Connection: close\r\n" ) != string::npos );
 }
 
-SW_TEST_CASE( OpsHttpEndpointTest, ServesMetricsOverLoopbackAndCloses )
+SW_TEST_CASE( OpsHTTPEndpointTest, ServesMetricsOverLoopbackAndCloses )
 {
     OpsLoopbackRig rig;
     SW_ASSERT_TRUE( rig.start() );
@@ -174,7 +174,7 @@ SW_TEST_CASE( OpsHttpEndpointTest, ServesMetricsOverLoopbackAndCloses )
     SW_EXPECT_TRUE( rig._probe._bClosed.load( std::memory_order_acquire ) );
 }
 
-SW_TEST_CASE( OpsHttpEndpointTest, OversizedHeadIsRefusedWith431 )
+SW_TEST_CASE( OpsHTTPEndpointTest, OversizedHeadIsRefusedWith431 )
 {
     OpsLoopbackRig rig;
     SW_ASSERT_TRUE( rig.start() );
@@ -186,16 +186,16 @@ SW_TEST_CASE( OpsHttpEndpointTest, OversizedHeadIsRefusedWith431 )
     SW_EXPECT_TRUE( rig._probe._bClosed.load( std::memory_order_acquire ) );
 }
 
-SW_TEST_CASE( OpsHttpEndpointTest, ServesHealthOverARealSocketOnThisMachine )
+SW_TEST_CASE( OpsHTTPEndpointTest, ServesHealthOverARealSocketOnThisMachine )
 {
     unique_ptr<IStreamTransport> serverTransport = StreamTransportFactory::createPlatformTransport();
     unique_ptr<IStreamTransport> clientTransport = StreamTransportFactory::createPlatformTransport();
     SW_ASSERT_TRUE( serverTransport != nullptr && clientTransport != nullptr );
     MetricRegistry          metrics;
     ServiceHealthRegistry   health;
-    OpsHttpEndpoint         endpoint;
-    OpsHttpProbe            probe;
-    OpsHttpEndpointSettings opsSettings;
+    OpsHTTPEndpoint         endpoint;
+    OpsHTTPProbe            probe;
+    OpsHTTPEndpointSettings opsSettings;
     SW_EXPECT_TRUE( opsSettings._bindAddress == NetAddress::makeLoopback( 9100 ) ); // 기본은 이 기계만
     opsSettings._bindAddress = NetAddress::makeLoopback( 0 );
     StreamTransportSettings transportSettings;

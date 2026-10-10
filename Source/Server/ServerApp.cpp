@@ -25,7 +25,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/Server/ServerConfig.h"
 #include "Engine/Observability/MetricRegistry.h"
-#include "Engine/Observability/OpsHttpEndpoint.h"
+#include "Engine/Observability/OpsHTTPEndpoint.h"
 #include "Engine/Observability/ServiceHealthRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -226,7 +226,7 @@ namespace sw
         _pDroppedTickCounter = _metricRegistry->registerCounter( "server_dropped_ticks_total", "Ticks dropped because the server fell too far behind" );
         if ( _pServerConfig->_opsPort == 0 )
             return true;
-        OpsHttpEndpointSettings opsSettings;
+        OpsHTTPEndpointSettings opsSettings;
         if ( NetAddress::parse( _pServerConfig->_opsListenAddress, static_cast<uint16>( _pServerConfig->_opsPort ), opsSettings._bindAddress ) == false )
         {
             SW_LOG_ERROR( "Server config _opsListenAddress '%#' is not an IPv4 address", _pServerConfig->_opsListenAddress.c_str() );
@@ -243,7 +243,7 @@ namespace sw
         transportSettings._ioThreadCount      = 1;
         transportSettings._maxConnections     = ServerAppInternal::kOpsMaxConnections;
         transportSettings._idleTimeoutSeconds = ServerAppInternal::kOpsIdleTimeoutSeconds;
-        _opsEndpoint                          = make_unique<OpsHttpEndpoint>();
+        _opsEndpoint                          = make_unique<OpsHTTPEndpoint>();
         if ( _opsEndpoint->initialize( _opsTransport.get(), transportSettings, opsSettings, _metricRegistry.get(), _healthRegistry.get() ) == false )
         {
             _opsEndpoint.reset();

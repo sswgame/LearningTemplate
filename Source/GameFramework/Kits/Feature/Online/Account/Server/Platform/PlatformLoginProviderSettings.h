@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class HttpClient;
+    class HTTPClient;
     class INetSecurityProvider;
     class IPlatformLoginProvider;
 
@@ -53,8 +53,8 @@ namespace sw
     /** @brief 설정 → 제공자 공장 · 설정 목록 읽기입니다. */
     struct SW_GF_API PlatformLoginProviderFactory
     {
-        /** @brief 설정으로 공통 구현을 만듭니다. @p pHttpClient 는 빌려 쓰고 이 제공자 혼자 거둔다(응답을 다른 쪽과 나누지 않는다). 설정이 틀리면 nullptr. */
-        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HttpClient* pHttpClient );
+        /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰고 이 제공자 혼자 거둔다(응답을 다른 쪽과 나누지 않는다). 설정이 틀리면 nullptr. */
+        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
          * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIds":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
          * @details 모르는 키 · 빠진 필수 키 · 규칙 밖 이름은 오류(@p outError) — 철자가 틀린 설정이 조용히 기본값이 되지 않게.

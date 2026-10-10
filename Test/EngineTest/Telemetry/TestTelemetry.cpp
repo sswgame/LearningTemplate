@@ -3,7 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Observability/HttpClient.h"
+#include "Engine/Observability/HTTPClient.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
@@ -52,18 +52,18 @@ namespace
         };
 
         /** @brief 요청을 적고 정한 상태를 돌려주는 가짜 HTTP 창구입니다(네트워크 없음). */
-        class RecordingHttpClient final : public IHttpClient
+        class RecordingHTTPClient final : public IHTTPClient
         {
         public:
-            HttpResponse send( const HttpRequest& request ) override
+            HTTPResponse send( const HTTPRequest& request ) override
             {
                 _listRequest.push_back( request );
-                HttpResponse response;
+                HTTPResponse response;
                 response._status = _status;
                 return response;
             }
 
-            vector<HttpRequest> _listRequest{};
+            vector<HTTPRequest> _listRequest{};
             int32               _status{ 200 };
         };
 
@@ -445,17 +445,17 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
 /**
  * @brief [TelemetryTest] HTTP 업로더 — 파일 그대로를 POST 본문으로, 세션 · 사건 수 · 키를 헤더로 보내고 2xx 만 보낸 것으로 친다. 기본 창구는 보내지 않는다
  */
-SW_TEST_CASE( TelemetryTest, HttpUploaderBuildsTheRequestAndNeverTouchesTheNetwork )
+SW_TEST_CASE( TelemetryTest, HTTPUploaderBuildsTheRequestAndNeverTouchesTheNetwork )
 {
-    TelemetryTestInternal::RecordingHttpClient client;
-    HttpTelemetryUploader                      uploader( client, "https://telemetry.invalid/v1/events", "key-123" );
+    TelemetryTestInternal::RecordingHTTPClient client;
+    HTTPTelemetryUploader                      uploader( client, "https://telemetry.invalid/v1/events", "key-123" );
     TelemetryUploadBatch                       batch;
     batch._content    = "{\"type\":\"context\"}\n{\"type\":\"event\"}\n";
     batch._sessionId  = "s1";
     batch._eventCount = 1;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Sent );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( client._listRequest.size() ) );
-    const HttpRequest& request = client._listRequest[0];
+    const HTTPRequest& request = client._listRequest[0];
     SW_EXPECT_TRUE( request._method == "POST" && request._url == "https://telemetry.invalid/v1/events" );
     SW_EXPECT_TRUE( request._body == batch._content );
     SW_EXPECT_TRUE( request.findHeader( "content-type" ) == "application/x-ndjson" );
@@ -465,7 +465,7 @@ SW_TEST_CASE( TelemetryTest, HttpUploaderBuildsTheRequestAndNeverTouchesTheNetwo
     client._status = 503;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Failed );
 
-    HttpTelemetryUploader offline( NullHttpClient::get(), "https://telemetry.invalid/v1/events", "" );
+    HTTPTelemetryUploader offline( NullHTTPClient::get(), "https://telemetry.invalid/v1/events", "" );
     SW_EXPECT_TRUE( offline.upload( batch ) == TelemetryUploadResult::Failed );
     SW_EXPECT_TRUE( NullTelemetryUploader::get().upload( batch ) == TelemetryUploadResult::Kept );
 }
