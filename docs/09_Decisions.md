@@ -171,7 +171,7 @@
 
 ### 5-1. 문서와 저장소
 
-- **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/AcronymRegistry.py` 한 자리, 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
+- **약어는 대문자로 쓴다**(사용자 결정 2026-10-10 — 이미 대문자인 `AABB` · `RHI` · `TagID` 와 철자가 하나가 되고, 함수 이름에서도 약어가 보인다). 목록은 `Scripts/lint/rules/AcronymRegistry.toml` 한 자리(읽기 · 철자 판정은 `Scripts/lint/AcronymRegistry.py`), 대문자 약어가 이어 붙으면 낱말을 사이에 두거나 뜻이 같은 쪽을 뺀다(`RTSCommanderAI` · `HTTPAddress` · `kRTSCatalogXML` · `RHITimestamp` · `OpenSSLContext`). `SSL` 은 제품 이름표(`OpenSSL`)로 둔다 — 약어로 올리면 `_pSsl` 같은 OpenSSL 핸들 이름까지 바뀌고 이어 붙음은 이름 하나뿐이었다. 파이썬 · CMake 식별자는 대상이 아니다.
 - **저장소에 LICENSE 파일을 두지 않습니다**(2026-10-06). 라이선스를 정하는 것은 사용자의 일이라, README 의 MIT 배지와 develop 배지도 뺐습니다.
 - **코딩 규칙의 원본은 `AGENTS.md` 하나입니다**(2026-10-06). [04 코딩 규칙 예시](04_CodingGuidelines.md)는 규칙을 다시 적지 않는 한국어 예시 모음입니다.
   언리얼도 Coding Standard 한 문서에 규칙을 두고 예시는 따로 둡니다. `CLAUDE.md` 는 영어 요약이고, 자주 바뀌는 목록은 링크로만 가리킵니다.
@@ -230,6 +230,17 @@
 - **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [백로그](06_Backlog.md) 1-9): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.
   ④ 출처를 모르는 리소스는 저장소에서 생성한 것이나 CC0 로 확인한 것으로 바꿉니다.
+- **린트의 규칙 데이터는 `Scripts/lint/rules/<이름>.toml` 에 두고 `Scripts/common/RuleData.py` 하나가 읽습니다**(2026-10-11). clang-tidy 가 검사 설정을 `.clang-tidy`(YAML)로,
+  언리얼이 금지 API · 예외를 `.ini` 로 코드 밖에 두는 것과 같습니다. 형식은 TOML 입니다 — 주석이 되고, 표 · 배열만으로 예외 표와 목록이 그대로 적히며, JSON 은 주석이 없고
+  YAML 은 표준 라이브러리에 읽기가 없습니다. CI 린트 잡의 파이썬은 3.10 이라 `tomllib`(3.11+)이 없어, 쓰는 문법만 아는 부분 집합 읽기를 같이 두고
+  `CheckExemptionTables` 가 두 읽기의 결과를 견줍니다(파이썬을 올리면 CI 잡마다 `setup-python` 이 붙고 WSL 클론도 따라 올려야 한다).
+  - 게이트 예외는 크기와 상관없이 모두 옮겼습니다(한 줄짜리 넷 포함) — "예외는 한 자리" 를 셀프테스트가 지키려면 게이트 소스에 표가 하나도 없어야 합니다.
+  - 목록은 사람이 늘리는 데이터만 옮겼습니다: Core · Engine · GameFramework 티어, 제품 낱말, 금지 동사 · 줄임말, 약어 등록부, 엔진 루트 파일, Win32 일반 이름, 내장 매크로,
+    실패 가능 동사, 입력 장치 조회 · 폰 쪽 파일, 셰이더 줄임말.
+  - 옮기지 않은 것: 정규식이 든 표(`RunDocStyle.kListCoinedTerm` · `CheckWellKnownConstants` · `CheckScriptLayout` · `CheckScriptCommonHelpers` 의 규칙 — 정규식은 쓰는 코드 옆에),
+    여러 칸짜리 레코드(`CheckThirdPartyIsolation._kListLibraryRule` — 두 게이트가 읽고 부분 집합에 표 배열이 없다, `CheckModuleTargets._kListFolderTarget` 7 줄),
+    `Constants.py` 의 경로로 짓는 표(`CheckEngineLayers` 의 금지 규칙), 언어가 정한 낱말(HLSL 키워드 · 한정자, C++ 내장 타입), 명명 판정 표(`conventions/NamingVocabulary` —
+    주체 × 컨테이너 칸이 판정 코드의 일부), 확장자 목록(파일 고르기 설정이지 규칙이 아니다).
 
 ### 5-3. Core 와 플랫폼
 

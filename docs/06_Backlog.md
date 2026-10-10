@@ -481,7 +481,7 @@
   `CheckKitNamespaces` 다 — 내용 규칙으로 토큰이 없는 소스 커밋에서는 서지 않게 했지만, 토큰이 든 파일(`REFLECT` · `enum class` 헤더)을 건드린 커밋은 여전히 돈다.
   더 줄이려면 `CheckConfigReference` 를 파일 단위로(생성 문서를 통째로 다시 만들지 않고 바뀐 구조체만) 나눠야 한다.
   ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
-  (CTest 이름 · `mapExemption` 표를 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
+  (CTest 이름을 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
   모양이다 — 두 계획(`docs/plans/EnginePartition.md` · `GameFrameworkLayout.md`)이 끝나면 지우거나 공용 이동기 하나로.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다

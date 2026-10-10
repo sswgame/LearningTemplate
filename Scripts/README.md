@@ -63,6 +63,7 @@ Scripts/
   │     ├── XmlAssetMerge.py          # XML 에셋 의미 비교 · 3-way 병합(엔티티 id · 컴포넌트 · 속성 단위), 엔진 저장기와 같은 서식으로 쓰기
   │     ├── AssetPipeline.py          # 쿠커의 기본 출력 폴더 찾기 — 가장 최근에 구성된 build/*/Bin/<subDir>
   │     ├── CookContract.py           # 쿠킹 표(`Config/Engine/CookContract.json`)를 읽은 결과 — 헤더 생성기 · 쿠커 · 게이트가 같은 객체를 쓴다
+  │     ├── RuleData.py               # 린트 규칙 데이터(`lint/rules/*.toml`) 읽기 · 스키마 검사 · 파이썬 3.10 용 TOML 부분 집합 읽기(아래 "규칙 데이터")
   │     └── PackFormat.py             # `.pack` 바이너리 계약(Config/Engine/PackFormat.json)을 읽은 결과
   │
   ├── setup/                          # [환경 구성] 외부 도구를 찾고, 없으면 받아 설치한다
@@ -101,6 +102,7 @@ Scripts/
   │     │                             #   병합 커밋은 어느 부모와도 내용이 다른 파일만 파일 단위로 본다 (아래 "커밋 훅과 병합 커밋")
   │     ├── RunLintSuite.py           # 린트 전체를 빌드 폴더 없이 돌려 린트마다 · 커밋 훅 시간을 잰다 (CI 린트 잡)
   │     ├── conventions/              # CheckCodeConventions 의 규칙 묶음(라이브러리 — 묶음 지도는 __init__.py). LintCatalog 는 훑지 않는다
+  │     ├── rules/                    # 규칙 데이터 — `<게이트 · 등록부 이름>.toml`(예외 표 `[exemption]` · 티어 · 어휘 · 허용 목록). 코드는 없다
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
   │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/)
   │     │     ├── CheckOutParameterNames.py   # 맨이름 `out` 매개변수(헤더 선언)
@@ -190,7 +192,7 @@ Scripts/
   │           ├── CheckFixersAreAlive.py      # fixer/ 가 아직 고치는지, 고치면 안 되는 것은 안 고치는지
   │           ├── CheckCodeConventionsSelfTest.py # CheckCodeConventions 의 규칙마다 아직 무는지 확인
   │           ├── CheckMergeCommitScope.py    # 병합 커밋에서 훅이 새 내용 파일을 빠뜨리지 않고 줄이는지 (임시 git 저장소)
-  │           ├── CheckExemptionTables.py     # 게이트의 예외가 LintGate.mapExemption 한 자리에만 있는지
+  │           ├── CheckExemptionTables.py     # 게이트의 예외가 rules/<게이트>.toml 한 자리에만 있는지 · rules/ 파일이 3.10 에서도 같게 읽히는지
   │           ├── CheckLintScanRoots.py       # 게이트가 대상 뿌리를 손으로 조립하지 않는지(kLintTargetRelDirs 하나)
   │           └── CheckReportsRun.py          # report/ 의 보고서가 모두 LintReport 이고 --help 로 뜨는지
   │
@@ -263,13 +265,34 @@ py -3 -m Scripts stacks <pid> --samples 200                   # 스택 샘플러
 | 필요한 것 | 자리 |
 | --- | --- |
 | `--files` · 대상 파일 고르기 · 읽기 | `LintGate.addFilesArgument` · `selectTargetFiles` · `readFiles(mustContain=…)` |
-| 예외(이유 · 낡음 검사 포함) | `LintGate.mapExemption` · `seeExemption` · `useExemption` |
+| 예외(이유 · 낡음 검사 포함) | `lint/rules/<게이트>.toml` 의 `[exemption]` → `LintGate.mapExemption` · `seeExemption` · `useExemption` |
+| 게이트가 읽는 목록 · 표(티어 · 어휘 · 허용 파일) | `lint/rules/<게이트>.toml` 의 다른 키 → 클래스 `ruleSchema` + 모듈 수준 `LintGate.readRules` |
 | 주석 · 리터럴 가리기, 줄 번호 | `common.blankComments` · `blankCommentsAndLiterals` · `blankMatch` · `lineOf` |
 | include 줄 · 층 폴더 · include 가 가리키는 파일 | `common.iterIncludes` · `firstFolderAfter` · `IncludeResolver` |
 | 파일마다 무거운 정규식 | `common.flatMapInProcesses`(스레드는 GIL 에 막힌다) |
 
 예: `CheckCoreNetworkLayers` 는 `selectTargetFiles` → `readFiles` → `iterIncludes` · `firstFolderAfter` 로 층 표 하나를 대조하고,
 `CheckModuleTargets` 는 `IncludeResolver` 로 include 를 소속 모듈로 푼다. 자기 시험 조각(`selfTestCases`)이 없으면 `CheckLintsAreAlive` 가 실패한다.
+
+## 규칙 데이터 — `lint/rules/` 와 `RuleData`
+
+게이트가 빼 주는 자리(예외)와 게이트 · 등록부가 쓰는 긴 목록은 코드가 아니라 데이터다. `lint/rules/<이름>.toml` 하나에 두고,
+`common/RuleData.py` 가 읽고 모양을 검사한다. 이름은 게이트 이름(`CheckCoreLayers`) 또는 읽는 모듈 이름(`AcronymRegistry`)이다.
+
+```toml
+# 게이트 이름의 파일 — 맨 키(배열)가 먼저, 표가 뒤(TOML 은 표 뒤에 맨 키를 둘 수 없다)
+pawn_side = ["Source/GameFramework/Base/Actor/Control/Pawn*"]
+
+[exemption]                       # 예외 — 키의 뜻(경로 · fnmatch · `종류:이름`)은 게이트가 정한다, 이유 칸은 비울 수 없다
+"Source/Core/Math/VectorMath.cpp" = "영 벡터 단언 — Math 가 Log 아래라 링크 간선이 거꾸로 간다"
+```
+
+- **예외만 있는 게이트는 파일만 둔다.** `LintGate` 가 클래스를 만들 때 `rules/<게이트 이름>.toml` 의 `[exemption]` 으로 `mapExemption` 을
+  채운다. 파일이 없으면 빈 표다 — 새 게이트는 여전히 파일 하나 떨구기다.
+- **목록도 읽는 게이트**는 클래스에 `ruleSchema`(키 → `kKindReason` · `kKindText` · `kKindInteger` · `kKindTextList`)를 적고, 모듈 수준에서
+  `LintGate.readRules( 이름, 스키마, requiredKeys=… )` 로 읽어 지금까지의 이름(`_kEngineTier` …)에 담는다. 스키마에 없는 키 · 빈 이유 ·
+  종류가 다른 값 · 같은 값 두 번 · 빠진 필수 키는 `RuleDataError` 다(게이트는 종료 2).
+- 옮기지 않은 표와 그 까닭(정규식이 든 표, 여러 칸짜리 레코드, 언어가 정한 낱말)은 [결정 기록](../docs/09_Decisions.md) 5-2 에 있다.
 
 ## 커밋 훅과 병합 커밋
 
@@ -433,6 +456,15 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   자리만 보이는 예시는 `<게임>` 처럼 꺾쇠로 쓰고(게이트가 경로로 읽지 않는다), 아직 없는 파일은 백로그에만 적는다(백로그는 링크만 본다).
 - **`#!` 스크립트는 git 모드 100755 로 커밋한다**(`CheckExecutableBits`) — Windows 에서 만든 파일은 100644 로 들어가 리눅스에서만 `Permission denied` 가 난다
   (오버레이 포트 `openssl/unix/configure` 가 리눅스 CI 다섯 잡을 Configure 에서 세웠다). 새 스크립트는 `git update-index --chmod=+x <경로>`.
+- **규칙 데이터(`lint/rules/*.toml`)는 TOML 부분 집합으로만 쓴다** — CI 린트 잡의 `python3`(ubuntu-22.04)은 3.10 이라 `tomllib` 이 없고,
+  `common/RuleData.py` 의 부분 집합 읽기가 대신 읽는다(`[표]` · `키 = 값` · 문자열 · 정수 · 불 · 배열 · 주석). 점 키 · 인라인 표 · `[[표 배열]]` ·
+  여러 줄 문자열은 쓰지 않는다 — `CheckExemptionTables` 가 파일마다 두 읽기의 결과를 견준다. 데이터는 `--root` 가 아니라 스크립트 트리의 것을 읽는다
+  (자기 시험의 임시 트리에도 같은 규칙이 든다).
+- **규칙 데이터를 못 읽은 게이트는 모든 조각에서 종료 2 를 낸다** — 0 이 아니라서 `CheckLintsAreAlive` 에는 "살아 있다" 로 보인다. 그래서
+  그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
+- **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면
+  그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 등록부 · 제품 이름 · 함수 어휘)은
+  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `dev/MoveEngineFolders.py --sync-tier` 가 TOML 을 고쳐 쓴다.
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.

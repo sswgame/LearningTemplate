@@ -98,13 +98,14 @@ A reader who knows one of these names must be able to guess the rest; that is th
 `CheckFunctionVocabulary.py` enforces six checks on header declarations — acronym runs (`AcronymRun`), the banned
 verbs below (`BannedVerb`), abbreviations in function names (`Abbreviation`: `Attr` → `Attribute`), `check*`
 predicates (`CheckVerb`), `string_view`/`hashed_string` name pairs (`NamePair`) and bare getters (`BareGetter`).
-Declarations that predate a check sit in the gate's `mapExemption` (key `<Rule>:<HeaderStem>::<function>`, the reason
+Declarations that predate a check sit in the gate's exemption table, `[exemption]` in `Scripts/lint/rules/CheckFunctionVocabulary.toml`
+(key `<Rule>:<HeaderStem>::<function>`, the reason
 "개명 예정 <new name>" or "도메인 용어"; `CheckOutParameterNames.py` does the same for bare `out`); a new declaration is never added there unless the verb is
 the domain's own term (`UUID::generate`, `SurfaceBvh::build`), and a fixed name is removed from the table — a full run
 reports keys that no longer match. The `on*` and spell-it-out rules are kept by review.
 
 - **An acronym is written in capitals, everywhere.** What counts as an acronym is one list,
-  `Scripts/lint/AcronymRegistry.py` (`kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
+  `acronym` in `Scripts/lint/rules/AcronymRegistry.toml` (read by `Scripts/lint/AcronymRegistry.py` as `kAcronym`); a shortening (`Nav`, `Anim`, `Info`) is not one. Types, files, namespaces,
   enums, folders, modules and test executables: `UISystem`, `GPUScene`, `HTTPClient`, `UISystem.h`. Functions, variables and
   members: capitals in the middle or at the end (`updateUI`, `queryAABB`, `entityID`, `pUISystem`, `_pGPUScene`), all lower case
   as the first word (`uiSystem`, `_gpuScene`, `_id`). Two capital acronyms never touch (`RHIUI…` hides the boundary — spell one
@@ -112,7 +113,7 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
   their spelling (a third-party member that looks like ours goes in `kExternalName`: Box2D `bodyIdA`, Tracy `queryId`).
   `CheckAcronymSpelling.py` blocks Pascal spellings and touching capitals of the acronyms in `kEnforced` (every registered acronym);
   `AcronymRun` blocks a capital run in a function name that is not one registered acronym (`bindComputeUAV` — `UAV` is not
-  registered, so it stays `bindComputeUav`). A new acronym is added to `kAcronym` · `kEnforced` and rewritten across the tree with
+  registered, so it stays `bindComputeUav`). A new acronym is added to `acronym` · `enforced` in that data file and rewritten across the tree with
   `FormatAcronymSpelling.py` in one commit.
 - **One verb per concept.** Picking a synonym is how two names for one thing get born:
 
@@ -246,7 +247,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   unconditional includes; inside a branch, project headers, a blank line, then system headers. Never open a
   second block on the same condition family for the system headers (`CheckIncludeOrder.py` rejects it).
 - **Core folders are tiers** (`Common` → `Concurrency` · `Math` → `Memory` → `Container` → … → `Diagnostics` → `LogSink`, table in
-  `Scripts/lint/gate/CheckCoreLayers.py`): a file includes only its own folder or a lower tier, `.cpp` included. A lower tier that must
+  `Scripts/lint/rules/CheckCoreLayers.toml`): a file includes only its own folder or a lower tier, `.cpp` included. A lower tier that must
   reach up takes an interface or a function pointer (`ILockObserver`, `IAllocationTracker`, `RaceDetectContext::setReportFunction`).
   Recompute the table with `Scripts/lint/report/RunCoreLayerGraph.py`. Enforced by `CheckCoreLayers.py`.
 - Use the project type aliases from `Types.h`.

@@ -191,6 +191,9 @@ up with no list to edit — and it must carry a `selfTestCases` snippet proving 
 (or a `selfTestSkipReason` saying why it cannot), or the self-test fails.
 A gate that takes `--files` picks its files with `addFilesArgument` / `selectTargetFiles` (same rule for the hook's
 staged subset and the full scan; it never descends into `kNotOurDirNames` — build output and downloaded tools).
+**Rule data is not code:** a gate's exemptions (`[exemption]`, path or name → reason) and its long lists (tiers, vocabularies,
+allowed files) live in `Scripts/lint/rules/<Gate>.toml`, read through `Scripts/common/RuleData.py` (schema-checked; no file = no
+exemptions, so a new gate is still one file). `selftest/CheckExemptionTables.py` rejects exemption tables written in the gate source.
 
 **CMake has no lint list either.** `Scripts/lint/LintCatalog.py` walks `gate/` and `selftest/`, and
 `Scripts/generate/GenerateLintTargets.py` turns that into the `add_custom_target` / `sw_registerScriptTest` block CMake
