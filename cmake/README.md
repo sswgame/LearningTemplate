@@ -9,7 +9,7 @@ cmake/
 ├── Config/                      [1계층: 전역 설정 및 프로젝트 옵션]
 │   ├── BuildOptions.cmake       — SW_* 빌드 기능 옵션 및 프로젝트 메타데이터 정의
 │   ├── LoadConfigConstants.cmake — Constants.py 의 상수를 SW_* 변수로 (상수만 필요한 곳은 이것만 include)
-│   ├── GenerateConfigConstants.cmake — 위 상수로 ConfigConstants.h · PackFormat.gen.h · CookContract.gen.h · Shipping 호스트 기본값 생성 (한 번)
+│   ├── GenerateConfigConstants.cmake — configure 생성기 다섯을 한 프로세스로(GenerateConfigureFiles.py) · 상수 읽기 · 게임 프리셋 경로 · ConfigConstants.h (한 번)
 │   └── ConfigConstants.h.in     — C++ 헤더 템플릿
 │
 ├── Environment/                 [2계층: 개발 환경 및 툴체인 주입 (project() 이전)]
@@ -19,6 +19,7 @@ cmake/
 │   ├── FindWindowsTools.cmake   — lib.exe / mt.exe 탐색 및 clang-cl 아카이버 재바인딩
 │   ├── WindowsToolSearch.cmake  — MSVC lib.exe · SDK mt.exe 폴더 탐색 (본 프로젝트와 vcpkg 포트 툴체인이 함께 쓴다)
 │   ├── HostPath.cmake           — PATH 앞에 붙이기(sw_prependEnvPath) · Git for Windows 기본 경로
+│   ├── FindLibclang.cmake       — ReflectionParser 가 링크하는 libclang 찾기(환경 변수 → toolchain → 배포판 LLVM, sw_findLibclang)
 │   └── PythonUtils.cmake        — Python 인터프리터 탐색(한 곳) 및 스크립트 실행 헬퍼
 │
 ├── Modules/                     [3계층: 컴파일러/플랫폼/아키텍처 INTERFACE 플래그]
@@ -32,15 +33,22 @@ cmake/
 │   └── Toolchain/VcpkgTsan/     — TSan 구성(CI-Debug-TSAN) 전용 triplet: Jolt · Box2D 를 -fsanitize=thread 로 (기본 CI 캐시 키 밖에 두려고 폴더를 가른다)
 │
 └── Engine/                      [4계층: 엔진 빌드 파이프라인 및 타겟 헬퍼 (project() 이후)]
-    ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐
-    │                               (include 되는 순간 실행된다 — 타깃 규칙 셋보다 먼저여야 한다)
+    ├── BuildLayout.cmake         — 산출물이 어디 놓이나: 출력 경로 · sw_global_options · IPO · 런타임 복사 큐,
+    │                               `Bin` 의 옛 자리 · 꺼진 모듈 산출물 지우기(sw_removeStaleBinaryOutputs)
+    │                               (include 되는 순간 실행된다 — 타깃 규칙 파일보다 먼저여야 한다. 아래 파일은 함수만 정의한다)
     ├── UnbuiltSources.cmake      — 이 구성이 일부러 짓지 않는 소스 목록(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙 → CheckSourceGlob)
-    ├── ModuleTargets.cmake       — 모듈 · 실행 파일 타깃: 내보내기 · 동적 모듈 레지스트리 · ABI 도장 · 모듈 팩토리 · delay-load
+    ├── TargetCompileRules.cmake  — 타깃 하나의 컴파일 규칙: 내보내기 매크로 짝 · PCH · 결정성 TU(sw_markDeterministicSources)
+    ├── DelayLoad.cmake           — Windows 지연 로드를 정하는 유일한 자리(sw_addDelayloadHook · sw_addDelayloadSystemDlls — CheckDelayLoadSites)
+    ├── EngineAbiStamp.cmake      — 핫 리로드 ABI 도장(Core · Engine 헤더 지문을 Engine 과 Dev 모듈이 같이 박는다)
+    ├── ModuleRegistry.cmake      — 동적 모듈 레지스트리: 등록(ABI 도장 · 서버 전용 표식) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
+    ├── ModuleTargets.cmake       — 모듈 라이브러리 팩토리(sw_addModuleLibrary)와 RHI 백엔드 · 키트 · 게임 모듈, 모듈 출력 폴더 · 서드파티 DLL 모으기
+    ├── ExecutableTargets.cmake   — 실행 파일의 링크 · 배치: 통째 링크(sw_linkWholeArchive) · App/Server 의존 · 프로세스 매니페스트 · 리눅스 Shipping 심볼 분리
     ├── StageModuleRuntimeDlls.cmake — `cmake -P` 스크립트: 모듈의 서드파티 DLL 을 모듈마다 스테이지에서 applocal 로 모아 `Bin` 에 한 벌(sw_stageModuleRuntimeDlls)
     ├── TestTargets.cmake         — 시험 타깃 · CTest 등록(실행 파일 · 샤드 · 새니타이저 보정 · 스크립트 시험)
-    ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환, 꺼진 모듈은 짓지 않고 `Bin/Modules/` 에 복사,
-    │                               `Bin` 의 옛 자리 · 꺼진 모듈 산출물 지우기(sw_removeStaleBinaryOutputs)
-    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트
+    ├── ModuleManifest.cmake      — 모듈 매니페스트(`<모듈>.module.json`) 해석: 켜짐 · 플랫폼 · 구성 · 의존 · 순환 · 적재 순서, Dev 는 `Bin/Modules/` 에 복사
+    │                               (`cmake -P` 로도 include 된다 — PythonTest_TestKitBuildOrder)
+    ├── ModuleActivation.cmake    — 해석 결과를 묻는 쪽: 꺼진 모듈 건너뛰기(sw_skipInactiveModule) · 꺼진 키트를 쓰는 시험 소스 빼기
+    ├── ThirdPartyLibs.cmake      — 서드파티를 어떻게 붙이나: SYSTEM include, vcpkg CONFIG 패키지(못 찾으면 구성 실패), 헤더 전용 포트, Engine 압축 코덱
     ├── AssetAndToolTargets.cmake— 에셋 쿠킹, Doxygen 문서, 린트 타겟 및 CTest 등록 헬퍼
     ├── ReflectionCodeGen.cmake  — ReflectionParser 코드 생성 파이프라인 (sw_addReflectionStep)
     ├── RuntimeDependencies.cmake— vcpkg 경로 조회, Vulkan 레이어·mimalloc 런타임 DLL 복사
@@ -62,7 +70,7 @@ cmake/
 
 | 함수 | 용도 |
 |------|------|
-| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`ModuleTargets.cmake`) |
+| `sw_configurePch` | `SW_ENABLE_PCH`가 ON일 때만 `target_precompile_headers`를 적용 (`TargetCompileRules.cmake`) |
 | `sw_configureDllExports` | 내보내기 매크로 짝(ENGINE · GF · MODULE) |
 | `sw_prependEnvPath` | configure 프로세스의 PATH 앞에 폴더를 붙인다(호스트 구분자, 이미 있으면 그대로 — `HostPath.cmake`) |
 | `sw_queueRuntimeCopy` / `sw_emitRuntimeCopies` | 런타임 DLL 복사를 모아 두었다가 타겟당 POST_BUILD 한 번으로 방출 (`BuildLayout.cmake`) |
@@ -80,6 +88,8 @@ cmake/
 | `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
 | `sw_registerScriptTest` | 파이썬 스크립트 하나를 CTest 항목 하나로(PythonTest · QA · 린트가 같은 속성 철자). 린트는 **목록이 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 의 등록 함수가 이것을 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |
+| `sw_addTestExecutable` | 시험 실행 파일 하나 — 소스는 그 폴더를 훑고(`SOURCES` 를 주면 그것), 같이 컴파일할 엔진 밖 소스는 `EXTRA_SOURCES` (`TestTargets.cmake`) |
+| `sw_findEngineCompressionLibraries` | Engine 의 압축 코덱(zlib · LZ4 · Zstd) 링크 항목 — 찾기 · 진단을 한 자리에 (`ThirdPartyLibs.cmake`) |
 
 ## 고친 뒤 구성이 같은지
 
@@ -126,8 +136,8 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   CMake 는 IPO 아카이브 명령을 `project()` 때 정해 두고, `check_ipo_supported` 는 거짓 NO 를 내서 직접 판정한다(`cmake/Environment/ToolchainBinaries.cmake`). `SW_ENABLE_LTO` 하나가 Release · Shipping.
 - **configure 의 PATH 는 `sw_prependEnvPath` 로만 고친다**(`cmake/Environment/HostPath.cmake` — 호스트 구분자, 이미 있으면 그대로). project() 전에는
   호스트 판정 `CMAKE_HOST_WIN32` 로 고른다(이 PC 의 --fresh 구성에서는 `WIN32` 도 그때 이미 1 이었다 — 문서가 보장하는 것은 호스트 변수다).
-- **빌드 스크립트 리팩터 뒤의 자리**(2026-10-06): 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
-  `CheckCmakeConventions` 가 막는다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
+- **빌드 스크립트의 자리**: 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
+  `CheckCmakeConventions` 가 막는다), 지연 로드는 `DelayLoad.cmake` 하나(`CheckDelayLoadSites` 가 그 파일 이름을 든다 — 옮기면 게이트도 고친다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
   vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
   보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
 - **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.
@@ -183,5 +193,10 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
   `/arch:AVX2` 가 `a * b + c` 를 FMA 로 합쳐 파괴 해시가 Debug 와 갈렸다(파쇄 결과부터). 대상은 Engine `Destruction/` 의 시뮬레이션 TU 여덟 ·
   `GF_NetDestruction` · Core `Math/VectorMath.cpp`(거리 · 길이가 줄 밖 함수라 그쪽도 — 빼면 사건 넷째의 반경 피해에서 다시 갈린다). 새 결정성 경로는
   이 함수에 파일을 더하고 기준값 시험을 붙인다.
+- **`TestBin` 의 서드파티 DLL 은 첫 빌드와 다시 빌드가 다르다** — vcpkg applocal(실행 파일 POST_BUILD 첫 단계)이 옆의 키트 DLL import 까지 따라가는데, 키트 DLL 은 그 뒤
+  단계가 복사한다. 깨끗한 폴더의 첫 빌드에는 `sqlite3` · `libpq` · `libssl` · `libcrypto` 가 없고 다시 지으면 생긴다(시험은 작업 폴더 `Bin` 에서 찾아 어느 쪽이든 돈다).
+  산출물 목록을 견줄 때는 같은 단계(둘 다 다시 빌드)끼리 견준다.
+- **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 `Platform/Windows.cmake` 의 컴파일 정의다** — 헤더 정의(`PlatformOsHeaders.h`)는 그보다 먼저 `windows.h` 를 읽은 TU 에 닿지 않는다.
+  그 헤더에서 OS 헤더를 빼는 일(백로그 1-9)은 이 정의에 기댄다. `sw_global_options` 를 링크하지 않는 타깃은 이 정의도 없다.
 - **`cmake -P` 스크립트는 `cmake_minimum_required` 를 먼저 둔다** — 없으면 정책이 OLD 라 CMake 3.x(CI 러너)에서 `IN_LIST` 가 "Unknown arguments" 다.
   CMake 4.x(이 PC)는 3.5 이전 정책의 OLD 를 지워 늘 통과하므로 로컬에서는 안 보인다. `-P` 로 include 되는 모듈(`ModuleManifest` · `RhiBackends`)은 그것이 없으면 구성을 세운다.

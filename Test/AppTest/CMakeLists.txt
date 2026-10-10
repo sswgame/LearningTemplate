@@ -16,16 +16,9 @@ endif()
 # 돌리지 않으므로, 그 그물은 실제 `App.exe` 를 돌려 보는 것뿐이다. 그 집합은 GPU·창이 필요하니
 # 아래에서 `hostgpu` 로 갈라 둔다. 헤드리스 씬 쿠킹(`TestAppCook.cpp`)은 창 · GPU 가 없어도 돌아 `nogpu` 쪽에 남는다.
 #
-# 소스를 명시하는 이유도 같다. 글롭이면 App 소스를 하나 끌어올 때마다 그 의존성이 조용히 따라온다.
+# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). App 소스는 하나도 끌어오지 않는다 — 끌어오면 그 의존성이 조용히 따라온다.
 sw_addTestExecutable(AppTest
 	HOST_SPLIT
-	SOURCES
-		AppTestUtil.cpp
-		TestAppCook.cpp
-		TestAppScenario.cpp
-		TestAppSmoke.cpp
-		TestAppUI.cpp
-		TestDevCommandShipping.cpp
 	LIBS
 		Engine
 	LABELS

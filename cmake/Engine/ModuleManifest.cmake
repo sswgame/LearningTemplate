@@ -1,7 +1,9 @@
 # ==============================================================================
 # @file cmake/Engine/ModuleManifest.cmake
-# @brief 모듈 매니페스트(`<모듈>.module.json`) 읽기 · 해석 — 꺼진 모듈은 짓지 않고, 매니페스트를 `Bin/Modules/` 에 복사한다
+# @brief 모듈 매니페스트(`<모듈>.module.json`) 읽기 · 해석 — 켜짐 · 의존 확인 · 적재 순서, Dev 는 매니페스트를 `Bin/Modules/` 에 복사한다
 # ==============================================================================
+#
+# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기 · 꺼진 키트의 시험 소스 빼기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
 #
 # 규칙은 런타임(`Engine/Module/ModuleCatalog.cpp`)과 같다 — 한쪽만 고치면 빌드한 것과 App 이 올리는 것이 갈린다.
 # 그래서 해석 결과(켜진 모듈 · 적재 순서)를 `Bin/Modules/ResolvedModules.txt` 로 남기고, 시험(`ModuleCatalogTest.BuildAndRuntimeAgree`)이
@@ -335,145 +337,6 @@ function(sw_resolveModuleManifests)
 	list(LENGTH swNames swManifestCount)
 	list(LENGTH swActive swActiveCount)
 	message(STATUS "[Module] ${swActiveCount} of ${swManifestCount} modules active (${sw_platform_name} ${sw_configuration_name} ${SW_TARGET_TYPE})")
-endfunction()
-
-# ------------------------------------------------------------------------------
-# sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
-#   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
-#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
-#      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
-#   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 시험 실행 파일(지금은 `TestBin`),
-#      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
-#   실행 중인 App · 시험이 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
-# ------------------------------------------------------------------------------
-function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
-	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")
-	set(swModulePattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
-	set(swImageSuffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")
-	set(swStale "")
-
-	file(GLOB swModuleFolderFiles LIST_DIRECTORIES false "${swBinDir}/Modules/*")
-	foreach(swPath IN LISTS swModuleFolderFiles)
-		get_filename_component(swStem "${swPath}" NAME_WE)
-		get_filename_component(swSuffix "${swPath}" LAST_EXT)
-		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
-		get_filename_component(swFileName "${swPath}" NAME)
-		if(swFileName MATCHES "_temp_")
-			list(APPEND swStale "${swPath}")
-		elseif(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
-			list(APPEND swStale "${swPath}")
-		elseif((swSuffix STREQUAL ".dll" OR swSuffix STREQUAL ".pdb") AND NOT swStemNoPrefix MATCHES "${swModulePattern}")
-			list(APPEND swStale "${swPath}")
-		endif()
-	endforeach()
-
-	file(GLOB swBinFiles LIST_DIRECTORIES false "${swBinDir}/*")
-	foreach(swPath IN LISTS swBinFiles)
-		get_filename_component(swFileName "${swPath}" NAME)
-		get_filename_component(swStem "${swPath}" NAME_WE)
-		get_filename_component(swSuffix "${swPath}" LAST_EXT)
-		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
-		if(swStemNoPrefix MATCHES "${swModulePattern}" AND (swSuffix IN_LIST swImageSuffixes OR swFileName MATCHES "\\.module\\.json$"))
-			list(APPEND swStale "${swPath}")
-		elseif(swStem MATCHES "Test$" AND (swSuffix STREQUAL ".exe" OR swSuffix STREQUAL ".pdb" OR swSuffix STREQUAL ""))
-			list(APPEND swStale "${swPath}")
-		elseif(swSuffix STREQUAL ".pdb" AND EXISTS "${swBinDir}/Symbols/${swFileName}")
-			list(APPEND swStale "${swPath}")
-		endif()
-	endforeach()
-
-	set(swRemovedCount 0)
-	foreach(swPath IN LISTS swStale)
-		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${swPath}" RESULT_VARIABLE swResult OUTPUT_QUIET ERROR_QUIET)
-		if(swResult EQUAL 0 AND NOT EXISTS "${swPath}")
-			math(EXPR swRemovedCount "${swRemovedCount} + 1")
-		else()
-			message(WARNING "[Module] Could not remove a stale output (in use?): ${swPath}")
-		endif()
-	endforeach()
-	if(swRemovedCount GREATER 0)
-		message(STATUS "[Module] Removed ${swRemovedCount} stale output(s) from Bin (old layout or modules this configuration turns off)")
-	endif()
-endfunction()
-
-# 모듈 NAME 이 이 구성에서 켜져 있으면 OUT_VAR 를 ON 으로 둔다. 매니페스트가 없는 모듈은 구성을 세운다(모든 동적 모듈은 매니페스트를 갖는다).
-function(sw_isModuleActive NAME OUT_VAR)
-	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
-
-	if(NOT NAME IN_LIST swNames)
-		message(FATAL_ERROR "[Module] '${NAME}' has no manifest — add ${NAME}.module.json next to its CMakeLists.txt")
-	endif()
-
-	get_property(swActive GLOBAL PROPERTY SW_MODULE_${NAME}_ACTIVE)
-	set(${OUT_VAR} ${swActive} PARENT_SCOPE)
-endfunction()
-
-# 꺼진 모듈 NAME 의 폴더를 "이 구성이 짓지 않는다" 로 적고 OUT_VAR 를 ON 으로 둔다(켜져 있으면 OFF). 모듈 타깃을 만드는 함수의 첫 줄에서 부른다.
-function(sw_skipInactiveModule NAME OUT_VAR)
-	sw_isModuleActive(${NAME} swActive)
-
-	if(swActive)
-		set(${OUT_VAR} OFF PARENT_SCOPE)
-		return()
-	endif()
-
-	get_property(swReason GLOBAL PROPERTY SW_MODULE_${NAME}_REASON)
-	message(STATUS "[Module] ${NAME} is not built — ${swReason}")
-	sw_declareUnbuiltDirectory("${CMAKE_CURRENT_SOURCE_DIR}")
-	set(${OUT_VAR} ON PARENT_SCOPE)
-endfunction()
-
-# 소스 목록 LIST_VAR 에서 꺼진 키트의 헤더(`GameFramework/Kits/<묶음>/<키트>/…`)를 include 하는 파일을 뺀다 — 시험 실행 파일이 꺼진 키트를 링크하지 않게.
-# 뺀 것은 "이 구성이 짓지 않는 소스" 로 적는다.
-function(sw_excludeSourcesOfInactiveKits LIST_VAR)
-	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
-	set(swInactivePrefixes "")
-
-	foreach(swName IN LISTS swNames)
-		get_property(swKind GLOBAL PROPERTY SW_MODULE_${swName}_KIND)
-		get_property(swActive GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE)
-
-		if(swKind STREQUAL "Kit" AND NOT swActive)
-			get_property(swDirectory GLOBAL PROPERTY SW_MODULE_${swName}_DIR)
-			file(RELATIVE_PATH swRelative "${CMAKE_SOURCE_DIR}/Source" "${swDirectory}")
-			list(APPEND swInactivePrefixes "${swRelative}/")
-		endif()
-	endforeach()
-
-	if(NOT swInactivePrefixes)
-		return()
-	endif()
-
-	set(swKept "")
-	set(swDropped "")
-
-	foreach(swSource IN LISTS ${LIST_VAR})
-		set(swUsesInactive OFF)
-
-		if(swSource MATCHES "\\.(cpp|h)$")
-			file(STRINGS "${swSource}" swIncludes REGEX "^#include \"GameFramework/Kits/")
-
-			foreach(swPrefix IN LISTS swInactivePrefixes)
-				string(FIND "${swIncludes}" "\"${swPrefix}" swHit)
-
-				if(NOT swHit EQUAL -1)
-					set(swUsesInactive ON)
-				endif()
-			endforeach()
-		endif()
-
-		if(swUsesInactive)
-			list(APPEND swDropped "${swSource}")
-		else()
-			list(APPEND swKept "${swSource}")
-		endif()
-	endforeach()
-
-	if(swDropped)
-		sw_declareUnbuiltSources(${swDropped})
-	endif()
-
-	set(${LIST_VAR} ${swKept} PARENT_SCOPE)
 endfunction()
 
 # 모듈 이름 목록(LIST_VAR)을 의존이 먼저 · 동점은 이름 순으로 줄 세운다(Kahn — 런타임 `TopologicalSortUtil::sortByDependency` 와 같다).

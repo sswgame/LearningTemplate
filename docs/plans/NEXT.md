@@ -2,7 +2,14 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다.
 
-## 지금 상태 (2026-10-10 밤 — 이름 정리 기계적 치환까지 들어갔다)
+## 지금 상태 (2026-10-10 밤 — 이름 정리 기계적 치환 · CMake 구조 정리까지 들어갔다)
+
+- CMake 구조 정리(2026-10-10 밤, 동작 불변): `cmake/Engine/ModuleTargets.cmake` 를 여섯 파일로(`TargetCompileRules` · `DelayLoad` · `EngineAbiStamp` · `ModuleRegistry` · `ModuleTargets` · `ExecutableTargets`),
+  `ModuleManifest.cmake` 에서 `ModuleActivation.cmake` 를 가르고 옛 산출물 지우기를 `BuildLayout.cmake` 로, Engine 압축 코덱 찾기를 `sw_findEngineCompressionLibraries`, libclang 찾기를
+  `cmake/Environment/FindLibclang.cmake`, 시험 폴더 손 목록을 폴더 훑기 + `EXTRA_SOURCES`, `GenerateConfigConstants.cmake` 의 죽은 변수 · 흩어진 절 정리. 하지 않은 것과 이유는 결정 기록 5-2.
+  검증: 네 프리셋(Ninja-Debug · Ninja-Shipping · Ninja-Debug-Server · Ninja-Shipping-Server)의 TU 별 명령 · 링크 엣지 · ninja 타깃 · File API 답이 전과 같다(EditorTest 오브젝트 순서만 다르다).
+  `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮긴 커밋은 모든 Windows TU 에 정의 둘이 붙는 것 말고 다른 차이가 없다. 백로그 1-9 ①(OS 헤더를 PCH 에서 빼기)의 선행이 끝났다.
+  풀 시험은 돌리지 않았다(사용자 결정 — 에디터 보강 뒤 한 번에) — 아래 7번 "전체 검증" 에 그대로 든다.
 
 - 이름 정리 기계적 치환(2026-10-10 밤): [이름 정리](NamingPass.md) "끝난 것" 절. 두 린트의 "개명 예정" 59 줄을 고치고 표에서 지웠다(`CheckOutParameterNames` 예외 표는 비었다).
   약어 통일이 남긴 문자열 `UiDocument` · `ExpectUi` 도 `UIDocument` · `ExpectUI` 로 고쳤다(UI 시험 셋이 지고 있었다).

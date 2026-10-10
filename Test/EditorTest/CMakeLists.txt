@@ -9,65 +9,15 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 	return()
 endif()
 
-# Editor 소스를 직접 나열해 같이 컴파일한다 — `EditorModule` 은 MODULE DLL 이라 링크할 수 없다.
+# 시험 소스는 이 폴더를 훑는다(`sw_addTestExecutable`). Editor 소스는 직접 나열해 같이 컴파일한다 — `EditorModule` 은 MODULE DLL 이라
+# 링크할 수 없다.
 #
 # **이 목록은 "Editor/Common 전부" 도 "ImGui 를 안 쓰는 것 전부" 도 아니다.** 테스트가 실제로 링크해야
 # 하는 것만 적는다. 기계가 대신 고를 수 없어서 목록은 손으로 두되,
 # `CheckTestSuites.py` 가 썩는 두 방향을 막는다: 파일이 옮겨져 경로가 죽는 것과, ImGui 를 include 하는
 # 파일이 섞여 들어오는 것(EditorTest 는 ImGui 를 링크하지 않으므로 그 순간 빌드가 깨진다).
 sw_addTestExecutable(EditorTest
-	SOURCES
-		Common/Workspace/TestAssetHotReload.cpp
-		Common/Workspace/TestConfigHotReload.cpp
-		Common/Config/TestEditorToolDefaults.cpp
-		Common/Workspace/TestEditorConfigFileSchema.cpp
-		Common/Workspace/TestEditorAssetType.cpp
-		Common/Asset/TestEditorAssetValidation.cpp
-		AssetActions/TestEditorAssetTypeActions.cpp
-		Common/Commands/TestEditorBackgroundTask.cpp
-		Common/Commands/TestEditorCommandRegistry.cpp
-		Common/Commands/TestEditorDataTableCommands.cpp
-		Common/Backend/TestEditorDrawReleaseQueue.cpp
-		Common/Commands/TestEditorGlobalVariableCommands.cpp
-		Common/Workspace/TestEditorLayoutStore.cpp
-		Common/Widgets/TestEditorLabelLayout.cpp
-		Common/Widgets/TestEditorListFilter.cpp
-		Common/Widgets/TestEditorNodeGraph.cpp
-		Common/Commands/TestEditorLogCommands.cpp
-		Common/GUI/TestEditorPanelDocument.cpp
-		Common/Workspace/TestEditorRegistry.cpp
-		Common/Workspace/TestEditorPlaySession.cpp
-		Common/Commands/TestEditorResourceIndex.cpp
-		Common/Commands/TestEditorSceneCommands.cpp
-		Common/Workspace/TestEditorSceneGenerationSync.cpp
-		Common/Workspace/TestEditorSessionPolicy.cpp
-		Common/SourceControl/TestEditorSourceControl.cpp
-		Common/Workspace/TestEditorTransaction.cpp
-		Common/Commands/TestEditorTransformCommands.cpp
-		Common/Commands/TestEditorToolAssetCommands.cpp
-		Common/Commands/TestSequenceTimingUtil.cpp
-		Viewport/TestEditorViewportMath.cpp
-		Common/Workspace/TestEditorWindowTitle.cpp
-		Common/Workspace/TestEditorWorkspace.cpp
-		Panels/TestContentBrowserLogic.cpp
-		Panels/TestInspectorBuiltinValue.cpp
-		Panels/TestInspectorPropertyLayout.cpp
-		Common/Commands/TestEditorViewportPick.cpp
-		Common/Commands/TestEditorViewportPreview.cpp
-		Viewport/TestEditorGridUtil.cpp
-		Viewport/TestEditorViewTargetUtil.cpp
-		Viewport/TestEditorVisualizerGeometry.cpp
-		Common/Workspace/TestFileWatchDispatcher.cpp
-		Common/Localization/TestLocalizationTools.cpp
-		Common/Asset/TestHeightfieldImporter.cpp
-		Common/Workspace/TestEditorSelection.cpp
-		Common/Asset/TestModelImporter.cpp
-		Panels/TestProfilerScopeHistory.cpp
-		Popups/TestQuickLauncherLayout.cpp
-		Panels/TestTileMapPaintUtil.cpp
-		Panels/TestUIPreviewLogic.cpp
-		Common/Asset/TestTexturePipeline.cpp
-		Common/Asset/TestVrmMaterialImporter.cpp
+	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"

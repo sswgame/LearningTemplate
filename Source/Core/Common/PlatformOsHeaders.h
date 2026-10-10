@@ -7,7 +7,8 @@
  */
 #pragma once
 // ------------------------------------------------------------------------------
-// 1) Windows — NOMINMAX · WIN32_LEAN_AND_MEAN 을 정의한 뒤 SDK 헤더
+// 1) Windows — SDK 헤더. NOMINMAX · WIN32_LEAN_AND_MEAN 은 CMake 가 모든 TU 에 정의한다(cmake/Modules/Platform/Windows.cmake)
+//    — 이 헤더보다 먼저 windows.h 를 include 하는 서드파티 헤더에도 걸린다. 아래 정의는 빌드 플래그 없이 헤더를 읽는 도구용이다.
 // ------------------------------------------------------------------------------
 
 #if defined( SW_PLATFORM_WINDOWS )

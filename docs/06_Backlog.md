@@ -464,8 +464,8 @@
   (`CI-Debug -DSW_ENABLE_PCH=OFF`)에서 통과했다. B4 로 실패 보고(`CiFailureReport.py`)가 나아진 뒤 다음 CI 주석으로 본다.
 - **imgui-node-editor vcpkg 오버레이**(`ThirdParty/imgui-node-editor/vcpkg-port/`, `<exception>` 패치)는 업스트림이 같은 고침을 받으면 지운다(2026-10-06 확인: 업스트림 vcpkg port-version 4 · 원본 master · develop 모두 아직 없음. vcpkg PR 은 내지 않는다 — 사용자 결정, 외부 공개).
 - **include · 전방 선언 남은 후보.** ① OS 헤더(`Core/Common/PlatformOsHeaders.h` — `Windows.h` · `DbgHelp.h` · `Xinput.h` …)가 `EngineMinimal.h` 를 거쳐
-  PCH 에 남아 있다(TU 2746 · `windows.h` 1671). 빼려면 먼저 `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 을 CMake 정의로 옮기고(서드파티가 `windows.h` 를 먼저 include 해도
-  min/max 매크로가 안 생기게), Win32 · POSIX API 를 쓰는 파일이 직접 include 한다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
+  PCH 에 남아 있다(TU 2746 · `windows.h` 1671). `NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 이제 CMake 정의다(`cmake/Modules/Platform/Windows.cmake` — 서드파티가 먼저
+  `windows.h` 를 include 해도 min/max 매크로가 안 생긴다). 남은 일은 Win32 · POSIX API 를 쓰는 파일이 직접 include 하는 것이다 — 글자 그래프로 찾은 후보 26 개(`Core/Common/Macros.h` · `ModuleCompiler.cpp` ·
   `WindowsFileWatcher.h` · `InputManagerWin32.cpp` · `XInputGamepadDevice.h` · `TestFramework.cpp` …, 오탐 섞임)를 빌드로 하나씩 확인하는 단계다.
   ② `GameObjectManager.h` 의 값 멤버 서브시스템 8 개(`ScenePhysics` · `SceneNavigation` · `SceneAudio` · `SceneOverlapWorld2D` · `PrimitiveRegistry` ·
   `ComponentRegistry` · `CameraRegistry` · `AnimationSystem`)를 `unique_ptr` 로 바꾸면 GOM 을 include 하는 234 TU 에서 헤더 32 개(약 4,700 줄, 서드파티 없음 —

@@ -1,10 +1,10 @@
 # ==============================================================================
 # @file cmake/Engine/BuildLayout.cmake
-# @brief 산출물이 어디에 놓이나 — 출력 경로, 전역 옵션 타겟, IPO, 런타임 복사 큐
+# @brief 산출물이 어디에 놓이나 — 출력 경로, 전역 옵션 타겟, IPO, 런타임 복사 큐, `Bin` 의 옛 자리 산출물 지우기
 # ==============================================================================
 
 # 이 파일은 함수만 정의하지 않는다. include 되는 순간 출력 경로와 sw_global_options 가 정해진다.
-# 그래서 타깃 규칙(UnbuiltSources · ModuleTargets · TestTargets)보다 먼저 include 해야 한다.
+# 그래서 타깃 규칙(UnbuiltSources · TargetCompileRules · ModuleTargets · TestTargets …)보다 먼저 include 해야 한다.
 
 # ------------------------------------------------------------------------------
 # 플랫폼 · 구성 이름 — 매니페스트(_listPlatform · _listConfiguration) · 모듈 해석 · 배포 백엔드 확인이 같은 낱말을 쓴다(런타임 ModuleCatalog 와 같은 표).
@@ -184,4 +184,63 @@ function(sw_deployRuntimeDependencies TARGET_NAME)
 	endif()
 	sw_copyTracyRuntime(${TARGET_NAME})
 	sw_emitRuntimeCopies(${TARGET_NAME})
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_removeStaleBinaryOutputs — Dev `Bin` 의 옛 산출물을 configure 때 지운다(ninja 는 지어 놓은 파일을 치우지 않는다).
+#   1) `Bin/Modules` 의 모듈 산출물(GF_* · RHI_* · EditorModule · SWGame*) 가운데 이 구성에서 꺼진 모듈의 것 — 켜진 모듈 것은 건드리지 않는다.
+#      서드파티 DLL · PDB(모듈 이름 꼴이 아닌 것 — 서드파티는 `Bin` 에 한 벌, `sw_stageModuleRuntimeDlls`)와 남은 섀도 복사본(`<모듈>_temp_p<pid>_…`).
+#      살아 있는 App 이 쓰는 섀도 복사본은 잠겨 있어 지워지지 않는다 — 아래 경고로 남는다.
+#   2) `Bin` 바로 아래의 옛 자리 산출물 — 모듈 DLL · PDB · 매니페스트(지금은 `Bin/Modules`), 시험 실행 파일(지금은 `TestBin`),
+#      `Bin/Symbols` 에 같은 이름이 생긴 PDB(옛 자리).
+#   실행 중인 App · 시험이 DLL 을 쥐고 있으면 지우지 못한다 — 경고만 하고 넘어간다(다음 configure 가 다시 지운다).
+# ------------------------------------------------------------------------------
+function(sw_removeStaleBinaryOutputs ACTIVE_MODULES)
+	set(swBinDir "${CMAKE_BINARY_DIR}/Bin")
+	set(swModulePattern "^(GF_.+|RHI_.+|EditorModule|SWGame.*)$")
+	set(swImageSuffixes ".dll;.pdb;.so;.exp;.lib;.ilk;.debug")
+	set(swStale "")
+
+	file(GLOB swModuleFolderFiles LIST_DIRECTORIES false "${swBinDir}/Modules/*")
+	foreach(swPath IN LISTS swModuleFolderFiles)
+		get_filename_component(swStem "${swPath}" NAME_WE)
+		get_filename_component(swSuffix "${swPath}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
+		get_filename_component(swFileName "${swPath}" NAME)
+		if(swFileName MATCHES "_temp_")
+			list(APPEND swStale "${swPath}")
+		elseif(swSuffix IN_LIST swImageSuffixes AND swStemNoPrefix MATCHES "${swModulePattern}" AND NOT swStemNoPrefix IN_LIST ACTIVE_MODULES)
+			list(APPEND swStale "${swPath}")
+		elseif((swSuffix STREQUAL ".dll" OR swSuffix STREQUAL ".pdb") AND NOT swStemNoPrefix MATCHES "${swModulePattern}")
+			list(APPEND swStale "${swPath}")
+		endif()
+	endforeach()
+
+	file(GLOB swBinFiles LIST_DIRECTORIES false "${swBinDir}/*")
+	foreach(swPath IN LISTS swBinFiles)
+		get_filename_component(swFileName "${swPath}" NAME)
+		get_filename_component(swStem "${swPath}" NAME_WE)
+		get_filename_component(swSuffix "${swPath}" LAST_EXT)
+		string(REGEX REPLACE "^lib" "" swStemNoPrefix "${swStem}")
+		if(swStemNoPrefix MATCHES "${swModulePattern}" AND (swSuffix IN_LIST swImageSuffixes OR swFileName MATCHES "\\.module\\.json$"))
+			list(APPEND swStale "${swPath}")
+		elseif(swStem MATCHES "Test$" AND (swSuffix STREQUAL ".exe" OR swSuffix STREQUAL ".pdb" OR swSuffix STREQUAL ""))
+			list(APPEND swStale "${swPath}")
+		elseif(swSuffix STREQUAL ".pdb" AND EXISTS "${swBinDir}/Symbols/${swFileName}")
+			list(APPEND swStale "${swPath}")
+		endif()
+	endforeach()
+
+	set(swRemovedCount 0)
+	foreach(swPath IN LISTS swStale)
+		execute_process(COMMAND "${CMAKE_COMMAND}" -E rm -f "${swPath}" RESULT_VARIABLE swResult OUTPUT_QUIET ERROR_QUIET)
+		if(swResult EQUAL 0 AND NOT EXISTS "${swPath}")
+			math(EXPR swRemovedCount "${swRemovedCount} + 1")
+		else()
+			message(WARNING "[Module] Could not remove a stale output (in use?): ${swPath}")
+		endif()
+	endforeach()
+	if(swRemovedCount GREATER 0)
+		message(STATUS "[Module] Removed ${swRemovedCount} stale output(s) from Bin (old layout or modules this configuration turns off)")
+	endif()
 endfunction()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-지연 로드(`/DELAYLOAD`)를 정하는 자리를 `cmake/Engine/ModuleTargets.cmake` 의 두 함수로 막는다.
+지연 로드(`/DELAYLOAD`)를 정하는 자리를 `cmake/Engine/DelayLoad.cmake` 의 두 함수로 막는다.
 
 - `sw_addDelayloadHook` — 모듈 그래프(GameFramework · 키트)를 지연 로드하는 키트 · 게임. 알림 훅과 **미리 묶기**
   (`bindDelayLoadImports`)가 같이 들어가, 모듈을 올린 자리 · 엔진 기동이 그 코드가 돌기 전에 import 를 묶는다.
@@ -28,7 +28,7 @@ from common import kLintTargetRelDirs  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 #: 지연 로드를 정해도 되는 유일한 파일(저장소 상대).
-_kDelayLoadHome = "cmake/Engine/ModuleTargets.cmake"
+_kDelayLoadHome = "cmake/Engine/DelayLoad.cmake"
 _kDelayLoadRe = re.compile(r"DELAYLOAD\s*:", re.IGNORECASE)
 
 
@@ -36,12 +36,12 @@ class CheckDelayLoadSitesGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
     description = "지연 로드(/DELAYLOAD)를 정하는 자리 검사"
-    buildComment = "Checking that delay-loaded DLLs are declared only through the ModuleTargets.cmake functions..."
+    buildComment = "Checking that delay-loaded DLLs are declared only through the DelayLoad.cmake functions..."
     timeoutSeconds = 30
     preCommitPattern = ("*CMakeLists.txt", "*.cmake")
     preCommitFileArgument = ""
     violationHeader = "지연 로드를 직접 정한 CMake"
-    hint = ("  `/DELAYLOAD` 는 cmake/Engine/ModuleTargets.cmake 의 sw_addDelayloadHook(모듈 그래프 — 미리 묶기 포함) ·\n"
+    hint = ("  `/DELAYLOAD` 는 cmake/Engine/DelayLoad.cmake 의 sw_addDelayloadHook(모듈 그래프 — 미리 묶기 포함) ·\n"
             "  sw_addDelayloadSystemDlls(시스템 DLL) 로만 정합니다. 지연 로드한 함수의 첫 호출은 첫 float 인자를 망가뜨립니다.")
     selfTestCases = [
         {

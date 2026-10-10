@@ -9,8 +9,6 @@ if(NOT TARGET Server)
 endif()
 
 sw_addTestExecutable(ServerTest
-	SOURCES
-		TestServerBoot.cpp
 	LIBS
 		Engine
 	LABELS

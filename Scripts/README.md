@@ -124,7 +124,7 @@ Scripts/
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
   │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 (짓지 않는 소스는 CMake 가 적은 UnbuiltSources.txt 로만 안다)
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
-  │     │     ├── CheckDelayLoadSites.py      # /DELAYLOAD 는 ModuleTargets.cmake 의 두 함수로만(지연 로드 첫 호출이 첫 float 인자를 망가뜨린다)
+  │     │     ├── CheckDelayLoadSites.py      # /DELAYLOAD 는 DelayLoad.cmake 의 두 함수로만(지연 로드 첫 호출이 첫 float 인자를 망가뜨린다)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline

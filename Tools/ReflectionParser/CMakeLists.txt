@@ -4,99 +4,16 @@
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
-# 1) LLVM/libclang 경로 찾기 (환경 변수 → toolchain_config.json)
+# 1) libclang — 못 찾으면 파서를 짓지 않는다(SW_REQUIRE_REFLECTION 이면 구성이 선다). 찾는 순서는 cmake/Environment/FindLibclang.cmake.
 # ------------------------------------------------------------------------------
-set(DETECTED_LLVM_DIR "$ENV{LLVM_DIR}")
-
-if(NOT DETECTED_LLVM_DIR)
-	set(DETECTED_LLVM_DIR "$ENV{LLVM_HOME}")
-endif()
-
-# toolchain_config.json 은 `DetectToolchain` 이 include 한 생성 파일(ToolchainVars.cmake)이
-# 이미 변수로 풀어 두었다. 여기서 다시 파싱하지 않는다.
-if(NOT DETECTED_LLVM_DIR)
-	set(DETECTED_LLVM_DIR "${SW_TOOLCHAIN_LLVM_PATH}")
-	set(DETECTED_LIBCLANG_DLL "${SW_TOOLCHAIN_LIBCLANG_DLL_PATH}")
-endif()
-
-# 환경 변수 · toolchain 에 없으면 배포판 패키지 경로를 찾는다(Ubuntu 의 /usr/lib/llvm-N). 버전 목록을 손으로 들고
-# 있으면 목록보다 새 LLVM 이 깔린 호스트에서 조용히 빠지므로, 설치된 것 중 가장 높은 메이저 버전을 고른다.
-if(NOT DETECTED_LLVM_DIR)
-	file(GLOB _swLlvmCandidates LIST_DIRECTORIES true "/usr/lib/llvm-*")
-	list(SORT _swLlvmCandidates COMPARE NATURAL ORDER DESCENDING)
-
-	foreach(_swLlvmCandidate IN LISTS _swLlvmCandidates)
-		if(EXISTS "${_swLlvmCandidate}/include/clang-c/Index.h")
-			set(DETECTED_LLVM_DIR "${_swLlvmCandidate}")
-			message(STATUS "[ReflectionParser] Using distro LLVM: ${DETECTED_LLVM_DIR}")
-			break()
-		endif()
-	endforeach()
-
-	unset(_swLlvmCandidates)
-	unset(_swLlvmCandidate)
-endif()
-
-# llvm_path 가 없으면 검색을 포기한다.
-if(NOT DETECTED_LLVM_DIR)
-	message(STATUS "[ReflectionParser] LLVM directory not detected, skipping.")
-	return()
-endif()
-
-set(LLVM_INSTALL_PREFIX "${DETECTED_LLVM_DIR}")
-set(CLANG_SEARCH_PATHS
-	"${LLVM_INSTALL_PREFIX}/lib"
-	"${LLVM_INSTALL_PREFIX}/bin"
-	"${LLVM_INSTALL_PREFIX}"
-)
-
-# 배포판 패키지에는 libclang-N.so 처럼 버전이 붙은 이름만 있을 수 있다. 여기도 목록 대신 glob 으로 모은다.
-file(GLOB _swLibclangVersioned "${LLVM_INSTALL_PREFIX}/lib/libclang-*.so")
-set(_swLibclangNames libclang clang)
-
-foreach(_swLibclangPath IN LISTS _swLibclangVersioned)
-	get_filename_component(_swLibclangName "${_swLibclangPath}" NAME_WE)
-	string(REGEX REPLACE "^lib" "" _swLibclangName "${_swLibclangName}")
-	list(APPEND _swLibclangNames "${_swLibclangName}")
-endforeach()
-
-find_library(LIBCLANG_LIB
-	NAMES ${_swLibclangNames}
-	PATHS ${CLANG_SEARCH_PATHS}
-	NO_DEFAULT_PATH
-)
-
-unset(_swLibclangVersioned)
-unset(_swLibclangNames)
-unset(_swLibclangPath)
-unset(_swLibclangName)
-
-find_path(LIBCLANG_INCLUDE_DIR
-	NAMES clang-c/Index.h
-	PATHS
-	"${LLVM_INSTALL_PREFIX}/include"
-	/usr/include
-	NO_DEFAULT_PATH
-)
-
-if(NOT LIBCLANG_LIB OR NOT LIBCLANG_INCLUDE_DIR)
-	if(SW_REQUIRE_REFLECTION)
-		message(FATAL_ERROR
-			"[ReflectionParser] '${LLVM_INSTALL_PREFIX}' 경로에서 libclang을 찾을 수 없습니다.\n"
-			"  LLVM을 설치하거나 Config/Environment/toolchain_config.json 의 llvm_path 를 설정하세요.\n"
-			"  도구만 빌드하려면 -DSW_REQUIRE_REFLECTION=OFF 를 사용하세요."
-		)
-	endif()
-
-	message(WARNING
-		"[ReflectionParser] '${LLVM_INSTALL_PREFIX}' 경로에서 libclang을 찾을 수 없습니다.\n"
-		"  ReflectionParser 빌드가 건너뛰어집니다."
-	)
+include("${CMAKE_SOURCE_DIR}/cmake/Environment/FindLibclang.cmake")
+sw_findLibclang(swLibclangLib swLibclangIncludeDir swLibclangDll)
+if(NOT swLibclangLib)
 	return()
 endif()
 
 # ------------------------------------------------------------------------------
-# 2) ReflectionParser 실행 파일
+# 2) ReflectionParser 실행 파일 — Engine.dll 과 순환하지 않게 Core 만 링크한다
 # ------------------------------------------------------------------------------
 file(GLOB_RECURSE PARSER_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 
@@ -110,68 +27,46 @@ target_include_directories(ReflectionParser PUBLIC
 	"${CMAKE_SOURCE_DIR}/Source/Core"
 )
 # 외부 헤더는 SYSTEM 으로 — 우리 경고 규칙(-Werror=covered-switch-default 등)이 그 안에 걸리지 않는다.
-target_include_directories(ReflectionParser SYSTEM PRIVATE "${LIBCLANG_INCLUDE_DIR}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
+target_include_directories(ReflectionParser SYSTEM PRIVATE "${swLibclangIncludeDir}" "${CMAKE_SOURCE_DIR}/ThirdParty/nlohmann-json")
 target_include_directories(ReflectionParser PRIVATE "${CMAKE_BINARY_DIR}/generated")
 
 target_link_libraries(ReflectionParser
 	PRIVATE
 	Core
-	"${LIBCLANG_LIB}"
+	"${swLibclangLib}"
 	sw_global_options
 )
 
-target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"")
-sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
-
-set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-
-sw_setUnityBuild(ReflectionParser OFF)
-
-set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
-
-# 빌드 타임 전용 도구다. 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
-# libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다.
-# 호출부는 모두 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
-set(swReflectionParserOutDir "${CMAKE_BINARY_DIR}/BuildTools")
-set_target_properties(ReflectionParser PROPERTIES
-	RUNTIME_OUTPUT_DIRECTORY "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_DEBUG "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_RELEASE "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_RELWITHDEBINFO "${swReflectionParserOutDir}"
-	RUNTIME_OUTPUT_DIRECTORY_MINSIZEREL "${swReflectionParserOutDir}"
-)
-
+target_compile_definitions(ReflectionParser PRIVATE "SW_LOG_TAG=\"Tool\"" SW_TOOL_INTERNAL)
 if(WIN32)
 	target_compile_definitions(ReflectionParser PRIVATE _CRT_SECURE_NO_WARNINGS)
 endif()
+sw_configurePch(ReflectionParser "${CMAKE_SOURCE_DIR}/Source/Core/pch.h")
+
+set_property(TARGET ReflectionParser PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+sw_setUnityBuild(ReflectionParser OFF)
+
+# 빌드 타임 전용 도구다. 런타임 산출물(Bin)과 섞이면 배포물에 파서 실행 파일과
+# libclang.dll(수십 MB)이 그대로 따라 들어가므로 별도 디렉터리로 내보낸다(`$<0:>` 는 구성 이름 하위 폴더를 막는다 — BuildLayout 과 같다).
+# 호출부는 모두 $<TARGET_FILE:ReflectionParser> 제너레이터 식이라 경로를 따라온다.
+set_target_properties(ReflectionParser PROPERTIES
+	FOLDER "Tools"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/BuildTools$<0:>"
+)
+
+# 어노테이션 매크로 표 — IDE 에서 보이게 소스로 단다.
+target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedReflectAnnotation.xxx")
 
 # ------------------------------------------------------------------------------
 # 3) libclang.dll — ReflectionParser 옆(BuildTools)으로 복사
 # ------------------------------------------------------------------------------
-if(NOT DETECTED_LIBCLANG_DLL AND LIBCLANG_INCLUDE_DIR)
-	find_file(
-		DETECTED_LIBCLANG_DLL
-		NAMES libclang.dll
-		HINTS "${LLVM_INSTALL_PREFIX}/bin" "${LLVM_INSTALL_PREFIX}/lib"
-	)
-endif()
-
-if(DETECTED_LIBCLANG_DLL AND EXISTS "${DETECTED_LIBCLANG_DLL}")
+if(swLibclangDll)
 	add_custom_command(
 		TARGET ReflectionParser POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
-		"${DETECTED_LIBCLANG_DLL}"
+		"${swLibclangDll}"
 		"$<TARGET_FILE_DIR:ReflectionParser>"
 		COMMENT "[ReflectionParser] Copying libclang.dll..."
 		VERBATIM
 	)
 endif()
-
-target_sources(ReflectionParser PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/PredefinedReflectAnnotation.xxx")
-
-# ------------------------------------------------------------------------------
-# 4) 어노테이션 매크로 테이블 — IDE 폴더는 Tools
-# ------------------------------------------------------------------------------
-set_target_properties(ReflectionParser PROPERTIES FOLDER "Tools")
-
-target_compile_definitions(ReflectionParser PRIVATE SW_TOOL_INTERNAL)

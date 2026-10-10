@@ -136,8 +136,29 @@ function(sw_registerTestShards TEST_NAME TARGET_NAME SHARD_COUNT)
 	endforeach()
 endfunction()
 
+# ------------------------------------------------------------------------------
+# sw_addTestExecutable — 테스트 실행 파일 타겟을 만들고 공통 PCH · 로그 태그 · ctest 등록을 한다
+#
+#   SOURCES       시험 소스. 비우면 그 폴더의 소스를 재귀로 훑는다(시험 폴더는 목록을 적지 않는 것이 기본이다).
+#   EXTRA_SOURCES 폴더 소스에 더할 소스 — 시험이 같이 컴파일하는 엔진 밖 소스(에디터 · App 은 링크할 라이브러리가 없다).
+#   HOST_SPLIT   호스트 스위트(`SW_TEST_REQUIRES_HOST`)가 있는 실행 파일. ctest 항목을 둘로 가른다 —
+#                 `<타깃>_NoGPU`(`--host_suites=exclude`, 라벨 `nogpu`, CI 가 도는 집합)와
+#                 `<타깃>_HostOnly`(`--host_suites=only`, 라벨 `hostgpu`, 직렬). 어느 스위트가 호스트인지는
+#                 **코드의 선언이 정한다** — 여기에 스위트 이름을 적지 않는다. 갈라진 두 항목 말고 전체 실행을
+#                 하나 더 등록하지 말 것(라벨 없는 `ctest` 가 같은 시험을 두 번 돈다).
+#   HOST_TIMEOUT  `_HostOnly` 의 제한 시간(기본: TIMEOUT).
+#   SHARDS        ctest 항목을 이 수만큼 `<타깃>_Shard<k>` 로 갈라 병렬로 돌린다(`--test_shard=<k-1>/<n>`). 케이스는 **스위트 안에서 번갈아**
+#                 나뉘므로 느린 스위트 하나가 끝을 정하는 실행 파일에 쓴다(ReflectionTest — 파서를 차례로 띄우는 스위트가 시간의 거의 전부).
+#                 스위트 이름을 적지 않는다. HOST_SPLIT 과 함께 쓰면 `_NoGPU` 를 `<타깃>_NoGPU_Shard<k>` 로 가른다
+#                 (`--host_suites=exclude --test_shard=…`, CI 가 병렬로 도는 쪽).
+#   HOST_SHARDS   HOST_SPLIT 의 `_HostOnly` 를 이 수만큼 `<타깃>_HostOnly_Shard<k>` 로 가른다(기본 1 — 하나). 조각도 **직렬**이다
+#                 (GPU 를 잡는다) — 합계 시간은 같고, 조각마다 제한 시간(HOST_TIMEOUT)을 따로 받는다. 조각마다 호스트 케이스가 하나는
+#                 있어야 한다(`--host_suites=only` 가 아무것도 고르지 않으면 진다).
+#   RUN_SERIAL    다른 테스트와 겹치면 안 되는 실행 파일(같은 파일 · 같은 장치를 쓰는 경우). **지금 쓰는 타겟은 없다.**
+#                 쓸 때는 그 이유를 옆에 적는다.
+# ------------------------------------------------------------------------------
 function(sw_addTestExecutable TARGET_NAME)
-	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS;HOST_SHARDS" "SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
+	cmake_parse_arguments(ARG "RUN_SERIAL;HOST_SPLIT" "TIMEOUT;HOST_TIMEOUT;SHARDS;HOST_SHARDS" "SOURCES;EXTRA_SOURCES;LIBS;LABELS;DEFINITIONS;ASAN_OPTIONS" ${ARGN})
 	if(ARG_HOST_SHARDS AND NOT ARG_HOST_SPLIT)
 		message(FATAL_ERROR "sw_addTestExecutable(${TARGET_NAME}): HOST_SHARDS 는 HOST_SPLIT 의 `_HostOnly` 를 가른다 — HOST_SPLIT 없이 쓰지 않는다")
 	endif()
@@ -145,7 +166,7 @@ function(sw_addTestExecutable TARGET_NAME)
 		file(GLOB_RECURSE ARG_SOURCES CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	endif()
 
-	add_executable(${TARGET_NAME} ${ARG_SOURCES})
+	add_executable(${TARGET_NAME} ${ARG_SOURCES} ${ARG_EXTRA_SOURCES})
 	target_sources(${TARGET_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/Test/TestFramework/main.cpp" "${CMAKE_SOURCE_DIR}/Test/TestFramework/TestHostRuntime.cpp")
 	sw_embedProcessManifest(${TARGET_NAME})
 	set_target_properties(${TARGET_NAME} PROPERTIES FOLDER "Test")

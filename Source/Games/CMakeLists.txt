@@ -38,5 +38,5 @@ foreach(_swGameName IN LISTS _swListGameFolder)
 endforeach()
 
 # 등록은 여기서 하지 않는다 — 타겟을 **만드는** `sw_addGameModule` 이 한다
-# (`cmake/Engine/ModuleTargets.cmake` 의 "동적 모듈 레지스트리"). 호출부가 등록하면
+# (`cmake/Engine/ModuleRegistry.cmake` 의 "동적 모듈 레지스트리"). 호출부가 등록하면
 # 새 모듈이 조용히 빠진다.

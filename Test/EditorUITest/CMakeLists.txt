@@ -19,9 +19,8 @@ if(SW_TARGET_TYPE STREQUAL "Server")
 endif()
 
 sw_addTestExecutable(EditorUITest
-	SOURCES
-		TestImGuiPlatformBackend.cpp
-		TestImGuiTextureUpdate.cpp
+	# 시험 소스는 이 폴더를 훑는다. 같이 컴파일하는 에디터 백엔드 소스만 적는다.
+	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiWin32PlatformBackend.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/Platform/ImGuiX11PlatformBackend.cpp"
 	LIBS

@@ -59,7 +59,7 @@ sw_deployRuntimeDependencies(EngineTest ALWAYS_DXC)
 # RHI MODULE은 런타임 로드 — Engine과 순환 없이 테스트 빌드 시 플러그인 재빌드
 #
 # 백엔드 이름을 여기 적지 않는다. `sw_addRhiBackendModule` 이 타겟을 만들면서 등록한 것을 묻는다
-# (`cmake/Engine/ModuleTargets.cmake` 의 동적 모듈 레지스트리) — 이름을 글자 그대로 적으면 백엔드가
+# (`cmake/Engine/ModuleRegistry.cmake` 의 동적 모듈 레지스트리) — 이름을 글자 그대로 적으면 백엔드가
 # 늘 때 조용히 빠진다. Shipping 은 백엔드를 Engine 에 정적 링크해 모듈 타겟이 없으므로 목록이 빈다.
 sw_addDynamicModuleDependencies(EngineTest KINDS rhi)
 

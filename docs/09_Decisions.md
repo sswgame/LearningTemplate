@@ -218,6 +218,14 @@
 - **게이트가 나눠 쓰는 글 읽기(include 줄 · 층 폴더 · include → 파일 · 주석 가리기 · 줄 번호)는 `Scripts/common/CodeText.py` 한 자리이고, 3,000 줄이 넘는 게이트는 규칙 묶음 패키지(`Scripts/lint/conventions/`)로 나눕니다**(2026-10-10).
   clang-tidy 가 검사를 모듈(`bugprone` · `readability` …)별 파일로 두고 공용 매처를 `utils/` 에 두는 것과 같은 모양입니다. 층 게이트 다섯(Core · Core/Network · Engine · GameFramework · ModuleTargets)을
   표 하나로 구동하는 한 구현은 하지 않았습니다 — 판정이 서로 다르고(같은 층 허용 · 배선 예외 · 대상 집합) CTest 이름 · 자기 시험이 게이트마다 달려 있어, 도우미만 나눴습니다.
+- **`cmake/Engine/` 은 책임 하나에 파일 하나입니다**(2026-10-10). 677 줄 `ModuleTargets.cmake` 를 컴파일 규칙 · 지연 로드 · ABI 도장 · 모듈 레지스트리 · 모듈 팩토리 · 실행 파일 링크로,
+  613 줄 `ModuleManifest.cmake` 를 해석 · 켜짐 조회로 나누고 옛 산출물 지우기는 `BuildLayout.cmake` 로 옮겼습니다. UBT 가 ModuleRules · TargetRules · 링크 규칙을 따로 두는 것과 같습니다.
+  구성 결과(네 프리셋의 TU 별 명령 · 링크 엣지 · ninja 타깃 · File API 답)는 전과 같고, 다른 것은 EditorTest 의 오브젝트 순서(폴더 훑기)뿐입니다.
+  하지 않은 정리: 시험 폴더 머리의 "Server 타깃이면 건너뛴다" 세 줄(`return()` 은 부른 파일에 있어야 해 함수로 줄지 않는다), App · Server · ModuleHost · 도구 타깃의 공통 기본값 함수
+  (타깃마다 정의 · PCH · 링크가 달라 두세 줄을 줄이고 링크 순서를 흔든다), QA 스크립트 시험 등록 함수(셋의 인자가 달라 풀어 쓴 것이 읽기 쉽다), `ConfigConstants.h.in` 을 파이썬 생성기로
+  옮기기(손으로 고른 C++ 상수 묶음이라 얻는 것이 없다), zlib · LZ4 · Zstd 를 ThirdParty 래퍼 타깃으로(리눅스 CI 에서 비었던 임포트 타깃을 받치는 `ZLIB_LIBRARIES` 링크가 빠진다).
+- **`NOMINMAX` · `WIN32_LEAN_AND_MEAN` 은 CMake 컴파일 정의입니다**(2026-10-10). 헤더에서만 정의하면 그보다 먼저 `windows.h` 를 include 한 TU 에 min/max 매크로가 생깁니다.
+  Godot 도 빌드 정의(`platform/windows/detect.py`)로 줍니다. 헤더의 `#if !defined` 정의는 빌드 플래그 없이 헤더를 읽는 도구를 위해 남깁니다.
 - **서드파티 고지(`THIRD_PARTY_NOTICES.txt`)는 빌드가 모읍니다**(2026-10-06). 대상은 매니페스트가 끌어오는 의존 전부이고 개발 전용 라이브러리도 넣습니다. 고지가 넘치는 것은 해가 없지만 빠지면 라이선스 위반입니다.
 - **규칙 예외 감사에서 정한 넷**(2026-10-07, 아직 적용 전 — [백로그](06_Backlog.md) 1-9): ① 두 플랫폼이 같은 명시적 경고 목록을 씁니다(clang-cl 의 `-Wall` 은 `-Weverything` 이라 플랫폼마다 경고가 달랐습니다).
   ② `(void)` 와 이유 주석은 `[[nodiscard]]` 가 붙은 실패 가능 함수에만 요구합니다. ③ 백엔드 명령줄 철자는 `-dx12`, `-dx11`, `-vk`, `-gl` 하나씩만 둡니다.

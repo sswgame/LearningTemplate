@@ -16,7 +16,7 @@ Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvide
   `push rcx … r9; sub rsp,48h; movdqa [rsp],xmm0; movdqa [rsp+10h],xmm1; …; call __delayLoadHelper2` — `[rsp..rsp+1Fh]` 가 그 호출의 홈 공간이라 헬퍼가
   rcx · rdx 를 흘려 저장된 xmm0 을 덮는다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이 damage = 0 을 받았다). 지연 로드 훅 TU 가
   `bindDelayLoadImports`(이미지의 지연 import 를 `__HrLoadAllImportsForDll` 로 전부)를 내보내고, `LiveReloadManager` 의 커밋 · `ModuleHost` · 엔진 기동
-  (`bindDelayLoadImportsOfLoadedModules` — 시험 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `ModuleTargets.cmake` 의 두 함수로만
+  (`bindDelayLoadImportsOfLoadedModules` — 시험 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `DelayLoad.cmake` 의 두 함수로만
   (`CheckDelayLoadSites`) — Engine 의 시스템 DLL(D3DCompiler · MF · XAudio2 · Tracy)은 미리 묶지 않으니 첫 인자가 float 인 함수를 부르지 않는다.
   Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 시험: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
 - **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 되살린 월드를 덮는다.** 첫 씬 요청이 그랬다(되살린 씬을 몇 프레임
