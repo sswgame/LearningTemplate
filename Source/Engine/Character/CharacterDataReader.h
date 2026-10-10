@@ -13,7 +13,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -31,41 +31,41 @@ namespace sw
          * @brief 문서를 텍스트에서 파싱하고 루트 원소를 찾습니다. 실패하면 오류를 남기고 false 입니다.
          * @param pRootName 루트 원소 이름입니다(대소문자 무시).
          */
-        [[nodiscard]] bool parseRoot( XmlDocument& outDocument, string_view xmlText, const utf8* pRootName, XmlNode& outRoot );
+        [[nodiscard]] bool parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot );
         /** @brief 리소스 경로(또는 절대 경로)의 문서를 읽고 루트 원소를 찾습니다. */
-        [[nodiscard]] bool loadRoot( XmlDocument& outDocument, string_view path, const utf8* pRootName, XmlNode& outRoot );
+        [[nodiscard]] bool loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot );
 
         /** @brief 오류 하나를 남깁니다. 원소 이름을 앞에 붙입니다. */
-        void addError( const XmlNode& node, string_view message );
+        void addError( const XMLNode& node, string_view message );
         /** @brief 원소와 상관없는 오류 하나를 남깁니다. */
         void addError( string_view message );
         /** @brief 표에 없는 속성마다 오류를 남깁니다. */
         template <size_t Count>
-        void reportUnknownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count] )
+        void reportUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count] )
         {
             reportUnknownAttributes( node, arrKnown, Count );
         }
         /** @brief 속성이 하나라도 있으면 오류를 남깁니다(속성이 없는 원소 — 루트 등). */
-        void reportUnexpectedAttributes( const XmlNode& node ) { reportUnknownAttributes( node, nullptr, 0 ); }
+        void reportUnexpectedAttributes( const XMLNode& node ) { reportUnknownAttributes( node, nullptr, 0 ); }
         /** @brief 모르는 자식 원소 하나를 오류로 남깁니다. */
-        void reportUnknownElement( const XmlNode& node );
+        void reportUnknownElement( const XMLNode& node );
 
         /** @brief 실수 칸입니다. */
-        float32 readFloat( const XmlNode& node, const utf8* pName, float32 fallback );
+        float32 readFloat( const XMLNode& node, const utf8* pName, float32 fallback );
         /** @brief 정수 칸입니다. */
-        int32 readInt( const XmlNode& node, const utf8* pName, int32 fallback );
+        int32 readInt( const XMLNode& node, const utf8* pName, int32 fallback );
         /** @brief 참거짓 칸입니다. */
-        [[nodiscard]] bool readBool( const XmlNode& node, const utf8* pName, bool fallback );
+        [[nodiscard]] bool readBool( const XMLNode& node, const utf8* pName, bool fallback );
         /** @brief 세 수 칸입니다("x y z"). */
-        float3 readFloat3( const XmlNode& node, const utf8* pName, const float3& fallback );
+        float3 readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback );
         /** @brief 회전 칸입니다(도 단위 "피치 요 롤"). */
-        quaternion readRotation( const XmlNode& node, const utf8* pName, const quaternion& fallback );
+        quaternion readRotation( const XMLNode& node, const utf8* pName, const quaternion& fallback );
         /** @brief 이름 칸입니다. @p bRequired 인데 비었으면 오류입니다. */
-        hashed_string readName( const XmlNode& node, const utf8* pName, bool bRequired );
+        hashed_string readName( const XMLNode& node, const utf8* pName, bool bRequired );
         /** @brief 공백 · 쉼표로 나눈 이름 목록 칸입니다(비우고 채움). */
-        void readNameList( const XmlNode& node, const utf8* pName, vector<hashed_string>& outListName );
+        void readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName );
         /** @brief 칸이 있으면 true 입니다. */
-        static bool hasAttribute( const XmlNode& node, const utf8* pName ) { return node.findAttribute( pName ) != nullptr; }
+        static bool hasAttribute( const XMLNode& node, const utf8* pName ) { return node.findAttribute( pName ) != nullptr; }
 
         /** @brief 오류가 하나라도 있으면 true 입니다. */
         bool hasError() const { return _listError.empty() == false; }
@@ -88,7 +88,7 @@ namespace sw
         static string formatNameList( const vector<hashed_string>& listName );
 
     private:
-        void reportUnknownAttributes( const XmlNode& node, const utf8* const* ppKnown, size_t knownCount );
+        void reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount );
 
     private:
         string         _sourceName;

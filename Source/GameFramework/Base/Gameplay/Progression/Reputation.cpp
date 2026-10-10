@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
@@ -26,12 +26,12 @@ namespace sw
 
 namespace sw
 {
-    uint32 ReputationCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ReputationCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Faction" ); node; node = node.findNextSibling( "Faction" ) )
+        for ( XMLNode node = root.findChild( "Faction" ); node; node = node.findNextSibling( "Faction" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             FactionDef faction;
@@ -42,7 +42,7 @@ namespace sw
             faction._maxValue   = MathUtil::max( faction._minValue, node.getAttributeInt( "max", faction._maxValue ) );
             faction._startValue = MathUtil::clamp( node.getAttributeInt( "start", faction._startValue ), faction._minValue, faction._maxValue );
             faction._dailyDecay = MathUtil::max( 0, node.getAttributeInt( "decay", faction._dailyDecay ) );
-            for ( XmlNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
+            for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
             {
                 const utf8* pTierName = child.findAttribute( "name" );
                 if ( pTierName != nullptr )
@@ -51,7 +51,7 @@ namespace sw
             std::stable_sort( faction._listTier.begin(), faction._listTier.end(),
                               []( const ReputationTier& lhs, const ReputationTier& rhs )
             { return lhs._minValue < rhs._minValue; } );
-            for ( XmlNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
+            for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
             {
                 const utf8* pFaction = child.findAttribute( "faction" );
                 if ( pFaction != nullptr )

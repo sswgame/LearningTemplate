@@ -152,7 +152,7 @@ Ctrl+F8은 셰이더 리로드이고 엔진이 처리합니다. Ctrl+F6은 에�
 
 - `-gv_dumpReflection` 은 첫 프레임에 그 타입의 부모 클래스, 필드 위치와 범위, 플래그, 열거자를 로그로 남깁니다. 이름은 쉼표로 여러 개 줄 수 있습니다.
 - `ReflectionParser --dump` 의 예시 명령은 [ReflectionParser 문서](../../Tools/ReflectionParser/README.md)에 있습니다.
-- 파일 읽기 오류는 어느 줄의 몇 번째 글자에서 무엇이 틀렸는지 알려 줍니다. 파일이 아예 없을 때만 `not found` 라고 씁니다. 코드에서는 `XmlDocument` 와 `JsonDocument` 의 `getLastError()` 로 같은 내용을 읽습니다.
+- 파일 읽기 오류는 어느 줄의 몇 번째 글자에서 무엇이 틀렸는지 알려 줍니다. 파일이 아예 없을 때만 `not found` 라고 씁니다. 코드에서는 `XMLDocument` 와 `JSONDocument` 의 `getLastError()` 로 같은 내용을 읽습니다.
 - enum 경고가 나면 그 필드는 원래 값을 유지합니다. 오타 하나가 조용히 기본값으로 바뀌지 않게 하려는 것입니다.
 - 타입 이름 경고는 씬과 프리팹이 짧은 이름으로 타입을 찾기 때문에 납니다. 같은 짧은 이름이 둘이면 나중에 등록한 쪽이 이깁니다.
 - `[SW_ASSERT]` 줄 아래에는 실패한 식, 파일과 줄, 함수 이름이 이어서 나옵니다.

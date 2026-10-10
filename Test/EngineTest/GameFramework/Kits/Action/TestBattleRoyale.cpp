@@ -25,7 +25,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kBrCatalogXml = R"(
+    constexpr const utf8* kBrCatalogXML = R"(
 <BattleRoyaleCatalog mapSize="1000">
   <Player health="100" downedHealth="100" bleedout="10" reviveTime="10" reviveHealthRatio="0.1" carryWeight="20" slots="20" revivers="2"/>
   <Flight speed="100" altitude="600" jumpStart="0.1" jumpEnd="0.9" offset="0.6"/>
@@ -45,7 +45,7 @@ namespace
 </BattleRoyaleCatalog>
 )";
 
-    constexpr const utf8* kBrItemXml = R"(
+    constexpr const utf8* kBrItemXML = R"(
 <ItemCatalog>
   <Item id="ammo556" category="Ammo" maxStack="200" weight="0.5"/>
   <Item id="bandage" category="Heal" maxStack="10" weight="1"/>
@@ -55,7 +55,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kBrLootXml = R"(
+    constexpr const utf8* kBrLootXML = R"(
 <LootCatalog>
   <Table id="house" rolls="1">
     <Entry item="ammo556" weight="4" min="10" max="30"/>
@@ -104,8 +104,8 @@ namespace
 
         bool initialize( uint32 seed )
         {
-            if ( _catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) == false || _itemCatalog.loadFromXmlText( kBrItemXml, "BattleRoyaleTest" ) == false ||
-                 _lootCatalog.loadFromXmlText( kBrLootXml, "BattleRoyaleTest" ) == false )
+            if ( _catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) == false || _itemCatalog.loadFromXMLText( kBrItemXML, "BattleRoyaleTest" ) == false ||
+                 _lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) == false )
                 return false;
             _match.initialize( &_catalog, &_itemCatalog, &_lootCatalog, seed, nullptr );
             return true;
@@ -148,7 +148,7 @@ namespace
 SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
 {
     BrCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
     SW_EXPECT_EQUAL( 2, static_cast<int32>( catalog.getZoneSettings()._listPhase.size() ) );
 
     BrZone zone;
@@ -215,7 +215,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneShrinksIntoNextCircleAndHurtsOutside )
 SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
 {
     BrCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
     auto captureNetBytes = []( const BrZone& target )
     {
         BitWriter writer;
@@ -263,7 +263,7 @@ SW_TEST_CASE( BattleRoyaleTest, ZoneStateRoundTripContinuesTheSameZone )
 SW_TEST_CASE( BattleRoyaleTest, NextZoneCenterAvoidsForbiddenTerrain )
 {
     BrCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
     BrWestWaterTerrain terrain;
 
     // 콜백이 없으면 서쪽(물)에도 원이 생긴다 — 이 시험이 콜백을 실제로 재는지 확인.
@@ -291,7 +291,7 @@ SW_TEST_CASE( BattleRoyaleTest, NextZoneCenterAvoidsForbiddenTerrain )
 SW_TEST_CASE( BattleRoyaleTest, FlightPathCrossesMapAndLandingIsPredicted )
 {
     BrCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
     const BrFlightPath path  = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
     const BrFlightPath again = BrFlightPath::makeRandom( catalog.getFlightSettings(), 1000.0f, 42u );
     SW_EXPECT_NEAR_EQUAL( path._start._x, again._start._x, 0.0001f );
@@ -344,8 +344,8 @@ SW_TEST_CASE( BattleRoyaleTest, LootPlacementIsSeededPerSpot )
 {
     BrCatalog   catalog;
     LootCatalog lootCatalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
-    SW_ASSERT_TRUE( lootCatalog.loadFromXmlText( kBrLootXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( lootCatalog.loadFromXMLText( kBrLootXML, "BattleRoyaleTest" ) );
 
     vector<BrLootSpot> listSpot;
     for ( int32 index = 0; index < 12; ++index )
@@ -403,8 +403,8 @@ SW_TEST_CASE( BattleRoyaleTest, ArmorBackpackAndAmmoReload )
 {
     BrCatalog   catalog;
     ItemCatalog itemCatalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kBrCatalogXml, "BattleRoyaleTest" ) );
-    SW_ASSERT_TRUE( itemCatalog.loadFromXmlText( kBrItemXml, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kBrCatalogXML, "BattleRoyaleTest" ) );
+    SW_ASSERT_TRUE( itemCatalog.loadFromXMLText( kBrItemXML, "BattleRoyaleTest" ) );
     BrLoadout loadout;
     loadout.initialize( &catalog );
 

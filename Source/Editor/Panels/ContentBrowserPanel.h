@@ -9,7 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Commands/EditorBackgroundIo.h"
+#include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Gui/IEditorPanel.h"
 #include "Editor/Panels/ContentBrowserLogic.h"
 

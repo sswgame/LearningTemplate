@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
 #include <algorithm>
@@ -19,7 +19,7 @@ namespace sw
     {
         struct AreaGraphInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pName )
+            static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
@@ -40,7 +40,7 @@ namespace sw
     {
     }
 
-    uint32 AreaGraph::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 AreaGraph::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
         const uint32 loadedCount = loadFromNode( root, sourceName );
@@ -48,12 +48,12 @@ namespace sw
         return loadedCount;
     }
 
-    uint32 AreaGraph::loadFromNode( const XmlNode& node, string_view sourceName )
+    uint32 AreaGraph::loadFromNode( const XMLNode& node, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
+        for ( XMLNode areaNode = node.findChild( "Area" ); areaNode; areaNode = areaNode.findNextSibling( "Area" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( areaNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( areaNode, sourceName );
             if ( pId == nullptr )
                 continue;
             AreaDef area;
@@ -69,7 +69,7 @@ namespace sw
             else
                 SW_LOG_WARNING( "%#: duplicate area '%#' - skipped", sourceName, pId );
         }
-        for ( XmlNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
+        for ( XMLNode linkNode = node.findChild( "Link" ); linkNode; linkNode = linkNode.findNextSibling( "Link" ) )
         {
             const hashed_string from     = AreaGraphInternal::readName( linkNode, "from" );
             const hashed_string to       = AreaGraphInternal::readName( linkNode, "to" );

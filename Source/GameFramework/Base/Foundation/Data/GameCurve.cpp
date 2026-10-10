@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -21,10 +21,10 @@ namespace sw
         _listPoint.insert( _listPoint.begin() + static_cast<ptrdiff_t>( insertIndex ), point );
     }
 
-    uint32 GameCurve::readPoints( const XmlNode& node, const utf8* pElement, const utf8* pValueAttribute, float32 minValue )
+    uint32 GameCurve::readPoints( const XMLNode& node, const utf8* pElement, const utf8* pValueAttribute, float32 minValue )
     {
         uint32 readCount = 0;
-        for ( XmlNode child = node.findChild( pElement ); child; child = child.findNextSibling( pElement ) )
+        for ( XMLNode child = node.findChild( pElement ); child; child = child.findNextSibling( pElement ) )
         {
             addPoint( child.getAttributeFloat( "time", 0.0f ), MathUtil::max( minValue, child.getAttributeFloat( pValueAttribute, 1.0f ) ) );
             ++readCount;

@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /** @brief 애니메이션 그래프 노드입니다. */
     struct AnimGraphNode
@@ -82,9 +82,9 @@ namespace sw
         /** @brief JSON 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 파싱합니다. */
-        [[nodiscard]] bool parseJson( string_view json );
+        [[nodiscard]] bool parseJSON( string_view json );
         /** @brief JSON 본문을 만듭니다. */
-        string toJson() const;
+        string toJSON() const;
         /** @brief 노드 이름 목록을 채웁니다. */
         void collectNodeNames( vector<string>& outListName ) const;
         /** @brief id 로 노드를 찾습니다. */
@@ -107,6 +107,6 @@ namespace sw
 
     private:
         /** @brief 이미 파싱된 JSON 루트에서 노드 · 링크를 읽습니다. 모르는 조건 표기면 false 입니다. */
-        [[nodiscard]] bool parseRoot( const JsonValue& root );
+        [[nodiscard]] bool parseRoot( const JSONValue& root );
     };
 } // namespace sw

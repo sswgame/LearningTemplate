@@ -20,7 +20,7 @@
 #include "Engine/Renderer/Frame/GpuTimelineExporter.h"
 #include "Engine/Renderer/Frame/PassConstantRing.h"
 #include "Engine/Renderer/Frame/PassConstantValues.h"
-#include "Engine/Renderer/Frame/RenderPsoCache.h"
+#include "Engine/Renderer/Frame/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/RenderView.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Renderer/Frame/TransientAttachmentPool.h"
@@ -82,10 +82,10 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /** @brief 디바이스와 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, string_view pipelineXmlPath = {} );
+        bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
         /** @brief 디바이스 · TaskManager · 파이프라인 XML 로 초기화합니다. */
         bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                         string_view pipelineXmlPath = {} );
+                         string_view pipelineXMLPath = {} );
         /** @brief 핫패스 서비스(TaskManager)를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
@@ -95,7 +95,7 @@ namespace sw
         // 2) 파이프라인 · 실행: XML 로드, execute / executePacket
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML 에서 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번 바인딩합니다. */
-        [[nodiscard]] bool loadPipeline( string_view pipelineXmlPath );
+        [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
         /** @brief 컴파일된 그래프를 실행합니다. scene 이 있으면 자기 빌더로 스냅샷을 만들어 패킷 경로와 같은 길로 올립니다. */
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
         /** @brief 렌더 스레드 경로입니다. 미리 만든 packet 의 GpuScene 을 씁니다(Scene 에 접근하지 않습니다). */
@@ -217,7 +217,7 @@ namespace sw
 
         /**
          * @brief 씬 지오메트리 보기 방식을 정합니다(Lit/Unlit/Wireframe).
-         * @details 다음 프레임의 `ensureMaterialPsos` 가 그 모드의 PSO 변형을 만들고 드로우가 그것을 고릅니다.
+         * @details 다음 프레임의 `ensureMaterialPSOs` 가 그 모드의 PSO 변형을 만들고 드로우가 그것을 고릅니다.
          *          모드를 바꾼 프레임에 셰이더 컴파일이 한 번 끼고, 그 뒤로는 캐시에서 나옵니다.
          *          렌더 스레드가 드로우마다 읽으므로 atomic 입니다(락을 걸 자리가 아닙니다).
          */
@@ -226,13 +226,13 @@ namespace sw
         RenderViewMode getViewMode() const;
 
         /** @brief 패스 타입에 대응하는 엔진 PSO 입니다. 없으면 0 입니다. */
-        RHIPipelineStateHandle getEnginePso( RenderPassType passType ) const;
+        RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
         /**
          * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션 · 뷰 모드 · 컬 반전을 얹은 변형이 있으면 그것, 없으면 패스 PSO 그대로입니다.
-         * @details 드로우 경로가 배치마다 부르는 조회입니다(읽기 전용). 캐시는 `ensureMaterialPsos` 가 기록 전에 채웁니다.
+         * @details 드로우 경로가 배치마다 부르는 조회입니다(읽기 전용). 캐시는 `ensureMaterialPSOs` 가 기록 전에 채웁니다.
          *          거울 변환 배치(`GpuMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그립니다.
          */
-        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const;
+        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPSO, const GpuMeshBatch& batch ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다 — 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나입니다(머티리얼 PSO 변형 · 셰이더 쿠커와 같은 판정).
@@ -243,7 +243,7 @@ namespace sw
          * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 창입니다. 픽셀로는 안 보이는
          *          차이(알파 경로가 컴파일됐는가 같은)를 테스트가 여기서 확인합니다.
          */
-        bool findPsoDesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
+        bool findPSODesc( RHIPipelineStateHandle pso, RHIPipelineStateDesc& outDesc ) const;
         /** @brief 주 시점의 TAA 히스토리 텍스처입니다. 파이프라인에 TAA 패스가 없거나 아직 만들지 않았으면 0 입니다(진단 · 시험용). */
         RHITextureHandle getTaaHistory() const { return _mainView._taaHistory; }
         /**
@@ -293,7 +293,7 @@ namespace sw
              *          가 **바인딩되지 않은 채** 드로우가 나가고, Vulkan 은 초기화되지 않은 디스크립터를 읽어
              *          디바이스를 잃습니다(GPU-AV: "binding 25 Descriptor index 0 is uninitialized").
              */
-            RHIPipelineStateHandle _lastBindPso{ 0 };
+            RHIPipelineStateHandle _lastBindPSO{ 0 };
             /**
              * @brief 이 패스가 어떤 컬링 칸의 결과를 쓸지 정합니다(0 주 시점 · 1 그림자 · `kFirstExtraCullView` 부터 추가 뷰).
              * @details 그림자 패스만 그림자 칸이고 나머지는 지금 그리는 뷰의 칸입니다. 컬링 결과는 절두체에 종속이라
@@ -307,14 +307,14 @@ namespace sw
             ///        PassCB 에 넣으면 한 패스의 드로우들이 서로를 덮어씁니다(binding.hlsli 1-0 참고).
             uint32 _drawMaterialCount{ 0 };
             /// @brief bindForDraw 가 마지막으로 조회한 PSO → 레이아웃입니다. 같은 PSO 로 연속 드로우할 때
-            ///        layoutForPso() 의 뮤텍스 + 해시맵 조회를 건너뛰는 패스 로컬 1칸 캐시입니다.
-            RHIPipelineStateHandle     _lastLayoutPso{ 0 };
+            ///        layoutForPSO() 의 뮤텍스 + 해시맵 조회를 건너뛰는 패스 로컬 1칸 캐시입니다.
+            RHIPipelineStateHandle     _lastLayoutPSO{ 0 };
             const ShaderBindingLayout* _pLastLayout{ nullptr };
 
             /**
              * @brief "마지막으로 건 것" 캐시를 모두 잊습니다. PSO · 버퍼 핸들이 무효가 되는 자리(디바이스 교체)에서 부릅니다.
              * @details 핸들 값은 **디바이스 안에서만** 정체성입니다. 새 디바이스의 PSO 는 옛 디바이스의 PSO 와 같은 값을
-             *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPso == pso` 가 참이 되어 이미 파괴된
+             *          받을 수 있고(둘 다 첫 PSO 가 같은 번호), 그러면 `_lastLayoutPSO == pso` 가 참이 되어 이미 파괴된
              *          레이아웃(`_pLastLayout`)을 쓰고 리소스 재바인딩을 건너뛰어, 백엔드 교체 뒤
              *          아무것도 안 그려집니다. 파괴와 함께 캐시도 지워야 "같은 값 = 같은 것" 이 성립합니다.
              */
@@ -323,8 +323,8 @@ namespace sw
                 _lastCbBuffer          = 0;
                 _lastCbValuesVersion   = 0;
                 _lastCbRegistryVersion = 0;
-                _lastBindPso           = 0;
-                _lastLayoutPso         = 0;
+                _lastBindPSO           = 0;
+                _lastLayoutPSO         = 0;
                 _pLastLayout           = nullptr;
             }
         };
@@ -538,9 +538,9 @@ namespace sw
         void bindForDraw( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex materialCb,
                           const RHIDescriptorIndex* pMaterialTexSrv = nullptr );
         /** @brief PSO 핸들의 바인딩 레이아웃을 조회합니다. 없으면 nullptr 입니다. */
-        const ShaderBindingLayout* layoutForPso( RHIPipelineStateHandle pso ) const;
+        const ShaderBindingLayout* layoutForPSO( RHIPipelineStateHandle pso ) const;
         /** @brief PSO 생성 desc 로 레이아웃을 만들고 핸들에 매핑합니다. */
-        void registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
+        void registerPSOLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc );
         /** @brief GPUScene 인스턴스 구조버퍼를 리소스 레지스트리에 "SwInstances" 이름으로 등록합니다. */
         void registerInstanceBuffer( FramePassContext& ctx );
         /**
@@ -636,23 +636,23 @@ namespace sw
          * @brief 패스 종류의 표(RenderPassTypeInfo)와 파이프라인 XML 의 패스 서술로 패스 PSO 를 만듭니다.
          * @param pRtvFormatOverride 컬러 RT 포맷을 이 배열로 고정합니다(Present 변종). nullptr 이면 표의 고정 포맷 → 출력 선언 순입니다
          */
-        RHIPipelineStateHandle createPsoForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );
+        RHIPipelineStateHandle createPSOForPassType( RenderPassType passType, const RHIFormat* pRtvFormatOverride = nullptr );
         /** @brief 패스의 엔진 PSO 를 찾고, 없으면 표가 정한 대신할 패스(`_psoFallbackType`)의 PSO 를 반환합니다. */
-        RHIPipelineStateHandle findPassPso( RenderPassType passType ) const;
+        RHIPipelineStateHandle findPassPSO( RenderPassType passType ) const;
 
         /**
          * @brief 이번 프레임의 배치들이 쓸 머티리얼 퍼뮤테이션 PSO 를 **기록 시작 전에** 모두 만들어 둡니다.
          * @details 기록 중에는 PSO 를 만들 수 없고(상수버퍼 용량을 미리 늘리는 것과 같은 이유입니다), 패스는
          *          병렬로 기록되므로 그때 만들면 백엔드마다 다른 방식으로 깨집니다.
          */
-        void ensureMaterialPsos();
+        void ensureMaterialPSOs();
         /**
          * @brief 패스 PSO 에 머티리얼 퍼뮤테이션 · 뷰 모드 · 컬 반전을 얹은 변형을 만듭니다. 얹을 것이 없으면 패스 PSO 를 그대로 반환합니다.
          * @details 렌더 상태(블렌드 · 뎁스 · RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 갈아 끼웁니다.
          *          그 둘은 패스가 정하는 것이지 머티리얼이 정하는 것이 아닙니다. 예외는 컬 모드 하나입니다 — `bReverseCulling` 이면
          *          Back 과 Front 를 맞바꿉니다(거울 변환이 감김을 뒤집으므로). None 은 그대로입니다.
          */
-        RenderPsoCache::MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
+        RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
                                                                    const GpuShaderPermutation* pPermutation, RenderViewMode viewMode,
                                                                    bool bReverseCulling );
         /**
@@ -676,9 +676,9 @@ namespace sw
          *          주 출력에 그리는 패스(Present · Canvas)만 그 키가 포맷이라 (패스, 포맷) 맵 하나로 충분합니다.
          *          **조회만 합니다** — 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 됩니다. 없으면 엔진 PSO 로 물러나고 한 번 알립니다.
          */
-        RHIPipelineStateHandle findOutputPso( RenderPassType passType, RHIFormat targetFormat );
+        RHIPipelineStateHandle findOutputPSO( RenderPassType passType, RHIFormat targetFormat );
         /** @brief 주 출력에 그리는 패스(Present · Canvas)가 그릴 수 있는 대상 포맷(백버퍼 · 오프스크린 · 캡처)의 PSO 를 셋업에서 미리 만듭니다. */
-        void buildOutputPsoVariants();
+        void buildOutputPSOVariants();
 
     private:
         IRHIDevice* _pDevice;
@@ -726,14 +726,14 @@ namespace sw
         RenderViewScheduler       _directViewScheduler;
         vector<RenderViewRequest> _listDirectViewScratch;
         /** @brief 이번 프레임 배치가 쓰는 PSO 변형 하나의 조건(퍼뮤테이션, 컬 반전)입니다. 퍼뮤테이션이 없으면 kInvalidShaderPermutation 입니다. */
-        struct MaterialPsoRequest
+        struct MaterialPSORequest
         {
             uint32 _shaderPermutation{ kInvalidShaderPermutation };
             uint8  _bReverseCulling{ SW_FALSE };
         };
-        /// @brief `ensureMaterialPsos` 가 이번 프레임 배치에서 모으는 변형 조건입니다(중복 없음). 프레임마다 다시 채웁니다.
-        vector<MaterialPsoRequest> _listOpaquePsoRequestScratch;
-        vector<MaterialPsoRequest> _listTransparentPsoRequestScratch;
+        /// @brief `ensureMaterialPSOs` 가 이번 프레임 배치에서 모으는 변형 조건입니다(중복 없음). 프레임마다 다시 채웁니다.
+        vector<MaterialPSORequest> _listOpaquePSORequestScratch;
+        vector<MaterialPSORequest> _listTransparentPSORequestScratch;
         /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스에서 그려지는지의 어림값입니다(그림자 · 프리패스 · 불투명 · 반투명).
         static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         /// @brief 패스 · 드로우별 상수버퍼 슬롯 링입니다. 병렬 기록에서 드로우마다 하나씩 집어 갑니다.
@@ -887,7 +887,7 @@ namespace sw
         /// @brief 순번 표가 없는 뷰(주 · 그림자)의 정렬 디스패치가 t2 에 거는 원소 하나짜리 자리표입니다. 셰이더는 플래그(`g_UseViewRank`)가 0 이면 읽지 않는다.
         RHIStructuredBufferSlot _transparentRankPlaceholder;
         /// @brief 엔진 패스 PSO · Present PSO · 머티리얼 변형과 그 바인딩 레이아웃입니다. 소유와 해제 순서는 캐시가 압니다.
-        RenderPsoCache                       _psoCache;
+        RenderPSOCache                       _psoCache;
         unordered_map<hashed_string, uint32> _mapPassNameToIndex;
         RHITextureHandle                     _outputRenderTarget;
         /**
@@ -951,11 +951,11 @@ namespace sw
          * @brief 현재 보기 방식(`RenderViewMode`)입니다.
          * @details 드로우 경로가 배치마다 읽고 UI 스레드가 씁니다. 값 하나뿐이라 atomic 으로 충분합니다.
          *          프레임 중간에 바뀌어도 최악은 한 프레임이 섞여 그려지는 것이고, PSO 변형은
-         *          `ensureMaterialPsos` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있습니다.
+         *          `ensureMaterialPSOs` 가 그 프레임 시작에 읽은 모드로 이미 준비되어 있습니다.
          */
         atomic<uint8> _viewMode;
         /// @brief 셋업에 없는 출력 대상 포맷(Present · Canvas)을 만났다고 한 번만 알리기 위한 래치입니다.
-        atomic<uint8> _bOutputPsoMissingLogged;
+        atomic<uint8> _bOutputPSOMissingLogged;
         /// @brief 출력 RT 와 Present 캡처의 크기 · 포맷이 달라 복사를 건너뛴다고 한 번만 알리기 위한 래치입니다.
         atomic<uint8> _bCaptureMismatchLogged;
         /// @brief 머티리얼 폴백 stride 가 없다고 한 번만 알리기 위한 래치입니다(드로우 경로라 프레임마다 찍으면 안 됩니다).

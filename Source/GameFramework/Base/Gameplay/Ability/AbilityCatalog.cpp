@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Ability/CombatAttributeSet.h"
 
 namespace sw
@@ -19,9 +19,9 @@ namespace sw
         struct AbilityCatalogInternal
         {
             /** @brief `<X tag="A.B"/>` 자식들을 컨테이너에 더합니다(태그 속성이 빈 노드는 건너뛴다). */
-            static void readTagChildren( const XmlNode& parent, const utf8* pChildName, TagContainer& outTags )
+            static void readTagChildren( const XMLNode& parent, const utf8* pChildName, TagContainer& outTags )
             {
-                for ( XmlNode child = parent.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
+                for ( XMLNode child = parent.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
                     const utf8* pTag = child.findAttribute( "tag" );
                     if ( StringUtil::isNullOrEmpty( pTag ) )
@@ -31,7 +31,7 @@ namespace sw
             }
 
             /** @brief 속성 @p pName 을 이름으로 읽습니다. 없거나 비었으면 빈 이름입니다. */
-            static hashed_string readName( const XmlNode& node, const utf8* pName )
+            static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( StringUtil::isNullOrEmpty( pText ) )
@@ -40,7 +40,7 @@ namespace sw
             }
 
             /** @brief `<Modifier>` 하나를 읽습니다. 어트리뷰트가 없거나 열거 이름을 모르면 false 입니다(경고). */
-            [[nodiscard]] static bool readModifier( const XmlNode& node, const utf8* pEffectId, string_view sourceName, GameplayEffectModifier& outModifier )
+            [[nodiscard]] static bool readModifier( const XMLNode& node, const utf8* pEffectId, string_view sourceName, GameplayEffectModifier& outModifier )
             {
                 outModifier._attribute = readName( node, "attribute" );
                 if ( outModifier._attribute.empty() )
@@ -93,7 +93,7 @@ namespace sw
             }
 
             /** @brief "Damage" 실행 계산을 노드의 매개변수로 만듭니다. */
-            static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XmlNode& node )
+            static shared_ptr<const IGameplayEffectExecution> createDamageExecution( const XMLNode& node )
             {
                 shared_ptr<DamageExecution> pExecution = make_shared<DamageExecution>();
                 const utf8*                 pName      = node.findAttribute( "setByCaller" );
@@ -240,12 +240,12 @@ namespace sw
         return _mapAbilityFactory.find( className ) != _mapAbilityFactory.end();
     }
 
-    uint32 AbilityCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 AbilityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
 
         // 이펙트 → 어빌리티 → 세트. 어빌리티가 비용 · 쿨다운 이펙트를 가리키므로 파일 안의 순서와 상관없이 이펙트를 먼저 다 읽는다.
-        for ( XmlNode node = root.findChild( "GameplayEffect" ); node; node = node.findNextSibling( "GameplayEffect" ) )
+        for ( XMLNode node = root.findChild( "GameplayEffect" ); node; node = node.findNextSibling( "GameplayEffect" ) )
         {
             GameplayEffectDef def;
             if ( readEffect( node, sourceName, def ) == false )
@@ -254,7 +254,7 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
+        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
             GameplayAbilityDef def;
             if ( readAbility( node, sourceName, def ) == false )
@@ -263,7 +263,7 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "AbilitySet" ); node; node = node.findNextSibling( "AbilitySet" ) )
+        for ( XMLNode node = root.findChild( "AbilitySet" ); node; node = node.findNextSibling( "AbilitySet" ) )
         {
             AbilitySetDef def;
             if ( readAbilitySet( node, sourceName, def ) == false )
@@ -277,7 +277,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool AbilityCatalog::readEffect( const XmlNode& node, string_view sourceName, GameplayEffectDef& outDef ) const
+    bool AbilityCatalog::readEffect( const XMLNode& node, string_view sourceName, GameplayEffectDef& outDef ) const
     {
         const utf8* pId = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pId ) )
@@ -319,14 +319,14 @@ namespace sw
         if ( bDurationWithoutLength )
             SW_LOG_WARNING( "%#: effect '%#' is HasDuration but 'seconds' is not positive - it expires on the next update", sourceName, pId );
 
-        for ( XmlNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
+        for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
         {
             GameplayEffectModifier modifier;
             if ( AbilityCatalogInternal::readModifier( modifierNode, pId, sourceName, modifier ) )
                 outDef._listModifier.push_back( modifier );
         }
 
-        for ( XmlNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
+        for ( XMLNode executionNode = node.findChild( "Execution" ); executionNode; executionNode = executionNode.findNextSibling( "Execution" ) )
         {
             const hashed_string className   = AbilityCatalogInternal::readName( executionNode, "class" );
             const auto          factoryIter = _mapExecutionFactory.find( className );
@@ -349,7 +349,7 @@ namespace sw
         return true;
     }
 
-    bool AbilityCatalog::readAbility( const XmlNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const
+    bool AbilityCatalog::readAbility( const XMLNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const
     {
         const utf8* pId = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pId ) )
@@ -381,7 +381,7 @@ namespace sw
         AbilityCatalogInternal::readTagChildren( node, "BlockedTag", config._activationBlockedTags );
         AbilityCatalogInternal::readTagChildren( node, "TriggerTag", config._triggerEventTags );
 
-        for ( XmlNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
+        for ( XMLNode paramNode = node.findChild( "Param" ); paramNode; paramNode = paramNode.findNextSibling( "Param" ) )
         {
             const hashed_string paramName = AbilityCatalogInternal::readName( paramNode, "name" );
             if ( paramName.empty() )
@@ -395,7 +395,7 @@ namespace sw
         return true;
     }
 
-    bool AbilityCatalog::readAbilitySet( const XmlNode& node, string_view sourceName, AbilitySetDef& outDef ) const
+    bool AbilityCatalog::readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const
     {
         const utf8* pId = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pId ) )
@@ -405,14 +405,14 @@ namespace sw
         }
         outDef._id = hashed_string( pId );
 
-        for ( XmlNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
+        for ( XMLNode setNode = node.findChild( "AttributeSet" ); setNode; setNode = setNode.findNextSibling( "AttributeSet" ) )
         {
             AbilitySetAttributeSetEntry setEntry;
             setEntry._className = AbilityCatalogInternal::readName( setNode, "class" );
             if ( setEntry._className.empty() )
                 setEntry._className = hashed_string( "Generic" );
 
-            for ( XmlNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
+            for ( XMLNode attributeNode = setNode.findChild( "Attribute" ); attributeNode; attributeNode = attributeNode.findNextSibling( "Attribute" ) )
             {
                 AbilitySetAttributeEntry attributeEntry;
                 attributeEntry._attribute = AbilityCatalogInternal::readName( attributeNode, "name" );
@@ -428,7 +428,7 @@ namespace sw
             outDef._listAttributeSet.push_back( std::move( setEntry ) );
         }
 
-        for ( XmlNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
+        for ( XMLNode abilityNode = node.findChild( "Ability" ); abilityNode; abilityNode = abilityNode.findNextSibling( "Ability" ) )
         {
             AbilitySetAbilityEntry abilityEntry;
             abilityEntry._abilityId = AbilityCatalogInternal::readName( abilityNode, "id" );
@@ -439,7 +439,7 @@ namespace sw
             outDef._listAbility.push_back( abilityEntry );
         }
 
-        for ( XmlNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
+        for ( XMLNode effectNode = node.findChild( "Effect" ); effectNode; effectNode = effectNode.findNextSibling( "Effect" ) )
         {
             AbilitySetEffectEntry effectEntry;
             effectEntry._effectId = AbilityCatalogInternal::readName( effectNode, "id" );

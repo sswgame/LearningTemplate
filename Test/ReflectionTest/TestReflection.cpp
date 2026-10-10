@@ -7,7 +7,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -256,7 +256,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
         { 1, pTarget->getHandle() }
     };
     pHolderComp->_targetComponent = pTargetComp->getHandle();
-    const sw::string state        = sw::ObjectStateSerializer::saveToXmlString( pHolder );
+    const sw::string state        = sw::ObjectStateSerializer::saveToXMLString( pHolder );
     SW_ASSERT_TRUE( state.empty() == false );
 
     // 같은 실행 상태 — 묶음 밖의 오브젝트도 런타임 id 그대로다.
@@ -266,7 +266,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
         sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Live );
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pLive, state, context ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLive, state, context ) );
         batch.finish();
         const sw::TestHandleHolderComponent* pLoaded = pLive->getComponent<sw::TestHandleHolderComponent>();
         SW_ASSERT_NOT_NULL( pLoaded );
@@ -285,7 +285,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchClearsHandlesItCannotRemap )
         sw::ObjectLoadContext context{};
         context._pBatch  = &batch;
         context._savedId = 900000001; // 런타임 id 와 겹치지 않는 파일 id
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pFresh, state, context ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
         batch.finish();
     }
     const sw::TestHandleHolderComponent* pFromFile = pFresh->getComponent<sw::TestHandleHolderComponent>();
@@ -331,8 +331,8 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
 
     sw::vector<uint8> binaryState;
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pHolder, binaryState ) );
-    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXmlString( pHolder );
-    const sw::string jsonState = sw::ObjectStateSerializer::saveToJsonString( pHolder );
+    const sw::string xmlState  = sw::ObjectStateSerializer::saveToXMLString( pHolder );
+    const sw::string jsonState = sw::ObjectStateSerializer::saveToJSONString( pHolder );
 
     for ( uint32 formatIndex = 0; formatIndex < 3; ++formatIndex )
     {
@@ -348,9 +348,9 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
         context._savedId = 900000101 + formatIndex;
         bool bLoaded     = false;
         if ( formatIndex == 0 )
-            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pNewHolder, xmlState, context );
+            bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pNewHolder, xmlState, context );
         else if ( formatIndex == 1 )
-            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pNewHolder, jsonState, context );
+            bLoaded = sw::ObjectStateSerializer::loadFromJSONString( pNewHolder, jsonState, context );
         else
             bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pNewHolder, binaryState.data(), binaryState.size(), context ) != 0;
         SW_ASSERT_TRUE_MSG( bLoaded, arrFormatName[formatIndex] );
@@ -578,9 +578,9 @@ SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
     sw::AliasContainerActor source;
     source._aliasScores          = { 3, 1, 4 };
     source._aliasCount           = 7;
-    const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
+    const sw::string        json = sw::JSONSerializer::serialize( &source, *pType );
     sw::AliasContainerActor restored;
-    SW_ASSERT_TRUE_MSG( sw::JsonSerializer::deserialize( &restored, *pType, json ), json.c_str() );
+    SW_ASSERT_TRUE_MSG( sw::JSONSerializer::deserialize( &restored, *pType, json ), json.c_str() );
     SW_EXPECT_EQUAL( size_t( 3 ), restored._aliasScores.size() );
     SW_EXPECT_TRUE_MSG( restored._aliasScores.size() == 3 && restored._aliasScores[2] == 4, json.c_str() );
     SW_EXPECT_EQUAL( 7, restored._aliasCount );

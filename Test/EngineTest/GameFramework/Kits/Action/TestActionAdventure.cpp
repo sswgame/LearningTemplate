@@ -23,7 +23,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kAdventureAreaXml = R"(
+    constexpr const utf8* kAdventureAreaXML = R"(
 <AreaGraph>
   <Area id="entrance" region="Forest"/>
   <Area id="hall" region="Forest"/>
@@ -40,7 +40,7 @@ namespace
 </AreaGraph>
 )";
 
-    constexpr const utf8* kAdventureDungeonXml = R"(
+    constexpr const utf8* kAdventureDungeonXML = R"(
 <AdventureDungeons>
   <Dungeon id="forest" region="Forest">
     <Door id="cellDoor" kind="SmallKey" flag="forest.cell"/>
@@ -74,9 +74,9 @@ namespace
 
         bool initialize()
         {
-            if ( _areaGraph.loadFromXmlText( kAdventureAreaXml, "ActionAdventureTest" ) == false )
+            if ( _areaGraph.loadFromXMLText( kAdventureAreaXML, "ActionAdventureTest" ) == false )
                 return false;
-            if ( _catalog.loadFromXmlText( kAdventureDungeonXml, "ActionAdventureTest" ) == false )
+            if ( _catalog.loadFromXMLText( kAdventureDungeonXML, "ActionAdventureTest" ) == false )
                 return false;
             _state.initialize( &_catalog );
             return true;
@@ -114,7 +114,7 @@ namespace
         grid.setWind( wind );
     }
 
-    constexpr const utf8* kAdventureItemXml = R"(
+    constexpr const utf8* kAdventureItemXML = R"(
 <ItemCatalog>
   <Item id="hydromelon" category="Food" maxStack="99"/>
   <Item id="chillshroom" category="Food" maxStack="99"/>
@@ -128,7 +128,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kAdventureCookingXml = R"(
+    constexpr const utf8* kAdventureCookingXML = R"(
 <AdventureCooking maxIngredients="5" heartScale="2" durationPerIngredient="30" station="CookingPot" generic="simmeredDish" dubious="dubiousFood" dubiousHearts="4">
   <Effect id="Chilly" tier2="4" tier3="7" maxDuration="1800"/>
   <Effect id="Spicy" tier2="4" tier3="7" maxDuration="1800"/>
@@ -139,7 +139,7 @@ namespace
 </AdventureCooking>
 )";
 
-    constexpr const utf8* kAdventureRecipeXml = R"(
+    constexpr const utf8* kAdventureRecipeXML = R"(
 <RecipeCatalog>
   <Recipe id="sorbet" station="CookingPot"><In item="hydromelon" count="2"/><Out item="chillySorbet" count="1"/></Recipe>
 </RecipeCatalog>
@@ -532,7 +532,7 @@ SW_TEST_CASE( ActionAdventureTest, ElectricityConductsAndIceBlocks )
 SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
 {
     AdventureCooking cooking;
-    SW_ASSERT_TRUE( cooking.loadFromXmlText( kAdventureCookingXml, "ActionAdventureTest" ) );
+    SW_ASSERT_TRUE( cooking.loadFromXMLText( kAdventureCookingXML, "ActionAdventureTest" ) );
     AdventureDish dish;
 
     vector<hashed_string> listPot{ "hydromelon", "hydromelon", "hydromelon", "wildberry" };
@@ -563,9 +563,9 @@ SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
     SW_EXPECT_TRUE( cooking.evaluate( listPot, dish ) == AdventureCookResult::EmptyPot );
 
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kAdventureItemXml, "ActionAdventureTest" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kAdventureItemXML, "ActionAdventureTest" ) );
     RecipeCatalog recipes;
-    SW_ASSERT_TRUE( recipes.loadFromXmlText( kAdventureRecipeXml, "ActionAdventureTest" ) );
+    SW_ASSERT_TRUE( recipes.loadFromXMLText( kAdventureRecipeXML, "ActionAdventureTest" ) );
     Crafter crafter;
     crafter.initialize( &recipes );
     Inventory inventory;
@@ -594,7 +594,7 @@ SW_TEST_CASE( ActionAdventureTest, CookingSumsSameEffectAndSpoilsMixed )
 SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
 {
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kAdventureItemXml, "ActionAdventureTest" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kAdventureItemXML, "ActionAdventureTest" ) );
     Inventory inventory;
     inventory.initialize( &items, 4 );
     SW_ASSERT_TRUE( inventory.addItem( "treeBranch", 1 ) == 1 );
@@ -622,9 +622,9 @@ SW_TEST_CASE( ActionAdventureTest, WeaponWearTowersAndShrines )
     SW_EXPECT_EQUAL( 1, inventory.getItemCount( "masterSword" ) ); // 내구도 없는 검은 닳지 않는다
 
     AreaGraph areaGraph;
-    SW_ASSERT_TRUE( areaGraph.loadFromXmlText( kAdventureAreaXml, "ActionAdventureTest" ) );
+    SW_ASSERT_TRUE( areaGraph.loadFromXMLText( kAdventureAreaXML, "ActionAdventureTest" ) );
     AdventureWorldMap worldMap;
-    SW_ASSERT_TRUE( worldMap.loadFromXmlText( R"(<AdventureWorld orbsPerExchange="4"><Tower id="plateauTower" region="Plateau"/>
+    SW_ASSERT_TRUE( worldMap.loadFromXMLText( R"(<AdventureWorld orbsPerExchange="4"><Tower id="plateauTower" region="Plateau"/>
         <Shrine id="s1" region="Plateau"/><Shrine id="s2"/><Shrine id="s3"/><Shrine id="s4"/></AdventureWorld>)",
                                               "ActionAdventureTest" ) );
     SW_EXPECT_EQUAL( 2, worldMap.activateTower( "plateauTower", areaGraph ) );

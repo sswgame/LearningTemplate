@@ -12,12 +12,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 스테이지 하나입니다. */
     struct ActionStageDef
@@ -139,9 +139,9 @@ namespace sw
      *        <Pattern id="gunner" start="patrol"><State id="patrol" frames="90" next="aim" onNear="aim" near="5" moveX="1"/>
      *        <State id="aim" frames="20" next="shoot"/><State id="shoot" frames="1" next="patrol" fire="true" fireSpeed="9"/></Pattern></ActionPlatformer>` 를 읽습니다.
      */
-    class SW_GF_API ActionPlatformerCatalog : public XmlCatalog<ActionPlatformerCatalog>
+    class SW_GF_API ActionPlatformerCatalog : public XMLCatalog<ActionPlatformerCatalog>
     {
-        friend class XmlCatalog<ActionPlatformerCatalog>;
+        friend class XMLCatalog<ActionPlatformerCatalog>;
 
     public:
         ActionPlatformerCatalog();
@@ -155,9 +155,9 @@ namespace sw
         ActionParryRules&         getParryRules() { return _parryRules; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "ActionPlatformer"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadPattern( const XmlNode& node, const utf8* pId, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "ActionPlatformer"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadPattern( const XMLNode& node, const utf8* pId, string_view sourceName );
 
         GameCatalog<ActionStageDef>   _stageCatalog;
         GameCatalog<ActionComboDef>   _comboCatalog;

@@ -34,7 +34,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 상태 값이 걸음마다 어떻게 바뀌는가입니다. */
     enum class ElementStatusKind : uint8
@@ -151,7 +151,7 @@ namespace sw
         static constexpr const utf8* kDefaultPath = "common/data/elements/default.elements.xml";
 
         [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
         /**
          * @brief 경로의 표를 한 번 읽어 나눠 씁니다(오브젝트 원소 상태가 같은 표를 본다). 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불려도 됩니다.
@@ -187,11 +187,11 @@ namespace sw
         void                              setStepTime( float32 stepTime ) { _stepTime = stepTime; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
-        [[nodiscard]] bool readStimulusRule( const XmlNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
-        [[nodiscard]] bool readStepRule( const XmlNode& node, ElementStepRule& outRule, string_view sourceName ) const;
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
+        [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
         /** @brief 이름 속성을 표의 번호로 읽습니다. 속성이 없으면 −1 로 true, 모르는 이름이면 경고하고 false 입니다. */
-        [[nodiscard]] bool readIndex( const XmlNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
+        [[nodiscard]] bool readIndex( const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const;
 
         vector<hashed_string>      _listFlag{};

@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
     {
         struct PrefabOverridesInternal
         {
-            using ComponentListWriteFn = Delegate<void( XmlNode, const XmlNode& )>;
+            using ComponentListWriteFn = Delegate<void( XMLNode, const XMLNode& )>;
 
             static constexpr const utf8* kComponentList = "_listComponent";
             static constexpr const utf8* kComponentName = "_componentName";
@@ -36,13 +36,13 @@ namespace sw
             /** @brief 컴포넌트 원소 하나와 그 키(`이름표#n`)입니다. */
             struct KeyedComponent
             {
-                XmlNode _node;
+                XMLNode _node;
                 string  _key;
                 bool    _bUsed{ false };
             };
 
             /** @brief 원소 노드인지 봅니다(글 · 주석 노드는 이름이 비어 있다). */
-            static bool isElement( const XmlNode& node )
+            static bool isElement( const XMLNode& node )
             {
                 return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false;
             }
@@ -53,11 +53,11 @@ namespace sw
             }
 
             /** @brief 이름이 정확히 같은 첫 자식 원소입니다. 없으면 무효 노드입니다. */
-            static XmlNode findChildElement( const XmlNode& parent, const utf8* pName )
+            static XMLNode findChildElement( const XMLNode& parent, const utf8* pName )
             {
                 if ( parent.isValid() == false )
                     return {};
-                for ( XmlNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isElement( child ) && isSameText( child.getName(), pName ) )
                         return child;
@@ -66,9 +66,9 @@ namespace sw
             }
 
             /** @brief 첫 자식 원소입니다(`<Override>` · `<Add>` 가 싼 컴포넌트 원소). */
-            static XmlNode findFirstElement( const XmlNode& parent )
+            static XMLNode findFirstElement( const XMLNode& parent )
             {
-                for ( XmlNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = parent.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isElement( child ) )
                         return child;
@@ -80,13 +80,13 @@ namespace sw
              * @brief 컴포넌트 목록 원소의 컴포넌트마다 키를 붙여 모읍니다. 키는 `ComponentStableKey` 와 같은 규칙입니다 — 이름표(`_componentName`),
              *        없거나 비었으면 원소 이름(타입), 그 뒤에 같은 이름 가운데 몇 번째인지.
              */
-            static void collectComponents( const XmlNode& listNode, vector<KeyedComponent>& outListComponent )
+            static void collectComponents( const XMLNode& listNode, vector<KeyedComponent>& outListComponent )
             {
                 outListComponent.clear();
                 if ( listNode.isValid() == false )
                     return;
                 unordered_map<string, int32> mapCount;
-                for ( XmlNode child = listNode.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = listNode.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isElement( child ) == false )
                         continue;
@@ -117,12 +117,12 @@ namespace sw
             }
 
             /** @brief 인스턴스 원소에서 기준 원소와 다른 속성 · 자식 원소를 모읍니다. */
-            static void collectDifferences( const XmlNode& instance, const XmlNode& base, bool bRoot, vector<XmlAttribute>& outListAttribute,
-                                            vector<XmlNode>& outListChild )
+            static void collectDifferences( const XMLNode& instance, const XMLNode& base, bool bRoot, vector<XMLAttribute>& outListAttribute,
+                                            vector<XMLNode>& outListChild )
             {
                 outListAttribute.clear();
                 outListChild.clear();
-                for ( XmlAttribute attribute = instance.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = instance.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     if ( bRoot && isRootOnlyField( attribute.getName() ) )
                         continue;
@@ -130,34 +130,34 @@ namespace sw
                     if ( pBaseValue == nullptr || isSameText( pBaseValue, attribute.getValue() ) == false )
                         outListAttribute.push_back( attribute );
                 }
-                for ( XmlNode child = instance.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = instance.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isElement( child ) == false || ( bRoot && isRootOnlyField( child.getName() ) ) )
                         continue;
-                    const XmlNode baseChild = findChildElement( base, child.getName() );
+                    const XMLNode baseChild = findChildElement( base, child.getName() );
                     if ( baseChild.isValid() == false || baseChild.toString() != child.toString() )
                         outListChild.push_back( child );
                 }
             }
 
             /** @brief 모은 속성 · 자식만 든 원소 하나를 @p parent 아래에 씁니다. */
-            static void appendPartial( XmlNode parent, const utf8* pName, const vector<XmlAttribute>& listAttribute, const vector<XmlNode>& listChild )
+            static void appendPartial( XMLNode parent, const utf8* pName, const vector<XMLAttribute>& listAttribute, const vector<XMLNode>& listChild )
             {
-                XmlNode partial = parent.appendChild( pName );
-                for ( const XmlAttribute& attribute : listAttribute )
+                XMLNode partial = parent.appendChild( pName );
+                for ( const XMLAttribute& attribute : listAttribute )
                 {
                     partial.appendAttribute( attribute.getName(), attribute.getValue() );
                 }
-                for ( const XmlNode& child : listChild )
+                for ( const XMLNode& child : listChild )
                 {
                     partial.appendClone( child );
                 }
             }
 
             /** @brief 기준 원소의 속성을 덮어쓴 값(있으면)으로 쓰고, 기준에 없는 덮어쓴 속성을 더합니다. @p pName 이 있으면 `_name` 을 그것으로. */
-            static void appendMergedAttributes( XmlNode out, const XmlNode& base, const XmlNode& partial, const utf8* pName )
+            static void appendMergedAttributes( XMLNode out, const XMLNode& base, const XMLNode& partial, const utf8* pName )
             {
-                for ( XmlAttribute attribute = base.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = base.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     const bool  bRenamed = pName != nullptr && isSameText( attribute.getName(), kObjectName );
                     const utf8* pValue   = partial.isValid() ? partial.findAttribute( attribute.getName(), false ) : nullptr;
@@ -167,7 +167,7 @@ namespace sw
                 }
                 if ( partial.isValid() == false )
                     return;
-                for ( XmlAttribute attribute = partial.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = partial.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     if ( base.findAttribute( attribute.getName(), false ) == nullptr && isSameText( attribute.getName(), kObjectName ) == false )
                         out.appendAttribute( attribute.getName(), attribute.getValue() );
@@ -175,10 +175,10 @@ namespace sw
             }
 
             /** @brief 기준 원소의 자식 원소마다 덮어쓴 것이 있으면 그것을, 없으면 기준의 것을 씁니다. 컴포넌트 목록은 @p listWriter 가 씁니다. */
-            static void appendMergedChildren( XmlNode out, const XmlNode& base, const XmlNode& partial, const ComponentListWriteFn* pListWriter )
+            static void appendMergedChildren( XMLNode out, const XMLNode& base, const XMLNode& partial, const ComponentListWriteFn* pListWriter )
             {
                 bool bListWritten = false;
-                for ( XmlNode child = base.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = base.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     if ( isElement( child ) == false )
                         continue;
@@ -188,35 +188,35 @@ namespace sw
                         bListWritten = true;
                         continue;
                     }
-                    const XmlNode replaced = findChildElement( partial, child.getName() );
+                    const XMLNode replaced = findChildElement( partial, child.getName() );
                     out.appendClone( replaced.isValid() ? replaced : child );
                 }
                 if ( partial.isValid() )
                 {
-                    for ( XmlNode child = partial.findChild(); child.isValid(); child = child.findNextSibling() )
+                    for ( XMLNode child = partial.findChild(); child.isValid(); child = child.findNextSibling() )
                     {
                         if ( isElement( child ) && findChildElement( base, child.getName() ).isValid() == false )
                             out.appendClone( child );
                     }
                 }
                 if ( pListWriter != nullptr && bListWritten == false )
-                    ( *pListWriter )( out, XmlNode{} );
+                    ( *pListWriter )( out, XMLNode{} );
             }
 
             /** @brief `makeInstanceState` 가 컴포넌트 목록을 쓰는 단계입니다 — 지운 것을 빼고, 덮어쓴 것을 얹고, 더한 것을 `after` 자리에 넣습니다. */
             struct ComponentListWriter
             {
-                XmlNode     _overrideRoot;
+                XMLNode     _overrideRoot;
                 string_view _instanceName; ///< 경고에 적을 엔티티 이름(비면 "?")
 
-                void write( XmlNode outRoot, const XmlNode& baseList ) const
+                void write( XMLNode outRoot, const XMLNode& baseList ) const
                 {
                     vector<KeyedComponent> listBase;
                     collectComponents( baseList, listBase );
-                    XmlNode outList = outRoot.appendChild( kComponentList );
+                    XMLNode outList = outRoot.appendChild( kComponentList );
 
                     vector<string> listRemovedKey;
-                    for ( XmlNode entry = _overrideRoot.findChild( kRemove, false ); entry.isValid(); entry = entry.findNextSibling( kRemove, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kRemove, false ); entry.isValid(); entry = entry.findNextSibling( kRemove, false ) )
                     {
                         const utf8* pKey = entry.findAttribute( kKey, false );
                         if ( StringUtil::isNullOrEmpty( pKey ) == false )
@@ -239,40 +239,40 @@ namespace sw
                 }
 
                 /** @brief 프리팹 컴포넌트 하나를 씁니다 — 덮어쓴 것이 있으면 얹어서. */
-                void appendBaseComponent( XmlNode outList, KeyedComponent& component ) const
+                void appendBaseComponent( XMLNode outList, KeyedComponent& component ) const
                 {
-                    const XmlNode partial = findOverride( component );
+                    const XMLNode partial = findOverride( component );
                     if ( partial.isValid() == false )
                     {
                         outList.appendClone( component._node );
                         return;
                     }
                     component._bUsed = true;
-                    XmlNode merged   = outList.appendChild( component._node.getName() );
+                    XMLNode merged   = outList.appendChild( component._node.getName() );
                     appendMergedAttributes( merged, component._node, partial, nullptr );
                     appendMergedChildren( merged, component._node, partial, nullptr );
                 }
 
                 /** @brief `after` 가 @p pAnchorKey 인 더한 컴포넌트를 문서 순서대로 씁니다. @p pAnchorKey 가 nullptr 이면 `after` 가 없는 것(맨 앞)입니다. */
-                void appendAddedAfter( XmlNode outList, const string* pAnchorKey ) const
+                void appendAddedAfter( XMLNode outList, const string* pAnchorKey ) const
                 {
-                    for ( XmlNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
                     {
                         const utf8* pAfter    = entry.findAttribute( kAfter, false );
                         const bool  bNoAnchor = StringUtil::isNullOrEmpty( pAfter );
                         const bool  bMatches  = pAnchorKey == nullptr ? bNoAnchor : ( bNoAnchor == false && *pAnchorKey == pAfter );
                         if ( bMatches == false )
                             continue;
-                        const XmlNode added = findFirstElement( entry );
+                        const XMLNode added = findFirstElement( entry );
                         if ( added.isValid() )
                             outList.appendClone( added );
                     }
                 }
 
                 /** @brief 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 컴포넌트를 끝에 씁니다 — 버리지 않는다(다음 저장이 지금 자리로 다시 적는다). */
-                void appendAddedWithLostAnchor( XmlNode outList, const vector<KeyedComponent>& listBase ) const
+                void appendAddedWithLostAnchor( XMLNode outList, const vector<KeyedComponent>& listBase ) const
                 {
-                    for ( XmlNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kAdd, false ); entry.isValid(); entry = entry.findNextSibling( kAdd, false ) )
                     {
                         const utf8* pAfter = entry.findAttribute( kAfter, false );
                         if ( StringUtil::isNullOrEmpty( pAfter ) )
@@ -282,7 +282,7 @@ namespace sw
                         {
                             bFound = bFound || component._key == pAfter;
                         }
-                        const XmlNode added = findFirstElement( entry );
+                        const XMLNode added = findFirstElement( entry );
                         if ( bFound || added.isValid() == false )
                             continue;
                         SW_LOG_TRACE( "Added component follows '%#', which the prefab no longer has - appended at the end", pAfter );
@@ -291,12 +291,12 @@ namespace sw
                 }
 
                 /** @brief 이 컴포넌트를 가리키는 `<Override>` 의 컴포넌트 원소입니다. 원소 이름(타입)이 다르면 무효 노드입니다. */
-                XmlNode findOverride( const KeyedComponent& component ) const
+                XMLNode findOverride( const KeyedComponent& component ) const
                 {
-                    for ( XmlNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
                     {
                         const utf8*   pKey    = entry.findAttribute( kKey, false );
-                        const XmlNode partial = findFirstElement( entry );
+                        const XMLNode partial = findFirstElement( entry );
                         if ( pKey != nullptr && component._key == pKey && partial.isValid() && isSameText( partial.getName(), component._node.getName() ) )
                             return partial;
                     }
@@ -306,7 +306,7 @@ namespace sw
                 /** @brief 프리팹에서 사라진(또는 타입이 바뀐) 컴포넌트를 가리키는 항목을 알립니다 — 버려지고 다음 저장에서 빠진다. */
                 void warnDroppedEntries( const vector<KeyedComponent>& listBase, const vector<string>& listRemovedKey ) const
                 {
-                    for ( XmlNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
+                    for ( XMLNode entry = _overrideRoot.findChild( kOverride, false ); entry.isValid(); entry = entry.findNextSibling( kOverride, false ) )
                     {
                         const utf8* pKey     = entry.findAttribute( kKey, false );
                         bool        bMatched = false;
@@ -338,9 +338,9 @@ namespace sw
 {
     SW_LOG_CALLER( "PrefabOverrides" );
 
-    bool PrefabOverrides::makeBaseState( const PrefabAsset& prefab, string& outStateXml )
+    bool PrefabOverrides::makeBaseState( const PrefabAsset& prefab, string& outStateXML )
     {
-        outStateXml.clear();
+        outStateXML.clear();
         if ( prefab.isValid() == false )
             return false;
 
@@ -355,28 +355,28 @@ namespace sw
 
         ObjectSaveOptions options{};
         options._bOmitExternalParent = true;
-        outStateXml                  = ObjectStateSerializer::saveToXmlString( pBase, options );
-        return outStateXml.empty() == false;
+        outStateXML                  = ObjectStateSerializer::saveToXMLString( pBase, options );
+        return outStateXML.empty() == false;
     }
 
-    bool PrefabOverrides::computeOverrides( string_view instanceStateXml, string_view baseStateXml, string& outOverrideXml )
+    bool PrefabOverrides::computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML )
     {
-        outOverrideXml.clear();
-        XmlDocument instanceDoc;
-        XmlDocument baseDoc;
-        if ( instanceDoc.parse( instanceStateXml ) == false || baseDoc.parse( baseStateXml ) == false )
+        outOverrideXML.clear();
+        XMLDocument instanceDoc;
+        XMLDocument baseDoc;
+        if ( instanceDoc.parse( instanceStateXML ) == false || baseDoc.parse( baseStateXML ) == false )
             return false;
-        const XmlNode instanceRoot = instanceDoc.getRoot();
-        const XmlNode baseRoot     = baseDoc.getRoot();
+        const XMLNode instanceRoot = instanceDoc.getRoot();
+        const XMLNode baseRoot     = baseDoc.getRoot();
         if ( instanceRoot.isValid() == false || baseRoot.isValid() == false )
             return false;
 
-        XmlDocument outDoc;
-        XmlNode     outRoot = outDoc.appendRoot( kRootName );
+        XMLDocument outDoc;
+        XMLNode     outRoot = outDoc.appendRoot( kRootName );
         bool        bAny    = false;
 
-        vector<XmlAttribute> listAttribute;
-        vector<XmlNode>      listChild;
+        vector<XMLAttribute> listAttribute;
+        vector<XMLNode>      listChild;
         PrefabOverridesInternal::collectDifferences( instanceRoot, baseRoot, true, listAttribute, listChild );
         if ( listAttribute.empty() == false || listChild.empty() == false )
         {
@@ -416,7 +416,7 @@ namespace sw
             PrefabOverridesInternal::collectDifferences( instanceComponent._node, pBaseComponent->_node, false, listAttribute, listChild );
             if ( listAttribute.empty() && listChild.empty() )
                 continue;
-            XmlNode entry = outRoot.appendChild( PrefabOverridesInternal::kOverride );
+            XMLNode entry = outRoot.appendChild( PrefabOverridesInternal::kOverride );
             entry.appendAttribute( PrefabOverridesInternal::kKey, instanceComponent._key );
             PrefabOverridesInternal::appendPartial( entry, instanceComponent._node.getName(), listAttribute, listChild );
             bAny = true;
@@ -430,7 +430,7 @@ namespace sw
                 pLastInheritedKey = &instanceComponent._key;
                 continue;
             }
-            XmlNode entry = outRoot.appendChild( PrefabOverridesInternal::kAdd );
+            XMLNode entry = outRoot.appendChild( PrefabOverridesInternal::kAdd );
             if ( pLastInheritedKey != nullptr )
                 entry.appendAttribute( PrefabOverridesInternal::kAfter, *pLastInheritedKey );
             entry.appendClone( instanceComponent._node );
@@ -438,25 +438,25 @@ namespace sw
         }
 
         if ( bAny )
-            outOverrideXml = outRoot.toString();
+            outOverrideXML = outRoot.toString();
         return true;
     }
 
-    bool PrefabOverrides::makeInstanceState( string_view baseStateXml, string_view overrideXml, string_view instanceName, string& outStateXml )
+    bool PrefabOverrides::makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML )
     {
-        outStateXml.clear();
-        XmlDocument baseDoc;
-        if ( baseDoc.parse( baseStateXml ) == false )
+        outStateXML.clear();
+        XMLDocument baseDoc;
+        if ( baseDoc.parse( baseStateXML ) == false )
             return false;
-        const XmlNode baseRoot = baseDoc.getRoot();
+        const XMLNode baseRoot = baseDoc.getRoot();
         if ( baseRoot.isValid() == false )
             return false;
 
-        XmlDocument overrideDoc;
-        XmlNode     overrideRoot;
-        if ( StringUtil::trim( overrideXml ).empty() == false )
+        XMLDocument overrideDoc;
+        XMLNode     overrideRoot;
+        if ( StringUtil::trim( overrideXML ).empty() == false )
         {
-            if ( overrideDoc.parse( overrideXml ) == false )
+            if ( overrideDoc.parse( overrideXML ) == false )
                 return false;
             overrideRoot = overrideDoc.getRoot( kRootName, false );
             if ( overrideRoot.isValid() == false )
@@ -466,17 +466,17 @@ namespace sw
             }
         }
 
-        const XmlNode                                       objectOverride = PrefabOverridesInternal::findChildElement( overrideRoot, PrefabOverridesInternal::kObject );
+        const XMLNode                                       objectOverride = PrefabOverridesInternal::findChildElement( overrideRoot, PrefabOverridesInternal::kObject );
         const PrefabOverridesInternal::ComponentListWriter  listWriter{ overrideRoot, instanceName };
         const PrefabOverridesInternal::ComponentListWriteFn writeList =
             SW_DELEGATE_METHOD( PrefabOverridesInternal::ComponentListWriteFn, &PrefabOverridesInternal::ComponentListWriter::write, &listWriter );
         const string name( instanceName );
 
-        XmlDocument outDoc;
-        XmlNode     outRoot = outDoc.appendRoot( baseRoot.getName() );
+        XMLDocument outDoc;
+        XMLNode     outRoot = outDoc.appendRoot( baseRoot.getName() );
         PrefabOverridesInternal::appendMergedAttributes( outRoot, baseRoot, objectOverride, name.empty() ? nullptr : name.c_str() );
         PrefabOverridesInternal::appendMergedChildren( outRoot, baseRoot, objectOverride, &writeList );
-        outStateXml = outRoot.toString();
-        return outStateXml.empty() == false;
+        outStateXML = outRoot.toString();
+        return outStateXML.empty() == false;
     }
 } // namespace sw

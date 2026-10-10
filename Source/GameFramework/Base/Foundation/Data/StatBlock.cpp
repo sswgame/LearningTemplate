@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -86,16 +86,16 @@ namespace sw
         }
     }
 
-    uint32 StatBlock::loadFromAttributes( const XmlNode& node, const utf8* pSkipName )
+    uint32 StatBlock::loadFromAttributes( const XMLNode& node, const utf8* pSkipName )
     {
         uint32 loadedCount = 0;
-        for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const string_view name( attribute.getName() );
             bool              bSkip = false;
             if ( pSkipName != nullptr )
             {
-                GameDataXml::forEachToken( string_view( pSkipName ), ",", [&]( string_view token )
+                GameDataXML::forEachToken( string_view( pSkipName ), ",", [&]( string_view token )
                 {
                     bSkip = bSkip || StringUtil::equals( token, name, true );
                 } );

@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
     bool FontCatalogDesc::loadFromResource( string_view resourcePath )
     {
         *this = FontCatalogDesc{};
-        if ( XmlSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[Text] Font catalog could not be read or holds unknown keys: %#", resourcePath );
             return false;
@@ -24,10 +24,10 @@ namespace sw
         return validate();
     }
 
-    bool FontCatalogDesc::loadFromXmlText( string_view xmlText )
+    bool FontCatalogDesc::loadFromXMLText( string_view xmlText )
     {
         *this = FontCatalogDesc{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "[Text] Font catalog text could not be read or holds unknown keys" );
             return false;

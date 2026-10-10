@@ -75,9 +75,9 @@ _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("PostgreSQL", ("libpq-fe.h", "libpq/", "libpq-events.h", "postgres_ext.h"), ("Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/",),
                 ("PostgreSQL::PostgreSQL",), "Source/GameFramework/Kits/Feature/Storage/SQLStore/Server/CMakeLists.txt"),
 
-    # 엔진 안의 형식 · 압축 · 셰이더 · 그래픽 API — 감싼 클래스 한 자리(XmlDocument · JsonDocument · 코덱 · ShaderCompiler · RHI 백엔드)에서만.
-    LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Serialization/Xml/",), ()),
-    LibraryRule("nlohmann-json", ("nlohmann/",), ("Source/Engine/Serialization/Json/", "Tools/ReflectionParser/"), ()),   # 파서는 Core 만 링크한다(Engine 순환 방지)
+    # 엔진 안의 형식 · 압축 · 셰이더 · 그래픽 API — 감싼 클래스 한 자리(XMLDocument · JSONDocument · 코덱 · ShaderCompiler · RHI 백엔드)에서만.
+    LibraryRule("pugixml", ("pugixml.hpp", "pugiconfig.hpp"), ("Source/Engine/Serialization/XML/",), ()),
+    LibraryRule("nlohmann-json", ("nlohmann/",), ("Source/Engine/Serialization/JSON/", "Tools/ReflectionParser/"), ()),   # 파서는 Core 만 링크한다(Engine 순환 방지)
     LibraryRule("lz4", ("lz4.h", "lz4hc.h", "lz4frame.h"), ("Source/Engine/Compression/",), ()),
     LibraryRule("zstd", ("zstd.h", "zdict.h", "zstd_errors.h"), ("Source/Engine/Compression/",), ()),
     LibraryRule("zlib", ("zlib.h", "zconf.h"), ("Source/Engine/Compression/",), ()),
@@ -188,7 +188,7 @@ class CheckThirdPartyIsolationGate(LintGate):
     )
     selfTestCases = [
         {
-            "name": "pugixml 헤더를 씬에서 include 한다(XmlDocument 를 비켜 감)",
+            "name": "pugixml 헤더를 씬에서 include 한다(XMLDocument 를 비켜 감)",
             "files": {"Source/Engine/Scene/Probe.cpp": "#include <pugixml.hpp>\nint probe() { return 0; }\n"},
         },
         {

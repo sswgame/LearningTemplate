@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -34,23 +34,23 @@ namespace sw
 
 namespace sw
 {
-    bool TranslationMemory::loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool TranslationMemory::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
     {
-        JsonDocument document;
+        JSONDocument document;
         string       error;
         if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
             error = document.getLastError();
-        const JsonValue root    = document.getRoot();
-        const JsonValue entries = root.isObject() ? root.get( "entries", false ) : JsonValue{};
+        const JSONValue root    = document.getRoot();
+        const JSONValue entries = root.isObject() ? root.get( "entries", false ) : JSONValue{};
         if ( error.empty() && ( root.isObject() == false || root.getMemberNames().size() != 2 || entries.isArray() == false || root.has( "culture", false ) == false ) )
             error = string( sourceName ) + ": needs { \"culture\", \"entries\": [ ... ] } and nothing else";
 
         map<string, string> mapPair;
         for ( size_t index = 0; error.empty() && index < entries.size(); ++index )
         {
-            const JsonValue entry  = entries.at( index );
-            const JsonValue source = entry.get( "source", false );
-            const JsonValue text   = entry.get( "text", false );
+            const JSONValue entry  = entries.at( index );
+            const JSONValue source = entry.get( "source", false );
+            const JSONValue text   = entry.get( "text", false );
             if ( entry.isObject() == false || entry.getMemberNames().size() != 2 || source.isString() == false || text.isString() == false )
             {
                 error = string( sourceName ) + ": entries[" + to_string( static_cast<uint64>( index ) ) + "] needs exactly \"source\" and \"text\"";
@@ -78,19 +78,19 @@ namespace sw
                 *pOutError = "cannot read '" + string( absolutePath ) + "'";
             return false;
         }
-        return loadFromJsonText( text, absolutePath, pOutError );
+        return loadFromJSONText( text, absolutePath, pOutError );
     }
 
-    string TranslationMemory::toJsonText() const
+    string TranslationMemory::toJSONText() const
     {
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         root.set( "culture", false ).setString( _culture );
-        const JsonValue entries = root.set( "entries", false );
+        const JSONValue entries = root.set( "entries", false );
         entries.setArray();
         for ( const auto& [source, text] : _mapSourceToText )
         {
-            const JsonValue entry = entries.pushBack();
+            const JSONValue entry = entries.pushBack();
             entry.setObject();
             entry.set( "source", false ).setString( source );
             entry.set( "text", false ).setString( text );
@@ -100,7 +100,7 @@ namespace sw
 
     bool TranslationMemory::saveToFile( string_view absolutePath ) const
     {
-        const string text = toJsonText();
+        const string text = toJSONText();
         string       existing;
         if ( FileUtil::exists( absolutePath ) && FileUtil::readTextFile( absolutePath, existing ) && existing == text )
             return true;

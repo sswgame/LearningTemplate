@@ -1,6 +1,6 @@
 # ==============================================================================
 # @file Test/SmokeTest/CMakeLists.txt
-# @brief Dev: MODULE DLL export*Api 로드 스모크 / Shipping: 정적 exportGameApi 스모크
+# @brief Dev: MODULE DLL export*API 로드 스모크 / Shipping: 정적 exportGameAPI 스모크
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -11,7 +11,7 @@ if(SW_SHIPPING_BUILD)
 	list(APPEND smokeLibs SWGame)
 endif()
 
-# 핫리로드 · 모듈 백그라운드 컴파일은 Dev 에만 있다 — Shipping 스모크는 정적 exportGameApi 경로만 본다.
+# 핫리로드 · 모듈 백그라운드 컴파일은 Dev 에만 있다 — Shipping 스모크는 정적 exportGameAPI 경로만 본다.
 # (TestSmoke.cpp 도 같은 기준으로 갈라져 있다: 리로드 케이스는 #if !defined(SW_SHIPPING) 안이다.)
 set(swSmokeDevSources "")
 if(NOT SW_SHIPPING_BUILD)

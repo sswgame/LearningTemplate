@@ -22,7 +22,7 @@ namespace
 {
     struct ScheduleTestInternal
     {
-        static constexpr const utf8* kTownXml = R"(
+        static constexpr const utf8* kTownXML = R"(
 <Schedules>
   <Calendar days="Mon,Tue,Wed,Thu,Fri,Sat,Sun" seasons="Spring,Summer" weathers="sunny,rain"/>
   <Place id="pierre_home" area="home_p" position="0 0 0"/>
@@ -142,7 +142,7 @@ SW_TEST_CASE( ScheduleTest, ClockTextParsesHoursAndMinutes )
 SW_TEST_CASE( ScheduleTest, CatalogResolvesArchetypesAndAppointmentAttendees )
 {
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( ScheduleTestInternal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( ScheduleTestInternal::kTownXML, "town" ) );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( catalog.getNpcs().size() ) );
     const ScheduleNpcDef* pPierre = catalog.findNpc( "pierre" );
     SW_ASSERT_NOT_NULL( pPierre );
@@ -161,7 +161,7 @@ SW_TEST_CASE( ScheduleTest, CatalogResolvesArchetypesAndAppointmentAttendees )
  */
 SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
 {
-    constexpr const utf8*    kBadXml = R"(
+    constexpr const utf8*    kBadXML = R"(
 <Schedules>
   <Calendar days="Mon,Tue" seasons="Spring" weathers="sunny"/>
   <Place id="home" position="0 0 0"/>
@@ -187,7 +187,7 @@ SW_TEST_CASE( ScheduleTest, CatalogWarnsAboutEveryBadName )
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "schedule data with unknown names" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kBadXml, "bad" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kBadXML, "bad" ) );
     }
     const utf8* const arrExpected[] = { "unknown element <Bogus>",
                                         "unknown attribute 'color'",
@@ -229,7 +229,7 @@ SW_TEST_CASE( ScheduleTest, BlockSelectionFollowsTimeConditionsAndPriority )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     GameFlags      flags;
     ScheduleSystem system;
     system.setFlags( &flags );
@@ -282,7 +282,7 @@ SW_TEST_CASE( ScheduleTest, FestivalOverridesOnlyItsHoursOnItsDay )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
     const int32    kFestivalDay = 12; // 봄 13 일 토요일
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( kFestivalDay, 6 ) );
@@ -323,7 +323,7 @@ SW_TEST_CASE( ScheduleTest, LeavesEarlyByEstimatedTravelTime )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
@@ -362,7 +362,7 @@ SW_TEST_CASE( ScheduleTest, InterruptionStackResumesToTheCurrentBlock )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
@@ -417,7 +417,7 @@ SW_TEST_CASE( ScheduleTest, AppointmentBringsTwoNpcsTogetherOrBreaks )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     {
         ScheduleSystem system;
         system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
@@ -477,7 +477,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     NavGrid grid;
     Internal::makeWalledGrid( grid );
     GridPathfinder          pathfinder;
@@ -495,7 +495,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
     }
     for ( int32 npcIndex = 0; npcIndex < onScreen.getNpcCount(); ++npcIndex )
     {
-        onScreen.setNpcLod( npcIndex, ScheduleLod::Near );
+        onScreen.setNpcLOD( npcIndex, ScheduleLOD::Near );
     }
     const int32 pierre = onScreen.findNpcIndex( "pierre" );
 
@@ -527,7 +527,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
             SW_EXPECT_TRUE( farView._phase == ScheduleNpcPhase::Traveling );
             SW_EXPECT_NEAR_EQUAL( nearView._travelFraction, farView._travelFraction, 1.0e-5f );
             SW_EXPECT_TRUE_MSG( float3::getDistance( nearView._location._position, farView._location._position ) > 1.0f, "the fine route detours around the wall" );
-            snapping.setNpcLod( pierre, ScheduleLod::Near );
+            snapping.setNpcLOD( pierre, ScheduleLOD::Near );
             SW_EXPECT_TRUE( Internal::isNear( nearView._location._position, snapping.getNpcView( pierre )._location._position ) );
             vector<ScheduleEvent> listEvent;
             snapping.drainEvents( listEvent );
@@ -556,7 +556,7 @@ SW_TEST_CASE( ScheduleTest, TimeSkipJumpsEveryNpcToTheirScheduledPlace )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem flowing;
     ScheduleSystem sleeping;
     flowing.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
@@ -589,7 +589,7 @@ SW_TEST_CASE( ScheduleTest, SaveStateRoundTripsThroughTheArchive )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem original;
     original.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kWednesday, 6 ) );
     const int32 pierre  = original.findNpcIndex( "pierre" );
@@ -634,7 +634,7 @@ SW_TEST_CASE( ScheduleTest, DeterminismHashAndNetSummary )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem first;
     ScheduleSystem second;
     ScheduleSystem otherSeed;
@@ -681,7 +681,7 @@ SW_TEST_CASE( ScheduleTest, DeterminismHashAndNetSummary )
 SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
 {
     using Internal                 = ScheduleTestInternal;
-    constexpr const utf8* kFarmXml = R"(
+    constexpr const utf8* kFarmXML = R"(
 <Schedules>
   <Place id="house" area="farm" position="2.5 6.5 0"/>
   <Place id="field" area="farm" position="15.5 6.5 0" radius="2"/>
@@ -694,7 +694,7 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
 </Schedules>
 )";
     ScheduleCatalog       catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmXml, "farm" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmXML, "farm" ) );
     NavGrid grid;
     grid.initialize( 20, 10, 1.0f, float3{} );
     for ( int32 cellY = 1; cellY <= 9; ++cellY )
@@ -707,7 +707,7 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
     ScheduleSystem system;
     system.setPathing( &pathing, &pathing );
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 0, 6 ) );
-    system.setNpcLod( 0, ScheduleLod::Near );
+    system.setNpcLOD( 0, ScheduleLOD::Near );
     const ScheduleSegment* pWork = nullptr;
     for ( const ScheduleSegment& segment : system.getPlan( 0 ) )
     {
@@ -743,7 +743,7 @@ SW_TEST_CASE( ScheduleTest, SpotLocatorReservesDistinctBenchesIdempotently )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     ScheduleSystem system;
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 6 ) );
     const int32 abigail = system.findNpcIndex( "abigail" );
@@ -772,13 +772,13 @@ SW_TEST_CASE( ScheduleTest, AnimatorHookPlaysOnlyForNearNpcs )
 {
     using Internal = ScheduleTestInternal;
     ScheduleCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( Internal::kTownXml, "town" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( Internal::kTownXML, "town" ) );
     Internal::RecordingAnimator animator;
     ScheduleSystem              system;
     system.setActivityAnimator( &animator );
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 8 ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
-    system.setNpcLod( pierre, ScheduleLod::Near );
+    system.setNpcLOD( pierre, ScheduleLOD::Near );
     animator._listStarted.clear();
     system.advanceTo( Internal::makeMinute( Internal::kMonday, 9, 5 ) );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( animator._listStarted.size() ) );

@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    void FrameRenderer::registerPsoLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
+    void FrameRenderer::registerPSOLayout( RHIPipelineStateHandle pso, const RHIPipelineStateDesc& desc )
     {
         if ( pso == 0 || _pDevice == nullptr )
             return;
@@ -50,7 +50,7 @@ namespace sw
         bindPassCallbacks();
     }
 
-    const ShaderBindingLayout* FrameRenderer::layoutForPso( RHIPipelineStateHandle pso ) const
+    const ShaderBindingLayout* FrameRenderer::layoutForPSO( RHIPipelineStateHandle pso ) const
     {
         return _psoCache.findLayout( pso );
     }
@@ -125,7 +125,7 @@ namespace sw
             // 머티리얼 없는 배치. 빈 슬롯으로 그리지 않는다(Vulkan 은 partially-bound 슬롯을 실제로 읽으면 정의되지 않는다).
             // 폴백은 **이 PSO 셰이더가 선언한 stride** 의 것을 고른다. 공용 256 바이트를 걸면 DX11 이 드로우마다
             // "structure stride 256 vs 24" 를 낸다(SRV 의 구조 stride 는 셰이더 선언과 같아야 한다).
-            const ShaderBindingLayout* pLayout = ( ctx._lastLayoutPso == pso ) ? ctx._pLastLayout : layoutForPso( pso );
+            const ShaderBindingLayout* pLayout = ( ctx._lastLayoutPSO == pso ) ? ctx._pLastLayout : layoutForPSO( pso );
             const ShaderBindingSlot*   pSlot   = ( pLayout != nullptr ) ? pLayout->find( passConstantNames()._swMaterials ) : nullptr;
             if ( pSlot == nullptr || pSlot->_elementStride == 0 )
                 return; // 셰이더가 머티리얼 버퍼를 선언하지 않았다. 걸 것도 없다.
@@ -138,7 +138,7 @@ namespace sw
             else if ( _bMaterialFallbackMissingLogged.exchange( 1, std::memory_order_relaxed ) == 0 )
             {
                 // 여기서 조용히 나가면 t9 가 빈 채로 드로우가 나가고 Vulkan 은 디바이스를 잃는다.
-                // 막는 것은 ensureMaterialPsos 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
+                // 막는 것은 ensureMaterialPSOs 쪽이고, 그래도 새면 원인을 알 수 있게 남긴다.
                 SW_LOG_ERROR( "머티리얼 폴백 버퍼가 stride %# 에 없습니다 — 이 드로우는 g_SwMaterials 를 비운 채 나갑니다.",
                               pSlot->_elementStride );
             }
@@ -157,11 +157,11 @@ namespace sw
         ctx._passValues.setMatrix( passConstantNames()._world, ctx._world );
 
         // 같은 PSO 로 연속 드로우하는 것이 흔한 패턴이라, 패스 로컬 1칸 캐시로
-        // layoutForPso() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
-        if ( ctx._lastLayoutPso != pso )
+        // layoutForPSO() 의 뮤텍스 + 해시맵 조회를 매 드로우 반복하지 않게 한다.
+        if ( ctx._lastLayoutPSO != pso )
         {
-            ctx._pLastLayout   = layoutForPso( pso );
-            ctx._lastLayoutPso = pso;
+            ctx._pLastLayout   = layoutForPSO( pso );
+            ctx._lastLayoutPSO = pso;
         }
         const ShaderBindingLayout* pLayout = ctx._pLastLayout;
         if ( pLayout == nullptr || pLayout->isEmpty() )
@@ -178,16 +178,16 @@ namespace sw
 
         // 엔진 상수버퍼를 이 드로우에서 다시 만들 필요가 있나. 값 · 레지스트리 버전과 버퍼가 모두 그대로면 없다.
         // **PSO 도 같아야 한다.** 이 플래그는 상수버퍼 재업로드만이 아니라 리소스 재바인딩까지 건너뛰게 하는데,
-        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPso 참고).
+        // 슬롯 상태는 PSO 가 바뀌는 순간 백엔드가 비우기 때문이다(FramePassContext::_lastBindPSO 참고).
         const uint32 valuesVersion   = ctx._passValues.getVersion();
         const uint32 registryVersion = ctx._resourceRegistry.getVersion();
-        const bool   bUpToDate       = ( ctx._lastBindPso == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
+        const bool   bUpToDate       = ( ctx._lastBindPSO == pso ) && ( ctx._lastCbBuffer == engineCb._buffer ) &&
                                ( ctx._lastCbValuesVersion == valuesVersion ) && ( ctx._lastCbRegistryVersion == registryVersion );
 
         ShaderParameterBinder::bindGraphics( *ctx._pCmd, *pLayout, ctx._resourceRegistry, ctx._passValues,
                                              engineCb, materialCb, _pDevice->supportsNativeBindlessSampling(), pMaterialTexSrv, bUpToDate );
 
-        ctx._lastBindPso           = pso;
+        ctx._lastBindPSO           = pso;
         ctx._lastCbBuffer          = engineCb._buffer;
         ctx._lastCbValuesVersion   = valuesVersion;
         ctx._lastCbRegistryVersion = registryVersion;
@@ -231,7 +231,7 @@ namespace sw
         commitBindlessTextureBindings( ctx );
 
         // 지금 커맨드 리스트에 걸려 있는 PSO. 배치마다 퍼뮤테이션이 다를 수 있으므로 **바뀔 때만** 다시 건다.
-        RHIPipelineStateHandle boundPso = pso;
+        RHIPipelineStateHandle boundPSO = pso;
 
         const bool bInstanced = _pDevice->supportsInstancedSceneDraw() &&
                                 _gpuScene.getInstanceSrv() != kInvalidDescriptorIndex;
@@ -256,9 +256,9 @@ namespace sw
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
 
         // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GpuMeshBatch::canShareMaterialBinding`).
-        auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPso ) -> bool
+        auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPSO ) -> bool
         {
-            const ShaderBindingLayout* pLayout = layoutForPso( batchPso );
+            const ShaderBindingLayout* pLayout = layoutForPSO( batchPSO );
             if ( pLayout == nullptr )
                 return false;
             static const hashed_string s_materialCbName{ shaderslot::cbname::kMaterial };
@@ -328,17 +328,17 @@ namespace sw
 
             // **이 머티리얼의 퍼뮤테이션**으로 그린다. 주의: 패스 PSO 하나로 모두 그리면 머티리얼이 선언한
             // 정적 스위치(유리의 MATERIAL_BLEND_TRANSLUCENT 같은)가 쿠킹되기만 하고 한 번도 걸리지 않는다.
-            // 캐시는 ensureMaterialPsos 가 기록 전에 채운다. 여기서는 조회만 한다.
-            const RHIPipelineStateHandle batchPso = psoForBatch( pso, head );
-            if ( batchPso != boundPso && batchPso != 0 )
+            // 캐시는 ensureMaterialPSOs 가 기록 전에 채운다. 여기서는 조회만 한다.
+            const RHIPipelineStateHandle batchPSO = psoForBatch( pso, head );
+            if ( batchPSO != boundPSO && batchPSO != 0 )
             {
-                ctx._pCmd->setPipelineState( batchPso );
-                boundPso = batchPso;
+                ctx._pCmd->setPipelineState( batchPSO );
+                boundPSO = batchPSO;
             }
 
             // 루트 상수 = { 머티리얼 원소 수 }. 그룹 안에서 같다.
-            registerMaterialBuffer( ctx, head, batchPso );
-            bindForDraw( ctx, batchPso, head._materialCb, head._arrMaterialTexSrv );
+            registerMaterialBuffer( ctx, head, batchPSO );
+            bindForDraw( ctx, batchPSO, head._materialCb, head._arrMaterialTexSrv );
             // **이 패스의 뷰**가 만든 인자를 쓴다. 그림자 패스가 메인 카메라 인자를 쓰면 화면 밖에서
             // 화면 안으로 그림자를 드리우는 물체가 사라진다.
             ctx._pCmd->drawIndirect( argsBuffer, ( batchOffset + batchIndex ) * static_cast<uint32>( sizeof( RHIDrawIndirectCommand ) ), groupCount );

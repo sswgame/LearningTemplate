@@ -295,7 +295,7 @@ namespace sw
 
         // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스가 건 t/u 슬롯이 다음 세트로 새지 않게 한다(언리얼의 파이프라인별 상태).
         _pState->_arrSlotState[0]                                 = VulkanSlotState{};
-        _pState->_activeGraphicsPso                               = pso;
+        _pState->_activeGraphicsPSO                               = pso;
         VkPipeline                                        pipe    = _pDevice->_pipeline;
         const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord != nullptr )
@@ -762,7 +762,7 @@ namespace sw
             return false;
 
         VkPipeline                                        pipeline = _pDevice->_pipeline;
-        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
+        const VulkanRHIDevice::VulkanPipelineStateRecord* pRecord  = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pRecord != nullptr )
         {
             if ( pRecord->_pipeline != VK_NULL_HANDLE )

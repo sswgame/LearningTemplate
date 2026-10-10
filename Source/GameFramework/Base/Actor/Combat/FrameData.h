@@ -16,13 +16,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 공격 높이입니다(철권 상단 · 중단 · 하단 · 잡기). */
     enum class AttackHeight : uint8
@@ -121,9 +121,9 @@ namespace sw
      *        height="Mid" launcher="false" knockdown="false" wallSplat="false" unblockable="false">
      *        <Hitbox from="10" to="11" x=".." y=".." w=".." h=".." shape="Box"/><Cancel from="12" to="20" moves="a,b" onHit="true"/></Move></MoveCatalog>` 를 읽습니다.
      */
-    class SW_GF_API MoveCatalog : public XmlCatalog<MoveCatalog>
+    class SW_GF_API MoveCatalog : public XMLCatalog<MoveCatalog>
     {
-        friend class XmlCatalog<MoveCatalog>;
+        friend class XMLCatalog<MoveCatalog>;
 
     public:
         MoveCatalog();
@@ -137,8 +137,8 @@ namespace sw
         static AttackHeight parseAttackHeight( string_view text, AttackHeight fallback );
 
     private:
-        static constexpr const utf8* kXmlRootName = "MoveCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "MoveCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<MoveFrameData> _catalog;
     };

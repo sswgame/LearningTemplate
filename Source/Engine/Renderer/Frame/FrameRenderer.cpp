@@ -31,20 +31,20 @@ namespace sw
         struct FrameRendererInternal
         {
             /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다(뷰어가 큐 이름 옆에 보여 준다). */
-            static ProfilerGpuApi toProfilerGpuApi( RHIBackend backend )
+            static ProfilerGraphicsAPI toProfilerGraphicsAPI( RHIBackend backend )
             {
                 switch ( backend )
                 {
                     case RHIBackend::DirectX11:
-                        return ProfilerGpuApi::Direct3D11;
+                        return ProfilerGraphicsAPI::Direct3D11;
                     case RHIBackend::DirectX12:
-                        return ProfilerGpuApi::Direct3D12;
+                        return ProfilerGraphicsAPI::Direct3D12;
                     case RHIBackend::Vulkan:
-                        return ProfilerGpuApi::Vulkan;
+                        return ProfilerGraphicsAPI::Vulkan;
                     case RHIBackend::OpenGL:
-                        return ProfilerGpuApi::OpenGl;
+                        return ProfilerGraphicsAPI::OpenGl;
                 }
-                return ProfilerGpuApi::Direct3D12;
+                return ProfilerGraphicsAPI::Direct3D12;
             }
         };
 #endif
@@ -149,7 +149,7 @@ namespace sw
         , _bPassResourcesReady{ SW_FALSE }
         , _reservedFlags{ 0 }
         , _viewMode{ static_cast<uint8>( RenderViewMode::Lit ) }
-        , _bOutputPsoMissingLogged{ 0 }
+        , _bOutputPSOMissingLogged{ 0 }
         , _bCaptureMismatchLogged{ 0 }
         , _bMaterialFallbackMissingLogged{ 0 }
         , _bMissingColorTargetLogged{ 0 }
@@ -162,13 +162,13 @@ namespace sw
         shutdown();
     }
 
-    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXmlPath )
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXMLPath )
     {
-        return initialize( pDevice, nullptr, pipelineXmlPath );
+        return initialize( pDevice, nullptr, pipelineXMLPath );
     }
 
     bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                                    string_view pipelineXmlPath )
+                                    string_view pipelineXMLPath )
     {
         _pDevice = pDevice;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
@@ -212,7 +212,7 @@ namespace sw
 
         // 인자 > `-gv_renderPipeline` > `-gv_deferred` > EngineDefaultAssets 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
         // 측정 · 검증하려면 `-gv_deferred=1` 을 준다.
-        string_view resolvedPipeline = pipelineXmlPath;
+        string_view resolvedPipeline = pipelineXMLPath;
         if ( resolvedPipeline.empty() && gv_renderPipeline.empty() == false )
             resolvedPipeline = gv_renderPipeline;
         if ( resolvedPipeline.empty() && gv_deferred )
@@ -339,7 +339,7 @@ namespace sw
                 return;
             int64      gpuNow{ 0 };
             const bool bClockRead = pDevice->readGpuClockNanos( gpuNow );
-            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGpuApi( pDevice->getBackendType() ),
+            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGraphicsAPI( pDevice->getBackendType() ),
                                                                             pDevice->getBackendName(), pDevice, gpuNow );
             if ( bOpened == false )
             {
@@ -421,23 +421,23 @@ namespace sw
         SW_LOG_INFO( "Shut down." );
     }
 
-    bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
+    bool FrameRenderer::loadPipeline( string_view pipelineXMLPath )
     {
-        _pipelinePath    = pipelineXmlPath;
+        _pipelinePath    = pipelineXMLPath;
         _bCallbacksBound = SW_FALSE;
         _graph.clear();
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXmlFile( pipelineXmlPath ) == false )
+        if ( _pipelineResource.loadFromXMLFile( pipelineXMLPath ) == false )
         {
-            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXmlPath );
+            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;
         }
 
         if ( _renderPipelineAssetCache != nullptr )
         {
             RenderPipelineAssetCache& rpm = *_renderPipelineAssetCache;
-            rpm.loadPipeline( pipelineXmlPath );
+            rpm.loadPipeline( pipelineXMLPath );
             for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
             {
                 if ( passRef.empty() == false )
@@ -448,7 +448,7 @@ namespace sw
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         if ( listPass.empty() )
         {
-            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
+            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXMLPath );
             SW_LOG_ERROR( "%#", _statusMessage );
             return false;
         }
@@ -806,7 +806,7 @@ namespace sw
         ensurePassCbCapacityForFrame();
 
         // 머티리얼 퍼뮤테이션 PSO 도 같은 이유로 여기서 만든다. 기록 중에는 만들 수 없고, 패스들은 병렬로 기록된다.
-        ensureMaterialPsos();
+        ensureMaterialPSOs();
 
         // 캔버스의 아틀라스 텍스처 · 사각형 버퍼 · 렌더 텍스처 대상도 기록 전에 갖춘다(Canvas 패스 · 대상 그리기는 그리기만 한다).
         prepareCanvasTargets();

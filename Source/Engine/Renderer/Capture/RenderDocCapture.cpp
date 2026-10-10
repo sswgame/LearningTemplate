@@ -26,11 +26,11 @@ namespace sw
             /** @brief 캡처 파일 경로 틀입니다(RenderDoc 이 `_frame<N>.rdc` 를 붙인다). 작업 폴더 기준. */
             static constexpr const utf8* kCaptureFilePathTemplate = "Saved/RenderDoc/capture";
 
-            inline static RENDERDOC_API_1_6_0* _s_pApi   = nullptr;
+            inline static RENDERDOC_API_1_6_0* _s_pAPI   = nullptr;
             inline static bool                 _s_bTried = false;
 
             /** @brief 이미 올라온(또는 @p bLoadIfMissing 이면 설치 경로에서 올린) RenderDoc 의 `RENDERDOC_GetAPI` 입니다. 없으면 nullptr. */
-            static pRENDERDOC_GetAPI findGetApi( bool bLoadIfMissing )
+            static pRENDERDOC_GetAPI findGetAPI( bool bLoadIfMissing )
             {
     #if defined( SW_PLATFORM_WINDOWS )
                 HMODULE hModule = GetModuleHandleW( L"renderdoc.dll" );
@@ -101,46 +101,46 @@ namespace sw
             return;
         RenderDocCaptureInternal::_s_bTried = true;
 
-        const pRENDERDOC_GetAPI pfnGetApi = RenderDocCaptureInternal::findGetApi( bLoadIfMissing );
-        if ( pfnGetApi == nullptr )
+        const pRENDERDOC_GetAPI pfnGetAPI = RenderDocCaptureInternal::findGetAPI( bLoadIfMissing );
+        if ( pfnGetAPI == nullptr )
         {
             if ( bLoadIfMissing )
                 SW_LOG_WARNING( "-renderdoc: RenderDoc is not installed in the default location - captures are unavailable" );
             return;
         }
-        void* pApi = nullptr;
-        if ( pfnGetApi( eRENDERDOC_API_Version_1_6_0, &pApi ) != 1 || pApi == nullptr )
+        void* pAPI = nullptr;
+        if ( pfnGetAPI( eRENDERDOC_API_Version_1_6_0, &pAPI ) != 1 || pAPI == nullptr )
         {
             SW_LOG_WARNING( "RenderDoc is loaded but did not provide API 1.6.0 - captures are unavailable" );
             return;
         }
-        RenderDocCaptureInternal::_s_pApi = static_cast<RENDERDOC_API_1_6_0*>( pApi );
-        RenderDocCaptureInternal::_s_pApi->SetCaptureFilePathTemplate( RenderDocCaptureInternal::kCaptureFilePathTemplate );
+        RenderDocCaptureInternal::_s_pAPI = static_cast<RENDERDOC_API_1_6_0*>( pAPI );
+        RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( RenderDocCaptureInternal::kCaptureFilePathTemplate );
         // 화면 글자를 끈다 — 캡처하지 않는 프레임의 스크린샷 · 픽셀 시험이 흔들리지 않게.
-        RenderDocCaptureInternal::_s_pApi->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
+        RenderDocCaptureInternal::_s_pAPI->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
         SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", RenderDocCaptureInternal::kCaptureFilePathTemplate );
     }
 
     bool RenderDocCapture::isAvailable()
     {
-        return RenderDocCaptureInternal::_s_pApi != nullptr;
+        return RenderDocCaptureInternal::_s_pAPI != nullptr;
     }
 
     void RenderDocCapture::triggerCapture()
     {
-        if ( RenderDocCaptureInternal::_s_pApi == nullptr )
+        if ( RenderDocCaptureInternal::_s_pAPI == nullptr )
             return;
-        RenderDocCaptureInternal::_s_pApi->TriggerCapture();
+        RenderDocCaptureInternal::_s_pAPI->TriggerCapture();
         SW_LOG_INFO( "RenderDoc capture requested for the next frame" );
     }
 
     bool RenderDocCapture::launchReplayUi()
     {
-        if ( RenderDocCaptureInternal::_s_pApi == nullptr )
+        if ( RenderDocCaptureInternal::_s_pAPI == nullptr )
             return false;
-        if ( RenderDocCaptureInternal::_s_pApi->IsTargetControlConnected() != 0 )
-            return RenderDocCaptureInternal::_s_pApi->ShowReplayUI() != 0;
-        return RenderDocCaptureInternal::_s_pApi->LaunchReplayUI( 1, nullptr ) != 0;
+        if ( RenderDocCaptureInternal::_s_pAPI->IsTargetControlConnected() != 0 )
+            return RenderDocCaptureInternal::_s_pAPI->ShowReplayUI() != 0;
+        return RenderDocCaptureInternal::_s_pAPI->LaunchReplayUI( 1, nullptr ) != 0;
     }
 #else
     void RenderDocCapture::initialize( bool bLoadIfMissing )

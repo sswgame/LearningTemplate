@@ -23,7 +23,7 @@ namespace
         [[nodiscard]] static bool instantiate( sw::Scene& scene )
         {
             sw::SceneDocument document;
-            return document.loadXml( kScenePath ) && scene.instantiate( document );
+            return document.loadXML( kScenePath ) && scene.instantiate( document );
         }
     };
 } // namespace

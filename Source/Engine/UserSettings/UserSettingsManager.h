@@ -118,7 +118,7 @@ namespace sw
         /** @brief 스키마 XML 을 덧붙이고 검사합니다. 실패하면 덧붙인 것을 버리고 false 입니다. 새 설정은 기본값으로 시작합니다. */
         [[nodiscard]] bool loadSchema( string_view resourcePath );
         /** @brief 위와 같되 XML 글에서 읽습니다. */
-        [[nodiscard]] bool loadSchemaFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadSchemaFromXMLText( string_view xmlText, string_view sourceName );
         /**
          * @brief 게임 프리셋의 기본값 덮어쓰기(`GameConfig::_mapUserSettingDefault`)를 겁니다. 아직 바꾸지 않은 값(기본값)도 따라 바뀝니다.
          * @return 모르는 설정 · 받을 수 없는 값이면 오류를 알리고 false 입니다.
@@ -134,11 +134,11 @@ namespace sw
          */
         [[nodiscard]] bool loadUserFile( string_view filePath );
         /** @brief 위와 같되 JSON 글에서 읽습니다. */
-        [[nodiscard]] bool loadUserJson( string_view jsonText, string_view sourceName );
+        [[nodiscard]] bool loadUserJSON( string_view jsonText, string_view sourceName );
         /** @brief 기본값과 다른 확정 값만 사용자 파일에 씁니다. 확인 대기 중인 설정은 되돌릴 값(옛 값)을 씁니다. */
         [[nodiscard]] bool saveUserFile( string_view filePath ) const;
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. */
-        string makeUserJson() const;
+        string makeUserJSON() const;
         /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(시험 · 헤드리스). */
         void          setUserFilePath( string_view filePath ) { _userFilePath = string( filePath ); }
         const string& getUserFilePath() const { return _userFilePath; }

@@ -141,7 +141,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(시험용). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = "<text>" );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 이름 · 레이어 · 길이 · 템포 · 시작 구간 · 다음 구간 · 전환 이름 · 곡선 순서를 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 

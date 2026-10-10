@@ -201,11 +201,11 @@ SW_TEST_CASE( FacialAnimationTest, ImportedTestHeadCarriesMorphTargetsAndWeightC
 
     test::ScopedDefensiveTestLog expected( "a rig naming a missing morph target fails validation" );
     FacialRig                    broken;
-    SW_ASSERT_TRUE( broken.parseJson( R"({ "expressions": { "Frown": { "browDown": 1.0 } } })", "broken" ) );
+    SW_ASSERT_TRUE( broken.parseJSON( R"({ "expressions": { "Frown": { "browDown": 1.0 } } })", "broken" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "broken" ) );
-    SW_ASSERT_TRUE( broken.parseJson( R"({ "expressions": { "Smile": { "smile": 1.0 } } })", "clash" ) );
+    SW_ASSERT_TRUE( broken.parseJSON( R"({ "expressions": { "Smile": { "smile": 1.0 } } })", "clash" ) );
     SW_EXPECT_FALSE( broken.validate( listTargetName, skeleton, "clash" ) );
-    SW_EXPECT_FALSE( broken.parseJson( R"({ "expressions": {}, "eyebrows": {} })", "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "expressions": {}, "eyebrows": {} })", "unknown key" ) );
 }
 
 /**
@@ -250,7 +250,7 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
     SW_EXPECT_NEAR_EQUAL( 0.0f, LipSyncAnalyzer::computeOpenness( 0.0f, settings ), 0.0f );
 
     VisemeTrack copy;
-    SW_ASSERT_TRUE( copy.parseJson( track.toJson(), "roundtrip" ) );
+    SW_ASSERT_TRUE( copy.parseJSON( track.toJSON(), "roundtrip" ) );
     SW_EXPECT_EQUAL( track.getFrameCount(), copy.getFrameCount() );
     SW_EXPECT_TRUE( copy._listViseme == track._listViseme );
     for ( size_t index = 0; index < track._listWeight.size(); ++index )
@@ -276,8 +276,8 @@ SW_TEST_CASE( FacialAnimationTest, LipSyncAnalyzerSeparatesSyntheticVowels )
 
     test::ScopedDefensiveTestLog expected( "unknown keys in lip sync data are rejected" );
     LipSyncSettings              broken;
-    SW_EXPECT_FALSE( broken.parseJson( R"({ "frame_rate": 30, "pitch": 1 })", "broken" ) );
-    SW_EXPECT_FALSE( copy.parseJson( R"({ "frame_rate": 30, "visemes": [ "sil" ], "frames": [ [ 0 ] ], "phonemes": [] })", "broken" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( R"({ "frame_rate": 30, "pitch": 1 })", "broken" ) );
+    SW_EXPECT_FALSE( copy.parseJSON( R"({ "frame_rate": 30, "visemes": [ "sil" ], "frames": [ [ 0 ] ], "phonemes": [] })", "broken" ) );
 }
 
 /**

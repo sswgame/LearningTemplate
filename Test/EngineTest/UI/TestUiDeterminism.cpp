@@ -57,7 +57,7 @@ namespace
         };
 
         /** @brief 옵션 메뉴의 시험 스키마 — 카테고리 둘, 형식마다 한 줄. */
-        static constexpr const utf8* kSchemaXml = R"(
+        static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="Audio"/>
     <Category id="video" text="Video"/>
@@ -197,7 +197,7 @@ namespace
             catalog._defaultFamily = "Latin";
             sw::test::FakeFontSystemFixture::addFamily( catalog, "Latin", "test/fonts/latin.ttf" );
             _settings.initialize( sw::UserSettingsTargets{} );
-            _bReady = _settings.loadSchemaFromXmlText( UiDeterminismTestUtil::kSchemaXml, "test.settings.xml" ) && _input.initialize() &&
+            _bReady = _settings.loadSchemaFromXMLText( UiDeterminismTestUtil::kSchemaXML, "test.settings.xml" ) && _input.initialize() &&
                       _fonts.initialize( catalog ) && _ui.initialize( _input, _fonts._fontSystem.get() );
             _settings.reapplyAll();
             _ui.setUserSettings( &_settings );

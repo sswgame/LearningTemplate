@@ -187,7 +187,7 @@ namespace sw::editor
         string                       _pendingScenePath;
         string                       _pendingSceneActionPath;
         string                       _emptyString;
-        string                       _copiedComponentXml;
+        string                       _copiedComponentXML;
         string                       _copiedComponentTypeName;
         vector<uint8>                _copiedComponentBytes;
         mutex                        _pendingSceneMutex;

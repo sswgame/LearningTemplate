@@ -287,20 +287,20 @@ namespace sw
         RenderPassAsset& operator=( const RenderPassAsset& ) = delete;
 
         /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
-        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
 
         /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
-        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
 
         /** @brief XML 로드를 비동기 작업으로 예약합니다. */
-        TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
+        TaskHandle loadFromXMLFileAsync( string_view assetRelativePath );
 
         const RenderPassDesc& getDesc() const { return _desc; }
         RenderPassDesc&       getDesc() { return _desc; }
 
     private:
         /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this · 경로 문자열입니다. */
-        static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+        static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 
     private:
         RenderPassDesc _desc;

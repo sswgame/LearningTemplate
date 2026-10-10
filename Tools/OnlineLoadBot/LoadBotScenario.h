@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /** @brief 단계 하나의 동작입니다. 이름은 `toString` · 시나리오 `_action` 칸. */
     enum class LoadBotAction : uint8

@@ -210,12 +210,12 @@ SW_TEST_CASE( DialogueGraphTest, FollowsChoiceAndDefaultPins )
  * @brief [DialogueGraphTest] JSON 왕복과 loadFromFile 이 같은 결과를 내는지 검증
  * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
-SW_TEST_CASE( DialogueGraphTest, JsonRoundTripAndLoadFromFileAgree )
+SW_TEST_CASE( DialogueGraphTest, JSONRoundTripAndLoadFromFileAgree )
 {
     const DialogueGraphAsset source = makeChoiceGraph();
 
     DialogueGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJson( source.toJson() ) );
+    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeType::Choice );
@@ -367,7 +367,7 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeFinishesTheDialogue )
  */
 SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
 {
-    const utf8* pJson = R"({
+    const utf8* pJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Action", "action": "open_curtain" },
@@ -380,7 +380,7 @@ SW_TEST_CASE( DialogueGraphTest, ActionBeforeFirstLineContinues )
 	})";
 
     DialogueRunnerComponent runner;
-    SW_EXPECT_TRUE( runner.loadGraphJson( pJson ) );
+    SW_EXPECT_TRUE( runner.loadGraphJSON( pJSON ) );
     string eventCommand;
     runner.setOnDialogueEvent( [&eventCommand]( const string& command )
     { eventCommand = command; } );
@@ -431,11 +431,11 @@ SW_TEST_CASE( DialogueGraphTest, RunnerReopensItsGraphAfterStateLoad )
     SW_ASSERT_NOT_NULL( pSourceRunner );
     pSourceRunner->_graphPath = filePath;
 
-    const string xml = ObjectStateSerializer::saveToXmlString( pSource );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSource );
     SW_ASSERT_FALSE( xml.empty() );
     GameObject* pTarget = manager.createGameObject( hashed_string( "LoadedNpc" ) );
     SW_ASSERT_NOT_NULL( pTarget );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pTarget, xml ) );
 
     DialogueRunnerComponent* pLoaded = pTarget->getComponent<DialogueRunnerComponent>();
     SW_ASSERT_NOT_NULL( pLoaded );

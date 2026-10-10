@@ -107,7 +107,7 @@ namespace sw
             {
                 if ( pHandler == nullptr || settings._ioThreadCount != 0 )
                 {
-                    SW_LOG_ERROR( "LoopbackStreamTransport: needs a handler and _ioThreadCount == 0 (it is driven by pollIo)" );
+                    SW_LOG_ERROR( "LoopbackStreamTransport: needs a handler and _ioThreadCount == 0 (it is driven by pollIO)" );
                     return false;
                 }
                 _pHandler     = pHandler;
@@ -131,7 +131,7 @@ namespace sw
                             abortLinkLocked( slot._linkIndex, slot._side, StreamCloseReason::Shutdown );
                     }
                 }
-                (void)pollIo( 0 ); // 닫힘 사건을 지금 넘긴다 — 돌아온 뒤에는 콜백이 없다
+                (void)pollIO( 0 ); // 닫힘 사건을 지금 넘긴다 — 돌아온 뒤에는 콜백이 없다
                 {
                     // 저쪽이 아직 자리를 풀지 않은 링크는 이 전송을 가리킨 채 남는다 — 이 전송이 먼저 없어지면 저쪽의 자리 풀기가 없어진 전송을 읽는다.
                     // 두 쪽 모두 닫혔으므로 이 쪽 자리는 더 쓰이지 않는다(자리 풀기는 nullptr 을 "이미 풀렸다" 로 본다).
@@ -169,7 +169,7 @@ namespace sw
                 LoopbackStreamTransport* const pPeer  = found != _pState->_mapListener.end() ? found->second : nullptr;
                 if ( pPeer == nullptr || pPeer->_bInitialized == SW_FALSE || pPeer->countOpenLocked() >= pPeer->_settings._maxConnections )
                 {
-                    // 실제 전송처럼 핸들은 주고 다음 pollIo 에 ConnectFailed 로 닫는다.
+                    // 실제 전송처럼 핸들은 주고 다음 pollIO 에 ConnectFailed 로 닫는다.
                     _listSlot[handle._index]._linkIndex = -1;
                     pushEventLocked( LoopbackEvent{ {}, remote, handle, StreamCloseReason::ConnectFailed, LoopbackEventKind::Closed, SW_FALSE } );
                     return handle;
@@ -237,7 +237,7 @@ namespace sw
                     pLink->_arrPaused[_listSlot[handle._index]._side] = bPaused ? SW_TRUE : SW_FALSE;
             }
 
-            int32 pollIo( int32 timeoutMilli ) override
+            int32 pollIO( int32 timeoutMilli ) override
             {
                 (void)timeoutMilli; // 루프백은 기다릴 것이 없다 — 저쪽이 쓴 것은 이미 망에 있다
                 {
@@ -472,7 +472,7 @@ namespace sw
             vector<LoopbackHandleSlot> _listSlot;
             vector<uint32>             _listFreeSlot;
             vector<LoopbackEvent>      _listPending;  ///< 망 잠금 안에서 쌓인 사건
-            vector<LoopbackEvent>      _listDispatch; ///< pollIo 스레드 전용 — 잠금 밖에서 넘긴다
+            vector<LoopbackEvent>      _listDispatch; ///< pollIO 스레드 전용 — 잠금 밖에서 넘긴다
             StreamTransportSettings    _settings;
             StreamTransportStats       _stats;
             LoopbackNetworkState*      _pState;

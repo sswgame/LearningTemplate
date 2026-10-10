@@ -4,19 +4,19 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "FacialRig" );
 
-    bool FacialRig::parseJson( string_view json, string_view sourceLabel )
+    bool FacialRig::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = FacialRig{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Facial rig '%#': malformed JSON", sourceLabel );
@@ -37,10 +37,10 @@ namespace sw
             *this = FacialRig{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool FacialRig::parsePoses( const JsonValue& value, vector<FacialPose>& outListPose, string_view sourceLabel )
+    bool FacialRig::parsePoses( const JSONValue& value, vector<FacialPose>& outListPose, string_view sourceLabel )
     {
         if ( value.isValid() == false || value.isNull() )
             return true;
@@ -51,7 +51,7 @@ namespace sw
         }
         for ( const string& poseName : value.getMemberNames() )
         {
-            const JsonValue targets = value.get( poseName, false );
+            const JSONValue targets = value.get( poseName, false );
             if ( targets.isObject() == false )
             {
                 SW_LOG_ERROR( "Facial rig '%#': pose '%#' must be an object of { target: weight }", sourceLabel, poseName.c_str() );
@@ -61,7 +61,7 @@ namespace sw
             pose._name = hashed_string( poseName );
             for ( const string& targetName : targets.getMemberNames() )
             {
-                const JsonValue weight = targets.get( targetName, false );
+                const JSONValue weight = targets.get( targetName, false );
                 if ( weight.isNumber() == false )
                 {
                     SW_LOG_ERROR( "Facial rig '%#': pose '%#' target '%#' needs a numeric weight", sourceLabel, poseName.c_str(), targetName.c_str() );
@@ -74,19 +74,19 @@ namespace sw
         return true;
     }
 
-    bool FacialRig::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool FacialRig::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "expressions", "visemes", "blink", "gaze" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "expressions", "visemes", "blink", "gaze" }, sourceLabel ) == false )
             return false;
         if ( parsePoses( root.get( "expressions" ), _listExpression, sourceLabel ) == false || parsePoses( root.get( "visemes" ), _listViseme, sourceLabel ) == false )
             return false;
 
-        const JsonValue blink = root.get( "blink" );
+        const JSONValue blink = root.get( "blink" );
         if ( blink.isObject() )
         {
-            if ( AnimJsonUtil::hasOnlyKnownKeys( blink, { "targets", "min_interval", "max_interval", "duration" }, sourceLabel ) == false )
+            if ( AnimJSONUtil::hasOnlyKnownKeys( blink, { "targets", "min_interval", "max_interval", "duration" }, sourceLabel ) == false )
                 return false;
-            const JsonValue targets = blink.get( "targets" );
+            const JSONValue targets = blink.get( "targets" );
             if ( targets.isArray() == false || blink.get( "min_interval" ).isNumber() == false || blink.get( "max_interval" ).isNumber() == false ||
                  blink.get( "duration" ).isNumber() == false )
             {
@@ -107,15 +107,15 @@ namespace sw
             }
         }
 
-        const JsonValue gaze = root.get( "gaze" );
+        const JSONValue gaze = root.get( "gaze" );
         if ( gaze.isObject() )
         {
-            if ( AnimJsonUtil::hasOnlyKnownKeys( gaze, { "eye_bones", "forward_axis", "max_angle_degrees", "saccade_min_interval", "saccade_max_interval", "saccade_amplitude_degrees" },
+            if ( AnimJSONUtil::hasOnlyKnownKeys( gaze, { "eye_bones", "forward_axis", "max_angle_degrees", "saccade_min_interval", "saccade_max_interval", "saccade_amplitude_degrees" },
                                                  sourceLabel ) == false )
                 return false;
-            const JsonValue bones = gaze.get( "eye_bones" );
+            const JSONValue bones = gaze.get( "eye_bones" );
             float32         arrForward[3]{};
-            const bool      bComplete = bones.isArray() && AnimJsonUtil::readFloats( gaze.get( "forward_axis" ), arrForward, 3 ) &&
+            const bool      bComplete = bones.isArray() && AnimJSONUtil::readFloats( gaze.get( "forward_axis" ), arrForward, 3 ) &&
                                    gaze.get( "max_angle_degrees" ).isNumber() && gaze.get( "saccade_min_interval" ).isNumber() &&
                                    gaze.get( "saccade_max_interval" ).isNumber() && gaze.get( "saccade_amplitude_degrees" ).isNumber();
             if ( bComplete == false )

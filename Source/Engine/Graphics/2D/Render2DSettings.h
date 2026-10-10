@@ -56,7 +56,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽습니다. 실패하면 오류를 남기고 false 이며 표는 바뀌지 않습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief XML 본문을 읽습니다. 실패하면 오류를 남기고 false 이며 표는 바뀌지 않습니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
         /** @brief 정렬 레이어 수입니다. */
         uint32 getSortingLayerCount() const { return static_cast<uint32>( _listSortingLayer.size() ); }

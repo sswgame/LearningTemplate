@@ -6,7 +6,7 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CharacterAppearanceState.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
@@ -24,14 +24,14 @@ namespace
     struct AppearanceTestInternal
     {
         /** @brief 규칙 표 하나만 바꿔 읽고 오류 보고를 돌려줍니다. */
-        [[nodiscard]] static bool loadWithRules( const utf8* pRuleXml, Fixture& outFixture ) { return outFixture.load( pRuleXml ); }
+        [[nodiscard]] static bool loadWithRules( const utf8* pRuleXML, Fixture& outFixture ) { return outFixture.load( pRuleXML ); }
 
         /** @brief 한 덩이를 더 읽고 검사한 결과입니다(모르는 이름 시험). */
-        [[nodiscard]] static bool loadWithExtra( const utf8* pExtraXml, Fixture& outFixture )
+        [[nodiscard]] static bool loadWithExtra( const utf8* pExtraXML, Fixture& outFixture )
         {
             if ( outFixture.load() == false )
                 return false;
-            (void)outFixture._database.loadSectionFromXmlText( pExtraXml, "AppearanceTest.extra" ); // 깨진 구역도 그대로 둔다 — 판정은 finishLoad 와 각 시험이 한다
+            (void)outFixture._database.loadSectionFromXMLText( pExtraXML, "AppearanceTest.extra" ); // 깨진 구역도 그대로 둔다 — 판정은 finishLoad 와 각 시험이 한다
             return outFixture._database.finishLoad( &outFixture._items );
         }
 
@@ -64,7 +64,7 @@ SW_TEST_CASE( AppearanceTest, UnknownNamesAreLoadErrors )
     }
     struct Case
     {
-        const utf8* _pXml;
+        const utf8* _pXML;
         const utf8* _pExpected;
     };
     const Case arrCase[] = {
@@ -96,7 +96,7 @@ SW_TEST_CASE( AppearanceTest, UnknownNamesAreLoadErrors )
     for ( const Case& testCase : arrCase )
     {
         Fixture fixture;
-        SW_EXPECT_FALSE_MSG( Internal::loadWithExtra( testCase._pXml, fixture ), testCase._pXml );
+        SW_EXPECT_FALSE_MSG( Internal::loadWithExtra( testCase._pXML, fixture ), testCase._pXML );
         SW_EXPECT_TRUE_MSG( fixture._database.getReport().countContaining( testCase._pExpected ) >= 1,
                             ( string( testCase._pExpected ) + " missing in:" + fixture._database.getReport().joined() ).c_str() );
     }
@@ -110,7 +110,7 @@ SW_TEST_CASE( AppearanceTest, EquipConditionCycleIsALoadError )
     Fixture fixture;
     SW_ASSERT_TRUE( fixture.load() );
     ItemCatalog cyclic;
-    SW_ASSERT_TRUE( cyclic.loadFromXmlText( R"(
+    SW_ASSERT_TRUE( cyclic.loadFromXMLText( R"(
 <ItemCatalog>
   <Item id="a" slot="Ring" tags="Mark.A"><Requires equippedTag="Mark.B"/></Item>
   <Item id="b" slot="Belt" tags="Mark.B"><Requires equippedTag="Mark.A"/></Item>
@@ -124,7 +124,7 @@ SW_TEST_CASE( AppearanceTest, EquipConditionCycleIsALoadError )
     // 한쪽만 요구하면 순환이 아니다.
     vector<hashed_string> listCycle;
     ItemCatalog           chain;
-    SW_ASSERT_TRUE( chain.loadFromXmlText( R"(<ItemCatalog><Item id="a" tags="Mark.A"><Requires equippedTag="Mark.B"/></Item><Item id="b" tags="Mark.B"/></ItemCatalog>)", "chain" ) );
+    SW_ASSERT_TRUE( chain.loadFromXMLText( R"(<ItemCatalog><Item id="a" tags="Mark.A"><Requires equippedTag="Mark.B"/></Item><Item id="b" tags="Mark.B"/></ItemCatalog>)", "chain" ) );
     SW_EXPECT_FALSE( EquipConditionUtil::findConditionCycle( chain, nullptr, listCycle ) );
 }
 
@@ -150,10 +150,10 @@ SW_TEST_CASE( AppearanceTest, EqualPriorityRuleConflictIsALoadError )
         R"(<AppearanceRuleTable><Rule id="A" priority="3"><When tag="Hat"/><Variant target="Hair" name="UnderHat"/></Rule><Rule id="B" priority="3"><When tag="Hat" not="true"/><Variant target="Hair" name="Lean"/></Rule></AppearanceRuleTable>)",
         R"(<AppearanceRuleTable><Rule id="A" priority="3"><When tag="Hat"/><Hide target="Hair"/></Rule><Rule id="B" priority="3"><When occupied="Back"/><Hide target="Hair"/></Rule></AppearanceRuleTable>)",
     };
-    for ( const utf8* pRuleXml : arrAllowed )
+    for ( const utf8* pRuleXML : arrAllowed )
     {
         Fixture fixture;
-        SW_EXPECT_TRUE_MSG( Internal::loadWithRules( pRuleXml, fixture ), ( string( pRuleXml ) + fixture._database.getReport().joined() ).c_str() );
+        SW_EXPECT_TRUE_MSG( Internal::loadWithRules( pRuleXML, fixture ), ( string( pRuleXML ) + fixture._database.getReport().joined() ).c_str() );
     }
 }
 
@@ -206,10 +206,10 @@ SW_TEST_CASE( AppearanceTest, PresetInheritanceAndSeededCandidates )
         SW_EXPECT_TRUE( 0.8f <= height && height <= 1.4f );
         if ( std::find( listHeight.begin(), listHeight.end(), height ) == listHeight.end() )
             listHeight.push_back( height );
-        if ( AppearanceXmlUtil::containsName( listShape, villager._bodyShape ) == false )
+        if ( AppearanceXMLUtil::containsName( listShape, villager._bodyShape ) == false )
             listShape.push_back( villager._bodyShape );
         const hashed_string body = villager.findSlot( hashed_string( "Body" ) )->_itemId;
-        if ( AppearanceXmlUtil::containsName( listBody, body ) == false )
+        if ( AppearanceXMLUtil::containsName( listBody, body ) == false )
             listBody.push_back( body );
         if ( villager._customization.findValue( hashed_string( "Hair" ) )->_option == hashed_string( "Bald" ) )
             ++baldCount;
@@ -689,7 +689,7 @@ SW_TEST_CASE( AppearanceTest, StateReresolvesOnlyWhenARevisionChanges )
     SW_EXPECT_FALSE( state.getResolved().hasOwner( hashed_string( "Hair" ) ) );
 
     // 데이터를 다시 읽으면(핫 리로드) 다시 해석한다.
-    SW_ASSERT_TRUE( fixture._database.loadSectionFromXmlText( appearancetest::kRuleXml, "AppearanceTest.reload" ) );
+    SW_ASSERT_TRUE( fixture._database.loadSectionFromXMLText( appearancetest::kRuleXML, "AppearanceTest.reload" ) );
     SW_ASSERT_TRUE( fixture._database.finishLoad( &fixture._items ) );
     SW_EXPECT_TRUE( state.update( &equipment ) );
     SW_EXPECT_EQUAL( 4u, state.getResolveCount() );
@@ -766,17 +766,17 @@ SW_TEST_CASE( AppearanceTest, ShooterSampleDataResolves )
 SW_TEST_CASE( AppearanceTest, PaperDollFixtureResolvesSpritesAndPalettes )
 {
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( R"(<ItemCatalog><Item id="tunic" slot="Torso" visual="tunic"/><Item id="hood" slot="Head" visual="hood"/>
+    SW_ASSERT_TRUE( items.loadFromXMLText( R"(<ItemCatalog><Item id="tunic" slot="Torso" visual="tunic"/><Item id="hood" slot="Head" visual="hood"/>
       <Item id="spear" slot="Hand" visual="spear"/></ItemCatalog>)",
                                            "PaperDoll.items" ) );
     AppearanceDatabase database;
-    SW_ASSERT_TRUE( database.loadSectionFromXmlText( R"(<SlotTable><Slot name="Head"/><Slot name="Torso"/><Slot name="Hand"/></SlotTable>)", "PaperDoll.slots" ) );
-    SW_ASSERT_TRUE( database.loadSectionFromXmlText( R"(<CustomizationSchemaCatalog><Schema id="Pixel">
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<SlotTable><Slot name="Head"/><Slot name="Torso"/><Slot name="Hand"/></SlotTable>)", "PaperDoll.slots" ) );
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<CustomizationSchemaCatalog><Schema id="Pixel">
         <Color name="Skin" default="1 0.8 0.6 1"><Drive kind="PaletteSwap" target="Skin"/></Color>
         <Choice name="HairStyle" default="Spiky"><Option name="Spiky" visual="hair_spiky"/><Option name="Shaved"/></Choice></Schema>
       <Schema id="Cloth"><Color name="Dye" default="0.5 0.5 0.5 1"><Drive kind="PaletteSwap" target="Cloth"/></Color></Schema></CustomizationSchemaCatalog>)",
                                                      "PaperDoll.schemas" ) );
-    SW_ASSERT_TRUE( database.loadSectionFromXmlText( R"(<ItemVisualCatalog>
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<ItemVisualCatalog>
         <ItemVisual id="doll"><Part name="Base" kind="Sprite" sprite="t/doll.sprite.json" socket="root" layer="0"/></ItemVisual>
         <ItemVisual id="hair_spiky"><Part name="Hair" kind="Sprite" sprite="t/hair_spiky.sprite.json" socket="head" layer="3"/></ItemVisual>
         <ItemVisual id="tunic" customization="Cloth"><Part name="Tunic" kind="Sprite" sprite="t/tunic.sprite.json" socket="root" layer="1"/></ItemVisual>
@@ -784,9 +784,9 @@ SW_TEST_CASE( AppearanceTest, PaperDollFixtureResolvesSpritesAndPalettes )
         <ItemVisual id="spear" defaultState="Held"><Part name="Spear" kind="Sprite" sprite="t/spear.sprite.json" socket="hand" layer="5"/>
           <State name="Held"/><State name="Stowed"><Place part="Spear" socket="back" rotation="0 0 90"/></State></ItemVisual></ItemVisualCatalog>)",
                                                      "PaperDoll.visuals" ) );
-    SW_ASSERT_TRUE( database.loadSectionFromXmlText( R"(<AppearanceRuleTable><Rule id="HoodHidesHair"><When target="Head" tag="Hat"/><Hide target="HairStyle"/></Rule></AppearanceRuleTable>)",
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<AppearanceRuleTable><Rule id="HoodHidesHair"><When target="Head" tag="Hat"/><Hide target="HairStyle"/></Rule></AppearanceRuleTable>)",
                                                      "PaperDoll.rules" ) );
-    SW_ASSERT_TRUE( database.loadSectionFromXmlText( R"(<CharacterAppearanceCatalog><CharacterAppearance id="Peasant" schema="Pixel" body="doll">
+    SW_ASSERT_TRUE( database.loadSectionFromXMLText( R"(<CharacterAppearanceCatalog><CharacterAppearance id="Peasant" schema="Pixel" body="doll">
         <Value name="Skin" color="0.4 0.3 0.2 1"/><Equip slot="Torso" item="tunic"><Value name="Dye" color="0.8 0.1 0.1 1"/></Equip><Equip slot="Hand" item="spear"/>
       </CharacterAppearance></CharacterAppearanceCatalog>)",
                                                      "PaperDoll.presets" ) );

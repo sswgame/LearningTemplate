@@ -14,7 +14,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kWeatherTestXml = R"(
+    constexpr const utf8* kWeatherTestXML = R"(
 <WeatherCatalog transition="10">
   <Weather id="clear" weight="3" minDuration="100" maxDuration="200"><Values wetness="0" wind="0.1"/></Weather>
   <Weather id="rain" seasons="Spring:2,Summer:1" minDuration="50" maxDuration="80"><Values wetness="1" wind="0.5"/></Weather>
@@ -83,7 +83,7 @@ SW_TEST_CASE( WorldTest, ClockCountsHoursDaysSeasonsAndYears )
 SW_TEST_CASE( WorldTest, WeatherFollowsSeasonWeightsBlendsAndForecasts )
 {
     WeatherCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWeatherTestXml, "WorldTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWeatherTestXML, "WorldTest" ) );
     SW_EXPECT_NEAR_EQUAL( 0.0f, catalog.findWeather( hashed_string( "snow" ) )->computeWeight( hashed_string( "Spring" ) ), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, catalog.findWeather( hashed_string( "clear" ) )->computeWeight( hashed_string( "Winter" ) ), 1.0e-6f );
 

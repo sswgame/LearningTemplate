@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -21,10 +21,10 @@ namespace sw
         } );
     }
 
-    void TimingJudge::loadFromNode( const XmlNode& node )
+    void TimingJudge::loadFromNode( const XMLNode& node )
     {
         vector<TimingWindow> listWindow;
-        for ( XmlNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
+        for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
         {
             TimingWindow window;
             const utf8*  pGrade  = child.findAttribute( "grade" );
@@ -39,11 +39,11 @@ namespace sw
         setWindows( listWindow );
     }
 
-    bool TimingJudge::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool TimingJudge::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::parseRoot( doc, xmlText, sourceName, "TimingWindows", root ) == false )
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "TimingWindows", root ) == false )
             return false;
         loadFromNode( root );
         return _listWindow.empty() == false;

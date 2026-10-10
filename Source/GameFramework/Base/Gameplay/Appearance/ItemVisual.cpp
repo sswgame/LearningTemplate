@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
 {
@@ -61,7 +61,7 @@ namespace sw
             }
 
             /** @brief 종류에 맞지 않는 에셋 속성이 있으면 오류입니다. */
-            static void reportMisplacedAssetAttributes( const XmlNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
+            static void reportMisplacedAssetAttributes( const XMLNode& node, AppearancePartKind kind, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
             {
                 constexpr const utf8* kArrAssetAttribute[] = { "mesh", "prefab", "sprite" };
                 const utf8*           pExpected            = getAssetAttribute( kind );
@@ -80,18 +80,18 @@ namespace sw
                 return false;
             }
 
-            static void readPartChild( const XmlNode& child, const XmlNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
+            static void readPartChild( const XMLNode& child, const XMLNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualId )
             {
                 const utf8* pName         = child.getName();
                 const bool  bModification = inoutPart._kind == AppearancePartKind::BodyModification;
                 if ( StringUtil::equals( pName, "Variant", true ) && bModification == false )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrVariantAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrVariantAttribute, report, sourceName );
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualId );
                     AppearancePartVariantDef variant;
-                    variant._name     = AppearanceXmlUtil::readName( child, "name" );
-                    variant._asset    = AppearanceXmlUtil::readName( child, getAssetAttribute( inoutPart._kind ) );
-                    variant._material = AppearanceXmlUtil::readName( child, "material" );
+                    variant._name     = AppearanceXMLUtil::readName( child, "name" );
+                    variant._asset    = AppearanceXMLUtil::readName( child, getAssetAttribute( inoutPart._kind ) );
+                    variant._material = AppearanceXMLUtil::readName( child, "material" );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addError( "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualId.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -99,10 +99,10 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "MaterialVariant", true ) && bModification == false )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrMaterialVariantAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialVariantAttribute, report, sourceName );
                     AppearancePartVariantDef variant;
-                    variant._name     = AppearanceXmlUtil::readName( child, "name" );
-                    variant._material = AppearanceXmlUtil::readName( child, "material" );
+                    variant._name     = AppearanceXMLUtil::readName( child, "name" );
+                    variant._material = AppearanceXMLUtil::readName( child, "material" );
                     if ( variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr )
                         report.addError( "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualId.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -110,33 +110,33 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Morph", true ) && bModification )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
-                    inoutPart._listMorph.push_back( AppearanceMorphDef{ AppearanceXmlUtil::readName( child, "name" ), child.getAttributeFloat( "weight", 1.0f ) } );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
+                    inoutPart._listMorph.push_back( AppearanceMorphDef{ AppearanceXMLUtil::readName( child, "name" ), child.getAttributeFloat( "weight", 1.0f ) } );
                 }
                 else if ( StringUtil::equals( pName, "Material", true ) && bModification )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
                     AppearanceMaterialValueDef value;
-                    value._name  = AppearanceXmlUtil::readName( child, "name" );
-                    value._value = AppearanceXmlUtil::readFloat4( child, "value", float4::Zero );
+                    value._name  = AppearanceXMLUtil::readName( child, "name" );
+                    value._value = AppearanceXMLUtil::readFloat4( child, "value", float4::Zero );
                     inoutPart._listMaterialValue.push_back( value );
                 }
                 else if ( StringUtil::equals( pName, "HideRegion", true ) && bModification )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrRegionAttribute, report, sourceName );
-                    inoutPart._listHiddenRegion.push_back( AppearanceXmlUtil::readName( child, "name" ) );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrRegionAttribute, report, sourceName );
+                    inoutPart._listHiddenRegion.push_back( AppearanceXMLUtil::readName( child, "name" ) );
                 }
                 else
                 {
-                    AppearanceXmlUtil::reportUnknownChild( partNode, child, report, sourceName );
+                    AppearanceXMLUtil::reportUnknownChild( partNode, child, report, sourceName );
                 }
             }
 
-            static void readPart( const XmlNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
+            static void readPart( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrPartAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPartAttribute, report, sourceName );
                 AppearancePartDef part;
-                part._name = AppearanceXmlUtil::readName( node, "name" );
+                part._name = AppearanceXMLUtil::readName( node, "name" );
                 if ( parseKind( node.getAttributeText( "kind" ), part._kind ) == false )
                 {
                     report.addError( "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
@@ -149,70 +149,70 @@ namespace sw
                 }
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
                 const utf8* pAssetAttribute = getAssetAttribute( part._kind );
-                part._asset                 = pAssetAttribute != nullptr ? AppearanceXmlUtil::readName( node, pAssetAttribute ) : hashed_string{};
-                part._material              = AppearanceXmlUtil::readName( node, "material" );
-                part._skeleton              = AppearanceXmlUtil::readName( node, "skeleton" );
-                part._socketSet             = AppearanceXmlUtil::readName( node, "sockets" );
-                part._breakStage            = AppearanceXmlUtil::readName( node, "breakStage" );
-                part._breakImpulse          = AppearanceXmlUtil::readFloat3( node, "impulse", float3::Zero );
+                part._asset                 = pAssetAttribute != nullptr ? AppearanceXMLUtil::readName( node, pAssetAttribute ) : hashed_string{};
+                part._material              = AppearanceXMLUtil::readName( node, "material" );
+                part._skeleton              = AppearanceXMLUtil::readName( node, "skeleton" );
+                part._socketSet             = AppearanceXMLUtil::readName( node, "sockets" );
+                part._breakStage            = AppearanceXMLUtil::readName( node, "breakStage" );
+                part._breakImpulse          = AppearanceXMLUtil::readFloat3( node, "impulse", float3::Zero );
                 part._layer                 = node.getAttributeInt( "layer", 0 );
                 part._bDeforms              = node.getAttributeBool( "deforms", part._kind == AppearancePartKind::Skinned ) ? SW_TRUE : SW_FALSE;
                 part._bBreakable            = node.getAttributeBool( "breakable", part._breakStage.empty() == false ) ? SW_TRUE : SW_FALSE;
-                AppearanceXmlUtil::readPlacement( node, "socket", part._placement );
+                AppearanceXMLUtil::readPlacement( node, "socket", part._placement );
                 if ( pAssetAttribute != nullptr && part._asset.empty() )
                     report.addError( "%#: visual '%#' part '%#' needs '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), pAssetAttribute );
                 if ( part._kind == AppearancePartKind::SocketPrefab && part._placement.isEmpty() )
                     report.addError( "%#: visual '%#' part '%#' needs a socket", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 if ( part._kind == AppearancePartKind::BodyModification && ( part._placement.isEmpty() == false || part._bBreakable == SW_TRUE ) )
                     report.addError( "%#: visual '%#' body modification '%#' cannot have a socket or break off", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     readPartChild( child, node, part, report, sourceName, inoutVisual._id );
                 }
                 inoutVisual._listPart.push_back( part );
             }
 
-            static void readState( const XmlNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
+            static void readState( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrStateAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrStateAttribute, report, sourceName );
                 AppearanceStateDef state;
-                state._name = AppearanceXmlUtil::readName( node, "name" );
+                state._name = AppearanceXMLUtil::readName( node, "name" );
                 if ( state._name.empty() || inoutVisual.findState( state._name ) != nullptr )
                 {
                     report.addError( "%#: visual '%#' has a state without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), state._name.c_str() );
                     return;
                 }
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Place", true ) )
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrPlaceAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrPlaceAttribute, report, sourceName );
                         AppearanceStateDef::Placement placement;
-                        placement._part = AppearanceXmlUtil::readName( child, "part" );
-                        AppearanceXmlUtil::readPlacement( child, "socket", placement._placement );
+                        placement._part = AppearanceXMLUtil::readName( child, "part" );
+                        AppearanceXMLUtil::readPlacement( child, "socket", placement._placement );
                         if ( hasPart( inoutVisual, placement._part, report, sourceName, "<Place>" ) )
                             state._listPlacement.push_back( placement );
                     }
                     else if ( StringUtil::equals( child.getName(), "HidePart", true ) )
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrHidePartAttribute, report, sourceName );
-                        const hashed_string part = AppearanceXmlUtil::readName( child, "part" );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrHidePartAttribute, report, sourceName );
+                        const hashed_string part = AppearanceXMLUtil::readName( child, "part" );
                         if ( hasPart( inoutVisual, part, report, sourceName, "<HidePart>" ) )
                             state._listHiddenPart.push_back( part );
                     }
                     else
                     {
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                     }
                 }
                 inoutVisual._listState.push_back( state );
             }
 
-            static void readDamageStage( const XmlNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
+            static void readDamageStage( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrStageAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrStageAttribute, report, sourceName );
                 AppearanceDamageStageDef stage;
-                stage._name            = AppearanceXmlUtil::readName( node, "name" );
+                stage._name            = AppearanceXMLUtil::readName( node, "name" );
                 stage._threshold       = node.getAttributeFloat( "threshold", -1.0f );
                 const float32 previous = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
                 const bool    bOrdered = previous < stage._threshold && stage._threshold <= 1.0f;
@@ -221,14 +221,14 @@ namespace sw
                     report.addError( "%#: visual '%#' damage stage '%#' needs a unique name and a threshold in (previous, 1]", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
                     return;
                 }
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Variant", true ) )
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrStageVariantAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageVariantAttribute, report, sourceName );
                         AppearanceDamageStageDef::PartVariant entry;
-                        entry._part                    = AppearanceXmlUtil::readName( child, "part" );
-                        entry._variant                 = AppearanceXmlUtil::readName( child, "name" );
+                        entry._part                    = AppearanceXMLUtil::readName( child, "part" );
+                        entry._variant                 = AppearanceXMLUtil::readName( child, "name" );
                         const AppearancePartDef* pPart = inoutVisual.findPart( entry._part );
                         if ( pPart == nullptr || pPart->findVariant( entry._variant ) == nullptr )
                             report.addError( "%#: visual '%#' damage stage '%#' names unknown part/variant '%#'/'%#'", sourceName, inoutVisual._id.c_str(), stage._name.c_str(), entry._part.c_str(),
@@ -238,35 +238,35 @@ namespace sw
                     }
                     else if ( StringUtil::equals( child.getName(), "Material", true ) )
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
                         AppearanceMaterialValueDef value;
-                        value._part  = AppearanceXmlUtil::readName( child, "part" );
-                        value._name  = AppearanceXmlUtil::readName( child, "name" );
-                        value._value = AppearanceXmlUtil::readFloat4( child, "value", float4::Zero );
+                        value._part  = AppearanceXMLUtil::readName( child, "part" );
+                        value._name  = AppearanceXMLUtil::readName( child, "name" );
+                        value._value = AppearanceXMLUtil::readFloat4( child, "value", float4::Zero );
                         if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
                             stage._listMaterialValue.push_back( value );
                     }
                     else
                     {
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                     }
                 }
                 inoutVisual._listDamageStage.push_back( stage );
             }
 
-            static void readVisual( const XmlNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
+            static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrVisualAttribute, report, sourceName );
-                outVisual._occupancy     = AppearanceXmlUtil::readName( node, "occupancy" );
-                outVisual._customization = AppearanceXmlUtil::readName( node, "customization" );
-                outVisual._defaultState  = AppearanceXmlUtil::readName( node, "defaultState" );
-                AppearanceXmlUtil::readTags( node, "tags", outVisual._tags );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVisualAttribute, report, sourceName );
+                outVisual._occupancy     = AppearanceXMLUtil::readName( node, "occupancy" );
+                outVisual._customization = AppearanceXMLUtil::readName( node, "customization" );
+                outVisual._defaultState  = AppearanceXMLUtil::readName( node, "defaultState" );
+                AppearanceXMLUtil::readTags( node, "tags", outVisual._tags );
                 // 부품을 먼저 모두 읽는다 — 상태 · 피해 단계가 앞뒤 순서와 상관없이 부품을 가리킨다.
-                for ( XmlNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )
+                for ( XMLNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )
                 {
                     readPart( child, outVisual, report, sourceName );
                 }
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "Part", true ) )
@@ -276,7 +276,7 @@ namespace sw
                     else if ( StringUtil::equals( pName, "DamageStage", true ) )
                         readDamageStage( child, outVisual, report, sourceName );
                     else
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                 }
                 if ( outVisual._defaultState.empty() == false && outVisual.findState( outVisual._defaultState ) == nullptr )
                     report.addError( "%#: visual '%#' default state '%#' is not one of its states", sourceName, outVisual._id.c_str(), outVisual._defaultState.c_str() );
@@ -377,20 +377,20 @@ namespace sw
         return stageIndex;
     }
 
-    bool ItemVisualCatalog::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool ItemVisualCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "ItemVisual", true ) == false )
             {
-                AppearanceXmlUtil::reportUnknownChild( root, node, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, node, report, sourceName );
                 continue;
             }
             ItemVisualDef visual;
-            visual._id = AppearanceXmlUtil::readName( node, "id" );
+            visual._id = AppearanceXMLUtil::readName( node, "id" );
             if ( visual._id.empty() || findVisual( visual._id ) != nullptr )
             {
                 report.addError( "%#: <ItemVisual> without an id or with a duplicate id '%#'", sourceName, visual._id.c_str() );

@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
         {
             static constexpr uint32 kMaxStageCount = 16;
 
-            static hashed_string readName( const XmlNode& node, const utf8* pName )
+            static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : hashed_string{};
@@ -43,12 +43,12 @@ namespace sw
         _vacuum._listStagePower.push_back( 10.0f );
     }
 
-    uint32 GhostCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 GhostCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         const utf8* pCurrency = root.findAttribute( "currency" );
         if ( pCurrency != nullptr && pCurrency[0] != '\0' )
             _currency = hashed_string( pCurrency );
-        const XmlNode flashlight = root.findChild( "Flashlight" );
+        const XMLNode flashlight = root.findChild( "Flashlight" );
         if ( flashlight )
         {
             _flashlight._range            = MathUtil::max( 0.1f, flashlight.getAttributeFloat( "range", _flashlight._range ) );
@@ -57,11 +57,11 @@ namespace sw
             _flashlight._strobeHalfAngle  = MathUtil::clamp( flashlight.getAttributeFloat( "strobeAngle", _flashlight._strobeHalfAngle ), 1.0f, 89.0f );
             _flashlight._strobeChargeTime = MathUtil::max( 0.0f, flashlight.getAttributeFloat( "strobeCharge", _flashlight._strobeChargeTime ) );
         }
-        const XmlNode vacuum = root.findChild( "Vacuum" );
+        const XMLNode vacuum = root.findChild( "Vacuum" );
         if ( vacuum )
         {
             float32      arrStage[GhostCatalogInternal::kMaxStageCount] = {};
-            const uint32 stageCount                                     = GameDataXml::parseFloats( vacuum.getAttributeText( "stages" ), arrStage, GhostCatalogInternal::kMaxStageCount );
+            const uint32 stageCount                                     = GameDataXML::parseFloats( vacuum.getAttributeText( "stages" ), arrStage, GhostCatalogInternal::kMaxStageCount );
             if ( stageCount > 0 )
             {
                 _vacuum._listStagePower.clear();
@@ -80,9 +80,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Ghost" ); node; node = node.findNextSibling( "Ghost" ) )
+        for ( XMLNode node = root.findChild( "Ghost" ); node; node = node.findNextSibling( "Ghost" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             GhostDef ghost;
@@ -100,9 +100,9 @@ namespace sw
             (void)_ghostCatalog.add( ghost );
             ++loadedCount;
         }
-        for ( XmlNode node = root.findChild( "Room" ); node; node = node.findNextSibling( "Room" ) )
+        for ( XMLNode node = root.findChild( "Room" ); node; node = node.findNextSibling( "Room" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             GhostRoomDef room;
@@ -115,7 +115,7 @@ namespace sw
                 flag += pId;
                 room._lightFlag = hashed_string( flag.c_str() );
             }
-            GameDataXml::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "ghosts" ), ",; ", [&]( string_view token )
             {
                 const hashed_string ghostId( string( token.data(), token.size() ).c_str() );
                 if ( _ghostCatalog.find( ghostId ) == nullptr )
@@ -125,9 +125,9 @@ namespace sw
             } );
             (void)_roomCatalog.add( room );
         }
-        for ( XmlNode node = root.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
+        for ( XMLNode node = root.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             GhostDoorDef door;
@@ -138,9 +138,9 @@ namespace sw
                 door._flag = hashed_string( string( "door." ) + pId );
             (void)_doorCatalog.add( door );
         }
-        for ( XmlNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )
+        for ( XMLNode node = root.findChild( "Furniture" ); node; node = node.findNextSibling( "Furniture" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             GhostFurnitureDef furniture;
@@ -152,7 +152,7 @@ namespace sw
             {
                 furniture._bVacuum = SW_FALSE;
                 furniture._bShake  = SW_FALSE;
-                GameDataXml::forEachToken( searchText, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( searchText, ",; ", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Vacuum" ), true ) )
                         furniture._bVacuum = SW_TRUE;
@@ -164,9 +164,9 @@ namespace sw
             }
             (void)_furnitureCatalog.add( furniture );
         }
-        for ( XmlNode node = root.findChild( "Boo" ); node; node = node.findNextSibling( "Boo" ) )
+        for ( XMLNode node = root.findChild( "Boo" ); node; node = node.findNextSibling( "Boo" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             GhostBooDef boo;

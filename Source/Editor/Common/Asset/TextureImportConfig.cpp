@@ -5,8 +5,8 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Json/ConfigKeyDoc.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/ConfigKeyDoc.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
 {
@@ -66,19 +66,19 @@ namespace sw::editor
             return false;
         }
 
-        return loadFromJsonString( text );
+        return loadFromJSONString( text );
     }
 
-    bool TextureImportConfig::loadFromJsonString( string_view jsonString )
+    bool TextureImportConfig::loadFromJSONString( string_view jsonString )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonString ) == false )
         {
             SW_LOG_ERROR( "Failed to parse TextureImportConfig JSON." );
             return false;
         }
 
-        const JsonValue root = doc.getRoot();
+        const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
             SW_LOG_ERROR( "TextureImportConfig root is not an object." );
@@ -91,13 +91,13 @@ namespace sw::editor
             return false;
 
         // 1) 프리셋 파싱
-        const JsonValue presetsVal = root.get( "presets" );
+        const JSONValue presetsVal = root.get( "presets" );
         if ( presetsVal.isObject() )
         {
             const vector<string> listName = presetsVal.getMemberNames();
             for ( const auto& name : listName )
             {
-                const JsonValue   presetObj = presetsVal.get( name );
+                const JSONValue   presetObj = presetsVal.get( name );
                 TextureImportRule rule;
                 rule._name = name;
                 if ( applyInheritance( presetObj, rule ) == false )
@@ -111,13 +111,13 @@ namespace sw::editor
 
         // 2) 규칙 파싱 — 객체 아닌 원소 · 모르는 키 · 모르는 swizzle · 없는 inherits 는 로드 오류다(객체 아닌 원소를 규칙으로 받으면
         //    무엇에나 맞는 규칙이 되어 뒤 규칙을 모두 가린다).
-        const JsonValue rulesVal = root.get( "rules" );
+        const JSONValue rulesVal = root.get( "rules" );
         if ( rulesVal.isArray() )
         {
             const size_t count = rulesVal.size();
             for ( size_t index = 0; index < count; ++index )
             {
-                const JsonValue   ruleObj = rulesVal.at( index );
+                const JSONValue   ruleObj = rulesVal.at( index );
                 TextureImportRule rule;
                 if ( applyInheritance( ruleObj, rule ) == false || parseRuleObject( ruleObj, rule, "TextureImportConfig rule " + to_string( index ) ) == false )
                     return clearAndFail();
@@ -148,7 +148,7 @@ namespace sw::editor
         return false;
     }
 
-    bool TextureImportConfig::applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const
+    bool TextureImportConfig::applyInheritance( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule ) const
     {
         if ( jsonValue.isObject() == false || jsonValue.has( "inherits" ) == false )
             return true;
@@ -167,7 +167,7 @@ namespace sw::editor
         return true;
     }
 
-    bool TextureImportConfig::parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule, string_view context )
+    bool TextureImportConfig::parseRuleObject( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule, string_view context )
     {
         if ( jsonValue.isObject() == false )
         {

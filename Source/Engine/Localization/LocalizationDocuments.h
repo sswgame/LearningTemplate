@@ -56,9 +56,9 @@ namespace sw
     public:
         static constexpr const utf8* kExtension = ".strings.json";
 
-        [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJsonText() const;
+        string             toJSONText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         const SourceTextEntry* findEntry( string_view key ) const;
@@ -113,9 +113,9 @@ namespace sw
     public:
         static constexpr const utf8* kExtension = ".translation.json";
 
-        [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJsonText() const;
+        string             toJSONText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         const TranslationEntry* findEntry( string_view key ) const;
@@ -169,7 +169,7 @@ namespace sw
     public:
         static constexpr const utf8* kExtension = ".locproject.json";
 
-        [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
 
         /** @brief 프로젝트 파일 옆 @p fileName 의 경로입니다. */

@@ -177,7 +177,7 @@ namespace sw
             xml += "<Link from=\"outside\" to=\"ship\" kind=\"Ship\"/>";
         }
         xml += "</AreaGraph>";
-        if ( _graph.loadFromXmlText( string_view( xml.data(), xml.size() ), "ScavengerFacility" ) == false )
+        if ( _graph.loadFromXMLText( string_view( xml.data(), xml.size() ), "ScavengerFacility" ) == false )
             return false;
 
         if ( _roomCount <= 0 || catalog.getScraps().empty() )

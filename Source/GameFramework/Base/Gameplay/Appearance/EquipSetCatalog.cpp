@@ -4,10 +4,10 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 
 namespace sw
@@ -21,11 +21,11 @@ namespace sw
             static constexpr const utf8* kArrVariantAttribute[]  = { "bodyType" };
             static constexpr const utf8* kArrCompleteAttribute[] = { "visual", "slots" };
 
-            [[nodiscard]] static bool readPiece( const XmlNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setId )
+            [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setId )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrPieceAttribute, report, sourceName );
-                outPiece._slot = AppearanceXmlUtil::readName( node, "slot" );
-                AppearanceXmlUtil::readNameList( node, "items", outPiece._listItem );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPieceAttribute, report, sourceName );
+                outPiece._slot = AppearanceXMLUtil::readName( node, "slot" );
+                AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
                     report.addError( "%#: set '%#' <Piece> needs a slot and items", sourceName, setId.c_str() );
@@ -49,27 +49,27 @@ namespace sw
 
 namespace sw
 {
-    bool EquipSetCatalog::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool EquipSetCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode setNode = root.findChild(); setNode; setNode = setNode.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode setNode = root.findChild(); setNode; setNode = setNode.findNextSibling() )
         {
             if ( StringUtil::equals( setNode.getName(), "Set", true ) == false )
             {
-                AppearanceXmlUtil::reportUnknownChild( root, setNode, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, setNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXmlUtil::reportUnknownAttributes( setNode, EquipSetCatalogInternal::kArrSetAttribute, report, sourceName );
+            (void)AppearanceXMLUtil::reportUnknownAttributes( setNode, EquipSetCatalogInternal::kArrSetAttribute, report, sourceName );
             EquipSetDef def;
-            def._id = AppearanceXmlUtil::readName( setNode, "id" );
+            def._id = AppearanceXMLUtil::readName( setNode, "id" );
             if ( def._id.empty() || findSet( def._id ) != nullptr )
             {
                 report.addError( "%#: <Set> without an id or with a duplicate id '%#'", sourceName, def._id.c_str() );
                 continue;
             }
-            for ( XmlNode child = setNode.findChild(); child; child = child.findNextSibling() )
+            for ( XMLNode child = setNode.findChild(); child; child = child.findNextSibling() )
             {
                 const utf8* pName = child.getName();
                 if ( StringUtil::equals( pName, "Piece", true ) )
@@ -84,16 +84,16 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Variant", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrVariantAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrVariantAttribute, report, sourceName );
                     EquipSetVariantDef variant;
-                    variant._bodyType = AppearanceXmlUtil::readName( child, "bodyType" );
+                    variant._bodyType = AppearanceXMLUtil::readName( child, "bodyType" );
                     if ( variant._bodyType.empty() )
                         report.addError( "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
-                    for ( XmlNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
+                    for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
                     {
                         EquipSetPieceDef piece;
                         if ( StringUtil::equals( pieceNode.getName(), "Piece", true ) == false )
-                            AppearanceXmlUtil::reportUnknownChild( child, pieceNode, report, sourceName );
+                            AppearanceXMLUtil::reportUnknownChild( child, pieceNode, report, sourceName );
                         else if ( EquipSetCatalogInternal::readPiece( pieceNode, piece, report, sourceName, def._id ) )
                             variant._listPiece.push_back( piece );
                     }
@@ -101,15 +101,15 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Complete", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrCompleteAttribute, report, sourceName );
-                    def._completeVisual = AppearanceXmlUtil::readName( child, "visual" );
-                    AppearanceXmlUtil::readNameList( child, "slots", def._listCompleteSlot );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrCompleteAttribute, report, sourceName );
+                    def._completeVisual = AppearanceXMLUtil::readName( child, "visual" );
+                    AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
                     if ( def._completeVisual.empty() || def._listCompleteSlot.empty() )
                         report.addError( "%#: set '%#' <Complete> needs a visual and slots", sourceName, def._id.c_str() );
                 }
                 else
                 {
-                    AppearanceXmlUtil::reportUnknownChild( setNode, child, report, sourceName );
+                    AppearanceXMLUtil::reportUnknownChild( setNode, child, report, sourceName );
                 }
             }
             if ( def._listPiece.empty() )

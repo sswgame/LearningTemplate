@@ -17,7 +17,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -139,10 +139,10 @@ namespace sw
 
     bool MaterialInstance::loadFromFile( string_view assetRelativePath )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.loadPath( assetRelativePath ) == false )
             return false;
-        return loadFromXml( doc.saveToString() );
+        return loadFromXML( doc.saveToString() );
     }
 
     bool MaterialInstance::saveToFile( string_view assetRelativePath ) const
@@ -153,19 +153,19 @@ namespace sw
 
         syncDescOverrides();
 
-        XmlDocument doc;
-        XmlNode     root = doc.appendRoot( "MaterialInstanceDesc" );
-        AssetFormatRegistry::writeXmlVersion( root, AssetFormatVersions::kMaterialInstance );
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "MaterialInstanceDesc" );
+        AssetFormatRegistry::writeXMLVersion( root, AssetFormatVersions::kMaterialInstance );
         MaterialUtil::appendAttribute( root, "name", _desc._name );
         if ( _desc._parentPath.empty() == false )
             MaterialUtil::appendAttribute( root, "parentPath", _desc._parentPath );
         if ( _desc._quality.empty() == false )
             MaterialUtil::appendAttribute( root, "quality", _desc._quality );
 
-        XmlNode overrides = root.appendChild( "_overrides" );
+        XMLNode overrides = root.appendChild( "_overrides" );
         for ( const MaterialInstanceDesc::Override& overrideItem : _desc._listOverride )
         {
-            XmlNode item = overrides.appendChild( "item" );
+            XMLNode item = overrides.appendChild( "item" );
             MaterialUtil::appendAttribute( item, "name", overrideItem._name );
             MaterialUtil::appendAttribute( item, "value", overrideItem._value );
             if ( overrideItem._assetPath.empty() == false )
@@ -174,20 +174,20 @@ namespace sw
 
         if ( _desc._listKeyword.empty() == false )
         {
-            XmlNode list = root.appendChild( "_keywords" );
+            XMLNode list = root.appendChild( "_keywords" );
             for ( const MaterialInstanceDesc::KeywordOverride& keywordItem : _desc._listKeyword )
             {
-                XmlNode item = list.appendChild( "item" );
+                XMLNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", keywordItem._name );
                 MaterialUtil::appendBoolAttr( item, "bEnabled", keywordItem._bEnabled );
             }
         }
         if ( _desc._listMultiCompile.empty() == false )
         {
-            XmlNode list = root.appendChild( "_multiCompiles" );
+            XMLNode list = root.appendChild( "_multiCompiles" );
             for ( const MaterialInstanceDesc::MultiCompileOverride& multiCompileItem : _desc._listMultiCompile )
             {
-                XmlNode item = list.appendChild( "item" );
+                XMLNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", multiCompileItem._name );
                 MaterialUtil::appendAttribute( item, "selected", multiCompileItem._selected );
             }
@@ -750,17 +750,17 @@ namespace sw
             self->_desc._parentPath.clear(); // 런타임 부모다. 경로가 필요하면 부르는 쪽이 채운다.
     }
 
-    bool MaterialInstance::loadFromXml( string_view xmlText )
+    bool MaterialInstance::loadFromXML( string_view xmlText )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText ) == false )
             return false;
 
-        XmlNode root = doc.getRoot( "MaterialInstanceDesc" );
+        XMLNode root = doc.getRoot( "MaterialInstanceDesc" );
         if ( root.isValid() == false )
             return false;
 
-        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::MaterialInstance, doc, root, AssetFormatVersions::kMaterialInstance ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::MaterialInstance, doc, root, AssetFormatVersions::kMaterialInstance ) == false )
             return false;
 
         _desc             = MaterialInstanceDesc{};
@@ -768,10 +768,10 @@ namespace sw
         _desc._parentPath = MaterialUtil::fieldText( root, "parentPath" );
         _desc._quality    = MaterialUtil::fieldText( root, "quality" );
 
-        XmlNode overrides = root.findChild( "_overrides" );
+        XMLNode overrides = root.findChild( "_overrides" );
         if ( overrides.isValid() )
         {
-            for ( XmlNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = overrides.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::Override overrideItem{};
                 overrideItem._name      = MaterialUtil::fieldText( item, "name" );
@@ -781,10 +781,10 @@ namespace sw
                     _desc._listOverride.push_back( std::move( overrideItem ) );
             }
         }
-        XmlNode keywords = root.findChild( "_keywords" );
+        XMLNode keywords = root.findChild( "_keywords" );
         if ( keywords.isValid() )
         {
-            for ( XmlNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = keywords.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::KeywordOverride keywordItem{};
                 keywordItem._name     = MaterialUtil::fieldText( item, "name" );
@@ -793,10 +793,10 @@ namespace sw
                     _desc._listKeyword.push_back( std::move( keywordItem ) );
             }
         }
-        XmlNode multiCompileNode = root.findChild( "_multiCompiles" );
+        XMLNode multiCompileNode = root.findChild( "_multiCompiles" );
         if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialInstanceDesc::MultiCompileOverride multiCompileItem{};
                 multiCompileItem._name     = MaterialUtil::fieldText( item, "name" );

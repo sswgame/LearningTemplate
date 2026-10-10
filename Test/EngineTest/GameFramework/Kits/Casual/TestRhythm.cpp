@@ -14,17 +14,17 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kRhythmJudgeXml = R"(<TimingWindows>
+    constexpr const utf8* kRhythmJudgeXML = R"(<TimingWindows>
         <Window grade="Cool" width="0.03" score="300"/>
         <Window grade="Good" width="0.07" score="200"/>
         <Window grade="Bad" width="0.12" score="50" breaksCombo="true"/>
       </TimingWindows>)";
 
     /** @brief 120 BPM · 오프셋 0 · 레인 4 의 채보 글입니다. */
-    string makeSimpleChartXml( const utf8* pNoteXml )
+    string makeSimpleChartXML( const utf8* pNoteXML )
     {
         string text = R"(<Chart title="Test" artist="Tester" level="3" lanes="4" offset="0"><Bpm beat="0" bpm="120"/>)";
-        text += pNoteXml;
+        text += pNoteXML;
         text += "</Chart>";
         return text;
     }
@@ -44,7 +44,7 @@ namespace
 SW_TEST_CASE( RhythmTest, BeatSecondsRoundTripAcrossBpmChangesStopsAndMeasures )
 {
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( R"(<Chart title="Shift" lanes="7" offset="0.05">
+    SW_ASSERT_TRUE( chart.loadFromXMLText( R"(<Chart title="Shift" lanes="7" offset="0.05">
         <Bpm beat="0" bpm="120"/><Bpm beat="8" bpm="240"/><Stop beat="12" seconds="0.5"/><Bpm beat="16" bpm="60"/>
         <Measure beat="4" beatsPerMeasure="3"/>
         <Note lane="0" beat="12"/><Note lane="1" beat="13"/><Note lane="9" beat="1"/>
@@ -88,9 +88,9 @@ SW_TEST_CASE( RhythmTest, BeatSecondsRoundTripAcrossBpmChangesStopsAndMeasures )
 SW_TEST_CASE( RhythmTest, JudgesByWindowIgnoresTooEarlyPressAndMissesPassedNotes )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( makeSimpleChartXml( R"(<Note lane="0" beat="2"/><Note lane="0" beat="4"/><Note lane="1" beat="4"/><Note lane="2" beat="6"/>)" ),
+    SW_ASSERT_TRUE( chart.loadFromXMLText( makeSimpleChartXML( R"(<Note lane="0" beat="2"/><Note lane="0" beat="4"/><Note lane="1" beat="4"/><Note lane="2" beat="6"/>)" ),
                                            "RhythmTest" ) );
     RhythmPlaySession session;
     session.initialize( &chart, &judge, RhythmPlaySettings{} );
@@ -129,10 +129,10 @@ SW_TEST_CASE( RhythmTest, JudgesByWindowIgnoresTooEarlyPressAndMissesPassedNotes
 SW_TEST_CASE( RhythmTest, LongNoteNeedsHoldingToTheEndAndEarlyReleaseIsJudged )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText(
-        makeSimpleChartXml( R"(<Note lane="0" beat="2" endBeat="6"/><Note lane="1" beat="2" endBeat="6"/><Note lane="2" beat="2" endBeat="6"/><Note lane="3" beat="2" endBeat="6"/>)" ),
+    SW_ASSERT_TRUE( chart.loadFromXMLText(
+        makeSimpleChartXML( R"(<Note lane="0" beat="2" endBeat="6"/><Note lane="1" beat="2" endBeat="6"/><Note lane="2" beat="2" endBeat="6"/><Note lane="3" beat="2" endBeat="6"/>)" ),
         "RhythmTest" ) );
     SW_EXPECT_EQUAL( 8, chart.getJudgmentCount() ); // 머리 + 끝
     RhythmPlaySession session;
@@ -162,14 +162,14 @@ SW_TEST_CASE( RhythmTest, LongNoteNeedsHoldingToTheEndAndEarlyReleaseIsJudged )
 SW_TEST_CASE( RhythmTest, ComboBreaksOnBadAndScoreAccuracyRankAndReplayAreDeterministic )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
-    string noteXml;
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
+    string noteXML;
     for ( int32 beat = 1; beat <= 10; ++beat )
     {
-        noteXml += "<Note lane=\"0\" beat=\"" + std::to_string( beat ) + "\"/>";
+        noteXML += "<Note lane=\"0\" beat=\"" + std::to_string( beat ) + "\"/>";
     }
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( makeSimpleChartXml( noteXml.c_str() ), "RhythmTest" ) );
+    SW_ASSERT_TRUE( chart.loadFromXMLText( makeSimpleChartXML( noteXML.c_str() ), "RhythmTest" ) );
 
     RhythmPlaySettings settings;
     settings._comboBonusPerCombo = 0.01f;
@@ -215,10 +215,10 @@ SW_TEST_CASE( RhythmTest, ComboBreaksOnBadAndScoreAccuracyRankAndReplayAreDeterm
 SW_TEST_CASE( RhythmTest, LifeReachingZeroFailsAndStopsJudging )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText(
-        makeSimpleChartXml( R"(<Note lane="0" beat="2"/><Note lane="0" beat="4"/><Note lane="0" beat="6"/><Note lane="0" beat="8"/><Note lane="0" beat="10"/>)" ),
+    SW_ASSERT_TRUE( chart.loadFromXMLText(
+        makeSimpleChartXML( R"(<Note lane="0" beat="2"/><Note lane="0" beat="4"/><Note lane="0" beat="6"/><Note lane="0" beat="8"/><Note lane="0" beat="10"/>)" ),
         "RhythmTest" ) );
     RhythmPlaySettings settings;
     settings._initialLife   = 50.0f;
@@ -252,9 +252,9 @@ SW_TEST_CASE( RhythmTest, LifeReachingZeroFailsAndStopsJudging )
 SW_TEST_CASE( RhythmTest, AutoPlayHitsEveryNoteWithTheBestGrade )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( R"(<Chart lanes="7" offset="0.1">
+    SW_ASSERT_TRUE( chart.loadFromXMLText( R"(<Chart lanes="7" offset="0.1">
         <Bpm beat="0" bpm="150"/><Bpm beat="8" bpm="300"/><Stop beat="10" seconds="0.4"/>
         <Note lane="0" beat="1"/><Note lane="1" beat="1"/><Note lane="2" beat="2" endBeat="5"/><Note lane="3" beat="3.5"/>
         <Note lane="2" beat="6"/><Note lane="4" beat="10"/><Note lane="5" beat="10.25"/><Note lane="6" beat="9" endBeat="12"/>
@@ -291,7 +291,7 @@ SW_TEST_CASE( RhythmTest, AutoPlayHitsEveryNoteWithTheBestGrade )
 SW_TEST_CASE( RhythmTest, ScrollPositionIsTimeBasedOrFollowsBpmAndStops )
 {
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( R"(<Chart lanes="4" offset="0">
+    SW_ASSERT_TRUE( chart.loadFromXMLText( R"(<Chart lanes="4" offset="0">
         <Bpm beat="0" bpm="120"/><Bpm beat="8" bpm="240"/><Stop beat="12" seconds="1"/><Note lane="0" beat="14"/>
       </Chart>)",
                                            "RhythmTest" ) );
@@ -314,7 +314,7 @@ SW_TEST_CASE( RhythmTest, ScrollPositionIsTimeBasedOrFollowsBpmAndStops )
 
     // 전역 오프셋은 노트를 그만큼 늦게 내린다.
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmPlaySettings settings;
     settings._globalOffset = 0.2f;
     settings._scrollMode   = RhythmScrollMode::FollowBpm;
@@ -331,9 +331,9 @@ SW_TEST_CASE( RhythmTest, ScrollPositionIsTimeBasedOrFollowsBpmAndStops )
 SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kRhythmJudgeXml, "RhythmTest" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kRhythmJudgeXML, "RhythmTest" ) );
     RhythmChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( makeSimpleChartXml( R"(<Note lane="0" beat="1"/><Note lane="0" beat="2"/><Note lane="0" beat="3"/><Note lane="0" beat="4"/>
+    SW_ASSERT_TRUE( chart.loadFromXMLText( makeSimpleChartXML( R"(<Note lane="0" beat="1"/><Note lane="0" beat="2"/><Note lane="0" beat="3"/><Note lane="0" beat="4"/>
         <Note lane="0" beat="5"/><Note lane="0" beat="6"/><Note lane="1" beat="2" endBeat="6"/>)" ),
                                            "RhythmTest" ) );
     RhythmPlaySession session;
@@ -387,7 +387,7 @@ SW_TEST_CASE( RhythmTest, StateRoundTripContinuesTheSamePlay )
 
     // 다른 채보(노트 수가 다르다)의 판 · 잘린 바이트는 거절한다.
     RhythmChart otherChart;
-    SW_ASSERT_TRUE( otherChart.loadFromXmlText( makeSimpleChartXml( R"(<Note lane="0" beat="1"/>)" ), "RhythmTest" ) );
+    SW_ASSERT_TRUE( otherChart.loadFromXMLText( makeSimpleChartXML( R"(<Note lane="0" beat="1"/>)" ), "RhythmTest" ) );
     RhythmPlaySession other;
     other.initialize( &otherChart, &judge, RhythmPlaySettings{} );
     Archive otherReader( originalBytes.data(), originalBytes.size() );

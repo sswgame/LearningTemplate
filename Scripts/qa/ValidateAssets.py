@@ -77,7 +77,7 @@ def main(listArgument: list[str] | None = None) -> int:
     print(f"[ValidateAssets] {scope}: {mapCount['error']} error(s), {mapCount['warning']} warning(s), {mapCount['info']} info, "
           f"{len(listRule)} rule(s)")
     if args.json is not None:
-        args.json.write_text(json.dumps([finding.toJson() for finding in listFinding], indent=2), encoding="utf-8")
+        args.json.write_text(json.dumps([finding.toJSON() for finding in listFinding], indent=2), encoding="utf-8")
     return 1 if mapCount["error"] else 0
 
 

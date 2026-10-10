@@ -60,10 +60,10 @@ namespace sw
             }
             else
             {
-                pso = createPsoForPassType( passType );
+                pso = createPSOForPassType( passType );
             }
             if ( pso != 0 )
-                _psoCache.setEnginePso( passType, pso );
+                _psoCache.setEnginePSO( passType, pso );
         }
 
         // 씬 메시는 **인다이렉트 드로우 하나로만** 그린다(컬링 · 정렬 · 인스턴스 애니메이션이 모두 그 경로에 붙어 있다).
@@ -71,8 +71,8 @@ namespace sw
         if ( caps._bIndirectDraw == SW_FALSE )
             SW_LOG_ERROR( "이 백엔드는 인다이렉트 드로우를 지원하지 않습니다 — 씬 메시를 그릴 수 없습니다." );
 
-        // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPso 주석 참고).
-        buildOutputPsoVariants();
+        // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
+        buildOutputPSOVariants();
 
         // 폴백 원소는 PSO 를 모두 등록한 뒤에 만든다. 필요한 stride 를 레이아웃에서 읽어야 하고, 기록 중에는 만들 수 없다.
         ensureMaterialFallbackBuffers();
@@ -83,9 +83,9 @@ namespace sw
 
         _bPassResourcesReady = SW_TRUE;
         SW_LOG_INFO( "Pass PSOs/CB ready (shadow=%# forward=%# transparent=%# deferred=%# bloom=%# outline=%# gpuDriven=%#)",
-                     getEnginePso( RenderPassType::Shadow ), getEnginePso( RenderPassType::ForwardOpaque ),
-                     getEnginePso( RenderPassType::Transparent ), getEnginePso( RenderPassType::Lighting ),
-                     getEnginePso( RenderPassType::Bloom ), getEnginePso( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
+                     getEnginePSO( RenderPassType::Shadow ), getEnginePSO( RenderPassType::ForwardOpaque ),
+                     getEnginePSO( RenderPassType::Transparent ), getEnginePSO( RenderPassType::Lighting ),
+                     getEnginePSO( RenderPassType::Bloom ), getEnginePSO( RenderPassType::Outline ), static_cast<uint32>( caps._bIndirectDraw ) );
     }
 
     void FrameRenderer::collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] )
@@ -172,18 +172,18 @@ namespace sw
         _passCbRing.ensureCapacity( _pDevice, MathUtil::max( estimate, _passCbRing.getHighWater() + PassConstantRing::kInitialSlotCount ) );
     }
 
-    RHIPipelineStateHandle FrameRenderer::getEnginePso( RenderPassType passType ) const
+    RHIPipelineStateHandle FrameRenderer::getEnginePSO( RenderPassType passType ) const
     {
-        return _psoCache.findEnginePso( passType );
+        return _psoCache.findEnginePSO( passType );
     }
 
-    RHIPipelineStateHandle FrameRenderer::findPassPso( RenderPassType passType ) const
+    RHIPipelineStateHandle FrameRenderer::findPassPSO( RenderPassType passType ) const
     {
-        const RHIPipelineStateHandle pso = _psoCache.findEnginePso( passType );
+        const RHIPipelineStateHandle pso = _psoCache.findEnginePSO( passType );
         if ( pso != 0 )
             return pso;
         const RenderPassType fallbackType = getRenderPassTypeInfo( passType )._psoFallbackType;
-        return fallbackType != RenderPassType::Invalid ? _psoCache.findEnginePso( fallbackType ) : 0;
+        return fallbackType != RenderPassType::Invalid ? _psoCache.findEnginePSO( fallbackType ) : 0;
     }
 
     void FrameRenderer::ensureMaterialFallbackBuffers()
@@ -194,10 +194,10 @@ namespace sw
         // 등록된 PSO 레이아웃이 선언한 머티리얼 원소 stride 를 모은다. 셰이더 타입마다 다를 수 있고, 레이아웃은
         // 이 디바이스의 백엔드로 빌드된 것이다(SPIR-V 도 지금은 `-fvk-use-dx-layout` 으로 DX 규칙을 따른다).
         vector<uint32>                           listStride;
-        vector<RenderPsoCache::RegisteredLayout> listLayout;
+        vector<RenderPSOCache::RegisteredLayout> listLayout;
         _psoCache.collectLayouts( listLayout );
         {
-            for ( const RenderPsoCache::RegisteredLayout& registered : listLayout )
+            for ( const RenderPSOCache::RegisteredLayout& registered : listLayout )
             {
                 const RHIPipelineStateHandle     pso     = registered._pso;
                 const ShaderBindingLayout* const pLayout = registered._pLayout;
@@ -236,7 +236,7 @@ namespace sw
         }
     }
 
-    void FrameRenderer::buildOutputPsoVariants()
+    void FrameRenderer::buildOutputPSOVariants()
     {
         if ( _pDevice == nullptr )
             return;
@@ -250,33 +250,33 @@ namespace sw
             for ( const RHIFormat format : arrTargetFormat )
             {
                 RHIPipelineStateHandle existing{ 0 };
-                if ( format == RHIFormat::Unknown || _psoCache.findOutputPso( passType, format, existing ) )
+                if ( format == RHIFormat::Unknown || _psoCache.findOutputPSO( passType, format, existing ) )
                     continue;
                 const RHIFormat              arrRtvFormat[] = { format };
-                const RHIPipelineStateHandle pso            = createPsoForPassType( passType, arrRtvFormat );
+                const RHIPipelineStateHandle pso            = createPSOForPassType( passType, arrRtvFormat );
                 // 실패해도 기록한다. 0 이면 부르는 쪽이 폴백으로 간다(Present 는 blit, Canvas 는 그리지 않는다).
-                _psoCache.setOutputPso( passType, format, pso );
+                _psoCache.setOutputPSO( passType, format, pso );
             }
         }
     }
 
-    RHIPipelineStateHandle FrameRenderer::findOutputPso( RenderPassType passType, RHIFormat targetFormat )
+    RHIPipelineStateHandle FrameRenderer::findOutputPSO( RenderPassType passType, RHIFormat targetFormat )
     {
         // **조회만 한다.** 없다고 여기서 만들면 안 된다 — 이 함수는 패스 실행 중 = 태스크 워커에서
         // 불린다. PSO 생성은 RHIHandleTable(락 없음)과 Vulkan 렌더 패스 캐시(락 없음)를 건드리므로, 같은
         // 레벨의 다른 패스가 드로우하며 그 표를 읽는 중이면 레이스다. assertRegistryMutableNow 는 bindless
-        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildOutputPsoVariants 가 셋업에서 만든다.
+        // 레지스트리만 감시해서 이 경우를 못 잡는다. 변종은 buildOutputPSOVariants 가 셋업에서 만든다.
         if ( targetFormat == RHIFormat::Unknown )
-            return getEnginePso( passType );
+            return getEnginePSO( passType );
         RHIPipelineStateHandle pso{ 0 };
-        if ( _psoCache.findOutputPso( passType, targetFormat, pso ) )
+        if ( _psoCache.findOutputPSO( passType, targetFormat, pso ) )
             return pso;
 
-        if ( _bOutputPsoMissingLogged.exchange( 1 ) == 0 )
+        if ( _bOutputPSOMissingLogged.exchange( 1 ) == 0 )
         {
-            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to buildOutputPsoVariants", passType,
+            SW_LOG_ERROR( "Output pass %# has no PSO for target format %# from setup - add the format to buildOutputPSOVariants", passType,
                           static_cast<uint32>( targetFormat ) );
         }
-        return getEnginePso( passType );
+        return getEnginePSO( passType );
     }
 } // namespace sw

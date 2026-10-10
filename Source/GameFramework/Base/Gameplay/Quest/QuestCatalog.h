@@ -11,13 +11,13 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 목표 하나 — "무엇을(종류) 누구에게(대상) 몇 번" 입니다. 종류 · 대상은 문자열이라 게임이 정합니다("Kill" · "Collect" · "Talk" · "Reach"). */
     struct QuestObjective
@@ -102,17 +102,17 @@ namespace sw
      *     </QuestCatalog>
      * @endcode
      */
-    class SW_GF_API QuestCatalog : public XmlCatalog<QuestCatalog>
+    class SW_GF_API QuestCatalog : public XMLCatalog<QuestCatalog>
     {
-        friend class XmlCatalog<QuestCatalog>;
+        friend class XMLCatalog<QuestCatalog>;
 
     public:
         const QuestDef*         findQuest( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<QuestDef>& getQuests() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "QuestCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "QuestCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<QuestDef> _catalog{};
     };

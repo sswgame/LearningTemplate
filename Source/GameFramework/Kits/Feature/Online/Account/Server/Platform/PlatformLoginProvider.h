@@ -2,7 +2,7 @@
  * @file PlatformLoginProvider.h
  * @brief 외부 계정(구글 · 애플 · 카카오 · 네이버 · 스팀 …)의 로그인 표를 확인해 그 제공자 안의 주체 id 를 돌려주는 계약입니다.
  * @details - 확인은 제공자 서버(JWKS · 프로필 API)에 묻는 일이라 기다린다 — 맡기고(`submitVerification`) 거둔다(`pollVerifications`). 모든 호출은 서비스 스레드다.
- *          - 공통 구현이 둘이다: OIDC ID 토큰(`OidcLoginProvider` — 서명 · iss · aud · exp · nonce, JWKS 캐시)과 액세스 토큰 조회(`ProfileApiLoginProvider` — 프로필 API 의
+ *          - 공통 구현이 둘이다: OIDC ID 토큰(`OidcLoginProvider` — 서명 · iss · aud · exp · nonce, JWKS 캐시)과 액세스 토큰 조회(`ProfileAPILoginProvider` — 프로필 API 의
  *            주체 id 경로). 제공자는 **데이터**(`PlatformLoginProviderSettings`)가 기본이고, 코드가 필요한 예외만 `Provider/<제품>/` 폴더에 둔다. 시험 · 개발 서버는 가짜.
  *          - 주체 id(`sub`)만 키다 — 이메일은 식별자로 쓰지 않는다(비공개 릴레이 · 제공자마다 바뀐다).
  *          언리얼 Online Subsystem 의 플랫폼별 `IOnlineIdentity` 구현 · EOS Connect 의 외부 계정 연결과 같은 자리.

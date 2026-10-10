@@ -6,7 +6,7 @@
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -71,7 +71,7 @@ namespace sw
                 if ( spec._type == GimmickParamType::Text )
                     return true;
                 float32      arrValue[4] = {};
-                const uint32 count       = GameDataXml::parseFloats( text, arrValue, 4 );
+                const uint32 count       = GameDataXML::parseFloats( text, arrValue, 4 );
                 if ( count == 0 || ( spec._type == GimmickParamType::Number && count != 1 ) )
                     return false;
                 outValue._vector = float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };

@@ -62,7 +62,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - `Character/AnimNotify`(처리기 · 표 · 컴포넌트)는 `CharacterHit` · `SocketSetComponent` 를 써서 `Object/Animation` 으로 내릴 수 없다 — 알림 계약만 `Animation/Notify` 로 모았다.
 - `Test/EngineTest/Graphics` 의 렌더러 시험(`TestGpuScene` · `TestRenderGraph` …)은 아직 `Graphics` 폴더에 있다(`Test/EngineTest/Renderer` 로 옮길 후보).
 
-**Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHttpEndpoint` 를 쓴다)도 남는다.
+**Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
 
 각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.

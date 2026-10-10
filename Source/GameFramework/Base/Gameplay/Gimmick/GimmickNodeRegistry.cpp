@@ -8,7 +8,7 @@
 #include "Engine/Animation/Graph/BlendCurve.h"
 #include "Engine/Reflection/TypeRegistry.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -488,7 +488,7 @@ namespace sw
             static bool initializeElevator( GimmickNodeContext& context )
             {
                 float32      arrFloor[kMaxElevatorFloor] = {};
-                const uint32 floorCount                  = GameDataXml::parseFloats( context.getText( 0 ), arrFloor, kMaxElevatorFloor );
+                const uint32 floorCount                  = GameDataXML::parseFloats( context.getText( 0 ), arrFloor, kMaxElevatorFloor );
                 if ( floorCount == 0 )
                     return failParam( context, "floors needs at least one height (\"0 4 8\")" );
                 for ( uint32 floor = 0; floor < floorCount; ++floor )

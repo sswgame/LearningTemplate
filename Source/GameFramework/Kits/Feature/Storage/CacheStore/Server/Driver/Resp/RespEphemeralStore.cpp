@@ -296,7 +296,7 @@ namespace sw
     void RespEphemeralStore::pumpTransport()
     {
         if ( _transportSettings._ioThreadCount == 0 )
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
     }
 
     RespEphemeralStore::Operation* RespEphemeralStore::findOperation( uint64 requestId )

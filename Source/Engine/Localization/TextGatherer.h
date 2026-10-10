@@ -95,7 +95,7 @@ namespace sw
          * @brief 리플렉션 XML(씬 · 프리팹 · 리플렉션으로 읽는 카탈로그) 하나를 훑습니다 — 원소 이름이 리플렉션 타입이면 `Localizable` 프로퍼티의 값을 모읍니다.
          * @details `Localizable` 도 `NotLocalizable` 도 아닌 문자열 프로퍼티에 사람이 읽는 글로 보이는 값(낱말 둘 이상 · 경로 아님)이 있으면 하드코딩 의심으로 경고합니다.
          */
-        void gatherReflectedXml( string_view xmlText, string_view originName );
+        void gatherReflectedXML( string_view xmlText, string_view originName );
 
         void addKeyedText( string_view key, string_view source, string_view context, string_view origin, uint32 maxLength = 0 );
         void addTextOrKey( string_view textOrKey, string_view context, string_view origin, uint32 maxLength = 0 );

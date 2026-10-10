@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class IHttpClient;
+    class IHTTPClient;
 
     /** @brief 올리기 결과입니다. */
     enum class CrashReportUploadResult : uint8
@@ -69,22 +69,22 @@ namespace sw
 namespace sw
 {
     /**
-     * @class HttpCrashReportUploader
+     * @class HTTPCrashReportUploader
      * @brief `POST <endpoint>` 한 번 — `multipart/form-data` 로 `manifest`(JSON)와 파일마다 한 부분. 덤프는 `upload_file_minidump` 이름으로 넣는다
      *        (Breakpad · Crashpad · Sentry 의 미니덤프 끝점이 받는 이름). 2xx 면 `Sent`.
-     * @details 보내기는 `IHttpClient`(빌림)가 합니다. 엔진의 기본 창구(`NullHttpClient`)는 보내지 않습니다.
+     * @details 보내기는 `IHTTPClient`(빌림)가 합니다. 엔진의 기본 창구(`NullHTTPClient`)는 보내지 않습니다.
      */
-    class SW_API HttpCrashReportUploader final : public ICrashReportUploader
+    class SW_API HTTPCrashReportUploader final : public ICrashReportUploader
     {
     public:
         static constexpr const utf8* kBoundary = "----SwCrashReportBoundary7d1f3a";
 
-        HttpCrashReportUploader( IHttpClient& client, string_view endpoint );
+        HTTPCrashReportUploader( IHTTPClient& client, string_view endpoint );
 
         CrashReportUploadResult upload( const CrashReportUploadBundle& bundle ) override;
 
     private:
         string       _endpoint;
-        IHttpClient* _pClient;
+        IHTTPClient* _pClient;
     };
 } // namespace sw

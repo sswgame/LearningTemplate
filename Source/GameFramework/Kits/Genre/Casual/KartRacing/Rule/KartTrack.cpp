@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -378,12 +378,12 @@ namespace sw
     // 카탈로그
     // ------------------------------------------------------------------------------
 
-    uint32 KartTrackCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 KartTrackCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode trackNode = root.findChild( "Track" ); trackNode; trackNode = trackNode.findNextSibling( "Track" ) )
+        for ( XMLNode trackNode = root.findChild( "Track" ); trackNode; trackNode = trackNode.findNextSibling( "Track" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( trackNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( trackNode, sourceName );
             if ( pId == nullptr )
                 continue;
             KartTrackDef def;
@@ -396,23 +396,23 @@ namespace sw
             def._lapCount          = MathUtil::max( 1, trackNode.getAttributeInt( "laps", def._lapCount ) );
             def._samplesPerSegment = MathUtil::max( 1, trackNode.getAttributeInt( "samples", def._samplesPerSegment ) );
 
-            for ( XmlNode pointNode = trackNode.findChild( "Point" ); pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
+            for ( XMLNode pointNode = trackNode.findChild( "Point" ); pointNode; pointNode = pointNode.findNextSibling( "Point" ) )
             {
                 def._listControlPoint.push_back(
                     float3{ pointNode.getAttributeFloat( "x", 0.0f ), pointNode.getAttributeFloat( "y", 0.0f ), pointNode.getAttributeFloat( "z", 0.0f ) } );
             }
-            for ( XmlNode node = trackNode.findChild( "Checkpoint" ); node; node = node.findNextSibling( "Checkpoint" ) )
+            for ( XMLNode node = trackNode.findChild( "Checkpoint" ); node; node = node.findNextSibling( "Checkpoint" ) )
             {
                 def._listCheckpoint.push_back( node.getAttributeFloat( "at", 0.0f ) );
             }
-            for ( XmlNode node = trackNode.findChild( "ItemBox" ); node; node = node.findNextSibling( "ItemBox" ) )
+            for ( XMLNode node = trackNode.findChild( "ItemBox" ); node; node = node.findNextSibling( "ItemBox" ) )
             {
                 KartItemBoxDef box;
                 box._at     = node.getAttributeFloat( "at", 0.0f );
                 box._offset = node.getAttributeFloat( "offset", 0.0f );
                 def._listItemBox.push_back( box );
             }
-            for ( XmlNode node = trackNode.findChild( "BoostPad" ); node; node = node.findNextSibling( "BoostPad" ) )
+            for ( XMLNode node = trackNode.findChild( "BoostPad" ); node; node = node.findNextSibling( "BoostPad" ) )
             {
                 KartBoostPadDef pad;
                 pad._at       = node.getAttributeFloat( "at", 0.0f );
@@ -422,7 +422,7 @@ namespace sw
                 pad._duration = node.getAttributeFloat( "duration", pad._duration );
                 def._listBoostPad.push_back( pad );
             }
-            for ( XmlNode node = trackNode.findChild( "Offroad" ); node; node = node.findNextSibling( "Offroad" ) )
+            for ( XMLNode node = trackNode.findChild( "Offroad" ); node; node = node.findNextSibling( "Offroad" ) )
             {
                 KartOffroadZoneDef zone;
                 zone._from       = node.getAttributeFloat( "from", 0.0f );

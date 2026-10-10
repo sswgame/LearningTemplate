@@ -253,11 +253,11 @@ SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
     pPart->setSkeleton( skeleton );
     pPart->setLeaderPose( pLeader );
 
-    AnimationLodState farState{};
+    AnimationLODState farState{};
     farState._bVertexAnimation = SW_TRUE;
     for ( SkeletalMeshComponent* pUnit : { pFarA, pFarB, pLeader } )
     {
-        pUnit->applyAnimationLod( farState );
+        pUnit->applyAnimationLOD( farState );
     }
     system.evaluate( 0.0f );
 
@@ -276,7 +276,7 @@ SW_TEST_CASE( AnimationCrowdTest, FarUnitsSwitchToVertexAnimation )
     SW_EXPECT_NEAR_EQUAL( 0.3f - 10.0f, pFarA->getVertexAnimationPhase(), 1e-4f );
 
     // 가까워지면 묶음으로 돌아온다.
-    pFarA->applyAnimationLod( AnimationLodState{} );
+    pFarA->applyAnimationLOD( AnimationLODState{} );
     system.evaluate( 0.1f );
     SW_EXPECT_TRUE( pFarA->getCrowdMode() == AnimationCrowdMode::Shared );
     SW_EXPECT_TRUE( pFarA->getMesh()->hasSkin() );

@@ -308,7 +308,7 @@ SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
     // 별칭 목록이 한쪽만 늘어나 있던 자리 — 단독 토큰으로는 `xmlAttribute` 가 먹혔다.
     const sw::PropertyInfo* pTag = pActor->findProperty( sw::hashed_string( "_tag" ) );
     SW_ASSERT_NOT_NULL( pTag );
-    SW_EXPECT_TRUE( pTag->_metadata._bXmlAttribute == SW_TRUE );
+    SW_EXPECT_TRUE( pTag->_metadata._bXMLAttribute == SW_TRUE );
 
     const sw::FunctionInfo* pPing = pActor->findMethod( sw::hashed_string( "ping" ) );
     SW_ASSERT_NOT_NULL( pPing );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
     SW_ASSERT_NOT_NULL( pTitleProp );
     SW_EXPECT_EQUAL( sw::string( "75" ), pManaProp->_metadata._defaultValue );
     SW_EXPECT_EQUAL( sw::string( "Apprentice" ), pTitleProp->_metadata._defaultValue );
-    SW_EXPECT_TRUE( pTitleProp->_metadata._bXmlAttribute == SW_TRUE );
+    SW_EXPECT_TRUE( pTitleProp->_metadata._bXMLAttribute == SW_TRUE );
 }
 
 /**
@@ -428,14 +428,14 @@ SW_TEST_CASE( ReflectionParserTest, ParserUtilExtremeEdgeCases )
 }
 
 /**
- * @brief [ReflectionParserTest] RpcDemoActor 메타데이터 및 Invoker 실행 검증
+ * @brief [ReflectionParserTest] RPCDemoActor 메타데이터 및 Invoker 실행 검증
  */
-SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
+SW_TEST_CASE( ReflectionParserTest, RPCMethodMetadataAndInvokerExecution )
 {
-    const sw::TypeInfo* pRpcType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RpcDemoActor" ) );
-    SW_ASSERT_NOT_NULL( pRpcType );
+    const sw::TypeInfo* pRPCType = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::RPCDemoActor" ) );
+    SW_ASSERT_NOT_NULL( pRPCType );
 
-    const sw::FunctionInfo* pMethod = pRpcType->findMethod( sw::hashed_string( "applyDamage" ) );
+    const sw::FunctionInfo* pMethod = pRPCType->findMethod( sw::hashed_string( "applyDamage" ) );
     SW_ASSERT_NOT_NULL( pMethod );
 
     SW_EXPECT_TRUE( pMethod->_metadata._netRole == sw::FunctionNetRole::Server );
@@ -447,7 +447,7 @@ SW_TEST_CASE( ReflectionParserTest, RpcMethodMetadataAndInvokerExecution )
 #endif
 
     // Invoker 실행 검증
-    sw::RpcDemoActor actor;
+    sw::RPCDemoActor actor;
     actor._hp = 100;
     sw::TaskArgs args;
     args.add( int32{ 35 } );

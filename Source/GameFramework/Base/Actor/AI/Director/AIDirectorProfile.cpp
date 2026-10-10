@@ -5,10 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -32,16 +32,16 @@ namespace sw
 
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 일정 조건 속성도 받습니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
-            static bool validateAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
+            static bool validateAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                return XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
+                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
             /** @brief @p node 의 자식 중 @p arrKnown 에 없는 원소마다 경고합니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
-            static bool validateChildren( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
+            static bool validateChildren( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                return XmlNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Warning );
+                return XMLNameCheck::reportUnknownChildren( node, arrKnown, sourceName, LogLevel::Warning );
             }
 
             template <size_t Count>
@@ -103,17 +103,17 @@ namespace sw
 
     bool AIDirectorProfile::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
+        XMLDocument doc;
+        XMLNode     root;
         string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
+        return GameDataXML::loadRoot( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
     }
 
-    bool AIDirectorProfile::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool AIDirectorProfile::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "AIDirector", root ) && loadRoot( root, sourceName );
+        XMLDocument doc;
+        XMLNode     root;
+        return GameDataXML::parseRoot( doc, xmlText, sourceName, "AIDirector", root ) && loadRoot( root, sourceName );
     }
 
     void AIDirectorProfile::clear()
@@ -157,7 +157,7 @@ namespace sw
         }
     }
 
-    bool AIDirectorProfile::loadRoot( const XmlNode& root, string_view sourceName )
+    bool AIDirectorProfile::loadRoot( const XMLNode& root, string_view sourceName )
     {
         using Internal = AIDirectorProfileInternal;
         clear();
@@ -168,22 +168,22 @@ namespace sw
 
         // 조건 이름의 어휘는 풀보다 먼저 읽는다(파일 안 순서와 상관없이).
         ScheduleConditionVocabulary vocabulary;
-        for ( XmlNode node = root.findChild( "Calendar" ); node; node = node.findNextSibling( "Calendar" ) )
+        for ( XMLNode node = root.findChild( "Calendar" ); node; node = node.findNextSibling( "Calendar" ) )
         {
             bValid = Internal::validateAttributes( node, Internal::kArrCalendarAttribute, false, sourceName ) && bValid;
             ScheduleCondition::parseNameList( node.getAttributeText( "days" ), vocabulary._listWeekday );
             ScheduleCondition::parseNameList( node.getAttributeText( "seasons" ), vocabulary._listSeason );
             ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), vocabulary._listWeather );
         }
-        for ( XmlNode node = root.findChild( "Intensity" ); node; node = node.findNextSibling( "Intensity" ) )
+        for ( XMLNode node = root.findChild( "Intensity" ); node; node = node.findNextSibling( "Intensity" ) )
         {
             bValid = readIntensity( node, sourceName ) && bValid;
         }
-        for ( XmlNode node = root.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
+        for ( XMLNode node = root.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
         {
             bValid = readPhase( node, sourceName ) && bValid;
         }
-        for ( XmlNode node = root.findChild( "Pool" ); node; node = node.findNextSibling( "Pool" ) )
+        for ( XMLNode node = root.findChild( "Pool" ); node; node = node.findNextSibling( "Pool" ) )
         {
             bValid = readPool( node, vocabulary, sourceName ) && bValid;
         }
@@ -193,7 +193,7 @@ namespace sw
         return bValid;
     }
 
-    bool AIDirectorProfile::readIntensity( const XmlNode& node, string_view sourceName )
+    bool AIDirectorProfile::readIntensity( const XMLNode& node, string_view sourceName )
     {
         using Internal                                    = AIDirectorProfileInternal;
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
@@ -202,10 +202,10 @@ namespace sw
         _intensity._max                                   = MathUtil::max( 0.0f, node.getAttributeFloat( "max", _intensity._max ) );
         _intensity._decayPerSecond                        = MathUtil::max( 0.0f, node.getAttributeFloat( "decayPerSecond", _intensity._decayPerSecond ) );
         _intensity._decayDelay                            = MathUtil::max( 0.0f, node.getAttributeFloat( "decayDelay", _intensity._decayDelay ) );
-        for ( XmlNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
+        for ( XMLNode child = node.findChild( "Signal" ); child; child = child.findNextSibling( "Signal" ) )
         {
             bValid          = Internal::validateAttributes( child, Internal::kArrSignalAttribute, false, sourceName ) && bValid;
-            const utf8* pId = GameDataXml::findRequiredId( child, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( child, sourceName );
             if ( pId == nullptr )
             {
                 bValid = false;
@@ -235,13 +235,13 @@ namespace sw
         return bValid;
     }
 
-    bool AIDirectorProfile::readPhase( const XmlNode& node, string_view sourceName )
+    bool AIDirectorProfile::readPhase( const XMLNode& node, string_view sourceName )
     {
         using Internal                                = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateAttributes( node, Internal::kArrPhaseAttribute, false, sourceName );
         bValid                                        = Internal::validateChildren( node, kArrPhaseChild, sourceName ) && bValid;
-        const utf8* pId                               = GameDataXml::findRequiredId( node, sourceName );
+        const utf8* pId                               = GameDataXML::findRequiredId( node, sourceName );
         if ( pId == nullptr )
             return false;
         AIDirectorPhaseDef phase;
@@ -249,12 +249,12 @@ namespace sw
         phase._spawnScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnScale", phase._spawnScale ) );
         phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
-        for ( XmlNode child = node.findChild( "Curve" ); child; child = child.findNextSibling( "Curve" ) )
+        for ( XMLNode child = node.findChild( "Curve" ); child; child = child.findNextSibling( "Curve" ) )
         {
             bValid = Internal::validateAttributes( child, Internal::kArrCurveAttribute, false, sourceName ) && bValid;
         }
         (void)phase._spawnCurve.readPoints( node, "Curve", "scale", 0.0f ); // 점 수만 돌려준다 — 점이 없으면 곡선이 대체값을 쓴다
-        for ( XmlNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
+        for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             bValid = Internal::validateAttributes( child, Internal::kArrExitAttribute, false, sourceName ) && bValid;
             AIDirectorExitDef exit;
@@ -274,13 +274,13 @@ namespace sw
         return bValid;
     }
 
-    bool AIDirectorProfile::readPool( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName )
+    bool AIDirectorProfile::readPool( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName )
     {
         using Internal                               = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };
         bool                         bValid          = Internal::validateAttributes( node, Internal::kArrPoolAttribute, false, sourceName );
         bValid                                       = Internal::validateChildren( node, kArrPoolChild, sourceName ) && bValid;
-        const utf8* pId                              = GameDataXml::findRequiredId( node, sourceName );
+        const utf8* pId                              = GameDataXML::findRequiredId( node, sourceName );
         if ( pId == nullptr )
             return false;
         AIDirectorPoolDef pool;
@@ -317,10 +317,10 @@ namespace sw
             bValid = false;
         }
 
-        for ( XmlNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
+        for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             bValid                   = Internal::validateAttributes( child, Internal::kArrEncounterAttribute, true, sourceName ) && bValid;
-            const utf8* pEncounterId = GameDataXml::findRequiredId( child, sourceName );
+            const utf8* pEncounterId = GameDataXML::findRequiredId( child, sourceName );
             if ( pEncounterId == nullptr )
             {
                 bValid = false;

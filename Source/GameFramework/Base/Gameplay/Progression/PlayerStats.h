@@ -10,13 +10,13 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 통계가 값을 받는 방법입니다. 데이터(`kind`)는 이름 그대로 적습니다. */
     enum class StatKind : uint8
@@ -58,9 +58,9 @@ namespace sw
      * @class StatCatalog
      * @brief `<Stats><Stat id="enemies_killed" kind="Counter" name="Enemies" max="1000000"/>…</Stats>` 를 읽습니다. 모르는 `kind` 는 오류이고 그 정의는 뺍니다.
      */
-    class SW_GF_API StatCatalog : public XmlCatalog<StatCatalog>
+    class SW_GF_API StatCatalog : public XMLCatalog<StatCatalog>
     {
-        friend class XmlCatalog<StatCatalog>;
+        friend class XMLCatalog<StatCatalog>;
 
     public:
         StatCatalog();
@@ -72,8 +72,8 @@ namespace sw
         const vector<StatDef>& getStats() const { return _listStat; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "Stats"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "Stats"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<StatDef>                      _listStat;
         unordered_map<hashed_string, uint32> _mapIndex;

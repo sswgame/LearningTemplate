@@ -11,7 +11,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -196,13 +196,13 @@ namespace sw
             ConfigManager::setPrimary( loop._configManager.get() );
             loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
 
-            loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
+            loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
             if ( loop._pEngineConfig == nullptr )
                 return EngineInitResult::Failed;
             EngineConfig::setActive( *loop._pEngineConfig );
 
             // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
-            const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+            const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJSON );
             if ( pGameConfig == nullptr )
                 return EngineInitResult::Failed;
             GameConfig::setActive( *pGameConfig );
@@ -295,17 +295,17 @@ namespace sw
         static void destroy( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
     };
 
-    struct EngineLoop::FileIoStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::FileIOStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
             // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-            AsyncFileIoSettings settings{};
+            AsyncFileIOSettings settings{};
             settings._pTaskManager = loop._owned._pTaskManager.get();
-            return loop._owned._pAsyncFileIo->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            return loop._owned._pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
         // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
-        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIo->shutdown(); }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIO->shutdown(); }
     };
 
     struct EngineLoop::ModuleImagesStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -737,7 +737,7 @@ namespace sw
             if ( pShaderRecompiler == nullptr )
                 return EngineInitResult::Succeeded;
             // onShaderRecompiled 는 셰이더 바인딩 레이아웃 캐시 항목을 **파괴**하는데,
-            // FrameRenderer::_mapPsoLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
+            // FrameRenderer::_mapPSOLayout 과 패스 컨텍스트의 1-entry 캐시가 그 실체를 가리키는
             // 생포인터를 들고 있다. 이 콜백은 게임 스레드(tick 의 핫 리로드 블록)에서 불리고
             // 렌더 스레드는 직전 패킷을 그리는 중이라, 렌더 스레드를 세운 뒤에 반영한다.
             // 재컴파일은 개발 중 가끔 일어나는 일이라 이때의 스톨은 문제가 되지 않는다.
@@ -891,7 +891,7 @@ namespace sw
         , _pAutomationRunner{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
-        , _listAnimationLodView{}
+        , _listAnimationLODView{}
         , _hostRole{ EngineHostRole::Client }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
@@ -1385,15 +1385,15 @@ namespace sw
                 // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
                 if ( pActiveScene->getObjectManager() != nullptr )
                 {
-                    _listAnimationLodView.clear();
+                    _listAnimationLODView.clear();
                     if ( packet._bHasViewProj == SW_TRUE )
-                        _listAnimationLodView.push_back( AnimationLodView::make( packet._viewProj, packet._cameraPos ) );
+                        _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
                     for ( const RenderViewRequest& view : packet._listView )
                     {
                         if ( view._bRender == SW_TRUE )
-                            _listAnimationLodView.push_back( AnimationLodView::make( view._viewProj, view._position ) );
+                            _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
                     }
-                    pActiveScene->getObjectManager()->getAnimationSystem().setLodViews( _listAnimationLodView );
+                    pActiveScene->getObjectManager()->getAnimationSystem().setLODViews( _listAnimationLODView );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
                 // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.

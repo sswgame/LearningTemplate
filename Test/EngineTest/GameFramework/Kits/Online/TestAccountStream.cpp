@@ -21,8 +21,8 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountConnectAuthenticator.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountClient.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountDeviceSecret.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountDeviceSecret.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountProtocol.h"
 
 #include "TestFramework/TestFramework.h"

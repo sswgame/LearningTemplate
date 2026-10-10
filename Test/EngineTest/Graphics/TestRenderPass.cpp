@@ -39,7 +39,7 @@
 
 // RenderPassTest — 파이프라인 XML · 렌더 그래프 위상 · 검증. GPU 디바이스를 만들지 않는다(nogpu).
 
-SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
+SW_TEST_CASE( RenderPassTest, XMLSerializationRoundtrip )
 {
     sw::RenderPassAsset passRes;
     sw::RenderPassDesc& desc = passRes.getDesc();
@@ -53,10 +53,10 @@ SW_TEST_CASE( RenderPassTest, XmlSerializationRoundtrip )
     desc._listAttachment.push_back( colorAtt );
 
     sw::string testPath = test::makeTempPath( "test_renderpass_roundtrip.xml" );
-    SW_EXPECT_TRUE( passRes.saveToXmlFile( testPath ) );
+    SW_EXPECT_TRUE( passRes.saveToXMLFile( testPath ) );
 
     sw::RenderPassAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestRenderPass" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
     SW_EXPECT_EQUAL( sw::string( "Color0" ), loadedRes.getDesc()._listAttachment[0]._name );
@@ -102,7 +102,7 @@ SW_TEST_CASE( RenderPassTest, EditorAndGameCameras )
 /**
  * @brief [RenderPassTest] 파이프라인 XML 라운드트립
  */
-SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
+SW_TEST_CASE( RenderPassTest, PipelineXMLSerializationRoundtrip )
 {
     sw::RenderPipelineAsset pipeRes;
     sw::RenderPipelineDesc& desc = pipeRes.getDesc();
@@ -125,10 +125,10 @@ SW_TEST_CASE( RenderPassTest, PipelineXmlSerializationRoundtrip )
     desc._listRenderPassRef.push_back( "renderpass/defaultrenderpass.xml" );
 
     sw::string testPath = test::makeTempPath( "test_renderpipeline_roundtrip.xml" );
-    SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
+    SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
     SW_EXPECT_EQUAL( sw::string( "UnitTestPipeline" ), loadedRes.getDesc()._name );
     SW_EXPECT_EQUAL( sw::string( "Forward" ), loadedRes.getDesc()._shadingModel );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getDesc()._listAttachment.size() );
@@ -160,7 +160,7 @@ SW_TEST_CASE( RenderPassTest, PipelineRejectsLegacyRenderPassDescRoot )
     }
 
     sw::RenderPipelineAsset loaded;
-    SW_EXPECT_FALSE( loaded.loadFromXmlFile( testPath ) );
+    SW_EXPECT_FALSE( loaded.loadFromXMLFile( testPath ) );
 }
 
 // ------------------------------------------------------------------------------
@@ -397,7 +397,7 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
     for ( std::string_view path : arrPipeline )
     {
         sw::RenderPipelineAsset res;
-        SW_ASSERT_TRUE( res.loadFromXmlFile( path ) );
+        SW_ASSERT_TRUE( res.loadFromXMLFile( path ) );
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         // 모든 패스 타입이 해석돼야 한다 — Invalid 가 남아 있으면 PSO 가 기본 포맷으로 만들어진다.
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )
@@ -788,10 +788,10 @@ SW_TEST_CASE( RenderPassTest, PipelineExtendedStagesRoundtrip )
     desc._listPass.push_back( pass );
 
     const sw::string testPath = test::makeTempPath( "test_pipeline_all_stages.xml" );
-    SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
+    SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
     SW_EXPECT_EQUAL( size_t( 1 ), loadedRes.getGraphPass().size() );
 
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
@@ -830,7 +830,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
     desc._listPass.push_back( pass );
 
     const sw::string testPath = test::makeTempPath( "test_pipeline_compact.xml" );
-    SW_EXPECT_TRUE( pipeRes.saveToXmlFile( testPath ) );
+    SW_EXPECT_TRUE( pipeRes.saveToXMLFile( testPath ) );
 
     sw::string xmlContent;
     SW_EXPECT_TRUE( sw::FileUtil::readTextFile( testPath, xmlContent ) );
@@ -847,7 +847,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
 
     // 다시 로드했을 때 기본 빈 문자열 상태가 안전하게 유지되는지 검증
     sw::RenderPipelineAsset loadedRes;
-    SW_EXPECT_TRUE( loadedRes.loadFromXmlFile( testPath ) );
+    SW_EXPECT_TRUE( loadedRes.loadFromXMLFile( testPath ) );
     const sw::RenderGraphPassDesc& loadedPass = loadedRes.getGraphPass()[0];
     SW_EXPECT_TRUE( loadedPass._geometryEntryPoint.empty() );
     SW_EXPECT_TRUE( loadedPass._hullEntryPoint.empty() );
@@ -1082,7 +1082,7 @@ SW_TEST_CASE( RenderPassTest, EngineGraphicsPipelinesEndWithCanvas )
     for ( std::string_view path : arrPipeline )
     {
         sw::RenderPipelineAsset res;
-        SW_ASSERT_TRUE( res.loadFromXmlFile( path ) );
+        SW_ASSERT_TRUE( res.loadFromXMLFile( path ) );
         SW_EXPECT_EQUAL( 0u, res.validate( path ) );
         const sw::RenderGraphPassDesc* pLastWriter = nullptr;
         for ( const sw::RenderGraphPassDesc& pass : res.getGraphPass() )

@@ -41,16 +41,16 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SpriteAnimatorLodClient
-     * @brief 스프라이트 애니메이터가 애니메이션 LOD 판정 · 되감기 기록에 보이는 얼굴입니다(`SkeletalMeshLodClient` 와 같은 자리).
+     * @class SpriteAnimatorLODClient
+     * @brief 스프라이트 애니메이터가 애니메이션 LOD 판정 · 되감기 기록에 보이는 얼굴입니다(`SkeletalMeshLODClient` 와 같은 자리).
      */
-    class SW_API SpriteAnimatorLodClient final : public IAnimationLodClient
+    class SW_API SpriteAnimatorLODClient final : public IAnimationLODClient
     {
     public:
-        explicit SpriteAnimatorLodClient( SpriteAnimatorComponent& owner );
+        explicit SpriteAnimatorLODClient( SpriteAnimatorComponent& owner );
 
-        bool             findAnimationLodBounds( float3& outCenter, float32& outRadius ) const override;
-        void             applyAnimationLod( const AnimationLodState& state ) override;
+        bool             findAnimationLODBounds( float3& outCenter, float32& outRadius ) const override;
+        void             applyAnimationLOD( const AnimationLODState& state ) override;
         const Component* findRewindTarget() const override;
         void             collectDebugState( AnimationDebugState& inoutState ) const override;
         void             applyRewindState( const AnimationDebugState& state ) override;
@@ -80,7 +80,7 @@ namespace sw
     class SW_API SpriteAnimatorComponent : public SceneComponent
     {
         friend class SpriteAnimatorClipSource;
-        friend class SpriteAnimatorLodClient;
+        friend class SpriteAnimatorLODClient;
 
     public:
         REFLECT_BODY();
@@ -181,7 +181,7 @@ namespace sw
         AnimGraphPlayer          _graphPlayer;     ///< 시간 · 반복 · 끝 · 다음 상태 — 스켈레탈 애니메이터와 같은 코드다
         vector<AnimFiredNotify>  _listFiredNotify; ///< 이번 틱에 울린 알림(받는 쪽이 있을 때만 모은다)
         IAnimNotifyListener*     _pNotifyListener;
-        SpriteAnimatorLodClient  _lodClient;
+        SpriteAnimatorLODClient  _lodClient;
         PROPERTY( Category = "Playback", DisplayName = "Current Frame", Tooltip = "Current playback frame index within the animation", Min = 0.0 )
         int32 _currentFrame;
         PROPERTY( Category = "Playback", DisplayName = "Total Frames", Tooltip = "Frame count of the active animation, taken from the sprite clip", ReadOnly )
@@ -191,7 +191,7 @@ namespace sw
         AnimationSystem*       _pAnimationSystem; ///< 오른 애니메이션 시스템(등록 동안)
         int32                  _firstClipFrame;   ///< 지금 구간이 시작하는 클립 프레임입니다(저장하지 않습니다 — 클립에서 다시 잡습니다)
         uint32                 _updatePhase;      ///< LOD 주기 위상(핸들에서 — 같은 주기의 애니메이터가 한 프레임에 몰리지 않게)
-        AnimationLodState      _lodState;         ///< 마지막 LOD 판정
+        AnimationLODState      _lodState;         ///< 마지막 LOD 판정
         PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
         uint8                  _bRepeat       : 1;
         uint8                  _bPlaying      : 1;

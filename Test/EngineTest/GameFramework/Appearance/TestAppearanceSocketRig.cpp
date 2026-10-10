@@ -28,31 +28,31 @@ namespace
 {
     struct AppearanceSocketRigTestInternal
     {
-        static constexpr const utf8* kItemXml          = R"(<ItemCatalog>
+        static constexpr const utf8* kItemXML          = R"(<ItemCatalog>
             <Item id="gun_short" slot="Weapon" visual="gun_short"/><Item id="gun_long" slot="Weapon" visual="gun_long"/></ItemCatalog>)";
-        static constexpr const utf8* kSlotXml          = R"(<SlotTable><Slot name="MainHand" accept="Weapon"/></SlotTable>)";
-        static constexpr const utf8* kVisualXml        = R"(<ItemVisualCatalog>
+        static constexpr const utf8* kSlotXML          = R"(<SlotTable><Slot name="MainHand" accept="Weapon"/></SlotTable>)";
+        static constexpr const utf8* kVisualXML        = R"(<ItemVisualCatalog>
             <ItemVisual id="body"><Part name="Body" kind="Skinned" mesh="m/body.mesh" sockets="mem/body.sockets.xml"/></ItemVisual>
             <ItemVisual id="gun_short"><Part name="Gun" kind="SocketPrefab" prefab="p/gun_short.prefab.xml" sockets="mem/gun_short.sockets.xml" socket="Missing,Grip" offset="0 0 0.25"/></ItemVisual>
             <ItemVisual id="gun_long"><Part name="Gun" kind="SocketPrefab" prefab="p/gun_long.prefab.xml" sockets="mem/gun_long.sockets.xml" socket="Grip"/></ItemVisual>
         </ItemVisualCatalog>)";
-        static constexpr const utf8* kPresetXml        = R"(<CharacterAppearanceCatalog>
+        static constexpr const utf8* kPresetXML        = R"(<CharacterAppearanceCatalog>
             <CharacterAppearance id="Hero" body="body"><Equip slot="MainHand" item="gun_short"/></CharacterAppearance>
             <CharacterAppearance id="LeftyHero" parent="Hero"><SocketOverride name="Grip" parent="hand.l" offset="0 0.1 0"/></CharacterAppearance>
         </CharacterAppearanceCatalog>)";
-        static constexpr const utf8* kBodySocketXml    = R"(<SocketSet><Socket name="Grip" parent="hand.r" translation="0 0.05 0"/></SocketSet>)";
-        static constexpr const utf8* kShortSocketXml   = R"(<SocketSet><Socket name="Muzzle" translation="0 0 0.4"/></SocketSet>)";
-        static constexpr const utf8* kLongSocketXml    = R"(<SocketSet><Socket name="Muzzle" translation="0 0 0.9"/></SocketSet>)";
-        static constexpr const utf8* kBadBodySocketXml = R"(<SocketSet><Socket name="Grip" parent="hand.missing"/></SocketSet>)";
+        static constexpr const utf8* kBodySocketXML    = R"(<SocketSet><Socket name="Grip" parent="hand.r" translation="0 0.05 0"/></SocketSet>)";
+        static constexpr const utf8* kShortSocketXML   = R"(<SocketSet><Socket name="Muzzle" translation="0 0 0.4"/></SocketSet>)";
+        static constexpr const utf8* kLongSocketXML    = R"(<SocketSet><Socket name="Muzzle" translation="0 0 0.9"/></SocketSet>)";
+        static constexpr const utf8* kBadBodySocketXML = R"(<SocketSet><Socket name="Grip" parent="hand.missing"/></SocketSet>)";
 
         /** @brief 메모리의 소켓 에셋(경로 → XML)입니다. */
         class MemorySocketSource final : public IAppearanceSocketSource
         {
         public:
-            void add( const utf8* pPath, const utf8* pXml )
+            void add( const utf8* pPath, const utf8* pXML )
             {
                 SocketSet set;
-                SW_EXPECT_TRUE( set.loadFromXmlText( pXml, pPath, _kinds ) );
+                SW_EXPECT_TRUE( set.loadFromXMLText( pXML, pPath, _kinds ) );
                 _mapSet[hashed_string( pPath )] = set;
             }
             const SocketSet* findSocketSet( const hashed_string& path ) override
@@ -74,8 +74,8 @@ namespace
 
             [[nodiscard]] bool load()
             {
-                return _items.loadFromXmlText( kItemXml, "SocketRigTest.items" ) && _database.loadSectionFromXmlText( kSlotXml, "SocketRigTest.slots" ) &&
-                       _database.loadSectionFromXmlText( kVisualXml, "SocketRigTest.visuals" ) && _database.loadSectionFromXmlText( kPresetXml, "SocketRigTest.presets" ) &&
+                return _items.loadFromXMLText( kItemXML, "SocketRigTest.items" ) && _database.loadSectionFromXMLText( kSlotXML, "SocketRigTest.slots" ) &&
+                       _database.loadSectionFromXMLText( kVisualXML, "SocketRigTest.visuals" ) && _database.loadSectionFromXMLText( kPresetXML, "SocketRigTest.presets" ) &&
                        _database.finishLoad( &_items );
             }
 
@@ -121,9 +121,9 @@ SW_TEST_CASE( AppearanceSocketRigTest, WeaponSitsOnTheBodySocketAndExposesItsMuz
     Internal::Data data;
     SW_ASSERT_TRUE_MSG( data.load(), data._database.getReport().joined().c_str() );
     Internal::MemorySocketSource source;
-    source.add( "mem/body.sockets.xml", Internal::kBodySocketXml );
-    source.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXml );
-    source.add( "mem/gun_long.sockets.xml", Internal::kLongSocketXml );
+    source.add( "mem/body.sockets.xml", Internal::kBodySocketXML );
+    source.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXML );
+    source.add( "mem/gun_long.sockets.xml", Internal::kLongSocketXML );
 
     ResolvedAppearance resolved;
     SW_ASSERT_TRUE( data.resolve( "Hero", resolved ) );
@@ -183,8 +183,8 @@ SW_TEST_CASE( AppearanceSocketRigTest, SocketOverridesMoveBodySocketsAndBadBones
     Internal::Data data;
     SW_ASSERT_TRUE_MSG( data.load(), data._database.getReport().joined().c_str() );
     Internal::MemorySocketSource source;
-    source.add( "mem/body.sockets.xml", Internal::kBodySocketXml );
-    source.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXml );
+    source.add( "mem/body.sockets.xml", Internal::kBodySocketXML );
+    source.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXML );
 
     ResolvedAppearance resolved;
     SW_ASSERT_TRUE( data.resolve( "LeftyHero", resolved ) );
@@ -201,8 +201,8 @@ SW_TEST_CASE( AppearanceSocketRigTest, SocketOverridesMoveBodySocketsAndBadBones
     SW_EXPECT_NEAR_EQUAL( 1.1f, inBody.getTranslation()._y, 1.0e-5f );
 
     Internal::MemorySocketSource badSource;
-    badSource.add( "mem/body.sockets.xml", Internal::kBadBodySocketXml );
-    badSource.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXml );
+    badSource.add( "mem/body.sockets.xml", Internal::kBadBodySocketXML );
+    badSource.add( "mem/gun_short.sockets.xml", Internal::kShortSocketXML );
     SW_ASSERT_TRUE( data.resolve( "Hero", resolved ) );
     error.clear();
     SW_EXPECT_FALSE( rig.rebuild( resolved, bindBones, badSource, &error ) );

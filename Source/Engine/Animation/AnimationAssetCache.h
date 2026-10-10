@@ -17,7 +17,7 @@ namespace sw
     class AnimClip;
     class RigAsset;
     class Skeleton;
-    class SkeletonBoneLod;
+    class SkeletonBoneLOD;
 
     /**
      * @class SkeletonCache
@@ -64,18 +64,18 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SkeletonBoneLodCache
-     * @brief 스켈레톤 곁 본 LOD 표(`.bonelod.json`)를 경로로 나눠 줍니다. 핫 리로드는 제자리로 다시 읽고, 유닛은 `SkeletonBoneLod::getRevision` 으로 알아챕니다.
+     * @class SkeletonBoneLODCache
+     * @brief 스켈레톤 곁 본 LOD 표(`.bonelod.json`)를 경로로 나눠 줍니다. 핫 리로드는 제자리로 다시 읽고, 유닛은 `SkeletonBoneLOD::getRevision` 으로 알아챕니다.
      */
-    class SW_API SkeletonBoneLodCache final : public IAssetCache
+    class SW_API SkeletonBoneLODCache final : public IAssetCache
     {
     public:
         /** @brief 경로의 본 LOD 를 나눠 받습니다. 처음이면 읽고, 읽을 수 없으면 nullptr 입니다. */
-        static shared_ptr<const SkeletonBoneLod> acquire( string_view path );
+        static shared_ptr<const SkeletonBoneLOD> acquire( string_view path );
         /** @brief 사용 중이면 제자리로 다시 읽습니다. 읽지 못하면 옛 내용 그대로이고 false 입니다. */
         [[nodiscard]] static bool reloadShared( string_view path );
 
-        const utf8* getAssetKindName() const override { return "SkeletonBoneLod"; }
+        const utf8* getAssetKindName() const override { return "SkeletonBoneLOD"; }
         bool        isCached( string_view relativePath ) const override;
         void        reload( string_view relativePath, IRHIDevice* pDevice ) override;
         size_t      getCachedCount() const override;

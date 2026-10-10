@@ -199,7 +199,7 @@ SW_TEST_CASE( SpriteComponentTest, SavedClipPathLoadsTheClip )
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::GameObjectManager manager;
     sw::GameObject*       pObject = manager.createGameObject( sw::hashed_string( "ClipSprite" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
         pObject, "<GameObject _name=\"ClipSprite\"><_listComponent><SpriteComponent _clipPath=\"engine/textures/test/quadrants.sprite.json\" "
                  "/></_listComponent></GameObject>" ) );
     const sw::SpriteComponent* pSprite = pObject->getComponent<sw::SpriteComponent>();

@@ -118,7 +118,7 @@ namespace sw
         if ( pRecord->_program == 0 )
             return;
 
-        _pDevice->_recordingState._boundGraphicsPso = pso;
+        _pDevice->_recordingState._boundGraphicsPSO = pso;
         glUseProgram( pRecord->_program );
 
         if ( pRecord->_vao != 0 )
@@ -166,7 +166,7 @@ namespace sw
         if ( pRecord == nullptr )
             return;
 
-        _pDevice->_recordingState._boundComputePso = pso;
+        _pDevice->_recordingState._boundComputePSO = pso;
         if ( pRecord->_program != 0 )
             glUseProgram( pRecord->_program );
     }
@@ -526,11 +526,11 @@ namespace sw
     {
         outProgram                                             = _pDevice->_shaderProgram;
         outMode                                                = GL_TRIANGLES;
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPso );
-        if ( pPso != nullptr && pPso->_program != 0 )
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundGraphicsPSO );
+        if ( pPSO != nullptr && pPSO->_program != 0 )
         {
-            outProgram = pPso->_program;
-            outMode    = toGlPrimitive( pPso->_topology );
+            outProgram = pPSO->_program;
+            outMode    = toGlPrimitive( pPSO->_topology );
         }
         return outProgram != 0;
     }
@@ -638,11 +638,11 @@ namespace sw
         // 컴퓨트는 **컴퓨트 PSO** 의 프로그램으로 디스패치해야 한다. 그래픽스 PSO(또는 디바이스 기본 프로그램)로
         // 디스패치하면 GL_INVALID_OPERATION("no active compute program") 이 나는데, 컬링 결과가 CPU 가 채운
         // 인자 그대로 남아 화면에는 드러나지 않는다.
-        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePso );
-        if ( pPso == nullptr || pPso->_program == 0 )
+        const OpenGLRHIDevice::OpenGLPipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pDevice->_recordingState._boundComputePSO );
+        if ( pPSO == nullptr || pPSO->_program == 0 )
             return;
 
-        glUseProgram( pPso->_program );
+        glUseProgram( pPSO->_program );
         glDispatchCompute( threadGroupCountX, threadGroupCountY, threadGroupCountZ );
         // 이미지 스토어 결과를 이후 샘플링 · 읽기 · 업로드가 보도록 한다. SSBO 는 transitionBuffer 가 따로 막는다.
         glMemoryBarrier( GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT );

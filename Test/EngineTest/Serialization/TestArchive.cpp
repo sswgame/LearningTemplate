@@ -14,8 +14,8 @@
 #include "Engine/Serialization/Base/StringPool.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleSaveState.h"
 #include "GameFramework/Base/Foundation/Framework/Save/SaveGame.h"
@@ -435,13 +435,13 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         node1._name        = "Player";
         node1._prefab      = "prefabs/player.prefab.xml";
         node1._prefabGuid  = "guid-1234-abcd";
-        node1._embeddedXml = "<Transform x=\"10\" y=\"20\"/>";
+        node1._embeddedXML = "<Transform x=\"10\" y=\"20\"/>";
 
         sw::SceneDocument::SceneObjectNode node2{};
         node2._name        = "Monster";
         node2._prefab      = "prefabs/goblin.prefab.xml";
         node2._prefabGuid  = "guid-5678-ef01";
-        node2._embeddedXml = "<Transform x=\"50\" y=\"60\"/>";
+        node2._embeddedXML = "<Transform x=\"50\" y=\"60\"/>";
 
         sceneWrite._listSceneObjectNode.push_back( node1 );
         sceneWrite._listSceneObjectNode.push_back( node2 );
@@ -455,7 +455,7 @@ SW_TEST_CASE( ArchiveTest, SceneAndPrefabBinaryArchiveRoundTrip )
         SW_EXPECT_EQUAL( node1._name, sceneRead._listSceneObjectNode[0]._name );
         SW_EXPECT_EQUAL( node1._prefab, sceneRead._listSceneObjectNode[0]._prefab );
         SW_EXPECT_EQUAL( node2._name, sceneRead._listSceneObjectNode[1]._name );
-        SW_EXPECT_EQUAL( node2._embeddedXml, sceneRead._listSceneObjectNode[1]._embeddedXml );
+        SW_EXPECT_EQUAL( node2._embeddedXML, sceneRead._listSceneObjectNode[1]._embeddedXML );
     }
 
     // 2) PrefabAsset 바이너리 저장 및 로드
@@ -699,7 +699,7 @@ SW_TEST_CASE( ArchiveTest, ArchiveVersionedObjectSerialization )
 /**
  * @brief [ArchiveTest] Archive JSON 임베딩 및 상호 트랜스코딩(JSON ↔ 바이너리) 검증
  */
-SW_TEST_CASE( ArchiveTest, ArchiveJsonObjectEmbeddingAndTranscoding )
+SW_TEST_CASE( ArchiveTest, ArchiveJSONObjectEmbeddingAndTranscoding )
 {
     TestReflectedPlayer player;
     player._level = 77;
@@ -708,19 +708,19 @@ SW_TEST_CASE( ArchiveTest, ArchiveJsonObjectEmbeddingAndTranscoding )
 
     // 1) Archive 내 JSON 객체 임베딩 직렬화
     sw::Archive jsonArch;
-    SW_EXPECT_TRUE( jsonArch.serializeJsonObject( player, true ) );
+    SW_EXPECT_TRUE( jsonArch.serializeJSONObject( player, true ) );
 
     sw::Archive         jsonRead( jsonArch.getData(), jsonArch.getSize() );
-    TestReflectedPlayer playerFromJson;
-    SW_EXPECT_TRUE( jsonRead.deserializeJsonObject( playerFromJson ) );
-    SW_EXPECT_EQUAL( 77, playerFromJson._level );
-    SW_EXPECT_EQUAL( sw::string( "JsonRogue" ), playerFromJson._name );
-    SW_EXPECT_EQUAL( 55555, playerFromJson._gold );
+    TestReflectedPlayer playerFromJSON;
+    SW_EXPECT_TRUE( jsonRead.deserializeJSONObject( playerFromJSON ) );
+    SW_EXPECT_EQUAL( 77, playerFromJSON._level );
+    SW_EXPECT_EQUAL( sw::string( "JsonRogue" ), playerFromJSON._name );
+    SW_EXPECT_EQUAL( 55555, playerFromJSON._gold );
 
     // 2) JSON 문자열 -> Archive 바이너리 변환(Transcoding)
     sw::Archive      transcodeArch;
-    const sw::string sampleJson = "{\"_level\":88, \"_name\":\"TranscodedHero\", \"_gold\":99999}";
-    SW_EXPECT_TRUE( transcodeArch.convertJsonToBinary( sampleJson, *TestReflectedPlayer::StaticType() ) );
+    const sw::string sampleJSON = "{\"_level\":88, \"_name\":\"TranscodedHero\", \"_gold\":99999}";
+    SW_EXPECT_TRUE( transcodeArch.convertJSONToBinary( sampleJSON, *TestReflectedPlayer::StaticType() ) );
 
     sw::Archive         transcodeRead( transcodeArch.getData(), transcodeArch.getSize() );
     TestReflectedPlayer playerFromTranscode;
@@ -731,14 +731,14 @@ SW_TEST_CASE( ArchiveTest, ArchiveJsonObjectEmbeddingAndTranscoding )
 
     // 3) Archive 바이너리 -> JSON 문자열 변환. 위의 읽기가 자리를 객체 끝으로 옮겼으므로 처음부터 읽는 아카이브로 바꾼다.
     sw::Archive      exportRead( transcodeArch.getData(), transcodeArch.getSize() );
-    const sw::string exportedJson = exportRead.convertBinaryToJson( *TestReflectedPlayer::StaticType() );
-    SW_EXPECT_TRUE( exportedJson.find( "TranscodedHero" ) != sw::string::npos );
+    const sw::string exportedJSON = exportRead.convertBinaryToJSON( *TestReflectedPlayer::StaticType() );
+    SW_EXPECT_TRUE( exportedJSON.find( "TranscodedHero" ) != sw::string::npos );
 }
 
 /**
  * @brief [ArchiveTest] Archive XML 임베딩 및 상호 트랜스코딩(XML ↔ 바이너리) 검증
  */
-SW_TEST_CASE( ArchiveTest, ArchiveXmlObjectEmbeddingAndTranscoding )
+SW_TEST_CASE( ArchiveTest, ArchiveXMLObjectEmbeddingAndTranscoding )
 {
     TestReflectedPlayer player;
     player._level = 33;
@@ -747,19 +747,19 @@ SW_TEST_CASE( ArchiveTest, ArchiveXmlObjectEmbeddingAndTranscoding )
 
     // 1) Archive 내 XML 객체 임베딩 직렬화
     sw::Archive xmlArch;
-    SW_EXPECT_TRUE( xmlArch.serializeXmlObject( player ) );
+    SW_EXPECT_TRUE( xmlArch.serializeXMLObject( player ) );
 
     sw::Archive         xmlRead( xmlArch.getData(), xmlArch.getSize() );
-    TestReflectedPlayer playerFromXml;
-    SW_EXPECT_TRUE( xmlRead.deserializeXmlObject( playerFromXml ) );
-    SW_EXPECT_EQUAL( 33, playerFromXml._level );
-    SW_EXPECT_EQUAL( sw::string( "XmlPaladin" ), playerFromXml._name );
-    SW_EXPECT_EQUAL( 33333, playerFromXml._gold );
+    TestReflectedPlayer playerFromXML;
+    SW_EXPECT_TRUE( xmlRead.deserializeXMLObject( playerFromXML ) );
+    SW_EXPECT_EQUAL( 33, playerFromXML._level );
+    SW_EXPECT_EQUAL( sw::string( "XmlPaladin" ), playerFromXML._name );
+    SW_EXPECT_EQUAL( 33333, playerFromXML._gold );
 
     // 2) XML 문자열 -> Archive 바이너리 변환(Transcoding)
     sw::Archive      transcodeArch;
-    const sw::string sampleXml = "<TestReflectedPlayer _level=\"44\" _name=\"TranscodedCleric\" _gold=\"44444\"/>";
-    SW_EXPECT_TRUE( transcodeArch.convertXmlToBinary( sampleXml, *TestReflectedPlayer::StaticType() ) );
+    const sw::string sampleXML = "<TestReflectedPlayer _level=\"44\" _name=\"TranscodedCleric\" _gold=\"44444\"/>";
+    SW_EXPECT_TRUE( transcodeArch.convertXMLToBinary( sampleXML, *TestReflectedPlayer::StaticType() ) );
 
     sw::Archive         transcodeRead( transcodeArch.getData(), transcodeArch.getSize() );
     TestReflectedPlayer playerFromTranscode;
@@ -792,14 +792,14 @@ SW_TEST_CASE( ArchiveTest, ArchiveMultiFormatHybridBundle )
     metaPlayer._level = 1;
     metaPlayer._name  = "MetaInspector";
     metaPlayer._gold  = 0;
-    SW_EXPECT_TRUE( bundleArch.serializeJsonObject( metaPlayer ) );
+    SW_EXPECT_TRUE( bundleArch.serializeJSONObject( metaPlayer ) );
 
     // 3) XML 퀘스트/설정
     TestReflectedPlayer configPlayer;
     configPlayer._level = 5;
     configPlayer._name  = "QuestConfig";
     configPlayer._gold  = 500;
-    SW_EXPECT_TRUE( bundleArch.serializeXmlObject( configPlayer ) );
+    SW_EXPECT_TRUE( bundleArch.serializeXMLObject( configPlayer ) );
 
     // 역직렬화 및 전수 일치성 검증
     sw::Archive bundleRead( bundleArch.getData(), bundleArch.getSize() );
@@ -815,13 +815,13 @@ SW_TEST_CASE( ArchiveTest, ArchiveMultiFormatHybridBundle )
     SW_EXPECT_EQUAL( 1234567890, readState._gold );
 
     TestReflectedPlayer readMeta;
-    SW_EXPECT_TRUE( bundleRead.deserializeJsonObject( readMeta ) );
+    SW_EXPECT_TRUE( bundleRead.deserializeJSONObject( readMeta ) );
     SW_EXPECT_EQUAL( 1, readMeta._level );
     SW_EXPECT_EQUAL( sw::string( "MetaInspector" ), readMeta._name );
     SW_EXPECT_EQUAL( 0, readMeta._gold );
 
     TestReflectedPlayer readConfig;
-    SW_EXPECT_TRUE( bundleRead.deserializeXmlObject( readConfig ) );
+    SW_EXPECT_TRUE( bundleRead.deserializeXMLObject( readConfig ) );
     SW_EXPECT_EQUAL( 5, readConfig._level );
     SW_EXPECT_EQUAL( sw::string( "QuestConfig" ), readConfig._name );
     SW_EXPECT_EQUAL( 500, readConfig._gold );
@@ -1379,38 +1379,38 @@ SW_TEST_CASE( ArchiveTest, SerializerUtilTranscodingAndScopedScratch )
     originalPlayer._name  = "TranscodePlayer";
     originalPlayer._gold  = 99999;
 
-    const sw::string jsonSource = sw::JsonSerializer::serialize( &originalPlayer, *pPlayerType );
+    const sw::string jsonSource = sw::JSONSerializer::serialize( &originalPlayer, *pPlayerType );
     SW_EXPECT_FALSE( jsonSource.empty() );
 
     sw::vector<uint8> transcodedBinary;
-    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeJsonToBinary( jsonSource, *pPlayerType, transcodedBinary ) );
+    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeJSONToBinary( jsonSource, *pPlayerType, transcodedBinary ) );
     SW_EXPECT_FALSE( transcodedBinary.empty() );
 
-    const sw::string transcodedJson = sw::SerializerUtil::transcodeBinaryToJson( transcodedBinary.data(), transcodedBinary.size(), *pPlayerType );
-    SW_EXPECT_FALSE( transcodedJson.empty() );
+    const sw::string transcodedJSON = sw::SerializerUtil::transcodeBinaryToJSON( transcodedBinary.data(), transcodedBinary.size(), *pPlayerType );
+    SW_EXPECT_FALSE( transcodedJSON.empty() );
 
-    TestReflectedPlayer deserializedFromJson;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &deserializedFromJson, *pPlayerType, transcodedJson ) );
-    SW_EXPECT_EQUAL( 42, deserializedFromJson._level );
-    SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromJson._name );
-    SW_EXPECT_EQUAL( 99999, deserializedFromJson._gold );
+    TestReflectedPlayer deserializedFromJSON;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &deserializedFromJSON, *pPlayerType, transcodedJSON ) );
+    SW_EXPECT_EQUAL( 42, deserializedFromJSON._level );
+    SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromJSON._name );
+    SW_EXPECT_EQUAL( 99999, deserializedFromJSON._gold );
 
     // 3. Test XML <-> Binary transcoding via SerializerUtil
-    const sw::string xmlSource = sw::XmlSerializer::serialize( &originalPlayer, *pPlayerType );
+    const sw::string xmlSource = sw::XMLSerializer::serialize( &originalPlayer, *pPlayerType );
     SW_EXPECT_FALSE( xmlSource.empty() );
 
-    sw::vector<uint8> transcodedXmlBinary;
-    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeXmlToBinary( xmlSource, *pPlayerType, transcodedXmlBinary ) );
-    SW_EXPECT_FALSE( transcodedXmlBinary.empty() );
+    sw::vector<uint8> transcodedXMLBinary;
+    SW_EXPECT_TRUE( sw::SerializerUtil::transcodeXMLToBinary( xmlSource, *pPlayerType, transcodedXMLBinary ) );
+    SW_EXPECT_FALSE( transcodedXMLBinary.empty() );
 
-    const sw::string transcodedXml = sw::SerializerUtil::transcodeBinaryToXml( transcodedXmlBinary.data(), transcodedXmlBinary.size(), *pPlayerType );
-    SW_EXPECT_FALSE( transcodedXml.empty() );
+    const sw::string transcodedXML = sw::SerializerUtil::transcodeBinaryToXML( transcodedXMLBinary.data(), transcodedXMLBinary.size(), *pPlayerType );
+    SW_EXPECT_FALSE( transcodedXML.empty() );
 
-    TestReflectedPlayer deserializedFromXml;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &deserializedFromXml, *pPlayerType, transcodedXml ) );
-    SW_EXPECT_EQUAL( 42, deserializedFromXml._level );
-    SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromXml._name );
-    SW_EXPECT_EQUAL( 99999, deserializedFromXml._gold );
+    TestReflectedPlayer deserializedFromXML;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &deserializedFromXML, *pPlayerType, transcodedXML ) );
+    SW_EXPECT_EQUAL( 42, deserializedFromXML._level );
+    SW_EXPECT_EQUAL( "TranscodePlayer", deserializedFromXML._name );
+    SW_EXPECT_EQUAL( 99999, deserializedFromXML._gold );
 }
 
 SW_TEST_CASE( ArchiveTest, ZeroCopyReadBytesView )
@@ -1513,33 +1513,33 @@ SW_TEST_CASE( ArchiveTest, TranscodingFailureCasesAndInvalidInputs )
 
     // 1. Malformed JSON transcoding to binary
     {
-        const sw::string  brokenJson = "{\"_level\": 42, \"_name\": \"Unfinished";
+        const sw::string  brokenJSON = "{\"_level\": 42, \"_name\": \"Unfinished";
         sw::vector<uint8> outBinary;
-        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeJsonToBinary( brokenJson, *pPlayerType, outBinary ) );
+        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeJSONToBinary( brokenJSON, *pPlayerType, outBinary ) );
         SW_EXPECT_TRUE( outBinary.empty() );
     }
 
     // 2. Malformed XML transcoding to binary
     {
-        const sw::string  brokenXml = "<TestReflectedPlayer _level=\"42\" <unclosed_tag";
+        const sw::string  brokenXML = "<TestReflectedPlayer _level=\"42\" <unclosed_tag";
         sw::vector<uint8> outBinary;
-        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeXmlToBinary( brokenXml, *pPlayerType, outBinary ) );
+        SW_EXPECT_FALSE( sw::SerializerUtil::transcodeXMLToBinary( brokenXML, *pPlayerType, outBinary ) );
         SW_EXPECT_TRUE( outBinary.empty() );
     }
 
     // 3. Null / empty binary data transcoding to JSON and XML
     {
-        const sw::string jsonResult = sw::SerializerUtil::transcodeBinaryToJson( nullptr, 0, *pPlayerType );
+        const sw::string jsonResult = sw::SerializerUtil::transcodeBinaryToJSON( nullptr, 0, *pPlayerType );
         SW_EXPECT_TRUE( jsonResult.empty() );
 
-        const sw::string xmlResult = sw::SerializerUtil::transcodeBinaryToXml( nullptr, 0, *pPlayerType );
+        const sw::string xmlResult = sw::SerializerUtil::transcodeBinaryToXML( nullptr, 0, *pPlayerType );
         SW_EXPECT_TRUE( xmlResult.empty() );
     }
 
     // 4. Truncated binary data transcoding to JSON
     {
         const uint8      truncatedBytes[2] = { 0x01, 0x00 };
-        const sw::string jsonResult        = sw::SerializerUtil::transcodeBinaryToJson( truncatedBytes, 2, *pPlayerType );
+        const sw::string jsonResult        = sw::SerializerUtil::transcodeBinaryToJSON( truncatedBytes, 2, *pPlayerType );
         SW_EXPECT_TRUE( jsonResult.empty() );
     }
 }

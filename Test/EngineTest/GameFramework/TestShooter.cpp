@@ -247,16 +247,16 @@ SW_TEST_CASE( ShooterTest, SemiAutoShotgunSpreadIsBoundedAndDeterministic )
 /**
  * @brief [ShooterTest] 무기 XML 은 속성 이름이 필드 이름이고 빠진 것은 기본값이다
  */
-SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXml )
+SW_TEST_CASE( ShooterTest, WeaponCatalogReadsXML )
 {
-    constexpr const utf8* kWeaponXml = R"(
+    constexpr const utf8* kWeaponXML = R"(
 <WeaponCatalog>
   <Weapon id="shotgun" name="Shotgun" fireInterval="0.8" pelletCount="9" automatic="false" magazineSize="6" damage="7"/>
   <Weapon name="NoId"/>
 </WeaponCatalog>
 )";
     WeaponCatalog         catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWeaponXml, "ShooterTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWeaponXML, "ShooterTest" ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), catalog.getWeapons().size() );
     const WeaponDef* pShotgun = catalog.findWeapon( "shotgun" );
     SW_ASSERT_NOT_NULL( pShotgun );
@@ -412,7 +412,7 @@ SW_TEST_CASE( ShooterTest, PawnSchemaMatchesTheInputMap )
     SW_ASSERT_TRUE( inputMap.loadFromResource( "game/shooter3d/data/shooter.input.xml" ) );
 
     SceneDocument document;
-    SW_ASSERT_TRUE( document.loadXml( "game/shooter3d/maps/arena.scene.xml" ) );
+    SW_ASSERT_TRUE( document.loadXML( "game/shooter3d/maps/arena.scene.xml" ) );
     Scene scene{ "ShooterPawnSchema" };
     SW_ASSERT_TRUE( scene.instantiate( document ) );
     const PawnComponent* pPlayerPawn = nullptr;

@@ -33,7 +33,7 @@ namespace sw
          * @details 모르는 키 · 모르는 태그 이름 · 같은 태그 두 번 · 0 이하 크기는 오류입니다(조용히 넘기지 않는다). 실패하면 아무 예산도 바꾸지 않습니다.
          * @param outError 실패 이유(어느 항목이 왜)
          */
-        [[nodiscard]] static bool applyBudgetJson( string_view jsonText, MemoryProfiler& profiler, string& outError );
+        [[nodiscard]] static bool applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler, string& outError );
         /**
          * @brief 예산 파일을 읽어 활성 프로파일러에 겁니다. 파일이 없으면 예산 없이 true 입니다. 형식이 틀리면 오류를 남기고 false 입니다.
          */

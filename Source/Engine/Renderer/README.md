@@ -182,7 +182,7 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
 | `FrameRendererPassExecute` | 패스 종류별 실행 분기 |
 | `FrameRendererDraw` | 드로우 루프 |
 | `FrameRendererViews` | 추가 뷰의 준비와 그리기 |
-| `FrameRendererPso` | 머티리얼 PSO와 뷰 모드 define |
+| `FrameRendererPSO` | 머티리얼 PSO와 뷰 모드 define |
 
 - `FrameRendererReadback` 은 GPU를 기다리므로 프레임 경로에서 쓰지 않습니다.
 - `FrameRendererCompute` 의 프리패스는 다섯 가지입니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬입니다. 그래프 패스가 아니라 그리기 전에 커맨드 리스트에 직접 기록합니다.
@@ -192,8 +192,8 @@ DirectX 12 커맨드 시그니처로 루트 상수를 주입하고 Vulkan과 Ope
 `FrameRenderer` 는 자기 뮤텍스와 수명을 가진 상태 세 개를 클래스로 분리해 소유합니다.
 
 - `PassConstantRing` 은 드로우마다 패스 상수 버퍼 슬롯을 하나씩 나눠 주는 링입니다. 원자적 커서를 쓰고 프레임마다 되감습니다.
-- `RenderPsoCache` 는 엔진 패스 PSO, 출력 패스(Present, Canvas)의 대상 포맷별 PSO, 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃을 소유합니다.
-  만드는 일은 `FrameRendererPso` 가 하고, 해제 순서(변형, 패스, 출력 포맷별)는 캐시가 압니다.
+- `RenderPSOCache` 는 엔진 패스 PSO, 출력 패스(Present, Canvas)의 대상 포맷별 PSO, 머티리얼 퍼뮤테이션 변형과 바인딩 레이아웃을 소유합니다.
+  만드는 일은 `FrameRendererPSO` 가 하고, 해제 순서(변형, 패스, 출력 포맷별)는 캐시가 압니다.
 - `TransientAttachmentPool` 은 이름으로 찾는 프레임 첨부 풀입니다. "이번 프레임에 이미 클리어했는가"도 여기서 기억합니다.
 
 그 밖의 주요 타입은 다음과 같습니다. 각 타입의 자세한 설명은 헤더의 `@brief` 에 있습니다.
@@ -309,7 +309,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 언리얼과 같은 것:
 
 - **Present PSO는 대상 포맷마다 하나입니다.** PSO의 렌더 타깃 포맷은 바인딩된 타깃의 실제 포맷(`getTextureFormat( handle )`, `getBackBufferFormat()`)에서 가져옵니다.
-  `buildPresentPsoVariants` 가 준비 단계에서 백버퍼와 오프스크린 포맷의 PSO를 미리 만들고, 기록 중의 `ensurePresentPso` 는 조회만 합니다.
+  `buildPresentPSOVariants` 가 준비 단계에서 백버퍼와 오프스크린 포맷의 PSO를 미리 만들고, 기록 중의 `ensurePresentPSO` 는 조회만 합니다.
   PSO 생성은 잠금 없는 핸들 테이블과 Vulkan 렌더 패스 캐시를 건드리므로 태스크 워커에서 만들면 안 됩니다.
 - **패스 상수 버퍼는 드로우마다 슬롯을 받습니다**(`PassConstantRing`). 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼 확보합니다.
   버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
@@ -347,7 +347,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 ### 머티리얼로 배치를 거르는 패스
 
 씬 메시 패스는 그릴 머티리얼을 define으로 거를 수 있습니다(`_pRequiredMaterialDefine`). 메시 외곽선 패스(`MeshOutline`)는 `MATERIAL_OUTLINE` 이 있는 배치만 그립니다.
-드로우(`FrameRenderer::drawsBatchInPass`), 머티리얼 PSO 변형(`ensureMaterialPsos`), 셰이더 쿠킹(`ShaderCookRequest`)이 모두 같은 판정 `FrameRendererUtil::drawsMaterialInPass` 를 씁니다.
+드로우(`FrameRenderer::drawsBatchInPass`), 머티리얼 PSO 변형(`ensureMaterialPSOs`), 셰이더 쿠킹(`ShaderCookRequest`)이 모두 같은 판정 `FrameRendererUtil::drawsMaterialInPass` 를 씁니다.
 언리얼의 메시 패스 프로세서가 머티리얼 속성으로 드로우를 거르는 것과 같습니다. 툰 머티리얼의 외곽선은 [Material 문서](../Graphics/Material/README.md)에 있습니다.
 
 ## 함정과 주의

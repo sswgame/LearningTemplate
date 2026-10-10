@@ -89,7 +89,7 @@ namespace sw::editor
         if ( _layer == PaintLayer::Warp )
         {
             uniqueWarpCells.reserve( _map._listWarp.size() );
-            for ( const TileMapXmlData::Warp& warp : _map._listWarp )
+            for ( const TileMapXMLData::Warp& warp : _map._listWarp )
             {
                 uniqueWarpCells.insert( ( static_cast<uint64>( static_cast<uint32>( warp._tileY ) ) << 32 ) |
                                         static_cast<uint32>( warp._tileX ) );
@@ -106,7 +106,7 @@ namespace sw::editor
                 {
                     case PaintLayer::Visual:
                     {
-                        const TileMapXmlData::Visual& tileVisual = _map._listVisual[tileIndex];
+                        const TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
                         color                                    = IM_COL32( tileVisual._tintR, tileVisual._tintG, tileVisual._tintB, 255 );
                         break;
                     }
@@ -195,7 +195,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
-            if ( saveXml( _pathBuffer.c_str() ) )
+            if ( saveXML( _pathBuffer.c_str() ) )
             {
                 _status = string( "Saved " ) + _pathBuffer.c_str();
                 clearDocumentDirty();
@@ -277,12 +277,12 @@ namespace sw::editor
 
     void TileMapPanel::resize( int32 width, int32 height )
     {
-        // 크기는 Width/Height 칸에서 그대로 온다. 상한과 그 이유는 `TileMapXmlData::kMaxTileCount` 에 있다.
+        // 크기는 Width/Height 칸에서 그대로 온다. 상한과 그 이유는 `TileMapXMLData::kMaxTileCount` 에 있다.
         if ( _map.resetTiles( width, height ) == false )
         {
             _status = "Size is out of range.";
             SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
-                            width, height, TileMapXmlData::kMaxTileCount );
+                            width, height, TileMapXMLData::kMaxTileCount );
             return;
         }
         _inputWidth  = width;
@@ -294,12 +294,12 @@ namespace sw::editor
         // 경로가 없으면 새 맵(기본 8x8)이다. 경로 칸은 첫 로드 때 열린 문서로, Load 단추 때는 적어 넣은 경로로 채워져 있다.
         if ( _pathBuffer.empty() )
             return ToolAssetLoadResult::Missing;
-        return loadXml( _pathBuffer.c_str() );
+        return loadXML( _pathBuffer.c_str() );
     }
 
-    ToolAssetLoadResult TileMapPanel::loadXml( string_view assetRelativePath )
+    ToolAssetLoadResult TileMapPanel::loadXML( string_view assetRelativePath )
     {
-        TileMapXmlData            data;
+        TileMapXMLData            data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status );
         if ( result != ToolAssetLoadResult::Loaded )
             return result;
@@ -309,7 +309,7 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapPanel::saveXml( string_view assetRelativePath )
+    bool TileMapPanel::saveXML( string_view assetRelativePath )
     {
         if ( EditorToolAssetCommands::saveTileMap( assetRelativePath, captureMapData() ) == false )
             return false;
@@ -320,19 +320,19 @@ namespace sw::editor
 
     bool TileMapPanel::saveDocument()
     {
-        if ( saveXml( _pathBuffer.c_str() ) == false )
+        if ( saveXML( _pathBuffer.c_str() ) == false )
             return false;
         return true;
     }
 
-    TileMapXmlData TileMapPanel::captureMapData() const
+    TileMapXMLData TileMapPanel::captureMapData() const
     {
-        TileMapXmlData data = _map;
+        TileMapXMLData data = _map;
         data._name          = _nameBuffer.c_str();
         return data;
     }
 
-    void TileMapPanel::applyMapData( const TileMapXmlData& data )
+    void TileMapPanel::applyMapData( const TileMapXMLData& data )
     {
         _map         = data;
         _nameBuffer  = data._name.c_str();
@@ -369,13 +369,13 @@ namespace sw::editor
 
     string TileMapPanel::captureDocumentText() const
     {
-        return captureMapData().toXml();
+        return captureMapData().toXML();
     }
 
     void TileMapPanel::applyDocumentText( string_view text )
     {
-        TileMapXmlData restored;
-        if ( text.empty() == false && restored.loadFromXml( text ) == false )
+        TileMapXMLData restored;
+        if ( text.empty() == false && restored.loadFromXML( text ) == false )
             SW_LOG_WARNING( "Tile map undo snapshot could not be read - showing an empty map" );
         applyMapData( restored );
     }
@@ -392,7 +392,7 @@ namespace sw::editor
             {
                 if ( _bErase == false )
                 {
-                    TileMapXmlData::Visual& tileVisual = _map._listVisual[tileIndex];
+                    TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
                     tileVisual._height                 = static_cast<uint8>( _paintHeight );
                     tileVisual._atlasId                = static_cast<uint8>( _atlasId );
                     tileVisual._tintR                  = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
@@ -420,12 +420,12 @@ namespace sw::editor
             case PaintLayer::Warp:
             {
                 _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
-                                                      [x, y]( const TileMapXmlData::Warp& warp )
+                                                      [x, y]( const TileMapXMLData::Warp& warp )
                 { return warp._tileX == x && warp._tileY == y; } ),
                                       _map._listWarp.end() );
                 if ( _bErase == false && _warpTarget.empty() == false )
                 {
-                    TileMapXmlData::Warp warpItem{};
+                    TileMapXMLData::Warp warpItem{};
                     warpItem._tileX       = x;
                     warpItem._tileY       = y;
                     warpItem._targetMap   = _warpTarget.c_str();
@@ -450,10 +450,10 @@ namespace sw::editor
         {
             _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( tileX, tileY )] = 1;
             _map._listWarp.erase( std::remove_if( _map._listWarp.begin(), _map._listWarp.end(),
-                                                  [tileX, tileY]( const TileMapXmlData::Warp& warp )
+                                                  [tileX, tileY]( const TileMapXMLData::Warp& warp )
             { return warp._tileX == tileX && warp._tileY == tileY; } ),
                                   _map._listWarp.end() );
-            TileMapXmlData::Warp warpItem{};
+            TileMapXMLData::Warp warpItem{};
             warpItem._tileX       = tileX;
             warpItem._tileY       = tileY;
             warpItem._targetMap   = targets[edge]->c_str();

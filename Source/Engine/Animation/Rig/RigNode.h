@@ -14,7 +14,7 @@
 
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Common/EngineDefines.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -141,14 +141,14 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RigJsonReader
+     * @class RigJSONReader
      * @brief 노드 · 대상 객체 하나를 읽는 엄격한 리더입니다. 읽은 키를 적어 두고 `finish` 가 모르는 키를 오류로 냅니다.
      * @details 모든 실패는 맥락(파일 · 노드 이름)과 함께 로그로 남고 리더는 실패 상태가 됩니다 — 데이터가 조용히 기본값이 되지 않게 합니다.
      */
-    class SW_API RigJsonReader
+    class SW_API RigJSONReader
     {
     public:
-        RigJsonReader( const JsonValue& object, string_view context );
+        RigJSONReader( const JSONValue& object, string_view context );
 
         [[nodiscard]] bool readName( string_view key, hashed_string& outValue, bool bRequired );
         [[nodiscard]] bool readFloat( string_view key, float32& outValue, bool bRequired );
@@ -159,9 +159,9 @@ namespace sw
         [[nodiscard]] bool readRotationDegrees( string_view key, quaternion& outValue, bool bRequired );
         [[nodiscard]] bool readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired );
         /** @brief 배열(객체들)을 꺼냅니다. 없거나 배열이 아니면 무효 값입니다. */
-        JsonValue readArray( string_view key, bool bRequired );
+        JSONValue readArray( string_view key, bool bRequired );
         /** @brief 객체 하나를 꺼냅니다. 없거나 객체가 아니면 무효 값입니다. */
-        JsonValue readObject( string_view key, bool bRequired );
+        JSONValue readObject( string_view key, bool bRequired );
         /** @brief 이름 · 열거 문자열 하나를 @p ppChoice 중에서 고릅니다(대소문자 구분). */
         [[nodiscard]] bool readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired );
 
@@ -173,9 +173,9 @@ namespace sw
         string_view        getContext() const { return _context; }
 
     private:
-        JsonValue findMember( string_view key, bool bRequired );
+        JSONValue findMember( string_view key, bool bRequired );
 
-        JsonValue      _object; ///< 값으로 든다 — `array.at( i )` 같은 임시를 받아도 리더보다 먼저 죽지 않게(핸들이라 복사가 싸다)
+        JSONValue      _object; ///< 값으로 든다 — `array.at( i )` 같은 임시를 받아도 리더보다 먼저 죽지 않게(핸들이라 복사가 싸다)
         vector<string> _listUsedKey;
         string         _context;
         uint8          _bOk;
@@ -221,7 +221,7 @@ namespace sw
         /** @brief 종류 이름(등록 이름)입니다. */
         virtual const utf8* getTypeName() const = 0;
         /** @brief 노드 자기 키를 읽습니다(공통 키는 에셋이 읽었습니다). */
-        [[nodiscard]] virtual bool parse( RigJsonReader& reader ) = 0;
+        [[nodiscard]] virtual bool parse( RigJSONReader& reader ) = 0;
         /** @brief 이름을 번호로 묶습니다. 모르는 본 · 대상은 오류입니다. */
         [[nodiscard]] virtual bool bind( const RigBindContext& context ) = 0;
         /** @brief 게임 스레드 준비(땅 광선 · 거리 LOD)입니다. */
@@ -245,7 +245,7 @@ namespace sw
         const hashed_string& getWeightCurve() const { return _weightCurve; }
         const hashed_string& getWeightSlot() const { return _weightSlot; }
         /** @brief 공통 키(name · weight · weight_curve · weight_slot)를 읽습니다(에셋이 부릅니다). */
-        [[nodiscard]] bool parseCommon( RigJsonReader& reader );
+        [[nodiscard]] bool parseCommon( RigJSONReader& reader );
 
     protected:
         hashed_string _name;

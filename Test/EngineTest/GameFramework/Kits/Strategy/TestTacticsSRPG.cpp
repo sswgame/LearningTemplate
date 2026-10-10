@@ -19,7 +19,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSRPGTestXml = R"(
+    constexpr const utf8* kSRPGTestXML = R"(
 <SRPGCatalog>
   <PilotCurve base="100" exponent="1" linear="0" maxLevel="20"/>
   <UnitCurve base="50" exponent="1" linear="0" maxLevel="10"/>
@@ -55,7 +55,7 @@ namespace
 
         bool initialize( int32 width, int32 height, const SRPGSettings& settings = SRPGSettings{}, uint32 seed = 7 )
         {
-            if ( _catalog.loadFromXmlText( kSRPGTestXml, "TacticsSRPGTest" ) == false )
+            if ( _catalog.loadFromXMLText( kSRPGTestXML, "TacticsSRPGTest" ) == false )
                 return false;
             _field.initialize( &_catalog, width, height, hashed_string( "plain" ), settings, seed );
             return true;
@@ -716,7 +716,7 @@ SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameBattlefield )
 SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
 {
     SRPGCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSRPGTestXml, "TacticsSRPGTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kSRPGTestXML, "TacticsSRPGTest" ) );
     RunMapSettings mapSettings;
     mapSettings._floorCount  = 3;
     mapSettings._columnCount = 3;

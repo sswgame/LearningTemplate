@@ -66,8 +66,8 @@ namespace sw
         int32*             _pEndPlayCount{ nullptr };          ///< onEndPlay 횟수를 적을 곳 — 컴포넌트가 사라진 뒤에도 읽도록 밖에 둔다
         GameObject*        _pTickClearOwner{ nullptr };        ///< 설정되면 틱이 그 오브젝트의 컴포넌트를 모두 비운다(`clearComponents`)
         size_t             _componentCountAfterTickClear{ 0 }; ///< 비운 **직후**(아직 틱 안) 그 오브젝트의 목록 길이 — 미뤄졌으면 그대로다
-        GameObject*        _pTickLoadTarget{ nullptr };        ///< 설정되면 틱이 그 오브젝트에 `_tickLoadXml` 을 제자리로 읽는다
-        string             _tickLoadXml;
+        GameObject*        _pTickLoadTarget{ nullptr };        ///< 설정되면 틱이 그 오브젝트에 `_tickLoadXML` 을 제자리로 읽는다
+        string             _tickLoadXML;
         int32              _tickLoadResult{ -1 };       ///< 그 결과(1 성공 · 0 실패 · -1 안 함)
         GameObject*        _pTickAdoptChild{ nullptr }; ///< 설정되면 틱이 이 오브젝트에 씬 컴포넌트를 붙이고 이어 `_pTickAdoptParent` 에 붙인다
         GameObject*        _pTickAdoptParent{ nullptr };
@@ -143,7 +143,7 @@ namespace sw
                 _componentCountAfterTickClear = _pTickClearOwner->getComponents().size(); // 삭제 대기도 센다 — 해제됐으면 목록에서 빠졌다
             }
             if ( _pTickLoadTarget != nullptr )
-                _tickLoadResult = ObjectStateSerializer::loadFromXmlString( _pTickLoadTarget, _tickLoadXml ) ? 1 : 0;
+                _tickLoadResult = ObjectStateSerializer::loadFromXMLString( _pTickLoadTarget, _tickLoadXML ) ? 1 : 0;
             if ( _pTickRenameTarget != nullptr )
             {
                 _pTickRenameTarget->setName( hashed_string( "TickRenamed" ) );

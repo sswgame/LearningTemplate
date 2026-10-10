@@ -11,7 +11,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kQuestTestXml = R"(
+    constexpr const utf8* kQuestTestXML = R"(
 <QuestCatalog>
   <Quest id="intro"><Stage id="talk" next="done"><Objective kind="Talk" target="elder"/></Stage><Stage id="done" complete="true"><Reward xp="10"/></Stage></Quest>
   <Quest id="wolves" level="2" requires="intro">
@@ -32,7 +32,7 @@ namespace
 SW_TEST_CASE( QuestTest, QuestsAdvanceThroughObjectivesBranchesAndRewards )
 {
     QuestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kQuestTestXml, "QuestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kQuestTestXML, "QuestTest" ) );
     QuestLog log;
     log.initialize( &catalog );
     const hashed_string wolves( "wolves" );
@@ -79,7 +79,7 @@ SW_TEST_CASE( QuestTest, QuestsAdvanceThroughObjectivesBranchesAndRewards )
 SW_TEST_CASE( QuestTest, TimeLimitsFailAndAbandonedOrRepeatableQuestsRestart )
 {
     QuestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kQuestTestXml, "QuestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kQuestTestXML, "QuestTest" ) );
     QuestLog log;
     log.initialize( &catalog );
     const hashed_string race( "race" );

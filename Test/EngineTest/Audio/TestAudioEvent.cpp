@@ -17,7 +17,7 @@ namespace
 {
     struct AudioEventTestInternal
     {
-        static constexpr const utf8* kMixerXml = R"(
+        static constexpr const utf8* kMixerXML = R"(
 <AudioMixerDesc _maxRealVoiceCount="2" _inaudibleDb="-60">
 	<_listBus>
 		<AudioBusDesc _name="master">
@@ -40,7 +40,7 @@ namespace
 	</_listSnapshot>
 </AudioMixerDesc>)";
 
-        static constexpr const utf8* kLibraryXml = R"(
+        static constexpr const utf8* kLibraryXML = R"(
 <AudioEventLibrary>
 	<_listParameter>
 		<AudioParameterDesc _name="Speed" _minValue="0" _maxValue="1" _defaultValue="0" />
@@ -95,7 +95,7 @@ namespace
         static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;
-            if ( mixerDesc.loadFromXmlText( kMixerXml ) == false || engine.initialize( mixerDesc ) == false )
+            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc ) == false )
                 return false;
             sw::AudioClipStore& store = engine.getClipStore();
             store.addClip( sw::hashed_string( "test/a" ), test::AudioTestUtil::makeConstantClip( 0.1f, 2048 ) );
@@ -116,7 +116,7 @@ namespace
             store.addClip( sw::hashed_string( "test/ramp" ), pRamp );
 
             sw::AudioEventLibrary library;
-            if ( library.loadFromXmlText( kLibraryXml ) == false )
+            if ( library.loadFromXMLText( kLibraryXML ) == false )
                 return false;
             engine.setRandomSeed( 1234 );
             return engine.loadEventLibrary( sw::hashed_string( "test/events" ), library );
@@ -389,19 +389,19 @@ SW_TEST_CASE( AudioEventTest, LibraryNamesAreValidated )
     SW_ASSERT_TRUE( AudioEventTestInternal::initializeEngine( engine ) );
     SW_TEST_DEFENSIVE_SCOPE( "Event libraries with unknown names are rejected" );
     sw::AudioEventLibrary library;
-    SW_EXPECT_FALSE( library.loadFromXmlText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Empty" _bus="sfx" /></_listEvent></AudioEventLibrary>)" ) );
-    SW_EXPECT_FALSE( library.loadFromXmlText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="P" _bus="sfx">
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Empty" _bus="sfx" /></_listEvent></AudioEventLibrary>)" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="P" _bus="sfx">
         <_listClip><AudioClipEntry _path="test/a" /></_listClip>
         <_listParameterMap><AudioParameterMapping _parameter="Nope"><_listPoint><AudioCurvePoint /></_listPoint></AudioParameterMapping></_listParameterMap>
         </AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
 
-    SW_ASSERT_TRUE( library.loadFromXmlText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Bad" _bus="nowhere">
+    SW_ASSERT_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Bad" _bus="nowhere">
         <_listClip><AudioClipEntry _path="test/a" /></_listClip></AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
     SW_EXPECT_FALSE( engine.loadEventLibrary( sw::hashed_string( "test/bad" ), library ) );
-    SW_ASSERT_TRUE( library.loadFromXmlText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Bad" _bus="sfx" _attenuation="Nope">
+    SW_ASSERT_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Bad" _bus="sfx" _attenuation="Nope">
         <_listClip><AudioClipEntry _path="test/a" /></_listClip></AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
     SW_EXPECT_FALSE( engine.loadEventLibrary( sw::hashed_string( "test/bad" ), library ) );
-    SW_ASSERT_TRUE( library.loadFromXmlText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Seq" _bus="sfx">
+    SW_ASSERT_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="Seq" _bus="sfx">
         <_listClip><AudioClipEntry _path="test/a" /></_listClip></AudioEventDesc></_listEvent></AudioEventLibrary>)" ) );
     SW_EXPECT_FALSE( engine.loadEventLibrary( sw::hashed_string( "test/other" ), library ) );
     SW_EXPECT_FALSE( engine.hasEvent( sw::hashed_string( "Bad" ) ) );

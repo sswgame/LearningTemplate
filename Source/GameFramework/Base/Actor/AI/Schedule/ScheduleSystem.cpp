@@ -155,13 +155,13 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( ScheduleLod lod )
+    const utf8* toString( ScheduleLOD lod )
     {
         switch ( lod )
         {
-            case ScheduleLod::Near:
+            case ScheduleLOD::Near:
                 return "Near";
-            case ScheduleLod::Far:
+            case ScheduleLOD::Far:
                 return "Far";
         }
         return "Unknown";
@@ -416,7 +416,7 @@ namespace sw
         }
     }
 
-    void ScheduleSystem::setNpcLod( int32 npcIndex, ScheduleLod lod )
+    void ScheduleSystem::setNpcLOD( int32 npcIndex, ScheduleLOD lod )
     {
         if ( isValidNpc( npcIndex ) == false )
             return;
@@ -426,7 +426,7 @@ namespace sw
         npc._lod = lod;
         // 화면 안으로 — 굵은 간격으로 미뤄 둔 사건을 지금 맞추고, 그 시각 자리로 옮긴다(계획은 LOD 와 상관없어 그대로다).
         refreshNpc( npcIndex );
-        if ( lod == ScheduleLod::Near )
+        if ( lod == ScheduleLOD::Near )
         {
             npc._routeKey = 0;
             updateNearRoutes();
@@ -434,9 +434,9 @@ namespace sw
         }
     }
 
-    ScheduleLod ScheduleSystem::getNpcLod( int32 npcIndex ) const
+    ScheduleLOD ScheduleSystem::getNpcLOD( int32 npcIndex ) const
     {
-        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._lod : ScheduleLod::Far;
+        return isValidNpc( npcIndex ) ? _listNpc[static_cast<size_t>( npcIndex )]._lod : ScheduleLOD::Far;
     }
 
     void ScheduleSystem::addNpcTag( int32 npcIndex, const TagID& tag )
@@ -581,7 +581,7 @@ namespace sw
             case ScheduleNpcPhase::Traveling:
             {
                 view._location               = computePlanningLocationOnRoute( npc, view._segmentIndex, view._travelFraction );
-                const bool bNearRouteCurrent = npc._lod == ScheduleLod::Near && npc._routeKey == ScheduleSystemInternal::computeSegmentKey( segment );
+                const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleSystemInternal::computeSegmentKey( segment );
                 if ( bNearRouteCurrent )
                     view._location._position = SchedulePathingUtil::computePointAlong( npc._listRoutePoint, view._travelFraction );
                 break;
@@ -1431,7 +1431,7 @@ namespace sw
             }
         }
         // 화면 밖은 상태 사건만 굵은 간격으로 미룬다(계획 · 자리 · 판정은 시각의 함수라 그대로다).
-        if ( npc._lod == ScheduleLod::Far && segmentWake != Internal::kNoWake )
+        if ( npc._lod == ScheduleLOD::Far && segmentWake != Internal::kNoWake )
             segmentWake = Internal::roundUpToStep( segmentWake, _settings._farStepMinutes );
         return MathUtil::min( wake, segmentWake );
     }
@@ -1454,7 +1454,7 @@ namespace sw
 
         const NpcRuntime& npc         = _listNpc[static_cast<size_t>( npcIndex )];
         const bool        bAnimation  = kind == ScheduleEvent::Kind::ActivityStarted || kind == ScheduleEvent::Kind::ActivityEnded;
-        const bool        bShouldPlay = _pAnimator != nullptr && npc._lod == ScheduleLod::Near && bAnimation && pSegment != nullptr;
+        const bool        bShouldPlay = _pAnimator != nullptr && npc._lod == ScheduleLOD::Near && bAnimation && pSegment != nullptr;
         if ( bShouldPlay == false )
             return;
         ScheduleActivityCue cue;
@@ -1505,7 +1505,7 @@ namespace sw
         for ( int32 npcIndex = 0; npcIndex < getNpcCount(); ++npcIndex )
         {
             NpcRuntime& npc = _listNpc[static_cast<size_t>( npcIndex )];
-            if ( npc._lod != ScheduleLod::Near || npc._listInterruption.empty() == false )
+            if ( npc._lod != ScheduleLOD::Near || npc._listInterruption.empty() == false )
                 continue;
             const int32 active = Internal::findActiveSegment( npc._listSegment, static_cast<float32>( _minute - npc._planDay * kScheduleMinutesPerDay ) );
             if ( active < 0 )

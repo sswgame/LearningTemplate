@@ -85,7 +85,7 @@ namespace sw
         /** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */
         string saveToString() const;
         /** @brief XML 텍스트에서 머티리얼을 로드합니다. */
-        [[nodiscard]] bool loadFromXml( string_view xmlText );
+        [[nodiscard]] bool loadFromXML( string_view xmlText );
         /** @brief 셰이더 리플렉션에 맞춰 프로퍼티 목록을 맞춥니다. */
         bool syncPropertiesFromReflection( const ShaderReflectionData& reflectionData );
         /** @brief 리플렉션에 머티리얼 스키마(`g_SwMaterials` 원소 또는 MaterialCB)가 있으면 true 입니다. */
@@ -99,7 +99,7 @@ namespace sw
         bool ensureShaderLayout( IRHIDevice* pDevice );
         /**
          * @brief 프로퍼티 오프셋 · stride 가 지금 이 백엔드의 셰이더 레이아웃에 맞춰져 있는지입니다.
-         * @details 다시 로드하면(`loadFromXml` — 에셋 핫 리로드 · 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가
+         * @details 다시 로드하면(`loadFromXML` — 에셋 핫 리로드 · 에디터 미리보기) XML 순서로 다시 쌓이므로 풀리고, 셰이더 리플렉션 캐시가
          *          비워지면(다시 쿠킹 · 라이브 셰이더 편집) 낡은 것이 됩니다. 마지막으로 맞춘 백엔드와 다른 백엔드로 물어도 false 입니다.
          *          리플렉션을 얻지 못한 시도도 "맞춰 봤다" 로 남습니다 — 매 프레임 같은 오류를 내지 않게.
          */

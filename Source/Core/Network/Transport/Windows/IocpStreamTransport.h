@@ -25,7 +25,7 @@ namespace sw
         StreamSendResult       send( StreamConnectionHandle handle, const uint8* pData, int32 size ) override;
         void                   close( StreamConnectionHandle handle, StreamCloseMode mode ) override;
         void                   setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override;
-        int32                  pollIo( int32 timeoutMilli ) override;
+        int32                  pollIO( int32 timeoutMilli ) override;
         NetAddress             getRemoteAddress( StreamConnectionHandle handle ) const override;
         StreamTransportStats   getStats() const override;
 

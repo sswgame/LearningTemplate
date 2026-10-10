@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -17,10 +17,10 @@ namespace sw
     {
         struct ConquestCatalogInternal
         {
-            static void loadStatChild( const XmlNode& node, const utf8* pChildName, StatBlock& outStats )
+            static void loadStatChild( const XMLNode& node, const utf8* pChildName, StatBlock& outStats )
             {
                 outStats.clear();
-                if ( const XmlNode child = node.findChild( pChildName ) )
+                if ( const XMLNode child = node.findChild( pChildName ) )
                     (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
             }
 
@@ -56,7 +56,7 @@ namespace sw
             static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pId )
             {
                 outListGarrison.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     ConquestGarrisonDef garrison;
                     const size_t        colon = token.find( ':' );
@@ -68,7 +68,7 @@ namespace sw
                 } );
             }
 
-            static void loadRules( const XmlNode& node, ConquestRules& outRules )
+            static void loadRules( const XMLNode& node, ConquestRules& outRules )
             {
                 outRules._waveUnit                = hashed_string( node.getAttributeText( "waveUnit" ) );
                 outRules._fixedStep               = MathUtil::clamp( node.getAttributeFloat( "fixedStep", outRules._fixedStep ), 0.01f, 1.0f );
@@ -135,20 +135,20 @@ namespace sw
     {
     }
 
-    uint32 ConquestCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ConquestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        if ( const XmlNode rulesNode = root.findChild( "Rules" ) )
+        if ( const XMLNode rulesNode = root.findChild( "Rules" ) )
             ConquestCatalogInternal::loadRules( rulesNode, _rules );
-        if ( const XmlNode startNode = root.findChild( "Start" ) )
+        if ( const XMLNode startNode = root.findChild( "Start" ) )
         {
             _rules._startResources.clear();
             (void)_rules._startResources.loadFromAttributes( startNode ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
         }
 
-        for ( XmlNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
+        for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ConquestUnitDef unit;
@@ -169,9 +169,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
+        for ( XMLNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ConquestBuildingDef building;
@@ -181,7 +181,7 @@ namespace sw
             building._amountPerWorker = MathUtil::max( 0, node.getAttributeInt( "amount", building._amountPerWorker ) );
             building._workerSlots     = MathUtil::max( 0, node.getAttributeInt( "workerSlots", building._workerSlots ) );
             building._housing         = MathUtil::max( 0, node.getAttributeInt( "housing", building._housing ) );
-            GameDataXml::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "trains" ), ",; ", [&]( string_view token )
             {
                 const hashed_string unitId( token );
                 if ( _unitCatalog.find( unitId ) == nullptr )
@@ -193,9 +193,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
+        for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ConquestSiteDef site;

@@ -9,12 +9,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 자기장 한 단계입니다. 단계가 시작되면 다음 원이 드러나고, 기다린 뒤 줄어듭니다. 시간은 초입니다. */
     struct BrZonePhaseDef
@@ -134,9 +134,9 @@ namespace sw
      *        <Armor id="helmet1" slot="Helmet" tier="1" reduction="0.3" durability="80"/><Backpack id="bag1" tier="1" capacity="150"/>
      *        <LootSpot id="house" table="house" chance="0.8" rolls="1" rollsMax="3"/><SupplyDrop table="airdrop" times="90,180"/></BattleRoyaleCatalog>` 를 읽습니다.
      */
-    class SW_GF_API BrCatalog : public XmlCatalog<BrCatalog>
+    class SW_GF_API BrCatalog : public XMLCatalog<BrCatalog>
     {
-        friend class XmlCatalog<BrCatalog>;
+        friend class XMLCatalog<BrCatalog>;
 
     public:
         BrCatalog();
@@ -152,8 +152,8 @@ namespace sw
         float32                     getMapSize() const { return _mapSize; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "BattleRoyaleCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "BattleRoyaleCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<BrArmorDef>    _armorCatalog;
         GameCatalog<BrBackpackDef> _backpackCatalog;

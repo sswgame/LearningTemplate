@@ -7,7 +7,7 @@
 ## 1. 왜 C-ABI인가
 
 실행 파일 `App.exe` 는 `Engine` 과 `RuntimeAPI` 만 링크하고, 게임과 에디터 클래스는 컴파일할 때 전혀 모릅니다.
-게임 모듈(`SWGame`), 에디터 모듈(`EditorModule`), 장르 키트(`GF_*`)와는 `RuntimeAPI` 에 정의한 `extern "C"` 함수 테이블로만 대화합니다. 게임 모듈의 `exportGameApi` 가 그 예입니다.
+게임 모듈(`SWGame`), 에디터 모듈(`EditorModule`), 장르 키트(`GF_*`)와는 `RuntimeAPI` 에 정의한 `extern "C"` 함수 테이블로만 대화합니다. 게임 모듈의 `exportGameAPI` 가 그 예입니다.
 
 C 함수는 C++ 이름 맹글링, RTTI, 클래스 레이아웃에 영향을 받지 않습니다. 그래서 DLL을 새 것으로 바꿔도 App이 부르는 함수의 형태가 그대로 유지됩니다.
 테이블과 핸들의 정의는 [RuntimeAPI 문서](../Source/RuntimeAPI/README.md)에 있습니다.

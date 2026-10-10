@@ -14,7 +14,7 @@
 #include "Engine/EngineInitSequence.h"
 #include "Engine/EngineServiceCollection.h"
 #include "Engine/Graphics/RHI/RHIInitResult.h"
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 #include "Engine/Profiling/FrameProfileSession.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
@@ -264,7 +264,7 @@ namespace sw
         /** @brief 스케줄러의 시각(초) — 프레임 델타의 누적입니다. */
         float64 _renderViewClock;
         /** @brief 애니메이션 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */
-        vector<AnimationLodView> _listAnimationLodView;
+        vector<AnimationLODView> _listAnimationLODView;
 
         /** @brief 이 엔진을 띄운 호스트의 역할입니다. 서비스를 만들기 전에 정한다(오디오 장치 · 기동 표 대상). */
         EngineHostRole _hostRole;

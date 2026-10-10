@@ -56,10 +56,10 @@ MeshComponent  ──▶  GpuSceneBuilder 가 머티리얼 원소로 모아 셰�
 
 ### 에셋 파일과 로드
 
-`.material` 파일의 루트는 `MaterialDesc` 이고, `shaderPath`, `blendMode`, `_properties`, `_permutations` 를 가집니다. 읽고 쓰는 코드는 `MaterialXml.cpp` 에 있습니다.
+`.material` 파일의 루트는 `MaterialDesc` 이고, `shaderPath`, `blendMode`, `_properties`, `_permutations` 를 가집니다. 읽고 쓰는 코드는 `MaterialXML.cpp` 에 있습니다.
 블렌드 모드는 `Opaque` 와 `Transparent` 두 가지입니다. 반투명 머티리얼은 `blendMode="Transparent"` 와 함께 `_alwaysDefines` 에 `MATERIAL_BLEND_TRANSLUCENT` 를 넣습니다.
 
-에셋 형식이 바뀌었는지는 `AssetFormatRegistry::upgradeXmlWithActiveRegistry` 가 판단합니다. 씬, 프리팹과 같은 경로이고 `AssetManager` 없이 돕니다.
+에셋 형식이 바뀌었는지는 `AssetFormatRegistry::upgradeXMLWithActiveRegistry` 가 판단합니다. 씬, 프리팹과 같은 경로이고 `AssetManager` 없이 돕니다.
 다만 본문의 enum 글을 해석하려면 `TypeRegistry` 가 필요합니다.
 
 메시는 `MeshComponent::setMaterialPath` 로 경로를 받고, `MaterialCache::acquire` 로 머티리얼을 잡습니다. 컴포넌트는 디바이스를 모르므로 GPU 리소스는 바로 만들지 않습니다.
@@ -123,7 +123,7 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 - **텍스처는 네 개입니다**(기본색, 그림자, 발광, 맷캡). 머티리얼 텍스처 슬롯 t5..t8이 네 개이기 때문입니다. 맷캡은 텍스처가 있을 때만 더합니다. 없으면 흰색이라 화면이 바랩니다.
 - **정적 스위치는 세 개입니다.** `Outline`(`MATERIAL_OUTLINE`)은 아래 메시 외곽선 패스가 이 머티리얼을 그리게 합니다. `AlphaCutoff`(`MATERIAL_ALPHA_CUTOFF`)는 `alphaCutoff` 아래 픽셀을 버립니다.
   `TwoSided`(`MATERIAL_TWO_SIDED`)는 양면으로 그립니다. `Outline` 과 `TwoSided` 는 `bShaderFeature="0"` 이라 실행 중에 바꿀 수 있고, `AlphaCutoff` 는 에셋 상태만 쿠킹합니다.
-- **양면은 머티리얼의 속성입니다.** 언리얼의 Two Sided와 같습니다. 머티리얼 PSO 변형(`createMaterialPsoVariant`)이 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끕니다.
+- **양면은 머티리얼의 속성입니다.** 언리얼의 Two Sided와 같습니다. 머티리얼 PSO 변형(`createMaterialPSOVariant`)이 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끕니다.
   후면 컬링을 쓰는 패스에만 적용되고, 그림자 패스도 양면으로 드리웁니다. 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집습니다(`RenderPassGpuTest.TwoSidedMaterialDrawsBackFaces`).
 - **디퍼드에서는 램버트로 그립니다.** G버퍼 패스는 표면(기본색, 노멀)만 기록하고, 계단 셰이딩은 포워드 경로에만 있습니다.
 - **톤 매핑과 블룸이 없는 파이프라인 `engine/pipeline/forwardtoonpipeline.xml` 을 씁니다**(`-gv_renderPipeline`). 툰은 빛을 받는 면이 기본색 그대로 보이는 것이 목표입니다.

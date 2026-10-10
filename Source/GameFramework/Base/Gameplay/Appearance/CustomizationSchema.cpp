@@ -5,10 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
 {
@@ -60,38 +60,38 @@ namespace sw
                 return kind == CustomizationDriveKind::Morph || kind == CustomizationDriveKind::BoneProportion || kind == CustomizationDriveKind::MaterialScalar;
             }
 
-            static void reportUnknownParamAttributes( const XmlNode& node, CustomizationKind kind, AppearanceLoadReport& report, string_view sourceName )
+            static void reportUnknownParamAttributes( const XMLNode& node, CustomizationKind kind, AppearanceLoadReport& report, string_view sourceName )
             {
                 switch ( kind )
                 {
                     case CustomizationKind::Slider:
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrSliderAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSliderAttribute, report, sourceName );
                         break;
                     }
                     case CustomizationKind::Color:
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrColorAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrColorAttribute, report, sourceName );
                         break;
                     }
                     case CustomizationKind::Choice:
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrChoiceAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrChoiceAttribute, report, sourceName );
                         break;
                     }
                     case CustomizationKind::Attachment:
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrAttachmentAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrAttachmentAttribute, report, sourceName );
                         break;
                     }
                 }
             }
 
-            static void readDrive( const XmlNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
+            static void readDrive( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrDriveAttribute, report, sourceName );
                 CustomizationDriveDef drive;
-                drive._target  = AppearanceXmlUtil::readName( node, "target" );
+                drive._target  = AppearanceXMLUtil::readName( node, "target" );
                 drive._from    = node.getAttributeFloat( "from", inoutParam._min );
                 drive._to      = node.getAttributeFloat( "to", inoutParam._max );
                 drive._channel = node.getAttributeInt( "channel", 0 );
@@ -115,19 +115,19 @@ namespace sw
                 inoutParam._listDrive.push_back( drive );
             }
 
-            static void readOption( const XmlNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
+            static void readOption( const XMLNode& node, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName, const hashed_string& schemaId )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrOptionAttribute, report, sourceName );
                 CustomizationOptionDef option;
-                option._name               = AppearanceXmlUtil::readName( node, "name" );
-                option._visual             = AppearanceXmlUtil::readName( node, "visual" );
-                option._variant            = AppearanceXmlUtil::readName( node, "variant" );
-                option._materialVariant    = AppearanceXmlUtil::readName( node, "materialVariant" );
-                const hashed_string prefab = AppearanceXmlUtil::readName( node, "prefab" );
-                const hashed_string sprite = AppearanceXmlUtil::readName( node, "sprite" );
+                option._name               = AppearanceXMLUtil::readName( node, "name" );
+                option._visual             = AppearanceXMLUtil::readName( node, "visual" );
+                option._variant            = AppearanceXMLUtil::readName( node, "variant" );
+                option._materialVariant    = AppearanceXMLUtil::readName( node, "materialVariant" );
+                const hashed_string prefab = AppearanceXMLUtil::readName( node, "prefab" );
+                const hashed_string sprite = AppearanceXMLUtil::readName( node, "sprite" );
                 option._asset              = prefab.empty() ? sprite : prefab;
-                option._offset             = AppearanceXmlUtil::readFloat3( node, "offset", float3::Zero );
-                option._rotation           = AppearanceXmlUtil::readFloat3( node, "rotation", float3::Zero );
+                option._offset             = AppearanceXMLUtil::readFloat3( node, "offset", float3::Zero );
+                option._rotation           = AppearanceXMLUtil::readFloat3( node, "rotation", float3::Zero );
                 const bool bChoiceOnly     = option._visual.empty() == false || option._variant.empty() == false || option._materialVariant.empty() == false;
                 if ( option._name.empty() || inoutParam.findOption( option._name ) != nullptr )
                     report.addError( "%#: schema '%#' parameter '%#' has an option without a name ('None' reads as no name) or a duplicate option '%#'", sourceName, schemaId.c_str(), inoutParam._name.c_str(), option._name.c_str() );
@@ -141,12 +141,12 @@ namespace sw
                     inoutParam._listOption.push_back( option );
             }
 
-            static void readCondition( const XmlNode& node, const CustomizationSchemaDef& schema, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName )
+            static void readCondition( const XMLNode& node, const CustomizationSchemaDef& schema, CustomizationParamDef& inoutParam, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrConditionAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrConditionAttribute, report, sourceName );
                 CustomizationConditionDef condition;
-                condition._parameter = AppearanceXmlUtil::readName( node, "parameter" );
-                AppearanceXmlUtil::readNameList( node, "options", condition._listOption );
+                condition._parameter = AppearanceXMLUtil::readName( node, "parameter" );
+                AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
                 // 조건은 앞에 선언한 매개변수만 — 아직 목록에 들어가지 않은 자기 자신도 못 가리킨다(순환이 생길 수 없다).
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
                 if ( pTarget == nullptr )
@@ -175,15 +175,15 @@ namespace sw
                 inoutParam._listCondition.push_back( condition );
             }
 
-            static void readParameter( const XmlNode& node, CustomizationKind kind, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
+            static void readParameter( const XMLNode& node, CustomizationKind kind, CustomizationSchemaDef& inoutSchema, AppearanceLoadReport& report, string_view sourceName )
             {
                 reportUnknownParamAttributes( node, kind, report, sourceName );
                 CustomizationParamDef param;
                 param._kind     = kind;
-                param._name     = AppearanceXmlUtil::readName( node, "name" );
-                param._category = AppearanceXmlUtil::readName( node, "category" );
-                param._symmetry = AppearanceXmlUtil::readName( node, "symmetry" );
-                param._socket   = AppearanceXmlUtil::readName( node, "socket" );
+                param._name     = AppearanceXMLUtil::readName( node, "name" );
+                param._category = AppearanceXMLUtil::readName( node, "category" );
+                param._symmetry = AppearanceXMLUtil::readName( node, "symmetry" );
+                param._socket   = AppearanceXMLUtil::readName( node, "socket" );
                 param._min      = node.getAttributeFloat( "min", param._min );
                 param._max      = node.getAttributeFloat( "max", param._max );
                 if ( param._name.empty() || inoutSchema.findParameter( param._name ) != nullptr )
@@ -200,8 +200,8 @@ namespace sw
                 else
                     param._default = param._min;
                 if ( kind == CustomizationKind::Color )
-                    param._defaultColor = AppearanceXmlUtil::readFloat4( node, "default", param._defaultColor );
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                    param._defaultColor = AppearanceXMLUtil::readFloat4( node, "default", param._defaultColor );
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName      = child.getName();
                     const bool  bHasOption = kind == CustomizationKind::Choice || kind == CustomizationKind::Attachment;
@@ -212,11 +212,11 @@ namespace sw
                     else if ( StringUtil::equals( pName, "Condition", true ) )
                         readCondition( child, inoutSchema, param, report, sourceName );
                     else
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                 }
                 if ( kind == CustomizationKind::Choice || kind == CustomizationKind::Attachment )
                 {
-                    param._defaultOption = AppearanceXmlUtil::readName( node, "default" );
+                    param._defaultOption = AppearanceXMLUtil::readName( node, "default" );
                     if ( param._listOption.empty() )
                         report.addError( "%#: schema '%#' parameter '%#' has no <Option>", sourceName, inoutSchema._id.c_str(), param._name.c_str() );
                     else if ( param._defaultOption.empty() )
@@ -315,33 +315,33 @@ namespace sw
         return nullptr;
     }
 
-    bool CustomizationSchemaCatalog::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool CustomizationSchemaCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode schemaNode = root.findChild(); schemaNode; schemaNode = schemaNode.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode schemaNode = root.findChild(); schemaNode; schemaNode = schemaNode.findNextSibling() )
         {
             if ( StringUtil::equals( schemaNode.getName(), "Schema", true ) == false )
             {
-                AppearanceXmlUtil::reportUnknownChild( root, schemaNode, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, schemaNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXmlUtil::reportUnknownAttributes( schemaNode, CustomizationSchemaInternal::kArrSchemaAttribute, report, sourceName );
+            (void)AppearanceXMLUtil::reportUnknownAttributes( schemaNode, CustomizationSchemaInternal::kArrSchemaAttribute, report, sourceName );
             CustomizationSchemaDef schema;
-            schema._id = AppearanceXmlUtil::readName( schemaNode, "id" );
+            schema._id = AppearanceXMLUtil::readName( schemaNode, "id" );
             if ( schema._id.empty() || findSchema( schema._id ) != nullptr )
             {
                 report.addError( "%#: <Schema> without an id or with a duplicate id '%#'", sourceName, schema._id.c_str() );
                 continue;
             }
-            for ( XmlNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
+            for ( XMLNode paramNode = schemaNode.findChild(); paramNode; paramNode = paramNode.findNextSibling() )
             {
                 CustomizationKind kind = CustomizationKind::Slider;
                 if ( CustomizationSchemaInternal::parseKind( paramNode.getName(), kind ) )
                     CustomizationSchemaInternal::readParameter( paramNode, kind, schema, report, sourceName );
                 else
-                    AppearanceXmlUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );
+                    AppearanceXMLUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );
             }
             // 공유 코드 · 네트워크는 매개변수 이름을 32 비트 해시로 싣는다 — 한 스키마 안에서 겹치면 안 된다.
             for ( size_t lhs = 0; lhs < schema._listParameter.size(); ++lhs )
@@ -445,7 +445,7 @@ namespace sw
                 if ( bInRange == false )
                     return false;
             }
-            else if ( AppearanceXmlUtil::containsName( condition._listOption, pValue->_option ) == false )
+            else if ( AppearanceXMLUtil::containsName( condition._listOption, pValue->_option ) == false )
             {
                 return false;
             }

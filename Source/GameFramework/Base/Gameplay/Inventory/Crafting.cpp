@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 
@@ -19,9 +19,9 @@ namespace sw
     {
         struct CraftingInternal
         {
-            static void readItems( const XmlNode& node, const utf8* pChildName, ItemStackList& outItems )
+            static void readItems( const XMLNode& node, const utf8* pChildName, ItemStackList& outItems )
             {
-                for ( XmlNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
+                for ( XMLNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
                     const utf8* pItem = child.findAttribute( "item" );
                     if ( pItem != nullptr )
@@ -89,12 +89,12 @@ namespace sw
     // RecipeCatalog
     // ------------------------------------------------------------------------------
 
-    uint32 RecipeCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 RecipeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Recipe" ); node; node = node.findNextSibling( "Recipe" ) )
+        for ( XMLNode node = root.findChild( "Recipe" ); node; node = node.findNextSibling( "Recipe" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             RecipeDef recipe;

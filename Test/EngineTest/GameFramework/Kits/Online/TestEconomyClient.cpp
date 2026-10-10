@@ -16,9 +16,9 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
-#include "GameFramework/Kits/Feature/Online/Economy/Shared/Api/EconomyClient.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Shared/API/EconomyClient.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Shared/Catalog/OfferCatalog.h"
 
@@ -59,8 +59,8 @@ namespace
             const uint8 arrMasterKey[LoginTicketAuthority::kMasterKeySize] = { 5, 5, 5 };
             _loginService.initialize( &_store, &_crypto, settings, arrMasterKey );
             _accountServer.initialize( &_loginService, AccountServerSettings{} );
-            SW_EXPECT_TRUE( _currencies.loadFromXmlText( R"(<CurrencyCatalog><Currency id="cur.gold"/></CurrencyCatalog>)", "currency" ) );
-            SW_EXPECT_TRUE( _offers.loadFromXmlText(
+            SW_EXPECT_TRUE( _currencies.loadFromXMLText( R"(<CurrencyCatalog><Currency id="cur.gold"/></CurrencyCatalog>)", "currency" ) );
+            SW_EXPECT_TRUE( _offers.loadFromXMLText(
                 R"(<OfferCatalog><Offer id="potion" maxCount="5"><Price currency="cur.gold" amount="20"/><Grant asset="item.potion" amount="1"/></Offer></OfferCatalog>)",
                 "offer" ) );
             EconomyServiceSettings economySettings;

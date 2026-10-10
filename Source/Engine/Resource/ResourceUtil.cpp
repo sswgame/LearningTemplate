@@ -4,7 +4,7 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -483,9 +483,9 @@ namespace sw
         { return getPackManager().readFile( key, outBytes ); } );
     }
 
-    AsyncReadHandle ResourceUtil::readBinaryResourceAsync( string_view relativePath, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete )
+    AsyncReadHandle ResourceUtil::readBinaryResourceAsync( string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete )
     {
-        AsyncFileIo&    io = engine::getAsyncFileIo();
+        AsyncFileIO&    io = engine::getAsyncFileIO();
         AsyncReadHandle handle;
         // 찾는 순서는 동기 읽기와 같은 함수 하나다 — 두 벌이면 한쪽만 고쳐 동기와 비동기가 다른 파일을 읽는다.
         (void)readResourceCommon(

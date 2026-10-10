@@ -310,7 +310,7 @@ namespace sw
         // 거리 LOD 기준점 = 첫 카메라(스프링 본의 lod_distance).
         const vector<CameraComponent*>& listCamera = pObjects->getCameraRegistry().getAll();
         if ( listCamera.empty() == false )
-            pObjects->getAnimationSystem().setLodViewPosition( listCamera.front()->getCameraPosition() );
+            pObjects->getAnimationSystem().setLODViewPosition( listCamera.front()->getCameraPosition() );
 
         // `-gv_benchAnimate=0` 이면 멈춘 그림(스크린샷 비교) — 시선 목표 · 몸 틀기를 움직이지 않는다.
         const float32 time = ( gv_benchAnimate != 0 ) ? _benchElapsed : 1.0f;

@@ -9,7 +9,7 @@
 - **크래시 보고.** 크래시가 나면 미니덤프와 로그를 남기고, 다음 실행에서 크래시 번들(bundle) 폴더 하나로 모아 플레이어 동의에 따라 보냅니다. 언리얼 CrashReportClient, Sentry, Backtrace와 같은 구조입니다.
 
 두 기능 모두 **플레이어가 동의했을 때만** 데이터를 보냅니다. 기본값은 아무것도 보내지 않는 것입니다.
-그리고 이 저장소에는 실제 네트워크 전송 코드가 없습니다. 보내는 부분은 인터페이스(`IHttpClient`)로만 있고, 게임이 자기 HTTP 클라이언트와 엔드포인트를 넣어야 실제로 전송됩니다.
+그리고 이 저장소에는 실제 네트워크 전송 코드가 없습니다. 보내는 부분은 인터페이스(`IHTTPClient`)로만 있고, 게임이 자기 HTTP 클라이언트와 엔드포인트를 넣어야 실제로 전송됩니다.
 
 엔진 계층으로는 8층입니다. 동의 여부를 사용자 설정(7층)에서 읽습니다.
 
@@ -153,7 +153,7 @@ if ( pTelemetry != nullptr )
 업로드 결과가 `Sent` 면 상태를 `sent` 로 바꾸고 덤프를 지웁니다. 실패하면 시도 수를 늘리고, 3번 실패하면 더 띄우지 않습니다.
 띄울 실행 파일은 `setReporterExecutable` 로 정한 것뿐이고, `EngineLoop` 가 App 경로를 넣습니다. 그래서 테스트 실행 파일은 자기 자신을 다시 띄우지 않습니다.
 
-**업로더.** `HttpCrashReportUploader` 는 `multipart/form-data` 로 `manifest`(JSON)와 파일마다 한 부분을 보냅니다. 덤프의 부분 이름은 `upload_file_minidump` 입니다.
+**업로더.** `HTTPCrashReportUploader` 는 `multipart/form-data` 로 `manifest`(JSON)와 파일마다 한 부분을 보냅니다. 덤프의 부분 이름은 `upload_file_minidump` 입니다.
 Breakpad, Crashpad, Sentry의 미니덤프 엔드포인트가 받는 이름입니다. 이 저장소의 보고 프로세스는 `NullCrashReportUploader` 를 씁니다.
 
 ### 심볼과 빌드 id
@@ -172,9 +172,9 @@ Breakpad, Crashpad, Sentry의 미니덤프 엔드포인트가 받는 이름입�
 
 **실제로 데이터를 보내려면**
 
-1. `IHttpClient` 를 구현합니다. 이 저장소에는 `NullHttpClient`(보내지 않고 거절)만 있습니다. 프레임이 멈추지 않도록 요청을 작업 스레드에 넘기는 비동기 구현이어야 합니다.
-2. 텔레메트리는 `TelemetryService::setUploader` 에 그 클라이언트와 엔드포인트, 키를 가진 `HttpTelemetryUploader` 를 넣습니다.
-3. 크래시 보고는 App 의 헤드리스 분기(`App::initialize`)가 `runReporter` 에 넘기는 업로더를 `HttpCrashReportUploader` 로 바꿉니다.
+1. `IHTTPClient` 를 구현합니다. 이 저장소에는 `NullHTTPClient`(보내지 않고 거절)만 있습니다. 프레임이 멈추지 않도록 요청을 작업 스레드에 넘기는 비동기 구현이어야 합니다.
+2. 텔레메트리는 `TelemetryService::setUploader` 에 그 클라이언트와 엔드포인트, 키를 가진 `HTTPTelemetryUploader` 를 넣습니다.
+3. 크래시 보고는 App 의 헤드리스 분기(`App::initialize`)가 `runReporter` 에 넘기는 업로더를 `HTTPCrashReportUploader` 로 바꿉니다.
 
 **배포 빌드의 심볼을 올리려면** 빌드마다 아래 명령으로 PDB와 `.debug` 를 심볼 서버 배치로 복사하거나, Sentry `sentry-cli debug-files upload` 를 씁니다. 배포물에는 PDB를 넣지 않습니다.
 
@@ -200,7 +200,7 @@ Linux `.debug` 는 `.build-id/<앞 2자리>/<나머지>.debug` 배치로 복사�
 |---|---|
 | `TelemetrySchema.h` | 스키마 형식과 파이프라인 설정 |
 | `TelemetryService.h` | 엔진 서비스. 동의, 배치, 스풀, 장면 요약 |
-| `TelemetryUploader.h`, `Observability/HttpClient.h` | 업로더와 HTTP 인터페이스(HTTP 는 운영 끝점과 같이 `Observability` 에 있다) |
+| `TelemetryUploader.h`, `Observability/HTTPClient.h` | 업로더와 HTTP 인터페이스(HTTP 는 운영 끝점과 같이 `Observability` 에 있다) |
 | `CrashReportService.h` | 크래시 번들 만들기, 동의, 보고 프로세스 |
 | `CrashReportUploader.h` | 크래시 업로더 |
 | `Core/Diagnostics/CrashHandler.h` | 크래시 순간에 파일을 쓰는 쪽 |

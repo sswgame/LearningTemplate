@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -17,13 +17,13 @@ namespace sw
     {
         struct WesternCatalogInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pAttribute )
+            static hashed_string readName( const XMLNode& node, const utf8* pAttribute )
             {
                 const utf8* pText = node.findAttribute( pAttribute );
                 return pText != nullptr && pText[0] != '\0' ? hashed_string( pText ) : hashed_string{};
             }
 
-            static uint8 readFlag( const XmlNode& node, const utf8* pAttribute, bool bFallback )
+            static uint8 readFlag( const XMLNode& node, const utf8* pAttribute, bool bFallback )
             {
                 return node.getAttributeBool( pAttribute, bFallback ) ? SW_TRUE : SW_FALSE;
             }
@@ -31,7 +31,7 @@ namespace sw
             static uint8 parseSizeMask( string_view text )
             {
                 uint8 mask = 0;
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, string_view( "Small" ), true ) )
                         mask |= 1u << static_cast<uint32>( WesternAnimalSize::Small );
@@ -124,14 +124,14 @@ namespace sw
         return _listGradeScale[index];
     }
 
-    uint32 WesternCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 WesternCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         const hashed_string currency = WesternCatalogInternal::readName( root, "currency" );
         if ( currency.empty() == false )
             _currency = currency;
         _extraHitPenalty   = MathUtil::max( 0, root.getAttributeInt( "extraHitPenalty", _extraHitPenalty ) );
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             if ( StringUtil::equals( name, string_view( "Pursuit" ), true ) )
@@ -160,7 +160,7 @@ namespace sw
                 bond._staminaBonus = node.getAttributeFloat( "stamina", 0.0f );
                 bond._healthBonus  = node.getAttributeFloat( "health", 0.0f );
                 bond._fearResist   = node.getAttributeFloat( "fearResist", 0.0f );
-                GameDataXml::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&]( string_view token )
                 { bond._listUnlock.push_back( hashed_string( token ) ); } );
                 _listBondLevel.push_back( bond );
                 ++loadedCount;
@@ -206,7 +206,7 @@ namespace sw
             if ( StringUtil::equals( name, string_view( "PeltGrade" ), true ) )
             {
                 float32      arrScale[4] = { 0.0f, 0.3f, 0.6f, 1.0f };
-                const uint32 count       = GameDataXml::parseFloats( node.getAttributeText( "scales" ), arrScale, 4 );
+                const uint32 count       = GameDataXML::parseFloats( node.getAttributeText( "scales" ), arrScale, 4 );
                 if ( count < 4 )
                     SW_LOG_WARNING( "%#: <PeltGrade> needs four scales (0..3 stars) - missing ones keep the default", sourceName );
                 _listGradeScale.assign( arrScale, arrScale + 4 );
@@ -222,7 +222,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             const hashed_string id( pId );
@@ -332,7 +332,7 @@ namespace sw
         return loadedCount;
     }
 
-    void WesternCatalog::loadHonor( const XmlNode& node )
+    void WesternCatalog::loadHonor( const XMLNode& node )
     {
         FactionDef faction;
         faction._id         = hashed_string( kHonorFactionId );
@@ -341,7 +341,7 @@ namespace sw
         faction._maxValue   = MathUtil::max( faction._minValue, node.getAttributeInt( "max", faction._maxValue ) );
         faction._startValue = MathUtil::clamp( node.getAttributeInt( "start", 0 ), faction._minValue, faction._maxValue );
         _listHonorTier.clear();
-        for ( XmlNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
+        for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
         {
             ReputationTier tier;
             tier._name     = WesternCatalogInternal::readName( child, "name" );
@@ -355,7 +355,7 @@ namespace sw
         }
         std::stable_sort( faction._listTier.begin(), faction._listTier.end(), []( const ReputationTier& lhs, const ReputationTier& rhs )
         { return lhs._minValue < rhs._minValue; } );
-        for ( XmlNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
+        for ( XMLNode child = node.findChild( "Action" ); child; child = child.findNextSibling( "Action" ) )
         {
             const utf8* pId = child.findAttribute( "id" );
             if ( pId == nullptr || pId[0] == '\0' )

@@ -15,8 +15,8 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
-#include "Engine/Serialization/Json/ConfigKeyDoc.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/ConfigKeyDoc.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -66,16 +66,16 @@ namespace sw
         _arrTagCounterSlot.fill( FrameProfiler::kInvalidSlot );
     }
 
-    bool MemoryBudgetMonitor::applyBudgetJson( string_view jsonText, MemoryProfiler& profiler, string& outError )
+    bool MemoryBudgetMonitor::applyBudgetJSON( string_view jsonText, MemoryProfiler& profiler, string& outError )
     {
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( jsonText, "MemoryBudget" ) == false )
         {
             outError = document.getLastError();
             return false;
         }
 
-        const JsonValue root = document.getRoot();
+        const JSONValue root = document.getRoot();
         string          unknownKey;
         if ( root.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( root, kArrMemoryBudgetRootKeyDoc, "MemoryBudget", &unknownKey ) == false )
         {
@@ -83,7 +83,7 @@ namespace sw
             return false;
         }
 
-        const JsonValue list = root.get( "_listBudget" );
+        const JSONValue list = root.get( "_listBudget" );
         if ( list.isValid() && list.isArray() == false )
         {
             outError = "_listBudget must be an array";
@@ -95,7 +95,7 @@ namespace sw
         const size_t                   entryCount = list.isValid() ? list.size() : 0;
         for ( size_t index = 0; index < entryCount; ++index )
         {
-            const JsonValue entry = list.at( index );
+            const JSONValue entry = list.at( index );
             if ( entry.isObject() == false || ConfigKeyDocUtil::hasOnlyKnownKeys( entry, kArrMemoryBudgetEntryKeyDoc, "MemoryBudget entry", &unknownKey ) == false )
             {
                 outError = "budget entry " + to_string( index ) + ( entry.isObject() ? ": unknown key '" + unknownKey + "'" : string( " is not an object" ) );
@@ -108,7 +108,7 @@ namespace sw
                 outError = "budget entry " + to_string( index ) + ": unknown memory tag '" + tagName + "'";
                 return false;
             }
-            const JsonValue megabytes = entry.get( "_megabytes" );
+            const JSONValue megabytes = entry.get( "_megabytes" );
             if ( megabytes.isNumber() == false || megabytes.asFloat() <= 0.0 )
             {
                 outError = "budget entry " + to_string( index ) + " (" + tagName + "): _megabytes must be a positive number";
@@ -143,7 +143,7 @@ namespace sw
             return false;
         }
         string error;
-        if ( applyBudgetJson( text, *pProfiler, error ) == false )
+        if ( applyBudgetJSON( text, *pProfiler, error ) == false )
         {
             SW_LOG_ERROR( "Invalid memory budget file '%#': %#", absolutePath, error.c_str() );
             return false;

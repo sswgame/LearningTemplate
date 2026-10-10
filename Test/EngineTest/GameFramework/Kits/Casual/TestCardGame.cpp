@@ -757,7 +757,7 @@ SW_TEST_CASE( CardGameTest, UnoSkipReverseDrawFourUnoPenaltyAndStacking )
 
 SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuffle )
 {
-    constexpr const utf8* kDeckXml = R"(
+    constexpr const utf8* kDeckXML = R"(
 <DeckBattleCatalog>
   <Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
   <Card id="defend" name="Defend" cost="1" effects="Block:5"/>
@@ -765,7 +765,7 @@ SW_TEST_CASE( CardGameTest, DeckBattlePlaysATurnWithEnergyBlockExhaustAndReshuff
 </DeckBattleCatalog>
 )";
     DeckBattleCatalog     catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kDeckXml, "CardGameTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kDeckXML, "CardGameTest" ) );
     SW_EXPECT_EQUAL( catalog.getCount(), 3 );
     SW_ASSERT_NOT_NULL( catalog.findCard( "prepare" ) );
     SW_EXPECT_EQUAL( static_cast<int32>( catalog.findCard( "prepare" )->_listEffect.size() ), 2 );
@@ -954,14 +954,14 @@ SW_TEST_CASE( CardGameTest, StateRoundTripContinuesTheSameTables )
     SW_EXPECT_EQUAL( 108 - 28 - 1, truncatedUno.getDrawPile().getCount() );
 
     // 덱 빌딩 전투 — 한 장 쓰고 턴을 넘겼다. 카드 번호 → 정의는 id 로 실려 읽는 쪽 카탈로그에서 찾는다.
-    constexpr const utf8* kDeckXml = R"(
+    constexpr const utf8* kDeckXML = R"(
 <DeckBattleCatalog>
   <Card id="strike" name="Strike" cost="1" effects="Damage:6"/>
   <Card id="defend" name="Defend" cost="1" effects="Block:5"/>
 </DeckBattleCatalog>
 )";
     DeckBattleCatalog     catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kDeckXml, "CardGameTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kDeckXML, "CardGameTest" ) );
     DeckBattleEnemy enemy;
     enemy._hp         = 40;
     enemy._listIntent = {

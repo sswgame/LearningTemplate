@@ -12,7 +12,7 @@
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @class ExperienceCurve
@@ -27,8 +27,8 @@ namespace sw
 
         void               setFormula( float32 base, float32 exponent, float32 linear, int32 maxLevel );
         void               setTable( const vector<int64>& listXpToNext );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
-        void               loadFromNode( const XmlNode& node );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
+        void               loadFromNode( const XMLNode& node );
 
         /** @brief @p level 에서 다음 레벨까지입니다. 최고 레벨이면 0 입니다. */
         int64 getXpToNext( int32 level ) const;

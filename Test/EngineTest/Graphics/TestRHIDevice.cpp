@@ -28,7 +28,7 @@ SW_TEST_REQUIRES_HOST( RHIDeviceTest, "creates real GPU devices on every backend
 namespace
 {
     /** @brief `VSMain` · `PSMain` 이 한 파일에 있는 셰이더로 RGBA8 렌더타깃 하나에 그리는 PSO 서술입니다. */
-    sw::RHIPipelineStateDesc makeSingleTargetPsoDesc( const utf8* pShaderPath )
+    sw::RHIPipelineStateDesc makeSingleTargetPSODesc( const utf8* pShaderPath )
     {
         sw::RHIPipelineStateDesc psoDesc{};
         psoDesc._vertexShaderPath = pShaderPath;
@@ -377,7 +377,7 @@ SW_TEST_CASE( RHIDeviceTest, UnifiedPipelineStateAndRenderPassAllBackends )
             continue;
         }
 
-        sw::RHIPipelineStateHandle pso = device->getResourceFactory()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        sw::RHIPipelineStateHandle pso = device->getResourceFactory()->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             // Present 없는 오프스크린 경로로 파이프라인 검증 (실패해도 RP/PSO create는 유효).
@@ -431,7 +431,7 @@ SW_TEST_CASE( RHIDeviceTest, BindlessResourceLifecycle )
     SW_EXPECT_TRUE( rhiDevice->getCapabilities()._bOffscreenRT != SW_FALSE );
     SW_EXPECT_TRUE( executeOffscreenPipelineSmoke( *rhiDevice, 0 ) == false ); // pso==0 → false
     {
-        const sw::RHIPipelineStateHandle pso = rhiDevice->getResourceFactory()->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = rhiDevice->getResourceFactory()->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         if ( pso != 0 )
         {
             const bool bSmoke = executeOffscreenPipelineSmoke( *rhiDevice, pso, descIdx );
@@ -780,7 +780,7 @@ SW_TEST_CASE( RHIDeviceTest, OffscreenDrawIsReadable )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
 
         if ( pso != 0 )
         {
@@ -836,7 +836,7 @@ SW_TEST_CASE( RHIDeviceTest, CommandListConstantBufferUpdateReachesItsDraws )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, ( label + "PSO 를 만들지 못했다" ).c_str() );
         if ( pso != 0 )
         {
@@ -885,7 +885,7 @@ SW_TEST_CASE( RHIDeviceTest, WriteOnceConstantBufferReachesEveryFrameSlot )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         SW_ASSERT_TRUE( cbIndex != sw::kInvalidDescriptorIndex );
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_ASSERT_TRUE( pso != 0 );
 
         const sw::RHITextureDesc   desc = makeOffscreenTargetDesc( 32, 32 );
@@ -952,7 +952,7 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
     {
         sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         if ( pso != 0 )
@@ -1012,7 +1012,7 @@ SW_TEST_CASE( RHIDeviceTest, SceneDrawVertexIdStartsAtZeroOnlyOnD3D )
             continue;
         sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/provokingvertex.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "common/shaders/provokingvertex.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         // 간접 레코드 하나 — startVertex 36. 정점 버퍼는 풀스크린 폴백(정점 3개)이라 위치는 SV_VertexID 로만 만든다.
@@ -1104,7 +1104,7 @@ SW_TEST_CASE( RHIDeviceTest, IndexedIndirectDrawReadsInstanceSlotStream )
     {
         sw::IRHIResourceFactory* pResource = device->getResourceFactory();
 
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/instanceslotprobe.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "common/shaders/instanceslotprobe.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, device->getBackendName() );
 
         // 정점 셋(위치는 셰이더가 SV_VertexID 로 만든다) · 인덱스 0 1 2 · 슬롯 스트림(값 7 하나) · 간접 인자 하나.
@@ -1201,7 +1201,7 @@ SW_TEST_CASE( RHIDeviceTest, DestroyedVertexBufferSkipsTheDrawAndReportsIt )
         const sw::string         backend   = device->getBackendName();
 
         // 위치는 셰이더가 SV_VertexID 로 만든다 — 정점 버퍼가 풀리지 않아도 드로우가 나가면 픽셀이 칠해진다.
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "common/shaders/instanceslotprobe.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "common/shaders/instanceslotprobe.hlsl" ) );
         SW_EXPECT_TRUE_MSG( pso != 0, backend.c_str() );
 
         const sw::RHIVertex       arrVertex[3]{};
@@ -1753,7 +1753,7 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
         const sw::RHIDescriptorIndex cbIndex = pResource->registerBindlessResource( cb );
         const sw::RHIBufferHandle    vb      = pResource->createVertexBuffer( arrVertex, static_cast<uint32>( sizeof( arrVertex ) ) );
 
-        sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" );
+        sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" );
         psoDesc._depthStencilFormat          = sw::RHIFormat::D24_UNORM_S8_UINT;
         psoDesc._bEnableDepthTest            = SW_TRUE;
         psoDesc._bEnableDepthWrite           = SW_TRUE;
@@ -2313,7 +2313,7 @@ SW_TEST_CASE( RHIDeviceTest, PremultipliedBlendAddsColorWithoutAlphaMultiply )
 
         for ( uint32 premultiplied = 0; premultiplied < 2; ++premultiplied )
         {
-            sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" );
+            sw::RHIPipelineStateDesc psoDesc     = makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" );
             psoDesc._bEnableBlend                = SW_TRUE;
             psoDesc._bPremultipliedAlpha         = premultiplied == 1 ? SW_TRUE : SW_FALSE;
             const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( psoDesc );
@@ -2375,7 +2375,7 @@ SW_TEST_CASE( RHIDeviceTest, ScissorRectClipsDrawsAndResetsWithViewport )
         const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
         FullscreenDrawProbe      probe;
         SW_ASSERT_TRUE( probe.initialize( *device, arrRed ) );
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_ASSERT_TRUE( pso != 0 );
 
         const sw::RHITextureDesc desc = makeOffscreenTargetDesc( kSize, kSize );
@@ -2477,7 +2477,7 @@ SW_TEST_CASE( RHIDeviceTest, LoadOpKeepsSingleOffscreenTarget )
         const sw::string         label     = sw::string( device->getBackendName() ) + ": ";
         FullscreenDrawProbe      probe;
         SW_ASSERT_TRUE( probe.initialize( *device, arrRed ) );
-        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPsoDesc( "engine/shaders/fullscreentriangle.hlsl" ) );
+        const sw::RHIPipelineStateHandle pso = pResource->createPipelineState( makeSingleTargetPSODesc( "engine/shaders/fullscreentriangle.hlsl" ) );
         SW_ASSERT_TRUE( pso != 0 );
         const sw::RHITextureDesc   desc   = makeOffscreenTargetDesc( kSize, kSize );
         const sw::RHITextureHandle target = pResource->createTexture2D( desc );

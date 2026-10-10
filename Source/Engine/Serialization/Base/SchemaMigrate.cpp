@@ -34,7 +34,7 @@ namespace sw
                 return true;
             }
 
-            static string_view stripJsonQuotes( string_view text )
+            static string_view stripJSONQuotes( string_view text )
             {
                 if ( text.size() >= 2 && text.front() == '"' && text.back() == '"' )
                 {
@@ -604,7 +604,7 @@ namespace sw
         if ( pValPtr == nullptr )
             return false;
 
-        const string_view stripped = SchemaMigrateInternal::stripJsonQuotes( valStr );
+        const string_view stripped = SchemaMigrateInternal::stripJSONQuotes( valStr );
         if ( SerializerUtil::parseTextValue( pValPtr, typeName, valStr, ctx ) )
             return true;
         if ( stripped.data() != valStr.data() || stripped.size() != valStr.size() )

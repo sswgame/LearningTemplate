@@ -99,7 +99,7 @@ namespace sw
         outLayout._chunkCells  = chunkCells;
         outLayout._chunkCountX = ( resolution - 1 ) / chunkCells;
         outLayout._chunkCountZ = outLayout._chunkCountX;
-        outLayout._maxLod      = MathUtil::countTrailingZeros( static_cast<uint64>( chunkCells ) );
+        outLayout._maxLOD      = MathUtil::countTrailingZeros( static_cast<uint64>( chunkCells ) );
         return true;
     }
 
@@ -131,13 +131,13 @@ namespace sw
         return MathUtil::sqrt( halfX * halfX + halfZ * halfZ + maxVertical * maxVertical );
     }
 
-    uint32 TerrainMeshBuilder::selectLod( float32 distance, float32 lodDistance, uint32 maxLod )
+    uint32 TerrainMeshBuilder::selectLOD( float32 distance, float32 lodDistance, uint32 maxLOD )
     {
         if ( lodDistance <= 0.0f )
             return 0;
         uint32  lod       = 0;
         float32 threshold = lodDistance;
-        while ( lod < maxLod && distance >= threshold )
+        while ( lod < maxLOD && distance >= threshold )
         {
             ++lod;
             threshold *= 2.0f;
@@ -146,19 +146,19 @@ namespace sw
     }
 
     void TerrainMeshBuilder::buildChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                                 const uint32 ( &arrNeighborLod )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex )
+                                                 const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex )
     {
         using Internal = TerrainMeshBuilderInternal;
         outListVertex.clear();
         if ( heightfield.isValid() == false || layout._chunkCells == 0 )
             return;
-        lod               = MathUtil::min( lod, layout._maxLod );
+        lod               = MathUtil::min( lod, layout._maxLOD );
         const uint32 step = 1u << lod;
         // 변마다 접는 간격(기본 칸 단위). 이웃이 더 고우면 그쪽이 이쪽에 맞춰 접으므로 이쪽은 자기 간격이다.
         uint32 arrSideStep[4]{};
         for ( uint32 side = 0; side < 4; ++side )
         {
-            arrSideStep[side] = 1u << MathUtil::max( lod, MathUtil::min( arrNeighborLod[side], layout._maxLod ) );
+            arrSideStep[side] = 1u << MathUtil::max( lod, MathUtil::min( arrNeighborLOD[side], layout._maxLOD ) );
         }
 
         const float3 translation = computeChunkTranslation( heightfield, layout, chunkX, chunkZ );

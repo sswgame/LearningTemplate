@@ -354,7 +354,7 @@ namespace sw
             return false;
         doc._sourcePath = outPath;
 
-        if ( doc.saveXml( outPath ) == false )
+        if ( doc.saveXML( outPath ) == false )
             return false;
 
         pScene->setSourcePath( outPath );

@@ -4,7 +4,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -18,13 +18,13 @@ namespace sw
             SW_LOG_ERROR( "Audio event library not found: %#", resourcePath );
             return false;
         }
-        return loadFromXmlText( text, resourcePath );
+        return loadFromXMLText( text, resourcePath );
     }
 
-    bool AudioEventLibrary::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool AudioEventLibrary::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = AudioEventLibrary{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "%#: audio event library could not be read or holds unknown keys / values", sourceName );
             return false;

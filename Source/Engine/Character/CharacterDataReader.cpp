@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
     {
     }
 
-    bool CharacterDataReader::parseRoot( XmlDocument& outDocument, string_view xmlText, const utf8* pRootName, XmlNode& outRoot )
+    bool CharacterDataReader::parseRoot( XMLDocument& outDocument, string_view xmlText, const utf8* pRootName, XMLNode& outRoot )
     {
         if ( outDocument.parse( xmlText, _sourceName ) == false )
         {
@@ -36,7 +36,7 @@ namespace sw
         return true;
     }
 
-    bool CharacterDataReader::loadRoot( XmlDocument& outDocument, string_view path, const utf8* pRootName, XmlNode& outRoot )
+    bool CharacterDataReader::loadRoot( XMLDocument& outDocument, string_view path, const utf8* pRootName, XMLNode& outRoot )
     {
         if ( outDocument.loadPath( path ) == false )
         {
@@ -52,7 +52,7 @@ namespace sw
         return true;
     }
 
-    void CharacterDataReader::addError( const XmlNode& node, string_view message )
+    void CharacterDataReader::addError( const XMLNode& node, string_view message )
     {
         string text = _sourceName;
         text += ": <";
@@ -70,22 +70,22 @@ namespace sw
         _listError.push_back( std::move( text ) );
     }
 
-    void CharacterDataReader::reportUnknownAttributes( const XmlNode& node, const utf8* const* ppKnown, size_t knownCount )
+    void CharacterDataReader::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, size_t knownCount )
     {
         vector<const utf8*> listUnknown;
-        (void)XmlNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
+        (void)XMLNameCheck::collectUnknownAttributes( node, ppKnown, static_cast<uint32>( knownCount ), listUnknown ); // 수는 목록이 말한다
         for ( const utf8* pName : listUnknown )
         {
             addError( node, string( "has unknown attribute '" ) + pName + "'" );
         }
     }
 
-    void CharacterDataReader::reportUnknownElement( const XmlNode& node )
+    void CharacterDataReader::reportUnknownElement( const XMLNode& node )
     {
         addError( node, "is not a known element here" );
     }
 
-    float32 CharacterDataReader::readFloat( const XmlNode& node, const utf8* pName, float32 fallback )
+    float32 CharacterDataReader::readFloat( const XMLNode& node, const utf8* pName, float32 fallback )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
@@ -99,7 +99,7 @@ namespace sw
         return value;
     }
 
-    int32 CharacterDataReader::readInt( const XmlNode& node, const utf8* pName, int32 fallback )
+    int32 CharacterDataReader::readInt( const XMLNode& node, const utf8* pName, int32 fallback )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
@@ -113,7 +113,7 @@ namespace sw
         return value;
     }
 
-    bool CharacterDataReader::readBool( const XmlNode& node, const utf8* pName, bool fallback )
+    bool CharacterDataReader::readBool( const XMLNode& node, const utf8* pName, bool fallback )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
@@ -127,7 +127,7 @@ namespace sw
         return value;
     }
 
-    float3 CharacterDataReader::readFloat3( const XmlNode& node, const utf8* pName, const float3& fallback )
+    float3 CharacterDataReader::readFloat3( const XMLNode& node, const utf8* pName, const float3& fallback )
     {
         const utf8* pText = node.findAttribute( pName );
         if ( pText == nullptr )
@@ -148,7 +148,7 @@ namespace sw
         return value;
     }
 
-    quaternion CharacterDataReader::readRotation( const XmlNode& node, const utf8* pName, const quaternion& fallback )
+    quaternion CharacterDataReader::readRotation( const XMLNode& node, const utf8* pName, const quaternion& fallback )
     {
         if ( hasAttribute( node, pName ) == false )
             return fallback;
@@ -156,7 +156,7 @@ namespace sw
         return quaternion::createFromYawPitchRoll( degrees * MathUtil::kDegreeToRadian );
     }
 
-    hashed_string CharacterDataReader::readName( const XmlNode& node, const utf8* pName, bool bRequired )
+    hashed_string CharacterDataReader::readName( const XMLNode& node, const utf8* pName, bool bRequired )
     {
         const string_view text = StringUtil::trim( node.getAttributeText( pName ) );
         if ( text.empty() )
@@ -168,7 +168,7 @@ namespace sw
         return hashed_string( text );
     }
 
-    void CharacterDataReader::readNameList( const XmlNode& node, const utf8* pName, vector<hashed_string>& outListName )
+    void CharacterDataReader::readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )
     {
         outListName.clear();
         vector<string_view> listToken;

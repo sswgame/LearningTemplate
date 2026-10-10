@@ -12,7 +12,7 @@
 
 namespace
 {
-    /** @brief 이름 붙은 애니메이션이 없는 클립 파일입니다 — 쓰는 쪽(`SpriteClipAsset::toJson`)은 빈 목록이면 "animations" 키를 쓰지 않습니다. */
+    /** @brief 이름 붙은 애니메이션이 없는 클립 파일입니다 — 쓰는 쪽(`SpriteClipAsset::toJSON`)은 빈 목록이면 "animations" 키를 쓰지 않습니다. */
     constexpr const utf8* kClipWithoutAnimations = R"({
   "atlas": "game/empty/textures/hero.dds",
   "frames": [
@@ -34,7 +34,7 @@ namespace
 SW_TEST_CASE( SpriteClipAssetTest, ClipWithoutAnimationsReadsAsOneWholeClipAnimation )
 {
     sw::SpriteClipAsset clip;
-    SW_ASSERT_TRUE( clip.parseJson( kClipWithoutAnimations ) );
+    SW_ASSERT_TRUE( clip.parseJSON( kClipWithoutAnimations ) );
     SW_EXPECT_STREQ( "game/empty/textures/hero.dds", clip._atlasPath.c_str() );
     SW_ASSERT_EQUAL( 3, clip.getFrameCount() );
     SW_EXPECT_NEAR_EQUAL( 0.25f, clip._listFrame[1]._uvRect._x, 1e-6f );
@@ -59,10 +59,10 @@ SW_TEST_CASE( SpriteClipAssetTest, ClipWithoutAnimationsReadsAsOneWholeClipAnima
     SW_EXPECT_NEAR_EQUAL( 0.5f, clip.getFrameDurationSeconds( 9, 0.5f ), 1e-6f );
 
     // 다시 쓰고 읽어도 같다. 애니메이션이 없으면 키를 쓰지 않는다.
-    const sw::string written = clip.toJson();
+    const sw::string written = clip.toJSON();
     SW_EXPECT_TRUE( written.find( "animations" ) == sw::string::npos );
     sw::SpriteClipAsset reread;
-    SW_ASSERT_TRUE( reread.parseJson( written ) );
+    SW_ASSERT_TRUE( reread.parseJSON( written ) );
     SW_EXPECT_EQUAL( clip.getFrameCount(), reread.getFrameCount() );
     SW_EXPECT_STREQ( clip._atlasPath.c_str(), reread._atlasPath.c_str() );
     SW_EXPECT_EQUAL( clip._listFrame[2]._durationMs, reread._listFrame[2]._durationMs );
@@ -89,7 +89,7 @@ SW_TEST_CASE( SpriteClipAssetTest, NamedAnimationsRoundTripAndOutOfRangeIsClampe
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "an animation range past the last frame is clamped and reported" );
-        SW_ASSERT_TRUE( clip.parseJson( kClip ) );
+        SW_ASSERT_TRUE( clip.parseJSON( kClip ) );
     }
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "clamped or dropped" ) );
     // 키가 빠진 프레임 칸은 구조체 기본값이다(시간 0 = 프레임 속도).
@@ -105,7 +105,7 @@ SW_TEST_CASE( SpriteClipAssetTest, NamedAnimationsRoundTripAndOutOfRangeIsClampe
     SW_EXPECT_FALSE( clip.findFrameRange( "missing", range ) ); // 이름 붙은 것이 있으면 모르는 이름은 없다
 
     sw::SpriteClipAsset reread;
-    SW_ASSERT_TRUE( reread.parseJson( clip.toJson() ) );
+    SW_ASSERT_TRUE( reread.parseJSON( clip.toJSON() ) );
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( reread._listAnimation.size() ) );
     SW_EXPECT_STREQ( "attack", reread._listAnimation[1]._name.c_str() );
     SW_EXPECT_EQUAL( 2, reread._listAnimation[1]._frameCount );
@@ -119,8 +119,8 @@ SW_TEST_CASE( SpriteClipAssetTest, MalformedTextIsRejected )
 {
     test::ScopedDefensiveTestLog expected( "malformed sprite clips are rejected" );
     sw::SpriteClipAsset          clip;
-    SW_EXPECT_FALSE( clip.parseJson( "<<< merge conflict { not json" ) );
-    SW_EXPECT_FALSE( clip.parseJson( "[ 1, 2, 3 ]" ) );
+    SW_EXPECT_FALSE( clip.parseJSON( "<<< merge conflict { not json" ) );
+    SW_EXPECT_FALSE( clip.parseJSON( "[ 1, 2, 3 ]" ) );
     SW_EXPECT_EQUAL( 0, clip.getFrameCount() );
 }
 
@@ -143,7 +143,7 @@ SW_TEST_CASE( SpriteClipAssetTest, CacheSharesOneClipPerPath )
     first.reset();
     second.reset();
     sw::SpriteClipAsset edited;
-    SW_ASSERT_TRUE( edited.parseJson( kClipWithoutAnimations ) );
+    SW_ASSERT_TRUE( edited.parseJSON( kClipWithoutAnimations ) );
     edited._listFrame.pop_back();
     SW_ASSERT_TRUE( edited.saveToFile( path ) );
     sw::shared_ptr<const sw::SpriteClipAsset> reloaded = sw::SpriteClipCache::acquire( path );
@@ -171,22 +171,22 @@ SW_TEST_CASE( SpriteClipAssetTest, SliceBorderRoundTripsPerFrame )
   "transformKeys": []
 })";
     sw::SpriteClipAsset   clip;
-    SW_ASSERT_TRUE( clip.parseJson( kBorderClip ) );
+    SW_ASSERT_TRUE( clip.parseJSON( kBorderClip ) );
     SW_ASSERT_EQUAL( 2, clip.getFrameCount() );
     SW_EXPECT_TRUE( clip._listFrame[0].hasBorder() );
     SW_EXPECT_NEAR_EQUAL( 0.125f, clip._listFrame[0]._border._x, 1e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.5f, clip._listFrame[0]._border._w, 1e-6f );
     SW_EXPECT_FALSE( clip._listFrame[1].hasBorder() );
 
-    const sw::string written = clip.toJson();
+    const sw::string written = clip.toJSON();
     SW_EXPECT_TRUE( written.find( "border" ) == written.rfind( "border" ) ); // 테두리가 있는 프레임 하나만 키를 쓴다
     sw::SpriteClipAsset reread;
-    SW_ASSERT_TRUE( reread.parseJson( written ) );
+    SW_ASSERT_TRUE( reread.parseJSON( written ) );
     SW_EXPECT_NEAR_EQUAL( 0.375f, reread._listFrame[0]._border._z, 1e-6f );
     SW_EXPECT_FALSE( reread._listFrame[1].hasBorder() );
 
     SW_TEST_DEFENSIVE_SCOPE( "a border that is not four numbers is a data error" );
     sw::SpriteClipAsset malformed;
-    SW_ASSERT_TRUE( malformed.parseJson( R"({ "atlas": "a.dds", "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [0.1, 0.2] } ] })" ) );
+    SW_ASSERT_TRUE( malformed.parseJSON( R"({ "atlas": "a.dds", "frames": [ { "u": 0, "v": 0, "w": 1, "h": 1, "border": [0.1, 0.2] } ] })" ) );
     SW_EXPECT_FALSE( malformed._listFrame[0].hasBorder() );
 }

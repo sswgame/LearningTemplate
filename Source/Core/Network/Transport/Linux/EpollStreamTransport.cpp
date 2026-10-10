@@ -121,7 +121,7 @@ namespace sw
         vector<uint8>                       _receiveScratchBytes; ///< 읽기 버퍼 — 루프마다 한 칸(루프 수 × `_receiveChunkBytes`, getScratch)
         StreamTransportSettings             _settings{};
         IStreamHandler*                     _pHandler{ nullptr };
-        int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIo` 로 도는 루프 0 의 다음 시한 훑기
+        int64                               _manualNextSweepNanoseconds{ 0 }; ///< `pollIO` 로 도는 루프 0 의 다음 시한 훑기
         int32                               _listenFd{ -1 };
         atomic<uint32>                      _nextLoop{ 0 };
         atomic<int32>                       _openCount{ 0 };
@@ -592,7 +592,7 @@ namespace sw
 
         void runThread( int32 loopIndex )
         {
-            ThreadName::setCurrentThreadName( "StreamIo" );
+            ThreadName::setCurrentThreadName( "StreamIO" );
             int64 nextSweep = 0;
             while ( _bStopping.load( std::memory_order_acquire ) == false || _openCount.load( std::memory_order_acquire ) > 0 )
             {
@@ -821,7 +821,7 @@ namespace sw
             _state->scheduleCommand( pConnection->_loopIndex, handle._index ); // 에지 트리거 — 멈춘 동안 온 것은 다시 알리지 않으니 루프가 읽는다
     }
 
-    int32 EpollStreamTransport::pollIo( int32 timeoutMilli )
+    int32 EpollStreamTransport::pollIO( int32 timeoutMilli )
     {
         if ( _state->_bInitialized == SW_FALSE || _state->_bThreaded == SW_TRUE )
             return 0;

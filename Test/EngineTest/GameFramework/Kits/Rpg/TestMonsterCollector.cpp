@@ -17,7 +17,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kMonsterChartXml = R"(
+    constexpr const utf8* kMonsterChartXML = R"(
 <ElementChart>
   <Element id="Normal"/><Element id="Fire"/><Element id="Water"/><Element id="Grass"/>
   <Element id="Electric"/><Element id="Ground"/><Element id="Flying"/><Element id="Rock"/>
@@ -34,7 +34,7 @@ namespace
 </ElementChart>
 )";
 
-    constexpr const utf8* kMonsterCatalogXml = R"(
+    constexpr const utf8* kMonsterCatalogXML = R"(
 <MonsterCollectorCatalog>
   <Move id="tackle" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
   <Move id="scratch" type="Normal" category="Physical" power="40" accuracy="100" pp="35"/>
@@ -92,7 +92,7 @@ namespace
 
         bool initialize()
         {
-            return _chart.loadFromXmlText( kMonsterChartXml, "MonsterCollectorTest" ) && _catalog.loadFromXmlText( kMonsterCatalogXml, "MonsterCollectorTest" );
+            return _chart.loadFromXMLText( kMonsterChartXML, "MonsterCollectorTest" ) && _catalog.loadFromXMLText( kMonsterCatalogXML, "MonsterCollectorTest" );
         }
 
         /** @brief 개체값 0 · 무보정 성격 · 정한 기술로 개체를 만듭니다(능력치를 손으로 셀 수 있게). */
@@ -159,7 +159,7 @@ namespace
  */
 SW_TEST_CASE( MonsterCollectorTest, NatureWithAnUnknownStatIsSkippedAndReported )
 {
-    constexpr const utf8*    kXml = R"(
+    constexpr const utf8*    kXML = R"(
 <MonsterCollectorCatalog>
   <Nature id="Brave" up="Atack" down="Speed"/>
   <Nature id="Calm" up="SpecialDefense" down="Attack"/>
@@ -170,7 +170,7 @@ SW_TEST_CASE( MonsterCollectorTest, NatureWithAnUnknownStatIsSkippedAndReported 
     test::ScopedLogCollector collector;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a nature naming an unknown stat is skipped with a warning" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kXml, "MonsterCollectorTest" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kXML, "MonsterCollectorTest" ) );
     }
     SW_EXPECT_TRUE( catalog.findNature( hashed_string( "Brave" ) ) == nullptr );
     SW_EXPECT_TRUE_MSG( collector.countContaining( "Brave" ) > 0, collector.joined().c_str() );

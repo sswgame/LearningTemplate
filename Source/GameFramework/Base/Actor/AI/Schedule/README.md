@@ -59,7 +59,7 @@ schedules.setPathing( &areaPathing, &navPathing );           // 굵은 계획 �
 schedules.setFlags( &flags );
 // 매 프레임
 schedules.setWeather( weather.getCurrent() );
-schedules.setNpcLod( npcIndex, bVisible ? ScheduleLod::Near : ScheduleLod::Far );
+schedules.setNpcLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
 schedules.update( clock );
 const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 위치, 활동, 애니메이션
 ```

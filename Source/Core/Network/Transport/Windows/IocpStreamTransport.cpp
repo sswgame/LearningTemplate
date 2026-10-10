@@ -640,7 +640,7 @@ namespace sw
 
         void runThread()
         {
-            ThreadName::setCurrentThreadName( "StreamIo" );
+            ThreadName::setCurrentThreadName( "StreamIO" );
             bool bStop = false;
             while ( bStop == false && _bExitThreads.load( std::memory_order_acquire ) == false )
             {
@@ -859,7 +859,7 @@ namespace sw
             _state->postReceiveLocked( *pConnection );
     }
 
-    int32 IocpStreamTransport::pollIo( int32 timeoutMilli )
+    int32 IocpStreamTransport::pollIO( int32 timeoutMilli )
     {
         if ( _state->_bInitialized == SW_FALSE || _state->_listThread.empty() == false )
             return 0;

@@ -12,7 +12,7 @@
 SW_TEST_CASE( PhysicsSettingsTest, LayerTableIsSymmetric )
 {
     sw::PhysicsSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( R"(<PhysicsSettings>
+    SW_ASSERT_TRUE( settings.loadFromXMLText( R"(<PhysicsSettings>
         <_listLayer>
             <PhysicsLayerDef _name="Default"><_listCollidesWith><item>Default</item><item>Debris</item></_listCollidesWith></PhysicsLayerDef>
             <PhysicsLayerDef _name="Debris"><_listCollidesWith /></PhysicsLayerDef>
@@ -39,9 +39,9 @@ SW_TEST_CASE( PhysicsSettingsTest, UnknownNamesAreLoadErrors )
 {
     SW_TEST_DEFENSIVE_SCOPE( "unknown layer and key names are rejected" );
     sw::PhysicsSettings settings;
-    SW_EXPECT_FALSE( settings.loadFromXmlText(
+    SW_EXPECT_FALSE( settings.loadFromXMLText(
         R"(<PhysicsSettings><_listLayer><PhysicsLayerDef _name="Default"><_listCollidesWith><item>Nope</item></_listCollidesWith></PhysicsLayerDef></_listLayer></PhysicsSettings>)" ) );
-    SW_EXPECT_FALSE( settings.loadFromXmlText( R"(<PhysicsSettings _gravityy="0,-9.8,0" />)" ) );
+    SW_EXPECT_FALSE( settings.loadFromXMLText( R"(<PhysicsSettings _gravityy="0,-9.8,0" />)" ) );
 }
 
 /**

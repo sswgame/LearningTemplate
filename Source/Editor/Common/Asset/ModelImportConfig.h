@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 } // namespace sw
 
 namespace sw::editor
@@ -95,7 +95,7 @@ namespace sw::editor
         [[nodiscard]] bool loadFromFile( string_view configPath );
 
         /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 `recenter` 값, 숫자 셋이 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
-        [[nodiscard]] bool loadFromJsonString( string_view jsonString );
+        [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
         /** @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 처음으로 맞는 규칙입니다. 없으면 기본 규칙입니다. */
         ModelImportRule findMatchingRule( string_view relativePath ) const;
@@ -103,9 +103,9 @@ namespace sw::editor
         const vector<ModelImportRule>& getRules() const { return _listRule; }
 
         /** @brief 규칙의 애니메이션 · 부착 키를 읽습니다. 모르는 코덱 · 양수가 아닌 숫자는 false 입니다. */
-        [[nodiscard]] static bool parseAnimationKeys( const JsonValue& ruleValue, ModelImportRule& inoutRule );
+        [[nodiscard]] static bool parseAnimationKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule );
         /** @brief 규칙의 `fracture` 객체를 읽습니다. 모르는 키 · 패턴 · 양수가 아닌 수 · 길이가 틀린 배열은 false 입니다. */
-        [[nodiscard]] static bool parseFractureKeys( const JsonValue& fractureValue, ModelImportRule& inoutRule );
+        [[nodiscard]] static bool parseFractureKeys( const JSONValue& fractureValue, ModelImportRule& inoutRule );
 
         /** @brief `recenter` 값 이름을 읽습니다("none" · "xz" · "bottom-center"). 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool parseRecenter( string_view text, ModelRecenter& outRecenter );

@@ -97,7 +97,7 @@ namespace sw
         const uint64 requestId = request._requestId;
         if ( _bStopping == SW_TRUE )
         {
-            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IoError ) );
+            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
             return requestId;
         }
         _listQueuedRequest.push_back( std::move( request ) );
@@ -125,7 +125,7 @@ namespace sw
             }
             // 내리는 중에도 쓰기 · 지우기는 끝까지 한다(종료 때 세이브를 잃지 않는다) — 읽기 · 나열은 받을 사람이 없다.
             const bool              bDropped   = bStopping && ( request._operation == LocalStoreOperation::Read || request._operation == LocalStoreOperation::List );
-            LocalStoreCompletion    completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IoError )
+            LocalStoreCompletion    completion = bDropped ? LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError )
                                                           : LocalStoreRequestUtil::execute( request, *_storage, _sealContext );
             std::scoped_lock<mutex> lock{ _mutex };
             _listCompletion.push_back( std::move( completion ) );

@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -20,11 +20,11 @@ namespace sw
 
             static void parseNameList( string_view text, vector<hashed_string>& outListName )
             {
-                GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
                 { outListName.push_back( hashed_string( token ) ); } );
             }
 
-            static void parseStats( const XmlNode& node, const utf8* const ( &arrName )[kJrpgStatCount], int32 ( &inoutArrValue )[kJrpgStatCount] )
+            static void parseStats( const XMLNode& node, const utf8* const ( &arrName )[kJrpgStatCount], int32 ( &inoutArrValue )[kJrpgStatCount] )
             {
                 for ( int32 index = 0; index < kJrpgStatCount; ++index )
                 {
@@ -66,14 +66,14 @@ namespace sw
         _curve = ExperienceCurve{};
     }
 
-    uint32 JrpgCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 JrpgCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const XmlNode curve = root.findChild( "ExperienceCurve" );
+        const XMLNode curve = root.findChild( "ExperienceCurve" );
         if ( curve )
             _curve.loadFromNode( curve );
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pName   = node.getName();
             const bool  bClass  = StringUtil::equals( pName, "Class", true );
@@ -84,7 +84,7 @@ namespace sw
             const bool  bArea   = StringUtil::equals( pName, "Area", true );
             if ( ( bClass || bSpell || bCombo || bManual || bEnemy || bArea ) == false )
                 continue;
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
 
@@ -117,7 +117,7 @@ namespace sw
                 def._id           = hashed_string( pId );
                 const utf8* pText = node.findAttribute( "name" );
                 def._name         = pText != nullptr ? pText : pId;
-                for ( XmlNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
+                for ( XMLNode stage = node.findChild( "Stage" ); stage; stage = stage.findNextSibling( "Stage" ) )
                 {
                     JrpgManualStage entry;
                     entry._techniqueId = hashed_string( stage.getAttributeText( "technique" ) );
@@ -137,7 +137,7 @@ namespace sw
                 def._id         = hashed_string( pId );
                 def._rate       = MathUtil::clamp( node.getAttributeFloat( "rate", def._rate ), 0.0f, 1.0f );
                 def._graceSteps = MathUtil::max( 0, node.getAttributeInt( "grace", def._graceSteps ) );
-                for ( XmlNode group = node.findChild( "Group" ); group; group = group.findNextSibling( "Group" ) )
+                for ( XMLNode group = node.findChild( "Group" ); group; group = group.findNextSibling( "Group" ) )
                 {
                     JrpgEncounterGroup entry;
                     JrpgCatalogInternal::parseNameList( group.getAttributeText( "enemies" ), entry._listEnemyId );
@@ -181,7 +181,7 @@ namespace sw
         return loadedCount;
     }
 
-    void JrpgCatalog::loadClass( const XmlNode& node, const utf8* pId )
+    void JrpgCatalog::loadClass( const XMLNode& node, const utf8* pId )
     {
         JrpgClassDef def;
         def._id           = hashed_string( pId );
@@ -192,7 +192,7 @@ namespace sw
         JrpgCatalogInternal::parseStats( node, JrpgCatalogInternal::kArrStatName, def._arrBase );
         JrpgCatalogInternal::parseStats( node, JrpgCatalogInternal::kArrGrowthName, def._arrGrowth );
         def._arrBase[static_cast<size_t>( JrpgStat::MaxHp )] = MathUtil::max( 1, def._arrBase[static_cast<size_t>( JrpgStat::MaxHp )] );
-        for ( XmlNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
+        for ( XMLNode learn = node.findChild( "Learn" ); learn; learn = learn.findNextSibling( "Learn" ) )
         {
             JrpgLearnEntry entry;
             entry._spellId = hashed_string( learn.getAttributeText( "spell" ) );
@@ -203,7 +203,7 @@ namespace sw
         (void)_classCatalog.add( def );
     }
 
-    void JrpgCatalog::loadSpell( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void JrpgCatalog::loadSpell( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         JrpgSpellDef def;
         def._id                = hashed_string( pId );
@@ -226,7 +226,7 @@ namespace sw
         (void)_spellCatalog.add( def );
     }
 
-    void JrpgCatalog::loadEnemy( const XmlNode& node, const utf8* pId )
+    void JrpgCatalog::loadEnemy( const XMLNode& node, const utf8* pId )
     {
         JrpgEnemyDef def;
         def._id           = hashed_string( pId );

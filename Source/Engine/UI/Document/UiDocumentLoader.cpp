@@ -10,8 +10,8 @@
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
@@ -60,9 +60,9 @@ namespace sw
                 return error;
             }
 
-            static uint32 findLine( const ParseContext& context, const XmlNode& node ) { return XmlDocument::computeLineNumber( context._text, node.getSourceOffset() ); }
+            static uint32 findLine( const ParseContext& context, const XMLNode& node ) { return XMLDocument::computeLineNumber( context._text, node.getSourceOffset() ); }
 
-            static bool fail( const ParseContext& context, const XmlNode& node, string_view message )
+            static bool fail( const ParseContext& context, const XMLNode& node, string_view message )
             {
                 *context._pError = makeError( context._path, findLine( context, node ), message );
                 return false;
@@ -100,11 +100,11 @@ namespace sw
             }
 
             /** @brief 구조체 · 컨테이너 칸 원소 @p source 를 @p destinationParent 아래로 옮겨 적고, 그 안의 바인딩 속성은 떼어 @p inoutNode 에 모읍니다. */
-            static void copyPropertyElement( const ParseContext& context, const XmlNode& source, const XmlNode& destinationParent, const string& path,
+            static void copyPropertyElement( const ParseContext& context, const XMLNode& source, const XMLNode& destinationParent, const string& path,
                                              UiDocumentNode& inoutNode )
             {
-                const XmlNode destination = destinationParent.appendChild( source.getName() );
-                for ( XmlAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                const XMLNode destination = destinationParent.appendChild( source.getName() );
+                for ( XMLAttribute attribute = source.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     if ( isBindingValue( attribute.getValue() ) )
                     {
@@ -117,7 +117,7 @@ namespace sw
                 const utf8* pText = source.getText();
                 if ( StringUtil::isNullOrEmpty( pText ) == false )
                     destination.setValue( pText );
-                for ( XmlNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     copyPropertyElement( context, child, destination, path + "." + child.getName(), inoutNode );
                 }
@@ -127,7 +127,7 @@ namespace sw
             static string normalizeDocumentPath( string_view path ) { return FileUtil::normalizePath( path ); }
 
             /** @brief 위젯 원소 @p element 를 노드로 파싱해 문서 끝에 붙이고(자식은 그 뒤에) 그 자리를 @p outIndex 에 적습니다. */
-            [[nodiscard]] static bool parseWidget( const ParseContext& context, const XmlNode& element, uint32& outIndex )
+            [[nodiscard]] static bool parseWidget( const ParseContext& context, const XMLNode& element, uint32& outIndex )
             {
                 const utf8*     pTag  = element.getName();
                 const TypeInfo* pType = findWidgetType( pTag );
@@ -139,9 +139,9 @@ namespace sw
                 node._sourceLine = findLine( context, element );
 
                 // 위젯 PROPERTY 로 읽을 원소만 남긴 사본 — 자식 위젯 · 바인딩 식은 뗀다.
-                XmlDocument   propertyDocument;
-                const XmlNode propertyRoot = propertyDocument.appendRoot( pType->_name.c_str() );
-                for ( XmlAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                XMLDocument   propertyDocument;
+                const XMLNode propertyRoot = propertyDocument.appendRoot( pType->_name.c_str() );
+                for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const utf8* pName = attribute.getName();
                     if ( isKnownProperty( *pType, pName ) == false )
@@ -154,8 +154,8 @@ namespace sw
                     propertyRoot.appendAttribute( pName, attribute.getValue() );
                 }
 
-                vector<XmlNode> listChildWidget;
-                for ( XmlNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
+                vector<XMLNode> listChildWidget;
+                for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     const utf8* pChildName = child.getName();
                     if ( findWidgetType( pChildName ) != nullptr )
@@ -183,10 +183,10 @@ namespace sw
                 else if ( listChildWidget.empty() == false && pType->isDerivedFrom( PanelWidget::StaticType() ) == false )
                     return fail( context, listChildWidget.front(), string( "'" ) + pTag + "' cannot have children - it is not a panel" );
 
-                node._propertyXml = propertyDocument.saveToString();
+                node._propertyXML = propertyDocument.saveToString();
                 outIndex          = static_cast<uint32>( context._pAsset->_listNode.size() );
                 context._pAsset->_listNode.push_back( std::move( node ) );
-                for ( const XmlNode& child : listChildWidget )
+                for ( const XMLNode& child : listChildWidget )
                 {
                     uint32 childIndex{ 0 };
                     if ( parseWidget( context, child, childIndex ) == false )
@@ -197,10 +197,10 @@ namespace sw
             }
 
             /** @brief 화면 서술 원소를 읽습니다. 모르는 속성 · 읽지 못한 값은 오류입니다. */
-            [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XmlNode& element )
+            [[nodiscard]] static bool parseScreenDesc( const ParseContext& context, const XMLNode& element )
             {
                 vector<SchemaOrphanValue> listOrphan;
-                const bool                bRead = XmlSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UiScreenDesc::StaticType(), element.toString(), &listOrphan );
+                const bool                bRead = XMLSerializer::deserializeSoft( &context._pAsset->_screenDesc, *UiScreenDesc::StaticType(), element.toString(), &listOrphan );
                 if ( bRead == false )
                     return fail( context, element, "UiScreenDesc cannot be read" );
                 if ( listOrphan.empty() == false )
@@ -209,9 +209,9 @@ namespace sw
             }
 
             /** @brief 스타일 시트 목록(`<item>경로</item>`)을 읽습니다. */
-            [[nodiscard]] static bool parseStyleSheetList( const ParseContext& context, const XmlNode& element )
+            [[nodiscard]] static bool parseStyleSheetList( const ParseContext& context, const XMLNode& element )
             {
-                for ( XmlNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
+                for ( XMLNode item = element.findChild(); item.isValid(); item = item.findNextSibling() )
                 {
                     if ( StringUtil::equals( item.getName(), kItemElement, true ) == false )
                         return fail( context, item, string( "_listStyleSheet has unknown element <" ) + item.getName() + ">" );
@@ -224,12 +224,12 @@ namespace sw
             }
 
             /** @brief 애니메이션 목록(`<UiAnimation>` 원소들)을 읽습니다. 모르는 칸 · 읽지 못한 값 · 이름 없음 · 겹친 이름은 오류입니다. */
-            [[nodiscard]] static bool parseAnimationList( const ParseContext& context, const XmlNode& element )
+            [[nodiscard]] static bool parseAnimationList( const ParseContext& context, const XMLNode& element )
             {
                 UiAnimationList           list{};
                 vector<SchemaOrphanValue> listOrphan;
                 const string              text  = string( "<UiAnimationList>" ) + element.toString() + "</UiAnimationList>";
-                const bool                bRead = XmlSerializer::deserializeSoft( &list, *UiAnimationList::StaticType(), text, &listOrphan );
+                const bool                bRead = XMLSerializer::deserializeSoft( &list, *UiAnimationList::StaticType(), text, &listOrphan );
                 if ( bRead == false )
                     return fail( context, element, "_listAnimation cannot be read" );
                 if ( listOrphan.empty() == false )
@@ -280,7 +280,7 @@ namespace sw
                     return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' does not override getTypeInfo()" );
 
                 vector<SchemaOrphanValue> listOrphan;
-                if ( XmlSerializer::deserializeSoft( widget.get(), *pType, node._propertyXml, &listOrphan ) == false )
+                if ( XMLSerializer::deserializeSoft( widget.get(), *pType, node._propertyXML, &listOrphan ) == false )
                     return failInstantiate( context, document, node, string( "'" ) + node._typeName.c_str() + "' cannot be read" );
                 if ( listOrphan.empty() == false )
                     return failInstantiate( context, document, node,
@@ -351,14 +351,14 @@ namespace sw
         UiDocumentAsset asset{};
         asset._path = Internal::normalizeDocumentPath( path );
 
-        XmlDocument document;
+        XMLDocument document;
         if ( document.parse( text, path ) == false )
         {
             outError = document.getLastError();
             return false;
         }
         const Internal::ParseContext context{ text, path, &asset, &outError };
-        const XmlNode                root = document.getRoot();
+        const XMLNode                root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UiDocumentAsset::kRootElementName, true ) == false )
         {
             outError = Internal::makeError( path, 1, "the root element must be <UiDocument>" );
@@ -367,7 +367,7 @@ namespace sw
 
         // 루트 속성은 판 번호 하나 — 옛 형식 리더는 없다.
         bool bVersioned{ false };
-        for ( XmlAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
                 return Internal::fail( context, root, string( "UiDocument has unknown attribute '" ) + attribute.getName() + "'" );
@@ -381,7 +381,7 @@ namespace sw
 
         bool bScreenDesc{ false };
         bool bRootWidget{ false };
-        for ( XmlNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, Internal::kScreenDescElement, true ) )

@@ -36,7 +36,7 @@
 - `NetHost::update( float64 time )` → 절대 시각이면 `nowSeconds`, `_timeout` → `_timeoutSeconds`.
 - `_time` 이 0..1 스윕 비율인 3 곳(`Component.h` · `PhysicsWorld.h` · `ContinuousCollision.h`) → `_hitFraction`(언리얼 `FHitResult::Time` 도 같은 값이지만 이 저장소에서는 애님 초와 겹친다).
 - 부정형 불린 → 긍정형: `_bDisableCollision`(16 곳) → `_bCollideConnectedBodies`, `_bDisableJointedCollision` · `_bNoDelay` → `_bTCPNoDelay` · `_bUnlimitedCost` → `_bIgnoreCost`. 데이터 키가 달라지므로 같은 커밋에서 데이터를 다시 쓴다(별칭 없음).
-- 이름과 동작이 어긋난 함수: `MonsterBattle::canActThisTurn`(비-const, 상태이상 해제) → `resolveStatusBeforeAct`; `BehaviorTreeRunner::hasHigherPriorityTrigger`(조건 목록 갱신) → `pollHigherPriorityTrigger`; `ContentBrowserFolderCache::getChildFolders`(캐시를 채움) → `getOrScanChildFolders`; `RigJsonReader::findMember( key, bRequired )`(사용 키 기록 + 오류 로그) → `readMember`.
+- 이름과 동작이 어긋난 함수: `MonsterBattle::canActThisTurn`(비-const, 상태이상 해제) → `resolveStatusBeforeAct`; `BehaviorTreeRunner::hasHigherPriorityTrigger`(조건 목록 갱신) → `pollHigherPriorityTrigger`; `ContentBrowserFolderCache::getChildFolders`(캐시를 채움) → `getOrScanChildFolders`; `RigJSONReader::findMember( key, bRequired )`(사용 키 기록 + 오류 로그) → `readMember`.
 - `AssetManager::getMaterialManager` / `getTextureManager` 가 `MaterialCache` / `TextureCache` 를 돌려준다 → `getMaterialCache` / `getTextureCache`(참조 62).
 - `RegisterResult` / `RegistrationResult` 두 이름 → 하나.
 - 파일 이름과 타입이 어긋난 곳: `EditorColor.h` 의 `Color4`, `EventType.h` 의 `IEvent`, `Crafting.h` 의 `RecipeDef` 외, `AnimNotifyHandlers.h` 의 `CameraShakeRequest` — 파일을 타입 이름에 맞춰 나누거나 옮긴다(건별).

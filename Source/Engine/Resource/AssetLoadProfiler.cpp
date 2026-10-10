@@ -19,7 +19,7 @@ namespace sw
     {
         struct AssetLoadProfilerInternal
         {
-            static constexpr const utf8* kArrPhaseName[]      = { "Io", "Decode", "Upload" };
+            static constexpr const utf8* kArrPhaseName[]      = { "IO", "Decode", "Upload" };
             static constexpr float64     kNanosPerMillisecond = 1.0e6;
 
             [[maybe_unused]] static float64 toMilliseconds( uint64 nanos ) { return static_cast<float64>( nanos ) / kNanosPerMillisecond; }
@@ -244,7 +244,7 @@ namespace sw
     AssetLoadScope::AssetLoadScope( const utf8* pKind, string_view path, bool bAsync )
         : _record{}
         , _phaseStartNanos{ 0 }
-        , _phase{ AssetLoadPhase::Io }
+        , _phase{ AssetLoadPhase::IO }
         , _bActive{ SW_FALSE }
     {
         if ( AssetLoadProfiler::get().isEnabled() == false )

@@ -22,8 +22,8 @@ namespace sw
     /// @brief 프리팹 상태 본문의 형식입니다. 읽을 때 한 번 정하고, 상태를 쓰는 쪽은 이것을 봅니다(본문 첫 글자로 다시 짐작하지 않습니다).
     enum class PrefabStateFormat : uint8
     {
-        Xml,
-        Json,
+        XML,
+        JSON,
     };
 
     /// @brief 프리팹 에셋입니다(루트 GameObject 상태 템플릿).
@@ -34,15 +34,15 @@ namespace sw
         PrefabAsset();
 
         /** @brief XML 에서 프리팹을 로드합니다(`<Prefab formatVersion="0" name="..."><GameObject …/></Prefab>` — 저장하는 모양 하나). */
-        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
-        /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 그대로 — `saveToJsonFile` 이 쓰는 모양 하나). */
-        [[nodiscard]] bool loadFromJsonFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
+        /** @brief JSON 에서 프리팹을 로드합니다(GameObject 상태 JSON 그대로 — `saveToJSONFile` 이 쓰는 모양 하나). */
+        [[nodiscard]] bool loadFromJSONFile( string_view assetRelativePath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). */
         [[nodiscard]] bool loadFromBinaryFile( string_view assetRelativePath );
         /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). */
-        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
         /** @brief JSON 으로 저장합니다(GameObject 상태 JSON 그대로). 상태를 JSON 으로 옮기지 못하면 쓰지 않고 오류를 알리며 false 입니다. */
-        [[nodiscard]] bool saveToJsonFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToJSONFile( string_view assetRelativePath ) const;
         /**
          * @brief 경로의 확장자로 형식을 골라 저장합니다(`.prefab.xml` · `.prefab.json`). 프리팹 경로가 아니면 쓰지 않고 false 입니다.
          * @details 에디터가 프리팹을 쓰는 길(Apply to Prefab · 격리 편집 저장)은 이것만 씁니다 — 로더 · 쿠커와 같은 규칙입니다.

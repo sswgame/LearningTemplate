@@ -8,11 +8,11 @@
 
 #include "Editor/Common/EditorUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
 #include "Engine/Destruction/MeshFracture.h"
-#include "Engine/Serialization/Json/ConfigKeyDoc.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/ConfigKeyDoc.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -129,20 +129,20 @@ namespace sw::editor
             SW_LOG_WARNING( "Failed to read ModelImportConfig file: %#", configPath );
             return false;
         }
-        return loadFromJsonString( text );
+        return loadFromJSONString( text );
     }
 
-    bool ModelImportConfig::loadFromJsonString( string_view jsonString )
+    bool ModelImportConfig::loadFromJSONString( string_view jsonString )
     {
         _listRule.clear();
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonString ) == false )
         {
             SW_LOG_ERROR( "Failed to parse ModelImportConfig JSON." );
             return false;
         }
-        const JsonValue root = doc.getRoot();
+        const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
         {
             SW_LOG_ERROR( "ModelImportConfig root is not an object." );
@@ -152,11 +152,11 @@ namespace sw::editor
             return false;
 
         // 규칙이 조용히 기본값이 되면 임포트 결과가 말없이 바뀐다 — 망가진 규칙은 설정 전체를 거부한다.
-        const JsonValue rulesValue = root.get( "rules" );
+        const JSONValue rulesValue = root.get( "rules" );
         const size_t    ruleCount  = rulesValue.isArray() ? rulesValue.size() : 0;
         for ( size_t ruleIndex = 0; ruleIndex < ruleCount; ++ruleIndex )
         {
-            const JsonValue ruleValue = rulesValue.at( ruleIndex );
+            const JSONValue ruleValue = rulesValue.at( ruleIndex );
             if ( ruleValue.isObject() == false )
             {
                 SW_LOG_ERROR( "ModelImportConfig rule %# is not an object.", ruleIndex );
@@ -182,7 +182,7 @@ namespace sw::editor
             rule._filter.parse( ruleValue );
             if ( ruleValue.has( "translation" ) )
             {
-                const JsonValue translationValue = ruleValue.get( "translation" );
+                const JSONValue translationValue = ruleValue.get( "translation" );
                 const bool      bThreeNumbers    = translationValue.isArray() && translationValue.size() == 3 && translationValue.at( 0 ).isNumber() &&
                                            translationValue.at( 1 ).isNumber() && translationValue.at( 2 ).isNumber();
                 if ( bThreeNumbers == false )
@@ -211,7 +211,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportConfig::parseAnimationKeys( const JsonValue& ruleValue, ModelImportRule& inoutRule )
+    bool ModelImportConfig::parseAnimationKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule )
     {
         if ( ruleValue.has( "animations" ) )
             inoutRule._bImportAnimations = ruleValue.get( "animations" ).asBool( true ) ? SW_TRUE : SW_FALSE;
@@ -221,7 +221,7 @@ namespace sw::editor
             inoutRule._rootMotionBone = ruleValue.get( "root_motion_bone" ).asString();
         if ( ruleValue.has( "clips" ) )
         {
-            const JsonValue clips = ruleValue.get( "clips" );
+            const JSONValue clips = ruleValue.get( "clips" );
             for ( size_t clipIndex = 0; clips.isArray() && clipIndex < clips.size(); ++clipIndex )
             {
                 inoutRule._listClipName.push_back( clips.at( clipIndex ).asString() );
@@ -242,7 +242,7 @@ namespace sw::editor
         {
             if ( ruleValue.has( arrNumberKey[keyIndex] ) == false )
                 continue;
-            const JsonValue value = ruleValue.get( arrNumberKey[keyIndex] );
+            const JSONValue value = ruleValue.get( arrNumberKey[keyIndex] );
             if ( value.isNumber() == false || value.asFloat() <= 0.0 )
             {
                 SW_LOG_ERROR( "ModelImportConfig rule '%#': %# must be a positive number.", inoutRule._name.c_str(), arrNumberKey[keyIndex] );
@@ -253,7 +253,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ModelImportConfig::parseFractureKeys( const JsonValue& fractureValue, ModelImportRule& inoutRule )
+    bool ModelImportConfig::parseFractureKeys( const JSONValue& fractureValue, ModelImportRule& inoutRule )
     {
         const string context = "ModelImportConfig rule '" + inoutRule._name + "' fracture";
         if ( fractureValue.isObject() == false )
@@ -289,7 +289,7 @@ namespace sw::editor
         {
             if ( fractureValue.has( arrIntegerKey[keyIndex] ) == false )
                 continue;
-            const JsonValue value = fractureValue.get( arrIntegerKey[keyIndex] );
+            const JSONValue value = fractureValue.get( arrIntegerKey[keyIndex] );
             if ( value.isNumber() == false || value.asFloat() < 1.0 )
             {
                 SW_LOG_ERROR( "%#: %# must be a positive integer.", context.c_str(), arrIntegerKey[keyIndex] );
@@ -306,7 +306,7 @@ namespace sw::editor
         {
             if ( fractureValue.has( arrNumberKey[keyIndex] ) == false )
                 continue;
-            const JsonValue value = fractureValue.get( arrNumberKey[keyIndex] );
+            const JSONValue value = fractureValue.get( arrNumberKey[keyIndex] );
             if ( value.isNumber() == false || value.asFloat() < 0.0 )
             {
                 SW_LOG_ERROR( "%#: %# must be a non-negative number.", context.c_str(), arrNumberKey[keyIndex] );
@@ -314,12 +314,12 @@ namespace sw::editor
             }
             *arrNumberValue[keyIndex] = static_cast<float32>( value.asFloat() );
         }
-        if ( fractureValue.has( "impact_point" ) && AnimJsonUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
+        if ( fractureValue.has( "impact_point" ) && AnimJSONUtil::readFloats( fractureValue.get( "impact_point" ), &settings._impactPoint._x, 3 ) == false )
         {
             SW_LOG_ERROR( "%#: impact_point must be an array of three numbers.", context.c_str() );
             return false;
         }
-        if ( fractureValue.has( "interior_color" ) && AnimJsonUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
+        if ( fractureValue.has( "interior_color" ) && AnimJSONUtil::readFloats( fractureValue.get( "interior_color" ), &settings._interiorColor._x, 4 ) == false )
         {
             SW_LOG_ERROR( "%#: interior_color must be an array of four numbers.", context.c_str() );
             return false;
@@ -327,7 +327,7 @@ namespace sw::editor
         if ( fractureValue.has( "slices" ) )
         {
             float32    arrSlice[3] = { 0.0f, 0.0f, 0.0f };
-            const bool bRead       = AnimJsonUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
+            const bool bRead       = AnimJSONUtil::readFloats( fractureValue.get( "slices" ), arrSlice, 3 );
             if ( bRead == false || arrSlice[0] < 1.0f || arrSlice[1] < 1.0f || arrSlice[2] < 1.0f )
             {
                 SW_LOG_ERROR( "%#: slices must be three positive integers.", context.c_str() );
@@ -340,7 +340,7 @@ namespace sw::editor
         }
         if ( fractureValue.has( "levels" ) )
         {
-            const JsonValue levels = fractureValue.get( "levels" );
+            const JSONValue levels = fractureValue.get( "levels" );
             const size_t    count  = levels.isArray() ? levels.size() : 0;
             if ( levels.isArray() == false )
             {
@@ -349,7 +349,7 @@ namespace sw::editor
             }
             for ( size_t levelIndex = 0; levelIndex < count; ++levelIndex )
             {
-                const JsonValue level = levels.at( levelIndex );
+                const JSONValue level = levels.at( levelIndex );
                 if ( level.isNumber() == false || level.asFloat() < 1.0 )
                 {
                     SW_LOG_ERROR( "%#: levels must be an array of positive integers.", context.c_str() );

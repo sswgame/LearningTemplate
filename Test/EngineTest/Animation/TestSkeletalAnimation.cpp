@@ -235,7 +235,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
 /**
  * @brief [SkeletalAnimationTest] 스켈레톤 JSON 왕복과 검증 — 모르는 키 · 앞에 없는 부모 · 없는 본을 가리키는 부착은 로드 오류다
  */
-SW_TEST_CASE( SkeletalAnimationTest, SkeletonJsonRoundTripsAndValidates )
+SW_TEST_CASE( SkeletalAnimationTest, SkeletonJSONRoundTripsAndValidates )
 {
     Skeleton           skeleton = test::makeChainSkeleton( 3 );
     SkeletonAttachment attachment{};
@@ -246,7 +246,7 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJsonRoundTripsAndValidates )
     skeleton.addAttachment( attachment );
 
     Skeleton loaded;
-    SW_ASSERT_TRUE( loaded.parseJson( skeleton.toJson(), "round trip" ) );
+    SW_ASSERT_TRUE( loaded.parseJSON( skeleton.toJSON(), "round trip" ) );
     SW_EXPECT_EQUAL( 3u, loaded.getBoneCount() );
     SW_EXPECT_EQUAL( 1, loaded.getBone( 2 )._parentIndex );
     SW_EXPECT_NEAR_EQUAL( -1.0f, loaded.getBone( 1 )._inverseBind._42, 1e-5f );
@@ -254,14 +254,14 @@ SW_TEST_CASE( SkeletalAnimationTest, SkeletonJsonRoundTripsAndValidates )
     SW_EXPECT_TRUE( loaded.getAttachments()[0]._parentBone == hashed_string( "bone2" ) );
 
     test::ScopedDefensiveTestLog expected( "malformed skeleton data is rejected" );
-    string                       unknownKey = skeleton.toJson();
+    string                       unknownKey = skeleton.toJSON();
     unknownKey.replace( unknownKey.find( "\"parent\"" ), 8, "\"parnt\": 0, \"parent\"" );
     Skeleton broken;
-    SW_EXPECT_FALSE( broken.parseJson( unknownKey, "unknown key" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( unknownKey, "unknown key" ) );
     SW_EXPECT_EQUAL( 0u, broken.getBoneCount() );
-    string badBone = skeleton.toJson();
+    string badBone = skeleton.toJSON();
     badBone.replace( badBone.find( "\"bone2\"", badBone.find( "\"attachments\"" ) ), 7, "\"bone9\"" );
-    SW_EXPECT_FALSE( broken.parseJson( badBone, "unknown attachment bone" ) );
+    SW_EXPECT_FALSE( broken.parseJSON( badBone, "unknown attachment bone" ) );
 }
 
 /**
@@ -442,7 +442,7 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
 /**
  * @brief [SkeletalAnimationTest] 애니메이션 LOD — 갱신 주기 2 면 포즈는 두 프레임에 한 번(시간 단계는 매 프레임), 화면 밖이면 포즈를 만들지 않고, 쉬는 유닛은 돌지 않는다
  */
-SW_TEST_CASE( SkeletalAnimationTest, LodSkipsPoseEvaluation )
+SW_TEST_CASE( SkeletalAnimationTest, LODSkipsPoseEvaluation )
 {
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Lod", 3 );

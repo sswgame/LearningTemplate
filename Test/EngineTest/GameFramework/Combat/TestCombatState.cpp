@@ -14,7 +14,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kCombatStateMoveXml = R"(
+    constexpr const utf8* kCombatStateMoveXML = R"(
 <MoveCatalog>
   <Move id="jab" startup="10" active="2" recovery="15" damage="12" chip="2" hitstun="20" blockstun="12" hitstop="3" height="High">
     <Hitbox from="10" to="11" x="0.8" y="1.5" w="0.6" h="0.3"/>
@@ -27,7 +27,7 @@ namespace
 </MoveCatalog>
 )";
 
-    constexpr const utf8* kCombatStateElementXml = R"(
+    constexpr const utf8* kCombatStateElementXML = R"(
 <ElementChart>
   <Element id="Fire"/><Element id="Water"/><Element id="Grass"/><Element id="Ground"/><Element id="Flying"/><Element id="Electric"/>
   <Rule attack="Water" defend="Fire" multiplier="2"/>
@@ -265,7 +265,7 @@ SW_TEST_CASE( CombatStateTest, GaugeExhaustionAndOverheatLockUntilRecovered )
 SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdvantage )
 {
     MoveCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kCombatStateMoveXml, "CombatStateTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatStateMoveXML, "CombatStateTest" ) );
     SW_EXPECT_EQUAL( 2u, catalog.getMoves().size() ); // id 없는 Move 는 버린다
     const MoveFrameData* pJab = catalog.findMove( hashed_string( "jab" ) );
     SW_ASSERT_NOT_NULL( pJab );
@@ -357,7 +357,7 @@ SW_TEST_CASE( CombatStateTest, MoveTimelinePhasesCancelWindowsHitstopAndFrameAdv
 SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAndRollsDeterministically )
 {
     ElementChart chart;
-    SW_ASSERT_TRUE( chart.loadFromXmlText( kCombatStateElementXml, "CombatStateTest" ) );
+    SW_ASSERT_TRUE( chart.loadFromXMLText( kCombatStateElementXML, "CombatStateTest" ) );
     SW_EXPECT_EQUAL( 6u, chart.getElements().size() );
     const hashed_string water( "Water" );
     const hashed_string electric( "Electric" );
@@ -400,7 +400,7 @@ SW_TEST_CASE( CombatStateTest, ElementChartMultipliesDualTypesHandlesImmunityAnd
 
     // 선언된 속성이 없으면 실패.
     ElementChart emptyChart;
-    SW_EXPECT_TRUE( emptyChart.loadFromXmlText( "<ElementChart><Rule attack=\"A\" defend=\"B\" multiplier=\"2\"/></ElementChart>", "CombatStateTest" ) == false );
+    SW_EXPECT_TRUE( emptyChart.loadFromXMLText( "<ElementChart><Rule attack=\"A\" defend=\"B\" multiplier=\"2\"/></ElementChart>", "CombatStateTest" ) == false );
 }
 
 SW_TEST_CASE( CombatStateTest, GaugeRegenScaleReduceAndDrainAtEmptyKeepDelay )

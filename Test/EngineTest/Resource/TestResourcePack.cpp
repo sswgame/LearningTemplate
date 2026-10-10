@@ -5,7 +5,7 @@
 #include "Core/Compression/RleCompressionCodec.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/pair.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
@@ -1125,7 +1125,7 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     sw::ResourcePackManager manager;
     SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
 
-    sw::AsyncFileIo&                io = sw::engine::getAsyncFileIo();
+    sw::AsyncFileIO&                io = sw::engine::getAsyncFileIO();
     sw::vector<sw::vector<uint8>>   listBytes( kEntryCount );
     sw::vector<uint8>               listOk( kEntryCount, 0 );
     sw::vector<sw::AsyncReadHandle> listHandle;
@@ -1134,7 +1134,7 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     {
         sw::vector<uint8>* pBytes = &listBytes[index];
         uint8*             pOk    = &listOk[index];
-        listHandle.push_back( manager.readFileAsync( io, listFile[index].first, sw::AsyncIoPriority::Normal,
+        listHandle.push_back( manager.readFileAsync( io, listFile[index].first, sw::AsyncIOPriority::Normal,
                                                      SW_DELEGATE_LAMBDA( sw::ResourceReadCompleteDelegate, [pBytes, pOk, &callbackCount]( bool bSuccess, sw::vector<uint8>& bytes )
         {
             *pOk = bSuccess ? 1 : 0;
@@ -1162,7 +1162,7 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadMatchesSyncReadAndSurvivesUnmount )
     // 없는 경로는 아무것도 걸지 않는다.
     SW_ASSERT_TRUE( manager.mountPack( packPath, 5000 ) );
     bool                      bMissingCalled = false;
-    const sw::AsyncReadHandle missing        = manager.readFileAsync( io, "async/not_there.bin", sw::AsyncIoPriority::Normal,
+    const sw::AsyncReadHandle missing        = manager.readFileAsync( io, "async/not_there.bin", sw::AsyncIOPriority::Normal,
                                                                       SW_DELEGATE_LAMBDA( sw::ResourceReadCompleteDelegate, [&bMissingCalled]( bool, sw::vector<uint8>& )
            {
         bMissingCalled = true;
@@ -1192,7 +1192,7 @@ SW_TEST_CASE( ResourcePackTest, AsyncReadRejectsCrcMismatch )
     sw::vector<uint8> received;
     {
         test::ScopedLogSuppressor suppressor;
-        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getAsyncFileIo(), sw::StringUtil::computeHash64( sw::string_view{ entryPath } ), sw::AsyncIoPriority::High,
+        const sw::AsyncReadHandle handle = reader.readFileAsync( sw::engine::getAsyncFileIO(), sw::StringUtil::computeHash64( sw::string_view{ entryPath } ), sw::AsyncIOPriority::High,
                                                                  SW_DELEGATE_LAMBDA( sw::ResourceReadCompleteDelegate, [&]( bool bRead, sw::vector<uint8>& bytes )
         {
             bCalled  = true;

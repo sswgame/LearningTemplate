@@ -76,7 +76,7 @@ namespace sw
         ContainerKind                   _containerKind;
         uint8                           _bIsBitField   : 1;
         uint8                           _bReadOnly     : 1;
-        uint8                           _bXmlAttribute : 1;
+        uint8                           _bXMLAttribute : 1;
         uint8                           _bAssetPath    : 1;
         uint8                           _bPolymorphic  : 1;
         uint8                           _bHasMinRange  : 1;
@@ -131,7 +131,7 @@ namespace sw
             , _containerKind{ ContainerKind::None }
             , _bIsBitField{ SW_FALSE }
             , _bReadOnly{ SW_FALSE }
-            , _bXmlAttribute{ SW_FALSE }
+            , _bXMLAttribute{ SW_FALSE }
             , _bAssetPath{ SW_FALSE }
             , _bPolymorphic{ SW_FALSE }
             , _bHasMinRange{ SW_FALSE }
@@ -288,7 +288,7 @@ namespace sw
         {
         }
 
-        bool requiresTypeApi() const noexcept { return _bReflectBody == SW_TRUE; }
+        bool requiresTypeAPI() const noexcept { return _bReflectBody == SW_TRUE; }
         bool requiresComponentFactory() const noexcept { return _bComponentFactory == SW_TRUE; }
     };
 } // namespace sw

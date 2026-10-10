@@ -19,7 +19,7 @@ namespace sw
 {
     class GameFlags;
     class TagContainer;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 조건의 절입니다. 비트로 결과를 담습니다. */
     enum class ScheduleConditionClause : uint8
@@ -112,7 +112,7 @@ namespace sw
         static uint8 parsePhaseMask( string_view text, string_view sourceName, string_view ownerName );
 
         /** @brief 조건 속성을 모두 읽습니다. 어휘에 없는 이름 · 문법이 틀린 플래그 식은 경고합니다(데이터 검사가 잡는다). */
-        void readFromNode( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
+        void readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
 
         bool                    isEmpty() const;
         ScheduleConditionResult evaluate( const ScheduleConditionContext& context ) const;

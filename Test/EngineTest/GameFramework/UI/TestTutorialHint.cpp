@@ -25,7 +25,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
     UserSettingsManager settings;
     settings.initialize( UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText(
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText(
         R"(<UserSettingsSchema version="1"><Category id="gameplay"/><Setting id="gameplay.showTutorials" category="gameplay" type="bool" default="false"/></UserSettingsSchema>)",
         "hint.settings.xml" ) );
     game::bindLocalService<UserSettingsManager>( &settings );

@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -55,12 +55,12 @@ namespace sw
     {
     }
 
-    uint32 DeckBattleCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 DeckBattleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Card" ); node; node = node.findNextSibling( "Card" ) )
+        for ( XMLNode node = root.findChild( "Card" ); node; node = node.findNextSibling( "Card" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             DeckBattleCardDef def;
@@ -69,7 +69,7 @@ namespace sw
             def._name         = pName != nullptr ? pName : pId;
             def._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", 1 ) );
             def._bExhaust     = node.getAttributeBool( "exhaust", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXml::forEachToken( node.getAttributeText( "effects" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "effects" ), ",; ", [&]( string_view token )
             {
                 const size_t     colon = token.find( ':' );
                 DeckBattleEffect effect;

@@ -6,7 +6,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
@@ -34,7 +34,7 @@
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Utility/DebugOverlayState.h"
 
@@ -109,18 +109,18 @@ namespace
                 // 설정으로 돈다 — 기동 실패로 드러낸다(`sw_addTestExecutable` 의 통째 링크).
                 {
                     sw::EngineConfig probe;
-                    if ( sw::JsonSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJson ) == false )
+                    if ( sw::JSONSerializer::deserialize( &probe, *sw::EngineConfig::StaticType(), sw::shipping_host::kEngineConfigJSON ) == false )
                     {
                         SW_LOG_ERROR( "The generated EngineConfig JSON does not deserialize in this test executable - a reflection registrar was dropped at link time" );
                         return sw::EngineInitResult::Failed;
                     }
                 }
 #endif
-                host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJson );
+                host._pEngineConfig = host._configManager->ensureConfig<sw::EngineConfig>( sw::config::kFileRuntimeEngineConfig, sw::shipping_host::kEngineConfigJSON );
                 if ( host._pEngineConfig == nullptr )
                     return sw::EngineInitResult::Failed;
                 sw::EngineConfig::setActive( *host._pEngineConfig );
-                const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJson );
+                const sw::GameConfig* pGameConfig = host._configManager->ensureConfig<sw::GameConfig>( sw::config::kFileRuntimeGameConfig, sw::shipping_host::kGameConfigJSON );
                 if ( pGameConfig == nullptr )
                     return sw::EngineInitResult::Failed;
                 sw::GameConfig::setActive( *pGameConfig );
@@ -174,15 +174,15 @@ namespace
             static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
         };
 
-        struct FileIoStartupStep : Defaults
+        struct FileIOStartupStep : Defaults
         {
             static sw::EngineInitResult initialize( TestHost& host )
             {
-                sw::AsyncFileIoSettings settings{};
+                sw::AsyncFileIOSettings settings{};
                 settings._pTaskManager = host._pOwned->_pTaskManager.get();
-                return host._pOwned->_pAsyncFileIo->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+                return host._pOwned->_pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
-            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIo->shutdown(); }
+            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIO->shutdown(); }
         };
 
         struct AudioStartupStep : Defaults

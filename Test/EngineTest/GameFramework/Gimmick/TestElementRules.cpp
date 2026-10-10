@@ -152,16 +152,16 @@ SW_TEST_CASE( ElementRuleTest, UnknownNamesAreLoadErrors )
     ElementRuleTable table;
     {
         SW_TEST_DEFENSIVE_SCOPE( "element table with undeclared names" );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Flag id="Flammable"/><Material id="Grass" flags="Flamable"/></ElementRules>)", "flag.elements.xml" ) );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Material id="Grass"/><Stimulus id="Fire"><On material="Gras" event="X"/></Stimulus></ElementRules>)",
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Flag id="Flammable"/><Material id="Grass" flags="Flamable"/></ElementRules>)", "flag.elements.xml" ) );
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Material id="Grass"/><Stimulus id="Fire"><On material="Gras" event="X"/></Stimulus></ElementRules>)",
                                                 "material.elements.xml" ) );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Material id="Grass"/><Step><Spread status="Burning"/></Step></ElementRules>)", "status.elements.xml" ) );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Status id="Burning" kind="Age"/><Step><Explode status="Burning"/></Step></ElementRules>)", "rule.elements.xml" ) );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Status id="Burning" kind="Age"/><Step><Spread status="Burning" pattern="Spiral"/></Step></ElementRules>)",
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Material id="Grass"/><Step><Spread status="Burning"/></Step></ElementRules>)", "status.elements.xml" ) );
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Status id="Burning" kind="Age"/><Step><Explode status="Burning"/></Step></ElementRules>)", "rule.elements.xml" ) );
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Status id="Burning" kind="Age"/><Step><Spread status="Burning" pattern="Spiral"/></Step></ElementRules>)",
                                                 "pattern.elements.xml" ) );
-        SW_EXPECT_FALSE( table.loadFromXmlText( R"(<ElementRules><Weather id="Rain"/></ElementRules>)", "element.elements.xml" ) );
+        SW_EXPECT_FALSE( table.loadFromXMLText( R"(<ElementRules><Weather id="Rain"/></ElementRules>)", "element.elements.xml" ) );
     }
-    SW_EXPECT_TRUE( table.loadFromXmlText( R"(<ElementRules><Flag id="Flammable"/><Status id="Burning" kind="Age"/><Material id="Grass" flags="Flammable" burnSteps="2"/></ElementRules>)",
+    SW_EXPECT_TRUE( table.loadFromXMLText( R"(<ElementRules><Flag id="Flammable"/><Status id="Burning" kind="Age"/><Material id="Grass" flags="Flammable" burnSteps="2"/></ElementRules>)",
                                            "ok.elements.xml" ) );
     SW_EXPECT_EQUAL( 2, table.getMaterials()[0].getParam( "burnSteps", 0 ) );
 }

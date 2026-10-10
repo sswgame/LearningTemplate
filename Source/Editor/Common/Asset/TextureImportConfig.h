@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 } // namespace sw
 
 namespace sw::editor
@@ -74,7 +74,7 @@ namespace sw::editor
         [[nodiscard]] bool loadFromFile( string_view configPath );
 
         /** @brief JSON 문자열에서 설정을 파싱합니다. */
-        [[nodiscard]] bool loadFromJsonString( string_view jsonString );
+        [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
         /**
          * @brief 상대 텍스처 경로(예: "editor/textures_raw/splash.png")에 처음으로 일치하는 규칙을 찾습니다.
@@ -112,13 +112,13 @@ namespace sw::editor
          * @brief 프리셋 · 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키 · 모르는 swizzle 이면 오류를 남기고 false 입니다.
          * @details 키 표는 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc`(생성 문서 `docs/Config/TextureImportConfig.md`).
          */
-        [[nodiscard]] static bool parseRuleObject( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule, string_view context );
+        [[nodiscard]] static bool parseRuleObject( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule, string_view context );
         /**
          * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 깔아 줍니다. `inherits` 가 없으면 아무것도 하지 않고 true 입니다.
          * @details 찾기는 그 시점까지 파싱된 프리셋만 봅니다 — 오타이거나 부모를 아래쪽에 적었으면 오류를 남기고 false 입니다
          *          (상속이 통째로 사라진 채 기본값으로 임포트되면 아무도 알 수 없다).
          */
-        [[nodiscard]] bool applyInheritance( const sw::JsonValue& jsonValue, TextureImportRule& inoutRule ) const;
+        [[nodiscard]] bool applyInheritance( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule ) const;
         /** @brief 반쯤 읽은 표를 남기지 않게 비우고 false 를 돌려줍니다. */
         bool clearAndFail();
 

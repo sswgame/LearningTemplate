@@ -103,7 +103,7 @@ Dev의 Server는 팩이 아니라 낱개 파일을 읽지만, 같은 규칙으�
 
 서버는 지표 레지스트리(`Engine/Observability/MetricRegistry`)와 상태 확인 레지스트리(`ServiceHealthRegistry`)를 항상 갖고 있습니다.
 지표에는 `server_tick_seconds` 히스토그램과 `server_dropped_ticks_total` 이 있고, 상태 확인은 틱마다 신호를 받으며 종료 요청을 받으면 드레인(draining) 상태가 됩니다.
-설정의 `_opsPort` 가 0이 아니면 운영 HTTP 엔드포인트(`OpsHttpEndpoint`)를 엽니다. GET 하나에 답하고 연결을 닫으며, 평문이고 인증이 없습니다.
+설정의 `_opsPort` 가 0이 아니면 운영 HTTP 엔드포인트(`OpsHTTPEndpoint`)를 엽니다. GET 하나에 답하고 연결을 닫으며, 평문이고 인증이 없습니다.
 
 | 경로 | 응답 |
 |---|---|

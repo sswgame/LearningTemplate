@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -109,10 +109,10 @@ namespace sw
             SW_LOG_ERROR( "Tile set '%#' not found", path );
             return false;
         }
-        return loadFromXmlText( text, path );
+        return loadFromXMLText( text, path );
     }
 
-    bool TileSetAsset::parseVisual( const XmlNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const
+    bool TileSetAsset::parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const
     {
         outVisual = TileVisual{};
         if ( node.findAttribute( "frames" ) != nullptr )
@@ -150,23 +150,23 @@ namespace sw
         return true;
     }
 
-    bool TileSetAsset::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool TileSetAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         using Internal = TileSetAssetInternal;
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             SW_LOG_ERROR( "%#", doc.getLastError() );
             return false;
         }
-        const XmlNode root = doc.getRoot( "TileSet" );
+        const XMLNode root = doc.getRoot( "TileSet" );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "%#: the root element must be <TileSet>", sourceName );
             return false;
         }
         static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "normalAtlas", "columns", "rows", "tileSize" };
-        if ( XmlNameCheck::reportUnknownAttributes( root, kArrRootAttribute, sourceName ) == false )
+        if ( XMLNameCheck::reportUnknownAttributes( root, kArrRootAttribute, sourceName ) == false )
             return false;
 
         TileSetAsset loaded;
@@ -181,7 +181,7 @@ namespace sw
             return false;
         }
 
-        for ( XmlNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
             const bool bRuleTile = StringUtil::equals( node.getName(), "RuleTile", true );
             if ( bRuleTile == false && StringUtil::equals( node.getName(), "Tile", true ) == false )
@@ -190,7 +190,7 @@ namespace sw
                 return false;
             }
             static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
-            if ( XmlNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
+            if ( XMLNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
                 return false;
 
             TileBrush         brush{};
@@ -219,7 +219,7 @@ namespace sw
             }
             brush._bOutsideIsSame = StringUtil::equals( outside, "same", true ) ? SW_TRUE : SW_FALSE;
 
-            for ( XmlNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
+            for ( XMLNode ruleNode = node.findChild(); ruleNode.isValid(); ruleNode = ruleNode.findNextSibling() )
             {
                 if ( bRuleTile == false || StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
                 {
@@ -227,7 +227,7 @@ namespace sw
                     return false;
                 }
                 static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
-                if ( XmlNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
+                if ( XMLNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
                     return false;
                 TileRule rule{};
                 if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )

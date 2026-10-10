@@ -831,7 +831,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
 
     // 1) 파일 상태(Saved)로 읽는데 그 값의 오브젝트가 묶음에 없다 — 없음.
     pShot->setInstigator( GameObjectHandle::make( 987654321 ) );
-    const string state  = ObjectStateSerializer::saveToXmlString( pShot->getOwner() );
+    const string state  = ObjectStateSerializer::saveToXMLString( pShot->getOwner() );
     GameObject*  pFresh = manager.createGameObject( hashed_string( "FromFile" ) );
     SW_ASSERT_TRUE( state.empty() == false && pFresh != nullptr );
     {
@@ -839,7 +839,7 @@ SW_TEST_CASE( ActionCombatTest, ObjectReferencesOutsideTheirFileBecomeNone )
         ObjectLoadContext context{};
         context._pBatch  = &batch;
         context._savedId = 1;
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFresh, state, context ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pFresh, state, context ) );
         batch.finish();
     }
     const ProjectileComponent* pFromFile = pFresh->getComponent<ProjectileComponent>();

@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Object/Component/TagSystem.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 
@@ -50,7 +50,7 @@ namespace sw
             static void parseTagList( string_view text, vector<TagID>& outListTag )
             {
                 outListTag.clear();
-                GameDataXml::forEachToken( text, kNameSeparators, [&]( string_view token )
+                GameDataXML::forEachToken( text, kNameSeparators, [&]( string_view token )
                 { outListTag.push_back( TagID::request( token ) ); } );
             }
 
@@ -113,14 +113,14 @@ namespace sw
     void ScheduleCondition::parseNameList( string_view text, vector<hashed_string>& outListName )
     {
         outListName.clear();
-        GameDataXml::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
+        GameDataXML::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
         { outListName.push_back( hashed_string( token ) ); } );
     }
 
     uint8 ScheduleCondition::parsePhaseMask( string_view text, string_view sourceName, string_view ownerName )
     {
         uint8 mask = 0;
-        GameDataXml::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
+        GameDataXML::forEachToken( text, ScheduleConditionInternal::kNameSeparators, [&]( string_view token )
         {
             const hashed_string name( token );
             bool                bFound = false;
@@ -139,7 +139,7 @@ namespace sw
         return mask;
     }
 
-    void ScheduleCondition::readFromNode( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
+    void ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
     {
         using Internal = ScheduleConditionInternal;
         parseNameList( node.getAttributeText( "days" ), _listWeekday );
@@ -150,7 +150,7 @@ namespace sw
         Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", sourceName, ownerName );
 
         _listDayOfSeason.clear();
-        GameDataXml::forEachToken( node.getAttributeText( "daysOfSeason" ), Internal::kNameSeparators, [&]( string_view token )
+        GameDataXML::forEachToken( node.getAttributeText( "daysOfSeason" ), Internal::kNameSeparators, [&]( string_view token )
         {
             int32 dayOfSeason = 0;
             if ( StringUtil::parseInt( token, dayOfSeason ) && dayOfSeason >= 1 )

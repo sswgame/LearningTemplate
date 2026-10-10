@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -26,9 +26,9 @@ namespace sw
                 return static_cast<int32>( MathUtil::clamp( value, -limit, limit ) );
             }
 
-            static float3 readVec3( const JsonValue& parent, string_view key, const float3& fallback )
+            static float3 readVec3( const JSONValue& parent, string_view key, const float3& fallback )
             {
-                const JsonValue val = parent.get( key );
+                const JSONValue val = parent.get( key );
                 if ( val.isObject() == false )
                     return fallback;
                 float3 result = fallback;
@@ -38,9 +38,9 @@ namespace sw
                 return result;
             }
 
-            static void writeVec3( const JsonValue& parent, string_view key, const float3& value )
+            static void writeVec3( const JSONValue& parent, string_view key, const float3& value )
             {
-                const JsonValue obj = parent.set( key );
+                const JSONValue obj = parent.set( key );
                 obj.setObject();
                 obj.set( "x" ).setFloat( static_cast<float64>( value._x ) );
                 obj.set( "y" ).setFloat( static_cast<float64>( value._y ) );
@@ -73,7 +73,7 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
         // 읽은 문서를 **그대로** 읽는다(문자열로 되돌렸다가 다시 파싱하지 않는다).
@@ -85,12 +85,12 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 
-    bool SequenceAsset::parseJson( string_view jsonView )
+    bool SequenceAsset::parseJSON( string_view jsonView )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonView ) == false )
         {
             // 반쯤 찬 에셋을 남기지 않는다. 실패는 "아무것도 읽지 않았다" 여야 한다.
@@ -100,7 +100,7 @@ namespace sw
         return parseRoot( doc.getRoot() );
     }
 
-    bool SequenceAsset::parseRoot( const JsonValue& root )
+    bool SequenceAsset::parseRoot( const JSONValue& root )
     {
         _listItem.clear();
 
@@ -112,50 +112,50 @@ namespace sw
         if ( _frameMax <= _frameMin )
             _frameMax = _frameMin + 1;
 
-        forEachObjectInArray( root, "items", [this]( const JsonValue& itemJson, size_t /*itemIndex*/ )
+        forEachObjectInArray( root, "items", [this]( const JSONValue& itemJSON, size_t /*itemIndex*/ )
         {
             SequenceTrackItem item{};
-            item._name         = itemJson.get( "name" ).asString();
-            item._targetObject = itemJson.get( "target" ).asString();
-            item._start        = SequenceAssetInternal::clampFrame( itemJson.get( "start" ).asInt( 0 ) );
-            item._end          = SequenceAssetInternal::clampFrame( itemJson.get( "end" ).asInt( 10 ) );
+            item._name         = itemJSON.get( "name" ).asString();
+            item._targetObject = itemJSON.get( "target" ).asString();
+            item._start        = SequenceAssetInternal::clampFrame( itemJSON.get( "start" ).asInt( 0 ) );
+            item._end          = SequenceAssetInternal::clampFrame( itemJSON.get( "end" ).asInt( 10 ) );
             // 종류는 정수 그대로 둔다 — 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
-            const int64 rawKind = itemJson.get( "type" ).asInt( 0 );
+            const int64 rawKind = itemJSON.get( "type" ).asInt( 0 );
             item._kind          = static_cast<SequenceItemKind>( static_cast<int32>( MathUtil::clamp<int64>( rawKind, MathUtil::kMinInt32, MathUtil::kMaxInt32 ) ) );
             if ( findItemKindInfo( item._kind ) == nullptr )
                 SW_LOG_WARNING( "Sequence item '%#' has unknown type %# - it is kept but not applied", item._name, rawKind );
-            item._color       = static_cast<uint32>( itemJson.get( "color" ).asUint( 0xFFAA8080u ) );
-            item._translation = SequenceAssetInternal::readVec3( itemJson, "translation", float3{} );
-            item._rotation    = SequenceAssetInternal::readVec3( itemJson, "rotation", float3{} );
-            item._scale       = SequenceAssetInternal::readVec3( itemJson, "scale", float3{ 1.0f, 1.0f, 1.0f } );
+            item._color       = static_cast<uint32>( itemJSON.get( "color" ).asUint( 0xFFAA8080u ) );
+            item._translation = SequenceAssetInternal::readVec3( itemJSON, "translation", float3{} );
+            item._rotation    = SequenceAssetInternal::readVec3( itemJSON, "rotation", float3{} );
+            item._scale       = SequenceAssetInternal::readVec3( itemJSON, "scale", float3{ 1.0f, 1.0f, 1.0f } );
             _listItem.push_back( std::move( item ) );
         } );
         return true;
     }
 
-    string SequenceAsset::toJson() const
+    string SequenceAsset::toJSON() const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
         root.set( "frameMin" ).setInt( _frameMin );
         root.set( "frameMax" ).setInt( _frameMax );
         root.set( "note" ).setString( _note );
 
-        const JsonValue itemsVal = root.set( "items" );
+        const JSONValue itemsVal = root.set( "items" );
         itemsVal.setArray();
         for ( const SequenceTrackItem& item : _listItem )
         {
-            const JsonValue itemJson = itemsVal.pushBack();
-            itemJson.setObject();
-            itemJson.set( "name" ).setString( item._name );
-            itemJson.set( "target" ).setString( item._targetObject );
-            itemJson.set( "start" ).setInt( item._start );
-            itemJson.set( "end" ).setInt( item._end );
-            itemJson.set( "type" ).setInt( static_cast<int32>( item._kind ) );
-            itemJson.set( "color" ).setUint( item._color );
-            SequenceAssetInternal::writeVec3( itemJson, "translation", item._translation );
-            SequenceAssetInternal::writeVec3( itemJson, "rotation", item._rotation );
-            SequenceAssetInternal::writeVec3( itemJson, "scale", item._scale );
+            const JSONValue itemJSON = itemsVal.pushBack();
+            itemJSON.setObject();
+            itemJSON.set( "name" ).setString( item._name );
+            itemJSON.set( "target" ).setString( item._targetObject );
+            itemJSON.set( "start" ).setInt( item._start );
+            itemJSON.set( "end" ).setInt( item._end );
+            itemJSON.set( "type" ).setInt( static_cast<int32>( item._kind ) );
+            itemJSON.set( "color" ).setUint( item._color );
+            SequenceAssetInternal::writeVec3( itemJSON, "translation", item._translation );
+            SequenceAssetInternal::writeVec3( itemJSON, "rotation", item._rotation );
+            SequenceAssetInternal::writeVec3( itemJSON, "scale", item._scale );
         }
 
         return doc.dump( 2 );

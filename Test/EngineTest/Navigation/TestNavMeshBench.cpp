@@ -43,7 +43,7 @@ namespace
         [[nodiscard]] static bool instantiate( sw::Scene& scene, const utf8* pPath )
         {
             sw::SceneDocument document;
-            return document.loadXml( pPath ) && scene.instantiate( document );
+            return document.loadXML( pPath ) && scene.instantiate( document );
         }
 
         /** @brief 씬 기하를 한 번 모으고 새 내비메시에 @p kBakeRound 번 베이크해 판마다 걸린 시간(us)을 모읍니다. */

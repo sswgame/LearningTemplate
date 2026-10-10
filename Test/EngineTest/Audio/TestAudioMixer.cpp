@@ -18,7 +18,7 @@ namespace
     struct AudioMixerTestInternal
     {
         /** @brief master 아래 music · sfx, sfx 는 fx 로 센드(-6 dB), fx 도 master 아래입니다. */
-        static constexpr const utf8* kSendMixerXml = R"(
+        static constexpr const utf8* kSendMixerXML = R"(
 <AudioMixerDesc>
 	<_listBus>
 		<AudioBusDesc _name="master" />
@@ -57,7 +57,7 @@ namespace
 SW_TEST_CASE( AudioMixerTest, FaderAndUserVolumeMultiply )
 {
     sw::AudioMixerDesc desc;
-    SW_ASSERT_TRUE( desc.loadFromXmlText( AudioMixerTestInternal::kSendMixerXml ) );
+    SW_ASSERT_TRUE( desc.loadFromXMLText( AudioMixerTestInternal::kSendMixerXML ) );
     // 센드는 이 케이스에서 끈다(레벨 바닥).
     desc._listBus[2]._listSend[0]._levelDb = sw::audio::kSilenceDb;
     sw::AudioEngine engine;
@@ -105,7 +105,7 @@ SW_TEST_CASE( AudioMixerTest, MuteAndSoloSilenceTheRightBuses )
 SW_TEST_CASE( AudioMixerTest, SendsCarryTheSignalToTheTargetBus )
 {
     sw::AudioMixerDesc desc;
-    SW_ASSERT_TRUE( desc.loadFromXmlText( AudioMixerTestInternal::kSendMixerXml ) );
+    SW_ASSERT_TRUE( desc.loadFromXMLText( AudioMixerTestInternal::kSendMixerXML ) );
     sw::AudioEngine engine;
     SW_ASSERT_TRUE( AudioMixerTestInternal::initializeEngine( engine, desc ) );
     (void)engine.playClip( sw::hashed_string( "test/dc_half" ), sw::hashed_string( "sfx" ), sw::AudioClipPlayParams{} );
@@ -131,16 +131,16 @@ SW_TEST_CASE( AudioMixerTest, CyclesAndBadRootsAreLoadErrors )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Mixer graphs with cycles / unknown names are rejected" );
     sw::AudioMixerDesc desc;
-    SW_EXPECT_FALSE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus>
+    SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus>
         <AudioBusDesc _name="master" />
         <AudioBusDesc _name="a" _parent="master"><_listSend><AudioSendDesc _bus="b" /></_listSend></AudioBusDesc>
         <AudioBusDesc _name="b" _parent="a" /></_listBus></AudioMixerDesc>)" ) );
-    SW_EXPECT_FALSE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="main" /></_listBus></AudioMixerDesc>)" ) );
-    SW_EXPECT_FALSE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus>
+    SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="main" /></_listBus></AudioMixerDesc>)" ) );
+    SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus>
         <AudioBusDesc _name="master" /><AudioBusDesc _name="sfx" _parent="nowhere" /></_listBus></AudioMixerDesc>)" ) );
 
     // 처리 순서는 보내는 쪽이 먼저다.
-    SW_ASSERT_TRUE( desc.loadFromXmlText( AudioMixerTestInternal::kSendMixerXml ) );
+    SW_ASSERT_TRUE( desc.loadFromXMLText( AudioMixerTestInternal::kSendMixerXML ) );
     sw::vector<uint32> listOrder;
     SW_ASSERT_TRUE( desc.makeProcessingOrder( listOrder ) );
     sw::vector<uint32> listPosition( listOrder.size() );

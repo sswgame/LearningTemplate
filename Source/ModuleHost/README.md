@@ -36,7 +36,7 @@ cd build/Ninja-Debug/Bin
 
 ### 모듈을 언로드하는 경로는 하나입니다
 
-종료, 핫 리로드, 그래픽 API 교체는 모두 `ModuleHost::suspendModules( ModuleScope, bReleaseApiTable )` 하나를 거칩니다.
+종료, 핫 리로드, 그래픽 API 교체는 모두 `ModuleHost::suspendModules( ModuleScope, bReleaseAPITable )` 하나를 거칩니다.
 이 함수는 워커를 비우고, 상태를 보존하고, 인스턴스를 파괴하는 순서를 지킵니다. 이 순서를 이유마다 따로 조립하면 한 곳만 고치고 나머지를 잊게 됩니다.
 
 ## 확장하는 법

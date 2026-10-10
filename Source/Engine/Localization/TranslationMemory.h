@@ -37,9 +37,9 @@ namespace sw
         static constexpr const utf8* kFolderName     = "tm";
         static constexpr float32     kFuzzyThreshold = 0.75f;
 
-        [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         [[nodiscard]] bool loadFromFile( string_view absolutePath, string* pOutError = nullptr );
-        string             toJsonText() const;
+        string             toJSONText() const;
         [[nodiscard]] bool saveToFile( string_view absolutePath ) const;
 
         /** @brief 쌍을 넣습니다(같은 원문이면 번역을 바꿉니다). 바뀌었으면 true 입니다. */

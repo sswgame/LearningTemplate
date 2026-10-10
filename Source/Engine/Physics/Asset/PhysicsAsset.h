@@ -132,7 +132,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 모르는 키 · 열거자 · 겹친 뼈 · 셰이프 없는 바디 · 모르는 쌍 뼈는 오류이고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 에셋 자체의 규칙을 검사합니다(뼈 이름이 겹치지 않고, 바디마다 셰이프가 있고, 쌍의 뼈가 에셋에 있다). */
         [[nodiscard]] bool validate( string_view sourceName ) const;
         /** @brief 모든 바디의 뼈가 스켈레톤의 이름에 있는지 검사합니다. 없는 뼈는 오류를 남기고 false 입니다. */

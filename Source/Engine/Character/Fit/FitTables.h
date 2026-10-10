@@ -32,7 +32,7 @@ namespace sw
 
     class CharacterDataReader;
     class FitOperatorRegistry;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 겹 하나입니다. 순서가 작을수록 안쪽입니다(몸 < 셔츠 < 재킷 < 팔찌). */
     struct SW_API FitLayerDef
@@ -104,7 +104,7 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다(비우고). 연산 이름 · 인자는 @p operators 에 대조합니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const FitOperatorRegistry& operators );
 
@@ -142,7 +142,7 @@ namespace sw
         void assignRegions( const AppearanceGeometry& geometry, const CharacterBoneArray& bones, vector<uint16>& outListVertexRegion ) const;
 
     private:
-        void readRoot( const XmlNode& root, const FitOperatorRegistry& operators, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, const FitOperatorRegistry& operators, CharacterDataReader& reader );
 
     private:
         vector<FitLayerDef>       _listLayer;

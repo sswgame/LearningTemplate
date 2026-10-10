@@ -19,7 +19,7 @@ namespace sw
         , _mapInFlightCallback{}
         , _mapInFlightDataCallback{}
         , _mapRequestGeneration{}
-        , _mapInFlightIo{}
+        , _mapInFlightIO{}
         , _completedMutex{}
         , _listCompleted{}
         , _bInitialized{ false }
@@ -43,19 +43,19 @@ namespace sw
         // 다룬다 — 취소의 완료가 이 스레드에서 바로 올 수 있고, 그 완료가 `_mutex` 를 잡는다.
         if ( engine::areEngineServicesBound() )
             engine::getTaskManager().waitAll();
-        vector<AsyncReadHandle> listIo;
+        vector<AsyncReadHandle> listIO;
         {
             std::scoped_lock<mutex> lock{ _mutex };
-            for ( auto& [path, handle] : _mapInFlightIo )
+            for ( auto& [path, handle] : _mapInFlightIO )
             {
-                listIo.push_back( handle );
+                listIO.push_back( handle );
             }
         }
-        for ( const AsyncReadHandle& handle : listIo )
+        for ( const AsyncReadHandle& handle : listIO )
         {
             (void)handle.cancel();
         }
-        for ( const AsyncReadHandle& handle : listIo )
+        for ( const AsyncReadHandle& handle : listIO )
         {
             handle.wait();
         }
@@ -70,7 +70,7 @@ namespace sw
             _mapInFlightCallback.clear();
             _mapInFlightDataCallback.clear();
             _mapRequestGeneration.clear();
-            _mapInFlightIo.clear();
+            _mapInFlightIO.clear();
             _bInitialized = false;
         }
         std::scoped_lock<mutex> completedLock{ _completedMutex };
@@ -203,20 +203,20 @@ namespace sw
         return TaskPriority::Low;
     }
 
-    AsyncIoPriority AssetStreamingQueue::toIoPriority( StreamingPriority priority )
+    AsyncIOPriority AssetStreamingQueue::toIOPriority( StreamingPriority priority )
     {
         switch ( priority )
         {
             case StreamingPriority::Low:
-                return AsyncIoPriority::Low;
+                return AsyncIOPriority::Low;
             case StreamingPriority::Normal:
-                return AsyncIoPriority::Normal;
+                return AsyncIOPriority::Normal;
             case StreamingPriority::High:
-                return AsyncIoPriority::High;
+                return AsyncIOPriority::High;
             case StreamingPriority::Immediate:
-                return AsyncIoPriority::Critical;
+                return AsyncIOPriority::Critical;
         }
-        return AsyncIoPriority::Normal;
+        return AsyncIOPriority::Normal;
     }
 
     void AssetStreamingQueue::startRequestLocked( const string& pathStr, uint64 generation, bool bFetchData, StreamingPriority priority )
@@ -249,7 +249,7 @@ namespace sw
                 return;
         }
         const AsyncReadHandle handle = ResourceUtil::readBinaryResourceAsync(
-            pathStr, toIoPriority( priority ),
+            pathStr, toIOPriority( priority ),
             SW_DELEGATE_LAMBDA( ResourceReadCompleteDelegate, [this, pathStr, generation]( bool bSuccess, vector<uint8>& bytes )
         {
             onDataRead( pathStr, generation, bSuccess, bytes );
@@ -267,7 +267,7 @@ namespace sw
         }
         // 이미 끝났으면(빠른 읽기 · 취소) 핸들을 적지 않는다 — 완료가 진행 표를 먼저 지웠다.
         if ( bCurrent && _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end() )
-            _mapInFlightIo[pathStr] = handle;
+            _mapInFlightIO[pathStr] = handle;
     }
 
     void AssetStreamingQueue::onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes )
@@ -284,7 +284,7 @@ namespace sw
         _mapAssetResult[pathStr] = bSuccess;
         _uniqueActiveRequest.erase( pathStr );
         _uniqueActiveDataRequest.erase( pathStr );
-        _mapInFlightIo.erase( pathStr );
+        _mapInFlightIO.erase( pathStr );
 
         auto itCallbacks = _mapInFlightCallback.find( pathStr );
         if ( itCallbacks != _mapInFlightCallback.end() )
@@ -357,11 +357,11 @@ namespace sw
             std::scoped_lock<mutex> lock{ _mutex };
             _uniqueActiveRequest.erase( pathStr );
             _uniqueActiveDataRequest.erase( pathStr );
-            const auto itIo = _mapInFlightIo.find( pathStr );
-            if ( itIo != _mapInFlightIo.end() )
+            const auto itIO = _mapInFlightIO.find( pathStr );
+            if ( itIO != _mapInFlightIO.end() )
             {
-                ioHandle = itIo->second;
-                _mapInFlightIo.erase( itIo );
+                ioHandle = itIO->second;
+                _mapInFlightIO.erase( itIO );
             }
 
             const auto itCallbacks = _mapInFlightCallback.find( pathStr );

@@ -34,9 +34,9 @@ kListLayerOrder = (kLayerEngineDefault, kLayerGamePreset, kLayerPackData, kLayer
 # ------------------------------------------------------------------------------
 # 2) 키 이름 규칙 — 파일의 키가 코드의 무엇과 같은가
 # ------------------------------------------------------------------------------
-#: JSON 키 = 멤버 이름 그대로(`_width`). 리플렉션 `JsonSerializer` 가 읽는다.
+#: JSON 키 = 멤버 이름 그대로(`_width`). 리플렉션 `JSONSerializer` 가 읽는다.
 kKeyStyleJsonMember = "json-member"
-#: XML 속성 · 자식 원소 = 멤버 이름 그대로(`_gravity="0,-9.81,0"`). 리플렉션 `XmlSerializer` 가 읽는다.
+#: XML 속성 · 자식 원소 = 멤버 이름 그대로(`_gravity="0,-9.81,0"`). 리플렉션 `XMLSerializer` 가 읽는다.
 kKeyStyleXmlMember = "xml-member"
 #: XML 자식 원소 = 멤버 이름에서 앞의 `_` 를 뗀 것(`<startMap>`). 손으로 읽는다(`GameSettings::loadRoot`).
 kKeyStyleXmlElementBare = "xml-element-bare"

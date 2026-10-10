@@ -10,12 +10,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 땅의 종류입니다. */
     enum class CityTerrain : uint8
@@ -119,9 +119,9 @@ namespace sw
      * @brief `<CityCatalog roadCost="2"><Good .../><Building .../><HouseLevel .../></CityCatalog>` 를 읽습니다(키 이름은 `Resource/game/nilecity/data/city.xml`).
      * @details 집은 `kind="House"` 인 건물 하나(보통 1 칸)이고 단계 정의는 `<HouseLevel>` 을 적은 순서입니다.
      */
-    class SW_GF_API CityCatalog : public XmlCatalog<CityCatalog>
+    class SW_GF_API CityCatalog : public XMLCatalog<CityCatalog>
     {
-        friend class XmlCatalog<CityCatalog>;
+        friend class XMLCatalog<CityCatalog>;
 
     public:
         CityCatalog();
@@ -138,8 +138,8 @@ namespace sw
         int32                            getRoadCost() const { return _roadCost; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "CityCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "CityCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<CityBuildingDef> _buildingCatalog;
         GameCatalog<CityGoodDef>     _goodCatalog;

@@ -20,7 +20,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kCityTestXml = R"(
+    constexpr const utf8* kCityTestXML = R"(
 <CityCatalog roadCost="1">
   <Good id="grain" name="Grain" food="true"/>
   <Building id="house" kind="House" size="1" cost="5"/>
@@ -48,7 +48,7 @@ namespace
 
         bool initialize( int32 money = 5000, float32 wagePerWorkerPerMonth = 0.5f )
         {
-            if ( _catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) == false )
+            if ( _catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) == false )
                 return false;
             CitySettings settings;
             settings._wagePerWorkerPerMonth = wagePerWorkerPerMonth;
@@ -93,7 +93,7 @@ namespace
 SW_TEST_CASE( CityBuilderTest, CatalogReadsBuildingsGoodsAndHouseLevels )
 {
     CityCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 9 ), catalog.getBuildings().size() );
     SW_EXPECT_EQUAL( static_cast<size_t>( 4 ), catalog.getHouseLevels().size() );
     SW_EXPECT_EQUAL( 1, catalog.getRoadCost() );
@@ -411,7 +411,7 @@ SW_TEST_CASE( CityBuilderTest, StateRoundTripContinuesTheSameCity )
     {
         CityCatalog    catalog;
         CitySimulation smallCity;
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kCityTestXml, "CityBuilderTest" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kCityTestXML, "CityBuilderTest" ) );
         smallCity.initialize( &catalog, 8, 8, CitySettings{}, GameStateRefs{} );
         Archive smallReader( written.getData(), written.getSize() );
         SW_EXPECT_FALSE( smallCity.readState( smallReader ) );

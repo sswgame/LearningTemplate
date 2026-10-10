@@ -205,14 +205,14 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
     for ( uint32 pipelineIndex = 0; pipelineIndex < kPipelineCount; ++pipelineIndex )
     {
         sw::RenderPipelineAsset& probe = arrProbe[pipelineIndex];
-        SW_ASSERT_TRUE_MSG( probe.loadFromXmlFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
+        SW_ASSERT_TRUE_MSG( probe.loadFromXMLFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
         for ( sw::RenderGraphPassDesc& pass : probe.getDesc()._listPass )
         {
             pass._shaderPath.clear();
             pass._listPermutation.push_back( "SW_COOK_PROBE=1" );
         }
         const sw::string probePath = sw::FileUtil::joinPath( pipelineDir, sw::FileUtil::getFileNamePart( arrPipeline[pipelineIndex] ) );
-        SW_ASSERT_TRUE_MSG( probe.saveToXmlFile( probePath ), probePath.c_str() );
+        SW_ASSERT_TRUE_MSG( probe.saveToXMLFile( probePath ), probePath.c_str() );
     }
 
     sw::vector<sw::ShaderCookRequest> listRequest;
@@ -438,7 +438,7 @@ SW_TEST_CASE( ShaderCookRequestTest, CookedFoldersHoldOnlyRequestedBinaries )
 
 /**
  * @brief [ShaderCookRequestTest] 머티리얼이 런타임에 바꿀 수 있는 정적 스위치(`bShaderFeature="0"`)의 모든 조합을, 씬 메시 패스마다 요청한다
- * @details 런타임은 `Material::setStaticSwitch` 로 바뀐 define 목록으로 변형 PSO 를 만든다(`createMaterialPsoVariant` — 패스 define ∪ 머티리얼 define).
+ * @details 런타임은 `Material::setStaticSwitch` 로 바뀐 define 목록으로 변형 PSO 를 만든다(`createMaterialPSOVariant` — 패스 define ∪ 머티리얼 define).
  *          쿠커가 에셋 상태만 쿠킹하면 Dev 는 실시간 컴파일로 그려지고 Shipping 에서만 바이너리가 없다(툰 TwoSided 를 켠 시험이 Shipping hostgpu 에서만 졌다).
  *          조합은 쿠커와 따로 런타임 API(`setStaticSwitch` → `getCachedShaderDefines`)로 만들고, 패스마다 런타임과 같은 합집합을 기대한다.
  *          `bShaderFeature="1"` 스위치는 에셋 상태만 쿠킹하는 계약이라 보지 않는다.

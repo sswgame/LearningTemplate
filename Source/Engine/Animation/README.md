@@ -146,7 +146,7 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 | 상태 기계 | `AnimGraphPlayer` | 같음 |
 | 알림, 동기 그룹 | `AnimNotifyTrack`, `AnimSyncGroup` | 같음 |
 | 샘플 결과 | 구간 안의 프레임 | 코덱으로 푼 본 포즈 |
-| LOD | `SpriteAnimatorLodClient` | `SkeletalMeshLodClient` |
+| LOD | `SpriteAnimatorLODClient` | `SkeletalMeshLODClient` |
 
 `SpriteClipPlayable` 은 스프라이트 클립(`.sprite.json`)의 이름 붙은 구간 하나를 `IAnimPlayable` 로 보여 줍니다. 구간 길이는 프레임 시간의 합입니다.
 스프라이트 알림은 구간마다 `animations[].notifies` 에 구간 시작 기준 초로 적습니다.
@@ -157,18 +157,18 @@ glTF 의 열 우선 행렬 배열을 행 우선으로 읽으면 그대로 이 �
 ### 애니메이션 LOD
 
 화면에 작게 보이거나 보이지 않는 캐릭터까지 매 프레임 포즈를 만들면 군중 장면에서 비용이 커집니다.
-`Object/Animation/AnimationLod` 는 언리얼의 URO(Update Rate Optimization), Significance Manager, Animation Budget Allocator 를 합친 것에 해당합니다.
+`Object/Animation/AnimationLOD` 는 언리얼의 URO(Update Rate Optimization), Significance Manager, Animation Budget Allocator 를 합친 것에 해당합니다.
 
-엔진 루프가 프레임마다 뷰 목록을 넣습니다(`AnimationSystem::setLodViews`). 주 시점과, 이번 프레임에 그리는 화면 분할이나 렌더 텍스처의 뷰가 들어갑니다.
-평가 전에 LOD 클라이언트(`IAnimationLodClient`)마다 경계 구로 다음을 판정합니다.
+엔진 루프가 프레임마다 뷰 목록을 넣습니다(`AnimationSystem::setLODViews`). 주 시점과, 이번 프레임에 그리는 화면 분할이나 렌더 텍스처의 뷰가 들어갑니다.
+평가 전에 LOD 클라이언트(`IAnimationLODClient`)마다 경계 구로 다음을 판정합니다.
 
 - **가시성.** 어느 뷰의 절두체에도 없으면 포즈를 만들지 않습니다(`setVisibleHint( false )`). 시간과 알림은 계속 흐릅니다. `_bAnimateWhenOffscreen` 을 켜면 계속 포즈를 만듭니다.
   쉬는 추가 뷰는 목록에 넣지 않으므로, CCTV 화면에만 보이는 캐릭터는 그 화면을 그리는 프레임에만 포즈를 만듭니다.
-- **갱신 주기.** 화면 크기는 경계 구 지름을 화면 높이로 나눈 값입니다(`AnimationLodUtil::computeScreenSize`). 화면 크기 단계마다 갱신 주기와 보간 여부가 정해집니다.
+- **갱신 주기.** 화면 크기는 경계 구 지름을 화면 높이로 나눈 값입니다(`AnimationLODUtil::computeScreenSize`). 화면 크기 단계마다 갱신 주기와 보간 여부가 정해집니다.
   같은 주기의 유닛들은 위상이 달라서 한 프레임에 몰리지 않습니다. 컴포넌트의 `_updateRateDivisor` 는 주기의 하한입니다.
 - **보간.** 건너뛴 프레임에는 직전 두 포즈 사이를 보간합니다. 그래서 한 주기만큼 늦습니다. 언리얼 URO 보간과 같습니다.
 - **본 LOD.** 스켈레톤 곁의 `.bonelod.json` 이 고른 본은 코덱이 풀지 않고 레퍼런스 포즈로 부모를 따라갑니다.
-- **예산.** 유닛 하나의 비용을 측정해(포즈 단계의 실제 시간을 평가한 유닛 수로 나눈 이동 평균), 전체 비용이 예산을 넘으면 화면이 작은 유닛부터 주기를 두 배씩 늘립니다(`AnimationLodUtil::allocateBudget`).
+- **예산.** 유닛 하나의 비용을 측정해(포즈 단계의 실제 시간을 평가한 유닛 수로 나눈 이동 평균), 전체 비용이 예산을 넘으면 화면이 작은 유닛부터 주기를 두 배씩 늘립니다(`AnimationLODUtil::allocateBudget`).
 
 단계, 화면 밖 주기, 예산은 `engine/animation/animationlod.json` 에 있습니다. 뷰를 한 번도 받지 않은 시스템(테스트, 서버, 헤드리스)은 판정하지 않습니다. `-gv_animationLod=0` 이면 LOD 를 끕니다.
 
@@ -310,13 +310,13 @@ KayKit 기사가 비탈 위에서 발을 디디고, 움직이는 구를 바라�
 |---|---|
 | `.skeleton.json` | `Skeletal/Skeleton.h` |
 | `.animclip` | `AnimClip.h` |
-| `.bonelod.json` | `Skeletal/SkeletonBoneLod.h` |
+| `.bonelod.json` | `Skeletal/SkeletonBoneLOD.h` |
 | `.mesh` 의 스킨 스트림과 모프 블록 | `Graphics/Mesh/MeshAssetFormat.h` |
 | `.facial.json` | `Facial/FacialRig.h` |
 | `engine/animation/lipsync.json`, `.visemes.json` | `Facial/LipSync.h` |
 | `.rig.json` | `Rig/RigAsset.h` |
 | `.retarget.json` | `Retarget/RetargetProfile.h` |
-| `engine/animation/animationlod.json` | `Object/Animation/AnimationLod.h` |
+| `engine/animation/animationlod.json` | `Object/Animation/AnimationLOD.h` |
 | `.vertexanimation.json` | `Object/Animation/VertexAnimationCooker.h` |
 
 모든 파일은 모르는 키, 없는 본을 가리키는 이름, 앞에 없는 부모를 로드 오류로 처리합니다. `ResourceDataSchemaTest` 가 `Resource/` 의 모든 파일을 읽어 확인합니다.
@@ -330,7 +330,7 @@ glTF 모프 타깃은 `.mesh` 의 모프 블록으로, `weights` 채널은 타�
 
 ### 새 리그 노드
 
-1. `RigNode` 를 상속하고 `clone`, `getTypeName`, 읽기와 평가 함수를 구현합니다. JSON 은 `RigJsonReader` 로 읽습니다. 읽은 키를 기록하므로 모르는 키가 자동으로 오류가 됩니다.
+1. `RigNode` 를 상속하고 `clone`, `getTypeName`, 읽기와 평가 함수를 구현합니다. JSON 은 `RigJSONReader` 로 읽습니다. 읽은 키를 기록하므로 모르는 키가 자동으로 오류가 됩니다.
 2. `RigNodeRegistry::registerNode( 이름, 팩토리 )` 로 등록합니다. 엔진 노드는 `RigNodeLibrary` 가 처음 쓸 때 등록하고, 게임과 키트는 같은 함수로 더합니다.
 3. `.rig.json` 의 `type` 에 그 이름을 씁니다.
 
@@ -398,4 +398,4 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 | `AnimPlayer.h`, `Graph/AnimGraphPlayer.h` | 크로스페이드, 상태 기계 |
 | `AnimPlayback.h` | 커서, 알림 트랙 |
 | `Rig/RigAsset.h`, `Rig/RigInstance.h` | 리그 에셋과 실행 상태 |
-| `Object/Animation/AnimationLod.h`, `AnimationCrowd.h` | LOD, 군중 공유 |
+| `Object/Animation/AnimationLOD.h`, `AnimationCrowd.h` | LOD, 군중 공유 |

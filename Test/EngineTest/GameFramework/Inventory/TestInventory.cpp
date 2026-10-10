@@ -19,7 +19,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kItemTestXml = R"(
+    constexpr const utf8* kItemTestXML = R"(
 <ItemCatalog>
   <Item id="herb" category="Material" maxStack="10" weight="0.1" value="2"/>
   <Item id="ore" category="Material" maxStack="5" weight="2" value="5" rarity="1"/>
@@ -31,7 +31,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kLootTestXml = R"(
+    constexpr const utf8* kLootTestXML = R"(
 <LootCatalog>
   <Table id="wolf" rolls="1" rollsMax="2" none="2">
     <Entry item="herb" weight="6" min="1" max="3"/>
@@ -43,7 +43,7 @@ namespace
 </LootCatalog>
 )";
 
-    constexpr const utf8* kRecipeTestXml = R"(
+    constexpr const utf8* kRecipeTestXML = R"(
 <RecipeCatalog>
   <Recipe id="brew" station="Alchemy" time="2"><In item="herb" count="3"/><Tool item="mortar"/><Out item="potion" count="1"/></Recipe>
   <Recipe id="forge" level="5" known="false"><In item="ore" count="2"/><Out item="sword"/></Recipe>
@@ -54,7 +54,7 @@ namespace
 SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
 {
     ItemCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kItemTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
     const ItemDef* pSword = catalog.findItem( hashed_string( "sword" ) );
     SW_ASSERT_NOT_NULL( pSword );
     SW_EXPECT_EQUAL( 1, pSword->_maxStack ); // 내구도가 있으면 겹치지 않는다
@@ -114,7 +114,7 @@ SW_TEST_CASE( InventoryTest, SlotsStackRespectWeightAndMoveSplitSortAndWear )
 SW_TEST_CASE( InventoryTest, EquipmentSlotsAcceptKindsSwapWithInventoryAndSumStats )
 {
     ItemCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kItemTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
     Inventory inventory;
     inventory.initialize( &catalog, 3 );
     (void)inventory.addItem( hashed_string( "sword" ), 1 );
@@ -154,7 +154,7 @@ SW_TEST_CASE( InventoryTest, EquipmentSlotsAcceptKindsSwapWithInventoryAndSumSta
 SW_TEST_CASE( InventoryTest, LootTablesRollWeightsNestedTablesAndLuckDeterministically )
 {
     LootCatalog loot;
-    SW_ASSERT_TRUE( loot.loadFromXmlText( kLootTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( loot.loadFromXMLText( kLootTestXML, "InventoryTest" ) );
     GameRandom    randomA( 77u );
     GameRandom    randomB( 77u );
     ItemStackList itemsA;
@@ -196,9 +196,9 @@ SW_TEST_CASE( InventoryTest, LootTablesRollWeightsNestedTablesAndLuckDeterminist
 SW_TEST_CASE( InventoryTest, CraftingChecksStationLevelToolsAndQueuesTimedJobs )
 {
     ItemCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kItemTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
     RecipeCatalog recipes;
-    SW_ASSERT_TRUE( recipes.loadFromXmlText( kRecipeTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( recipes.loadFromXMLText( kRecipeTestXML, "InventoryTest" ) );
     vector<const RecipeDef*> listRecipe;
     recipes.findRecipesFor( hashed_string( "potion" ), listRecipe );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( listRecipe.size() ) );
@@ -249,9 +249,9 @@ SW_TEST_CASE( InventoryTest, CraftingChecksStationLevelToolsAndQueuesTimedJobs )
 SW_TEST_CASE( InventoryTest, CrafterConsumeHandlerAndGridInventoryShapes )
 {
     ItemCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kItemTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kItemTestXML, "InventoryTest" ) );
     RecipeCatalog recipes;
-    SW_ASSERT_TRUE( recipes.loadFromXmlText( kRecipeTestXml, "InventoryTest" ) );
+    SW_ASSERT_TRUE( recipes.loadFromXMLText( kRecipeTestXML, "InventoryTest" ) );
     Inventory inventory;
     inventory.initialize( &catalog, 6 );
     (void)inventory.addItem( hashed_string( "herb" ), 3 );

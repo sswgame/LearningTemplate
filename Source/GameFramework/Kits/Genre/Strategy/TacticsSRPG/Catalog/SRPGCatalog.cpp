@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
             static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSRPGMoveTypeCount], bool bAptitude )
             {
                 int32 slot = 0;
-                GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( slot >= kSRPGMoveTypeCount )
                         return;
@@ -114,17 +114,17 @@ namespace sw
         return MathUtil::max( 0, value );
     }
 
-    uint32 SRPGCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 SRPGCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const XmlNode pilotCurve = root.findChild( "PilotCurve" );
+        const XMLNode pilotCurve = root.findChild( "PilotCurve" );
         if ( pilotCurve )
             _pilotCurve.loadFromNode( pilotCurve );
-        const XmlNode unitCurve = root.findChild( "UnitCurve" );
+        const XMLNode unitCurve = root.findChild( "UnitCurve" );
         if ( unitCurve )
             _unitCurve.loadFromNode( unitCurve );
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pName       = node.getName();
             const bool  bTerrain    = StringUtil::equals( pName, "Terrain", true );
@@ -134,7 +134,7 @@ namespace sw
             const bool  bDefinition = bTerrain || bWeapon || bUnit || bPilot;
             if ( bDefinition == false )
                 continue;
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             if ( bTerrain )
@@ -164,7 +164,7 @@ namespace sw
         return loadedCount;
     }
 
-    void SRPGCatalog::loadTerrain( const XmlNode& node, const utf8* pId )
+    void SRPGCatalog::loadTerrain( const XMLNode& node, const utf8* pId )
     {
         SRPGTerrainDef def;
         def._id           = hashed_string( pId );
@@ -179,7 +179,7 @@ namespace sw
         (void)_terrainCatalog.add( def );
     }
 
-    void SRPGCatalog::loadWeapon( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadWeapon( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         SRPGWeaponDef def;
         def._id                = hashed_string( pId );
@@ -210,10 +210,10 @@ namespace sw
             def._mapAnchor = SRPGMapAnchor::Target;
         if ( def.isMap() )
         {
-            GameDataXml::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
             {
                 float32 arrValue[2]{ 0.0f, 0.0f };
-                if ( GameDataXml::parseFloats( token, arrValue, 2 ) == 2 )
+                if ( GameDataXML::parseFloats( token, arrValue, 2 ) == 2 )
                     def._listMapOffset.push_back( int2{ static_cast<int32>( arrValue[0] ), static_cast<int32>( arrValue[1] ) } );
             } );
             if ( def._listMapOffset.empty() )
@@ -226,7 +226,7 @@ namespace sw
         (void)_weaponCatalog.add( def );
     }
 
-    void SRPGCatalog::loadUnit( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadUnit( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         SRPGUnitDef def;
         def._id                    = hashed_string( pId );
@@ -242,9 +242,9 @@ namespace sw
         if ( moveType.empty() == false && SRPGCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
             SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pId, moveType );
         SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
-        GameDataXml::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
+        GameDataXML::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
         { def._listWeaponId.push_back( hashed_string( token ) ); } );
-        GameDataXml::forEachToken( node.getAttributeText( "developsTo" ), ",; \t", [&]( string_view token )
+        GameDataXML::forEachToken( node.getAttributeText( "developsTo" ), ",; \t", [&]( string_view token )
         {
             SRPGDevelopTarget target;
             const size_t      colon = token.find( ':' );
@@ -257,7 +257,7 @@ namespace sw
         (void)_unitCatalog.add( def );
     }
 
-    void SRPGCatalog::loadPilot( const XmlNode& node, const utf8* pId )
+    void SRPGCatalog::loadPilot( const XMLNode& node, const utf8* pId )
     {
         SRPGPilotDef def;
         def._id           = hashed_string( pId );

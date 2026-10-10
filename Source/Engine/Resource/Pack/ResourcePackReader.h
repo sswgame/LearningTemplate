@@ -5,7 +5,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 
 #include "Engine/Resource/Pack/ResourcePackTypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -75,7 +75,7 @@ namespace sw
          *          유효하지 않은 핸들을 돌려줍니다 — 그때 @p onComplete 는 불리지 않습니다.
          * @return 건 읽기의 핸들(취소 · 기다리기). 항목이 없으면 `isValid() == false` 입니다.
          */
-        AsyncReadHandle readFileAsync( AsyncFileIo& io, uint64 pathHash, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
+        AsyncReadHandle readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const;
 
         /** @brief 팩 헤더를 반환합니다. */
         const PackHeader& getHeader() const;

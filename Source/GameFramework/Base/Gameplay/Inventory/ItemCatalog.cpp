@@ -5,10 +5,10 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
             static constexpr const utf8* kArrRequiresAttribute[] = { "set", "pieces", "equippedTag", "characterTag", "bodyShape" };
 
             /** @brief `<Requires>` 하나를 읽습니다. 조건 속성이 없거나 둘 이상이면 경고하고 false 입니다. */
-            [[nodiscard]] static bool readRequires( const XmlNode& node, EquipCondition& outCondition, string_view sourceName, const utf8* pItemId )
+            [[nodiscard]] static bool readRequires( const XMLNode& node, EquipCondition& outCondition, string_view sourceName, const utf8* pItemId )
             {
                 const utf8* pSet          = node.findAttribute( "set" );
                 const utf8* pEquippedTag  = node.findAttribute( "equippedTag" );
@@ -34,7 +34,7 @@ namespace sw
                     return false;
                 }
                 vector<const utf8*> listUnknown;
-                if ( XmlNameCheck::collectUnknownAttributes( node, kArrRequiresAttribute, listUnknown ) > 0 )
+                if ( XMLNameCheck::collectUnknownAttributes( node, kArrRequiresAttribute, listUnknown ) > 0 )
                 {
                     for ( const utf8* pName : listUnknown )
                     {
@@ -56,7 +56,7 @@ namespace sw
                     return outCondition._tag.isValid();
                 }
                 outCondition._kind = EquipConditionKind::BodyShape;
-                GameDataXml::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
                 {
                     outCondition._listBodyShape.push_back( hashed_string( token ) );
                 } );
@@ -91,12 +91,12 @@ namespace sw
         return pDef != nullptr ? pDef->_maxStack : 1;
     }
 
-    uint32 ItemCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+        for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ItemDef def;
@@ -119,7 +119,7 @@ namespace sw
             def._maxStack      = MathUtil::max( 1, node.getAttributeInt( "maxStack", def._maxStack ) );
             def._value         = MathUtil::max( 0, node.getAttributeInt( "value", def._value ) );
             def._rarity        = node.getAttributeInt( "rarity", def._rarity );
-            GameDataXml::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             {
                 def._listTag.push_back( hashed_string( token ) );
             } );
@@ -128,10 +128,10 @@ namespace sw
                 SW_LOG_WARNING( "%#: '%#' has durability - stacks are limited to 1", sourceName, pId );
                 def._maxStack = 1;
             }
-            const XmlNode statNode = node.findChild( "Stats" );
+            const XMLNode statNode = node.findChild( "Stats" );
             if ( statNode )
                 (void)def._stats.loadFromAttributes( statNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
-            for ( XmlNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
+            for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
             {
                 EquipCondition condition;
                 if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pId ) )

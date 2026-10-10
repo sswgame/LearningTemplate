@@ -19,7 +19,7 @@
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/AccountServer.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Server/TradeServer.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeClient.h"
 #include "GameFramework/Kits/Feature/Online/Trade/Shared/TradeInventoryUtil.h"
@@ -386,7 +386,7 @@ SW_TEST_CASE( TradeStreamTest, PartnerLeavingClosesTheTradeAndFeatureFlagCanTurn
 SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
 {
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( R"(<ItemCatalog>
+    SW_ASSERT_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
   <Item id="potion" category="Consumable" maxStack="10" value="12"/>
   <Item id="sword" category="Weapon" maxStack="1" value="100"/>
   <Item id="quest_key" category="Quest" maxStack="1" value="0"/>

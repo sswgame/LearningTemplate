@@ -4,10 +4,10 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
         {
             static constexpr const utf8* kRootName = "ElementRules";
 
-            static bool isNamed( const XmlNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
+            static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName, true ); }
         };
 
         /** @brief 경로마다 한 번 읽어 나눠 쓰는 표입니다(GameFramework 모듈 정적 — 등록부는 `GameDataCacheRegistry` 가 맞춘다). */
@@ -178,24 +178,24 @@ namespace sw
 
     bool ElementRuleTable::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
+        XMLDocument doc;
+        XMLNode     root;
         string      sourceName;
-        if ( GameDataXml::loadRoot( doc, path, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
+        if ( GameDataXML::loadRoot( doc, path, ElementRuleTableInternal::kRootName, root, sourceName ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleTable::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool ElementRuleTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::parseRoot( doc, xmlText, sourceName, ElementRuleTableInternal::kRootName, root ) == false )
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, ElementRuleTableInternal::kRootName, root ) == false )
             return false;
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleTable::readIndex( const XmlNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
+    bool ElementRuleTable::readIndex( const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const
     {
         outIndex          = -1;
@@ -209,7 +209,7 @@ namespace sw
         return false;
     }
 
-    bool ElementRuleTable::readStimulusRule( const XmlNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
+    bool ElementRuleTable::readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
     {
         bool bValid    = readIndex( node, "material", &ElementRuleTable::findMaterial, outRule._material, sourceName );
         bValid         = readIndex( node, "flag", &ElementRuleTable::findFlag, outRule._flag, sourceName ) && bValid;
@@ -229,7 +229,7 @@ namespace sw
         return bValid;
     }
 
-    bool ElementRuleTable::readStepRule( const XmlNode& node, ElementStepRule& outRule, string_view sourceName ) const
+    bool ElementRuleTable::readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const
     {
         if ( ElementRuleTableInternal::isNamed( node, "Expire" ) )
             outRule._kind = ElementStepRuleKind::Expire;
@@ -268,13 +268,13 @@ namespace sw
         return bValid;
     }
 
-    bool ElementRuleTable::loadRoot( const XmlNode& root, string_view sourceName )
+    bool ElementRuleTable::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
         _stepTime   = root.getAttributeFloat( "stepTime", 0.25f );
         bool bValid = true;
         // 이름은 앞에서 선언한 것만 가리킨다 — 깃발 · 재질 · 상태를 먼저 모두 읽고 규칙을 읽는다.
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( ElementRuleTableInternal::isNamed( child, "Flag" ) )
             {
@@ -302,10 +302,10 @@ namespace sw
                 }
             }
         }
-        for ( XmlNode child = root.findChild( "Material" ); child; child = child.findNextSibling( "Material" ) )
+        for ( XMLNode child = root.findChild( "Material" ); child; child = child.findNextSibling( "Material" ) )
         {
             vector<hashed_string> listFlag;
-            GameDataXml::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
+            GameDataXML::forEachToken( child.getAttributeText( "flags" ), ", ;", [&listFlag]( string_view token )
             { listFlag.push_back( hashed_string( string( token ).c_str() ) ); } );
             const int32 material = addMaterial( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), listFlag );
             if ( material < 0 )
@@ -314,7 +314,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            for ( XmlAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+            for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
             {
                 const bool bReserved = StringUtil::equals( attribute.getName(), "id", true ) || StringUtil::equals( attribute.getName(), "flags", true );
                 if ( bReserved )
@@ -329,19 +329,19 @@ namespace sw
                 setMaterialParam( material, hashed_string( attribute.getName() ), value );
             }
         }
-        for ( XmlNode child = root.findChild( "Stimulus" ); child; child = child.findNextSibling( "Stimulus" ) )
+        for ( XMLNode child = root.findChild( "Stimulus" ); child; child = child.findNextSibling( "Stimulus" ) )
         {
             const int32 stimulus = addStimulus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ) );
-            for ( XmlNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
+            for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
             {
                 ElementStimulusRule rule;
                 bValid = readStimulusRule( ruleNode, rule, sourceName ) && bValid;
                 addStimulusRule( stimulus, rule );
             }
         }
-        for ( XmlNode stepNode = root.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
+        for ( XMLNode stepNode = root.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
-            for ( XmlNode ruleNode = stepNode.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
+            for ( XMLNode ruleNode = stepNode.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
             {
                 ElementStepRule rule;
                 if ( readStepRule( ruleNode, rule, sourceName ) )
@@ -350,7 +350,7 @@ namespace sw
                     bValid = false;
             }
         }
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const bool bKnown = ElementRuleTableInternal::isNamed( child, "Flag" ) || ElementRuleTableInternal::isNamed( child, "Status" ) ||
                                 ElementRuleTableInternal::isNamed( child, "Material" ) || ElementRuleTableInternal::isNamed( child, "Stimulus" ) ||

@@ -23,7 +23,7 @@ namespace
 {
     struct AIDirectorTestInternal
     {
-        static constexpr const utf8* kPacingXml = R"(
+        static constexpr const utf8* kPacingXML = R"(
 <AIDirector startPhase="BuildUp">
   <Intensity max="1" decayPerSecond="0.1" decayDelay="2">
     <Signal id="damage" kind="impulse" scale="0.1" combat="true"/>
@@ -48,7 +48,7 @@ namespace
 </AIDirector>
 )";
 
-        static constexpr const utf8* kSpawnXml = R"(
+        static constexpr const utf8* kSpawnXML = R"(
 <SpawnTable budgetPerMinute="60" maxBudget="4" startBudget="0">
   <Entry id="grunt" cost="1" weight="1" max="50" tags="Common"/>
   <Entry id="runner" cost="1" weight="1" max="50" tags="Common"/>
@@ -56,7 +56,7 @@ namespace
 </SpawnTable>
 )";
 
-        static constexpr const utf8* kCooldownXml = R"(
+        static constexpr const utf8* kCooldownXML = R"(
 <AIDirector>
   <Phase id="Only"/>
   <Pool id="ambient" trigger="interval" interval="1" chance="1" cooldown="2">
@@ -66,7 +66,7 @@ namespace
 </AIDirector>
 )";
 
-        static constexpr const utf8* kContextXml = R"(
+        static constexpr const utf8* kContextXML = R"(
 <AIDirector>
   <Calendar weathers="clear,storm"/>
   <Phase id="Calm"/>
@@ -80,7 +80,7 @@ namespace
 </AIDirector>
 )";
 
-        static constexpr const utf8* kRewardXml = R"(
+        static constexpr const utf8* kRewardXML = R"(
 <AIDirector startPhase="Fight">
   <Intensity><Signal id="lowAmmo" kind="level" scale="0"/></Intensity>
   <Phase id="Fight" rewardScale="1"/>
@@ -118,7 +118,7 @@ namespace
         {
             AIDirectorProfile profile;
             SpawnTable        table;
-            if ( profile.loadFromXmlText( kPacingXml, "Pacing" ) == false || table.loadFromXmlText( kSpawnXml, "Spawn" ) == false )
+            if ( profile.loadFromXMLText( kPacingXML, "Pacing" ) == false || table.loadFromXMLText( kSpawnXML, "Spawn" ) == false )
                 return 0;
             AIDirector director;
             director.initialize( &profile, &table, seed );
@@ -150,7 +150,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
 {
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kPacingXML, "Pacing" ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( profile.getPhases().size() ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( profile.getPools().size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( profile.getIntensity()._listSignal.size() ) );
@@ -163,7 +163,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
 
     struct BadCase
     {
-        const utf8* _pXml;
+        const utf8* _pXML;
         const utf8* _pMessage;
     };
     const BadCase arrBad[] = {
@@ -183,7 +183,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
         AIDirectorProfile        broken;
         {
             SW_TEST_DEFENSIVE_SCOPE( "broken director profile" );
-            SW_EXPECT_FALSE( broken.loadFromXmlText( bad._pXml, "Broken" ) );
+            SW_EXPECT_FALSE( broken.loadFromXMLText( bad._pXML, "Broken" ) );
         }
         SW_EXPECT_TRUE_MSG( logs.countContaining( bad._pMessage ) >= 1, ( string( bad._pMessage ) + " not reported:" + logs.joined() ).c_str() );
         SW_EXPECT_TRUE( broken.getPhases().empty() );
@@ -196,7 +196,7 @@ SW_TEST_CASE( AIDirectorTest, ProfileRejectsUnknownNames )
 SW_TEST_CASE( AIDirectorTest, IntensityModelBuildsDecaysAndFloors )
 {
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( AIDirectorTestInternal::kPacingXml, "Pacing" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( AIDirectorTestInternal::kPacingXML, "Pacing" ) );
     AIDirectorIntensityModel model;
     model.initialize( &profile.getIntensity() );
     SW_EXPECT_NEAR_EQUAL( 0.0f, model.getIntensity(), 1.0e-6f );
@@ -245,7 +245,7 @@ SW_TEST_CASE( AIDirectorTest, PhasesFollowIntensityThroughBuildUpPeakRelax )
 {
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kPacingXML, "Pacing" ) );
     AIDirector director;
     director.initialize( &profile, nullptr, 11u );
     vector<AIDirectorEvent> listEvent;
@@ -336,8 +336,8 @@ SW_TEST_CASE( AIDirectorTest, SpawnBudgetFollowsThePhase )
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
     SpawnTable        table;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
-    SW_ASSERT_TRUE( table.loadFromXmlText( Internal::kSpawnXml, "Spawn" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kPacingXML, "Pacing" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( Internal::kSpawnXML, "Spawn" ) );
     AIDirector director;
     director.initialize( &profile, &table, 5u );
     vector<AIDirectorEvent> listEvent;
@@ -404,7 +404,7 @@ SW_TEST_CASE( AIDirectorTest, SpawnBudgetFollowsThePhase )
 SW_TEST_CASE( AIDirectorTest, SpawnDirectorBudgetScalePausesAndScales )
 {
     SpawnTable table;
-    SW_ASSERT_TRUE( table.loadFromXmlText( R"(<SpawnTable budgetPerMinute="60" maxBudget="10" startBudget="3"><Entry id="grunt" cost="1"/></SpawnTable>)", "Scale" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( R"(<SpawnTable budgetPerMinute="60" maxBudget="10" startBudget="3"><Entry id="grunt" cost="1"/></SpawnTable>)", "Scale" ) );
     SpawnDirector director;
     director.initialize( &table, 1u );
     director.setBudgetScale( 0.0f );
@@ -423,7 +423,7 @@ SW_TEST_CASE( AIDirectorTest, CooldownsAndCapsHoldForEverySeed )
 {
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kCooldownXml, "Cooldown" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kCooldownXML, "Cooldown" ) );
     for ( uint32 seed = 1; seed <= 20; ++seed )
     {
         AIDirector director;
@@ -462,7 +462,7 @@ SW_TEST_CASE( AIDirectorTest, ContextConditionsGateEncounters )
 {
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kContextXml, "Context" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kContextXML, "Context" ) );
     AIDirector director;
     director.initialize( &profile, nullptr, 3u );
     const int32 pool = director.findPoolIndex( hashed_string( "road" ) );
@@ -526,7 +526,7 @@ SW_TEST_CASE( AIDirectorTest, RewardDensityFollowsNeedAndPhase )
 {
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kRewardXml, "Reward" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kRewardXML, "Reward" ) );
     const auto countRewards = [&]( const utf8* pPhase, float32 need ) -> int32
     {
         AIDirector director;
@@ -588,8 +588,8 @@ SW_TEST_CASE( AIDirectorTest, TraceKeepsRecentEventsInOrder )
     vector<AIDirectorEvent> listEvent;
     AIDirectorProfile       profile;
     SpawnTable              table;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
-    SW_ASSERT_TRUE( table.loadFromXmlText( Internal::kSpawnXml, "Spawn" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kPacingXML, "Pacing" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( Internal::kSpawnXML, "Spawn" ) );
     AIDirector director;
     director.initialize( &profile, &table, 1u );
     vector<AIDirectorEvent> listStep;
@@ -641,8 +641,8 @@ SW_TEST_CASE( AIDirectorTest, StateRoundTripContinuesFromTheSamePlace )
     using Internal = AIDirectorTestInternal;
     AIDirectorProfile profile;
     SpawnTable        table;
-    SW_ASSERT_TRUE( profile.loadFromXmlText( Internal::kPacingXml, "Pacing" ) );
-    SW_ASSERT_TRUE( table.loadFromXmlText( Internal::kSpawnXml, "Spawn" ) );
+    SW_ASSERT_TRUE( profile.loadFromXMLText( Internal::kPacingXML, "Pacing" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( Internal::kSpawnXML, "Spawn" ) );
 
     /** @brief 대본 한 걸음 — 30 초마다 맞고, 처음 6 초는 둘러싸이고, 스폰은 3 초 뒤 돌려준다(산 목록은 게임의 몫이라 감독 밖에 든다). */
     struct Script
@@ -725,7 +725,7 @@ SW_TEST_CASE( AIDirectorTest, StateRoundTripContinuesFromTheSamePlace )
 
     // 모양이 다른 프로필(단계 하나 · 풀 하나)은 거절하고 그대로다.
     AIDirectorProfile other;
-    SW_ASSERT_TRUE( other.loadFromXmlText( Internal::kCooldownXml, "Cooldown" ) );
+    SW_ASSERT_TRUE( other.loadFromXMLText( Internal::kCooldownXML, "Cooldown" ) );
     AIDirector mismatched;
     mismatched.initialize( &other, nullptr, 77u );
     const uint64 hashBefore = mismatched.computeStateHash();

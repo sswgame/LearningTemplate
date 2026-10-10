@@ -29,7 +29,7 @@ namespace sw
     struct AppearanceGeometry;
 
     class CharacterDataReader;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 표면 채널 하나입니다. 마스크 해상도가 0 이면 영역 값만 있고 UV 마스크가 없습니다. */
     struct SW_API SurfaceChannelDef
@@ -49,7 +49,7 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다(비우고). 모르는 속성 · 원소 · 겹친 이름은 오류입니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 채널을 더합니다(같은 이름은 바꿈). */
@@ -60,7 +60,7 @@ namespace sw
         const vector<SurfaceChannelDef>& getChannels() const { return _listChannel; }
 
     private:
-        void readRoot( const XmlNode& root, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
 
     private:
         vector<SurfaceChannelDef> _listChannel;

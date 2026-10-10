@@ -162,7 +162,7 @@ namespace sw
          */
         uint32 findTextureSlot( hashed_string name ) const;
         /** @brief XML 텍스트에서 인스턴스를 로드합니다. */
-        [[nodiscard]] bool loadFromXml( string_view xmlText );
+        [[nodiscard]] bool loadFromXML( string_view xmlText );
 
         Material*            _pParentMaterial;
         MaterialInstanceDesc _desc;

@@ -92,7 +92,7 @@ SW_TEST_CASE( TileGridUtilTest, OutlineJoinsEdgesAndPointsOutward )
 SW_TEST_CASE( TileGridUtilTest, NavCostsDriveTheGridPathfinder )
 {
     sw::TileSetAsset tileSet;
-    SW_ASSERT_TRUE( tileSet.loadFromXmlText( "<TileSet columns=\"2\" rows=\"2\">"
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( "<TileSet columns=\"2\" rows=\"2\">"
                                              "  <Tile name=\"wall\" cell=\"0\" solid=\"true\"/>"
                                              "  <Tile name=\"swamp\" cell=\"1\" navCost=\"40\"/>"
                                              "  <Tile name=\"grass\" cell=\"2\" navCost=\"5\"/>"

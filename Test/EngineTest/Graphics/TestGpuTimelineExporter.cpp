@@ -39,7 +39,7 @@ SW_TEST_CASE( GpuTimelineExporterTest, ExportsTreeInTimeOrderAndSkipsUnwrittenPa
     test::RecordingProfilerBackend backend;
     sw::GpuTimelineExporter        exporter;
     int32                          deviceIdentity{ 0 };
-    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGpuApi::Direct3D12, "DX12", &deviceIdentity, 500 ) );
+    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGraphicsAPI::Direct3D12, "DX12", &deviceIdentity, 500 ) );
     SW_EXPECT_TRUE( exporter.isContextOpenFor( &deviceIdentity, &backend ) );
 
     sw::RHIGpuTimestampFrame frame                                         = makeEmptyFrameInternal( 1'000'000 );
@@ -89,7 +89,7 @@ SW_TEST_CASE( GpuTimelineExporterTest, OverlappingSiblingsAreClippedToPreviousEn
     test::RecordingProfilerBackend backend;
     sw::GpuTimelineExporter        exporter;
     int32                          deviceIdentity{ 0 };
-    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGpuApi::Vulkan, "Vulkan", &deviceIdentity, 0 ) );
+    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGraphicsAPI::Vulkan, "Vulkan", &deviceIdentity, 0 ) );
 
     sw::RHIGpuTimestampFrame frame = makeEmptyFrameInternal( 0 );
     frame._listMicro[0]            = 0.0f; // A: 0 ~ 10 us
@@ -129,7 +129,7 @@ SW_TEST_CASE( GpuTimelineExporterTest, ContextFollowsDeviceAndResyncsPeriodicall
 
     int32 firstDevice{ 0 };
     int32 secondDevice{ 0 };
-    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGpuApi::OpenGl, "GL", &firstDevice, 0 ) );
+    SW_ASSERT_TRUE( exporter.openContext( backend, sw::ProfilerGraphicsAPI::OpenGl, "GL", &firstDevice, 0 ) );
     SW_EXPECT_FALSE( exporter.isContextOpenFor( &secondDevice, &backend ) );
     test::RecordingProfilerBackend otherBackend;
     SW_EXPECT_FALSE( exporter.isContextOpenFor( &firstDevice, &otherBackend ) );

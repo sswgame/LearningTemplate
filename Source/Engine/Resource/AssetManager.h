@@ -2,7 +2,7 @@
  * @file AssetManager.h
  * @brief 팩 에셋(GUID · 스키마 · Material · Texture · Prefab · Mesh)을 한곳에서 들고 있는 파사드입니다. `EngineLoop` 가 `EngineServiceCollection` 로 소유합니다.
  * @note
- *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, SkeletonBoneLodCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
+ *   포함: AssetDatabase, AssetFormatRegistry, MaterialCache, TextureCache, PrefabCache, SpriteClipCache, MeshCache, SkeletonCache, AnimClipCache, SkeletonBoneLODCache, RigAssetCache, FractureAssetCache, ResourcePackManager.
  *   등록부에는 코드로 짓는 값 표 셋(`MeshUtil` 내장 도형 · `SpriteMeshBuilder` 9-슬라이스 메시 · `SpriteRenderUtil` 텍스처 인스턴스 — `WeakInternCache`)도 오릅니다.
  *   제외(수명이 다름):
  *   - ResourceUtil: Resource/ 경로 해석만 합니다(소유권 없음)
@@ -36,7 +36,7 @@ namespace sw
     class PrefabCache;
     class ResourcePackManager;
     class RigAssetCache;
-    class SkeletonBoneLodCache;
+    class SkeletonBoneLODCache;
     class SkeletonCache;
     class SocketSetCache;
     class SpriteClipCache;
@@ -196,7 +196,7 @@ namespace sw
         unique_ptr<MeshCache>               _meshCache;               ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SkeletonCache>           _skeletonCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<AnimClipCache>           _animClipCache;           ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
-        unique_ptr<SkeletonBoneLodCache>    _boneLodCache;            ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
+        unique_ptr<SkeletonBoneLODCache>    _boneLODCache;            ///< 등록부에 보이는 창구 — 표는 프로세스에 하나다
         unique_ptr<SocketSetCache>          _socketSetCache;          ///< 캐릭터 데이터(소켓 에셋) — 등록부에 보이는 창구
         unique_ptr<AnimNotifyTableCache>    _notifyTableCache;        ///< 캐릭터 데이터(알림 표)
         unique_ptr<PhysicsAssetCache>       _physicsAssetCache;       ///< 물리 에셋(래그돌 · 히트박스)

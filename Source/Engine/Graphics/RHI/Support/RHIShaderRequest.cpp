@@ -24,7 +24,7 @@ namespace sw
         RHIGraphicsShaderRequest request;
 
         // 뎁스만 쓰는 파이프라인(RT 0 개)은 픽셀 스테이지가 없다. FrameRenderer 는 컬러 출력이 없는 패스의 PS 경로를
-        // 이미 비우지만(createPsoForPassType), 서술체를 직접 만드는 쪽(테스트 · 툴)을 위해 여기서도 같은 판정을 한다.
+        // 이미 비우지만(createPSOForPassType), 서술체를 직접 만드는 쪽(테스트 · 툴)을 위해 여기서도 같은 판정을 한다.
         request._bDepthOnly      = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 ) ? SW_TRUE : SW_FALSE;
         request._bHasPixelShader = ( desc._pixelShaderPath.empty() == false && request._bDepthOnly == SW_FALSE ) ? SW_TRUE : SW_FALSE;
         request._numRenderTargets =

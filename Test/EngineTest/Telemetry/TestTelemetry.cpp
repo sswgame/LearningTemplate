@@ -3,8 +3,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Observability/HttpClient.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Observability/HTTPClient.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
@@ -21,7 +21,7 @@ namespace
 {
     struct TelemetryTestInternal
     {
-        static constexpr const utf8* kSchemaXml = R"(
+        static constexpr const utf8* kSchemaXML = R"(
 <TelemetrySchema version="2">
   <Pipeline batchEvents="4" flushSeconds="10" maxFileBytes="1024" maxFiles="4" maxTotalBytes="100000" sessionSample="1" breadcrumbs="5"/>
   <Event id="session.start" category="session"/>
@@ -52,18 +52,18 @@ namespace
         };
 
         /** @brief 요청을 적고 정한 상태를 돌려주는 가짜 HTTP 창구입니다(네트워크 없음). */
-        class RecordingHttpClient final : public IHttpClient
+        class RecordingHTTPClient final : public IHTTPClient
         {
         public:
-            HttpResponse send( const HttpRequest& request ) override
+            HTTPResponse send( const HTTPRequest& request ) override
             {
                 _listRequest.push_back( request );
-                HttpResponse response;
+                HTTPResponse response;
                 response._status = _status;
                 return response;
             }
 
-            vector<HttpRequest> _listRequest{};
+            vector<HTTPRequest> _listRequest{};
             int32               _status{ 200 };
         };
 
@@ -132,7 +132,7 @@ namespace
 SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
 {
     TelemetrySchema schema;
-    SW_ASSERT_TRUE( schema.loadFromXmlText( TelemetryTestInternal::kSchemaXml, "Telemetry" ) );
+    SW_ASSERT_TRUE( schema.loadFromXMLText( TelemetryTestInternal::kSchemaXML, "Telemetry" ) );
     SW_EXPECT_EQUAL( 5u, static_cast<uint32>( schema.getEvents().size() ) );
     SW_EXPECT_EQUAL( 2, schema.getVersion() );
     SW_EXPECT_EQUAL( 4u, schema.getSettings()._batchEvents );
@@ -141,7 +141,7 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
 
     struct BadCase
     {
-        const utf8* _pXml;
+        const utf8* _pXML;
         const utf8* _pMessage;
     };
     const BadCase arrBad[] = {
@@ -158,7 +158,7 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
         test::ScopedLogCollector logs;
         {
             SW_TEST_DEFENSIVE_SCOPE( "broken telemetry schema" );
-            SW_EXPECT_FALSE( schema.loadFromXmlText( bad._pXml, "Broken" ) );
+            SW_EXPECT_FALSE( schema.loadFromXMLText( bad._pXML, "Broken" ) );
         }
         SW_EXPECT_TRUE_MSG( logs.countContaining( bad._pMessage ) >= 1, ( string( bad._pMessage ) + " not reported:" + logs.joined() ).c_str() );
     }
@@ -167,7 +167,7 @@ SW_TEST_CASE( TelemetryTest, SchemaRejectsUnknownNamesAndKeepsWhatWasLoaded )
     SW_EXPECT_TRUE( schema.findEvent( "b" ) == nullptr );
     SW_EXPECT_EQUAL( 4u, schema.getSettings()._batchEvents );
     // 맞는 파일은 덧붙는다(게임 스키마).
-    SW_EXPECT_TRUE( schema.loadFromXmlText( R"(<TelemetrySchema><Event id="game.win"><Field name="score" type="int"/></Event></TelemetrySchema>)", "Game" ) );
+    SW_EXPECT_TRUE( schema.loadFromXMLText( R"(<TelemetrySchema><Event id="game.win"><Field name="score" type="int"/></Event></TelemetrySchema>)", "Game" ) );
     SW_EXPECT_TRUE( schema.findEvent( "game.win" ) != nullptr );
 }
 
@@ -181,7 +181,7 @@ SW_TEST_CASE( TelemetryTest, ConsentGatesCollectionWritingAndUpload )
     Internal::RecordingUploader uploader;
     {
         TelemetryService telemetry;
-        SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+        SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
         telemetry.initialize( folder, Internal::makeContext() );
         telemetry.setUploader( &uploader );
         SW_EXPECT_FALSE( telemetry.hasConsent() );
@@ -225,7 +225,7 @@ SW_TEST_CASE( TelemetryTest, ConsentGatesCollectionWritingAndUpload )
     SW_ASSERT_TRUE( FileUtil::writeTextFile( FileUtil::joinPath( folder, "telemetry_oldsession_0000.jsonl" ), "{\"type\":\"context\"}\n{\"type\":\"event\"}\n" ) );
     {
         TelemetryService telemetry;
-        SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+        SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
         telemetry.initialize( folder, Internal::makeContext( "nextsession" ) );
         telemetry.setUploader( &uploader );
         vector<string> listFile;
@@ -245,7 +245,7 @@ SW_TEST_CASE( TelemetryTest, RecordValidatesAgainstTheSchema )
     using Internal = TelemetryTestInternal;
     TelemetryService telemetry;
     SW_EXPECT_TRUE( telemetry.record( Internal::makeKill( "rifle", 1.0f ) ) == TelemetryRecordResult::NotInitialized );
-    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
     telemetry.initialize( test::makeTempDirectory( "spool" ), Internal::makeContext() );
     telemetry.setConsent( true );
     test::ScopedLogCollector logs;
@@ -281,7 +281,7 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     Internal::RecordingUploader uploader;
     uploader._result = TelemetryUploadResult::Kept;
     TelemetryService telemetry;
-    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
     telemetry.initialize( folder, Internal::makeContext() );
     telemetry.setUploader( &uploader );
     telemetry.setConsent( true ); // session.start 가 묶음의 첫 줄
@@ -294,7 +294,7 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_EQUAL( 1u, Internal::countSpoolFiles( folder ) );
     const vector<string> listLine = Internal::splitLines( Internal::readAllSpool( folder ) );
     SW_ASSERT_EQUAL( 5u, static_cast<uint32>( listLine.size() ) );
-    JsonDocument contextLine;
+    JSONDocument contextLine;
     SW_ASSERT_TRUE( contextLine.parse( listLine[0], "context" ) );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "type" ).asString() == "context" );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "session" ).asString() == "testsession01" );
@@ -302,11 +302,11 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_EQUAL( 2, static_cast<int32>( contextLine.getRoot().get( "schema" ).asInt() ) );
     for ( size_t lineIndex = 1; lineIndex < listLine.size(); ++lineIndex )
     {
-        JsonDocument eventLine;
+        JSONDocument eventLine;
         SW_ASSERT_TRUE( eventLine.parse( listLine[lineIndex], "event" ) );
         SW_EXPECT_EQUAL( static_cast<int64>( lineIndex - 1 ), eventLine.getRoot().get( "seq" ).asInt() );
     }
-    JsonDocument killLine;
+    JSONDocument killLine;
     SW_ASSERT_TRUE( killLine.parse( listLine[4], "kill" ) );
     SW_EXPECT_TRUE( killLine.getRoot().get( "event" ).asString() == "game.kill" );
     SW_EXPECT_NEAR_EQUAL( 3.0, killLine.getRoot().get( "fields" ).get( "distance" ).asFloat(), 1.0e-6 );
@@ -355,7 +355,7 @@ SW_TEST_CASE( TelemetryTest, SamplingIsDeterministicPerSession )
     const auto runRare = [&]( const utf8* pSession, vector<int32>& outListKept ) -> uint32
     {
         TelemetryService telemetry;
-        SW_EXPECT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+        SW_EXPECT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
         telemetry.initialize( test::makeTempDirectory( pSession ), Internal::makeContext( pSession ) );
         telemetry.setConsent( true );
         outListKept.clear();
@@ -406,7 +406,7 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
 
     const string     folder = test::makeTempDirectory( "spool" );
     TelemetryService telemetry;
-    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXml, "Telemetry" ) );
+    SW_ASSERT_TRUE( telemetry.loadSchemaText( Internal::kSchemaXML, "Telemetry" ) );
     telemetry.initialize( folder, Internal::makeContext() );
     telemetry.setConsent( true );
     // 장면 A: 16 ms 99 프레임 + 100 ms 1 프레임(끊김). 장면 B: 8 ms 50 프레임.
@@ -421,22 +421,22 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     }
     telemetry.shutdown();
     // 업로더가 없으니(기본 — 보내지 않는다) 닫힌 파일이 스풀에 남는다.
-    vector<JsonDocument> listSummary;
+    vector<JSONDocument> listSummary;
     for ( const string& line : Internal::splitLines( Internal::readAllSpool( folder ) ) )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         SW_ASSERT_TRUE( doc.parse( line, "line" ) );
         if ( doc.getRoot().get( "event" ).asString() == "perf.sceneSummary" )
             listSummary.push_back( std::move( doc ) );
     }
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listSummary.size() ) );
-    const JsonValue first = listSummary[0].getRoot().get( "fields" );
+    const JSONValue first = listSummary[0].getRoot().get( "fields" );
     SW_EXPECT_TRUE( first.get( "scene" ).asString() == "game/a.scene.xml" );
     SW_EXPECT_EQUAL( 100, static_cast<int32>( first.get( "frames" ).asInt() ) );
     SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).asFloat(), 0.06 );
     SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p99Ms" ).asFloat(), 0.06 );
     SW_EXPECT_NEAR_EQUAL( 100.0, first.get( "maxMs" ).asFloat(), 0.01 );
-    const JsonValue second = listSummary[1].getRoot().get( "fields" );
+    const JSONValue second = listSummary[1].getRoot().get( "fields" );
     SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
     SW_EXPECT_EQUAL( 50, static_cast<int32>( second.get( "frames" ).asInt() ) );
     SW_EXPECT_NEAR_EQUAL( 8.05, second.get( "p50Ms" ).asFloat(), 0.06 );
@@ -445,17 +445,17 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
 /**
  * @brief [TelemetryTest] HTTP 업로더 — 파일 그대로를 POST 본문으로, 세션 · 사건 수 · 키를 헤더로 보내고 2xx 만 보낸 것으로 친다. 기본 창구는 보내지 않는다
  */
-SW_TEST_CASE( TelemetryTest, HttpUploaderBuildsTheRequestAndNeverTouchesTheNetwork )
+SW_TEST_CASE( TelemetryTest, HTTPUploaderBuildsTheRequestAndNeverTouchesTheNetwork )
 {
-    TelemetryTestInternal::RecordingHttpClient client;
-    HttpTelemetryUploader                      uploader( client, "https://telemetry.invalid/v1/events", "key-123" );
+    TelemetryTestInternal::RecordingHTTPClient client;
+    HTTPTelemetryUploader                      uploader( client, "https://telemetry.invalid/v1/events", "key-123" );
     TelemetryUploadBatch                       batch;
     batch._content    = "{\"type\":\"context\"}\n{\"type\":\"event\"}\n";
     batch._sessionId  = "s1";
     batch._eventCount = 1;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Sent );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( client._listRequest.size() ) );
-    const HttpRequest& request = client._listRequest[0];
+    const HTTPRequest& request = client._listRequest[0];
     SW_EXPECT_TRUE( request._method == "POST" && request._url == "https://telemetry.invalid/v1/events" );
     SW_EXPECT_TRUE( request._body == batch._content );
     SW_EXPECT_TRUE( request.findHeader( "content-type" ) == "application/x-ndjson" );
@@ -465,7 +465,7 @@ SW_TEST_CASE( TelemetryTest, HttpUploaderBuildsTheRequestAndNeverTouchesTheNetwo
     client._status = 503;
     SW_EXPECT_TRUE( uploader.upload( batch ) == TelemetryUploadResult::Failed );
 
-    HttpTelemetryUploader offline( NullHttpClient::get(), "https://telemetry.invalid/v1/events", "" );
+    HTTPTelemetryUploader offline( NullHTTPClient::get(), "https://telemetry.invalid/v1/events", "" );
     SW_EXPECT_TRUE( offline.upload( batch ) == TelemetryUploadResult::Failed );
     SW_EXPECT_TRUE( NullTelemetryUploader::get().upload( batch ) == TelemetryUploadResult::Kept );
 }
@@ -477,12 +477,12 @@ SW_TEST_CASE( TelemetryTest, ConsentFollowsTheUserSetting )
 {
     UserSettingsManager settings;
     settings.initialize( UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
 <Setting id="telemetry.enabled" category="privacy" type="bool" default="false"/></UserSettingsSchema>)",
                                                     "privacy.settings.xml" ) );
     settings.reapplyAll();
     TelemetryService telemetry;
-    SW_ASSERT_TRUE( telemetry.loadSchemaText( TelemetryTestInternal::kSchemaXml, "Telemetry" ) );
+    SW_ASSERT_TRUE( telemetry.loadSchemaText( TelemetryTestInternal::kSchemaXML, "Telemetry" ) );
     telemetry.initialize( test::makeTempDirectory( "spool" ), TelemetryTestInternal::makeContext() );
     telemetry.bindConsentSetting( settings );
     SW_EXPECT_FALSE( telemetry.hasConsent() );

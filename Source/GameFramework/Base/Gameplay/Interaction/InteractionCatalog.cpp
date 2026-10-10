@@ -6,11 +6,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Base/Foundation/Data/GameDataCache.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -28,13 +28,13 @@ namespace sw
             static constexpr const utf8* kArrSlotAttribute[]        = { "id", "offset", "yaw", "tags" };
 
             template <size_t Count>
-            static bool checkAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
+            static bool checkAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                return XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning );
+                return XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning );
             }
 
             template <typename TEnum>
-            [[nodiscard]] static bool readEnum( const XmlNode& node, const utf8* pName, TEnum& inoutValue, string_view sourceName )
+            [[nodiscard]] static bool readEnum( const XMLNode& node, const utf8* pName, TEnum& inoutValue, string_view sourceName )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( pText == nullptr )
@@ -51,12 +51,12 @@ namespace sw
 
             static void readTags( string_view text, TagContainer& outTags )
             {
-                GameDataXml::forEachToken( text, ", ;", [&outTags]( string_view token )
+                GameDataXML::forEachToken( text, ", ;", [&outTags]( string_view token )
                 { outTags.addTag( TagID::request( token ) ); } );
             }
 
             /** @brief 단계 속성(mode · prompt · duration · presses · decay · maxParticipants)을 읽습니다. 빠진 칸은 @p inoutStep 의 것입니다. */
-            [[nodiscard]] static bool readStep( const XmlNode& node, InteractionStepDef& inoutStep, string_view sourceName )
+            [[nodiscard]] static bool readStep( const XMLNode& node, InteractionStepDef& inoutStep, string_view sourceName )
             {
                 const bool  bValid  = readEnum( node, "mode", inoutStep._mode, sourceName );
                 const utf8* pPrompt = node.findAttribute( "prompt" );
@@ -83,7 +83,7 @@ namespace sw
 {
     bool InteractionDef::allowsInteractor( const TagContainer& interactorTags ) const { return interactorTags.matchesTags( _requiredTags, _forbiddenTags ); }
 
-    bool InteractionCatalog::readInteraction( const XmlNode& node, InteractionDef& outDef, string_view sourceName ) const
+    bool InteractionCatalog::readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const
     {
         using Internal       = InteractionCatalogInternal;
         bool bValid          = Internal::checkAttributes( node, Internal::kArrInteractionAttribute, sourceName );
@@ -102,7 +102,7 @@ namespace sw
 
         InteractionStepDef rootStep;
         bValid        = Internal::readStep( node, rootStep, sourceName ) && bValid;
-        XmlNode child = node.findChild();
+        XMLNode child = node.findChild();
         for ( ; child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Step", true ) == false )
@@ -121,12 +121,12 @@ namespace sw
         return bValid;
     }
 
-    bool InteractionCatalog::readSmartObject( const XmlNode& node, SmartObjectDef& outDef, string_view sourceName ) const
+    bool InteractionCatalog::readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
         bool bValid    = Internal::checkAttributes( node, Internal::kArrSmartObjectAttribute, sourceName );
         outDef._id     = hashed_string( node.findAttribute( "id" ) != nullptr ? node.findAttribute( "id" ) : "" );
-        for ( XmlNode slotNode = node.findChild(); slotNode; slotNode = slotNode.findNextSibling() )
+        for ( XMLNode slotNode = node.findChild(); slotNode; slotNode = slotNode.findNextSibling() )
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot", true ) == false )
             {
@@ -137,7 +137,7 @@ namespace sw
             bValid = Internal::checkAttributes( slotNode, Internal::kArrSlotAttribute, sourceName ) && bValid;
             SmartObjectSlotDef slot;
             slot._id     = hashed_string( slotNode.findAttribute( "id" ) != nullptr ? slotNode.findAttribute( "id" ) : "" );
-            slot._offset = GameDataXml::parseFloat3( slotNode.getAttributeText( "offset" ), float3{} );
+            slot._offset = GameDataXML::parseFloat3( slotNode.getAttributeText( "offset" ), float3{} );
             slot._yaw    = slotNode.getAttributeFloat( "yaw", 0.0f ) * MathUtil::kDegreeToRadian;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
@@ -145,10 +145,10 @@ namespace sw
         return bValid;
     }
 
-    bool InteractionCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    bool InteractionCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         bool bValid = true;
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Interaction", true ) )
             {

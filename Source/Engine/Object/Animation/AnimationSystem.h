@@ -12,7 +12,7 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
 #include "Engine/Object/Animation/AnimationDebugState.h"
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
 
 namespace sw
@@ -21,7 +21,7 @@ namespace sw
     class Component;
     class GameObjectManager;
     class SkeletalMeshComponent;
-    class SkeletonBoneLod;
+    class SkeletonBoneLOD;
 
     /**
      * @enum AnimationPhase
@@ -115,25 +115,25 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IAnimationLodClient
-     * @brief LOD 판정을 받는 것(스켈레탈 유닛 · 스프라이트 애니메이터)입니다. `AnimationSystem::registerLodClient` 로 올립니다.
+     * @class IAnimationLODClient
+     * @brief LOD 판정을 받는 것(스켈레탈 유닛 · 스프라이트 애니메이터)입니다. `AnimationSystem::registerLODClient` 로 올립니다.
      * @details 리플렉션 컴포넌트는 기반 클래스 하나만 두므로 컴포넌트가 이것을 구현한 작은 객체를 하나 듭니다(`SkeletalAnimatorBinding` 과 같은 자리).
-     *          판정은 게임 스레드에서 평가 앞에 한 번이고, 결과는 `applyAnimationLod` 로 받습니다.
+     *          판정은 게임 스레드에서 평가 앞에 한 번이고, 결과는 `applyAnimationLOD` 로 받습니다.
      */
-    class SW_API IAnimationLodClient
+    class SW_API IAnimationLODClient
     {
     public:
-        IAnimationLodClient()                                        = default;
-        virtual ~IAnimationLodClient()                               = default;
-        IAnimationLodClient( const IAnimationLodClient& )            = delete;
-        IAnimationLodClient& operator=( const IAnimationLodClient& ) = delete;
+        IAnimationLODClient()                                        = default;
+        virtual ~IAnimationLODClient()                               = default;
+        IAnimationLODClient( const IAnimationLODClient& )            = delete;
+        IAnimationLODClient& operator=( const IAnimationLODClient& ) = delete;
 
         /** @brief 월드 경계 구입니다. 없으면 false — 늘 보이고 가장 중요한 것으로 봅니다. */
-        virtual bool findAnimationLodBounds( float3& outCenter, float32& outRadius ) const = 0;
+        virtual bool findAnimationLODBounds( float3& outCenter, float32& outRadius ) const = 0;
         /** @brief 본 LOD 표입니다(없으면 nullptr). */
-        virtual const SkeletonBoneLod* findBoneLod() const { return nullptr; }
+        virtual const SkeletonBoneLOD* findBoneLOD() const { return nullptr; }
         /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */
-        virtual void applyAnimationLod( const AnimationLodState& state ) = 0;
+        virtual void applyAnimationLOD( const AnimationLODState& state ) = 0;
         /**
          * @brief 포즈 없이 상태만 되감기에 남기는 클라이언트(스프라이트 애니메이터)면 그 컴포넌트입니다. 기본은 nullptr — 스켈레탈 유닛은 포즈와 함께
          *        따로 기록합니다.
@@ -180,21 +180,21 @@ namespace sw
         /** @brief 한 프레임을 평가합니다(게임 스레드, 틱 뒤). LOD 판정 → 단계들 순서입니다. */
         void evaluate( float32 deltaSeconds );
 
-        // --- LOD (AnimationLod.h) ---
+        // --- LOD (AnimationLOD.h) ---
         /** @brief LOD 판정을 받을 것을 올립니다(유닛 · 스프라이트 애니메이터). */
-        void registerLodClient( IAnimationLodClient* pClient );
+        void registerLODClient( IAnimationLODClient* pClient );
         /** @brief 내립니다. 멱등입니다. */
-        void unregisterLodClient( IAnimationLodClient* pClient );
+        void unregisterLODClient( IAnimationLODClient* pClient );
         /**
          * @brief 다음 평가가 쓸 뷰들입니다(주 시점 + 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
          *        (모든 클라이언트가 보이고 매 프레임 — 시험 · 서버 · 뷰가 없는 실행).
          */
-        void setLodViews( const vector<AnimationLodView>& listView );
+        void setLODViews( const vector<AnimationLODView>& listView );
         /** @brief 뷰를 지워 LOD 를 끕니다. */
-        void clearLodViews();
-        /** @brief LOD 표를 정합니다(시험 · 게임). 정하지 않으면 처음 판정 때 `AnimationLodSettings::kResourcePath` 를 읽습니다. */
-        void                        setLodSettings( const AnimationLodSettings& settings );
-        const AnimationLodSettings& getLodSettings() const { return _lodSettings; }
+        void clearLODViews();
+        /** @brief LOD 표를 정합니다(시험 · 게임). 정하지 않으면 처음 판정 때 `AnimationLODSettings::kResourcePath` 를 읽습니다. */
+        void                        setLODSettings( const AnimationLODSettings& settings );
+        const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
         /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다 — 예산 배분이 씁니다. */
         float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
         /** @brief 비용 평균을 정합니다(시험 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
@@ -230,15 +230,15 @@ namespace sw
         const AnimationRewindRecorder& getRewind() const { return _rewind; }
 #endif
         /** @brief 거리 LOD 의 기준점(보통 카메라 월드 위치)을 정합니다. 카메라 · 뷰를 가진 쪽이 프레임마다 넣습니다. */
-        void setLodViewPosition( const float3& position );
+        void setLODViewPosition( const float3& position );
         /** @brief 거리 LOD 기준점을 지웁니다(거리 LOD 가 꺼진다). */
-        void clearLodViewPosition() { _bHasLodViewPosition = SW_FALSE; }
+        void clearLODViewPosition() { _bHasLODViewPosition = SW_FALSE; }
         /** @brief 거리 LOD 기준점입니다. 정하지 않았으면 false 입니다. */
-        bool findLodViewPosition( float3& outPosition ) const;
+        bool findLODViewPosition( float3& outPosition ) const;
 
     private:
         /** @brief LOD 판정(가시성 · 화면 크기 · 주기 · 본 LOD · 예산)을 하고 클라이언트에 알립니다. */
-        void updateLod();
+        void updateLOD();
         /** @brief 의존을 풀어 레벨을 다시 짓습니다. */
         void rebuildLevels();
         /** @brief 단계 하나를 레벨 순서로 돕니다. */
@@ -258,11 +258,11 @@ namespace sw
         vector<vector<SkeletalMeshComponent*>> _listLevel;
         vector<SkeletalMeshComponent*>         _listActive;     ///< 이번 프레임 단계를 도는 유닛(레벨 순서). 재사용합니다
         vector<uint32>                         _listLevelStart; ///< `_listActive` 안의 레벨 시작 위치(끝 하나 더)
-        vector<IAnimationLodClient*>           _listLodClient;
-        vector<AnimationLodView>               _listLodView;
-        vector<AnimationLodState>              _listScratchLodState;   ///< 판정 중 클라이언트마다의 상태(재사용)
+        vector<IAnimationLODClient*>           _listLODClient;
+        vector<AnimationLODView>               _listLODView;
+        vector<AnimationLODState>              _listScratchLODState;   ///< 판정 중 클라이언트마다의 상태(재사용)
         vector<AnimationBudgetItem>            _listScratchBudgetItem; ///< 예산 배분 입력(재사용)
-        AnimationLodSettings                   _lodSettings;
+        AnimationLODSettings                   _lodSettings;
         AnimationCrowd                         _crowd;
 #if SW_ANIMATION_REWIND_ENABLED
         AnimationRewindRecorder _rewind;
@@ -279,10 +279,10 @@ namespace sw
         uint32             _poseEvaluatedUnitCount;
         uint8              _bOrderDirty;
         uint8              _bCycle;
-        uint8              _bLodViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
-        uint8              _bLodSettingsReady;   ///< 표를 정했거나 읽었다
-        uint8              _bLodApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
+        uint8              _bLODViewsSet;        ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
+        uint8              _bLODSettingsReady;   ///< 표를 정했거나 읽었다
+        uint8              _bLODApplied;         ///< 지난 프레임에 판정을 넣었다(꺼질 때 한 번 되돌린다)
         uint8              _bCrowdSettingsReady; ///< 군중 표를 정했거나 읽었다
-        uint8              _bHasLodViewPosition; ///< 거리 LOD 기준점을 정했다
+        uint8              _bHasLODViewPosition; ///< 거리 LOD 기준점을 정했다
     };
 } // namespace sw

@@ -257,7 +257,7 @@ namespace sw
         VisemeTrack  track;
         string       trackText;
         bool         bStarted = false;
-        if ( ResourceUtil::readTextResource( trackPath, trackText ) && track.parseJson( trackText, trackPath ) )
+        if ( ResourceUtil::readTextResource( trackPath, trackText ) && track.parseJSON( trackText, trackPath ) )
         {
             speakTrack( track );
             bStarted = true;

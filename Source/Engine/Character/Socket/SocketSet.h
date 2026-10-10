@@ -31,7 +31,7 @@ namespace sw
     struct CharacterBoneArray;
 
     class CharacterDataReader;
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @brief 소켓 종류 표입니다(부착 소켓 · 접지점 · 히트박스 중심 · 락온 지점 …). 종류는 코드가 아니라 데이터 한 줄입니다.
@@ -44,7 +44,7 @@ namespace sw
         static constexpr string_view kDefaultPath = "engine/character/default.socketkinds.xml";
 
         /** @brief XML 텍스트에서 읽습니다(지금 표에 더합니다). 모르는 속성 · 원소 · 겹친 이름은 오류이고 false 입니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 종류 하나를 더합니다(이미 있으면 그대로). */
@@ -55,7 +55,7 @@ namespace sw
         const vector<hashed_string>& getKinds() const { return _listKind; }
 
     private:
-        void readRoot( const XmlNode& root, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
 
     private:
         vector<hashed_string> _listKind;
@@ -133,11 +133,11 @@ namespace sw
          * @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 모르는 속성 · 원소 · 종류(@p kinds 에 없음) · 겹친 이름은 오류입니다.
          * @param pBones 있으면 부모 본 이름도 대조합니다(없는 본은 오류).
          */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
         /** @brief XML 텍스트로 씁니다(적은 칸만). */
-        string saveToXmlText() const;
+        string saveToXMLText() const;
 
         /** @brief 항목을 더합니다. 같은 이름이 있으면 바꿉니다. */
         void addSocket( const SocketDef& socket );
@@ -172,9 +172,9 @@ namespace sw
         static bool computeVirtualBoneTransform( const VirtualBoneDef& virtualBone, const CharacterBoneArray& bones, float4x4& outUnitTransform );
 
     private:
-        void readRoot( const XmlNode& root, const SocketKindTable& kinds, CharacterDataReader& reader );
-        void readSocket( const XmlNode& node, const SocketKindTable& kinds, CharacterDataReader& reader );
-        void readVirtualBone( const XmlNode& node, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, const SocketKindTable& kinds, CharacterDataReader& reader );
+        void readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader );
+        void readVirtualBone( const XMLNode& node, CharacterDataReader& reader );
 
     private:
         vector<SocketDef>      _listSocket;

@@ -56,8 +56,8 @@ SW_TEST_CASE( ComponentStableKeyTest, LabelIsTheKeyAndSurvivesAReload )
     SW_EXPECT_TRUE( sw::ComponentStableKey::findComponent( pObj, "SceneComponent#0" ) == pPlain );
 
     // 상태를 다시 읽어도 같은 키가 같은 자리를 가리킨다.
-    const sw::string state = sw::ObjectStateSerializer::saveToXmlString( pObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pObj, state ) );
+    const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pObj, state ) );
     sw::Component* pReloadedNamed = sw::ComponentStableKey::findComponent( pObj, "Muzzle#0" );
     SW_ASSERT_NOT_NULL( pReloadedNamed );
     SW_EXPECT_TRUE( pReloadedNamed == pObj->getComponents()[0] );

@@ -86,7 +86,7 @@ namespace sw
         if ( pRecord == nullptr || _pContext == nullptr )
             return;
 
-        _pState->_activeGraphicsPso = pso;
+        _pState->_activeGraphicsPSO = pso;
         if ( pRecord->_vs )
             _pContext->VSSetShader( pRecord->_vs.Get(), nullptr, 0 );
         if ( pRecord->_ps )
@@ -161,7 +161,7 @@ namespace sw
             _pContext->OMSetRenderTargets( 0, nullptr, pDsv );
 
         // 활성 PSO 의 깊이 · 블렌드 상태(깊이 쓰기 · 알파)를 먼저 쓰고, 없으면 전역 깊이 상태로 물러난다.
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
         if ( pRecord != nullptr )
         {
             if ( pRecord->_depthStencilState )
@@ -315,15 +315,15 @@ namespace sw
         ID3D11VertexShader*                             pVs  = nullptr;
         ID3D11PixelShader*                              pPs  = nullptr;
         ID3D11InputLayout*                              pIl  = nullptr;
-        const D3D11RHIDevice::D3D11PipelineStateRecord* pPso = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPso != nullptr )
+        const D3D11RHIDevice::D3D11PipelineStateRecord* pPSO = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        if ( pPSO != nullptr )
         {
-            if ( pPso->_vs )
-                pVs = pPso->_vs.Get();
-            if ( pPso->_ps )
-                pPs = pPso->_ps.Get();
-            if ( pPso->_inputLayout )
-                pIl = pPso->_inputLayout.Get();
+            if ( pPSO->_vs )
+                pVs = pPSO->_vs.Get();
+            if ( pPSO->_ps )
+                pPs = pPSO->_ps.Get();
+            if ( pPSO->_inputLayout )
+                pIl = pPSO->_inputLayout.Get();
         }
 
         // 정점 셰이더가 없으면(컴퓨트 PSO · 지운 핸들) 그릴 수 없다. 부르는 쪽은 드로우를 건너뛴다. PS 는 없어도 된다 — 깊이 전용 PSO(그림자 ·

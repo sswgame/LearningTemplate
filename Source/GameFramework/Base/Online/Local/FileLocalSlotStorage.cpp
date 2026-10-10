@@ -44,15 +44,15 @@ namespace sw
         const string path = makeSlotPath( slot );
         if ( FileUtil::isRegularFile( path ) == false )
             return LocalStoreResult::NotFound;
-        return FileUtil::readFile( path, outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IoError;
+        return FileUtil::readFile( path, outEnvelopeBytes ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::writeSlot( const string& slot, const vector<uint8>& envelopeBytes )
     {
         const string path = makeSlotPath( slot );
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
-            return LocalStoreResult::IoError;
-        return FileUtil::writeFile( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
+        return FileUtil::writeFile( path, envelopeBytes.data(), envelopeBytes.size() ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::eraseSlot( const string& slot )
@@ -60,7 +60,7 @@ namespace sw
         const string path = makeSlotPath( slot );
         if ( FileUtil::isRegularFile( path ) == false )
             return LocalStoreResult::NotFound;
-        return FileUtil::removeFile( path ) ? LocalStoreResult::Ok : LocalStoreResult::IoError;
+        return FileUtil::removeFile( path ) ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult FileLocalSlotStorage::listSlots( const string& groupPrefix, vector<LocalSlotInfo>& outListSlotInfo )
@@ -87,7 +87,7 @@ namespace sw
             return true;
         } );
         if ( bListed == false )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         std::sort( outListSlotInfo.begin() + static_cast<ptrdiff_t>( firstIndex ), outListSlotInfo.end(), &FileLocalSlotStorageInternal::isSlotInfoBefore );
         return LocalStoreResult::Ok;
     }

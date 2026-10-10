@@ -20,18 +20,18 @@ namespace
 {
     constexpr float32 kMechArenaStep = 1.0f / 60.0f;
 
-    constexpr const utf8* kMechWeaponXml = R"(<WeaponCatalog>
+    constexpr const utf8* kMechWeaponXML = R"(<WeaponCatalog>
         <Weapon id="rifle" damage="50" fireInterval="0.2" reloadTime="1" magazineSize="10" maxReserveAmmo="30" minSpread="0" maxSpread="0"
                 spreadPerShot="0" recoilPitch="0" automatic="false"/>
       </WeaponCatalog>)";
 
     // slash1: 3 + 2 + 10 프레임, 4..14 프레임에 slash2 로 캔슬.
-    constexpr const utf8* kMechMoveXml = R"(<MoveCatalog>
+    constexpr const utf8* kMechMoveXML = R"(<MoveCatalog>
         <Move id="slash1" startup="3" active="2" recovery="10" damage="40" hitstun="20" blockstun="10" height="Mid"><Cancel from="4" to="14" moves="slash2"/></Move>
         <Move id="slash2" startup="3" active="2" recovery="12" damage="60" hitstun="20" blockstun="10" height="Mid"/>
       </MoveCatalog>)";
 
-    constexpr const utf8* kMechCatalogXml = R"(<MechCatalog deckCostLimit="1200">
+    constexpr const utf8* kMechCatalogXML = R"(<MechCatalog deckCostLimit="1200">
         <Class id="Near" melee="1.5" shot="1"/>
         <Class id="Far" down="2"/>
         <Mech id="striker" name="Striker" class="Near" rank="A" cost="300" hp="300" boost="100" boostRegen="50" boostRegenDelay="0.5" overheatPenalty="1"
@@ -57,8 +57,8 @@ namespace
 
         [[nodiscard]] bool load()
         {
-            return _weaponCatalog.loadFromXmlText( kMechWeaponXml, "MechArenaTest" ) && _moveCatalog.loadFromXmlText( kMechMoveXml, "MechArenaTest" ) &&
-                   _mechCatalog.loadFromXmlText( kMechCatalogXml, "MechArenaTest" );
+            return _weaponCatalog.loadFromXMLText( kMechWeaponXML, "MechArenaTest" ) && _moveCatalog.loadFromXMLText( kMechMoveXML, "MechArenaTest" ) &&
+                   _mechCatalog.loadFromXMLText( kMechCatalogXML, "MechArenaTest" );
         }
 
         void initialize( MechArenaWorld& outWorld, const MechArenaSettings& settings = MechArenaSettings{} ) const

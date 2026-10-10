@@ -20,7 +20,7 @@ namespace sw::editor
 
     /**
      * @brief editortooldefaults.json 의 에디터 도구 시드입니다.
-     * @details 읽기는 `JsonSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
+     * @details 읽기는 `JSONSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
      */
     REFLECT()
     struct EditorToolDefaults

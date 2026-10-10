@@ -7,7 +7,7 @@
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Animation/UiAnimation.h"
 #include "Engine/UI/Document/UiDocument.h"
 #include "Engine/UI/Document/UiDocumentCache.h"
@@ -387,7 +387,7 @@ SW_TEST_CASE( UiDocumentTest, RoundTripSaveMatchesSource )
     const utf8*       kPausePath = "engine/ui/pause.ui.xml";
     sw::string        sourceText;
     SW_ASSERT_TRUE( sw::ResourceUtil::readTextResource( kPausePath, sourceText ) );
-    sw::XmlDocument source;
+    sw::XMLDocument source;
     SW_ASSERT_TRUE( source.parse( sourceText ) );
 
     sw::UiScreen* pScreen = fixture._ui.findScreen( fixture._ui.openScreen( kPausePath ) );
@@ -406,7 +406,7 @@ SW_TEST_CASE( UiDocumentTest, RoundTripSaveMatchesSource )
     fixture._ui.getDocumentCache().registerMemoryDocument( "test/roundtrip.ui.xml", kBindingText );
     sw::UiScreen* pBound = fixture._ui.findScreen( fixture._ui.openScreen( "test/roundtrip.ui.xml" ) );
     SW_ASSERT_NOT_NULL( pBound );
-    sw::XmlDocument boundSource;
+    sw::XMLDocument boundSource;
     SW_ASSERT_TRUE( boundSource.parse( kBindingText ) );
     SW_EXPECT_STREQ( boundSource.saveToString().c_str(),
                      sw::UiDocumentWriter::write( pBound->getDesc(), {}, *pBound->getTree().getRoot(), pBound->getBindings(), {} ).c_str() );

@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.loadPath( path ) == false )
         {
             SW_LOG_WARNING( "Could not read sprite clip '%#': %#", string( path ), doc.getLastError() );
@@ -35,13 +35,13 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 
-    bool SpriteClipAsset::parseJson( string_view json )
+    bool SpriteClipAsset::parseJSON( string_view json )
     {
         clear();
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( json ) == false )
             return false;
         return parseRoot( doc.getRoot(), "<text>" );
@@ -55,7 +55,7 @@ namespace sw
         _listAnimation.clear();
     }
 
-    bool SpriteClipAsset::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool SpriteClipAsset::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
         if ( root.isObject() == false )
         {
@@ -66,24 +66,24 @@ namespace sw
         _atlasPath = root.get( "atlas" ).asString();
 
         // 키가 빠진 프레임은 구조체 기본값이다(UV 전체). 시간이 빠지면 0 = 애니메이터의 프레임 속도. 에디터는 다섯 키를 늘 다 쓴다.
-        forEachObjectInArray( root, "frames", [this, sourceLabel]( const JsonValue& frameJson, size_t frameIndex )
+        forEachObjectInArray( root, "frames", [this, sourceLabel]( const JSONValue& frameJSON, size_t frameIndex )
         {
             SpriteClipFrame frame{};
-            frame._uvRect._x  = static_cast<float32>( frameJson.get( "u" ).asFloat( 0.0 ) );
-            frame._uvRect._y  = static_cast<float32>( frameJson.get( "v" ).asFloat( 0.0 ) );
-            frame._uvRect._z  = static_cast<float32>( frameJson.get( "w" ).asFloat( 1.0 ) );
-            frame._uvRect._w  = static_cast<float32>( frameJson.get( "h" ).asFloat( 1.0 ) );
-            frame._durationMs = static_cast<int32>( frameJson.get( "durationMs" ).asInt( 0 ) );
+            frame._uvRect._x  = static_cast<float32>( frameJSON.get( "u" ).asFloat( 0.0 ) );
+            frame._uvRect._y  = static_cast<float32>( frameJSON.get( "v" ).asFloat( 0.0 ) );
+            frame._uvRect._z  = static_cast<float32>( frameJSON.get( "w" ).asFloat( 1.0 ) );
+            frame._uvRect._w  = static_cast<float32>( frameJSON.get( "h" ).asFloat( 1.0 ) );
+            frame._durationMs = static_cast<int32>( frameJSON.get( "durationMs" ).asInt( 0 ) );
             // 9-슬라이스 테두리는 선택 키다. 숫자 넷의 배열이 아니면 데이터 오류라 알리고 테두리 없이 읽는다.
-            const JsonValue borderJson = frameJson.get( "border" );
-            if ( borderJson.isValid() )
+            const JSONValue borderJSON = frameJSON.get( "border" );
+            if ( borderJSON.isValid() )
             {
-                if ( borderJson.isArray() && borderJson.size() == 4 )
+                if ( borderJSON.isArray() && borderJSON.size() == 4 )
                 {
-                    frame._border._x = MathUtil::saturate( static_cast<float32>( borderJson.at( 0 ).asFloat( 0.0 ) ) );
-                    frame._border._y = MathUtil::saturate( static_cast<float32>( borderJson.at( 1 ).asFloat( 0.0 ) ) );
-                    frame._border._z = MathUtil::saturate( static_cast<float32>( borderJson.at( 2 ).asFloat( 0.0 ) ) );
-                    frame._border._w = MathUtil::saturate( static_cast<float32>( borderJson.at( 3 ).asFloat( 0.0 ) ) );
+                    frame._border._x = MathUtil::saturate( static_cast<float32>( borderJSON.at( 0 ).asFloat( 0.0 ) ) );
+                    frame._border._y = MathUtil::saturate( static_cast<float32>( borderJSON.at( 1 ).asFloat( 0.0 ) ) );
+                    frame._border._z = MathUtil::saturate( static_cast<float32>( borderJSON.at( 2 ).asFloat( 0.0 ) ) );
+                    frame._border._w = MathUtil::saturate( static_cast<float32>( borderJSON.at( 3 ).asFloat( 0.0 ) ) );
                 }
                 else
                 {
@@ -94,31 +94,31 @@ namespace sw
             _listFrame.push_back( frame );
         } );
 
-        forEachObjectInArray( root, "transformKeys", [this]( const JsonValue& keyJson, size_t /*keyIndex*/ )
+        forEachObjectInArray( root, "transformKeys", [this]( const JSONValue& keyJSON, size_t /*keyIndex*/ )
         {
             SpriteClipKey key{};
-            key._time        = static_cast<float32>( keyJson.get( "time" ).asFloat( 0.0 ) );
-            key._position._x = static_cast<float32>( keyJson.get( "x" ).asFloat( 0.0 ) );
-            key._position._y = static_cast<float32>( keyJson.get( "y" ).asFloat( 0.0 ) );
-            key._angleDeg    = static_cast<float32>( keyJson.get( "angleDeg" ).asFloat( 0.0 ) );
+            key._time        = static_cast<float32>( keyJSON.get( "time" ).asFloat( 0.0 ) );
+            key._position._x = static_cast<float32>( keyJSON.get( "x" ).asFloat( 0.0 ) );
+            key._position._y = static_cast<float32>( keyJSON.get( "y" ).asFloat( 0.0 ) );
+            key._angleDeg    = static_cast<float32>( keyJSON.get( "angleDeg" ).asFloat( 0.0 ) );
             _listKey.push_back( key );
         } );
 
         // 구간은 프레임 목록 안으로 자른다. 잘린 것 · 버린 것은 로드마다 한 번 알린다(조용히 다른 프레임을 보이지 않게).
         const int32 frameCount   = getFrameCount();
         uint32      clampedCount = 0;
-        forEachObjectInArray( root, "animations", [this, frameCount, &clampedCount]( const JsonValue& animationJson, size_t /*animationIndex*/ )
+        forEachObjectInArray( root, "animations", [this, frameCount, &clampedCount]( const JSONValue& animationJSON, size_t /*animationIndex*/ )
         {
             SpriteClipAnimation animation{};
-            animation._name            = animationJson.get( "name" ).asString();
-            const int64 requestedFirst = animationJson.get( "start" ).asInt( 0 );
-            const int64 requestedCount = animationJson.get( "count" ).asInt( 0 );
-            animation._bLoop           = animationJson.get( "loop" ).asBool( true ) ? SW_TRUE : SW_FALSE;
+            animation._name            = animationJSON.get( "name" ).asString();
+            const int64 requestedFirst = animationJSON.get( "start" ).asInt( 0 );
+            const int64 requestedCount = animationJSON.get( "count" ).asInt( 0 );
+            animation._bLoop           = animationJSON.get( "loop" ).asBool( true ) ? SW_TRUE : SW_FALSE;
             // 알림 — 구간 시작 기준 시각(초) · 길이(구간 알림). 스켈레탈 클립 곁 데이터(`clips.json`)와 같은 키다.
-            const JsonValue notifies = animationJson.get( "notifies" );
+            const JSONValue notifies = animationJSON.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
-                const JsonValue notify = notifies.at( notifyIndex );
+                const JSONValue notify = notifies.at( notifyIndex );
                 AnimNotifyEvent event{};
                 event._name     = hashed_string( notify.get( "name" ).asString() );
                 event._time     = static_cast<float32>( notify.get( "time" ).asFloat( 0.0 ) );
@@ -143,69 +143,69 @@ namespace sw
         return true;
     }
 
-    string SpriteClipAsset::toJson() const
+    string SpriteClipAsset::toJSON() const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
         root.set( "atlas" ).setString( _atlasPath );
 
-        const JsonValue framesVal = root.set( "frames" );
+        const JSONValue framesVal = root.set( "frames" );
         framesVal.setArray();
         for ( const SpriteClipFrame& frame : _listFrame )
         {
-            const JsonValue frameJson = framesVal.pushBack();
-            frameJson.setObject();
-            frameJson.set( "u" ).setFloat( static_cast<float64>( frame._uvRect._x ) );
-            frameJson.set( "v" ).setFloat( static_cast<float64>( frame._uvRect._y ) );
-            frameJson.set( "w" ).setFloat( static_cast<float64>( frame._uvRect._z ) );
-            frameJson.set( "h" ).setFloat( static_cast<float64>( frame._uvRect._w ) );
-            frameJson.set( "durationMs" ).setInt( frame._durationMs );
+            const JSONValue frameJSON = framesVal.pushBack();
+            frameJSON.setObject();
+            frameJSON.set( "u" ).setFloat( static_cast<float64>( frame._uvRect._x ) );
+            frameJSON.set( "v" ).setFloat( static_cast<float64>( frame._uvRect._y ) );
+            frameJSON.set( "w" ).setFloat( static_cast<float64>( frame._uvRect._z ) );
+            frameJSON.set( "h" ).setFloat( static_cast<float64>( frame._uvRect._w ) );
+            frameJSON.set( "durationMs" ).setInt( frame._durationMs );
             if ( frame.hasBorder() )
             {
-                const JsonValue borderJson = frameJson.set( "border" );
-                borderJson.setArray();
-                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._x ) );
-                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._y ) );
-                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._z ) );
-                borderJson.pushBack().setFloat( static_cast<float64>( frame._border._w ) );
+                const JSONValue borderJSON = frameJSON.set( "border" );
+                borderJSON.setArray();
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._x ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._y ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._z ) );
+                borderJSON.pushBack().setFloat( static_cast<float64>( frame._border._w ) );
             }
         }
 
-        const JsonValue keysVal = root.set( "transformKeys" );
+        const JSONValue keysVal = root.set( "transformKeys" );
         keysVal.setArray();
         for ( const SpriteClipKey& key : _listKey )
         {
-            const JsonValue keyJson = keysVal.pushBack();
-            keyJson.setObject();
-            keyJson.set( "time" ).setFloat( static_cast<float64>( key._time ) );
-            keyJson.set( "x" ).setFloat( static_cast<float64>( key._position._x ) );
-            keyJson.set( "y" ).setFloat( static_cast<float64>( key._position._y ) );
-            keyJson.set( "angleDeg" ).setFloat( static_cast<float64>( key._angleDeg ) );
+            const JSONValue keyJSON = keysVal.pushBack();
+            keyJSON.setObject();
+            keyJSON.set( "time" ).setFloat( static_cast<float64>( key._time ) );
+            keyJSON.set( "x" ).setFloat( static_cast<float64>( key._position._x ) );
+            keyJSON.set( "y" ).setFloat( static_cast<float64>( key._position._y ) );
+            keyJSON.set( "angleDeg" ).setFloat( static_cast<float64>( key._angleDeg ) );
         }
 
         if ( _listAnimation.empty() == false )
         {
-            const JsonValue animationsVal = root.set( "animations" );
+            const JSONValue animationsVal = root.set( "animations" );
             animationsVal.setArray();
             for ( const SpriteClipAnimation& animation : _listAnimation )
             {
-                const JsonValue animationJson = animationsVal.pushBack();
-                animationJson.setObject();
-                animationJson.set( "name" ).setString( animation._name );
-                animationJson.set( "start" ).setInt( animation._firstFrame );
-                animationJson.set( "count" ).setInt( animation._frameCount );
-                animationJson.set( "loop" ).setBool( animation._bLoop == SW_TRUE );
+                const JSONValue animationJSON = animationsVal.pushBack();
+                animationJSON.setObject();
+                animationJSON.set( "name" ).setString( animation._name );
+                animationJSON.set( "start" ).setInt( animation._firstFrame );
+                animationJSON.set( "count" ).setInt( animation._frameCount );
+                animationJSON.set( "loop" ).setBool( animation._bLoop == SW_TRUE );
                 if ( animation._listNotify.empty() )
                     continue;
-                const JsonValue notifiesVal = animationJson.set( "notifies" );
+                const JSONValue notifiesVal = animationJSON.set( "notifies" );
                 notifiesVal.setArray();
                 for ( const AnimNotifyEvent& event : animation._listNotify )
                 {
-                    const JsonValue notifyJson = notifiesVal.pushBack();
-                    notifyJson.setObject();
-                    notifyJson.set( "name" ).setString( event._name.c_str() );
-                    notifyJson.set( "time" ).setFloat( static_cast<float64>( event._time ) );
-                    notifyJson.set( "duration" ).setFloat( static_cast<float64>( event._duration ) );
+                    const JSONValue notifyJSON = notifiesVal.pushBack();
+                    notifyJSON.setObject();
+                    notifyJSON.set( "name" ).setString( event._name.c_str() );
+                    notifyJSON.set( "time" ).setFloat( static_cast<float64>( event._time ) );
+                    notifyJSON.set( "duration" ).setFloat( static_cast<float64>( event._duration ) );
                 }
             }
         }

@@ -19,7 +19,7 @@ namespace
 {
     constexpr float32 kPartyArenaStep = 1.0f / 60.0f;
 
-    constexpr const utf8* kPartyItemXml = R"(<PartyItems minInterval="0.5" maxInterval="0.5" lifetime="30" radius="6" height="1.5" maxActive="1">
+    constexpr const utf8* kPartyItemXML = R"(<PartyItems minInterval="0.5" maxInterval="0.5" lifetime="30" radius="6" height="1.5" maxActive="1">
         <Item id="spring" effect="SuperBounce"/>
       </PartyItems>)";
 
@@ -120,7 +120,7 @@ namespace
     /** @brief 아이템이 0.5 초마다 나오는 셋의 아레나를 엽니다. */
     bool beginItemArena( TrampolineArena& outArena, uint32 seed )
     {
-        if ( outArena.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) == false )
+        if ( outArena.getItemSpawner().loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) == false )
             return false;
         if ( outArena.initialize( TrampolineSettings{}, 3, 30.0f, 0, seed ) == false )
             return false;
@@ -327,7 +327,7 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
     auto collectSpawns = []( uint32 seed, vector<float3>& outListPosition )
     {
         PartyItemSpawner spawner;
-        SW_EXPECT_TRUE( spawner.loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+        SW_EXPECT_TRUE( spawner.loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._maxActive             = 3;
         settings._lifetime              = 1.0f;
@@ -364,7 +364,7 @@ SW_TEST_CASE( PartyArenaTest, ItemsSpawnDeterministicallyAndSuperBounceDoublesHe
 
     // 아레나 — 0 번이 아이템 쪽으로 가서 주우면 다음 튕김이 두 배 높이.
     TrampolineArena arena;
-    SW_ASSERT_TRUE( arena.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+    SW_ASSERT_TRUE( arena.getItemSpawner().loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
     SW_ASSERT_TRUE( arena.initialize( TrampolineSettings{}, 2, 0.0f, 0, 11u ) );
     arena.start();
     bool                    bPicked = false;
@@ -417,7 +417,7 @@ SW_TEST_CASE( PartyArenaTest, InputBytesRoundTripAndSameInputsReplay )
     auto runScript = []( vector<float32>& outListValue )
     {
         TrampolineArena arena;
-        SW_EXPECT_TRUE( arena.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+        SW_EXPECT_TRUE( arena.getItemSpawner().loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
         SW_EXPECT_TRUE( arena.initialize( TrampolineSettings{}, 3, 6.0f, 0, 99u ) );
         arena.start();
         for ( int32 frame = 0; frame < 60 * 7; ++frame )
@@ -465,7 +465,7 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
 {
     PartyRoundSeries series;
     SW_EXPECT_FALSE( series.start( 3 ) ); // 라운드가 없다
-    SW_ASSERT_TRUE( series.loadFromXmlText( R"(<PartySeries winScore="5" placementPoints="3,2,1">
+    SW_ASSERT_TRUE( series.loadFromXMLText( R"(<PartySeries winScore="5" placementPoints="3,2,1">
         <Round id="trampoline" time="60" scoreLimit="5"/><Round id="sumo" time="45"/></PartySeries>)",
                                             "PartyArenaTest" ) );
     SW_EXPECT_EQUAL( series.getWinScore(), 5 );
@@ -511,7 +511,7 @@ SW_TEST_CASE( PartyArenaTest, RoundSeriesRanksRoundsAndCrownsFirstToTarget )
 SW_TEST_CASE( PartyArenaTest, RoundSeriesEventsCarryRoundIdRankAndPoints )
 {
     PartyRoundSeries series;
-    SW_ASSERT_TRUE( series.loadFromXmlText( R"(<PartySeries winScore="4" placementPoints="3,1"><Round id="trampoline"/><Round id="sumo"/></PartySeries>)",
+    SW_ASSERT_TRUE( series.loadFromXMLText( R"(<PartySeries winScore="4" placementPoints="3,1"><Round id="trampoline"/><Round id="sumo"/></PartySeries>)",
                                             "PartyArenaTest" ) );
     SW_ASSERT_TRUE( series.start( 3 ) );
     const hashed_string trampoline( "trampoline" );
@@ -548,7 +548,7 @@ SW_TEST_CASE( PartyArenaTest, ItemSpawnRateDoesNotDependOnFrameRate )
     for ( const float32 framesPerSecond : { 60.0f, 30.0f } )
     {
         PartyItemSpawner spawner;
-        SW_ASSERT_TRUE( spawner.loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+        SW_ASSERT_TRUE( spawner.loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
         PartyItemSpawnSettings settings = spawner.getSettings();
         settings._minInterval           = 0.47f;
         settings._maxInterval           = 0.47f;
@@ -603,7 +603,7 @@ SW_TEST_CASE( PartyArenaTest, StateRoundTripContinuesTheSameArena )
     SW_EXPECT_TRUE( captureArenaBytes( arena ) == captureArenaBytes( restored ) );
 
     TrampolineArena pair;
-    SW_ASSERT_TRUE( pair.getItemSpawner().loadFromXmlText( kPartyItemXml, "PartyArenaTest" ) );
+    SW_ASSERT_TRUE( pair.getItemSpawner().loadFromXMLText( kPartyItemXML, "PartyArenaTest" ) );
     SW_ASSERT_TRUE( pair.initialize( TrampolineSettings{}, 2, 30.0f, 0, 5u ) );
     Archive pairReader( written.data(), written.size() );
     SW_EXPECT_FALSE( pair.readState( pairReader ) );

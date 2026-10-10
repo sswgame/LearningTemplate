@@ -67,7 +67,7 @@ namespace sw
     /** @brief 스트림 전송 설정입니다. 시간은 초, 크기는 바이트입니다. */
     struct StreamTransportSettings
     {
-        int32   _ioThreadCount{ 1 };                    ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIo` 를 돈다
+        int32   _ioThreadCount{ 1 };                    ///< 0 = 전용 스레드 없음 — 부르는 쪽이 `pollIO` 를 돈다
         int32   _maxConnections{ 1024 };                ///< 넘는 수락은 바로 닫는다
         int32   _receiveChunkBytes{ 16 * 1024 };        ///< 읽기 한 번의 버퍼(연결마다 하나)
         int32   _sendHighWatermarkBytes{ 256 * 1024 };  ///< 줄이 이것을 넘으면 `QueuedAboveHighWatermark`

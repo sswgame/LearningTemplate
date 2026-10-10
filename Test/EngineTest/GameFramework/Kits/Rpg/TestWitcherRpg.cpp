@@ -26,7 +26,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kWitcherTestXml = R"(
+    constexpr const utf8* kWitcherTestXML = R"(
 <WitcherCatalog>
   <Alchemy maxToxicity="100" toxicityDecay="2" alcohol="dwarven_spirit,white_gull"/>
   <Combat stamina="100" regen="10" delay="1" fast="0" strong="15" dodge="5" roll="10" adrenalineMax="3" adrenalinePerHit="0.25" adrenalineLoss="1" adrenalineBonus="0.1"/>
@@ -62,7 +62,7 @@ namespace
 </WitcherCatalog>
 )";
 
-    constexpr const utf8* kElementXml = R"(
+    constexpr const utf8* kElementXML = R"(
 <ElementChart>
   <Element id="Fire"/><Element id="Shield"/><Element id="NecrophageOil"/><Element id="Dimeritium"/>
   <Element id="Necrophage"/><Element id="Specter"/><Element id="Cursed"/>
@@ -74,7 +74,7 @@ namespace
 </ElementChart>
 )";
 
-    constexpr const utf8* kWitcherRpgItemXml = R"(
+    constexpr const utf8* kWitcherRpgItemXML = R"(
 <ItemCatalog>
   <Item id="swallow" maxStack="1"/><Item id="thunderbolt" maxStack="1"/><Item id="ekimmara" maxStack="1"/>
   <Item id="necrophage_oil" maxStack="1"/><Item id="dimeritium_bomb" maxStack="1"/>
@@ -82,7 +82,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kRecipeXml = R"(
+    constexpr const utf8* kRecipeXML = R"(
 <RecipeCatalog>
   <Recipe id="brew_swallow"><In item="celandine" count="2"/><In item="dwarven_spirit" count="1"/><Out item="swallow" count="1"/></Recipe>
   <Recipe id="brew_thunderbolt"><In item="celandine" count="1"/><Out item="thunderbolt" count="1"/></Recipe>
@@ -100,8 +100,8 @@ namespace
 
         bool initialize()
         {
-            return _catalog.loadFromXmlText( kWitcherTestXml, "WitcherRpgTest" ) && _chart.loadFromXmlText( kElementXml, "WitcherRpgTest" ) &&
-                   _itemCatalog.loadFromXmlText( kWitcherRpgItemXml, "WitcherRpgTest" ) && _recipeCatalog.loadFromXmlText( kRecipeXml, "WitcherRpgTest" );
+            return _catalog.loadFromXMLText( kWitcherTestXML, "WitcherRpgTest" ) && _chart.loadFromXMLText( kElementXML, "WitcherRpgTest" ) &&
+                   _itemCatalog.loadFromXMLText( kWitcherRpgItemXML, "WitcherRpgTest" ) && _recipeCatalog.loadFromXMLText( kRecipeXML, "WitcherRpgTest" );
         }
     };
 
@@ -130,7 +130,7 @@ namespace
 SW_TEST_CASE( WitcherRpgTest, CatalogReadsMonstersAlchemySignsMutagensAndContracts )
 {
     WitcherCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWitcherTestXml, "WitcherRpgTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWitcherTestXML, "WitcherRpgTest" ) );
     const WitcherMonsterDef* pDrowner = catalog.findMonster( hashed_string( "drowner" ) );
     SW_ASSERT_NOT_NULL( pDrowner );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( pDrowner->_listWeakness.size() ) );
@@ -274,7 +274,7 @@ SW_TEST_CASE( WitcherRpgTest, SignsSpendStaminaScaleWithIntensityAndAlternateCas
     WitcherTestData data;
     SW_ASSERT_TRUE( data.initialize() );
     SkillTreeCatalog skillCatalog;
-    SW_ASSERT_TRUE( skillCatalog.loadFromXmlText( R"(<SkillTreeCatalog><Tree id="signs"><Skill id="firestream" maxRank="1" cost="1"/></Tree></SkillTreeCatalog>)",
+    SW_ASSERT_TRUE( skillCatalog.loadFromXMLText( R"(<SkillTreeCatalog><Tree id="signs"><Skill id="firestream" maxRank="1" cost="1"/></Tree></SkillTreeCatalog>)",
                                                   "WitcherRpgTest" ) );
     SkillTreeState skills;
     skills.initialize( skillCatalog.findTree( hashed_string( "signs" ) ) );
@@ -371,7 +371,7 @@ SW_TEST_CASE( WitcherRpgTest, ActionsCostStaminaAndAdrenalineBuildsOnHitsAndDrop
 SW_TEST_CASE( WitcherRpgTest, MutagenSlotsOpenByLevelAndMatchingColorsRaiseTheBonus )
 {
     WitcherCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWitcherTestXml, "WitcherRpgTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWitcherTestXML, "WitcherRpgTest" ) );
     WitcherMutagens mutagens;
     mutagens.initialize( &catalog, 5 );
     SW_EXPECT_EQUAL( 2, mutagens.getGroupCount() );
@@ -411,9 +411,9 @@ SW_TEST_CASE( WitcherRpgTest, MutagenSlotsOpenByLevelAndMatchingColorsRaiseTheBo
 SW_TEST_CASE( WitcherRpgTest, ContractCluesFollowOrderAdvanceTheQuestAndGreedyHaggleBreaksOff )
 {
     WitcherCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWitcherTestXml, "WitcherRpgTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWitcherTestXML, "WitcherRpgTest" ) );
     QuestCatalog questCatalog;
-    SW_ASSERT_TRUE( questCatalog.loadFromXmlText( R"(
+    SW_ASSERT_TRUE( questCatalog.loadFromXMLText( R"(
 <QuestCatalog>
   <Quest id="contract_griffin">
     <Stage id="tracks" next="lair"><Objective kind="Investigate" target="tracks"/></Stage>
@@ -593,7 +593,7 @@ SW_TEST_CASE( WitcherRpgTest, StateRoundTripContinuesTheSameHunt )
 
     // 조사 — 피 자국을 찾았다. 일지는 빌린 것이라 둘이 각자 든다.
     QuestCatalog questCatalog;
-    SW_ASSERT_TRUE( questCatalog.loadFromXmlText( R"(
+    SW_ASSERT_TRUE( questCatalog.loadFromXMLText( R"(
 <QuestCatalog>
   <Quest id="contract_griffin">
     <Stage id="tracks" next="lair"><Objective kind="Investigate" target="tracks"/></Stage>

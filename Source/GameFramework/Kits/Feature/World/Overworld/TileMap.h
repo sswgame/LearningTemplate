@@ -1,6 +1,6 @@
 /**
  * @file TileMap.h
- * @brief 오버월드 타일맵 — Engine 타일맵 스키마(`TileMapXmlData`) 위의 칸 조회(걷기 · 조우 칸 · 통과 · 워프)입니다.
+ * @brief 오버월드 타일맵 — Engine 타일맵 스키마(`TileMapXMLData`) 위의 칸 조회(걷기 · 조우 칸 · 통과 · 워프)입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -9,26 +9,26 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 1) 워프 · HD-2D 비주얼 — 파일 스키마(`TileMapXmlData`)의 타입을 그대로 쓴다
+    // 1) 워프 · HD-2D 비주얼 — 파일 스키마(`TileMapXMLData`)의 타입을 그대로 쓴다
     // ------------------------------------------------------------------------------
     /** @brief 타일 좌표에서 다른 맵으로 보내는 워프입니다. */
-    using TileWarp = TileMapXmlData::Warp;
+    using TileWarp = TileMapXMLData::Warp;
     /** @brief HD-2D 1차: 타일별 가짜 높이 + 틴트입니다(메시 패스 전까지 소프트웨어 · 디버그). */
-    using OverworldTileVisual = TileMapXmlData::Visual;
+    using OverworldTileVisual = TileMapXMLData::Visual;
 
     // ------------------------------------------------------------------------------
     // 2) TileMap — XML 그리드 + 워프 목록
     // ------------------------------------------------------------------------------
     /**
      * @brief HD-2D 오버월드 타일 그리드입니다.
-     * @details 맵 데이터는 파일 스키마 `TileMapXmlData` 를 그대로 듭니다 — 플래그 레이어 · 비주얼 · 워프가 필드마다 복사되지 않습니다.
+     * @details 맵 데이터는 파일 스키마 `TileMapXMLData` 를 그대로 듭니다 — 플래그 레이어 · 비주얼 · 워프가 필드마다 복사되지 않습니다.
      *          칸 속성은 Engine 레이어 표(`kArrTileFlagLayerInfo`)의 레이어로 묻습니다(`isFlagSet`). 조우가 **일어나는 칸**은 `TileFlagLayer::Encounter` 이고,
      *          무엇을 만나는지는 장르 키트의 지역 표가 정합니다(지역 = 존 id · 태그 — `ZoneTracker`).
      */
@@ -38,10 +38,10 @@ namespace sw
         TileMap();
 
         /** @brief Resource 상대 XML 에서 타일맵을 불러옵니다. */
-        [[nodiscard]] bool loadFromXml( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXML( string_view assetRelativePath );
 
         /** @brief Resource 상대 XML 로 타일맵을 저장합니다. */
-        [[nodiscard]] bool saveToXml( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXML( string_view assetRelativePath ) const;
         /** @brief 맵 데이터를 비웁니다. */
         void clear();
         /** @brief 맵 크기를 변경합니다. */
@@ -124,7 +124,7 @@ namespace sw
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
-        TileMapXmlData                        _data; ///< 맵 데이터(파일 스키마 그대로)
+        TileMapXMLData                        _data; ///< 맵 데이터(파일 스키마 그대로)
         mutable unordered_map<uint64, size_t> _mapWarpIndex;
     };
 

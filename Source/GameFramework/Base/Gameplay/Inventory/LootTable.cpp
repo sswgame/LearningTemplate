@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 
@@ -18,7 +18,7 @@ namespace sw
     {
         struct LootTableInternal
         {
-            static LootEntry readEntry( const XmlNode& node )
+            static LootEntry readEntry( const XMLNode& node )
             {
                 LootEntry   entry;
                 const utf8* pItem  = node.findAttribute( "item" );
@@ -37,12 +37,12 @@ namespace sw
 
 namespace sw
 {
-    uint32 LootCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 LootCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Table" ); node; node = node.findNextSibling( "Table" ) )
+        for ( XMLNode node = root.findChild( "Table" ); node; node = node.findNextSibling( "Table" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             LootTableDef table;
@@ -50,11 +50,11 @@ namespace sw
             table._minRolls   = MathUtil::max( 0, node.getAttributeInt( "rolls", table._minRolls ) );
             table._maxRolls   = MathUtil::max( table._minRolls, node.getAttributeInt( "rollsMax", table._minRolls ) );
             table._noneWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "none", table._noneWeight ) );
-            for ( XmlNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
+            for ( XMLNode child = node.findChild( "Entry" ); child; child = child.findNextSibling( "Entry" ) )
             {
                 table._listEntry.push_back( LootTableInternal::readEntry( child ) );
             }
-            for ( XmlNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
+            for ( XMLNode child = node.findChild( "Always" ); child; child = child.findNextSibling( "Always" ) )
             {
                 table._listAlways.push_back( LootTableInternal::readEntry( child ) );
             }

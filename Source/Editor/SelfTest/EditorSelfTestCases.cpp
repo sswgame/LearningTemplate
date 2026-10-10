@@ -418,7 +418,7 @@ namespace sw::editor
                     pCamera->setRole( CameraRole::Custom );
                     pCamera->setOrthographic( true );
                     probe._objectId  = pObj->getObjectId();
-                    probe._xmlBefore = ObjectStateSerializer::saveToXmlString( pObj );
+                    probe._xmlBefore = ObjectStateSerializer::saveToXMLString( pObj );
                     (void)pContext->getPanelManager().setPanelOpen( "inspector", true );
                     pContext->getWorkspace().selectGameObject( pObj );
                     return EditorSelfTestStep::Continue;
@@ -433,7 +433,7 @@ namespace sw::editor
                     const CameraComponent* pCamera = pObj->getComponent<CameraComponent>();
                     (void)context.expect( pCamera != nullptr && pCamera->getRole() == CameraRole::Custom, "the inspector changed the camera role" );
                     (void)context.expect( pCamera != nullptr && pCamera->isOrthographic(), "the inspector cleared the bool next to the enum" );
-                    (void)context.expect( ObjectStateSerializer::saveToXmlString( pObj ) == probe._xmlBefore, "drawing the inspector changed the object" );
+                    (void)context.expect( ObjectStateSerializer::saveToXMLString( pObj ) == probe._xmlBefore, "drawing the inspector changed the object" );
                 }
                 const ImGuiWindow* pInspector = ImGui::FindWindowByName( "Inspector" );
                 (void)context.expect( pInspector != nullptr && pInspector->Hidden == false, "the inspector was not drawn" );
@@ -806,18 +806,18 @@ namespace sw::editor
                 constexpr uint32 kCheckRestoreStep = 20;
 
                 DpiProbe&        probe      = getDpiProbe();
-                ImGuiPlatformIO& platformIo = ImGui::GetPlatformIO();
+                ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
                 const uint32     stepIndex  = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
                     if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
                         return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않는다 — 볼 것이 없다
                     probe                                 = DpiProbe{};
-                    probe._pfnSavedDpiScale               = platformIo.Platform_GetWindowDpiScale;
+                    probe._pfnSavedDpiScale               = platformIO.Platform_GetWindowDpiScale;
                     probe._baseScale                      = EditorThemeUtil::getDpiScale();
                     probe._basePaddingX                   = ImGui::GetStyle().FramePadding.x;
                     probe._fakeScale                      = probe._baseScale + 0.5f;
-                    platformIo.Platform_GetWindowDpiScale = &fakeWindowDpiScale;
+                    platformIO.Platform_GetWindowDpiScale = &fakeWindowDpiScale;
                     return EditorSelfTestStep::Continue;
                 }
                 if ( stepIndex < kCheckScaleStep )
@@ -829,7 +829,7 @@ namespace sw::editor
                     (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
                     (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
                     (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), "frame padding stayed at the old DPI while fonts grew" );
-                    platformIo.Platform_GetWindowDpiScale = probe._pfnSavedDpiScale;
+                    platformIO.Platform_GetWindowDpiScale = probe._pfnSavedDpiScale;
 #if defined( SW_PLATFORM_WINDOWS )
                     // 창 쪽 — OS 가 보내는 것과 같은 메시지(새 DPI · 그 비율만큼 큰 권장 사각형). 보내기(SendMessage)로 — 주의: 게시(PostMessage)한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
                     HWND hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );

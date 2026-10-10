@@ -338,7 +338,7 @@ namespace test
 
         void tick( int64 nowMs )
         {
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
             (void)_endpoint.pump( *this );
             _requestClient.update();
             for ( sw::unique_ptr<sw::OnlineServiceClient>& client : _listClient )

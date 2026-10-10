@@ -1,7 +1,7 @@
 /**
  * @file PlatformLoginProviderSettings.h
  * @brief 외부 로그인 제공자는 **데이터**다 — 이름 · 방식(OIDC | 액세스 토큰 프로필 조회) · 발급자/JWKS 주소 또는 프로필 주소 · client id(aud) · 주체 필드 경로.
- *        공장이 설정에서 공통 구현(`OidcLoginProvider` · `ProfileApiLoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽습니다.
+ *        공장이 설정에서 공통 구현(`OidcLoginProvider` · `ProfileAPILoginProvider`)을 만들고, 서버 설정 JSON 의 목록을 읽습니다.
  * @details 구글 · 애플 · 카카오(OIDC ID 토큰)는 Oidc, 네이버(OIDC 없음 — 액세스 토큰으로 프로필 API)는 AccessTokenProfile. 코드가 필요한 예외(애플 client secret
  *          JWT 서명 · 탈퇴 때 토큰 철회)만 `Provider/<제품>/` 폴더에 둔다. 실제 제공자 등록(앱 등록 · client id)은 쓰는 게임이 생기면(백로그).
  */
@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class HttpClient;
+    class HTTPClient;
     class INetSecurityProvider;
     class IPlatformLoginProvider;
 
@@ -53,8 +53,8 @@ namespace sw
     /** @brief 설정 → 제공자 공장 · 설정 목록 읽기입니다. */
     struct SW_GF_API PlatformLoginProviderFactory
     {
-        /** @brief 설정으로 공통 구현을 만듭니다. @p pHttpClient 는 빌려 쓰고 이 제공자 혼자 거둔다(응답을 다른 쪽과 나누지 않는다). 설정이 틀리면 nullptr. */
-        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HttpClient* pHttpClient );
+        /** @brief 설정으로 공통 구현을 만듭니다. @p pHTTPClient 는 빌려 쓰고 이 제공자 혼자 거둔다(응답을 다른 쪽과 나누지 않는다). 설정이 틀리면 nullptr. */
+        static unique_ptr<IPlatformLoginProvider> create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
         /**
          * @brief `{"providers":[{"name","kind":"oidc|profile","issuer","jwksUrl","clientIds":[…],"requireNonce","profileUrl","subjectPath","displayNamePath"}]}` 를 읽습니다.
          * @details 모르는 키 · 빠진 필수 키 · 규칙 밖 이름은 오류(@p outError) — 철자가 틀린 설정이 조용히 기본값이 되지 않게.

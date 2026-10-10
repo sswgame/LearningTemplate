@@ -63,7 +63,7 @@ namespace sw
         pAllocator->Reset();
         commandListForRecord()->Reset( pAllocator, nullptr );
         _pState->_bRecording             = SW_TRUE;
-        _pState->_boundNativeGraphicsPso = 0;                     // 새 리스트에는 아직 아무 PSO 도 안 걸렸다. 캐시를 무효로 한다.
+        _pState->_boundNativeGraphicsPSO = 0;                     // 새 리스트에는 아직 아무 PSO 도 안 걸렸다. 캐시를 무효로 한다.
         _pState->_arrSlotState[0]        = D3D12SlotTableState{}; // 새 리스트에는 슬롯 테이블도 없다. 첫 드로우가 다시 굳힌다.
         _pState->_arrSlotState[1]        = D3D12SlotTableState{};
         // 힙 · 루트 시그니처 · 텍스처 배열 테이블은 리스트가 열릴 때 한 번 건다. 이후 bind*() 는 루트 CBV(상수버퍼)와 슬롯 테이블(t · u)만 바꾼다.
@@ -523,16 +523,16 @@ namespace sw
         _pState->_boundMeshOffset = offset;
     }
 
-    bool D3D12RHICommandContext::bindActiveGraphicsPso()
+    bool D3D12RHICommandContext::bindActiveGraphicsPSO()
     {
-        const D3D12RHIDevice::D3D12PipelineStateRecord* pPsoRecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPso );
-        if ( pPsoRecord == nullptr || pPsoRecord->_pso == nullptr )
+        const D3D12RHIDevice::D3D12PipelineStateRecord* pPSORecord = _pDevice->_pipelineStates.get( _pState->_activeGraphicsPSO );
+        if ( pPSORecord == nullptr || pPSORecord->_pso == nullptr )
             return false;
 
-        if ( _pState->_boundNativeGraphicsPso != _pState->_activeGraphicsPso )
+        if ( _pState->_boundNativeGraphicsPSO != _pState->_activeGraphicsPSO )
         {
-            commandListForRecord()->SetPipelineState( pPsoRecord->_pso.Get() );
-            _pState->_boundNativeGraphicsPso = _pState->_activeGraphicsPso;
+            commandListForRecord()->SetPipelineState( pPSORecord->_pso.Get() );
+            _pState->_boundNativeGraphicsPSO = _pState->_activeGraphicsPSO;
         }
         return true;
     }
@@ -542,7 +542,7 @@ namespace sw
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 )
             return;
 
-        if ( bindActiveGraphicsPso() == false )
+        if ( bindActiveGraphicsPSO() == false )
             return;
         // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다(루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
         if ( flushSlotTables( false ) == false )
@@ -558,7 +558,7 @@ namespace sw
         if ( _pCmdList == nullptr || _pDevice->_rootSignature == nullptr || vertexCount == 0 || instanceCount == 0 )
             return;
 
-        if ( bindActiveGraphicsPso() == false )
+        if ( bindActiveGraphicsPSO() == false )
             return;
         if ( flushSlotTables( false ) == false )
             return;
@@ -751,7 +751,7 @@ namespace sw
         if ( _pCmdList == nullptr )
             return;
 
-        _pState->_activeGraphicsPso = pso;
+        _pState->_activeGraphicsPSO = pso;
         // PSO 가 바뀌면 그래픽스 슬롯 상태를 비운다. 이전 패스의 t 슬롯이 다음 테이블로 새지 않게 한다(Vulkan setPipelineState 와 같다).
         _pState->_arrSlotState[0]                               = D3D12SlotTableState{};
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
@@ -761,7 +761,7 @@ namespace sw
         // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState). PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
         // 드로우가 같은 PSO 로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시한다.
-        _pState->_boundNativeGraphicsPso = pso;
+        _pState->_boundNativeGraphicsPSO = pso;
     }
 
     void D3D12RHICommandContext::setComputePipelineState( RHIPipelineStateHandle pso )

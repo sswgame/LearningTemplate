@@ -11,14 +11,14 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 계절 하나의 가중치입니다. */
     struct WeatherSeasonWeight
@@ -51,9 +51,9 @@ namespace sw
      * @brief `<WeatherCatalog transition="60"><Weather id="rain" weight="1" seasons="Spring:3,Summer:1" minDuration="600" maxDuration="1800">
      *        <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>` 를 읽습니다.
      */
-    class SW_GF_API WeatherCatalog : public XmlCatalog<WeatherCatalog>
+    class SW_GF_API WeatherCatalog : public XMLCatalog<WeatherCatalog>
     {
-        friend class XmlCatalog<WeatherCatalog>;
+        friend class XMLCatalog<WeatherCatalog>;
 
     public:
         const WeatherDef*         findWeather( const hashed_string& id ) const { return _catalog.find( id ); }
@@ -61,8 +61,8 @@ namespace sw
         float32                   getTransitionTime() const { return _transitionTime; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "WeatherCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<WeatherDef> _catalog{};
         float32                 _transitionTime{ 60.0f };

@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -66,12 +66,12 @@ namespace sw
         return fallback;
     }
 
-    uint32 MoveCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 MoveCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
+        for ( XMLNode node = root.findChild( "Move" ); node; node = node.findNextSibling( "Move" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MoveFrameData move;
@@ -93,7 +93,7 @@ namespace sw
             move._bUnblockable    = node.getAttributeBool( "unblockable", false ) ? SW_TRUE : SW_FALSE;
             const int32 lastFrame = move.getTotalFrames();
 
-            for ( XmlNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
+            for ( XMLNode child = node.findChild( "Hitbox" ); child; child = child.findNextSibling( "Hitbox" ) )
             {
                 MoveHitbox hitbox;
                 hitbox._fromFrame = child.getAttributeInt( "from", move._startup );
@@ -111,13 +111,13 @@ namespace sw
                 move._listHitbox.push_back( hitbox );
             }
 
-            for ( XmlNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
+            for ( XMLNode child = node.findChild( "Cancel" ); child; child = child.findNextSibling( "Cancel" ) )
             {
                 MoveCancelWindow window;
                 window._fromFrame  = child.getAttributeInt( "from", move.getLastActiveFrame() + 1 );
                 window._toFrame    = child.getAttributeInt( "to", lastFrame );
                 window._bOnHitOnly = child.getAttributeBool( "onHit", false ) ? SW_TRUE : SW_FALSE;
-                GameDataXml::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
                 { window._listMoveId.push_back( hashed_string( token ) ); } );
                 if ( window._listMoveId.empty() || window._toFrame < window._fromFrame )
                 {

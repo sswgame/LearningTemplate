@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
     class TextGatherer;
 
     /**
@@ -137,9 +137,9 @@ namespace sw
         /** @brief JSON 파일을 씁니다. */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 파싱합니다. */
-        [[nodiscard]] bool parseJson( string_view json );
+        [[nodiscard]] bool parseJSON( string_view json );
         /** @brief JSON 본문을 만듭니다. */
-        string toJson() const;
+        string toJSON() const;
         /** @brief 노드 타입 이름을 반환합니다. 모르는 값이면 "Unknown" 입니다. */
         static const utf8* nodeTypeName( DialogueAssetNodeType type );
         /** @brief 노드 타입 문자열을 파싱합니다. 모르는 이름이면 Dialogue 입니다. */
@@ -205,6 +205,6 @@ namespace sw
 
     private:
         /** @brief 이미 파싱된 JSON 루트에서 노드 · 링크를 읽습니다. */
-        void parseRoot( const JsonValue& root );
+        void parseRoot( const JSONValue& root );
     };
 } // namespace sw

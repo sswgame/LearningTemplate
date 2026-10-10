@@ -48,7 +48,7 @@ namespace sw
         void onAllocate( const void* pPtr, size_t size, const utf8* pPoolName ) override;
         void onFree( const void* pPtr, const utf8* pPoolName ) override;
 
-        uint32 createGpuContext( ProfilerGpuApi api, const utf8* pName, int64 gpuNanos ) override;
+        uint32 createGpuContext( ProfilerGraphicsAPI api, const utf8* pName, int64 gpuNanos ) override;
         void   syncGpuClock( uint32 gpuContext, int64 gpuNanos ) override;
         void   beginGpuZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) override;
         void   endGpuZone( uint32 gpuContext, int64 gpuEndNanos ) override;

@@ -19,7 +19,7 @@ namespace sw
     // 1) EditorAPI — C ABI 함수 테이블
     //    IEditor 구현은 EditorModule 안에 두고, App 은 이 포인터만 부른다
     // ------------------------------------------------------------------------------
-    /** @brief EditorModule 이 exportEditorApi 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
+    /** @brief EditorModule 이 exportEditorAPI 로 채우고 App 이 부르는 함수 포인터 테이블입니다. */
     struct EditorAPI
     {
         EditorHandle ( *create )(){ nullptr };                                                                                /**< @brief 에디터 인스턴스를 생성합니다. */
@@ -44,8 +44,8 @@ namespace sw
         void ( *endFrame )( EditorHandle editor ){ nullptr };                                                                 /**< @brief 월드 틱 이후 Step 소비 등 프레임 마감을 합니다. */
     };
 
-    /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorApi). */
-    using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutApi );
+    /** @brief EditorModule 이 export 하는 API 테이블 함수의 형입니다(심볼 이름: exportEditorAPI). */
+    using PFN_ExportEditorAPI = bool ( * )( EditorAPI* pOutAPI );
 
     /** @brief 헤드리스 임포트가 다루는 원본 종류입니다. C ABI 로는 uint32 로 건넵니다. */
     enum class EditorImportKind : uint32
@@ -88,7 +88,7 @@ extern "C"
     SW_MODULE_API const utf8* getEditorModuleAbiStamp();
 
     /** @brief EditorModule API 테이블을 내보냅니다. */
-    SW_MODULE_API bool exportEditorApi( sw::EditorAPI* pOutApi );
+    SW_MODULE_API bool exportEditorAPI( sw::EditorAPI* pOutAPI );
 
     /**
      * @brief 리소스 트리의 @p kind(`sw::EditorImportKind`) 원본을 그 폴더의 `import.stamp` 와 대조하고, @p checkOnly 가 0 이면 어긋난 것을 임포트합니다.

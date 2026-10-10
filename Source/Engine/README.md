@@ -43,7 +43,7 @@
 
 - **토대.** Engine의 어느 것도 참조하지 않습니다. `Compression` 은 외부 라이브러리(lz4, zstd)로 Core의 인터페이스를 구현합니다. Core가 그 라이브러리에 종속되지 않게 하려고 여기 둡니다.
   네트워크 보안(OpenSSL)은 온라인을 쓰는 게임만 필요하므로 Engine 이 아니라 `GameFramework/Base/Online/Security` 에 있습니다 — Engine.dll 은 libssl · libcrypto 를 모릅니다.
-  `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 끝점 `OpsHttpEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHttpClient`)도 여기 한 곳에 있습니다.
+  `Observability` 는 Core만 보는 서버 운영 관측입니다. 엔진의 HTTP(운영 끝점 `OpsHTTPEndpoint`, 텔레메트리 · 크래시 보고가 쓰는 `IHTTPClient`)도 여기 한 곳에 있습니다.
 - **설정과 물리.** 물리의 설정 테이블, 물리 에셋, 셰이프 서술자가 리플렉션 데이터라서 물리가 설정과 같은 자리에 있습니다.
 - **에셋과 공간.** `Resource` 는 에셋 데이터베이스, 팩, 캐시 레지스트리(`IAssetCache`)입니다. 공간 분할(`Spatial`)은 물리의 `AABB` 를 씁니다.
   내비메시(`Navigation`)는 물리의 셰이프 서술자를 읽어 베이크하고, 씬 쪽 내비게이션 컴포넌트가 그것을 씁니다.
@@ -109,7 +109,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 
 같은 원칙으로 정해진 위치가 몇 가지 더 있습니다. 기능 모듈은 오브젝트 위에 있고(`SequencePlayerComponent` 는 `Sequencer/`), 정책은 메커니즘 위에 있습니다.
 셰이더 쿠킹에서 무엇을 쿠킹할지는 `Renderer/Cook/ShaderCookDriver` 가 정하고, 컴파일 방법은 `Graphics/Shader` 에 있습니다.
-리플렉션 타입의 인코딩(`ReflectAny`, `Rpc`)은 Serialization에 있습니다. Core 기능만 쓰는 값 타입(`Core/String/TagID.h`, `Core/Container/ComponentHandle.h`)은 Core에 둡니다.
+리플렉션 타입의 인코딩(`ReflectAny`, `RPC`)은 Serialization에 있습니다. Core 기능만 쓰는 값 타입(`Core/String/TagID.h`, `Core/Container/ComponentHandle.h`)은 Core에 둡니다.
 설정은 `RHITypes.h` 대신 `Config/RHIBackendType.h` 만 봅니다.
 
 ## 작동 원리
@@ -162,7 +162,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 `Resource/` 에는 에셋 데이터베이스(`AssetDatabase`), 에셋 매니저(`AssetManager`), 팩 파일 가상 파일 시스템(`ResourcePackManager`), 스트리밍 큐(`AssetStreamingQueue`)가 있습니다.
 
 팩 리더는 위치를 지정해 읽으므로 여러 스레드가 잠금 없이 읽을 수 있습니다. 매니저는 리더를 찾는 동안만 잠급니다.
-`readFileAsync` 는 `AsyncFileIo` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 갑니다.
+`readFileAsync` 는 `AsyncFileIO` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 갑니다.
 
 스트리밍 큐는 호스트 전용 서비스(`HostOnly`)라 게임 모듈에는 보이지 않습니다. `EngineLoop` 의 기동 단계가 만들고 종료합니다.
 완료 콜백은 엔진 루프가 메인 스레드에서 프레임마다 내보냅니다(`update()`). 결과를 값으로 받으려면 `requestAssetFuture` 를 씁니다.
@@ -198,13 +198,13 @@ Shipping 실행 파일에 레지스트리가 없는지는 `DevCommandShippingTes
 ### 서버 운영 관측
 
 `Observability/` 는 전용 서버(`Source/Server`)가 쓰는 운영 관측입니다. 지표 레지스트리(`MetricRegistry`)는 카운터, 게이지, 히스토그램을 Prometheus 텍스트 형식 0.0.4로 냅니다. 라벨은 등록할 때 고정합니다.
-상태 확인(`ServiceHealthRegistry`)은 틱 박동, 검사, 드레인 상태를 봅니다. 운영 HTTP 엔드포인트(`OpsHttpEndpoint`)는 GET `/metrics`, `/healthz`, `/readyz` 를 내고, 기본 바인드 주소는 127.0.0.1입니다.
+상태 확인(`ServiceHealthRegistry`)은 틱 박동, 검사, 드레인 상태를 봅니다. 운영 HTTP 엔드포인트(`OpsHTTPEndpoint`)는 GET `/metrics`, `/healthz`, `/readyz` 를 내고, 기본 바인드 주소는 127.0.0.1입니다.
 늘 켜져 있는 서버 누계라는 점에서, 개발용 프레임 구간인 `FrameProfiler` 나 동의를 받은 클라이언트 사건인 `Telemetry` 와 다릅니다.
 
 ### Utility, Console, Profiling, TileMap, Module
 
 `Utility/` 에는 진짜 최하위 헬퍼만 둡니다. 키-값 파일, `CommandStack`, 게임이 쓰고 에디터 HUD가 읽는 디버그 값(`DebugOverlayState`)이 여기 있습니다.
-XML · JSON 문서(`XmlDocument`, `JsonDocument`, `ConfigKeyDoc`)는 `Serialization/Xml` · `Serialization/Json` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XmlNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
+XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serialization/XML` · `Serialization/JSON` 에 있습니다. 데이터 XML의 "모르는 이름" 검사는 `XMLNameCheck` 하나가 합니다. 문구는 `<원소> has unknown attribute 'x'` 로 같고, 데이터 오류면 Error, 읽기를 계속하는 로더면 Warning을 고릅니다.
 게임 시간 배율(`GameTimeScale`, `gv_timeScale`)은 호스트가 프레임 시간에 곱합니다. 게임의 자동 플레이 스위치 계약(`GameAutoplay`, `SW_GAME_AUTOPLAY`)도 여기 있습니다.
 `Profiling/` 은 엔진 프로파일러입니다. `SW_PROFILE_SCOPE` 한 줄이 `FrameProfiler` 표와 Tracy 구간에 함께 남습니다([Profiling](Profiling/README.md)).
 `Console/` 은 개발 명령 레지스트리와 콘솔 해석기, `TileMap/` 은 2D 타일맵 데이터(타일셋 에셋, 맵 XML, 격자 도우미)입니다. 셋 다 쓰는 곳이 여러 티어에 걸쳐 바닥 가까이 둡니다.

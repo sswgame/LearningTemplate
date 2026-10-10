@@ -67,11 +67,11 @@ namespace sw
         RenderPipelineAsset& operator=( const RenderPipelineAsset& ) = delete;
 
         /** @brief 리소스 상대 경로에서 파이프라인 XML 을 로드합니다. */
-        [[nodiscard]] bool loadFromXmlFile( string_view assetRelativePath );
+        [[nodiscard]] bool loadFromXMLFile( string_view assetRelativePath );
         /** @brief 파이프라인 XML 을 저장합니다. */
-        [[nodiscard]] bool saveToXmlFile( string_view assetRelativePath ) const;
+        [[nodiscard]] bool saveToXMLFile( string_view assetRelativePath ) const;
         /** @brief 파이프라인 XML 을 비동기로 로드합니다. */
-        TaskHandle loadFromXmlFileAsync( string_view assetRelativePath );
+        TaskHandle loadFromXMLFileAsync( string_view assetRelativePath );
 
         /** @brief 파이프라인 디스크립터를 반환합니다. */
         const RenderPipelineDesc& getDesc() const { return _desc; }
@@ -91,7 +91,7 @@ namespace sw
 
     private:
         /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 는 this · 경로 문자열입니다. */
-        static void loadFromXmlFileAsyncJob( const TaskArgs& args );
+        static void loadFromXMLFileAsyncJob( const TaskArgs& args );
 
     private:
         RenderPipelineDesc _desc;

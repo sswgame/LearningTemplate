@@ -21,8 +21,8 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -67,7 +67,7 @@ namespace
             if ( isScene( resourceId ) )
             {
                 sw::SceneDocument doc;
-                if ( doc.loadXml( resourceId ) == false )
+                if ( doc.loadXML( resourceId ) == false )
                     return false;
                 outLoaded._scene = sw::make_unique<sw::Scene>( "SerializationRoundTripScene" );
                 if ( outLoaded._scene->instantiate( doc ) == false )
@@ -76,7 +76,7 @@ namespace
                 return true;
             }
             sw::PrefabAsset prefab;
-            const bool      bLoaded = sw::StringUtil::endsWith( resourceId, ".json", true ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXmlFile( resourceId );
+            const bool      bLoaded = sw::StringUtil::endsWith( resourceId, ".json", true ) ? prefab.loadFromJSONFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
             if ( bLoaded == false )
                 return false;
             outLoaded._manager      = sw::make_unique<sw::GameObjectManager>();
@@ -106,16 +106,16 @@ namespace
          */
         static sw::string findRewriteMismatch( sw::Component* pComponent, const sw::TypeInfo& typeInfo )
         {
-            const sw::string xml = sw::XmlSerializer::serialize( pComponent, typeInfo );
-            if ( sw::XmlSerializer::deserialize( pComponent, typeInfo, xml ) == false )
+            const sw::string xml = sw::XMLSerializer::serialize( pComponent, typeInfo );
+            if ( sw::XMLSerializer::deserialize( pComponent, typeInfo, xml ) == false )
                 return "xml read";
-            if ( sw::XmlSerializer::serialize( pComponent, typeInfo ) != xml )
+            if ( sw::XMLSerializer::serialize( pComponent, typeInfo ) != xml )
                 return "xml";
 
-            const sw::string json = sw::JsonSerializer::serialize( pComponent, typeInfo );
-            if ( sw::JsonSerializer::deserialize( pComponent, typeInfo, json ) == false )
+            const sw::string json = sw::JSONSerializer::serialize( pComponent, typeInfo );
+            if ( sw::JSONSerializer::deserialize( pComponent, typeInfo, json ) == false )
                 return "json read";
-            if ( sw::JsonSerializer::serialize( pComponent, typeInfo ) != json )
+            if ( sw::JSONSerializer::serialize( pComponent, typeInfo ) != json )
                 return "json";
 
             sw::vector<uint8> firstBytes;
@@ -206,8 +206,8 @@ SW_TEST_CASE( SerializationRoundTripTest, DumpEveryResourceObjectState )
             const sw::string      stem    = sw::string( pDumpDir ) + "/" + resourceId + "/" + sw::to_string( static_cast<uint32>( objectIndex ) );
             sw::vector<uint8>     bytes;
             SW_EXPECT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pObject, bytes ) );
-            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".xml", sw::ObjectStateSerializer::saveToXmlString( pObject ) ) );
-            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".json", sw::ObjectStateSerializer::saveToJsonString( pObject ) ) );
+            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".xml", sw::ObjectStateSerializer::saveToXMLString( pObject ) ) );
+            SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpText( stem + ".json", sw::ObjectStateSerializer::saveToJSONString( pObject ) ) );
             SW_EXPECT_TRUE( SerializationRoundTripInternal::writeDumpFile( stem + ".bin", bytes.data(), bytes.size() ) );
             fileCount += 3;
         }

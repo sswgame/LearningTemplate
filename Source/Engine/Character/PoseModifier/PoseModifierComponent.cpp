@@ -648,7 +648,7 @@ namespace sw
         prepare._deltaSeconds   = context._deltaSeconds;
         prepare._worldGravity   = PhysicsSystem::getConfiguredGravity();
         prepare._pGroundQuery   = ( _pGroundQueryOverride != nullptr ) ? _pGroundQueryOverride : _groundQuery.get();
-        if ( pManager != nullptr && pManager->getAnimationSystem().findLodViewPosition( prepare._viewPosition ) )
+        if ( pManager != nullptr && pManager->getAnimationSystem().findLODViewPosition( prepare._viewPosition ) )
             prepare._bHasViewPosition = SW_TRUE;
         _instance.prepare( prepare );
     }

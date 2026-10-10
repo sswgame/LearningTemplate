@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include <iterator>
 
@@ -106,8 +106,8 @@ namespace sw
                 return value.empty();
             }
 
-            [[nodiscard]] static bool readStep( const JsonValue& value, LoadBotStep& outStep, string& outError, int32 depth );
-            [[nodiscard]] static bool readStepList( const JsonValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
+            [[nodiscard]] static bool readStep( const JSONValue& value, LoadBotStep& outStep, string& outError, int32 depth );
+            [[nodiscard]] static bool readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth );
         };
     } // namespace
 } // namespace sw
@@ -124,7 +124,7 @@ namespace sw
         return "unknown";
     }
 
-    bool LoadBotScenarioInternal::readStepList( const JsonValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth )
+    bool LoadBotScenarioInternal::readStepList( const JSONValue& listValue, vector<LoadBotStep>& outListStep, string& outError, int32 depth )
     {
         if ( listValue.isArray() == false || listValue.size() == 0 )
         {
@@ -139,7 +139,7 @@ namespace sw
         return true;
     }
 
-    bool LoadBotScenarioInternal::readStep( const JsonValue& value, LoadBotStep& outStep, string& outError, int32 depth )
+    bool LoadBotScenarioInternal::readStep( const JSONValue& value, LoadBotStep& outStep, string& outError, int32 depth )
     {
         if ( depth > kMaxRepeatDepth || value.isObject() == false )
         {
@@ -221,13 +221,13 @@ namespace sw
 
     bool LoadBotScenario::loadText( string_view jsonText, LoadBotScenario& outScenario, string& outError )
     {
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( jsonText, "<scenario>" ) == false )
         {
             outError = "scenario is not valid JSON: " + document.getLastError();
             return false;
         }
-        const JsonValue root = document.getRoot();
+        const JSONValue root = document.getRoot();
         if ( root.isObject() == false )
         {
             outError = "scenario root must be an object";

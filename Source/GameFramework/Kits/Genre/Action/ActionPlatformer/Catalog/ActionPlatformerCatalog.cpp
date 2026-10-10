@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -18,16 +18,16 @@ namespace sw
     {
         struct ActionPlatformerCatalogInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pName )
+            static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
             }
 
-            static void readNameList( const XmlNode& node, const utf8* pName, vector<hashed_string>& outListName )
+            static void readNameList( const XMLNode& node, const utf8* pName, vector<hashed_string>& outListName )
             {
                 outListName.clear();
-                GameDataXml::forEachToken( node.getAttributeText( pName ), ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( node.getAttributeText( pName ), ",; \t", [&]( string_view token )
                 { outListName.push_back( hashed_string( token ) ); } );
             }
 
@@ -66,18 +66,18 @@ namespace sw
     {
     }
 
-    uint32 ActionPlatformerCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ActionPlatformerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        const XmlNode grading = root.findChild( "Grading" );
+        const XMLNode grading = root.findChild( "Grading" );
         _grading._listGrade.clear();
         if ( grading )
         {
             _grading._timeWeight    = MathUtil::max( 0.0f, grading.getAttributeFloat( "time", _grading._timeWeight ) );
             _grading._hitWeight     = MathUtil::max( 0.0f, grading.getAttributeFloat( "hits", _grading._hitWeight ) );
             _grading._collectWeight = MathUtil::max( 0.0f, grading.getAttributeFloat( "collect", _grading._collectWeight ) );
-            for ( XmlNode node = grading.findChild( "Grade" ); node; node = node.findNextSibling( "Grade" ) )
+            for ( XMLNode node = grading.findChild( "Grade" ); node; node = node.findNextSibling( "Grade" ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pId != nullptr )
                     _grading._listGrade.push_back( ActionPlatformerCatalogInternal::makeGrade( pId, node.getAttributeFloat( "min", 0.0f ) ) );
             }
@@ -98,7 +98,7 @@ namespace sw
             _grading._collectWeight = 1.0f;
         }
 
-        const XmlNode body = root.findChild( "Body" );
+        const XMLNode body = root.findChild( "Body" );
         if ( body )
         {
             ActionBodySettings& settings       = _bodySettings;
@@ -114,7 +114,7 @@ namespace sw
             settings._drillEntryTime           = MathUtil::max( 0.0f, body.getAttributeFloat( "drillEntryTime", settings._drillEntryTime ) );
         }
 
-        const XmlNode parry = root.findChild( "Parry" );
+        const XMLNode parry = root.findChild( "Parry" );
         if ( parry )
         {
             _parryRules._windowFrames       = MathUtil::max( 0, parry.getAttributeInt( "window", _parryRules._windowFrames ) );
@@ -126,9 +126,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Stage" ); node; node = node.findNextSibling( "Stage" ) )
+        for ( XMLNode node = root.findChild( "Stage" ); node; node = node.findNextSibling( "Stage" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ActionStageDef stage;
@@ -144,9 +144,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Combo" ); node; node = node.findNextSibling( "Combo" ) )
+        for ( XMLNode node = root.findChild( "Combo" ); node; node = node.findNextSibling( "Combo" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ActionComboDef combo;
@@ -161,9 +161,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Pattern" ); node; node = node.findNextSibling( "Pattern" ) )
+        for ( XMLNode node = root.findChild( "Pattern" ); node; node = node.findNextSibling( "Pattern" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             loadPattern( node, pId, sourceName );
@@ -172,13 +172,13 @@ namespace sw
         return loadedCount;
     }
 
-    void ActionPlatformerCatalog::loadPattern( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void ActionPlatformerCatalog::loadPattern( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         ActionPatternDef pattern;
         pattern._id = hashed_string( pId );
-        for ( XmlNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
+        for ( XMLNode child = node.findChild( "State" ); child; child = child.findNextSibling( "State" ) )
         {
-            const utf8* pStateId = GameDataXml::findRequiredId( child, sourceName );
+            const utf8* pStateId = GameDataXML::findRequiredId( child, sourceName );
             if ( pStateId == nullptr )
                 continue;
             ActionPatternStateDef state;

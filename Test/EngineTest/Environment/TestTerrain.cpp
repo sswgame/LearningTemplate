@@ -257,13 +257,13 @@ SW_TEST_CASE( TerrainTest, SplatWeightsNormalize )
  * @brief [TerrainTest] LOD 가 다른 이웃 청크의 맞닿은 변은 정점 집합이 비트까지 같다(T 접합 · 틈 없음) · 접어도 청크 넓이는 그대로다
  * @details LOD 0..4 의 모든 쌍을 x 로 이웃한 두 청크에 건다. 고운 쪽이 변을 접지 않으면 그 변에 거친 쪽에 없는 정점이 생겨 집합이 갈린다.
  */
-SW_TEST_CASE( TerrainTest, LodEdgesAreCrackFree )
+SW_TEST_CASE( TerrainTest, LODEdgesAreCrackFree )
 {
     const TerrainHeightfield field = TerrainTestUtil::makeWaveField( 65 );
     TerrainChunkLayout       layout;
     SW_ASSERT_TRUE( TerrainMeshBuilder::makeLayout( 65, 16, layout ) );
     SW_EXPECT_EQUAL( 4u, layout._chunkCountX );
-    SW_EXPECT_EQUAL( 4u, layout._maxLod );
+    SW_EXPECT_EQUAL( 4u, layout._maxLOD );
 
     const float32     edgeX = 32.0f; // 청크 1 과 2 사이
     uint32            mismatchCount{ 0 };
@@ -272,17 +272,17 @@ SW_TEST_CASE( TerrainTest, LodEdgesAreCrackFree )
     vector<RHIVertex> listRight;
     vector<uint64>    listLeftKey;
     vector<uint64>    listRightKey;
-    for ( uint32 leftLod = 0; leftLod <= layout._maxLod; ++leftLod )
+    for ( uint32 leftLOD = 0; leftLOD <= layout._maxLOD; ++leftLOD )
     {
-        for ( uint32 rightLod = 0; rightLod <= layout._maxLod; ++rightLod )
+        for ( uint32 rightLOD = 0; rightLOD <= layout._maxLOD; ++rightLOD )
         {
-            const uint32 arrLeftNeighbor[4]  = { leftLod, rightLod, leftLod, leftLod };
-            const uint32 arrRightNeighbor[4] = { leftLod, rightLod, rightLod, rightLod };
-            TerrainMeshBuilder::buildChunkVertices( field, layout, 1, 1, leftLod, arrLeftNeighbor, listLeft );
-            TerrainMeshBuilder::buildChunkVertices( field, layout, 2, 1, rightLod, arrRightNeighbor, listRight );
+            const uint32 arrLeftNeighbor[4]  = { leftLOD, rightLOD, leftLOD, leftLOD };
+            const uint32 arrRightNeighbor[4] = { leftLOD, rightLOD, rightLOD, rightLOD };
+            TerrainMeshBuilder::buildChunkVertices( field, layout, 1, 1, leftLOD, arrLeftNeighbor, listLeft );
+            TerrainMeshBuilder::buildChunkVertices( field, layout, 2, 1, rightLOD, arrRightNeighbor, listRight );
             TerrainTestUtil::collectEdgeVertices( listLeft, TerrainMeshBuilder::computeChunkTranslation( field, layout, 1, 1 ), edgeX, listLeftKey );
             TerrainTestUtil::collectEdgeVertices( listRight, TerrainMeshBuilder::computeChunkTranslation( field, layout, 2, 1 ), edgeX, listRightKey );
-            const uint32 coarseStep = 1u << MathUtil::max( leftLod, rightLod );
+            const uint32 coarseStep = 1u << MathUtil::max( leftLOD, rightLOD );
             if ( listLeftKey != listRightKey || listLeftKey.size() != 16 / coarseStep + 1 )
                 ++mismatchCount;
             if ( MathUtil::abs( TerrainTestUtil::computeCoveredArea( listLeft ) - 256.0f ) > 1.0e-2f ||
@@ -297,25 +297,25 @@ SW_TEST_CASE( TerrainTest, LodEdgesAreCrackFree )
 /**
  * @brief [TerrainTest] LOD 는 거리의 두 배마다 하나씩 오르고 상한에서 멈춘다 · 청크 배치는 2 의 거듭제곱 · 나눠떨어짐을 요구한다
  */
-SW_TEST_CASE( TerrainTest, LodSelectionDoublesWithDistance )
+SW_TEST_CASE( TerrainTest, LODSelectionDoublesWithDistance )
 {
-    SW_EXPECT_EQUAL( 0u, TerrainMeshBuilder::selectLod( 10.0f, 40.0f, 5 ) );
-    SW_EXPECT_EQUAL( 1u, TerrainMeshBuilder::selectLod( 40.0f, 40.0f, 5 ) );
-    SW_EXPECT_EQUAL( 1u, TerrainMeshBuilder::selectLod( 79.0f, 40.0f, 5 ) );
-    SW_EXPECT_EQUAL( 2u, TerrainMeshBuilder::selectLod( 80.0f, 40.0f, 5 ) );
-    SW_EXPECT_EQUAL( 5u, TerrainMeshBuilder::selectLod( 100000.0f, 40.0f, 5 ) );
+    SW_EXPECT_EQUAL( 0u, TerrainMeshBuilder::selectLOD( 10.0f, 40.0f, 5 ) );
+    SW_EXPECT_EQUAL( 1u, TerrainMeshBuilder::selectLOD( 40.0f, 40.0f, 5 ) );
+    SW_EXPECT_EQUAL( 1u, TerrainMeshBuilder::selectLOD( 79.0f, 40.0f, 5 ) );
+    SW_EXPECT_EQUAL( 2u, TerrainMeshBuilder::selectLOD( 80.0f, 40.0f, 5 ) );
+    SW_EXPECT_EQUAL( 5u, TerrainMeshBuilder::selectLOD( 100000.0f, 40.0f, 5 ) );
     TerrainChunkLayout layout;
     SW_EXPECT_FALSE( TerrainMeshBuilder::makeLayout( 65, 12, layout ) );
     SW_EXPECT_FALSE( TerrainMeshBuilder::makeLayout( 64, 16, layout ) );
     SW_EXPECT_TRUE( TerrainMeshBuilder::makeLayout( 257, 32, layout ) );
     SW_EXPECT_EQUAL( 8u, layout._chunkCountX );
-    SW_EXPECT_EQUAL( 5u, layout._maxLod );
+    SW_EXPECT_EQUAL( 5u, layout._maxLOD );
 }
 
 /**
  * @brief [TerrainTest] 컴포넌트 — 에셋을 읽어 오너 자리에 펼치고, 먼 카메라에서는 청크를 거칠게 다시 만들며, 같은 자리면 다시 만들지 않는다
  */
-SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLods )
+SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLODs )
 {
     const string    path = test::makeTempPath( "wave.heightfield" );
     HeightfieldData data = TerrainTestUtil::makeData( 65, &TerrainTestUtil::wave );
@@ -331,7 +331,7 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLods )
     pTerrain->setSize( float2{ 64.0f, 64.0f } );
     pTerrain->setHeightRange( TerrainTestUtil::kHeightMin, TerrainTestUtil::kHeightMax );
     pTerrain->setChunkCells( 16 );
-    pTerrain->setLodDistance( 20.0f );
+    pTerrain->setLODDistance( 20.0f );
     pTerrain->setMaterialPath( "" ); // 그리지 않는 시험 — 머티리얼을 잡지 않는다
     SW_ASSERT_TRUE( pTerrain->reloadTerrain() );
     SW_EXPECT_EQUAL( 16u, pTerrain->getChunkLayout().getChunkCount() );
@@ -343,12 +343,12 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLods )
     SW_EXPECT_TRUE( TerrainComponent::findTerrainAt( manager, 0.0f, 0.0f ) == nullptr );
 
     const uint32 nearVertexCount = pTerrain->getChunkVertexCount( 3, 3 );
-    const uint32 rebuiltCount    = pTerrain->updateLods( float3{ 100.0f, 2.0f, -50.0f } ); // 청크 (0, 0) 모서리
+    const uint32 rebuiltCount    = pTerrain->updateLODs( float3{ 100.0f, 2.0f, -50.0f } ); // 청크 (0, 0) 모서리
     SW_EXPECT_TRUE( rebuiltCount > 0 );
-    SW_EXPECT_EQUAL( 0u, pTerrain->getChunkLod( 0, 0 ) );
-    SW_EXPECT_TRUE( pTerrain->getChunkLod( 3, 3 ) >= 2u );
+    SW_EXPECT_EQUAL( 0u, pTerrain->getChunkLOD( 0, 0 ) );
+    SW_EXPECT_TRUE( pTerrain->getChunkLOD( 3, 3 ) >= 2u );
     SW_EXPECT_TRUE( pTerrain->getChunkVertexCount( 3, 3 ) < nearVertexCount );
-    SW_EXPECT_EQUAL( 0u, pTerrain->updateLods( float3{ 100.0f, 2.0f, -50.0f } ) );
+    SW_EXPECT_EQUAL( 0u, pTerrain->updateLODs( float3{ 100.0f, 2.0f, -50.0f } ) );
 }
 
 /**

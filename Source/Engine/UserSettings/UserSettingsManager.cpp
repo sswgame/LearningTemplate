@@ -11,7 +11,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 
 namespace sw
@@ -34,19 +34,19 @@ namespace sw
             };
 
             /** @brief JSON 값을 글로 바꿉니다 — 숫자는 쓰인 그대로, 불리언은 true/false. */
-            static string toText( const JsonValue& value )
+            static string toText( const JSONValue& value )
             {
                 switch ( value.getType() )
                 {
-                    case JsonType::Bool:
+                    case JSONType::Bool:
                         return value.asBool() ? "true" : "false";
-                    case JsonType::Number:
+                    case JSONType::Number:
                         return value.dump();
-                    case JsonType::String:
+                    case JSONType::String:
                         return value.asString();
-                    case JsonType::Null:
-                    case JsonType::Array:
-                    case JsonType::Object:
+                    case JSONType::Null:
+                    case JSONType::Array:
+                    case JSONType::Object:
                         return {};
                 }
                 return {};
@@ -164,10 +164,10 @@ namespace sw
         return false;
     }
 
-    bool UserSettingsManager::loadSchemaFromXmlText( string_view xmlText, string_view sourceName )
+    bool UserSettingsManager::loadSchemaFromXMLText( string_view xmlText, string_view sourceName )
     {
         const UserSettingsSchema backup  = _schema;
-        const bool               bLoaded = _schema.loadFromXmlText( xmlText, sourceName );
+        const bool               bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
         if ( appendSchema( bLoaded ) )
             return true;
         _schema = backup;
@@ -254,20 +254,20 @@ namespace sw
             SW_LOG_WARNING( "Failed to read user settings '%#' - using defaults", filePath );
             return false;
         }
-        return loadUserJson( text, filePath );
+        return loadUserJSON( text, filePath );
     }
 
-    bool UserSettingsManager::loadUserJson( string_view jsonText, string_view sourceName )
+    bool UserSettingsManager::loadUserJSON( string_view jsonText, string_view sourceName )
     {
         using Internal = UserSettingsManagerInternal;
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonText, sourceName ) == false )
         {
             SW_LOG_WARNING( "User settings '%#' is not valid JSON - using defaults", sourceName );
             return false;
         }
-        const JsonValue root   = doc.getRoot();
-        const JsonValue values = root.get( Internal::kValuesKey );
+        const JSONValue root   = doc.getRoot();
+        const JSONValue values = root.get( Internal::kValuesKey );
         if ( root.isObject() == false || values.isObject() == false )
         {
             SW_LOG_WARNING( "User settings '%#' has no \"values\" object - using defaults", sourceName );
@@ -326,13 +326,13 @@ namespace sw
         return true;
     }
 
-    string UserSettingsManager::makeUserJson() const
+    string UserSettingsManager::makeUserJSON() const
     {
         using Internal = UserSettingsManagerInternal;
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
         root.set( Internal::kVersionKey ).setUint( _schema.getVersion() );
-        const JsonValue values = root.set( Internal::kValuesKey );
+        const JSONValue values = root.set( Internal::kValuesKey );
         values.setObject();
 
         const vector<UserSettingDef>& listSetting = _schema.getSettings();
@@ -344,7 +344,7 @@ namespace sw
             if ( value == state._defaultValue )
                 continue;
             const UserSettingDef& def   = listSetting[settingIndex];
-            const JsonValue       field = values.set( def._id.c_str(), false );
+            const JSONValue       field = values.set( def._id.c_str(), false );
             switch ( def._type )
             {
                 case UserSettingType::Bool:
@@ -383,7 +383,7 @@ namespace sw
             SW_LOG_WARNING( "Cannot create the folder for user settings '%#'", filePath );
             return false;
         }
-        if ( FileUtil::writeTextFile( filePath, makeUserJson() ) == false )
+        if ( FileUtil::writeTextFile( filePath, makeUserJSON() ) == false )
         {
             SW_LOG_WARNING( "Failed to write user settings '%#'", filePath );
             return false;

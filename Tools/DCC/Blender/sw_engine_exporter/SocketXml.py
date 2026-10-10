@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-소켓 초안(`*.sockets.xml`) 만들기 — 엔진 `SocketSet::loadFromXmlText` 가 읽는 꼴. **bpy 를 쓰지 않는다.**
+소켓 초안(`*.sockets.xml`) 만들기 — 엔진 `SocketSet::loadFromXMLText` 가 읽는 꼴. **bpy 를 쓰지 않는다.**
 
 초안은 **파일이 없을 때만** 쓴다(엔진 `SocketImportUtil::writeIfMissing` 과 같은 규칙). 그 뒤로는 사람이 고치는 원본이라
 다시 내보내도 덮어쓰지 않는다 — 소켓을 임포트 산출물과 따로 두는 이유가 그것이다. 덮어쓰려면 지우고 다시 내보낸다.

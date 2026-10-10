@@ -36,7 +36,7 @@ namespace sw
     class CharacterDataReader;
     class Pose;
     class Skeleton;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 본 하나의 비율 보정입니다. 스케일은 로컬 스케일에 곱하고, 오프셋은 로컬 위치에 더합니다. */
     struct SW_API BoneProportionEntry
@@ -133,7 +133,7 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다. 모르는 속성 · 원소 · 겹친 축은 오류입니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 축을 더합니다(같은 이름이면 바꿈). */
@@ -155,8 +155,8 @@ namespace sw
                        string* pOutError ) const;
 
     private:
-        void readRoot( const XmlNode& root, CharacterDataReader& reader );
-        void readSide( const XmlNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
+        void readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader );
 
     private:
         vector<BodyShapeAxis> _listAxis;

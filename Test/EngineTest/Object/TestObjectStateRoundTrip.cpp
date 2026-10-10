@@ -147,7 +147,7 @@ using namespace sw;
  * @brief [ObjectStateRoundTripTest] SceneComponent 트랜스폼이 XML 왕복에서 보존되는지 검증
  * @details 기준선 — 가장 파생 타입이 SceneComponent 인 경우다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, SceneComponentTransformSurvivesXml )
+SW_TEST_CASE( ObjectStateRoundTripTest, SceneComponentTransformSurvivesXML )
 {
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "Source" ) );
@@ -157,12 +157,12 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SceneComponentTransformSurvivesXml )
     SW_ASSERT_NOT_NULL( pScene );
     pScene->setLocalPosition( float3{ 1.0f, 2.0f, 3.0f } );
 
-    const string xml = ObjectStateSerializer::saveToXmlString( pSource );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSource );
     SW_EXPECT_FALSE( xml.empty() );
 
     GameObject* pTarget = manager.createGameObject( hashed_string( "Target" ) );
     SW_ASSERT_NOT_NULL( pTarget );
-    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pTarget, xml ) );
 
     SceneComponent* pLoaded = pTarget->getComponent<SceneComponent>();
     SW_ASSERT_NOT_NULL( pLoaded );
@@ -178,7 +178,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SceneComponentTransformSurvivesXml )
  *          모든 직렬화기가 `TypeInfo::forEachProperty` 를 기본값(`bIncludeBase = false`)으로 부르면
  *          이 값이 저장도 되지 않고 로드도 되지 않는다 — 씬·프리팹·Undo 스냅샷이 전부 같은 경로다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurvivesXml )
+SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurvivesXML )
 {
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "MeshSource" ) );
@@ -189,12 +189,12 @@ SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurviv
     pMesh->setLocalPosition( float3{ -2.0f, 0.5f, 4.0f } );
     pMesh->setLocalScale( float3{ 2.0f, 2.0f, 2.0f } );
 
-    const string xml = ObjectStateSerializer::saveToXmlString( pSource );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSource );
     SW_EXPECT_FALSE( xml.empty() );
 
     GameObject* pTarget = manager.createGameObject( hashed_string( "MeshTarget" ) );
     SW_ASSERT_NOT_NULL( pTarget );
-    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pTarget, xml ) );
 
     MeshComponent* pLoaded = pTarget->getComponent<MeshComponent>();
     SW_ASSERT_NOT_NULL( pLoaded );
@@ -209,14 +209,14 @@ SW_TEST_CASE( ObjectStateRoundTripTest, DerivedComponentInheritedTransformSurviv
 }
 
 // ------------------------------------------------------------------------------
-// 7) ObjectStateXmlSerializerTest — XML 저장·계층 라운드트립
+// 7) ObjectStateXMLSerializerTest — XML 저장·계층 라운드트립
 // ------------------------------------------------------------------------------
 /**
  * @brief [ObjectStateRoundTripTest] 메시의 블렌드 모드가 저장 · 로드를 지난다
  * @details `RHIBlendMode` 에 `ENUM()` 이 없으면 직렬화기가 이름을 몰라 씬 · 프리팹에 `_blendMode="null"` 로 적고, 읽을 때는
  *          기본값(불투명)으로 돌아간다 — 반투명으로 바꾼 메시가 저장할 때마다 불투명이 된다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
+SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXML )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       pSource = manager.createGameObject( sw::hashed_string( "GlassPane" ) );
@@ -224,11 +224,11 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
     SW_ASSERT_NOT_NULL( pMesh );
     pMesh->setBlendMode( sw::RHIBlendMode::Transparent );
 
-    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXMLString( pSource );
     SW_EXPECT_TRUE_MSG( xml.find( "_blendMode=\"Transparent\"" ) != sw::string::npos, xml.c_str() );
 
     sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "GlassPaneCopy" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pCopy, xml ) );
     const sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pCopyMesh );
     SW_EXPECT_TRUE( pCopyMesh->getBlendMode() == sw::RHIBlendMode::Transparent );
@@ -239,7 +239,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshBlendModeSurvivesXml )
  * @details 머티리얼을 날 포인터로만 들면 저장되지 않아 씬 · 프리팹을 다시 열 때 모든 메시가 씬 기본 머티리얼이 된다.
  *          언리얼 `UMeshComponent::OverrideMaterials` · 유니티 `Renderer.sharedMaterials` 처럼 에셋 참조로 저장한다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
+SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXML )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     constexpr const utf8* kPath = "engine/materials/benchtextured.material";
@@ -254,11 +254,11 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
     SW_EXPECT_TRUE( cache.isCached( kPath ) );
     SW_ASSERT_NOT_NULL( pMesh->getMaterial() );
 
-    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXMLString( pSource );
     SW_EXPECT_TRUE_MSG( xml.find( "_materialPath=\"engine/materials/benchtextured.material\"" ) != sw::string::npos, xml.c_str() );
 
     sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "PaintedCopy" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pCopy, xml ) );
     sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pCopyMesh );
     SW_EXPECT_STREQ( kPath, pCopyMesh->getMaterialPath().c_str() );
@@ -291,10 +291,10 @@ SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithout
     SW_ASSERT_NOT_NULL( pMesh );
     pMesh->setMaterialPath( "engine/materials/benchtextured.material" );
     SW_ASSERT_NOT_NULL( pMesh->getRawMesh() );
-    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXMLString( pSource );
 
     // 되돌리기 — 같은 오브젝트에 제자리로 다시 읽는다.
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pSource, xml ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pSource, xml ) );
     const sw::MeshComponent* pReloaded = pSource->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pReloaded );
     SW_EXPECT_TRUE( pReloaded->getRawMesh() != nullptr );
@@ -302,7 +302,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithout
 
     // 프리팹 드래그 · 복제 — 새 오브젝트에 읽는다.
     sw::GameObject* pCopy = manager.createGameObject( sw::hashed_string( "StatueCopy" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pCopy, xml ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pCopy, xml ) );
     const sw::MeshComponent* pCopyMesh = pCopy->getComponent<sw::MeshComponent>();
     SW_ASSERT_NOT_NULL( pCopyMesh );
     SW_EXPECT_TRUE( pCopyMesh->getRawMesh() != nullptr );
@@ -335,9 +335,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
         const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pParent );
         bool                     bLoaded  = false;
         if ( format == 0 )
-            bLoaded = sw::ObjectStateSerializer::loadFromXmlString( pParent, sw::ObjectStateSerializer::saveToXmlString( pParent ), { &identity } );
+            bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pParent, sw::ObjectStateSerializer::saveToXMLString( pParent ), { &identity } );
         else if ( format == 1 )
-            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pParent, sw::ObjectStateSerializer::saveToJsonString( pParent ), { &identity } );
+            bLoaded = sw::ObjectStateSerializer::loadFromJSONString( pParent, sw::ObjectStateSerializer::saveToJSONString( pParent ), { &identity } );
         else
         {
             sw::vector<uint8> buffer;
@@ -369,7 +369,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
     sw::SceneComponent*   pArm  = pRig->addComponent<sw::SceneComponent>();
     SW_ASSERT_TRUE( pArm->attachToComponent( pRoot ) );
 
-    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pRig );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXMLString( pRig );
     SW_EXPECT_TRUE( xml.find( "_attachOwner=\"Rig\"" ) == sw::string::npos ); // 자기 이름을 적지 않는다
 
     const auto expectArmOnOwnRoot = []( sw::GameObject* pCopy, const utf8* pStep )
@@ -387,13 +387,13 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
 
     BLOCK( "XML · JSON · 바이너리 — 원본이 살아 있는 매니저에 읽는다" )
     {
-        sw::GameObject* pXmlCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pXmlCopy, xml ) );
-        expectArmOnOwnRoot( pXmlCopy, "XML" );
+        sw::GameObject* pXMLCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pXMLCopy, xml ) );
+        expectArmOnOwnRoot( pXMLCopy, "XML" );
 
-        sw::GameObject* pJsonCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pJsonCopy, sw::ObjectStateSerializer::saveToJsonString( pRig ) ) );
-        expectArmOnOwnRoot( pJsonCopy, "JSON" );
+        sw::GameObject* pJSONCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pJSONCopy, sw::ObjectStateSerializer::saveToJSONString( pRig ) ) );
+        expectArmOnOwnRoot( pJSONCopy, "JSON" );
 
         sw::vector<uint8> bytes;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pRig, bytes ) );
@@ -422,14 +422,14 @@ SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectI
     SceneComponent*   pGunRoot = pGun->addComponent<SceneComponent>();
     SW_ASSERT_TRUE( pRigRoot != nullptr && pGunRoot != nullptr );
     SW_ASSERT_TRUE( pGunRoot->attachToComponent( pRigRoot ) );
-    const string rigXml     = ObjectStateSerializer::saveToXmlString( pRig );
-    const string liveGunXml = ObjectStateSerializer::saveToXmlString( pGun );
+    const string rigXML     = ObjectStateSerializer::saveToXMLString( pRig );
+    const string liveGunXML = ObjectStateSerializer::saveToXMLString( pGun );
 
     GameObjectManager editing;
     GameObject*       pKept = editing.createGameObject( hashed_string( "Gun" ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "a parent reference whose parent is not loaded is kept" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pKept, liveGunXml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pKept, liveGunXML ) );
     }
     SW_ASSERT_NOT_NULL( pKept->getPrimarySceneComponent() );
     SW_EXPECT_NULL( pKept->getPrimarySceneComponent()->getParent() );
@@ -441,17 +441,17 @@ SW_TEST_CASE( ObjectStateRoundTripTest, NameOnlyParentReferenceIsNeverTheObjectI
     };
     ObjectSaveOptions options{};
     options._pSavedIdMap  = &mapSavedId;
-    const string sceneXml = ObjectStateSerializer::saveToXmlString( pKept, options );
-    SW_ASSERT_TRUE( sceneXml.find( "_attachOwner=\"Rig\"" ) != string::npos );
-    SW_ASSERT_TRUE( sceneXml.find( "_attachOwnerId=\"0\"" ) != string::npos );
+    const string sceneXML = ObjectStateSerializer::saveToXMLString( pKept, options );
+    SW_ASSERT_TRUE( sceneXML.find( "_attachOwner=\"Rig\"" ) != string::npos );
+    SW_ASSERT_TRUE( sceneXML.find( "_attachOwnerId=\"0\"" ) != string::npos );
 
     // 3) 같은 이름의 부모 엔티티와 한 묶음으로 읽는다 — 이름으로 그 엔티티를 찾아 붙는다.
     GameObjectManager world;
     GameObject*       pWorldRig = world.createGameObject( hashed_string( "Rig" ) );
     GameObject*       pWorldGun = world.createGameObject( hashed_string( "Rig" ) );
     ObjectStateBatch  batch( ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldRig, rigXml, { nullptr, &batch, 1 } ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pWorldGun, sceneXml, { nullptr, &batch, 2 } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pWorldRig, rigXML, { nullptr, &batch, 1 } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pWorldGun, sceneXML, { nullptr, &batch, 2 } ) );
     batch.finish();
     SW_ASSERT_TRUE( pWorldRig->getPrimarySceneComponent() != nullptr && pWorldGun->getPrimarySceneComponent() != nullptr );
     SW_EXPECT_TRUE( pWorldGun->getPrimarySceneComponent()->getParent() == pWorldRig->getPrimarySceneComponent() );
@@ -474,8 +474,8 @@ SW_TEST_CASE( ObjectStateRoundTripTest, FailedInPlaceLoadLeavesTheObjectAsItWas 
 
     {
         test::ScopedDefensiveTestLog expected( "a malformed state is not applied" );
-        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromXmlString( pObj, "<GameObject _name=\"Broken\"><_listComponent><SceneComponent" ) );
-        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromJsonString( pObj, "{ \"_name\": " ) );
+        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromXMLString( pObj, "<GameObject _name=\"Broken\"><_listComponent><SceneComponent" ) );
+        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromJSONString( pObj, "{ \"_name\": " ) );
     }
 
     SW_EXPECT_TRUE( pObj->getName() == sw::hashed_string( "Keeper" ) );
@@ -487,16 +487,16 @@ SW_TEST_CASE( ObjectStateRoundTripTest, FailedInPlaceLoadLeavesTheObjectAsItWas 
 }
 
 /**
- * @brief [ObjectStateXmlSerializerTest] XML 문자열 저장·로드
+ * @brief [ObjectStateXMLSerializerTest] XML 문자열 저장·로드
  */
-SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
+SW_TEST_CASE( ObjectStateXMLSerializerTest, SaveAndLoadXMLString )
 {
     sw::GameObjectManager manager;
     sw::GameObject*       sourcePtr = manager.createGameObject( sw::hashed_string( "SerializedHero" ) );
     sw::GameObject&       source    = *sourcePtr;
     source.setActive( false );
 
-    const sw::string xml = ObjectStateSerializer::saveToXmlString( &source );
+    const sw::string xml = ObjectStateSerializer::saveToXMLString( &source );
     SW_ASSERT_FALSE( xml.empty() );
     SW_EXPECT_TRUE( xml.find( "GameObject" ) != sw::string::npos );
     SW_EXPECT_TRUE( xml.find( "SerializedHero" ) != sw::string::npos );
@@ -508,7 +508,7 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
     SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
 
-    const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
+    const sw::string json = ObjectStateSerializer::saveToJSONString( &source );
     SW_ASSERT_FALSE( json.empty() );
     // 컨테이너는 프로퍼티 이름 아래 배열로 직접 나간다("vector"/"_name" 래핑 없음).
     SW_EXPECT_TRUE( json.find( "\"_listComponent\":[" ) != sw::string::npos );
@@ -521,32 +521,32 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, SaveAndLoadXmlString )
     sw::GameObject* targetPtr = manager.createGameObject( sw::hashed_string( "Temp" ) );
     sw::GameObject& target    = *targetPtr;
     target.setActive( true );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( &target, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( &target, xml ) );
     SW_EXPECT_STREQ( "SerializedHero", target.getName().c_str() );
     SW_EXPECT_FALSE( target.isActive() );
 
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( nullptr, xml ) );
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXmlString( &target, "" ) );
-    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXmlString( nullptr ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( nullptr, xml ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromXMLString( &target, "" ) );
+    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToXMLString( nullptr ) );
 
     // JSON 도 로드까지 돌려 본다 — 두 포맷은 몸통 하나(직렬화기만 다르다)를 쓴다.
     manager.clear();
     sw::GameObject* jsonTargetPtr = manager.createGameObject( sw::hashed_string( "TempJson" ) );
     SW_ASSERT_NOT_NULL( jsonTargetPtr );
     jsonTargetPtr->setActive( true );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, json ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( jsonTargetPtr, json ) );
     SW_EXPECT_STREQ( "SerializedHero", jsonTargetPtr->getName().c_str() );
     SW_EXPECT_FALSE( jsonTargetPtr->isActive() );
 
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( nullptr, json ) );
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, "" ) );
-    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToJsonString( nullptr ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( nullptr, json ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( jsonTargetPtr, "" ) );
+    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToJSONString( nullptr ) );
 }
 
 /**
- * @brief [ObjectStateXmlSerializerTest] 부모-자식 계층 라운드트립
+ * @brief [ObjectStateXMLSerializerTest] 부모-자식 계층 라운드트립
  */
-SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
+SW_TEST_CASE( ObjectStateXMLSerializerTest, ParentChildHierarchyRoundtrip )
 {
     Scene* scene = engine::getSceneManager().getActiveScene();
     if ( scene == nullptr )
@@ -574,15 +574,15 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
     SW_ASSERT_TRUE( child->attachToParent( parent ) );
     SW_ASSERT_TRUE( grand->attachToParent( child ) );
 
-    const sw::string parentXml = ObjectStateSerializer::saveToXmlString( parent );
-    const sw::string childXml  = ObjectStateSerializer::saveToXmlString( child );
-    const sw::string grandXml  = ObjectStateSerializer::saveToXmlString( grand );
-    SW_ASSERT_FALSE( parentXml.empty() );
-    SW_ASSERT_FALSE( childXml.empty() );
-    SW_ASSERT_FALSE( grandXml.empty() );
+    const sw::string parentXML = ObjectStateSerializer::saveToXMLString( parent );
+    const sw::string childXML  = ObjectStateSerializer::saveToXMLString( child );
+    const sw::string grandXML  = ObjectStateSerializer::saveToXMLString( grand );
+    SW_ASSERT_FALSE( parentXML.empty() );
+    SW_ASSERT_FALSE( childXML.empty() );
+    SW_ASSERT_FALSE( grandXML.empty() );
 
-    SW_EXPECT_TRUE( childXml.find( "ParentGO" ) != sw::string::npos );
-    SW_EXPECT_TRUE( grandXml.find( "ChildGO" ) != sw::string::npos );
+    SW_EXPECT_TRUE( childXML.find( "ParentGO" ) != sw::string::npos );
+    SW_EXPECT_TRUE( grandXML.find( "ChildGO" ) != sw::string::npos );
     const uint64 parentSavedId = parent->getObjectId();
     const uint64 childSavedId  = child->getObjectId();
     const uint64 grandSavedId  = grand->getObjectId();
@@ -598,9 +598,9 @@ SW_TEST_CASE( ObjectStateXmlSerializerTest, ParentChildHierarchyRoundtrip )
 
     // 자식을 부모보다 먼저 로드한다 — 읽는 자리에서는 부모가 아직 없고, 묶음의 끝(`finish`)이 잇는다(비순서 스냅샷 복원).
     ObjectStateBatch batch( ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( child, childXml, { nullptr, &batch, childSavedId } ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( grand, grandXml, { nullptr, &batch, grandSavedId } ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( parent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( child, childXML, { nullptr, &batch, childSavedId } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( grand, grandXML, { nullptr, &batch, grandSavedId } ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( parent, parentXML, { nullptr, &batch, parentSavedId } ) );
     SW_EXPECT_NULL( child->getParent() );
     batch.finish();
 
@@ -658,7 +658,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
     pComp->_dropped = 9;
     vector<uint8> bytes;
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSaved, bytes ) );
-    const string xml = ObjectStateSerializer::saveToXmlString( pSaved );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSaved );
 
     // 1) 다음 빌드(핫 리로드)에서 컴포넌트의 `_dropped` 가 사라졌다 — 같은 이름으로 다시 등록한다.
     TypeInfo componentAfter = restoreComponentType._original;
@@ -666,21 +666,21 @@ SW_TEST_CASE( ObjectStateRoundTripTest, StateSavedBeforeAPropertyWasRemovedStill
     engine::getTypeRegistry().registerClass( componentAfter );
 
     GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
-    GameObject* pFromXml    = manager.createGameObject( hashed_string( "FromXml" ) );
+    GameObject* pFromXML    = manager.createGameObject( hashed_string( "FromXml" ) );
     size_t      readBytes   = 0;
-    bool        bXmlLoaded  = false;
+    bool        bXMLLoaded  = false;
     {
         test::ScopedDefensiveTestLog expected( "a saved component field the type no longer declares" );
         readBytes  = ObjectStateSerializer::loadFromBinaryBuffer( pFromBinary, bytes.data(), bytes.size() );
-        bXmlLoaded = ObjectStateSerializer::loadFromXmlString( pFromXml, xml );
+        bXMLLoaded = ObjectStateSerializer::loadFromXMLString( pFromXML, xml );
     }
     SW_EXPECT_EQUAL( bytes.size(), readBytes );
-    SW_EXPECT_TRUE( bXmlLoaded );
+    SW_EXPECT_TRUE( bXMLLoaded );
     const SchemaShiftComponent* pFromBinaryComp = pFromBinary->getComponent<SchemaShiftComponent>();
-    const SchemaShiftComponent* pFromXmlComp    = pFromXml->getComponent<SchemaShiftComponent>();
-    SW_ASSERT_TRUE( pFromBinaryComp != nullptr && pFromXmlComp != nullptr );
+    const SchemaShiftComponent* pFromXMLComp    = pFromXML->getComponent<SchemaShiftComponent>();
+    SW_ASSERT_TRUE( pFromBinaryComp != nullptr && pFromXMLComp != nullptr );
     SW_EXPECT_EQUAL( 7, pFromBinaryComp->_kept );
-    SW_EXPECT_EQUAL( 7, pFromXmlComp->_kept );
+    SW_EXPECT_EQUAL( 7, pFromXMLComp->_kept );
 
     // 2) 오브젝트 자기 칸(`_bActive`)이 사라져도 같다.
     TypeInfo objectAfter = restoreObjectType._original;
@@ -734,15 +734,15 @@ SW_TEST_CASE( ObjectStateRoundTripTest, TurnedOffComponentsAndHiddenMeshesStayTh
     pMesh->setActive( false );
     pMesh->setVisible( false );
 
-    const string  xml = ObjectStateSerializer::saveToXmlString( pSource );
+    const string  xml = ObjectStateSerializer::saveToXMLString( pSource );
     vector<uint8> bytes;
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSource, bytes ) );
 
-    GameObject* pFromXml    = manager.createGameObject( hashed_string( "FromXml" ) );
+    GameObject* pFromXML    = manager.createGameObject( hashed_string( "FromXml" ) );
     GameObject* pFromBinary = manager.createGameObject( hashed_string( "FromBinary" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFromXml, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pFromXML, xml ) );
     SW_ASSERT_EQUAL( bytes.size(), ObjectStateSerializer::loadFromBinaryBuffer( pFromBinary, bytes.data(), bytes.size() ) );
-    for ( GameObject* pLoaded : { pFromXml, pFromBinary } )
+    for ( GameObject* pLoaded : { pFromXML, pFromBinary } )
     {
         const MeshComponent* pLoadedMesh = pLoaded->getComponent<MeshComponent>();
         SW_ASSERT_NOT_NULL( pLoadedMesh );
@@ -770,9 +770,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SecondSceneComponentHangsUnderThePrimary
 
     // 둘째가 루트로 저장된 데이터: 읽으면 primary 아래로 간다.
     pCollider->detachFromComponent();
-    const string oldXml  = ObjectStateSerializer::saveToXmlString( pCrate );
+    const string oldXML  = ObjectStateSerializer::saveToXMLString( pCrate );
     GameObject*  pLoaded = manager.createGameObject( hashed_string( "LoadedCrate" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pLoaded, oldXml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, oldXML ) );
     SceneComponent* pLoadedRoot = pLoaded->getPrimarySceneComponent();
     SW_ASSERT_NOT_NULL( pLoadedRoot );
     SceneComponent* pLoadedCollider = nullptr;
@@ -837,45 +837,45 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
     SW_ASSERT_NOT_NULL( pSource->addComponent<SceneComponent>() );
 
     // XML: 모르는 원소를 하나 끼운다(모듈이 안 뜬 컴포넌트).
-    string       xml      = ObjectStateSerializer::saveToXmlString( pSource );
+    string       xml      = ObjectStateSerializer::saveToXMLString( pSource );
     const size_t listOpen = xml.find( "<_listComponent>" );
     SW_ASSERT_TRUE( listOpen != string::npos );
-    const string kUnknownXml = "<NotLoadedLampDriver _flicker=\"0.25\" _mode=\"Candle\" />";
-    xml.insert( listOpen + string_view( "<_listComponent>" ).size(), kUnknownXml );
+    const string kUnknownXML = "<NotLoadedLampDriver _flicker=\"0.25\" _mode=\"Candle\" />";
+    xml.insert( listOpen + string_view( "<_listComponent>" ).size(), kUnknownXML );
 
-    GameObject* pFromXml = manager.createGameObject( hashed_string( "FromXml" ) );
+    GameObject* pFromXML = manager.createGameObject( hashed_string( "FromXml" ) );
     {
         test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pFromXml, xml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pFromXML, xml ) );
     }
-    const MissingComponent* pMissing = pFromXml->getComponent<MissingComponent>();
+    const MissingComponent* pMissing = pFromXML->getComponent<MissingComponent>();
     SW_ASSERT_NOT_NULL( pMissing );
     SW_EXPECT_STREQ( "NotLoadedLampDriver", pMissing->getOriginalTypeName().c_str() );
-    const string savedAgain = ObjectStateSerializer::saveToXmlString( pFromXml );
+    const string savedAgain = ObjectStateSerializer::saveToXMLString( pFromXML );
     SW_EXPECT_TRUE( savedAgain.find( "<NotLoadedLampDriver" ) != string::npos );
     SW_EXPECT_TRUE( savedAgain.find( "_flicker=\"0.25\"" ) != string::npos );
     SW_EXPECT_TRUE( savedAgain.find( "MissingComponent" ) == string::npos ); // 자리 표시가 아니라 원문이 나간다
 
     // 바이너리를 거쳐(플레이 스냅샷) 다시 XML 로 — 원문이 돌아온다.
     vector<uint8> snapshot;
-    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pFromXml, snapshot ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pFromXML, snapshot ) );
     GameObject* pRestored = manager.createGameObject( hashed_string( "Restored" ) );
     SW_ASSERT_EQUAL( snapshot.size(), ObjectStateSerializer::loadFromBinaryBuffer( pRestored, snapshot.data(), snapshot.size() ) );
-    SW_EXPECT_TRUE( ObjectStateSerializer::saveToXmlString( pRestored ).find( "_flicker=\"0.25\"" ) != string::npos );
+    SW_EXPECT_TRUE( ObjectStateSerializer::saveToXMLString( pRestored ).find( "_flicker=\"0.25\"" ) != string::npos );
 
     // JSON
-    string       json     = ObjectStateSerializer::saveToJsonString( pSource );
+    string       json     = ObjectStateSerializer::saveToJSONString( pSource );
     const size_t jsonList = json.find( "\"_listComponent\"" );
     SW_ASSERT_TRUE( jsonList != string::npos );
     const size_t arrayOpen = json.find( '[', jsonList );
     SW_ASSERT_TRUE( arrayOpen != string::npos );
     json.insert( arrayOpen + 1, "{\"NotLoadedLampDriver\":{\"_flicker\":0.25}}," );
-    GameObject* pFromJson = manager.createGameObject( hashed_string( "FromJson" ) );
+    GameObject* pFromJSON = manager.createGameObject( hashed_string( "FromJson" ) );
     {
         test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pFromJson, json ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( pFromJSON, json ) );
     }
-    const string jsonAgain = ObjectStateSerializer::saveToJsonString( pFromJson );
+    const string jsonAgain = ObjectStateSerializer::saveToJSONString( pFromJSON );
     SW_EXPECT_TRUE( jsonAgain.find( "NotLoadedLampDriver" ) != string::npos );
     SW_EXPECT_TRUE( jsonAgain.find( "_flicker" ) != string::npos );
     SW_EXPECT_TRUE( jsonAgain.find( "MissingComponent" ) == string::npos ); // 자리 표시가 아니라 원문이 나간다
@@ -932,7 +932,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
     pNext->_kept  = 7;
     vector<uint8> bytes;
     SW_ASSERT_TRUE( ObjectStateSerializer::saveToBinaryBuffer( pSaved, bytes ) );
-    const string xml = ObjectStateSerializer::saveToXmlString( pSaved );
+    const string xml = ObjectStateSerializer::saveToXMLString( pSaved );
 
     // 1) 다음 빌드에서 열거자 순서가 바뀐다 — Green 은 2 다.
     registerStateShiftColor( {
@@ -946,11 +946,11 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
     SW_ASSERT_NOT_NULL( pReorderedEnum );
     SW_EXPECT_TRUE_MSG( static_cast<int32>( pReorderedEnum->_color ) == 2, "저장된 Green 이 값으로 읽혀 다른 열거자가 됐습니다" );
     SW_EXPECT_EQUAL( 5, pReorderedEnum->_after );
-    GameObject* pReorderedXml = manager.createGameObject( hashed_string( "ReorderedXml" ) );
-    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXmlString( pReorderedXml, xml ) );
-    const EnumShiftComponent* pReorderedXmlEnum = pReorderedXml->getComponent<EnumShiftComponent>();
-    SW_ASSERT_NOT_NULL( pReorderedXmlEnum );
-    SW_EXPECT_EQUAL( 2, static_cast<int32>( pReorderedXmlEnum->_color ) ); // XML 은 원래 이름으로 실었다 — 두 형식이 같은 답이다
+    GameObject* pReorderedXML = manager.createGameObject( hashed_string( "ReorderedXml" ) );
+    SW_EXPECT_TRUE( ObjectStateSerializer::loadFromXMLString( pReorderedXML, xml ) );
+    const EnumShiftComponent* pReorderedXMLEnum = pReorderedXML->getComponent<EnumShiftComponent>();
+    SW_ASSERT_NOT_NULL( pReorderedXMLEnum );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( pReorderedXMLEnum->_color ) ); // XML 은 원래 이름으로 실었다 — 두 형식이 같은 답이다
 
     // 2) 다음 빌드에서 Green 이 Lime 이 됐다(ValueAlias 없음). 그 칸만 기본값(Red)으로 남고, 뒤의 칸 · 뒤의 컴포넌트는 읽힌다.
     registerStateShiftColor( {
@@ -959,17 +959,17 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
         {"Blue", 2}
     } );
     GameObject* pRenamed    = manager.createGameObject( hashed_string( "Renamed" ) );
-    GameObject* pRenamedXml = manager.createGameObject( hashed_string( "RenamedXml" ) );
+    GameObject* pRenamedXML = manager.createGameObject( hashed_string( "RenamedXml" ) );
     size_t      readBytes   = 0;
-    bool        bXmlLoaded  = false;
+    bool        bXMLLoaded  = false;
     {
         test::ScopedDefensiveTestLog expected( "a saved enumerator the enum no longer has" );
         readBytes  = ObjectStateSerializer::loadFromBinaryBuffer( pRenamed, bytes.data(), bytes.size() );
-        bXmlLoaded = ObjectStateSerializer::loadFromXmlString( pRenamedXml, xml );
+        bXMLLoaded = ObjectStateSerializer::loadFromXMLString( pRenamedXML, xml );
     }
     SW_EXPECT_EQUAL( bytes.size(), readBytes );
-    SW_EXPECT_TRUE( bXmlLoaded );
-    for ( GameObject* pRenamedObject : { pRenamed, pRenamedXml } )
+    SW_EXPECT_TRUE( bXMLLoaded );
+    for ( GameObject* pRenamedObject : { pRenamed, pRenamedXML } )
     {
         const EnumShiftComponent*   pRenamedEnum = pRenamedObject->getComponent<EnumShiftComponent>();
         const SchemaShiftComponent* pRenamedNext = pRenamedObject->getComponent<SchemaShiftComponent>();
@@ -985,7 +985,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
  * @details JSON 이 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드가
  *          "_listComponent 를 버렸다" 고만 알린다 — 컴포넌트는 읽혔는데 어느 칸이 문제인지는 말하지 않는다. XML 처럼 바깥 목록을 내려 준다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed )
+SW_TEST_CASE( ObjectStateRoundTripTest, JSONComponentFieldThatDoesNotReadIsNamed )
 {
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "Mover" ) );
@@ -993,7 +993,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
     SW_ASSERT_NOT_NULL( pRoot );
     pRoot->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
 
-    string       json    = ObjectStateSerializer::saveToJsonString( pSource );
+    string       json    = ObjectStateSerializer::saveToJSONString( pSource );
     const size_t typeKey = json.find( "\"SceneComponent\"" );
     SW_ASSERT_TRUE( typeKey != string::npos );
     const size_t bodyOpen = json.find( '{', typeKey );
@@ -1004,7 +1004,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component field the type does not have" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pLoaded, json ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( pLoaded, json ) );
     }
     const SceneComponent* pLoadedRoot = pLoaded->getComponent<SceneComponent>();
     SW_ASSERT_NOT_NULL( pLoadedRoot );

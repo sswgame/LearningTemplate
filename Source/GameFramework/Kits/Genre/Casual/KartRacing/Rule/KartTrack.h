@@ -15,12 +15,12 @@
 
 #include "GameFramework/Base/Actor/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 아이템 상자 자리입니다. `_at` 은 한 바퀴에 대한 비율(0..1)입니다. */
     struct KartItemBoxDef
@@ -208,9 +208,9 @@ namespace sw
      *        <Offroad from="0.6" to="0.65" minOffset="-6" maxOffset="0" scale="0.4"/></Track></KartTrackCatalog>` 를 읽습니다.
      * @details 점이 셋보다 적은 트랙은 경고하고 건너뜁니다. 같은 id 는 뒤의 것이 이깁니다.
      */
-    class SW_GF_API KartTrackCatalog : public XmlCatalog<KartTrackCatalog>
+    class SW_GF_API KartTrackCatalog : public XMLCatalog<KartTrackCatalog>
     {
-        friend class XmlCatalog<KartTrackCatalog>;
+        friend class XMLCatalog<KartTrackCatalog>;
 
     public:
         void addTrack( const KartTrackDef& def ) { (void)_catalog.add( def ); }
@@ -219,8 +219,8 @@ namespace sw
         const GameCatalog<KartTrackDef>& getCatalog() const { return _catalog; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "KartTrackCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "KartTrackCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<KartTrackDef> _catalog{};
     };

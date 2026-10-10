@@ -11,12 +11,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 가격 다리 하나 — 화폐(가상이면 재원 순서로) · 양입니다. */
     struct OfferPrice
@@ -68,9 +68,9 @@ namespace sw
 namespace sw
 {
     /** @class OfferCatalog @brief 상품 모음입니다. 읽은 뒤에는 바꾸지 않는다(저장소 스레드가 읽는다). */
-    class SW_GF_API OfferCatalog : public XmlCatalog<OfferCatalog>
+    class SW_GF_API OfferCatalog : public XMLCatalog<OfferCatalog>
     {
-        friend class XmlCatalog<OfferCatalog>;
+        friend class XMLCatalog<OfferCatalog>;
 
     public:
         /** @brief 더합니다(시험). 규칙(가격 xor 상품, 지급 하나 이상, id 글자, 같은 id 없음)을 어기면 false 입니다. */
@@ -81,8 +81,8 @@ namespace sw
         const vector<OfferDef>& getOffers() const { return _listOffer; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "OfferCatalog";
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "OfferCatalog";
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<OfferDef> _listOffer{};
     };

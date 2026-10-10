@@ -6,7 +6,7 @@
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
 
             /** @brief @p value 의 멤버가 모두 @p arrAllowed 안이면 true. 아니면 첫 모르는 이름을 @p outUnknown 에 담습니다. */
             template <size_t N>
-            static bool hasOnlyKnownKeys( const JsonValue& value, const utf8* const ( &arrAllowed )[N], string& outUnknown )
+            static bool hasOnlyKnownKeys( const JSONValue& value, const utf8* const ( &arrAllowed )[N], string& outUnknown )
             {
                 for ( const string& memberName : value.getMemberNames() )
                 {
@@ -46,7 +46,7 @@ namespace sw
 
             /** @brief 낱말 배열을 비트로 읽습니다. 모르는 낱말 · 빈 배열이면 false 입니다. */
             template <typename TEnum, size_t N>
-            [[nodiscard]] static bool parseMask( const JsonValue& list, const utf8* const ( &arrWord )[N], const TEnum ( &arrValue )[N], uint8& outMask, string& outBadWord )
+            [[nodiscard]] static bool parseMask( const JSONValue& list, const utf8* const ( &arrWord )[N], const TEnum ( &arrValue )[N], uint8& outMask, string& outBadWord )
             {
                 outMask = 0;
                 if ( list.isArray() == false || list.size() == 0 )
@@ -150,13 +150,13 @@ namespace sw
         outManifest._sourcePath = string( sourcePath );
         const string where      = sourcePath.empty() ? string( "<module manifest>" ) : string( sourcePath );
 
-        JsonDocument document;
+        JSONDocument document;
         if ( document.tryParse( jsonText ) == false )
         {
             outError = where + ": not valid JSON";
             return false;
         }
-        const JsonValue root = document.getRoot();
+        const JSONValue root = document.getRoot();
         string          unknown;
         if ( root.isObject() == false )
         {
@@ -237,7 +237,7 @@ namespace sw
             return false;
         }
 
-        const JsonValue enabledByDefault = root.get( "_bEnabledByDefault" );
+        const JSONValue enabledByDefault = root.get( "_bEnabledByDefault" );
         if ( enabledByDefault.isValid() && enabledByDefault.isBool() == false )
         {
             outError = context + ": _bEnabledByDefault must be true or false";
@@ -245,7 +245,7 @@ namespace sw
         }
         outManifest._bEnabledByDefault = enabledByDefault.isValid() ? enabledByDefault.asBool() : true;
 
-        const JsonValue dependencyList = root.get( "_listDependency" );
+        const JSONValue dependencyList = root.get( "_listDependency" );
         if ( dependencyList.isValid() && dependencyList.isArray() == false )
         {
             outError = context + ": _listDependency must be an array";
@@ -253,7 +253,7 @@ namespace sw
         }
         for ( size_t index = 0; dependencyList.isValid() && index < dependencyList.size(); ++index )
         {
-            const JsonValue  entry = dependencyList.at( index );
+            const JSONValue  entry = dependencyList.at( index );
             ModuleDependency dependency{};
             if ( entry.isObject() == false || ModuleCatalogInternal::hasOnlyKnownKeys( entry, ModuleCatalogInternal::kArrDependencyKey, unknown ) == false )
             {
@@ -266,7 +266,7 @@ namespace sw
                 outError = context + ": dependency " + to_string( index ) + " has no name or names the module itself";
                 return false;
             }
-            const JsonValue minVersion = entry.get( "_minVersion" );
+            const JSONValue minVersion = entry.get( "_minVersion" );
             if ( minVersion.isValid() && ModuleVersion::parse( minVersion.asString(), dependency._minVersion ) == false )
             {
                 outError = context + ": dependency '" + dependency._name + "' has a bad _minVersion";
@@ -275,7 +275,7 @@ namespace sw
             outManifest._listDependency.push_back( std::move( dependency ) );
         }
 
-        const JsonValue overrideList = root.get( "_listModuleOverride" );
+        const JSONValue overrideList = root.get( "_listModuleOverride" );
         if ( overrideList.isValid() )
         {
             if ( outManifest._kind != ModuleKind::Game || overrideList.isArray() == false )
@@ -285,7 +285,7 @@ namespace sw
             }
             for ( size_t index = 0; index < overrideList.size(); ++index )
             {
-                const JsonValue entry = overrideList.at( index );
+                const JSONValue entry = overrideList.at( index );
                 if ( entry.isObject() == false || ModuleCatalogInternal::hasOnlyKnownKeys( entry, ModuleCatalogInternal::kArrOverrideKey, unknown ) == false ||
                      entry.get( "_bEnabled" ).isBool() == false || entry.get( "_name" ).asString().empty() )
                 {

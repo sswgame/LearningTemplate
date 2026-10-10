@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 필드 값의 타입입니다. */
     enum class TelemetryFieldType : uint8
@@ -89,7 +89,7 @@ namespace sw
         TelemetrySchema();
 
         [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
         const TelemetryEventDef*         findEvent( const hashed_string& eventId ) const;
@@ -98,7 +98,7 @@ namespace sw
         int32                            getVersion() const { return _version; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<TelemetryEventDef> _listEvent;
         TelemetryPipelineSettings _settings;

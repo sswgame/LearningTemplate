@@ -4,7 +4,7 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -12,7 +12,7 @@ namespace sw
 
     bool UiThemeCatalog::loadFromResource( string_view resourcePath )
     {
-        if ( XmlSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[Ui] UI theme catalog could not be read or holds unknown keys: %#", resourcePath );
             return false;

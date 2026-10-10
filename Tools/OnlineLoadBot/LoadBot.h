@@ -16,7 +16,7 @@
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Base/Online/Service/OnlineServiceClient.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/AccountClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/AccountClient.h"
 #include "GameFramework/Kits/Feature/Online/Chat/Shared/ChatClient.h"
 #include "GameFramework/Kits/Feature/Online/Leaderboard/Shared/LeaderboardClient.h"
 #include "GameFramework/Kits/Feature/Online/LiveOps/Shared/LiveOpsClient.h"

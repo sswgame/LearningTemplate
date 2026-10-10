@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Kits/Genre/Action/Metroidvania/Rule/MetroAbilitySet.h"
 
 namespace sw
@@ -17,19 +17,19 @@ namespace sw
     {
         struct MetroidvaniaCatalogInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pName )
+            static hashed_string readName( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
             }
 
-            static string readText( const XmlNode& node, const utf8* pName, const utf8* pFallback )
+            static string readText( const XMLNode& node, const utf8* pName, const utf8* pFallback )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? string( pValue ) : string( pFallback );
             }
 
-            static uint8 readFlag( const XmlNode& node, const utf8* pName, uint8 fallback )
+            static uint8 readFlag( const XMLNode& node, const utf8* pName, uint8 fallback )
             {
                 return node.getAttributeBool( pName, fallback != SW_FALSE ) ? SW_TRUE : SW_FALSE;
             }
@@ -50,13 +50,13 @@ namespace sw
     {
     }
 
-    void MetroidvaniaCatalog::loadRules( const XmlNode& root )
+    void MetroidvaniaCatalog::loadRules( const XMLNode& root )
     {
         const utf8* pCurrency = root.findAttribute( "currency" );
         if ( pCurrency != nullptr )
             _rules._currency = hashed_string( pCurrency );
 
-        const XmlNode rules = root.findChild( "Rules" );
+        const XMLNode rules = root.findChild( "Rules" );
         if ( rules )
         {
             _rules._flaskCharges              = MathUtil::max( 0, rules.getAttributeInt( "flaskCharges", _rules._flaskCharges ) );
@@ -75,7 +75,7 @@ namespace sw
             _rules._bAllowOvercharm           = MetroidvaniaCatalogInternal::readFlag( rules, "overcharm", _rules._bAllowOvercharm );
         }
 
-        const XmlNode health = root.findChild( "Health" );
+        const XMLNode health = root.findChild( "Health" );
         if ( health )
         {
             VitalitySettings& settings   = _rules._health;
@@ -88,7 +88,7 @@ namespace sw
         }
         _rules._health._bDownedEnabled = SW_FALSE; // 소울라이크는 기절이 없다 — 0 이면 죽는다
 
-        const XmlNode stamina = root.findChild( "Stamina" );
+        const XMLNode stamina = root.findChild( "Stamina" );
         if ( stamina )
         {
             ResourceGaugeSettings& settings = _rules._stamina;
@@ -99,7 +99,7 @@ namespace sw
             settings._bOverheatMode         = SW_FALSE;
         }
 
-        const XmlNode parry = root.findChild( "Parry" );
+        const XMLNode parry = root.findChild( "Parry" );
         if ( parry )
             _rules._parryJudge.loadFromNode( parry );
         if ( _rules._parryJudge.getWindows().empty() )
@@ -112,21 +112,21 @@ namespace sw
         }
     }
 
-    uint32 MetroidvaniaCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 MetroidvaniaCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         loadRules( root );
         uint32 loadedCount = 0;
 
-        for ( XmlNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
+        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MetroAbilityDef ability;
             ability._id         = hashed_string( pId );
             ability._name       = MetroidvaniaCatalogInternal::readText( node, "name", pId );
             ability._flag       = MetroidvaniaCatalogInternal::readName( node, "flag" );
-            const XmlNode motor = node.findChild( "Motor" );
+            const XMLNode motor = node.findChild( "Motor" );
             if ( motor )
                 (void)ability._motor.loadFromAttributes( motor ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             for ( const StatValue& value : ability._motor.getValues() )
@@ -138,23 +138,23 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Charm" ); node; node = node.findNextSibling( "Charm" ) )
+        for ( XMLNode node = root.findChild( "Charm" ); node; node = node.findNextSibling( "Charm" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MetroCharmDef charm;
             charm._id           = hashed_string( pId );
             charm._name         = MetroidvaniaCatalogInternal::readText( node, "name", pId );
             charm._cost         = MathUtil::max( 0, node.getAttributeInt( "cost", charm._cost ) );
-            const XmlNode stats = node.findChild( "Stats" );
+            const XMLNode stats = node.findChild( "Stats" );
             if ( stats )
                 (void)charm._stats.loadFromAttributes( stats ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
             (void)_charmCatalog.add( charm );
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
+        for ( XMLNode node = root.findChild( "Map" ); node; node = node.findNextSibling( "Map" ) )
         {
             MetroRegionMapDef regionMap;
             regionMap._id = MetroidvaniaCatalogInternal::readName( node, "region" );
@@ -168,9 +168,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
+        for ( XMLNode node = root.findChild( "Site" ); node; node = node.findNextSibling( "Site" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MetroSiteDef site;
@@ -184,9 +184,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
+        for ( XMLNode node = root.findChild( "Pickup" ); node; node = node.findNextSibling( "Pickup" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MetroPickupDef pickup;
@@ -202,9 +202,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Enemy" ); node; node = node.findNextSibling( "Enemy" ) )
+        for ( XMLNode node = root.findChild( "Enemy" ); node; node = node.findNextSibling( "Enemy" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MetroEnemyDef enemy;

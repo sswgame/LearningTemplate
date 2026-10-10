@@ -94,7 +94,7 @@ namespace
         }
 
         /** @brief 백그라운드 I/O 흉내 — 2 ms 를 바쁘게 돈다(잠들면 워커가 비어 그 자리를 다른 일이 채운다). */
-        static void backgroundIo()
+        static void backgroundIO()
         {
             const sw::Stopwatch stopwatch;
             while ( stopwatch.getElapsedMicroseconds() < 2000 )
@@ -180,7 +180,7 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinLatency )
 /**
  * @brief [TaskManagerBenchTest] 백그라운드 I/O(Low 줄)가 늘 차 있을 때의 포크-조인 — 합류 대기가 Low 를 도우면 최악이 I/O 태스크 하나만큼 는다
  */
-SW_TEST_CASE( TaskManagerBenchTest, ForkJoinUnderBackgroundIo )
+SW_TEST_CASE( TaskManagerBenchTest, ForkJoinUnderBackgroundIO )
 {
     sw::TaskManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -197,7 +197,7 @@ SW_TEST_CASE( TaskManagerBenchTest, ForkJoinUnderBackgroundIo )
         while ( s_lowInFlight.load( std::memory_order_relaxed ) < lowTarget )
         {
             s_lowInFlight.fetch_add( 1, std::memory_order_relaxed );
-            sw::TaskHandle low = manager.emplaceTask( "BenchBackgroundIo", SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::backgroundIo ) );
+            sw::TaskHandle low = manager.emplaceTask( "BenchBackgroundIO", SW_DELEGATE_FUNCTION( sw::TaskDelegate, BenchBody::backgroundIO ) );
             low.setPriority( sw::TaskPriority::Low );
             low.submit();
         }

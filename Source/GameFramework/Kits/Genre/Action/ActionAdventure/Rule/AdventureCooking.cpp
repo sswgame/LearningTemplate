@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Inventory/Crafting.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
@@ -19,7 +19,7 @@ namespace sw
     {
         struct AdventureCookingInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pName, const utf8* pFallback )
+            static hashed_string readName( const XMLNode& node, const utf8* pName, const utf8* pFallback )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return hashed_string( pValue != nullptr && pValue[0] != '\0' ? pValue : pFallback );
@@ -76,7 +76,7 @@ namespace sw
     {
     }
 
-    uint32 AdventureCooking::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 AdventureCooking::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _station               = AdventureCookingInternal::readName( root, "station", "CookingPot" );
         _genericDish           = AdventureCookingInternal::readName( root, "generic", "simmeredDish" );
@@ -85,9 +85,9 @@ namespace sw
         _durationPerIngredient = MathUtil::max( 0.0f, root.getAttributeFloat( "durationPerIngredient", _durationPerIngredient ) );
         _maxIngredientCount    = MathUtil::max( 1, root.getAttributeInt( "maxIngredients", _maxIngredientCount ) );
         _dubiousHeartQuarters  = MathUtil::max( 0, root.getAttributeInt( "dubiousHearts", _dubiousHeartQuarters ) );
-        for ( XmlNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
+        for ( XMLNode node = root.findChild( "Effect" ); node; node = node.findNextSibling( "Effect" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             AdventureCookEffectDef effect;
@@ -98,9 +98,9 @@ namespace sw
             (void)_effectCatalog.add( effect );
         }
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
+        for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             AdventureIngredientDef ingredient;

@@ -167,20 +167,20 @@ NTP 보정으로 거꾸로 갈 수 있으므로 경과 시간에는 쓰지 않�
 
 ### 비동기 파일 IO
 
-`AsyncFileIo`(`File/AsyncFileIo.h`)는 읽기 요청(파일 전체, 구간, 연 파일의 구간)을 우선순위 큐에 넣고, 백엔드가 높은 우선순위부터 OS에 겁니다.
+`AsyncFileIO`(`File/AsyncFileIO.h`)는 읽기 요청(파일 전체, 구간, 연 파일의 구간)을 우선순위 큐에 넣고, 백엔드가 높은 우선순위부터 OS에 겁니다.
 언리얼의 `IAsyncReadFileHandle` 과 IoStore 우선순위 큐, 유니티의 `AsyncReadManager` 에 해당합니다.
 동시에 OS에 걸린 요청 수는 `_maxInFlightCount` 로 제한합니다. 그래야 뒤에 온 급한 요청이 대량 요청 뒤에 줄 서지 않습니다. 같은 우선순위는 들어온 순서입니다.
 
 백엔드는 세 가지입니다. Windows는 오버랩드 IO와 완료 포트, 리눅스는 liburing 없이 시스템 호출로 쓰는 io_uring, 그 밖에는 스레드 풀입니다.
 `Auto` 는 플랫폼 백엔드를 고르고, io_uring을 쓸 수 없으면(옛 커널, WSL1, 컨테이너 seccomp) 로그 한 줄과 함께 스레드 풀로 내려갑니다. 명시한 백엔드를 쓸 수 없으면 `initialize` 가 실패합니다.
-정책(우선순위, 상한, 취소, 파일 열기, 버퍼 준비, 완료 전달)은 `AsyncFileIoQueue` 한 곳에 있고, 백엔드는 "꺼내서 걸고, 끝나면 알린다"만 합니다.
+정책(우선순위, 상한, 취소, 파일 열기, 버퍼 준비, 완료 전달)은 `AsyncFileIOQueue` 한 곳에 있고, 백엔드는 "꺼내서 걸고, 끝나면 알린다"만 합니다.
 
 - 파일 열기와 크기 확인, 버퍼 할당은 IO 스레드가 하고, 버퍼는 **요청한 스레드의 메모리 태그**로 셉니다.
 - 완료 콜백은 요청마다 한 번 불립니다. `TaskManager` 를 넘기면 그 워커에서, 아니면 IO 스레드에서 돕니다. `readFileFuture` 는 결과를 `TaskFuture` 로 돌려줍니다.
 - 결과는 `Succeeded`, `Canceled`, `FileNotFound`, `OutOfRange`, `ReadFailed`, `ShutDown` 중 하나입니다. 구간이 파일 끝을 넘으면 짧게 읽지 않고 `OutOfRange` 로 실패합니다.
 - 큐에 있는 요청을 취소하면 OS에 넘기지 않고, 이미 걸린 요청은 읽은 뒤 결과를 버립니다. 언리얼, 유니티와 같은 "최선" 취소입니다.
 
-엔진은 서비스 하나(`engine::getAsyncFileIo()`)를 기동 단계 `FileIo` 에서 만들고, Task와 모듈 이미지보다 먼저 종료합니다. 걸린 읽기와 완료 태스크를 모두 기다립니다.
+엔진은 서비스 하나(`engine::getAsyncFileIO()`)를 기동 단계 `FileIO` 에서 만들고, Task와 모듈 이미지보다 먼저 종료합니다. 걸린 읽기와 완료 태스크를 모두 기다립니다.
 `PlatformFileUtil::openNativeFileForRead` 와 `readNativeFileAt` 은 공유 파일 위치가 없는 위치 지정 읽기라 여러 스레드가 한 핸들을 잠금 없이 읽습니다.
 
 ### 압축
@@ -315,7 +315,7 @@ W 클래스로 만든 창의 프로시저가 `DefWindowProcA` 로 끝나 제목�
 ### 비동기와 크래시
 
 **비동기 IO의 완료 콜백은 태스크 워커에서 돕니다**(엔진 설정). 팩 압축 해제와 CRC 검사가 IO 스레드를 막지 않게 하기 위해서입니다.
-그래서 `AsyncFileIo` 종료는 Task보다 먼저입니다. 콜백 안에서 자기 큐의 잠금을 쥔 채 IO를 걸지 마세요. 종료 뒤의 요청은 그 스레드에서 바로 완료되어 교착합니다.
+그래서 `AsyncFileIO` 종료는 Task보다 먼저입니다. 콜백 안에서 자기 큐의 잠금을 쥔 채 IO를 걸지 마세요. 종료 뒤의 요청은 그 스레드에서 바로 완료되어 교착합니다.
 
 **`SW_ASSERT` 는 Release와 Shipping에서 사라지고, `SW_LOG_ASSERT` 는 Debug에서 `SW_DEBUG_BREAK` 까지 합니다.** 디버거가 없는 CI에서는 프로세스가 죽으므로, 방어 경로 테스트는 Release와 Shipping에서 합니다.
 배포 구성의 `SW_LOG_ASSERT` 는 진행하므로, 뒤 코드가 그 전제에 의존한다면 하드 단언을 씁니다.
@@ -375,6 +375,6 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 | `Log/Logger.h` | 로그 매크로와 상세도 |
 | `Memory/Memory.h`, `Memory/MemoryTag.h` | 할당 함수와 메모리 태그 |
 | `String/hashed_string.h` | 이름 문자열 |
-| `File/AsyncFileIo.h` | 비동기 파일 읽기 |
+| `File/AsyncFileIO.h` | 비동기 파일 읽기 |
 | `Time/MonotonicClock.h` | 시계, 스톱워치, 기한 |
 | `Common/TargetMacroCheck.h` | 컴파일러 매크로와 CMake 판정 대조 |

@@ -4,7 +4,7 @@
 
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Observability/HttpClient.h"
+#include "Engine/Observability/HTTPClient.h"
 
 namespace sw
 {
@@ -19,7 +19,7 @@ namespace sw
             static void appendPartHeader( string& inoutBody, string_view fieldName, string_view fileName, string_view contentType )
             {
                 inoutBody += "--";
-                inoutBody += HttpCrashReportUploader::kBoundary;
+                inoutBody += HTTPCrashReportUploader::kBoundary;
                 inoutBody += "\r\nContent-Disposition: form-data; name=\"";
                 inoutBody += fieldName;
                 inoutBody += "\"";
@@ -66,16 +66,16 @@ namespace sw
         return s_uploader;
     }
 
-    HttpCrashReportUploader::HttpCrashReportUploader( IHttpClient& client, string_view endpoint )
+    HTTPCrashReportUploader::HTTPCrashReportUploader( IHTTPClient& client, string_view endpoint )
         : _endpoint{ endpoint }
         , _pClient{ &client }
     {
     }
 
-    CrashReportUploadResult HttpCrashReportUploader::upload( const CrashReportUploadBundle& bundle )
+    CrashReportUploadResult HTTPCrashReportUploader::upload( const CrashReportUploadBundle& bundle )
     {
         using Internal = CrashReportUploaderInternal;
-        HttpRequest request;
+        HTTPRequest request;
         request._method = "POST";
         request._url    = _endpoint;
         request._listHeader.push_back( { "Content-Type", string( "multipart/form-data; boundary=" ) + kBoundary } );
@@ -96,7 +96,7 @@ namespace sw
         request._body += "--";
         request._body += kBoundary;
         request._body += "--\r\n";
-        const HttpResponse response = _pClient->send( request );
+        const HTTPResponse response = _pClient->send( request );
         if ( response.isSuccess() )
             return CrashReportUploadResult::Sent;
         SW_LOG_INFO( "Crash report '%#' was not accepted (status %#, %#)", bundle._sessionId.c_str(), response._status, response._error.c_str() );

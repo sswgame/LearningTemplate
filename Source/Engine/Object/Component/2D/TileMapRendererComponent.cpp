@@ -90,7 +90,7 @@ namespace sw
 
     bool TileMapRendererComponent::loadTileMap()
     {
-        TileMapXmlData map;
+        TileMapXMLData map;
         if ( map.load( _tileMapPath ) == false )
             return false;
         if ( map._tileSetPath.empty() )
@@ -105,7 +105,7 @@ namespace sw
         return _bLoaded == SW_TRUE;
     }
 
-    void TileMapRendererComponent::setTileMapData( const TileMapXmlData& map, const TileSetAsset& tileSet )
+    void TileMapRendererComponent::setTileMapData( const TileMapXMLData& map, const TileSetAsset& tileSet )
     {
         _map               = map;
         _tileSet           = tileSet;

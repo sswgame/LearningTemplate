@@ -390,7 +390,7 @@ SW_TEST_CASE( ModelImporterTest, RecenterMovesTheBoundsAsTheRuleSays )
 SW_TEST_CASE( ModelImporterTest, ImportRuleIsChosenByPathAndFeedsTheSourceHash )
 {
     sw::editor::ModelImportConfig recenterConfig;
-    SW_ASSERT_TRUE( recenterConfig.loadFromJsonString(
+    SW_ASSERT_TRUE( recenterConfig.loadFromJSONString(
         R"({ "rules": [ { "name": "Probe", "include_patterns": [ "*/probe/models_raw/*" ], "recenter": "xz", "translation": [ 0.5, 0, -1 ] } ] })" ) );
     const sw::editor::ModelImportRule probeRule = recenterConfig.findMatchingRule( "game/probe/models_raw/a.glb" );
     SW_EXPECT_TRUE( sw::editor::ModelRecenter::Xz == probeRule._recenter );
@@ -401,9 +401,9 @@ SW_TEST_CASE( ModelImporterTest, ImportRuleIsChosenByPathAndFeedsTheSourceHash )
     {
         test::ScopedDefensiveTestLog  expected( "an unknown recenter value rejects the whole config" );
         sw::editor::ModelImportConfig brokenConfig;
-        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "recenter": "center" } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "recenter": "center" } ] })" ) );
         SW_EXPECT_TRUE( brokenConfig.getRules().empty() );
-        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "translation": [ 1, 2 ] } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "translation": [ 1, 2 ] } ] })" ) );
     }
 
     const sw::string resourceRoot = test::makeTempDirectory( "model_import_rule_resource" );
@@ -527,10 +527,10 @@ SW_TEST_CASE( ModelImporterTest, SkinnedModelImportsSkeletonClipsAndAttachments 
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( copiedPath, walkRule, result ) );
     // 모르는 규칙 키 · 뿌리 키 · 코덱은 설정 오류다.
     sw::editor::ModelImportConfig config;
-    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rulez": [] })" ) );
-    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
-    SW_EXPECT_FALSE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
-    SW_EXPECT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
+    SW_EXPECT_FALSE( config.loadFromJSONString( R"({ "rulez": [] })" ) );
+    SW_EXPECT_FALSE( config.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "zip" } ] })" ) );
+    SW_EXPECT_FALSE( config.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "animashions": false } ] })" ) );
+    SW_EXPECT_TRUE( config.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "animation_codec": "raw", "clips": [ "Idle" ] } ] })" ) );
     SW_EXPECT_EQUAL( sw::string( "raw" ), config.getRules()[0]._animationCodec );
 }
 
@@ -574,11 +574,11 @@ SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
     SW_EXPECT_NEAR_EQUAL( 0.21404f, result._listSection[0]._material._baseColor._x, 1e-4f );
 
     // 모르는 MToon 키가 있으면 임포트가 실패한다.
-    sw::string   badJson = json;
-    const size_t at      = badJson.find( "\"_BlendMode\"" );
+    sw::string   badJSON = json;
+    const size_t at      = badJSON.find( "\"_BlendMode\"" );
     SW_ASSERT_TRUE( at != sw::string::npos );
-    badJson.replace( at, 12, "\"_BlendModes\"" );
-    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, badJson ) );
+    badJSON.replace( at, 12, "\"_BlendModes\"" );
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourcePath, badJSON ) );
     test::ScopedDefensiveTestLog expected( "an unknown VRM material key fails the import" );
     SW_EXPECT_FALSE( sw::editor::ModelImporter::readModelAsset( sourcePath, sw::editor::ModelImportRule{}, result ) );
 }
@@ -590,7 +590,7 @@ SW_TEST_CASE( ModelImporterTest, VrmSplitsMeshByToonMaterial )
 SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
 {
     sw::editor::ModelImportConfig fractureConfig;
-    SW_ASSERT_TRUE( fractureConfig.loadFromJsonString( R"({ "rules": [ { "name": "Wall", "include_patterns": [ "*/probe/models_raw/*" ],
+    SW_ASSERT_TRUE( fractureConfig.loadFromJSONString( R"({ "rules": [ { "name": "Wall", "include_patterns": [ "*/probe/models_raw/*" ],
         "fracture": { "pattern": "slices", "slices": [ 3, 1, 1 ], "slice_jitter": 0, "levels": [ 2 ], "seed": 5, "interior_color": [ 1, 0, 0, 1 ] } } ] })" ) );
     const sw::editor::ModelImportRule rule = fractureConfig.findMatchingRule( "game/probe/models_raw/box.gltf" );
     SW_EXPECT_TRUE( rule._bFracture == SW_TRUE );
@@ -599,9 +599,9 @@ SW_TEST_CASE( ModelImporterTest, FractureRuleWritesFractureAssetBesideTheMesh )
     {
         test::ScopedDefensiveTestLog  expected( "an unknown fracture key or pattern rejects the whole config" );
         sw::editor::ModelImportConfig brokenConfig;
-        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "piece": 4 } } ] })" ) );
-        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "pattern": "shatter" } } ] })" ) );
-        SW_EXPECT_FALSE( brokenConfig.loadFromJsonString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "slices": [ 3, 0, 1 ] } } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "piece": 4 } } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "pattern": "shatter" } } ] })" ) );
+        SW_EXPECT_FALSE( brokenConfig.loadFromJSONString( R"({ "rules": [ { "include_patterns": [ "*" ], "fracture": { "slices": [ 3, 0, 1 ] } } ] })" ) );
     }
 
     const sw::string resourceRoot = test::makeTempDirectory( "model_import_fracture_resource" );

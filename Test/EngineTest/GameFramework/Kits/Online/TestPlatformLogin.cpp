@@ -9,17 +9,17 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/String/Base64Util.h"
 
-#include "GameFramework/Base/Online/Http/HttpClient.h"
-#include "GameFramework/Base/Online/Http/HttpServer.h"
+#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
+#include "GameFramework/Base/Online/HTTP/HTTPServer.h"
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Service/LoginService.h"
-#include "GameFramework/Kits/Feature/Online/Account/Shared/Api/LoopbackPkceLoginClient.h"
+#include "GameFramework/Kits/Feature/Online/Account/Shared/API/LoopbackPkceLoginClient.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -30,7 +30,7 @@ namespace
     constexpr int64 kNowMs = 1000000; ///< 시험 벽시계(초로 1000)
 
     /** @brief 가짜 제공자 서버 — `/jwks`(바꿀 수 있다) · `/profile`(Bearer good | bad) · `/token`(PKCE 확인 뒤 정한 토큰). `_bDown` 이면 모두 503. */
-    class FakeIssuerHandler final : public IHttpRequestHandler
+    class FakeIssuerHandler final : public IHTTPRequestHandler
     {
     public:
         string _jwks{};
@@ -41,7 +41,7 @@ namespace
         int32  _tokenHitCount{ 0 };
         uint8  _bDown{ SW_FALSE };
 
-        void onHttpRequest( const HttpServerRequest& request, HttpServerResponse& outResponse ) override
+        void onHTTPRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse ) override
         {
             if ( _bDown == SW_TRUE )
             {
@@ -57,7 +57,7 @@ namespace
             }
             if ( request._path == "/profile" )
             {
-                const HttpHeader* pAuthorization = request.findHeader( "authorization" );
+                const HTTPHeader* pAuthorization = request.findHeader( "authorization" );
                 if ( pAuthorization == nullptr || pAuthorization->_value != "Bearer good" )
                 {
                     outResponse._statusCode = 401;
@@ -67,14 +67,14 @@ namespace
                 outResponse._bodyBytes.assign( body.begin(), body.end() );
                 return;
             }
-            if ( request._path == "/token" && request._method == HttpMethod::Post )
+            if ( request._path == "/token" && request._method == HTTPMethod::Post )
             {
                 ++_tokenHitCount;
-                vector<HttpHeader> listForm;
-                const bool         bForm = HttpUtil::decodeForm( request.getBodyText(), listForm );
+                vector<HTTPHeader> listForm;
+                const bool         bForm = HTTPUtil::decodeForm( request.getBodyText(), listForm );
                 string             code;
                 string             verifier;
-                for ( const HttpHeader& pair : listForm )
+                for ( const HTTPHeader& pair : listForm )
                 {
                     if ( pair._name == "code" )
                         code = pair._value;
@@ -138,7 +138,7 @@ namespace
             {
                 if ( index != 0 )
                     jwks += ",";
-                jwks += JsonWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyId );
+                jwks += JSONWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyId );
             }
             return jwks + "]}";
         }
@@ -151,7 +151,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JsonWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
+            (void)JSONWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
             return compact;
         }
 
@@ -159,11 +159,11 @@ namespace
 
         static string findQuery( const string& url, const utf8* pName )
         {
-            vector<HttpHeader> listPair;
+            vector<HTTPHeader> listPair;
             const size_t       question = url.find( '?' );
-            if ( question == string::npos || HttpUtil::decodeForm( string_view( url ).substr( question + 1 ), listPair ) == false )
+            if ( question == string::npos || HTTPUtil::decodeForm( string_view( url ).substr( question + 1 ), listPair ) == false )
                 return {};
-            for ( const HttpHeader& pair : listPair )
+            for ( const HTTPHeader& pair : listPair )
             {
                 if ( pair._name == pName )
                     return pair._value;
@@ -179,8 +179,8 @@ namespace
         FakeIssuerHandler       _handler;
         unique_ptr<ITLSContext> _serverContext;
         unique_ptr<ITLSContext> _clientContext;
-        HttpServer              _server;
-        HttpClient              _client;
+        HTTPServer              _server;
+        HTTPClient              _client;
         int64                   _nowMs;
 
         IssuerFixture()
@@ -209,10 +209,10 @@ namespace
             _clientContext = provider.createTLSContext( clientTLS, error );
             StreamTransportSettings transportSettings;
             transportSettings._ioThreadCount = 0;
-            HttpServerSettings serverSettings;
+            HTTPServerSettings serverSettings;
             serverSettings._pTLSContext = _serverContext.get();
             (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler );
-            (void)_client.initialize( _network.createTransport(), transportSettings, HttpClientSettings{} );
+            (void)_client.initialize( _network.createTransport(), transportSettings, HTTPClientSettings{} );
             _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
@@ -325,7 +325,7 @@ SW_TEST_CASE( PlatformLoginTest, OidcRefetchesOnKeyRotationAndKeepsWorkingFromCa
     SW_EXPECT_EQUAL( fetchBefore + 1, provider.getJwksFetchCount() );
 }
 
-SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
+SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
 {
     IssuerFixture                 fixture;
     PlatformLoginProviderSettings settings;
@@ -335,7 +335,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
     settings._subjectPath     = "response.id";
     settings._displayNamePath = "response.nickname";
     SW_ASSERT_TRUE( PlatformLoginProviderFactory::isValidSettings( settings ) );
-    ProfileApiLoginProvider         provider{ settings, &fixture._client };
+    ProfileAPILoginProvider         provider{ settings, &fixture._client };
     const PlatformLoginVerification good = fixture.verify( provider, "good" );
     SW_ASSERT_TRUE( good.isVerified() );
     SW_EXPECT_EQUAL( string( "n-1" ), good._subject );
@@ -347,7 +347,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileApiProviderReadsTheSubjectPath )
 
 SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 {
-    const utf8*                           pJson = "{\"providers\":["
+    const utf8*                           pJSON = "{\"providers\":["
                                                   "{\"name\":\"google\",\"kind\":\"oidc\",\"issuer\":\"https://accounts.google.com\",\"jwksUrl\":\"https://www.googleapis.com/oauth2/v3/certs\","
                                                   "\"clientIds\":[\"a\",\"b\"],\"requireNonce\":true},"
                                                   "{\"name\":\"kakao\",\"kind\":\"oidc\",\"issuer\":\"https://kauth.kakao.com\",\"jwksUrl\":\"https://kauth.kakao.com/.well-known/jwks.json\","
@@ -355,13 +355,13 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
                                                   "{\"name\":\"naver\",\"kind\":\"profile\",\"profileUrl\":\"https://openapi.naver.com/v1/nid/me\",\"subjectPath\":\"response.id\"}]}";
     vector<PlatformLoginProviderSettings> listSettings;
     string                                error;
-    SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJson, listSettings, error ) );
+    SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJSON, listSettings, error ) );
     SW_ASSERT_EQUAL( size_t( 3 ), listSettings.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), listSettings[0]._listClientId.size() );
     SW_EXPECT_TRUE( listSettings[0]._bRequireNonce == SW_TRUE );
     SW_EXPECT_EQUAL( string( "sub" ), listSettings[1]._subjectPath );
     SW_EXPECT_TRUE( listSettings[2]._kind == PlatformLoginProviderKind::AccessTokenProfile );
-    HttpClient unused;
+    HTTPClient unused;
     SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( listSettings[2], nullptr, &unused ) != nullptr );
     SW_EXPECT_TRUE( PlatformLoginProviderFactory::create( listSettings[0], nullptr, &unused ) == nullptr ); // OIDC 는 서명 제공자가 있어야
 
@@ -386,7 +386,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     transportSettings._ioThreadCount = 0;
     SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &NetSecurity::getProvider(),
                                        &browser, { settings } ) );
-    client.getHttpClient().registerTLSContext( "localhost", fixture._clientContext.get() );
+    client.getHTTPClient().registerTLSContext( "localhost", fixture._clientContext.get() );
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
     const uint64     requestId = client.beginLogin( "google", kNowMs );
@@ -401,15 +401,15 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     fixture._handler._idToken           = Internal::makeToken( key, "https://issuer.test", "client-a", 2000, "pc-user", nonce.c_str() );
 
     // "브라우저" — 위조 state 로 한 번(무시), 진짜 state 로 한 번 리다이렉트를 부른다.
-    HttpClient&       browserClient = fixture._client;
-    HttpClientRequest forged;
+    HTTPClient&       browserClient = fixture._client;
+    HTTPClientRequest forged;
     forged._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=forged";
     (void)browserClient.submitRequest( forged, kNowMs );
-    HttpClientRequest redirect;
-    redirect._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=" + HttpUtil::encodePercent( state );
+    HTTPClientRequest redirect;
+    redirect._url = redirectUri + "?code=" + fixture._handler._expectedCode + "&state=" + HTTPUtil::encodePercent( state );
     (void)browserClient.submitRequest( redirect, kNowMs );
     vector<PlatformLoginClientResult> listResult;
-    vector<HttpClientResponse>        listPage;
+    vector<HTTPClientResponse>        listPage;
     for ( int32 step = 0; step < 600 && listResult.empty(); ++step )
     {
         fixture._server.tick();
@@ -425,7 +425,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     SW_EXPECT_EQUAL( 1, fixture._handler._tokenHitCount ); // 위조 state 는 토큰 교환까지 가지 않았다
     SW_ASSERT_EQUAL( size_t( 2 ), listPage.size() );
     int32 rejectedPageCount = 0;
-    for ( const HttpClientResponse& page : listPage )
+    for ( const HTTPClientResponse& page : listPage )
     {
         rejectedPageCount += page._statusCode == 400 ? 1 : 0;
     }
@@ -434,8 +434,8 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     // 사용자가 거절했다 — 취소로 끝난다.
     (void)client.beginLogin( "google", kNowMs );
     const string      secondState = Internal::findQuery( browser._lastURL, "state" );
-    HttpClientRequest denied;
-    denied._url = redirectUri + "?error=access_denied&state=" + HttpUtil::encodePercent( secondState );
+    HTTPClientRequest denied;
+    denied._url = redirectUri + "?error=access_denied&state=" + HTTPUtil::encodePercent( secondState );
     (void)browserClient.submitRequest( denied, kNowMs );
     listResult.clear();
     for ( int32 step = 0; step < 600 && listResult.empty(); ++step )

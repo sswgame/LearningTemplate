@@ -20,7 +20,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -58,7 +58,7 @@ namespace sw
                 return count;
             }
 
-            static void applyAssetRule( const LocalizationAssetRule& rule, const XmlNode& node, TextGatherer& gatherer, string_view origin, uint32 depth )
+            static void applyAssetRule( const LocalizationAssetRule& rule, const XMLNode& node, TextGatherer& gatherer, string_view origin, uint32 depth )
             {
                 if ( depth > 64 )
                     return;
@@ -75,7 +75,7 @@ namespace sw
                     else
                         gatherer.addTextOrKey( value, rule._context, origin );
                 }
-                for ( XmlNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     applyAssetRule( rule, child, gatherer, origin, depth + 1 );
                 }
@@ -148,7 +148,7 @@ namespace sw
                 TranslationMemory memory;
                 if ( loadMemory( memoryPath, culture, memory, inoutResult._report ) == false )
                     return;
-                const string memoryBefore = memory.toJsonText();
+                const string memoryBefore = memory.toJSONText();
 
                 // 1) 해시 없는 번역은 지금 원문의 번역으로 받고, 지금 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺀다.
                 vector<string> listOrphan;
@@ -232,7 +232,7 @@ namespace sw
                     }
                 }
 
-                const bool bMemoryChanged = memory.toJsonText() != memoryBefore;
+                const bool bMemoryChanged = memory.toJSONText() != memoryBefore;
                 if ( cultureReport._bChanged == false && bMemoryChanged == false )
                     return;
                 cultureReport._bChanged = true;
@@ -376,7 +376,7 @@ namespace sw
         if ( StringUtil::endsWith( origin, LocalizationToolsInternal::kDialogueSuffix, true ) )
         {
             DialogueGraphAsset dialogue;
-            if ( dialogue.parseJson( fileText ) == false )
+            if ( dialogue.parseJSON( fileText ) == false )
             {
                 gatherer.addIssue( origin, "dialogue cannot be parsed", true );
                 return;
@@ -391,7 +391,7 @@ namespace sw
         {
             if ( StringUtil::endsWith( origin, rule._fileSuffix, true ) == false )
                 continue;
-            XmlDocument document;
+            XMLDocument document;
             if ( document.parse( fileText, origin ) == false )
             {
                 gatherer.addIssue( origin, "XML cannot be parsed: " + document.getLastError(), true );
@@ -399,7 +399,7 @@ namespace sw
             }
             LocalizationToolsInternal::applyAssetRule( rule, document.getRoot(), gatherer, origin, 0 );
         }
-        gatherer.gatherReflectedXml( fileText, origin );
+        gatherer.gatherReflectedXML( fileText, origin );
     }
 
     bool LocalizationTools::gatherProject( string_view projectPath, string_view repositoryRoot, bool bWrite, LocalizationGatherResult& outResult )
@@ -493,7 +493,7 @@ namespace sw
 
         // 3) 합치기 · 쓰기
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
-        const string newText = gatherTable.toJsonText();
+        const string newText = gatherTable.toJSONText();
         string       diskText;
         const bool   bSameOnDisk = FileUtil::exists( outResult._gatherTablePath ) && FileUtil::readTextFile( outResult._gatherTablePath, diskText ) && diskText == newText;
         if ( bSameOnDisk == false )

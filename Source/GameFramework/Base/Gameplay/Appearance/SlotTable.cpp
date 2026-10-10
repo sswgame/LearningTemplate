@@ -4,10 +4,10 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceTypes.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
 {
@@ -29,19 +29,19 @@ namespace sw
         _listOccupancy.clear();
     }
 
-    bool SlotTable::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool SlotTable::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const uint32 errorCountBefore = static_cast<uint32>( report.getErrors().size() );
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Slot", true ) )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrSlotAttribute, report, sourceName );
                 AppearanceSlotDef slot;
-                slot._name   = AppearanceXmlUtil::readName( child, "name" );
-                slot._accept = AppearanceXmlUtil::readName( child, "accept" );
+                slot._name   = AppearanceXMLUtil::readName( child, "name" );
+                slot._accept = AppearanceXMLUtil::readName( child, "accept" );
                 if ( slot._accept.empty() )
                     slot._accept = slot._name;
                 if ( slot._name.empty() )
@@ -53,10 +53,10 @@ namespace sw
             }
             else if ( StringUtil::equals( child.getName(), "Occupancy", true ) )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( child, SlotTableInternal::kArrOccupancyAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( child, SlotTableInternal::kArrOccupancyAttribute, report, sourceName );
                 SlotOccupancyDef occupancy;
-                occupancy._id = AppearanceXmlUtil::readName( child, "id" );
-                AppearanceXmlUtil::readNameList( child, "slots", occupancy._listSlot );
+                occupancy._id = AppearanceXMLUtil::readName( child, "id" );
+                AppearanceXMLUtil::readNameList( child, "slots", occupancy._listSlot );
                 if ( occupancy._id.empty() || occupancy._listSlot.size() < 2 )
                     report.addError( "%#: <Occupancy> needs an id and at least two slots", sourceName );
                 else if ( findOccupancy( occupancy._id ) != nullptr )
@@ -66,7 +66,7 @@ namespace sw
             }
             else
             {
-                AppearanceXmlUtil::reportUnknownChild( root, child, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, child, report, sourceName );
             }
         }
         // 칸 선언이 묶음보다 뒤에 와도 되게 이름 확인은 끝에서 한다.

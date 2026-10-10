@@ -93,7 +93,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 이름 · 겹친 이름) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(시험용). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText );
         /** @brief 이름이 겹치지 않고 · 레이어가 32 개 이하이고 · 충돌 목록의 이름이 모두 있는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate() const;
         /** @brief 레이어 · 재질이 비어 있으면 `Default` 하나씩을 채웁니다(Default 레이어는 자기와 부딪힌다). */

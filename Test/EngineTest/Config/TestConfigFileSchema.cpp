@@ -51,7 +51,7 @@ namespace
             sw::MemoryProfiler profiler;
             profiler.initialize();
             sw::string error;
-            const bool bApplied = sw::MemoryBudgetMonitor::applyBudgetJson( text, profiler, error );
+            const bool bApplied = sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler, error );
             profiler.shutdown();
             SW_EXPECT_TRUE_MSG( bApplied, error.c_str() );
             return bApplied;

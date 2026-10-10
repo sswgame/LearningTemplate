@@ -12,13 +12,13 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class GameRandom;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 속성 하나가 거는 상태이상 하나의 확률입니다. */
     struct ElementStatusChance
@@ -36,9 +36,9 @@ namespace sw
      * @brief `<ElementChart><Element id="Fire"/>...<Rule attack="Water" defend="Fire" multiplier="2"/>...<Status element="Fire" status="Burn" chance="0.1"/></ElementChart>`
      *        를 읽습니다. 규칙이 없는 쌍은 1 배입니다. 선언하지 않은 속성을 쓰는 규칙 · 상태이상은 경고하고 버립니다(오타를 잡는다).
      */
-    class SW_GF_API ElementChart : public XmlCatalog<ElementChart>
+    class SW_GF_API ElementChart : public XMLCatalog<ElementChart>
     {
-        friend class XmlCatalog<ElementChart>;
+        friend class XMLCatalog<ElementChart>;
 
     public:
         ElementChart();
@@ -68,8 +68,8 @@ namespace sw
         const vector<ElementStatusChance>& getStatusChances() const { return _listStatusChance; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "ElementChart"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "ElementChart"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<hashed_string>                                               _listElement;      ///< 읽은 순서
         unordered_map<hashed_string, unordered_map<hashed_string, float32>> _mapRule;          ///< 공격 → 방어 → 배율

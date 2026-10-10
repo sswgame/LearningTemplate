@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
@@ -22,7 +22,7 @@ namespace sw
     {
         struct AdventureDungeonInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pName, const hashed_string& fallback )
+            static hashed_string readName( const XMLNode& node, const utf8* pName, const hashed_string& fallback )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : fallback;
@@ -135,20 +135,20 @@ namespace sw
         return -1;
     }
 
-    uint32 AdventureDungeonCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 AdventureDungeonCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode dungeonNode = root.findChild( "Dungeon" ); dungeonNode; dungeonNode = dungeonNode.findNextSibling( "Dungeon" ) )
+        for ( XMLNode dungeonNode = root.findChild( "Dungeon" ); dungeonNode; dungeonNode = dungeonNode.findNextSibling( "Dungeon" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( dungeonNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( dungeonNode, sourceName );
             if ( pId == nullptr )
                 continue;
             AdventureDungeonDef dungeon;
             dungeon._id     = hashed_string( pId );
             dungeon._region = AdventureDungeonInternal::readName( dungeonNode, "region", dungeon._id );
-            for ( XmlNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
+            for ( XMLNode node = dungeonNode.findChild( "Door" ); node; node = node.findNextSibling( "Door" ) )
             {
-                const utf8* pDoorId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pDoorId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pDoorId == nullptr )
                     continue;
                 AdventureDoorDef door;
@@ -161,9 +161,9 @@ namespace sw
                     SW_LOG_WARNING( "%#: condition door '%#' has no requires - it always opens", sourceName, pDoorId );
                 dungeon._listDoor.push_back( door );
             }
-            for ( XmlNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
+            for ( XMLNode node = dungeonNode.findChild( "Treasure" ); node; node = node.findNextSibling( "Treasure" ) )
             {
-                const utf8* pTreasureId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pTreasureId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pTreasureId == nullptr )
                     continue;
                 AdventureTreasureDef treasure;
@@ -174,9 +174,9 @@ namespace sw
                 treasure._count = MathUtil::max( 1, node.getAttributeInt( "count", 1 ) );
                 dungeon._listTreasure.push_back( treasure );
             }
-            for ( XmlNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
+            for ( XMLNode node = dungeonNode.findChild( "Device" ); node; node = node.findNextSibling( "Device" ) )
             {
-                const utf8* pDeviceId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pDeviceId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pDeviceId == nullptr )
                     continue;
                 AdventureDeviceDef device;

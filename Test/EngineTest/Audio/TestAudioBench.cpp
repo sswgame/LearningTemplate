@@ -19,7 +19,7 @@ namespace
 {
     struct AudioBenchTestInternal
     {
-        static constexpr const utf8* kLibraryXml = R"(
+        static constexpr const utf8* kLibraryXML = R"(
 <AudioEventLibrary>
 	<_listParameter><AudioParameterDesc _name="Rpm" _minValue="0" _maxValue="1" _defaultValue="0.5" /></_listParameter>
 	<_listEvent>
@@ -45,7 +45,7 @@ namespace
             // 44.1 kHz 모노 톤 — 리샘플 경로를 탄다.
             engine.getClipStore().addClip( sw::hashed_string( "bench/tone" ), test::AudioTestUtil::makeSineClip( 220.0f, 0.05f, 44100, 44100 ) );
             sw::AudioEventLibrary library;
-            return library.loadFromXmlText( kLibraryXml ) && engine.loadEventLibrary( sw::hashed_string( "bench" ), library );
+            return library.loadFromXMLText( kLibraryXML ) && engine.loadEventLibrary( sw::hashed_string( "bench" ), library );
         }
     };
 } // namespace

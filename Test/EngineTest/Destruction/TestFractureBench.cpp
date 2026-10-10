@@ -21,7 +21,7 @@ SW_TEST_CASE( FractureBenchTest, ShowcaseBeginPlay )
     constexpr uint32 kRoundCount = 5;
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXml( "game/empty/maps/destructionshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/destructionshowcase.scene.xml" ) );
     sw::vector<int64> listMicros;
     for ( uint32 round = 0; round < kRoundCount; ++round )
     {

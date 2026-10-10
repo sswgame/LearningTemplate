@@ -799,14 +799,14 @@ SW_TEST_CASE( RenderPassGpuTest, ShaderRecompileRebuildsPipelineStates )
     SW_EXPECT_TRUE( renderer.initialize( device.get() ) );
     SW_EXPECT_TRUE( renderer.isReady() );
 
-    const sw::RHIPipelineStateHandle beforeForward = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
+    const sw::RHIPipelineStateHandle beforeForward = renderer.getEnginePSO( sw::RenderPassType::ForwardOpaque );
     SW_EXPECT_TRUE_MSG( beforeForward != 0, "리로드 전 ForwardOpaque PSO 가 있어야 한다" );
 
     sw::ShaderCompileResult result{};
     result._bSuccess = true;
     renderer.onShaderRecompiled( "engine/shaders/forwardlit.hlsl", result );
 
-    const sw::RHIPipelineStateHandle afterForward = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
+    const sw::RHIPipelineStateHandle afterForward = renderer.getEnginePSO( sw::RenderPassType::ForwardOpaque );
     SW_EXPECT_TRUE_MSG( afterForward != 0, "리로드 후 ForwardOpaque PSO 가 다시 만들어져야 한다" );
     SW_EXPECT_TRUE_MSG( afterForward != beforeForward,
                         "PSO 핸들이 그대로다 — 레이아웃만 갱신하고 파이프라인은 예전 바이트코드를 들고 있다" );
@@ -1138,7 +1138,7 @@ SW_TEST_CASE( RenderPassGpuTest, FrameRendererDeferredPipelineParallelLevels )
  *          픽셀로는 잡기 어렵다. 알파 경로가 컴파일됐는지 여부는 겹치는 곳의 색만 바꾸는데, 그 색은
  *          조명·톤매핑을 타고 흔들린다. 그래서 **드로우가 실제로 고른 PSO 의 디스크립터**를 본다.
  */
-SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
+SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPSO )
 {
     auto hasDefine = []( const sw::RHIPipelineStateDesc& desc, const utf8* pDefine ) -> bool
     {
@@ -1161,7 +1161,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
         if ( bOk )
             bOk = materialGlass->loadFromFile( "engine/materials/glassmaterial.material" );
 
-        sw::Scene scene( "MaterialPermutationPsoScene" );
+        sw::Scene scene( "MaterialPermutationPSOScene" );
         if ( bOk )
             bOk = scene.ensureDefaultCameras();
 
@@ -1189,7 +1189,7 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
 
         if ( bOk )
         {
-            // 한 프레임을 돌려야 배치가 서고 ensureMaterialPsos 가 퍼뮤테이션 PSO 를 만든다.
+            // 한 프레임을 돌려야 배치가 서고 ensureMaterialPSOs 가 퍼뮤테이션 PSO 를 만든다.
             const sw::float4 clear{ 0.0f, 0.0f, 0.0f, 1.0f };
             bOk = renderSceneFrame( renderer, device.get(), scene, clear );
         }
@@ -1201,12 +1201,12 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
             SW_EXPECT_TRUE_MSG( batches.empty() == false,
                                 ( label + ": 반투명 머티리얼인데 반투명 배치가 없다" ).c_str() );
 
-            const sw::RHIPipelineStateHandle passPso = renderer.getEnginePso( sw::RenderPassType::Transparent );
-            if ( batches.empty() == false && passPso != 0 )
+            const sw::RHIPipelineStateHandle passPSO = renderer.getEnginePSO( sw::RenderPassType::Transparent );
+            if ( batches.empty() == false && passPSO != 0 )
             {
                 // 패스 PSO 자체에는 그 define 이 없다 — 반투명 패스가 정하는 것은 블렌드·뎁스지 셰이더가 아니다.
                 sw::RHIPipelineStateDesc passDesc{};
-                if ( renderer.findPsoDesc( passPso, passDesc ) )
+                if ( renderer.findPSODesc( passPSO, passDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( hasDefine( passDesc, "MATERIAL_BLEND_TRANSLUCENT" ) == false,
                                         ( label + ": 반투명 패스 PSO 에 퍼뮤테이션이 박혀 있다 — 머티리얼이 뭘 선언하든 상관없어진다" )
@@ -1216,12 +1216,12 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
                 }
 
                 // 배치가 고르는 PSO 는 패스 PSO 와 **달라야** 하고, 그 안에 머티리얼의 define 이 있어야 한다.
-                const sw::RHIPipelineStateHandle batchPso = renderer.psoForBatch( passPso, batches[0] );
-                SW_EXPECT_TRUE_MSG( batchPso != passPso,
+                const sw::RHIPipelineStateHandle batchPSO = renderer.psoForBatch( passPSO, batches[0] );
+                SW_EXPECT_TRUE_MSG( batchPSO != passPSO,
                                     ( label + ": 유리 배치가 패스 PSO 를 그대로 쓴다 — 머티리얼 퍼뮤테이션이 안 걸렸다" ).c_str() );
 
                 sw::RHIPipelineStateDesc batchDesc{};
-                if ( renderer.findPsoDesc( batchPso, batchDesc ) )
+                if ( renderer.findPSODesc( batchPSO, batchDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( hasDefine( batchDesc, "MATERIAL_BLEND_TRANSLUCENT" ),
                                         ( label + ": 배치 PSO 에 MATERIAL_BLEND_TRANSLUCENT 가 없다 — 알파 경로가 컴파일되지 않는다" )
@@ -1236,13 +1236,13 @@ SW_TEST_CASE( RenderPassGpuTest, MaterialPermutationDrivesBatchPso )
                 }
 
                 // 그림자 패스는 자기 지오메트리 셰이더가 정본이다 — 머티리얼 셰이더로 갈아타면 안 된다.
-                const sw::RHIPipelineStateHandle shadowPso = renderer.getEnginePso( sw::RenderPassType::Shadow );
+                const sw::RHIPipelineStateHandle shadowPSO = renderer.getEnginePSO( sw::RenderPassType::Shadow );
                 sw::RHIPipelineStateDesc         shadowDesc{};
-                if ( shadowPso != 0 && renderer.findPsoDesc( shadowPso, shadowDesc ) )
+                if ( shadowPSO != 0 && renderer.findPSODesc( shadowPSO, shadowDesc ) )
                 {
-                    const sw::RHIPipelineStateHandle shadowBatchPso = renderer.psoForBatch( shadowPso, batches[0] );
+                    const sw::RHIPipelineStateHandle shadowBatchPSO = renderer.psoForBatch( shadowPSO, batches[0] );
                     sw::RHIPipelineStateDesc         shadowBatchDesc{};
-                    if ( renderer.findPsoDesc( shadowBatchPso, shadowBatchDesc ) )
+                    if ( renderer.findPSODesc( shadowBatchPSO, shadowBatchDesc ) )
                     {
                         SW_EXPECT_TRUE_MSG( shadowBatchDesc._vertexShaderPath == shadowDesc._vertexShaderPath,
                                             ( label + ": 그림자 패스가 머티리얼 셰이더로 갈아탔다" ).c_str() );
@@ -1315,11 +1315,11 @@ SW_TEST_CASE( RenderPassGpuTest, SpriteDrawsWithTheSpriteShader )
             {
                 const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getTransparentBatches();
                 SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 스프라이트(반투명 머티리얼)인데 반투명 배치가 없다" ).c_str() );
-                const sw::RHIPipelineStateHandle passPso = renderer.getEnginePso( sw::RenderPassType::Transparent );
-                if ( batches.empty() == false && passPso != 0 )
+                const sw::RHIPipelineStateHandle passPSO = renderer.getEnginePSO( sw::RenderPassType::Transparent );
+                if ( batches.empty() == false && passPSO != 0 )
                 {
                     sw::RHIPipelineStateDesc batchDesc{};
-                    SW_EXPECT_TRUE_MSG( renderer.findPsoDesc( renderer.psoForBatch( passPso, batches[0] ), batchDesc ),
+                    SW_EXPECT_TRUE_MSG( renderer.findPSODesc( renderer.psoForBatch( passPSO, batches[0] ), batchDesc ),
                                         ( label + ": 스프라이트 배치 PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
                     SW_EXPECT_TRUE_MSG( batchDesc._pixelShaderPath.find( "sprite2d" ) != sw::string::npos,
                                         ( label + ": 스프라이트 배치가 스프라이트 셰이더가 아니다 — " + batchDesc._pixelShaderPath ).c_str() );
@@ -2226,16 +2226,16 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
             const sw::vector<sw::GpuMeshBatch>& batches = renderer.getGpuScene().getOpaqueBatches();
             SW_EXPECT_TRUE_MSG( batches.empty() == false, ( label + ": 불투명 배치가 없다" ).c_str() );
 
-            const sw::RHIPipelineStateHandle passPso   = renderer.getEnginePso( sw::RenderPassType::ForwardOpaque );
-            const sw::RHIPipelineStateHandle shadowPso = renderer.getEnginePso( sw::RenderPassType::Shadow );
-            if ( batches.empty() == false && passPso != 0 )
+            const sw::RHIPipelineStateHandle passPSO   = renderer.getEnginePSO( sw::RenderPassType::ForwardOpaque );
+            const sw::RHIPipelineStateHandle shadowPSO = renderer.getEnginePSO( sw::RenderPassType::Shadow );
+            if ( batches.empty() == false && passPSO != 0 )
             {
                 const sw::GpuMeshBatch& batch = batches[0];
 
                 // ── Lit: 패스 PSO 그대로, Solid ──────────────────────────────
-                const sw::RHIPipelineStateHandle litPso = renderer.psoForBatch( passPso, batch );
+                const sw::RHIPipelineStateHandle litPSO = renderer.psoForBatch( passPSO, batch );
                 sw::RHIPipelineStateDesc         litDesc{};
-                SW_EXPECT_TRUE_MSG( renderer.findPsoDesc( litPso, litDesc ),
+                SW_EXPECT_TRUE_MSG( renderer.findPSODesc( litPSO, litDesc ),
                                     ( label + ": Lit PSO 의 디스크립터를 찾을 수 없다" ).c_str() );
                 SW_EXPECT_TRUE_MSG( litDesc._fillMode == sw::RHIFillMode::Solid,
                                     ( label + ": Lit 인데 채우기 모드가 Solid 가 아니다" ).c_str() );
@@ -2246,12 +2246,12 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
                 renderer.setViewMode( sw::RenderViewMode::Wireframe );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": 와이어프레임 프레임 실행 실패" ).c_str() );
 
-                const sw::RHIPipelineStateHandle wirePso = renderer.psoForBatch( passPso, batch );
-                SW_EXPECT_TRUE_MSG( wirePso != litPso,
+                const sw::RHIPipelineStateHandle wirePSO = renderer.psoForBatch( passPSO, batch );
+                SW_EXPECT_TRUE_MSG( wirePSO != litPSO,
                                     ( label + ": 와이어프레임인데 드로우가 Lit 과 같은 PSO 를 고른다 — 모드가 화면에 닿지 않는다" )
                                         .c_str() );
                 sw::RHIPipelineStateDesc wireDesc{};
-                if ( renderer.findPsoDesc( wirePso, wireDesc ) )
+                if ( renderer.findPSODesc( wirePSO, wireDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( wireDesc._fillMode == sw::RHIFillMode::Wireframe,
                                         ( label + ": 와이어프레임 PSO 의 채우기 모드가 Wireframe 이 아니다" ).c_str() );
@@ -2268,7 +2268,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
 
                 // 그림자 패스는 뷰 모드를 받지 않는다.
                 sw::RHIPipelineStateDesc shadowDesc{};
-                if ( shadowPso != 0 && renderer.findPsoDesc( renderer.psoForBatch( shadowPso, batch ), shadowDesc ) )
+                if ( shadowPSO != 0 && renderer.findPSODesc( renderer.psoForBatch( shadowPSO, batch ), shadowDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( shadowDesc._fillMode == sw::RHIFillMode::Solid,
                                         ( label + ": 그림자 패스가 와이어프레임으로 만들어진다" ).c_str() );
@@ -2278,11 +2278,11 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
                 renderer.setViewMode( sw::RenderViewMode::Unlit );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Unlit 프레임 실행 실패" ).c_str() );
 
-                const sw::RHIPipelineStateHandle unlitPso = renderer.psoForBatch( passPso, batch );
-                SW_EXPECT_TRUE_MSG( unlitPso != litPso && unlitPso != wirePso,
+                const sw::RHIPipelineStateHandle unlitPSO = renderer.psoForBatch( passPSO, batch );
+                SW_EXPECT_TRUE_MSG( unlitPSO != litPSO && unlitPSO != wirePSO,
                                     ( label + ": Unlit 이 다른 모드와 같은 PSO 를 고른다" ).c_str() );
                 sw::RHIPipelineStateDesc unlitDesc{};
-                if ( renderer.findPsoDesc( unlitPso, unlitDesc ) )
+                if ( renderer.findPSODesc( unlitPSO, unlitDesc ) )
                 {
                     SW_EXPECT_TRUE_MSG( hasDefine( unlitDesc, "SW_VIEWMODE_UNLIT=1" ),
                                         ( label + ": Unlit PSO 에 define 이 없다 — 조명이 그대로 컴파일된다" ).c_str() );
@@ -2297,7 +2297,7 @@ SW_TEST_CASE( RenderPassGpuTest, ViewModeSelectsDistinctPipelineStates )
                 // ── 되돌리기: 캐시에서 같은 PSO 가 나와야 한다 ────────────────
                 renderer.setViewMode( sw::RenderViewMode::Lit );
                 SW_EXPECT_TRUE_MSG( renderOneFrame(), ( label + ": Lit 복귀 프레임 실행 실패" ).c_str() );
-                SW_EXPECT_TRUE_MSG( renderer.psoForBatch( passPso, batch ) == litPso,
+                SW_EXPECT_TRUE_MSG( renderer.psoForBatch( passPSO, batch ) == litPSO,
                                     ( label + ": Lit 로 돌아왔는데 다른 PSO 가 나온다 — 캐시가 모드를 구분하지 못한다" ).c_str() );
             }
         }
@@ -3820,7 +3820,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
 SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 {
     // roughness 를 먼저 — XML 순서로 쌓으면 roughness 가 0, color 가 16 에 간다. 셰이더는 color 가 0, roughness 가 16.
-    const sw::string reorderedXml =
+    const sw::string reorderedXML =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<MaterialDesc formatVersion=\"0\" name=\"DefaultMaterial\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\">"
         "  <_properties>"
@@ -3847,7 +3847,7 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
             SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 핫 리로드 — 같은 머티리얼을 프로퍼티 순서만 바꿔 다시 읽는다.
-            SW_ASSERT_TRUE( parent->loadFromXml( reorderedXml ) );
+            SW_ASSERT_TRUE( parent->loadFromXML( reorderedXML ) );
             SW_EXPECT_FALSE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 인스턴스가 먼저 올라가도(GpuScene 의 순서) 셰이더 레이아웃의 바이트를 집는다.
@@ -4463,7 +4463,7 @@ SW_TEST_CASE( RenderPassGpuTest, MissingTextureSamplesTheChecker )
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
         SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
-        SW_ASSERT_TRUE( material->loadFromXml( xml ) ); // albedoMap 만 없는 파일을 가리킨다
+        SW_ASSERT_TRUE( material->loadFromXML( xml ) ); // albedoMap 만 없는 파일을 가리킨다
         material->releaseTextureAssets( device.get() );
         {
             SW_TEST_DEFENSIVE_SCOPE( "the material names a texture that does not exist" );
@@ -6484,9 +6484,9 @@ SW_TEST_CASE( RenderPassGpuTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             pUnit->setLocalPosition( sw::float3{ -1.6f + 1.6f * static_cast<float32>( index ), 1.0f, 0.0f } );
             if ( crowdCase == CrowdCase::VertexAnimation )
             {
-                sw::AnimationLodState farState{};
+                sw::AnimationLODState farState{};
                 farState._bVertexAnimation = SW_TRUE;
-                pUnit->applyAnimationLod( farState );
+                pUnit->applyAnimationLOD( farState );
             }
             if ( crowdCase == CrowdCase::BindPose )
                 continue;

@@ -62,7 +62,7 @@ namespace sw
         const SQLValue arrParam[1] = { SQLValue::makeText( slot ) };
         SQLRowSet      rowSet;
         if ( _connection->execute( "SELECT bytes FROM sw_local_slot WHERE slot = ?", arrParam, 1, &rowSet ) != SQLResult::Ok )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         if ( rowSet._listRow.empty() )
             return LocalStoreResult::NotFound;
         outEnvelopeBytes = std::move( rowSet._listRow[0][0]._bytes );
@@ -76,7 +76,7 @@ namespace sw
         const SQLResult result      = _connection->execute( "INSERT INTO sw_local_slot ( slot, bytes, written_at_ms ) VALUES ( ?, ?, ? ) "
                                                                  "ON CONFLICT ( slot ) DO UPDATE SET bytes = excluded.bytes, written_at_ms = excluded.written_at_ms",
                                                             arrParam, 3, nullptr );
-        return result == SQLResult::Ok ? LocalStoreResult::Ok : LocalStoreResult::IoError;
+        return result == SQLResult::Ok ? LocalStoreResult::Ok : LocalStoreResult::IOError;
     }
 
     LocalStoreResult SQLLocalSlotStorage::eraseSlot( const string& slot )
@@ -84,7 +84,7 @@ namespace sw
         const SQLValue arrParam[1] = { SQLValue::makeText( slot ) };
         SQLRowSet      rowSet;
         if ( _connection->execute( "DELETE FROM sw_local_slot WHERE slot = ?", arrParam, 1, &rowSet ) != SQLResult::Ok )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         return rowSet._affectedRowCount > 0 ? LocalStoreResult::Ok : LocalStoreResult::NotFound;
     }
 
@@ -96,7 +96,7 @@ namespace sw
         SQLRowSet      rowSet;
         if ( _connection->execute( "SELECT slot, length( bytes ), written_at_ms FROM sw_local_slot WHERE slot >= ? AND slot < ? ORDER BY slot", arrParam, 2, &rowSet ) !=
              SQLResult::Ok )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         for ( const vector<SQLValue>& row : rowSet._listRow )
         {
             LocalSlotInfo& info = outListSlotInfo.emplace_back();

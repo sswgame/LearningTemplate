@@ -31,9 +31,9 @@ namespace
             , _registry{}
         {
             // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
-            (void)_currencies.loadFromXmlText( R"(<CurrencyCatalog><Currency id="cur.gem_paid" paid="true"/></CurrencyCatalog>)", "currency" );
+            (void)_currencies.loadFromXMLText( R"(<CurrencyCatalog><Currency id="cur.gem_paid" paid="true"/></CurrencyCatalog>)", "currency" );
             // 시험 준비 — 깨진 항목은 카탈로그가 경고로 남기고, 상품 · 통화가 없으면 아래 단언이 실패한다
-            (void)_offers.loadFromXmlText( R"(<OfferCatalog><Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
+            (void)_offers.loadFromXMLText( R"(<OfferCatalog><Offer id="gem_100"><Product store="fake" id="gem100"/><Grant asset="cur.gem_paid" amount="100"/></Offer></OfferCatalog>)",
                                            "offer" );
             (void)_registry.registerValidator( &_fake );
         }

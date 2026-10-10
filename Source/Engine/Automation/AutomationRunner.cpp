@@ -130,7 +130,7 @@ namespace sw
                 return text;
             }
 
-            static string escapeJson( string_view text )
+            static string escapeJSON( string_view text )
             {
                 string escaped;
                 escaped.reserve( text.size() + 8 );
@@ -891,23 +891,23 @@ namespace sw
         if ( _reportPath.empty() )
             return;
         using Internal = AutomationRunnerInternal;
-        string json    = "{\n  \"name\": \"" + Internal::escapeJson( _scenario.getName() ) + "\",\n";
+        string json    = "{\n  \"name\": \"" + Internal::escapeJSON( _scenario.getName() ) + "\",\n";
         json += "  \"result\": \"" + string( getResultName( _result ) ) + "\",\n";
         json += "  \"exitCode\": " + to_string( static_cast<int32>( _result ) ) + ",\n";
         json += "  \"frames\": " + to_string( _frameIndex ) + ",\n";
-        json += "  \"reason\": \"" + Internal::escapeJson( _finishReason ) + "\",\n";
+        json += "  \"reason\": \"" + Internal::escapeJSON( _finishReason ) + "\",\n";
         json += "  \"failures\": [";
         for ( size_t index = 0; index < _listFailure.size(); ++index )
         {
             json += index == 0 ? "\n    \"" : ",\n    \"";
-            json += Internal::escapeJson( _listFailure[index] ) + "\"";
+            json += Internal::escapeJSON( _listFailure[index] ) + "\"";
         }
         json += _listFailure.empty() ? "],\n" : "\n  ],\n";
         json += "  \"metrics\": [";
         for ( size_t index = 0; index < _listMetricLine.size(); ++index )
         {
             json += index == 0 ? "\n    \"" : ",\n    \"";
-            json += Internal::escapeJson( _listMetricLine[index] ) + "\"";
+            json += Internal::escapeJSON( _listMetricLine[index] ) + "\"";
         }
         json += _listMetricLine.empty() ? "]\n}\n" : "\n  ]\n}\n";
         const string directory = FileUtil::getDirectoryPart( _reportPath );

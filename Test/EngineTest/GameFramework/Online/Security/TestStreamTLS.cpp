@@ -47,7 +47,7 @@ namespace
         }
         void                 close( StreamConnectionHandle handle, StreamCloseMode mode ) override { _inner->close( handle, mode ); }
         void                 setReceivePaused( StreamConnectionHandle handle, bool bPaused ) override { _inner->setReceivePaused( handle, bPaused ); }
-        int32                pollIo( int32 timeoutMilli ) override { return _inner->pollIo( timeoutMilli ); }
+        int32                pollIO( int32 timeoutMilli ) override { return _inner->pollIO( timeoutMilli ); }
         NetAddress           getRemoteAddress( StreamConnectionHandle handle ) const override { return _inner->getRemoteAddress( handle ); }
         StreamTransportStats getStats() const override { return _inner->getStats(); }
 

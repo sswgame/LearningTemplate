@@ -804,7 +804,7 @@ SW_TEST_CASE( MaterialTest, PackingDoesNotClobberTheNextPropertySlot )
         "    <item name=\"_mask\" type=\"ChannelMask\" shaderType=\"Float4\" defaultValue=\"rgba\"/>"
         "  </_properties>"
         "</MaterialDesc>";
-    SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
 
     // 리플렉션이 말하는 것: `_mask` 는 타입 이름 없이 5바이트(재매핑이 실패하는 조합),
     // `_tint` 는 그 바로 뒤 8바이트 자리의 float 하나다.
@@ -862,7 +862,7 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "non-boolean material text" );
-        SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+        SW_ASSERT_TRUE( material->loadFromXML( xml ) );
     }
 
     const sw::MaterialProperty* pAlbedo = material->findProperty( sw::hashed_string( "_albedo" ) );
@@ -894,7 +894,7 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
         "  </_properties>"
         "</MaterialDesc>";
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) );
 
     sw::ShaderReflectionData reflection{};
     sw::ShaderBufferInfo     element{};
@@ -917,7 +917,7 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
     SW_ASSERT_EQUAL( 20u, material->getElementStride() );
 
     const uint32 syncedGeneration = material->getBufferGeneration();
-    SW_ASSERT_TRUE( material->loadFromXml( xml ) ); // 핫 리로드 — XML 순서로 다시 쌓인다
+    SW_ASSERT_TRUE( material->loadFromXML( xml ) ); // 핫 리로드 — XML 순서로 다시 쌓인다
 
     const sw::MaterialProperty* pColor = material->findProperty( sw::hashed_string( "color" ) );
     SW_ASSERT_NOT_NULL( pColor );
@@ -987,7 +987,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "unknown material enum text" );
-        SW_ASSERT_TRUE( material->loadFromXml( xml ) );
+        SW_ASSERT_TRUE( material->loadFromXML( xml ) );
     }
     // usage 의 모르는 토큰은 아는 토큰만 남기지 않는다 — 기본값(StaticMesh)이 그대로다.
     SW_EXPECT_TRUE_MSG( material->getPermutations()._usage == sw::MaterialUsageFlags::StaticMesh, logs.joined().c_str() );
@@ -1042,7 +1042,7 @@ SW_TEST_CASE( MaterialTest, UnknownEnumTextKeepsTheValueAndSaysSo )
 
 /**
  * @brief [MaterialTest] 머티리얼 · 인스턴스의 형식 판정은 `AssetManager` 서비스 없이 돈다 — 이 빌드보다 새 판은 서비스가 없어도 assert 없이 거절한다
- * @details 형식 판정은 씬 · 프리팹과 같은 `AssetFormatRegistry::upgradeXmlWithActiveRegistry`, 판 번호 쓰기 · 읽기는 상태 없는 정적 함수다.
+ * @details 형식 판정은 씬 · 프리팹과 같은 `AssetFormatRegistry::upgradeXMLWithActiveRegistry`, 판 번호 쓰기 · 읽기는 상태 없는 정적 함수다.
  *          머티리얼 본문의 enum 글 해석은 리플렉션(`TypeRegistry`)이 필요하므로 이 시험은 그 앞에서 끝나는 경로만 본다.
  */
 SW_TEST_CASE( MaterialTest, FormatCheckDoesNotNeedTheAssetManager )

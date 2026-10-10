@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Common/EnginePlatformHeaders.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
 #include "Engine/Graphics/Shader/Reflection/SpirvConstants.h"
@@ -470,11 +470,11 @@ namespace sw
 
                     if ( desc._targetFormat == ShaderTargetFormat::SPIRV_Vulkan )
                     {
-                        // 타깃 판은 디바이스가 요구하는 최소 판과 같은 값이다(VulkanRHIApiVersion). 이 타깃에서 DXC 는 HLSL `discard` 를
+                        // 타깃 판은 디바이스가 요구하는 최소 판과 같은 값이다(VulkanRHIRequiredVersion). 이 타깃에서 DXC 는 HLSL `discard` 를
                         // OpDemoteToHelperInvocation 으로 낸다 — 1.3 디바이스의 필수 기능이다.
                         static const wstring s_targetEnv = StringUtil::utf8ToUtf16(
-                            ( string( "-fspv-target-env=vulkan" ) + to_string( VulkanRHIApiVersion::kRequiredMajor ) + "." +
-                              to_string( VulkanRHIApiVersion::kRequiredMinor ) )
+                            ( string( "-fspv-target-env=vulkan" ) + to_string( VulkanRHIRequiredVersion::kRequiredMajor ) + "." +
+                              to_string( VulkanRHIRequiredVersion::kRequiredMinor ) )
                                 .c_str() );
                         listArgument.push_back( L"-spirv" );
                         listArgument.push_back( s_targetEnv.c_str() );

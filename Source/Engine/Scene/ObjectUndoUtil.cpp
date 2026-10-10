@@ -47,7 +47,7 @@ namespace sw
                 ObjectLoadContext context{};
                 context._pIdentity = &snapshot._identity;
                 // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
-                if ( ObjectStateSerializer::loadFromXmlString( pTarget, snapshot._xml, context ) == false )
+                if ( ObjectStateSerializer::loadFromXMLString( pTarget, snapshot._xml, context ) == false )
                     SW_LOG_WARNING( "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
@@ -101,7 +101,7 @@ namespace sw
         ObjectSnapshot snapshot;
         if ( pObj == nullptr )
             return snapshot;
-        snapshot._xml      = ObjectStateSerializer::saveToXmlString( pObj );
+        snapshot._xml      = ObjectStateSerializer::saveToXMLString( pObj );
         snapshot._identity = ObjectStateSerializer::captureIdentity( pObj );
         return snapshot;
     }

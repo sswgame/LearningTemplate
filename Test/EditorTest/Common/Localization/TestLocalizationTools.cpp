@@ -79,11 +79,11 @@ SW_TEST_CASE( LocalizationGatherTest, DialogueAndAssetRulesAreGathered )
 {
     sw::LocalizationProject project;
     sw::string              error;
-    SW_ASSERT_TRUE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ], "assetRules": [
+    SW_ASSERT_TRUE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "p.strings.json" ], "assetRules": [
         { "files": "items.xml", "elements": [ "Item" ], "attribute": "name", "kind": "text", "context": "Item name" },
         { "files": ".settings.xml", "elements": [ "Setting" ], "attribute": "text", "kind": "key" } ] })",
                                               "p", &error ) );
-    SW_EXPECT_FALSE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a" ], "assetRules": [ { "files": "x.xml", "elements": [ "A" ], "attribute": "b", "kind": "maybe" } ] })",
+    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a" ], "assetRules": [ { "files": "x.xml", "elements": [ "A" ], "attribute": "b", "kind": "maybe" } ] })",
                                                "p", &error ) );
 
     sw::TextGatherer gatherer;

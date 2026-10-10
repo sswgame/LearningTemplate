@@ -2,7 +2,7 @@
  * @file PushNotificationProvider.h
  * @brief 푸시 알림 제공자 계약 — 기기 토큰으로 보내고, 결과를 나중에 거둡니다. 구현은 `Provider/<제품>/` 안(제품 이름은 그 폴더 밖에 쓰지 않는다).
  * @details `send` 는 서비스 스레드에서 막지 않는다(실제 제공자는 자기 워커 · HTTP/2 연결 · 인증을 가진다). `pollResults` 는 서비스 스레드가 틱마다(발송기).
- *          지금은 `Provider/Fake/` 하나 — 실제 제공자는 공통 HTTPS 클라이언트(기반 `Online/Http`) 뒤에 운영 비밀(인증서 · 서비스 계정 키)과 함께 넣는다(백로그).
+ *          지금은 `Provider/Fake/` 하나 — 실제 제공자는 공통 HTTPS 클라이언트(기반 `Online/HTTP`) 뒤에 운영 비밀(인증서 · 서비스 계정 키)과 함께 넣는다(백로그).
  */
 #pragma once
 #include "Core/Common/Types.h"

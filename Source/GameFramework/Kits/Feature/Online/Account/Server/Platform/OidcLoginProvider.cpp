@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 
-#include "GameFramework/Base/Online/Http/HttpClient.h"
+#include "GameFramework/Base/Online/HTTP/HTTPClient.h"
 
 namespace sw
 {
@@ -11,13 +11,13 @@ namespace sw
 
 namespace sw
 {
-    OidcLoginProvider::OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HttpClient* pHttpClient )
+    OidcLoginProvider::OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient )
         : _settings{ settings }
         , _keyCache{}
         , _listPending{}
         , _listDone{}
         , _pProvider{ pProvider }
-        , _pHttpClient{ pHttpClient }
+        , _pHTTPClient{ pHTTPClient }
         , _nextVerificationId{ 1 }
         , _jwksRequestId{ 0 }
         , _lastFetchStartMs{ 0 }
@@ -52,10 +52,10 @@ namespace sw
 
     void OidcLoginProvider::tick( int64 nowMs )
     {
-        _pHttpClient->tick( nowMs );
-        vector<HttpClientResponse> listResponse;
-        (void)_pHttpClient->pollResponses( listResponse );
-        for ( const HttpClientResponse& response : listResponse )
+        _pHTTPClient->tick( nowMs );
+        vector<HTTPClientResponse> listResponse;
+        (void)_pHTTPClient->pollResponses( listResponse );
+        for ( const HTTPClientResponse& response : listResponse )
         {
             if ( response._requestId != _jwksRequestId )
                 continue;
@@ -109,18 +109,18 @@ namespace sw
 
     void OidcLoginProvider::startJwksFetch( int64 nowMs )
     {
-        HttpClientRequest request;
+        HTTPClientRequest request;
         request._url       = _settings._jwksURL;
         request._timeoutMs = _settings._requestTimeoutMs;
-        request._listHeader.push_back( HttpHeader{ "Accept", "application/json" } );
-        _jwksRequestId    = _pHttpClient->submitRequest( request, nowMs );
+        request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
+        _jwksRequestId    = _pHTTPClient->submitRequest( request, nowMs );
         _lastFetchStartMs = nowMs;
         ++_jwksFetchCount;
     }
 
     OidcLoginProvider::Decision OidcLoginProvider::evaluate( const PendingTicket& pending, int64 nowMs, PlatformLoginVerification& outVerification )
     {
-        JsonWebToken token;
+        JSONWebToken token;
         if ( token.parse( pending._token ) == false )
         {
             outVerification._bRejected = SW_TRUE;

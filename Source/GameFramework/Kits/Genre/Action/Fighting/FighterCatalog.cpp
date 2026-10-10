@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
             static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveId )
             {
                 uint8 mask = 0;
-                GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( StringUtil::equals( token, "Standing", true ) )
                         mask = static_cast<uint8>( mask | ( 1u << static_cast<uint32>( FighterPosture::Standing ) ) );
@@ -89,12 +89,12 @@ namespace sw
 
     bool FighterCatalog::loadFromResource( string_view path, const MoveCatalog& moveCatalog )
     {
-        return GameDataXml::loadFile( *this, &FighterCatalog::loadRoot, moveCatalog, path, "FighterCatalog" );
+        return GameDataXML::loadFile( *this, &FighterCatalog::loadRoot, moveCatalog, path, "FighterCatalog" );
     }
 
-    bool FighterCatalog::loadFromXmlText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )
+    bool FighterCatalog::loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName )
     {
-        return GameDataXml::loadText( *this, &FighterCatalog::loadRoot, moveCatalog, xmlText, sourceName, "FighterCatalog" );
+        return GameDataXML::loadText( *this, &FighterCatalog::loadRoot, moveCatalog, xmlText, sourceName, "FighterCatalog" );
     }
 
     void FighterCatalog::addFighter( const FighterDef& fighter )
@@ -111,7 +111,7 @@ namespace sw
         (void)_catalog.add( copy ); // 빈 id 는 카탈로그가 거른다
     }
 
-    uint32 FighterCatalog::loadRoot( const XmlNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
+    uint32 FighterCatalog::loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName )
     {
         InputCommandParser parser;
         const string_view  buttonNames = root.getAttributeText( "buttons" );
@@ -119,9 +119,9 @@ namespace sw
             parser.setButtonNames( buttonNames );
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
+        for ( XMLNode node = root.findChild( "Fighter" ); node; node = node.findNextSibling( "Fighter" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             FighterDef fighter;
@@ -146,9 +146,9 @@ namespace sw
             if ( bSidestepOk == false || bSidestepDownOk == false || bJumpOk == false )
                 SW_LOG_WARNING( "%#: fighter '%#' has an unreadable sidestep/jump command - movement disabled", sourceName, pId );
 
-            for ( XmlNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
+            for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )
             {
-                const utf8* pMoveId = GameDataXml::findRequiredId( child, sourceName );
+                const utf8* pMoveId = GameDataXML::findRequiredId( child, sourceName );
                 if ( pMoveId == nullptr )
                     continue;
                 const string_view    framesId = child.getAttributeText( "frames" );

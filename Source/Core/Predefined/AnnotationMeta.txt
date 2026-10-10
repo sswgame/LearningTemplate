@@ -44,7 +44,7 @@ string.Count = Count, CountValue
 
 [PROPERTY]
 flag.ReadOnly = ReadOnly
-flag.XmlAttribute = XmlAttribute, xmlAttribute
+flag.XMLAttribute = XMLAttribute, xmlAttribute
 flag.AssetPath = AssetPath, assetPath
 flag.Polymorphic = Polymorphic, polymorphic
 flag.Transient = Transient, transient, NonSerialized, nonSerialized

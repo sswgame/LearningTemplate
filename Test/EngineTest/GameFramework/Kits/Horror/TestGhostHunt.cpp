@@ -20,7 +20,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kGhostHuntXml = R"(
+    constexpr const utf8* kGhostHuntXML = R"(
 <GhostHunt>
   <Flashlight range="8" angle="25" strobeRange="10" strobeAngle="40" strobeCharge="1"/>
   <Vacuum range="4" stages="10 20 30" alignThreshold="0.7" alignBonus="2" surgeFill="1" surgeDamage="40" dragSpeed="2" dragReduction="0.75"/>
@@ -38,7 +38,7 @@ namespace
 </GhostHunt>
 )";
 
-    constexpr const utf8* kGhostAreaXml = R"(
+    constexpr const utf8* kGhostAreaXML = R"(
 <AreaGraph>
   <Area id="foyer"/>
   <Area id="parlor"/>
@@ -48,7 +48,7 @@ namespace
 </AreaGraph>
 )";
 
-    constexpr const utf8* kGhostLootXml = R"(
+    constexpr const utf8* kGhostLootXML = R"(
 <LootCatalog>
   <Table id="dresserLoot" rolls="2"><Entry item="coin" weight="5" min="5" max="10"/><Entry item="pearl" weight="1"/></Table>
   <Table id="curtainLoot"><Entry item="bill" weight="1" min="1" max="3"/></Table>
@@ -108,8 +108,8 @@ namespace
 
         bool initialize( uint32 seed )
         {
-            if ( _catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) == false || _loot.loadFromXmlText( kGhostLootXml, "GhostHuntTest" ) == false ||
-                 _areaGraph.loadFromXmlText( kGhostAreaXml, "GhostHuntTest" ) == false )
+            if ( _catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) == false || _loot.loadFromXMLText( kGhostLootXML, "GhostHuntTest" ) == false ||
+                 _areaGraph.loadFromXMLText( kGhostAreaXML, "GhostHuntTest" ) == false )
                 return false;
             _bag.initialize( nullptr, 8 );
             GameStateRefs refs;
@@ -171,7 +171,7 @@ namespace
 SW_TEST_CASE( GhostHuntTest, FlashlightConeAndStrobe )
 {
     GhostCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) );
     GhostEncounter encounter;
     encounter.initialize( &catalog, 1 );
     const float3 eye{};
@@ -215,7 +215,7 @@ SW_TEST_CASE( GhostHuntTest, FlashlightConeAndStrobe )
 SW_TEST_CASE( GhostHuntTest, GhostCycleAndStunTimeout )
 {
     GhostCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) );
     GhostEncounter encounter;
     encounter.initialize( &catalog, 1 );
     const uint32 ghost = encounter.spawnGhost( "goob", float3{} );
@@ -250,7 +250,7 @@ SW_TEST_CASE( GhostHuntTest, GhostCycleAndStunTimeout )
 SW_TEST_CASE( GhostHuntTest, SuctionTugOfWarRewardsOppositePull )
 {
     GhostCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) );
 
     GhostEncounter opposite;
     opposite.initialize( &catalog, 5 );
@@ -301,7 +301,7 @@ SW_TEST_CASE( GhostHuntTest, SuctionTugOfWarRewardsOppositePull )
 SW_TEST_CASE( GhostHuntTest, VacuumStageSurgeAndDeterminism )
 {
     GhostCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kGhostHuntXml, "GhostHuntTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kGhostHuntXML, "GhostHuntTest" ) );
     GhostEncounter encounter;
     encounter.initialize( &catalog, 9 );
     SW_EXPECT_NEAR_EQUAL( 10.0f, encounter.computeVacuumPower(), 0.001f );

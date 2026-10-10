@@ -15,7 +15,7 @@ namespace sw
      * @details 이웃 순서는 하나로 고정입니다 — 앞 넷이 직교(+x, −x, +y, −y), 뒤 넷이 대각선(+x+y, +x−y, −x+y, −x−y). 탐색 결과(경로 ·
      *          흐름장 · 번짐 알림 순서)가 이 순서에 매이므로 바꾸면 결정적 시뮬레이션의 결과가 바뀝니다. 내비 · 기믹 · 키트가 같은 표를 씁니다.
      *          칸 격자를 든 클래스는 `_width` · `_height` 를 따로 두지 않고 이것 하나를 멤버로 들며, `y × 너비 + x` 를 손으로 적지 않습니다.
-     * @note 칸 번호는 int32 입니다 — 칸 수가 int32 를 넘는 격자는 저장소부터 만들 수 없습니다(타일맵은 `TileMapXmlData::kMaxTileCount` 로 막는다).
+     * @note 칸 번호는 int32 입니다 — 칸 수가 int32 를 넘는 격자는 저장소부터 만들 수 없습니다(타일맵은 `TileMapXMLData::kMaxTileCount` 로 막는다).
      */
     struct GridTopology
     {

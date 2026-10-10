@@ -5,8 +5,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -20,15 +20,15 @@ namespace sw
         struct ConfigManagerInternal
         {
             /** @brief @p fileObject 의 키마다 두 쪽 값이 같은 JSON 이면 경로를 담습니다. 파일 쪽이 객체면 안으로 들어간다(구조체 칸). */
-            static void collectEqualMembers( const JsonValue& fileObject, const JsonValue& left, const JsonValue& right, const string& prefix,
+            static void collectEqualMembers( const JSONValue& fileObject, const JSONValue& left, const JSONValue& right, const string& prefix,
                                              vector<string>& outListKey )
             {
                 for ( const string& key : fileObject.getMemberNames() )
                 {
                     const string    path       = prefix.empty() ? key : string( prefix + "." + key );
-                    const JsonValue fileValue  = fileObject.get( key, false );
-                    const JsonValue leftValue  = left.get( key, false );
-                    const JsonValue rightValue = right.get( key, false );
+                    const JSONValue fileValue  = fileObject.get( key, false );
+                    const JSONValue leftValue  = left.get( key, false );
+                    const JSONValue rightValue = right.get( key, false );
                     if ( leftValue.isValid() == false || rightValue.isValid() == false )
                         continue;
                     if ( fileValue.isObject() && leftValue.isObject() && rightValue.isObject() && fileValue.getMemberNames().empty() == false )
@@ -109,13 +109,13 @@ namespace sw
 
 namespace sw
 {
-    bool ConfigManager::readConfigJson( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
+    bool ConfigManager::readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel )
     {
         // 키는 대소문자까지 맞아야 한다 — 기본 문맥은 대소문자를 무시해 `_Width` 오타를 그대로 받아들인다.
         SerializeContext ctx = SerializeContext::deriveFromDefault();
         ctx.setIgnoreCaseKeys( false );
         vector<SchemaOrphanValue> listOrphan;
-        if ( JsonSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, ctx ) == false )
+        if ( JSONSerializer::deserializeSoft( pInstance, typeInfo, jsonStr, &listOrphan, nullptr, ctx ) == false )
         {
             SW_LOG_ERROR( "Config %#: not a JSON object for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
@@ -137,11 +137,11 @@ namespace sw
 
     bool ConfigManager::collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey )
     {
-        JsonDocument fileDoc;
-        JsonDocument leftDoc;
-        JsonDocument rightDoc;
-        if ( fileDoc.parse( jsonStr ) == false || leftDoc.parse( JsonSerializer::serialize( pLeft, typeInfo ) ) == false ||
-             rightDoc.parse( JsonSerializer::serialize( pRight, typeInfo ) ) == false )
+        JSONDocument fileDoc;
+        JSONDocument leftDoc;
+        JSONDocument rightDoc;
+        if ( fileDoc.parse( jsonStr ) == false || leftDoc.parse( JSONSerializer::serialize( pLeft, typeInfo ) ) == false ||
+             rightDoc.parse( JSONSerializer::serialize( pRight, typeInfo ) ) == false )
             return false;
         ConfigManagerInternal::collectEqualMembers( fileDoc.getRoot(), leftDoc.getRoot(), rightDoc.getRoot(), string(), outListKey );
         return true;

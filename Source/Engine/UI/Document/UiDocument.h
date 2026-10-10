@@ -17,12 +17,12 @@ namespace sw
     /**
      * @struct UiDocumentNode
      * @brief 문서의 위젯 원소 하나를 파싱한 결과입니다. 인스턴스는 이것에서 지어지므로 같은 문서로 화면을 여러 번 열어도 파일은 한 번만 읽습니다.
-     * @details `_propertyXml` 은 그 원소에서 자식 위젯과 바인딩 속성을 뺀 XML 입니다 — 씬 파일과 같은 `XmlSerializer` 가 위젯 PROPERTY 로 읽습니다.
+     * @details `_propertyXML` 은 그 원소에서 자식 위젯과 바인딩 속성을 뺀 XML 입니다 — 씬 파일과 같은 `XMLSerializer` 가 위젯 PROPERTY 로 읽습니다.
      */
     struct UiDocumentNode
     {
         hashed_string         _typeName{};       ///< 위젯 타입 이름(원소 이름) — 지을 때 타입 등록부에서 찾는다(모듈 다시 로드에도 이름은 남는다)
-        string                _propertyXml{};    ///< 자식 위젯 · 바인딩 속성을 뺀 원소 XML
+        string                _propertyXML{};    ///< 자식 위젯 · 바인딩 속성을 뺀 원소 XML
         string                _fragment{};       ///< `UserWidget` 이면 끼울 조각 문서 경로(정규화)
         vector<UiBindingDesc> _listBinding{};    ///< 이 원소에서 뗀 바인딩 식(위젯 번호는 무효)
         vector<uint32>        _listChildIndex{}; ///< 자식 노드 자리(`UiDocumentAsset::_listNode`) — 문서 순서

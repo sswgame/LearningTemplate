@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -36,20 +36,20 @@ namespace sw
         _maxLevel     = static_cast<int32>( listXpToNext.size() ) + 1;
     }
 
-    bool ExperienceCurve::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool ExperienceCurve::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::parseRoot( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "ExperienceCurve", root ) == false )
             return false;
         loadFromNode( root );
         return true;
     }
 
-    void ExperienceCurve::loadFromNode( const XmlNode& node )
+    void ExperienceCurve::loadFromNode( const XMLNode& node )
     {
         vector<int64> listXpToNext;
-        for ( XmlNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
+        for ( XMLNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
         {
             listXpToNext.push_back( MathUtil::max( 1, child.getAttributeInt( "xp", 1 ) ) );
         }

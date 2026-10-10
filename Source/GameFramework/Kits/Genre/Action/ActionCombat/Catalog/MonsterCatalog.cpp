@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -47,7 +47,7 @@ namespace sw
     bool MonsterCatalog::loadFromResource( string_view assetRelativePath )
     {
         clear();
-        if ( XmlCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
+        if ( XMLCatalog<MonsterCatalog>::loadFromResource( assetRelativePath ) )
             return true;
         // 파일 · 루트가 없거나 `<Monster>` 가 하나도 없다(읽기 쪽이 이미 까닭을 알렸다) — 폴백을 심는다.
         SW_LOG_WARNING( "%# gave no monster definitions — using fallback monster definitions.", assetRelativePath );
@@ -55,9 +55,9 @@ namespace sw
         return false;
     }
 
-    uint32 MonsterCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 MonsterCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        for ( XmlNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
+        for ( XMLNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
         {
             const utf8* pIdStr = node.findAttribute( "id" );
             if ( StringUtil::isNullOrEmpty( pIdStr ) )
@@ -73,7 +73,7 @@ namespace sw
 
             monsterDef._archetype = parseArchetype( node.findAttribute( "archetype" ), pIdStr );
 
-            XmlNode statsNode = node.findChild( "Stats" );
+            XMLNode statsNode = node.findChild( "Stats" );
             if ( statsNode.isValid() )
             {
                 monsterDef._hp            = statsNode.getAttributeInt( "hp", monsterDef._hp );
@@ -88,7 +88,7 @@ namespace sw
                                     MonsterDef::kMaxSpeed );
             }
 
-            XmlNode aiNode = node.findChild( "AI" );
+            XMLNode aiNode = node.findChild( "AI" );
             if ( aiNode.isValid() )
             {
                 monsterDef._patrolRange      = aiNode.getAttributeFloat( "patrolRange", monsterDef._patrolRange );
@@ -102,7 +102,7 @@ namespace sw
             }
 
             // 사격은 줄마다 한 발이다 — 한 번에 쏘는 패턴(겨냥 · 옆 · 부채)을 코드 없이 적는다.
-            for ( XmlNode shotNode = node.findChild( "Shot" ); shotNode; shotNode = shotNode.findNextSibling( "Shot" ) )
+            for ( XMLNode shotNode = node.findChild( "Shot" ); shotNode; shotNode = shotNode.findNextSibling( "Shot" ) )
             {
                 MonsterShotDef shot;
                 shot._angleDegrees = shotNode.getAttributeFloat( "angle", shot._angleDegrees );
@@ -113,7 +113,7 @@ namespace sw
                 monsterDef._listShot.push_back( shot );
             }
 
-            XmlNode prefabNode = node.findChild( "Prefab" );
+            XMLNode prefabNode = node.findChild( "Prefab" );
             if ( prefabNode.isValid() )
             {
                 const utf8* pPath = prefabNode.findAttribute( "path" );
@@ -121,11 +121,11 @@ namespace sw
                     monsterDef._prefabPath = pPath;
             }
 
-            XmlNode dropNode = node.findChild( "Drop" );
+            XMLNode dropNode = node.findChild( "Drop" );
             if ( dropNode.isValid() )
             {
                 // 속성 이름이 곧 보상 이름이다. 코드가 보상 종류를 알 필요가 없다.
-                for ( XmlAttribute attr = dropNode.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
+                for ( XMLAttribute attr = dropNode.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
                     const utf8* pRewardId = attr.getName();
                     if ( StringUtil::isNullOrEmpty( pRewardId ) )

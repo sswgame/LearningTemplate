@@ -12,13 +12,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 이동 타입입니다. 지형의 이동 비용과 적성이 이 순서로 적힙니다("지상 공중 우주 수중"). */
     enum class SRPGMoveType : uint8
@@ -152,9 +152,9 @@ namespace sw
      *          `weapons="vulcan,rifle"` · `developsTo="gundam:5 gmcustom:3"` · 무기 `map="Self" pattern="1,0 2,0 3,0"` · 파일럿 `shooting="20" growShooting="2"`.
      *          경험치 곡선은 기반 `ExperienceCurve` 의 속성을 그대로 씁니다.
      */
-    class SW_GF_API SRPGCatalog : public XmlCatalog<SRPGCatalog>
+    class SW_GF_API SRPGCatalog : public XMLCatalog<SRPGCatalog>
     {
-        friend class XmlCatalog<SRPGCatalog>;
+        friend class XMLCatalog<SRPGCatalog>;
 
     public:
         SRPGCatalog();
@@ -171,12 +171,12 @@ namespace sw
         static int32 parseAptitude( string_view token, int32 fallback );
 
     private:
-        static constexpr const utf8* kXmlRootName = "SRPGCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadTerrain( const XmlNode& node, const utf8* pId );
-        void                         loadWeapon( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadUnit( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadPilot( const XmlNode& node, const utf8* pId );
+        static constexpr const utf8* kXMLRootName = "SRPGCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadTerrain( const XMLNode& node, const utf8* pId );
+        void                         loadWeapon( const XMLNode& node, const utf8* pId, string_view sourceName );
+        void                         loadUnit( const XMLNode& node, const utf8* pId, string_view sourceName );
+        void                         loadPilot( const XMLNode& node, const utf8* pId );
 
         GameCatalog<SRPGTerrainDef> _terrainCatalog;
         GameCatalog<SRPGWeaponDef>  _weaponCatalog;

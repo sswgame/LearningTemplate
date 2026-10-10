@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -20,7 +20,7 @@ namespace sw
     class Crafter;
     class Inventory;
     class RecipeCatalog;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 효과 하나의 단계 기준입니다. */
     struct AdventureCookEffectDef
@@ -82,9 +82,9 @@ namespace sw
      *        dubious="dubiousFood" dubiousHearts="4"><Effect id="Chilly" tier2="4" tier3="7" maxDuration="1800"/>
      *        <Ingredient id="hydromelon" effect="Chilly" potency="1" duration="150" hearts="2"/></AdventureCooking>` 를 읽습니다.
      */
-    class SW_GF_API AdventureCooking : public XmlCatalog<AdventureCooking>
+    class SW_GF_API AdventureCooking : public XMLCatalog<AdventureCooking>
     {
-        friend class XmlCatalog<AdventureCooking>;
+        friend class XMLCatalog<AdventureCooking>;
 
     public:
         AdventureCooking();
@@ -104,8 +104,8 @@ namespace sw
         int32                         getMaxIngredientCount() const { return _maxIngredientCount; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "AdventureCooking"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "AdventureCooking"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<AdventureIngredientDef> _ingredientCatalog;
         GameCatalog<AdventureCookEffectDef> _effectCatalog;

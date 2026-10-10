@@ -20,7 +20,7 @@
 namespace sw
 {
     class ItemCatalog;
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @class AppearanceDatabase
@@ -38,7 +38,7 @@ namespace sw
         /** @brief 폴더의 데이터를 모두 읽고 검사합니다. 오류가 없으면 true 입니다. @p pItemCatalog 는 빌려 씁니다(데이터보다 오래 살아야 한다). */
         [[nodiscard]] bool loadFromFolder( string_view folder, const ItemCatalog* pItemCatalog );
         /** @brief 데이터 한 덩이(루트 원소로 종류를 고른다)를 읽습니다(시험 · 미리보기). 검사는 `finishLoad` 에서 합니다. */
-        [[nodiscard]] bool loadSectionFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadSectionFromXMLText( string_view xmlText, string_view sourceName );
         /**
          * @brief 읽은 데이터끼리 이름을 대조합니다. 오류가 없으면 true 입니다.
          * @param pListKnownBodyRegion 몸 영역 표(피팅 데이터)의 이름 — 주면 숨김 영역 이름도 대조합니다.
@@ -62,7 +62,7 @@ namespace sw
         bool isOwnerName( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool loadSectionFromNode( const XmlNode& root, string_view sourceName );
+        [[nodiscard]] bool loadSectionFromNode( const XMLNode& root, string_view sourceName );
         void               validateItems();
         void               validateSets();
         void               validateVisuals( const vector<hashed_string>* pListKnownBodyRegion );

@@ -6,7 +6,7 @@
 
 #include "Engine/Character/AnimNotify/AnimNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
             }
 
             /** @brief 인자 하나를 선언된 종류로 읽습니다. */
-            static AnimNotifyParam readParam( const XmlNode& node, const AnimNotifyParamDef& def, CharacterDataReader& reader )
+            static AnimNotifyParam readParam( const XMLNode& node, const AnimNotifyParamDef& def, CharacterDataReader& reader )
             {
                 AnimNotifyParam param;
                 param._name = hashed_string( def._pName );
@@ -112,12 +112,12 @@ namespace sw
 
 namespace sw
 {
-    bool AnimNotifyTable::loadFromXmlText( string_view xmlText, string_view sourceName, const AnimNotifyHandlerRegistry& registry )
+    bool AnimNotifyTable::loadFromXMLText( string_view xmlText, string_view sourceName, const AnimNotifyHandlerRegistry& registry )
     {
         _listEntry.clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "AnimNotifies", root ) )
             readRoot( root, registry, reader );
         return reader.finish();
@@ -127,8 +127,8 @@ namespace sw
     {
         _listEntry.clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "AnimNotifies", root ) )
             readRoot( root, registry, reader );
         return reader.finish();
@@ -144,10 +144,10 @@ namespace sw
         return nullptr;
     }
 
-    void AnimNotifyTable::readRoot( const XmlNode& root, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
+    void AnimNotifyTable::readRoot( const XMLNode& root, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Notify", true ) )
                 readEntry( child, registry, reader );
@@ -156,7 +156,7 @@ namespace sw
         }
     }
 
-    void AnimNotifyTable::readEntry( const XmlNode& node, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
+    void AnimNotifyTable::readEntry( const XMLNode& node, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader )
     {
         AnimNotifyEntry entry;
         entry._notify      = reader.readName( node, "name", true );
@@ -171,7 +171,7 @@ namespace sw
         }
         const vector_reference<const AnimNotifyParamDef> listDef = entry._pHandler->getParams();
         // 표의 칸은 처리기가 선언한 인자만 — 모르는 칸은 오타이므로 오류다.
-        for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const utf8* pName      = attribute.getName();
             const bool  bBaseField = StringUtil::equals( pName, "name", true ) || StringUtil::equals( pName, "handler", true );

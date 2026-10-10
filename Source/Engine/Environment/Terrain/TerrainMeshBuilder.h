@@ -37,7 +37,7 @@ namespace sw
         uint32 _chunkCells{ 0 }; ///< 청크 한 변의 칸 수(2 의 거듭제곱)
         uint32 _chunkCountX{ 0 };
         uint32 _chunkCountZ{ 0 };
-        uint32 _maxLod{ 0 }; ///< log2( _chunkCells ) — 그 LOD 에서 청크가 칸 하나다
+        uint32 _maxLOD{ 0 }; ///< log2( _chunkCells ) — 그 LOD 에서 청크가 칸 하나다
 
         uint32 getChunkCount() const { return _chunkCountX * _chunkCountZ; }
     };
@@ -63,16 +63,16 @@ namespace sw
         static float32 computeChunkBoundsRadius( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ );
 
         /**
-         * @brief 거리로 LOD 를 고릅니다. 거리 < @p lodDistance 이면 0, 그 두 배까지 1, 네 배까지 2 … 이고 @p maxLod 에서 멈춥니다.
+         * @brief 거리로 LOD 를 고릅니다. 거리 < @p lodDistance 이면 0, 그 두 배까지 1, 네 배까지 2 … 이고 @p maxLOD 에서 멈춥니다.
          */
-        static uint32 selectLod( float32 distance, float32 lodDistance, uint32 maxLod );
+        static uint32 selectLOD( float32 distance, float32 lodDistance, uint32 maxLOD );
 
         /**
-         * @brief 청크 (x, z) 를 LOD @p lod 로 만듭니다. @p arrNeighborLod 는 `TerrainChunkSide` 순서의 이웃 LOD 이고, 지형 가장자리 변은
+         * @brief 청크 (x, z) 를 LOD @p lod 로 만듭니다. @p arrNeighborLOD 는 `TerrainChunkSide` 순서의 이웃 LOD 이고, 지형 가장자리 변은
          *        자기 LOD 를 넣습니다. 구멍 칸을 덮는 사각형은 만들지 않습니다.
          * @details 정점: 위치(청크 이동 기준) · 노멀(샘플 중앙 차분) · UV(지형 정규 좌표 u = 샘플 x / (N−1)) · 색(흰색). 삼각형 목록(인덱스 없음)입니다.
          */
         static void buildChunkVertices( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ, uint32 lod,
-                                        const uint32 ( &arrNeighborLod )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
+                                        const uint32 ( &arrNeighborLOD )[static_cast<uint32>( TerrainChunkSide::Count )], vector<RHIVertex>& outListVertex );
     };
 } // namespace sw

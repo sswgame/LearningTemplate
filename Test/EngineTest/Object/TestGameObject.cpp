@@ -585,7 +585,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 
     keeperMesh->_pTickClearOwner = victim;
     keeperMesh->_pTickLoadTarget = loaded;
-    keeperMesh->_tickLoadXml     = ObjectStateSerializer::saveToXmlString( victim );
+    keeperMesh->_tickLoadXML     = ObjectStateSerializer::saveToXMLString( victim );
     {
         test::ScopedDefensiveTestLog expected( "a state load during the component tick" );
         manager.tick( 0.016f );
@@ -984,8 +984,8 @@ SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
 
     // 상태를 읽는다 — 저장된 이름은 `Bullet` 이다.
-    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pFirst );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pSecond, state ) );
+    const sw::string state = sw::ObjectStateSerializer::saveToJSONString( pFirst );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pSecond, state ) );
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
     pSecond->setName( sw::hashed_string( "Bullet" ) );
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
@@ -1142,8 +1142,8 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 
     // 상태를 되돌려도 같은 id 를 되찾는다(식별 목록이 타입 이름으로 적힌다).
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pObj );
-    const sw::string         state    = sw::ObjectStateSerializer::saveToJsonString( pObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, { &identity } ) );
+    const sw::string         state    = sw::ObjectStateSerializer::saveToJSONString( pObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pObj, state, { &identity } ) );
     sw::SceneComponent* pRestored = pObj->getComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_EQUAL( componentId, pRestored->getComponentId() );
@@ -1372,8 +1372,8 @@ SW_TEST_CASE( GameObjectTest, ReloadedChildOfInactiveParentStaysInactive )
     pParent->setActive( false );
     SW_ASSERT_FALSE( pChild->isActiveInHierarchy() );
 
-    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pChild );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pChild, state ) );
+    const sw::string state = sw::ObjectStateSerializer::saveToJSONString( pChild );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pChild, state ) );
     SW_EXPECT_TRUE( pChild->getParent() == pParent );
     SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
 }
@@ -2920,8 +2920,8 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     SW_ASSERT_NOT_NULL( pChild->addComponent<sw::MockPostLoadProbeComponent>() );
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
 
-    const sw::string parentXml     = sw::ObjectStateSerializer::saveToXmlString( pParent );
-    const sw::string childXml      = sw::ObjectStateSerializer::saveToXmlString( pChild );
+    const sw::string parentXML     = sw::ObjectStateSerializer::saveToXMLString( pParent );
+    const sw::string childXML      = sw::ObjectStateSerializer::saveToXMLString( pChild );
     const uint64     parentSavedId = pParent->getObjectId();
     const uint64     childSavedId  = pChild->getObjectId();
     manager.clear();
@@ -2933,8 +2933,8 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     sw::MockPostLoadProbeComponent::s_postLoadCount           = 0;
     sw::MockPostLoadProbeComponent::s_postLoadWithParentCount = 0;
     sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewChild, childXml, { nullptr, &batch, childSavedId } ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewParent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewChild, childXML, { nullptr, &batch, childSavedId } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewParent, parentXML, { nullptr, &batch, parentSavedId } ) );
     SW_EXPECT_EQUAL( 0, sw::MockPostLoadProbeComponent::s_postLoadCount ); // 묶음이 끝나기 전에는 부르지 않는다
     batch.finish();
 

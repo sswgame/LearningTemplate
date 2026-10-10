@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 } // namespace sw
 
 namespace sw::editor
@@ -37,7 +37,7 @@ namespace sw::editor
         }
 
         /** @brief 규칙 객체의 `include_patterns` · `exclude_patterns` · `include_paths` · `exclude_paths` 중 있는 것을 읽습니다. */
-        void parse( const JsonValue& jsonValue );
+        void parse( const JSONValue& jsonValue );
 
         /** @brief @p relativePath(리소스 루트 기준)가 조건에 맞는지 봅니다. */
         bool matchesPath( string_view relativePath ) const;

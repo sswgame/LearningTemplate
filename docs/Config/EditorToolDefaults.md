@@ -18,7 +18,7 @@ JSON 키는 아래 필드 이름 그대로입니다(앞의 `_` 포함). 적지 �
 
 ## 필드
 
-editortooldefaults.json 의 에디터 도구 시드입니다. 읽기는 `JsonSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
+editortooldefaults.json 의 에디터 도구 시드입니다. 읽기는 `JSONSerializer` 가 PROPERTY 그래프로 합니다. 필드를 추가하면 읽기가 따라옵니다(손으로 파싱하지 않습니다).
 
 원본: [`Source/Editor/Common/Config/EditorToolDefaults.h`](../../Source/Editor/Common/Config/EditorToolDefaults.h)
 

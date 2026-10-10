@@ -2,10 +2,10 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileApiLoginProvider.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Shared/Protocol/AccountTypes.h"
 
 namespace sw
@@ -26,9 +26,9 @@ namespace sw
                 return false;
             }
 
-            static string readText( const JsonValue& object, const utf8* pKey, string_view fallback )
+            static string readText( const JSONValue& object, const utf8* pKey, string_view fallback )
             {
-                const JsonValue value = object.get( pKey, false );
+                const JSONValue value = object.get( pKey, false );
                 return value.isString() ? value.asString() : string( fallback );
             }
         };
@@ -38,30 +38,30 @@ namespace sw
 namespace sw
 {
     unique_ptr<IPlatformLoginProvider> PlatformLoginProviderFactory::create( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider,
-                                                                             HttpClient* pHttpClient )
+                                                                             HTTPClient* pHTTPClient )
     {
-        if ( isValidSettings( settings ) == false || pHttpClient == nullptr )
+        if ( isValidSettings( settings ) == false || pHTTPClient == nullptr )
             return nullptr;
         if ( settings._kind == PlatformLoginProviderKind::Oidc )
         {
             if ( pProvider == nullptr )
                 return nullptr;
-            return make_unique<OidcLoginProvider>( settings, pProvider, pHttpClient );
+            return make_unique<OidcLoginProvider>( settings, pProvider, pHTTPClient );
         }
-        return make_unique<ProfileApiLoginProvider>( settings, pHttpClient );
+        return make_unique<ProfileAPILoginProvider>( settings, pHTTPClient );
     }
 
     bool PlatformLoginProviderFactory::readSettings( string_view jsonText, vector<PlatformLoginProviderSettings>& outListSettings, string& outError )
     {
         using Internal = PlatformLoginProviderSettingsInternal;
         outListSettings.clear();
-        JsonDocument document;
+        JSONDocument document;
         if ( document.tryParse( jsonText ) == false )
         {
             outError = "platform login settings are not JSON";
             return false;
         }
-        const JsonValue providers = document.getRoot().get( "providers", false );
+        const JSONValue providers = document.getRoot().get( "providers", false );
         if ( providers.isArray() == false )
         {
             outError = "platform login settings need a 'providers' array";
@@ -69,7 +69,7 @@ namespace sw
         }
         for ( size_t index = 0; index < providers.size(); ++index )
         {
-            const JsonValue entry = providers.at( index );
+            const JSONValue entry = providers.at( index );
             if ( entry.isObject() == false )
             {
                 outError = "provider entry is not an object";
@@ -101,7 +101,7 @@ namespace sw
             settings._subjectPath     = Internal::readText( entry, "subjectPath", settings._kind == PlatformLoginProviderKind::Oidc ? "sub" : "id" );
             settings._displayNamePath = Internal::readText( entry, "displayNamePath", "" );
             settings._bRequireNonce   = entry.get( "requireNonce", false ).asBool( false ) ? SW_TRUE : SW_FALSE;
-            const JsonValue clientIds = entry.get( "clientIds", false );
+            const JSONValue clientIds = entry.get( "clientIds", false );
             for ( size_t clientIndex = 0; clientIds.isArray() && clientIndex < clientIds.size(); ++clientIndex )
             {
                 settings._listClientId.push_back( clientIds.at( clientIndex ).asString() );

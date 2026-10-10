@@ -12,7 +12,7 @@
 언리얼 Online Services, PlayFab, Nakama 가 제공하는 기능과 같은 범위를 엔진 안에서 직접 구현한 것입니다.
 
 이 폴더는 기반의 층 1 이라서 Core 만 봅니다. 엔진 오브젝트나 씬을 모르므로 전용 서버도, 테스트도, 부하 테스트 봇도 같은 코드를 씁니다.
-클라이언트의 로컬 저장(`Local/`)과 HTTP 클라이언트(`Http/`)도 같은 이유로 이 폴더에 있습니다.
+클라이언트의 로컬 저장(`Local/`)과 HTTP 클라이언트(`HTTP/`)도 같은 이유로 이 폴더에 있습니다.
 
 ## 머릿속 그림
 
@@ -88,7 +88,7 @@ py -3 -m Scripts test ChatStreamTest.*
 | `Sanction` | 계정 제재 레코드 |
 | `Observability` | 서비스 표준 지표 |
 | `Local` | 클라이언트 로컬 저장 슬롯 |
-| `Http` | 최소 HTTP/1.1 클라이언트와 테스트 서버 |
+| `HTTP` | 최소 HTTP/1.1 클라이언트와 테스트 서버 |
 
 메모리 구현(`MemoryServiceStore`, `MemoryEphemeralStore`)은 테스트와 개발 서버가 씁니다. 실제 드라이버는 저장 키트에 있습니다.
 SQL 은 `GF_SQLStore`(SQLite)와 `GF_Server_SQLStore`(PostgreSQL), 캐시는 `GF_Server_CacheStore`(RESP) 입니다.
@@ -171,7 +171,7 @@ GM 도구 키트는 운영 도구와 에디터만 의존하고, 플레이어용 
 - **SQL 은 SQLite 3.35 이상과 PostgreSQL 이 같은 문법만 씁니다**(`ON CONFLICT`, `RETURNING`, `LIMIT ?`). 자리표시자는 늘 `?` 이고 드라이버가 바꿉니다. 갈라지는 곳은 방언 훅(`SQLDialect`)뿐입니다.
 - **HTTP 클라이언트는 호스트 이름을 해석하지 못합니다.** IPv4 주소와 `localhost` 만 받고, 그 밖의 이름은 바로 실패합니다.
   외부 로그인 JWKS, 영수증 검증, 푸시처럼 바깥 HTTPS 를 부르는 기능은 이 한계를 먼저 풀어야 실제 서비스에 붙습니다.
-- **루프백 스트림 전송은 한 스레드에서만 돌립니다.** 다른 스레드가 `pollIo` 를 돌리면 Debug 경합 검출기가 멈춥니다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돕니다.
+- **루프백 스트림 전송은 한 스레드에서만 돌립니다.** 다른 스레드가 `pollIO` 를 돌리면 Debug 경합 검출기가 멈춥니다. 가짜 서버는 스레드 대신 클라이언트 전송을 감싸 같이 돕니다.
 - **엔진 서비스 없이 도는 실행 파일은 이름 풀(`HashedStringPool::initialize`)부터 초기화합니다.** 빠뜨리면 첫 `hashed_string` 에서 접근 위반이 납니다. `EngineBootstrap` 앞부분과 같은 순서입니다.
 - **서버 고르기 규칙은 `Directory/ServerSelection` 하나입니다.** 클라이언트 배정과 매칭의 전용 서버 배정이 같은 규칙(열림, 버전, 살아 있음, 자리, 같은 지역, 찬 비율, id 순)을 씁니다.
   스냅숏은 읽기 주기(2초)만큼 늦으므로, 고른 횟수를 다음 읽기까지 더해 두어 한 서버로 몰리지 않게 합니다.

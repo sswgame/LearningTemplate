@@ -137,7 +137,7 @@ namespace sw
         PROPERTY( Default = "75" )
         int32 _mana{ 0 };
 
-        PROPERTY( Default = "Apprentice", XmlAttribute )
+        PROPERTY( Default = "Apprentice", XMLAttribute )
         string _title = "unset";
     };
 } // namespace sw
@@ -188,7 +188,7 @@ namespace sw
     // 2) FUNCTION / RPC / Abstract / Static / 생성자
     // ------------------------------------------------------------------------------
     REFLECT()
-    struct RpcDemoActor
+    struct RPCDemoActor
     {
         REFLECT_BODY();
         PROPERTY()

@@ -72,7 +72,7 @@ namespace sw
         /** @brief 에디터 인스턴스 핸들을 반환합니다. App 의 Present 훅이 씁니다. */
         EditorHandle getEditor() const { return _editor; }
         /** @brief EditorAPI 테이블을 반환합니다. App 의 Present 훅이 씁니다. */
-        const EditorAPI& getEditorApi() const { return _editorApi; }
+        const EditorAPI& getEditorAPI() const { return _editorAPI; }
 
         // LiveReload 콜백 — 에디터
         /** @brief 에디터 모듈을 내리기 직전에 불립니다. 인스턴스와 API 테이블을 놓습니다. */
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 에디터 모듈이 다시 올라온 직후에 불립니다. API 를 다시 바인딩하고 인스턴스를 만듭니다. */
         void onAfterEditorReload( void* pLibraryModule );
         /**
-         * @brief 새 에디터 이미지가 이 호스트와 같은 API 표로 빌드됐는지 봅니다(ABI 버전 · 지문 · `exportEditorApi`). 옛 이미지를 내리기 전에 불립니다.
+         * @brief 새 에디터 이미지가 이 호스트와 같은 API 표로 빌드됐는지 봅니다(ABI 버전 · 지문 · `exportEditorAPI`). 옛 이미지를 내리기 전에 불립니다.
          * @details 여기서 거절하면 옛 에디터가 그대로 돈다. 같은 검사를 옛 것을 내린 뒤(`onAfterEditorReload`)에야 하면 거절이 곧 에디터를 잃는 일이 된다.
          */
         bool isEditorImageUsable( void* pLibraryModule ) const;
@@ -91,15 +91,15 @@ namespace sw
         void onEditorReloadFault( uint32 faultCode );
 
         /** @brief 에디터 DLL 에서 API 테이블을 받아 바인딩합니다. ABI 버전 · 스탬프가 다르면 실패합니다. */
-        bool bindEditorApi( void* pLibraryModule );
+        bool bindEditorAPI( void* pLibraryModule );
 #if !defined( SW_SHIPPING )
         /**
          * @brief 이미 만든 에디터 인스턴스와 그 API 표를 호스트에 붙입니다.
-         * @details 정상 경로는 `bindEditorApi` → `createEditorInstance` 다. 이 창구는 모듈 DLL · 디바이스 없이 가짜 API 표로 호스트의 순서
+         * @details 정상 경로는 `bindEditorAPI` → `createEditorInstance` 다. 이 창구는 모듈 DLL · 디바이스 없이 가짜 API 표로 호스트의 순서
          *          (시뮬레이션 멈춤 → shutdown → destroy)를 시험하려고 둔다. 에디터 모드(`initialize` 의 bEnableEditor)일 때만 에디터로 쓰인다.
          *          시험 전용 창구라 배포본에는 없다 — 배포본에서 호스트의 API 표를 바꿔 끼울 길을 남기지 않는다.
          */
-        void attachEditorInstance( const EditorAPI& editorApi, EditorHandle editor );
+        void attachEditorInstance( const EditorAPI& editorAPI, EditorHandle editor );
 #endif
 
         /** @brief RHI 핫스왑 뒤 게임 → 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 입니다. */
@@ -120,7 +120,7 @@ namespace sw
          *          플레이 스냅샷은 복원되지 않는다). 멈춤이 플레이를 끝내고 스냅샷을 되돌린다 — 에디터 컨텍스트가 아직 있는 동안이어야 한다.
          */
         void onBeforeSuspendModules() override;
-        void suspendHostModule( bool bReleaseApiTable ) override;
+        void suspendHostModule( bool bReleaseAPITable ) override;
         /**
          * @brief 에디터의 "렌더 대기" 표시를 버립니다.
          * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUi 나
@@ -140,17 +140,17 @@ namespace sw
         void rebindEditorService();
         /**
          * @brief 에디터 인스턴스를 shutdown → destroy 하고 핸들을 비웁니다.
-         * @param bReleaseApiTable true 면 API 테이블과 타입 등록까지 놓습니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
+         * @param bReleaseAPITable true 면 API 테이블과 타입 등록까지 놓습니다(모듈 언로드 직전). RHI 핫스왑처럼 **같은 모듈로 다시
          *        만들** 때는 false 이고, 테이블을 그대로 재사용합니다.
          */
-        void destroyEditorInstance( bool bReleaseApiTable );
+        void destroyEditorInstance( bool bReleaseAPITable );
         /** @brief 이미 바인딩한 API 테이블로 에디터 인스턴스를 만들고 초기화합니다. 디바이스가 없으면 만들지 않습니다. */
         [[nodiscard]] bool createEditorInstance();
         /** @brief RHI 교체 뒤 에디터를 다시 세웁니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateEditorInstance( void* pEditorModule );
 
     private:
-        EditorAPI    _editorApi;
+        EditorAPI    _editorAPI;
         EditorHandle _editor;
 
         uint8                  _bEnableEditor       : 1;

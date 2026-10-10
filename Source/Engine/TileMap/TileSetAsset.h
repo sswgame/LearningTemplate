@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @struct TileVisual
@@ -108,7 +108,7 @@ namespace sw
         /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief XML 본문을 읽습니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
         /** @brief 아틀라스 텍스처 경로입니다. */
         const string& getAtlasPath() const { return _atlasPath; }
@@ -135,7 +135,7 @@ namespace sw
 
     private:
         /** @brief 노드의 `cell` 또는 `frames` · `fps` 를 읽습니다. 둘 다 없으면 @p bRequired 일 때 오류입니다. */
-        [[nodiscard]] bool parseVisual( const XmlNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
+        [[nodiscard]] bool parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
 
         string            _atlasPath;
         string            _normalAtlasPath;

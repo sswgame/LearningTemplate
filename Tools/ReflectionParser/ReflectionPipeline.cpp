@@ -89,7 +89,7 @@ namespace sw
                         const pair<uint8, const utf8*> arrFlag[] = {
                             {       prop._bReadOnly,        "ReadOnly"},
                             {      prop._bTransient,       "Transient"},
-                            {   prop._bXmlAttribute,    "XmlAttribute"},
+                            {   prop._bXMLAttribute,    "XMLAttribute"},
                             {    prop._bPolymorphic,     "Polymorphic"},
                             {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
                             {prop._bHideInInspector, "HideInInspector"},

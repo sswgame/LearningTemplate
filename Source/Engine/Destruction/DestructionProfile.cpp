@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/CharacterDataReader.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
             static constexpr const utf8* kArrNetworkAttribute[] = { "poseRate" };
 
             /** @brief 같은 원소가 두 번 나오면 오류입니다(뒤 것이 앞 것을 조용히 덮지 않게). */
-            static bool claimElement( const XmlNode& node, CharacterDataReader& reader, uint8& inoutSeen )
+            static bool claimElement( const XMLNode& node, CharacterDataReader& reader, uint8& inoutSeen )
             {
                 if ( inoutSeen != SW_FALSE )
                 {
@@ -65,12 +65,12 @@ namespace sw
         return _listStrainThreshold[MathUtil::min( static_cast<size_t>( depth ), _listStrainThreshold.size() - 1 )];
     }
 
-    bool DestructionProfile::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool DestructionProfile::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = DestructionProfile{};
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "DestructionProfile", root ) )
             readRoot( root, reader );
         if ( reader.hasError() )
@@ -82,8 +82,8 @@ namespace sw
     {
         *this = DestructionProfile{};
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "DestructionProfile", root ) )
             readRoot( root, reader );
         if ( reader.hasError() )
@@ -91,7 +91,7 @@ namespace sw
         return reader.finish();
     }
 
-    void DestructionProfile::readRoot( const XmlNode& root, CharacterDataReader& reader )
+    void DestructionProfile::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         using Internal = DestructionProfileInternal;
         reader.reportUnknownAttributes( root, Internal::kArrRootAttribute );
@@ -102,7 +102,7 @@ namespace sw
         uint8 bImpactSeen  = SW_FALSE;
         uint8 bDebrisSeen  = SW_FALSE;
         uint8 bNetworkSeen = SW_FALSE;
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Strain", true ) )
             {

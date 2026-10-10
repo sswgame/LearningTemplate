@@ -35,10 +35,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @enum ProfilerGpuApi
+     * @enum ProfilerGraphicsAPI
      * @brief GPU 구간을 낸 그래픽스 API 입니다. 뷰어가 큐 이름 옆에 보여 줍니다.
      */
-    enum class ProfilerGpuApi : uint8
+    enum class ProfilerGraphicsAPI : uint8
     {
         Direct3D11,
         Direct3D12,
@@ -94,7 +94,7 @@ namespace sw
          * @brief GPU 큐 하나의 타임라인을 엽니다. @p gpuNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역의 나노초)입니다.
          * @return 컨텍스트 번호. 만들 수 없으면 `kInvalidGpuContext`.
          */
-        virtual uint32 createGpuContext( ProfilerGpuApi api, const utf8* pName, int64 gpuNanos ) = 0;
+        virtual uint32 createGpuContext( ProfilerGraphicsAPI api, const utf8* pName, int64 gpuNanos ) = 0;
         /** @brief GPU 시계와 CPU 시계를 다시 맞춥니다. @p gpuNanos 는 **지금** GPU 시계입니다(시계가 서로 흐르는 만큼을 지웁니다). */
         virtual void syncGpuClock( uint32 gpuContext, int64 gpuNanos ) = 0;
         /** @brief GPU 구간을 엽니다. 안쪽 구간은 바깥 구간이 닫히기 전에 열고 닫습니다(트리). */

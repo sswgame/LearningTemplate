@@ -224,7 +224,7 @@ int32 main( int32 argc, utf8* argv[] )
     const LoadBotMetrics& metrics   = runner.getMetrics();
     const int64           elapsedMs = runner.getElapsedMs();
     Internal::logLines( metrics.formatTable( elapsedMs ) );
-    if ( options._reportPath.empty() == false && FileUtil::writeTextFile( options._reportPath, metrics.formatJson( runner.getScenario(), elapsedMs ) ) == false )
+    if ( options._reportPath.empty() == false && FileUtil::writeTextFile( options._reportPath, metrics.formatJSON( runner.getScenario(), elapsedMs ) ) == false )
         SW_LOG_ERROR( "OnlineLoadBot: cannot write report '%#'", options._reportPath );
     runner.shutdown();
     localServer.shutdown();

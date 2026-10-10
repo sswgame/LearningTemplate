@@ -12,12 +12,12 @@ namespace sw
     {
     }
 
-    bool TileMap::loadFromXml( string_view assetRelativePath )
+    bool TileMap::loadFromXML( string_view assetRelativePath )
     {
         clear();
         _data._sourcePath = assetRelativePath;
 
-        TileMapXmlData xmlData{};
+        TileMapXMLData xmlData{};
         if ( xmlData.load( assetRelativePath ) == false )
             return false;
 
@@ -26,24 +26,24 @@ namespace sw
         return true;
     }
 
-    bool TileMap::saveToXml( string_view assetRelativePath ) const
+    bool TileMap::saveToXML( string_view assetRelativePath ) const
     {
         return _data.save( assetRelativePath );
     }
 
     void TileMap::clear()
     {
-        _data = TileMapXmlData{};
+        _data = TileMapXMLData{};
         rebuildWarpIndex();
     }
 
     void TileMap::resize( int32 width, int32 height )
     {
-        // 크기 상한은 `TileMapXmlData` 가 기준이다. 로더 · 에디터(`TileMapPanel::resize`)가 같은 것을 본다.
+        // 크기 상한은 `TileMapXMLData` 가 기준이다. 로더 · 에디터(`TileMapPanel::resize`)가 같은 것을 본다.
         if ( _data.resetTiles( width, height ) == false )
         {
             SW_LOG_WARNING( "TileMap resize %#x%# is beyond the supported tile count (%#)",
-                            width, height, TileMapXmlData::kMaxTileCount );
+                            width, height, TileMapXMLData::kMaxTileCount );
             return;
         }
         rebuildWarpIndex();

@@ -7,14 +7,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Common/EngineParallel.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -50,10 +50,10 @@ namespace sw
 
 namespace sw
 {
-    bool AnimationCrowdSettings::parseJson( string_view json, string_view sourceLabel )
+    bool AnimationCrowdSettings::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = AnimationCrowdSettings{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#': malformed JSON", sourceLabel );
@@ -74,16 +74,16 @@ namespace sw
             *this = AnimationCrowdSettings{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool AnimationCrowdSettings::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool AnimationCrowdSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, sourceLabel ) == false )
             return false;
-        const JsonValue variations = root.get( "variations_per_clip" );
-        const JsonValue keep       = root.get( "bucket_keep_seconds" );
-        const JsonValue frameRate  = root.get( "vertex_animation_frames_per_second" );
+        const JSONValue variations = root.get( "variations_per_clip" );
+        const JSONValue keep       = root.get( "bucket_keep_seconds" );
+        const JSONValue frameRate  = root.get( "vertex_animation_frames_per_second" );
         if ( variations.isNumber() == false || keep.isNumber() == false || frameRate.isNumber() == false || variations.asInt( 0 ) < 1 || frameRate.asFloat() <= 0.0 )
         {
             SW_LOG_ERROR( "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds and vertex_animation_frames_per_second (> 0) are required",

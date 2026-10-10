@@ -9,12 +9,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 손전등 수치입니다. 각은 원뿔의 절반(도)입니다. */
     struct GhostFlashlightSettings
@@ -128,9 +128,9 @@ namespace sw
      *        <Furniture id="dresser" room="foyer" loot="dresserLoot" search="Shake"/><Boo id="booA" room="foyer" furniture="dresser" hp="30" escapeTime="5"/></GhostHunt>`
      *        를 읽습니다.
      */
-    class SW_GF_API GhostCatalog : public XmlCatalog<GhostCatalog>
+    class SW_GF_API GhostCatalog : public XMLCatalog<GhostCatalog>
     {
-        friend class XmlCatalog<GhostCatalog>;
+        friend class XMLCatalog<GhostCatalog>;
 
     public:
         GhostCatalog();
@@ -148,8 +148,8 @@ namespace sw
         int32                            findBooIndex( const hashed_string& id ) const { return _booCatalog.findIndex( id ); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "GhostHunt"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "GhostHunt"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GhostFlashlightSettings        _flashlight;
         GhostVacuumSettings            _vacuum;

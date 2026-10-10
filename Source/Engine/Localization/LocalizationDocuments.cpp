@@ -6,7 +6,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
         {
             /** @brief @p value 객체의 칸이 모두 @p arrKnown 안에 있는지 봅니다. 모르는 칸이면 이름을 적고 false 입니다. */
             template <size_t N>
-            static bool hasOnlyKnownFields( const JsonValue& value, const utf8* const ( &arrKnown )[N], string& outUnknown )
+            static bool hasOnlyKnownFields( const JSONValue& value, const utf8* const ( &arrKnown )[N], string& outUnknown )
             {
                 for ( const string& fieldName : value.getMemberNames() )
                 {
@@ -34,7 +34,7 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readStringList( const JsonValue& value, vector<string>& outList )
+            [[nodiscard]] static bool readStringList( const JSONValue& value, vector<string>& outList )
             {
                 outList.clear();
                 if ( value.isValid() == false )
@@ -43,7 +43,7 @@ namespace sw
                     return false;
                 for ( size_t index = 0; index < value.size(); ++index )
                 {
-                    const JsonValue element = value.at( index );
+                    const JSONValue element = value.at( index );
                     if ( element.isString() == false )
                         return false;
                     outList.push_back( element.asString() );
@@ -51,9 +51,9 @@ namespace sw
                 return true;
             }
 
-            static void writeStringList( const JsonValue& parent, const utf8* pName, const vector<string>& listValue )
+            static void writeStringList( const JSONValue& parent, const utf8* pName, const vector<string>& listValue )
             {
-                const JsonValue arrayValue = parent.set( pName, false );
+                const JSONValue arrayValue = parent.set( pName, false );
                 arrayValue.setArray();
                 for ( const string& value : listValue )
                 {
@@ -62,14 +62,14 @@ namespace sw
             }
 
             /** @brief 문서 머리(`culture` · `entries`)를 읽습니다. */
-            [[nodiscard]] static bool readHeader( JsonDocument& document, string_view jsonText, string_view sourceName, string& outCulture, JsonValue& outEntries, string& outError )
+            [[nodiscard]] static bool readHeader( JSONDocument& document, string_view jsonText, string_view sourceName, string& outCulture, JSONValue& outEntries, string& outError )
             {
                 if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
                 {
                     outError = document.getLastError();
                     return false;
                 }
-                const JsonValue root = document.getRoot();
+                const JSONValue root = document.getRoot();
                 if ( root.isObject() == false )
                 {
                     outError = string( sourceName ) + ": root must be an object";
@@ -151,12 +151,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // SourceStringTable
     // ------------------------------------------------------------------------------
-    bool SourceStringTable::loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool SourceStringTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
     {
         string       error;
-        JsonDocument document;
+        JSONDocument document;
         string       culture;
-        JsonValue    entries;
+        JSONValue    entries;
         if ( LocalizationDocumentsInternal::readHeader( document, jsonText, sourceName, culture, entries, error ) == false )
         {
             if ( pOutError != nullptr )
@@ -167,14 +167,14 @@ namespace sw
         map<string, SourceTextEntry> mapEntry;
         for ( const string& key : entries.getMemberNames() )
         {
-            const JsonValue value = entries.get( key, false );
+            const JSONValue value = entries.get( key, false );
             string          unknown;
             if ( value.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( value, kArrEntryField, unknown ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' " + ( unknown.empty() ? "must be an object" : "has unknown field '" + unknown + "'" );
                 break;
             }
-            const JsonValue source = value.get( "source", false );
+            const JSONValue source = value.get( "source", false );
             if ( source.isString() == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' needs a \"source\" string";
@@ -206,19 +206,19 @@ namespace sw
     bool SourceStringTable::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJsonText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
     }
 
-    string SourceStringTable::toJsonText() const
+    string SourceStringTable::toJSONText() const
     {
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         root.set( "culture", false ).setString( _culture );
-        const JsonValue entries = root.set( "entries", false );
+        const JSONValue entries = root.set( "entries", false );
         entries.setObject();
         for ( const auto& [key, entry] : _mapEntry )
         {
-            const JsonValue value = entries.set( key, false );
+            const JSONValue value = entries.set( key, false );
             value.setObject();
             value.set( "source", false ).setString( entry._source );
             if ( entry._context.empty() == false )
@@ -235,7 +235,7 @@ namespace sw
 
     bool SourceStringTable::saveToFile( string_view absolutePath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJsonText() );
+        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJSONText() );
     }
 
     const SourceTextEntry* SourceStringTable::findEntry( string_view key ) const
@@ -262,12 +262,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // TranslationTable
     // ------------------------------------------------------------------------------
-    bool TranslationTable::loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool TranslationTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
     {
         string       error;
-        JsonDocument document;
+        JSONDocument document;
         string       culture;
-        JsonValue    entries;
+        JSONValue    entries;
         if ( LocalizationDocumentsInternal::readHeader( document, jsonText, sourceName, culture, entries, error ) == false )
         {
             if ( pOutError != nullptr )
@@ -278,14 +278,14 @@ namespace sw
         map<string, TranslationEntry> mapEntry;
         for ( const string& key : entries.getMemberNames() )
         {
-            const JsonValue value = entries.get( key, false );
+            const JSONValue value = entries.get( key, false );
             string          unknown;
             if ( value.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( value, kArrEntryField, unknown ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' " + ( unknown.empty() ? "must be an object" : "has unknown field '" + unknown + "'" );
                 break;
             }
-            const JsonValue text = value.get( "text", false );
+            const JSONValue text = value.get( "text", false );
             if ( text.isString() == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' needs a \"text\" string";
@@ -295,7 +295,7 @@ namespace sw
             entry._text               = text.asString();
             entry._translatorComment  = value.get( "translatorComment", false ).asString();
             entry._bReview            = value.get( "review", false ).asBool( false );
-            const JsonValue hashValue = value.get( "sourceHash", false );
+            const JSONValue hashValue = value.get( "sourceHash", false );
             if ( hashValue.isValid() && LocalizationTextUtil::tryParseSourceHash( hashValue.asString(), entry._sourceHash ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' sourceHash must be 16 hex digits";
@@ -317,19 +317,19 @@ namespace sw
     bool TranslationTable::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJsonText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
     }
 
-    string TranslationTable::toJsonText() const
+    string TranslationTable::toJSONText() const
     {
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         root.set( "culture", false ).setString( _culture );
-        const JsonValue entries = root.set( "entries", false );
+        const JSONValue entries = root.set( "entries", false );
         entries.setObject();
         for ( const auto& [key, entry] : _mapEntry )
         {
-            const JsonValue value = entries.set( key, false );
+            const JSONValue value = entries.set( key, false );
             value.setObject();
             value.set( "text", false ).setString( entry._text );
             if ( entry._sourceHash != 0 )
@@ -344,7 +344,7 @@ namespace sw
 
     bool TranslationTable::saveToFile( string_view absolutePath ) const
     {
-        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJsonText() );
+        return LocalizationDocumentsInternal::writeTextFile( absolutePath, toJSONText() );
     }
 
     const TranslationEntry* TranslationTable::findEntry( string_view key ) const
@@ -384,13 +384,13 @@ namespace sw
     // ------------------------------------------------------------------------------
     // LocalizationProject
     // ------------------------------------------------------------------------------
-    bool LocalizationProject::loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool LocalizationProject::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
     {
-        JsonDocument document;
+        JSONDocument document;
         string       error;
         if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
             error = document.getLastError();
-        const JsonValue              root            = document.getRoot();
+        const JSONValue              root            = document.getRoot();
         static constexpr const utf8* kArrRootField[] = { "name", "sourceCulture", "cultures", "stringTables", "codeRoots", "assetRoots", "assetRules" };
         string                       unknown;
         if ( error.empty() && ( root.isObject() == false || LocalizationDocumentsInternal::hasOnlyKnownFields( root, kArrRootField, unknown ) == false ) )
@@ -405,13 +405,13 @@ namespace sw
                                     LocalizationDocumentsInternal::readStringList( root.get( "stringTables", false ), loaded._listStringTable ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "codeRoots", false ), loaded._listCodeRoot ) &&
                                     LocalizationDocumentsInternal::readStringList( root.get( "assetRoots", false ), loaded._listAssetRoot );
-            const JsonValue rules = root.get( "assetRules", false );
+            const JSONValue rules = root.get( "assetRules", false );
             if ( rules.isValid() && rules.isArray() == false )
                 error = string( sourceName ) + ": assetRules must be an array";
             static constexpr const utf8* kArrRuleField[] = { "files", "elements", "attribute", "kind", "context" };
             for ( size_t ruleIndex = 0; error.empty() && rules.isArray() && ruleIndex < rules.size(); ++ruleIndex )
             {
-                const JsonValue       ruleValue = rules.at( ruleIndex );
+                const JSONValue       ruleValue = rules.at( ruleIndex );
                 LocalizationAssetRule rule;
                 const bool            bShape = ruleValue.isObject() && LocalizationDocumentsInternal::hasOnlyKnownFields( ruleValue, kArrRuleField, unknown ) &&
                                     LocalizationDocumentsInternal::readStringList( ruleValue.get( "elements", false ), rule._listElement );
@@ -450,7 +450,7 @@ namespace sw
     bool LocalizationProject::loadFromFile( string_view absolutePath, string* pOutError )
     {
         string text;
-        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJsonText( text, absolutePath, pOutError );
+        return LocalizationDocumentsInternal::readTextFile( absolutePath, text, pOutError ) && loadFromJSONText( text, absolutePath, pOutError );
     }
 
     string LocalizationProject::makeSiblingPath( string_view projectPath, string_view fileName )

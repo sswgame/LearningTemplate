@@ -30,7 +30,7 @@ namespace sw
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct ModuleHostInternal
         {
-            static constexpr ModuleApiSymbols kGameSymbols{ "getGameModuleAbiVersion", "getGameModuleAbiStamp", "exportGameApi", "Game" };
+            static constexpr ModuleAPISymbols kGameSymbols{ "getGameModuleAbiVersion", "getGameModuleAbiStamp", "exportGameAPI", "Game" };
         };
     } // namespace
 } // namespace sw
@@ -41,7 +41,7 @@ namespace sw
 
     ModuleHost::ModuleHost()
         : _moduleCompiler{ nullptr }
-        , _gameApi{}
+        , _gameAPI{}
         , _game{ nullptr }
         , _pLiveReloadManager{ nullptr }
         , _pRHI{ nullptr }
@@ -219,15 +219,15 @@ namespace sw
     void ModuleHost::updateGame( float32 deltaTime )
     {
         SW_MEMORY_SCOPE( Game );
-        if ( _game != nullptr && _gameApi.update != nullptr && _frameState._bGameplayActive == SW_TRUE )
-            _gameApi.update( _game, deltaTime );
+        if ( _game != nullptr && _gameAPI.update != nullptr && _frameState._bGameplayActive == SW_TRUE )
+            _gameAPI.update( _game, deltaTime );
     }
 
     void ModuleHost::fixedUpdateGame( float32 fixedDeltaTime )
     {
         SW_MEMORY_SCOPE( Game );
-        if ( _game != nullptr && _gameApi.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE )
-            _gameApi.fixedUpdate( _game, fixedDeltaTime );
+        if ( _game != nullptr && _gameAPI.fixedUpdate != nullptr && _frameState._bGameplayActive == SW_TRUE )
+            _gameAPI.fixedUpdate( _game, fixedDeltaTime );
     }
 
     // ======================================================================
@@ -244,14 +244,14 @@ namespace sw
         SW_MEMORY_SCOPE( Game );
 #if defined( SW_SHIPPING )
         (void)pLibraryModule;
-        if ( _gameApi.create == nullptr && bindGameApi( nullptr ) == false )
+        if ( _gameAPI.create == nullptr && bindGameAPI( nullptr ) == false )
             return;
 #else
         void* pModuleHandle = pLibraryModule;
         if ( pModuleHandle == nullptr && _pLiveReloadManager != nullptr )
             pModuleHandle = _pLiveReloadManager->getModuleHandle( sw::config::kTargetGameModule );
 
-        if ( bindGameApi( pModuleHandle ) == false )
+        if ( bindGameAPI( pModuleHandle ) == false )
         {
             markReloadGraphBroken( "GameAPI bind failed after reload" );
             return;
@@ -260,7 +260,7 @@ namespace sw
 
         if ( createGameInstance() == false )
         {
-            _gameApi = {};
+            _gameAPI = {};
             markReloadGraphBroken( "Game create/initialize failed after reload" );
             return;
         }
@@ -313,7 +313,7 @@ namespace sw
     bool ModuleHost::isGameImageUsable( void* pLibraryModule ) const
     {
         GameAPI api{};
-        if ( ModuleInstanceUtil::exportApiFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, api ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, api ) == false )
             return false;
         return api.create != nullptr && api.destroy != nullptr;
     }
@@ -353,7 +353,7 @@ namespace sw
         SW_LOG_ERROR( "Game module faulted after the reload (code 0x%#) — the game is off; fix it and rebuild, the next reload restores the %# byte snapshot (scene saving is blocked until then)",
                       Fmt( faultCode, Format( 8, Format::Padding::Zero ).hex() ), static_cast<uint64>( _listGameSavedState.size() ) );
         _game    = nullptr;
-        _gameApi = {};
+        _gameAPI = {};
     }
 
     void ModuleHost::markReloadGraphBroken( const utf8* pReason )
@@ -370,35 +370,35 @@ namespace sw
     // API 바인딩
     // ======================================================================
 
-    bool ModuleHost::bindGameApi( void* pLibraryModule )
+    bool ModuleHost::bindGameAPI( void* pLibraryModule )
     {
-        _gameApi = {};
+        _gameAPI = {};
 #if defined( SW_SHIPPING )
         (void)pLibraryModule;
-        if ( exportGameApi( &_gameApi ) == false )
+        if ( exportGameAPI( &_gameAPI ) == false )
         {
             SW_LOG_ERROR( "Failed to bind GameAPI (shipping)" );
             return false;
         }
 #else
         // Shipping 은 게임을 정적으로 링크하므로(위 분기) 테이블이 어긋날 수 없다. 대조는 동적 경로에서만 한다.
-        if ( ModuleInstanceUtil::exportApiFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, _gameApi ) == false )
+        if ( ModuleInstanceUtil::exportAPIFromImage<GameAPI, PFN_ExportGameAPI>( pLibraryModule, ModuleHostInternal::kGameSymbols, _gameAPI ) == false )
             return false;
 #endif
 
         rebindGameService();
 
         engine::registerModuleTypes( sw::config::kTargetGameModule );
-        return _gameApi.create != nullptr && _gameApi.destroy != nullptr;
+        return _gameAPI.create != nullptr && _gameAPI.destroy != nullptr;
     }
 
-    void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseApiTable )
+    void ModuleHost::suspendModules( ModuleScope scope, bool bReleaseAPITable )
     {
         // 종료 · RHI 교체 · 에디터 리로드에는 게임 상태를 넘겨받을 새 게임 이미지가 없다 — 찍기 실패가 내리기를 막지 않는다.
-        (void)suspendModulesInternal( scope, bReleaseApiTable, false );
+        (void)suspendModulesInternal( scope, bReleaseAPITable, false );
     }
 
-    bool ModuleHost::suspendModulesInternal( ModuleScope scope, bool bReleaseApiTable, bool bKeepGameOnCaptureFailure )
+    bool ModuleHost::suspendModulesInternal( ModuleScope scope, bool bReleaseAPITable, bool bKeepGameOnCaptureFailure )
     {
         drainRenderWorkers();
 
@@ -413,20 +413,20 @@ namespace sw
             return false;
         if ( bSuspendHostModule )
         {
-            suspendHostModule( bReleaseApiTable );
+            suspendHostModule( bReleaseAPITable );
             // 멈춤 창구가 없던 호스트 모듈이라도 월드가 플레이 중으로 남지 않게 한다. 호스트 모듈 없이 다시 돌면 beginFrame 이 다시 켠다.
             if ( engine::areEngineServicesBound() && engine::getSceneManager().isWorldPlaying() )
                 engine::getSceneManager().setWorldPlaying( false );
         }
         if ( bSuspendGame )
-            destroyGameInstance( bReleaseApiTable );
+            destroyGameInstance( bReleaseAPITable );
         return true;
     }
 
 #if !defined( SW_SHIPPING )
-    void ModuleHost::attachGameInstance( const GameAPI& gameApi, GameHandle game )
+    void ModuleHost::attachGameInstance( const GameAPI& gameAPI, GameHandle game )
     {
-        _gameApi = gameApi;
+        _gameAPI = gameAPI;
         _game    = game;
     }
 #endif
@@ -445,17 +445,17 @@ namespace sw
 
     bool ModuleHost::captureGameState()
     {
-        if ( _game == nullptr || _gameApi.serializeState == nullptr )
+        if ( _game == nullptr || _gameAPI.serializeState == nullptr )
             return true;
 
         uint32 size{ 0 };
-        if ( _gameApi.serializeState( _game, nullptr, &size ) == false )
+        if ( _gameAPI.serializeState( _game, nullptr, &size ) == false )
             return false;
         if ( size == 0 )
             return true;
 
         vector<uint8> tempState( size );
-        if ( _gameApi.serializeState( _game, tempState.data(), &size ) == false )
+        if ( _gameAPI.serializeState( _game, tempState.data(), &size ) == false )
             return false;
         _listGameSavedState = std::move( tempState );
         return true;
@@ -466,14 +466,14 @@ namespace sw
         if ( _game == nullptr )
             return;
         // 되돌릴 것이 없으면(상태 직렬화가 없는 게임 · 스냅숏이 비었다) 막을 이유도 없다.
-        if ( _gameApi.deserializeState == nullptr || _listGameSavedState.empty() )
+        if ( _gameAPI.deserializeState == nullptr || _listGameSavedState.empty() )
         {
             if ( engine::areEngineServicesBound() )
                 engine::getSceneManager().setSaveBlockReason( {} );
             return;
         }
 
-        if ( _gameApi.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
+        if ( _gameAPI.deserializeState( _game, _listGameSavedState.data(), static_cast<uint32>( _listGameSavedState.size() ) ) )
         {
             SW_LOG_INFO( "Scene object state restored from %zu bytes.", _listGameSavedState.size() );
             _listGameSavedState.clear();
@@ -488,7 +488,7 @@ namespace sw
 
     bool ModuleHost::recreateGameInstance( void* pGameModule )
     {
-        if ( _gameApi.create == nullptr || _gameApi.initialize == nullptr )
+        if ( _gameAPI.create == nullptr || _gameAPI.initialize == nullptr )
         {
 #if defined( SW_SHIPPING )
             (void)pGameModule;
@@ -527,21 +527,21 @@ namespace sw
 
     void ModuleHost::rebindGameService()
     {
-        if ( _gameApi.bindService == nullptr )
+        if ( _gameAPI.bindService == nullptr )
             return;
 
         ModuleService gameService{};
         fillModuleService( gameService, true );
-        _gameApi.bindService( &gameService );
+        _gameAPI.bindService( &gameService );
     }
 
-    void ModuleHost::destroyGameInstance( bool bReleaseApiTable )
+    void ModuleHost::destroyGameInstance( bool bReleaseAPITable )
     {
-        ModuleInstanceUtil::destroyInstance( _gameApi, _game, bReleaseApiTable, sw::config::kTargetGameModule );
+        ModuleInstanceUtil::destroyInstance( _gameAPI, _game, bReleaseAPITable, sw::config::kTargetGameModule );
 #if !defined( SW_SHIPPING )
         // 게임 컴포넌트를 모든 씬에서 걷어 냈다. 되돌릴 때까지(`restoreGameState`) 씬을 저장하면 그것들이 빠진 채 저장된다 — 리로드가 실패 ·
         // 중단되면 되돌리는 쪽이 오지 않으므로 여기서 막는다.
-        if ( bReleaseApiTable && engine::areEngineServicesBound() )
+        if ( bReleaseAPITable && engine::areEngineServicesBound() )
             engine::getSceneManager().setSaveBlockReason( "the game module's components were removed for a reload and have not been restored yet" );
 #endif
     }
@@ -550,6 +550,6 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Game );
         // RHI 를 받은 호스트(App)는 디바이스가 있어야 만든다. 전용 서버는 RHI 가 없고 게임을 디바이스 없이 만든다.
-        return ModuleInstanceUtil::createInstance( _gameApi, _game, _pWindow, _pRHI, _pRHI != nullptr, "Game" );
+        return ModuleInstanceUtil::createInstance( _gameAPI, _game, _pWindow, _pRHI, _pRHI != nullptr, "Game" );
     }
 } // namespace sw

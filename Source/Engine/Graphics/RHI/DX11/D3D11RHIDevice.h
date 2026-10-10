@@ -58,7 +58,7 @@ namespace sw
         uint32                 _boundMeshOffset{ 0 };
         RHIBufferHandle        _boundInstanceSlotVb{ 0 }; ///< 슬롯 1: 인스턴스 슬롯 스트림 (0 = 안 걸림)
         uint32                 _boundInstanceSlotOffset{ 0 };
-        RHIPipelineStateHandle _activeGraphicsPso{ 0 };
+        RHIPipelineStateHandle _activeGraphicsPSO{ 0 };
         /**
          * @brief CS UAV 슬롯마다 지금 걸려 있는 버퍼입니다(0 = 없음).
          * @details D3D11 은 같은 리소스를 출력(UAV)과 입력(SRV)에 동시에 걸 수 없습니다. UAV 를 안 떼면

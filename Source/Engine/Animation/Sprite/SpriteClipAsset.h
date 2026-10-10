@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /**
      * @struct SpriteClipFrame
@@ -93,9 +93,9 @@ namespace sw
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief JSON 본문을 읽습니다. 구문이 틀렸거나 루트가 객체가 아니면 false 이고 내용은 비어 있습니다. */
-        [[nodiscard]] bool parseJson( string_view json );
+        [[nodiscard]] bool parseJSON( string_view json );
         /** @brief JSON 본문을 만듭니다(들여쓰기 2). 애니메이션이 없으면 "animations" 키를 쓰지 않습니다(그 키가 없는 파일과 바이트까지 같습니다). */
-        string toJson() const;
+        string toJSON() const;
         /** @brief 내용을 비웁니다. */
         void clear();
 
@@ -131,6 +131,6 @@ namespace sw
 
     private:
         /** @brief 파싱된 루트에서 내용을 읽습니다. 루트가 객체가 아니면 false 입니다. */
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw

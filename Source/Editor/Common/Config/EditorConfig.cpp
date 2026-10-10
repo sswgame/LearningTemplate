@@ -7,7 +7,7 @@
 #include "Editor/Common/EditorUtil.h"
 
 #include "Engine/Config/ConfigManager.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -53,7 +53,7 @@ namespace sw::editor
         const string    configPath = EditorUtil::resolveProjectRelativePath( config::kFileRuntimeEditorConfig );
 
         FileUtil::ensureParentDirectoryExists( configPath );
-        if ( pTypeInfo != nullptr && JsonSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
+        if ( pTypeInfo != nullptr && JSONSerializer::saveFile( configPath, &s_activeEditorConfig, *pTypeInfo ) )
             SW_LOG_TRACE( "EditorConfig saved to file (%#)", configPath.c_str() );
         else
             SW_LOG_WARNING( "Failed to save EditorConfig to %#", configPath.c_str() );

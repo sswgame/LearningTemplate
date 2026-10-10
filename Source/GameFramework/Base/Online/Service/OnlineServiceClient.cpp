@@ -126,7 +126,7 @@ namespace sw
         if ( _bSharedEndpoint == SW_FALSE )
         {
             if ( _settings._transportSettings._ioThreadCount == 0 )
-                (void)_pTransport->pollIo( 0 );
+                (void)_pTransport->pollIO( 0 );
             (void)_pEndpoint->pump( *this );
             _pRequestClient->update();
             if ( _state == OnlineClientState::Disconnected && nowMs >= _nextConnectMs )

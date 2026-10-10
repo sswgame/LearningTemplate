@@ -20,7 +20,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kJrpgCatalogXml = R"(
+    constexpr const utf8* kJrpgCatalogXML = R"(
 <JrpgCatalog>
   <ExperienceCurve base="10" exponent="1" linear="0" maxLevel="50"/>
   <Class id="hero" hp="30" mp="5" str="12" agi="8" vit="10" intellect="5" luck="5" growHp="6" growMp="2" growStr="3" growAgi="2" growVit="2" growIntellect="1" growLuck="1" attackType="Sword">
@@ -53,7 +53,7 @@ namespace
 </JrpgCatalog>
 )";
 
-    constexpr const utf8* kJrpgItemXml = R"(
+    constexpr const utf8* kJrpgItemXML = R"(
 <ItemCatalog>
   <Item id="copper_sword" category="Weapon" slot="Weapon" maxStack="1" value="100"><Stats attack="12"/></Item>
   <Item id="book_of_satori" category="Key" maxStack="1" value="0"/>
@@ -61,7 +61,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kJrpgShopXml = R"(
+    constexpr const utf8* kJrpgShopXML = R"(
 <ShopCatalog><Shop id="aliahan" currency="Gold"><Stock item="copper_sword" price="100"/><Stock item="herb" price="8"/></Shop></ShopCatalog>
 )";
 
@@ -103,8 +103,8 @@ namespace
             window._lateWidth  = 0.08f;
             listWindow.push_back( window );
             _judge.setWindows( listWindow );
-            return _catalog.loadFromXmlText( kJrpgCatalogXml, "ClassicJrpgTest" ) && _itemCatalog.loadFromXmlText( kJrpgItemXml, "ClassicJrpgTest" ) &&
-                   _shopCatalog.loadFromXmlText( kJrpgShopXml, "ClassicJrpgTest" );
+            return _catalog.loadFromXMLText( kJrpgCatalogXML, "ClassicJrpgTest" ) && _itemCatalog.loadFromXMLText( kJrpgItemXML, "ClassicJrpgTest" ) &&
+                   _shopCatalog.loadFromXMLText( kJrpgShopXML, "ClassicJrpgTest" );
         }
 
         /** @brief 파티가 빌릴 공유 상태 — 부를 때마다 가방 · 지갑을 새로 엽니다. */

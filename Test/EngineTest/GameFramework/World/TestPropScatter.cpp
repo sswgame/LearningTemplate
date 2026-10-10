@@ -176,7 +176,7 @@ SW_TEST_CASE( PropScatterTest, SceneStateFillsTheParams )
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Trees" ) );
     SW_ASSERT_NOT_NULL( pObject );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pObject, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pObject, xml ) );
     const PropScatterComponent* pScatter = pObject->getComponent<PropScatterComponent>();
     SW_ASSERT_NOT_NULL( pScatter );
 

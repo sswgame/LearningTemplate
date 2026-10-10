@@ -6,9 +6,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -62,10 +62,10 @@ namespace sw
 
 namespace sw
 {
-    bool LipSyncSettings::parseJson( string_view json, string_view sourceLabel )
+    bool LipSyncSettings::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = LipSyncSettings{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Lip sync settings '%#': malformed JSON", sourceLabel );
@@ -86,15 +86,15 @@ namespace sw
             *this = LipSyncSettings{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool LipSyncSettings::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool LipSyncSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "frame_rate", "silence_rms", "full_rms", "sharpness", "fallback_viseme", "bands", "visemes" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "silence_rms", "full_rms", "sharpness", "fallback_viseme", "bands", "visemes" }, sourceLabel ) == false )
             return false;
-        const JsonValue bands    = root.get( "bands" );
-        const JsonValue visemes  = root.get( "visemes" );
+        const JSONValue bands    = root.get( "bands" );
+        const JSONValue visemes  = root.get( "visemes" );
         const bool      bScalars = root.get( "frame_rate" ).isNumber() && root.get( "silence_rms" ).isNumber() && root.get( "full_rms" ).isNumber() &&
                               root.get( "sharpness" ).isNumber() && root.get( "fallback_viseme" ).isString();
         if ( bScalars == false || bands.isArray() == false || bands.size() != 3 || visemes.isArray() == false || visemes.size() < 2 )
@@ -114,7 +114,7 @@ namespace sw
         }
         for ( uint32 bandIndex = 0; bandIndex < 3; ++bandIndex )
         {
-            if ( AnimJsonUtil::readFloats( bands.at( bandIndex ), _arrBandRange[bandIndex], 2 ) == false || _arrBandRange[bandIndex][1] <= _arrBandRange[bandIndex][0] )
+            if ( AnimJSONUtil::readFloats( bands.at( bandIndex ), _arrBandRange[bandIndex], 2 ) == false || _arrBandRange[bandIndex][1] <= _arrBandRange[bandIndex][0] )
             {
                 SW_LOG_ERROR( "Lip sync settings '%#': band %# must be [low Hz, high Hz]", sourceLabel, bandIndex );
                 return false;
@@ -122,11 +122,11 @@ namespace sw
         }
         for ( size_t visemeIndex = 0; visemeIndex < visemes.size(); ++visemeIndex )
         {
-            const JsonValue viseme = visemes.at( visemeIndex );
-            if ( AnimJsonUtil::hasOnlyKnownKeys( viseme, { "name", "bands" }, sourceLabel ) == false )
+            const JSONValue viseme = visemes.at( visemeIndex );
+            if ( AnimJSONUtil::hasOnlyKnownKeys( viseme, { "name", "bands" }, sourceLabel ) == false )
                 return false;
             LipSyncViseme entry{};
-            if ( viseme.get( "name" ).isString() == false || AnimJsonUtil::readFloats( viseme.get( "bands" ), entry._arrBand, 3 ) == false )
+            if ( viseme.get( "name" ).isString() == false || AnimJSONUtil::readFloats( viseme.get( "bands" ), entry._arrBand, 3 ) == false )
             {
                 SW_LOG_ERROR( "Lip sync settings '%#': viseme %# needs a name and three band weights", sourceLabel, visemeIndex );
                 return false;
@@ -174,20 +174,20 @@ namespace sw
         }
     }
 
-    bool VisemeTrack::parseJson( string_view json, string_view sourceLabel )
+    bool VisemeTrack::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = VisemeTrack{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Viseme track '%#': malformed JSON", sourceLabel );
             return false;
         }
-        const JsonValue root = document.getRoot();
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
+        const JSONValue root = document.getRoot();
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "frame_rate", "visemes", "frames" }, sourceLabel ) == false )
             return false;
-        const JsonValue visemes = root.get( "visemes" );
-        const JsonValue frames  = root.get( "frames" );
+        const JSONValue visemes = root.get( "visemes" );
+        const JSONValue frames  = root.get( "frames" );
         if ( root.get( "frame_rate" ).isNumber() == false || visemes.isArray() == false || visemes.size() == 0 || frames.isArray() == false )
         {
             SW_LOG_ERROR( "Viseme track '%#' needs frame_rate, visemes and frames", sourceLabel );
@@ -201,7 +201,7 @@ namespace sw
         vector<float32> listFrame( _listViseme.size() );
         for ( size_t frameIndex = 0; frameIndex < frames.size(); ++frameIndex )
         {
-            if ( AnimJsonUtil::readFloats( frames.at( frameIndex ), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
+            if ( AnimJSONUtil::readFloats( frames.at( frameIndex ), listFrame.data(), static_cast<uint32>( listFrame.size() ) ) == false )
             {
                 SW_LOG_ERROR( "Viseme track '%#': frame %# must hold one weight per viseme", sourceLabel, frameIndex );
                 *this = VisemeTrack{};
@@ -221,27 +221,27 @@ namespace sw
             *this = VisemeTrack{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    string VisemeTrack::toJson() const
+    string VisemeTrack::toJSON() const
     {
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         root.set( "frame_rate" ).setFloat( static_cast<float64>( _frameRate ) );
-        const JsonValue visemes = root.set( "visemes" );
+        const JSONValue visemes = root.set( "visemes" );
         visemes.setArray();
         for ( const hashed_string& name : _listViseme )
         {
             visemes.pushBack().setString( name.c_str() );
         }
-        const JsonValue frames = root.set( "frames" );
+        const JSONValue frames = root.set( "frames" );
         frames.setArray();
         const uint32 visemeCount = getVisemeCount();
         for ( uint32 frameIndex = 0; frameIndex < getFrameCount(); ++frameIndex )
         {
             // 소수 셋째 자리로 줄인다 — 파일이 짧고 비교가 안정된다(가중치 정밀도로는 충분하다).
-            const JsonValue frame = frames.pushBack();
+            const JSONValue frame = frames.pushBack();
             frame.setArray();
             for ( uint32 visemeIndex = 0; visemeIndex < visemeCount; ++visemeIndex )
             {
@@ -256,7 +256,7 @@ namespace sw
     {
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 
     string VisemeTrack::makePathForAudio( string_view audioPath )

@@ -26,9 +26,9 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Base/StringPool.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
 #include "Engine/Utility/KeyValueFile.h"
 
@@ -84,14 +84,14 @@ namespace test
             // ---------------------------------------------------------------------------------------------------------
             // 대상 — 결과는 보지 않는다(퍼징이 보는 것은 죽음 · 단언 · 끝나지 않음이다)
             // ---------------------------------------------------------------------------------------------------------
-            static void runXml( const uint8* pData, size_t size )
+            static void runXML( const uint8* pData, size_t size )
             {
-                XmlDocument document;
+                sw::XMLDocument document;
                 (void)document.parse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
-            static void runJson( const uint8* pData, size_t size )
+            static void runJSON( const uint8* pData, size_t size )
             {
-                JsonDocument document;
+                JSONDocument document;
                 (void)document.tryParse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runKeyValue( const uint8* pData, size_t size )
@@ -131,13 +131,13 @@ namespace test
                     reader.close();
                 }
             }
-            static void runSceneXml( const uint8* pData, size_t size )
+            static void runSceneXML( const uint8* pData, size_t size )
             {
                 const string path = makeScratchPath( "scene.scene.xml" );
                 if ( FileUtil::writeFile( path, pData, size ) == false )
                     return;
                 SceneDocument document;
-                (void)document.loadXml( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)document.loadXML( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSceneBinary( const uint8* pData, size_t size )
             {
@@ -147,15 +147,15 @@ namespace test
                 SceneDocument document;
                 (void)document.loadBinary( path ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
-            static void runGameObjectXml( const uint8* pData, size_t size )
+            static void runGameObjectXML( const uint8* pData, size_t size )
             {
                 GameObject object( hashed_string( "FuzzObject" ) );
-                (void)ObjectStateSerializer::loadFromXmlString( &object, asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)ObjectStateSerializer::loadFromXMLString( &object, asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runMaterial( const uint8* pData, size_t size )
             {
                 const shared_ptr<Material> pMaterial = Material::create();
-                (void)pMaterial->loadFromXml( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)pMaterial->loadFromXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSockets( const uint8* pData, size_t size )
             {
@@ -164,52 +164,52 @@ namespace test
                 kinds.addKind( hashed_string( "GroundPoint" ) );
                 kinds.addKind( hashed_string( "HitboxCenter" ) );
                 SocketSet sockets;
-                (void)sockets.loadFromXmlText( asText( pData, size ), "fuzz.sockets.xml", kinds ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)sockets.loadFromXMLText( asText( pData, size ), "fuzz.sockets.xml", kinds ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runBodyShape( const uint8* pData, size_t size )
             {
                 BodyShapeSet shapes;
-                (void)shapes.loadFromXmlText( asText( pData, size ), "fuzz.bodyshape.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)shapes.loadFromXMLText( asText( pData, size ), "fuzz.bodyshape.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSurfaceChannels( const uint8* pData, size_t size )
             {
                 SurfaceChannelTable table;
-                (void)table.loadFromXmlText( asText( pData, size ), "fuzz.surfacechannels.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)table.loadFromXMLText( asText( pData, size ), "fuzz.surfacechannels.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runUserSettingsSchema( const uint8* pData, size_t size )
             {
                 UserSettingsSchema schema;
-                (void)schema.loadFromXmlText( asText( pData, size ), "fuzz.settings.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)schema.loadFromXMLText( asText( pData, size ), "fuzz.settings.xml" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSpriteClip( const uint8* pData, size_t size )
             {
                 SpriteClipAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runAnimGraph( const uint8* pData, size_t size )
             {
                 AnimGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDialogue( const uint8* pData, size_t size )
             {
                 DialogueGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSequence( const uint8* pData, size_t size )
             {
                 SequenceAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringTable( const uint8* pData, size_t size )
             {
                 SourceStringTable table;
-                (void)table.loadFromJsonText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)table.loadFromJSONText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runTileMap( const uint8* pData, size_t size )
             {
-                TileMapXmlData data;
-                (void)data.loadFromXml( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                TileMapXMLData data;
+                (void)data.loadFromXML( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringPool( const uint8* pData, size_t size )
             {
@@ -231,12 +231,12 @@ namespace test
             // ---------------------------------------------------------------------------------------------------------
             // 씨앗
             // ---------------------------------------------------------------------------------------------------------
-            static void seedXml( vector<vector<uint8>>& outListSeed )
+            static void seedXML( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( ".xml", 12, outListSeed );
                 appendTextSeed( "<a x=\"1\"><b>t&amp;</b><!-- c --><![CDATA[d]]></a>", outListSeed );
             }
-            static void seedJson( vector<vector<uint8>>& outListSeed )
+            static void seedJSON( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( ".json", 4, outListSeed );
                 appendTextSeed( R"({"a":[1,2.5e3,-0,true,null,"é"],"b":{"c":"d"}})", outListSeed );
@@ -283,15 +283,15 @@ namespace test
             static void seedScene( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".scene.xml", 4, outListSeed ); }
             static void seedSceneBinary( vector<vector<uint8>>& outListSeed )
             {
-                vector<vector<uint8>> listXml;
-                appendResourceSeeds( ".scene.xml", 2, listXml );
-                for ( const vector<uint8>& xml : listXml )
+                vector<vector<uint8>> listXML;
+                appendResourceSeeds( ".scene.xml", 2, listXML );
+                for ( const vector<uint8>& xml : listXML )
                 {
                     const string  xmlPath = makeScratchPath( "seed.scene.xml" );
                     const string  binPath = makeScratchPath( "seed.scene.bin" );
                     SceneDocument document;
                     vector<uint8> bytes;
-                    if ( FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXml( xmlPath ) && document.saveBinary( binPath ) &&
+                    if ( FileUtil::writeFile( xmlPath, xml.data(), xml.size() ) && document.loadXML( xmlPath ) && document.saveBinary( binPath ) &&
                          FileUtil::readFile( binPath, bytes ) )
                         outListSeed.push_back( std::move( bytes ) );
                 }
@@ -376,16 +376,16 @@ namespace test
         };
 
         constexpr LoaderFuzzTarget kArrLoaderFuzzTarget[] = {
-            {               "Xml",                &LoaderFuzzTargetsInternal::runXml,             &LoaderFuzzTargetsInternal::seedXml,  true},
-            {              "Json",               &LoaderFuzzTargetsInternal::runJson,            &LoaderFuzzTargetsInternal::seedJson,  true},
+            {               "XML",                &LoaderFuzzTargetsInternal::runXML,             &LoaderFuzzTargetsInternal::seedXML,  true},
+            {              "JSON",               &LoaderFuzzTargetsInternal::runJSON,            &LoaderFuzzTargetsInternal::seedJSON,  true},
             {          "KeyValue",           &LoaderFuzzTargetsInternal::runKeyValue,        &LoaderFuzzTargetsInternal::seedKeyValue,  true},
             {               "DDS",                &LoaderFuzzTargetsInternal::runDDS,             &LoaderFuzzTargetsInternal::seedDDS, false},
             {              "Mesh",               &LoaderFuzzTargetsInternal::runMesh,            &LoaderFuzzTargetsInternal::seedMesh, false},
             {       "Compression",        &LoaderFuzzTargetsInternal::runCompression,     &LoaderFuzzTargetsInternal::seedCompression, false},
             {              "Pack",               &LoaderFuzzTargetsInternal::runPack,            &LoaderFuzzTargetsInternal::seedPack, false},
-            {          "SceneXml",           &LoaderFuzzTargetsInternal::runSceneXml,           &LoaderFuzzTargetsInternal::seedScene,  true},
+            {          "SceneXML",           &LoaderFuzzTargetsInternal::runSceneXML,           &LoaderFuzzTargetsInternal::seedScene,  true},
             {       "SceneBinary",        &LoaderFuzzTargetsInternal::runSceneBinary,     &LoaderFuzzTargetsInternal::seedSceneBinary, false},
-            {     "GameObjectXml",      &LoaderFuzzTargetsInternal::runGameObjectXml,      &LoaderFuzzTargetsInternal::seedGameObject,  true},
+            {     "GameObjectXML",      &LoaderFuzzTargetsInternal::runGameObjectXML,      &LoaderFuzzTargetsInternal::seedGameObject,  true},
             {          "Material",           &LoaderFuzzTargetsInternal::runMaterial,        &LoaderFuzzTargetsInternal::seedMaterial,  true},
             {           "Sockets",            &LoaderFuzzTargetsInternal::runSockets,         &LoaderFuzzTargetsInternal::seedSockets,  true},
             {         "BodyShape",          &LoaderFuzzTargetsInternal::runBodyShape,       &LoaderFuzzTargetsInternal::seedBodyShape,  true},

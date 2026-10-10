@@ -11,14 +11,14 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Progression/LevelProgress.h"
 #include "GameFramework/Base/Gameplay/Progression/Reputation.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 범죄 한 종류입니다. */
     struct WesternCrimeDef
@@ -253,9 +253,9 @@ namespace sw
      *     </WesternCatalog>
      * @endcode
      */
-    class SW_GF_API WesternCatalog : public XmlCatalog<WesternCatalog>
+    class SW_GF_API WesternCatalog : public XMLCatalog<WesternCatalog>
     {
-        friend class XmlCatalog<WesternCatalog>;
+        friend class XMLCatalog<WesternCatalog>;
 
     public:
         static constexpr const utf8* kHonorFactionId = "western.honor"; ///< 명예가 쓰는 평판 세력 id(키트 접두)
@@ -290,9 +290,9 @@ namespace sw
         hashed_string getCurrency() const { return _currency; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "WesternCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadHonor( const XmlNode& node );
+        static constexpr const utf8* kXMLRootName = "WesternCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadHonor( const XMLNode& node );
 
         GameCatalog<WesternCrimeDef>       _crimeCatalog;
         GameCatalog<WesternRegionDef>      _regionCatalog;

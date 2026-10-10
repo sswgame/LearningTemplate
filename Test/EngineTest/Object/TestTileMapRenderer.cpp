@@ -17,7 +17,7 @@
 
 namespace
 {
-    constexpr const utf8* kRendererTileSetXml = "<TileSet atlas=\"engine/textures/test/quadrants.dds\" columns=\"4\" rows=\"4\" tileSize=\"0.5\">"
+    constexpr const utf8* kRendererTileSetXML = "<TileSet atlas=\"engine/textures/test/quadrants.dds\" columns=\"4\" rows=\"4\" tileSize=\"0.5\">"
                                                 "  <RuleTile name=\"ground\" cell=\"5\" solid=\"true\">"
                                                 "    <Rule pattern=\".x. ... ...\" cell=\"1\"/>"
                                                 "  </RuleTile>"
@@ -43,8 +43,8 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     SW_ASSERT_NOT_NULL( pTiles );
 
     sw::TileSetAsset tileSet;
-    SW_ASSERT_TRUE( tileSet.loadFromXmlText( kRendererTileSetXml, "<test>" ) );
-    sw::TileMapXmlData map;
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( kRendererTileSetXML, "<test>" ) );
+    sw::TileMapXMLData map;
     SW_ASSERT_TRUE( map.resetTiles( 4, 2 ) );
     map._tileSetPath = "engine/tilesets/test.tileset.xml";
     for ( int32 x = 0; x < 3; ++x )

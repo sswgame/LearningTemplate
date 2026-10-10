@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -28,11 +28,11 @@ namespace sw
     {
     }
 
-    uint32 BrCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 BrCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _mapSize = MathUtil::max( 1.0f, root.getAttributeFloat( "mapSize", _mapSize ) );
 
-        if ( const XmlNode node = root.findChild( "Player" ) )
+        if ( const XMLNode node = root.findChild( "Player" ) )
         {
             _player._maxHealth         = MathUtil::max( 1.0f, node.getAttributeFloat( "health", _player._maxHealth ) );
             _player._downedHealth      = MathUtil::max( 0.0f, node.getAttributeFloat( "downedHealth", _player._downedHealth ) );
@@ -43,7 +43,7 @@ namespace sw
             _player._slotCount         = MathUtil::max( 1, node.getAttributeInt( "slots", _player._slotCount ) );
             _player._maxRevivers       = MathUtil::max( 1, node.getAttributeInt( "revivers", _player._maxRevivers ) );
         }
-        if ( const XmlNode node = root.findChild( "Flight" ) )
+        if ( const XMLNode node = root.findChild( "Flight" ) )
         {
             _flight._speed          = MathUtil::max( 1.0f, node.getAttributeFloat( "speed", _flight._speed ) );
             _flight._altitude       = MathUtil::max( 1.0f, node.getAttributeFloat( "altitude", _flight._altitude ) );
@@ -51,7 +51,7 @@ namespace sw
             _flight._jumpEndRatio   = MathUtil::clamp( node.getAttributeFloat( "jumpEnd", _flight._jumpEndRatio ), _flight._jumpStartRatio, 1.0f );
             _flight._offsetRatio    = MathUtil::clamp( node.getAttributeFloat( "offset", _flight._offsetRatio ), 0.0f, 0.95f );
         }
-        if ( const XmlNode node = root.findChild( "Fall" ) )
+        if ( const XMLNode node = root.findChild( "Fall" ) )
         {
             _fall._freeFallSpeed            = MathUtil::max( 0.1f, node.getAttributeFloat( "freeFallSpeed", _fall._freeFallSpeed ) );
             _fall._freeFallHorizontalSpeed  = MathUtil::max( 0.0f, node.getAttributeFloat( "freeFallHorizontal", _fall._freeFallHorizontalSpeed ) );
@@ -59,12 +59,12 @@ namespace sw
             _fall._parachuteHorizontalSpeed = MathUtil::max( 0.0f, node.getAttributeFloat( "parachuteHorizontal", _fall._parachuteHorizontalSpeed ) );
             _fall._autoOpenHeight           = MathUtil::max( 0.0f, node.getAttributeFloat( "autoOpenHeight", _fall._autoOpenHeight ) );
         }
-        if ( const XmlNode zoneNode = root.findChild( "Zone" ) )
+        if ( const XMLNode zoneNode = root.findChild( "Zone" ) )
         {
             _zone._startRadius    = MathUtil::max( 0.0f, zoneNode.getAttributeFloat( "startRadius", _zone._startRadius ) );
             _zone._centerAttempts = MathUtil::max( 1, zoneNode.getAttributeInt( "centerAttempts", _zone._centerAttempts ) );
             _zone._listPhase.clear();
-            for ( XmlNode node = zoneNode.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
+            for ( XMLNode node = zoneNode.findChild( "Phase" ); node; node = node.findNextSibling( "Phase" ) )
             {
                 BrZonePhaseDef phase;
                 phase._waitTime        = MathUtil::max( 0.0f, node.getAttributeFloat( "wait", phase._waitTime ) );
@@ -76,9 +76,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Armor" ); node; node = node.findNextSibling( "Armor" ) )
+        for ( XMLNode node = root.findChild( "Armor" ); node; node = node.findNextSibling( "Armor" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             BrArmorDef def;
@@ -91,9 +91,9 @@ namespace sw
             (void)_armorCatalog.add( def );
             ++loadedCount;
         }
-        for ( XmlNode node = root.findChild( "Backpack" ); node; node = node.findNextSibling( "Backpack" ) )
+        for ( XMLNode node = root.findChild( "Backpack" ); node; node = node.findNextSibling( "Backpack" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             BrBackpackDef def;
@@ -103,9 +103,9 @@ namespace sw
             (void)_backpackCatalog.add( def );
             ++loadedCount;
         }
-        for ( XmlNode node = root.findChild( "LootSpot" ); node; node = node.findNextSibling( "LootSpot" ) )
+        for ( XMLNode node = root.findChild( "LootSpot" ); node; node = node.findNextSibling( "LootSpot" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             BrLootSpotDef def;
@@ -118,12 +118,12 @@ namespace sw
             (void)_lootSpotCatalog.add( def );
             ++loadedCount;
         }
-        if ( const XmlNode node = root.findChild( "SupplyDrop" ) )
+        if ( const XMLNode node = root.findChild( "SupplyDrop" ) )
         {
             const string_view table = node.getAttributeText( "table" );
             _supplyDrop._tableId    = hashed_string( table );
             _supplyDrop._listTime.clear();
-            GameDataXml::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
             {
                 float32 time = 0.0f;
                 if ( StringUtil::parseFloat( token, time ) && time >= 0.0f )

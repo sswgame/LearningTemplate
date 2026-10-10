@@ -7,14 +7,14 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/AnimClip.h"
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -38,10 +38,10 @@ namespace sw
 
 namespace sw
 {
-    bool VertexAnimationCookList::parseJson( string_view json, string_view sourceLabel )
+    bool VertexAnimationCookList::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = VertexAnimationCookList{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Vertex animation list '%#': malformed JSON", sourceLabel );
@@ -62,14 +62,14 @@ namespace sw
             *this = VertexAnimationCookList{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool VertexAnimationCookList::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool VertexAnimationCookList::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "mesh", "skeleton", "clip_folder", "clips" }, sourceLabel ) == false )
             return false;
-        const JsonValue clips = root.get( "clips" );
+        const JSONValue clips = root.get( "clips" );
         if ( root.get( "mesh" ).isString() == false || root.get( "skeleton" ).isString() == false || root.get( "clip_folder" ).isString() == false ||
              clips.isArray() == false || clips.size() == 0 )
         {

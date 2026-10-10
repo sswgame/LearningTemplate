@@ -154,7 +154,7 @@ ctest --test-dir build/Ninja-Debug-HarvestValley -R AppTest_HostOnly --output-on
   색만 다르면 씬이 늘 가지고 있는 머티리얼(팔레트, 엔진 기본)에서 디렉터가 머티리얼 인스턴스를 만들어 나눠 씁니다(`MaterialTintCache`).
 - **프레임을 넘겨 가지고 있는 것은 핸들입니다.** 디렉터와 카메라와 스폰한 오브젝트를 `GameObjectHandle` 로 가지고 매 프레임 대상을 찾습니다.
   씬의 다른 엔티티를 가리키는 PROPERTY 가 `GameObjectHandle` 이면 파일 id 로 저장되어 로드와 쿠킹 뒤에도 이어집니다.
-- **씬과 프리팹 파일은 엔진 직렬화기로 씁니다.** 에디터를 쓰거나, 오브젝트를 만든 뒤 `SceneManager::saveActiveScene` 이나 `PrefabAsset::saveToXmlFile` 로 저장합니다. 손으로 쓴 XML 은 형식을 깨기 쉽습니다.
+- **씬과 프리팹 파일은 엔진 직렬화기로 씁니다.** 에디터를 쓰거나, 오브젝트를 만든 뒤 `SceneManager::saveActiveScene` 이나 `PrefabAsset::saveToXMLFile` 로 저장합니다. 손으로 쓴 XML 은 형식을 깨기 쉽습니다.
 - **게임 컴포넌트에 처음 `REFLECT` 를 넣으면 다시 configure 해야 등록됩니다.** EngineTest 는 게임 모듈을 링크하지 않습니다.
   그래서 게임 팩의 씬과 프리팹 검사(`ResourceDataSchemaTest`)는 `Source/Games` 헤더에 선언된 타입을 모르는 타입으로 넘깁니다.
   쿠킹은 활성 팩만 대상이라 다른 게임 팩의 그런 씬은 건너뜁니다.

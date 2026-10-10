@@ -22,7 +22,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kCreatureLifeTestXml = R"(
+    constexpr const utf8* kCreatureLifeTestXML = R"(
 <CreatureLifeCatalog>
   <Habitat id="tall_grass" name="Tall Grass">
     <Key symbol="G" object="grass"/><Key symbol="T" object="tree"/>
@@ -42,13 +42,13 @@ namespace
 </CreatureLifeCatalog>
 )";
 
-    constexpr const utf8* kCreatureLifeTestReputationXml = R"(
+    constexpr const utf8* kCreatureLifeTestReputationXML = R"(
 <ReputationCatalog>
   <Faction id="creature.sprout" min="0" max="1000" start="0"><Tier name="Stranger" min="0"/><Tier name="Friend" min="50"/><Tier name="Best" min="150"/></Faction>
 </ReputationCatalog>
 )";
 
-    constexpr const utf8* kCreatureLifeTestQuestXml = R"(
+    constexpr const utf8* kCreatureLifeTestQuestXML = R"(
 <QuestCatalog>
   <Quest id="sprout_berries">
     <Stage id="bring" next="done"><Objective kind="Deliver" target="berry" count="3"/></Stage>
@@ -61,7 +61,7 @@ namespace
 </QuestCatalog>
 )";
 
-    constexpr const utf8* kCreatureLifeTestWeatherXml = R"(
+    constexpr const utf8* kCreatureLifeTestWeatherXML = R"(
 <WeatherCatalog transition="0"><Weather id="sunny"/><Weather id="rain"/></WeatherCatalog>
 )";
 
@@ -85,9 +85,9 @@ namespace
                 item._maxStack = 99;
                 _items.addItem( item );
             }
-            const bool bLoaded = _catalog.loadFromXmlText( kCreatureLifeTestXml, "CreatureLifeTest" ) &&
-                                 _reputation.loadFromXmlText( kCreatureLifeTestReputationXml, "CreatureLifeTest" ) &&
-                                 _quests.loadFromXmlText( kCreatureLifeTestQuestXml, "CreatureLifeTest" );
+            const bool bLoaded = _catalog.loadFromXMLText( kCreatureLifeTestXML, "CreatureLifeTest" ) &&
+                                 _reputation.loadFromXMLText( kCreatureLifeTestReputationXML, "CreatureLifeTest" ) &&
+                                 _quests.loadFromXMLText( kCreatureLifeTestQuestXML, "CreatureLifeTest" );
             _questLog.initialize( &_quests );
             _friendship.initialize( &_reputation );
             _clock.initialize( WorldClockSettings{} );
@@ -270,7 +270,7 @@ SW_TEST_CASE( CreatureLifeTest, VisitorsFollowPhaseWeatherAndAreDeterministic )
     CreatureLifeTestWorld world;
     SW_ASSERT_TRUE( world.load() );
     WeatherCatalog weatherCatalog;
-    SW_ASSERT_TRUE( weatherCatalog.loadFromXmlText( kCreatureLifeTestWeatherXml, "CreatureLifeTest" ) );
+    SW_ASSERT_TRUE( weatherCatalog.loadFromXMLText( kCreatureLifeTestWeatherXML, "CreatureLifeTest" ) );
     WeatherSystem weather;
     weather.initialize( &weatherCatalog, 11u, "Default" );
     WorldClock clock;

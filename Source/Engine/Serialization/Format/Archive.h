@@ -292,52 +292,52 @@ namespace sw
         }
 
         // ------------------------------------------------------------------------------
-        // 4) JSON 임베딩 및 상호 변환 (JsonSerializer 연계)
+        // 4) JSON 임베딩 및 상호 변환 (JSONSerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 JSON 문자열로 직렬화해 아카이브에 넣습니다. */
-        [[nodiscard]] bool serializeJsonObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty = false );
+        [[nodiscard]] bool serializeJSONObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty = false );
         /** @brief 아카이브에 넣어 둔 JSON 문자열에서 객체를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeJsonObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeJSONObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        [[nodiscard]] bool serializeJsonObject( const T& instance, bool bPretty = false )
+        [[nodiscard]] bool serializeJSONObject( const T& instance, bool bPretty = false )
         {
-            return serializeJsonObject( &instance, *T::StaticType(), bPretty );
+            return serializeJSONObject( &instance, *T::StaticType(), bPretty );
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeJsonObject( T& instance )
+        [[nodiscard]] bool deserializeJSONObject( T& instance )
         {
-            return deserializeJsonObject( &instance, *T::StaticType() );
+            return deserializeJSONObject( &instance, *T::StaticType() );
         }
 
         /** @brief JSON 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        [[nodiscard]] bool convertJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo );
+        [[nodiscard]] bool convertJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo );
         /** @brief 아카이브의 바이너리 객체를 JSON 문자열로 바꿔 반환합니다. */
-        string convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty = false );
+        string convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty = false );
 
         // ------------------------------------------------------------------------------
-        // 5) XML 임베딩 및 상호 변환 (XmlSerializer 연계)
+        // 5) XML 임베딩 및 상호 변환 (XMLSerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 XML 문자열로 직렬화해 아카이브에 넣습니다. */
-        [[nodiscard]] bool serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo );
         /** @brief 아카이브에 넣어 둔 XML 문자열에서 객체를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeXMLObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        [[nodiscard]] bool serializeXmlObject( const T& instance )
+        [[nodiscard]] bool serializeXMLObject( const T& instance )
         {
-            return serializeXmlObject( &instance, *T::StaticType() );
+            return serializeXMLObject( &instance, *T::StaticType() );
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeXmlObject( T& instance )
+        [[nodiscard]] bool deserializeXMLObject( T& instance )
         {
-            return deserializeXmlObject( &instance, *T::StaticType() );
+            return deserializeXMLObject( &instance, *T::StaticType() );
         }
 
         /** @brief XML 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        [[nodiscard]] bool convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo );
+        [[nodiscard]] bool convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo );
 
         // ------------------------------------------------------------------------------
         // 6) 가변 길이 정수 (VarInt / ZigZag) 스트리밍

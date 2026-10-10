@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
@@ -70,7 +70,7 @@ namespace sw
         for ( const AppearanceDatabaseInternal::DataFile& file : AppearanceDatabaseInternal::kArrDataFile )
         {
             const string path = FileUtil::joinPath( folder, file._pFileName );
-            XmlDocument  doc;
+            XMLDocument  doc;
             string       absolutePath;
             if ( doc.loadPath( path, &absolutePath ) == false )
             {
@@ -84,9 +84,9 @@ namespace sw
         return finishLoad( pItemCatalog );
     }
 
-    bool AppearanceDatabase::loadSectionFromXmlText( string_view xmlText, string_view sourceName )
+    bool AppearanceDatabase::loadSectionFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             _report.addError( "%#: cannot parse appearance data (%#)", sourceName, doc.getLastError() );
@@ -95,7 +95,7 @@ namespace sw
         return loadSectionFromNode( doc.getRoot(), sourceName );
     }
 
-    bool AppearanceDatabase::loadSectionFromNode( const XmlNode& root, string_view sourceName )
+    bool AppearanceDatabase::loadSectionFromNode( const XMLNode& root, string_view sourceName )
     {
         const utf8* pName = root.getName();
         ++_revision;
@@ -245,7 +245,7 @@ namespace sw
             {
                 for ( const hashed_string& region : part._listHiddenRegion )
                 {
-                    if ( AppearanceXmlUtil::containsName( *pListKnownBodyRegion, region ) == false )
+                    if ( AppearanceXMLUtil::containsName( *pListKnownBodyRegion, region ) == false )
                         _report.addError( "visual '%#' part '%#' hides unknown body region '%#'", visual._id.c_str(), part._name.c_str(), region.c_str() );
                 }
             }
@@ -290,7 +290,7 @@ namespace sw
                     _report.addError( "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
                     _report.addError( "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
-                if ( action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXmlUtil::containsName( *pListKnownBodyRegion, action._name ) == false )
+                if ( action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && AppearanceXMLUtil::containsName( *pListKnownBodyRegion, action._name ) == false )
                     _report.addError( "rule '%#' hides unknown body region '%#'", rule._id.c_str(), action._name.c_str() );
             }
         }

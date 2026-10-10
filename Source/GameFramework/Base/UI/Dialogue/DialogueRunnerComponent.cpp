@@ -81,9 +81,9 @@ namespace sw
         return _graph.loadFromFile( jsonPath );
     }
 
-    bool DialogueRunnerComponent::loadGraphJson( string_view jsonContent )
+    bool DialogueRunnerComponent::loadGraphJSON( string_view jsonContent )
     {
-        return _graph.parseJson( jsonContent );
+        return _graph.parseJSON( jsonContent );
     }
 
     void DialogueRunnerComponent::setGraph( DialogueGraphAsset graph )

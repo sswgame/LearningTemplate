@@ -41,7 +41,7 @@ namespace sw
     {
         outAsset = NavMeshAsset{};
         SceneDocument document;
-        if ( document.loadXml( sceneResourcePath ) == false )
+        if ( document.loadXML( sceneResourcePath ) == false )
         {
             SW_LOG_ERROR( "Navmesh cook could not read scene '%#'", sceneResourcePath );
             return false;

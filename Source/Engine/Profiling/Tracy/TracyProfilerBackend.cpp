@@ -35,17 +35,17 @@ namespace sw
             static_assert( offsetof( ProfileZoneSite, _color ) == offsetof( ___tracy_source_location_data, color ), "color offset" );
 
             /** @brief Tracy 의 GPU 컨텍스트 종류 번호입니다(서버 `GpuContextType` — OpenGl 1 · Vulkan 2 · Direct3D12 4 · Direct3D11 5). */
-            static uint8 toTracyGpuType( ProfilerGpuApi api )
+            static uint8 toTracyGpuType( ProfilerGraphicsAPI api )
             {
                 switch ( api )
                 {
-                    case ProfilerGpuApi::OpenGl:
+                    case ProfilerGraphicsAPI::OpenGl:
                         return 1;
-                    case ProfilerGpuApi::Vulkan:
+                    case ProfilerGraphicsAPI::Vulkan:
                         return 2;
-                    case ProfilerGpuApi::Direct3D12:
+                    case ProfilerGraphicsAPI::Direct3D12:
                         return 4;
-                    case ProfilerGpuApi::Direct3D11:
+                    case ProfilerGraphicsAPI::Direct3D11:
                         return 5;
                 }
                 return 1;
@@ -158,7 +158,7 @@ namespace sw
 #endif
     }
 
-    uint32 TracyProfilerBackend::createGpuContext( [[maybe_unused]] ProfilerGpuApi api, [[maybe_unused]] const utf8* pName,
+    uint32 TracyProfilerBackend::createGpuContext( [[maybe_unused]] ProfilerGraphicsAPI api, [[maybe_unused]] const utf8* pName,
                                                    [[maybe_unused]] int64 gpuNanos )
     {
 #if defined( SW_PROFILER_TRACY )

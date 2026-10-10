@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -93,7 +93,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
     pSourceMesh->setLocalPosition( float3( 3.0f, 0.0f, 0.0f ) );
     SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Sphere", ctx ) );
     SW_ASSERT_TRUE( pTargetMesh->getRawMesh() != MeshUtil::acquirePrimitive( "Sphere" ).get() );
-    SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
+    SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, XMLSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 3.0f, pTargetMesh->getWorldPosition()._x, 1e-4f );
     SW_EXPECT_TRUE( pTargetMesh->getRawMesh() == MeshUtil::acquirePrimitive( "Sphere" ).get() );
@@ -102,7 +102,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastedValuesAndPresetsReachTheWorldTr
     pSourceMesh->setLocalPosition( float3( 0.0f, 4.0f, 0.0f ) );
     SW_ASSERT_TRUE( SerializerUtil::applyPropertyText( *pMeshId, pSourceMesh, "Cylinder", ctx ) );
     const string presetPath = test::makeTempPath( "mesh.preset.xml" );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( presetPath, XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( presetPath, XMLSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() ) ) );
     SW_ASSERT_TRUE( EditorTransformCommands::loadComponentPreset( pTargetMesh, presetPath ) );
     manager.flushSceneTransforms();
     SW_EXPECT_NEAR_EQUAL( 4.0f, pTargetMesh->getWorldPosition()._y, 1e-4f );
@@ -124,7 +124,7 @@ SW_TEST_CASE( EditorTransformCommandsTest, PastingValuesKeepsTheTargetsComponent
     SW_ASSERT_TRUE( pSourceMesh != nullptr && pTargetMesh != nullptr );
     pSourceMesh->setComponentName( hashed_string( "Barrel" ) );
     pTargetMesh->setComponentName( hashed_string( "Stock" ) );
-    const string copied = XmlSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() );
+    const string copied = XMLSerializer::serialize( pSourceMesh, *pSourceMesh->getTypeInfo() );
 
     SW_ASSERT_TRUE( EditorTransformCommands::pasteComponentValues( pTargetMesh, copied ) );
     SW_EXPECT_STREQ( "Stock", pTargetMesh->getComponentName().c_str() );

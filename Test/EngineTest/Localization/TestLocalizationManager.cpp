@@ -140,16 +140,16 @@ SW_TEST_CASE( LocalizationManagerTest, UnknownFieldsInTablesAreLoadErrors )
 {
     sw::SourceStringTable source;
     sw::string            error;
-    SW_EXPECT_FALSE( source.loadFromJsonText( R"({ "culture": "en", "entries": { "a": { "source": "A", "maxLenght": 3 } } })", "test", &error ) );
+    SW_EXPECT_FALSE( source.loadFromJSONText( R"({ "culture": "en", "entries": { "a": { "source": "A", "maxLenght": 3 } } })", "test", &error ) );
     SW_EXPECT_TRUE( error.find( "maxLenght" ) != sw::string::npos );
 
     sw::TranslationTable translation;
-    SW_EXPECT_FALSE( translation.loadFromJsonText( R"({ "culture": "ko", "entries": { "a": { "txt": "가" } } })", "test", &error ) );
-    SW_EXPECT_FALSE( translation.loadFromJsonText( R"({ "culture": "ko", "entries": { "a": { "text": "가", "sourceHash": "zz" } } })", "test", &error ) );
+    SW_EXPECT_FALSE( translation.loadFromJSONText( R"({ "culture": "ko", "entries": { "a": { "txt": "가" } } })", "test", &error ) );
+    SW_EXPECT_FALSE( translation.loadFromJSONText( R"({ "culture": "ko", "entries": { "a": { "text": "가", "sourceHash": "zz" } } })", "test", &error ) );
 
     sw::LocalizationProject project;
-    SW_EXPECT_FALSE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a.strings.json" ], "culture": [] })", "test", &error ) );
-    SW_EXPECT_TRUE( project.loadFromJsonText( R"({ "name": "p", "sourceCulture": "en-US", "stringTables": [ "a.strings.json" ] })", "test", &error ) );
+    SW_EXPECT_FALSE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en", "stringTables": [ "a.strings.json" ], "culture": [] })", "test", &error ) );
+    SW_EXPECT_TRUE( project.loadFromJSONText( R"({ "name": "p", "sourceCulture": "en-US", "stringTables": [ "a.strings.json" ] })", "test", &error ) );
     SW_EXPECT_STREQ( "en_us", project._sourceCulture.c_str() );
 }
 

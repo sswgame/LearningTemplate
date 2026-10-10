@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/World/Land/AreaGraph.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
 
@@ -38,11 +38,11 @@ namespace sw
     {
     }
 
-    void AdventureWorldMap::readLandmarks( const XmlNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount )
+    void AdventureWorldMap::readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount )
     {
-        for ( XmlNode node = root.findChild( pNodeName ); node; node = node.findNextSibling( pNodeName ) )
+        for ( XMLNode node = root.findChild( pNodeName ); node; node = node.findNextSibling( pNodeName ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             AdventureLandmarkDef landmark;
@@ -57,7 +57,7 @@ namespace sw
         }
     }
 
-    uint32 AdventureWorldMap::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 AdventureWorldMap::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _catalog.clear();
         _orbsPerExchange   = MathUtil::max( 1, root.getAttributeInt( "orbsPerExchange", 4 ) );

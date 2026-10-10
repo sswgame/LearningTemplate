@@ -5,8 +5,8 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -297,24 +297,24 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
     SW_ASSERT_NOT_NULL( pHostType );
     {
         test::ScopedDefensiveTestLog expected( "enum text that names no enumerator" );
-        sw::NarrowEnumHost           fromJson;
-        fromJson._mode = sw::NarrowEnum::One;
-        (void)sw::JsonSerializer::deserialize( &fromJson, *pHostType, R"({"_mode":"Bogus"})" ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
-        SW_EXPECT_TRUE( fromJson._mode == sw::NarrowEnum::One );
+        sw::NarrowEnumHost           fromJSON;
+        fromJSON._mode = sw::NarrowEnum::One;
+        (void)sw::JSONSerializer::deserialize( &fromJSON, *pHostType, R"({"_mode":"Bogus"})" ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
+        SW_EXPECT_TRUE( fromJSON._mode == sw::NarrowEnum::One );
 
         sw::NarrowEnumHost source;
         source._mode         = sw::NarrowEnum::Two;
-        sw::string   xml     = sw::XmlSerializer::serialize( &source, *pHostType );
+        sw::string   xml     = sw::XMLSerializer::serialize( &source, *pHostType );
         const size_t namePos = xml.find( "\"Two\"" );
         SW_ASSERT_TRUE_MSG( namePos != sw::string::npos, xml.c_str() );
         xml.replace( namePos, 5, "\"Bogus\"" );
-        sw::NarrowEnumHost fromXml;
-        fromXml._mode = sw::NarrowEnum::One;
-        (void)sw::XmlSerializer::deserialize( &fromXml, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
-        SW_EXPECT_TRUE( fromXml._mode == sw::NarrowEnum::One );
+        sw::NarrowEnumHost fromXML;
+        fromXML._mode = sw::NarrowEnum::One;
+        (void)sw::XMLSerializer::deserialize( &fromXML, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
+        SW_EXPECT_TRUE( fromXML._mode == sw::NarrowEnum::One );
     }
     sw::NarrowEnumHost caseInsensitive;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &caseInsensitive, *pHostType, R"({"_mode":"two"})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &caseInsensitive, *pHostType, R"({"_mode":"two"})" ) );
     SW_EXPECT_TRUE( caseInsensitive._mode == sw::NarrowEnum::Two );
 
     // 쓰는 쪽이 적는 글은 모두 다시 읽힌다 — 등록된 모든 enum 의 모든 값과, 비트플래그의 0(`None`) · 모든 비트 합.

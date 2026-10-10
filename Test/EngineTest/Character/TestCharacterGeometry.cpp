@@ -235,7 +235,7 @@ SW_TEST_CASE( DismembermentTest, SeveredRegionProducesClosedCappedPieces )
 SW_TEST_CASE( SurfaceStateTest, RegionChannelsSetAndDecay )
 {
     SurfaceChannelTable channels;
-    SW_ASSERT_TRUE( channels.loadFromXmlText( "<SurfaceChannels>"
+    SW_ASSERT_TRUE( channels.loadFromXMLText( "<SurfaceChannels>"
                                               "  <Channel name='Wet' decayPerSecond='0.1'/>"
                                               "  <Channel name='Blood' decayPerSecond='0.05' maskResolution='32'/>"
                                               "  <Channel name='Tear' maskResolution='64' clip='true'/>"
@@ -245,7 +245,7 @@ SW_TEST_CASE( SurfaceStateTest, RegionChannelsSetAndDecay )
         test::ScopedLogCollector logs;
         SW_TEST_DEFENSIVE_SCOPE( "unknown attributes in surface channel data are load errors" );
         SurfaceChannelTable broken;
-        SW_EXPECT_FALSE( broken.loadFromXmlText( "<SurfaceChannels><Channel name='Wet' fade='1'/></SurfaceChannels>", "broken.surfacechannels.xml" ) );
+        SW_EXPECT_FALSE( broken.loadFromXMLText( "<SurfaceChannels><Channel name='Wet' fade='1'/></SurfaceChannels>", "broken.surfacechannels.xml" ) );
         SW_EXPECT_TRUE( logs.countContaining( "unknown attribute 'fade'" ) > 0 );
     }
     CharacterSurfaceState state;

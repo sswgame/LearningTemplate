@@ -136,7 +136,7 @@
 | `FileUtil::fileExists` · `directoryExists` | `FileUtil::exists`(파일 · 폴더 무엇이든) · `isDirectory`(파일만은 `isRegularFile`) |
 | `transformNormal` | `transformVector`(방향 변환) |
 | `-gv_editorOpenAllPanels=1` | `-gv_editorOpenPanel=all` |
-| `RenderResourceXml` | `Serialization/Format/ReflectedXmlFile` |
+| `RenderResourceXml` | `Serialization/Format/ReflectedXMLFile` |
 | `CameraBlendCurve` · `CameraBlendKey` · `CameraBlendSpec`(GameFramework/Base/Actor/Camera) | `BlendCurve` · `BlendCurveKey` · `BlendCurveSpec`(`Engine/Animation/BlendCurve.h`) |
 | `Engine/Character/<평면 60 개>` | `Character/{Fit,Socket,Hit,Pose,AnimNotify}/`, 워핑 둘은 `Object/Animation/`(2026-10-05) |
 | `Utility/Debug/*` · `Utility/Format/KeyValueFile` | `Utility/Profiling/*`(`DebugOverlayState` · `KeyValueFile` 은 `Utility/`) |
@@ -155,8 +155,8 @@
 | `Resource/{AnimationAssetCache,SpriteClipCache,LocalizationReloadCache}` | `Animation/` · `Animation/Sprite/` · `Localization/` |
 | `Character/Pose/` · `Animation/AnimNotifyPhase` · `Object/Animation/AnimNotifyListener` | `Character/PoseModifier/` · `Animation/Notify/` |
 | `IRenderSurface`(Common 루트) · `ServerConfig` · `ServerSecret`(Config 루트) | `Graphics/RHI/IRenderSurface` · `Config/Server/` |
-| `Utility/{Xml,Json,TileMap,Console,Profiling}` | `Serialization/{Xml,Json}` · `TileMap/` · `Console/` · `Profiling/` |
-| `Telemetry/HttpClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HttpClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
+| `Utility/{XML,JSON,TileMap,Console,Profiling}` | `Serialization/{XML,JSON}` · `TileMap/` · `Console/` · `Profiling/` |
+| `Telemetry/HTTPClient` · `UI/Screens/` · `Serialization/Core/` · `UI/Core/` | `Observability/HTTPClient` · `UI/Screen/` · `Serialization/Base/` · `UI/Base/` |
 | `Physics` · `Resource` · `Animation` · `Input` 루트 파일 | `Physics/{Collision,Asset}` · `Resource/{Pack,Image,Cache}` · `Animation/{Sprite,Graph,Skeletal}` · `Input/{Map,Virtual}`(표는 `Scripts/dev/MoveEngineFolders.py`) |
 
 일부러 둔 용어: stamp · kit · cook · orphan · chord · pin.

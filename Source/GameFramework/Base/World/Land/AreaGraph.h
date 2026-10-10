@@ -12,13 +12,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class GameFlags;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 방 하나입니다. 위치 · 크기는 지도 그리기용(그래프 계산은 쓰지 않는다)입니다. */
     struct AreaDef
@@ -71,9 +71,9 @@ namespace sw
      * @details 방에 들어가면 방문 · 발견이 되고, 그 방에서 나가는 연결의 반대편 방도 발견됩니다(문 너머가 지도에 보인다 — 잠겨 있어도).
      *          길 찾기는 너비 우선이라 지나는 문 수가 가장 적은 길이며, 같은 길이면 연결을 읽은 순서로 정해져 늘 같은 답입니다.
      */
-    class SW_GF_API AreaGraph : public XmlCatalog<AreaGraph>
+    class SW_GF_API AreaGraph : public XMLCatalog<AreaGraph>
     {
-        friend class XmlCatalog<AreaGraph>;
+        friend class XMLCatalog<AreaGraph>;
 
     public:
         AreaGraph();
@@ -95,7 +95,7 @@ namespace sw
         /**
          * @brief `<Area>` · `<Link>` 를 가진 노드를 읽어 **더합니다**(지우지 않는다). 다른 키트의 XML 안에 그래프를 함께 적을 때 씁니다. 더한 방 수입니다.
          */
-        uint32 loadFromNode( const XmlNode& node, string_view sourceName );
+        uint32 loadFromNode( const XMLNode& node, string_view sourceName );
         /** @brief 방에 들어갑니다 — 방문 · 발견, 이웃 발견. 처음 방문이면 true 입니다(없는 방은 false). */
         bool enterArea( const hashed_string& areaId );
         /** @brief 방을 지도에 드러냅니다(지도 아이템 · 힌트). 새로 드러났으면 true 입니다. */
@@ -137,8 +137,8 @@ namespace sw
         int32                   getVisitedCount() const { return _visitedCount; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "AreaGraph"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "AreaGraph"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 연결을 @p fromIndex 쪽에서 지나면 닿는 방입니다. 그 방향으로 지날 수 없으면 −1 입니다(잠금은 보지 않는다). */
         int32 findOtherSide( const AreaLink& link, int32 fromIndex ) const;
         bool  isUnlocked( const AreaLink& link, const GameFlags& flags ) const;

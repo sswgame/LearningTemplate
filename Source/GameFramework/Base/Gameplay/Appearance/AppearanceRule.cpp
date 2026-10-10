@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 
 namespace sw
 {
@@ -23,11 +23,11 @@ namespace sw
             static constexpr const utf8* kArrMorphAttribute[]    = { "target", "name", "weight" };
             static constexpr const utf8* kArrSocketAttribute[]   = { "name", "parent", "offset", "rotation" };
 
-            [[nodiscard]] static bool readCondition( const XmlNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
+            [[nodiscard]] static bool readCondition( const XMLNode& node, AppearanceRuleCondition& outCondition, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrWhenAttribute, report, sourceName );
                 outCondition._bNegate      = node.getAttributeBool( "not", false ) ? SW_TRUE : SW_FALSE;
-                outCondition._target       = AppearanceXmlUtil::readName( node, "target" );
+                outCondition._target       = AppearanceXMLUtil::readName( node, "target" );
                 const utf8* pTag           = node.findAttribute( "tag" );
                 const utf8* pCharacterTag  = node.findAttribute( "characterTag" );
                 const utf8* pOccupied      = node.findAttribute( "occupied" );
@@ -53,24 +53,24 @@ namespace sw
                 else if ( pOccupied != nullptr )
                 {
                     outCondition._kind   = AppearanceRuleConditionKind::Occupied;
-                    outCondition._target = AppearanceXmlUtil::readName( node, "occupied" );
+                    outCondition._target = AppearanceXMLUtil::readName( node, "occupied" );
                 }
                 else
                 {
                     outCondition._kind = pBodyShape != nullptr ? AppearanceRuleConditionKind::BodyShape : AppearanceRuleConditionKind::BodyType;
-                    AppearanceXmlUtil::readNameList( node, pBodyShape != nullptr ? "bodyShape" : "bodyType", outCondition._listName );
+                    AppearanceXMLUtil::readNameList( node, pBodyShape != nullptr ? "bodyShape" : "bodyType", outCondition._listName );
                 }
                 return true;
             }
 
-            [[nodiscard]] static bool readAction( const XmlNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
+            [[nodiscard]] static bool readAction( const XMLNode& node, AppearanceRuleAction& outAction, AppearanceLoadReport& report, string_view sourceName, const hashed_string& ruleId )
             {
                 const utf8* pName = node.getName();
-                outAction._target = AppearanceXmlUtil::readName( node, "target" );
-                outAction._part   = AppearanceXmlUtil::readName( node, "part" );
+                outAction._target = AppearanceXMLUtil::readName( node, "target" );
+                outAction._part   = AppearanceXMLUtil::readName( node, "part" );
                 if ( StringUtil::equals( pName, "Hide", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrHideAttribute, report, sourceName );
                     const utf8* pItemTag  = node.findAttribute( "itemTag" );
                     const utf8* pRegion   = node.findAttribute( "region" );
                     const int32 kindCount = ( outAction._target.empty() ? 0 : 1 ) + ( pItemTag != nullptr ? 1 : 0 ) + ( pRegion != nullptr ? 1 : 0 );
@@ -88,45 +88,45 @@ namespace sw
                     else if ( pRegion != nullptr )
                     {
                         outAction._kind = AppearanceRuleActionKind::HideRegion;
-                        outAction._name = AppearanceXmlUtil::readName( node, "region" );
+                        outAction._name = AppearanceXMLUtil::readName( node, "region" );
                     }
                     return true;
                 }
                 if ( StringUtil::equals( pName, "Variant", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrVariantAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVariantAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::ChooseVariant;
-                    outAction._name = AppearanceXmlUtil::readName( node, "name" );
+                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMesh", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrMeshAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMeshAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMesh;
-                    outAction._value = AppearanceXmlUtil::readName( node, "mesh" );
+                    outAction._value = AppearanceXMLUtil::readName( node, "mesh" );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "SwapMaterial", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrMaterialAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMaterialAttribute, report, sourceName );
                     outAction._kind  = AppearanceRuleActionKind::SwapMaterial;
-                    outAction._value = AppearanceXmlUtil::readName( node, "material" );
+                    outAction._value = AppearanceXMLUtil::readName( node, "material" );
                     return outAction._value.empty() == false && outAction._target.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "Morph", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrMorphAttribute, report, sourceName );
                     outAction._kind   = AppearanceRuleActionKind::ApplyMorph;
-                    outAction._name   = AppearanceXmlUtil::readName( node, "name" );
+                    outAction._name   = AppearanceXMLUtil::readName( node, "name" );
                     outAction._weight = node.getAttributeFloat( "weight", 1.0f );
                     return outAction._name.empty() == false;
                 }
                 if ( StringUtil::equals( pName, "OverrideSocket", true ) )
                 {
-                    (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
+                    (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrSocketAttribute, report, sourceName );
                     outAction._kind = AppearanceRuleActionKind::OverrideSocket;
-                    outAction._name = AppearanceXmlUtil::readName( node, "name" );
-                    AppearanceXmlUtil::readPlacement( node, "parent", outAction._placement );
+                    outAction._name = AppearanceXMLUtil::readName( node, "name" );
+                    AppearanceXMLUtil::readPlacement( node, "parent", outAction._placement );
                     return outAction._name.empty() == false && outAction._placement.isEmpty() == false;
                 }
                 report.addError( "%#: rule '%#' has unknown element <%#>", sourceName, ruleId.c_str(), pName );
@@ -194,28 +194,28 @@ namespace sw
         return _name == other._name && _value == other._value && _weight == other._weight && _placement == other._placement;
     }
 
-    bool AppearanceRuleTable::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool AppearanceRuleTable::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode ruleNode = root.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode ruleNode = root.findChild(); ruleNode; ruleNode = ruleNode.findNextSibling() )
         {
             if ( StringUtil::equals( ruleNode.getName(), "Rule", true ) == false )
             {
-                AppearanceXmlUtil::reportUnknownChild( root, ruleNode, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, ruleNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXmlUtil::reportUnknownAttributes( ruleNode, AppearanceRuleInternal::kArrRuleAttribute, report, sourceName );
+            (void)AppearanceXMLUtil::reportUnknownAttributes( ruleNode, AppearanceRuleInternal::kArrRuleAttribute, report, sourceName );
             AppearanceRuleDef rule;
-            rule._id       = AppearanceXmlUtil::readName( ruleNode, "id" );
+            rule._id       = AppearanceXMLUtil::readName( ruleNode, "id" );
             rule._priority = ruleNode.getAttributeInt( "priority", 0 );
             if ( rule._id.empty() || findRule( rule._id ) != nullptr )
             {
                 report.addError( "%#: <Rule> without an id or with a duplicate id '%#'", sourceName, rule._id.c_str() );
                 continue;
             }
-            for ( XmlNode child = ruleNode.findChild(); child; child = child.findNextSibling() )
+            for ( XMLNode child = ruleNode.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "When", true ) )
                 {

@@ -17,7 +17,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Collision/AABB.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
 {
@@ -102,7 +102,7 @@ namespace sw::editor
             bSuccess = BinarySerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), bytes.data(), bytes.size() );
 
         if ( bSuccess == false && xmlFallback.empty() == false )
-            bSuccess = XmlSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
+            bSuccess = XMLSerializer::deserialize( pTargetComp, *pTargetComp->getTypeInfo(), string{ xmlFallback } );
         // 이름표는 값이 아니라 정체다(컴포넌트 키) — 붙여 넣어도 대상의 것을 지킨다(언리얼의 속성 붙여넣기도 컴포넌트 이름을 옮기지 않는다).
         pTargetComp->setComponentName( targetName );
 
@@ -144,7 +144,7 @@ namespace sw::editor
                 bSuccess = BinarySerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), bytes.data(), bytes.size() );
 
             if ( bSuccess == false && xmlFallback.empty() == false )
-                bSuccess = XmlSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
+                bSuccess = XMLSerializer::deserialize( pNewComp, *pNewComp->getTypeInfo(), string{ xmlFallback } );
             pNewComp->setComponentName( newName ); // 새 컴포넌트는 제 이름표(타입 이름)로 — 원본의 이름표를 옮기면 키가 겹친다
             // 읽지 못했어도 기본값이 그 상태다 — 어느 쪽이든 컴포넌트가 값을 자원으로 바꾸게 한다(`EditorSceneCommands::addComponent` 와 같다).
             pNewComp->notifyStateWritten();
@@ -210,7 +210,7 @@ namespace sw::editor
             fullPath = FileUtil::removeExtension( fullPath ) + string( EditorTransformCommandsInternal::kPresetSuffix );
         FileUtil::ensureParentDirectoryExists( fullPath );
 
-        const string xmlData = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
+        const string xmlData = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
         return FileUtil::writeTextFile( fullPath, xmlData );
     }
 
@@ -227,7 +227,7 @@ namespace sw::editor
         const ObjectSnapshot beforeSnapshot = EditorTransaction::captureSnapshot( pOwner );
 
         const hashed_string targetName = pComp->getComponentName();
-        const bool          bSuccess   = XmlSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
+        const bool          bSuccess   = XMLSerializer::deserialize( pComp, *pComp->getTypeInfo(), xmlData );
         pComp->setComponentName( targetName ); // 프리셋은 값이다 — 이름표(컴포넌트 키)는 대상의 것을 지킨다
         if ( bSuccess )
             pComp->notifyStateWritten();

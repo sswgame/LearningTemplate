@@ -7,7 +7,7 @@
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitTables.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -35,11 +35,11 @@ namespace sw
 
 namespace sw
 {
-    bool FitPartData::loadFromXmlText( string_view xmlText, string_view sourceName, const FitTables& tables )
+    bool FitPartData::loadFromXMLText( string_view xmlText, string_view sourceName, const FitTables& tables )
     {
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "PartFit", root ) )
             readRoot( root, tables, reader );
         return reader.finish();
@@ -48,14 +48,14 @@ namespace sw
     bool FitPartData::loadFromResource( string_view path, const FitTables& tables )
     {
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "PartFit", root ) )
             readRoot( root, tables, reader );
         return reader.finish();
     }
 
-    void FitPartData::readRoot( const XmlNode& root, const FitTables& tables, CharacterDataReader& reader )
+    void FitPartData::readRoot( const XMLNode& root, const FitTables& tables, CharacterDataReader& reader )
     {
         _listHiddenRegion.clear();
         _listRing.clear();
@@ -67,7 +67,7 @@ namespace sw
             reader.addError( root, string( "names unknown layer '" ) + _layer.c_str() + "'" );
         if ( _profile.empty() == false && tables.findProfile( _profile ) == nullptr )
             reader.addError( root, string( "names unknown profile '" ) + _profile.c_str() + "'" );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Hide", true ) )
@@ -100,7 +100,7 @@ namespace sw
                 reader.reportUnknownAttributes( child, FitPartDataInternal::kArrCorrectiveAttribute );
                 FitCorrectiveDef corrective;
                 corrective._morph = reader.readName( child, "morph", false );
-                for ( XmlNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
+                for ( XMLNode deltaNode = child.findChild(); deltaNode; deltaNode = deltaNode.findNextSibling() )
                 {
                     if ( StringUtil::equals( deltaNode.getName(), "Delta", true ) == false )
                     {

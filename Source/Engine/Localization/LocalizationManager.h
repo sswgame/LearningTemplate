@@ -75,7 +75,7 @@ namespace sw
         /** @brief 문화권 표(`*.cultures.json`)를 읽습니다. 의사 문화권의 표도 다시 만듭니다. */
         [[nodiscard]] bool loadCultureTable( string_view resourcePath );
         /** @brief 문화권 표를 JSON 글에서 읽습니다(시험 · 도구). */
-        [[nodiscard]] bool loadCultureTableJson( string_view jsonText );
+        [[nodiscard]] bool loadCultureTableJSON( string_view jsonText );
         /** @brief @p culture 의 형식 데이터(없으면 부모, 끝까지 없으면 기본값)를 값으로 돌려줍니다. */
         CultureInfo resolveCulture( string_view culture ) const;
 
@@ -96,7 +96,7 @@ namespace sw
         bool isProjectFile( string_view path ) const;
 
         /** @brief 번역 표 JSON(`TranslationTable` 형식)을 낱개 표로 올립니다. 원문 확인 없이 프로젝트 위에 덮입니다(시험 · 도구). */
-        [[nodiscard]] bool loadLanguageJson( string_view languageCode, string_view jsonText );
+        [[nodiscard]] bool loadLanguageJSON( string_view languageCode, string_view jsonText );
         /** @brief 낱개 표에 문자열 하나를 넣습니다. */
         void setString( string_view languageCode, const hashed_string& key, string_view value );
         /** @brief 그 언어의 낱개 표를 내립니다(프로젝트의 글은 남는다). */

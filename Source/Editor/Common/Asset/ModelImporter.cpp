@@ -20,14 +20,14 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
 #include "Engine/Destruction/FractureAsset.h"
 #include "Engine/Destruction/MeshFracture.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #define CGLTF_IMPLEMENTATION
 #include <cgltf.h>
@@ -65,7 +65,7 @@ namespace sw::editor
             static constexpr string_view kRawTextureFolder = "textures_raw";
             /** @brief GLB 머리 · 청크 머리 크기와 표식("glTF" · "JSON")입니다. */
             static constexpr uint32 kGlbMagic           = FourCcUtil::make( "glTF" );
-            static constexpr uint32 kGlbJsonChunkType   = FourCcUtil::make( "JSON" );
+            static constexpr uint32 kGlbJSONChunkType   = FourCcUtil::make( "JSON" );
             static constexpr size_t kGlbHeaderSize      = 12;
             static constexpr size_t kGlbChunkHeaderSize = 8;
             /** @brief meshopt_optimizeOverdraw 가 정점 캐시 효율을 얼마나 잃어도 되는지입니다(라이브러리 권장값). */
@@ -486,7 +486,7 @@ namespace sw::editor
                 size_t     jsonSize   = inoutBytes.size();
                 if ( bGlb )
                 {
-                    if ( readUint32( inoutBytes, kGlbHeaderSize + 4 ) != kGlbJsonChunkType )
+                    if ( readUint32( inoutBytes, kGlbHeaderSize + 4 ) != kGlbJSONChunkType )
                         return 0;
                     jsonOffset = kGlbHeaderSize + kGlbChunkHeaderSize;
                     jsonSize   = readUint32( inoutBytes, kGlbHeaderSize );
@@ -495,19 +495,19 @@ namespace sw::editor
                 }
 
                 // 읽지 못하는 JSON 은 그대로 두고 cgltf 가 알리게 한다.
-                JsonDocument document;
+                JSONDocument document;
                 if ( document.parse( string_view( reinterpret_cast<const utf8*>( inoutBytes.data() ) + jsonOffset, jsonSize ) ) == false )
                     return 0;
-                const JsonValue root = document.getRoot();
+                const JSONValue root = document.getRoot();
                 if ( root.isObject() == false )
                     return 0;
 
-                const JsonValue nodes     = root.get( "nodes", false );
+                const JSONValue nodes     = root.get( "nodes", false );
                 const size_t    nodeCount = nodes.isArray() ? nodes.size() : 0;
                 vector<size_t>  listParent( nodeCount, nodeCount ); // nodeCount = 부모 없음
                 for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
                 {
-                    const JsonValue children   = nodes.at( nodeIndex ).get( "children", false );
+                    const JSONValue children   = nodes.at( nodeIndex ).get( "children", false );
                     const size_t    childCount = children.isArray() ? children.size() : 0;
                     for ( size_t childSlot = 0; childSlot < childCount; ++childSlot )
                     {
@@ -518,11 +518,11 @@ namespace sw::editor
                 }
 
                 uint32          promotedCount = 0;
-                const JsonValue scenes        = root.get( "scenes", false );
+                const JSONValue scenes        = root.get( "scenes", false );
                 const size_t    sceneCount    = scenes.isArray() ? scenes.size() : 0;
                 for ( size_t sceneIndex = 0; sceneIndex < sceneCount; ++sceneIndex )
                 {
-                    const JsonValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
+                    const JSONValue sceneNodes = scenes.at( sceneIndex ).get( "nodes", false );
                     if ( sceneNodes.isArray() == false )
                         continue;
 
@@ -564,17 +564,17 @@ namespace sw::editor
                 else
                 {
                     // GLB 청크는 4 바이트 정렬이고 JSON 청크는 공백으로 채운다. BIN 청크 이하는 그대로 옮긴다.
-                    const size_t paddedJsonSize = ( json.size() + 3 ) & ~size_t( 3 );
+                    const size_t paddedJSONSize = ( json.size() + 3 ) & ~size_t( 3 );
                     const size_t tailOffset     = jsonOffset + jsonSize;
-                    const size_t totalSize      = jsonOffset + paddedJsonSize + ( inoutBytes.size() - tailOffset );
+                    const size_t totalSize      = jsonOffset + paddedJSONSize + ( inoutBytes.size() - tailOffset );
                     rewrittenBytes.reserve( totalSize );
                     appendUint32( kGlbMagic, rewrittenBytes );
                     appendUint32( readUint32( inoutBytes, 4 ), rewrittenBytes );
                     appendUint32( static_cast<uint32>( totalSize ), rewrittenBytes );
-                    appendUint32( static_cast<uint32>( paddedJsonSize ), rewrittenBytes );
-                    appendUint32( kGlbJsonChunkType, rewrittenBytes );
+                    appendUint32( static_cast<uint32>( paddedJSONSize ), rewrittenBytes );
+                    appendUint32( kGlbJSONChunkType, rewrittenBytes );
                     rewrittenBytes.insert( rewrittenBytes.end(), reinterpret_cast<const uint8*>( json.data() ), reinterpret_cast<const uint8*>( json.data() ) + json.size() );
-                    rewrittenBytes.resize( jsonOffset + paddedJsonSize, static_cast<uint8>( ' ' ) );
+                    rewrittenBytes.resize( jsonOffset + paddedJSONSize, static_cast<uint8>( ' ' ) );
                     rewrittenBytes.insert( rewrittenBytes.end(), inoutBytes.begin() + static_cast<ptrdiff_t>( tailOffset ), inoutBytes.end() );
                 }
                 inoutBytes.swap( rewrittenBytes );
@@ -1135,29 +1135,29 @@ namespace sw::editor
                 const string clipDataPath = ModelImporter::makeClipDataPath( sourcePath );
                 if ( FileUtil::exists( clipDataPath ) == false )
                     return true;
-                JsonDocument document;
+                JSONDocument document;
                 if ( document.loadPath( clipDataPath ) == false )
                 {
                     SW_LOG_ERROR( "Clip data '%#' is not valid JSON", clipDataPath.c_str() );
                     return false;
                 }
-                const JsonValue root = document.getRoot();
-                if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
+                const JSONValue root = document.getRoot();
+                if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
                     return false;
-                const JsonValue clips = root.get( "clips" );
+                const JSONValue clips = root.get( "clips" );
                 for ( const string& clipName : clips.getMemberNames() )
                 {
-                    const JsonValue clipValue = clips.get( clipName, false );
-                    if ( AnimJsonUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
+                    const JSONValue clipValue = clips.get( clipName, false );
+                    if ( AnimJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
                         return false;
                     ClipExtra extra{};
                     if ( clipValue.has( "loop" ) )
                         extra._loopOverride = clipValue.get( "loop" ).asBool( true ) ? 1 : 0;
-                    const JsonValue notifies = clipValue.get( "notifies" );
+                    const JSONValue notifies = clipValue.get( "notifies" );
                     for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
                     {
-                        const JsonValue notify = notifies.at( notifyIndex );
-                        if ( AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
+                        const JSONValue notify = notifies.at( notifyIndex );
+                        if ( AnimJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
                              notify.get( "time" ).isNumber() == false )
                         {
                             SW_LOG_ERROR( "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
@@ -1169,16 +1169,16 @@ namespace sw::editor
                         event._duration = static_cast<float32>( notify.get( "duration" ).asFloat( 0.0 ) );
                         extra._listNotify.push_back( event );
                     }
-                    const JsonValue curves = clipValue.get( "curves" );
+                    const JSONValue curves = clipValue.get( "curves" );
                     for ( const string& curveName : curves.isObject() ? curves.getMemberNames() : vector<string>{} )
                     {
-                        const JsonValue keys = curves.get( curveName, false );
+                        const JSONValue keys = curves.get( curveName, false );
                         AnimCurve       curve{};
                         curve._name = hashed_string( curveName );
                         for ( size_t keyIndex = 0; keys.isArray() && keyIndex < keys.size(); ++keyIndex )
                         {
                             float32 arrKey[2]{};
-                            if ( AnimJsonUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
+                            if ( AnimJSONUtil::readFloats( keys.at( keyIndex ), arrKey, 2 ) == false )
                             {
                                 SW_LOG_ERROR( "Clip data '%#': curve '%#' keys must be [time, value] pairs", clipDataPath.c_str(), curveName.c_str() );
                                 return false;
@@ -1203,26 +1203,26 @@ namespace sw::editor
                 outListToon.clear();
                 if ( data.json == nullptr || data.json_size == 0 )
                     return true;
-                JsonDocument document;
+                JSONDocument document;
                 if ( document.parse( string_view( data.json, data.json_size ) ) == false )
                     return true; // cgltf 가 이미 읽은 JSON 이다 — 여기서 못 읽을 일은 없지만, 못 읽으면 VRM 이 아닌 것으로 본다
-                const JsonValue root       = document.getRoot();
-                const JsonValue extensions = root.get( "extensions", false );
-                const JsonValue vrm0       = extensions.isObject() ? extensions.get( "VRM", false ) : JsonValue{};
-                const JsonValue materials  = root.get( "materials", false );
+                const JSONValue root       = document.getRoot();
+                const JSONValue extensions = root.get( "extensions", false );
+                const JSONValue vrm0       = extensions.isObject() ? extensions.get( "VRM", false ) : JSONValue{};
+                const JSONValue materials  = root.get( "materials", false );
                 const size_t    count      = materials.isArray() ? materials.size() : 0;
 
                 bool bVrm1 = extensions.isObject() && extensions.has( "VRMC_vrm", false );
                 for ( size_t index = 0; index < count && bVrm1 == false; ++index )
                 {
-                    const JsonValue materialExtensions = materials.at( index ).get( "extensions", false );
+                    const JSONValue materialExtensions = materials.at( index ).get( "extensions", false );
                     bVrm1                              = materialExtensions.isObject() && materialExtensions.has( "VRMC_materials_mtoon", false );
                 }
                 if ( vrm0.isObject() == false && bVrm1 == false )
                     return true;
 
                 outListToon.resize( count );
-                const JsonValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties", false ) : JsonValue{};
+                const JSONValue materialProperties = vrm0.isObject() ? vrm0.get( "materialProperties", false ) : JSONValue{};
                 for ( size_t index = 0; index < count; ++index )
                 {
                     string error;
@@ -1406,7 +1406,7 @@ namespace sw::editor
                         SW_LOG_ERROR( "Failed to write section mesh %#", meshPath.c_str() );
                         return false;
                     }
-                    const string materialText = VrmMaterialImporter::makeMaterialXml( section._material, listTexturePath );
+                    const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath );
                     const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
                     FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( materialPath ) );
                     if ( materialText.empty() || FileUtil::writeTextFile( materialPath, materialText ) == false )

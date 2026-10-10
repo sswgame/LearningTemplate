@@ -6,8 +6,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
@@ -127,7 +127,7 @@ namespace sw::editor
 
             /** @brief 객체의 키를 표와 대조합니다. 모르는 키가 있으면 그 이름을 @p outError 에 쓰고 false 입니다. */
             template <size_t Count>
-            [[nodiscard]] static bool checkKeys( const JsonValue& object, const string_view ( &arrKnown )[Count], string_view context, string& outError )
+            [[nodiscard]] static bool checkKeys( const JSONValue& object, const string_view ( &arrKnown )[Count], string_view context, string& outError )
             {
                 for ( const string& key : object.getMemberNames() )
                 {
@@ -141,13 +141,13 @@ namespace sw::editor
             }
 
             /** @brief 숫자 @p count 개의 배열을 읽습니다. 모자란 칸은 그대로 둡니다. 배열이 아니거나 숫자가 아니면 false 입니다. */
-            [[nodiscard]] static bool readNumbers( const JsonValue& value, float32* pOutValue, uint32 count )
+            [[nodiscard]] static bool readNumbers( const JSONValue& value, float32* pOutValue, uint32 count )
             {
                 if ( value.isArray() == false || value.size() < count )
                     return false;
                 for ( uint32 index = 0; index < count; ++index )
                 {
-                    const JsonValue element = value.at( index );
+                    const JSONValue element = value.at( index );
                     if ( element.isNumber() == false )
                         return false;
                     pOutValue[index] = static_cast<float32>( element.asFloat() );
@@ -156,7 +156,7 @@ namespace sw::editor
             }
 
             /** @brief 색(3 또는 4 칸)을 읽습니다. 3 칸이면 알파는 1 입니다. */
-            [[nodiscard]] static bool readColor( const JsonValue& value, float4& outColor )
+            [[nodiscard]] static bool readColor( const JSONValue& value, float4& outColor )
             {
                 float32 arrValue[4]{ 0.0f, 0.0f, 0.0f, 1.0f };
                 if ( value.isArray() == false || ( value.size() != 3 && value.size() != 4 ) || readNumbers( value, arrValue, static_cast<uint32>( value.size() ) ) == false )
@@ -172,11 +172,11 @@ namespace sw::editor
             }
 
             /** @brief glTF textureInfo 의 텍스처 번호입니다. 없으면 -1 입니다. 지원하지 않는 텍스처 확장(KHR_texture_transform)이 있으면 무시 목록에 남깁니다. */
-            static int32 readTextureIndex( const JsonValue& textureInfo, vector<string>* pOutListIgnored )
+            static int32 readTextureIndex( const JSONValue& textureInfo, vector<string>* pOutListIgnored )
             {
                 if ( textureInfo.isObject() == false || textureInfo.get( "index", false ).isNumber() == false )
                     return -1;
-                const JsonValue extensions = textureInfo.get( "extensions", false );
+                const JSONValue extensions = textureInfo.get( "extensions", false );
                 if ( extensions.isObject() )
                 {
                     for ( const string& extension : extensions.getMemberNames() )
@@ -193,11 +193,11 @@ namespace sw::editor
              * @brief glTF 기본 머티리얼(baseColor · alphaMode · alphaCutoff · doubleSided · emissive)을 읽습니다. 1.0 의 MToon 과 0.x 의 평면 셰이더가 함께 씁니다.
              * @return alphaMode 를 모르면 false 입니다.
              */
-            [[nodiscard]] static bool readGltfBase( const JsonValue& gltfMaterial, ToonMaterialDesc& inoutDesc, vector<string>* pOutListIgnored, string& outError )
+            [[nodiscard]] static bool readGltfBase( const JSONValue& gltfMaterial, ToonMaterialDesc& inoutDesc, vector<string>* pOutListIgnored, string& outError )
             {
                 if ( gltfMaterial.isObject() == false )
                     return true;
-                const JsonValue pbr = gltfMaterial.get( "pbrMetallicRoughness", false );
+                const JSONValue pbr = gltfMaterial.get( "pbrMetallicRoughness", false );
                 if ( pbr.isObject() )
                 {
                     if ( pbr.has( "baseColorFactor", false ) && readColor( pbr.get( "baseColorFactor", false ), inoutDesc._baseColor ) == false )
@@ -229,8 +229,8 @@ namespace sw::editor
                 inoutDesc._emissiveTexture = readTextureIndex( gltfMaterial.get( "emissiveTexture", false ), pOutListIgnored );
                 if ( gltfMaterial.has( "normalTexture", false ) )
                     appendIgnored( pOutListIgnored, "normalTexture" );
-                const JsonValue extensions = gltfMaterial.get( "extensions", false );
-                const JsonValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength", false ) : JsonValue{};
+                const JSONValue extensions = gltfMaterial.get( "extensions", false );
+                const JSONValue strength   = extensions.isObject() ? extensions.get( "KHR_materials_emissive_strength", false ) : JSONValue{};
                 if ( strength.isObject() )
                     inoutDesc._emissiveStrength = static_cast<float32>( strength.get( "emissiveStrength", false ).asFloat( 1.0 ) );
                 return true;
@@ -259,14 +259,14 @@ namespace sw::editor
             }
 
             /** @brief `_properties` 에서 이름의 항목입니다. */
-            static XmlNode findProperty( const XmlNode& properties, string_view name )
+            static XMLNode findProperty( const XMLNode& properties, string_view name )
             {
-                for ( XmlNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                for ( XMLNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     if ( item.getAttributeText( "name" ) == name )
                         return item;
                 }
-                return XmlNode{};
+                return XMLNode{};
             }
         };
     } // namespace
@@ -282,7 +282,7 @@ namespace sw::editor
         return MathUtil::pow( ( value + 0.055f ) / 1.055f, 2.4f );
     }
 
-    bool VrmMaterialImporter::readVrm0Material( const JsonValue& materialProperty, const JsonValue& gltfMaterial, ToonMaterialDesc& outDesc,
+    bool VrmMaterialImporter::readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc,
                                                 vector<string>* pOutListIgnored, string& outError )
     {
         using Internal = VrmMaterialImporterInternal;
@@ -316,7 +316,7 @@ namespace sw::editor
         }
 
         // 실수
-        const JsonValue floats = materialProperty.get( "floatProperties", false );
+        const JSONValue floats = materialProperty.get( "floatProperties", false );
         float32         arrFloat[sizeof( Internal::kArrVrm0Float ) / sizeof( Internal::kArrVrm0Float[0] )]{};
         bool            arrHasFloat[sizeof( Internal::kArrVrm0Float ) / sizeof( Internal::kArrVrm0Float[0] )]{};
         auto            findFloat = [&]( string_view key, float32 fallback ) -> float32
@@ -330,7 +330,7 @@ namespace sw::editor
         };
         for ( const string& key : floats.isObject() ? floats.getMemberNames() : vector<string>{} )
         {
-            const JsonValue value = floats.get( key, false );
+            const JSONValue value = floats.get( key, false );
             if ( value.isNumber() == false )
             {
                 outError = context + ": float property '" + key + "' is not a number";
@@ -358,7 +358,7 @@ namespace sw::editor
         }
 
         // 색
-        const JsonValue vectors                                                                            = materialProperty.get( "vectorProperties", false );
+        const JSONValue vectors                                                                            = materialProperty.get( "vectorProperties", false );
         float4          arrColor[sizeof( Internal::kArrVrm0Color ) / sizeof( Internal::kArrVrm0Color[0] )] = {
             float4{1.0f, 1.0f, 1.0f, 1.0f},
             float4{0.0f, 0.0f, 0.0f, 1.0f},
@@ -368,7 +368,7 @@ namespace sw::editor
         };
         for ( const string& key : vectors.isObject() ? vectors.getMemberNames() : vector<string>{} )
         {
-            const JsonValue value  = vectors.get( key, false );
+            const JSONValue value  = vectors.get( key, false );
             bool            bKnown = false;
             for ( size_t index = 0; index < sizeof( Internal::kArrVrm0Color ) / sizeof( Internal::kArrVrm0Color[0] ); ++index )
             {
@@ -403,11 +403,11 @@ namespace sw::editor
         }
 
         // 텍스처(glTF 텍스처 번호)
-        const JsonValue textures = materialProperty.get( "textureProperties", false );
+        const JSONValue textures = materialProperty.get( "textureProperties", false );
         int32           arrTexture[4]{ -1, -1, -1, -1 };
         for ( const string& key : textures.isObject() ? textures.getMemberNames() : vector<string>{} )
         {
-            const JsonValue value = textures.get( key, false );
+            const JSONValue value = textures.get( key, false );
             if ( value.isNumber() == false )
             {
                 outError = context + ": texture property '" + key + "' is not a texture index";
@@ -501,7 +501,7 @@ namespace sw::editor
         return true;
     }
 
-    bool VrmMaterialImporter::readMtoon1Material( const JsonValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError )
+    bool VrmMaterialImporter::readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError )
     {
         using Internal       = VrmMaterialImporterInternal;
         outDesc              = ToonMaterialDesc{};
@@ -512,8 +512,8 @@ namespace sw::editor
             outError = context + ": " + outError;
             return false;
         }
-        const JsonValue extensions = gltfMaterial.get( "extensions", false );
-        const JsonValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon", false ) : JsonValue{};
+        const JSONValue extensions = gltfMaterial.get( "extensions", false );
+        const JSONValue mtoon      = extensions.isObject() ? extensions.get( "VRMC_materials_mtoon", false ) : JSONValue{};
         if ( mtoon.isObject() == false )
         {
             // MToon 이 없는 머티리얼(KHR_materials_unlit · PBR)은 평면 툰이다.
@@ -573,17 +573,17 @@ namespace sw::editor
         return true;
     }
 
-    string VrmMaterialImporter::makeMaterialXml( const ToonMaterialDesc& desc, const vector<string>& listTexturePath )
+    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath )
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
         if ( ResourceUtil::readTextResource( Internal::kToonMaterialTemplate, templateText ) == false )
             return {};
-        XmlDocument document;
+        XMLDocument document;
         if ( document.parse( templateText ) == false )
             return {};
-        const XmlNode root       = document.getRoot( "MaterialDesc" );
-        const XmlNode properties = root.findChild( "_properties" );
+        const XMLNode root       = document.getRoot( "MaterialDesc" );
+        const XMLNode properties = root.findChild( "_properties" );
         if ( root.isValid() == false || properties.isValid() == false )
             return {};
 
@@ -592,13 +592,13 @@ namespace sw::editor
 
         auto setValue = [&]( string_view name, const string& value )
         {
-            const XmlNode item = Internal::findProperty( properties, name );
+            const XMLNode item = Internal::findProperty( properties, name );
             if ( item.isValid() )
                 item.setAttribute( "defaultValue", string_view( value ) );
         };
         auto setTexture = [&]( string_view name, int32 textureIndex )
         {
-            const XmlNode item     = Internal::findProperty( properties, name );
+            const XMLNode item     = Internal::findProperty( properties, name );
             const bool    bInRange = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
             if ( item.isValid() && bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false )
                 item.setAttribute( "assetPath", string_view( listTexturePath[static_cast<size_t>( textureIndex )] ) );
@@ -626,9 +626,9 @@ namespace sw::editor
         setTexture( "emissiveMap", desc._emissiveTexture );
         setTexture( "matcapMap", desc._matcapTexture );
 
-        const XmlNode permutations = root.findChild( "_permutations" );
-        const XmlNode switches     = permutations.findChild( "_staticSwitches" );
-        for ( XmlNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+        const XMLNode permutations = root.findChild( "_permutations" );
+        const XMLNode switches     = permutations.findChild( "_staticSwitches" );
+        for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
         {
             const string_view name     = item.getAttributeText( "name" );
             bool              bEnabled = false;

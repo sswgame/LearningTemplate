@@ -18,7 +18,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kFarmingTestCropXml = R"(
+    constexpr const utf8* kFarmingTestCropXML = R"(
 <CropCatalog>
   <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="3" seasons="Spring" seedPrice="20" sellPrice="60"/>
   <Crop id="tomato" name="Tomato" seed="tomato_seed" produce="tomato" days="4" regrow="2" seasons="Spring, Summer" seedPrice="40" sellPrice="30" harvest="2"/>
@@ -42,7 +42,7 @@ SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
 {
     CropCatalog catalog;
     catalog.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), catalog.getCrops().size() ); // 모르는 계절(Monsoon)만 적힌 ghost 는 빠졌다
 
     FarmField field;
@@ -77,7 +77,7 @@ SW_TEST_CASE( FarmingTest, CropsGrowOnlyOnWateredDays )
 SW_TEST_CASE( FarmingTest, RegrowingCropsStayAndRainWatersTilledSoil )
 {
     CropCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     FarmField field;
     field.initialize( 2, 1, &catalog );
     prepareFarmTile( field, 0, 0, "tomato_seed" );
@@ -108,7 +108,7 @@ SW_TEST_CASE( FarmingTest, RegrowingCropsStayAndRainWatersTilledSoil )
 SW_TEST_CASE( FarmingTest, SeasonChangeWithersOutOfSeasonCrops )
 {
     CropCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     FarmField field;
     field.initialize( 2, 1, &catalog );
     prepareFarmTile( field, 0, 0, "turnip_seed" ); // 봄만
@@ -134,7 +134,7 @@ SW_TEST_CASE( FarmingTest, SeasonChangeWithersOutOfSeasonCrops )
 SW_TEST_CASE( FarmingTest, ShippingBinSellsFromTheBorrowedBagAtTheEndOfTheDay )
 {
     CropCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
     SW_ASSERT_NOT_NULL( items.findItem( "turnip_seed" ) );
@@ -162,7 +162,7 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsFromTheBorrowedBagAtTheEndOfTheDay )
 SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
 {
     CropCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     ItemCatalog items;
     catalog.fillItemCatalog( items, 99 );
     Inventory bag;
@@ -233,7 +233,7 @@ SW_TEST_CASE( FarmingTest, StateRoundTripContinuesTheSameFarm )
 SW_TEST_CASE( FarmingTest, TwoFarmsShareOneBorrowedWallet )
 {
     CropCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kFarmingTestCropXml, "FarmingTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kFarmingTestCropXML, "FarmingTest" ) );
     Inventory bag;
     bag.initialize( nullptr, 8 );
     Wallet          shared;

@@ -13,7 +13,7 @@
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 이름 붙은 수치 하나입니다. */
     struct StatValue
@@ -46,7 +46,7 @@ namespace sw
         [[nodiscard]] bool trySpend( const StatBlock& cost );
 
         /** @brief 노드의 속성을 모두 읽어 더합니다. @p pSkipName 은 건너뛸 속성 이름(쉼표 목록 — "id,name"). 읽은 수입니다. */
-        uint32 loadFromAttributes( const XmlNode& node, const utf8* pSkipName = nullptr );
+        uint32 loadFromAttributes( const XMLNode& node, const utf8* pSkipName = nullptr );
 
         const vector<StatValue>& getValues() const { return _listValue; }
         bool                     isEmpty() const { return _listValue.empty(); }

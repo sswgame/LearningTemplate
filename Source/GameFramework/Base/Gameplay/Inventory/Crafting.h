@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -20,7 +20,7 @@ namespace sw
 {
     class Archive;
     class Inventory;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 레시피 하나입니다. */
     struct RecipeDef
@@ -58,9 +58,9 @@ namespace sw
      * @brief `<RecipeCatalog><Recipe id="potion" station="Alchemy" time="2" level="1" known="false"><In item="herb" count="2"/>
      *        <Tool item="mortar"/><Out item="potion" count="1"/></Recipe></RecipeCatalog>` 를 읽습니다.
      */
-    class SW_GF_API RecipeCatalog : public XmlCatalog<RecipeCatalog>
+    class SW_GF_API RecipeCatalog : public XMLCatalog<RecipeCatalog>
     {
-        friend class XmlCatalog<RecipeCatalog>;
+        friend class XMLCatalog<RecipeCatalog>;
 
     public:
         void addRecipe( const RecipeDef& recipe ) { (void)_catalog.add( recipe ); }
@@ -71,8 +71,8 @@ namespace sw
         void findRecipesFor( const hashed_string& itemId, vector<const RecipeDef*>& outListRecipe ) const;
 
     private:
-        static constexpr const utf8* kXmlRootName = "RecipeCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "RecipeCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<RecipeDef> _catalog{};
     };

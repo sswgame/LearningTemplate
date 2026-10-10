@@ -5,7 +5,7 @@
 #include "Editor/Common/Asset/VrmMaterialImporter.h"
 
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -41,7 +41,7 @@ namespace
       "outlineWidthMode": "screenCoordinates", "outlineWidthFactor": 0.004, "outlineColorFactor": [0.05, 0.0, 0.1], "outlineLightingMixFactor": 0.75,
       "uvAnimationScrollXSpeedFactor": 0.5 } } })";
 
-        static sw::JsonValue parse( sw::JsonDocument& document, const utf8* pText )
+        static sw::JSONValue parse( sw::JSONDocument& document, const utf8* pText )
         {
             SW_EXPECT_TRUE( document.parse( pText ) );
             return document.getRoot();
@@ -55,8 +55,8 @@ namespace
 SW_TEST_CASE( VrmMaterialImporterTest, Vrm0MToonValuesMapToToonParameters )
 {
     using Internal = TestVrmMaterialImporterInternal;
-    sw::JsonDocument             document;
-    sw::JsonDocument             gltfDocument;
+    sw::JSONDocument             document;
+    sw::JSONDocument             gltfDocument;
     sw::editor::ToonMaterialDesc desc;
     sw::vector<sw::string>       listIgnored;
     sw::string                   error;
@@ -100,8 +100,8 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0MToonValuesMapToToonParameters )
 SW_TEST_CASE( VrmMaterialImporterTest, Vrm0ScreenOutlineAndHardStep )
 {
     using Internal = TestVrmMaterialImporterInternal;
-    sw::JsonDocument             document;
-    sw::JsonDocument             gltfDocument;
+    sw::JSONDocument             document;
+    sw::JSONDocument             gltfDocument;
     sw::editor::ToonMaterialDesc desc;
     sw::string                   error;
     const utf8*                  pText = R"({ "name": "Hair", "shader": "VRM/MToon",
@@ -140,8 +140,8 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0UnknownNamesAreErrors )
     };
     for ( const ErrorCase& errorCase : kArrCase )
     {
-        sw::JsonDocument             document;
-        sw::JsonDocument             gltfDocument;
+        sw::JSONDocument             document;
+        sw::JSONDocument             gltfDocument;
         sw::editor::ToonMaterialDesc desc;
         sw::string                   error;
         SW_EXPECT_FALSE_MSG( sw::editor::VrmMaterialImporter::readVrm0Material( Internal::parse( document, errorCase._pText ), Internal::parse( gltfDocument, "{}" ),
@@ -157,7 +157,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, Vrm0UnknownNamesAreErrors )
 SW_TEST_CASE( VrmMaterialImporterTest, Mtoon1ValuesMapDirectly )
 {
     using Internal = TestVrmMaterialImporterInternal;
-    sw::JsonDocument             document;
+    sw::JSONDocument             document;
     sw::editor::ToonMaterialDesc desc;
     sw::vector<sw::string>       listIgnored;
     sw::string                   error;
@@ -189,7 +189,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, Mtoon1ValuesMapDirectly )
     SW_EXPECT_TRUE( listIgnored.size() == 1 && listIgnored[0] == "uvAnimationScrollXSpeedFactor" );
 
     // 모르는 키는 오류다.
-    sw::JsonDocument             badDocument;
+    sw::JSONDocument             badDocument;
     sw::editor::ToonMaterialDesc badDesc;
     const utf8*                  pBad = R"({ "name": "B", "extensions": { "VRMC_materials_mtoon": { "specVersion": "1.0", "shadingToonyFactr": 0.5 } } })";
     SW_EXPECT_FALSE( sw::editor::VrmMaterialImporter::readMtoon1Material( Internal::parse( badDocument, pBad ), badDesc, nullptr, error ) );
@@ -199,7 +199,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, Mtoon1ValuesMapDirectly )
 /**
  * @brief [VrmMaterialImporterTest] 만든 `.material` 이 엔진 툰 머티리얼로 읽힌다 — 값 · 텍스처 경로 · 정적 스위치(외곽선 · 컷오프 · 양면) · 반투명 블렌드
  */
-SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
+SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
 {
     sw::editor::ToonMaterialDesc desc;
     desc._name                                   = "Hair";
@@ -212,7 +212,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
     const sw::vector<sw::string> listTexturePath = { "", "game/test/textures/hair.dds" };
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromXml( sw::editor::VrmMaterialImporter::makeMaterialXml( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( material->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
     SW_EXPECT_STREQ( "engine/shaders/toon.hlsl", material->getShaderPath().c_str() );
     float32 toony{ 0.0f };
     SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "shadingToony" ), toony ) );
@@ -232,7 +232,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
     // 반투명은 블렌드 모드 + MATERIAL_BLEND_TRANSLUCENT 이고 외곽선 패스에는 들어가지 않는다(불투명 목록만 그린다).
     desc._alphaMode                    = sw::editor::ToonAlphaMode::Transparent;
     sw::shared_ptr<sw::Material> glass = sw::Material::create();
-    SW_ASSERT_TRUE( glass->loadFromXml( sw::editor::VrmMaterialImporter::makeMaterialXml( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( glass->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
     const sw::vector<sw::string>& listGlassDefine = glass->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_BLEND_TRANSLUCENT" ) ) != listGlassDefine.end() );
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_OUTLINE" ) ) == listGlassDefine.end() );

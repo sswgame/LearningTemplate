@@ -7,8 +7,8 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Observability/HttpClient.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Observability/HTTPClient.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -43,18 +43,18 @@ namespace
             CrashReportUploadResult         _result{ CrashReportUploadResult::Sent };
         };
 
-        class RecordingHttpClient final : public IHttpClient
+        class RecordingHTTPClient final : public IHTTPClient
         {
         public:
-            HttpResponse send( const HttpRequest& request ) override
+            HTTPResponse send( const HTTPRequest& request ) override
             {
                 _listRequest.push_back( request );
-                HttpResponse response;
+                HTTPResponse response;
                 response._status = 200;
                 return response;
             }
 
-            vector<HttpRequest> _listRequest{};
+            vector<HTTPRequest> _listRequest{};
         };
 
         /** @brief 크래시 핸들러가 남기는 모양 그대로의 가짜 크래시 파일을 씁니다. */
@@ -77,9 +77,9 @@ namespace
 
         static string bundleFolder( const string& reportsFolder, const utf8* pSession ) { return FileUtil::joinPath( reportsFolder, string( "crash_" ) + pSession ); }
 
-        static JsonDocument loadManifest( const string& reportsFolder, const utf8* pSession )
+        static JSONDocument loadManifest( const string& reportsFolder, const utf8* pSession )
         {
-            JsonDocument doc;
+            JSONDocument doc;
             string       text;
             if ( FileUtil::readTextFile( FileUtil::joinPath( bundleFolder( reportsFolder, pSession ), "manifest.json" ), text ) )
                 (void)doc.tryParse( text ); // 깨진 manifest 는 빈 문서로 남아 부르는 쪽 단언이 값으로 드러낸다
@@ -128,8 +128,8 @@ SW_TEST_CASE( CrashBundleTest, BundlesPreviousCrashesOnce )
     SW_EXPECT_TRUE( lastLog.find( "FIRST LINE" ) == string::npos );
     SW_EXPECT_TRUE( lastLog.find( "OTHER SESSION" ) == string::npos );
 
-    const JsonDocument manifest = Internal::loadManifest( reportsFolder, "oldsession01" );
-    const JsonValue    root     = manifest.getRoot();
+    const JSONDocument manifest = Internal::loadManifest( reportsFolder, "oldsession01" );
+    const JSONValue    root     = manifest.getRoot();
     SW_EXPECT_TRUE( root.get( "session" ).asString() == "oldsession01" );
     SW_EXPECT_TRUE( root.get( "reason" ).asString() == "EXCEPTION_ACCESS_VIOLATION" );
     SW_EXPECT_TRUE( root.get( "buildId" ).asString() == "0A1B2C3D4E5F60718293A4B5C6D7E8F91" );
@@ -256,7 +256,7 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
     SW_ASSERT_TRUE( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, folder ) );
     SW_EXPECT_TRUE( folder == reportsFolder );
     SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, NullCrashReportUploader::get() ) );
-    const JsonDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
+    const JSONDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
     SW_EXPECT_TRUE( manifest.getRoot().get( "state" ).asString() == "queued" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).asUint() ) );
 }
@@ -264,7 +264,7 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
 /**
  * @brief [CrashBundleTest] HTTP 업로더 — multipart/form-data 로 매니페스트와 파일을 보내고 덤프는 `upload_file_minidump` 이다. 기본 창구는 보내지 않는다
  */
-SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
+SW_TEST_CASE( CrashBundleTest, HTTPUploaderSendsMultipartMinidump )
 {
     using Internal                   = CrashBundleTestInternal;
     const string       crashFolder   = test::makeTempDirectory( "Logs" );
@@ -275,11 +275,11 @@ SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
     Internal::writeFakeCrash( crashFolder, "multipart", "abort" );
     SW_ASSERT_EQUAL( 1u, service.collectNewCrashes() );
 
-    Internal::RecordingHttpClient client;
-    HttpCrashReportUploader       uploader( client, "https://crash.invalid/api/minidump" );
+    Internal::RecordingHTTPClient client;
+    HTTPCrashReportUploader       uploader( client, "https://crash.invalid/api/minidump" );
     SW_EXPECT_EQUAL( 1u, CrashReportService::runReporter( reportsFolder, uploader ) );
     SW_ASSERT_EQUAL( 1u, static_cast<uint32>( client._listRequest.size() ) );
-    const HttpRequest& request = client._listRequest[0];
+    const HTTPRequest& request = client._listRequest[0];
     SW_EXPECT_TRUE( request._url == "https://crash.invalid/api/minidump" );
     SW_EXPECT_TRUE( StringUtil::startsWith( request.findHeader( "Content-Type" ), "multipart/form-data; boundary=" ) );
     SW_EXPECT_TRUE( request.findHeader( "X-Crash-Session" ) == "multipart" );
@@ -287,9 +287,9 @@ SW_TEST_CASE( CrashBundleTest, HttpUploaderSendsMultipartMinidump )
     SW_EXPECT_TRUE( request._body.find( "name=\"upload_file_minidump\"; filename=\"crash.dmp\"" ) != string::npos );
     SW_EXPECT_TRUE( request._body.find( string( "MDMP\0\x01\x02", 7 ) ) != string::npos );
     SW_EXPECT_TRUE( request._body.find( "crash.breadcrumbs.txt" ) != string::npos );
-    SW_EXPECT_TRUE( StringUtil::endsWith( request._body, string( "--" ) + HttpCrashReportUploader::kBoundary + "--\r\n" ) );
+    SW_EXPECT_TRUE( StringUtil::endsWith( request._body, string( "--" ) + HTTPCrashReportUploader::kBoundary + "--\r\n" ) );
 
-    HttpCrashReportUploader offline( NullHttpClient::get(), "https://crash.invalid/api/minidump" );
+    HTTPCrashReportUploader offline( NullHTTPClient::get(), "https://crash.invalid/api/minidump" );
     CrashReportUploadBundle bundle;
     SW_EXPECT_TRUE( offline.upload( bundle ) == CrashReportUploadResult::Failed );
 }
@@ -301,7 +301,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentFollowsTheUserSetting )
 {
     UserSettingsManager settings;
     settings.initialize( UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
 <Setting id="telemetry.crashReports" category="privacy" type="enum" default="local"><Option value="local"/><Option value="ask"/><Option value="send"/></Setting>
 </UserSettingsSchema>)",
                                                     "privacy.settings.xml" ) );

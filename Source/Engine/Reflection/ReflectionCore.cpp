@@ -163,7 +163,7 @@ namespace sw
         , _bHasMinRange{ SW_FALSE }
         , _bHasMaxRange{ SW_FALSE }
         , _bReadOnly{ SW_FALSE }
-        , _bXmlAttribute{ SW_FALSE }
+        , _bXMLAttribute{ SW_FALSE }
         , _bAssetPath{ SW_FALSE }
         , _bPolymorphic{ SW_FALSE }
         , _bTransient{ SW_FALSE }
@@ -853,7 +853,7 @@ namespace sw
                 const pair<bool, const utf8*> arrFlag[] = {
                     {    prop._metadata._bReadOnly != SW_FALSE,     "ReadOnly"},
                     {   prop._metadata._bTransient != SW_FALSE,    "Transient"},
-                    {prop._metadata._bXmlAttribute != SW_FALSE, "XmlAttribute"},
+                    {prop._metadata._bXMLAttribute != SW_FALSE, "XMLAttribute"},
                     {   prop._metadata._bAssetPath != SW_FALSE,    "AssetPath"},
                     { prop._metadata._bPolymorphic != SW_FALSE,  "Polymorphic"},
                     { prop._metadata._bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},

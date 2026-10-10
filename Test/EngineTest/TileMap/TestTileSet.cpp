@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 #include "TestFramework/TestFramework.h"
@@ -13,7 +13,7 @@ namespace
      * @brief 4 × 4 아틀라스 타일셋 — 땅(규칙 타일: 외톨이 0, 위가 비면 1, 기본 5), 물(애니메이션 12..15, 4 fps), 풀(그냥 타일 3).
      * @details 규칙은 앞에서부터 맞는다 — 외톨이가 "위가 빔" 보다 먼저라야 위도 빈 외톨이 칸이 외톨이 모습을 받는다.
      */
-    constexpr const utf8* kTileSetXml = "<TileSet atlas=\"engine/textures/test/quadrants.dds\" columns=\"4\" rows=\"4\" tileSize=\"1\">"
+    constexpr const utf8* kTileSetXML = "<TileSet atlas=\"engine/textures/test/quadrants.dds\" columns=\"4\" rows=\"4\" tileSize=\"1\">"
                                         "  <RuleTile name=\"ground\" cell=\"5\" solid=\"true\">"
                                         "    <Rule pattern=\".x. x.x .x.\" cell=\"0\"/>"
                                         "    <Rule pattern=\".x. ... ...\" cell=\"1\"/>"
@@ -40,7 +40,7 @@ namespace
 SW_TEST_CASE( TileSetTest, RuleTilesResolveByNeighborsAndFollowPainting )
 {
     sw::TileSetAsset tileSet;
-    SW_ASSERT_TRUE( tileSet.loadFromXmlText( kTileSetXml, "<test>" ) );
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( kTileSetXML, "<test>" ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( tileSet.getBrushes().size() ) );
     const uint16 ground = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "ground" ) ) + 1 );
     const uint16 water  = static_cast<uint16>( tileSet.findBrush( sw::hashed_string( "water" ) ) + 1 );
@@ -79,9 +79,9 @@ SW_TEST_CASE( TileSetTest, RuleTilesResolveByNeighborsAndFollowPainting )
  */
 SW_TEST_CASE( TileSetTest, TileLayerRoundTripsByBrushName )
 {
-    sw::TileMapXmlData map;
+    sw::TileMapXMLData map;
     SW_ASSERT_TRUE( map.resetTiles( 3, 2 ) );
-    const sw::string withoutLayer = map.toXml();
+    const sw::string withoutLayer = map.toXML();
     SW_EXPECT_TRUE( withoutLayer.find( "tileLayer" ) == sw::string::npos );
 
     map._tileSetPath = "engine/tilesets/test.tileset.xml";
@@ -91,8 +91,8 @@ SW_TEST_CASE( TileSetTest, TileLayerRoundTripsByBrushName )
     SW_EXPECT_FALSE( map.setTileBrush( 3, 0, "ground" ) ); // 맵 밖
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( map._listPaletteName.size() ) );
 
-    sw::TileMapXmlData reread;
-    SW_ASSERT_TRUE( reread.loadFromXml( map.toXml() ) );
+    sw::TileMapXMLData reread;
+    SW_ASSERT_TRUE( reread.loadFromXML( map.toXML() ) );
     SW_EXPECT_STREQ( "engine/tilesets/test.tileset.xml", reread._tileSetPath.c_str() );
     SW_EXPECT_TRUE( reread.getTileBrushName( 0, 1 ) == "ground" );
     SW_EXPECT_TRUE( reread.getTileBrushName( 2, 1 ) == "water" );
@@ -100,7 +100,7 @@ SW_TEST_CASE( TileSetTest, TileLayerRoundTripsByBrushName )
 
     // 타일셋 브러시 번호로 옮긴다 — 맵의 팔레트 순서(ground, water)와 타일셋 순서(ground, water, grass)가 달라도 이름이 같으면 같다.
     sw::TileSetAsset tileSet;
-    SW_ASSERT_TRUE( tileSet.loadFromXmlText( kTileSetXml, "<test>" ) );
+    SW_ASSERT_TRUE( tileSet.loadFromXMLText( kTileSetXML, "<test>" ) );
     sw::vector<uint16> listBrushIndex;
     SW_EXPECT_TRUE( reread.mapTileCells( tileSet, listBrushIndex ) );
     SW_ASSERT_EQUAL( 6u, static_cast<uint32>( listBrushIndex.size() ) );
@@ -131,10 +131,10 @@ SW_TEST_CASE( TileSetTest, MalformedDataIsALoadError )
         "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" frames=\"0 1\"/></TileSet>",
         "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\"/></TileSet>",
     };
-    for ( const utf8* pXml : arrBadTileSet )
+    for ( const utf8* pXML : arrBadTileSet )
     {
         sw::TileSetAsset tileSet;
-        SW_EXPECT_FALSE_MSG( tileSet.loadFromXmlText( pXml, "<bad>" ), pXml );
+        SW_EXPECT_FALSE_MSG( tileSet.loadFromXMLText( pXML, "<bad>" ), pXML );
     }
 
     const utf8* arrBadMap[] = {
@@ -142,9 +142,9 @@ SW_TEST_CASE( TileSetTest, MalformedDataIsALoadError )
         "<TileMap><width>2</width><height>1</height><tileLayer tileSet=\"t\"><palette><b name=\"a\"/></palette><cells>1 2</cells></tileLayer></TileMap>",
         "<TileMap><width>2</width><height>1</height><tileLayer tileSet=\"t\"><palette/><cells>0 a</cells></tileLayer></TileMap>",
     };
-    for ( const utf8* pXml : arrBadMap )
+    for ( const utf8* pXML : arrBadMap )
     {
-        sw::TileMapXmlData map;
-        SW_EXPECT_FALSE_MSG( map.loadFromXml( pXml ), pXml );
+        sw::TileMapXMLData map;
+        SW_EXPECT_FALSE_MSG( map.loadFromXML( pXML ), pXML );
     }
 }

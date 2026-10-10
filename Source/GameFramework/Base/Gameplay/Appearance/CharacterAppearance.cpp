@@ -4,11 +4,11 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Base/Gameplay/Appearance/EquipSetCatalog.h"
 #include "GameFramework/Base/Gameplay/Appearance/SlotTable.h"
@@ -34,19 +34,19 @@ namespace sw
 
             static void readColors( string_view text, vector<float4>& outListColor )
             {
-                GameDataXml::forEachToken( text, ";", [&]( string_view token )
+                GameDataXML::forEachToken( text, ";", [&]( string_view token )
                 {
-                    outListColor.push_back( GameDataXml::parseFloat4( token, float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
+                    outListColor.push_back( GameDataXML::parseFloat4( token, float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
                 } );
             }
 
-            static void readValue( const XmlNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
+            static void readValue( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrValueAttribute, report, sourceName );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrValueAttribute, report, sourceName );
                 CharacterAppearanceValueDef value;
-                value._parameter = AppearanceXmlUtil::readName( node, "name" );
-                AppearanceXmlUtil::readNameList( node, "option", value._listOption );
-                AppearanceXmlUtil::readNameList( node, "options", value._listOption );
+                value._parameter = AppearanceXMLUtil::readName( node, "name" );
+                AppearanceXMLUtil::readNameList( node, "option", value._listOption );
+                AppearanceXMLUtil::readNameList( node, "options", value._listOption );
                 readColors( node.getAttributeText( "color" ), value._listColor );
                 readColors( node.getAttributeText( "colors" ), value._listColor );
                 const bool bFixed      = node.findAttribute( "value" ) != nullptr;
@@ -71,24 +71,24 @@ namespace sw
                 inoutDef._listValue.push_back( value );
             }
 
-            static void readItemValue( const XmlNode& node, CharacterAppearanceSlotDef& inoutSlot, AppearanceLoadReport& report, string_view sourceName, const hashed_string& presetId )
+            static void readItemValue( const XMLNode& node, CharacterAppearanceSlotDef& inoutSlot, AppearanceLoadReport& report, string_view sourceName, const hashed_string& presetId )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrItemValueAttribute, report, sourceName );
-                const hashed_string parameter = AppearanceXmlUtil::readName( node, "name" );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrItemValueAttribute, report, sourceName );
+                const hashed_string parameter = AppearanceXMLUtil::readName( node, "name" );
                 if ( node.findAttribute( "option" ) != nullptr )
-                    inoutSlot._customization.setOption( parameter, AppearanceXmlUtil::readName( node, "option" ) );
+                    inoutSlot._customization.setOption( parameter, AppearanceXMLUtil::readName( node, "option" ) );
                 else if ( node.findAttribute( "color" ) != nullptr )
-                    inoutSlot._customization.setColor( parameter, AppearanceXmlUtil::readFloat4( node, "color", float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
+                    inoutSlot._customization.setColor( parameter, AppearanceXMLUtil::readFloat4( node, "color", float4( 1.0f, 1.0f, 1.0f, 1.0f ) ) );
                 else if ( node.findAttribute( "value" ) != nullptr )
                     inoutSlot._customization.setNumber( parameter, node.getAttributeFloat( "value", 0.0f ) );
                 else
                     report.addError( "%#: preset '%#' slot '%#' item value '%#' needs value / color / option", sourceName, presetId.c_str(), inoutSlot._slot.c_str(), parameter.c_str() );
             }
 
-            static void readEquip( const XmlNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
+            static void readEquip( const XMLNode& node, CharacterAppearanceDef& inoutDef, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrEquipAttribute, report, sourceName );
-                const hashed_string setId = AppearanceXmlUtil::readName( node, "set" );
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrEquipAttribute, report, sourceName );
+                const hashed_string setId = AppearanceXMLUtil::readName( node, "set" );
                 if ( setId.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
@@ -97,19 +97,19 @@ namespace sw
                     return;
                 }
                 CharacterAppearanceSlotDef slot;
-                slot._slot = AppearanceXmlUtil::readName( node, "slot" );
-                AppearanceXmlUtil::readNameList( node, "item", slot._listItem );
-                AppearanceXmlUtil::readNameList( node, "items", slot._listItem );
+                slot._slot = AppearanceXMLUtil::readName( node, "slot" );
+                AppearanceXMLUtil::readNameList( node, "item", slot._listItem );
+                AppearanceXMLUtil::readNameList( node, "items", slot._listItem );
                 slot._bClear        = node.findAttribute( "item" ) != nullptr && slot._listItem.empty() ? SW_TRUE : SW_FALSE;
-                slot._visibleVisual = AppearanceXmlUtil::readName( node, "visible" );
-                slot._state         = AppearanceXmlUtil::readName( node, "state" );
+                slot._visibleVisual = AppearanceXMLUtil::readName( node, "visible" );
+                slot._state         = AppearanceXMLUtil::readName( node, "state" );
                 slot._damage        = node.getAttributeFloat( "damage", 0.0f );
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     if ( StringUtil::equals( child.getName(), "Value", true ) )
                         readItemValue( child, slot, report, sourceName, inoutDef._id );
                     else
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                 }
                 if ( slot._slot.empty() )
                 {
@@ -127,17 +127,17 @@ namespace sw
                 inoutDef._listSlot.push_back( slot );
             }
 
-            static void readPreset( const XmlNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
+            static void readPreset( const XMLNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXmlUtil::reportUnknownAttributes( node, kArrPresetAttribute, report, sourceName );
-                outDef._parent = AppearanceXmlUtil::readName( node, "parent" );
-                outDef._schema = AppearanceXmlUtil::readName( node, "schema" );
-                AppearanceXmlUtil::readNameList( node, "bodyType", outDef._listBodyType );
-                AppearanceXmlUtil::readNameList( node, "bodyShape", outDef._listBodyShape );
-                AppearanceXmlUtil::readNameList( node, "face", outDef._listFace );
-                AppearanceXmlUtil::readNameList( node, "body", outDef._listBody );
-                AppearanceXmlUtil::readTags( node, "tags", outDef._tags );
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPresetAttribute, report, sourceName );
+                outDef._parent = AppearanceXMLUtil::readName( node, "parent" );
+                outDef._schema = AppearanceXMLUtil::readName( node, "schema" );
+                AppearanceXMLUtil::readNameList( node, "bodyType", outDef._listBodyType );
+                AppearanceXMLUtil::readNameList( node, "bodyShape", outDef._listBodyShape );
+                AppearanceXMLUtil::readNameList( node, "face", outDef._listFace );
+                AppearanceXMLUtil::readNameList( node, "body", outDef._listBody );
+                AppearanceXMLUtil::readTags( node, "tags", outDef._tags );
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "Value", true ) )
@@ -150,10 +150,10 @@ namespace sw
                     }
                     else if ( StringUtil::equals( pName, "SocketOverride", true ) )
                     {
-                        (void)AppearanceXmlUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
+                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSocketAttribute, report, sourceName );
                         AppearanceSocketOverride socketOverride;
-                        socketOverride._name = AppearanceXmlUtil::readName( child, "name" );
-                        AppearanceXmlUtil::readPlacement( child, "parent", socketOverride._placement );
+                        socketOverride._name = AppearanceXMLUtil::readName( child, "name" );
+                        AppearanceXMLUtil::readPlacement( child, "parent", socketOverride._placement );
                         if ( socketOverride._name.empty() || socketOverride._placement.isEmpty() )
                             report.addError( "%#: preset '%#' <SocketOverride> needs a name and a parent", sourceName, outDef._id.c_str() );
                         else
@@ -161,7 +161,7 @@ namespace sw
                     }
                     else
                     {
-                        AppearanceXmlUtil::reportUnknownChild( node, child, report, sourceName );
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
                     }
                 }
             }
@@ -205,20 +205,20 @@ namespace sw
         return nullptr;
     }
 
-    bool CharacterAppearanceCatalog::loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool CharacterAppearanceCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
-        (void)AppearanceXmlUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        (void)AppearanceXMLUtil::reportUnknownAttributes( root, nullptr, 0, report, sourceName );
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "CharacterAppearance", true ) == false )
             {
-                AppearanceXmlUtil::reportUnknownChild( root, node, report, sourceName );
+                AppearanceXMLUtil::reportUnknownChild( root, node, report, sourceName );
                 continue;
             }
             CharacterAppearanceDef def;
-            def._id = AppearanceXmlUtil::readName( node, "id" );
+            def._id = AppearanceXMLUtil::readName( node, "id" );
             if ( def._id.empty() || findPreset( def._id ) != nullptr )
             {
                 report.addError( "%#: <CharacterAppearance> without an id or with a duplicate id '%#'", sourceName, def._id.c_str() );

@@ -11,13 +11,13 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/EquipCondition.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 아이템 한 종류입니다. 분류 · 장비 칸 · 태그는 문자열 id 라 장르마다 마음대로 정합니다. */
     struct SW_GF_API ItemDef
@@ -56,9 +56,9 @@ namespace sw
      * @details `<Requires>` 하나는 속성 하나로 조건 하나입니다 — `set="S"`(세트 완성) · `set="S" pieces="n"` · `equippedTag="T"` · `characterTag="T"` ·
      *          `bodyShape="A,B"`. 세트 이름이 실제로 있는지와 조건 순환은 세트를 아는 쪽(`AppearanceDatabase`)이 검사합니다.
      */
-    class SW_GF_API ItemCatalog : public XmlCatalog<ItemCatalog>
+    class SW_GF_API ItemCatalog : public XMLCatalog<ItemCatalog>
     {
-        friend class XmlCatalog<ItemCatalog>;
+        friend class XMLCatalog<ItemCatalog>;
 
     public:
         void addItem( const ItemDef& def ) { (void)_catalog.add( def ); }
@@ -69,8 +69,8 @@ namespace sw
         int32 getMaxStack( const hashed_string& id ) const;
 
     private:
-        static constexpr const utf8* kXmlRootName = "ItemCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "ItemCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<ItemDef> _catalog{};
     };

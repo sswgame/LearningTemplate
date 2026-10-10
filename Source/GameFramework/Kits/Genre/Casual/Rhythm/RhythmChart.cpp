@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -88,12 +88,12 @@ namespace sw
 
     bool RhythmChart::loadFromResource( string_view path )
     {
-        return GameDataXml::loadFile( *this, &RhythmChart::loadRoot, path, "Chart" );
+        return GameDataXML::loadFile( *this, &RhythmChart::loadRoot, path, "Chart" );
     }
 
-    bool RhythmChart::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool RhythmChart::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return GameDataXml::loadText( *this, &RhythmChart::loadRoot, xmlText, sourceName, "Chart" );
+        return GameDataXML::loadText( *this, &RhythmChart::loadRoot, xmlText, sourceName, "Chart" );
     }
 
     float32 RhythmChart::convertBeatToSeconds( float32 beat ) const
@@ -162,7 +162,7 @@ namespace sw
         }
     }
 
-    bool RhythmChart::loadRoot( const XmlNode& root, string_view sourceName )
+    bool RhythmChart::loadRoot( const XMLNode& root, string_view sourceName )
     {
         const utf8* pTitle  = root.findAttribute( "title" );
         _title              = pTitle != nullptr ? pTitle : "";
@@ -173,7 +173,7 @@ namespace sw
         _offset             = root.getAttributeFloat( "offset", 0.0f );
 
         vector<RhythmBpmChange> listBpmChange;
-        for ( XmlNode node = root.findChild( "Bpm" ); node; node = node.findNextSibling( "Bpm" ) )
+        for ( XMLNode node = root.findChild( "Bpm" ); node; node = node.findNextSibling( "Bpm" ) )
         {
             RhythmBpmChange change;
             change._beat = node.getAttributeFloat( "beat", 0.0f );
@@ -193,7 +193,7 @@ namespace sw
         }
 
         vector<RhythmStop> listStop;
-        for ( XmlNode node = root.findChild( "Stop" ); node; node = node.findNextSibling( "Stop" ) )
+        for ( XMLNode node = root.findChild( "Stop" ); node; node = node.findNextSibling( "Stop" ) )
         {
             RhythmStop stop;
             stop._beat    = node.getAttributeFloat( "beat", 0.0f );
@@ -209,7 +209,7 @@ namespace sw
         _baseBpm = MathUtil::max( RhythmChartInternal::kMinBpm, root.getAttributeFloat( "baseBpm", findBpmAt( 0.0f ) ) );
 
         _listMeasureChange.clear();
-        for ( XmlNode node = root.findChild( "Measure" ); node; node = node.findNextSibling( "Measure" ) )
+        for ( XMLNode node = root.findChild( "Measure" ); node; node = node.findNextSibling( "Measure" ) )
         {
             RhythmMeasureChange change;
             change._beat            = node.getAttributeFloat( "beat", 0.0f );
@@ -224,7 +224,7 @@ namespace sw
         std::stable_sort( _listMeasureChange.begin(), _listMeasureChange.end(), &RhythmChartInternal::isMeasureChangeBefore );
 
         _listNote.clear();
-        for ( XmlNode node = root.findChild( "Note" ); node; node = node.findNextSibling( "Note" ) )
+        for ( XMLNode node = root.findChild( "Note" ); node; node = node.findNextSibling( "Note" ) )
         {
             RhythmNote note;
             note._lane    = node.getAttributeInt( "lane", -1 );

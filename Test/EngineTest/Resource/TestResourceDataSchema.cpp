@@ -3,7 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Graph/AnimGraphAsset.h"
@@ -11,7 +11,7 @@
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -36,7 +36,7 @@
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -49,10 +49,10 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
@@ -182,7 +182,7 @@ namespace
         [[nodiscard]] static bool loadScene( const sw::string& resourceId )
         {
             sw::SceneDocument doc;
-            if ( doc.loadXml( resourceId ) == false )
+            if ( doc.loadXML( resourceId ) == false )
                 return false;
             sw::Scene scene{ "ResourceDataSchemaScene" };
             return scene.instantiate( doc );
@@ -191,7 +191,7 @@ namespace
         [[nodiscard]] static bool loadPrefab( const sw::string& resourceId )
         {
             sw::PrefabAsset prefab;
-            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXmlFile( resourceId );
+            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJSONFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
             if ( bLoaded == false )
                 return false;
             sw::GameObjectManager manager;
@@ -202,13 +202,13 @@ namespace
         [[nodiscard]] static bool loadPipeline( const sw::string& resourceId )
         {
             sw::RenderPipelineAsset pipeline;
-            return pipeline.loadFromXmlFile( resourceId );
+            return pipeline.loadFromXMLFile( resourceId );
         }
 
         [[nodiscard]] static bool loadRenderPass( const sw::string& resourceId )
         {
             sw::RenderPassAsset pass;
-            return pass.loadFromXmlFile( resourceId );
+            return pass.loadFromXMLFile( resourceId );
         }
 
         [[nodiscard]] static bool loadEngineDefaultAssets( const sw::string& resourceId )
@@ -270,7 +270,7 @@ namespace
         /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
         [[nodiscard]] static bool loadTileMap( const sw::string& resourceId )
         {
-            sw::TileMapXmlData map;
+            sw::TileMapXMLData map;
             if ( map.load( resourceId ) == false )
                 return false;
             if ( map._tileSetPath.empty() )
@@ -292,7 +292,7 @@ namespace
             return settings.loadFromResource( resourceId );
         }
 
-        /** @brief 로컬라이제이션 JSON 문서(`loadFromJsonText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
+        /** @brief 로컬라이제이션 JSON 문서(`loadFromJSONText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
         template <typename TDocument>
         [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceId )
         {
@@ -301,7 +301,7 @@ namespace
                 return false;
             TDocument  document;
             sw::string error;
-            if ( document.loadFromJsonText( text, resourceId, &error ) )
+            if ( document.loadFromJSONText( text, resourceId, &error ) )
                 return true;
             SW_LOG_WARNING( "%#", error.c_str() );
             return false;
@@ -329,24 +329,24 @@ namespace
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
         [[nodiscard]] static bool loadClipData( const sw::string& resourceId )
         {
-            sw::JsonDocument document;
+            sw::JSONDocument document;
             // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceId ) ) == false )
                 return false;
-            const sw::JsonValue root = document.getRoot();
-            if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
+            const sw::JSONValue root = document.getRoot();
+            if ( sw::AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
                 return false;
-            const sw::JsonValue clips = root.get( "clips" );
+            const sw::JSONValue clips = root.get( "clips" );
             for ( const sw::string& clipName : clips.getMemberNames() )
             {
-                const sw::JsonValue clip = clips.get( clipName, false );
-                if ( sw::AnimJsonUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
+                const sw::JSONValue clip = clips.get( clipName, false );
+                if ( sw::AnimJSONUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
                     return false;
-                const sw::JsonValue notifies = clip.get( "notifies" );
+                const sw::JSONValue notifies = clip.get( "notifies" );
                 for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
                 {
-                    const sw::JsonValue notify = notifies.at( notifyIndex );
-                    if ( sw::AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
+                    const sw::JSONValue notify = notifies.at( notifyIndex );
+                    if ( sw::AnimJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
                          notify.get( "time" ).isNumber() == false )
                         return false;
                 }
@@ -410,21 +410,21 @@ namespace
         }
 
         /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
-        static bool               isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
-        [[nodiscard]] static bool loadBoneLod( const sw::string& resourceId )
+        static bool               isBoneLOD( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLOD::kExtension ); }
+        [[nodiscard]] static bool loadBoneLOD( const sw::string& resourceId )
         {
             sw::string importedPath;
             sw::string siblingPath;
-            sw::SkeletonBoneLod::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
+            sw::SkeletonBoneLOD::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
             const sw::string&             skeletonPath = sw::ResourceUtil::hasResource( importedPath ) ? importedPath : siblingPath;
-            sw::SkeletonBoneLod           boneLod;
+            sw::SkeletonBoneLOD           boneLOD;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
-            return boneLod.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLod.buildMasks( skeleton, listMask, resourceId );
+            return boneLOD.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.buildMasks( skeleton, listMask, resourceId );
         }
 
         /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
-        static bool isAnimationLod( sw::string_view resourceId ) { return resourceId == sw::AnimationLodSettings::kResourcePath; }
+        static bool isAnimationLOD( sw::string_view resourceId ) { return resourceId == sw::AnimationLODSettings::kResourcePath; }
         /** @brief 군중 공유 표(변형 칸 수 · 묶음 유지 · VAT 프레임율). */
         static bool isAnimationCrowd( sw::string_view resourceId ) { return resourceId == sw::AnimationCrowdSettings::kResourcePath; }
         /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
@@ -552,8 +552,8 @@ namespace
             {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
             {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
             {           "clipdata",            &isClipData,                                      &loadClipData},
-            {            "bonelod",             &isBoneLod,                                       &loadBoneLod},
-            {       "animationlod",        &isAnimationLod,             &loadCatalog<sw::AnimationLodSettings>},
+            {            "bonelod",             &isBoneLOD,                                       &loadBoneLOD},
+            {       "animationlod",        &isAnimationLOD,             &loadCatalog<sw::AnimationLODSettings>},
             {     "animationcrowd",      &isAnimationCrowd,           &loadCatalog<sw::AnimationCrowdSettings>},
             {    "vertexanimation", &isVertexAnimationList,          &loadCatalog<sw::VertexAnimationCookList>},
             {            "lipsync",             &isLipSync,                  &loadCatalog<sw::LipSyncSettings>},
@@ -695,7 +695,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, UnknownComponentAttributeIsNamed )
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component attribute the type does not have" );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
             pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2,2,2\" _noSuchField=\"1\" /></_listComponent></GameObject>" ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "SceneComponent._noSuchField" ) == 1, logs.joined().c_str() );

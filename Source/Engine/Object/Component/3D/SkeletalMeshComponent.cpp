@@ -8,7 +8,7 @@
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -53,24 +53,24 @@ namespace sw
 
 namespace sw
 {
-    SkeletalMeshLodClient::SkeletalMeshLodClient( SkeletalMeshComponent& owner )
+    SkeletalMeshLODClient::SkeletalMeshLODClient( SkeletalMeshComponent& owner )
         : _owner{ owner }
     {
     }
 
-    bool SkeletalMeshLodClient::findAnimationLodBounds( float3& outCenter, float32& outRadius ) const
+    bool SkeletalMeshLODClient::findAnimationLODBounds( float3& outCenter, float32& outRadius ) const
     {
         return _owner.getWorldBounds( outCenter, outRadius );
     }
 
-    const SkeletonBoneLod* SkeletalMeshLodClient::findBoneLod() const
+    const SkeletonBoneLOD* SkeletalMeshLODClient::findBoneLOD() const
     {
-        return _owner.findBoneLod();
+        return _owner.findBoneLOD();
     }
 
-    void SkeletalMeshLodClient::applyAnimationLod( const AnimationLodState& state )
+    void SkeletalMeshLODClient::applyAnimationLOD( const AnimationLODState& state )
     {
-        _owner.applyAnimationLod( state );
+        _owner.applyAnimationLOD( state );
     }
 
     SkeletalMeshComponent::SkeletalMeshComponent()
@@ -92,10 +92,10 @@ namespace sw
         , _poseEvaluationCount{ 0 }
         , _lodClient{ *this }
         , _lodState{}
-        , _boneLod{}
-        , _listBoneLodMask{}
-        , _boneLodRevision{ 0 }
-        , _pBoneLodMaskSkeleton{ nullptr }
+        , _boneLOD{}
+        , _listBoneLODMask{}
+        , _boneLODRevision{ 0 }
+        , _pBoneLODMaskSkeleton{ nullptr }
         , _interpolationFrom{}
         , _interpolationTarget{}
         , _updatePhase{ 0 }
@@ -147,14 +147,14 @@ namespace sw
         MeshComponent::onRegister( manager );
         _pAnimationSystem = &manager.getAnimationSystem();
         _pAnimationSystem->registerUnit( this );
-        _pAnimationSystem->registerLodClient( &_lodClient );
+        _pAnimationSystem->registerLODClient( &_lodClient );
         _updatePhase = SkeletalMeshComponentInternal::makeUpdatePhase( getHandle().componentId() );
     }
 
     void SkeletalMeshComponent::onUnregister( GameObjectManager& manager )
     {
         leaveCrowd( &manager.getAnimationSystem().getCrowd() );
-        manager.getAnimationSystem().unregisterLodClient( &_lodClient );
+        manager.getAnimationSystem().unregisterLODClient( &_lodClient );
         manager.getAnimationSystem().unregisterUnit( this );
         _pAnimationSystem = nullptr;
         MeshComponent::onUnregister( manager );
@@ -219,7 +219,7 @@ namespace sw
         // 경로가 비었고 런타임에 정한 스켈레톤이면 그대로 둔다 — 렌더 에셋을 다시 풀어도(resolveRenderAssets) 암묵 스켈레톤으로 덮지 않는다.
         if ( _skeletonPath.empty() && _bRuntimeSkeleton == SW_TRUE )
         {
-            resolveBoneLod();
+            resolveBoneLOD();
             return;
         }
         shared_ptr<const Skeleton> skeleton;
@@ -234,57 +234,57 @@ namespace sw
         if ( skeleton != _skeleton )
             assignSkeleton( std::move( skeleton ) );
         // 본 LOD 는 이 스켈레톤에 맞춰 마스크를 짓는다 — 스켈레톤을 정한 뒤다.
-        resolveBoneLod();
+        resolveBoneLOD();
     }
 
-    void SkeletalMeshComponent::resolveBoneLod()
+    void SkeletalMeshComponent::resolveBoneLOD()
     {
         // 본 LOD 는 스켈레톤 곁의 선택 파일이다 — 없으면 조용히 본 LOD 없이 간다.
-        const string path = SkeletonBoneLod::makePathForSkeleton( _skeletonPath );
+        const string path = SkeletonBoneLOD::makePathForSkeleton( _skeletonPath );
         if ( path.empty() || ResourceUtil::hasResource( path ) == false )
         {
-            setBoneLod( nullptr );
+            setBoneLOD( nullptr );
             return;
         }
-        shared_ptr<const SkeletonBoneLod> boneLod = SkeletonBoneLodCache::acquire( path );
-        if ( boneLod != _boneLod )
-            setBoneLod( std::move( boneLod ) );
+        shared_ptr<const SkeletonBoneLOD> boneLOD = SkeletonBoneLODCache::acquire( path );
+        if ( boneLOD != _boneLOD )
+            setBoneLOD( std::move( boneLOD ) );
     }
 
-    void SkeletalMeshComponent::setBoneLod( shared_ptr<const SkeletonBoneLod> boneLod )
+    void SkeletalMeshComponent::setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD )
     {
-        _boneLod         = std::move( boneLod );
-        _boneLodRevision = 0;
-        _listBoneLodMask.clear();
-        refreshBoneLodMasks();
+        _boneLOD         = std::move( boneLOD );
+        _boneLODRevision = 0;
+        _listBoneLODMask.clear();
+        refreshBoneLODMasks();
     }
 
-    void SkeletalMeshComponent::refreshBoneLodMasks()
+    void SkeletalMeshComponent::refreshBoneLODMasks()
     {
-        if ( _boneLod == nullptr )
+        if ( _boneLOD == nullptr )
         {
-            _listBoneLodMask.clear();
+            _listBoneLODMask.clear();
             return;
         }
-        if ( _boneLodRevision == _boneLod->getRevision() && _pBoneLodMaskSkeleton == _skeleton.get() )
+        if ( _boneLODRevision == _boneLOD->getRevision() && _pBoneLODMaskSkeleton == _skeleton.get() )
             return;
-        _boneLodRevision      = _boneLod->getRevision();
-        _pBoneLodMaskSkeleton = _skeleton.get();
+        _boneLODRevision      = _boneLOD->getRevision();
+        _pBoneLODMaskSkeleton = _skeleton.get();
         // 스켈레톤에 없는 본 이름은 데이터 오류다 — 알리고 본 LOD 없이 간다.
-        if ( _boneLod->buildMasks( *_skeleton, _listBoneLodMask, _skeletonPath ) == false )
-            _listBoneLodMask.clear();
+        if ( _boneLOD->buildMasks( *_skeleton, _listBoneLODMask, _skeletonPath ) == false )
+            _listBoneLODMask.clear();
     }
 
-    const uint8* SkeletalMeshComponent::findBoneLodMask() const
+    const uint8* SkeletalMeshComponent::findBoneLODMask() const
     {
-        const uint32 level = _lodState._boneLodLevel;
-        if ( level == 0 || level > _listBoneLodMask.size() )
+        const uint32 level = _lodState._boneLODLevel;
+        if ( level == 0 || level > _listBoneLODMask.size() )
             return nullptr;
-        const vector<uint8>& mask = _listBoneLodMask[level - 1];
+        const vector<uint8>& mask = _listBoneLODMask[level - 1];
         return mask.size() == _skeleton->getBoneCount() ? mask.data() : nullptr;
     }
 
-    void SkeletalMeshComponent::applyAnimationLod( const AnimationLodState& state )
+    void SkeletalMeshComponent::applyAnimationLOD( const AnimationLODState& state )
     {
         _lodState = state;
         setVisibleHint( state._bVisible == SW_TRUE );
@@ -333,8 +333,8 @@ namespace sw
         _pLeaderSkeletonForMap = nullptr;
         _bPoseDirty            = SW_TRUE;
         _bInterpolationReady   = SW_FALSE;
-        _pBoneLodMaskSkeleton  = nullptr;
-        refreshBoneLodMasks();
+        _pBoneLODMaskSkeleton  = nullptr;
+        refreshBoneLODMasks();
         const shared_ptr<Mesh>& mesh = getMesh();
         if ( mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount() )
             SW_LOG_ERROR( "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshId().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
@@ -592,8 +592,8 @@ namespace sw
         if ( _listMorphWeight.size() != morphTargetCount )
             _listMorphWeight.assign( morphTargetCount, 0.0f );
         // 본 LOD 표가 제자리에서 다시 읽혔으면(핫 리로드) 마스크를 다시 짓는다.
-        if ( _boneLod != nullptr && _boneLodRevision != _boneLod->getRevision() )
-            refreshBoneLodMasks();
+        if ( _boneLOD != nullptr && _boneLODRevision != _boneLOD->getRevision() )
+            refreshBoneLODMasks();
         bool bActive = _bPoseDirty == SW_TRUE || _leader.isValid();
         for ( const IAnimationPhaseTask* pTask : _listTask )
         {
@@ -605,7 +605,7 @@ namespace sw
         // 갱신 주기: 시간 단계는 매 프레임 돌고(알림 · 루트 모션이 늦지 않게), 포즈는 주기마다 만든다. 화면 밖이면 포즈를 건너뛴다.
         // 주기는 PROPERTY(하한)와 LOD 판정 중 큰 쪽이고, 위상을 더해 같은 주기의 유닛이 한 프레임에 몰리지 않게 한다.
         _effectiveDivisor           = MathUtil::max( _updateRateDivisor, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
-        const bool bOnRate          = AnimationLodUtil::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
+        const bool bOnRate          = AnimationLODUtil::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
         const bool bOnScreen        = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
         const bool bPoseDirty       = _bPoseDirty == SW_TRUE;
         _frameContext._deltaSeconds = deltaSeconds;

@@ -374,7 +374,7 @@ SW_TEST_CASE( GimmickGenreTest, EveryGimmickPrefabSpawnsWithValidWiring )
     {
         const string resourceId = ResourceUtil::toResourceId( filePath );
         PrefabAsset  prefab;
-        SW_EXPECT_TRUE_MSG( prefab.loadFromXmlFile( resourceId ), resourceId.c_str() );
+        SW_EXPECT_TRUE_MSG( prefab.loadFromXMLFile( resourceId ), resourceId.c_str() );
         GameObject* pObject = manager.createGameObject( hashed_string( "Gimmick" ) );
         SW_EXPECT_TRUE_MSG( prefab.applyStateTo( pObject ), resourceId.c_str() );
         ++prefabCount;

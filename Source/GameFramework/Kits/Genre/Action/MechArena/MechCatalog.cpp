@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -35,7 +35,7 @@ namespace sw
                 return MechSkillTrigger::Manual;
             }
 
-            static MechWeaponSlotDef readWeapon( const XmlNode& node, const utf8* pId )
+            static MechWeaponSlotDef readWeapon( const XMLNode& node, const utf8* pId )
             {
                 MechWeaponSlotDef slot;
                 slot._id                = hashed_string( pId );
@@ -43,7 +43,7 @@ namespace sw
                 const utf8* pWeaponId   = node.findAttribute( "weapon" );
                 slot._weaponId          = pWeaponId != nullptr ? hashed_string( pWeaponId ) : hashed_string{};
                 const string_view moves = node.getAttributeText( "moves" );
-                GameDataXml::forEachToken( moves, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( moves, ",; ", [&]( string_view token )
                 { slot._listMoveId.push_back( hashed_string( token ) ); } );
                 slot._damage          = MathUtil::max( 0.0f, node.getAttributeFloat( "damage", slot._damage ) );
                 slot._downValue       = MathUtil::max( 0.0f, node.getAttributeFloat( "down", slot._downValue ) );
@@ -56,11 +56,11 @@ namespace sw
                 return slot;
             }
 
-            static void readWeapons( const XmlNode& parent, string_view sourceName, MechModeDef& outMode )
+            static void readWeapons( const XMLNode& parent, string_view sourceName, MechModeDef& outMode )
             {
-                for ( XmlNode node = parent.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
+                for ( XMLNode node = parent.findChild( "Weapon" ); node; node = node.findNextSibling( "Weapon" ) )
                 {
-                    const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+                    const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
                     if ( pId == nullptr )
                         continue;
                     outMode._listWeapon.push_back( readWeapon( node, pId ) );
@@ -111,12 +111,12 @@ namespace sw
         return fallback;
     }
 
-    uint32 MechCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 MechCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _deckCostLimit = MathUtil::max( 0, root.getAttributeInt( "deckCostLimit", _deckCostLimit ) );
-        for ( XmlNode node = root.findChild( "Class" ); node; node = node.findNextSibling( "Class" ) )
+        for ( XMLNode node = root.findChild( "Class" ); node; node = node.findNextSibling( "Class" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             const MechRangeClass rangeClass = parseRangeClass( string_view( pId ), MechRangeClass::Count );
@@ -131,9 +131,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Mech" ); node; node = node.findNextSibling( "Mech" ) )
+        for ( XMLNode node = root.findChild( "Mech" ); node; node = node.findNextSibling( "Mech" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MechDef def;
@@ -167,9 +167,9 @@ namespace sw
             def._transformTime     = MathUtil::max( 0.0f, node.getAttributeFloat( "transformTime", def._transformTime ) );
             def._skillSlots        = MathUtil::max( 0, node.getAttributeInt( "skillSlots", def._skillSlots ) );
 
-            for ( XmlNode modeNode = node.findChild( "Mode" ); modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
+            for ( XMLNode modeNode = node.findChild( "Mode" ); modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
             {
-                const utf8* pModeId = GameDataXml::findRequiredId( modeNode, sourceName );
+                const utf8* pModeId = GameDataXML::findRequiredId( modeNode, sourceName );
                 if ( pModeId == nullptr )
                     continue;
                 MechModeDef mode;
@@ -191,9 +191,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
+        for ( XMLNode node = root.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             MechSkillDef skill;

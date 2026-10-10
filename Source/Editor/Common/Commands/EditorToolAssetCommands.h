@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    struct TileMapXmlData;
+    struct TileMapXMLData;
 
     class AnimGraphAsset;
     class DialogueGraphAsset;
@@ -56,14 +56,14 @@ namespace sw::editor
         /** @brief 대화 그래프 JSON을 씁니다. */
         [[nodiscard]] static bool saveDialogueGraph( const DialogueGraphAsset& data, string_view path = {} );
         /** @brief Resource 상대 경로의 TileMap XML을 읽습니다. 파일이 없으면 `Missing`(새 문서), 있는데 못 읽으면 `Malformed` 입니다. */
-        static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXmlData& outData, string& outStatus );
+        static ToolAssetLoadResult loadTileMap( string_view assetRelativePath, TileMapXMLData& outData, string& outStatus );
         /** @brief Resource 상대 경로로 TileMap XML을 씁니다. */
-        [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXmlData& data );
+        [[nodiscard]] static bool saveTileMap( string_view assetRelativePath, const TileMapXMLData& data );
         /**
          * @brief SpriteClip JSON을 읽습니다. path가 비면 에디터 설정 기본 파일을 씁니다. 결과는 `loadTileMap` 과 같은 세 갈래입니다.
          *        클립 문서가 아닌 이미지 경로는 문서로 읽지 않고 그 이미지를 아틀라스로 삼아 `Loaded` 를 돌려줍니다.
          * @details 형식은 런타임 타입(`SpriteClipAsset`) 하나가 읽고 씁니다 — 에디터가 자기 구조체와 파서를 따로 두지 않습니다.
-         *          문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJson` · `parseJson` 입니다.
+         *          문자열 왕복(되돌리기 스냅샷)도 `SpriteClipAsset::toJSON` · `parseJSON` 입니다.
          */
         static ToolAssetLoadResult loadSpriteClip( SpriteClipAsset& outData, string& outStatus, string_view path = {} );
         /** @brief SpriteClip JSON을 씁니다. */

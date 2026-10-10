@@ -52,7 +52,7 @@ namespace sw::editor
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
         /** @brief SpriteClip.json을 저장합니다. */
-        void saveJson();
+        void saveJSON();
 
     private:
         fixed_string<constant::kMaxBuffer256> _atlasPath;

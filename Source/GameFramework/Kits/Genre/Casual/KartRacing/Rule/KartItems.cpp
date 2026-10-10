@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemStackList.h"
 
@@ -139,13 +139,13 @@ namespace sw
         return pRank != nullptr ? _lootCatalog.computeDropChance( pRank->_tableId, itemId ) : 0.0f;
     }
 
-    uint32 KartItemCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 KartItemCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _referencePlaceCount = root.getAttributeInt( "places", _referencePlaceCount );
         uint32 loadedCount   = 0;
-        for ( XmlNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
+        for ( XMLNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( itemNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( itemNode, sourceName );
             if ( pId == nullptr )
                 continue;
             KartItemDef def;
@@ -168,10 +168,10 @@ namespace sw
             addItem( def );
             ++loadedCount;
         }
-        for ( XmlNode rankNode = root.findChild( "RankTable" ); rankNode; rankNode = rankNode.findNextSibling( "RankTable" ) )
+        for ( XMLNode rankNode = root.findChild( "RankTable" ); rankNode; rankNode = rankNode.findNextSibling( "RankTable" ) )
         {
             vector<LootEntry> listEntry;
-            for ( XmlNode entryNode = rankNode.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
+            for ( XMLNode entryNode = rankNode.findChild( "Entry" ); entryNode; entryNode = entryNode.findNextSibling( "Entry" ) )
             {
                 const utf8* pItem = entryNode.findAttribute( "item" );
                 if ( pItem == nullptr || findItem( hashed_string( pItem ) ) == nullptr )

@@ -288,7 +288,7 @@ SW_TEST_CASE( EditorTransactionTest, ComponentHandleSurvivesModifyUndo )
 
     BLOCK( "대조군 — id 없이 읽으면 컴포넌트가 새 id 를 받아 핸들이 끊긴다" )
     {
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pObj, before._xml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pObj, before._xml ) );
         SW_EXPECT_TRUE( pManager->resolveComponent( componentHandle ) == nullptr );
     }
 }

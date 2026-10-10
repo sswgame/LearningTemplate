@@ -167,7 +167,7 @@ SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
     tracy.markFrame( "ProfilerBackendTest.Frame" );
     SW_EXPECT_EQUAL( uint64( 1 ), tracy.getZoneCount() );
 
-    const uint32 gpuContext = tracy.createGpuContext( sw::ProfilerGpuApi::Direct3D12, "ProfilerBackendTest", 1'000'000 );
+    const uint32 gpuContext = tracy.createGpuContext( sw::ProfilerGraphicsAPI::Direct3D12, "ProfilerBackendTest", 1'000'000 );
     SW_ASSERT_TRUE( gpuContext != sw::IProfilerBackend::kInvalidGpuContext );
     tracy.beginGpuZone( gpuContext, *pSite, 1'000'100 );
     tracy.beginGpuZone( gpuContext, *pSite, 1'000'200 );

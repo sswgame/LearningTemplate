@@ -25,7 +25,7 @@ SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
         sw::string text;
         SW_ASSERT_TRUE( sw::FileUtil::readTextFile( filePath, text ) );
         sw::ConfigManager manager;
-        SW_EXPECT_TRUE_MSG( manager.loadConfigFromJson<sw::ServerConfig>( text, filePath.c_str() ), filePath.c_str() );
+        SW_EXPECT_TRUE_MSG( manager.loadConfigFromJSON<sw::ServerConfig>( text, filePath.c_str() ), filePath.c_str() );
         const sw::ServerConfig* pConfig = manager.getConfig<sw::ServerConfig>();
         SW_ASSERT_NOT_NULL( pConfig );
         SW_EXPECT_TRUE_MSG( pConfig->_tickRateHz > 0 && pConfig->_gamePort > 0, filePath.c_str() );
@@ -35,7 +35,7 @@ SW_TEST_CASE( ServerConfigTest, RepositoryServerConfigsLoad )
     const sw::string  json = R"({ "_listStore": [ { "_name": "accounts", "_driver": "sqlite", "_connection": "Saved/accounts.db" } ],
                                   "_listCache": [ { "_name": "presence", "_driver": "resp", "_endpoint": "127.0.0.1:6379", "_secretEnvironment": "SW_CACHE_AUTH" } ] })";
     sw::ConfigManager manager;
-    SW_ASSERT_TRUE( manager.loadConfigFromJson<sw::ServerConfig>( json, "inline" ) );
+    SW_ASSERT_TRUE( manager.loadConfigFromJSON<sw::ServerConfig>( json, "inline" ) );
     const sw::ServerConfig* pConfig = manager.getConfig<sw::ServerConfig>();
     SW_ASSERT_NOT_NULL( pConfig );
     SW_ASSERT_EQUAL( size_t{ 1 }, pConfig->_listStore.size() );

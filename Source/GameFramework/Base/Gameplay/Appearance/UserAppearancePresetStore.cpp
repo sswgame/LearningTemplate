@@ -6,7 +6,7 @@
 
 #include "Engine/Utility/KeyValueFile.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 
 namespace sw
@@ -47,7 +47,7 @@ namespace sw
             {
                 const int32    count = KeyValueFile::getInt( inoutMap, "count", 0 );
                 vector<string> listFavorite;
-                GameDataXml::forEachToken( string_view( KeyValueFile::get( inoutMap, "favorites", "" ) ), ",", [&]( string_view token )
+                GameDataXML::forEachToken( string_view( KeyValueFile::get( inoutMap, "favorites", "" ) ), ",", [&]( string_view token )
                 {
                     listFavorite.push_back( string( StringUtil::trim( token ) ) );
                 } );

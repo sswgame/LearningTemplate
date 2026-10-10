@@ -26,7 +26,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kScavengerCatalogXml = R"(
+    constexpr const utf8* kScavengerCatalogXML = R"(
 <ScavengerCatalog terminalShop="terminal" currency="Credits" crewHealth="100">
   <Quota start="130" days="2" increase="100" steepness="16" randomness="0.5" overtime="5" credits="100"/>
   <BuyRate daysLeft="2" rate="0.4"/>
@@ -45,14 +45,14 @@ namespace
 </ScavengerCatalog>
 )";
 
-    constexpr const utf8* kScavengerWeatherXml = R"(
+    constexpr const utf8* kScavengerWeatherXML = R"(
 <WeatherCatalog transition="0">
   <Weather id="clear" seasons="experimentation:1,titan:1,company:1" minDuration="100000" maxDuration="100000"><Values threat="1" scrapValue="1"/></Weather>
   <Weather id="eclipsed" seasons="rend:1" minDuration="100000" maxDuration="100000"><Values threat="2" scrapValue="1"/></Weather>
 </WeatherCatalog>
 )";
 
-    constexpr const utf8* kScavengerThreatXml = R"(
+    constexpr const utf8* kScavengerThreatXML = R"(
 <SpawnTable budgetPerMinute="6" maxBudget="40" startBudget="0">
   <Entry id="bracken" cost="3" weight="1" max="20" tags="Indoor"/>
   <Entry id="lootbug" cost="1" weight="2" max="20" tags="Indoor"/>
@@ -60,14 +60,14 @@ namespace
 </SpawnTable>
 )";
 
-    constexpr const utf8* kScavengerItemXml = R"(
+    constexpr const utf8* kScavengerItemXML = R"(
 <ItemCatalog>
   <Item id="shovel" category="Tool" weight="8" value="30"/>
   <Item id="flashlight" category="Tool" weight="2" value="15"/>
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kScavengerShopXml = R"(
+    constexpr const utf8* kScavengerShopXML = R"(
 <ShopCatalog>
   <Shop id="terminal" currency="Credits"><Stock item="shovel" price="30"/><Stock item="flashlight" price="15"/></Shop>
 </ShopCatalog>
@@ -88,9 +88,9 @@ namespace
 
         bool initialize()
         {
-            return _catalog.loadFromXmlText( kScavengerCatalogXml, "CoopScavengerTest" ) && _weatherCatalog.loadFromXmlText( kScavengerWeatherXml, "CoopScavengerTest" ) &&
-                   _threatTable.loadFromXmlText( kScavengerThreatXml, "CoopScavengerTest" ) && _itemCatalog.loadFromXmlText( kScavengerItemXml, "CoopScavengerTest" ) &&
-                   _shopCatalog.loadFromXmlText( kScavengerShopXml, "CoopScavengerTest" );
+            return _catalog.loadFromXMLText( kScavengerCatalogXML, "CoopScavengerTest" ) && _weatherCatalog.loadFromXMLText( kScavengerWeatherXML, "CoopScavengerTest" ) &&
+                   _threatTable.loadFromXMLText( kScavengerThreatXML, "CoopScavengerTest" ) && _itemCatalog.loadFromXMLText( kScavengerItemXML, "CoopScavengerTest" ) &&
+                   _shopCatalog.loadFromXMLText( kScavengerShopXML, "CoopScavengerTest" );
         }
 
         /** @brief 원정이 빌릴 우주선 창고를 새로 엽니다. */
@@ -199,7 +199,7 @@ namespace
 SW_TEST_CASE( CoopScavengerTest, QuotaFormulaBuyRateAndDeadline )
 {
     ScavengerCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kScavengerCatalogXml, "CoopScavengerTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kScavengerCatalogXML, "CoopScavengerTest" ) );
     // 매입률 — 마감에 가까울수록 오르고, 사이는 선형.
     SW_EXPECT_NEAR_EQUAL( 0.4f, catalog.computeBuyRate( 2 ), 0.0001f );
     SW_EXPECT_NEAR_EQUAL( 0.7f, catalog.computeBuyRate( 1 ), 0.0001f );
@@ -250,7 +250,7 @@ SW_TEST_CASE( CoopScavengerTest, QuotaFormulaBuyRateAndDeadline )
 SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
 {
     ScavengerCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kScavengerCatalogXml, "CoopScavengerTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kScavengerCatalogXML, "CoopScavengerTest" ) );
     const ScavengerMoonDef* pMoon = catalog.findMoon( "experimentation" );
     SW_ASSERT_NOT_NULL( pMoon );
 
@@ -336,7 +336,7 @@ SW_TEST_CASE( CoopScavengerTest, FacilityGraphIsSeededWithLocksAndFireExits )
 SW_TEST_CASE( CoopScavengerTest, CarrySlotsTwoHandedAndWeightSpeed )
 {
     ScavengerCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kScavengerCatalogXml, "CoopScavengerTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kScavengerCatalogXML, "CoopScavengerTest" ) );
     ScavengerCarry carry;
     carry.initialize( catalog.getCarrySettings() );
     ScavengerScrap bolt;

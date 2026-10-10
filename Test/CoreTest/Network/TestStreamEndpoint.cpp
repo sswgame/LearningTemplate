@@ -92,7 +92,7 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
     settings._maxPendingReceiveBytes = 4096;
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
-    test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{ 0, 2048 } ); // 한 pollIo 가 2 KB 씩 — 멈춤이 걸릴 틈을 준다
+    test::StreamEndpointPair pair( serverRecord, clientRecord, settings, LoopbackStreamConditions{ 0, 2048 } ); // 한 pollIO 가 2 KB 씩 — 멈춤이 걸릴 틈을 준다
     pair.step( 2 );
     const vector<uint8> body( 1000, 0x42 );
     for ( int32 index = 0; index < 40; ++index )
@@ -101,8 +101,8 @@ SW_TEST_CASE( StreamEndpointTest, PendingReceiveCapPausesTransportUntilPumped )
     }
     for ( int32 index = 0; index < 20; ++index ) // 서버는 pump 하지 않고 전송만 돈다
     {
-        (void)pair._serverTransport->pollIo( 0 );
-        (void)pair._clientTransport->pollIo( 0 );
+        (void)pair._serverTransport->pollIO( 0 );
+        (void)pair._clientTransport->pollIO( 0 );
     }
     SW_EXPECT_TRUE( pair._clientTransport->getStats()._sentBytes > 0 );
     // 멈췄으면 클라이언트 쪽 보낼 줄(아직 넘겨받지 않은 바이트)이 남아 있다 — 서버가 받은 것은 상한 + 한 덩어리 근처.

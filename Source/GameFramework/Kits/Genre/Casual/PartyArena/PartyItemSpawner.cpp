@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -186,7 +186,7 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    uint32 PartyItemSpawner::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 PartyItemSpawner::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _settings._minInterval = root.getAttributeFloat( "minInterval", _settings._minInterval );
         _settings._maxInterval = root.getAttributeFloat( "maxInterval", _settings._maxInterval );
@@ -195,9 +195,9 @@ namespace sw
         _settings._height      = root.getAttributeFloat( "height", _settings._height );
         _settings._maxActive   = root.getAttributeInt( "maxActive", _settings._maxActive );
         uint32 loadedCount     = 0;
-        for ( XmlNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
+        for ( XMLNode itemNode = root.findChild( "Item" ); itemNode; itemNode = itemNode.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( itemNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( itemNode, sourceName );
             if ( pId == nullptr )
                 continue;
             PartyItemDef def;

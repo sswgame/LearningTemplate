@@ -44,7 +44,7 @@ namespace sw
         return _gpuContext != IProfilerBackend::kInvalidGpuContext && _pDeviceIdentity == pDeviceIdentity && _pBackend == pBackend;
     }
 
-    bool GpuTimelineExporter::openContext( IProfilerBackend& backend, ProfilerGpuApi api, const utf8* pName, const void* pDeviceIdentity,
+    bool GpuTimelineExporter::openContext( IProfilerBackend& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity,
                                            int64 gpuNowNanos )
     {
         _gpuContext      = backend.createGpuContext( api, pName, gpuNowNanos );

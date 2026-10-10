@@ -47,7 +47,7 @@ namespace sw
 
         void   summarize( vector<LoadBotActionSummary>& outListSummary ) const;
         string formatTable( int64 elapsedMs ) const;
-        string formatJson( const LoadBotScenario& scenario, int64 elapsedMs ) const;
+        string formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const;
 
         int64 getCompletedCount( LoadBotAction action ) const;
         int64 getErrorCount( LoadBotAction action ) const;

@@ -16,13 +16,13 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class ScheduleActivityRegistry;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 하루의 분 수입니다. 일정 시각은 0..1440 분(정수)입니다. */
     inline constexpr int32 kScheduleMinutesPerDay = 1440;
@@ -175,9 +175,9 @@ namespace sw
      * @details 시각은 `H:MM`(0:00..24:00)입니다. 모르는 원소 · 속성 · 활동 · 장소 · 약속 · 묶음 · 요일 · 계절 · 날씨 이름, 겹치는 칸, 시작 ≥ 끝,
      *          묶음 순환은 경고하고 그 항목을 뺍니다(`ResourceDataSchemaTest` 가 경고를 실패로 잡는다).
      */
-    class SW_GF_API ScheduleCatalog : public XmlCatalog<ScheduleCatalog>
+    class SW_GF_API ScheduleCatalog : public XMLCatalog<ScheduleCatalog>
     {
-        friend class XmlCatalog<ScheduleCatalog>;
+        friend class XMLCatalog<ScheduleCatalog>;
 
     public:
         ScheduleCatalog();
@@ -207,14 +207,14 @@ namespace sw
         bool isNpcOfArchetype( const ScheduleNpcDef& npc, const hashed_string& archetypeId ) const;
 
     private:
-        static constexpr const utf8* kXmlRootName = "Schedules"; ///< 루트 원소(`XmlCatalog`)
+        static constexpr const utf8* kXMLRootName = "Schedules"; ///< 루트 원소(`XMLCatalog`)
 
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 읽은 NPC 수(0 · 1)입니다. */
-        uint32 loadElement( const XmlNode& node, string_view sourceName );
-        void   readRoutine( const XmlNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
+        uint32 loadElement( const XMLNode& node, string_view sourceName );
+        void   readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const;
         /** @brief 칸을 읽습니다. 쓸 수 없는 칸이면 경고하고 false 입니다. @p bInRoutine 이면 `Meet` 를 받습니다. */
-        [[nodiscard]] bool readBlock( const XmlNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const;
+        [[nodiscard]] bool readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const;
         void               warnOverlappingBlocks( const vector<ScheduleBlockDef>& listBlock, string_view sourceName, string_view ownerName ) const;
         /** @brief NPC 마다 묶음 사슬의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환 · 모르는 이름은 경고합니다. */
         void resolveReferences( string_view sourceName );

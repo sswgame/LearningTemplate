@@ -24,7 +24,7 @@ namespace
     constexpr uint16 kButton4         = 8;
 
     // 히트박스 높이: 상단 [1.3, 1.7] · 중단 [0.7, 1.3] · 하단 [0, 0.6] · 저글용 넓은 중단 [0.1, 1.7] · 잡기 [1.15, 1.55].
-    constexpr const utf8* kFightingMoveXml = R"(<MoveCatalog>
+    constexpr const utf8* kFightingMoveXML = R"(<MoveCatalog>
         <Move id="jab" startup="10" active="2" recovery="10" damage="5" hitstun="19" blockstun="12" hitstop="6" height="High">
           <Hitbox x="0.8" y="1.5" w="0.8" h="0.4"/><Cancel from="12" to="18" moves="jab2"/></Move>
         <Move id="jab2" startup="12" active="2" recovery="14" damage="8" hitstun="20" blockstun="10" hitstop="6" height="Mid">
@@ -51,7 +51,7 @@ namespace
       </MoveCatalog>)";
 
     // 방향이 붙은 한 단계 커맨드는 우선도 1 — 기반 규칙은 단계 수만 보므로 "d/f+1" 과 "1" 이 같은 길이다.
-    constexpr const utf8* kFightingFighterXml = R"(<FighterCatalog>
+    constexpr const utf8* kFightingFighterXML = R"(<FighterCatalog>
         <Fighter id="tester" name="Tester" health="100" sidestepFrames="20" sidestepAngle="40">
           <Move id="jab" command="1"/>
           <Move id="jab2" command="2" stringOnly="true"/>
@@ -90,8 +90,8 @@ namespace
             , _fighterCatalog{}
             , _bLoaded{ false }
         {
-            _bLoaded = _moveCatalog.loadFromXmlText( kFightingMoveXml, "FightingTest" ) &&
-                       _fighterCatalog.loadFromXmlText( kFightingFighterXml, _moveCatalog, "FightingTest" );
+            _bLoaded = _moveCatalog.loadFromXMLText( kFightingMoveXML, "FightingTest" ) &&
+                       _fighterCatalog.loadFromXMLText( kFightingFighterXML, _moveCatalog, "FightingTest" );
         }
 
         const FighterDef* findTester() const { return _fighterCatalog.findFighter( "tester" ); }

@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -53,19 +53,19 @@ namespace sw
     // SkillTreeCatalog
     // ------------------------------------------------------------------------------
 
-    uint32 SkillTreeCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 SkillTreeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
+        for ( XMLNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
         {
-            const utf8* pTreeId = GameDataXml::findRequiredId( treeNode, sourceName );
+            const utf8* pTreeId = GameDataXML::findRequiredId( treeNode, sourceName );
             if ( pTreeId == nullptr )
                 continue;
             SkillTreeDef tree;
             tree._id = hashed_string( pTreeId );
-            for ( XmlNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
+            for ( XMLNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pId == nullptr )
                     continue;
                 SkillDef skill;
@@ -81,7 +81,7 @@ namespace sw
                 skill._requiredLevel = node.getAttributeInt( "level", skill._requiredLevel );
                 skill._requiredSpent = MathUtil::max( 0, node.getAttributeInt( "spent", skill._requiredSpent ) );
                 // "basic:2,stance" — 이름:랭크(생략하면 1).
-                GameDataXml::forEachToken( node.getAttributeText( "requires" ), ", ", [&]( string_view token )
+                GameDataXML::forEachToken( node.getAttributeText( "requires" ), ", ", [&]( string_view token )
                 {
                     SkillRequirement requirement;
                     const size_t     colon = token.find( ':' );
@@ -94,7 +94,7 @@ namespace sw
                     }
                     skill._listRequirement.push_back( requirement );
                 } );
-                const XmlNode statNode = node.findChild( "Stats" );
+                const XMLNode statNode = node.findChild( "Stats" );
                 if ( statNode )
                     (void)skill._statsPerRank.loadFromAttributes( statNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
                 tree._listSkill.push_back( skill );

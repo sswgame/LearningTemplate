@@ -297,7 +297,7 @@ SW_TEST_CASE( GameStateComponentTest, UnknownSectionIsSkippedAndMissingSectionSt
 SW_TEST_CASE( GameStateComponentTest, WeatherFollowsTheSharedClockAndRidesTheSnapshot )
 {
     WeatherCatalog weatherCatalog;
-    SW_ASSERT_TRUE( weatherCatalog.loadFromXmlText( R"(
+    SW_ASSERT_TRUE( weatherCatalog.loadFromXMLText( R"(
 <WeatherCatalog transition="0">
   <Weather id="sun" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="1"/></Weather>
   <Weather id="rain" seasons="Default:1" minDuration="3600" maxDuration="7200"><Values light="0.5"/></Weather>

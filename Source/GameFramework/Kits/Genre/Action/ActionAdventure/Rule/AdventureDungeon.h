@@ -15,7 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -26,7 +26,7 @@ namespace sw
     class AreaGraph;
     class GameFlags;
     class ItemStackList;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 문이 무엇으로 열리는가입니다. */
     enum class AdventureDoorKind : uint8
@@ -107,9 +107,9 @@ namespace sw
      *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
      *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>` 를 읽습니다.
      */
-    class SW_GF_API AdventureDungeonCatalog : public XmlCatalog<AdventureDungeonCatalog>
+    class SW_GF_API AdventureDungeonCatalog : public XMLCatalog<AdventureDungeonCatalog>
     {
-        friend class XmlCatalog<AdventureDungeonCatalog>;
+        friend class XMLCatalog<AdventureDungeonCatalog>;
 
     public:
         const AdventureDungeonDef*         findDungeon( const hashed_string& id ) const { return _catalog.find( id ); }
@@ -117,8 +117,8 @@ namespace sw
         const vector<AdventureDungeonDef>& getDungeons() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "AdventureDungeons"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "AdventureDungeons"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<AdventureDungeonDef> _catalog{};
     };

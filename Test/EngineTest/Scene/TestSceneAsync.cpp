@@ -84,7 +84,7 @@ namespace sw
             if ( FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) == false )
                 return false;
             SceneDocument cooked{};
-            return cooked.loadXml( xmlPath ) && cooked.saveBinary( binPath );
+            return cooked.loadXML( xmlPath ) && cooked.saveBinary( binPath );
         }
     } // namespace
 
@@ -251,7 +251,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     entA._name        = "Hero";
     entA._fileId      = 5;
     entA._prefab      = "game/empty/prefabs/hero.prefab";
-    entA._embeddedXml = "<GameObjectState><Name>Hero</Name></GameObjectState>";
+    entA._embeddedXML = "<GameObjectState><Name>Hero</Name></GameObjectState>";
     originalDoc._listSceneObjectNode.push_back( std::move( entA ) );
 
     sw::SceneDocument::SceneObjectNode entB{};
@@ -269,7 +269,7 @@ SW_TEST_CASE( SceneAsyncTest, DocumentBinaryRoundTrip )
     SW_ASSERT_EQUAL( size_t( 2 ), loadedDoc._listSceneObjectNode.size() );
     SW_EXPECT_STREQ( "Hero", loadedDoc._listSceneObjectNode[0]._name );
     SW_EXPECT_STREQ( "game/empty/prefabs/hero.prefab", loadedDoc._listSceneObjectNode[0]._prefab );
-    SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDoc._listSceneObjectNode[0]._embeddedXml );
+    SW_EXPECT_STREQ( "<GameObjectState><Name>Hero</Name></GameObjectState>", loadedDoc._listSceneObjectNode[0]._embeddedXML );
     SW_EXPECT_STREQ( "Monster", loadedDoc._listSceneObjectNode[1]._name );
     SW_EXPECT_STREQ( "game/empty/prefabs/monster.prefab", loadedDoc._listSceneObjectNode[1]._prefab );
 }
@@ -479,7 +479,7 @@ SW_TEST_CASE( SceneAsyncTest, RequestLoadFutureChaining )
  */
 SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 {
-    sw::vector<sw::string> listXmlPath;
+    sw::vector<sw::string> listXMLPath;
     sw::vector<sw::string> listBinPath;
 
     for ( int32 index = 0; index < 3; ++index )
@@ -499,7 +499,7 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
         doc._listSceneObjectNode.push_back( std::move( ent ) );
         SW_ASSERT_TRUE( doc.saveBinary( binPath ) );
 
-        listXmlPath.push_back( xmlPath );
+        listXMLPath.push_back( xmlPath );
         listBinPath.push_back( binPath );
     }
 
@@ -508,9 +508,9 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 
     for ( int32 cycle = 0; cycle < 5; ++cycle )
     {
-        sw::TaskFuture<sw::Scene*> fut1 = manager.requestLoadFuture( listXmlPath[0] );
-        sw::TaskFuture<sw::Scene*> fut2 = manager.requestLoadFuture( listXmlPath[1] );
-        sw::TaskFuture<sw::Scene*> fut3 = manager.requestLoadFuture( listXmlPath[2] );
+        sw::TaskFuture<sw::Scene*> fut1 = manager.requestLoadFuture( listXMLPath[0] );
+        sw::TaskFuture<sw::Scene*> fut2 = manager.requestLoadFuture( listXMLPath[1] );
+        sw::TaskFuture<sw::Scene*> fut3 = manager.requestLoadFuture( listXMLPath[2] );
 
         sw::drainSceneTransitions( manager );
 
@@ -521,9 +521,9 @@ SW_TEST_CASE( SceneAsyncTest, RapidConcurrentFutureLoadsAndCancellationsStress )
 
     manager.shutdown();
 
-    for ( size_t index = 0; index < listXmlPath.size(); ++index )
+    for ( size_t index = 0; index < listXMLPath.size(); ++index )
     {
-        SW_EXPECT_TRUE( sw::FileUtil::removeFile( listXmlPath[index] ) );
+        SW_EXPECT_TRUE( sw::FileUtil::removeFile( listXMLPath[index] ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( listBinPath[index] ) );
     }
 }
@@ -682,7 +682,7 @@ SW_TEST_CASE( SceneAsyncTest, SaveIsRefusedWhileBlocked )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_block.scene.bin" );
     sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.loadXML( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
     const sw::string savePath = test::makeTempPath( "sw_test_scene_save_block_out.scene.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( savePath ) );
@@ -718,7 +718,7 @@ SW_TEST_CASE( SceneAsyncTest, SavedSceneNamesAreCookable )
     SW_ASSERT_TRUE( sw::FileUtil::writeFile( xmlPath, reinterpret_cast<const uint8*>( xmlStr.data() ), static_cast<uint64>( xmlStr.size() ) ) );
     const sw::string  binPath = test::makeTempPath( "sw_test_scene_save_name.scene.bin" );
     sw::SceneDocument cooked{};
-    SW_ASSERT_TRUE( cooked.loadXml( xmlPath ) );
+    SW_ASSERT_TRUE( cooked.loadXML( xmlPath ) );
     SW_ASSERT_TRUE( cooked.saveBinary( binPath ) );
 
     sw::SceneManager manager;

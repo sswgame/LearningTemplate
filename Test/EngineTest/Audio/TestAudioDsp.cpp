@@ -258,7 +258,7 @@ SW_TEST_CASE( AudioDspTest, DelayEchoLandsAtTheDelayTime )
 SW_TEST_CASE( AudioDspTest, BusEffectChainsComeFromData )
 {
     sw::AudioMixerDesc desc;
-    SW_ASSERT_TRUE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus>
+    SW_ASSERT_TRUE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus>
         <AudioBusDesc _name="master"><_listEffect><AudioEffectDesc _type="Limiter"><_listParameter>
             <AudioEffectParameterDesc _name="ceilingDb" _value="-6.0206" /></_listParameter></AudioEffectDesc></_listEffect></AudioBusDesc>
         <AudioBusDesc _name="sfx" _parent="master"><_listEffect><AudioEffectDesc _type="LowPass"><_listParameter>
@@ -287,9 +287,9 @@ SW_TEST_CASE( AudioDspTest, BusEffectChainsComeFromData )
     SW_EXPECT_TRUE( test::AudioTestUtil::computePeak( listLoud, 0, 0, 9600 ) <= 0.5f + 1e-4f );
 
     SW_TEST_DEFENSIVE_SCOPE( "Unknown effect types and parameters are rejected" );
-    SW_EXPECT_FALSE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master">
+    SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master">
         <_listEffect><AudioEffectDesc _type="Chorus" /></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>)" ) );
-    SW_EXPECT_FALSE( desc.loadFromXmlText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master">
+    SW_EXPECT_FALSE( desc.loadFromXMLText( R"(<AudioMixerDesc><_listBus><AudioBusDesc _name="master">
         <_listEffect><AudioEffectDesc _type="Reverb"><_listParameter><AudioEffectParameterDesc _name="size" _value="1" />
         </_listParameter></AudioEffectDesc></_listEffect></AudioBusDesc></_listBus></AudioMixerDesc>)" ) );
 }

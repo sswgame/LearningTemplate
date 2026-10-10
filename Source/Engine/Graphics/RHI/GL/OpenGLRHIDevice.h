@@ -51,8 +51,8 @@ namespace sw
         uint32          _boundIndexStride{ 4 };
         uint32          _boundIndexOffset{ 0 };
 
-        RHIPipelineStateHandle _boundGraphicsPso{ 0 };
-        RHIPipelineStateHandle _boundComputePso{ 0 }; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO. dispatchCompute 는 이 프로그램을 쓴다
+        RHIPipelineStateHandle _boundGraphicsPSO{ 0 };
+        RHIPipelineStateHandle _boundComputePSO{ 0 }; ///< setComputePipelineState 가 마지막으로 건 컴퓨트 PSO. dispatchCompute 는 이 프로그램을 쓴다
         /// @brief 지금 렌더 패스 타깃의 높이(px)입니다. 기본 프레임버퍼에서는 뷰포트의 y 를 아래 원점으로 뒤집는 데 쓴다(`setViewport`).
         uint32 _renderTargetHeight{ 0 };
         /// @brief 지금 렌더 패스가 기본 프레임버퍼(창의 백버퍼, GL_LOWER_LEFT)에 그리는지입니다.

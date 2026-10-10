@@ -207,7 +207,7 @@ namespace sw::editor
 
                     if ( pMaterial != nullptr )
                     {
-                        if ( pCached->loadFromXml( pMaterial->saveToString() ) == false )
+                        if ( pCached->loadFromXML( pMaterial->saveToString() ) == false )
                             SW_LOG_WARNING( "Material preview could not copy the edited material - the preview shows the cached one" );
                         pCached->rebuildPackedBuffer();
                         pMaterial = pCached;

@@ -288,14 +288,14 @@ namespace sw
 
     void D3D11RHIDevice::forgetPipelineStateInRecordingStates( RHIPipelineStateHandle pso )
     {
-        if ( _recordingState._activeGraphicsPso == pso )
-            _recordingState._activeGraphicsPso = 0;
+        if ( _recordingState._activeGraphicsPSO == pso )
+            _recordingState._activeGraphicsPSO = 0;
 
         std::scoped_lock<mutex> lock{ _liveCmdListMutex };
         for ( D3D11RHICommandList* pList : _listLiveCmd )
         {
-            if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPso == pso )
-                pList->getRecordingState()._activeGraphicsPso = 0;
+            if ( pList != nullptr && pList->getRecordingState()._activeGraphicsPSO == pso )
+                pList->getRecordingState()._activeGraphicsPSO = 0;
         }
     }
 
