@@ -233,43 +233,11 @@ rewrite (otherwise the transform is dead) and `goodSample` it must NOT touch. Th
 than for a gate — a gate that over-fires prints a red line, a fixer that over-fires **rewrites 969 files**.
 
 ```powershell
-py -3 Scripts/lint/gate/CheckCodeConventions.py                # naming/style rules (CI gate)
-py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path> # single file
-py -3 Scripts/lint/gate/CheckIncludeOrder.py                   # check only — fixer/FormatIncludeOrder.py rewrites
-py -3 Scripts/lint/fixer/FormatIncludeOrder.py --files <path>  # include order/dupes (same rule as the gate)
-py -3 Scripts/lint/gate/CheckEngineLayers.py                   # Engine must not include Editor/GameFramework/Games; RuntimeAPI must not include Engine/App
-py -3 Scripts/lint/gate/CheckModuleTargets.py                  # module targets (_listTarget): GF_Server_/GF_Client_ names, dependency and include direction
-py -3 Scripts/lint/gate/CheckEngineRootFiles.py                # Source/Engine root holds only the startup/shutdown wiring files
-py -3 Scripts/lint/gate/CheckDocPaths.py                       # links, anchors and backticked repo paths in *.md exist; every README is on docs/02_DocumentMap.md
-py -3 Scripts/lint/gate/CheckResourceCasing.py                 # everything under Resource/ must be lowercase
-py -3 Scripts/lint/gate/CheckFunctionVocabulary.py            # one verb per concept; capital runs are registered acronyms
-py -3 Scripts/lint/gate/CheckFallibleNodiscard.py              # bool-returning fallible verbs (load/save/apply…) are [[nodiscard]]
-py -3 Scripts/lint/gate/CheckTargetMacros.py                   # platform/arch/compiler via SW_* macros, never compiler built-ins
-py -3 Scripts/lint/gate/CheckStdFilesystemIsolation.py         # std::filesystem only inside Core/File/Std (engine code asks FileUtil)
-py -3 Scripts/lint/gate/CheckTextureFolders.py                 # textures/ holds DDS only; source images live in textures_raw/
-py -3 Scripts/lint/gate/CheckConfigReference.py                # docs/Config matches the code; every config file is in ConfigCatalog.py
-py -3 Scripts/generate/GenerateConfigReference.py              # regenerate docs/Config after changing a config field, gv, argument or SW_* option
-py -3 Scripts/lint/gate/CheckWin32WideCalls.py                 # Win32 calls name the W variant (UNICODE is not defined)
-py -3 Scripts/lint/gate/CheckWellKnownConstants.py             # π/√2/e/gravity/hash constants only in their home (MathUtil, HashUtil, …)
-py -3 Scripts/lint/gate/CheckKitNamespaces.py                  # state tags unique (comment = little-endian bytes); kits read no raw keys, prefix kit settings keys
-py -3 Scripts/lint/gate/CheckControlBoundary.py                # only player controllers, player views and command directors read input; pawns read ControlIntent
-py -3 Scripts/lint/gate/CheckScriptCommonHelpers.py            # Scripts/ use common's one place for processes, build dirs, console, generated files
-py -3 Scripts/lint/gate/CheckScriptLayout.py                   # Scripts/ file-name prefix per folder and lint base classes (Scripts/README.md layout table)
-py -3 Scripts/lint/fixer/FormatBranchBraces.py --check         # if/case 중괄호 규칙 검사
-py -3 Scripts/lint/fixer/FormatModified.py                     # clang-format the working-tree changes
-py -3 Scripts/lint/report/RunBuildWarnings.py                  # compiler warnings still in the tree
-py -3 Scripts/lint/report/RunHeaderSelfContained.py            # headers that only compile thanks to someone else
-py -3 Scripts/lint/report/RunForwardDeclarationCandidates.py  # includes a header could replace with a forward declaration (`--apply` rewrites; then build + RunHeaderSelfContained)
-py -3 Scripts/lint/report/RunClangTidy.py                      # static analysis
-py -3 Scripts/lint/report/RunPaddingReport.py                  # per-record size, padding and the reorder floor (libclang)
-py -3 Scripts/lint/report/RunRepeatedConstants.py              # constants/literals defined in more than one place
-py -3 Scripts/lint/report/RunDocStyle.py                       # prose shape per doc: noun chains, nested parens, long sentences, folder trees, coined terms
-py -3 Scripts/lint/report/RunFolderFileCount.py                # folders over 40 code files, single-file Source folders
-py -3 Scripts/lint/selftest/CheckLintsAreAlive.py              # do the gates still bite? (CI gate)
-py -3 Scripts/lint/selftest/CheckFixersAreAlive.py             # do the fixers still rewrite — and still hold back? (CI gate)
-py -3 Scripts/lint/RunLintSuite.py [--hook-sample 1,10]         # every gate + self-test without a build dir, with timings (what the CI lint job runs)
-py -3 Scripts/lint/selftest/CheckCodeConventionsSelfTest.py    # do its rules still bite? (CI gate)
+py -3 Scripts/lint/gate/CheckCodeConventions.py --files <path>  # 변경한 파일의 컨벤션 검사
+py -3 Scripts/lint/RunLintSuite.py                             # 전체 린트 스위트가 필요한 경우
 ```
+
+개별 gate · fixer · report의 전체 목록과 역할은 `Scripts/README.md`를 기준으로 합니다. 검증 단계와 어떤 검사를 실행할지는 `docs/08_Verification.md`를 따릅니다.
 
 - **A header that compiles is not a header that stands alone.** A header that forgets an include still
   builds as long as something else included that name first — until the day that something else is
