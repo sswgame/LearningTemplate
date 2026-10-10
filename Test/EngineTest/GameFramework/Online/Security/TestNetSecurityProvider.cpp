@@ -30,7 +30,7 @@ namespace
     }
 
     /** @brief 두 세션 사이에 암호문을 옮깁니다(20 번) — 소켓 없이 핸드셰이크. */
-    void pumpTls( ITlsSession& client, ITlsSession& server )
+    void pumpTLS( ITLSSession& client, ITLSSession& server )
     {
         vector<uint8> bytes;
         for ( int32 round = 0; round < 20; ++round )
@@ -46,46 +46,46 @@ namespace
         }
     }
 
-    struct TlsPair
+    struct TLSPair
     {
-        unique_ptr<ITlsContext> _serverContext{};
-        unique_ptr<ITlsContext> _clientContext{};
+        unique_ptr<ITLSContext> _serverContext{};
+        unique_ptr<ITLSContext> _clientContext{};
         string                  _certificatePem{};
     };
 
-    bool makeTlsPair( TlsPair& outPair, TlsVersion clientMaxVersion, const string& pinnedOverride )
+    bool makeTLSPair( TLSPair& outPair, TLSVersion clientMaxVersion, const string& pinnedOverride )
     {
         INetSecurityProvider& provider = NetSecurity::getProvider();
         string                privateKeyPem;
         if ( provider.createSelfSignedCertificate( "localhost", 30, outPair._certificatePem, privateKeyPem ) == false )
             return false;
         string             error;
-        TlsContextSettings server;
-        server._role           = TlsRole::Server;
+        TLSContextSettings server;
+        server._role           = TLSRole::Server;
         server._certificatePem = outPair._certificatePem;
         server._privateKeyPem  = privateKeyPem;
-        outPair._serverContext = provider.createTlsContext( server, error );
-        TlsContextSettings client;
-        client._role                       = TlsRole::Client;
+        outPair._serverContext = provider.createTLSContext( server, error );
+        TLSContextSettings client;
+        client._role                       = TLSRole::Client;
         client._trustPem                   = outPair._certificatePem;
         client._serverName                 = "localhost";
         client._pinnedCertificateSha256Hex = pinnedOverride;
-        client._minVersion                 = TlsVersion::Tls12;
+        client._minVersion                 = TLSVersion::TLS12;
         client._maxVersion                 = clientMaxVersion;
-        outPair._clientContext             = provider.createTlsContext( client, error );
+        outPair._clientContext             = provider.createTLSContext( client, error );
         return outPair._serverContext != nullptr && outPair._clientContext != nullptr;
     }
 
-    bool isHandshakeCarryingData( ITlsContext& serverContext, ITlsContext& clientContext )
+    bool isHandshakeCarryingData( ITLSContext& serverContext, ITLSContext& clientContext )
     {
-        unique_ptr<ITlsSession> client      = clientContext.createSession();
-        unique_ptr<ITlsSession> server      = serverContext.createSession();
+        unique_ptr<ITLSSession> client      = clientContext.createSession();
+        unique_ptr<ITLSSession> server      = serverContext.createSession();
         const uint8             arrHello[5] = { 'h', 'e', 'l', 'l', 'o' };
         if ( client->writePlaintext( arrHello, 5 ) == false ) // 핸드셰이크 전 — 모아 두었다가 보낸다
             return false;
-        pumpTls( *client, *server );
+        pumpTLS( *client, *server );
         vector<uint8> receivedBytes;
-        const bool    bEstablished = client->getState() == TlsSessionState::Established && server->getState() == TlsSessionState::Established;
+        const bool    bEstablished = client->getState() == TLSSessionState::Established && server->getState() == TLSSessionState::Established;
         return bEstablished && server->readPlaintext( receivedBytes ) && receivedBytes.size() == 5 && std::memcmp( receivedBytes.data(), arrHello, 5 ) == 0;
     }
 } // namespace
@@ -201,50 +201,50 @@ SW_TEST_CASE( NetSecurityProviderTest, AeadRoundTripsAndRejectsTampering )
     }
 }
 
-SW_TEST_CASE( NetSecurityProviderTest, TlsHandshakeCarriesDataAndRefusesDowngradeAndPinMismatch )
+SW_TEST_CASE( NetSecurityProviderTest, TLSHandshakeCarriesDataAndRefusesDowngradeAndPinMismatch )
 {
-    TlsPair pair;
-    SW_ASSERT_TRUE( makeTlsPair( pair, TlsVersion::Tls13, "" ) );
+    TLSPair pair;
+    SW_ASSERT_TRUE( makeTLSPair( pair, TLSVersion::TLS13, "" ) );
     SW_EXPECT_TRUE( isHandshakeCarryingData( *pair._serverContext, *pair._clientContext ) );
 
     // 다운그레이드 — 1.2 까지만 말하는 클라이언트는 1.3 만 받는 서버와 핸드셰이크하지 못한다.
-    TlsPair old;
-    SW_ASSERT_TRUE( makeTlsPair( old, TlsVersion::Tls12, "" ) );
-    unique_ptr<ITlsSession> oldClient = old._clientContext->createSession();
-    unique_ptr<ITlsSession> oldServer = old._serverContext->createSession();
-    pumpTls( *oldClient, *oldServer );
-    SW_EXPECT_TRUE( oldServer->getState() == TlsSessionState::Failed );
-    SW_EXPECT_TRUE( oldClient->getState() != TlsSessionState::Established );
+    TLSPair old;
+    SW_ASSERT_TRUE( makeTLSPair( old, TLSVersion::TLS12, "" ) );
+    unique_ptr<ITLSSession> oldClient = old._clientContext->createSession();
+    unique_ptr<ITLSSession> oldServer = old._serverContext->createSession();
+    pumpTLS( *oldClient, *oldServer );
+    SW_EXPECT_TRUE( oldServer->getState() == TLSSessionState::Failed );
+    SW_EXPECT_TRUE( oldClient->getState() != TLSSessionState::Established );
 
     // 고정 불일치 — 체인은 믿지만 고정한 SHA-256 이 다르다.
-    TlsPair pinned;
-    SW_ASSERT_TRUE( makeTlsPair( pinned, TlsVersion::Tls13, string( 64, '0' ) ) );
-    unique_ptr<ITlsSession> pinnedClient = pinned._clientContext->createSession();
-    unique_ptr<ITlsSession> pinnedServer = pinned._serverContext->createSession();
-    pumpTls( *pinnedClient, *pinnedServer );
-    SW_EXPECT_TRUE( pinnedClient->getState() == TlsSessionState::Failed );
+    TLSPair pinned;
+    SW_ASSERT_TRUE( makeTLSPair( pinned, TLSVersion::TLS13, string( 64, '0' ) ) );
+    unique_ptr<ITLSSession> pinnedClient = pinned._clientContext->createSession();
+    unique_ptr<ITLSSession> pinnedServer = pinned._serverContext->createSession();
+    pumpTLS( *pinnedClient, *pinnedServer );
+    SW_EXPECT_TRUE( pinnedClient->getState() == TLSSessionState::Failed );
 
     // 맞는 고정 값이면 선다.
     string hex;
     SW_ASSERT_TRUE( NetSecurity::getProvider().computeCertificateSha256( pair._certificatePem, hex ) );
     SW_EXPECT_EQUAL( 64, static_cast<int32>( hex.size() ) );
-    TlsContextSettings matching;
-    matching._role                       = TlsRole::Client;
+    TLSContextSettings matching;
+    matching._role                       = TLSRole::Client;
     matching._trustPem                   = pair._certificatePem;
     matching._serverName                 = "localhost";
     matching._pinnedCertificateSha256Hex = hex;
     string                  error;
-    unique_ptr<ITlsContext> matchingClient = NetSecurity::getProvider().createTlsContext( matching, error );
+    unique_ptr<ITLSContext> matchingClient = NetSecurity::getProvider().createTLSContext( matching, error );
     SW_ASSERT_NOT_NULL( matchingClient.get() );
     SW_EXPECT_TRUE( isHandshakeCarryingData( *pair._serverContext, *matchingClient ) );
 
     // 신뢰하지 않는 인증서 — 다른 자체 서명 인증서를 신뢰 목록에 둔 클라이언트는 검증에서 진다.
-    TlsPair stranger;
-    SW_ASSERT_TRUE( makeTlsPair( stranger, TlsVersion::Tls13, "" ) );
-    unique_ptr<ITlsSession> strangerClient = stranger._clientContext->createSession();
-    unique_ptr<ITlsSession> otherServer    = pair._serverContext->createSession();
-    pumpTls( *strangerClient, *otherServer );
-    SW_EXPECT_TRUE( strangerClient->getState() == TlsSessionState::Failed );
+    TLSPair stranger;
+    SW_ASSERT_TRUE( makeTLSPair( stranger, TLSVersion::TLS13, "" ) );
+    unique_ptr<ITLSSession> strangerClient = stranger._clientContext->createSession();
+    unique_ptr<ITLSSession> otherServer    = pair._serverContext->createSession();
+    pumpTLS( *strangerClient, *otherServer );
+    SW_EXPECT_TRUE( strangerClient->getState() == TLSSessionState::Failed );
 }
 
 SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsAreEmpty )
@@ -252,19 +252,19 @@ SW_TEST_CASE( NetSecurityProviderTest, EngineContextsUseDevCertificateWhenPathsA
     string error;
 #if defined( SW_SHIPPING )
     // 배포 구성은 개발용 인증서를 만들지 않는다(사용자 결정) — 경로가 비면 서버 TLS 문맥을 만들지 못하고 까닭을 돌려준다.
-    SW_EXPECT_TRUE( NetSecurity::createServerTlsContext( "", "", "", error ) == nullptr );
+    SW_EXPECT_TRUE( NetSecurity::createServerTLSContext( "", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
 #else
-    unique_ptr<ITlsContext> server = NetSecurity::createServerTlsContext( "", "", "", error );
+    unique_ptr<ITLSContext> server = NetSecurity::createServerTLSContext( "", "", "", error );
     SW_ASSERT_TRUE_MSG( server != nullptr, error.c_str() );
-    unique_ptr<ITlsContext> client = NetSecurity::createClientTlsContext( "", "localhost", error );
+    unique_ptr<ITLSContext> client = NetSecurity::createClientTLSContext( "", "localhost", error );
     SW_ASSERT_TRUE_MSG( client != nullptr, error.c_str() );
-    SW_EXPECT_TRUE( server->getRole() == TlsRole::Server && client->getRole() == TlsRole::Client );
+    SW_EXPECT_TRUE( server->getRole() == TLSRole::Server && client->getRole() == TLSRole::Client );
     SW_EXPECT_TRUE( isHandshakeCarryingData( *server, *client ) );
 
     // 인증서 · 키 중 하나만 있으면 설정 오류다(개발용으로 메우지 않는다).
     error.clear();
-    SW_EXPECT_TRUE( NetSecurity::createServerTlsContext( "server.cert.pem", "", "", error ) == nullptr );
+    SW_EXPECT_TRUE( NetSecurity::createServerTLSContext( "server.cert.pem", "", "", error ) == nullptr );
     SW_EXPECT_FALSE( error.empty() );
 #endif
 }

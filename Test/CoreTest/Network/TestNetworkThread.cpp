@@ -4,7 +4,7 @@
 #include "Core/Network/Connection/NetConnection.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/NetHostThread.h"
-#include "Core/Network/Transport/UdpNetTransport.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestFramework.h"
@@ -311,10 +311,10 @@ SW_TEST_CASE( NetworkThreadTest, ConnectionsSurviveStalledGameThread )
     SW_EXPECT_FALSE( cluster.getThread( 1 ).isRunning() );
 }
 
-SW_TEST_CASE( NetworkThreadTest, UdpHostsRunOnThreadsOverLocalhost )
+SW_TEST_CASE( NetworkThreadTest, UDPHostsRunOnThreadsOverLocalhost )
 {
-    UdpNetTransport serverTransport;
-    UdpNetTransport clientTransport;
+    UDPNetTransport serverTransport;
+    UDPNetTransport clientTransport;
     SW_ASSERT_TRUE( serverTransport.open( 0 ) );
     SW_ASSERT_TRUE( clientTransport.open( 0 ) );
     NetHost server;

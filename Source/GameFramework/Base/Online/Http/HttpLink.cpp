@@ -16,12 +16,12 @@ namespace sw
 
     HttpLink::~HttpLink() = default;
 
-    bool HttpLink::initialize( ITlsContext* pTlsContext )
+    bool HttpLink::initialize( ITLSContext* pTLSContext )
     {
         _tlsSession.reset();
-        if ( pTlsContext == nullptr )
+        if ( pTLSContext == nullptr )
             return true;
-        _tlsSession = pTlsContext->createSession();
+        _tlsSession = pTLSContext->createSession();
         return _tlsSession != nullptr;
     }
 
@@ -46,7 +46,7 @@ namespace sw
         }
         const bool bFed = _tlsSession->feedCiphertext( pData, size );
         (void)flushCiphertext( transport ); // 핸드셰이크 답 · 세션 표
-        const bool bRead = bFed && _tlsSession->getState() != TlsSessionState::Failed && _tlsSession->readPlaintext( outPlainBytes );
+        const bool bRead = bFed && _tlsSession->getState() != TLSSessionState::Failed && _tlsSession->readPlaintext( outPlainBytes );
         (void)flushCiphertext( transport ); // 핸드셰이크가 끝나며 내보낸 모아 둔 평문
         return bRead;
     }

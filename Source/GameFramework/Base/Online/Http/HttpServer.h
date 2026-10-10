@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class ITlsContext;
+    class ITLSContext;
 
     /**
      * @class IHttpRequestHandler
@@ -42,7 +42,7 @@ namespace sw
     struct HttpServerSettings
     {
         NetAddress   _listenAddress{ NetAddress::makeLoopback( 0 ) }; ///< 포트 0 = 아무 포트(`getListenPort`)
-        ITlsContext* _pTlsContext{ nullptr };                         ///< 있으면 HTTPS(빌려 쓴다)
+        ITLSContext* _pTLSContext{ nullptr };                         ///< 있으면 HTTPS(빌려 쓴다)
         int32        _maxRequestBodyBytes{ 64 * 1024 };
     };
 } // namespace sw

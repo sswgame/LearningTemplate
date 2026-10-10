@@ -71,7 +71,7 @@ namespace sw
         shared_ptr<ParsedContainerNode> _containerTree;
         float32                         _minRange;
         float32                         _maxRange;
-        float32                         _uiMinRange; ///< `UiMin` — 슬라이더 범위(허용 범위와 따로)
+        float32                         _uiMinRange; ///< `UIMin` — 슬라이더 범위(허용 범위와 따로)
         float32                         _uiMaxRange;
         ContainerKind                   _containerKind;
         uint8                           _bIsBitField   : 1;
@@ -96,8 +96,8 @@ namespace sw
         uint8 _bInterp     : 1;
         /** @brief `RepNotify` 함수가 이전 값을 받는다(`void fn( const T& )`). 선언에서 온 사실이다(애노테이션 줄이 아니다). */
         uint8                   _bRepNotifyTakesOldValue : 1;
-        uint8                   _bHasUiMinRange          : 1;
-        uint8                   _bHasUiMaxRange          : 1;
+        uint8                   _bHasUIMinRange          : 1;
+        uint8                   _bHasUIMaxRange          : 1;
         uint8                   _bEditConditionHides     : 1;
         uint8                   _bColorHdr               : 1;
         uint8                   _bMultiline              : 1;
@@ -145,8 +145,8 @@ namespace sw
             , _bSaveGame{ SW_FALSE }
             , _bInterp{ SW_FALSE }
             , _bRepNotifyTakesOldValue{ SW_FALSE }
-            , _bHasUiMinRange{ SW_FALSE }
-            , _bHasUiMaxRange{ SW_FALSE }
+            , _bHasUIMinRange{ SW_FALSE }
+            , _bHasUIMaxRange{ SW_FALSE }
             , _bEditConditionHides{ SW_FALSE }
             , _bColorHdr{ SW_FALSE }
             , _bMultiline{ SW_FALSE }

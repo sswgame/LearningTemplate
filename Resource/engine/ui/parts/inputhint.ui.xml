@@ -1,5 +1,5 @@
-<UiDocument _schemaVersion="1">
+<UIDocument _schemaVersion="1">
 	<BoxPanel _spacing="8">
 		<TextWidget _name="Label" _bRichText="true" _text="[action=UI.Accept] Select" />
 	</BoxPanel>
-</UiDocument>
+</UIDocument>

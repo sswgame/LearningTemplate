@@ -1,5 +1,5 @@
-<UiDocument _schemaVersion="1">
-	<UiScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Swap" />
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _layer="Modal" _bModal="true" _defaultFocus="Swap" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/options.uistyle.xml</item>
 	</_listStyleSheet>
@@ -23,4 +23,4 @@
 			</BoxPanel>
 		</BorderPanel>
 	</CanvasPanel>
-</UiDocument>
+</UIDocument>

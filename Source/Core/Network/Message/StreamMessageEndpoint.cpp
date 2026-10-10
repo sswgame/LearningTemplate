@@ -54,7 +54,7 @@ namespace sw
         mutex                   _mutex; ///< 해독기 · 보낼 프레임 버퍼 · TLS 세션
         StreamFrameDecoder      _decoder;
         vector<uint8>           _frameScratch{};      ///< 보낼 프레임을 짓는 자리
-        unique_ptr<ITlsSession> _tlsSession{};        ///< 있으면 오가는 모든 바이트가 이것을 지난다
+        unique_ptr<ITLSSession> _tlsSession{};        ///< 있으면 오가는 모든 바이트가 이것을 지난다
         vector<uint8>           _plainScratch{};      ///< 세션이 푼 평문
         vector<uint8>           _cipherScratch{};     ///< 세션이 내놓은 보낼 암호문
         vector<uint8>           _compressScratch{};   ///< 보낼 몸의 압축 봉투
@@ -159,19 +159,19 @@ namespace sw
         connection->_remote               = remote;
         connection->_bAccepted            = bAccepted ? SW_TRUE : SW_FALSE;
         // 세션은 표에 넣기 전에 — 표에서 찾은 다른 스레드의 보내기가 세션 없이 평문을 내보내지 않게.
-        if ( _settings._security._pTlsContext != nullptr )
-            connection->_tlsSession = _settings._security._pTlsContext->createSession();
+        if ( _settings._security._pTLSContext != nullptr )
+            connection->_tlsSession = _settings._security._pTLSContext->createSession();
         {
             std::scoped_lock<mutex> lock{ _tableMutex };
             _mapConnection[handle.packed()] = connection;
         }
         std::scoped_lock<mutex> lock{ connection->_mutex };
-        if ( _settings._security._pTlsContext == nullptr )
+        if ( _settings._security._pTLSContext == nullptr )
         {
             announceOpenLocked( *connection );
             return;
         }
-        if ( connection->_tlsSession == nullptr || connection->_tlsSession->getState() == TlsSessionState::Failed )
+        if ( connection->_tlsSession == nullptr || connection->_tlsSession->getState() == TLSSessionState::Failed )
         {
             closeForError( *connection, StreamCloseReason::SecurityFailure );
             return;
@@ -208,16 +208,16 @@ namespace sw
     {
         if ( connection._tlsSession == nullptr )
             return decodeFramesLocked( connection, pData, size );
-        ITlsSession& session = *connection._tlsSession;
+        ITLSSession& session = *connection._tlsSession;
         const bool   bFed    = session.feedCiphertext( pData, size );
         (void)flushCiphertextLocked( connection ); // 핸드셰이크 답 · 세션 표 · 실패 경고
-        if ( bFed == false || session.getState() == TlsSessionState::Failed )
+        if ( bFed == false || session.getState() == TLSSessionState::Failed )
         {
             SW_LOG_WARNING( "TLS handshake failed on stream %#: %#", connection._remote.toString().c_str(), session.getFailureText() );
             closeForError( connection, StreamCloseReason::SecurityFailure );
             return false;
         }
-        if ( session.getState() == TlsSessionState::Established && connection._bOpenAnnounced == SW_FALSE )
+        if ( session.getState() == TLSSessionState::Established && connection._bOpenAnnounced == SW_FALSE )
         {
             announceOpenLocked( connection );
             (void)flushCiphertextLocked( connection ); // 핸드셰이크 중에 모아 둔 평문이 이제 레코드로 나왔다
@@ -230,7 +230,7 @@ namespace sw
             return false;
         }
         (void)flushCiphertextLocked( connection ); // 읽기가 내놓은 레코드(세션 표 답 등)
-        if ( session.getState() == TlsSessionState::Closed )
+        if ( session.getState() == TLSSessionState::Closed )
             _pTransport->close( connection._handle, StreamCloseMode::Graceful ); // 저쪽 close_notify
         return connection._plainScratch.empty() ||
                decodeFramesLocked( connection, connection._plainScratch.data(), static_cast<int32>( connection._plainScratch.size() ) );
@@ -384,7 +384,7 @@ namespace sw
         {
             // 우아한 종료 — close_notify 를 먼저 보낸다(저쪽이 잘린 연결과 끝을 가른다).
             std::scoped_lock<mutex> lock{ connection->_mutex };
-            if ( connection->_tlsSession != nullptr && connection->_tlsSession->getState() == TlsSessionState::Established )
+            if ( connection->_tlsSession != nullptr && connection->_tlsSession->getState() == TLSSessionState::Established )
             {
                 connection->_tlsSession->close();
                 (void)flushCiphertextLocked( *connection );

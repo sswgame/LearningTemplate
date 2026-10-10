@@ -30,20 +30,20 @@ namespace sw
 
         const TypeInfo* getTypeInfo() const override;
 
-        UiOrientation getOrientation() const { return _orientation; }
+        UIOrientation getOrientation() const { return _orientation; }
         /** @brief 흐름 방향을 바꿉니다(가로면 줄이 아래로 쌓인다). kLayout. */
-        void    setOrientation( UiOrientation orientation );
+        void    setOrientation( UIOrientation orientation );
         float32 getItemSpacing() const { return _itemSpacing; }
         /** @brief 한 줄 안 자식 사이 간격입니다. kLayout. */
         void    setItemSpacing( float32 itemSpacing );
         float32 getLineSpacing() const { return _lineSpacing; }
         /** @brief 줄 사이 간격입니다. kLayout. */
         void setLineSpacing( float32 lineSpacing );
-        bool isChildOrderTopToBottom() const override { return _orientation == UiOrientation::Horizontal && _lineSpacing >= 0.0f; }
+        bool isChildOrderTopToBottom() const override { return _orientation == UIOrientation::Horizontal && _lineSpacing >= 0.0f; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
         PROPERTY( DisplayName = "Item Spacing", Meta = "Units=ui" )
@@ -51,6 +51,6 @@ namespace sw
         PROPERTY( DisplayName = "Line Spacing", Meta = "Units=ui" )
         float32 _lineSpacing;
         PROPERTY( DisplayName = "Orientation" )
-        UiOrientation _orientation;
+        UIOrientation _orientation;
     };
 } // namespace sw

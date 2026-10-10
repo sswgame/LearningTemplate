@@ -8,12 +8,12 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/UI/Base/Widget.h"
-#include "Engine/UI/Screen/UiScreen.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ImageWidget.h"
 #include "Engine/UI/World/WidgetComponent.h"
 
-#include "EngineTest/UI/UiTestWidgets.h"
+#include "EngineTest/UI/UITestWidgets.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -105,17 +105,17 @@ SW_TEST_CASE( WidgetComponentTest, ScaleWithDistance )
  *        등록을 풀면 마커 화면이 닫힌다
  * @details 변이: `Widget::setRenderTransform` 의 kArrange 를 빼면 배율만 바뀐 프레임에 기하가 그대로라 진다.
  */
-SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
+SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUISystem )
 {
-    sw::UiSystem   ui;
-    sw::UiViewport viewport{};
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
     viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
     viewport._physicalSize = viewport._size;
     sw::WidgetComponent component;
     component.setDrawSize( sw::float2{ 100.0f, 20.0f } );
     component.setPivot( sw::float2{ 0.5f, 1.0f } );
     component.setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "hp" ) );
-    component.bindUiSystem( &ui );
+    component.bindUISystem( &ui );
     SW_ASSERT_EQUAL( 1u, ui.getScreenCount() );
     SW_EXPECT_TRUE( ui.getActiveScreen() == nullptr ); // HUD — 포커스를 받지 않는다
 
@@ -131,7 +131,7 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
     placement._scale = 2.0f;
     component.applyPlacement( placement );
     ui.update( 1.0f / 60.0f, viewport );
-    const sw::UiRect scaled = pMarker->getGeometry().computeScreenBounds();
+    const sw::UIRect scaled = pMarker->getGeometry().computeScreenBounds();
     SW_EXPECT_NEAR_EQUAL( 200.0f, scaled.getRight() - scaled.getLeft(), 0.01f );
     SW_EXPECT_NEAR_EQUAL( 300.0f, scaled.getBottom(), 0.01f ); // 피벗(가운데 아래)은 그대로
 
@@ -139,7 +139,7 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
     component.applyPlacement( placement );
     SW_EXPECT_TRUE( pMarker->getVisibility() == sw::WidgetVisibility::Collapsed );
 
-    component.bindUiSystem( nullptr );
+    component.bindUISystem( nullptr );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( 0u, ui.getScreenCount() );
     SW_EXPECT_EQUAL( 0u, ui.getWidgetComponentCount() );
@@ -152,8 +152,8 @@ SW_TEST_CASE( WidgetComponentTest, MarkerFollowsPlacementInUiSystem )
  */
 SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
 {
-    sw::UiSystem   ui;
-    sw::UiViewport viewport{};
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
     viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
     viewport._physicalSize = viewport._size;
     sw::GameObjectManager manager;
@@ -172,7 +172,7 @@ SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
     manager.beginPlay();
     pMarker->setWorldOffset( sw::float3{ 0.0f, 2.0f, 0.0f } );
     pMarker->setContent( sw::make_unique<sw::uitest::TestBoxWidget>( "hp" ) );
-    pMarker->bindUiSystem( &ui );
+    pMarker->bindUISystem( &ui );
 
     const sw::CameraComponent* pGameCamera = manager.getCameraRegistry().selectCamera( sw::CameraRole::Game );
     SW_ASSERT_NOT_NULL( pGameCamera );
@@ -195,7 +195,7 @@ SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
     pMarker->setHidden( false );
     pMarker->updateScreenMarker( viewport );
     SW_EXPECT_TRUE( pMarker->getLastPlacement()._bVisible == SW_TRUE );
-    pMarker->bindUiSystem( nullptr );
+    pMarker->bindUISystem( nullptr );
     manager.endPlay();
 }
 
@@ -206,8 +206,8 @@ SW_TEST_CASE( WidgetComponentTest, ScreenMarkerAnchorsAtWorldOffsetAndHides )
  */
 SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
 {
-    sw::UiSystem   ui;
-    sw::UiViewport viewport{};
+    sw::UISystem   ui;
+    sw::UIViewport viewport{};
     viewport._size         = sw::float2{ WidgetComponentTestUtil::kWidth, WidgetComponentTestUtil::kHeight };
     viewport._physicalSize = viewport._size;
     sw::WidgetComponent component;
@@ -215,9 +215,9 @@ SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
     component.setDrawSize( sw::float2{ 64.0f, 32.0f } );
     sw::unique_ptr<sw::ImageWidget> image  = sw::make_unique<sw::ImageWidget>();
     sw::ImageWidget*                pImage = image.get();
-    pImage->setBrush( sw::UiBrush::makeSolid( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
+    pImage->setBrush( sw::UIBrush::makeSolid( sw::float4{ 1.0f, 0.0f, 0.0f, 1.0f } ) );
     component.setContent( std::move( image ) );
-    component.bindUiSystem( &ui );
+    component.bindUISystem( &ui );
     SW_EXPECT_EQUAL( 0u, ui.getScreenCount() ); // 마커 화면을 쓰지 않는다
 
     ui.update( 1.0f / 60.0f, viewport );
@@ -232,10 +232,10 @@ SW_TEST_CASE( WidgetComponentTest, WorldSpaceEmitsRenderTextureList )
 
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( firstRevision, component.getWorldCanvasRevision() );
-    pImage->setBrush( sw::UiBrush::makeSolid( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
+    pImage->setBrush( sw::UIBrush::makeSolid( sw::float4{ 0.0f, 0.0f, 1.0f, 1.0f } ) );
     ui.update( 1.0f / 60.0f, viewport );
     SW_EXPECT_EQUAL( firstRevision + 1, component.getWorldCanvasRevision() );
-    component.bindUiSystem( nullptr );
+    component.bindUISystem( nullptr );
     listTarget.clear();
     ui.collectWorldCanvases( listTarget );
     SW_EXPECT_TRUE( listTarget.empty() );

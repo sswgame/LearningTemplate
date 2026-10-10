@@ -16,7 +16,7 @@ namespace sw
     /**
      * @struct WidgetStyle
      * @brief 스타일 시트 규칙이 쓰는 겉모습 칸입니다 — 규칙(`<Rule _selector="…" _backgroundColor="…" />`)의 속성 이름이 곧 이 PROPERTY 이름입니다.
-     * @details 칸의 순서 · 뜻은 `UiStyleField` · `UiStyleFieldTable` 과 짝입니다(`UiStyleTest.FieldTableMatchesReflection` 이 지킨다). 길이는 UI 단위입니다.
+     * @details 칸의 순서 · 뜻은 `UIStyleField` · `UIStyleFieldTable` 과 짝입니다(`UIStyleTest.FieldTableMatchesReflection` 이 지킨다). 길이는 UI 단위입니다.
      */
     REFLECT()
     struct SW_API WidgetStyle
@@ -61,7 +61,7 @@ namespace sw
 namespace sw
 {
     /** @brief `WidgetStyle` 의 칸 번호입니다(선언 순서와 같다 — 계산된 스타일의 "정한 칸" 비트 자리). */
-    enum class UiStyleField : uint8
+    enum class UIStyleField : uint8
     {
         BackgroundColor,
         CornerRadius,
@@ -83,10 +83,10 @@ namespace sw
     };
 
     /**
-     * @struct UiStyleFieldTable
+     * @struct UIStyleFieldTable
      * @brief 칸마다 이름 · 바뀌면 무엇을 다시 하는가 · 물려받는가입니다(CSS 의 상속 속성 · 레이아웃에 닿는 속성).
      */
-    struct SW_API UiStyleFieldTable
+    struct SW_API UIStyleFieldTable
     {
         static constexpr uint32 kAffectsLayout  = SW_BIT( 0 ); ///< 바뀌면 원하는 크기가 바뀐다(여백 · 글꼴 · 크기)
         static constexpr uint32 kAffectsSubtree = SW_BIT( 1 ); ///< 자손 그림에 구워진다(불투명도) — 자손까지 다시 칠한다
@@ -99,28 +99,28 @@ namespace sw
         };
 
         /** @brief 칸 하나의 표 줄입니다. */
-        static const Entry& getEntry( UiStyleField field );
+        static const Entry& getEntry( UIStyleField field );
         /** @brief 이름(`_backgroundColor`, 대소문자 무시)의 칸입니다. 없으면 false 입니다. */
-        [[nodiscard]] static bool tryFindField( string_view name, UiStyleField& outField );
+        [[nodiscard]] static bool tryFindField( string_view name, UIStyleField& outField );
         /** @brief 비트 하나(칸 하나)입니다. */
-        static constexpr uint32 makeBit( UiStyleField field ) { return 1u << static_cast<uint32>( field ); }
+        static constexpr uint32 makeBit( UIStyleField field ) { return 1u << static_cast<uint32>( field ); }
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @struct UiComputedStyle
+     * @struct UIComputedStyle
      * @brief 위젯 하나의 계산된 스타일입니다 — 값과 "규칙이 정했거나 물려받은 칸" 비트. 정하지 않은 칸은 위젯 자기 칸(코드 · 문서가 넣은 기본 겉모습)을 씁니다.
-     * @details 같은 규칙 묶음 · 같은 부모 스타일인 위젯은 한 객체를 나눠 씁니다(`UiStyleSet`). 값은 바꾸지 않습니다.
+     * @details 같은 규칙 묶음 · 같은 부모 스타일인 위젯은 한 객체를 나눠 씁니다(`UIStyleSet`). 값은 바꾸지 않습니다.
      */
-    struct SW_API UiComputedStyle
+    struct SW_API UIComputedStyle
     {
         WidgetStyle _value{};
         uint32      _setMask{ 0 };
 
-        bool has( UiStyleField field ) const { return ( _setMask & UiStyleFieldTable::makeBit( field ) ) != 0; }
+        bool has( UIStyleField field ) const { return ( _setMask & UIStyleFieldTable::makeBit( field ) ) != 0; }
         /** @brief 두 스타일에서 값이나 정함이 다른 칸 비트입니다(nullptr 은 아무 칸도 정하지 않은 것). */
-        static uint32 computeChangedFields( const UiComputedStyle* pOld, const UiComputedStyle* pNew );
+        static uint32 computeChangedFields( const UIComputedStyle* pOld, const UIComputedStyle* pNew );
     };
 } // namespace sw

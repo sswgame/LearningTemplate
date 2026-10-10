@@ -18,15 +18,15 @@ namespace sw
 {
     struct CanvasDrawList;
 
-    class UiFocusManager;
-    class UiScreen;
+    class UIFocusManager;
+    class UIScreen;
 
     /**
      * @class WidgetTree
      * @brief 루트 위젯 하나와 그 아래 모든 위젯의 번호표 · 이름표, 무효화 목록을 듭니다(언리얼 UWidgetTree · 유니티 패널).
-     * @details 화면(`UiScreen`) 하나가 트리 하나를 가집니다. 무효화는 이유별 목록으로 모입니다 — 레이아웃은 부모 쪽으로 레이아웃 경계까지 올라가 그
+     * @details 화면(`UIScreen`) 하나가 트리 하나를 가집니다. 무효화는 이유별 목록으로 모입니다 — 레이아웃은 부모 쪽으로 레이아웃 경계까지 올라가 그
      *          "다시 잴 뿌리" 만 적고(`getLayoutDirtyRoots`), 그리기 · 스타일은 위젯 자신만 적습니다. 목록은 번호를 듭니다 — 그 사이 떨어진 위젯은 걷는 쪽이 건너뜁니다.
-     *          포커스: 포커스 관리자(`UiFocusManager`)가 이 트리에 포커스를 두면 그 위젯 번호가 여기 적힙니다. 그 위젯이 떨어지면 트리가 포커스를 풀고,
+     *          포커스: 포커스 관리자(`UIFocusManager`)가 이 트리에 포커스를 두면 그 위젯 번호가 여기 적힙니다. 그 위젯이 떨어지면 트리가 포커스를 풀고,
      *          트리가 지워지면 관리자에게 알립니다.
      */
     class SW_API WidgetTree
@@ -71,7 +71,7 @@ namespace sw
         void clearAllDirty();
 
         /** @brief 이 트리를 소유한 화면입니다(화면 밖의 트리 — 시험 · 월드 위젯 — 면 nullptr). 팝업을 여는 위젯이 그 화면의 UI 시스템을 찾는다. */
-        UiScreen* getScreen() const { return _pScreen; }
+        UIScreen* getScreen() const { return _pScreen; }
 
         /** @brief 이 트리에서 포커스를 쥔 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */
         WidgetId getFocusedWidget() const { return _focusedWidget; }
@@ -81,12 +81,12 @@ namespace sw
 
     private:
         friend class Widget;
-        friend class UiFocusManager;
-        friend class UiLayoutPass;
-        friend class UiPaintPass;
-        friend class UiScreen;
-        friend class UiStylePass;
-        friend class UiStyleTransition;
+        friend class UIFocusManager;
+        friend class UILayoutPass;
+        friend class UIPaintPass;
+        friend class UIScreen;
+        friend class UIStylePass;
+        friend class UIStyleTransition;
 
         /** @brief 번호 · 이름을 올립니다(`Widget::attachToTree` 가 부른다). */
         void registerWidget( Widget& widget );
@@ -106,14 +106,14 @@ namespace sw
         vector<WidgetId>                                               _listLayoutDirtyRoot; ///< kLayout 이 올라가다 멈춘 자리(레이아웃 경계 · 루트)
         vector<WidgetId>                                               _listPaintDirty;
         vector<WidgetId>                                               _listStyleDirty;
-        vector<WidgetId>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UiStyleTransition` 이 진행한다)
-        UiFocusManager*                                                _pFocusManager;       ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
-        UiScreen*                                                      _pScreen;             ///< 소유한 화면(UiScreen 생성자가 적는다)
+        vector<WidgetId>                                               _listStyleTransition; ///< 스타일 전환 중인 위젯(`UIStyleTransition` 이 진행한다)
+        UIFocusManager*                                                _pFocusManager;       ///< 지금 이 트리에 포커스를 둔 관리자(없으면 nullptr — 트리가 지워질 때 알린다)
+        UIScreen*                                                      _pScreen;             ///< 소유한 화면(UIScreen 생성자가 적는다)
         WidgetId                                                       _focusedWidget;
-        float32                                                        _layoutUiScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UiLayoutPass)
+        float32                                                        _layoutUIScale;        ///< 지난 레이아웃 걷기의 UI 배율(바뀌면 전체 다시 — UILayoutPass)
         float32                                                        _layoutTextScale;      ///< 지난 레이아웃 걷기의 글자 배율
         float4                                                         _layoutSafeInsets;     ///< 지난 레이아웃 걷기의 안전 영역(바뀌면 루트부터 다시 놓는다)
-        float32                                                        _paintUiScale;         ///< 지난 그리기 걷기의 UI 배율(바뀌면 모든 그림 캐시를 다시 — 픽셀이 바뀐다)
+        float32                                                        _paintUIScale;         ///< 지난 그리기 걷기의 UI 배율(바뀌면 모든 그림 캐시를 다시 — 픽셀이 바뀐다)
         uint32                                                         _paintAtlasGeneration; ///< 지난 그리기 걷기의 글리프 아틀라스 세대(바뀌면 글 위젯을 다시)
         unique_ptr<CanvasDrawList>                                     _paintOutput;          ///< 지난 그리기 걷기가 이어 붙인 트리 전체의 목록(바뀐 것이 없으면 걷지 않고 이것을 낸다)
         uint8                                                          _bPaintOutputStale;    ///< 지난 걷기 뒤 무효화가 하나라도 있었다(구조 · 레이아웃 · 스타일 · 그리기 무엇이든)

@@ -1,8 +1,8 @@
-<UiStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="1">
 	<!-- 자막 — 화자 이름 색은 변수 하나(게임이 덮어쓰는 시트에서 바꾼다). 바탕을 끈 플레이어(불투명도 0)를 위해 글에 외곽선을 둔다. -->
 	<Variable _name="speaker" _value="1,0.85,0.4,1" />
 	<Variable _name="line" _value="1,1,1,1" />
 	<Variable _name="outline" _value="0,0,0,1" />
 	<Rule _selector="TextWidget.speaker" _textColor="$speaker" _textOutlineColor="$outline" _textOutlineWidth="1.5" />
 	<Rule _selector="TextWidget.line" _textColor="$line" _textOutlineColor="$outline" _textOutlineWidth="1.5" />
-</UiStyleSheet>
+</UIStyleSheet>

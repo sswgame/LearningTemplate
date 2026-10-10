@@ -3,7 +3,7 @@
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/WidgetTree.h"
 
-#include "EngineTest/UI/UiTestWidgets.h"
+#include "EngineTest/UI/UITestWidgets.h"
 
 #include "TestFramework/TestFramework.h"
 

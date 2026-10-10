@@ -20,7 +20,7 @@ namespace sw
 
 namespace sw
 {
-    float32 UiRect::computeRangeGap( float32 aMin, float32 aMax, float32 bMin, float32 bMax )
+    float32 UIRect::computeRangeGap( float32 aMin, float32 aMax, float32 bMin, float32 bMax )
     {
         if ( bMin > aMax )
             return bMin - aMax;
@@ -64,11 +64,11 @@ namespace sw
         return _axisX._x == 1.0f && _axisX._y == 0.0f && _axisY._x == 0.0f && _axisY._y == 1.0f;
     }
 
-    UiRect WidgetGeometry::computeScreenBounds() const
+    UIRect WidgetGeometry::computeScreenBounds() const
     {
         const float2 arrCorner[4] = { transformPoint( float2{ 0.0f, 0.0f } ), transformPoint( float2{ _size._x, 0.0f } ), transformPoint( float2{ 0.0f, _size._y } ),
                                       transformPoint( _size ) };
-        UiRect       bounds{ arrCorner[0]._x, arrCorner[0]._y, arrCorner[0]._x, arrCorner[0]._y };
+        UIRect       bounds{ arrCorner[0]._x, arrCorner[0]._y, arrCorner[0]._x, arrCorner[0]._y };
         for ( const float2& corner : arrCorner )
         {
             bounds._left   = MathUtil::min( bounds._left, corner._x );

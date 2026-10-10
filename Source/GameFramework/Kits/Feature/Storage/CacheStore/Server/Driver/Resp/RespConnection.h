@@ -19,8 +19,8 @@
 namespace sw
 {
     class IStreamTransport;
-    class ITlsContext;
-    class ITlsSession;
+    class ITLSContext;
+    class ITLSSession;
 
     /** @brief 답이 누구 것인지 — 맡은 요청 id 와 그 요청의 몇 번째 명령인지입니다. */
     struct RespCommandTag
@@ -68,9 +68,9 @@ namespace sw
 
         /**
          * @brief 연결을 겁니다. @p pAuthCommand 가 있으면 열리자마자 가장 먼저 보낸다. 시작도 못 하면 false(바로 닫힘 상태).
-         * @param pTlsContext 있으면 세션을 만들어 모든 바이트가 그것을 지난다(빌려 쓴다)
+         * @param pTLSContext 있으면 세션을 만들어 모든 바이트가 그것을 지난다(빌려 쓴다)
          */
-        [[nodiscard]] bool beginConnect( IStreamTransport& transport, const NetAddress& address, ITlsContext* pTlsContext, const RespCommand* pAuthCommand );
+        [[nodiscard]] bool beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RespCommand* pAuthCommand );
         /** @brief 명령 하나를 보내고(열리기 전이면 모은다) 답 꼬리표를 줄에 넣습니다. 닫힌 연결이면 false. */
         bool sendCommand( IStreamTransport& transport, const RespCommand& command, const RespCommandTag& tag );
         /** @brief 바로 끊고(RST) 기다리던 꼬리표를 모두 실패로 냅니다. 이 핸들의 늦은 콜백은 버려진다. */
@@ -106,7 +106,7 @@ namespace sw
         vector<uint8>           _pendingSendBytes; ///< 열리기 전에 모은 평문
         vector<uint8>           _plainBytes;
         vector<uint8>           _cipherBytes;
-        unique_ptr<ITlsSession> _tlsSession;
+        unique_ptr<ITLSSession> _tlsSession;
         StreamConnectionHandle  _handle;
         RespConnectionState     _state;
         uint8                   _bPushMode;

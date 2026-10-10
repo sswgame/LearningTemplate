@@ -590,8 +590,8 @@ namespace sw
 
             {
                 // 에디터가 없으면 바로 돌아온다. 이 호출이 게임 뷰 · 씬 뷰 RT 와 씬 틱 여부를 확정한다.
-                SW_PROFILE_SCOPE( "GT.Editor.updateUi" );
-                _moduleHost->updateEditorUi( frameTime._deltaTime );
+                SW_PROFILE_SCOPE( "GT.Editor.updateUI" );
+                _moduleHost->updateEditorUI( frameTime._deltaTime );
             }
 
             // 카메라 포인터를 미리 잡아 두면 tick 안의 씬 전환 · 핫 리로드가 그 GameObject 를 파괴한 뒤 역참조하게 된다. 그래서

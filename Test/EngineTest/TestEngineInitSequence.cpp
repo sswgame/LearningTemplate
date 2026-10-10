@@ -54,7 +54,7 @@ namespace
 
     /** @brief 표의 줄을 거꾸로 적은 단계 이름입니다 — 해제는 기동이 어디서 멈췄든 이 순서로 모든 단계를 돈다. */
     constexpr const utf8* kFullDestroyOrder =
-        "Ui Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+        "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
         "Config Reflection Compression";
 
     string joinStepNames( const vector<EngineInitStep>& listStep )
@@ -178,7 +178,7 @@ SW_TEST_CASE( EngineInitSequenceTest, ShutdownRunsInReverseOfInitialization )
 
     sequence.shutdownAll();
     SW_EXPECT_STREQ( joinStepNames( makeReversed( recorder._listInitialized ) ).c_str(), joinStepNames( recorder._listShutdown ).c_str() );
-    SW_EXPECT_STREQ( "Ui Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 
@@ -350,7 +350,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DependentsOfAStepRestartWithTheSameBodies 
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Ui Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
+    SW_EXPECT_STREQ( "UI Telemetry SceneRHI LiveShader RenderThread FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource "
                      "Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
@@ -371,7 +371,7 @@ SW_TEST_CASE( EngineInitSequenceTest, FailedRestartLeavesTheRestStopped )
 
     recorder._listShutdown.clear();
     sequence.shutdownAll();
-    SW_EXPECT_STREQ( "Ui Telemetry FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
+    SW_EXPECT_STREQ( "UI Telemetry FrameRenderer RHI UserSettings Fonts Headless Scene Physics ModuleTypes Input FileIo Audio ModuleImages Task ShaderCache EngineDefaultAssets Resource Config Reflection Compression",
                      joinStepNames( recorder._listShutdown ).c_str() );
 }
 
@@ -416,7 +416,7 @@ SW_TEST_CASE( EngineInitSequenceTest, DedicatedServerSkipsClientSteps )
     SW_ASSERT_TRUE( sequence.initializeAll( recorder, EngineInitTarget::Server ) );
 
     const EngineInitStep arrClientOnly[]   = { EngineInitStep::UserSettings, EngineInitStep::RHI, EngineInitStep::FrameRenderer, EngineInitStep::RenderThread,
-                                               EngineInitStep::LiveShader, EngineInitStep::SceneRHI, EngineInitStep::Telemetry, EngineInitStep::Fonts, EngineInitStep::Ui };
+                                               EngineInitStep::LiveShader, EngineInitStep::SceneRHI, EngineInitStep::Telemetry, EngineInitStep::Fonts, EngineInitStep::UI };
     bool                 bSceneInitialized = false;
     for ( const EngineInitStep step : recorder._listInitialized )
     {

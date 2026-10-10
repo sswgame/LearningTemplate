@@ -1,4 +1,4 @@
-<UiStyleSheet _schemaVersion="1">
+<UIStyleSheet _schemaVersion="1">
 	<Variable _name="accent" _value="0.25,0.5,1,1" />
 	<Variable _name="accentHover" _value="0.375,0.625,1,1" />
 	<Variable _name="accentPressed" _value="0.125,0.375,0.875,1" />
@@ -27,4 +27,4 @@
 		<_font _weight="Bold" />
 	</Rule>
 	<Rule _selector="TextWidget.tip" _fontSize="20" _textColor="0.7,0.72,0.78,1" />
-</UiStyleSheet>
+</UIStyleSheet>

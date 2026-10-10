@@ -38,7 +38,7 @@ namespace
         }
 
         static bool initializeStore( RespEphemeralStore& store, test::FakeRespServer& server, const RespStoreSettings& settings,
-                                     unique_ptr<ITlsContext> tlsContext = nullptr )
+                                     unique_ptr<ITLSContext> tlsContext = nullptr )
         {
             string     error;
             const bool bInitialized = store.initialize( server.createClientTransport(), makeTransportSettings(), settings, std::move( tlsContext ), error );
@@ -201,23 +201,23 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, AuthIsSentFirstAndAWrongPassword
     }
 }
 
-SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TlsCarriesTheCommands )
+SW_TEST_CASE( RespEphemeralStoreFakeServerTest, TLSCarriesTheCommands )
 {
     INetSecurityProvider& provider = NetSecurity::getProvider();
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 30, certificatePem, privateKeyPem ) );
     string             error;
-    TlsContextSettings serverSettings;
-    serverSettings._role                  = TlsRole::Server;
+    TLSContextSettings serverSettings;
+    serverSettings._role                  = TLSRole::Server;
     serverSettings._certificatePem        = certificatePem;
     serverSettings._privateKeyPem         = privateKeyPem;
-    unique_ptr<ITlsContext> serverContext = provider.createTlsContext( serverSettings, error );
-    TlsContextSettings      clientSettings;
-    clientSettings._role                  = TlsRole::Client;
+    unique_ptr<ITLSContext> serverContext = provider.createTLSContext( serverSettings, error );
+    TLSContextSettings      clientSettings;
+    clientSettings._role                  = TLSRole::Client;
     clientSettings._trustPem              = certificatePem;
     clientSettings._serverName            = "localhost";
-    unique_ptr<ITlsContext> clientContext = provider.createTlsContext( clientSettings, error );
+    unique_ptr<ITLSContext> clientContext = provider.createTLSContext( clientSettings, error );
     SW_ASSERT_TRUE( serverContext != nullptr && clientContext != nullptr );
 
     LoopbackStreamNetwork network{ 8u };
@@ -273,7 +273,7 @@ SW_TEST_CASE( RespEphemeralStoreFakeServerTest, FactoryReadsTheEndpointAndRefuse
     SW_EXPECT_TRUE( endpoint._address == NetAddress::make( 127, 0, 0, 1, 6380 ) );
     SW_EXPECT_TRUE( endpoint._keyPrefix == "game1:" );
     SW_EXPECT_EQUAL( int64( 500 ), endpoint._timeoutMs );
-    SW_EXPECT_TRUE( endpoint._bTls == SW_TRUE );
+    SW_EXPECT_TRUE( endpoint._bTLS == SW_TRUE );
     SW_EXPECT_TRUE( endpoint._trustFile == "certs/ca.pem" );
 
     SW_ASSERT_TRUE( CacheStoreFactory::parseEndpoint( "localhost", endpoint, error ) );

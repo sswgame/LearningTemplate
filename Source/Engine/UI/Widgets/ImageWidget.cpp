@@ -40,7 +40,7 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    void ImageWidget::setBrush( const UiBrush& brush )
+    void ImageWidget::setBrush( const UIBrush& brush )
     {
         _brush = brush;
         invalidate( WidgetDirty::kPaint );
@@ -62,7 +62,7 @@ namespace sw
         invalidate( WidgetDirty::kPaint );
     }
 
-    float2 ImageWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 ImageWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
         (void)availableSize;
@@ -73,7 +73,7 @@ namespace sw
         return float2{};
     }
 
-    void ImageWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void ImageWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         const bool bImagePath = _image == nullptr && _imagePath.empty() == false;

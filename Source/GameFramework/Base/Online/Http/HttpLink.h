@@ -14,8 +14,8 @@
 namespace sw
 {
     class IStreamTransport;
-    class ITlsContext;
-    class ITlsSession;
+    class ITLSContext;
+    class ITLSSession;
 
     /**
      * @class HttpLink
@@ -30,8 +30,8 @@ namespace sw
         HttpLink( const HttpLink& )            = delete;
         HttpLink& operator=( const HttpLink& ) = delete;
 
-        /** @brief @p pTlsContext 가 있으면 세션을 만든다(실패하면 false). 핸들은 연결을 건 · 받은 뒤 `setHandle`. */
-        [[nodiscard]] bool initialize( ITlsContext* pTlsContext );
+        /** @brief @p pTLSContext 가 있으면 세션을 만든다(실패하면 false). 핸들은 연결을 건 · 받은 뒤 `setHandle`. */
+        [[nodiscard]] bool initialize( ITLSContext* pTLSContext );
         void               setHandle( StreamConnectionHandle handle ) { _handle = handle; }
         /** @brief 평문을 선에 올립니다(TLS 핸드셰이크 전이면 세션이 모았다가 보낸다). */
         [[nodiscard]] bool writePlain( IStreamTransport& transport, const uint8* pData, size_t size );
@@ -48,7 +48,7 @@ namespace sw
         [[nodiscard]] bool flushCiphertext( IStreamTransport& transport );
 
         vector<uint8>           _cipherBytes;
-        unique_ptr<ITlsSession> _tlsSession;
+        unique_ptr<ITLSSession> _tlsSession;
         StreamConnectionHandle  _handle;
     };
 } // namespace sw

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -13,17 +13,17 @@ namespace sw
         struct WrapPanelInternal
         {
             /** @brief 자식의 (원하는 크기 + 여백) 주축 · 교차축 길이입니다. */
-            static void computeExtent( UiOrientation orientation, const Widget& child, float32& outMain, float32& outCross )
+            static void computeExtent( UIOrientation orientation, const Widget& child, float32& outMain, float32& outCross )
             {
                 const float4& padding = child.getLayoutSlot()._padding;
-                outMain               = UiLayoutPass::getMainAxis( orientation, child.getDesiredSize() ) + UiLayoutPass::getMainPadding( orientation, padding );
-                outCross              = UiLayoutPass::getCrossAxis( orientation, child.getDesiredSize() ) + UiLayoutPass::getCrossPadding( orientation, padding );
+                outMain               = UILayoutPass::getMainAxis( orientation, child.getDesiredSize() ) + UILayoutPass::getMainPadding( orientation, padding );
+                outCross              = UILayoutPass::getCrossAxis( orientation, child.getDesiredSize() ) + UILayoutPass::getCrossPadding( orientation, padding );
             }
 
             /** @brief 지금 줄(길이 @p lineMain)에 길이 @p itemMain 인 자식이 더 들어가지 못하는가. 줄의 첫 자식은 늘 들어간다. */
             static bool shouldBreak( float32 lineMain, float32 itemMain, float32 spacing, float32 mainAvailable, bool bLineEmpty )
             {
-                if ( bLineEmpty || UiLayoutPass::isUnbounded( mainAvailable ) )
+                if ( bLineEmpty || UILayoutPass::isUnbounded( mainAvailable ) )
                     return false;
                 return lineMain + spacing + itemMain > mainAvailable;
             }
@@ -37,7 +37,7 @@ namespace sw
         : PanelWidget{}
         , _itemSpacing{ 0.0f }
         , _lineSpacing{ 0.0f }
-        , _orientation{ UiOrientation::Horizontal }
+        , _orientation{ UIOrientation::Horizontal }
     {
     }
 
@@ -48,7 +48,7 @@ namespace sw
         return StaticType();
     }
 
-    void WrapPanel::setOrientation( UiOrientation orientation )
+    void WrapPanel::setOrientation( UIOrientation orientation )
     {
         if ( _orientation == orientation )
             return;
@@ -72,9 +72,9 @@ namespace sw
         invalidate( WidgetDirty::kLayout );
     }
 
-    float2 WrapPanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 WrapPanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
-        const float32 mainAvailable = UiLayoutPass::getMainAxis( _orientation, availableSize );
+        const float32 mainAvailable = UILayoutPass::getMainAxis( _orientation, availableSize );
         float32       maxLineMain   = 0.0f;
         float32       crossTotal    = 0.0f;
         float32       lineMain      = 0.0f;
@@ -87,10 +87,10 @@ namespace sw
             if ( child.getVisibility() == WidgetVisibility::Collapsed )
                 continue;
             const float4& padding = child.getLayoutSlot()._padding;
-            (void)UiLayoutPass::measure( child, context,
-                                         UiLayoutPass::makeAxisVector( _orientation,
-                                                                       UiLayoutPass::computeRemaining( mainAvailable, UiLayoutPass::getMainPadding( _orientation, padding ) ),
-                                                                       kUiUnbounded ) );
+            (void)UILayoutPass::measure( child, context,
+                                         UILayoutPass::makeAxisVector( _orientation,
+                                                                       UILayoutPass::computeRemaining( mainAvailable, UILayoutPass::getMainPadding( _orientation, padding ) ),
+                                                                       kUIUnbounded ) );
             float32 itemMain  = 0.0f;
             float32 itemCross = 0.0f;
             WrapPanelInternal::computeExtent( _orientation, child, itemMain, itemCross );
@@ -112,12 +112,12 @@ namespace sw
         crossTotal += lineCross;
         if ( lineCount > 1 )
             crossTotal += _lineSpacing * static_cast<float32>( lineCount - 1 );
-        return UiLayoutPass::makeAxisVector( _orientation, maxLineMain, crossTotal );
+        return UILayoutPass::makeAxisVector( _orientation, maxLineMain, crossTotal );
     }
 
-    void WrapPanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void WrapPanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
-        const float32 mainSize   = UiLayoutPass::getMainAxis( _orientation, size );
+        const float32 mainSize   = UILayoutPass::getMainAxis( _orientation, size );
         float32       lineOffset = 0.0f;
         uint32        lineBegin  = 0;
         while ( lineBegin < getChildCount() )
@@ -150,8 +150,8 @@ namespace sw
                 float32 itemMain  = 0.0f;
                 float32 itemCross = 0.0f;
                 WrapPanelInternal::computeExtent( _orientation, child, itemMain, itemCross );
-                arrangeChild( context, child, UiLayoutPass::makeAxisVector( _orientation, cursor, lineOffset ),
-                              UiLayoutPass::makeAxisVector( _orientation, itemMain, lineCross ) );
+                arrangeChild( context, child, UILayoutPass::makeAxisVector( _orientation, cursor, lineOffset ),
+                              UILayoutPass::makeAxisVector( _orientation, itemMain, lineCross ) );
                 cursor += itemMain + _itemSpacing;
             }
             if ( bLineEmpty == false )

@@ -13,7 +13,7 @@ namespace sw
 {
     /** @brief 슬롯 안 정렬입니다. Fill 은 슬롯 크기 그대로, 나머지는 원하는 크기로 그 자리에. */
     ENUM()
-    enum class UiAlignment : uint8
+    enum class UIAlignment : uint8
     {
         Fill,
         Start,
@@ -23,7 +23,7 @@ namespace sw
 
     /** @brief 상자 패널의 주축 크기 규칙입니다(UMG Size Rule · Godot Expand). */
     ENUM()
-    enum class UiSizeRule : uint8
+    enum class UISizeRule : uint8
     {
         Auto, ///< 원하는 크기만큼
         Fill  ///< 남은 주축을 채우기 비(_fillWeight)로 나눠 받는다
@@ -31,7 +31,7 @@ namespace sw
 
     /** @brief 앵커 크기가 원하는 크기를 따를 때 커지는 쪽입니다(Godot grow_direction). */
     ENUM()
-    enum class UiGrowDirection : uint8
+    enum class UIGrowDirection : uint8
     {
         End,   ///< 왼쪽(위) 변을 두고 오른쪽(아래)으로
         Begin, ///< 오른쪽(아래) 변을 두고 왼쪽(위)으로
@@ -40,7 +40,7 @@ namespace sw
 
     /** @brief 상자 · 흐름 패널의 주축 방향입니다. */
     ENUM()
-    enum class UiOrientation : uint8
+    enum class UIOrientation : uint8
     {
         Horizontal,
         Vertical
@@ -64,9 +64,9 @@ namespace sw
         PROPERTY( DisplayName = "Padding", Tooltip = "Left, top, right, bottom", Meta = "Units=ui" )
         float4 _padding{};
         PROPERTY( DisplayName = "Horizontal Alignment" )
-        UiAlignment _horizontalAlignment{ UiAlignment::Fill };
+        UIAlignment _horizontalAlignment{ UIAlignment::Fill };
         PROPERTY( DisplayName = "Vertical Alignment" )
-        UiAlignment _verticalAlignment{ UiAlignment::Fill };
+        UIAlignment _verticalAlignment{ UIAlignment::Fill };
         PROPERTY( DisplayName = "Width Override", Tooltip = "<= 0 means none", Meta = "Units=ui" )
         float32 _widthOverride{ 0.0f };
         PROPERTY( DisplayName = "Height Override", Tooltip = "<= 0 means none", Meta = "Units=ui" )
@@ -77,7 +77,7 @@ namespace sw
         float2 _maxSize{};
         // 상자
         PROPERTY( DisplayName = "Size Rule" )
-        UiSizeRule _sizeRule{ UiSizeRule::Auto };
+        UISizeRule _sizeRule{ UISizeRule::Auto };
         PROPERTY( DisplayName = "Fill Weight", Min = 0.0 )
         float32 _fillWeight{ 1.0f };
         // 캔버스(Godot 식 — 변 = 앵커 × 부모 크기 + 오프셋)
@@ -92,9 +92,9 @@ namespace sw
         PROPERTY( DisplayName = "Auto Size", Tooltip = "Use the desired size instead of the max offset" )
         bool _bAutoSize{ false };
         PROPERTY( DisplayName = "Grow Horizontal" )
-        UiGrowDirection _growHorizontal{ UiGrowDirection::End };
+        UIGrowDirection _growHorizontal{ UIGrowDirection::End };
         PROPERTY( DisplayName = "Grow Vertical" )
-        UiGrowDirection _growVertical{ UiGrowDirection::End };
+        UIGrowDirection _growVertical{ UIGrowDirection::End };
         PROPERTY( DisplayName = "Z Order" )
         int16 _zOrder{ 0 };
         // 격자

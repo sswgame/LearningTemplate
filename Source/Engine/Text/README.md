@@ -59,7 +59,7 @@ UI 위젯을 거치지 않고 글자 계층만 써서 문장 하나를 정해진
 ### 1단계 — 글꼴 서비스와 배치기
 
 엔진이 켜지면 기동 단계 `Fonts` 가 글꼴 서비스를 엽니다. 서비스는 `engine::getFontSystem()` 으로 얻고, 배치기 `TextLayoutEngine` 은 그 서비스를 받아 만듭니다.
-UI는 이미 배치기를 하나 가지고 있으므로(`UiSystem::getTextLayout`), UI 코드 안에서는 그것을 씁니다.
+UI는 이미 배치기를 하나 가지고 있으므로(`UISystem::getTextLayout`), UI 코드 안에서는 그것을 씁니다.
 
 ### 2단계 — 스타일을 정하고 배치하기
 

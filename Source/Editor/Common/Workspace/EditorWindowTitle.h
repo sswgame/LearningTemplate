@@ -1,7 +1,7 @@
 /**
  * @file EditorWindowTitle.h
  * @brief 에디터 창 제목(`<게임> — <씬>[*] — SW Editor`)을 만듭니다.
- * @details ImGui 없이 글자만 만들어 `Test/EditorTest` 가 시험합니다. 셸(`ImGuiEditor::updateUi`)이 프레임마다 `IWindow::setTitle` 에 겁니다.
+ * @details ImGui 없이 글자만 만들어 `Test/EditorTest` 가 시험합니다. 셸(`ImGuiEditor::updateUI`)이 프레임마다 `IWindow::setTitle` 에 겁니다.
  */
 #pragma once
 #include "Core/Common/Types.h"

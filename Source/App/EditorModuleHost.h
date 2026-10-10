@@ -61,7 +61,7 @@ namespace sw
          * @brief 메인 스레드에서 에디터 UI 와 플랫폼 창을 갱신하고, 그 결과(게임 뷰포트 RT · 씬 틱 여부)를 프레임 상태에 확정합니다.
          * @details 에디터가 없으면 바로 돌아오며, 그때 프레임 상태는 "백버퍼 + 씬 틱" 기본값입니다.
          */
-        void updateEditorUi( float32 deltaTime );
+        void updateEditorUI( float32 deltaTime );
         /** @brief 월드 틱 뒤에 에디터의 Step 을 소비합니다. */
         void endEditorFrame();
         /** @brief 네이티브 창 이벤트를 에디터에 전달합니다. */
@@ -123,7 +123,7 @@ namespace sw
         void suspendHostModule( bool bReleaseApiTable ) override;
         /**
          * @brief 에디터의 "렌더 대기" 표시를 버립니다.
-         * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUi 나
+         * @details 그 표시는 렌더 스레드의 postPresent 만 풀 수 있는데, 그 스레드는 방금 일을 끝내고 쉬고 있다. 알려 주지 않으면 다음 updateUI 나
          *          shutdown 이 waitForDrawSnapshotIdle 에서 영원히 돌아오지 않는다. 에디터 모듈 핫 리로드가 실제로 여기서 멈췄다.
          */
         void onRenderWorkersDrained() override;

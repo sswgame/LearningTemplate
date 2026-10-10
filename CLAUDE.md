@@ -128,7 +128,7 @@ build/Ninja-Debug/TestBin/ReflectionTest.exe --test_shard=0/2          # one sha
 - **The default build does not build tests** (`Test/` is `EXCLUDE_FROM_ALL`; the `AllTests` target collects them). `ctest` builds
   `all` + `AllTests` first through the setup test `BuildTestBinaries` (skip it with `-FS BuildTestBinaries`); the `CI-*`, `*-Shipping*` and
   `Ninja-Debug-ASAN` build presets build the tests too. Run the exe directly only after building `AllTests`.
-- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUiTest`, `AppTest`, `ServerTest`.
+- Executables: `CoreTest`, `EngineTest`, `ReflectionTest`, `SmokeTest`, `EditorTest`, `EditorUITest`, `AppTest`, `ServerTest`.
   `ServerTest` launches the built `Server` (Game · Server targets) without a window or GPU and runs under `nogpu` on both platforms;
   the Server target builds no editor or App tests, and its presets run `-L nogpu` only (a server build has no GPU suite).
   **Always run them with `build/<preset>/Bin` as the working directory** — they walk up from the current

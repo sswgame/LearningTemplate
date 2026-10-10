@@ -17,7 +17,7 @@
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/Utility/GameTimeScale.h"
 
@@ -94,8 +94,8 @@ namespace sw
         LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();
         loadingSettings._documentPath         = _bootstrap._data._loadingScreen;
         _pLoadingScreen->setSettings( loadingSettings );
-        UiSystem* pUiSystem = game::getService<UiSystem>();
-        _pLoadingScreen->bindUiSystem( pUiSystem != nullptr && pUiSystem->isInitialized() ? pUiSystem : nullptr );
+        UISystem* pUISystem = game::getService<UISystem>();
+        _pLoadingScreen->bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
         const bool bInitialized = onInitialize();
 
         // 플레이어 설정을 다시 넣는다 — 언어 팩 · 입력 맵(키 바인딩 · 누르기/토글)은 위에서 막 생겼다. 엔진 기동 때의 적용은 그 대상이 없을 때였다.
@@ -113,7 +113,7 @@ namespace sw
         if ( game::getService<GameSettings>() == &_bootstrap._data )
             game::unbindLocalService<GameSettings>();
         _listPendingSceneLoad.clear();
-        _pLoadingScreen->bindUiSystem( nullptr );
+        _pLoadingScreen->bindUISystem( nullptr );
         _screenTransition.reset();
         _pWindow    = nullptr;
         _pRHIDevice = nullptr;

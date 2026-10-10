@@ -3,7 +3,7 @@
 #include "GameFramework/Base/UI/HUD/HUDControllerComponent.h"
 
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 
@@ -13,8 +13,8 @@ namespace sw
 
     HUDControllerComponent::HUDControllerComponent()
         : Component{}
-        , _pUiSystem{ nullptr }
-        , _screen{ kInvalidUiScreenHandle }
+        , _pUISystem{ nullptr }
+        , _screen{ kInvalidUIScreenHandle }
         , _viewModel{ make_unique<HUDViewModel>() }
         , _documentPath{}
     {
@@ -22,28 +22,28 @@ namespace sw
 
     HUDControllerComponent::~HUDControllerComponent()
     {
-        bindUiSystem( nullptr );
+        bindUISystem( nullptr );
     }
 
     void HUDControllerComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        UiSystem* pUi = game::getService<UiSystem>();
-        bindUiSystem( pUi != nullptr && pUi->isInitialized() ? pUi : nullptr );
+        UISystem* pUI = game::getService<UISystem>();
+        bindUISystem( pUI != nullptr && pUI->isInitialized() ? pUI : nullptr );
     }
 
     void HUDControllerComponent::onEndPlay()
     {
-        bindUiSystem( nullptr );
+        bindUISystem( nullptr );
         Component::onEndPlay();
     }
 
-    void HUDControllerComponent::bindUiSystem( UiSystem* pUiSystem )
+    void HUDControllerComponent::bindUISystem( UISystem* pUISystem )
     {
-        if ( _pUiSystem == pUiSystem )
+        if ( _pUISystem == pUISystem )
             return;
         closeScreen();
-        _pUiSystem = pUiSystem;
+        _pUISystem = pUISystem;
         openScreen();
     }
 
@@ -52,44 +52,44 @@ namespace sw
         if ( _documentPath == documentPath )
             return;
         _documentPath = string( documentPath );
-        if ( _screen == kInvalidUiScreenHandle )
+        if ( _screen == kInvalidUIScreenHandle )
             return;
         closeScreen();
         openScreen();
     }
 
-    UiScreen* HUDControllerComponent::getScreen() const
+    UIScreen* HUDControllerComponent::getScreen() const
     {
-        UiScreen* pScreen = _pUiSystem != nullptr ? _pUiSystem->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _screen ) : nullptr;
         return pScreen != nullptr && pScreen->isClosing() == false ? pScreen : nullptr;
     }
 
     Widget* HUDControllerComponent::findWidget( const hashed_string& name ) const
     {
-        const UiScreen* pScreen = getScreen();
+        const UIScreen* pScreen = getScreen();
         return pScreen != nullptr ? pScreen->getTree().findWidgetByName( name ) : nullptr;
     }
 
     void HUDControllerComponent::openScreen()
     {
-        if ( _pUiSystem == nullptr || _documentPath.empty() || getScreen() != nullptr )
+        if ( _pUISystem == nullptr || _documentPath.empty() || getScreen() != nullptr )
             return;
-        _screen           = _pUiSystem->openScreen( _documentPath );
-        UiScreen* pScreen = getScreen();
+        _screen           = _pUISystem->openScreen( _documentPath );
+        UIScreen* pScreen = getScreen();
         if ( pScreen != nullptr )
             pScreen->setViewModel( _viewModel.get() );
-        if ( pScreen != nullptr && pScreen->getDesc()._layer != UiLayer::HUD )
+        if ( pScreen != nullptr && pScreen->getDesc()._layer != UILayer::HUD )
             SW_LOG_WARNING( "HUD document '%#' is not on the HUD layer - it takes focus and may block game input", _documentPath.c_str() );
     }
 
     void HUDControllerComponent::closeScreen()
     {
         // 닫기는 지연이라(닫기 애니메이션 · 다음 update) 그동안 뷰모델이 먼저 지워질 수 있다 — 지금 뗀다.
-        UiScreen* pScreen = _pUiSystem != nullptr ? _pUiSystem->findScreen( _screen ) : nullptr;
+        UIScreen* pScreen = _pUISystem != nullptr ? _pUISystem->findScreen( _screen ) : nullptr;
         if ( pScreen != nullptr )
             pScreen->setViewModel( nullptr );
-        if ( _pUiSystem != nullptr && _screen != kInvalidUiScreenHandle )
-            _pUiSystem->closeScreen( _screen );
-        _screen = kInvalidUiScreenHandle;
+        if ( _pUISystem != nullptr && _screen != kInvalidUIScreenHandle )
+            _pUISystem->closeScreen( _screen );
+        _screen = kInvalidUIScreenHandle;
     }
 } // namespace sw

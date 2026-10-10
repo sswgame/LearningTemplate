@@ -208,7 +208,7 @@ namespace sw
 
     /**
      * @brief `-gv_benchUiMarkers=K` — 앞쪽 큐브 K 개에 화면 마커(`WidgetComponent` Screen — 숫자 글)를 붙입니다(데미지 숫자 광역 경우).
-     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UiBenchScreen`)와 함께 `GT.Ui.*` 로 잰다.
+     * @details 마커는 프레임마다 월드 점을 화면에 투영해 놓인다 — 위젯 벤치(`-gv_benchUiWidgets` · 엔진 `UIBenchScreen`)와 함께 `GT.UI.*` 로 잰다.
      *          큐브 수(`-gv_benchMeshes`)보다 크면 큐브 수만큼입니다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_benchUiMarkers, 0, "앞쪽 벤치 큐브 K 개에 화면 마커(숫자 글)를 붙인다 (0=사용 안 함)" );

@@ -37,15 +37,15 @@ SW_TEST_CASE( Render2DSettingsTest, LayerOrderWinsOverOrderInLayer )
     const uint32 defaultBottom = sw::Render2DSettings::makeSortKey( 1, -32767 );
     const uint32 defaultZero   = sw::Render2DSettings::makeSortKey( 1, 0 );
     const uint32 defaultOne    = sw::Render2DSettings::makeSortKey( 1, 1 );
-    const uint32 worldUiBottom = sw::Render2DSettings::makeSortKey( 2, -32767 );
+    const uint32 worldUIBottom = sw::Render2DSettings::makeSortKey( 2, -32767 );
     SW_EXPECT_TRUE( backgroundTop < defaultBottom );
     SW_EXPECT_TRUE( defaultBottom < defaultZero );
     SW_EXPECT_TRUE( defaultZero < defaultOne );
-    SW_EXPECT_TRUE( defaultOne < worldUiBottom );
+    SW_EXPECT_TRUE( defaultOne < worldUIBottom );
     SW_EXPECT_EQUAL( defaultZero, settings.getDefaultSortKey() );
     // 범위 밖 순서는 묶인다 — 다음 레이어로 넘치지 않는다.
     SW_EXPECT_EQUAL( sw::Render2DSettings::makeSortKey( 1, 32767 ), sw::Render2DSettings::makeSortKey( 1, 40000 ) );
-    SW_EXPECT_TRUE( sw::Render2DSettings::makeSortKey( 1, 40000 ) < worldUiBottom );
+    SW_EXPECT_TRUE( sw::Render2DSettings::makeSortKey( 1, 40000 ) < worldUIBottom );
     // 자리표 키(0)는 어떤 유효한 키와도 겹치지 않는다.
     SW_EXPECT_NOT_EQUAL( sw::Render2DSettings::kDefaultSortKeyPlaceholder, sw::Render2DSettings::makeSortKey( 0, -40000 ) );
 
@@ -111,12 +111,12 @@ SW_TEST_CASE( Render2DSettingsTest, MalformedTablesAreLoadErrors )
  * @brief [Render2DSettingsTest] 엔진 기본 표(engine/data/render2d.xml)가 읽히고 월드 UI 레이어가 Default 위에 있다
  * @details HP 바 · 데미지 숫자(`WorldUI`)는 같은 Z 의 스프라이트보다 늘 위다 — 표에서 그 줄이 Default 뒤에 와야 한다.
  */
-SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUiAboveDefault )
+SW_TEST_CASE( Render2DSettingsTest, EngineTableHasWorldUIAboveDefault )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     sw::Render2DSettings settings;
     SW_ASSERT_TRUE( settings.loadFromResource( sw::Render2DSettings::getEngineSettingsPath() ) );
-    const int32 worldUi = settings.findSortingLayer( sw::hashed_string( "WorldUI" ) );
-    SW_ASSERT_TRUE( worldUi >= 0 );
-    SW_EXPECT_TRUE( static_cast<uint32>( worldUi ) > settings.getDefaultSortingLayer() );
+    const int32 worldUI = settings.findSortingLayer( sw::hashed_string( "WorldUI" ) );
+    SW_ASSERT_TRUE( worldUI >= 0 );
+    SW_EXPECT_TRUE( static_cast<uint32>( worldUI ) > settings.getDefaultSortingLayer() );
 }

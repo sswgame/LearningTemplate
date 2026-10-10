@@ -98,7 +98,7 @@
                 "ReflectionTest",
                 "SmokeTest",
                 "EditorTest",
-                "EditorUiTest",
+                "EditorUITest",
                 "AppTest"
             ],
             "default": "EngineTest"

@@ -23,7 +23,7 @@ namespace sw
         /** @brief 배율을 정합니다(범위로 자릅니다). 정지 요청과 따로 남습니다 — 요청이 모두 풀리면 이 값으로 돌아갑니다. */
         static void set( float32 scale );
         /**
-         * @brief 게임 시간을 멈추는 요청을 하나 겁니다(일시정지 메뉴 화면 — `UiScreenDesc::_bPausesGame`). 요청은 쌓이고, 하나라도 있으면 멈춥니다.
+         * @brief 게임 시간을 멈추는 요청을 하나 겁니다(일시정지 메뉴 화면 — `UIScreenDesc::_bPausesGame`). 요청은 쌓이고, 하나라도 있으면 멈춥니다.
          * @details 건 쪽이 `removePauseRequest` 로 꼭 풉니다. `gv_timeScale` 은 바꾸지 않습니다(에디터 · 콘솔이 정한 배율이 남는다).
          */
         static void addPauseRequest();

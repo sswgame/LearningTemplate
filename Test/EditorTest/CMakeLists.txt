@@ -65,7 +65,7 @@ sw_addTestExecutable(EditorTest
 		Panels/TestProfilerScopeHistory.cpp
 		Popups/TestQuickLauncherLayout.cpp
 		Panels/TestTileMapPaintUtil.cpp
-		Panels/TestUiPreviewLogic.cpp
+		Panels/TestUIPreviewLogic.cpp
 		Common/Asset/TestTexturePipeline.cpp
 		Common/Asset/TestVrmMaterialImporter.cpp
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
@@ -95,7 +95,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/TileMapPaintUtil.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Popups/QuickLauncherLayout.cpp"
-		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UiPreviewLogic.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/UIPreviewLogic.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/AssetHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/ConfigHotReload.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Workspace/EditorAssetType.cpp"

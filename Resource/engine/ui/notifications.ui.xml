@@ -1,5 +1,5 @@
-<UiDocument _schemaVersion="1">
-	<UiScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
 	<_listStyleSheet>
 		<item>engine/ui/styles/notifications.uistyle.xml</item>
 	</_listStyleSheet>
@@ -10,4 +10,4 @@
 			</BoxPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
-</UiDocument>
+</UIDocument>

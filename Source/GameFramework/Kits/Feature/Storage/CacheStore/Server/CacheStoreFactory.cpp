@@ -44,7 +44,7 @@ namespace sw
                         outError = "cache endpoint: tls must be 0 or 1";
                         return false;
                     }
-                    outEndpoint._bTls = bOn ? SW_TRUE : SW_FALSE;
+                    outEndpoint._bTLS = bOn ? SW_TRUE : SW_FALSE;
                     return true;
                 }
                 if ( name == "timeoutMs" )
@@ -79,10 +79,10 @@ namespace sw
         CacheEndpoint parsed;
         if ( parseEndpoint( endpoint, parsed, outError ) == false )
             return nullptr;
-        unique_ptr<ITlsContext> tlsContext;
-        if ( parsed._bTls == SW_TRUE )
+        unique_ptr<ITLSContext> tlsContext;
+        if ( parsed._bTLS == SW_TRUE )
         {
-            tlsContext = NetSecurity::createClientTlsContext( parsed._trustFile, parsed._host, outError );
+            tlsContext = NetSecurity::createClientTLSContext( parsed._trustFile, parsed._host, outError );
             if ( tlsContext == nullptr )
                 return nullptr;
         }

@@ -1123,10 +1123,10 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
     {
         sw::RenderPipelineAsset  res;
         sw::RenderPassAttachment attachment{};
-        attachment._name = "UiColor";
+        attachment._name = "UIColor";
         res.getDesc()._listAttachment.push_back( attachment );
         res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
-        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UiColor" ) );
+        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UIColor" ) );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     {

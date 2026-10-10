@@ -86,9 +86,9 @@ cd build/Ninja-Debug/Bin
 
 - **물리 벤치: `PhysicsBenchTest`**(Release) — 먼 이동 바디가 있는 step p50 1124~2468 → 319~330 us(없는 step 은 319~328 us 그대로).
 - **에디터 모듈의 계측은 `SW_EDITOR_PROFILE_SCOPE`**(`Editor/Common/EditorProfile.h`) — 엔진 `SW_PROFILE_SCOPE` 는 엔진 서비스 표(`engine::getFrameProfiler`)를
-  불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUi` 의 하위 구간은
+  불러 에디터 모듈에서 쓸 수 없다. 같은 표에 쌓이고 이름은 엔진이 복사해 든다(모듈을 다시 올려도 매달리지 않는다). `GT.Editor.updateUI` 의 하위 구간은
   `GT.Editor.waitDrawSnapshot · newFrame · commandsAndWatchers · panels · endFrame(render · platformWindows · captureDrawSnapshot)`, 패널별 시간은 `-gv_editorPanelTimes=N`.
-- **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUi` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
+- **Hierarchy 는 화면 밖의 접힌 루트를 빈자리로 둔다**(이어진 것은 빈자리 하나) — 큐브 8000 Release `GT.Editor.updateUI` p50 4.2~4.7 → 1.3~1.4 ms, Hierarchy 패널
   평균 3.4~4.1 → 0.63~0.65 ms(큐브 100 에서는 0.12 ms). 남은 몫은 루트 8000 개를 도는 것(열림 상태 조회) — 더 줄이려면 열린 루트 목록을 들고 보이는 범위만 계산한다.
   빈자리 높이는 접힌 루트 줄(프레임 높이 + 줄 간격)과 같아야 스크롤이 튀지 않는다(`hierarchy.offscreenRootsKeepTheirPlace`).
 - **AppSmokeTest 의 Unknown 태그 상한(8 KB)은 파일 수에도 걸린다** — 태그 없는 호출자(App 스플래시)가 공유 캐시(`ResourceUtil` 경로 캐시)의
@@ -101,7 +101,7 @@ cd build/Ninja-Debug/Bin
   p50 · p99 · 최악 프레임을 본다. 백분위는 옥타브 × 8 칸 히스토그램의 아래 끝(±9 %)이다. 구간 표는 스레드마다 **일한 시간**이고, 프레임이 빨라졌는지는
   `[Profile] wall N frames … us/frame` 와 `startup N ms` 로 본다. 중첩 합이 바깥보다 크면 표부터 의심한다.
 - **`RT.Frame` = `RT.BeginFrame`(펜스 대기 = GPU 백프레셔) + `RT.ExecutePacket` + `RT.Present`.** `GT.Packet.submit` 이 크면 GT 가 RT 를 기다린다. `GT.Frame` 은
-  `EngineLoop::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUi` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
+  `EngineLoop::tick` 만 재고 게임 모듈은 `App::run` 의 `GT.Game.update` · `GT.Game.fixedUpdate` · `GT.Editor.updateUI` 다. 2026-09-13 이전 RT 수치는 실제보다 작다.
 - **병목은 씬 크기에 따라 뒤집힌다.** 큐브 2000 은 GPU 대기, 8000 은 게임 스레드다. 어느 쪽을 깎을지는 재고 나서 정한다. GT 가 병목이면 RT 구간이 늘어 보여도 경합일 뿐이다.
 - **타임라인은 Tracy 로 본다**(`-gv_tracy=1` + 같은 판 0.14.1 뷰어, `Source/Engine/Profiling/README.md`). 표(`-gv_profileFrames`)는 구간마다 접은 숫자라
   "어느 스레드가 무엇을 기다렸나" 는 Tracy 의 스레드 타임라인으로 본다. 계측은 `SW_PROFILE_SCOPE` 하나가 둘 다에 남긴다. GPU 줄도 쿼리는 한 벌이다
@@ -110,13 +110,13 @@ cd build/Ninja-Debug/Bin
 - **재기 전에 VSync 가 꺼졌는지 본다** — 1/RT.Frame 이 주사율과 같으면 VSync 다. DXGI 는 스왑체인 생성과 `ResizeBuffers` **둘 다**에 `ALLOW_TEARING` +
   `Present( 0, DXGI_PRESENT_ALLOW_TEARING )`(짝이 안 맞으면 `INVALID_CALL`, `RHI/DX/RHIDxgiTearing.h`). Vulkan 은 present 모드. CLI 는 `-vsync`.
 - **셰이더를 고쳤으면 재기 전에 `App.exe --cook-shaders`.** 빌드는 HLSL 을 다시 쿠킹하지 않는다.
-- **런타임 UI 벤치**(2026-10-07, Release · DX12 · VSync 꺼짐 · 600 프레임 × 세 번, i5-8500): `-gv_benchUiWidgets=10000`(엔진 `UiBenchScreen` — 스크롤 밖이 대부분) ·
-  `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`(Empty 벤치 큐브에 화면 마커). 글 10 칸/프레임: `GT.Ui.Paint` p50 12.6 → 1.6 ms(자르기 밖 자식 컬링),
-  `GT.Ui.Layout` 0.11 ms(30 위젯), `RT.Canvas` Upload 0.05 + Draw 0.013 ms. 바뀜 없음(대조군): `GT.Ui.Paint` 2.1 → 0.12 ms(바뀌지 않은 트리 출력 재사용), 업로드 p50 0.
-  마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 2026-10-10(보이는 자식 이분 탐색 · 그리기 목록 통째 복사 뒤, 세 번): 글 10 칸/프레임 `GT.Ui.Paint` p50 0.29~0.36 · p99 0.66~0.79 ms,
-  `GT.Ui.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 같은 날 다른 PC(워커 14) 세 번: 전 `GT.Ui.Paint` p50 0.26~0.29 · Layout 0.06 ms(합 0.32~0.35) →
+- **런타임 UI 벤치**(2026-10-07, Release · DX12 · VSync 꺼짐 · 600 프레임 × 세 번, i5-8500): `-gv_benchUiWidgets=10000`(엔진 `UIBenchScreen` — 스크롤 밖이 대부분) ·
+  `-gv_benchUiChurn=M`(프레임마다 글 M 칸) · `-gv_benchUiMarkers=K`(Empty 벤치 큐브에 화면 마커). 글 10 칸/프레임: `GT.UI.Paint` p50 12.6 → 1.6 ms(자르기 밖 자식 컬링),
+  `GT.UI.Layout` 0.11 ms(30 위젯), `RT.Canvas` Upload 0.05 + Draw 0.013 ms. 바뀜 없음(대조군): `GT.UI.Paint` 2.1 → 0.12 ms(바뀌지 않은 트리 출력 재사용), 업로드 p50 0.
+  마커 500 + 위젯 1 만: Layout 0.36 · Paint 2.1 ms. 2026-10-10(보이는 자식 이분 탐색 · 그리기 목록 통째 복사 뒤, 세 번): 글 10 칸/프레임 `GT.UI.Paint` p50 0.29~0.36 · p99 0.66~0.79 ms,
+  `GT.UI.Layout` p50 0.06 ms, `RT.Canvas.Upload` p50 0.04 ms. 같은 날 다른 PC(워커 14) 세 번: 전 `GT.UI.Paint` p50 0.26~0.29 · Layout 0.06 ms(합 0.32~0.35) →
   후(바뀐 그리기 목록 맞바꾸기 · 빈 위젯 캐시 건너뛰기 · `Widget::asPanel`) Paint p50 0.23 · p99 0.52 ms, Layout 0.06 ms(합 0.29 ms). 걷기 분해(임시 구간):
-  걷기 ~180 us(보이는 위젯 1150 · 캐시 일괄 860 — 이어 붙이기 ~90 · 자르기 검사 ~20), 트리 출력 → 프레임 목록 30 us, 같은 내용 비교 8 us, 프레임 목록 복사 55~65 us(→ 0, 맞바꾼다). 구간 `GT.Ui.*` · `RT.Canvas.*`, 카운터 `Ui.LayoutWidgets` · `Ui.PaintWidgets` · `Ui.CanvasQuads`(값은 per_frame 열).
+  걷기 ~180 us(보이는 위젯 1150 · 캐시 일괄 860 — 이어 붙이기 ~90 · 자르기 검사 ~20), 트리 출력 → 프레임 목록 30 us, 같은 내용 비교 8 us, 프레임 목록 복사 55~65 us(→ 0, 맞바꾼다). 구간 `GT.UI.*` · `RT.Canvas.*`, 카운터 `UI.LayoutWidgets` · `UI.PaintWidgets` · `UI.CanvasQuads`(값은 per_frame 열).
 - **텍스처 임포트 압축**(2026-10-10, Release App `--import-textures`, 워커 14 개 PC, 세 번): 띠 병렬 압축(`BandCompressJobInternal`) 전 → 후로
   BC7 512² 밉 10 단(`engine/textures_raw/random/grass.jpg`) 61.7~62.6 → 8.1~8.3 s, BC3 1024² 밉 11 단(`f00_000_face_00`) 17 → 2 ms,
   BC3 2048² 밉 12 단(`f00_001_body_00`) 70~72 → 9~10 ms, 원본 39 장 전체 3 분 35 초 → 40 초. 결과 DDS 는 스탬프 해시까지 바이트가 같다(스탬프를 비우고 전부 다시 임포트해

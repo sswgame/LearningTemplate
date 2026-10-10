@@ -70,7 +70,7 @@ namespace
             (void)pKey;
             return nullptr;
         }
-        unique_ptr<ITlsContext> createTlsContext( const TlsContextSettings& settings, string& outError ) override
+        unique_ptr<ITLSContext> createTLSContext( const TLSContextSettings& settings, string& outError ) override
         {
             (void)settings;
             outError = "not supported";

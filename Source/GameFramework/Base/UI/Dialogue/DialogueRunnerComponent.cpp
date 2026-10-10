@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
@@ -20,7 +20,7 @@ namespace sw
         , _bPostSubtitles{ false }
         , _graph{}
         , _pFlags{ nullptr }
-        , _pUiSystemOverride{ nullptr }
+        , _pUISystemOverride{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
         , _listCurrentChoice{}
@@ -221,9 +221,9 @@ namespace sw
     {
         if ( _bPostSubtitles )
         {
-            UiSystem* pUiSystem = _pUiSystemOverride != nullptr ? _pUiSystemOverride : game::getService<UiSystem>();
-            if ( pUiSystem != nullptr && pUiSystem->isInitialized() && _currentText.empty() == false )
-                (void)pUiSystem->getSubtitles().post( _currentSpeaker, _currentText );
+            UISystem* pUISystem = _pUISystemOverride != nullptr ? _pUISystemOverride : game::getService<UISystem>();
+            if ( pUISystem != nullptr && pUISystem->isInitialized() && _currentText.empty() == false )
+                (void)pUISystem->getSubtitles().post( _currentSpeaker, _currentText );
         }
         if ( _onLine.isBound() == false )
             return;

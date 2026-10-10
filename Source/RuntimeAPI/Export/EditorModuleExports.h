@@ -43,7 +43,7 @@ namespace sw
         pOutApi->initialize = []( sw::EditorHandle editorHandle, sw::WindowHandle windowHandle, sw::RHIDeviceHandle rhiDeviceHandle ) -> bool                                                                      \
         { return sw::ModuleForwardUtil::callOr<EditorClass, bool>( editorHandle, false, &EditorClass::initialize, static_cast<sw::IWindow*>( windowHandle ), static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); }; \
         pOutApi->shutdown  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::shutdown ); };                                                        \
-        pOutApi->updateUi  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::updateUi ); };                                                        \
+        pOutApi->updateUI  = []( sw::EditorHandle editorHandle ) { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::updateUI ); };                                                        \
         pOutApi->preRender = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle )                                                                                                              \
         { sw::ModuleForwardUtil::callVoid<EditorClass>( editorHandle, &EditorClass::preRender, static_cast<sw::IRHIDevice*>( rhiDeviceHandle ) ); };                                                               \
         pOutApi->render = []( sw::EditorHandle editorHandle, sw::RHIDeviceHandle rhiDeviceHandle )                                                                                                                 \

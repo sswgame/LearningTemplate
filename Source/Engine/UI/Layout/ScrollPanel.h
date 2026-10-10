@@ -17,7 +17,7 @@ namespace sw
      * @brief 첫 자식(내용)을 스크롤 축으로는 무한 가용 크기로 재고, `-오프셋` 자리에 놓고 자릅니다(`clipsChildren`).
      * @details 오프셋은 `[0, 내용 − 보이는 크기]` 로 묶입니다. 오프셋이 바뀌면 `kArrange` 만 — 크기는 그대로라 위로 번지지 않고 이 패널만 다시 놓습니다
      *          (measure 0). 입력: 휠(버블 — 안쪽 스크롤이 끝에 닿으면 바깥으로 간다) · 막대 끌기(터널 — 막대 위 누름은 내용보다 먼저, 포인터를 잡는다) ·
-     *          패드 오른쪽 스틱(`UI.Scroll` 행동 — 포커스 경로) · 포커스 탐색 뒤 `scrollIntoView`(`UiFocusManager::navigate`).
+     *          패드 오른쪽 스틱(`UI.Scroll` 행동 — 포커스 경로) · 포커스 탐색 뒤 `scrollIntoView`(`UIFocusManager::navigate`).
      *          막대는 넘치는 스크롤 축의 안쪽 끝(세로는 오른쪽 · 가로는 아래)에 겹쳐 그립니다. 두 번째 자식부터는 놓지 않습니다.
      */
     REFLECT( Category = "Layout", DisplayName = "Scroll Panel", Tooltip = "Scrolls one content child inside a clipped viewport" )
@@ -66,21 +66,21 @@ namespace sw
          * @brief @p axis 의 스크롤 막대 사각형을 셉니다(지난 배치 기준). 그 축으로 스크롤하지 않거나 넘치지 않으면 막대가 없어 false 입니다.
          * @details 엄지 길이 = 트랙 × 보이는 크기 / 내용 크기(최소 `_minThumbLength`), 자리 = (트랙 − 엄지) × 오프셋 / 최대 오프셋.
          */
-        [[nodiscard]] bool computeScrollBar( UiOrientation axis, ScrollBarLayout& outLayout ) const;
+        [[nodiscard]] bool computeScrollBar( UIOrientation axis, ScrollBarLayout& outLayout ) const;
         /** @brief 막대를 끄는 중이면 true 입니다. */
         bool isDraggingScrollBar() const { return _bDraggingBar; }
 
-        UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override;
-        UiReply onActionEvent( const UiActionEvent& event, UiRoutePhase phase ) override;
+        UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
+        UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
 
         float32 getNavigationMargin() const { return _navigationMargin; }
         void    setNavigationMargin( float32 navigationMargin ) { _navigationMargin = navigationMargin; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
         /** @brief 스크롤 막대 엄지를 내용 위에 칠합니다(끄는 중이면 더 밝게). */
-        void paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
         /** @brief 내용 자리는 스크롤 오프셋이다 — 거울로 놓지 않는다(내용 안의 패널은 자기 방향으로 거울한다). 가로 스크롤의 RTL 시작점은 왼쪽이다. */
         bool mirrorsChildrenInRightToLeft() const override { return false; }
 
@@ -90,7 +90,7 @@ namespace sw
         /** @brief 휠 · 스틱 스크롤을 오프셋 변화로 적용합니다. 옮겼으면 true(안 옮겼으면 바깥 스크롤 패널이 받는다). */
         [[nodiscard]] bool applyScrollDelta( const float2& delta );
         /** @brief 막대 위 누름 — 엄지면 끌기를 시작하고(포인터를 잡는다), 트랙이면 한 화면만큼 옮깁니다. 막대 밖이면 처리하지 않습니다. */
-        UiReply beginScrollBarDrag( const float2& local );
+        UIReply beginScrollBarDrag( const float2& local );
 
     private:
         float2        _scrollOffset;    ///< 지금 오프셋(UI 단위, 내용이 위 · 왼쪽으로 밀린 길이)
@@ -98,7 +98,7 @@ namespace sw
         float2        _viewportSize;    ///< 지난 배치의 보이는 크기(이 패널 크기)
         float2        _dragStartLocal;  ///< 막대 끌기를 시작한 로컬 점
         float32       _dragStartOffset; ///< 막대 끌기를 시작할 때 그 축의 오프셋
-        UiOrientation _dragAxis;        ///< 끄는 막대의 축
+        UIOrientation _dragAxis;        ///< 끄는 막대의 축
         bool          _bDraggingBar;    ///< 막대를 끄는 중이다(포인터를 잡았다)
         PROPERTY( DisplayName = "Navigation Margin", Tooltip = "Gap kept between a focused child and the viewport edge", Meta = "Units=ui" )
         float32 _navigationMargin;

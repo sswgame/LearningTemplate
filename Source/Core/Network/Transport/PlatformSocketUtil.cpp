@@ -62,7 +62,7 @@ namespace sw
 #endif
     }
 
-    uint64 PlatformSocketUtil::openUdpSocket( uint16 port )
+    uint64 PlatformSocketUtil::openUDPSocket( uint16 port )
     {
         if ( initialize() == false )
             return kInvalidSocket;

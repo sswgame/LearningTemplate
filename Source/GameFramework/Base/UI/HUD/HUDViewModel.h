@@ -8,7 +8,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/WidgetTypes.h"
-#include "Engine/UI/Binding/UiViewModel.h"
+#include "Engine/UI/Binding/UIViewModel.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -22,7 +22,7 @@ namespace sw
      *          세터는 값이 같으면 알리지 않으므로 게임이 매 프레임 불러도 바인딩은 바뀐 칸만 씁니다. 게임 스레드만(틱 안이면 틱 뒤 큐에서).
      */
     REFLECT( DisplayName = "HUD View Model" )
-    class SW_GF_API HUDViewModel : public UiViewModel
+    class SW_GF_API HUDViewModel : public UIViewModel
     {
     public:
         REFLECT_BODY();

@@ -42,7 +42,7 @@ SW_TEST_CASE( RenderGraphTest, RenderGraphInfersOnlyChangedBarriers )
     sw::RenderGraph         graph;
     const sw::hashed_string colorBuffer( "ColorBuffer" );
     const sw::hashed_string blurBuffer( "BlurBuffer" );
-    const sw::hashed_string uiBuffer( "UiBuffer" );
+    const sw::hashed_string uiBuffer( "UIBuffer" );
 
     graph.addPass( sw::hashed_string( "PassA_Write" ), {}, { colorBuffer } );
     graph.addPass( sw::hashed_string( "PassB_Read" ), { colorBuffer }, { blurBuffer } );

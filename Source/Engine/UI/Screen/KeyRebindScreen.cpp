@@ -6,7 +6,7 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
@@ -14,8 +14,8 @@ namespace sw
 {
     SW_LOG_CALLER( "KeyRebindScreen" );
 
-    KeyRebindScreen::KeyRebindScreen( const UiScreenDesc& desc, unique_ptr<Widget> root )
-        : UiScreen{ desc, std::move( root ) }
+    KeyRebindScreen::KeyRebindScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+        : UIScreen{ desc, std::move( root ) }
         , _capturedSlotText{}
         , _settingId{}
         , _pSettings{ nullptr }
@@ -28,12 +28,12 @@ namespace sw
 
     KeyRebindScreen::~KeyRebindScreen() = default;
 
-    UiScreenHandle KeyRebindScreen::open( UiSystem& ui, UserSettingsManager& settings, const hashed_string& settingId, string_view documentPath )
+    UIScreenHandle KeyRebindScreen::open( UISystem& ui, UserSettingsManager& settings, const hashed_string& settingId, string_view documentPath )
     {
-        const UiScreenHandle handle  = ui.openScreen<KeyRebindScreen>( documentPath );
-        UiScreen*            pScreen = ui.findScreen( handle );
+        const UIScreenHandle handle  = ui.openScreen<KeyRebindScreen>( documentPath );
+        UIScreen*            pScreen = ui.findScreen( handle );
         if ( pScreen == nullptr )
-            return kInvalidUiScreenHandle;
+            return kInvalidUIScreenHandle;
         KeyRebindScreen& screen = static_cast<KeyRebindScreen&>( *pScreen );
         screen._pSettings       = &settings;
         screen._settingId       = settingId;
@@ -55,7 +55,7 @@ namespace sw
             close();
             return true;
         }
-        return UiScreen::onCommand( command, source );
+        return UIScreen::onCommand( command, source );
     }
 
     bool KeyRebindScreen::onBack()
@@ -66,8 +66,8 @@ namespace sw
 
     void KeyRebindScreen::onTick( float32 deltaSeconds )
     {
-        UiSystem*     pUi    = getUiSystem();
-        InputManager* pInput = pUi != nullptr ? pUi->getInputManager() : nullptr;
+        UISystem*     pUI    = getUISystem();
+        InputManager* pInput = pUI != nullptr ? pUI->getInputManager() : nullptr;
         if ( _bListening == false || pInput == nullptr || _pSettings == nullptr )
             return;
         // 연 프레임의 입력(창을 연 확인 · 클릭)은 받지 않는다.
@@ -93,7 +93,7 @@ namespace sw
         {
             _bEscapeHeld       = true;
             _escapeHeldSeconds = 0.0f;
-            pUi->consumeSlot( slot );
+            pUI->consumeSlot( slot );
             return;
         }
         capture( slot );
@@ -101,9 +101,9 @@ namespace sw
 
     void KeyRebindScreen::capture( const InputSlot& slot )
     {
-        UiSystem* pUi = getUiSystem();
-        if ( pUi != nullptr )
-            pUi->consumeSlot( slot );
+        UISystem* pUI = getUISystem();
+        if ( pUI != nullptr )
+            pUI->consumeSlot( slot );
         _capturedSlotText = InputSlotUtil::toText( slot );
         _bListening       = false;
         UserSettingBindingConflict conflict{};
@@ -114,7 +114,7 @@ namespace sw
         }
         const UserSettingSetResult result = _pSettings->setPendingBinding( _settingId, _capturedSlotText, UserSettingBindingPolicy::Reject );
         if ( result != UserSettingSetResult::Accepted && result != UserSettingSetResult::Unchanged )
-            SW_LOG_WARNING( "[Ui] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingId.c_str() );
+            SW_LOG_WARNING( "[UI] Key binding '%#' for '%#' was not accepted", _capturedSlotText.c_str(), _settingId.c_str() );
         close();
     }
 
@@ -135,11 +135,11 @@ namespace sw
         Widget* pSwap = tree.findWidgetByName( "Swap" );
         if ( pSwap != nullptr && pOther == nullptr )
             pSwap->setVisibility( WidgetVisibility::Collapsed );
-        UiSystem* pUi = getUiSystem();
-        if ( pUi == nullptr )
+        UISystem* pUI = getUISystem();
+        if ( pUI == nullptr )
             return;
         Widget* pFocus = pOther != nullptr ? pSwap : tree.findWidgetByName( "Cancel" );
         if ( pFocus != nullptr )
-            (void)pUi->getFocusManager().setFocus( tree, pFocus->getId() );
+            (void)pUI->getFocusManager().setFocus( tree, pFocus->getId() );
     }
 } // namespace sw

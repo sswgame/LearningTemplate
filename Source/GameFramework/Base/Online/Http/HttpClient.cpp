@@ -14,7 +14,7 @@ namespace sw
     HttpClient::HttpClient()
         : _mutex{}
         , _mapCall{}
-        , _mapHostToTlsContext{}
+        , _mapHostToTLSContext{}
         , _listDone{}
         , _transport{}
         , _settings{}
@@ -59,10 +59,10 @@ namespace sw
         _bInitialized = SW_FALSE;
     }
 
-    void HttpClient::registerTlsContext( string_view host, ITlsContext* pTlsContext )
+    void HttpClient::registerTLSContext( string_view host, ITLSContext* pTLSContext )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        _mapHostToTlsContext[string( host )] = pTlsContext;
+        _mapHostToTLSContext[string( host )] = pTLSContext;
     }
 
     uint64 HttpClient::submitRequest( const HttpClientRequest& request, int64 nowMs )
@@ -91,23 +91,23 @@ namespace sw
             failImmediately( requestId, "host name resolution is not supported (IPv4 or localhost only)" );
             return requestId;
         }
-        ITlsContext* pTlsContext = nullptr;
+        ITLSContext* pTLSContext = nullptr;
         if ( url._bSecure == SW_TRUE )
         {
-            const auto contextIt = _mapHostToTlsContext.find( url._host );
-            if ( contextIt == _mapHostToTlsContext.end() || contextIt->second == nullptr )
+            const auto contextIt = _mapHostToTLSContext.find( url._host );
+            if ( contextIt == _mapHostToTLSContext.end() || contextIt->second == nullptr )
             {
                 failImmediately( requestId, "no TLS context for this host" );
                 return requestId;
             }
-            pTlsContext = contextIt->second;
+            pTLSContext = contextIt->second;
         }
         unique_ptr<Call> call = make_unique<Call>();
         call->_requestId      = requestId;
         call->_deadlineMs     = nowMs + ( request._timeoutMs > 0 ? request._timeoutMs : HttpConstant::kDefaultTimeoutMs );
         call->_parser.reset( HttpMessageKind::Response, _settings._maxResponseBodyBytes );
         HttpWriteUtil::writeRequest( request, url, call->_requestBytes );
-        if ( call->_link.initialize( pTlsContext ) == false )
+        if ( call->_link.initialize( pTLSContext ) == false )
         {
             failImmediately( requestId, "could not create a TLS session" );
             return requestId;

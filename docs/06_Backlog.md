@@ -89,10 +89,10 @@
   옛 1-4 의 "에디터 · 개발 편의 기능" 가운데 C 확장 지점 · F 카탈로그 편집기 · G 프로파일링 · 캡처의 남은 것 · H 품질 · 작업 흐름, 그리고 설정 브라우저 패널은 그 문서로 옮겼다.
   단위를 끝내면 계획 문서에서 지우고, 다 끝나면 이 항목과 계획 문서를 지운다(남은 로드맵 줄은 여기로).
 - **에디터 문서(`Source/Editor/README.md` 등)는 에디터 보강 뒤 새 문체로 다시 쓴다** — 5 차 문서 다시 쓰기에서 일부러 뺐다(보강하면서 패널 · 확장 지점이 바뀐다). 틀은 [문서 쓰기 지침](10_WritingDocs.md).
-- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UiPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
-  미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UiDocumentWriter` 로 저장(되돌리기 —
+- **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
+  미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UIDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —
-  에셋 종류 `UiDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
+  에셋 종류 `UIDocument` 의 열기 동작. (5) 애니메이션 미리 보기(재생 · 시간 막대 — 미리보기 화면은 Open 을 틀지 않아 문서 값 그대로다). (6) UI 문서 디자이너(팔레트 → 끌어 놓기 · 슬롯 손잡이) — 미리보기 패널 위에.
 - **AbilityArena 자동 전투 실행은 종료 보고에 `Scene` 태그 232 B(1 블록)가 남는다**(2026-10-06, `Ninja-Debug-AbilityArena` 네 백엔드 모두 `-gv_arenaAutoPlay=1
   -gv_profileFrames=300`). 다른 게임 여섯 · Empty 는 0. 같은 진단(기준선 뒤 상세 추적 · 종료 직전 `getTopCallStacks`)으로 자리를 찾는다.
 - **에디터를 켠 실행은 종료 보고에 `Editor` 태그 256 B(1 블록)가 남는다**(2026-10-06, `App.exe -dx12 -EnableEditor -gv_profileFrames=5`). 에디터 없는 실행은 0 이고
@@ -236,24 +236,24 @@
   (3) 전환 지연(`transition-delay`) · 키 사이 사건 말고 곡선 위 사건.
   (4) 그림 캐시는 조상의 `kTransform` 이면 자손까지 다시 칠한다 — 변환을 캐시 밖에서 곱하는 쪽은 10-4 의 위젯 1 만 개 측정으로 판단.
 - **런타임 UI 입력의 남은 것(위젯 트리 코어 뒤, `Engine/UI/README.md`).** (1) 명령 조종자(디렉터 넷) · 플레이어 뷰 카메라는 아직 UI 가 먹은 입력
-  (`UiSystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
+  (`UISystem::isActionConsumed` · `isGameInputBlocked`)을 보지 않는다 — 플레이어 조종자만 본다. 그 게임이 메뉴를 띄우게 되면 같은 질의를 그 자리에 둔다.
   (2) 에디터 게임 뷰(Game 패널) 안의 포인터 좌표(창 픽셀 → 게임 뷰 렌더 타깃) — UI 가 게임 뷰에 그려지는 단계와 함께. (3) UI 행동 맵(`engine/input/ui.input.xml`)의
   키 리바인딩 — 키 바인딩 창(`KeyRebindScreen`)은 있다, UI 맵을 설정 대상으로 두는 길(`UserSettingsTargets` 의 입력 맵이 게임 맵 하나)이 남았다. (4) 글 입력 칸(`TextInputWidget`)은 끝에 붙이기 · Backspace(`UI.TextBackspace`) · Enter 확정만 — 커서 이동(좌우 · Home/End) · 선택 · 붙여넣기 · 조합 글 밑줄이 남았다.
 - **런타임 UI 접근성의 남은 것(runtime-ui 9-1 뒤, `Engine/UI/README.md`).** (1) 음성 재생 쪽 자막 — 음성 이벤트(`GameSound`)에 자막 키를 실어
-  `UiSubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다). (2) "글자 배율 2 에서 옵션 메뉴가 넘치지 않는다" 시험은 옵션 메뉴(8-2)가 없어
-  견본 문서로 한다(`UiAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`) — 8-2 가 들어오면 엔진 옵션 메뉴 문서로 바꾼다.
+  `UISubtitleService::post` 로(오디오 키트의 모양을 보고 정한다 — 지금은 대화 러너만 보낸다). (2) "글자 배율 2 에서 옵션 메뉴가 넘치지 않는다" 시험은 옵션 메뉴(8-2)가 없어
+  견본 문서로 한다(`UIAccessibilityTest.OptionsMenuFitsAtDoubleTextScale`) — 8-2 가 들어오면 엔진 옵션 메뉴 문서로 바꾼다.
 - **옵션 · 일시정지 메뉴의 남은 것(runtime-ui 8-2 뒤, `Engine/UI/README.md`).** (1) 일시정지 메뉴에 타이틀로 · 끝내기 — 게임 흐름(`GameInstanceBase`)의
   명령이라 엔진 화면이 모른다(게임이 `PauseMenuScreen` 을 덮어쓰거나 명령 표를 거는 길). (2) 명령 조종자 게임(NileCity · StarSkirmish · ThemePark)과
-  MeadowVillage 는 `_bUiPauseMenu` 를 켜지 않았다 — Esc 를 게임이 따로 쓰는지 보고 켠다. (3) 열거형 행은 콤보(펼침)뿐 — 패드에 맞는 좌우 고르기 위젯이 없다.
+  MeadowVillage 는 `_bUIPauseMenu` 를 켜지 않았다 — Esc 를 게임이 따로 쓰는지 보고 켠다. (3) 열거형 행은 콤보(펼침)뿐 — 패드에 맞는 좌우 고르기 위젯이 없다.
   (4) 키 바인딩 창의 Esc 길게 누르기는 키보드 Esc 만 — 패드 사용자는 취소가 없다(패드 B 를 바인딩할 수 있어야 해서). (5) 해상도 바꾸고 15 초 되돌림 ·
   키 바인딩 재시작 뒤 유지의 실기동 확인(Shooter3D · 패드)은 게임별 빌드 때. (6) 자동 크기 옵션 창은 1280×720 골든(`options.layout.txt`)에서 화면 안에 든다 —
-  150 % 조건(853×480 UI 단위)을 보는 시험은 없다(`UiAccessibilityTest` 꼴로 더한다).
+  150 % 조건(853×480 UI 단위)을 보는 시험은 없다(`UIAccessibilityTest` 꼴로 더한다).
 - **알림 · 힌트 · 목표 마커의 남은 것(runtime-ui 8-3 뒤, `Engine/UI/README.md`).** (1) 들어오기 · 나가기 애니메이션 — 항목은 화면이 아니라 조각이라 문서 Open · Close 가 닿지 않는다,
-  `showEntry` · 제거 때 `UiSystem::tween` 으로 `_opacity` 를 걸고 지우기를 페이드 뒤로 미룬다. (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글
+  `showEntry` · 제거 때 `UISystem::tween` 으로 `_opacity` 를 걸고 지우기를 페이드 뒤로 미룬다. (2) 목표 마커를 퀘스트 키트의 목표 오브젝트에 붙이는 한두 줄 — 키트 쪽 목표 오브젝트 모양을 보고. (3) 코드가 올리는 알림 글
   ("Game saved" · "다시 시작하면 적용")은 글 그대로라 글 수집에 들지 않는다 — 코드 글 키(`SW_LOCTEXT` 꼴)로 바꿀 것. (4) 입력 힌트 위젯을 따로 두지 않았다 —
   리치 텍스트 태그 하나로 충분한지 게임 HUD(8-1)에서 본다. (5) 항목마다 이름 `Message` · `Count` 가 트리 안에 겹쳐
   둘째 항목부터 "name is used twice" 경고가 난다 — 항목 조각을 `UserWidget` 으로 감싸 이름을 `<번호>.Message` 로.
-- **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 위젯 1 만 칸 · 글 10 칸/프레임 바뀜의 `GT.Ui`(Layout + Paint) p50 은 0.29 ms 로
+- **런타임 UI 그리기 성능의 남은 것(runtime-ui 10-4 뒤, `Engine/UI/README.md` "성능").** 위젯 1 만 칸 · 글 10 칸/프레임 바뀜의 `GT.UI`(Layout + Paint) p50 은 0.29 ms 로
   목표(0.3 ms) 안이다(08 2 절). 남은 몫은 보이는 위젯 ~1150 개를 걷는 비용(Paint 걷기 ~180 us — 위젯 캐시 이어 붙이기 ~90 · 자르기 검사 ~20 · 나머지 방문)이고,
   더 줄이려면 패널마다 하위 출력 캐시(Slate Invalidation Panel)다 — 일괄 합치기 결정이 이어 붙이는 순서에 달려 있어, 하위 목록은 합치지 않은 일괄 그대로 들어야
   바이트가 같다. 창 크기 바꿈(전체 재배치) 한 프레임 · 첫 프레임 글리프 래스터화가 몇 프레임에 퍼지는지는 표 밖이다(워밍업 60 프레임이 버린다).
@@ -414,7 +414,7 @@
   암호 구현은 직접 짜지 않는다 — 라이브러리 하나(OpenSSL 3.6 — vcpkg 에 넣었다, 감싼 폴더는 GameFramework/Base/Online/Security/OpenSSL)를 엔진 인터페이스 뒤에 두고 격리 게이트(`CheckThirdPartyIsolation`)에
   올렸다. Core 창구(`Network/Security/`) · OpenSSL 구현(`GameFramework/Base/Online/Security/OpenSSL`, `NetSecurity`) · 스트림 TLS 1.3(`StreamEndpointSettings::_security`) ·
   UDP 보안(`NetHostSettings::_security` — X25519 + 패킷 AEAD + 재전송 창 + 토큰 결속, 인증기 없는 암호화는 개발 빌드만)은 있다. 남은 것: 암호화 켠 하니스로 서버 틱
-  시간을 재어 [결정 기록](09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `NetSecurity::createServerTlsContext` 에 넘기는 배선.
+  시간을 재어 [결정 기록](09_Decisions.md) 3절에 숫자 한 줄(N18a 벤치에 `_security` 를 켠 판), 서버 호스트가 `ServerConfig::_tlsCertificateFile` · `_tlsPrivateKeyFile` · `_tlsPrivateKeySecretEnvironment`(→ `ServerSecret::read`)를 `NetSecurity::createServerTLSContext` 에 넘기는 배선.
 - **패킷 압축(2026-10-06 사용자 결정).** 코덱 틀은 Core `Compression`(코덱 id 등록부), LZ4 · zstd · zlib 은 Engine 이 등록한다 — Core 네트워크는 id 로만 쓴다. 작은 UDP 패킷은 일반 압축의 이득이
   작다. 측정 벤치(`NetCompressionBenchTest`, Release 3 회 가운데 값, 패킷마다 봉투 3 B · 줄지 않으면 원문): 스냅숏(평균 1009 B) LZ4 1 %/1.1 us ·
   zstd1 15 %/11.7 us · zstd1+사전 16 KB 34 %/6.0 us, 파괴(302 B) LZ4 3 %/0.37 us · zstd1 4 %/6.4 us · 사전 35 %/1.6 us, 채팅(43 B, 합성) LZ4 1 % · zstd 0 % · 사전 27 %/0.74 us
@@ -423,12 +423,12 @@
   컴파일러 · libc 에 따라 다르다). 스트림 프레임 압축은 있다(`StreamEndpointSettings::_compression` — 봉투 `NetCompressionUtil`, 기본 꺼짐, 받는 쪽은 푼 크기를 몸 상한으로
   보고 풀기 전에 거절) — 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 - **MMO 규모 서버의 UDP 소켓 계층.** 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나.
-  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUdpBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
+  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUDPBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
   Release 3 회 가운데 값, 다른 빌드로 CPU 20~46 % 부하): Windows 500 — 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 6.6 us/패킷, RTT p50 48 · p99 48 ms /
   2000 — 42.1k · 42.5k pkt/s, 54 %(51~82 %), 6.5 us/패킷, RTT p50 68 · p99 70 ms, 커널 버림 0(RTT 는 같은 PC 의 클라이언트 드라이버 지연이 대부분). 리눅스(WSL Release,
   `ulimit -n 8192` 뒤 같은 필터)는 아직 — 숫자를 나란히 놓는다. 패킷당 6.5 us 의 대부분이 `recvfrom`/`sendto` 라 다음 일은 ②.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
-  ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUdpBenchTest` 숫자로 전후를 잰다.
+  ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 잰다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 

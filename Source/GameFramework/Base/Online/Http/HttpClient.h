@@ -2,7 +2,7 @@
  * @file HttpClient.h
  * @brief 최소 HTTP/1.1 클라이언트 — 요청을 맡기고(`submitRequest`) 응답을 거둡니다(`pollResponses`). 요청마다 연결 하나, TLS 는 호스트마다 올린 컨텍스트로.
  * @details - 전송은 이 객체가 갖는다(처리기 = 이 객체). I/O 스레드가 없는 전송(루프백 시험)은 `tick` 이 `pollIo` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
- *          - `https://` 는 그 호스트에 `registerTlsContext` 한 컨텍스트가 있어야 한다(서버 이름 검사 · 신뢰는 컨텍스트가 정한다) — 없으면 전송 실패로 끝난다.
+ *          - `https://` 는 그 호스트에 `registerTLSContext` 한 컨텍스트가 있어야 한다(서버 이름 검사 · 신뢰는 컨텍스트가 정한다) — 없으면 전송 실패로 끝난다.
  *          - 시한은 맡긴 때부터(`_timeoutMs`) — 넘으면 연결을 끊고 전송 실패. 응답 몸 상한을 넘어도 전송 실패.
  *          언리얼 FHttpModule · libcurl multi 처럼 비동기 요청 · 완료 거두기 모양이다.
  */
@@ -21,7 +21,7 @@
 
 namespace sw
 {
-    class ITlsContext;
+    class ITLSContext;
 
     /** @brief HTTP 클라이언트 설정입니다. */
     struct HttpClientSettings
@@ -52,7 +52,7 @@ namespace sw
         void shutdown();
 
         /** @brief @p host 의 `https://` 요청에 쓸 TLS 컨텍스트(빌려 쓴다 — 이 객체보다 오래 산다)를 올립니다. */
-        void registerTlsContext( string_view host, ITlsContext* pTlsContext );
+        void registerTLSContext( string_view host, ITLSContext* pTLSContext );
         /** @brief 요청을 맡깁니다. 0 이 아닌 요청 id 입니다(응답의 `_requestId`). 응답은 반드시 한 번 온다(실패도). */
         uint64 submitRequest( const HttpClientRequest& request, int64 nowMs );
         /** @brief 전송을 돌리고(I/O 스레드가 없을 때) 시한을 봅니다. */
@@ -84,7 +84,7 @@ namespace sw
 
         mutable mutex                           _mutex;
         unordered_map<uint64, unique_ptr<Call>> _mapCall; ///< 연결(packed) → 요청
-        unordered_map<string, ITlsContext*>     _mapHostToTlsContext;
+        unordered_map<string, ITLSContext*>     _mapHostToTLSContext;
         vector<HttpClientResponse>              _listDone;
         unique_ptr<IStreamTransport>            _transport;
         HttpClientSettings                      _settings;

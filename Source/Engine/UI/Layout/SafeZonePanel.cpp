@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/UI/Layout/UiLayoutPass.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
         return StaticType();
     }
 
-    float2 SafeZonePanel::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 SafeZonePanel::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         float2 desiredMax{};
         for ( uint32 index = 0; index < getChildCount(); ++index )
@@ -31,15 +31,15 @@ namespace sw
             const float4& padding = child.getLayoutSlot()._padding;
             const float32 padX    = padding._x + padding._z;
             const float32 padY    = padding._y + padding._w;
-            const float2  desired = UiLayoutPass::measure(
-                child, context, float2{ UiLayoutPass::computeRemaining( availableSize._x, padX ), UiLayoutPass::computeRemaining( availableSize._y, padY ) } );
+            const float2  desired = UILayoutPass::measure(
+                child, context, float2{ UILayoutPass::computeRemaining( availableSize._x, padX ), UILayoutPass::computeRemaining( availableSize._y, padY ) } );
             desiredMax._x = MathUtil::max( desiredMax._x, desired._x + padX );
             desiredMax._y = MathUtil::max( desiredMax._y, desired._y + padY );
         }
         return desiredMax;
     }
 
-    void SafeZonePanel::arrangeChildren( const UiLayoutContext& context, const float2& size )
+    void SafeZonePanel::arrangeChildren( const UILayoutContext& context, const float2& size )
     {
         // 안전 사각형(화면 UI 단위)과 이 패널 사각형이 겹치는 만큼만 안쪽으로 민다 — 화면 가운데 패널은 그대로다.
         const float2& origin      = getGeometry()._position;

@@ -104,10 +104,10 @@ namespace sw
                             if ( bSet == SW_TRUE )
                                 out.appendFormat( "  [%#]", pFlagName );
                         }
-                        if ( prop._bHasUiMinRange == SW_TRUE )
-                            out.appendFormat( "  UiMin=%#", prop._uiMinRange );
-                        if ( prop._bHasUiMaxRange == SW_TRUE )
-                            out.appendFormat( "  UiMax=%#", prop._uiMaxRange );
+                        if ( prop._bHasUIMinRange == SW_TRUE )
+                            out.appendFormat( "  UIMin=%#", prop._uiMinRange );
+                        if ( prop._bHasUIMaxRange == SW_TRUE )
+                            out.appendFormat( "  UIMax=%#", prop._uiMaxRange );
                         if ( prop._units.empty() == false )
                             out.appendFormat( "  Units=%#", prop._units );
                         if ( prop._editCondition.empty() == false )

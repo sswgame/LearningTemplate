@@ -57,12 +57,12 @@ namespace
         {
         }
 
-        bool initialize( ITlsContext* pServerContext, int32 maxBodyBytes = HttpConstant::kDefaultMaxBodyBytes )
+        bool initialize( ITLSContext* pServerContext, int32 maxBodyBytes = HttpConstant::kDefaultMaxBodyBytes )
         {
             StreamTransportSettings transportSettings;
             transportSettings._ioThreadCount = 0;
             HttpServerSettings serverSettings;
-            serverSettings._pTlsContext = pServerContext;
+            serverSettings._pTLSContext = pServerContext;
             HttpClientSettings clientSettings;
             clientSettings._maxResponseBodyBytes = maxBodyBytes;
             return _server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler ) &&
@@ -176,23 +176,23 @@ SW_TEST_CASE( HttpTest, ParserHandlesLengthChunkedCloseAndLimits )
     SW_EXPECT_TRUE( parser.append( reinterpret_cast<const uint8*>( badMethod.data() ), badMethod.size() ) == HttpParseState::Failed );
 }
 
-SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTls )
+SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTLS )
 {
     INetSecurityProvider& provider = NetSecurity::getProvider();
     string                certificatePem;
     string                privateKeyPem;
     SW_ASSERT_TRUE( provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ) );
-    TlsContextSettings serverTls;
-    serverTls._role           = TlsRole::Server;
-    serverTls._certificatePem = certificatePem;
-    serverTls._privateKeyPem  = privateKeyPem;
-    TlsContextSettings clientTls;
-    clientTls._role       = TlsRole::Client;
-    clientTls._trustPem   = certificatePem;
-    clientTls._serverName = "localhost";
+    TLSContextSettings serverTLS;
+    serverTLS._role           = TLSRole::Server;
+    serverTLS._certificatePem = certificatePem;
+    serverTLS._privateKeyPem  = privateKeyPem;
+    TLSContextSettings clientTLS;
+    clientTLS._role       = TLSRole::Client;
+    clientTLS._trustPem   = certificatePem;
+    clientTLS._serverName = "localhost";
     string                  error;
-    unique_ptr<ITlsContext> serverContext = provider.createTlsContext( serverTls, error );
-    unique_ptr<ITlsContext> clientContext = provider.createTlsContext( clientTls, error );
+    unique_ptr<ITLSContext> serverContext = provider.createTLSContext( serverTLS, error );
+    unique_ptr<ITLSContext> clientContext = provider.createTLSContext( clientTLS, error );
     SW_ASSERT_TRUE( serverContext != nullptr && clientContext != nullptr );
 
     const bool arrSecure[] = { false, true };
@@ -201,7 +201,7 @@ SW_TEST_CASE( HttpTest, LoopbackRequestsGetAnswersOverPlainAndTls )
         HttpPair pair;
         SW_ASSERT_TRUE( pair.initialize( bSecure ? serverContext.get() : nullptr ) );
         if ( bSecure )
-            pair._client.registerTlsContext( "localhost", clientContext.get() );
+            pair._client.registerTLSContext( "localhost", clientContext.get() );
         const utf8* pScheme = bSecure ? "https" : "http";
 
         HttpClientRequest get;
@@ -257,10 +257,10 @@ SW_TEST_CASE( HttpTest, TransportFailuresAreReportedOnce )
     const HttpClientResponse namedResponse = pair.run( named );
     SW_EXPECT_TRUE( namedResponse._bTransportFailed == SW_TRUE ); // 이름 해석 없음 — 분명한 실패
 
-    HttpClientRequest noTls;
-    noTls._url                             = pair.makeUrl( "https", "/echo" ); // 그 호스트의 TLS 컨텍스트를 올리지 않았다
-    const HttpClientResponse noTlsResponse = pair.run( noTls );
-    SW_EXPECT_TRUE( noTlsResponse._bTransportFailed == SW_TRUE );
+    HttpClientRequest noTLS;
+    noTLS._url                             = pair.makeUrl( "https", "/echo" ); // 그 호스트의 TLS 컨텍스트를 올리지 않았다
+    const HttpClientResponse noTLSResponse = pair.run( noTLS );
+    SW_EXPECT_TRUE( noTLSResponse._bTransportFailed == SW_TRUE );
 
     HttpClientRequest refused;
     refused._url                             = "http://127.0.0.1:1/";

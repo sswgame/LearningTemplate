@@ -607,7 +607,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 10, 20, 30, 255 ) ) );
 
         TextureImportConfig uiConfig;
-        SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
+        SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "UI", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
 
         // 1) 한 번도 임포트하지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
         AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly );
@@ -632,7 +632,7 @@ namespace sw::editor
 
         // 4) 규칙만 바꿨다(원본은 그대로).
         TextureImportConfig srgbConfig;
-        SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
+        SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "UI", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
         SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, AssetImportMode::CheckOnly )._listProblem.size() );
         SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
 

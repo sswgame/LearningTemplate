@@ -3,8 +3,8 @@
 #include "GameFramework/Base/UI/HUD/TutorialHintComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/UI/Screen/UiNotificationService.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -20,7 +20,7 @@ namespace sw
     } // namespace
 
     TutorialHintComponent::TutorialHintComponent()
-        : _pUiSystem{ nullptr }
+        : _pUISystem{ nullptr }
         , _text{}
         , _durationSeconds{ 6.0f }
         , _activatorTag{}
@@ -55,15 +55,15 @@ namespace sw
         const hashed_string        settingId( TutorialHintComponentInternal::kShowTutorialsSetting );
         if ( pSettings != nullptr && pSettings->findSetting( settingId ) != nullptr && pSettings->getBoolValue( settingId ) == false )
             return false;
-        UiSystem* pUi = _pUiSystem != nullptr ? _pUiSystem : game::getService<UiSystem>();
-        if ( pUi == nullptr )
+        UISystem* pUI = _pUISystem != nullptr ? _pUISystem : game::getService<UISystem>();
+        if ( pUI == nullptr )
             return false; // 서버처럼 UI 가 없다
-        UiNotificationDesc desc{};
+        UINotificationDesc desc{};
         desc._text            = _text;
         desc._durationSeconds = _durationSeconds;
-        desc._kind            = UiNotificationKind::Hint;
+        desc._kind            = UINotificationKind::Hint;
         desc._priority        = 1; // 힌트는 지금 할 일이라 쌓인 알림보다 먼저
-        pUi->getNotifications().post( desc );
+        pUI->getNotifications().post( desc );
         _bFired = true;
         return true;
     }
