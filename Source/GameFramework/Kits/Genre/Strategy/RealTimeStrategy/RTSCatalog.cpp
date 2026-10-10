@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -11,25 +11,25 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RtsCatalog" );
+    SW_LOG_CALLER( "RTSCatalog" );
 
-    RtsCatalog::RtsCatalog()
+    RTSCatalog::RTSCatalog()
         : _catalog{}
         , _supplyMax{ 200 }
     {
     }
 
-    void RtsCatalog::findProducts( const hashed_string& producerId, vector<const RtsUnitDef*>& outListDef ) const
+    void RTSCatalog::findProducts( const hashed_string& producerId, vector<const RTSUnitDef*>& outListDef ) const
     {
         outListDef.clear();
-        for ( const RtsUnitDef& def : _catalog.getAll() )
+        for ( const RTSUnitDef& def : _catalog.getAll() )
         {
             if ( def._producedBy == producerId )
                 outListDef.push_back( &def );
         }
     }
 
-    uint32 RtsCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 RTSCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         _supplyMax         = MathUtil::max( 1, root.getAttributeInt( "supplyMax", _supplyMax ) );
         uint32 loadedCount = 0;
@@ -38,29 +38,29 @@ namespace sw
             const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
-            RtsUnitDef def;
+            RTSUnitDef def;
             def._id                = hashed_string( pId );
             const utf8* pName      = node.findAttribute( "name" );
             def._name              = pName != nullptr ? pName : pId;
             const string_view kind = node.getAttributeText( "kind" );
             if ( StringUtil::equals( kind, string_view( "Building" ), true ) )
-                def._kind = RtsUnitKind::Building;
+                def._kind = RTSUnitKind::Building;
             else if ( StringUtil::equals( kind, string_view( "Resource" ), true ) )
-                def._kind = RtsUnitKind::Resource;
+                def._kind = RTSUnitKind::Resource;
             else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Unit" ), true ) == false )
                 SW_LOG_WARNING( "%#: '%#' has an unknown kind '%#' - read as a unit", sourceName, pId, kind );
             const string_view resource = node.getAttributeText( "resource" );
             if ( StringUtil::equals( resource, string_view( "Minerals" ), true ) )
-                def._resourceType = RtsResourceType::Minerals;
+                def._resourceType = RTSResourceType::Minerals;
             else if ( StringUtil::equals( resource, string_view( "Gas" ), true ) )
-                def._resourceType = RtsResourceType::Gas;
+                def._resourceType = RTSResourceType::Gas;
             const utf8* pProducedBy   = node.findAttribute( "producedBy" );
             const utf8* pRequires     = node.findAttribute( "requires" );
             def._producedBy           = pProducedBy != nullptr ? hashed_string( pProducedBy ) : hashed_string{};
             def._requires             = pRequires != nullptr ? hashed_string( pRequires ) : hashed_string{};
             def._hp                   = MathUtil::max( 1.0f, node.getAttributeFloat( "hp", def._hp ) );
             def._armor                = MathUtil::max( 0.0f, node.getAttributeFloat( "armor", def._armor ) );
-            def._speed                = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", def._kind == RtsUnitKind::Unit ? def._speed : 0.0f ) );
+            def._speed                = MathUtil::max( 0.0f, node.getAttributeFloat( "speed", def._kind == RTSUnitKind::Unit ? def._speed : 0.0f ) );
             def._radius               = MathUtil::max( 0.1f, node.getAttributeFloat( "radius", def._radius ) );
             def._sight                = MathUtil::max( 0.0f, node.getAttributeFloat( "sight", def._sight ) );
             def._buildTime            = MathUtil::max( 0.1f, node.getAttributeFloat( "buildTime", def._buildTime ) );
@@ -72,7 +72,7 @@ namespace sw
             def._gas                  = MathUtil::max( 0, node.getAttributeInt( "gas", def._gas ) );
             def._supplyCost           = MathUtil::max( 0, node.getAttributeInt( "supply", def._supplyCost ) );
             def._supplyProvided       = MathUtil::max( 0, node.getAttributeInt( "provides", def._supplyProvided ) );
-            def._footprint            = MathUtil::clamp( node.getAttributeInt( "footprint", def._kind == RtsUnitKind::Unit ? 1 : 2 ), 1, 8 );
+            def._footprint            = MathUtil::clamp( node.getAttributeInt( "footprint", def._kind == RTSUnitKind::Unit ? 1 : 2 ), 1, 8 );
             def._cargo                = MathUtil::max( 1, node.getAttributeInt( "cargo", def._cargo ) );
             def._resourceAmount       = MathUtil::max( 0, node.getAttributeInt( "amount", def._resourceAmount ) );
             def._bWorker              = node.getAttributeBool( "worker", false ) ? SW_TRUE : SW_FALSE;
@@ -93,12 +93,12 @@ namespace sw
             }
             def._bTargetsGround = bGround ? SW_TRUE : SW_FALSE;
             def._bTargetsAir    = bAir ? SW_TRUE : SW_FALSE;
-            if ( def._kind == RtsUnitKind::Building || def._kind == RtsUnitKind::Resource )
+            if ( def._kind == RTSUnitKind::Building || def._kind == RTSUnitKind::Resource )
                 def._radius = static_cast<float32>( def._footprint ) * 0.5f;
             (void)_catalog.add( def );
             ++loadedCount;
         }
-        for ( const RtsUnitDef& def : _catalog.getAll() )
+        for ( const RTSUnitDef& def : _catalog.getAll() )
         {
             if ( def._producedBy.empty() == false && _catalog.find( def._producedBy ) == nullptr )
                 SW_LOG_WARNING( "%#: '%#' is produced by unknown '%#'", sourceName, def._id.c_str(), def._producedBy.c_str() );

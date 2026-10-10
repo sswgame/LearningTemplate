@@ -1,8 +1,8 @@
 /**
  * @file SkirmishMatch.h
- * @brief StarSkirmish 의 한 판 규칙 — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 시작 유닛, 컴퓨터 상대(`RtsAiCommander`), 정리 사냥, 상태 · 승패 로그입니다.
+ * @brief StarSkirmish 의 한 판 규칙 — 절차 맵(두 기지 · 광물 · 간헐천 · 절벽), 시작 유닛, 컴퓨터 상대(`RTSAiCommander`), 정리 사냥, 상태 · 승패 로그입니다.
  *
- * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `RtsWorld` · `RtsAiCommander` 만 씁니다).
+ * @details 화면 · 입력을 모르는 순수 규칙이라 엔진 밖 하네스에서 그대로 돌려 볼 수 있습니다(키트 `RTSWorld` · `RTSAiCommander` 만 씁니다).
  *          사람이 0 번을 맡으면 AI 는 1 번만, 자동 플레이면 둘 다 AI 입니다. 두 AI 는 성향이 다릅니다(0 번 러시 · 1 번 운영) — 같은 AI 끼리면 대칭이라
  *          가운데서 서로 지우기만 하고 끝나지 않는다.
  */
@@ -13,8 +13,8 @@
 #include "Core/Math/Math.h"
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsAiCommander.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
 namespace sw
 {
@@ -52,14 +52,14 @@ namespace sw
          * @brief 맵을 칠하고 두 기지(본진 · 일꾼 넷 · 광물 여덟 · 간헐천)를 놓습니다.
          * @param bHumanPlayer 0 번을 사람이 맡는가(아니면 둘 다 AI). 사람 쪽 일꾼도 처음에는 광물을 캐러 간다.
          */
-        void initialize( const RtsCatalog* pCatalog, bool bHumanPlayer );
+        void initialize( const RTSCatalog* pCatalog, bool bHumanPlayer );
         /** @brief 월드 · AI 를 돌리고 알림을 AI 에 넘깁니다. 상태는 30 초마다, 승패는 한 번 로그로 남깁니다. */
         void update( float32 deltaTime );
         /** @brief 이번까지 쌓인 월드 알림(화면용 사본)을 꺼냅니다. */
-        void drainEvents( vector<RtsEvent>& outListEvent );
+        void drainEvents( vector<RTSEvent>& outListEvent );
 
-        RtsWorld&             getWorld() { return _world; }
-        const RtsWorld&       getWorld() const { return _world; }
+        RTSWorld&             getWorld() { return _world; }
+        const RTSWorld&       getWorld() const { return _world; }
         bool                  isCliff( int32 x, int32 y ) const;
         bool                  hasHumanPlayer() const { return _bHumanPlayer != SW_FALSE; }
         bool                  isOver() const { return _world.getWinningTeam() >= 0; }
@@ -79,15 +79,15 @@ namespace sw
         void      paintMap();
         void      spawnBase( int32 player, bool bMirror );
         void      spawnResource( const utf8* pDefId, int32 x, int32 y, bool bMirror );
-        RtsUnitId spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror );
+        RTSUnitId spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror );
         /** @brief 적 시작 지점에 닿아 놀고 있는 병력을 가장 가까운 남은 적 건물로 보냅니다(멀리 지은 보급고가 남아 판이 끝나지 않는 일을 막는다). */
         void huntRemaining( int32 player );
 
-        RtsWorld         _world;
-        RtsAiCommander   _arrAi[kPlayerCount];
+        RTSWorld         _world;
+        RTSAiCommander   _arrAi[kPlayerCount];
         Wallet           _arrWallet[kPlayerCount]; ///< 플레이어마다 광물 · 가스 — 키트 하나만 쓰는 게임이라 매치가 들고 월드에 빌려 준다
-        vector<RtsEvent> _listEvent;               ///< 화면이 꺼내 갈 사본
-        vector<RtsEvent> _listFrameEvent;
+        vector<RTSEvent> _listEvent;               ///< 화면이 꺼내 갈 사본
+        vector<RTSEvent> _listFrameEvent;
         vector<uint8>    _listCliff;
         float32          _statusTimer;
         float32          _huntTimer;

@@ -45,10 +45,10 @@ namespace sw
             static constexpr const utf8* kSoundUnitDied = "UnitDied";
 
             /** @brief 모습 칸 — 편(0 · 1 · 그 밖)이거나 자원(광물 · 가스)입니다. */
-            static int32 computeLookCategory( const RtsUnit& unit )
+            static int32 computeLookCategory( const RTSUnit& unit )
             {
                 if ( unit.isResource() )
-                    return unit._pDef->_resourceType == RtsResourceType::Gas ? 4 : 3;
+                    return unit._pDef->_resourceType == RTSResourceType::Gas ? 4 : 3;
                 if ( unit._owner == 0 || unit._owner == 1 )
                     return unit._owner;
                 return 2;
@@ -96,10 +96,10 @@ namespace sw
             if ( pDirector == nullptr )
                 return false;
             int32 count = 0;
-            pDirector->getWorld().forEachUnit( [pDirector, bMoveOnly, &count]( const RtsUnit& unit )
+            pDirector->getWorld().forEachUnit( [pDirector, bMoveOnly, &count]( const RTSUnit& unit )
             {
-                const RtsOrder* pOrder = unit.findOrder();
-                if ( pDirector->isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RtsOrderType::Move ) ) )
+                const RTSOrder* pOrder = unit.findOrder();
+                if ( pDirector->isSelected( unit._id ) && ( bMoveOnly == false || ( pOrder != nullptr && pOrder->_type == RTSOrderType::Move ) ) )
                     ++count;
             } );
             outValue = static_cast<float64>( count );
@@ -207,7 +207,7 @@ namespace sw
         _bDragging = SW_FALSE;
     }
 
-    const shared_ptr<MaterialInstance>& SkirmishDirectorComponent::findUnitLook( const RtsUnit& unit, bool bSelected ) const
+    const shared_ptr<MaterialInstance>& SkirmishDirectorComponent::findUnitLook( const RTSUnit& unit, bool bSelected ) const
     {
         static const shared_ptr<MaterialInstance> kNoLook{};
         const int32                               lookIndex = SkirmishDirectorComponentInternal::computeLookCategory( unit ) * 2 + ( bSelected ? 1 : 0 );
@@ -338,7 +338,7 @@ namespace sw
     void SkirmishDirectorComponent::spawnUnit( GameObjectManager& manager, int32 slotIndex )
     {
         UnitSlot&      slot  = _listUnitSlot[static_cast<size_t>( slotIndex )];
-        const RtsUnit* pUnit = _match.getWorld().findUnit( slot._shownId );
+        const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownId );
         if ( pUnit == nullptr )
             return;
         const SkirmishUnitModel* pModel = SkirmishUnitComponent::findUnitModel( pUnit->_pDef->_id );
@@ -381,11 +381,11 @@ namespace sw
     {
         // 보일 유닛 — 사람 쪽 화면은 안 보이는 적을 그리지 않는다(자원은 늘 보인다). 자리의 유닛이 바뀌었거나 이번에 못 본 자리(죽음 · 안개)만 쌓는다.
         ++_frameStamp;
-        const RtsWorld& world  = _match.getWorld();
+        const RTSWorld& world  = _match.getWorld();
         const bool      bHuman = _bHuman == SW_TRUE;
-        world.forEachUnit( [this, &world, bHuman]( const RtsUnit& unit )
+        world.forEachUnit( [this, &world, bHuman]( const RTSUnit& unit )
         {
-            if ( bHuman && unit._owner != 0 && unit._owner != RtsWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false )
+            if ( bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false )
                 return;
             if ( SkirmishUnitComponent::findUnitModel( unit._pDef->_id ) == nullptr )
                 return;
@@ -404,7 +404,7 @@ namespace sw
             UnitSlot& slot = _listUnitSlot[slotIndex];
             if ( slot._stamp == _frameStamp || slot._shownId.isValid() == false )
                 continue;
-            slot._shownId = RtsUnitId{};
+            slot._shownId = RTSUnitId{};
             _listPendingUnit.push_back( static_cast<int32>( slotIndex ) );
         }
     }
@@ -433,7 +433,7 @@ namespace sw
 
     void SkirmishDirectorComponent::updateHumanCommands( const InputManager& input )
     {
-        RtsWorld&       world    = _match.getWorld();
+        RTSWorld&       world    = _match.getWorld();
         const InputMap& inputMap = input.getInputMap();
         float3          point{};
         const bool      bPointValid = findGroundPoint( input, point );
@@ -455,7 +455,7 @@ namespace sw
             const bool bHold = inputMap.wasActionTriggered( hashed_string( "Skirmish.Hold" ) );
             if ( bHold || inputMap.wasActionTriggered( hashed_string( "Skirmish.Stop" ) ) )
             {
-                for ( const RtsUnitId unitId : _selection.getSelected() )
+                for ( const RTSUnitId unitId : _selection.getSelected() )
                 {
                     (void)( bHold ? world.issueHold( unitId ) : world.issueStop( unitId ) );
                 }
@@ -491,11 +491,11 @@ namespace sw
         }
 
         // 부대 — Ctrl + 숫자 정하기, Shift + 숫자 더하기, 숫자 부르기.
-        for ( int32 group = 0; group < RtsSelection::kGroupCount; ++group )
+        for ( int32 group = 0; group < RTSSelection::kGroupCount; ++group )
         {
             constexpr const utf8* kArrGroupAction[] = { "Skirmish.Group0", "Skirmish.Group1", "Skirmish.Group2", "Skirmish.Group3", "Skirmish.Group4",
                                                         "Skirmish.Group5", "Skirmish.Group6", "Skirmish.Group7", "Skirmish.Group8", "Skirmish.Group9" };
-            static_assert( sizeof( kArrGroupAction ) / sizeof( kArrGroupAction[0] ) == RtsSelection::kGroupCount, "one group action per group" );
+            static_assert( sizeof( kArrGroupAction ) / sizeof( kArrGroupAction[0] ) == RTSSelection::kGroupCount, "one group action per group" );
             if ( inputMap.wasActionTriggered( hashed_string( kArrGroupAction[group] ) ) == false )
                 continue;
             if ( bControl )
@@ -508,7 +508,7 @@ namespace sw
         if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.JumpToSelection" ) ) )
         {
             // 고른 유닛으로 — 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
-            const RtsUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
+            const RTSUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
             OrthoCameraRigComponent* pRig     = findCameraRig();
             if ( pPrimary != nullptr && pRig != nullptr )
                 pRig->setFocus( float3{ pPrimary->_position._x, 0.0f, pPrimary->_position._z } );
@@ -517,7 +517,7 @@ namespace sw
 
     void SkirmishDirectorComponent::updateDrag( const InputManager& input, const float3& point, bool bPointValid )
     {
-        RtsWorld&           world    = _match.getWorld();
+        RTSWorld&           world    = _match.getWorld();
         const InputMap&     inputMap = input.getInputMap();
         const hashed_string selectAction( "Skirmish.Select" );
         const bool          bShift = inputMap.isActionDown( hashed_string( "Skirmish.AddToSelection" ) );
@@ -546,7 +546,7 @@ namespace sw
         const float32 dragged = MathUtil::max( MathUtil::abs( end._x - _dragStart._x ), MathUtil::abs( end._z - _dragStart._z ) );
         if ( dragged < SkirmishDirectorComponentInternal::kClickSlop )
         {
-            const RtsUnitId pickedId = world.pickUnit( end );
+            const RTSUnitId pickedId = world.pickUnit( end );
             if ( pickedId.isValid() )
                 _selection.selectUnit( world, pickedId, bShift );
             else if ( bShift == false )
@@ -554,7 +554,7 @@ namespace sw
         }
         else
             _selection.selectInRect( world, _dragStart, end, bShift );
-        const RtsUnit* pPrimary = world.findUnit( _selection.getPrimary() );
+        const RTSUnit* pPrimary = world.findUnit( _selection.getPrimary() );
         if ( pPrimary != nullptr )
         {
             SW_LOG_INFO( "[Skirmish] selected %# (%# units)", pPrimary->_pDef->_name.c_str(), static_cast<int32>( _selection.getSelected().size() ) );
@@ -564,15 +564,15 @@ namespace sw
 
     void SkirmishDirectorComponent::issueOrder( const float3& point, bool bQueue )
     {
-        RtsWorld& world = _match.getWorld();
+        RTSWorld& world = _match.getWorld();
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
             return;
         // 유닛 · 자원을 눌렀으면 하나씩 똑똑한 명령(공격 · 채취 · 이어 짓기), 빈 땅이면 움직이는 것은 무리 이동 · 건물은 집결지.
-        const RtsUnitId   targetId = world.pickUnit( point );
-        vector<RtsUnitId> listMobile;
-        for ( const RtsUnitId unitId : _selection.getSelected() )
+        const RTSUnitId   targetId = world.pickUnit( point );
+        vector<RTSUnitId> listMobile;
+        for ( const RTSUnitId unitId : _selection.getSelected() )
         {
-            const RtsUnit* pUnit = world.findUnit( unitId );
+            const RTSUnit* pUnit = world.findUnit( unitId );
             if ( pUnit == nullptr )
                 continue;
             if ( pUnit->isBuilding() )
@@ -588,15 +588,15 @@ namespace sw
 
     void SkirmishDirectorComponent::orderBuild( const utf8* pBuildingId, const float3& point )
     {
-        RtsWorld&         world = _match.getWorld();
-        const RtsUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingId ) );
+        RTSWorld&         world = _match.getWorld();
+        const RTSUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingId ) );
         if ( pDef == nullptr )
             return;
         // 고른 것 중 첫 일꾼이 짓는다. 정제소는 커서 가까운 빈 간헐천, 다른 건물은 커서가 가운데가 되는 자리.
-        RtsUnitId workerId{};
-        for ( const RtsUnitId unitId : _selection.getSelected() )
+        RTSUnitId workerId{};
+        for ( const RTSUnitId unitId : _selection.getSelected() )
         {
-            const RtsUnit* pUnit = world.findUnit( unitId );
+            const RTSUnit* pUnit = world.findUnit( unitId );
             if ( workerId.isValid() == false && pUnit != nullptr && pUnit->_pDef->_bWorker != SW_FALSE )
                 workerId = unitId;
         }
@@ -611,22 +611,22 @@ namespace sw
             SW_LOG_INFO( "[Skirmish] no free geyser near the cursor for %#", pDef->_name.c_str() );
             return;
         }
-        [[maybe_unused]] const RtsCommandResult result = world.issueBuild( workerId, pDef->_id, cell );
+        [[maybe_unused]] const RTSCommandResult result = world.issueBuild( workerId, pDef->_id, cell );
         SW_LOG_INFO( "[Skirmish] build %# at (%#, %#): %#", pDef->_name.c_str(), cell._x, cell._y, toString( result ) );
     }
 
     void SkirmishDirectorComponent::trainFromPrimary( int32 productIndex )
     {
-        RtsWorld&      world    = _match.getWorld();
-        const RtsUnit* pPrimary = world.findUnit( _selection.getPrimary() );
+        RTSWorld&      world    = _match.getWorld();
+        const RTSUnit* pPrimary = world.findUnit( _selection.getPrimary() );
         if ( pPrimary == nullptr || pPrimary->isBuilding() == false )
             return;
-        vector<const RtsUnitDef*> listProduct;
+        vector<const RTSUnitDef*> listProduct;
         _catalog.findProducts( pPrimary->_pDef->_id, listProduct );
         if ( productIndex >= static_cast<int32>( listProduct.size() ) )
             return;
-        const RtsUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
-        [[maybe_unused]] const RtsCommandResult result  = world.train( pPrimary->_id, product._id );
+        const RTSUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
+        [[maybe_unused]] const RTSCommandResult result  = world.train( pPrimary->_id, product._id );
         SW_LOG_INFO( "[Skirmish] train %# at %#: %#", product._name.c_str(), pPrimary->_pDef->_name.c_str(), toString( result ) );
     }
 
@@ -655,9 +655,9 @@ namespace sw
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _match.drainEvents( _listEvent );
         // 유닛이 부서지면 누구 것이든 그 자리에서 쇳소리 — 한 프레임에 여럿이어도 한 번(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
-        for ( const RtsEvent& event : _listEvent )
+        for ( const RTSEvent& event : _listEvent )
         {
-            if ( event._kind == RtsEvent::Kind::UnitDied )
+            if ( event._kind == RTSEvent::Kind::UnitDied )
             {
                 getSoundQueue().queueEventAt( Internal::kSoundUnitDied, event._position );
                 break;
@@ -666,42 +666,42 @@ namespace sw
         if ( _bHuman == SW_FALSE )
             return;
         // 사람 쪽(0 번)에 알릴 것만 — 나머지는 판이 로그로 남긴다.
-        for ( const RtsEvent& event : _listEvent )
+        for ( const RTSEvent& event : _listEvent )
         {
             if ( event._player != 0 )
                 continue;
-            const RtsUnitDef*            pDef  = _catalog.findUnit( event._defId );
+            const RTSUnitDef*            pDef  = _catalog.findUnit( event._defId );
             [[maybe_unused]] const utf8* pName = pDef != nullptr ? pDef->_name.c_str() : "?";
             switch ( event._kind )
             {
-                case RtsEvent::Kind::ConstructionComplete:
+                case RTSEvent::Kind::ConstructionComplete:
                 {
                     SW_LOG_INFO( "[Skirmish] %# complete", pName );
                     getSoundQueue().queueEvent( Internal::kSoundBuilt );
                     break;
                 }
-                case RtsEvent::Kind::ProductionComplete:
+                case RTSEvent::Kind::ProductionComplete:
                 {
                     SW_LOG_INFO( "[Skirmish] %# ready", pName );
                     break;
                 }
-                case RtsEvent::Kind::SupplyBlocked:
+                case RTSEvent::Kind::SupplyBlocked:
                 {
                     SW_LOG_INFO( "[Skirmish] not enough supply - build a Supply Depot (B)" );
                     getSoundQueue().queueEvent( Internal::kSoundBlocked );
                     break;
                 }
-                case RtsEvent::Kind::UnderAttack:
+                case RTSEvent::Kind::UnderAttack:
                 {
                     SW_LOG_INFO( "[Skirmish] we are under attack at (%#, %#)", static_cast<int32>( event._position._x ), static_cast<int32>( event._position._z ) );
                     break;
                 }
-                case RtsEvent::Kind::UnitCreated:
-                case RtsEvent::Kind::UnitDied:
-                case RtsEvent::Kind::ResourceDepleted:
-                case RtsEvent::Kind::ResourcesDeposited:
-                case RtsEvent::Kind::PlayerDefeated:
-                case RtsEvent::Kind::GameOver:
+                case RTSEvent::Kind::UnitCreated:
+                case RTSEvent::Kind::UnitDied:
+                case RTSEvent::Kind::ResourceDepleted:
+                case RTSEvent::Kind::ResourcesDeposited:
+                case RTSEvent::Kind::PlayerDefeated:
+                case RTSEvent::Kind::GameOver:
                 {
                     break;
                 }

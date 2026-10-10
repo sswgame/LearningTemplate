@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- StarSkirmish 의 유닛 · 건물 · 자원(GF_RealTimeStrategy 의 RtsCatalog 형식).
+<!-- StarSkirmish 의 유닛 · 건물 · 자원(GF_RealTimeStrategy 의 RTSCatalog 형식).
      kind = Unit(기본) · Building · Resource. producedBy = 만드는 건물(건물이면 짓는 일꾼), requires = 다 지어진 이 건물이 있어야 한다(테크).
      hp · armor · speed(칸/초) · radius · sight(칸) · damage · range(몸 가장자리 사이 칸) · cooldown(초) · targets(Ground,Air).
      minerals · gas = 값, supply = 쓰는 보급, provides = 주는 보급(상한 supplyMax), buildTime(초).
      worker = 일꾼(gatherTime · cargo), depot = 자원을 내려놓는 본진, extractor = 가스 간헐천 위에 짓는 정제소, footprint = 건물 · 자원이 막는 칸(한 변).
      AI 는 worker · command_center · supply_depot · barracks · marine 을 쓴다(SkirmishMatch). -->
-<RtsCatalog supplyMax="200">
+<RTSCatalog supplyMax="200">
   <!-- 자원 -->
   <Unit id="minerals" name="Mineral Field" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="rich_minerals" name="Rich Mineral Field" kind="Resource" resource="Minerals" amount="900" footprint="1"/>
@@ -30,4 +30,4 @@
   <Unit id="tank" name="Siege Tank" hp="150" armor="1" speed="2.0" radius="0.6" damage="30" range="7" cooldown="2.2" producedBy="factory" minerals="150" gas="100" supply="2" buildTime="38" sight="10"/>
   <Unit id="goliath" name="Goliath" hp="125" armor="1" speed="2.2" radius="0.55" damage="12" range="5" cooldown="1.0" targets="Ground,Air" producedBy="factory" minerals="100" gas="50" supply="2" buildTime="30" requires="academy" sight="8"/>
   <Unit id="wraith" name="Wraith" air="true" hp="120" speed="4" radius="0.5" damage="8" range="5" cooldown="1.5" targets="Ground,Air" producedBy="starport" minerals="150" gas="100" supply="2" buildTime="40" sight="7"/>
-</RtsCatalog>
+</RTSCatalog>

@@ -31,8 +31,8 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -367,20 +367,20 @@ namespace sw
   <HouseLevel name="Hut" population="4" tax="1"/>
 </CityCatalog>
 )";
-        static constexpr const utf8* kRtsXml           = R"(
-<RtsCatalog supplyMax="200">
+        static constexpr const utf8* kRTSXml           = R"(
+<RTSCatalog supplyMax="200">
   <Unit id="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
   <Unit id="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
   <Unit id="barracks" kind="Building" hp="1000" footprint="3" producedBy="worker" minerals="150" buildTime="20"/>
   <Unit id="marine" hp="40" speed="2.25" radius="0.35" producedBy="barracks" minerals="50" supply="1" buildTime="18"/>
-</RtsCatalog>
+</RTSCatalog>
 )";
         static constexpr int32       kLandSize         = 32;
         static constexpr int64       kStartingDeben    = 500;
         static constexpr int64       kStartingMinerals = 500;
 
         CityCatalog _city;
-        RtsCatalog  _rts;
+        RTSCatalog  _rts;
         uint8       _bLoaded{ SW_FALSE };
 
         static LandCompositionCatalogs& get()
@@ -388,7 +388,7 @@ namespace sw
             static LandCompositionCatalogs s_catalogs;
             if ( s_catalogs._bLoaded == SW_FALSE )
             {
-                const bool bLoaded  = s_catalogs._city.loadFromXmlText( kCityXml, "KitCompositionTest" ) && s_catalogs._rts.loadFromXmlText( kRtsXml, "KitCompositionTest" );
+                const bool bLoaded  = s_catalogs._city.loadFromXmlText( kCityXml, "KitCompositionTest" ) && s_catalogs._rts.loadFromXmlText( kRTSXml, "KitCompositionTest" );
                 s_catalogs._bLoaded = bLoaded ? SW_TRUE : SW_FALSE;
             }
             return s_catalogs;
@@ -529,12 +529,12 @@ namespace sw
         static constexpr uint32 kStateVersion = 1;
 
         const TypeInfo*  getTypeInfo() const override { return StaticType(); }
-        const RtsWorld&  getWorld() const { return _world; }
-        RtsCommandResult getBlockedBuildResult() const { return _blockedBuildResult; }
-        RtsCommandResult getOpenBuildResult() const { return _openBuildResult; }
-        RtsCommandResult getRoadBuildResult() const { return _roadBuildResult; }
+        const RTSWorld&  getWorld() const { return _world; }
+        RTSCommandResult getBlockedBuildResult() const { return _blockedBuildResult; }
+        RTSCommandResult getOpenBuildResult() const { return _openBuildResult; }
+        RTSCommandResult getRoadBuildResult() const { return _roadBuildResult; }
         int32            getTempleStepCount() const { return _templeStepCount; }
-        RtsUnitId        getMarine() const { return _marine; }
+        RTSUnitId        getMarine() const { return _marine; }
 
         void writeState( Archive& outArchive ) const override
         {
@@ -569,13 +569,13 @@ namespace sw
             uint64 marineValue = 0;
             archive >> tickCount;
             archive >> marineValue;
-            RtsWorld world;
+            RTSWorld world;
             initializeWorld( world, *pState );
             if ( archive.isError() || world.readState( archive ) == false || archive.getRemainingBytes() != 0 )
                 return false;
             _world     = std::move( world );
             _tickCount = tickCount;
-            _marine    = RtsUnitId::fromPacked( marineValue );
+            _marine    = RTSUnitId::fromPacked( marineValue );
             return true;
         }
 
@@ -589,7 +589,7 @@ namespace sw
                 (void)_world.issueMove( _marine, float3{ 10.5f, 0.0f, 6.5f } );
             }
             _world.update( deltaTime );
-            const RtsUnit* pMarine = _world.findUnit( _marine );
+            const RTSUnit* pMarine = _world.findUnit( _marine );
             if ( pMarine != nullptr )
             {
                 const int2 cell      = _world.getGrid().computeCell( pMarine->_position );
@@ -605,19 +605,19 @@ namespace sw
         }
 
     private:
-        static void initializeWorld( RtsWorld& outWorld, GameStateComponent& state )
+        static void initializeWorld( RTSWorld& outWorld, GameStateComponent& state )
         {
-            outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RtsSettings{} );
+            outWorld.initialize( &LandCompositionCatalogs::get()._rts, LandCompositionCatalogs::kLandSize, LandCompositionCatalogs::kLandSize, RTSSettings{} );
             outWorld.bindLand( &state.getLand(), int2{ 0, 0 } );
             (void)outWorld.addPlayer( 0, &state.getWallet(), float3{ 2.0f, 0.0f, 2.0f } );
         }
 
-        RtsWorld         _world;
-        RtsUnitId        _worker{};
-        RtsUnitId        _marine{};
-        RtsCommandResult _blockedBuildResult{ RtsCommandResult::Ok };
-        RtsCommandResult _openBuildResult{ RtsCommandResult::CannotDo };
-        RtsCommandResult _roadBuildResult{ RtsCommandResult::Ok };
+        RTSWorld         _world;
+        RTSUnitId        _worker{};
+        RTSUnitId        _marine{};
+        RTSCommandResult _blockedBuildResult{ RTSCommandResult::Ok };
+        RTSCommandResult _openBuildResult{ RTSCommandResult::CannotDo };
+        RTSCommandResult _roadBuildResult{ RTSCommandResult::Ok };
         int32            _tickCount{ 0 };
         int32            _templeStepCount{ 0 };
     };
@@ -831,7 +831,7 @@ namespace
         outDigest._barracksOwner         = pState->getLand().getOwnerName( 21, 21 );
         outDigest._barracksCount         = pSkirmish->getWorld().countUnits( 0, "barracks", true );
         outDigest._finishedBarracksCount = pSkirmish->getWorld().countUnits( 0, "barracks", false );
-        const RtsUnit* pMarine           = pSkirmish->getWorld().findUnit( pSkirmish->getMarine() );
+        const RTSUnit* pMarine           = pSkirmish->getWorld().findUnit( pSkirmish->getMarine() );
         outDigest._marinePosition        = pMarine != nullptr ? pMarine->_position : float3{};
         return true;
     }
@@ -1024,9 +1024,9 @@ SW_TEST_CASE( KitCompositionTest, CityAndSkirmishShareTheLandAndRouteAroundBuild
     SW_ASSERT_NOT_NULL( pCity );
     SW_ASSERT_NOT_NULL( pSkirmish );
 
-    SW_EXPECT_TRUE( pSkirmish->getBlockedBuildResult() == RtsCommandResult::InvalidPlacement ); // (5, 5) 는 도시 신전 땅
-    SW_EXPECT_TRUE( pSkirmish->getRoadBuildResult() == RtsCommandResult::InvalidPlacement );    // 도로는 지나갈 수 있어도 도시 땅
-    SW_EXPECT_TRUE( pSkirmish->getOpenBuildResult() == RtsCommandResult::Ok );
+    SW_EXPECT_TRUE( pSkirmish->getBlockedBuildResult() == RTSCommandResult::InvalidPlacement ); // (5, 5) 는 도시 신전 땅
+    SW_EXPECT_TRUE( pSkirmish->getRoadBuildResult() == RTSCommandResult::InvalidPlacement );    // 도로는 지나갈 수 있어도 도시 땅
+    SW_EXPECT_TRUE( pSkirmish->getOpenBuildResult() == RTSCommandResult::Ok );
     SW_EXPECT_EQUAL( 0, pSkirmish->getTempleStepCount() ); // 해병은 신전 칸을 밟지 않았다
 
     LandCompositionDigest digest;

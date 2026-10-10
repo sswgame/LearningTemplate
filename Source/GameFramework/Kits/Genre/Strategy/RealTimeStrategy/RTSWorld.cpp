@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -14,11 +14,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RtsWorld" );
+    SW_LOG_CALLER( "RTSWorld" );
 
     namespace
     {
-        struct RtsWorldInternal
+        struct RTSWorldInternal
         {
             static constexpr float32 kMaxUnitExtent       = 4.5f; ///< 버킷 조회에 더하는 몸 크기 상한(건물 반 변)
             static constexpr uint32  kMinUnitStateBytes   = 128;  ///< 유닛 하나의 상태가 적어도 쓰는 바이트(개수 상한)
@@ -32,42 +32,42 @@ namespace sw
                 return MathUtil::sqrt( dx * dx + dz * dz );
             }
 
-            static bool isGround( const RtsUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
+            static bool isGround( const RTSUnit& unit ) { return unit._pDef->_bAir == SW_FALSE; }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    const utf8* toString( RtsCommandResult result )
+    const utf8* toString( RTSCommandResult result )
     {
         switch ( result )
         {
-            case RtsCommandResult::Ok:
+            case RTSCommandResult::Ok:
                 return "Ok";
-            case RtsCommandResult::InvalidUnit:
+            case RTSCommandResult::InvalidUnit:
                 return "InvalidUnit";
-            case RtsCommandResult::NotOwner:
+            case RTSCommandResult::NotOwner:
                 return "NotOwner";
-            case RtsCommandResult::CannotDo:
+            case RTSCommandResult::CannotDo:
                 return "CannotDo";
-            case RtsCommandResult::NotEnoughMinerals:
+            case RTSCommandResult::NotEnoughMinerals:
                 return "NotEnoughMinerals";
-            case RtsCommandResult::NotEnoughGas:
+            case RTSCommandResult::NotEnoughGas:
                 return "NotEnoughGas";
-            case RtsCommandResult::NotEnoughSupply:
+            case RTSCommandResult::NotEnoughSupply:
                 return "NotEnoughSupply";
-            case RtsCommandResult::TechRequired:
+            case RTSCommandResult::TechRequired:
                 return "TechRequired";
-            case RtsCommandResult::QueueFull:
+            case RTSCommandResult::QueueFull:
                 return "QueueFull";
-            case RtsCommandResult::InvalidPlacement:
+            case RTSCommandResult::InvalidPlacement:
                 return "InvalidPlacement";
         }
         return "Unknown";
     }
 
-    RtsWorld::RtsWorld()
+    RTSWorld::RTSWorld()
         : _grid{}
         , _airGrid{}
         , _pathfinder{}
@@ -96,7 +96,7 @@ namespace sw
     {
     }
 
-    void RtsWorld::initialize( const RtsCatalog* pCatalog, int32 width, int32 height, const RtsSettings& settings )
+    void RTSWorld::initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings )
     {
         _pCatalog             = pCatalog;
         _settings             = settings;
@@ -122,7 +122,7 @@ namespace sw
         _winningTeam = -1;
     }
 
-    void RtsWorld::setTerrainBlocked( int32 x, int32 y, bool bBlocked )
+    void RTSWorld::setTerrainBlocked( int32 x, int32 y, bool bBlocked )
     {
         if ( _grid.isInside( x, y ) == false )
             return;
@@ -130,14 +130,14 @@ namespace sw
         _grid.setBlocked( x, y, bBlocked || _land.isBlocked( x, y ) );
     }
 
-    void RtsWorld::bindLand( LandRegistry* pLand, const int2& origin )
+    void RTSWorld::bindLand( LandRegistry* pLand, const int2& origin )
     {
         _land.bind( pLand, origin, hashed_string( "RealTimeStrategy" ) );
         repaintGrid();
         _landRevision = _land.getRevision();
     }
 
-    void RtsWorld::repaintGrid()
+    void RTSWorld::repaintGrid()
     {
         for ( int32 y = 0; y < _grid.getHeight(); ++y )
         {
@@ -147,16 +147,16 @@ namespace sw
                 _grid.setBlocked( x, y, bTerrain || _land.isBlocked( x, y ) );
             }
         }
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
                 placeFootprint( unit, true );
         }
     }
 
-    int32 RtsWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
+    int32 RTSWorld::addPlayer( int32 team, Wallet* pWallet, const float3& startPosition )
     {
-        RtsPlayer player;
+        RTSPlayer player;
         player._team          = MathUtil::max( 0, team );
         player._pWallet       = pWallet;
         player._startPosition = startPosition;
@@ -164,7 +164,7 @@ namespace sw
         _teamCount = MathUtil::max( _teamCount, player._team + 1 );
         while ( static_cast<int32>( _listTeamVisibility.size() ) < _teamCount )
         {
-            _listTeamVisibility.emplace_back( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), static_cast<uint8>( RtsVisibility::Unexplored ) );
+            _listTeamVisibility.emplace_back( static_cast<size_t>( _grid.getWidth() * _grid.getHeight() ), static_cast<uint8>( RTSVisibility::Unexplored ) );
         }
         return static_cast<int32>( _listPlayer.size() ) - 1;
     }
@@ -172,34 +172,34 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 유닛 자리
     // ------------------------------------------------------------------------------
-    RtsUnitId RtsWorld::allocateUnit()
+    RTSUnitId RTSWorld::allocateUnit()
     {
         if ( _listFreeSlot.empty() == false )
         {
             const uint32 index = _listFreeSlot.back();
             _listFreeSlot.pop_back();
-            _listUnit[index] = RtsUnit{};
-            return RtsUnitId::make( index, _listGeneration[index] );
+            _listUnit[index] = RTSUnit{};
+            return RTSUnitId::make( index, _listGeneration[index] );
         }
         const uint32 index = static_cast<uint32>( _listUnit.size() );
         _listUnit.emplace_back();
         _listGeneration.push_back( 1u );
-        return RtsUnitId::make( index, 1u );
+        return RTSUnitId::make( index, 1u );
     }
 
-    void RtsWorld::freeDeadUnits()
+    void RTSWorld::freeDeadUnits()
     {
         for ( size_t index = 0; index < _listUnit.size(); ++index )
         {
-            RtsUnit& unit = _listUnit[index];
+            RTSUnit& unit = _listUnit[index];
             if ( unit._bAlive || unit._id.isValid() == false )
                 continue;
-            for ( RtsOrder& order : unit._listOrder )
+            for ( RTSOrder& order : unit._listOrder )
             {
                 releaseOrder( unit, order );
             }
             unit._listOrder.clear();
-            unit._id = RtsUnitId{};
+            unit._id = RTSUnitId{};
             ++_listGeneration[index];
             if ( _listGeneration[index] == 0 )
                 _listGeneration[index] = 1;
@@ -207,29 +207,29 @@ namespace sw
         }
     }
 
-    const RtsUnit* RtsWorld::findUnit( RtsUnitId unitId ) const
+    const RTSUnit* RTSWorld::findUnit( RTSUnitId unitId ) const
     {
         if ( unitId.isValid() == false || unitId.index() >= _listUnit.size() )
             return nullptr;
-        const RtsUnit& unit = _listUnit[unitId.index()];
+        const RTSUnit& unit = _listUnit[unitId.index()];
         return unit._bAlive && unit._id == unitId ? &unit : nullptr;
     }
 
-    RtsUnit* RtsWorld::findUnitMutable( RtsUnitId unitId ) { return const_cast<RtsUnit*>( findUnit( unitId ) ); }
+    RTSUnit* RTSWorld::findUnitMutable( RTSUnitId unitId ) { return const_cast<RTSUnit*>( findUnit( unitId ) ); }
 
-    const RtsPlayer* RtsWorld::findPlayer( int32 player ) const
+    const RTSPlayer* RTSWorld::findPlayer( int32 player ) const
     {
         return player >= 0 && player < static_cast<int32>( _listPlayer.size() ) ? &_listPlayer[static_cast<size_t>( player )] : nullptr;
     }
 
-    float3 RtsWorld::computeFootprintCenter( const int2& cell, int32 footprint ) const
+    float3 RTSWorld::computeFootprintCenter( const int2& cell, int32 footprint ) const
     {
         const float32 half = static_cast<float32>( footprint ) * 0.5f * _grid.getCellSize();
         return float3{ _grid.getOrigin()._x + static_cast<float32>( cell._x ) * _grid.getCellSize() + half, 0.0f,
                        _grid.getOrigin()._z + static_cast<float32>( cell._y ) * _grid.getCellSize() + half };
     }
 
-    void RtsWorld::placeFootprint( const RtsUnit& unit, bool bBlocked )
+    void RTSWorld::placeFootprint( const RTSUnit& unit, bool bBlocked )
     {
         const int32 footprint = unit._pDef->_footprint;
         for ( int32 y = unit._cell._y; y < unit._cell._y + footprint; ++y )
@@ -244,22 +244,22 @@ namespace sw
         }
     }
 
-    RtsUnitId RtsWorld::spawnUnit( const hashed_string& defId, int32 owner, const float3& position )
+    RTSUnitId RTSWorld::spawnUnit( const hashed_string& defId, int32 owner, const float3& position )
     {
-        const RtsUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( defId ) : nullptr;
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( defId ) : nullptr;
         if ( pDef == nullptr || ( owner != kNoOwner && findPlayer( owner ) == nullptr ) )
-            return RtsUnitId{};
+            return RTSUnitId{};
         int2      cell = _grid.computeCell( position );
-        RtsUnitId linkedResource{};
+        RTSUnitId linkedResource{};
         if ( pDef->isMobile() == false )
         {
             if ( pDef->_bExtractor )
             {
                 if ( canPlaceBuilding( defId, cell ) == false )
-                    return RtsUnitId{};
-                for ( const RtsUnit& other : _listUnit )
+                    return RTSUnitId{};
+                for ( const RTSUnit& other : _listUnit )
                 {
-                    if ( other._bAlive && other.isResource() && other._pDef->_resourceType == RtsResourceType::Gas && other._cell == cell )
+                    if ( other._bAlive && other.isResource() && other._pDef->_resourceType == RTSResourceType::Gas && other._cell == cell )
                         linkedResource = other._id;
                 }
             }
@@ -270,24 +270,24 @@ namespace sw
                     for ( int32 x = cell._x; x < cell._x + pDef->_footprint; ++x )
                     {
                         if ( _grid.isWalkable( x, y ) == false )
-                            return RtsUnitId{};
+                            return RTSUnitId{};
                     }
                 }
             }
         }
         else if ( pDef->_bAir == SW_FALSE && _grid.isWalkable( cell ) == false && _grid.findNearestWalkable( cell, 8, cell ) == false )
         {
-            return RtsUnitId{};
+            return RTSUnitId{};
         }
         const int32 footprint = pDef->_footprint;
-        if ( pDef->_kind == RtsUnitKind::Building && _land.claimRect( cell._x, cell._y, cell._x + footprint - 1, cell._y + footprint - 1, true ) == false )
-            return RtsUnitId{};
+        if ( pDef->_kind == RTSUnitKind::Building && _land.claimRect( cell._x, cell._y, cell._x + footprint - 1, cell._y + footprint - 1, true ) == false )
+            return RTSUnitId{};
 
-        const RtsUnitId unitId = allocateUnit();
-        RtsUnit&        unit   = _listUnit[unitId.index()];
+        const RTSUnitId unitId = allocateUnit();
+        RTSUnit&        unit   = _listUnit[unitId.index()];
         unit._id               = unitId;
         unit._pDef             = pDef;
-        unit._owner            = pDef->_kind == RtsUnitKind::Resource ? kNoOwner : owner;
+        unit._owner            = pDef->_kind == RTSUnitKind::Resource ? kNoOwner : owner;
         unit._hp               = pDef->_hp;
         unit._resourceLeft     = pDef->_resourceAmount;
         unit._linkedResource   = linkedResource;
@@ -307,58 +307,58 @@ namespace sw
             unit._position = computeFootprintCenter( cell, pDef->_footprint );
             if ( pDef->_bExtractor == SW_FALSE )
                 placeFootprint( unit, true );
-            if ( pDef->_kind == RtsUnitKind::Building && owner != kNoOwner )
+            if ( pDef->_kind == RTSUnitKind::Building && owner != kNoOwner )
                 _listPlayer[static_cast<size_t>( owner )]._bHadBuilding = SW_TRUE;
         }
-        pushEvent( RtsEvent::Kind::UnitCreated, unit._owner, unitId, pDef->_id );
+        pushEvent( RTSEvent::Kind::UnitCreated, unit._owner, unitId, pDef->_id );
         return unitId;
     }
 
     // ------------------------------------------------------------------------------
     // 명령
     // ------------------------------------------------------------------------------
-    RtsCommandResult RtsWorld::pushOrder( RtsUnit& unit, const RtsOrder& order, bool bQueue )
+    RTSCommandResult RTSWorld::pushOrder( RTSUnit& unit, const RTSOrder& order, bool bQueue )
     {
         if ( bQueue == false )
             clearOrders( unit );
         unit._listOrder.push_back( order );
         if ( unit._listOrder.size() == 1 )
             beginOrder( unit );
-        return RtsCommandResult::Ok;
+        return RTSCommandResult::Ok;
     }
 
-    void RtsWorld::beginOrder( RtsUnit& unit )
+    void RTSWorld::beginOrder( RTSUnit& unit )
     {
         unit._bOrderStarted = SW_FALSE;
-        unit._attackTarget  = RtsUnitId{};
+        unit._attackTarget  = RTSUnitId{};
         unit._repathTimer.clear();
         if ( unit._listOrder.empty() )
         {
             unit._agent.stop();
             return;
         }
-        if ( unit._listOrder.front()._type == RtsOrderType::Gather )
-            unit._gatherPhase = unit._cargoAmount > 0 ? RtsGatherPhase::Returning : RtsGatherPhase::ToResource;
+        if ( unit._listOrder.front()._type == RTSOrderType::Gather )
+            unit._gatherPhase = unit._cargoAmount > 0 ? RTSGatherPhase::Returning : RTSGatherPhase::ToResource;
     }
 
-    void RtsWorld::releaseOrder( RtsUnit& unit, RtsOrder& order )
+    void RTSWorld::releaseOrder( RTSUnit& unit, RTSOrder& order )
     {
         if ( order._pFlowField != nullptr )
         {
             releaseFlowField( order._pFlowField );
             order._pFlowField = nullptr;
         }
-        if ( order._type == RtsOrderType::Gather || order._type == RtsOrderType::Build )
+        if ( order._type == RTSOrderType::Gather || order._type == RTSOrderType::Build )
         {
-            RtsUnit* pTarget = findUnitMutable( order._targetUnit );
+            RTSUnit* pTarget = findUnitMutable( order._targetUnit );
             if ( pTarget != nullptr && pTarget->_harvester == unit._id )
-                pTarget->_harvester = RtsUnitId{};
+                pTarget->_harvester = RTSUnitId{};
             if ( pTarget != nullptr && pTarget->_builder == unit._id )
-                pTarget->_builder = RtsUnitId{};
+                pTarget->_builder = RTSUnitId{};
         }
     }
 
-    void RtsWorld::finishOrder( RtsUnit& unit )
+    void RTSWorld::finishOrder( RTSUnit& unit )
     {
         if ( unit._listOrder.empty() )
             return;
@@ -367,9 +367,9 @@ namespace sw
         beginOrder( unit );
     }
 
-    void RtsWorld::clearOrders( RtsUnit& unit )
+    void RTSWorld::clearOrders( RTSUnit& unit )
     {
-        for ( RtsOrder& order : unit._listOrder )
+        for ( RTSOrder& order : unit._listOrder )
         {
             releaseOrder( unit, order );
         }
@@ -377,146 +377,146 @@ namespace sw
         beginOrder( unit );
     }
 
-    RtsCommandResult RtsWorld::issueMove( RtsUnitId unitId, const float3& target, bool bQueue )
+    RTSCommandResult RTSWorld::issueMove( RTSUnitId unitId, const float3& target, bool bQueue )
     {
-        RtsUnit* pUnit = findUnitMutable( unitId );
+        RTSUnit* pUnit = findUnitMutable( unitId );
         if ( pUnit == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->isMobile() == false )
-            return RtsCommandResult::CannotDo;
-        RtsOrder order;
-        order._type   = RtsOrderType::Move;
+            return RTSCommandResult::CannotDo;
+        RTSOrder order;
+        order._type   = RTSOrderType::Move;
         order._target = target;
         return pushOrder( *pUnit, order, bQueue );
     }
 
-    RtsCommandResult RtsWorld::issueAttackMove( RtsUnitId unitId, const float3& target, bool bQueue )
+    RTSCommandResult RTSWorld::issueAttackMove( RTSUnitId unitId, const float3& target, bool bQueue )
     {
-        RtsUnit* pUnit = findUnitMutable( unitId );
+        RTSUnit* pUnit = findUnitMutable( unitId );
         if ( pUnit == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->isMobile() == false )
-            return RtsCommandResult::CannotDo;
-        RtsOrder order;
-        order._type   = pUnit->_pDef->canAttack() ? RtsOrderType::AttackMove : RtsOrderType::Move;
+            return RTSCommandResult::CannotDo;
+        RTSOrder order;
+        order._type   = pUnit->_pDef->canAttack() ? RTSOrderType::AttackMove : RTSOrderType::Move;
         order._target = target;
         return pushOrder( *pUnit, order, bQueue );
     }
 
-    RtsCommandResult RtsWorld::issueAttack( RtsUnitId unitId, RtsUnitId targetId, bool bQueue )
+    RTSCommandResult RTSWorld::issueAttack( RTSUnitId unitId, RTSUnitId targetId, bool bQueue )
     {
-        RtsUnit*       pUnit   = findUnitMutable( unitId );
-        const RtsUnit* pTarget = findUnit( targetId );
+        RTSUnit*       pUnit   = findUnitMutable( unitId );
+        const RTSUnit* pTarget = findUnit( targetId );
         if ( pUnit == nullptr || pTarget == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->isMobile() == false || canAttack( *pUnit, *pTarget ) == false )
-            return RtsCommandResult::CannotDo;
-        RtsOrder order;
-        order._type       = RtsOrderType::Attack;
+            return RTSCommandResult::CannotDo;
+        RTSOrder order;
+        order._type       = RTSOrderType::Attack;
         order._targetUnit = targetId;
         order._target     = pTarget->_position;
         return pushOrder( *pUnit, order, bQueue );
     }
 
-    RtsCommandResult RtsWorld::issueGather( RtsUnitId unitId, RtsUnitId resourceId, bool bQueue )
+    RTSCommandResult RTSWorld::issueGather( RTSUnitId unitId, RTSUnitId resourceId, bool bQueue )
     {
-        RtsUnit*       pUnit   = findUnitMutable( unitId );
-        const RtsUnit* pTarget = findUnit( resourceId );
+        RTSUnit*       pUnit   = findUnitMutable( unitId );
+        const RTSUnit* pTarget = findUnit( resourceId );
         if ( pUnit == nullptr || pTarget == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->_pDef->_bWorker == SW_FALSE )
-            return RtsCommandResult::CannotDo;
-        const bool bMinerals  = pTarget->isResource() && pTarget->_pDef->_resourceType == RtsResourceType::Minerals;
+            return RTSCommandResult::CannotDo;
+        const bool bMinerals  = pTarget->isResource() && pTarget->_pDef->_resourceType == RTSResourceType::Minerals;
         const bool bExtractor = pTarget->_pDef->_bExtractor && pTarget->_owner == pUnit->_owner && pTarget->isConstructed();
         if ( bMinerals == false && bExtractor == false )
-            return RtsCommandResult::CannotDo;
-        RtsOrder order;
-        order._type       = RtsOrderType::Gather;
+            return RTSCommandResult::CannotDo;
+        RTSOrder order;
+        order._type       = RTSOrderType::Gather;
         order._targetUnit = resourceId;
         order._target     = pTarget->_position;
         return pushOrder( *pUnit, order, bQueue );
     }
 
-    RtsCommandResult RtsWorld::evaluateCost( int32 player, const RtsUnitDef& def ) const
+    RTSCommandResult RTSWorld::evaluateCost( int32 player, const RTSUnitDef& def ) const
     {
-        const RtsPlayer* pPlayer = findPlayer( player );
+        const RTSPlayer* pPlayer = findPlayer( player );
         if ( pPlayer == nullptr )
-            return RtsCommandResult::NotOwner;
+            return RTSCommandResult::NotOwner;
         if ( def._requires.empty() == false && hasConstructed( player, def._requires ) == false )
-            return RtsCommandResult::TechRequired;
+            return RTSCommandResult::TechRequired;
         if ( def._minerals > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._mineralCurrency, def._minerals ) == false ) )
-            return RtsCommandResult::NotEnoughMinerals;
+            return RTSCommandResult::NotEnoughMinerals;
         if ( def._gas > 0 && ( pPlayer->_pWallet == nullptr || pPlayer->_pWallet->canAfford( _settings._gasCurrency, def._gas ) == false ) )
-            return RtsCommandResult::NotEnoughGas;
-        return RtsCommandResult::Ok;
+            return RTSCommandResult::NotEnoughGas;
+        return RTSCommandResult::Ok;
     }
 
-    RtsCommandResult RtsWorld::issueBuild( RtsUnitId workerId, const hashed_string& buildingId, const int2& cell, bool bQueue )
+    RTSCommandResult RTSWorld::issueBuild( RTSUnitId workerId, const hashed_string& buildingId, const int2& cell, bool bQueue )
     {
-        RtsUnit* pWorker = findUnitMutable( workerId );
+        RTSUnit* pWorker = findUnitMutable( workerId );
         if ( pWorker == nullptr )
-            return RtsCommandResult::InvalidUnit;
-        const RtsUnitDef* pDef = _pCatalog->findUnit( buildingId );
-        if ( pDef == nullptr || pDef->_kind != RtsUnitKind::Building || pWorker->_pDef->_bWorker == SW_FALSE || pDef->_producedBy != pWorker->_pDef->_id )
-            return RtsCommandResult::CannotDo;
-        const RtsCommandResult costResult = evaluateCost( pWorker->_owner, *pDef );
-        if ( costResult != RtsCommandResult::Ok )
+            return RTSCommandResult::InvalidUnit;
+        const RTSUnitDef* pDef = _pCatalog->findUnit( buildingId );
+        if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building || pWorker->_pDef->_bWorker == SW_FALSE || pDef->_producedBy != pWorker->_pDef->_id )
+            return RTSCommandResult::CannotDo;
+        const RTSCommandResult costResult = evaluateCost( pWorker->_owner, *pDef );
+        if ( costResult != RTSCommandResult::Ok )
             return costResult;
         if ( canPlaceBuilding( buildingId, cell, workerId ) == false )
-            return RtsCommandResult::InvalidPlacement;
-        RtsOrder order;
-        order._type      = RtsOrderType::Build;
+            return RTSCommandResult::InvalidPlacement;
+        RTSOrder order;
+        order._type      = RTSOrderType::Build;
         order._buildId   = buildingId;
         order._buildCell = cell;
         order._target    = computeFootprintCenter( cell, pDef->_footprint );
         return pushOrder( *pWorker, order, bQueue );
     }
 
-    RtsCommandResult RtsWorld::issueHold( RtsUnitId unitId )
+    RTSCommandResult RTSWorld::issueHold( RTSUnitId unitId )
     {
-        RtsUnit* pUnit = findUnitMutable( unitId );
+        RTSUnit* pUnit = findUnitMutable( unitId );
         if ( pUnit == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->isMobile() == false )
-            return RtsCommandResult::CannotDo;
-        RtsOrder order;
-        order._type   = RtsOrderType::Hold;
+            return RTSCommandResult::CannotDo;
+        RTSOrder order;
+        order._type   = RTSOrderType::Hold;
         order._target = pUnit->_position;
         return pushOrder( *pUnit, order, false );
     }
 
-    RtsCommandResult RtsWorld::issueStop( RtsUnitId unitId )
+    RTSCommandResult RTSWorld::issueStop( RTSUnitId unitId )
     {
-        RtsUnit* pUnit = findUnitMutable( unitId );
+        RTSUnit* pUnit = findUnitMutable( unitId );
         if ( pUnit == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         clearOrders( *pUnit );
-        return RtsCommandResult::Ok;
+        return RTSCommandResult::Ok;
     }
 
-    RtsCommandResult RtsWorld::issueSmart( RtsUnitId unitId, const float3& position, RtsUnitId targetId, bool bQueue )
+    RTSCommandResult RTSWorld::issueSmart( RTSUnitId unitId, const float3& position, RTSUnitId targetId, bool bQueue )
     {
-        RtsUnit* pUnit = findUnitMutable( unitId );
+        RTSUnit* pUnit = findUnitMutable( unitId );
         if ( pUnit == nullptr )
-            return RtsCommandResult::InvalidUnit;
+            return RTSCommandResult::InvalidUnit;
         if ( pUnit->isMobile() == false )
         {
             setRallyPoint( unitId, position );
-            return RtsCommandResult::Ok;
+            return RTSCommandResult::Ok;
         }
-        const RtsUnit* pTarget = findUnit( targetId );
+        const RTSUnit* pTarget = findUnit( targetId );
         if ( pTarget != nullptr && pTarget->_id != unitId )
         {
             if ( areEnemies( pUnit->_owner, pTarget->_owner ) && canAttack( *pUnit, *pTarget ) )
                 return issueAttack( unitId, targetId, bQueue );
             if ( pUnit->_pDef->_bWorker )
             {
-                if ( issueGather( unitId, targetId, bQueue ) == RtsCommandResult::Ok )
-                    return RtsCommandResult::Ok;
+                if ( issueGather( unitId, targetId, bQueue ) == RTSCommandResult::Ok )
+                    return RTSCommandResult::Ok;
                 if ( pTarget->isBuilding() && pTarget->_owner == pUnit->_owner && pTarget->isConstructed() == false )
                 {
-                    RtsOrder order;
-                    order._type       = RtsOrderType::Build;
+                    RTSOrder order;
+                    order._type       = RTSOrderType::Build;
                     order._buildId    = pTarget->_pDef->_id;
                     order._buildCell  = pTarget->_cell;
                     order._targetUnit = targetId;
@@ -528,29 +528,29 @@ namespace sw
         return issueMove( unitId, position, bQueue );
     }
 
-    int32 RtsWorld::issueGroupMove( const vector<RtsUnitId>& listUnit, const float3& target, bool bAttackMove, bool bQueue )
+    int32 RTSWorld::issueGroupMove( const vector<RTSUnitId>& listUnit, const float3& target, bool bAttackMove, bool bQueue )
     {
         int32 groundCount = 0;
-        for ( const RtsUnitId unitId : listUnit )
+        for ( const RTSUnitId unitId : listUnit )
         {
-            const RtsUnit* pUnit = findUnit( unitId );
-            if ( pUnit != nullptr && pUnit->isMobile() && RtsWorldInternal::isGround( *pUnit ) )
+            const RTSUnit* pUnit = findUnit( unitId );
+            if ( pUnit != nullptr && pUnit->isMobile() && RTSWorldInternal::isGround( *pUnit ) )
                 ++groundCount;
         }
         const float32 arriveRadius = 0.5f + 0.5f * MathUtil::sqrt( static_cast<float32>( listUnit.size() ) );
         const bool    bUseField    = groundCount >= _settings._flowFieldGroupSize;
         const int2    goalCell     = _grid.computeCell( target );
         int32         issuedCount  = 0;
-        for ( const RtsUnitId unitId : listUnit )
+        for ( const RTSUnitId unitId : listUnit )
         {
-            RtsUnit* pUnit = findUnitMutable( unitId );
+            RTSUnit* pUnit = findUnitMutable( unitId );
             if ( pUnit == nullptr || pUnit->isMobile() == false )
                 continue;
-            RtsOrder order;
-            order._type         = bAttackMove && pUnit->_pDef->canAttack() ? RtsOrderType::AttackMove : RtsOrderType::Move;
+            RTSOrder order;
+            order._type         = bAttackMove && pUnit->_pDef->canAttack() ? RTSOrderType::AttackMove : RTSOrderType::Move;
             order._target       = target;
             order._arriveRadius = listUnit.size() > 1 ? arriveRadius : 0.0f;
-            if ( bUseField && RtsWorldInternal::isGround( *pUnit ) )
+            if ( bUseField && RTSWorldInternal::isGround( *pUnit ) )
                 order._pFlowField = acquireFlowField( goalCell );
             (void)pushOrder( *pUnit, order, bQueue );
             ++issuedCount;
@@ -558,31 +558,31 @@ namespace sw
         return issuedCount;
     }
 
-    RtsCommandResult RtsWorld::train( RtsUnitId buildingId, const hashed_string& unitId )
+    RTSCommandResult RTSWorld::train( RTSUnitId buildingId, const hashed_string& unitId )
     {
-        RtsUnit* pBuilding = findUnitMutable( buildingId );
+        RTSUnit* pBuilding = findUnitMutable( buildingId );
         if ( pBuilding == nullptr )
-            return RtsCommandResult::InvalidUnit;
-        const RtsUnitDef* pDef = _pCatalog->findUnit( unitId );
+            return RTSCommandResult::InvalidUnit;
+        const RTSUnitDef* pDef = _pCatalog->findUnit( unitId );
         if ( pDef == nullptr || pDef->isMobile() == false || pBuilding->isBuilding() == false || pBuilding->isConstructed() == false ||
              pDef->_producedBy != pBuilding->_pDef->_id )
-            return RtsCommandResult::CannotDo;
+            return RTSCommandResult::CannotDo;
         if ( static_cast<int32>( pBuilding->_listProduction.size() ) >= _settings._productionQueueMax )
-            return RtsCommandResult::QueueFull;
-        const RtsCommandResult costResult = evaluateCost( pBuilding->_owner, *pDef );
-        if ( costResult != RtsCommandResult::Ok )
+            return RTSCommandResult::QueueFull;
+        const RTSCommandResult costResult = evaluateCost( pBuilding->_owner, *pDef );
+        if ( costResult != RTSCommandResult::Ok )
             return costResult;
         payCost( _listPlayer[static_cast<size_t>( pBuilding->_owner )], *pDef );
         pBuilding->_listProduction.push_back( unitId );
-        return RtsCommandResult::Ok;
+        return RTSCommandResult::Ok;
     }
 
-    bool RtsWorld::cancelTrain( RtsUnitId buildingId )
+    bool RTSWorld::cancelTrain( RTSUnitId buildingId )
     {
-        RtsUnit* pBuilding = findUnitMutable( buildingId );
+        RTSUnit* pBuilding = findUnitMutable( buildingId );
         if ( pBuilding == nullptr || pBuilding->_listProduction.empty() )
             return false;
-        const RtsUnitDef* pDef = _pCatalog->findUnit( pBuilding->_listProduction.back() );
+        const RTSUnitDef* pDef = _pCatalog->findUnit( pBuilding->_listProduction.back() );
         if ( pBuilding->_listProduction.size() == 1 )
         {
             pBuilding->_productionTimer = 0.0f;
@@ -595,9 +595,9 @@ namespace sw
         return true;
     }
 
-    void RtsWorld::setRallyPoint( RtsUnitId buildingId, const float3& position )
+    void RTSWorld::setRallyPoint( RTSUnitId buildingId, const float3& position )
     {
-        RtsUnit* pBuilding = findUnitMutable( buildingId );
+        RTSUnit* pBuilding = findUnitMutable( buildingId );
         if ( pBuilding == nullptr || pBuilding->isBuilding() == false )
             return;
         pBuilding->_rallyPoint = position;
@@ -607,7 +607,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 시간
     // ------------------------------------------------------------------------------
-    void RtsWorld::update( float32 deltaTime )
+    void RTSWorld::update( float32 deltaTime )
     {
         if ( _pCatalog == nullptr )
             return;
@@ -624,12 +624,12 @@ namespace sw
         }
     }
 
-    void RtsWorld::drainEvents( vector<RtsEvent>& outListEvent )
+    void RTSWorld::drainEvents( vector<RTSEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
     }
 
-    void RtsWorld::stepFixed( float32 deltaTime )
+    void RTSWorld::stepFixed( float32 deltaTime )
     {
         _time += deltaTime;
         for ( FlowFieldSlot& slot : _listFlowField )
@@ -642,7 +642,7 @@ namespace sw
         const size_t unitCount = _listUnit.size(); // 이번 걸음에 생긴 유닛은 다음 걸음부터
         for ( size_t index = 0; index < unitCount; ++index )
         {
-            RtsUnit& unit = _listUnit[index];
+            RTSUnit& unit = _listUnit[index];
             if ( unit._bAlive )
                 updateUnit( unit, deltaTime );
         }
@@ -656,29 +656,29 @@ namespace sw
         freeDeadUnits();
     }
 
-    void RtsWorld::recomputeSupply()
+    void RTSWorld::recomputeSupply()
     {
-        for ( RtsPlayer& player : _listPlayer )
+        for ( RTSPlayer& player : _listPlayer )
         {
             player._supplyUsed = 0;
             player._supplyCap  = 0;
         }
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner == kNoOwner )
                 continue;
-            RtsPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
+            RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
             if ( unit.isConstructed() )
                 player._supplyCap += unit._pDef->_supplyProvided;
             player._supplyUsed += unit._pDef->_supplyCost + unit._supplyReserved;
         }
-        for ( RtsPlayer& player : _listPlayer )
+        for ( RTSPlayer& player : _listPlayer )
         {
             player._supplyCap = MathUtil::min( player._supplyCap, _pCatalog->getSupplyMax() );
         }
     }
 
-    int32 RtsWorld::computeBucketIndex( const float3& position ) const
+    int32 RTSWorld::computeBucketIndex( const float3& position ) const
     {
         const int2  cell    = _grid.computeCell( position );
         const int32 bucketX = MathUtil::clamp( cell._x / _settings._bucketSize, 0, _bucketTopology._width - 1 );
@@ -686,13 +686,13 @@ namespace sw
         return _bucketTopology.toIndex( bucketX, bucketY );
     }
 
-    void RtsWorld::rebuildBuckets()
+    void RTSWorld::rebuildBuckets()
     {
         std::fill( _listBucketHead.begin(), _listBucketHead.end(), -1 );
         _listBucketNext.assign( _listUnit.size(), -1 );
         for ( size_t index = 0; index < _listUnit.size(); ++index )
         {
-            const RtsUnit& unit = _listUnit[index];
+            const RTSUnit& unit = _listUnit[index];
             if ( unit._bAlive == SW_FALSE )
                 continue;
             const int32 bucket                             = computeBucketIndex( unit._position );
@@ -701,12 +701,12 @@ namespace sw
         }
     }
 
-    void RtsWorld::queryUnits( const float3& center, float32 radius, vector<RtsUnitId>& outListUnit ) const
+    void RTSWorld::queryUnits( const float3& center, float32 radius, vector<RTSUnitId>& outListUnit ) const
     {
         outListUnit.clear();
         if ( _listBucketHead.empty() )
             return;
-        const float32 reach       = radius + RtsWorldInternal::kMaxUnitExtent;
+        const float32 reach       = radius + RTSWorldInternal::kMaxUnitExtent;
         const float32 cellSize    = _grid.getCellSize() * static_cast<float32>( _settings._bucketSize );
         const int32   lastBucketX = _bucketTopology._width - 1;
         const int32   lastBucketY = _bucketTopology._height - 1;
@@ -721,10 +721,10 @@ namespace sw
                 for ( int32 index = _listBucketHead[static_cast<size_t>( _bucketTopology.toIndex( bucketX, bucketY ) )]; index >= 0;
                       index       = _listBucketNext[static_cast<size_t>( index )] )
                 {
-                    const RtsUnit& unit = _listUnit[static_cast<size_t>( index )];
+                    const RTSUnit& unit = _listUnit[static_cast<size_t>( index )];
                     if ( unit._bAlive == SW_FALSE )
                         continue;
-                    const float32 distance = unit.isMobile() ? RtsWorldInternal::computeFlatDistance( center, unit._position ) - unit._pDef->_radius
+                    const float32 distance = unit.isMobile() ? RTSWorldInternal::computeFlatDistance( center, unit._position ) - unit._pDef->_radius
                                                              : computeRectDistance( center, unit._cell, unit._pDef->_footprint );
                     if ( distance <= radius )
                         outListUnit.push_back( unit._id );
@@ -733,15 +733,15 @@ namespace sw
         }
     }
 
-    RtsUnitId RtsWorld::pickUnit( const float3& position ) const
+    RTSUnitId RTSWorld::pickUnit( const float3& position ) const
     {
-        RtsUnitId bestId{};
+        RTSUnitId bestId{};
         float32   bestDistance = MathUtil::kMaxFloat;
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE )
                 continue;
-            float32 distance = unit.isMobile() ? RtsWorldInternal::computeFlatDistance( position, unit._position ) - unit._pDef->_radius
+            float32 distance = unit.isMobile() ? RTSWorldInternal::computeFlatDistance( position, unit._position ) - unit._pDef->_radius
                                                : computeRectDistance( position, unit._cell, unit._pDef->_footprint );
             if ( distance > 0.0f )
                 continue;
@@ -759,7 +759,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 유닛 한 걸음
     // ------------------------------------------------------------------------------
-    void RtsWorld::updateUnit( RtsUnit& unit, float32 deltaTime )
+    void RTSWorld::updateUnit( RTSUnit& unit, float32 deltaTime )
     {
         unit._cooldown.tick( deltaTime );
         unit._repathTimer.tick( deltaTime );
@@ -785,11 +785,11 @@ namespace sw
         updateMovement( unit, deltaTime );
     }
 
-    void RtsWorld::approach( RtsUnit& unit, const float3& target, bool bForce )
+    void RTSWorld::approach( RTSUnit& unit, const float3& target, bool bForce )
     {
-        if ( RtsWorldInternal::isGround( unit ) == false )
+        if ( RTSWorldInternal::isGround( unit ) == false )
         {
-            if ( bForce || unit._agent.isMoving() == false || RtsWorldInternal::computeFlatDistance( unit._moveGoal, target ) > 0.25f )
+            if ( bForce || unit._agent.isMoving() == false || RTSWorldInternal::computeFlatDistance( unit._moveGoal, target ) > 0.25f )
             {
                 unit._moveGoal = target;
                 unit._agent.followPath( vector<float3>{
@@ -798,7 +798,7 @@ namespace sw
             }
             return;
         }
-        const bool bGoalMoved = RtsWorldInternal::computeFlatDistance( unit._moveGoal, target ) > 1.0f;
+        const bool bGoalMoved = RTSWorldInternal::computeFlatDistance( unit._moveGoal, target ) > 1.0f;
         if ( bForce == false && unit._repathTimer.isActive() )
             return;
         if ( bForce == false && unit._agent.isMoving() && bGoalMoved == false )
@@ -809,7 +809,7 @@ namespace sw
             nudgeToWalkable( unit );
     }
 
-    void RtsWorld::nudgeToWalkable( RtsUnit& unit )
+    void RTSWorld::nudgeToWalkable( RTSUnit& unit )
     {
         const int2 cell = _grid.computeCell( unit._position );
         int2       freeCell{};
@@ -819,22 +819,22 @@ namespace sw
         unit._agent.setPosition( unit._position );
     }
 
-    void RtsWorld::updateMovement( RtsUnit& unit, float32 deltaTime )
+    void RTSWorld::updateMovement( RTSUnit& unit, float32 deltaTime )
     {
-        const bool bGround = RtsWorldInternal::isGround( unit );
+        const bool bGround = RTSWorldInternal::isGround( unit );
         _listNeighborScratch.clear();
         // 채취하는 일꾼은 서로 밀지 않는다(광물 앞에 모여도 된다 — 스타크래프트도 같다).
-        const RtsOrder* pOrder = unit.findOrder();
-        if ( pOrder == nullptr || pOrder->_type != RtsOrderType::Gather )
+        const RTSOrder* pOrder = unit.findOrder();
+        if ( pOrder == nullptr || pOrder->_type != RTSOrderType::Gather )
         {
             queryUnits( unit._position, unit._pDef->_radius * 2.0f, _listQueryScratch );
-            for ( const RtsUnitId otherId : _listQueryScratch )
+            for ( const RTSUnitId otherId : _listQueryScratch )
             {
-                const RtsUnit* pOther = findUnit( otherId );
-                if ( pOther == nullptr || pOther == &unit || pOther->isMobile() == false || RtsWorldInternal::isGround( *pOther ) != bGround )
+                const RTSUnit* pOther = findUnit( otherId );
+                if ( pOther == nullptr || pOther == &unit || pOther->isMobile() == false || RTSWorldInternal::isGround( *pOther ) != bGround )
                     continue;
-                const RtsOrder* pOtherOrder = pOther->findOrder();
-                if ( pOtherOrder != nullptr && pOtherOrder->_type == RtsOrderType::Gather )
+                const RTSOrder* pOtherOrder = pOther->findOrder();
+                if ( pOtherOrder != nullptr && pOtherOrder->_type == RTSOrderType::Gather )
                     continue;
                 _listNeighborScratch.push_back( pOther->_position );
             }
@@ -843,7 +843,7 @@ namespace sw
         unit._position = unit._agent.getPosition();
     }
 
-    void RtsWorld::updateOrder( RtsUnit& unit, float32 deltaTime )
+    void RTSWorld::updateOrder( RTSUnit& unit, float32 deltaTime )
     {
         const bool bAutoAcquire = unit._pDef->canAttack() && unit._pDef->_bWorker == SW_FALSE;
         if ( unit._listOrder.empty() )
@@ -852,13 +852,13 @@ namespace sw
                 unit._attackTarget = findAutoTarget( unit, unit._pDef->_sight );
             return;
         }
-        RtsOrder& order = unit._listOrder.front();
+        RTSOrder& order = unit._listOrder.front();
         switch ( order._type )
         {
-            case RtsOrderType::Move:
-            case RtsOrderType::AttackMove:
+            case RTSOrderType::Move:
+            case RTSOrderType::AttackMove:
             {
-                if ( order._type == RtsOrderType::AttackMove )
+                if ( order._type == RTSOrderType::AttackMove )
                 {
                     if ( findUnit( unit._attackTarget ) == nullptr )
                         unit._attackTarget = findAutoTarget( unit, unit._pDef->_sight );
@@ -882,13 +882,13 @@ namespace sw
                     }
                     return;
                 }
-                const float32 distance = RtsWorldInternal::computeFlatDistance( unit._position, order._target );
+                const float32 distance = RTSWorldInternal::computeFlatDistance( unit._position, order._target );
                 const bool    bClose   = order._arriveRadius > 0.0f && distance <= order._arriveRadius;
                 if ( bClose || unit._agent.isMoving() == false )
                     finishOrder( unit );
                 return;
             }
-            case RtsOrderType::Attack:
+            case RTSOrderType::Attack:
             {
                 if ( findUnit( order._targetUnit ) == nullptr )
                 {
@@ -898,21 +898,21 @@ namespace sw
                 unit._attackTarget = order._targetUnit;
                 return;
             }
-            case RtsOrderType::Hold:
+            case RTSOrderType::Hold:
             {
                 if ( unit._agent.isMoving() )
                     unit._agent.stop();
-                const RtsUnit* pTarget = findUnit( unit._attackTarget );
+                const RTSUnit* pTarget = findUnit( unit._attackTarget );
                 if ( unit._pDef->canAttack() && ( pTarget == nullptr || computeEdgeDistance( unit, *pTarget ) > unit._pDef->_range ) )
                     unit._attackTarget = findAutoTarget( unit, unit._pDef->_range );
                 return;
             }
-            case RtsOrderType::Gather:
+            case RTSOrderType::Gather:
             {
                 updateGather( unit, order, deltaTime );
                 return;
             }
-            case RtsOrderType::Build:
+            case RTSOrderType::Build:
             {
                 updateBuild( unit, order, deltaTime );
                 return;
@@ -923,11 +923,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 채취
     // ------------------------------------------------------------------------------
-    void RtsWorld::updateGather( RtsUnit& unit, RtsOrder& order, float32 deltaTime )
+    void RTSWorld::updateGather( RTSUnit& unit, RTSOrder& order, float32 deltaTime )
     {
-        if ( unit._gatherPhase == RtsGatherPhase::Returning )
+        if ( unit._gatherPhase == RTSGatherPhase::Returning )
         {
-            const RtsUnit* pDepot = findUnit( findNearestDepot( unit._owner, unit._position ) );
+            const RTSUnit* pDepot = findUnit( findNearestDepot( unit._owner, unit._position ) );
             if ( pDepot == nullptr )
             {
                 unit._agent.stop();
@@ -939,22 +939,22 @@ namespace sw
                 return;
             }
             unit._agent.stop();
-            RtsPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
+            RTSPlayer& player = _listPlayer[static_cast<size_t>( unit._owner )];
             if ( player._pWallet != nullptr )
-                player._pWallet->add( unit._cargoType == RtsResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
-            pushEvent( RtsEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
+                player._pWallet->add( unit._cargoType == RTSResourceType::Gas ? _settings._gasCurrency : _settings._mineralCurrency, unit._cargoAmount );
+            pushEvent( RTSEvent::Kind::ResourcesDeposited, unit._owner, unit._id, unit._pDef->_id, unit._cargoAmount );
             unit._cargoAmount = 0;
-            unit._cargoType   = RtsResourceType::None;
-            unit._gatherPhase = RtsGatherPhase::ToResource;
+            unit._cargoType   = RTSResourceType::None;
+            unit._gatherPhase = RTSGatherPhase::ToResource;
             unit._repathTimer.clear();
             return;
         }
 
-        RtsUnit* pTarget = findUnitMutable( order._targetUnit );
+        RTSUnit* pTarget = findUnitMutable( order._targetUnit );
         if ( pTarget == nullptr )
         {
             // 다 캔 광물 — 둘레의 다른 광물로(정제소가 부서졌으면 끝).
-            const RtsUnitId nextId = findNearestResource( order._target, RtsResourceType::Minerals, _settings._resourceSearchRadius );
+            const RTSUnitId nextId = findNearestResource( order._target, RTSResourceType::Minerals, _settings._resourceSearchRadius );
             if ( nextId.isValid() == false )
             {
                 finishOrder( unit );
@@ -962,18 +962,18 @@ namespace sw
             }
             order._targetUnit = nextId;
             order._target     = findUnit( nextId )->_position;
-            unit._gatherPhase = RtsGatherPhase::ToResource;
+            unit._gatherPhase = RTSGatherPhase::ToResource;
             return;
         }
         const bool bExtractor = pTarget->_pDef->_bExtractor != SW_FALSE;
-        RtsUnit*   pSource    = bExtractor ? findUnitMutable( pTarget->_linkedResource ) : pTarget;
+        RTSUnit*   pSource    = bExtractor ? findUnitMutable( pTarget->_linkedResource ) : pTarget;
         if ( pSource == nullptr || pSource->_resourceLeft <= 0 )
         {
             finishOrder( unit );
             return;
         }
 
-        if ( unit._gatherPhase == RtsGatherPhase::Harvesting )
+        if ( unit._gatherPhase == RTSGatherPhase::Harvesting )
         {
             unit._gatherTimer += deltaTime;
             if ( unit._gatherTimer < unit._pDef->_gatherTime )
@@ -982,37 +982,37 @@ namespace sw
             pSource->_resourceLeft -= amount;
             unit._cargoAmount = amount;
             unit._cargoType   = pSource->_pDef->_resourceType;
-            unit._gatherPhase = RtsGatherPhase::Returning;
+            unit._gatherPhase = RTSGatherPhase::Returning;
             unit._repathTimer.clear();
-            pTarget->_harvester = RtsUnitId{};
+            pTarget->_harvester = RTSUnitId{};
             if ( pSource->_resourceLeft <= 0 )
             {
-                pushEvent( RtsEvent::Kind::ResourceDepleted, unit._owner, pSource->_id, pSource->_pDef->_id );
+                pushEvent( RTSEvent::Kind::ResourceDepleted, unit._owner, pSource->_id, pSource->_pDef->_id );
                 if ( bExtractor == false )
-                    killUnit( *pSource, RtsUnitId{} );
+                    killUnit( *pSource, RTSUnitId{} );
             }
             return;
         }
 
         if ( isWithinReach( unit, *pTarget, _settings._interactSlack ) == false )
         {
-            unit._gatherPhase = RtsGatherPhase::ToResource;
+            unit._gatherPhase = RTSGatherPhase::ToResource;
             approach( unit, pTarget->_position, false );
             return;
         }
         unit._agent.stop();
-        const RtsUnit* pHarvester = findUnit( pTarget->_harvester );
+        const RTSUnit* pHarvester = findUnit( pTarget->_harvester );
         if ( pHarvester != nullptr && pHarvester != &unit )
         {
             // 남이 캔다 — 광물이면 바로 옆의 빈 광물로 옮긴다.
-            if ( bExtractor == false && unit._gatherPhase == RtsGatherPhase::ToResource )
+            if ( bExtractor == false && unit._gatherPhase == RTSGatherPhase::ToResource )
             {
                 queryUnits( unit._position, 2.0f, _listQueryScratch );
-                for ( const RtsUnitId otherId : _listQueryScratch )
+                for ( const RTSUnitId otherId : _listQueryScratch )
                 {
-                    const RtsUnit* pOther = findUnit( otherId );
+                    const RTSUnit* pOther = findUnit( otherId );
                     if ( pOther != nullptr && pOther != pTarget && pOther->isResource() &&
-                         pOther->_pDef->_resourceType == RtsResourceType::Minerals && findUnit( pOther->_harvester ) == nullptr )
+                         pOther->_pDef->_resourceType == RTSResourceType::Minerals && findUnit( pOther->_harvester ) == nullptr )
                     {
                         order._targetUnit = otherId;
                         order._target     = pOther->_position;
@@ -1020,27 +1020,27 @@ namespace sw
                     }
                 }
             }
-            unit._gatherPhase = RtsGatherPhase::Waiting;
+            unit._gatherPhase = RTSGatherPhase::Waiting;
             return;
         }
         pTarget->_harvester = unit._id;
-        unit._gatherPhase   = RtsGatherPhase::Harvesting;
+        unit._gatherPhase   = RTSGatherPhase::Harvesting;
         unit._gatherTimer   = 0.0f;
     }
 
     // ------------------------------------------------------------------------------
     // 건설
     // ------------------------------------------------------------------------------
-    void RtsWorld::startConstruction( RtsUnit& worker, RtsOrder& order )
+    void RTSWorld::startConstruction( RTSUnit& worker, RTSOrder& order )
     {
-        const RtsUnitDef* pDef = _pCatalog->findUnit( order._buildId );
-        if ( pDef == nullptr || evaluateCost( worker._owner, *pDef ) != RtsCommandResult::Ok || canPlaceBuilding( order._buildId, order._buildCell, worker._id ) == false )
+        const RTSUnitDef* pDef = _pCatalog->findUnit( order._buildId );
+        if ( pDef == nullptr || evaluateCost( worker._owner, *pDef ) != RTSCommandResult::Ok || canPlaceBuilding( order._buildId, order._buildCell, worker._id ) == false )
         {
             finishOrder( worker );
             return;
         }
-        const RtsUnitId buildingId = spawnUnit( order._buildId, worker._owner, _grid.computeCellCenter( order._buildCell ) );
-        RtsUnit*        pBuilding  = findUnitMutable( buildingId );
+        const RTSUnitId buildingId = spawnUnit( order._buildId, worker._owner, _grid.computeCellCenter( order._buildCell ) );
+        RTSUnit*        pBuilding  = findUnitMutable( buildingId );
         if ( pBuilding == nullptr )
         {
             finishOrder( worker );
@@ -1054,11 +1054,11 @@ namespace sw
         nudgeToWalkable( worker );
     }
 
-    void RtsWorld::updateBuild( RtsUnit& unit, RtsOrder& order, float32 deltaTime )
+    void RTSWorld::updateBuild( RTSUnit& unit, RTSOrder& order, float32 deltaTime )
     {
         if ( order._targetUnit.isValid() == false )
         {
-            const RtsUnitDef* pDef = _pCatalog->findUnit( order._buildId );
+            const RTSUnitDef* pDef = _pCatalog->findUnit( order._buildId );
             if ( pDef == nullptr )
             {
                 finishOrder( unit );
@@ -1074,7 +1074,7 @@ namespace sw
             startConstruction( unit, order );
             return;
         }
-        RtsUnit* pBuilding = findUnitMutable( order._targetUnit );
+        RTSUnit* pBuilding = findUnitMutable( order._targetUnit );
         if ( pBuilding == nullptr || pBuilding->isConstructed() )
         {
             finishOrder( unit );
@@ -1092,14 +1092,14 @@ namespace sw
             return;
         }
         unit._agent.stop();
-        const RtsUnitDef& def     = *pBuilding->_pDef;
+        const RTSUnitDef& def     = *pBuilding->_pDef;
         const float32     step    = deltaTime / def._buildTime;
         pBuilding->_buildProgress = MathUtil::min( 1.0f, pBuilding->_buildProgress + step );
         pBuilding->_hp            = MathUtil::min( def._hp, pBuilding->_hp + def._hp * ( 1.0f - _settings._constructionStartRatio ) * step );
         if ( pBuilding->isConstructed() )
         {
-            pBuilding->_builder = RtsUnitId{};
-            pushEvent( RtsEvent::Kind::ConstructionComplete, pBuilding->_owner, pBuilding->_id, def._id );
+            pBuilding->_builder = RTSUnitId{};
+            pushEvent( RTSEvent::Kind::ConstructionComplete, pBuilding->_owner, pBuilding->_id, def._id );
             finishOrder( unit );
         }
     }
@@ -1107,23 +1107,23 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 생산
     // ------------------------------------------------------------------------------
-    void RtsWorld::updateProduction( RtsUnit& building, float32 deltaTime )
+    void RTSWorld::updateProduction( RTSUnit& building, float32 deltaTime )
     {
         if ( building._listProduction.empty() )
             return;
-        const RtsUnitDef* pDef = _pCatalog->findUnit( building._listProduction.front() );
+        const RTSUnitDef* pDef = _pCatalog->findUnit( building._listProduction.front() );
         if ( pDef == nullptr )
         {
             building._listProduction.pop_front();
             return;
         }
-        RtsPlayer& player = _listPlayer[static_cast<size_t>( building._owner )];
+        RTSPlayer& player = _listPlayer[static_cast<size_t>( building._owner )];
         if ( building._productionTimer <= 0.0f && building._supplyReserved == 0 && pDef->_supplyCost > 0 )
         {
             if ( player._supplyUsed + pDef->_supplyCost > player._supplyCap )
             {
                 if ( building._bSupplyBlocked == SW_FALSE )
-                    pushEvent( RtsEvent::Kind::SupplyBlocked, building._owner, building._id, pDef->_id );
+                    pushEvent( RTSEvent::Kind::SupplyBlocked, building._owner, building._id, pDef->_id );
                 building._bSupplyBlocked = SW_TRUE;
                 return;
             }
@@ -1136,7 +1136,7 @@ namespace sw
             completeProduction( building );
     }
 
-    bool RtsWorld::findSpawnPosition( const RtsUnit& building, float3& outPosition ) const
+    bool RTSWorld::findSpawnPosition( const RTSUnit& building, float3& outPosition ) const
     {
         const float3 toward    = building._bHasRally ? building._rallyPoint : float3{ building._position._x, 0.0f, building._position._z - 10.0f };
         const int32  footprint = building._pDef->_footprint;
@@ -1153,7 +1153,7 @@ namespace sw
                     if ( bEdge == false || _grid.isWalkable( x, y ) == false )
                         continue;
                     const float3  center   = _grid.computeCellCenter( int2{ x, y } );
-                    const float32 distance = RtsWorldInternal::computeFlatDistance( center, toward );
+                    const float32 distance = RTSWorldInternal::computeFlatDistance( center, toward );
                     if ( distance < bestDistance )
                     {
                         bestDistance = distance;
@@ -1168,7 +1168,7 @@ namespace sw
         return false;
     }
 
-    void RtsWorld::completeProduction( RtsUnit& building )
+    void RTSWorld::completeProduction( RTSUnit& building )
     {
         const hashed_string defId = building._listProduction.front();
         building._listProduction.pop_front();
@@ -1177,35 +1177,35 @@ namespace sw
         float3 position{};
         if ( findSpawnPosition( building, position ) == false )
             position = building._position;
-        const RtsUnitDef* pDef = _pCatalog->findUnit( defId );
+        const RTSUnitDef* pDef = _pCatalog->findUnit( defId );
         if ( pDef != nullptr && pDef->_bAir )
             position = float3{ building._position._x, 0.0f, building._position._z };
-        const RtsUnitId unitId = spawnUnit( defId, building._owner, position );
-        pushEvent( RtsEvent::Kind::ProductionComplete, building._owner, unitId, defId );
+        const RTSUnitId unitId = spawnUnit( defId, building._owner, position );
+        pushEvent( RTSEvent::Kind::ProductionComplete, building._owner, unitId, defId );
         if ( building._bHasRally == SW_FALSE || unitId.isValid() == false )
             return;
-        const RtsUnitId rallyTarget = pickUnit( building._rallyPoint );
+        const RTSUnitId rallyTarget = pickUnit( building._rallyPoint );
         (void)issueSmart( unitId, building._rallyPoint, rallyTarget, false );
     }
 
     // ------------------------------------------------------------------------------
     // 전투
     // ------------------------------------------------------------------------------
-    bool RtsWorld::areEnemies( int32 playerA, int32 playerB ) const
+    bool RTSWorld::areEnemies( int32 playerA, int32 playerB ) const
     {
-        const RtsPlayer* pA = findPlayer( playerA );
-        const RtsPlayer* pB = findPlayer( playerB );
+        const RTSPlayer* pA = findPlayer( playerA );
+        const RTSPlayer* pB = findPlayer( playerB );
         return pA != nullptr && pB != nullptr && TeamAttitudeUtil::isHostile( pA->_team, pB->_team );
     }
 
-    bool RtsWorld::canAttack( const RtsUnit& attacker, const RtsUnit& target ) const
+    bool RTSWorld::canAttack( const RTSUnit& attacker, const RTSUnit& target ) const
     {
         if ( attacker._pDef->canAttack() == false || target._bAlive == SW_FALSE || target.isResource() || areEnemies( attacker._owner, target._owner ) == false )
             return false;
         return target._pDef->_bAir ? attacker._pDef->_bTargetsAir != SW_FALSE : attacker._pDef->_bTargetsGround != SW_FALSE;
     }
 
-    float32 RtsWorld::computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const
+    float32 RTSWorld::computeRectDistance( const float3& position, const int2& cell, int32 footprint ) const
     {
         const float32 cellSize = _grid.getCellSize();
         const float32 minX     = _grid.getOrigin()._x + static_cast<float32>( cell._x ) * cellSize;
@@ -1216,26 +1216,26 @@ namespace sw
         return MathUtil::sqrt( dx * dx + dz * dz );
     }
 
-    float32 RtsWorld::computeEdgeDistance( const RtsUnit& unit, const RtsUnit& target ) const
+    float32 RTSWorld::computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const
     {
         if ( target.isMobile() == false )
             return computeRectDistance( unit._position, target._cell, target._pDef->_footprint ) - ( unit.isMobile() ? unit._pDef->_radius : 0.0f );
         if ( unit.isMobile() == false )
             return computeRectDistance( target._position, unit._cell, unit._pDef->_footprint ) - target._pDef->_radius;
-        return RtsWorldInternal::computeFlatDistance( unit._position, target._position ) - unit._pDef->_radius - target._pDef->_radius;
+        return RTSWorldInternal::computeFlatDistance( unit._position, target._position ) - unit._pDef->_radius - target._pDef->_radius;
     }
 
-    bool RtsWorld::isWithinReach( const RtsUnit& unit, const RtsUnit& target, float32 reach ) const { return computeEdgeDistance( unit, target ) <= reach; }
+    bool RTSWorld::isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const { return computeEdgeDistance( unit, target ) <= reach; }
 
-    RtsUnitId RtsWorld::findAutoTarget( const RtsUnit& unit, float32 radius ) const
+    RTSUnitId RTSWorld::findAutoTarget( const RTSUnit& unit, float32 radius ) const
     {
-        vector<RtsUnitId> listCandidate;
+        vector<RTSUnitId> listCandidate;
         queryUnits( unit._position, radius + ( unit.isMobile() ? unit._pDef->_radius : 0.0f ), listCandidate );
-        RtsUnitId bestId{};
+        RTSUnitId bestId{};
         float32   bestScore = MathUtil::kMaxFloat;
-        for ( const RtsUnitId candidateId : listCandidate )
+        for ( const RTSUnitId candidateId : listCandidate )
         {
-            const RtsUnit* pCandidate = findUnit( candidateId );
+            const RTSUnit* pCandidate = findUnit( candidateId );
             if ( pCandidate == nullptr || canAttack( unit, *pCandidate ) == false )
                 continue;
             const float32 distance = computeEdgeDistance( unit, *pCandidate );
@@ -1252,22 +1252,22 @@ namespace sw
         return bestId;
     }
 
-    void RtsWorld::updateCombat( RtsUnit& unit, float32 deltaTime )
+    void RTSWorld::updateCombat( RTSUnit& unit, float32 deltaTime )
     {
         (void)deltaTime;
         if ( unit._attackTarget.isValid() == false )
             return;
-        RtsUnit* pTarget = findUnitMutable( unit._attackTarget );
+        RTSUnit* pTarget = findUnitMutable( unit._attackTarget );
         if ( pTarget == nullptr || canAttack( unit, *pTarget ) == false )
         {
-            unit._attackTarget = RtsUnitId{};
+            unit._attackTarget = RTSUnitId{};
             if ( unit.isMobile() && unit._listOrder.empty() )
                 unit._agent.stop();
             return;
         }
         const float32   distance = computeEdgeDistance( unit, *pTarget );
-        const RtsOrder* pOrder   = unit.findOrder();
-        const bool      bHold    = pOrder != nullptr && pOrder->_type == RtsOrderType::Hold;
+        const RTSOrder* pOrder   = unit.findOrder();
+        const bool      bHold    = pOrder != nullptr && pOrder->_type == RTSOrderType::Hold;
         if ( distance <= unit._pDef->_range )
         {
             if ( unit.isMobile() && unit._agent.isMoving() )
@@ -1280,26 +1280,26 @@ namespace sw
             }
             return;
         }
-        const bool bOrdered = pOrder != nullptr && pOrder->_type == RtsOrderType::Attack;
+        const bool bOrdered = pOrder != nullptr && pOrder->_type == RTSOrderType::Attack;
         if ( unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f ) )
         {
-            unit._attackTarget = RtsUnitId{}; // 놓쳤다(자동 목표만 — 명령한 목표는 끝까지 쫓는다)
+            unit._attackTarget = RTSUnitId{}; // 놓쳤다(자동 목표만 — 명령한 목표는 끝까지 쫓는다)
             return;
         }
         approach( unit, pTarget->_position, false );
     }
 
-    void RtsWorld::dealDamage( RtsUnit& attacker, RtsUnit& target )
+    void RTSWorld::dealDamage( RTSUnit& attacker, RTSUnit& target )
     {
         const float32 damage = MathUtil::max( _settings._minimumDamage, attacker._pDef->_damage - target._pDef->_armor );
         target._hp -= damage;
         if ( target._owner != kNoOwner )
         {
-            RtsPlayer& owner = _listPlayer[static_cast<size_t>( target._owner )];
+            RTSPlayer& owner = _listPlayer[static_cast<size_t>( target._owner )];
             if ( _time >= owner._nextUnderAttackTime )
             {
                 owner._nextUnderAttackTime = _time + _settings._underAttackCooldown;
-                pushEvent( RtsEvent::Kind::UnderAttack, target._owner, target._id, target._pDef->_id, 0, attacker._id );
+                pushEvent( RTSEvent::Kind::UnderAttack, target._owner, target._id, target._pDef->_id, 0, attacker._id );
             }
         }
         // 할 일 없이 맞으면 되받아친다.
@@ -1309,12 +1309,12 @@ namespace sw
             killUnit( target, attacker._id );
     }
 
-    void RtsWorld::killUnit( RtsUnit& unit, RtsUnitId killerId )
+    void RTSWorld::killUnit( RTSUnit& unit, RTSUnitId killerId )
     {
         if ( unit._bAlive == SW_FALSE )
             return;
         unit._hp = 0.0f;
-        for ( RtsOrder& order : unit._listOrder )
+        for ( RTSOrder& order : unit._listOrder )
         {
             releaseOrder( unit, order );
         }
@@ -1322,27 +1322,27 @@ namespace sw
         unit._agent.stop();
         if ( unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
             placeFootprint( unit, false ); // 정제소는 아니다 — 그 칸은 간헐천이 계속 막는다
-        if ( unit._pDef->_kind == RtsUnitKind::Building )
+        if ( unit._pDef->_kind == RTSUnitKind::Building )
             _land.releaseRect( unit._cell._x, unit._cell._y, unit._cell._x + unit._pDef->_footprint - 1, unit._cell._y + unit._pDef->_footprint - 1 );
         // 생산 대기열 값은 돌려주지 않는다(부서진 건물 — 스타크래프트와 같다).
         unit._bAlive = SW_FALSE;
-        pushEvent( RtsEvent::Kind::UnitDied, unit._owner, unit._id, unit._pDef->_id, 0, killerId );
+        pushEvent( RTSEvent::Kind::UnitDied, unit._owner, unit._id, unit._pDef->_id, 0, killerId );
     }
 
     // ------------------------------------------------------------------------------
     // 시야 · 승패
     // ------------------------------------------------------------------------------
-    void RtsWorld::updateVision()
+    void RTSWorld::updateVision()
     {
         for ( vector<uint8>& listVisibility : _listTeamVisibility )
         {
             for ( uint8& visibility : listVisibility )
             {
-                if ( visibility == static_cast<uint8>( RtsVisibility::Visible ) )
-                    visibility = static_cast<uint8>( RtsVisibility::Explored );
+                if ( visibility == static_cast<uint8>( RTSVisibility::Visible ) )
+                    visibility = static_cast<uint8>( RTSVisibility::Explored );
             }
         }
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner == kNoOwner )
                 continue;
@@ -1358,64 +1358,64 @@ namespace sw
                     const float32 dx = static_cast<float32>( x - center._x );
                     const float32 dy = static_cast<float32>( y - center._y );
                     if ( dx * dx + dy * dy <= sightSquared )
-                        listVisibility[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = static_cast<uint8>( RtsVisibility::Visible );
+                        listVisibility[static_cast<size_t>( _grid.computeIndex( int2{ x, y } ) )] = static_cast<uint8>( RTSVisibility::Visible );
                 }
             }
         }
     }
 
-    RtsVisibility RtsWorld::getVisibility( int32 player, const int2& cell ) const
+    RTSVisibility RTSWorld::getVisibility( int32 player, const int2& cell ) const
     {
-        const RtsPlayer* pPlayer = findPlayer( player );
+        const RTSPlayer* pPlayer = findPlayer( player );
         if ( pPlayer == nullptr || _grid.isInside( cell ) == false )
-            return RtsVisibility::Unexplored;
-        return static_cast<RtsVisibility>( _listTeamVisibility[static_cast<size_t>( pPlayer->_team )][static_cast<size_t>( _grid.computeIndex( cell ) )] );
+            return RTSVisibility::Unexplored;
+        return static_cast<RTSVisibility>( _listTeamVisibility[static_cast<size_t>( pPlayer->_team )][static_cast<size_t>( _grid.computeIndex( cell ) )] );
     }
 
-    bool RtsWorld::isVisibleTo( int32 player, RtsUnitId unitId ) const
+    bool RTSWorld::isVisibleTo( int32 player, RTSUnitId unitId ) const
     {
-        const RtsUnit*   pUnit   = findUnit( unitId );
-        const RtsPlayer* pPlayer = findPlayer( player );
+        const RTSUnit*   pUnit   = findUnit( unitId );
+        const RTSPlayer* pPlayer = findPlayer( player );
         if ( pUnit == nullptr || pPlayer == nullptr )
             return false;
         if ( pUnit->_owner != kNoOwner && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( pUnit->_owner )]._team, pPlayer->_team ) )
             return true;
         if ( pUnit->isMobile() )
-            return getVisibility( player, _grid.computeCell( pUnit->_position ) ) == RtsVisibility::Visible;
+            return getVisibility( player, _grid.computeCell( pUnit->_position ) ) == RTSVisibility::Visible;
         for ( int32 y = pUnit->_cell._y; y < pUnit->_cell._y + pUnit->_pDef->_footprint; ++y )
         {
             for ( int32 x = pUnit->_cell._x; x < pUnit->_cell._x + pUnit->_pDef->_footprint; ++x )
             {
-                if ( getVisibility( player, int2{ x, y } ) == RtsVisibility::Visible )
+                if ( getVisibility( player, int2{ x, y } ) == RTSVisibility::Visible )
                     return true;
             }
         }
         return false;
     }
 
-    void RtsWorld::updateDefeat()
+    void RTSWorld::updateDefeat()
     {
         if ( _winningTeam >= 0 )
             return;
         vector<int32> listBuildingCount( _listPlayer.size(), 0 );
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive && unit._owner != kNoOwner && unit.isBuilding() )
                 ++listBuildingCount[static_cast<size_t>( unit._owner )];
         }
         for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
-            RtsPlayer& player = _listPlayer[index];
+            RTSPlayer& player = _listPlayer[index];
             if ( player._bDefeated || player._bHadBuilding == SW_FALSE || listBuildingCount[index] > 0 )
                 continue;
             player._bDefeated = SW_TRUE;
-            pushEvent( RtsEvent::Kind::PlayerDefeated, static_cast<int32>( index ), RtsUnitId{}, hashed_string{} );
+            pushEvent( RTSEvent::Kind::PlayerDefeated, static_cast<int32>( index ), RTSUnitId{}, hashed_string{} );
         }
         int32 aliveTeam  = -1;
         int32 aliveCount = 0;
         for ( int32 team = 0; team < _teamCount; ++team )
         {
-            for ( const RtsPlayer& player : _listPlayer )
+            for ( const RTSPlayer& player : _listPlayer )
             {
                 if ( player._team == team && player._bDefeated == SW_FALSE )
                 {
@@ -1428,17 +1428,17 @@ namespace sw
         if ( _teamCount > 1 && aliveCount == 1 )
         {
             _winningTeam = aliveTeam;
-            pushEvent( RtsEvent::Kind::GameOver, aliveTeam, RtsUnitId{}, hashed_string{} );
+            pushEvent( RTSEvent::Kind::GameOver, aliveTeam, RTSUnitId{}, hashed_string{} );
         }
     }
 
     // ------------------------------------------------------------------------------
     // 조회 · 배치
     // ------------------------------------------------------------------------------
-    int32 RtsWorld::countUnits( int32 player, const hashed_string& defId, bool bIncludeUnfinished ) const
+    int32 RTSWorld::countUnits( int32 player, const hashed_string& defId, bool bIncludeUnfinished ) const
     {
         int32 count = 0;
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive && unit._owner == player && unit._pDef->_id == defId && ( bIncludeUnfinished || unit.isConstructed() ) )
                 ++count;
@@ -1446,12 +1446,12 @@ namespace sw
         return count;
     }
 
-    bool RtsWorld::hasConstructed( int32 player, const hashed_string& defId ) const { return countUnits( player, defId, false ) > 0; }
+    bool RTSWorld::hasConstructed( int32 player, const hashed_string& defId ) const { return countUnits( player, defId, false ) > 0; }
 
-    int32 RtsWorld::countPlanned( int32 player, const hashed_string& defId ) const
+    int32 RTSWorld::countPlanned( int32 player, const hashed_string& defId ) const
     {
         int32 count = 0;
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner != player )
                 continue;
@@ -1461,18 +1461,18 @@ namespace sw
             {
                 count += queued == defId ? 1 : 0;
             }
-            for ( const RtsOrder& order : unit._listOrder )
+            for ( const RTSOrder& order : unit._listOrder )
             {
-                count += order._type == RtsOrderType::Build && order._buildId == defId && order._targetUnit.isValid() == false ? 1 : 0;
+                count += order._type == RTSOrderType::Build && order._buildId == defId && order._targetUnit.isValid() == false ? 1 : 0;
             }
         }
         return count;
     }
 
-    bool RtsWorld::canPlaceBuilding( const hashed_string& buildingId, const int2& cell, RtsUnitId ignoreUnit ) const
+    bool RTSWorld::canPlaceBuilding( const hashed_string& buildingId, const int2& cell, RTSUnitId ignoreUnit ) const
     {
-        const RtsUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingId ) : nullptr;
-        if ( pDef == nullptr || pDef->_kind != RtsUnitKind::Building )
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingId ) : nullptr;
+        if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building )
             return false;
         const int32 footprint = pDef->_footprint;
         if ( _grid.isInside( cell ) == false || _grid.isInside( cell._x + footprint - 1, cell._y + footprint - 1 ) == false )
@@ -1488,12 +1488,12 @@ namespace sw
         if ( pDef->_bExtractor )
         {
             // 같은 칸 · 같은 크기의 빈 가스 간헐천 위만.
-            for ( const RtsUnit& unit : _listUnit )
+            for ( const RTSUnit& unit : _listUnit )
             {
-                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RtsResourceType::Gas || unit._cell != cell ||
+                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas || unit._cell != cell ||
                      unit._pDef->_footprint != footprint )
                     continue;
-                for ( const RtsUnit& other : _listUnit )
+                for ( const RTSUnit& other : _listUnit )
                 {
                     if ( other._bAlive && other._pDef->_bExtractor && other._linkedResource == unit._id )
                         return false;
@@ -1510,29 +1510,29 @@ namespace sw
                     return false;
             }
         }
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
-            if ( unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && RtsWorldInternal::isGround( unit ) &&
+            if ( unit._bAlive && unit.isMobile() && unit._id != ignoreUnit && RTSWorldInternal::isGround( unit ) &&
                  computeRectDistance( unit._position, cell, footprint ) < unit._pDef->_radius * 0.9f )
                 return false;
         }
         return true;
     }
 
-    bool RtsWorld::findBuildSite( const hashed_string& buildingId, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const
+    bool RTSWorld::findBuildSite( const hashed_string& buildingId, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const
     {
-        const RtsUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingId ) : nullptr;
-        if ( pDef == nullptr || pDef->_kind != RtsUnitKind::Building )
+        const RTSUnitDef* pDef = _pCatalog != nullptr ? _pCatalog->findUnit( buildingId ) : nullptr;
+        if ( pDef == nullptr || pDef->_kind != RTSUnitKind::Building )
             return false;
         if ( pDef->_bExtractor )
         {
             float32 bestDistance = static_cast<float32>( maxRadius ) + 1.0f;
             bool    bFound       = false;
-            for ( const RtsUnit& unit : _listUnit )
+            for ( const RTSUnit& unit : _listUnit )
             {
-                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RtsResourceType::Gas )
+                if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas )
                     continue;
-                const float32 distance = RtsWorldInternal::computeFlatDistance( nearPosition, unit._position );
+                const float32 distance = RTSWorldInternal::computeFlatDistance( nearPosition, unit._position );
                 if ( distance < bestDistance && canPlaceBuilding( buildingId, unit._cell ) )
                 {
                     bestDistance = distance;
@@ -1575,15 +1575,15 @@ namespace sw
         return false;
     }
 
-    RtsUnitId RtsWorld::findNearestResource( const float3& position, RtsResourceType type, float32 maxDistance ) const
+    RTSUnitId RTSWorld::findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const
     {
-        RtsUnitId bestId{};
+        RTSUnitId bestId{};
         float32   bestDistance = maxDistance;
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != type || unit._resourceLeft <= 0 )
                 continue;
-            const float32 distance = RtsWorldInternal::computeFlatDistance( position, unit._position );
+            const float32 distance = RTSWorldInternal::computeFlatDistance( position, unit._position );
             if ( distance <= bestDistance )
             {
                 bestDistance = distance;
@@ -1593,15 +1593,15 @@ namespace sw
         return bestId;
     }
 
-    RtsUnitId RtsWorld::findNearestDepot( int32 player, const float3& position ) const
+    RTSUnitId RTSWorld::findNearestDepot( int32 player, const float3& position ) const
     {
-        RtsUnitId bestId{};
+        RTSUnitId bestId{};
         float32   bestDistance = MathUtil::kMaxFloat;
-        for ( const RtsUnit& unit : _listUnit )
+        for ( const RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive == SW_FALSE || unit._owner != player || unit._pDef->_bDepot == SW_FALSE || unit.isConstructed() == false )
                 continue;
-            const float32 distance = RtsWorldInternal::computeFlatDistance( position, unit._position );
+            const float32 distance = RTSWorldInternal::computeFlatDistance( position, unit._position );
             if ( distance < bestDistance )
             {
                 bestDistance = distance;
@@ -1614,7 +1614,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 흐름장 · 알림
     // ------------------------------------------------------------------------------
-    FlowField* RtsWorld::acquireFlowField( const int2& goal )
+    FlowField* RTSWorld::acquireFlowField( const int2& goal )
     {
         FlowFieldSlot* pFree = nullptr;
         for ( FlowFieldSlot& slot : _listFlowField )
@@ -1638,7 +1638,7 @@ namespace sw
         return &pFree->_field;
     }
 
-    void RtsWorld::releaseFlowField( const FlowField* pField )
+    void RTSWorld::releaseFlowField( const FlowField* pField )
     {
         for ( FlowFieldSlot& slot : _listFlowField )
         {
@@ -1650,16 +1650,16 @@ namespace sw
         }
     }
 
-    void RtsWorld::pushEvent( RtsEvent::Kind kind, int32 player, RtsUnitId unitId, const hashed_string& defId, int32 value, RtsUnitId otherId )
+    void RTSWorld::pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitId unitId, const hashed_string& defId, int32 value, RTSUnitId otherId )
     {
-        RtsEvent event;
+        RTSEvent event;
         event._kind   = kind;
         event._player = player;
         event._unit   = unitId;
         event._defId  = defId;
         event._value  = value;
         event._other  = otherId;
-        if ( const RtsUnit* pUnit = findUnit( unitId ) )
+        if ( const RTSUnit* pUnit = findUnit( unitId ) )
             event._position = pUnit->_position;
         else if ( unitId.isValid() && unitId.index() < _listUnit.size() )
             event._position = _listUnit[unitId.index()]._position;
@@ -1672,7 +1672,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
-    void RtsWorld::writeState( Archive& outArchive ) const
+    void RTSWorld::writeState( Archive& outArchive ) const
     {
         outArchive << _grid.getWidth();
         outArchive << _grid.getHeight();
@@ -1680,11 +1680,11 @@ namespace sw
         outArchive << static_cast<uint32>( _listUnit.size() );
         for ( size_t index = 0; index < _listUnit.size(); ++index )
         {
-            const RtsUnit& unit = _listUnit[index];
+            const RTSUnit& unit = _listUnit[index];
             outArchive << _listGeneration[index];
             StateArchiveUtil::writeName( outArchive, unit._pDef != nullptr ? unit._pDef->_id : hashed_string{} );
             outArchive << static_cast<uint32>( unit._listOrder.size() );
-            for ( const RtsOrder& order : unit._listOrder )
+            for ( const RTSOrder& order : unit._listOrder )
             {
                 StateArchiveUtil::writeName( outArchive, order._buildId );
                 outArchive << order._target;
@@ -1730,7 +1730,7 @@ namespace sw
             outArchive << slot;
         }
         outArchive << static_cast<uint32>( _listPlayer.size() );
-        for ( const RtsPlayer& player : _listPlayer )
+        for ( const RTSPlayer& player : _listPlayer )
         {
             outArchive << player._startPosition;
             outArchive << player._supplyUsed;
@@ -1752,9 +1752,9 @@ namespace sw
         outArchive << _winningTeam;
     }
 
-    bool RtsWorld::readState( Archive& archive )
+    bool RTSWorld::readState( Archive& archive )
     {
-        using Internal = RtsWorldInternal;
+        using Internal = RTSWorldInternal;
         int32 width    = 0;
         int32 height   = 0;
         archive >> width;
@@ -1769,12 +1769,12 @@ namespace sw
         uint32 unitCount = 0;
         if ( StateArchiveUtil::readCount( archive, Internal::kMinUnitStateBytes, unitCount ) == false )
             return false;
-        deque<RtsUnit> listUnit;
+        deque<RTSUnit> listUnit;
         vector<uint32> listGeneration( unitCount );
         vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는가(유닛 · 명령 순)
         for ( uint32 index = 0; index < unitCount; ++index )
         {
-            RtsUnit&      unit = listUnit.emplace_back();
+            RTSUnit&      unit = listUnit.emplace_back();
             hashed_string defId;
             archive >> listGeneration[index];
             if ( StateArchiveUtil::readName( archive, defId ) == false )
@@ -1787,7 +1787,7 @@ namespace sw
                 return false;
             for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
             {
-                RtsOrder& order      = unit._listOrder.emplace_back();
+                RTSOrder& order      = unit._listOrder.emplace_back();
                 uint64    targetUnit = 0;
                 uint8     type       = 0;
                 uint8     bFlowField = SW_FALSE;
@@ -1799,10 +1799,10 @@ namespace sw
                 archive >> order._arriveRadius;
                 archive >> type;
                 archive >> bFlowField;
-                if ( archive.isError() || type > static_cast<uint8>( RtsOrderType::Hold ) )
+                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) )
                     return false;
-                order._targetUnit = RtsUnitId::fromPacked( targetUnit );
-                order._type       = static_cast<RtsOrderType>( type );
+                order._targetUnit = RTSUnitId::fromPacked( targetUnit );
+                order._type       = static_cast<RTSOrderType>( type );
                 listFlowFieldOrder.push_back( bFlowField );
             }
             uint32 productionCount = 0;
@@ -1847,18 +1847,18 @@ namespace sw
             archive >> unit._bAlive;
             archive >> unit._bHasRally;
             archive >> unit._bSupplyBlocked;
-            const bool bEnumValid  = cargoType <= static_cast<uint8>( RtsResourceType::None ) && gatherPhase <= static_cast<uint8>( RtsGatherPhase::Returning );
+            const bool bEnumValid  = cargoType <= static_cast<uint8>( RTSResourceType::None ) && gatherPhase <= static_cast<uint8>( RTSGatherPhase::Returning );
             const bool bAliveValid = unit._bAlive == SW_FALSE || unit._pDef != nullptr;
             if ( archive.isError() || bEnumValid == false || bAliveValid == false )
                 return false;
-            unit._id             = RtsUnitId::fromPacked( id );
-            unit._attackTarget   = RtsUnitId::fromPacked( attackTarget );
-            unit._gatherTarget   = RtsUnitId::fromPacked( gatherTarget );
-            unit._harvester      = RtsUnitId::fromPacked( harvester );
-            unit._builder        = RtsUnitId::fromPacked( builder );
-            unit._linkedResource = RtsUnitId::fromPacked( linkedResource );
-            unit._cargoType      = static_cast<RtsResourceType>( cargoType );
-            unit._gatherPhase    = static_cast<RtsGatherPhase>( gatherPhase );
+            unit._id             = RTSUnitId::fromPacked( id );
+            unit._attackTarget   = RTSUnitId::fromPacked( attackTarget );
+            unit._gatherTarget   = RTSUnitId::fromPacked( gatherTarget );
+            unit._harvester      = RTSUnitId::fromPacked( harvester );
+            unit._builder        = RTSUnitId::fromPacked( builder );
+            unit._linkedResource = RTSUnitId::fromPacked( linkedResource );
+            unit._cargoType      = static_cast<RTSResourceType>( cargoType );
+            unit._gatherPhase    = static_cast<RTSGatherPhase>( gatherPhase );
             // 길(경로 · 흐름장)은 싣지 않는다 — 앞 명령을 처음부터 다시 걷게 해 이 격자에서 길을 다시 구한다.
             unit._bOrderStarted = SW_FALSE;
             unit._repathTimer.clear();
@@ -1878,12 +1878,12 @@ namespace sw
         // 지갑은 플레이어를 더한 쪽이 빌려 준 것이라 싣지 않는다 — 같은 수의 플레이어를 먼저 더한 월드에만 읽는다.
         if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size() )
             return false;
-        vector<RtsPlayer> listPlayer( playerCount );
+        vector<RTSPlayer> listPlayer( playerCount );
         for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
         {
             listPlayer[playerIndex]._pWallet = _listPlayer[playerIndex]._pWallet;
         }
-        for ( RtsPlayer& player : listPlayer )
+        for ( RTSPlayer& player : listPlayer )
         {
             archive >> player._startPosition;
             archive >> player._supplyUsed;
@@ -1944,7 +1944,7 @@ namespace sw
             }
         }
         size_t flowFieldOrderIndex = 0;
-        for ( RtsUnit& unit : _listUnit )
+        for ( RTSUnit& unit : _listUnit )
         {
             if ( unit._bAlive != SW_FALSE && unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
                 placeFootprint( unit, true );
@@ -1956,7 +1956,7 @@ namespace sw
                 unit._agent.setSettings( agentSettings );
                 unit._agent.setPosition( unit._position );
             }
-            for ( RtsOrder& order : unit._listOrder )
+            for ( RTSOrder& order : unit._listOrder )
             {
                 const bool bFlowField = listFlowFieldOrder[flowFieldOrderIndex++] != SW_FALSE;
                 if ( bFlowField && unit._bAlive != SW_FALSE )
@@ -1967,28 +1967,28 @@ namespace sw
         return true;
     }
 
-    int64 RtsWorld::getMinerals( int32 player ) const
+    int64 RTSWorld::getMinerals( int32 player ) const
     {
-        const RtsPlayer* pPlayer = findPlayer( player );
+        const RTSPlayer* pPlayer = findPlayer( player );
         return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._mineralCurrency ) : 0;
     }
 
-    int64 RtsWorld::getGas( int32 player ) const
+    int64 RTSWorld::getGas( int32 player ) const
     {
-        const RtsPlayer* pPlayer = findPlayer( player );
+        const RTSPlayer* pPlayer = findPlayer( player );
         return pPlayer != nullptr && pPlayer->_pWallet != nullptr ? pPlayer->_pWallet->getBalance( _settings._gasCurrency ) : 0;
     }
 
-    void RtsWorld::payCost( RtsPlayer& player, const RtsUnitDef& def )
+    void RTSWorld::payCost( RTSPlayer& player, const RTSUnitDef& def )
     {
         // evaluateCost 가 둘 다 된다고 본 뒤에만 부른다 — 한쪽만 빠지지 않는다.
         if ( player._pWallet == nullptr )
             return;
         if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
-            SW_LOG_WARNING( "RtsWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
+            SW_LOG_WARNING( "RTSWorld: '%#' cost was checked but could not be paid", def._id.c_str() );
     }
 
-    void RtsWorld::refundCost( RtsPlayer& player, const RtsUnitDef& def )
+    void RTSWorld::refundCost( RTSPlayer& player, const RTSUnitDef& def )
     {
         if ( player._pWallet == nullptr )
             return;

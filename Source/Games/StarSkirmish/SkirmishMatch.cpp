@@ -20,9 +20,9 @@ namespace sw
             static constexpr int32   kStartMinerals  = 50;
 
             /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). */
-            static RtsAiSettings makeAiSettings( int32 style )
+            static RTSAiSettings makeAiSettings( int32 style )
             {
-                RtsAiSettings settings;
+                RTSAiSettings settings;
                 settings._workerId     = hashed_string( "worker" );
                 settings._depotId      = hashed_string( "command_center" );
                 settings._supplyId     = hashed_string( "supply_depot" );
@@ -57,7 +57,7 @@ namespace sw
                 return MathUtil::sqrt( dx * dx + dz * dz );
             }
 
-            static bool isArmy( const RtsUnit& unit ) { return unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack(); }
+            static bool isArmy( const RTSUnit& unit ) { return unit.isMobile() && unit._pDef->_bWorker == SW_FALSE && unit._pDef->canAttack(); }
         };
     } // namespace
 } // namespace sw
@@ -79,9 +79,9 @@ namespace sw
     {
     }
 
-    void SkirmishMatch::initialize( const RtsCatalog* pCatalog, bool bHumanPlayer )
+    void SkirmishMatch::initialize( const RTSCatalog* pCatalog, bool bHumanPlayer )
     {
-        _world.initialize( pCatalog, kMapSize, kMapSize, RtsSettings{} );
+        _world.initialize( pCatalog, kMapSize, kMapSize, RTSSettings{} );
         _listEvent.clear();
         _listFrameEvent.clear();
         _statusTimer   = 0.0f;
@@ -92,7 +92,7 @@ namespace sw
 
         // 0 번은 남서(본진 가운데 10, 10), 1 번은 점 대칭인 북동. 팀이 달라 서로 적이다.
         const float32      farCenter = static_cast<float32>( kMapSize ) - 10.0f;
-        const RtsSettings& settings  = _world.getSettings();
+        const RTSSettings& settings  = _world.getSettings();
         for ( Wallet& wallet : _arrWallet )
         {
             wallet.clear();
@@ -194,13 +194,13 @@ namespace sw
         return _listCliff[static_cast<size_t>( y * kMapSize + x )] != SW_FALSE;
     }
 
-    RtsUnitId SkirmishMatch::spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror )
+    RTSUnitId SkirmishMatch::spawnAt( const utf8* pDefId, int32 owner, int32 x, int32 y, bool bMirror )
     {
-        const RtsUnitDef* pDef = _world.getCatalog()->findUnit( hashed_string( pDefId ) );
+        const RTSUnitDef* pDef = _world.getCatalog()->findUnit( hashed_string( pDefId ) );
         if ( pDef == nullptr )
         {
             SW_LOG_WARNING( "[Skirmish] units.xml has no '%#' - not placed", pDefId );
-            return RtsUnitId{};
+            return RTSUnitId{};
         }
         // 점 대칭 — 건물 · 자원은 왼쪽 아래 칸이 기준이라 자리 폭만큼 더 민다.
         const int32 footprint = pDef->isMobile() ? 1 : pDef->_footprint;
@@ -211,7 +211,7 @@ namespace sw
 
     void SkirmishMatch::spawnResource( const utf8* pDefId, int32 x, int32 y, bool bMirror )
     {
-        (void)spawnAt( pDefId, RtsWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
+        (void)spawnAt( pDefId, RTSWorld::kNoOwner, x, y, bMirror ); // id 는 쓰지 않는다 — 정의가 없으면 spawnAt 이 경고한다
     }
 
     void SkirmishMatch::spawnBase( int32 player, bool bMirror )
@@ -229,16 +229,16 @@ namespace sw
         }
 
         // 사람 쪽 일꾼도 놀지 않게 처음 한 번 캐러 보낸다(AI 쪽은 AI 가 보낸다).
-        const RtsPlayer*  pPlayer = _world.findPlayer( player );
-        vector<RtsUnitId> listWorker;
-        _world.forEachUnit( [&]( const RtsUnit& unit )
+        const RTSPlayer*  pPlayer = _world.findPlayer( player );
+        vector<RTSUnitId> listWorker;
+        _world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( unit._owner == player && unit._pDef->_bWorker != SW_FALSE )
                 listWorker.push_back( unit._id );
         } );
-        for ( const RtsUnitId workerId : listWorker )
+        for ( const RTSUnitId workerId : listWorker )
         {
-            const RtsUnitId mineralId = _world.findNearestResource( pPlayer->_startPosition, RtsResourceType::Minerals, 16.0f );
+            const RTSUnitId mineralId = _world.findNearestResource( pPlayer->_startPosition, RTSResourceType::Minerals, 16.0f );
             if ( mineralId.isValid() )
                 (void)_world.issueGather( workerId, mineralId );
         }
@@ -252,17 +252,17 @@ namespace sw
             if ( _arrAiActive[player] != SW_FALSE )
                 _arrAi[player].update( deltaTime );
         }
-        // `RtsWorld::drainEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
+        // `RTSWorld::drainEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();
         _world.drainEvents( _listFrameEvent );
-        for ( const RtsEvent& event : _listFrameEvent )
+        for ( const RTSEvent& event : _listFrameEvent )
         {
             for ( int32 player = 0; player < kPlayerCount; ++player )
             {
                 if ( _arrAiActive[player] != SW_FALSE )
                     _arrAi[player].notify( event );
             }
-            if ( event._kind == RtsEvent::Kind::PlayerDefeated )
+            if ( event._kind == RTSEvent::Kind::PlayerDefeated )
                 SW_LOG_INFO( "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), event._player );
         }
         _listEvent.insert( _listEvent.end(), _listFrameEvent.begin(), _listFrameEvent.end() );
@@ -298,7 +298,7 @@ namespace sw
         }
     }
 
-    void SkirmishMatch::drainEvents( vector<RtsEvent>& outListEvent )
+    void SkirmishMatch::drainEvents( vector<RTSEvent>& outListEvent )
     {
         outListEvent.insert( outListEvent.end(), _listEvent.begin(), _listEvent.end() );
         _listEvent.clear();
@@ -307,12 +307,12 @@ namespace sw
     void SkirmishMatch::huntRemaining( int32 player )
     {
         const int32      enemy  = 1 - player;
-        const RtsPlayer* pEnemy = _world.findPlayer( enemy );
+        const RTSPlayer* pEnemy = _world.findPlayer( enemy );
         if ( pEnemy == nullptr || pEnemy->_bDefeated != SW_FALSE )
             return;
-        vector<RtsUnitId> listArrived;
+        vector<RTSUnitId> listArrived;
         float3            groupPosition{};
-        _world.forEachUnit( [&]( const RtsUnit& unit )
+        _world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( unit._owner != player || SkirmishMatchInternal::isArmy( unit ) == false || unit.isIdle() == false || unit._attackTarget.isValid() )
                 return;
@@ -325,7 +325,7 @@ namespace sw
             return;
         float32 bestDistance = MathUtil::kMaxFloat;
         float3  target{};
-        _world.forEachUnit( [&]( const RtsUnit& unit )
+        _world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( unit._owner != enemy || unit.isBuilding() == false )
                 return;
@@ -343,7 +343,7 @@ namespace sw
     SkirmishPlayerSummary SkirmishMatch::makeSummary( int32 player ) const
     {
         SkirmishPlayerSummary summary;
-        _world.forEachUnit( [&]( const RtsUnit& unit )
+        _world.forEachUnit( [&]( const RTSUnit& unit )
         {
             if ( unit._owner != player )
                 return;
@@ -354,7 +354,7 @@ namespace sw
             else if ( unit.isBuilding() )
                 ++summary._buildings;
         } );
-        const RtsPlayer* pPlayer = _world.findPlayer( player );
+        const RTSPlayer* pPlayer = _world.findPlayer( player );
         if ( pPlayer != nullptr )
         {
             summary._minerals   = static_cast<int32>( _world.getMinerals( player ) );

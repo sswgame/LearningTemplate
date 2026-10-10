@@ -66,7 +66,7 @@ grid.queryCircle( center._x, center._z, 30.0f, listNear ); // listNear 는 먼�
   쓰는 쪽은 보통 벡터 하나를 매 프레임 다시 씁니다. 빈 인덱스에서 벡터를 그대로 두면 지난 프레임의 결과를 이번 결과로 읽게 됩니다. `PhysicsWorld` 의 질의도 같은 규칙을 따릅니다.
   이 동작을 테스트할 때는 원소가 이미 들어 있는 벡터를 넘겨야 덧붙이는 결함이 드러납니다(`SpatialTest.QueriesOverwriteTheOutListInsteadOfAppending`).
 - **2D 근접 질의는 `SpatialHashGrid2D` 하나로 합니다.** 키트마다 비슷한 그리드를 새로 만들지 않습니다.
-  예외는 RTS 키트의 버킷(`RtsWorld` 의 `_listBucketHead` 와 `_listBucketNext`)입니다. 이 버킷은 시뮬레이션 스텝마다 다시 만들고, 결과 순서가 자동 목표 선택과 채취, 밀어내기 결과에 영향을 줍니다. 그래서 이 그리드로 옮기지 않습니다.
+  예외는 RTS 키트의 버킷(`RTSWorld` 의 `_listBucketHead` 와 `_listBucketNext`)입니다. 이 버킷은 시뮬레이션 스텝마다 다시 만들고, 결과 순서가 자동 목표 선택과 채취, 밀어내기 결과에 영향을 줍니다. 그래서 이 그리드로 옮기지 않습니다.
 
 ## 더 볼 곳
 

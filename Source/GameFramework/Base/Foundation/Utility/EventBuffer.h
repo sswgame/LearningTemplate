@@ -15,8 +15,8 @@ namespace sw
      *          쌓이는 쪽은 받는 쪽이 쓰던 용량을 물려받습니다. 받는 목록에 이미 있으면 그 뒤에 붙입니다(여러 곳의 알림을 한 목록에 모으는 쪽).
      *          언리얼 `TQueue` 를 프레임마다 비우는 자리 · 유니티 이벤트 큐와 같은 몫이지만 스레드 안전하지 않습니다 — 한 스레드(게임 스레드)용입니다.
      * @code
-     *     void RtsWorld::pushEvent( ... ) { _eventBuffer.push( event ); }
-     *     void RtsWorld::drainEvents( vector<RtsEvent>& outListEvent ) { _eventBuffer.drainTo( outListEvent ); }
+     *     void RTSWorld::pushEvent( ... ) { _eventBuffer.push( event ); }
+     *     void RTSWorld::drainEvents( vector<RTSEvent>& outListEvent ) { _eventBuffer.drainTo( outListEvent ); }
      * @endcode
      */
     template <typename T>

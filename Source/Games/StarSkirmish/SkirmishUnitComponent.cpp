@@ -108,19 +108,19 @@ namespace sw
         if ( pManager == nullptr || pMesh == nullptr )
             return;
         const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
-        const RtsUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitId ) : nullptr;
+        const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitId ) : nullptr;
         if ( pUnit == nullptr )
             return;
 
         // 크기 · 자리 — 모델 바닥이 원점이다. 건물은 지은 만큼 솟고, 광물은 남은 만큼 낮아진다. 공중 유닛은 떠 있다.
-        const RtsUnitDef& def = *pUnit->_pDef;
+        const RTSUnitDef& def = *pUnit->_pDef;
         float3            position{};
         float3            scale{};
         if ( pUnit->isResource() || pUnit->isBuilding() )
         {
             const float32 size   = static_cast<float32>( def._footprint ) * Internal::kFootprintFill / _modelWidth;
             float32       height = 1.0f;
-            if ( pUnit->isResource() && def._resourceType != RtsResourceType::Gas )
+            if ( pUnit->isResource() && def._resourceType != RTSResourceType::Gas )
                 height = 0.4f + 0.6f * ( def._resourceAmount > 0 ? static_cast<float32>( pUnit->_resourceLeft ) / static_cast<float32>( def._resourceAmount ) : 1.0f );
             else if ( pUnit->isBuilding() )
                 height = 0.2f + 0.8f * MathUtil::clamp( pUnit->_buildProgress, 0.0f, 1.0f );

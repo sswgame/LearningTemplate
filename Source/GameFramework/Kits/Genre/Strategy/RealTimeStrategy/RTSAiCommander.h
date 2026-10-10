@@ -1,5 +1,5 @@
 /**
- * @file RtsAiCommander.h
+ * @file RTSAiCommander.h
  * @brief 컴퓨터 상대 — 행동 트리로 일꾼 · 보급 · 생산 건물 · 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
  */
 #pragma once
@@ -11,12 +11,12 @@
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsWorld.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
 namespace sw
 {
     /** @brief AI 가 쓰는 정의 id 와 목표 수입니다(종족 · 난이도마다 데이터로 바꾼다). */
-    struct RtsAiSettings
+    struct RTSAiSettings
     {
         hashed_string _workerId{};
         hashed_string _depotId{};      ///< 본진(일꾼을 만든다)
@@ -35,7 +35,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RtsAiCommander
+     * @class RTSAiCommander
      * @brief 한 플레이어를 맡는 AI 입니다. 트리는 이렇습니다(반응형 셀렉터 — 위가 먼저).
      * @code
      *     Root (reactive)
@@ -50,16 +50,16 @@ namespace sw
      * @endcode
      *          월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 압니다. 월드 · 설정은 AI 보다 오래 살아야 합니다.
      */
-    class SW_GF_API RtsAiCommander
+    class SW_GF_API RTSAiCommander
     {
     public:
-        RtsAiCommander();
+        RTSAiCommander();
 
-        void initialize( RtsWorld* pWorld, int32 player, const RtsAiSettings& settings );
+        void initialize( RTSWorld* pWorld, int32 player, const RTSAiSettings& settings );
         /** @brief `_thinkInterval` 마다 트리를 한 번 돌립니다. */
         void update( float32 deltaTime );
         /** @brief 월드 알림을 받습니다(공격받음). */
-        void notify( const RtsEvent& event );
+        void notify( const RTSEvent& event );
 
         const utf8*       getActiveTaskName() const { return _runner.getActiveLeafName(); }
         int32             getPlayer() const { return _player; }
@@ -83,14 +83,14 @@ namespace sw
         void makeTree();
         /** @brief 노는 · 채취 중인 일꾼 하나로 @p buildingId 를 본진 둘레에 짓습니다. */
         bool      orderConstruction( const hashed_string& buildingId );
-        RtsUnitId findDepot() const;
-        void      collectArmy( vector<RtsUnitId>& outListUnit ) const;
+        RTSUnitId findDepot() const;
+        void      collectArmy( vector<RTSUnitId>& outListUnit ) const;
 
         BehaviorTree       _tree;
         BehaviorTreeRunner _runner;
         Blackboard         _blackboard;
-        RtsAiSettings      _settings;
-        RtsWorld*          _pWorld;
+        RTSAiSettings      _settings;
+        RTSWorld*          _pWorld;
         Countdown          _thinkTimer;
         int32              _player;
         int32              _attackWaveCount;

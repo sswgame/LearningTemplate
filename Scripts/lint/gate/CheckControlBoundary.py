@@ -117,7 +117,7 @@ class CheckControlBoundaryGate(LintGate):
         "Source/GameFramework/Base/Foundation/Framework/Flow/GameInstanceBase.*": "입력 맵 파일을 싣는다(매핑 층을 세움)",
         "Source/GameFramework/Base/Foundation/Data/GameSettings.h": "입력 맵 경로 설정",
         "Source/Games/NileCity/NileDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 키트 명령)",
-        "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RtsWorld 명령)",
+        "Source/Games/StarSkirmish/SkirmishDirectorComponent.*": "명령 조종자 — RTS 는 폰이 없다(입력 → RTSWorld 명령)",
         "Source/Games/ThemeParkTycoon/ParkDirectorComponent.*": "명령 조종자 — 경영 게임은 폰이 없다(입력 → 공원 명령)",
         "Source/Games/MeadowVillage/MeadowFarmDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 시간 빨리 감기(게임 규칙 명령)",
         "Source/Games/MeadowVillage/MeadowTownDirectorComponent.*": "명령 조종자 — 조립 시험 마을의 말 걸기(대화 명령)",

@@ -85,7 +85,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -449,7 +449,7 @@ namespace
         static bool isQuests( sw::string_view resourceId ) { return isGameData( resourceId, "/data/quests.xml" ); }
         static bool isCity( sw::string_view resourceId ) { return isGameData( resourceId, "/data/city.xml" ); }
         static bool isWeapons( sw::string_view resourceId ) { return isGameData( resourceId, "/data/weapons.xml" ); }
-        static bool isRtsUnits( sw::string_view resourceId ) { return isGameData( resourceId, "/data/units.xml" ); }
+        static bool isRTSUnits( sw::string_view resourceId ) { return isGameData( resourceId, "/data/units.xml" ); }
         static bool isVoxelBlocks( sw::string_view resourceId ) { return isGameData( resourceId, "/data/blocks.xml" ); }
         static bool isCoasters( sw::string_view resourceId ) { return isGameData( resourceId, "/data/coasters.xml" ); }
         static bool isParkLayout( sw::string_view resourceId ) { return isGameData( resourceId, "/data/rides.xml" ); }
@@ -518,7 +518,7 @@ namespace
             {             "quests",              &isQuests,                     &loadCatalog<sw::QuestCatalog>},
             {               "city",                &isCity,                      &loadCatalog<sw::CityCatalog>},
             {            "weapons",             &isWeapons,                    &loadCatalog<sw::WeaponCatalog>},
-            {           "rtsunits",            &isRtsUnits,                       &loadCatalog<sw::RtsCatalog>},
+            {           "rtsunits",            &isRTSUnits,                       &loadCatalog<sw::RTSCatalog>},
             {        "voxelblocks",         &isVoxelBlocks,                &loadCatalog<sw::VoxelBlockCatalog>},
             {           "coasters",            &isCoasters,             &loadCatalog<sw::CoasterLayoutCatalog>},
             {         "parklayout",          &isParkLayout,                                    &loadParkLayout},

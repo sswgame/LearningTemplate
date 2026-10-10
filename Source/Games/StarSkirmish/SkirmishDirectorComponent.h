@@ -2,7 +2,7 @@
  * @file SkirmishDirectorComponent.h
  * @brief StarSkirmish 의 판을 돌리는 컴포넌트 — 한 판(`SkirmishMatch`) · 고르기 · 명령 · 생산 · 건설 · 부대 입력 · 속도 · 알림, 그리고 절벽 · 유닛(프리팹) 스폰 지시입니다.
  *
- * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(채취 · 생산 · 전투 · 안개 · AI)은 키트의 `RtsWorld` · `RtsAiCommander` 와
+ * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(채취 · 생산 · 전투 · 안개 · AI)은 키트의 `RTSWorld` · `RTSAiCommander` 와
  *          `SkirmishMatch` 가 맡고, 여기는 사람의 입력과 무엇을 어디에 세우는지를 압니다. 유닛 모습은 뷰(`SkirmishUnitComponent`)가, 끌어 고르기 상자는
  *          `SkirmishDragComponent` 가 이 컴포넌트를 **읽기만** 해서 맞춥니다.
  *
@@ -21,8 +21,8 @@
 
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RtsSelection.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
 
@@ -55,10 +55,10 @@ namespace sw
         void writeState( Archive& outArchive ) const override;
 
         // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
-        const RtsWorld& getWorld() const { return _match.getWorld(); }
-        bool            isSelected( RtsUnitId unitId ) const { return _selection.isSelected( unitId ); }
+        const RTSWorld& getWorld() const { return _match.getWorld(); }
+        bool            isSelected( RTSUnitId unitId ) const { return _selection.isSelected( unitId ); }
         /** @brief 유닛 주인(또는 자원 종류) · 고름의 모습입니다. 아직 없으면 비어 있다. */
-        const shared_ptr<MaterialInstance>& findUnitLook( const RtsUnit& unit, bool bSelected ) const;
+        const shared_ptr<MaterialInstance>& findUnitLook( const RTSUnit& unit, bool bSelected ) const;
         /** @brief 끌어 고르는 중이면 true 이고 땅 위 상자의 가운데 · 크기를 줍니다. */
         bool findDragBox( float3& outCenter, float3& outScale ) const;
 
@@ -78,7 +78,7 @@ namespace sw
         /** @brief 유닛 id 자리 하나의 모습입니다. 틱이 보일 유닛을 정하고 틱 뒤에 오브젝트를 맞춘다. */
         struct UnitSlot
         {
-            RtsUnitId        _shownId{}; ///< 세웠거나 세울 유닛(무효면 없다)
+            RTSUnitId        _shownId{}; ///< 세웠거나 세울 유닛(무효면 없다)
             GameObjectHandle _object{};
             uint32           _stamp{ 0 };
         };
@@ -117,10 +117,10 @@ namespace sw
         PROPERTY( Category = "Scene", DisplayName = "Watch Ortho Height", Tooltip = "Camera height when both players are AI", Min = 0.1, Units = m )
         float32 _watchOrthoHeight;
 
-        RtsCatalog                           _catalog;
+        RTSCatalog                           _catalog;
         SkirmishMatch                        _match;
-        RtsSelection                         _selection;
-        vector<RtsEvent>                     _listEvent;
+        RTSSelection                         _selection;
+        vector<RTSEvent>                     _listEvent;
         vector<UnitSlot>                     _listUnitSlot;
         vector<int32>                        _listPendingUnit; ///< 맞출 유닛 자리(틱 뒤)
         MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다)
