@@ -149,7 +149,7 @@ echo $LASTEXITCODE
 | `PostWindowMessage` | `message` | `AutomationWindowSteps` | 자기 창에 OS 메시지를 보냅니다 |
 | `ExpectCursorClip` | `state`(`locked`, `free`) | `AutomationWindowSteps` | 커서 가두기 상태를 확인합니다(`GetClipCursor`) |
 | `RequireForeground` | 없음 | `AutomationWindowSteps` | 전경 창을 얻지 못하면 13으로 끝냅니다 |
-| `CaptureWindow` | `file`(.png) | `AutomationWindowSteps` | 화면에 합성된 클라이언트 영역을 PNG 로 씁니다. 에디터 UI 까지 찍힙니다 |
+| `CaptureWindow` | `file`(.png) | `AutomationWindowSteps` | 화면에 합성된 클라이언트 영역을 PNG 로 씁니다. 에디터 UI 까지 찍힙니다. 창이 전경이 아니면 찍지 않고 경고만 남깁니다(가린 다른 창이 찍히지 않게) |
 
 - `Intent` 와 `Possess` 는 그 프레임의 입력 재생 **전**에 돕니다(등록 시 `_bBeforeInput` 이 참). 빙의와 의도는 [GameFramework README](../../GameFramework/README.md)의 Control 절에 있습니다.
 - `ExpectUI` 와 같은 판정을 nogpu 테스트 `UINavigationScriptTest` 도 씁니다. `UILayoutDump` 결과는 `AppUITest` 가 스크린샷 안의 위젯을 이름으로 찾는 데 씁니다.
@@ -227,6 +227,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.ModulePreviewNewlyInactive` | 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수(묻지 않으면 0) |
 | `Editor.SelectedPropertySum` | 선택한 오브젝트 모두의 `gv_editorProbeProperty` 값 합(다중 편집) |
 | `Editor.SelectedCurveKeyCount` | 주 선택 오브젝트의 `gv_editorProbeProperty` 커브(`FloatCurve`) 키 수 |
+| `Editor.HierarchyRowIcon` | `gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘 코드 포인트 |
 | `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |
 | `Editor.PanelOpen` | `gv_editorProbePanel` 의 패널이 열려 있으면 1 |
 | `Editor.VisualizerOn` | 씬 뷰가 `gv_editorProbeVisualizer`(시나리오가 `<Variable>` 로 정한다)의 시각화를 켜 두었으면 1 |

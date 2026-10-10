@@ -580,6 +580,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   화면 좌표로 되돌리지 않는다. 그러면 확대 · 축소가 1 이 아닐 때 배경과 노드가 패널 일부에서 잘린다(Dialogue Graph 를 처음 열 때 그랬다).
   `EditorNodeGraph::beginCanvas` 가 같은 색 배경을 먼저 그려 마지막 명령을 채우고, 남은 영역이 거의 없는 프레임(도킹 직후)에는 캔버스를 열지 않는다.
   화면은 시나리오 단계 `CaptureWindow`(에디터 UI 까지 든 실제 화면 PNG)로 본다 — 시나리오 `editor/dialoguegraph` · `editor/uiscale`.
+- **컴포넌트 아이콘은 `EditorComponentIcon` 표 하나다**(Hierarchy 오브젝트 · 컴포넌트 줄, 인스펙터 카드 머리, 다음의 뷰포트 빌보드가 같이 쓴다). 찾는 순서는 타입 이름(자신 → 부모)
+  → 리플렉션 Category → 기본. 에디터는 GameFramework 를 링크하지 않아 짧은 타입 이름으로 맞추므로 타입 이름을 바꾸면 그 줄이 조용히 죽는다 —
+  `EditorComponentIconTest` 가 표의 이름이 레지스트리에 있는지 본다. 오브젝트 줄은 빌보드 종류(빛 · 카메라 · 오디오)가 있으면 그 아이콘이다(시나리오 `editor/componenticons`).
 - **노드 그래프 틀은 `EditorNodeGraph`(내보냄) + 템플릿 `EditorGraphDocumentPanel` 이다.** 틀이 찾아 넣기(빈 곳 오른쪽 클릭 → 검색 → Enter 는 맨 위 줄, 고른 노드는
   그 자리에 — `placeNodeOnNextDraw`), 링크 판정(`queryNewLink` — 방향 · 핀 타입이 맞지 않으면 빨갛게 거절하고 이유 툴팁), 문제 노드 빨간 테두리(`setNodeIssues`)를 한다.
   판단은 ImGui 없는 `EditorNodeGraphRules`(EditorTest). 캔버스는 `beginGraphCanvas` · `endGraphCanvas` 로 연다 — 확장 모듈은 imgui-node-editor 를 정적으로 따로

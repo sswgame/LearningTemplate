@@ -11,6 +11,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -304,7 +305,11 @@ namespace sw::editor
             if ( pComp == nullptr )
                 continue;
 
-            const utf8* pName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
+            const utf8* pComponentName = pComp->getComponentName().empty() == false ? pComp->getComponentName().c_str() : "Component";
+            // 카드 머리 앞에 컴포넌트 아이콘(유니티 Inspector · 언리얼 Details 의 컴포넌트 머리)
+            fixed_string<constant::kMaxBuffer128> cardTitle;
+            formatstring( cardTitle.data(), cardTitle.capacity(), "%#  %#", EditorComponentIcon::findRow( pComp->getTypeInfo() )._pGlyph, pComponentName );
+            const utf8* pName = cardTitle.c_str();
             // 체크박스는 컴포넌트 **자기** 비트다. 주의: 실효값(isActive — 소유 오브젝트의 계층 활성까지)을 읽어 그대로 다시 쓰면
             // 꺼진 부모 아래의 컴포넌트는 인스펙터에 보이기만 해도 자기 비트가 꺼진다. 쓰는 것도 바뀐 때 한 번이다(아래).
             const bool bWasActive = pComp->isSelfActive();

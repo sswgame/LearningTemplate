@@ -14,6 +14,7 @@
 #include "Editor/Common/Commands/EditorShortcutOverrides.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -60,6 +61,7 @@ namespace sw::editor
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
     /** @brief 탐침 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject, "", "탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용)" );
     /** @brief 탐침 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty, "", "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)" );
 } // namespace sw::editor
@@ -930,6 +932,19 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘의 코드 포인트입니다. 그 이름의 오브젝트가 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readHierarchyRowIcon( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObjectManager* pManager = editor::getActiveObjectManager();
+                if ( pManager == nullptr )
+                    return false;
+                const GameObject* pObject = pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) );
+                if ( pObject == nullptr )
+                    return false;
+                outValue = static_cast<float64>( EditorComponentIcon::decodeGlyph( EditorComponentIcon::findObjectRow( *pObject )._pGlyph ) );
+                return true;
+            }
+
             /** @brief 가장 최근에 그린 노드 그래프 캔버스의 노드 수입니다(대화 · 애니메이션 그래프 · 확장의 그래프 문서 패널). */
             [[nodiscard]] static bool readGraphNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1094,6 +1109,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorSelectedCurveKeyCount, "Editor.SelectedCurveKeyCount",
                          "Keys of the FloatCurve gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection",
                          &EditorScenarioStepsInternal::readSelectedCurveKeyCount );
+    SW_AUTOMATION_PROBE( editorHierarchyRowIcon, "Editor.HierarchyRowIcon", "Icon code point of the Hierarchy row of the object named by gv_editorProbeObject",
+                         &EditorScenarioStepsInternal::readHierarchyRowIcon );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",

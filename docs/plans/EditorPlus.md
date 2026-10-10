@@ -95,8 +95,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
-| **추가 — 아이콘(12절)** | R3 | 컴포넌트와 오브젝트 아이콘(Hierarchy, 인스펙터) | M | 5b R2 | ★ |
-| | R4 | 뷰포트 빌보드와 클릭 선택 | M | R3 · C2 | ★ |
+| **추가 — 아이콘(12절)** | R4 | 뷰포트 빌보드와 클릭 선택 | M | R3 · C2 | ★ |
 | | R5 | 재생, 기즈모, 뷰포트 툴바, 커맨드 아이콘 | S | 5b R2 | |
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
@@ -404,23 +403,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나눴습니다. 5b 는 아이콘 폰트와 Font Awesome 교체(R1, R2), 누락 텍스처(R6), 프로토타입 격자(R7), 앱 아이콘(R8)을 넣고,
 아래 넷을 이 계획으로 넘겼습니다. 아이콘은 모두 5b 의 R1 이 만든 아이콘 폰트(`Resource/editor/fonts/sweditoricons.ttf`, 글리프 이름은 `editoricon::k*`)를 씁니다.
 새 아이콘이 필요하면 `Scripts/common/EditorIconFont.py` 에 그리기 함수를 더하고 `Scripts/generate/GenerateEditorIcons.py` 를 실행합니다(5b R1 이 둔 스크립트입니다).
-
-### R3 컴포넌트와 오브젝트 아이콘(Hierarchy, 인스펙터) ★
-
-**무엇.** 컴포넌트 타입에서 아이콘과 색을 찾는 테이블 `EditorComponentIcon`(`Source/Editor/Common/GUI/EditorComponentIcon.h`, 새 파일)을 두고, Hierarchy 의 오브젝트 줄과 컴포넌트 줄, 인스펙터의 컴포넌트 카드 머리에 붙입니다.
-찾는 순서는 셋입니다. 먼저 타입 이름 테이블을 타입 자신부터 부모 타입으로 올라가며 찾고, 없으면 리플렉션 `Category` 테이블, 그래도 없으면 `editoricon::kComponent` 입니다.
-에디터는 GameFramework 를 링크하지 않으므로 타입 포인터가 아니라 짧은 타입 이름(`TypeInfo::_name`)으로 맞춥니다. 행마다 빌보드 여부(`_bBillboard`, 메시가 없는 종류)를 둬서 R4 가 같은 테이블을 씁니다.
-오브젝트 줄은 빌보드 종류 컴포넌트가 있으면 그 아이콘(전구, 카메라)을, 없으면 `kGameObject` 를 보입니다. `[Category]` 배지는 그대로 둡니다.
-
-**왜.** 지금 Hierarchy 는 이름과 `[Category]` 글자만 보여서 빛, 카메라, 트리거를 한눈에 구분할 수 없습니다. 인스펙터 카드 머리도 이름뿐입니다.
-
-**상용 비교.** 언리얼 Outliner 는 액터 클래스 아이콘을, Details 는 컴포넌트 아이콘을 보입니다. 유니티 Inspector 의 컴포넌트 머리와 Godot 씬 트리의 노드 아이콘도 같습니다.
-키트와 게임이 자기 컴포넌트 아이콘을 등록하는 길은 C 단계(확장 모듈) 뒤에 등록 매크로로 더합니다.
-
-**테스트.** `EditorComponentIconTest`(EditorTest, ImGui 없음): 파생 타입이 기반 행보다 먼저 맞는지(`PointLightComponent` → `kLightPoint`), 모르는 타입은 `kComponent` 인지, 테이블의 Engine 타입 이름이 레지스트리에 있는지(타입 이름을 바꾸면 행이 조용히 죽습니다).
-
-**확인 = 에디터 시나리오.** `componenticons.scenario.xml`: 빛과 카메라가 있는 시험 씬을 열고, 탐침 `Editor.HierarchyRowIcon.<이름>`(그 줄에 그린 글리프 코드포인트, 이 단위가 등록)이 빛 줄은 `kLightPoint`, 카메라 줄은 `kCamera` 인지 봅니다.
-`Screenshot` 으로 Hierarchy 영역을 찍어 둡니다(눈으로 볼 기록).
 
 ### R4 뷰포트 빌보드와 클릭 선택 ★
 

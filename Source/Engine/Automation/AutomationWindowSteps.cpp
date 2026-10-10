@@ -23,6 +23,8 @@
 
 namespace sw
 {
+    SW_LOG_CALLER( "AutomationWindowSteps" );
+
     namespace
     {
         struct AutomationWindowStepsInternal
@@ -162,7 +164,8 @@ namespace sw
 
             /**
              * @brief 클라이언트 영역을 데스크톱 화면에서 복사해 PNG 로 씁니다 — 에디터 UI 까지 든 실제 화면입니다(Present 캡처는 UI 를 그리기 전의 주 출력이다).
-             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 길이고, 창이 가려져 있으면 가린 것이 찍힌다. 시나리오가 `input="exclusive"` 로 전경을 잡은 뒤 쓴다.
+             * @details DWM 이 합성한 화면을 읽으므로 네 백엔드 모두 같은 길이다. 주의: 창이 가려져 있으면 **가린 다른 창이 찍힌다**(사용자의 다른 프로그램 화면이
+             *          파일로 남는다). 그래서 창이 전경이 아니면 찍지 않고 경고만 남긴다 — 화면을 보려는 시나리오는 앞에 `RequireForeground` 를 둔다.
              */
             static bool runCapture( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -172,6 +175,11 @@ namespace sw
                 if ( hwnd == nullptr || GetClientRect( hwnd, &clientRect ) == FALSE || ClientToScreen( hwnd, &origin ) == FALSE )
                 {
                     runner.finish( AutomationResult::Failed, step.describe() + ": no window to capture" );
+                    return true;
+                }
+                if ( GetForegroundWindow() != hwnd || IsIconic( hwnd ) != FALSE )
+                {
+                    SW_LOG_WARNING( "[Scenario] %# skipped - the window is not in front, so the screen there shows other windows", step.describe().c_str() );
                     return true;
                 }
                 const int32 width  = clientRect.right - clientRect.left;

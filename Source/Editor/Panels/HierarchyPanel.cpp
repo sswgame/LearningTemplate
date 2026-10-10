@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -396,8 +397,10 @@ namespace sw::editor
                                           ? pSceneComp->getComponentName().c_str()
                                           : "SceneComponent";
 
+                // 줄 앞에 컴포넌트 아이콘(언리얼 Outliner · Godot 씬 트리처럼 종류를 한눈에)
+                const utf8*                           pIcon = EditorComponentIcon::findRow( pSceneComp->getTypeInfo() )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
-                formatstring( arrLabel.data(), arrLabel.capacity(), "%###sc%#", pCompName, pSceneComp->getComponentID() );
+                formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###sc%#", pIcon, pCompName, pSceneComp->getComponentID() );
 
                 bool                           hasChildOnOwner{ false };
                 const vector<SceneComponent*>& listChild = pSceneComp->getChildren();
@@ -477,11 +480,13 @@ namespace sw::editor
                     EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
                 }
 
+                // 오브젝트 아이콘: 빌보드 종류 컴포넌트(빛 · 카메라 · 오디오)가 있으면 그 아이콘, 없으면 오브젝트 아이콘이다.
+                const utf8*                           pIcon = EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 if ( badgeStr.empty() == false )
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pObj->getName().c_str(), badgeStr.c_str(), objectID );
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %# %###go%#", pIcon, pObj->getName().c_str(), badgeStr.c_str(), objectID );
                 else
-                    formatstring( arrLabel.data(), arrLabel.capacity(), "%###go%#", pObj->getName().c_str(), objectID );
+                    formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
 
                 const bool bHasChildGos   = pObj->hasChildren();
                 const bool bHasComponents = pObj->getComponentCount() > 0;

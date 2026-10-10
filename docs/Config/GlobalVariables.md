@@ -55,6 +55,7 @@
 
 | 이름 | 타입 | 기본값 | 종류 | 설명 | 정의 |
 |---|---|---|---|---|---|
+| `gv_editorProbeObject` | `string` | — | 시험 | 탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbePanel` | `string` | — | 시험 | 탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbeProperty` | `string` | — | 시험 | 탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
 | `gv_editorProbeVisualizer` | `string` | — | 시험 | 탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용) | [EditorScenarioSteps.cpp](../../Source/Editor/SelfTest/EditorScenarioSteps.cpp) |
