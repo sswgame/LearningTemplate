@@ -3,16 +3,17 @@
 """
 Scripts/lint/gate/CheckPythonConventions.py
 
-`AGENTS.md` 의 **Python** 명명 규칙을 검사합니다.
+`AGENTS.md` 의 **Python** 규칙(이름 · 모양)을 검사합니다.
 
 `AGENTS.md` 는 세 언어(C++ · CMake · Python)의 규칙을 적어 두었는데 C++ 게이트는 `kCppAllExtensions` 만
 훑는다 — 이 게이트가 없으면 **린트를 만드는 코드가 린트를 받지 않는다**.
 
 검사 규칙 (`AGENTS.md` → "### Python"):
 
-- 공개 함수는 `camelCase`, 내부 헬퍼는 `camelCaseInternal`
-- 모듈 상수는 `kPascalCase` 또는 `_kPascalCase`
-- 모듈/파일 이름은 `PascalCase.py`
+- 이름: 공개 함수는 `camelCase`, 내부 헬퍼는 `camelCaseInternal` · 모듈 상수는 `kPascalCase` 또는 `_kPascalCase` · 파일은 `PascalCase.py`
+- 모양(`_kStyleRule`): 모듈 docstring · `from __future__ import annotations` · 매개변수와 반환 타입 표기 · `X | None` 과 내장 제네릭 ·
+  글 파일 입출력의 `encoding=` · 경로는 `pathlib`(os.path 는 글자 연산만) · 종료는 `sys.exit` · `__main__` 가드는 `sys.exit(main())` 한 줄 ·
+  `ArgumentParser` 는 `description=`
 
 **AST 로 본다, 정규식이 아니라.** 함수 이름·모듈 수준 대입은 구문 트리가 정확히 답해 주는
 질문이라 굳이 틀릴 이유가 없다. 문자열 안의 예시 코드를 위반으로 읽는 사고도 이걸로 사라진다.
@@ -31,7 +32,22 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — common
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
+from common.RuleData import kKindTextList  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
+
+_kRuleSchema = {"lexical_os_path_function": kKindTextList, "legacy_typing_name": kKindTextList}
+_kRuleData = LintGate.readRules("CheckPythonConventions", _kRuleSchema, requiredKeys=tuple(_kRuleSchema))
+#: os.path 가운데 pathlib 에 같은 것이 없는 글자 연산 — 이것 말고는 `Path` 로 쓴다.
+_kSetLexicalOsPathFunction: frozenset[str] = frozenset(_kRuleData["lexical_os_path_function"])
+#: typing 의 옛 철자 — `X | None` · `list[str]` 로 쓴다.
+_kSetLegacyTypingName: frozenset[str] = frozenset(_kRuleData["legacy_typing_name"])
+
+#: 모양 규칙의 이름 — 위반 줄의 머리이자 예외 키(`<규칙>:<경로>`)의 앞부분이다.
+_kStyleRule = ("docstring", "future", "annotation", "typing", "encoding", "osPath", "exit", "mainGuard", "argparse")
+#: 예외 표에서 모든 모양 규칙을 빼는 키의 앞말.
+_kAllStyleRulePrefix = "*:"
+#: 글 모드로 여는 `open` 의 모드 글자 — `b` 가 없다.
+_kTextModeRe = re.compile(r"^[rwxat+]+$")
 
 #: 파이썬이 이름을 정해 둔 자리 — 우리 규칙을 들이댈 수 없다.
 _kDunderRe = re.compile(r'^__[a-z0-9_]+__$')
@@ -163,6 +179,149 @@ def checkModuleConstantInternal(node: ast.Assign | ast.AnnAssign, relPath: str) 
     return listViolation
 
 
+class StyleScanInternal:
+    """파일 하나에 모양 규칙을 적용합니다. 위반은 `(규칙, 줄, 말)` 로 모으고, 예외 표에 든 규칙은 넘깁니다."""
+
+    def __init__(self, tree: ast.Module, relPath: str) -> None:
+        self.tree = tree
+        self.relPath = relPath
+        self.listViolation: list[str] = []
+        self.mapExemptionKey: dict[str, str] = {}
+        for rule in _kStyleRule:
+            for key in (f"{rule}:{relPath}", _kAllStyleRulePrefix + relPath):
+                if key in CheckPythonConventionsGate.mapExemption:
+                    CheckPythonConventionsGate.seeExemption(key)
+                    self.mapExemptionKey[rule] = key
+                    break
+
+    def addViolation(self, rule: str, lineNumber: int, message: str) -> None:
+        key = self.mapExemptionKey.get(rule)
+        if key is not None:
+            CheckPythonConventionsGate.useExemption(key)
+            return
+        self.listViolation.append(f"{self.relPath}:{lineNumber} [{rule}] {message} — AGENTS.md '### Python'")
+
+    def run(self) -> list[str]:
+        self.checkModuleHead()
+        for node in self.tree.body:
+            if isMainGuardInternal(node):
+                self.checkMainGuard(node)
+        for node in ast.walk(self.tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                self.checkAnnotation(node)
+            elif isinstance(node, ast.Call):
+                self.checkCall(node)
+            elif isinstance(node, ast.ImportFrom):
+                self.checkImportFrom(node)
+            elif isinstance(node, ast.Attribute):
+                self.checkAttribute(node)
+            elif isinstance(node, ast.Raise):
+                self.checkRaise(node)
+        return self.listViolation
+
+    def checkModuleHead(self) -> None:
+        """모듈 docstring 과 `from __future__ import annotations` — 빈 파일은 보지 않는다."""
+        body = self.tree.body
+        if not body:
+            return
+        if ast.get_docstring(self.tree) is None:
+            self.addViolation("docstring", 1, "모듈 docstring 이 없습니다 — 파일 맨 위에 무엇을 하는 모듈인지 적습니다")
+        listCode = body[1:] if ast.get_docstring(self.tree) is not None else body
+        if listCode and not any(isFutureAnnotationsInternal(node) for node in listCode):
+            self.addViolation("future", 1, "`from __future__ import annotations` 가 없습니다")
+
+    def checkMainGuard(self, node: ast.If) -> None:
+        """`if __name__ == "__main__":` 의 몸은 `sys.exit(main(...))`(시험은 `unittest.main(...)`) 한 줄이다."""
+        if len(node.body) == 1 and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Call):
+            call = node.body[0].value
+            if isDottedNameInternal(call.func, "unittest.main"):
+                return
+            if (isDottedNameInternal(call.func, "sys.exit") and len(call.args) == 1 and isinstance(call.args[0], ast.Call)
+                    and isDottedNameInternal(call.args[0].func, "main")):
+                return
+        self.addViolation("mainGuard", node.lineno, "`__main__` 가드의 몸은 `sys.exit(main())` 한 줄입니다(시험은 `unittest.main()`)")
+
+    def checkAnnotation(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+        """매개변수(`self` · `cls` 빼고)와 반환 타입을 모두 적는다."""
+        arguments = node.args
+        listParameter = [*arguments.posonlyargs, *arguments.args]
+        if listParameter and listParameter[0].arg in ("self", "cls") and listParameter[0].annotation is None:
+            listParameter = listParameter[1:]
+        listParameter += [*arguments.kwonlyargs, *(argument for argument in (arguments.vararg, arguments.kwarg) if argument is not None)]
+        listMissing = [argument.arg for argument in listParameter if argument.annotation is None]
+        if node.returns is None:
+            listMissing.append("반환")
+        if listMissing:
+            self.addViolation("annotation", node.lineno, f"함수 '{node.name}' 의 타입 표기가 없습니다: {', '.join(listMissing)}")
+
+    def checkCall(self, node: ast.Call) -> None:
+        func = node.func
+        setKeyword = {keyword.arg for keyword in node.keywords}
+        name = func.id if isinstance(func, ast.Name) else (func.attr if isinstance(func, ast.Attribute) else "")
+        if name == "ArgumentParser" and "description" not in setKeyword:
+            self.addViolation("argparse", node.lineno, "`ArgumentParser` 에 `description=` 이 없습니다")
+        if "encoding" in setKeyword:
+            return
+        if isinstance(func, ast.Name) and func.id == "open":
+            mode = node.args[1] if len(node.args) > 1 else next((keyword.value for keyword in node.keywords if keyword.arg == "mode"), None)
+            if not (isinstance(mode, ast.Constant) and isinstance(mode.value, str) and "b" in mode.value):
+                self.addViolation("encoding", node.lineno, "글 모드 `open()` 에 `encoding=` 이 없습니다")
+        elif isinstance(func, ast.Attribute):
+            # `read_text(encoding)` · `write_text(data, encoding)` 처럼 자리로 넘긴 것도 인정한다.
+            if (func.attr == "read_text" and not node.args) or (func.attr == "write_text" and len(node.args) < 2):
+                self.addViolation("encoding", node.lineno, f"`{func.attr}()` 에 `encoding=` 이 없습니다")
+            elif (func.attr == "open" and node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)
+                  and _kTextModeRe.match(node.args[0].value)):
+                self.addViolation("encoding", node.lineno, "글 모드 `.open()` 에 `encoding=` 이 없습니다")
+
+    def checkImportFrom(self, node: ast.ImportFrom) -> None:
+        listName = [alias.name for alias in node.names]
+        if node.module == "typing":
+            listLegacy = [name for name in listName if name in _kSetLegacyTypingName]
+            if listLegacy:
+                self.addViolation("typing", node.lineno, f"typing 의 옛 철자({', '.join(listLegacy)}) — `X | None` · `list[str]` 로 씁니다")
+        elif node.module == "os.path":
+            listBanned = [name for name in listName if name not in _kSetLexicalOsPathFunction]
+            if listBanned:
+                self.addViolation("osPath", node.lineno, f"os.path 의 {', '.join(listBanned)} — `pathlib.Path` 로 씁니다")
+        elif node.module == "os" and "path" in listName:
+            self.addViolation("osPath", node.lineno, "`from os import path` — `pathlib.Path` 로 씁니다")
+
+    def checkAttribute(self, node: ast.Attribute) -> None:
+        if isDottedNameInternal(node.value, "typing") and node.attr in _kSetLegacyTypingName:
+            self.addViolation("typing", node.lineno, f"`typing.{node.attr}` — `X | None` · `list[str]` 로 씁니다")
+        elif isDottedNameInternal(node.value, "os.path") and node.attr not in _kSetLexicalOsPathFunction:
+            self.addViolation("osPath", node.lineno, f"`os.path.{node.attr}` — `pathlib.Path` 로 씁니다(os.path 는 글자 연산만)")
+
+    def checkRaise(self, node: ast.Raise) -> None:
+        exception = node.exc.func if isinstance(node.exc, ast.Call) else node.exc
+        if isinstance(exception, ast.Name) and exception.id == "SystemExit":
+            self.addViolation("exit", node.lineno, "`raise SystemExit` — `sys.exit(...)` 로 끝냅니다")
+
+
+def isDottedNameInternal(node: ast.expr, dottedName: str) -> bool:
+    """`node` 가 `a.b.c` 모양의 이름 `dottedName` 인가."""
+    listPart = dottedName.split(".")
+    for part in reversed(listPart[1:]):
+        if not (isinstance(node, ast.Attribute) and node.attr == part):
+            return False
+        node = node.value
+    return isinstance(node, ast.Name) and node.id == listPart[0]
+
+
+def isFutureAnnotationsInternal(node: ast.stmt) -> bool:
+    return isinstance(node, ast.ImportFrom) and node.module == "__future__" and any(alias.name == "annotations" for alias in node.names)
+
+
+def isMainGuardInternal(node: ast.stmt) -> bool:
+    """`if __name__ == "__main__":` 인가."""
+    if not isinstance(node, ast.If) or not isinstance(node.test, ast.Compare):
+        return False
+    test = node.test
+    return (isinstance(test.left, ast.Name) and test.left.id == "__name__" and len(test.comparators) == 1
+            and isinstance(test.comparators[0], ast.Constant) and test.comparators[0].value == "__main__")
+
+
 def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
     """파일 하나를 파싱해 규칙을 적용합니다."""
     relPath = path.relative_to(repositoryRoot).as_posix()
@@ -191,31 +350,55 @@ def checkPythonFileInternal(path: Path, repositoryRoot: Path) -> list[str]:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             listViolation.extend(checkFunctionNameInternal(node, relPath))
 
+    listViolation.extend(StyleScanInternal(tree, relPath).run())
     return listViolation
+
+
+#: 셀프테스트 조각의 머리 — 이것만으로는 어떤 규칙도 어기지 않아, 조각마다 겨눈 규칙 하나만 진다.
+_kProbeHead = '"""조각."""\nfrom __future__ import annotations\n\n'
 
 
 class CheckPythonConventionsGate(LintGate):
     """`AGENTS.md` 의 Python 규칙 — 지금까지 아무 게이트도 보지 않던 자리다."""
 
-    description = "Scripts/ 및 Tools/ 파이썬 명명 규칙 검사 (AGENTS.md '### Python')"
-    buildComment = "Checking Python naming conventions (AGENTS.md)..."
+    description = "저장소 파이썬의 이름 · 모양 규칙 검사 (AGENTS.md '### Python')"
+    buildComment = "Checking Python conventions (AGENTS.md)..."
     timeoutSeconds = 30
     preCommitPattern = ("*.py",)
     preCommitFileArgument = "--files"
-    violationHeader = "Python 명명 규칙 위반"
-    hint = "  AGENTS.md '### Python': 함수는 camelCase(내부는 camelCaseInternal), 모듈 상수는 kPascalCase, 파일은 PascalCase.py."
+    ruleSchema = _kRuleSchema
+    violationHeader = "Python 규칙 위반"
+    hint = ("  AGENTS.md '### Python': 함수는 camelCase(내부는 camelCaseInternal), 모듈 상수는 kPascalCase, 파일은 PascalCase.py. "
+            "[규칙] 머리가 붙은 줄은 같은 절의 모양 규칙이고, 정말 예외면 rules/CheckPythonConventions.toml 에 '<규칙>:<경로>' 와 이유를 적습니다.")
     selfTestCases = [
         {
             "name": "snake_case 함수",
-            "files": {"Scripts/Probe/BadFunction.py": "def ppm_stats(path):\n    return path\n"},
+            "files": {"Scripts/Probe/BadFunction.py": _kProbeHead + "def ppm_stats(path: str) -> str:\n    return path\n"},
         },
         {
             "name": "대문자 스네이크 모듈 상수",
-            "files": {"Scripts/Probe/BadConstant.py": "BACKENDS = [1, 2]\n"},
+            "files": {"Scripts/Probe/BadConstant.py": _kProbeHead + "BACKENDS = [1, 2]\n"},
         },
         {
             "name": "PascalCase 가 아닌 파일 이름",
-            "files": {"Scripts/Probe/bad_module.py": "kProbeValue = 1\n"},
+            "files": {"Scripts/Probe/bad_module.py": _kProbeHead + "kProbeValue = 1\n"},
+        },
+        {"name": "모듈 docstring 없음", "files": {"Scripts/Probe/NoDoc.py": "from __future__ import annotations\n\nkProbeValue = 1\n"}},
+        {"name": "future annotations 없음", "files": {"Scripts/Probe/NoFuture.py": '"""조각."""\nkProbeValue = 1\n'}},
+        {"name": "반환 타입 표기 없음", "files": {"Scripts/Probe/NoReturn.py": _kProbeHead + "def probe(value: int):\n    return value\n"}},
+        {"name": "매개변수 타입 표기 없음", "files": {"Scripts/Probe/NoParam.py": _kProbeHead + "def probe(value) -> int:\n    return value\n"}},
+        {"name": "typing.Optional", "files": {"Scripts/Probe/OldTyping.py": _kProbeHead + "from typing import Optional\n"}},
+        {"name": "encoding 없는 open", "files": {"Scripts/Probe/NoEncoding.py": _kProbeHead + "kText = open('a.txt').read()\n"}},
+        {"name": "encoding 없는 read_text", "files": {"Scripts/Probe/NoEncodingPath.py": _kProbeHead + "from pathlib import Path\n\nkText = Path('a').read_text()\n"}},
+        {"name": "os.path.join", "files": {"Scripts/Probe/OsPath.py": _kProbeHead + "import os\n\nkPath = os.path.join('a', 'b')\n"}},
+        {"name": "raise SystemExit", "files": {"Scripts/Probe/RaiseExit.py": _kProbeHead + "def probe() -> None:\n    raise SystemExit(1)\n"}},
+        {
+            "name": "__main__ 가드 모양",
+            "files": {"Scripts/Probe/Guard.py": _kProbeHead + "def main() -> int:\n    return 0\n\n\nif __name__ == '__main__':\n    main()\n"},
+        },
+        {
+            "name": "description 없는 ArgumentParser",
+            "files": {"Scripts/Probe/Parser.py": _kProbeHead + "import argparse\n\nkParser = argparse.ArgumentParser()\n"},
         },
     ]
 

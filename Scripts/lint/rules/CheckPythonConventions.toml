@@ -1,7 +1,16 @@
 # CheckPythonConventions 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckPythonConventions.py.
 
+# os.path 가운데 쓸 수 있는 함수 — pathlib 에 같은 것이 없는 글자 연산(`..` 를 접는 normpath, 공통 앞부분, 위로 올라가는 relpath,
+# 환경 변수 펼치기)과 os.walk 가 주는 이름 글자의 확장자 떼기(`PurePath.suffix` 는 끝 점을 다르게 다룬다). 나머지는 Path 로 쓴다.
+lexical_os_path_function = ["normpath", "relpath", "commonpath", "commonprefix", "expandvars", "splitext"]
+
+# typing 의 옛 철자 — `X | None` 과 내장 제네릭(`list[str]` · `dict[str, int]`)으로 쓴다.
+legacy_typing_name = ["Optional", "Union", "List", "Dict", "Tuple", "Set", "FrozenSet", "Type"]
+
 # `module:<파일 줄기>` · `variable:<모듈 변수>` → 이름 규칙에서 빼는 까닭.
+# `<규칙>:<경로>`(`*:<경로>` 는 이름 규칙 밖의 모든 규칙) → 모양 규칙에서 빼는 까닭. 규칙 이름은 게이트의 `_kStyleRule` 이다.
 [exemption]
 "module:__init__" = "패키지 표시 파일 — 이름이 정해져 있다"
 "module:__main__" = "`python -m` 진입점 — 이름이 정해져 있다"
 "variable:main" = "게이트 · 픽서 · 보고서의 진입점(`main = XxxGate.run`) — 상수가 아니다"
+"*:.claude/hooks/SessionGuard.py" = "Claude Code 세션 훅 — `.claude/` 설정이라 에이전트가 고치지 않고, 어떤 예외에도 세션을 막지 않게 0 으로 끝나는 모양을 따로 둔다"
