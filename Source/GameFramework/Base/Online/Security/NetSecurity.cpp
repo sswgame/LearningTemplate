@@ -80,7 +80,7 @@ namespace sw
 #endif
     }
 
-    unique_ptr<ITlsContext> NetSecurity::createServerTlsContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
+    unique_ptr<ITLSContext> NetSecurity::createServerTLSContext( string_view certificateFile, string_view privateKeyFile, string_view privateKeyPassphrase,
                                                                  string& outError )
     {
         using Internal         = NetSecurityInternal;
@@ -93,22 +93,22 @@ namespace sw
         }
         if ( certificatePath.empty() && ensureDevCertificate( certificatePath, privateKeyPath, outError ) == false )
             return nullptr;
-        TlsContextSettings settings;
-        settings._role                 = TlsRole::Server;
+        TLSContextSettings settings;
+        settings._role                 = TLSRole::Server;
         settings._privateKeyPassphrase = string( privateKeyPassphrase );
         if ( Internal::readPem( certificatePath, settings._certificatePem, outError ) == false ||
              Internal::readPem( privateKeyPath, settings._privateKeyPem, outError ) == false )
             return nullptr;
-        unique_ptr<ITlsContext> context = getProvider().createTlsContext( settings, outError );
+        unique_ptr<ITLSContext> context = getProvider().createTLSContext( settings, outError );
         settings._privateKeyPassphrase.assign( settings._privateKeyPassphrase.size(), '\0' );
         return context;
     }
 
-    unique_ptr<ITlsContext> NetSecurity::createClientTlsContext( string_view trustFile, string_view serverName, string& outError )
+    unique_ptr<ITLSContext> NetSecurity::createClientTLSContext( string_view trustFile, string_view serverName, string& outError )
     {
         using Internal = NetSecurityInternal;
-        TlsContextSettings settings;
-        settings._role       = TlsRole::Client;
+        TLSContextSettings settings;
+        settings._role       = TLSRole::Client;
         settings._serverName = string( serverName );
         string trustPath     = Internal::makeProjectPath( trustFile );
         if ( trustPath.empty() )
@@ -126,6 +126,6 @@ namespace sw
         {
             return nullptr;
         }
-        return getProvider().createTlsContext( settings, outError );
+        return getProvider().createTLSContext( settings, outError );
     }
 } // namespace sw

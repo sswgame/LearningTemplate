@@ -87,13 +87,13 @@ namespace
     };
 
     /** @brief 서버 컨텍스트(자체 서명 인증서)와 그 인증서를 믿는 클라이언트 컨텍스트입니다. @p bTrustStranger 면 클라이언트는 다른 인증서를 믿는다. */
-    struct TlsContexts
+    struct TLSContexts
     {
-        unique_ptr<ITlsContext> _server{};
-        unique_ptr<ITlsContext> _client{};
+        unique_ptr<ITLSContext> _server{};
+        unique_ptr<ITLSContext> _client{};
     };
 
-    bool makeTlsContexts( TlsVersion clientMaxVersion, bool bTrustStranger, TlsContexts& outContexts )
+    bool makeTLSContexts( TLSVersion clientMaxVersion, bool bTrustStranger, TLSContexts& outContexts )
     {
         INetSecurityProvider& provider = NetSecurity::getProvider();
         string                certificatePem;
@@ -108,25 +108,25 @@ namespace
                 return false;
         }
         string             error;
-        TlsContextSettings server;
-        server._role           = TlsRole::Server;
+        TLSContextSettings server;
+        server._role           = TLSRole::Server;
         server._certificatePem = certificatePem;
         server._privateKeyPem  = privateKeyPem;
-        outContexts._server    = provider.createTlsContext( server, error );
-        TlsContextSettings client;
-        client._role        = TlsRole::Client;
+        outContexts._server    = provider.createTLSContext( server, error );
+        TLSContextSettings client;
+        client._role        = TLSRole::Client;
         client._trustPem    = trustPem;
         client._serverName  = "localhost";
-        client._minVersion  = TlsVersion::Tls12;
+        client._minVersion  = TLSVersion::TLS12;
         client._maxVersion  = clientMaxVersion;
-        outContexts._client = provider.createTlsContext( client, error );
+        outContexts._client = provider.createTLSContext( client, error );
         return outContexts._server != nullptr && outContexts._client != nullptr;
     }
 
-    StreamEndpointSettings makeSettings( ITlsContext* pContext )
+    StreamEndpointSettings makeSettings( ITLSContext* pContext )
     {
         StreamEndpointSettings settings;
-        settings._security._pTlsContext = pContext;
+        settings._security._pTLSContext = pContext;
         return settings;
     }
 
@@ -137,10 +137,10 @@ namespace
     }
 } // namespace
 
-SW_TEST_CASE( StreamTlsTest, FramesFlowAfterHandshakeAndWireIsCiphertext )
+SW_TEST_CASE( StreamTLSTest, FramesFlowAfterHandshakeAndWireIsCiphertext )
 {
-    TlsContexts contexts;
-    SW_ASSERT_TRUE( makeTlsContexts( TlsVersion::Tls13, false, contexts ) );
+    TLSContexts contexts;
+    SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, false, contexts ) );
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, makeSettings( contexts._server.get() ), makeSettings( contexts._client.get() ), LoopbackStreamConditions{},
@@ -182,10 +182,10 @@ SW_TEST_CASE( StreamTlsTest, FramesFlowAfterHandshakeAndWireIsCiphertext )
     SW_EXPECT_TRUE( serverRecord._listClosedReason[0] == StreamCloseReason::RemoteClose || serverRecord._listClosedReason[0] == StreamCloseReason::LocalClose );
 }
 
-SW_TEST_CASE( StreamTlsTest, TamperedRecordClosesWithSecurityFailure )
+SW_TEST_CASE( StreamTLSTest, TamperedRecordClosesWithSecurityFailure )
 {
-    TlsContexts contexts;
-    SW_ASSERT_TRUE( makeTlsContexts( TlsVersion::Tls13, false, contexts ) );
+    TLSContexts contexts;
+    SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, false, contexts ) );
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, makeSettings( contexts._server.get() ), makeSettings( contexts._client.get() ), LoopbackStreamConditions{},
@@ -204,10 +204,10 @@ SW_TEST_CASE( StreamTlsTest, TamperedRecordClosesWithSecurityFailure )
     SW_ASSERT_EQUAL( 1, static_cast<int32>( clientRecord._listClosedReason.size() ) );
 }
 
-SW_TEST_CASE( StreamTlsTest, UntrustedServerNeverOpens )
+SW_TEST_CASE( StreamTLSTest, UntrustedServerNeverOpens )
 {
-    TlsContexts contexts;
-    SW_ASSERT_TRUE( makeTlsContexts( TlsVersion::Tls13, true, contexts ) );
+    TLSContexts contexts;
+    SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, true, contexts ) );
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, makeSettings( contexts._server.get() ), makeSettings( contexts._client.get() ), LoopbackStreamConditions{},
@@ -220,10 +220,10 @@ SW_TEST_CASE( StreamTlsTest, UntrustedServerNeverOpens )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( serverRecord._listClosedReason.size() ) );
 }
 
-SW_TEST_CASE( StreamTlsTest, Tls12ClientNeverOpens )
+SW_TEST_CASE( StreamTLSTest, TLS12ClientNeverOpens )
 {
-    TlsContexts contexts;
-    SW_ASSERT_TRUE( makeTlsContexts( TlsVersion::Tls12, false, contexts ) );
+    TLSContexts contexts;
+    SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS12, false, contexts ) );
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, makeSettings( contexts._server.get() ), makeSettings( contexts._client.get() ), LoopbackStreamConditions{},
@@ -236,10 +236,10 @@ SW_TEST_CASE( StreamTlsTest, Tls12ClientNeverOpens )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( clientRecord._listClosedReason.size() ) );
 }
 
-SW_TEST_CASE( StreamTlsTest, PlaintextClientAgainstTlsServerIsRejected )
+SW_TEST_CASE( StreamTLSTest, PlaintextClientAgainstTLSServerIsRejected )
 {
-    TlsContexts contexts;
-    SW_ASSERT_TRUE( makeTlsContexts( TlsVersion::Tls13, false, contexts ) );
+    TLSContexts contexts;
+    SW_ASSERT_TRUE( makeTLSContexts( TLSVersion::TLS13, false, contexts ) );
     EndpointRecord           serverRecord;
     EndpointRecord           clientRecord;
     test::StreamEndpointPair pair( serverRecord, clientRecord, makeSettings( contexts._server.get() ), makeSettings( nullptr ), LoopbackStreamConditions{}, nullptr );

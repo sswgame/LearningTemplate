@@ -177,8 +177,8 @@ namespace
     {
         LoopbackStreamNetwork   _network;
         FakeIssuerHandler       _handler;
-        unique_ptr<ITlsContext> _serverContext;
-        unique_ptr<ITlsContext> _clientContext;
+        unique_ptr<ITLSContext> _serverContext;
+        unique_ptr<ITLSContext> _clientContext;
         HttpServer              _server;
         HttpClient              _client;
         int64                   _nowMs;
@@ -196,24 +196,24 @@ namespace
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
-            TlsContextSettings serverTls;
-            serverTls._role           = TlsRole::Server;
-            serverTls._certificatePem = certificatePem;
-            serverTls._privateKeyPem  = privateKeyPem;
-            TlsContextSettings clientTls;
-            clientTls._role       = TlsRole::Client;
-            clientTls._trustPem   = certificatePem;
-            clientTls._serverName = "localhost";
+            TLSContextSettings serverTLS;
+            serverTLS._role           = TLSRole::Server;
+            serverTLS._certificatePem = certificatePem;
+            serverTLS._privateKeyPem  = privateKeyPem;
+            TLSContextSettings clientTLS;
+            clientTLS._role       = TLSRole::Client;
+            clientTLS._trustPem   = certificatePem;
+            clientTLS._serverName = "localhost";
             string error;
-            _serverContext = provider.createTlsContext( serverTls, error );
-            _clientContext = provider.createTlsContext( clientTls, error );
+            _serverContext = provider.createTLSContext( serverTLS, error );
+            _clientContext = provider.createTLSContext( clientTLS, error );
             StreamTransportSettings transportSettings;
             transportSettings._ioThreadCount = 0;
             HttpServerSettings serverSettings;
-            serverSettings._pTlsContext = _serverContext.get();
+            serverSettings._pTLSContext = _serverContext.get();
             (void)_server.initialize( _network.createTransport(), transportSettings, serverSettings, &_handler );
             (void)_client.initialize( _network.createTransport(), transportSettings, HttpClientSettings{} );
-            _client.registerTlsContext( "localhost", _clientContext.get() );
+            _client.registerTLSContext( "localhost", _clientContext.get() );
         }
 
         string makeUrl( const utf8* pPath ) const { return "https://localhost:" + to_string( static_cast<int32>( _server.getListenPort() ) ) + pPath; }
@@ -386,7 +386,7 @@ SW_TEST_CASE( PlatformLoginTest, PcLoopbackPkceFlowGetsAnIdTokenWithNonce )
     transportSettings._ioThreadCount = 0;
     SW_ASSERT_TRUE( client.initialize( fixture._network.createTransport(), fixture._network.createTransport(), transportSettings, &NetSecurity::getProvider(),
                                        &browser, { settings } ) );
-    client.getHttpClient().registerTlsContext( "localhost", fixture._clientContext.get() );
+    client.getHttpClient().registerTLSContext( "localhost", fixture._clientContext.get() );
 
     const SigningKey key       = Internal::makeKey( "k1", NetSignatureAlgorithm::EcdsaP256Sha256 );
     const uint64     requestId = client.beginLogin( "google", kNowMs );

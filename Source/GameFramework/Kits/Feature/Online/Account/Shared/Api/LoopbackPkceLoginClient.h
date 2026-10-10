@@ -49,7 +49,7 @@ namespace sw
 
         /**
          * @brief 리다이렉트 서버(127.0.0.1:0)와 토큰 교환 클라이언트를 띄웁니다. 전송 둘은 넘겨받고, @p pProvider(난수 · SHA-256) · @p pBrowser 는 빌려 쓴다.
-         * @details 토큰 주소가 `https://` 면 그 호스트의 TLS 컨텍스트를 `getHttpClient().registerTlsContext` 로 올린다.
+         * @details 토큰 주소가 `https://` 면 그 호스트의 TLS 컨텍스트를 `getHttpClient().registerTLSContext` 로 올린다.
          */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> serverTransport, unique_ptr<IStreamTransport> clientTransport,
                                        const StreamTransportSettings& transportSettings, INetSecurityProvider* pProvider, IExternalBrowser* pBrowser,

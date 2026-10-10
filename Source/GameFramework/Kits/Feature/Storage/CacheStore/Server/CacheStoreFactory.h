@@ -26,7 +26,7 @@ namespace sw
         string     _trustFile{}; ///< `ca=` — TLS 신뢰 PEM(비면 Dev 개발용 인증서)
         NetAddress _address{};
         int64      _timeoutMs{ 2000 };
-        uint8      _bTls{ SW_FALSE };
+        uint8      _bTLS{ SW_FALSE };
     };
 } // namespace sw
 

@@ -25,7 +25,7 @@ namespace sw
 
     RespConnection::~RespConnection() = default;
 
-    bool RespConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITlsContext* pTlsContext, const RespCommand* pAuthCommand )
+    bool RespConnection::beginConnect( IStreamTransport& transport, const NetAddress& address, ITLSContext* pTLSContext, const RespCommand* pAuthCommand )
     {
         _parser.reset();
         _listAwaitTag.clear();
@@ -33,9 +33,9 @@ namespace sw
         _bAuthRejected = SW_FALSE;
         _tlsSession.reset();
         // 세션은 연결을 걸기 전에 — 열림 콜백이 다른 스레드에서 먼저 와도 평문이 선에 나가지 않게.
-        if ( pTlsContext != nullptr )
+        if ( pTLSContext != nullptr )
         {
-            _tlsSession = pTlsContext->createSession();
+            _tlsSession = pTLSContext->createSession();
             if ( _tlsSession == nullptr )
                 return false;
         }
@@ -117,7 +117,7 @@ namespace sw
             const bool bFed = _tlsSession->feedCiphertext( pData, size );
             (void)flushCiphertext( transport ); // 핸드셰이크 답 · 세션 표
             _plainBytes.clear();
-            const bool bRead = bFed && _tlsSession->getState() != TlsSessionState::Failed && _tlsSession->readPlaintext( _plainBytes );
+            const bool bRead = bFed && _tlsSession->getState() != TLSSessionState::Failed && _tlsSession->readPlaintext( _plainBytes );
             if ( bRead == false )
             {
                 abort( transport, _tlsSession->getFailureText() );

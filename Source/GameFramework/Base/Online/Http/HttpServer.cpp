@@ -96,7 +96,7 @@ namespace sw
             return;
         std::scoped_lock<mutex> lock{ _mutex };
         unique_ptr<Peer>        peer = make_unique<Peer>();
-        if ( peer->_link.initialize( _settings._pTlsContext ) == false )
+        if ( peer->_link.initialize( _settings._pTLSContext ) == false )
         {
             _transport->close( handle, StreamCloseMode::Abort );
             return;

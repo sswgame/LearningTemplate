@@ -44,12 +44,12 @@ namespace
         }
     };
 
-    struct TlsPair
+    struct TLSPair
     {
-        unique_ptr<ITlsContext> _serverContext;
-        unique_ptr<ITlsContext> _clientContext;
+        unique_ptr<ITLSContext> _serverContext;
+        unique_ptr<ITLSContext> _clientContext;
 
-        TlsPair()
+        TLSPair()
             : _serverContext{}
             , _clientContext{}
         {
@@ -57,17 +57,17 @@ namespace
             string                certificatePem;
             string                privateKeyPem;
             (void)provider.createSelfSignedCertificate( "localhost", 1, certificatePem, privateKeyPem ); // 실패면 PEM 이 비어 아래 TLS 준비가 실패로 드러난다
-            TlsContextSettings serverTls;
-            serverTls._role           = TlsRole::Server;
-            serverTls._certificatePem = certificatePem;
-            serverTls._privateKeyPem  = privateKeyPem;
-            TlsContextSettings clientTls;
-            clientTls._role       = TlsRole::Client;
-            clientTls._trustPem   = certificatePem;
-            clientTls._serverName = "localhost";
+            TLSContextSettings serverTLS;
+            serverTLS._role           = TLSRole::Server;
+            serverTLS._certificatePem = certificatePem;
+            serverTLS._privateKeyPem  = privateKeyPem;
+            TLSContextSettings clientTLS;
+            clientTLS._role       = TLSRole::Client;
+            clientTLS._trustPem   = certificatePem;
+            clientTLS._serverName = "localhost";
             string error;
-            _serverContext = provider.createTlsContext( serverTls, error );
-            _clientContext = provider.createTlsContext( clientTls, error );
+            _serverContext = provider.createTLSContext( serverTLS, error );
+            _clientContext = provider.createTLSContext( clientTLS, error );
         }
     };
 
@@ -81,7 +81,7 @@ namespace
         unique_ptr<IStreamTransport> _transport;
         OnlineServiceHost            _host;
 
-        ServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, ITlsContext* pTlsContext, const RemoteConfig* pRemoteConfig )
+        ServerSide( LoopbackStreamNetwork& network, MemoryServiceDatabase& database, ITLSContext* pTLSContext, const RemoteConfig* pRemoteConfig )
             : _store{ &database }
             , _crypto{ &NetSecurity::getProvider() }
             , _loginService{}
@@ -99,7 +99,7 @@ namespace
             SW_EXPECT_TRUE( _host.registerService( &_accountServer ) );
             OnlineServiceHostSettings hostSettings;
             hostSettings._transportSettings._ioThreadCount        = 0;
-            hostSettings._endpointSettings._security._pTlsContext = pTlsContext;
+            hostSettings._endpointSettings._security._pTLSContext = pTLSContext;
             hostSettings._listenAddress                           = NetAddress::makeLoopback( kServerPort );
             hostSettings._pServiceStore                           = &_store;
             hostSettings._requestBurstPerRemote                   = 1000;
@@ -125,7 +125,7 @@ namespace
         AccountClient                _account;
         OnlineServiceClient          _client;
 
-        ClientSide( LoopbackStreamNetwork& network, ITlsContext* pTlsContext, const AccountClientInfo& clientInfo = AccountClientInfo{} )
+        ClientSide( LoopbackStreamNetwork& network, ITLSContext* pTLSContext, const AccountClientInfo& clientInfo = AccountClientInfo{} )
             : _transport{ network.createTransport() }
             , _account{}
             , _client{}
@@ -134,7 +134,7 @@ namespace
             SW_EXPECT_TRUE( _client.registerClientService( &_account ) );
             OnlineServiceClientSettings settings;
             settings._transportSettings._ioThreadCount        = 0;
-            settings._endpointSettings._security._pTlsContext = pTlsContext;
+            settings._endpointSettings._security._pTLSContext = pTLSContext;
             settings._serverAddress                           = NetAddress::makeLoopback( kServerPort );
             settings._gameBuild                               = "test";
             settings._maxBackoffMs                            = 200;
@@ -148,7 +148,7 @@ namespace
     struct AccountRig
     {
         LoopbackStreamNetwork  _network;
-        TlsPair                _tls;
+        TLSPair                _tls;
         MemoryServiceDatabase  _database;
         RemoteConfig           _remoteConfig;
         unique_ptr<ServerSide> _server;
@@ -169,8 +169,8 @@ namespace
             restartServer();
         }
 
-        ITlsContext* getServerContext() const { return _bSecure ? _tls._serverContext.get() : nullptr; }
-        ITlsContext* getClientContext() const { return _bSecure ? _tls._clientContext.get() : nullptr; }
+        ITLSContext* getServerContext() const { return _bSecure ? _tls._serverContext.get() : nullptr; }
+        ITLSContext* getClientContext() const { return _bSecure ? _tls._clientContext.get() : nullptr; }
 
         void restartServer()
         {

@@ -54,7 +54,7 @@ namespace sw
          * @param tlsContext 있으면 연결마다 TLS 세션(클라이언트 역할)
          */
         [[nodiscard]] bool initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const RespStoreSettings& settings,
-                                       unique_ptr<ITlsContext> tlsContext, string& outError );
+                                       unique_ptr<ITLSContext> tlsContext, string& outError );
 
         uint64 submit( const EphemeralRequest& request ) override;
         int32  pollReplies( vector<EphemeralReply>& outListReply ) override;
@@ -116,7 +116,7 @@ namespace sw
         vector<string>               _listChannel; ///< 구독 중인 채널(접두 없는 이름) — 다시 연결하면 다시 구독한다
         deque<Operation>             _listOperation;
         unique_ptr<IStreamTransport> _transport;
-        unique_ptr<ITlsContext>      _tlsContext;
+        unique_ptr<ITLSContext>      _tlsContext;
         int64                        _nextCommandConnectNanoseconds;
         int64                        _nextSubscribeConnectNanoseconds;
         int64                        _commandBackoffMs;

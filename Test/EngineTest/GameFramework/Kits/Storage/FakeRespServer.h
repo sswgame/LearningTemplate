@@ -60,14 +60,14 @@ namespace test
     class FakeRespServer final : public sw::IStreamHandler
     {
     public:
-        FakeRespServer( sw::LoopbackStreamNetwork& network, sw::ITlsContext* pTlsContext = nullptr )
+        FakeRespServer( sw::LoopbackStreamNetwork& network, sw::ITLSContext* pTLSContext = nullptr )
             : _mapConnection{}
             , _mapEntry{}
             , _mapKeyVersion{}
             , _password{}
             , _pNetwork{ &network }
             , _transport{ network.createTransport() }
-            , _pTlsContext{ pTlsContext }
+            , _pTLSContext{ pTLSContext }
             , _nowMs{ 1000000 }
             , _nextVersion{ 1 }
             , _acceptedCount{ 0 }
@@ -132,8 +132,8 @@ namespace test
             (void)bAccepted;
             Connection& connection = _mapConnection[handle.packed()];
             connection._handle     = handle;
-            if ( _pTlsContext != nullptr )
-                connection._tlsSession = _pTlsContext->createSession();
+            if ( _pTLSContext != nullptr )
+                connection._tlsSession = _pTLSContext->createSession();
             ++_acceptedCount;
         }
 
@@ -198,7 +198,7 @@ namespace test
             sw::vector<sw::RespValue>            _listQueuedCommand{};
             sw::vector<sw::string>               _listChannel{};
             sw::unordered_map<sw::string, int64> _mapWatchedVersion{};
-            sw::unique_ptr<sw::ITlsSession>      _tlsSession{};
+            sw::unique_ptr<sw::ITLSSession>      _tlsSession{};
             sw::StreamConnectionHandle           _handle{};
             bool                                 _bAuthenticated{ false };
             bool                                 _bInMulti{ false };
@@ -627,7 +627,7 @@ namespace test
         sw::string                            _password;
         sw::LoopbackStreamNetwork*            _pNetwork;
         sw::unique_ptr<sw::IStreamTransport>  _transport;
-        sw::ITlsContext*                      _pTlsContext;
+        sw::ITLSContext*                      _pTLSContext;
         int64                                 _nowMs;
         int64                                 _nextVersion;
         int32                                 _acceptedCount;

@@ -38,20 +38,20 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ITlsSession
+     * @class ITLSSession
      * @brief 메모리 위의 TLS 세션입니다 — 소켓을 모른다. 받은 암호문을 넣고 평문을 꺼내고, 평문을 넣고 보낼 암호문을 꺼냅니다.
      * @details 한 스레드가 씁니다(연결마다 하나). 핸드셰이크 · 레코드 검증이 실패하면 상태가 `Failed` 가 되고 다시 살아나지 않는다.
      */
-    class SW_API ITlsSession
+    class SW_API ITLSSession
     {
     public:
-        ITlsSession()          = default;
-        virtual ~ITlsSession() = default;
+        ITLSSession()          = default;
+        virtual ~ITLSSession() = default;
 
-        ITlsSession( const ITlsSession& )            = delete;
-        ITlsSession& operator=( const ITlsSession& ) = delete;
+        ITLSSession( const ITLSSession& )            = delete;
+        ITLSSession& operator=( const ITLSSession& ) = delete;
 
-        virtual TlsSessionState getState() const = 0;
+        virtual TLSSessionState getState() const = 0;
         /** @brief 저쪽에서 받은 암호문을 넣습니다. false = 실패(변조 · 핸드셰이크 실패) — 상태 `Failed`. */
         [[nodiscard]] virtual bool feedCiphertext( const uint8* pData, int32 size ) = 0;
         /** @brief 풀린 평문을 @p outBytes 뒤에 붙입니다. false = 실패. */
@@ -69,20 +69,20 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ITlsContext
+     * @class ITLSContext
      * @brief TLS 컨텍스트(인증서 · 신뢰 · 판)입니다 — 연결마다 세션을 만듭니다. `createSession` 은 아무 스레드에서나.
      */
-    class SW_API ITlsContext
+    class SW_API ITLSContext
     {
     public:
-        ITlsContext()          = default;
-        virtual ~ITlsContext() = default;
+        ITLSContext()          = default;
+        virtual ~ITLSContext() = default;
 
-        ITlsContext( const ITlsContext& )            = delete;
-        ITlsContext& operator=( const ITlsContext& ) = delete;
+        ITLSContext( const ITLSContext& )            = delete;
+        ITLSContext& operator=( const ITLSContext& ) = delete;
 
-        virtual unique_ptr<ITlsSession> createSession() = 0;
-        virtual TlsRole                 getRole() const = 0;
+        virtual unique_ptr<ITLSSession> createSession() = 0;
+        virtual TLSRole                 getRole() const = 0;
     };
 } // namespace sw
 
@@ -121,7 +121,7 @@ namespace sw
         virtual unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) = 0;
 
         /** @brief TLS 컨텍스트를 만듭니다. 실패하면 nullptr 이고 @p outError 에 까닭. */
-        virtual unique_ptr<ITlsContext> createTlsContext( const TlsContextSettings& settings, string& outError ) = 0;
+        virtual unique_ptr<ITLSContext> createTLSContext( const TLSContextSettings& settings, string& outError ) = 0;
         /** @brief 개발용 자체 서명 인증서(EC P-256, SAN = @p commonName · localhost · 127.0.0.1)와 키를 PEM 으로 만듭니다. */
         [[nodiscard]] virtual bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) = 0;
         /** @brief PEM 인증서(첫 장)의 DER SHA-256 을 소문자 16 진 64 자로 줍니다. */

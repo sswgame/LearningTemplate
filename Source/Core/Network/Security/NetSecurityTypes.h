@@ -33,21 +33,21 @@ namespace sw
     };
 
     /** @brief TLS 쪽입니다 — 서버는 인증서 · 키, 클라이언트는 신뢰 목록을 듭니다. */
-    enum class TlsRole : uint8
+    enum class TLSRole : uint8
     {
         Server = 0,
         Client
     };
 
     /** @brief TLS 판입니다. 서비스 스트림은 1.3 만 — 1.2 는 다운그레이드 거절 시험에만 쓴다. */
-    enum class TlsVersion : uint8
+    enum class TLSVersion : uint8
     {
-        Tls12 = 0,
-        Tls13
+        TLS12 = 0,
+        TLS13
     };
 
     /** @brief TLS 세션의 상태입니다. */
-    enum class TlsSessionState : uint8
+    enum class TLSSessionState : uint8
     {
         Handshaking = 0, ///< 핸드셰이크 중 — 쓴 평문은 모아 둔다
         Established,     ///< 평문을 주고받는다
@@ -121,7 +121,7 @@ namespace sw
 namespace sw
 {
     /** @brief TLS 컨텍스트 설정입니다. 인증서 · 키 · 신뢰는 PEM 문자열(파일 경로는 `NetSecurity` 가 읽어 채운다). */
-    struct TlsContextSettings
+    struct TLSContextSettings
     {
         string     _certificatePem{};             ///< 서버 — 끝 인증서 + 중간 인증서(체인)
         string     _privateKeyPem{};              ///< 서버
@@ -129,8 +129,8 @@ namespace sw
         string     _trustPem{};                   ///< 클라이언트 — 이 인증서(들)로 서버 체인을 검증한다(CA 묶음 또는 서버 인증서 그 자체)
         string     _serverName{};                 ///< 클라이언트 — SNI + 이름 검사(비우면 이름 검사 없이 체인만)
         string     _pinnedCertificateSha256Hex{}; ///< 클라이언트 — 있으면 서버 끝 인증서의 SHA-256(소문자 16 진 64 자)이 같아야 한다
-        TlsRole    _role{ TlsRole::Server };
-        TlsVersion _minVersion{ TlsVersion::Tls13 }; ///< 1.3 만 — 낮추는 것은 다운그레이드 시험뿐
-        TlsVersion _maxVersion{ TlsVersion::Tls13 };
+        TLSRole    _role{ TLSRole::Server };
+        TLSVersion _minVersion{ TLSVersion::TLS13 }; ///< 1.3 만 — 낮추는 것은 다운그레이드 시험뿐
+        TLSVersion _maxVersion{ TLSVersion::TLS13 };
     };
 } // namespace sw

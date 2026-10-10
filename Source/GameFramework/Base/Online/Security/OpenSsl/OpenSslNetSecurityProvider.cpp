@@ -48,7 +48,7 @@ namespace sw
                 return text.empty() ? string( "unknown OpenSSL error" ) : text;
             }
 
-            static int32 toOpenSslVersion( TlsVersion version ) { return version == TlsVersion::Tls12 ? TLS1_2_VERSION : TLS1_3_VERSION; }
+            static int32 toOpenSslVersion( TLSVersion version ) { return version == TLSVersion::TLS12 ? TLS1_2_VERSION : TLS1_3_VERSION; }
 
             static string toHex( const uint8* pData, int32 size )
             {
@@ -165,17 +165,17 @@ namespace sw
         };
 
         /** @brief 메모리 BIO 둘 위의 TLS 세션 — 핸드셰이크 전에 쓴 평문은 모아 두었다가 핸드셰이크가 끝나면 보낸다. */
-        class OpenSslTlsSession final : public ITlsSession
+        class OpenSslTLSSession final : public ITLSSession
         {
         public:
-            OpenSslTlsSession( SSL_CTX* pContext, TlsRole role, const string& serverName, const string& pinnedSha256Hex )
+            OpenSslTLSSession( SSL_CTX* pContext, TLSRole role, const string& serverName, const string& pinnedSha256Hex )
                 : _pendingBytes{}
                 , _pinnedSha256Hex{ pinnedSha256Hex }
                 , _failureText{}
                 , _pSsl{ SSL_new( pContext ) }
                 , _pReadBio{ BIO_new( BIO_s_mem() ) }
                 , _pWriteBio{ BIO_new( BIO_s_mem() ) }
-                , _state{ TlsSessionState::Handshaking }
+                , _state{ TLSSessionState::Handshaking }
             {
                 if ( _pSsl == nullptr || _pReadBio == nullptr || _pWriteBio == nullptr )
                 {
@@ -183,7 +183,7 @@ namespace sw
                     return;
                 }
                 SSL_set_bio( _pSsl, _pReadBio, _pWriteBio ); // BIO 는 SSL 이 소유한다
-                if ( role == TlsRole::Server )
+                if ( role == TLSRole::Server )
                 {
                     SSL_set_accept_state( _pSsl );
                     return;
@@ -197,7 +197,7 @@ namespace sw
                 advanceHandshake(); // ClientHello
             }
 
-            ~OpenSslTlsSession() override
+            ~OpenSslTLSSession() override
             {
                 if ( _pSsl != nullptr )
                 {
@@ -208,27 +208,27 @@ namespace sw
                 BIO_free( _pWriteBio );
             }
 
-            OpenSslTlsSession( const OpenSslTlsSession& )            = delete;
-            OpenSslTlsSession& operator=( const OpenSslTlsSession& ) = delete;
+            OpenSslTLSSession( const OpenSslTLSSession& )            = delete;
+            OpenSslTLSSession& operator=( const OpenSslTLSSession& ) = delete;
 
-            TlsSessionState getState() const override { return _state; }
+            TLSSessionState getState() const override { return _state; }
             const utf8*     getFailureText() const override { return _failureText.c_str(); }
 
             [[nodiscard]] bool feedCiphertext( const uint8* pData, int32 size ) override
             {
-                if ( _state == TlsSessionState::Failed )
+                if ( _state == TLSSessionState::Failed )
                     return false;
                 if ( size > 0 && BIO_write( _pReadBio, pData, size ) != size )
                     return fail( "BIO_write failed" );
-                if ( _state == TlsSessionState::Handshaking )
+                if ( _state == TLSSessionState::Handshaking )
                     advanceHandshake();
-                return _state != TlsSessionState::Failed;
+                return _state != TLSSessionState::Failed;
             }
 
             [[nodiscard]] bool readPlaintext( vector<uint8>& outBytes ) override
             {
-                if ( _state != TlsSessionState::Established )
-                    return _state != TlsSessionState::Failed;
+                if ( _state != TLSSessionState::Established )
+                    return _state != TLSSessionState::Failed;
                 uint8 arrBuffer[constant::kMaxBuffer8192];
                 for ( ;; )
                 {
@@ -243,7 +243,7 @@ namespace sw
                         return true;
                     if ( error == SSL_ERROR_ZERO_RETURN )
                     {
-                        _state = TlsSessionState::Closed; // 저쪽 close_notify
+                        _state = TLSSessionState::Closed; // 저쪽 close_notify
                         return true;
                     }
                     return fail( OpenSslNetSecurityInternal::takeErrorText() ); // 변조된 레코드는 여기(bad record mac)
@@ -252,12 +252,12 @@ namespace sw
 
             [[nodiscard]] bool writePlaintext( const uint8* pData, int32 size ) override
             {
-                if ( _state == TlsSessionState::Handshaking )
+                if ( _state == TLSSessionState::Handshaking )
                 {
                     _pendingBytes.insert( _pendingBytes.end(), pData, pData + size );
                     return true;
                 }
-                if ( _state != TlsSessionState::Established )
+                if ( _state != TLSSessionState::Established )
                     return false;
                 return writeEstablished( pData, size );
             }
@@ -277,16 +277,16 @@ namespace sw
 
             void close() override
             {
-                if ( _state == TlsSessionState::Established )
+                if ( _state == TLSSessionState::Established )
                     (void)SSL_shutdown( _pSsl );
-                if ( _state != TlsSessionState::Failed )
-                    _state = TlsSessionState::Closed;
+                if ( _state != TLSSessionState::Failed )
+                    _state = TLSSessionState::Closed;
             }
 
         private:
             bool fail( const string& text )
             {
-                _state       = TlsSessionState::Failed;
+                _state       = TLSSessionState::Failed;
                 _failureText = text;
                 return false;
             }
@@ -314,7 +314,7 @@ namespace sw
                         (void)fail( "server certificate does not match the pinned SHA-256" );
                         return;
                     }
-                    _state = TlsSessionState::Established;
+                    _state = TLSSessionState::Established;
                     if ( _pendingBytes.empty() == false )
                     {
                         // 실패는 fail 이 상태(Failed)와 오류 글자로 남긴다
@@ -348,32 +348,32 @@ namespace sw
             SSL*            _pSsl;
             BIO*            _pReadBio;
             BIO*            _pWriteBio;
-            TlsSessionState _state;
+            TLSSessionState _state;
         };
 
-        class OpenSslTlsContext final : public ITlsContext
+        class OpenSslTLSContext final : public ITLSContext
         {
         public:
-            OpenSslTlsContext( SSL_CTX* pContext, const TlsContextSettings& settings )
+            OpenSslTLSContext( SSL_CTX* pContext, const TLSContextSettings& settings )
                 : _serverName{ settings._serverName }
                 , _pinnedSha256Hex{ settings._pinnedCertificateSha256Hex }
                 , _pContext{ pContext }
                 , _role{ settings._role }
             {
             }
-            ~OpenSslTlsContext() override { SSL_CTX_free( _pContext ); }
+            ~OpenSslTLSContext() override { SSL_CTX_free( _pContext ); }
 
-            OpenSslTlsContext( const OpenSslTlsContext& )            = delete;
-            OpenSslTlsContext& operator=( const OpenSslTlsContext& ) = delete;
+            OpenSslTLSContext( const OpenSslTLSContext& )            = delete;
+            OpenSslTLSContext& operator=( const OpenSslTLSContext& ) = delete;
 
-            unique_ptr<ITlsSession> createSession() override { return sw::make_unique<OpenSslTlsSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
-            TlsRole                 getRole() const override { return _role; }
+            unique_ptr<ITLSSession> createSession() override { return sw::make_unique<OpenSslTLSSession>( _pContext, _role, _serverName, _pinnedSha256Hex ); }
+            TLSRole                 getRole() const override { return _role; }
 
         private:
             string   _serverName;
             string   _pinnedSha256Hex;
             SSL_CTX* _pContext;
-            TlsRole  _role;
+            TLSRole  _role;
         };
 
         /** @brief 서명 확인 · 서명 · 키 쌍 — EVP_PKEY 를 JWK 구성 요소에서 만들고 ES256 의 r ‖ s 와 DER 를 오간다. */
@@ -600,11 +600,11 @@ namespace sw
         return aead;
     }
 
-    unique_ptr<ITlsContext> OpenSslNetSecurityProvider::createTlsContext( const TlsContextSettings& settings, string& outError )
+    unique_ptr<ITLSContext> OpenSslNetSecurityProvider::createTLSContext( const TLSContextSettings& settings, string& outError )
     {
         using Internal = OpenSslNetSecurityInternal;
         ERR_clear_error();
-        const bool bServer  = settings._role == TlsRole::Server;
+        const bool bServer  = settings._role == TLSRole::Server;
         SSL_CTX*   pContext = SSL_CTX_new( bServer ? TLS_server_method() : TLS_client_method() );
         bool       bReady   = pContext != nullptr && SSL_CTX_set_min_proto_version( pContext, Internal::toOpenSslVersion( settings._minVersion ) ) == 1 &&
                       SSL_CTX_set_max_proto_version( pContext, Internal::toOpenSslVersion( settings._maxVersion ) ) == 1;
@@ -648,7 +648,7 @@ namespace sw
             SSL_CTX_free( pContext );
             return nullptr;
         }
-        return sw::make_unique<OpenSslTlsContext>( pContext, settings );
+        return sw::make_unique<OpenSslTLSContext>( pContext, settings );
     }
 
     bool OpenSslNetSecurityProvider::createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem )

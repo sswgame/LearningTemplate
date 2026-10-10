@@ -15,15 +15,15 @@
 
 namespace sw
 {
-    class ITlsContext;
+    class ITLSContext;
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 스트림 끝점의 TLS 설정 — 컨텍스트(인증서 · 신뢰)는 `INetSecurityProvider::createTlsContext` 로 만들어 끝점보다 오래 둔다. 없으면 평문. */
+    /** @brief 스트림 끝점의 TLS 설정 — 컨텍스트(인증서 · 신뢰)는 `INetSecurityProvider::createTLSContext` 로 만들어 끝점보다 오래 둔다. 없으면 평문. */
     struct StreamSecuritySettings
     {
-        ITlsContext* _pTlsContext{ nullptr };
+        ITLSContext* _pTLSContext{ nullptr };
     };
 } // namespace sw
 
@@ -70,7 +70,7 @@ namespace sw
      * @brief 스트림 전송 위의 프레임 끝점 — 전송의 처리기가 되어 I/O 스레드에서 프레임을 잘라 연결마다의 받은 줄에 쌓고, `pump` 가 한 잠금에 꺼내 줍니다.
      * @details 받은 줄이 `_maxPendingReceiveBytes` 를 넘으면 읽기를 멈춘다(TCP 창이 닫혀 상대가 멈춘다). 핑 · 퐁은 끝점이 I/O 스레드에서 스스로 답한다.
      *          보낼 줄이 넘치면 메시지를 버리지 않고 끊는다(SendQueueOverflow) — 버리면 그 위의 순서가 깨진다. 보내기는 아무 스레드에서나.
-     *          `_security._pTlsContext` 가 있으면 연결마다 TLS 세션을 두고 모든 바이트가 그것을 지난다 — 열림은 핸드셰이크가 끝난 뒤, 핸드셰이크 · 레코드 검증
+     *          `_security._pTLSContext` 가 있으면 연결마다 TLS 세션을 두고 모든 바이트가 그것을 지난다 — 열림은 핸드셰이크가 끝난 뒤, 핸드셰이크 · 레코드 검증
      *          실패는 SecurityFailure 로 끊어 열림 없이 닫힘만 간다. 핸드셰이크 중에 보낸 프레임은 세션이 모았다가 끝나면 보낸다. 위 층은 TLS 를 모른다.
      * @code
      *     unique_ptr<IStreamTransport> transport = StreamTransportFactory::createPlatformTransport();

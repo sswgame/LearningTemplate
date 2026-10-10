@@ -22,7 +22,7 @@ namespace sw
         [[nodiscard]] bool      computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params,
                                                      uint8* pOut, int32 outSize ) override;
         unique_ptr<INetAead>    createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override;
-        unique_ptr<ITlsContext> createTlsContext( const TlsContextSettings& settings, string& outError ) override;
+        unique_ptr<ITLSContext> createTLSContext( const TLSContextSettings& settings, string& outError ) override;
         [[nodiscard]] bool      createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override;
         [[nodiscard]] bool      computeCertificateSha256( const string& certificatePem, string& outHex ) override;
         [[nodiscard]] bool      computeSha256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override;

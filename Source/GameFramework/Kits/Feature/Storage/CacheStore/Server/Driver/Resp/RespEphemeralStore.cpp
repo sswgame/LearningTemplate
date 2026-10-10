@@ -71,7 +71,7 @@ namespace sw
     RespEphemeralStore::~RespEphemeralStore() { shutdown(); }
 
     bool RespEphemeralStore::initialize( unique_ptr<IStreamTransport> transport, const StreamTransportSettings& transportSettings, const RespStoreSettings& settings,
-                                         unique_ptr<ITlsContext> tlsContext, string& outError )
+                                         unique_ptr<ITLSContext> tlsContext, string& outError )
     {
         SW_ASSERT( _bInitialized == SW_FALSE );
         if ( transport == nullptr )
