@@ -729,7 +729,7 @@ SW_TEST_CASE( SpatialTest, SpatialHashGrid2DEntityAtTheCellLimitDoesNotHang )
 /**
  * @brief [SpatialTest] 같은 셀 안의 update 는 경계만 바꾸고, 셀을 넘는 update 는 옮긴다(점 엔티티 · 음수 셀)
  * @details `update` 는 덮는 셀 범위가 그대로면 셀 목록을 건드리지 않는다(`PhysicsWorld::setAABBLocked` 와 같은 지름길). 그 길에서도 좁힘 판정은
- *          **새 경계**로 해야 한다 — 경계를 안 바꾸면 셀 안에서 움직인 것이 옛 자리로 판정된다. NetMmo 관심 영역이 이 모양(점 · 반경)으로 쓴다.
+ *          **새 경계**로 해야 한다 — 경계를 안 바꾸면 셀 안에서 움직인 것이 옛 자리로 판정된다. NetMMO 관심 영역이 이 모양(점 · 반경)으로 쓴다.
  * @note 변이 검사: 지름길에서 경계 대입을 빼면 두 번째 (0, 0) 원 질의가 eNear 를 돌려줘 실패한다. 셀을 넘는 update 가 옛 셀에서 빼지 않으면 활성 버킷이 5 가 된다.
  */
 SW_TEST_CASE( SpatialTest, SpatialHashGrid2DUpdateWithinACellMovesTheBound )

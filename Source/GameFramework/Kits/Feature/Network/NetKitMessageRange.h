@@ -16,12 +16,12 @@ namespace sw
         static constexpr uint8 kClientServer = NetMessageRange::kFramework + 0 * NetMessageRange::kSize; ///< GF_NetClientServer
         static constexpr uint8 kLockstep     = NetMessageRange::kFramework + 1 * NetMessageRange::kSize; ///< GF_NetLockstep
         static constexpr uint8 kTurnRelay    = NetMessageRange::kFramework + 2 * NetMessageRange::kSize; ///< GF_NetTurnRelay
-        static constexpr uint8 kMmo          = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMmo
+        static constexpr uint8 kMMO          = NetMessageRange::kFramework + 3 * NetMessageRange::kSize; ///< GF_NetMMO
         static constexpr uint8 kDestruction  = NetMessageRange::kFramework + 4 * NetMessageRange::kSize; ///< GF_NetDestruction
 
         static_assert( kDestruction + NetMessageRange::kSize <= NetMessageRange::kGame, "network kit message ranges must stay below the game range" );
         // 첫 바이트는 선(wire) 형식이다 — 값이 바뀌면 다른 빌드와 말이 안 통한다. 바꾸려면 프로토콜 판을 올린다.
-        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMmo == 0x40 && kDestruction == 0x50,
+        static_assert( kClientServer == 0x10 && kLockstep == 0x20 && kTurnRelay == 0x30 && kMMO == 0x40 && kDestruction == 0x50,
                        "network kit message ranges are wire format" );
     };
 } // namespace sw
@@ -41,7 +41,7 @@ namespace sw
         static constexpr uint32 kClientServer = 3;
         static constexpr uint32 kLockstep     = 3;
         static constexpr uint32 kTurnRelay    = 3; ///< 3: 행동 상한 8 KB(N20b)
-        static constexpr uint32 kMmo          = 3; ///< 3: 들어옴을 틱마다 메시지 하나로(N20b)
+        static constexpr uint32 kMMO          = 3; ///< 3: 들어옴을 틱마다 메시지 하나로(N20b)
         static constexpr uint32 kDestruction  = 2; ///< 2: 스냅숏 조각 → 메시지 하나(N20b)
     };
 } // namespace sw

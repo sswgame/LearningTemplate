@@ -26,7 +26,7 @@
 
 ## 따라 해 보기 — 반경 안의 이웃 찾기
 
-XZ 평면의 점 엔티티를 2D 해시 그리드에 넣고, 한 점 주변 반경 안의 엔티티를 찾습니다. NetMmo 키트의 관심 영역이 이 방식을 씁니다.
+XZ 평면의 점 엔티티를 2D 해시 그리드에 넣고, 한 점 주변 반경 안의 엔티티를 찾습니다. NetMMO 키트의 관심 영역이 이 방식을 씁니다.
 
 <!-- snippet: SpatialHashGrid2D 에 점을 넣고 queryCircle 로 이웃 찾기 — 5b U7 에서 대조 -->
 ```cpp
@@ -71,5 +71,5 @@ grid.queryCircle( center._x, center._z, 30.0f, listNear ); // listNear 는 먼�
 ## 더 볼 곳
 
 - 테스트: `Test/EngineTest/Spatial/TestSpatial.cpp`
-- 쓰는 곳: `GameFramework/Kits/Feature/Network/NetMmo/MmoReplicator`(해시 그리드), `Engine/Character/Fit/SurfaceBvh`(BVH)
+- 쓰는 곳: `GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator`(해시 그리드), `Engine/Character/Fit/SurfaceBvh`(BVH)
 - 상위 문서: [Engine/README.md](../README.md)

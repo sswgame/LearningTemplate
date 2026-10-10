@@ -69,7 +69,7 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | `Feature/Network` | `NetClientServer` | 권위 서버 복제와 예측 | |
 | | `NetLockstep` | 락스텝과 롤백 | |
 | | `NetTurnRelay` | 턴제 중계 | |
-| | `NetMmo` | 관심 영역 복제 | |
+| | `NetMMO` | 관심 영역 복제 | |
 | | `NetDestruction` | 파괴 상태 복제 | |
 | | `NetSimulation` | 한 프로세스 가상 서버 하니스 | |
 | `Feature/World` | `Overworld` | 타일 걷기 필드와 존 | |
@@ -129,12 +129,12 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 ### 네트워크 키트
 
 네트워크 키트(`Kits/Feature/Network/`)는 장르별 동기화 방식입니다. 공통 전송 계층은 `Core/Network` 에 있고, 싱글 게임은 네트워크 키트를 링크하지 않습니다.
-슈터와 액션은 `NetClientServer`, RTS 와 격투는 `NetLockstep`, 카드와 보드는 `NetTurnRelay`, MMO 는 `NetMmo` 를 씁니다.
+슈터와 액션은 `NetClientServer`, RTS 와 격투는 `NetLockstep`, 카드와 보드는 `NetTurnRelay`, MMO 는 `NetMMO` 를 씁니다.
 
 메시지 첫 바이트의 범위는 키트마다 나뉘어 있습니다(`NetMessageRange`, `NetKitMessageRange.h`). 그래서 한 게임이 키트 둘을 같이 써도 메시지가 섞이지 않습니다.
 키트의 서버와 클라이언트는 모두 `INetMessageHandler` 이고, `NetMessageRouter` 에 등록해 두면 `pump( host )` 가 범위대로 나눠 주고 게임 메시지만 돌려줍니다.
 
-`ReplicationServer` 와 `MmoReplicator` 에 `setTaskManager( &engine::getTaskManager() )` 를 주면 관찰자마다의 스냅샷과 관심 영역 계산을 워커에 나눕니다.
+`ReplicationServer` 와 `MMOReplicator` 에 `setTaskManager( &engine::getTaskManager() )` 를 주면 관찰자마다의 스냅샷과 관심 영역 계산을 워커에 나눕니다.
 결과는 한 스레드로 돌린 것과 바이트까지 같습니다(`NetParallelTest`). 관찰자 128명, 엔티티 8,000개에서 틱당 4.4ms 가 워커 3개로 1.5ms 가 되었습니다.
 이때 정책 인터페이스(`IReplicationPolicy`, `IInterestPolicy`)는 여러 스레드에서 동시에 불리므로 읽기만 해야 합니다.
 

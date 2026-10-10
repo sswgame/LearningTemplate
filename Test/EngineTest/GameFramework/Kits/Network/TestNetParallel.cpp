@@ -8,7 +8,7 @@
 
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationClient.h"
 #include "GameFramework/Kits/Feature/Network/NetClientServer/ReplicationServer.h"
-#include "GameFramework/Kits/Feature/Network/NetMmo/MmoReplicator.h"
+#include "GameFramework/Kits/Feature/Network/NetMMO/MMOReplicator.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestLoopbackCluster.h"
@@ -120,15 +120,15 @@ namespace
     }
 
     /** @brief MMO 판 — 관찰자마다 받은 메시지 바이트의 해시 + 보낸 갱신 수(마지막 칸)입니다. */
-    vector<uint64> runMmo( TaskManager* pTaskManager )
+    vector<uint64> runMMO( TaskManager* pTaskManager )
     {
         NetHostSettings settings;
         settings._sendInterval = 1.0 / 20.0;
         test::LoopbackCluster cluster( 21u );
         connectHostCluster( cluster, settings );
 
-        MmoReplicator         server;
-        MmoReplicatorSettings mmoSettings;
+        MMOReplicator         server;
+        MMOReplicatorSettings mmoSettings;
         mmoSettings._enterRadius       = 50.0f;
         mmoSettings._leaveRadius       = 60.0f;
         mmoSettings._updateBudgetBytes = 120;
@@ -139,7 +139,7 @@ namespace
         {
             for ( uint32 index = 0; index < 600; ++index )
             {
-                server.setEntity( MmoEntity{
+                server.setEntity( MMOEntity{
                     vector<uint8>{ static_cast<uint8>( ( index + tick ) % 7u ) },
                     float3{ static_cast<float32>( index % 30 ) * 15.0f, 0.0f, static_cast<float32>( index / 30 ) * 15.0f },
                     index, 1, 1.0f + static_cast<float32>( index % 3 )
@@ -161,7 +161,7 @@ namespace
                 placeEntities( tick );
             for ( int32 index = 0; index < kClientCount; ++index )
             {
-                server.setEntity( MmoEntity{
+                server.setEntity( MMOEntity{
                     vector<uint8>{},
                     float3{ static_cast<float32>( index % 6 ) * 70.0f + static_cast<float32>( tick ), 0.0f, static_cast<float32>( index / 6 ) * 70.0f },
                     1000u + static_cast<uint32>( index ), 0, 2.0f
@@ -199,12 +199,12 @@ SW_TEST_CASE( NetParallelTest, ReplicationServerSendsTheSameSnapshotsOnWorkerThr
     }
 }
 
-SW_TEST_CASE( NetParallelTest, MmoReplicatorSendsTheSameViewsOnWorkerThreads )
+SW_TEST_CASE( NetParallelTest, MMOReplicatorSendsTheSameViewsOnWorkerThreads )
 {
     TaskManager taskManager;
     SW_ASSERT_TRUE( taskManager.initialize( 3 ) );
-    const vector<uint64> listSerial   = runMmo( nullptr );
-    const vector<uint64> listParallel = runMmo( &taskManager );
+    const vector<uint64> listSerial   = runMMO( nullptr );
+    const vector<uint64> listParallel = runMMO( &taskManager );
     taskManager.shutdown();
     SW_ASSERT_EQUAL( listSerial.size(), listParallel.size() );
     for ( size_t index = 0; index < listSerial.size(); ++index )
