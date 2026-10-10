@@ -101,6 +101,7 @@ kExternalName: frozenset[str] = frozenset({
     "ActiveId", "ActiveIdHasBeenEditedThisFrame", "HoveredId", "DockId", "ThreadId",
     "shapeIdA", "shapeIdB", "bodyIdA", "bodyIdB", "sensorShapeId", "visitorShapeId", "userMaterialId",
     "minLod", "maxLod", "mipLodBias",
+    "queryId",
 })
 
 #: 코드모드 · 게이트가 보는 C++ 파일의 확장자 — X-매크로 목록(`.xxx`)도 C++ 로 include 된다.

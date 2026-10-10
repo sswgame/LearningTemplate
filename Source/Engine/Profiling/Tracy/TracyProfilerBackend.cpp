@@ -211,13 +211,13 @@ namespace sw
         const uint16                 queryID = allocateGPUQueryID();
         ___tracy_gpu_zone_begin_data beginData{};
         beginData.srcloc  = static_cast<uint64_t>( reinterpret_cast<uintptr_t>( &site ) );
-        beginData.queryID = queryID;
+        beginData.queryId = queryID;
         beginData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_zone_begin( beginData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuBeginNanos;
-        timeData.queryID = queryID;
+        timeData.queryId = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_time( timeData );
 #endif
@@ -230,13 +230,13 @@ namespace sw
             return;
         const uint16               queryID = allocateGPUQueryID();
         ___tracy_gpu_zone_end_data endData{};
-        endData.queryID = queryID;
+        endData.queryId = queryID;
         endData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_zone_end( endData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuEndNanos;
-        timeData.queryID = queryID;
+        timeData.queryId = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
         ___tracy_emit_gpu_time( timeData );
         _gpuZoneCount.fetch_add( 1, std::memory_order_relaxed );
