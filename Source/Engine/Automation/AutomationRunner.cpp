@@ -15,6 +15,7 @@
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Automation/AutomationWindowSteps.h"
 #include "Engine/Common/EngineServices.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -40,6 +41,25 @@ namespace sw
             static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
+
+            /**
+             * @brief 이 구성에 없는 단계가 든 시나리오면 그 첫 단계를 돌려줍니다 — 개발 명령(`DevCommand`)은 Shipping 에서 빠진다.
+             * @details 그런 시나리오는 이 구성에서 돌 수 없는 것이지 틀린 것이 아니다 — 읽기 오류(11)가 아니라 건너뜀(13)이다
+             *          (언리얼 자동화 시험이 구성에 없는 문맥의 시험을 목록에서 빼는 것과 같은 자리).
+             */
+            static const AutomationStep* findStepMissingFromThisBuild( [[maybe_unused]] const AutomationScenario& scenario )
+            {
+#if SW_DEV_COMMANDS_ENABLED
+                return nullptr;
+#else
+                for ( const AutomationStep& step : scenario.getSteps() )
+                {
+                    if ( string_view{ step._kind } == AutomationEnvironmentSteps::kDevCommandKind )
+                        return &step;
+                }
+                return nullptr;
+#endif
+            }
 
             /** @brief 단계 속성 이름이 @p listAllowed 안에 있는지 봅니다. 아니면 false 와 이유. */
             static bool checkAttributeNames( const AutomationStep& step, std::initializer_list<string_view> listAllowed, string& outError )
@@ -223,6 +243,8 @@ namespace sw
             return;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
+        if ( skipIfStepsAreMissingFromThisBuild() )
+            return;
         SW_LOG_INFO( "[Scenario] %# loaded from %# (%# step(s), fixed delta %#)", _scenario.getName().c_str(), string( scenarioPath ).c_str(),
                      static_cast<uint32>( _scenario.getSteps().size() ), _scenario.getFixedDelta() );
         if ( _scenario.getInputMode() == VirtualInputMode::Mixed )
@@ -239,6 +261,15 @@ namespace sw
             return false;
         }
         _outputDirectory = "Saved/Automation/" + _scenario.getName();
+        return skipIfStepsAreMissingFromThisBuild() == false;
+    }
+
+    bool AutomationRunner::skipIfStepsAreMissingFromThisBuild()
+    {
+        const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
+        if ( pMissingStep == nullptr )
+            return false;
+        finish( AutomationResult::Skipped, pMissingStep->describe() + ": dev commands are compiled out of this build" );
         return true;
     }
 

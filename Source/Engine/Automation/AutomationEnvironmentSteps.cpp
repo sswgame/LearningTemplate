@@ -148,7 +148,7 @@ namespace sw
 
     void AutomationEnvironmentSteps::ensureLinked() {}
 
-    SW_AUTOMATION_STEP( devCommand, "DevCommand", &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
+    SW_AUTOMATION_STEP( devCommand, AutomationEnvironmentSteps::kDevCommandKind, &AutomationEnvironmentStepsInternal::runDevCommand, &AutomationEnvironmentStepsInternal::validateDevCommand,
                         false );
     SW_AUTOMATION_STEP( resizeWindow, "ResizeWindow", &AutomationEnvironmentStepsInternal::runResize, &AutomationEnvironmentStepsInternal::validateResize, false );
 } // namespace sw

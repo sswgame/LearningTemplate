@@ -64,7 +64,10 @@ namespace sw
 
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
         void startFromPath( string_view scenarioPath, string_view reportPath );
-        /** @brief XML 글로 시작합니다(시험). 형식 오류면 false 이고 결과는 LoadError 입니다. */
+        /**
+         * @brief XML 글로 시작합니다(시험). 형식 오류면 false 이고 결과는 LoadError 입니다.
+         * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).
+         */
         [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
 
         /** @brief 프레임 시작(입력 `beginFrame` **전**) — 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌린다. */
@@ -117,6 +120,8 @@ namespace sw
         static const utf8* getResultName( AutomationResult result );
 
     private:
+        /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
+        bool skipIfStepsAreMissingFromThisBuild();
         /** @brief 시작 조건이 참이 된 프레임 — 단계를 검사하고 입력 단계를 옮기고 로그를 듣기 시작한다. 실패면 false 와 이유. */
         [[nodiscard]] bool prepare( string& outError );
         [[nodiscard]] bool validateEngineStep( const AutomationStep& step, string& outError ) const;

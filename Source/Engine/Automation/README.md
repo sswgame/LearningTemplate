@@ -145,7 +145,7 @@ echo $LASTEXITCODE
 | `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
 | `EditorExpectObject` | `name`, `count`(기본 1), `component`, `selected` | 에디터 `EditorScenarioSteps` | 활성 씬에서 그 이름의 오브젝트 수를 확인합니다. `component` 는 그 컴포넌트를 가진 것만, `selected=1` 은 선택된 것만 셉니다 |
 | `EditorExpectDockLayout` | `minNodeSize`(px, 기본 24) | 에디터 `EditorScenarioSteps` | 창이 에디터 최소 크기 이상이고, 메인 뷰포트가 창과 같고, 보이는 도크 칸이 모두 화면 안에서 최소 변 이상인지 확인합니다 |
-| `DevCommand` | `line` | `AutomationEnvironmentSteps` | 개발 명령(`SW_DEV_COMMAND`) 한 줄을 부릅니다(`play`, `stop`, `editor <커맨드 id>`, `scene.saveAs <경로>`, `scene.open <리소스 id 또는 경로>`, `content.open <리소스 폴더>`). 모르는 명령은 읽기 오류, 명령이 false 면 실패입니다. Shipping 에는 없습니다 |
+| `DevCommand` | `line` | `AutomationEnvironmentSteps` | 개발 명령(`SW_DEV_COMMAND`) 한 줄을 부릅니다(`play`, `stop`, `editor <커맨드 id>`, `scene.saveAs <경로>`, `scene.open <리소스 id 또는 경로>`, `content.open <리소스 폴더>`). 모르는 명령은 읽기 오류, 명령이 false 면 실패입니다. Shipping 에는 없습니다 — 이 단계가 든 시나리오는 Shipping 에서 읽기 오류가 아니라 13(건너뜀)입니다 |
 | `ResizeWindow` | `width`, `height`(픽셀) | `AutomationEnvironmentSteps` | 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 거기서 멈춥니다 |
 | `PostWindowMessage` | `message` | `AutomationWindowSteps` | 자기 창에 OS 메시지를 보냅니다 |
 | `ExpectCursorClip` | `state`(`locked`, `free`) | `AutomationWindowSteps` | 커서 가두기 상태를 확인합니다(`GetClipCursor`) |
@@ -202,7 +202,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 ### 에디터 시나리오
 
 에디터 동작은 `Resource/engine/automation/editor/` 의 시나리오로 확인합니다(작업 흐름 `workflow`, 화면 `screen`, Hierarchy 검색 `hierarchyfilter`).
-`AppScenarioTest.EditorScenariosPassOnEveryBackend` 가 `-EnableEditor` 로 백엔드마다 돌립니다. 실행마다 빈 에디터 상태 폴더(`-gv_editorStateDir=Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
+`AppScenarioTest.EditorScenariosPassOn<Backend>` 가 `-EnableEditor` 로 백엔드마다 돌립니다. 실행마다 빈 에디터 상태 폴더(`-gv_editorStateDir=Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
 사용자의 `Saved/Editor`(레이아웃, 테마, 최근 씬)가 결과를 바꾸지 않고, 시나리오도 그 폴더를 건드리지 않습니다.
 저장된 상태를 읽는 분기는 `<묶음>.<n>.scenario.xml` 으로 확인합니다. 같은 묶음의 파일은 이름순으로 같은 상태 폴더를 이어 쓰므로, 앞 실행이 저장한 배치와 설정을 뒤 실행이 읽습니다(`savedstate.1` · `savedstate.2`).
 손으로 돌릴 때도 `-gv_editorStateDir=<빈 폴더>` 를 주면 같은 조건이 됩니다.

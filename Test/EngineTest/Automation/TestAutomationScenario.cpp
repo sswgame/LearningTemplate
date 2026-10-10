@@ -6,6 +6,7 @@
 #include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -109,6 +110,26 @@ SW_TEST_CASE( AutomationScenarioTest, TapStepTriggersOncePerTap )
     SW_EXPECT_EQUAL( 30u, runner.getFrameIndex() );
     SW_EXPECT_FALSE( input.isVirtualInputAttached() ); // 끝나면 뗀다
     input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] 개발 명령 단계가 든 시나리오는 개발 명령이 없는 구성(Shipping)에서 읽기 오류가 아니라 건너뜀이다
+ * @details Shipping AppScenarioTest 가 `bugit` · `debughud` 를 읽기 오류(11)로 지던 것을 막는다 — 구성에 없는 기능의 시나리오는 그 구성에서 돌 수 없을 뿐이다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, DevCommandScenarioIsSkippedWithoutDevCommands )
+{
+    sw::AutomationRunner runner;
+    const bool           bStarted = runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="1"><DevCommand line="help"/></At>
+        <At frame="2"><Pass/></At>
+      </Scenario>)" );
+#if SW_DEV_COMMANDS_ENABLED
+    SW_EXPECT_TRUE( bStarted );
+    SW_EXPECT_TRUE( runner.getResult() == sw::AutomationResult::Running );
+#else
+    SW_EXPECT_FALSE( bStarted );
+    SW_EXPECT_TRUE_MSG( runner.getResult() == sw::AutomationResult::Skipped, runner.getFinishReason().c_str() );
+#endif
 }
 
 /**
