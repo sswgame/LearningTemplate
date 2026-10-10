@@ -2,7 +2,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
-#include "Core/File/AsyncFileIoBackend.h"
+#include "Core/File/AsyncFileIOBackend.h"
 
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Concurrency/ThreadName.h"
@@ -29,9 +29,9 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIo" );
+        SW_LOG_CALLER( "AsyncFileIO" );
 
-        struct LinuxAsyncFileIoBackendInternal
+        struct LinuxAsyncFileIOBackendInternal
         {
             /** @brief 깨우기용 eventfd 읽기의 user_data 입니다(읽기 연산의 포인터와 겹치지 않는 값). */
             static constexpr uint64 kWakeUserData = 1;
@@ -59,7 +59,7 @@ namespace sw
         };
 
         /** @brief 커널에 걸린 읽기 하나입니다. iovec 은 SQE 가 커널로 넘어갈 때까지 살아 있어야 하므로 연산에 둔다. */
-        struct IoUringReadOperation
+        struct IOUringReadOperation
         {
             iovec                        _iov;
             shared_ptr<AsyncReadRequest> _pRequest;
@@ -70,17 +70,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IoUringAsyncFileIoBackend
+     * @class IOUringAsyncFileIOBackend
      * @brief 리눅스 io_uring 백엔드입니다(시스템 호출 직접 — liburing 없음). IO 스레드 하나가 SQE 를 채워 제출하고 CQE 를 거둡니다.
      * @details 다른 스레드의 새 요청은 eventfd 에 쓰고, 링에 걸어 둔 eventfd 읽기가 끝나 IO 스레드가 깹니다(링은 IO 스레드만 만진다 — 잠금 없음).
      *          읽기는 `IORING_OP_READV`(5.1+)로 걸어 오래된 커널에서도 돈다. 짧게 끝난 읽기는 남은 구간을 다시 건다.
      *          `io_uring_setup` 이 실패하면(ENOSYS — 옛 커널 · WSL1, EPERM — 컨테이너 seccomp · `kernel.io_uring_disabled`) `start` 가 false 를
      *          돌려 매니저가 스레드 풀로 내려간다.
      */
-    class IoUringAsyncFileIoBackend final : public IAsyncFileIoBackend
+    class IOUringAsyncFileIOBackend final : public IAsyncFileIOBackend
     {
     public:
-        IoUringAsyncFileIoBackend( AsyncFileIoQueue& queue, uint32 maxInFlightCount )
+        IOUringAsyncFileIOBackend( AsyncFileIOQueue& queue, uint32 maxInFlightCount )
             : _thread{}
             , _pQueue{ &queue }
             , _pSqRing{ nullptr }
@@ -107,7 +107,7 @@ namespace sw
         {
         }
 
-        ~IoUringAsyncFileIoBackend() override
+        ~IOUringAsyncFileIOBackend() override
         {
             stop();
             releaseRing();
@@ -116,9 +116,9 @@ namespace sw
         bool start() override
         {
             // 걸린 읽기(상한) + 깨우기 읽기 하나 + 여유. 상한을 큐가 지키므로 SQ 가 넘치지 않는다.
-            const uint32    entryCount = LinuxAsyncFileIoBackendInternal::roundUpToPowerOfTwo( _maxInFlightCount + 2 );
+            const uint32    entryCount = LinuxAsyncFileIOBackendInternal::roundUpToPowerOfTwo( _maxInFlightCount + 2 );
             io_uring_params params{};
-            _ringFd = LinuxAsyncFileIoBackendInternal::setupRing( entryCount, params );
+            _ringFd = LinuxAsyncFileIOBackendInternal::setupRing( entryCount, params );
             if ( _ringFd < 0 )
             {
                 SW_LOG_INFO( "io_uring is not available (errno %#) — using the thread-pool backend", errno );
@@ -192,7 +192,7 @@ namespace sw
                 return false;
             }
 
-            _thread = std::thread( &IoUringAsyncFileIoBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = std::thread( &IOUringAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 
@@ -214,7 +214,7 @@ namespace sw
             (void)::write( _eventFd, &one, sizeof( one ) );
         }
 
-        AsyncIoBackendKind getKind() const override { return AsyncIoBackendKind::IoUring; }
+        AsyncIOBackendKind getKind() const override { return AsyncIOBackendKind::IOUring; }
 
     private:
         /** @brief 채우고 · 제출하고 · 거두는 루프입니다. 큐가 멈추고 걸린 것이 없으면 끝납니다. */
@@ -231,7 +231,7 @@ namespace sw
                     return;
 
                 const uint32 submitCount = _pendingSubmitCount;
-                const int32  result      = LinuxAsyncFileIoBackendInternal::enterRing( _ringFd, submitCount, 1, IORING_ENTER_GETEVENTS );
+                const int32  result      = LinuxAsyncFileIOBackendInternal::enterRing( _ringFd, submitCount, 1, IORING_ENTER_GETEVENTS );
                 if ( result < 0 )
                 {
                     if ( errno == EINTR || errno == EAGAIN || errno == EBUSY )
@@ -254,25 +254,25 @@ namespace sw
                 if ( pRequest == nullptr )
                     return;
 
-                const AsyncIoStatus prepareStatus = _pQueue->prepare( *pRequest );
-                if ( prepareStatus != AsyncIoStatus::Pending )
+                const AsyncIOStatus prepareStatus = _pQueue->prepare( *pRequest );
+                if ( prepareStatus != AsyncIOStatus::Pending )
                 {
                     _pQueue->finish( pRequest, prepareStatus );
                     continue;
                 }
                 if ( pRequest->_size == 0 )
                 {
-                    _pQueue->finish( pRequest, AsyncIoStatus::Succeeded );
+                    _pQueue->finish( pRequest, AsyncIOStatus::Succeeded );
                     continue;
                 }
-                IoUringReadOperation* pOperation = sw_new IoUringReadOperation{};
+                IOUringReadOperation* pOperation = sw_new IOUringReadOperation{};
                 pOperation->_pRequest            = std::move( pRequest );
                 pushReadSqe( pOperation );
             }
         }
 
         /** @brief 남은 구간의 다음 조각을 SQE 로 채웁니다(제출은 다음 enter). */
-        void pushReadSqe( IoUringReadOperation* pOperation )
+        void pushReadSqe( IOUringReadOperation* pOperation )
         {
             AsyncReadRequest& request    = *pOperation->_pRequest;
             const uint64      remaining  = request._size - request._bytesDone;
@@ -301,7 +301,7 @@ namespace sw
             _wakeIov.iov_len   = sizeof( _wakeValue );
             pSqe->addr         = reinterpret_cast<uint64>( &_wakeIov );
             pSqe->len          = 1;
-            pSqe->user_data    = LinuxAsyncFileIoBackendInternal::kWakeUserData;
+            pSqe->user_data    = LinuxAsyncFileIOBackendInternal::kWakeUserData;
             commitSqe();
         }
 
@@ -313,7 +313,7 @@ namespace sw
         {
             while ( *_pSqTail - __atomic_load_n( _pSqHead, __ATOMIC_ACQUIRE ) >= _sqEntryCount )
             {
-                const int32 result = LinuxAsyncFileIoBackendInternal::enterRing( _ringFd, _pendingSubmitCount, 0, 0 );
+                const int32 result = LinuxAsyncFileIOBackendInternal::enterRing( _ringFd, _pendingSubmitCount, 0, 0 );
                 if ( result > 0 )
                     _pendingSubmitCount -= static_cast<uint32>( result ) < _pendingSubmitCount ? static_cast<uint32>( result ) : _pendingSubmitCount;
                 else if ( result < 0 && errno != EINTR && errno != EAGAIN && errno != EBUSY )
@@ -347,24 +347,24 @@ namespace sw
                 ++head;
                 __atomic_store_n( _pCqHead, head, __ATOMIC_RELEASE );
 
-                if ( userData == LinuxAsyncFileIoBackendInternal::kWakeUserData )
+                if ( userData == LinuxAsyncFileIOBackendInternal::kWakeUserData )
                 {
                     armWakeRead();
                     continue;
                 }
-                onReadCompleted( reinterpret_cast<IoUringReadOperation*>( userData ), result );
+                onReadCompleted( reinterpret_cast<IOUringReadOperation*>( userData ), result );
             }
         }
 
         /** @brief 조각 하나가 끝났습니다(@p result 는 읽은 바이트 또는 -errno). */
-        void onReadCompleted( IoUringReadOperation* pOperation, int32 result )
+        void onReadCompleted( IOUringReadOperation* pOperation, int32 result )
         {
             AsyncReadRequest& request = *pOperation->_pRequest;
-            AsyncIoStatus     status  = AsyncIoStatus::ReadFailed;
+            AsyncIOStatus     status  = AsyncIOStatus::ReadFailed;
             if ( result < 0 )
             {
                 if ( result == -ECANCELED )
-                    status = AsyncIoStatus::Canceled;
+                    status = AsyncIOStatus::Canceled;
                 else
                     SW_LOG_ERROR( "io_uring read failed on '%#' (errno %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", -result );
             }
@@ -377,7 +377,7 @@ namespace sw
                     pushReadSqe( pOperation );
                     return;
                 }
-                status = AsyncFileIoBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
+                status = AsyncFileIOBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
             }
 
             const shared_ptr<AsyncReadRequest> pRequest = std::move( pOperation->_pRequest );
@@ -406,7 +406,7 @@ namespace sw
         }
 
         std::thread       _thread;
-        AsyncFileIoQueue* _pQueue;
+        AsyncFileIOQueue* _pQueue;
         void*             _pSqRing;
         void*             _pCqRing;
         io_uring_sqe*     _pSqeArray;
@@ -434,12 +434,12 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIoBackend> AsyncFileIoBackendUtil::createPlatform( AsyncFileIoQueue& queue, AsyncIoBackendKind kind, uint32 maxInFlightCount )
+    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
     {
-        if ( kind != AsyncIoBackendKind::Auto && kind != AsyncIoBackendKind::IoUring )
+        if ( kind != AsyncIOBackendKind::Auto && kind != AsyncIOBackendKind::IOUring )
             return nullptr;
     #if defined( SW_HAS_IO_URING )
-        return make_unique<IoUringAsyncFileIoBackend>( queue, maxInFlightCount );
+        return make_unique<IOUringAsyncFileIOBackend>( queue, maxInFlightCount );
     #else
         (void)queue;
         (void)maxInFlightCount;

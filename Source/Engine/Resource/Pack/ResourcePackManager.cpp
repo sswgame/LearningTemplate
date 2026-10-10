@@ -357,7 +357,7 @@ namespace sw
         return true;
     }
 
-    AsyncReadHandle ResourcePackManager::readFileAsync( AsyncFileIo& io, string_view relativePath, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle ResourcePackManager::readFileAsync( AsyncFileIO& io, string_view relativePath, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
     {
         if ( relativePath.empty() )
             return AsyncReadHandle{};

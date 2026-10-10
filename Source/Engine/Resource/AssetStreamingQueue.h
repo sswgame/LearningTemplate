@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/Container/deque.h"
 #include "Core/Delegate/Delegate.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/EngineMinimal.h"
@@ -31,7 +31,7 @@ namespace sw
      * @class AssetStreamingQueue
      * @brief 에셋을 백그라운드에서 미리 읽는 스트리밍 큐입니다.
      * @details 씬 로드나 런타임 이동 중에 메인 스레드를 멈추지 않고 텍스처 · 오디오 · 머티리얼 파일을 비동기로 미리 읽습니다.
-     *          바이트를 읽는 요청(`requestAssetData`)은 워커가 찾고(낱개 파일 존재 확인은 느리다) 비동기 IO(`ResourceUtil::readBinaryResourceAsync` → `AsyncFileIo`)로 읽어 워커를 막지 않고,
+     *          바이트를 읽는 요청(`requestAssetData`)은 워커가 찾고(낱개 파일 존재 확인은 느리다) 비동기 IO(`ResourceUtil::readBinaryResourceAsync` → `AsyncFileIO`)로 읽어 워커를 막지 않고,
      *          팩 항목의 압축 해제 · CRC 는 완료를 받은 태스크 워커가 합니다 — 여러 요청의 해제가 나란히 돈다. 있는지만 보는 요청(`requestAsset`)은
      *          태스크 하나입니다. 완료 콜백은 `update` 를 부른 스레드에서 돕니다.
      */
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 스트리밍 우선순위가 싣는 태스크 우선순위입니다(`StreamingPriority` 설명의 표). */
         static TaskPriority toTaskPriority( StreamingPriority priority );
         /** @brief 스트리밍 우선순위가 싣는 IO 우선순위입니다(Immediate 는 Critical). */
-        static AsyncIoPriority toIoPriority( StreamingPriority priority );
+        static AsyncIOPriority toIOPriority( StreamingPriority priority );
 
     private:
         struct CompletedItem
@@ -140,7 +140,7 @@ namespace sw
          */
         unordered_map<string, uint64> _mapRequestGeneration;
         /** @brief 진행 중인 바이트 읽기의 IO 핸들입니다(경로당 하나). 취소 · 종료가 OS 에 걸린 읽기를 멈추고 기다리는 데 씁니다. */
-        unordered_map<string, AsyncReadHandle> _mapInFlightIo;
+        unordered_map<string, AsyncReadHandle> _mapInFlightIO;
         /**
          * @brief `update` 가 부를 완료입니다. **크기 상한이 없다** — 고정 용량 큐는 같은 경로에 콜백이 몰리면(편승 1024 개 초과) 넘친 완료를
          *        말없이 버린다.

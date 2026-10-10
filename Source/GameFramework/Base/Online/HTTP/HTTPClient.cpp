@@ -69,7 +69,7 @@ namespace sw
     {
         std::scoped_lock<mutex> lock{ _mutex };
         const uint64            requestId = _nextRequestId++;
-        HTTPAddress                 url;
+        HTTPAddress             url;
         if ( _bInitialized == SW_FALSE )
         {
             failImmediately( requestId, "client is not running" );
@@ -128,7 +128,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         if ( _ioThreadCount == 0 )
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
         vector<StreamConnectionHandle> listExpired;
         {
             std::scoped_lock<mutex> lock{ _mutex };

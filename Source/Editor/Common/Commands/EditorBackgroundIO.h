@@ -1,5 +1,5 @@
 /**
- * @file EditorBackgroundIo.h
+ * @file EditorBackgroundIO.h
  * @brief 에디터의 파일 스캔 · 로컬라이즈 로드를 TaskManager 워커에서 하는 잡들입니다.
  *
  * @details 공통 규약(잠금 · 세대 · 완료 플래그)은 EditorBackgroundTask 에 있습니다. 여기 있는 잡들은 입력 타입과 실제

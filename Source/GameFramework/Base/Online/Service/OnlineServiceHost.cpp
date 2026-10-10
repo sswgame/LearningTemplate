@@ -159,7 +159,7 @@ namespace sw
             return;
         _nowMs = nowMs;
         if ( _settings._transportSettings._ioThreadCount == 0 )
-            (void)_pTransport->pollIo( 0 );
+            (void)_pTransport->pollIO( 0 );
         (void)_endpoint.pump( *this );
         _requestServer.update();
         (void)_ephemeralRouter.pump();

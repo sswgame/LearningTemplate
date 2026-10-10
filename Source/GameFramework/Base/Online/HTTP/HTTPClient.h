@@ -1,7 +1,7 @@
 /**
  * @file HTTPClient.h
  * @brief 최소 HTTP/1.1 클라이언트 — 요청을 맡기고(`submitRequest`) 응답을 거둡니다(`pollResponses`). 요청마다 연결 하나, TLS 는 호스트마다 올린 컨텍스트로.
- * @details - 전송은 이 객체가 갖는다(처리기 = 이 객체). I/O 스레드가 없는 전송(루프백 시험)은 `tick` 이 `pollIo` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
+ * @details - 전송은 이 객체가 갖는다(처리기 = 이 객체). I/O 스레드가 없는 전송(루프백 시험)은 `tick` 이 `pollIO` 를 돈다. 콜백은 I/O 스레드라 상태는 잠금 하나로 지킨다.
  *          - `https://` 는 그 호스트에 `registerTlsContext` 한 컨텍스트가 있어야 한다(서버 이름 검사 · 신뢰는 컨텍스트가 정한다) — 없으면 전송 실패로 끝난다.
  *          - 시한은 맡긴 때부터(`_timeoutMs`) — 넘으면 연결을 끊고 전송 실패. 응답 몸 상한을 넘어도 전송 실패.
  *          언리얼 FHttpModule · libcurl multi 처럼 비동기 요청 · 완료 거두기 모양이다.

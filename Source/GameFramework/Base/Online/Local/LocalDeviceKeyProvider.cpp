@@ -103,7 +103,7 @@ namespace sw
             vector<uint8> bytes;
             if ( FileUtil::readFile( _keyFilePath, bytes ) == false || Internal::unprotectKey( bytes, _arrKey, kKeySize ) == false )
             {
-                // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IoError 다.
+                // 다른 PC · 다른 사용자에서 온 키 파일이다 — 새로 만들지 않는다(그러면 이 키로 봉인한 슬롯을 영영 못 푼다). 슬롯은 WrongKey 가 아니라 IOError 다.
                 SW_LOG_ERROR( "Local store key file cannot be opened on this device/user: %#", _keyFilePath.c_str() );
                 return false;
             }

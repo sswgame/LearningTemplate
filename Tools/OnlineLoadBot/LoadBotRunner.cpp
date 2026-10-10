@@ -118,7 +118,7 @@ namespace sw
         if ( _bManualClock == SW_FALSE && _startUs == 0 )
             _startUs = MonotonicClock::nowMicroseconds();
         const int64 nowMs = getNowMs();
-        (void)_pTransport->pollIo( 0 );
+        (void)_pTransport->pollIO( 0 );
         (void)_endpoint.pump( *this );
         _requestClient.update();
 

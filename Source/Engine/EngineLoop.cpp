@@ -11,7 +11,7 @@
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -295,17 +295,17 @@ namespace sw
         static void destroy( EngineLoop& loop ) { loop._owned._pTaskManager.reset(); }
     };
 
-    struct EngineLoop::FileIoStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::FileIOStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
             // 완료 콜백(팩 해제 · CRC · 스트리밍 완료 기록)은 태스크 워커에서 돈다 — IO 스레드는 다음 읽기를 거는 일만 한다.
-            AsyncFileIoSettings settings{};
+            AsyncFileIOSettings settings{};
             settings._pTaskManager = loop._owned._pTaskManager.get();
-            return loop._owned._pAsyncFileIo->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
+            return loop._owned._pAsyncFileIO->initialize( settings ) ? EngineInitResult::Succeeded : EngineInitResult::Failed;
         }
         // 큐를 비우고 걸린 읽기와 완료 콜백(태스크)을 다 기다린다. Task 보다 먼저, 모듈을 내리기 전에 내려간다.
-        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIo->shutdown(); }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pAsyncFileIO->shutdown(); }
     };
 
     struct EngineLoop::ModuleImagesStartupStep : EngineInitStepDefaults<EngineLoop>

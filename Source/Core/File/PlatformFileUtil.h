@@ -17,7 +17,7 @@
 namespace sw
 {
     /**
-     * @brief OS 파일 핸들(Windows `HANDLE` · POSIX 파일 서술자)을 담는 값입니다. 위치 지정 읽기(`readNativeFileAt`)와 비동기 IO(`AsyncFileIo`)가 씁니다.
+     * @brief OS 파일 핸들(Windows `HANDLE` · POSIX 파일 서술자)을 담는 값입니다. 위치 지정 읽기(`readNativeFileAt`)와 비동기 IO(`AsyncFileIO`)가 씁니다.
      * @details `FILE*` 와 달리 공유 파일 위치가 없어 여러 스레드가 같은 핸들을 잠금 없이 동시에 읽습니다.
      */
     using NativeFileHandle = int64;

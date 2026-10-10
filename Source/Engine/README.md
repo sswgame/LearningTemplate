@@ -162,7 +162,7 @@ py -3 Scripts/lint/gate/CheckEngineLayers.py
 `Resource/` 에는 에셋 데이터베이스(`AssetDatabase`), 에셋 매니저(`AssetManager`), 팩 파일 가상 파일 시스템(`ResourcePackManager`), 스트리밍 큐(`AssetStreamingQueue`)가 있습니다.
 
 팩 리더는 위치를 지정해 읽으므로 여러 스레드가 잠금 없이 읽을 수 있습니다. 매니저는 리더를 찾는 동안만 잠급니다.
-`readFileAsync` 는 `AsyncFileIo` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 갑니다.
+`readFileAsync` 는 `AsyncFileIO` 에 구간 읽기를 걸고, 압축 해제와 CRC 검사는 태스크 워커에서 합니다. 스트리밍 큐의 바이트 요청은 `ResourceUtil::readBinaryResourceAsync` 로 갑니다.
 
 스트리밍 큐는 호스트 전용 서비스(`HostOnly`)라 게임 모듈에는 보이지 않습니다. `EngineLoop` 의 기동 단계가 만들고 종료합니다.
 완료 콜백은 엔진 루프가 메인 스레드에서 프레임마다 내보냅니다(`update()`). 결과를 값으로 받으려면 `requestAssetFuture` 를 씁니다.

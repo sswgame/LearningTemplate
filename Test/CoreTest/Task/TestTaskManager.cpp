@@ -669,7 +669,7 @@ SW_TEST_CASE( TaskManagerTest, RunParallelJoinDoesNotHelpLowPriorityTasks )
             {
                 for ( uint32 lowIndex = 0; lowIndex < kLowTaskCount; ++lowIndex )
                 {
-                    sw::TaskHandle low = manager.emplaceTask( "BackgroundIoProbe", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bJoining, &lowOnJoiningThreadCount]()
+                    sw::TaskHandle low = manager.emplaceTask( "BackgroundIOProbe", SW_DELEGATE_LAMBDA( sw::TaskDelegate, [&manager, &bJoining, &lowOnJoiningThreadCount]()
                     {
                         if ( manager.isMainThread() && bJoining.load( std::memory_order_acquire ) )
                             lowOnJoiningThreadCount.fetch_add( 1, std::memory_order_relaxed );

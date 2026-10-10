@@ -6,7 +6,7 @@
 #include "Core/Compression/CompressionCodecRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
 
@@ -174,15 +174,15 @@ namespace
             static void destroy( TestHost& host ) { host._pOwned->_pTaskManager.reset(); }
         };
 
-        struct FileIoStartupStep : Defaults
+        struct FileIOStartupStep : Defaults
         {
             static sw::EngineInitResult initialize( TestHost& host )
             {
-                sw::AsyncFileIoSettings settings{};
+                sw::AsyncFileIOSettings settings{};
                 settings._pTaskManager = host._pOwned->_pTaskManager.get();
-                return host._pOwned->_pAsyncFileIo->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
+                return host._pOwned->_pAsyncFileIO->initialize( settings ) ? sw::EngineInitResult::Succeeded : sw::EngineInitResult::Failed;
             }
-            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIo->shutdown(); }
+            static void shutdown( TestHost& host ) { host._pOwned->_pAsyncFileIO->shutdown(); }
         };
 
         struct AudioStartupStep : Defaults

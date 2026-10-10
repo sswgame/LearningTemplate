@@ -244,7 +244,7 @@ namespace sw
             OVERLAPPED overlapped{};
             overlapped.Offset     = static_cast<DWORD>( position & 0xFFFFFFFFull );
             overlapped.OffsetHigh = static_cast<DWORD>( position >> 32 );
-            // 낮은 비트를 세운 이벤트 — 핸들이 완료 포트에 묶여 있어도(AsyncFileIo IOCP) 이 읽기의 완료는 포트로 가지 않는다.
+            // 낮은 비트를 세운 이벤트 — 핸들이 완료 포트에 묶여 있어도(AsyncFileIO IOCP) 이 읽기의 완료는 포트로 가지 않는다.
             overlapped.hEvent = reinterpret_cast<HANDLE>( reinterpret_cast<uintptr_t>( hEvent ) | 1 );
 
             const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( handle ) );

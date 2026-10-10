@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Commands/EditorBackgroundIo.h"
+#include "Editor/Common/Commands/EditorBackgroundIO.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
@@ -11,7 +11,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorBackgroundIoInternal
+        struct EditorBackgroundIOInternal
         {
             /** @brief TaskManager 가 없으면(테스트·초기화 전) 같은 스레드에서 바로 돌립니다. */
             static void submitOrRun( string_view name, const TaskArgsDelegate& delegate, const TaskArgs& args )
@@ -44,7 +44,7 @@ namespace sw::editor
         input._bRecursive = recursive;
 
         const uint32 generation = beginRequest( std::move( input ) );
-        EditorBackgroundIoInternal::submitOrRun( "EditorFileCollect",
+        EditorBackgroundIOInternal::submitOrRun( "EditorFileCollect",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFileCollectJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
@@ -71,7 +71,7 @@ namespace sw::editor
     void EditorLocalizationLoadJob::request( string_view projectPath )
     {
         const uint32 generation = beginRequest( string( projectPath ) );
-        EditorBackgroundIoInternal::submitOrRun( "EditorLocalizationLoad",
+        EditorBackgroundIOInternal::submitOrRun( "EditorLocalizationLoad",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorLocalizationLoadJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
@@ -99,7 +99,7 @@ namespace sw::editor
     void EditorGameDataScanJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIoInternal::submitOrRun( "EditorGameDataScan",
+        EditorBackgroundIOInternal::submitOrRun( "EditorGameDataScan",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorGameDataScanJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
@@ -126,7 +126,7 @@ namespace sw::editor
     void EditorResourceIndexJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIoInternal::submitOrRun( "EditorResourceIndex",
+        EditorBackgroundIOInternal::submitOrRun( "EditorResourceIndex",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceIndexJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
@@ -156,7 +156,7 @@ namespace sw::editor
         input._folder = string{ folderAbs };
 
         const uint32 generation = beginRequest( std::move( input ) );
-        EditorBackgroundIoInternal::submitOrRun( "EditorFolderListing",
+        EditorBackgroundIOInternal::submitOrRun( "EditorFolderListing",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorFolderListingJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }
@@ -183,7 +183,7 @@ namespace sw::editor
     void EditorResourceCatalogJob::request()
     {
         const uint32 generation = beginRequest( {} );
-        EditorBackgroundIoInternal::submitOrRun( "EditorResourceCatalog",
+        EditorBackgroundIOInternal::submitOrRun( "EditorResourceCatalog",
                                                  SW_DELEGATE_FUNCTION( TaskArgsDelegate, EditorResourceCatalogJob::runJob ),
                                                  MakeTaskArgs( _pState, generation ) );
     }

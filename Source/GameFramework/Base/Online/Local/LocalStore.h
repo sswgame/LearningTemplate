@@ -22,7 +22,7 @@ namespace sw
         NotFound,
         Corrupt,  ///< 봉투 · 체크섬 · 태그가 맞지 않는다(변조 · 반쪽 쓰기 — 원자 쓰기라 보통은 변조)
         WrongKey, ///< 봉인을 풀 키가 이 장치 · 계정 것이 아니다
-        IoError,  ///< 디스크 가득 · 권한 · 경로 · 내린 저장소
+        IOError,  ///< 디스크 가득 · 권한 · 경로 · 내린 저장소
         Invalid   ///< 슬롯 이름 규칙 · 크기 상한(64 MiB) · 봉인할 암호 창구가 없다
     };
 } // namespace sw
@@ -132,7 +132,7 @@ namespace sw
         virtual uint64 submitList( string_view groupPrefix )                              = 0;
         virtual int32  pollCompletions( vector<LocalStoreCompletion>& outListCompletion ) = 0;
         virtual int32  getPendingCount() const                                            = 0;
-        /** @brief 남은 쓰기 · 지우기를 **끝까지 마치고** 내립니다(종료 때 세이브를 잃지 않는다 — 남은 읽기 · 나열은 IoError). 그 뒤 맡긴 것은 IoError. */
+        /** @brief 남은 쓰기 · 지우기를 **끝까지 마치고** 내립니다(종료 때 세이브를 잃지 않는다 — 남은 읽기 · 나열은 IOError). 그 뒤 맡긴 것은 IOError. */
         virtual void shutdown() = 0;
 
         /** @brief 슬롯 이름 규칙(`[0-9a-z_.-]`, 1..64 자, `/` 하나까지, 빈 마디 · `.` 으로 시작하는 마디 없음)을 지키는가입니다. */

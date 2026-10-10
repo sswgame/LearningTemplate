@@ -116,7 +116,7 @@ py -3 -m Scripts test NetworkThreadTest.*
 
 ### 스트림(TCP)
 
-`IStreamTransport` 는 수락, 연결, 읽기, 쓰기 완료를 `IStreamHandler` 로 알립니다. I/O 스레드 N개를 쓰거나 `pollIo` 로 직접 돌릴 수 있습니다.
+`IStreamTransport` 는 수락, 연결, 읽기, 쓰기 완료를 `IStreamHandler` 로 알립니다. I/O 스레드 N개를 쓰거나 `pollIO` 로 직접 돌릴 수 있습니다.
 리슨할 주소는 받습니다. 운영 엔드포인트는 `NetAddress::makeLoopback`, 서버는 `makeAnyInterface` 를 씁니다.
 보낼 줄(`StreamSendQueue`)은 64KB 덩어리와 높은 물금, 낮은 물금, 상한으로 배압을 겁니다. 루프백(`LoopbackStreamNetwork`)은 결정적이고 I/O 스레드가 없습니다.
 구현은 Windows IOCP와 리눅스 epoll(에지 트리거)이고 `StreamTransportFactory` 가 고릅니다.

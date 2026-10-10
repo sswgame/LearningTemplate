@@ -287,7 +287,7 @@ namespace sw
         return true;
     }
 
-    AsyncReadHandle ResourcePackReader::readFileAsync( AsyncFileIo& io, uint64 pathHash, AsyncIoPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
+    AsyncReadHandle ResourcePackReader::readFileAsync( AsyncFileIO& io, uint64 pathHash, AsyncIOPriority priority, const ResourceReadCompleteDelegate& onComplete ) const
     {
         PackReadPlan    plan{};
         AsyncFileHandle file;
@@ -302,8 +302,8 @@ namespace sw
             bool          bSuccess = false;
             if ( result.isSucceeded() )
                 bSuccess = decodeStoredBytes( plan, file.getPath(), result._bytes, bytes );
-            else if ( result._status != AsyncIoStatus::Canceled )
-                SW_LOG_ERROR( "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIo::getStatusName( result._status ), plan._dataOffset );
+            else if ( result._status != AsyncIOStatus::Canceled )
+                SW_LOG_ERROR( "Read error in pack %# (%# at offset %#)", file.getPath(), AsyncFileIO::getStatusName( result._status ), plan._dataOffset );
             if ( onComplete.isBound() )
                 onComplete( bSuccess, bytes );
         } ) );

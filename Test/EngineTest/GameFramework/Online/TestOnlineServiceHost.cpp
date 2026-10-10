@@ -334,7 +334,7 @@ namespace
 
         void pump()
         {
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
             (void)_endpoint.pump( *this );
         }
 
@@ -413,7 +413,7 @@ namespace
 
         void pump()
         {
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
             (void)_endpoint.pump( *this );
             _requestClient.update();
         }

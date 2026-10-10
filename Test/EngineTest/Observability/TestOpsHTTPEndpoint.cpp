@@ -103,8 +103,8 @@ namespace
         {
             for ( int32 round = 0; round < roundCount; ++round )
             {
-                (void)_serverTransport->pollIo( 0 );
-                (void)_clientTransport->pollIo( 0 );
+                (void)_serverTransport->pollIO( 0 );
+                (void)_clientTransport->pollIO( 0 );
             }
         }
 

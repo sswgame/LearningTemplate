@@ -1,9 +1,9 @@
 #include "pch.h"
 
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 
 #include "Core/Concurrency/ThreadName.h"
-#include "Core/File/AsyncFileIoBackend.h"
+#include "Core/File/AsyncFileIOBackend.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -16,30 +16,30 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIo" );
+        SW_LOG_CALLER( "AsyncFileIO" );
 
-        struct AsyncFileIoInternal
+        struct AsyncFileIOInternal
         {
             /** @brief 완료 콜백을 싣는 태스크의 우선순위입니다 — 파일 일은 렌더 · 물리 몫인 High 줄에 싣지 않는다(`AssetStreamingQueue::toTaskPriority` 와 같은 표). */
-            static TaskPriority toTaskPriority( AsyncIoPriority priority )
+            static TaskPriority toTaskPriority( AsyncIOPriority priority )
             {
                 switch ( priority )
                 {
-                    case AsyncIoPriority::Low:
-                    case AsyncIoPriority::Normal:
+                    case AsyncIOPriority::Low:
+                    case AsyncIOPriority::Normal:
                         return TaskPriority::Low;
-                    case AsyncIoPriority::High:
-                    case AsyncIoPriority::Critical:
+                    case AsyncIOPriority::High:
+                    case AsyncIOPriority::Critical:
                         return TaskPriority::Normal;
                 }
                 return TaskPriority::Low;
             }
 
             /** @brief 우선순위의 큐 칸 번호입니다. */
-            static uint32 toQueueIndex( AsyncIoPriority priority )
+            static uint32 toQueueIndex( AsyncIOPriority priority )
             {
                 const uint32 index = static_cast<uint32>( priority );
-                return index < kAsyncIoPriorityCount ? index : static_cast<uint32>( AsyncIoPriority::Normal );
+                return index < kAsyncIOPriorityCount ? index : static_cast<uint32>( AsyncIOPriority::Normal );
             }
         };
     } // namespace
@@ -70,9 +70,9 @@ namespace sw
         , _size{ 0 }
         , _bytesDone{ 0 }
         , _state{ static_cast<uint8>( AsyncReadState::Queued ) }
-        , _doneStatus{ static_cast<uint8>( AsyncIoStatus::Pending ) }
+        , _doneStatus{ static_cast<uint8>( AsyncIOStatus::Pending ) }
         , _bCancelRequested{ false }
-        , _priority{ AsyncIoPriority::Normal }
+        , _priority{ AsyncIOPriority::Normal }
         , _memoryTag{ MemoryTag::Unknown }
     {
     }
@@ -158,11 +158,11 @@ namespace sw
         return _pRequest != nullptr && _pRequest->_state.load( std::memory_order_acquire ) == static_cast<uint8>( AsyncReadState::Done );
     }
 
-    AsyncIoStatus AsyncReadHandle::getStatus() const
+    AsyncIOStatus AsyncReadHandle::getStatus() const
     {
         if ( _pRequest == nullptr )
-            return AsyncIoStatus::Pending;
-        return static_cast<AsyncIoStatus>( _pRequest->_doneStatus.load( std::memory_order_acquire ) );
+            return AsyncIOStatus::Pending;
+        return static_cast<AsyncIOStatus>( _pRequest->_doneStatus.load( std::memory_order_acquire ) );
     }
 
     bool AsyncReadHandle::cancel() const
@@ -191,7 +191,7 @@ namespace sw
 
 namespace sw
 {
-    AsyncFileIoQueue::AsyncFileIoQueue( const AsyncFileIoSettings& settings )
+    AsyncFileIOQueue::AsyncFileIOQueue( const AsyncFileIOSettings& settings )
         : _mutex{}
         , _cv{}
         , _arrQueue{}
@@ -204,7 +204,7 @@ namespace sw
     {
     }
 
-    bool AsyncFileIoQueue::push( const shared_ptr<AsyncReadRequest>& pRequest )
+    bool AsyncFileIOQueue::push( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         {
             std::scoped_lock<mutex> lock{ _mutex };
@@ -212,7 +212,7 @@ namespace sw
                 return false;
             pRequest->_pQueue = this;
             pRequest->_state.store( static_cast<uint8>( AsyncReadState::Queued ), std::memory_order_release );
-            _arrQueue[AsyncFileIoInternal::toQueueIndex( pRequest->_priority )].push_back( pRequest );
+            _arrQueue[AsyncFileIOInternal::toQueueIndex( pRequest->_priority )].push_back( pRequest );
             ++_outstandingCount;
         }
         _cv.notify_all();
@@ -221,7 +221,7 @@ namespace sw
         return true;
     }
 
-    void AsyncFileIoQueue::completeDetached( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIoStatus status )
+    void AsyncFileIOQueue::completeDetached( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status )
     {
         AsyncReadRequest& request = *pRequest;
         request._pQueue           = nullptr;
@@ -237,7 +237,7 @@ namespace sw
         request._state.store( static_cast<uint8>( AsyncReadState::Done ), std::memory_order_release );
     }
 
-    bool AsyncFileIoQueue::cancel( const shared_ptr<AsyncReadRequest>& pRequest )
+    bool AsyncFileIOQueue::cancel( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         bool bRemovedFromQueue{ false };
         {
@@ -251,7 +251,7 @@ namespace sw
             if ( state != AsyncReadState::Queued )
                 return false;
 
-            deque<shared_ptr<AsyncReadRequest>>& queue = _arrQueue[AsyncFileIoInternal::toQueueIndex( pRequest->_priority )];
+            deque<shared_ptr<AsyncReadRequest>>& queue = _arrQueue[AsyncFileIOInternal::toQueueIndex( pRequest->_priority )];
             for ( auto it = queue.begin(); it != queue.end(); ++it )
             {
                 if ( it->get() == pRequest.get() )
@@ -267,17 +267,17 @@ namespace sw
         }
 
         // OS 에 넘기기 전에 뺐다 — 결과는 취소다. 콜백은 다른 완료와 같은 길(태스크 워커)로 간다.
-        pRequest->_result._status = AsyncIoStatus::Canceled;
+        pRequest->_result._status = AsyncIOStatus::Canceled;
         deliver( pRequest, false );
         return true;
     }
 
-    shared_ptr<AsyncReadRequest> AsyncFileIoQueue::tryPop()
+    shared_ptr<AsyncReadRequest> AsyncFileIOQueue::tryPop()
     {
         std::scoped_lock<mutex> lock{ _mutex };
         if ( _inFlightCount >= _maxInFlightCount )
             return nullptr;
-        for ( uint32 index = kAsyncIoPriorityCount; index > 0; --index )
+        for ( uint32 index = kAsyncIOPriorityCount; index > 0; --index )
         {
             deque<shared_ptr<AsyncReadRequest>>& queue = _arrQueue[index - 1];
             if ( queue.empty() )
@@ -291,12 +291,12 @@ namespace sw
         return nullptr;
     }
 
-    shared_ptr<AsyncReadRequest> AsyncFileIoQueue::waitPop()
+    shared_ptr<AsyncReadRequest> AsyncFileIOQueue::waitPop()
     {
         std::unique_lock<mutex> lock{ _mutex };
         while ( true )
         {
-            for ( uint32 index = kAsyncIoPriorityCount; index > 0; --index )
+            for ( uint32 index = kAsyncIOPriorityCount; index > 0; --index )
             {
                 deque<shared_ptr<AsyncReadRequest>>& queue = _arrQueue[index - 1];
                 if ( queue.empty() )
@@ -313,13 +313,13 @@ namespace sw
         }
     }
 
-    AsyncIoStatus AsyncFileIoQueue::prepare( AsyncReadRequest& request ) const
+    AsyncIOStatus AsyncFileIOQueue::prepare( AsyncReadRequest& request ) const
     {
         if ( request._pFile == nullptr )
         {
             const AsyncFileHandle file = AsyncFileHandle::open( request._path );
             if ( file.isValid() == false )
-                return AsyncIoStatus::FileNotFound;
+                return AsyncIOStatus::FileNotFound;
             request._pFile = file.getOpenFile();
         }
 
@@ -327,11 +327,11 @@ namespace sw
         // 뺄셈으로 잰다 — `offset + size` 는 넘칠 수 있다.
         const uint64 fileSize = request._pFile->_size;
         if ( request._offset > fileSize )
-            return AsyncIoStatus::OutOfRange;
-        if ( request._size == AsyncFileIo::kWholeFile )
+            return AsyncIOStatus::OutOfRange;
+        if ( request._size == AsyncFileIO::kWholeFile )
             request._size = fileSize - request._offset;
         else if ( request._size > fileSize - request._offset )
-            return AsyncIoStatus::OutOfRange;
+            return AsyncIOStatus::OutOfRange;
 
         // 버퍼는 요청한 쪽의 용도로 센다 — IO 스레드의 태그가 아니다.
         const ScopedMemoryTag memoryTag{ request._memoryTag };
@@ -342,14 +342,14 @@ namespace sw
         catch ( const std::bad_alloc& )
         {
             SW_LOG_ERROR( "Out of memory reserving %# bytes to read '%#'", request._size, request._pFile->_path );
-            return AsyncIoStatus::ReadFailed;
+            return AsyncIOStatus::ReadFailed;
         }
         request._result._offset = request._offset;
         request._bytesDone      = 0;
-        return AsyncIoStatus::Pending;
+        return AsyncIOStatus::Pending;
     }
 
-    void AsyncFileIoQueue::finish( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIoStatus status )
+    void AsyncFileIOQueue::finish( const shared_ptr<AsyncReadRequest>& pRequest, AsyncIOStatus status )
     {
         AsyncReadRequest& request = *pRequest;
         // 취소 표시는 상태를 바꾸는 잠금 **안에서** 읽는다. 밖에서 읽으면 그 사이에 `cancel` 이 "진행 중" 을 보고 true 를 돌려준 요청이
@@ -363,8 +363,8 @@ namespace sw
             request._state.store( static_cast<uint8>( AsyncReadState::Delivering ), std::memory_order_release );
         }
         if ( bCanceled )
-            status = AsyncIoStatus::Canceled;
-        if ( status != AsyncIoStatus::Succeeded )
+            status = AsyncIOStatus::Canceled;
+        if ( status != AsyncIOStatus::Succeeded )
             vector<uint8>{}.swap( request._result._bytes );
         request._result._status = status;
         // 다 쓴 파일은 여기서 놓는다 — 마지막 소유자면 콜백보다 먼저 닫혀, 콜백이 같은 파일을 다시 쓰거나 지워도 막지 않는다.
@@ -372,25 +372,25 @@ namespace sw
         deliver( pRequest, false );
     }
 
-    void AsyncFileIoQueue::deliver( const shared_ptr<AsyncReadRequest>& pRequest, bool bInline )
+    void AsyncFileIOQueue::deliver( const shared_ptr<AsyncReadRequest>& pRequest, bool bInline )
     {
         if ( bInline == false && _pTaskManager != nullptr )
         {
             // 캡처가 포인터 둘(24 바이트 안)이라 델리게이트가 힙을 쓰지 않는다.
             TaskHandle handle = _pTaskManager->emplaceTask(
-                "AsyncIoComplete",
+                "AsyncIOComplete",
                 SW_DELEGATE_LAMBDA( TaskDelegate, [this, pRequest]()
             {
                 runDelivery( pRequest );
             } ) );
-            handle.setPriority( AsyncFileIoInternal::toTaskPriority( pRequest->_priority ) );
+            handle.setPriority( AsyncFileIOInternal::toTaskPriority( pRequest->_priority ) );
             handle.submit();
             return;
         }
         runDelivery( pRequest );
     }
 
-    void AsyncFileIoQueue::runDelivery( const shared_ptr<AsyncReadRequest>& pRequest )
+    void AsyncFileIOQueue::runDelivery( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         AsyncReadRequest& request = *pRequest;
         {
@@ -410,7 +410,7 @@ namespace sw
         _cv.notify_all();
     }
 
-    void AsyncFileIoQueue::beginStop()
+    void AsyncFileIOQueue::beginStop()
     {
         vector<shared_ptr<AsyncReadRequest>> listCanceled;
         {
@@ -429,39 +429,39 @@ namespace sw
         _cv.notify_all();
         for ( const shared_ptr<AsyncReadRequest>& pRequest : listCanceled )
         {
-            pRequest->_result._status = AsyncIoStatus::Canceled;
+            pRequest->_result._status = AsyncIOStatus::Canceled;
             deliver( pRequest, false );
         }
         if ( _wakeDelegate.isBound() )
             _wakeDelegate();
     }
 
-    bool AsyncFileIoQueue::isStopping() const
+    bool AsyncFileIOQueue::isStopping() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _bStopping;
     }
 
-    uint32 AsyncFileIoQueue::getInFlightCount() const
+    uint32 AsyncFileIOQueue::getInFlightCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _inFlightCount;
     }
 
-    uint32 AsyncFileIoQueue::getOutstandingCount() const
+    uint32 AsyncFileIOQueue::getOutstandingCount() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _outstandingCount;
     }
 
-    void AsyncFileIoQueue::waitIdle() const
+    void AsyncFileIOQueue::waitIdle() const
     {
         std::unique_lock<mutex> lock{ _mutex };
         _cv.wait( lock, [this]()
         { return _outstandingCount == 0; } );
     }
 
-    bool AsyncFileIoQueue::waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const
+    bool AsyncFileIOQueue::waitRequest( const AsyncReadRequest& request, uint32 timeoutMs ) const
     {
         std::unique_lock<mutex> lock{ _mutex };
         const auto              isDone = [&request]()
@@ -480,21 +480,21 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ThreadPoolAsyncFileIoBackend
+     * @class ThreadPoolAsyncFileIOBackend
      * @brief 스레드 몇 개가 큐에서 꺼내 위치 지정 읽기(`readNativeFileAt`)를 막고 기다리는 백엔드입니다. 어느 플랫폼에서나 돌고, io_uring 이
      *        없는 리눅스의 폴백입니다. 동시에 진행하는 요청 수 = 스레드 수입니다.
      */
-    class ThreadPoolAsyncFileIoBackend final : public IAsyncFileIoBackend
+    class ThreadPoolAsyncFileIOBackend final : public IAsyncFileIOBackend
     {
     public:
-        ThreadPoolAsyncFileIoBackend( AsyncFileIoQueue& queue, uint32 threadCount )
+        ThreadPoolAsyncFileIOBackend( AsyncFileIOQueue& queue, uint32 threadCount )
             : _listThread{}
             , _pQueue{ &queue }
             , _threadCount{ threadCount > 0 ? threadCount : 1 }
         {
         }
 
-        ~ThreadPoolAsyncFileIoBackend() override { stop(); }
+        ~ThreadPoolAsyncFileIOBackend() override { stop(); }
 
         bool start() override
         {
@@ -502,7 +502,7 @@ namespace sw
             _listThread.reserve( _threadCount );
             for ( uint32 index = 0; index < _threadCount; ++index )
             {
-                _listThread.emplace_back( &ThreadPoolAsyncFileIoBackend::runWorker, this, memoryTag );
+                _listThread.emplace_back( &ThreadPoolAsyncFileIOBackend::runWorker, this, memoryTag );
             }
             return true;
         }
@@ -519,7 +519,7 @@ namespace sw
 
         void wake() override {} // 워커는 큐의 조건 변수에서 깬다
 
-        AsyncIoBackendKind getKind() const override { return AsyncIoBackendKind::ThreadPool; }
+        AsyncIOBackendKind getKind() const override { return AsyncIOBackendKind::ThreadPool; }
 
     private:
         /** @brief 큐가 멈출 때까지 꺼내 읽습니다. */
@@ -533,68 +533,68 @@ namespace sw
                 const shared_ptr<AsyncReadRequest> pRequest = _pQueue->waitPop();
                 if ( pRequest == nullptr )
                     return;
-                AsyncIoStatus status = _pQueue->prepare( *pRequest );
-                if ( status == AsyncIoStatus::Pending )
+                AsyncIOStatus status = _pQueue->prepare( *pRequest );
+                if ( status == AsyncIOStatus::Pending )
                 {
                     size_t     readBytes{ 0 };
                     const bool bRead = pRequest->_size == 0 ||
                                        PlatformFileUtil::readNativeFileAt( pRequest->_pFile->_handle, pRequest->_offset, pRequest->_result._bytes.data(),
                                                                            static_cast<size_t>( pRequest->_size ), readBytes );
-                    status = AsyncFileIoBackendUtil::classifyReadResult( bRead, pRequest->_size == 0 ? 0 : readBytes, pRequest->_size );
+                    status = AsyncFileIOBackendUtil::classifyReadResult( bRead, pRequest->_size == 0 ? 0 : readBytes, pRequest->_size );
                 }
                 _pQueue->finish( pRequest, status );
             }
         }
 
         vector<std::thread> _listThread;
-        AsyncFileIoQueue*   _pQueue;
+        AsyncFileIOQueue*   _pQueue;
         uint32              _threadCount;
     };
 } // namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIoBackend> AsyncFileIoBackendUtil::createThreadPool( AsyncFileIoQueue& queue, uint32 threadCount )
+    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createThreadPool( AsyncFileIOQueue& queue, uint32 threadCount )
     {
-        return make_unique<ThreadPoolAsyncFileIoBackend>( queue, threadCount );
+        return make_unique<ThreadPoolAsyncFileIOBackend>( queue, threadCount );
     }
 
-    AsyncIoStatus AsyncFileIoBackendUtil::classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested )
+    AsyncIOStatus AsyncFileIOBackendUtil::classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested )
     {
         if ( bReadSucceeded == false )
-            return AsyncIoStatus::ReadFailed;
+            return AsyncIOStatus::ReadFailed;
         // 열 때 잰 크기 안의 구간인데 짧게 끝났다 — 그 사이 파일이 줄었다.
-        return bytesDone == bytesRequested ? AsyncIoStatus::Succeeded : AsyncIoStatus::OutOfRange;
+        return bytesDone == bytesRequested ? AsyncIOStatus::Succeeded : AsyncIOStatus::OutOfRange;
     }
 } // namespace sw
 
 namespace sw
 {
-    AsyncFileIo::AsyncFileIo()
+    AsyncFileIO::AsyncFileIO()
         : _queue{}
         , _backend{}
     {
     }
 
-    AsyncFileIo::~AsyncFileIo()
+    AsyncFileIO::~AsyncFileIO()
     {
         shutdown();
     }
 
-    bool AsyncFileIo::initialize( const AsyncFileIoSettings& settings )
+    bool AsyncFileIO::initialize( const AsyncFileIOSettings& settings )
     {
         if ( _backend != nullptr )
             return true;
 
-        _queue = make_unique<AsyncFileIoQueue>( settings );
+        _queue = make_unique<AsyncFileIOQueue>( settings );
 
-        unique_ptr<IAsyncFileIoBackend> backend;
-        if ( settings._backendKind != AsyncIoBackendKind::ThreadPool )
+        unique_ptr<IAsyncFileIOBackend> backend;
+        if ( settings._backendKind != AsyncIOBackendKind::ThreadPool )
         {
-            backend = AsyncFileIoBackendUtil::createPlatform( *_queue, settings._backendKind, settings._maxInFlightCount );
+            backend = AsyncFileIOBackendUtil::createPlatform( *_queue, settings._backendKind, settings._maxInFlightCount );
             if ( backend != nullptr && backend->start() == false )
                 backend.reset();
-            if ( backend == nullptr && settings._backendKind != AsyncIoBackendKind::Auto )
+            if ( backend == nullptr && settings._backendKind != AsyncIOBackendKind::Auto )
             {
                 SW_LOG_ERROR( "Async file IO backend %# is not available on this platform", getBackendName( settings._backendKind ) );
                 _queue.reset();
@@ -603,7 +603,7 @@ namespace sw
         }
         if ( backend == nullptr )
         {
-            backend = AsyncFileIoBackendUtil::createThreadPool( *_queue, settings._threadPoolThreadCount );
+            backend = AsyncFileIOBackendUtil::createThreadPool( *_queue, settings._threadPoolThreadCount );
             if ( backend->start() == false )
             {
                 _queue.reset();
@@ -611,7 +611,7 @@ namespace sw
             }
         }
 
-        IAsyncFileIoBackend* pBackend = backend.get();
+        IAsyncFileIOBackend* pBackend = backend.get();
         _queue->setWakeDelegate( SW_DELEGATE_LAMBDA( Delegate<void()>, [pBackend]()
         {
             pBackend->wake();
@@ -621,7 +621,7 @@ namespace sw
         return true;
     }
 
-    void AsyncFileIo::shutdown()
+    void AsyncFileIO::shutdown()
     {
         if ( _backend == nullptr )
             return;
@@ -633,22 +633,22 @@ namespace sw
         _queue.reset();
     }
 
-    bool AsyncFileIo::isInitialized() const
+    bool AsyncFileIO::isInitialized() const
     {
         return _backend != nullptr;
     }
 
-    AsyncIoBackendKind AsyncFileIo::getBackendKind() const
+    AsyncIOBackendKind AsyncFileIO::getBackendKind() const
     {
-        return _backend != nullptr ? _backend->getKind() : AsyncIoBackendKind::Auto;
+        return _backend != nullptr ? _backend->getKind() : AsyncIOBackendKind::Auto;
     }
 
-    AsyncReadHandle AsyncFileIo::readFile( string_view filePath, AsyncIoPriority priority, const AsyncReadCompleteDelegate& onComplete )
+    AsyncReadHandle AsyncFileIO::readFile( string_view filePath, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete )
     {
         return readRange( filePath, 0, kWholeFile, priority, onComplete );
     }
 
-    AsyncReadHandle AsyncFileIo::readRange( string_view filePath, uint64 offset, uint64 size, AsyncIoPriority priority, const AsyncReadCompleteDelegate& onComplete )
+    AsyncReadHandle AsyncFileIO::readRange( string_view filePath, uint64 offset, uint64 size, AsyncIOPriority priority, const AsyncReadCompleteDelegate& onComplete )
     {
         shared_ptr<AsyncReadRequest> pRequest = sw::make_shared<AsyncReadRequest>();
         pRequest->_path                       = string( filePath );
@@ -659,13 +659,13 @@ namespace sw
         pRequest->_onComplete                 = onComplete;
         if ( filePath.empty() )
         {
-            AsyncFileIoQueue::completeDetached( pRequest, AsyncIoStatus::FileNotFound );
+            AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::FileNotFound );
             return AsyncReadHandle( pRequest );
         }
         return submit( pRequest );
     }
 
-    AsyncReadHandle AsyncFileIo::readRange( const AsyncFileHandle& file, uint64 offset, uint64 size, AsyncIoPriority priority,
+    AsyncReadHandle AsyncFileIO::readRange( const AsyncFileHandle& file, uint64 offset, uint64 size, AsyncIOPriority priority,
                                             const AsyncReadCompleteDelegate& onComplete )
     {
         shared_ptr<AsyncReadRequest> pRequest = sw::make_shared<AsyncReadRequest>();
@@ -677,13 +677,13 @@ namespace sw
         pRequest->_onComplete                 = onComplete;
         if ( pRequest->_pFile == nullptr )
         {
-            AsyncFileIoQueue::completeDetached( pRequest, AsyncIoStatus::FileNotFound );
+            AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::FileNotFound );
             return AsyncReadHandle( pRequest );
         }
         return submit( pRequest );
     }
 
-    TaskFuture<AsyncReadResult> AsyncFileIo::readFileFuture( string_view filePath, AsyncIoPriority priority )
+    TaskFuture<AsyncReadResult> AsyncFileIO::readFileFuture( string_view filePath, AsyncIOPriority priority )
     {
         shared_ptr<TaskPromise<AsyncReadResult>> pPromise = sw::make_shared<TaskPromise<AsyncReadResult>>();
         TaskFuture<AsyncReadResult>              future   = pPromise->getFuture();
@@ -695,63 +695,63 @@ namespace sw
         return future;
     }
 
-    uint32 AsyncFileIo::getOutstandingCount() const
+    uint32 AsyncFileIO::getOutstandingCount() const
     {
         return _queue != nullptr ? _queue->getOutstandingCount() : 0;
     }
 
-    void AsyncFileIo::waitIdle() const
+    void AsyncFileIO::waitIdle() const
     {
         if ( _queue != nullptr )
             _queue->waitIdle();
     }
 
-    AsyncReadHandle AsyncFileIo::submit( const shared_ptr<AsyncReadRequest>& pRequest )
+    AsyncReadHandle AsyncFileIO::submit( const shared_ptr<AsyncReadRequest>& pRequest )
     {
         if ( _queue == nullptr )
         {
             // 시작 전(또는 내린 뒤)이다. 조용히 버리지 않고 결과로 알린다.
-            AsyncFileIoQueue::completeDetached( pRequest, AsyncIoStatus::ShutDown );
+            AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::ShutDown );
             return AsyncReadHandle( pRequest );
         }
         if ( _queue->push( pRequest ) == false )
-            AsyncFileIoQueue::completeDetached( pRequest, AsyncIoStatus::ShutDown );
+            AsyncFileIOQueue::completeDetached( pRequest, AsyncIOStatus::ShutDown );
         return AsyncReadHandle( pRequest );
     }
 
-    const utf8* AsyncFileIo::getBackendName( AsyncIoBackendKind kind )
+    const utf8* AsyncFileIO::getBackendName( AsyncIOBackendKind kind )
     {
         switch ( kind )
         {
-            case AsyncIoBackendKind::Auto:
+            case AsyncIOBackendKind::Auto:
                 return "Auto";
-            case AsyncIoBackendKind::ThreadPool:
+            case AsyncIOBackendKind::ThreadPool:
                 return "ThreadPool";
-            case AsyncIoBackendKind::Iocp:
+            case AsyncIOBackendKind::Iocp:
                 return "Iocp";
-            case AsyncIoBackendKind::IoUring:
-                return "IoUring";
+            case AsyncIOBackendKind::IOUring:
+                return "IOUring";
         }
         return "Unknown";
     }
 
-    const utf8* AsyncFileIo::getStatusName( AsyncIoStatus status )
+    const utf8* AsyncFileIO::getStatusName( AsyncIOStatus status )
     {
         switch ( status )
         {
-            case AsyncIoStatus::Pending:
+            case AsyncIOStatus::Pending:
                 return "Pending";
-            case AsyncIoStatus::Succeeded:
+            case AsyncIOStatus::Succeeded:
                 return "Succeeded";
-            case AsyncIoStatus::Canceled:
+            case AsyncIOStatus::Canceled:
                 return "Canceled";
-            case AsyncIoStatus::FileNotFound:
+            case AsyncIOStatus::FileNotFound:
                 return "FileNotFound";
-            case AsyncIoStatus::OutOfRange:
+            case AsyncIOStatus::OutOfRange:
                 return "OutOfRange";
-            case AsyncIoStatus::ReadFailed:
+            case AsyncIOStatus::ReadFailed:
                 return "ReadFailed";
-            case AsyncIoStatus::ShutDown:
+            case AsyncIOStatus::ShutDown:
                 return "ShutDown";
         }
         return "Unknown";

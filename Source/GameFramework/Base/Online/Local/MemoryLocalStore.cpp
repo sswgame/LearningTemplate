@@ -29,7 +29,7 @@ namespace sw
         if ( _bFailNextWrite == SW_TRUE )
         {
             _bFailNextWrite = SW_FALSE;
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         }
         SlotEntry& entry   = _mapSlot[slot];
         entry._envelope    = envelopeBytes;
@@ -147,7 +147,7 @@ namespace sw
     {
         request._requestId = _nextRequestId++;
         if ( _bShutdown == SW_TRUE )
-            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IoError ) );
+            _listCompletion.push_back( LocalStoreRequestUtil::makeCompletion( request, LocalStoreResult::IOError ) );
         else
             _listCompletion.push_back( LocalStoreRequestUtil::execute( request, *_pDatabase, _sealContext ) );
         return request._requestId;

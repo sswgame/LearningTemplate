@@ -171,8 +171,8 @@ namespace
                     return false;
                 if ( _bManualPoll == SW_TRUE )
                 {
-                    (void)_server->pollIo( 0 );
-                    (void)_client->pollIo( 0 );
+                    (void)_server->pollIO( 0 );
+                    (void)_client->pollIO( 0 );
                 }
                 else
                 {
@@ -340,8 +340,8 @@ SW_TEST_CASE( StreamTransportTest, LoopbackShutsDownAfterThePeerTransportIsDestr
         unique_ptr<IStreamTransport> client = network.createTransport();
         SW_ASSERT_TRUE( client->initialize( &clientRecorder, settings ) );
         SW_ASSERT_TRUE( client->connect( NetAddress::makeLoopback( server->getListenPort() ) ).isValid() );
-        (void)server->pollIo( 0 );
-        (void)client->pollIo( 0 );
+        (void)server->pollIO( 0 );
+        (void)client->pollIO( 0 );
         SW_ASSERT_EQUAL( 1, serverRecorder.getOpenedCount() );
         client->shutdown();
     }

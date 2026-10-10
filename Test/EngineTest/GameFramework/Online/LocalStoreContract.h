@@ -87,7 +87,7 @@ namespace test
         {
             sw::LocalStoreCompletion completion;
             if ( waitCompletion( store, store.submitWrite( pSlot, bytes, options ), completion ) == false )
-                return sw::LocalStoreResult::IoError;
+                return sw::LocalStoreResult::IOError;
             return completion._result;
         }
 
@@ -95,7 +95,7 @@ namespace test
         {
             sw::LocalStoreCompletion completion;
             if ( waitCompletion( store, store.submitRead( pSlot ), completion ) == false )
-                completion._result = sw::LocalStoreResult::IoError;
+                completion._result = sw::LocalStoreResult::IOError;
             return completion;
         }
 
@@ -291,7 +291,7 @@ namespace test
             SW_EXPECT_EQUAL( size_t( 20 ), listCompletion.size() );
             LocalStoreCompletion afterShutdown;
             SW_ASSERT_TRUE( waitCompletion( store, store.submitRead( "flush" ), afterShutdown ) );
-            SW_EXPECT_TRUE( afterShutdown._result == LocalStoreResult::IoError );
+            SW_EXPECT_TRUE( afterShutdown._result == LocalStoreResult::IOError );
             fixture.restart();
             SW_EXPECT_TRUE( read( fixture.getStore(), "flush" )._bytes == vector<uint8>{ 19 } );
         }

@@ -92,7 +92,7 @@ namespace sw
                     return LocalStoreResult::Invalid;
                 uint8 arrDeviceKey[ILocalStoreKeyProvider::kKeySize] = {};
                 if ( context._pKeyProvider->getSealKey( arrDeviceKey ) == false )
-                    return LocalStoreResult::IoError;
+                    return LocalStoreResult::IOError;
                 uint8      arrKeyId[kKeyIdSize] = {};
                 const bool bDerived             = context._pSecurityProvider->computeHkdfSha256( arrDeviceKey, ILocalStoreKeyProvider::kKeySize, nullptr, 0,
                                                                                                  reinterpret_cast<const uint8*>( kSealInfo ), sizeof( kSealInfo ) - 1, outSealKey,
@@ -102,7 +102,7 @@ namespace sw
                                                                                      static_cast<int32>( kKeyIdSize ) );
                 std::memset( arrDeviceKey, 0, sizeof( arrDeviceKey ) );
                 if ( bDerived == false )
-                    return LocalStoreResult::IoError;
+                    return LocalStoreResult::IOError;
                 outKeyId = readUint64( arrKeyId );
                 return LocalStoreResult::Ok;
             }
@@ -198,7 +198,7 @@ namespace sw
         std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
         uint8 arrNonce[NetSecurityConstant::kAeadNonceSize] = {};
         if ( aead == nullptr || context._pSecurityProvider->fillRandomBytes( arrNonce, NetSecurityConstant::kAeadNonceSize ) == false )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         if ( options._seal == LocalStoreSeal::Authenticated )
         {
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), storedBody.begin(), storedBody.end() );
@@ -206,7 +206,7 @@ namespace sw
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrNonce, arrNonce + NetSecurityConstant::kAeadNonceSize );
             uint8 arrTag[NetSecurityConstant::kAeadTagSize] = {};
             if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( authenticatedSize ), nullptr, 0, arrTag ) == false )
-                return LocalStoreResult::IoError;
+                return LocalStoreResult::IOError;
             outEnvelopeBytes.insert( outEnvelopeBytes.end(), arrTag, arrTag + NetSecurityConstant::kAeadTagSize );
             return LocalStoreResult::Ok;
         }
@@ -215,7 +215,7 @@ namespace sw
         outEnvelopeBytes.resize( cipherOffset + storedBody.size() + NetSecurityConstant::kAeadTagSize );
         if ( aead->seal( arrNonce, outEnvelopeBytes.data(), static_cast<int32>( kHeaderSize ), storedBody.data(), static_cast<int32>( storedBody.size() ),
                          outEnvelopeBytes.data() + cipherOffset ) == false )
-            return LocalStoreResult::IoError;
+            return LocalStoreResult::IOError;
         return LocalStoreResult::Ok;
     }
 
@@ -272,7 +272,7 @@ namespace sw
                 unique_ptr<INetAead> aead = context._pSecurityProvider->createAead( NetAeadAlgorithm::Aes256Gcm, arrSealKey );
                 std::memset( arrSealKey, 0, sizeof( arrSealKey ) );
                 if ( aead == nullptr )
-                    return LocalStoreResult::IoError;
+                    return LocalStoreResult::IOError;
                 if ( header._seal == LocalStoreSeal::Authenticated )
                 {
                     const uint8* pNonce      = pEnvelopeBytes + kHeaderSize + bodySize;

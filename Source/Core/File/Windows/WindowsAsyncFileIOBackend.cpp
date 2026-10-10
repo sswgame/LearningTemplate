@@ -2,7 +2,7 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Common/PlatformOsHeaders.h"
-#include "Core/File/AsyncFileIoBackend.h"
+#include "Core/File/AsyncFileIOBackend.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Concurrency/ThreadName.h"
@@ -16,9 +16,9 @@ namespace sw
 {
     namespace
     {
-        SW_LOG_CALLER( "AsyncFileIo" );
+        SW_LOG_CALLER( "AsyncFileIO" );
 
-        struct WindowsAsyncFileIoBackendInternal
+        struct WindowsAsyncFileIOBackendInternal
         {
             /** @brief 큐에 새 요청이 들어왔다는 완료 포트 패킷의 키입니다(OVERLAPPED 없음). */
             static constexpr ULONG_PTR kWakeKey = 1;
@@ -40,22 +40,22 @@ namespace sw
 namespace sw
 {
     /**
-     * @class IocpAsyncFileIoBackend
+     * @class IocpAsyncFileIOBackend
      * @brief Windows 오버랩드 IO + 완료 포트 백엔드입니다. IO 스레드 하나가 큐에서 꺼내 `ReadFile` 을 걸고(상한까지) 완료 포트에서 끝난 것을 받습니다.
      * @details 파일은 `FILE_FLAG_OVERLAPPED` 로 열려 있고(`PlatformFileUtil::openNativeFileForRead`) 처음 쓸 때 이 포트에 묶습니다. 같은 핸들의
      *          동기 위치 읽기(`readNativeFileAt`)는 이벤트 핸들의 낮은 비트를 세워 포트로 완료가 오지 않게 합니다.
      */
-    class IocpAsyncFileIoBackend final : public IAsyncFileIoBackend
+    class IocpAsyncFileIOBackend final : public IAsyncFileIOBackend
     {
     public:
-        explicit IocpAsyncFileIoBackend( AsyncFileIoQueue& queue )
+        explicit IocpAsyncFileIOBackend( AsyncFileIOQueue& queue )
             : _thread{}
             , _pQueue{ &queue }
             , _hPort{ nullptr }
         {
         }
 
-        ~IocpAsyncFileIoBackend() override
+        ~IocpAsyncFileIOBackend() override
         {
             stop();
             if ( _hPort != nullptr )
@@ -70,7 +70,7 @@ namespace sw
                 SW_LOG_ERROR( "CreateIoCompletionPort failed (error %#)", static_cast<uint32>( GetLastError() ) );
                 return false;
             }
-            _thread = std::thread( &IocpAsyncFileIoBackend::run, this, Memory::getCurrentMemoryTag() );
+            _thread = std::thread( &IocpAsyncFileIOBackend::run, this, Memory::getCurrentMemoryTag() );
             return true;
         }
 
@@ -86,10 +86,10 @@ namespace sw
         void wake() override
         {
             if ( _hPort != nullptr )
-                PostQueuedCompletionStatus( _hPort, 0, WindowsAsyncFileIoBackendInternal::kWakeKey, nullptr );
+                PostQueuedCompletionStatus( _hPort, 0, WindowsAsyncFileIOBackendInternal::kWakeKey, nullptr );
         }
 
-        AsyncIoBackendKind getKind() const override { return AsyncIoBackendKind::Iocp; }
+        AsyncIOBackendKind getKind() const override { return AsyncIOBackendKind::Iocp; }
 
     private:
         /** @brief 꺼내 걸고 · 끝난 것을 받는 루프입니다. 큐가 멈추고 걸린 것이 없으면 끝납니다. */
@@ -138,15 +138,15 @@ namespace sw
         /** @brief 요청 하나를 준비해 OS 에 겁니다. 걸 수 없으면 그 자리에서 끝냅니다. */
         void startRequest( const shared_ptr<AsyncReadRequest>& pRequest )
         {
-            const AsyncIoStatus prepareStatus = _pQueue->prepare( *pRequest );
-            if ( prepareStatus != AsyncIoStatus::Pending )
+            const AsyncIOStatus prepareStatus = _pQueue->prepare( *pRequest );
+            if ( prepareStatus != AsyncIOStatus::Pending )
             {
                 _pQueue->finish( pRequest, prepareStatus );
                 return;
             }
             if ( pRequest->_size == 0 )
             {
-                _pQueue->finish( pRequest, AsyncIoStatus::Succeeded );
+                _pQueue->finish( pRequest, AsyncIOStatus::Succeeded );
                 return;
             }
             if ( bindToPort( *pRequest->_pFile ) == false )
@@ -155,7 +155,7 @@ namespace sw
                 size_t     readBytes{ 0 };
                 const bool bRead = PlatformFileUtil::readNativeFileAt( pRequest->_pFile->_handle, pRequest->_offset, pRequest->_result._bytes.data(),
                                                                        static_cast<size_t>( pRequest->_size ), readBytes );
-                _pQueue->finish( pRequest, AsyncFileIoBackendUtil::classifyReadResult( bRead, readBytes, pRequest->_size ) );
+                _pQueue->finish( pRequest, AsyncFileIOBackendUtil::classifyReadResult( bRead, readBytes, pRequest->_size ) );
                 return;
             }
 
@@ -199,11 +199,11 @@ namespace sw
                 return;
             }
 
-            AsyncIoStatus status = AsyncIoStatus::ReadFailed;
+            AsyncIOStatus status = AsyncIOStatus::ReadFailed;
             if ( errorCode == ERROR_SUCCESS || errorCode == ERROR_HANDLE_EOF )
-                status = AsyncFileIoBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
+                status = AsyncFileIOBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
             else if ( errorCode == ERROR_OPERATION_ABORTED )
-                status = AsyncIoStatus::Canceled;
+                status = AsyncIOStatus::Canceled;
             else
                 SW_LOG_ERROR( "ReadFile failed on '%#' (error %#)", request._pFile != nullptr ? request._pFile->_path.c_str() : "", static_cast<uint32>( errorCode ) );
 
@@ -222,11 +222,11 @@ namespace sw
             if ( file._pBoundPort.compare_exchange_strong( pExpected, _hPort, std::memory_order_acq_rel ) )
             {
                 const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( file._handle ) );
-                if ( CreateIoCompletionPort( hFile, _hPort, WindowsAsyncFileIoBackendInternal::kReadKey, 0 ) == nullptr )
+                if ( CreateIoCompletionPort( hFile, _hPort, WindowsAsyncFileIOBackendInternal::kReadKey, 0 ) == nullptr )
                 {
                     SW_LOG_WARNING( "Cannot bind '%#' to the IO completion port (error %#) — reading it synchronously",
                                     file._path, static_cast<uint32>( GetLastError() ) );
-                    file._pBoundPort.store( WindowsAsyncFileIoBackendInternal::kUnbindablePort, std::memory_order_release );
+                    file._pBoundPort.store( WindowsAsyncFileIOBackendInternal::kUnbindablePort, std::memory_order_release );
                     return false;
                 }
                 return true;
@@ -235,19 +235,19 @@ namespace sw
         }
 
         std::thread       _thread;
-        AsyncFileIoQueue* _pQueue;
+        AsyncFileIOQueue* _pQueue;
         HANDLE            _hPort;
     };
 } // namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIoBackend> AsyncFileIoBackendUtil::createPlatform( AsyncFileIoQueue& queue, AsyncIoBackendKind kind, uint32 maxInFlightCount )
+    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
     {
         (void)maxInFlightCount; // 상한은 큐가 지킨다(`tryPop`)
-        if ( kind != AsyncIoBackendKind::Auto && kind != AsyncIoBackendKind::Iocp )
+        if ( kind != AsyncIOBackendKind::Auto && kind != AsyncIOBackendKind::Iocp )
             return nullptr;
-        return make_unique<IocpAsyncFileIoBackend>( queue );
+        return make_unique<IocpAsyncFileIOBackend>( queue );
     }
 } // namespace sw
 #endif

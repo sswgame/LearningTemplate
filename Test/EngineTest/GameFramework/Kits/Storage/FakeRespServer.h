@@ -2,7 +2,7 @@
  * @file FakeRespServer.h
  * @brief 시험 안의 가짜 RESP 서버 — 루프백 스트림 위에서 RESP 드라이버가 쓰는 명령 부분집합만 Valkey 처럼 답합니다(만료 · WATCH · MULTI/EXEC · 정렬 집합 · 발행/구독 · AUTH).
  * @details - 스레드가 없다 — 루프백 전송은 한 스레드에서만 돈다. RESP 앞에는 `createClientTransport` 가 준 전송을 준다: 앞이 자기 전송을 돌 때
- *            (`pollIo`) 서버도 한 번 돈다. 그래서 시험 스레드 하나로 결정적이다.
+ *            (`pollIO`) 서버도 한 번 돈다. 그래서 시험 스레드 하나로 결정적이다.
  *          - 시계는 손으로 민다(`advanceTimeMs`). 실패 주입: 답 붙잡기(시한) · 모든 연결 끊기(`dropAllConnections`).
  *          - TLS 컨텍스트를 주면 연결마다 서버 세션을 지난다.
  */
@@ -45,7 +45,7 @@ namespace test
         sw::StreamSendResult       send( sw::StreamConnectionHandle handle, const uint8* pData, int32 size ) override { return _inner->send( handle, pData, size ); }
         void                       close( sw::StreamConnectionHandle handle, sw::StreamCloseMode mode ) override { _inner->close( handle, mode ); }
         void                       setReceivePaused( sw::StreamConnectionHandle handle, bool bPaused ) override { _inner->setReceivePaused( handle, bPaused ); }
-        int32                      pollIo( int32 timeoutMilli ) override;
+        int32                      pollIO( int32 timeoutMilli ) override;
         sw::NetAddress             getRemoteAddress( sw::StreamConnectionHandle handle ) const override { return _inner->getRemoteAddress( handle ); }
         sw::StreamTransportStats   getStats() const override { return _inner->getStats(); }
 
@@ -91,7 +91,7 @@ namespace test
         sw::unique_ptr<sw::IStreamTransport> createClientTransport() { return sw::make_unique<FakeRespPumpingTransport>( _pNetwork->createTransport(), this ); }
 
         /** @brief 서버 전송을 한 번 돕니다(받은 명령에 답한다). */
-        void pump() { (void)_transport->pollIo( 0 ); }
+        void pump() { (void)_transport->pollIO( 0 ); }
 
         void setPassword( const sw::string& password ) { _password = password; }
         void advanceTimeMs( int64 deltaMs ) { _nowMs += deltaMs; }
@@ -634,10 +634,10 @@ namespace test
         bool                                  _bHoldReplies;
     };
 
-    inline int32 FakeRespPumpingTransport::pollIo( int32 timeoutMilli )
+    inline int32 FakeRespPumpingTransport::pollIO( int32 timeoutMilli )
     {
         _pServer->pump();
-        const int32 eventCount = _inner->pollIo( timeoutMilli );
+        const int32 eventCount = _inner->pollIO( timeoutMilli );
         _pServer->pump();
         return eventCount;
     }

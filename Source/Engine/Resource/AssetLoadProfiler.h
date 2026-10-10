@@ -12,10 +12,10 @@
 
 namespace sw
 {
-    /** @brief 로드 한 번의 단계입니다. 단계를 나눌 수 없는 로더(파일을 읽으며 해석한다)는 `Io` 하나에 모두 적습니다. */
+    /** @brief 로드 한 번의 단계입니다. 단계를 나눌 수 없는 로더(파일을 읽으며 해석한다)는 `IO` 하나에 모두 적습니다. */
     enum class AssetLoadPhase : uint8
     {
-        Io = 0, ///< 파일 · 팩에서 바이트를 읽는다
+        IO = 0, ///< 파일 · 팩에서 바이트를 읽는다
         Decode, ///< 바이트를 객체로 푼다(XML · 메시 · 텍스처 머리)
         Upload, ///< GPU 자원을 만들고 올린다
         Count
@@ -109,7 +109,7 @@ namespace sw
 {
     /**
      * @class AssetLoadScope
-     * @brief 로드 한 번을 잽니다. 열 때 `Io` 단계가 시작되고, `beginPhase` 가 앞 단계를 닫고 다음을 열며, 닫힐 때 마지막 단계를 닫고 기록을 넘긴다.
+     * @brief 로드 한 번을 잽니다. 열 때 `IO` 단계가 시작되고, `beginPhase` 가 앞 단계를 닫고 다음을 열며, 닫힐 때 마지막 단계를 닫고 기록을 넘긴다.
      * @code
      *     AssetLoadScope scope( "Texture", path );
      *     // 파일 읽기

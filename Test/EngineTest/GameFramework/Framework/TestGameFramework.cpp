@@ -449,7 +449,7 @@ SW_TEST_CASE( GameFrameworkTest, SaveGameUserFileRoundTripsThroughASlot )
  * @details 기반이 `SaveGameSerializer::writeBytes( *this, out )` 를 부르면 템플릿 인자가 `SaveGame` 이라 프로퍼티 0 인 빈 페이로드를 쓰고도 성공을 돌려준다.
  *          그런 기본 구현이 있으면 override 를 빠뜨린 파생 세이브는 말없이 데이터를 잃는다 — 순수 가상이라 컴파일러가 막는다.
  */
-SW_TEST_CASE( GameFrameworkTest, SaveGameBaseHasNoDefaultFileIo )
+SW_TEST_CASE( GameFrameworkTest, SaveGameBaseHasNoDefaultFileIO )
 {
     SW_EXPECT_TRUE_MSG( std::is_abstract_v<SaveGame>, "SaveGame 에 파일 입출력 기본 구현이 다시 생겼습니다" );
     SW_EXPECT_TRUE_MSG( std::is_abstract_v<UserAppearancePresetStore> == false, "UserAppearancePresetStore 가 writeBytes · readBytes 를 정의하지 않습니다" );

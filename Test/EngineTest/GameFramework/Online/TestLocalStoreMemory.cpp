@@ -38,7 +38,7 @@ SW_TEST_CASE( LocalStoreMemoryTest, WriteInterruptedMidwayLeavesTheOldContent )
     MemoryLocalFixture fixture;
     SW_EXPECT_TRUE( test::LocalStoreContract::write( fixture.getStore(), "save/slot0", test::LocalStoreContract::makeText( "old" ) ) == LocalStoreResult::Ok );
     fixture._database.failNextWrite(); // 다음 쓰기 도중 꺼짐
-    SW_EXPECT_TRUE( test::LocalStoreContract::write( fixture.getStore(), "save/slot0", test::LocalStoreContract::makeText( "new" ) ) == LocalStoreResult::IoError );
+    SW_EXPECT_TRUE( test::LocalStoreContract::write( fixture.getStore(), "save/slot0", test::LocalStoreContract::makeText( "new" ) ) == LocalStoreResult::IOError );
     fixture.restart();
     SW_EXPECT_TRUE( test::LocalStoreContract::read( fixture.getStore(), "save/slot0" )._bytes == test::LocalStoreContract::makeText( "old" ) );
 }

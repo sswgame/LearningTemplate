@@ -78,7 +78,7 @@ SW_TEST_CASE( AssetLoadProfilerTest, ScopesSplitPhasesAndAggregatePerKind )
     SW_EXPECT_EQUAL( 1u, pTexture->_failedCount );
     SW_EXPECT_EQUAL( 0u, pTexture->_asyncCount );
     SW_EXPECT_EQUAL( uint64( 4106 ), pTexture->_bytes );
-    SW_EXPECT_TRUE( pTexture->_arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::Io )] >= 2'000'000u );
+    SW_EXPECT_TRUE( pTexture->_arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::IO )] >= 2'000'000u );
     SW_EXPECT_TRUE( pTexture->_arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::Upload )] >= 1'000'000u );
     SW_EXPECT_EQUAL( uint64( 0 ), pTexture->_arrPhaseNanos[static_cast<uint32>( AssetLoadPhase::Decode )] );
     SW_EXPECT_EQUAL( 1u, pScene->_asyncCount ); // 워커 스레드

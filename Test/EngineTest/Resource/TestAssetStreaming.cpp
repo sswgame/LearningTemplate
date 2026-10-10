@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/File/AsyncFileIo.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
@@ -502,7 +502,7 @@ SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
     SW_EXPECT_FALSE( queue.isStreaming( assetPath ) );
 
     // 걸려 있던 읽기가 끝날 시간을 준다 — 그 완료는 세대가 지나 버려져야 한다.
-    sw::engine::getAsyncFileIo().waitIdle();
+    sw::engine::getAsyncFileIO().waitIdle();
     sw::engine::getTaskManager().waitAll();
     for ( uint32 pump = 0; pump < 4; ++pump )
     {

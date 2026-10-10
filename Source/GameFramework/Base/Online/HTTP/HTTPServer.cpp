@@ -62,7 +62,7 @@ namespace sw
         if ( _bInitialized == SW_FALSE )
             return;
         if ( _ioThreadCount == 0 )
-            (void)_transport->pollIo( 0 );
+            (void)_transport->pollIO( 0 );
         vector<ReadyRequest> listReady;
         {
             std::scoped_lock<mutex> lock{ _mutex };

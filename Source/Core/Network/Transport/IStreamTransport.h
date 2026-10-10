@@ -13,7 +13,7 @@ namespace sw
 {
     /**
      * @class IStreamHandler
-     * @brief 전송이 부르는 콜백입니다. **I/O 스레드**(또는 `pollIo` 를 부른 스레드)에서 불립니다.
+     * @brief 전송이 부르는 콜백입니다. **I/O 스레드**(또는 `pollIO` 를 부른 스레드)에서 불립니다.
      * @details 약속: 한 연결의 `onStreamReceived` 는 받은 순서대로 하나씩 온다. `onStreamWritable` 은 다른 I/O 스레드에서 겹칠 수 있다.
      *          `onStreamClosed` 는 그 연결의 **마지막** 콜백이고 정확히 한 번이다(열린 적 없는 연결 — 연결 실패 — 도 한 번). 콜백 안에서 `send` · `close` ·
      *          `setReceivePaused` 를 불러도 된다. 콜백은 오래 막지 않는다 — 무거운 일은 게임 스레드 큐로 넘긴다(`StreamMessageEndpoint`).
@@ -80,7 +80,7 @@ namespace sw
          * @brief `_ioThreadCount == 0` 일 때 부르는 쪽이 이벤트 루프를 한 번 돕니다(@p timeoutMilli 까지 기다림, 0 = 기다리지 않음). 처리한 완료 수입니다.
          *        I/O 스레드가 있으면 아무것도 하지 않고 0 입니다.
          */
-        virtual int32 pollIo( int32 timeoutMilli ) = 0;
+        virtual int32 pollIO( int32 timeoutMilli ) = 0;
 
         virtual NetAddress           getRemoteAddress( StreamConnectionHandle handle ) const = 0;
         virtual StreamTransportStats getStats() const                                        = 0;
