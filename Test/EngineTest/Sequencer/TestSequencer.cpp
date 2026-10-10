@@ -5,6 +5,7 @@
 
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -17,7 +18,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 시퀀서 — 타임라인 프레임 적용 · 이벤트 교차 판정 · JSON 왕복.
+// 시퀀서 — 타임라인 프레임 적용 · 이벤트 교차 판정 · 키 트랙 · 카메라 컷 · JSON 왕복.
 
 namespace sw
 {
@@ -34,7 +35,7 @@ namespace sw
             return false;
         }
 
-        /** @brief 클립 하나와 첫 프레임 이벤트 하나를 가진 시퀀스. */
+        /** @brief 클립 하나, 첫 프레임 이벤트 하나, 0 → 20 프레임에 X 를 0 → 4 로 모는 트랜스폼 트랙 하나를 가진 시퀀스. */
         SequenceAsset makeSequenceWithFirstFrameEvent()
         {
             SequenceAsset asset;
@@ -46,9 +47,17 @@ namespace sw
             clip._targetObject = "SeqTarget";
             clip._start        = 0;
             clip._end          = 20;
-            clip._translation  = float3{ 4.0f, 0.0f, 0.0f };
             clip._kind         = sw::SequenceItemKind::Clip;
             asset._listItem.push_back( std::move( clip ) );
+
+            SequenceKeyTrack track{};
+            track._name         = "Move";
+            track._targetObject = "SeqTarget";
+            track._kind         = SequenceTrackKind::Transform;
+            track.fitChannelsToKind();
+            (void)track.setChannelKey( 0, 0.0f, 0.0f );
+            (void)track.setChannelKey( 0, 20.0f, 4.0f );
+            asset._listTrack.push_back( std::move( track ) );
 
             SequenceTrackItem event{};
             event._name         = "FirstFrameEvent";
@@ -108,9 +117,9 @@ SW_TEST_CASE( SequencerTest, EventDoesNotRefireOnSameFrame )
 }
 
 /**
- * @brief [SequencerTest] 클립 밖의 대상은 꺼지고, 안의 대상은 켜지며 트랜스폼이 적용된다
+ * @brief [SequencerTest] 클립 밖의 대상은 꺼지고, 안의 대상은 켜지며 트랜스폼 트랙이 두 키 사이 값으로 옮긴다
  */
-SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndAppliesTransform )
+SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndKeyTrackMovesIt )
 {
     sw::SequencePlayer player;
     player.setAsset( sw::makeSequenceWithFirstFrameEvent() );
@@ -118,11 +127,11 @@ SW_TEST_CASE( SequencerTest, ClipTogglesTargetAndAppliesTransform )
     sw::GameObjectManager manager;
     sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string{ "SeqTarget" } );
     SW_ASSERT_NOT_NULL( pTarget );
-    // 트랜스폼을 적용할 자리가 있어야 한다 — 없으면 applyClipTransform 이 조용히 넘어간다.
+    // 트랜스폼을 적용할 자리가 있어야 한다 — 없으면 트랜스폼 트랙이 조용히 넘어간다.
     SW_ASSERT_NOT_NULL( pTarget->addComponent<sw::SceneComponent>() );
     manager.mergePendingAdds();
 
-    // 클립 한가운데(프레임 10) — 켜지고 절반쯤 이동해 있다.
+    // 두 키 한가운데(프레임 10) — 켜지고 절반 이동해 있다(끝 키의 자동 접선은 평평해 가운데가 정확히 절반이다).
     sw::SequenceTimelineUtil::applyFrame( &manager, player.getAsset(), 10 );
     SW_EXPECT_TRUE( pTarget->isActive() );
     sw::SceneComponent* pScene = pTarget->getPrimarySceneComponent();
@@ -205,8 +214,12 @@ SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
         SW_EXPECT_EQUAL( source._listItem[index]._start, loaded._listItem[index]._start );
         SW_EXPECT_EQUAL( source._listItem[index]._end, loaded._listItem[index]._end );
         SW_EXPECT_TRUE( source._listItem[index]._kind == loaded._listItem[index]._kind );
-        SW_EXPECT_NEAR_EQUAL( source._listItem[index]._translation._x, loaded._listItem[index]._translation._x, 0.0001f );
     }
+    SW_ASSERT_EQUAL( size_t( 1 ), loaded._listTrack.size() );
+    SW_ASSERT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), loaded._listTrack[0]._listChannel.size() );
+    SW_EXPECT_EQUAL( size_t( 2 ), loaded._listTrack[0]._listChannel[0]._listKey.size() );
+    SW_EXPECT_NEAR_EQUAL( 4.0f, loaded._listTrack[0].evaluateChannel( 0, 20.0f, 0.0f ), 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, loaded._listTrack[0].evaluateChannel( 0, 10.0f, 0.0f ), 0.0001f );
 }
 
 /**
@@ -403,14 +416,15 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
     // 에디터 트랙 이름은 리플렉션 enum 이름이다.
     SW_EXPECT_STREQ( "Clip", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Clip ) );
     SW_EXPECT_STREQ( "Event", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::Event ) );
+    SW_EXPECT_STREQ( "CameraCut", sw::engine::getTypeRegistry().enumToString( sw::SequenceItemKind::CameraCut ) );
     SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( sw::SequenceItemKind::Count ) );
     SW_EXPECT_NULL( sw::SequenceAsset::findItemKindInfo( static_cast<sw::SequenceItemKind>( -1 ) ) );
 }
 
 /**
- * @brief [SequencerTest] 종류를 enum 으로 바꾼 뒤에도 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로)
- * @details 아래 문서는 종류가 `int32 _type` 이던 때의 `toJSON` 출력이다(저장소에 시퀀스 파일이 없어 시험 안에 둔다). 세 번째 항목의
- *          종류 7 은 이 버전이 모르는 값이다 — 경고하고, 지우지 않고 다시 쓴다.
+ * @brief [SequencerTest] 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로, 키 트랙은 채널마다 키 배열)
+ * @details 아래 문서는 `toJSON` 출력이다(저장소에 시퀀스 파일이 하나뿐이라 시험 안에 둔다). 세 번째 항목의 종류 7 은 이 버전이 모르는
+ *          값이다 — 경고하고, 지우지 않고 다시 쓴다.
  */
 SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
 {
@@ -425,22 +439,7 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
       "start": 0,
       "end": 24,
       "type": 0,
-      "color": 4289364096,
-      "translation": {
-        "x": 2.0,
-        "y": 0.0,
-        "z": 0.5
-      },
-      "rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "scale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
-      }
+      "color": 4289364096
     },
     {
       "name": "Door",
@@ -448,22 +447,7 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
       "start": 12,
       "end": 12,
       "type": 1,
-      "color": 4286611626,
-      "translation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "scale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
-      }
+      "color": 4286611626
     },
     {
       "name": "Future",
@@ -471,22 +455,37 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
       "start": 30,
       "end": 40,
       "type": 7,
-      "color": 4289364096,
-      "translation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "rotation": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "scale": {
-        "x": 1.0,
-        "y": 1.0,
-        "z": 1.0
-      }
+      "color": 4289364096
+    }
+  ],
+  "tracks": [
+    {
+      "name": "Priority",
+      "target": "Hero",
+      "type": 1,
+      "property": "CameraComponent._priority",
+      "channels": [
+        {
+          "keys": [
+            {
+              "time": 0.0,
+              "value": 1.0,
+              "arriveTangent": 0.0,
+              "leaveTangent": 0.0,
+              "interpolation": 2,
+              "autoTangent": true
+            },
+            {
+              "time": 24.0,
+              "value": 3.0,
+              "arriveTangent": 0.0,
+              "leaveTangent": 0.0,
+              "interpolation": 1,
+              "autoTangent": true
+            }
+          ]
+        }
+      ]
     }
   ]
 })";
@@ -500,6 +499,9 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
     SW_EXPECT_TRUE( asset._listItem[0]._kind == sw::SequenceItemKind::Clip );
     SW_EXPECT_TRUE( asset._listItem[1]._kind == sw::SequenceItemKind::Event );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( asset._listItem[2]._kind ) );
+    SW_ASSERT_EQUAL( size_t( 1 ), asset._listTrack.size() );
+    SW_EXPECT_TRUE( asset._listTrack[0]._kind == sw::SequenceTrackKind::Property );
+    SW_EXPECT_TRUE( asset._listTrack[0]._listChannel[0]._listKey[1]._interpolation == sw::CurveInterpolation::Linear );
     SW_EXPECT_TRUE_MSG( asset.toJSON() == kSequenceJSON, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
 }
 
@@ -632,4 +634,154 @@ SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
     pLoaded->play();
     SW_ASSERT_EQUAL( size_t( 1 ), listEvent.size() );
     SW_EXPECT_EQUAL( "FirstFrameEvent", listEvent[0] );
+}
+
+// ------------------------------------------------------------------------------
+// 키 트랙 · 카메라 컷
+// ------------------------------------------------------------------------------
+
+/**
+ * @brief [SequencerTest] 같은 프레임에 키를 다시 찍으면 값만 바뀌고, 키 프레임은 채널을 겹쳐 하나로 세며, 지우면 모든 채널에서 빠진다
+ */
+SW_TEST_CASE( SequencerTest, KeyTrackSetKeyReplacesAndRemovesAcrossChannels )
+{
+    sw::SequenceKeyTrack track{};
+    track._kind = sw::SequenceTrackKind::Transform;
+    track.fitChannelsToKind();
+    SW_ASSERT_EQUAL( size_t( sw::kSequenceTransformChannelCount ), track._listChannel.size() );
+
+    float32 arrValue[sw::kSequenceTransformChannelCount] = { 1.0f, 2.0f, 3.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f };
+    track.setKey( 10.0f, arrValue, sw::kSequenceTransformChannelCount );
+    arrValue[0] = 5.0f;
+    track.setKey( 10.2f, arrValue, sw::kSequenceTransformChannelCount ); // 반 프레임 안 — 같은 키
+    (void)track.setChannelKey( 1, 30.0f, 7.0f );                         // 채널 하나에만
+
+    SW_EXPECT_EQUAL( size_t( 1 ), track._listChannel[0]._listKey.size() );
+    SW_EXPECT_NEAR_EQUAL( 5.0f, track.evaluateChannel( 0, 10.0f, 0.0f ), 0.0001f );
+    sw::vector<float32> listFrame;
+    track.collectKeyFrames( listFrame );
+    SW_ASSERT_EQUAL( size_t( 2 ), listFrame.size() );
+    SW_EXPECT_TRUE( track.hasKeyAt( 30.0f ) );
+    SW_EXPECT_TRUE( track.findChannelKey( 0, 30.0f ) == sw::invalid_index::kUint32 );
+
+    SW_EXPECT_TRUE( track.removeKeysAt( 10.0f ) );
+    SW_EXPECT_TRUE( track._listChannel[0]._listKey.empty() );
+    SW_EXPECT_EQUAL( size_t( 1 ), track._listChannel[1]._listKey.size() );
+    SW_EXPECT_FALSE( track.removeKeysAt( 10.0f ) );
+}
+
+/**
+ * @brief [SequencerTest] 트랜스폼 트랙은 키가 있는 채널만 몰고, 키 없는 채널 · 묶음은 대상의 지금 값을 둔다
+ */
+SW_TEST_CASE( SequencerTest, TransformTrackLeavesUnkeyedChannelsAlone )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string{ "Mover" } );
+    SW_ASSERT_NOT_NULL( pTarget );
+    sw::SceneComponent* pScene = pTarget->addComponent<sw::SceneComponent>();
+    SW_ASSERT_NOT_NULL( pScene );
+    manager.mergePendingAdds();
+    pScene->setLocalPosition( sw::float3{ 0.0f, 9.0f, 0.0f } );
+    pScene->setLocalScale( sw::float3{ 2.0f, 2.0f, 2.0f } );
+
+    sw::SequenceAsset    asset;
+    sw::SequenceKeyTrack track{};
+    track._targetObject = "Mover";
+    track._kind         = sw::SequenceTrackKind::Transform;
+    track.fitChannelsToKind();
+    (void)track.setChannelKey( 0, 0.0f, 10.0f );
+    (void)track.setChannelKey( 0, 10.0f, 20.0f );
+    asset._listTrack.push_back( track );
+
+    // 지금 값 읽기 — 에디터의 Key 단추가 이것을 키로 찍는다.
+    float32 arrCurrent[sw::kSequenceTransformChannelCount]{};
+    SW_ASSERT_TRUE( sw::SequenceTimelineUtil::readTrackValues( &manager, track, arrCurrent, sw::kSequenceTransformChannelCount ) );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, arrCurrent[1], 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, arrCurrent[6], 0.0001f );
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 5 );
+    SW_EXPECT_NEAR_EQUAL( 15.0f, pScene->getLocalPosition()._x, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 9.0f, pScene->getLocalPosition()._y, 0.0001f );
+    SW_EXPECT_NEAR_EQUAL( 2.0f, pScene->getLocalScale()._x, 0.0001f );
+    // 끝 키 뒤는 끝 값이다.
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 40 );
+    SW_EXPECT_NEAR_EQUAL( 20.0f, pScene->getLocalPosition()._x, 0.0001f );
+}
+
+/**
+ * @brief [SequencerTest] 프로퍼티 트랙은 컴포넌트의 숫자 프로퍼티(int32 는 반올림)를 몰고, 숫자가 아닌 · 없는 프로퍼티는 읽지 못한다
+ */
+SW_TEST_CASE( SequencerTest, PropertyTrackDrivesNumericProperty )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pTarget = manager.createGameObject( sw::hashed_string{ "Lens" } );
+    SW_ASSERT_NOT_NULL( pTarget );
+    sw::CameraComponent* pCamera = pTarget->addComponent<sw::CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    manager.mergePendingAdds();
+
+    sw::SequenceAsset    asset;
+    sw::SequenceKeyTrack track{};
+    track._targetObject = "Lens";
+    track._kind         = sw::SequenceTrackKind::Property;
+    track._propertyPath = "CameraComponent._priority";
+    track.fitChannelsToKind();
+    (void)track.setChannelKey( 0, 0.0f, 0.0f );
+    (void)track.setChannelKey( 0, 10.0f, 10.0f );
+    track._listChannel[0]._listKey[0]._interpolation = sw::CurveInterpolation::Linear;
+    asset._listTrack.push_back( track );
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 7 );
+    SW_EXPECT_EQUAL( 7, pCamera->getPriority() );
+
+    float32 value{ 0.0f };
+    SW_EXPECT_TRUE( sw::SequenceTimelineUtil::readTrackValues( &manager, asset._listTrack[0], &value, 1 ) );
+    SW_EXPECT_NEAR_EQUAL( 7.0f, value, 0.0001f );
+
+    sw::SequenceKeyTrack wrong = track;
+    wrong._propertyPath        = "CameraComponent._noSuchProperty";
+    SW_EXPECT_FALSE( sw::SequenceTimelineUtil::readTrackValues( &manager, wrong, &value, 1 ) );
+}
+
+/**
+ * @brief [SequencerTest] 카메라 컷 구간 안에서는 그 대상의 카메라가 컷 카메라이고, 구간 밖 · 멈춤에서는 풀린다
+ * @details 컷이 없는 시퀀스는 게임 카메라를 건드리지 않는다 — 코드가 고른 컷을 다른 시퀀스가 지우지 않는다.
+ */
+SW_TEST_CASE( SequencerTest, CameraCutSelectsTargetCameraOnlyInsideItsSpan )
+{
+    sw::GameObjectManager manager;
+    sw::GameObject*       pShot = manager.createGameObject( sw::hashed_string{ "ShotCamera" } );
+    SW_ASSERT_NOT_NULL( pShot );
+    sw::CameraComponent* pCamera = pShot->addComponent<sw::CameraComponent>();
+    SW_ASSERT_NOT_NULL( pCamera );
+    manager.mergePendingAdds();
+
+    sw::SequenceAsset asset;
+    asset._frameMin = 0;
+    asset._frameMax = 30;
+    sw::SequenceTrackItem cut{};
+    cut._name         = "Shot";
+    cut._targetObject = "ShotCamera";
+    cut._kind         = sw::SequenceItemKind::CameraCut;
+    cut._start        = 10;
+    cut._end          = 20;
+    asset._listItem.push_back( cut );
+    SW_ASSERT_TRUE( asset.hasCameraCut() );
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 15 );
+    SW_EXPECT_TRUE( manager.getCameraRegistry().getCutCamera() == pCamera );
+    // 컷 카메라 대상은 구간 밖에서 꺼지지 않는다(클립이 아니다).
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 25 );
+    SW_EXPECT_NULL( manager.getCameraRegistry().getCutCamera() );
+    SW_EXPECT_TRUE( pShot->isActive() );
+
+    sw::SequenceTimelineUtil::applyFrame( &manager, asset, 12 );
+    sw::SequenceTimelineUtil::releaseCameraCut( &manager, asset );
+    SW_EXPECT_NULL( manager.getCameraRegistry().getCutCamera() );
+
+    // 컷이 없는 시퀀스는 컷을 건드리지 않는다.
+    manager.getCameraRegistry().setCutCamera( pCamera );
+    sw::SequenceTimelineUtil::applyFrame( &manager, sw::makeSequenceWithFirstFrameEvent(), 5 );
+    SW_EXPECT_TRUE( manager.getCameraRegistry().getCutCamera() == pCamera );
+    manager.getCameraRegistry().setCutCamera( nullptr );
 }

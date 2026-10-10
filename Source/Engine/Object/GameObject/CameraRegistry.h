@@ -54,6 +54,14 @@ namespace sw
          */
         CameraComponent* selectCamera( CameraRole role ) const;
 
+        /**
+         * @brief 시퀀서 카메라 컷이 고른 카메라를 적습니다(nullptr 이면 풉니다). 게임 카메라 선택에서 직접 고른 카메라 · 등록부 규칙보다 먼저입니다.
+         * @details 언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리입니다. 그 카메라가 등록 해제되면(`remove`) 함께 풀립니다.
+         */
+        void setCutCamera( CameraComponent* pCamera );
+        /** @brief 카메라 컷이 고른 카메라입니다. 없으면 nullptr 입니다. */
+        CameraComponent* getCutCamera() const;
+
         /** @brief 이 씬의 게임 카메라가 그리는 뷰포트의 픽셀 크기를 적습니다(`EngineLoop` 가 틱 전에). 모르면 0 입니다. */
         void setViewportSize( uint32 width, uint32 height )
         {
@@ -79,9 +87,10 @@ namespace sw
         /** @brief 등록된 카메라입니다(등록 순서). 소유하지 않습니다. */
         RegistrationList<CameraComponent> _registeredCamera;
         /** @brief 목록을 지킵니다. 등록/해제는 드물고(비동기 씬 로드는 워커에서 등록합니다), 조회는 게임 스레드입니다. */
-        mutable mutex _mutex;
-        uint32        _viewportWidth{ 0 };    ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
-        uint32        _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
-        float32       _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
+        mutable mutex    _mutex;
+        CameraComponent* _pCutCamera{ nullptr }; ///< 시퀀서 카메라 컷(`setCutCamera`). 등록 해제가 함께 푼다
+        uint32           _viewportWidth{ 0 };    ///< 게임 뷰포트 픽셀 폭(게임 스레드가 틱 전에 적고 틱이 읽습니다)
+        uint32           _viewportHeight{ 0 };   ///< 게임 뷰포트 픽셀 높이
+        float32          _pixelSnapUnit{ 0.0f }; ///< 2D 픽셀 스냅 단위(0 = 끔)
     };
 } // namespace sw

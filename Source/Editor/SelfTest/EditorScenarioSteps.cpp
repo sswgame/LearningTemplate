@@ -30,6 +30,7 @@
 #include "Editor/Panels/ModulesPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
+#include "Editor/Panels/SequencerPanel.h"
 #include "Editor/Panels/ShortcutsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -41,6 +42,7 @@
 #include "Engine/Automation/AutomationRunner.h"
 #include "Engine/Automation/AutomationStepRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
@@ -1283,6 +1285,35 @@ namespace sw::editor
                 return true;
             }
         };
+
+        struct EditorSequencerProbeInternal
+        {
+            /** @brief `-gv_editorProbeObject` 오브젝트의 로컬 위치 X 입니다(시퀀서 키 트랙 미리보기가 옮긴 값). */
+            [[nodiscard]] static bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const GameObjectManager* pManager = editor::getActiveObjectManager();
+                const GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) ) : nullptr;
+                const SceneComponent*    pScene   = pObject != nullptr ? pObject->getPrimarySceneComponent() : nullptr;
+                if ( pScene == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pScene->getLocalPosition()._x );
+                return true;
+            }
+
+            /** @brief Sequencer 패널이 고른 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 고른 트랙이 없으면 값이 없다. */
+            [[nodiscard]] static bool readSequencerKeyFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const SequencerPanel* pPanel = static_cast<const SequencerPanel*>( pContext->getPanelManager().findPanel( "sequencer" ) );
+                uint32                count{ 0 };
+                if ( pPanel == nullptr || pPanel->isOpen() == false || pPanel->findSelectedTrackKeyFrameCount( count ) == false )
+                    return false;
+                outValue = static_cast<float64>( count );
+                return true;
+            }
+        };
     } // namespace
 
     SW_AUTOMATION_STEP( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, false );
@@ -1401,4 +1432,9 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorProfilerTimelineThreadCount, "Editor.ProfilerTimelineThreadCount",
                          "Threads with profile scopes in the profiler timeline over the last 4 frames (0 while not recording)",
                          &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );
+
+    SW_AUTOMATION_PROBE( editorObjectPositionX, "Editor.ObjectPositionX", "Local position X of the object named by gv_editorProbeObject",
+                         &EditorSequencerProbeInternal::readObjectPositionX );
+    SW_AUTOMATION_PROBE( editorSequencerKeyFrameCount, "Editor.SequencerKeyFrameCount", "Key frames of the key track selected in the Sequencer panel",
+                         &EditorSequencerProbeInternal::readSequencerKeyFrameCount );
 } // namespace sw::editor

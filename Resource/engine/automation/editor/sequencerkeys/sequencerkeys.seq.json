@@ -1,0 +1,43 @@
+{
+  "frameMin": 0,
+  "frameMax": 100,
+  "note": "sequencerkeys scenario: key GameCamera location X at two frames",
+  "items": [],
+  "tracks": [
+    {
+      "name": "Move",
+      "target": "GameCamera",
+      "type": 0,
+      "property": "",
+      "channels": [
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        },
+        {
+          "keys": []
+        }
+      ]
+    }
+  ]
+}

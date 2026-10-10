@@ -26,6 +26,20 @@ namespace sw
         // 순서를 지키며 뺀다(목록을 보여 주는 쪽 — 프러스텀 시각화 · 벤치 — 이 순서를 본다). 카메라는 몇 개뿐이다.
         std::scoped_lock<mutex> lock{ _mutex };
         (void)_registeredCamera.remove( pCamera ); // 두 번 빼도 된다 — 없으면 할 일이 없다
+        if ( _pCutCamera == pCamera )
+            _pCutCamera = nullptr;
+    }
+
+    void CameraRegistry::setCutCamera( CameraComponent* pCamera )
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        _pCutCamera = pCamera;
+    }
+
+    CameraComponent* CameraRegistry::getCutCamera() const
+    {
+        std::scoped_lock<mutex> lock{ _mutex };
+        return _pCutCamera;
     }
 
     bool CameraRegistry::isUsableCamera( const CameraComponent* pCamera )

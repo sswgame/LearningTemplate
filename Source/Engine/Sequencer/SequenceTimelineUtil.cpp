@@ -7,9 +7,11 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Sequencer/SequencePlayer.h"
 
@@ -19,15 +21,6 @@ namespace sw
     {
         struct SequenceTimelineUtilInternal
         {
-            static float32 clipProgress( const SequenceTrackItem& item, int32 frame )
-            {
-                const int32 span = item._end - item._start;
-                if ( span <= 0 )
-                    return 1.0f;
-                const float32 t = static_cast<float32>( frame - item._start ) / static_cast<float32>( span );
-                return MathUtil::clamp( t, 0.0f, 1.0f );
-            }
-
             /** @brief 구간 동안 대상의 활성 · 트랜스폼을 정하는 종류인지 반환합니다. 표에 없는 종류는 아무것도 하지 않습니다. */
             static bool drivesTarget( const SequenceTrackItem& item )
             {
@@ -60,21 +53,94 @@ namespace sw
                 return pManager->findGameObjectByName( hashed_string{ name } );
             }
 
-            static void applyClipTransform( GameObject* pTarget, const SequenceTrackItem& item, int32 frame )
+            /** @brief 축 하나(0 x · 1 y · 2 z)입니다. */
+            static float32& axisOf( float3& value, uint32 axis )
             {
-                if ( pTarget == nullptr || SequenceTimelineUtil::hasTransform( item ) == false )
-                    return;
-                SceneComponent* pScene = pTarget->getPrimarySceneComponent();
-                if ( pScene == nullptr )
-                    return;
+                if ( axis == 0 )
+                    return value._x;
+                if ( axis == 1 )
+                    return value._y;
+                return value._z;
+            }
 
-                const float32 t           = clipProgress( item, frame );
-                const float3  translation = float3::lerp( float3{}, item._translation, t );
-                const float3  rotation    = float3::lerp( float3{}, item._rotation, t );
-                const float3  scale       = float3::lerp( float3{ 1.0f, 1.0f, 1.0f }, item._scale, t );
-                pScene->setLocalPosition( translation );
-                pScene->setLocalRotation( rotation );
-                pScene->setLocalScale( scale );
+            /** @brief 프로퍼티 트랙이 가리키는 컴포넌트와 숫자 프로퍼티입니다. 못 찾거나 숫자(`float32` · `int32`)가 아니면 false 입니다. */
+            static bool findTrackProperty( GameObject* pTarget, const SequenceKeyTrack& track, Component*& pOutComponent, const PropertyInfo*& pOutProperty )
+            {
+                pOutComponent    = nullptr;
+                pOutProperty     = nullptr;
+                const size_t dot = track._propertyPath.find( '.' );
+                if ( pTarget == nullptr || dot == string::npos )
+                    return false;
+                Component* pComponent = pTarget->findComponentByTypeName( hashed_string( track._propertyPath.substr( 0, dot ).c_str() ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                    return false;
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( track._propertyPath.substr( dot + 1 ).c_str() ) );
+                if ( pProperty == nullptr )
+                    return false;
+                if ( pProperty->_typeName != hashed_string( "float32" ) && pProperty->_typeName != hashed_string( "int32" ) )
+                    return false;
+                pOutComponent = pComponent;
+                pOutProperty  = pProperty;
+                return true;
+            }
+
+            /** @brief 트랜스폼 트랙의 아홉 채널을 대상 SceneComponent 에 씁니다. 키가 없는 채널은 지금 값을 둔다. */
+            static void applyTransformTrack( GameObject* pTarget, const SequenceKeyTrack& track, float32 frame )
+            {
+                SceneComponent* pScene = pTarget->getPrimarySceneComponent();
+                if ( pScene == nullptr || track._listChannel.size() < kSequenceTransformChannelCount )
+                    return;
+                float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+                bool   arrKeyed[3] = { false, false, false };
+                for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
+                {
+                    if ( track._listChannel[channelIndex]._listKey.empty() )
+                        continue;
+                    const uint32 groupIndex = channelIndex / 3;
+                    float32&     component  = axisOf( arrValue[groupIndex], channelIndex % 3 );
+                    component               = track._listChannel[channelIndex].evaluate( frame, component );
+                    arrKeyed[groupIndex]    = true;
+                }
+                // 키가 있는 묶음만 쓴다 — 키 없는 회전 · 크기까지 쓰면 트랜스폼이 프레임마다 더티가 된다.
+                if ( arrKeyed[0] )
+                    pScene->setLocalPosition( arrValue[0] );
+                if ( arrKeyed[1] )
+                    pScene->setLocalRotation( arrValue[1] );
+                if ( arrKeyed[2] )
+                    pScene->setLocalScale( arrValue[2] );
+            }
+
+            static void applyPropertyTrack( GameObject* pTarget, const SequenceKeyTrack& track, float32 frame )
+            {
+                Component*          pComponent{ nullptr };
+                const PropertyInfo* pProperty{ nullptr };
+                if ( track._listChannel.empty() || track._listChannel[0]._listKey.empty() || findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
+                    return;
+                if ( pProperty->_typeName == hashed_string( "float32" ) )
+                {
+                    float32* pValue = pProperty->getValuePtr<float32>( pComponent );
+                    *pValue         = track._listChannel[0].evaluate( frame, *pValue );
+                    return;
+                }
+                int32* pValue = pProperty->getValuePtr<int32>( pComponent );
+                *pValue       = static_cast<int32>( MathUtil::round( track._listChannel[0].evaluate( frame, static_cast<float32>( *pValue ) ) ) );
+            }
+
+            /** @brief 그 프레임을 덮는 카메라 컷 가운데 가장 늦게 시작한 것의 카메라를 게임 카메라로 고릅니다. 덮는 컷이 없으면 풉니다. */
+            static void applyCameraCut( GameObjectManager* pManager, const vector<const SequenceTrackItem*>& listActive )
+            {
+                const SequenceTrackItem* pCut = nullptr;
+                for ( const SequenceTrackItem* pItem : listActive )
+                {
+                    const SequenceItemKindInfo* pInfo = pItem != nullptr ? SequenceAsset::findItemKindInfo( pItem->_kind ) : nullptr;
+                    if ( pInfo == nullptr || pInfo->_bCutsCamera == false )
+                        continue;
+                    if ( pCut == nullptr || pItem->_start >= pCut->_start )
+                        pCut = pItem;
+                }
+                GameObject*      pTarget = pCut != nullptr ? findTarget( pManager, pCut->_targetObject ) : nullptr;
+                CameraComponent* pCamera = pTarget != nullptr ? pTarget->getComponent<CameraComponent>() : nullptr;
+                pManager->getCameraRegistry().setCutCamera( pCamera );
             }
         };
     } // namespace
@@ -83,17 +149,6 @@ namespace sw
 namespace sw
 {
     SW_LOG_CALLER( "SequenceTimeline" );
-
-    bool SequenceTimelineUtil::hasTransform( const SequenceTrackItem& item )
-    {
-        if ( ( item._translation == float3{} ) == false )
-            return true;
-        if ( ( item._rotation == float3{} ) == false )
-            return true;
-        if ( ( item._scale == float3{ 1.0f, 1.0f, 1.0f } ) == false )
-            return true;
-        return false;
-    }
 
     void SequenceTimelineUtil::applyFrame( GameObjectManager* pManager, const SequenceAsset& asset, int32 frame, int32 previousFrame,
                                            vector<const SequenceTrackItem*>* pOutListCrossedEvent )
@@ -120,13 +175,19 @@ namespace sw
                 pTarget->setActive( bCovered );
         }
 
-        for ( const SequenceTrackItem* pItem : listActive )
+        if ( asset.hasCameraCut() )
+            SequenceTimelineUtilInternal::applyCameraCut( pManager, listActive );
+
+        const float32 keyFrame = static_cast<float32>( frame );
+        for ( const SequenceKeyTrack& track : asset._listTrack )
         {
-            if ( pItem == nullptr || pItem->_targetObject.empty() || SequenceTimelineUtilInternal::drivesTarget( *pItem ) == false )
+            GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
+            if ( pTarget == nullptr )
                 continue;
-            GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, pItem->_targetObject );
-            if ( pTarget != nullptr )
-                SequenceTimelineUtilInternal::applyClipTransform( pTarget, *pItem, frame );
+            if ( track._kind == SequenceTrackKind::Transform )
+                SequenceTimelineUtilInternal::applyTransformTrack( pTarget, track, keyFrame );
+            else if ( track._kind == SequenceTrackKind::Property )
+                SequenceTimelineUtilInternal::applyPropertyTrack( pTarget, track, keyFrame );
         }
 
         if ( previousFrame == kNoPreviousFrame )
@@ -164,5 +225,41 @@ namespace sw
         applyFrame( pManager, asset, player.getCurrentFrame(), player.getPreviousFrame(), pOutListCrossedEvent );
         if ( pOutListCrossedEvent != nullptr && listTailEvent.empty() == false )
             pOutListCrossedEvent->insert( pOutListCrossedEvent->begin(), listTailEvent.begin(), listTailEvent.end() );
+    }
+
+    bool SequenceTimelineUtil::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
+    {
+        GameObject* pTarget = SequenceTimelineUtilInternal::findTarget( pManager, track._targetObject );
+        if ( pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind ) )
+            return false;
+        if ( track._kind == SequenceTrackKind::Transform )
+        {
+            const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
+            if ( pScene == nullptr )
+                return false;
+            float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
+            for ( uint32 channelIndex = 0; channelIndex < kSequenceTransformChannelCount; ++channelIndex )
+            {
+                pOutArrValue[channelIndex] = SequenceTimelineUtilInternal::axisOf( arrValue[channelIndex / 3], channelIndex % 3 );
+            }
+            return true;
+        }
+        if ( track._kind != SequenceTrackKind::Property )
+            return false;
+        Component*          pComponent{ nullptr };
+        const PropertyInfo* pProperty{ nullptr };
+        if ( SequenceTimelineUtilInternal::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
+            return false;
+        if ( pProperty->_typeName == hashed_string( "float32" ) )
+            pOutArrValue[0] = *pProperty->getValuePtr<float32>( pComponent );
+        else
+            pOutArrValue[0] = static_cast<float32>( *pProperty->getValuePtr<int32>( pComponent ) );
+        return true;
+    }
+
+    void SequenceTimelineUtil::releaseCameraCut( GameObjectManager* pManager, const SequenceAsset& asset )
+    {
+        if ( pManager != nullptr && asset.hasCameraCut() )
+            pManager->getCameraRegistry().setCutCamera( nullptr );
     }
 } // namespace sw

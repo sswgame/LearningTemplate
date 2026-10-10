@@ -412,9 +412,12 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
-        // 직접 고른 카메라가 먼저, 다음은 등록부의 규칙. 둘 다 없으면 지난번 카메라를 그대로 둔다 — 하나뿐인 게임 카메라를 끈 경우다.
-        // 그때 새로 만들거나 기본값으로 되돌리면 꺼 둔 카메라를 프레임마다 옮기게 된다. 아무것도 없을 때만 만든다.
-        CameraComponent* pCamera = resolveCamera( _gameCameraOverride );
+        // 시퀀서 카메라 컷이 먼저(언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리), 다음은 직접 고른 카메라, 그다음은 등록부의 규칙. 모두 없으면
+        // 지난번 카메라를 그대로 둔다 — 하나뿐인 게임 카메라를 끈 경우다. 그때 새로 만들거나 기본값으로 되돌리면 꺼 둔 카메라를 프레임마다
+        // 옮기게 된다. 아무것도 없을 때만 만든다.
+        CameraComponent* pCamera = _objectManager->getCameraRegistry().getCutCamera();
+        if ( CameraRegistry::isUsableCamera( pCamera ) == false )
+            pCamera = resolveCamera( _gameCameraOverride );
         if ( CameraRegistry::isUsableCamera( pCamera ) == false )
             pCamera = _objectManager->getCameraRegistry().selectCamera( CameraRole::Game );
         if ( pCamera == nullptr )

@@ -49,6 +49,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
+#include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
@@ -307,6 +308,21 @@ namespace
             return false;
         }
 
+        static bool isSequence( sw::string_view resourceID ) { return endsWith( resourceID, ".seq.json" ); }
+        /** @brief 시퀀스 — 키 트랙은 모두 아는 종류여야 한다(모르는 종류는 읽지만 적용하지 않는다). */
+        [[nodiscard]] static bool loadSequence( const sw::string& resourceID )
+        {
+            sw::SequenceAsset sequence;
+            if ( sequence.loadFromFile( resourceID ) == false )
+                return false;
+            for ( const sw::SequenceKeyTrack& track : sequence._listTrack )
+            {
+                if ( sw::SequenceKeyTrack::getChannelCount( track._kind ) == 0 )
+                    return false;
+            }
+            return true;
+        }
+
         [[nodiscard]] static bool loadSpriteClip( const sw::string& resourceID )
         {
             sw::SpriteClipAsset clip;
@@ -497,6 +513,7 @@ namespace
             {           "scenario",  &isAutomationScenario,                            &loadAutomationScenario},
             {           "material",            &isMaterial,                                      &loadMaterial},
             {         "spriteclip",          &isSpriteClip,                                    &loadSpriteClip},
+            {           "sequence",            &isSequence,                                      &loadSequence},
             {      "camerapresets",       &isCameraPresets,              &loadCatalog<sw::CameraPresetCatalog>},
             {           "render2d",    &isRender2DSettings,                              &loadRender2DSettings},
             {            "tileset",             &isTileSet,                                       &loadTileSet},

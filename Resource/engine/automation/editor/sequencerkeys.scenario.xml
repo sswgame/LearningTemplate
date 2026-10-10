@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Sequencer 키 트랙(N9): Quick Open 으로 시험 시퀀스(sequencerkeys/, GameCamera 를 모는 빈 트랜스폼 트랙)를 열고,
+  프레임 0 에서 Key 단추로 키를 찍은 뒤 Location X 칸에 2 를 친다. 시간 막대에 100 을 쳐서 옮기고 Location X 칸에 12 를 치면
+  그 채널에 둘째 키가 생긴다(자동 키). 시간 막대 가운데를 누르면 미리보기가 GameCamera 를 두 키 사이(2 와 12 사이)로 옮긴다.
+  드래그 칸 · 슬라이더는 Ctrl+클릭이 글 입력이다. Quick Open 은 파일 목록이 온 뒤에 열므로 첫 확인까지 넉넉히 기다린다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/sequencerkeys.scenario.xml -dx12
+-->
+<Scenario name="editor.sequencerkeys" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="40"><Variable name="gv_editorProbeObject" value="GameCamera"/></At>
+	<At frame="60"><EditorKey key="Ctrl+P"/></At>
+	<At frame="75"><EditorText value="sequencerkeys.seq.json"/></At>
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="280"><Expect probe="Editor.SequencerKeyFrameCount" equals="0"/></At>
+	<At frame="290"><EditorClick mark="sequencer.addKey"/></At>
+	<At frame="310"><Expect probe="Editor.SequencerKeyFrameCount" equals="1"/></At>
+	<At frame="320"><EditorClick mark="sequencer.channel.0" mods="ctrl"/></At>
+	<At frame="330"><EditorKey key="Ctrl+A"/></At>
+	<At frame="335"><EditorText value="2"/></At>
+	<At frame="340"><EditorKey key="Enter"/></At>
+	<At frame="360"><Expect probe="Editor.ObjectPositionX" equals="2"/></At>
+	<At frame="370"><EditorClick mark="sequencer.scrub" mods="ctrl"/></At>
+	<At frame="380"><EditorKey key="Ctrl+A"/></At>
+	<At frame="385"><EditorText value="100"/></At>
+	<At frame="390"><EditorKey key="Enter"/></At>
+	<At frame="410"><EditorClick mark="sequencer.channel.0" mods="ctrl"/></At>
+	<At frame="420"><EditorKey key="Ctrl+A"/></At>
+	<At frame="425"><EditorText value="12"/></At>
+	<At frame="430"><EditorKey key="Enter"/></At>
+	<At frame="450">
+		<Expect probe="Editor.SequencerKeyFrameCount" equals="2"/>
+		<Expect probe="Editor.ObjectPositionX" equals="12"/>
+	</At>
+	<At frame="460"><EditorClick mark="sequencer.scrub"/></At>
+	<At frame="480">
+		<Expect probe="Editor.ObjectPositionX" atLeast="4"/>
+		<Expect probe="Editor.ObjectPositionX" atMost="10"/>
+	</At>
+	<At frame="490"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

@@ -90,6 +90,10 @@ namespace sw
     void SequencePlayerComponent::stop()
     {
         _player.stop();
+        // 카메라 컷은 컷 구간이 끝나야 풀리므로, 구간 안에서 멈추면 여기서 푼다(게임 카메라가 원래 규칙으로 돌아간다).
+        GameObject* pOwner = getOwner();
+        if ( pOwner != nullptr )
+            SequenceTimelineUtil::releaseCameraCut( pOwner->getManager(), _player.getAsset() );
     }
 
     void SequencePlayerComponent::pause()

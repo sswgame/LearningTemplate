@@ -658,3 +658,6 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **머티리얼 패널의 구 미리보기는 CPU 셈이다**(`MaterialPreviewShading`, 결정은 docs/09 5-11). 관례 이름의 값(`color` · `baseColor` · `albedo`, `roughness`,
   `metallic`, `emissive`)만 읽고 셰이더 코드는 보지 않으므로, 값 이름이 다른 셰이더의 머티리얼은 기본값으로 보인다. 시나리오 `editor/materialpreview`(탐침 `Editor.MaterialPreviewRedMinusBlue`).
   `MaterialProperty` 는 Engine 이 내보내지 않아 EditorTest 가 만들 수 없다 — 값 읽기는 시나리오가 본다.
+- **Sequencer 미리보기는 편집 씬의 오브젝트를 그대로 옮긴다**(`EditorViewportPreview::applySequenceFrame`, 결정은 docs/09 5-11). 시간 막대 · 키 띠 · 채널 값을 고칠 때마다
+  키 트랙이 대상 트랜스폼을 덮으므로, 키를 찍은 오브젝트를 저장하면 미리보기 자리가 씬에 남는다(언리얼 Restore State 없음). 키 트랙 판단(키 찍기 · 지우기 · 채널 평가)은
+  Engine 의 `SequenceKeyTrack` 에 있고 EngineTest(`SequencerTest`)가 본다. 시나리오 `editor/sequencerkeys`(탐침 `Editor.ObjectPositionX` · `Editor.SequencerKeyFrameCount`).
