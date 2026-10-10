@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Codec/Acl/AclAnimCodec.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
@@ -13,15 +13,15 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AclAnimCodec" );
+    SW_LOG_CALLER( "ACLAnimCodec" );
 
     namespace
     {
         /**
-         * @class AclAllocator
+         * @class ACLAllocator
          * @brief ACL 의 할당을 sw 할당자로 돌립니다(메모리 태그 · 누수 검사에 보입니다).
          */
-        class AclAllocator final : public acl::iallocator
+        class ACLAllocator final : public acl::iallocator
         {
         public:
             void* allocate( size_t size, size_t alignment ) override { return Memory::allocateAligned( size, alignment ); }
@@ -34,12 +34,12 @@ namespace sw
         };
 
         /**
-         * @struct AclPoseWriter
+         * @struct ACLPoseWriter
          * @brief 압축 해제한 값을 포즈 배열에 바로 씁니다. 트랙 번호가 곧 포즈의 본 번호입니다.
          */
-        struct AclPoseWriter final : public acl::track_writer
+        struct ACLPoseWriter final : public acl::track_writer
         {
-            AclPoseWriter( Pose& inoutPose, const uint8* pTrackMask )
+            ACLPoseWriter( Pose& inoutPose, const uint8* pTrackMask )
                 : _pTranslation{ inoutPose.getTranslationData() }
                 , _pRotation{ inoutPose.getRotationData() }
                 , _pScale{ inoutPose.getScaleData() }
@@ -77,20 +77,20 @@ namespace sw
 
 namespace sw
 {
-    const AclAnimCodec& AclAnimCodec::getInstance()
+    const ACLAnimCodec& ACLAnimCodec::getInstance()
     {
-        static const AclAnimCodec s_codec;
+        static const ACLAnimCodec s_codec;
         return s_codec;
     }
 
-    bool AclAnimCodec::compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const
+    bool ACLAnimCodec::compress( const AnimRawClip& rawClip, const AnimCodecSettings& settings, vector<uint8>& outBytes ) const
     {
         outBytes.clear();
         const uint32 trackCount = rawClip.getTrackCount();
         if ( rawClip._sampleCount == 0 || trackCount == 0 || rawClip._listSample.size() != static_cast<size_t>( rawClip._sampleCount ) * trackCount )
             return false;
 
-        AclAllocator          allocator;
+        ACLAllocator          allocator;
         acl::track_array_qvvf listTrack( allocator, trackCount );
         for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
         {
@@ -133,7 +133,7 @@ namespace sw
         return true;
     }
 
-    bool AclAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
+    bool ACLAnimCodec::sample( const uint8* pBytes, size_t byteCount, float32 time, Pose& outPose, const uint8* pTrackMask ) const
     {
         if ( pBytes == nullptr || byteCount == 0 || ( reinterpret_cast<uintptr_t>( pBytes ) & 15u ) != 0 )
             return false;
@@ -147,7 +147,7 @@ namespace sw
         outPose.resize( pTracks->get_num_tracks() );
         outPose.setToIdentity();
         context.seek( time, acl::sample_rounding_policy::none );
-        AclPoseWriter writer{ outPose, pTrackMask };
+        ACLPoseWriter writer{ outPose, pTrackMask };
         context.decompress_tracks( writer );
         return true;
     }

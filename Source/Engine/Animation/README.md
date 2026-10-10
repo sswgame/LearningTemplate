@@ -245,7 +245,7 @@ Weight[i] = 1 / dist(p, p[i])^2,   NormalizedWeight[i] = Weight[i] / ΣWeight
 클립의 본 트랙은 코덱이 압축한 블롭으로 저장됩니다. 코드는 코덱을 이름으로만 고르고, 어느 코덱을 쓸지는 임포트 규칙(데이터)이 정합니다(`AnimCodecRegistry`).
 
 - `Raw` 는 압축하지 않은 균일 샘플입니다. 비교 기준과 디버그용입니다.
-- `Acl` 은 Animation Compression Library 2.1 입니다. 가변 비트율, 상수 트랙 제거, 오차 기준 키 줄이기를 합니다.
+- `ACL` 은 Animation Compression Library 2.1 입니다. 가변 비트율, 상수 트랙 제거, 오차 기준 키 줄이기를 합니다.
 
 `AnimCodecRegistry::measureMaxError` 는 원본과 블롭을 같은 시각들에서 샘플해 모델 공간 가상 정점의 최대 거리를 측정합니다. 가상 정점은 본 원점에서 세 축 방향으로 shell 거리만큼 떨어진 점입니다.
 코덱과 무관한 하나의 기준이라 Raw 와 ACL 을 같은 수치로 비교할 수 있습니다.
@@ -366,7 +366,7 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 
 **ACL 의 정밀도 기본값은 센티미터 기준입니다.** ACL 의 기본값은 정밀도 0.01, shell 거리 3.0 입니다. 엔진은 미터를 쓰므로 임포트 규칙의 기본값은 `animation_precision` 0.0001, `animation_shell_distance` 0.1 입니다.
 
-**ACL 과 RTM 헤더는 `Codec/Acl/` 의 `.cpp` 에서만 include 하세요.** 다른 곳에서 include 하면 `CheckThirdPartyIsolation.py` 가 막습니다.
+**ACL 과 RTM 헤더는 `Codec/ACL/` 의 `.cpp` 에서만 include 하세요.** 다른 곳에서 include 하면 `CheckThirdPartyIsolation.py` 가 막습니다.
 
 **`AnimPlayback.h` 를 `Component.h` 에서 include 하지 마세요.** `Component.h` 는 PCH 에 들어 있어서, 거기서 include 한 헤더를 고치면 PCH 가 다시 빌드됩니다.
 그래서 `Component.h` 는 알림 종류 하나만 담은 `AnimNotifyPhase.h` 만 include 합니다.

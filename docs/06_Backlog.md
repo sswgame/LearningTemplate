@@ -165,7 +165,7 @@
 
 - **서드파티 — Jolt(3D 물리) · Box2D(2D 물리) · ACL(애니메이션 압축)(2026-10-04 사용자 결정), Recast · Tracy(2026-10-05 추가).** 모두 MIT · vcpkg 에 있다.
   물리 둘은 감쌌다(`IPhysicsScene3D` · `IPhysicsScene2D`, `Source/Engine/Physics/README.md`) — 경계는 `CheckThirdPartyIsolation.py` 가 지킨다(ACL 도 같은 표에 있다).
-  ACL 코덱은 `Engine/Animation/Codec/Acl`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
+  ACL 코덱은 `Engine/Animation/Codec/ACL`(쿠킹 때 압축 → 코덱 id + 불투명 블롭). vcpkg 를 바꿀 때는 **다른 워크트리가 빌드 중이
   아닐 때** — 설치 폴더를 나눠 써서, 옛 매니페스트의 워크트리가 configure 하면 새 패키지를 지운다. Jolt 소프트 바디(천 · 헤어 카드)는 아직 감싸지 않았다.
   2026-10-05 사용자 결정으로 **Recast & Detour**(zlib, 정적 — `RecastNavigation::Recast` · `Detour` · `DetourCrowd` · `DetourTileCache`)와
   **Tracy**(BSD-3, 클라이언트만 · 기능 끔 — `Tracy::TracyClient`, Windows 는 공유 TracyClient.dll)를 vcpkg 로 들였다(`ThirdParty/{recastnavigation,tracy}`).

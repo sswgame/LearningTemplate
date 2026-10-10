@@ -8,7 +8,7 @@
 모두 따라 바뀐다. 이 게이트가 그 경계를 지킨다.
 
   1) `#include <Jolt/...>` 는 `Source/Engine/Physics/Jolt/` 안에서만, `<box2d/...>` 는 `Source/Engine/Physics/Box2D/` 안에서만,
-     `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/Acl/` 안에서만, `<tracy/...>` 는 `Source/Engine/Profiling/Tracy/`
+     `<acl/...>` · `<rtm/...>` 는 `Source/Engine/Animation/Codec/ACL/` 안에서만, `<tracy/...>` 는 `Source/Engine/Profiling/Tracy/`
      안에서만, `<recastnavigation/...>`(와 `Recast*.h` · `Detour*.h` · `DebugDraw.h`)는 `Source/Engine/Navigation/Recast/` 안에서만,
      `<openssl/...>` 는 `Source/GameFramework/Base/Online/Security/OpenSsl/` 안에서만,
      `<ft2build.h>` · `<freetype/...>` 는 `Source/Engine/Text/FreeType/` 안에서만, `<sqlite3.h>` 는 키트 드라이버 폴더 `Source/GameFramework/Kits/Feature/Storage/SqlStore/Shared/Driver/Sqlite/`
@@ -57,7 +57,7 @@ class LibraryRule:
 _kListLibraryRule: tuple[LibraryRule, ...] = (
     LibraryRule("Jolt", ("Jolt/",), ("Source/Engine/Physics/Jolt/",), ("joltphysics", "Jolt::Jolt")),
     LibraryRule("Box2D", ("box2d/",), ("Source/Engine/Physics/Box2D/",), ("box2d", "box2d::box2d")),
-    LibraryRule("ACL", ("acl/", "rtm/"), ("Source/Engine/Animation/Codec/Acl/",), ("acl",)),
+    LibraryRule("ACL", ("acl/", "rtm/"), ("Source/Engine/Animation/Codec/ACL/",), ("acl",)),
     LibraryRule("Tracy", ("tracy/", "client/Tracy", "common/Tracy"), ("Source/Engine/Profiling/Tracy/",), ("tracy", "Tracy::TracyClient")),
     LibraryRule(
         "Recast",
@@ -183,7 +183,7 @@ class CheckThirdPartyIsolationGate(LintGate):
         "  암호 · TLS 는 Core/Network/Security/INetSecurityProvider.h(구현 GameFramework/Base/Online/Security/NetSecurity.h).\n"
         "  글리프 래스터화는 Engine/Text/IFontRasterizer.h(구현 Engine/Text/FreeType/).\n"
         "  SQL 은 GameFramework/Kits/Feature/Storage/SqlStore/Shared/Sql/SqlDriver.h(드라이버는 Kits/Storage/SqlStore/Driver/<제품>/).\n"
-        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/Acl · Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
+        "  라이브러리 헤더가 필요한 코드는 백엔드 폴더(Physics/Jolt · Physics/Box2D · Animation/Codec/ACL · Profiling/Tracy · Navigation/Recast)로 옮기고,\n"
         "  링크는 규칙마다의 CMakeLists(엔진 백엔드는 Source/Engine/CMakeLists.txt, 키트 드라이버는 그 키트의 CMakeLists)에만 둡니다."
     )
     selfTestCases = [

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Codec/Acl/AclAnimCodec.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
 
 namespace sw
@@ -20,7 +20,7 @@ namespace sw
             /** @brief 등록된 코덱 표입니다. 번호 순서입니다. */
             static const IAnimCodec* const* getCodecTable()
             {
-                static const IAnimCodec* const s_arrCodec[static_cast<uint32>( AnimCodecId::Count )] = { &RawAnimCodec::getInstance(), &AclAnimCodec::getInstance() };
+                static const IAnimCodec* const s_arrCodec[static_cast<uint32>( AnimCodecId::Count )] = { &RawAnimCodec::getInstance(), &ACLAnimCodec::getInstance() };
                 return s_arrCodec;
             }
 
