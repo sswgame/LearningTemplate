@@ -24,13 +24,13 @@ namespace sw
         uint8 _bCompute{ SW_TRUE };         ///< 컴퓨트 셰이더
         uint8 _bOffscreenRT{ SW_FALSE };    ///< createTexture2D + 오프스크린 경로
         uint8 _bIndirectDraw{ SW_FALSE };   ///< drawIndirect / dispatchIndirect
-        uint8 _bGpuCulling{ SW_FALSE };     ///< 컴퓨트 컬 + 인디렉트 인자 경로
+        uint8 _bGPUCulling{ SW_FALSE };     ///< 컴퓨트 컬 + 인디렉트 인자 경로
         /**
          * @brief GPU 메시 모프입니다. 컴퓨트가 정점을 변형하고 정점 셰이더가 그 결과를 풀링합니다.
          * @details 끄면 모프를 요청한 메시도 **레스트 포즈로 그려집니다**(셰이더의 폴백 경로 그대로).
          *          언리얼도 스킨 캐시를 못 쓰면 일반 정점 팩토리로 되돌립니다. 그리기가 멈추지는 않습니다.
          */
-        uint8 _bGpuMeshMorph{ SW_FALSE };
+        uint8 _bGPUMeshMorph{ SW_FALSE };
         uint8 _bMultiDrawIndirect{ SW_FALSE };        ///< 멀티 드로우 / count 버퍼 (DX12/VK/GL; DX11은 루프)
         uint8 _bParallelCommandRecording{ SW_FALSE }; ///< 멀티스레드 커맨드 리스트 병렬 기록 및 제출 지원 (DX12/VK)
         uint8 _bRequiresWindowRecreate{ SW_FALSE };   ///< OS 윈도우 픽셀 포맷 1회 제한(Windows WGL 등)으로 핫스왑 시 윈도우 재생성 필요
@@ -38,7 +38,7 @@ namespace sw
          * @brief 워커 스레드에서 GPU 리소스를 **만들어도** 되는지입니다(그리기가 아니라 생성만).
          * @details DX12 · Vulkan 은 디바이스 레벨 생성이 스펙상 스레드 안전하고, DX11 도 ID3D11Device 는
          *          (컨텍스트와 달리) 안전합니다. OpenGL 은 `glGen*` 이 **현재 컨텍스트**를 필요로 해 안 됩니다.
-         *          `GpuUploadQueue` 가 이 값으로 워커 병렬과 "받지 않음(렌더 스레드가 만든다)" 을 가릅니다.
+         *          `GPUUploadQueue` 가 이 값으로 워커 병렬과 "받지 않음(렌더 스레드가 만든다)" 을 가릅니다.
          */
         uint8 _bThreadSafeResourceCreation{ SW_FALSE };
 
@@ -88,8 +88,8 @@ namespace sw
                     caps._bCompute                    = SW_TRUE;
                     caps._bOffscreenRT                = SW_TRUE;
                     caps._bIndirectDraw               = SW_TRUE;
-                    caps._bGpuCulling                 = SW_TRUE;
-                    caps._bGpuMeshMorph               = SW_TRUE;
+                    caps._bGPUCulling                 = SW_TRUE;
+                    caps._bGPUMeshMorph               = SW_TRUE;
                     caps._bMultiDrawIndirect          = SW_TRUE;
                     caps._bParallelCommandRecording   = SW_TRUE;
                     caps._bThreadSafeResourceCreation = SW_TRUE;
@@ -105,9 +105,9 @@ namespace sw
                     // D3D11 은 한 버퍼에 `BUFFER_STRUCTURED` 와 `DRAWINDIRECT_ARGS` 를 같이 걸 수 없다.
                     // gpucull.hlsl 이 간접 인자를 RWStructuredBuffer 로 쓰므로 그 버퍼를 인다이렉트 인자로도
                     // 쓰려면 둘 중 하나를 포기해야 한다. 인다이렉트 드로우를 살리고 컬링을 끈다
-                    // (간접 인자는 GpuScene 이 CPU 에서 이미 채운다).
-                    caps._bGpuCulling        = SW_FALSE;
-                    caps._bGpuMeshMorph      = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다. 간접 인자 제약과 무관하다
+                    // (간접 인자는 GPUScene 이 CPU 에서 이미 채운다).
+                    caps._bGPUCulling        = SW_FALSE;
+                    caps._bGPUMeshMorph      = SW_TRUE; // 구조버퍼 SRV/UAV 만 쓴다. 간접 인자 제약과 무관하다
                     caps._bMultiDrawIndirect = SW_TRUE;
                     // **디바이스가 있으면 이 값을 믿지 말 것.** `D3D11RHIDevice::getCapabilities` 가
                     // `D3D11_FEATURE_THREADING` 조회 결과로 이 항목을 덮어 **참이 될 수 있다**. 여기 FALSE 는
@@ -123,11 +123,11 @@ namespace sw
                     caps._bCompute        = SW_TRUE;
                     caps._bOffscreenRT    = SW_TRUE;
                     caps._bIndirectDraw   = SW_TRUE;
-                    caps._bGpuCulling     = SW_TRUE;
+                    caps._bGPUCulling     = SW_TRUE;
                     // 주의: GL 드라이버는 early-return 모양의 `swComputeMorphElement`(DXC 가 OpSwitch(0) 구조로 내는 코드)를
                     // 잘못 컴파일해 풀에서 **한 칸 앞 원소**를 읽는다. 셰이더 쪽은 분기 없는 한 식이어야 한다(binding.hlsli 주석).
-                    // 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 잡는다.
-                    caps._bGpuMeshMorph             = SW_TRUE;
+                    // 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 잡는다.
+                    caps._bGPUMeshMorph             = SW_TRUE;
                     caps._bMultiDrawIndirect        = SW_TRUE;
                     caps._bParallelCommandRecording = SW_FALSE;
 #if defined( SW_PLATFORM_WINDOWS )
@@ -142,10 +142,10 @@ namespace sw
                     caps._bCompute        = SW_TRUE;
                     caps._bOffscreenRT    = SW_TRUE;
                     caps._bIndirectDraw   = SW_TRUE;
-                    caps._bGpuCulling     = SW_TRUE;
+                    caps._bGPUCulling     = SW_TRUE;
                     // 주의: 백엔드 하나가 다른 그림을 내면 **쿠킹된 셰이더 산출물이 낡았는지부터 의심할 것**
                     // (`App.exe --cook-shaders` 로 다시 쿠킹하고 견준다). Vulkan 의 모프는 DX12 · DX11 과 픽셀 수가 같다.
-                    caps._bGpuMeshMorph      = SW_TRUE;
+                    caps._bGPUMeshMorph      = SW_TRUE;
                     caps._bMultiDrawIndirect = SW_TRUE;
                     // 리스트가 자기 VkCommandPool + VkCommandBuffer + 기록 상태를 소유한다.
                     // 풀이 리스트마다 따로여야 하는 이유는 VkCommandPool 이 외부 동기화 대상이기

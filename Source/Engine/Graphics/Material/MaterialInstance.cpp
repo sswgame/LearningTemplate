@@ -83,7 +83,7 @@ namespace sw
         , _cachedPermutationHash{ 0 }
         , _parentPermutationHash{ 0 }
         , _bDefinesDirty{ SW_TRUE }
-        , _bGpuDirty{ SW_TRUE }
+        , _bGPUDirty{ SW_TRUE }
         , _instReserved{ 0 } {}
 
     MaterialInstance::~MaterialInstance()
@@ -110,7 +110,7 @@ namespace sw
         _constant.forget();
         _descriptorIndex  = kInvalidDescriptorIndex;
         _constantByteSize = 0;
-        _bGpuDirty        = SW_TRUE;
+        _bGPUDirty        = SW_TRUE;
     }
 
     void MaterialInstance::releaseRhi( IRHIDevice* pRhi )
@@ -124,7 +124,7 @@ namespace sw
 
         if ( pRhi != nullptr )
         {
-            // 마지막 소유를 게임 스레드가 놓을 수 있다(GpuScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
+            // 마지막 소유를 게임 스레드가 놓을 수 있다(GPUScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _descriptorIndex != kInvalidDescriptorIndex )
                 pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
             if ( _constant._buffer != 0 )
@@ -134,7 +134,7 @@ namespace sw
         _descriptorIndex  = kInvalidDescriptorIndex;
         _constantByteSize = 0;
         _bytes.clear();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     bool MaterialInstance::loadFromFile( string_view assetRelativePath )
@@ -209,7 +209,7 @@ namespace sw
             _constant.forget();
             _descriptorIndex  = kInvalidDescriptorIndex;
             _constantByteSize = 0;
-            _bGpuDirty        = SW_TRUE;
+            _bGPUDirty        = SW_TRUE;
         }
 
         // 부모 레이아웃을 **먼저** 셰이더에 맞춘다. 복사한 뒤에 맞추면 첫 프레임의 인스턴스가 XML 순서 바이트를 들고 있다.
@@ -217,11 +217,11 @@ namespace sw
         // 부모 바이트가 바뀌었으면(값 · 레이아웃 · 다시 로드) 복사본도 낡았다. 인스턴스가 더러워질 때만 다시 복사하면 오버라이드가
         // 없는 파라미터에서 부모의 값 변경과 다시 맞춘 레이아웃을 놓친다.
         if ( _parentBufferGeneration != _pParentMaterial->getBufferGeneration() )
-            _bGpuDirty = SW_TRUE;
+            _bGPUDirty = SW_TRUE;
         if ( syncTextureOverrides( pRhi ) )
-            _bGpuDirty = SW_TRUE;
+            _bGPUDirty = SW_TRUE;
 
-        if ( _bGpuDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
+        if ( _bGPUDirty == SW_FALSE && _constant._buffer != 0 && _descriptorIndex != kInvalidDescriptorIndex )
             return true;
 
         _bytes                  = _pParentMaterial->getBuffer();
@@ -271,7 +271,7 @@ namespace sw
             _constantByteSize = size;
         }
         pRhi->getResourceFactory()->updateConstantBuffer( _constant._buffer, _bytes.data(), size );
-        _bGpuDirty = SW_FALSE;
+        _bGPUDirty = SW_FALSE;
         return _descriptorIndex != kInvalidDescriptorIndex;
     }
 
@@ -332,7 +332,7 @@ namespace sw
             texture._acquiredPath.clear();
         }
         _pTextureDevice = nullptr;
-        _bGpuDirty      = SW_TRUE;
+        _bGPUDirty      = SW_TRUE;
     }
 
     uint32 MaterialInstance::findTextureSlot( hashed_string name ) const
@@ -391,7 +391,7 @@ namespace sw
         _qualityOverride = MaterialQualityLevel::Count;
         _bDefinesDirty   = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::enableKeyword( hashed_string keyword )
@@ -400,7 +400,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, true );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::disableKeyword( hashed_string keyword )
@@ -409,7 +409,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listKeywordOverride, keyword, false );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::setParent( Material* pParentMaterial )
@@ -418,14 +418,14 @@ namespace sw
         _pParentMaterial = pParentMaterial;
         _bDefinesDirty   = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::setParameter( hashed_string name, string_view value )
     {
         std::scoped_lock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string( value ) );
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::setScalarParameter( hashed_string name, float32 value )
@@ -433,7 +433,7 @@ namespace sw
         std::scoped_lock<mutex> lock{ _overrideMutex };
         MaterialInstanceInternal::insertOrAssign( _listScalarOverride, name, value );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, to_string( value ) );
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::setVectorParameter( hashed_string name, const float4& value )
@@ -444,14 +444,14 @@ namespace sw
         StringBuilder<constant::kMaxBuffer64> sb;
         sb.appendFormat( "%# %# %# %#", value._x, value._y, value._z, value._w );
         MaterialInstanceInternal::insertOrAssign( _listValueOverride, name, string{ sb.c_str(), sb.size() } );
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     void MaterialInstance::setTextureParameter( hashed_string name, string_view textureAssetPath )
     {
         // 게임 스레드는 원하는 경로만 적는다. 빌리고 돌려주는 것은 렌더 스레드의 updateRhi 다(syncTextureOverrides).
         std::scoped_lock<mutex> lock{ _overrideMutex };
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
         for ( TextureOverride& texture : _listTextureOverride )
         {
             if ( texture._name != name )
@@ -478,7 +478,7 @@ namespace sw
             _qualityOverride = level;
             _bDefinesDirty   = SW_TRUE;
             MaterialUtil::bumpPermutationGeneration();
-            _bGpuDirty = SW_TRUE;
+            _bGPUDirty = SW_TRUE;
         }
     }
 
@@ -488,7 +488,7 @@ namespace sw
         MaterialInstanceInternal::insertOrAssign( _listMultiCompileOverride, name, string( selectedOption ) );
         _bDefinesDirty = SW_TRUE;
         MaterialUtil::bumpPermutationGeneration();
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
     }
 
     bool MaterialInstance::getParameter( hashed_string name, string& outValue ) const
@@ -832,7 +832,7 @@ namespace sw
         }
         if ( _desc._quality.empty() == false )
             _qualityOverride = MaterialUtil::parseQuality( _desc._quality );
-        _bGpuDirty = SW_TRUE;
+        _bGPUDirty = SW_TRUE;
         return true;
     }
 

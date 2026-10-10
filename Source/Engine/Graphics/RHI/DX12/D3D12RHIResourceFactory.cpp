@@ -206,7 +206,7 @@ namespace sw
             {
                 Microsoft::WRL::ComPtr<ID3D12Resource> oldHeap = slot._uploadHeap;
                 RHIMemoryLedger*                       pLedger = &_pDevice->getMemoryLedger();
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pLedger]()
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [oldHeap, pLedger]()
                 {
                     pLedger->recordFree( RHIMemoryKey::makeDeviceObject( oldHeap.Get() ) );
                 } ),

@@ -879,7 +879,7 @@ namespace sw
         constexpr uint32 kDrainTimeoutMs = LiveReloadManager::kModuleDrainTimeoutMs;
 
         // onBeforeReload 는 모듈에서 시작된 작업을 멈춰야 한다. 실행 중인 태스크를 비워 콜백이 옛 이미지에 들어가지 못하게 한다.
-        // clear() 는 부르지 않는다. 그러면 관계없는 GpuScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
+        // clear() 는 부르지 않는다. 그러면 관계없는 GPUScene · 씬 로드 작업까지 버리고 onTaskFinished 정리를 건너뛴다.
         if ( engine::areEngineServicesBound() )
             engine::getSceneManager().cancelPendingAsyncLoads();
 

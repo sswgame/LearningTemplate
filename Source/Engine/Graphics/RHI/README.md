@@ -14,7 +14,7 @@ Shipping 빌드는 `SW_SHIPPING_RHI_BACKEND` 로 고른 백엔드 하나만 Engi
 ## 머릿속 그림
 
 ```text
-렌더러 (FrameRenderer, GpuScene, 머티리얼, CanvasRenderer)
+렌더러 (FrameRenderer, GPUScene, 머티리얼, CanvasRenderer)
         │  IRHIDevice / IRHIResourceFactory / IRHICommandList
         ▼
 백엔드 DLL   D3D11RHI*   D3D12RHI*   VulkanRHI*   OpenGLRHI*
@@ -189,7 +189,7 @@ Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인의 present 
 `IRHIDevice::shutdown` 은 가상 함수가 아닌 템플릿 메서드이고, 백엔드는 단계마다의 훅만 채웁니다. 순서는 네 백엔드가 같습니다.
 
 1. GPU 리소스를 보관하는 객체에 알립니다(`RHIRenderResource::releaseAllFor( this )`). 디바이스가 아직 살아 있으므로 리소스를 돌려줄 수 있습니다.
-2. GPU를 기다리고 해제 큐를 비웁니다(`waitIdleInternal`). 1단계가 넘긴 리소스와 남은 `enqueueGpuRelease` 콜백이 여기서 실제로 해제됩니다.
+2. GPU를 기다리고 해제 큐를 비웁니다(`waitIdleInternal`). 1단계가 넘긴 리소스와 남은 `enqueueGPURelease` 콜백이 여기서 실제로 해제됩니다.
 3. 프레임 스트림 컨텍스트를 해제하고, 살아 있는 커맨드 리스트를 디바이스에서 분리합니다(`detachCommandRecordingInternal`).
    렌더 그래프가 리스트를 보관하므로 리스트는 디바이스보다 오래 살 수 있습니다. 분리하지 않으면 리스트의 소멸자가 이미 종료된 디바이스에 반납하려 합니다.
 4. 백엔드 리소스, 스왑체인, 네이티브 디바이스를 종료합니다(`shutdownInternal`).
@@ -203,7 +203,7 @@ Vulkan은 Present 호출에 동기화 인자가 없고, 스왑체인의 present 
   마지막 소유자는 게임 스레드가 아무 때나 놓습니다. 렌더 스레드가 프레임을 기록 중이면(`RenderThread::submit` 이 `notifyRenderFrameQueued`) 핸들을 줄에 두었다가 그 프레임이 끝난 뒤 해제합니다.
   해제 시점은 렌더 스레드의 `flushDeferredHandleReleases`, `waitIdle`, 렌더 스레드 종료, `shutdown` 중 먼저 오는 곳입니다. 렌더 스레드 자신이 부르거나 렌더 스레드가 쉬고 있으면 바로 해제합니다.
   언리얼의 `FDeferredCleanupInterface` 에 해당하고, `RHIDeferredHandleTest` 가 지킵니다.
-- **엔진 밖 네이티브 리소스**는 `IRHIDevice::enqueueGpuRelease( delegate )` 로 백엔드 해제 큐(`RHIReleaseQueue`)에 넣습니다. DirectX 12와 Vulkan은 GPU 펜스를, DirectX 11과 OpenGL은 프레임 지연을 기준으로 해제합니다.
+- **엔진 밖 네이티브 리소스**는 `IRHIDevice::enqueueGPURelease( delegate )` 로 백엔드 해제 큐(`RHIReleaseQueue`)에 넣습니다. DirectX 12와 Vulkan은 GPU 펜스를, DirectX 11과 OpenGL은 프레임 지연을 기준으로 해제합니다.
   펜스 값을 올리는 스레드가 읽어야 "이 프레임"이 맞으므로 렌더 스레드에서 부릅니다. 에디터의 `EditorDrawReleaseQueue` 가 ImGui 디스크립터와 렌더 타깃을 이것으로 넘깁니다.
 - **디바이스 수명 이벤트**는 `RHIRenderResource` 레지스트리가 전합니다. GPU 리소스를 보관하는 객체는 이 클래스를 상속하고, 언리얼의 `FRenderResource` 에 해당합니다.
   디바이스가 살아 있으면 `releaseRhi`, 이미 없으면 `forgetRhi` 가 불립니다. 새 디바이스가 만들어지면 `EngineLoop` 이 `initAllFor( device )` 를 부르고, 각 객체의 `initRhi` 는 여러 번 불러도 결과가 같습니다.
@@ -245,7 +245,7 @@ cd build/Ninja-Debug/Bin
 ./App.exe --cook-shaders
 ./EngineTest.exe --test_filter=ShaderBindingValidatorTest.*
 ./EngineTest.exe --test_filter=RHIDeviceTest.*
-./EngineTest.exe --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*
+./EngineTest.exe --test_filter=GPUSceneTest.*,RenderPassTest.*,RenderPassGPUTest.*
 cd ../../..
 py -3 Scripts/dev/RunBackendSmoke.py
 ```
@@ -322,7 +322,7 @@ DirectX 11은 뷰포트를 바인딩하는 세 곳이 가위도 함께 바인딩
 **인스턴스 버퍼를 컴퓨트 셰이더 UAV 슬롯에서 해제해야 SRV로 읽힙니다.** 해제하지 않으면 D3D11이 SRV를 NULL로 강제합니다. 이 해저드는 WARNING이라 로그에 나오지 않으므로 해저드 ID만 ERROR로 올려 둡니다.
 
 **`UpdateSubresource` 에 상자를 주지 않으면 버퍼 전체 길이를 원본에서 읽습니다.** 용량을 남겨 둔 버퍼에 짧게 올릴 때 상자가 없으면 원본 뒤를 넘어 읽어 드라이버 안에서 크래시가 납니다.
-`RenderPassGpuTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킵니다.
+`RenderPassGPUTest.PartialStructuredBufferUploadReadsOnlyTheSourceRange` 가 가드 페이지로 지킵니다.
 
 **기록이 끝난 `ID3D11CommandList` 는 백버퍼를 붙잡고 있습니다.** 리사이즈 전에 놓아야 합니다.
 버퍼의 SRV는 버퍼 레코드(`BufferRecord`)에 둡니다. 기록 경로가 읽는 데이터를 별도 해시 맵에 두면 생성과 삭제가 일으키는 재해시를 기록이 읽습니다.
@@ -348,7 +348,7 @@ DirectX 11은 뷰포트를 바인딩하는 세 곳이 가위도 함께 바인딩
 
 **`drawIndirect` 가 메시 정점 버퍼를 덮어쓴 적이 있습니다.** 로그와 테스트가 모두 통과해도 화면이 깨질 수 있으니, 렌더 변경은 스크린샷까지 봅니다.
 
-**`enqueueGpuRelease` 는 해제를 너무 일찍 할 수 있습니다**(`_fenceValue`). 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal하면, 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있습니다.
+**`enqueueGPURelease` 는 해제를 너무 일찍 할 수 있습니다**(`_fenceValue`). 다른 스레드의 `waitForQueueDrain` 이 같은 값을 먼저 Signal하면, 기록 중인 프레임이 제출되기 전에 해제가 돌 수 있습니다.
 기존 DirectX 12 해제 경로 전체에 해당하는 열린 문제입니다.
 
 ### Vulkan

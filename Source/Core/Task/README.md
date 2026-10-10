@@ -158,7 +158,7 @@ yield 1024번 같은 횟수 상한은 느린 CI 머신에서 정상적인 대기
 
 - 컴포넌트 틱은 `engine::runParallel` 로 나누고, 부른 스레드도 합류까지 함께 처리합니다.
 - `SceneManager` 와 `AssetStreamingQueue` 는 `TaskFuture` 로 씬 비동기 로드와 에셋 스트리밍을 합니다.
-- `RenderGraph` 는 병렬 패스 기록을 `High` 태스크와 스테이지로 합니다. `GpuUploadQueue` 는 메시 업로드를 `emplaceParallel` 과 스테이지로 합니다.
+- `RenderGraph` 는 병렬 패스 기록을 `High` 태스크와 스테이지로 합니다. `GPUUploadQueue` 는 메시 업로드를 `emplaceParallel` 과 스테이지로 합니다.
 - 모듈 핫 리로드는 언로드 전에 `waitAll` 로 모든 태스크를 기다립니다.
 
 ## 확장하는 법

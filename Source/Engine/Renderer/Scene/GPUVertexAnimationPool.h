@@ -1,8 +1,8 @@
 /**
- * @file GpuVertexAnimationPool.h
+ * @file GPUVertexAnimationPool.h
  * @brief 정점 애니메이션(VAT) 표들을 구조버퍼 하나(g_SwVertexAnimation, t14)에 모으는 풀입니다. 렌더 스레드가 소유합니다.
  * @details 표는 굽고 나면 변하지 않아(`MeshVertexAnimation`) 집합이 바뀔 때만 한 번 올립니다. 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 ·
- *          반복) 하나와 프레임 × 정점 원소가 이어지고, 배치는 머리 원소 번호를 배치 표에 싣습니다(`GpuMeshBatch::_vertexAnimationBase`).
+ *          반복) 하나와 프레임 × 정점 원소가 이어지고, 배치는 머리 원소 번호를 배치 표에 싣습니다(`GPUMeshBatch::_vertexAnimationBase`).
  *          같은 표를 나누는 메시들은 한 구간을 씁니다.
  */
 #pragma once
@@ -22,19 +22,19 @@ namespace sw
     class Mesh;
 
     /**
-     * @class GpuVertexAnimationPool
+     * @class GPUVertexAnimationPool
      * @brief VAT 가 걸린 메시들의 표를 한 버퍼에 잇습니다.
      */
-    class SW_API GpuVertexAnimationPool
+    class SW_API GPUVertexAnimationPool
     {
     public:
         /** @brief 풀에 없는 메시가 받는 값입니다(셰이더의 kInvalidIndex). */
         static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
-        GpuVertexAnimationPool()                                           = default;
-        ~GpuVertexAnimationPool()                                          = default;
-        GpuVertexAnimationPool( const GpuVertexAnimationPool& )            = delete;
-        GpuVertexAnimationPool& operator=( const GpuVertexAnimationPool& ) = delete;
+        GPUVertexAnimationPool()                                           = default;
+        ~GPUVertexAnimationPool()                                          = default;
+        GPUVertexAnimationPool( const GPUVertexAnimationPool& )            = delete;
+        GPUVertexAnimationPool& operator=( const GPUVertexAnimationPool& ) = delete;
 
         /**
          * @brief VAT 가 걸린 메시 목록으로 풀을 맞춥니다. 목록(포인터 · 내용 번호)이 그대로면 아무것도 하지 않습니다.

@@ -54,7 +54,7 @@ namespace sw
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
-        GpuCull,
+        GPUCull,
         /// @brief GPUScene 인스턴스 애니메이션 컴퓨트(instanceanim.hlsl)입니다. 인스턴스마다 다른 각속도로 회전시킵니다.
         InstanceAnim,
         /// @brief 배치 안의 가시 인스턴스를 CPU 정렬 순서(인스턴스 번호)로 되돌리는 컴퓨트(instancesort.hlsl)입니다. 투명 블렌딩 순서를 맞춥니다.

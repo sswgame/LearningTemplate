@@ -1,5 +1,5 @@
 /**
- * @file GpuMeshMorphPool.h
+ * @file GPUMeshMorphPool.h
  * @brief GPU 가 변형한 정점을 담는 풀입니다. 언리얼 GPU Skin Cache 가 있는 자리입니다.
  *
  * [무엇을 푸는가]
@@ -43,20 +43,20 @@
 
 namespace sw
 {
-    struct GpuSkinPalette;
+    struct GPUSkinPalette;
 
     class IRHIDevice;
     class Mesh;
 
     /**
-     * @struct GpuMorphVertex
+     * @struct GPUMorphVertex
      * @brief 모프 풀의 정점 하나입니다. GPU 에서는 **float4 둘**로 보입니다(`g_SwMorphVertices`, binding.hlsli).
      * @details 셰이더 쪽은 구조체가 아니라 `StructuredBuffer<float4>` 입니다. 주의: 구조체로 선언하면 레이아웃이 네 백엔드에서
      *          같아도 OpenGL 만 같은 원소의 두 멤버를 **다른 원소**에서 읽습니다. 그래서 버퍼의 원소는 float4 이고 정점당
      *          `shaderslot::kMorphFloat4PerVertex` 개입니다.
      *          이 구조체는 CPU 가 채우는 모양일 뿐이며, 바이트 배치는 float4 둘과 같습니다.
      */
-    struct GpuMorphVertex
+    struct GPUMorphVertex
     {
         float4 _position{}; ///< w 는 쓰지 않습니다(정렬용).
         float4 _normal{};   ///< 변형된 노멀입니다. 컴퓨트가 위치와 **같이** 다시 만듭니다. w 는 쓰지 않습니다.
@@ -65,17 +65,17 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GpuMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
+    static_assert( sizeof( GPUMorphVertex ) == 2 * sizeof( float4 ), "모프 풀 정점은 float4 둘(32바이트)이어야 한다 — 셰이더가 [2i], [2i+1] 로 읽는다" );
 
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @struct GpuSkinInstanceRow
+     * @struct GPUSkinInstanceRow
      * @brief 스킨 인스턴스 표의 한 줄(uint4 둘)입니다. 셰이더 meshskin.hlsl 이 `g_SkinInstances[2i]` · `[2i + 1]` 로 읽습니다.
      */
-    struct GpuSkinInstanceRow
+    struct GPUSkinInstanceRow
     {
         uint32 _resultOffset{ 0 };     ///< 스킨 구간 안에서 이 인스턴스의 결과 시작(정점)
         uint32 _sourceBase{ 0 };       ///< 원본 레스트 · 가중치 버퍼에서의 시작(정점)
@@ -89,22 +89,22 @@ namespace sw
 
 namespace sw
 {
-    static_assert( sizeof( GpuSkinInstanceRow ) == shaderslot::kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(meshskin.hlsl)" );
+    static_assert( sizeof( GPUSkinInstanceRow ) == shaderslot::kSkinUint4PerInstance * 16, "스킨 인스턴스 줄은 uint4 둘이어야 한다(meshskin.hlsl)" );
 
     /**
-     * @class GpuMeshMorphPool
+     * @class GPUMeshMorphPool
      * @brief 모프를 요청한 메시들의 레스트 · 결과 정점과 스킨 원본 · 인스턴스를 구조버퍼에 모읍니다. 렌더 스레드가 소유합니다.
      */
-    class SW_API GpuMeshMorphPool
+    class SW_API GPUMeshMorphPool
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 셰이더의 폴백 조건과 같은 뜻입니다. */
         static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
-        GpuMeshMorphPool()                                     = default;
-        ~GpuMeshMorphPool()                                    = default;
-        GpuMeshMorphPool( const GpuMeshMorphPool& )            = delete;
-        GpuMeshMorphPool& operator=( const GpuMeshMorphPool& ) = delete;
+        GPUMeshMorphPool()                                     = default;
+        ~GPUMeshMorphPool()                                    = default;
+        GPUMeshMorphPool( const GPUMeshMorphPool& )            = delete;
+        GPUMeshMorphPool& operator=( const GPUMeshMorphPool& ) = delete;
 
         /**
          * @brief 이번 프레임에 모프할 메시 목록을 받아 풀을 맞춥니다.
@@ -124,7 +124,7 @@ namespace sw
          * @brief 이번 프레임 팔레트를 풀의 스킨 인스턴스 순서로 올립니다. 팔레트가 없는 메시는 단위 행렬(바인드 포즈)입니다.
          * @param pListRow 스냅샷의 팔레트 행(본 하나 = float4 셋). nullptr 이면 모두 단위입니다.
          */
-        void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow,
+        void uploadSkinPalettes( IRHIDevice* pDevice, const vector<GPUSkinPalette>& listPalette, const vector<float4>* pListRow,
                                  const vector<float32>* pListMorphWeight = nullptr );
 
         /** @brief 메시의 풀 시작 오프셋(정점 단위)을 반환합니다. 풀에 없으면 `kInvalidBase` 입니다. */
@@ -156,7 +156,7 @@ namespace sw
         uint32 getSkinDeltaBase() const { return _skinDeltaBase; }
         /** @brief 스킨 원본의 가중치 버퍼입니다(정점 하나 = float4 셋 — 가중치 넷, 원본 본 번호 넷, 모프 차이 구간(시작 · 수)). */
         const RHIStructuredBufferSlot& getSkinWeightBuffer() const { return _skinWeight; }
-        /** @brief 스킨 인스턴스 표입니다(인스턴스 하나 = uint4 둘, `GpuSkinInstanceRow`). */
+        /** @brief 스킨 인스턴스 표입니다(인스턴스 하나 = uint4 둘, `GPUSkinInstanceRow`). */
         const RHIStructuredBufferSlot& getSkinInstanceBuffer() const { return _skinInstance; }
         /** @brief 스킨 팔레트 버퍼입니다(본 하나 = float4 셋). */
         const RHIStructuredBufferSlot& getSkinPaletteBuffer() const { return _skinPalette; }
@@ -193,7 +193,7 @@ namespace sw
         vector<uint64>      _listBuiltSkinContentId;
         /// @brief 결과 구간을 받은 스킨 인스턴스(풀 순서) · 그 표 줄입니다.
         vector<const Mesh*>        _listSkinMesh;
-        vector<GpuSkinInstanceRow> _listSkinRow;
+        vector<GPUSkinInstanceRow> _listSkinRow;
         /// @brief 올린 스킨 원본(스킨 데이터 번호)과 그 원본 버퍼 시작(정점)입니다.
         vector<uint64> _listSourceDataId;
         vector<uint32> _listSourceBase;

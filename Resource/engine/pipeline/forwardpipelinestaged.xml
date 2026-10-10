@@ -3,7 +3,7 @@
 	합쳐 쓴다 — 중간 타깃 왕복 둘이 사라져 GPU 프레임이 그만큼 싸다.
 
 	이 파일을 남겨 두는 이유는 둘이다.
-	  1) 합친 판이 **같은 그림**을 내는지 재는 기준이다 (RenderPassGpuTest.FusedPostChainMatchesStaged).
+	  1) 합친 판이 **같은 그림**을 내는지 재는 기준이다 (RenderPassGPUTest.FusedPostChainMatchesStaged).
 	  2) 효과를 패스 단위로 끼우고 빼는 조립이 여전히 가능하다는 증거다 — 합치기가 그 길을 막지 않았다.
 -->
 <RenderPipelineDesc _name="ForwardPipelineStaged" _shadingModel="Forward">

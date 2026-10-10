@@ -481,17 +481,17 @@ namespace sw
             if ( bRefreshBudget )
             {
                 SW_PROFILE_SCOPE( "RT.RefreshGpuMemoryBudget" );
-                _pDevice->refreshGpuMemoryBudget();
+                _pDevice->refreshGPUMemoryBudget();
             }
         }
 
         // -gv_screenshot=<path> : 한 장(또는 -gv_screenshotCount 장)을 찍는다.
         //  - **endFrame 뒤여야 한다.** 그 전에는 커맨드 리스트가 기록만 됐고 아직 큐에 나가지 않아,
         //    읽어 보면 클리어 색만 나온다.
-        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 게 없다.
+        //  - **몇 프레임 기다려야 한다.** 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 게 없다.
         if ( gv_screenshot.empty() == false && _bScreenshotTaken == SW_FALSE && _pFrameRenderer != nullptr )
         {
-            // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GpuScene 업로드가 아직이라 그릴 것이 없다.
+            // 최소 몇 프레임은 기다려야 한다. 첫 프레임에는 GPUScene 업로드가 아직이라 그릴 것이 없다.
             // 그 위로는 -gv_screenshotFrame 이 정한다(시간에 따라 움직이는 장면을 비교할 때 필요하다).
             constexpr uint32 kScreenshotMinWarmupFrames = 10;
             const uint32     targetFrame                = ( gv_screenshotFrame > static_cast<int32>( kScreenshotMinWarmupFrames ) )

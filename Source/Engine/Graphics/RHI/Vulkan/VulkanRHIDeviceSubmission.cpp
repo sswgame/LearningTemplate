@@ -2,7 +2,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDevice.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIDeviceInternal.h"
@@ -21,27 +21,27 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
-    void VulkanRHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    void VulkanRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGpuRelease( releaseDelegate, _frameFenceCounter + 1 );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _frameFenceCounter + 1 );
     }
 
     uint32 VulkanRHIDevice::getTimestampSlotCount() const
     {
         return ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE && _timestampPeriod > 0.0f )
-                 ? constant::kMaxGpuTimestampSlot
+                 ? constant::kMaxGPUTimestampSlot
                  : 0u;
     }
 
-    bool VulkanRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    bool VulkanRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
         return outFrame._listMicro.empty() == false;
     }
 
-    bool VulkanRHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    bool VulkanRHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
-        outGpuNanos = 0;
+        outGPUNanos = 0;
         if ( _device == VK_NULL_HANDLE || _physicalDevice == VK_NULL_HANDLE || _graphicsQueue == VK_NULL_HANDLE ||
              _oneShotCommandPool == VK_NULL_HANDLE )
             return false;
@@ -77,7 +77,7 @@ namespace sw
         uint64 tick{ 0 };
         if ( vkGetQueryPoolResults( _device, _clockQueryPool, 0, 1, sizeof( tick ), &tick, sizeof( tick ), VK_QUERY_RESULT_64_BIT ) != VK_SUCCESS )
             return false;
-        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( tick, static_cast<float64>( properties.limits.timestampPeriod ) );
         return true;
     }
 
@@ -96,7 +96,7 @@ namespace sw
         VkQueryPoolCreateInfo poolInfo{};
         poolInfo.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
         poolInfo.queryType  = VK_QUERY_TYPE_TIMESTAMP;
-        poolInfo.queryCount = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        poolInfo.queryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
         if ( vkCreateQueryPool( _device, &poolInfo, nullptr, &_timestampPool ) != VK_SUCCESS )
         {
             _timestampPool = VK_NULL_HANDLE;
@@ -114,27 +114,27 @@ namespace sw
 
         // 칸마다 [값][가용 여부] 두 개가 온다. **가용 비트가 반드시 필요하다.** 이번 프레임에 안 쓰인
         // 슬롯은 리셋된 채로 남아 영영 준비되지 않고, 그것 하나 때문에 범위 전체가 VK_NOT_READY 가 된다.
-        uint64       arrResult[constant::kMaxGpuTimestampSlot * 2]{};
+        uint64       arrResult[constant::kMaxGPUTimestampSlot * 2]{};
         const uint32 base = getTimestampBase();
         // **기다리지 않는다**(WAIT 비트 없음). 재려던 파이프라인을 멈추면 숫자가 거짓이 된다.
         // 그래서 VK_NOT_READY 도 정상 응답으로 받는다(쓰인 칸의 값은 이미 채워져 있다).
         const VkResult result =
-            vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGpuTimestampSlot, sizeof( arrResult ), arrResult,
+            vkGetQueryPoolResults( _device, _timestampPool, base, constant::kMaxGPUTimestampSlot, sizeof( arrResult ), arrResult,
                                    sizeof( uint64 ) * 2, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT );
         if ( result != VK_SUCCESS && result != VK_NOT_READY )
             return;
 
         // 가용 비트가 선 칸만 준비된 것이다. 값과 비트를 갈라 공통 규칙에 넘긴다.
-        uint64 arrTick[constant::kMaxGpuTimestampSlot]{};
+        uint64 arrTick[constant::kMaxGPUTimestampSlot]{};
         uint32 readyMask{ 0 };
-        for ( uint32 index = 0; index < constant::kMaxGpuTimestampSlot; ++index )
+        for ( uint32 index = 0; index < constant::kMaxGPUTimestampSlot; ++index )
         {
             if ( arrResult[index * 2 + 1] == 0 )
                 continue;
             arrTick[index] = arrResult[index * 2];
             readyMask |= ( 1u << index );
         }
-        RHIGpuTimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
+        RHITimestamp::resolve( arrTick, readyMask, static_cast<float64>( _timestampPeriod ), _timestampFrame );
     }
 
     void VulkanRHIDevice::beginFrame( const float4& clearColor )
@@ -232,7 +232,7 @@ namespace sw
         vkBeginCommandBuffer( _listCommandBuffer[_currentFrame], &beginInfo );
         // Vulkan 은 **쓰기 전에 반드시 리셋**해야 한다. 안 하면 결과가 정의되지 않는다.
         if ( _bTimestampEnabled != SW_FALSE && _timestampPool != VK_NULL_HANDLE )
-            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGpuTimestampSlot );
+            vkCmdResetQueryPool( _listCommandBuffer[_currentFrame], _timestampPool, getTimestampBase(), constant::kMaxGPUTimestampSlot );
 
         // 프레임 스트림의 첫 세그먼트. 리스트가 제출될 때마다 여기서 잘리고 새 세그먼트가 열린다.
         _activeFrameBuffer  = _listCommandBuffer[_currentFrame];
@@ -314,7 +314,7 @@ namespace sw
             submitInfo.pSignalSemaphores    = arrSignalSemaphore;
         }
 
-        // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGpuRelease)는
+        // 이 제출에 새 세대 번호를 매긴다. 이번 프레임 기록 중 등록된 지연 해제(enqueueGPURelease)는
         // 이 세대가 실제로 끝났다고 확인될 때까지(beginFrame 의 tickCompleted) 보류된다.
         _listRingFrameNumber[_currentFrame] = ++_frameFenceCounter;
         std::unique_lock<mutex> queueLock{ _queueMutex };
@@ -441,7 +441,7 @@ namespace sw
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _frameFenceCounter + 1 );
     }
 
     VkCommandBuffer VulkanRHIDevice::beginNextFrameSegment()

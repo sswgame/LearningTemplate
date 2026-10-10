@@ -151,7 +151,7 @@ namespace sw
         const D3D12_CPU_DESCRIPTOR_HANDLE dst     = _pDevice->shaderVisibleCpuAt( base );
         const UINT                        dstSize = count;
         _pDevice->_device->CopyDescriptors( 1, &dst, &dstSize, count, arrSrc, arrSrcSize, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV );
-        outTable = _pDevice->shaderVisibleGpuAt( base );
+        outTable = _pDevice->shaderVisibleGPUAt( base );
         return true;
     }
 

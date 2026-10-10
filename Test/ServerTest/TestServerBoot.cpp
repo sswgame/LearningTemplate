@@ -110,7 +110,7 @@ namespace
  * @details CI(nogpu)에서 도는 "실제 서버 프로세스" 시험이다. 시작 씬을 읽어도 `[Error]` 가 0 이어야 한다 — 서버는 텍스처 · 셰이더 바이너리 ·
  *          오디오를 읽지 않고 없는 것으로 친다(쿠킹 표 target_excluded_asset_kinds).
  */
-SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGpu )
+SW_TEST_CASE( ServerBootTest, StartsTicksAndExitsWithoutWindowOrGPU )
 {
     if ( findServerPath().empty() )
         SW_TEST_SKIP( "Server is not built next to the working directory (run from Bin)" );

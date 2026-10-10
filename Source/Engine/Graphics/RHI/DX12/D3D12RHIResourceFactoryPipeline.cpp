@@ -155,7 +155,7 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12PipelineState> owned     = record._pso;
         auto                                        releaseCb = [owned]()
         { (void)owned.Get(); };
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _pDevice->_fenceValue );
     }
 
     RHIRenderPassHandle D3D12RHIResourceFactory::createRenderPass( const RHIRenderPassDesc& desc )

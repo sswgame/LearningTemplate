@@ -7,7 +7,7 @@
 
 | 방향 | include 수 | 파일 수 | 대표 헤더 |
 |---|---|---|---|
-| Object → Graphics | 51 | 21 | `Mesh.h` · `GpuLight.h` · `ShaderBindingSlots.h` · `MaterialInstance.h` |
+| Object → Graphics | 51 | 21 | `Mesh.h` · `GPULight.h` · `ShaderBindingSlots.h` · `MaterialInstance.h` |
 | Object → Physics | 41 | 22 | `IPhysicsScene.h` · `PhysicsTypes.h` · `AABB.h` |
 | Object → Animation | 38 | 22 | `Skeleton.h` · `Pose.h` · `AnimClip.h` |
 | Object → Audio | 11 | 8 | `AudioSpatial.h` · `AudioEngine.h` |
@@ -86,7 +86,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - 리플렉션 등록기 보존: `sw_linkWholeArchive` 를 층 라이브러리마다 건다(Shipping 정적 링크는 지금과 같다). 서버 타깃은 Render 층을 링크하지 않는다.
 
 ### 4. 월드를 값으로
-- `World` 가 씬 · 물리 월드 · 내비 · GpuScene 빌더 · 틱 설정을 소유하고 `EngineLoop` 는 월드 목록을 돈다. 프리팹 격리 · 머티리얼 미리보기 · 에디터 툴 창 · 서버의 방이 이 위에 선다(백로그 "다중 월드").
+- `World` 가 씬 · 물리 월드 · 내비 · GPUScene 빌더 · 틱 설정을 소유하고 `EngineLoop` 는 월드 목록을 돈다. 프리팹 격리 · 머티리얼 미리보기 · 에디터 툴 창 · 서버의 방이 이 위에 선다(백로그 "다중 월드").
 - 2 단계 뒤에 한다 — 월드가 코어 위의 소유자가 되려면 코어가 기능을 모르는 상태여야 한다.
 
 ### 5. 모듈 확장 창구와 상태 규칙

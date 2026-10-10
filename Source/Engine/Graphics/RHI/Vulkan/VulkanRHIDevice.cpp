@@ -97,7 +97,7 @@ namespace sw
         , _listUavSourceTexture{}
         , _listUavFree{}
         , _gpuTextures{}
-        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
+        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _renderPassCache{}
         , _listTextureUsed{}
         , _listTextureFree{}
@@ -533,7 +533,7 @@ namespace sw
         return _gpuTextures.get( handle );
     }
 
-    bool VulkanRHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    bool VulkanRHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
         if ( _bMemoryBudget == SW_FALSE || _physicalDevice == VK_NULL_HANDLE )
             return false;
@@ -561,7 +561,7 @@ namespace sw
         outBudget._usageBytes      = usageBytes;
         outBudget._budgetBytes     = localBudgetBytes;
         outBudget._availableBytes  = localBudgetBytes > localUsageBytes ? localBudgetBytes - localUsageBytes : 0;
-        outBudget._scope           = RHIGpuMemoryScope::Process;
+        outBudget._scope           = RHIMemoryScope::Process;
         outBudget._bUsageKnown     = SW_TRUE;
         outBudget._bBudgetKnown    = SW_TRUE;
         outBudget._bAvailableKnown = SW_TRUE;

@@ -20,13 +20,13 @@ namespace
     }
 
     /** @brief 가짜 디바이스가 받아 둔 해제를 "GPU 가 그 프레임을 끝냈다" 로 보고 모두 부릅니다. */
-    void completeGpuFrames( test::FakeRHIDevice& device )
+    void completeGPUFrames( test::FakeRHIDevice& device )
     {
-        for ( const RHIResourceReleaseDelegate& releaseDelegate : device._listGpuRelease )
+        for ( const RHIResourceReleaseDelegate& releaseDelegate : device._listGPURelease )
         {
             releaseDelegate();
         }
-        device._listGpuRelease.clear();
+        device._listGPURelease.clear();
     }
 } // namespace
 
@@ -47,7 +47,7 @@ SW_TEST_CASE( EditorDrawReleaseQueueTest, ReleaseWaitsForTheFirstSnapshotPublish
     // 스냅샷 1 은 놓기 전에 냈으니 그 자원을 그릴 수 있다. 몇 번을 다시 그려도 넘기지 않는다.
     SW_EXPECT_EQUAL( 0u, queue.handOverToDevice( device, 1 ) );
     SW_EXPECT_EQUAL( 0u, queue.handOverToDevice( device, 1 ) );
-    SW_EXPECT_TRUE( device._listGpuRelease.empty() );
+    SW_EXPECT_TRUE( device._listGPURelease.empty() );
 
     queue.markSnapshotPublished( 2 );
     SW_EXPECT_EQUAL( 0u, queue.handOverToDevice( device, 1 ) );
@@ -56,10 +56,10 @@ SW_TEST_CASE( EditorDrawReleaseQueueTest, ReleaseWaitsForTheFirstSnapshotPublish
     // 스냅샷 2 를 그리는 프레임에서 넘긴다. 부르는 것은 디바이스(그 프레임의 GPU 완료 뒤)다.
     SW_EXPECT_EQUAL( 1u, queue.handOverToDevice( device, 2 ) );
     SW_EXPECT_EQUAL( 0u, queue.getPendingCount() );
-    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( device._listGpuRelease.size() ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( device._listGPURelease.size() ) );
     SW_EXPECT_EQUAL( 0u, callCount );
 
-    completeGpuFrames( device );
+    completeGPUFrames( device );
     SW_EXPECT_EQUAL( 1u, callCount );
 }
 
@@ -77,7 +77,7 @@ SW_TEST_CASE( EditorDrawReleaseQueueTest, ReleaseBeforeAnySnapshotGoesWithTheFir
 
     queue.markSnapshotPublished( 1 );
     SW_EXPECT_EQUAL( 1u, queue.handOverToDevice( device, 1 ) );
-    completeGpuFrames( device );
+    completeGPUFrames( device );
     SW_EXPECT_EQUAL( 1u, callCount );
 }
 
@@ -98,12 +98,12 @@ SW_TEST_CASE( EditorDrawReleaseQueueTest, EachReleaseWaitsForItsOwnSnapshot )
     queue.markSnapshotPublished( 6 );
 
     SW_EXPECT_EQUAL( 1u, queue.handOverToDevice( device, 5 ) );
-    completeGpuFrames( device );
+    completeGPUFrames( device );
     SW_EXPECT_EQUAL( 1u, firstCount );
     SW_EXPECT_EQUAL( 0u, secondCount );
 
     SW_EXPECT_EQUAL( 1u, queue.handOverToDevice( device, 6 ) );
-    completeGpuFrames( device );
+    completeGPUFrames( device );
     SW_EXPECT_EQUAL( 1u, secondCount );
 }
 

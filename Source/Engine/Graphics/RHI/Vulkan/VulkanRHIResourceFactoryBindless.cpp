@@ -106,7 +106,7 @@ namespace sw
         // 인덱스는 이 프레임의 커맨드가 끝난 뒤에 재사용한다. 같은 프레임에 등록된 새 버퍼가 아직 실행 중인
         // 세트가 가리키던 자리를 받지 않도록 한다(언리얼의 지연 해제와 같다).
         VulkanRHIDevice* pDevice = _pDevice;
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUav]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index, bUav]()
         {
             std::unique_lock<std::shared_mutex> lock{ pDevice->_bindlessMutex };
             ( bUav ? pDevice->_listUavFree : pDevice->_listBindlessFree ).push_back( index );
@@ -146,7 +146,7 @@ namespace sw
             // 이 인덱스를 받으면 이전 프레임이 새 텍스처를 샘플한다. 이미지 자체도 같은 펜스 뒤에 파괴된다(destroyTexture).
             _pDevice->_listTextureUsed[index] = 2; // 2 = 해제 대기 (등록 불가, 프리리스트에도 아직 없음)
             VulkanRHIDevice* pDevice          = _pDevice;
-            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
+            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [pDevice, index]()
             {
                 std::unique_lock<std::shared_mutex> lock{ pDevice->_bindlessMutex };
                 pDevice->writeBindlessTextureSlot( index, pDevice->_bindlessDummyView, static_cast<uint32>( VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) );

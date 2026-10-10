@@ -92,14 +92,14 @@ SW_ROOT_CONSTANTS_END
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_SwInstances, SW_SLOT_INSTANCE_SRV );
 
 // ------------------------------------------------------------------------------
-// 1-1a) 씬 배치 표 — C++ GpuBatchInfo · gpucull.hlsl GpuBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
+// 1-1a) 씬 배치 표 — C++ GPUBatchInfo · gpucull.hlsl GPUBatchInfo 와 레이아웃 일치(uint 여덟, 32바이트).
 //       배치마다 다른 값은 전부 여기 있다. 정점은 인스턴스(swLoadInstance)의 meshBatchIndex 로 자기 배치를 찾는다.
 // ------------------------------------------------------------------------------
 struct SwBatchData
 {
 	uint instanceBase;    // 인스턴스 버퍼(또는 가시 목록)에서 이 배치의 시작
 	uint instanceCount;   // CPU 가 센 개수 (컬링은 간접 인자에 자기 개수를 따로 만든다)
-	uint sortMode;        // 컬링 전용 (GpuBatchSortMode)
+	uint sortMode;        // 컬링 전용 (GPUBatchSortMode)
 	uint morphVertexBase; // 모프 정점 풀에서 이 메시의 시작. kInvalidIndex = 모프 안 함
 	uint firstVertex;     // 정점 풀에서 이 메시의 시작 (간접 인자의 startVertex). SV_VertexID 가 이 값을 포함하는지는 API 마다 다르다 — swComputeMorphElement 참고
 	uint vertexAnimationBase; // 정점 애니메이션(VAT) 표에서 이 메시의 머리 원소. kInvalidIndex = VAT 없음 (swLoadAnimatedVertex)
@@ -131,7 +131,7 @@ SwBatchData swLoadBatch( uint batchIndex )
 }
 
 // ------------------------------------------------------------------------------
-// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GpuMorphVertex` 와 바이트 배치 일치(float4 둘).
+// 1-2) GPU 가 변형한 정점 (메시 모프). C++ `GPUMorphVertex` 와 바이트 배치 일치(float4 둘).
 //      메시마다 버퍼를 따로 두지 않고 **풀 하나에 구간을 나눠 쓴다** — 언리얼 GPU Skin Cache 가 캐시
 //      버퍼 하나를 할당해 나눠 쓰는 것과 같다. 그래야 드로우 사이에 바인딩이 바뀌지 않는다(이 엔진의 규약).
 // ------------------------------------------------------------------------------
@@ -151,14 +151,14 @@ SW_DECLARE_STRUCTURED_BUFFER( float4, g_SwMorphVertices, SW_SLOT_MORPH_VERTEX_SR
 // **분기 없는 한 식이어야 한다.** 주의: `if (base == INVALID || …) return INVALID;` 같은 early-return 을 DXC 는
 // SPIR-V 의 `OpSwitch(0){ default: … }` 구조로 내는데, OpenGL 드라이버가 그 모양을 잘못 컴파일해 **같은 인보케이션에서
 // 같은 UBO 멤버를 두 번 읽어 다른 값**(0 과 -1)을 낸다 — 결과는 정점마다 한 칸 앞 원소를 읽는 것(DX12·DX11·Vulkan 은
-// 같은 소스로 멀쩡하다). 회귀는 RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
+// 같은 소스로 멀쩡하다). 회귀는 RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 픽셀로 잡는다.
 uint swComputeMorphElement( uint batchIndex, uint vertexId )
 {
 	const SwBatchData batch = swLoadBatch( batchIndex );
 	// **API 차이 — 이 메시의 로컬 정점 번호.** 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는지가 백엔드마다 다르다:
 	// Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 포함하고, D3D11·D3D12 는 드로우 안의 0 기반 번호다.
 	// RHIDeviceTest.SceneDrawVertexIdStartsAtZeroOnlyOnD3D 가 네 백엔드에서 이 기대를 실측한다 — 넷 다 포함한다고 보고
-	// 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGpuTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
+	// 빼기만 하면 DX 에서 정점 풀 첫 메시만 모프된다(RenderPassGPUTest.MorphPoolIdentityMatchesRest 가 DX 에서만 진다).
 	// 셰이더 파일에 백엔드 분기는 없다 — 이 헤더가 흡수한다.
 #if defined( DX11 ) || defined( DX12 )
 	const uint local = vertexId;
@@ -199,7 +199,7 @@ float3 swLoadMorphPosition( uint batchIndex, uint vertexId, float3 restPosition 
 }
 
 // ------------------------------------------------------------------------------
-// 1-3) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 구운 프레임 × 정점 표(C++ `MeshVertexAnimation`, `GpuVertexAnimationPool`).
+// 1-3) 정점 애니메이션(VAT) — 클립 하나를 미리 스키닝해 구운 프레임 × 정점 표(C++ `MeshVertexAnimation`, `GPUVertexAnimationPool`).
 //      먼 군중은 CPU 포즈 · GPU 스키닝 없이 이 표를 **인스턴스마다 다른 시각**(g_SwVertexAnimationTime + instance.vertexAnimationPhase)으로 읽는다.
 //      원소 하나 = float4(위치 xyz, 노멀을 정수로 담은 w). 메시마다 머리 원소(프레임 수 · 프레임율 · 정점 수 · 반복) 하나 뒤에 프레임 우선 순서다.
 //      텍스처가 아니라 구조버퍼인 것은 모프 풀과 같은 이유다(정점 셰이더가 SV_VertexID 로 읽는다 — 네 백엔드가 같은 길).
@@ -318,7 +318,7 @@ float4 swComputeClipPosition( float4 worldPosition, float4x4 viewProj )
  *          역행렬은 필요 없다. 3x3 의 `(M⁻¹)ᵀ = cof(M) / det(M)` 이고 여인수 행렬의 행은 월드 행 셋의 외적 셋(r1×r2, r2×r0, r0×r1)이다.
  *          정규화하므로 행렬식은 **부호만** 남긴다 — 거울 변환(det < 0)에서 노멀이 안쪽을 보지 않게 한다. 한 축이 0 인 납작한 물체도
  *          보이는 면의 노멀이 남는다(월드 행렬을 곱하면 그 면의 노멀이 0 이 되어 NaN 이다). 언리얼의 로컬 정점 팩토리도 노멀을
- *          역스케일 · 행렬식 부호로 옮긴다. 회귀는 RenderPassGpuTest.NormalsStayPerpendicularUnderNonUniformScale 가 G버퍼 노멀로 잡는다.
+ *          역스케일 · 행렬식 부호로 옮긴다. 회귀는 RenderPassGPUTest.NormalsStayPerpendicularUnderNonUniformScale 가 G버퍼 노멀로 잡는다.
  */
 float3 swComputeWorldNormal( float3 localNormal, float4x4 world )
 {
@@ -397,7 +397,7 @@ float4x4 swLoadInstanceWorld( uint instanceSlot )
 //      **머티리얼은 픽셀 단계에서만 읽는다.** 정점 · 픽셀 두 단계가 g_SwMaterials 를 함께 읽으면 GL(ARB_gl_spirv) 드라이버가 구조 버퍼의
 //      이름 없는 멤버를 단계마다 다른 SPIR-V id 로 이름 짓고("_struct14_member0" · "_struct19_member0") 링크를 거절한다 — 그 배치는 패스
 //      셰이더로 물러나 그려진다. 정점에서 필요한 값(sprite2d 의 uvRect)은 픽셀에서 적용한다(아핀이면 결과가 같다).
-//      RenderPassGpuTest.SpriteDrawsWithTheSpriteShader 가 GL 에서 확인한다.
+//      RenderPassGPUTest.SpriteDrawsWithTheSpriteShader 가 GL 에서 확인한다.
 // ------------------------------------------------------------------------------
 uint swClampMaterialIndex( uint index )
 {
@@ -782,7 +782,7 @@ struct SwSurfaceOutput
 #define SW_SURFACE_OUTPUT SwSurfaceOutput
 
 // 보기 모드 Unlit — 조명 · 그림자 · 림 · 반사를 컴파일 아웃하고 알베도를 그대로 낸다. 조명을 하는 셰이더는 **모두** 이 매크로로 가른다.
-// C++ 정본은 FrameRendererUtil 의 kViewModeUnlitDefine 이다 — 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGpuTest.UnlitViewModeChangesThePicture).
+// C++ 정본은 FrameRendererUtil 의 kViewModeUnlitDefine 이다 — 이름이 어긋나면 컴파일은 되고 그림만 안 바뀐다(RenderPassGPUTest.UnlitViewModeChangesThePicture).
 #if defined( SW_VIEWMODE_UNLIT )
 #define SW_VIEWMODE_SKIPS_LIGHTING 1
 #else

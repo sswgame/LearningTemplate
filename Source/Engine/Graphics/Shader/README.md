@@ -95,7 +95,7 @@ HLSL과 C++가 이 파일을 같이 include하므로 슬롯 번호를 두 곳에
 - `ShaderBindingLayout` 은 여러 스테이지의 리플렉션을 합쳐, 이름이나 레지스터로 조회할 수 있게 만듭니다. C++ 구조체 없이 리플렉션만 믿는 구조의 중심입니다.
 - `ShaderBindingLayoutCache` 는 "경로, define, 백엔드"를 키로 레이아웃을 캐시합니다. PSO를 만들 때 여기서 레이아웃을 얻고, 핫 리로드 때 `invalidateByShaderPath` 로 무효화합니다.
 - `ShaderBindingValidator` 는 쿠킹된 바이너리의 리플렉션이 계약과 맞는지 검사합니다. PSO 레이아웃을 만들 때, 쿠킹할 때, 테스트에서 돕니다.
-- `GpuLight.h` 와 `GpuSpriteInstanceData.h` 는 셰이더가 읽는 레이아웃 그대로의 값입니다(라이트 64바이트, 스프라이트 인스턴스 16바이트).
+- `GPULight.h` 와 `GPUSpriteInstanceData.h` 는 셰이더가 읽는 레이아웃 그대로의 값입니다(라이트 64바이트, 스프라이트 인스턴스 16바이트).
   컴포넌트(Object 층)가 직접 채우므로 Object가 include할 수 있는 층에 있어야 합니다. `Renderer` 는 Object보다 위 층이라 그곳에 둘 수 없고, 셰이더 계약을 두는 이 폴더가 가장 가까운 아래 층입니다.
 
 ### 바인딩 모델 — 드로우마다 바뀌는 것은 버퍼의 원소
@@ -145,7 +145,7 @@ PSO 설명을 받으면 `ShaderBindingLayoutCache::getOrBuild( desc, backend )` 
 드로우 직전에 `ShaderParameterBinder::bindGraphics` 가 다음을 바인딩합니다.
 
 - **패스 상수 버퍼(b0).** 리플렉션이 알려 준 멤버 오프셋에 값을 쓰고 엔진의 상수 버퍼 슬롯에 올립니다. 패스마다 한 번입니다.
-- **머티리얼 버퍼(t9).** 셰이더 종류마다 `StructuredBuffer<SwMaterialData>` 하나입니다. `GpuScene` 이 리플렉션의 stride로 버퍼를 채워 배치 전에 바인딩합니다.
+- **머티리얼 버퍼(t9).** 셰이더 종류마다 `StructuredBuffer<SwMaterialData>` 하나입니다. `GPUScene` 이 리플렉션의 stride로 버퍼를 채워 배치 전에 바인딩합니다.
   머티리얼이 없는 배치에는 0으로 채운 폴백 원소를 바인딩합니다. DirectX 12의 루트 SRV가 빈 채로 나가지 않게 하기 위해서입니다.
 - **텍스처.** `g_<Name>Index` 멤버는 레지스트리에서 자동으로 채웁니다(DirectX 12, Vulkan). DirectX 11과 OpenGL은 `bindShaderResource( srv, 리플렉션의 t 번호 )` 로 바인딩합니다.
 - **머티리얼 상수 버퍼(b1).** 인스턴스 버퍼가 없는 픽스처 드로우(`fullscreentriangle`)에서만 머티리얼 버퍼를 상수 버퍼로 바인딩합니다.
@@ -162,7 +162,7 @@ PSO 설명을 받으면 `ShaderBindingLayoutCache::getOrBuild( desc, backend )` 
 머티리얼 원소 레이아웃의 원본은 셰이더입니다. `Material::ensureShaderLayout` 이 디바이스 백엔드의 리플렉션으로 stride와 오프셋을 맞춥니다.
 SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인스턴스마다 자기 머티리얼 원소를 가지므로 DirectX 12와 Vulkan은 배치를 셰이더 종류 단위로 합칩니다.
 
-인스턴스 원소 레이아웃은 테스트가 확인합니다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의 stride와 필드 오프셋을 C++ `GpuInstance` 와 비교합니다.
+인스턴스 원소 레이아웃은 테스트가 확인합니다. `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct`(nogpu)가 쿠킹된 바이너리의 stride와 필드 오프셋을 C++ `GPUInstance` 와 비교합니다.
 컴퓨트 쪽 이름(`g_Instances`, `g_InstancesRW`)도 같은 표로 확인합니다.
 
 ## 확장하는 법
@@ -174,7 +174,7 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
    `struct VSInput { pos; col }` 처럼 중간 속성을 빼면 col이 노멀을 읽습니다. 리플렉션이 정점 입력을 읽고 `ShaderBindingValidator` 가 `constant::arrVertexAttribute` 와 비교하므로, 어긋난 바이너리는 nogpu 테스트에서 실패합니다.
 3. 머티리얼은 한 스테이지에서만 읽습니다. OpenGL(ARB_gl_spirv)은 구조체 버퍼(`g_SwMaterials`)를 정점과 픽셀 두 단계에서 읽으면 링크를 거부합니다.
    보통은 픽셀 셰이더가 읽고, 정점을 움직이는 셰이더(식생 `foliage.hlsl`, 물 `water.hlsl`)는 정점 셰이더가 읽어 픽셀이 쓸 값을 보간 필드로 넘깁니다.
-   머티리얼 스키마는 픽셀 단계에서 찾지 못하면 정점 단계에서 찾습니다(`Material::ensureShaderLayout`, `RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`).
+   머티리얼 스키마는 픽셀 단계에서 찾지 못하면 정점 단계에서 찾습니다(`Material::ensureShaderLayout`, `RenderPassGPUTest.VertexStageMaterialSchemaIsUsed`).
 4. 머티리얼이 쓰는 새 셰이더는 `ShaderCookRequest.cpp` 의 엔진 셰이더 목록에도 넣습니다. 이유는 아래 함정 절에 있습니다.
 5. `App.exe --cook-shaders` 로 쿠킹하고, 바이너리와 매니페스트를 함께 커밋합니다.
 
@@ -196,7 +196,7 @@ SPIR-V는 `-fvk-use-dx-layout` 으로 DirectX와 같은 패킹을 씁니다. 인
 ## 함정과 주의
 
 - **보기 모드 define 은 조명을 하는 모든 셰이더가 읽는다.** Unlit 을 toon 만 읽어 기본 파이프라인에서 Lit 과 픽셀이 하나도 다르지 않았다.
-  셰이더를 더하면 `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 디퍼드는 G버퍼 알베도 알파(셰이딩 모델 `SW_GBUFFER_SHADING`)로 조명 패스에 넘긴다(조명 패스에는 뷰 모드 변형이 없다). `RenderPassGpuTest.UnlitViewModeChangesThePicture` 가 포워드와 디퍼드를 본다.
+  셰이더를 더하면 `binding.hlsli` 의 `SW_VIEWMODE_SKIPS_LIGHTING` 으로 조명을 가르고, 디퍼드는 G버퍼 알베도 알파(셰이딩 모델 `SW_GBUFFER_SHADING`)로 조명 패스에 넘긴다(조명 패스에는 뷰 모드 변형이 없다). `RenderPassGPUTest.UnlitViewModeChangesThePicture` 가 포워드와 디퍼드를 본다.
 ### 쿠킹과 산출물
 
 **`.hlsl` 이나 `.hlsli` 를 고쳤으면 `App.exe --cook-shaders` 를 다시 돌리세요.** 빌드는 HLSL을 쿠킹하지 않습니다. 개발 빌드는 낡은 매니페스트를 버리고 런타임 리플렉션으로 폴백하지만, 테스트와 배포본은 쿠킹된 바이너리를 봅니다.
@@ -246,7 +246,7 @@ Debug 빌드는 런타임 리플렉션으로 넘어가 문제를 숨기고, Ship
 셰이더 쪽 이름 변경은 계약 검사를 조용히 끌 수 있습니다. `validate` 는 테이블에 없는 이름을 건너뛰기 때문입니다. `ShaderBindingValidatorTest.EveryBoundNameIsInCookedReflection` 이 C++가 아는 이름이 매니페스트에 있는지 봅니다.
 
 **정점 입력의 원본은 `constant::arrVertexAttribute` 입니다**(POSITION, NORMAL, TEXCOORD, COLOR, 48바이트). 인스턴스 번호는 정점 슬롯 1(`SW_INSTANCESLOT`)로 넘기므로 `SV_InstanceID` 를 쓰지 않습니다.
-`SV_VertexID` 는 Vulkan과 OpenGL에서 `startVertex` 를 포함하고 Direct3D에서는 0부터 셉니다. `GpuInstance` 원소의 정의는 `instancedata.hlsli` 하나입니다.
+`SV_VertexID` 는 Vulkan과 OpenGL에서 `startVertex` 를 포함하고 Direct3D에서는 0부터 셉니다. `GPUInstance` 원소의 정의는 `instancedata.hlsli` 하나입니다.
 
 **OpenGL 타깃의 SPIR-V는 구조체 버퍼를 `Uniform` 저장 클래스와 `BufferBlock` 데코레이션으로 냅니다.** 리플렉션이 StorageBuffer 클래스만 보면 구조체 버퍼를 상수 버퍼로 잘못 분류합니다. 그래서 `ShaderReflectionSpirv` 가 `BufferBlock` 을 따로 확인합니다.
 

@@ -1,5 +1,5 @@
 /**
- * @file GpuLightBuffer.h
+ * @file GPULightBuffer.h
  * @brief 씬의 라이트를 GPU 구조버퍼 하나로 모읍니다. 언리얼의 라이트 데이터 버퍼가 있는 자리입니다.
  *
  * [왜 상수버퍼가 아닌가]
@@ -21,7 +21,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/RHI/RHIStructuredBufferSlot.h"
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -38,19 +38,19 @@ namespace sw
      *       나옵니다. 그림자 맵이 하나라서입니다.
      * @param outList 기존 내용을 지우고 채웁니다. 부르는 쪽이 프레임마다 재사용하는 버퍼여야 합니다(할당 회피).
      */
-    SW_API void collectSceneLights( const Scene* pScene, vector<GpuLight>& outList );
+    SW_API void collectSceneLights( const Scene* pScene, vector<GPULight>& outList );
 
     /**
-     * @class GpuLightBuffer
+     * @class GPULightBuffer
      * @brief 프레임 라이트 목록을 구조버퍼에 올리고 SRV 를 들고 있습니다. 렌더 스레드가 소유합니다.
      */
-    class SW_API GpuLightBuffer
+    class SW_API GPULightBuffer
     {
     public:
-        GpuLightBuffer()                                   = default;
-        ~GpuLightBuffer()                                  = default;
-        GpuLightBuffer( const GpuLightBuffer& )            = delete;
-        GpuLightBuffer& operator=( const GpuLightBuffer& ) = delete;
+        GPULightBuffer()                                   = default;
+        ~GPULightBuffer()                                  = default;
+        GPULightBuffer( const GPULightBuffer& )            = delete;
+        GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
 
         /**
          * @brief 이번 프레임의 라이트를 올립니다.
@@ -58,7 +58,7 @@ namespace sw
          *          버퍼도 그대로이고 업로드만 합니다. 상한(`shaderslot::kMaxFrameLight`)을 넘으면 잘라
          *          보내고 **한 번만** 경고합니다(매 프레임 찍으면 로그가 그것으로 덮입니다).
          */
-        void update( IRHIDevice* pDevice, const vector<GpuLight>& listLight );
+        void update( IRHIDevice* pDevice, const vector<GPULight>& listLight );
 
         /** @brief 라이트 버퍼입니다. 셰이더가 SRV 로 읽습니다. */
         const RHIStructuredBufferSlot& getBuffer() const { return _buffer; }

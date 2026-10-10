@@ -32,7 +32,7 @@ namespace sw
     template <typename T>
     class Delegate;
 
-    /** @brief GPU 가 다 쓴 뒤에 부를 자원 해제 콜백입니다(`RHIReleaseQueue` · `IRHIDevice::enqueueGpuRelease`). */
+    /** @brief GPU 가 다 쓴 뒤에 부를 자원 해제 콜백입니다(`RHIReleaseQueue` · `IRHIDevice::enqueueGPURelease`). */
     using RHIResourceReleaseDelegate = Delegate<void()>;
 
     /**
@@ -203,20 +203,20 @@ namespace sw
          *          32 칸은 begin/end 쌍 16 개인데, 렌더러가 뒤쪽 세 칸을 프레임 전체 · 컴퓨트 프리패스에 쓰므로 패스는
          *          14 개까지입니다(`FrameRendererUtil`). 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 조용히 빠집니다.
          */
-        inline constexpr uint32 kMaxGpuTimestampSlot = 32;
+        inline constexpr uint32 kMaxGPUTimestampSlot = 32;
 
         /**
          * @brief GPU 리소스 지연 해제 프레임 수입니다(RHIReleaseQueue 기본 frameLatency).
          * @details 네 RHI 백엔드(DX11 · DX12 · Vulkan · OpenGL)가 모두 같은 값을 써야 하는 계약입니다.
          *          한쪽만 바꾸면 아직 GPU 가 참조 중인 리소스를 일찍 해제할 위험이 있습니다.
          */
-        inline constexpr uint32 kGpuReleaseFrameLatency = 3;
+        inline constexpr uint32 kGPUReleaseFrameLatency = 3;
 
         /**
          * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
          *        프레임 수입니다(RenderThread 패킷 링 깊이).
          * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
-         *          해제를 미뤄야 합니다(예: GpuScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
+         *          해제를 미뤄야 합니다(예: GPUScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
          *          값인 kMaxFrameCountInFlight 와는 별개 개념이니 혼동하지 말 것.
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;

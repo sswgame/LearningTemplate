@@ -15,7 +15,7 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
-#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
+#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
@@ -295,7 +295,7 @@ namespace sw
                     cell._batch->setBoundsRadius( entry, listMeshRadius[meshIndex] );
                     // 밝기 흔들기 — 인스턴스 색 칸(머티리얼을 가르지 않는다).
                     const float32 shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
-                    cell._batch->setSprite( entry, GpuSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
+                    cell._batch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
                     const float3 position = world.getTranslation();
                     minimum               = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
                     maximum               = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };

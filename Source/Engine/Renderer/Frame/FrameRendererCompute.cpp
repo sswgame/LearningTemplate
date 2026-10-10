@@ -25,14 +25,14 @@ namespace sw
 {
     /**
      * @brief `-gv_gpuCulling=0` 이면 GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
-     * @details 간접 인자는 GpuScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
+     * @details 간접 인자는 GPUScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
      *          망치는가" 를 백엔드별로 가를 수 있습니다. 기본은 켬입니다.
      */
     SW_GLOBAL_VARIABLE( int32, gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
      * @brief `-gv_morphDiag=<0|1|2|3>` 는 GPU 메시 모프 경로를 백엔드 능력표와 **상관없이** 돌려 봅니다.
-     * @details 0 = 평소대로(`RHICapabilities::_bGpuMeshMorph` 를 따름), 1 = 능력표를 무시하고 켬,
+     * @details 0 = 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), 1 = 능력표를 무시하고 켬,
      *          2 = 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 물림**,
      *          3 = 2 에 더해 풀 원소의 노멀 자리에 **원소 번호**를 적음.
      *
@@ -43,11 +43,11 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( int32, gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
 
-    bool FrameRenderer::usesGpuGeneratedCommands() const
+    bool FrameRenderer::usesGPUGeneratedCommands() const
     {
         // 컴퓨트가 드로우 커맨드를 만드는 경로를 쓰려면 인다이렉트 드로우와 컬링 디스패치가 둘 다 켜져
         // 있고 컬링 PSO 가 실제로 만들어져 있어야 한다. 셋 중 하나라도 없으면 CPU 가 채운 개수로 그린다.
-        return gv_gpuCulling != 0 && getEnginePso( RenderPassType::GpuCull ) != 0;
+        return gv_gpuCulling != 0 && getEnginePso( RenderPassType::GPUCull ) != 0;
     }
 
     void FrameRenderer::dispatchInstanceAnimation( uint32 instanceCount )
@@ -63,11 +63,11 @@ namespace sw
             if ( animPso != 0 && _instanceAnimCb.isValid() &&
                  _gpuScene.getInstanceUav() != kInvalidDescriptorIndex )
             {
-                FrameRendererUtil::GpuAnimParams animParams{};
+                FrameRendererUtil::GPUAnimParams animParams{};
                 animParams._time = getAnimationTime();
                 // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도"로 보이지 않는다.
-                animParams._baseSpeed     = FrameRendererUtil::kGpuSpinBaseSpeed;
-                animParams._speedRange    = FrameRendererUtil::kGpuSpinSpeedRange;
+                animParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
+                animParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
                 animParams._instanceCount = instanceCount;
                 _instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
 
@@ -110,7 +110,7 @@ namespace sw
         _bMorphBindsRest = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
-        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 )
+        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
             return;
 
         // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
@@ -118,7 +118,7 @@ namespace sw
         _listScratchMorphMesh.clear();
         _listScratchSkinMesh.clear();
         _listScratchVertexAnimationMesh.clear();
-        for ( const GpuMeshBatch& batch : _gpuScene.getAllBatches() )
+        for ( const GPUMeshBatch& batch : _gpuScene.getAllBatches() )
         {
             Mesh* pMesh = batch._mesh.get();
             if ( pMesh == nullptr )
@@ -131,7 +131,7 @@ namespace sw
                 continue;
             }
             const bool bSkin = pMesh->hasSkin();
-            if ( bSkin == false && pMesh->isGpuMorphEnabled() == false )
+            if ( bSkin == false && pMesh->isGPUMorphEnabled() == false )
                 continue;
             // 같은 메시가 여러 배치에 나올 수 있다(불투명 · 투명 · 뷰). 풀에는 한 번만 넣는다.
             vector<Mesh*>& listTarget = bSkin ? _listScratchSkinMesh : _listScratchMorphMesh;
@@ -157,7 +157,7 @@ namespace sw
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
-        if ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 )
+        if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
             return;
         if ( _meshMorphPool.isDispatchable() == false )
             return;
@@ -183,7 +183,7 @@ namespace sw
                     continue;
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
                 {
-                    GpuMorphVertex tagged{};
+                    GPUMorphVertex tagged{};
                     tagged._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
                     tagged._normal   = float4{ static_cast<float32>( element ), 0.0f, 0.0f, 0.0f };
                     _listScratchMorphTag.push_back( tagged );
@@ -192,7 +192,7 @@ namespace sw
             }
             _bMorphBindsRest = SW_TRUE;
             _meshMorphPool.getRestBuffer().upload( _pDevice, _listScratchMorphTag.data(),
-                                                   static_cast<uint32>( _listScratchMorphTag.size() * sizeof( GpuMorphVertex ) ) );
+                                                   static_cast<uint32>( _listScratchMorphTag.size() * sizeof( GPUMorphVertex ) ) );
             return;
         }
 
@@ -200,7 +200,7 @@ namespace sw
         if ( morphPso == 0 || _meshMorphCb.isValid() == false )
             return;
 
-        FrameRendererUtil::GpuMorphParams morphParams{};
+        FrameRendererUtil::GPUMorphParams morphParams{};
         morphParams._time        = getAnimationTime();
         morphParams._amplitude   = FrameRendererUtil::kMeshMorphAmplitude;
         morphParams._frequency   = FrameRendererUtil::kMeshMorphFrequency;
@@ -228,7 +228,7 @@ namespace sw
             return;
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 진단 2 · 3 은 레스트 버퍼를 그대로 물려 "컴퓨트 없이" 를 본다 — 스키닝도 돌리지 않는다(바인드 포즈).
-        if ( ( _pDevice->getCapabilities()._bGpuMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
+        if ( ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
             return;
         if ( _meshMorphPool.isSkinDispatchable() == false )
             return;
@@ -236,7 +236,7 @@ namespace sw
         if ( skinPso == 0 || _meshSkinCb.isValid() == false )
             return;
 
-        FrameRendererUtil::GpuSkinParams skinParams{};
+        FrameRendererUtil::GPUSkinParams skinParams{};
         skinParams._skinVertexBase    = _meshMorphPool.getSkinVertexBase();
         skinParams._skinVertexCount   = _meshMorphPool.getSkinVertexCount();
         skinParams._skinBoneCount     = _meshMorphPool.getSkinBoneCount();
@@ -263,15 +263,15 @@ namespace sw
 
     void FrameRenderer::dispatchCullAndSort( uint32 instanceCount )
     {
-        // 컬링은 GpuScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
+        // 컬링은 GPUScene 이 "개수를 컴퓨트에 맡겼다" 고 답할 때만 돈다. 그래야 인자의 초기 개수(0)와
         // 디스패치 여부가 절대 어긋나지 않는다. 어긋나면 한쪽은 빈 화면, 다른 쪽은 낡은 목록이다.
         //
         // **뷰마다 한 번씩** 돈다. 컬링 결과는 절두체에 종속이라, 메인 카메라로 거른 목록을 그림자 패스가
         // 쓰면 화면 밖에서 화면 안으로 그림자를 드리우는 물체가 사라진다. 언리얼이 뷰마다
         // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV · PiP)도 자기 칸을 돈다.
-        if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGpuFilled() == false )
+        if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGPUFilled() == false )
             return;
-        if ( getEnginePso( RenderPassType::GpuCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
+        if ( getEnginePso( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
              _gpuScene.getBatchInfoSrv() == kInvalidDescriptorIndex )
             return;
 
@@ -286,18 +286,18 @@ namespace sw
             if ( pView->_bRenderThisFrame == SW_TRUE && dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() ) == false )
                 pView->_bRenderThisFrame = SW_FALSE;
         }
-        _bGpuCullingActive = bAllViewsCulled ? 1u : 0u;
+        _bGPUCullingActive = bAllViewsCulled ? 1u : 0u;
     }
 
     bool FrameRenderer::dispatchCullView( uint32 cullViewIndex, const RenderView& renderView, uint32 instanceCount, const ViewTarget* pExtraView )
     {
         if ( cullViewIndex >= _gpuScene.getCullViewCount() )
             return false;
-        const GpuCullViewResources& view = _gpuScene.getCullView( cullViewIndex );
+        const GPUCullViewResources& view = _gpuScene.getCullView( cullViewIndex );
         if ( view._indirectArgs._uav == kInvalidDescriptorIndex || view._visibleInstances._uav == kInvalidDescriptorIndex || renderView.isReadyForCulling() == false )
             return false;
 
-        FrameRendererUtil::GpuCullParams cullParams{};
+        FrameRendererUtil::GPUCullParams cullParams{};
         // 절두체는 **뷰가 이미 들고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
         // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 안 바뀌는 상태가 생길 수 있다.
         Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
@@ -311,7 +311,7 @@ namespace sw
         _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
         // PSO 와 바인딩은 **뷰마다** 다시 건다. 아래 정렬 패스가 둘 다 갈아 끼우므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
-        _pCmd->setComputePipelineState( getEnginePso( RenderPassType::GpuCull ) );
+        _pCmd->setComputePipelineState( getEnginePso( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
         // gpucull.hlsl 레지스터와 1:1 대응이다. 인스턴스 · 배치 구간은 뷰가 공유한다(절두체만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
@@ -334,7 +334,7 @@ namespace sw
         const RHIPipelineStateHandle sortPso = getEnginePso( RenderPassType::InstanceSort );
         if ( sortPso != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
         {
-            FrameRendererUtil::GpuSortParams sortParams{};
+            FrameRendererUtil::GPUSortParams sortParams{};
             // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 추가 뷰는 CPU 가 그 뷰의 눈으로 다시 정한 순번(t2)으로.
             // 카메라 위치는 상수버퍼 꼴을 지키려 그대로 싣는다.
             const bool bViewRank             = pExtraView != nullptr && pExtraView->_bHasTransparentRank == SW_TRUE;

@@ -18,17 +18,17 @@ flowchart TB
   XML["pipeline/*.xml"] --> Asset["Pipeline/<br/>RenderPipelineAsset"]
   Asset --> Graph["Graph/<br/>RenderGraph — 레벨로 정렬"]
   subgraph GT["게임 스레드"]
-    Builder["Scene/<br/>GpuSceneBuilder"]
+    Builder["Scene/<br/>GPUSceneBuilder"]
     Canvas["Graphics/Canvas<br/>그리기 목록"]
   end
-  Builder -- "GpuSceneSnapshot" --> Packet["RenderFramePacket"]
+  Builder -- "GPUSceneSnapshot" --> Packet["RenderFramePacket"]
   Canvas --> Packet
   subgraph RT["렌더 스레드"]
-    GpuScene["Scene/<br/>GpuScene"] --> Frame["Frame/<br/>FrameRenderer"]
+    GPUScene["Scene/<br/>GPUScene"] --> Frame["Frame/<br/>FrameRenderer"]
     Graph --> Frame
     Frame --> CanvasRenderer["Canvas/<br/>CanvasRenderer"]
   end
-  Packet --> GpuScene
+  Packet --> GPUScene
 ```
 
 기억할 개념은 네 가지입니다.
@@ -39,8 +39,8 @@ flowchart TB
 **렌더 그래프와 레벨.** `RenderGraph` 는 패스의 입출력으로 의존 관계를 만들고 위상 정렬합니다. 서로 기다릴 필요가 없는 패스들을 같은 **레벨**로 묶습니다.
 백엔드가 병렬 기록을 지원하면 한 레벨의 패스를 여러 스레드가 동시에 기록합니다.
 
-**GPU 씬.** 씬은 게임 스레드의 것이고 렌더 스레드는 씬을 읽지 않습니다. 게임 스레드의 `GpuSceneBuilder` 가 그릴 것을 모아 `GpuSceneSnapshot` 을 만들고,
-렌더 스레드의 `GpuScene` 이 스냅샷을 받아 GPU 버퍼로 올립니다. 두 클래스는 스냅샷 타입으로만 만납니다.
+**GPU 씬.** 씬은 게임 스레드의 것이고 렌더 스레드는 씬을 읽지 않습니다. 게임 스레드의 `GPUSceneBuilder` 가 그릴 것을 모아 `GPUSceneSnapshot` 을 만들고,
+렌더 스레드의 `GPUScene` 이 스냅샷을 받아 GPU 버퍼로 올립니다. 두 클래스는 스냅샷 타입으로만 만납니다.
 
 **프레임 실행.** `FrameRenderer` 가 한 프레임을 실행합니다. 렌더 그래프의 레벨 순서대로 패스를 기록하고, 마지막에 `Canvas` 패스로 화면 2D를 그립니다.
 
@@ -81,7 +81,7 @@ XML이 선언한 포맷과 코드가 만드는 것이 어긋나면 조용히 잘
 - 한 패스 안에서 나눗수가 다른 출력
 - 컬러 출력이 없는 지오메트리 패스, 컬러 출력이 2개가 아닌 GBuffer 패스
 
-GPU 타임스탬프 슬롯(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패스가 많은 파이프라인은 로드할 때 경고하고, 넘치는 패스는 측정하지 않습니다.
+GPU 타임스탬프 슬롯(`FrameRendererUtil::kGPUTimedPassCapacity`)보다 패스가 많은 파이프라인은 로드할 때 경고하고, 넘치는 패스는 측정하지 않습니다.
 
 ### 패스 입력 역할 — XML의 선언이 곧 바인딩
 
@@ -115,28 +115,28 @@ GPU 타임스탬프 슬롯(`FrameRendererUtil::kGpuTimedPassCapacity`)보다 패
 
 세 타입이 한 줄로 이어지고, 두 스레드는 가운데 타입으로만 만납니다.
 
-- `GpuSceneBuilder`(게임 스레드)는 `MeshComponent` 를 훑어 인스턴스 배열, 배치, 머티리얼 원소 테이블을 만듭니다. 다시 모을지 판단하는 캐시와 머티리얼 원소의 영속 ID가 여기 있습니다. GPU 핸들은 하나도 없습니다.
-- `GpuSceneSnapshot` 은 게임 스레드에서 렌더 스레드로 옮겨지는 값의 전부입니다. 여기 없는 값은 옮겨질 수 없습니다.
-- `GpuScene`(렌더 스레드)은 스냅샷을 받아 인스턴스 구조체 버퍼, 배치 테이블, 간접 인자, 머티리얼 버퍼로 올립니다. 씬을 볼 수 없습니다.
+- `GPUSceneBuilder`(게임 스레드)는 `MeshComponent` 를 훑어 인스턴스 배열, 배치, 머티리얼 원소 테이블을 만듭니다. 다시 모을지 판단하는 캐시와 머티리얼 원소의 영속 ID가 여기 있습니다. GPU 핸들은 하나도 없습니다.
+- `GPUSceneSnapshot` 은 게임 스레드에서 렌더 스레드로 옮겨지는 값의 전부입니다. 여기 없는 값은 옮겨질 수 없습니다.
+- `GPUScene`(렌더 스레드)은 스냅샷을 받아 인스턴스 구조체 버퍼, 배치 테이블, 간접 인자, 머티리얼 버퍼로 올립니다. 씬을 볼 수 없습니다.
 
 `FrameRenderer::execute( pScene )` 는 에디터와 테스트가 쓰는 직접 경로입니다. 이 경로도 자기 빌더로 스냅샷을 만들어 같은 경로로 올립니다.
 
 GPU 풀은 렌더 스레드가 소유합니다.
 
-- `GpuMeshVertexPool` 은 씬 메시의 정점을 정점 버퍼 하나에 이어 붙입니다. 메시 집합이 같으면 다시 만들지 않습니다.
-- `GpuMeshMorphPool` 은 모프와 스키닝 결과를 담습니다. 결과 버퍼는 앞이 모프 메시, 뒤가 스킨 인스턴스인 두 구간입니다.
+- `GPUMeshVertexPool` 은 씬 메시의 정점을 정점 버퍼 하나에 이어 붙입니다. 메시 집합이 같으면 다시 만들지 않습니다.
+- `GPUMeshMorphPool` 은 모프와 스키닝 결과를 담습니다. 결과 버퍼는 앞이 모프 메시, 뒤가 스킨 인스턴스인 두 구간입니다.
   스킨 데이터(레스트 포즈와 가중치)는 원본(`Mesh::getSkinDataId`)마다 한 번만 올라가고, 그리는 메시마다 인스턴스 테이블 한 줄이 결과와 원본을 연결합니다.
   컴퓨트 셰이더(`meshskin.hlsl`)는 디스패치 하나로 모든 정점을 처리하고, 정점마다 이분 탐색으로 자기 인스턴스를 찾습니다.
-- `GpuVertexAnimationPool` 은 정점 애니메이션 텍스처(VAT)가 있는 메시(`Mesh::setVertexAnimation`)의 테이블을 버퍼 하나에 이어 붙입니다. 테이블은 베이크한 뒤 변하지 않으므로 집합이 바뀔 때만 올립니다.
+- `GPUVertexAnimationPool` 은 정점 애니메이션 텍스처(VAT)가 있는 메시(`Mesh::setVertexAnimation`)의 테이블을 버퍼 하나에 이어 붙입니다. 테이블은 베이크한 뒤 변하지 않으므로 집합이 바뀔 때만 올립니다.
 
-스킨 팔레트는 본마다 행렬 하나이고, 게임 스레드의 `AnimationSystem` 이 만듭니다. `GpuSceneBuilder::collectSkinPalettes` 가 매 프레임 스냅샷으로 옮기고,
-렌더 스레드의 `GpuMeshMorphPool::uploadSkinPalettes` 가 올립니다. 군중 배치와 팔레트를 나눠 쓰는 유닛은 건너뛰고 배치가 한 번 싣습니다.
+스킨 팔레트는 본마다 행렬 하나이고, 게임 스레드의 `AnimationSystem` 이 만듭니다. `GPUSceneBuilder::collectSkinPalettes` 가 매 프레임 스냅샷으로 옮기고,
+렌더 스레드의 `GPUMeshMorphPool::uploadSkinPalettes` 가 올립니다. 군중 배치와 팔레트를 나눠 쓰는 유닛은 건너뛰고 배치가 한 번 싣습니다.
 스킨드 메시의 모프 타깃은 레스트 버퍼 뒤에 원본마다 한 번 두고, 컴퓨트가 스키닝 **앞에** 더합니다. 스킨이 없는 메시의 모프는 이 경로를 타지 않습니다.
 
 ### 드로우 경로 — 인스턴스, 배치, 멀티 드로우
 
 메시 드로우는 인스턴스마다의 월드 행렬과 머티리얼 번호를 드로우 인자가 아니라 영속 구조체 버퍼에서 읽습니다. 언리얼의 GPUScene과 같은 방식입니다.
-인스턴스 원소(`SwInstanceData`)의 정의는 `instancedata.hlsli` 하나이고, 그래픽스와 컴퓨트 셰이더가 같이 씁니다. C++의 `GpuInstance` 와 128바이트 레이아웃이 같습니다.
+인스턴스 원소(`SwInstanceData`)의 정의는 `instancedata.hlsli` 하나이고, 그래픽스와 컴퓨트 셰이더가 같이 씁니다. C++의 `GPUInstance` 와 128바이트 레이아웃이 같습니다.
 
 드로우 한 번은 이렇게 데이터를 찾습니다.
 
@@ -150,7 +150,7 @@ GPU 풀은 렌더 스레드가 소유합니다.
 배치마다 다른 값은 드로우 호출이 아니라 버퍼가 줍니다.
 
 - **정점 풀.** 간접 인자의 `startVertex` 가 풀 안의 오프셋입니다. 풀에 들어가지 못한 메시는 자기 정점 버퍼를 쓰고 멀티 드로우로 묶이지 않습니다.
-- **배치 테이블**(`g_SwBatches`, t13, `GpuBatchInfo` 32바이트). 배치의 인스턴스 시작, 모프 풀 시작, 정점 풀 시작, VAT 테이블 시작이 들어 있습니다. 패스마다 한 번 바인딩하고, 컬링의 t1과 같은 버퍼입니다.
+- **배치 테이블**(`g_SwBatches`, t13, `GPUBatchInfo` 32바이트). 배치의 인스턴스 시작, 모프 풀 시작, 정점 풀 시작, VAT 테이블 시작이 들어 있습니다. 패스마다 한 번 바인딩하고, 컬링의 t1과 같은 버퍼입니다.
 - **VAT 테이블**(`g_SwVertexAnimation`, t14). 메시마다 머리 원소(프레임 수, 프레임률, 정점 수, 반복)와 "프레임 × 정점" 개의 float4가 있습니다.
   정점 셰이더(`swLoadAnimatedVertex`)가 군중 시계(`g_SwVertexAnimationTime`)와 인스턴스의 `vertexAnimationPhase` 로 두 프레임을 골라 보간합니다.
   그래서 먼 군중은 CPU 포즈 계산과 GPU 스키닝 없이 인스턴스마다 다른 위상으로 한 번에 그려집니다.
@@ -226,7 +226,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 카메라가 등록될 때 크기를 알리면(`declareRenderTarget`) 캐시가 렌더 타깃 텍스처로 만듭니다.
 
 - 뷰 하나(`FrameRenderer::ViewTarget`)는 자기 트랜지언트 풀, 컬링 입력, TAA 기록, 커맨드 리스트, 출력 텍스처를 가집니다. 트랜지언트 풀의 크기에는 해상도 배율이 곱해집니다.
-- `GpuScene` 의 컬링 슬롯은 0이 주 뷰, 1이 그림자, 2부터가 추가 뷰입니다(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
+- `GPUScene` 의 컬링 슬롯은 0이 주 뷰, 1이 그림자, 2부터가 추가 뷰입니다(`kFirstExtraCullView`, 최대 `kMaxExtraRenderView`).
 - **호스트 타깃 뷰**(`RenderViewOutputKind::HostTarget`)는 호스트가 만든 RT 핸들에 그리는 추가 뷰입니다 — 에디터 씬 뷰가 이것입니다. 호스트가 `HostViewTargets`(게임 뷰 · 씬 뷰)를
   `EngineLoop::tick` 에 넘기면 게임 뷰가 주 출력(게임 카메라 · 화면 UI · 화면 사각형 뷰 · 스크린샷 캡처)이고 씬 뷰는 호스트 카메라의 호스트 타깃 뷰입니다.
   게임 뷰가 없고 씬 뷰만 있으면 씬 뷰가 주 출력이 되고 화면 UI · 화면 사각형 뷰를 싣지 않습니다(`RenderViewCollector::removeScreenRectViews`). 호스트 뷰는 예산 · 갱신 주기와 무관하게 매 프레임 그리고,
@@ -241,7 +241,7 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 
 `PortraitRenderer` 는 프리팹 하나를 격리된 스튜디오에서 그려 RGBA8로 읽어 옵니다. 명령은 `App --render-portraits=<prefab,..> [--portrait-size=N] [--portrait-dir=D]` 이고, 런타임 진입점은 `EngineLoop::renderPortraits` 입니다.
 격리는 두 가지입니다. `SceneManager` 에 등록하지 않은 별도 `Scene` 이라 게임 씬의 빛과 안개, 오브젝트가 끼어들지 않고, 게임 틱과 저장, 에디터도 이 씬을 보지 않습니다.
-또 별도 `FrameRenderer` 인스턴스라 주 렌더러의 TAA 기록, 풀, `GpuScene` 을 건드리지 않습니다. 직접 경로 `execute( pScene )` 에 출력 크기만 덮어씁니다.
+또 별도 `FrameRenderer` 인스턴스라 주 렌더러의 TAA 기록, 풀, `GPUScene` 을 건드리지 않습니다. 직접 경로 `execute( pScene )` 에 출력 크기만 덮어씁니다.
 같은 디바이스를 쓰므로 렌더 스레드를 멈추고(`RenderThread::waitIdle`) 그립니다. 메시 로컬 경계 상자를 감싸는 구로 프레이밍하고, 키 라이트 하나와 환경광만 비춥니다. 파일은 `Resource/Image/ImageFileWriter` 로 PNG나 DDS로 씁니다.
 
 ### Cook/ — 무엇을 쿠킹할지
@@ -266,15 +266,15 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
 | `MaterialInstance` | `MaterialInstance::create()` | 스냅샷이 함께 소유, `updateRhi` 호출 |
 | `Texture2D` | `TextureCache` | 직접 보지 않고 SRV 인덱스 값만 |
 | GPU 핸들 | `IRHIResourceFactory` | 해제는 펜스 뒤로 미룸 |
-| `GpuSceneSnapshot` | `GpuSceneBuilder::exportCpuSnapshot` | `GpuScene::adoptCpuSnapshot` 이 통째로 받음 |
-| GPU 슬롯, 간접 개수 | `GpuScene::upload` | 스냅샷에 없어 옮겨지지 않음 |
+| `GPUSceneSnapshot` | `GPUSceneBuilder::exportCpuSnapshot` | `GPUScene::adoptCpuSnapshot` 이 통째로 받음 |
+| GPU 슬롯, 간접 개수 | `GPUScene::upload` | 스냅샷에 없어 옮겨지지 않음 |
 
 규칙은 일곱 가지입니다.
 
 1. **스레드를 넘어 역참조하는 것은 소유를 함께 싣습니다.** 스냅샷과 패킷의 멤버는 `shared_ptr` 이거나 값입니다.
-   원시 포인터는 `GpuMaterialElementKey` 같은 식별 키에만 씁니다. 키는 비교만 하고 역참조하지 않습니다.
-2. **한쪽만 만드는 값은 그쪽 타입에만 둡니다.** 옮겨지는 값은 `GpuSceneSnapshot` 하나에 모으고, `export` 와 `adopt` 는 그 타입을 통째로 옮깁니다. 필드를 골라 복사하는 함수를 다시 만들지 않습니다.
-   만드는 쪽(`GpuSceneBuilder`)과 받는 쪽(`GpuScene`)이 다른 클래스라, 렌더 스레드가 씬을 읽거나 게임 스레드가 GPU 핸들을 만지는 코드는 컴파일되지 않습니다.
+   원시 포인터는 `GPUMaterialElementKey` 같은 식별 키에만 씁니다. 키는 비교만 하고 역참조하지 않습니다.
+2. **한쪽만 만드는 값은 그쪽 타입에만 둡니다.** 옮겨지는 값은 `GPUSceneSnapshot` 하나에 모으고, `export` 와 `adopt` 는 그 타입을 통째로 옮깁니다. 필드를 골라 복사하는 함수를 다시 만들지 않습니다.
+   만드는 쪽(`GPUSceneBuilder`)과 받는 쪽(`GPUScene`)이 다른 클래스라, 렌더 스레드가 씬을 읽거나 게임 스레드가 GPU 핸들을 만지는 코드는 컴파일되지 않습니다.
 3. **모듈 경계를 넘어 소유될 수 있는 객체는 Engine의 `create()` 로만 만듭니다.** `shared_ptr` 의 제어 블록은 `make_shared` 를 부른 DLL에 있습니다.
    그래서 `Material`, `MaterialInstance`, `Mesh` 의 생성자는 `create()` 만 만들 수 있는 키(`CreateKey`)를 요구합니다. 모듈에서 `make_shared` 하거나 스택에 값으로 두면 컴파일되지 않습니다.
    덕분에 `shared_ptr` 로 소유되지 않은 머티리얼은 존재할 수 없고, 스냅샷은 언제나 `shared_from_this` 로 소유를 빌릴 수 있습니다.
@@ -291,15 +291,15 @@ UI와 화면 글자는 파이프라인의 마지막 `Canvas` 패스가 그립니
    원시 포인터는 해제된 주소가 되고 `ComponentHandle` 은 nullptr가 됩니다. 절차적으로 만든 오브젝트는 스냅샷에 싣지 말고
    `onBeforeStateSerialize` 에서 정리하고 `onAfterStateDeserialize` 에서 다시 만듭니다(`BenchScene` 이 그 예).
 
-GPU 리소스는 그리기 전에 만듭니다. 게임 스레드가 이번 프레임에 그릴 것을 알고 있으므로, 스냅샷을 넘기기 전에 `GpuUploadQueue` 로 넘겨 워커가 병렬로 만듭니다.
+GPU 리소스는 그리기 전에 만듭니다. 게임 스레드가 이번 프레임에 그릴 것을 알고 있으므로, 스냅샷을 넘기기 전에 `GPUUploadQueue` 로 넘겨 워커가 병렬로 만듭니다.
 워커에서 만들 수 있는지는 백엔드가 `_bThreadSafeResourceCreation` 으로 답합니다. OpenGL은 컨텍스트가 스레드에 묶여 있어 큐가 받지 않고, 렌더 스레드가 그 프레임에 만듭니다.
 큐는 미리 만드는 장치일 뿐 유일한 경로가 아닙니다. 큐가 처리하지 못한 것은 렌더 스레드가 그 자리에서 만들고, `Mesh::initRhi` 는 여러 번 불러도 결과가 같습니다. `-gv_gpuUploadQueue=0` 으로 끌 수 있습니다.
 
-옮겨지는 값의 집합은 `GpuSceneSnapshot` 타입이, 생성과 소유 방식은 `CreateKey` 생성자가 컴파일 시점에 지킵니다.
+옮겨지는 값의 집합은 `GPUSceneSnapshot` 타입이, 생성과 소유 방식은 `CreateKey` 생성자가 컴파일 시점에 지킵니다.
 C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드를 더하는 일 하나이고, 이것은 `Scripts/lint/gate/CheckRenderOwnership.py` 가 막습니다.
 예외는 그 줄에 `// SW_OWNERSHIP_RAW_OK( _pMember ): <이유>` 를 붙입니다(적은 멤버만 면제, 그 멤버가 사라지면 낡은 표식으로 실패).
 
-회귀 테스트는 `RenderPassGpuTest.MaterialLifetimeFollowsPacket`(ASAN 프리셋에서 해제 후 사용을 잡는다)과 `RenderPassGpuTest.RendererSurvivesDeviceRecreate` 입니다.
+회귀 테스트는 `RenderPassGPUTest.MaterialLifetimeFollowsPacket`(ASAN 프리셋에서 해제 후 사용을 잡는다)과 `RenderPassGPUTest.RendererSurvivesDeviceRecreate` 입니다.
 앱에서 재현하려면 `-gv_rhiSwapAtFrame=30 -gv_rhiSwapTo=<0..3> -gv_screenshotFrame=100` 을 씁니다. 번호는 DX11이 0, DX12가 1, Vulkan이 2, OpenGL이 3입니다.
 
 ### 언리얼과 같은 것, 다른 것
@@ -312,12 +312,12 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
   `buildPresentPsoVariants` 가 준비 단계에서 백버퍼와 오프스크린 포맷의 PSO를 미리 만들고, 기록 중의 `ensurePresentPso` 는 조회만 합니다.
   PSO 생성은 잠금 없는 핸들 테이블과 Vulkan 렌더 패스 캐시를 건드리므로 태스크 워커에서 만들면 안 됩니다.
 - **패스 상수 버퍼는 드로우마다 슬롯을 받습니다**(`PassConstantRing`). 기록 전에 `PassConstantRing::ensureCapacity` 로 배치 수만큼 확보합니다.
-  버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
+  버퍼 하나를 드로우들이 나눠 쓰면 GPU는 제출 뒤에 읽으므로 모두 마지막 값을 봅니다. `RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants` 가 메시 두 개로 이것을 확인합니다.
 - **머티리얼 원소는 영속 ID를 가집니다.** 처음 본 조합에만 슬롯을 주고, 쓰이지 않으면 나중에 회수하지만 슬롯을 옮기지 않습니다.
-  옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GpuSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`).
+  옮기면 인스턴스에 적힌 `materialIndex` 가 엉뚱한 원소를 가리킵니다(`GPUSceneTest.MaterialElementIdsPersistAcrossBuildsAndAreFreed`).
 - **머티리얼 폴백 버퍼는 stride마다 하나입니다**(`ensureMaterialFallbackBuffers`, stride는 `ShaderBindingSlot::_elementStride`). SRV의 구조체 stride는 셰이더 선언과 같아야 하기 때문입니다. 언리얼 RDG의 더미 버퍼와 같은 규칙입니다.
-- **스프라이트의 프레임과 색은 인스턴스 필드입니다**(`GpuInstance::_sprite`, 16바이트 `GpuSpriteInstanceData`). 언리얼의 Custom Primitive Data에 해당합니다.
-  배치 키를 건드리지 않으므로 같은 텍스처의 스프라이트는 한 번에 그려집니다(`RenderPassGpuTest.SpriteFramesAndTintsArePerInstance`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)입니다.
+- **스프라이트의 프레임과 색은 인스턴스 필드입니다**(`GPUInstance::_sprite`, 16바이트 `GPUSpriteInstanceData`). 언리얼의 Custom Primitive Data에 해당합니다.
+  배치 키를 건드리지 않으므로 같은 텍스처의 스프라이트는 한 번에 그려집니다(`RenderPassGPUTest.SpriteFramesAndTintsArePerInstance`). 스프라이트 메시는 양면 사각형(`MeshUtil::createSpriteQuad`)입니다.
 - **값이 실제로 바뀔 때만 일합니다.** 상수 버퍼와 바인딩 상태는 내용이 달라질 때만 버전을 올리고 다시 만듭니다. 같은 값을 다시 넣는 호출이 흔하기 때문입니다.
 
 일부러 다르게 둔 것:
@@ -325,7 +325,7 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 - **트랜지언트 메모리 앨리어싱이 없습니다.** 트랜지언트 첨부마다 별도 텍스처를 프레임 내내 보관합니다. 정확성이 아니라 메모리 사용량의 차이입니다.
 - **DirectX 12에는 PSO 디스크 캐시(`ID3D12PipelineLibrary`)가 없습니다.** Vulkan은 종료할 때 파이프라인 캐시를 저장합니다.
 - **텍스처 배열의 용량은 고정이고,** 인덱스는 펜스 뒤에 재사용합니다. 스트리밍과 축출은 디스크립터가 아니라 텍스처 스트리밍이 할 일입니다.
-- **DirectX 11과 OpenGL에서는 머티리얼 경계가 배치 경계입니다.** 텍스처를 슬롯에 바인딩하기 때문입니다. DirectX 12와 Vulkan은 셰이더 종류 단위로 배치를 합칩니다(`GpuSceneBuilder::setMergeBatchesAcrossMaterials`).
+- **DirectX 11과 OpenGL에서는 머티리얼 경계가 배치 경계입니다.** 텍스처를 슬롯에 바인딩하기 때문입니다. DirectX 12와 Vulkan은 셰이더 종류 단위로 배치를 합칩니다(`GPUSceneBuilder::setMergeBatchesAcrossMaterials`).
 
 ## 확장하는 법
 
@@ -354,17 +354,17 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 
 ### 씬과 스냅샷
 
-**렌더 스레드는 씬을 볼 수 없습니다.** 런타임 경로의 `_pScene` 은 늘 null이고, `GpuSceneSnapshot` 이 유일한 채널입니다. CPU 폴백을 다시 만들지 마세요.
+**렌더 스레드는 씬을 볼 수 없습니다.** 런타임 경로의 `_pScene` 은 늘 null이고, `GPUSceneSnapshot` 이 유일한 채널입니다. CPU 폴백을 다시 만들지 마세요.
 스냅샷에는 게임 스레드가 만든 값만 싣습니다. 렌더 스레드가 파생하는 값(`_indirectCommandCount`)을 실으면 게임 스레드의 0이 덮어써서 "카메라를 움직일 때만 메시가 보인다"는 증상이 납니다.
 패킷은 자기완결이어야 하고 소유(`shared_ptr`)를 함께 싣습니다.
 
 **`FrameRenderer` 하나로 두 씬을 번갈아 그리면 예전 배치가 나옵니다.** 빌더의 수집 캐시(프리미티브 집합 세대)가 씬마다 따로가 아니라서, 다른 매니저의 같은 세대 번호를 "그대로"로 봅니다.
-픽셀을 비교하는 테스트는 씬마다 렌더러를 따로 둡니다(`RenderPassGpuTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
+픽셀을 비교하는 테스트는 씬마다 렌더러를 따로 둡니다(`RenderPassGPUTest.SkinnedMeshFollowsPaletteLikeCpuSkinning`).
 
-**`GpuSceneBuilder` 의 수집 규칙을 지키세요.** 전체 수집과 부분 수집은 같은 `fillCandidateFromPrimitive` 를 씁니다.
+**`GPUSceneBuilder` 의 수집 규칙을 지키세요.** 전체 수집과 부분 수집은 같은 `fillCandidateFromPrimitive` 를 씁니다.
 집합이나 퍼뮤테이션 세대가 바뀌거나 더티가 1/4을 넘으면 전체를 수집합니다. 부분 수집 프레임에는 회수 시계를 멈추지만 머티리얼 원소 회수는 계속합니다.
 퍼뮤테이션 해시는 `SortKey` 에 직접 넣고, 멈춘 씬을 다시 수집하는 계기는 `MaterialUtil::getPermutationGeneration()` 입니다.
-한 번 넘긴 인스턴스 배열은 다시 고치지 않습니다(`GpuInstanceRing` 은 `use_count()==1` 인 슬롯에만 씁니다). `rebuildTransparentTail` 은 앞부분 갱신과 같은 `runParallel` 의 블록 0입니다.
+한 번 넘긴 인스턴스 배열은 다시 고치지 않습니다(`GPUInstanceRing` 은 `use_count()==1` 인 슬롯에만 씁니다). `rebuildTransparentTail` 은 앞부분 갱신과 같은 `runParallel` 의 블록 0입니다.
 `DrawCandidate` 의 `shared_ptr` 을 원시 포인터로 바꾸지 마세요. 같은 주소에 새 메시가 만들어지면 ABA 문제가 생깁니다. `PrimitiveRegistry` 의 더티는 렌더 상태와 월드 행렬 두 가지뿐입니다.
 
 **인스턴스 배치를 보관하는 컴포넌트는 `setOwnerComponent( this )` 를 부르고, 활성 상태가 바뀌면 `markAllEntriesDirty` 를 부릅니다.**
@@ -378,10 +378,10 @@ C++가 막지 못하는 것은 옮겨지는 구조체에 원시 포인터 필드
 ### 스키닝과 모프
 
 **스킨 팔레트는 `AnimationSystem::getUnits()` 에서 모읍니다. 레벨에서 모으지 마세요.** `unregisterUnit` 은 레벨을 다음 평가까지 비웁니다.
-레벨로 모으면 유닛 하나가 빠지는 프레임에 모든 스킨드 메시가 팔레트 없이 바인드 포즈(T 포즈)로 한 번 그려집니다(`GpuSceneTest.SkinPalettesSurviveAUnitLeavingTheFrame`).
+레벨로 모으면 유닛 하나가 빠지는 프레임에 모든 스킨드 메시가 팔레트 없이 바인드 포즈(T 포즈)로 한 번 그려집니다(`GPUSceneTest.SkinPalettesSurviveAUnitLeavingTheFrame`).
 
 **팔레트 행은 행벡터 4x4 행렬의 열 세 개입니다.** 행을 넣으면 회전이 전치됩니다.
-모프 타깃은 같은 컴퓨트에서 스키닝 **앞에** 더합니다. 스키닝 뒤에 더하면 민 방향이 본과 함께 돌지 않습니다(`RenderPassGpuTest.MorphWeightsDeformBeforeSkinningLikeCpu`).
+모프 타깃은 같은 컴퓨트에서 스키닝 **앞에** 더합니다. 스키닝 뒤에 더하면 민 방향이 본과 함께 돌지 않습니다(`RenderPassGPUTest.MorphWeightsDeformBeforeSkinningLikeCpu`).
 
 **GPU 모프는 구조체 버퍼 풀과 정점 셰이더의 인덱스 읽기로 합니다.** 정점 버퍼에 UAV를 붙일 수 없고, DirectX 12 정점 버퍼는 UPLOAD 힙이며, DirectX 11은 겸용이 안 되기 때문입니다.
 `Mesh::setVertices` 는 매번 GPU 버퍼를 다시 만들므로 매 프레임 CPU에서 정점을 고치지 마세요.
@@ -430,14 +430,14 @@ Vulkan PSO는 셰이더가 읽는 정점 속성만 바인딩합니다.
 
 ### 투명 순서
 
-**투명 순서의 기준은 CPU의 `GpuSceneBuilder::sortTransparent` 하나입니다**(정렬 레이어 키, 깊이, 후보 번호 순). GPU의 `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호 오름차순으로 되돌릴 뿐입니다.
+**투명 순서의 기준은 CPU의 `GPUSceneBuilder::sortTransparent` 하나입니다**(정렬 레이어 키, 깊이, 후보 번호 순). GPU의 `instancesort.hlsl` 은 압축된 목록을 인스턴스 번호 오름차순으로 되돌릴 뿐입니다.
 배치 안의 인스턴스가 CPU 순서로 놓이기 때문입니다. GPU에서 깊이를 다시 측정하면 정렬 레이어와 직교 카메라의 시선 축을 모르므로, 같은 깊이를 불안정하게 나눠 CPU와 다른 순서가 나옵니다.
 깊이는 직교 카메라에서 시선 축 위의 위치, 원근 카메라에서 거리입니다(`Render2DSettings::computeTransparentSortAxis`, [2D 문서](../Graphics/2D/README.md)).
 
 추가 뷰는 `buildViewTransparentOrders` 가 투명 부분을 그 뷰의 눈으로 다시 정렬합니다. 결과는 정렬 디스패치의 t2 순번, 배치 순서, DirectX 11의 뷰 슬롯 스트림으로 실립니다.
 배치끼리 깊이가 엇갈리는 경우와 512개를 넘는 투명 배치(Preserve)는 추가 뷰에서도 주 뷰의 순서를 씁니다.
 머티리얼을 넘어 배치를 합치는 백엔드(DirectX 12, Vulkan)는 색만 다른 투명 머티리얼이 한 배치라 순서가 GPU 정렬 하나로 정해집니다. 나머지 백엔드는 배치 순서가 정합니다.
-`RenderPassGpuTest.ExtraViewSortsTransparencyFromItsOwnEye` 가 두 경우를 모두 봅니다.
+`RenderPassGPUTest.ExtraViewSortsTransparencyFromItsOwnEye` 가 두 경우를 모두 봅니다.
 
 ### 다중 뷰
 
@@ -447,7 +447,7 @@ Vulkan PSO는 셰이더가 읽는 정점 속성만 바인딩합니다.
 
 **D3D의 `CopyResource` 는 포맷과 크기가 같은 리소스끼리만 복사합니다.** 그래서 컷 프레임은 원본을 기록에 복사하지 않고 기록 자리에 원본을 바인딩합니다. 캡처를 백버퍼로 옮기는 것도 출력이 백버퍼 크기일 때만 합니다.
 OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤집습니다. 오프스크린 FBO는 그대로입니다.
-창에 나간 이미지는 `blitTexture( 0, 텍스처 )` 로 읽습니다. 원본 0이 백버퍼이고, Present 전에 프레임 스트림에서 읽습니다(`RenderPassGpuTest.PresentedBackBufferMatchesTheCapture`, `ScreenRectViewLandsInItsCornerOfTheBackBuffer`).
+창에 나간 이미지는 `blitTexture( 0, 텍스처 )` 로 읽습니다. 원본 0이 백버퍼이고, Present 전에 프레임 스트림에서 읽습니다(`RenderPassGPUTest.PresentedBackBufferMatchesTheCapture`, `ScreenRectViewLandsInItsCornerOfTheBackBuffer`).
 
 **추가 뷰의 메모리는 "뷰 픽셀 × 첨부 바이트"입니다.** 포워드는 픽셀당 12바이트(512² 뷰에 3MB), 디퍼드는 TAA 기록을 포함해 64바이트(512² 뷰에 17MB, 1080p 주 뷰에 133MB)입니다.
 뷰 한도 8개를 모두 512² 디퍼드로 써도 주 뷰 하나 수준이라 풀을 공유하지 않았습니다. 4인 분할 화면도 합이 주 화면과 같습니다.
@@ -462,14 +462,14 @@ OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤�
 ### 화면 2D와 파이프라인 선택
 
 **UI는 Present(톤 매핑) 뒤의 Canvas 패스가 같은 출력에 Load로 그립니다.** 스크린샷 캡처를 백버퍼로 복사하는 일은 Swapchain을 쓰는 마지막 패스 끝에서 합니다.
-그 전에 복사하면 UI가 캡처에 없습니다(`RenderPassGpuTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 비교합니다). 검증이 Canvas가 Swapchain을 쓰는 마지막 패스인지 확인합니다.
+그 전에 복사하면 UI가 캡처에 없습니다(`RenderPassGPUTest.CanvasDrawsOnEveryBackend` 가 백버퍼 사본과 캡처를 비교합니다). 검증이 Canvas가 Swapchain을 쓰는 마지막 패스인지 확인합니다.
 
 **기본 포워드 파이프라인의 톤 매핑(Reinhard, `c/(c+1)`)은 흰색을 0.5로 누릅니다.** 2D 화면은 회색으로 죽으므로 2D 게임은 `forward2dpipeline.xml` 을 씁니다(`-gv_renderPipeline`).
 
 **`forwardpipeline` 은 완전한 사슬이라 레벨마다 패스가 하나입니다.** 병렬 기록을 실제로 돌려 보려면 `deferredpipeline` 을 씁니다.
 
 **기본 씬에는 메시가 없습니다.** Empty 게임의 시작 씬은 기하가 없으므로 앱을 그냥 띄우면 드로우 경로가 거의 돌지 않습니다.
-드로우 경로는 `-gv_benchMeshes=N` 으로 띄우거나 `EngineTest --test_filter=GpuSceneTest.*,RenderPassTest.*,RenderPassGpuTest.*` 로 확인합니다.
+드로우 경로는 `-gv_benchMeshes=N` 으로 띄우거나 `EngineTest --test_filter=GPUSceneTest.*,RenderPassTest.*,RenderPassGPUTest.*` 로 확인합니다.
 
 ### 그림자와 측정
 
@@ -485,7 +485,7 @@ OpenGL 기본 프레임버퍼는 원점이 아래라 `setViewport` 가 y를 뒤�
 **GPU 타임스탬프 슬롯은 패스 인덱스로 고정합니다.** 흐르는 카운터를 쓰면 병렬 기록에서 경쟁합니다. 기다리지 않고, 링 슬롯이 펜스를 지난 뒤에만 읽고, 기록하지 않은 슬롯은 음수입니다.
 계측은 `SW_PROFILE_COMPILED` 로 감싸며 Shipping에서는 통째로 빠집니다. 로그에만 쓰는 값은 `[[maybe_unused]]` 로 둡니다.
 
-**`GpuUploadQueue` 는 게임 스레드가 `buildFromScene` 뒤, 스냅샷 전에 동기로 비웁니다.** OpenGL에서 게임 스레드가 GL 리소스를 만들면 렌더 스레드가 잡은 컨텍스트를 기다리다 시간을 넘깁니다.
+**`GPUUploadQueue` 는 게임 스레드가 `buildFromScene` 뒤, 스냅샷 전에 동기로 비웁니다.** OpenGL에서 게임 스레드가 GL 리소스를 만들면 렌더 스레드가 잡은 컨텍스트를 기다리다 시간을 넘깁니다.
 
 **디퍼드의 고정 비용은 채움률입니다.** 1280×720에서 2503µs, 640×360에서 864µs였고, 라이트 256개의 비용은 약 600µs였습니다. 그래서 타일이나 클러스터 컬링은 측정이 가리키는 곳이 아닙니다.
 GBuffer 패스는 같은 머티리얼 셰이더에 `SW_PASS_GBUFFER` 를 더해 그리고, 출력은 양쪽 다 구조체입니다.

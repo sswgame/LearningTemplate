@@ -125,9 +125,9 @@ namespace sw
          * @note **GPU 쪽 변형은 CPU 사본(`getVertices`)에 반영되지 않습니다.** 유니티 문서도 같은 주의를 줍니다.
          *       CPU 는 레스트 포즈만 압니다(피킹 · 바운드는 그 값을 봅니다).
          */
-        void setGpuMorphEnabled( bool bEnabled ) { _bGpuMorph = bEnabled ? SW_TRUE : SW_FALSE; }
+        void setGPUMorphEnabled( bool bEnabled ) { _bGPUMorph = bEnabled ? SW_TRUE : SW_FALSE; }
         /** @brief GPU 모프를 요청했는지 반환합니다. */
-        bool isGpuMorphEnabled() const { return _bGpuMorph != SW_FALSE; }
+        bool isGPUMorphEnabled() const { return _bGPUMorph != SW_FALSE; }
 
         /**
          * @brief 스킨(정점마다 본 영향)을 겁니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
@@ -223,8 +223,8 @@ namespace sw
         float3  _localBoundsMax{};
         /// @brief getContentId 참고. 만들 때와 setVertices 때 새로 받습니다.
         uint64 _contentId{ allocateContentId() };
-        /// @brief setGpuMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.
-        uint8 _bGpuMorph{ SW_FALSE };
+        /// @brief setGPUMorphEnabled 참고. 이 메시가 모프 풀에 들어갈지 여부입니다.
+        uint8 _bGPUMorph{ SW_FALSE };
         /** @brief 정점 버퍼입니다. 어느 디바이스의 것인지를 함께 듭니다(RHIResidentBuffer). */
         RHIResidentBuffer _vertex;
     };

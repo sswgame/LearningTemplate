@@ -13,11 +13,11 @@
 
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Renderer/Canvas/CanvasRenderer.h"
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/FrameResourceRegistry.h"
-#include "Engine/Renderer/Frame/GpuTimelineExporter.h"
+#include "Engine/Renderer/Frame/GPUTimelineExporter.h"
 #include "Engine/Renderer/Frame/PassConstantRing.h"
 #include "Engine/Renderer/Frame/PassConstantValues.h"
 #include "Engine/Renderer/Frame/RenderPsoCache.h"
@@ -25,13 +25,13 @@
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
 #include "Engine/Renderer/Frame/TransientAttachmentPool.h"
 #include "Engine/Renderer/Graph/RenderGraph.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
-#include "Engine/Renderer/Scene/GpuMeshMorphPool.h"
-#include "Engine/Renderer/Scene/GpuScene.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
-#include "Engine/Renderer/Scene/GpuVertexAnimationPool.h"
+#include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
+#include "Engine/Renderer/Scene/GPUScene.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 
 namespace sw
 {
@@ -60,7 +60,7 @@ namespace sw
 
     /**
      * @class FrameRenderer
-     * @brief 프레임 경로입니다: RenderPipeline XML → RenderGraph → GpuScene / MeshComponents → IRHIDevice
+     * @brief 프레임 경로입니다: RenderPipeline XML → RenderGraph → GPUScene / MeshComponents → IRHIDevice
      * @details **뷰가 여럿입니다.** 주 시점 하나 + 추가 뷰(`RenderViewRequest` — CCTV · 백미러 · 미니맵 렌더 텍스처, 분할 화면 · PiP 화면 사각형)를 같은
      *          그래프로 한 번씩 그립니다. 뷰마다 트랜지언트 풀 · 컬링 칸(간접 인자 · 가시 목록 · 컬링 상수버퍼) · TAA 기록 · 커맨드 리스트를 따로 듭니다
      *          (`ViewTarget`). 순서: 컴퓨트 프리패스(모든 뷰의 컬링) → 렌더 텍스처 뷰(주 시점이 그 텍스처를 읽는다) → 주 시점 → 화면 사각형 뷰(주 시점 위에 겹친다).
@@ -98,7 +98,7 @@ namespace sw
         [[nodiscard]] bool loadPipeline( string_view pipelineXmlPath );
         /** @brief 컴파일된 그래프를 실행합니다. scene 이 있으면 자기 빌더로 스냅샷을 만들어 패킷 경로와 같은 길로 올립니다. */
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
-        /** @brief 렌더 스레드 경로입니다. 미리 만든 packet 의 GpuScene 을 씁니다(Scene 에 접근하지 않습니다). */
+        /** @brief 렌더 스레드 경로입니다. 미리 만든 packet 의 GPUScene 을 씁니다(Scene 에 접근하지 않습니다). */
         bool executePacket( IRHIDevice* pDevice, RenderFramePacket& packet );
 
         // ------------------------------------------------------------------------------
@@ -144,9 +144,9 @@ namespace sw
         const string& getStatusMessage() const { return _statusMessage; }
         /** @brief 렌더 그래프를 반환합니다. */
         const RenderGraph& getGraph() const { return _graph; }
-        /** @brief GpuScene 을 반환합니다. */
-        const GpuScene& getGpuScene() const { return _gpuScene; }
-        GpuScene&       getGpuScene() { return _gpuScene; }
+        /** @brief GPUScene 을 반환합니다. */
+        const GPUScene& getGPUScene() const { return _gpuScene; }
+        GPUScene&       getGPUScene() { return _gpuScene; }
         /** @brief 셰이더 핫 리로드 알림입니다. 그 셰이더의 바인딩 레이아웃을 무효화하고 패스 PSO 를 모두 다시 만듭니다. */
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
         /**
@@ -230,14 +230,14 @@ namespace sw
         /**
          * @brief 이 배치를 그릴 PSO 입니다. 머티리얼 퍼뮤테이션 · 뷰 모드 · 컬 반전을 얹은 변형이 있으면 그것, 없으면 패스 PSO 그대로입니다.
          * @details 드로우 경로가 배치마다 부르는 조회입니다(읽기 전용). 캐시는 `ensureMaterialPsos` 가 기록 전에 채웁니다.
-         *          거울 변환 배치(`GpuMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그립니다.
+         *          거울 변환 배치(`GPUMeshBatch::_bReverseCulling`)는 패스의 컬 모드를 뒤집은 변형으로 그립니다.
          */
-        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GpuMeshBatch& batch ) const;
+        RHIPipelineStateHandle psoForBatch( RHIPipelineStateHandle passPso, const GPUMeshBatch& batch ) const;
         /**
          * @brief 이 패스가 이 배치를 그리는지 반환합니다 — 패스가 머티리얼 define 으로 배치를 거르면(메시 외곽선) 퍼뮤테이션에 그 define 이 있어야 합니다.
          * @details 판정은 `FrameRendererUtil::drawsMaterialInPass` 하나입니다(머티리얼 PSO 변형 · 셰이더 쿠커와 같은 판정).
          */
-        bool drawsBatchInPass( RenderPassType passType, const GpuMeshBatch& batch ) const;
+        bool drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const;
         /**
          * @brief PSO 를 만들 때 쓴 디스크립터를 돌려줍니다(셰이더 경로 · define · 렌더 상태). 모르는 PSO 면 false 입니다.
          * @details 어떤 퍼뮤테이션이 실제로 걸렸는지 밖에서 볼 수 있는 유일한 창입니다. 픽셀로는 안 보이는
@@ -441,7 +441,7 @@ namespace sw
         void releaseCanvasTargets();
         /**
          * @brief 이번 프레임의 추가 뷰 요청을 뷰 상태로 맞춥니다 — 새 뷰를 만들고, 사라진 뷰를 놓고, 출력 텍스처 · 풀 크기 · 컬링 입력을 맞추고,
-         *        GpuScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
+         *        GPUScene 의 컬링 칸 수를 정합니다. **업로드 전에**(셋업 단계) 부릅니다 — 버퍼 · 텍스처 생성은 기록 중에 할 수 없다.
          */
         void prepareExtraViews( const vector<RenderViewRequest>& listRequest );
         /**
@@ -550,11 +550,11 @@ namespace sw
          */
         void registerLightBuffer( FramePassContext& ctx );
         /** @brief 배치의 머티리얼 데이터 버퍼(GPUScene)를 패스 레지스트리에 "SwMaterials" 로 등록합니다. */
-        void registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso );
-        /** @brief 씬 메시를 그립니다. GpuScene 이 올라가 있으면 drawGpuBatches 로 넘기고, 아니면 상태만 맞춥니다. */
+        void registerMaterialBuffer( FramePassContext& ctx, const GPUMeshBatch& batch, RHIPipelineStateHandle pso );
+        /** @brief 씬 메시를 그립니다. GPUScene 이 올라가 있으면 drawGPUBatches 로 넘기고, 아니면 상태만 맞춥니다. */
         void drawSceneMeshes( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
-        /** @brief GpuScene 배치를 간접 드로우로 그립니다. */
-        void drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
+        /** @brief GPUScene 배치를 간접 드로우로 그립니다. */
+        void drawGPUBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass );
         /** @brief 풀스크린 삼각형을 그립니다. */
         void drawFullscreen( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex );
         /** @brief 뷰의 풀에 일시 텍스처를 할당합니다. */
@@ -653,7 +653,7 @@ namespace sw
          *          Back 과 Front 를 맞바꿉니다(거울 변환이 감김을 뒤집으므로). None 은 그대로입니다.
          */
         RenderPsoCache::MaterialPsoEntry createMaterialPsoVariant( RHIPipelineStateHandle passPso, RenderPassType passType,
-                                                                   const GpuShaderPermutation* pPermutation, RenderViewMode viewMode,
+                                                                   const GPUShaderPermutation* pPermutation, RenderViewMode viewMode,
                                                                    bool bReverseCulling );
         /**
          * @brief 이번 프레임 배치 수에 맞춰 상수버퍼 슬롯을 **기록 시작 전에** 늘려 둡니다(드로우마다 하나씩 나가므로).
@@ -693,9 +693,9 @@ namespace sw
         IRHICommandList*                     _pCmd;
         Scene*                               _pScene;
         TaskManager*                         _pTaskManager;
-        GpuScene                             _gpuScene;
+        GPUScene                             _gpuScene;
         /// @brief 씬 직접 경로(`execute( pScene )`, 에디터 · 테스트)가 쓰는 빌더입니다. 패킷 경로에서는 EngineLoop 의 것이 대신합니다.
-        GpuSceneBuilder     _sceneBuilder;
+        GPUSceneBuilder     _sceneBuilder;
         RenderPipelineAsset _pipelineResource;
         RenderGraph         _graph;
         string              _pipelinePath;
@@ -719,7 +719,7 @@ namespace sw
          */
         vector<FramePassContext> _listPassContext;
         /// @brief 씬 직접 경로가 내보내는 스냅샷입니다. 바꿔치기로 저장소가 돌아옵니다.
-        GpuSceneSnapshot _sceneSnapshotScratch;
+        GPUSceneSnapshot _sceneSnapshotScratch;
         /// @brief 주 시점의 패스 시드입니다. 추가 뷰가 이것에서 출발해 자기 값(뷰 행렬 · 플래그 · 컬링 칸)만 덮어씁니다. 프레임마다 대입이라 용량이 남습니다.
         FramePassContext _mainSeedScratch;
         /// @brief 씬 직접 경로(`execute( pScene )`)가 추가 뷰를 고르는 스케줄러와 요청 목록입니다(패킷 경로에서는 EngineLoop 의 것).
@@ -748,10 +748,10 @@ namespace sw
         RHIConstantBufferSlot _instanceAnimCb;
         RHIConstantBufferSlot _meshMorphCb;
         RHIConstantBufferSlot _meshSkinCb;
-        /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GpuMeshMorphPool 참고).
-        GpuMeshMorphPool _meshMorphPool;
-        /// @brief 정점 애니메이션(VAT) 표 풀입니다. RT 소유입니다(GpuVertexAnimationPool 참고).
-        GpuVertexAnimationPool _vertexAnimationPool;
+        /// @brief GPU 가 변형한 정점 풀입니다. RT 소유입니다(GPUMeshMorphPool 참고).
+        GPUMeshMorphPool _meshMorphPool;
+        /// @brief 정점 애니메이션(VAT) 표 풀입니다. RT 소유입니다(GPUVertexAnimationPool 참고).
+        GPUVertexAnimationPool _vertexAnimationPool;
         /// @brief `setMeshMorphDiag` 가 준 값입니다. 음수면 전역 변수 `gv_morphDiag` 를 따릅니다.
         int32 _meshMorphDiagOverride;
         /// @brief `setDrawMergeEnabled` 가 준 값입니다. 음수면 전역 변수 `gv_drawMerge` 를 따릅니다.
@@ -761,9 +761,9 @@ namespace sw
         /// @brief 이번 프레임의 씬 간접 드로우 호출 수입니다. 패스가 병렬로 기록하므로 원자입니다.
         atomic<uint32> _indirectDrawCallCount;
         /** @brief 지난 프레임의 타임스탬프입니다(마이크로초, 프레임 시작 기준 누적 + 기준점의 GPU 시계). 엔진 표와 Tracy 가 같은 값을 쓴다. */
-        RHIGpuTimestampFrame _gpuTimestampFrame;
+        RHITimestampFrame _gpuTimestampFrame;
         /** @brief 패스 하나의 GPU 스코프입니다. 그 칸을 만든 패스 이름과 프로파일러 슬롯 · 외부 프로파일러 지점을 담습니다. */
-        struct GpuPassScope
+        struct GPUPassScope
         {
             string                 _passName;
             const ProfileZoneSite* _pZoneSite{ nullptr }; ///< Tracy GPU 구간 이름(패스 이름, 프로세스 수명 사본)
@@ -776,22 +776,22 @@ namespace sw
          *          제자리)에 둡니다. 주의: 자라며 옮겨지는 저장소의 `string` 을 넘기면 짧은 이름(`GPU.Shadow` 처럼 문자열 객체 안에
          *          드는 것)의 포인터가 옮겨진 뒤의 빈자리를 가리킵니다.
          */
-        vector<GpuPassScope> _listGpuPassScope;
+        vector<GPUPassScope> _listGPUPassScope;
         /// @brief `GPU.Compute` · `GPU.Frame` 의 프로파일러 슬롯입니다. 처음 한 번 등록합니다(프레임마다 선형 탐색을 하지 않습니다).
         uint32 _gpuComputeScopeSlot;
         uint32 _gpuFrameScopeSlot;
         /// @brief 외부 프로파일러(Tracy) GPU 타임라인입니다. 엔진 표와 같은 타임스탬프를 쓴다(쿼리는 한 벌).
-        GpuTimelineExporter _gpuTimeline;
-        /// @brief 패스 번호 → Tracy 지점입니다. `_listGpuPassScope` 에서 프레임마다 채운다(할당을 되풀이하지 않게 든다).
-        vector<const ProfileZoneSite*> _listGpuPassSite;
+        GPUTimelineExporter _gpuTimeline;
+        /// @brief 패스 번호 → Tracy 지점입니다. `_listGPUPassScope` 에서 프레임마다 채운다(할당을 되풀이하지 않게 든다).
+        vector<const ProfileZoneSite*> _listGPUPassSite;
         /// @brief GPU 시계를 읽지 못한 디바이스입니다. 막히는 읽기(DX11 · Vulkan)를 프레임마다 다시 하지 않는다.
-        const IRHIDevice* _pGpuTimelineFailedDevice;
+        const IRHIDevice* _pGPUTimelineFailedDevice;
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32 _lastIndirectDrawCallCount;
         /// @brief `setInputRoleEnabled( role, false )` 가 켠 비트입니다. 그 역할의 입력은 걸지 않습니다.
         uint32 _disabledInputRoleMask;
         /// @brief 진단(`-gv_morphDiag=3`)이 올리는 번호표 정점입니다. 스크래치라 프레임 밖에서는 의미가 없습니다.
-        vector<GpuMorphVertex> _listScratchMorphTag;
+        vector<GPUMorphVertex> _listScratchMorphTag;
         /// @brief 이번 프레임 모프 대상 메시입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
         vector<Mesh*> _listScratchMorphMesh;
         /// @brief 이번 프레임 스킨드 메시 목록입니다(모프 풀의 스킨 구간 순서, 프레임마다 재사용).
@@ -799,28 +799,28 @@ namespace sw
         /// @brief 이번 프레임 VAT 메시 목록입니다(프레임마다 재사용).
         vector<Mesh*> _listScratchVertexAnimationMesh;
         /// @brief 씬 라이트 구조버퍼입니다. RT 소유이고 포워드 · 디퍼드가 같은 버퍼를 읽습니다.
-        GpuLightBuffer _lightBuffer;
+        GPULightBuffer _lightBuffer;
         /// @brief 씬 직접 경로에서 라이트를 모으는 버퍼입니다. 프레임마다 할당하지 않으려고 들고 있습니다.
-        vector<GpuLight> _listScratchLight;
+        vector<GPULight> _listScratchLight;
 
         /** @brief 뷰 하나를 얻습니다. 그 뷰의 행렬 · 절두체 · 상수버퍼가 함께 옵니다. */
         RenderView&       view( RenderViewType type ) { return _arrView[static_cast<uint32>( type )]; }
         const RenderView& view( RenderViewType type ) const { return _arrView[static_cast<uint32>( type )]; }
 
-        /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 반환합니다(업로드 전에 GpuScene 에 알립니다). */
-        bool usesGpuGeneratedCommands() const;
+        /** @brief 컴퓨트가 드로우 커맨드를 만드는 경로를 이번 프레임에 쓸 생각인지 반환합니다(업로드 전에 GPUScene 에 알립니다). */
+        bool usesGPUGeneratedCommands() const;
 
         /**
          * @brief 지난 프레임의 패스별 GPU 시간을 프로파일러에 `GPU.<패스>` 로 넣습니다.
          * @details GPU 타임스탬프가 없으면 GPU 비용을 `RT.BeginFrame`(백프레셔) 같은 대리값으로
          *          추측하거나 패스를 지워 가며 차이로 구해야 하고, 그런 추측(클리어 · 포맷 비용 같은)은 쉽게 틀립니다.
          */
-        void reportGpuPassTimes( IRHIDevice* pDevice );
+        void reportGPUPassTimes( IRHIDevice* pDevice );
         /**
          * @brief 방금 읽은 타임스탬프를 외부 프로파일러(Tracy)의 GPU 타임라인으로 냅니다. 출력이 꺼져 있으면 아무것도 하지 않습니다.
          * @details 디바이스가 바뀌면 GPU 컨텍스트를 새로 열고(그때 GPU 시계를 한 번 읽는다), 싼 시계(DX12 · GL)는 몇 프레임마다 다시 맞춘다.
          */
-        void exportGpuTimeline( IRHIDevice* pDevice );
+        void exportGPUTimeline( IRHIDevice* pDevice );
         /**
          * @brief 패스 @p passIndex 의 `GPU.<패스>` 프로파일러 슬롯입니다. 그 칸의 패스 이름이 바뀌었을 때만 다시 등록합니다.
          * @details 파이프라인을 다시 읽어 패스 구성이 바뀌어도 이름 비교가 알아챕니다(칸마다 문자열 비교 한 번).
@@ -941,7 +941,7 @@ namespace sw
          * @details 드로우가 가시 목록을 걸지 말지 정하는 값입니다. 목록을 걸었는데 컬링이 안 돌면 셰이더가
          *          갱신되지 않은(또는 0 으로 찬) 목록을 읽어 모두 같은 인스턴스를 그립니다.
          */
-        uint8                  _bGpuCullingActive;
+        uint8                  _bGPUCullingActive;
         uint8                  _bPresentCaptureEnabled; ///< `-gv_screenshot` 실행에서만 켬(전체 화면 복사 한 번이 더 붙음).
         FrameRendererStatus    _status;
         uint8                  _bCallbacksBound     : 1;

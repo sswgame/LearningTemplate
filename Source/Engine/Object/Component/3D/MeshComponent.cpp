@@ -192,10 +192,10 @@ namespace sw
         markRenderStateDirty();
     }
 
-    void MeshComponent::setSpriteInstanceData( const GpuSpriteInstanceData& data )
+    void MeshComponent::setSpriteInstanceData( const GPUSpriteInstanceData& data )
     {
         // 프레임 · 색을 바꾸는 쪽은 스냅 단위를 모른다 — 지금 값을 지킨다.
-        GpuSpriteInstanceData merged = data;
+        GPUSpriteInstanceData merged = data;
         merged._pixelSnap            = _spriteInstanceData._pixelSnap;
         if ( _spriteInstanceData == merged )
             return;
@@ -205,7 +205,7 @@ namespace sw
 
     void MeshComponent::setPixelSnapUnit( float32 unit )
     {
-        GpuSpriteInstanceData snapped = _spriteInstanceData;
+        GPUSpriteInstanceData snapped = _spriteInstanceData;
         snapped._pixelSnap            = MathUtil::max( unit, 0.0f );
         if ( _spriteInstanceData == snapped )
             return;
@@ -231,7 +231,7 @@ namespace sw
     {
         const float4x4 world = getWorldMatrix();
         outCenter            = world.getTranslation();
-        outRadius            = getBoundsRadius() * world.getMaximumAxisScale(); // GPU 컬링(`GpuSceneBuilder`)과 같은 반지름
+        outRadius            = getBoundsRadius() * world.getMaximumAxisScale(); // GPU 컬링(`GPUSceneBuilder`)과 같은 반지름
         return true;
     }
 
@@ -259,7 +259,7 @@ namespace sw
         markRenderStateDirty();
     }
 
-    void MeshComponent::setGpuSpinSeed( uint32 seed )
+    void MeshComponent::setGPUSpinSeed( uint32 seed )
     {
         _gpuSpinSeed = seed;
         markRenderStateDirty();

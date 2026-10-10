@@ -12,7 +12,7 @@
 
 ```text
 SpriteComponent ─┐
-TileMapRenderer ─┼─▶ 인스턴스(프레임, 색, 픽셀 스냅) ─▶ GpuSceneBuilder ─▶ 투명 큐(정렬 키 → 깊이)
+TileMapRenderer ─┼─▶ 인스턴스(프레임, 색, 픽셀 스냅) ─▶ GPUSceneBuilder ─▶ 투명 큐(정렬 키 → 깊이)
                  │
 PointLight2D / GlobalLight2D / ShadowCaster2D ─▶ 빛 목록(t12) ─▶ sprite2dlit.hlsl
 PixelPerfectCamera ─▶ 카메라의 직교 높이와 화면 픽셀 스냅
@@ -21,7 +21,7 @@ ParallaxLayer ─▶ 카메라에 대한 배율로 오브젝트 이동
 
 기억할 개념은 세 가지입니다.
 
-**스프라이트는 인스턴스입니다.** 스프라이트의 아틀라스 프레임, 색, 픽셀 스냅은 메시가 아니라 인스턴스 데이터(`GpuSpriteInstanceData`)입니다.
+**스프라이트는 인스턴스입니다.** 스프라이트의 아틀라스 프레임, 색, 픽셀 스냅은 메시가 아니라 인스턴스 데이터(`GPUSpriteInstanceData`)입니다.
 그래서 같은 텍스처를 쓰는 스프라이트는 프레임과 색이 달라도 한 번에 그려집니다.
 
 **정렬 레이어.** 스프라이트는 정렬 레이어 이름과 레이어 안 순서를 가집니다. 투명 큐는 이 둘로 먼저 정렬하고, 같으면 깊이로 정렬합니다.

@@ -279,7 +279,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, MeshMaterialReferenceSurvivesXml )
 /**
  * @brief [ObjectStateRoundTripTest] 플레이 중이 아니어도 상태를 읽은 메시는 그릴 메시 · 머티리얼을 갖는다 — 편집 중 되돌리기 · 프리팹 드래그
  * @details 상태를 읽으면 컴포넌트를 새로 만든다. 메시가 렌더 에셋(메시 id → 메시, 머티리얼 참조 → 머티리얼)을 시작(`onBeginPlay`) · 씬 초기화에서만
- *          풀면 **편집 중**에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 다음 플레이 · 씬 재로드까지 그려지지 않는다(GpuScene 은 메시 없는 것을
+ *          풀면 **편집 중**에 되돌리기 · 프리팹 드래그로 다시 만든 메시가 다음 플레이 · 씬 재로드까지 그려지지 않는다(GPUScene 은 메시 없는 것을
  *          건너뛴다). 언리얼 `PostLoad` · 유니티 `OnAfterDeserialize` 처럼 상태를 읽은 뒤 컴포넌트마다 `onPostLoad` 를 부른다.
  */
 SW_TEST_CASE( ObjectStateRoundTripTest, LoadedMeshResolvesItsRenderAssetsWithoutPlay )

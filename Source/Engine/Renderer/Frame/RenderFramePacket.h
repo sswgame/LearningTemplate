@@ -8,15 +8,15 @@
 #include "Engine/Renderer/Frame/FrameRendererUtil.h"
 #include "Engine/Renderer/Frame/PresentHookDelegate.h"
 #include "Engine/Renderer/Frame/RenderView.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
-#include "Engine/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
 {
     /// @brief 게임 스레드 → 렌더 스레드로 넘기는 한 프레임 스냅샷입니다.
     struct RenderFramePacket
     {
-        GpuSceneSnapshot _gpuScene; ///< GT 가 만든 것 모두. 소유를 함께 실음(GpuSceneSnapshot 참고)
+        GPUSceneSnapshot _gpuScene; ///< GT 가 만든 것 모두. 소유를 함께 실음(GPUSceneSnapshot 참고)
         float4           _clearColor;
         float3           _cameraPos;
         float4x4         _viewProj;
@@ -33,7 +33,7 @@ namespace sw
          *          위의 `_light*` 셋은 **키라이트 하나**로, 그림자 행렬과 앰비언트가 거기서 나옵니다.
          *          라이트 목록이 비어도 키라이트 하나로 그리는 폴백 경로이기도 합니다.
          */
-        vector<GpuLight> _listLight;
+        vector<GPULight> _listLight;
         /** @brief 이번 프레임의 추가 뷰(CCTV · 백미러 · 분할 화면 · PiP)입니다. 쉬는 뷰도 실린다(`RenderViewRequest::_bRender`). */
         vector<RenderViewRequest> _listView;
         /**

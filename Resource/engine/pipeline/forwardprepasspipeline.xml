@@ -8,7 +8,7 @@
 	맞물림: 프리패스는 shadowdepth.hlsl 을 **카메라** 행렬로 그리고(패스 define `SW_PASS_DEPTH_PREPASS`), 기본 패스는 같은 위치 함수
 	(binding.hlsli `swComputeWorldPosition` · `swComputeClipPosition`, precise)로 같은 깊이를 내 LessEqual 을 통과한다 — 언리얼이 depth-only 와
 	base pass 에 같은 정점 팩토리 코드를 쓰는 것과 같은 이유다. 프리패스가 돈 프레임의 ForwardOpaque 는 깊이 쓰기를 끈 PSO 로 그린다.
-	같은 그림을 내는지 시험이 프리패스 없는 판과 대조한다(`RenderPassGpuTest.DepthPrepassRendersTheSameImage`).
+	같은 그림을 내는지 시험이 프리패스 없는 판과 대조한다(`RenderPassGPUTest.DepthPrepassRendersTheSameImage`).
 -->
 <RenderPipelineDesc _name="ForwardPrepassPipeline" _shadingModel="Forward">
 	<_listAttachment>

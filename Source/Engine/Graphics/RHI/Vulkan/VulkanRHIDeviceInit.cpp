@@ -259,11 +259,11 @@ namespace sw
         {
             VkPhysicalDeviceProperties properties{};
             vkGetPhysicalDeviceProperties( _physicalDevice, &properties );
-            utf8 arrGpu[constant::kMaxBuffer256]{};
-            formatstring( arrGpu, constant::kMaxBuffer256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
+            utf8 arrGPU[constant::kMaxBuffer256]{};
+            formatstring( arrGPU, constant::kMaxBuffer256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
                           properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
-            CrashHandler::setContextValue( "GPU", arrGpu );
+            CrashHandler::setContextValue( "GPU", arrGPU );
             _bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
         }
         if ( _physicalDevice == nullptr && bSoftwareAdapter )
@@ -396,7 +396,7 @@ namespace sw
         createInfo.pQueueCreateInfos    = &queueCreateInfo;
         createInfo.queueCreateInfoCount = 1;
         createInfo.pEnabledFeatures     = &deviceFeatures;
-        // VK_EXT_memory_budget 은 선택이다. 있으면 켜서 드라이버의 사용량 · 예산을 읽고(queryGpuMemoryBudgetInternal), 없으면 그 값은 "모름" 이다.
+        // VK_EXT_memory_budget 은 선택이다. 있으면 켜서 드라이버의 사용량 · 예산을 읽고(queryGPUMemoryBudgetInternal), 없으면 그 값은 "모름" 이다.
         vector<const utf8*> listDeviceExtension( s_listDeviceExtensions.begin(), s_listDeviceExtensions.end() );
         {
             uint32 availableExtCount{ 0 };

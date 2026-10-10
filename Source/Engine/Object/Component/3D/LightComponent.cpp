@@ -8,7 +8,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -39,12 +39,12 @@ namespace sw
         return float3{ world._41, world._42, world._43 };
     }
 
-    void LightComponent::writeGpuLight( GpuLight& outLight ) const
+    void LightComponent::writeGPULight( GPULight& outLight ) const
     {
-        outLight                 = GpuLight{};
+        outLight                 = GPULight{};
         outLight._colorIntensity = float4{ _color._x, _color._y, _color._z, _intensity };
         outLight._directionType  = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( _lightType ) };
-        writeGpuLightKindFields( outLight );
+        writeGPULightKindFields( outLight );
     }
 
     float3 LightComponent::computeLightDirection( const float3& defaultLocalDirection ) const

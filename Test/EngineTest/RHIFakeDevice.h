@@ -2,7 +2,7 @@
  * @file Test/EngineTest/RHIFakeDevice.h
  * @brief GPU 없이 도는 가짜 RHI 디바이스 · 커맨드 리스트 — 렌더 그래프의 병렬 기록 · 제출 순서를 nogpu 로 본다.
  * @details `RenderGraph::executeParallel` 은 디바이스가 있어야 돌아서, 그 경로(레벨마다 리스트를 열고 · 기록하고 · 제출하는 순서, 리스트를 만들지
- *          못할 때)는 실제 디바이스로는 GPU 시험(`RenderPassGpuTest`)에서만 지나간다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
+ *          못할 때)는 실제 디바이스로는 GPU 시험(`RenderPassGPUTest`)에서만 지나간다. 그리기는 하지 않고 기록 범위와 제출 순서만 적는다.
  */
 #pragma once
 #include "Core/Delegate/Delegate.h"
@@ -114,8 +114,8 @@ namespace test
 
         void executeCommandList( sw::IRHICommandList* pCmdList ) override { _listExecuted.push_back( static_cast<FakeRHICommandList*>( pCmdList ) ); }
 
-        /** @brief 부르지 않고 쌓기만 합니다. 시험이 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGpuRelease` 를 부릅니다. */
-        void enqueueGpuRelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGpuRelease.push_back( releaseDelegate ); }
+        /** @brief 부르지 않고 쌓기만 합니다. 시험이 "GPU 가 그 프레임을 끝냈다" 를 흉내 내어 `_listGPURelease` 를 부릅니다. */
+        void enqueueGPURelease( const sw::RHIResourceReleaseDelegate& releaseDelegate ) override { _listGPURelease.push_back( releaseDelegate ); }
 
         [[nodiscard]] bool queryNativeHandlesInternal( sw::RHINativeHandles& outHandles ) const override
         {
@@ -129,6 +129,6 @@ namespace test
         sw::vector<const utf8*>                    _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 시험 자원의 `releaseRhi` 도 여기 적는다 */
         void*                                      _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
         mutable uint32                             _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
-        sw::vector<sw::RHIResourceReleaseDelegate> _listGpuRelease;              /**< `enqueueGpuRelease` 로 받은 콜백(받은 순서) */
+        sw::vector<sw::RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
     };
 } // namespace test

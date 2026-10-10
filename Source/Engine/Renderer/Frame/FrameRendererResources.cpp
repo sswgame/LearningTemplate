@@ -52,9 +52,9 @@ namespace sw
             RHIPipelineStateHandle pso{ 0 };
             if ( info.hasFlag( RenderPassTraitFlag::kCompute ) )
             {
-                // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGpuCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
-                // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGpuCulling 이 0 이지만 _bCompute 는 1 이다.
-                const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGpuCulling ) ? caps._bGpuCulling != SW_FALSE : caps._bCompute != SW_FALSE;
+                // 컬링 · 정렬은 간접 인자 버퍼 능력(_bGPUCulling)을, 애니메이션 · 모프는 구조버퍼 UAV(_bCompute)만 요구한다.
+                // DX11 은 한 버퍼에 STRUCTURED 와 DRAWINDIRECT_ARGS 를 같이 못 걸어 _bGPUCulling 이 0 이지만 _bCompute 는 1 이다.
+                const bool bCapable = info.hasFlag( RenderPassTraitFlag::kRequiresGPUCulling ) ? caps._bGPUCulling != SW_FALSE : caps._bCompute != SW_FALSE;
                 if ( bCapable )
                     pso = _pDevice->getResourceFactory()->createComputePipelineState( ( engineDefaultAssets.*info._pDefaultShader ).c_str() );
             }
@@ -94,12 +94,12 @@ namespace sw
         uint32 rowIndex{ 0 };
         for ( uint32 viewIndex = 0; viewIndex < static_cast<uint32>( RenderViewType::Count ); ++viewIndex )
         {
-            outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GpuCullParams ), "cull" };
-            outArrRow[rowIndex++] = { &_arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GpuSortParams ), "instance sort" };
+            outArrRow[rowIndex++] = { &_arrView[viewIndex]._cullCb, sizeof( FrameRendererUtil::GPUCullParams ), "cull" };
+            outArrRow[rowIndex++] = { &_arrView[viewIndex]._sortCb, sizeof( FrameRendererUtil::GPUSortParams ), "instance sort" };
         }
-        outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GpuAnimParams ), "instance animation" };
-        outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GpuMorphParams ), "mesh morph" };
-        outArrRow[rowIndex++] = { &_meshSkinCb, sizeof( FrameRendererUtil::GpuSkinParams ), "mesh skin" };
+        outArrRow[rowIndex++] = { &_instanceAnimCb, sizeof( FrameRendererUtil::GPUAnimParams ), "instance animation" };
+        outArrRow[rowIndex++] = { &_meshMorphCb, sizeof( FrameRendererUtil::GPUMorphParams ), "mesh morph" };
+        outArrRow[rowIndex++] = { &_meshSkinCb, sizeof( FrameRendererUtil::GPUSkinParams ), "mesh skin" };
         SW_LOG_ASSERT( rowIndex == _s_kComputeConstantBufferCount, "compute constant buffer table has %# rows, expected %#", rowIndex,
                        _s_kComputeConstantBufferCount );
     }
@@ -118,7 +118,7 @@ namespace sw
         // PSO 는 캐시가 순서대로 놓는다: 변형(소유한 것만) → 패스 → Present → 레이아웃 표.
         _psoCache.releaseAll( _pDevice );
 
-        _gpuScene.releaseGpu( _pDevice );
+        _gpuScene.releaseGPU( _pDevice );
         // 캔버스의 아틀라스 텍스처 · 사각형 버퍼도 이 디바이스의 것이다(거울은 남아 다음 프레임에 다시 올린다).
         _canvasRenderer.release( _pDevice );
         releaseCanvasTargets();

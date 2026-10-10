@@ -142,7 +142,7 @@ build/Ninja-Debug/TestBin/ReflectionTest.exe --test_shard=0/2          # one sha
   `sw_addTestExecutable( ... HOST_SPLIT )` gets two CTest entries, `<Target>_NoGPU` (`--host_suites=exclude`,
   label `nogpu`, what CI runs) and `<Target>_HostOnly` (`--host_suites=only`, label `hostgpu`). No suite name
   is written in CMake. Today `EngineTest` and `AppTest` split this way; the others are one entry each, except
-  `ReflectionTest`, which is sharded (below). **A test that creates an RHI device belongs in `RenderPassGpuTest`.**
+  `ReflectionTest`, which is sharded (below). **A test that creates an RHI device belongs in `RenderPassGPUTest`.**
   A host-suite case fails on any unexpected `[Error]` log line, since validation-layer and driver errors only log;
   wrap a deliberate rejection in `SW_TEST_DEFENSIVE_SCOPE( "reason" )`.
 - **A suite that needs an outside server declares it too**: `SW_TEST_REQUIRES_ENVIRONMENT( SuiteName, "SW_TEST_POSTGRES_URL", "reason" );`.

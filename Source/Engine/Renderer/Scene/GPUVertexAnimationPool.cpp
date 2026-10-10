@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Scene/GpuVertexAnimationPool.h"
+#include "Engine/Renderer/Scene/GPUVertexAnimationPool.h"
 
 #include "Core/Log/Logger.h"
 
@@ -10,9 +10,9 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GpuVertexAnimationPool" );
+    SW_LOG_CALLER( "GPUVertexAnimationPool" );
 
-    void GpuVertexAnimationPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUVertexAnimationPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
         if ( pDevice == nullptr )
             return;
@@ -72,13 +72,13 @@ namespace sw
             _table.upload( pDevice, listElement.data(), _elementCount * kStride );
     }
 
-    uint32 GpuVertexAnimationPool::baseOf( const Mesh* pMesh ) const
+    uint32 GPUVertexAnimationPool::baseOf( const Mesh* pMesh ) const
     {
         const auto it = _mapBase.find( pMesh );
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
     }
 
-    void GpuVertexAnimationPool::release( IRHIDevice* pDevice )
+    void GPUVertexAnimationPool::release( IRHIDevice* pDevice )
     {
         _table.release( pDevice );
         _mapBase.clear();

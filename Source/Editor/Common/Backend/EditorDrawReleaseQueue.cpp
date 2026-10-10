@@ -53,7 +53,7 @@ namespace sw::editor
 
         for ( const RHIResourceReleaseDelegate& releaseDelegate : listReady )
         {
-            device.enqueueGpuRelease( releaseDelegate );
+            device.enqueueGPURelease( releaseDelegate );
         }
         return static_cast<uint32>( listReady.size() );
     }

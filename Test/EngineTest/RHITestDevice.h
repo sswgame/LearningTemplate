@@ -44,7 +44,7 @@ namespace test
     }
 
     /**
-     * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGpuTest`).
+     * @brief 디바이스가 필요한 케이스의 창 + 디바이스 한 벌(`RHIDeviceTest` · `RenderPassGPUTest`).
      * @details 창 만들기 · 디바이스 만들기 · 표면 붙이기 · 초기화 · 실패 시 되감기를 한 곳에 모으고, 내리기는 소멸자가 한다.
      *          케이스가 끝의 내리기를 손으로 들면 그 사이의 `SW_ASSERT_*` 가 실패할 때 **내리기에 닿지 않는다** — 디바이스는
      *          `shutdown()` 없이 소멸자만 돌고 창은 `destroy()` 되지 않은 채 다음 케이스로 넘어간다.

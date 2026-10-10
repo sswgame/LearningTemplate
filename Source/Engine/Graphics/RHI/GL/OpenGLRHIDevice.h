@@ -14,14 +14,14 @@
 #include "Engine/Common/EnginePlatformHeaders.h"
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
 {
-    struct RHIGpuMemoryBudget;
+    struct RHIMemoryBudget;
 
     class IOpenGLPlatformContext;
     class OpenGLRHICommandContext;
@@ -101,9 +101,9 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
-        bool               isGpuClockReadCheap() const override { return true; }
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
+        bool               isGPUClockReadCheap() const override { return true; }
         /**
          * @brief 커맨드 리스트가 부르는 기록 지점입니다. GL 은 커맨드 버퍼가 없어 그 자리에서 발행합니다.
          * @details 그래서 락이 없습니다. GL 호출은 컨텍스트를 쥔 한 스레드에서만 나갑니다.
@@ -121,10 +121,10 @@ namespace sw
          * @brief 벤더 확장이 있을 때만 드라이버 값을 채웁니다. `GL_NVX_gpu_memory_info` 는 총량 · 남은 양(디바이스 전체 — 다른 프로세스 몫 포함),
          *        `GL_ATI_meminfo` 는 남은 양만 줍니다. 둘 다 없으면 false 입니다(드라이버 값은 "모름").
          */
-        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+        [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        /** @brief 프레임 지연(`kGPUReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. GL 은 펜스 대신 endFrame 횟수로 셉니다. */
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
         /** @brief 백엔드 타입(OpenGL)을 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::OpenGL; }
@@ -369,10 +369,10 @@ namespace sw
          * @details 읽기는 그 묶음을 **다시 쓰기 직전**(= 링 한 바퀴 뒤)에 GL_QUERY_RESULT_AVAILABLE
          *          로 먼저 물어보고 준비된 칸만 풉니다. 준비 안 된 칸을 바로 읽으면 GL 이 거기서 막습니다.
          */
-        uint32               _arrTimestampQuery[constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight];
-        uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight];
-        uint32               _timestampFrameIndex;
-        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
+        uint32            _arrTimestampQuery[constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight];
+        uint32            _arrTimestampMask[constant::kMaxFrameCountInFlight];
+        uint32            _timestampFrameIndex;
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
 
         uint32 _arrComputeRootConstantShadow[shaderslot::kRootConstantDwords];
 

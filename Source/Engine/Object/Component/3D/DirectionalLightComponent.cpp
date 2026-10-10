@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -246,7 +246,7 @@ namespace sw
         return projection;
     }
 
-    void DirectionalLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    void DirectionalLightComponent::writeGPULightKindFields( GPULight& outLight ) const
     {
         const float3 direction     = getLightDirection();
         outLight._directionType._x = direction._x;

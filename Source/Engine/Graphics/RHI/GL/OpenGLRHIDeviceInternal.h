@@ -30,8 +30,8 @@ namespace sw
     struct OpenGLRHIDeviceInternal
     {
         // GPU 메모리 질의 토큰. glad 는 이 벤더 확장을 싣지 않아 값을 직접 둔다(GL 레지스트리의 값).
-        static constexpr GLenum kGpuMemoryInfoTotalAvailableNvx   = 0x9048; ///< GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX (KB)
-        static constexpr GLenum kGpuMemoryInfoCurrentAvailableNvx = 0x9049; ///< GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX (KB)
+        static constexpr GLenum kGPUMemoryInfoTotalAvailableNvx   = 0x9048; ///< GPU_MEMORY_INFO_TOTAL_AVAILABLE_MEMORY_NVX (KB)
+        static constexpr GLenum kGPUMemoryInfoCurrentAvailableNvx = 0x9049; ///< GPU_MEMORY_INFO_CURRENT_AVAILABLE_VIDMEM_NVX (KB)
         static constexpr GLenum kTextureFreeMemoryAti             = 0x87FC; ///< TEXTURE_FREE_MEMORY_ATI (KB × 4)
 
         /** @brief 컨텍스트가 이 확장을 내놓는지 봅니다(`glGetStringi( GL_EXTENSIONS, … )`). 컨텍스트가 붙은 스레드에서 부릅니다. */

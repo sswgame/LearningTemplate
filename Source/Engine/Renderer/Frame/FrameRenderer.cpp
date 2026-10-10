@@ -31,20 +31,20 @@ namespace sw
         struct FrameRendererInternal
         {
             /** @brief RHI 백엔드를 외부 프로파일러의 GPU API 종류로 바꿉니다(뷰어가 큐 이름 옆에 보여 준다). */
-            static ProfilerGpuApi toProfilerGpuApi( RHIBackend backend )
+            static ProfilerGPUBackend toProfilerGPUBackend( RHIBackend backend )
             {
                 switch ( backend )
                 {
                     case RHIBackend::DirectX11:
-                        return ProfilerGpuApi::Direct3D11;
+                        return ProfilerGPUBackend::Direct3D11;
                     case RHIBackend::DirectX12:
-                        return ProfilerGpuApi::Direct3D12;
+                        return ProfilerGPUBackend::Direct3D12;
                     case RHIBackend::Vulkan:
-                        return ProfilerGpuApi::Vulkan;
+                        return ProfilerGPUBackend::Vulkan;
                     case RHIBackend::OpenGL:
-                        return ProfilerGpuApi::OpenGl;
+                        return ProfilerGPUBackend::OpenGl;
                 }
-                return ProfilerGpuApi::Direct3D12;
+                return ProfilerGPUBackend::Direct3D12;
             }
         };
 #endif
@@ -114,8 +114,8 @@ namespace sw
         , _gpuComputeScopeSlot{ FrameProfiler::kInvalidSlot }
         , _gpuFrameScopeSlot{ FrameProfiler::kInvalidSlot }
         , _gpuTimeline{}
-        , _listGpuPassSite{}
-        , _pGpuTimelineFailedDevice{ nullptr }
+        , _listGPUPassSite{}
+        , _pGPUTimelineFailedDevice{ nullptr }
         , _lastIndirectDrawCallCount{ 0 }
         , _disabledInputRoleMask{ 0 }
         , _mapMaterialFallback{}
@@ -142,7 +142,7 @@ namespace sw
         , _animationTimeOverride{ -1.0f }
 #endif
         , _bMorphBindsRest{ SW_FALSE }
-        , _bGpuCullingActive{ SW_FALSE }
+        , _bGPUCullingActive{ SW_FALSE }
         , _bPresentCaptureEnabled{ SW_FALSE }
         , _status{ FrameRendererStatus::Uninitialized }
         , _bCallbacksBound{ SW_FALSE }
@@ -242,9 +242,9 @@ namespace sw
 
     uint32 FrameRenderer::gpuScopeSlotFor( size_t passIndex, const string& passName )
     {
-        if ( passIndex >= _listGpuPassScope.size() )
-            _listGpuPassScope.resize( passIndex + 1 );
-        GpuPassScope& scope = _listGpuPassScope[passIndex];
+        if ( passIndex >= _listGPUPassScope.size() )
+            _listGPUPassScope.resize( passIndex + 1 );
+        GPUPassScope& scope = _listGPUPassScope[passIndex];
         if ( scope._profilerSlot != FrameProfiler::kInvalidSlot && scope._passName == passName )
             return scope._profilerSlot;
 
@@ -261,7 +261,7 @@ namespace sw
         return scope._profilerSlot;
     }
 
-    void FrameRenderer::reportGpuPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
+    void FrameRenderer::reportGPUPassTimes( [[maybe_unused]] IRHIDevice* pDevice )
     {
 #if SW_PROFILE_COMPILED
         // **몇 프레임 늦은 값이다.** 기다려서 최신 값을 받으면 재려던 그 파이프라인을 멈춰 세워
@@ -276,16 +276,16 @@ namespace sw
             return;
         if ( pDevice->readTimestamps( _gpuTimestampFrame ) == false )
             return;
-        const vector<float32>& listGpuTimestampMicro = _gpuTimestampFrame._listMicro;
+        const vector<float32>& listGPUTimestampMicro = _gpuTimestampFrame._listMicro;
 
         // 한 구간을 프로파일러에 넣는다. 음수는 그 칸이 이번 프레임에 안 적혔다는 표시다(패스를
         // 건너뛰었거나 첫 사이클). 한쪽만 음수여도 구간이 성립하지 않으므로 둘 다 본다.
         auto reportSpan = [&]( uint32 profilerSlot, size_t beginSlot, size_t endSlot ) -> float32
         {
-            if ( endSlot >= listGpuTimestampMicro.size() )
+            if ( endSlot >= listGPUTimestampMicro.size() )
                 return -1.0f;
-            const float32 beginMicro = listGpuTimestampMicro[beginSlot];
-            const float32 endMicro   = listGpuTimestampMicro[endSlot];
+            const float32 beginMicro = listGPUTimestampMicro[beginSlot];
+            const float32 endMicro   = listGPUTimestampMicro[endSlot];
             if ( beginMicro < 0.0f || endMicro < 0.0f || endMicro < beginMicro )
                 return -1.0f;
             const float32 micro = endMicro - beginMicro;
@@ -297,7 +297,7 @@ namespace sw
         float32                            lastEndMicro{ -1.0f };
         for ( size_t passIndex = 0; passIndex < listPass.size(); ++passIndex )
         {
-            if ( passIndex >= FrameRendererUtil::kGpuTimedPassCapacity )
+            if ( passIndex >= FrameRendererUtil::kGPUTimedPassCapacity )
                 break;
             const size_t  beginSlot = passIndex * 2;
             const float32 endMicro  = reportSpan( gpuScopeSlotFor( passIndex, listPass[passIndex]._name ), beginSlot, beginSlot + 1 );
@@ -312,20 +312,20 @@ namespace sw
             _gpuComputeScopeSlot = engine::getFrameProfiler().registerScope( "GPU.Compute" );
         if ( _gpuFrameScopeSlot == FrameProfiler::kInvalidSlot )
             _gpuFrameScopeSlot = engine::getFrameProfiler().registerScope( "GPU.Frame" );
-        reportSpan( _gpuComputeScopeSlot, FrameRendererUtil::kGpuTimestampSlotComputeBegin, FrameRendererUtil::kGpuTimestampSlotComputeEnd );
-        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGpuTimestampSlotFrameBegin < listGpuTimestampMicro.size() )
+        reportSpan( _gpuComputeScopeSlot, FrameRendererUtil::kGPUTimestampSlotComputeBegin, FrameRendererUtil::kGPUTimestampSlotComputeEnd );
+        if ( lastEndMicro >= 0.0f && FrameRendererUtil::kGPUTimestampSlotFrameBegin < listGPUTimestampMicro.size() )
         {
-            const float32 frameBegin = listGpuTimestampMicro[FrameRendererUtil::kGpuTimestampSlotFrameBegin];
+            const float32 frameBegin = listGPUTimestampMicro[FrameRendererUtil::kGPUTimestampSlotFrameBegin];
             if ( frameBegin >= 0.0f && lastEndMicro >= frameBegin )
                 engine::getFrameProfiler().addSample( _gpuFrameScopeSlot, static_cast<uint64>( ( lastEndMicro - frameBegin ) * 1000.0f ) );
         }
 
         // 같은 값을 Tracy GPU 타임라인으로도 낸다 — 쿼리를 따로 만들지 않는다.
-        exportGpuTimeline( pDevice );
+        exportGPUTimeline( pDevice );
 #endif
     }
 
-    void FrameRenderer::exportGpuTimeline( [[maybe_unused]] IRHIDevice* pDevice )
+    void FrameRenderer::exportGPUTimeline( [[maybe_unused]] IRHIDevice* pDevice )
     {
 #if SW_PROFILER_BACKEND_COMPILED
         IProfilerBackend* pBackend = ProfilerBackend::getActiveBackend();
@@ -335,25 +335,25 @@ namespace sw
         if ( _gpuTimeline.isContextOpenFor( pDevice, pBackend ) == false )
         {
             // GPU 시계를 못 읽는 디바이스는 다시 묻지 않는다(DX11 · Vulkan 의 읽기는 큐를 기다린다).
-            if ( _pGpuTimelineFailedDevice == pDevice )
+            if ( _pGPUTimelineFailedDevice == pDevice )
                 return;
             int64      gpuNow{ 0 };
-            const bool bClockRead = pDevice->readGpuClockNanos( gpuNow );
-            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGpuApi( pDevice->getBackendType() ),
+            const bool bClockRead = pDevice->readGPUClockNanos( gpuNow );
+            const bool bOpened    = bClockRead && _gpuTimeline.openContext( *pBackend, FrameRendererInternal::toProfilerGPUBackend( pDevice->getBackendType() ),
                                                                             pDevice->getBackendName(), pDevice, gpuNow );
             if ( bOpened == false )
             {
-                _pGpuTimelineFailedDevice = pDevice;
+                _pGPUTimelineFailedDevice = pDevice;
                 SW_LOG_WARNING( "GPU timeline for the external profiler is unavailable on %# (GPU clock read %#)", pDevice->getBackendName(),
                                 bClockRead ? "ok" : "failed" );
                 return;
             }
             SW_LOG_INFO( "GPU timeline for the external profiler opened on %#", pDevice->getBackendName() );
         }
-        else if ( pDevice->isGpuClockReadCheap() && _gpuTimeline.advanceAndCheckResync() )
+        else if ( pDevice->isGPUClockReadCheap() && _gpuTimeline.advanceAndCheckResync() )
         {
             int64 gpuNow{ 0 };
-            if ( pDevice->readGpuClockNanos( gpuNow ) )
+            if ( pDevice->readGPUClockNanos( gpuNow ) )
                 _gpuTimeline.resyncClock( *pBackend, gpuNow );
         }
 
@@ -362,12 +362,12 @@ namespace sw
         if ( s_pFrameSite == nullptr || s_pComputeSite == nullptr )
             return;
 
-        _listGpuPassSite.clear();
-        for ( const GpuPassScope& scope : _listGpuPassScope )
+        _listGPUPassSite.clear();
+        for ( const GPUPassScope& scope : _listGPUPassScope )
         {
-            _listGpuPassSite.push_back( scope._pZoneSite );
+            _listGPUPassSite.push_back( scope._pZoneSite );
         }
-        std::ignore = _gpuTimeline.exportFrame( *pBackend, _gpuTimestampFrame, *s_pFrameSite, *s_pComputeSite, _listGpuPassSite );
+        std::ignore = _gpuTimeline.exportFrame( *pBackend, _gpuTimestampFrame, *s_pFrameSite, *s_pComputeSite, _listGPUPassSite );
 #endif
     }
 
@@ -377,11 +377,11 @@ namespace sw
             return;
 
         // 스냅샷이 든 머티리얼 · 인스턴스의 소유를 **디바이스가 살아 있을 때** 놓는다. 스냅샷은 소유를 함께
-        // 실으므로(GpuScene.h) 여기서 비우지 않으면 렌더러가 죽을 때까지 그것들이 살아, 디바이스가 먼저
+        // 실으므로(GPUScene.h) 여기서 비우지 않으면 렌더러가 죽을 때까지 그것들이 살아, 디바이스가 먼저
         // 사라진 뒤 소멸자가 죽은 디바이스에 GPU 자원을 돌려주려 한다(해제 후 사용).
         _graph.releaseCommandLists();
         if ( _pDevice != nullptr )
-            _gpuScene.releaseGpu( _pDevice );
+            _gpuScene.releaseGPU( _pDevice );
         _gpuScene.clear();
         _sceneBuilder.clear();
 
@@ -412,7 +412,7 @@ namespace sw
         _pDevice         = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 서도 옛 시계 기준을 쓰지 않게 잊는다.
         _gpuTimeline.forgetContext();
-        _pGpuTimelineFailedDevice = nullptr;
+        _pGPUTimelineFailedDevice = nullptr;
         _pTaskManager             = nullptr;
         _status                   = FrameRendererStatus::Uninitialized;
         _statusMessage.clear();
@@ -455,13 +455,13 @@ namespace sw
 
 #if SW_PROFILE_COMPILED
         // 타임스탬프 칸은 앞쪽 패스에만 있다. 넘는 패스는 GPU 시간(과 GPU.Frame 의 끝)이 빠지므로 로드 때 알린다.
-        const uint32 untimedPassCount = FrameRendererUtil::countUntimedGpuPass( listPass.size() );
+        const uint32 untimedPassCount = FrameRendererUtil::countUntimedGPUPass( listPass.size() );
         if ( untimedPassCount > 0 )
         {
             SW_LOG_WARNING( "Pipeline '%#' has %# passes; GPU timestamps cover the first %#, so %# pass(es) from '%#' on are not timed "
-                            "(constant::kMaxGpuTimestampSlot)",
-                            _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGpuTimedPassCapacity, untimedPassCount,
-                            listPass[FrameRendererUtil::kGpuTimedPassCapacity]._name );
+                            "(constant::kMaxGPUTimestampSlot)",
+                            _pipelineResource.getDesc()._name, listPass.size(), FrameRendererUtil::kGPUTimedPassCapacity, untimedPassCount,
+                            listPass[FrameRendererUtil::kGPUTimedPassCapacity]._name );
         }
 #endif
 
@@ -531,19 +531,19 @@ namespace sw
             _listPassContext.resize( passCount + 1 );
 
         _pCmd->beginCommandList();
-        _bGpuCullingActive = SW_FALSE;
+        _bGPUCullingActive = SW_FALSE;
         _indirectDrawCallCount.store( 0, std::memory_order_relaxed );
         _animTimer.updateTimer();
 
 #if SW_PROFILE_COMPILED
         // 프레임의 첫 GPU 명령 자리. 패스 시간 합과 이 값의 차이가 "패스 밖의 GPU 시간"(컴퓨트
         // 프리패스 · 업로드 · 배리어)이다. 게이트는 패스 타임스탬프와 같다(FrameRendererPassExecute).
-        const bool bWriteGpuTime = engine::getFrameProfiler().isEnabled() &&
-                                   FrameRendererUtil::kGpuTimestampSlotFrameBegin < pDevice->getTimestampSlotCount();
-        if ( bWriteGpuTime )
+        const bool bWriteGPUTime = engine::getFrameProfiler().isEnabled() &&
+                                   FrameRendererUtil::kGPUTimestampSlotFrameBegin < pDevice->getTimestampSlotCount();
+        if ( bWriteGPUTime )
         {
-            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotFrameBegin );
-            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeBegin );
+            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotFrameBegin );
+            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeBegin );
         }
 #endif
 
@@ -558,8 +558,8 @@ namespace sw
         drawCanvasTargets();
 
 #if SW_PROFILE_COMPILED
-        if ( bWriteGpuTime )
-            _pCmd->writeTimestamp( FrameRendererUtil::kGpuTimestampSlotComputeEnd );
+        if ( bWriteGPUTime )
+            _pCmd->writeTimestamp( FrameRendererUtil::kGPUTimestampSlotComputeEnd );
 #endif
 
         // 프리패스 리스트를 먼저 닫아 큐에 낸다 — 뷰마다의 리스트 · 병렬 패스 리스트보다 인다이렉트 인자 준비가 GPU 타임라인에서 먼저 끝나도록
@@ -708,7 +708,7 @@ namespace sw
                                                     static_cast<float64>( getAnimationTime() ), RenderViewCollector::getDefaultBudget(), _directViewScheduler,
                                                     _listDirectViewScratch );
         }
-        // 패킷 경로와 **같은 길**이다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GpuScene 에는 씬을 읽는 메서드가 없다.
+        // 패킷 경로와 **같은 길**이다. 빌더가 스냅샷을 만들고 RT 쪽이 받는다. 렌더 스레드 쪽 GPUScene 에는 씬을 읽는 메서드가 없다.
         // 주 카메라의 정렬 축도 패킷 경로(EngineLoop)처럼 건다 — 직교 카메라는 시선 축, 원근은 거리.
         if ( pMainCamera != nullptr )
             _sceneBuilder.setTransparentSortAxis( Render2DSettings::getActive().computeTransparentSortAxis( pMainCamera->isOrthographic(), pMainCamera->getCameraForward() ) );
@@ -736,7 +736,7 @@ namespace sw
         _mainView._settings = packet._mainView;
         // _gpuScene 은 FrameRenderer 가 프레임 사이에 계속 소유한다(GPU 버퍼 · 핸들 · 머티리얼 데이터 버퍼 보존).
         // 패킷에서는 CPU 스냅샷(인스턴스 · 배치 목록)만 옮겨 온다. 주의: 통째로 move 하면 직전 프레임에 업로드한
-        // GPU 버퍼 · 디스크립터를 releaseGpu() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
+        // GPU 버퍼 · 디스크립터를 releaseGPU() 없이 잃어버려 매 프레임 새로 만드는 누수가 된다.
         _gpuScene.adoptCpuSnapshot( packet._gpuScene );
         // 캔버스(화면 2D)도 패킷으로만 온다(렌더 스레드는 위젯을 볼 수 없다). 바꿔치기라 지난 프레임의 저장소가 패킷으로 돌아간다.
         setCanvasFrame( packet._canvas );
@@ -786,8 +786,8 @@ namespace sw
     bool FrameRenderer::uploadSceneAndSubmit( IRHIDevice* pDevice, const utf8* pCallerName )
     {
         // 컬링 컴퓨트가 개수를 만들지 **업로드 전에** 알려야 한다. 간접 인자의 초기값이 달라지기 때문이다.
-        // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGpuFilled() 가 답한다.
-        _gpuScene.setIndirectCountsFilledByGpu( usesGpuGeneratedCommands() );
+        // 실제로 그렇게 됐는지는 upload 뒤에 areIndirectCountsGPUFilled() 가 답한다.
+        _gpuScene.setIndirectCountsFilledByGPU( usesGPUGeneratedCommands() );
         // 모프 풀 오프셋은 배치 표에 실려 업로드 시점에 완성돼야 한다.
         prepareMeshMorphPool();
         _gpuScene.setVertexPoolEnabled( ( ( _vertexPoolOverride >= 0 ) ? _vertexPoolOverride : gv_vertexPool ) != 0 );
@@ -817,7 +817,7 @@ namespace sw
 
         const bool bOk             = submitGraph( pDevice );
         _lastIndirectDrawCallCount = _indirectDrawCallCount.load( std::memory_order_relaxed );
-        reportGpuPassTimes( pDevice );
+        reportGPUPassTimes( pDevice );
         return bOk;
     }
 } // namespace sw

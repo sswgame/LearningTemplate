@@ -217,7 +217,7 @@ namespace sw
             return;
 
         VkDevice dev = _device;
-        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, framebuffer, ownedRenderPass]()
         {
             if ( framebuffer != VK_NULL_HANDLE )
                 vkDestroyFramebuffer( dev, framebuffer, nullptr );

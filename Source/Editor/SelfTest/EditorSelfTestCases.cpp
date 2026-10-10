@@ -736,7 +736,7 @@ namespace sw::editor
                 return false;
             }
 
-            static EditorSelfTestStep runProfilerGpuMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
+            static EditorSelfTestStep runProfilerGPUMemoryTabDrawsTheLedger( EditorSelfTestContext& context )
             {
                 constexpr const utf8* kProfilerPanelId = "profiler";
                 constexpr uint32      kMaxStepCount    = 30;
@@ -925,7 +925,7 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( HierarchyTag, "hierarchy.tagFilter", 600, &EditorSelfTestCasesInternal::runHierarchyTagFilter );
     SW_EDITOR_SELF_TEST( HierarchyOffscreenRows, "hierarchy.offscreenRootsKeepTheirPlace", 610, &EditorSelfTestCasesInternal::runHierarchyOffscreenRootsKeepTheirPlace );
     SW_EDITOR_SELF_TEST( SceneViewResize, "sceneView.resizeEveryFrame", 700, &EditorSelfTestCasesInternal::runSceneViewResizeEveryFrame );
-    SW_EDITOR_SELF_TEST( ProfilerGpuMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGpuMemoryTabDrawsTheLedger );
+    SW_EDITOR_SELF_TEST( ProfilerGPUMemory, "profiler.gpuMemoryTab", 800, &EditorSelfTestCasesInternal::runProfilerGPUMemoryTabDrawsTheLedger );
     SW_EDITOR_SELF_TEST( UserSettingsPanel, "userSettings.panelDrawsEveryTab", 900, &EditorSelfTestCasesInternal::runUserSettingsPanelDrawsEveryTab );
     SW_EDITOR_SELF_TEST( DpiMonitorScale, "dpi.monitorScaleFollows", 950, &EditorSelfTestCasesInternal::runDpiMonitorScaleFollows );
 } // namespace sw::editor

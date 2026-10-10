@@ -41,7 +41,7 @@
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`.slot1~3`)을 쓴다. 사용 한도에 두 번 걸렸으니 도우미는 셋 안팎으로 둔다. **검증은 마지막에 한 번**(사용자 결정), 큰 이동 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
 1. **약어 철자 통일 — 실제 치환.** 계획 [약어 철자 통일](AcronymSpelling.md), 도구는 `Scripts/lint/fixer/FormatAcronymSpelling.py`(`--report` 사전 실행 · `--acronym <약어>` · `--apply-files` · `--rename-folders`), 등록부 `Scripts/lint/AcronymRegistry.py`, 게이트 `CheckAcronymSpelling`(`kEnforced` 에 오른 약어만 강제).
-   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → Gpu → Ui → Cpu → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
+   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → GPU → Ui → Cpu → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
    약어 단계마다: 코드모드 → 셰이더(HLSL)와 문자열은 손으로 맞춘다(코드모드가 안 고친다) → reconfigure(코드젠) → Debug 풀 컴파일 경고 0 → 린트 → `kEnforced` 에 올림 → 커밋.
    첫 단계에서 `CheckFunctionVocabulary` 의 `AcronymRun` 검사를 반대로(약어는 대문자) 고치고 AGENTS.md 의 약어 문안을 바꾼다. 폴더 · 모듈 이름 14곳(`--rename-folders`)은 모듈 DLL 이름이 바뀌므로 `Bin/Modules` 산출물 정리(configure)와 모듈 ABI 판을 같이 본다.
    의심 충돌: 새 철자가 이미 있는 이름(`Id` · `Ui` · `Rhi` · `pRhi` · `editorApi` · `platformIo` · `textureId`), 외부 헤더와 겹치는 91개(Box2D `shapeIdA` · `bodyIdA` 와 `HttpResponse` 확인), 이어 붙은 대문자 약어 19개(`RHIGPUTimestamp` · `RTSAICommander` · `XMLJSON…` — 풀어 쓴다).
@@ -63,7 +63,7 @@
 
 ### 에디터 작은 단위(E5 · G2 · G3 · H1)가 남긴 검증 대기
 
-`main` 에 있다(`0a4376257` ~ `6f748f3ba`). 단위마다 Debug 경고 0, 새 시험은 통과(`EditorWindowTitleTest` 4 · `ScreenshotPathUtilTest` 2 · `RenderPassGpuTest.ScreenshotDumpWritesPngAndPpm` · `RenderDocCaptureTest` 1 · `AssertDialogTest` 4). 새 시나리오 `windowtitle` · `screenshotbutton` · `renderdocbutton` · `assertdialog` 는 폴더 이동 전 바이너리로 DX12 단독 PASS.
+`main` 에 있다(`0a4376257` ~ `6f748f3ba`). 단위마다 Debug 경고 0, 새 시험은 통과(`EditorWindowTitleTest` 4 · `ScreenshotPathUtilTest` 2 · `RenderPassGPUTest.ScreenshotDumpWritesPngAndPpm` · `RenderDocCaptureTest` 1 · `AssertDialogTest` 4). 새 시나리오 `windowtitle` · `screenshotbutton` · `renderdocbutton` · `assertdialog` 는 폴더 이동 전 바이너리로 DX12 단독 PASS.
 **전체 검증 때 돌릴 것**: rebase 뒤 전체 빌드, 새 시나리오 넷 재실행, 기존 `sceneviewgameview` · `workflow` 회귀, `AppScenarioTest` 전체(네 백엔드), `AppTest`(`-unattended` 추가), 리눅스 X11 · dlopen 갈래, 실제 RenderDoc 캡처(이 PC 에 RenderDoc 이 없다), 단언 대화상자 세 단추(모달이라 손으로만).
 남은 작은 일: 스크린샷 토스트 "Show in Explorer" 단추(알림 관리자에 동작 단추가 없다), `screenshotbutton` 시나리오가 `Bin/Saved/Screenshots` 에 남기는 PNG, Engine README 개발 명령 줄의 경로 확인, 시나리오가 늘어 `AppTest` 의 `HOST_SHARDS` 조정 검토.
 RenderDoc 은 기동 단계를 따로 두지 않고 RHI 단계 맨 앞에서 올린다. `ThirdParty/renderdoc` 에 원문 헤더를 넣었고 그 폴더의 `.clang-format` 은 `DisableFormat` 이다.

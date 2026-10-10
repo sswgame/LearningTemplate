@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 
 #include "Core/Common/HashUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -14,7 +14,7 @@
 #include "Engine/Graphics/Material/MaterialUtil.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/3D/SkeletalMeshComponent.h"
 #include "Engine/Object/Component/Component.h"
@@ -32,14 +32,14 @@ namespace sw
 {
     namespace
     {
-        struct GpuSceneBuilderInternal
+        struct GPUSceneBuilderInternal
         {
             /**
              * @brief 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드 · 스프라이트 프레임과 색)가 raw 와 **비트 단위로** 다른지 확인합니다.
              * @details 엡실론 비교는 매 프레임 엡실론 미만으로 움직이는 물체를 영원히 "안 바뀜" 으로 보고 화면에
              *          오차를 누적시킵니다(DrawCandidate::operator== 와 같은 이유). 전체 갱신과 부분 갱신이 같은 판정을 씁니다.
              */
-            static bool isPayloadChanged( const GpuInstance& instance, const GpuInstance& raw )
+            static bool isPayloadChanged( const GPUInstance& instance, const GPUInstance& raw )
             {
                 return Memory::compare( &instance._world, &raw._world, sizeof( instance._world ) ) != 0 ||
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
@@ -49,7 +49,7 @@ namespace sw
             }
 
             /** @brief raw 의 페이로드를 인스턴스에 옮깁니다. `_meshBatchIndex` · `_materialIndex` 는 그대로 둡니다. 배치 구성이 같을 때만 부릅니다. */
-            static void copyPayload( const GpuInstance& raw, GpuInstance& outInstance )
+            static void copyPayload( const GPUInstance& raw, GPUInstance& outInstance )
             {
                 outInstance._world                = raw._world;
                 outInstance._boundsCenter         = raw._boundsCenter;
@@ -74,7 +74,7 @@ namespace sw
             }
 
             /** @brief 머티리얼의 텍스처 SRV 를 배치에 값으로 복사합니다(렌더 스레드는 Material* 를 따라갈 수 없습니다). */
-            static void fillMaterialTextureSrvs( GpuMeshBatch& batch, const Material* pMaterial )
+            static void fillMaterialTextureSrvs( GPUMeshBatch& batch, const Material* pMaterial )
             {
                 if ( pMaterial == nullptr )
                     return;
@@ -102,7 +102,7 @@ namespace sw
 
 namespace sw
 {
-    void GpuSceneBuilder::invalidateBuildCache()
+    void GPUSceneBuilder::invalidateBuildCache()
     {
         _listBuiltCandidate.clear();
         _lastCameraPos              = float3{};
@@ -112,7 +112,7 @@ namespace sw
         _snapshot._bCpuDirty        = SW_TRUE;
     }
 
-    void GpuSceneBuilder::clear()
+    void GPUSceneBuilder::clear()
     {
         _instanceRing.clear();
         _snapshot._pListInstance.reset();
@@ -131,7 +131,7 @@ namespace sw
         invalidateBuildCache();
     }
 
-    void GpuSceneBuilder::setMergeBatchesAcrossMaterials( bool bMerge )
+    void GPUSceneBuilder::setMergeBatchesAcrossMaterials( bool bMerge )
     {
         const uint8 value = bMerge ? 1 : 0;
         if ( _bMergeAcrossMaterials == value )
@@ -142,7 +142,7 @@ namespace sw
         invalidateBuildCache();
     }
 
-    uint64 GpuSceneBuilder::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance )
+    uint64 GPUSceneBuilder::permutationHashFor( const Material* pMaterial, const MaterialInstance* pInstance )
     {
         if ( pMaterial == nullptr )
             return 0;
@@ -153,7 +153,7 @@ namespace sw
         return hash;
     }
 
-    uint32 GpuSceneBuilder::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance )
+    uint32 GPUSceneBuilder::shaderPermutationFor( const Material* pMaterial, const MaterialInstance* pInstance )
     {
         if ( pMaterial == nullptr )
             return kInvalidShaderPermutation;
@@ -162,15 +162,15 @@ namespace sw
         if ( it != _mapPermutationToIndex.end() )
             return it->second;
 
-        GpuShaderPermutation permutation{};
+        GPUShaderPermutation permutation{};
         permutation._shaderPath = pMaterial->getShaderPath();
         permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : pMaterial->getCachedShaderDefines();
         permutation._hash       = hash;
 
         // copy-on-write: 목록은 RT 와 공유하므로 제자리에 더하지 않는다. 새 퍼뮤테이션은 드물어(머티리얼 종류만큼) 복사가 싸다.
-        shared_ptr<vector<GpuShaderPermutation>> pList = ( _snapshot._pListShaderPermutation != nullptr )
-                                                           ? make_shared<vector<GpuShaderPermutation>>( *_snapshot._pListShaderPermutation )
-                                                           : make_shared<vector<GpuShaderPermutation>>();
+        shared_ptr<vector<GPUShaderPermutation>> pList = ( _snapshot._pListShaderPermutation != nullptr )
+                                                           ? make_shared<vector<GPUShaderPermutation>>( *_snapshot._pListShaderPermutation )
+                                                           : make_shared<vector<GPUShaderPermutation>>();
         pList->push_back( std::move( permutation ) );
         _snapshot._pListShaderPermutation = pList;
 
@@ -179,7 +179,7 @@ namespace sw
         return index;
     }
 
-    Material* GpuSceneBuilder::batchKeyMaterial( Material* pMaterial, uint64 permutationHash )
+    Material* GPUSceneBuilder::batchKeyMaterial( Material* pMaterial, uint64 permutationHash )
     {
         if ( _bMergeAcrossMaterials == SW_FALSE || pMaterial == nullptr )
             return pMaterial;
@@ -193,7 +193,7 @@ namespace sw
         return pMaterial;
     }
 
-    void GpuSceneBuilder::rebuildPartitionTables()
+    void GPUSceneBuilder::rebuildPartitionTables()
     {
         const uint32 count = static_cast<uint32>( _listScratchCandidate.size() );
         _listScratchOpaqueEntry.clear();
@@ -244,7 +244,7 @@ namespace sw
         }
     }
 
-    bool GpuSceneBuilder::fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate )
+    bool GPUSceneBuilder::fillCandidateFromPrimitive( MeshComponent* pMeshComp, Scene* pScene, DrawCandidate& candidate )
     {
         if ( pMeshComp == nullptr || pMeshComp->isVisible() == false )
             return false;
@@ -263,8 +263,8 @@ namespace sw
         candidate._boundsCenter         = world.getTranslation();
         candidate._localBoundsRadius    = pMeshComp->getBoundsRadius();
         candidate._boundsRadius         = candidate._localBoundsRadius * world.getMaximumAxisScale();
-        candidate._bReverseCulling      = GpuSceneBuilderInternal::computeReverseCulling( world );
-        candidate._spinSeed             = pMeshComp->getGpuSpinSeed();
+        candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
+        candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
         candidate._sortKey              = pMeshComp->getSortKey();
@@ -282,7 +282,7 @@ namespace sw
         return true;
     }
 
-    bool GpuSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
+    bool GPUSceneBuilder::fillCandidateFromInstanceEntry( const PrimitiveInstanceEntry& entry, Scene* pScene, DrawCandidate& candidate )
     {
         const MeshInstanceBatch* pBatch = entry._pBatch;
         if ( pBatch == nullptr || pBatch->isVisible() == false || entry._index >= pBatch->getCount() )
@@ -302,7 +302,7 @@ namespace sw
         candidate._boundsCenter              = item._world.getTranslation();
         candidate._localBoundsRadius         = item._boundsRadius;
         candidate._boundsRadius              = item._boundsRadius * item._world.getMaximumAxisScale();
-        candidate._bReverseCulling           = GpuSceneBuilderInternal::computeReverseCulling( item._world );
+        candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
         candidate._vertexAnimationPhase      = 0.0f;
@@ -316,7 +316,7 @@ namespace sw
         return true;
     }
 
-    void GpuSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
+    void GPUSceneBuilder::fillCandidateMaterial( DrawCandidate& candidate, Material* pMaterial, Scene* pScene, uint32 fallbackBlendMode )
     {
         // 머티리얼이 없으면 인스턴스의 부모가 먼저고, 씬 기본 머티리얼은 그다음이다. 순서가 뒤집히면 인스턴스만 붙은 메시의
         // 배치가 머티리얼 · 그룹 · 텍스처 · stride 는 기본 머티리얼 것, 원소 바이트 · 퍼뮤테이션은 인스턴스 것인 섞인 상태가 된다
@@ -327,20 +327,20 @@ namespace sw
             pMaterial = pScene->getMaterial();
         // 날 포인터로 먼저 견주고, 다르면 소유를 싣는다. 같으면 참조 카운트를 건드리지 않는다.
         if ( candidate._material.get() != pMaterial )
-            candidate._material = GpuSceneBuilderInternal::shareMaterial( pMaterial );
+            candidate._material = GPUSceneBuilderInternal::shareMaterial( pMaterial );
 
         const Material* pBlendSource = candidate._material.get();
         candidate._blendMode         = ( pBlendSource != nullptr ) ? static_cast<uint32>( pBlendSource->getBlendMode() ) : fallbackBlendMode;
     }
 
-    void GpuSceneBuilder::stampPermutationHash( DrawCandidate& candidate )
+    void GPUSceneBuilder::stampPermutationHash( DrawCandidate& candidate )
     {
         // 어느 PSO 로 그릴지를 정하는 값이다. 배치 키의 일부이고, 여기서 한 번 구해 두면
         // 나누기 · 정렬이 다시 구하지 않는다(투명은 원소마다 물었다).
         candidate._permutationHash = permutationHashFor( candidate._material.get(), candidate._instance.get() );
     }
 
-    void GpuSceneBuilder::fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance )
+    void GPUSceneBuilder::fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance )
     {
         outInstance._world                = candidate._world;
         outInstance._boundsCenter         = candidate._boundsCenter;
@@ -351,7 +351,7 @@ namespace sw
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;
     }
 
-    bool GpuSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
+    bool GPUSceneBuilder::copyCandidateTransforms( const PrimitiveRegistry& primitives )
     {
         // 행렬 하나(64 바이트)와 번호 셋을 읽는 것뿐이다. 움직였다고 메시 컴포넌트 · 소유 오브젝트(활성) · 메시 · 머티리얼이
         // 바뀌지는 않으므로 후보를 다시 채우지 않는다.
@@ -380,7 +380,7 @@ namespace sw
                     candidate._world            = pPage->_arrWorldMatrix[transformSlot & SceneTransformPage::kSlotMask];
                     candidate._boundsCenter     = candidate._world.getTranslation();
                     candidate._boundsRadius     = candidate._localBoundsRadius * candidate._world.getMaximumAxisScale();
-                    const uint8 bReverseCulling = GpuSceneBuilderInternal::computeReverseCulling( candidate._world );
+                    const uint8 bReverseCulling = GPUSceneBuilderInternal::computeReverseCulling( candidate._world );
                     if ( bReverseCulling != candidate._bReverseCulling )
                     {
                         candidate._bReverseCulling = bReverseCulling;
@@ -400,7 +400,7 @@ namespace sw
         return job._bReverseCullingChanged.load( std::memory_order_relaxed );
     }
 
-    void GpuSceneBuilder::moveTransformSlotsWithoutCandidate( uint32 meshCount )
+    void GPUSceneBuilder::moveTransformSlotsWithoutCandidate( uint32 meshCount )
     {
         size_t keptCount = 0;
         for ( const uint32 slot : _listTransformDirtyPrimitive )
@@ -414,9 +414,9 @@ namespace sw
         _listTransformDirtyPrimitive.resize( keptCount );
     }
 
-    void GpuSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
+    void GPUSceneBuilder::buildFromScene( Scene* pScene, const float3& cameraPos )
     {
-        SW_PROFILE_SCOPE( "GT.GpuScene.build" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build" );
 
         if ( pScene == nullptr )
         {
@@ -433,7 +433,7 @@ namespace sw
 
         // 여기서 움직인 프리미티브가 onWorldTransformUpdated 를 통해 스스로 더티를 찍는다.
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.flushTransforms" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.flushTransforms" );
             pObjects->flushSceneTransforms();
         }
 
@@ -494,7 +494,7 @@ namespace sw
         bool bPartialAnyChange = false;
         if ( bCanPartial )
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
             // 지난 프레임 후보를 작업 자리로 가져온다. 이중 버퍼라 scratch 는 두 프레임 전 것이다.
             _listScratchCandidate.swap( _listBuiltCandidate );
             bPartialDone = _listScratchCandidate.size() >= _lastCandidateCount;
@@ -572,7 +572,7 @@ namespace sw
         bool bAllContentSame = false;
         if ( bPartialDone == false )
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.collect" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.collect" );
             const uint32 primitiveCount = slotCount;
             _listCollectFlag.resize( primitiveCount );
 
@@ -586,7 +586,7 @@ namespace sw
             // 지난 후보 배열은 **읽기만** 한다. const 로 꺼낸 포인터다.
             struct CollectJob
             {
-                GpuSceneBuilder*              _pBuilder{ nullptr };
+                GPUSceneBuilder*              _pBuilder{ nullptr };
                 Scene*                        _pScene{ nullptr };
                 MeshComponent* const*         _ppPrimitive{ nullptr };
                 const PrimitiveInstanceEntry* _pEntry{ nullptr };
@@ -690,7 +690,7 @@ namespace sw
         // 올라간다). 여기서 한 번 더 확인해 헛된 재구축을 막는다.
         bool bContentSame = false;
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.compare" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.compare" );
             // 부분 수집을 했으면 **무엇이 바뀌었는지 이미 안다**. 두 배열을 통째로 비교하지 않는다.
             // (그리고 그때 `_listBuiltCandidate` 는 두 프레임 전 것이라 비교 대상이 될 수도 없다.)
             // 전체 수집은 워커가 칸마다 비교를 끝냈다. 여기는 그 합만 읽는다(두 배열을 통째로 다시 비교하지 않는다).
@@ -721,16 +721,16 @@ namespace sw
         // 나타나 아무도 보지 않으므로 재는 자리를 둔다.
         bool bBatchKeysSame = false;
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.batchKeys" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.batchKeys" );
             bBatchKeysSame = bPartialDone ? ( bContentSame == false && bPartialKeysSame )
                                           : ( bContentSame == false && bAllKeySame );
         }
 
         if ( bContentSame == false )
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.fill" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.fill" );
             // 이 스레드에서 그대로 채운다. 워커로 나누면 **모든 크기에서 느려진다**. 원소당 일이
-            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GpuSceneBuilder.h buildFromScene 주석의 숫자).
+            // 필드 몇 개 복사뿐이라 디스패치와 대기가 일보다 비싸다(GPUSceneBuilder.h buildFromScene 주석의 숫자).
             //
             // 부분 수집을 했으면 **바뀐 후보만** 옮긴다. raw 는 후보에서 1:1 로 나오는 값이라, 손대지
             // 않은 후보의 raw 는 지난 프레임 것이 그대로 맞다. (전체 수집 프레임에는 raw 자체가
@@ -759,17 +759,17 @@ namespace sw
 
             if ( bBatchKeysSame == false )
             {
-                SW_PROFILE_SCOPE( "GT.GpuScene.build.partition" );
+                SW_PROFILE_SCOPE( "GT.GPUScene.build.partition" );
                 rebuildPartitionTables();
             }
         }
 
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.batches" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.batches" );
             sortTransparent( cameraPos );
 
             // 배치 구성이 그대로면 **다시 나누지 않는다**. 인스턴스 값만 제자리에서 갱신한다.
-            // 물체가 움직였다고 인스턴스 · 배치 목록을 통째로 다시 만들면 GpuScene 빌드의 절반이 넘는다. 언리얼 GPUScene 도
+            // 물체가 움직였다고 인스턴스 · 배치 목록을 통째로 다시 만들면 GPUScene 빌드의 절반이 넘는다. 언리얼 GPUScene 도
             // 프리미티브가 움직였다고 자료구조를 다시 만들지는 않는다.
             const bool bRefreshed = bBatchKeysSame && refreshInstancesInPlace( bPartialDone );
             if ( bRefreshed == false )
@@ -781,7 +781,7 @@ namespace sw
                 buildBatches();
             }
             {
-                SW_PROFILE_SCOPE( "GT.GpuScene.build.free" );
+                SW_PROFILE_SCOPE( "GT.GPUScene.build.free" );
                 freeUnusedMaterialElements();
             }
         }
@@ -796,12 +796,12 @@ namespace sw
         _snapshot._bCpuDirty        = SW_TRUE;
 
         // **내용이 바뀐 이 자리에서만 발행한다.** 내용이 그대로인 프레임은 여기까지 오지 않으므로 지난 배열이 그대로 실린다.
-        // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GpuInstanceRing.h).
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.publish" );
+        // 발행은 링 슬롯의 포인터를 넘기는 것이다. 복사도 옮기기도 되복사도 없다(GPUInstanceRing.h).
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.publish" );
         publishInstances();
     }
 
-    void GpuSceneBuilder::refreshReloadedTextures()
+    void GPUSceneBuilder::refreshReloadedTextures()
     {
         if ( engine::areEngineServicesBound() == false )
             return;
@@ -822,26 +822,26 @@ namespace sw
             MaterialUtil::bumpPermutationGeneration();
     }
 
-    void GpuSceneBuilder::publishInstances()
+    void GPUSceneBuilder::publishInstances()
     {
         _snapshot._pListInstance = _instanceRing.publish( _snapshot._bAllInstancesDirty != SW_FALSE, _snapshot._listDirtyInstanceRun );
     }
 
-    void GpuSceneBuilder::requestGpuUploads( GpuUploadQueue& queue ) const
+    void GPUSceneBuilder::requestGPUUploads( GPUUploadQueue& queue ) const
     {
         // 배치가 메시의 소유를 들고 있으므로(스냅샷 소유 규칙) 큐에 넘겨도 워커가 도는 동안 사라지지 않는다.
-        for ( const GpuMeshBatch& batch : _snapshot._listAllBatch )
+        for ( const GPUMeshBatch& batch : _snapshot._listAllBatch )
         {
             queue.requestMesh( batch._mesh );
         }
     }
 
-    void GpuSceneBuilder::collectSkinPalettes( GameObjectManager& objects )
+    void GPUSceneBuilder::collectSkinPalettes( GameObjectManager& objects )
     {
         const AnimationSystem& animation = objects.getAnimationSystem();
         if ( animation.getUnitCount() == 0 && _snapshot._listSkinPalette.empty() )
             return;
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.skinPalettes" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.skinPalettes" );
 
         _snapshot._listSkinPalette.clear();
         shared_ptr<vector<float4>>  listRow    = make_shared<vector<float4>>();
@@ -849,7 +849,7 @@ namespace sw
         // 행벡터 4x4 의 0 · 1 · 2 열 — 셰이더는 dot( float4( p, 1 ), 열 ) 로 옮긴다(meshskin.hlsl). 모프 가중치는 [0, 1] 로 묶어 싣는다.
         auto appendPalette = [this, &listRow, &listWeight]( const Mesh* pMesh, const vector<float4x4>& listPalette, const vector<float32>* pListMorphWeight )
         {
-            GpuSkinPalette entry{};
+            GPUSkinPalette entry{};
             entry._pMesh     = pMesh;
             entry._firstRow  = static_cast<uint32>( listRow->size() );
             entry._boneCount = static_cast<uint32>( listPalette.size() );
@@ -897,19 +897,19 @@ namespace sw
         _snapshot._vertexAnimationTime = static_cast<float32>( animation.getCrowd().getClock() );
     }
 
-    void GpuSceneBuilder::exportCpuSnapshot( GpuSceneSnapshot& outSnapshot )
+    void GPUSceneBuilder::exportCpuSnapshot( GPUSceneSnapshot& outSnapshot )
     {
-        // 옮겨지는 것은 GpuSceneSnapshot 이 든 것 **모두이고 그것뿐**이다. 복사다. 퍼뮤테이션 표는 GT 가
+        // 옮겨지는 것은 GPUSceneSnapshot 이 든 것 **모두이고 그것뿐**이다. 복사다. 퍼뮤테이션 표는 GT 가
         // 계속 늘려 가는 기준이라 빼앗아 가면 다음 프레임의 인덱스가 0 부터 다시 매겨진다.
         outSnapshot          = _snapshot;
         _snapshot._bCpuDirty = SW_FALSE;
     }
 
-    void GpuSceneBuilder::sortTransparent( const float3& cameraPos )
+    void GPUSceneBuilder::sortTransparent( const float3& cameraPos )
     {
         if ( _listScratchTransparentIdx.size() <= 1 )
             return;
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.sortTransparent" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.sortTransparent" );
 
         // 키를 한 번만 구한다. 비교 함수 안에서 거리를 다시 구하면 원소마다 raw 를 무작위로 다시 읽는다(헤더 주석).
         // 정렬 레이어 키 0 은 "기본" 자리표다 — 표의 기본 키로 바꿔야 Default 레이어의 스프라이트와 3D 투명 물체가 한 줄에 선다.
@@ -924,7 +924,7 @@ namespace sw
             _listTransparentSortKey[sortIndex] = makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, _transparentSortAxis, candidateIndex );
         }
         // 레이어 키 → 먼 것 → 후보 인덱스. 정렬이 결정적이어야 "순서가 그대로" 판정이 흔들리지 않는다.
-        const auto isFartherFirst = &GpuSceneBuilder::isDrawnBefore;
+        const auto isFartherFirst = &GPUSceneBuilder::isDrawnBefore;
 
         // **지난 프레임 순서에서 출발한다.** 나누기를 다시 하지 않은 프레임이면 `_listScratchTransparentIdx` 가 지난 정렬 결과
         // 그대로라, 한 프레임에 조금씩 움직인 물체들은 거의 정렬돼 있다. 삽입 정렬은 (원소 수 + 뒤집힌 쌍 수) 에 비례한다.
@@ -955,7 +955,7 @@ namespace sw
         }
     }
 
-    bool GpuSceneBuilder::isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
+    bool GPUSceneBuilder::isDrawnBefore( const TransparentSortKey& keyA, const TransparentSortKey& keyB )
     {
         if ( keyA._sortKey != keyB._sortKey )
             return keyA._sortKey < keyB._sortKey;
@@ -964,7 +964,7 @@ namespace sw
         return keyA._candidateIndex < keyB._candidateIndex;
     }
 
-    GpuSceneBuilder::TransparentSortKey GpuSceneBuilder::makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis,
+    GPUSceneBuilder::TransparentSortKey GPUSceneBuilder::makeTransparentSortKey( uint32 sortLayer, const float3& center, const float3& eye, const float3& axis,
                                                                                  uint32 orderIndex )
     {
         TransparentSortKey key;
@@ -974,16 +974,16 @@ namespace sw
         return key;
     }
 
-    void GpuSceneBuilder::setTransparentSortAxis( const float3& axis )
+    void GPUSceneBuilder::setTransparentSortAxis( const float3& axis )
     {
         _transparentSortAxis = axis;
     }
 
-    void GpuSceneBuilder::buildViewTransparentOrders( const vector<RenderViewRequest>& listView )
+    void GPUSceneBuilder::buildViewTransparentOrders( const vector<RenderViewRequest>& listView )
     {
         _snapshot._listViewTransparentOrder.clear();
-        const vector<GpuInstance>*  pInstance = _instanceRing.getPublished();
-        const vector<GpuMeshBatch>& listBatch = _snapshot._listTransparentBatch;
+        const vector<GPUInstance>*  pInstance = _instanceRing.getPublished();
+        const vector<GPUMeshBatch>& listBatch = _snapshot._listTransparentBatch;
         if ( pInstance == nullptr || listBatch.empty() || listView.empty() )
             return;
         const uint32 instanceCount = static_cast<uint32>( pInstance->size() );
@@ -992,7 +992,7 @@ namespace sw
         // 꼬리는 투명 후보마다 인스턴스 하나다(`_listBuiltTransparentIdx` 순서). 어긋나면 이 프레임은 주 순서로 그린다.
         if ( tailCount == 0 || _listBuiltTransparentIdx.size() != tailCount )
             return;
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.viewTransparentOrder" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.viewTransparentOrder" );
 
         const uint32 defaultSortKey = Render2DSettings::getActive().getDefaultSortKey();
         for ( const RenderViewRequest& view : listView )
@@ -1009,9 +1009,9 @@ namespace sw
                 _listViewSortKey[tailIndex] =
                     makeTransparentSortKey( sortLayer, ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
             }
-            std::sort( _listViewSortKey.begin(), _listViewSortKey.end(), &GpuSceneBuilder::isDrawnBefore );
+            std::sort( _listViewSortKey.begin(), _listViewSortKey.end(), &GPUSceneBuilder::isDrawnBefore );
 
-            GpuViewTransparentOrder order;
+            GPUViewTransparentOrder order;
             order._viewId                       = view._viewId;
             order._tailBase                     = tailBase;
             shared_ptr<vector<uint32>> listRank = make_shared<vector<uint32>>( tailCount );
@@ -1029,7 +1029,7 @@ namespace sw
             vector<uint32> listBatchFirstRank( listBatch.size(), MathUtil::kMaxUInt32 );
             for ( uint32 batchIndex = 0; batchIndex < static_cast<uint32>( listBatch.size() ); ++batchIndex )
             {
-                const GpuMeshBatch& batch          = listBatch[batchIndex];
+                const GPUMeshBatch& batch          = listBatch[batchIndex];
                 const bool          bInsideTheTail = tailBase <= batch._instanceBase && batch._instanceBase + batch._instanceCount <= tailBase + tailCount;
                 if ( bInsideTheTail == false )
                     continue;
@@ -1057,11 +1057,11 @@ namespace sw
         }
     }
 
-    bool GpuSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )
+    bool GPUSceneBuilder::refreshInstancesInPlace( bool bPartialCollect )
     {
         // 이전 값은 마지막 발행본에서 **읽기만** 한다(`_meshBatchIndex` · `_materialIndex` 는 배치 구성이 같으므로
-        // 그대로 옮긴다). 결과는 아무도 안 읽는 링 슬롯에 쓴다. 되복사가 없다(GpuInstanceRing.h).
-        const vector<GpuInstance>* pPrevious = _instanceRing.getPublished();
+        // 그대로 옮긴다). 결과는 아무도 안 읽는 링 슬롯에 쓴다. 되복사가 없다(GPUInstanceRing.h).
+        const vector<GPUInstance>* pPrevious = _instanceRing.getPublished();
         // 매핑이 인스턴스 수와 맞아야 한다. 한 번이라도 전체 빌드를 안 했으면 못 쓴다.
         if ( pPrevious == nullptr || pPrevious->empty() || _listInstanceSrcIndex.size() != pPrevious->size() )
             return false;
@@ -1095,13 +1095,13 @@ namespace sw
         if ( bPartialRefresh == false )
             _snapshot._spinInstanceCount = 0;
 
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.loop" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.loop" );
         // 쓰기 슬롯을 잡는다. 전체 훑기는 슬롯 전부를 새로 쓰므로 낡은 내용이 상관없고, 부분 훑기는 안 건드릴 자리가
         // 발행본과 같아야 하므로 먼저 맞춘다(슬롯이 발행된 뒤 바뀐 구간만).
-        vector<GpuInstance>& work = instanceWork();
+        vector<GPUInstance>& work = instanceWork();
         if ( bPartialRefresh )
         {
-            SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.sync" );
+            SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.sync" );
             syncWriteSlotFromPublished();
         }
         else
@@ -1147,10 +1147,10 @@ namespace sw
 
             struct RefreshJob
             {
-                GpuSceneBuilder*      _pBuilder{ nullptr };
-                GpuInstance*          _pInstance{ nullptr };
-                const GpuInstance*    _pPrevious{ nullptr };
-                const GpuInstance*    _pRaw{ nullptr };
+                GPUSceneBuilder*      _pBuilder{ nullptr };
+                GPUInstance*          _pInstance{ nullptr };
+                const GPUInstance*    _pPrevious{ nullptr };
+                const GPUInstance*    _pRaw{ nullptr };
                 const uint32*         _pSrcIndex{ nullptr };
                 uint32                _rawCount{ 0 };
                 InstanceRefreshChunk* _pChunk{ nullptr };
@@ -1202,7 +1202,7 @@ namespace sw
                 {
                     for ( uint32 runIndex = 0; runIndex < chunk._runCount; ++runIndex )
                     {
-                        const GpuInstanceRun& run = chunk._arrRun[runIndex];
+                        const GPUInstanceRun& run = chunk._arrRun[runIndex];
                         if ( _snapshot._listDirtyInstanceRun.empty() == false &&
                              _snapshot._listDirtyInstanceRun.back()._start + _snapshot._listDirtyInstanceRun.back()._count == run._start )
                             _snapshot._listDirtyInstanceRun.back()._count += run._count;
@@ -1225,7 +1225,7 @@ namespace sw
                 else if ( _snapshot._listDirtyInstanceRun.size() >= kMaxDirtyInstanceRun )
                     bTooManyRuns = true;
                 else
-                    _snapshot._listDirtyInstanceRun.push_back( GpuInstanceRun{ _opaqueInstanceCount, tailCount } );
+                    _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ _opaqueInstanceCount, tailCount } );
             }
         }
 
@@ -1255,13 +1255,13 @@ namespace sw
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
             // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임 · 색뿐이다. 판정과 복사는 청크 갱신과 **같은 도우미**다.
-            const GpuInstance& prev             = ( *pPrevious )[slot];
-            GpuInstance&       instance         = work[slot];
-            const GpuInstance& raw              = _listScratchRaw[srcIndex];
-            const bool         bChanged         = GpuSceneBuilderInternal::isPayloadChanged( prev, raw );
+            const GPUInstance& prev             = ( *pPrevious )[slot];
+            GPUInstance&       instance         = work[slot];
+            const GPUInstance& raw              = _listScratchRaw[srcIndex];
+            const bool         bChanged         = GPUSceneBuilderInternal::isPayloadChanged( prev, raw );
             const uint32       previousSpinSeed = prev._spinSeed;
             instance                            = prev;
-            GpuSceneBuilderInternal::copyPayload( raw, instance );
+            GPUSceneBuilderInternal::copyPayload( raw, instance );
             if ( bPartialRefresh )
             {
                 if ( previousSpinSeed != 0 && instance._spinSeed == 0 && _snapshot._spinInstanceCount > 0 )
@@ -1287,7 +1287,7 @@ namespace sw
             }
             else
             {
-                _snapshot._listDirtyInstanceRun.push_back( GpuInstanceRun{ static_cast<uint32>( slot ), 1 } );
+                _snapshot._listDirtyInstanceRun.push_back( GPUInstanceRun{ static_cast<uint32>( slot ), 1 } );
             }
             lastDirtySlot = slot;
         }
@@ -1306,7 +1306,7 @@ namespace sw
         // 프레임에 시계를 멈추면, 트랜스폼만 바뀐 프리미티브는 부분 수집으로 가므로(모두 움직이는 씬도 그렇다) 숨기거나 뺀 메시의
         // 원소를 다음 구조 변경까지 붙든다.
         ++_buildCounter;
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.stamp" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.stamp" );
         // 도장은 원소에 찍는다. 인스턴스 8000 개를 돌 것 없이 배치가 적어 둔 (배치, 원소) 쌍만 돈다.
         const size_t batchCount = MathUtil::min( _snapshot._listAllBatch.size(), _listBatchElementRange.size() );
         for ( size_t batchIndex = 0; batchIndex < batchCount; ++batchIndex )
@@ -1315,7 +1315,7 @@ namespace sw
             if ( groupIndex >= _listMaterialGroupState.size() )
                 continue;
             MaterialGroupState&   state = _listMaterialGroupState[groupIndex];
-            const GpuInstanceRun& range = _listBatchElementRange[batchIndex];
+            const GPUInstanceRun& range = _listBatchElementRange[batchIndex];
             for ( uint32 entry = range._start; entry < range._start + range._count && entry < _listBatchElementIndex.size(); ++entry )
             {
                 const uint32 elementIndex = _listBatchElementIndex[entry];
@@ -1326,7 +1326,7 @@ namespace sw
         return true;
     }
 
-    void GpuSceneBuilder::refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pPrevious, const GpuInstance* pRaw, const uint32* pSrcIndex,
+    void GPUSceneBuilder::refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, const uint32* pSrcIndex,
                                                 uint32 rawCount, InstanceRefreshChunk& chunk )
     {
         uint32 lastDirtySlot = 0xFFFFFFFFu;
@@ -1341,12 +1341,12 @@ namespace sw
 
             // 배치 구성이 같으므로 _meshBatchIndex 와 _materialIndex 는 그대로다. 바뀐 것은
             // 트랜스폼과 바운드, 회전 시드, 스프라이트 프레임 · 색뿐이다. 판정과 복사는 직렬 루프와 **같은 도우미**다.
-            const GpuInstance& prev     = pPrevious[slot];
-            GpuInstance&       instance = pInstance[slot];
-            const GpuInstance& raw      = pRaw[srcIndex];
-            const bool         bChanged = GpuSceneBuilderInternal::isPayloadChanged( prev, raw );
+            const GPUInstance& prev     = pPrevious[slot];
+            GPUInstance&       instance = pInstance[slot];
+            const GPUInstance& raw      = pRaw[srcIndex];
+            const bool         bChanged = GPUSceneBuilderInternal::isPayloadChanged( prev, raw );
             instance                    = prev;
-            GpuSceneBuilderInternal::copyPayload( raw, instance );
+            GPUSceneBuilderInternal::copyPayload( raw, instance );
             if ( instance._spinSeed != 0 )
                 ++chunk._spinCount;
 
@@ -1358,12 +1358,12 @@ namespace sw
             else if ( chunk._runCount >= kMaxDirtyInstanceRun )
                 chunk._bTooManyRun = SW_TRUE;
             else
-                chunk._arrRun[chunk._runCount++] = GpuInstanceRun{ slot, 1 };
+                chunk._arrRun[chunk._runCount++] = GPUInstanceRun{ slot, 1 };
             lastDirtySlot = slot;
         }
     }
 
-    void GpuSceneBuilder::buildBatches()
+    void GPUSceneBuilder::buildBatches()
     {
         // 전체 재구축이다. 구간을 적어 봐야 전부이므로 받는 쪽이 통째로 올리게 한다.
         _snapshot._bAllInstancesDirty = SW_TRUE;
@@ -1402,7 +1402,7 @@ namespace sw
                     const SortKey&       key           = _listScratchOpaqueEntry[batchStart]._key;
                     const DrawCandidate& headCandidate = _listScratchCandidate[_listScratchOpaqueEntry[batchStart]._srcIdx];
                     emitBatch( _listScratchOpaqueIdx.data(), batchStart, entryIndex, RHIBlendMode::Opaque,
-                               GpuSceneBuilderInternal::shareMaterial( key._pMaterial ), ( key._pInstance != nullptr ) ? headCandidate._instance : nullptr );
+                               GPUSceneBuilderInternal::shareMaterial( key._pMaterial ), ( key._pInstance != nullptr ) ? headCandidate._instance : nullptr );
                     batchStart = entryIndex;
                 }
             }
@@ -1417,7 +1417,7 @@ namespace sw
         _listBuiltTransparentIdx = _listScratchTransparentIdx;
     }
 
-    void GpuSceneBuilder::emitTransparentBatches()
+    void GPUSceneBuilder::emitTransparentBatches()
     {
         // 먼 것부터 정렬된 투명 인덱스에서 키가 연속으로 같은 것만 합친다(메시 · 퍼뮤테이션 해시 · 컬 반전 · 머티리얼, 합치기가 꺼져 있으면 인스턴스까지).
         if ( _listScratchTransparentIdx.empty() == false )
@@ -1458,9 +1458,9 @@ namespace sw
         }
     }
 
-    void GpuSceneBuilder::rebuildTransparentTail()
+    void GPUSceneBuilder::rebuildTransparentTail()
     {
-        SW_PROFILE_SCOPE( "GT.GpuScene.build.refresh.transparentTail" );
+        SW_PROFILE_SCOPE( "GT.GPUScene.build.refresh.transparentTail" );
         // 꼬리를 잘라 낸다. 용량은 남아 있으므로 다시 붙일 때 할당이 없다.
         instanceWork().resize( _opaqueInstanceCount );
         _listInstanceSrcIndex.resize( _opaqueInstanceCount );
@@ -1475,15 +1475,15 @@ namespace sw
         _listBuiltTransparentIdx = _listScratchTransparentIdx;
     }
 
-    void GpuSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
+    void GPUSceneBuilder::emitBatch( const uint32* pSrcIdx, uint32 begin, uint32 end, RHIBlendMode blendMode, const shared_ptr<Material>& material,
                                      const shared_ptr<MaterialInstance>& instance )
     {
         const DrawCandidate& headCandidate = _listScratchCandidate[pSrcIdx[begin]];
 
-        GpuMeshBatch batch{};
+        GPUMeshBatch batch{};
         batch._mesh               = headCandidate._mesh; // 소유는 배치 머리 후보의 것
         batch._vertexCount        = batch._mesh->getVertexCount();
-        vector<GpuInstance>& work = instanceWork();
+        vector<GPUInstance>& work = instanceWork();
         batch._instanceBase       = static_cast<uint32>( work.size() );
         batch._instanceCount      = end - begin;
         batch._blendMode          = blendMode;
@@ -1495,7 +1495,7 @@ namespace sw
         else
             batch._materialCb = ( material != nullptr ) ? material->getDescriptorIndex() : kInvalidDescriptorIndex;
         // 텍스처 슬롯은 인스턴스가 아니라 부모 머티리얼이 소유한다(인스턴스는 CB 값만 덮어쓴다).
-        GpuSceneBuilderInternal::fillMaterialTextureSrvs( batch, material.get() );
+        GPUSceneBuilderInternal::fillMaterialTextureSrvs( batch, material.get() );
         batch._materialGroup = materialGroupFor( material.get() );
         // 퍼뮤테이션은 **배치에 실제로 든 후보**에서 뽑는다. 합치기가 켜지면 키의 인스턴스는 nullptr 이라,
         // 키로 물으면 대표 머티리얼의 define 만 나오고 인스턴스가 켠 키워드가 통째로 빠진다. 그 배치는
@@ -1507,12 +1507,12 @@ namespace sw
         // 배치가 쓰는 원소는 중복 없이 적어 둔다(회수 도장이 인스턴스가 아니라 이 목록을 돈다). 정렬돼 있어 같은
         // 원소는 연속으로 오므로 직전 것과 다를 때만 더한다.
         const uint32 batchIndex = static_cast<uint32>( _snapshot._listAllBatch.size() );
-        _listBatchElementRange.push_back( GpuInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );
+        _listBatchElementRange.push_back( GPUInstanceRun{ static_cast<uint32>( _listBatchElementIndex.size() ), 0 } );
         for ( uint32 entryIndex = begin; entryIndex < end; ++entryIndex )
         {
             const uint32         srcIdx      = pSrcIdx[entryIndex];
             const DrawCandidate& candidate   = _listScratchCandidate[srcIdx];
-            GpuInstance          gpuInstance = _listScratchRaw[srcIdx];
+            GPUInstance          gpuInstance = _listScratchRaw[srcIdx];
             gpuInstance._meshBatchIndex      = batchIndex;
             if ( _bReuseMaterialElement != SW_FALSE && srcIdx < _listCandidateMaterialElement.size() )
                 gpuInstance._materialIndex = _listCandidateMaterialElement[srcIdx];
@@ -1520,7 +1520,7 @@ namespace sw
                 gpuInstance._materialIndex = assignMaterialElement( candidate._material, candidate._instance, batch._materialGroup );
             if ( srcIdx < _listCandidateMaterialElement.size() )
                 _listCandidateMaterialElement[srcIdx] = gpuInstance._materialIndex;
-            GpuInstanceRun& elementRange = _listBatchElementRange.back();
+            GPUInstanceRun& elementRange = _listBatchElementRange.back();
             if ( elementRange._count == 0 || _listBatchElementIndex.back() != gpuInstance._materialIndex )
             {
                 _listBatchElementIndex.push_back( gpuInstance._materialIndex );
@@ -1538,12 +1538,12 @@ namespace sw
 
         // 두 목록이 같은 배치를 든다. 앞쪽은 복사해야 하지만 마지막 하나는 옮길 수 있다.
         // 그만큼 배치마다 shared_ptr 셋의 참조 카운트 조작이 한 벌씩 줄어든다.
-        vector<GpuMeshBatch>& listByBlend = ( blendMode == RHIBlendMode::Transparent ) ? _snapshot._listTransparentBatch : _snapshot._listOpaqueBatch;
+        vector<GPUMeshBatch>& listByBlend = ( blendMode == RHIBlendMode::Transparent ) ? _snapshot._listTransparentBatch : _snapshot._listOpaqueBatch;
         listByBlend.push_back( batch );
         _snapshot._listAllBatch.push_back( std::move( batch ) );
     }
 
-    void GpuSceneBuilder::freeUnusedMaterialElements()
+    void GPUSceneBuilder::freeUnusedMaterialElements()
     {
         // 이번 빌드에서 안 쓰인 원소는 바로 지우지 않는다. 아직 GPU 가 읽는 중인 프레임이 있을 수 있다.
         // 패킷 링 깊이(constant::kRenderFrameQueueDepth)와 같은 지연 기준을 쓴다. 큐잉된 패킷이 아직 원소를 읽을 수 있다.
@@ -1554,7 +1554,7 @@ namespace sw
         const size_t groupCount = MathUtil::min( _snapshot._listMaterialGroup.size(), _listMaterialGroupState.size() );
         for ( size_t groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
-            GpuMaterialGroup&   group = _snapshot._listMaterialGroup[groupIndex];
+            GPUMaterialGroup&   group = _snapshot._listMaterialGroup[groupIndex];
             MaterialGroupState& state = _listMaterialGroupState[groupIndex];
             for ( uint32 index = 0; index < group._listEntry.size(); ++index )
             {
@@ -1563,18 +1563,18 @@ namespace sw
                 if ( index < state._listEntryLastUsedBuild.size() && state._listEntryLastUsedBuild[index] >= staleBefore )
                     continue;
 
-                const GpuMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
+                const GPUMaterialElementKey key{ group._listEntry[index]._material.get(), group._listEntry[index]._instance.get() };
                 state._mapEntryToIndex.erase( key );
                 // 자리는 비워 두고 프리리스트로 돌린다. 뒤 원소를 당겨오면 그들의 인덱스가 바뀌어
                 // 이미 인스턴스에 적힌 materialIndex 가 엉뚱한 머티리얼을 가리킨다.
-                group._listEntry[index] = GpuMaterialElement{};
+                group._listEntry[index] = GPUMaterialElement{};
                 state._listFreeEntry.push_back( index );
                 state._bHasLast = SW_FALSE;
             }
         }
     }
 
-    void GpuSceneBuilder::resetMaterialRegistry()
+    void GPUSceneBuilder::resetMaterialRegistry()
     {
         _snapshot._listMaterialGroup.clear();
         _listMaterialGroupState.clear();
@@ -1583,7 +1583,7 @@ namespace sw
         _mapPermutationToIndex.clear();
     }
 
-    uint32 GpuSceneBuilder::materialGroupFor( const Material* pMaterial )
+    uint32 GPUSceneBuilder::materialGroupFor( const Material* pMaterial )
     {
         if ( pMaterial == nullptr )
             return kInvalidMaterialGroup;
@@ -1592,7 +1592,7 @@ namespace sw
         if ( it != _mapShaderPathToGroup.end() )
             return it->second;
 
-        GpuMaterialGroup group{};
+        GPUMaterialGroup group{};
         group._shaderPath = shaderPath;
         _snapshot._listMaterialGroup.push_back( std::move( group ) );
         _listMaterialGroupState.emplace_back();
@@ -1601,15 +1601,15 @@ namespace sw
         return groupIndex;
     }
 
-    uint32 GpuSceneBuilder::assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex )
+    uint32 GPUSceneBuilder::assignMaterialElement( const shared_ptr<Material>& material, const shared_ptr<MaterialInstance>& instance, uint32 groupIndex )
     {
         Material* const         pMaterial = material.get();
         MaterialInstance* const pInstance = instance.get();
         if ( pMaterial == nullptr || groupIndex >= _snapshot._listMaterialGroup.size() || groupIndex >= _listMaterialGroupState.size() )
             return 0;
-        GpuMaterialGroup&           group = _snapshot._listMaterialGroup[groupIndex];
+        GPUMaterialGroup&           group = _snapshot._listMaterialGroup[groupIndex];
         MaterialGroupState&         state = _listMaterialGroupState[groupIndex];
-        const GpuMaterialElementKey key{ pMaterial, pInstance };
+        const GPUMaterialElementKey key{ pMaterial, pInstance };
         // 배치 안의 인스턴스는 같은 원소를 연속으로 묻는다. 포인터 비교 한 번으로 끝낸다.
         if ( state._bHasLast != SW_FALSE && state._lastKey == key )
             return state._lastIndex;
@@ -1624,12 +1624,12 @@ namespace sw
             // 회수된 자리를 재사용한다. 새 자리를 늘리면 버퍼가 단조 증가한다.
             elementIndex = state._listFreeEntry.back();
             state._listFreeEntry.pop_back();
-            group._listEntry[elementIndex] = GpuMaterialElement{ material, instance };
+            group._listEntry[elementIndex] = GPUMaterialElement{ material, instance };
             state._mapEntryToIndex.emplace( key, elementIndex );
         }
         else
         {
-            group._listEntry.push_back( GpuMaterialElement{ material, instance } );
+            group._listEntry.push_back( GPUMaterialElement{ material, instance } );
             state._listEntryLastUsedBuild.push_back( 0 );
             elementIndex = static_cast<uint32>( group._listEntry.size() - 1 );
             state._mapEntryToIndex.emplace( key, elementIndex );

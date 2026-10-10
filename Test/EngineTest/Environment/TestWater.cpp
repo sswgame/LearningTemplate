@@ -10,7 +10,7 @@
 
 #include "TestFramework/TestFramework.h"
 
-// 물 — 거스트너 변위 · 노멀 · 수면 높이 질의(부력의 기반) · 호수 · 강 · 물속 판정. GPU 쪽 같은 식의 대조는 RenderPassGpuTest.WaterWaveShaderMatchesCpu.
+// 물 — 거스트너 변위 · 노멀 · 수면 높이 질의(부력의 기반) · 호수 · 강 · 물속 판정. GPU 쪽 같은 식의 대조는 RenderPassGPUTest.WaterWaveShaderMatchesCpu.
 
 using namespace sw;
 

@@ -76,7 +76,7 @@ cmake --build --preset Ninja-Debug
   as `i`, `j`, or `k` (use at least `index`).
 - **GPU resource verbs are a closed vocabulary.** A class that owns RHI resources derives from
   `RHIRenderResource` and names its device-lifecycle methods from this table only. Do not invent
-  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGpu`):
+  synonyms (`upload`, `applyToGpu`, `shutdownAllGpu`, `isUploaded`, `isReady`, `releaseGPU`):
 
   | Verb | Meaning |
   | --- | --- |
@@ -89,7 +89,7 @@ cmake --build --preset Ninja-Debug
   `releaseRhi` / `forgetRhi` / `initRhi` are never called in a loop from outside. `IRHIDevice` broadcasts
   them to the whole registry (`RHIRenderResource::releaseAllFor` / `forgetAllFor` / `initAllFor`), so a
   new resource class is covered the moment it derives. Per-frame buffer managers that are not assets
-  (`GpuScene`) keep their own vocabulary — they are not registry members.
+  (`GPUScene`) keep their own vocabulary — they are not registry members.
 
 ### Function names
 
@@ -184,7 +184,7 @@ section on every `.hlsl` / `.hlsli` (CI gate and pre-commit hook).
   GPU access verbs: `load` / `store` for buffer and RW-texture elements, `sample` / `gather` for texture reads.
   Entry points stay `VSMain` / `PSMain` / `CSMain` (the compiler and pipeline XML name them as strings).
 - **Types** are `PascalCase` with no `_t` suffix. A shared-header type starts with `Sw` (`SwInstanceData`,
-  `SwMaterialData`); a type local to one `.hlsl` does not (`PSInput`, `GpuBatchInfo`). A struct that mirrors
+  `SwMaterialData`); a type local to one `.hlsl` does not (`PSInput`, `GPUBatchInfo`). A struct that mirrors
   a C++ struct takes the C++ type name (`RHIDrawIndirectCommand`).
 - **Fields** are `camelCase`. A field that mirrors a C++ member is that member without the leading `_`
   (`_startVertexLocation` → `startVertexLocation`). No opaque abbreviations: `position`, `normal`, `color`,

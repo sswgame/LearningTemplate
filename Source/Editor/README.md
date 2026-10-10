@@ -301,7 +301,7 @@ CI 는 App 을 띄우지 않고 `EditorTest` 의 `LocalizationGatherTest.Reposit
 ImGui 텍스처 · 게임 뷰 렌더 타깃은 UI 스레드가 놓지만 그리는 것은 렌더 스레드이고, 렌더 스레드는 UI 가 다음 스냅샷을 내기 전까지 **같은 draw
 스냅샷을 여러 프레임에 다시 그립니다.** 그래서 놓은 자원은 바로 지우지 않고 `IImGuiRendererBackend::getDrawReleaseQueue()` 의
 `EditorDrawReleaseQueue::enqueue` 에 맡깁니다. 큐는 해제마다 "다음에 낼 스냅샷 번호" 를 찍어 두고, 렌더 스레드가 그 번호 이상의 스냅샷을
-기록하는 프레임에서 `IRHIDevice::enqueueGpuRelease` 로 넘깁니다 — 그 프레임의 GPU 완료 뒤에 실제로 풀립니다.
+기록하는 프레임에서 `IRHIDevice::enqueueGPURelease` 로 넘깁니다 — 그 프레임의 GPU 완료 뒤에 실제로 풀립니다.
 주의: UI 스레드에서 읽은 펜스 값으로 해제하면 뒤에 줄 선 프레임이 놓인 자원을 씁니다.
 새 렌더 타깃은 그리기 전 패킷이 샘플링할 수 있어 만들 때 클리어 색으로 채운다(Vulkan UNDEFINED 레이아웃).
 

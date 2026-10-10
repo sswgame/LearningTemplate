@@ -2102,7 +2102,7 @@ bool swApplyViewMode( float3 albedo, float3 worldNormal, float3 worldPosition, o
 Overdraw 는 G버퍼 패스가 가산(알베도 칸에 단색)이고 Lighting 은 알베도를 그대로. 톤맵이 색을 바꾸지 않게 보기 모드가 Lit 이 아니면 톤맵 패스는 통과(`tonemap.hlsl` 에 같은 define — Present 패스 종류에 kAppliesViewMode).
 3) **적용 뒤 `App.exe --cook-shaders`** — 쿠커가 표를 끝까지 돈다(셰이더 변형 수가 모드 수만큼 는다: 머티리얼 셰이더 × 셋 — 매니페스트 크기를 커밋 메시지에 적는다).
 
-**시험.** `RenderPassGpuTest.ViewModesProduceDistinctPictures`(E3 의 시험을 넓힌다): 포워드 · 디퍼드에서 Lit · Unlit · Normals · Depth · Overdraw 다섯 장이 서로 100 픽셀 넘게 다르다,
+**시험.** `RenderPassGPUTest.ViewModesProduceDistinctPictures`(E3 의 시험을 넓힌다): 포워드 · 디퍼드에서 Lit · Unlit · Normals · Depth · Overdraw 다섯 장이 서로 100 픽셀 넘게 다르다,
 Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 = 1.0), Overdraw 는 겹친 큐브 둘의 겹친 자리가 하나뿐인 자리보다 밝다(모서리 기준 배경을 빼고 평균으로 비교한다. 특정 색 픽셀 수는 톤매핑에 무너진다).
 
 **확인 = 에디터 시나리오.** `viewmodes.scenario.xml`: 뷰포트 툴바의 보기 모드 콤보(이름표 `viewport.viewMode`)로 모드를 하나씩 고르고 그때마다 `Screenshot` 을 찍습니다.
@@ -2124,7 +2124,7 @@ Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 =
 - 셰이더 다시 쿠킹(변형 수 증가: …).
 
 결과:
-- RenderPassGpuTest.ViewModesProduceDistinctPictures(다섯 장 서로 다름 · 위 면 노멀 G · 겹친 자리 밝기).
+- RenderPassGPUTest.ViewModesProduceDistinctPictures(다섯 장 서로 다름 · 위 면 노멀 G · 겹친 자리 밝기).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
@@ -2573,7 +2573,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
   `shortcuts.captureAssignsCombo` · `modules.panelListsKits` · `inspector.multiEditAppliesToAll` · `contentBrowser.showsActivePackOnly` · `testRunner.runsSelfTestInPlace` · `curve.dragKeyRecordsOneUndo` ·
   `mapCheck.selectsIssueObject` · `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
 - **에디터 시나리오**: 단위마다 하나씩 더한다(머리말의 "확인 = 에디터 시나리오"). `AppScenarioTest` 가 모두 돌리므로 시나리오가 늘면 `AppTest` 의 `HOST_SHARDS` 를 늘린다.
-- **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGpuTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
+- **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGPUTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
   자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
 
 **겹치는 파일.** 원문이 적은 다른 제안서(2차 ~ 4차)는 모두 main 에 들어갔으므로, 겹침은 이 문서 안의 단위끼리만 봅니다.

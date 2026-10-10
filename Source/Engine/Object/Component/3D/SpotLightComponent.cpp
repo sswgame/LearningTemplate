@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -67,7 +67,7 @@ namespace sw
         return computeLightDirection( SpotLightComponentInternal::kDefaultDirection );
     }
 
-    void SpotLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    void SpotLightComponent::writeGPULightKindFields( GPULight& outLight ) const
     {
         const float3 position      = getLightPosition();
         const float3 direction     = getLightDirection();

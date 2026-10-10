@@ -1,8 +1,8 @@
 /**
- * @file GpuSpriteInstanceData.h
+ * @file GPUSpriteInstanceData.h
  * @brief 인스턴스마다 다른 스프라이트 값(UV 사각형 · 색 · 픽셀 스냅)을 셰이더가 읽는 꼴 그대로 묶은 16 바이트입니다.
  * @details HLSL 쪽은 `Resource/engine/shaders/instancedata.hlsli` 의 `uvStart` · `uvEnd` · `tint` · `pixelSnap` 이고, 푸는 함수는
- *          `swComputeInstanceUvRect` · `swComputeInstanceTint` 입니다. 이 값은 `GpuInstance` 에 그대로 실리고(오프셋은
+ *          `swComputeInstanceUvRect` · `swComputeInstanceTint` 입니다. 이 값은 `GPUInstance` 에 그대로 실리고(오프셋은
  *          ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct 가 쿠킹된 바이너리로 대조합니다), 메시 컴포넌트 ·
  *          인스턴스 배치 항목이 들고 있다가 빌더가 옮깁니다. 컴포넌트 층(Object)이 렌더러(Renderer)를 include 할 수 없어
  *          이 묶음만 렌더러 아래의 계약 폴더에 둡니다.
@@ -16,7 +16,7 @@
 namespace sw
 {
     /**
-     * @struct GpuSpriteInstanceData
+     * @struct GPUSpriteInstanceData
      * @brief 인스턴스 하나의 아틀라스 프레임(UV 사각형)과 색입니다. 기본값은 텍스처 전체 · 흰색 불투명입니다.
      * @details **머티리얼 인스턴스가 아니라 인스턴스에 싣는 이유:** 배치 키는 머티리얼 인스턴스입니다. 프레임마다 바뀌는 아틀라스 프레임 ·
      *          페이드 알파를 인스턴스 파라미터로 바꾸면 스프라이트마다 인스턴스가 생겨 배치가 하나씩 갈립니다. 여기 실으면 같은 텍스처의
@@ -27,7 +27,7 @@ namespace sw
      *          대신 꼭짓점은 [0, 1] 로 묶입니다(아틀라스 안의 사각형이 이 칸의 일입니다. 반복 타일링은 머티리얼 uvRect 의 일입니다).
      *          unorm16 은 4096 텍셀 아틀라스에서 텍셀의 1/16 보다 곱습니다. 색은 RGBA8 입니다.
      */
-    struct GpuSpriteInstanceData
+    struct GPUSpriteInstanceData
     {
         uint32 _uvStart{ 0u };        ///< (u, v) — unorm16 둘, u 가 하위 16비트
         uint32 _uvEnd{ 0xFFFFFFFFu }; ///< (u, v) — unorm16 둘. 기본은 (1, 1)
@@ -43,9 +43,9 @@ namespace sw
          * @brief (u, v, 폭, 높이) 사각형과 색으로 만듭니다. 머티리얼 uvRect 와 같은 꼴입니다.
          * @details 꼭짓점 (u, v) 와 (u + 폭, v + 높이) 를 [0, 1] 로 묶어 담고, 색은 [0, 1] 로 묶어 8비트로 담습니다.
          */
-        static GpuSpriteInstanceData make( const float4& uvRect, const float4& tint )
+        static GPUSpriteInstanceData make( const float4& uvRect, const float4& tint )
         {
-            GpuSpriteInstanceData data{};
+            GPUSpriteInstanceData data{};
             data._uvStart = makeUnorm16x2( uvRect._x, uvRect._y );
             data._uvEnd   = makeUnorm16x2( uvRect._x + uvRect._z, uvRect._y + uvRect._w );
             data._tint    = makeRgba8( tint );
@@ -88,12 +88,12 @@ namespace sw
         }
 
         /** @brief 네 칸이 모두 같으면 true 입니다(스냅 단위는 비트로 견줍니다). */
-        bool operator==( const GpuSpriteInstanceData& other ) const
+        bool operator==( const GPUSpriteInstanceData& other ) const
         {
             return _uvStart == other._uvStart && _uvEnd == other._uvEnd && _tint == other._tint &&
                    Memory::compare( &_pixelSnap, &other._pixelSnap, sizeof( _pixelSnap ) ) == 0;
         }
         /** @brief operator== 의 부정입니다. */
-        bool operator!=( const GpuSpriteInstanceData& other ) const { return ( *this == other ) == false; }
+        bool operator!=( const GPUSpriteInstanceData& other ) const { return ( *this == other ) == false; }
     };
 } // namespace sw

@@ -1,5 +1,5 @@
 /**
- * @file GpuTimelineExporter.h
+ * @file GPUTimelineExporter.h
  * @brief 엔진이 읽은 GPU 타임스탬프 한 프레임을 외부 프로파일러(Tracy)의 GPU 타임라인으로 내보냅니다.
  *
  * [쿼리는 한 벌]
@@ -20,19 +20,19 @@
 
 namespace sw
 {
-    struct RHIGpuTimestampFrame;
+    struct RHITimestampFrame;
 
     /**
-     * @class GpuTimelineExporter
+     * @class GPUTimelineExporter
      * @brief GPU 컨텍스트 하나(디바이스 하나)의 수명 · 시계 맞추기 · 프레임 내보내기입니다. 렌더 스레드만 씁니다.
      */
-    class SW_API GpuTimelineExporter
+    class SW_API GPUTimelineExporter
     {
     public:
         /** @brief 싼 시계(DX12 · GL)를 몇 프레임마다 다시 맞추는가입니다. GPU 와 CPU 시계는 서로 흐릅니다. */
         static constexpr uint32 kResyncFrameInterval = 240;
 
-        GpuTimelineExporter();
+        GPUTimelineExporter();
 
         /** @brief @p pDeviceIdentity 디바이스 · @p pBackend 출력의 컨텍스트가 열려 있으면 true 입니다. 둘 중 하나가 바뀌면 다시 엽니다. */
         bool isContextOpenFor( const void* pDeviceIdentity, const IProfilerBackend* pBackend ) const;
@@ -40,7 +40,7 @@ namespace sw
          * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역)입니다.
          * @return 출력이 컨텍스트를 만들었으면 true 입니다.
          */
-        [[nodiscard]] bool openContext( IProfilerBackend& backend, ProfilerGpuApi api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
+        [[nodiscard]] bool openContext( IProfilerBackend& backend, ProfilerGPUBackend api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
         /** @brief 디바이스가 사라졌을 때 잊습니다(출력 쪽 컨텍스트는 Tracy 가 닫지 않는다 — 다음 디바이스는 새 번호를 쓴다). */
         void forgetContext();
 
@@ -56,7 +56,7 @@ namespace sw
          * @details 형제 구간이 겹치거나(같은 큐라 실제로는 순서대로다 — 칸 해상도 차이) 부모 밖으로 나가면 뷰어의 트리가 깨지므로 시작 순으로
          *          정렬하고 앞 형제의 끝 · 부모의 범위로 자릅니다.
          */
-        uint32 exportFrame( IProfilerBackend& backend, const RHIGpuTimestampFrame& frame, const ProfileZoneSite& frameSite,
+        uint32 exportFrame( IProfilerBackend& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
                             const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite );
 
     private:

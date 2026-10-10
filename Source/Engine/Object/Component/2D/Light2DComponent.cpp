@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -62,7 +62,7 @@ namespace sw
         _innerAngle = MathUtil::clamp( innerAngle, 0.0f, _outerAngle );
     }
 
-    void PointLight2DComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    void PointLight2DComponent::writeGPULightKindFields( GPULight& outLight ) const
     {
         using Internal           = Light2DComponentInternal;
         const float3 position    = getLightPosition();
@@ -83,7 +83,7 @@ namespace sw
     {
     }
 
-    void GlobalLight2DComponent::writeGpuLightKindFields( GpuLight& /*outLight*/ ) const
+    void GlobalLight2DComponent::writeGPULightKindFields( GPULight& /*outLight*/ ) const
     {
         // 색 · 세기(공통 칸)만 읽는다.
     }

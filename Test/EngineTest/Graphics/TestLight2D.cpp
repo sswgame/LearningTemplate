@@ -2,14 +2,14 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/Light2DComponent.h"
 #include "Engine/Object/Component/2D/ShadowCaster2DComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -18,7 +18,7 @@
 
 /**
  * @brief [Light2DTest] 감쇠는 안 반경 안에서 1, 바깥 반경에서 0, 사이는 ((바깥 − 거리) / (바깥 − 안))^지수다
- * @details 셰이더 `swComputeLight2dAttenuation` 과 같은 식이다 — RenderPassGpuTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 견준다.
+ * @details 셰이더 `swComputeLight2dAttenuation` 과 같은 식이다 — RenderPassGPUTest.Light2DFalloffAndShadowOnEveryBackend 가 GPU 되읽기를 이 값과 견준다.
  */
 SW_TEST_CASE( Light2DTest, AttenuationFollowsInnerOuterAndExponent )
 {
@@ -58,7 +58,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
     SW_ASSERT_NOT_NULL( pAmbientObject->addComponent<sw::GlobalLight2DComponent>() );
     pManager->flushSceneTransforms();
 
-    sw::vector<sw::GpuLight> listLight;
+    sw::vector<sw::GPULight> listLight;
     sw::collectSceneLights( &scene, listLight );
     SW_ASSERT_EQUAL( 2u + 4u, static_cast<uint32>( listLight.size() ) );
     // 빛(종류 순서: 점 2D → 전역 2D) 다음에 가림막 토막 넷.
@@ -69,7 +69,7 @@ SW_TEST_CASE( Light2DTest, CollectWritesLightsThenShadowSegments )
         SW_EXPECT_NEAR_EQUAL( static_cast<float32>( sw::shaderslot::kLightTypeShadow2D ), listLight[index]._directionType._w, 1e-6f );
     }
 
-    const sw::GpuLight& point = listLight[0];
+    const sw::GPULight& point = listLight[0];
     SW_EXPECT_NEAR_EQUAL( -1.0f, point._positionRadius._x, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, point._positionRadius._y, 1e-5f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, point._positionRadius._z, 1e-5f ); // 노멀 맵 높이

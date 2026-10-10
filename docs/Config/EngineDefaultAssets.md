@@ -47,7 +47,7 @@ enginedefaultassets.xml 의 엔진 셸 경로입니다. 읽기는 `XmlSerializer
 | `_shaderPostBloom` | `string` | `engine/shaders/postbloom.hlsl` |  |  | 후처리 블룸 |
 | `_shaderPostOutline` | `string` | `engine/shaders/postoutline.hlsl` |  |  | 후처리 외곽선 |
 | `_shaderFullscreenBlit` | `string` | `engine/shaders/fullscreenblit.hlsl` |  |  | 전체 화면 복사 |
-| `_shaderGpuCull` | `string` | `engine/shaders/gpucull.hlsl` |  |  | GPU 컬링 · 드로우 커맨드 생성(컴퓨트) |
+| `_shaderGPUCull` | `string` | `engine/shaders/gpucull.hlsl` |  |  | GPU 컬링 · 드로우 커맨드 생성(컴퓨트) |
 | `_shaderInstanceAnim` | `string` | `engine/shaders/instanceanim.hlsl` |  |  | 인스턴스 애니메이션(컴퓨트) |
 | `_shaderMeshMorph` | `string` | `engine/shaders/meshmorph.hlsl` |  |  | 모프 타깃(컴퓨트) |
 | `_shaderMeshSkin` | `string` | `engine/shaders/meshskin.hlsl` |  |  | 스키닝(컴퓨트) |

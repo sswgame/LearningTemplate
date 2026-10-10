@@ -41,7 +41,7 @@ namespace sw
         float32 getOuterRadius() const { return _outerRadius; }
 
     protected:
-        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+        void writeGPULightKindFields( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Inner Radius", Min = 0.0, Tooltip = "Full intensity inside this distance", Units = m )
@@ -79,6 +79,6 @@ namespace sw
         virtual ~GlobalLight2DComponent() override = default;
 
     protected:
-        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+        void writeGPULightKindFields( GPULight& outLight ) const override;
     };
 } // namespace sw

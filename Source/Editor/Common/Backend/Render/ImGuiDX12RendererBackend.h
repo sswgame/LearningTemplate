@@ -56,7 +56,7 @@ namespace sw::editor
         // 3) SRV 힙 풀
         // ------------------------------------------------------------------------------
         /** @brief SRV 힙에서 CPU/GPU 디스크립터를 할당합니다. 어느 스레드에서나 부를 수 있습니다. */
-        bool allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu );
+        bool allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU );
         /** @brief 할당했던 SRV 디스크립터를 풀에 반환합니다. 곧바로 다시 쓰이므로 GPU 가 그 디스크립터를 다 읽은 뒤에 부릅니다. */
         void freeSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE cpu, D3D12_GPU_DESCRIPTOR_HANDLE gpu );
 #endif

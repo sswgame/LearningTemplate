@@ -132,7 +132,7 @@ namespace sw
             else
                 SW_LOG_WARNING( "glProvokingVertex 를 쓸 수 없습니다 — nointerpolation 값이 DX·Vulkan 과 다른 정점에서 옵니다." );
 
-            // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGpuMemoryBudgetInternal).
+            // GPU 메모리 총량 · 남은 양은 벤더 확장에만 있다. 없으면 드라이버 값은 "모름" 이다(queryGPUMemoryBudgetInternal).
             _bNvxMemoryInfo = OpenGLRHIDeviceInternal::hasGlExtension( "GL_NVX_gpu_memory_info" ) ? SW_TRUE : SW_FALSE;
             _bAtiMemInfo    = OpenGLRHIDeviceInternal::hasGlExtension( "GL_ATI_meminfo" ) ? SW_TRUE : SW_FALSE;
 

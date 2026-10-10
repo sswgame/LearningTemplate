@@ -25,7 +25,7 @@ namespace test
 namespace test
 {
     /**
-     * @brief 되읽은 이미지 한 장(`RenderPassGpuTest`).
+     * @brief 되읽은 이미지 한 장(`RenderPassGPUTest`).
      * @details `getPixel` 이 RGBA 로 준다 — 되읽기 · 행 포인터 계산 · BGRA 뒤집기를 케이스마다 손으로 들면, 백엔드마다 스왑체인 형식이
      *          달라 뒤집기를 한 곳이라도 빠뜨릴 때 그 백엔드에서만 빨강과 파랑이 바뀐다.
      *          반정밀도 첨부(`R16G16B16A16_FLOAT`)는 [0,1] 로 잘라 0~255 로 환산한다 — 두 판을 같은 규칙으로 견주는 데 쓴다.

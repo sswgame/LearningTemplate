@@ -1362,7 +1362,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 /**
  * @brief [ArchitectureTest] GPU 없이 MaterialCache acquire/release
  */
-SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
+SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
 {
     // 디스크에 없는 경로를 잡는다 — 디바이스 없이는 파일을 읽지 않는다. 리소스 루트 밖의 임시 경로라 에셋 데이터베이스가
     // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 시험을 돌릴 때마다 Resource 에 `.meta` 가 생긴다).

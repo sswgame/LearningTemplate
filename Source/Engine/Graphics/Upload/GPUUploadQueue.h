@@ -1,9 +1,9 @@
 /**
- * @file GpuUploadQueue.h
+ * @file GPUUploadQueue.h
  * @brief GPU 리소스 **생성**을 렌더 스레드 밖으로 옮기는 큐입니다.
  *
  * @details 렌더 스레드는 그리기만 해야 합니다. 생성은 그리기 전에 이미 끝나 있어야 합니다. 메시를
- *          `GpuScene::upload`(RT) 안에서 처음 그려질 때 만들면 새 메시가 등장한 프레임은 RT 가
+ *          `GPUScene::upload`(RT) 안에서 처음 그려질 때 만들면 새 메시가 등장한 프레임은 RT 가
  *          정점 버퍼 생성 비용을 통째로 뒤집어씁니다(백엔드 교체처럼 모두 다시 올려야 할 때는 더 큽니다).
  *
  *          여기서는 게임 스레드가 "이번 프레임에 그릴 것" 을 알고 있으므로, 스냅샷을 내보내기 전에 아직
@@ -39,19 +39,19 @@ namespace sw
     class TaskManager;
 
     /**
-     * @class GpuUploadQueue
+     * @class GPUUploadQueue
      * @brief 올라가지 않은 GPU 리소스를 모아 워커에서 만들어 둡니다.
      * @note 게임 스레드에서만 요청 · flush 합니다. 큐 자체는 잠그지 않습니다. 잠금이 필요해지는 순간
      *       "누가 이 큐를 쓰는가" 가 흐려진 것이므로, 그때 소유를 다시 보십시오.
      */
-    class SW_API GpuUploadQueue
+    class SW_API GPUUploadQueue
     {
     public:
-        GpuUploadQueue()  = default;
-        ~GpuUploadQueue() = default;
+        GPUUploadQueue()  = default;
+        ~GPUUploadQueue() = default;
 
-        GpuUploadQueue( const GpuUploadQueue& )            = delete;
-        GpuUploadQueue& operator=( const GpuUploadQueue& ) = delete;
+        GPUUploadQueue( const GPUUploadQueue& )            = delete;
+        GPUUploadQueue& operator=( const GPUUploadQueue& ) = delete;
 
         /**
          * @brief 디바이스와 태스크 매니저를 겁니다. 백엔드 교체 뒤에도 다시 부릅니다.

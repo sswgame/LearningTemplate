@@ -54,7 +54,7 @@
 - **컴포넌트 모델.** 컴포넌트가 머티리얼과 메시를 보관합니다. 언리얼의 `UStaticMeshComponent` 가 `UMaterialInterface` 를 보관하는 것과 같습니다.
 - **월드와 기능 모듈.** 월드(씬, 씬 매니저)와 오브젝트 위에서 도는 기능 모듈입니다. **월드는 액터를 알고 액터는 월드를 모릅니다.**
   플레이어 옵션(`UserSettings`)은 입력, 오디오, 언어, 창에 값을 넣으므로 그 위에 있습니다.
-- **그리는 쪽과 상위 기능.** 그리는 쪽(FrameRenderer, RenderGraph, GpuScene, RenderThread, 셰이더 쿠킹)과 핫 리로드입니다. 언리얼의 Renderer가 Engine을 보는 방향과 같습니다.
+- **그리는 쪽과 상위 기능.** 그리는 쪽(FrameRenderer, RenderGraph, GPUScene, RenderThread, 셰이더 쿠킹)과 핫 리로드입니다. 언리얼의 Renderer가 Engine을 보는 방향과 같습니다.
   텔레메트리와 크래시 보고는 사용자 설정에서 동의를 읽습니다. 파괴(`Destruction`)는 캐릭터 형상의 자르기 도구를 씁니다.
   런타임 UI는 입력, 글자, 사용자 설정을 쓰지만 렌더러와는 서로 include하지 않습니다. 둘 사이에 오가는 값은 그리기 목록뿐입니다(언리얼의 Slate와 SlateRHIRenderer 관계).
 
@@ -300,7 +300,7 @@ GameFramework의 데이터 테이블 캐시(`GameDataCache`)는 게임 서비스
 **컴포넌트가 머티리얼과 메시를 보관합니다.** Object가 Graphics의 아래 티어를 보는 방향이고, 언리얼의 `UStaticMeshComponent` 와 같습니다.
 Godot처럼 "노드는 RID만 안다"로 바꾸면 모든 컴포넌트에 해석 테이블이 생기고, `shared_ptr` 로 풀어 둔 렌더 패킷 수명 문제가 다시 생깁니다.
 
-**렌더러가 컴포넌트를 읽습니다.** `GpuSceneBuilder` 가 `PrimitiveRegistry` 와 `ComponentRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향입니다.
+**렌더러가 컴포넌트를 읽습니다.** `GPUSceneBuilder` 가 `PrimitiveRegistry` 와 `ComponentRegistry` 를 훑는 것은 언리얼 `FScene` 이 프리미티브 프록시를 훑는 것과 같은 방향입니다.
 영속 렌더 씬(`FScene` 모델)은 두지 않습니다. 빌더가 내용이 같으면 빌드를 건너뛰고, 움직임만 있으면 제자리에서 갱신하고, 바뀐 구간만 업로드하기 때문입니다.
 그래서 메시 종류가 8개에서 1024개로 늘어도 빌드 비용이 거의 같습니다(`-gv_benchMeshVariants` 로 측정합니다).
 

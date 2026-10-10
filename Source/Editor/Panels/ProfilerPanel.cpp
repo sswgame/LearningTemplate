@@ -110,7 +110,7 @@ namespace sw::editor
             }
             if ( ImGui::BeginTabItem( "GPU Passes" ) )
             {
-                drawScopeTab( ProfilerScopeKind::Gpu );
+                drawScopeTab( ProfilerScopeKind::GPU );
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( "Counters" ) )
@@ -130,7 +130,7 @@ namespace sw::editor
             }
             if ( ImGui::BeginTabItem( "GPU Memory" ) )
             {
-                drawGpuMemoryTab();
+                drawGPUMemoryTab();
                 ImGui::EndTabItem();
             }
             ImGui::EndTabBar();
@@ -297,7 +297,7 @@ namespace sw::editor
         {
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            ImGui::TextDisabled( kind == ProfilerScopeKind::Gpu ? "No GPU timestamps yet (this backend may not support them)" : "No samples yet" );
+            ImGui::TextDisabled( kind == ProfilerScopeKind::GPU ? "No GPU timestamps yet (this backend may not support them)" : "No samples yet" );
         }
         ImGui::EndTable();
     }
@@ -421,7 +421,7 @@ namespace sw::editor
         ImGui::Separator();
     }
 
-    void ProfilerPanel::drawGpuMemoryTab()
+    void ProfilerPanel::drawGPUMemoryTab()
     {
         EditorContext* pContext = EditorContext::get();
         IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
@@ -430,8 +430,8 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( "No RHI device." );
             return;
         }
-        const RHIMemoryLedger&    ledger  = pDevice->getMemoryLedger();
-        const RHIGpuMemorySummary summary = ledger.makeSummary();
+        const RHIMemoryLedger& ledger  = pDevice->getMemoryLedger();
+        const RHIMemorySummary summary = ledger.makeSummary();
 
         fixed_string<constant::kMaxBuffer32> arrBytesBuf;
         ProfilerPanelInternal::formatBytes( summary._trackedBytes, arrBytesBuf );
@@ -474,16 +474,16 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( "Driver", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
             // 드라이버가 답하지 않은 칸은 "Unknown" 이다 — 0 으로 지어내지 않는다.
-            const RHIGpuMemoryBudget&            budget = summary._budget;
+            const RHIMemoryBudget&               budget = summary._budget;
             fixed_string<constant::kMaxBuffer32> arrUsageBuf;
             fixed_string<constant::kMaxBuffer32> arrBudgetBuf;
             fixed_string<constant::kMaxBuffer32> arrAvailableBuf;
             ProfilerPanelInternal::formatKnownBytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsageBuf );
             ProfilerPanelInternal::formatKnownBytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudgetBuf );
             ProfilerPanelInternal::formatKnownBytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailableBuf );
-            const utf8* pScope = budget._bUsageKnown == SW_FALSE             ? ""
-                               : budget._scope == RHIGpuMemoryScope::Process ? " (this process)"
-                                                                             : " (whole device, other processes included)";
+            const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
+                               : budget._scope == RHIMemoryScope::Process ? " (this process)"
+                                                                          : " (whole device, other processes included)";
             ImGui::Text( "Usage: %s%s", arrUsageBuf.c_str(), pScope );
             ImGui::Text( "Budget: %s", arrBudgetBuf.c_str() );
             ImGui::Text( "Available: %s", arrAvailableBuf.c_str() );

@@ -24,7 +24,7 @@ namespace sw::editor
     enum class ProfilerScopeKind : uint8
     {
         Cpu,     ///< 시간 구간(`SW_PROFILE_SCOPE`) — 값은 마이크로초
-        Gpu,     ///< GPU 타임스탬프 구간(`GPU.<패스>`) — 값은 마이크로초
+        GPU,     ///< GPU 타임스탬프 구간(`GPU.<패스>`) — 값은 마이크로초
         Counter, ///< 카운터(`SW_PROFILE_COUNT`) — 값은 프레임당 합
     };
 } // namespace sw::editor

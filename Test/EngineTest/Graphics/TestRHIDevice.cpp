@@ -7,8 +7,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Window/IWindow.h"
 
@@ -293,7 +293,7 @@ SW_TEST_CASE( RHIDeviceTest, DeviceCreationAllBackends )
 
 /**
  * @brief [RHIDeviceTest] `test::RHIBackendSweep` 은 서는 백엔드마다 몸통을 한 번 돌린다 — 따로 하나씩 세워 본 목록과 같다
- * @details 이 파일과 `RenderPassGpuTest` 의 백엔드 루프가 전부 이 범위를 쓴다. 범위가 백엔드를 빠뜨리면 그 백엔드의 검증이 조용히
+ * @details 이 파일과 `RenderPassGPUTest` 의 백엔드 루프가 전부 이 범위를 쓴다. 범위가 백엔드를 빠뜨리면 그 백엔드의 검증이 조용히
  *          사라진다. 몸통이 디바이스를 내려도(디바이스를 잃은 경우를 보는 케이스) 반복은 다음 백엔드로 간다.
  */
 SW_TEST_CASE( RHIDeviceTest, BackendSweepVisitsEveryBackendThatStandsUp )
@@ -981,7 +981,7 @@ SW_TEST_CASE( RHIDeviceTest, ProvokingVertexIsFirstOnAllBackends )
 
 /**
  * @brief [RHIDeviceTest] 간접 드로우의 startVertex 를 SV_VertexID 가 포함하는가 — 백엔드마다 다르고, 엔진은 그 차이에 기댄다
- * @details 정점 풀(GpuMeshVertexPool)은 배치의 간접 인자에 `startVertex = 풀 오프셋` 을 싣고, 정점 셰이더는 SV_VertexID 로
+ * @details 정점 풀(GPUMeshVertexPool)은 배치의 간접 인자에 `startVertex = 풀 오프셋` 을 싣고, 정점 셰이더는 SV_VertexID 로
  *          모프 풀의 로컬 정점 번호를 구한다. Vulkan(VertexIndex)·OpenGL(gl_VertexID)은 그 오프셋을 **포함**하고
  *          D3D11·D3D12 는 드로우 안의 0 기반 번호다 — binding.hlsli 의 swComputeMorphElement 가 그 차이를 흡수한다.
  *          여기서는 provokingvertex.hlsl(SV_VertexID 로 풀스크린 삼각형을 만든다)을 startVertex = 36 으로 그린다:
@@ -1600,7 +1600,7 @@ SW_TEST_CASE( RHIDeviceTest, ComputeEntryPointOtherThanCSMainRuns )
  *          지난 사이클 값이 그대로 남고(쿼리 힙을 리셋하지 않는다), Vulkan·GL 은 "아직 준비 안 됨"
  *          이다. 그걸 가리지 않으면 건너뛴 패스가 0us 로, 혹은 지난 프레임 값으로 보고된다.
  */
-SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
+SW_TEST_CASE( RHIDeviceTest, GPUTimestampsMarkUnwrittenSlotsAllBackends )
 {
     /// @brief 몇 프레임 늦게 오므로 링 깊이보다 넉넉히 돌린다.
     constexpr uint32 kFrameCount = 12;
@@ -1615,9 +1615,9 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         // 엔진이 켜 주기 전에는 백엔드가 쿼리 자원조차 만들지 않는다 — 계측 비용을 안 내기 위해서다.
         device->setTimestampEnabled( true );
 
-        sw::RHIGpuTimestampFrame frame;
-        bool                     bGotSample{ false };
-        uint32                   slotCount{ 0 };
+        sw::RHITimestampFrame frame;
+        bool                  bGotSample{ false };
+        uint32                slotCount{ 0 };
         for ( uint32 frameIndex = 0; frameIndex < kFrameCount && bGotSample == false; ++frameIndex )
         {
             device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -1651,11 +1651,11 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
         if ( bGotSample )
         {
             ++reportedCount;
-            SW_EXPECT_TRUE_MSG( slotCount == sw::constant::kMaxGpuTimestampSlot,
+            SW_EXPECT_TRUE_MSG( slotCount == sw::constant::kMaxGPUTimestampSlot,
                                 ( sw::string( pName ) + ": slot count is not the shared contract value" ).c_str() );
-            SW_EXPECT_TRUE_MSG( listMicro.size() == sw::constant::kMaxGpuTimestampSlot,
+            SW_EXPECT_TRUE_MSG( listMicro.size() == sw::constant::kMaxGPUTimestampSlot,
                                 ( sw::string( pName ) + ": timestamp list size mismatch" ).c_str() );
-            if ( listMicro.size() == sw::constant::kMaxGpuTimestampSlot )
+            if ( listMicro.size() == sw::constant::kMaxGPUTimestampSlot )
             {
                 SW_EXPECT_TRUE_MSG( listMicro[0] >= 0.0f && listMicro[1] >= 0.0f,
                                     ( sw::string( pName ) + ": written slots must not be negative" ).c_str() );
@@ -1663,12 +1663,12 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
                                     ( sw::string( pName ) + ": later slot must not go backwards" ).c_str() );
 
                 uint32 unwrittenCount{ 0 };
-                for ( uint32 slotIndex = 2; slotIndex < sw::constant::kMaxGpuTimestampSlot; ++slotIndex )
+                for ( uint32 slotIndex = 2; slotIndex < sw::constant::kMaxGPUTimestampSlot; ++slotIndex )
                 {
                     if ( listMicro[slotIndex] < 0.0f )
                         ++unwrittenCount;
                 }
-                SW_EXPECT_TRUE_MSG( unwrittenCount == sw::constant::kMaxGpuTimestampSlot - 2,
+                SW_EXPECT_TRUE_MSG( unwrittenCount == sw::constant::kMaxGPUTimestampSlot - 2,
                                     ( sw::string( pName ) + ": unwritten slots must be marked negative (" +
                                       sw::to_string( unwrittenCount ) + ")" )
                                         .c_str() );
@@ -1676,7 +1676,7 @@ SW_TEST_CASE( RHIDeviceTest, GpuTimestampsMarkUnwrittenSlotsAllBackends )
 
             // GPU 시계(외부 프로파일러가 GPU 시각을 CPU 시계에 맞추는 값)는 타임스탬프와 같은 시계다 — 이미 끝난 프레임의 기준점보다 늦다.
             int64 clockNanos{ 0 };
-            SW_EXPECT_TRUE_MSG( device->readGpuClockNanos( clockNanos ), ( sw::string( pName ) + ": GPU clock is not readable" ).c_str() );
+            SW_EXPECT_TRUE_MSG( device->readGPUClockNanos( clockNanos ), ( sw::string( pName ) + ": GPU clock is not readable" ).c_str() );
             SW_EXPECT_TRUE_MSG( clockNanos >= frame._originNanos && frame._originNanos > 0,
                                 ( sw::string( pName ) + ": GPU clock " + sw::to_string( clockNanos ) + " ns is not after the frame origin " +
                                   sw::to_string( frame._originNanos ) + " ns (different clock domain?)" )
@@ -1934,12 +1934,12 @@ SW_TEST_CASE( RHIDeviceTest, SlicedTexturesTargetUploadAndReadBackPerSlice )
 }
 
 /**
- * @brief [RHIDeviceTest] `enqueueGpuRelease` 는 맡긴 콜백을 그 자리에서 부르지 않고, 프레임이 지나면 한 번만 부른다(네 백엔드)
+ * @brief [RHIDeviceTest] `enqueueGPURelease` 는 맡긴 콜백을 그 자리에서 부르지 않고, 프레임이 지나면 한 번만 부른다(네 백엔드)
  * @details 에디터의 ImGui 렌더러가 디스크립터를 이 창구로 놓는다. 그 자리에서 부르면 기록 중인 프레임이 놓인 세트를 쓴다. 해제 큐의 기준은 백엔드마다
- *          다르다(DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연) — 어느 쪽이든 `kGpuReleaseFrameLatency` 프레임을 넘기면 불려야 하고,
+ *          다르다(DX12 · Vulkan 은 GPU 펜스, DX11 · GL 은 프레임 지연) — 어느 쪽이든 `kGPUReleaseFrameLatency` 프레임을 넘기면 불려야 하고,
  *          뒤의 `waitIdle` 이 다시 부르면 안 된다.
  */
-SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
+SW_TEST_CASE( RHIDeviceTest, EnqueuedGPUReleaseRunsOnceAfterItsFrame )
 {
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
@@ -1949,12 +1949,12 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
         uint32*          pCallCount = &callCount;
 
         device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
-        device->enqueueGpuRelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
+        device->enqueueGPURelease( SW_DELEGATE_LAMBDA( sw::RHIResourceReleaseDelegate, [pCallCount]()
         { ++( *pCallCount ); } ) );
         SW_EXPECT_TRUE_MSG( callCount == 0, ( label + ": 기록 중인 프레임에서 곧바로 불렀다" ).c_str() );
         device->endFrame( false, false );
 
-        constexpr uint32 kFollowingFrameCount = sw::constant::kGpuReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+        constexpr uint32 kFollowingFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
         for ( uint32 frame = 0; frame < kFollowingFrameCount; ++frame )
         {
             device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -1973,7 +1973,7 @@ SW_TEST_CASE( RHIDeviceTest, EnqueuedGpuReleaseRunsOnceAfterItsFrame )
  * @brief [RHIDeviceTest] 텍스처 · 버퍼를 만들면 GPU 메모리 장부의 그 줄이 크기만큼 오르고, 지운 뒤 해제 지연을 지나면 원래대로 돌아온다(네 백엔드)
  * @details 샘플링 텍스처는 Texture, 렌더 타깃은 RenderTarget, 트랜지언트 풀 표시가 붙은 것은 TransientPool, 구조버퍼는 Buffer 줄이다. 오른 양은
  *          적어도 논리 크기(너비 × 높이 × 텍셀 바이트)다 — DX12 · Vulkan 은 드라이버의 할당 크기라 더 클 수 있다. 장부는 자원을 **실제로 놓을 때**
- *          줄어야 한다. destroy 직후에는 아직 GPU 가 쥐고 있을 수 있으므로 그대로이고, 해제 지연(`kGpuReleaseFrameLatency` + 링 깊이)만큼 프레임을 돌린
+ *          줄어야 한다. destroy 직후에는 아직 GPU 가 쥐고 있을 수 있으므로 그대로이고, 해제 지연(`kGPUReleaseFrameLatency` + 링 깊이)만큼 프레임을 돌린
  *          뒤에 원래 값이다.
  */
 SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
@@ -2040,7 +2040,7 @@ SW_TEST_CASE( RHIDeviceTest, MemoryLedgerTracksCreateAndDeferredRelease )
         SW_EXPECT_TRUE_MSG( ledger.getStats( sw::RHIMemoryKind::Texture )._liveCount == arrBefore[0]._liveCount + 1,
                             ( label + ": destroy 요청만으로 장부가 줄었다 — GPU 가 아직 쥔 자원이다" ).c_str() );
 
-        constexpr uint32 kFollowingFrameCount = sw::constant::kGpuReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
+        constexpr uint32 kFollowingFrameCount = sw::constant::kGPUReleaseFrameLatency + sw::constant::kMaxFrameCountInFlight;
         for ( uint32 frame = 0; frame <= kFollowingFrameCount; ++frame )
         {
             device->beginFrame( sw::float4{ 0.0f, 0.0f, 0.0f, 1.0f } );
@@ -2071,13 +2071,13 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
     test::RHIBackendSweep sweep;
     for ( test::RHITestDevice& device : sweep )
     {
-        const sw::string             label  = sw::string( device->getBackendName() );
-        const sw::RHIMemoryLedger&   ledger = device->getMemoryLedger();
-        const sw::RHIGpuMemoryBudget fresh  = ledger.getDriverBudget();
+        const sw::string           label  = sw::string( device->getBackendName() );
+        const sw::RHIMemoryLedger& ledger = device->getMemoryLedger();
+        const sw::RHIMemoryBudget  fresh  = ledger.getDriverBudget();
         SW_EXPECT_TRUE_MSG( fresh._bUsageKnown == SW_FALSE && fresh._bBudgetKnown == SW_FALSE, ( label + ": 묻기 전부터 드라이버 값이 있다" ).c_str() );
 
-        device->refreshGpuMemoryBudget();
-        const sw::RHIGpuMemoryBudget budget = ledger.getDriverBudget();
+        device->refreshGPUMemoryBudget();
+        const sw::RHIMemoryBudget budget = ledger.getDriverBudget();
         SW_LOG_INFO( "%#: usage known %# (%# B), budget known %# (%# B), available known %# (%# B), scope %#", label.c_str(),
                      static_cast<uint32>( budget._bUsageKnown ), budget._usageBytes, static_cast<uint32>( budget._bBudgetKnown ), budget._budgetBytes,
                      static_cast<uint32>( budget._bAvailableKnown ), budget._availableBytes, static_cast<uint32>( budget._scope ) );
@@ -2087,7 +2087,7 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
         if ( bDxgi )
         {
             SW_EXPECT_TRUE_MSG( budget._bUsageKnown == SW_TRUE && budget._bBudgetKnown == SW_TRUE, ( label + ": DXGI 가 사용량 · 예산을 답하지 않았다" ).c_str() );
-            SW_EXPECT_TRUE_MSG( budget._scope == sw::RHIGpuMemoryScope::Process, ( label + ": DXGI 사용량은 이 프로세스의 것이다" ).c_str() );
+            SW_EXPECT_TRUE_MSG( budget._scope == sw::RHIMemoryScope::Process, ( label + ": DXGI 사용량은 이 프로세스의 것이다" ).c_str() );
         }
         if ( budget._bUsageKnown == SW_FALSE )
             SW_EXPECT_TRUE_MSG( budget._usageBytes == 0, ( label + ": 모르는 사용량에 숫자가 있다" ).c_str() );
@@ -2097,7 +2097,7 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
             SW_EXPECT_TRUE_MSG( budget._budgetBytes > 0, ( label + ": 예산이 0 이다" ).c_str() );
 
         const bool bTracksAllocation = backend == sw::RHIBackend::DirectX12 || backend == sw::RHIBackend::Vulkan;
-        if ( bTracksAllocation && budget._bUsageKnown == SW_TRUE && budget._scope == sw::RHIGpuMemoryScope::Process )
+        if ( bTracksAllocation && budget._bUsageKnown == SW_TRUE && budget._scope == sw::RHIMemoryScope::Process )
         {
             sw::RHITextureDesc largeDesc{};
             largeDesc._width                  = 4096;
@@ -2106,8 +2106,8 @@ SW_TEST_CASE( RHIDeviceTest, DriverMemoryBudgetIsKnownOnlyWhereTheDriverAnswers 
             constexpr uint64           kBytes = 4096ull * 4096ull * 4ull;
             const sw::RHITextureHandle large  = device->getResourceFactory()->createTexture2D( largeDesc );
             SW_ASSERT_TRUE( large != 0 );
-            device->refreshGpuMemoryBudget();
-            const sw::RHIGpuMemoryBudget grown = ledger.getDriverBudget();
+            device->refreshGPUMemoryBudget();
+            const sw::RHIMemoryBudget grown = ledger.getDriverBudget();
             SW_EXPECT_TRUE_MSG( grown._usageBytes >= budget._usageBytes + kBytes / 2, ( label + ": 64 MB 텍스처를 만들어도 드라이버 사용량이 따라 오르지 않았다" ).c_str() );
             device->getResourceFactory()->destroyTexture( large );
         }

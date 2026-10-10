@@ -6,7 +6,7 @@
 #include "Engine/Graphics/RHI/DX12/D3D12RHICommandList.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIDevice.h"
 #include "Engine/Graphics/RHI/DX12/D3D12RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Engine/Common/EnginePlatformHeaders.h"
@@ -26,9 +26,9 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
-    void D3D12RHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    void D3D12RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
-        _releaseQueue.enqueueGpuRelease( releaseDelegate, _fenceValue );
+        _releaseQueue.enqueueGPURelease( releaseDelegate, _fenceValue );
     }
 
     unique_ptr<IRHICommandList> D3D12RHIDevice::createCommandList()
@@ -369,25 +369,25 @@ namespace sw
             std::scoped_lock<mutex> lock{ _cmdListPoolMutex };
             _listFreeCmdListEntry.push_back( entry );
         };
-        _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
+        _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, recycleCb ), _fenceValue );
     }
 
     uint32 D3D12RHIDevice::getTimestampSlotCount() const
     {
         return ( _bTimestampEnabled != SW_FALSE && _timestampHeap != nullptr && _timestampFrequency != 0 )
-                 ? constant::kMaxGpuTimestampSlot
+                 ? constant::kMaxGPUTimestampSlot
                  : 0u;
     }
 
-    bool D3D12RHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    bool D3D12RHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
         return outFrame._listMicro.empty() == false;
     }
 
-    bool D3D12RHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    bool D3D12RHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
-        outGpuNanos = 0;
+        outGPUNanos = 0;
         if ( _commandQueue == nullptr )
             return false;
         uint64 frequency = _timestampFrequency;
@@ -400,7 +400,7 @@ namespace sw
         uint64 cpuTick{ 0 };
         if ( FAILED( _commandQueue->GetClockCalibration( &gpuTick, &cpuTick ) ) )
             return false;
-        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( gpuTick, 1.0e9 / static_cast<float64>( frequency ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( gpuTick, 1.0e9 / static_cast<float64>( frequency ) );
         return true;
     }
 
@@ -415,7 +415,7 @@ namespace sw
 
         D3D12_QUERY_HEAP_DESC heapDesc{};
         heapDesc.Type  = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-        heapDesc.Count = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        heapDesc.Count = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
         if ( FAILED( _device->CreateQueryHeap( &heapDesc, IID_PPV_ARGS( &_timestampHeap ) ) ) )
             return;
 
@@ -450,7 +450,7 @@ namespace sw
 
         const uint32 base       = getTimestampBase();
         const size_t byteOffset = sizeof( uint64 ) * base;
-        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGpuTimestampSlot };
+        D3D12_RANGE  range{ byteOffset, byteOffset + sizeof( uint64 ) * constant::kMaxGPUTimestampSlot };
 
         void* pMapped{ nullptr };
         if ( FAILED( _timestampReadback->Map( 0, &range, &pMapped ) ) || pMapped == nullptr )
@@ -460,7 +460,7 @@ namespace sw
         // 그래서 어느 칸이 이번 것인지 비트로 가려야 한다. 안 그러면 건너뛴 패스가 0us 로 보고된다.
         const uint64* pTicks = reinterpret_cast<const uint64*>( static_cast<const uint8*>( pMapped ) + byteOffset );
         // 그래서 writtenMask 가 곧 준비 비트다. 이 슬롯은 방금 펜스를 통과했다.
-        RHIGpuTimestamp::resolve( pTicks, writtenMask, 1.0e9 / static_cast<float64>( _timestampFrequency ), _timestampFrame );
+        RHITimestamp::resolve( pTicks, writtenMask, 1.0e9 / static_cast<float64>( _timestampFrequency ), _timestampFrame );
 
         const D3D12_RANGE emptyRange{ 0, 0 };
         _timestampReadback->Unmap( 0, &emptyRange );
@@ -549,7 +549,7 @@ namespace sw
                 {
                     const uint32 base = getTimestampBase();
                     _pActiveFrameList->ResolveQueryData( _timestampHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, base,
-                                                         constant::kMaxGpuTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
+                                                         constant::kMaxGPUTimestampSlot, _timestampReadback.Get(), sizeof( uint64 ) * base );
                 }
                 _pActiveFrameList->Close();
                 _listPendingSubmit.push_back( _pActiveFrameList );

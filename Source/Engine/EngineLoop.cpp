@@ -48,7 +48,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -73,9 +73,9 @@
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -661,14 +661,14 @@ namespace sw
             // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
             // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
             if ( loop._gpuSceneBuilder == nullptr )
-                loop._gpuSceneBuilder = make_unique<GpuSceneBuilder>();
+                loop._gpuSceneBuilder = make_unique<GPUSceneBuilder>();
             if ( loop._packetScratch == nullptr )
                 loop._packetScratch = make_unique<RenderFramePacket>();
             if ( loop._gpuUploadQueue == nullptr )
-                loop._gpuUploadQueue = make_unique<GpuUploadQueue>();
+                loop._gpuUploadQueue = make_unique<GPUUploadQueue>();
             if ( loop._renderViewScheduler == nullptr )
                 loop._renderViewScheduler = make_unique<RenderViewScheduler>();
-            // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
+            // GT 쪽 GPUScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
             // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
             loop._gpuSceneBuilder->setMergeBatchesAcrossMaterials( loop._rhi->getDevice().supportsNativeBindlessSampling() );
             loop._gpuUploadQueue->bindDevice( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
@@ -682,7 +682,7 @@ namespace sw
         }
         static void shutdown( EngineLoop& loop )
         {
-            // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
+            // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
             // 해제(destroy)까지 미루면 디바이스가 사라진 뒤에 놓게 된다.
             loop._gpuSceneBuilder->clear();
             loop._frameRenderer->shutdown();
@@ -1403,7 +1403,7 @@ namespace sw
                 // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).
                 if ( _gpuUploadQueue != nullptr )
                 {
-                    _gpuSceneBuilder->requestGpuUploads( *_gpuUploadQueue );
+                    _gpuSceneBuilder->requestGPUUploads( *_gpuUploadQueue );
                     _gpuUploadQueue->flush();
                 }
 

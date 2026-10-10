@@ -168,18 +168,18 @@ namespace sw
         // (2) Dev 에서도 프로파일러가 켜져 있을 때만 찍는다(`-gv_profileFrames`).
         const uint32 timestampBegin = static_cast<uint32>( passIndex ) * 2u;
         // 패스 슬롯은 패스 번호로 고정이라 주 시점만 적는다(추가 뷰가 같은 칸을 다시 쓰면 주 시점의 시간이 덮인다).
-        const bool bWriteGpuTime = _pDevice != nullptr && passCtx._pCmd != nullptr && isRenderingExtraView() == false &&
+        const bool bWriteGPUTime = _pDevice != nullptr && passCtx._pCmd != nullptr && isRenderingExtraView() == false &&
                                    engine::getFrameProfiler().isEnabled() &&
-                                   static_cast<uint32>( passIndex ) < FrameRendererUtil::kGpuTimedPassCapacity &&
+                                   static_cast<uint32>( passIndex ) < FrameRendererUtil::kGPUTimedPassCapacity &&
                                    ( timestampBegin + 1u ) < _pDevice->getTimestampSlotCount();
-        if ( bWriteGpuTime )
+        if ( bWriteGPUTime )
             passCtx._pCmd->writeTimestamp( timestampBegin );
 #endif
 
         executePass( passCtx, passType, pPassName, depthAttachment, pPassDesc );
 
 #if SW_PROFILE_COMPILED
-        if ( bWriteGpuTime )
+        if ( bWriteGPUTime )
             passCtx._pCmd->writeTimestamp( timestampBegin + 1u );
 #endif
     }
@@ -652,7 +652,7 @@ namespace sw
                 case RenderPassType::Outline:
                 case RenderPassType::Tonemap:
                 case RenderPassType::ForwardOpaqueNoDepthWrite:
-                case RenderPassType::GpuCull:
+                case RenderPassType::GPUCull:
                 case RenderPassType::InstanceAnim:
                 case RenderPassType::InstanceSort:
                 case RenderPassType::MeshMorph:

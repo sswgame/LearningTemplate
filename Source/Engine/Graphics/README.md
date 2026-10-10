@@ -20,11 +20,11 @@ API별 구현이나 바인딩 규칙의 세부는 아래 "더 볼 곳"의 하위
 ```mermaid
 flowchart LR
   subgraph GT["게임 스레드"]
-    Scene["씬<br/>MeshComponent, 조명, 카메라"] --> Builder["GpuSceneBuilder<br/>그릴 것을 모은다"]
+    Scene["씬<br/>MeshComponent, 조명, 카메라"] --> Builder["GPUSceneBuilder<br/>그릴 것을 모은다"]
   end
-  Builder -- "스냅샷<br/>(GpuSceneSnapshot)" --> GpuScene
+  Builder -- "스냅샷<br/>(GPUSceneSnapshot)" --> GPUScene
   subgraph RT["렌더 스레드"]
-    GpuScene["GpuScene<br/>GPU 버퍼에 올린다"] --> Frame["FrameRenderer<br/>패스를 실행한다"]
+    GPUScene["GPUScene<br/>GPU 버퍼에 올린다"] --> Frame["FrameRenderer<br/>패스를 실행한다"]
     Pipeline["파이프라인 XML"] --> Graph["RenderGraph<br/>패스 순서"] --> Frame
   end
   Frame --> RHI["RHI"] --> Backend["DX11 / DX12 / Vulkan / OpenGL"]
@@ -53,7 +53,7 @@ flowchart LR
 큐브는 씬의 기본 머티리얼(`engine/materials/defaultmaterial.material`)로 그려집니다. 이 머티리얼에는 `color` 라는 값이 있습니다.
 머티리얼 인스턴스를 만들어 이 값만 바꿔 보겠습니다. `EmptyGame::ensureTutorialSpinner` 에서 `setMeshId` 다음에 아래 코드를 넣습니다.
 
-<!-- snippet: 머티리얼 인스턴스로 큐브 색 바꾸기 — 5b U7 에서 RenderPassGpuTest 케이스 구간으로 대조 -->
+<!-- snippet: 머티리얼 인스턴스로 큐브 색 바꾸기 — 5b U7 에서 RenderPassGPUTest 케이스 구간으로 대조 -->
 ```cpp
 Scene*    pScene = game::getService<SceneManager>()->getActiveScene();
 Material* pBase  = pScene->getMaterial(); // 씬 기본 머티리얼
@@ -119,11 +119,11 @@ pMesh->setMaterialInstance( std::move( tint ) );
 
 ### 한 프레임이 그려지는 순서
 
-1. **게임 스레드: 그릴 것 모으기.** 씬 틱이 끝나면 `GpuSceneBuilder` 가 보이는 메시와 조명, 카메라를 모아 스냅샷을 만듭니다.
+1. **게임 스레드: 그릴 것 모으기.** 씬 틱이 끝나면 `GPUSceneBuilder` 가 보이는 메시와 조명, 카메라를 모아 스냅샷을 만듭니다.
    같은 메시와 머티리얼을 쓰는 인스턴스는 이때 배치 하나로 묶입니다.
-2. **게임 스레드: GPU 리소스 미리 만들기.** 처음 그리는 메시나 텍스처가 있으면 `GpuUploadQueue` 가 워커 스레드에서 GPU 버퍼를 미리 만듭니다.
+2. **게임 스레드: GPU 리소스 미리 만들기.** 처음 그리는 메시나 텍스처가 있으면 `GPUUploadQueue` 가 워커 스레드에서 GPU 버퍼를 미리 만듭니다.
    렌더 스레드가 그리는 도중에 리소스를 만드느라 멈추지 않게 하려는 것입니다. OpenGL은 컨텍스트가 스레드 하나에 묶여 있어서 이 단계를 건너뛰고 렌더 스레드가 직접 만듭니다.
-3. **렌더 스레드: 스냅샷 받기.** 스냅샷이 렌더 스레드로 넘어가면 `GpuScene` 이 인스턴스 데이터를 GPU 버퍼에 올립니다.
+3. **렌더 스레드: 스냅샷 받기.** 스냅샷이 렌더 스레드로 넘어가면 `GPUScene` 이 인스턴스 데이터를 GPU 버퍼에 올립니다.
 4. **렌더 스레드: 패스 실행.** `FrameRenderer` 가 렌더 그래프의 순서대로 패스를 실행합니다. 같은 레벨의 패스는 커맨드 리스트를 따로 만들어 여러 스레드에서 동시에 기록합니다.
 5. **화면 2D 그리기.** 마지막 `Canvas` 패스가 톤 매핑이 끝난 화면 위에 UI와 화면 글자를 그립니다. 게임 스레드의 UI가 칠한 그리기 목록(`Canvas/`)을 렌더 스레드가 받아 그립니다.
 6. **제출과 Present.** 기록한 커맨드 리스트를 순서대로 GPU에 제출하고 화면에 표시합니다.
@@ -207,7 +207,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 `-dx11`, `-dx12`, `-vk`, `-gl` 로 명시하고, 로그의 `Initializing RHI with backend:` 줄로 확인합니다.
 
 **"실행이 됐다"를 "이미지가 맞다"로 읽지 마세요.** 로그에 오류가 없고 테스트가 통과해도 화면이 깨져 있을 수 있습니다. 렌더링을 바꿨다면 `-gv_screenshot` 으로 실제 이미지를 보세요.
-백엔드가 같은 이미지를 내는지는 `RenderPassGpuTest.FrameRendererParityAllBackends` 처럼 픽셀을 읽어 비교하는 테스트만 증명합니다.
+백엔드가 같은 이미지를 내는지는 `RenderPassGPUTest.FrameRendererParityAllBackends` 처럼 픽셀을 읽어 비교하는 테스트만 증명합니다.
 
 **성능은 Release 빌드에서, VSync를 끄고 측정하세요.** Debug 빌드는 컨테이너 검사 코드 때문에 측정값이 크게 부풀려집니다.
 프레임 시간이 모니터 주사율과 같다면 VSync에 묶여 있는 것이므로, 그 측정값으로는 아무것도 판단할 수 없습니다. 측정 방법은 [검증과 측정](../../../docs/08_Verification.md)의 "측정 · 프로파일" 절에 있습니다.

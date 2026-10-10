@@ -25,7 +25,7 @@ namespace sw
     {
     public:
         /** @brief GPU 컨텍스트 수 상한입니다. Tracy 의 컨텍스트 번호는 1 바이트이고, 디바이스를 바꿀 때마다 하나씩 씁니다. */
-        static constexpr uint32 kMaxGpuContext = 255;
+        static constexpr uint32 kMaxGPUContext = 255;
 
         TracyProfilerBackend();
         ~TracyProfilerBackend() override = default;
@@ -48,10 +48,10 @@ namespace sw
         void onAllocate( const void* pPtr, size_t size, const utf8* pPoolName ) override;
         void onFree( const void* pPtr, const utf8* pPoolName ) override;
 
-        uint32 createGpuContext( ProfilerGpuApi api, const utf8* pName, int64 gpuNanos ) override;
-        void   syncGpuClock( uint32 gpuContext, int64 gpuNanos ) override;
-        void   beginGpuZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) override;
-        void   endGpuZone( uint32 gpuContext, int64 gpuEndNanos ) override;
+        uint32 createGPUContext( ProfilerGPUBackend api, const utf8* pName, int64 gpuNanos ) override;
+        void   syncGPUClock( uint32 gpuContext, int64 gpuNanos ) override;
+        void   beginGPUZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) override;
+        void   endGPUZone( uint32 gpuContext, int64 gpuEndNanos ) override;
 
         // ------------------------------------------------------------------------------
         // 2) 이 빌드 · 상태
@@ -61,18 +61,18 @@ namespace sw
         /** @brief Tracy 데이터 포트입니다(`TRACY_PORT` 환경 변수가 있으면 그 값, 없으면 8086). */
         static uint16 getDataPort();
         /** @brief 지금까지 낸 GPU 구간 수입니다(시험 · 에디터 표시). */
-        uint64 getGpuZoneCount() const { return _gpuZoneCount.load( std::memory_order_relaxed ); }
+        uint64 getGPUZoneCount() const { return _gpuZoneCount.load( std::memory_order_relaxed ); }
         /** @brief 지금까지 연 CPU 구간 수입니다(시험 · 에디터 표시). */
         uint64 getZoneCount() const { return _zoneCount.load( std::memory_order_relaxed ); }
 
     private:
         /** @brief 다음 GPU 쿼리 번호입니다. 시각을 begin · end 와 같은 자리에서 바로 넘기므로 번호는 돌려 써도 겹치지 않습니다. */
-        uint16 allocateGpuQueryId();
+        uint16 allocateGPUQueryId();
 
     private:
         atomic<uint64>          _zoneCount;       ///< 연 CPU 구간 수
         atomic<uint64>          _gpuZoneCount;    ///< 닫은 GPU 구간 수
         [[maybe_unused]] uint32 _gpuContextCount; ///< 만든 GPU 컨텍스트 수(렌더 스레드만 쓴다). Tracy 없는 빌드에서는 쓰이지 않는다
-        uint16                  _nextGpuQueryId;  ///< 렌더 스레드만 쓴다
+        uint16                  _nextGPUQueryId;  ///< 렌더 스레드만 쓴다
     };
 } // namespace sw

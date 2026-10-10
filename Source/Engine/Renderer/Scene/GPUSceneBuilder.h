@@ -1,7 +1,7 @@
 /**
- * @file GpuSceneBuilder.h
- * @brief 게임 스레드가 씬의 프리미티브(MeshComponent · 인스턴스 배치 항목)를 모아 `GpuSceneSnapshot` 을 만드는 쪽입니다.
- * @details 렌더 스레드 쪽(`GpuScene`)과는 스냅샷 타입으로만 만납니다. 여기에는 GPU 핸들이 하나도 없고, 저쪽에는 씬이 없습니다.
+ * @file GPUSceneBuilder.h
+ * @brief 게임 스레드가 씬의 프리미티브(MeshComponent · 인스턴스 배치 항목)를 모아 `GPUSceneSnapshot` 을 만드는 쪽입니다.
+ * @details 렌더 스레드 쪽(`GPUScene`)과는 스냅샷 타입으로만 만납니다. 여기에는 GPU 핸들이 하나도 없고, 저쪽에는 씬이 없습니다.
  *          프레임 간에 유지되는 것은 재구축 판단용 캐시(후보 집합 · 카메라 · 세대)와 **머티리얼 원소 등록부**
  *          (언리얼 GPUScene 의 영속 ID 자리)입니다. 스냅샷은 매 프레임 복사해 내보내고 기준은 여기 남습니다.
  */
@@ -12,8 +12,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Renderer/Scene/GpuInstanceRing.h"
-#include "Engine/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Renderer/Scene/GPUInstanceRing.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
     struct RenderViewRequest;
 
     class GameObjectManager;
-    class GpuUploadQueue;
+    class GPUUploadQueue;
     class Material;
     class MaterialInstance;
     class Mesh;
@@ -30,20 +30,20 @@ namespace sw
     class Scene;
 
     /**
-     * @class GpuSceneBuilder
+     * @class GPUSceneBuilder
      * @brief 씬 → 스냅샷입니다. 게임 스레드 전용이며 GPU 를 모릅니다.
      */
-    class SW_API GpuSceneBuilder
+    class SW_API GPUSceneBuilder
     {
     public:
-        GpuSceneBuilder() noexcept = default;
-        ~GpuSceneBuilder()         = default;
+        GPUSceneBuilder() noexcept = default;
+        ~GPUSceneBuilder()         = default;
 
-        GpuSceneBuilder( GpuSceneBuilder&& other ) noexcept            = default;
-        GpuSceneBuilder& operator=( GpuSceneBuilder&& other ) noexcept = default;
+        GPUSceneBuilder( GPUSceneBuilder&& other ) noexcept            = default;
+        GPUSceneBuilder& operator=( GPUSceneBuilder&& other ) noexcept = default;
 
-        GpuSceneBuilder( const GpuSceneBuilder& )            = delete;
-        GpuSceneBuilder& operator=( const GpuSceneBuilder& ) = delete;
+        GPUSceneBuilder( const GPUSceneBuilder& )            = delete;
+        GPUSceneBuilder& operator=( const GPUSceneBuilder& ) = delete;
 
         /**
          * @brief 프리미티브가 이 수 이상이면 전체 수집의 채우기를 잡에 나눕니다.
@@ -65,7 +65,7 @@ namespace sw
          * @brief 프리미티브(MeshComponent · 인스턴스 배치 항목)를 모아 CPU 스냅샷을 만듭니다(게임 스레드).
          * @details 내용 · 카메라가 이전과 같으면 재구축을 건너뜁니다. 카메라만 바뀌면
          *          투명 재정렬과 배치 재구성만 합니다.
-         * @note 인스턴스 채우기(`GT.GpuScene.build.fill`)는 이 스레드에서 합니다. 워커로 나눠 봤지만 **모든 크기에서 졌습니다**.
+         * @note 인스턴스 채우기(`GT.GPUScene.build.fill`)는 이 스레드에서 합니다. 워커로 나눠 봤지만 **모든 크기에서 졌습니다**.
          *       원소당 일이 필드 몇 개 복사라 디스패치 · 대기 비용이 일 자체보다 훨씬 큽니다
          *       (400개 358us → 1us, 20,000개 219us → 99us). 다시 나누자고 제안하기 전에 그 숫자를 볼 것.
          *       수집과 전체 제자리 갱신은 문턱을 넘으면 병렬로 돕니다(`kParallelCollectPrimitiveCount` · `refreshInstancesInPlace`).
@@ -88,16 +88,16 @@ namespace sw
         /**
          * @brief 스냅샷(GT → RT 로 옮겨지는 전부)을 outSnapshot 으로 복사합니다. GPU 쪽은 타입상 실릴 수 없습니다.
          * @details GT 가 프레임마다 RenderFramePacket 에 담을 때 씁니다. 부른 뒤 dirty 플래그는 소비된 것으로 보고
-         *          0 으로 되돌립니다(GpuScene::upload 의 재업로드 생략과 대칭되는 GT 쪽 소비 시점).
+         *          0 으로 되돌립니다(GPUScene::upload 의 재업로드 생략과 대칭되는 GT 쪽 소비 시점).
          */
-        void exportCpuSnapshot( GpuSceneSnapshot& outSnapshot );
+        void exportCpuSnapshot( GPUSceneSnapshot& outSnapshot );
         /**
          * @brief 이번 빌드가 그릴 메시 중 아직 안 올라간 것을 업로드 큐에 올립니다(게임 스레드).
          * @details 렌더 스레드가 처음 그릴 때 만들 것을 **그리기 전에** 만들어 두기 위한 것입니다. 큐가 만들어
          *          두면 RT 의 `Mesh::initRhi` 호출은 핸들을 읽는 일이 되고, 큐가 못 다룬 것은 RT 가
          *          그 자리에서 만듭니다. 앞당기는 장치이지 유일한 통로가 아닙니다.
          */
-        void requestGpuUploads( GpuUploadQueue& queue ) const;
+        void requestGPUUploads( GPUUploadQueue& queue ) const;
         /**
          * @brief 불투명 배치를 머티리얼이 아니라 **셰이더 퍼뮤테이션**(셰이더 경로 + 정적 define)으로 묶을지 정합니다(언리얼 GPUScene).
          * @details 머티리얼 파라미터는 인스턴스의 materialIndex 로 버퍼에서 읽으므로, 텍스처를 인덱스로 고를 수 있는 백엔드
@@ -110,17 +110,17 @@ namespace sw
         bool isMergeBatchesAcrossMaterials() const { return _bMergeAcrossMaterials == SW_TRUE; }
 
         /** @brief 인스턴스 목록을 반환합니다. */
-        const vector<GpuInstance>& getInstances() const { return _snapshot.getInstances(); }
+        const vector<GPUInstance>& getInstances() const { return _snapshot.getInstances(); }
         /** @brief 불투명 배치를 반환합니다. */
-        const vector<GpuMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
+        const vector<GPUMeshBatch>& getOpaqueBatches() const { return _snapshot._listOpaqueBatch; }
         /** @brief 투명 배치를 반환합니다. */
-        const vector<GpuMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
+        const vector<GPUMeshBatch>& getTransparentBatches() const { return _snapshot._listTransparentBatch; }
         /** @brief 셰이더 타입별 머티리얼 데이터 그룹(CPU 스냅샷)을 반환합니다. */
-        const vector<GpuMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
+        const vector<GPUMaterialGroup>& getMaterialGroups() const { return _snapshot._listMaterialGroup; }
         /** @brief 퍼뮤테이션 하나를 얻습니다. 인덱스가 없으면 nullptr 입니다. */
-        const GpuShaderPermutation* findShaderPermutation( uint32 index ) const
+        const GPUShaderPermutation* findShaderPermutation( uint32 index ) const
         {
-            const vector<GpuShaderPermutation>* pList = _snapshot._pListShaderPermutation.get();
+            const vector<GPUShaderPermutation>* pList = _snapshot._pListShaderPermutation.get();
             return ( pList != nullptr && index < pList->size() ) ? &( *pList )[index] : nullptr;
         }
         /** @brief 마지막 buildFromScene 이 CPU 스냅샷을 바꿨으면 true 를 반환합니다(내보내면 다시 false). */
@@ -196,7 +196,7 @@ namespace sw
         void invalidateBuildCache();
         /**
          * @brief 텍스처가 다시 올라왔으면(`TextureCache::getReloadGeneration`) 지난 빌드의 머티리얼이 새 SRV 인덱스를 받게 합니다.
-         * @details 슬롯 바인딩 백엔드(DX11 · GL)의 배치는 SRV 를 값으로 들고 있으므로(`GpuMeshBatch::_arrMaterialTexSrv`) 바뀐 머티리얼이 있으면
+         * @details 슬롯 바인딩 백엔드(DX11 · GL)의 배치는 SRV 를 값으로 들고 있으므로(`GPUMeshBatch::_arrMaterialTexSrv`) 바뀐 머티리얼이 있으면
          *          퍼뮤테이션 세대를 올려 배치를 다시 만들게 합니다. 네이티브 bindless 는 머티리얼 바이트가 바뀌어 매 프레임 업로드가 가져갑니다.
          */
         void refreshReloadedTextures();
@@ -208,7 +208,7 @@ namespace sw
         void collectSkinPalettes( GameObjectManager& objects );
 
         /** @brief 기준 스냅샷입니다. 매 프레임 `exportCpuSnapshot` 이 복사해 내보냅니다. 퍼뮤테이션 표 · 머티리얼 그룹은 여기서 계속 자랍니다. */
-        GpuSceneSnapshot _snapshot;
+        GPUSceneSnapshot _snapshot;
         /// @brief 셰이더 경로 → `_snapshot._listMaterialGroup` 인덱스입니다(배치마다 그룹 목록을 string 비교로 훑지 않습니다).
         unordered_map<string, uint32> _mapShaderPathToGroup;
 
@@ -218,13 +218,13 @@ namespace sw
          */
         struct MaterialGroupState
         {
-            unordered_map<GpuMaterialElementKey, uint32, GpuMaterialElementKeyHash> _mapEntryToIndex;
+            unordered_map<GPUMaterialElementKey, uint32, GPUMaterialElementKeyHash> _mapEntryToIndex;
             /// @brief 원소별로 마지막으로 쓰인 빌드 번호입니다. 오래 안 쓰인 원소를 회수하는 기준입니다.
             vector<uint64> _listEntryLastUsedBuild;
             /// @brief 회수된 원소 자리입니다. **인덱스를 옮기지 않고** 재사용합니다. 옮기면 영속 ID 가 아니게 됩니다.
             vector<uint32> _listFreeEntry;
             /// @brief 직전 조회 결과입니다. 배치 안의 인스턴스는 정렬돼 있어 대부분 같은 원소를 연속으로 묻습니다.
-            GpuMaterialElementKey _lastKey{};
+            GPUMaterialElementKey _lastKey{};
             uint32                _lastIndex{ 0 };
             uint8                 _bHasLast{ SW_FALSE };
         };
@@ -257,7 +257,7 @@ namespace sw
             shared_ptr<Mesh>             _mesh;
             shared_ptr<Material>         _material;
             shared_ptr<MaterialInstance> _instance;
-            /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GpuInstance::_spinSeed 로 갑니다.
+            /// @brief GPU 회전 애니메이션 시드입니다(0 = 없음). MeshComponent 가 주고 GPUInstance::_spinSeed 로 갑니다.
             uint32 _spinSeed{ 0 };
             /**
              * @brief 투명 큐의 정렬 키입니다(`Render2DSettings::makeSortKey` — 정렬 레이어 · 레이어 안 순서, 0 = 기본). **내용**이고 배치 키가 아닙니다.
@@ -265,11 +265,11 @@ namespace sw
              */
             uint32 _sortKey{ 0 };
             /**
-             * @brief 스프라이트 프레임 · 색입니다(GpuInstance::_sprite 로 갑니다). **내용**이고 배치 키가 아닙니다.
+             * @brief 스프라이트 프레임 · 색입니다(GPUInstance::_sprite 로 갑니다). **내용**이고 배치 키가 아닙니다.
              * @details `operator==` 에는 들고 `hasSameBatchKey` 에는 들지 않습니다 — 프레임만 넘긴 스프라이트는 배치를 다시 나누지 않고
              *          제자리 갱신(더티 구간 하나)으로 끝납니다. 키에 넣으면 프레임마다 정렬 · 나누기를 다시 했을 것입니다.
              */
-            GpuSpriteInstanceData _sprite{};
+            GPUSpriteInstanceData _sprite{};
             /**
              * @brief (셰이더 경로 + define) 해시입니다. **어느 PSO 로 그릴지**를 정하는 값입니다.
              * @details 배치 키에 들어가야 합니다. 머티리얼 · 인스턴스 **포인터가 그대로여도** 인스턴스의
@@ -279,11 +279,11 @@ namespace sw
              */
             uint64 _permutationHash{ 0 };
             /**
-             * @brief 월드 행렬식이 음수(거울 변환)인가입니다. 배치 키이고 `GpuMeshBatch::_bReverseCulling` 으로 갑니다.
+             * @brief 월드 행렬식이 음수(거울 변환)인가입니다. 배치 키이고 `GPUMeshBatch::_bReverseCulling` 으로 갑니다.
              * @details 월드 행렬에서 나오는 값이라 트랜스폼만 바뀐 프레임도 다시 구합니다(`copyCandidateTransforms`). 부호가 바뀌면 배치를 다시 나눕니다.
              */
             uint8 _bReverseCulling{ SW_FALSE };
-            /// @brief 정점 애니메이션 시각 오프셋(초)입니다. MeshComponent 가 주고 GpuInstance::_vertexAnimationPhase 로 갑니다(배치 키가 아니라 내용).
+            /// @brief 정점 애니메이션 시각 오프셋(초)입니다. MeshComponent 가 주고 GPUInstance::_vertexAnimationPhase 로 갑니다(배치 키가 아니라 내용).
             /// 컬 반전(1 바이트) 뒤 정렬 빈자리에 둔다 — 앞에 두면 구멍이 생긴다(아래 static_assert).
             float32 _vertexAnimationPhase{ 0.0f };
 
@@ -327,7 +327,7 @@ namespace sw
         };
         /// @brief 후보는 프리미티브마다 하나라 패딩이 곧 메모리 대역입니다. 필드 크기 합을 정렬로 올린 값을 넘으면(필드 사이에 구멍이 생기면) 멈춥니다.
         static_assert( sizeof( DrawCandidate ) <= ( sizeof( float4x4 ) + sizeof( float3 ) + sizeof( float32 ) * 2 + sizeof( uint32 ) * 3 +
-                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GpuSpriteInstanceData ) + sizeof( uint64 ) +
+                                                    sizeof( shared_ptr<Mesh> ) * 3 + sizeof( GPUSpriteInstanceData ) + sizeof( uint64 ) +
                                                     sizeof( uint8 ) + sizeof( float32 ) + alignof( DrawCandidate ) - 1 ) /
                                                       alignof( DrawCandidate ) * alignof( DrawCandidate ),
                        "DrawCandidate has padding between fields (or a field was added without adding its size here)" );
@@ -354,7 +354,7 @@ namespace sw
         /** @brief 후보의 퍼뮤테이션 해시를 찍습니다. 게임 스레드 전용입니다(머티리얼의 지연 캐시를 건드립니다). */
         static void stampPermutationHash( DrawCandidate& candidate );
         /** @brief 후보에서 GPU 인스턴스 페이로드(월드 · 바운드 · 블렌드 · 시드 · 스프라이트 프레임과 색)를 채웁니다. 배치 · 머티리얼 인덱스는 손대지 않습니다. */
-        static void fillPayload( const DrawCandidate& candidate, GpuInstance& outInstance );
+        static void fillPayload( const DrawCandidate& candidate, GPUInstance& outInstance );
         /**
          * @brief 월드 행렬만 바뀐 프리미티브(`_listTransformDirtyPrimitive`)의 후보에 트랜스폼 저장소의 행렬 · 바운드 중심을 옮깁니다.
          * @details 컴포넌트 · 메시 · 머티리얼을 읽지 않습니다. 부분 수집 안에서만 부르고, 후보 자리는 지난 프레임 것 그대로입니다
@@ -427,7 +427,7 @@ namespace sw
         vector<DrawCandidate> _listScratchCandidate;
         /** @brief 마지막으로 반영된 후보 집합입니다. 다음 프레임의 변경 판단 기준이자 scratch 버퍼의 재활용처입니다. */
         vector<DrawCandidate> _listBuiltCandidate;
-        vector<GpuInstance>   _listScratchRaw;
+        vector<GPUInstance>   _listScratchRaw;
 
         struct SortKey
         {
@@ -485,32 +485,32 @@ namespace sw
             uint32         _runCount{ 0 };
             uint8          _bFailed{ SW_FALSE };
             uint8          _bTooManyRun{ SW_FALSE };
-            GpuInstanceRun _arrRun[kMaxDirtyInstanceRun];
+            GPUInstanceRun _arrRun[kMaxDirtyInstanceRun];
         };
         vector<InstanceRefreshChunk> _listRefreshChunk;
 
         /**
          * @brief 청크 하나의 슬롯 구간을 갱신합니다(워커에서 돌며 포인터만 만집니다).
          * @details 이전 값은 `pPrevious`(마지막 발행본)에서 읽고 결과는 `pInstance`(이번 쓰기 슬롯)에 통째로 씁니다.
-         *          두 배열은 다른 메모리입니다(`GpuInstanceRing`).
+         *          두 배열은 다른 메모리입니다(`GPUInstanceRing`).
          */
-        static void refreshInstanceChunk( GpuInstance* pInstance, const GpuInstance* pPrevious, const GpuInstance* pRaw, const uint32* pSrcIndex,
+        static void refreshInstanceChunk( GPUInstance* pInstance, const GPUInstance* pPrevious, const GPUInstance* pRaw, const uint32* pSrcIndex,
                                           uint32 rawCount, InstanceRefreshChunk& chunk );
 
         /**
-         * @brief 인스턴스 배열 링입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기는 `GpuInstanceRing` 이 맡습니다.
+         * @brief 인스턴스 배열 링입니다. 되복사 없는 발행과 낡은 슬롯 따라잡기는 `GPUInstanceRing` 이 맡습니다.
          * @details 빌더는 주로 세 창구를 씁니다: `instanceWork()`(이번 프레임 쓰기 슬롯) · `syncWriteSlotFromPublished()`(부분 갱신 전)
          *          · `publishInstances()`(스냅샷에 포인터 넘기기). 이전 값은 `getPublished()` 로 읽습니다. 규칙과 이유는 그 타입의 주석에 있습니다.
          */
-        GpuInstanceRing _instanceRing;
+        GPUInstanceRing _instanceRing;
         /** @brief 지난 프레임 팔레트 행 수입니다. 이번 프레임 배열을 그만큼 미리 잡는다(캐릭터 천 명이면 행 십만 개 — 자라며 옮기지 않게). */
         size_t _paletteRowCountHint{ 0 };
 
-        /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GpuInstanceRing::acquireWrite`). */
-        vector<GpuInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
+        /** @brief 이번 프레임의 쓰기 슬롯을 반환합니다(`GPUInstanceRing::acquireWrite`). */
+        vector<GPUInstance>& instanceWork() { return _instanceRing.acquireWrite(); }
         /** @brief 쓰기 슬롯을 발행합니다. 이번 빌드의 더티 구간을 이력으로 남깁니다. */
         void publishInstances();
-        /** @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다 (`GpuInstanceRing::syncWriteFromPublished`). */
+        /** @brief 부분 갱신 전에 쓰기 슬롯을 마지막 발행본에 맞춥니다 (`GPUInstanceRing::syncWriteFromPublished`). */
         void syncWriteSlotFromPublished() { _instanceRing.syncWriteFromPublished(); }
 
         /**
@@ -561,7 +561,7 @@ namespace sw
          *          합치기가 꺼져 있으면 배치당 원소 하나, 켜져 있어도 배치당 머티리얼 종류 수입니다.
          */
         vector<uint32>         _listBatchElementIndex;
-        vector<GpuInstanceRun> _listBatchElementRange;
+        vector<GPUInstanceRun> _listBatchElementRange;
 
         /** @brief 마지막으로 반영한 프리미티브 집합 세대입니다. 달라졌으면 등록부가 바뀐 것입니다. */
         uint64 _lastPrimitiveSetGeneration{ 0 };

@@ -7,7 +7,7 @@
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDeviceInternal.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/GL/Platform/IOpenGLPlatformContext.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 
 namespace sw
@@ -16,18 +16,18 @@ namespace sw
 
     uint32 OpenGLRHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
+        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
     }
 
-    bool OpenGLRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    bool OpenGLRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
         return outFrame._listMicro.empty() == false;
     }
 
-    bool OpenGLRHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    bool OpenGLRHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
-        outGpuNanos = 0;
+        outGPUNanos = 0;
         // GL_TIMESTAMP 는 기다리지 않고 지금 GPU 시계(나노초, 쿼리 타임스탬프와 같은 시계)를 준다. 컨텍스트를 쥔 스레드에서만 부른다.
         if ( _bInitialized == SW_FALSE || glGetInteger64v == nullptr )
             return false;
@@ -35,17 +35,17 @@ namespace sw
         glGetInteger64v( GL_TIMESTAMP, &now );
         if ( now <= 0 )
             return false;
-        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
+        outGPUNanos = RHITimestamp::convertTickToNanos( static_cast<uint64>( now ), 1.0 );
         return true;
     }
 
     void OpenGLRHIDevice::writeTimestampSlot( uint32 slotIndex )
     {
-        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGpuTimestampSlot )
+        if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || slotIndex >= constant::kMaxGPUTimestampSlot )
             return;
 
         // glQueryCounter 는 Begin/End 쌍이 아니다. 한 번 부르면 "여기까지 GPU 가 끝낸 시각" 이 찍힌다.
-        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGpuTimestampSlot + slotIndex], GL_TIMESTAMP );
+        glQueryCounter( _arrTimestampQuery[_timestampFrameIndex * constant::kMaxGPUTimestampSlot + slotIndex], GL_TIMESTAMP );
         _arrTimestampMask[_timestampFrameIndex] |= ( 1u << slotIndex );
     }
 
@@ -58,7 +58,7 @@ namespace sw
              glGetQueryObjectiv == nullptr )
             return;
 
-        constexpr uint32 kQueryCount = constant::kMaxGpuTimestampSlot * constant::kMaxFrameCountInFlight;
+        constexpr uint32 kQueryCount = constant::kMaxGPUTimestampSlot * constant::kMaxFrameCountInFlight;
         glGenQueries( static_cast<GLsizei>( kQueryCount ), _arrTimestampQuery );
         if ( _arrTimestampQuery[0] == 0 )
             return;
@@ -72,10 +72,10 @@ namespace sw
         if ( _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE || writtenMask == 0 )
             return;
 
-        const uint32 base = _timestampFrameIndex * constant::kMaxGpuTimestampSlot;
-        uint64       arrTick[constant::kMaxGpuTimestampSlot]{};
+        const uint32 base = _timestampFrameIndex * constant::kMaxGPUTimestampSlot;
+        uint64       arrTick[constant::kMaxGPUTimestampSlot]{};
         uint32       readyMask{ 0 };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( writtenMask & ( 1u << slotIndex ) ) == 0 )
                 continue;
@@ -93,7 +93,7 @@ namespace sw
             readyMask |= ( 1u << slotIndex );
         }
         // GL 타임스탬프는 나노초다.
-        RHIGpuTimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
+        RHITimestamp::resolve( arrTick, readyMask, 1.0, _timestampFrame );
     }
 
     void OpenGLRHIDevice::beginFrame( const float4& clearColor )
@@ -155,7 +155,7 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
-    void OpenGLRHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    void OpenGLRHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueRelease( releaseDelegate );
     }

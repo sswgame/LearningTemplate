@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Scene/GpuMeshMorphPool.h"
+#include "Engine/Renderer/Scene/GPUMeshMorphPool.h"
 
 #include "Core/Log/Logger.h"
 
@@ -8,15 +8,15 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
-#include "Engine/Renderer/Scene/GpuSceneSnapshot.h"
+#include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "GpuMeshMorphPool" );
+    SW_LOG_CALLER( "GPUMeshMorphPool" );
 
     namespace
     {
-        struct GpuMeshMorphPoolInternal
+        struct GPUMeshMorphPoolInternal
         {
             static constexpr RHIBufferUsage kReadUsage  = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
             static constexpr RHIBufferUsage kWriteUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
@@ -24,9 +24,9 @@ namespace sw
             static constexpr uint32 kElementStride = static_cast<uint32>( sizeof( float4 ) );
 
             /** @brief 정점의 위치 · 노멀을 float4 둘로 담습니다(레스트). */
-            static GpuMorphVertex makeRestVertex( const RHIVertex& vertex )
+            static GPUMorphVertex makeRestVertex( const RHIVertex& vertex )
             {
-                GpuMorphVertex restVertex{};
+                GPUMorphVertex restVertex{};
                 restVertex._position = float4{ vertex._arrPosition[0], vertex._arrPosition[1], vertex._arrPosition[2], 1.0f };
                 // 레스트 노멀도 함께 올린다. 컴퓨트가 변형된 노멀을 만들려면 원래 노멀이 있어야 한다.
                 restVertex._normal = float4{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2], 0.0f };
@@ -50,31 +50,31 @@ namespace sw
 
 namespace sw
 {
-    bool GpuMeshMorphPool::isDispatchable() const
+    bool GPUMeshMorphPool::isDispatchable() const
     {
         return getMorphVertexCount() > 0 && _rest._srv != kInvalidDescriptorIndex && _morph._uav != kInvalidDescriptorIndex;
     }
 
-    uint32 GpuMeshMorphPool::baseOf( const Mesh* pMesh ) const
+    uint32 GPUMeshMorphPool::baseOf( const Mesh* pMesh ) const
     {
         const auto it = _mapBase.find( pMesh );
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
     }
 
-    bool GpuMeshMorphPool::isSkinDispatchable() const
+    bool GPUMeshMorphPool::isSkinDispatchable() const
     {
         return getSkinVertexCount() > 0 && _skinBoneCount > 0 && _morph._uav != kInvalidDescriptorIndex && _skinRest._srv != kInvalidDescriptorIndex &&
                _skinWeight._srv != kInvalidDescriptorIndex && _skinInstance._srv != kInvalidDescriptorIndex && _skinPalette._srv != kInvalidDescriptorIndex;
     }
 
-    void GpuMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    void GPUMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
         build( pDevice, listMesh, vector<Mesh*>{} );
     }
 
-    bool GpuMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentId )
+    bool GPUMeshMorphPool::isSameList( const vector<Mesh*>& listMesh, const vector<const Mesh*>& listBuilt, const vector<uint64>& listBuiltContentId )
     {
-        // 포인터와 **내용 번호**를 함께 본다(GpuMeshVertexPool::build 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
+        // 포인터와 **내용 번호**를 함께 본다(GPUMeshVertexPool::build 와 같은 이유 — 지워진 자리에 새 메시가 생기거나 정점을 바꾼 메시).
         if ( listBuilt.size() != listMesh.size() )
             return false;
         for ( size_t index = 0; index < listMesh.size(); ++index )
@@ -86,7 +86,7 @@ namespace sw
         return true;
     }
 
-    void GpuMeshMorphPool::rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
+    void GPUMeshMorphPool::rebuildSkinSources( IRHIDevice* pDevice, const vector<Mesh*>& listSkinMesh )
     {
         // 원본 = 스킨 데이터 번호. 사본(`Mesh::createSkinInstance`)은 원본의 번호를 나누므로 레스트 · 가중치가 한 벌만 올라간다.
         vector<uint64>      listDataId;
@@ -107,9 +107,9 @@ namespace sw
         _listSourceDataId = listDataId;
         _listSourceBase.clear();
         _skinSourceVertexCount = 0;
-        vector<GpuMorphVertex> listRest;
+        vector<GPUMorphVertex> listRest;
         vector<float4>         listWeight;
-        vector<GpuMorphVertex> listDelta;
+        vector<GPUMorphVertex> listDelta;
         vector<uint32>         listVertexDeltaStart;
         vector<uint32>         listVertexDeltaCount;
         for ( const Mesh* pSource : listSource )
@@ -117,7 +117,7 @@ namespace sw
             _listSourceBase.push_back( _skinSourceVertexCount );
             for ( const RHIVertex& vertex : pSource->getVertices() )
             {
-                listRest.push_back( GpuMeshMorphPoolInternal::makeRestVertex( vertex ) );
+                listRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
             }
             // 모프 차이를 정점별로 모은다 — 컴퓨트는 정점 하나의 차이 구간(시작 · 수)을 돌며 (위치 · 노멀 차이, 타깃 번호)를 가중치만큼 더한다.
             const uint32                   vertexCount = pSource->getVertexCount();
@@ -143,7 +143,7 @@ namespace sw
                 {
                     const uint32          targetIndex = listVertexTarget[vertexIndex][entry];
                     const MeshMorphDelta& delta       = listTarget[targetIndex]._listDelta[listVertexDelta[vertexIndex][entry]];
-                    GpuMorphVertex        packed{};
+                    GPUMorphVertex        packed{};
                     packed._position = float4{ delta._position._x, delta._position._y, delta._position._z, static_cast<float32>( targetIndex ) };
                     packed._normal   = float4{ delta._normal._x, delta._normal._y, delta._normal._z, 0.0f };
                     listDelta.push_back( packed );
@@ -164,11 +164,11 @@ namespace sw
         // 레스트 버퍼 = [원본 레스트 정점][모프 차이] — 둘 다 float4 둘이라 한 버퍼에 잇는다(컴퓨트 SRV 슬롯은 넷뿐이다).
         _skinDeltaBase = static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex;
         listRest.insert( listRest.end(), listDelta.begin(), listDelta.end() );
-        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
-        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
+        GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinRest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
+        GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinWeight, listWeight.data(), static_cast<uint32>( listWeight.size() ) );
     }
 
-    void GpuMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
+    void GPUMeshMorphPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMorphMesh, const vector<Mesh*>& listSkinMesh )
     {
         if ( pDevice == nullptr )
             return;
@@ -195,7 +195,7 @@ namespace sw
         }
 
         // 모프 구간 — 레스트 정점을 한 줄로 잇는다. 구간 시작이 곧 그 메시의 base 다.
-        vector<GpuMorphVertex> listRest;
+        vector<GPUMorphVertex> listRest;
         uint32                 morphCount = 0;
         for ( Mesh* pMesh : listMorphMesh )
         {
@@ -214,14 +214,14 @@ namespace sw
             {
                 for ( const RHIVertex& vertex : pMesh->getVertices() )
                 {
-                    listRest.push_back( GpuMeshMorphPoolInternal::makeRestVertex( vertex ) );
+                    listRest.push_back( GPUMeshMorphPoolInternal::makeRestVertex( vertex ) );
                 }
             }
             morphCount += count;
         }
         _skinVertexBase = morphCount;
         if ( bSameMorph == false )
-            GpuMeshMorphPoolInternal::uploadAll( pDevice, _rest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
+            GPUMeshMorphPoolInternal::uploadAll( pDevice, _rest, listRest.data(), static_cast<uint32>( listRest.size() ) * shaderslot::kMorphFloat4PerVertex );
 
         // 스킨 원본(바뀐 때만 올린다)과 인스턴스 — 인스턴스는 결과 구간 · 원본 구간 · 팔레트 시작을 표에 한 줄씩 갖는다.
         rebuildSkinSources( pDevice, listSkinMesh );
@@ -243,7 +243,7 @@ namespace sw
                 SW_LOG_WARNING( "모프 풀이 가득 찼습니다(%# 정점) — 남은 스킨드 메시는 바인드 포즈로 그립니다.", kMaxPoolVertices );
                 continue;
             }
-            GpuSkinInstanceRow row{};
+            GPUSkinInstanceRow row{};
             row._resultOffset     = resultOffset;
             row._sourceBase       = _listSourceBase[static_cast<size_t>( sourceIt - _listSourceDataId.begin() )];
             row._vertexCount      = count;
@@ -258,7 +258,7 @@ namespace sw
             resultOffset += count;
         }
         // 모프 가중치는 팔레트 버퍼의 본 행 뒤에 float4 로 싣는다 — 셰이더는 그 버퍼를 float 배열로 본다(float4 셋 × 본 수 = float 열둘 × 본 수).
-        for ( GpuSkinInstanceRow& row : _listSkinRow )
+        for ( GPUSkinInstanceRow& row : _listSkinRow )
         {
             row._morphWeightBase += _skinBoneCount * shaderslot::kSkinFloat4PerBone * 4u;
         }
@@ -273,12 +273,12 @@ namespace sw
         }
 
         // 결과는 컴퓨트가 채우므로 초기값이 필요 없다 — 구간이 바뀌어도 올릴 것이 없다(용량만 맞춘다).
-        _morph.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex, GpuMeshMorphPoolInternal::kWriteUsage, true,
+        _morph.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _vertexCount * shaderslot::kMorphFloat4PerVertex, GPUMeshMorphPoolInternal::kWriteUsage, true,
                                true, nullptr );
-        GpuMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
+        GPUMeshMorphPoolInternal::uploadAll( pDevice, _skinInstance, _listSkinRow.data(), static_cast<uint32>( _listSkinRow.size() ) * shaderslot::kSkinUint4PerInstance );
         if ( _skinBoneCount > 0 )
-            _skinPalette.ensureCapacity( pDevice, GpuMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
-                                         GpuMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
+            _skinPalette.ensureCapacity( pDevice, GPUMeshMorphPoolInternal::kElementStride, _skinBoneCount * shaderslot::kSkinFloat4PerBone + ( _skinMorphWeightCount + 3u ) / 4u,
+                                         GPUMeshMorphPoolInternal::kReadUsage, true, false, nullptr );
         else
             _skinPalette.release( pDevice );
 
@@ -287,7 +287,7 @@ namespace sw
             SW_LOG_WARNING( "모프 결과 버퍼에 UAV 를 걸지 못했습니다 — 이 백엔드에서는 모프가 꺼집니다." );
     }
 
-    void GpuMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GpuSkinPalette>& listPalette, const vector<float4>* pListRow,
+    void GPUMeshMorphPool::uploadSkinPalettes( IRHIDevice* pDevice, const vector<GPUSkinPalette>& listPalette, const vector<float4>* pListRow,
                                                const vector<float32>* pListMorphWeight )
     {
         if ( pDevice == nullptr || _skinBoneCount == 0 || _skinPalette.isValid() == false )
@@ -309,7 +309,7 @@ namespace sw
             const uint32          boneBase  = _listSkinRow[skinIndex]._paletteBase;
             const uint32          boneCount = pMesh->getSkinBoneCount();
             const auto            found     = _mapScratchPaletteIndex.find( pMesh );
-            const GpuSkinPalette* pFound    = ( found != _mapScratchPaletteIndex.end() ) ? &listPalette[found->second] : nullptr;
+            const GPUSkinPalette* pFound    = ( found != _mapScratchPaletteIndex.end() ) ? &listPalette[found->second] : nullptr;
             for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
             {
                 float4*      pRow     = &_listScratchPaletteRow[( static_cast<size_t>( boneBase ) + boneIndex ) * shaderslot::kSkinFloat4PerBone];
@@ -328,7 +328,7 @@ namespace sw
                 pRow[2] = float4{ 0.0f, 0.0f, 1.0f, 0.0f };
             }
             // 모프 가중치 — 팔레트 뒤 구간에 이 인스턴스 몫(타깃 수)만큼. 없으면 0(레스트).
-            const GpuSkinInstanceRow& row = _listSkinRow[skinIndex];
+            const GPUSkinInstanceRow& row = _listSkinRow[skinIndex];
             if ( row._morphTargetCount == 0 || pFound == nullptr || pListMorphWeight == nullptr )
                 continue;
             float32* pWeight = reinterpret_cast<float32*>( _listScratchPaletteRow.data() ) + row._morphWeightBase;
@@ -342,7 +342,7 @@ namespace sw
         _skinPalette.upload( pDevice, _listScratchPaletteRow.data(), static_cast<uint32>( _listScratchPaletteRow.size() * sizeof( float4 ) ) );
     }
 
-    void GpuMeshMorphPool::release( IRHIDevice* pDevice )
+    void GPUMeshMorphPool::release( IRHIDevice* pDevice )
     {
         _rest.release( pDevice );
         _morph.release( pDevice );

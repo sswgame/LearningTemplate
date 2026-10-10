@@ -93,7 +93,7 @@ namespace sw
         , _depthDisabledState{ nullptr }
         , _arrStaticSampler{}
         , _pHWnd{ nullptr }
-        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
+        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -271,7 +271,7 @@ namespace sw
         return handle;
     }
 
-    bool D3D11RHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    bool D3D11RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
         return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }

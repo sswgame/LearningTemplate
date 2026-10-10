@@ -295,7 +295,7 @@ namespace sw
         releaseTextureAssets( pRhi );
         if ( pRhi != nullptr )
         {
-            // 마지막 소유를 게임 스레드가 놓을 수 있다(GpuScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
+            // 마지막 소유를 게임 스레드가 놓을 수 있다(GPUScene 후보 · 걷은 뷰) — 렌더 스레드가 병렬 기록 중이면 핸들 반환을 그 프레임 뒤로 미룬다.
             if ( _descriptorIndex != kInvalidDescriptorIndex )
                 pRhi->releaseHandle( RHIHandleKind::BindlessResource, _descriptorIndex );
             if ( _constantBuffer != 0 )
@@ -310,7 +310,7 @@ namespace sw
     {
         // 머티리얼 바이트의 기준은 .material 의 프로퍼티 순서가 아니라 **셰이더의 SwMaterialData 원소 레이아웃**이다(언리얼도
         // 머티리얼 파라미터 레이아웃을 셰이더에서 가져온다). 로드 경로에서도 맞춰야 한다 — XML 순서로 패킹하면 stride 가 0 이고,
-        // 그러면 GpuScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
+        // 그러면 GPUScene 이 CB 크기(256)를 stride 로 써서 원소 1 부터 어긋난다.
         //
         // "맞췄다" 표시는 다시 로드(XML 순서로 다시 쌓는다)가 풀고(applyDescToRuntime), 리플렉션 캐시를 비우면 낡는다.
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 올라간다.

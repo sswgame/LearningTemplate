@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Scene/GpuMeshVertexPool.h"
+#include "Engine/Renderer/Scene/GPUMeshVertexPool.h"
 
 #include "Core/Log/Logger.h"
 
@@ -10,15 +10,15 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GpuMeshVertexPool" );
+    SW_LOG_CALLER( "GPUMeshVertexPool" );
 
-    uint32 GpuMeshVertexPool::baseOf( const Mesh* pMesh ) const
+    uint32 GPUMeshVertexPool::baseOf( const Mesh* pMesh ) const
     {
         const auto it = _mapBase.find( pMesh );
         return ( it != _mapBase.end() ) ? it->second : kInvalidBase;
     }
 
-    bool GpuMeshVertexPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
+    bool GPUMeshVertexPool::build( IRHIDevice* pDevice, const vector<Mesh*>& listMesh )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
@@ -82,7 +82,7 @@ namespace sw
         return true;
     }
 
-    void GpuMeshVertexPool::release( IRHIDevice* pDevice )
+    void GPUMeshVertexPool::release( IRHIDevice* pDevice )
     {
         if ( _vertexBuffer != 0 && pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
             pDevice->getResourceFactory()->destroyBuffer( _vertexBuffer );

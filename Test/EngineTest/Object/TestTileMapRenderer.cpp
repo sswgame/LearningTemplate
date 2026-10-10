@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/PhysicsWorld.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 
@@ -64,7 +64,7 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     SW_EXPECT_NEAR_EQUAL( -0.25f, center._y, 1e-5f );
 
     // 실린 인스턴스: 칠한 칸 넷만(빈 칸 넷은 숨긴 항목).
-    sw::GpuSceneBuilder builder;
+    sw::GPUSceneBuilder builder;
     builder.buildFromScene( &scene, sw::float3{ 0.0f, 0.0f, -10.0f } );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( builder.getInstances().size() ) );
 
@@ -79,7 +79,7 @@ SW_TEST_CASE( TileMapRendererTest, TilesDrawRepaintAndBuildColliders )
     const sw::float3 neighborCenter = pTiles->computeCellCenter( 1, 1 );
     const sw::float4 expectedUv     = tileSet.computeCellUvRect( 5 );
     bool             bNeighborFound = false;
-    for ( const sw::GpuInstance& instance : builder.getInstances() )
+    for ( const sw::GPUInstance& instance : builder.getInstances() )
     {
         if ( sw::MathUtil::abs( instance._boundsCenter._x - neighborCenter._x ) > 1e-4f || sw::MathUtil::abs( instance._boundsCenter._y - neighborCenter._y ) > 1e-4f )
             continue;

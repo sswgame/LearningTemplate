@@ -1,5 +1,5 @@
 /**
- * @file GpuMeshVertexPool.h
+ * @file GPUMeshVertexPool.h
  * @brief 씬의 모든 메시 정점을 **한 정점 버퍼**에 모으는 풀입니다. 언리얼의 통합 정점 버퍼 풀이 있는 자리입니다.
  *
  * [무엇을 푸는가]
@@ -12,7 +12,7 @@
  * 메시들의 정점을 이어 붙여 정점 버퍼 하나를 만들고 메시마다 시작 오프셋을 기억합니다. 배치의 간접 인자는
  * `startVertex = 시작 오프셋` 이고, 입력 어셈블러가 그 구간을 읽습니다. 정점 셰이더의 SV_VertexID 가 그 오프셋을
  * 포함하는지는 API 마다 다릅니다(Vulkan · GL 은 포함, D3D 는 0 기반. binding.hlsli swComputeMorphElement).
- * 모프 풀(`GpuMeshMorphPool`)도 같은 모양입니다.
+ * 모프 풀(`GPUMeshMorphPool`)도 같은 모양입니다.
  * 메시 집합이 바뀔 때만 다시 만듭니다(장면 로드 · 메시 추가). 정점 데이터는 CPU 사본(`Mesh::getVertices`)에서 옵니다.
  */
 #pragma once
@@ -30,22 +30,22 @@ namespace sw
     class Mesh;
 
     /**
-     * @class GpuMeshVertexPool
-     * @brief 씬 메시들의 정점을 한 버퍼에 모읍니다. 렌더 스레드가 소유합니다(GpuScene 의 GPU 상태와 같은 규칙).
+     * @class GPUMeshVertexPool
+     * @brief 씬 메시들의 정점을 한 버퍼에 모읍니다. 렌더 스레드가 소유합니다(GPUScene 의 GPU 상태와 같은 규칙).
      */
-    class SW_API GpuMeshVertexPool
+    class SW_API GPUMeshVertexPool
     {
     public:
         /** @brief 풀에 들어가지 못한 메시가 받는 값입니다. 그 배치는 자기 정점 버퍼로 그립니다. */
         static constexpr uint32 kInvalidBase = invalid_index::kUint32;
 
-        GpuMeshVertexPool()                                      = default;
-        ~GpuMeshVertexPool()                                     = default;
-        GpuMeshVertexPool( const GpuMeshVertexPool& )            = delete;
-        GpuMeshVertexPool& operator=( const GpuMeshVertexPool& ) = delete;
-        /// GpuScene 의 이동 연산이 이 멤버를 옮길 수 있어야 해서 이동은 허용합니다(핸들만 옮깁니다).
-        GpuMeshVertexPool( GpuMeshVertexPool&& ) noexcept            = default;
-        GpuMeshVertexPool& operator=( GpuMeshVertexPool&& ) noexcept = default;
+        GPUMeshVertexPool()                                      = default;
+        ~GPUMeshVertexPool()                                     = default;
+        GPUMeshVertexPool( const GPUMeshVertexPool& )            = delete;
+        GPUMeshVertexPool& operator=( const GPUMeshVertexPool& ) = delete;
+        /// GPUScene 의 이동 연산이 이 멤버를 옮길 수 있어야 해서 이동은 허용합니다(핸들만 옮깁니다).
+        GPUMeshVertexPool( GPUMeshVertexPool&& ) noexcept            = default;
+        GPUMeshVertexPool& operator=( GPUMeshVertexPool&& ) noexcept = default;
 
         /**
          * @brief 메시 집합에 맞춰 풀을 만듭니다. 집합이 지난번과 같으면 아무것도 하지 않습니다.

@@ -114,7 +114,7 @@ LOD나 이웃 LOD가 바뀐 청크만 메시를 다시 만들어 `MeshInstanceBa
 
 `WaterBodyComponent` 는 호수(오너 중심의 사각형)와 강(점 목록을 연결한 띠, 점의 y가 수면 높이)을 그립니다.
 파도는 월드 (x, z)에 대한 거스트너 파 네 개(`GerstnerWave`)의 합입니다. CPU(`WaterWaveMath`)와 정점 셰이더(`gerstner.hlsli`)가 같은 식을 같은 순서로 계산합니다.
-`RenderPassGpuTest.WaterWaveShaderMatchesCpu` 가 컴퓨트 프로브로 네 백엔드의 값을 CPU와 비교합니다.
+`RenderPassGPUTest.WaterWaveShaderMatchesCpu` 가 컴퓨트 프로브로 네 백엔드의 값을 CPU와 비교합니다.
 
 거스트너 파는 수면 위 점을 옆으로도 옮깁니다. 그래서 `computeSurfaceHeight` 는 그 위치로 옮겨 오는 원래 점을 고정점 반복으로 찾은 뒤 높이를 계산합니다. 부력 계산이 이 값을 씁니다.
 

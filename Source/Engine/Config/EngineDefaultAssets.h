@@ -75,7 +75,7 @@ namespace sw
         PROPERTY()
         string _shaderFullscreenBlit{ "engine/shaders/fullscreenblit.hlsl" }; ///< 전체 화면 복사
         PROPERTY()
-        string _shaderGpuCull{ "engine/shaders/gpucull.hlsl" }; ///< GPU 컬링 · 드로우 커맨드 생성(컴퓨트)
+        string _shaderGPUCull{ "engine/shaders/gpucull.hlsl" }; ///< GPU 컬링 · 드로우 커맨드 생성(컴퓨트)
         PROPERTY()
         string _shaderInstanceAnim{ "engine/shaders/instanceanim.hlsl" }; ///< 인스턴스 애니메이션(컴퓨트)
         PROPERTY()

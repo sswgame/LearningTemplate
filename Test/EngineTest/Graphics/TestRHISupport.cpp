@@ -5,12 +5,12 @@
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIIndexFreeList.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
 #include "Engine/Graphics/RHI/Support/RHIShaderRequest.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIApiVersion.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -123,7 +123,7 @@ SW_TEST_CASE( RHIHandleTableTest, GenerationInvalidatesStaleHandles )
 /**
  * @brief [RHIReleaseQueueTest] GPU 펜스가 완료되기 전에는 해제하지 않는다
  */
-SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
+SW_TEST_CASE( RHIReleaseQueueTest, GPUFenceRelease )
 {
     sw::RHIReleaseQueue            queue( 3 );
     bool                           bDestroyed{ false };
@@ -132,7 +132,7 @@ SW_TEST_CASE( RHIReleaseQueueTest, GpuFenceRelease )
         bDestroyed = true;
     } );
 
-    queue.enqueueGpuRelease( releaseDel, 4 );
+    queue.enqueueGPURelease( releaseDel, 4 );
     SW_EXPECT_EQUAL( 1u, queue.getPendingReleaseCount() );
     queue.tickCompleted( 3 );
     SW_EXPECT_FALSE( bDestroyed );
@@ -241,31 +241,31 @@ SW_TEST_CASE( RHIIndexFreeListTest, DoubleReleaseIsRejected )
 }
 
 /**
- * @brief [RHIGpuTimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다. 기준점은 GPU 시계 나노초로도 남는다
- * @details 외부 프로파일러(Tracy)는 기준점 + 칸 값으로 절대 GPU 시각을 만들어 `readGpuClockNanos` 로 맞춘 CPU 시계 위에 놓는다.
+ * @brief [RHITimestampTest] 기준점은 가장 이른 틱이고, 안 적힌 칸은 음수다. 기준점은 GPU 시계 나노초로도 남는다
+ * @details 외부 프로파일러(Tracy)는 기준점 + 칸 값으로 절대 GPU 시각을 만들어 `readGPUClockNanos` 로 맞춘 CPU 시계 위에 놓는다.
  *          기준점의 환산이 칸 값과 다르면 GPU 구간이 타임라인에서 통째로 밀린다.
  */
-SW_TEST_CASE( RHIGpuTimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative )
+SW_TEST_CASE( RHITimestampTest, OriginIsEarliestTickAndUnwrittenSlotsAreNegative )
 {
-    uint64 arrTick[sw::constant::kMaxGpuTimestampSlot]{};
+    uint64 arrTick[sw::constant::kMaxGPUTimestampSlot]{};
     arrTick[0]             = 1000; // 낮은 번호지만 늦은 시각 — 이것을 기준으로 삼으면 슬롯 5 가 음수(→ 0)가 된다
     arrTick[5]             = 400;
     arrTick[31]            = 1600;
     const uint32 readyMask = ( 1u << 0 ) | ( 1u << 5 ) | ( 1u << 31 );
 
-    sw::RHIGpuTimestampFrame frame;
-    SW_ASSERT_TRUE( sw::RHIGpuTimestamp::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
+    sw::RHITimestampFrame frame;
+    SW_ASSERT_TRUE( sw::RHITimestamp::resolve( arrTick, readyMask, 500.0, frame ) ); // 틱 하나 = 500 ns = 0.5 us
     const sw::vector<float32>& listMicro = frame._listMicro;
-    SW_ASSERT_TRUE( listMicro.size() == sw::constant::kMaxGpuTimestampSlot );
+    SW_ASSERT_TRUE( listMicro.size() == sw::constant::kMaxGPUTimestampSlot );
     SW_EXPECT_EQUAL( int64( 400 * 500 ), frame._originNanos );
-    SW_EXPECT_EQUAL( int64( 1000 * 500 ), sw::RHIGpuTimestamp::convertTickToNanos( 1000, 500.0 ) );
+    SW_EXPECT_EQUAL( int64( 1000 * 500 ), sw::RHITimestamp::convertTickToNanos( 1000, 500.0 ) );
     SW_EXPECT_NEAR_EQUAL( 300.0f, listMicro[0], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, listMicro[5], 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 600.0f, listMicro[31], 1e-3f );
     SW_EXPECT_TRUE( listMicro[1] < 0.0f && listMicro[30] < 0.0f );
 
     // 준비된 칸이 없으면 비운다 — 호출자는 빈 목록을 "이번 프레임 없음" 으로 읽는다.
-    SW_EXPECT_TRUE( sw::RHIGpuTimestamp::resolve( arrTick, 0, 500.0, frame ) == false );
+    SW_EXPECT_TRUE( sw::RHITimestamp::resolve( arrTick, 0, 500.0, frame ) == false );
     SW_EXPECT_TRUE( frame._listMicro.empty() );
 }
 
@@ -616,18 +616,18 @@ SW_TEST_CASE( RHIMemoryLedgerTest, SummaryComputesOutsideOnlyForProcessUsage )
     ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 1 ), sw::RHIMemoryKind::Texture, 300 );
     ledger.recordAllocation( sw::RHIMemoryKey::makeBuffer( 1 ), sw::RHIMemoryKind::Buffer, sw::kRHIMemoryUnknownBytes );
 
-    const sw::RHIGpuMemorySummary unknown = ledger.makeSummary();
+    const sw::RHIMemorySummary unknown = ledger.makeSummary();
     SW_EXPECT_TRUE( unknown._budget._bUsageKnown == SW_FALSE && unknown._budget._bBudgetKnown == SW_FALSE );
     SW_EXPECT_TRUE( unknown._bOutsideKnown == SW_FALSE );
     SW_EXPECT_EQUAL( 300ull, unknown._trackedBytes );
     SW_EXPECT_EQUAL( 1u, unknown._unknownSizeCount );
 
-    sw::RHIGpuMemoryBudget processBudget{};
+    sw::RHIMemoryBudget processBudget{};
     processBudget._usageBytes  = 1000;
     processBudget._bUsageKnown = SW_TRUE;
-    processBudget._scope       = sw::RHIGpuMemoryScope::Process;
+    processBudget._scope       = sw::RHIMemoryScope::Process;
     ledger.setDriverBudget( processBudget );
-    const sw::RHIGpuMemorySummary process = ledger.makeSummary();
+    const sw::RHIMemorySummary process = ledger.makeSummary();
     SW_EXPECT_TRUE( process._bOutsideKnown == SW_TRUE );
     SW_EXPECT_EQUAL( 700ll, process._outsideBytes );
 
@@ -635,26 +635,26 @@ SW_TEST_CASE( RHIMemoryLedgerTest, SummaryComputesOutsideOnlyForProcessUsage )
     ledger.setDriverBudget( processBudget );
     SW_EXPECT_EQUAL( -200ll, ledger.makeSummary()._outsideBytes );
 
-    sw::RHIGpuMemoryBudget deviceBudget = processBudget;
-    deviceBudget._scope                 = sw::RHIGpuMemoryScope::Device;
+    sw::RHIMemoryBudget deviceBudget = processBudget;
+    deviceBudget._scope              = sw::RHIMemoryScope::Device;
     ledger.setDriverBudget( deviceBudget );
     SW_EXPECT_TRUE( ledger.makeSummary()._bOutsideKnown == SW_FALSE );
 }
 
 /**
- * @brief [RHIMemoryLedgerTest] 드라이버에게 물을 수 없는 백엔드는 `refreshGpuMemoryBudget` 뒤에도 모든 칸이 "모름" 이다
+ * @brief [RHIMemoryLedgerTest] 드라이버에게 물을 수 없는 백엔드는 `refreshGPUMemoryBudget` 뒤에도 모든 칸이 "모름" 이다
  * @details 앞서 적힌 값이 있어도 이번에 묻지 못하면 지운다 — 옛 숫자를 지금 값처럼 보여 주지 않는다.
  */
 SW_TEST_CASE( RHIMemoryLedgerTest, RefreshWithoutDriverQueryLeavesEveryFieldUnknown )
 {
-    test::FakeRHIDevice    device;
-    sw::RHIGpuMemoryBudget stale{};
+    test::FakeRHIDevice device;
+    sw::RHIMemoryBudget stale{};
     stale._usageBytes  = 4096;
     stale._bUsageKnown = SW_TRUE;
     device.getMemoryLedger().setDriverBudget( stale );
 
-    device.refreshGpuMemoryBudget();
-    const sw::RHIGpuMemoryBudget budget = device.getMemoryLedger().getDriverBudget();
+    device.refreshGPUMemoryBudget();
+    const sw::RHIMemoryBudget budget = device.getMemoryLedger().getDriverBudget();
     SW_EXPECT_TRUE( budget._bUsageKnown == SW_FALSE && budget._bBudgetKnown == SW_FALSE && budget._bAvailableKnown == SW_FALSE );
     SW_EXPECT_EQUAL( 0ull, budget._usageBytes );
 }
@@ -670,10 +670,10 @@ SW_TEST_CASE( RHIMemoryLedgerTest, ReportPrintsUsedKindsAndUnknownDriverValues )
     ledger.recordAllocation( sw::RHIMemoryKey::makeTexture( 1 ), sw::RHIMemoryKind::TransientPool, 3ull * 1024ull * 1024ull );
     int32 poolStandIn{ 0 };
     ledger.recordAllocation( sw::RHIMemoryKey::makeDeviceObject( &poolStandIn ), sw::RHIMemoryKind::Descriptor, sw::kRHIMemoryUnknownBytes );
-    sw::RHIGpuMemoryBudget deviceBudget{};
+    sw::RHIMemoryBudget deviceBudget{};
     deviceBudget._availableBytes  = 8ull * 1024ull * 1024ull;
     deviceBudget._bAvailableKnown = SW_TRUE;
-    deviceBudget._scope           = sw::RHIGpuMemoryScope::Device;
+    deviceBudget._scope           = sw::RHIMemoryScope::Device;
     ledger.setDriverBudget( deviceBudget );
 
     sw::mutex                mutex;

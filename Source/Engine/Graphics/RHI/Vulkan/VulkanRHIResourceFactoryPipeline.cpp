@@ -279,7 +279,7 @@ namespace sw
         {
             VkDevice   dev  = _pDevice->_device;
             VkPipeline pipe = record._pipeline;
-            _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
+            _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, pipe]()
             {
                 vkDestroyPipeline( dev, pipe, nullptr );
             } ),

@@ -52,7 +52,7 @@ namespace sw
 
     protected:
         /** @brief 위치 · 반경 · 방향과 원뿔의 코사인(`_params.yz`)을 씁니다. */
-        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+        void writeGPULightKindFields( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )

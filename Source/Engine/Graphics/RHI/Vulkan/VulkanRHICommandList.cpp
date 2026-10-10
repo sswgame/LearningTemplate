@@ -44,7 +44,7 @@ namespace sw
     void VulkanRHICommandList::writeTimestamp( uint32 slotIndex )
     {
         const VkQueryPool pool = ( _pDevice != nullptr ) ? _pDevice->getTimestampPool() : VK_NULL_HANDLE;
-        if ( pool == VK_NULL_HANDLE || slotIndex >= constant::kMaxGpuTimestampSlot || _entry._buffer == VK_NULL_HANDLE )
+        if ( pool == VK_NULL_HANDLE || slotIndex >= constant::kMaxGPUTimestampSlot || _entry._buffer == VK_NULL_HANDLE )
             return;
         // BOTTOM_OF_PIPE 는 "여기까지 GPU 가 다 끝냈다" 를 뜻한다. DX12 의 EndQuery 와 같은 의미라
         // 백엔드끼리 숫자를 그대로 견줄 수 있다.

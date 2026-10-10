@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 
 #include "Core/Log/Logger.h"
 
@@ -13,9 +13,9 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GpuLightBuffer" );
+    SW_LOG_CALLER( "GPULightBuffer" );
 
-    void collectSceneLights( const Scene* pScene, vector<GpuLight>& outList )
+    void collectSceneLights( const Scene* pScene, vector<GPULight>& outList )
     {
         outList.clear();
         if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
@@ -26,7 +26,7 @@ namespace sw
         const DirectionalLightComponent* pShadowLight = pScene->findShadowCastingDirectionalLight();
 
         // 종류 순서로 돈다. 방향광이 0 이라 앞에 온다(상한을 넘으면 뒤에서부터 잘린다). 원소의 칸은 빛이 스스로 쓴다
-        // (`LightComponent::writeGpuLight`) — 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.
+        // (`LightComponent::writeGPULight`) — 여기는 종류를 모른다. 그림자 플래그만 씬이 고른 빛에 켠다.
         for ( uint32 lightType = 0; lightType < shaderslot::kLightTypeCount; ++lightType )
         {
             for ( const LightComponent* pLight : registry.getAll<LightComponent>( lightType ) )
@@ -34,8 +34,8 @@ namespace sw
                 if ( pLight == nullptr || pLight->isActive() == false )
                     continue;
 
-                GpuLight light{};
-                pLight->writeGpuLight( light );
+                GPULight light{};
+                pLight->writeGPULight( light );
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
                 outList.push_back( light );
@@ -46,11 +46,11 @@ namespace sw
         for ( const ShadowCaster2DComponent* pCaster : registry.getAll<ShadowCaster2DComponent>() )
         {
             if ( pCaster != nullptr && pCaster->isActive() )
-                pCaster->appendGpuShadowSegments( outList );
+                pCaster->appendGPUShadowSegments( outList );
         }
     }
 
-    void GpuLightBuffer::update( IRHIDevice* pDevice, const vector<GpuLight>& listLight )
+    void GPULightBuffer::update( IRHIDevice* pDevice, const vector<GPULight>& listLight )
     {
         if ( pDevice == nullptr )
             return;
@@ -75,7 +75,7 @@ namespace sw
         }
 
         constexpr RHIBufferUsage kUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource;
-        const uint32             stride = static_cast<uint32>( sizeof( GpuLight ) );
+        const uint32             stride = static_cast<uint32>( sizeof( GPULight ) );
         if ( _buffer.ensureCapacity( pDevice, stride, count, kUsage, true, false, listLight.data() ) == false )
         {
             _count = 0;
@@ -84,7 +84,7 @@ namespace sw
         _buffer.upload( pDevice, listLight.data(), count * stride );
     }
 
-    void GpuLightBuffer::release( IRHIDevice* pDevice )
+    void GPULightBuffer::release( IRHIDevice* pDevice )
     {
         _buffer.release( pDevice );
         _count = 0;

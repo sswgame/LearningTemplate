@@ -26,12 +26,12 @@ namespace sw
 
     /// @brief 셰이더 퍼뮤테이션과 패킹 CB 를 가진 머티리얼 에셋입니다.
     /*
-     * enable_shared_from_this 인 이유: 렌더 패킷(GpuScene 스냅샷)이 이 객체의 **소유를 함께 싣기** 위해서다.
+     * enable_shared_from_this 인 이유: 렌더 패킷(GPUScene 스냅샷)이 이 객체의 **소유를 함께 싣기** 위해서다.
      * 렌더 스레드는 씬을 못 보고 패킷만 받는데, 게임 스레드가 오브젝트를 지우거나 인스턴스를 바꾼 뒤에도
      * 큐에 남은 패킷(링 깊이만큼)이 이 머티리얼을 역참조한다. 소유가 패킷을 따라가면 그 창이 사라진다.
      * 그래서 렌더에 실리는 Material 은 반드시 shared_ptr 로 소유돼야 하고, **반드시 create() 로 만든다.**
      * shared_ptr 의 제어 블록(소멸 코드)은 make_shared 를 부른 쪽 DLL 에 산다. 게임 모듈이 만든 머티리얼을
-     * 엔진(GpuScene 스냅샷)이 마지막까지 들고 있다가 모듈이 내려간 뒤 놓으면 이미 없는 코드로 뛰어든다.
+     * 엔진(GPUScene 스냅샷)이 마지막까지 들고 있다가 모듈이 내려간 뒤 놓으면 이미 없는 코드로 뛰어든다.
      * create() 는 Engine.dll 안에서 만들므로 누가 마지막에 놓든 안전하다.
      */
     class SW_API Material final : public RHIRenderResource, public std::enable_shared_from_this<Material>
@@ -92,7 +92,7 @@ namespace sw
         static bool hasMaterialSchema( const ShaderReflectionData& reflectionData );
         /**
          * @brief 이 디바이스 백엔드의 셰이더 리플렉션(g_SwMaterials 원소 레이아웃)으로 프로퍼티 오프셋과 원소 stride 를 맞춥니다.
-         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GpuScene 과 인스턴스(`MaterialInstance::updateRhi`)가 바이트를
+         * @details 이미 맞춰져 있으면(`isShaderLayoutSynced`) 아무것도 하지 않습니다. GPUScene 과 인스턴스(`MaterialInstance::updateRhi`)가 바이트를
          *          읽기 전에 부릅니다. 레이아웃의 기준은 셰이더입니다.
          * @return 원소 stride 를 얻었으면 true 입니다.
          */
@@ -148,7 +148,7 @@ namespace sw
          * @brief 빌린 텍스처가 다시 올라왔으면(`TextureCache::reload`) 새 SRV 인덱스를 받아 다시 패킹합니다.
          * @details 텍스처 핫 리로드는 같은 `Texture2D` 에 새 텍스처 · 새 SRV 인덱스를 올리고 옛 인덱스는 돌려줍니다. resolve 때 받은
          *          인덱스를 바이트(네이티브 bindless)와 슬롯 목록(DX11 · GL)에 그대로 들고 있으면 **돌려준 자리**를 읽습니다. 캐시의 reload
-         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 쌉니다(`GpuSceneBuilder` 가 세대가 바뀐 빌드에서만 부릅니다).
+         *          세대가 그대로면 아무것도 하지 않으므로 매 빌드 불러도 쌉니다(`GPUSceneBuilder` 가 세대가 바뀐 빌드에서만 부릅니다).
          * @return 인덱스가 하나라도 바뀌었으면 true 입니다.
          */
         bool refreshTextureBindings();
@@ -222,7 +222,7 @@ namespace sw
 
         /**
          * @brief 셰이더 경로의 해시입니다(경로가 바뀔 때만 다시 계산합니다).
-         * @details GpuScene 이 배치 키를 만들 때 인스턴스마다 부릅니다. 경로는 머티리얼 수명 동안 거의 안 바뀌므로
+         * @details GPUScene 이 배치 키를 만들 때 인스턴스마다 부릅니다. 경로는 머티리얼 수명 동안 거의 안 바뀌므로
          *          정의(define) 해시와 같은 더티 플래그 방식으로 캐시합니다.
          */
         uint64 getShaderPathHash() const;

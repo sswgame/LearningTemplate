@@ -876,9 +876,9 @@ SW_TEST_CASE( MaterialTest, UnreadableBooleanKeepsTheDefaultAndSaysSo )
 /**
  * @brief [MaterialTest] 다시 로드한 머티리얼은 셰이더 레이아웃을 잊는다 — 원소 stride 를 비우고 바이트 세대를 올린다
  * @details 리플렉션으로 레이아웃을 맞춘 뒤 같은 머티리얼을 다시 로드하면(에셋 핫 리로드 · 에디터 미리보기) 프로퍼티가 XML 순서로 다시
- *          쌓인다. "맞췄다" 는 표시가 남으면 다시 맞추지 않아 **옛 stride 와 XML 순서 바이트**가 함께 GpuScene 에 올라간다 —
+ *          쌓인다. "맞췄다" 는 표시가 남으면 다시 맞추지 않아 **옛 stride 와 XML 순서 바이트**가 함께 GPUScene 에 올라간다 —
  *          셰이더가 color 를 읽는 자리에 roughness 가 들어간다. 실제 리플렉션으로 다시 맞추는 것은
- *          `RenderPassGpuTest.ReloadedMaterialIsLaidOutByTheShaderAgain` 이 본다.
+ *          `RenderPassGPUTest.ReloadedMaterialIsLaidOutByTheShaderAgain` 이 본다.
  */
 SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
 {
@@ -929,7 +929,7 @@ SW_TEST_CASE( MaterialTest, ReloadForgetsTheShaderLayout )
 /**
  * @brief [MaterialTest] 인스턴스의 텍스처 덮어쓰기는 에셋 경로다 — 저장하면 `assetPath` 로 나가고, 읽으면 다시 덮어쓰기가 된다
  * @details 덮어쓰기를 날 디스크립터 인덱스로 들면 값(`value`)으로 저장되고, 파일의 `assetPath` 를 읽고 버리면 .materialinstance 에 적은 텍스처가
- *          조용히 부모 것으로 남는다. GPU 에 닿는 것은 `RenderPassGpuTest.InstanceOverridesReachTheGpuOnEveryBackend` 가 본다.
+ *          조용히 부모 것으로 남는다. GPU 에 닿는 것은 `RenderPassGPUTest.InstanceOverridesReachTheGPUOnEveryBackend` 가 본다.
  */
 SW_TEST_CASE( MaterialTest, InstanceTextureOverrideRoundTripsAsAnAssetPath )
 {

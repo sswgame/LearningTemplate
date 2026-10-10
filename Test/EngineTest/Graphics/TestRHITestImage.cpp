@@ -5,7 +5,7 @@
 #include "TestFramework/TestFramework.h"
 
 // GPU 케이스가 픽셀을 읽는 규칙(`test::RHITestImage`)을 GPU 없이 지킨다. 이 PC 의 네 백엔드는 `SceneColor` 를 전부 RGBA8 로
-// 되읽어서, BGRA 뒤집기를 틀려도 `RenderPassGpuTest` 는 하나도 지지 않는다 — 스왑체인이 BGRA 인 호스트에서만 빨강 · 파랑이
+// 되읽어서, BGRA 뒤집기를 틀려도 `RenderPassGPUTest` 는 하나도 지지 않는다 — 스왑체인이 BGRA 인 호스트에서만 빨강 · 파랑이
 // 바뀐 채로 통과하거나 진다.
 
 namespace

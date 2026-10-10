@@ -92,7 +92,7 @@ namespace sw
 namespace sw
 {
     /** @brief 드라이버 사용량이 누구의 것인지입니다. */
-    enum class RHIGpuMemoryScope : uint8
+    enum class RHIMemoryScope : uint8
     {
         Process, ///< 이 프로세스의 사용량(DXGI `QueryVideoMemoryInfo` · `VK_EXT_memory_budget`)
         Device   ///< 디바이스 전체 — 다른 프로세스 몫까지 든다(`GL_NVX_gpu_memory_info`)
@@ -103,19 +103,19 @@ namespace sw
      * @details 사용량은 로컬(비디오 메모리)과 비로컬(GPU 가 보는 시스템 메모리 — 업로드 힙)을 합한 값이고, 예산은 로컬 예산입니다.
      *          엔진 장부도 업로드 힙 버퍼를 세므로 둘을 견줄 수 있습니다.
      */
-    struct SW_API RHIGpuMemoryBudget
+    struct SW_API RHIMemoryBudget
     {
         uint64                 _usageBytes;          ///< 드라이버가 센 사용량(로컬 + 비로컬)
         uint64                 _budgetBytes;         ///< 로컬 메모리 예산(이를 넘으면 OS 가 내쫓기 시작한다)
         uint64                 _availableBytes;      ///< 드라이버가 답한 남은 양
-        RHIGpuMemoryScope      _scope;               ///< 사용량이 누구의 것인가
+        RHIMemoryScope         _scope;               ///< 사용량이 누구의 것인가
         uint8                  _bUsageKnown     : 1; ///< `_usageBytes` 가 드라이버 값이다
         uint8                  _bBudgetKnown    : 1; ///< `_budgetBytes` 가 드라이버 값이다
         uint8                  _bAvailableKnown : 1; ///< `_availableBytes` 가 드라이버 값이다
         [[maybe_unused]] uint8 _reserved        : 5;
 
         /** @brief 모든 칸을 "모름" 으로 둡니다. */
-        RHIGpuMemoryBudget() noexcept;
+        RHIMemoryBudget() noexcept;
     };
 } // namespace sw
 
@@ -127,9 +127,9 @@ namespace sw
      *          사용량을 모르거나 그것이 디바이스 전체 값이면(다른 프로세스 몫이 섞인다) 계산하지 않습니다. 장부가 논리 크기면 음수가 될 수도 있어
      *          부호 있는 값입니다.
      */
-    struct RHIGpuMemorySummary
+    struct RHIMemorySummary
     {
-        RHIGpuMemoryBudget _budget{};                                    ///< 마지막으로 읽은 드라이버 값
+        RHIMemoryBudget    _budget{};                                    ///< 마지막으로 읽은 드라이버 값
         uint64             _trackedBytes{ 0 };                           ///< 장부의 바이트 합(크기 모름 칸 제외)
         int64              _outsideBytes{ 0 };                           ///< 드라이버 사용량 − 장부 합
         uint32             _unknownSizeCount{ 0 };                       ///< 크기를 모르는 살아 있는 자원 수(모든 줄 합)
@@ -195,12 +195,12 @@ namespace sw
         void setSizeBasis( RHIMemorySizeBasis basis ) { _sizeBasis = basis; }
 
         /** @brief 마지막으로 읽은 드라이버 값입니다. */
-        RHIGpuMemoryBudget getDriverBudget() const;
-        /** @brief 드라이버 값을 적습니다(`IRHIDevice::refreshGpuMemoryBudget`). */
-        void setDriverBudget( const RHIGpuMemoryBudget& budget );
+        RHIMemoryBudget getDriverBudget() const;
+        /** @brief 드라이버 값을 적습니다(`IRHIDevice::refreshGPUMemoryBudget`). */
+        void setDriverBudget( const RHIMemoryBudget& budget );
 
         /** @brief 드라이버 값과 장부를 맞춰 "엔진 밖" 까지 계산합니다. */
-        RHIGpuMemorySummary makeSummary() const;
+        RHIMemorySummary makeSummary() const;
 
         /**
          * @brief `-gv_profileFrames` 보고의 GPU 표를 Info 로그로 남깁니다. CPU 의 "memory by tag" 표와 같은 모양입니다.
@@ -224,7 +224,7 @@ namespace sw
         mutable mutex                    _mutex;
         unordered_map<uint64, LiveEntry> _arrMapIdToEntry[kRHIMemoryKeySpaceCount];
         RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount];
-        RHIGpuMemoryBudget               _driverBudget;
+        RHIMemoryBudget                  _driverBudget;
         RHIMemorySizeBasis               _sizeBasis;
     };
 } // namespace sw

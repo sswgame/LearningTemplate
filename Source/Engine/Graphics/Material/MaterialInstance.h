@@ -37,7 +37,7 @@ namespace sw
         MaterialInstance( CreateKey, Material* pParentMaterial );
         /**
          * @brief Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 삽니다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께
+         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 삽니다. 렌더 패킷(GPUScene 스냅샷)이 소유를 함께
          *          실으므로 게임 모듈이 만든 인스턴스를 엔진이 마지막까지 들 수 있고, 모듈이 내려간 뒤 놓으면
          *          없는 코드로 뛰어듭니다. 여기서 만들면 누가 마지막에 놓든 Engine 코드입니다.
          */
@@ -110,7 +110,7 @@ namespace sw
         string getTextureParameter( hashed_string name ) const;
         /**
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 · GL 의 t5..)에 걸 SRV 를 채웁니다 — 부모의 슬롯 위에 덮어쓴 텍스처를 얹습니다.
-         * @details 렌더 스레드가 `updateRhi` 뒤에 부릅니다(GpuScene). 슬롯 바인딩 백엔드는 배치마다 슬롯을 걸고, 인스턴스가 있는 배치는 그
+         * @details 렌더 스레드가 `updateRhi` 뒤에 부릅니다(GPUScene). 슬롯 바인딩 백엔드는 배치마다 슬롯을 걸고, 인스턴스가 있는 배치는 그
          *          인스턴스의 것입니다(합치기는 네이티브 bindless 에서만 켜진다).
          */
         void collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
@@ -205,7 +205,7 @@ namespace sw
         mutable uint64         _cachedPermutationHash;
         mutable uint64         _parentPermutationHash;
         mutable uint8          _bDefinesDirty : 1;
-        uint8                  _bGpuDirty     : 1;
+        uint8                  _bGPUDirty     : 1;
         [[maybe_unused]] uint8 _instReserved  : 6;
     };
 } // namespace sw

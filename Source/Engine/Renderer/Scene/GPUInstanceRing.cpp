@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Scene/GpuInstanceRing.h"
+#include "Engine/Renderer/Scene/GPUInstanceRing.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw
 {
-    vector<GpuInstance>& GpuInstanceRing::acquireWrite()
+    vector<GPUInstance>& GPUInstanceRing::acquireWrite()
     {
         if ( _pWrite != nullptr )
             return *_pWrite;
@@ -22,14 +22,14 @@ namespace sw
             }
         }
         // 모자라면 하나 더 만든다. 렌더 큐가 깊은 만큼만 자란다(패킷이 슬롯을 놓으면 그 슬롯이 다시 골라진다).
-        _listSlot.push_back( make_shared<vector<GpuInstance>>() );
+        _listSlot.push_back( make_shared<vector<GPUInstance>>() );
         _listSlotBuild.push_back( 0 );
         _writeSlotIndex = static_cast<uint32>( _listSlot.size() - 1 );
         _pWrite         = _listSlot.back();
         return *_pWrite;
     }
 
-    shared_ptr<const vector<GpuInstance>> GpuInstanceRing::publish( bool bAllDirty, const vector<GpuInstanceRun>& listDirtyRun )
+    shared_ptr<const vector<GPUInstance>> GPUInstanceRing::publish( bool bAllDirty, const vector<GPUInstanceRun>& listDirtyRun )
     {
         if ( _pWrite == nullptr )
             return _pPublished;
@@ -51,12 +51,12 @@ namespace sw
         return _pPublished;
     }
 
-    void GpuInstanceRing::syncWriteFromPublished()
+    void GPUInstanceRing::syncWriteFromPublished()
     {
         if ( _pPublished == nullptr )
             return;
-        const vector<GpuInstance>& prev = *_pPublished;
-        vector<GpuInstance>&       work = acquireWrite();
+        const vector<GPUInstance>& prev = *_pPublished;
+        vector<GPUInstance>&       work = acquireWrite();
 
         // 슬롯이 발행된 뒤 무엇이 바뀌었나. 이력에서 (슬롯의 발행 번호, 마지막 발행 번호] 를 모은다.
         const uint64 slotBuild = ( _writeSlotIndex < _listSlotBuild.size() ) ? _listSlotBuild[_writeSlotIndex] : 0;
@@ -84,24 +84,24 @@ namespace sw
         if ( bWhole )
         {
             if ( prev.empty() == false )
-                Memory::copy( work.data(), prev.data(), prev.size() * sizeof( GpuInstance ) );
+                Memory::copy( work.data(), prev.data(), prev.size() * sizeof( GPUInstance ) );
             return;
         }
         for ( const PublishRecord& record : _listHistory )
         {
             if ( record._build <= slotBuild )
                 continue;
-            for ( const GpuInstanceRun& run : record._listRun )
+            for ( const GPUInstanceRun& run : record._listRun )
             {
                 const size_t start = MathUtil::min<size_t>( run._start, prev.size() );
                 const size_t end   = MathUtil::min<size_t>( static_cast<size_t>( run._start ) + run._count, prev.size() );
                 if ( end > start )
-                    Memory::copy( work.data() + start, prev.data() + start, ( end - start ) * sizeof( GpuInstance ) );
+                    Memory::copy( work.data() + start, prev.data() + start, ( end - start ) * sizeof( GPUInstance ) );
             }
         }
     }
 
-    void GpuInstanceRing::clear()
+    void GPUInstanceRing::clear()
     {
         _listSlot.clear();
         _listSlotBuild.clear();

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Task/TaskManager.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "GpuUploadQueue" );
+    SW_LOG_CALLER( "GPUUploadQueue" );
 
     /**
      * @brief `-gv_gpuUploadQueue=0` 이면 업로드를 워커로 앞당기지 않고 렌더 스레드가 그 자리에서 만듭니다.
@@ -21,7 +21,7 @@ namespace sw
      */
     SW_GLOBAL_VARIABLE( int32, gv_gpuUploadQueue, 1, "GPU 업로드를 워커로 앞당긴다 (0=렌더 스레드가 그 자리에서 만든다)" );
 
-    void GpuUploadQueue::bindDevice( IRHIDevice* pDevice, TaskManager* pTaskManager )
+    void GPUUploadQueue::bindDevice( IRHIDevice* pDevice, TaskManager* pTaskManager )
     {
         // 쌓여 있던 요청은 옛 디바이스의 것이므로 버린다. 필요한 메시는 다음 프레임 GT 가 다시 요청한다.
         _listPendingMesh.clear();
@@ -39,9 +39,9 @@ namespace sw
                      pDevice->getBackendName() );
     }
 
-    void GpuUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
+    void GPUUploadQueue::requestMesh( const shared_ptr<Mesh>& mesh )
     {
-        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GpuScene` 의 `initRhi`)에서 만든다.
+        // 워커 생성을 못 하는 백엔드(OpenGL)에서는 받지 않는다 — 렌더 스레드가 그 프레임의 업로드(`GPUScene` 의 `initRhi`)에서 만든다.
         // 주의: 게임 스레드가 대신 만들면 렌더 스레드가 컨텍스트를 오래 쥔 동안(셰이더 실시간 컴파일) 컨텍스트 대기가 시간을 넘겨 메시를 못 만든다.
         if ( _bParallel == SW_FALSE )
             return;
@@ -61,7 +61,7 @@ namespace sw
         _listPendingMesh.push_back( mesh );
     }
 
-    uint32 GpuUploadQueue::flush()
+    uint32 GPUUploadQueue::flush()
     {
         if ( _listPendingMesh.empty() || _pDevice == nullptr || gv_gpuUploadQueue == 0 )
         {

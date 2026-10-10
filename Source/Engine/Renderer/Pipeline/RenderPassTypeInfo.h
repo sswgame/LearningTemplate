@@ -67,13 +67,13 @@ namespace sw
         static constexpr uint32 kDepthWrite            = SW_BIT( 1 );  ///< PSO 기본값: 깊이 쓰기
         static constexpr uint32 kBlend                 = SW_BIT( 2 );  ///< PSO 기본값: 블렌드(패스 서술이 있으면 그 값이 이긴다)
         static constexpr uint32 kDepthOnly             = SW_BIT( 3 );  ///< 깊이만 쓴다. 출력 선언이 없을 때 컬러 RT 수가 0 이 되는 근거다
-        static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GpuScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다
+        static constexpr uint32 kDrawsSceneMeshes      = SW_BIT( 4 );  ///< 씬 메시(GPUScene 배치)를 그린다. 머티리얼 변형 PSO 를 만들 대상이다
         static constexpr uint32 kDrawsTransparentBatch = SW_BIT( 5 );  ///< 씬 메시 중 반투명 배치 목록을 그린다(아니면 불투명 목록)
         static constexpr uint32 kUsesMaterialShader    = SW_BIT( 6 );  ///< 머티리얼이 선언한 `.hlsl` 로 갈아탄다(아니면 패스 셰이더에 define 만)
         static constexpr uint32 kAppliesViewMode       = SW_BIT( 7 );  ///< 뷰 모드(Unlit · Wireframe)를 받는다
         static constexpr uint32 kGenericFullscreen     = SW_BIT( 8 );  ///< 선언한 입력을 역할로 걸고 첫 출력에 풀스크린 삼각형 하나를 그린다
         static constexpr uint32 kCompute               = SW_BIT( 9 );  ///< 컴퓨트 PSO 다(`CSMain`)
-        static constexpr uint32 kRequiresGpuCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGpuCulling` 일 때만 만든다(아니면 `_bCompute`)
+        static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`)
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값: 앞면 컬링(뒤집은 껍질 외곽선). XML 은 None 으로만 바꿀 수 있다
         static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha — `_bPremultipliedAlpha`)

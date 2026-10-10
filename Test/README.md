@@ -296,7 +296,7 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 
 **GPU가 필요한 테스트를 쓰려면**
 
-1. RHI 디바이스를 만드는 테스트는 `RenderPassGpuTest` 스위트에 넣습니다.
+1. RHI 디바이스를 만드는 테스트는 `RenderPassGPUTest` 스위트에 넣습니다.
 2. 창과 디바이스는 `test::RHITestDevice`(`Test/EngineTest/RHITestDevice.h`)로 만듭니다. 스코프를 벗어나면 정리되므로, 단언으로 일찍 빠져도 다음 케이스에 남지 않습니다.
 3. 백엔드마다 도는 케이스는 `test::RHIBackendSweep` 범위로 돕니다. `for ( test::RHITestDevice& device : sweep )` 로 만들어진 백엔드마다 본문을 한 번씩 돌리고, 하나도 없으면 `sweep.getReadyCount() == 0` 으로 건너뜁니다.
 4. 새 호스트 스위트를 만들 때는 그 스위트 파일에 `SW_TEST_REQUIRES_HOST` 를 두고, 파일에 다른 스위트를 두지 않습니다.

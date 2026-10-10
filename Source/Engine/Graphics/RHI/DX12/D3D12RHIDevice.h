@@ -16,10 +16,10 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <shared_mutex>
@@ -166,10 +166,10 @@ namespace sw
         void waitIdleInternal() override;
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬 + 비로컬)과 로컬 예산을 채웁니다. 어댑터를 못 찾았으면 false 입니다. */
-        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+        [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 이번 프레임이 Signal 할 펜스 값(`_fenceValue`)으로 해제 큐에 넣습니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
         /** @brief 리소스 생성 · 파괴 인터페이스(D3D12RHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
@@ -199,7 +199,7 @@ namespace sw
         /** @brief 셰이더 가시 힙의 index 번째 CPU 핸들을 반환합니다(복사 목적지). */
         D3D12_CPU_DESCRIPTOR_HANDLE shaderVisibleCpuAt( uint32 index ) const;
         /** @brief 셰이더 가시 힙의 index 번째 GPU 핸들을 반환합니다(루트 테이블 인자). */
-        D3D12_GPU_DESCRIPTOR_HANDLE shaderVisibleGpuAt( uint32 index ) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE shaderVisibleGPUAt( uint32 index ) const;
         /** @brief 스왑체인이 만든 백버퍼 포맷입니다. 백버퍼 PSO 의 렌더 타깃 포맷은 여기서 나옵니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getFormat(); }
 
@@ -251,14 +251,14 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
-        bool               isGpuClockReadCheap() const override { return true; }
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
+        bool               isGPUClockReadCheap() const override { return true; }
 
         /** @brief 타임스탬프 쿼리 힙을 반환합니다. 준비되지 않았으면 nullptr 입니다. */
         ID3D12QueryHeap* getTimestampHeap() const { return _timestampHeap.Get(); }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스를 반환합니다. */
-        uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::kMaxGpuTimestampSlot; }
+        uint32 getTimestampBase() const { return _frameRing.currentIndex() * constant::kMaxGPUTimestampSlot; }
         /** @brief 슬롯 하나를 적었다고 표시합니다. 여러 패스 스레드가 동시에 부를 수 있습니다. */
         void markTimestampWritten( uint32 slotIndex )
         {
@@ -480,7 +480,7 @@ namespace sw
         /**
          * @struct StructuredUploadSlot
          * @brief 업로드(updateStructuredBufferRegions · uploadTexture2D)가 쓰는 프레임 링 슬롯 하나입니다. 스테이징 힙과 복사 얼로케이터 · 리스트입니다.
-         * @details 한 프레임 안에서 여러 번 불립니다(GpuScene 만 해도 인스턴스 · 배치 표 · 간접 인자 · 머티리얼 그룹). 그래서
+         * @details 한 프레임 안에서 여러 번 불립니다(GPUScene 만 해도 인스턴스 · 배치 표 · 간접 인자 · 머티리얼 그룹). 그래서
          *          얼로케이터는 **펜스 구간마다 한 번만** Reset 하고(_resetFence), 스테이징은 bump
          *          오프셋으로 이어 씁니다(_uploadOffset). 주의: 호출마다 둘 다 처음부터 다시 쓰면 두 번째 호출이
          *          첫 번째 복사가 아직 실행 중인 얼로케이터를 Reset 합니다("allocator is being reset [in use]"
@@ -558,7 +558,7 @@ namespace sw
         FrameResourceRing               _frameRing;
 
         /**
-         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGpuTimestampSlot` 칸을 씁니다.
+         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 칸을 씁니다.
          * @details 읽기는 `waitForRingSlot()` 이 그 슬롯의 펜스를 통과시킨 **직후**에 합니다. 그때가
          *          "그 프레임의 GPU 작업이 끝났음" 이 이미 보장된 유일한 자리라, 재려고 파이프라인을
          *          멈춰 세우는 일이 없습니다.
@@ -570,7 +570,7 @@ namespace sw
         atomic<uint32> _timestampWrittenMask;
         /// @brief 링 슬롯별로 굳힌 비트입니다. 그 슬롯이 다시 돌아왔을 때 어느 칸이 진짜 값인지 가립니다.
         uint32               _arrTimestampMask[constant::kMaxFrameCountInFlight];
-        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
+        RHITimestampFrame    _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
         StructuredUploadSlot _arrStructuredUploadSlot[constant::kMaxFrameCountInFlight];
 
         RHIHandleTable<Microsoft::WRL::ComPtr<ID3D12Resource>> _gpuBuffers;

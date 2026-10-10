@@ -127,7 +127,7 @@ namespace sw
                 if ( slot._pMapped != nullptr )
                     vkUnmapMemory( dev, mem );
                 RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
                 {
                     vkDestroyBuffer( dev, buf, nullptr );
                     vkFreeMemory( dev, mem, nullptr );
@@ -362,7 +362,7 @@ namespace sw
         VkDeviceMemory   mem     = owned._memory;
         VkDevice         dev     = _pDevice->_device;
         RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
@@ -819,7 +819,7 @@ namespace sw
         VkDeviceMemory      mem        = owned._memory;
         vector<VkImageView> listSliceView{ owned._listSliceView };
         RHIMemoryLedger*    pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
             {

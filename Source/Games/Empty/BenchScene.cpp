@@ -150,7 +150,7 @@ namespace sw
     /**
      * @brief `-gv_benchMaterialChurn=N` — 매 프레임 머티리얼 인스턴스 N 개의 **값**을 무작위로 바꿉니다.
      * @details 색·러프니스를 흔든다. 정적인 벤치는 머티리얼 바이트가 한 번 올라간 뒤 영원히 그대로라
-     *          "바뀐 것만 올린다" 경로(`GpuMaterialGroupBuffer::_lastBytes` 비교, 인스턴스 CB 재작성,
+     *          "바뀐 것만 올린다" 경로(`GPUMaterialGroupBuffer::_lastBytes` 비교, 인스턴스 CB 재작성,
      *          구조버퍼 재업로드)를 **한 번도 지나지 않는다.** 이 스위치가 그 길을 매 프레임 태운다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_benchMaterialChurn, 0, "프레임당 값을 무작위로 바꿀 머티리얼 인스턴스 수 (0=사용 안 함)" );
@@ -425,7 +425,7 @@ namespace sw
             }
             // GPU 모프 옵트인 — 유니티의 vertexBufferTarget 옵트인과 같은 자리다. 켠 메시만 풀에 들어간다.
             if ( gv_benchMeshMorph != 0 )
-                variant->setGpuMorphEnabled( true );
+                variant->setGPUMorphEnabled( true );
             listMeshVariant.push_back( std::move( variant ) );
         }
 
@@ -785,7 +785,7 @@ namespace sw
         // `-gv_benchAnimate=0` 이면 시드를 주지 않는다 — 각도가 벽시계 시간에서 나와 같은 프레임을
         // 찍어도 그림이 달라지므로, 픽셀 비교 검증에는 멈춘 격자가 필요하다.
         if ( gv_benchAnimate != 0 )
-            pMesh->setGpuSpinSeed( index + 1u );
+            pMesh->setGPUSpinSeed( index + 1u );
         pMesh->setVisible( true );
 
         if ( gv_benchUiMarkers > 0 && index < static_cast<uint32>( gv_benchUiMarkers ) )
