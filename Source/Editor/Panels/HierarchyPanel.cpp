@@ -13,6 +13,7 @@
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -194,99 +195,11 @@ namespace sw::editor
                 EditorSelfTestMarks::note( "hierarchy.addComponent" );
                 if ( bMenuOpen == false )
                     return;
-
-                vector<hashed_string> listType;
-                if ( pObj != nullptr && pObj->getManager() != nullptr )
-                    listType = pObj->getManager()->getRegisteredComponentTypeNames();
-                if ( listType.empty() )
-                {
-                    ImGui::TextDisabled( "No registered component types." );
-                    ImGui::EndMenu();
-                    return;
-                }
-
                 static fixed_string<constant::kMaxBuffer64> s_searchBuf;
-                ImGui::SetNextItemWidth( 180.0f * EditorThemeUtil::getDpiScale() );
-                ImGui::InputTextWithHint( "##compSearch", "Search...", s_searchBuf.data(),
-                                          s_searchBuf.capacity() );
-                EditorSelfTestMarks::note( "hierarchy.addComponent.search" );
-                const EditorListFilter compFilter{ s_searchBuf.c_str() };
-                const bool             bHasFilter = compFilter.isActive();
-
-                auto* pRegistry = editor::getService<TypeRegistry>();
-
-                auto drawItem = [&]( const hashed_string& typeName, const TypeInfo* pTypeInfo )
-                {
-                    const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
-                    if ( ImGui::MenuItem( pDisplayName ) )
-                    {
-                        if ( EditorSceneCommands::addComponent( pObj, typeName ) == nullptr )
-                            ImGui::OpenPopup( "AddCompFailed" );
-                    }
-                    // 자동화 시나리오가 타입 이름으로 누른다(EditorClick mark="hierarchy.addComponent.<타입>")
-                    if ( EditorSelfTestMarks::isEnabled() )
-                        EditorSelfTestMarks::note( ( string( "hierarchy.addComponent." ) + typeName.c_str() ).c_str() );
-                    if ( pTypeInfo != nullptr )
-                        EditorWidgets::drawTooltip( pTypeInfo->getTooltip().c_str() );
-                };
-
-                if ( bHasFilter )
-                {
-                    ImGui::Separator();
-                    uint32 matchCount{ 0 };
-                    for ( const hashed_string& typeName : listType )
-                    {
-                        const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
-                        if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
-                            continue;
-
-                        const utf8* pDisplayName = ( pTypeInfo != nullptr ) ? pTypeInfo->getDisplayName() : typeName.c_str();
-                        if ( compFilter.matchesAny( { string_view{ pDisplayName }, typeName.view() } ) )
-                        {
-                            drawItem( typeName, pTypeInfo );
-                            ++matchCount;
-                        }
-                    }
-                    if ( matchCount == 0 )
-                        ImGui::TextDisabled( "No matching components." );
-                }
-                else
-                {
-                    map<string, vector<pair<hashed_string, const TypeInfo*>>> mapCategorized;
-                    for ( const hashed_string& typeName : listType )
-                    {
-                        const TypeInfo* pTypeInfo = ( pRegistry != nullptr ) ? pRegistry->findType( typeName ) : nullptr;
-                        if ( pTypeInfo != nullptr && pTypeInfo->isHiddenInMenu() )
-                            continue;
-
-                        string category = ( pTypeInfo != nullptr && pTypeInfo->getCategory().empty() == false )
-                                            ? pTypeInfo->getCategory()
-                                            : "General";
-                        mapCategorized[category].emplace_back( typeName, pTypeInfo );
-                    }
-
-                    for ( const auto& [category, items] : mapCategorized )
-                    {
-                        if ( category == "General" )
-                        {
-                            for ( const auto& [typeName, pTypeInfo] : items )
-                            {
-                                drawItem( typeName, pTypeInfo );
-                            }
-                        }
-                        else
-                        {
-                            if ( ImGui::BeginMenu( category.c_str() ) )
-                            {
-                                for ( const auto& [typeName, pTypeInfo] : items )
-                                {
-                                    drawItem( typeName, pTypeInfo );
-                                }
-                                ImGui::EndMenu();
-                            }
-                        }
-                    }
-                }
+                bool                                        bFailed{ false };
+                (void)EditorComponentMenu::drawAddComponentList( pObj, s_searchBuf, "hierarchy.addComponent", false, bFailed ); // 더했는지는 되돌리기가 기록한다
+                if ( bFailed )
+                    ImGui::OpenPopup( "AddCompFailed" );
                 ImGui::EndMenu();
             }
 

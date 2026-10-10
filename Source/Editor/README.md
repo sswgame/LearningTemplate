@@ -605,6 +605,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **컴포넌트 아이콘은 `EditorComponentIcon` 표 하나다**(Hierarchy 오브젝트 · 컴포넌트 줄, 인스펙터 카드 머리, 다음의 뷰포트 빌보드가 같이 쓴다). 찾는 순서는 타입 이름(자신 → 부모)
   → 리플렉션 Category → 기본. 에디터는 GameFramework 를 링크하지 않아 짧은 타입 이름으로 맞추므로 타입 이름을 바꾸면 그 줄이 조용히 죽는다 —
   `EditorComponentIconTest` 가 표의 이름이 레지스트리에 있는지 본다. 오브젝트 줄은 빌보드 종류(빛 · 카메라 · 오디오)가 있으면 그 아이콘이다(시나리오 `editor/componenticons`).
+- **Add Component 목록은 `EditorComponentMenu` 하나다**(Hierarchy 오른쪽 클릭 메뉴와 인스펙터 맨 아래 단추 — 검색 Enter 는 맨 위 줄). 카드 메뉴의 Move Up/Down 은
+  `GameObject::moveComponent` 로 이웃과 바꾸고, 주 씬 컴포넌트(뿌리 트랜스폼)는 옮기지도 그 자리로 끼워 넣지도 않는다. 에셋 경로 칸의 고르기 팝업 · 지우기 · 드롭은
+  `grid.applyPropertyTextAsEdit` 로 입힌다 — 값에 바로 쓰면 ImGui 편집 플래그가 서지 않아 통지 · 되돌리기가 빠진다(시나리오 `editor/addcomponent`).
 - **Hierarchy 의 눈은 에디터에서만 숨긴다**(`GameObject::setHiddenInEditor` — PROPERTY 가 아니라 저장 · 되돌리기 · 씬 dirty 에 남지 않고 게임 동작도 그대로).
   렌더러의 프리미티브 수집이 그 비트를 보므로 숨기는 쪽(`EditorSceneCommands::setHiddenInEditor`)이 메시 렌더 상태를 더럽혀야 다음 프레임에 빠진다.
   활성 비트는 인스펙터의 Active 체크박스로만 바꾼다. 자물쇠는 워크스페이스의 잠금 목록이고 뷰포트(빌보드 · 레이 피킹)만 막는다(시나리오 `editor/hidelock`).

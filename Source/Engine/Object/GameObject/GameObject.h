@@ -296,6 +296,12 @@ namespace sw
 
         /** @brief 컴포넌트 인스턴스 하나를 제거합니다. 이 오브젝트의 것이 아니면 false, 틱 중이면 지연 제거로 넘기고 true 입니다. */
         [[nodiscard]] bool removeComponent( Component* pComp );
+        /**
+         * @brief 컴포넌트를 목록에서 이웃과 자리를 바꿉니다(@p direction 이 음수면 앞으로, 양수면 뒤로 — 인스펙터의 Move Up/Down).
+         * @return 바꿨으면 true 입니다. 끝이거나, 틱 중(구조가 얼었다)이거나, 둘 중 하나가 주 씬 컴포넌트면 false 입니다 — 주 씬 컴포넌트는
+         *         오브젝트의 뿌리 트랜스폼이라 자리를 옮기지 않는다(유니티 Transform 이 늘 첫 컴포넌트인 것과 같다).
+         */
+        [[nodiscard]] bool moveComponent( Component* pComp, int32 direction );
 
         /** @brief componentID 로 소유 컴포넌트를 찾습니다. */
         Component* findComponentByID( uint64 componentID, bool bIncludePendingDestroy = false ) const;

@@ -266,17 +266,6 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 **확인 = 에디터 시나리오.** `hierarchyedit.scenario.xml`: 형제 셋을 둔 시험 씬에서 첫 줄을 고르고 `EditorClick mods="shift"` 로 셋째 줄까지 골라 탐침 `Editor.SelectionCount` 가 3 인지 보고,
 `EditorKey key="C" mods="ctrl"` 와 `EditorKey key="V" mods="ctrl"` 뒤 오브젝트 수 탐침이 3 늘었는지, `EditorKey key="Z" mods="ctrl"` 한 번에 돌아오는지 봅니다. 끌어 바꾸기는 끌기 단계가 생기면 더합니다.
 
-### N4 인스펙터 기본기 ★(S, 선행 I1)
-
-**무엇.** 인스펙터에 검색이 되는 Add Component 단추를 둡니다. Hierarchy 의 메뉴 그리기 함수를 공용 위젯으로 옮겨 씁니다. 컴포넌트 순서 바꾸기(Move Up/Down), 인스펙터 잠그기, 에셋 참조 필드의 고르기 팝업과 "콘텐츠 브라우저에서 보기" 를 더합니다.
-다중 편집과 기본값 되돌리기는 I1 과 I2 입니다.
-
-**왜.** 컴포넌트를 더하려면 Hierarchy 의 오른쪽 클릭 메뉴로 가야 하고, 에셋 참조는 경로를 손으로 쳐야 합니다.
-
-**상용 비교.** 유니티 Inspector 맨 아래와 언리얼 Details 위의 Add Component, 유니티 자물쇠와 언리얼의 여러 Details 창, 언리얼 에셋 피커와 같습니다.
-
-**확인 = 에디터 시나리오.** `addcomponent.scenario.xml`: 오브젝트를 고르고 Add Component 단추(이름표 `inspector.addComponent`)를 눌러 `EditorText value="PointLight"` 와 `EditorKey key="Enter"` 를 보낸 뒤, 그 오브젝트의 컴포넌트 수 탐침이 하나 늘었는지 봅니다.
-
 ### N5 Output Log(S)
 
 **무엇.** 같은 줄 접기(Collapse), Play 때 지우기, 오류에서 멈추기, 위로 스크롤하면 자동 스크롤 멈춤, 여러 줄을 끌어 골라 복사, 저장된 로그 파일 열기 단추를 더합니다.

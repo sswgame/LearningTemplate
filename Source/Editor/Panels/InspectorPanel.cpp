@@ -12,7 +12,9 @@
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorComponentMenu.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -90,6 +92,10 @@ namespace sw::editor
         , _componentPresetJob{}
         , _listComponentPresetFile{}
         , _nameEditObjectID{ 0 }
+        , _lockedObjectID{ 0 }
+        , _pPendingMoveComponent{ nullptr }
+        , _pendingMoveDirection{ 0 }
+        , _addComponentSearch{}
         , _bComponentPresetDirty{ SW_TRUE }
         , _reserved{ 0 }
     {
@@ -115,17 +121,25 @@ namespace sw::editor
             return;
 
         EditorWidgets::drawSectionHeader( "Selection" );
+        // 잠그면 선택이 바뀌어도 지금 오브젝트를 계속 보인다(유니티 Inspector 자물쇠 · 언리얼의 여러 Details 창 대신).
+        ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
+        const bool bLocked = _lockedObjectID != 0;
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, editoricon::kLock, editoricon::kUnlock, "Locked to this object - click to follow the selection",
+                                                  "Following the selection - click to lock to this object" ) )
+            _lockedObjectID = bLocked ? 0 : pContext->getWorkspace().getSelectedObjectID();
+        EditorSelfTestMarks::note( "inspector.lock" );
 
+        EditorWorkspace&    ws = pContext->getWorkspace();
         vector<GameObject*> listSelected;
         pContext->getEditorSelection().getSelectedObjects( listSelected );
-        if ( listSelected.size() > 1 )
+        if ( listSelected.size() > 1 && _lockedObjectID == 0 )
         {
             drawMultiSelection( listSelected );
             return;
         }
 
-        EditorWorkspace& ws = pContext->getWorkspace();
-        if ( ws.getSelectedObjectID() == 0 )
+        const uint64 shownObjectID = _lockedObjectID != 0 ? _lockedObjectID : ws.getSelectedObjectID();
+        if ( shownObjectID == 0 )
         {
             EditorWidgets::drawEmptyHint( "Nothing selected. Pick in the Scene view or use Hierarchy." );
             return;
@@ -138,11 +152,14 @@ namespace sw::editor
             return;
         }
 
-        GameObject* pObj = pScene->getObjectManager()->findGameObjectByID( ws.getSelectedObjectID() );
+        GameObject* pObj = pScene->getObjectManager()->findGameObjectByID( shownObjectID );
         if ( pObj == nullptr )
         {
             EditorWidgets::drawEmptyHint( "Selected object no longer exists." );
-            ws.clearSelection();
+            if ( _lockedObjectID != 0 )
+                _lockedObjectID = 0; // 잠근 오브젝트가 사라졌다 — 선택을 따라가는 데로 돌아간다
+            else
+                ws.clearSelection();
             return;
         }
 
@@ -339,6 +356,16 @@ namespace sw::editor
                 InspectorPanelInternal::applyObjectEdit( pObj, "Toggle Component Active", [pComp, bActive]()
                 { pComp->setActive( bActive ); } );
 
+            if ( _pPendingMoveComponent == pComp && _pendingMoveDirection != 0 )
+            {
+                const int32 direction = _pendingMoveDirection;
+                InspectorPanelInternal::applyObjectEdit( pObj, direction < 0 ? "Move Component Up" : "Move Component Down", [pObj, pComp, direction]()
+                { (void)pObj->moveComponent( pComp, direction ); } ); // 끝 · 주 씬 컴포넌트면 그대로 — 메뉴가 이미 막는다
+                _pPendingMoveComponent = nullptr;
+                _pendingMoveDirection  = 0;
+                break;
+            }
+
             if ( bRemove )
             {
                 GameObjectManager* pGameObjectManager = pObj->getManager();
@@ -350,6 +377,26 @@ namespace sw::editor
                     pGameObjectManager->destroyComponent( pComp ); // 플레이 사본 — Stop 이 되돌린다
                 break;
             }
+        }
+
+        // 컴포넌트 목록 끝의 Add Component(유니티 Inspector 맨 아래 · 언리얼 Details 의 Add) — Hierarchy 메뉴와 같은 목록이다.
+        ImGui::Spacing();
+        const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
+        {
+            _addComponentSearch.clear();
+            ImGui::OpenPopup( "InspectorAddComponent" );
+        }
+        EditorSelfTestMarks::note( "inspector.addComponent" );
+        if ( ImGui::BeginPopup( "InspectorAddComponent" ) )
+        {
+            bool bFailed{ false };
+            if ( EditorComponentMenu::drawAddComponentList( pObj, _addComponentSearch, "inspector.addComponent", ImGui::IsWindowAppearing(), bFailed ) )
+                ImGui::CloseCurrentPopup();
+            if ( bFailed )
+                SW_LOG_WARNING( "Could not add the component to '%#'", pObj->getName().c_str() );
+            ImGui::EndPopup();
         }
     }
 
@@ -381,6 +428,27 @@ namespace sw::editor
                 {
                     if ( ImGui::MenuItem( "Paste as New Component" ) )
                         workspace.pasteComponentAsNew( pObj );
+                }
+                ImGui::Separator();
+                // 주 씬 컴포넌트(뿌리 트랜스폼)는 옮기지 않고, 그 자리로 옮겨 들어가지도 않는다(`GameObject::moveComponent`).
+                const auto& listComponent = pObj->getComponents();
+                size_t      index         = 0;
+                while ( index < listComponent.size() && listComponent[index] != pComp )
+                {
+                    ++index;
+                }
+                const Component* pPrimary = pObj->getPrimarySceneComponent();
+                const bool       bCanUp   = index > 0 && index < listComponent.size() && pComp != pPrimary && listComponent[index - 1] != pPrimary;
+                const bool       bCanDown = index + 1 < listComponent.size() && pComp != pPrimary && listComponent[index + 1] != pPrimary;
+                if ( ImGui::MenuItem( "Move Up", nullptr, false, bCanUp ) )
+                {
+                    _pPendingMoveComponent = pComp;
+                    _pendingMoveDirection  = -1;
+                }
+                if ( ImGui::MenuItem( "Move Down", nullptr, false, bCanDown ) )
+                {
+                    _pPendingMoveComponent = pComp;
+                    _pendingMoveDirection  = 1;
                 }
 
                 ImGui::Separator();

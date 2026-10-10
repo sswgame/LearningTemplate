@@ -2943,3 +2943,25 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     SW_EXPECT_EQUAL( pNewParent, pNewChild->getParent() );
     manager.clear();
 }
+
+/**
+ * @brief [GameObjectTest] moveComponent 는 이웃과 자리를 바꾸고, 끝이거나 주 씬 컴포넌트가 끼면 바꾸지 않는다(인스펙터 Move Up/Down)
+ */
+SW_TEST_CASE( GameObjectTest, MoveComponentKeepsThePrimarySceneComponent )
+{
+    sw::GameObjectManager manager;
+    sw::RegisterMockComponents();
+    sw::GameObject*        pActor  = manager.createGameObject( sw::hashed_string( "MoveProbe" ) );
+    sw::SceneComponent*    pRoot   = pActor->addComponent<sw::SceneComponent>();
+    sw::MockMeshComponent* pFirst  = pActor->addComponent<sw::MockMeshComponent>();
+    sw::MockMeshComponent* pSecond = pActor->addComponent<sw::MockMeshComponent>();
+    SW_ASSERT_EQUAL( 3u, pActor->getComponentCount() );
+
+    SW_EXPECT_TRUE( pActor->moveComponent( pSecond, -1 ) );
+    SW_EXPECT_EQUAL( static_cast<sw::Component*>( pSecond ), pActor->getComponents()[1] );
+    SW_EXPECT_EQUAL( static_cast<sw::Component*>( pFirst ), pActor->getComponents()[2] );
+    SW_EXPECT_FALSE( pActor->moveComponent( pSecond, -1 ) ); // 앞이 주 씬 컴포넌트다
+    SW_EXPECT_FALSE( pActor->moveComponent( pRoot, 1 ) );    // 주 씬 컴포넌트 자신
+    SW_EXPECT_FALSE( pActor->moveComponent( pFirst, 1 ) );   // 끝
+    SW_EXPECT_EQUAL( static_cast<sw::Component*>( pRoot ), static_cast<sw::Component*>( pActor->getPrimarySceneComponent() ) );
+}

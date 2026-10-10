@@ -708,6 +708,24 @@ namespace sw
         return nullptr;
     }
 
+    bool GameObject::moveComponent( Component* pComp, int32 direction )
+    {
+        if ( pComp == nullptr || pComp->getOwner() != this || direction == 0 || isComponentMutationFrozen() )
+            return false;
+        const auto it = std::find( _listComponent.begin(), _listComponent.end(), pComp );
+        if ( it == _listComponent.end() )
+            return false;
+        const size_t index  = static_cast<size_t>( it - _listComponent.begin() );
+        const size_t target = direction < 0 ? index - 1 : index + 1;
+        if ( ( direction < 0 && index == 0 ) || target >= _listComponent.size() )
+            return false;
+        const Component* pPrimary = getPrimarySceneComponent();
+        if ( _listComponent[index] == pPrimary || _listComponent[target] == pPrimary )
+            return false;
+        std::swap( _listComponent[index], _listComponent[target] );
+        return true;
+    }
+
     bool GameObject::removeComponent( Component* pComp )
     {
         if ( pComp == nullptr || pComp->getOwner() != this )

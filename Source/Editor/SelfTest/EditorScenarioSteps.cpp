@@ -972,6 +972,17 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 주 선택 오브젝트의 컴포넌트 수입니다. */
+            [[nodiscard]] static bool readSelectedComponentCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                GameObject*    pObject  = pContext != nullptr ? pContext->getEditorSelection().getPrimaryObject() : nullptr;
+                if ( pObject == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pObject->getComponentCount() );
+                return true;
+            }
+
             /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1151,6 +1162,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorObjectActive, "Editor.ObjectActive", "Own active bit of the object named by gv_editorProbeObject", &EditorScenarioStepsInternal::readObjectActive );
     SW_AUTOMATION_PROBE( editorObjectHiddenInEditor, "Editor.ObjectHiddenInEditor", "1 when the object named by gv_editorProbeObject is hidden in the editor only",
                          &EditorScenarioStepsInternal::readObjectHiddenInEditor );
+    SW_AUTOMATION_PROBE( editorSelectedComponentCount, "Editor.SelectedComponentCount", "Components on the primary selection",
+                         &EditorScenarioStepsInternal::readSelectedComponentCount );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );

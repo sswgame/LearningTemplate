@@ -86,8 +86,12 @@ namespace sw::editor
         EditorFileCollectJob                  _componentPresetJob;
         vector<string>                        _listComponentPresetFile;
         /** @brief `_nameEditBuffer` 가 가리키는 오브젝트입니다(선택이 바뀌면 버린다). */
-        uint64                 _nameEditObjectID;
-        uint8                  _bComponentPresetDirty : 1;
-        [[maybe_unused]] uint8 _reserved              : 7;
+        uint64                               _nameEditObjectID;
+        uint64                               _lockedObjectID;        ///< 자물쇠로 잠근 오브젝트(0 이면 선택을 따라간다)
+        Component*                           _pPendingMoveComponent; ///< 카드 메뉴의 Move Up/Down — 목록을 다 그린 뒤가 아니라 그 카드 다음에 적용한다
+        int32                                _pendingMoveDirection;
+        fixed_string<constant::kMaxBuffer64> _addComponentSearch; ///< Add Component 팝업의 검색어
+        uint8                                _bComponentPresetDirty : 1;
+        [[maybe_unused]] uint8               _reserved              : 7;
     };
 } // namespace sw::editor

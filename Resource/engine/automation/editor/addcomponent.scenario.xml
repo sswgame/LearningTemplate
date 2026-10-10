@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 인스펙터의 Add Component 단추(N4): 오브젝트를 고르고 컴포넌트 목록 끝의 Add Component(inspector.addComponent)를 눌러 검색 팝업에
+  PointLight 를 치고 Enter 를 보내면 그 오브젝트에 컴포넌트가 하나 늘고 되돌리기가 한 줄 는다. 인스펙터를 잠그면 다른 오브젝트를 골라도 잠근 오브젝트를 보인다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/addcomponent.scenario.xml -dx12
+-->
+<Scenario name="editor.addcomponent" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="50"><EditorClick mark="hierarchy.row.TestParent"/></At>
+	<At frame="65"><Expect probe="Editor.SelectedComponentCount" equals="1"/></At>
+	<At frame="70"><EditorClick mark="inspector.addComponent"/></At>
+	<At frame="90"><EditorText value="PointLight"/></At>
+	<At frame="100"><EditorKey key="Enter"/></At>
+	<At frame="120">
+		<Expect probe="Editor.SelectedComponentCount" equals="2"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+	</At>
+	<At frame="125"><EditorKey key="Ctrl+Z"/></At>
+	<At frame="145"><Expect probe="Editor.SelectedComponentCount" equals="1"/></At>
+	<At frame="150"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

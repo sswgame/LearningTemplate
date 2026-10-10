@@ -6,21 +6,31 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/SlotHandle.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Module/ModuleUnloadListener.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Commands/EditorResourceIndex.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/ContentBrowserPanel.h"
+#include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
 #include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
 #include "Editor/Panels/Inspector/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
+#include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
 
 #include <imgui.h>
@@ -35,9 +45,22 @@ namespace sw::editor
         enum class AssetFieldAction : uint8
         {
             None,
-            Dropped, ///< 드래그 드롭으로 경로가 들어왔다
+            Dropped, ///< 드래그 드롭이나 고르기 팝업으로 경로가 들어왔다
             Cleared, ///< 지우기 버튼
         };
+
+        /** @brief 에셋 고르기 팝업의 상태입니다. 열린 팝업은 하나라 하나만 든다. */
+        struct AssetPickerState
+        {
+            vector<EditorResourceIndexEntry>     _listEntry; ///< 열 때 한 번 모은 리소스(파일 목록을 프레임마다 훑지 않는다)
+            fixed_string<constant::kMaxBuffer64> _search;
+        };
+
+        AssetPickerState& getAssetPickerState()
+        {
+            static AssetPickerState s_state;
+            return s_state;
+        }
 
         class BuiltinPropertyBase : public IInspectorProperty
         {
@@ -91,19 +114,72 @@ namespace sw::editor
              *          (키 입력마다 인턴하면 그 문자열이 모두 표에 남습니다). 드롭과 지우기의 처리도 부르는 쪽이 합니다.
              */
             template <typename DrawInputFn>
-            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, string& outDroppedPath )
+            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyInfo& prop, string_view currentPath, string& outDroppedPath )
             {
-                const float32    kButtonWidth = 24.0f * EditorThemeUtil::getDpiScale();
+                const float32    kButtonWidth = ImGui::GetFrameHeight();
                 AssetFieldAction action       = AssetFieldAction::None;
 
                 ImGui::PushID( _pLabel );
-                const float32 itemWidth = ImGui::CalcItemWidth();
-                ImGui::SetNextItemWidth( ( itemWidth > kButtonWidth + 10.0f ) ? itemWidth - kButtonWidth - 4.0f : itemWidth );
+                const float32 itemWidth    = ImGui::CalcItemWidth();
+                const float32 buttonsWidth = ( kButtonWidth + ImGui::GetStyle().ItemSpacing.x ) * 3.0f;
+                ImGui::SetNextItemWidth( ( itemWidth > buttonsWidth + 10.0f ) ? itemWidth - buttonsWidth : itemWidth );
 
                 drawInput( "##assetInput" );
 
                 if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
                     action = AssetFieldAction::Dropped;
+
+                // 고르기 팝업(언리얼 에셋 피커 · 유니티 Object Picker) — 프로퍼티의 FileFilter 에 맞는 리소스만, 검색으로 거른다.
+                ImGui::SameLine();
+                if ( ImGui::Button( editoricon::kSearch, ImVec2( kButtonWidth, 0 ) ) )
+                {
+                    AssetPickerState& picker = getAssetPickerState();
+                    picker._listEntry.clear();
+                    picker._search.clear();
+                    EditorResourceIndex::collectEntries( picker._listEntry );
+                    ImGui::OpenPopup( "AssetPicker" );
+                }
+                EditorWidgets::drawTooltip( "Pick an asset" );
+                EditorSelfTestMarks::note( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
+                if ( ImGui::BeginPopup( "AssetPicker" ) )
+                {
+                    AssetPickerState& picker = getAssetPickerState();
+                    if ( ImGui::IsWindowAppearing() )
+                        ImGui::SetKeyboardFocusHere();
+                    ImGui::SetNextItemWidth( 320.0f * EditorThemeUtil::getDpiScale() );
+                    const bool bEnter = ImGui::InputTextWithHint( "##pickerSearch", "Search assets...", picker._search.data(), picker._search.capacity(),
+                                                                  ImGuiInputTextFlags_EnterReturnsTrue );
+                    EditorSelfTestMarks::note( "inspector.assetPicker.search" );
+                    const EditorListFilter filter{ picker._search.c_str() };
+                    uint32                 shownCount{ 0 };
+                    ImGui::BeginChild( "##pickerList", ImVec2{ 320.0f * EditorThemeUtil::getDpiScale(), 260.0f * EditorThemeUtil::getDpiScale() } );
+                    for ( const EditorResourceIndexEntry& entry : picker._listEntry )
+                    {
+                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, entry._path ) == false ||
+                             filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
+                            continue;
+                        const bool bFirst = shownCount == 0;
+                        ++shownCount;
+                        if ( ImGui::Selectable( entry._path.c_str(), entry._path == currentPath ) || ( bFirst && bEnter ) )
+                        {
+                            outDroppedPath = entry._path;
+                            action         = AssetFieldAction::Dropped;
+                            ImGui::CloseCurrentPopup();
+                        }
+                    }
+                    if ( shownCount == 0 )
+                        ImGui::TextDisabled( "No matching assets." );
+                    ImGui::EndChild();
+                    ImGui::EndPopup();
+                }
+
+                // 콘텐츠 브라우저에서 보기(언리얼 Browse to Asset)
+                ImGui::SameLine();
+                ImGui::BeginDisabled( currentPath.empty() );
+                if ( ImGui::Button( editoricon::kFolderOpen, ImVec2( kButtonWidth, 0 ) ) )
+                    revealInContentBrowser( currentPath );
+                ImGui::EndDisabled();
+                EditorWidgets::drawTooltip( "Show in the Content Browser" );
 
                 ImGui::SameLine();
                 if ( ImGui::Button( "x##clear", ImVec2( kButtonWidth, 0 ) ) )
@@ -112,6 +188,19 @@ namespace sw::editor
 
                 ImGui::PopID();
                 return action;
+            }
+
+            /** @brief 리소스 id 의 폴더를 콘텐츠 브라우저로 엽니다. */
+            static void revealInContentBrowser( string_view resourcePath )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr || pContext->getPanelManager().setPanelOpen( "content_browser", true ) == false )
+                    return;
+                ContentBrowserPanel* pPanel = static_cast<ContentBrowserPanel*>( pContext->getPanelManager().findPanel( "content_browser" ) );
+                if ( pPanel == nullptr )
+                    return;
+                const string fileAbs = FileUtil::joinPath( ResourceUtil::getRootFolderPath(), FileUtil::normalizePath( resourcePath ) );
+                pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs ) );
             }
         };
 
@@ -400,7 +489,7 @@ namespace sw::editor
         class StringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
                 const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
@@ -418,12 +507,12 @@ namespace sw::editor
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
-                    { EditorWidgets::drawTextField( pID, *pPtr ); }, droppedPath );
-                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다.
+                    { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
+                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭 · 고르기 · 지우기는 위젯 편집이 아니라 그리드가 입혀야 통지 · 되돌리기에 남는다.
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
-                        *pPtr = droppedPath;
+                        grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        pPtr->clear();
+                        grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
                 }
                 else if ( prop._metadata._bMultiline != SW_FALSE )
                 {
@@ -442,7 +531,7 @@ namespace sw::editor
         class HashedStringProperty : public BuiltinPropertyBase
         {
         public:
-            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& /*grid*/ ) override
+            bool draw( void* pInstance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
             {
                 const bool bAssetPath = prop._metadata._bAssetPath != SW_FALSE || prop._metadata._assetType.empty() == false;
 
@@ -460,11 +549,11 @@ namespace sw::editor
                     string                 droppedPath;
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
-                    { drawNameInput( pID, *pPtr ); }, droppedPath );
+                    { drawNameInput( pID, *pPtr ); }, prop, pPtr->view(), droppedPath );
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
-                        *pPtr = hashed_string( droppedPath.c_str() );
+                        grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
-                        *pPtr = hashed_string{};
+                        grid.applyPropertyTextAsEdit( pInstance, prop, "", "Clear Asset" );
                 }
                 else
                 {
