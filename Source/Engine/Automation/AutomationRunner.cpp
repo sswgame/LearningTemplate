@@ -152,8 +152,24 @@ namespace sw
                 }
                 return escaped;
             }
+
+            /** @brief 탐침 `Input.OsDeviceInputBlocked` — 무인 자동화가 사람의 마우스 · 키보드를 창 메시지 단계에서 버리는 중이면 1 입니다. */
+            [[nodiscard]] static bool readOsDeviceInputBlocked( const GameObjectManager* pManager, float64& outValue )
+            {
+                (void)pManager;
+                if ( engine::areEngineServicesBound() == false )
+                    return false;
+                outValue = engine::getInputManager().isOsDeviceInputBlocked() ? 1.0 : 0.0;
+                return true;
+            }
         };
     } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SW_AUTOMATION_PROBE( inputOsDeviceInputBlocked, "Input.OsDeviceInputBlocked", "1 while unattended automation drops the person's mouse and keyboard window events",
+                         &AutomationRunnerInternal::readOsDeviceInputBlocked );
 } // namespace sw
 
 namespace sw
@@ -261,6 +277,8 @@ namespace sw
             }
             _bStarted = SW_TRUE;
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
+            // 배타 시나리오는 무인 실행이다 — 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 사건을 창 메시지 단계에서 버린다.
+            input.setOsDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
             SW_LOG_INFO( "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _waitFrameCount );
         }
         _logFrameIndex.store( _frameIndex, std::memory_order_relaxed );

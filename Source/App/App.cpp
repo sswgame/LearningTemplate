@@ -720,6 +720,10 @@ namespace sw
 
     bool App::onWindowMessage( const NativeWindowEvent& event )
     {
+        // 무인 자동화는 사람의 마우스 · 키보드를 여기서 버린다 — 에디터(ImGui)와 게임 입력 둘 다에 닿지 않는다. 창 사건은 지나간다.
+        if ( engine::areEngineServicesBound() && engine::getInputManager().shouldDropNativeEvent( event ) )
+            return false;
+
         // 이벤트를 ModuleHost(ImGui 등)에 먼저 보낸다
         const bool bConsumedByEditor = ( _moduleHost != nullptr && _moduleHost->onWindowMessage( event ) );
 

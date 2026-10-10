@@ -13,6 +13,7 @@
 #include "Editor/Common/Backend/EditorDrawDataSnapshot.h"
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/Backend/ImGuiOsInputFilter.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorPlayCommands.h"
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
@@ -49,6 +50,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
@@ -73,6 +75,13 @@ namespace sw::editor
         {
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
+
+            /** @brief 무인 자동화가 사람의 장치 입력을 막는 중이면 true 입니다 — 플랫폼 백엔드가 ImGui 에 넣는 실제 커서 · 키를 지운다. */
+            static bool isOsDeviceInputBlocked()
+            {
+                const InputManager* pInput = editor::getService<InputManager>();
+                return pInput != nullptr && pInput->isOsDeviceInputBlocked();
+            }
 
             /** @brief 뷰 RT 핸들과 크기를 C ABI 출력 인자에 씁니다. @p pView 가 없으면 0 입니다(이번 프레임에 그 뷰를 그리지 않는다). */
             static void writeViewport( const EditorViewTarget* pView, uint64* pRenderTarget, uint32* pWidth, uint32* pHeight )
@@ -631,7 +640,11 @@ namespace sw::editor
             return false;
 
         if ( _platformBackend != nullptr )
+        {
+            // 셸이 이미 장치 사건을 버리지만(`InputManager::shouldDropNativeEvent`), 비클라이언트 · 떠남 사건(WM_NCMOUSEMOVE · WM_MOUSELEAVE)도 커서 자리를 넣는다.
+            const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->processEvent( event );
+        }
 
         // ImGui 가 차지한 입력은 게임으로 넘기지 않는다. 게임 뷰 위에서는 예외다(씬 뷰 위의 입력은 에디터 카메라 몫이다).
         const ImGuiIO& io               = ImGui::GetIO();
@@ -729,7 +742,12 @@ namespace sw::editor
             _rendererBackend->newFrame();
 
         if ( _platformBackend != nullptr )
+        {
+            // 무인 자동화면 플랫폼이 물은 실제 커서(Win32 GetCursorPos · 커서 아래 뷰포트, X11 XQueryPointer 의 위치 · 단추)를 지운다 — 시험이 커서를
+            // 놓은 프레임(단추를 떼는 프레임)에 실제 커서가 마지막 위치가 되면 ImGui 가 뗌을 다음 프레임으로 미뤄 뷰포트 비행이 그 차이만큼 돈다.
+            const ScopedImGuiOsInputFilter osInputFilter{ ImGuiEditorInternal::isOsDeviceInputBlocked() };
             _platformBackend->newFrame();
+        }
         // 자체 시험이 흉내 낸 입력 — 플랫폼 백엔드가 넣은 실제 커서보다 뒤에 넣어야 이긴다(ImGui 는 큐를 순서대로 처리한다).
         EditorSelfTestInput::flushIntoImGui();
 

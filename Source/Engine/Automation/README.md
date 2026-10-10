@@ -96,7 +96,7 @@ echo $LASTEXITCODE
 | `timeoutFrames` | 3600 | 이 프레임 수 안에 `<Pass/>` 가 없으면 12 |
 | `startAfter` | `ScenePlaying` | 시작 조건. `ScenePlaying` 또는 `Immediately` |
 | `startTimeoutFrames` | 1200 | 시작 조건을 이만큼 기다려도 오지 않으면 12 |
-| `input` | `exclusive` | `exclusive` 는 OS 입력을 무시하고, `mixed` 는 OS 입력도 받습니다 |
+| `input` | `exclusive` | `exclusive` 는 무인 실행입니다. 사람의 마우스 · 키보드를 창 메시지 단계에서 버려 게임 입력과 에디터 UI 어디에도 닿지 않습니다(창 닫기 · 크기 · 포커스는 지나감, 탐침 `Input.OsDeviceInputBlocked`). `mixed` 는 OS 입력도 받습니다 |
 
 `ScenePlaying` 은 활성 씬이 플레이를 시작했고 로딩 화면이 사라진 첫 프레임입니다. 로딩 화면이 게임 입력을 막기 때문에 그 뒤에 시작합니다.
 `mixed` 는 진짜 OS 창 상태를 확인하는 시나리오에 씁니다. 이때 실행 중에 사람이 키보드나 마우스를 만지면 그 입력도 섞입니다.
@@ -214,6 +214,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 |---|---|
 | `Editor.PlayState` | 0 정지, 1 플레이, 2 일시 정지 |
 | `Editor.SceneDirty` | 저장하지 않은 변경이 있으면 1 |
+| `Input.OsDeviceInputBlocked` | 배타 시나리오가 사람의 마우스 · 키보드 창 사건을 버리는 중이면 1(혼합 시나리오 · 일반 실행은 0) |
 | `App.AssertDialogInstalled` | App 이 대화형 단언 대화상자를 걸었으면 1 — 자동 실행(시나리오 · `-unattended`)에서는 늘 0 |
 | `Editor.RenderDocAvailable` | RenderDoc 이 이 프로세스에 붙어 있으면 1(`-renderdoc` 또는 RenderDoc 에서 실행) |
 | `Editor.WindowTitleDirty` | 창 제목이 미저장 표시(`*`)를 달고 있으면 1 — 셸이 실제로 창에 건 제목을 읽는다 |

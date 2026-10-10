@@ -4,6 +4,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
+#include "Engine/Window/NativeWindowEvent.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -122,6 +123,65 @@ SW_TEST_CASE( VirtualInputTest, MixedModeKeepsOsEvents )
     input.detachVirtualInput();
     input.shutdown();
 }
+
+#if defined( SW_PLATFORM_WINDOWS )
+/**
+ * @brief [VirtualInputTest] 무인 자동화(배타 + 장치 입력 막기)는 사람의 마우스 · 키보드 창 사건을 버리고 창 사건과 가상 사건은 통과시킨다
+ * @details 막지 않으면(혼합 모드 · 막기 없음) 같은 창 사건이 그대로 지나간다 — 일반 실행과 혼합 시나리오에는 영향이 없다.
+ */
+SW_TEST_CASE( VirtualInputTest, UnattendedBlockDropsOsDeviceEventsOnly )
+{
+    using Internal = VirtualInputTestInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    sw::InputMap& inputMap = input.getInputMap();
+    inputMap.bind( "Fire", sw::Key::J, sw::ActionTrigger::Down );
+
+    sw::NativeWindowEvent mouseMove{};
+    mouseMove._message = WM_MOUSEMOVE;
+    mouseMove._lParam  = MAKELPARAM( 385, 500 );
+    sw::NativeWindowEvent keyDown{};
+    keyDown._message = WM_KEYDOWN;
+    keyDown._wParam  = 'D';
+    sw::NativeWindowEvent resize{};
+    resize._message = WM_SIZE;
+    sw::NativeWindowEvent close{};
+    close._message = WM_CLOSE;
+
+    // 막기 전: 아무것도 버리지 않는다.
+    SW_EXPECT_FALSE( input.isOsDeviceInputBlocked() );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( mouseMove ) );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( keyDown ) );
+
+    // 혼합 모드에서는 막기를 켜도 켜지지 않는다(사람 입력도 받는 시나리오).
+    sw::VirtualInputScript mixedScript;
+    input.attachVirtualInput( &mixedScript, sw::VirtualInputMode::Mixed );
+    input.setOsDeviceInputBlocked( true );
+    SW_EXPECT_FALSE( input.isOsDeviceInputBlocked() );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( mouseMove ) );
+    input.detachVirtualInput();
+
+    // 배타 + 막기: 장치 사건만 버리고, 가상 J 는 들어온다.
+    sw::VirtualInputScript script;
+    SW_ASSERT_TRUE( script.addSlot( 0, sw::InputSlot::fromKey( sw::Key::J ), true ) );
+    input.attachVirtualInput( &script, sw::VirtualInputMode::Exclusive );
+    input.setOsDeviceInputBlocked( true );
+    SW_EXPECT_TRUE( input.isOsDeviceInputBlocked() );
+    SW_EXPECT_TRUE( input.shouldDropNativeEvent( mouseMove ) );
+    SW_EXPECT_TRUE( input.shouldDropNativeEvent( keyDown ) );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( resize ) );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( close ) );
+    input.beginFrame( Internal::kFrameSeconds );
+    SW_EXPECT_TRUE( inputMap.isActionDown( "Fire" ) );
+    input.endFrame();
+
+    // 떼면 막기도 풀린다 — 자동화가 끝난 뒤 사람이 다시 쓴다.
+    input.detachVirtualInput();
+    SW_EXPECT_FALSE( input.isOsDeviceInputBlocked() );
+    SW_EXPECT_FALSE( input.shouldDropNativeEvent( mouseMove ) );
+    input.shutdown();
+}
+#endif
 
 /**
  * @brief [VirtualInputTest] 가상 패드 — 연결 사건 전에는 끊김, 연결 뒤 버튼이 바인딩에 든다(실제 패드 폴링이 덮지 않는다)

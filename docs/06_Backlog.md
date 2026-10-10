@@ -99,10 +99,6 @@
   Data Table 의 게임 데이터 탭(지금 XML 글 상자)을 리플렉션 구조체 행의 표 편집으로 바꾸는 일도 여기다(언리얼 DataTable · DataAsset 편집 + Fix Up Redirectors).
   ⑧ 지형 칠하기 도구 모드(1-3 환경). ⑨ 다중 월드 툴 창과 그 위의 애니메이션 · 리그 · 프리팹 · 머티리얼 미리보기 창(언리얼 FPreviewScene · Asset Editor Toolkit).
   ⑩ UI 문서 디자이너(⑨ 뒤). 에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
-- **에디터 시나리오가 실제 커서 자리에 흔들린다**(2026-10-11, 에디터 보강 마지막 네 백엔드 실행). `sceneviewgameview` 의 Play 중 비행에서 실제 마우스 커서가 앱 창 위에 있으면
-  한 프레임에 실제 커서 자리(`EditorSelfTestInput` 의 누른 채 붙잡은 자리가 아니라)가 들어와 마우스 델타(385, 500)로 시점이 돈다 — 카메라 X 가 6 대신 4.08(커서를 창 밖에 두면 2.44).
-  결정적이라 커서를 옮기기 전까지 매번 진다. 플랫폼 백엔드가 그 프레임에 `flushIntoImGui` 뒤에 위치 사건을 넣는 자리를 찾아, 자동화 입력이 독점(`input="exclusive"`)일 때 실제 커서를 막는다.
-  같은 실행에서 `assetmanage`(Vulkan, 참조 수) · `profilercapture`(DX11, 문턱 입력)도 한 번씩 졌고 다시 돌리면 3/3 통과다.
 - **Hierarchy 형제 순서 끌어 바꾸기 · 정리용 폴더(에디터 보강 N2 에서 남김).** 루트 줄은 오브젝트 id 순이고(`EditorSceneCommands::collectRootsInOrder`) 씬 파일에 순서 칸이 없다.
   끌어 바꾸려면 씬 형식에 형제 순서를 적고(유니티 sibling index) 그 순서로 그려야 한다 — 형식을 바꾸니 데이터를 다시 쓴다. 폴더는 저장되지 않는 빈 오브젝트(언리얼 Outliner 폴더)로 같이.
 - **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라

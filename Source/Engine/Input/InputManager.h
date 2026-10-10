@@ -231,6 +231,17 @@ namespace sw
         IVirtualInputSource* getVirtualInput() const { return _pVirtualInput; }
         /** @brief 배타 가상 입력이 붙어 OS 입력을 무시하는 중이면 true 입니다. */
         bool isOsInputSuppressed() const { return _pVirtualInput != nullptr && _virtualInputMode == VirtualInputMode::Exclusive; }
+        /**
+         * @brief 무인 자동화(시나리오 `input="exclusive"`)가 사람의 마우스 · 키보드를 창 메시지 단계에서 버리게 합니다 — 언리얼 `-unattended` 와 같은 뜻.
+         * @details `isOsInputSuppressed` 는 게임 입력(이 매니저의 장치)만 막습니다. 이 표시는 그 앞, 창 메시지를 나눠 주는 셸과 에디터 UI(ImGui 플랫폼
+         *          백엔드의 커서 조회)까지 막습니다. 창 사건(닫기 · 크기 · 포커스)은 그대로 둡니다. 배타 가상 입력이 붙어 있을 때만 켜지고,
+         *          `attachVirtualInput` · `detachVirtualInput` 이 끕니다 — 입력 리플레이처럼 사람이 에디터를 계속 만지는 배타 재생은 켜지 않습니다.
+         */
+        void setOsDeviceInputBlocked( bool bBlocked );
+        /** @brief 사람의 마우스 · 키보드 사건을 버리는 중이면 true 입니다(`setOsDeviceInputBlocked`). */
+        bool isOsDeviceInputBlocked() const { return _bOsDeviceInputBlocked == SW_TRUE; }
+        /** @brief 창 메시지 @p event 를 입력 층 앞에서 버려야 하면 true 입니다 — 버리는 중의 마우스 · 키보드 사건. */
+        bool shouldDropNativeEvent( const NativeWindowEvent& event ) const;
         /** @brief 붙인 뒤 지난 `beginFrame` 수 — 다음 `beginFrame` 이 원천에 넘길 프레임 번호입니다. */
         uint32 getVirtualFrameIndex() const { return _virtualFrameIndex; }
         /** @brief 이번 `beginFrame` 이 장치에 적용한 원시 사건입니다(배타 가상 입력이면 가상 사건만). 입력 녹화가 읽습니다. 다음 `beginFrame` 까지 유효합니다. */
@@ -344,12 +355,13 @@ namespace sw
         VirtualInputMode                     _virtualInputMode;                          /**< 붙인 가상 입력 원천의 모드. */
         [[maybe_unused]] uint16              _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트 앞 반쪽(Win32 WM_CHAR). 0 이면 없음. */
         uint8                                _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼어지지 않은 마우스 버튼 비트(`1 << MouseButton`). */
-        uint8                                _bInitialized         : 1;
-        uint8                                _bInputMuted          : 1;
-        uint8                                _bWindowFocused       : 1; /**< 창이 포커스를 쥐고 있는가(포커스 메시지로 갱신, 창 없는 시험에서는 참). */
-        uint8                                _bMouseLockEngaged    : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는가. */
-        uint8                                _bAltHeld             : 1; /**< Alt 를 누르고 있는가(누르는 동안 잠금을 쉰다). */
-        uint8                                _bCursorHiddenApplied : 1; /**< OS 커서를 숨겨 둔 상태인가 — `ShowCursor` 는 카운터라 전이에서만 부른다. */
-        [[maybe_unused]] uint8               _reserved             : 2;
+        uint8                                _bInitialized          : 1;
+        uint8                                _bInputMuted           : 1;
+        uint8                                _bWindowFocused        : 1; /**< 창이 포커스를 쥐고 있는가(포커스 메시지로 갱신, 창 없는 시험에서는 참). */
+        uint8                                _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는가. */
+        uint8                                _bAltHeld              : 1; /**< Alt 를 누르고 있는가(누르는 동안 잠금을 쉰다). */
+        uint8                                _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인가 — `ShowCursor` 는 카운터라 전이에서만 부른다. */
+        uint8                                _bOsDeviceInputBlocked : 1; /**< 무인 자동화 — 창 메시지 단계에서 사람의 마우스 · 키보드 사건을 버린다(`setOsDeviceInputBlocked`). */
+        [[maybe_unused]] uint8               _reserved              : 1;
     };
 } // namespace sw

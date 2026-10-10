@@ -17,6 +17,8 @@
 
 	<!-- ① 기본은 씬 뷰만 보인다 -->
 	<At frame="60">
+		<!-- 무인 실행: 사람의 마우스 · 키보드는 창 메시지 단계에서 버린다 — 커서가 창 위 · 밖 어디 있든 비행 결과가 같다 -->
+		<Expect probe="Input.OsDeviceInputBlocked" equals="1"/>
 		<Expect probe="Editor.SceneViewDrawn" equals="1"/>
 		<Expect probe="Editor.SceneViewRequested" equals="1"/>
 		<Expect probe="Editor.GameViewRequested" equals="0"/>

@@ -11,6 +11,7 @@
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/NativeWindowEvent.h"
 
 // 이 파일은 플랫폼 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금 · 표시,
 // 접근성 단축키 억제)은 InputManager.h 의 "플랫폼별 구현" 절에 있는 훅(registerPlatformGamepads() 등)으로만
@@ -52,6 +53,7 @@ namespace sw
         , _bMouseLockEngaged{ SW_FALSE }
         , _bAltHeld{ SW_FALSE }
         , _bCursorHiddenApplied{ SW_FALSE }
+        , _bOsDeviceInputBlocked{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -860,6 +862,7 @@ namespace sw
         }
         const bool bWasExclusive = isOsInputSuppressed();
         _pVirtualInput           = pSource;
+        _bOsDeviceInputBlocked   = SW_FALSE; // 붙이는 쪽(자동화 실행기)이 다시 켠다
         _virtualInputMode        = mode;
         _virtualFrameIndex       = 0;
         // 사람이 누르고 있던 것 · 큐에 남은 OS 사건이 첫 프레임에 새지 않게 지운다.
@@ -880,12 +883,27 @@ namespace sw
             return;
         const bool bWasExclusive = isOsInputSuppressed();
         _pVirtualInput           = nullptr;
+        _bOsDeviceInputBlocked   = SW_FALSE;
         if ( bResetState )
             resetAllDeviceState();
         if ( bWasExclusive )
             setGamepadVirtualSession( false );
         syncMouseLock();
         SW_LOG_INFO( "Virtual input detached after %# frame(s)", _virtualFrameIndex );
+    }
+
+    void InputManager::setOsDeviceInputBlocked( bool bBlocked )
+    {
+        // 배타 가상 입력 없이 막으면 사람도 자동화도 입력을 못 넣는다 — 붙어 있을 때만 켠다.
+        const bool bApply = bBlocked && isOsInputSuppressed();
+        if ( bBlocked && bApply == false )
+            SW_LOG_WARNING( "OS device input stays live: blocking needs an exclusive virtual input source" );
+        _bOsDeviceInputBlocked = bApply ? SW_TRUE : SW_FALSE;
+    }
+
+    bool InputManager::shouldDropNativeEvent( const NativeWindowEvent& event ) const
+    {
+        return _bOsDeviceInputBlocked == SW_TRUE && ( event.isMouseInput() || event.isKeyboardInput() );
     }
 
     void InputManager::setGamepadVirtualSession( bool bVirtual )
