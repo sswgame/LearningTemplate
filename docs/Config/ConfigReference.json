@@ -2380,6 +2380,14 @@
    "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
   },
   {
+   "name": "gv_editorProbeProperty",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)",
+   "source": "Source/Editor/SelfTest/EditorScenarioSteps.cpp"
+  },
+  {
    "name": "gv_editorProbeVisualizer",
    "type": "string",
    "default": "",

@@ -91,8 +91,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **2 에디터 설정** | P1 | 리플렉션 객체 그리기를 `EditorPropertyGrid` 로 떼기(인스펙터 · 환경설정 · 프로젝트 설정이 같이 쓴다) | M | | |
-| | P2 | 환경설정 창(`SW_EDITOR_SETTINGS` 섹션 등록 · `Saved/Editor/EditorPreferences.json`) | M | P1 · C1 | ★ |
+| **2 에디터 설정** | P2 | 환경설정 창(`SW_EDITOR_SETTINGS` 섹션 등록 · `Saved/Editor/EditorPreferences.json`) | M | P1 · C1 | ★ |
 | | P3 | 단축키 편집기(`Saved/Editor/Shortcuts.json` · 키 받기 · 충돌) | M | C3 | ★ |
 | | P4 | 모듈 창(켜고 끄기 · 의존 미리보기 · 구성/빌드 버튼) | M | C4 | |
 | **3 인스펙터 · 콘텐츠** | I1 | 다중 선택 편집(공통 프로퍼티 · 다른 값 표시 · 한 트랜잭션) | M | P1 | ★ |
@@ -144,104 +143,6 @@ EditorModule 을 언리얼 `UnrealEd` 처럼 내보내고, 키트 확장이 리�
 유니티는 `SettingsProvider` 등록(Preferences · Project Settings 두 창, 같은 IMGUI/UIElements 그리기), Shortcuts Manager(키보드 그림 + 프로필, 바뀐 것만 저장, 충돌 표시),
 Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · 섹션 트리 · "바뀐 것만 보기") · Shortcuts 탭 · Project Settings > Plugins.
 공통점: **(1) 설정 = 리플렉션 객체, 그리기는 인스펙터와 같은 위젯 (2) 섹션은 등록으로 늘어난다(확장 모듈도) (3) 사용자 파일에는 바뀐 것만.**
-
-### P1 리플렉션 객체 그리기를 `EditorPropertyGrid` 로 뗀다
-
-**목적.** 인스펙터(`InspectorPanel`)만 리플렉션 프로퍼티를 그린다 — 그리기 · 편집 통지 · Undo · 검색 · EditCondition · 컨테이너 · enum · 중첩 구조체 · 메서드 · 이벤트가 패널 안 private 함수다.
-환경설정(P2) · 프로젝트 설정 · 다중 선택(I1) · 커브(T1) · 확장 패널이 같은 그리기를 써야 한다(언리얼 `IDetailsView` 를 아무 창에서 만드는 것과 같은 자리).
-
-**바꿀 것 — 기계적 이동 + 대상 추상 하나.**
-1) 새 `Panels/Inspector/EditorPropertyGrid.h` · `.cpp`(내보냄 `SW_EDITOR_API`):
-```cpp
-namespace sw::editor
-{
-    /**
-     * @struct EditorPropertyGridTarget
-     * @brief 그리드가 그리고 고치는 대상 하나입니다 — 리플렉션 인스턴스와, 고쳤을 때 알릴 곳 · Undo 를 남길 오브젝트.
-     */
-    struct EditorPropertyGridTarget
-    {
-        void*                             _pInstance{ nullptr };
-        const TypeInfo*                   _pType{ nullptr };
-        Component*                        _pComponent{ nullptr };  ///< 컴포넌트면 onPropertyChanged 를 받는다
-        GameObject*                       _pObject{ nullptr };     ///< 오브젝트면 onPropertyChanged · Undo 의 주인(컴포넌트면 그 owner)
-        Delegate<void( const PropertyInfo& )> _onEdited;           ///< 씬 밖 객체(환경설정 · 문서)가 바뀜을 받는 곳. 비어 있으면 위 둘만
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @class EditorPropertyGrid
-     * @brief 리플렉션 객체의 프로퍼티(상속분 · 카테고리 · EditCondition · 컨테이너 · enum · 중첩 구조체)를 그리고 고칩니다. 인스펙터 · 환경설정 · 다중 선택이 같이 씁니다.
-     * @details 언리얼 `IDetailsView` 의 자리입니다. 값을 고치면 대상에 알리고(컴포넌트 · 오브젝트의 onPropertyChanged, 그 밖은 _onEdited),
-     *          씬 오브젝트면 Undo 를 남깁니다(`InspectorPropertyUndo`). 검색 칸은 그리드가 든다.
-     */
-    class SW_EDITOR_API EditorPropertyGrid
-    {
-    public:
-        EditorPropertyGrid();
-
-        /** @brief 검색 칸을 그립니다(그리드 위 한 줄). */
-        void drawSearchBar();
-        /**
-         * @brief 대상의 프로퍼티를 그립니다. @p listDrawnName 은 이미 다른 곳(인스펙터 확장)이 그린 이름 — 다시 그리지 않습니다.
-         * @param pSectionTitle 그릴 것이 있을 때만 위에 구분선 제목. nullptr 이면 없음
-         */
-        void drawProperties( const EditorPropertyGridTarget& target, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName );
-        /** @brief 대상 타입의 메서드(FUNCTION) · 이벤트를 그립니다(인스펙터의 Methods · Events 구역). */
-        void drawMethodsAndEvents( const EditorPropertyGridTarget& target );
-
-    private:
-        ... (InspectorPanel 에서 옮긴 함수들 — 아래 표)
-        fixed_string<constant::kMaxBuffer64>                  _propertyFilter;
-        unordered_map<uint64, vector<InspectorMethodArgSlot>> _mapMethodArgSlot;
-        fixed_string<constant::kMaxBuffer256>                 _lastInvokeResult;
-        const EditorPropertyGridTarget*                       _pTarget;            ///< drawProperties 동안만 — 통지 · Undo 대상
-        int32                                                 _propertyDrawDepth;
-    };
-} // namespace sw::editor
-```
-2) 이동 표(`InspectorPanel.cpp` → `EditorPropertyGrid.cpp`, 본문 그대로 — `_pEditTargetComponent` · `_pEditTargetObject` 를 `_pTarget->_pComponent` · `_pTarget->_pObject` 로, `notifyPropertyEdited` 끝에 `_pTarget->_onEdited` 호출을 더함):
-
-| InspectorPanel (줄) | EditorPropertyGrid |
-|---|---|
-| `drawTypeProperties` (459) | `drawProperties`(대상 인자) |
-| `drawPropertyWidget` · `notifyPropertyEdited` · `drawPropertyWidgetBody` (555 · 573 · 586) | private 같은 이름 |
-| `drawEnumProperty` · `drawContainerProperty` · `drawMapContainer` · `drawKeyedSequenceContainer` · `drawContainerAddRow` · `drawStructOrStringProperty` (628 ~ 1013) | private 같은 이름 |
-| `getEditOwner` (973) | private `getUndoOwner()` |
-| `drawTypeMethods` · `drawTypeEvents` · `invokeTypeMethod` (1014 ~ 끝) | `drawMethodsAndEvents` + private |
-| 멤버 `_propertyFilter` · `_mapMethodArgSlot` · `_lastInvokeResult` · `_propertyDrawDepth` | 그리드로 |
-| `InspectorPanelInternal::applyObjectEdit` | `EditorPropertyGridInternal` 로(인스펙터가 아직 쓰면 둘 다 — 공용이면 `InspectorPropertyUndo` 로) |
-
-`InspectorPanel` 은 `EditorPropertyGrid _propertyGrid;` 를 들고, 컴포넌트 구역에서 `EditorPropertyGridTarget{ pComp, pComp->getTypeInfo(), pComp, pComp->getOwner(), {} }` 로 부른다.
-3) 인스펙터 동작은 바뀌지 않는다 — 시험은 기존 자체 시험(`inspector.*`) · `InspectorPropertyLayoutTest` · `InspectorBuiltinValueTest` 가 그대로 통과하는 것.
-
-**확인 = 에디터 시나리오.** `inspectoredit.scenario.xml`: 시험 씬의 오브젝트를 `EditorClick mark="hierarchy.row.<이름>"` 으로 고르고, 인스펙터의 위치 X 칸(이름표 `inspector.property.<컴포넌트>.<프로퍼티>`, 이 단위가 그리드에 남김)을 눌러
-`EditorText` 로 값을 바꾼 뒤 탐침 `Editor.UndoCount` 가 하나 늘었는지, `EditorKey key="Z" mods="ctrl"` 뒤 값이 돌아왔는지 봅니다. 이동 전후로 같은 결과여야 합니다.
-값은 오브젝트 위치 탐침(이 단위가 등록, 시험 씬의 고정 이름 오브젝트)으로 읽습니다.
-
-**남길 교훈.** `Source/Editor/README.md` 함정 · 계약 절의 인스펙터 줄에 덧붙임: `리플렉션 객체 그리기는 EditorPropertyGrid 하나(인스펙터 · 환경설정 · 다중 선택이 쓴다) — 대상은 EditorPropertyGridTarget(통지 · Undo 주인).`
-**커밋 메시지:**
-```
-에디터 - 리플렉션 프로퍼티 그리기를 인스펙터에서 EditorPropertyGrid 로 뗀다
-
-문제점:
-- 리플렉션 프로퍼티 그리기(카테고리 · EditCondition · 컨테이너 · enum · 중첩 구조체 · 메서드 · 이벤트 · 편집 통지 · Undo)가
-  InspectorPanel 의 private 함수라 환경설정 · 다중 선택 · 확장 패널이 같은 위젯을 쓸 수 없었다.
-
-해결방안:
-- EditorPropertyGrid(SW_EDITOR_API) 로 함수 · 상태를 옮긴다(본문 그대로). 대상은 EditorPropertyGridTarget — 인스턴스 · 타입 ·
-  컴포넌트 · 오브젝트(통지 · Undo 주인) · 씬 밖 객체의 _onEdited.
-- InspectorPanel 은 그리드 하나를 들고 컴포넌트마다 대상을 만들어 부른다.
-
-결과:
-- 동작 변화 없음 — 인스펙터 자체 시험 · InspectorPropertyLayoutTest · InspectorBuiltinValueTest 그대로 통과.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** 빌드, `-gv_editorSelfTest=inspector.*`, `EditorTest --test_filter=Inspector*`, 에디터에서 컴포넌트 값 하나 고치고 Ctrl+Z.
-**겹침:** 2 차 gfx-editor-rest 8(자체 시험 — 인스펙터 콤보 직접 편집), object-game-rest(인스펙터의 프리팹 오버라이드 표시)가 `InspectorPanel.cpp` 를 고치면 **이동 전에** 넣는다.
 
 ### P2 환경설정 창 — `SW_EDITOR_SETTINGS` 섹션 등록 · `Saved/Editor/EditorPreferences.json` ★
 

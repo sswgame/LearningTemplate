@@ -49,6 +49,8 @@ namespace sw::editor
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
     /** @brief 탐침 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
+    /** @brief 탐침 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty, "", "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)" );
 } // namespace sw::editor
 
 namespace sw::editor
@@ -738,6 +740,36 @@ namespace sw::editor
                 return true;
             }
 
+            /**
+             * @brief 주 선택 오브젝트의 `-gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 값입니다. 숫자 프로퍼티(float32 · int32 · uint32)만 읽는다.
+             * @details 선택이 없거나 그 컴포넌트 · 프로퍼티가 없으면 값을 내지 않는다.
+             */
+            [[nodiscard]] static bool readSelectedProperty( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                GameObject*  pObject = pContext->getEditorSelection().getPrimaryObject();
+                const size_t dot     = gv_editorProbeProperty.find( '.' );
+                if ( pObject == nullptr || dot == string::npos )
+                    return false;
+                Component* pComponent = pObject->findComponentByTypeName( hashed_string( gv_editorProbeProperty.substr( 0, dot ).c_str() ) );
+                if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                    return false;
+                const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( hashed_string( gv_editorProbeProperty.substr( dot + 1 ).c_str() ) );
+                if ( pProperty == nullptr )
+                    return false;
+                if ( pProperty->_typeName == hashed_string( "float32" ) )
+                    outValue = static_cast<float64>( *pProperty->getValuePtr<float32>( pComponent ) );
+                else if ( pProperty->_typeName == hashed_string( "int32" ) )
+                    outValue = static_cast<float64>( *pProperty->getValuePtr<int32>( pComponent ) );
+                else if ( pProperty->_typeName == hashed_string( "uint32" ) )
+                    outValue = static_cast<float64>( *pProperty->getValuePtr<uint32>( pComponent ) );
+                else
+                    return false;
+                return true;
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -814,6 +846,8 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
     SW_AUTOMATION_PROBE( editorVisualizerOn, "Editor.VisualizerOn", "1 when the scene view shows the visualizer named by gv_editorProbeVisualizer",
                          &EditorScenarioStepsInternal::readVisualizerOn );
+    SW_AUTOMATION_PROBE( editorSelectedProperty, "Editor.SelectedProperty",
+                         "Numeric value of gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection", &EditorScenarioStepsInternal::readSelectedProperty );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
