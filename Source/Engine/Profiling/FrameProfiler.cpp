@@ -21,6 +21,9 @@ namespace sw
 {
     namespace
     {
+        /** @brief 이 스레드에서 지금 열린 계측 구간 수입니다(타임라인의 겹). */
+        thread_local uint16 t_profileScopeDepth = 0;
+
         /** @brief 단조 시계의 현재 나노초입니다. */
         uint64 nowNanos() noexcept
         {
@@ -179,6 +182,9 @@ namespace sw
         //
         // `endFrame` 이 exchange 로 **읽으면서 0 으로 바꾼다**. 창이 닫힌 뒤 더해진 샘플은
         // 버려지지 않고 다음 창으로 넘어간다. 그래서 이 함수는 창이 열렸다는 표시일 뿐이다.
+        // 타임라인의 프레임 경계만 남긴다(기록 중일 때).
+        if ( isEnabled() )
+            _timeline.recordFrameBegin( nowNanos() );
     }
 
     void FrameProfiler::endFrame()
@@ -321,6 +327,7 @@ namespace sw
         , _zoneToken{ 0 }
 #endif
         , _slot{ scopeID._slot }
+        , _depth{ 0 }
     {
 #if SW_PROFILER_BACKEND_COMPILED
         // 외부 구간을 먼저 연다 — 닫을 때는 역순(시간 누적 뒤)이라 외부 구간이 이 표의 측정을 감싼다.
@@ -332,15 +339,27 @@ namespace sw
         }
 #endif
         if ( _slot < FrameProfiler::kMaxScope && engine::getFrameProfiler().isEnabled() )
+        {
+            _depth      = t_profileScopeDepth++;
             _startNanos = nowNanos();
+        }
         else
+        {
             _slot = FrameProfiler::kInvalidSlot;
+        }
     }
 
     ScopedFrameProfile::~ScopedFrameProfile() noexcept
     {
         if ( _slot < FrameProfiler::kMaxScope )
-            engine::getFrameProfiler().addSample( _slot, nowNanos() - _startNanos );
+        {
+            const uint64   endNanos = nowNanos();
+            FrameProfiler& profiler = engine::getFrameProfiler();
+            profiler.addSample( _slot, endNanos - _startNanos );
+            --t_profileScopeDepth;
+            // 타임라인은 켤 때만 남긴다 — 꺼져 있으면 bool 하나 읽기다.
+            profiler.getTimeline().recordEvent( _slot, _startNanos, endNanos, _depth );
+        }
 #if SW_PROFILER_BACKEND_COMPILED
         if ( _pBackend != nullptr )
             _pBackend->endZone( _zoneToken );

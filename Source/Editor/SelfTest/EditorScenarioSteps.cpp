@@ -35,6 +35,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
@@ -823,6 +824,17 @@ namespace sw::editor
             [[nodiscard]] static bool readSceneViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( true, outValue ); }
 
             [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
+
+            /** @brief 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
+            [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                constexpr uint32     kRecentFrameCount = 4;
+                const FrameProfiler* pProfiler         = editor::getService<FrameProfiler>();
+                if ( pProfiler == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pProfiler->getTimeline().countActiveThreads( kRecentFrameCount ) );
+                return true;
+            }
         };
     } // namespace
 
@@ -891,4 +903,7 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewMode );
     SW_AUTOMATION_PROBE( editorGameViewMode, "Editor.GameViewMode", "Main output (game view) view mode — stays 0 Lit while the scene view changes",
                          &EditorScenarioStepsInternal::readGameViewMode );
+    SW_AUTOMATION_PROBE( editorProfilerTimelineThreadCount, "Editor.ProfilerTimelineThreadCount",
+                         "Threads with profile scopes in the profiler timeline over the last 4 frames (0 while not recording)",
+                         &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );
 } // namespace sw::editor

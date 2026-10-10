@@ -97,8 +97,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
-| **4 캡처 · 디버그 · 품질** | G4 | 프로파일러 스레드 미니 타임라인 | M | | |
-| | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
+| **4 캡처 · 디버그 · 품질** | H2 | `bugit` / `bugitgo` — 버그 리포트 한 방 | M | | ★ |
 | | H3 | 시험 패널(자체 시험 · 시나리오 · 시험 실행 파일 목록과 실행) | M | 3 차 B2 · gfx-editor-rest 8 | |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
 | | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
@@ -606,76 +605,6 @@ Insights(별도 앱 — 타임라인), `ensure` 실패 대화상자(무인 실�
 유니티: Scene view Draw Mode(Shaded · Wireframe · Overdraw · Mipmaps · Normals …), Game view 스크린샷(`ScreenCapture`), Frame Debugger · RenderDoc 캡처 단추, Profiler Timeline(에디터 안), Test Runner 창(EditMode · PlayMode).
 우리: 보기 모드 셋(Lit, Unlit, Wireframe), Tracy(바깥), 자체 시험 · 시나리오는 명령줄로만, assert 는 디버거 없으면 프로세스가 죽는다.
 
-### G4 프로파일러 스레드 미니 타임라인
-
-**바꿀 것.**
-1) 새 `Engine/Profiling/ProfilerTimeline.h` · `.cpp` — 켤 때만 사건을 스레드별 링 버퍼에 남긴다:
-```cpp
-namespace sw
-{
-    /** @brief 타임라인 사건 하나 — 계측 구간 하나의 시작 · 끝(단조 시계 나노초)과 깊이. */
-    struct ProfilerTimelineEvent
-    {
-        uint64 _beginNanos{ 0 };
-        uint64 _endNanos{ 0 };
-        uint32 _slot{ 0 };  ///< FrameProfiler 슬롯(이름은 FrameProfiler 가 든다)
-        uint16 _depth{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @class ProfilerTimeline
-     * @brief 계측 구간(SW_PROFILE_SCOPE)을 스레드마다 링 버퍼(스레드당 8192 사건)에 남깁니다. 꺼져 있으면 ScopedFrameProfile 의 비용은 bool 하나 읽기다.
-     * @details 쓰는 쪽은 자기 스레드 버퍼 하나뿐이라 잠금이 없다. 읽는 쪽(에디터 패널)은 버퍼마다 쓰기 위치를 읽고 그 앞을 복사한다 —
-     *          복사 중 덮인 사건은 세대 번호로 버린다. 프레임 경계는 게임 스레드의 `FrameProfiler::beginFrame` 시각을 따로 링에 남긴다.
-     */
-    class SW_API ProfilerTimeline
-    {
-    public:
-        static ProfilerTimeline& get();
-
-        void setRecording( bool bRecording );
-        bool isRecording() const { return _bRecording.load( std::memory_order_relaxed ); }
-        /** @brief 이 스레드의 사건 하나를 남깁니다(ScopedFrameProfile 소멸자가 부른다). */
-        void recordEvent( uint32 slot, uint64 beginNanos, uint64 endNanos, uint16 depth );
-        /** @brief 프레임 시작 시각을 남깁니다(게임 스레드 beginFrame). */
-        void recordFrameBegin( uint64 nanos );
-        /** @brief 최근 @p frameCount 프레임 구간의 사건을 스레드마다 모읍니다(스레드 이름 포함). */
-        void collectRecentFrames( uint32 frameCount, vector<ProfilerTimelineThread>& outListThread, uint64& outBeginNanos, uint64& outEndNanos ) const;
-        ...
-    };
-} // namespace sw
-```
-`ScopedFrameProfile` 은 깊이를 스레드 지역 카운터로 세고(생성자 ++ · 소멸자 --), 소멸자에서 `if ( ProfilerTimeline::get().isRecording() ) recordEvent(…)`. 스레드 이름은 Core 의 `setCurrentThreadName` 이 붙인 이름을 읽는다(읽는 함수가 없으면 더한다) — 없으면 "Thread <id>".
-2) `ProfilerPanel` 에 탭 "Timeline": 녹화 단추(켜면 `FrameProfiler` 도 켠다), 최근 프레임 수(1 · 4 · 16), 스레드마다 한 줄(깊이만큼 겹), 구간 = 슬롯 이름 해시 색 사각형(폭이 2 px 미만이면 이름 생략),
-   호버 툴팁(이름 · 길이 µs · 깊이), 휠 = 확대, 끌기 = 이동, 프레임 경계 세로선, "Freeze"(녹화는 계속 · 보기만 멈춤). 그리기 계산(사건 → 사각형 · 겹 · 보이는 범위 잘라내기)은 ImGui 없는
-   `ProfilerTimelineLayout`(Editor/Panels) — `ProfilerScopeHistory` 처럼 EditorTest 가 본다.
-**시험.** `ProfilerTimelineTest`(EngineTest nogpu): 두 스레드에서 구간을 남기고 `collectRecentFrames` 가 스레드별로 · 시간 순으로 · 깊이를 지켜 돌려준다, 링이 넘치면 오래된 것부터 버린다, 꺼져 있으면 0.
-`ProfilerTimelineLayoutTest`(EditorTest): 사건 → 사각형 x 범위 · 겹 줄 · 보이는 범위 밖 잘라냄.
-측정: `-gv_profileFrames=600` 의 `GT.Frame` p50 을 녹화 끔 · 켬으로 잰다(Release — Debug 는 레이스 검출기 때문에 컨테이너 비용이 과장된다) — 켬이 +2 % 를 넘으면 커밋 메시지에 숫자와 함께.
-**확인 = 에디터 시나리오.** `profilertimeline.scenario.xml`: 프로파일러 패널의 Timeline 탭과 녹화 단추(이름표 `profiler.timeline.record`)를 누르고 몇 프레임 뒤 탐침 `Editor.ProfilerTimelineThreadCount` 가 2 이상(게임 스레드와 렌더 스레드)인지 봅니다.
-
-**남길 교훈.** `Source/Engine/Profiling/README.md` 함정과 주의 절에 "빠른 확인은 패널 타임라인, 깊은 분석은 Tracy" 한 줄.
-**커밋 메시지:**
-```
-프로파일러 - 패널의 스레드 미니 타임라인(켤 때만 스레드별 링 버퍼)
-
-문제점:
-- 프로파일러 패널은 표 · 그래프뿐이라 스레드 사이 겹침 · 기다림을 보려면 Tracy 를 따로 띄워야 했다.
-
-해결방안:
-- ProfilerTimeline: 켤 때만 계측 구간을 스레드마다 잠금 없는 링(8192)에, 프레임 시작 시각 링. ScopedFrameProfile 이 깊이를 세고 남긴다.
-- ProfilerPanel Timeline 탭: 녹화 · 최근 1/4/16 프레임 · 스레드 줄 · 겹 · 툴팁 · 확대/이동 · 프레임 경계 · Freeze. 배치 계산은
-  ImGui 없는 ProfilerTimelineLayout.
-
-결과:
-- ProfilerTimelineTest · ProfilerTimelineLayoutTest. 녹화 켬 비용 GT.Frame p50 …(Release 600 프레임).
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-
 ### H2 `bugit` / `bugitgo` — 버그 리포트 한 방 ★
 
 **목적.** 버그를 남길 때 스크린샷 · 로그 · 씬 · 카메라 자리 · 입력을 손으로 모은다. 언리얼 `BugIt` 처럼 명령 하나로 폴더에 모으고 `BugItGo` 로 그 자리에 돌아간다(D13).
@@ -1082,7 +1011,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | P2 · P3 · P4 | 에디터 README, 모듈 README | 에디터 설정은 환경설정 섹션, 사용자 단축키 덮어쓰기, 매니페스트 내용도 configure 의존 |
 | I1 ~ I3 | 에디터 README | 리플렉션 그리기는 `EditorPropertyGrid`, 타입 그리기 확장은 `SW_EDITOR_PROPERTY_DRAWER` |
 | A1 | 에디터 README | 활성 팩 기본, 참조 찾기는 `EditorReferenceIndex` |
-| G4 | 프로파일링 README | 패널 타임라인과 Tracy 의 역할 |
 | T1 | [백로그](../06_Backlog.md) 1-6 | `GameCurve` 는 `FloatCurve` 로 옮기지 않음(남은 일) |
 | R3 · R4 | 에디터 README | 컴포넌트 아이콘 테이블, 빌보드 클릭이 레이 피킹보다 먼저 |
 | 9절 로드맵 | [백로그](../06_Backlog.md) 1-4 | 이 문서를 지울 때 남은 로드맵 줄을 옮긴다 |

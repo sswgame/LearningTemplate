@@ -229,10 +229,11 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.GameViewCameraX`, `Editor.GameViewCameraY` | 게임 뷰가 그리는 카메라(활성 씬의 게임 카메라)의 월드 X · Y |
 | `Editor.SceneViewRequested`, `Editor.GameViewRequested` | 이번 프레임에 에디터가 호스트에 그 뷰 RT 를 그려 달라고 했으면 1. 게임 뷰는 패널이 안 보이면(접힘 · 닫힘 · 다른 탭) 0 이고, 씬 뷰는 두 뷰가 다 가려져도 1 이다 |
 | `Editor.SceneViewDrawn` | 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸으면(앞 탭으로 보이면) 1 — 씬 뷰가 보이는지는 이것으로 본다 |
+| `Editor.ProfilerTimelineThreadCount` | 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수(녹화 전 0) |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
-`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
+`hierarchy.addComponent.search`, `hierarchy.addComponent.<타입>`, `inspector.name`, `theme.swatch.violet`, 씬 뷰 캔버스 `sceneView.canvas` · 스크린샷 `sceneView.screenshot` · 보기 모드 콤보 `viewport.viewMode` · 그 항목 `viewport.viewMode.<모드>`(소문자), 프로파일러 Timeline 탭 `profiler.timeline.tab` · 녹화 단추 `profiler.timeline.record`(탭은 `state="down"` · `up` 을 다른 프레임에 나눠 눌러야 골라진다), 게임 뷰 `gameView.canvas` · `gameView.aspect` · 스크린샷 `gameView.screenshot`,
 상단 툴바 `toolbar.play` · `toolbar.simulate` · `toolbar.pause` · `toolbar.stop` · `toolbar.playAnyway`(미저장 확인 모달) · `toolbar.renderDoc` 이 있습니다. 씬 뷰와 게임 뷰는 같은 영역의 탭이라
 앞에 없는 쪽은 이름표를 남기지 않습니다 — 그쪽을 누르려면 먼저 `DevCommand line="panel.focus game_view"` 로 탭을 앞으로 가져옵니다.
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.

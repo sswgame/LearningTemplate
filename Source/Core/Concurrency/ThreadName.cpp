@@ -36,4 +36,40 @@ namespace sw
         pthread_setname_np( pthread_self(), arrShort );
 #endif
     }
+
+    bool ThreadName::tryGetCurrentThreadName( utf8* pOutName, uint32 capacity )
+    {
+        if ( pOutName == nullptr || capacity == 0 )
+            return false;
+        pOutName[0] = '\0';
+
+#if defined( SW_PLATFORM_WINDOWS )
+        PWSTR pWide = nullptr;
+        if ( FAILED( GetThreadDescription( GetCurrentThread(), &pWide ) ) || pWide == nullptr )
+            return false;
+        const int32 written = WideCharToMultiByte( CP_UTF8, 0, pWide, -1, pOutName, static_cast<int32>( capacity ), nullptr, nullptr );
+        LocalFree( pWide );
+        if ( written <= 0 )
+        {
+            pOutName[0] = '\0';
+            return false;
+        }
+        pOutName[capacity - 1] = '\0';
+        return pOutName[0] != '\0';
+#elif defined( SW_PLATFORM_LINUX )
+        utf8 arrShort[kMaxPosixLength + 1]{};
+        if ( pthread_getname_np( pthread_self(), arrShort, sizeof( arrShort ) ) != 0 )
+            return false;
+        uint32 length = 0;
+        while ( length + 1 < capacity && arrShort[length] != '\0' )
+        {
+            pOutName[length] = arrShort[length];
+            ++length;
+        }
+        pOutName[length] = '\0';
+        return length > 0;
+#else
+        return false;
+#endif
+    }
 } // namespace sw

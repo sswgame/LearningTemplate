@@ -10,10 +10,12 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
@@ -63,6 +65,26 @@ namespace sw::editor
                 }
                 formatBytes( bytes, out );
             }
+
+            /** @brief Timeline 탭이 고를 수 있는 최근 프레임 수입니다. */
+            static constexpr uint32 kArrTimelineFrameChoice[] = { 1, 4, 16 };
+            /** @brief 휠 한 칸의 확대 배율입니다(1 보다 작으면 확대). */
+            static constexpr float32 kTimelineWheelZoomFactor = 0.8f;
+            /** @brief 스레드 이름 칸의 폭입니다(UI 단위, DPI 배율을 곱한다). */
+            static constexpr float32 kTimelineLabelWidth = 120.0f;
+
+            /** @brief 슬롯마다 다른 색입니다(색상환을 슬롯 번호로 돌린다). */
+            static ImU32 computeSlotColor( uint32 slot )
+            {
+                constexpr uint32 kHueStepDegrees = 47;
+                constexpr uint32 kDegreesPerTurn = 360;
+                const float32    hue             = static_cast<float32>( ( slot * kHueStepDegrees ) % kDegreesPerTurn ) / static_cast<float32>( kDegreesPerTurn );
+                float32          red{ 0.0f };
+                float32          green{ 0.0f };
+                float32          blue{ 0.0f };
+                ImGui::ColorConvertHSVtoRGB( hue, 0.55f, 0.85f, red, green, blue );
+                return ImGui::GetColorU32( ImVec4{ red, green, blue, 1.0f } );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -83,9 +105,20 @@ namespace sw::editor
         , _listScratchSeries{}
         , _arrFilter{}
         , _lastTracyResult{ EditorTracyLaunchResult::Launched }
+        , _listTimelineThread{}
+        , _listTimelineRect{}
+        , _listTimelineLaneCount{}
+        , _listTimelineFrameBegin{}
+        , _timelineWindowBegin{ 0 }
+        , _timelineWindowEnd{ 0 }
+        , _timelineViewBegin{ 0 }
+        , _timelineViewEnd{ 0 }
+        , _timelineFrameCount{ 4 }
         , _bCatalogDirty{ SW_TRUE }
         , _bCollect{ SW_TRUE }
         , _bTracyTried{ SW_FALSE }
+        , _bTimelineFrozen{ SW_FALSE }
+        , _bTimelineZoomed{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -116,6 +149,13 @@ namespace sw::editor
             if ( ImGui::BeginTabItem( "Counters" ) )
             {
                 drawScopeTab( ProfilerScopeKind::Counter );
+                ImGui::EndTabItem();
+            }
+            const bool bTimelineTab = ImGui::BeginTabItem( "Timeline" );
+            EditorSelfTestMarks::note( "profiler.timeline.tab" );
+            if ( bTimelineTab )
+            {
+                drawTimelineTab();
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( "Performance & Scene" ) )
@@ -199,6 +239,162 @@ namespace sw::editor
         ImGui::EndDisabled();
         if ( bRenderDoc == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
             ImGui::SetTooltip( "%s", "Start with -renderdoc or from RenderDoc — RenderDoc 이 이 프로세스에 붙어 있지 않습니다" );
+    }
+
+    void ProfilerPanel::drawTimelineTab()
+    {
+        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        if ( pProfiler == nullptr )
+        {
+            ImGui::TextDisabled( "Engine profiler is not available" );
+            return;
+        }
+        ProfilerTimeline& timeline   = pProfiler->getTimeline();
+        const bool        bRecording = timeline.isRecording();
+        if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
+        {
+            // 녹화는 계측이 켜져 있어야 쌓인다(스코프가 시계를 읽어야 한다). 켤 때 지난 사건을 비운다.
+            if ( bRecording == false )
+            {
+                timeline.clear();
+                _bCollect = SW_TRUE;
+                pProfiler->setEnabled( true );
+                _bTimelineZoomed = SW_FALSE;
+            }
+            timeline.setRecording( bRecording == false );
+        }
+        EditorSelfTestMarks::note( "profiler.timeline.record" );
+        EditorWidgets::drawTooltip( "Record profile scopes per thread into a ring (8192 events per thread) — only while recording" );
+
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "Frames:" );
+        for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )
+        {
+            ImGui::SameLine();
+            fixed_string<constant::kMaxBuffer16> label;
+            formatstring( label.data(), label.capacity(), "%#", frameChoice );
+            if ( ImGui::RadioButton( label.c_str(), _timelineFrameCount == frameChoice ) )
+            {
+                _timelineFrameCount = frameChoice;
+                _bTimelineZoomed    = SW_FALSE;
+            }
+        }
+        ImGui::SameLine();
+        bool bFrozen = _bTimelineFrozen == SW_TRUE;
+        if ( ImGui::Checkbox( "Freeze", &bFrozen ) )
+            _bTimelineFrozen = bFrozen ? SW_TRUE : SW_FALSE;
+        EditorWidgets::drawTooltip( "Keep recording but stop updating the view" );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Fit" ) )
+            _bTimelineZoomed = SW_FALSE;
+        ImGui::SameLine();
+        ImGui::TextDisabled( "| wheel = zoom, drag = pan, deep analysis: Tracy" );
+
+        if ( _bTimelineFrozen == SW_FALSE )
+        {
+            if ( timeline.collectRecentFrames( _timelineFrameCount, _listTimelineThread, _timelineWindowBegin, _timelineWindowEnd ) == false )
+                _listTimelineThread.clear();
+        }
+        if ( _bTimelineZoomed == SW_FALSE || _timelineViewEnd <= _timelineViewBegin )
+        {
+            _timelineViewBegin = _timelineWindowBegin;
+            _timelineViewEnd   = _timelineWindowEnd;
+        }
+        if ( _listTimelineThread.empty() )
+        {
+            ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to capture the last frames per thread." );
+            return;
+        }
+        timeline.collectFrameBegins( _timelineViewBegin, _timelineViewEnd, _listTimelineFrameBegin );
+        drawTimelineCanvas();
+    }
+
+    void ProfilerPanel::drawTimelineCanvas()
+    {
+        const FrameProfiler* pProfiler  = editor::getService<FrameProfiler>();
+        const float32        dpiScale   = EditorThemeUtil::getDpiScale();
+        const float32        labelWidth = ProfilerPanelInternal::kTimelineLabelWidth * dpiScale;
+        const float32        laneHeight = ImGui::GetTextLineHeight() + 4.0f * dpiScale;
+        const float32        rowGap     = 2.0f * dpiScale;
+        const ImVec2         origin     = ImGui::GetCursorScreenPos();
+        const float32        totalWidth = MathUtil::max( ImGui::GetContentRegionAvail().x, labelWidth + 1.0f );
+        const float32        trackWidth = totalWidth - labelWidth;
+        const float32        trackLeft  = origin.x + labelWidth;
+
+        ProfilerTimelineLayout::layoutRects( _listTimelineThread, _timelineViewBegin, _timelineViewEnd, trackWidth, _listTimelineRect, _listTimelineLaneCount );
+        float32 totalHeight{ 0.0f };
+        for ( const uint16 laneCount : _listTimelineLaneCount )
+        {
+            totalHeight += static_cast<float32>( laneCount ) * laneHeight + rowGap;
+        }
+
+        ImGui::InvisibleButton( "##TimelineCanvas", ImVec2{ totalWidth, MathUtil::max( totalHeight, laneHeight ) } );
+        const bool   bHovered = ImGui::IsItemHovered();
+        const ImVec2 mouse    = ImGui::GetIO().MousePos;
+        if ( bHovered && ImGui::GetIO().MouseWheel != 0.0f )
+        {
+            const float32 factor = ImGui::GetIO().MouseWheel > 0.0f ? ProfilerPanelInternal::kTimelineWheelZoomFactor
+                                                                    : 1.0f / ProfilerPanelInternal::kTimelineWheelZoomFactor;
+            ProfilerTimelineLayout::zoom( _timelineViewBegin, _timelineViewEnd, mouse.x - trackLeft, trackWidth, factor, _timelineWindowBegin, _timelineWindowEnd );
+            _bTimelineZoomed = SW_TRUE;
+        }
+        if ( ImGui::IsItemActive() && ImGui::IsMouseDragging( ImGuiMouseButton_Left ) )
+        {
+            ProfilerTimelineLayout::pan( _timelineViewBegin, _timelineViewEnd, ImGui::GetIO().MouseDelta.x, trackWidth, _timelineWindowBegin, _timelineWindowEnd );
+            _bTimelineZoomed = SW_TRUE;
+        }
+
+        ImDrawList*     pDrawList = ImGui::GetWindowDrawList();
+        vector<float32> listRowTop( _listTimelineThread.size(), 0.0f );
+        float32         rowTop = origin.y;
+        for ( size_t threadIndex = 0; threadIndex < _listTimelineThread.size(); ++threadIndex )
+        {
+            listRowTop[threadIndex] = rowTop;
+            const float32 rowHeight = static_cast<float32>( _listTimelineLaneCount[threadIndex] ) * laneHeight;
+            pDrawList->AddRectFilled( ImVec2{ origin.x, rowTop }, ImVec2{ origin.x + totalWidth, rowTop + rowHeight },
+                                      ImGui::GetColorU32( ImGuiCol_FrameBg, ( threadIndex % 2 == 0 ) ? 0.6f : 0.3f ) );
+            pDrawList->AddText( ImVec2{ origin.x + rowGap * 2.0f, rowTop + rowGap }, ImGui::GetColorU32( ImGuiCol_Text ),
+                                _listTimelineThread[threadIndex]._name.c_str() );
+            rowTop += rowHeight + rowGap;
+        }
+
+        pDrawList->PushClipRect( ImVec2{ trackLeft, origin.y }, ImVec2{ origin.x + totalWidth, origin.y + totalHeight }, true );
+        const ProfilerTimelineRect* pHoveredRect = nullptr;
+        for ( const ProfilerTimelineRect& rect : _listTimelineRect )
+        {
+            const ProfilerTimelineEvent& event = _listTimelineThread[rect._threadIndex]._listEvent[rect._eventIndex];
+            const ImVec2                 minPoint{ trackLeft + rect._x0, listRowTop[rect._threadIndex] + static_cast<float32>( rect._depth ) * laneHeight };
+            const ImVec2                 maxPoint{ trackLeft + rect._x1, minPoint.y + laneHeight - 1.0f };
+            pDrawList->AddRectFilled( minPoint, maxPoint, ProfilerPanelInternal::computeSlotColor( event._slot ) );
+            const utf8* pName = pProfiler != nullptr ? pProfiler->findScopeName( event._slot ) : nullptr;
+            if ( rect._bShowsLabel == SW_TRUE && pName != nullptr )
+            {
+                pDrawList->PushClipRect( minPoint, maxPoint, true );
+                pDrawList->AddText( ImVec2{ minPoint.x + rowGap, minPoint.y + rowGap }, IM_COL32( 0, 0, 0, 255 ), pName );
+                pDrawList->PopClipRect();
+            }
+            const bool bUnderMouse = bHovered && minPoint.x <= mouse.x && mouse.x <= maxPoint.x && minPoint.y <= mouse.y && mouse.y <= maxPoint.y;
+            if ( bUnderMouse )
+                pHoveredRect = &rect;
+        }
+        // 프레임 경계 — 세로선.
+        for ( const uint64 frameBegin : _listTimelineFrameBegin )
+        {
+            const float32 lineX = trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, trackWidth );
+            pDrawList->AddLine( ImVec2{ lineX, origin.y }, ImVec2{ lineX, origin.y + totalHeight }, IM_COL32( 255, 255, 255, 160 ), 1.0f );
+        }
+        pDrawList->PopClipRect();
+
+        if ( pHoveredRect != nullptr )
+        {
+            const ProfilerTimelineEvent& event = _listTimelineThread[pHoveredRect->_threadIndex]._listEvent[pHoveredRect->_eventIndex];
+            const utf8*                  pName = pProfiler != nullptr ? pProfiler->findScopeName( event._slot ) : nullptr;
+            ImGui::BeginTooltip();
+            ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
+            ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / 1000.0, static_cast<uint32>( event._depth ) );
+            ImGui::TextDisabled( "%s", _listTimelineThread[pHoveredRect->_threadIndex]._name.c_str() );
+            ImGui::EndTooltip();
+        }
     }
 
     void ProfilerPanel::drawFrameGraph()

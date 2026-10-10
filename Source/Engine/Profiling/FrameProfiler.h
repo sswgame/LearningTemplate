@@ -26,6 +26,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
+#include "Engine/Profiling/ProfilerTimeline.h"
 
 namespace sw
 {
@@ -106,6 +107,10 @@ namespace sw
         /** @brief endFrame 이 불린 횟수입니다. */
         uint64 getFrameCount() const { return _frameCount.load( std::memory_order_relaxed ); }
 
+        /** @brief 스레드 미니 타임라인입니다(에디터 프로파일러 패널의 Timeline 탭). 계측이 켜져 있고 타임라인이 기록 중일 때만 사건이 쌓입니다. */
+        ProfilerTimeline&       getTimeline() { return _timeline; }
+        const ProfilerTimeline& getTimeline() const { return _timeline; }
+
         // ------------------------------------------------------------------------------
         // 실시간 조회 — 에디터 프로파일러 패널이 프레임마다 읽는다(게임 스레드가 쓰는 중에 다른 스레드가 읽어도 된다)
         // ------------------------------------------------------------------------------
@@ -173,10 +178,11 @@ namespace sw
         static void plotCounter( IProfilerBackend& backend, Scope& scope, uint64 value );
 
     private:
-        Scope          _arrScope[kMaxScope];
-        atomic<uint32> _scopeCount{ 0 };
-        atomic<uint64> _frameCount{ 0 };
-        atomic<bool>   _bEnabled{ false };
+        Scope            _arrScope[kMaxScope];
+        ProfilerTimeline _timeline;
+        atomic<uint32>   _scopeCount{ 0 };
+        atomic<uint64>   _frameCount{ 0 };
+        atomic<bool>     _bEnabled{ false };
     };
 } // namespace sw
 
@@ -204,6 +210,7 @@ namespace sw
         uint64            _zoneToken; ///< 그 출력이 돌려준 구간 값
 #endif
         uint32 _slot;
+        uint16 _depth; ///< 이 스레드에서 이 구간을 감싼 계측 구간 수(타임라인의 겹)
     };
 } // namespace sw
 

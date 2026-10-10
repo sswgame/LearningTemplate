@@ -25,5 +25,12 @@ namespace sw
          * @details 스레드 진입 함수의 첫 줄에서 부릅니다. 다른 스레드의 이름은 바꾸지 않습니다(그 스레드가 스스로 붙입니다).
          */
         static void setCurrentThreadName( const utf8* pName );
+
+        /**
+         * @brief 이 함수를 부른 스레드의 OS 이름을 @p pOutName(UTF-8, 종료 문자 포함 @p capacity 바이트)에 씁니다.
+         * @return 이름이 붙어 있어 썼으면 true 입니다. 이름이 없거나 읽지 못하면 false 이고 @p pOutName 은 빈 문자열입니다.
+         * @note 스레드마다 한 번 읽을 용도입니다(Windows 는 `GetThreadDescription` 이 힙에 문자열을 만든다). 프레임 경로에서 부르지 않습니다.
+         */
+        [[nodiscard]] static bool tryGetCurrentThreadName( utf8* pOutName, uint32 capacity );
     };
 } // namespace sw

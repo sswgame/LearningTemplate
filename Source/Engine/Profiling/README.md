@@ -70,6 +70,7 @@ VSync는 기본이 꺼짐이지만, 사용자 파일에 켜 둔 값이 있으면
 | 파일 | 역할 |
 |---|---|
 | `FrameProfiler` | 프로세스 안의 구간 집계와 카운터 |
+| `ProfilerTimeline` | 켤 때만 계측 구간을 스레드마다 링(8192 사건)에 남기는 미니 타임라인. `FrameProfiler` 가 소유한다 |
 | `FrameProfileSession` | `-gv_profileFrames=N` 한 번의 측정 |
 | `MemoryBudgetMonitor` | 메모리 태그 예산(`Config/Engine/MemoryBudget.json`), 프레임 끝 예산 검사, `-gv_memoryReport` 표 |
 | `IProfilerBackend.h` | 출력 하나의 인터페이스 |
@@ -166,6 +167,8 @@ p50은 같은 히스토그램 버킷(±9%) 안에 있습니다. 구간 하나의
 
 - **프로파일러 패널**(`Source/Editor/Panels/ProfilerPanel`)은 `FrameProfiler` 값만 읽어 CPU 구간, GPU 패스, 카운터를 최근 N 프레임(기본 240)의 마지막, 평균, p50, p99, 최대로 보여 줍니다.
   머리줄로 정렬하고 검색할 수 있고, GT.Frame, RT.Frame, GPU.Frame 그래프를 그립니다. 집계는 ImGui 없는 `ProfilerScopeHistory` 가 하고 EditorTest가 테스트합니다. Tracy가 없는 빌드에서도 같습니다.
+- **Timeline 탭**은 Record 를 누르면 최근 1 · 4 · 16 프레임의 계측 구간을 스레드마다 겹으로 펼칩니다(휠 확대, 끌어 이동, Freeze, 프레임 경계선, 툴팁).
+  기록은 `ProfilerTimeline` 이 스레드마다 잠금 없는 링에 하고, 배치는 ImGui 없는 `ProfilerTimelineLayout` 이 합니다. 시나리오 `editor/profilertimeline`.
 - **"Open Tracy" 버튼**은 Tracy 출력을 켜고(`ProfilerBackend::startTracy`), 뷰어를 `-a 127.0.0.1 -p <포트>` 로 띄웁니다(`EditorTracyLauncher`). 뷰어는 `-gv_tracyViewerPath`, `Tools/Tracy/tracy-profiler.exe` 순서로 찾습니다.
 
 Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 띄웁니다. 언리얼 에디터가 Insights를 따로 띄우는 것과 같은 방식입니다.
@@ -193,6 +196,8 @@ Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 
   핫 리로드로 사라지는 모듈 상수나 엔진 종료 때 해제되는 이름 풀(`HashedStringPool`)을 가리키면 해제된 메모리를 읽게 됩니다.
   그래서 `ProfilerBackend::registerZoneSite` 와 `internName` 이 정적 저장소에 복사합니다. 저장소는 지점 1,024개(`kMaxZoneSite`)와 64 KB(`kNameArenaBytes`)이고, 넘치면 그 지점만 Tracy에 나가지 않습니다.
 - **구간은 연 출력으로 닫힙니다.** 프레임 도중에 출력이 켜져도 짝이 어긋나지 않습니다. `ScopedFrameProfile` 이 구간을 연 출력을 보관하기 때문입니다.
+- **빠른 확인은 패널 타임라인, 깊은 분석은 Tracy 입니다.** 타임라인은 최근 64 프레임 · 스레드당 8192 사건까지만 들고 계측 구간(`SW_PROFILE_SCOPE`)만 봅니다.
+  잠금 · GPU 큐 · 컨텍스트 전환 · 긴 녹화는 Tracy 로 봅니다. 기록은 `FrameProfiler` 계측이 켜져 있어야 쌓입니다(스코프가 시계를 읽어야 한다).
 - Tracy를 처음 켜면 Windows 방화벽이 리슨 소켓 허용을 묻습니다. 거절해도 같은 PC의 뷰어는 localhost로 연결됩니다.
 
 ## 더 볼 곳

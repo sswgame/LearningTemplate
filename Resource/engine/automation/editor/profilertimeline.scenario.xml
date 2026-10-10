@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 프로파일러 패널의 Timeline 탭: 녹화 단추(profiler.timeline.record)를 누르면 최근 프레임의 계측 구간이 스레드마다 쌓인다.
+  게임 스레드(GT.Frame)와 렌더 스레드(RT.Frame)가 모두 있어야 한다(Editor.ProfilerTimelineThreadCount 2 이상). 다시 누르면 녹화가 멈춘다.
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/profilertimeline.scenario.xml -gv_editorStateDir=<빈 폴더> -dx12
+-->
+<Scenario name="editor.profilertimeline" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<At frame="10"><ResizeWindow width="1600" height="900"/></At>
+	<At frame="30"><DevCommand line="panel.focus profiler"/></At>
+	<At frame="50">
+		<Expect probe="Editor.ProfilerTimelineThreadCount" equals="0"/>
+		<EditorClick mark="profiler.timeline.tab" state="down"/>
+	</At>
+	<At frame="53"><EditorClick mark="profiler.timeline.tab" state="up"/></At>
+	<At frame="60"><EditorClick mark="profiler.timeline.record"/></At>
+	<At frame="120">
+		<Expect probe="Editor.ProfilerTimelineThreadCount" atLeast="2"/>
+	</At>
+	<!-- 다시 누르면 녹화가 멈춘다 — 남은 사건은 그대로 보인다 -->
+	<At frame="130"><EditorClick mark="profiler.timeline.record"/></At>
+	<At frame="150"><Expect probe="Editor.ProfilerTimelineThreadCount" atLeast="2"/></At>
+	<At frame="160"><Pass/></At>
+</Scenario>
