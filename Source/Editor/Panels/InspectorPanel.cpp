@@ -163,15 +163,14 @@ namespace sw::editor
             return;
         }
 
-        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
-        if ( bEditsAllowed == false )
+        // 플레이 중에도 값은 고친다(유니티 플레이 모드 편집) — Stop 이 스냅샷으로 되돌리고, 남기려면 Keep Simulation Changes.
+        // 구조 편집(컴포넌트 더하기 · 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
+        if ( EditorUtil::areSceneEditsAllowed() == false )
         {
             EditorWidgets::drawChip( "Play Mode", editor::style::kWarn );
             ImGui::SameLine();
-            ImGui::TextDisabled( "Scene edits locked until Stop." );
+            ImGui::TextDisabled( "Edits revert on Stop (Play > Keep Simulation Changes keeps the selection)." );
         }
-        if ( bEditsAllowed == false )
-            ImGui::BeginDisabled();
 
         drawGameObjectHeader( pObj );
 
@@ -196,9 +195,6 @@ namespace sw::editor
         }
 
         drawComponentList( pObj, ws );
-
-        if ( bEditsAllowed == false )
-            ImGui::EndDisabled();
     }
 
     void InspectorPanel::drawMultiSelection( const vector<GameObject*>& listObject )

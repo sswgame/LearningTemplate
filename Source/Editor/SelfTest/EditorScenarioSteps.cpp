@@ -992,6 +992,15 @@ namespace sw::editor
                 return pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) ) : nullptr;
             }
 
+            /** @brief 플레이 세션이 Simulate(조종 없이 월드만)면 1, 플레이어가 조종하면 0 입니다. 멈춤이면 값을 내지 않는다. */
+            [[nodiscard]] static bool readPlaySimulating( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                if ( EditorPlaySession::isStopped() )
+                    return false;
+                outValue = EditorPlaySession::isSimulating() ? 1.0 : 0.0;
+                return true;
+            }
+
             /** @brief `-gv_editorProbeObject` 오브젝트의 자기 활성 비트(1 · 0)입니다. */
             [[nodiscard]] static bool readObjectActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1287,6 +1296,8 @@ namespace sw::editor
                         &EditorScenarioStepsInternal::validateDockLayout, false );
 
     SW_AUTOMATION_PROBE( editorPlayState, "Editor.PlayState", "Play session state: 0 stopped, 1 playing, 2 paused", &EditorScenarioStepsInternal::readPlayState );
+    SW_AUTOMATION_PROBE( editorPlaySimulating, "Editor.PlaySimulating", "While a session runs: 1 simulating (ejected or Simulate), 0 the player is possessed",
+                         &EditorScenarioStepsInternal::readPlaySimulating );
     SW_AUTOMATION_PROBE( editorSceneDirty, "Editor.SceneDirty", "1 while the edited scene has unsaved changes", &EditorScenarioStepsInternal::readSceneDirty );
     SW_AUTOMATION_PROBE( editorWindowTitleDirty, "Editor.WindowTitleDirty", "1 when the editor window title carries the unsaved mark (*)",
                          &EditorScenarioStepsInternal::readWindowTitleDirty );

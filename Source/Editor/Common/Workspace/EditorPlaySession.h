@@ -49,6 +49,8 @@ namespace sw::editor
         };
 
         vector<ObjectSnapshot> _listSnapshot;
+        /** @brief Keep Simulation Changes 로 적은 오브젝트의 플레이 중 상태입니다. Stop 이 되돌린 뒤 편집 씬에 입힌다(`keepObjectState`). */
+        vector<ObjectSnapshot> _listKept;
         /**
          * @brief 스냅샷을 찍을 때의 활성 씬입니다(`SceneManager::getSceneGeneration` · 이름 · 소스 경로).
          * @details Stop 때 활성 씬의 세대가 다르면 플레이 중에 씬이 바뀐 것이다(게임 코드가 다음 레벨을 열었다). 그때는 편집하던 씬을 이 이름 ·
@@ -63,16 +65,19 @@ namespace sw::editor
         uint32           _pendingStepCount;
         PlaySessionState _state{ PlaySessionState::Stopped };
         /** @brief 씬을 여는 중에 요청한 시작 상태입니다(`_bStartQueued` 일 때만 뜻이 있다). 로드가 끝난 프레임에 `update` 가 이 상태로 시작한다. */
-        PlaySessionState       _queuedState{ PlaySessionState::Stopped };
-        uint8                  _bHasSnapshot      : 1;
-        uint8                  _bStartQueued      : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼 RequestPlaySession 의 대기 요청)
-        uint8                  _bSimulate         : 1; ///< 월드만 돈다 — 게임 모듈 업데이트 · 게임 입력 없음, 에디터 카메라 유지(언리얼 Simulate)
-        uint8                  _bStartAtPosition  : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
-        uint8                  _bStartMovePending : 1; ///< 시작 위치로 한 번 더 옮길 차례다(첫 프레임이 스폰 자리로 되돌린 것을 덮는다)
-        [[maybe_unused]] uint8 _reserved          : 3;
+        PlaySessionState _queuedState{ PlaySessionState::Stopped };
+        uint8            _bHasSnapshot      : 1;
+        uint8            _bStartQueued      : 1; ///< 씬을 여는 중이라 시작을 미뤘다(언리얼 RequestPlaySession 의 대기 요청)
+        uint8            _bSimulate         : 1; ///< 월드만 돈다 — 게임 모듈 업데이트 · 게임 입력 없음, 에디터 카메라 유지(언리얼 Simulate)
+        uint8            _bStartAtPosition  : 1; ///< 다음 Play 를 `_startPosition` 에서 시작한다
+        uint8            _bStartMovePending : 1; ///< 시작 위치로 한 번 더 옮길 차례다(첫 프레임이 스폰 자리로 되돌린 것을 덮는다)
+        uint8            _bOptionsApplied   : 1; ///< 이 세션의 플레이 옵션(최대화)을 적용했다(`EditorPlayCommands::tick`)
+        uint8            _bMaximizedForPlay : 1; ///< Maximize On Play 가 게임 뷰를 최대화했다 — 멈추면 배치를 되돌린다
+        uint8            _bEjected          : 1; ///< F8 로 조종을 놓았다 — 다시 누르면 조종으로 돌아간다
 
         PlaySessionData()
             : _listSnapshot{}
+            , _listKept{}
             , _sceneGeneration{ 0 }
             , _sceneName{}
             , _sceneSourcePath{}
@@ -85,7 +90,9 @@ namespace sw::editor
             , _bSimulate{ SW_FALSE }
             , _bStartAtPosition{ SW_FALSE }
             , _bStartMovePending{ SW_FALSE }
-            , _reserved{ 0 }
+            , _bOptionsApplied{ SW_FALSE }
+            , _bMaximizedForPlay{ SW_FALSE }
+            , _bEjected{ SW_FALSE }
         {
         }
     };
@@ -190,5 +197,11 @@ namespace sw::editor
          *          지금 씬에 그대로 되돌리면 두 씬이 섞이고, 저장하면 플레이 중에 연 씬 파일을 덮어씁니다.
          */
         static void restoreSnapshot( PlaySessionData& data );
+        /**
+         * @brief @p pObject 의 지금(플레이 중) 상태를 Stop 뒤에도 남기게 적습니다. 같은 오브젝트를 다시 적으면 새 상태로 바꿉니다. 멈춤이면 false 입니다.
+         * @details Stop 은 스냅샷으로 씬을 되돌린 뒤 적은 상태를 그 오브젝트(같은 id)에 입히고 되돌리기 한 번("Keep Simulation Changes")으로 기록한다.
+         *          플레이 중에 생긴 오브젝트는 되돌리기가 지우므로 남지 않는다.
+         */
+        static bool keepObjectState( PlaySessionData& data, const GameObject* pObject );
     };
 } // namespace sw::editor

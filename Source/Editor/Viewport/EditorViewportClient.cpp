@@ -12,6 +12,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorPlayCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorViewportPick.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -429,33 +430,15 @@ namespace sw::editor
 
     void EditorViewportClient::toggleMaximize()
     {
-        EditorContext*    pContext = EditorContext::get();
-        EditorDockLayout* pDock    = pContext != nullptr ? pContext->findDockLayout() : nullptr;
-        if ( pDock == nullptr )
-            return;
-        // 직전 배치는 에디터 상태 폴더의 임시 레이아웃으로 둔다(이름 붙인 레이아웃 목록에 섞이지 않게).
-        const string folder = FileUtil::joinPath( EditorUtil::getEditorStateDirectory(), "Temp" );
         if ( _bMaximized == SW_TRUE )
         {
             _bMaximized = SW_FALSE;
-            if ( pDock->requestLoadNamedLayout( "maximize-restore", folder ) == false )
+            if ( EditorPlayCommands::restoreMaximizedLayout() == false )
                 SW_LOG_WARNING( "The layout before maximizing is gone - use Panel > Reset Layout" );
             return;
         }
-        if ( pDock->saveNamedLayout( "maximize-restore", folder ) == false )
-            return;
-        EditorPanelManager& panelManager = pContext->getPanelManager();
-        vector<string>      listCloseID;
-        for ( const EditorPanelEntry& entry : panelManager.getPanels() )
-        {
-            if ( entry._id != "scene_view" && entry._pInstance != nullptr && entry._pInstance->isOpen() )
-                listCloseID.push_back( entry._id );
-        }
-        for ( const string& panelID : listCloseID )
-        {
-            (void)panelManager.setPanelOpen( panelID, false ); // 이미 닫혔으면 할 일이 없다
-        }
-        _bMaximized = SW_TRUE;
+        if ( EditorPlayCommands::maximizePanel( "scene_view" ) )
+            _bMaximized = SW_TRUE;
     }
 
     void EditorViewportClient::processOrbitInput()

@@ -5,6 +5,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
+#include "Editor/Common/Config/EditorPreferences.h"
+#include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -125,6 +127,14 @@ namespace sw::editor
             }
             EditorSelfTestMarks::note( "gameView.aspect" );
             EditorWidgets::drawTooltip( "게임 뷰 화면 비율 — 자유(패널 전체) · 16:9(남는 쪽은 레터박스)" );
+
+            ImGui::SameLine();
+            // 유니티 게임 뷰의 Maximize On Play 자리 — 값은 환경설정(Editor/Play)이고 바꾸면 바로 저장한다.
+            EditorPlayPreferences& playPreferences = *static_cast<EditorPlayPreferences*>( EditorSettingsInstance<EditorPlayPreferences>::getInstance() );
+            if ( ImGui::Checkbox( "Max", &playPreferences._bMaximizeOnPlay ) && EditorPreferencesStore::saveAll( EditorPreferencesStore::getDefaultFilePath() ) == false )
+                SW_LOG_WARNING( "Editor preferences could not be saved" );
+            EditorSelfTestMarks::note( "gameView.maximizeOnPlay" );
+            EditorWidgets::drawTooltip( "Maximize On Play - 플레이하는 동안 게임 뷰만 남기고, Stop 하면 배치를 되돌립니다" );
 
             ImGui::SameLine();
             ImGui::Checkbox( "HUD", &_bShowOverlay );

@@ -1,6 +1,6 @@
 /**
  * @file EditorPreferences.h
- * @brief 에디터 환경설정의 기본 섹션입니다(General, Viewport, Content Browser). 테마(Appearance)는 `EditorConfig` 입니다.
+ * @brief 에디터 환경설정의 기본 섹션입니다(General, Viewport, Play, Content Browser). 테마(Appearance)는 `EditorConfig` 입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -55,6 +55,22 @@ namespace sw::editor
 
         PROPERTY( Tooltip = "Show the orientation cube" )
         bool _bShowOrientationCube{ true };
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 플레이 — 플레이 옵션(메뉴 Play · 게임 뷰 툴바)입니다. */
+    REFLECT()
+    struct EditorPlayPreferences
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Maximize the game view while playing (restored on Stop). Simulate keeps the layout" )
+        bool _bMaximizeOnPlay{ false };
+
+        PROPERTY( Tooltip = "Extra command line for Play in New Window (for example -dx12)" )
+        string _standaloneArguments{};
     };
 } // namespace sw::editor
 

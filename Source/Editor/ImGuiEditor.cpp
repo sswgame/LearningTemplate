@@ -14,6 +14,7 @@
 #include "Editor/Common/Backend/IImGuiPlatformBackend.h"
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/Commands/EditorPlayCommands.h"
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorPreferences.h"
@@ -710,6 +711,7 @@ namespace sw::editor
         // 씬을 여는 중에 누른 Play 는 미뤄져 있다 — 로드가 끝난 프레임에 여기서 시작한다.
         EditorPlaySession::update();
         EditorPlaySession::consumePendingStep();
+        EditorPlayCommands::tick(); // Maximize On Play — 시작 · 정지가 어디서 왔든 상태 전이를 여기서 본다
     }
 
     bool ImGuiEditor::onWindowCloseQuery()

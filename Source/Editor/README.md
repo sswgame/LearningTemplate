@@ -365,6 +365,10 @@ PASS 인지 봅니다 — 시험을 더하면 그 목록에도 한 줄 더합니
     곱해 게임 업데이트 · 씬 틱 · 고정 스텝이 같이 느려지거나 빨라진다. 에디터 UI · 에디터 카메라는 자기 시간으로 돈다.
   - **Auto**(자동 플레이): 게임이 `SW_GAME_AUTOPLAY` 로 등록했으면 서고, 누르면 그 게임의 자동 플레이 전역 변수를 켜고 끈다
     (`GameAutoplay::setOn` — 전역 변수 표를 거쳐 써서 패널 · 콘솔과 같은 값이다). 자체 시험 `toolbar.autoplayButton`.
+- **플레이 옵션**(`EditorPlayCommands`, 메뉴 Play): F8 Eject 는 조종을 놓고 Simulate 로 바꿔 씬 뷰를 앞으로 두고, 다시 F8 이 조종으로 돌아온다(언리얼 Eject ·
+  Possess). Keep Simulation Changes 는 고른 오브젝트의 플레이 중 상태를 적어 두고 Stop 이 되돌린 뒤 입힌다(되돌리기 하나). Play in New Window 는 저장된
+  활성 씬을 `-gv_firstScene` 으로 엔진을 따로 띄운다(언리얼 Standalone). 게임 뷰 툴바 `Max` 는 Maximize On Play(환경설정 Editor/Play) — 최대화와 Shift+Space 는
+  같은 임시 레이아웃 `maximize-restore` 를 쓴다. 상태 전이는 `EditorPlayCommands::tick` 이 프레임 끝에 한 번 본다. 시나리오 `editor/playedit`.
 - **디버그 드로우**: 게임 코드가 `DebugDrawQueue`(엔진 서비스)에 넣은 선 · 구 · 상자 · 화살표 · 글자를 씬 뷰의 `debug_draw` 시각화(툴바 `Dbg`)가 그린다.
   지속 시간(초)과 카테고리를 받는다. 씬 뷰 툴바의 `Dbg Cat` 팝업이 카테고리를 켜고 끈다. 2D 뷰(직교 카메라가 Z 를 본다)에서는 구가 XY 원 하나다.
 - **HUD**(디버그 오버레이): 게임이 `DebugOverlayState` 에 쓴 값을 게임 뷰 왼쪽 아래에 키 순서로 그린다.
@@ -563,8 +567,8 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `CheckNullableServiceUse` 가 막는다. `game::areGameServicesBound()` 는 SceneManager 슬롯 하나만 본다. 진단용 서비스는 `OPT` 로 등록한다(required 면 `areEngineServicesBound()` 가 영영 false).
 - **문서 저장 계약** — dirty 비트는 `IEditorPanel` 이 든다(패널이 자기 `_bDirty` 를 만들면 Ctrl+S · 종료 확인에서 빠진다). `saveDocumentAndClearDirty` 가 성공했을 때만 지운다. 로드 실패는
   `markDocumentLoadFailed` 로 저장을 막는다. 씬 dirty 는 되돌리기 · 다시 하기 · 스냅샷 되읽기에서도 찍는다. 커맨드 스택이 없어도 `markActiveSceneDirty()` 는 찍는다.
-- **플레이** — 스냅샷은 활성 씬의 세대 · 이름 · 소스 경로를 함께 적는다(Stop 때 세대가 다르면 로드를 거두고 편집하던 씬을 다시 세운 뒤 되돌린다). 플레이 중 인스펙터 직접 편집은 바로
-  적용한다(의도 — Stop 이 되돌린다). 씬을 여는 중의 Play 는 `Starting` 으로 미뤘다가 로드가 끝난 프레임에 시작한다.
+- **플레이** — 스냅샷은 활성 씬의 세대 · 이름 · 소스 경로를 함께 적는다(Stop 때 세대가 다르면 로드를 거두고 편집하던 씬을 다시 세운 뒤 되돌린다). 플레이 중 인스펙터 편집은 바로
+  적용하고 기록하지 않는다(편집 내역은 맡겨 두었다 — `InspectorPropertyUndo::commitFinishedEdits` 가 버린다). Stop 이 되돌린다. 씬을 여는 중의 Play 는 `Starting` 으로 미뤘다가 로드가 끝난 프레임에 시작한다.
 - **되돌리기** — 자식 있는 오브젝트는 서브트리를 후위 순서로 한 트랜잭션에(`recordDestruction`), 생성 · 삭제는 `recordObjectLifetime` 한 절차. 제자리 로드는 지우기 전에 다른 오브젝트의
   자식을 (자식 핸들, 부모 **안정 키**)로 적고 되붙인다. 오브젝트 → GUID 표와 GUID → 오브젝트 표는 서로의 역이어야 한다(`EditorWorkspace::setGuid`). 모듈 DLL 주소(람다)는 모듈이 내려가기 전에 걷는다.
 - **인스펙터** — 리플렉션 객체 그리기는 `EditorPropertyGrid` 하나다(인스펙터 · 환경설정 · 다중 선택이 쓴다). 대상은 `EditorPropertyGridTarget`(인스턴스 · 타입 ·

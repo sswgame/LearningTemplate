@@ -455,3 +455,46 @@ SW_TEST_CASE( EditorPlaySessionTest, StartAtCameraMovesThePlayer )
     SW_EXPECT_NEAR_EQUAL( 0.0f, pPlayerRoot->getWorldPosition()._y, 1e-4f );
     EditorPlaySession::setState( data, PlaySessionState::Stopped );
 }
+
+/**
+ * @brief [EditorPlaySessionTest] Keep Simulation Changes 로 적은 오브젝트만 Stop 뒤에도 플레이 중 상태를 지니고, 나머지는 되돌아간다
+ */
+SW_TEST_CASE( EditorPlaySessionTest, KeptStateSurvivesStopWhileOthersRevert )
+{
+    SceneManager sceneManager;
+    Scene*       pScene = sceneManager.createEmptyActiveScene( "EditedLevel" );
+    SW_ASSERT_NOT_NULL( pScene );
+    ScopedSceneManagerService scopedScene{ sceneManager };
+    GameObjectManager*        pObjects = pScene->getObjectManager();
+
+    GameObject*     pHero     = pObjects->createGameObject( hashed_string( "Hero" ) );
+    GameObject*     pVillain  = pObjects->createGameObject( hashed_string( "Villain" ) );
+    SceneComponent* pHeroRoot = pHero->addComponent<SceneComponent>();
+    SceneComponent* pVillRoot = pVillain->addComponent<SceneComponent>();
+    SW_ASSERT_NOT_NULL( pHeroRoot );
+    SW_ASSERT_NOT_NULL( pVillRoot );
+    pObjects->mergePendingAdds();
+    const uint64 heroID    = pHero->getObjectID();
+    const uint64 villainID = pVillain->getObjectID();
+
+    PlaySessionData data;
+    SW_EXPECT_FALSE_MSG( EditorPlaySession::keepObjectState( data, pHero ), "멈춤에서 상태를 적었습니다" );
+    EditorPlaySession::setState( data, PlaySessionState::Playing );
+    pHeroRoot->setWorldPosition( float3{ 1.0f, 0.0f, 0.0f } );
+    pVillRoot->setWorldPosition( float3{ 2.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( EditorPlaySession::keepObjectState( data, pHero ) );
+    pHeroRoot->setWorldPosition( float3{ 3.0f, 0.0f, 0.0f } );
+    SW_EXPECT_TRUE( EditorPlaySession::keepObjectState( data, pHero ) ); // 다시 적으면 새 상태로 바뀐다(목록은 하나)
+    SW_EXPECT_EQUAL( size_t( 1 ), data._listKept.size() );
+    EditorPlaySession::setState( data, PlaySessionState::Stopped );
+    pObjects->processDeferredDestruction();
+    pObjects->mergePendingAdds();
+
+    const GameObject* pHeroAfter    = pObjects->findGameObjectByID( heroID );
+    const GameObject* pVillainAfter = pObjects->findGameObjectByID( villainID );
+    SW_ASSERT_NOT_NULL( pHeroAfter );
+    SW_ASSERT_NOT_NULL( pVillainAfter );
+    SW_EXPECT_NEAR_EQUAL( 3.0f, pHeroAfter->getComponent<SceneComponent>()->getWorldPosition()._x, 1e-4f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, pVillainAfter->getComponent<SceneComponent>()->getWorldPosition()._x, 1e-4f );
+    SW_EXPECT_TRUE( data._listKept.empty() );
+}

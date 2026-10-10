@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 
+#include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -107,6 +108,12 @@ namespace sw::editor
     void InspectorPropertyUndo::commitFinishedEdits()
     {
         vector<PendingEdit>& listFinished = getFinishedEdits();
+        // 플레이 중 편집은 기록하지 않는다 — 편집 내역은 맡겨 두었고(`CommandStack::parkHistory`) Stop 이 스냅샷으로 되돌린다.
+        if ( EditorUtil::areSceneEditsAllowed() == false )
+        {
+            listFinished.clear();
+            return;
+        }
         for ( const PendingEdit& edit : listFinished )
         {
             const string label     = InspectorPropertyLayout::makeUndoLabel( edit._label.c_str() );

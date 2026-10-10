@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 플레이 옵션(N6).
+  1) 플레이 중 인스펙터로 GameCamera 의 _priority 를 7 로 바꾸면 바로 들어가고(탐침 Editor.SelectedProperty), Stop 이 0 으로 되돌린다.
+  2) (3 · 4 뒤에) 다시 플레이해 7 로 바꾸고 Play > Keep Simulation Changes 를 쓰면 Stop 뒤에도 7 이고, 그 남김은 되돌리기 하나다(Ctrl+Z 로 0).
+  3) F8 은 조종을 놓고(Simulate, 씬 뷰) 다시 F8 이 조종으로 돌아온다(Editor.PlaySimulating).
+  4) 게임 뷰 툴바의 Max(Maximize On Play)를 켜고 플레이하면 인스펙터가 닫히고(Editor.PanelOpen), Stop 하면 배치가 돌아온다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/playedit.scenario.xml -dx12
+-->
+<Scenario name="editor.playedit" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="50">
+		<EditorClick mark="hierarchy.row.GameCamera"/>
+		<Variable name="gv_editorProbeProperty" value="CameraComponent._priority"/>
+		<Variable name="gv_editorProbePanel" value="inspector"/>
+	</At>
+	<At frame="70"><Expect probe="Editor.SelectedProperty" equals="0"/><Expect probe="Editor.UndoCount" equals="0"/></At>
+	<!-- 1) 플레이 중 편집은 Stop 이 되돌린다 -->
+	<At frame="75"><DevCommand line="editor play.start"/></At>
+	<At frame="95"><Expect probe="Editor.PlayState" equals="1"/></At>
+	<At frame="100"><EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/></At>
+	<At frame="110"><EditorKey key="Ctrl+A"/></At>
+	<At frame="115"><EditorText value="7"/></At>
+	<At frame="120"><EditorKey key="Enter"/></At>
+	<At frame="140"><Expect probe="Editor.SelectedProperty" equals="7"/></At>
+	<At frame="145"><EditorClick mark="toolbar.stop"/></At>
+	<At frame="170">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<Expect probe="Editor.SelectedProperty" equals="0"/>
+		<Expect probe="Editor.UndoCount" equals="0"/>
+	</At>
+	<!-- 3) F8 Eject / Possess -->
+	<At frame="175"><DevCommand line="editor play.start"/></At>
+	<At frame="195"><Expect probe="Editor.PlaySimulating" equals="0"/></At>
+	<At frame="200"><EditorKey key="F8"/></At>
+	<At frame="220"><Expect probe="Editor.PlaySimulating" equals="1"/></At>
+	<At frame="225"><EditorKey key="F8"/></At>
+	<At frame="245"><Expect probe="Editor.PlaySimulating" equals="0"/></At>
+	<At frame="250"><EditorClick mark="toolbar.stop"/></At>
+	<!-- 4) Maximize On Play -->
+	<At frame="270"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="300"><EditorClick mark="gameView.maximizeOnPlay"/></At>
+	<At frame="320"><Expect probe="Editor.PanelOpen" equals="1"/><DevCommand line="editor play.start"/></At>
+	<At frame="360"><Expect probe="Editor.PlayState" equals="1"/><Expect probe="Editor.PanelOpen" equals="0"/></At>
+	<At frame="365"><EditorClick mark="toolbar.stop"/></At>
+	<At frame="410"><Expect probe="Editor.PlayState" equals="0"/><Expect probe="Editor.PanelOpen" equals="1"/></At>
+	<At frame="412"><DevCommand line="panel.focus game_view"/></At>
+	<At frame="440"><EditorClick mark="gameView.maximizeOnPlay"/></At>
+	<!-- 2) Keep Simulation Changes 는 남기고, 그것은 되돌리기 하나다 -->
+	<At frame="460"><DevCommand line="editor play.start"/></At>
+	<At frame="485"><EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/></At>
+	<At frame="495"><EditorKey key="Ctrl+A"/></At>
+	<At frame="500"><EditorText value="7"/></At>
+	<At frame="505"><EditorKey key="Enter"/></At>
+	<At frame="525"><Expect probe="Editor.SelectedProperty" equals="7"/><DevCommand line="editor play.keepChanges"/></At>
+	<At frame="535"><EditorClick mark="toolbar.stop"/></At>
+	<At frame="560">
+		<Expect probe="Editor.PlayState" equals="0"/>
+		<Expect probe="Editor.SelectedProperty" equals="7"/>
+		<Expect probe="Editor.UndoCount" equals="1"/>
+	</At>
+	<At frame="565"><DevCommand line="editor edit.undo"/></At>
+	<At frame="585"><Expect probe="Editor.SelectedProperty" equals="0"/></At>
+	<At frame="590"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

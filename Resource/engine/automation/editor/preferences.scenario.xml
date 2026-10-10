@@ -11,7 +11,7 @@
 	<At frame="75"><EditorText value="Open editor preferences"/></At>
 	<At frame="90"><EditorKey key="Enter"/></At>
 	<At frame="105"><DevCommand line="panel.focus preferences"/></At>
-	<At frame="125"><Expect probe="Editor.PreferencesVisibleSections" equals="4"/></At>
+	<At frame="125"><Expect probe="Editor.PreferencesVisibleSections" equals="5"/></At>
 	<At frame="130"><EditorClick mark="preferences.search"/></At>
 	<At frame="140"><EditorText value="snap"/></At>
 	<At frame="155"><Expect probe="Editor.PreferencesVisibleSections" equals="1"/></At>

@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
@@ -163,6 +164,48 @@ namespace sw::editor
 
                 data._listSnapshot.clear();
                 data._bHasSnapshot = SW_FALSE;
+            }
+
+            /**
+             * @brief Keep Simulation Changes 로 적은 상태를 편집 씬의 같은 id 오브젝트에 입히고 되돌리기 한 번으로 기록합니다.
+             * @details 스냅샷을 되돌리고 편집 내역을 되찾은 뒤에 부른다 — 그래야 기록이 편집 내역에 들어가고, Ctrl+Z 가 플레이 전 값으로 돌린다.
+             */
+            static void applyKeptStates( PlaySessionData& data )
+            {
+                GameObjectManager* pObjects = editor::getActiveObjectManager();
+                if ( data._listKept.empty() || pObjects == nullptr )
+                {
+                    data._listKept.clear();
+                    return;
+                }
+                const bool bCompound = data._listKept.size() > 1;
+                if ( bCompound )
+                    EditorTransaction::beginTransaction( "Keep Simulation Changes" );
+                for ( const PlaySessionData::ObjectSnapshot& kept : data._listKept )
+                {
+                    GameObject* pObj = pObjects->findGameObjectByID( kept._identity._objectID );
+                    if ( pObj == nullptr )
+                    {
+                        SW_LOG_WARNING( "Keep Simulation Changes: '%#' does not exist after Stop (created during play?)", kept._name.c_str() );
+                        continue;
+                    }
+                    const ObjectSnapshot before = EditorTransaction::captureSnapshot( pObj );
+                    ObjectStateBatch     batch( ObjectIDSpace::Live );
+                    ObjectLoadContext    context{};
+                    context._pIdentity = &kept._identity;
+                    context._pBatch    = &batch;
+                    if ( ObjectStateSerializer::loadFromBinaryBuffer( pObj, kept._bytes.data(), kept._bytes.size(), context ) == 0 )
+                    {
+                        SW_LOG_WARNING( "Keep Simulation Changes: failed to apply the play state of '%#'", kept._name.c_str() );
+                        continue;
+                    }
+                    batch.finish();
+                    EditorTransaction::recordModify( pObj, before, EditorTransaction::captureSnapshot( pObj ), "Keep Simulation Changes" );
+                }
+                if ( bCompound )
+                    EditorTransaction::endTransaction();
+                SW_LOG_INFO( "Kept the play state of %# object(s).", static_cast<uint32>( data._listKept.size() ) );
+                data._listKept.clear();
             }
 
             /**
@@ -427,6 +470,7 @@ namespace sw::editor
         // 멈춤 → 일시정지는 일시정지 상태로 플레이를 시작한다(스냅샷 · 시작은 하고 씬은 틱하지 않는다).
         if ( previous == PlaySessionState::Stopped )
         {
+            pData->_listKept.clear();
             if ( pCommandStack != nullptr )
                 pCommandStack->parkHistory();
             captureSnapshot( *pData );
@@ -443,7 +487,29 @@ namespace sw::editor
             // 스냅샷이 오브젝트를 원래 id 로 되돌린 뒤라 맡긴 명령의 대상(id)이 다시 맞는다.
             if ( pCommandStack != nullptr )
                 pCommandStack->unparkHistory();
+            EditorPlaySessionInternal::applyKeptStates( *pData );
         }
+    }
+
+    bool EditorPlaySession::keepObjectState( PlaySessionData& data, const GameObject* pObject )
+    {
+        if ( data._state == PlaySessionState::Stopped || pObject == nullptr )
+            return false;
+        PlaySessionData::ObjectSnapshot entry;
+        entry._identity = ObjectStateSerializer::captureIdentity( pObject );
+        entry._name     = pObject->getName().c_str();
+        if ( ObjectStateSerializer::saveToBinaryBuffer( pObject, entry._bytes ) == false )
+            return false;
+        for ( PlaySessionData::ObjectSnapshot& kept : data._listKept )
+        {
+            if ( kept._identity._objectID == entry._identity._objectID )
+            {
+                kept = std::move( entry );
+                return true;
+            }
+        }
+        data._listKept.push_back( std::move( entry ) );
+        return true;
     }
 
     void EditorPlaySession::captureSnapshot( PlaySessionData& data )
