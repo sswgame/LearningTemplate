@@ -17,6 +17,7 @@
 
 namespace sw::editor
 {
+    // [doc:panel-draw]
     ParkLayoutPanel::ParkLayoutPanel()
         : IEditorPanel( false )
     {
@@ -29,6 +30,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kRefresh, "Reload" ) ) )
             bForce = true;
         EditorSelfTestMarks::note( "themepark.layout.reload" );
+        // [/doc:panel-draw]
         if ( preview.refresh( bForce ) && bForce )
             SW_LOG_INFO( "Park layout reloaded on request" );
         if ( preview.isLoaded() == false )
@@ -62,5 +64,7 @@ namespace sw::editor
         ImGui::EndTable();
     }
 
+    // [doc:panel-register]
     SW_EDITOR_PANEL( ParkLayoutPanel, "themepark.layout", EditorPanelCategory::Custom, 9000 );
+    // [/doc:panel-register]
 } // namespace sw::editor

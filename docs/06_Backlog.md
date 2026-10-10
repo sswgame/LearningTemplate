@@ -89,14 +89,18 @@
 
 ### 1-4. 에디터
 
-- **에디터 보강 — 계획은 [docs/plans/EditorPlus.md](plans/EditorPlus.md).** 다음 세션이 할 일이다(사용자 결정, 2026-10-07). 확장 지점(EditorModule SHARED · 확장 모듈),
-  환경설정 · 단축키 · 모듈 창, 인스펙터 다중 편집 · 콘텐츠 브라우저 역색인, 보기 모드 · 스크린샷 · RenderDoc · 타임라인 · assert 대화상자 · bugit · Test Runner,
-  커브 · 맵 검사 · 노드 그래프 틀 · 패키징, 아이콘(R3 · R4 · R5 · R9), 패널 점검의 부족한 점(N1 ~ N12)을 단위마다 "확인 = 에디터 시나리오" 와 함께 적었다.
-  옛 1-4 의 "에디터 · 개발 편의 기능" 가운데 C 확장 지점 · F 카탈로그 편집기 · G 프로파일링 · 캡처의 남은 것 · H 품질 · 작업 흐름, 그리고 설정 브라우저 패널은 그 문서로 옮겼다.
-  단위를 끝내면 계획 문서에서 지우고, 다 끝나면 이 항목과 계획 문서를 지운다(남은 로드맵 줄은 여기로).
+- **에디터 로드맵 — 미룬 영역 패널을 그 영역 옆에(에디터 보강에서 남김).** 엔진 영역 패널은 EditorModule, 기반 GameFramework 영역은 `GF_Editor_Base`(아직 없음 — 
+  `Source/GameFramework/Base/Editor/`), 키트 영역은 `GF_Editor_<키트>` 확장 모듈에 둔다. 체감 · 선행 순서로:
+  ① 프로젝트 설정 창 — 생성 메타데이터 `docs/Config/ConfigReference.json` 으로 `Config/` 와 팩 설정을 찾아 `EditorPropertyGrid` 로 고치고, `ConfigManager::reloadConfigFile` 로 다시 읽고,
+  기본값과 같은 값은 파일에서 지운다(언리얼 · 유니티 Project Settings). ② 물리 셰이프 시각화와 콜라이더 크기 손잡이(`SW_EDITOR_VISUALIZER`, 1-2 강체 물리 (3)).
+  ③ 내비메시 보기와 베이크 커맨드 `navigation.bake`(`GF_Editor_Base`, 1-2 내비메시 (4)). ④ 오디오 믹서 패널(버스 미터 · 음소거 · 솔로 · 볼륨, 1-6 오디오).
+  ⑤ GM 도구 패널(`GF_Editor_Admin` — `AdminClient` 로 조회 · 지급 · 제재 · 감사 열람). ⑥ 기믹 회로 그래프 편집 창(`EditorGraphDocumentPanel` 틀, 1-6 기믹).
+  ⑦ 카탈로그 편집기 — 카탈로그 계약 하나가 `ResourceDataSchemaTest` 의 종류 표를 대신하고, `CityCatalog.cpp` 의 하드코딩 개수를 포함해 25 곳에 흩어진 enum 이름 표를 모은다.
+  Data Table 의 게임 데이터 탭(지금 XML 글 상자)을 리플렉션 구조체 행의 표 편집으로 바꾸는 일도 여기다(언리얼 DataTable · DataAsset 편집 + Fix Up Redirectors).
+  ⑧ 지형 칠하기 도구 모드(1-3 환경). ⑨ 다중 월드 툴 창과 그 위의 애니메이션 · 리그 · 프리팹 · 머티리얼 미리보기 창(언리얼 FPreviewScene · Asset Editor Toolkit).
+  ⑩ UI 문서 디자이너(⑨ 뒤). 에디터에 이미 있는 것(전역 변수 표, 커맨드 팔레트, 핫 리로드, Undo, Play 와 Step, InputReplay, 기즈모, RenderTargetPanel, 프로파일러와 Tracy)은 다시 만들지 않는다.
 - **Hierarchy 형제 순서 끌어 바꾸기 · 정리용 폴더(에디터 보강 N2 에서 남김).** 루트 줄은 오브젝트 id 순이고(`EditorSceneCommands::collectRootsInOrder`) 씬 파일에 순서 칸이 없다.
   끌어 바꾸려면 씬 형식에 형제 순서를 적고(유니티 sibling index) 그 순서로 그려야 한다 — 형식을 바꾸니 데이터를 다시 쓴다. 폴더는 저장되지 않는 빈 오브젝트(언리얼 Outliner 폴더)로 같이.
-- **에디터 문서(`Source/Editor/README.md` 등)는 에디터 보강 뒤 새 문체로 다시 쓴다** — 5 차 문서 다시 쓰기에서 일부러 뺐다(보강하면서 패널 · 확장 지점이 바뀐다). 틀은 [문서 쓰기 지침](10_WritingDocs.md).
 - **UI 미리보기 패널의 남은 것(runtime-ui 8-5 뒤, `Editor/Panels/UIPreviewPanel`).** (1) 언어 고르기(의사 문화권 `qps-ploc` · `qps-plocm` 포함) — 문화권이 전역이라
   미리보기 화면에만 거는 길(화면별 `LocalizationManager` 출처)이 필요하다. (2) 고른 위젯의 PROPERTY 를 인스펙터로 고치고 `UIDocumentWriter` 로 저장(되돌리기 —
   `CommandStack`) — 지금은 이름 · 사각형만 보인다. (3) 미리보기 안 입력 흉내(마우스 · 탐색 방향). (4) 콘텐츠 브라우저에서 `*.ui.xml` 두 번 누르면 이 패널로 —

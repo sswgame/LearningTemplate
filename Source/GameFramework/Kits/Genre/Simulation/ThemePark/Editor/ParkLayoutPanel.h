@@ -11,6 +11,7 @@ namespace sw::editor
      * @class ParkLayoutPanel
      * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 돕니다.
      */
+    // [doc:panel-class]
     class ParkLayoutPanel final : public IEditorPanel
     {
     public:
@@ -20,4 +21,5 @@ namespace sw::editor
         bool        isToolPanel() const override { return true; }
         void        drawContent() override;
     };
+    // [/doc:panel-class]
 } // namespace sw::editor
