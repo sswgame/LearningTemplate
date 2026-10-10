@@ -251,6 +251,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.ReferenceCount` | 역색인에서 `gv_editorProbeAsset`(리소스 id)을 적은 텍스트 에셋 파일 수 |
 | `Editor.ReferenceIndexReady`, `Editor.ReferenceResultCount` | 참조 역색인이 다 만들어졌으면 1, 마지막 Find References 나 Show Dependencies 의 결과 줄 수 |
 | `Editor.OutputLogVisibleRows` | Output Log 가 지난 그리기에 보인 줄 수(거르기 · Collapse 뒤) |
+| `Editor.TileMapFlagCells`, `Editor.TileMapTool` | Tile Map Tool 이 고른 플래그 레이어의 켜진 칸 수(다른 레이어면 0), 칠하기 도구(0 Brush · 1 Rect · 2 Fill · 3 Picker) |
 | `Editor.SceneViewMode`, `Editor.GameViewMode` | 씬 뷰 툴바의 보기 모드, 주 출력(게임 뷰)의 보기 모드(0 Lit · 1 Unlit · 2 Wireframe · 3 Normals · 4 Depth · 5 Overdraw) |
 
 `EditorClick` 이 누르는 위젯 이름표에는 `hierarchy.create`, `hierarchy.filter`, `hierarchy.selectedRow`, `hierarchy.activeToggle`, `hierarchy.addComponent`,
@@ -260,6 +261,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 이름표가 없는 위젯을 누르려면 그 위젯 바로 뒤에 `EditorSelfTestMarks::note` 한 줄을 더합니다.
 Output Log 툴바는 `console.clear` · `console.collapse` · `console.level.info` · 검색 칸 `console.filter` 를, 도구 문서 패널(Material · Tile Map · Sprite Clip)의 열기 단추는
 `<material|tileMap|spriteClip>.open` · 그 팝업의 검색 칸 `<…>.open.search` · 줄 `<…>.open.<파일 이름>` 을 남깁니다.
+Tile Map Tool 은 도구 단추 `tileMap.tool.brush` · `tileMap.tool.rect` · `tileMap.tool.fill` · `tileMap.tool.picker`, `tileMap.erase`, 캔버스 `tileMap.canvas`(칸은 `anchor` 로)를 남깁니다.
 
 ## 확장하는 법
 

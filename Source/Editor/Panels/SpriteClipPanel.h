@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/EditorThumbnailCache.h"
 
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 
@@ -28,6 +29,8 @@ namespace sw::editor
         /** @brief 스프라이트 클립 편집 UI를 그립니다. */
         void               drawContent() override;
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 아틀라스 그림을 놓습니다. */
+        void shutdown( IRHIDevice* pRHIDevice ) override;
 
     private:
         string          captureDocumentText() const override;
@@ -37,6 +40,11 @@ namespace sw::editor
         void adoptClip( SpriteClipAsset&& clip );
         /** @brief 이름 붙은 애니메이션 구간 목록을 그립니다. */
         void drawAnimationSection();
+        /**
+         * @brief 아틀라스 그림을 열 · 행 칸으로 나눠 보이고, 누른 칸을 고른 프레임의 UV 로 넣습니다(Shift 는 새 프레임으로 더한다).
+         * @details 유니티 Sprite Editor 의 Slice by Cell Count 와 같다. 칸 계산은 `AtlasGridUtil`.
+         */
+        void drawAtlasPicker();
 
     private:
         // ------------------------------------------------------------------------------
@@ -64,5 +72,8 @@ namespace sw::editor
         int32                                 _selectedFrame;
         int32                                 _selectedKey;
         int32                                 _selectedAnimation;
+        int32                                 _sliceColumns; ///< 아틀라스를 나눌 열 수(칸 고르기)
+        int32                                 _sliceRows;    ///< 아틀라스를 나눌 행 수
+        EditorThumbnailCache                  _atlasThumbnail;
     };
 } // namespace sw::editor

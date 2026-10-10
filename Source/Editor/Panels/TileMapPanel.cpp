@@ -14,15 +14,61 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/TileMapPaintUtil.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/AutomationProbe.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include <imgui.h>
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct TileMapPanelInternal
+        {
+            /** @brief 확대 1 의 칸 한 변(96 DPI px)입니다. */
+            static constexpr float32 kBaseCellSize = 18.0f;
+            /** @brief 확대 범위입니다. */
+            static constexpr float32 kMinZoom = 0.25f;
+            static constexpr float32 kMaxZoom = 4.0f;
+            /** @brief 캔버스 왼쪽 위와 격자 사이의 처음 여백(px)입니다. */
+            static constexpr float32 kCanvasMargin = 4.0f;
+
+            [[nodiscard]] static bool readFlagCells( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getPanelManager().findPanel( "tile_map" ) );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->countSelectedFlagCells() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readPaintTool( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const TileMapPanel* pPanel = static_cast<const TileMapPanel*>( pContext->getPanelManager().findPanel( "tile_map" ) );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getPaintToolIndex() );
+                return true;
+            }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
     SW_LOG_CALLER( "TileMapPanel" );
     SW_EDITOR_PANEL( TileMapPanel, "tile_map", EditorPanelCategory::Tool, 1500 );
+    SW_AUTOMATION_PROBE( editorTileMapFlagCells, "Editor.TileMapFlagCells", "Cells set in the Tile Map Tool's selected flag layer (0 on other layers)",
+                         &TileMapPanelInternal::readFlagCells );
+    SW_AUTOMATION_PROBE( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker", &TileMapPanelInternal::readPaintTool );
 
     TileMapPanel::TileMapPanel()
         : EditorDocumentPanel{ EditorAssetType::TileMap, false }
@@ -40,6 +86,10 @@ namespace sw::editor
         , _loadedTileSet{}
         , _listBrushIndex{}
         , _listStrokeCell{}
+        , _listCellValue{}
+        , _atlasThumbnail{}
+        , _canvasPan{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin }
+        , _canvasZoom{ 1.0f }
         , _brushIndex{ 0 }
         , _arrEdgeTx{ 1, 1, 1, 1 }
         , _arrEdgeTy{ 1, 1, 1, 1 }
@@ -51,10 +101,13 @@ namespace sw::editor
         , _warpTx{ 1 }
         , _warpTy{ 1 }
         , _lastPaintCell{}
+        , _rectStartCell{}
         , _layer{ PaintLayer::Flag }
         , _flagLayer{ TileFlagLayer::Walkable }
+        , _tool{ PaintTool::Brush }
         , _bErase{ false }
         , _bStrokeActive{ false }
+        , _bRectActive{ false }
     {
         const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
         if ( editorToolDefaults._defaultMap.empty() == false )
@@ -71,20 +124,121 @@ namespace sw::editor
             _pathBuffer = getLoadedAssetPath().c_str();
         ensureDocumentLoaded();
         drawDocumentOpenBar( "tileMap" );
+        _atlasThumbnail.update();
 
-        drawTileMapFileControls();
+        // 왼쪽은 파일 · 레이어 · 팔레트, 오른쪽은 캔버스다(유니티 Tile Palette 와 씬 뷰를 한 창에).
+        const float32 statusHeight = ImGui::GetFrameHeightWithSpacing();
+        const float32 sideWidth    = 300.0f * EditorThemeUtil::getDpiScale();
+        if ( ImGui::BeginChild( "##tileMapSide", ImVec2( sideWidth, -statusHeight ), ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+        {
+            drawTileMapFileControls();
+            ImGui::Separator();
+            drawLayerControls();
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        if ( ImGui::BeginChild( "##tileMapCanvasArea", ImVec2( 0.0f, -statusHeight ) ) )
+        {
+            drawToolBar();
+            drawCanvas();
+        }
+        ImGui::EndChild();
+
+        EditorWidgets::drawPanelStatus( _status.c_str() );
+    }
+
+    void TileMapPanel::drawToolBar()
+    {
+        struct ToolButton
+        {
+            const utf8* _pLabel;
+            const utf8* _pMark;
+            const utf8* _pTooltip;
+            PaintTool   _tool;
+        };
+        static constexpr ToolButton kArrToolButton[] = {
+            { "Brush",  "tileMap.tool.brush",                     "누르고 끄는 칸마다 칠합니다 (B)",  PaintTool::Brush},
+            {  "Rect",   "tileMap.tool.rect",               "눌러 끈 사각형을 놓을 때 칠합니다 (U)",   PaintTool::Rect},
+            {  "Fill",   "tileMap.tool.fill", "누른 칸과 같은 값으로 이어진 칸을 모두 칠합니다 (G)",   PaintTool::Fill},
+            {"Picker", "tileMap.tool.picker",           "누른 칸의 값을 칠할 값으로 가져옵니다 (I)", PaintTool::Picker},
+        };
+        for ( const ToolButton& button : kArrToolButton )
+        {
+            if ( ImGui::RadioButton( button._pLabel, _tool == button._tool ) )
+                _tool = button._tool;
+            EditorSelfTestMarks::note( button._pMark );
+            EditorWidgets::drawTooltip( button._pTooltip );
+            ImGui::SameLine();
+        }
         ImGui::Checkbox( "Erase", &_bErase );
-        ImGui::Separator();
+        EditorSelfTestMarks::note( "tileMap.erase" );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Reset View" ) )
+        {
+            _canvasPan  = float2{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin };
+            _canvasZoom = 1.0f;
+        }
+        EditorWidgets::drawTooltip( "확대와 이동을 처음으로 되돌립니다 (휠: 확대, 가운데 · 오른쪽 끌기: 이동)" );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%dx%d  %.0f%%", _map._width, _map._height, static_cast<float64>( _canvasZoom * 100.0f ) );
 
-        drawLayerControls();
-        ImGui::Text( "Grid %dx%d - click to paint", _map._width, _map._height );
+        // 유니티 Tile Palette 의 단축키 — 캔버스 칸에 포커스가 있고 글을 치는 중이 아닐 때만.
+        if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
+        {
+            if ( ImGui::IsKeyPressed( ImGuiKey_B, false ) )
+                _tool = PaintTool::Brush;
+            if ( ImGui::IsKeyPressed( ImGuiKey_U, false ) )
+                _tool = PaintTool::Rect;
+            if ( ImGui::IsKeyPressed( ImGuiKey_G, false ) )
+                _tool = PaintTool::Fill;
+            if ( ImGui::IsKeyPressed( ImGuiKey_I, false ) )
+                _tool = PaintTool::Picker;
+        }
+    }
 
-        constexpr float32 cell   = 18.0f;
-        ImDrawList*       pDl    = ImGui::GetWindowDrawList();
-        const ImVec2      origin = ImGui::GetCursorScreenPos();
+    void TileMapPanel::drawCanvas()
+    {
+        const ImVec2 canvasMin  = ImGui::GetCursorScreenPos();
+        ImVec2       canvasSize = ImGui::GetContentRegionAvail();
+        canvasSize.x            = MathUtil::max( canvasSize.x, 64.0f );
+        canvasSize.y            = MathUtil::max( canvasSize.y, 64.0f );
+        ImGui::InvisibleButton( "##tilegrid", canvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle | ImGuiButtonFlags_MouseButtonRight );
+        EditorSelfTestMarks::note( "tileMap.canvas" );
+        const bool bHovered = ImGui::IsItemHovered();
+        const bool bActive  = ImGui::IsItemActive();
 
+        // 휠은 커서 아래 자리를 붙든 채 확대하고, 가운데 · 오른쪽 끌기는 이동한다(유니티 씬 뷰 2D).
+        const ImGuiIO& io = ImGui::GetIO();
+        if ( bHovered && io.MouseWheel != 0.0f )
+        {
+            const float32 oldZoom = _canvasZoom;
+            _canvasZoom           = MathUtil::clamp( _canvasZoom * ( 1.0f + 0.1f * io.MouseWheel ), TileMapPanelInternal::kMinZoom, TileMapPanelInternal::kMaxZoom );
+            const float32 mouseX  = io.MousePos.x - canvasMin.x;
+            const float32 mouseY  = io.MousePos.y - canvasMin.y;
+            const float32 ratio   = _canvasZoom / oldZoom;
+            _canvasPan._x         = mouseX - ( mouseX - _canvasPan._x ) * ratio;
+            _canvasPan._y         = mouseY - ( mouseY - _canvasPan._y ) * ratio;
+        }
+        if ( bActive && ( ImGui::IsMouseDragging( ImGuiMouseButton_Middle, 0.0f ) || ImGui::IsMouseDragging( ImGuiMouseButton_Right, 0.0f ) ) )
+        {
+            _canvasPan._x += io.MouseDelta.x;
+            _canvasPan._y += io.MouseDelta.y;
+        }
+
+        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDpiScale() * _canvasZoom;
+        const ImVec2  origin( canvasMin.x + _canvasPan._x, canvasMin.y + _canvasPan._y );
+        const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
+        ImDrawList*   pDl = ImGui::GetWindowDrawList();
+        pDl->PushClipRect( canvasMin, canvasMax, true );
+        pDl->AddRectFilled( canvasMin, canvasMax, IM_COL32( 28, 28, 32, 255 ) );
+
+        void* pAtlasTexture{ nullptr };
         if ( _layer == PaintLayer::Tile )
+        {
             (void)_map.mapTileCells( _tileSet, _listBrushIndex ); // 모르는 브러시는 빈 칸으로 보인다 — 읽을 때 이미 알렸다
+            if ( _tileSet.getAtlasPath().empty() == false )
+                pAtlasTexture = _atlasThumbnail.findTexture( _tileSet.getAtlasPath() );
+        }
 
         unordered_set<uint64> uniqueWarpCells;
         if ( _layer == PaintLayer::Warp )
@@ -119,7 +273,7 @@ namespace sw::editor
                     }
                     case PaintLayer::Tile:
                     {
-                        break; // 아래에서 칸마다 그린다(브러시 색 + 규칙이 고른 칸 번호)
+                        break; // 아래에서 칸마다 그린다(아틀라스 그림, 없으면 브러시 색 + 규칙이 고른 칸 번호)
                     }
                     case PaintLayer::Flag:
                     {
@@ -130,35 +284,211 @@ namespace sw::editor
                     }
                 }
 
-                const float32 fx = static_cast<float32>( tileX );
-                const float32 fy = static_cast<float32>( tileY );
-                const ImVec2  p0( origin.x + fx * cell, origin.y + fy * cell );
-                const ImVec2  p1( p0.x + cell - 1.0f, p0.y + cell - 1.0f );
+                const ImVec2 p0( origin.x + static_cast<float32>( tileX ) * cell, origin.y + static_cast<float32>( tileY ) * cell );
+                const ImVec2 p1( p0.x + cell - 1.0f, p0.y + cell - 1.0f );
                 pDl->AddRectFilled( p0, p1, color );
                 if ( _layer == PaintLayer::Tile )
-                    drawTileLayerCell( pDl, p0, p1, tileX, tileY );
+                    drawTileLayerCell( pDl, p0, p1, tileX, tileY, pAtlasTexture );
                 pDl->AddRect( p0, p1, IM_COL32( 20, 20, 24, 255 ) );
             }
         }
 
-        ImGui::InvisibleButton( "##tilegrid",
-                                ImVec2( static_cast<float32>( _map._width ) * cell, static_cast<float32>( _map._height ) * cell ) );
-        const bool bPainting = ImGui::IsItemHovered() && ImGui::IsMouseDown( ImGuiMouseButton_Left );
-        if ( bPainting )
+        // 브러시 미리보기 — 커서 아래 칸, Rect 도구로 끄는 중이면 그 사각형(지우기면 빨강).
+        const int2  hoverCell    = TileMapPaintUtil::findCellAt( io.MousePos.x - origin.x, io.MousePos.y - origin.y, cell );
+        const ImU32 previewColor = _bErase ? IM_COL32( 255, 90, 90, 255 ) : IM_COL32( 255, 255, 255, 255 );
+        if ( _bRectActive )
         {
-            const ImVec2 mouse = ImGui::GetMousePos();
-            const int2   cellNow{ static_cast<int32>( ( mouse.x - origin.x ) / cell ), static_cast<int32>( ( mouse.y - origin.y ) / cell ) };
-            // 한 프레임에 마우스가 여러 칸을 지나가도 끊기지 않게 지난 프레임에 칠한 칸에서 이번 칸까지 선분으로 칠한다.
-            TileMapPaintUtil::collectLineCells( _bStrokeActive ? _lastPaintCell : cellNow, cellNow, _listStrokeCell );
-            for ( const int2& strokeCell : _listStrokeCell )
-            {
-                paintCell( strokeCell._x, strokeCell._y );
-            }
-            _lastPaintCell = cellNow;
+            const float32 minX = static_cast<float32>( MathUtil::min( _rectStartCell._x, hoverCell._x ) );
+            const float32 minY = static_cast<float32>( MathUtil::min( _rectStartCell._y, hoverCell._y ) );
+            const float32 maxX = static_cast<float32>( MathUtil::max( _rectStartCell._x, hoverCell._x ) + 1 );
+            const float32 maxY = static_cast<float32>( MathUtil::max( _rectStartCell._y, hoverCell._y ) + 1 );
+            pDl->AddRect( ImVec2( origin.x + minX * cell, origin.y + minY * cell ), ImVec2( origin.x + maxX * cell, origin.y + maxY * cell ), previewColor, 0.0f, 0,
+                          2.0f );
         }
-        _bStrokeActive = bPainting;
+        else if ( bHovered && isInBounds( hoverCell._x, hoverCell._y ) )
+        {
+            const ImVec2 p0( origin.x + static_cast<float32>( hoverCell._x ) * cell, origin.y + static_cast<float32>( hoverCell._y ) * cell );
+            pDl->AddRect( p0, ImVec2( p0.x + cell, p0.y + cell ), previewColor, 0.0f, 0, 2.0f );
+        }
+        pDl->PopClipRect();
 
-        EditorWidgets::drawPanelStatus( _status.c_str() );
+        applyToolInput( hoverCell, bHovered );
+    }
+
+    void TileMapPanel::applyToolInput( const int2& hoverCell, bool bHovered )
+    {
+        const bool bClicked = bHovered && ImGui::IsMouseClicked( ImGuiMouseButton_Left );
+        switch ( _tool )
+        {
+            case PaintTool::Brush:
+            {
+                const bool bPainting = ImGui::IsItemActive() && ImGui::IsMouseDown( ImGuiMouseButton_Left );
+                if ( bPainting )
+                {
+                    // 한 프레임에 마우스가 여러 칸을 지나가도 끊기지 않게 지난 프레임에 칠한 칸에서 이번 칸까지 선분으로 칠한다.
+                    TileMapPaintUtil::collectLineCells( _bStrokeActive ? _lastPaintCell : hoverCell, hoverCell, _listStrokeCell );
+                    for ( const int2& strokeCell : _listStrokeCell )
+                    {
+                        paintCell( strokeCell._x, strokeCell._y );
+                    }
+                    _lastPaintCell = hoverCell;
+                }
+                _bStrokeActive = bPainting;
+                break;
+            }
+            case PaintTool::Rect:
+            {
+                if ( bClicked )
+                {
+                    _rectStartCell = hoverCell;
+                    _bRectActive   = true;
+                }
+                if ( _bRectActive && ImGui::IsMouseDown( ImGuiMouseButton_Left ) == false )
+                {
+                    _bRectActive = false;
+                    TileMapPaintUtil::collectRectCells( _rectStartCell, hoverCell, _map._width, _map._height, _listStrokeCell );
+                    for ( const int2& rectCell : _listStrokeCell )
+                    {
+                        paintCell( rectCell._x, rectCell._y );
+                    }
+                }
+                break;
+            }
+            case PaintTool::Fill:
+            {
+                if ( bClicked && isInBounds( hoverCell._x, hoverCell._y ) )
+                {
+                    collectCellValues( _listCellValue );
+                    TileMapPaintUtil::collectFloodFillCells( _listCellValue, _map._width, _map._height, hoverCell, _listStrokeCell );
+                    for ( const int2& fillCell : _listStrokeCell )
+                    {
+                        paintCell( fillCell._x, fillCell._y );
+                    }
+                }
+                break;
+            }
+            case PaintTool::Picker:
+            {
+                if ( bClicked && isInBounds( hoverCell._x, hoverCell._y ) )
+                {
+                    pickCell( hoverCell._x, hoverCell._y );
+                    _tool = PaintTool::Brush; // 유니티 Tile Palette 처럼 집은 뒤에는 칠한다
+                }
+                break;
+            }
+        }
+    }
+
+    void TileMapPanel::collectCellValues( vector<uint64>& outListValue )
+    {
+        const size_t cellCount = static_cast<size_t>( _map._width ) * static_cast<size_t>( _map._height );
+        outListValue.assign( cellCount, 0 );
+        switch ( _layer )
+        {
+            case PaintLayer::Visual:
+            {
+                for ( size_t cellIndex = 0; cellIndex < cellCount; ++cellIndex )
+                {
+                    const TileMapXMLData::Visual& visual = _map._listVisual[cellIndex];
+                    outListValue[cellIndex]              = ( static_cast<uint64>( visual._height ) << 32 ) | ( static_cast<uint64>( visual._atlasID ) << 24 ) |
+                                              ( static_cast<uint64>( visual._tintR ) << 16 ) | ( static_cast<uint64>( visual._tintG ) << 8 ) | visual._tintB;
+                }
+                break;
+            }
+            case PaintLayer::Warp:
+            {
+                for ( const TileMapXMLData::Warp& warp : _map._listWarp )
+                {
+                    if ( isInBounds( warp._tileX, warp._tileY ) )
+                        outListValue[indexOf( warp._tileX, warp._tileY )] = 1;
+                }
+                break;
+            }
+            case PaintLayer::Tile:
+            {
+                (void)_map.mapTileCells( _tileSet, _listBrushIndex ); // 모르는 브러시는 빈 칸(0)이다
+                for ( size_t cellIndex = 0; cellIndex < cellCount && cellIndex < _listBrushIndex.size(); ++cellIndex )
+                {
+                    outListValue[cellIndex] = _listBrushIndex[cellIndex];
+                }
+                break;
+            }
+            case PaintLayer::Flag:
+            {
+                const auto& listFlag = _map.getFlagLayer( _flagLayer );
+                for ( size_t cellIndex = 0; cellIndex < cellCount; ++cellIndex )
+                {
+                    outListValue[cellIndex] = listFlag[cellIndex];
+                }
+                break;
+            }
+        }
+    }
+
+    void TileMapPanel::pickCell( int32 x, int32 y )
+    {
+        const size_t tileIndex = indexOf( x, y );
+        switch ( _layer )
+        {
+            case PaintLayer::Visual:
+            {
+                const TileMapXMLData::Visual& visual = _map._listVisual[tileIndex];
+                _paintHeight                         = visual._height;
+                _atlasID                             = visual._atlasID;
+                _arrTint[0]                          = static_cast<float32>( visual._tintR ) / 255.0f;
+                _arrTint[1]                          = static_cast<float32>( visual._tintG ) / 255.0f;
+                _arrTint[2]                          = static_cast<float32>( visual._tintB ) / 255.0f;
+                _bErase                              = false;
+                break;
+            }
+            case PaintLayer::Warp:
+            {
+                _bErase = true;
+                for ( const TileMapXMLData::Warp& warp : _map._listWarp )
+                {
+                    if ( warp._tileX != x || warp._tileY != y )
+                        continue;
+                    _warpTarget = warp._targetMap.c_str();
+                    _warpTx     = warp._targetTileX;
+                    _warpTy     = warp._targetTileY;
+                    _bErase     = false;
+                    break;
+                }
+                break;
+            }
+            case PaintLayer::Tile:
+            {
+                const string_view brushName = _map.getTileBrushName( x, y );
+                const int32       found     = brushName.empty() ? -1 : _tileSet.findBrush( hashed_string( string( brushName ).c_str() ) );
+                _bErase                     = found < 0;
+                if ( found >= 0 )
+                    _brushIndex = found;
+                break;
+            }
+            case PaintLayer::Flag:
+            {
+                _bErase = _map.getFlagLayer( _flagLayer )[tileIndex] == 0;
+                break;
+            }
+        }
+    }
+
+    uint32 TileMapPanel::countSelectedFlagCells() const
+    {
+        if ( _layer != PaintLayer::Flag )
+            return 0;
+        uint32 count{ 0 };
+        for ( const auto value : _map.getFlagLayer( _flagLayer ) )
+        {
+            if ( value != 0 )
+                ++count;
+        }
+        return count;
+    }
+
+    void TileMapPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    {
+        _atlasThumbnail.clear();
     }
 
     void TileMapPanel::drawTileMapFileControls()
@@ -240,16 +570,7 @@ namespace sw::editor
                 refreshTileSet();
                 notifyDocumentEdited( "Set Tile Set", "tilemap-tileset" );
             }
-            const vector<TileBrush>& listBrush = _tileSet.getBrushes();
-            if ( listBrush.empty() )
-                ImGui::TextDisabled( "No tile set loaded" );
-            for ( int32 brushIndex = 0; brushIndex < static_cast<int32>( listBrush.size() ); ++brushIndex )
-            {
-                const TileBrush& brush = listBrush[static_cast<size_t>( brushIndex )];
-                const string     label = string( brush._name.c_str() ) + ( brush.isRuleTile() ? " (rule)" : "" ) + ( brush._defaultVisual.isAnimated() ? " (animated)" : "" );
-                if ( ImGui::RadioButton( label.c_str(), _brushIndex == brushIndex ) )
-                    _brushIndex = brushIndex;
-            }
+            drawTilePalette();
         }
 
         ImGui::Separator();
@@ -354,11 +675,48 @@ namespace sw::editor
             _status = string( "Tile set could not be read: " ) + _map._tileSetPath;
     }
 
-    void TileMapPanel::drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y ) const
+    void TileMapPanel::drawTilePalette()
+    {
+        const vector<TileBrush>& listBrush = _tileSet.getBrushes();
+        if ( listBrush.empty() )
+        {
+            ImGui::TextDisabled( "No tile set loaded" );
+            return;
+        }
+        // 브러시마다 아틀라스 그림의 그 칸을 보인다(유니티 Tile Palette). 그림을 아직 못 읽었으면 이름만.
+        void*         pAtlasTexture = _tileSet.getAtlasPath().empty() ? nullptr : _atlasThumbnail.findTexture( _tileSet.getAtlasPath() );
+        const float32 swatchSide    = 32.0f * EditorThemeUtil::getDpiScale();
+        for ( int32 brushIndex = 0; brushIndex < static_cast<int32>( listBrush.size() ); ++brushIndex )
+        {
+            const TileBrush& brush = listBrush[static_cast<size_t>( brushIndex )];
+            ImGui::PushID( brushIndex );
+            if ( pAtlasTexture != nullptr && brush._defaultVisual._listFrameCell.empty() == false )
+            {
+                const float4 uvRect = _tileSet.computeCellUvRect( brush._defaultVisual._listFrameCell.front() );
+                ImGui::Image( reinterpret_cast<ImTextureID>( pAtlasTexture ), ImVec2( swatchSide, swatchSide ), ImVec2( uvRect._x, uvRect._y ),
+                              ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
+                ImGui::SameLine();
+            }
+            const string label = string( brush._name.c_str() ) + ( brush.isRuleTile() ? " (rule)" : "" ) + ( brush._defaultVisual.isAnimated() ? " (animated)" : "" );
+            if ( ImGui::RadioButton( label.c_str(), _brushIndex == brushIndex ) )
+                _brushIndex = brushIndex;
+            ImGui::PopID();
+        }
+    }
+
+    void TileMapPanel::drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y, void* pAtlasTexture ) const
     {
         const TileVisual* pVisual = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
         if ( pVisual == nullptr )
             return;
+        if ( pAtlasTexture != nullptr )
+        {
+            // 규칙이 고른 칸의 그림 — 이웃을 칠하면 그림이 따라 바뀌는 것이 규칙 타일이 일하는 모습이다.
+            const float4 uvRect = _tileSet.computeCellUvRect( pVisual->computeCellAt( 0.0f ) );
+            pDrawList->AddImage( reinterpret_cast<ImTextureID>( pAtlasTexture ), cellMin, cellMax, ImVec2( uvRect._x, uvRect._y ),
+                                 ImVec2( uvRect._x + uvRect._z, uvRect._y + uvRect._w ) );
+            return;
+        }
         // 브러시마다 다른 색(이름 해시) + 규칙이 고른 아틀라스 칸 번호 — 이웃을 칠하면 번호가 바뀌는 것이 규칙 타일이 일하는 모습이다.
         const uint16 brushValue = _listBrushIndex[indexOf( x, y )];
         const uint32 hash       = static_cast<uint32>( _tileSet.getBrushes()[brushValue - 1u]._name.getHash() );

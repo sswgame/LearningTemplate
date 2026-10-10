@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 타일맵 도구(N11): 새 8 x 8 맵은 Walkable 플래그가 모두 켜져 있다. Erase 를 켠 Fill 로 한 번 누르면 64 칸이 모두 꺼지고,
+  Brush 로 왼쪽 위 칸 하나를 칠한 뒤 Fill 로 빈 칸 하나를 누르면 이어진 빈 칸 63 개가 한 번에 칠해져 다시 64 칸이다.
+  Picker 로 칸을 집으면 Brush 로 돌아간다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/tilemaptools.scenario.xml -dx12
+-->
+<Scenario name="editor.tilemaptools" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="45"><DevCommand line="panel.focus tile_map"/></At>
+	<At frame="70"><Expect probe="Editor.TileMapFlagCells" equals="64"/></At>
+	<At frame="75"><EditorClick mark="tileMap.tool.fill"/></At>
+	<At frame="85"><EditorClick mark="tileMap.erase"/></At>
+	<At frame="95"><EditorClick mark="tileMap.canvas" anchor="0.12,0.12"/></At>
+	<At frame="110"><Expect probe="Editor.TileMapFlagCells" equals="0"/></At>
+	<At frame="115"><EditorClick mark="tileMap.erase"/></At>
+	<At frame="125"><EditorClick mark="tileMap.tool.brush"/></At>
+	<!-- 캔버스 왼쪽 위 여백 4 px 뒤가 칸 (0,0) 이다 -->
+	<At frame="135"><EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/></At>
+	<At frame="150"><Expect probe="Editor.TileMapFlagCells" equals="1"/></At>
+	<At frame="155"><EditorClick mark="tileMap.tool.fill"/></At>
+	<At frame="165"><EditorClick mark="tileMap.canvas" anchor="0.12,0.12"/></At>
+	<At frame="180"><Expect probe="Editor.TileMapFlagCells" equals="64"/></At>
+	<At frame="185"><EditorClick mark="tileMap.tool.picker"/></At>
+	<At frame="195"><Expect probe="Editor.TileMapTool" equals="3"/></At>
+	<At frame="200"><EditorClick mark="tileMap.canvas" anchor="0.02,0.02"/></At>
+	<At frame="215"><Expect probe="Editor.TileMapTool" equals="0"/></At>
+	<At frame="220"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

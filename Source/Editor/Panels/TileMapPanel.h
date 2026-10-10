@@ -11,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorDocumentPanel.h"
+#include "Editor/Common/GUI/EditorThumbnailCache.h"
 
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
@@ -42,6 +43,16 @@ namespace sw::editor
         /** @brief 레이어 선택과 엣지 워프 프리셋을 그립니다. */
         void               drawLayerControls();
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 썸네일(아틀라스 그림)을 놓습니다. */
+        void shutdown( IRHIDevice* pRHIDevice ) override;
+        /** @brief 지금 고른 플래그 레이어에서 켜진 칸 수입니다. 플래그 레이어가 아니면 0 입니다(탐침 `Editor.TileMapFlagCells`). */
+        uint32 countSelectedFlagCells() const;
+        /** @brief 지금 도구 번호입니다(0 Brush · 1 Rect · 2 Fill · 3 Picker — 탐침 `Editor.TileMapTool`). */
+        uint32 getPaintToolIndex() const { return static_cast<uint32>( _tool ); }
+
+    protected:
+        /** @brief 왼쪽 도구 칸과 오른쪽 캔버스가 나란히 들어갈 크기로 엽니다. */
+        float2 getInitialPanelSize() const override { return float2{ 980.0f, 620.0f }; }
 
     private:
         string         captureDocumentText() const override;
@@ -64,6 +75,15 @@ namespace sw::editor
         /** @brief 레이어 목록에서 플래그 레이어보다 앞에 오는 항목 수(Visual · Warp · Tile)입니다. */
         static constexpr int32 kFixedPaintLayerCount = 3;
 
+        /** @brief 캔버스를 누를 때 하는 일입니다(유니티 Tile Palette 의 도구). */
+        enum class PaintTool : uint8
+        {
+            Brush = 0, ///< 누르고 끄는 칸마다 칠한다
+            Rect,      ///< 눌러 끈 사각형을 놓을 때 칠한다
+            Fill,      ///< 누른 칸과 같은 값으로 이어진 칸을 모두 칠한다
+            Picker     ///< 누른 칸의 값을 칠할 값으로 가져오고 Brush 로 돌아간다
+        };
+
         // ------------------------------------------------------------------------------
         // 3) XML 로드/저장 · 페인트
         // ------------------------------------------------------------------------------
@@ -85,8 +105,20 @@ namespace sw::editor
         void selectPaintLayer( int32 layerIndex );
         /** @brief 맵이 가리키는 타일셋을 읽습니다(이미 그 경로를 읽었으면 그대로). 못 읽으면 상태 줄에 알립니다. */
         void refreshTileSet();
-        /** @brief Tile 레이어 칸을 그립니다 — 브러시 색과 규칙이 고른 아틀라스 칸 번호. */
-        void drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y ) const;
+        /** @brief Tile 레이어 칸을 그립니다 — 아틀라스 그림의 그 칸(그림이 없으면 브러시 색과 규칙이 고른 칸 번호). */
+        void drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y, void* pAtlasTexture ) const;
+        /** @brief 도구 단추 줄(Brush · Rect · Fill · Picker · Erase · 보기 되돌리기)을 그립니다. */
+        void drawToolBar();
+        /** @brief 칠하는 캔버스(확대 · 이동 · 미리보기 · 도구)를 그립니다. */
+        void drawCanvas();
+        /** @brief 캔버스에서 왼쪽 단추로 한 일을 지금 도구로 처리합니다. */
+        void applyToolInput( const int2& hoverCell, bool bHovered );
+        /** @brief 지금 레이어에서 칸마다 비교할 값을 채웁니다(채우기 도구). */
+        void collectCellValues( vector<uint64>& outListValue );
+        /** @brief 칸의 값을 칠할 값으로 가져옵니다(스포이트). */
+        void pickCell( int32 x, int32 y );
+        /** @brief 타일셋 브러시 목록(아틀라스 그림 + 이름)을 그립니다. */
+        void drawTilePalette();
         /** @brief 좌표가 맵 범위 안인지 여부를 반환합니다. */
         bool isInBounds( int32 x, int32 y ) const;
         /** @brief (x, y)의 1차원 인덱스를 반환합니다. */
@@ -107,6 +139,10 @@ namespace sw::editor
         string                                _loadedTileSet;  ///< `_tileSet` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않는다)
         vector<uint16>                        _listBrushIndex; ///< 그릴 때마다 맵에서 옮긴 칸마다 브러시 번호 + 1
         vector<int2>                          _listStrokeCell; ///< 이번 프레임에 칠할 칸(지난 칸 → 이번 칸 선분). 멤버라 프레임마다 할당하지 않는다
+        vector<uint64>                        _listCellValue;  ///< 채우기 도구가 비교할 칸 값(멤버라 누를 때마다 할당하지 않는다)
+        EditorThumbnailCache                  _atlasThumbnail; ///< 타일셋 아틀라스 그림
+        float2                                _canvasPan;      ///< 캔버스 원점에서 격자 왼쪽 위까지(px)
+        float32                               _canvasZoom;     ///< 칸 크기 배율(휠로 바꾼다)
         int32                                 _brushIndex;     ///< 칠할 브러시(타일셋 순번)
         int32                                 _arrEdgeTx[4];
         int32                                 _arrEdgeTy[4];
@@ -118,9 +154,12 @@ namespace sw::editor
         int32                                 _warpTx;
         int32                                 _warpTy;
         int2                                  _lastPaintCell; ///< 지난 프레임에 칠한 칸(`_bStrokeActive` 일 때만 뜻이 있다)
+        int2                                  _rectStartCell; ///< Rect 도구로 누른 칸(`_bRectActive` 일 때만 뜻이 있다)
         PaintLayer                            _layer;
         TileFlagLayer                         _flagLayer;
+        PaintTool                             _tool;
         bool                                  _bErase;
         bool                                  _bStrokeActive; ///< 지난 프레임에 칠하고 있었다 — 이번 프레임은 `_lastPaintCell` 에서 잇는다
+        bool                                  _bRectActive;   ///< Rect 도구로 누른 채 끌고 있다
     };
 } // namespace sw::editor

@@ -4,14 +4,17 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/Panels/TileMapPaintUtil.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -33,6 +36,9 @@ namespace sw::editor
         , _selectedFrame{ -1 }
         , _selectedKey{ -1 }
         , _selectedAnimation{ -1 }
+        , _sliceColumns{ 4 }
+        , _sliceRows{ 4 }
+        , _atlasThumbnail{}
     {
         const string& atlas = editor::getEditorToolDefaults()._spriteAtlas;
         if ( atlas.empty() == false )
@@ -45,6 +51,7 @@ namespace sw::editor
         updateFocusedDocument();
         ensureDocumentLoaded();
         drawDocumentOpenBar( "spriteClip" );
+        _atlasThumbnail.update();
 
         ImGui::InputText( "Atlas", _atlasPath.data(), _atlasPath.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -109,6 +116,8 @@ namespace sw::editor
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sprite Frame", "sprite-clip-frame" );
         }
+
+        drawAtlasPicker();
 
         drawAnimationSection();
 
@@ -188,6 +197,71 @@ namespace sw::editor
         _selectedKey       = _listKey.empty() ? -1 : 0;
         _selectedAnimation = _listAnimation.empty() ? -1 : 0;
         _animationName     = ( _selectedAnimation >= 0 ) ? _listAnimation[0]._name.c_str() : "";
+    }
+
+    void SpriteClipPanel::drawAtlasPicker()
+    {
+        ImGui::Separator();
+        ImGui::TextUnformatted( "Atlas cells (click: selected frame, Shift+click: new frame)" );
+        ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputInt( "Columns", &_sliceColumns );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( 90.0f * EditorThemeUtil::getDpiScale() );
+        ImGui::InputInt( "Rows", &_sliceRows );
+        _sliceColumns = MathUtil::clamp( _sliceColumns, 1, 64 );
+        _sliceRows    = MathUtil::clamp( _sliceRows, 1, 64 );
+
+        void* pTexture = _atlasPath.empty() ? nullptr : _atlasThumbnail.findTexture( _atlasPath.c_str() );
+        if ( pTexture == nullptr )
+        {
+            ImGui::TextDisabled( _atlasPath.empty() ? "No atlas" : "Loading atlas..." );
+            return;
+        }
+
+        const float32 side     = 256.0f * EditorThemeUtil::getDpiScale();
+        const ImVec2  imageMin = ImGui::GetCursorScreenPos();
+        ImGui::Image( reinterpret_cast<ImTextureID>( pTexture ), ImVec2( side, side ) );
+        const bool bHovered = ImGui::IsItemHovered();
+
+        // 칸 격자와 고른 프레임 사각형을 그림 위에 그린다.
+        ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+        for ( int32 column = 1; column < _sliceColumns; ++column )
+        {
+            const float32 x = imageMin.x + side * static_cast<float32>( column ) / static_cast<float32>( _sliceColumns );
+            pDrawList->AddLine( ImVec2( x, imageMin.y ), ImVec2( x, imageMin.y + side ), IM_COL32( 255, 255, 255, 90 ) );
+        }
+        for ( int32 row = 1; row < _sliceRows; ++row )
+        {
+            const float32 y = imageMin.y + side * static_cast<float32>( row ) / static_cast<float32>( _sliceRows );
+            pDrawList->AddLine( ImVec2( imageMin.x, y ), ImVec2( imageMin.x + side, y ), IM_COL32( 255, 255, 255, 90 ) );
+        }
+        if ( 0 <= _selectedFrame && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
+        {
+            const float4& uvRect = _listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
+            pDrawList->AddRect( ImVec2( imageMin.x + uvRect._x * side, imageMin.y + uvRect._y * side ),
+                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), IM_COL32( 255, 200, 60, 255 ),
+                                0.0f, 0, 2.0f );
+        }
+
+        if ( bHovered == false || ImGui::IsMouseClicked( ImGuiMouseButton_Left ) == false )
+            return;
+        const ImVec2 mouse = ImGui::GetMousePos();
+        const int32  cell  = AtlasGridUtil::findCellAtUv( ( mouse.x - imageMin.x ) / side, ( mouse.y - imageMin.y ) / side, _sliceColumns, _sliceRows );
+        if ( cell < 0 )
+            return;
+        const bool bAddFrame = ImGui::GetIO().KeyShift || _selectedFrame < 0 || _selectedFrame >= static_cast<int32>( _listFrame.size() );
+        if ( bAddFrame )
+        {
+            _listFrame.push_back( Frame{} );
+            _selectedFrame = static_cast<int32>( _listFrame.size() ) - 1;
+        }
+        _listFrame[static_cast<size_t>( _selectedFrame )]._uvRect = AtlasGridUtil::computeCellUvRect( cell, _sliceColumns, _sliceRows );
+        notifyDocumentEdited( bAddFrame ? "Add Sprite Frame" : "Edit Sprite Frame", bAddFrame ? string_view{} : string_view{ "sprite-clip-frame" } );
+    }
+
+    void SpriteClipPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
+    {
+        _atlasThumbnail.clear();
     }
 
     void SpriteClipPanel::drawAnimationSection()

@@ -639,3 +639,7 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   바꾸기 · 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 한다 — 패널이 직접 읽으면 미저장 확인을 건너뛴다. 최근 목록은 패널이 들고 있어 에디터를 다시 켜면 빈다.
   Quick Open 은 콘텐츠 브라우저 더블클릭과 같은 `EditorAssetCommands::openPath` 로 연다(포커스만 옮기면 도구 패널이 열리지 않는다).
   파일 목록이 오기 전에 Enter 를 누르면 목록이 오는 대로 첫 줄을 연다. 시나리오 `editor/openasset`.
+- **Tile Map Tool 의 도구(Brush · Rect · Fill · Picker)는 같은 `paintCell` 을 칸마다 부른다.** 레이어 규칙(지우기 · 같은 브러시는 되돌리기에 안 넣기 · 워프의 Walkable)이
+  한 곳에 있으므로 새 도구도 칸 목록만 만들고 `paintCell` 로 칠한다. 채우기가 "같다" 고 보는 값은 레이어마다 `collectCellValues` 가 정한다(Visual 은 높이 · 아틀라스 · 색 전부).
+  칸 판단은 ImGui 없는 `TileMapPaintUtil` · `AtlasGridUtil`(EditorTest). 새 맵은 Walkable 이 모두 켜져 있다. 시나리오 `editor/tilemaptools`(탐침 `Editor.TileMapFlagCells` · `Editor.TileMapTool`).
+- **아틀라스 그림은 패널마다 `EditorThumbnailCache` 로 빌린다**(Tile Map 팔레트 · 캔버스, Sprite Clip 칸 고르기). 패널의 `shutdown` 에서 `clear` 해야 디바이스가 내려가기 전에 ImGui 등록과 텍스처 참조를 놓는다.
