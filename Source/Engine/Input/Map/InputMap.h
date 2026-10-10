@@ -488,8 +488,10 @@ namespace sw
         bool                         hasAction( const hashed_string& action ) const;
         const vector<hashed_string>& getActionNames() const { return _listActionName; }
         ActionTrigger                getBindingTrigger( const hashed_string& action, uint32 bindIndex ) const;
-        uint32                       getBindingCount( const hashed_string& action ) const;
-        const ActionBinding*         getBinding( const hashed_string& action, uint32 bindIndex ) const;
+        /** @brief 바인딩 @p bindIndex 의 발화 규칙을 바꿉니다(편집기). 액션 · 바인딩이 없으면 false 입니다. */
+        [[nodiscard]] bool   setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
+        uint32               getBindingCount( const hashed_string& action ) const;
+        const ActionBinding* getBinding( const hashed_string& action, uint32 bindIndex ) const;
 
         bool wasActionTriggered( const hashed_string& action ) const;
         bool wasActionTriggered( ActionHandle handle ) const;

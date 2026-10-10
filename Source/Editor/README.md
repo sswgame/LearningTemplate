@@ -646,6 +646,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **노드 그래프 캔버스 안의 위젯 좌표는 캔버스 좌표다.** 시험 이름표를 `note` 로 적으면 화면과 어긋난 자리를 누른다 — `ed::CanvasToScreen` 으로 바꿔
   `EditorSelfTestMarks::noteRect` 로 적는다(`animGraph.node.<이름>`). Animation Graph 의 편집 대상(오른쪽 상태 · 전이 인스펙터)은 캔버스 선택이 **바뀐 프레임에만**
   따라간다 — 매 프레임 따르면 전이 목록으로 고른 것을 노드 선택이 덮는다. Link Selected 는 고른 순서(먼저 → 나중)로 잇는다. 시나리오 `editor/animgraphedit`.
+- **Input Map Editor 는 탭 셋이다** — Mappings(왼쪽 액션 목록 · 레이어, 오른쪽 고른 액션의 바인딩 · 발화 규칙 · 충돌 · 플랫폼 글리프 — 언리얼 Enhanced Input 의 한 화면),
+  Debug(장치 · 그래프 · 뷰포트 HUD · 명령 패턴), Replay & Inject. 충돌은 ImGui 없는 `InputMapConflicts` 가 모은다 — Chord · Shortcut 은 조합 전체가 같아야 겹친다
+  (Ctrl+F7 · Ctrl+F8 은 겹치지 않는다). 엔진의 `InputMap::hasBindingConflict` 는 아직 슬롯 하나만 보아 조합 키끼리 겹친다고 답한다(Rebind 경고에만 쓴다). 시나리오 `editor/inputmapedit`.
 - **Output Log 의 그리기 사본은 새 줄만 덧붙인다**(받은 줄 누계 `_entrySerial` 과 사본이 따라잡은 누계를 비교). 통째로 다시 담으면 로그가 올 때마다 최대 2048 줄을 복사한다.
 - **Output Log 의 따라가기는 스크롤 위치로 정한다.** 지난 프레임 배치의 `GetScrollY` 가 `GetScrollMaxY` 에 붙어 있을 때만 새 로그에 맨 아래로 내린다.
   "새 로그가 오면 늘 내린다" 로 되돌리면 위로 올려 읽는 중에 끌려 내려간다. 명령을 친 뒤에는 답을 보도록 한 번 내린다.

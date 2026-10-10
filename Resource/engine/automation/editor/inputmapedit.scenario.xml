@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — Input Map Editor 의 Mappings 탭(에디터 보강 "그 밖에": 데이터 편집기 정리). 왼쪽 목록을 Confirm 으로 걸러 고르면
+  오른쪽에 바인딩 둘(Enter · Space)이 보이고(Editor.InputMapBindingCount), 0 번 바인딩의 발화 규칙을 HoldThreshold(4)로 바꾸면
+  Editor.InputMapSelectedTrigger 가 4 다. Reload 는 파일을 다시 읽어 Pressed(0)로 돌린다(저장하지 않는다 — 엔진 기본 입력 파일이다).
+  기본 입력 맵에는 충돌이 없다(Editor.InputMapConflicts 0). Debug 탭은 장치 · 그래프 · HUD · 명령 패턴을 접는 절로 둔다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/inputmapedit.scenario.xml -dx12
+-->
+<Scenario name="editor.inputmapedit" fixedDelta="0.0166667" timeoutFrames="600" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="40"><DevCommand line="panel.focus input_map"/></At>
+	<At frame="80"><EditorClick mark="inputMap.filter"/></At>
+	<At frame="85"><EditorText value="Confirm"/></At>
+	<At frame="90"><Expect probe="Editor.InputMapConflicts" equals="0"/><EditorClick mark="inputMap.action.Confirm"/></At>
+	<At frame="110"><Expect probe="Editor.InputMapBindingCount" equals="2"/><Expect probe="Editor.InputMapSelectedTrigger" equals="0"/></At>
+	<At frame="115"><EditorClick mark="inputMap.binding.0.trigger"/></At>
+	<At frame="135"><EditorClick mark="inputMap.trigger.4"/></At>
+	<At frame="155"><Expect probe="Editor.InputMapSelectedTrigger" equals="4"/></At>
+	<At frame="160"><EditorClick mark="inputMap.reload"/></At>
+	<At frame="180"><Expect probe="Editor.InputMapSelectedTrigger" equals="0"/></At>
+	<At frame="185"><EditorClick mark="inputMap.tab.debug" state="down"/></At>
+	<At frame="188"><EditorClick mark="inputMap.tab.debug" state="up"/></At>
+	<At frame="210"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

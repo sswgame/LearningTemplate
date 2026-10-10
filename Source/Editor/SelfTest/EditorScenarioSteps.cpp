@@ -27,6 +27,7 @@
 #include "Editor/Panels/AnimGraphPanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
+#include "Editor/Panels/InputMapPanel.h"
 #include "Editor/Panels/ModulesPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/ProfilerPanel.h"
@@ -1275,6 +1276,26 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief Input Map Editor 값 하나입니다(0 고른 액션의 바인딩 수, 1 그 0 번 바인딩의 발화 규칙, 2 충돌 수). 패널이 없거나 고른 액션이 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readInputMapValue( uint32 which, float64& outValue )
+            {
+                EditorContext*       pContext = EditorContext::get();
+                const InputMapPanel* pPanel   = pContext != nullptr ? static_cast<const InputMapPanel*>( pContext->getPanelManager().findPanel( "input_map" ) ) : nullptr;
+                if ( pPanel == nullptr )
+                    return false;
+                uint32 value{ 0 };
+                if ( which == 2 )
+                    value = pPanel->getConflictCount();
+                else if ( ( which == 0 ? pPanel->readSelectedBindingCount( value ) : pPanel->readSelectedTrigger( value ) ) == false )
+                    return false;
+                outValue = static_cast<float64>( value );
+                return true;
+            }
+
+            [[nodiscard]] static bool readInputMapBindingCount( const GameObjectManager* /*pManager*/, float64& outValue ) { return readInputMapValue( 0, outValue ); }
+            [[nodiscard]] static bool readInputMapSelectedTrigger( const GameObjectManager* /*pManager*/, float64& outValue ) { return readInputMapValue( 1, outValue ); }
+            [[nodiscard]] static bool readInputMapConflicts( const GameObjectManager* /*pManager*/, float64& outValue ) { return readInputMapValue( 2, outValue ); }
+
             /** @brief 프로파일러 패널 값 하나입니다(열려 있지 않으면 값을 내지 않는다). */
             [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
             {
@@ -1468,6 +1489,12 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readGameViewMode );
     SW_AUTOMATION_PROBE( editorTestRunnerPassCount, "Editor.TestRunnerPassCount", "Editor self tests that passed in the last (or current) self test run",
                          &EditorScenarioStepsInternal::readTestRunnerPassCount );
+    SW_AUTOMATION_PROBE( editorInputMapBindingCount, "Editor.InputMapBindingCount", "Bindings of the action selected in the Input Map Editor",
+                         &EditorScenarioStepsInternal::readInputMapBindingCount );
+    SW_AUTOMATION_PROBE( editorInputMapSelectedTrigger, "Editor.InputMapSelectedTrigger", "ActionTrigger number of binding 0 of the selected Input Map action",
+                         &EditorScenarioStepsInternal::readInputMapSelectedTrigger );
+    SW_AUTOMATION_PROBE( editorInputMapConflicts, "Editor.InputMapConflicts", "Binding conflicts the Input Map Editor found (same key, same layer, two actions)",
+                         &EditorScenarioStepsInternal::readInputMapConflicts );
     SW_AUTOMATION_PROBE( editorProfilerCallTreeNodes, "Editor.ProfilerCallTreeNodes", "Nodes of the profiler call tree drawn last", &EditorScenarioStepsInternal::readProfilerCallTreeNodes );
     SW_AUTOMATION_PROBE( editorProfilerSelectedFrame, "Editor.ProfilerSelectedFrame", "Frame the profiler table shows: 0 latest, n frames ago",
                          &EditorScenarioStepsInternal::readProfilerSelectedFrame );

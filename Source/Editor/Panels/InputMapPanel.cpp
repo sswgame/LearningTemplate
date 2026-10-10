@@ -8,10 +8,12 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -208,6 +210,7 @@ namespace sw::editor
         , _replayFilePath{ "engine/replay/demo_01.swreplay" }
         , _newActionName{ "" }
         , _selectedAction{ "" }
+        , _arrActionFilter{}
         , _testComboPattern{ "236P" }
         , _arrPlotLeftStickX{}
         , _arrPlotLeftStickY{}
@@ -223,7 +226,6 @@ namespace sw::editor
         , _capturingBindIndex{ 0 }
         , _newActionValueType{ 0 }
         , _simKeyToInject{ 1 }
-        , _selectedGlyphPlatform{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
@@ -287,108 +289,265 @@ namespace sw::editor
         if ( pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() ) )
             pInput->detachVirtualInput();
 
+        // 탭 셋 — 편집(Mappings) · 들여다보기(Debug) · 녹화와 주입(Replay & Inject). 언리얼 Enhanced Input 은 액션 · 매핑 · 트리거를 한 화면에서 고친다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
         {
-            if ( ImGui::BeginTabItem( "Action Maps & Bindings" ) )
+            if ( ImGui::BeginTabItem( "Mappings" ) )
             {
-                drawInputMapTab();
+                drawMappingsTab();
                 ImGui::EndTabItem();
             }
-
-            if ( ImGui::BeginTabItem( "Live Device Monitor" ) )
+            const bool bDebugTab = ImGui::BeginTabItem( "Debug" );
+            EditorSelfTestMarks::note( "inputMap.tab.debug" );
+            if ( bDebugTab )
             {
-                drawDeviceMonitorTab();
+                drawDebugTab();
                 ImGui::EndTabItem();
             }
-
-            if ( ImGui::BeginTabItem( "Key Conflict Matrix" ) )
+            if ( ImGui::BeginTabItem( "Replay & Inject" ) )
             {
-                drawConflictMatrixTab();
-                ImGui::EndTabItem();
-            }
-
-            if ( ImGui::BeginTabItem( "Input Graphs" ) )
-            {
-                drawInputGraphTab();
-                ImGui::EndTabItem();
-            }
-
-            if ( ImGui::BeginTabItem( "Virtual Input Injector" ) )
-            {
+                drawInputReplayTab();
+                ImGui::Separator();
                 drawInputSimulatorTab();
                 ImGui::EndTabItem();
             }
-
-            if ( ImGui::BeginTabItem( "Input Replay & QA Playback" ) )
-            {
-                drawInputReplayTab();
-                ImGui::EndTabItem();
-            }
-
-            if ( ImGui::BeginTabItem( "Multi-Platform Glyph Preview" ) )
-            {
-                drawGlyphPreviewerTab();
-                ImGui::EndTabItem();
-            }
-
-            if ( ImGui::BeginTabItem( "Viewport Overlay HUD" ) )
-            {
-                drawViewportOverlayTab();
-                ImGui::EndTabItem();
-            }
-
-            if ( ImGui::BeginTabItem( "Combos & Input Buffering" ) )
-            {
-                drawCombosAndBufferTab();
-                ImGui::EndTabItem();
-            }
-
             ImGui::EndTabBar();
         }
+        drawCaptureModal();
     }
 
-    void InputMapPanel::drawInputMapTab()
+    bool InputMapPanel::readSelectedBindingCount( uint32& outCount ) const
     {
-        ImGui::Text( "InputMap Resource:" );
+        if ( _selectedAction.empty() )
+            return false;
+        outCount = _inputMap.getBindingCount( hashed_string( _selectedAction.c_str() ) );
+        return true;
+    }
+
+    bool InputMapPanel::readSelectedTrigger( uint32& outTrigger ) const
+    {
+        if ( _selectedAction.empty() || _inputMap.getBindingCount( hashed_string( _selectedAction.c_str() ) ) == 0 )
+            return false;
+        outTrigger = static_cast<uint32>( _inputMap.getBindingTrigger( hashed_string( _selectedAction.c_str() ), 0 ) );
+        return true;
+    }
+
+    void InputMapPanel::drawMappingsTab()
+    {
+        ImGui::TextUnformatted( "Input Map" );
         ImGui::SameLine();
         EditorWidgets::drawTextField( "##InputMapPath", _inputMapPath, 260.0f );
-
         ImGui::SameLine();
         if ( ImGui::Button( "Reload" ) )
             reloadFromFile();
-
+        EditorSelfTestMarks::note( "inputMap.reload" );
         ImGui::SameLine();
-        if ( ImGui::Button( "Save XML" ) )
+        if ( ImGui::Button( "Save" ) )
             (void)saveToFile(); // 실패는 saveToFile 이 알리고 dirty 가 남는다
-
         ImGui::SameLine();
         if ( ImGui::Button( "Revert All to Default" ) )
         {
             _inputMap.resetAllBindingsToDefault();
             markDocumentDirty();
         }
-
         if ( isDocumentDirty() )
         {
             ImGui::SameLine();
             EditorThemeUtil::textWarning( "* Unsaved changes" );
         }
-
+        InputMapConflicts::collect( _inputMap, _listConflict );
+        if ( _listConflict.empty() == false )
+        {
+            ImGui::SameLine();
+            fixed_string<constant::kMaxBuffer32> conflictText;
+            formatstring( conflictText.data(), conflictText.capacity(), "%# conflict(s)", static_cast<uint32>( _listConflict.size() ) );
+            EditorThemeUtil::textError( conflictText.c_str() );
+        }
         ImGui::Separator();
 
-        drawLayerList();
-        ImGui::Separator();
-        drawActionTable();
-        ImGui::Separator();
-        drawAddActionSection();
-        drawCaptureModal();
+        const float32 availWidth = ImGui::GetContentRegionAvail().x;
+        const float32 listWidth  = MathUtil::max( availWidth * 0.42f, 200.0f * EditorThemeUtil::getDpiScale() );
+        if ( ImGui::BeginChild( "InputMapLeft", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX ) )
+        {
+            drawActionList();
+            drawLayerList();
+            drawAddActionSection();
+        }
+        ImGui::EndChild();
+        ImGui::SameLine();
+        if ( ImGui::BeginChild( "InputMapRight", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
+            drawActionDetails();
+        ImGui::EndChild();
+    }
+
+    void InputMapPanel::drawActionList()
+    {
+        ImGui::SeparatorText( "Actions" );
+        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::kMaxBuffer64, "Filter actions..." );
+        EditorSelfTestMarks::note( "inputMap.filter" );
+        const EditorListFilter filter{ string_view( _arrActionFilter ) };
+        for ( const hashed_string& actionName : _inputMap.getActionNames() )
+        {
+            if ( filter.matches( actionName.view() ) == false )
+                continue;
+            const bool bConflict = InputMapConflicts::involves( _listConflict, actionName );
+            const bool bDown     = _inputMap.isActionDown( actionName );
+            ImGui::PushID( actionName.c_str() );
+            if ( bConflict )
+                EditorThemeUtil::pushTextColor( EditorThemeUtil::getErrorColor() );
+            if ( ImGui::Selectable( actionName.c_str(), _selectedAction == actionName.view() ) )
+                _selectedAction = actionName.c_str();
+            if ( bConflict )
+                EditorThemeUtil::popTextColor();
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( string{ "inputMap.action." } + actionName.c_str() ).c_str() );
+            if ( bConflict )
+                EditorWidgets::drawTooltip( "Shares a key with another action on the same layer - see the details" );
+            ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFontSize() * 4.0f );
+            if ( bDown )
+                EditorThemeUtil::textSuccess( "DOWN" );
+            else
+                ImGui::TextDisabled( "%s", _inputMap.getGlyphForAction( actionName ).c_str() );
+            ImGui::PopID();
+        }
+    }
+
+    void InputMapPanel::drawActionDetails()
+    {
+        if ( _selectedAction.empty() )
+        {
+            EditorWidgets::drawEmptyHint( "Select an action to edit its bindings and triggers." );
+            return;
+        }
+        const hashed_string action( _selectedAction.c_str() );
+        ImGui::SeparatorText( _selectedAction.c_str() );
+        const ActionPhase phase = _inputMap.getActionPhase( action );
+        ImGui::Text( "State: %s  hold %.2f s", _inputMap.wasActionTriggered( action ) ? "TRIGGERED" : ( _inputMap.isActionDown( action ) ? "DOWN" : ( phase != ActionPhase::None ? "ONGOING" : "Idle" ) ),
+                     static_cast<float64>( _inputMap.getActionHoldDuration( action ) ) );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Reset to Default" ) && _inputMap.resetActionToDefault( action ) )
+            markDocumentDirty();
+
+        // 바인딩마다 — 키(글리프) · 레이어 · 발화 규칙(트리거) · 다시 잡기.
+        ImGui::SeparatorText( "Bindings" );
+        const uint32 bindingCount = _inputMap.getBindingCount( action );
+        for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
+        {
+            const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
+            if ( pBinding == nullptr )
+                continue;
+            ImGui::PushID( static_cast<int32>( bindIndex ) );
+            InputSlot    slot{};
+            const bool   bRebindable = _inputMap.findRebindSlot( action, bindIndex, slot );
+            const string slotGlyph   = bRebindable ? InputMap::getGlyphForSlot( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( pBinding->_kind ) };
+            ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
+            ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
+            ImGui::TextDisabled( "%s", _inputMap.findBindingLayer( action, bindIndex ).c_str() );
+            ImGui::SameLine( ImGui::GetFontSize() * 15.0f );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * 8.0f );
+            const ActionTrigger trigger  = _inputMap.getBindingTrigger( action, bindIndex );
+            const utf8*         pCurrent = InputMap::actionTriggerToName( trigger );
+            const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( "inputMap.binding." + to_string( static_cast<uint64>( bindIndex ) ) + ".trigger" ).c_str() );
+            EditorWidgets::drawTooltip( "When the action fires (Pressed, Hold, Tap, Double Tap ...) - Unreal Enhanced Input triggers" );
+            if ( bOpen )
+            {
+                for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
+                {
+                    const ActionTrigger value = static_cast<ActionTrigger>( option );
+                    if ( ImGui::Selectable( InputMap::actionTriggerToName( value ), value == trigger ) && _inputMap.setBindingTrigger( action, bindIndex, value ) )
+                        markDocumentDirty();
+                    if ( EditorSelfTestMarks::isEnabled() )
+                        EditorSelfTestMarks::note( ( "inputMap.trigger." + to_string( static_cast<uint64>( option ) ) ).c_str() );
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::BeginDisabled( bRebindable == false );
+            if ( ImGui::SmallButton( "Rebind" ) )
+            {
+                _capturingBindIndex = bindIndex;
+                _bCapturingKey      = SW_TRUE;
+            }
+            ImGui::EndDisabled();
+            if ( bRebindable == false )
+                EditorWidgets::drawTooltip( "This binding kind (axis, stick, mouse delta ...) is not one key - edit the XML" );
+            ImGui::PopID();
+        }
+        if ( bindingCount == 0 )
+            ImGui::TextDisabled( "No bindings" );
+
+        // 충돌 — 같은 레이어에서 같은 키를 쓰는 다른 액션. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
+        if ( InputMapConflicts::involves( _listConflict, action ) )
+        {
+            ImGui::SeparatorText( "Conflicts" );
+            for ( size_t index = 0; index < _listConflict.size(); ++index )
+            {
+                const InputMapConflict& conflict = _listConflict[index];
+                const bool              bIsA     = conflict._actionA == action;
+                if ( bIsA == false && conflict._actionB != action )
+                    continue;
+                const hashed_string& other      = bIsA ? conflict._actionB : conflict._actionA;
+                const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
+                ImGui::PushID( static_cast<int32>( index ) );
+                fixed_string<constant::kMaxBuffer256> conflictText;
+                formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputMap::getGlyphForSlot( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
+                              other.c_str(), conflict._layer.c_str() );
+                EditorThemeUtil::textError( conflictText.c_str() );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Rebind this" ) )
+                {
+                    _capturingBindIndex = bIsA ? conflict._bindIndexA : conflict._bindIndexB;
+                    _bCapturingKey      = SW_TRUE;
+                }
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( "Unbind other" ) && _inputMap.rebindKey( other, Key::Unknown, otherIndex ) )
+                    markDocumentDirty();
+                ImGui::PopID();
+            }
+        }
+
+        // 플랫폼 글리프 — 화면에 뜰 버튼 표시(언리얼 CommonUI 의 입력 표시).
+        ImGui::SeparatorText( "Prompt Glyphs" );
+        static constexpr InputGlyphStyle kArrStyle[]     = { InputGlyphStyle::KeyboardMouse, InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch };
+        static constexpr const utf8*     kArrStyleName[] = { "Keyboard / Mouse", "Xbox", "PlayStation", "Switch" };
+        for ( size_t index = 0; index < 4; ++index )
+        {
+            ImGui::TextDisabled( "%s", kArrStyleName[index] );
+            ImGui::SameLine( ImGui::GetFontSize() * 9.0f );
+            ImGui::TextUnformatted( _inputMap.getGlyphForAction( action, kArrStyle[index] ).c_str() );
+        }
+    }
+
+    void InputMapPanel::drawDebugTab()
+    {
+        if ( ImGui::CollapsingHeader( "Devices", ImGuiTreeNodeFlags_DefaultOpen ) )
+            drawDeviceMonitorTab();
+        if ( ImGui::CollapsingHeader( "Graphs" ) )
+            drawInputGraphTab();
+        if ( ImGui::CollapsingHeader( "Viewport HUD" ) )
+            drawViewportOverlayTab();
+        if ( ImGui::CollapsingHeader( "Command Pattern Tester" ) )
+            drawCommandPatternTester();
+    }
+
+    void InputMapPanel::drawCommandPatternTester()
+    {
+        EditorWidgets::drawTextField( "Pattern (numpad notation)", _testComboPattern, 150.0f );
+        ImGui::SameLine();
+        if ( _inputMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f ) )
+            EditorThemeUtil::textSuccess( "MATCHED" );
+        else
+            ImGui::TextDisabled( "Waiting for input..." );
+        ImGui::TextDisabled( "236P = down, down-right, right + punch (the map's command history, 0.8 s window)" );
     }
 
     void InputMapPanel::drawLayerList()
     {
         const vector<hashed_string>& listLayer = _inputMap.getLayerNames();
 
-        if ( ImGui::CollapsingHeader( "Input Layers", ImGuiTreeNodeFlags_DefaultOpen ) )
+        if ( ImGui::CollapsingHeader( "Input Layers" ) )
         {
             static constexpr InputMapPanelInternal::TableColumn kArrLayerColumn[] = {
                 {  "Layer Name",   0.0f},
@@ -423,80 +582,6 @@ namespace sw::editor
                 }
                 ImGui::EndTable();
             }
-        }
-    }
-
-    void InputMapPanel::drawActionTable()
-    {
-        const vector<hashed_string>& listAction = _inputMap.getActionNames();
-
-        static constexpr InputMapPanelInternal::TableColumn kArrActionColumn[] = {
-            {       "Action",   0.0f},
-            {      "Trigger", 110.0f},
-            {     "UI Glyph",  90.0f},
-            {"State / Phase", 100.0f},
-            {    "Hold Time",  80.0f},
-            {       "Rebind",  75.0f},
-            {        "Reset",  60.0f}
-        };
-        if ( InputMapPanelInternal::beginColumnTable( "ActionTable", kArrActionColumn,
-                                                      ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable ) )
-        {
-            for ( const hashed_string& actionName : listAction )
-            {
-                InputMapPanelInternal::beginNamedRow( actionName );
-                const ActionTrigger trigger      = _inputMap.getBindingTrigger( actionName, 0 );
-                const utf8*         pTriggerName = InputMap::actionTriggerToName( trigger );
-                ImGui::TextUnformatted( pTriggerName != nullptr ? pTriggerName : "Unknown" );
-
-                ImGui::TableNextColumn();
-                const string glyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
-                EditorThemeUtil::textInfo( glyph.c_str() );
-
-                ImGui::TableNextColumn();
-                const bool        bDown      = _inputMap.isActionDown( actionName );
-                const bool        bTriggered = _inputMap.wasActionTriggered( actionName );
-                const ActionPhase phase      = _inputMap.getActionPhase( actionName );
-                if ( bTriggered )
-                    EditorThemeUtil::textError( "TRIGGERED" );
-                else if ( bDown )
-                    EditorThemeUtil::textSuccess( "DOWN" );
-                else if ( phase != ActionPhase::None )
-                    EditorThemeUtil::textWarning( "ONGOING" );
-                else
-                    ImGui::TextDisabled( "Idle" );
-
-                ImGui::TableNextColumn();
-                const float32 holdSec = _inputMap.getActionHoldDuration( actionName );
-                if ( holdSec > 0.0f )
-                {
-                    EditorThemeUtil::pushTextColor( EditorThemeUtil::getWarningColor() );
-                    ImGui::Text( "%.2f s", static_cast<float64>( holdSec ) );
-                    EditorThemeUtil::popTextColor();
-                }
-                else
-                    ImGui::Text( "0.00 s" );
-
-                ImGui::TableNextColumn();
-                ImGui::PushID( actionName.c_str() );
-                if ( ImGui::Button( "Rebind" ) )
-                {
-                    _selectedAction     = actionName.c_str();
-                    _capturingBindIndex = 0;
-                    _bCapturingKey      = SW_TRUE;
-                }
-                ImGui::PopID();
-
-                ImGui::TableNextColumn();
-                ImGui::PushID( ( string( actionName.c_str() ) + "_reset" ).c_str() );
-                if ( ImGui::Button( "Reset" ) )
-                {
-                    _inputMap.resetActionToDefault( sw::hashed_string( actionName.view() ) );
-                    markDocumentDirty();
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndTable();
         }
     }
 
@@ -769,81 +854,6 @@ namespace sw::editor
         ImGui::EndGroup();
     }
 
-    void InputMapPanel::drawConflictMatrixTab()
-    {
-        ImGui::Text( "Key Binding Conflict Matrix & One-Click Resolver" );
-        ImGui::TextDisabled( "Detects duplicated key bindings across actions and provides instant collision resolution." );
-        ImGui::Separator();
-
-        const vector<hashed_string>& listAction     = _inputMap.getActionNames();
-        bool                         bFoundConflict = false;
-
-        static constexpr InputMapPanelInternal::TableColumn kArrConflictColumn[] = {
-            {     "Action A",   0.0f},
-            {     "Action B",   0.0f},
-            {"Colliding Key", 100.0f},
-            {         "Swap",  75.0f},
-            {   "Override B",  85.0f}
-        };
-        if ( InputMapPanelInternal::beginColumnTable( "ConflictTable", kArrConflictColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
-        {
-
-            for ( size_t idxA = 0; idxA < listAction.size(); ++idxA )
-            {
-                const hashed_string& nameA  = listAction[idxA];
-                const string         glyphA = _inputMap.getGlyphForAction( sw::hashed_string( nameA.view() ) );
-                if ( glyphA == "[ Unbound ]" || glyphA.empty() )
-                    continue;
-
-                for ( size_t idxB = idxA + 1; idxB < listAction.size(); ++idxB )
-                {
-                    const hashed_string& nameB  = listAction[idxB];
-                    const string         glyphB = _inputMap.getGlyphForAction( sw::hashed_string( nameB.view() ) );
-
-                    if ( glyphA == glyphB )
-                    {
-                        bFoundConflict = true;
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        EditorThemeUtil::textError( nameA.c_str() );
-
-                        ImGui::TableNextColumn();
-                        EditorThemeUtil::textError( nameB.c_str() );
-
-                        ImGui::TableNextColumn();
-                        EditorThemeUtil::textWarning( glyphA.c_str() );
-
-                        ImGui::TableNextColumn();
-                        ImGui::PushID( static_cast<int32>( idxA * 1000 + idxB ) );
-                        if ( ImGui::Button( "Rebind A" ) )
-                        {
-                            _selectedAction     = nameA.c_str();
-                            _capturingBindIndex = 0;
-                            _bCapturingKey      = SW_TRUE;
-                        }
-                        ImGui::PopID();
-
-                        ImGui::TableNextColumn();
-                        ImGui::PushID( static_cast<int32>( idxA * 1000 + idxB + 500 ) );
-                        if ( ImGui::Button( "Unbind B" ) )
-                        {
-                            _inputMap.rebindKey( sw::hashed_string( nameB.c_str() ), Key::Unknown, 0 );
-                            markDocumentDirty();
-                        }
-                        ImGui::PopID();
-                    }
-                }
-            }
-            ImGui::EndTable();
-        }
-
-        if ( bFoundConflict == false )
-        {
-            ImGui::Spacing();
-            EditorThemeUtil::textSuccess( "✓ Zero Conflicts Detected! All key bindings are completely unique." );
-        }
-    }
-
     void InputMapPanel::drawInputGraphTab()
     {
         ImGui::Text( "Real-Time Input Graphs (Last 120 Frames)" );
@@ -925,21 +935,6 @@ namespace sw::editor
                 pGamepad->setAxis( 0, 0.0f );
                 pGamepad->setAxis( 1, 0.0f );
             }
-        }
-
-        ImGui::Separator();
-        ImGui::Text( "3) One-Click Combat Macros:" );
-        if ( ImGui::Button( "Inject 'Hadoken' (236 + Attack)" ) )
-        {
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( Key::S ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( Key::S ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( Key::C ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( Key::C ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( Key::D ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( Key::D ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyDown( Key::J ) );
-            pInput->postRawEvent( RawInputEvent::makeKeyUp( Key::J ) );
-            SW_LOG_INFO( "Injected Hadoken combo macro into InputManager!" );
         }
     }
 
@@ -1041,53 +1036,6 @@ namespace sw::editor
         }
     }
 
-    void InputMapPanel::drawGlyphPreviewerTab()
-    {
-        ImGui::Text( "Multi-Platform Action UI Glyph & Button Prompt Previewer" );
-        ImGui::TextDisabled( "Preview how button prompts appear across Xbox, PlayStation, Nintendo Switch, and PC Keyboards." );
-        ImGui::Separator();
-
-        const utf8*                      arrPlatforms[]      = { "Xbox Controller", "PlayStation DualSense", "Nintendo Switch Pro", "PC Keyboard / Mouse" };
-        static constexpr InputGlyphStyle kArrPreviewDevice[] = { InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch, InputGlyphStyle::KeyboardMouse };
-        ImGui::Combo( "Target Platform", &_selectedGlyphPlatform, arrPlatforms, 4 );
-        // 미리보기 장치와 아래 표의 플랫폼 이름이 같은 자리를 읽는다 — 범위 제한을 한 번만 한다.
-        const int32           platformIndex = MathUtil::clamp( _selectedGlyphPlatform, 0, 3 );
-        const InputGlyphStyle previewDevice = kArrPreviewDevice[platformIndex];
-        ImGui::Separator();
-
-        const vector<hashed_string>&                        listAction        = _inputMap.getActionNames();
-        static constexpr InputMapPanelInternal::TableColumn kArrGlyphColumn[] = {
-            {      "Action Name",   0.0f},
-            {      "Key Binding", 120.0f},
-            {"UI Prompt (Glyph)", 140.0f},
-            {   "Platform Style", 140.0f}
-        };
-        if ( InputMapPanelInternal::beginColumnTable( "GlyphTable", kArrGlyphColumn, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg ) )
-        {
-            for ( const hashed_string& actionName : listAction )
-            {
-                InputMapPanelInternal::beginNamedRow( actionName );
-                const string glyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ) );
-                ImGui::TextUnformatted( glyph.c_str() );
-
-                ImGui::TableNextColumn();
-                const string previewGlyph = _inputMap.getGlyphForAction( sw::hashed_string( actionName.view() ), previewDevice );
-                if ( platformIndex == 0 )
-                    ImGui::TextColored( ImVec4( 0.2f, 1.0f, 0.4f, 1.0f ), "[ Ⓨ Xbox ] %s", previewGlyph.c_str() );
-                else if ( platformIndex == 1 )
-                    ImGui::TextColored( ImVec4( 0.3f, 0.6f, 1.0f, 1.0f ), "[ ▲ DualSense ] %s", previewGlyph.c_str() );
-                else if ( platformIndex == 2 )
-                    ImGui::TextColored( ImVec4( 1.0f, 0.3f, 0.3f, 1.0f ), "[ X Switch ] %s", previewGlyph.c_str() );
-                else
-                    ImGui::TextColored( ImVec4( 0.9f, 0.9f, 0.9f, 1.0f ), "[ KeyCap ] %s", previewGlyph.c_str() );
-
-                ImGui::TableNextColumn();
-                ImGui::TextDisabled( "%s", arrPlatforms[platformIndex] );
-            }
-            ImGui::EndTable();
-        }
-    }
-
     void InputMapPanel::drawViewportOverlayTab()
     {
         ImGui::Text( "Game Viewport On-Screen Controller Overlay HUD Settings" );
@@ -1123,38 +1071,6 @@ namespace sw::editor
         bool bShowHistory = ( config._bShowCommandHistory == SW_TRUE );
         if ( ImGui::Checkbox( "Show Live Action Trigger Stream", &bShowHistory ) )
             config._bShowCommandHistory = bShowHistory ? SW_TRUE : SW_FALSE;
-    }
-
-    void InputMapPanel::drawCombosAndBufferTab()
-    {
-        ImGui::Text( "Fighting Game Combo Tester & Input Buffer Inspector" );
-        ImGui::Separator();
-
-        EditorWidgets::drawTextField( "Combo Pattern (Numpad Notation)", _testComboPattern, 150.0f );
-
-        ImGui::SameLine();
-        const bool bPatternMatched = _inputMap.wasCommandPatternTriggered( sw::hashed_string( _testComboPattern.c_str() ), 0.8f );
-        if ( bPatternMatched )
-            EditorThemeUtil::textSuccess( "MATCHED! (Success)" );
-        else
-            ImGui::TextDisabled( "Waiting for input..." );
-
-        ImGui::Text( "Legend: 236P = Hadoken (Down, DownRight, Right + Punch), 623P = Shoryuken" );
-        ImGui::Separator();
-
-        ImGui::Text( "Action Input Buffering:" );
-        if ( ImGui::Button( "Buffer 'Attack' (0.3s)" ) )
-            _inputMap.bufferAction( "Attack", 0.3f );
-        ImGui::SameLine();
-        if ( ImGui::Button( "Buffer 'Jump' (0.3s)" ) )
-            _inputMap.bufferAction( "Jump", 0.3f );
-
-        ImGui::SameLine();
-        if ( ImGui::Button( "Consume 'Attack'" ) )
-        {
-            if ( _inputMap.consumeBufferedAction( "Attack" ) )
-                SW_LOG_INFO( "Successfully consumed buffered 'Attack'!" );
-        }
     }
 
     void InputMapPanel::reloadFromFile()

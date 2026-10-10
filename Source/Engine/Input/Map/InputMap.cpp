@@ -782,6 +782,15 @@ namespace sw
         return pEntry->_listBinding[bindIndex]._trigger;
     }
 
+    bool InputMap::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || trigger >= ActionTrigger::Count )
+            return false;
+        pEntry->_listBinding[bindIndex]._trigger = trigger;
+        return true;
+    }
+
     uint32 InputMap::getBindingCount( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
