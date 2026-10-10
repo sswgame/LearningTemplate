@@ -9,12 +9,14 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorViewportPick.h"
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -82,6 +84,9 @@ namespace sw::editor
              * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는
              *          `EditorViewportPick::makeRay` 라 테스트가 있습니다.
              */
+            static constexpr float64 kSlowHoverPickSeconds  = 0.002; ///< 이보다 오래 걸린 호버 피킹은 비싸다고 본다
+            static constexpr float64 kSlowHoverPickInterval = 0.1;   ///< 비싸면 이만큼 사이를 둔다(초)
+
             static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize,
                                       EditorPickRay& outRay )
             {
@@ -180,6 +185,10 @@ namespace sw::editor
         , _lastGizmoFrame{ -1 }
         , _lastGizmoObjectCount{ 0 }
         , _orthoHeight{ 10.0f }
+        , _hoveredObjectID{ 0 }
+        , _hoverMousePos{ -1.0f, -1.0f }
+        , _lastHoverPickSeconds{ 0.0 }
+        , _lastHoverPickTime{ 0.0 }
         , _bRulerActive{ SW_FALSE }
         , _bGizmoTracking{ SW_FALSE }
         , _bOrthographicView{ SW_FALSE }
@@ -499,6 +508,9 @@ namespace sw::editor
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
         EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다(뷰포트 피킹 · 카메라 비행)
+        // 캔버스(이미지)의 호버 · 클릭은 지금 읽는다 — 뒤에서 시각화가 이름표 자리로 항목을 더하면(빌보드) "마지막 항목" 이 바뀐다.
+        const bool bCanvasHovered = ImGui::IsItemHovered();
+        const bool bCanvasClicked = ImGui::IsItemClicked( ImGuiMouseButton_Left );
 
         CameraComponent* pCamera = EditorViewportClientInternal::getSceneViewCamera();
         const float2     canvasPos{ imagePos.x, imagePos.y };
@@ -543,7 +555,9 @@ namespace sw::editor
             processRulerTool( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
             pCanvasDrawList->PopClipRect();
 
-            processPicking( canvasPos, canvasSize, pCamera );
+            processPicking( canvasPos, canvasSize, pCamera, bCanvasClicked );
+            processHover( canvasPos, canvasSize, pCamera, bCanvasHovered );
+            EditorSelectionBounds::setHoveredObjectID( _hoveredObjectID );
 
             {
                 GameObjectManager* pObjectManager = editor::getActiveObjectManager();
@@ -566,63 +580,105 @@ namespace sw::editor
         }
     }
 
-    void EditorViewportClient::processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera )
+    bool EditorViewportClient::findObjectUnderMouse( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, GameObject*& pOutObject,
+                                                     Component*& pOutComponent ) const
     {
+        pOutObject              = nullptr;
+        pOutComponent           = nullptr;
         EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
-            return;
-
-        if ( pCamera == nullptr )
-            return;
-        if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) == false )
-            return;
-        if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
-            return;
-        if ( ImGui::GetIO().KeyAlt )
-            return;
+        Scene*         pScene   = editor::getActiveScene();
+        if ( pContext == nullptr || pCamera == nullptr || pScene == nullptr || pScene->getObjectManager() == nullptr )
+            return false;
         const float32  aspect      = canvasSize._x / ( canvasSize._y > 0.0f ? canvasSize._y : 1.0f );
-        const float4x4 invViewProj = pCamera->getViewProjectionMatrix( aspect ).invert();
+        const float4x4 viewProj    = pCamera->getViewProjectionMatrix( aspect );
+        const float4x4 invViewProj = viewProj.invert();
         EditorPickRay  pickRay{};
         if ( EditorViewportClientInternal::makeMouseRay( invViewProj, canvasPos, canvasSize, pickRay ) == false )
-            return;
-
-        Scene* pScene = editor::getActiveScene();
-        if ( pScene == nullptr || pScene->getObjectManager() == nullptr )
-            return;
+            return false;
         GameObjectManager* pManager = pScene->getObjectManager();
         pManager->flushSceneTransforms();
 
         // 빌보드(빛 · 카메라 · 오디오 아이콘)가 레이 피킹보다 먼저다 — 메시가 없어 레이로는 집히지 않는다(언리얼 빌보드 · 유니티 Gizmo 아이콘 클릭).
+        // 잠근 오브젝트의 빌보드가 맞으면 그 자리는 "빈 곳" 이다(뒤의 레이 피킹으로 넘기지 않는다).
         const EditorVisualizerRegistration* pBillboard = EditorRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
         if ( pBillboard != nullptr && _toolbarSettings._visualizerToggles.isOn( *pBillboard ) )
         {
             vector<EditorViewportBillboardItem> listItem;
-            EditorViewportBillboard::collect( *pManager, pCamera->getViewProjectionMatrix( aspect ), canvasPos, canvasSize, pCamera, listItem );
+            EditorViewportBillboard::collect( *pManager, viewProj, canvasPos, canvasSize, pCamera, listItem );
             const ImVec2 mouse = ImGui::GetIO().MousePos;
             const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
             if ( index != invalid_index::kUint32 )
             {
-                // 잠근 오브젝트는 고르지 않는다(Hierarchy 에서만). 빌보드가 맞았으면 뒤의 레이 피킹으로 넘기지 않는다.
                 if ( pContext->getWorkspace().isObjectLocked( listItem[index]._pObject->getObjectID() ) )
-                    pContext->getWorkspace().clearSelection();
-                else
-                    pContext->getWorkspace().selectComponent( listItem[index]._pObject, listItem[index]._pComponent );
-                return;
+                    return false;
+                pOutObject    = listItem[index]._pObject;
+                pOutComponent = listItem[index]._pComponent;
+                return true;
             }
         }
 
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
         EditorPickResult pickResult{};
-        if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) && pickResult._pObject != nullptr &&
-             pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) == false && pickResult._pObject->isHiddenInEditor() == false )
-        {
-            pContext->getWorkspace().selectComponent( pickResult._pObject,
-                                                      pickResult._pComponent );
-        }
+        if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
+             pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
+            return false;
+        pOutObject    = pickResult._pObject;
+        pOutComponent = pickResult._pComponent;
+        return true;
+    }
+
+    void EditorViewportClient::processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked )
+    {
+        EditorContext* pContext = EditorContext::get();
+        if ( pContext == nullptr || pCamera == nullptr )
+            return;
+        if ( bCanvasClicked == false )
+            return;
+        if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
+            return;
+        if ( ImGui::GetIO().KeyAlt )
+            return;
+        GameObject* pObject    = nullptr;
+        Component*  pComponent = nullptr;
+        if ( findObjectUnderMouse( canvasPos, canvasSize, pCamera, pObject, pComponent ) )
+            pContext->getWorkspace().selectComponent( pObject, pComponent );
         else
-        {
             pContext->getWorkspace().clearSelection();
+    }
+
+    void EditorViewportClient::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered )
+    {
+        // 호버는 마우스가 씬 뷰 위에만 있고(다른 패널 · 팝업이 마우스를 갖지 않음) 끌기 · 비행 · 궤도 · 기즈모 위가 아닐 때만이다(언리얼 · 유니티의 호버 강조).
+        const ImGuiIO& io       = ImGui::GetIO();
+        const bool     bBlocked = bCanvasHovered == false || pCamera == nullptr || io.KeyAlt || io.MouseDown[0] || io.MouseDown[1] || io.MouseDown[2] ||
+                              ImGui::IsAnyItemActive() || ImGuizmo::IsOver() || ImGuizmo::IsUsing() || _bGizmoTracking == SW_TRUE;
+        if ( bBlocked )
+        {
+            _hoveredObjectID = 0;
+            _hoverMousePos   = float2{ -1.0f, -1.0f };
+            return;
         }
+        // 마우스가 그대로면 지난 답을 쓴다(프레임당 많아야 한 번, 대개는 0 번 — 카메라를 움직이는 동안은 위에서 막혔다).
+        const float2 mouse{ io.MousePos.x, io.MousePos.y };
+        if ( mouse._x == _hoverMousePos._x && mouse._y == _hoverMousePos._y )
+            return;
+        // 피킹이 비싼 씬(레이 피킹은 오브젝트 수에 비례 — 8000 개면 Debug 로 약 20 ms)은 마우스가 움직이는 동안 0.1 초에 한 번만 찾는다.
+        // 마우스 자리를 적지 않고 돌아가므로 멈춘 뒤 다음 기회에 마지막 자리로 다시 찾는다.
+        const float64 now = ImGui::GetTime();
+        if ( _lastHoverPickSeconds > EditorViewportClientInternal::kSlowHoverPickSeconds && now - _lastHoverPickTime < EditorViewportClientInternal::kSlowHoverPickInterval )
+            return;
+        _hoverMousePos = mouse;
+        SW_EDITOR_PROFILE_SCOPE( "GT.Editor.hoverPick" );
+        const int64 startNanos = MonotonicClock::nowNanoseconds();
+        GameObject* pObject    = nullptr;
+        Component*  pComponent = nullptr;
+        _hoveredObjectID       = findObjectUnderMouse( canvasPos, canvasSize, pCamera, pObject, pComponent ) ? pObject->getObjectID() : 0;
+        // 이미 고른 오브젝트는 호버가 아니다 — 선택 상자 · 기즈모가 이미 있다(그 위의 기즈모 손잡이와 겹치는 판정도 여기서 사라진다).
+        EditorContext* pContext = EditorContext::get();
+        if ( pObject != nullptr && pContext != nullptr && pContext->getEditorSelection().hasObject( pObject ) )
+            _hoveredObjectID = 0;
+        _lastHoverPickSeconds = static_cast<float64>( MonotonicClock::nowNanoseconds() - startNanos ) * 1e-9;
+        _lastHoverPickTime    = now;
     }
 
     void EditorViewportClient::drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos,

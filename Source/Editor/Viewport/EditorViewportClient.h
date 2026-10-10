@@ -12,6 +12,7 @@
 namespace sw
 {
     class CameraComponent;
+    class Component;
     class GameObject;
     class IRHIDevice;
 } // namespace sw
@@ -63,6 +64,8 @@ namespace sw::editor
         bool isOrthographicView() const { return _bOrthographicView == SW_TRUE; }
         /** @brief 씬 뷰를 최대화했으면 true 입니다(Shift+Space). */
         bool isMaximized() const { return _bMaximized == SW_TRUE; }
+        /** @brief 마우스 아래의 오브젝트 id 입니다(호버 강조 — 없거나 막혔으면 0). */
+        uint64 getHoveredObjectID() const { return _hoveredObjectID; }
 
     private:
         void processFlyInput( float32 deltaTime );
@@ -73,7 +76,11 @@ namespace sw::editor
         void setOrthographicView( float32 pitch, float32 yaw );
         /** @brief 씬 뷰 최대화를 켜고 끕니다(다른 패널을 닫았다가 직전 배치를 되살린다 — 유니티 Shift+Space). */
         void toggleMaximize();
-        void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera );
+        void processPicking( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked );
+        /** @brief 마우스 아래 오브젝트를 찾습니다(빌보드 → 레이 피킹, 잠근 · 숨긴 오브젝트는 빈 곳). 클릭 선택과 호버가 같이 쓴다. */
+        bool findObjectUnderMouse( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, GameObject*& pOutObject, Component*& pOutComponent ) const;
+        /** @brief 호버 오브젝트를 정합니다. 마우스가 움직였을 때만 피킹한다(프레임당 많아야 한 번). */
+        void processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered );
         void drawGizmo( const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize );
 
         /** @brief 다중 선택 기즈모를 조작합니다(열거형은 ImGuizmo 에 묶이지 않도록 uint32 로 받습니다). */
@@ -122,7 +129,11 @@ namespace sw::editor
         float32                  _arrGizmoGroupMatrix[16];
         int32                    _lastGizmoFrame;
         uint32                   _lastGizmoObjectCount;
-        float32                  _orthoHeight; ///< 직교 보기의 화면 높이(월드 단위) — 휠이 바꾼다
+        float32                  _orthoHeight;          ///< 직교 보기의 화면 높이(월드 단위) — 휠이 바꾼다
+        uint64                   _hoveredObjectID;      ///< 마우스 아래 오브젝트(0 이면 없음)
+        float2                   _hoverMousePos;        ///< 마지막으로 호버 피킹한 마우스 자리 — 그대로면 다시 찾지 않는다
+        float64                  _lastHoverPickSeconds; ///< 마지막 호버 피킹에 든 시간(초)
+        float64                  _lastHoverPickTime;    ///< 그 피킹을 한 ImGui 시각(초)
         uint8                    _bRulerActive      : 1;
         uint8                    _bGizmoTracking    : 1;
         uint8                    _bOrthographicView : 1;

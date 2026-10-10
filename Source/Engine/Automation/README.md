@@ -139,6 +139,7 @@ echo $LASTEXITCODE
 | `ExpectUI` | `focus`, `screen`, `screens` 중 하나 이상 | `Engine/UI/Automation/UIAutomationSteps` | 런타임 UI의 포커스 위젯, 활성 화면, 화면 수를 확인합니다 |
 | `UILayoutDump` | `file` | `Engine/UI/Automation/UIAutomationSteps` | UI 화면마다 위젯 이름과 픽셀 사각형을 파일로 씁니다 |
 | `EditorDrag` | `mark`, `dx`, `dy`(픽셀), `button`, `mods` | 에디터 `EditorScenarioSteps` | `mark` 위젯 가운데를 누르고 (dx, dy) 만큼 끌어 놓습니다(누름 · 절반 · 끝 · 뗌을 네 프레임에 — 프레임마다 커서를 다시 넣는다). 커브 키 · 손잡이 끌기 |
+| `EditorHover` | `mark`, `anchor` 또는 `release="true"` | 에디터 `EditorScenarioSteps` | 단추를 누르지 않고 커서를 이름표 자리에 붙잡아 둡니다(호버). `release` 까지 프레임마다 그 자리를 넣는다 |
 | `EditorClick` | `mark`, `button`(0..4), `mods`, `state`(`down`, `up`), `anchor`(`x,y` 0..1) | 에디터 `EditorScenarioSteps` | `mark` 이름이 붙은 위젯 가운데(`anchor` 를 주면 그 안의 자리 — 캔버스 빈 곳)를 클릭합니다. `state="down"` 은 누른 채 두고 `up` 까지 커서를 그 자리에 붙잡습니다(뷰포트 비행 · 끌기) |
 | `EditorText` | `value` | 에디터 `EditorScenarioSteps` | ImGui에 글자를 입력합니다 |
 | `EditorKey` | `key`(ImGui 키 이름, 수정자는 `+` — `Enter`, `Escape`, `Ctrl+Z`), `state`(`down`, `up`) | 에디터 `EditorScenarioSteps` | 수정자를 누르고 키를 눌렀다 뗍니다(단축키, 입력 칸 확정). `state` 를 주면 누르기만, 떼기만 합니다(`D` 를 누른 채 몇 프레임) |
@@ -231,6 +232,7 @@ ctest --test-dir build/Ninja-Debug-Shooter3D -L hostgpu -R AppTest_HostOnly --ou
 | `Editor.ObjectActive`, `Editor.ObjectHiddenInEditor` | `gv_editorProbeObject` 이름 오브젝트의 자기 활성 비트, 에디터에서만 숨김(1 · 0) |
 | `Editor.SelectedComponentCount` | 주 선택 오브젝트의 컴포넌트 수 |
 | `Editor.SceneViewOrthographic`, `Editor.SceneViewMaximized` | 씬 뷰가 직교 보기면 1, 최대화했으면 1 |
+| `Editor.HoveredObject` | 씬 뷰 호버: `gv_editorProbeObject` 오브젝트면 1, 없으면 0, 다른 오브젝트면 -1 |
 | `Editor.SelectionOutlineBoxes` | 씬 뷰가 지난 프레임에 그린 선택 상자 수 |
 | `Editor.GizmoOperation` | 기즈모 조작(0 이동 · 1 회전 · 2 크기) |
 | `Editor.GraphNodeCount` | 가장 최근에 그린 노드 그래프 캔버스(대화 · 애니메이션 · 확장의 그래프 문서)의 노드 수 |

@@ -348,6 +348,44 @@ namespace sw::editor
                 return true;
             }
 
+            static bool validateHover( const AutomationStep& step, string& outError )
+            {
+                if ( validate( step, { "mark", "anchor", "release" }, nullptr, outError ) == false )
+                    return false;
+                const bool bRelease = step.findAttribute( "release" ) != nullptr;
+                if ( bRelease == ( step.findAttribute( "mark" ) != nullptr ) )
+                {
+                    outError = step.describe() + ": give either mark (and anchor) or release=\"true\"";
+                    return false;
+                }
+                float2 anchor{};
+                if ( readAnchor( step, anchor ) == false )
+                {
+                    outError = step.describe() + ": anchor must be 'x,y' in 0..1";
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 단추를 누르지 않고 커서를 이름표 자리(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 까지 프레임마다 그 자리를 다시 넣는다 —
+             *        넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다. 이름표가 없으면 실패를 적는다.
+             */
+            static bool runHover( AutomationRunner& runner, const AutomationStep& step )
+            {
+                if ( step.findAttribute( "release" ) != nullptr )
+                {
+                    EditorSelfTestInput::releaseMouseHold();
+                    return true;
+                }
+                const string& mark = *step.findAttribute( "mark" );
+                float2        anchor{ 0.5f, 0.5f };
+                (void)readAnchor( step, anchor ); // 검사에서 봤다
+                if ( EditorSelfTestInput::holdMouseAtMark( mark, anchor ) == false )
+                    runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
+                return true;
+            }
+
             static bool runText( AutomationRunner& /*runner*/, const AutomationStep& step )
             {
                 EditorSelfTestInput::typeText( *step.findAttribute( "value" ) );
@@ -1011,6 +1049,20 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 씬 뷰의 호버 오브젝트입니다: `-gv_editorProbeObject` 오브젝트면 1, 없으면 0, 다른 오브젝트면 -1. */
+            [[nodiscard]] static bool readHoveredObject( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const uint64 hoveredID = EditorSelectionBounds::getHoveredObjectID();
+                if ( hoveredID == 0 )
+                {
+                    outValue = 0.0;
+                    return true;
+                }
+                const GameObject* pProbe = findProbedObject();
+                outValue                 = pProbe != nullptr && pProbe->getObjectID() == hoveredID ? 1.0 : -1.0;
+                return true;
+            }
+
             /** @brief 선택 상자 시각화가 지난 프레임에 그린 상자 수입니다. */
             [[nodiscard]] static bool readSelectionOutlineBoxes( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1135,6 +1187,7 @@ namespace sw::editor
 
     SW_AUTOMATION_STEP( editorClick, "EditorClick", &EditorScenarioStepsInternal::runClick, &EditorScenarioStepsInternal::validateClick, false );
     SW_AUTOMATION_STEP( editorDrag, "EditorDrag", &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepsInternal::validateDrag, false );
+    SW_AUTOMATION_STEP( editorHover, "EditorHover", &EditorScenarioStepsInternal::runHover, &EditorScenarioStepsInternal::validateHover, false );
     SW_AUTOMATION_STEP( editorText, "EditorText", &EditorScenarioStepsInternal::runText, &EditorScenarioStepsInternal::validateText, false );
     SW_AUTOMATION_STEP( editorKey, "EditorKey", &EditorScenarioStepsInternal::runKey, &EditorScenarioStepsInternal::validateKey, false );
     SW_AUTOMATION_STEP( editorExpectObject, "EditorExpectObject", &EditorScenarioStepsInternal::runExpectObject,
@@ -1203,6 +1256,9 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewOrthographic );
     SW_AUTOMATION_PROBE( editorSceneViewMaximized, "Editor.SceneViewMaximized", "1 while the scene view is maximized (Shift+Space)",
                          &EditorScenarioStepsInternal::readSceneViewMaximized );
+    SW_AUTOMATION_PROBE( editorHoveredObject, "Editor.HoveredObject",
+                         "Scene view hover: 1 when it is the object named by gv_editorProbeObject, 0 when nothing, -1 when another object",
+                         &EditorScenarioStepsInternal::readHoveredObject );
     SW_AUTOMATION_PROBE( editorSelectionOutlineBoxes, "Editor.SelectionOutlineBoxes", "Selection boxes the scene view drew in the last frame",
                          &EditorScenarioStepsInternal::readSelectionOutlineBoxes );
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );

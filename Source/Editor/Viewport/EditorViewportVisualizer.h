@@ -96,6 +96,9 @@ namespace sw::editor
     struct SW_EDITOR_API EditorSelectionBounds
     {
         static uint32 getDrawnBoxCount();
+        /** @brief 씬 뷰가 이번 프레임의 호버 오브젝트를 알립니다(0 이면 없음). 고른 오브젝트면 그리지 않는다. */
+        static void   setHoveredObjectID( uint64 objectID );
+        static uint64 getHoveredObjectID();
     };
 } // namespace sw::editor
 

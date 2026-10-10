@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 씬 뷰 호버 강조: 커서를 큐브(TestMesh) 위에 두면 호버 오브젝트가 그것이고(Editor.HoveredObject 1), 빈 곳이면 없다(0).
+  큐브를 고르면 그 위(기즈모 손잡이 포함)는 호버가 아니다(고른 오브젝트는 선택 상자 · 기즈모가 이미 있다). 오른쪽 단추를 누른 채(비행)도 꺼진다. 고른 오브젝트에는 호버 상자를 그리지 않는다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/viewporthover.scenario.xml -dx12
+-->
+<Scenario name="editor.viewporthover" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="50">
+		<Variable name="gv_editorProbeObject" value="TestMesh"/>
+		<EditorHover mark="sceneView.canvas" anchor="0.5,0.68"/>
+	</At>
+	<At frame="65"><Expect probe="Editor.HoveredObject" equals="1"/></At>
+	<At frame="70"><EditorHover mark="sceneView.canvas" anchor="0.05,0.95"/></At>
+	<At frame="85"><Expect probe="Editor.HoveredObject" equals="0"/></At>
+	<At frame="90"><EditorHover release="true"/></At>
+	<At frame="95"><EditorClick mark="hierarchy.row.TestMesh"/></At>
+	<At frame="110"><EditorHover mark="sceneView.canvas" anchor="0.551,0.756"/></At>
+	<At frame="125"><Expect probe="Editor.HoveredObject" equals="0"/></At>
+	<At frame="130"><EditorHover release="true"/></At>
+	<At frame="135"><EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.68" state="down"/></At>
+	<At frame="150"><Expect probe="Editor.HoveredObject" equals="0"/></At>
+	<At frame="155"><EditorClick mark="sceneView.canvas" button="1" anchor="0.5,0.68" state="up"/></At>
+	<At frame="160"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

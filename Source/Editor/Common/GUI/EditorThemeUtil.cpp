@@ -464,6 +464,12 @@ namespace sw::editor
         saveToConfig();
     }
 
+    Color4 EditorThemeUtil::getViewportHoverColor()
+    {
+        const Color4& accent = getAccentColor();
+        return Color4{ accent._r + ( 1.0f - accent._r ) * 0.45f, accent._g + ( 1.0f - accent._g ) * 0.45f, accent._b + ( 1.0f - accent._b ) * 0.45f, 0.75f };
+    }
+
     const Color4& EditorThemeUtil::getAccentColor()
     {
         return EditorThemeInternal::activeTheme()._accentColor;

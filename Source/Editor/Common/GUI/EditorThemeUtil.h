@@ -100,6 +100,8 @@ namespace sw::editor
         // 1) 테마 색상 접근자 (Color4)
         // ----------------------------------------------------------------------
         static const Color4& getAccentColor();
+        /** @brief 씬 뷰 호버 강조 색입니다(강조색을 밝게 · 반투명 — 선택 주황보다 약하게, 테마를 따른다). */
+        static Color4        getViewportHoverColor();
         static const Color4& getWindowBgColor();
         static const Color4& getPanelBgColor();
         static const Color4& getHeaderBgColor();
