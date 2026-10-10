@@ -2,6 +2,17 @@
 
 새 세션은 이 문서를 먼저 읽습니다. 배치 경계마다 적용 담당이 고쳐 씁니다. 끝난 항목은 지웁니다.
 
+## 에디터 보강 끝(2026-10-11)
+
+- 계획 문서 `EditorPlus.md` 의 단위를 모두 넣고 계획 문서를 지웠다. 이 세션 마지막 묶음: N8 Animation Graph 전이 편집, N6 플레이 옵션(플레이 중 인스펙터 편집 · Keep Simulation Changes ·
+  F8 Eject · Maximize On Play · 새 창 플레이), N9 Sequencer 키 트랙(도우미), 프로파일러(호출 트리 · 프레임 고르기 · Pause on spike · 캡처 저장), 에디터 프레임당 할당(draw 스냅샷 풀 — 프레임당 ~260 KB 0),
+  Input Map Editor 탭 셋, 디버그 HUD 에디터 연결(옛 Stats · 오버레이 줄 대체), 렌더 타깃 보기(깊이 선형화 · 채널 · 픽셀 값, 도우미), 에디터 README 를 모듈 README 틀로 다시 쓰기.
+  남은 로드맵(프로젝트 설정 창 · 카탈로그 편집기 · 다중 월드 툴 창 …)은 백로그 1-4 "에디터 로드맵" 한 항목이다.
+- 마지막 검증: `AppScenarioTest.EditorScenariosPassOnEveryBackend` 는 세 시나리오가 졌다 — `assetmanage`(Vulkan) · `profilercapture`(DX11)는 다시 돌리면 3/3 통과(흔들림),
+  `sceneviewgameview` 는 네 백엔드 모두 진다. 실제 마우스 커서가 앱 창 위에 있으면 한 프레임 실제 커서 자리가 들어와 시점이 돈다(백로그 1-4 첫 항목 — 커서 자리를 바꾸면 값이 바뀐다).
+  다음 세션은 그 항목부터 고치고 네 백엔드 에디터 시나리오를 다시 한 번 돌린다(커서를 창 밖에 둔 채로는 같은 값이 나오는지도 본다).
+- 도우미 워크트리는 모두 지웠다(editor-plus 하나만 이 세션의 적용 자리).
+
 ## 지금 상태 (2026-10-10 밤 — 이름 정리 기계적 치환 · CMake 구조 정리까지 들어갔다)
 
 - CMake 구조 정리(2026-10-10 밤, 동작 불변): `cmake/Engine/ModuleTargets.cmake` 를 여섯 파일로(`TargetCompileRules` · `DelayLoad` · `EngineAbiStamp` · `ModuleRegistry` · `ModuleTargets` · `ExecutableTargets`),
@@ -31,7 +42,7 @@
   검증: Debug 경고 0, `ctest --preset Ninja-Debug-lint` 59/59, Debug `-L nogpu` 41/42(SmokeTest 는 아래), 에디터 자체 시험 37/37,
   `AppScenarioTest.EditorScenariosPassOnEveryBackend`(10 시나리오 × 네 백엔드, 건너뜀 0) · `AppSmokeTest.Editor*` · Vulkan 씬 뷰 리사이즈 통과,
   Shipping · Debug-Server 빌드 경고 0, 창 캡처로 Scene 탭 격자 · 기즈모 · Game 탭 보조선 없음 확인.
-  **남은 것**: 보기 모드가 렌더러 전역이라 두 뷰가 함께 보이면 게임 뷰에도 걸린다(EditorPlus G1 에 적었다), 두 뷰가 함께 보일 때 그림자 볼륨은 게임 카메라 기준.
+  **남은 것**: 보기 모드가 렌더러 전역이라 두 뷰가 함께 보이면 게임 뷰에도 걸린다(보기 모드는 뷰마다로 고쳤다 — Editor README), 두 뷰가 함께 보일 때 그림자 볼륨은 게임 카메라 기준.
   **검증 대기**: SmokeTest(`ArchitectureTest.ModuleCompilerAndLiveReloadE2E`)는 같은 시각 빌드 속도 작업(`d649e08f4`)이 공유 vcpkg 를 다시 설치하는 동안
   Debug 재구성이 vcpkg 잠금 · 없는 zstd 패키지로 실패해 확인하지 못했다(V1 코드와 무관한 환경 문제) — vcpkg 설치가 끝난 뒤 `ctest -R ^SmokeTest$` 로 다시 본다.
 - 그 뒤 묶음(2026-10-10): AppHost → ModuleHost 개명 · FixedTimestep 을 `Engine/Config` 로(`6863b1f95`), 에디터 격자 월드 고정 · 적응 간격 · 가장자리 흐림(`0c3f1fd37`),
@@ -66,7 +77,7 @@
 3. **빌드 속도 2 ~ 6 단계.** 계획 [빌드 속도](BuildSpeed.md). 0 단계 기준선(Debug, Ryzen 7 6800H, 3회 중앙값: 풀 131.5 s · 헤더 하나 수정 131.6 s · `.cpp` 하나 7.2 s · 워크트리 콜드 142.9 s)과 상위 헤더 20개(헤더 파싱 비율 82 %, 1위 `Engine/pch.h`, 2위 `CoreMinimal.h`)는 `docs/08_Verification.md` 빌드 속도 절과 `BuildSpeed.md` 에 있다. **헤더 하나를 고치면 풀 빌드와 같은 시간이 든다**(Core 기본 헤더 — 헤더 다이어트의 근거). Release 는 풀 한 번(192 s)만 재었다. Jolt 래퍼 TU 는 자기 PCH 를 가진 OBJECT 라이브러리로 11.1 → 5.5 s 로 줄었다(6 단계 끝). 헤더 다이어트 → PCH 공유(타깃마다 86개) → 개발 증분(PCH)과 콜드(PCH 없이 유니티 + sccache) 구성 분리 → 유니티 확대. 단계마다 같은 표로 전후를 남기고, 효과 없으면 되돌려 `docs/09_Decisions.md` 3절에 숫자와 함께 적는다. 7 ~ 9 는 필요할 때만(사용자 결정).
 4. **행동이 바뀔 수 있는 중복 정리.** 결정적 난수를 Core 로(xorshift32 사본 7곳 · splitmix64 3곳; 상태 바이트 호환을 시험으로 증명), 격자 사본 13곳 → `GridTopology`(Engine · Editor 용은 Core 나 Engine 쪽으로 올리는 선결 과제), 타이머 약 25곳 → `Countdown`, 실시간 키트 HP 직접 관리 → `Vitality`. 상태 바이트와 게임 동작에 닿으므로 시험과 함께.
 5. **엔진 분할 1단계 이후.** 계획 [엔진 분할](EnginePartition.md): 작은 고리(`Automation ↔ UI`, `Text` 티어 불일치), `Object` 코어와 기능 컴포넌트 가르기(`GameObject/` 코어가 `Graphics` 15 · `Physics` 10 · `Navigation` 5 · `Audio` 2 를 include), `OBJECT` 라이브러리 분할 → (빌드 속도 측정으로 이득이 확인되면) DLL 승격, 다중 월드. 에디터는 `GameFramework` 를, 서버 실행 파일도 `GameFramework` 를 include 할 수 없다 — 그래서 에디터 · 서버가 쓰는 폴더는 Engine 에 남는다.
-6. **에디터 보강** — [에디터 보강 계획](EditorPlus.md). V1 · E5 · G2 · G3 · H1 은 끝났다. 남은 단위(C1~C5, P1~P4, I1~I3, A1, G1 보기 모드 분리, G4, H2 · H3, T1~T4, 아이콘 R3 · R4 · R5 · R9, 패널 점검 N1~N12)를 선행 칸 순서로. 끝나면 에디터 문서를 새 문체로 다시 쓴다.
+6. **에디터 보강** — 끝났다(위 "에디터 보강 끝" 절). 남은 것은 백로그 1-4.
 7. **전체 검증 한 번(마지막).** `ctest --preset Ninja-Debug-lint`, 시험 실행 파일을 먼저 짓고(`AllTests` 타깃 — 기본 빌드는 시험을 안 짓는다) Debug `-L nogpu`(V1 에서 41/42, **실패 한 건의 이름을 모른다** — 먼저 찾는다) · `SmokeTest`, Shipping 빌드 · `-L nogpu` · `-L hostgpu`, 대표 실행(네 백엔드 × Empty · 에디터 · Shooter3D · NileCity), 서버 프리셋 `-L nogpu`, 게임별 프리셋(`Ninja-Debug-<Game>`) 빌드. 리눅스는 CI 결과(특히 Core 의 새 Posix 파일 `PosixThreadCrashStack` 등은 한 번도 컴파일되지 않았다).
 8. **6 차(주석을 새 문체로)** 와 끝난 계획 문서 정리(`EnginePartition.md` · `GameFrameworkLayout.md` · `BuildSpeed.md` 에서 끝난 단위 삭제, 교훈은 영역 README 함정 절 · 결정 기록으로).
 

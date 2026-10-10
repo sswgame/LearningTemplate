@@ -28,7 +28,22 @@
             "source": "Close",
             "context": "TextWidget._text",
             "origins": [
+                "engine/ui/debughud.ui.xml",
                 "engine/ui/options.ui.xml"
+            ]
+        },
+        "Corner": {
+            "source": "Corner",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/debughud.ui.xml"
+            ]
+        },
+        "Debug HUD": {
+            "source": "Debug HUD",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/debughud.ui.xml"
             ]
         },
         "Defaults": {
@@ -64,6 +79,13 @@
             "context": "TextWidget._text",
             "origins": [
                 "engine/ui/loading.ui.xml"
+            ]
+        },
+        "Opacity": {
+            "source": "Opacity",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/debughud.ui.xml"
             ]
         },
         "Options": {
@@ -108,6 +130,20 @@
             "context": "TextWidget._text",
             "origins": [
                 "engine/ui/confirm_countdown.ui.xml"
+            ]
+        },
+        "Sections": {
+            "source": "Sections",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/debughud.ui.xml"
+            ]
+        },
+        "Show HUD (Ctrl+F3)": {
+            "source": "Show HUD (Ctrl+F3)",
+            "context": "TextWidget._text",
+            "origins": [
+                "engine/ui/debughud.ui.xml"
             ]
         },
         "Some changes take effect after a restart.": {
