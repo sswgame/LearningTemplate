@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 } // namespace sw
 
 namespace sw::editor
@@ -86,7 +86,7 @@ namespace sw::editor
          *          (shadingShift, shadingToony) 로 옮겨 같은 경계가 되게 하고, 외곽선 두께는 월드 cm → m, 화면은 NDC 의 1 % 단위 → 화면 높이 비율(× 0.005)입니다.
          * @return 모르는 키 · 셰이더 · 값이면 false 이고 @p outError 에 이유를 씁니다.
          */
-        [[nodiscard]] static bool readVrm0Material( const JsonValue& materialProperty, const JsonValue& gltfMaterial, ToonMaterialDesc& outDesc,
+        [[nodiscard]] static bool readVrm0Material( const JSONValue& materialProperty, const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc,
                                                     vector<string>* pOutListIgnored, string& outError );
 
         /**
@@ -94,7 +94,7 @@ namespace sw::editor
          * @details 1.0 의 값은 선형이고 이름이 엔진과 같아 그대로 옮깁니다. `KHR_materials_emissive_strength` 를 받습니다.
          * @return 모르는 MToon 키 · 값이면 false 이고 @p outError 에 이유를 씁니다.
          */
-        [[nodiscard]] static bool readMtoon1Material( const JsonValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError );
+        [[nodiscard]] static bool readMtoon1Material( const JSONValue& gltfMaterial, ToonMaterialDesc& outDesc, vector<string>* pOutListIgnored, string& outError );
 
         /**
          * @brief 엔진 툰 머티리얼(`engine/materials/toon.material`)을 틀로 @p desc 의 값을 넣은 `.material` 글을 만듭니다. 틀을 못 읽으면 빈 글입니다.

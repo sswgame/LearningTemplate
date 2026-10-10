@@ -65,12 +65,12 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     SW_ASSERT_NOT_NULL( pScratch );
 
     sw::vector<sw::string>        listXML( listObject.size() );
-    sw::vector<sw::string>        listJson( listObject.size() );
+    sw::vector<sw::string>        listJSON( listObject.size() );
     sw::vector<sw::vector<uint8>> listBinary( listObject.size() );
     sw::vector<int64>             listXMLWriteMicro;
     sw::vector<int64>             listXMLReadMicro;
-    sw::vector<int64>             listJsonWriteMicro;
-    sw::vector<int64>             listJsonReadMicro;
+    sw::vector<int64>             listJSONWriteMicro;
+    sw::vector<int64>             listJSONReadMicro;
     sw::vector<int64>             listBinaryWriteMicro;
     sw::vector<int64>             listBinaryReadMicro;
     for ( uint32 round = 0; round < SerializationBenchInternal::kRoundCount; ++round )
@@ -95,17 +95,17 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
             const sw::Stopwatch stopwatch;
             for ( size_t objectIndex = 0; objectIndex < listObject.size(); ++objectIndex )
             {
-                listJson[objectIndex] = sw::ObjectStateSerializer::saveToJsonString( listObject[objectIndex] );
+                listJSON[objectIndex] = sw::ObjectStateSerializer::saveToJSONString( listObject[objectIndex] );
             }
-            listJsonWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
+            listJSONWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
-            for ( const sw::string& json : listJson )
+            for ( const sw::string& json : listJSON )
             {
-                (void)sw::ObjectStateSerializer::loadFromJsonString( pScratch, json ); // 시간만 잰다
+                (void)sw::ObjectStateSerializer::loadFromJSONString( pScratch, json ); // 시간만 잰다
             }
-            listJsonReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
+            listJSONReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
@@ -129,8 +129,8 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     test::logBenchSamples( "arena scene load (xml document + instantiate)", listLoadMicro );
     test::logBenchSamples( "object state write xml (all objects)", listXMLWriteMicro );
     test::logBenchSamples( "object state read xml (all objects)", listXMLReadMicro );
-    test::logBenchSamples( "object state write json (all objects)", listJsonWriteMicro );
-    test::logBenchSamples( "object state read json (all objects)", listJsonReadMicro );
+    test::logBenchSamples( "object state write json (all objects)", listJSONWriteMicro );
+    test::logBenchSamples( "object state read json (all objects)", listJSONReadMicro );
     test::logBenchSamples( "object state write binary (all objects)", listBinaryWriteMicro );
     test::logBenchSamples( "object state read binary (all objects)", listBinaryReadMicro );
 }

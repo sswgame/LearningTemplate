@@ -225,7 +225,7 @@ class RecordLayout:
         alignment = max(1, self.align)
         return max(alignment, (covered + alignment - 1) // alignment * alignment)
 
-    def toJson(self) -> str:
+    def toJSON(self) -> str:
         return json.dumps({
             "name": self.name, "file": self.file, "line": self.line, "size": self.size, "align": self.align,
             "spans": [[span.name, span.offset, span.size, span.align, span.bitText] for span in self.listSpan],
@@ -233,7 +233,7 @@ class RecordLayout:
         }, ensure_ascii=False)
 
     @staticmethod
-    def fromJson(text: str) -> "RecordLayout":
+    def fromJSON(text: str) -> "RecordLayout":
         data = json.loads(text)
         record = RecordLayout(data["name"], data["file"], data["line"], data["size"], data["align"])
         record.listSpan = [MemberSpan(*values) for values in data["spans"]]
@@ -497,7 +497,7 @@ def parseUnitInWorker(request: dict) -> int:
 
     collector = RecordCollector(libClang, request["sourceRoot"])
     for record in collector.collect(translationUnit):
-        print(record.toJson())
+        print(record.toJSON())
     libClang.clang_disposeTranslationUnit(translationUnit)
     libClang.clang_disposeIndex(index)
     return 0
@@ -573,7 +573,7 @@ def collectRecordsInternal(rawText: str) -> tuple[dict[tuple[str, int, str], lis
         if "error" in data:
             listError.append(data["error"])
             continue
-        record = RecordLayout.fromJson(line)
+        record = RecordLayout.fromJSON(line)
         key = (record.file, record.line, record.name)
         listVariant = mapKeyToRecord.setdefault(key, [])
         if all(variant.size != record.size for variant in listVariant):

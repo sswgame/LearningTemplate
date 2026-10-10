@@ -8,7 +8,7 @@
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -75,7 +75,7 @@ namespace sw
             }
 
             /** @brief 컨텍스트 파일(`key : value` 줄)을 읽어 @p outRoot 에 넣습니다. */
-            static void readContextInto( string_view text, const JsonValue& outContext )
+            static void readContextInto( string_view text, const JSONValue& outContext )
             {
                 size_t lineStart = 0;
                 while ( lineStart < text.size() )
@@ -111,12 +111,12 @@ namespace sw
                 return count;
             }
 
-            [[nodiscard]] static bool loadManifest( const string& bundleFolder, JsonDocument& outDocument )
+            [[nodiscard]] static bool loadManifest( const string& bundleFolder, JSONDocument& outDocument )
             {
                 return outDocument.tryParse( readText( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ) ) );
             }
 
-            [[nodiscard]] static bool saveManifest( const string& bundleFolder, const JsonDocument& document )
+            [[nodiscard]] static bool saveManifest( const string& bundleFolder, const JSONDocument& document )
             {
                 return document.saveFile( FileUtil::joinPath( bundleFolder, CrashReportService::kManifestFileName ), 2 );
             }
@@ -129,14 +129,14 @@ namespace sw
                 return text;
             }
 
-            static CrashReportState getState( const JsonDocument& manifest )
+            static CrashReportState getState( const JSONDocument& manifest )
             {
                 CrashReportState state = CrashReportState::Local;
                 (void)parseState( manifest.getRoot().get( "state" ).asString(), state ); // 모르는 이름이면 Local 로 둔다 — 보내지 않는 쪽이 안전하다
                 return state;
             }
 
-            static void setState( const JsonDocument& manifest, CrashReportState state ) { manifest.getRoot().set( "state" ).setString( toString( state ) ); }
+            static void setState( const JSONDocument& manifest, CrashReportState state ) { manifest.getRoot().set( "state" ).setString( toString( state ) ); }
 
             /** @brief 묶음 폴더들(이름 `crash_*`)입니다. */
             static void collectBundleFolders( const string& reportsFolder, vector<string>& outListFolder )
@@ -306,14 +306,14 @@ namespace sw
         if ( FileUtil::isDirectory( bundleFolder ) || FileUtil::ensureDirectoryExists( bundleFolder ) == false )
             return false;
 
-        JsonDocument    manifest;
-        const JsonValue root = manifest.makeObject();
+        JSONDocument    manifest;
+        const JSONValue root = manifest.makeObject();
         root.set( "schema" ).setInt( 1 );
         root.set( "session" ).setString( sessionId );
         root.set( "crashTime" ).setUint( FileUtil::getFileTimestamp( contextPath ) );
         root.set( "bundledBy" ).setString( _currentSessionId );
         const string    contextText = Internal::readText( contextPath );
-        const JsonValue context     = root.set( "context" );
+        const JSONValue context     = root.set( "context" );
         context.setObject();
         Internal::readContextInto( contextText, context );
         // 자주 보는 칸은 맨 위에 — 받는 쪽 목록 화면이 컨텍스트를 풀지 않고 보인다.
@@ -332,13 +332,13 @@ namespace sw
         root.set( "gpu" ).setString( gpu );
         // 시스템 정보는 묶는 지금 읽는다 — 같은 기계의 다음 실행이다.
         const HardwareProbeResult hardware = HardwareProbe::probe();
-        const JsonValue           system   = root.set( "system" );
+        const JSONValue           system   = root.set( "system" );
         system.setObject();
         system.set( "logicalCores" ).setUint( hardware._logicalCoreCount );
         system.set( "memoryMb" ).setUint( hardware._systemMemoryMb );
 
         // 크래시 파일은 묶음으로 옮긴다(다시 묶지 않게). 로그는 복사한다 — 로그 폴더의 것은 로그 정리가 맡는다.
-        const JsonValue files = root.set( "files" );
+        const JSONValue files = root.set( "files" );
         files.setArray();
         uint32 breadcrumbCount = 0;
         for ( const Internal::CrashFileKind& kind : Internal::kArrCrashFile )
@@ -355,7 +355,7 @@ namespace sw
             if ( StringUtil::equals( kind._pExtension, "breadcrumbs.txt" ) )
                 breadcrumbCount = Internal::countLines( Internal::readText( target ) );
             (void)FileUtil::removeFile( source ); // 실패는 removeFile 이 경고로 남긴다 — 사본은 이미 묶음에 있다
-            const JsonValue entry = files.pushBack();
+            const JSONValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( kind._pBundleName );
             entry.set( "bytes" ).setUint( FileUtil::getFileSize( target ) );
@@ -363,7 +363,7 @@ namespace sw
         const string log = Internal::collectSessionLog( _crashFolder, sessionId, kMaxLogBytes );
         if ( log.empty() == false && FileUtil::writeTextFile( FileUtil::joinPath( bundleFolder, "last.log" ), log ) )
         {
-            const JsonValue entry = files.pushBack();
+            const JSONValue entry = files.pushBack();
             entry.setObject();
             entry.set( "name" ).setString( "last.log" );
             entry.set( "bytes" ).setUint( log.size() );
@@ -393,7 +393,7 @@ namespace sw
         Internal::collectBundleFolders( _reportsFolder, listFolder );
         for ( const string& folder : listFolder )
         {
-            JsonDocument manifest;
+            JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
                 continue;
             const CrashReportState state     = Internal::getState( manifest );
@@ -421,7 +421,7 @@ namespace sw
         vector<pair<uint64, string>> listByTime;
         for ( const string& folder : listFolder )
         {
-            JsonDocument manifest;
+            JSONDocument manifest;
             const uint64 crashTime = Internal::loadManifest( folder, manifest ) ? manifest.getRoot().get( "crashTime" ).asUint() : 0u;
             listByTime.push_back( { crashTime, folder } );
         }
@@ -440,10 +440,10 @@ namespace sw
         Internal::collectBundleFolders( _reportsFolder, listFolder );
         for ( const string& folder : listFolder )
         {
-            JsonDocument manifest;
+            JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false )
                 continue;
-            const JsonValue    root = manifest.getRoot();
+            const JSONValue    root = manifest.getRoot();
             CrashReportSummary summary;
             summary._sessionId = root.get( "session" ).asString();
             summary._folder    = folder;
@@ -461,7 +461,7 @@ namespace sw
     {
         using Internal            = CrashReportServiceInternal;
         const string bundleFolder = FileUtil::joinPath( _reportsFolder, string( kBundlePrefix ) + string( sessionId ) );
-        JsonDocument manifest;
+        JSONDocument manifest;
         if ( Internal::loadManifest( bundleFolder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::AwaitingDecision )
             return false;
         Internal::setState( manifest, bSend ? CrashReportState::Queued : CrashReportState::Declined );
@@ -504,10 +504,10 @@ namespace sw
         uint32 sentCount = 0;
         for ( const string& folder : listFolder )
         {
-            JsonDocument manifest;
+            JSONDocument manifest;
             if ( Internal::loadManifest( folder, manifest ) == false || Internal::getState( manifest ) != CrashReportState::Queued )
                 continue;
-            const JsonValue root     = manifest.getRoot();
+            const JSONValue root     = manifest.getRoot();
             const uint64    attempts = root.get( "attempts" ).asUint();
             if ( attempts >= kMaxAttempts )
                 continue;
@@ -515,7 +515,7 @@ namespace sw
             bundle._folder        = folder;
             bundle._sessionId     = root.get( "session" ).asString();
             bundle._manifest      = manifest.dump( -1 );
-            const JsonValue files = root.get( "files" );
+            const JSONValue files = root.get( "files" );
             for ( size_t index = 0; index < files.size(); ++index )
             {
                 bundle._listFilePath.push_back( FileUtil::joinPath( folder, files.at( index ).get( "name" ).asString() ) );

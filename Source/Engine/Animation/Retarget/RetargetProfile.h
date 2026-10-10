@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /** @brief 뿌리 · 골반 이동을 옮기는 방법입니다. */
     enum class RetargetTranslationMode : uint8
@@ -56,7 +56,7 @@ namespace sw
         RetargetProfile();
 
         /** @brief JSON 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         void               clear();
@@ -76,7 +76,7 @@ namespace sw
                                RetargetTranslationMode mode );
 
     private:
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
 
         vector<RetargetChain>   _listChain;
         string                  _sourceSkeletonPath;

@@ -28,7 +28,7 @@
   가 줄바꿈으로 끝나 다시 쓰면 `&#10;` 이 빠진다 — 지금은 오브젝트 상태 직렬화기가 원문을 그대로 다시 써서 데이터는 잃지 않고, 시험은 이 타입을 뺀다.
   끝 공백이 뜻을 갖는 문자열 칸이 생기면 XML 읽기의 자르기를 속성 값에서 걷어낸다.
 
-- **JSON 소유 포인터 원소가 `{ "타입이름": {...} }` 꼴이 아니면 말없이 건너뛴다**(`JsonSerializerInternal::ContainerReader::readOwnedPointer`). 실패로 알리면 `_listComponent`
+- **JSON 소유 포인터 원소가 `{ "타입이름": {...} }` 꼴이 아니면 말없이 건너뛴다**(`JSONSerializerInternal::ContainerReader::readOwnedPointer`). 실패로 알리면 `_listComponent`
   칸 전체가 실패하므로 그 원소만 orphan 으로 남기는 길이 필요하다(XML 은 태그가 곧 타입이라 이 모양이 없다).
 
 ### 1-2. 오브젝트 · 씬 · 틱 · 물리

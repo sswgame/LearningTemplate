@@ -73,7 +73,7 @@ namespace
         static PoseModifierComponent* addRig( SkeletalMeshComponent& unit, string_view json )
         {
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->parseJson( json, "test.rig.json" ) == false )
+            if ( asset->parseJSON( json, "test.rig.json" ) == false )
                 return nullptr;
             PoseModifierComponent* pModifier = unit.getOwner()->addComponent<PoseModifierComponent>();
             if ( pModifier == nullptr )
@@ -301,12 +301,12 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
 {
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
     const string      path = FileUtil::joinPath( test::makeTempPath( "rigreload" ), "reach.rig.json" );
-    const string_view firstJson =
+    const string_view firstJSON =
         R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "A" } ] })";
-    const string_view secondJson =
+    const string_view secondJSON =
         R"({ "targets": [ { "name": "A", "object": "A" }, { "name": "B", "object": "B" } ], "nodes": [ { "type": "Position", "name": "Reach", "bone": "bone2", "target": "B" } ] })";
     FileUtil::ensureParentDirectoryExists( path );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, firstJson ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, firstJSON ) );
 
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestPoseModifierInternal::createUnit( manager, "Hero", float3{} );
@@ -320,7 +320,7 @@ SW_TEST_CASE( PoseModifierTest, HotReloadRebindsRig )
     manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ 1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );
 
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, secondJson ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, secondJSON ) );
     SW_ASSERT_TRUE( RigAssetCache::reloadShared( path ) );
     manager.getAnimationSystem().evaluate( 1.0f / 60.0f );
     SW_EXPECT_TRUE( TestPoseModifierInternal::isNear( float3{ -1.0f, 0.0f, 0.0f }, TestPoseModifierInternal::getBoneModel( *pUnit, 2 ), 1e-4f ) );

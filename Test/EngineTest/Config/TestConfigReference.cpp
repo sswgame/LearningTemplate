@@ -5,7 +5,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -20,24 +20,24 @@
 SW_TEST_CASE( ConfigReferenceTest, FieldsMatchReflection )
 {
     const sw::string path = sw::FileUtil::joinPath( sw::ResourceUtil::getProjectFolderPath(), "docs/Config/ConfigReference.json" );
-    sw::JsonDocument doc;
+    sw::JSONDocument doc;
     SW_ASSERT_TRUE_MSG( doc.loadPath( path ), path.c_str() );
 
     uint32              comparedCount{ 0 };
-    const sw::JsonValue listFile = doc.getRoot().get( "files" );
+    const sw::JSONValue listFile = doc.getRoot().get( "files" );
     for ( size_t fileIndex = 0; fileIndex < listFile.size(); ++fileIndex )
     {
-        const sw::JsonValue listType = listFile.at( fileIndex ).get( "types" );
+        const sw::JSONValue listType = listFile.at( fileIndex ).get( "types" );
         for ( size_t typeIndex = 0; typeIndex < listType.size(); ++typeIndex )
         {
-            const sw::JsonValue typeEntry = listType.at( typeIndex );
+            const sw::JSONValue typeEntry = listType.at( typeIndex );
             const sw::string    typeName  = typeEntry.get( "name" ).asString();
             const sw::TypeInfo* pType     = sw::engine::getTypeRegistry().findType( sw::hashed_string( typeName ) );
             if ( pType == nullptr )
                 continue;
 
             sw::vector<sw::string> listDocName;
-            const sw::JsonValue    listField = typeEntry.get( "fields" );
+            const sw::JSONValue    listField = typeEntry.get( "fields" );
             for ( size_t fieldIndex = 0; fieldIndex < listField.size(); ++fieldIndex )
             {
                 listDocName.push_back( listField.at( fieldIndex ).get( "name" ).asString() );

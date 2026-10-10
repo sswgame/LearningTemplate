@@ -44,14 +44,14 @@ namespace
 } // namespace
 
 /**
- * @brief [AnimGraphTest] toJson / parseJson 왕복이 노드·링크·좌표를 모두 보존하는지 검증
+ * @brief [AnimGraphTest] toJSON / parseJSON 왕복이 노드·링크·좌표를 모두 보존하는지 검증
  */
-SW_TEST_CASE( AnimGraphTest, JsonRoundTripKeepsNodesAndLinks )
+SW_TEST_CASE( AnimGraphTest, JSONRoundTripKeepsNodesAndLinks )
 {
     const AnimGraphAsset source = makeTwoNodeGraph();
 
     AnimGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJson( source.toJson() ) );
+    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
 
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( parsed._listLink.size() ) );
@@ -63,10 +63,10 @@ SW_TEST_CASE( AnimGraphTest, JsonRoundTripKeepsNodesAndLinks )
 }
 
 /**
- * @brief [AnimGraphTest] loadFromFile 이 parseJson 과 같은 결과를 내는지 검증
+ * @brief [AnimGraphTest] loadFromFile 이 parseJSON 과 같은 결과를 내는지 검증
  * @details loadFromFile 은 읽어 둔 문서를 다시 문자열로 덤프하지 않고 한 번만 파싱한다. 두 경로의 결과가 같음을 못박아 둔다.
  */
-SW_TEST_CASE( AnimGraphTest, LoadFromFileMatchesParseJson )
+SW_TEST_CASE( AnimGraphTest, LoadFromFileMatchesParseJSON )
 {
     const AnimGraphAsset source   = makeTwoNodeGraph();
     const string         filePath = test::makeTempPath( "test_anim_graph.json" );
@@ -77,7 +77,7 @@ SW_TEST_CASE( AnimGraphTest, LoadFromFileMatchesParseJson )
     SW_EXPECT_TRUE( loaded.loadFromFile( filePath ) );
 
     AnimGraphAsset parsed;
-    SW_EXPECT_TRUE( parsed.parseJson( source.toJson() ) );
+    SW_EXPECT_TRUE( parsed.parseJSON( source.toJSON() ) );
 
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listNode.size() ), static_cast<uint32>( loaded._listNode.size() ) );
     SW_EXPECT_EQUAL( static_cast<uint32>( parsed._listLink.size() ), static_cast<uint32>( loaded._listLink.size() ) );
@@ -188,14 +188,14 @@ SW_TEST_CASE( AnimGraphTest, StateMachineFollowsConditionsTriggersAndFinish )
 
     // JSON 왕복 — 조건 · 반복이 남는다.
     AnimGraphAsset parsed;
-    SW_ASSERT_TRUE( parsed.parseJson( graph.toJson() ) );
+    SW_ASSERT_TRUE( parsed.parseJSON( graph.toJSON() ) );
     SW_ASSERT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
     SW_EXPECT_TRUE( parsed._listLink[1]._op == AnimConditionOp::Trigger );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( parsed._listNode[1]._loopOverride ) );
     {
         test::ScopedDefensiveTestLog expected( "unknown condition op is a load error" );
         AnimGraphAsset               broken;
-        SW_EXPECT_FALSE( broken.parseJson( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "condition": { "param": "x", "op": "~" } } ] })" ) );
+        SW_EXPECT_FALSE( broken.parseJSON( R"({ "nodes": [ { "id": 1, "name": "A" } ], "links": [ { "id": 1, "from": 1, "to": 1, "condition": { "param": "x", "op": "~" } } ] })" ) );
     }
 
     test::TestPlayable       idle( 1.0f, true );

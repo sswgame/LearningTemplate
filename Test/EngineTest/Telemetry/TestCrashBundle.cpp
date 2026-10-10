@@ -8,7 +8,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Observability/HttpClient.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/CrashReportService.h"
 #include "Engine/Telemetry/CrashReportUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -77,9 +77,9 @@ namespace
 
         static string bundleFolder( const string& reportsFolder, const utf8* pSession ) { return FileUtil::joinPath( reportsFolder, string( "crash_" ) + pSession ); }
 
-        static JsonDocument loadManifest( const string& reportsFolder, const utf8* pSession )
+        static JSONDocument loadManifest( const string& reportsFolder, const utf8* pSession )
         {
-            JsonDocument doc;
+            JSONDocument doc;
             string       text;
             if ( FileUtil::readTextFile( FileUtil::joinPath( bundleFolder( reportsFolder, pSession ), "manifest.json" ), text ) )
                 (void)doc.tryParse( text ); // 깨진 manifest 는 빈 문서로 남아 부르는 쪽 단언이 값으로 드러낸다
@@ -128,8 +128,8 @@ SW_TEST_CASE( CrashBundleTest, BundlesPreviousCrashesOnce )
     SW_EXPECT_TRUE( lastLog.find( "FIRST LINE" ) == string::npos );
     SW_EXPECT_TRUE( lastLog.find( "OTHER SESSION" ) == string::npos );
 
-    const JsonDocument manifest = Internal::loadManifest( reportsFolder, "oldsession01" );
-    const JsonValue    root     = manifest.getRoot();
+    const JSONDocument manifest = Internal::loadManifest( reportsFolder, "oldsession01" );
+    const JSONValue    root     = manifest.getRoot();
     SW_EXPECT_TRUE( root.get( "session" ).asString() == "oldsession01" );
     SW_EXPECT_TRUE( root.get( "reason" ).asString() == "EXCEPTION_ACCESS_VIOLATION" );
     SW_EXPECT_TRUE( root.get( "buildId" ).asString() == "0A1B2C3D4E5F60718293A4B5C6D7E8F91" );
@@ -256,7 +256,7 @@ SW_TEST_CASE( CrashBundleTest, ReporterArgumentIsACommandLineEntry )
     SW_ASSERT_TRUE( commandLine.getArgument( CommandLineArgument::CRASH_REPORTER, folder ) );
     SW_EXPECT_TRUE( folder == reportsFolder );
     SW_EXPECT_EQUAL( 0u, CrashReportService::runReporter( folder, NullCrashReportUploader::get() ) );
-    const JsonDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
+    const JSONDocument manifest = Internal::loadManifest( reportsFolder, "queued01" );
     SW_EXPECT_TRUE( manifest.getRoot().get( "state" ).asString() == "queued" );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( manifest.getRoot().get( "attempts" ).asUint() ) );
 }

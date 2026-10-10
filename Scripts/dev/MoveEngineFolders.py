@@ -90,23 +90,23 @@ _kMapStep: dict[int, MoveStep] = {
         ((r"(?<![\w/])Common/IRenderSurface", "Graphics/RHI/IRenderSurface"),),
     ),
     5: MoveStep(
-        "Utility 해체 — XML · Json 은 Serialization, TileMap · Console · Profiling 은 자기 최상위 폴더",
+        "Utility 해체 — XML · JSON 은 Serialization, TileMap · Console · Profiling 은 자기 최상위 폴더",
         (
             ("Utility/XML/TileMapXml", "TileMap/TileMapXml"),
             ("Utility/TileMap", "TileMap"),
             ("Utility/XML", "Serialization/XML"),
-            ("Utility/Json", "Serialization/Json"),
+            ("Utility/JSON", "Serialization/JSON"),
             ("Utility/Console", "Console"),
             ("Utility/Profiling", "Profiling"),
         ),
         (
             (r"(?<![\w/])Utility/XML/TileMapXml", "TileMap/TileMapXml"),
             (r"(?<![\w/])Utility/(TileMap|Console|Profiling)(?![\w])", r"\1"),
-            (r"(?<![\w/])Utility/(XML|Json)(?![\w])", r"Serialization/\1"),
+            (r"(?<![\w/])Utility/(XML|JSON)(?![\w])", r"Serialization/\1"),
             (r"(?<=\{CMAKE_CURRENT_SOURCE_DIR\}/)Utility/Profiling/", "Profiling/"),
         ),
         (
-            ("Test/EngineTest/Utility/TestJsonDocument.cpp", "Test/EngineTest/Serialization/TestJsonDocument.cpp"),
+            ("Test/EngineTest/Utility/TestJSONDocument.cpp", "Test/EngineTest/Serialization/TestJSONDocument.cpp"),
             ("Test/EngineTest/Utility/TestXMLDocument.cpp", "Test/EngineTest/Serialization/TestXMLDocument.cpp"),
             ("Test/EngineTest/Utility/TestTileGridUtil.cpp", "Test/EngineTest/TileMap/TestTileGridUtil.cpp"),
             ("Test/EngineTest/Utility/TestTileMapXML.cpp", "Test/EngineTest/TileMap/TestTileMapXML.cpp"),

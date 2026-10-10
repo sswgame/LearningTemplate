@@ -7,10 +7,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -33,10 +33,10 @@ namespace sw
 namespace sw
 {
 
-    bool SkeletonBoneLOD::parseJson( string_view json, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseJSON( string_view json, string_view sourceLabel )
     {
         _listLevel.clear();
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#': malformed JSON", sourceLabel );
@@ -61,14 +61,14 @@ namespace sw
             _listLevel.clear();
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool SkeletonBoneLOD::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
             return false;
-        const JsonValue levels = root.get( "levels" );
+        const JSONValue levels = root.get( "levels" );
         if ( levels.isArray() == false )
         {
             SW_LOG_ERROR( "Bone LOD '%#': 'levels' must be an array", sourceLabel );
@@ -76,10 +76,10 @@ namespace sw
         }
         for ( size_t levelIndex = 0; levelIndex < levels.size(); ++levelIndex )
         {
-            const JsonValue level = levels.at( levelIndex );
-            if ( AnimJsonUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
+            const JSONValue level = levels.at( levelIndex );
+            if ( AnimJSONUtil::hasOnlyKnownKeys( level, { "max_screen_size", "remove" }, sourceLabel ) == false )
                 return false;
-            const JsonValue removed = level.get( "remove" );
+            const JSONValue removed = level.get( "remove" );
             if ( level.get( "max_screen_size" ).isNumber() == false || removed.isArray() == false || removed.size() == 0 )
             {
                 SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty 'remove' array", sourceLabel, levelIndex );

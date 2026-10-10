@@ -1,23 +1,23 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/Base64Util.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     namespace
     {
-        struct JsonWebTokenInternal
+        struct JSONWebTokenInternal
         {
             static constexpr int32 kMaxCompactSize = 16 * 1024;
 
             static const utf8* getAlgorithmName( NetSignatureAlgorithm algorithm ) { return algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 ? "RS256" : "ES256"; }
 
-            [[nodiscard]] static bool decodeJson( string_view encoded, JsonDocument& outDocument )
+            [[nodiscard]] static bool decodeJSON( string_view encoded, JSONDocument& outDocument )
             {
                 vector<uint8> bytes;
                 if ( Base64Util::decodeUrl( encoded, bytes ) == false )
@@ -28,9 +28,9 @@ namespace sw
 
             static string encodeText( string_view text ) { return Base64Util::encodeUrl( reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
 
-            [[nodiscard]] static bool decodeField( const JsonValue& key, const utf8* pName, vector<uint8>& outBytes )
+            [[nodiscard]] static bool decodeField( const JSONValue& key, const utf8* pName, vector<uint8>& outBytes )
             {
-                const JsonValue field = key.get( pName, false );
+                const JSONValue field = key.get( pName, false );
                 return field.isString() && Base64Util::decodeUrl( field.asString(), outBytes ) && outBytes.empty() == false;
             }
         };
@@ -39,8 +39,8 @@ namespace sw
 
 namespace sw
 {
-    JsonWebToken::JsonWebToken()
-        : _payload{ make_unique<JsonDocument>() }
+    JSONWebToken::JSONWebToken()
+        : _payload{ make_unique<JSONDocument>() }
         , _signatureBytes{}
         , _signingInput{}
         , _keyId{}
@@ -48,25 +48,25 @@ namespace sw
     {
     }
 
-    JsonWebToken::~JsonWebToken() = default;
+    JSONWebToken::~JSONWebToken() = default;
 
-    bool JsonWebToken::parse( string_view compact )
+    bool JSONWebToken::parse( string_view compact )
     {
-        using Internal = JsonWebTokenInternal;
+        using Internal = JSONWebTokenInternal;
         if ( compact.empty() || compact.size() > static_cast<size_t>( Internal::kMaxCompactSize ) )
             return false;
         const size_t firstDot  = compact.find( '.' );
         const size_t secondDot = firstDot == string_view::npos ? string_view::npos : compact.find( '.', firstDot + 1 );
         if ( secondDot == string_view::npos || compact.find( '.', secondDot + 1 ) != string_view::npos )
             return false;
-        JsonDocument header;
-        if ( Internal::decodeJson( compact.substr( 0, firstDot ), header ) == false )
+        JSONDocument header;
+        if ( Internal::decodeJSON( compact.substr( 0, firstDot ), header ) == false )
             return false;
-        if ( Internal::decodeJson( compact.substr( firstDot + 1, secondDot - firstDot - 1 ), *_payload ) == false )
+        if ( Internal::decodeJSON( compact.substr( firstDot + 1, secondDot - firstDot - 1 ), *_payload ) == false )
             return false;
         if ( Base64Util::decodeUrl( compact.substr( secondDot + 1 ), _signatureBytes ) == false || _signatureBytes.empty() )
             return false;
-        const JsonValue algorithm = header.getRoot().get( "alg", false );
+        const JSONValue algorithm = header.getRoot().get( "alg", false );
         if ( algorithm.isString() == false )
             return false;
         const string algorithmName = algorithm.asString();
@@ -76,47 +76,47 @@ namespace sw
             _algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
         else
             return false; // none · HS256 · 그 밖 — 받지 않는다
-        const JsonValue keyId = header.getRoot().get( "kid", false );
+        const JSONValue keyId = header.getRoot().get( "kid", false );
         _keyId                = keyId.isString() ? keyId.asString() : string{};
         _signingInput         = string( compact.substr( 0, secondDot ) );
         return true;
     }
 
-    bool JsonWebToken::findText( string_view claim, string& outValue ) const
+    bool JSONWebToken::findText( string_view claim, string& outValue ) const
     {
-        const JsonValue value = _payload->getRoot().get( claim, false );
+        const JSONValue value = _payload->getRoot().get( claim, false );
         if ( value.isString() == false )
             return false;
         outValue = value.asString();
         return true;
     }
 
-    bool JsonWebToken::findInteger( string_view claim, int64& outValue ) const
+    bool JSONWebToken::findInteger( string_view claim, int64& outValue ) const
     {
-        const JsonValue value = _payload->getRoot().get( claim, false );
+        const JSONValue value = _payload->getRoot().get( claim, false );
         if ( value.isNumber() == false )
             return false;
         outValue = value.asInt();
         return true;
     }
 
-    bool JsonWebToken::hasAudience( string_view audience ) const
+    bool JSONWebToken::hasAudience( string_view audience ) const
     {
-        const JsonValue value = _payload->getRoot().get( "aud", false );
+        const JSONValue value = _payload->getRoot().get( "aud", false );
         if ( value.isString() )
             return value.asString() == audience;
         if ( value.isArray() == false )
             return false;
         for ( size_t index = 0; index < value.size(); ++index )
         {
-            const JsonValue element = value.at( index );
+            const JSONValue element = value.at( index );
             if ( element.isString() && element.asString() == audience )
                 return true;
         }
         return false;
     }
 
-    bool JsonWebToken::verifySignature( INetSecurityProvider& provider, const NetPublicKey& publicKey ) const
+    bool JSONWebToken::verifySignature( INetSecurityProvider& provider, const NetPublicKey& publicKey ) const
     {
         if ( publicKey._algorithm != _algorithm )
             return false;
@@ -124,14 +124,14 @@ namespace sw
                                          static_cast<int32>( _signatureBytes.size() ) );
     }
 
-    bool JsonWebTokenUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJson,
+    bool JSONWebTokenUtil::makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJSON,
                                        const string& privateKeyPem, string& outCompact )
     {
-        using Internal            = JsonWebTokenInternal;
-        const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JsonDocument::escapeString( keyId ) + "\"}";
+        using Internal            = JSONWebTokenInternal;
+        const string header       = string( "{\"alg\":\"" ) + Internal::getAlgorithmName( algorithm ) + "\",\"typ\":\"JWT\",\"kid\":\"" + JSONDocument::escapeString( keyId ) + "\"}";
         string       signingInput = Internal::encodeText( header );
         signingInput.push_back( '.' );
-        signingInput += Internal::encodeText( payloadJson );
+        signingInput += Internal::encodeText( payloadJSON );
         vector<uint8> signature;
         if ( provider.signData( algorithm, privateKeyPem, reinterpret_cast<const uint8*>( signingInput.data() ), static_cast<int32>( signingInput.size() ), signature ) ==
              false )
@@ -140,9 +140,9 @@ namespace sw
         return true;
     }
 
-    string JsonWebTokenUtil::writeJwk( const NetPublicKey& publicKey, string_view keyId )
+    string JSONWebTokenUtil::writeJwk( const NetPublicKey& publicKey, string_view keyId )
     {
-        string jwk = "{\"kid\":\"" + JsonDocument::escapeString( keyId ) + "\",\"use\":\"sig\",";
+        string jwk = "{\"kid\":\"" + JSONDocument::escapeString( keyId ) + "\",\"use\":\"sig\",";
         if ( publicKey._algorithm == NetSignatureAlgorithm::RsaPkcs1Sha256 )
         {
             jwk += "\"kty\":\"RSA\",\"alg\":\"RS256\",\"n\":\"" + Base64Util::encodeUrl( publicKey._modulus.data(), publicKey._modulus.size() ) + "\",\"e\":\"" +
@@ -160,22 +160,22 @@ namespace sw
     {
     }
 
-    bool JwksKeyCache::replaceFromJwks( string_view jwksJson, int64 nowMs )
+    bool JwksKeyCache::replaceFromJwks( string_view jwksJSON, int64 nowMs )
     {
-        using Internal = JsonWebTokenInternal;
-        JsonDocument document;
-        if ( document.tryParse( jwksJson ) == false )
+        using Internal = JSONWebTokenInternal;
+        JSONDocument document;
+        if ( document.tryParse( jwksJSON ) == false )
             return false;
-        const JsonValue keys = document.getRoot().get( "keys", false );
+        const JSONValue keys = document.getRoot().get( "keys", false );
         if ( keys.isArray() == false )
             return false;
         vector<Entry> listEntry;
         for ( size_t index = 0; index < keys.size(); ++index )
         {
-            const JsonValue key   = keys.at( index );
-            const JsonValue use   = key.get( "use", false );
-            const JsonValue kid   = key.get( "kid", false );
-            const JsonValue type  = key.get( "kty", false );
+            const JSONValue key   = keys.at( index );
+            const JSONValue use   = key.get( "use", false );
+            const JSONValue kid   = key.get( "kid", false );
+            const JSONValue type  = key.get( "kty", false );
             const bool      bSign = use.isValid() == false || use.isNull() || use.asString() == "sig";
             if ( key.isObject() == false || bSign == false || kid.isString() == false || type.isString() == false )
                 continue;

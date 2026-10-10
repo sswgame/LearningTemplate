@@ -59,7 +59,7 @@ namespace
         static shared_ptr<const RigAsset> parseRig( string_view json )
         {
             shared_ptr<RigAsset> asset = make_shared<RigAsset>();
-            if ( asset->parseJson( json, "test.rig.json" ) == false )
+            if ( asset->parseJSON( json, "test.rig.json" ) == false )
                 return nullptr;
             return asset;
         }

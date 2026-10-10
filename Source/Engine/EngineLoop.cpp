@@ -196,13 +196,13 @@ namespace sw
             ConfigManager::setPrimary( loop._configManager.get() );
             loop._configManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &EngineLoop::onConfigReloaded, &loop ) );
 
-            loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJson );
+            loop._pEngineConfig = loop._configManager->ensureConfig<EngineConfig>( config::kFileRuntimeEngineConfig, shipping_host::kEngineConfigJSON );
             if ( loop._pEngineConfig == nullptr )
                 return EngineInitResult::Failed;
             EngineConfig::setActive( *loop._pEngineConfig );
 
             // 틀린 설정 파일은 nullptr 이다(키 이름은 이미 오류로 남았다) — 기본값으로 뜨면 고친 값이 무시된 것을 아무도 모른다.
-            const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJson );
+            const GameConfig* pGameConfig = loop._configManager->ensureConfig<GameConfig>( config::kFileRuntimeGameConfig, shipping_host::kGameConfigJSON );
             if ( pGameConfig == nullptr )
                 return EngineInitResult::Failed;
             GameConfig::setActive( *pGameConfig );

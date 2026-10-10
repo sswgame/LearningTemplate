@@ -1804,7 +1804,7 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
         const sw::string path    = sw::FileUtil::normalizeSeparators( filePath );
         const bool       bScene  = sw::StringUtil::endsWith( path, ".scene.xml", true );
         const bool       bXML    = sw::StringUtil::endsWith( path, ".prefab.xml", true );
-        const bool       bJson   = sw::StringUtil::endsWith( path, ".prefab.json", true );
+        const bool       bJSON   = sw::StringUtil::endsWith( path, ".prefab.json", true );
         const sw::string tempTag = "repo_" + sw::to_string( sceneCount + prefabCount );
         if ( bScene )
         {
@@ -1829,12 +1829,12 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
             SW_EXPECT_TRUE_MSG( sw::SceneTestInternal::collectComponentNames( pReopened->getObjectManager() ) == listExpected, path.c_str() );
             continue;
         }
-        if ( ( bXML || bJson ) == false )
+        if ( ( bXML || bJSON ) == false )
             continue;
 
         ++prefabCount;
         sw::PrefabAsset prefab;
-        SW_ASSERT_TRUE_MSG( bJson ? prefab.loadFromJsonFile( path ) : prefab.loadFromXMLFile( path ), path.c_str() );
+        SW_ASSERT_TRUE_MSG( bJSON ? prefab.loadFromJSONFile( path ) : prefab.loadFromXMLFile( path ), path.c_str() );
         sw::GameObjectManager authoring;
         sw::GameObject*       pAuthored = authoring.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
         SW_ASSERT_TRUE_MSG( prefab.applyStateTo( pAuthored ), path.c_str() );
@@ -1845,10 +1845,10 @@ SW_TEST_CASE( SceneTest, RepositoryScenesAndPrefabsKeepComponentNames )
 
         sw::PrefabAsset resaved;
         resaved.setFromGameObject( pAuthored );
-        const sw::string savedPath = test::makeTempPath( tempTag + ( bJson ? ".prefab.json" : ".prefab.xml" ) );
+        const sw::string savedPath = test::makeTempPath( tempTag + ( bJSON ? ".prefab.json" : ".prefab.xml" ) );
         SW_ASSERT_TRUE( resaved.saveToFile( savedPath ) );
         sw::PrefabAsset reread;
-        SW_ASSERT_TRUE( bJson ? reread.loadFromJsonFile( savedPath ) : reread.loadFromXMLFile( savedPath ) );
+        SW_ASSERT_TRUE( bJSON ? reread.loadFromJSONFile( savedPath ) : reread.loadFromXMLFile( savedPath ) );
         sw::GameObjectManager rebuilt;
         sw::GameObject*       pRebuilt = rebuilt.createGameObject( sw::hashed_string( "RepositoryPrefab" ) );
         SW_ASSERT_TRUE( reread.applyStateTo( pRebuilt ) );

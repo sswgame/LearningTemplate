@@ -14,7 +14,7 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -664,7 +664,7 @@ namespace sw
                                                        currentVersion, migrate, pLegacyTypeInfo );
     }
 
-    bool Archive::serializeJsonObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty )
+    bool Archive::serializeJSONObject( const void* pInstance, const TypeInfo& typeInfo, bool bPretty )
     {
         if ( pInstance == nullptr )
         {
@@ -672,13 +672,13 @@ namespace sw
             return false;
         }
 
-        const string jsonStr = bPretty ? JsonSerializer::serializePretty( pInstance, typeInfo )
-                                       : JsonSerializer::serialize( pInstance, typeInfo );
+        const string jsonStr = bPretty ? JSONSerializer::serializePretty( pInstance, typeInfo )
+                                       : JSONSerializer::serialize( pInstance, typeInfo );
         ( *this ) << jsonStr;
         return true;
     }
 
-    bool Archive::deserializeJsonObject( void* pInstance, const TypeInfo& typeInfo )
+    bool Archive::deserializeJSONObject( void* pInstance, const TypeInfo& typeInfo )
     {
         if ( pInstance == nullptr )
         {
@@ -691,10 +691,10 @@ namespace sw
         if ( _bError == SW_TRUE || jsonStr.empty() )
             return false;
 
-        return JsonSerializer::deserialize( pInstance, typeInfo, jsonStr );
+        return JSONSerializer::deserialize( pInstance, typeInfo, jsonStr );
     }
 
-    bool Archive::convertJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo )
+    bool Archive::convertJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo )
     {
         if ( jsonStr.empty() || typeInfo._size == 0 )
         {
@@ -703,7 +703,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerUtil::transcodeJsonToBinary( jsonStr, typeInfo, outBytes ) == false )
+        if ( SerializerUtil::transcodeJSONToBinary( jsonStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;
@@ -713,12 +713,12 @@ namespace sw
         return true;
     }
 
-    string Archive::convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty )
+    string Archive::convertBinaryToJSON( const TypeInfo& typeInfo, bool bPretty )
     {
         if ( _pData == nullptr || _offset >= _dataSize || typeInfo._size == 0 )
             return {};
 
-        return SerializerUtil::transcodeBinaryToJson( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
+        return SerializerUtil::transcodeBinaryToJSON( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
     }
 
     bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )

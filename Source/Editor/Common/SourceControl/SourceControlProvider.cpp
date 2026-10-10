@@ -2,7 +2,7 @@
 
 #include "Editor/Common/SourceControl/SourceControlProvider.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
 {
@@ -49,15 +49,15 @@ namespace sw::editor
         if ( text.empty() )
             return false;
 
-        JsonDocument document;
+        JSONDocument document;
         if ( document.tryParse( text ) == false )
             return false;
-        const JsonValue root = document.getRoot();
+        const JSONValue root = document.getRoot();
         if ( root.isArray() == false )
             return false;
         for ( size_t index = 0; index < root.size(); ++index )
         {
-            const JsonValue entry = root.at( index );
+            const JSONValue entry = root.at( index );
             if ( entry.isObject() == false || entry.get( "path" ).isString() == false )
             {
                 outListLock.clear();
@@ -66,7 +66,7 @@ namespace sw::editor
             SourceControlLock lock;
             lock._path            = entry.get( "path" ).asString();
             lock._id              = entry.get( "id" ).isString() ? entry.get( "id" ).asString() : string{};
-            const JsonValue owner = entry.get( "owner" );
+            const JSONValue owner = entry.get( "owner" );
             lock._owner           = owner.isObject() && owner.get( "name" ).isString() ? owner.get( "name" ).asString() : string{ "?" };
             outListLock.push_back( std::move( lock ) );
         }

@@ -65,7 +65,7 @@ def describeGpuInternal() -> dict:
     if sys.platform != "win32":
         return {"gpu": "", "driver": ""}
     command = ("Get-CimInstance Win32_VideoController | Sort-Object AdapterRAM -Descending | Select-Object -First 1 Name,DriverVersion"
-               " | ConvertTo-Json")
+               " | ConvertTo-JSON")
     output = runProcess(["powershell", "-NoProfile", "-Command", command], timeoutSeconds=30).stdout
     try:
         record = json.loads(output) if output.strip() else {}
@@ -104,7 +104,7 @@ def recordInternal(appPath: Path, gameName: str, game: dict, table: dict, backen
         "runs": runCount,
         "capture": {"width": table["capture_width"], "height": table["capture_height"], "frame": game["screenshot_frame"],
                     "arguments": game["arguments"]},
-        "metrics": averageMetrics(listMetrics).toJson(),
+        "metrics": averageMetrics(listMetrics).toJSON(),
         "tolerance": tolerance,
         "device": describeGpuInternal(),
     }
@@ -124,7 +124,7 @@ def compareInternal(appPath: Path, game: dict, table: dict, backend: str, golden
     if status != "ok":
         return status, str(payload)
     actual = computeMetrics(payload)
-    listViolation = compareMetrics(ImageMetrics.fromJson(record["metrics"]), actual, record["tolerance"])
+    listViolation = compareMetrics(ImageMetrics.fromJSON(record["metrics"]), actual, record["tolerance"])
     if not listViolation:
         return "pass", f"foreground {actual.foregroundFraction:.3f}, edges {actual.edgeDensity:.3f}"
     if diffDir is not None:

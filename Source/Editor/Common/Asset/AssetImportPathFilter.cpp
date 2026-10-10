@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
 {
@@ -13,7 +13,7 @@ namespace sw::editor
     {
         struct AssetImportPathFilterInternal
         {
-            static void parseStringList( const JsonValue& arrValue, vector<string>& outListItem )
+            static void parseStringList( const JSONValue& arrValue, vector<string>& outListItem )
             {
                 outListItem.clear();
                 if ( arrValue.isArray() == false )
@@ -22,7 +22,7 @@ namespace sw::editor
                 const size_t count = arrValue.size();
                 for ( size_t index = 0; index < count; ++index )
                 {
-                    const JsonValue item = arrValue.at( index );
+                    const JSONValue item = arrValue.at( index );
                     if ( item.isString() )
                         outListItem.push_back( item.asString() );
                 }
@@ -55,7 +55,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void AssetImportPathFilter::parse( const JsonValue& jsonValue )
+    void AssetImportPathFilter::parse( const JSONValue& jsonValue )
     {
         if ( jsonValue.has( "include_patterns" ) )
             AssetImportPathFilterInternal::parseStringList( jsonValue.get( "include_patterns" ), _listIncludePattern );

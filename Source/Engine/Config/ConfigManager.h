@@ -75,7 +75,7 @@ namespace sw
                 SW_LOG_ERROR( "Cannot read config file %#", resolvedPath.c_str() );
                 return ConfigReadResult::Invalid;
             }
-            if ( loadConfigFromJson<T>( jsonStr, resolvedPath.c_str() ) == false )
+            if ( loadConfigFromJSON<T>( jsonStr, resolvedPath.c_str() ) == false )
                 return ConfigReadResult::Invalid;
             _mapSource[getConfigKey<T>()] = ConfigSource{ resolvedPath, &ConfigManager::reloadFromSource<T> };
             return ConfigReadResult::Loaded;
@@ -109,14 +109,14 @@ namespace sw
         /** @brief 호스트의 표를 알립니다. 놓을 때 nullptr 를 넘깁니다. */
         static void setPrimary( ConfigManager* pManager );
 
-        /** @brief 설정 하나를 JSON 본문에서 엄격하게(`readConfigJson`) 읽어 등록합니다. 틀리면 표를 바꾸지 않습니다. */
+        /** @brief 설정 하나를 JSON 본문에서 엄격하게(`readConfigJSON`) 읽어 등록합니다. 틀리면 표를 바꾸지 않습니다. */
         template <typename T>
-        [[nodiscard]] bool loadConfigFromJson( const string& jsonStr, const utf8* pSourceLabel = "json" )
+        [[nodiscard]] bool loadConfigFromJSON( const string& jsonStr, const utf8* pSourceLabel = "json" )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
             unique_ptr<T> newConfig = make_unique<T>();
-            if ( readConfigJson( *newConfig, jsonStr, pSourceLabel ) == false )
+            if ( readConfigJSON( *newConfig, jsonStr, pSourceLabel ) == false )
                 return false;
             _mapConfig[getConfigKey<T>()] = std::move( newConfig );
             SW_LOG_INFO( "Config loaded successfully from %#", pSourceLabel );
@@ -130,7 +130,7 @@ namespace sw
          *          **Shipping 은 디스크의 `Config/` 를 보지 않습니다.** 생성 JSON 만 쓰고, 그것이 틀려도 nullptr 입니다.
          */
         template <typename T>
-        T* ensureConfig( const string& filePath, const utf8* pGeneratedJson = nullptr )
+        T* ensureConfig( const string& filePath, const utf8* pGeneratedJSON = nullptr )
         {
             static_assert( std::is_base_of_v<IConfig, T>, "T must inherit from IConfig" );
 
@@ -148,9 +148,9 @@ namespace sw
             if ( result == ConfigReadResult::Invalid )
                 return nullptr;
 #endif
-            if ( StringUtil::isNullOrEmpty( pGeneratedJson ) == false )
+            if ( StringUtil::isNullOrEmpty( pGeneratedJSON ) == false )
             {
-                if ( loadConfigFromJson<T>( string( pGeneratedJson ), "shipping_host_generated" ) == false )
+                if ( loadConfigFromJSON<T>( string( pGeneratedJSON ), "shipping_host_generated" ) == false )
                     return nullptr;
 #if !defined( SW_SHIPPING )
                 SW_LOG_WARNING( "%# file %# is missing - using the generated defaults", pTypeName, filePath.c_str() );
@@ -183,13 +183,13 @@ namespace sw
          *          false 입니다(첫 오류에서 멈추지 않는다 — 한 번에 다 고치게). 설정 아닌 리플렉션 타입(`EditorToolDefaults`)도 이것으로 읽습니다.
          *          구조체 칸 안의 모르는 키는 바깥 칸 이름과 본문으로 나옵니다.
          */
-        [[nodiscard]] static bool readConfigJson( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel );
+        [[nodiscard]] static bool readConfigJSON( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr, const utf8* pSourceLabel );
 
-        /** @brief `readConfigJson` 의 타입 판입니다. */
+        /** @brief `readConfigJSON` 의 타입 판입니다. */
         template <typename T>
-        [[nodiscard]] static bool readConfigJson( T& outConfig, string_view jsonStr, const utf8* pSourceLabel )
+        [[nodiscard]] static bool readConfigJSON( T& outConfig, string_view jsonStr, const utf8* pSourceLabel )
         {
-            return readConfigJson( &outConfig, *T::StaticType(), jsonStr, pSourceLabel );
+            return readConfigJSON( &outConfig, *T::StaticType(), jsonStr, pSourceLabel );
         }
 
         /**
@@ -201,7 +201,7 @@ namespace sw
         [[nodiscard]] static bool collectDefaultEchoKeys( string_view jsonStr, vector<string>& outListKey )
         {
             T loaded{};
-            if ( readConfigJson( loaded, jsonStr, "default echo check" ) == false )
+            if ( readConfigJSON( loaded, jsonStr, "default echo check" ) == false )
                 return false;
             const T defaultValue{};
             return collectEqualKeys( &loaded, &defaultValue, *T::StaticType(), jsonStr, outListKey );
@@ -210,7 +210,7 @@ namespace sw
         /** @brief @p jsonStr 의 키마다 두 인스턴스의 그 칸이 같은 JSON 으로 쓰이면 @p outListKey 에 담습니다(`collectDefaultEchoKeys` 의 몸). */
         [[nodiscard]] static bool collectEqualKeys( const void* pLeft, const void* pRight, const TypeInfo& typeInfo, string_view jsonStr, vector<string>& outListKey );
 
-        /** @brief 파일을 `readConfigJson` 으로 읽습니다. 없으면 `Missing`(로그 없음)입니다. @p absolutePath 는 그대로 씁니다. */
+        /** @brief 파일을 `readConfigJSON` 으로 읽습니다. 없으면 `Missing`(로그 없음)입니다. @p absolutePath 는 그대로 씁니다. */
         template <typename T>
         [[nodiscard]] static ConfigReadResult readConfigFile( T& outConfig, string_view absolutePath )
         {
@@ -220,7 +220,7 @@ namespace sw
             if ( FileUtil::readTextFile( absolutePath, jsonStr ) == false )
                 return ConfigReadResult::Invalid;
             const string label( absolutePath );
-            return readConfigJson( outConfig, jsonStr, label.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+            return readConfigJSON( outConfig, jsonStr, label.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
         }
 
     private:
@@ -247,7 +247,7 @@ namespace sw
                 return false;
             }
             unique_ptr<T> reloaded = make_unique<T>();
-            if ( readConfigJson( *reloaded, jsonStr, resolvedPath.c_str() ) == false )
+            if ( readConfigJSON( *reloaded, jsonStr, resolvedPath.c_str() ) == false )
             {
                 SW_LOG_WARNING( "Config reload: %# is not valid - keeping the previous values", resolvedPath.c_str() );
                 return false;

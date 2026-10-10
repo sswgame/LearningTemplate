@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Json/ConfigKeyDoc.h"
+#include "Engine/Serialization/JSON/ConfigKeyDoc.h"
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -16,7 +16,7 @@ namespace sw
 
 namespace sw
 {
-    bool ConfigKeyDocUtil::hasOnlyKnownKeys( const JsonValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context, string* pOutUnknownKey )
+    bool ConfigKeyDocUtil::hasOnlyKnownKeys( const JSONValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context, string* pOutUnknownKey )
     {
         bool bAllKnown = true;
         for ( const string& memberName : object.getMemberNames() )

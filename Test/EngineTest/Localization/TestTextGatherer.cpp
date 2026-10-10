@@ -138,13 +138,13 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
 {
     sw::SourceStringTable gatherTable;
     sw::string            error;
-    SW_ASSERT_TRUE( gatherTable.loadFromJsonText( R"({ "culture": "en", "entries": {
+    SW_ASSERT_TRUE( gatherTable.loadFromJSONText( R"({ "culture": "en", "entries": {
         "Menu.Start": { "source": "Start", "comment": "Main menu", "maxLength": 12, "origins": [ "Old.cpp" ] },
         "Menu.Gone": { "source": "Gone", "origins": [ "Old.cpp" ] },
         "Manual.Only": { "source": "Hand written" } } })",
                                                   "gather", &error ) );
     sw::SourceStringTable otherTable;
-    SW_ASSERT_TRUE( otherTable.loadFromJsonText( R"({ "culture": "en", "entries": { "settings.title": { "source": "Settings" } } })", "other", &error ) );
+    SW_ASSERT_TRUE( otherTable.loadFromJSONText( R"({ "culture": "en", "entries": { "settings.title": { "source": "Settings" } } })", "other", &error ) );
 
     sw::TextGatherer gatherer;
     gatherer.addKeyedText( "Menu.Start", "Start Game", {}, "Menu.cpp" );

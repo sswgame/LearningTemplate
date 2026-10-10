@@ -20,7 +20,7 @@ using namespace sw;
 namespace
 {
     /** @brief 창 크기만 바꾼 EngineConfig JSON 을 만듭니다. */
-    string makeEngineConfigJson( uint32 width, uint32 height )
+    string makeEngineConfigJSON( uint32 width, uint32 height )
     {
         utf8 arrBuffer[constant::kMaxBuffer256]{};
         formatstring( arrBuffer, constant::kMaxBuffer256, "{ \"_window\": { \"_width\": %#, \"_height\": %# } }", width, height );
@@ -40,7 +40,7 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
     SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
 
-    SW_EXPECT_TRUE( manager.loadConfigFromJson<EngineConfig>( makeEngineConfigJson( 1600, 900 ), "test" ) );
+    SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>( makeEngineConfigJSON( 1600, 900 ), "test" ) );
 
     EngineConfig* pEngineConfig = manager.getConfig<EngineConfig>();
     SW_EXPECT_NOT_NULL( pEngineConfig );
@@ -50,7 +50,7 @@ SW_TEST_CASE( ConfigManagerTest, ConfigTableIsKeyedByType )
     SW_EXPECT_NULL( manager.getConfig<GameConfig>() );
 
     // 다시 읽으면 덮어쓴다.
-    SW_EXPECT_TRUE( manager.loadConfigFromJson<EngineConfig>( makeEngineConfigJson( 800, 600 ), "test" ) );
+    SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>( makeEngineConfigJSON( 800, 600 ), "test" ) );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );
 }
 
@@ -72,7 +72,7 @@ SW_TEST_CASE( ConfigManagerTest, RelativePathResolvesAgainstRootDirectory )
     const string absolutePath = FileUtil::joinPath( rootDir, relativePath );
 
     FileUtil::ensureDirectoryExists( rootDir );
-    SW_EXPECT_TRUE( FileUtil::writeTextFile( absolutePath, makeEngineConfigJson( 1920, 1080 ) ) );
+    SW_EXPECT_TRUE( FileUtil::writeTextFile( absolutePath, makeEngineConfigJSON( 1920, 1080 ) ) );
 
     // 1) 루트를 알려 주지 않으면 못 찾는다 (작업 디렉터리에도 실행 파일 옆에도 없다).
     {
@@ -115,7 +115,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults 
     // 1) 생성된 JSON 이 있으면 그것으로 떨어진다.
     {
         ConfigManager manager;
-        const string  generated     = makeEngineConfigJson( 640, 480 );
+        const string  generated     = makeEngineConfigJSON( 640, 480 );
         EngineConfig* pEngineConfig = manager.ensureConfig<EngineConfig>( missingPath, generated.c_str() );
         SW_EXPECT_NOT_NULL( pEngineConfig );
         SW_EXPECT_EQUAL( 640u, pEngineConfig->_window._width );
@@ -133,7 +133,7 @@ SW_TEST_CASE( ConfigManagerTest, MissingFileFallsBackToGeneratedThenCppDefaults 
     // 3) 깨진 JSON 은 로드 실패다 — 절반만 채워 넣지 않는다.
     {
         ConfigManager manager;
-        SW_EXPECT_FALSE( manager.loadConfigFromJson<EngineConfig>( string( "{ this is not json" ), "test" ) );
+        SW_EXPECT_FALSE( manager.loadConfigFromJSON<EngineConfig>( string( "{ this is not json" ), "test" ) );
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
     }
 }
@@ -150,7 +150,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
     const string rootDir = test::makeTempPath( "sw_config_reload_test" );
     const string path    = FileUtil::joinPath( rootDir, "ReloadEngineConfig.json" );
     FileUtil::ensureDirectoryExists( rootDir );
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJson( 800, 600 ) ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 800, 600 ) ) );
 
     ConfigManager manager;
     SW_ASSERT_TRUE( manager.loadConfig<EngineConfig>( path ) );
@@ -166,7 +166,7 @@ SW_TEST_CASE( ConfigManagerTest, ReloadConfigFileUpdatesInPlaceAndNotifies )
         notifiedType = typeName;
     } ) );
 
-    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJson( 1024, 768 ) ) );
+    SW_ASSERT_TRUE( FileUtil::writeTextFile( path, makeEngineConfigJSON( 1024, 768 ) ) );
     SW_EXPECT_TRUE( manager.reloadConfigFile( path ) );
     SW_EXPECT_TRUE_MSG( manager.getConfig<EngineConfig>() == pBefore, "다시 읽으며 설정 객체를 바꿨습니다(받아 둔 포인터가 댕글링이 된다)" );
     SW_EXPECT_EQUAL( 1024u, pBefore->_window._width );
@@ -194,11 +194,11 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
     const string rootDir = test::makeTempPath( "sw_config_invalid_test" );
     const string path    = FileUtil::joinPath( rootDir, "InvalidEngineConfig.json" );
     FileUtil::ensureDirectoryExists( rootDir );
-    const string generated = makeEngineConfigJson( 640, 480 );
+    const string generated = makeEngineConfigJSON( 640, 480 );
 
     struct Case
     {
-        const utf8* _pJson;
+        const utf8* _pJSON;
         const utf8* _pExpectedName;
     };
     const Case arrCase[] = {
@@ -209,13 +209,13 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
     };
     for ( const Case& testCase : arrCase )
     {
-        SW_ASSERT_TRUE( FileUtil::writeTextFile( path, testCase._pJson ) );
+        SW_ASSERT_TRUE( FileUtil::writeTextFile( path, testCase._pJSON ) );
         test::ScopedDefensiveTestLog defensive( "틀린 설정 파일을 일부러 읽는다" );
         test::ScopedLogCollector     logs;
         ConfigManager                manager;
-        SW_EXPECT_TRUE_MSG( manager.ensureConfig<EngineConfig>( path, generated.c_str() ) == nullptr, testCase._pJson );
+        SW_EXPECT_TRUE_MSG( manager.ensureConfig<EngineConfig>( path, generated.c_str() ) == nullptr, testCase._pJSON );
         SW_EXPECT_NULL( manager.getConfig<EngineConfig>() );
-        SW_EXPECT_TRUE_MSG( logs.countContaining( testCase._pExpectedName ) >= 1u, string( testCase._pJson ) + logs.joined() );
+        SW_EXPECT_TRUE_MSG( logs.countContaining( testCase._pExpectedName ) >= 1u, string( testCase._pJSON ) + logs.joined() );
     }
     SW_EXPECT_TRUE( FileUtil::removeFile( path ) );
 #endif
@@ -227,7 +227,7 @@ SW_TEST_CASE( ConfigManagerTest, InvalidFileStopsAndNamesTheKey )
 SW_TEST_CASE( ConfigManagerTest, ValidFileWithNestedStructLoads )
 {
     ConfigManager manager;
-    SW_EXPECT_TRUE( manager.loadConfigFromJson<EngineConfig>(
+    SW_EXPECT_TRUE( manager.loadConfigFromJSON<EngineConfig>(
         string( "{ \"_window\": { \"_width\": 800, \"_defaultRHI\": \"Vulkan\" }, \"_fixedDeltaTime\": 0.02 }" ), "test" ) );
     SW_ASSERT_NOT_NULL( manager.getConfig<EngineConfig>() );
     SW_EXPECT_EQUAL( 800u, manager.getConfig<EngineConfig>()->_window._width );

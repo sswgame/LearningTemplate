@@ -12,9 +12,9 @@
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -674,7 +674,7 @@ namespace sw
         {
             if ( pStructInfo->isPrimitive() == false )
             {
-                ss.append( JsonSerializer::serialize( pValPtr, *pStructInfo, ctx ) );
+                ss.append( JSONSerializer::serialize( pValPtr, *pStructInfo, ctx ) );
                 return;
             }
         }
@@ -715,10 +715,10 @@ namespace sw
                 string_view sv = StringUtil::trim( valStr );
                 if ( sv.size() >= 2 && sv.front() == '"' && sv.back() == '"' )
                 {
-                    const string unescaped = JsonDocument::unescapeString( sv.substr( 1, sv.size() - 2 ) );
-                    return JsonSerializer::deserialize( pValPtr, *pStructInfo, unescaped, ctx );
+                    const string unescaped = JSONDocument::unescapeString( sv.substr( 1, sv.size() - 2 ) );
+                    return JSONSerializer::deserialize( pValPtr, *pStructInfo, unescaped, ctx );
                 }
-                return JsonSerializer::deserialize( pValPtr, *pStructInfo, sv, ctx );
+                return JSONSerializer::deserialize( pValPtr, *pStructInfo, sv, ctx );
             }
         }
 
@@ -899,21 +899,21 @@ namespace sw
         return pMatched;
     }
 
-    bool SerializerUtil::transcodeJsonToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+    bool SerializerUtil::transcodeJSONToBinary( string_view jsonStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                 const SerializeContext& ctx )
     {
         return SerializerUtilInternal::transcodeTextToBinary( jsonStr, typeInfo, outBinary, ctx, [&]( void* pScratch )
         {
-            return JsonSerializer::deserialize( pScratch, typeInfo, jsonStr, ctx );
+            return JSONSerializer::deserialize( pScratch, typeInfo, jsonStr, ctx );
         } );
     }
 
-    string SerializerUtil::transcodeBinaryToJson( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
+    string SerializerUtil::transcodeBinaryToJSON( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo, bool bPretty,
                                                   const SerializeContext& ctx )
     {
         return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, ctx, [&]( const void* pScratch )
         {
-            return bPretty ? JsonSerializer::serializePretty( pScratch, typeInfo, 4, ctx ) : JsonSerializer::serialize( pScratch, typeInfo, ctx );
+            return bPretty ? JSONSerializer::serializePretty( pScratch, typeInfo, 4, ctx ) : JSONSerializer::serialize( pScratch, typeInfo, ctx );
         } );
     }
 

@@ -233,7 +233,7 @@ namespace sw
          */
         static string saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
         /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XMLSerializer 와 같은 PROPERTY 그래프입니다. */
-        [[maybe_unused]] static string saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
+        [[maybe_unused]] static string saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
 
         /** @brief GameObject 상태를 바이너리 버퍼로 빠르게 직렬화합니다(핫 리로드 · 프리팹용). */
         [[nodiscard]] static bool saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options = {} );
@@ -246,7 +246,7 @@ namespace sw
          *          그래야 자식이 부모보다 먼저 읽혀도 부모를 찾습니다.
          */
         [[nodiscard]] static bool loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
-        [[nodiscard]] static bool loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static bool loadFromJSONString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
 
         /**
          * @brief 바이너리 버퍼에서 GameObject 상태를 복원하고 읽은 바이트 수를 반환합니다(실패하면 0).
@@ -282,7 +282,7 @@ namespace sw
          */
         template <typename TSerializer>
         static string saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
-        /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXMLString` · `loadFromJsonString` 의 몸통입니다. */
+        /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXMLString` · `loadFromJSONString` 의 몸통입니다. */
         template <typename TSerializer>
         [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**

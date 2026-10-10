@@ -984,8 +984,8 @@ SW_TEST_CASE( GameObjectTest, RenamingToOwnBaseNameKeepsTheNumber )
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
 
     // 상태를 읽는다 — 저장된 이름은 `Bullet` 이다.
-    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pFirst );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pSecond, state ) );
+    const sw::string state = sw::ObjectStateSerializer::saveToJSONString( pFirst );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pSecond, state ) );
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
     pSecond->setName( sw::hashed_string( "Bullet" ) );
     SW_EXPECT_STREQ( "Bullet_2", pSecond->getName().c_str() );
@@ -1142,8 +1142,8 @@ SW_TEST_CASE( GameObjectTest, ComponentLabelIsNotItsType )
 
     // 상태를 되돌려도 같은 id 를 되찾는다(식별 목록이 타입 이름으로 적힌다).
     const sw::ObjectIdentity identity = sw::ObjectStateSerializer::captureIdentity( pObj );
-    const sw::string         state    = sw::ObjectStateSerializer::saveToJsonString( pObj );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pObj, state, { &identity } ) );
+    const sw::string         state    = sw::ObjectStateSerializer::saveToJSONString( pObj );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pObj, state, { &identity } ) );
     sw::SceneComponent* pRestored = pObj->getComponent<sw::SceneComponent>();
     SW_ASSERT_NOT_NULL( pRestored );
     SW_EXPECT_EQUAL( componentId, pRestored->getComponentId() );
@@ -1372,8 +1372,8 @@ SW_TEST_CASE( GameObjectTest, ReloadedChildOfInactiveParentStaysInactive )
     pParent->setActive( false );
     SW_ASSERT_FALSE( pChild->isActiveInHierarchy() );
 
-    const sw::string state = sw::ObjectStateSerializer::saveToJsonString( pChild );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pChild, state ) );
+    const sw::string state = sw::ObjectStateSerializer::saveToJSONString( pChild );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pChild, state ) );
     SW_EXPECT_TRUE( pChild->getParent() == pParent );
     SW_EXPECT_FALSE( pChild->isActiveInHierarchy() );
 }

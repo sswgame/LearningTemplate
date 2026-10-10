@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -14,10 +14,10 @@ namespace sw
 {
     namespace
     {
-        struct JsonDocumentInternal
+        struct JSONDocumentInternal
         {
             /** @brief json 의 문자열 타입입니다. 키 · 문자열 값 · `dump` 결과가 sw 할당자를 지납니다. */
-            using JsonString = std::basic_string<utf8, std::char_traits<utf8>, Allocator<utf8>>;
+            using JSONString = std::basic_string<utf8, std::char_traits<utf8>, Allocator<utf8>>;
 
             /** @brief 실수를 정수 범위로 잘라 바꿉니다. 범위 밖 실수를 그대로 `static_cast` 하면 정의되지 않은 동작입니다(`1e20` → int64). NaN 은 @p fallback 입니다. */
             static int64 toInt64Saturated( float64 value, int64 fallback )
@@ -47,12 +47,12 @@ namespace sw
              * @details 할당자 인자만 바꾼 것이라 동작은 ordered_json 과 같습니다. nlohmann 을 include 하는 곳은 이 파일 하나입니다.
              *          파서 내부의 작은 버퍼(토큰 바이트 · 상태 스택)는 nlohmann 이 `std::vector` 를 고정으로 써 CRT 에 남습니다.
              */
-            using JsonImpl = nlohmann::basic_json<nlohmann::ordered_map, std::vector, JsonString, bool, int64, uint64, float64, Allocator,
+            using JSONImpl = nlohmann::basic_json<nlohmann::ordered_map, std::vector, JSONString, bool, int64, uint64, float64, Allocator,
                                                   nlohmann::adl_serializer, std::vector<uint8, Allocator<uint8>>>;
 
-            static JsonImpl* asJson( void* pPtr )
+            static JSONImpl* asJSON( void* pPtr )
             {
-                return static_cast<JsonImpl*>( pPtr );
+                return static_cast<JSONImpl*>( pPtr );
             }
 
             static bool nameEquals( string_view lhs, string_view rhs, bool bIgnoreCase )
@@ -60,17 +60,17 @@ namespace sw
                 return StringUtil::equals( lhs, rhs, bIgnoreCase );
             }
 
-            static string fromJsonString( const JsonString& value )
+            static string fromJSONString( const JSONString& value )
             {
                 return string( value.data(), value.size() );
             }
 
-            static JsonString toJsonString( string_view value )
+            static JSONString toJSONString( string_view value )
             {
-                return JsonString( value.data(), value.size() );
+                return JSONString( value.data(), value.size() );
             }
 
-            static JsonImpl* findMember( JsonImpl* pObj, string_view key, bool bIgnoreCase )
+            static JSONImpl* findMember( JSONImpl* pObj, string_view key, bool bIgnoreCase )
             {
                 if ( pObj == nullptr || pObj->is_object() == false )
                     return nullptr;
@@ -89,7 +89,7 @@ namespace sw
                 return nullptr;
             }
 
-            static string findExistingKey( JsonImpl* pObj, string_view key, bool bIgnoreCase )
+            static string findExistingKey( JSONImpl* pObj, string_view key, bool bIgnoreCase )
             {
                 if ( pObj == nullptr || pObj->is_object() == false )
                     return string( key );
@@ -98,16 +98,16 @@ namespace sw
                 for ( auto it = pObj->begin(); it != pObj->end(); ++it )
                 {
                     if ( nameEquals( it.key(), key, true ) )
-                        return fromJsonString( it.key() );
+                        return fromJSONString( it.key() );
                 }
                 return string( key );
             }
 
-            static string dumpValue( const JsonImpl& value, int32 indent )
+            static string dumpValue( const JSONImpl& value, int32 indent )
             {
                 if ( indent < 0 )
-                    return fromJsonString( value.dump() );
-                return fromJsonString( value.dump( indent ) );
+                    return fromJSONString( value.dump() );
+                return fromJSONString( value.dump( indent ) );
             }
 
             /**
@@ -115,7 +115,7 @@ namespace sw
              * @details nlohmann 의 `sax_parse` 는 입력 형식을 실행 중에 고르므로 이진 형식 읽기(UBJSON)까지 인스턴스를 만드는데, 그 길은 문자열 타입이
              *          `std::string` 이어야 컴파일됩니다. 실패한 글을 한 번 더 읽는 드문 길이라 표준 할당자로 둡니다.
              */
-            using ErrorScanJson = nlohmann::ordered_json;
+            using ErrorScanJSON = nlohmann::ordered_json;
 
             /**
              * @brief 실패한 글을 SAX 로 다시 읽어 오류 자리(읽은 바이트 수)와 이유를 받는 처리기입니다. 값은 만들지 않습니다.
@@ -128,13 +128,13 @@ namespace sw
 
                 bool null() { return true; }
                 bool boolean( bool ) { return true; }
-                bool number_integer( ErrorScanJson::number_integer_t ) { return true; }
-                bool number_unsigned( ErrorScanJson::number_unsigned_t ) { return true; }
-                bool number_float( ErrorScanJson::number_float_t, const ErrorScanJson::string_t& ) { return true; }
-                bool string( ErrorScanJson::string_t& ) { return true; }
-                bool binary( ErrorScanJson::binary_t& ) { return true; }
+                bool number_integer( ErrorScanJSON::number_integer_t ) { return true; }
+                bool number_unsigned( ErrorScanJSON::number_unsigned_t ) { return true; }
+                bool number_float( ErrorScanJSON::number_float_t, const ErrorScanJSON::string_t& ) { return true; }
+                bool string( ErrorScanJSON::string_t& ) { return true; }
+                bool binary( ErrorScanJSON::binary_t& ) { return true; }
                 bool start_object( std::size_t ) { return true; }
-                bool key( ErrorScanJson::string_t& ) { return true; }
+                bool key( ErrorScanJSON::string_t& ) { return true; }
                 bool end_object() { return true; }
                 bool start_array( std::size_t ) { return true; }
                 bool end_array() { return true; }
@@ -153,7 +153,7 @@ namespace sw
             static sw::string describeParseError( string_view text, string_view sourceName )
             {
                 ParseErrorRecorder recorder;
-                (void)ErrorScanJson::sax_parse( text.data(), text.data() + text.size(), &recorder );
+                (void)ErrorScanJSON::sax_parse( text.data(), text.data() + text.size(), &recorder );
                 // what() 은 "[json.exception.parse_error.101] parse error at line 3, column 5: <이유>" 다. 줄 · 열은 우리 꼴로 다시 적으므로 이유만 남긴다.
                 std::string_view reason{ recorder._message };
                 const size_t     columnPos = reason.find( "column " );
@@ -174,46 +174,46 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "JsonDocument" );
+    SW_LOG_CALLER( "JSONDocument" );
 
-    using JsonImpl = JsonDocumentInternal::JsonImpl;
+    using JSONImpl = JSONDocumentInternal::JSONImpl;
 
-    struct JsonDocument::Impl
+    struct JSONDocument::Impl
     {
-        JsonImpl root{ nullptr };
+        JSONImpl root{ nullptr };
     };
 
-    JsonType JsonValue::getType() const
+    JSONType JSONValue::getType() const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_null() )
-            return JsonType::Null;
+            return JSONType::Null;
         if ( pValue->is_boolean() )
-            return JsonType::Bool;
+            return JSONType::Bool;
         if ( pValue->is_number() )
-            return JsonType::Number;
+            return JSONType::Number;
         if ( pValue->is_string() )
-            return JsonType::String;
+            return JSONType::String;
         if ( pValue->is_array() )
-            return JsonType::Array;
+            return JSONType::Array;
         if ( pValue->is_object() )
-            return JsonType::Object;
-        return JsonType::Null;
+            return JSONType::Object;
+        return JSONType::Null;
     }
 
-    string JsonValue::asString() const
+    string JSONValue::asString() const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr )
             return {};
         if ( pValue->is_string() )
-            return JsonDocumentInternal::fromJsonString( pValue->get_ref<const JsonDocumentInternal::JsonString&>() );
-        return JsonDocumentInternal::fromJsonString( pValue->dump() );
+            return JSONDocumentInternal::fromJSONString( pValue->get_ref<const JSONDocumentInternal::JSONString&>() );
+        return JSONDocumentInternal::fromJSONString( pValue->dump() );
     }
 
-    int64 JsonValue::asInt( int64 fallback ) const
+    int64 JSONValue::asInt( int64 fallback ) const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_number() == false )
             return fallback;
         // **부호 없는 쪽을 먼저 본다.** nlohmann 의 `is_number_integer()` 는 부호 있는 정수와
@@ -224,13 +224,13 @@ namespace sw
         if ( pValue->is_number_integer() )
             return pValue->get<int64>();
         if ( pValue->is_number_float() )
-            return JsonDocumentInternal::toInt64Saturated( pValue->get<float64>(), fallback );
+            return JSONDocumentInternal::toInt64Saturated( pValue->get<float64>(), fallback );
         return fallback;
     }
 
-    uint64 JsonValue::asUint( uint64 fallback ) const
+    uint64 JSONValue::asUint( uint64 fallback ) const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_number() == false )
             return fallback;
         if ( pValue->is_number_unsigned() )
@@ -238,13 +238,13 @@ namespace sw
         if ( pValue->is_number_integer() )
             return static_cast<uint64>( pValue->get<int64>() );
         if ( pValue->is_number_float() )
-            return JsonDocumentInternal::toUint64Saturated( pValue->get<float64>(), fallback );
+            return JSONDocumentInternal::toUint64Saturated( pValue->get<float64>(), fallback );
         return fallback;
     }
 
-    float64 JsonValue::asFloat( float64 fallback ) const
+    float64 JSONValue::asFloat( float64 fallback ) const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_number() == false )
             return fallback;
         if ( pValue->is_number_float() )
@@ -257,65 +257,65 @@ namespace sw
         return fallback;
     }
 
-    bool JsonValue::asBool( bool fallback ) const
+    bool JSONValue::asBool( bool fallback ) const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_boolean() == false )
             return fallback;
         return pValue->get<bool>();
     }
 
-    size_t JsonValue::size() const
+    size_t JSONValue::size() const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr )
             return 0;
         return pValue->size();
     }
 
-    vector<string> JsonValue::getMemberNames() const
+    vector<string> JSONValue::getMemberNames() const
     {
         vector<string>  listName;
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_object() == false )
             return listName;
         for ( auto it = pValue->begin(); it != pValue->end(); ++it )
         {
-            listName.push_back( JsonDocumentInternal::fromJsonString( it.key() ) );
+            listName.push_back( JSONDocumentInternal::fromJSONString( it.key() ) );
         }
         return listName;
     }
 
-    JsonValue JsonValue::get( string_view key, bool bIgnoreCaseKeys ) const
+    JSONValue JSONValue::get( string_view key, bool bIgnoreCaseKeys ) const
     {
-        return JsonValue{ JsonDocumentInternal::findMember( JsonDocumentInternal::asJson( _pValue ), key, bIgnoreCaseKeys ) };
+        return JSONValue{ JSONDocumentInternal::findMember( JSONDocumentInternal::asJSON( _pValue ), key, bIgnoreCaseKeys ) };
     }
 
-    bool JsonValue::has( string_view key, bool bIgnoreCaseKeys ) const
+    bool JSONValue::has( string_view key, bool bIgnoreCaseKeys ) const
     {
         return get( key, bIgnoreCaseKeys ).isValid();
     }
 
-    JsonValue JsonValue::at( size_t index ) const
+    JSONValue JSONValue::at( size_t index ) const
     {
-        JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr || pValue->is_array() == false || index >= pValue->size() )
             return {};
-        return JsonValue{ &( *pValue )[index] };
+        return JSONValue{ &( *pValue )[index] };
     }
 
-    string JsonValue::dump( int32 indent ) const
+    string JSONValue::dump( int32 indent ) const
     {
-        const JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        const JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue == nullptr )
             return "null";
-        return JsonDocumentInternal::dumpValue( *pValue, indent );
+        return JSONDocumentInternal::dumpValue( *pValue, indent );
     }
 
-    void JsonValue::assignFrom( const JsonValue& other ) const
+    void JSONValue::assignFrom( const JSONValue& other ) const
     {
-        JsonImpl*       pDst = JsonDocumentInternal::asJson( _pValue );
-        const JsonImpl* pSrc = JsonDocumentInternal::asJson( other._pValue );
+        JSONImpl*       pDst = JSONDocumentInternal::asJSON( _pValue );
+        const JSONImpl* pSrc = JSONDocumentInternal::asJSON( other._pValue );
         if ( pDst == nullptr )
             return;
         if ( pSrc == nullptr )
@@ -324,95 +324,95 @@ namespace sw
             *pDst = *pSrc;
     }
 
-    void JsonValue::setNull() const
+    void JSONValue::setNull() const
     {
-        JsonImpl* pValue = JsonDocumentInternal::asJson( _pValue );
+        JSONImpl* pValue = JSONDocumentInternal::asJSON( _pValue );
         if ( pValue != nullptr )
             *pValue = nullptr;
     }
 
-    void JsonValue::setBool( bool value ) const
+    void JSONValue::setBool( bool value ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = value;
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = value;
     }
 
-    void JsonValue::setInt( int64 value ) const
+    void JSONValue::setInt( int64 value ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = value;
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = value;
     }
 
-    void JsonValue::setUint( uint64 value ) const
+    void JSONValue::setUint( uint64 value ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = value;
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = value;
     }
 
-    void JsonValue::setFloat( float64 value ) const
+    void JSONValue::setFloat( float64 value ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = value;
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = value;
     }
 
-    void JsonValue::setString( string_view value ) const
+    void JSONValue::setString( string_view value ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = JsonDocumentInternal::toJsonString( value );
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = JSONDocumentInternal::toJSONString( value );
     }
 
-    void JsonValue::setObject() const
+    void JSONValue::setObject() const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = JsonImpl::object();
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = JSONImpl::object();
     }
 
-    void JsonValue::setArray() const
+    void JSONValue::setArray() const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson != nullptr )
-            *pJson = JsonImpl::array();
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON != nullptr )
+            *pJSON = JSONImpl::array();
     }
 
-    JsonValue JsonValue::set( string_view key, bool bIgnoreCaseKeys ) const
+    JSONValue JSONValue::set( string_view key, bool bIgnoreCaseKeys ) const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson == nullptr )
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON == nullptr )
             return {};
-        if ( pJson->is_object() == false )
-            *pJson = JsonImpl::object();
-        const string storedKey = JsonDocumentInternal::findExistingKey( pJson, key, bIgnoreCaseKeys );
-        JsonImpl&    child     = ( *pJson )[JsonDocumentInternal::toJsonString( storedKey )];
-        return JsonValue{ &child };
+        if ( pJSON->is_object() == false )
+            *pJSON = JSONImpl::object();
+        const string storedKey = JSONDocumentInternal::findExistingKey( pJSON, key, bIgnoreCaseKeys );
+        JSONImpl&    child     = ( *pJSON )[JSONDocumentInternal::toJSONString( storedKey )];
+        return JSONValue{ &child };
     }
 
-    JsonValue JsonValue::pushBack() const
+    JSONValue JSONValue::pushBack() const
     {
-        JsonImpl* pJson = JsonDocumentInternal::asJson( _pValue );
-        if ( pJson == nullptr )
+        JSONImpl* pJSON = JSONDocumentInternal::asJSON( _pValue );
+        if ( pJSON == nullptr )
             return {};
-        if ( pJson->is_array() == false )
-            *pJson = JsonImpl::array();
-        pJson->push_back( nullptr );
-        return JsonValue{ &( pJson->back() ) };
+        if ( pJSON->is_array() == false )
+            *pJSON = JSONImpl::array();
+        pJSON->push_back( nullptr );
+        return JSONValue{ &( pJSON->back() ) };
     }
 
-    JsonDocument::JsonDocument()
+    JSONDocument::JSONDocument()
         : _impl{ make_unique<Impl>() } {}
 
-    JsonDocument::~JsonDocument() = default;
+    JSONDocument::~JSONDocument() = default;
 
-    JsonDocument::JsonDocument( JsonDocument&& other ) noexcept
+    JSONDocument::JSONDocument( JSONDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
         , _lastError{ std::move( other._lastError ) } {}
 
-    JsonDocument& JsonDocument::operator=( JsonDocument&& other ) noexcept
+    JSONDocument& JSONDocument::operator=( JSONDocument&& other ) noexcept
     {
         if ( this != &other )
         {
@@ -422,7 +422,7 @@ namespace sw
         return *this;
     }
 
-    void JsonDocument::clear()
+    void JSONDocument::clear()
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
@@ -430,7 +430,7 @@ namespace sw
             _impl->root = nullptr;
     }
 
-    bool JsonDocument::parse( string_view jsonText, string_view sourceName )
+    bool JSONDocument::parse( string_view jsonText, string_view sourceName )
     {
         _lastError.clear();
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
@@ -443,10 +443,10 @@ namespace sw
 
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
+        _impl->root = JSONImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
         if ( _impl->root.is_discarded() )
         {
-            _lastError = JsonDocumentInternal::describeParseError( jsonText, source );
+            _lastError = JSONDocumentInternal::describeParseError( jsonText, source );
             SW_LOG_ERROR( "JSON parse error at %#", _lastError );
             clear();
             return false;
@@ -454,7 +454,7 @@ namespace sw
         return true;
     }
 
-    bool JsonDocument::tryParse( string_view jsonText )
+    bool JSONDocument::tryParse( string_view jsonText )
     {
         _lastError.clear();
         if ( jsonText.empty() )
@@ -464,7 +464,7 @@ namespace sw
         }
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
+        _impl->root = JSONImpl::parse( jsonText.data(), jsonText.data() + jsonText.size(), nullptr, false, false );
         if ( _impl->root.is_discarded() )
         {
             clear();
@@ -473,7 +473,7 @@ namespace sw
         return true;
     }
 
-    bool JsonDocument::loadFile( string_view absPath )
+    bool JSONDocument::loadFile( string_view absPath )
     {
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
@@ -484,7 +484,7 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool JsonDocument::loadResource( string_view relativePath, string* pOutAbsPath )
+    bool JSONDocument::loadResource( string_view relativePath, string* pOutAbsPath )
     {
         string text;
         string absPath;
@@ -498,7 +498,7 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool JsonDocument::loadPath( string_view path, string* pOutAbsPath )
+    bool JSONDocument::loadPath( string_view path, string* pOutAbsPath )
     {
         if ( path.empty() )
         {
@@ -514,53 +514,53 @@ namespace sw
         return loadResource( path, pOutAbsPath );
     }
 
-    JsonValue JsonDocument::getRoot() const
+    JSONValue JSONDocument::getRoot() const
     {
         if ( _impl == nullptr )
             return {};
-        return JsonValue{ &_impl->root };
+        return JSONValue{ &_impl->root };
     }
 
-    JsonValue JsonDocument::makeObject()
+    JSONValue JSONDocument::makeObject()
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::object();
+        _impl->root = JSONImpl::object();
         return getRoot();
     }
 
-    JsonValue JsonDocument::makeArray()
+    JSONValue JSONDocument::makeArray()
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
-        _impl->root = JsonImpl::array();
+        _impl->root = JSONImpl::array();
         return getRoot();
     }
 
-    string JsonDocument::dump( int32 indent ) const
+    string JSONDocument::dump( int32 indent ) const
     {
         if ( _impl == nullptr )
             return "null";
-        return JsonDocumentInternal::dumpValue( _impl->root, indent );
+        return JSONDocumentInternal::dumpValue( _impl->root, indent );
     }
 
-    bool JsonDocument::saveFile( string_view absPath, int32 indent ) const
+    bool JSONDocument::saveFile( string_view absPath, int32 indent ) const
     {
         if ( absPath.empty() )
             return false;
         return FileUtil::writeTextFile( absPath, dump( indent ) );
     }
 
-    string JsonDocument::escapeString( string_view value )
+    string JSONDocument::escapeString( string_view value )
     {
-        const JsonImpl quoted = JsonDocumentInternal::toJsonString( value );
-        string         dumped = JsonDocumentInternal::fromJsonString( quoted.dump() );
+        const JSONImpl quoted = JSONDocumentInternal::toJSONString( value );
+        string         dumped = JSONDocumentInternal::fromJSONString( quoted.dump() );
         if ( dumped.size() >= 2 && dumped.front() == '"' && dumped.back() == '"' )
             dumped = dumped.substr( 1, dumped.size() - 2 );
         return dumped;
     }
 
-    string JsonDocument::unescapeString( string_view value )
+    string JSONDocument::unescapeString( string_view value )
     {
         if ( value.empty() )
             return {};
@@ -570,22 +570,22 @@ namespace sw
         quoted.push_back( '"' );
         quoted.append( value.data(), value.size() );
         quoted.push_back( '"' );
-        const JsonImpl parsed = JsonImpl::parse( JsonDocumentInternal::toJsonString( quoted ), nullptr, false, false );
+        const JSONImpl parsed = JSONImpl::parse( JSONDocumentInternal::toJSONString( quoted ), nullptr, false, false );
         if ( parsed.is_discarded() == false && parsed.is_string() )
-            return JsonDocumentInternal::fromJsonString( parsed.get_ref<const JsonDocumentInternal::JsonString&>() );
+            return JSONDocumentInternal::fromJSONString( parsed.get_ref<const JSONDocumentInternal::JSONString&>() );
         return string( value );
     }
 
-    string JsonDocument::extractStringField( string_view json, string_view fieldName,
+    string JSONDocument::extractStringField( string_view json, string_view fieldName,
                                              bool bIgnoreCaseKeys )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( json ) == false )
             return {};
-        const JsonValue root = doc.getRoot();
+        const JSONValue root = doc.getRoot();
         if ( root.isObject() == false )
             return {};
-        const JsonValue field = root.get( fieldName, bIgnoreCaseKeys );
+        const JSONValue field = root.get( fieldName, bIgnoreCaseKeys );
         if ( field.isValid() == false )
             return {};
         if ( field.isObject() || field.isArray() )

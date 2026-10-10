@@ -134,7 +134,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, ImportConfigParsingAndInheritance )
     {
-        const sw::string_view kJson = R"({
+        const sw::string_view kJSON = R"({
             "presets": {
                 "Base_Default": {
                     "format": "BC7_UNORM",
@@ -186,7 +186,7 @@ namespace sw::editor
         })";
 
         TextureImportConfig config;
-        SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
+        SW_ASSERT_TRUE( config.loadFromJSONString( kJSON ) );
         SW_EXPECT_EQUAL( 3u, static_cast<uint32>( config.getPresets().size() ) );
         SW_EXPECT_EQUAL( 4u, static_cast<uint32>( config.getRules().size() ) );
 
@@ -391,17 +391,17 @@ namespace sw::editor
     SW_TEST_CASE( EditorTexturePipelineTest, UnresolvedInheritsIsALoadError )
     {
         SW_TEST_DEFENSIVE_SCOPE( "inherits 가 없는 프리셋을 가리키는 설정을 일부러 읽는다" );
-        const sw::string_view arrJson[] = {
+        const sw::string_view arrJSON[] = {
             // 부모를 뒤에 적기
             R"({ "presets": { "Uses_Later": { "inherits": "Declared_Below" }, "Declared_Below": { "format": "BC5_UNORM" } } })",
             // 규칙의 오타
             R"({ "presets": { "Base_UI": { "format": "B8G8R8A8_UNORM" } }, "rules": [ { "name": "Typo_Rule", "inherits": "Base_UI_TYPO" } ] })",
         };
-        for ( const sw::string_view json : arrJson )
+        for ( const sw::string_view json : arrJSON )
         {
             test::ScopedLogCollector logs;
             TextureImportConfig      config;
-            SW_EXPECT_FALSE_MSG( config.loadFromJsonString( json ), sw::string( json ) );
+            SW_EXPECT_FALSE_MSG( config.loadFromJSONString( json ), sw::string( json ) );
             SW_EXPECT_TRUE( config.getPresets().empty() );
             SW_EXPECT_TRUE( config.getRules().empty() );
             SW_EXPECT_TRUE_MSG( logs.countContaining( "inherits" ) >= 1u, sw::string( json ) + logs.joined() );
@@ -415,17 +415,17 @@ namespace sw::editor
     SW_TEST_CASE( EditorTexturePipelineTest, InvalidRuleIsALoadError )
     {
         SW_TEST_DEFENSIVE_SCOPE( "틀린 임포트 설정을 일부러 읽는다" );
-        const sw::string_view arrJson[] = {
+        const sw::string_view arrJSON[] = {
             R"({ "rules": [ { "fromat": "BC7_UNORM" } ] })",
             R"({ "rules": [ { "swizzle": "XYZW" } ] })",
             R"({ "rules": [ 3 ] })",
             R"({ "rulez": [] })",
             R"({ "presets": { "Base": { "srgbb": true } } })",
         };
-        for ( const sw::string_view json : arrJson )
+        for ( const sw::string_view json : arrJSON )
         {
             TextureImportConfig config;
-            SW_EXPECT_FALSE_MSG( config.loadFromJsonString( json ), sw::string( json ) );
+            SW_EXPECT_FALSE_MSG( config.loadFromJSONString( json ), sw::string( json ) );
             SW_EXPECT_TRUE( config.getRules().empty() );
             SW_EXPECT_TRUE( config.getPresets().empty() );
         }
@@ -437,7 +437,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, MidListCatchAllRuleShadowingIsReported )
     {
-        const sw::string_view kJson = R"({
+        const sw::string_view kJSON = R"({
             "rules": [
                 { "name": "Normal_Maps", "include_patterns": ["*_n.*"] },
                 { "name": "Catch_All" },
@@ -447,7 +447,7 @@ namespace sw::editor
 
         test::ScopedLogSuppressor suppressor;
         TextureImportConfig       config;
-        SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
+        SW_ASSERT_TRUE( config.loadFromJSONString( kJSON ) );
         SW_ASSERT_EQUAL( size_t( 3 ), config.getRules().size() );
         SW_EXPECT_TRUE( TextureImportConfig::isCatchAllRule( config.getRules()[1] ) );
         SW_EXPECT_EQUAL( size_t( 1 ), config.findShadowingRuleIndex() );
@@ -465,7 +465,7 @@ namespace sw::editor
      */
     SW_TEST_CASE( EditorTexturePipelineTest, TrailingCatchAllRuleIsNotReported )
     {
-        const sw::string_view kJson = R"({
+        const sw::string_view kJSON = R"({
             "rules": [
                 { "name": "Normal_Maps", "include_patterns": ["*_n.*"] },
                 { "name": "Fallback_Default" }
@@ -473,7 +473,7 @@ namespace sw::editor
         })";
 
         TextureImportConfig config;
-        SW_ASSERT_TRUE( config.loadFromJsonString( kJson ) );
+        SW_ASSERT_TRUE( config.loadFromJSONString( kJSON ) );
         SW_ASSERT_EQUAL( size_t( 2 ), config.getRules().size() );
 
         // 캐치올이지만 맨 끝이라 가리는 것이 없다.
@@ -607,7 +607,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 10, 20, 30, 255 ) ) );
 
         TextureImportConfig uiConfig;
-        SW_ASSERT_TRUE( uiConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
+        SW_ASSERT_TRUE( uiConfig.loadFromJSONString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
 
         // 1) 한 번도 임포트하지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
         AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly );
@@ -632,7 +632,7 @@ namespace sw::editor
 
         // 4) 규칙만 바꿨다(원본은 그대로).
         TextureImportConfig srgbConfig;
-        SW_ASSERT_TRUE( srgbConfig.loadFromJsonString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
+        SW_ASSERT_TRUE( srgbConfig.loadFromJSONString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
         SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, AssetImportMode::CheckOnly )._listProblem.size() );
         SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
 
@@ -665,7 +665,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( FileUtil::writeTextFile( sourcePath, "#?RADIANCE\n" ) );
 
         TextureImportConfig config;
-        SW_ASSERT_TRUE( config.loadFromJsonString( R"({ "rules": [ { "name": "Any" } ] })" ) );
+        SW_ASSERT_TRUE( config.loadFromJSONString( R"({ "rules": [ { "name": "Any" } ] })" ) );
         const AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, config, AssetImportMode::ImportStale );
         SW_EXPECT_EQUAL( 1u, summary._sourceCount );
         SW_EXPECT_EQUAL( 0u, summary._importedCount );

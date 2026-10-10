@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
     class Skeleton;
 
     /** @brief 모프 타깃 하나의 가중치입니다. */
@@ -75,7 +75,7 @@ namespace sw
         /** @brief 얼굴 리그 확장자입니다. */
         static constexpr string_view kExtension = ".facial.json";
 
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 메시의 모프 타깃 이름들에 없는 타깃 · 스켈레톤에 없는 눈 본 · 타깃과 같은 이름의 표정(커브가 둘 다 움직인다)이 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool validate( const vector<hashed_string>& listMorphTargetName, const Skeleton& skeleton, string_view sourceLabel ) const;
@@ -90,8 +90,8 @@ namespace sw
         int32 findVisemeIndex( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool        parseRoot( const JsonValue& root, string_view sourceLabel );
-        [[nodiscard]] static bool parsePoses( const JsonValue& value, vector<FacialPose>& outListPose, string_view sourceLabel );
+        [[nodiscard]] bool        parseRoot( const JSONValue& root, string_view sourceLabel );
+        [[nodiscard]] static bool parsePoses( const JSONValue& value, vector<FacialPose>& outListPose, string_view sourceLabel );
 
         vector<FacialPose>  _listExpression;
         vector<FacialPose>  _listViseme;

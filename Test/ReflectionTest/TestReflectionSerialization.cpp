@@ -10,9 +10,9 @@
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -67,9 +67,9 @@ namespace
         return false;
     }
 
-    /** @brief 한 인스턴스의 5개 골든(Json/XML/Bin/JsonVer/BinVer)을 검증합니다. */
+    /** @brief 한 인스턴스의 5개 골든(JSON/XML/Bin/JsonVer/BinVer)을 검증합니다. */
     bool checkGoldenSet( const utf8* pLabel, const void* pInstance, const sw::TypeInfo& typeInfo,
-                         const utf8* pJson, const utf8* pXML, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
+                         const utf8* pJSON, const utf8* pXML, const utf8* pBinHex, const utf8* pJSONVer, const utf8* pBinVerHex )
     {
         sw::vector<uint8> bin;
         sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
@@ -77,10 +77,10 @@ namespace
         sw::BinarySerializer::serializeVersioned( 7, pInstance, typeInfo, binVer );
 
         bool bOk = true;
-        bOk &= goldenEq( pLabel, sw::JsonSerializer::serialize( pInstance, typeInfo ), pJson );
+        bOk &= goldenEq( pLabel, sw::JSONSerializer::serialize( pInstance, typeInfo ), pJSON );
         bOk &= goldenEq( pLabel, sw::XMLSerializer::serialize( pInstance, typeInfo ), pXML );
         bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
-        bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
+        bOk &= goldenEq( pLabel, sw::JSONSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJSONVer );
         bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
         return bOk;
     }
@@ -406,7 +406,7 @@ SW_TEST_CASE( ReflectionSerializationTest, CompressedBinaryRoundtrip )
 /**
  * @brief [ReflectionSerializationTest] JSON 라운드트립
  */
-SW_TEST_CASE( ReflectionSerializationTest, JsonRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, JSONRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -419,11 +419,11 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonRoundtrip )
     src._title     = "JsonTest";
     src._listScore = { 5, 10, 15 };
 
-    sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
+    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo );
     SW_EXPECT_TRUE( json.empty() == false );
 
     sw::ComplexData dst;
-    bool            success = sw::JsonSerializer::deserialize( &dst, *typeInfo, json );
+    bool            success = sw::JSONSerializer::deserialize( &dst, *typeInfo, json );
 
     SW_EXPECT_TRUE( success );
     SW_EXPECT_EQUAL( 777, dst._id );
@@ -633,7 +633,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLAttributeRoundtrip )
 /**
  * @brief [ReflectionSerializationTest] XML/JSON 키 대소문자 무시, 값은 유지
  */
-SW_TEST_CASE( ReflectionSerializationTest, XMLJsonKeysIgnoreCaseValuesPreserveCase )
+SW_TEST_CASE( ReflectionSerializationTest, XMLAndJSONKeysIgnoreCaseValuesPreserveCase )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -644,11 +644,11 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLJsonKeysIgnoreCaseValuesPreserveCa
     // 프로퍼티 키/태그는 대소문자가 달라도 되고, 문자열 값은 대소문자를 유지해야 한다.
     const utf8* json =
         R"({"_ID":77,"_TITLE":"CaseSensitiveValue","_listScore":[1,2]})";
-    sw::ComplexData fromJson;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &fromJson, *typeInfo, json ) );
-    SW_EXPECT_EQUAL( 77, fromJson._id );
-    SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ), fromJson._title );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJson._listScore.size() ) );
+    sw::ComplexData fromJSON;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &fromJSON, *typeInfo, json ) );
+    SW_EXPECT_EQUAL( 77, fromJSON._id );
+    SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ), fromJSON._title );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromJSON._listScore.size() ) );
 
     const utf8* xml =
         R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_listScore><item>3</item><ITEM>4</ITEM></_listScore></sw__ComplexData>)";
@@ -661,17 +661,17 @@ SW_TEST_CASE( ReflectionSerializationTest, XMLJsonKeysIgnoreCaseValuesPreserveCa
     SW_EXPECT_EQUAL( 4, fromXML._listScore[1] );
 
     SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ),
-                     sw::JsonDocument::extractStringField( json, "_title" ) );
-    SW_EXPECT_TRUE( sw::JsonDocument::extractStringField( json, "_title", false ).empty() );
+                     sw::JSONDocument::extractStringField( json, "_title" ) );
+    SW_EXPECT_TRUE( sw::JSONDocument::extractStringField( json, "_title", false ).empty() );
 
     // 옵트아웃: 대소문자 구분 키 조회는 다른 대소문자를 바인딩하면 안 된다.
     sw::SerializeContext strictCtx = sw::SerializeContext::getDefault();
     strictCtx.setIgnoreCaseKeys( false );
 
-    sw::ComplexData strictJson;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &strictJson, *typeInfo, json, strictCtx ) );
-    SW_EXPECT_EQUAL( 101, strictJson._id ); // ComplexData 기본값, 77 아님
-    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictJson._title );
+    sw::ComplexData strictJSON;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &strictJSON, *typeInfo, json, strictCtx ) );
+    SW_EXPECT_EQUAL( 101, strictJSON._id ); // ComplexData 기본값, 77 아님
+    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictJSON._title );
 
     sw::ComplexData strictXML;
     SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &strictXML, *typeInfo, xml, strictCtx ) );
@@ -701,7 +701,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NarrowEnumHost host;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &host, *typeInfo, R"({"_mode":"Two"})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &host, *typeInfo, R"({"_mode":"Two"})" ) );
     SW_EXPECT_TRUE( host._mode == sw::NarrowEnum::Two );
     // enum 뒤 1바이트 필드들이 초기값 그대로여야 한다.
     SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( host._guard ) );
@@ -710,16 +710,16 @@ SW_TEST_CASE( ReflectionSerializationTest, NarrowEnumDeserializeKeepsAdjacentByt
 
     // 숫자 표기도 동일하게 동작한다.
     sw::NarrowEnumHost numeric;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &numeric, *typeInfo, R"({"_mode":1})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &numeric, *typeInfo, R"({"_mode":1})" ) );
     SW_EXPECT_TRUE( numeric._mode == sw::NarrowEnum::One );
     SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( numeric._guard ) );
 
     // 왕복도 값이 유지된다.
     sw::NarrowEnumHost src;
     src._mode               = sw::NarrowEnum::Two;
-    const sw::string   json = sw::JsonSerializer::serialize( &src, *typeInfo );
+    const sw::string   json = sw::JSONSerializer::serialize( &src, *typeInfo );
     sw::NarrowEnumHost dst;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dst, *typeInfo, json ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &dst, *typeInfo, json ) );
     SW_EXPECT_TRUE( dst._mode == sw::NarrowEnum::Two );
     SW_EXPECT_EQUAL( static_cast<uint32>( 0xAB ), static_cast<uint32>( dst._guard ) );
 }
@@ -875,10 +875,10 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerReadRulesAreTheSameInEveryFo
     SW_EXPECT_EQUAL( size_t( 1 ), fromXML._mapColorToCount.size() );
     SW_EXPECT_EQUAL( 4, fromXML._mapColorToCount[WireShiftColor::Blue] );
 
-    WireShiftHost fromJson;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromJson, info, R"({"_mapColorToCount":{"Purple":3,"Blue":4}})" ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), fromJson._mapColorToCount.size() );
-    SW_EXPECT_EQUAL( 4, fromJson._mapColorToCount[WireShiftColor::Blue] );
+    WireShiftHost fromJSON;
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, info, R"({"_mapColorToCount":{"Purple":3,"Blue":4}})" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), fromJSON._mapColorToCount.size() );
+    SW_EXPECT_EQUAL( 4, fromJSON._mapColorToCount[WireShiftColor::Blue] );
 
     sw::XMLDocumentBackend backend;
     WireShiftHost          fromEmpty;
@@ -1083,7 +1083,7 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldOfADeletedEnumTypeIsNotReadAsANu
 /**
  * @brief [ReflectionSerializationTest] JSON 맵 컨테이너를 평범한 오브젝트 표현으로도 읽고 쓴다.
  */
-SW_TEST_CASE( ReflectionSerializationTest, JsonMapUsesPlainObject )
+SW_TEST_CASE( ReflectionSerializationTest, JSONMapUsesPlainObject )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -1091,20 +1091,20 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonMapUsesPlainObject )
 
     // 읽기: {"key":value,...}
     sw::ComplexData plain;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_mapStat":{"atk":7,"def":3}})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &plain, *typeInfo, R"({"_mapStat":{"atk":7,"def":3}})" ) );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( plain._mapStat.size() ) );
     SW_EXPECT_EQUAL( 7, plain._mapStat["atk"] );
     SW_EXPECT_EQUAL( 3, plain._mapStat["def"] );
 
     // 쓰기도 같은 표현이어야 한다(래핑 키가 나오면 안 됨).
-    const sw::string json = sw::JsonSerializer::serialize( &plain, *typeInfo );
+    const sw::string json = sw::JSONSerializer::serialize( &plain, *typeInfo );
     SW_EXPECT_TRUE( json.find( "\"_mapStat\":{" ) != sw::string::npos );
     SW_EXPECT_TRUE( json.find( "\"map\"" ) == sw::string::npos );
     SW_EXPECT_TRUE( json.find( "\"entry\"" ) == sw::string::npos );
 
     // 래핑 형식({"map":[{"_name":..,"entry":..}]})은 읽지 않는다 — 알 수 없는 키 "map" 으로 취급되어 실패해야 한다.
     sw::ComplexData legacy;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize(
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize(
         &legacy, *typeInfo, R"({"map":[{"_name":"_mapStat","entry":{"hp":9}}]})" ) );
 }
 
@@ -1153,9 +1153,9 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
     };
 
     {
-        const sw::string         json = sw::JsonSerializer::serialize( &src, *typeInfo );
+        const sw::string         json = sw::JSONSerializer::serialize( &src, *typeInfo );
         sw::NestedContainerActor dst;
-        SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dst, *typeInfo, json ) );
+        SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &dst, *typeInfo, json ) );
         verify( dst, "json" );
     }
     {
@@ -1176,7 +1176,7 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
 /**
  * @brief [ReflectionSerializationTest] JSON 시퀀스 컨테이너를 평범한 배열 표현으로도 읽는다(손으로 쓴 Config 등).
  */
-SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
+SW_TEST_CASE( ReflectionSerializationTest, JSONSequenceAcceptsPlainArray )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -1184,7 +1184,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 
     // 자연스러운 형식: "_listScore": [10, 20, 30]
     sw::ComplexData plain;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_id":9,"_listScore":[10,20,30]})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &plain, *typeInfo, R"({"_id":9,"_listScore":[10,20,30]})" ) );
     SW_EXPECT_EQUAL( 9, plain._id );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( plain._listScore.size() ) );
     SW_EXPECT_EQUAL( 10, plain._listScore[0] );
@@ -1192,12 +1192,12 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
 
     // 빈 배열도 유효하다.
     sw::ComplexData empty;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &empty, *typeInfo, R"({"_listScore":[]})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &empty, *typeInfo, R"({"_listScore":[]})" ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( empty._listScore.size() ) );
 
     // 잘못된 원소 타입은 여전히 실패한다.
     sw::ComplexData bad;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &bad, *typeInfo, R"({"_listScore":[1,"nope"]})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &bad, *typeInfo, R"({"_listScore":[1,"nope"]})" ) );
 }
 
 /**
@@ -1205,20 +1205,20 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonSequenceAcceptsPlainArray )
  * @details 쓰는 쪽은 값 구조체를 감싸지 않는다. 멤버 하나의 이름이 등록된 타입이면 감싼 것으로 짐작해 그 안을 읽으면, 칸 하나짜리 구조체의 칸 이름이
  *          우연히 타입 이름일 때 엉뚱하게 벗겨 읽는다.
  */
-SW_TEST_CASE( ReflectionSerializationTest, JsonValueStructElementIsReadOnlyAsItsBody )
+SW_TEST_CASE( ReflectionSerializationTest, JSONValueStructElementIsReadOnlyAsItsBody )
 {
     const sw::TypeInfo* typeInfo = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::NestedContainerActor" ) );
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor plain;
-    SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &plain, *typeInfo, R"({"_listInner":[{"_x":5}]})" ) );
+    SW_ASSERT_TRUE( sw::JSONSerializer::deserialize( &plain, *typeInfo, R"({"_listInner":[{"_x":5}]})" ) );
     SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), plain._listInner.size() );
     SW_EXPECT_EQUAL( 5, plain._listInner[0]._x );
 
     sw::NestedContainerActor wrapped;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a JSON value struct element wrapped in its type name" );
-        (void)sw::JsonSerializer::deserialize( &wrapped, *typeInfo, R"({"_listInner":[{"NestedInner":{"_x":5}}]})" ); // 거절이 기대값 — 아래 단언이 읽히지 않았는지 본다
+        (void)sw::JSONSerializer::deserialize( &wrapped, *typeInfo, R"({"_listInner":[{"NestedInner":{"_x":5}}]})" ); // 거절이 기대값 — 아래 단언이 읽히지 않았는지 본다
     }
     const bool bReadThroughWrapper = wrapped._listInner.size() == 1 && wrapped._listInner[0]._x == 5;
     SW_EXPECT_FALSE( bReadThroughWrapper );
@@ -1236,7 +1236,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadFieldInsid
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::NestedContainerActor jsonList;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonList, *typeInfo, R"({"_listInner":[{"_x":"nope"}]})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonList, *typeInfo, R"({"_listInner":[{"_x":"nope"}]})" ) );
 
     // XML 은 두 입구를 다 본다 — 문자열 입구(orphan 목록으로 판정)와 백엔드 입구(orphan 목록 없이 칸 실패로 판정).
     const utf8* const kArrBadXML[] = {
@@ -1274,10 +1274,10 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
     SW_ASSERT_TRUE( typeInfo != nullptr );
 
     sw::ComplexData jsonContainer;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonContainer, *typeInfo, R"({"_listScore":[1,"not_an_int"]})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonContainer, *typeInfo, R"({"_listScore":[1,"not_an_int"]})" ) );
 
     sw::ComplexData jsonField;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
 
     sw::ComplexData xmlField;
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
@@ -1289,15 +1289,15 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
         R"(<sw__ComplexData><_listScore><item>1</item><item>not_an_int</item></_listScore></sw__ComplexData>)" ) );
 
     sw::ComplexData jsonOk;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"_listScore":[1,2]})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &jsonOk, *typeInfo, R"({"_id":7,"_listScore":[1,2]})" ) );
     SW_EXPECT_EQUAL( 7, jsonOk._id );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( jsonOk._listScore.size() ) );
 
     sw::ComplexData jsonMalformed;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonMalformed, *typeInfo, R"({"not_a_pair","_id":1})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonMalformed, *typeInfo, R"({"not_a_pair","_id":1})" ) );
 
     sw::ComplexData jsonUnknown;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonUnknown, *typeInfo, R"({"_id":1,"NotARealField":2})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &jsonUnknown, *typeInfo, R"({"_id":1,"NotARealField":2})" ) );
 
     sw::ComplexData xmlUnknown;
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
@@ -1392,11 +1392,11 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomSerializeContext )
     sw::ComplexData src;
     src._id = 50;
 
-    sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo, customCtx );
+    sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo, customCtx );
     SW_EXPECT_TRUE( json.find( "\"_id\":500" ) != sw::string::npos );
 
     sw::ComplexData dst;
-    bool            success = sw::JsonSerializer::deserialize( &dst, *typeInfo, json, customCtx );
+    bool            success = sw::JSONSerializer::deserialize( &dst, *typeInfo, json, customCtx );
     SW_EXPECT_TRUE( success );
     SW_EXPECT_EQUAL( 50, dst._id );
 }
@@ -1435,7 +1435,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
     DefaultActor jsonActor;
     jsonActor._mana  = 1;
     jsonActor._title = "x";
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &jsonActor, info, "{}" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &jsonActor, info, "{}" ) );
     SW_EXPECT_EQUAL( 75, jsonActor._mana );
     SW_EXPECT_EQUAL( sw::string( "Apprentice" ), jsonActor._title );
 
@@ -1467,9 +1467,9 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
          SW_OFFSET_OF( AliasTestActor, _currentHp ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr, sw::hashed_string( "hp" ) }
     };
 
-    sw::string     oldJson = "{\"hp\": 250}";
+    sw::string     oldJSON = "{\"hp\": 250}";
     AliasTestActor actor;
-    bool           jsonOk = sw::JsonSerializer::deserialize( &actor, info, oldJson );
+    bool           jsonOk = sw::JSONSerializer::deserialize( &actor, info, oldJSON );
     SW_EXPECT_TRUE( jsonOk );
     SW_EXPECT_EQUAL( 250, actor._currentHp );
 
@@ -1484,7 +1484,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::AliasAndReorderTestActor" ) );
     SW_ASSERT_NOT_NULL( multiAliasInfo );
     sw::AliasAndReorderTestActor multi{};
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &multi, *multiAliasInfo, R"({"HitPoints":33,"_score":1})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &multi, *multiAliasInfo, R"({"HitPoints":33,"_score":1})" ) );
     SW_EXPECT_EQUAL( 33, multi._currentHp );
 
     // PROPERTY(Default) 없는 누락 필드는 생성 시 값을 유지한다.
@@ -1609,13 +1609,13 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     SW_EXPECT_TRUE( xmlOrphans.empty() == false );
 
     // --- JSON: 동일 ---
-    LayoutV2 fromJson{};
-    fromJson._hp   = -1;
-    fromJson._mana = -1;
+    LayoutV2 fromJSON{};
+    fromJSON._hp   = -1;
+    fromJSON._mana = -1;
     sw::vector<sw::SchemaOrphanValue> jsonOrphans;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeSoft( &fromJson, infoV2, R"({"health":66,"_score":2})", &jsonOrphans ) );
-    SW_EXPECT_EQUAL( 66, fromJson._hp );
-    SW_EXPECT_EQUAL( 9, fromJson._mana );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeSoft( &fromJSON, infoV2, R"({"health":66,"_score":2})", &jsonOrphans ) );
+    SW_EXPECT_EQUAL( 66, fromJSON._hp );
+    SW_EXPECT_EQUAL( 9, fromJSON._mana );
     SW_EXPECT_TRUE( jsonOrphans.empty() == false );
 
     // --- 필드 타입명 별칭(int32 → int32)으로 텍스트 파싱 ---
@@ -1697,7 +1697,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
 }
 
 /**
- * @brief [ReflectionSerializationTest] 필드 타입 변경 (int32→string) binary coerce + Json/XML versioned
+ * @brief [ReflectionSerializationTest] 필드 타입 변경 (int32→string) binary coerce + JSON/XML versioned
  */
 SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 {
@@ -1738,14 +1738,14 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 
     // string → int32 (quoted JSON)
     StrHp      strSrc{ "99" };
-    sw::string json = sw::JsonSerializer::serializeVersioned( 3, &strSrc, strInfo );
+    sw::string json = sw::JSONSerializer::serializeVersioned( 3, &strSrc, strInfo );
     SW_EXPECT_TRUE( json.find( "\"_schemaVersion\":3" ) != sw::string::npos );
 
-    IntHp fromJson{};
+    IntHp fromJSON{};
     ver = 0;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &fromJson, intInfo, json, 3u ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &fromJSON, intInfo, json, 3u ) );
     SW_EXPECT_EQUAL( 3u, ver );
-    SW_EXPECT_EQUAL( 99, fromJson._hp );
+    SW_EXPECT_EQUAL( 99, fromJSON._hp );
 
     // XML versioned + int32→string coerce
     sw::string xml = sw::XMLSerializer::serializeVersioned( 4, &src, intInfo );
@@ -2015,9 +2015,9 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
     SW_EXPECT_FALSE( sw::BinarySerializer::deserializeVersioned( ver, &restored, info, bin.data(), bin.size(), 2u ) );
     SW_EXPECT_EQUAL( 1u, ver );
 
-    sw::string json = sw::JsonSerializer::serializeVersioned( 1, &actor, info );
+    sw::string json = sw::JSONSerializer::serializeVersioned( 1, &actor, info );
     ver             = 0;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserializeVersioned( ver, &restored, info, json, 2u ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserializeVersioned( ver, &restored, info, json, 2u ) );
 
     sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &actor, info );
     ver            = 0;
@@ -2070,9 +2070,9 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
     sw::BinarySerializer::serializeVersioned( 1, &source, wide, bin );
     const bool bBinary = sw::BinarySerializer::deserializeVersioned( ver, &target, narrow, bin.data(), bin.size(), 1u );
 
-    const sw::string json = sw::JsonSerializer::serializeVersioned( 1, &source, wide );
+    const sw::string json = sw::JSONSerializer::serializeVersioned( 1, &source, wide );
     ver                   = 0;
-    const bool bJson      = sw::JsonSerializer::deserializeVersioned( ver, &target, narrow, json, 1u );
+    const bool bJSON      = sw::JSONSerializer::deserializeVersioned( ver, &target, narrow, json, 1u );
 
     const sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &source, wide );
     ver                  = 0;
@@ -2080,7 +2080,7 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
 
     SW_EXPECT_TRUE_MSG( bBinary == false,
                         "Binary 가 orphan 을 받아들였습니다 — SchemaOrphanPolicy::Reject 가 무력해졌습니다" );
-    SW_EXPECT_TRUE_MSG( bJson,
+    SW_EXPECT_TRUE_MSG( bJSON,
                         "JSON 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 파일 전체가 안 읽힙니다" );
     SW_EXPECT_TRUE_MSG( bXML,
                         "XML 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 씬이 통째로 안 읽힙니다" );
@@ -2120,12 +2120,12 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     test::ScopedLogCollector logs;
 
     // ① JSON — 읽지 못한 값 둘. 한 줄에 둘 다, 나머지 칸은 읽혔다.
-    DropProbe fromJson;
+    DropProbe fromJSON;
     uint32    ver{ 0 };
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &fromJson, info, R"({"_schemaVersion":1,"_hp":"abc","_mp":"x1","_level":9})", 1u ) );
-    SW_EXPECT_EQUAL( 5, fromJson._hp );
-    SW_EXPECT_EQUAL( 6, fromJson._mp );
-    SW_EXPECT_EQUAL( 9, fromJson._level );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &fromJSON, info, R"({"_schemaVersion":1,"_hp":"abc","_mp":"x1","_level":9})", 1u ) );
+    SW_EXPECT_EQUAL( 5, fromJSON._hp );
+    SW_EXPECT_EQUAL( 6, fromJSON._mp );
+    SW_EXPECT_EQUAL( 9, fromJSON._level );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 2 saved field(s)" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "_hp, _mp" ) == 1, logs.joined().c_str() );
 
@@ -2148,7 +2148,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     };
     DropProbe migrated;
     ver = 0;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})",
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &migrated, info, R"({"_schemaVersion":1,"_dropProbeHealth":42,"_dropProbeJunk":1})",
                                                               2u, +moveHealth ) );
     SW_EXPECT_EQUAL( 42, migrated._hp );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s) that the type does not have or could not read: _dropProbeJunk" ) == 1,
@@ -2158,7 +2158,7 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     // ④ 모든 값이 자리를 찾은 로드는 조용하다.
     DropProbe clean;
     ver = 0;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &clean, info, R"({"_schemaVersion":1,"_hp":1,"_mp":2,"_level":3})", 1u ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &clean, info, R"({"_schemaVersion":1,"_hp":1,"_mp":2,"_level":3})", 1u ) );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor" ) == 3, logs.joined().c_str() );
 }
 
@@ -2204,7 +2204,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
     {
         return ctx.applyOrphanToPath( "_stats._hp" );
     };
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})",
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &nested, nestedActorInfo, R"({"_schemaVersion":1,"_hp":77})",
                                                               2u, +moveOrphan ) );
     SW_EXPECT_EQUAL( 77, nested._stats._hp );
 
@@ -2220,7 +2220,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
 
     RenamedActor renamed{};
     ver = 0;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserializeVersioned( ver, &renamed, renamedInfo,
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserializeVersioned( ver, &renamed, renamedInfo,
                                                               R"({"_schemaVersion":1,"_hp":55})", 1u ) );
     SW_EXPECT_EQUAL( 55, renamed._hitPoints );
 }
@@ -2228,23 +2228,23 @@ SW_TEST_CASE( ReflectionSerializationTest, StructuralMoveAndPropertyAlias )
 /**
  * @brief [ReflectionSerializationTest] JSON pretty print
  */
-SW_TEST_CASE( ReflectionSerializationTest, JsonPrettyPrint )
+SW_TEST_CASE( ReflectionSerializationTest, JSONPrettyPrint )
 {
-    struct SimpleJsonActor
+    struct SimpleJSONActor
     {
         int32 _val = 42;
     } actor;
 
     sw::TypeInfo info;
-    info._name               = sw::hashed_string( "SimpleJsonActor" );
-    info._fullyQualifiedName = sw::hashed_string( "sw::SimpleJsonActor" );
-    info._size               = sizeof( SimpleJsonActor );
+    info._name               = sw::hashed_string( "SimpleJSONActor" );
+    info._fullyQualifiedName = sw::hashed_string( "sw::SimpleJSONActor" );
+    info._size               = sizeof( SimpleJSONActor );
     info._listProperty       = {
         { sw::hashed_string( "_val" ), sw::hashed_string( "int32" ),
-         SW_OFFSET_OF( SimpleJsonActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
+         SW_OFFSET_OF( SimpleJSONActor, _val ), false, sw::ContainerKind::None, sw::hashed_string(), sw::hashed_string(), nullptr }
     };
 
-    sw::string prettyStr = sw::JsonSerializer::serializePretty( &actor, info, 4 );
+    sw::string prettyStr = sw::JSONSerializer::serializePretty( &actor, info, 4 );
     SW_EXPECT_TRUE( prettyStr.find( '\n' ) != sw::string::npos );
     SW_EXPECT_TRUE( prettyStr.find( "    \"_val\": 42" ) != sw::string::npos );
 }
@@ -2305,11 +2305,11 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedStructAndContainersRoundtrip )
     SW_EXPECT_EQUAL( 42, dstBin._inner._x );
     SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), dstBin._namedRows["a"].size() );
 
-    const sw::string         json = sw::JsonSerializer::serialize( &src, *typeInfo );
-    sw::NestedContainerActor dstJson;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &dstJson, *typeInfo, json ) );
-    SW_EXPECT_EQUAL( 4, dstJson._grid[1][1] );
-    SW_EXPECT_EQUAL( 42, dstJson._inner._x );
+    const sw::string         json = sw::JSONSerializer::serialize( &src, *typeInfo );
+    sw::NestedContainerActor dstJSON;
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &dstJSON, *typeInfo, json ) );
+    SW_EXPECT_EQUAL( 4, dstJSON._grid[1][1] );
+    SW_EXPECT_EQUAL( 42, dstJSON._inner._x );
 }
 
 /**
@@ -2330,7 +2330,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
     const sw::NestedContainerActor src = makeGoldenNestedActor();
 
     // 컨테이너는 자연스러운 JSON 표현으로 나간다: 시퀀스는 배열, 맵은 오브젝트.
-    const sw::string kGoldenJson =
+    const sw::string kGoldenJSON =
         "{\"_grid\":[[1,2],[3,4,5]],\"_namedRows\":{\"a\":[1,2.5],\"b\":[-3.25]},\"_nestedMap\":{\"out\":{\"x\":7}},\"_listInner\":[{\"_x\":11}],\"_mapInner\":{\"m\":{\"_x\":33}},\"_inner\":{\"_x\":42}}";
 
     const sw::string kGoldenPretty =
@@ -2422,12 +2422,12 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
         "7d0b57bfe2defb0400000021000000be55188f1aa2d1f6180000001400000001000001a27d0b57bf"
         "e2defb040000002a000000";
 
-    const sw::string json = sw::JsonSerializer::serialize( &src, *typeInfo );
-    if ( json != kGoldenJson )
-        std::fprintf( stdout, "[golden json]\n  expected: %s\n  actual  : %s\n", kGoldenJson.c_str(), json.c_str() );
-    SW_EXPECT_TRUE( json == kGoldenJson );
+    const sw::string json = sw::JSONSerializer::serialize( &src, *typeInfo );
+    if ( json != kGoldenJSON )
+        std::fprintf( stdout, "[golden json]\n  expected: %s\n  actual  : %s\n", kGoldenJSON.c_str(), json.c_str() );
+    SW_EXPECT_TRUE( json == kGoldenJSON );
 
-    const sw::string pretty = sw::JsonSerializer::serializePretty( &src, *typeInfo, 4 );
+    const sw::string pretty = sw::JSONSerializer::serializePretty( &src, *typeInfo, 4 );
     if ( pretty != kGoldenPretty )
         std::fprintf( stdout, "[golden pretty]\n---expected---\n%s\n---actual---\n%s\n", kGoldenPretty.c_str(), pretty.c_str() );
     SW_EXPECT_TRUE( pretty == kGoldenPretty );
@@ -2446,7 +2446,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 
     // 역방향: 골든 문자열을 다시 읽어 원본과 같은지 (안전망 자체가 유효한지 확인)
     sw::NestedContainerActor back;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &back, *typeInfo, kGoldenJson ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &back, *typeInfo, kGoldenJSON ) );
     SW_EXPECT_EQUAL( 5, back._grid[1][2] );
     SW_EXPECT_EQUAL( 42, back._inner._x );
 }
@@ -2672,9 +2672,9 @@ SW_TEST_CASE( ReflectionSerializationTest, SetPropertyRoundTripsInEveryFormat )
 
     // 2) JSON
     {
-        const sw::string json = sw::JsonSerializer::serialize( &source, info );
+        const sw::string json = sw::JSONSerializer::serialize( &source, info );
         SetHolder        restored{};
-        SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &restored, info, json ) );
+        SW_ASSERT_TRUE( sw::JSONSerializer::deserialize( &restored, info, json ) );
         expectContents( restored, "JSON 왕복이 set 을 잃었습니다" );
     }
 
@@ -2744,11 +2744,11 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
     }
     // 2) JSON — 키는 Name 이 준 옛 이름이다.
     {
-        const sw::string json = sw::JsonSerializer::serialize( &source, info );
+        const sw::string json = sw::JSONSerializer::serialize( &source, info );
         SW_EXPECT_TRUE_MSG( json.find( "\"_position\"" ) != sw::string::npos, json.c_str() );
         sw::ExternalStorageTestActor restored;
         restored._storageIndex = 3;
-        SW_ASSERT_TRUE( sw::JsonSerializer::deserialize( &restored, info, json ) );
+        SW_ASSERT_TRUE( sw::JSONSerializer::deserialize( &restored, info, json ) );
         SW_EXPECT_EQUAL( 7, restored._level );
         expectRestored( 3, "JSON" );
     }
@@ -2839,9 +2839,9 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
         expectPayload( restored, "binary" );
     }
     {
-        const sw::string   json = sw::JsonSerializer::serialize( &source, *pActorType );
+        const sw::string   json = sw::JSONSerializer::serialize( &source, *pActorType );
         sw::AssetPathActor restored;
-        SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &restored, *pActorType, json ), json.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &restored, *pActorType, json ), json.c_str() );
         expectPayload( restored, "json" );
     }
     {
@@ -2854,8 +2854,8 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
     // 텍스트 표현이 깨지면(홀수 자리 16진수 · 구분자 없음) 값을 만들지 않는다.
     SW_TEST_DEFENSIVE_SCOPE( "malformed ReflectAny text is rejected" );
     sw::AssetPathActor broken;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &broken, *pActorType, R"({"_payload":"sw::PolyPayloadA|abc"})" ) );
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &broken, *pActorType, R"({"_payload":"no separator"})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &broken, *pActorType, R"({"_payload":"sw::PolyPayloadA|abc"})" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &broken, *pActorType, R"({"_payload":"no separator"})" ) );
 }
 
 /**
@@ -3033,14 +3033,14 @@ SW_TEST_CASE( ReflectionSerializationTest, OutOfRangeIntegerTextIsRejectedNotWra
     NarrowFields value;
     {
         test::ScopedDefensiveTestLog expected( "integers that do not fit their fields" );
-        (void)sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":300,"_wide":4000000000,"_signedByte":-129})" ); // 결과보다 필드가 그대로인지를 본다
+        (void)sw::JSONSerializer::deserialize( &value, info, R"({"_narrow":300,"_wide":4000000000,"_signedByte":-129})" ); // 결과보다 필드가 그대로인지를 본다
     }
     SW_EXPECT_EQUAL( 7, static_cast<int32>( value._narrow ) );
     SW_EXPECT_EQUAL( 5, value._wide );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( value._signedByte ) );
 
     // 경계 값은 그대로 읽힌다.
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &value, info, R"({"_narrow":255,"_wide":-2147483648,"_signedByte":-128})" ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &value, info, R"({"_narrow":255,"_wide":-2147483648,"_signedByte":-128})" ) );
     SW_EXPECT_EQUAL( 255, static_cast<int32>( value._narrow ) );
     SW_EXPECT_TRUE( value._wide == std::numeric_limits<int32>::min() );
     SW_EXPECT_EQUAL( -128, static_cast<int32>( value._signedByte ) );
@@ -3132,13 +3132,13 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
     SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXML._bActive ) );       // 다른 것은 읽혔다
     SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXML._bCanJump ) );
 
-    sw::BitfieldTestActor fromJson;
-    fromJson._bInvulnerable = SW_TRUE;
+    sw::BitfieldTestActor fromJSON;
+    fromJSON._bInvulnerable = SW_TRUE;
     {
         test::ScopedDefensiveTestLog expected( "a bitfield written as 'ture'" );
-        SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromJson, *pBits, R"({"_bInvulnerable":"ture"})" ) );
+        SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromJSON, *pBits, R"({"_bInvulnerable":"ture"})" ) );
     }
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromJson._bInvulnerable ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromJSON._bInvulnerable ) );
 
     // 비트필드가 아닌 bool 도 같은 규칙이다(직렬화기가 함께 쓰는 글 읽기).
     const sw::SerializeContext::TextReadFn* pBoolReader = sw::SerializeContext::getDefault().findTextReader( sw::hashed_string( "bool" ) );
@@ -3225,10 +3225,10 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
     SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
     SW_EXPECT_TRUE_MSG( isSame( fromXML ), xml.c_str() );
 
-    const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
-    sw::ContainerShapeActor fromJson;
-    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromJson, *pType, json ), json.c_str() );
-    SW_EXPECT_TRUE_MSG( isSame( fromJson ), json.c_str() );
+    const sw::string        json = sw::JSONSerializer::serialize( &source, *pType );
+    sw::ContainerShapeActor fromJSON;
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, *pType, json ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromJSON ), json.c_str() );
 
     sw::vector<uint8> bytes;
     sw::BinarySerializer::serialize( &source, *pType, bytes );
@@ -3261,10 +3261,10 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
     SW_EXPECT_TRUE_MSG( fromXML._arrSlot[0] == 7 && fromXML._arrSlot[1] == 8 && fromXML._arrSlot[2] == 9 && fromXML._after == 42, xml.c_str() );
 
-    const sw::string    json = sw::JsonSerializer::serialize( &source, *pType );
-    sw::FixedArrayActor fromJson;
-    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromJson, *pType, json ), json.c_str() );
-    SW_EXPECT_TRUE_MSG( fromJson._arrSlot[0] == 7 && fromJson._arrSlot[1] == 8 && fromJson._arrSlot[2] == 9 && fromJson._after == 42, json.c_str() );
+    const sw::string    json = sw::JSONSerializer::serialize( &source, *pType );
+    sw::FixedArrayActor fromJSON;
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromJSON, *pType, json ), json.c_str() );
+    SW_EXPECT_TRUE_MSG( fromJSON._arrSlot[0] == 7 && fromJSON._arrSlot[1] == 8 && fromJSON._arrSlot[2] == 9 && fromJSON._after == 42, json.c_str() );
 
     sw::vector<uint8> bytes;
     sw::BinarySerializer::serialize( &source, *pType, bytes );
@@ -3273,15 +3273,15 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     SW_EXPECT_TRUE( fromBinary._arrSlot[0] == 7 && fromBinary._arrSlot[1] == 8 && fromBinary._arrSlot[2] == 9 && fromBinary._after == 42 );
 
     // 원소가 칸보다 적으면 앞 칸만 채우고 나머지는 그대로다. 많으면 실패로 알린다(조용히 버리지 않는다).
-    const sw::string    shortJson = "{\"_arrSlot\":[5],\"_after\":1}";
+    const sw::string    shortJSON = "{\"_arrSlot\":[5],\"_after\":1}";
     sw::FixedArrayActor fromShort;
     fromShort._arrSlot = { 1, 2, 3 };
-    SW_EXPECT_TRUE_MSG( sw::JsonSerializer::deserialize( &fromShort, *pType, shortJson ), shortJson.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::JSONSerializer::deserialize( &fromShort, *pType, shortJSON ), shortJSON.c_str() );
     SW_EXPECT_TRUE( fromShort._arrSlot[0] == 5 && fromShort._arrSlot[1] == 2 && fromShort._arrSlot[2] == 3 && fromShort._after == 1 );
 
     test::ScopedLogSuppressor suppressor;
     sw::FixedArrayActor       fromLong;
-    SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromLong, *pType, "{\"_arrSlot\":[1,2,3,4],\"_after\":1}" ) );
+    SW_EXPECT_FALSE( sw::JSONSerializer::deserialize( &fromLong, *pType, "{\"_arrSlot\":[1,2,3,4],\"_after\":1}" ) );
     SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromLong, *pType,
                                                      "<FixedArrayActor><_arrSlot><item>1</item><item>2</item><item>3</item><item>4</item></_arrSlot></FixedArrayActor>" ) );
 }

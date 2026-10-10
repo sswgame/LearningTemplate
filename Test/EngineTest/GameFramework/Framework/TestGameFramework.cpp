@@ -464,7 +464,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
 {
     DialogueRunnerComponent runner;
 
-    const string testJson = R"({
+    const string testJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "Hello traveler!" },
@@ -476,7 +476,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentBasicFlow )
 		]
 	})";
 
-    SW_EXPECT_TRUE( runner.loadGraphJson( testJson ) );
+    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
 
     string heardSpeaker;
     string heardText;
@@ -512,7 +512,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
     DialogueRunnerComponent runner;
     runner.setFlags( &flags );
 
-    const string testJson = R"({
+    const string testJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Take quest?", "choices": ["Accept", "Decline"] },
@@ -531,7 +531,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentChoiceBranchAndAction )
 		]
 	})";
 
-    SW_EXPECT_TRUE( runner.loadGraphJson( testJson ) );
+    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
 
     vector<string> listCurrentChoice;
     runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )
@@ -565,7 +565,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
     // DialogueGraphPanel 형식:
     // Start(1) Output(102) -> Dialogue(2) Input(201)
     // Dialogue(2) Choice 0(210) -> End(3) Input(301)
-    const string testJson = R"({
+    const string testJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Are you ready?", "choices": ["Yes", "No"] },
@@ -579,7 +579,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunnerComponentEditorTool100ScaleFormat
 		]
 	})";
 
-    SW_EXPECT_TRUE( runner.loadGraphJson( testJson ) );
+    SW_EXPECT_TRUE( runner.loadGraphJSON( testJSON ) );
     SW_EXPECT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( static_cast<uint8>( DialogueRunnerState::WaitingForChoice ), static_cast<uint8>( runner.getState() ) );
 
@@ -612,7 +612,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionUnderstandsEveryComparison )
         json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
 		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
 		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
-        SW_EXPECT_TRUE( runner.loadGraphJson( json ) );
+        SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
     };
@@ -667,7 +667,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueConditionAgreesWithWorldFlagConditions 
         json += R"(" }, { "id": 3, "type": "Dialogue", "speaker": "S", "text": "yes" },
 		                 { "id": 4, "type": "Dialogue", "speaker": "S", "text": "no" } ],
 		    "links": [ { "from": 102, "to": 201 }, { "from": 203, "to": 301 }, { "from": 204, "to": 401 } ] })";
-        SW_EXPECT_TRUE( runner.loadGraphJson( json ) );
+        SW_EXPECT_TRUE( runner.loadGraphJSON( json ) );
         SW_EXPECT_TRUE( runner.startDialogue() );
         return runner.getCurrentText() == "yes";
     };
@@ -1445,7 +1445,7 @@ SW_TEST_CASE( GameFrameworkTest, TileMap_WarpLookupAndIndexCache )
  */
 SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 {
-    const utf8* dialogueJson = R"({
+    const utf8* dialogueJSON = R"({
 		"startNodeId": 1,
 		"nodes": [
 			{ "id": 1, "type": "Action", "action": "CloseMenu" },
@@ -1457,7 +1457,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_StopDialogueDuringAction )
 	})";
 
     DialogueRunnerComponent runner;
-    SW_EXPECT_TRUE( runner.loadGraphJson( dialogueJson ) );
+    SW_EXPECT_TRUE( runner.loadGraphJSON( dialogueJSON ) );
 
     bool bActionExecuted = false;
     runner.setOnDialogueEvent( [&]( const string& cmd )
@@ -2370,7 +2370,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
 {
     DialogueRunnerComponent runner;
 
-    const string testJson = R"({
+    const string testJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Dialogue", "speaker": "NPC", "text": "First line" },
@@ -2383,7 +2383,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_HandlerArgumentsSurviveReentrant
 			{ "from": 302, "to": 401 }
 		]
 	})";
-    SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
+    SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
 
     int32  lineCount{ 0 };
     string firstLineAfterAdvancing;
@@ -2414,7 +2414,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 {
     DialogueRunnerComponent runner;
 
-    const string testJson = R"({
+    const string testJSON = R"({
 		"nodes": [
 			{ "id": 1, "type": "Start" },
 			{ "id": 2, "type": "Choice", "speaker": "Guide", "text": "Pick", "choices": ["Alpha", "Beta", "Gamma"] },
@@ -2427,7 +2427,7 @@ SW_TEST_CASE( GameFrameworkTest, DialogueRunner_ChoiceListSurvivesSelectingWhile
 			{ "from": 302, "to": 401 }
 		]
 	})";
-    SW_ASSERT_TRUE( runner.loadGraphJson( testJson ) );
+    SW_ASSERT_TRUE( runner.loadGraphJSON( testJSON ) );
 
     vector<string> listCollectedChoice;
     runner.setOnDialogueChoices( [&]( const vector<string>& listChoice )

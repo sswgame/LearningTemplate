@@ -9,7 +9,7 @@
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -84,7 +84,7 @@ namespace sw
                 return "CopyTransform";
             }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 bool bMaintain = false;
                 bool bOk       = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
@@ -156,7 +156,7 @@ namespace sw
 
             const utf8* getTypeName() const override { return "ParentSwitch"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 const bool bOk = reader.readName( "bone", _boneName, true ) && reader.readNameList( "parents", _listParentName, true ) &&
                                  reader.readUint( "initial", _initialParent, false ) && reader.readFloat( "settle_seconds", _settleSeconds, false );
@@ -257,7 +257,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigDistanceNode>( *this ); }
             const utf8*         getTypeName() const override { return "Distance"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 const bool bOk = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
                                  reader.readFloat( "min", _min, false ) && reader.readFloat( "max", _max, true );
@@ -305,7 +305,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigLimitRotationNode>( *this ); }
             const utf8*         getTypeName() const override { return "LimitRotation"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 return reader.readName( "bone", _boneName, true ) && reader.readFloat3( "min_degrees", _minAngle, true ) &&
                        reader.readFloat3( "max_degrees", _maxAngle, true );
@@ -352,14 +352,14 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigTwistDistributionNode>( *this ); }
             const utf8*         getTypeName() const override { return "TwistDistribution"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 bool bOk              = reader.readName( "source", _sourceName, true ) && reader.readFloat3( "axis", _axis, false );
                 _axis                 = _axis.normalize();
-                const JsonValue bones = reader.readArray( "bones", true );
+                const JSONValue bones = reader.readArray( "bones", true );
                 for ( size_t index = 0; bOk && bones.isValid() && index < bones.size(); ++index )
                 {
-                    RigJsonReader entryReader( bones.at( index ), reader.getContext() );
+                    RigJSONReader entryReader( bones.at( index ), reader.getContext() );
                     TwistBone     entry{};
                     bOk = entryReader.readName( "bone", entry._name, true ) && entryReader.readFloat( "weight", entry._weight, true );
                     bOk = entryReader.finish() && bOk;

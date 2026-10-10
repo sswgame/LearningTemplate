@@ -806,7 +806,7 @@ namespace sw
             return false;
 
         // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
-        // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JsonSerializer::deserializeSoft` 도 문서 하나만 쓴다).
+        // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
         const bool         bIgnore = ctx.ignoresCaseKeys();
         XMLDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );

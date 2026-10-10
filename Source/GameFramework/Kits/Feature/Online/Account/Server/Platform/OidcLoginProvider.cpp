@@ -120,7 +120,7 @@ namespace sw
 
     OidcLoginProvider::Decision OidcLoginProvider::evaluate( const PendingTicket& pending, int64 nowMs, PlatformLoginVerification& outVerification )
     {
-        JsonWebToken token;
+        JSONWebToken token;
         if ( token.parse( pending._token ) == false )
         {
             outVerification._bRejected = SW_TRUE;

@@ -7,7 +7,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -137,14 +137,14 @@ namespace sw
             }
 
             /** @brief 문자열 배열 칸을 읽습니다. 배열이 아니거나 원소가 문자열이 아니면 false 입니다. */
-            [[nodiscard]] static bool readStringArray( const JsonValue& value, vector<string>& outList )
+            [[nodiscard]] static bool readStringArray( const JSONValue& value, vector<string>& outList )
             {
                 if ( value.isArray() == false )
                     return false;
                 outList.clear();
                 for ( size_t index = 0; index < value.size(); ++index )
                 {
-                    const JsonValue element = value.at( index );
+                    const JSONValue element = value.at( index );
                     if ( element.isString() == false )
                         return false;
                     outList.push_back( element.asString() );
@@ -153,7 +153,7 @@ namespace sw
             }
 
             /** @brief 패턴 묶음(`{ "short": …, "medium": … }`)을 읽습니다. 모르는 이름이면 false 입니다. */
-            [[nodiscard]] static bool readPatternGroup( const JsonValue& value, string* pShort, string* pMedium, string* pLong, string& outError )
+            [[nodiscard]] static bool readPatternGroup( const JSONValue& value, string* pShort, string* pMedium, string* pLong, string& outError )
             {
                 if ( value.isObject() == false )
                 {
@@ -162,7 +162,7 @@ namespace sw
                 }
                 for ( const string& styleName : value.getMemberNames() )
                 {
-                    const JsonValue pattern = value.get( styleName, false );
+                    const JSONValue pattern = value.get( styleName, false );
                     string*         pTarget = nullptr;
                     if ( styleName == "short" )
                         pTarget = pShort;
@@ -181,7 +181,7 @@ namespace sw
             }
 
             /** @brief 한 문화권 객체의 칸을 @p inoutInfo 에 덮어씁니다(적힌 칸만). */
-            [[nodiscard]] static bool applyFields( const JsonValue& entry, CultureInfo& inoutInfo, string& outError )
+            [[nodiscard]] static bool applyFields( const JSONValue& entry, CultureInfo& inoutInfo, string& outError )
             {
                 for ( const string& fieldName : entry.getMemberNames() )
                 {
@@ -192,10 +192,10 @@ namespace sw
                     }
                 }
 
-                const JsonValue nativeName = entry.get( "nativeName", false );
+                const JSONValue nativeName = entry.get( "nativeName", false );
                 if ( nativeName.isValid() )
                     inoutInfo._nativeName = nativeName.asString();
-                const JsonValue pluralRule = entry.get( "pluralRule", false );
+                const JSONValue pluralRule = entry.get( "pluralRule", false );
                 if ( pluralRule.isValid() )
                 {
                     const string   ruleName = pluralRule.asString();
@@ -208,10 +208,10 @@ namespace sw
                     inoutInfo._pluralRuleName = ruleName;
                     inoutInfo._pPluralRule    = pRule;
                 }
-                const JsonValue rightToLeft = entry.get( "rightToLeft", false );
+                const JSONValue rightToLeft = entry.get( "rightToLeft", false );
                 if ( rightToLeft.isValid() )
                     inoutInfo._bRightToLeft = rightToLeft.asBool( false );
-                const JsonValue digits = entry.get( "digits", false );
+                const JSONValue digits = entry.get( "digits", false );
                 if ( digits.isValid() )
                 {
                     const string digitsName = digits.asString();
@@ -225,7 +225,7 @@ namespace sw
                         return false;
                     }
                 }
-                const JsonValue pseudo = entry.get( "pseudo", false );
+                const JSONValue pseudo = entry.get( "pseudo", false );
                 if ( pseudo.isValid() )
                 {
                     const string pseudoName = pseudo.asString();
@@ -240,30 +240,30 @@ namespace sw
                     }
                 }
 
-                const JsonValue decimalSeparator = entry.get( "decimalSeparator", false );
+                const JSONValue decimalSeparator = entry.get( "decimalSeparator", false );
                 if ( decimalSeparator.isValid() )
                     inoutInfo._decimalSeparator = decimalSeparator.asString();
-                const JsonValue groupSeparator = entry.get( "groupSeparator", false );
+                const JSONValue groupSeparator = entry.get( "groupSeparator", false );
                 if ( groupSeparator.isValid() )
                     inoutInfo._groupSeparator = groupSeparator.asString();
-                const JsonValue percentPattern = entry.get( "percentPattern", false );
+                const JSONValue percentPattern = entry.get( "percentPattern", false );
                 if ( percentPattern.isValid() )
                     inoutInfo._percentPattern = percentPattern.asString();
 
-                const JsonValue datePatterns = entry.get( "datePatterns", false );
+                const JSONValue datePatterns = entry.get( "datePatterns", false );
                 if ( datePatterns.isValid() && readPatternGroup( datePatterns, &inoutInfo._dateShort, &inoutInfo._dateMedium, &inoutInfo._dateLong, outError ) == false )
                     return false;
-                const JsonValue timePatterns = entry.get( "timePatterns", false );
+                const JSONValue timePatterns = entry.get( "timePatterns", false );
                 if ( timePatterns.isValid() && readPatternGroup( timePatterns, &inoutInfo._timeShort, &inoutInfo._timeMedium, nullptr, outError ) == false )
                     return false;
 
-                const JsonValue monthNames = entry.get( "monthNames", false );
+                const JSONValue monthNames = entry.get( "monthNames", false );
                 if ( monthNames.isValid() && ( readStringArray( monthNames, inoutInfo._listMonthName ) == false || inoutInfo._listMonthName.size() != 12 ) )
                 {
                     outError = "monthNames must be 12 strings";
                     return false;
                 }
-                const JsonValue monthAbbreviations = entry.get( "monthAbbreviations", false );
+                const JSONValue monthAbbreviations = entry.get( "monthAbbreviations", false );
                 const bool      bBadAbbreviations  = monthAbbreviations.isValid() &&
                                                ( readStringArray( monthAbbreviations, inoutInfo._listMonthAbbreviation ) == false || inoutInfo._listMonthAbbreviation.size() != 12 );
                 if ( bBadAbbreviations )
@@ -271,13 +271,13 @@ namespace sw
                     outError = "monthAbbreviations must be 12 strings";
                     return false;
                 }
-                const JsonValue dayPeriods = entry.get( "dayPeriods", false );
+                const JSONValue dayPeriods = entry.get( "dayPeriods", false );
                 if ( dayPeriods.isValid() && ( readStringArray( dayPeriods, inoutInfo._listDayPeriod ) == false || inoutInfo._listDayPeriod.size() != 2 ) )
                 {
                     outError = "dayPeriods must be 2 strings";
                     return false;
                 }
-                const JsonValue fonts = entry.get( "fonts", false );
+                const JSONValue fonts = entry.get( "fonts", false );
                 if ( fonts.isValid() && readStringArray( fonts, inoutInfo._listFont ) == false )
                 {
                     outError = "fonts must be an array of strings";
@@ -619,18 +619,18 @@ namespace sw
         return string( normalizedCode.substr( 0, separatorPos ) );
     }
 
-    bool CultureTable::loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError )
+    bool CultureTable::loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError )
     {
         string       error;
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( FileUtil::skipUtf8Bom( jsonText ), sourceName ) == false )
         {
             if ( pOutError != nullptr )
                 *pOutError = document.getLastError();
             return false;
         }
-        const JsonValue root     = document.getRoot();
-        const JsonValue cultures = root.isObject() ? root.get( "cultures", false ) : JsonValue{};
+        const JSONValue root     = document.getRoot();
+        const JSONValue cultures = root.isObject() ? root.get( "cultures", false ) : JSONValue{};
         if ( cultures.isObject() == false || root.getMemberNames().size() != 1 )
         {
             if ( pOutError != nullptr )
@@ -651,7 +651,7 @@ namespace sw
             vector<string> listNext;
             for ( const string& rawCode : listPending )
             {
-                const JsonValue entry = cultures.get( rawCode, false );
+                const JSONValue entry = cultures.get( rawCode, false );
                 if ( entry.isObject() == false )
                 {
                     error = "culture '" + rawCode + "' must be an object";
@@ -730,7 +730,7 @@ namespace sw
             return false;
         }
         string error;
-        if ( loadFromJsonText( text, resourcePath, &error ) == false )
+        if ( loadFromJSONText( text, resourcePath, &error ) == false )
         {
             SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
             return false;

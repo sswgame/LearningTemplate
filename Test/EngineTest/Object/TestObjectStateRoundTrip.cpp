@@ -337,7 +337,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, InPlaceReloadKeepsOtherObjectsChildren )
         if ( format == 0 )
             bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pParent, sw::ObjectStateSerializer::saveToXMLString( pParent ), { &identity } );
         else if ( format == 1 )
-            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pParent, sw::ObjectStateSerializer::saveToJsonString( pParent ), { &identity } );
+            bLoaded = sw::ObjectStateSerializer::loadFromJSONString( pParent, sw::ObjectStateSerializer::saveToJSONString( pParent ), { &identity } );
         else
         {
             sw::vector<uint8> buffer;
@@ -391,9 +391,9 @@ SW_TEST_CASE( ObjectStateRoundTripTest, AttachmentInsideAnObjectStaysInsideItsCo
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pXMLCopy, xml ) );
         expectArmOnOwnRoot( pXMLCopy, "XML" );
 
-        sw::GameObject* pJsonCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJsonString( pJsonCopy, sw::ObjectStateSerializer::saveToJsonString( pRig ) ) );
-        expectArmOnOwnRoot( pJsonCopy, "JSON" );
+        sw::GameObject* pJSONCopy = manager.createGameObject( sw::hashed_string( "Rig" ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromJSONString( pJSONCopy, sw::ObjectStateSerializer::saveToJSONString( pRig ) ) );
+        expectArmOnOwnRoot( pJSONCopy, "JSON" );
 
         sw::vector<uint8> bytes;
         SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pRig, bytes ) );
@@ -475,7 +475,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, FailedInPlaceLoadLeavesTheObjectAsItWas 
     {
         test::ScopedDefensiveTestLog expected( "a malformed state is not applied" );
         SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromXMLString( pObj, "<GameObject _name=\"Broken\"><_listComponent><SceneComponent" ) );
-        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromJsonString( pObj, "{ \"_name\": " ) );
+        SW_EXPECT_FALSE( sw::ObjectStateSerializer::loadFromJSONString( pObj, "{ \"_name\": " ) );
     }
 
     SW_EXPECT_TRUE( pObj->getName() == sw::hashed_string( "Keeper" ) );
@@ -508,7 +508,7 @@ SW_TEST_CASE( ObjectStateXMLSerializerTest, SaveAndLoadXMLString )
     SW_EXPECT_TRUE( xml.find( "_parentGO" ) == sw::string::npos );
     SW_EXPECT_TRUE( xml.find( "ParentGO" ) == sw::string::npos );
 
-    const sw::string json = ObjectStateSerializer::saveToJsonString( &source );
+    const sw::string json = ObjectStateSerializer::saveToJSONString( &source );
     SW_ASSERT_FALSE( json.empty() );
     // 컨테이너는 프로퍼티 이름 아래 배열로 직접 나간다("vector"/"_name" 래핑 없음).
     SW_EXPECT_TRUE( json.find( "\"_listComponent\":[" ) != sw::string::npos );
@@ -534,13 +534,13 @@ SW_TEST_CASE( ObjectStateXMLSerializerTest, SaveAndLoadXMLString )
     sw::GameObject* jsonTargetPtr = manager.createGameObject( sw::hashed_string( "TempJson" ) );
     SW_ASSERT_NOT_NULL( jsonTargetPtr );
     jsonTargetPtr->setActive( true );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, json ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( jsonTargetPtr, json ) );
     SW_EXPECT_STREQ( "SerializedHero", jsonTargetPtr->getName().c_str() );
     SW_EXPECT_FALSE( jsonTargetPtr->isActive() );
 
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( nullptr, json ) );
-    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJsonString( jsonTargetPtr, "" ) );
-    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToJsonString( nullptr ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( nullptr, json ) );
+    SW_EXPECT_FALSE( ObjectStateSerializer::loadFromJSONString( jsonTargetPtr, "" ) );
+    SW_EXPECT_EMPTY( ObjectStateSerializer::saveToJSONString( nullptr ) );
 }
 
 /**
@@ -864,18 +864,18 @@ SW_TEST_CASE( ObjectStateRoundTripTest, UnknownComponentIsKeptAndWrittenBack )
     SW_EXPECT_TRUE( ObjectStateSerializer::saveToXMLString( pRestored ).find( "_flicker=\"0.25\"" ) != string::npos );
 
     // JSON
-    string       json     = ObjectStateSerializer::saveToJsonString( pSource );
+    string       json     = ObjectStateSerializer::saveToJSONString( pSource );
     const size_t jsonList = json.find( "\"_listComponent\"" );
     SW_ASSERT_TRUE( jsonList != string::npos );
     const size_t arrayOpen = json.find( '[', jsonList );
     SW_ASSERT_TRUE( arrayOpen != string::npos );
     json.insert( arrayOpen + 1, "{\"NotLoadedLampDriver\":{\"_flicker\":0.25}}," );
-    GameObject* pFromJson = manager.createGameObject( hashed_string( "FromJson" ) );
+    GameObject* pFromJSON = manager.createGameObject( hashed_string( "FromJson" ) );
     {
         test::ScopedDefensiveTestLog expected( "a component type that is not loaded" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pFromJson, json ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( pFromJSON, json ) );
     }
-    const string jsonAgain = ObjectStateSerializer::saveToJsonString( pFromJson );
+    const string jsonAgain = ObjectStateSerializer::saveToJSONString( pFromJSON );
     SW_EXPECT_TRUE( jsonAgain.find( "NotLoadedLampDriver" ) != string::npos );
     SW_EXPECT_TRUE( jsonAgain.find( "_flicker" ) != string::npos );
     SW_EXPECT_TRUE( jsonAgain.find( "MissingComponent" ) == string::npos ); // 자리 표시가 아니라 원문이 나간다
@@ -985,7 +985,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, SavedEnumsKeepTheirEnumeratorAcrossEnumC
  * @details JSON 이 컴포넌트 원소를 orphan 목록 없이 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 **전체**를 실패로 만들어 로드가
  *          "_listComponent 를 버렸다" 고만 알린다 — 컴포넌트는 읽혔는데 어느 칸이 문제인지는 말하지 않는다. XML 처럼 바깥 목록을 내려 준다.
  */
-SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed )
+SW_TEST_CASE( ObjectStateRoundTripTest, JSONComponentFieldThatDoesNotReadIsNamed )
 {
     GameObjectManager manager;
     GameObject*       pSource = manager.createGameObject( hashed_string( "Mover" ) );
@@ -993,7 +993,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
     SW_ASSERT_NOT_NULL( pRoot );
     pRoot->setLocalScale( float3( 2.0f, 2.0f, 2.0f ) );
 
-    string       json    = ObjectStateSerializer::saveToJsonString( pSource );
+    string       json    = ObjectStateSerializer::saveToJSONString( pSource );
     const size_t typeKey = json.find( "\"SceneComponent\"" );
     SW_ASSERT_TRUE( typeKey != string::npos );
     const size_t bodyOpen = json.find( '{', typeKey );
@@ -1004,7 +1004,7 @@ SW_TEST_CASE( ObjectStateRoundTripTest, JsonComponentFieldThatDoesNotReadIsNamed
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component field the type does not have" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJsonString( pLoaded, json ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromJSONString( pLoaded, json ) );
     }
     const SceneComponent* pLoadedRoot = pLoaded->getComponent<SceneComponent>();
     SW_ASSERT_NOT_NULL( pLoadedRoot );

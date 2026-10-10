@@ -53,7 +53,7 @@ namespace sw::editor
         ImGui::SameLine();
         if ( ImGui::Button( "Save" ) )
         {
-            saveJson();
+            saveJSON();
             if ( getLoadedAssetPath().empty() )
                 _status = string{ "Saved " } + EditorUtil::kSpriteClipDocumentFileName;
             else
@@ -249,7 +249,7 @@ namespace sw::editor
         }
     }
 
-    void SpriteClipPanel::saveJson()
+    void SpriteClipPanel::saveJSON()
     {
         if ( getLoadedAssetPath().empty() )
             return;
@@ -285,13 +285,13 @@ namespace sw::editor
 
     string SpriteClipPanel::captureDocumentText() const
     {
-        return captureClipData().toJson();
+        return captureClipData().toJSON();
     }
 
     void SpriteClipPanel::applyDocumentText( string_view text )
     {
         SpriteClipAsset restored;
-        if ( text.empty() == false && restored.parseJson( text ) == false )
+        if ( text.empty() == false && restored.parseJSON( text ) == false )
             SW_LOG_WARNING( "Sprite clip undo snapshot could not be read - showing an empty clip" );
         adoptClip( std::move( restored ) );
     }

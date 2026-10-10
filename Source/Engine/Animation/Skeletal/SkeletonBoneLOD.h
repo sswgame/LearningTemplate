@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
     class Skeleton;
 
     /**
@@ -43,7 +43,7 @@ namespace sw
         static constexpr string_view kExtension = ".bonelod.json";
 
         /** @brief JSON 을 읽습니다. 형식이 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
 
@@ -71,7 +71,7 @@ namespace sw
 
     private:
         /** @brief 뿌리 객체를 읽습니다. */
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
 
         vector<SkeletonBoneLODLevel> _listLevel;
         uint64                       _revision{ 0 };

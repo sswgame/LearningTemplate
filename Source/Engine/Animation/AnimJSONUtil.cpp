@@ -1,17 +1,17 @@
 #include "pch.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimJsonUtil" );
+    SW_LOG_CALLER( "AnimJSONUtil" );
 
-    bool AnimJsonUtil::hasOnlyKnownKeys( const JsonValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
+    bool AnimJSONUtil::hasOnlyKnownKeys( const JSONValue& object, std::initializer_list<string_view> listKnownKey, string_view context )
     {
         if ( object.isObject() == false )
         {
@@ -30,13 +30,13 @@ namespace sw
         return bKnown;
     }
 
-    bool AnimJsonUtil::readFloats( const JsonValue& value, float32* pOutValue, uint32 count )
+    bool AnimJSONUtil::readFloats( const JSONValue& value, float32* pOutValue, uint32 count )
     {
         if ( value.isArray() == false || value.size() != count )
             return false;
         for ( uint32 index = 0; index < count; ++index )
         {
-            const JsonValue element = value.at( index );
+            const JSONValue element = value.at( index );
             if ( element.isNumber() == false )
                 return false;
             pOutValue[index] = static_cast<float32>( element.asFloat() );
@@ -44,7 +44,7 @@ namespace sw
         return true;
     }
 
-    void AnimJsonUtil::writeFloats( const JsonValue& value, const float32* pValue, uint32 count )
+    void AnimJSONUtil::writeFloats( const JSONValue& value, const float32* pValue, uint32 count )
     {
         value.setArray();
         for ( uint32 index = 0; index < count; ++index )
@@ -53,7 +53,7 @@ namespace sw
         }
     }
 
-    bool AnimJsonUtil::readBoneTransform( const JsonValue& object, BoneTransform& outTransform )
+    bool AnimJSONUtil::readBoneTransform( const JSONValue& object, BoneTransform& outTransform )
     {
         float32    arrTranslation[3]{};
         float32    arrRotation[4]{};
@@ -68,7 +68,7 @@ namespace sw
         return true;
     }
 
-    void AnimJsonUtil::writeBoneTransform( const JsonValue& object, const BoneTransform& transform )
+    void AnimJSONUtil::writeBoneTransform( const JSONValue& object, const BoneTransform& transform )
     {
         const float32 arrTranslation[3] = { transform._translation._x, transform._translation._y, transform._translation._z };
         const float32 arrRotation[4]    = { transform._rotation._x, transform._rotation._y, transform._rotation._z, transform._rotation._w };

@@ -63,7 +63,7 @@ class RgbImage:
 
 @dataclass
 class ImageMetrics:
-    """배경을 뺀 지표 묶음. 기준 JSON 에 그대로 들어간다(`toJson` · `fromJson`)."""
+    """배경을 뺀 지표 묶음. 기준 JSON 에 그대로 들어간다(`toJSON` · `fromJSON`)."""
 
     background: list[float]
     foregroundFraction: float
@@ -73,7 +73,7 @@ class ImageMetrics:
     edgeDensity: float
     gridLuma: list[float] = field(default_factory=list)
 
-    def toJson(self) -> dict:
+    def toJSON(self) -> dict:
         return {
             "background": [round(value, 2) for value in self.background],
             "foregroundFraction": round(self.foregroundFraction, 5),
@@ -85,7 +85,7 @@ class ImageMetrics:
         }
 
     @staticmethod
-    def fromJson(data: dict) -> "ImageMetrics":
+    def fromJSON(data: dict) -> "ImageMetrics":
         return ImageMetrics(
             background=list(data["background"]),
             foregroundFraction=float(data["foregroundFraction"]),

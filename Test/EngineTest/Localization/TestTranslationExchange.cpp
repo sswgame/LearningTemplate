@@ -34,7 +34,7 @@ SW_TEST_CASE( TranslationMemoryTest, ExactNormalizedAndFuzzyMatches )
     SW_EXPECT_STREQ( "Open the door", memory.findSourceOfText( "문을 연다" ).c_str() );
 
     sw::TranslationMemory reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromJsonText( memory.toJsonText(), "tm" ) );
+    SW_ASSERT_TRUE( reloaded.loadFromJSONText( memory.toJSONText(), "tm" ) );
     SW_EXPECT_EQUAL( size_t( 2 ), reloaded.getEntryCount() );
 }
 

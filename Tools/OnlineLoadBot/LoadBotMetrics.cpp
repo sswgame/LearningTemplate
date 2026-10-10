@@ -5,7 +5,7 @@
 #include "Core/Common/Defines.h"
 #include "Core/Container/formatString.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include <algorithm>
 
@@ -19,7 +19,7 @@ namespace sw
             static constexpr int32  kPercentileMedian      = 50;
             static constexpr int32  kPercentileHigh        = 95;
             static constexpr int32  kPercentileTail        = 99;
-            static constexpr int32  kJsonIndent            = 2;
+            static constexpr int32  kJSONIndent            = 2;
             static constexpr int64  kMicrosecondsPerMs     = 1000;
             static constexpr int64  kMicrosecondsPerTenth  = 100;
             static constexpr int64  kMillisecondsPerSecond = 1000;
@@ -168,20 +168,20 @@ namespace sw
         return text;
     }
 
-    string LoadBotMetrics::formatJson( const LoadBotScenario& scenario, int64 elapsedMs ) const
+    string LoadBotMetrics::formatJSON( const LoadBotScenario& scenario, int64 elapsedMs ) const
     {
         vector<LoadBotActionSummary> listSummary;
         summarize( listSummary );
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         root.set( "_scenario", false ).setString( scenario._name );
         root.set( "_botCount", false ).setInt( scenario._botCount );
         root.set( "_elapsedMs", false ).setInt( elapsedMs );
-        const JsonValue listAction = root.set( "_listAction", false );
+        const JSONValue listAction = root.set( "_listAction", false );
         listAction.setArray();
         for ( const LoadBotActionSummary& summary : listSummary )
         {
-            const JsonValue entry = listAction.pushBack();
+            const JSONValue entry = listAction.pushBack();
             entry.setObject();
             entry.set( "_name", false ).setString( summary._actionName );
             entry.set( "_count", false ).setInt( summary._count );
@@ -191,25 +191,25 @@ namespace sw
             entry.set( "_p99Us", false ).setInt( summary._p99Us );
             entry.set( "_maxUs", false ).setInt( summary._maxUs );
         }
-        const JsonValue mapError = root.set( "_mapError", false );
+        const JSONValue mapError = root.set( "_mapError", false );
         mapError.setObject();
         for ( const auto& [errorKey, count] : _mapErrorKeyToCount )
         {
             mapError.set( errorKey, false ).setInt( count );
         }
-        const JsonValue mapPush = root.set( "_mapPush", false );
+        const JSONValue mapPush = root.set( "_mapPush", false );
         mapPush.setObject();
         for ( const auto& [pushKind, count] : _mapPushKindToCount )
         {
             mapPush.set( LoadBotMetricsInternal::makeNumberText( pushKind ), false ).setInt( count );
         }
-        const JsonValue connection = root.set( "_connection", false );
+        const JSONValue connection = root.set( "_connection", false );
         connection.setObject();
         connection.set( "_opened", false ).setInt( _openedCount );
         connection.set( "_failed", false ).setInt( _failedCount );
         connection.set( "_closed", false ).setInt( _disconnectCount );
         root.set( "_matchCount", false ).setInt( getDistinctMatchCount() );
-        return document.dump( LoadBotMetricsInternal::kJsonIndent );
+        return document.dump( LoadBotMetricsInternal::kJSONIndent );
     }
 
     int64 LoadBotMetrics::getCompletedCount( LoadBotAction action ) const { return static_cast<int64>( _listSampleByAction[static_cast<size_t>( action )].size() ); }

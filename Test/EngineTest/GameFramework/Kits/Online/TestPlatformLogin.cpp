@@ -14,7 +14,7 @@
 #include "GameFramework/Base/Online/Security/NetSecurity.h"
 #include "GameFramework/Base/Online/Store/MemoryServiceStore.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/NetSecurityLoginCrypto.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/OidcLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
@@ -138,7 +138,7 @@ namespace
             {
                 if ( index != 0 )
                     jwks += ",";
-                jwks += JsonWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyId );
+                jwks += JSONWebTokenUtil::writeJwk( listKey[index]->_publicKey, listKey[index]->_keyId );
             }
             return jwks + "]}";
         }
@@ -151,7 +151,7 @@ namespace
                 payload += string( ",\"nonce\":\"" ) + pNonce + "\"";
             payload += "}";
             string compact;
-            (void)JsonWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
+            (void)JSONWebTokenUtil::makeSigned( NetSecurity::getProvider(), key._algorithm, key._keyId, payload, key._privateKeyPem, compact );
             return compact;
         }
 
@@ -347,7 +347,7 @@ SW_TEST_CASE( PlatformLoginTest, ProfileAPIProviderReadsTheSubjectPath )
 
 SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
 {
-    const utf8*                           pJson = "{\"providers\":["
+    const utf8*                           pJSON = "{\"providers\":["
                                                   "{\"name\":\"google\",\"kind\":\"oidc\",\"issuer\":\"https://accounts.google.com\",\"jwksUrl\":\"https://www.googleapis.com/oauth2/v3/certs\","
                                                   "\"clientIds\":[\"a\",\"b\"],\"requireNonce\":true},"
                                                   "{\"name\":\"kakao\",\"kind\":\"oidc\",\"issuer\":\"https://kauth.kakao.com\",\"jwksUrl\":\"https://kauth.kakao.com/.well-known/jwks.json\","
@@ -355,7 +355,7 @@ SW_TEST_CASE( PlatformLoginTest, ProviderSettingsComeFromData )
                                                   "{\"name\":\"naver\",\"kind\":\"profile\",\"profileUrl\":\"https://openapi.naver.com/v1/nid/me\",\"subjectPath\":\"response.id\"}]}";
     vector<PlatformLoginProviderSettings> listSettings;
     string                                error;
-    SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJson, listSettings, error ) );
+    SW_ASSERT_TRUE( PlatformLoginProviderFactory::readSettings( pJSON, listSettings, error ) );
     SW_ASSERT_EQUAL( size_t( 3 ), listSettings.size() );
     SW_EXPECT_EQUAL( size_t( 2 ), listSettings[0]._listClientId.size() );
     SW_EXPECT_TRUE( listSettings[0]._bRequireNonce == SW_TRUE );

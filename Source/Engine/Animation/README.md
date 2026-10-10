@@ -330,7 +330,7 @@ glTF 모프 타깃은 `.mesh` 의 모프 블록으로, `weights` 채널은 타�
 
 ### 새 리그 노드
 
-1. `RigNode` 를 상속하고 `clone`, `getTypeName`, 읽기와 평가 함수를 구현합니다. JSON 은 `RigJsonReader` 로 읽습니다. 읽은 키를 기록하므로 모르는 키가 자동으로 오류가 됩니다.
+1. `RigNode` 를 상속하고 `clone`, `getTypeName`, 읽기와 평가 함수를 구현합니다. JSON 은 `RigJSONReader` 로 읽습니다. 읽은 키를 기록하므로 모르는 키가 자동으로 오류가 됩니다.
 2. `RigNodeRegistry::registerNode( 이름, 팩토리 )` 로 등록합니다. 엔진 노드는 `RigNodeLibrary` 가 처음 쓸 때 등록하고, 게임과 키트는 같은 함수로 더합니다.
 3. `.rig.json` 의 `type` 에 그 이름을 씁니다.
 

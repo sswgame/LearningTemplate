@@ -143,10 +143,10 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
     for ( const string_view bad : listBad )
     {
         RetargetProfile broken;
-        SW_EXPECT_FALSE( broken.parseJson( bad, "bad.retarget.json" ) );
+        SW_EXPECT_FALSE( broken.parseJSON( bad, "bad.retarget.json" ) );
     }
     RetargetProfile missingBone;
-    SW_ASSERT_TRUE( missingBone.parseJson( R"({ "root": { "source": "bone0", "target": "bone0" }, "pelvis": { "source": "bone0", "target": "bone0" },
+    SW_ASSERT_TRUE( missingBone.parseJSON( R"({ "root": { "source": "bone0", "target": "bone0" }, "pelvis": { "source": "bone0", "target": "bone0" },
         "chains": [ { "name": "Arm", "source": ["bone1"], "target": ["elbow"] } ] })",
                                            "missing.retarget.json" ) );
     const Skeleton chain = test::makeChainSkeleton( 3 );

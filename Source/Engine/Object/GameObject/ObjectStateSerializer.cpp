@@ -21,7 +21,7 @@
 #include "Engine/Serialization/Base/BinaryStream.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/Serializer.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -391,9 +391,9 @@ namespace sw
         return saveToText<XMLSerializer>( pGameObject, options );
     }
 
-    string ObjectStateSerializer::saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options )
+    string ObjectStateSerializer::saveToJSONString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
-        return saveToText<JsonSerializer>( pGameObject, options );
+        return saveToText<JSONSerializer>( pGameObject, options );
     }
 
     bool ObjectStateSerializer::saveToBinaryBuffer( const GameObject* pGameObject, vector<uint8>& outBuffer, const ObjectSaveOptions& options )
@@ -455,9 +455,9 @@ namespace sw
         return loadFromText<XMLSerializer>( pGameObject, xmlString, context );
     }
 
-    bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context )
+    bool ObjectStateSerializer::loadFromJSONString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context )
     {
-        return loadFromText<JsonSerializer>( pGameObject, jsonString, context );
+        return loadFromText<JSONSerializer>( pGameObject, jsonString, context );
     }
 
     ObjectIdentity ObjectStateSerializer::captureIdentity( const GameObject* pGameObject )

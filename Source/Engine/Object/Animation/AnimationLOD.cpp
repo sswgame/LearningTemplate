@@ -6,19 +6,19 @@
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "AnimationLOD" );
 
-    bool AnimationLODSettings::parseJson( string_view json, string_view sourceLabel )
+    bool AnimationLODSettings::parseJSON( string_view json, string_view sourceLabel )
     {
         *this = AnimationLODSettings{};
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#': malformed JSON", sourceLabel );
@@ -39,15 +39,15 @@ namespace sw
             *this = AnimationLODSettings{};
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool AnimationLODSettings::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool AnimationLODSettings::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "rate_levels", "offscreen_update_rate_divisor", "budget_milliseconds", "max_update_rate_divisor", "vertex_animation_screen_size" },
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "rate_levels", "offscreen_update_rate_divisor", "budget_milliseconds", "max_update_rate_divisor", "vertex_animation_screen_size" },
                                              sourceLabel ) == false )
             return false;
-        const JsonValue levels = root.get( "rate_levels" );
+        const JSONValue levels = root.get( "rate_levels" );
         if ( levels.isArray() == false || levels.size() == 0 )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#': 'rate_levels' must be a non-empty array", sourceLabel );
@@ -55,8 +55,8 @@ namespace sw
         }
         for ( size_t levelIndex = 0; levelIndex < levels.size(); ++levelIndex )
         {
-            const JsonValue level = levels.at( levelIndex );
-            if ( AnimJsonUtil::hasOnlyKnownKeys( level, { "min_screen_size", "update_rate_divisor", "interpolate" }, sourceLabel ) == false )
+            const JSONValue level = levels.at( levelIndex );
+            if ( AnimJSONUtil::hasOnlyKnownKeys( level, { "min_screen_size", "update_rate_divisor", "interpolate" }, sourceLabel ) == false )
                 return false;
             if ( level.get( "min_screen_size" ).isNumber() == false || level.get( "update_rate_divisor" ).isNumber() == false || level.get( "interpolate" ).isBool() == false )
             {
@@ -80,10 +80,10 @@ namespace sw
             return false;
         }
 
-        const JsonValue offscreen = root.get( "offscreen_update_rate_divisor" );
-        const JsonValue budget    = root.get( "budget_milliseconds" );
-        const JsonValue maxRate   = root.get( "max_update_rate_divisor" );
-        const JsonValue vertex    = root.get( "vertex_animation_screen_size" );
+        const JSONValue offscreen = root.get( "offscreen_update_rate_divisor" );
+        const JSONValue budget    = root.get( "budget_milliseconds" );
+        const JSONValue maxRate   = root.get( "max_update_rate_divisor" );
+        const JSONValue vertex    = root.get( "vertex_animation_screen_size" );
         if ( offscreen.isNumber() == false || budget.isNumber() == false || maxRate.isNumber() == false || vertex.isNumber() == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#': offscreen_update_rate_divisor, budget_milliseconds, max_update_rate_divisor and "

@@ -87,7 +87,7 @@ class Finding:
     def format(self) -> str:
         return f"{self.severity.upper():7} {self.path}: [{self.rule}] {self.message}"
 
-    def toJson(self) -> dict:
+    def toJSON(self) -> dict:
         return {"path": self.path, "rule": self.rule, "severity": self.severity, "message": self.message}
 
 

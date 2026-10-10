@@ -30,7 +30,7 @@ namespace sw
         enum class OpaqueFormat : uint8
         {
             XML,
-            Json,
+            JSON,
             Binary
         };
         /**
@@ -114,7 +114,7 @@ namespace sw
         /** @brief 등록된 텍스트 reader 를 찾습니다. */
         const TextReadFn* findTextReader( hashed_string typeName ) const;
         /**
-         * @brief XML/Json 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
+         * @brief XML/JSON 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
          * @details XMLSerializer::deserialize 가 이 값을 IXMLBackend 에 넘깁니다.
          *          끄려면: `SerializeContext ctx = SerializeContext::deriveFromDefault(); ctx.setIgnoreCaseKeys( false );`
          */

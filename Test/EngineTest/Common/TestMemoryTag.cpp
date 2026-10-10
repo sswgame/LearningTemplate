@@ -22,7 +22,7 @@
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "TestFramework/TestFramework.h"
@@ -299,9 +299,9 @@ SW_TEST_CASE( MemoryTagTest, XMLDocumentParseIsTagged )
 
 /**
  * @brief [MemoryTagTest] JSON 문서(nlohmann)의 객체 · 문자열은 sw 할당자로 잡혀 그때의 태그로 세인다
- * @details JsonDocument 의 json 타입은 문자열 · 배열 · 객체 할당자로 sw 할당자를 받는다. 표준 할당자면 태그 줄에는 `JsonDocument::Impl` 만 늘어난다.
+ * @details JSONDocument 의 json 타입은 문자열 · 배열 · 객체 할당자로 sw 할당자를 받는다. 표준 할당자면 태그 줄에는 `JSONDocument::Impl` 만 늘어난다.
  */
-SW_TEST_CASE( MemoryTagTest, JsonDocumentParseIsTagged )
+SW_TEST_CASE( MemoryTagTest, JSONDocumentParseIsTagged )
 {
     if constexpr ( sw::kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
@@ -322,7 +322,7 @@ SW_TEST_CASE( MemoryTagTest, JsonDocumentParseIsTagged )
     uint64       animationHeld{ 0 };
     {
         SW_MEMORY_SCOPE( Animation );
-        sw::JsonDocument document;
+        sw::JSONDocument document;
         SW_ASSERT_TRUE( document.parse( jsonText, "memorytag.json" ) );
         animationHeld = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
     }

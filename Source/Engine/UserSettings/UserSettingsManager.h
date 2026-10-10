@@ -134,11 +134,11 @@ namespace sw
          */
         [[nodiscard]] bool loadUserFile( string_view filePath );
         /** @brief 위와 같되 JSON 글에서 읽습니다. */
-        [[nodiscard]] bool loadUserJson( string_view jsonText, string_view sourceName );
+        [[nodiscard]] bool loadUserJSON( string_view jsonText, string_view sourceName );
         /** @brief 기본값과 다른 확정 값만 사용자 파일에 씁니다. 확인 대기 중인 설정은 되돌릴 값(옛 값)을 씁니다. */
         [[nodiscard]] bool saveUserFile( string_view filePath ) const;
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. */
-        string makeUserJson() const;
+        string makeUserJSON() const;
         /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(시험 · 헤드리스). */
         void          setUserFilePath( string_view filePath ) { _userFilePath = string( filePath ); }
         const string& getUserFilePath() const { return _userFilePath; }

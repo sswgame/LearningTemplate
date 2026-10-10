@@ -544,7 +544,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
     sourceActor._armor  = 77;
 
     // 1) JSON 직렬화 검증: _health는 제외되고 _armor만 직렬화되어야 함
-    const sw::string json = sw::JsonSerializer::serialize( &sourceActor, *pType );
+    const sw::string json = sw::JSONSerializer::serialize( &sourceActor, *pType );
     SW_EXPECT_TRUE( json.find( "_armor" ) != sw::string::npos );
     SW_EXPECT_TRUE( json.find( "_health" ) == sw::string::npos );
     SW_EXPECT_TRUE( json.find( "Health Points" ) == sw::string::npos );
@@ -553,7 +553,7 @@ SW_TEST_CASE( ReflectionMetadataTest, TransientPropertySerialization )
     sw::MetaTestActor targetActor;
     targetActor._health = 50;
     targetActor._armor  = 0;
-    SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &targetActor, *pType, json ) );
+    SW_EXPECT_TRUE( sw::JSONSerializer::deserialize( &targetActor, *pType, json ) );
     SW_EXPECT_EQUAL( 77, targetActor._armor );
     SW_EXPECT_EQUAL( 50, targetActor._health );
 

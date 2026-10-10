@@ -9,7 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -72,7 +72,7 @@ namespace sw
                 return count;
             }
 
-            static void setValueJson( const JsonValue& target, const TelemetryValue& value )
+            static void setValueJSON( const JSONValue& target, const TelemetryValue& value )
             {
                 switch ( value._type )
                 {
@@ -429,26 +429,26 @@ namespace sw
 
     string TelemetryService::makeEventLineLocked( const TelemetryEvent& event, const TelemetryEventDef& def ) const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
         root.set( "type" ).setString( "event" );
         root.set( "event" ).setString( def._id.c_str() );
         root.set( "seq" ).setUint( _sequence + static_cast<uint64>( _listPendingLine.size() ) );
         root.set( "t" ).setFloat( MathUtil::round( _sessionSeconds * 1000.0 ) / 1000.0 );
         root.set( "sample" ).setFloat( static_cast<float64>( def._sampleRate ) );
-        const JsonValue fields = root.set( "fields" );
+        const JSONValue fields = root.set( "fields" );
         fields.setObject();
         for ( const TelemetryValue& value : event.getValues() )
         {
-            TelemetryServiceInternal::setValueJson( fields.set( value._name.c_str(), false ), value );
+            TelemetryServiceInternal::setValueJSON( fields.set( value._name.c_str(), false ), value );
         }
         return doc.dump( -1 );
     }
 
     string TelemetryService::makeContextLineLocked() const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
         root.set( "type" ).setString( "context" );
         root.set( "schema" ).setInt( _schema.getVersion() );
         root.set( "session" ).setString( _context._sessionId );

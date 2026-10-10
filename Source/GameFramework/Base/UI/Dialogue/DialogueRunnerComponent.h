@@ -73,7 +73,7 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
 
         [[nodiscard]] bool loadGraphFile( string_view jsonPath );
-        [[nodiscard]] bool loadGraphJson( string_view jsonContent );
+        [[nodiscard]] bool loadGraphJSON( string_view jsonContent );
         /** @brief 이미 만든 그래프를 씁니다(코드로 지은 그래프 · 에디터에서 넘긴 그래프). 진행 중인 대화는 멈추지 않습니다. */
         void setGraph( DialogueGraphAsset graph );
 

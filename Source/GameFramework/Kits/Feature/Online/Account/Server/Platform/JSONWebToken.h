@@ -1,5 +1,5 @@
 /**
- * @file JsonWebToken.h
+ * @file JSONWebToken.h
  * @brief JWT(JWS 압축 형식) 읽기 · 서명 · JWKS 키 캐시 — OIDC ID 토큰 확인과 클라이언트 비밀 JWT(애플) · 시험 발급자가 씁니다.
  * @details 받아들이는 알고리즘은 RS256 · ES256 뿐이다(`none` · HS256 거절 — 알고리즘 바꿔치기 공격). 서명 확인은 네트워크 보안 제공자(OpenSSL).
  */
@@ -15,20 +15,20 @@
 namespace sw
 {
     class INetSecurityProvider;
-    class JsonDocument;
+    class JSONDocument;
 
     /**
-     * @class JsonWebToken
+     * @class JSONWebToken
      * @brief 읽은 JWT 하나입니다(머리 · 몸 JSON + 서명 입력 · 서명).
      */
-    class SW_GF_API JsonWebToken
+    class SW_GF_API JSONWebToken
     {
     public:
-        JsonWebToken();
-        ~JsonWebToken();
+        JSONWebToken();
+        ~JSONWebToken();
 
-        JsonWebToken( const JsonWebToken& )            = delete;
-        JsonWebToken& operator=( const JsonWebToken& ) = delete;
+        JSONWebToken( const JSONWebToken& )            = delete;
+        JSONWebToken& operator=( const JSONWebToken& ) = delete;
 
         /** @brief `머리.몸.서명` 을 읽습니다. 형식 · base64url · JSON · 알고리즘(RS256 · ES256 외)이 틀리면 false 입니다. */
         [[nodiscard]] bool parse( string_view compact );
@@ -45,7 +45,7 @@ namespace sw
         [[nodiscard]] bool verifySignature( INetSecurityProvider& provider, const NetPublicKey& publicKey ) const;
 
     private:
-        unique_ptr<JsonDocument> _payload;
+        unique_ptr<JSONDocument> _payload;
         vector<uint8>            _signatureBytes;
         string                   _signingInput;
         string                   _keyId;
@@ -56,10 +56,10 @@ namespace sw
 namespace sw
 {
     /** @brief JWT 만들기 · JWKS 읽기 도우미입니다. */
-    struct SW_GF_API JsonWebTokenUtil
+    struct SW_GF_API JSONWebTokenUtil
     {
-        /** @brief @p payloadJson 을 몸으로 서명한 압축 JWT 를 만듭니다(머리 `alg` · `typ` · `kid`). */
-        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJson,
+        /** @brief @p payloadJSON 을 몸으로 서명한 압축 JWT 를 만듭니다(머리 `alg` · `typ` · `kid`). */
+        [[nodiscard]] static bool makeSigned( INetSecurityProvider& provider, NetSignatureAlgorithm algorithm, string_view keyId, string_view payloadJSON,
                                               const string& privateKeyPem, string& outCompact );
         /** @brief 공개 키를 JWK(JSON 객체 글)로 씁니다 — 시험의 가짜 JWKS. */
         static string writeJwk( const NetPublicKey& publicKey, string_view keyId );
@@ -84,7 +84,7 @@ namespace sw
         JwksKeyCache();
 
         /** @brief JWKS 글(`{"keys":[…]}`)로 키를 바꿉니다. RSA(n · e) · EC P-256(x · y) 서명 키만, 다른 것은 건너뛴다. 읽은 키가 하나도 없으면 false 이고 옛 키를 둔다. */
-        [[nodiscard]] bool  replaceFromJwks( string_view jwksJson, int64 nowMs );
+        [[nodiscard]] bool  replaceFromJwks( string_view jwksJSON, int64 nowMs );
         const NetPublicKey* findKey( string_view keyId ) const;
         int32               getKeyCount() const { return static_cast<int32>( _listEntry.size() ); }
         int64               getFetchedAtMs() const { return _fetchedAtMs; }

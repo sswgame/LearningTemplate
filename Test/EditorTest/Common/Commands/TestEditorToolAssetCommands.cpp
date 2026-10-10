@@ -226,7 +226,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, ApplyToPrefabWritesThePrefabsFormatAn
     const string jsonPath = test::makeTempPath( "crate.prefab.json" );
     SW_ASSERT_TRUE( EditorToolAssetCommands::applyPrefabOverridesToTemplate( pObj, jsonPath ) );
     PrefabAsset reloaded;
-    SW_EXPECT_TRUE( reloaded.loadFromJsonFile( jsonPath ) );
+    SW_EXPECT_TRUE( reloaded.loadFromJSONFile( jsonPath ) );
 
     const string scenePath = test::makeTempPath( "level.scene.xml" );
     const string kScene    = "<Scene name=\"Level\"/>\n";

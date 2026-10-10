@@ -1,7 +1,7 @@
 /**
- * @file JsonDocument.h
+ * @file JSONDocument.h
  * @brief 리플렉션 없는 JSON 파싱·탐색 (콘텐츠 테이블, 맵, 툴)
- * @note 리플렉션 객체 그래프는 JsonSerializer를 사용합니다.
+ * @note 리플렉션 객체 그래프는 JSONSerializer를 사용합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -12,10 +12,10 @@
 namespace sw
 {
     /**
-     * @enum JsonType
+     * @enum JSONType
      * @brief JSON 값의 종류
      */
-    enum class JsonType : uint8
+    enum class JSONType : uint8
     {
         Null = 0,
         Bool,
@@ -26,8 +26,8 @@ namespace sw
     };
 
     /**
-     * @class JsonValue
-     * @brief JsonDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
+     * @class JSONValue
+     * @brief JSONDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
      * @warning **같은 부모에 항목을 더하면 앞서 받은 핸들이 무효가 됩니다.** 이 핸들은 문서 안의
      *          노드를 가리키는 **빌린 포인터**이고, 객체도 배열도 연속 저장(`std::vector`)이라
      *          `set( 새 키 )` 나 `pushBack()` 이 재할당을 일으키면 그 부모에서 앞서 꺼낸 핸들이
@@ -35,11 +35,11 @@ namespace sw
      *          받는 것**입니다. 형제 핸들을 여럿 들고 번갈아 쓰지 마십시오. 읽기(`get`/`at`)만
      *          하는 동안에는 문서가 변하지 않으므로 여러 핸들을 들고 있어도 됩니다.
      */
-    class SW_API JsonValue
+    class SW_API JSONValue
     {
     public:
         /** @brief 빈(무효) 값 핸들. */
-        JsonValue() = default;
+        JSONValue() = default;
 
         /** @brief 값이 유효하면 true. */
         bool isValid() const { return _pValue != nullptr; }
@@ -50,19 +50,19 @@ namespace sw
         // 1) 읽기 — 타입, 스칼라, 객체/배열
         // ------------------------------------------------------------------------------
         /** @brief JSON 타입을 반환합니다. 무효면 Null. */
-        JsonType getType() const;
+        JSONType getType() const;
         /** @brief 객체이면 true. */
-        bool isObject() const { return getType() == JsonType::Object; }
+        bool isObject() const { return getType() == JSONType::Object; }
         /** @brief 배열이면 true. */
-        bool isArray() const { return getType() == JsonType::Array; }
+        bool isArray() const { return getType() == JSONType::Array; }
         /** @brief 문자열이면 true. */
-        bool isString() const { return getType() == JsonType::String; }
+        bool isString() const { return getType() == JSONType::String; }
         /** @brief 숫자이면 true. */
-        bool isNumber() const { return getType() == JsonType::Number; }
+        bool isNumber() const { return getType() == JSONType::Number; }
         /** @brief 불리언이면 true. */
-        bool isBool() const { return getType() == JsonType::Bool; }
+        bool isBool() const { return getType() == JSONType::Bool; }
         /** @brief null이면 true. */
-        bool isNull() const { return getType() == JsonType::Null; }
+        bool isNull() const { return getType() == JSONType::Null; }
 
         /** @brief 문자열 내용입니다. 문자열이 아니면 스칼라를 dump 한 값(따옴표 없음)입니다. */
         string asString() const;
@@ -80,16 +80,16 @@ namespace sw
         /** @brief 객체 멤버 이름을 삽입 순으로 반환합니다. */
         vector<string> getMemberNames() const;
         /** @brief 객체 멤버를 찾습니다. 없으면 무효 핸들. */
-        JsonValue get( string_view key, bool bIgnoreCaseKeys = true ) const;
+        JSONValue get( string_view key, bool bIgnoreCaseKeys = true ) const;
         /** @brief 객체에 키가 있으면 true. */
         bool has( string_view key, bool bIgnoreCaseKeys = true ) const;
         /** @brief 배열 원소. 범위 밖이면 무효 핸들. */
-        JsonValue at( size_t index ) const;
+        JSONValue at( size_t index ) const;
 
         /** @brief 이 서브트리를 JSON 문자열로 직렬화합니다. indent<0 이면 한 줄. */
         string dump( int32 indent = -1 ) const;
         /** @brief 다른 핸들의 값을 이 노드에 복사합니다. */
-        void assignFrom( const JsonValue& other ) const;
+        void assignFrom( const JSONValue& other ) const;
 
         // ------------------------------------------------------------------------------
         // 2) 쓰기 — 문서는 호출자가 소유
@@ -115,14 +115,14 @@ namespace sw
          * @brief 객체 멤버를 만들거나 기존 키를 반환합니다.
          * @details bIgnoreCaseKeys이면 대소문자만 다른 기존 키를 재사용합니다.
          */
-        JsonValue set( string_view key, bool bIgnoreCaseKeys = true ) const;
+        JSONValue set( string_view key, bool bIgnoreCaseKeys = true ) const;
         /** @brief 배열 끝에 null 원소를 붙이고 반환합니다. */
-        JsonValue pushBack() const;
+        JSONValue pushBack() const;
 
     private:
-        friend class JsonDocument;
+        friend class JSONDocument;
         /** @brief 내부 JSON 노드 포인터로 핸들을 만듭니다. */
-        explicit JsonValue( void* pValue )
+        explicit JSONValue( void* pValue )
             : _pValue{ pValue } {}
 
         void* _pValue{ nullptr };
@@ -134,51 +134,51 @@ namespace sw
     /**
      * @brief `parent` 안의 이름 붙은 배열을 돌며 **객체 원소만** 넘겨줍니다.
      * @param pArrayName 배열 멤버 이름 ("nodes" · "links" …). 없거나 배열이 아니면 아무것도 하지 않습니다.
-     * @param visit `(const JsonValue& element, size_t index)` 를 받는 호출 가능 객체.
+     * @param visit `(const JSONValue& element, size_t index)` 를 받는 호출 가능 객체.
      * @details 손으로 읽는 JSON 에셋이 함께 씁니다 — 배열을 얻고, 배열인지 묻고, 개수를 세고, 원소가 객체가 아니면
      *          건너뛰는 것입니다. `isObject` 검사를 빠뜨리면 **망가진 파일 하나로 그 에셋이 통째로 깨지므로**, 검사를
      *          여기 한 번만 둡니다.
      * @note 인덱스를 함께 넘기는 이유는 id 가 없는 원소에 **순번을 기본값으로** 쓰는 에셋이 있기 때문입니다.
      */
     template <typename VisitFn>
-    void forEachObjectInArray( const JsonValue& parent, const utf8* pArrayName, VisitFn&& visit )
+    void forEachObjectInArray( const JSONValue& parent, const utf8* pArrayName, VisitFn&& visit )
     {
-        const JsonValue arrayValue = parent.get( pArrayName );
+        const JSONValue arrayValue = parent.get( pArrayName );
         if ( arrayValue.isArray() == false )
             return;
 
         const size_t count = arrayValue.size();
         for ( size_t index = 0; index < count; ++index )
         {
-            const JsonValue element = arrayValue.at( index );
+            const JSONValue element = arrayValue.at( index );
             if ( element.isObject() )
                 visit( element, index );
         }
     }
 
     /**
-     * @class JsonDocument
+     * @class JSONDocument
      * @brief JSON 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.
      */
-    class SW_API JsonDocument
+    class SW_API JSONDocument
     {
     public:
         // ------------------------------------------------------------------------------
         // 3) 수명 — 복사 금지, 이동 가능
         // ------------------------------------------------------------------------------
         /** @brief 빈(null) 문서를 만듭니다. */
-        JsonDocument();
+        JSONDocument();
         /** @brief 파싱 트리를 해제합니다. */
-        ~JsonDocument();
+        ~JSONDocument();
 
         /** @brief 복사를 금지합니다. */
-        JsonDocument( const JsonDocument& ) = delete;
+        JSONDocument( const JSONDocument& ) = delete;
         /** @brief 대입을 금지합니다. */
-        JsonDocument& operator=( const JsonDocument& ) = delete;
+        JSONDocument& operator=( const JSONDocument& ) = delete;
         /** @brief 문서를 이동합니다. */
-        JsonDocument( JsonDocument&& ) noexcept;
+        JSONDocument( JSONDocument&& ) noexcept;
         /** @brief 문서를 이동 대입합니다. */
-        JsonDocument& operator=( JsonDocument&& ) noexcept;
+        JSONDocument& operator=( JSONDocument&& ) noexcept;
 
         /** @brief 문서를 null로 비웁니다. */
         void clear();
@@ -193,7 +193,7 @@ namespace sw
         [[nodiscard]] bool parse( string_view jsonText, string_view sourceName = {} );
         /**
          * @brief JSON 인지 **알아보려고** 파싱합니다. `parse` 와 같지만 실패를 로그로 남기지 않습니다(오류 글은 비어 있습니다).
-         * @details 값이 JSON 스칼라인지 보는 쪽(`JsonSerializer` 쓰기)이 `parse` 를 써서, `"0,0,0"` 같은 정상 값을 쓸 때마다 `[Error]` 가 찍혔다.
+         * @details 값이 JSON 스칼라인지 보는 쪽(`JSONSerializer` 쓰기)이 `parse` 를 써서, `"0,0,0"` 같은 정상 값을 쓸 때마다 `[Error]` 가 찍혔다.
          */
         [[nodiscard]] bool tryParse( string_view jsonText );
 
@@ -216,15 +216,15 @@ namespace sw
         const string& getLastError() const { return _lastError; }
 
         /** @brief 루트 값입니다. */
-        JsonValue getRoot() const;
+        JSONValue getRoot() const;
 
         // ------------------------------------------------------------------------------
         // 5) 쓰기
         // ------------------------------------------------------------------------------
         /** @brief 루트를 빈 객체로 만들고 반환합니다. */
-        JsonValue makeObject();
+        JSONValue makeObject();
         /** @brief 루트를 빈 배열로 만들고 반환합니다. */
-        JsonValue makeArray();
+        JSONValue makeArray();
         /** @brief 현재 문서를 JSON 문자열로 직렬화합니다. indent<0 이면 한 줄. */
         string dump( int32 indent = -1 ) const;
         /** @brief 현재 문서를 절대 경로에 씁니다. indent<0 이면 한 줄. */

@@ -26,7 +26,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Sequencer/SequenceAsset.h"
 #include "Engine/Serialization/Base/StringPool.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileMapXML.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
@@ -89,9 +89,9 @@ namespace test
                 sw::XMLDocument document;
                 (void)document.parse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
-            static void runJson( const uint8* pData, size_t size )
+            static void runJSON( const uint8* pData, size_t size )
             {
-                JsonDocument document;
+                JSONDocument document;
                 (void)document.tryParse( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runKeyValue( const uint8* pData, size_t size )
@@ -184,27 +184,27 @@ namespace test
             static void runSpriteClip( const uint8* pData, size_t size )
             {
                 SpriteClipAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runAnimGraph( const uint8* pData, size_t size )
             {
                 AnimGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runDialogue( const uint8* pData, size_t size )
             {
                 DialogueGraphAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runSequence( const uint8* pData, size_t size )
             {
                 SequenceAsset asset;
-                (void)asset.parseJson( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)asset.parseJSON( asText( pData, size ) ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runStringTable( const uint8* pData, size_t size )
             {
                 SourceStringTable table;
-                (void)table.loadFromJsonText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                (void)table.loadFromJSONText( asText( pData, size ), "fuzz.strings.json" ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runTileMap( const uint8* pData, size_t size )
             {
@@ -236,7 +236,7 @@ namespace test
                 appendResourceSeeds( ".xml", 12, outListSeed );
                 appendTextSeed( "<a x=\"1\"><b>t&amp;</b><!-- c --><![CDATA[d]]></a>", outListSeed );
             }
-            static void seedJson( vector<vector<uint8>>& outListSeed )
+            static void seedJSON( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( ".json", 4, outListSeed );
                 appendTextSeed( R"({"a":[1,2.5e3,-0,true,null,"é"],"b":{"c":"d"}})", outListSeed );
@@ -377,7 +377,7 @@ namespace test
 
         constexpr LoaderFuzzTarget kArrLoaderFuzzTarget[] = {
             {               "XML",                &LoaderFuzzTargetsInternal::runXML,             &LoaderFuzzTargetsInternal::seedXML,  true},
-            {              "Json",               &LoaderFuzzTargetsInternal::runJson,            &LoaderFuzzTargetsInternal::seedJson,  true},
+            {              "JSON",               &LoaderFuzzTargetsInternal::runJSON,            &LoaderFuzzTargetsInternal::seedJSON,  true},
             {          "KeyValue",           &LoaderFuzzTargetsInternal::runKeyValue,        &LoaderFuzzTargetsInternal::seedKeyValue,  true},
             {               "DDS",                &LoaderFuzzTargetsInternal::runDDS,             &LoaderFuzzTargetsInternal::seedDDS, false},
             {              "Mesh",               &LoaderFuzzTargetsInternal::runMesh,            &LoaderFuzzTargetsInternal::seedMesh, false},

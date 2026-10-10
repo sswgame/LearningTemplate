@@ -22,7 +22,7 @@
 namespace sw
 {
     class AnimClip;
-    class JsonValue;
+    class JSONValue;
     class Mesh;
     class Skeleton;
 
@@ -67,12 +67,12 @@ namespace sw
         float32 _vertexAnimationFramesPerSecond{ 15.0f }; ///< VAT 를 구울 프레임율
 
         /** @brief JSON 을 읽습니다. 모르는 키 · 범위 밖 값은 오류이고 false 입니다(기본값으로 돌아갑니다). */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
 
     private:
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw
 

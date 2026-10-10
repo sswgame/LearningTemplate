@@ -6,7 +6,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -56,10 +56,10 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJson 에 다시 넘기지 않는다).
+        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJSON 에 다시 넘기지 않는다).
         return parseRoot( doc.getRoot() );
     }
 
@@ -68,46 +68,46 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 
-    bool AnimGraphAsset::parseJson( string_view jsonView )
+    bool AnimGraphAsset::parseJSON( string_view jsonView )
     {
         _listNode.clear();
         _listLink.clear();
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonView ) == false )
             return false;
 
         return parseRoot( doc.getRoot() );
     }
 
-    bool AnimGraphAsset::parseRoot( const JsonValue& root )
+    bool AnimGraphAsset::parseRoot( const JSONValue& root )
     {
-        forEachObjectInArray( root, "nodes", [this]( const JsonValue& nodeJson, size_t /*nodeIndex*/ )
+        forEachObjectInArray( root, "nodes", [this]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
         {
             AnimGraphNode node{};
-            node._id          = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-            node._name        = nodeJson.get( "name" ).asString();
-            node._position._x = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-            node._position._y = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
-            if ( nodeJson.has( "loop" ) )
-                node._loopOverride = nodeJson.get( "loop" ).asBool() ? 1 : 0;
+            node._id          = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
+            node._name        = nodeJSON.get( "name" ).asString();
+            node._position._x = static_cast<float32>( nodeJSON.get( "x" ).asFloat( 40.0 ) );
+            node._position._y = static_cast<float32>( nodeJSON.get( "y" ).asFloat( 40.0 ) );
+            if ( nodeJSON.has( "loop" ) )
+                node._loopOverride = nodeJSON.get( "loop" ).asBool() ? 1 : 0;
             if ( node._id > 0 )
                 _listNode.push_back( std::move( node ) );
         } );
 
         bool bValid = true;
-        forEachObjectInArray( root, "links", [this, &bValid]( const JsonValue& linkJson, size_t /*linkIndex*/ )
+        forEachObjectInArray( root, "links", [this, &bValid]( const JSONValue& linkJSON, size_t /*linkIndex*/ )
         {
             AnimGraphLink link{};
-            link._id       = static_cast<int32>( linkJson.get( "id" ).asInt( 0 ) );
-            link._fromNode = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
-            link._toNode   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
-            if ( linkJson.has( "blend" ) )
-                link._blendSeconds = static_cast<float32>( linkJson.get( "blend" ).asFloat( -1.0 ) );
-            const JsonValue condition = linkJson.get( "condition" );
+            link._id       = static_cast<int32>( linkJSON.get( "id" ).asInt( 0 ) );
+            link._fromNode = static_cast<int32>( linkJSON.get( "from" ).asInt( 0 ) );
+            link._toNode   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
+            if ( linkJSON.has( "blend" ) )
+                link._blendSeconds = static_cast<float32>( linkJSON.get( "blend" ).asFloat( -1.0 ) );
+            const JSONValue condition = linkJSON.get( "condition" );
             if ( condition.isObject() )
             {
                 const string opText = condition.get( "op" ).asString();
@@ -130,39 +130,39 @@ namespace sw
         return bValid;
     }
 
-    string AnimGraphAsset::toJson() const
+    string AnimGraphAsset::toJSON() const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
 
-        const JsonValue nodesVal = root.set( "nodes" );
+        const JSONValue nodesVal = root.set( "nodes" );
         nodesVal.setArray();
         for ( const AnimGraphNode& node : _listNode )
         {
-            const JsonValue nodeJson = nodesVal.pushBack();
-            nodeJson.setObject();
-            nodeJson.set( "id" ).setInt( node._id );
-            nodeJson.set( "name" ).setString( node._name );
-            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
-            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
+            const JSONValue nodeJSON = nodesVal.pushBack();
+            nodeJSON.setObject();
+            nodeJSON.set( "id" ).setInt( node._id );
+            nodeJSON.set( "name" ).setString( node._name );
+            nodeJSON.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
+            nodeJSON.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
             if ( node._loopOverride >= 0 )
-                nodeJson.set( "loop" ).setBool( node._loopOverride != 0 );
+                nodeJSON.set( "loop" ).setBool( node._loopOverride != 0 );
         }
 
-        const JsonValue linksVal = root.set( "links" );
+        const JSONValue linksVal = root.set( "links" );
         linksVal.setArray();
         for ( const AnimGraphLink& link : _listLink )
         {
-            const JsonValue linkJson = linksVal.pushBack();
-            linkJson.setObject();
-            linkJson.set( "id" ).setInt( link._id );
-            linkJson.set( "from" ).setInt( link._fromNode );
-            linkJson.set( "to" ).setInt( link._toNode );
+            const JSONValue linkJSON = linksVal.pushBack();
+            linkJSON.setObject();
+            linkJSON.set( "id" ).setInt( link._id );
+            linkJSON.set( "from" ).setInt( link._fromNode );
+            linkJSON.set( "to" ).setInt( link._toNode );
             if ( link._blendSeconds >= 0.0f )
-                linkJson.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
+                linkJSON.set( "blend" ).setFloat( static_cast<float64>( link._blendSeconds ) );
             if ( link._op != AnimConditionOp::None )
             {
-                const JsonValue condition = linkJson.set( "condition" );
+                const JSONValue condition = linkJSON.set( "condition" );
                 condition.setObject();
                 condition.set( "param" ).setString( link._parameter.c_str() );
                 condition.set( "op" ).setString( getConditionOpText( link._op ) );

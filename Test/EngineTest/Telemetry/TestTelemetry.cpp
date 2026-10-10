@@ -4,7 +4,7 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Observability/HttpClient.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetryEvent.h"
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Telemetry/TelemetryUploader.h"
@@ -294,7 +294,7 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_EQUAL( 1u, Internal::countSpoolFiles( folder ) );
     const vector<string> listLine = Internal::splitLines( Internal::readAllSpool( folder ) );
     SW_ASSERT_EQUAL( 5u, static_cast<uint32>( listLine.size() ) );
-    JsonDocument contextLine;
+    JSONDocument contextLine;
     SW_ASSERT_TRUE( contextLine.parse( listLine[0], "context" ) );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "type" ).asString() == "context" );
     SW_EXPECT_TRUE( contextLine.getRoot().get( "session" ).asString() == "testsession01" );
@@ -302,11 +302,11 @@ SW_TEST_CASE( TelemetryTest, BatchesRotateAndRespectCaps )
     SW_EXPECT_EQUAL( 2, static_cast<int32>( contextLine.getRoot().get( "schema" ).asInt() ) );
     for ( size_t lineIndex = 1; lineIndex < listLine.size(); ++lineIndex )
     {
-        JsonDocument eventLine;
+        JSONDocument eventLine;
         SW_ASSERT_TRUE( eventLine.parse( listLine[lineIndex], "event" ) );
         SW_EXPECT_EQUAL( static_cast<int64>( lineIndex - 1 ), eventLine.getRoot().get( "seq" ).asInt() );
     }
-    JsonDocument killLine;
+    JSONDocument killLine;
     SW_ASSERT_TRUE( killLine.parse( listLine[4], "kill" ) );
     SW_EXPECT_TRUE( killLine.getRoot().get( "event" ).asString() == "game.kill" );
     SW_EXPECT_NEAR_EQUAL( 3.0, killLine.getRoot().get( "fields" ).get( "distance" ).asFloat(), 1.0e-6 );
@@ -421,22 +421,22 @@ SW_TEST_CASE( TelemetryTest, SceneSummariesCarryFramePercentiles )
     }
     telemetry.shutdown();
     // 업로더가 없으니(기본 — 보내지 않는다) 닫힌 파일이 스풀에 남는다.
-    vector<JsonDocument> listSummary;
+    vector<JSONDocument> listSummary;
     for ( const string& line : Internal::splitLines( Internal::readAllSpool( folder ) ) )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         SW_ASSERT_TRUE( doc.parse( line, "line" ) );
         if ( doc.getRoot().get( "event" ).asString() == "perf.sceneSummary" )
             listSummary.push_back( std::move( doc ) );
     }
     SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listSummary.size() ) );
-    const JsonValue first = listSummary[0].getRoot().get( "fields" );
+    const JSONValue first = listSummary[0].getRoot().get( "fields" );
     SW_EXPECT_TRUE( first.get( "scene" ).asString() == "game/a.scene.xml" );
     SW_EXPECT_EQUAL( 100, static_cast<int32>( first.get( "frames" ).asInt() ) );
     SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p50Ms" ).asFloat(), 0.06 );
     SW_EXPECT_NEAR_EQUAL( 16.05, first.get( "p99Ms" ).asFloat(), 0.06 );
     SW_EXPECT_NEAR_EQUAL( 100.0, first.get( "maxMs" ).asFloat(), 0.01 );
-    const JsonValue second = listSummary[1].getRoot().get( "fields" );
+    const JSONValue second = listSummary[1].getRoot().get( "fields" );
     SW_EXPECT_TRUE( second.get( "scene" ).asString() == "game/b.scene.xml" );
     SW_EXPECT_EQUAL( 50, static_cast<int32>( second.get( "frames" ).asInt() ) );
     SW_EXPECT_NEAR_EQUAL( 8.05, second.get( "p50Ms" ).asFloat(), 0.06 );

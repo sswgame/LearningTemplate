@@ -2,7 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/ProfileAPILoginProvider.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 #include "GameFramework/Base/Online/Http/HttpClient.h"
 
@@ -59,7 +59,7 @@ namespace sw
                 verification._bRejected = SW_TRUE;
                 continue;
             }
-            JsonDocument document;
+            JSONDocument document;
             if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
             {
                 verification._bUnavailable = SW_TRUE;
@@ -76,9 +76,9 @@ namespace sw
         }
     }
 
-    bool ProfileAPILoginProvider::findPathText( const JsonValue& root, string_view path, string& outText )
+    bool ProfileAPILoginProvider::findPathText( const JSONValue& root, string_view path, string& outText )
     {
-        JsonValue current = root;
+        JSONValue current = root;
         while ( path.empty() == false )
         {
             const size_t      dot  = path.find( '.' );

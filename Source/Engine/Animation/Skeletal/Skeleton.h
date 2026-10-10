@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /**
      * @struct SkeletonBone
@@ -87,17 +87,17 @@ namespace sw
         void clear();
 
         /** @brief JSON 본문을 읽습니다. 형식이 틀리면(모르는 키 · 빠진 키 · 앞에 없는 부모 · 모르는 본 이름) false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief JSON 본문을 만듭니다(들여쓰기 2). */
-        string toJson() const;
+        string toJSON() const;
         /** @brief 파일로 씁니다(부모 폴더를 만듭니다). */
         [[nodiscard]] bool saveToFile( string_view path ) const;
 
     private:
         /** @brief 파싱된 루트에서 내용을 읽습니다. */
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
 
         vector<SkeletonBone>       _listBone;
         vector<int32>              _listParentIndex;

@@ -175,7 +175,7 @@ namespace sw
         static string makeParentCode( string_view normalizedCode );
 
         /** @brief 표를 읽습니다(이미 있는 문화권은 바꿉니다). 실패하면 @p pOutError 에 이유를 적고 false 이며 표는 그대로입니다. */
-        [[nodiscard]] bool loadFromJsonText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
+        [[nodiscard]] bool loadFromJSONText( string_view jsonText, string_view sourceName, string* pOutError = nullptr );
         /** @brief 리소스 경로의 표를 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
 

@@ -319,7 +319,7 @@ SW_TEST_CASE( UserSettingsTest, UserFileRoundTripKeepsOnlyChangedValues )
         SW_EXPECT_TRUE( result._bSaved );
         settings.confirmChanges();
 
-        const sw::string json = settings.makeUserJson();
+        const sw::string json = settings.makeUserJSON();
         SW_EXPECT_TRUE( json.find( "video.mode" ) != sw::string::npos );
         SW_EXPECT_TRUE( json.find( "video.scale" ) != sw::string::npos );
         // 기본값 그대로인 설정은 파일에 없다 — 다음 판에서 기본값이 바뀌면 그대로 따라간다.
@@ -365,7 +365,7 @@ SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )
     test::ScopedLogCollector logs;
     {
         SW_TEST_DEFENSIVE_SCOPE( "a version 1 player file with unknown and out-of-range values" );
-        SW_ASSERT_TRUE( settings.loadUserJson( R"({ "version": 1, "values": { "a.masterVolume": 50, "a.mode": "fullscreen", "a.legacy": true,
+        SW_ASSERT_TRUE( settings.loadUserJSON( R"({ "version": 1, "values": { "a.masterVolume": 50, "a.mode": "fullscreen", "a.legacy": true,
                                                     "a.removedLongAgo": 3, "a.gamma": 9 } })",
                                                "old.json" ) );
     }
@@ -377,7 +377,7 @@ SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "'a.gamma' = '9' is out of range" ) );
 
     // 쓰는 파일은 지금 판이다.
-    SW_EXPECT_TRUE( settings.makeUserJson().find( "\"version\": 3" ) != sw::string::npos );
+    SW_EXPECT_TRUE( settings.makeUserJSON().find( "\"version\": 3" ) != sw::string::npos );
 }
 
 /**
@@ -450,7 +450,7 @@ SW_TEST_CASE( UserSettingsTest, ConfirmCountdownRevertsWithoutConfirmation )
     SW_EXPECT_TRUE( result._bAwaitingConfirm );
     SW_EXPECT_EQUAL( 7, gv_userSettingsTestInt ); // 선택지의 targetValue
     // 확인 대기 중에 쓰는 파일은 옛 값이다 — 확인 전에 꺼지면 다음 실행은 확인된 화면으로 뜬다.
-    SW_EXPECT_TRUE( settings.makeUserJson().find( "video.mode" ) == sw::string::npos );
+    SW_EXPECT_TRUE( settings.makeUserJSON().find( "video.mode" ) == sw::string::npos );
     settings.update( 6.0f );
     SW_EXPECT_TRUE( settings.isAwaitingConfirm() );
     SW_EXPECT_NEAR_EQUAL( 4.0f, settings.getConfirmSecondsLeft(), 0.001f );

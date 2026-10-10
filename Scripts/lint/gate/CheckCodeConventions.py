@@ -3170,7 +3170,7 @@ class ConventionResult(GateResult):
     """
 
     listRaw: list[ConventionViolation] = field(default_factory=list)
-    bJson: bool = False
+    bJSON: bool = False
     repositoryRoot: Path | None = None
 
 
@@ -3203,13 +3203,13 @@ class CheckCodeConventionsGate(LintGate):
         return ConventionResult(
             listViolation=[f"{v.file_path}:{v.line_number} -> {v.message}" for v in violations],
             listRaw=violations,
-            bJson=args.json,
+            bJSON=args.json,
             repositoryRoot=repositoryRoot,
         )
 
     def report(self, result: ConventionResult) -> int:
         """카테고리별로 묶어 찍는다 — 규칙이 서른 종이라 평평한 목록으로는 읽히지 않는다."""
-        if result.bJson:
+        if result.bJSON:
             print(json.dumps([asdict(v) for v in result.listRaw], indent=2, ensure_ascii=False))
             return 0 if not result.listRaw else 1
 

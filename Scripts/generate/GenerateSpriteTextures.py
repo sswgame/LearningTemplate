@@ -69,7 +69,7 @@ def makeMissingTextureInternal():
 
 
 def makeClipText(atlasPath: str, listFrame: list, listAnimation: list) -> str:
-    """`SpriteClipAsset::toJson` 과 같은 키 · 순서의 클립 글을 만듭니다(atlas · frames · transformKeys · 있으면 animations)."""
+    """`SpriteClipAsset::toJSON` 과 같은 키 · 순서의 클립 글을 만듭니다(atlas · frames · transformKeys · 있으면 animations)."""
     clip = {"atlas": atlasPath, "frames": listFrame, "transformKeys": []}
     if listAnimation:
         clip["animations"] = listAnimation

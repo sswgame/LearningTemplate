@@ -8,7 +8,7 @@
 
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -104,11 +104,11 @@ namespace sw
         return -1;
     }
 
-    bool RigAsset::parseJson( string_view json, string_view sourceLabel )
+    bool RigAsset::parseJSON( string_view json, string_view sourceLabel )
     {
         SW_MEMORY_SCOPE( Animation );
         clear();
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Rig '%#': malformed JSON", sourceLabel );
@@ -132,18 +132,18 @@ namespace sw
             clear();
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool RigAsset::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool RigAsset::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        RigJsonReader reader( root, sourceLabel );
+        RigJSONReader reader( root, sourceLabel );
         bool          bPlanar = false;
         if ( reader.readBool( "planar", bPlanar, false ) == false )
             return false;
         _bPlanar                = bPlanar ? SW_TRUE : SW_FALSE;
-        const JsonValue targets = reader.readArray( "targets", false );
-        const JsonValue nodes   = reader.readArray( "nodes", true );
+        const JSONValue targets = reader.readArray( "targets", false );
+        const JSONValue nodes   = reader.readArray( "nodes", true );
         if ( reader.finish() == false )
             return false;
         if ( nodes.size() == 0 )
@@ -164,9 +164,9 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::parseTarget( const JsonValue& value, string_view sourceLabel )
+    bool RigAsset::parseTarget( const JSONValue& value, string_view sourceLabel )
     {
-        RigJsonReader reader( value, sourceLabel );
+        RigJSONReader reader( value, sourceLabel );
         RigTargetDef  target{};
         bool          bOk = reader.readName( "name", target._name, true ) && reader.readName( "bone", target._bone, false ) &&
                    reader.readName( "socket", target._socket, false ) && reader.readName( "object", target._object, false ) &&
@@ -198,9 +198,9 @@ namespace sw
         return true;
     }
 
-    bool RigAsset::parseNode( const JsonValue& value, string_view sourceLabel )
+    bool RigAsset::parseNode( const JSONValue& value, string_view sourceLabel )
     {
-        RigJsonReader reader( value, sourceLabel );
+        RigJSONReader reader( value, sourceLabel );
         hashed_string typeName{};
         if ( reader.readName( "type", typeName, true ) == false )
             return false;

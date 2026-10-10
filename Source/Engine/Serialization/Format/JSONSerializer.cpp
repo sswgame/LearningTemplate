@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "Core/Container/InlineAllocator.h"
 #include "Core/File/FileUtil.h"
@@ -10,15 +10,15 @@
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     namespace
     {
-        struct JsonSerializerInternal
+        struct JSONSerializerInternal
         {
-            static void writeJsonValue( JsonValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx )
+            static void writeJSONValue( JSONValue dst, const void* pValPtr, const hashed_string& typeName, const SerializeContext& ctx )
             {
                 if ( dst.isValid() == false )
                     return;
@@ -51,7 +51,7 @@ namespace sw
                 {
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, pValPtr, typeName, ctx );
-                    JsonDocument parsed;
+                    JSONDocument parsed;
                     if ( parsed.tryParse( text.view() ) && parsed.getRoot().isObject() == false && parsed.getRoot().isArray() == false )
                     {
                         dst.assignFrom( parsed.getRoot() );
@@ -66,7 +66,7 @@ namespace sw
                 {
                     if ( pStructInfo->isPrimitive() == false )
                     {
-                        JsonSerializer::writeObject( dst, pValPtr, *pStructInfo, ctx );
+                        JSONSerializer::writeObject( dst, pValPtr, *pStructInfo, ctx );
                         return;
                     }
                 }
@@ -80,7 +80,7 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( const JsonValue& root, const SerializeContext& ctx )
+                ContainerWriter( const JSONValue& root, const SerializeContext& ctx )
                     : _listSlot{}
                     , _ctx{ ctx }
                 {
@@ -92,12 +92,12 @@ namespace sw
                 void beginMap( size_t ) override { _listSlot.back().setObject(); }
                 void endMap() override {}
 
-                // `JsonValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
+                // `JSONValue` 는 빌린 포인터다 — 같은 부모에 새 키 · 원소를 더하면 앞서 꺼낸 형제 핸들이 죽으므로, 꺼낸 자리는 다 채운 뒤 버린다(스택).
                 void beginMapEntry( const void* pKey, const hashed_string& keyTypeName ) override
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
                     SerializerUtil::valueToText( keyText, pKey, keyTypeName, _ctx );
-                    const JsonValue entry = _listSlot.back().set( keyText.view(), false );
+                    const JSONValue entry = _listSlot.back().set( keyText.view(), false );
                     _listSlot.push_back( entry );
                 }
 
@@ -107,7 +107,7 @@ namespace sw
                 {
                     if ( slot == ContainerSlot::SequenceElement )
                     {
-                        const JsonValue element = _listSlot.back().pushBack();
+                        const JSONValue element = _listSlot.back().pushBack();
                         _listSlot.push_back( element );
                     }
                 }
@@ -122,12 +122,12 @@ namespace sw
                 {
                     if ( pObject == nullptr )
                         return; // 널 원소는 배열에 넣지 않는다
-                    const JsonValue dst = _listSlot.back().pushBack();
+                    const JSONValue dst = _listSlot.back().pushBack();
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
                     SerializeContext::OpaqueElementView opaque{};
-                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Json )
+                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::JSON )
                     {
-                        JsonDocument rawDoc;
+                        JSONDocument rawDoc;
                         if ( rawDoc.tryParse( opaque._text ) )
                         {
                             dst.assignFrom( rawDoc.getRoot() );
@@ -138,32 +138,32 @@ namespace sw
                     const TypeInfo* pRuntimeType = _ctx.getRuntimeTypeInfo( pObject );
                     if ( pRuntimeType == nullptr )
                         return;
-                    const JsonValue body = dst.set( pRuntimeType->_name.c_str(), false );
-                    JsonSerializer::writeObject( body, pObject, *pRuntimeType, _ctx );
+                    const JSONValue body = dst.set( pRuntimeType->_name.c_str(), false );
+                    JSONSerializer::writeObject( body, pObject, *pRuntimeType, _ctx );
                     body.set( kSchemaVersionKey, false ).setUint( 0 );
                 }
 
                 // 값 구조체는 타입 래핑 없이 본문을 그대로 쓴다(리더도 본문만 받는다).
                 void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
-                    JsonSerializer::writeObject( openElementSlot( slot ), pValue, typeInfo, _ctx );
+                    JSONSerializer::writeObject( openElementSlot( slot ), pValue, typeInfo, _ctx );
                 }
 
                 void writeScalar( const void* pValue, const hashed_string& typeName, const ContainerSlot slot ) override
                 {
-                    writeJsonValue( openElementSlot( slot ), pValue, typeName, _ctx );
+                    writeJSONValue( openElementSlot( slot ), pValue, typeName, _ctx );
                 }
 
             private:
                 /** @brief 원소 하나를 적을 자리입니다 — 시퀀스면 새 배열 원소, 맵 값이면 항목이 연 자리입니다. */
-                JsonValue openElementSlot( const ContainerSlot slot ) const
+                JSONValue openElementSlot( const ContainerSlot slot ) const
                 {
                     if ( slot == ContainerSlot::SequenceElement )
                         return _listSlot.back().pushBack();
                     return _listSlot.back();
                 }
 
-                vector<JsonValue, InlineAllocator<JsonValue, 4>> _listSlot;
+                vector<JSONValue, InlineAllocator<JSONValue, 4>> _listSlot;
                 const SerializeContext&                          _ctx;
             };
 
@@ -171,7 +171,7 @@ namespace sw
             class ContainerReader final : public IContainerReader
             {
             public:
-                ContainerReader( const JsonValue& root, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
+                ContainerReader( const JSONValue& root, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
                     : _listCursor{}
                     , _pCurrentKey{ nullptr }
                     , _ctx{ ctx }
@@ -182,7 +182,7 @@ namespace sw
 
                 ContainerReadResult beginSequence( size_t& outCountHint ) override
                 {
-                    const JsonValue& current = _listCursor.back();
+                    const JSONValue& current = _listCursor.back();
                     if ( current.isArray() == false )
                         return ContainerReadResult::FieldFailed;
                     outCountHint = current.size();
@@ -197,7 +197,7 @@ namespace sw
 
                 ContainerReadResult forEachElement( const ContainerElementVisitDelegate& visit ) override
                 {
-                    const JsonValue     container = _listCursor.back();
+                    const JSONValue     container = _listCursor.back();
                     ContainerReadResult total{ ContainerReadResult::Read };
                     if ( container.isArray() )
                     {
@@ -231,7 +231,7 @@ namespace sw
                 ContainerReadResult readOwnedPointer() override
                 {
                     // 타입 이름 키 하나짜리 오브젝트가 아니면 원소로 보지 않고 건너뛴다.
-                    const JsonValue& element = _listCursor.back();
+                    const JSONValue& element = _listCursor.back();
                     if ( element.isObject() == false )
                         return ContainerReadResult::Read;
                     const vector<string> listKey = element.getMemberNames();
@@ -243,42 +243,42 @@ namespace sw
                     if ( pObject == nullptr )
                     {
                         // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
-                        const string                        rawJson = element.dump();
+                        const string                        rawJSON = element.dump();
                         SerializeContext::OpaqueElementView opaque{};
                         opaque._typeName = listKey[0];
-                        opaque._format   = SerializeContext::OpaqueFormat::Json;
-                        opaque._text     = rawJson;
+                        opaque._format   = SerializeContext::OpaqueFormat::JSON;
+                        opaque._text     = rawJSON;
                         (void)_ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                         return ContainerReadResult::Read;
                     }
                     // 원소 안의 못 읽은 칸은 바깥 orphan 목록으로(XML 과 같다) — 엄격하게 읽으면 칸 하나가 `_listComponent` 칸 전체를 실패로 만든다.
-                    const bool bRead = JsonSerializer::readObject( element.get( listKey[0], false ), pObject, *pType, _pOutListOrphan, nullptr, _ctx );
+                    const bool bRead = JSONSerializer::readObject( element.get( listKey[0], false ), pObject, *pType, _pOutListOrphan, nullptr, _ctx );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
                 // 값 구조체 원소는 본문 그대로다(쓰는 쪽이 타입 이름으로 감싸지 않는다). 감싼 원소는 모르는 키 하나로 읽힌다.
                 ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
-                    const JsonValue& element = _listCursor.back();
-                    const bool       bRead   = element.isObject() && JsonSerializer::readObject( element, pValue, typeInfo, nullptr, nullptr, _ctx );
+                    const JSONValue& element = _listCursor.back();
+                    const bool       bRead   = element.isObject() && JSONSerializer::readObject( element, pValue, typeInfo, nullptr, nullptr, _ctx );
                     return bRead ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
                 ContainerReadResult readScalar( void* pValue, const hashed_string& typeName, ContainerSlot ) override
                 {
-                    return readJsonValue( pValue, typeName, _listCursor.back(), _ctx ) ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
+                    return readJSONValue( pValue, typeName, _listCursor.back(), _ctx ) ? ContainerReadResult::Read : ContainerReadResult::FieldFailed;
                 }
 
                 ContainerReadResult skipElement( size_t ) override { return ContainerReadResult::FieldFailed; }
 
             private:
-                vector<JsonValue, InlineAllocator<JsonValue, 4>> _listCursor;
+                vector<JSONValue, InlineAllocator<JSONValue, 4>> _listCursor;
                 const string*                                    _pCurrentKey;
                 const SerializeContext&                          _ctx;
                 vector<SchemaOrphanValue>*                       _pOutListOrphan;
             };
 
-            [[nodiscard]] static bool readJsonValue( void* pValPtr, const hashed_string& typeName, const JsonValue& src, const SerializeContext& ctx )
+            [[nodiscard]] static bool readJSONValue( void* pValPtr, const hashed_string& typeName, const JSONValue& src, const SerializeContext& ctx )
             {
                 if ( pValPtr == nullptr || src.isValid() == false )
                     return false;
@@ -313,8 +313,8 @@ namespace sw
                     if ( pStructInfo->isPrimitive() == false )
                     {
                         if ( src.isObject() )
-                            return JsonSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, ctx );
-                        return JsonSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), ctx );
+                            return JSONSerializer::readObject( src, pValPtr, *pStructInfo, nullptr, nullptr, ctx );
+                        return JSONSerializer::deserialize( pValPtr, *pStructInfo, src.dump(), ctx );
                     }
                 }
 
@@ -322,7 +322,7 @@ namespace sw
                     return parseTextValueCoerced( pValPtr, typeName, src.asString(), ctx );
                 return parseTextValueCoerced( pValPtr, typeName, src.dump(), ctx );
             }
-            static void writeProperty( JsonValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
+            static void writeProperty( JSONValue parent, const PropertyInfo& prop, const void* pInstance, const SerializeContext& ctx )
             {
                 if ( prop._bIsBitField == SW_TRUE )
                 {
@@ -338,10 +338,10 @@ namespace sw
                     ContainerVisitor::write( pPropPtr, prop.getContainerShape(), writer, ctx );
                     return;
                 }
-                writeJsonValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
+                writeJSONValue( parent.set( prop._name.c_str(), false ), pPropPtr, prop._typeName, ctx );
             }
 
-            [[nodiscard]] static bool readProperty( const JsonValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx,
+            [[nodiscard]] static bool readProperty( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& ctx,
                                                     vector<SchemaOrphanValue>* pOutListOrphan = nullptr )
             {
                 if ( prop._bIsBitField == SW_TRUE )
@@ -363,7 +363,7 @@ namespace sw
                     ContainerReader reader( field, ctx, pOutListOrphan );
                     return ContainerVisitor::read( pPropPtr, prop.getContainerShape(), reader, ctx ) == ContainerReadResult::Read;
                 }
-                return readJsonValue( pPropPtr, prop._typeName, field, ctx );
+                return readJSONValue( pPropPtr, prop._typeName, field, ctx );
             }
         };
     } // namespace
@@ -371,47 +371,47 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "JsonSerializer" );
+    SW_LOG_CALLER( "JSONSerializer" );
 
-    string JsonSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    string JSONSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, ctx );
         return doc.dump();
     }
 
-    string JsonSerializer::serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+    string JSONSerializer::serializePretty( const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
                                             const SerializeContext& ctx )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, ctx );
         return doc.dump( static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces ) );
     }
 
-    bool JsonSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+    bool JSONSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                       const SerializeContext& ctx )
     {
         return deserializeSoft( pInstance, typeInfo, jsonStr, nullptr, nullptr, ctx );
     }
 
-    bool JsonSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
+    bool JSONSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo, uint32 indentSpaces,
                                    const SerializeContext& ctx )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         writeObject( doc.makeObject(), pInstance, typeInfo, ctx );
         const int32 indent = static_cast<int32>( indentSpaces == 0 ? 4 : indentSpaces );
         return doc.saveFile( absPath, indent );
     }
 
-    bool JsonSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool JSONSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
         return readObject( doc.getRoot(), pInstance, typeInfo, nullptr, nullptr, ctx );
     }
 
-    void JsonSerializer::writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,
+    void JSONSerializer::writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,
                                       const SerializeContext& ctx )
     {
         if ( dst.isValid() == false || pInstance == nullptr )
@@ -421,11 +421,11 @@ namespace sw
         {
             if ( prop._metadata._bTransient == SW_TRUE )
                 return;
-            JsonSerializerInternal::writeProperty( dst, prop, pInstance, ctx );
+            JSONSerializerInternal::writeProperty( dst, prop, pInstance, ctx );
         }, true /* 상속 PROPERTY 포함 */ );
     }
 
-    bool JsonSerializer::readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
+    bool JSONSerializer::readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
                                      vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
                                      const SerializeContext& ctx )
     {
@@ -442,7 +442,7 @@ namespace sw
 
         for ( const string& keyRaw : src.getMemberNames() )
         {
-            const JsonValue field = src.get( keyRaw, false );
+            const JSONValue field = src.get( keyRaw, false );
             if ( SerializerUtil::keysEqual( keyRaw, kSchemaVersionKey, bIgnoreCaseKeys ) )
             {
                 if ( pOutVersion != nullptr )
@@ -451,7 +451,7 @@ namespace sw
             }
             bool bCaseVariant{ false };
             // 대소문자를 가리는 문맥에서 대소문자만 다른 키: orphan 목록이 없으면 건너뛴다(그 문맥의 계약 — 묶지 않을 뿐 실패는 아니다).
-            // 목록이 있으면(설정 읽기 `ConfigManager::readConfigJson`) 아래에서 모르는 키로 이름을 알린다 — 조용히 버리면 `_Width` 오타가 사라진다.
+            // 목록이 있으면(설정 읽기 `ConfigManager::readConfigJSON`) 아래에서 모르는 키로 이름을 알린다 — 조용히 버리면 `_Width` 오타가 사라진다.
             const PropertyInfo* pMatched = SerializerUtil::matchProperty( listProp, keyRaw, bIgnoreCaseKeys, bCaseVariant );
             if ( pMatched == nullptr && bCaseVariant && pOutListOrphan == nullptr )
                 continue;
@@ -475,7 +475,7 @@ namespace sw
             }
 
             uniqueMatched.insert( pMatched->getNameHash() );
-            if ( JsonSerializerInternal::readProperty( field, *pMatched, pInstance, ctx, pOutListOrphan ) == false )
+            if ( JSONSerializerInternal::readProperty( field, *pMatched, pInstance, ctx, pOutListOrphan ) == false )
             {
                 if ( pOutListOrphan != nullptr )
                 {
@@ -502,32 +502,32 @@ namespace sw
         return bFieldError == false;
     }
 
-    bool JsonSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
+    bool JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                           vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
                                           const SerializeContext& ctx )
     {
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonStr ) == false )
             return false;
         return readObject( doc.getRoot(), pInstance, typeInfo, pOutListOrphan, pOutVersion, ctx );
     }
 
-    string JsonSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+    string JSONSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
                                                const SerializeContext& ctx )
     {
-        JsonDocument doc;
-        JsonValue    root = doc.makeObject();
+        JSONDocument doc;
+        JSONValue    root = doc.makeObject();
         root.set( kSchemaVersionKey, false ).setUint( version );
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
         {
             if ( prop._metadata._bTransient == SW_TRUE )
                 return;
-            JsonSerializerInternal::writeProperty( root, prop, pInstance, ctx );
+            JSONSerializerInternal::writeProperty( root, prop, pInstance, ctx );
         }, true /* 상속 PROPERTY 포함 */ );
         return doc.dump();
     }
 
-    bool JsonSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+    bool JSONSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
                                                string_view jsonStr, uint32 currentVersion, SchemaMigrateFn migrate,
                                                const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {

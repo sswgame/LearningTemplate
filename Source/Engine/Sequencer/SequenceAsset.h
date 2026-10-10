@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
@@ -98,9 +98,9 @@ namespace sw
          * @details **실패하면 빈 에셋이 남습니다** — 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아 트랙 없는 옛
          *          시퀀스가 새 시퀀스인 척합니다.
          */
-        [[nodiscard]] bool parseJson( string_view json );
+        [[nodiscard]] bool parseJSON( string_view json );
         /** @brief JSON 본문을 만듭니다. */
-        string toJson() const;
+        string toJSON() const;
         /** @brief 종류의 특성 줄입니다. 표에 없는 값이면 nullptr 입니다. */
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
@@ -108,7 +108,7 @@ namespace sw
 
     private:
         /** @brief 파싱된 루트 하나를 읽습니다. 파일 경로와 문자열 경로가 모이는 자리입니다. */
-        [[nodiscard]] bool parseRoot( const JsonValue& root );
+        [[nodiscard]] bool parseRoot( const JSONValue& root );
 
     public:
         int32                     _frameMin{ 0 };

@@ -6,7 +6,7 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -58,10 +58,10 @@ namespace sw
         _translationMode = mode;
     }
 
-    bool RetargetProfile::parseJson( string_view json, string_view sourceLabel )
+    bool RetargetProfile::parseJSON( string_view json, string_view sourceLabel )
     {
         clear();
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Retarget profile '%#': malformed JSON", sourceLabel );
@@ -82,12 +82,12 @@ namespace sw
             clear();
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool RetargetProfile::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool RetargetProfile::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        RigJsonReader reader( root, sourceLabel );
+        RigJSONReader reader( root, sourceLabel );
         hashed_string sourceSkeleton{};
         hashed_string targetSkeleton{};
         uint32        modeIndex = 0;
@@ -98,8 +98,8 @@ namespace sw
         _targetSkeletonPath = targetSkeleton.empty() ? string{} : string{ targetSkeleton.c_str() };
         _translationMode    = static_cast<RetargetTranslationMode>( modeIndex );
 
-        const JsonValue arrPair[2] = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
-        const JsonValue chains     = reader.readArray( "chains", true );
+        const JSONValue arrPair[2] = { reader.readObject( "root", true ), reader.readObject( "pelvis", true ) };
+        const JSONValue chains     = reader.readArray( "chains", true );
         bOk                        = reader.finish() && bOk;
         if ( bOk == false )
             return false;
@@ -108,7 +108,7 @@ namespace sw
         hashed_string* arrTarget[2] = { &_targetRoot, &_targetPelvis };
         for ( uint32 pairIndex = 0; pairIndex < 2; ++pairIndex )
         {
-            RigJsonReader pairReader( arrPair[pairIndex], sourceLabel );
+            RigJSONReader pairReader( arrPair[pairIndex], sourceLabel );
             bOk = pairReader.readName( "source", *arrSource[pairIndex], true ) && pairReader.readName( "target", *arrTarget[pairIndex], true );
             if ( ( pairReader.finish() && bOk ) == false )
                 return false;
@@ -116,7 +116,7 @@ namespace sw
 
         for ( size_t index = 0; index < chains.size(); ++index )
         {
-            RigJsonReader chainReader( chains.at( index ), sourceLabel );
+            RigJSONReader chainReader( chains.at( index ), sourceLabel );
             RetargetChain chain{};
             bool          bIKGoal = false;
             bOk                   = chainReader.readName( "name", chain._name, true ) && chainReader.readNameList( "source", chain._listSourceBone, true ) &&

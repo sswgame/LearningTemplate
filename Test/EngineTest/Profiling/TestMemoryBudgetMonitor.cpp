@@ -15,14 +15,14 @@
 /**
  * @brief [MemoryBudgetMonitorTest] 예산 표를 읽어 태그마다 바이트로 걸고, 표에 없는 태그의 예산은 지운다
  */
-SW_TEST_CASE( MemoryBudgetMonitorTest, AppliesBudgetsFromJson )
+SW_TEST_CASE( MemoryBudgetMonitorTest, AppliesBudgetsFromJSON )
 {
     sw::MemoryProfiler profiler;
     profiler.initialize();
     profiler.setBudget( sw::MemoryTag::Physics, 123 ); // 표에 없으니 지워진다
 
     sw::string error;
-    SW_ASSERT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJson( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "ui", "_megabytes": 0.5 } ] })",
+    SW_ASSERT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJSON( R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 2 }, { "_tag": "ui", "_megabytes": 0.5 } ] })",
                                                                   profiler, error ),
                         error.c_str() );
     SW_EXPECT_EQUAL( uint64{ 2 * 1024 * 1024 }, profiler.getBudget( sw::MemoryTag::Texture ) );
@@ -40,7 +40,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsMalformedBudgetsWithoutApplyingAny
     profiler.initialize();
     profiler.setBudget( sw::MemoryTag::Mesh, 777 );
 
-    const utf8* const arrBadJson[] = {
+    const utf8* const arrBadJSON[] = {
         R"({ "_listBudget": [ { "_tag": "Textures", "_megabytes": 1 } ] })",
         R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": 1, "_limit": 2 } ] })",
         R"({ "_listBudgets": [] })",
@@ -49,12 +49,12 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RejectsMalformedBudgetsWithoutApplyingAny
         R"({ "_listBudget": [ { "_tag": "Texture", "_megabytes": "big" } ] })",
         R"({ "_listBudget": { "_tag": "Texture" } })",
     };
-    for ( const utf8* pJson : arrBadJson )
+    for ( const utf8* pJSON : arrBadJSON )
     {
         sw::string                error;
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::MemoryBudgetMonitor::applyBudgetJson( pJson, profiler, error ), pJson );
-        SW_EXPECT_FALSE_MSG( error.empty(), pJson );
+        SW_EXPECT_FALSE_MSG( sw::MemoryBudgetMonitor::applyBudgetJSON( pJSON, profiler, error ), pJSON );
+        SW_EXPECT_FALSE_MSG( error.empty(), pJSON );
         SW_EXPECT_EQUAL( uint64{ 777 }, profiler.getBudget( sw::MemoryTag::Mesh ) );
     }
     profiler.shutdown();
@@ -72,7 +72,7 @@ SW_TEST_CASE( MemoryBudgetMonitorTest, RepositoryBudgetFileIsValid )
     sw::MemoryProfiler profiler;
     profiler.initialize();
     sw::string error;
-    SW_EXPECT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJson( text, profiler, error ), error.c_str() );
+    SW_EXPECT_TRUE_MSG( sw::MemoryBudgetMonitor::applyBudgetJSON( text, profiler, error ), error.c_str() );
     SW_EXPECT_TRUE( profiler.getBudget( sw::MemoryTag::Texture ) > 0 );
     profiler.shutdown();
 }

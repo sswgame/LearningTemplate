@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /**
      * @struct LipSyncViseme
@@ -50,13 +50,13 @@ namespace sw
         float32       _sharpness{ 8.0f };   ///< 대역 모양 비교의 날카로움(softmax 온도의 역)
         hashed_string _fallbackViseme;      ///< 트랙이 없을 때 진폭이 움직이는 비즘
 
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 비즘 번호입니다. 없으면 -1 입니다. */
         int32 findVisemeIndex( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw
 
@@ -82,9 +82,9 @@ namespace sw
         /** @brief 시각 @p time(초)의 비즘 가중치들입니다(두 프레임 사이 선형). @p outListWeight 는 비즘 수입니다. 끝을 지나면 모두 0 입니다. */
         void sample( float32 time, vector<float32>& outListWeight ) const;
 
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         [[nodiscard]] bool loadFromResource( string_view path );
-        string             toJson() const;
+        string             toJSON() const;
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /** @brief 음성 경로의 트랙 경로입니다(`a/line.wav` → `a/line.visemes.json`). */
         static string makePathForAudio( string_view audioPath );

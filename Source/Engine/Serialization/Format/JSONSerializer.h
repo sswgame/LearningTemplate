@@ -1,23 +1,23 @@
 /**
- * @file JsonSerializer.h
+ * @file JSONSerializer.h
  * @brief TypeInfo 리플렉션 기반 JSON 직렬화 · 역직렬화입니다.
- * @note 리플렉션이 아닌 콘텐츠(테이블, 툴)는 Serialization/Json/JsonDocument 를 씁니다.
+ * @note 리플렉션이 아닌 콘텐츠(테이블, 툴)는 Serialization/JSON/JSONDocument 를 씁니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     struct TypeInfo;
 
     /**
-     * @class JsonSerializer
+     * @class JSONSerializer
      * @brief TypeInfo 리플렉션으로 JSON 을 쓰고 읽습니다.
      */
-    class SW_API JsonSerializer
+    class SW_API JSONSerializer
     {
     public:
         // ------------------------------------------------------------------------------
@@ -45,11 +45,11 @@ namespace sw
         [[nodiscard]] static bool loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo,
                                             const SerializeContext& ctx = SerializeContext::getDefault() );
 
-        /** @brief JsonValue 객체에 리플렉션 필드를 씁니다. dst 는 객체여야 합니다. */
-        static void writeObject( JsonValue dst, const void* pInstance, const TypeInfo& typeInfo,
+        /** @brief JSONValue 객체에 리플렉션 필드를 씁니다. dst 는 객체여야 합니다. */
+        static void writeObject( JSONValue dst, const void* pInstance, const TypeInfo& typeInfo,
                                  const SerializeContext& ctx = SerializeContext::getDefault() );
-        /** @brief JsonValue 객체에서 리플렉션 필드를 읽습니다. */
-        [[nodiscard]] static bool readObject( JsonValue src, void* pInstance, const TypeInfo& typeInfo,
+        /** @brief JSONValue 객체에서 리플렉션 필드를 읽습니다. */
+        [[nodiscard]] static bool readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
                                               vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
                                               const SerializeContext& ctx = SerializeContext::getDefault() );
 

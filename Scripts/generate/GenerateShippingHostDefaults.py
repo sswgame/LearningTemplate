@@ -58,8 +58,8 @@ def generateShippingHostDefaults(outputPath: Path, gamePresetPath: str) -> None:
 
 namespace sw::shipping_host
 {{
-	inline constexpr const char* kEngineConfigJson = {escapeRawStringInternal(engineJson)};
-	inline constexpr const char* kGameConfigJson = {escapeRawStringInternal(gameJson)};
+	inline constexpr const char* kEngineConfigJSON = {escapeRawStringInternal(engineJson)};
+	inline constexpr const char* kGameConfigJSON = {escapeRawStringInternal(gameJson)};
 }}
 """
 

@@ -6,9 +6,9 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -63,10 +63,10 @@ namespace sw
         _listAttachment.clear();
     }
 
-    bool Skeleton::parseJson( string_view json, string_view sourceLabel )
+    bool Skeleton::parseJSON( string_view json, string_view sourceLabel )
     {
         clear();
-        JsonDocument document;
+        JSONDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
             SW_LOG_ERROR( "Skeleton '%#': malformed JSON", sourceLabel );
@@ -88,14 +88,14 @@ namespace sw
             clear();
             return false;
         }
-        return parseJson( text, path );
+        return parseJSON( text, path );
     }
 
-    bool Skeleton::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool Skeleton::parseRoot( const JSONValue& root, string_view sourceLabel )
     {
-        if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "bones", "attachments" }, sourceLabel ) == false )
+        if ( AnimJSONUtil::hasOnlyKnownKeys( root, { "bones", "attachments" }, sourceLabel ) == false )
             return false;
-        const JsonValue bones = root.get( "bones" );
+        const JSONValue bones = root.get( "bones" );
         if ( bones.isArray() == false || bones.size() == 0 )
         {
             SW_LOG_ERROR( "Skeleton '%#': 'bones' must be a non-empty array", sourceLabel );
@@ -103,13 +103,13 @@ namespace sw
         }
         for ( size_t boneIndex = 0; boneIndex < bones.size(); ++boneIndex )
         {
-            const JsonValue bone = bones.at( boneIndex );
-            if ( AnimJsonUtil::hasOnlyKnownKeys( bone, { "name", "parent", "translation", "rotation", "scale", "inverse_bind" }, sourceLabel ) == false )
+            const JSONValue bone = bones.at( boneIndex );
+            if ( AnimJSONUtil::hasOnlyKnownKeys( bone, { "name", "parent", "translation", "rotation", "scale", "inverse_bind" }, sourceLabel ) == false )
                 return false;
             BoneTransform referencePose{};
             float32       arrInverseBind[16]{};
-            const bool    bComplete = bone.get( "name" ).isString() && bone.get( "parent" ).isNumber() && AnimJsonUtil::readBoneTransform( bone, referencePose ) &&
-                                   AnimJsonUtil::readFloats( bone.get( "inverse_bind" ), arrInverseBind, 16 );
+            const bool    bComplete = bone.get( "name" ).isString() && bone.get( "parent" ).isNumber() && AnimJSONUtil::readBoneTransform( bone, referencePose ) &&
+                                   AnimJSONUtil::readFloats( bone.get( "inverse_bind" ), arrInverseBind, 16 );
             if ( bComplete == false )
             {
                 SW_LOG_ERROR( "Skeleton '%#': bone %# is missing a field or has a malformed one", sourceLabel, boneIndex );
@@ -121,7 +121,7 @@ namespace sw
                 return false;
         }
 
-        const JsonValue attachments = root.get( "attachments" );
+        const JSONValue attachments = root.get( "attachments" );
         if ( attachments.isArray() == false )
         {
             SW_LOG_ERROR( "Skeleton '%#': 'attachments' must be an array", sourceLabel );
@@ -129,12 +129,12 @@ namespace sw
         }
         for ( size_t attachmentIndex = 0; attachmentIndex < attachments.size(); ++attachmentIndex )
         {
-            const JsonValue attachment = attachments.at( attachmentIndex );
-            if ( AnimJsonUtil::hasOnlyKnownKeys( attachment, { "name", "mesh", "bone", "translation", "rotation", "scale" }, sourceLabel ) == false )
+            const JSONValue attachment = attachments.at( attachmentIndex );
+            if ( AnimJSONUtil::hasOnlyKnownKeys( attachment, { "name", "mesh", "bone", "translation", "rotation", "scale" }, sourceLabel ) == false )
                 return false;
             SkeletonAttachment entry{};
             const bool         bComplete = attachment.get( "name" ).isString() && attachment.get( "mesh" ).isString() && attachment.get( "bone" ).isString() &&
-                                   AnimJsonUtil::readBoneTransform( attachment, entry._localTransform );
+                                   AnimJSONUtil::readBoneTransform( attachment, entry._localTransform );
             if ( bComplete == false )
             {
                 SW_LOG_ERROR( "Skeleton '%#': attachment %# is missing a field or has a malformed one", sourceLabel, attachmentIndex );
@@ -153,34 +153,34 @@ namespace sw
         return true;
     }
 
-    string Skeleton::toJson() const
+    string Skeleton::toJSON() const
     {
-        JsonDocument    document;
-        const JsonValue root = document.makeObject();
+        JSONDocument    document;
+        const JSONValue root = document.makeObject();
         {
-            const JsonValue bones = root.set( "bones" );
+            const JSONValue bones = root.set( "bones" );
             bones.setArray();
             for ( const SkeletonBone& bone : _listBone )
             {
-                const JsonValue entry = bones.pushBack();
+                const JSONValue entry = bones.pushBack();
                 entry.setObject();
                 entry.set( "name" ).setString( bone._name.c_str() );
                 entry.set( "parent" ).setInt( bone._parentIndex );
-                AnimJsonUtil::writeBoneTransform( entry, bone._referencePose );
-                AnimJsonUtil::writeFloats( entry.set( "inverse_bind" ), &bone._inverseBind._11, 16 );
+                AnimJSONUtil::writeBoneTransform( entry, bone._referencePose );
+                AnimJSONUtil::writeFloats( entry.set( "inverse_bind" ), &bone._inverseBind._11, 16 );
             }
         }
         {
-            const JsonValue attachments = root.set( "attachments" );
+            const JSONValue attachments = root.set( "attachments" );
             attachments.setArray();
             for ( const SkeletonAttachment& attachment : _listAttachment )
             {
-                const JsonValue entry = attachments.pushBack();
+                const JSONValue entry = attachments.pushBack();
                 entry.setObject();
                 entry.set( "name" ).setString( attachment._name );
                 entry.set( "mesh" ).setString( attachment._meshPath );
                 entry.set( "bone" ).setString( attachment._parentBone.c_str() );
-                AnimJsonUtil::writeBoneTransform( entry, attachment._localTransform );
+                AnimJSONUtil::writeBoneTransform( entry, attachment._localTransform );
             }
         }
         return document.dump( 2 );
@@ -190,6 +190,6 @@ namespace sw
     {
         if ( FileUtil::ensureParentDirectoryExists( path ) == false )
             return false;
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 } // namespace sw

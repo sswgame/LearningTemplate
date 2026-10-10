@@ -3,7 +3,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Graph/AnimGraphAsset.h"
@@ -49,7 +49,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
 #include "Engine/TileMap/TileMapXML.h"
@@ -191,7 +191,7 @@ namespace
         [[nodiscard]] static bool loadPrefab( const sw::string& resourceId )
         {
             sw::PrefabAsset prefab;
-            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
+            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJSONFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
             if ( bLoaded == false )
                 return false;
             sw::GameObjectManager manager;
@@ -292,7 +292,7 @@ namespace
             return settings.loadFromResource( resourceId );
         }
 
-        /** @brief 로컬라이제이션 JSON 문서(`loadFromJsonText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
+        /** @brief 로컬라이제이션 JSON 문서(`loadFromJSONText( text, name, &error )` 모양)를 읽습니다. 모르는 칸은 오류 글로 돌아온다. */
         template <typename TDocument>
         [[nodiscard]] static bool loadLocalizationDocument( const sw::string& resourceId )
         {
@@ -301,7 +301,7 @@ namespace
                 return false;
             TDocument  document;
             sw::string error;
-            if ( document.loadFromJsonText( text, resourceId, &error ) )
+            if ( document.loadFromJSONText( text, resourceId, &error ) )
                 return true;
             SW_LOG_WARNING( "%#", error.c_str() );
             return false;
@@ -329,24 +329,24 @@ namespace
         /** @brief 모델 임포트 곁 데이터(`<모델>.clips.json`) — 임포터(`ModelImporter::readClipData`)와 같은 키 규칙(모르는 키는 오류)으로 본다. */
         [[nodiscard]] static bool loadClipData( const sw::string& resourceId )
         {
-            sw::JsonDocument document;
+            sw::JSONDocument document;
             // models_raw/ 는 팩에 실리지 않아 Shipping 에서는 리소스 id 로 못 찾는다 — 임포터처럼 원본 트리에서 파일로 읽는다.
             if ( document.loadFile( sw::FileUtil::joinPath( sw::ResourceUtil::getRootFolderPath(), resourceId ) ) == false )
                 return false;
-            const sw::JsonValue root = document.getRoot();
-            if ( sw::AnimJsonUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
+            const sw::JSONValue root = document.getRoot();
+            if ( sw::AnimJSONUtil::hasOnlyKnownKeys( root, { "clips" }, resourceId ) == false || root.get( "clips" ).isObject() == false )
                 return false;
-            const sw::JsonValue clips = root.get( "clips" );
+            const sw::JSONValue clips = root.get( "clips" );
             for ( const sw::string& clipName : clips.getMemberNames() )
             {
-                const sw::JsonValue clip = clips.get( clipName, false );
-                if ( sw::AnimJsonUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
+                const sw::JSONValue clip = clips.get( clipName, false );
+                if ( sw::AnimJSONUtil::hasOnlyKnownKeys( clip, { "loop", "notifies", "curves" }, resourceId ) == false )
                     return false;
-                const sw::JsonValue notifies = clip.get( "notifies" );
+                const sw::JSONValue notifies = clip.get( "notifies" );
                 for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
                 {
-                    const sw::JsonValue notify = notifies.at( notifyIndex );
-                    if ( sw::AnimJsonUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
+                    const sw::JSONValue notify = notifies.at( notifyIndex );
+                    if ( sw::AnimJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, resourceId ) == false || notify.get( "name" ).isString() == false ||
                          notify.get( "time" ).isNumber() == false )
                         return false;
                 }

@@ -185,7 +185,7 @@ SW_TEST_CASE( SequencerTest, MultiClipTargetDoesNotFlicker )
  * @brief [SequencerTest] JSON 왕복이 값을 잃지 않는다 (파일 경유 포함)
  * @details loadFromFile 은 읽은 문서를 다시 문자열로 덤프하지 않고 그대로 읽는다. 이 테스트는 그 경로가 같은 결과를 내는지 본다.
  */
-SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
+SW_TEST_CASE( SequencerTest, JSONRoundTripThroughFileKeepsValues )
 {
     const sw::string  path   = test::makeTempPath( "sw_test_sequence.json" );
     sw::SequenceAsset source = sw::makeSequenceWithFirstFrameEvent();
@@ -211,7 +211,7 @@ SW_TEST_CASE( SequencerTest, JsonRoundTripThroughFileKeepsValues )
 
 /**
  * @brief [SequencerTest] 파싱이 실패하면 애셋에 반쯤 남은 상태가 없다
- * @details parseJson 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아,
+ * @details parseJSON 이 _listItem 만 비우고 실패하면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아,
  *          트랙 없는 옛 시퀀스가 새 시퀀스인 척한다.
  */
 SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
@@ -222,7 +222,7 @@ SW_TEST_CASE( SequencerTest, FailedParseLeavesNothingBehind )
 
     {
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( asset.parseJson( "{ this is not json" ) );
+        SW_EXPECT_FALSE( asset.parseJSON( "{ this is not json" ) );
     }
 
     SW_EXPECT_TRUE( asset._listItem.empty() );
@@ -277,7 +277,7 @@ SW_TEST_CASE( SequencerTest, LoadedAssetResetsPlaybackToItsOwnStart )
 SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersCannotOverflowSpans )
 {
     sw::SequenceAsset asset;
-    SW_ASSERT_TRUE( asset.parseJson( R"({
+    SW_ASSERT_TRUE( asset.parseJSON( R"({
         "frameMin": 2147483647,
         "frameMax": 0,
         "items": [ { "name": "Wide", "target": "SeqTarget", "start": 2147483647, "end": -2147483648 } ]
@@ -409,12 +409,12 @@ SW_TEST_CASE( SequencerTest, ItemKindTableCoversEveryKind )
 
 /**
  * @brief [SequencerTest] 종류를 enum 으로 바꾼 뒤에도 시퀀스 파일이 같은 바이트로 왕복한다(종류는 정수 그대로)
- * @details 아래 문서는 종류가 `int32 _type` 이던 때의 `toJson` 출력이다(저장소에 시퀀스 파일이 없어 시험 안에 둔다). 세 번째 항목의
+ * @details 아래 문서는 종류가 `int32 _type` 이던 때의 `toJSON` 출력이다(저장소에 시퀀스 파일이 없어 시험 안에 둔다). 세 번째 항목의
  *          종류 7 은 이 버전이 모르는 값이다 — 경고하고, 지우지 않고 다시 쓴다.
  */
 SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
 {
-    const sw::string_view kSequenceJson = R"({
+    const sw::string_view kSequenceJSON = R"({
   "frameMin": 0,
   "frameMax": 48,
   "note": "golden",
@@ -494,13 +494,13 @@ SW_TEST_CASE( SequencerTest, SequenceFileRoundTripKeepsIntegerKinds )
     sw::SequenceAsset asset;
     {
         test::ScopedDefensiveTestLog expected( "unknown sequence item type 7" );
-        SW_ASSERT_TRUE( asset.parseJson( kSequenceJson ) );
+        SW_ASSERT_TRUE( asset.parseJSON( kSequenceJSON ) );
     }
     SW_ASSERT_EQUAL( size_t( 3 ), asset._listItem.size() );
     SW_EXPECT_TRUE( asset._listItem[0]._kind == sw::SequenceItemKind::Clip );
     SW_EXPECT_TRUE( asset._listItem[1]._kind == sw::SequenceItemKind::Event );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( asset._listItem[2]._kind ) );
-    SW_EXPECT_TRUE_MSG( asset.toJson() == kSequenceJson, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
+    SW_EXPECT_TRUE_MSG( asset.toJSON() == kSequenceJSON, "시퀀스 파일을 읽고 다시 쓰면 바이트가 달라진다" );
 }
 
 /**

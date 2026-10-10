@@ -5,11 +5,11 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/AnimJsonUtil.h"
+#include "Engine/Animation/AnimJSONUtil.h"
 #include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
         };
     } // namespace
 
-    RigJsonReader::RigJsonReader( const JsonValue& object, string_view context )
+    RigJSONReader::RigJSONReader( const JSONValue& object, string_view context )
         : _object{ object }
         , _listUsedKey{}
         , _context{ context }
@@ -41,18 +41,18 @@ namespace sw
             fail( "expected an object" );
     }
 
-    void RigJsonReader::fail( string_view message )
+    void RigJSONReader::fail( string_view message )
     {
         SW_LOG_ERROR( "Rig '%#': %#", _context.c_str(), message );
         _bOk = SW_FALSE;
     }
 
-    JsonValue RigJsonReader::findMember( string_view key, bool bRequired )
+    JSONValue RigJSONReader::findMember( string_view key, bool bRequired )
     {
         _listUsedKey.push_back( string{ key } );
         if ( _object.isObject() == false )
-            return JsonValue{};
-        const JsonValue value = _object.get( key, false );
+            return JSONValue{};
+        const JSONValue value = _object.get( key, false );
         if ( value.isValid() == false && bRequired )
         {
             string message = "missing required key '";
@@ -63,9 +63,9 @@ namespace sw
         return value;
     }
 
-    bool RigJsonReader::readName( string_view key, hashed_string& outValue, bool bRequired )
+    bool RigJSONReader::readName( string_view key, hashed_string& outValue, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isString() == false || value.asString().empty() )
@@ -77,9 +77,9 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readFloat( string_view key, float32& outValue, bool bRequired )
+    bool RigJSONReader::readFloat( string_view key, float32& outValue, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isNumber() == false )
@@ -91,7 +91,7 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readUint( string_view key, uint32& outValue, bool bRequired )
+    bool RigJSONReader::readUint( string_view key, uint32& outValue, bool bRequired )
     {
         float32 number = 0.0f;
         if ( readFloat( key, number, bRequired ) == false )
@@ -107,9 +107,9 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readBool( string_view key, bool& outValue, bool bRequired )
+    bool RigJSONReader::readBool( string_view key, bool& outValue, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isBool() == false )
@@ -121,13 +121,13 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readFloat3( string_view key, float3& outValue, bool bRequired )
+    bool RigJSONReader::readFloat3( string_view key, float3& outValue, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         float32 arrValue[3]{};
-        if ( AnimJsonUtil::readFloats( value, arrValue, 3 ) == false )
+        if ( AnimJSONUtil::readFloats( value, arrValue, 3 ) == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an array of 3 numbers" ) );
             return false;
@@ -136,7 +136,7 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readRotationDegrees( string_view key, quaternion& outValue, bool bRequired )
+    bool RigJSONReader::readRotationDegrees( string_view key, quaternion& outValue, bool bRequired )
     {
         float3 degrees{};
         if ( readFloat3( key, degrees, bRequired ) == false )
@@ -145,9 +145,9 @@ namespace sw
         return true;
     }
 
-    bool RigJsonReader::readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired )
+    bool RigJSONReader::readNameList( string_view key, vector<hashed_string>& outListValue, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         if ( value.isArray() == false || value.size() == 0 )
@@ -158,7 +158,7 @@ namespace sw
         outListValue.clear();
         for ( size_t index = 0; index < value.size(); ++index )
         {
-            const JsonValue element = value.at( index );
+            const JSONValue element = value.at( index );
             if ( element.isString() == false || element.asString().empty() )
             {
                 fail( RigNodeInternal::makeKeyMessage( key, "must hold only non-empty strings" ) );
@@ -169,31 +169,31 @@ namespace sw
         return true;
     }
 
-    JsonValue RigJsonReader::readArray( string_view key, bool bRequired )
+    JSONValue RigJSONReader::readArray( string_view key, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() && value.isArray() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an array" ) );
-            return JsonValue{};
+            return JSONValue{};
         }
         return value;
     }
 
-    JsonValue RigJsonReader::readObject( string_view key, bool bRequired )
+    JSONValue RigJSONReader::readObject( string_view key, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() && value.isObject() == false )
         {
             fail( RigNodeInternal::makeKeyMessage( key, "must be an object" ) );
-            return JsonValue{};
+            return JSONValue{};
         }
         return value;
     }
 
-    bool RigJsonReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
+    bool RigJSONReader::readChoice( string_view key, const utf8* const* ppChoice, uint32 choiceCount, uint32& outIndex, bool bRequired )
     {
-        const JsonValue value = findMember( key, bRequired );
+        const JSONValue value = findMember( key, bRequired );
         if ( value.isValid() == false )
             return bRequired == false;
         const string text = value.isString() ? value.asString() : string{};
@@ -209,7 +209,7 @@ namespace sw
         return false;
     }
 
-    bool RigJsonReader::finish()
+    bool RigJSONReader::finish()
     {
         if ( _object.isObject() )
         {
@@ -288,7 +288,7 @@ namespace sw
     {
     }
 
-    bool RigNode::parseCommon( RigJsonReader& reader )
+    bool RigNode::parseCommon( RigJSONReader& reader )
     {
         const bool bOk = reader.readName( "name", _name, true ) && reader.readFloat( "weight", _weight, false ) &&
                          reader.readName( "weight_curve", _weightCurve, false ) && reader.readName( "weight_slot", _weightSlot, false );

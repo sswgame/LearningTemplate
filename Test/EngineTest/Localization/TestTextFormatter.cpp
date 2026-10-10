@@ -101,13 +101,13 @@ SW_TEST_CASE( CultureTableTest, BadDataIsALoadError )
 {
     sw::CultureTable table;
     sw::string       error;
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx": { "pluralRule": "english", "decimalSep": "." } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "english", "decimalSep": "." } } })", "t", &error ) );
     SW_EXPECT_TRUE( error.find( "decimalSep" ) != sw::string::npos );
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx": { "pluralRule": "klingon" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx": { "parent": "yy" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx": { "parent": "zz" }, "zz": { "parent": "xx" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx-YY": { "pluralRule": "none" } } })", "t", &error ) );
-    SW_EXPECT_FALSE( table.loadFromJsonText( R"({ "cultures": { "xx": { "pluralRule": "none", "monthNames": [ "a" ] } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "klingon" } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "parent": "yy" } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "parent": "zz" }, "zz": { "parent": "xx" } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx-YY": { "pluralRule": "none" } } })", "t", &error ) );
+    SW_EXPECT_FALSE( table.loadFromJSONText( R"({ "cultures": { "xx": { "pluralRule": "none", "monthNames": [ "a" ] } } })", "t", &error ) );
     SW_EXPECT_EQUAL( size_t( 0 ), table.getCultureCount() );
 }
 

@@ -141,7 +141,7 @@ SW_TEST_CASE( EditorAssetTypeTest, FindPanelTitleLongestSuffix )
     SW_EXPECT_TRUE( unknownTitle.empty() );
 }
 
-SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimJson )
+SW_TEST_CASE( EditorAssetTypeTest, DataDoesNotStealAnimJSON )
 {
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::AnimGraph, "a.anim.json" ) );
     SW_EXPECT_TRUE( sw::editor::EditorAssetTypeRegistry::matches( sw::editor::EditorAssetType::Data, "a.anim.json" ) );

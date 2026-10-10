@@ -11,7 +11,7 @@
 #include "Core/Container/vector.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JsonWebToken.h"
+#include "GameFramework/Kits/Feature/Online/Account/Server/Platform/JSONWebToken.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProvider.h"
 #include "GameFramework/Kits/Feature/Online/Account/Server/Platform/PlatformLoginProviderSettings.h"
 

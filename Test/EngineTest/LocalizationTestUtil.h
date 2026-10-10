@@ -18,12 +18,12 @@ namespace sw::test
     {
         static constexpr const utf8* kCultureTable = "engine/localization/engine.cultures.json";
 
-        /** @brief 프로젝트 파일을 쓰고 그 경로를 돌려줍니다. @p culturesJson 은 `[ "ko", "ja" ]` 같은 JSON 배열 글입니다. */
-        static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJson, string_view extraFields = {} )
+        /** @brief 프로젝트 파일을 쓰고 그 경로를 돌려줍니다. @p culturesJSON 은 `[ "ko", "ja" ]` 같은 JSON 배열 글입니다. */
+        static string writeProject( const string& folder, string_view sourceCulture, string_view culturesJSON, string_view extraFields = {} )
         {
             (void)FileUtil::ensureDirectoryExists( folder );
             const string projectPath = FileUtil::joinPath( folder, "test.locproject.json" );
-            string       text        = "{ \"name\": \"test\", \"sourceCulture\": \"" + string( sourceCulture ) + "\", \"cultures\": " + string( culturesJson ) +
+            string       text        = "{ \"name\": \"test\", \"sourceCulture\": \"" + string( sourceCulture ) + "\", \"cultures\": " + string( culturesJSON ) +
                           ", \"stringTables\": [ \"test.strings.json\" ]";
             if ( extraFields.empty() == false )
                 text += ", " + string( extraFields );
@@ -32,19 +32,19 @@ namespace sw::test
             return projectPath;
         }
 
-        /** @brief 원문 표를 씁니다. @p entriesJson 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다. */
-        static void writeSourceTable( const string& folder, string_view culture, string_view entriesJson )
+        /** @brief 원문 표를 씁니다. @p entriesJSON 은 `"Key": { "source": "…" }, …` 처럼 entries 객체의 안쪽입니다. */
+        static void writeSourceTable( const string& folder, string_view culture, string_view entriesJSON )
         {
             (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, "test.strings.json" ), // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
-                                           "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJson ) + " } }" );
+                                           "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJSON ) + " } }" );
         }
 
-        /** @brief 번역 표를 씁니다. @p entriesJson 은 `"Key": { "text": "…" }, …` 입니다. */
-        static void writeTranslation( const string& folder, string_view culture, string_view entriesJson )
+        /** @brief 번역 표를 씁니다. @p entriesJSON 은 `"Key": { "text": "…" }, …` 입니다. */
+        static void writeTranslation( const string& folder, string_view culture, string_view entriesJSON )
         {
             // 시험 준비 — 실패는 writeTextFile 이 오류로 남기고 뒤의 읽기 단언이 드러낸다
             (void)FileUtil::writeTextFile( FileUtil::joinPath( folder, string( culture ) + ".translation.json" ),
-                                           "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJson ) + " } }" );
+                                           "{ \"culture\": \"" + string( culture ) + "\", \"entries\": { " + string( entriesJSON ) + " } }" );
         }
 
         /** @brief 엔진 문화권 표를 읽은 매니저를 준비합니다. */

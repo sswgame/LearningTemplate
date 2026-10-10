@@ -10,7 +10,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/TextGatherer.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -44,10 +44,10 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.loadPath( path ) == false )
             return false;
-        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJson 에 다시 넘기지 않는다).
+        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseJSON 에 다시 넘기지 않는다).
         parseRoot( doc.getRoot() );
         return true;
     }
@@ -57,15 +57,15 @@ namespace sw
         if ( path.empty() )
             return false;
         FileUtil::ensureParentDirectoryExists( path );
-        return FileUtil::writeTextFile( path, toJson() );
+        return FileUtil::writeTextFile( path, toJSON() );
     }
 
-    bool DialogueGraphAsset::parseJson( string_view jsonView )
+    bool DialogueGraphAsset::parseJSON( string_view jsonView )
     {
         _listNode.clear();
         _listLink.clear();
 
-        JsonDocument doc;
+        JSONDocument doc;
         if ( doc.parse( jsonView ) == false )
             return false;
 
@@ -73,22 +73,22 @@ namespace sw
         return true;
     }
 
-    void DialogueGraphAsset::parseRoot( const JsonValue& root )
+    void DialogueGraphAsset::parseRoot( const JSONValue& root )
     {
-        forEachObjectInArray( root, "nodes", [this]( const JsonValue& nodeJson, size_t /*nodeIndex*/ )
+        forEachObjectInArray( root, "nodes", [this]( const JSONValue& nodeJSON, size_t /*nodeIndex*/ )
         {
             DialogueAssetNode node{};
-            node._id            = static_cast<int32>( nodeJson.get( "id" ).asInt( 0 ) );
-            node._type          = parseNodeType( nodeJson.get( "type" ).asString() );
-            node._speaker       = nodeJson.get( "speaker" ).asString();
-            node._text          = nodeJson.get( "text" ).asString();
-            node._condition     = nodeJson.get( "condition" ).asString();
-            node._actionCommand = nodeJson.get( "action" ).asString();
-            node._position._x   = static_cast<float32>( nodeJson.get( "x" ).asFloat( 40.0 ) );
-            node._position._y   = static_cast<float32>( nodeJson.get( "y" ).asFloat( 40.0 ) );
+            node._id            = static_cast<int32>( nodeJSON.get( "id" ).asInt( 0 ) );
+            node._type          = parseNodeType( nodeJSON.get( "type" ).asString() );
+            node._speaker       = nodeJSON.get( "speaker" ).asString();
+            node._text          = nodeJSON.get( "text" ).asString();
+            node._condition     = nodeJSON.get( "condition" ).asString();
+            node._actionCommand = nodeJSON.get( "action" ).asString();
+            node._position._x   = static_cast<float32>( nodeJSON.get( "x" ).asFloat( 40.0 ) );
+            node._position._y   = static_cast<float32>( nodeJSON.get( "y" ).asFloat( 40.0 ) );
 
             // 선택지는 **문자열 배열**이라 객체만 거르는 위 도우미가 맞지 않는다. 여기서 그대로 읽는다.
-            const JsonValue choicesVal = nodeJson.get( "choices" );
+            const JSONValue choicesVal = nodeJSON.get( "choices" );
             if ( choicesVal.isArray() )
             {
                 const size_t choiceCount = choicesVal.size();
@@ -103,56 +103,56 @@ namespace sw
                 _listNode.push_back( std::move( node ) );
         } );
 
-        forEachObjectInArray( root, "links", [this]( const JsonValue& linkJson, size_t linkIndex )
+        forEachObjectInArray( root, "links", [this]( const JSONValue& linkJSON, size_t linkIndex )
         {
             DialogueAssetLink link{};
             // id 가 없으면 순번을 쓴다. 손으로 적은 파일이 id 를 빼먹는 일이 있다.
-            link._id      = static_cast<int32>( linkJson.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
-            link._fromPin = static_cast<int32>( linkJson.get( "from" ).asInt( 0 ) );
-            link._toPin   = static_cast<int32>( linkJson.get( "to" ).asInt( 0 ) );
+            link._id      = static_cast<int32>( linkJSON.get( "id" ).asInt( static_cast<int32>( linkIndex + 1 ) ) );
+            link._fromPin = static_cast<int32>( linkJSON.get( "from" ).asInt( 0 ) );
+            link._toPin   = static_cast<int32>( linkJSON.get( "to" ).asInt( 0 ) );
             if ( link._fromPin > 0 && link._toPin > 0 )
                 _listLink.push_back( link );
         } );
     }
 
-    string DialogueGraphAsset::toJson() const
+    string DialogueGraphAsset::toJSON() const
     {
-        JsonDocument    doc;
-        const JsonValue root = doc.makeObject();
+        JSONDocument    doc;
+        const JSONValue root = doc.makeObject();
 
-        const JsonValue nodesVal = root.set( "nodes" );
+        const JSONValue nodesVal = root.set( "nodes" );
         nodesVal.setArray();
         for ( const DialogueAssetNode& node : _listNode )
         {
-            const JsonValue nodeJson = nodesVal.pushBack();
-            nodeJson.setObject();
-            nodeJson.set( "id" ).setInt( node._id );
-            nodeJson.set( "type" ).setString( nodeTypeName( node._type ) );
-            nodeJson.set( "speaker" ).setString( node._speaker );
-            nodeJson.set( "text" ).setString( node._text );
-            nodeJson.set( "condition" ).setString( node._condition );
-            nodeJson.set( "action" ).setString( node._actionCommand );
+            const JSONValue nodeJSON = nodesVal.pushBack();
+            nodeJSON.setObject();
+            nodeJSON.set( "id" ).setInt( node._id );
+            nodeJSON.set( "type" ).setString( nodeTypeName( node._type ) );
+            nodeJSON.set( "speaker" ).setString( node._speaker );
+            nodeJSON.set( "text" ).setString( node._text );
+            nodeJSON.set( "condition" ).setString( node._condition );
+            nodeJSON.set( "action" ).setString( node._actionCommand );
 
-            const JsonValue choicesVal = nodeJson.set( "choices" );
+            const JSONValue choicesVal = nodeJSON.set( "choices" );
             choicesVal.setArray();
             for ( const string& choice : node._listChoice )
             {
                 choicesVal.pushBack().setString( choice );
             }
 
-            nodeJson.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
-            nodeJson.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
+            nodeJSON.set( "x" ).setFloat( static_cast<float64>( node._position._x ) );
+            nodeJSON.set( "y" ).setFloat( static_cast<float64>( node._position._y ) );
         }
 
-        const JsonValue linksVal = root.set( "links" );
+        const JSONValue linksVal = root.set( "links" );
         linksVal.setArray();
         for ( const DialogueAssetLink& link : _listLink )
         {
-            const JsonValue linkJson = linksVal.pushBack();
-            linkJson.setObject();
-            linkJson.set( "id" ).setInt( link._id );
-            linkJson.set( "from" ).setInt( link._fromPin );
-            linkJson.set( "to" ).setInt( link._toPin );
+            const JSONValue linkJSON = linksVal.pushBack();
+            linkJSON.setObject();
+            linkJSON.set( "id" ).setInt( link._id );
+            linkJSON.set( "from" ).setInt( link._fromPin );
+            linkJSON.set( "to" ).setInt( link._toPin );
         }
 
         return doc.dump( 2 );

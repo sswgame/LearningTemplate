@@ -7,7 +7,7 @@
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionCore.h"
-#include "Engine/Serialization/Format/JsonSerializer.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -332,7 +332,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
     sw::vector<uint8> binaryState;
     SW_ASSERT_TRUE( sw::ObjectStateSerializer::saveToBinaryBuffer( pHolder, binaryState ) );
     const sw::string xmlState  = sw::ObjectStateSerializer::saveToXMLString( pHolder );
-    const sw::string jsonState = sw::ObjectStateSerializer::saveToJsonString( pHolder );
+    const sw::string jsonState = sw::ObjectStateSerializer::saveToJSONString( pHolder );
 
     for ( uint32 formatIndex = 0; formatIndex < 3; ++formatIndex )
     {
@@ -350,7 +350,7 @@ SW_TEST_CASE( ReflectionComponentTest, LoadBatchRemapsHandlesInsideContainers )
         if ( formatIndex == 0 )
             bLoaded = sw::ObjectStateSerializer::loadFromXMLString( pNewHolder, xmlState, context );
         else if ( formatIndex == 1 )
-            bLoaded = sw::ObjectStateSerializer::loadFromJsonString( pNewHolder, jsonState, context );
+            bLoaded = sw::ObjectStateSerializer::loadFromJSONString( pNewHolder, jsonState, context );
         else
             bLoaded = sw::ObjectStateSerializer::loadFromBinaryBuffer( pNewHolder, binaryState.data(), binaryState.size(), context ) != 0;
         SW_ASSERT_TRUE_MSG( bLoaded, arrFormatName[formatIndex] );
@@ -578,9 +578,9 @@ SW_TEST_CASE( ReflectionTest, AliasedContainerPropertyIsAContainer )
     sw::AliasContainerActor source;
     source._aliasScores          = { 3, 1, 4 };
     source._aliasCount           = 7;
-    const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
+    const sw::string        json = sw::JSONSerializer::serialize( &source, *pType );
     sw::AliasContainerActor restored;
-    SW_ASSERT_TRUE_MSG( sw::JsonSerializer::deserialize( &restored, *pType, json ), json.c_str() );
+    SW_ASSERT_TRUE_MSG( sw::JSONSerializer::deserialize( &restored, *pType, json ), json.c_str() );
     SW_EXPECT_EQUAL( size_t( 3 ), restored._aliasScores.size() );
     SW_EXPECT_TRUE_MSG( restored._aliasScores.size() == 3 && restored._aliasScores[2] == 4, json.c_str() );
     SW_EXPECT_EQUAL( 7, restored._aliasCount );

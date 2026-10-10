@@ -123,14 +123,14 @@ namespace sw
             SW_LOG_ERROR( "Culture table '%#' cannot be read", resourcePath );
             return false;
         }
-        return loadCultureTableJson( text );
+        return loadCultureTableJSON( text );
     }
 
-    bool LocalizationManager::loadCultureTableJson( string_view jsonText )
+    bool LocalizationManager::loadCultureTableJSON( string_view jsonText )
     {
         CultureTable loaded;
         string       error;
-        if ( loaded.loadFromJsonText( jsonText, "<cultures>", &error ) == false )
+        if ( loaded.loadFromJSONText( jsonText, "<cultures>", &error ) == false )
         {
             SW_LOG_ERROR( "Culture table is not loaded: %#", error.c_str() );
             return false;
@@ -163,7 +163,7 @@ namespace sw
             SW_LOG_ERROR( "Localization project '%#' cannot be read", projectPath );
             return false;
         }
-        if ( outProject._project.loadFromJsonText( text, projectPath, &error ) == false )
+        if ( outProject._project.loadFromJSONText( text, projectPath, &error ) == false )
         {
             SW_LOG_ERROR( "Localization project is not loaded: %#", error.c_str() );
             return false;
@@ -180,7 +180,7 @@ namespace sw
             const string tablePath = LocalizationProject::makeSiblingPath( projectPath, tableName );
             outProject._listFilePath.push_back( tablePath );
             SourceStringTable table;
-            const bool        bRead = LocalizationManagerInternal::readLocalizationFile( tablePath, text ) && table.loadFromJsonText( text, tablePath, &error );
+            const bool        bRead = LocalizationManagerInternal::readLocalizationFile( tablePath, text ) && table.loadFromJSONText( text, tablePath, &error );
             if ( bRead == false )
             {
                 SW_LOG_ERROR( "String table '%#' is not loaded: %#", tablePath.c_str(), error.c_str() );
@@ -212,7 +212,7 @@ namespace sw
                 continue;
             }
             TranslationTable translation;
-            if ( translation.loadFromJsonText( text, translationPath, &error ) == false )
+            if ( translation.loadFromJSONText( text, translationPath, &error ) == false )
             {
                 SW_LOG_ERROR( "Translation table is not loaded: %#", error.c_str() );
                 bAllRead = false;
@@ -375,11 +375,11 @@ namespace sw
         return false;
     }
 
-    bool LocalizationManager::loadLanguageJson( string_view languageCode, string_view jsonText )
+    bool LocalizationManager::loadLanguageJSON( string_view languageCode, string_view jsonText )
     {
         TranslationTable table;
         string           error;
-        if ( languageCode.empty() || table.loadFromJsonText( jsonText, "<memory>", &error ) == false )
+        if ( languageCode.empty() || table.loadFromJSONText( jsonText, "<memory>", &error ) == false )
         {
             SW_LOG_WARNING( "Translation JSON for '%#' is not loaded: %#", languageCode, error.c_str() );
             return false;

@@ -15,7 +15,7 @@
 namespace sw
 {
     class HttpClient;
-    class JsonValue;
+    class JSONValue;
 
     /**
      * @class ProfileAPILoginProvider
@@ -33,7 +33,7 @@ namespace sw
         void        tick( int64 nowMs ) override;
 
         /** @brief JSON 에서 점 경로("response.id")의 값을 글로 찾습니다(숫자는 십진 글). */
-        [[nodiscard]] static bool findPathText( const JsonValue& root, string_view path, string& outText );
+        [[nodiscard]] static bool findPathText( const JSONValue& root, string_view path, string& outText );
 
     private:
         PlatformLoginProviderSettings     _settings;

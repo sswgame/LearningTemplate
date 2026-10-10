@@ -9,7 +9,7 @@
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -39,14 +39,14 @@ namespace sw
                 RigJointLimit _limit{};
             };
 
-            [[nodiscard]] static bool parseLimits( RigJsonReader& reader, vector<LimitSpec>& outListSpec )
+            [[nodiscard]] static bool parseLimits( RigJSONReader& reader, vector<LimitSpec>& outListSpec )
             {
-                const JsonValue limits = reader.readArray( "limits", false );
+                const JSONValue limits = reader.readArray( "limits", false );
                 if ( reader.isOk() == false )
                     return false;
                 for ( size_t index = 0; limits.isValid() && index < limits.size(); ++index )
                 {
-                    RigJsonReader limitReader( limits.at( index ), reader.getContext() );
+                    RigJSONReader limitReader( limits.at( index ), reader.getContext() );
                     LimitSpec     spec{};
                     uint32        typeIndex    = 0;
                     float32       swingDegrees = 180.0f;
@@ -125,7 +125,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigTwoBoneIKNode>( *this ); }
             const utf8*         getTypeName() const override { return "TwoBoneIK"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 bool       bMatch = false;
                 bool       bKeep  = true;
@@ -203,7 +203,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigChainIKNode>( *this ); }
             const utf8*         getTypeName() const override { return _bFabrik == SW_TRUE ? "FabrikChain" : "CcdChain"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 bool    bMatch         = false;
                 float32 maxStepDegrees = 180.0f;
@@ -268,17 +268,17 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigAimNode>( *this ); }
             const utf8*         getTypeName() const override { return "Aim"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 float32 maxDegrees = 180.0f;
                 bool    bOk        = reader.readName( "bone", _boneName, true ) && reader.readName( "target", _targetName, true ) &&
                            reader.readFloat3( "aim_axis", _aimAxis, false ) && reader.readFloat( "max_degrees", maxDegrees, false );
                 _maxAngle             = MathUtil::clamp( maxDegrees, 0.0f, 180.0f ) * MathUtil::kDegreeToRadian;
                 _aimAxis              = _aimAxis.normalize();
-                const JsonValue chain = reader.readArray( "chain", false );
+                const JSONValue chain = reader.readArray( "chain", false );
                 for ( size_t index = 0; bOk && chain.isValid() && index < chain.size(); ++index )
                 {
-                    RigJsonReader entryReader( chain.at( index ), reader.getContext() );
+                    RigJSONReader entryReader( chain.at( index ), reader.getContext() );
                     ChainEntry    entry{};
                     bOk = entryReader.readName( "bone", entry._name, true ) && entryReader.readFloat( "weight", entry._weight, true );
                     bOk = entryReader.finish() && bOk;
@@ -375,7 +375,7 @@ namespace sw
             unique_ptr<RigNode> clone() const override { return make_unique<RigFootPlacementNode>( *this ); }
             const utf8*         getTypeName() const override { return "FootPlacement"; }
 
-            [[nodiscard]] bool parse( RigJsonReader& reader ) override
+            [[nodiscard]] bool parse( RigJSONReader& reader ) override
             {
                 float32 maxAlignDegrees = 30.0f;
                 bool    bAlign          = true;
@@ -385,10 +385,10 @@ namespace sw
                            reader.readBool( "align_to_normal", bAlign, false ) && reader.readFloat( "max_align_degrees", maxAlignDegrees, false );
                 _bAlignToNormal      = bAlign ? SW_TRUE : SW_FALSE;
                 _maxAlignAngle       = maxAlignDegrees * MathUtil::kDegreeToRadian;
-                const JsonValue feet = reader.readArray( "feet", true );
+                const JSONValue feet = reader.readArray( "feet", true );
                 for ( size_t index = 0; bOk && feet.isValid() && index < feet.size(); ++index )
                 {
-                    RigJsonReader footReader( feet.at( index ), reader.getContext() );
+                    RigJSONReader footReader( feet.at( index ), reader.getContext() );
                     Foot          foot{};
                     bOk = footReader.readName( "root", foot._rootName, true ) && footReader.readName( "mid", foot._midName, true ) &&
                           footReader.readName( "end", foot._endName, true );

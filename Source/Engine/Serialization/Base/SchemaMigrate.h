@@ -158,7 +158,7 @@ namespace sw
                                       const vector<SchemaOrphanValue>& listOrphan, SchemaMigrateFn migrate,
                                       bool bWarnWhenNoMigrate, const SerializeContext& ctx );
 
-    /** @brief Json/XML 루트에 기록하는 스키마 버전 키입니다. */
+    /** @brief JSON/XML 루트에 기록하는 스키마 버전 키입니다. */
     inline constexpr auto kSchemaVersionKey = "_schemaVersion";
     /** @brief 요소가 PROPERTY 이름을 속성으로 들 때의 속성 이름입니다. XML orphan 수집은 루트의 자식 요소가 이 속성으로 아는 PROPERTY 를 가리키면 orphan 으로 보지 않습니다. */
     inline constexpr auto kPropertyNameKey     = "_name";

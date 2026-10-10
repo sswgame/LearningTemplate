@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
     class SkeletonBoneLOD;
 
     /**
@@ -94,7 +94,7 @@ namespace sw
         float32                       _vertexAnimationScreenSize{ 0.0f };
 
         /** @brief JSON 을 읽습니다. 모르는 키 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 화면 크기의 주기 단계입니다. 표가 비었으면 0 입니다. */
@@ -103,7 +103,7 @@ namespace sw
         static AnimationLODSettings makeDefault() { return AnimationLODSettings{}; }
 
     private:
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
     };
 } // namespace sw
 

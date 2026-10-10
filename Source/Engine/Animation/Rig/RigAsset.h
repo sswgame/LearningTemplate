@@ -74,7 +74,7 @@ namespace sw
         RigAsset& operator=( RigAsset&& ) noexcept;
 
         /** @brief JSON 본문을 읽습니다. 틀리면 false 이고 내용은 비웁니다. */
-        [[nodiscard]] bool parseJson( string_view json, string_view sourceLabel );
+        [[nodiscard]] bool parseJSON( string_view json, string_view sourceLabel );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief 모두 비웁니다. */
@@ -90,9 +90,9 @@ namespace sw
         int32 findTargetIndex( const hashed_string& name ) const;
 
     private:
-        [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
-        [[nodiscard]] bool parseTarget( const JsonValue& value, string_view sourceLabel );
-        [[nodiscard]] bool parseNode( const JsonValue& value, string_view sourceLabel );
+        [[nodiscard]] bool parseRoot( const JSONValue& root, string_view sourceLabel );
+        [[nodiscard]] bool parseTarget( const JSONValue& value, string_view sourceLabel );
+        [[nodiscard]] bool parseNode( const JSONValue& value, string_view sourceLabel );
 
         vector<RigTargetDef>        _listTarget;
         vector<unique_ptr<RigNode>> _listNode;

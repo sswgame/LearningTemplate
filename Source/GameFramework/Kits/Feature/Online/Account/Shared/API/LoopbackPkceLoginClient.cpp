@@ -8,7 +8,7 @@
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/String/Base64Util.h"
 
-#include "Engine/Serialization/Json/JsonDocument.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
@@ -132,10 +132,10 @@ namespace sw
                 if ( pending._tokenRequestId != response._requestId )
                     continue;
                 const PkceLoginProviderSettings* pSettings = findSettings( pending._provider );
-                JsonDocument                     document;
+                JSONDocument                     document;
                 const bool                       bParsed = response.isSuccess() && document.tryParse( response.getBodyText() ) && document.getRoot().isObject();
-                const JsonValue                  token   = bParsed ? document.getRoot().get( pSettings->_bUseIdToken == SW_TRUE ? "id_token" : "access_token", false )
-                                                                   : JsonValue{};
+                const JSONValue                  token   = bParsed ? document.getRoot().get( pSettings->_bUseIdToken == SW_TRUE ? "id_token" : "access_token", false )
+                                                                   : JSONValue{};
                 if ( token.isString() == false || token.asString().empty() )
                 {
                     finish( pending, false, false, response._bTransportFailed == SW_TRUE ? response._failureText : string( "token endpoint refused the code" ), vector<uint8>{} );

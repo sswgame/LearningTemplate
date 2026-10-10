@@ -411,7 +411,7 @@ SW_TEST_CASE( UiAccessibilityTest, DialogueRunnerPostsSubtitlesWhenEnabled )
 	})";
     sw::DialogueRunnerComponent runner;
     runner.setUiSystem( &fixture._ui );
-    SW_ASSERT_TRUE( runner.loadGraphJson( graph ) );
+    SW_ASSERT_TRUE( runner.loadGraphJSON( graph ) );
     SW_EXPECT_TRUE( runner.startDialogue() );
     SW_EXPECT_EQUAL( 0u, fixture._ui.getSubtitles().getQueuedLineCount() ); // 기본은 끔
 

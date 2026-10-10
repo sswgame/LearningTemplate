@@ -123,7 +123,7 @@ SW_TEST_CASE( AnimationLODTest, ScreenSizeFromViewProjection )
 SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 {
     AnimationLODSettings settings;
-    SW_ASSERT_TRUE( settings.parseJson( R"({ "rate_levels": [ { "min_screen_size": 0.25, "update_rate_divisor": 1, "interpolate": false },
+    SW_ASSERT_TRUE( settings.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.25, "update_rate_divisor": 1, "interpolate": false },
                                                               { "min_screen_size": 0.1, "update_rate_divisor": 2, "interpolate": true },
                                                               { "min_screen_size": 0.0, "update_rate_divisor": 8, "interpolate": false } ],
                                             "offscreen_update_rate_divisor": 0, "budget_milliseconds": 1.5, "max_update_rate_divisor": 16,
@@ -145,8 +145,8 @@ SW_TEST_CASE( AnimationLODTest, SettingsParseAndSelectLevel )
 
     test::ScopedDefensiveTestLog expected( "malformed animation LOD tables are rejected" );
     AnimationLODSettings         bad;
-    SW_EXPECT_FALSE( bad.parseJson( R"({ "rate_levels": [ { "min_screen_size": 0.0, "update_rate_divisor": 1, "interpolate": false } ], "typo": 1 })", "test" ) );
-    SW_EXPECT_FALSE( bad.parseJson( R"({ "rate_levels": [ { "min_screen_size": 0.1, "update_rate_divisor": 1, "interpolate": false },
+    SW_EXPECT_FALSE( bad.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.0, "update_rate_divisor": 1, "interpolate": false } ], "typo": 1 })", "test" ) );
+    SW_EXPECT_FALSE( bad.parseJSON( R"({ "rate_levels": [ { "min_screen_size": 0.1, "update_rate_divisor": 1, "interpolate": false },
                                                         { "min_screen_size": 0.2, "update_rate_divisor": 2, "interpolate": false } ],
                                        "offscreen_update_rate_divisor": 0, "budget_milliseconds": 0, "max_update_rate_divisor": 8,
                                        "vertex_animation_screen_size": 0 })",
@@ -189,7 +189,7 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
 {
     const Skeleton  skeleton = test::makeChainSkeleton( 4 ); // bone0 → bone1 → bone2 → bone3
     SkeletonBoneLOD boneLOD;
-    SW_ASSERT_TRUE( boneLOD.parseJson( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] },
+    SW_ASSERT_TRUE( boneLOD.parseJSON( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] },
                                                        { "max_screen_size": 0.05, "remove": [ "bone2" ] } ] })",
                                        "test" ) );
     vector<vector<uint8>> listMask;
@@ -216,16 +216,16 @@ SW_TEST_CASE( AnimationLODTest, BoneLODMasksInheritAndValidate )
 
     // 자손까지 — bone1 을 빼면 bone2 · bone3 도 빠진다.
     SkeletonBoneLOD parentOnly;
-    SW_ASSERT_TRUE( parentOnly.parseJson( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "bone1" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( parentOnly.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "bone1" ] } ] })", "test" ) );
     SW_ASSERT_TRUE( parentOnly.buildMasks( skeleton, listMask, "test" ) );
     SW_EXPECT_EQUAL( 0u, static_cast<uint32>( listMask[0][3] ) );
 
     test::ScopedDefensiveTestLog expected( "bone LOD tables naming unknown bones or out of order are rejected" );
     SkeletonBoneLOD              unknownBone;
-    SW_ASSERT_TRUE( unknownBone.parseJson( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "nope" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( unknownBone.parseJSON( R"({ "levels": [ { "max_screen_size": 0.1, "remove": [ "nope" ] } ] })", "test" ) );
     SW_EXPECT_FALSE( unknownBone.buildMasks( skeleton, listMask, "test" ) );
     SkeletonBoneLOD badOrder;
-    SW_EXPECT_FALSE( badOrder.parseJson( R"({ "levels": [ { "max_screen_size": 0.05, "remove": [ "bone3" ] },
+    SW_EXPECT_FALSE( badOrder.parseJSON( R"({ "levels": [ { "max_screen_size": 0.05, "remove": [ "bone3" ] },
                                                          { "max_screen_size": 0.2, "remove": [ "bone2" ] } ] })",
                                          "test" ) );
 }
@@ -277,7 +277,7 @@ SW_TEST_CASE( AnimationLODTest, AnimatorSkipsRemovedBoneTracks )
     SW_ASSERT_TRUE( pUnit != nullptr && pAnimator != nullptr );
     pUnit->setSkeleton( make_shared<Skeleton>( skeleton ) );
     shared_ptr<SkeletonBoneLOD> boneLOD = make_shared<SkeletonBoneLOD>();
-    SW_ASSERT_TRUE( boneLOD->parseJson( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] } ] })", "test" ) );
+    SW_ASSERT_TRUE( boneLOD->parseJSON( R"({ "levels": [ { "max_screen_size": 0.2, "remove": [ "bone3" ] } ] })", "test" ) );
     pUnit->setBoneLOD( boneLOD );
     pAnimator->setClipFolder( folder );
     pAnimator->setInitialState( "Wave" );

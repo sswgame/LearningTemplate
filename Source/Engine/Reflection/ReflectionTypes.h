@@ -89,7 +89,7 @@ namespace sw
 #endif
         /**
          * @brief 에셋이 이 프로퍼티를 생략할 때 쓰는 저작 기본값 (PROPERTY(Default="...")).
-         * @details XML/Json/Binary 역직렬화가 적용합니다. C++ 멤버 초기화자와는 별개이므로 둘을 맞춰 두십시오.
+         * @details XML/JSON/Binary 역직렬화가 적용합니다. C++ 멤버 초기화자와는 별개이므로 둘을 맞춰 두십시오.
          */
         string _defaultValue;
         /** @brief 소프트 에셋 힌트 (PROPERTY(AssetPath) / AssetType="Texture"). */
@@ -113,7 +113,7 @@ namespace sw
         uint8 _bAssetPath    : 1;
         /** @brief 값이 ReflectAny(또는 type+blob 다형 페이로드)입니다. */
         uint8 _bPolymorphic : 1;
-        /** @brief 직렬화(Json/XML/Binary/Diff)의 저장 · 로드 대상에서 뺍니다(Transient / NonSerialized). */
+        /** @brief 직렬화(JSON/XML/Binary/Diff)의 저장 · 로드 대상에서 뺍니다(Transient / NonSerialized). */
         uint8 _bTransient : 1;
         /**
          * @brief 값이 비어 있으면 **쓸 때 생략**합니다 (PROPERTY(SkipIfEmpty)).

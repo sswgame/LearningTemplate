@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class JsonValue;
+    class JSONValue;
 
     /** @brief 키 하나입니다. 문자열 넷 모두 문서에 그대로 나갑니다. */
     struct ConfigKeyDoc
@@ -37,12 +37,12 @@ namespace sw
          * @brief @p object 의 키가 모두 표에 있는지 봅니다. 모르는 키마다 "@p context: unknown key 'x' (known: a, b, …)" 오류를 남기고 false 입니다.
          * @param pOutUnknownKey 첫 모르는 키를 받을 자리(없어도 된다)
          */
-        [[nodiscard]] static bool hasOnlyKnownKeys( const JsonValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context,
+        [[nodiscard]] static bool hasOnlyKnownKeys( const JSONValue& object, const ConfigKeyDoc* pArrKeyDoc, size_t keyCount, string_view context,
                                                     string* pOutUnknownKey = nullptr );
 
         /** @brief 배열 판입니다. */
         template <size_t N>
-        [[nodiscard]] static bool hasOnlyKnownKeys( const JsonValue& object, const ConfigKeyDoc ( &arrKeyDoc )[N], string_view context,
+        [[nodiscard]] static bool hasOnlyKnownKeys( const JSONValue& object, const ConfigKeyDoc ( &arrKeyDoc )[N], string_view context,
                                                     string* pOutUnknownKey = nullptr )
         {
             return hasOnlyKnownKeys( object, arrKeyDoc, N, context, pOutUnknownKey );
