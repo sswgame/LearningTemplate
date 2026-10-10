@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
+#include "Editor/Common/Commands/EditorMultiEdit.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
@@ -82,6 +83,8 @@ namespace sw::editor
 
     InspectorPanel::InspectorPanel()
         : _propertyGrid{}
+        , _listMultiEditComponent{}
+        , _pMultiEditCurrent{ nullptr }
         , _nameEditBuffer{}
         , _componentPresetJob{}
         , _listComponentPresetFile{}
@@ -95,6 +98,7 @@ namespace sw::editor
     {
         EditorWidgets::pushInspectorStyle();
         drawSelectionSection();
+        InspectorPropertyUndo::commitFinishedEdits();
 
         // Undo/Redo 단축키는 여기서 처리하지 않는다 — edit.undo / edit.redo 커맨드가 유일한 처리자다.
         // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGUI)와 함께
@@ -111,12 +115,12 @@ namespace sw::editor
 
         EditorWidgets::drawSectionHeader( "Selection" );
 
-        const size_t selCount = pContext->getEditorSelection().getSelectedObjectCount();
-        if ( selCount > 1 )
+        vector<GameObject*> listSelected;
+        pContext->getEditorSelection().getSelectedObjects( listSelected );
+        if ( listSelected.size() > 1 )
         {
-            ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "Multi-Selection (%u objects)",
-                                static_cast<uint32>( selCount ) );
-            ImGui::Separator();
+            drawMultiSelection( listSelected );
+            return;
         }
 
         EditorWorkspace& ws = pContext->getWorkspace();
@@ -167,7 +171,7 @@ namespace sw::editor
         const TypeInfo* pTypeInfo = pObj->getTypeInfo();
         if ( pTypeInfo != nullptr )
         {
-            const EditorPropertyGridTarget objectTarget{ pObj, pTypeInfo, nullptr, pObj, {} };
+            const EditorPropertyGridTarget objectTarget{ pObj, pTypeInfo, nullptr, pObj, {}, {} };
             _propertyGrid.drawProperties( objectTarget, "Reflected Properties", {} );
             ImGui::SeparatorText( "Methods" );
             _propertyGrid.drawMethodsAndEvents( objectTarget, false );
@@ -177,6 +181,91 @@ namespace sw::editor
 
         if ( bEditsAllowed == false )
             ImGui::EndDisabled();
+    }
+
+    void InspectorPanel::drawMultiSelection( const vector<GameObject*>& listObject )
+    {
+        GameObject* pPrimary = listObject[0];
+        ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "%u objects selected", static_cast<uint32>( listObject.size() ) );
+        ImGui::TextDisabled( "Primary: %s", pPrimary->getName().c_str() );
+
+        const bool bEditsAllowed = EditorUtil::areSceneEditsAllowed();
+        if ( bEditsAllowed == false )
+            ImGui::BeginDisabled();
+
+        // 활성은 모두에 — 섞여 있으면 혼합 표시(체크는 주 선택 값).
+        bool bMixedActive = false;
+        for ( const GameObject* pObject : listObject )
+        {
+            bMixedActive = bMixedActive || pObject->isActive() != pPrimary->isActive();
+        }
+        bool bActive = pPrimary->isActive();
+        if ( bMixedActive )
+        {
+            ImGui::TextDisabled( "\xe2\x80\x94" );
+            EditorWidgets::drawTooltip( "Multiple values" );
+            ImGui::SameLine();
+        }
+        if ( ImGui::Checkbox( "Active", &bActive ) )
+        {
+            EditorTransaction::beginTransaction( "Set Active (multiple)" );
+            for ( GameObject* pObject : listObject )
+            {
+                EditorSceneCommands::setActive( pObject, bActive );
+            }
+            EditorTransaction::endTransaction();
+        }
+
+        _propertyGrid.drawSearchBar();
+        ImGui::SeparatorText( "Components" );
+        EditorMultiEditUtil::collectCommonComponents( listObject, _listMultiEditComponent );
+        for ( EditorMultiEditComponent& common : _listMultiEditComponent )
+        {
+            Component* pComponent = common._listComponent[0];
+            ImGui::PushID( pComponent->getTypeInfo()->_name.c_str() );
+            if ( ImGui::CollapsingHeader( pComponent->getTypeInfo()->getDisplayName(), ImGuiTreeNodeFlags_DefaultOpen ) )
+            {
+                _pMultiEditCurrent = &common;
+                EditorPropertyGridTarget target{};
+                target._pInstance  = pComponent;
+                target._pType      = pComponent->getTypeInfo();
+                target._pComponent = pComponent;
+                target._pObject    = pPrimary;
+                target._onEdited   = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &InspectorPanel::copyEditToOthers, this );
+                target._isMixed    = SW_DELEGATE_METHOD( Delegate<bool( const PropertyInfo& )>, &InspectorPanel::isMultiEditMixed, this );
+                _propertyGrid.drawProperties( target, nullptr, {} );
+                _pMultiEditCurrent = nullptr;
+            }
+            ImGui::PopID();
+        }
+        size_t componentCount{ 0 };
+        for ( const Component* pComponent : pPrimary->getComponents() )
+        {
+            componentCount += pComponent != nullptr ? 1u : 0u;
+        }
+        if ( componentCount > _listMultiEditComponent.size() )
+            ImGui::TextDisabled( "%u component(s) are not on every selected object", static_cast<uint32>( componentCount - _listMultiEditComponent.size() ) );
+
+        if ( bEditsAllowed == false )
+            ImGui::EndDisabled();
+    }
+
+    void InspectorPanel::copyEditToOthers( const PropertyInfo& prop )
+    {
+        if ( _pMultiEditCurrent != nullptr )
+            (void)EditorMultiEditUtil::copyPropertyToOthers( prop, _pMultiEditCurrent->_listComponent ); // 수는 쓰지 않는다 — 되돌리기는 위젯 추적이 모두를 담는다
+    }
+
+    bool InspectorPanel::isMultiEditMixed( const PropertyInfo& prop )
+    {
+        if ( _pMultiEditCurrent == nullptr )
+            return false;
+        vector<const void*> listInstance;
+        for ( const Component* pComponent : _pMultiEditCurrent->_listComponent )
+        {
+            listInstance.push_back( pComponent );
+        }
+        return EditorMultiEditUtil::hasMixedValues( prop, listInstance );
     }
 
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const string& prefabPath )
@@ -437,7 +526,7 @@ namespace sw::editor
             pInspector->collectDrawnProperties( listDrawnName );
         }
 
-        const EditorPropertyGridTarget componentTarget{ pComp, pTypeInfo, pComp, pComp->getOwner(), {} };
+        const EditorPropertyGridTarget componentTarget{ pComp, pTypeInfo, pComp, pComp->getOwner(), {}, {} };
         _propertyGrid.drawProperties( componentTarget, "Properties", listDrawnName );
         ImGui::SeparatorText( "Methods" );
         _propertyGrid.drawMethodsAndEvents( componentTarget, true );

@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
+#include "Editor/Common/Commands/EditorMultiEdit.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
@@ -56,6 +57,12 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         /** @brief 현재 선택 섹션을 그립니다. */
         void drawSelectionSection();
+        /** @brief 둘 이상 골랐을 때 — 공통 컴포넌트만 그리고, 다른 값은 혼합으로 보이며, 고친 프로퍼티를 나머지에 입힙니다(언리얼 · 유니티와 같다). */
+        void drawMultiSelection( const vector<GameObject*>& listObject );
+        /** @brief 다중 편집에서 고친 프로퍼티를 나머지 오브젝트의 같은 컴포넌트에 입힙니다(그리드의 `_onEdited`). */
+        void copyEditToOthers( const PropertyInfo& prop );
+        /** @brief 다중 편집에서 그 프로퍼티 값이 오브젝트마다 다른지 묻습니다(그리드의 `_isMixed`). */
+        bool isMultiEditMixed( const PropertyInfo& prop );
         /** @brief 프리팹 인스턴스일 때 적용·되돌리기·연결 해제 버튼을 그립니다. */
         void drawPrefabLinkSection( GameObject* pObj, const string& prefabPath );
         /** @brief 선택된 오브젝트의 컴포넌트 카드 목록을 그립니다. */
@@ -70,6 +77,10 @@ namespace sw::editor
     private:
         /** @brief 리플렉션 프로퍼티 · 메서드 · 이벤트 그리기(검색 칸 포함)입니다. 컴포넌트와 오브젝트마다 대상을 바꿔 부른다. */
         EditorPropertyGrid _propertyGrid;
+        /** @brief 다중 선택의 공통 컴포넌트입니다(그리는 프레임마다 다시 모은다). */
+        vector<EditorMultiEditComponent> _listMultiEditComponent;
+        /** @brief 지금 그리는 공통 컴포넌트입니다(그리드 콜백이 읽는다). */
+        EditorMultiEditComponent* _pMultiEditCurrent;
         /** @brief 이름 칸이 편집 중인 글입니다(편집 중이 아니면 프레임마다 오브젝트 이름으로 채운다 — 칸을 떠날 때 적용할 글을 잡아 둔다). */
         fixed_string<constant::kMaxBuffer256> _nameEditBuffer;
         EditorFileCollectJob                  _componentPresetJob;

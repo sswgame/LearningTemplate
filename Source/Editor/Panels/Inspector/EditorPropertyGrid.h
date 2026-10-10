@@ -42,6 +42,7 @@ namespace sw::editor
         Component*                            _pComponent{ nullptr }; ///< 컴포넌트면 onPropertyChanged 를 받는다
         GameObject*                           _pObject{ nullptr };    ///< Undo 의 주인(컴포넌트면 그 owner). 컴포넌트가 없으면 onPropertyChanged 도 받는다
         Delegate<void( const PropertyInfo& )> _onEdited;              ///< 씬 밖 객체(환경설정 · 문서)가 바뀜을 받는 곳. 비어 있으면 위 둘만
+        Delegate<bool( const PropertyInfo& )> _isMixed;               ///< 다중 선택에서 값이 오브젝트마다 다르면 true — 이름 앞에 "—" 를 그린다. 비어 있으면 혼합 없음
     };
 } // namespace sw::editor
 
@@ -122,6 +123,7 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer256>                        _lastInvokeResult;
         unordered_map<uint32, fixed_string<constant::kMaxBuffer256>> _mapContainerAddText;  ///< 컨테이너 "더하기" 칸의 글 — 키는 그 칸의 ImGui id
         Delegate<void( const PropertyInfo& )>                        _onEdited;             ///< 지금 대상의 `_onEdited`
+        Delegate<bool( const PropertyInfo& )>                        _isMixed;              ///< 지금 대상의 `_isMixed`
         Component*                                                   _pEditTargetComponent; ///< 지금 프로퍼티를 그리는 컴포넌트 — 편집 통지를 받는다
         GameObject*                                                  _pEditTargetObject;    ///< 지금 프로퍼티를 그리는 GameObject — 컴포넌트가 없을 때만
         uint32                                                       _propertyDrawDepth;    ///< 중첩 · 컨테이너 재귀 깊이 — 통지는 가장 바깥에서 한 번

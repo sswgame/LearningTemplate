@@ -26,5 +26,10 @@ namespace sw::editor
          *          인스펙터의 확장 구역(Transform · Camera …)이 이것으로 위젯마다 따로 부르지 않고 한 번에 남깁니다.
          */
         static void trackLastItem( const utf8* pPropertyLabel );
+        /**
+         * @brief 이번 프레임에 풀린 편집을 되돌리기에 남깁니다. 인스펙터가 그리기를 마친 뒤 부릅니다.
+         * @details 위젯이 풀린 순간이 아니라 그 뒤에 기록하는 까닭: 다중 선택은 편집 통지(위젯 뒤)에서 값을 나머지 오브젝트에 입힌다. 풀린 순간에 "뒤" 스냅샷을 뜨면 그 입히기가 빠진다.
+         */
+        static void commitFinishedEdits();
     };
 } // namespace sw::editor

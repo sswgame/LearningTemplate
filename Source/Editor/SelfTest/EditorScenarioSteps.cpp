@@ -779,6 +779,37 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 선택한 오브젝트 모두의 `-gv_editorProbeProperty` 값 합입니다(다중 편집이 모두에 들어갔는지). 숫자 프로퍼티만 읽는다. */
+            [[nodiscard]] static bool readSelectedPropertySum( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                const size_t   dot      = gv_editorProbeProperty.find( '.' );
+                if ( pContext == nullptr || dot == string::npos )
+                    return false;
+                vector<GameObject*> listSelected;
+                pContext->getEditorSelection().getSelectedObjects( listSelected );
+                const hashed_string typeName( gv_editorProbeProperty.substr( 0, dot ).c_str() );
+                const hashed_string propertyName( gv_editorProbeProperty.substr( dot + 1 ).c_str() );
+                float64             sum{ 0.0 };
+                for ( GameObject* pObject : listSelected )
+                {
+                    Component* pComponent = pObject->findComponentByTypeName( typeName );
+                    if ( pComponent == nullptr || pComponent->getTypeInfo() == nullptr )
+                        return false;
+                    const PropertyInfo* pProperty = pComponent->getTypeInfo()->findPropertyInHierarchy( propertyName );
+                    if ( pProperty == nullptr )
+                        return false;
+                    if ( pProperty->_typeName == hashed_string( "float32" ) )
+                        sum += static_cast<float64>( *pProperty->getValuePtr<float32>( pComponent ) );
+                    else if ( pProperty->_typeName == hashed_string( "int32" ) )
+                        sum += static_cast<float64>( *pProperty->getValuePtr<int32>( pComponent ) );
+                    else
+                        return false;
+                }
+                outValue = sum;
+                return listSelected.empty() == false;
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -930,6 +961,8 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readVisualizerOn );
     SW_AUTOMATION_PROBE( editorSelectedProperty, "Editor.SelectedProperty",
                          "Numeric value of gv_editorProbeProperty (<ComponentType>.<property>) on the primary selection", &EditorScenarioStepsInternal::readSelectedProperty );
+    SW_AUTOMATION_PROBE( editorSelectedPropertySum, "Editor.SelectedPropertySum",
+                         "Sum of gv_editorProbeProperty (<ComponentType>.<property>) over every selected object", &EditorScenarioStepsInternal::readSelectedPropertySum );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",

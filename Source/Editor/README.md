@@ -543,6 +543,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   자식을 (자식 핸들, 부모 **안정 키**)로 적고 되붙인다. 오브젝트 → GUID 표와 GUID → 오브젝트 표는 서로의 역이어야 한다(`EditorWorkspace::setGuid`). 모듈 DLL 주소(람다)는 모듈이 내려가기 전에 걷는다.
 - **인스펙터** — 리플렉션 객체 그리기는 `EditorPropertyGrid` 하나다(인스펙터 · 환경설정 · 다중 선택이 쓴다). 대상은 `EditorPropertyGridTarget`(인스턴스 · 타입 ·
   통지와 Undo 의 주인 · 씬 밖 객체의 `_onEdited`)이고, 값 칸마다 이름표 `inspector.property.<타입>.<프로퍼티>` 를 남긴다(드래그 칸은 Ctrl+클릭이 글 입력 — 시나리오 `editor/inspectoredit`).
+  둘 이상 고르면 공통 컴포넌트만 그리고(`EditorMultiEditUtil` — 교집합 · 혼합 판정 · 고친 프로퍼티 하나만 나머지에 입히기), 혼합 값은 이름 앞에 "—" 다.
+  되돌리기 기록은 위젯이 풀린 순간이 아니라 편집 통지 뒤(`InspectorPropertyUndo::commitFinishedEdits`)에 선택한 오브젝트 모두를 한 트랜잭션으로 남긴다 —
+  풀린 순간에 "뒤" 스냅샷을 뜨면 나머지에 입힌 값이 빠져 Ctrl+Z 가 주 선택만 되돌린다(시나리오 `editor/multiedit`).
   타입 사슬 전부의 확장을 기반 → 파생 순으로(`collectForType`), 확장은 자기가 그린 프로퍼티만 알린다. 각도는 라디안으로 저장하고 에디터만 도로 보인다(`Units=rad`),
   0..1 비율은 `Units=ratio`, `PropertyUnitsTest.UnitsMatchHowValuesAreStored` 가 본다. 검색은 `EditorListFilter`, 0 건 안내는 `drawNoSearchResultHint`(손으로 쓴 `stristr` 술어는 빈 필터에서
   목록을 지운다).

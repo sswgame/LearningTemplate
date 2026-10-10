@@ -91,8 +91,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **3 인스펙터 · 콘텐츠** | I1 | 다중 선택 편집(공통 프로퍼티 · 다른 값 표시 · 한 트랜잭션) | M | P1 | ★ |
-| | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
+| **3 인스펙터 · 콘텐츠** | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
 | | A1 | 콘텐츠 브라우저 — 활성 팩만 + "어디서 쓰이나" 역색인 | M | | ★ |
 | **5 공용 편집 틀** | T1 | `FloatCurve` + 커브 편집 위젯 | M | I3 | |
@@ -146,81 +145,6 @@ Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · �
 "Revert", `PropertyDrawer`(`[CustomPropertyDrawer(typeof(T))]`). Godot 인스펙터도 다중 편집 · 되돌리기 아이콘 · `EditorInspectorPlugin`.
 콘텐츠 쪽: 언리얼 Content Browser 는 프로젝트 콘텐츠가 기본(엔진 · 플러그인 콘텐츠는 보기 옵션), **Reference Viewer**(참조하는 것 · 참조되는 것), 이름 바꾸면 리디렉터 + "Fix Up".
 유니티 Project 창 "Find References In Scene" · 의존 검색(`AssetDatabase.GetDependencies`). 우리 인스펙터는 다중 선택에서 첫 오브젝트만 고치고(O8), 되돌리기는 오른쪽 클릭 메뉴에만 숨어 있다.
-
-### I1 다중 선택 편집 — 공통 컴포넌트 · 프로퍼티를 모든 선택에, 다른 값 표시, 한 트랜잭션 ★
-
-**목적.** O8 — `InspectorPanel::drawSelectionSection` 은 둘 이상 고르면 "Multi-Selection (N objects)" 한 줄을 그리고 **주 선택만** 그린다(나머지는 바뀌지 않는다).
-
-**설계.** 언리얼 · 유니티와 같다: (1) 모든 선택이 가진 컴포넌트 타입(교집합 — 같은 타입이 여럿이면 각 오브젝트의 첫 것)만 카드로 그린다. (2) 그리는 값은 주 선택의 것, 다른 오브젝트와
-값이 다르면 이름 칸에 `—`(혼합) 표시 · 툴팁 "Multiple values". (3) 값을 고치면 **고친 프로퍼티 하나의 글**(`SerializerUtil` 글 쓰기)을 나머지 오브젝트의 같은 컴포넌트에 입힌다 —
-고친 프로퍼티만이라 다른 프로퍼티의 혼합 값은 그대로다. Undo 는 오브젝트들을 한 트랜잭션(`EditorTransaction::beginTransaction( "Edit N objects" )`)으로. (4) GameObject 헤더(이름 · 태그)는
-이름은 주 선택만, 활성 · 태그 더하기는 모두에.
-
-**새 파일 — ImGui 없는 판단 `Common/Commands/EditorMultiEdit.h` · `.cpp`:**
-```cpp
-namespace sw::editor
-{
-    /** @brief 다중 편집의 공통 컴포넌트 하나 — 오브젝트마다 그 타입의 첫 컴포넌트(선택 순서). */
-    struct EditorMultiEditComponent
-    {
-        const TypeInfo*    _pType{ nullptr };
-        vector<Component*> _listComponent; ///< 선택 순서 — 첫 원소가 주 선택의 것
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @struct EditorMultiEditUtil
-     * @brief 여러 오브젝트를 한 번에 고치는 판단입니다(ImGui 없음 — EditorTest 가 본다).
-     */
-    struct SW_EDITOR_API EditorMultiEditUtil
-    {
-        /** @brief 모든 오브젝트가 가진 컴포넌트 타입을 주 선택의 컴포넌트 순서대로 모읍니다(먼저 비운다). 오브젝트가 하나면 그 오브젝트의 컴포넌트 전부. */
-        static void collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon );
-        /** @brief 프로퍼티 @p prop 이 @p listInstance 사이에서 다르면 true 입니다(프로퍼티 글로 비교). */
-        static bool hasMixedValues( const PropertyInfo& prop, const vector<const void*>& listInstance );
-        /**
-         * @brief 첫 인스턴스의 @p prop 값을 나머지에 입힙니다(프로퍼티 글 하나 — 다른 프로퍼티는 건드리지 않는다). 입힌 수입니다.
-         * @details 컴포넌트마다 `onPropertyChanged` 를 부릅니다. Undo 기록은 부르는 쪽(인스펙터)이 트랜잭션으로 감쌉니다.
-         */
-        static uint32 copyPropertyToOthers( const PropertyInfo& prop, const vector<Component*>& listComponent );
-    };
-} // namespace sw::editor
-```
-**인스펙터.** `drawSelectionSection` 에서 `getSelectedObjects( listObject )` → 2 개 이상이면 `drawMultiSelection( listObject )`: 헤더(N objects · 주 선택 이름), 공통 컴포넌트마다 카드 —
-`EditorPropertyGridTarget` 의 `_onEdited` 를 "그 프로퍼티를 나머지에 복사 + 트랜잭션" 으로 두고, 그리드에 **혼합 판정 콜백**(`EditorPropertyGridTarget::_pfnIsMixed` + `_pMixedUserData`)을 더해
-이름 칸 앞에 `—` 를 그린다(P1 의 그리드에 칸 하나 · 그리기 한 줄). 공통이 아닌 컴포넌트 수는 맨 아래 회색 한 줄("3 components are not on every selected object").
-Add Component 는 모두에(같은 타입이 이미 있는 오브젝트는 건너뜀).
-
-**시험 — `Test/EditorTest/Common/Commands/TestEditorMultiEdit.cpp`(`EditorMultiEditTest`, `EditorTestServices.h` 의 씬 도우미):**
-- `CommonComponentsAreTheIntersection` — A(Transform · Mesh · Light) · B(Transform · Mesh) → Transform · Mesh.
-- `MixedValuesAreDetected` — 두 오브젝트 위치가 다르면 `_position` 혼합 true, 같은 스케일은 false.
-- `CopyChangesOnlyThatProperty` — A 의 스케일만 바꿔 복사 → B 의 스케일은 같아지고 B 의 위치는 그대로.
-자체 시험 `inspector.multiEditAppliesToAll` — 오브젝트 둘 만들어 고르고(시험이 선택을 넣는다) 2 차 단위 8 의 입력 창구로 스케일 칸에 값을 쳐 둘 다 바뀌는지, Ctrl+Z 한 번에 둘 다 돌아오는지.
-
-**확인 = 에디터 시나리오.** `multiedit.scenario.xml`: 시험 씬의 큐브 둘을 `EditorClick` 과 `mods="ctrl"` 로 함께 고르고(탐침 `Editor.SelectionCount` 가 2), 인스펙터의 스케일 칸에 값을 친 뒤
-두 오브젝트의 스케일 탐침이 모두 바뀌었는지, `EditorKey key="Z" mods="ctrl"` 한 번에 둘 다 돌아오는지 봅니다.
-
-**남길 교훈.** 없음.
-**커밋 메시지:**
-```
-에디터 - 인스펙터 다중 선택 편집(공통 컴포넌트 · 혼합 값 표시 · 한 트랜잭션)
-
-문제점:
-- 오브젝트를 둘 이상 고르면 인스펙터가 "Multi-Selection (N objects)" 한 줄과 주 선택만 그렸다. 고친 값은 주 선택에만 들어갔다.
-
-해결방안:
-- EditorMultiEditUtil(ImGui 없음): 공통 컴포넌트(교집합, 주 선택 순서) · 혼합 판정(프로퍼티 글 비교) · 고친 프로퍼티 하나만 나머지에 복사.
-- 인스펙터: 공통 컴포넌트 카드를 그리고 혼합이면 이름 앞에 "—", 고치면 나머지에 복사 + 한 트랜잭션. 공통이 아닌 컴포넌트 수 표시,
-  Add Component 는 모두에.
-
-결과:
-- EditorMultiEditTest 셋, 자체 시험 inspector.multiEditAppliesToAll.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** `EditorTest --test_filter=EditorMultiEditTest.*`, 자체 시험, 손으로 큐브 셋 골라 스케일 · 색 바꾸고 Ctrl+Z.
 
 ### I2 기본값과 다름 표시 · 되돌리기 화살표 · 프로퍼티 값 복사/붙여넣기 ★
 

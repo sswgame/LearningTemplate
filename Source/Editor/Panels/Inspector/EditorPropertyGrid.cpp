@@ -101,6 +101,7 @@ namespace sw::editor
         , _lastInvokeResult{}
         , _mapContainerAddText{}
         , _onEdited{}
+        , _isMixed{}
         , _pEditTargetComponent{ nullptr }
         , _pEditTargetObject{ nullptr }
         , _propertyDrawDepth{ 0 }
@@ -123,6 +124,8 @@ namespace sw::editor
         beginTarget( target );
         drawTypeProperties( target._pInstance, target._pType, pSectionTitle, listDrawnName );
         endTarget();
+        // 편집 통지(다중 선택의 나머지에 값 입히기)가 끝난 뒤에 되돌리기를 남긴다.
+        InspectorPropertyUndo::commitFinishedEdits();
     }
 
     void EditorPropertyGrid::drawMethodsAndEvents( const EditorPropertyGridTarget& target, bool bEvents )
@@ -139,6 +142,7 @@ namespace sw::editor
         _pEditTargetComponent = target._pComponent;
         _pEditTargetObject    = target._pComponent == nullptr ? target._pObject : nullptr;
         _onEdited             = target._onEdited;
+        _isMixed              = target._isMixed;
     }
 
     void EditorPropertyGrid::endTarget()
@@ -146,6 +150,7 @@ namespace sw::editor
         _pEditTargetComponent = nullptr;
         _pEditTargetObject    = nullptr;
         _onEdited             = {};
+        _isMixed              = {};
     }
 
     void EditorPropertyGrid::drawTypeProperties( void* pInstance, const TypeInfo* pTypeInfo, const utf8* pSectionTitle, const vector<hashed_string>& listDrawnName )
@@ -191,6 +196,12 @@ namespace sw::editor
                     ImGui::TableNextColumn();
 
                     ImGui::AlignTextToFramePadding();
+                    if ( _isMixed.isBound() && _isMixed( *prop ) )
+                    {
+                        ImGui::TextDisabled( "\xe2\x80\x94" ); // — (혼합)
+                        EditorWidgets::drawTooltip( "Multiple values" );
+                        ImGui::SameLine();
+                    }
                     ImGui::TextUnformatted( InspectorPropertyLayout::getPropertyLabel( *prop ) );
                     EditorWidgets::drawTooltip( prop->_metadata._tooltip.c_str() );
 
