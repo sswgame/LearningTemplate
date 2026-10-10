@@ -57,6 +57,7 @@ sw_addTestExecutable(EditorTest
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/MapCheckRows.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/MaterialPreviewShading.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/PackagingProgressParser.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerCallTree.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerScopeHistory.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/ProfilerTimelineLayout.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Panels/EditorTestOutputParser.cpp"

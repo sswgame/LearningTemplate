@@ -4,6 +4,8 @@
 
 #include "Core/Common/Defines.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Task/TaskManager.h"
@@ -13,6 +15,7 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
+#include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -114,12 +117,18 @@ namespace sw::editor
         , _timelineViewBegin{ 0 }
         , _timelineViewEnd{ 0 }
         , _timelineFrameCount{ 4 }
+        , _listCallNode{}
+        , _listCallRoot{}
+        , _listCallThread{}
+        , _spikeThresholdMs{ 33.3f }
         , _bCatalogDirty{ SW_TRUE }
         , _bCollect{ SW_TRUE }
         , _bTracyTried{ SW_FALSE }
         , _bTimelineFrozen{ SW_FALSE }
         , _bTimelineZoomed{ SW_FALSE }
-        , _reserved{ 0 }
+        , _bPauseOnSpike{ SW_FALSE }
+        , _bCapturePaused{ SW_FALSE }
+        , _bCallTreeFrozen{ SW_FALSE }
     {
     }
 
@@ -131,7 +140,8 @@ namespace sw::editor
         {
             if ( _bCollect == SW_TRUE && pProfiler->isEnabled() == false )
                 pProfiler->setEnabled( true );
-            std::ignore = _scopeHistory.capture( *pProfiler );
+            if ( _bCapturePaused == SW_FALSE && _scopeHistory.capture( *pProfiler ) )
+                pauseOnSpike();
         }
 
         if ( ImGui::BeginTabBar( "ProfilerTabs" ) )
@@ -156,6 +166,13 @@ namespace sw::editor
             if ( bTimelineTab )
             {
                 drawTimelineTab();
+                ImGui::EndTabItem();
+            }
+            const bool bCallTreeTab = ImGui::BeginTabItem( "Call Tree" );
+            EditorSelfTestMarks::note( "profiler.callTree.tab" );
+            if ( bCallTreeTab )
+            {
+                drawCallTreeTab();
                 ImGui::EndTabItem();
             }
             if ( ImGui::BeginTabItem( "Performance & Scene" ) )
@@ -200,7 +217,62 @@ namespace sw::editor
         ImGui::TextDisabled( "%u frames window, %u captured", _scopeHistory.getWindowFrame(), static_cast<uint32>( capturedFrames ) );
         ImGui::SameLine();
         if ( ImGui::SmallButton( "Clear" ) )
+        {
             _scopeHistory.reset();
+            _rowQuery._frameOffset = 0;
+        }
+        EditorSelfTestMarks::note( "profiler.capture.clear" );
+
+        // 멈춤 · 스파이크 · 캡처 파일(유니티 Profiler 의 Record 끄기 · 언리얼 stat hitches · Save/Load).
+        ImGui::SameLine();
+        if ( _bCapturePaused == SW_TRUE )
+        {
+            if ( ImGui::SmallButton( "Resume" ) )
+            {
+                _bCapturePaused        = SW_FALSE;
+                _rowQuery._frameOffset = 0;
+            }
+            EditorWidgets::drawTooltip( "Capturing is paused (a spike or an opened capture) - resume live capture" );
+        }
+        else if ( ImGui::SmallButton( "Pause" ) )
+            _bCapturePaused = SW_TRUE;
+        EditorSelfTestMarks::note( "profiler.capture.pause" );
+        ImGui::SameLine();
+        bool bPauseOnSpike = _bPauseOnSpike == SW_TRUE;
+        if ( ImGui::Checkbox( "Pause on spike", &bPauseOnSpike ) )
+            _bPauseOnSpike = bPauseOnSpike ? SW_TRUE : SW_FALSE;
+        EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * 4.0f );
+        ImGui::DragFloat( "##spikeMs", &_spikeThresholdMs, 0.1f, 0.1f, 1000.0f, "%.1f ms" );
+        EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
+        EditorWidgets::drawTooltip( "GT.Frame above this pauses capturing (and a running play session) on that frame" );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Save" ) )
+        {
+            const string path = getCaptureFilePath();
+            if ( FileUtil::ensureParentDirectoryExists( path ) && _scopeHistory.saveToFile( path ) )
+                SW_LOG_INFO( "Profiler capture saved: %#", path.c_str() );
+            else
+                SW_LOG_WARNING( "Profiler capture could not be saved: %#", path.c_str() );
+        }
+        EditorSelfTestMarks::note( "profiler.capture.save" );
+        EditorWidgets::drawTooltip( "Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)" );
+        ImGui::SameLine();
+        if ( ImGui::SmallButton( "Load" ) )
+        {
+            const string path = getCaptureFilePath();
+            if ( _scopeHistory.loadFromFile( path ) )
+            {
+                _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮지 않게
+                _rowQuery._frameOffset = 0;
+                SW_LOG_INFO( "Profiler capture loaded: %#", path.c_str() );
+            }
+            else
+                SW_LOG_WARNING( "Profiler capture could not be loaded: %#", path.c_str() );
+        }
+        EditorSelfTestMarks::note( "profiler.capture.load" );
+        EditorWidgets::drawTooltip( "Open Saved/Profiler/ProfilerCapture.txt (pauses live capture)" );
 
         // Tracy — 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼.
         ImGui::SameLine();
@@ -428,6 +500,30 @@ namespace sw::editor
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
             ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
                               maxMs, ImVec2{ 0.0f, 48.0f } );
+            // 그래프의 한 프레임을 누르면 표의 "Last" 가 그 프레임 값이 된다(유니티 Profiler 의 프레임 고르기). 고른 프레임에 세로줄.
+            const ImVec2  plotMin    = ImGui::GetItemRectMin();
+            const ImVec2  plotMax    = ImGui::GetItemRectMax();
+            const float32 frameWidth = ( plotMax.x - plotMin.x ) / static_cast<float32>( _listScratchSeries.size() );
+            if ( ImGui::IsItemClicked( ImGuiMouseButton_Left ) && frameWidth > 0.0f )
+            {
+                const int32 clicked    = static_cast<int32>( ( ImGui::GetIO().MousePos.x - plotMin.x ) / frameWidth );
+                const int32 lastIndex  = static_cast<int32>( _listScratchSeries.size() ) - 1;
+                _rowQuery._frameOffset = static_cast<uint32>( lastIndex - MathUtil::clamp( clicked, 0, lastIndex ) );
+            }
+            if ( EditorSelfTestMarks::isEnabled() )
+                EditorSelfTestMarks::note( ( string{ "profiler.graph." } + pSeriesName ).c_str() );
+            if ( _rowQuery._frameOffset > 0 )
+            {
+                const float32 lineX = plotMax.x - ( static_cast<float32>( _rowQuery._frameOffset ) + 0.5f ) * frameWidth;
+                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, IM_COL32( 255, 200, 60, 255 ) );
+            }
+        }
+        if ( _rowQuery._frameOffset > 0 )
+        {
+            ImGui::TextColored( ImVec4{ 1.0f, 0.8f, 0.25f, 1.0f }, "Last column shows the frame %u frames ago", _rowQuery._frameOffset );
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( "Latest" ) )
+                _rowQuery._frameOffset = 0;
         }
     }
 
@@ -803,5 +899,136 @@ namespace sw::editor
         }
         else if ( bDetailed == false )
             ImGui::Text( "Detailed CallStack tracking is disabled." );
+    }
+
+    void ProfilerPanel::pauseOnSpike()
+    {
+        float32 frameMicro{ 0.0f };
+        if ( _bPauseOnSpike == SW_FALSE || _scopeHistory.readValue( "GT.Frame", 0, frameMicro ) == false || frameMicro < _spikeThresholdMs * 1000.0f )
+            return;
+        _bCapturePaused        = SW_TRUE;
+        _rowQuery._frameOffset = 0;
+        if ( EditorPlaySession::isPlaying() )
+            EditorPlaySession::pause();
+        SW_LOG_INFO( "Profiler paused on a spike: GT.Frame %# ms (threshold %# ms)", Fmt( static_cast<float64>( frameMicro ) / 1000.0, Format().precision( 2 ) ),
+                     Fmt( static_cast<float64>( _spikeThresholdMs ), Format().precision( 1 ) ) );
+    }
+
+    string ProfilerPanel::getCaptureFilePath()
+    {
+        return FileUtil::joinPath( FileUtil::joinPath( path::kSavedFolder, "Profiler" ), "ProfilerCapture.txt" );
+    }
+
+    void ProfilerPanel::drawCallTreeTab()
+    {
+        FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
+        if ( pProfiler == nullptr )
+        {
+            ImGui::TextDisabled( "Engine profiler is not available" );
+            return;
+        }
+        ProfilerTimeline& timeline   = pProfiler->getTimeline();
+        const bool        bRecording = timeline.isRecording();
+        if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
+        {
+            if ( bRecording == false )
+            {
+                timeline.clear();
+                _bCollect = SW_TRUE;
+                pProfiler->setEnabled( true );
+            }
+            timeline.setRecording( bRecording == false );
+        }
+        EditorSelfTestMarks::note( "profiler.callTree.record" );
+        EditorWidgets::drawTooltip( "The call tree folds the timeline recording (same recording as the Timeline tab)" );
+        ImGui::SameLine();
+        ImGui::TextUnformatted( "Frames:" );
+        for ( const uint32 frameChoice : ProfilerPanelInternal::kArrTimelineFrameChoice )
+        {
+            ImGui::SameLine();
+            fixed_string<constant::kMaxBuffer16> label;
+            formatstring( label.data(), label.capacity(), "%#", frameChoice );
+            ImGui::PushID( "callTreeFrames" );
+            if ( ImGui::RadioButton( label.c_str(), _timelineFrameCount == frameChoice ) )
+                _timelineFrameCount = frameChoice;
+            ImGui::PopID();
+        }
+        ImGui::SameLine();
+        bool bFrozen = _bCallTreeFrozen == SW_TRUE;
+        if ( ImGui::Checkbox( "Freeze##callTree", &bFrozen ) )
+            _bCallTreeFrozen = bFrozen ? SW_TRUE : SW_FALSE;
+
+        if ( _bCallTreeFrozen == SW_FALSE )
+        {
+            uint64 windowBegin{ 0 };
+            uint64 windowEnd{ 0 };
+            if ( timeline.collectRecentFrames( _timelineFrameCount, _listCallThread, windowBegin, windowEnd ) == false )
+                _listCallThread.clear();
+            ProfilerCallTree::compute( _listCallThread, _listCallNode );
+            ProfilerCallTree::sortChildrenByTotal( _listCallNode );
+            ProfilerCallTree::collectRoots( _listCallNode, _listCallRoot );
+        }
+        if ( _listCallRoot.empty() )
+        {
+            ImGui::TextDisabled( "%s", bRecording ? "Waiting for frames..." : "Press Record to fold the last frames into a call tree." );
+            return;
+        }
+
+        const ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_SizingStretchProp;
+        if ( ImGui::BeginTable( "##profilerCallTree", 4, flags, ImGui::GetContentRegionAvail() ) == false )
+            return;
+        ImGui::TableSetupScrollFreeze( 0, 1 );
+        ImGui::TableSetupColumn( "Scope", ImGuiTableColumnFlags_WidthStretch, 4.0f );
+        ImGui::TableSetupColumn( "Total (ms)", 0, 1.0f );
+        ImGui::TableSetupColumn( "Self (ms)", 0, 1.0f );
+        ImGui::TableSetupColumn( "Calls", 0, 0.8f );
+        ImGui::TableHeadersRow();
+        uint32 shownThread = ProfilerCallTree::kNoParent;
+        for ( const uint32 root : _listCallRoot )
+        {
+            const uint32 threadIndex = _listCallNode[root]._threadIndex;
+            if ( threadIndex != shownThread && threadIndex < _listCallThread.size() )
+            {
+                shownThread = threadIndex;
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::TextColored( ImVec4{ 0.6f, 0.8f, 1.0f, 1.0f }, "%s", _listCallThread[threadIndex]._name.c_str() );
+            }
+            drawCallTreeNode( root );
+        }
+        ImGui::EndTable();
+    }
+
+    void ProfilerPanel::drawCallTreeNode( uint32 nodeIndex )
+    {
+        const FrameProfiler*    pProfiler = editor::getService<FrameProfiler>();
+        const ProfilerCallNode& node      = _listCallNode[nodeIndex];
+        const utf8*             pName     = pProfiler != nullptr ? pProfiler->findScopeName( node._slot ) : nullptr;
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::PushID( static_cast<int32>( nodeIndex ) );
+        const bool         bLeaf     = node._firstChild == ProfilerCallTree::kNoParent;
+        ImGuiTreeNodeFlags treeFlags = ImGuiTreeNodeFlags_SpanFullWidth | ( bLeaf ? ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen : 0 );
+        // 바깥 두 겹은 펼쳐 둔다(프레임 → 큰 단계가 바로 보이게).
+        if ( node._depth < 2 )
+            treeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
+        const bool    bOpen       = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );
+        const float64 kNanosPerMs = 1000000.0;
+        const float64 frameCount  = static_cast<float64>( MathUtil::max( _timelineFrameCount, 1u ) );
+        ImGui::TableNextColumn();
+        ImGui::Text( "%.3f", static_cast<float64>( node._totalNanos ) / kNanosPerMs / frameCount );
+        ImGui::TableNextColumn();
+        ImGui::Text( "%.3f", static_cast<float64>( node._selfNanos ) / kNanosPerMs / frameCount );
+        ImGui::TableNextColumn();
+        ImGui::Text( "%u", node._callCount );
+        if ( bOpen && bLeaf == false )
+        {
+            for ( uint32 child = node._firstChild; child != ProfilerCallTree::kNoParent; child = _listCallNode[child]._nextSibling )
+            {
+                drawCallTreeNode( child );
+            }
+            ImGui::TreePop();
+        }
+        ImGui::PopID();
     }
 } // namespace sw::editor

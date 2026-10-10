@@ -40,7 +40,8 @@
 ### 기능
 
 - **Panels/**: Hierarchy, Inspector, Scene(에디터 카메라 · 편집 보조선), Game(게임 카메라 출력), Content Browser, Console, Profiler(CPU 구간 · GPU 패스 · 카운터 실시간 표 + 프레임 그래프 — 집계는 ImGui 없는
-  `ProfilerScopeHistory`, "Open Tracy" 는 `Common/Commands/EditorTracyLauncher` 가 같은 판 Tracy 뷰어를 띄워 localhost 에 붙인다),
+  `ProfilerScopeHistory` — 그래프를 누르면 표가 그 프레임 값, Pause · Pause on spike(GT.Frame 문턱) · Save/Load(`Saved/Profiler/ProfilerCapture.txt`), Call Tree 탭은 타임라인 녹화를
+  `ProfilerCallTree` 로 접은 호출 트리(시나리오 `editor/profilercapture`), "Open Tracy" 는 `Common/Commands/EditorTracyLauncher` 가 같은 판 Tracy 뷰어를 띄워 localhost 에 붙인다),
   Sequencer, Animation Graph, Animation Rewind(기록된 포즈 · 상태를 시간 막대로 훑기 — 훑으면 PIE 를 멈춘다), Dialogue Graph, Prefab Editor, Tile Map,
   Sprite Clip, User Settings(플레이어 옵션을 메뉴 바인딩 API 로 바꿔 보는 창 —
   셀프 시험 `userSettings.panelDrawsEveryTab`), UI Preview(런타임 UI 문서를 게임 UI 와 따로 오프스크린 화면으로 지어 보는 창 — 해상도 견본 · UI/글자 배율 ·

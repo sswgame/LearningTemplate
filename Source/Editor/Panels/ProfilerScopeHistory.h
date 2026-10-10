@@ -71,6 +71,7 @@ namespace sw::editor
         ProfilerScopeKind  _kind{ ProfilerScopeKind::CPU };        ///< 이 종류만
         ProfilerSortColumn _sortColumn{ ProfilerSortColumn::P99 }; ///< 정렬 열
         bool               _bDescending{ true };                   ///< 큰 값이 위
+        uint32             _frameOffset{ 0 };                      ///< "Last" 열이 보일 프레임(0 = 가장 최근, 1 = 그 앞 …) — 그래프에서 고른 프레임
     };
 } // namespace sw::editor
 
@@ -103,6 +104,16 @@ namespace sw::editor
          * @return 그런 구간이 없으면 false 입니다.
          */
         [[nodiscard]] bool copySeries( const string& scopeName, vector<float32>& outListValue ) const;
+        /** @brief 이름 붙은 구간의 @p frameOffset 프레임 전 값입니다(0 = 가장 최근). 그 프레임에 안 불렸거나 구간이 없으면 false 입니다. */
+        [[nodiscard]] bool readValue( const string& scopeName, uint32 frameOffset, float32& outValue ) const;
+
+        /**
+         * @brief 담은 창을 글 파일로 씁니다(프로파일 캡처 저장). 구간마다 한 줄 — 종류, 이름, 오래된 것부터 창 크기만큼의 값(안 불린 칸은 -1).
+         * @details 언리얼 `stat startfile` · 유니티 Profiler 의 Save 자리다. 깊은 분석(시간축 · 스레드)은 Tracy 캡처가 맡고, 이것은 패널 표를 다시 보는 용도다.
+         */
+        [[nodiscard]] bool saveToFile( string_view filePath ) const;
+        /** @brief `saveToFile` 이 쓴 파일을 읽어 창을 바꿉니다. 형식이 틀리면 지금 값을 그대로 두고 false 입니다. */
+        [[nodiscard]] bool loadFromFile( string_view filePath );
 
         /** @brief 창 크기(프레임)입니다. */
         uint32 getWindowFrame() const { return _windowFrame; }
@@ -121,8 +132,8 @@ namespace sw::editor
     private:
         /** @brief 이름의 종류를 정합니다. 카운터 표시가 먼저이고, 이름이 `GPU.` 로 시작하면 GPU 입니다. */
         static ProfilerScopeKind classifyScope( const string& name, bool bCounter );
-        /** @brief 트랙 하나의 창 안 통계를 줄에 채웁니다. */
-        void fillRow( const ScopeTrack& track, ProfilerScopeRow& outRow ) const;
+        /** @brief 트랙 하나의 창 안 통계를 줄에 채웁니다. "Last" 는 @p frameOffset 프레임 전 값입니다. */
+        void fillRow( const ScopeTrack& track, uint32 frameOffset, ProfilerScopeRow& outRow ) const;
 
     private:
         vector<ScopeTrack> _listTrack;          ///< 프로파일러 슬롯 번호 = 인덱스

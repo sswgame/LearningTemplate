@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 프로파일러 패널의 캡처 다루기(에디터 보강 "그 밖에": 프로파일러).
+  1) 프레임 그래프(GT.Frame)를 누르면 표가 그 프레임을 보인다(Editor.ProfilerSelectedFrame 이 0 보다 크다).
+  2) Pause 로 담기를 멈추고 Save, Clear 뒤 Load 하면 저장한 창이 다시 보이고 담기는 멈춰 있다(Saved/Profiler/ProfilerCapture.txt).
+  3) Pause on spike 의 문턱을 0.1 ms 로 낮추면 다음 프레임에 담기가 멈춘다(에디터 프레임은 0.1 ms 를 넘는다).
+  4) Call Tree 탭에서 Record 를 누르면 녹화가 호출 트리로 접힌다(Editor.ProfilerCallTreeNodes).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/profilercapture.scenario.xml -dx12
+-->
+<Scenario name="editor.profilercapture" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="5"><DevCommand line="layout.reset"/></At>
+	<At frame="10"><ResizeWindow width="1600" height="900"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="30"><DevCommand line="panel.focus profiler"/></At>
+	<At frame="110"><Expect probe="Editor.ProfilerCapturedFrames" atLeast="30"/><Expect probe="Editor.ProfilerSelectedFrame" equals="0"/></At>
+	<At frame="115"><EditorClick mark="profiler.graph.GT.Frame" anchor="0.5,0.5"/></At>
+	<At frame="130"><Expect probe="Editor.ProfilerSelectedFrame" atLeast="1"/></At>
+	<!-- 2) Pause · Save · Clear · Load -->
+	<At frame="135"><EditorClick mark="profiler.capture.pause"/></At>
+	<At frame="150"><Expect probe="Editor.ProfilerCapturePaused" equals="1"/><EditorClick mark="profiler.capture.save"/></At>
+	<At frame="165"><EditorClick mark="profiler.capture.clear"/></At>
+	<At frame="180"><Expect probe="Editor.ProfilerCapturedFrames" equals="0"/><EditorClick mark="profiler.capture.load"/></At>
+	<At frame="200">
+		<Expect probe="Editor.ProfilerCapturedFrames" atLeast="30"/>
+		<Expect probe="Editor.ProfilerCapturePaused" equals="1"/>
+		<ExpectLog contains="Profiler capture loaded" atLeast="1"/>
+	</At>
+	<!-- 3) Pause on spike -->
+	<At frame="205"><EditorClick mark="profiler.capture.pauseOnSpike"/></At>
+	<At frame="215"><EditorClick mark="profiler.capture.spikeMs" mods="ctrl"/></At>
+	<At frame="225"><EditorKey key="Ctrl+A"/></At>
+	<At frame="230"><EditorText value="0.1"/></At>
+	<At frame="235"><EditorKey key="Enter"/></At>
+	<At frame="245"><EditorClick mark="profiler.capture.pause"/></At>
+	<At frame="300">
+		<Expect probe="Editor.ProfilerCapturePaused" equals="1"/>
+		<ExpectLog contains="Profiler paused on a spike" atLeast="1"/>
+	</At>
+	<!-- 4) Call Tree -->
+	<At frame="310"><EditorClick mark="profiler.callTree.tab" state="down"/></At>
+	<At frame="313"><EditorClick mark="profiler.callTree.tab" state="up"/></At>
+	<At frame="325"><EditorClick mark="profiler.callTree.record"/></At>
+	<At frame="400"><Expect probe="Editor.ProfilerCallTreeNodes" atLeast="3"/></At>
+	<At frame="405"><EditorClick mark="profiler.callTree.record"/></At>
+	<At frame="420"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

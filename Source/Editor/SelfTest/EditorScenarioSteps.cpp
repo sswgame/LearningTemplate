@@ -29,6 +29,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/ModulesPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
+#include "Editor/Panels/ProfilerPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
 #include "Editor/Panels/SequencerPanel.h"
 #include "Editor/Panels/ShortcutsPanel.h"
@@ -1274,6 +1275,44 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 프로파일러 패널 값 하나입니다(열려 있지 않으면 값을 내지 않는다). */
+            [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
+            {
+                EditorContext*       pContext = EditorContext::get();
+                const ProfilerPanel* pPanel   = pContext != nullptr ? static_cast<const ProfilerPanel*>( pContext->getPanelManager().findPanel( "profiler" ) ) : nullptr;
+                if ( pPanel == nullptr || pPanel->isOpen() == false )
+                    return false;
+                switch ( which )
+                {
+                    case 0:
+                    {
+                        outValue = static_cast<float64>( pPanel->getCallTreeNodeCount() );
+                        break;
+                    }
+                    case 1:
+                    {
+                        outValue = static_cast<float64>( pPanel->getSelectedFrameOffset() );
+                        break;
+                    }
+                    case 2:
+                    {
+                        outValue = pPanel->isCapturePaused() ? 1.0 : 0.0;
+                        break;
+                    }
+                    default:
+                    {
+                        outValue = static_cast<float64>( pPanel->getCapturedFrameCount() );
+                        break;
+                    }
+                }
+                return true;
+            }
+
+            [[nodiscard]] static bool readProfilerCallTreeNodes( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 0, outValue ); }
+            [[nodiscard]] static bool readProfilerSelectedFrame( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 1, outValue ); }
+            [[nodiscard]] static bool readProfilerCapturePaused( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 2, outValue ); }
+            [[nodiscard]] static bool readProfilerCapturedFrames( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 3, outValue ); }
+
             /** @brief 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1429,6 +1468,13 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readGameViewMode );
     SW_AUTOMATION_PROBE( editorTestRunnerPassCount, "Editor.TestRunnerPassCount", "Editor self tests that passed in the last (or current) self test run",
                          &EditorScenarioStepsInternal::readTestRunnerPassCount );
+    SW_AUTOMATION_PROBE( editorProfilerCallTreeNodes, "Editor.ProfilerCallTreeNodes", "Nodes of the profiler call tree drawn last", &EditorScenarioStepsInternal::readProfilerCallTreeNodes );
+    SW_AUTOMATION_PROBE( editorProfilerSelectedFrame, "Editor.ProfilerSelectedFrame", "Frame the profiler table shows: 0 latest, n frames ago",
+                         &EditorScenarioStepsInternal::readProfilerSelectedFrame );
+    SW_AUTOMATION_PROBE( editorProfilerCapturePaused, "Editor.ProfilerCapturePaused", "1 while the profiler panel does not capture (spike, opened capture, Pause)",
+                         &EditorScenarioStepsInternal::readProfilerCapturePaused );
+    SW_AUTOMATION_PROBE( editorProfilerCapturedFrames, "Editor.ProfilerCapturedFrames", "Frames the profiler panel captured (or the opened capture holds)",
+                         &EditorScenarioStepsInternal::readProfilerCapturedFrames );
     SW_AUTOMATION_PROBE( editorProfilerTimelineThreadCount, "Editor.ProfilerTimelineThreadCount",
                          "Threads with profile scopes in the profiler timeline over the last 4 frames (0 while not recording)",
                          &EditorScenarioStepsInternal::readProfilerTimelineThreadCount );

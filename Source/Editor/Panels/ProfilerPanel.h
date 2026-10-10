@@ -12,6 +12,7 @@
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
 #include "Editor/Common/GUI/IEditorPanel.h"
+#include "Editor/Panels/ProfilerCallTree.h"
 #include "Editor/Panels/ProfilerScopeHistory.h"
 #include "Editor/Panels/ProfilerTimelineLayout.h"
 
@@ -56,6 +57,26 @@ namespace sw::editor
         /** @brief 타임라인 캔버스(스레드 줄 · 사각형 · 프레임 경계선 · 툴팁)를 그립니다. */
         void drawTimelineCanvas();
 
+        /** @brief 호출 트리 탭입니다 — 타임라인 녹화의 사건을 경로로 접어 합 · 자기 시간 · 횟수를 보인다(유니티 Profiler Hierarchy). */
+        void drawCallTreeTab();
+        /** @brief 호출 트리 노드 하나와 그 자식을 표 줄로 그립니다. */
+        void drawCallTreeNode( uint32 nodeIndex );
+        /** @brief 새로 담은 프레임의 GT.Frame 이 문턱을 넘었으면 담기를 멈추고 플레이를 일시정지합니다(Pause on spike). */
+        void pauseOnSpike();
+        /** @brief 캡처 파일 경로(`Saved/Profiler/ProfilerCapture.txt`)입니다. */
+        static string getCaptureFilePath();
+
+    public:
+        /** @brief 탐침 — 표가 보이는 프레임(0 = 가장 최근)입니다. */
+        uint32 getSelectedFrameOffset() const { return _rowQuery._frameOffset; }
+        /** @brief 탐침 — 담기를 멈췄으면(스파이크 · 캡처 열기) true 입니다. */
+        bool isCapturePaused() const { return _bCapturePaused == SW_TRUE; }
+        /** @brief 탐침 — 담은 프레임 수입니다. */
+        uint64 getCapturedFrameCount() const { return _scopeHistory.getCapturedFrameCount(); }
+        /** @brief 탐침 — 마지막으로 그린 호출 트리의 노드 수입니다. */
+        uint32 getCallTreeNodeCount() const { return static_cast<uint32>( _listCallNode.size() ); }
+
+    private:
         /** @brief 활성 씬의 컴포넌트 분포 섹션을 그립니다. */
         void drawSceneDistributionSection();
 
@@ -79,11 +100,17 @@ namespace sw::editor
         uint64                         _timelineViewBegin; ///< 보이는 범위(확대 · 이동)
         uint64                         _timelineViewEnd;
         uint32                         _timelineFrameCount; ///< 최근 프레임 수(1 · 4 · 16)
+        vector<ProfilerCallNode>       _listCallNode;       ///< 호출 트리(녹화에서 다시 접는다)
+        vector<uint32>                 _listCallRoot;       ///< 호출 트리 뿌리(스레드 순 · 큰 순)
+        vector<ProfilerTimelineThread> _listCallThread;     ///< 호출 트리가 접은 사건(Freeze 면 그대로)
+        float32                        _spikeThresholdMs;   ///< Pause on spike 문턱(GT.Frame, ms)
         uint8                          _bCatalogDirty   : 1;
         uint8                          _bCollect        : 1; ///< 엔진 프로파일러를 켜 두고 담는다
         uint8                          _bTracyTried     : 1; ///< "Open Tracy" 를 한 번이라도 눌렀다
         uint8                          _bTimelineFrozen : 1; ///< Freeze — 녹화는 계속하고 보기만 멈춘다
         uint8                          _bTimelineZoomed : 1; ///< 사용자가 확대 · 이동했다(아니면 보이는 범위가 모은 구간을 따라간다)
-        [[maybe_unused]] uint8         _reserved        : 3;
+        uint8                          _bPauseOnSpike   : 1; ///< GT.Frame 이 문턱을 넘으면 멈춘다
+        uint8                          _bCapturePaused  : 1; ///< 담기를 멈췄다 — 스파이크를 잡았거나 캡처 파일을 열었다
+        uint8                          _bCallTreeFrozen : 1; ///< 호출 트리를 다시 접지 않는다
     };
 } // namespace sw::editor

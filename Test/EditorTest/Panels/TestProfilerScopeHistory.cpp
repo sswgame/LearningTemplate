@@ -184,3 +184,55 @@ SW_TEST_CASE( EditorTracyLauncherTest, FindsViewerAndBuildsConnectCommand )
     SW_EXPECT_TRUE_MSG( command.find( "-a 127.0.0.1 -p 8087" ) != sw::string::npos, command.c_str() );
     SW_EXPECT_TRUE_MSG( command.front() == '"', command.c_str() );
 }
+
+/**
+ * @brief [ProfilerScopeHistoryTest] 고른 프레임(그래프 클릭)의 값이 "Last" 열에 오고, 캡처 파일로 쓰고 읽으면 같은 표가 나온다
+ */
+SW_TEST_CASE( ProfilerScopeHistoryTest, FrameOffsetAndCaptureFileRoundTrip )
+{
+    sw::FrameProfiler profiler;
+    profiler.setEnabled( true );
+    const uint32 slot = profiler.registerScope( "GT.Frame" );
+
+    sw::editor::ProfilerScopeHistory history{ 4 };
+    for ( uint32 frame = 1; frame <= 6; ++frame )
+    {
+        profiler.addSample( slot, static_cast<uint64>( frame ) * 1'000'000 ); // 1 ms, 2 ms, … 6 ms
+        foldFrameInternal( profiler );
+        SW_ASSERT_TRUE( history.capture( profiler ) );
+    }
+    float32 value{ 0.0f };
+    SW_ASSERT_TRUE( history.readValue( "GT.Frame", 0, value ) );
+    SW_EXPECT_NEAR_EQUAL( 6000.0f, value, 0.5f );
+    SW_ASSERT_TRUE( history.readValue( "GT.Frame", 2, value ) );
+    SW_EXPECT_NEAR_EQUAL( 4000.0f, value, 0.5f );
+    SW_EXPECT_FALSE( history.readValue( "GT.Frame", 4, value ) ); // 창(4) 밖
+
+    sw::editor::ProfilerRowQuery query{};
+    query._kind        = sw::editor::ProfilerScopeKind::CPU;
+    query._frameOffset = 1;
+    sw::vector<sw::editor::ProfilerScopeRow> listRow;
+    history.makeRows( query, listRow );
+    const sw::editor::ProfilerScopeRow* pRow = findRowInternal( listRow, "GT.Frame" );
+    SW_ASSERT_NOT_NULL( pRow );
+    SW_EXPECT_NEAR_EQUAL( 5000.0, pRow->_last, 0.5 );
+
+    const sw::string path = test::makeTempPath( "ProfilerCapture.txt" );
+    SW_ASSERT_TRUE( history.saveToFile( path ) );
+    sw::editor::ProfilerScopeHistory loaded{ 16 };
+    SW_ASSERT_TRUE( loaded.loadFromFile( path ) );
+    SW_EXPECT_EQUAL( 4u, loaded.getWindowFrame() );
+    SW_EXPECT_EQUAL( uint64( 6 ), loaded.getCapturedFrameCount() );
+    sw::vector<sw::editor::ProfilerScopeRow> listLoaded;
+    query._frameOffset = 0;
+    loaded.makeRows( query, listLoaded );
+    const sw::editor::ProfilerScopeRow* pLoaded = findRowInternal( listLoaded, "GT.Frame" );
+    SW_ASSERT_NOT_NULL( pLoaded );
+    SW_EXPECT_NEAR_EQUAL( 6000.0, pLoaded->_last, 0.5 );
+    SW_EXPECT_NEAR_EQUAL( 4500.0, pLoaded->_average, 0.5 );
+
+    // 형식이 틀리면 지금 값을 그대로 둔다.
+    SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( path, "not a capture" ) );
+    SW_EXPECT_FALSE( loaded.loadFromFile( path ) );
+    SW_EXPECT_EQUAL( uint64( 6 ), loaded.getCapturedFrameCount() );
+}
