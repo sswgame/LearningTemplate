@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -13,37 +13,37 @@ namespace sw
 {
     namespace
     {
-        struct SrpgCatalogInternal
+        struct SRPGCatalogInternal
         {
-            static constexpr const utf8* kArrPilotStatName[kSrpgPilotStatCount]   = { "shooting", "melee", "reaction", "awaken", "defense" };
-            static constexpr const utf8* kArrPilotGrowthName[kSrpgPilotStatCount] = { "growShooting", "growMelee", "growReaction", "growAwaken", "growDefense" };
+            static constexpr const utf8* kArrPilotStatName[kSRPGPilotStatCount]   = { "shooting", "melee", "reaction", "awaken", "defense" };
+            static constexpr const utf8* kArrPilotGrowthName[kSRPGPilotStatCount] = { "growShooting", "growMelee", "growReaction", "growAwaken", "growDefense" };
 
-            [[nodiscard]] static bool parseMoveType( string_view text, SrpgMoveType& outMoveType )
+            [[nodiscard]] static bool parseMoveType( string_view text, SRPGMoveType& outMoveType )
             {
                 if ( StringUtil::equals( text, string_view( "Ground" ), true ) )
-                    outMoveType = SrpgMoveType::Ground;
+                    outMoveType = SRPGMoveType::Ground;
                 else if ( StringUtil::equals( text, string_view( "Air" ), true ) )
-                    outMoveType = SrpgMoveType::Air;
+                    outMoveType = SRPGMoveType::Air;
                 else if ( StringUtil::equals( text, string_view( "Space" ), true ) )
-                    outMoveType = SrpgMoveType::Space;
+                    outMoveType = SRPGMoveType::Space;
                 else if ( StringUtil::equals( text, string_view( "Water" ), true ) )
-                    outMoveType = SrpgMoveType::Water;
+                    outMoveType = SRPGMoveType::Water;
                 else
                     return false;
                 return true;
             }
 
             /** @brief "1 1 - 2" 처럼 이동 타입 순서의 정수 넷입니다. `-` 는 @p dashValue 입니다. */
-            static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSrpgMoveTypeCount], bool bAptitude )
+            static void parseFourInts( string_view text, int32 dashValue, int32 ( &inoutArrValue )[kSRPGMoveTypeCount], bool bAptitude )
             {
                 int32 slot = 0;
                 GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
                 {
-                    if ( slot >= kSrpgMoveTypeCount )
+                    if ( slot >= kSRPGMoveTypeCount )
                         return;
                     int32 value = inoutArrValue[slot];
                     if ( bAptitude )
-                        value = SrpgCatalog::parseAptitude( token, value );
+                        value = SRPGCatalog::parseAptitude( token, value );
                     else if ( StringUtil::equals( token, string_view( "-" ) ) )
                         value = dashValue;
                     else if ( StringUtil::parseInt( token, value ) == false )
@@ -74,17 +74,17 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "SrpgCatalog" );
+    SW_LOG_CALLER( "SRPGCatalog" );
 
-    int32 SrpgPilotDef::computeStat( SrpgPilotStat stat, int32 level ) const
+    int32 SRPGPilotDef::computeStat( SRPGPilotStat stat, int32 level ) const
     {
         const size_t index = static_cast<size_t>( stat );
-        if ( index >= static_cast<size_t>( kSrpgPilotStatCount ) )
+        if ( index >= static_cast<size_t>( kSRPGPilotStatCount ) )
             return 0;
         return _arrStat[index] + _arrGrowth[index] * MathUtil::max( 0, level - 1 );
     }
 
-    SrpgCatalog::SrpgCatalog()
+    SRPGCatalog::SRPGCatalog()
         : _terrainCatalog{}
         , _weaponCatalog{}
         , _unitCatalog{}
@@ -94,7 +94,7 @@ namespace sw
     {
     }
 
-    int32 SrpgCatalog::parseAptitude( string_view token, int32 fallback )
+    int32 SRPGCatalog::parseAptitude( string_view token, int32 fallback )
     {
         if ( StringUtil::equals( token, string_view( "S" ), true ) )
             return 120;
@@ -114,7 +114,7 @@ namespace sw
         return MathUtil::max( 0, value );
     }
 
-    uint32 SrpgCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 SRPGCatalog::loadRoot( const XmlNode& root, string_view sourceName )
     {
         const XmlNode pilotCurve = root.findChild( "PilotCurve" );
         if ( pilotCurve )
@@ -148,14 +148,14 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( const SrpgUnitDef& def : _unitCatalog.getAll() )
+        for ( const SRPGUnitDef& def : _unitCatalog.getAll() )
         {
             for ( const hashed_string& weaponId : def._listWeaponId )
             {
                 if ( _weaponCatalog.find( weaponId ) == nullptr )
                     SW_LOG_WARNING( "%#: unit '%#' has unknown weapon '%#'", sourceName, def._id.c_str(), weaponId.c_str() );
             }
-            for ( const SrpgDevelopTarget& target : def._listDevelop )
+            for ( const SRPGDevelopTarget& target : def._listDevelop )
             {
                 if ( _unitCatalog.find( target._unitId ) == nullptr )
                     SW_LOG_WARNING( "%#: unit '%#' develops into unknown '%#'", sourceName, def._id.c_str(), target._unitId.c_str() );
@@ -164,24 +164,24 @@ namespace sw
         return loadedCount;
     }
 
-    void SrpgCatalog::loadTerrain( const XmlNode& node, const utf8* pId )
+    void SRPGCatalog::loadTerrain( const XmlNode& node, const utf8* pId )
     {
-        SrpgTerrainDef def;
+        SRPGTerrainDef def;
         def._id           = hashed_string( pId );
         const utf8* pName = node.findAttribute( "name" );
         def._name         = pName != nullptr ? pName : pId;
-        SrpgCatalogInternal::parseFourInts( node.getAttributeText( "cost" ), -1, def._arrMoveCost, false );
+        SRPGCatalogInternal::parseFourInts( node.getAttributeText( "cost" ), -1, def._arrMoveCost, false );
         def._defenseBonus = node.getAttributeInt( "defense", def._defenseBonus );
         def._evasionBonus = node.getAttributeInt( "evasion", def._evasionBonus );
-        SrpgMoveType domain{ SrpgMoveType::Ground };
-        if ( SrpgCatalogInternal::parseMoveType( node.getAttributeText( "domain" ), domain ) )
+        SRPGMoveType domain{ SRPGMoveType::Ground };
+        if ( SRPGCatalogInternal::parseMoveType( node.getAttributeText( "domain" ), domain ) )
             def._domain = domain;
         (void)_terrainCatalog.add( def );
     }
 
-    void SrpgCatalog::loadWeapon( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadWeapon( const XmlNode& node, const utf8* pId, string_view sourceName )
     {
-        SrpgWeaponDef def;
+        SRPGWeaponDef def;
         def._id                = hashed_string( pId );
         const utf8* pName      = node.findAttribute( "name" );
         def._name              = pName != nullptr ? pName : pId;
@@ -197,17 +197,17 @@ namespace sw
         def._bPostMove         = node.getAttributeBool( "postMove", true ) ? SW_TRUE : SW_FALSE;
         const string_view kind = node.getAttributeText( "kind" );
         if ( StringUtil::equals( kind, string_view( "Melee" ), true ) )
-            def._kind = SrpgWeaponKind::Melee;
+            def._kind = SRPGWeaponKind::Melee;
         else if ( StringUtil::equals( kind, string_view( "Awaken" ), true ) )
-            def._kind = SrpgWeaponKind::Awaken;
+            def._kind = SRPGWeaponKind::Awaken;
         else if ( kind.empty() == false && StringUtil::equals( kind, string_view( "Shooting" ), true ) == false )
             SW_LOG_WARNING( "%#: weapon '%#' has an unknown kind '%#' - read as shooting", sourceName, pId, kind );
 
         const string_view mapAnchor = node.getAttributeText( "map" );
         if ( StringUtil::equals( mapAnchor, string_view( "Self" ), true ) )
-            def._mapAnchor = SrpgMapAnchor::Self;
+            def._mapAnchor = SRPGMapAnchor::Self;
         else if ( StringUtil::equals( mapAnchor, string_view( "Target" ), true ) )
-            def._mapAnchor = SrpgMapAnchor::Target;
+            def._mapAnchor = SRPGMapAnchor::Target;
         if ( def.isMap() )
         {
             GameDataXml::forEachToken( node.getAttributeText( "pattern" ), " ;\t", [&]( string_view token )
@@ -226,9 +226,9 @@ namespace sw
         (void)_weaponCatalog.add( def );
     }
 
-    void SrpgCatalog::loadUnit( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void SRPGCatalog::loadUnit( const XmlNode& node, const utf8* pId, string_view sourceName )
     {
-        SrpgUnitDef def;
+        SRPGUnitDef def;
         def._id                    = hashed_string( pId );
         const utf8* pName          = node.findAttribute( "name" );
         def._name                  = pName != nullptr ? pName : pId;
@@ -237,16 +237,16 @@ namespace sw
         def._move                  = MathUtil::max( 0, node.getAttributeInt( "move", def._move ) );
         def._armor                 = MathUtil::max( 0, node.getAttributeInt( "armor", def._armor ) );
         def._mobility              = node.getAttributeInt( "mobility", def._mobility );
-        def._size                  = SrpgCatalogInternal::parseSize( node.getAttributeText( "size" ), def._size );
+        def._size                  = SRPGCatalogInternal::parseSize( node.getAttributeText( "size" ), def._size );
         const string_view moveType = node.getAttributeText( "moveType" );
-        if ( moveType.empty() == false && SrpgCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
+        if ( moveType.empty() == false && SRPGCatalogInternal::parseMoveType( moveType, def._moveType ) == false )
             SW_LOG_WARNING( "%#: unit '%#' has an unknown moveType '%#' - read as ground", sourceName, pId, moveType );
-        SrpgCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
+        SRPGCatalogInternal::parseFourInts( node.getAttributeText( "aptitude" ), 0, def._arrAptitude, true );
         GameDataXml::forEachToken( node.getAttributeText( "weapons" ), ",; \t", [&]( string_view token )
         { def._listWeaponId.push_back( hashed_string( token ) ); } );
         GameDataXml::forEachToken( node.getAttributeText( "developsTo" ), ",; \t", [&]( string_view token )
         {
-            SrpgDevelopTarget target;
+            SRPGDevelopTarget target;
             const size_t      colon = token.find( ':' );
             target._unitId          = hashed_string( token.substr( 0, colon ) );
             if ( colon != string_view::npos && StringUtil::parseInt( token.substr( colon + 1 ), target._requiredLevel ) == false )
@@ -257,16 +257,16 @@ namespace sw
         (void)_unitCatalog.add( def );
     }
 
-    void SrpgCatalog::loadPilot( const XmlNode& node, const utf8* pId )
+    void SRPGCatalog::loadPilot( const XmlNode& node, const utf8* pId )
     {
-        SrpgPilotDef def;
+        SRPGPilotDef def;
         def._id           = hashed_string( pId );
         const utf8* pName = node.findAttribute( "name" );
         def._name         = pName != nullptr ? pName : pId;
-        for ( int32 stat = 0; stat < kSrpgPilotStatCount; ++stat )
+        for ( int32 stat = 0; stat < kSRPGPilotStatCount; ++stat )
         {
-            def._arrStat[stat]   = node.getAttributeInt( SrpgCatalogInternal::kArrPilotStatName[stat], def._arrStat[stat] );
-            def._arrGrowth[stat] = node.getAttributeInt( SrpgCatalogInternal::kArrPilotGrowthName[stat], def._arrGrowth[stat] );
+            def._arrStat[stat]   = node.getAttributeInt( SRPGCatalogInternal::kArrPilotStatName[stat], def._arrStat[stat] );
+            def._arrGrowth[stat] = node.getAttributeInt( SRPGCatalogInternal::kArrPilotGrowthName[stat], def._arrGrowth[stat] );
         }
         (void)_pilotCatalog.add( def );
     }

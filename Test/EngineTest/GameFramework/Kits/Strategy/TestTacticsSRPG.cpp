@@ -4,11 +4,11 @@
 
 #include "GameFramework/Base/Actor/Navigation/GridReachability.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgAiCommander.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgBattlefield.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgCombat.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgProgress.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -19,8 +19,8 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSrpgTestXml = R"(
-<SrpgCatalog>
+    constexpr const utf8* kSRPGTestXml = R"(
+<SRPGCatalog>
   <PilotCurve base="100" exponent="1" linear="0" maxLevel="20"/>
   <UnitCurve base="50" exponent="1" linear="0" maxLevel="10"/>
   <Terrain id="plain" cost="1 1 - 2" domain="Ground"/>
@@ -44,33 +44,33 @@ namespace
   <Unit id="gogg" hp="2500" en="60" move="4" moveType="Water" aptitude="B - - A" weapons="vulcan"/>
   <Pilot id="ace" shooting="20" melee="18" reaction="20" awaken="10" defense="10" growShooting="2" growMelee="2" growReaction="1" growAwaken="1" growDefense="1"/>
   <Pilot id="grunt" shooting="10" melee="10" reaction="10" awaken="0" defense="5"/>
-</SrpgCatalog>
+</SRPGCatalog>
 )";
 
-    struct SrpgTestScene
+    struct SRPGTestScene
     {
-        SrpgCatalog       _catalog;
-        SrpgBattlefield   _field;
-        vector<SrpgEvent> _listEvent;
+        SRPGCatalog       _catalog;
+        SRPGBattlefield   _field;
+        vector<SRPGEvent> _listEvent;
 
-        bool initialize( int32 width, int32 height, const SrpgSettings& settings = SrpgSettings{}, uint32 seed = 7 )
+        bool initialize( int32 width, int32 height, const SRPGSettings& settings = SRPGSettings{}, uint32 seed = 7 )
         {
-            if ( _catalog.loadFromXmlText( kSrpgTestXml, "TacticsSrpgTest" ) == false )
+            if ( _catalog.loadFromXmlText( kSRPGTestXml, "TacticsSRPGTest" ) == false )
                 return false;
             _field.initialize( &_catalog, width, height, hashed_string( "plain" ), settings, seed );
             return true;
         }
 
-        int32 add( const utf8* pUnit, const utf8* pPilot, SrpgTeam team, int32 cellX, int32 cellY )
+        int32 add( const utf8* pUnit, const utf8* pPilot, SRPGTeam team, int32 cellX, int32 cellY )
         {
             return _field.addUnit( hashed_string( pUnit ), hashed_string( pPilot ), team, int2{ cellX, cellY } );
         }
 
-        int32 countEvents( SrpgEvent::Kind kind )
+        int32 countEvents( SRPGEvent::Kind kind )
         {
             _field.drainEvents( _listEvent );
             int32 count = 0;
-            for ( const SrpgEvent& event : _listEvent )
+            for ( const SRPGEvent& event : _listEvent )
             {
                 count += event._kind == kind ? 1 : 0;
             }
@@ -88,24 +88,24 @@ namespace
         }
     };
 
-    SrpgSettings makeNoSupportSettings()
+    SRPGSettings makeNoSupportSettings()
     {
-        SrpgSettings settings;
+        SRPGSettings settings;
         settings._bSupportAttack  = SW_FALSE;
         settings._bSupportDefense = SW_FALSE;
         return settings;
     }
 } // namespace
 
-SW_TEST_CASE( TacticsSrpgTest, MoveRangeFollowsTerrainMoveTypeAlliesAndZoneOfControl )
+SW_TEST_CASE( TacticsSRPGTest, MoveRangeFollowsTerrainMoveTypeAlliesAndZoneOfControl )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 8, 3 ) );
     SW_EXPECT_EQUAL( 3, scene._field.fillTerrain( int2{ 2, 0 }, int2{ 2, 2 }, hashed_string( "forest" ) ) );
-    const int32 gm   = scene.add( "gm", "grunt", SrpgTeam::Player, 0, 1 );
-    const int32 core = scene.add( "core", "grunt", SrpgTeam::Player, 1, 1 );
+    const int32 gm   = scene.add( "gm", "grunt", SRPGTeam::Player, 0, 1 );
+    const int32 core = scene.add( "core", "grunt", SRPGTeam::Player, 1, 1 );
     SW_ASSERT_TRUE( gm >= 0 && core >= 0 );
-    SW_EXPECT_EQUAL( -1, scene.add( "zaku", "grunt", SrpgTeam::Enemy, 1, 1 ) ); // 이미 선 칸
+    SW_EXPECT_EQUAL( -1, scene.add( "zaku", "grunt", SRPGTeam::Enemy, 1, 1 ) ); // 이미 선 칸
 
     GridReachability reach;
     scene._field.computeMoveRange( gm, reach );
@@ -121,11 +121,11 @@ SW_TEST_CASE( TacticsSrpgTest, MoveRangeFollowsTerrainMoveTypeAlliesAndZoneOfCon
     SW_EXPECT_TRUE( reach.isReachable( int2{ 7, 1 } ) );
 
     // 이동 타입 — 지상은 바다에 못 서고, 수중은 바다가 1 · 땅이 2
-    SrpgTestScene water;
+    SRPGTestScene water;
     SW_ASSERT_TRUE( water.initialize( 6, 1 ) );
     SW_EXPECT_EQUAL( 2, water._field.fillTerrain( int2{ 0, 0 }, int2{ 1, 0 }, hashed_string( "sea" ) ) );
-    SW_EXPECT_EQUAL( -1, water.add( "gm", "grunt", SrpgTeam::Player, 0, 0 ) );
-    const int32 gogg = water.add( "gogg", "grunt", SrpgTeam::Enemy, 0, 0 );
+    SW_EXPECT_EQUAL( -1, water.add( "gm", "grunt", SRPGTeam::Player, 0, 0 ) );
+    const int32 gogg = water.add( "gogg", "grunt", SRPGTeam::Enemy, 0, 0 );
     SW_ASSERT_TRUE( gogg >= 0 );
     water._field.computeMoveRange( gogg, reach );
     SW_EXPECT_EQUAL( 1, reach.getCost( int2{ 1, 0 } ) );
@@ -133,15 +133,15 @@ SW_TEST_CASE( TacticsSrpgTest, MoveRangeFollowsTerrainMoveTypeAlliesAndZoneOfCon
     SW_EXPECT_FALSE( reach.isReachable( int2{ 3, 0 } ) );
 
     // 적은 막고, ZOC 를 켜면 적과 이웃한 칸에서 멈춘다
-    SrpgSettings zocOff;
-    SrpgSettings zocOn;
+    SRPGSettings zocOff;
+    SRPGSettings zocOn;
     zocOn._bZoneOfControl = SW_TRUE;
     for ( int32 pass = 0; pass < 2; ++pass )
     {
-        SrpgTestScene zone;
+        SRPGTestScene zone;
         SW_ASSERT_TRUE( zone.initialize( 7, 3, pass == 0 ? zocOff : zocOn ) );
-        const int32 mover = zone.add( "gm", "grunt", SrpgTeam::Player, 0, 1 );
-        SW_ASSERT_TRUE( zone.add( "zaku", "grunt", SrpgTeam::Enemy, 2, 1 ) >= 0 );
+        const int32 mover = zone.add( "gm", "grunt", SRPGTeam::Player, 0, 1 );
+        SW_ASSERT_TRUE( zone.add( "zaku", "grunt", SRPGTeam::Enemy, 2, 1 ) >= 0 );
         zone._field.computeMoveRange( mover, reach );
         SW_EXPECT_FALSE( reach.isReachable( int2{ 2, 1 } ) );                 // 적 칸
         SW_EXPECT_TRUE( reach.isReachable( int2{ 2, 0 } ) );                  // 적 옆까지는 들어간다
@@ -149,36 +149,36 @@ SW_TEST_CASE( TacticsSrpgTest, MoveRangeFollowsTerrainMoveTypeAlliesAndZoneOfCon
     }
 }
 
-SW_TEST_CASE( TacticsSrpgTest, ThreatCellsAndMapWeaponPatterns )
+SW_TEST_CASE( TacticsSRPGTest, ThreatCellsAndMapWeaponPatterns )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 13, 13 ) );
-    const int32  gm = scene.add( "gm", "grunt", SrpgTeam::Player, 6, 6 );
+    const int32  gm = scene.add( "gm", "grunt", SRPGTeam::Player, 6, 6 );
     vector<int2> listCell;
     scene._field.collectThreatCells( gm, listCell );
-    SW_EXPECT_TRUE( SrpgTestScene::containsCell( listCell, int2{ 2, 2 } ) );  // 이동 4 + 라이플 4
-    SW_EXPECT_FALSE( SrpgTestScene::containsCell( listCell, int2{ 1, 2 } ) ); // 9 칸은 닿지 않는다
+    SW_EXPECT_TRUE( SRPGTestScene::containsCell( listCell, int2{ 2, 2 } ) );  // 이동 4 + 라이플 4
+    SW_EXPECT_FALSE( SRPGTestScene::containsCell( listCell, int2{ 1, 2 } ) ); // 9 칸은 닿지 않는다
 
-    SrpgTestScene artillery;
+    SRPGTestScene artillery;
     SW_ASSERT_TRUE( artillery.initialize( 13, 13 ) );
-    const int32 tank = artillery.add( "tank", "grunt", SrpgTeam::Player, 6, 6 );
+    const int32 tank = artillery.add( "tank", "grunt", SRPGTeam::Player, 6, 6 );
     artillery._field.beginBattle();
     artillery._field.collectThreatCells( tank, listCell );
-    SW_EXPECT_TRUE( SrpgTestScene::containsCell( listCell, int2{ 6, 0 } ) );
-    SW_EXPECT_FALSE( SrpgTestScene::containsCell( listCell, int2{ 0, 5 } ) ); // 이동 후 못 쓰는 포는 지금 칸에서만
-    SW_EXPECT_FALSE( SrpgTestScene::containsCell( listCell, int2{ 6, 7 } ) ); // 최소 사거리 3
+    SW_EXPECT_TRUE( SRPGTestScene::containsCell( listCell, int2{ 6, 0 } ) );
+    SW_EXPECT_FALSE( SRPGTestScene::containsCell( listCell, int2{ 0, 5 } ) ); // 이동 후 못 쓰는 포는 지금 칸에서만
+    SW_EXPECT_FALSE( SRPGTestScene::containsCell( listCell, int2{ 6, 7 } ) ); // 최소 사거리 3
     SW_ASSERT_TRUE( artillery._field.moveUnit( tank, int2{ 6, 8 } ) );
-    const SrpgUnit& tankUnit = *artillery._field.findUnit( tank );
-    SW_EXPECT_TRUE( artillery._field.computeWeaponStatus( tankUnit, 0, true ) == SrpgWeaponStatus::NotAfterMove );
-    SW_EXPECT_TRUE( artillery._field.computeWeaponStatus( tankUnit, 0, false ) == SrpgWeaponStatus::Ok );
+    const SRPGUnit& tankUnit = *artillery._field.findUnit( tank );
+    SW_EXPECT_TRUE( artillery._field.computeWeaponStatus( tankUnit, 0, true ) == SRPGWeaponStatus::NotAfterMove );
+    SW_EXPECT_TRUE( artillery._field.computeWeaponStatus( tankUnit, 0, false ) == SRPGWeaponStatus::Ok );
 
     // MAP 병기 — 자기 기준은 겨눈 쪽으로 돌고, 표적 기준은 사거리 안의 칸 둘레
-    SrpgTestScene map;
+    SRPGTestScene map;
     SW_ASSERT_TRUE( map.initialize( 11, 11 ) );
-    const int32 ship   = map.add( "whitebase", "ace", SrpgTeam::Player, 5, 5 );
-    const int32 ally   = map.add( "gm", "grunt", SrpgTeam::Player, 5, 4 );
-    const int32 enemyA = map.add( "zaku", "grunt", SrpgTeam::Enemy, 5, 3 );
-    const int32 enemyB = map.add( "zaku", "grunt", SrpgTeam::Enemy, 5, 2 );
+    const int32 ship   = map.add( "whitebase", "ace", SRPGTeam::Player, 5, 5 );
+    const int32 ally   = map.add( "gm", "grunt", SRPGTeam::Player, 5, 4 );
+    const int32 enemyA = map.add( "zaku", "grunt", SRPGTeam::Enemy, 5, 3 );
+    const int32 enemyB = map.add( "zaku", "grunt", SRPGTeam::Enemy, 5, 2 );
     SW_ASSERT_TRUE( ship >= 0 && ally >= 0 && enemyA >= 0 && enemyB >= 0 );
     SW_ASSERT_TRUE( map._field.collectMapCells( ship, 0, int2{ 5, 1 }, listCell ) );
     SW_ASSERT_TRUE( listCell.size() == 4 );
@@ -188,34 +188,34 @@ SW_TEST_CASE( TacticsSrpgTest, ThreatCellsAndMapWeaponPatterns )
     SW_EXPECT_FALSE( map._field.collectMapCells( ship, 0, int2{ 5, 5 }, listCell ) );
     SW_ASSERT_TRUE( map._field.collectMapCells( ship, 1, int2{ 5, 8 }, listCell ) );
     SW_EXPECT_EQUAL( 5, static_cast<int32>( listCell.size() ) );
-    SW_EXPECT_TRUE( SrpgTestScene::containsCell( listCell, int2{ 5, 9 } ) && SrpgTestScene::containsCell( listCell, int2{ 4, 8 } ) );
+    SW_EXPECT_TRUE( SRPGTestScene::containsCell( listCell, int2{ 5, 9 } ) && SRPGTestScene::containsCell( listCell, int2{ 4, 8 } ) );
     SW_EXPECT_FALSE( map._field.collectMapCells( ship, 1, int2{ 5, 6 }, listCell ) ); // 최소 사거리 2
 
     map._field.beginBattle();
-    SrpgCombatResult result;
-    SW_EXPECT_TRUE( SrpgCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 9 }, result ) == SrpgWeaponStatus::InvalidTarget );
+    SRPGCombatResult result;
+    SW_EXPECT_TRUE( SRPGCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 9 }, result ) == SRPGWeaponStatus::InvalidTarget );
     SW_EXPECT_EQUAL( 200, map._field.findUnit( ship )->_en ); // 맞을 것이 없으면 쏘지 않는다
-    SW_EXPECT_TRUE( SrpgCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 1 }, result ) == SrpgWeaponStatus::Ok );
+    SW_EXPECT_TRUE( SRPGCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 1 }, result ) == SRPGWeaponStatus::Ok );
     SW_ASSERT_TRUE( result._listStrike.size() == 2 ); // 아군은 빼고 적 둘
     SW_EXPECT_EQUAL( enemyA, result._listStrike[0]._preview._defender );
     SW_EXPECT_EQUAL( enemyB, result._listStrike[1]._preview._defender );
     SW_EXPECT_EQUAL( 3000, map._field.findUnit( ally )->_hp );
     SW_EXPECT_EQUAL( 150, map._field.findUnit( ship )->_en );
-    SW_EXPECT_TRUE( SrpgCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 1 }, result ) == SrpgWeaponStatus::CannotAct );
+    SW_EXPECT_TRUE( SRPGCombat::executeMapAttack( map._field, ship, 0, int2{ 5, 1 }, result ) == SRPGWeaponStatus::CannotAct );
 }
 
-SW_TEST_CASE( TacticsSrpgTest, ForecastMatchesFormulaAndBattleIsDeterministic )
+SW_TEST_CASE( TacticsSRPGTest, ForecastMatchesFormulaAndBattleIsDeterministic )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 5, makeNoSupportSettings() ) );
     SW_ASSERT_TRUE( scene._field.setTerrain( int2{ 4, 2 }, hashed_string( "forest" ) ) );
-    const int32 gm   = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 zaku = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-    const int32 tank = scene.add( "tank", "grunt", SrpgTeam::Enemy, 2, 4 );
+    const int32 gm   = scene.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 zaku = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+    const int32 tank = scene.add( "tank", "grunt", SRPGTeam::Enemy, 2, 4 );
     SW_ASSERT_TRUE( gm >= 0 && zaku >= 0 && tank >= 0 );
 
-    SrpgForecast forecast;
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( scene._field, gm, 1, zaku, forecast ) == SrpgWeaponStatus::Ok );
+    SRPGForecast forecast;
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( scene._field, gm, 1, zaku, forecast ) == SRPGWeaponStatus::Ok );
     // 공격력 1500 × 120 / 100 = 1800, 방어 ( 500 + 5 ) × 120 / 100 = 606 → 1194
     SW_EXPECT_EQUAL( 1194, forecast._attack._damage );
     SW_EXPECT_EQUAL( 1791, forecast._attack._critDamage );
@@ -228,41 +228,41 @@ SW_TEST_CASE( TacticsSrpgTest, ForecastMatchesFormulaAndBattleIsDeterministic )
     SW_EXPECT_EQUAL( 1040, forecast._counter._damage );
     SW_EXPECT_EQUAL( 55, forecast._counter._hit );
 
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( scene._field, gm, 1, tank, forecast ) == SrpgWeaponStatus::Ok );
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( scene._field, gm, 1, tank, forecast ) == SRPGWeaponStatus::Ok );
     SW_EXPECT_EQUAL( 85, forecast._attack._hit );   // 큰 표적 + 5
     SW_EXPECT_FALSE( forecast._counter.isValid() ); // 포는 반격하지 않는다
-    SW_EXPECT_TRUE( SrpgCombat::computeForecast( scene._field, gm, 2, zaku, forecast ) == SrpgWeaponStatus::OutOfRange );
-    SW_EXPECT_TRUE( SrpgCombat::computeForecast( scene._field, gm, 1, gm, forecast ) == SrpgWeaponStatus::InvalidTarget );
+    SW_EXPECT_TRUE( SRPGCombat::computeForecast( scene._field, gm, 2, zaku, forecast ) == SRPGWeaponStatus::OutOfRange );
+    SW_EXPECT_TRUE( SRPGCombat::computeForecast( scene._field, gm, 1, gm, forecast ) == SRPGWeaponStatus::InvalidTarget );
 
-    SrpgSettings sureHit = makeNoSupportSettings();
+    SRPGSettings sureHit = makeNoSupportSettings();
     sureHit._baseHit     = 300;
-    SrpgTestScene clamp;
+    SRPGTestScene clamp;
     SW_ASSERT_TRUE( clamp.initialize( 10, 5, sureHit ) );
-    const int32 clampGm   = clamp.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 clampZaku = clamp.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( clamp._field, clampGm, 1, clampZaku, forecast ) == SrpgWeaponStatus::Ok );
+    const int32 clampGm   = clamp.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 clampZaku = clamp.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( clamp._field, clampGm, 1, clampZaku, forecast ) == SRPGWeaponStatus::Ok );
     SW_EXPECT_EQUAL( 100, forecast._attack._hit ); // 0..100 으로 자른다
 
     // 같은 씨앗이면 같은 결과
-    SrpgTestScene twin;
+    SRPGTestScene twin;
     SW_ASSERT_TRUE( twin.initialize( 10, 5, makeNoSupportSettings() ) );
     SW_ASSERT_TRUE( twin._field.setTerrain( int2{ 4, 2 }, hashed_string( "forest" ) ) );
-    SW_ASSERT_TRUE( twin.add( "gm", "ace", SrpgTeam::Player, 2, 2 ) == gm && twin.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 ) == zaku );
-    SW_ASSERT_TRUE( twin.add( "tank", "grunt", SrpgTeam::Enemy, 2, 4 ) == tank );
+    SW_ASSERT_TRUE( twin.add( "gm", "ace", SRPGTeam::Player, 2, 2 ) == gm && twin.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 ) == zaku );
+    SW_ASSERT_TRUE( twin.add( "tank", "grunt", SRPGTeam::Enemy, 2, 4 ) == tank );
     scene._field.beginBattle();
     twin._field.beginBattle();
-    SrpgCombatResult resultA;
-    SrpgCombatResult resultB;
-    SW_ASSERT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 1, zaku, resultA ) == SrpgWeaponStatus::Ok );
-    SW_ASSERT_TRUE( SrpgCombat::executeAttack( twin._field, gm, 1, zaku, resultB ) == SrpgWeaponStatus::Ok );
+    SRPGCombatResult resultA;
+    SRPGCombatResult resultB;
+    SW_ASSERT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 1, zaku, resultA ) == SRPGWeaponStatus::Ok );
+    SW_ASSERT_TRUE( SRPGCombat::executeAttack( twin._field, gm, 1, zaku, resultB ) == SRPGWeaponStatus::Ok );
     SW_ASSERT_TRUE( resultA._listStrike.size() == 2 && resultB._listStrike.size() == 2 ); // 주 공격 + 반격(1791 로도 자쿠는 남는다)
     for ( size_t index = 0; index < resultA._listStrike.size(); ++index )
     {
         SW_EXPECT_TRUE( resultA._listStrike[index]._bHit == resultB._listStrike[index]._bHit );
         SW_EXPECT_EQUAL( resultA._listStrike[index]._damage, resultB._listStrike[index]._damage );
     }
-    const SrpgStrikeResult& main = resultA._listStrike[0];
-    SW_EXPECT_TRUE( main._role == SrpgStrikeRole::Main && resultA._listStrike[1]._role == SrpgStrikeRole::Counter );
+    const SRPGStrikeResult& main = resultA._listStrike[0];
+    SW_EXPECT_TRUE( main._role == SRPGStrikeRole::Main && resultA._listStrike[1]._role == SRPGStrikeRole::Counter );
     const int32 expectedDamage = main._bHit == SW_FALSE ? 0 : ( main._bCrit == SW_TRUE ? 1791 : 1194 );
     SW_EXPECT_EQUAL( expectedDamage, main._damage );
     SW_EXPECT_EQUAL( 2800 - main._damage, scene._field.findUnit( zaku )->_hp );
@@ -272,31 +272,31 @@ SW_TEST_CASE( TacticsSrpgTest, ForecastMatchesFormulaAndBattleIsDeterministic )
     // 메탈슬러그 택틱스식 이동 회피 — 3 칸 걸으면 15 가 쌓이고, 끄면 없다
     for ( int32 pass = 0; pass < 2; ++pass )
     {
-        SrpgSettings settings = makeNoSupportSettings();
+        SRPGSettings settings = makeNoSupportSettings();
         settings._bMoveDodge  = pass == 0 ? SW_TRUE : SW_FALSE;
-        SrpgTestScene dodge;
+        SRPGTestScene dodge;
         SW_ASSERT_TRUE( dodge.initialize( 10, 5, settings ) );
-        const int32 runner = dodge.add( "gm", "ace", SrpgTeam::Player, 0, 2 );
-        const int32 enemy  = dodge.add( "zaku", "grunt", SrpgTeam::Enemy, 5, 2 );
+        const int32 runner = dodge.add( "gm", "ace", SRPGTeam::Player, 0, 2 );
+        const int32 enemy  = dodge.add( "zaku", "grunt", SRPGTeam::Enemy, 5, 2 );
         dodge._field.beginBattle();
         SW_ASSERT_TRUE( dodge._field.moveUnit( runner, int2{ 3, 2 } ) );
-        SW_ASSERT_TRUE( SrpgCombat::computeForecast( dodge._field, enemy, 1, runner, forecast ) == SrpgWeaponStatus::Ok );
+        SW_ASSERT_TRUE( SRPGCombat::computeForecast( dodge._field, enemy, 1, runner, forecast ) == SRPGWeaponStatus::Ok );
         SW_EXPECT_EQUAL( pass == 0 ? 40 : 55, forecast._attack._hit );
     }
 }
 
-SW_TEST_CASE( TacticsSrpgTest, CounterSupportAttackSupportDefenseAndSync )
+SW_TEST_CASE( TacticsSRPGTest, CounterSupportAttackSupportDefenseAndSync )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 6 ) );
-    const int32 gm    = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 buddy = scene.add( "gmcustom", "grunt", SrpgTeam::Player, 2, 1 );
-    const int32 zaku  = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-    const int32 tank  = scene.add( "tank", "grunt", SrpgTeam::Enemy, 4, 3 );
+    const int32 gm    = scene.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 buddy = scene.add( "gmcustom", "grunt", SRPGTeam::Player, 2, 1 );
+    const int32 zaku  = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+    const int32 tank  = scene.add( "tank", "grunt", SRPGTeam::Enemy, 4, 3 );
     SW_ASSERT_TRUE( gm >= 0 && buddy >= 0 && zaku >= 0 && tank >= 0 );
 
-    SrpgForecast forecast;
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( scene._field, gm, 1, zaku, forecast ) == SrpgWeaponStatus::Ok );
+    SRPGForecast forecast;
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( scene._field, gm, 1, zaku, forecast ) == SRPGWeaponStatus::Ok );
     SW_EXPECT_EQUAL( tank, forecast._supportDefender ); // 자쿠 옆의 전차가 대신 맞는다
     SW_EXPECT_EQUAL( tank, forecast._attack._defender );
     SW_EXPECT_EQUAL( 697, forecast._attack._damage );    // ( 1800 − 405 ) × 50 / 100
@@ -308,12 +308,12 @@ SW_TEST_CASE( TacticsSrpgTest, CounterSupportAttackSupportDefenseAndSync )
     SW_EXPECT_EQUAL( zaku, forecast._counter._attacker );
 
     scene._field.beginBattle();
-    SrpgCombatResult result;
-    SW_ASSERT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 1, zaku, result ) == SrpgWeaponStatus::Ok );
+    SRPGCombatResult result;
+    SW_ASSERT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 1, zaku, result ) == SRPGWeaponStatus::Ok );
     SW_ASSERT_TRUE( result._listStrike.size() == 3 );
-    SW_EXPECT_TRUE( result._listStrike[0]._role == SrpgStrikeRole::Main && result._listStrike[0]._preview._defender == tank );
-    SW_EXPECT_TRUE( result._listStrike[1]._role == SrpgStrikeRole::Support && result._listStrike[1]._preview._defender == zaku );
-    SW_EXPECT_TRUE( result._listStrike[2]._role == SrpgStrikeRole::Counter && result._listStrike[2]._preview._defender == gm );
+    SW_EXPECT_TRUE( result._listStrike[0]._role == SRPGStrikeRole::Main && result._listStrike[0]._preview._defender == tank );
+    SW_EXPECT_TRUE( result._listStrike[1]._role == SRPGStrikeRole::Support && result._listStrike[1]._preview._defender == zaku );
+    SW_EXPECT_TRUE( result._listStrike[2]._role == SRPGStrikeRole::Counter && result._listStrike[2]._preview._defender == gm );
     SW_EXPECT_EQUAL( 2000 - result._listStrike[0]._damage, scene._field.findUnit( tank )->_hp );
     SW_EXPECT_EQUAL( 2800 - result._listStrike[1]._damage, scene._field.findUnit( zaku )->_hp );
     SW_EXPECT_EQUAL( 3000 - result._listStrike[2]._damage, scene._field.findUnit( gm )->_hp );
@@ -321,18 +321,18 @@ SW_TEST_CASE( TacticsSrpgTest, CounterSupportAttackSupportDefenseAndSync )
     SW_EXPECT_TRUE( scene._field.findUnit( buddy )->_bSupportUsed == SW_TRUE );
     SW_EXPECT_EQUAL( 110, scene._field.findUnit( buddy )->_en );                                                     // 지원 공격도 EN 을 쓴다
     SW_EXPECT_EQUAL( 70, scene._field.findUnit( zaku )->_en );                                                       // 반격도
-    SW_EXPECT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 1, zaku, result ) == SrpgWeaponStatus::CannotAct ); // 한 차례에 한 번
+    SW_EXPECT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 1, zaku, result ) == SRPGWeaponStatus::CannotAct ); // 한 차례에 한 번
 
     // 이번 차례 지원을 다 쓴 뒤에는 대신 맞지 않는다, 규칙을 끄면 처음부터 없다
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( scene._field, buddy, 1, zaku, forecast ) == SrpgWeaponStatus::Ok );
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( scene._field, buddy, 1, zaku, forecast ) == SRPGWeaponStatus::Ok );
     SW_EXPECT_EQUAL( -1, forecast._supportDefender );
-    SrpgTestScene noSupport;
+    SRPGTestScene noSupport;
     SW_ASSERT_TRUE( noSupport.initialize( 10, 6, makeNoSupportSettings() ) );
-    (void)noSupport.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    (void)noSupport.add( "gmcustom", "grunt", SrpgTeam::Player, 2, 1 );
-    (void)noSupport.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-    (void)noSupport.add( "tank", "grunt", SrpgTeam::Enemy, 4, 3 );
-    SW_ASSERT_TRUE( SrpgCombat::computeForecast( noSupport._field, gm, 1, zaku, forecast ) == SrpgWeaponStatus::Ok );
+    (void)noSupport.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    (void)noSupport.add( "gmcustom", "grunt", SRPGTeam::Player, 2, 1 );
+    (void)noSupport.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+    (void)noSupport.add( "tank", "grunt", SRPGTeam::Enemy, 4, 3 );
+    SW_ASSERT_TRUE( SRPGCombat::computeForecast( noSupport._field, gm, 1, zaku, forecast ) == SRPGWeaponStatus::Ok );
     SW_EXPECT_EQUAL( -1, forecast._supportDefender );
     SW_EXPECT_FALSE( forecast._supportAttack.isValid() );
     SW_EXPECT_EQUAL( zaku, forecast._attack._defender );
@@ -340,14 +340,14 @@ SW_TEST_CASE( TacticsSrpgTest, CounterSupportAttackSupportDefenseAndSync )
     // 동기 공격 — 같은 적을 사거리에 둔 아군이 절반 위력으로 함께(이웃이 아니어도)
     for ( int32 pass = 0; pass < 2; ++pass )
     {
-        SrpgSettings settings = makeNoSupportSettings();
+        SRPGSettings settings = makeNoSupportSettings();
         settings._bSyncAttack = pass == 0 ? SW_TRUE : SW_FALSE;
-        SrpgTestScene sync;
+        SRPGTestScene sync;
         SW_ASSERT_TRUE( sync.initialize( 10, 6, settings ) );
-        const int32 shooter = sync.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-        const int32 partner = sync.add( "gmcustom", "grunt", SrpgTeam::Player, 4, 5 );
-        const int32 target  = sync.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-        SW_ASSERT_TRUE( SrpgCombat::computeForecast( sync._field, shooter, 1, target, forecast ) == SrpgWeaponStatus::Ok );
+        const int32 shooter = sync.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+        const int32 partner = sync.add( "gmcustom", "grunt", SRPGTeam::Player, 4, 5 );
+        const int32 target  = sync.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+        SW_ASSERT_TRUE( SRPGCombat::computeForecast( sync._field, shooter, 1, target, forecast ) == SRPGWeaponStatus::Ok );
         SW_ASSERT_TRUE( static_cast<int32>( forecast._listSync.size() ) == ( pass == 0 ? 1 : 0 ) );
         if ( pass == 0 )
         {
@@ -355,151 +355,151 @@ SW_TEST_CASE( TacticsSrpgTest, CounterSupportAttackSupportDefenseAndSync )
             SW_EXPECT_EQUAL( 572, forecast._listSync[0]._damage ); // ( 1650 − 505 ) × 50 / 100
             SW_EXPECT_EQUAL( 65, forecast._listSync[0]._hit );
             sync._field.beginBattle();
-            SrpgCombatResult syncResult;
-            SW_ASSERT_TRUE( SrpgCombat::executeAttack( sync._field, shooter, 1, target, syncResult ) == SrpgWeaponStatus::Ok );
+            SRPGCombatResult syncResult;
+            SW_ASSERT_TRUE( SRPGCombat::executeAttack( sync._field, shooter, 1, target, syncResult ) == SRPGWeaponStatus::Ok );
             SW_ASSERT_TRUE( syncResult._listStrike.size() == 3 );
-            SW_EXPECT_TRUE( syncResult._listStrike[1]._role == SrpgStrikeRole::Sync );
+            SW_EXPECT_TRUE( syncResult._listStrike[1]._role == SRPGStrikeRole::Sync );
             SW_EXPECT_EQUAL( 120, sync._field.findUnit( partner )->_en ); // 동기 공격은 EN 을 쓰지 않는다
         }
     }
 }
 
-SW_TEST_CASE( TacticsSrpgTest, EnergyAmmoAndMoraleGateWeapons )
+SW_TEST_CASE( TacticsSRPGTest, EnergyAmmoAndMoraleGateWeapons )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 5, makeNoSupportSettings() ) );
-    const int32 gm     = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 gundam = scene.add( "gundam", "ace", SrpgTeam::Player, 2, 4 );
-    const int32 zaku   = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 3, 2 );
+    const int32 gm     = scene.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 gundam = scene.add( "gundam", "ace", SRPGTeam::Player, 2, 4 );
+    const int32 zaku   = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 3, 2 );
     SW_ASSERT_TRUE( gm >= 0 && gundam >= 0 && zaku >= 0 );
     scene._field.beginBattle();
 
-    SrpgUnit& gmUnit = *scene._field.findUnit( gm );
+    SRPGUnit& gmUnit = *scene._field.findUnit( gm );
     scene._field.consumeWeapon( gm, 0 );
     SW_EXPECT_EQUAL( 1, gmUnit._listAmmo[0] );
     scene._field.consumeWeapon( gm, 0 );
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 0, false ) == SrpgWeaponStatus::NoAmmo );
-    SrpgCombatResult result;
-    SW_EXPECT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 0, zaku, result ) == SrpgWeaponStatus::NoAmmo );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 0, false ) == SRPGWeaponStatus::NoAmmo );
+    SRPGCombatResult result;
+    SW_EXPECT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 0, zaku, result ) == SRPGWeaponStatus::NoAmmo );
     SW_EXPECT_EQUAL( 2800, scene._field.findUnit( zaku )->_hp ); // 실패는 아무것도 바꾸지 않는다
     SW_EXPECT_TRUE( gmUnit._bAttacked == SW_FALSE );
 
     gmUnit._en = 5;
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 1, false ) == SrpgWeaponStatus::NotEnoughEnergy );
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 2, false ) == SrpgWeaponStatus::Ok );
-    SW_ASSERT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 2, zaku, result ) == SrpgWeaponStatus::Ok ); // 빔 사벨 EN 5
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 1, false ) == SRPGWeaponStatus::NotEnoughEnergy );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gmUnit, 2, false ) == SRPGWeaponStatus::Ok );
+    SW_ASSERT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 2, zaku, result ) == SRPGWeaponStatus::Ok ); // 빔 사벨 EN 5
     SW_EXPECT_EQUAL( 0, gmUnit._en );
 
-    const SrpgUnit& gundamUnit = *scene._field.findUnit( gundam );
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SrpgWeaponStatus::LowMorale ); // 핀 판넬은 기력 120
+    const SRPGUnit& gundamUnit = *scene._field.findUnit( gundam );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SRPGWeaponStatus::LowMorale ); // 핀 판넬은 기력 120
     scene._field.addMorale( gundam, 19 );
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SrpgWeaponStatus::LowMorale );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SRPGWeaponStatus::LowMorale );
     scene._field.addMorale( gundam, 1 );
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SrpgWeaponStatus::Ok );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 2, false ) == SRPGWeaponStatus::Ok );
     scene._field.addMorale( gundam, 500 );
     SW_EXPECT_EQUAL( 150, gundamUnit._morale ); // 위 끝
-    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 9, false ) == SrpgWeaponStatus::InvalidWeapon );
+    SW_EXPECT_TRUE( scene._field.computeWeaponStatus( gundamUnit, 9, false ) == SRPGWeaponStatus::InvalidWeapon );
 }
 
-SW_TEST_CASE( TacticsSrpgTest, PhasesTurnOrderAndMissionOutcomes )
+SW_TEST_CASE( TacticsSRPGTest, PhasesTurnOrderAndMissionOutcomes )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 3 ) );
-    const int32 leader = scene.add( "gm", "ace", SrpgTeam::Player, 0, 0 );
-    const int32 wing   = scene.add( "gmcustom", "grunt", SrpgTeam::Player, 0, 2 );
-    const int32 boss   = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 8, 0 );
-    const int32 guard  = scene.add( "tank", "grunt", SrpgTeam::Enemy, 9, 2 );
-    const int32 rogue  = scene.add( "core", "grunt", SrpgTeam::Third, 9, 0 );
+    const int32 leader = scene.add( "gm", "ace", SRPGTeam::Player, 0, 0 );
+    const int32 wing   = scene.add( "gmcustom", "grunt", SRPGTeam::Player, 0, 2 );
+    const int32 boss   = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 8, 0 );
+    const int32 guard  = scene.add( "tank", "grunt", SRPGTeam::Enemy, 9, 2 );
+    const int32 rogue  = scene.add( "core", "grunt", SRPGTeam::Third, 9, 0 );
     scene._field.setCommander( leader, true );
     scene._field.setCommander( boss, true );
 
-    SrpgMissionRule defeatAll;
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, defeatAll ) == SrpgOutcome::Ongoing ); // 시작 전
+    SRPGMissionRule defeatAll;
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, defeatAll ) == SRPGOutcome::Ongoing ); // 시작 전
 
     scene._field.beginBattle();
     SW_EXPECT_EQUAL( 1, scene._field.getTurn() );
-    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Player );
+    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Player );
     SW_EXPECT_FALSE( scene._field.canAct( boss ) );
     scene._field.endUnitAction( leader );
-    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Player ); // 한 명 남았다
+    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Player ); // 한 명 남았다
     SW_EXPECT_FALSE( scene._field.canAct( leader ) );
     scene._field.endUnitAction( wing );
-    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Enemy );
+    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Enemy );
     SW_EXPECT_TRUE( scene._field.canAct( boss ) && scene._field.canAct( guard ) );
     scene._field.endPhase();
-    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Third );
+    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Third );
     scene._field.endPhase();
-    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Player );
+    SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Player );
     SW_EXPECT_EQUAL( 2, scene._field.getTurn() );
-    SW_EXPECT_EQUAL( 4, scene.countEvents( SrpgEvent::Kind::PhaseStarted ) );
+    SW_EXPECT_EQUAL( 4, scene.countEvents( SRPGEvent::Kind::PhaseStarted ) );
     SW_EXPECT_TRUE( scene._field.canAct( leader ) ); // 새 페이즈는 다시 움직인다
 
-    SrpgMissionRule reach;
-    reach._objective = SrpgObjective::ReachCell;
+    SRPGMissionRule reach;
+    reach._objective = SRPGObjective::ReachCell;
     reach._listGoalCell.push_back( int2{ 3, 0 } );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, reach ) == SrpgOutcome::Ongoing );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, reach ) == SRPGOutcome::Ongoing );
     SW_ASSERT_TRUE( scene._field.moveUnit( leader, int2{ 3, 0 } ) );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, reach ) == SrpgOutcome::Victory );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, reach ) == SRPGOutcome::Victory );
 
-    SrpgMissionRule commander;
-    commander._objective = SrpgObjective::DefeatCommander;
-    SrpgMissionRule turnLimit;
+    SRPGMissionRule commander;
+    commander._objective = SRPGObjective::DefeatCommander;
+    SRPGMissionRule turnLimit;
     turnLimit._turnLimit = 1;
-    SrpgMissionRule survive;
-    survive._objective = SrpgObjective::SurviveTurns;
+    SRPGMissionRule survive;
+    survive._objective = SRPGObjective::SurviveTurns;
     survive._turnLimit = 1;
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, turnLimit ) == SrpgOutcome::Defeat ); // 2 턴 > 1
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, survive ) == SrpgOutcome::Victory );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, commander ) == SrpgOutcome::Ongoing );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, turnLimit ) == SRPGOutcome::Defeat ); // 2 턴 > 1
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, survive ) == SRPGOutcome::Victory );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, commander ) == SRPGOutcome::Ongoing );
     SW_EXPECT_TRUE( scene._field.applyDamage( boss, 99999, leader ) );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, commander ) == SrpgOutcome::Victory );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, defeatAll ) == SrpgOutcome::Ongoing ); // 전차가 남았다(제3세력은 세지 않는다)
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, commander ) == SRPGOutcome::Victory );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, defeatAll ) == SRPGOutcome::Ongoing ); // 전차가 남았다(제3세력은 세지 않는다)
     SW_EXPECT_TRUE( scene._field.applyDamage( guard, 99999, leader ) );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, defeatAll ) == SrpgOutcome::Victory );
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, defeatAll ) == SRPGOutcome::Victory );
     SW_EXPECT_TRUE( scene._field.applyDamage( leader, 99999, rogue ) );
-    SW_EXPECT_TRUE( SrpgMission::evaluate( scene._field, defeatAll ) == SrpgOutcome::Defeat ); // 아군 지휘관 — 패배가 앞선다
+    SW_EXPECT_TRUE( SRPGMission::evaluate( scene._field, defeatAll ) == SRPGOutcome::Defeat ); // 아군 지휘관 — 패배가 앞선다
 
     // 개별 행동 순 — 반응 + 운동성이 빠른 쪽부터, 모두 한 번씩 하면 다음 턴
-    SrpgSettings individual;
-    individual._turnMode = SrpgTurnMode::Individual;
-    SrpgTestScene order;
+    SRPGSettings individual;
+    individual._turnMode = SRPGTurnMode::Individual;
+    SRPGTestScene order;
     SW_ASSERT_TRUE( order.initialize( 10, 3, individual ) );
-    const int32 slow = order.add( "zaku", "grunt", SrpgTeam::Enemy, 8, 0 );
-    const int32 fast = order.add( "gm", "ace", SrpgTeam::Player, 0, 0 );
+    const int32 slow = order.add( "zaku", "grunt", SRPGTeam::Enemy, 8, 0 );
+    const int32 fast = order.add( "gm", "ace", SRPGTeam::Player, 0, 0 );
     order._field.beginBattle();
     SW_EXPECT_EQUAL( 1, order._field.getTurn() );
     SW_EXPECT_EQUAL( fast, order._field.getActiveUnit() );
     SW_EXPECT_FALSE( order._field.canAct( slow ) );
     order._field.endUnitAction( fast );
     SW_EXPECT_EQUAL( slow, order._field.getActiveUnit() );
-    SW_EXPECT_TRUE( order._field.getPhaseTeam() == SrpgTeam::Enemy );
+    SW_EXPECT_TRUE( order._field.getPhaseTeam() == SRPGTeam::Enemy );
     order._field.endUnitAction( slow );
     SW_EXPECT_EQUAL( 2, order._field.getTurn() );
     SW_EXPECT_EQUAL( fast, order._field.getActiveUnit() );
 }
 
-SW_TEST_CASE( TacticsSrpgTest, AiPicksBestScoredTargetDeterministically )
+SW_TEST_CASE( TacticsSRPGTest, AiPicksBestScoredTargetDeterministically )
 {
     for ( int32 pass = 0; pass < 2; ++pass )
     {
-        SrpgTestScene scene;
+        SRPGTestScene scene;
         SW_ASSERT_TRUE( scene.initialize( 12, 5, makeNoSupportSettings() ) );
-        const int32 tank = scene.add( "tank", "grunt", SrpgTeam::Player, 2, 0 );
-        const int32 core = scene.add( "core", "grunt", SrpgTeam::Player, 2, 2 );
-        const int32 gm   = scene.add( "gm", "ace", SrpgTeam::Player, 2, 4 );
-        const int32 zaku = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 8, 2 );
+        const int32 tank = scene.add( "tank", "grunt", SRPGTeam::Player, 2, 0 );
+        const int32 core = scene.add( "core", "grunt", SRPGTeam::Player, 2, 2 );
+        const int32 gm   = scene.add( "gm", "ace", SRPGTeam::Player, 2, 4 );
+        const int32 zaku = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 8, 2 );
         SW_ASSERT_TRUE( tank >= 0 && core >= 0 && gm >= 0 && zaku >= 0 );
         scene._field.findUnit( core )->_hp = 100; // 한 방이면 격파
         scene._field.beginBattle();
         scene._field.endPhase();
-        SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Enemy );
+        SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Enemy );
 
-        SrpgAiCommander controller;
-        SrpgAiSettings  aiSettings;
+        SRPGAiCommander controller;
+        SRPGAiSettings  aiSettings;
         if ( pass == 1 )
             aiSettings._killBonus = 3000; // 격파를 무겁게 보면 표적이 바뀐다
         controller.setSettings( aiSettings );
-        SrpgAiPlan plan;
+        SRPGAiPlan plan;
         SW_ASSERT_TRUE( controller.makePlan( scene._field, zaku, plan ) );
         SW_ASSERT_TRUE( plan._bAttack == SW_TRUE );
         const int2 target = scene._field.findUnit( plan._target )->_cell;
@@ -510,7 +510,7 @@ SW_TEST_CASE( TacticsSrpgTest, AiPicksBestScoredTargetDeterministically )
             SW_EXPECT_EQUAL( tank, plan._target );
             SW_EXPECT_EQUAL( 1, plan._weapon );
             SW_EXPECT_EQUAL( 933, plan._score );
-            SW_EXPECT_EQUAL( 4, SrpgBattlefield::computeDistance( plan._moveCell, target ) ); // 사거리 끝 — 덜 걷는 칸
+            SW_EXPECT_EQUAL( 4, SRPGBattlefield::computeDistance( plan._moveCell, target ) ); // 사거리 끝 — 덜 걷는 칸
         }
         else
         {
@@ -518,48 +518,48 @@ SW_TEST_CASE( TacticsSrpgTest, AiPicksBestScoredTargetDeterministically )
             SW_EXPECT_EQUAL( core, plan._target );
             SW_EXPECT_EQUAL( 0, plan._weapon );
             SW_EXPECT_EQUAL( 1650, plan._score );
-            SW_EXPECT_EQUAL( 2, SrpgBattlefield::computeDistance( plan._moveCell, target ) );
+            SW_EXPECT_EQUAL( 2, SRPGBattlefield::computeDistance( plan._moveCell, target ) );
         }
-        SrpgAiPlan again;
+        SRPGAiPlan again;
         SW_ASSERT_TRUE( controller.makePlan( scene._field, zaku, again ) );
         SW_EXPECT_TRUE( again._moveCell == plan._moveCell && again._target == plan._target && again._weapon == plan._weapon );
 
-        SW_EXPECT_EQUAL( 1, controller.runPhase( scene._field, SrpgTeam::Enemy ) );
+        SW_EXPECT_EQUAL( 1, controller.runPhase( scene._field, SRPGTeam::Enemy ) );
         SW_EXPECT_TRUE( scene._field.findUnit( zaku )->_cell == plan._moveCell );
-        SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Player );
+        SW_EXPECT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Player );
         SW_EXPECT_EQUAL( 2, scene._field.getTurn() );
-        SW_EXPECT_EQUAL( 1, scene.countEvents( SrpgEvent::Kind::Moved ) );
+        SW_EXPECT_EQUAL( 1, scene.countEvents( SRPGEvent::Kind::Moved ) );
     }
 
     // 칠 것이 없으면 가장 가까운 적 쪽으로
-    SrpgTestScene farScene;
+    SRPGTestScene farScene;
     SW_ASSERT_TRUE( farScene.initialize( 20, 1 ) );
-    const int32 hunter = farScene.add( "zaku", "grunt", SrpgTeam::Enemy, 19, 0 );
-    (void)farScene.add( "gm", "grunt", SrpgTeam::Player, 0, 0 );
+    const int32 hunter = farScene.add( "zaku", "grunt", SRPGTeam::Enemy, 19, 0 );
+    (void)farScene.add( "gm", "grunt", SRPGTeam::Player, 0, 0 );
     farScene._field.beginBattle();
     farScene._field.endPhase();
-    SrpgAiCommander controller;
-    SrpgAiPlan      plan;
+    SRPGAiCommander controller;
+    SRPGAiPlan      plan;
     SW_ASSERT_TRUE( controller.makePlan( farScene._field, hunter, plan ) );
     SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
     SW_EXPECT_TRUE( plan._moveCell == ( int2{ 15, 0 } ) );
 }
 
-SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
+SW_TEST_CASE( TacticsSRPGTest, LevelUpDevelopmentAndRogueliteCampaign )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 5 ) );
-    const int32 gm = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
+    const int32 gm = scene.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
     SW_ASSERT_TRUE( gm >= 0 );
-    SW_EXPECT_EQUAL( 20, scene._field.findUnit( gm )->computeStat( SrpgPilotStat::Shooting ) );
+    SW_EXPECT_EQUAL( 20, scene._field.findUnit( gm )->computeStat( SRPGPilotStat::Shooting ) );
 
     scene._field.grantXp( gm, 250 ); // 파일럿 100 · 200 곡선 → 2 레벨 150, 기체 50 · 100 · 150 → 3 레벨 100
-    const SrpgUnit& unit = *scene._field.findUnit( gm );
+    const SRPGUnit& unit = *scene._field.findUnit( gm );
     SW_EXPECT_EQUAL( 2, unit._pilotLevel.getLevel() );
     SW_EXPECT_EQUAL( 150, static_cast<int32>( unit._pilotLevel.getXp() ) );
     SW_EXPECT_EQUAL( 3, unit._unitLevel.getLevel() );
-    SW_EXPECT_EQUAL( 22, unit.computeStat( SrpgPilotStat::Shooting ) ); // 성장 2
-    SW_EXPECT_EQUAL( 1, scene.countEvents( SrpgEvent::Kind::PilotLevelUp ) );
+    SW_EXPECT_EQUAL( 22, unit.computeStat( SRPGPilotStat::Shooting ) ); // 성장 2
+    SW_EXPECT_EQUAL( 1, scene.countEvents( SRPGEvent::Kind::PilotLevelUp ) );
 
     vector<hashed_string> listOption;
     scene._field.collectDevelopOptions( gm, listOption );
@@ -574,17 +574,17 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_EXPECT_EQUAL( 2, unit._pilotLevel.getLevel() ); // 파일럿은 그대로
 
     // 격파하면 맞힌 것 + 격파 경험치(레벨 차 보정)
-    SrpgTestScene battle;
+    SRPGTestScene battle;
     SW_ASSERT_TRUE( battle.initialize( 10, 5, makeNoSupportSettings() ) );
-    const int32 hunter                  = battle.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 prey                    = battle.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
+    const int32 hunter                  = battle.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 prey                    = battle.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
     battle._field.findUnit( prey )->_hp = 1;
     battle._field.beginBattle();
     for ( int32 attempt = 0; attempt < 8 && battle._field.findUnit( prey )->_bAlive == SW_TRUE; ++attempt )
     {
-        SrpgCombatResult result;
+        SRPGCombatResult result;
         battle._field.findUnit( hunter )->_bAttacked = SW_FALSE;
-        (void)SrpgCombat::executeAttack( battle._field, hunter, 1, prey, result );
+        (void)SRPGCombat::executeAttack( battle._field, hunter, 1, prey, result );
     }
     SW_ASSERT_TRUE( battle._field.findUnit( prey )->_bAlive == SW_FALSE );
     SW_EXPECT_EQUAL( 40, static_cast<int32>( battle._field.findUnit( hunter )->_pilotLevel.getTotalXp() ) ); // 10 + 30, 같은 레벨
@@ -597,7 +597,7 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     RunNodeRule rule;
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
-    SrpgCampaign campaign;
+    SRPGCampaign campaign;
     campaign.initialize( mapSettings, 99 );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( scene._catalog, hashed_string( "gm" ), hashed_string( "ace" ) ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( scene._catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
@@ -608,13 +608,13 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     SW_ASSERT_TRUE( campaign.beginMission( listChoice[0] ) );
     SW_EXPECT_FALSE( campaign.beginMission( listChoice[0] ) ); // 작전 중
     SW_EXPECT_TRUE( campaign.getMissionKind() == hashed_string( "Battle" ) );
-    SrpgCampaign twin;
+    SRPGCampaign twin;
     twin.initialize( mapSettings, 99 );
     SW_ASSERT_TRUE( twin.beginMission( listChoice[0] ) );
     SW_EXPECT_TRUE( twin.getMissionSeed() == campaign.getMissionSeed() ); // 같은 판 · 같은 칸이면 같은 전장
 
-    SrpgBattlefield mission;
-    mission.initialize( &scene._catalog, 8, 4, hashed_string( "plain" ), SrpgSettings{}, campaign.getMissionSeed() );
+    SRPGBattlefield mission;
+    mission.initialize( &scene._catalog, 8, 4, hashed_string( "plain" ), SRPGSettings{}, campaign.getMissionSeed() );
     vector<int2> listDeploy;
     listDeploy.push_back( int2{ 0, 0 } );
     listDeploy.push_back( int2{ 0, 1 } );
@@ -622,7 +622,7 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     mission.grantXp( 0, 250 );
     SW_ASSERT_TRUE( mission.developUnit( 0, hashed_string( "gmcustom" ) ) );
     SW_EXPECT_TRUE( mission.applyDamage( 1, 99999, -1 ) );
-    campaign.completeMission( mission, SrpgOutcome::Victory );
+    campaign.completeMission( mission, SRPGOutcome::Victory );
     SW_EXPECT_FALSE( campaign.isFailed() );
     SW_EXPECT_TRUE( campaign.getRoster()[0]._unitId == hashed_string( "gmcustom" ) );
     SW_EXPECT_EQUAL( 2, campaign.getRoster()[0]._pilotLevel.getLevel() );
@@ -631,38 +631,38 @@ SW_TEST_CASE( TacticsSrpgTest, LevelUpDevelopmentAndRogueliteCampaign )
     campaign.collectChoices( listChoice );
     SW_ASSERT_TRUE( listChoice.empty() == false );
     SW_ASSERT_TRUE( campaign.beginMission( listChoice[0] ) );
-    SrpgBattlefield second;
-    second.initialize( &scene._catalog, 8, 4, hashed_string( "plain" ), SrpgSettings{}, campaign.getMissionSeed() );
+    SRPGBattlefield second;
+    second.initialize( &scene._catalog, 8, 4, hashed_string( "plain" ), SRPGSettings{}, campaign.getMissionSeed() );
     SW_EXPECT_EQUAL( 1, campaign.deployRoster( second, listDeploy ) );
     SW_EXPECT_EQUAL( 2, second.findUnit( 0 )->_pilotLevel.getLevel() ); // 레벨이 이어진다
-    campaign.completeMission( second, SrpgOutcome::Defeat );
+    campaign.completeMission( second, SRPGOutcome::Defeat );
     SW_EXPECT_TRUE( campaign.isFailed() );
     campaign.collectChoices( listChoice );
     SW_EXPECT_FALSE( listChoice.empty() == false && campaign.beginMission( listChoice[0] ) ); // 패배하면 판이 끝난다
 }
 
 /**
- * @brief [TacticsSrpgTest] 상태 바이트로 되살린 전장이 같은 전투를 잇는다 — 지형 · 유닛(탄 · EN · 기력 · 레벨 · 차례 비트) · 차례 · 난수가 같은 바이트이고,
+ * @brief [TacticsSRPGTest] 상태 바이트로 되살린 전장이 같은 전투를 잇는다 — 지형 · 유닛(탄 · EN · 기력 · 레벨 · 차례 비트) · 차례 · 난수가 같은 바이트이고,
  *        같은 걸음(적 페이즈의 반격 · 페이즈 넘김)을 둘 다 더 돌려도 같은 바이트다. 크기가 다른 전장과 잘린 바이트는 거절한다
  */
-SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameBattlefield )
+SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameBattlefield )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 10, 5, makeNoSupportSettings() ) );
     SW_ASSERT_TRUE( scene._field.setTerrain( int2{ 5, 2 }, hashed_string( "forest" ) ) );
-    const int32 gm   = scene.add( "gm", "ace", SrpgTeam::Player, 2, 2 );
-    const int32 zaku = scene.add( "zaku", "grunt", SrpgTeam::Enemy, 4, 2 );
-    const int32 core = scene.add( "core", "grunt", SrpgTeam::Third, 9, 4 );
+    const int32 gm   = scene.add( "gm", "ace", SRPGTeam::Player, 2, 2 );
+    const int32 zaku = scene.add( "zaku", "grunt", SRPGTeam::Enemy, 4, 2 );
+    const int32 core = scene.add( "core", "grunt", SRPGTeam::Third, 9, 4 );
     SW_ASSERT_TRUE( gm >= 0 && zaku >= 0 && core >= 0 );
     scene._field.beginBattle();
-    SrpgCombatResult result;
-    SW_EXPECT_TRUE( SrpgCombat::executeAttack( scene._field, gm, 0, zaku, result ) == SrpgWeaponStatus::Ok );
+    SRPGCombatResult result;
+    SW_EXPECT_TRUE( SRPGCombat::executeAttack( scene._field, gm, 0, zaku, result ) == SRPGWeaponStatus::Ok );
     scene._field.endPhase();
-    SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SrpgTeam::Enemy );
+    SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Enemy );
 
     Archive written;
     scene._field.writeState( written );
-    SrpgTestScene restored;
+    SRPGTestScene restored;
     SW_ASSERT_TRUE( restored.initialize( 10, 5, makeNoSupportSettings(), 99 ) );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored._field.readState( reader ) );
@@ -678,14 +678,14 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameBattlefield )
     SW_ASSERT_EQUAL( 3, static_cast<int32>( restored._field.getUnits().size() ) );
     SW_EXPECT_EQUAL( scene._field.findUnit( zaku )->_hp, restored._field.findUnit( zaku )->_hp );
     SW_EXPECT_EQUAL( 1, restored._field.findUnit( gm )->_listAmmo[0] ); // 발칸 탄 하나를 썼다
-    SW_EXPECT_TRUE( restored._field.getPhaseTeam() == SrpgTeam::Enemy );
+    SW_EXPECT_TRUE( restored._field.getPhaseTeam() == SRPGTeam::Enemy );
     SW_EXPECT_EQUAL( scene._field.getTurn(), restored._field.getTurn() );
 
     // 같은 걸음을 둘 다 — 적이 라이플로 쏘고(명중 · 크리티컬 난수) 페이즈가 돌아 다음 턴이 된다.
-    for ( SrpgTestScene* pScene : { &scene, &restored } )
+    for ( SRPGTestScene* pScene : { &scene, &restored } )
     {
-        SrpgCombatResult enemyResult;
-        SW_EXPECT_TRUE( SrpgCombat::executeAttack( pScene->_field, zaku, 1, gm, enemyResult ) == SrpgWeaponStatus::Ok );
+        SRPGCombatResult enemyResult;
+        SW_EXPECT_TRUE( SRPGCombat::executeAttack( pScene->_field, zaku, 1, gm, enemyResult ) == SRPGWeaponStatus::Ok );
         pScene->_field.endPhase();
         pScene->_field.endPhase();
     }
@@ -698,11 +698,11 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameBattlefield )
     afterRestored.writeData( restoredBytes );
     SW_EXPECT_TRUE( originalBytes == restoredBytes );
 
-    SrpgTestScene smaller;
+    SRPGTestScene smaller;
     SW_ASSERT_TRUE( smaller.initialize( 8, 5 ) );
     Archive smallerReader( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( smaller._field.readState( smallerReader ) );
-    SrpgTestScene truncated;
+    SRPGTestScene truncated;
     SW_ASSERT_TRUE( truncated.initialize( 10, 5 ) );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated._field.readState( cut ) );
@@ -710,13 +710,13 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameBattlefield )
 }
 
 /**
- * @brief [TacticsSrpgTest] 상태 바이트로 되살린 캠페인이 같은 판을 잇는다 — 작전 지도 · 명단 · 씨앗 · 작전 중이 같은 바이트이고, 같은 작전을 끝내고 다음 칸을 골라도
+ * @brief [TacticsSRPGTest] 상태 바이트로 되살린 캠페인이 같은 판을 잇는다 — 작전 지도 · 명단 · 씨앗 · 작전 중이 같은 바이트이고, 같은 작전을 끝내고 다음 칸을 골라도
  *        같은 바이트 · 같은 전장 씨앗이다. 잘린 바이트는 거절하고 그대로 둔다
  */
-SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
+SW_TEST_CASE( TacticsSRPGTest, StateRoundTripContinuesTheSameCampaign )
 {
-    SrpgCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSrpgTestXml, "TacticsSrpgTest" ) );
+    SRPGCatalog catalog;
+    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSRPGTestXml, "TacticsSRPGTest" ) );
     RunMapSettings mapSettings;
     mapSettings._floorCount  = 3;
     mapSettings._columnCount = 3;
@@ -724,7 +724,7 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
     RunNodeRule rule;
     rule._kind = hashed_string( "Battle" );
     mapSettings._listRule.push_back( rule );
-    SrpgCampaign campaign;
+    SRPGCampaign campaign;
     campaign.initialize( mapSettings, 99 );
     SW_EXPECT_EQUAL( 0, campaign.addRosterEntry( catalog, hashed_string( "gm" ), hashed_string( "ace" ), 2 ) );
     SW_EXPECT_EQUAL( 1, campaign.addRosterEntry( catalog, hashed_string( "zaku" ), hashed_string( "grunt" ) ) );
@@ -735,7 +735,7 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
 
     Archive written;
     campaign.writeState( written );
-    SrpgCampaign restored;
+    SRPGCampaign restored;
     restored.initialize( mapSettings, 5 );
     Archive reader( written.getData(), written.getSize() );
     SW_ASSERT_TRUE( restored.readState( reader ) );
@@ -756,14 +756,14 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
     vector<int2> listDeploy;
     listDeploy.push_back( int2{ 0, 0 } );
     listDeploy.push_back( int2{ 0, 1 } );
-    for ( SrpgCampaign* pCampaign : { &campaign, &restored } )
+    for ( SRPGCampaign* pCampaign : { &campaign, &restored } )
     {
-        SrpgBattlefield mission;
-        mission.initialize( &catalog, 8, 4, hashed_string( "plain" ), SrpgSettings{}, pCampaign->getMissionSeed() );
+        SRPGBattlefield mission;
+        mission.initialize( &catalog, 8, 4, hashed_string( "plain" ), SRPGSettings{}, pCampaign->getMissionSeed() );
         SW_EXPECT_EQUAL( 2, pCampaign->deployRoster( mission, listDeploy ) );
         mission.grantXp( 0, 120 );
         SW_EXPECT_TRUE( mission.applyDamage( 1, 99999, -1 ) );
-        pCampaign->completeMission( mission, SrpgOutcome::Victory );
+        pCampaign->completeMission( mission, SRPGOutcome::Victory );
         vector<int32> listNext;
         pCampaign->collectChoices( listNext );
         SW_ASSERT_TRUE( listNext.empty() == false );
@@ -779,7 +779,7 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
     afterRestored.writeData( restoredBytes );
     SW_EXPECT_TRUE( originalBytes == restoredBytes );
 
-    SrpgCampaign truncated;
+    SRPGCampaign truncated;
     truncated.initialize( mapSettings, 5 );
     Archive cut( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( truncated.readState( cut ) );
@@ -788,11 +788,11 @@ SW_TEST_CASE( TacticsSrpgTest, StateRoundTripContinuesTheSameCampaign )
 }
 
 /**
- * @brief [TacticsSrpgTest] 전장은 전투 동안 전장 전체를 한 번에 빌린다 — 남의 칸이 있으면 거절, 끝나면 놓는다
+ * @brief [TacticsSRPGTest] 전장은 전투 동안 전장 전체를 한 번에 빌린다 — 남의 칸이 있으면 거절, 끝나면 놓는다
  */
-SW_TEST_CASE( TacticsSrpgTest, BattlefieldBorrowsItsLandForTheBattleOnly )
+SW_TEST_CASE( TacticsSRPGTest, BattlefieldBorrowsItsLandForTheBattleOnly )
 {
-    SrpgTestScene scene;
+    SRPGTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 6, 4 ) );
     LandRegistry land;
     land.initialize( 16, 16, 1.0f, float3{} );
@@ -802,7 +802,7 @@ SW_TEST_CASE( TacticsSrpgTest, BattlefieldBorrowsItsLandForTheBattleOnly )
     SW_EXPECT_FALSE( scene._field.bindLand( &land, int2{ 0, 0 } ) );
     SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 0, 0 ) );
     SW_ASSERT_TRUE( scene._field.bindLand( &land, int2{ 8, 8 } ) );
-    SW_EXPECT_TRUE( land.getOwnerName( 13, 11 ) == hashed_string( "TacticsSrpg" ) );
+    SW_EXPECT_TRUE( land.getOwnerName( 13, 11 ) == hashed_string( "TacticsSRPG" ) );
     SW_EXPECT_FALSE( land.claimRect( other, 13, 11, 13, 11, false ) );
     scene._field.releaseLand();
     SW_EXPECT_EQUAL( LandRegistry::kNoOwner, land.getOwner( 13, 11 ) );

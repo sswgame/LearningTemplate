@@ -56,7 +56,7 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | | `WitcherRpg` | 위쳐 류 RPG | |
 | `Genre/Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
 | | `CityBuilder` | 파라오 류 도시 건설 | NileCity |
-| | `TacticsSrpg` | 택틱스 SRPG | |
+| | `TacticsSRPG` | 택틱스 SRPG | |
 | | `SideScrollConquest` | 횡스크롤 정복 | |
 | `Genre/Simulation` | `Farming` | 농장 생활 | HarvestValley, MeadowVillage |
 | | `CreatureLife` | 생물 생활과 마을 | MeadowVillage |

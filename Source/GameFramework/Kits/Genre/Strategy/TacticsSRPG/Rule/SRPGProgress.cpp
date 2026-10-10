@@ -1,25 +1,25 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgProgress.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Catalog/SrpgCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSrpg/Rule/SrpgBattlefield.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 
 namespace sw
 {
     namespace
     {
-        struct SrpgProgressInternal
+        struct SRPGProgressInternal
         {
-            static bool isCommanderLost( const SrpgBattlefield& field, SrpgTeam team, bool& outHasCommander )
+            static bool isCommanderLost( const SRPGBattlefield& field, SRPGTeam team, bool& outHasCommander )
             {
                 outHasCommander = false;
                 bool bLost      = false;
-                for ( const SrpgUnit& unit : field.getUnits() )
+                for ( const SRPGUnit& unit : field.getUnits() )
                 {
                     if ( unit._team != team || unit._bCommander == SW_FALSE )
                         continue;
@@ -34,56 +34,56 @@ namespace sw
 
 namespace sw
 {
-    SrpgOutcome SrpgMission::evaluate( const SrpgBattlefield& field, const SrpgMissionRule& rule )
+    SRPGOutcome SRPGMission::evaluate( const SRPGBattlefield& field, const SRPGMissionRule& rule )
     {
         if ( field.getTurn() <= 0 )
-            return SrpgOutcome::Ongoing;
-        if ( field.countAlive( SrpgTeam::Player ) == 0 )
-            return SrpgOutcome::Defeat;
+            return SRPGOutcome::Ongoing;
+        if ( field.countAlive( SRPGTeam::Player ) == 0 )
+            return SRPGOutcome::Defeat;
         bool bPlayerHasCommander = false;
-        if ( rule._bLoseOnCommander == SW_TRUE && SrpgProgressInternal::isCommanderLost( field, SrpgTeam::Player, bPlayerHasCommander ) )
-            return SrpgOutcome::Defeat;
+        if ( rule._bLoseOnCommander == SW_TRUE && SRPGProgressInternal::isCommanderLost( field, SRPGTeam::Player, bPlayerHasCommander ) )
+            return SRPGOutcome::Defeat;
         const bool bOverTurnLimit = rule._turnLimit > 0 && field.getTurn() > rule._turnLimit;
-        if ( bOverTurnLimit && rule._objective != SrpgObjective::SurviveTurns )
-            return SrpgOutcome::Defeat;
+        if ( bOverTurnLimit && rule._objective != SRPGObjective::SurviveTurns )
+            return SRPGOutcome::Defeat;
 
         switch ( rule._objective )
         {
-            case SrpgObjective::DefeatAll:
+            case SRPGObjective::DefeatAll:
             {
-                return field.countAlive( SrpgTeam::Enemy ) == 0 ? SrpgOutcome::Victory : SrpgOutcome::Ongoing;
+                return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
             }
-            case SrpgObjective::DefeatCommander:
+            case SRPGObjective::DefeatCommander:
             {
                 bool       bEnemyHasCommander = false;
-                const bool bLost              = SrpgProgressInternal::isCommanderLost( field, SrpgTeam::Enemy, bEnemyHasCommander );
+                const bool bLost              = SRPGProgressInternal::isCommanderLost( field, SRPGTeam::Enemy, bEnemyHasCommander );
                 if ( bEnemyHasCommander == false )
-                    return field.countAlive( SrpgTeam::Enemy ) == 0 ? SrpgOutcome::Victory : SrpgOutcome::Ongoing; // 지휘관이 없으면 전멸로
-                return bLost ? SrpgOutcome::Victory : SrpgOutcome::Ongoing;
+                    return field.countAlive( SRPGTeam::Enemy ) == 0 ? SRPGOutcome::Victory : SRPGOutcome::Ongoing; // 지휘관이 없으면 전멸로
+                return bLost ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
             }
-            case SrpgObjective::ReachCell:
+            case SRPGObjective::ReachCell:
             {
-                for ( const SrpgUnit& unit : field.getUnits() )
+                for ( const SRPGUnit& unit : field.getUnits() )
                 {
-                    if ( unit._team != SrpgTeam::Player || unit._bAlive == SW_FALSE )
+                    if ( unit._team != SRPGTeam::Player || unit._bAlive == SW_FALSE )
                         continue;
                     for ( const int2& goal : rule._listGoalCell )
                     {
                         if ( unit._cell == goal )
-                            return SrpgOutcome::Victory;
+                            return SRPGOutcome::Victory;
                     }
                 }
-                return SrpgOutcome::Ongoing;
+                return SRPGOutcome::Ongoing;
             }
-            case SrpgObjective::SurviveTurns:
+            case SRPGObjective::SurviveTurns:
             {
-                return bOverTurnLimit ? SrpgOutcome::Victory : SrpgOutcome::Ongoing;
+                return bOverTurnLimit ? SRPGOutcome::Victory : SRPGOutcome::Ongoing;
             }
         }
-        return SrpgOutcome::Ongoing;
+        return SRPGOutcome::Ongoing;
     }
 
-    SrpgCampaign::SrpgCampaign()
+    SRPGCampaign::SRPGCampaign()
         : _runMap{}
         , _listRoster{}
         , _seed{ 0 }
@@ -92,7 +92,7 @@ namespace sw
     {
     }
 
-    void SrpgCampaign::initialize( const RunMapSettings& settings, uint32 seed )
+    void SRPGCampaign::initialize( const RunMapSettings& settings, uint32 seed )
     {
         _seed = seed;
         _runMap.generate( settings, seed );
@@ -101,11 +101,11 @@ namespace sw
         _bFailed    = SW_FALSE;
     }
 
-    int32 SrpgCampaign::addRosterEntry( const SrpgCatalog& catalog, const hashed_string& unitId, const hashed_string& pilotId, int32 pilotLevel )
+    int32 SRPGCampaign::addRosterEntry( const SRPGCatalog& catalog, const hashed_string& unitId, const hashed_string& pilotId, int32 pilotLevel )
     {
         if ( catalog.findUnit( unitId ) == nullptr || catalog.findPilot( pilotId ) == nullptr )
             return -1;
-        SrpgRosterEntry entry;
+        SRPGRosterEntry entry;
         entry._unitId  = unitId;
         entry._pilotId = pilotId;
         entry._pilotLevel.setLevel( catalog.getPilotCurve(), pilotLevel );
@@ -114,7 +114,7 @@ namespace sw
         return static_cast<int32>( _listRoster.size() ) - 1;
     }
 
-    bool SrpgCampaign::beginMission( int32 nodeIndex )
+    bool SRPGCampaign::beginMission( int32 nodeIndex )
     {
         if ( _bFailed == SW_TRUE || _bInMission == SW_TRUE || _runMap.moveTo( nodeIndex ) == false )
             return false;
@@ -122,18 +122,18 @@ namespace sw
         return true;
     }
 
-    int32 SrpgCampaign::deployRoster( SrpgBattlefield& field, const vector<int2>& listCell ) const
+    int32 SRPGCampaign::deployRoster( SRPGBattlefield& field, const vector<int2>& listCell ) const
     {
         int32  placedCount = 0;
         size_t cellIndex   = 0;
         for ( size_t rosterIndex = 0; rosterIndex < _listRoster.size() && cellIndex < listCell.size(); ++rosterIndex )
         {
-            const SrpgRosterEntry& entry = _listRoster[rosterIndex];
+            const SRPGRosterEntry& entry = _listRoster[rosterIndex];
             if ( entry._bLost == SW_TRUE )
                 continue;
-            const int32 unitIndex = field.addUnit( entry._unitId, entry._pilotId, SrpgTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
+            const int32 unitIndex = field.addUnit( entry._unitId, entry._pilotId, SRPGTeam::Player, listCell[cellIndex], entry._pilotLevel.getLevel() );
             ++cellIndex;
-            SrpgUnit* pUnit = field.findUnit( unitIndex );
+            SRPGUnit* pUnit = field.findUnit( unitIndex );
             if ( pUnit == nullptr )
                 continue;
             pUnit->_pilotLevel  = entry._pilotLevel;
@@ -144,15 +144,15 @@ namespace sw
         return placedCount;
     }
 
-    void SrpgCampaign::completeMission( const SrpgBattlefield& field, SrpgOutcome outcome )
+    void SRPGCampaign::completeMission( const SRPGBattlefield& field, SRPGOutcome outcome )
     {
-        if ( _bInMission == SW_FALSE || outcome == SrpgOutcome::Ongoing )
+        if ( _bInMission == SW_FALSE || outcome == SRPGOutcome::Ongoing )
             return;
-        for ( const SrpgUnit& unit : field.getUnits() )
+        for ( const SRPGUnit& unit : field.getUnits() )
         {
             if ( unit._rosterIndex < 0 || unit._rosterIndex >= static_cast<int32>( _listRoster.size() ) )
                 continue;
-            SrpgRosterEntry& entry = _listRoster[static_cast<size_t>( unit._rosterIndex )];
+            SRPGRosterEntry& entry = _listRoster[static_cast<size_t>( unit._rosterIndex )];
             entry._pilotLevel      = unit._pilotLevel;
             entry._unitLevel       = unit._unitLevel;
             entry._unitId          = unit._pDef->_id; // 작전 중 개발했으면 새 기체로
@@ -160,28 +160,28 @@ namespace sw
                 entry._bLost = SW_TRUE;
         }
         bool bAnyLeft = false;
-        for ( const SrpgRosterEntry& entry : _listRoster )
+        for ( const SRPGRosterEntry& entry : _listRoster )
         {
             bAnyLeft = bAnyLeft || entry._bLost == SW_FALSE;
         }
         _bInMission = SW_FALSE;
-        if ( outcome == SrpgOutcome::Defeat || bAnyLeft == false )
+        if ( outcome == SRPGOutcome::Defeat || bAnyLeft == false )
             _bFailed = SW_TRUE;
     }
 
-    hashed_string SrpgCampaign::getMissionKind() const
+    hashed_string SRPGCampaign::getMissionKind() const
     {
         const RunNode* pNode = _runMap.findNode( _runMap.getCurrent() );
         return pNode != nullptr ? pNode->_kind : hashed_string{};
     }
 
-    uint32 SrpgCampaign::getMissionSeed() const { return GameHash::mix32( _seed ^ GameHash::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) ); }
+    uint32 SRPGCampaign::getMissionSeed() const { return GameHash::mix32( _seed ^ GameHash::mix32( static_cast<uint32>( _runMap.getCurrent() + 1 ) * 0x9e3779b1u ) ); }
 
-    void SrpgCampaign::writeState( Archive& outArchive ) const
+    void SRPGCampaign::writeState( Archive& outArchive ) const
     {
         _runMap.writeState( outArchive );
         outArchive << static_cast<uint32>( _listRoster.size() );
-        for ( const SrpgRosterEntry& entry : _listRoster )
+        for ( const SRPGRosterEntry& entry : _listRoster )
         {
             entry._pilotLevel.writeState( outArchive );
             entry._unitLevel.writeState( outArchive );
@@ -194,15 +194,15 @@ namespace sw
         outArchive << _bFailed;
     }
 
-    bool SrpgCampaign::readState( Archive& archive )
+    bool SRPGCampaign::readState( Archive& archive )
     {
         RunMap runMap;
         uint32 count = 0;
         // 명단마다 레벨 둘(40) + 이름 둘(8) + 잃음(1)
         if ( runMap.readState( archive ) == false || StateArchiveUtil::readCount( archive, 49, count ) == false )
             return false;
-        vector<SrpgRosterEntry> listRoster( count );
-        for ( SrpgRosterEntry& entry : listRoster )
+        vector<SRPGRosterEntry> listRoster( count );
+        for ( SRPGRosterEntry& entry : listRoster )
         {
             const bool bEntryRead = entry._pilotLevel.readState( archive ) && entry._unitLevel.readState( archive ) &&
                                     StateArchiveUtil::readName( archive, entry._unitId ) && StateArchiveUtil::readName( archive, entry._pilotId );

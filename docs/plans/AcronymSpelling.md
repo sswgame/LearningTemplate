@@ -63,7 +63,7 @@
 | `Serialization/Json` · `Serialization/Xml` (Engine) | `JSON` · `XML` | include 경로 |
 | `Kits/Rpg` · `Rpg/WitcherRpg` · `Test/.../Kits/Rpg` | `RPG` · `WitcherRPG` | 키트 모듈 `GF_WitcherRpg` → `GF_WitcherRPG`, 매니페스트 · DLL · 게임의 모듈 표(`SWGame.module.json`) |
 | `Rpg/ClassicJrpg` | `ClassicJRPG` | 모듈 `GF_ClassicJRPG` |
-| `Strategy/TacticsSrpg` | `TacticsSRPG` | 모듈 `GF_TacticsSRPG` |
+| `Strategy/TacticsSRPG` | `TacticsSRPG` | 모듈 `GF_TacticsSRPG` |
 | `Storage/SqlStore/Shared` · `Storage/SqlStore/Server` | `SQLStore` | 모듈 `GF_SQLStore` · `GF_Server_SQLStore`, `CheckThirdPartyIsolation` 의 링크 주인 규칙 |
 | `SqlStore/Shared/Sql` · `SqlStore/Shared/Driver/Sqlite` | `SQL` · `SQLite` | include 경로(`SQLite` 는 제품 철자) |
 | `GameFramework/Base/Online/Security/OpenSsl` | `OpenSSL` | `CheckThirdPartyIsolation` · 그 폴더의 CMake(이름은 서드파티 제품 이름 `OpenSSL` 을 따른다) |
