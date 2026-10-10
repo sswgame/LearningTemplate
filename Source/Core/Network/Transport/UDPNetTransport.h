@@ -1,5 +1,5 @@
 /**
- * @file UdpNetTransport.h
+ * @file UDPNetTransport.h
  * @brief 실제 UDP 소켓 전송입니다(논블로킹 — 받을 것이 없으면 바로 돌아온다. 기다림은 `waitForReceive` 가 소켓을 `poll` 한다).
  * @details `send` 는 여러 스레드에서 동시에 불러도 된다(운영체제가 데이터그램 단위로 지킨다). `close` 는 기다리는 스레드를 멈춘 뒤에.
  */
@@ -10,14 +10,14 @@
 
 namespace sw
 {
-    class SW_API UdpNetTransport final : public INetTransport
+    class SW_API UDPNetTransport final : public INetTransport
     {
     public:
-        UdpNetTransport();
-        ~UdpNetTransport() override;
+        UDPNetTransport();
+        ~UDPNetTransport() override;
 
-        UdpNetTransport( const UdpNetTransport& )            = delete;
-        UdpNetTransport& operator=( const UdpNetTransport& ) = delete;
+        UDPNetTransport( const UDPNetTransport& )            = delete;
+        UDPNetTransport& operator=( const UDPNetTransport& ) = delete;
 
         /** @brief 포트를 엽니다(0 = 아무 포트 — 클라이언트). */
         [[nodiscard]] bool open( uint16 port );

@@ -1,45 +1,45 @@
 #include "pch.h"
 
-#include "Core/Network/Transport/UdpNetTransport.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "Core/Network/Transport/PlatformSocketUtil.h"
 
 namespace sw
 {
-    UdpNetTransport::UdpNetTransport()
+    UDPNetTransport::UDPNetTransport()
         : _localAddress{}
         , _socketHandle{ PlatformSocketUtil::kInvalidSocket }
     {
     }
 
-    UdpNetTransport::~UdpNetTransport() { close(); }
+    UDPNetTransport::~UDPNetTransport() { close(); }
 
-    bool UdpNetTransport::open( uint16 port )
+    bool UDPNetTransport::open( uint16 port )
     {
         close();
-        _socketHandle = PlatformSocketUtil::openUdpSocket( port );
+        _socketHandle = PlatformSocketUtil::openUDPSocket( port );
         if ( _socketHandle == PlatformSocketUtil::kInvalidSocket )
             return false;
         _localAddress = NetAddress::makeLoopback( PlatformSocketUtil::getBoundPort( _socketHandle ) );
         return true;
     }
 
-    void UdpNetTransport::close()
+    void UDPNetTransport::close()
     {
         PlatformSocketUtil::closeSocket( _socketHandle );
         _socketHandle = PlatformSocketUtil::kInvalidSocket;
     }
 
-    bool UdpNetTransport::isOpen() const { return _socketHandle != PlatformSocketUtil::kInvalidSocket; }
+    bool UDPNetTransport::isOpen() const { return _socketHandle != PlatformSocketUtil::kInvalidSocket; }
 
-    bool UdpNetTransport::send( const NetAddress& to, const uint8* pData, int32 size )
+    bool UDPNetTransport::send( const NetAddress& to, const uint8* pData, int32 size )
     {
         if ( isOpen() == false || size <= 0 || size > kNetMaxPacketSize )
             return false;
         return PlatformSocketUtil::sendTo( _socketHandle, to, pData, size );
     }
 
-    bool UdpNetTransport::waitForReceive( float64 timeoutSeconds )
+    bool UDPNetTransport::waitForReceive( float64 timeoutSeconds )
     {
         if ( isOpen() == false )
             return INetTransport::waitForReceive( timeoutSeconds );
@@ -47,7 +47,7 @@ namespace sw
         return PlatformSocketUtil::waitReadable( _socketHandle, timeoutMilli > 0 ? timeoutMilli : 0 );
     }
 
-    bool UdpNetTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
+    bool UDPNetTransport::receive( NetAddress& outFrom, vector<uint8>& outBuffer )
     {
         if ( isOpen() == false )
             return false;

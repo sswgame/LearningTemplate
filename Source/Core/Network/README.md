@@ -31,7 +31,7 @@ flowchart BT
 
 이 그림에서 기억할 개념은 네 가지입니다.
 
-**전송.** `INetTransport` 는 데이터그램을 보내고 받는 인터페이스입니다. 실제 UDP(`UdpNetTransport`), 한 프로세스 안의 루프백(`LoopbackNetwork`), 회선 흉내(`NetEmulationTransport`)가 이것을 구현합니다.
+**전송.** `INetTransport` 는 데이터그램을 보내고 받는 인터페이스입니다. 실제 UDP(`UDPNetTransport`), 한 프로세스 안의 루프백(`LoopbackNetwork`), 회선 흉내(`NetEmulationTransport`)가 이것을 구현합니다.
 `send` 는 아무 스레드에서나 부를 수 있고, `receive` 와 `waitForReceive` 는 `update` 를 도는 스레드 하나에서만 부릅니다.
 
 **연결과 채널.** `NetConnection` 은 연결 하나의 신뢰성을 맡습니다. 패킷 시퀀스와 확인(ack), 재전송, RTT와 손실률 측정을 합니다.

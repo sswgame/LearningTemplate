@@ -423,12 +423,12 @@
   컴파일러 · libc 에 따라 다르다). 스트림 프레임 압축은 있다(`StreamEndpointSettings::_compression` — 봉투 `NetCompressionUtil`, 기본 꺼짐, 받는 쪽은 푼 크기를 몸 상한으로
   보고 풀기 전에 거절) — 채팅 기록 · 거래 내역을 실을 키트가 zstd 로 켤지 정한다.
 - **MMO 규모 서버의 UDP 소켓 계층.** 지금은 호스트당 논블로킹 UDP 소켓 하나 + 전용 스레드 하나(`poll`/`WSAPoll`), 데이터그램마다 `recvfrom`/`sendto`, `NetHost` 잠금 하나.
-  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUdpBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
+  UDP 는 소켓이 하나라 IOCP · epoll 은 지렛대가 아니다. ① 측정(`NetUDPBenchTest`, 호스트 스위트 — 서버 20 Hz 200 B · 클라이언트 30 Hz 40 B, 서버 · 클라이언트가 한 PC,
   Release 3 회 가운데 값, 다른 빌드로 CPU 20~46 % 부하): Windows 500 — 받기 10.7k · 보내기 10.7k pkt/s, 서버 스레드 14 %, 6.6 us/패킷, RTT p50 48 · p99 48 ms /
   2000 — 42.1k · 42.5k pkt/s, 54 %(51~82 %), 6.5 us/패킷, RTT p50 68 · p99 70 ms, 커널 버림 0(RTT 는 같은 PC 의 클라이언트 드라이버 지연이 대부분). 리눅스(WSL Release,
   `ulimit -n 8192` 뒤 같은 필터)는 아직 — 숫자를 나란히 놓는다. 패킷당 6.5 us 의 대부분이 `recvfrom`/`sendto` 라 다음 일은 ②.
   ② 시스템 호출이 지배적이면 `INetTransport` 일괄 받기 · 보내기 하나의 계약 — 리눅스 `recvmmsg`/`sendmmsg`(+ GSO/GRO), Windows RIO(+ USO/URO, 없으면 `WSARecvMsg`)
-  ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUdpBenchTest` 숫자로 전후를 잰다.
+  ③ 스레드 하나가 차면 포트 샤딩(두 플랫폼 같은 계약 — 로그인 토큰이 포트를 준다, 리눅스는 `SO_REUSEPORT` 를 선택) + 샤드마다 `NetHost`. 둘 다 `NetUDPBenchTest` 숫자로 전후를 잰다.
 
 ### 1-8. 성능 (재고 나서 정할 것)
 

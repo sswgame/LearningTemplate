@@ -9,7 +9,7 @@
 #include "Core/Network/Replication/NetPrioritizer.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Network/Transport/NetTransport.h"
-#include "Core/Network/Transport/UdpNetTransport.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 
 #include "TestFramework/TestFramework.h"
 #include "TestFramework/TestLoopbackCluster.h"
@@ -966,10 +966,10 @@ SW_TEST_CASE( NetworkTest, LostPacketIsResentBeforeTheResendDelay )
     SW_EXPECT_EQUAL( 4242, readMessageValue( buffer ) );
 }
 
-SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
+SW_TEST_CASE( NetworkTest, UDPTransportSendsDatagramsOverLocalhost )
 {
-    UdpNetTransport server;
-    UdpNetTransport client;
+    UDPNetTransport server;
+    UDPNetTransport client;
     SW_ASSERT_TRUE( server.open( 0 ) );
     SW_ASSERT_TRUE( client.open( 0 ) );
     const NetAddress serverAddress = server.getLocalAddress();
@@ -994,7 +994,7 @@ SW_TEST_CASE( NetworkTest, UdpTransportSendsDatagramsOverLocalhost )
     // 닫힌 포트로 보낸 뒤에도 받기가 계속된다 — Windows 는 돌아온 ICMP "포트 닿지 않음" 을 다음 recvfrom 의 WSAECONNRESET 으로 알린다.
     NetAddress closedAddress{};
     {
-        UdpNetTransport closed;
+        UDPNetTransport closed;
         SW_ASSERT_TRUE( closed.open( 0 ) );
         closedAddress = closed.getLocalAddress();
     }

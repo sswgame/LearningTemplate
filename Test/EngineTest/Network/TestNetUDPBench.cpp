@@ -1,4 +1,4 @@
-// 실제 UDP 처리량 — 서버 NetHost 하나(UdpNetTransport) + 가짜 클라이언트 N 개(각자 소켓 · 드라이버 스레드 4 개가 나눠 돈다). 서버는 20 Hz 로 연결마다 200 B 스냅숏,
+// 실제 UDP 처리량 — 서버 NetHost 하나(UDPNetTransport) + 가짜 클라이언트 N 개(각자 소켓 · 드라이버 스레드 4 개가 나눠 돈다). 서버는 20 Hz 로 연결마다 200 B 스냅숏,
 // 클라이언트는 30 Hz 로 40 B 입력. 측정 5 초: 서버 받은/보낸 패킷/초, 서버 스레드의 바쁜 몫(update + 보내기)과 패킷당 ns, 서버가 본 연결 RTT p50 · p99,
 // 클라이언트가 보낸 수 대 서버가 받은 수(커널 버림 · 드라이버 지연). 두 플랫폼 같은 본문 — 값은 Release 로 읽는다.
 #include "pch.h"
@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Connection/NetHost.h"
 #include "Core/Network/Connection/NetHostThread.h"
-#include "Core/Network/Transport/UdpNetTransport.h"
+#include "Core/Network/Transport/UDPNetTransport.h"
 #include "Core/Time/MonotonicClock.h"
 
 #include "TestFramework/TestBench.h"
@@ -18,15 +18,15 @@
 #include <chrono>
 #include <thread>
 
-SW_TEST_REQUIRES_HOST( NetUdpBenchTest, "opens thousands of real UDP sockets for about 30 s - run with the host suites in Release on Windows and Linux" );
+SW_TEST_REQUIRES_HOST( NetUDPBenchTest, "opens thousands of real UDP sockets for about 30 s - run with the host suites in Release on Windows and Linux" );
 
-SW_LOG_CALLER( "NetUdpBench" );
+SW_LOG_CALLER( "NetUDPBench" );
 
 using namespace sw;
 
 namespace
 {
-    struct NetUdpBenchInternal
+    struct NetUDPBenchInternal
     {
         static constexpr int32   kDriverThreads       = 4;
         static constexpr int32   kSnapshotBytes       = 200;
@@ -73,7 +73,7 @@ namespace
 
     struct BenchClient
     {
-        UdpNetTransport _transport{};
+        UDPNetTransport _transport{};
         NetHost         _host{};
         float64         _nextInputTime{ 0.0 };
     };
@@ -93,8 +93,8 @@ namespace
     /** @brief 가짜 클라이언트 N 개로 한 판을 돈다. 소켓을 못 열거나 모두 연결하지 못하면 false(리눅스 기본 ulimit -n 1024 — 2000 개는 `ulimit -n 8192`). */
     bool runBench( int32 clientCount, BenchResult& outResult )
     {
-        using Internal = NetUdpBenchInternal;
-        UdpNetTransport serverSocket;
+        using Internal = NetUDPBenchInternal;
+        UDPNetTransport serverSocket;
         if ( serverSocket.open( 0 ) == false )
             return false;
         CountingTransport serverTransport( &serverSocket );
@@ -231,7 +231,7 @@ namespace
         outResult._rttP99                = listRtt.empty() ? 0.0f : listRtt[( listRtt.size() * 99 ) / 100];
         outResult._clientSentInputs      = clientSentInputs.load();
         outResult._serverReceivedPackets = received;
-        SW_LOG_INFO( "[Bench] NetUdp %# clients (%# connected) on %# %#: in %# pkt/s, out %# pkt/s, server busy %# pct (%# ns/packet), rtt p50 %# ms p99 %# ms, "
+        SW_LOG_INFO( "[Bench] NetUDP %# clients (%# connected) on %# %#: in %# pkt/s, out %# pkt/s, server busy %# pct (%# ns/packet), rtt p50 %# ms p99 %# ms, "
                      "client inputs %# vs server packets in %#",
                      clientCount, connectedCount, build::kPlatformName, build::kConfigName, static_cast<int64>( outResult._receivedPerSecond ),
                      static_cast<int64>( outResult._sentPerSecond ), static_cast<int64>( outResult._busyFraction * 100.0 ), outResult._nanosecondsPerPacket,
@@ -241,9 +241,9 @@ namespace
 } // namespace
 
 /**
- * @brief [NetUdpBenchTest] 가짜 클라이언트 500 — 실제 UDP 소켓, 서버 스레드 하나
+ * @brief [NetUDPBenchTest] 가짜 클라이언트 500 — 실제 UDP 소켓, 서버 스레드 하나
  */
-SW_TEST_CASE( NetUdpBenchTest, FiveHundredClients )
+SW_TEST_CASE( NetUDPBenchTest, FiveHundredClients )
 {
     BenchResult result;
     if ( runBench( 500, result ) == false )
@@ -252,9 +252,9 @@ SW_TEST_CASE( NetUdpBenchTest, FiveHundredClients )
 }
 
 /**
- * @brief [NetUdpBenchTest] 가짜 클라이언트 2000 — 실제 UDP 소켓, 서버 스레드 하나
+ * @brief [NetUDPBenchTest] 가짜 클라이언트 2000 — 실제 UDP 소켓, 서버 스레드 하나
  */
-SW_TEST_CASE( NetUdpBenchTest, TwoThousandClients )
+SW_TEST_CASE( NetUDPBenchTest, TwoThousandClients )
 {
     BenchResult result;
     if ( runBench( 2000, result ) == false )

@@ -25,7 +25,7 @@ namespace sw
         /** @brief 소켓 라이브러리를 엽니다(Windows 만 실제로 한다). 여러 번 불러도 됩니다. */
         [[nodiscard]] static bool initialize();
         /** @brief 논블로킹 UDP 소켓을 @p port 에 엽니다(0 = 아무 포트). 실패하면 `kInvalidSocket` 입니다. */
-        static uint64 openUdpSocket( uint16 port );
+        static uint64 openUDPSocket( uint16 port );
         static void   closeSocket( uint64 socketHandle );
         /** @brief 실제로 묶인 포트입니다(0 으로 열었을 때). */
         static uint16              getBoundPort( uint64 socketHandle );

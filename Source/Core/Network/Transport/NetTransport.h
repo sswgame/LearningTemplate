@@ -1,7 +1,7 @@
 /**
  * @file NetTransport.h
  * @brief 전송 — 데이터그램을 주소로 보내고 받는 인터페이스와, 한 프로세스 안의 루프백 망(보낸 순서대로 배달만 합니다)입니다.
- * @details 실제 UDP 는 `UdpNetTransport`. 루프백은 시험과 "한 프로세스 안의 서버 + 클라이언트"(리슨 서버 · 리플레이 · 봇)에 씁니다.
+ * @details 실제 UDP 는 `UDPNetTransport`. 루프백은 시험과 "한 프로세스 안의 서버 + 클라이언트"(리슨 서버 · 리플레이 · 봇)에 씁니다.
  *          회선 나쁨(지연 · 흔들림 · 손실 · 중복 · 깨짐 · 순서 뒤바뀜 · 대역폭)은 끝점에 씌우는 `NetEmulationTransport` 하나가 맡습니다 — UDP 에 씌우는 것과 같은 길입니다.
  */
 #pragma once

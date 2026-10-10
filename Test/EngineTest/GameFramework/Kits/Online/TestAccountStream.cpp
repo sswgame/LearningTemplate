@@ -223,7 +223,7 @@ namespace
     };
 
     /** @brief UDP 게임 서버 + 클라이언트 한 쌍(루프백 데이터그램). */
-    struct UdpPair
+    struct UDPPair
     {
         LoopbackNetwork             _network{};
         AccountConnectAuthenticator _authenticator;
@@ -231,7 +231,7 @@ namespace
         NetHost                     _client{};
         float64                     _time{ 0.0 };
 
-        UdpPair( const LoginTicketAuthority& authority, const utf8* pServerId, int64 nowMs )
+        UDPPair( const LoginTicketAuthority& authority, const utf8* pServerId, int64 nowMs )
             : _authenticator{ &authority, hashed_string( pServerId ) }
         {
             _authenticator.setNowMs( nowMs );
@@ -261,7 +261,7 @@ namespace
     };
 } // namespace
 
-SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUdpConnection )
+SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUDPConnection )
 {
     const bool arrSecure[] = { false, true };
     for ( const bool bSecure : arrSecure )
@@ -282,7 +282,7 @@ SW_TEST_CASE( AccountStreamTest, LoginIssuesATicketThatOpensAnEncryptedUdpConnec
         const AccountClientReply ticket = rig.waitReply( client, client._account.issueGameTicket( "zone-1" ) );
         SW_ASSERT_TRUE( ticket._result == LoginResult::Ok );
 
-        UdpPair               udp{ rig._server->_loginService.getTicketAuthority(), "zone-1", rig._nowMs };
+        UDPPair               udp{ rig._server->_loginService.getTicketAuthority(), "zone-1", rig._nowMs };
         NetConnectCredentials credentials;
         AccountClient::makeConnectCredentials( ticket._ticket, credentials );
         SW_ASSERT_TRUE( udp._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
@@ -324,21 +324,21 @@ SW_TEST_CASE( AccountStreamTest, ForgedOrForeignTicketsAndBadTokensAreRefused )
 
     NetGameTicket forged = ticket._ticket;
     forged._arrToken[3] ^= 0x01;
-    UdpPair               forgedPair{ rig._server->_loginService.getTicketAuthority(), "zone-1", rig._nowMs };
+    UDPPair               forgedPair{ rig._server->_loginService.getTicketAuthority(), "zone-1", rig._nowMs };
     NetConnectCredentials forgedCredentials;
     AccountClient::makeConnectCredentials( forged, forgedCredentials );
     SW_ASSERT_TRUE( forgedPair._client.connect( NetAddress::makeLoopback( 4100 ), forgedCredentials ) );
     forgedPair.run( 0.5 );
     SW_EXPECT_EQUAL( 0, forgedPair._server.getConnectedCount() );
 
-    UdpPair               otherZone{ rig._server->_loginService.getTicketAuthority(), "zone-2", rig._nowMs };
+    UDPPair               otherZone{ rig._server->_loginService.getTicketAuthority(), "zone-2", rig._nowMs };
     NetConnectCredentials credentials;
     AccountClient::makeConnectCredentials( ticket._ticket, credentials );
     SW_ASSERT_TRUE( otherZone._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
     otherZone.run( 0.5 );
     SW_EXPECT_EQUAL( 0, otherZone._server.getConnectedCount() );
 
-    UdpPair expired{ rig._server->_loginService.getTicketAuthority(), "zone-1", ticket._ticket._expiresAtMs };
+    UDPPair expired{ rig._server->_loginService.getTicketAuthority(), "zone-1", ticket._ticket._expiresAtMs };
     SW_ASSERT_TRUE( expired._client.connect( NetAddress::makeLoopback( 4100 ), credentials ) );
     expired.run( 0.5 );
     SW_EXPECT_EQUAL( 0, expired._server.getConnectedCount() );
