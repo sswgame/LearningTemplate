@@ -638,6 +638,9 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   판단은 ImGui 없는 `EditorNodeGraphRules`(EditorTest). 캔버스는 `beginGraphCanvas` · `endGraphCanvas` 로 연다 — 확장 모듈은 imgui-node-editor 를 정적으로 따로
   링크해 틀이 건 지금 편집기를 모르므로 템플릿(확장 안에서 컴파일된다)이 자기 사본에도 건다. 이것을 건너뛰고 `_nodeGraph.beginCanvas` 를 바로 부르면 확장의
   `ax::NodeEditor` 호출이 편집기 없음으로 멈춘다. 시나리오 `editor/graphaddnode`(탐침 `Editor.GraphNodeCount` 는 가장 최근에 그린 캔버스의 노드 수).
+- **노드 그래프 캔버스 안의 위젯 좌표는 캔버스 좌표다.** 시험 이름표를 `note` 로 적으면 화면과 어긋난 자리를 누른다 — `ed::CanvasToScreen` 으로 바꿔
+  `EditorSelfTestMarks::noteRect` 로 적는다(`animGraph.node.<이름>`). Animation Graph 의 편집 대상(오른쪽 상태 · 전이 인스펙터)은 캔버스 선택이 **바뀐 프레임에만**
+  따라간다 — 매 프레임 따르면 전이 목록으로 고른 것을 노드 선택이 덮는다. Link Selected 는 고른 순서(먼저 → 나중)로 잇는다. 시나리오 `editor/animgraphedit`.
 - **Output Log 의 따라가기는 스크롤 위치로 정한다.** 지난 프레임 배치의 `GetScrollY` 가 `GetScrollMaxY` 에 붙어 있을 때만 새 로그에 맨 아래로 내린다.
   "새 로그가 오면 늘 내린다" 로 되돌리면 위로 올려 읽는 중에 끌려 내려간다. 명령을 친 뒤에는 답을 보도록 한 번 내린다.
 - **도구 문서 패널은 열기 단추와 최근 목록을 기반이 그린다**(`EditorDocumentPanel::drawDocumentOpenBar`). 고른 문서는 워크스페이스 포커스로 넘기고,

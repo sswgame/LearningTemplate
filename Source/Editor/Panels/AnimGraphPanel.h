@@ -30,6 +30,10 @@ namespace sw::editor
         /** @brief 노드 그래프 캔버스를 그립니다. */
         void               drawAnimationCanvas();
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 조건이 있는 전이 수입니다(탐침 `Editor.AnimGraphConditionCount`). */
+        uint32 countConditionLinks() const;
+        /** @brief 전이 수입니다(탐침 `Editor.AnimGraphLinkCount`). */
+        uint32 getLinkCount() const { return static_cast<uint32>( _listLink.size() ); }
 
     private:
         using GraphNode = NodeType;
@@ -52,9 +56,27 @@ namespace sw::editor
         void syncPreviewGraph();
         /** @brief 미리보기 재생을 한 틱 진행합니다. */
         void tickPreview( float32 deltaSeconds );
+        /** @brief 미리보기가 상태를 옮겼으면 그 전이 링크에 흐름을 보이게 적습니다. */
+        void notePreviewTransition();
+        /** @brief 오른쪽 상태 · 전이 편집(이름 = 클립, 반복, 전이 조건 · 블렌드)입니다. */
+        void drawGraphInspector();
+        /** @brief 캔버스의 노드 · 링크 선택을 고른 순서대로 따라갑니다. */
+        void trackCanvasSelection();
+        /** @brief 고른 노드 둘(먼저 고른 것 → 나중 것)을 잇습니다. */
+        void linkSelectedNodes();
+        /** @brief 노드를 옆에 복제합니다. */
+        void duplicateNode( int32 nodeID );
 
     private:
-        AnimGraphAsset  _previewGraph;  ///< 미리보기 플레이어가 빌려 쓰는 그래프 사본입니다
-        AnimGraphPlayer _previewPlayer; ///< 노드 이름만 넘깁니다 — 클립 없이 "끝나면 다음" 을 손으로 진행합니다
+        AnimGraphAsset  _previewGraph;        ///< 미리보기 플레이어가 빌려 쓰는 그래프 사본입니다
+        AnimGraphPlayer _previewPlayer;       ///< 노드 이름만 넘깁니다 — 클립 없이 "끝나면 다음" 을 손으로 진행합니다
+        string          _previewStateName;    ///< 지난번 미리보기 상태(전이 흐름 표시)
+        string          _nameEditBuffer;      ///< 상태 이름 칸의 글
+        string          _parameterEditBuffer; ///< 조건 파라미터 칸의 글
+        vector<int32>   _listSelectionOrder;  ///< 캔버스에서 고른 노드(고른 순서)
+        int32           _selectedNodeID;
+        int32           _selectedLinkID;
+        int32           _canvasLinkID; ///< 지난 프레임에 캔버스에서 고른 링크(바뀐 때만 따라간다)
+        int32           _flowLinkID;   ///< 다음 캔버스에서 흐름을 보일 전이(0 이면 없음)
     };
 } // namespace sw::editor

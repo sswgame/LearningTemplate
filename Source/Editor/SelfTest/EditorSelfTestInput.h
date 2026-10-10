@@ -35,6 +35,8 @@ namespace sw::editor
     {
         /** @brief 바로 앞에 그린 위젯(ImGui "last item")을 @p pKey 로 적습니다. 시험이 꺼져 있으면 아무것도 하지 않습니다. */
         static void note( const utf8* pKey );
+        /** @brief 화면 픽셀 사각형(@p min ~ @p max)을 @p pKey 로 적습니다 — 좌표를 바꿔 그리는 캔버스(노드 그래프) 안의 위젯이 화면 좌표로 바꿔 넘깁니다. */
+        static void noteRect( const utf8* pKey, const float2& min, const float2& max );
         /** @brief 적힌 이름표를 찾습니다. 이번 프레임이나 지난 프레임에 적힌 것만 돌려줍니다. 없으면 false. */
         static bool find( string_view key, EditorSelfTestMark& outMark );
         /** @brief 실행기가 시험을 켜고 끌 때 부릅니다. 끄면 이름표와 남은 입력을 비웁니다. */

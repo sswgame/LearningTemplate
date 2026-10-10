@@ -82,6 +82,27 @@ namespace sw::editor
         state._listMark.push_back( EditorSelfTestInputInternal::NamedMark{ string( pKey ), mark } );
     }
 
+    void EditorSelfTestMarks::noteRect( const utf8* pKey, const float2& min, const float2& max )
+    {
+        EditorSelfTestInputInternal::State& state = EditorSelfTestInputInternal::getState();
+        if ( state._bEnabled == false || pKey == nullptr )
+            return;
+        EditorSelfTestMark mark;
+        mark._viewportID = ImGui::GetWindowViewport() != nullptr ? ImGui::GetWindowViewport()->ID : 0u;
+        mark._min        = min;
+        mark._max        = max;
+        mark._frame      = static_cast<uint32>( ImGui::GetFrameCount() );
+        for ( EditorSelfTestInputInternal::NamedMark& named : state._listMark )
+        {
+            if ( named._key == pKey )
+            {
+                named._mark = mark;
+                return;
+            }
+        }
+        state._listMark.push_back( EditorSelfTestInputInternal::NamedMark{ string( pKey ), mark } );
+    }
+
     bool EditorSelfTestMarks::find( string_view key, EditorSelfTestMark& outMark )
     {
         const uint32 frame = static_cast<uint32>( ImGui::GetFrameCount() );

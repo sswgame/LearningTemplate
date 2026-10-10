@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 애니메이션 그래프 전이 편집(N8): 노드를 하나 찾아 넣고, Walk 를 누른 뒤 Ctrl 로 Attack 을 골라 Link Selected 로 잇는다
+  (탐침 Editor.AnimGraphLinkCount). 오른쪽 인스펙터에서 그 전이를 골라 조건(파라미터 Speed · 비교 >)을 적으면 조건 있는 전이가 하나가 되고
+  (Editor.AnimGraphConditionCount), 저장한 뒤 조건을 지워도 Load 가 저장한 조건을 되읽는다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/animgraphedit.scenario.xml -dx12
+-->
+<Scenario name="editor.animgraphedit" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<At frame="20"><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/></At>
+	<At frame="25"><DevCommand line="layout.reset"/></At>
+	<At frame="40"><DevCommand line="panel.focus animation_graph"/></At>
+	<At frame="90"><Expect probe="Editor.GraphNodeCount" equals="2"/><Expect probe="Editor.AnimGraphLinkCount" equals="1"/></At>
+	<At frame="95"><EditorClick mark="graph.canvas" button="1" anchor="0.06,0.9"/></At>
+	<At frame="115"><EditorText value="att"/></At>
+	<At frame="125"><EditorKey key="Enter"/></At>
+	<At frame="150"><Expect probe="Editor.GraphNodeCount" equals="3"/></At>
+	<At frame="155"><EditorClick mark="animGraph.node.Walk"/></At>
+	<At frame="175"><EditorClick mark="animGraph.node.Attack" mods="ctrl"/></At>
+	<At frame="195"><EditorClick mark="animGraph.linkSelected"/></At>
+	<At frame="215"><Expect probe="Editor.AnimGraphLinkCount" equals="2"/><Expect probe="Editor.AnimGraphConditionCount" equals="0"/></At>
+	<At frame="220"><EditorClick mark="animGraph.link.1"/></At>
+	<At frame="240"><EditorClick mark="animGraph.condition.param"/></At>
+	<At frame="255"><EditorText value="Speed"/></At>
+	<At frame="265"><EditorKey key="Enter"/></At>
+	<At frame="280"><EditorClick mark="animGraph.condition.op"/></At>
+	<At frame="300"><EditorClick mark="animGraph.condition.op.1"/></At>
+	<At frame="320"><Expect probe="Editor.AnimGraphConditionCount" equals="1"/></At>
+	<At frame="325"><EditorClick mark="animGraph.save"/></At>
+	<At frame="345"><EditorClick mark="animGraph.link.1"/></At>
+	<At frame="360"><EditorClick mark="animGraph.condition.op"/></At>
+	<At frame="380"><EditorClick mark="animGraph.condition.op.0"/></At>
+	<At frame="400"><Expect probe="Editor.AnimGraphConditionCount" equals="0"/></At>
+	<At frame="405"><EditorClick mark="animGraph.load"/></At>
+	<At frame="430"><Expect probe="Editor.AnimGraphConditionCount" equals="1"/><Expect probe="Editor.AnimGraphLinkCount" equals="2"/></At>
+	<At frame="435"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

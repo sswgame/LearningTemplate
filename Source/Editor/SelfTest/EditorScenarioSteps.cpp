@@ -24,6 +24,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWindowTitle.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+#include "Editor/Panels/AnimGraphPanel.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/ModulesPanel.h"
@@ -1154,6 +1155,29 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 애니메이션 그래프 패널의 전이 수(@p bConditionOnly 면 조건이 있는 것만)입니다. 패널이 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readAnimGraphLinks( bool bConditionOnly, float64& outValue )
+            {
+                EditorContext* pContext = EditorContext::get();
+                if ( pContext == nullptr )
+                    return false;
+                const AnimGraphPanel* pPanel = static_cast<const AnimGraphPanel*>( pContext->getPanelManager().findPanel( "animation_graph" ) );
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( bConditionOnly ? pPanel->countConditionLinks() : pPanel->getLinkCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readAnimGraphLinkCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readAnimGraphLinks( false, outValue );
+            }
+
+            [[nodiscard]] static bool readAnimGraphConditionCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                return readAnimGraphLinks( true, outValue );
+            }
+
             /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -1339,6 +1363,10 @@ namespace sw::editor
     SW_AUTOMATION_PROBE( editorGizmoOperation, "Editor.GizmoOperation", "Gizmo operation: 0 translate, 1 rotate, 2 scale", &EditorScenarioStepsInternal::readGizmoOperation );
     SW_AUTOMATION_PROBE( editorGraphNodeCount, "Editor.GraphNodeCount", "Nodes of the node graph canvas drawn most recently (dialogue, animation, extension graphs)",
                          &EditorScenarioStepsInternal::readGraphNodeCount );
+    SW_AUTOMATION_PROBE( editorAnimGraphLinkCount, "Editor.AnimGraphLinkCount", "Transitions in the open animation graph document",
+                         &EditorScenarioStepsInternal::readAnimGraphLinkCount );
+    SW_AUTOMATION_PROBE( editorAnimGraphConditionCount, "Editor.AnimGraphConditionCount", "Transitions with a condition in the open animation graph document",
+                         &EditorScenarioStepsInternal::readAnimGraphConditionCount );
     SW_AUTOMATION_PROBE( editorProbedPanelOpen, "Editor.PanelOpen", "1 when the panel named by gv_editorProbePanel is open",
                          &EditorScenarioStepsInternal::readProbedPanelOpen );
     SW_AUTOMATION_PROBE( editorPreferencesVisibleSections, "Editor.PreferencesVisibleSections", "Sections the Preferences window listed in the last frame (after its search)",
