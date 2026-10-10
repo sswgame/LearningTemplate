@@ -50,7 +50,7 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | | `AsymmetricHorror` | 1 대 4 비대칭 공포 | |
 | | `CoopScavenger` | 협동 수집 공포 | |
 | | `GhostHunt` | 루이지 맨션 류 유령 사냥 | |
-| `Genre/RPG` | `ClassicJrpg` | 클래식 JRPG | |
+| `Genre/RPG` | `ClassicJRPG` | 클래식 JRPG | |
 | | `MonsterCollector` | 포켓몬 류 몬스터 수집 | |
 | | `OpenWorldWestern` | 오픈월드 서부극 | |
 | | `WitcherRPG` | 위쳐 류 RPG | |
@@ -233,7 +233,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 - **피해는 `UnitStatsComponent::applyTakeDamage` 한 곳에서만 깎습니다.** 방어 식은 `DamageMath::applyArmor`(최소 1)이고, 0 이하 피해는 맞지 않은 것으로 봅니다.
   `DamageAppliedEvent` 는 큐를 거치므로, 같은 프레임에 받아야 하면 `registerDamageApplied` 를 씁니다.
 - **턴제 몬스터 전투는 `MonsterCollector` 하나입니다.** 전투 연출(단계 타이머, HUD 한 줄)은 게임이 맡습니다.
-- **오버월드 맵은 조우가 일어나는 셀만 알려 줍니다.** 무엇을 만나는지는 장르 키트의 지역 테이블(`MonsterCollectorCatalog::rollEncounter`, `JrpgEncounterWalker`)이 정합니다.
+- **오버월드 맵은 조우가 일어나는 셀만 알려 줍니다.** 무엇을 만나는지는 장르 키트의 지역 테이블(`MonsterCollectorCatalog::rollEncounter`, `JRPGEncounterWalker`)이 정합니다.
   존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이고(`ZoneTracker::setFromMap`), 클리어 게이트는 `clear_gate` 태그입니다. 경로 이름에서 역할을 짐작하지 않습니다.
 - **타일맵 레이어 테이블(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식입니다.** 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힙니다(`TileMapXmlTest.SavedBytesMatchTheExistingFormat`).
   레이어를 더할 때는 `TileFlagLayer` 값과 이 테이블 한 줄만 고칩니다.

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/RPG/ClassicJrpg/JrpgEncounter.h"
+#include "GameFramework/Kits/Genre/RPG/ClassicJRPG/JRPGEncounter.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    JrpgEncounterWalker::JrpgEncounterWalker()
+    JRPGEncounterWalker::JRPGEncounterWalker()
         : _random{}
         , _pCatalog{ nullptr }
         , _stepsSinceEncounter{ kNoEncounterYet }
@@ -16,7 +16,7 @@ namespace sw
     {
     }
 
-    void JrpgEncounterWalker::initialize( const JrpgCatalog* pCatalog, uint32 seed )
+    void JRPGEncounterWalker::initialize( const JRPGCatalog* pCatalog, uint32 seed )
     {
         _pCatalog = pCatalog;
         _random.setSeed( seed );
@@ -24,12 +24,12 @@ namespace sw
         _totalSteps          = 0;
     }
 
-    const JrpgEncounterGroup* JrpgEncounterWalker::step( const hashed_string& areaId )
+    const JRPGEncounterGroup* JRPGEncounterWalker::step( const hashed_string& areaId )
     {
         ++_totalSteps;
         if ( _stepsSinceEncounter < kNoEncounterYet )
             ++_stepsSinceEncounter;
-        const JrpgAreaDef* pArea = _pCatalog != nullptr ? _pCatalog->findArea( areaId ) : nullptr;
+        const JRPGAreaDef* pArea = _pCatalog != nullptr ? _pCatalog->findArea( areaId ) : nullptr;
         if ( pArea == nullptr || pArea->_listGroup.empty() )
             return nullptr;
         if ( _stepsSinceEncounter <= pArea->_graceSteps )
@@ -38,7 +38,7 @@ namespace sw
         if ( _random.nextChance( pArea->_rate ) == false )
             return nullptr;
 
-        const int32 groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JrpgEncounterGroup& group )
+        const int32 groupIndex = _random.pickWeightedIndexInt( pArea->_listGroup, []( const JRPGEncounterGroup& group )
         { return group._weight; } );
         if ( groupIndex < 0 )
             return nullptr;
@@ -46,14 +46,14 @@ namespace sw
         return pArea->_listGroup.data() + groupIndex;
     }
 
-    void JrpgEncounterWalker::writeState( Archive& outArchive ) const
+    void JRPGEncounterWalker::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeRandom( outArchive, _random );
         outArchive << _stepsSinceEncounter;
         outArchive << _totalSteps;
     }
 
-    bool JrpgEncounterWalker::readState( Archive& archive )
+    bool JRPGEncounterWalker::readState( Archive& archive )
     {
         GameRandom random;
         int32      stepsSinceEncounter = 0;
