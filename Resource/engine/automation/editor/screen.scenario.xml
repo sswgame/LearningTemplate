@@ -3,7 +3,7 @@
   에디터 시나리오 ② 화면 — 뷰 스크린샷이 실제 그림인지, 창을 단계별로 줄여도 도크 칸이 화면 안 · 최소 변을 지키고 창이 에디터 최소 크기(960x540)에서
   멈추는지, UI 배율 1.5 에서도 같은지, 테마를 바꾸고 Classic Dark 의 테마 대화상자에서 스와치를 누르면 액센트가 바뀌는지.
   스크린샷은 에디터 UI 가 아니라 주 출력 그림이다(Present 캡처가 주 출력 렌더 타깃을 복사한다). 기본 배치는 Scene 탭이 앞이라 씬 뷰 그림이다.
-  실행: App.exe -EnableEditor -scenario=engine/automation/editor/screen.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOnEveryBackend 가 백엔드마다 돈다)
+  실행: App.exe -EnableEditor -scenario=engine/automation/editor/screen.scenario.xml -dx12   (AppScenarioTest.EditorScenariosPassOn<Backend> 가 백엔드마다 돈다)
 -->
 <Scenario name="editor.screen" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
 	<!-- 1) 뷰 스크린샷 — 까만 빈 그림이 아니다 -->

@@ -27,9 +27,12 @@ sw_addTestExecutable(AppTest
 		"unit;app"
 	TIMEOUT
 		60
-	# 실기동 스모크 + 자동화 시나리오(AppScenarioTest — 시나리오 수 × 백엔드 넷 × 시나리오마다 수십 초). 시나리오가 늘어 넘치면 HOST_SHARDS 로 나눈다.
+	# 실기동 스모크 + 자동화 시나리오(AppScenarioTest — 시나리오 수 × 백엔드 넷 × 시나리오마다 수 초). 에디터 시나리오만 백엔드마다 4~5 분이라
+	# 한 실행(약 23 분)이 시한을 넘었다 — 조각 셋으로 나눈다(에디터 케이스는 백엔드마다 하나라 조각에 고루 갈린다).
 	HOST_TIMEOUT
 		1200
+	HOST_SHARDS
+		3
 )
 
 # 스모크는 **빌드된 App 을 띄운다** — 타깃이 옆에 서 있어야 한다.

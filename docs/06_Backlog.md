@@ -85,6 +85,10 @@
 - **반해상도 후처리** — 첨부별 `_resolutionDivisor`(1 · 2 · 4)는 있다. 남은 것:
   `deferredpipeline.xml` 블룸을 반해상도로 나누기, Release 로 p50 · p99 측정.
 - **머티리얼 폴백 원소(`FrameRenderer::ensureMaterialFallbackBuffers` — 0 바이트)의 텍스처 인덱스 칸이 0 이다** — Vulkan 은 bindless 0 번 실제 텍스처를 읽는다(DX12 는 0 번을 null SRV 로 비웠다, 머티리얼은 `MaterialPacking` 이 `kInvalidIndex` 를 넣는다). 원소 레이아웃(`ShaderBindingSlot`)은 stride 만, 리플렉션 원소 칸은 `uint` 뿐이라 텍스처 칸을 가를 수 없다 — 셰이더 쪽 표식(텍스처 칸 매크로가 리플렉션에 남기는 이름 규칙)으로 칸을 알아 `kInvalidIndex` 로 채우거나, Vulkan 도 0 번을 null 서술자로 비운다.
+- **Vulkan 을 최소화 창으로 띄우면 `[Error]` 둘**(2026-10-11 전체 검증, `App -vk` 를 `Start-Process -WindowStyle Minimized` 로): 서피스 크기가 0 이라
+  `Failed to recreate the swapchain (1280x720) — retrying every frame`(Error)이 나고, 그 사이 `-gv_screenshot` 이 그린 적 없는 스왑체인 이미지(레이아웃 UNDEFINED)를
+  복사해 검증 레이어 Error 가 난다. DX12 · DX11 · GL 은 같은 조건에서 0. 최소화는 정상 상태라(주석도 그렇게 적는다) 서피스 `currentExtent` 가 0 이면 오류 없이 기다리고,
+  그동안 스크린샷 요청은 미룬다. 네 백엔드 × 최소화 · 복원 실행으로 확인한다.
 - **월드 좌표 UV(트라이플래너) 프로토타입 머티리얼** — `engine/materials/prototypegrid_*` 는 메시 UV 를 따라 큐브 크기마다 칸이 늘어난다. 언리얼 `WorldGridMaterial` 처럼 월드 1 m 격자로 보이려면 셰이더 분기(월드 위치로 샘플)가 필요하다.
 
 ### 1-4. 에디터
@@ -509,6 +513,10 @@
   로그는 `TaskManager Shutdown cleanly` 에서 끝나고 크래시 스택 주석이 없었다. 이 PC Debug 로 같은 조각(`--test_shard=2/3 --host_suites=exclude`) 15 회 순차 ·
   12 회 4 개 동시 — 재현 안 됨. 하네스가 이제 마지막 줄 `[TestHost] shut down - exit code N` 을 찍는다: 다시 나면 그 줄이 없으면 `TestHostRuntime::stop`
   안(부트스트랩 · 로거 · 메모리 프로파일러 종료), 있으면 정적 소멸자다.
+- **`GameFrameworkTest.ActionCombatKit_MonsterStatsAreInMetersAndReachUnitStats` 가 한 번 HP 30 ≠ 20 으로 졌다**(2026-10-10 이전 검증, 한 번).
+  2026-10-11 재현 안 됨 — Debug `EngineTest --test_shuffle=11 · 12 · 13 · 14`(전체) · `--test_filter=GameFrameworkTest.* --test_shuffle=1..5`. 케이스는 주인 없는 스택 컴포넌트에
+  `setStats` → `takeDamage` 라 전역 상태를 읽지 않는다(무적 시간 · 사망 비트는 생성자가 0 으로 둔다). 다시 나면 그 실행의 씨앗(`Replay this order with --test_shuffle=N`)과
+  `--output-on-failure` 전체를 남긴다.
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
 - **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을

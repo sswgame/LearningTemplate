@@ -113,12 +113,9 @@ namespace
             return fileName;
         }
 
-        /** @brief 묶음마다 · 백엔드마다 빈 상태 폴더를 만들어 묶음의 시나리오를 차례로 돌립니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
-        static uint32 runEditorGroups( const sw::vector<sw::string>& listScenario )
+        /** @brief 묶음마다 빈 상태 폴더를 만들어 묶음의 시나리오를 백엔드 @p pSwitch(`-dx12` …)로 차례로 돌립니다. 돌린(건너뛰지 않은) 수를 돌려줍니다. */
+        static uint32 runEditorGroups( const sw::vector<sw::string>& listScenario, const utf8* pSwitch )
         {
-    #define SW_APP_SCENARIO_EDITOR_SWITCH( Backend, ShaderFolder, ShaderTarget, Argument, CommandLineName ) "-" CommandLineName,
-            constexpr const utf8* kArrBackendSwitch[] = { SW_RHI_BACKEND_TABLE( SW_APP_SCENARIO_EDITOR_SWITCH ) };
-    #undef SW_APP_SCENARIO_EDITOR_SWITCH
             uint32 ranCount = 0;
             size_t begin    = 0;
             while ( begin < listScenario.size() )
@@ -129,31 +126,37 @@ namespace
                 {
                     ++end;
                 }
-                for ( const utf8* pSwitch : kArrBackendSwitch )
+                sw::string stateFolder;
+                const bool bAbsolute = sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + group + "_" + ( pSwitch + 1 ), stateFolder );
+                SW_EXPECT_TRUE( bAbsolute );
+                SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
+                const sw::string arguments = "-EnableEditor -gv_editorStateDir=" + stateFolder;
+                for ( size_t index = begin; index < end; ++index )
                 {
-                    sw::string stateFolder;
-                    const bool bAbsolute = sw::FileUtil::makeAbsolutePath( "Saved/Automation/EditorState/" + group + "_" + ( pSwitch + 1 ), stateFolder );
-                    SW_EXPECT_TRUE( bAbsolute );
-                    SW_EXPECT_TRUE( sw::FileUtil::removeDirectory( stateFolder ) );
-                    const sw::string arguments = "-EnableEditor -gv_editorStateDir=" + stateFolder;
-                    for ( size_t index = begin; index < end; ++index )
+                    sw::string       scenarioLines;
+                    const int32      exitCode = test::AppTestUtil::runScenario( listScenario[index], pSwitch, scenarioLines, arguments );
+                    const sw::string label    = listScenario[index] + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
+                    SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
+                    if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
                     {
-                        sw::string       scenarioLines;
-                        const int32      exitCode = test::AppTestUtil::runScenario( listScenario[index], pSwitch, scenarioLines, arguments );
-                        const sw::string label    = listScenario[index] + " " + pSwitch + " -> exit " + sw::to_string( exitCode ) + "\n" + scenarioLines;
-                        SW_EXPECT_TRUE_MSG( exitCode != test::AppTestUtil::kNotLaunchedExitCode, "App 을 띄우지 못했습니다 — 작업 폴더(Bin)에 App 이 있습니까?" );
-                        if ( test::AppTestUtil::isSkippedExitCode( exitCode ) )
-                        {
-                            SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
-                            break; // 묶음의 뒤 실행은 앞 실행이 남긴 상태를 본다 — 앞이 건너뛰면 뒤도 건너뛴다
-                        }
-                        SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
-                        ++ranCount;
+                        SW_LOG_INFO( "[AppScenarioTest] skipped %#", label.c_str() );
+                        break; // 묶음의 뒤 실행은 앞 실행이 남긴 상태를 본다 — 앞이 건너뛰면 뒤도 건너뛴다
                     }
+                    SW_EXPECT_TRUE_MSG( exitCode == 0, label.c_str() );
+                    ++ranCount;
                 }
                 begin = end;
             }
             return ranCount;
+        }
+
+        /** @brief `engine/automation/editor` 의 시나리오를 백엔드 하나(@p pSwitch)로 돌립니다 — 케이스 본문입니다. */
+        static void runEditorCase( const utf8* pSwitch )
+        {
+            const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { "engine/automation/editor" } );
+            SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "engine/automation/editor 에 에디터 시나리오가 없습니다" );
+            if ( runEditorGroups( listScenario, pSwitch ) == 0 )
+                SW_TEST_SKIP( "no editor scenario could run on this machine" );
         }
     };
 #endif
@@ -172,20 +175,56 @@ SW_TEST_CASE( AppScenarioTest, EveryScenarioPassesOnEveryBackend )
         SW_TEST_SKIP( "no scenario could run on this machine" );
 }
 
+// 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)를 에디터를 켠 실행(`-EnableEditor`)으로 돌린다. 에디터 동작을 바꿨으면 이 시나리오로 확인한다.
+// 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로 사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다.
+// `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.
+// 백엔드마다 한 케이스다 — 시나리오 60 개 × 백엔드 넷을 한 케이스에 두면 그 케이스 하나가 18 분을 넘겨 `AppTest_HostOnly` 시한(20 분)을 채웠다.
+// 케이스로 나눠야 `HOST_SHARDS` 가 조각마다 시한을 준다.
+
 /**
- * @brief [AppScenarioTest] 에디터 작업 흐름 시나리오(`engine/automation/editor` 의 `.scenario.xml`)가 에디터를 켠 실행(`-EnableEditor`)에서 모든 백엔드로 통과한다
- * @details 에디터 동작을 바꿨으면 이 시나리오로 확인한다. 실행마다 빈 에디터 상태 폴더(`Bin/Saved/Automation/EditorState/<묶음>_<백엔드>`)로 시작하므로
- *          사용자의 `Saved/Editor` 를 읽지도 쓰지도 않는다. `<묶음>.<n>.scenario.xml` 은 한 폴더를 이어 써 저장된 상태를 읽는 분기를 본다. 배포본에는 에디터가 없다.
+ * @brief [AppScenarioTest] 에디터 시나리오가 DX12 에서 통과한다
  */
-SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnEveryBackend )
+SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX12 )
 {
 #if defined( SW_SHIPPING )
     SW_TEST_SKIP( "the shipping build has no editor" );
 #else
-    const sw::vector<sw::string> listScenario = AppScenarioTestInternal::collectScenarioPaths( { "engine/automation/editor" } );
-    SW_ASSERT_TRUE_MSG( listScenario.empty() == false, "engine/automation/editor 에 에디터 시나리오가 없습니다" );
-    const uint32 ranCount = EditorScenarioRunInternal::runEditorGroups( listScenario );
-    if ( ranCount == 0 )
-        SW_TEST_SKIP( "no editor scenario could run on this machine" );
+    EditorScenarioRunInternal::runEditorCase( "-dx12" );
+#endif
+}
+
+/**
+ * @brief [AppScenarioTest] 에디터 시나리오가 DX11 에서 통과한다
+ */
+SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnDirectX11 )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the shipping build has no editor" );
+#else
+    EditorScenarioRunInternal::runEditorCase( "-dx11" );
+#endif
+}
+
+/**
+ * @brief [AppScenarioTest] 에디터 시나리오가 Vulkan 에서 통과한다
+ */
+SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnVulkan )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the shipping build has no editor" );
+#else
+    EditorScenarioRunInternal::runEditorCase( "-vk" );
+#endif
+}
+
+/**
+ * @brief [AppScenarioTest] 에디터 시나리오가 OpenGL 에서 통과한다
+ */
+SW_TEST_CASE( AppScenarioTest, EditorScenariosPassOnOpenGL )
+{
+#if defined( SW_SHIPPING )
+    SW_TEST_SKIP( "the shipping build has no editor" );
+#else
+    EditorScenarioRunInternal::runEditorCase( "-gl" );
 #endif
 }

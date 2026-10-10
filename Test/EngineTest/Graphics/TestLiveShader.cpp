@@ -198,6 +198,10 @@ SW_TEST_CASE( LiveShaderTest, LiveCompileWritesUnderItsOwnCodegen )
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( shaderAbs ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( livePath ) );
         SW_EXPECT_TRUE( sw::FileUtil::removeFile( requestPath ) );
+        // 엔진 캐시에 남은 프로브 항목도 비운다 — 남기면 다음 케이스의 수동 리로드(`triggerReloadAll`)가 지워진 소스를 다시 컴파일하려다
+        // "Shader reload failed" 를 남긴다(섞은 순서 `--test_shuffle=13` 에서 `ManualReloadWithNoTargetsIsNoop` 이 졌다).
+        if ( sw::engine::areEngineServicesBound() )
+            sw::engine::getShaderCache().clearCache();
     } ) );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( livePath ) );
     SW_ASSERT_TRUE( sw::FileUtil::removeFile( requestPath ) );

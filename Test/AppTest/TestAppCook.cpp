@@ -48,7 +48,9 @@ namespace
         {
             if ( line.find( "MissingComponent" ) != string::npos )
                 result._listMissingComponentLine.push_back( line );
-            if ( line.find( "[Error]" ) != string::npos || line.find( "[Warning]" ) != string::npos )
+            // 값 검증(`[ObjectValidation]`)은 읽기 실패가 아니라 데이터 점검 결과다 — Map Check 시나리오의 씬은 일부러 틀린 값을 든다.
+            const bool bProblem = line.find( "[Error]" ) != string::npos || line.find( "[Warning]" ) != string::npos;
+            if ( bProblem && line.find( "[ObjectValidation]" ) == string::npos )
                 result._listProblemLine.push_back( line );
         }
         result._exitCode = process.waitForExit();
