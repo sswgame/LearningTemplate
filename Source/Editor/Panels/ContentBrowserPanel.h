@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/Commands/EditorAssetFileCommands.h"
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorReferenceIndex.h"
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
@@ -48,8 +49,8 @@ namespace sw::editor
         /** @brief 에셋 삭제 확인 모달을 엽니다. 지우는 것은 사용자가 확인한 뒤(`confirmDeleteAsset`)입니다. */
         void requestDeleteAsset( string_view absolutePath );
         /**
-         * @brief 확인을 기다리던 에셋을 지웁니다(파일 + 짝 `.meta`, 휴지통 아님). 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
-         * @return 지웠으면 true. 기다리던 것이 없거나 지우지 못했으면 false(실패는 `EditorAssetCommands::deleteAsset` 이 알린다).
+         * @brief 확인을 기다리던 에셋을 OS 휴지통으로 보냅니다(파일과 짝 `.meta`). 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
+         * @return 보냈으면 true. 기다리던 것이 없거나 보내지 못했으면 false(실패는 `EditorAssetFileCommands::moveToTrash` 가 알린다).
          */
         bool confirmDeleteAsset();
         /** @brief 폴더 트리가 읽어 둔 하위 폴더를 버립니다(다음 그리기가 디스크를 다시 읽는다 — Refresh 와 같다). */
@@ -77,6 +78,23 @@ namespace sw::editor
         void showReferences( string_view absolutePath, bool bDependencies );
         /** @brief 마지막 참조 찾기의 결과 줄 수입니다. */
         uint32 getReferenceResultCount() const { return static_cast<uint32>( _listReferenceResult.size() ); }
+        // ------------------------------------------------------------------------------
+        // 1-3) 에셋 관리 — 툴바 Add, 우클릭 Rename · Duplicate · Delete, F2 · Ctrl+D · Delete, 폴더로 끌어 놓기가 부르는 것과 같다
+        // ------------------------------------------------------------------------------
+        /** @brief 지금 폴더에 새 폴더를 만들고 목록을 다시 읽게 합니다. */
+        [[nodiscard]] bool createNewFolder();
+        /** @brief 지금 폴더에 새 에셋을 만들고 그것을 고릅니다. */
+        [[nodiscard]] bool createNewAsset( EditorNewAssetKind kind );
+        /** @brief 에셋을 같은 폴더에 복제하고 사본을 고릅니다. */
+        bool duplicateAsset( string_view absolutePath );
+        /** @brief 에셋의 제자리 이름 바꾸기를 시작합니다(입력 칸은 확장자를 뺀 이름이다). 폴더는 받지 않습니다. */
+        void beginRename( string_view absolutePath );
+        /** @brief 이름 바꾸기 중인 에셋입니다(없으면 빈 문자열). */
+        const string& getRenamingPath() const { return _renamingAbs; }
+        /** @brief 이름 바꾸기를 @p newName(확장자 없이 써도 된다)으로 끝냅니다. 참조를 고치고 새 이름을 고릅니다. */
+        bool commitRename( string_view newName );
+        /** @brief 에셋을 @p folderAbs 로 옮기고 참조를 고칩니다(폴더 타일 · 트리로 끌어 놓기). */
+        [[nodiscard]] bool moveAssetToFolder( string_view sourceAbs, string_view folderAbs );
         /** @brief 썸네일 캐시가 들고 있는 텍스처 썸네일 수입니다. */
         uint32 getThumbnailCacheCount() const { return _thumbnailCache.getCachedCount(); }
         /** @brief 지난 그리기에서 종류 아이콘으로 그린 타일 수입니다(그림 썸네일이 없는 종류). */
@@ -143,6 +161,16 @@ namespace sw::editor
         void syncReferenceIndex();
         /** @brief 참조 찾기 결과 창을 그립니다(`showReferences` 가 연다). */
         void drawReferenceResults();
+        /** @brief 툴바 Add 팝업(새 폴더 · 머티리얼 · 씬 · 프리팹)을 그립니다. */
+        void drawAddMenu();
+        /** @brief 이름 바꾸기 중인 항목의 입력 칸을 그립니다. Enter · 다른 곳 클릭이면 바꾸고 Escape 면 그만둔다. */
+        void drawRenameField( float32 width );
+        /** @brief 창에 포커스가 있을 때의 F2 · Ctrl+D · Delete 입니다. */
+        void handleAssetShortcuts();
+        /** @brief 바로 앞 위젯을 에셋 끌어 놓기 대상으로 만듭니다. 놓으면 @p folderAbs 로 옮긴다. */
+        void acceptAssetDrop( string_view folderAbs );
+        /** @brief 목록과 폴더 트리를 다시 읽게 하고 @p absolutePath 를 고릅니다. */
+        void selectAfterFileChange( string_view absolutePath );
         /** @brief 애셋 항목 썸네일/아이콘을 그립니다. */
         void drawAssetThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos,
                                  const AssetEntry& entry );
@@ -210,12 +238,14 @@ namespace sw::editor
         string                                _selectedAssetAbs;
         string                                _pendingDeleteAbs; /**< 삭제 확인을 기다리는 에셋(비면 없음) */
         string                                _referenceQueryID; /**< 마지막 참조 찾기의 대상 리소스 id */
+        string                                _renamingAbs;      /**< 이름 바꾸기 중인 에셋(비면 없음) */
         vector<EditorAssetReference>          _listReferenceResult;
         EditorReferenceIndex                  _referenceIndex;
         EditorReferenceIndexJob               _referenceIndexJob;
         EditorThumbnailCache                  _thumbnailCache;
         uint64                                _referenceIndexSerial; /**< 역색인 훑기를 요청할 때의 `AssetHotReload::getContentChangeSerial` */
         fixed_string<constant::kMaxBuffer128> _searchBuffer;
+        fixed_string<constant::kMaxBuffer256> _renameBuffer;
         uint64                                _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
         float32                               _tileSize;
         uint32                                _filterIndex;
@@ -235,5 +265,8 @@ namespace sw::editor
         uint8                                 _bReferenceIndexRequested    : 1; /**< 역색인 훑기를 한 번이라도 요청했다 */
         uint8                                 _bOpenReferenceResults       : 1; /**< 다음 그리기에서 참조 결과 창을 연다 */
         uint8                                 _bReferenceQueryDependencies : 1; /**< 마지막 질의가 Show Dependencies 였다 */
+        uint8                                 _bFocusRenameInput           : 1; /**< 다음 그리기에서 이름 입력 칸에 포커스를 준다 */
+        uint8                                 _bListingRecursive           : 1; /**< 지금 목록이 하위 폴더의 파일까지다(검색 중) */
+        [[maybe_unused]] uint8                _reservedFlags               : 6;
     };
 } // namespace sw::editor

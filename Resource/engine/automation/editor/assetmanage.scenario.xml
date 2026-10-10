@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 콘텐츠 브라우저 에셋 관리(N3). 시험 폴더 engine/automation/editor/assetmanage 에는 probe.material 과 그것을 쓰는 씬이 있다.
+  1) Add > Material 로 new_material.material 을 만든다.
+  2) probe.material 을 F2 로 probe_renamed 로 바꾸면 씬의 참조가 새 이름으로 바뀐다(Editor.ReferenceCount — 역색인이 센 참조 파일 수).
+  3) 다시 probe 로 되돌리고(시험 폴더를 처음 그대로 둔다), 만든 머티리얼은 Delete 로 휴지통에 보낸다.
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/assetmanage.scenario.xml -dx12
+-->
+<Scenario name="editor.assetmanage" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<At frame="20">
+		<RequireForeground/><ResizeWindow width="1920" height="1080"/><Variable name="gv_editorUiScale" value="1"/>
+		<Variable name="gv_editorProbeAsset" value="engine/automation/editor/assetmanage/probe.material"/>
+	</At>
+	<At frame="30"><DevCommand line="panel.focus content_browser"/></At>
+	<!-- 역색인은 워커가 Resource/ 를 훑어 만든다 -->
+	<At frame="600">
+		<Expect probe="Editor.ReferenceIndexReady" equals="1"/>
+		<Expect probe="Editor.ReferenceCount" equals="1"/>
+		<DevCommand line="content.open engine/automation/editor/assetmanage"/>
+	</At>
+	<!-- 1) 새 머티리얼 -->
+	<At frame="620"><EditorClick mark="contentBrowser.add" state="down"/></At>
+	<At frame="623"><EditorClick mark="contentBrowser.add" state="up"/></At>
+	<At frame="635"><EditorClick mark="contentBrowser.add.material" state="down"/></At>
+	<At frame="638"><EditorClick mark="contentBrowser.add.material" state="up"/></At>
+	<At frame="660"><ExpectLog contains="Created 'engine/automation/editor/assetmanage/new_material.material'" count="1"/></At>
+	<!-- 2) 이름 바꾸기 — 타일을 고르고 F2, 입력 칸은 확장자를 뺀 이름이다 -->
+	<At frame="670"><EditorClick mark="contentBrowser.asset.probe.material" state="down"/></At>
+	<At frame="673"><EditorClick mark="contentBrowser.asset.probe.material" state="up"/></At>
+	<At frame="685"><EditorKey key="F2"/></At>
+	<At frame="700"><EditorText value="probe_renamed"/></At>
+	<At frame="710"><EditorKey key="Enter"/></At>
+	<At frame="730">
+		<ExpectLog contains="to 'engine/automation/editor/assetmanage/probe_renamed.material' and fixed 1 referencing file(s)" count="1"/>
+		<Expect probe="Editor.ReferenceCount" equals="0"/>
+		<Variable name="gv_editorProbeAsset" value="engine/automation/editor/assetmanage/probe_renamed.material"/>
+	</At>
+	<At frame="735">
+		<Expect probe="Editor.ReferenceCount" equals="1"/>
+		<CaptureWindow file="renamed.png"/>
+	</At>
+	<!-- 3) 되돌리기 -->
+	<At frame="745"><EditorClick mark="contentBrowser.asset.probe_renamed.material" state="down"/></At>
+	<At frame="748"><EditorClick mark="contentBrowser.asset.probe_renamed.material" state="up"/></At>
+	<At frame="760"><EditorKey key="F2"/></At>
+	<At frame="775"><EditorText value="probe"/></At>
+	<At frame="785"><EditorKey key="Enter"/></At>
+	<At frame="805">
+		<Variable name="gv_editorProbeAsset" value="engine/automation/editor/assetmanage/probe.material"/>
+	</At>
+	<At frame="810"><Expect probe="Editor.ReferenceCount" equals="1"/></At>
+	<At frame="820"><EditorClick mark="contentBrowser.asset.new_material.material" state="down"/></At>
+	<At frame="823"><EditorClick mark="contentBrowser.asset.new_material.material" state="up"/></At>
+	<At frame="835"><EditorKey key="Delete"/></At>
+	<At frame="850"><EditorClick mark="contentBrowser.delete.confirm" state="down"/></At>
+	<At frame="853"><EditorClick mark="contentBrowser.delete.confirm" state="up"/></At>
+	<At frame="870"><ExpectLog contains="Moved 'engine/automation/editor/assetmanage/new_material.material' to the recycle bin" count="1"/></At>
+	<At frame="880"><Variable name="gv_editorUiScale" value="0"/><Pass/></At>
+</Scenario>

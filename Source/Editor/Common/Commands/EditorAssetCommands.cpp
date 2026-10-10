@@ -624,7 +624,7 @@ namespace sw::editor
         return true;
     }
 
-    void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList )
+    void EditorAssetCommands::collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive )
     {
         outList.clear();
         if ( folderAbs.empty() || FileUtil::isDirectory( folderAbs ) == false )
@@ -633,7 +633,7 @@ namespace sw::editor
         vector<string> listFolder;
         vector<string> listFile;
         FileUtil::collectFolders( folderAbs, listFolder, false );
-        FileUtil::collectFiles( folderAbs, {}, listFile, false );
+        FileUtil::collectFiles( folderAbs, {}, listFile, bRecursive );
 
         const string& resourceRoot = ResourceUtil::getRootFolderPath();
         const string  rootNorm     = resourceRoot.empty() ? string{} : FileUtil::normalizePath( resourceRoot );

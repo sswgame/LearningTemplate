@@ -150,10 +150,11 @@ namespace sw::editor
     // EditorFolderListingJob
     // ======================================================================
 
-    void EditorFolderListingJob::request( string_view folderAbs )
+    void EditorFolderListingJob::request( string_view folderAbs, bool bRecursive )
     {
         EditorFolderListingInput input;
-        input._folder = string{ folderAbs };
+        input._folder     = string{ folderAbs };
+        input._bRecursive = bRecursive;
 
         const uint32 generation = beginRequest( std::move( input ) );
         EditorBackgroundIOInternal::submitOrRun( "EditorFolderListing",
@@ -171,7 +172,7 @@ namespace sw::editor
             return;
 
         vector<EditorFolderListingEntry> listEntry;
-        EditorAssetCommands::collectFolderListing( input._folder, listEntry );
+        EditorAssetCommands::collectFolderListing( input._folder, listEntry, input._bRecursive );
 
         publish( pState, generation, std::move( listEntry ) );
     }

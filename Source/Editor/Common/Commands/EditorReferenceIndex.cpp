@@ -17,6 +17,11 @@ namespace sw::editor
             static constexpr const utf8* kArrDomainPrefix[] = { "engine/", "common/", "game/", "editor/" };
             /** @brief 참조를 훑는 텍스트 에셋의 확장자입니다. 바이너리(dds, mesh, 셰이더 바이너리)는 글이 아니다. */
             static constexpr const utf8* kArrTextExtension[] = { ".xml", ".json", ".material", ".hlsl", ".hlsli" };
+            /**
+             * @brief 텍스트지만 에셋이 아닌 것입니다 — 자동화 시나리오는 시험 입력이라 참조자로 세지 않는다.
+             * @details 세면 이름 바꾸기가 도는 시나리오 파일까지 고쳐 쓴다. 시나리오가 적은 경로는 에셋이 옮겨지면 시나리오가 져서 알려야 한다.
+             */
+            static constexpr const utf8* kScenarioSuffix = ".scenario.xml";
 
             /** @brief 리소스 id 안에 올 수 있는 글자입니다(경로 조각 · 확장자). */
             static bool isPathChar( utf8 ch )
@@ -66,8 +71,10 @@ namespace sw::editor
             static bool scanFile( string_view resourceRoot, string_view resourceID, const vector<string>& listSortedKnownID,
                                   vector<EditorAssetReference>& outListReference )
             {
-                string text;
-                if ( FileUtil::readTextFile( FileUtil::joinPath( resourceRoot, resourceID ), text ) == false )
+                // 목록을 모은 뒤 지워진 파일(에디터가 옮기는 중)은 읽지 않는다 — readTextFile 은 없는 파일을 오류로 남긴다.
+                const string filePath = FileUtil::joinPath( resourceRoot, resourceID );
+                string       text;
+                if ( FileUtil::exists( filePath ) == false || FileUtil::readTextFile( filePath, text ) == false )
                     return false;
                 EditorReferenceIndex::extractReferences( resourceID, text, listSortedKnownID, outListReference );
                 return true;
@@ -105,6 +112,8 @@ namespace sw::editor
     bool EditorReferenceIndex::isTextAsset( string_view path )
     {
         const string lowerPath = FileUtil::normalizePath( path );
+        if ( StringUtil::endsWith( lowerPath, EditorReferenceIndexInternal::kScenarioSuffix ) )
+            return false;
         for ( const utf8* pExtension : EditorReferenceIndexInternal::kArrTextExtension )
         {
             if ( StringUtil::endsWith( lowerPath, pExtension ) )

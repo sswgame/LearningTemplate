@@ -6,6 +6,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/AssetActions/EditorAssetTypeActions.h"
@@ -35,6 +36,8 @@
 
 namespace sw::editor
 {
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeAsset, "", "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)" );
+
     namespace
     {
         struct ContentBrowserPanelInternal
@@ -139,6 +142,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief `-gv_editorProbeAsset` 을 적은 텍스트 에셋 파일 수입니다. 역색인이 아직이면 값을 내지 않는다. */
+            [[nodiscard]] static bool readReferenceCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const ContentBrowserPanel* pPanel = findPanel();
+                if ( pPanel == nullptr || pPanel->isReferenceIndexReady() == false )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getReferenceIndex().countReferrerFiles( gv_editorProbeAsset ) );
+                return true;
+            }
+
             [[nodiscard]] static bool readReferenceResultCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const ContentBrowserPanel* pPanel = findPanel();
@@ -165,6 +178,8 @@ namespace sw::editor
                          &ContentBrowserPanelInternal::readThumbnailCacheCount );
     SW_AUTOMATION_PROBE( editorThumbnailFallbackGlyphCount, "Editor.ThumbnailFallbackGlyphCount",
                          "Content Browser tiles drawn last frame with the kind icon (kinds without a drawn thumbnail)", &ContentBrowserPanelInternal::readFallbackGlyphCount );
+    SW_AUTOMATION_PROBE( editorReferenceCount, "Editor.ReferenceCount", "Text assets that name gv_editorProbeAsset (the reference index)",
+                         &ContentBrowserPanelInternal::readReferenceCount );
     SW_DEV_COMMAND( ContentOpen, "content.open", "content.open <resource folder>", "Show a resource folder in the Content Browser (e.g. game/empty/models)",
                     &ContentBrowserPanelInternal::runContentOpen );
 
@@ -337,8 +352,14 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            // 지우기 전에 확인한다(휴지통이 아니라 되돌릴 수 없다). 모달은 이 메뉴 밖, 창 단위에서 연다.
-            if ( ImGui::MenuItem( "Delete..." ) )
+            if ( ImGui::MenuItem( "Rename", "F2", false, entry._bIsDirectory == false ) )
+                beginRename( entry._absolutePath );
+            EditorSelfTestMarks::note( "contentBrowser.menu.rename" );
+            if ( ImGui::MenuItem( "Duplicate", "Ctrl+D", false, entry._bIsDirectory == false ) )
+                (void)duplicateAsset( entry._absolutePath ); // 실패는 copyFile 이 알린다
+            EditorSelfTestMarks::note( "contentBrowser.menu.duplicate" );
+            // 지우기 전에 확인한다(휴지통으로 보낸다). 모달은 이 메뉴 밖, 창 단위에서 연다.
+            if ( ImGui::MenuItem( "Delete...", "Del", false, entry._bIsDirectory == false ) )
                 requestDeleteAsset( entry._absolutePath );
             ImGui::EndPopup();
         }
@@ -353,12 +374,14 @@ namespace sw::editor
         , _selectedAssetAbs{}
         , _pendingDeleteAbs{}
         , _referenceQueryID{}
+        , _renamingAbs{}
         , _listReferenceResult{}
         , _referenceIndex{}
         , _referenceIndexJob{}
         , _thumbnailCache{}
         , _referenceIndexSerial{ 0 }
         , _searchBuffer{}
+        , _renameBuffer{}
         , _seenContentChangeSerial{ 0 }
         , _tileSize{ 96.0f }
         , _filterIndex{ 0 }
@@ -378,6 +401,9 @@ namespace sw::editor
         , _bReferenceIndexRequested{ SW_FALSE }
         , _bOpenReferenceResults{ SW_FALSE }
         , _bReferenceQueryDependencies{ SW_FALSE }
+        , _bFocusRenameInput{ SW_FALSE }
+        , _bListingRecursive{ SW_FALSE }
+        , _reservedFlags{ 0 }
     {
     }
 
@@ -391,7 +417,7 @@ namespace sw::editor
     {
         if ( _pendingDeleteAbs.empty() )
             return false;
-        const bool bDeleted = EditorAssetCommands::deleteAsset( _pendingDeleteAbs );
+        const bool bDeleted = EditorAssetFileCommands::moveToTrash( _pendingDeleteAbs );
         if ( bDeleted )
         {
             // 지운 파일이 목록 · 선택에 남지 않게 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
@@ -413,7 +439,7 @@ namespace sw::editor
         if ( ImGui::BeginPopupModal( ContentBrowserPanelInternal::kDeleteConfirmPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize ) == false )
             return;
 
-        ImGui::Text( "Delete '%s'? This cannot be undone.", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
+        ImGui::Text( "Move '%s' to the Recycle Bin?", FileUtil::getFileNamePart( _pendingDeleteAbs ).c_str() );
         // 지우기 전에 이것을 쓰는 곳을 보인다(언리얼 Delete Assets 대화상자의 참조 수와 같다).
         if ( _referenceIndex.isReady() )
         {
@@ -428,9 +454,11 @@ namespace sw::editor
             ImGui::TextDisabled( "The reference index is still building." );
         }
         ImGui::Separator();
-        if ( ImGui::Button( "Delete" ) )
+        const bool bConfirmed = ImGui::Button( "Delete" );
+        EditorSelfTestMarks::note( "contentBrowser.delete.confirm" );
+        if ( bConfirmed )
         {
-            (void)confirmDeleteAsset(); // 실패는 deleteAsset 이 알린다(파일과 .meta 를 그대로 둔다)
+            (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일과 .meta 를 그대로 둔다)
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -479,6 +507,159 @@ namespace sw::editor
         _referenceIndexSerial     = serial;
         _bReferenceIndexRequested = SW_TRUE;
         _referenceIndexJob.request( ResourceUtil::getRootFolderPath() );
+    }
+
+    void ContentBrowserPanel::selectAfterFileChange( string_view absolutePath )
+    {
+        // 감시도 같은 변경을 알리지만 한두 프레임 늦다 — 결과를 아는 자리에서 바로 다시 읽는다.
+        _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
+        _bFolderDirty     = SW_TRUE;
+        _folderCache.clear();
+        // 이 변경 전에 시작한 훑기는 옮기기가 고친 색인을 낡은 결과로 덮는다. 다시 요청해 그 세대의 결과를 버린다.
+        if ( _referenceIndexJob.isPending() )
+            _referenceIndexJob.request( ResourceUtil::getRootFolderPath() );
+    }
+
+    bool ContentBrowserPanel::createNewFolder()
+    {
+        string folderAbs;
+        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createFolder( _selectedFolderAbs, folderAbs ) == false )
+            return false;
+        selectAfterFileChange( folderAbs );
+        return true;
+    }
+
+    bool ContentBrowserPanel::createNewAsset( EditorNewAssetKind kind )
+    {
+        string assetAbs;
+        if ( _selectedFolderAbs.empty() || EditorAssetFileCommands::createAsset( _selectedFolderAbs, kind, assetAbs ) == false )
+            return false;
+        selectAfterFileChange( assetAbs );
+        return true;
+    }
+
+    bool ContentBrowserPanel::duplicateAsset( string_view absolutePath )
+    {
+        string assetAbs;
+        if ( absolutePath.empty() || EditorAssetFileCommands::duplicateAsset( absolutePath, assetAbs ) == false )
+            return false;
+        selectAfterFileChange( assetAbs );
+        return true;
+    }
+
+    void ContentBrowserPanel::beginRename( string_view absolutePath )
+    {
+        if ( absolutePath.empty() || FileUtil::isDirectory( absolutePath ) )
+            return;
+        string stem;
+        string suffix;
+        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( absolutePath ), stem, suffix );
+        _renamingAbs = FileUtil::normalizeSeparators( absolutePath );
+        _renameBuffer.assign( stem.c_str() );
+        _bFocusRenameInput = SW_TRUE;
+    }
+
+    bool ContentBrowserPanel::commitRename( string_view newName )
+    {
+        const string renamingAbs = _renamingAbs;
+        _renamingAbs.clear();
+        if ( renamingAbs.empty() || newName.empty() )
+            return false;
+        string stem;
+        string suffix;
+        EditorAssetFileCommands::splitAssetName( FileUtil::getFileNamePart( renamingAbs ), stem, suffix );
+        // 확장자는 그대로 둔다 — 확장자까지 적었으면 그것을 쓴다.
+        string fileName = FileUtil::normalizePath( newName );
+        if ( suffix.empty() == false && StringUtil::endsWith( fileName, suffix ) == false )
+            fileName += suffix;
+        const string destinationAbs = FileUtil::joinPath( FileUtil::getDirectoryPart( renamingAbs ), fileName );
+        if ( FileUtil::pathsEqualNormalized( destinationAbs, renamingAbs ) )
+            return false;
+        uint32 fixedFileCount{ 0 };
+        if ( EditorAssetFileCommands::moveAsset( renamingAbs, destinationAbs, _referenceIndex, fixedFileCount ) == false )
+            return false;
+        selectAfterFileChange( destinationAbs );
+        return true;
+    }
+
+    bool ContentBrowserPanel::moveAssetToFolder( string_view sourceAbs, string_view folderAbs )
+    {
+        const string destinationAbs = FileUtil::joinPath( folderAbs, FileUtil::getFileNamePart( sourceAbs ) );
+        if ( FileUtil::pathsEqualNormalized( destinationAbs, sourceAbs ) )
+            return false;
+        uint32 fixedFileCount{ 0 };
+        if ( EditorAssetFileCommands::moveAsset( sourceAbs, destinationAbs, _referenceIndex, fixedFileCount ) == false )
+            return false;
+        selectAfterFileChange( destinationAbs );
+        return true;
+    }
+
+    void ContentBrowserPanel::acceptAssetDrop( string_view folderAbs )
+    {
+        if ( ImGui::BeginDragDropTarget() == false )
+            return;
+        string resourceID;
+        if ( EditorWidgets::tryAcceptAssetPayload( resourceID ) )
+            (void)moveAssetToFolder( FileUtil::joinPath( ResourceUtil::getRootFolderPath(), resourceID ), folderAbs ); // 실패는 moveAsset 이 알린다
+        ImGui::EndDragDropTarget();
+    }
+
+    void ContentBrowserPanel::drawRenameField( float32 width )
+    {
+        if ( width > 0.0f )
+            ImGui::SetNextItemWidth( width );
+        if ( _bFocusRenameInput == SW_TRUE )
+        {
+            ImGui::SetKeyboardFocusHere();
+            _bFocusRenameInput = SW_FALSE;
+        }
+        const bool bEntered = ImGui::InputText( "##cb_rename", _renameBuffer.data(), _renameBuffer.capacity(),
+                                                ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll );
+        EditorSelfTestMarks::note( "contentBrowser.rename" );
+        const bool bEscaped = ImGui::IsKeyPressed( ImGuiKey_Escape );
+        if ( bEscaped )
+        {
+            _renamingAbs.clear();
+            return;
+        }
+        if ( bEntered || ImGui::IsItemDeactivated() )
+            (void)commitRename( _renameBuffer.c_str() ); // 실패(이름 규칙 · 이미 있음)는 moveAsset 이 알린다
+    }
+
+    void ContentBrowserPanel::drawAddMenu()
+    {
+        if ( ImGui::BeginPopup( "##cb_add" ) == false )
+            return;
+        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( editoricon::kFolder, "New Folder" ) ) )
+            (void)createNewFolder(); // 실패는 createFolder 가 알린다
+        EditorSelfTestMarks::note( "contentBrowser.add.folder" );
+        ImGui::Separator();
+        if ( ImGui::MenuItem( "Material" ) )
+            (void)createNewAsset( EditorNewAssetKind::Material ); // 실패는 createAsset 이 알린다
+        EditorSelfTestMarks::note( "contentBrowser.add.material" );
+        if ( ImGui::MenuItem( "Scene" ) )
+            (void)createNewAsset( EditorNewAssetKind::Scene ); // 실패는 createAsset 이 알린다
+        EditorSelfTestMarks::note( "contentBrowser.add.scene" );
+        if ( ImGui::MenuItem( "Prefab" ) )
+            (void)createNewAsset( EditorNewAssetKind::Prefab ); // 실패는 createAsset 이 알린다
+        EditorSelfTestMarks::note( "contentBrowser.add.prefab" );
+        ImGui::EndPopup();
+    }
+
+    void ContentBrowserPanel::handleAssetShortcuts()
+    {
+        // 다른 패널과 같은 규칙 — 이 창에 포커스가 있고 글 입력 중이 아닐 때만(Hierarchy 의 F2 · Ctrl+D · Delete 와 같은 자리).
+        const bool bFocused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+        if ( bFocused == false || ImGui::GetIO().WantTextInput || _renamingAbs.empty() == false || _selectedAssetAbs.empty() )
+            return;
+        if ( FileUtil::isDirectory( _selectedAssetAbs ) )
+            return;
+        if ( ImGui::IsKeyPressed( ImGuiKey_F2, false ) )
+            beginRename( _selectedAssetAbs );
+        else if ( ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_D, false ) )
+            (void)duplicateAsset( _selectedAssetAbs ); // 실패는 copyFile 이 알린다
+        else if ( ImGui::IsKeyPressed( ImGuiKey_Delete, false ) )
+            requestDeleteAsset( _selectedAssetAbs );
     }
 
     void ContentBrowserPanel::showReferences( string_view absolutePath, bool bDependencies )
@@ -583,6 +764,15 @@ namespace sw::editor
         _lastFallbackGlyphCount = _fallbackGlyphCount;
         _fallbackGlyphCount     = 0;
         _thumbnailCache.update();
+
+        handleAssetShortcuts();
+        // 검색어가 있으면 하위 폴더의 파일까지 본다(언리얼 · 유니티 프로젝트 검색과 같다).
+        const bool bWantRecursive = EditorListFilter{ _searchBuffer.c_str() }.isActive();
+        if ( bWantRecursive != ( _bListingRecursive == SW_TRUE ) )
+        {
+            _bListingRecursive = bWantRecursive ? SW_TRUE : SW_FALSE;
+            _bFolderDirty      = SW_TRUE;
+        }
 
         if ( _bRootsDirty == SW_TRUE )
             refreshRoots();
@@ -696,7 +886,7 @@ namespace sw::editor
 
     void ContentBrowserPanel::refreshCurrentFolder()
     {
-        _folderJob.request( _selectedFolderAbs );
+        _folderJob.request( _selectedFolderAbs, _bListingRecursive == SW_TRUE );
         _bFolderDirty = SW_FALSE;
     }
 
@@ -760,6 +950,13 @@ namespace sw::editor
             if ( bCanForward == false )
                 ImGui::EndDisabled();
             EditorWidgets::drawTooltip( "다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)" );
+
+            ImGui::SameLine();
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
+                ImGui::OpenPopup( "##cb_add" );
+            EditorSelfTestMarks::note( "contentBrowser.add" );
+            EditorWidgets::drawTooltip( "지금 폴더에 새 폴더 또는 새 에셋(머티리얼, 씬, 프리팹)을 만듭니다" );
+            drawAddMenu();
 
             ImGui::SameLine();
             EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, "Search Content", 160.0f, false );
@@ -925,6 +1122,7 @@ namespace sw::editor
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
             ContentBrowserPanelInternal::noteMark( "contentBrowser.folder.", ResourceUtil::toResourceID( absPath ) );
+        acceptAssetDrop( absPath );
 
         if ( ImGui::IsItemClicked() && ImGui::IsItemToggledOpen() == false )
         {
@@ -1089,6 +1287,8 @@ namespace sw::editor
                         openAsset( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str(), true );
+                    else
+                        acceptAssetDrop( entry._absolutePath );
 
                     ImDrawList*       pDrawList = ImGui::GetWindowDrawList();
                     constexpr float32 inset     = 6.0f;
@@ -1097,7 +1297,10 @@ namespace sw::editor
 
                     drawSourceControlBadge( pDrawList, float2{ cursor.x + cell - inset, cursor.y + inset }, entry );
 
-                    EditorWidgets::drawClampedLabel( entry._name, cell, ContentBrowserPanelInternal::kTileLabelLineCount );
+                    if ( _renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, _renamingAbs ) )
+                        drawRenameField( cell );
+                    else
+                        EditorWidgets::drawClampedLabel( entry._name, cell, ContentBrowserPanelInternal::kTileLabelLineCount );
                     ImGui::EndGroup();
 
                     ImGui::PopStyleColor( 2 );
@@ -1150,6 +1353,13 @@ namespace sw::editor
                     drawAssetContextMenu( entry );
                     if ( entry._bIsDirectory == false )
                         EditorWidgets::drawAssetDragSource( entry._relativePath.c_str() );
+                    else
+                        acceptAssetDrop( entry._absolutePath );
+                    if ( _renamingAbs.empty() == false && FileUtil::pathsEqualNormalized( entry._absolutePath, _renamingAbs ) )
+                    {
+                        ImGui::SameLine();
+                        drawRenameField( 0.0f );
+                    }
 
                     ImGui::TableSetColumnIndex( 1 );
                     ImGui::TextColored( ContentBrowserPanelInternal::colorForAsset( entry._name, entry._bIsDirectory ),

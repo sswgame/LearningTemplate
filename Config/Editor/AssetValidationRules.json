@@ -109,7 +109,9 @@
       "name": "references-exist",
       "check": "missing_reference",
       "severity": "error",
-      "include_patterns": ["*.xml", "*.material"]
+      "include_patterns": ["*.xml", "*.material"],
+      "exclude_patterns": ["engine/automation/editor/assetmanage.scenario.xml"],
+      "exclude_reason": "the asset-management scenario names the material it renames to (that file exists only during the run)"
     },
     {
       "name": "orphans",

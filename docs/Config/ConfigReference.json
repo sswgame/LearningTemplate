@@ -2285,6 +2285,14 @@
    "source": "Source/Editor/Panels/EditorPanelManager.cpp"
   },
   {
+   "name": "gv_editorProbeAsset",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "탐침 Editor.ReferenceCount 가 볼 에셋의 리소스 id (시나리오용)",
+   "source": "Source/Editor/Panels/ContentBrowserPanel.cpp"
+  },
+  {
    "name": "gv_editorProbeObject",
    "type": "string",
    "default": "",

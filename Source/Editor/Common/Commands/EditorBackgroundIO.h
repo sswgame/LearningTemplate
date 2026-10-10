@@ -38,6 +38,7 @@ namespace sw::editor
     struct EditorFolderListingInput
     {
         string _folder;
+        bool   _bRecursive{ false }; ///< 하위 폴더의 파일까지(검색 중)
     };
 } // namespace sw::editor
 
@@ -118,8 +119,8 @@ namespace sw::editor
     class EditorFolderListingJob final : public EditorBackgroundTask<EditorFolderListingInput, vector<EditorFolderListingEntry>>
     {
     public:
-        /** @brief 워커에 폴더 목록 스캔을 요청합니다. */
-        void request( string_view folderAbs );
+        /** @brief 워커에 폴더 목록 스캔을 요청합니다. @p bRecursive 면 하위 폴더의 파일까지 모읍니다. */
+        void request( string_view folderAbs, bool bRecursive = false );
 
     private:
         static void runJob( const TaskArgs& args );

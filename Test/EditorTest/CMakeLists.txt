@@ -19,6 +19,7 @@ endif()
 sw_addTestExecutable(EditorTest
 	EXTRA_SOURCES
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Backend/EditorDrawReleaseQueue.cpp"
+		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorAssetFileCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorCommandRegistry.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorDataTableCommands.cpp"
 		"${CMAKE_SOURCE_DIR}/Source/Editor/Common/Commands/EditorExternalToolJob.cpp"

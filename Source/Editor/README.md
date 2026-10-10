@@ -496,6 +496,11 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   `_bShowAllPacksByDefault` 다. 참조 찾기(오른쪽 클릭 Find References · Show Dependencies, 삭제 확인의 참조 수)는 `EditorReferenceIndex` 다. 텍스트 에셋(xml, json, material, hlsl)의 글 가운데
   실제로 있는 파일의 리소스 id 만 세고, `Resource/` 변경 번호가 바뀌면 워커가 통째로 다시 훑는다(Debug 1.1 초, 377 파일). 바이너리 안의 경로와 확장자를 뗀 이름은 참조로 잡지 않는다.
   콘솔 `content.open <리소스 폴더>` 가 그 폴더를 연다. 시험 `EditorReferenceIndexTest`, 자체 시험 `contentBrowser.showsActivePackOnly`, 시나리오 `editor/contentbrowser`.
+- **콘텐츠 브라우저의 에셋 관리는 `EditorAssetFileCommands` 다**(Add > New Folder · Material · Scene · Prefab, 우클릭 · F2 Rename, Ctrl+D Duplicate, Del, 폴더 타일 · 트리로 끌어 놓기).
+  이름 바꾸기와 옮기기는 역색인이 아는 텍스트 에셋의 글을 새 리소스 id 로 바로 고치고 짝 `.meta` 를 GUID 째 옮긴다(이름 칸은 확장자를 뺀 줄기다). 폴더 이름 바꾸기는 없다.
+  지우기는 OS 휴지통이다(Windows `SHFileOperationW` + `FOF_ALLOWUNDO`, 다른 플랫폼은 지운다). 검색어가 있으면 목록이 하위 폴더의 파일까지다.
+  자동화 시나리오(`*.scenario.xml`)는 참조자로 세지 않는다 — 세면 이름 바꾸기가 돌고 있는 시나리오 파일까지 고쳐 쓴다. 옮기기 전에 시작한 역색인 훑기는 다시 요청해 버린다(안 그러면 낡은 결과가 고친 색인을 덮는다).
+  시험 `EditorAssetFileCommandsTest`, 시나리오 `editor/assetmanage`(시험 폴더 `engine/automation/editor/assetmanage/` 를 바꿨다가 되돌린다).
 - **텍스처 썸네일은 엔진 텍스처 캐시에서 빌린 실제 텍스처다**(`EditorThumbnailCache` — `TextureCache::acquire` → `registerTexture`, 64 개 LRU). DDS 읽기와 GPU 업로드가 UI 스레드에서 돌므로
   프레임마다 하나만 읽는다. 놓을 때는 ImGui 등록을 먼저 풀고(`unregisterTexture` 는 그린 스냅샷이 끝난 뒤 디스크립터를 놓는다) 텍스처 참조를 놓는다. 패널 `shutdown` 이 렌더 백엔드보다 먼저 비운다.
   이미지 썸네일은 종류 동작의 `hasImagePreview` 로 정하고, 그림 썸네일이 없는 종류는 종류 아이콘을 가운데에 그린다(`EditorThemeUtil::drawCenteredGlyph`). 시나리오 `editor/contentthumbnails`.

@@ -82,8 +82,8 @@ namespace sw::editor
          *          한 번 깜빡입니다.
          */
         static bool showInFileExplorer( string_view absolutePath );
-        /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. */
-        static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList );
+        /** @brief 폴더의 직속 하위 폴더/파일을 채웁니다. .meta는 제외합니다. @p bRecursive 면 파일은 하위 폴더 전부에서 모읍니다(폴더는 직속만). */
+        static void collectFolderListing( string_view folderAbs, vector<EditorFolderListingEntry>& outList, bool bRecursive = false );
         /** @brief 폴더의 직속 하위 폴더 절대 경로를 채웁니다. */
         static void collectChildFolders( string_view folderAbs, vector<string>& outList );
         /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(프로세스 누계). 자체 시험이 "그리기마다 디스크를 읽지 않는다" 를 본다. */

@@ -1,0 +1,24 @@
+<Scene formatVersion="1" name="AssetManage">
+	<entities>
+		<entity id="1" name="ProbeMesh">
+			<GameObject _schemaVersion="0" _name="ProbeMesh" _bActive="true">
+				<_listComponent>
+					<MeshComponent _componentName="MeshComponent"
+					               _bActive="true"
+					               _localPosition="0,0,0"
+					               _localRotation="0,0,0"
+					               _localScale="1,1,1"
+					               _attachOwner="None"
+					               _attachOwnerID="0"
+					               _attachComponent="None"
+					               _meshID="Cube"
+					               _materialPath="engine/automation/editor/assetmanage/probe.material"
+					               _boundsRadius="0.866"
+					               _blendMode="Opaque"
+					               _gpuSpinSeed="0"
+					               _bVisible="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
