@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Workspace/EditorModuleUnloadListener.h"
 
+#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Panels/EditorPanelManager.h"
 #include "Editor/Panels/Inspector/InspectorComponentManager.h"
@@ -21,6 +22,7 @@ namespace sw::editor
         uint32 releasedCount = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, _context.getRHIDevice() );
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );
+        releasedCount += EditorCommandGUI::releaseCommandsWithin( pBegin, pEnd );
         return releasedCount;
     }
 } // namespace sw::editor

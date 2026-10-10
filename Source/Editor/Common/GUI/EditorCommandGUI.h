@@ -21,6 +21,10 @@ namespace sw::editor
     public:
         /** @brief 기본 커맨드 표를 레지스트리에 등록합니다. 중복 id·단축키는 오류로 로그합니다. */
         static void registerDefaults();
+        /** @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)의 세대가 바뀌었으면 표와 등록 줄로 레지스트리를 다시 만듭니다. 세대가 같으면 아무것도 하지 않습니다. */
+        static void syncWithRegistry();
+        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(언로드되는 모듈 이미지) 안인 커맨드를 빼고 레지스트리를 다시 만듭니다. 뺀 수를 돌려줍니다. */
+        static uint32 releaseCommandsWithin( const void* pBegin, const void* pEnd );
 
         /** @brief 등록된 단축키를 검사해 맞는 커맨드를 실행합니다. 텍스트 입력 중에는 아무것도 하지 않습니다. */
         static void processHotkeys();

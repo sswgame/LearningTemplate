@@ -26,6 +26,7 @@
 #include "Editor/Common/GUI/EditorPanelDump.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorUIContext.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -224,6 +225,8 @@ namespace sw::editor
             ImGui::SetAllocatorFunctions( &ImGuiEditorInternal::allocateForImGui, &ImGuiEditorInternal::freeForImGui, nullptr );
             ImGui::CreateContext();
             ImPlot::CreateContext();
+            // 확장 DLL 의 ImGui 사본에 이 컨텍스트를 건다(확장마다 CMake 가 만든 결속기). EditorModule 자신은 여기서 CreateContext 했다.
+            EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );
 
             SW_LOG_TRACE( "Configuring ImGui IO" );
             ImGuiIO& io = ImGui::GetIO();
@@ -389,7 +392,8 @@ namespace sw::editor
             _platformBackend.reset();
         }
 
-        // 2) ImPlot · ImGui 컨텍스트(글꼴 아틀라스는 컨텍스트가 든다)
+        // 2) ImPlot · ImGui 컨텍스트(글꼴 아틀라스는 컨텍스트가 든다) — 확장 DLL 의 사본에서 먼저 뗀다
+        EditorUIContext::publish( EditorUIContextState{} );
         if ( ImPlot::GetCurrentContext() != nullptr )
             ImPlot::DestroyContext();
         if ( ImGui::GetCurrentContext() != nullptr )

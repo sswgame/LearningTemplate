@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 등록 줄 커맨드(SW_EDITOR_COMMAND, 확장 지점 C3)가 커맨드 팔레트에 나오고 실행된다.
+  Ctrl+Shift+P 로 팔레트를 열고 "Self Test Ping" 을 쳐서 Enter — 그 커맨드가 남기는 로그 한 줄을 본다(EditorSelfTestDevTools.cpp 의 selftest.ping).
+  실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/commandpalette.scenario.xml -dx12
+-->
+<Scenario name="editor.commandpalette" fixedDelta="0.0166667" timeoutFrames="300" startAfter="Immediately" input="exclusive">
+	<At frame="60"><EditorKey key="Ctrl+Shift+P"/></At>
+	<At frame="75"><EditorText value="Self Test Ping"/></At>
+	<At frame="90"><EditorKey key="Enter"/></At>
+	<At frame="110"><ExpectLog contains="Self-test registration command ran" count="1"/></At>
+	<At frame="120"><Pass/></At>
+</Scenario>

@@ -12,6 +12,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorExports.h"
+#include "Editor/Common/Workspace/EditorRegistry.h"
 
 namespace sw::editor
 {
@@ -235,3 +236,53 @@ namespace sw::editor
         vector<EditorMenu>        _listMenu;
     };
 } // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorCommandRegistration
+     * @brief 확장 모듈(또는 EditorModule 의 아무 파일)이 커맨드 하나를 더하는 등록 줄입니다.
+     * @details 표(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)와 같은 값을 가지고, 커맨드 레지스트리는 표와 등록 줄을 합쳐 메뉴, 단축키, 팔레트를 만듭니다.
+     *          id 는 표와도 겹치면 안 됩니다(`validate`). 문자열은 리터럴이어야 합니다. 메뉴 경로는 이미 있는 메뉴(`"MainMenu/File"` …)이거나
+     *          새 한 단계 메뉴(`"MainMenu/ThemePark"`)입니다. 메뉴끼리는 가장 작은 순서로 줄 서므로 확장은 9000 대를 씁니다.
+     */
+    struct EditorCommandRegistration : EditorRegistration
+    {
+        static constexpr const utf8* kKindName = "command";
+
+        const utf8*           _pLabel;
+        const utf8*           _pIcon;
+        const utf8*           _pCategory;
+        const utf8*           _pTooltip;
+        const utf8*           _pDetail;
+        EditorCommandShortcut _shortcut;
+        void ( *_pfnAction )();
+        bool ( *_pfnEnabled )();
+        const utf8* _pMenuPath; ///< nullptr 이면 메뉴에 없습니다(팔레트와 단축키만)
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @struct EditorCommandTableUtil
+     * @brief 커맨드 등록 줄(`SW_EDITOR_COMMAND`)을 레지스트리에 옮깁니다. ImGui 를 쓰지 않으므로 EditorTest 가 시험합니다.
+     */
+    struct SW_EDITOR_API EditorCommandTableUtil
+    {
+        /**
+         * @brief 등록 줄을 모두 @p registry 에 더합니다. 등록 줄이 [@p pExcludeBegin, @p pExcludeEnd)(언로드되는 모듈 이미지) 안이면 건너뜁니다.
+         * @return 건너뛴 줄 수입니다.
+         */
+        static uint32 appendRegistrations( EditorCommandRegistry& registry, const void* pExcludeBegin, const void* pExcludeEnd );
+    };
+} // namespace sw::editor
+
+/**
+ * @brief 커맨드 하나를 그 커맨드의 .cpp 에서 등록합니다. @p menuOrder 는 메뉴 안 순서입니다(표의 `_menuOrder` 와 같은 뜻 — 백의 자리가 바뀌면 구분선).
+ * @code SW_EDITOR_COMMAND( ParkReload, "themepark.reloadLayout", 9100, "Reload Park Layout", editoricon::kRefresh, "ThemePark", "배치 파일을 다시 읽습니다",
+ *                          "Reload rides.xml", {}, &reloadLayout, nullptr, "MainMenu/ThemePark" ); @endcode
+ */
+#define SW_EDITOR_COMMAND( name, pID, menuOrder, pLabel, pIcon, pCategory, pTooltip, pDetail, shortcut, pfnAction, pfnEnabled, pMenuPath )        \
+    SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pID, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
+                        shortcut, pfnAction, pfnEnabled, pMenuPath )

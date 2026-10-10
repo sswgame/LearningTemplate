@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
@@ -139,6 +140,7 @@ namespace sw::editor
         _pPanelManager->syncWithRegistry( _pRHIDevice );
         _pPopupManager->syncWithRegistry();
         _pInspectorComponentManager->syncWithRegistry();
+        EditorCommandGUI::syncWithRegistry();
     }
 
     void EditorContext::clearViewDrawnMarks()

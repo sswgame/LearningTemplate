@@ -332,3 +332,31 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesMenuPathsNothingDraws )
     SW_EXPECT_TRUE( report.find( "orphan.item" ) != string::npos );
     SW_EXPECT_TRUE( report.find( "align.x" ) == string::npos );
 }
+
+/**
+ * @brief [EditorCommandRegistryTest] 등록 줄 커맨드(SW_EDITOR_COMMAND)가 레지스트리에 옮겨지고, 언로드되는 이미지 범위의 줄은 빠진다
+ * @details 확장 모듈은 커맨드를 자기 파일의 등록 줄로 더한다. 모듈이 언로드되기 전에 그 줄로 만든 커맨드(동작 함수가 그 이미지에 있다)를 빼야 한다.
+ */
+SW_TEST_CASE( EditorCommandRegistryTest, RegistrationLinesAreAppendedAndExcludedByImageRange )
+{
+    s_invokeCount = 0;
+    const EditorRegistrar<EditorCommandRegistration> registrar{
+        EditorCommandRegistration{ { "test.registeredCommand", 9100 }, "Registered", "", "Test", "툴팁", "detail", { EditorCommandKey::F7, commandmodifier::kCtrl }, &bumpInvokeCount, nullptr, "MainMenu/TestExtension" }
+    };
+    const EditorCommandRegistration* pRow = &registrar.getRegistration();
+
+    EditorCommandRegistry registry;
+    SW_EXPECT_EQUAL( 0u, EditorCommandTableUtil::appendRegistrations( registry, nullptr, nullptr ) );
+    const EditorCommandDesc* pDesc = registry.find( "test.registeredCommand" );
+    SW_ASSERT_TRUE( pDesc != nullptr );
+    SW_EXPECT_STREQ( "MainMenu/TestExtension", pDesc->_menuPath.c_str() );
+    SW_EXPECT_EQUAL( 9100, pDesc->_menuOrder );
+    SW_EXPECT_TRUE( pDesc->_shortcut._key == EditorCommandKey::F7 );
+    SW_EXPECT_TRUE( registry.findMenu( "MainMenu/TestExtension" ) != nullptr );
+    SW_EXPECT_TRUE( registry.execute( "test.registeredCommand" ) );
+    SW_EXPECT_EQUAL( 1, s_invokeCount );
+
+    EditorCommandRegistry excluded;
+    SW_EXPECT_EQUAL( 1u, EditorCommandTableUtil::appendRegistrations( excluded, pRow, pRow + 1 ) );
+    SW_EXPECT_TRUE( excluded.find( "test.registeredCommand" ) == nullptr );
+}

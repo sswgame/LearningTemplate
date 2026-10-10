@@ -45,6 +45,19 @@ namespace sw::editor
     {
         struct EditorCommandGUIInternal
         {
+            /**
+             * @brief 표와 등록 줄로 레지스트리를 다시 만듭니다. 등록 줄이 [@p pExcludeBegin, @p pExcludeEnd) 안이면 뺍니다. 뺀 수를 돌려줍니다.
+             * @details 정의는 아래 EditorCommandGUI 구현 옆에 있습니다(표 `_s_arrCommandRow` 가 이 구조체의 끝에 있어 그 뒤에 둔다).
+             */
+            static uint32 rebuild( const void* pExcludeBegin, const void* pExcludeEnd );
+
+            /** @brief 마지막으로 맞춘 커맨드 등록 세대입니다(EditorModule 이 다시 로드되면 함께 처음으로 돌아간다). */
+            static uint32& getSyncedGeneration()
+            {
+                static uint32 s_syncedGeneration = invalid_index::kUint32;
+                return s_syncedGeneration;
+            }
+
             // ------------------------------------------------------------------------------
             // 1) 커맨드 동작. 표가 함수 포인터로 가리킨다
             //
@@ -524,16 +537,34 @@ namespace sw::editor
 
     void EditorCommandGUI::registerDefaults()
     {
+        (void)EditorCommandGUIInternal::rebuild( nullptr, nullptr ); // 제외 범위가 없으면 뺀 수는 늘 0
+    }
+
+    void EditorCommandGUI::syncWithRegistry()
+    {
+        if ( EditorRegistry<EditorCommandRegistration>::getList().getGeneration() == EditorCommandGUIInternal::getSyncedGeneration() )
+            return;
+        registerDefaults();
+    }
+
+    uint32 EditorCommandGUI::releaseCommandsWithin( const void* pBegin, const void* pEnd )
+    {
+        return EditorCommandGUIInternal::rebuild( pBegin, pEnd );
+    }
+
+    uint32 EditorCommandGUIInternal::rebuild( const void* pExcludeBegin, const void* pExcludeEnd )
+    {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
         {
             // 조용히 돌아가면 메뉴가 통째로 비고 단축키가 먹지 않는다. 실제 기동 검증이 이 줄을 잡는다.
             SW_LOG_ERROR( "커맨드를 등록할 EditorContext 가 없습니다 — 메뉴와 단축키가 비어 있게 됩니다" );
-            return;
+            return 0;
         }
 
         EditorCommandRegistry& registry = pContext->getCommandRegistry();
         registry.clear();
+        getSyncedGeneration() = EditorRegistry<EditorCommandRegistration>::getList().getGeneration();
 
         for ( const EditorCommandGUIInternal::CommandRow& row : EditorCommandGUIInternal::_s_arrCommandRow )
         {
@@ -556,6 +587,8 @@ namespace sw::editor
 
             registry.registerCommand( std::move( desc ) );
         }
+        // 확장 모듈 · 다른 파일의 등록 줄(SW_EDITOR_COMMAND) — 표와 같은 레지스트리에 합친다.
+        const uint32 excludedCount = EditorCommandTableUtil::appendRegistrations( registry, pExcludeBegin, pExcludeEnd );
 
         string report;
         if ( registry.validate( report ) == false )
@@ -566,6 +599,7 @@ namespace sw::editor
             if ( registry.findMenu( pHostedPath ) == nullptr )
                 SW_LOG_ERROR( "Menu path '%#' is drawn by code but no command row uses it - the menu is empty", pHostedPath );
         }
+        return excludedCount;
     }
 
     void EditorCommandGUI::processHotkeys()

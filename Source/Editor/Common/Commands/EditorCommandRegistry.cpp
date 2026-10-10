@@ -6,6 +6,8 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
+#include "Core/Module/ModuleUnloadListener.h"
+
 namespace sw::editor
 {
     namespace
@@ -342,5 +344,40 @@ namespace sw::editor
             return false;
         constexpr uint8 kChordMask = commandmodifier::kCtrl | commandmodifier::kShift | commandmodifier::kAlt;
         return ( shortcut._modifier & kChordMask ) == ( pressedModifier & kChordMask );
+    }
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    uint32 EditorCommandTableUtil::appendRegistrations( EditorCommandRegistry& registry, const void* pExcludeBegin, const void* pExcludeEnd )
+    {
+        using CommandRegistry = EditorRegistry<EditorCommandRegistration>;
+        uint32 excludedCount{ 0 };
+        for ( uint32 index = 0; index < CommandRegistry::getCount(); ++index )
+        {
+            const EditorCommandRegistration& row = CommandRegistry::getAt( index );
+            if ( IModuleUnloadListener::isAddressWithin( &row, pExcludeBegin, pExcludeEnd ) )
+            {
+                ++excludedCount;
+                continue;
+            }
+            EditorCommandDesc desc{};
+            desc._id              = row._pID;
+            desc._label           = row._pLabel != nullptr ? row._pLabel : "";
+            desc._icon            = row._pIcon != nullptr ? row._pIcon : "";
+            desc._category        = row._pCategory != nullptr ? row._pCategory : "";
+            desc._tooltip         = row._pTooltip != nullptr ? row._pTooltip : "";
+            desc._detail          = row._pDetail != nullptr ? row._pDetail : "";
+            desc._shortcut        = row._shortcut;
+            desc._bPaletteVisible = true;
+            desc._menuPath        = row._pMenuPath != nullptr ? row._pMenuPath : "";
+            desc._menuOrder       = row._order;
+            if ( row._pfnAction != nullptr )
+                desc._action = row._pfnAction;
+            if ( row._pfnEnabled != nullptr )
+                desc._enabledPredicate = row._pfnEnabled;
+            registry.registerCommand( std::move( desc ) );
+        }
+        return excludedCount;
     }
 } // namespace sw::editor

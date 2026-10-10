@@ -8,8 +8,10 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
+#include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPlayToolbar.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
@@ -50,6 +52,9 @@ namespace sw::editor
     {
         struct EditorSelfTestDevToolsInternal
         {
+            /** @brief 등록 줄 커맨드(`selftest.ping`)의 동작 — 로그 한 줄을 남긴다(시나리오 `commandpalette` 가 본다). */
+            static void runPingCommand() { SW_LOG_INFO( "Self-test registration command ran" ); }
+
             static constexpr const utf8* kSceneViewPanelID = "scene_view";
             static constexpr const utf8* kGameViewPanelID  = "game_view";
             static constexpr uint32      kMaxWaitFrame     = 60;
@@ -575,6 +580,9 @@ namespace sw::editor
     SW_EDITOR_SELF_TEST( ConsoleDevCommands, "console.devCommands", 735, &EditorSelfTestDevToolsInternal::runConsoleDevCommands );
     SW_EDITOR_SELF_TEST( HierarchySelectAllWith, "hierarchy.selectAllWith", 740, &EditorSelfTestDevToolsInternal::runSelectAllWithTag );
     SW_EDITOR_SELF_TEST( NamedLayout, "layout.namedRoundTrip", 750, &EditorSelfTestDevToolsInternal::runNamedLayoutRoundTrip );
+    // 등록 줄 커맨드의 본보기 — 표가 아닌 파일에서 한 줄로 더한 커맨드가 팔레트에 나온다(메뉴 경로가 없으면 팔레트 · 단축키만).
+    SW_EDITOR_COMMAND( SelfTestPing, "selftest.ping", 0, "Self Test Ping", editoricon::kBug, "SelfTest", "자체 시험과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다",
+                       "Write one log line (self-test)", {}, &EditorSelfTestDevToolsInternal::runPingCommand, nullptr, nullptr );
     SW_EDITOR_SELF_TEST( SceneViewGizmo, "sceneView.gizmoMovesTheSelection", 760, &EditorSelfTestDevToolsInternal::runGizmoMovesTheSelection );
     SW_EDITOR_SELF_TEST( SceneViewGridAndGizmo, "sceneView.gridAndGizmoDraw", 765, &EditorSelfTestDevToolsInternal::runGridAndGizmoDraw );
     SW_EDITOR_SELF_TEST( GameViewNoOverlays, "gameView.hidesEditorOverlays", 770, &EditorSelfTestDevToolsInternal::runGameViewHidesEditorOverlays );

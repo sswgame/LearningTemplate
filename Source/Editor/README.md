@@ -479,6 +479,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
 - **인스펙터 위젯 · CallInEditor 인자는 `ReflectBuiltins.xxx` 를 펼친 표 하나**(`InspectorBuiltinValue.h`) — 내장 타입을 더하면 `InspectorWidgetFor<T>` 특수화가
   없으면 컴파일이 선다. .xxx 의 문자열 줄은 `std::string`, 프로퍼티는 `sw::string`(`InspectorBuiltinCppType` 이 메운다).
 - **오른쪽 클릭 메뉴의 확장 지점은 `EditorCommandRegistry` / `SW_EDITOR_*` 하나다** — 등록이 하나도 없던 `EditorActionMenuManager` 는 지웠다.
+  표 밖의 파일 · 확장 모듈은 커맨드를 `SW_EDITOR_COMMAND`(표와 같은 값) 한 줄로 더한다. 레지스트리는 표와 등록 줄을 합치고(`EditorCommandTableUtil::appendRegistrations`),
+  등록 세대가 바뀌면 다시 만든다. 확장 DLL 의 ImGui 는 CMake 가 만든 결속기(`cmake/Engine/EditorExtensionUIBinder.cpp.in`)가 에디터 컨텍스트에 건다 —
+  vcpkg imgui 는 정적이라 DLL 마다 `GImGui` · 할당자 사본이 있다(`EditorUIContext::publish`). ImGuizmo 를 쓰는 확장은 그리기 전에
+  `ImGuizmo::SetImGuiContext( ImGui::GetCurrentContext() )` 를 부르고, ImDrawList 콜백(`AddCallback`)은 쓰지 않는다(렌더 스레드가 늦게 부른다). 시나리오 `editor/commandpalette`.
 - **Undo 의 오브젝트 편집은 엔진 데이터 명령(`ObjectUndoUtil` — 오브젝트 id · 이름 · 스냅샷)으로 기록한다** — 리로드를 넘어야 할 기록은 Engine 코드로 만든다.
   모듈 람다 명령은 에디터 리로드 때 `CommandStack::releaseCodeWithin` 이 뗀다(묶음은 안쪽 하나라도 걸리면 통째로). 대상 조회는 id, 같은 프레임에 지우고 되살린
   오브젝트는 지연 파괴 때문에 새 id 를 받으므로 이름으로 다시 찾는다. 선택 · dirty 는 `ObjectEditListener` 로.
