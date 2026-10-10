@@ -60,7 +60,7 @@ namespace sw::editor
 
     bool ImageUtil::loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage )
     {
-        // 실패하면 출력에 아무것도 남기지 않는다. `DdsLoader::loadFromMemory` 와 같은 약속이다.
+        // 실패하면 출력에 아무것도 남기지 않는다. `DDSLoader::loadFromMemory` 와 같은 약속이다.
         outImage = RawImageData{};
 
         if ( pBuffer == nullptr || bufferSize == 0 )

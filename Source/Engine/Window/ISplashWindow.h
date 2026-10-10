@@ -7,7 +7,7 @@
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 
 namespace sw
 {
@@ -48,7 +48,7 @@ namespace sw
         float32 getProgress() const { return _progress; }
 
         /** @brief 로드된 DDS 스플래시 이미지 데이터를 반환합니다. */
-        const DdsImageData& getSplashImage() const { return _splashData; }
+        const DDSImageData& getSplashImage() const { return _splashData; }
 
         /**
          * @brief BGRA 32bpp 이미지를 **상자 평균**으로 다른 크기에 옮겨 담습니다.
@@ -89,7 +89,7 @@ namespace sw
 
     protected:
         string                 _status;
-        DdsImageData           _splashData;
+        DDSImageData           _splashData;
         float32                _progress;
         uint32                 _width;
         uint32                 _height;

@@ -2,7 +2,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Image/ImageFileWriter.h"
 
 #include "TestFramework/TestFramework.h"
@@ -97,15 +97,15 @@ SW_TEST_CASE( ImageFileWriterTest, PngRoundTripsThroughStoredBlocks )
 }
 
 /**
- * @brief [ImageFileWriterTest] DDS 는 엔진의 DDS 읽기(`DdsLoader`)가 같은 크기 · RGBA8 포맷 · 같은 픽셀로 다시 읽는다
+ * @brief [ImageFileWriterTest] DDS 는 엔진의 DDS 읽기(`DDSLoader`)가 같은 크기 · RGBA8 포맷 · 같은 픽셀로 다시 읽는다
  */
-SW_TEST_CASE( ImageFileWriterTest, DdsIsReadBackByTheEngineLoader )
+SW_TEST_CASE( ImageFileWriterTest, DDSIsReadBackByTheEngineLoader )
 {
     const vector<uint8> image = ImageFileWriterTestInternal::makeImage();
     const string        path  = test::makeTempPath( "portrait.dds" );
-    SW_ASSERT_TRUE( ImageFileWriter::writeDdsRgba8( path, image, 3, 2 ) );
-    DdsImageData loaded;
-    SW_ASSERT_TRUE( DdsLoader::loadFromFile( path, loaded ) );
+    SW_ASSERT_TRUE( ImageFileWriter::writeDDSRgba8( path, image, 3, 2 ) );
+    DDSImageData loaded;
+    SW_ASSERT_TRUE( DDSLoader::loadFromFile( path, loaded ) );
     SW_EXPECT_EQUAL( 3u, loaded._width );
     SW_EXPECT_EQUAL( 2u, loaded._height );
     SW_EXPECT_EQUAL( 28u, loaded._dxgiFormat ); // DXGI_FORMAT_R8G8B8A8_UNORM

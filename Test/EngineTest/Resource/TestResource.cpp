@@ -11,7 +11,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/AssetStreamingQueue.h"
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePackManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 
@@ -393,16 +393,16 @@ SW_TEST_CASE( ResourceTest, ConfigurableResourcePriorityAndDlcSupport )
 }
 
 /**
- * @brief [ResourceTest] DdsLoader를 통한 DDS 헤더 파싱 및 픽셀 버퍼 로드 검증
+ * @brief [ResourceTest] DDSLoader를 통한 DDS 헤더 파싱 및 픽셀 버퍼 로드 검증
  */
-SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
+SW_TEST_CASE( ResourceTest, DDSLoaderValidHeaderAndPixelLoading )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
-    const sw::string splashDdsPath = sw::ResourceUtil::getResourcePath( "textures/splash.dds" );
-    SW_ASSERT_FALSE( splashDdsPath.empty() );
+    const sw::string splashDDSPath = sw::ResourceUtil::getResourcePath( "textures/splash.dds" );
+    SW_ASSERT_FALSE( splashDDSPath.empty() );
 
-    sw::DdsImageData image;
-    SW_ASSERT_TRUE( sw::DdsLoader::loadFromFile( splashDdsPath, image ) );
+    sw::DDSImageData image;
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromFile( splashDDSPath, image ) );
 
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 1376u, image._width );
@@ -414,17 +414,17 @@ SW_TEST_CASE( ResourceTest, DdsLoaderValidHeaderAndPixelLoading )
 }
 
 /**
- * @brief [ResourceTest] DdsLoader::loadFromResource를 통한 VFS 상대 경로 DDS 로드 검증
+ * @brief [ResourceTest] DDSLoader::loadFromResource를 통한 VFS 상대 경로 DDS 로드 검증
  */
-SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
+SW_TEST_CASE( ResourceTest, DDSLoaderLoadFromResource )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     if ( test::HostTargetTestUtil::isLeftOutOfServerPackage( "engine/textures/perlin.dds" ) )
         SW_TEST_SKIP( "the dedicated server package leaves textures, shader binaries and audio out (CookContract target_excluded_asset_kinds)" );
-    sw::DdsImageData image;
+    sw::DDSImageData image;
     // **도메인까지 적은 engine 리소스**를 쓴다. 도메인 없는 "textures/splash.dds" 는 editor 도메인 에셋이라
     // Shipping 팩에 아예 없다(쿠킹 대상은 engine/common/game 뿐) — 느슨한 파일이 있는 Dev 에서만 찾힌다.
-    SW_ASSERT_TRUE( sw::DdsLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromResource( "engine/textures/perlin.dds", image ) );
     SW_EXPECT_TRUE( image.isValid() );
     // `engine/textures_raw/perlin.png`(Scripts/dev/MakeNoiseTexture.py, 256 × 256)를 임포트 규칙 Fallback_Default(BC7 · sRGB · 밉)로 가져온 것.
     SW_EXPECT_EQUAL( 256u, image._width );
@@ -439,7 +439,7 @@ SW_TEST_CASE( ResourceTest, DdsLoaderLoadFromResource )
  *          이 저장소의 임포터는 DX10 머리를 쓰므로 그런 파일이 저장소에 없다 — 머리를 직접 만들어 스위치를 지킨다.
  *          스위치가 이 값을 못 알아보면 `_dxgiFormat == 0` 이라 로드가 실패한다.
  */
-SW_TEST_CASE( ResourceTest, DdsLoaderReadsD3dFormatIntegerFourCc )
+SW_TEST_CASE( ResourceTest, DDSLoaderReadsD3dFormatIntegerFourCc )
 {
     // 4 × 4 텍셀 × 8 바이트(RGBA16F) 본문을 붙인 최소 DDS.
     constexpr size_t  kHeaderBytes = 4 + 124;
@@ -463,8 +463,8 @@ SW_TEST_CASE( ResourceTest, DdsLoaderReadsD3dFormatIntegerFourCc )
     writeUint32( p + 80, 0x00000004 ); // ddspf.dwFlags = DDPF_FOURCC
     writeUint32( p + 84, 113 );        // ddspf.dwFourCC = D3DFMT_A16B16G16R16F(정수)
 
-    sw::DdsImageData image;
-    SW_ASSERT_TRUE( sw::DdsLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
+    sw::DDSImageData image;
+    SW_ASSERT_TRUE( sw::DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
     SW_EXPECT_TRUE( image.isValid() );
     SW_EXPECT_EQUAL( 4u, image._width );
     SW_EXPECT_EQUAL( 10u, image._dxgiFormat ); // DXGI_FORMAT_R16G16B16A16_FLOAT
@@ -477,7 +477,7 @@ SW_TEST_CASE( ResourceTest, DdsLoaderReadsD3dFormatIntegerFourCc )
  *          스플래시 창처럼 32bpp 를 전제하고 폭×높이×4 바이트를 훑는 소비자에게는 이것이
  *          버퍼 밖 접근으로 이어진다.
  */
-SW_TEST_CASE( ResourceTest, DdsLoaderRejectsUnknownPixelFormat )
+SW_TEST_CASE( ResourceTest, DDSLoaderRejectsUnknownPixelFormat )
 {
     // 헤더는 온전하되 픽셀 포맷만 아무도 모르는 FourCC('ZZZZ')로 둔 최소 DDS.
     constexpr size_t  kHeaderBytes = 4 + 124;
@@ -501,11 +501,11 @@ SW_TEST_CASE( ResourceTest, DdsLoaderRejectsUnknownPixelFormat )
     writeUint32( p + 80, 0x00000004 ); // ddspf.dwFlags = DDPF_FOURCC
     writeUint32( p + 84, 0x5A5A5A5A ); // ddspf.dwFourCC = 'ZZZZ'
 
-    sw::DdsImageData image;
+    sw::DDSImageData image;
     {
         // 알아보지 못한 포맷은 에러 로그를 남긴다 — 테스트 출력에서만 지운다.
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE( sw::DdsLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
+        SW_EXPECT_FALSE( sw::DDSLoader::loadFromMemory( bytes.data(), bytes.size(), image ) );
     }
     SW_EXPECT_FALSE( image.isValid() );
 
@@ -519,22 +519,22 @@ SW_TEST_CASE( ResourceTest, DdsLoaderRejectsUnknownPixelFormat )
  * @details 받다 만 웹 페이지(HTML)가 `.dds` 이름으로 들어와 있으면 이름으로 부르는 날 로더가 "magic" 오류를 낸다. 이름만 보고는 모르므로
  *          파일 머리 4 바이트를 본다.
  */
-SW_TEST_CASE( ResourceTest, EveryDdsUnderResourceStartsWithTheDdsMagic )
+SW_TEST_CASE( ResourceTest, EveryDDSUnderResourceStartsWithTheDDSMagic )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
     const sw::string& rootPath = sw::ResourceUtil::getRootFolderPath();
     SW_ASSERT_FALSE( rootPath.empty() );
 
-    sw::vector<sw::string> listDdsPath;
-    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( rootPath, ".dds", listDdsPath, true ) );
-    SW_ASSERT_TRUE( listDdsPath.empty() == false );
+    sw::vector<sw::string> listDDSPath;
+    SW_ASSERT_TRUE( sw::FileUtil::collectFiles( rootPath, ".dds", listDDSPath, true ) );
+    SW_ASSERT_TRUE( listDDSPath.empty() == false );
 
-    constexpr uint8 kArrDdsMagic[4] = { 'D', 'D', 'S', ' ' };
-    for ( const sw::string& ddsPath : listDdsPath )
+    constexpr uint8 kArrDDSMagic[4] = { 'D', 'D', 'S', ' ' };
+    for ( const sw::string& ddsPath : listDDSPath )
     {
         sw::vector<uint8> bytes;
-        const bool        bRead     = sw::FileUtil::readFile( ddsPath, bytes, 0, sizeof( kArrDdsMagic ) );
-        const bool        bHasMagic = bRead && bytes.size() == sizeof( kArrDdsMagic ) && std::equal( bytes.begin(), bytes.end(), kArrDdsMagic );
+        const bool        bRead     = sw::FileUtil::readFile( ddsPath, bytes, 0, sizeof( kArrDDSMagic ) );
+        const bool        bHasMagic = bRead && bytes.size() == sizeof( kArrDDSMagic ) && std::equal( bytes.begin(), bytes.end(), kArrDDSMagic );
         SW_EXPECT_TRUE_MSG( bHasMagic, ( sw::string( "not a DDS file: " ) + ddsPath ).c_str() );
     }
 }

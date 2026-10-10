@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Resource/Image/DdsFormat.h"
+#include "Engine/Resource/Image/DDSFormat.h"
 
 namespace sw
 {
@@ -15,8 +15,8 @@ namespace sw
     {
         struct ImageFileWriterInternal
         {
-            static constexpr uint32 kDdsFlags           = 0x1u | 0x2u | 0x4u | 0x8u | 0x1000u; // CAPS · HEIGHT · WIDTH · PITCH · PIXELFORMAT
-            static constexpr uint32 kDdsCapsTexture     = 0x1000u;
+            static constexpr uint32 kDDSFlags           = 0x1u | 0x2u | 0x4u | 0x8u | 0x1000u; // CAPS · HEIGHT · WIDTH · PITCH · PIXELFORMAT
+            static constexpr uint32 kDDSCapsTexture     = 0x1000u;
             static constexpr uint32 kDxgiR8G8B8A8Unorm  = 28;
             static constexpr uint32 kDimensionTexture2D = 3;
             /** @brief zlib "저장" 블록 하나의 최대 길이입니다(16 비트 길이 칸). */
@@ -63,16 +63,16 @@ namespace sw
 
 namespace sw
 {
-    bool ImageFileWriter::writeDdsRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
+    bool ImageFileWriter::writeDDSRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height )
     {
         using Internal = ImageFileWriterInternal;
         if ( Internal::isSizeValid( rgbaBytes, width, height ) == false )
             return false;
         vector<uint8> bytes;
-        bytes.reserve( 4 + DdsFormat::kHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
-        Internal::appendUint32Le( bytes, DdsFormat::kMagic );
-        Internal::appendUint32Le( bytes, DdsFormat::kHeaderSize );
-        Internal::appendUint32Le( bytes, Internal::kDdsFlags );
+        bytes.reserve( 4 + DDSFormat::kHeaderSize + 20 + static_cast<size_t>( width ) * height * 4u );
+        Internal::appendUint32Le( bytes, DDSFormat::kMagic );
+        Internal::appendUint32Le( bytes, DDSFormat::kHeaderSize );
+        Internal::appendUint32Le( bytes, Internal::kDDSFlags );
         Internal::appendUint32Le( bytes, height );
         Internal::appendUint32Le( bytes, width );
         Internal::appendUint32Le( bytes, width * 4u ); // 행 바이트 수
@@ -82,14 +82,14 @@ namespace sw
         {
             Internal::appendUint32Le( bytes, 0 ); // 예약
         }
-        Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatSize );
-        Internal::appendUint32Le( bytes, DdsFormat::kPixelFormatFourCcFlag );
-        Internal::appendUint32Le( bytes, DdsFormat::kDx10FourCc );
+        Internal::appendUint32Le( bytes, DDSFormat::kPixelFormatSize );
+        Internal::appendUint32Le( bytes, DDSFormat::kPixelFormatFourCcFlag );
+        Internal::appendUint32Le( bytes, DDSFormat::kDx10FourCc );
         for ( uint32 index = 0; index < 5; ++index )
         {
             Internal::appendUint32Le( bytes, 0 ); // 비트 수 · 마스크(DX10 머리말이 포맷을 말한다)
         }
-        Internal::appendUint32Le( bytes, Internal::kDdsCapsTexture );
+        Internal::appendUint32Le( bytes, Internal::kDDSCapsTexture );
         for ( uint32 index = 0; index < 4; ++index )
         {
             Internal::appendUint32Le( bytes, 0 ); // caps2 · caps3 · caps4 · 예약

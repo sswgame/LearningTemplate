@@ -222,7 +222,7 @@ pMesh->setMaterialInstance( std::move( tint ) );
 **같은 기본 도형을 여러 컴포넌트가 쓰면 `MeshUtil::acquirePrimitive` 로 공유 메시를 받으세요.** `MeshUtil::createPrimitive` 는 부를 때마다 새 메시를 만듭니다.
 컴포넌트마다 새 메시를 만들면 같은 도형이라도 배치와 정점 버퍼가 컴포넌트 수만큼 생깁니다. 벤치는 배치를 일부러 나누려고 `createPrimitive` 를 씁니다.
 
-**텍스처는 DDS로만 읽습니다.** 원본 이미지는 `textures_raw/` 에 두고 `App --import-textures` 로 변환합니다. DDS 로더(`Engine/Resource/Image/DdsLoader.cpp`)를 고칠 때는 다음을 지킵니다.
+**텍스처는 DDS로만 읽습니다.** 원본 이미지는 `textures_raw/` 에 두고 `App --import-textures` 로 변환합니다. DDS 로더(`Engine/Resource/Image/DDSLoader.cpp`)를 고칠 때는 다음을 지킵니다.
 
 - 오래된 부동소수점 DDS는 `dwFourCC` 자리에 네 글자 코드가 아니라 D3DFMT 정수를 넣습니다. FourCC를 문자로만 해석하면 이 파일을 읽지 못합니다.
 - 스플래시 화면은 32비트 비압축 이미지만 받습니다. `splash.dds` 를 BC 포맷으로 저장하지 마세요.

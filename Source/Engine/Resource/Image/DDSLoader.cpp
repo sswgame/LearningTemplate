@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/StdHeaders.h"
@@ -8,7 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Resource/Image/DdsFormat.h"
+#include "Engine/Resource/Image/DDSFormat.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -30,7 +30,7 @@ namespace sw
         // D3DFMT 열거값이 그대로 들어앉은 FourCC — **네 글자 코드가 아니다.**
         // D3D9 시절 DDS 라이터는 부동소수점 포맷에 네 글자 이름을 주지 않고 `D3DFORMAT` 의 정수를
         // dwFourCC 에 밀어 넣었다. 그래서 값이 0x71 같은 작은 수로 보인다. 이 저장소의 임포터는 DX10 머리를 쓰므로
-        // 이 모양은 밖에서 들여온 DDS 에만 있다(`ResourceTest.DdsLoaderReadsD3dFormatIntegerFourCc`).
+        // 이 모양은 밖에서 들여온 DDS 에만 있다(`ResourceTest.DDSLoaderReadsD3dFormatIntegerFourCc`).
         constexpr uint32 kD3dFmt_R16F          = 111;
         constexpr uint32 kD3dFmt_G16R16F       = 112;
         constexpr uint32 kD3dFmt_A16B16G16R16F = 113;
@@ -59,7 +59,7 @@ namespace sw
         constexpr uint32 kDxgiFormatUnknown = 0;
 
 #pragma pack( push, 1 )
-        struct DdsPixelFormatHeader
+        struct DDSPixelFormatHeader
         {
             uint32 _size;
             uint32 _flags;
@@ -71,7 +71,7 @@ namespace sw
             uint32 _aBitMask;
         };
 
-        struct DdsFileHeader
+        struct DDSFileHeader
         {
             uint32               _size;
             uint32               _flags;
@@ -81,7 +81,7 @@ namespace sw
             uint32               _depth;
             uint32               _mipMapCount;
             uint32               _arrReserved1[11];
-            DdsPixelFormatHeader _pixelFormat;
+            DDSPixelFormatHeader _pixelFormat;
             uint32               _caps;
             uint32               _caps2;
             uint32               _caps3;
@@ -89,7 +89,7 @@ namespace sw
             uint32               _reserved2;
         };
 
-        struct DdsHeaderDxt10
+        struct DDSHeaderDxt10
         {
             uint32 _dxgiFormat;
             uint32 _resourceDimension;
@@ -100,9 +100,9 @@ namespace sw
 #pragma pack( pop )
     } // namespace
 
-    SW_LOG_CALLER( "DdsLoader" );
+    SW_LOG_CALLER( "DDSLoader" );
 
-    bool DdsLoader::loadFromFile( string_view filePath, DdsImageData& outImage )
+    bool DDSLoader::loadFromFile( string_view filePath, DDSImageData& outImage )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
@@ -114,7 +114,7 @@ namespace sw
         return loadFromMemory( bytes.data(), bytes.size(), outImage );
     }
 
-    bool DdsLoader::loadFromResource( string_view relativePath, DdsImageData& outImage )
+    bool DDSLoader::loadFromResource( string_view relativePath, DDSImageData& outImage )
     {
         // 이 호스트(전용 서버)의 패키지에 없는 종류다 — 없는 것으로 치고 오류를 남기지 않는다(ResourceUtil::setHostTarget).
         if ( ResourceUtil::isExcludedForHost( relativePath ) )
@@ -129,35 +129,35 @@ namespace sw
         return loadFromMemory( bytes.data(), bytes.size(), outImage );
     }
 
-    bool DdsLoader::loadFromMemory( const uint8* pBuffer, size_t bufferSize, DdsImageData& outImage )
+    bool DDSLoader::loadFromMemory( const uint8* pBuffer, size_t bufferSize, DDSImageData& outImage )
     {
         // **실패는 출력에 아무것도 남기지 않는다.** 나가는 길이 여섯 군데인데 그중 넷은 크기를
         // 이미 채운 뒤에 있다. 그래서 여기서 비우고, 파싱은 지역 변수에 한 뒤 **성공했을 때만**
         // 옮긴다. "실패 경로마다 잊지 말고 비우기" 를 사람이 지키는 대신 구조로 못 박는다.
-        outImage = DdsImageData{};
+        outImage = DDSImageData{};
 
-        DdsImageData image;
+        DDSImageData image;
 
-        if ( pBuffer == nullptr || bufferSize < sizeof( uint32 ) + sizeof( DdsFileHeader ) )
+        if ( pBuffer == nullptr || bufferSize < sizeof( uint32 ) + sizeof( DDSFileHeader ) )
         {
             SW_LOG_ERROR( "DDS buffer is null or smaller than minimum header size." );
             return false;
         }
 
         const uint32 magic = *reinterpret_cast<const uint32*>( pBuffer );
-        if ( magic != DdsFormat::kMagic )
+        if ( magic != DDSFormat::kMagic )
         {
             SW_LOG_ERROR(
                 "Invalid DDS magic: 0x%# (expected 0x%#).",
                 Fmt( magic, Format( 8, Format::Padding::Zero ).hex() ),
-                Fmt( static_cast<uint32>( DdsFormat::kMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
+                Fmt( static_cast<uint32>( DDSFormat::kMagic ), Format( 8, Format::Padding::Zero ).hex() ) );
             return false;
         }
 
-        const DdsFileHeader* pHeader = reinterpret_cast<const DdsFileHeader*>( pBuffer + sizeof( uint32 ) );
-        if ( pHeader->_size != DdsFormat::kHeaderSize || pHeader->_pixelFormat._size != sizeof( DdsPixelFormatHeader ) )
+        const DDSFileHeader* pHeader = reinterpret_cast<const DDSFileHeader*>( pBuffer + sizeof( uint32 ) );
+        if ( pHeader->_size != DDSFormat::kHeaderSize || pHeader->_pixelFormat._size != sizeof( DDSPixelFormatHeader ) )
         {
-            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DdsFormat::kHeaderSize );
+            SW_LOG_ERROR( "Corrupted DDS header size (%#, expected %#).", pHeader->_size, DDSFormat::kHeaderSize );
             return false;
         }
 
@@ -166,21 +166,21 @@ namespace sw
         image._depth    = ( pHeader->_depth > 0 ) ? pHeader->_depth : 1;
         image._mipCount = ( pHeader->_mipMapCount > 0 ) ? pHeader->_mipMapCount : 1;
 
-        size_t dataOffset = sizeof( uint32 ) + sizeof( DdsFileHeader );
+        size_t dataOffset = sizeof( uint32 ) + sizeof( DDSFileHeader );
 
-        if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatFourCcFlag ) != 0 && pHeader->_pixelFormat._fourCC == DdsFormat::kDx10FourCc )
+        if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 && pHeader->_pixelFormat._fourCC == DDSFormat::kDx10FourCc )
         {
-            if ( bufferSize < dataOffset + sizeof( DdsHeaderDxt10 ) )
+            if ( bufferSize < dataOffset + sizeof( DDSHeaderDxt10 ) )
             {
                 SW_LOG_ERROR( "DDS buffer truncated before DX10 header." );
                 return false;
             }
 
-            const DdsHeaderDxt10* pDxt10 = reinterpret_cast<const DdsHeaderDxt10*>( pBuffer + dataOffset );
+            const DDSHeaderDxt10* pDxt10 = reinterpret_cast<const DDSHeaderDxt10*>( pBuffer + dataOffset );
             image._dxgiFormat            = pDxt10->_dxgiFormat;
-            dataOffset += sizeof( DdsHeaderDxt10 );
+            dataOffset += sizeof( DDSHeaderDxt10 );
         }
-        else if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatFourCcFlag ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatFourCcFlag ) != 0 )
         {
             switch ( pHeader->_pixelFormat._fourCC )
             {
@@ -250,7 +250,7 @@ namespace sw
                 }
             }
         }
-        else if ( ( pHeader->_pixelFormat._flags & DdsFormat::kPixelFormatRgbFlag ) != 0 )
+        else if ( ( pHeader->_pixelFormat._flags & DDSFormat::kPixelFormatRgbFlag ) != 0 )
         {
             if ( pHeader->_pixelFormat._rgbBitCount == 32 )
             {

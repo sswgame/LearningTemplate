@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Window/Linux/X11SplashWindow.h"
 #include "Engine/Window/Windows/Win32SplashWindow.h"
@@ -91,7 +91,7 @@ namespace sw
 
     bool ISplashWindow::loadSplashImage()
     {
-        if ( DdsLoader::loadFromResource( "textures/splash.dds", _splashData ) == false || _splashData.isValid() == false )
+        if ( DDSLoader::loadFromResource( "textures/splash.dds", _splashData ) == false || _splashData.isValid() == false )
             return false;
 
         // 스플래시를 그리는 두 경로는 **압축 없는 32bpp** 를 전제한다. Win32 는 StretchDIBits 에
@@ -106,7 +106,7 @@ namespace sw
                 "Splash image must be uncompressed 32bpp — got %#x%#, %# bytes (need %#), compressed=%#. Skipping splash.",
                 _splashData._width, _splashData._height, _splashData._bytes.size(), requiredBytes,
                 static_cast<uint32>( _splashData._bCompressed ) );
-            _splashData = DdsImageData{};
+            _splashData = DDSImageData{};
             return false;
         }
 

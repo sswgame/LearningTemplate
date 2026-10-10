@@ -177,7 +177,7 @@ namespace sw::editor
         };
 
         /** @brief 임포트 결과(밉까지 끝난 이미지)를 DDS 로 쓰고 결과를 채웁니다. 8 비트 · HDR 두 갈래가 같이 씁니다. */
-        [[nodiscard]] bool saveImportedDdsInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
+        [[nodiscard]] bool saveImportedDDSInternal( const DirectX::ScratchImage& finalImage, [[maybe_unused]] string_view sourcePath, string_view outputPath, TextureImportResult* pOutResult )
         {
             const string outputDir = FileUtil::getDirectoryPart( outputPath );
             if ( outputDir.empty() == false )
@@ -250,7 +250,7 @@ namespace sw::editor
                               sourcePath );
                 return false;
             }
-            return saveImportedDdsInternal( finalImage, sourcePath, outputPath, pOutResult );
+            return saveImportedDDSInternal( finalImage, sourcePath, outputPath, pOutResult );
         }
 
         /**
@@ -480,7 +480,7 @@ namespace sw::editor
         }
 
         // 5) DDS 파일로 저장
-        return saveImportedDdsInternal( finalImage, sourcePath, outputPath, pOutResult );
+        return saveImportedDDSInternal( finalImage, sourcePath, outputPath, pOutResult );
     }
 
     void TextureImporter::applyChannelManipulations( RawImageData& rawImage, const TextureImportRule& rule, size_t totalPixels )

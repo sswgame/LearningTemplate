@@ -1102,9 +1102,9 @@ namespace sw
             string_view stem  = path.substr( path.find_last_of( '/' ) == string_view::npos ? 0 : path.find_last_of( '/' ) + 1 );
             stem              = stem.substr( 0, stem.find( '.' ) );
             const string base = directory + "/" + string( stem ) + ".portrait";
-            const bool   bDds = ImageFileWriter::writeDdsRgba8( base + ".dds", rgbaBytes, request._width, request._height );
+            const bool   bDDS = ImageFileWriter::writeDDSRgba8( base + ".dds", rgbaBytes, request._width, request._height );
             const bool   bPng = ImageFileWriter::writePngRgba8( base + ".png", rgbaBytes, request._width, request._height );
-            bAllSucceeded     = bAllSucceeded && bDds && bPng;
+            bAllSucceeded     = bAllSucceeded && bDDS && bPng;
             SW_LOG_INFO( "Portrait '%#' -> %#.dds / .png (%#x%#)", string( path ).c_str(), base.c_str(), request._width, request._height );
         }
         portrait.shutdown();

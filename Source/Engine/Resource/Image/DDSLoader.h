@@ -7,10 +7,10 @@
 namespace sw
 {
     /**
-     * @struct DdsImageData
+     * @struct DDSImageData
      * @brief DDS 파일에서 파싱한 텍스처 데이터입니다(헤더 정보와 픽셀 · 블록 데이터).
      */
-    struct DdsImageData
+    struct DDSImageData
     {
         vector<uint8>          _bytes;
         uint32                 _width;
@@ -22,7 +22,7 @@ namespace sw
         uint8                  _bIsBgra     : 1;
         [[maybe_unused]] uint8 _reserved    : 6;
 
-        DdsImageData()
+        DDSImageData()
             : _bytes{}
             , _width{ 0 }
             , _height{ 0 }
@@ -48,24 +48,24 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct DdsLoader
+     * @struct DDSLoader
      * @brief 외부 라이브러리 없이 표준 DDS 헤더와 바이너리 데이터를 직접 파싱하는 가벼운 로더입니다.
      */
-    struct SW_API DdsLoader
+    struct SW_API DDSLoader
     {
         /**
          * @brief 디스크의 실제 파일 경로에서 DDS 텍스처를 로드합니다.
          */
-        [[nodiscard]] static bool loadFromFile( string_view filePath, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromFile( string_view filePath, DDSImageData& outImage );
 
         /**
          * @brief VFS 리소스 상대 경로(예: "textures/splash.dds")에서 DDS 텍스처를 로드합니다(.pack 아카이브와 낱개 파일 모두 같은 방식으로).
          */
-        [[nodiscard]] static bool loadFromResource( string_view relativePath, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromResource( string_view relativePath, DDSImageData& outImage );
 
         /**
          * @brief 메모리 버퍼에서 DDS 텍스처를 로드합니다.
          */
-        [[nodiscard]] static bool loadFromMemory( const uint8* pBuffer, size_t bufferSize, DdsImageData& outImage );
+        [[nodiscard]] static bool loadFromMemory( const uint8* pBuffer, size_t bufferSize, DDSImageData& outImage );
     };
 } // namespace sw

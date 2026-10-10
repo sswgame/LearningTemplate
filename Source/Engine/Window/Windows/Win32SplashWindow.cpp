@@ -190,7 +190,7 @@ namespace sw
 
     void Win32SplashWindow::paintWindow( HDC hDC, const RECT& rcPaint )
     {
-        const DdsImageData& splashData = getSplashImage();
+        const DDSImageData& splashData = getSplashImage();
         if ( splashData.isValid() == false || _hWnd == nullptr )
             return;
 

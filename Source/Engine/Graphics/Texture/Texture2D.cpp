@@ -5,7 +5,7 @@
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
 
     RHIFormat Texture2D::toRhiFormatFromDxgi( uint32 dxgiFormat )
     {
-        // DdsLoader 가 쓰는 DXGI 번호(DirectX 헤더 없이 상수로 둔다). 여기 없는 번호는 Unknown.
+        // DDSLoader 가 쓰는 DXGI 번호(DirectX 헤더 없이 상수로 둔다). 여기 없는 번호는 Unknown.
         switch ( dxgiFormat )
         {
             case 28: // DXGI_FORMAT_R8G8B8A8_UNORM
@@ -83,8 +83,8 @@ namespace sw
             releaseRhi( pDevice );
 
         AssetLoadScope loadScope( "Texture", relativePath );
-        DdsImageData   image;
-        if ( DdsLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
+        DDSImageData   image;
+        if ( DDSLoader::loadFromResource( relativePath, image ) == false || image.isValid() == false )
         {
             SW_LOG_ERROR( "Texture2D: failed to load '%#'", relativePath );
             return false;

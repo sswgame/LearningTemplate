@@ -5,7 +5,7 @@
   - `engine/textures/missing.dds` — 마젠타 · 검정 체커(64x64, 16 텍셀 칸). 못 읽은 텍스처 · 머티리얼 대신 샘플합니다
     (`EngineDefaultAssets::_missingTexture` · `missingmaterial.material`).
 
-엔진은 실행 중에 DDS 만 읽으므로(`DdsLoader`) PNG 가 아니라 DDS 를 씁니다. 같은 입력이면 바이트까지 같은 파일이 나옵니다.
+엔진은 실행 중에 DDS 만 읽으므로(`DDSLoader`) PNG 가 아니라 DDS 를 씁니다. 같은 입력이면 바이트까지 같은 파일이 나옵니다.
 
 사용법: py -3 Scripts/generate/GenerateSpriteTextures.py [--root <repo>]
 """

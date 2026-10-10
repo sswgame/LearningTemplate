@@ -12,7 +12,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
 #include "Engine/Object/GameObject/PrimitiveRegistry.h"
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 namespace sw
@@ -217,8 +217,8 @@ namespace sw
             _heightfield.setSplat( 0, 0, {} );
             return;
         }
-        DdsImageData image;
-        if ( DdsLoader::loadFromResource( _splatTexturePath, image ) == false )
+        DDSImageData image;
+        if ( DDSLoader::loadFromResource( _splatTexturePath, image ) == false )
         {
             SW_LOG_WARNING( "Terrain splat '%#' could not be read - layer queries return layer 0", _splatTexturePath.c_str() );
             _heightfield.setSplat( 0, 0, {} );

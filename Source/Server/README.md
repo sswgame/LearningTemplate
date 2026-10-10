@@ -175,7 +175,7 @@ WantedBy=multi-user.target
 - **서버 배포본에서 Info 로그를 지우지 마세요.** 클라이언트 배포본은 Warning 이상만 컴파일하지만, 서버 배포본은 Info까지 컴파일합니다(`BuildLayout.cmake`).
   준비, 상태, 종료 줄과 콘솔 명령의 답이 Info라서, 빼면 서버가 아무 말도 하지 않습니다. 이 차이는 `ServerBootTest` 가 Shipping-Server 빌드에서 확인합니다.
 - **서버 패키지에 없는 에셋을 가리키는 테스트는 서버 전용 빌드에서 건너뛰세요.** `Test/EngineTest/HostTargetTestUtil.h` 를 씁니다.
-  그런 에셋을 찾는 엔진 코드(`DdsLoader`, 지형 스플랫 맵)는 `isExcludedForHost` 로 오류 없이 넘어가야 합니다.
+  그런 에셋을 찾는 엔진 코드(`DDSLoader`, 지형 스플랫 맵)는 `isExcludedForHost` 로 오류 없이 넘어가야 합니다.
 - 서버의 크래시 보고와 텔레메트리는 아직 없습니다. `Telemetry` 단계가 `Client` 대상이기 때문입니다. 남은 일은 [백로그](../../docs/06_Backlog.md)에 있습니다.
 
 ## 더 볼 곳

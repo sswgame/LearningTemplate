@@ -2,7 +2,7 @@
 
 #include "Core/Container/vector.h"
 
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "EngineTest/HostTargetTestUtil.h"
@@ -43,8 +43,8 @@ SW_TEST_CASE( ResourceHostTargetTest, DedicatedServerDoesNotReadExcludedKinds )
     SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kTexturePath, bytes ) );
     SW_EXPECT_FALSE( sw::ResourceUtil::readBinaryResource( kShaderBinaryPath, bytes ) );
     SW_EXPECT_TRUE( sw::ResourceUtil::readBinaryResource( kPipelinePath, bytes ) );
-    sw::DdsImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
-    SW_EXPECT_FALSE( sw::DdsLoader::loadFromResource( kTexturePath, image ) );
+    sw::DDSImageData image; // 로더도 조용히 진다(서버가 지형 스플랫 · 머티리얼 텍스처를 찾을 때)
+    SW_EXPECT_FALSE( sw::DDSLoader::loadFromResource( kTexturePath, image ) );
     SW_EXPECT_TRUE_MSG( logCollector.joined().empty(), logCollector.joined().c_str() );
 }
 

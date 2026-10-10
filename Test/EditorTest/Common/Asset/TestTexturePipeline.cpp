@@ -10,7 +10,7 @@
 #include "Editor/Common/Asset/TextureImporter.h"
 
 #include "Engine/Graphics/Texture/Texture2D.h"
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/ResourceUtil.h"
 
 #include "TestFramework/TestFramework.h"
@@ -222,7 +222,7 @@ namespace sw::editor
     }
 
     /**
-     * @brief [EditorTexturePipelineTest] ImageUtil 디코딩, TextureImporter 변환 및 DdsLoader 로딩 E2E 검증
+     * @brief [EditorTexturePipelineTest] ImageUtil 디코딩, TextureImporter 변환 및 DDSLoader 로딩 E2E 검증
      */
     SW_TEST_CASE( EditorTexturePipelineTest, ImageUtilAndTextureImporterEndToEnd )
     {
@@ -254,18 +254,18 @@ namespace sw::editor
         rule._bGenerateMips = SW_FALSE;
         rule._bSrgb         = SW_TRUE;
 
-        const string        tempOutDds = test::makeTempPath( "test_output_splash.dds" );
+        const string        tempOutDDS = test::makeTempPath( "test_output_splash.dds" );
         TextureImportResult importResult;
-        SW_ASSERT_TRUE( TextureImporter::importTexture( srcPath, tempOutDds, rule, &importResult ) );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( srcPath, tempOutDDS, rule, &importResult ) );
         SW_EXPECT_TRUE( importResult._bSuccess );
         SW_EXPECT_EQUAL( 1376u, importResult._width );
         SW_EXPECT_EQUAL( 768u, importResult._height );
         SW_EXPECT_EQUAL( 1u, importResult._mipCount );
-        SW_EXPECT_TRUE( FileUtil::exists( tempOutDds ) );
+        SW_EXPECT_TRUE( FileUtil::exists( tempOutDDS ) );
 
-        // 3. Verify generated DDS with Engine DdsLoader
-        DdsImageData ddsData;
-        SW_ASSERT_TRUE( DdsLoader::loadFromFile( tempOutDds, ddsData ) );
+        // 3. Verify generated DDS with Engine DDSLoader
+        DDSImageData ddsData;
+        SW_ASSERT_TRUE( DDSLoader::loadFromFile( tempOutDDS, ddsData ) );
         SW_EXPECT_TRUE( ddsData.isValid() );
         SW_EXPECT_EQUAL( 1376u, ddsData._width );
         SW_EXPECT_EQUAL( 768u, ddsData._height );
@@ -274,7 +274,7 @@ namespace sw::editor
         SW_EXPECT_EQUAL( static_cast<size_t>( 1376 * 768 * 4 ), ddsData._bytes.size() );
 
         // 4. Cleanup
-        SW_EXPECT_TRUE( FileUtil::removeFile( tempOutDds ) );
+        SW_EXPECT_TRUE( FileUtil::removeFile( tempOutDDS ) );
     }
 
     /**
@@ -333,8 +333,8 @@ namespace sw::editor
             const string ddsPath = test::makeTempPath( string( testCase._pName ) + ".dds" );
             SW_ASSERT_TRUE_MSG( TextureImporter::importTexture( sourcePath, ddsPath, rule ), testCase._pName );
 
-            DdsImageData dds;
-            SW_ASSERT_TRUE_MSG( DdsLoader::loadFromFile( ddsPath, dds ), testCase._pName );
+            DDSImageData dds;
+            SW_ASSERT_TRUE_MSG( DDSLoader::loadFromFile( ddsPath, dds ), testCase._pName );
             SW_EXPECT_TRUE_MSG( testCase._expectedDxgiFormat == dds._dxgiFormat, testCase._pName );
             SW_ASSERT_TRUE_MSG( dds._bytes.size() == 4, testCase._pName );
             for ( size_t channel = 0; channel < 4; ++channel )
@@ -509,8 +509,8 @@ namespace sw::editor
         const string bgraPath = test::makeTempPath( "srgb_bgra.dds" );
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, bgraPath, rule ) );
 
-        DdsImageData bgraImage;
-        SW_ASSERT_TRUE( DdsLoader::loadFromFile( bgraPath, bgraImage ) );
+        DDSImageData bgraImage;
+        SW_ASSERT_TRUE( DDSLoader::loadFromFile( bgraPath, bgraImage ) );
         SW_EXPECT_EQUAL( 91u, bgraImage._dxgiFormat ); // B8G8R8A8_UNORM_SRGB
         SW_ASSERT_TRUE( bgraImage._bytes.size() >= 4 );
         SW_EXPECT_EQUAL( 200, static_cast<int32>( bgraImage._bytes[0] ) );
@@ -566,7 +566,7 @@ namespace sw::editor
      * @details 깨끗한 클론 · CI 에서 "원본을 고치고 임포트하지 않았다" 를 잡는 자리다. 지면 `App --import-textures` 로 임포트하고 DDS 와
      *          `textures_raw/import.stamp` 를 함께 커밋한다.
      */
-    SW_TEST_CASE( TextureImportStampTest, RepositoryRawTexturesMatchTheirDds )
+    SW_TEST_CASE( TextureImportStampTest, RepositoryRawTexturesMatchTheirDDS )
     {
         SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
         TextureImportConfig config;
@@ -697,8 +697,8 @@ namespace sw::editor
         const string ddsPath = test::makeTempPath( "bright.dds" );
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, ddsPath, rule ) );
 
-        DdsImageData dds;
-        SW_ASSERT_TRUE( DdsLoader::loadFromFile( ddsPath, dds ) );
+        DDSImageData dds;
+        SW_ASSERT_TRUE( DDSLoader::loadFromFile( ddsPath, dds ) );
         SW_EXPECT_EQUAL( static_cast<uint32>( DXGI_FORMAT_BC6H_UF16 ), dds._dxgiFormat );
         SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
         SW_ASSERT_TRUE( dds._bytes.size() >= 16 );
@@ -719,11 +719,11 @@ namespace sw::editor
 
         // 무압축 HDR(rgba16f)도 같은 갈래다.
         rule._format             = "rgba16f";
-        const string halfDdsPath = test::makeTempPath( "bright_rgba16f.dds" );
-        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDdsPath, rule ) );
-        DdsImageData halfDds;
-        SW_ASSERT_TRUE( DdsLoader::loadFromFile( halfDdsPath, halfDds ) );
-        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( halfDds._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
+        const string halfDDSPath = test::makeTempPath( "bright_rgba16f.dds" );
+        SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );
+        DDSImageData halfDDS;
+        SW_ASSERT_TRUE( DDSLoader::loadFromFile( halfDDSPath, halfDDS ) );
+        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
         rule._format = "bc7";

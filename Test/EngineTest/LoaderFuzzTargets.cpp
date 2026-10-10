@@ -19,7 +19,7 @@
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
-#include "Engine/Resource/Image/DdsLoader.h"
+#include "Engine/Resource/Image/DDSLoader.h"
 #include "Engine/Resource/Pack/ResourcePackReader.h"
 #include "Engine/Resource/Pack/ResourcePackTypes.h"
 #include "Engine/Resource/ResourceUtil.h"
@@ -99,10 +99,10 @@ namespace test
                 KeyValueMap mapValue;
                 (void)KeyValueFile::parse( asText( pData, size ), mapValue ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
-            static void runDds( const uint8* pData, size_t size )
+            static void runDDS( const uint8* pData, size_t size )
             {
-                DdsImageData image;
-                (void)DdsLoader::loadFromMemory( pData, size, image ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
+                DDSImageData image;
+                (void)DDSLoader::loadFromMemory( pData, size, image ); // 퍼즈 대상 — 실패도 정상 입력이다, 크래시만 본다
             }
             static void runMesh( const uint8* pData, size_t size )
             {
@@ -246,7 +246,7 @@ namespace test
                 appendResourceSeeds( ".meta", 4, outListSeed );
                 appendTextSeed( "# c\nguid=11111111-1111-1111-1111-111111111111\nimported=0\nkey = value with spaces\n", outListSeed );
             }
-            static void seedDds( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".dds", 13, outListSeed ); }
+            static void seedDDS( vector<vector<uint8>>& outListSeed ) { appendResourceSeeds( ".dds", 13, outListSeed ); }
             static void seedMesh( vector<vector<uint8>>& outListSeed )
             {
                 appendResourceSeeds( ".mesh", 3, outListSeed );
@@ -379,7 +379,7 @@ namespace test
             {               "Xml",                &LoaderFuzzTargetsInternal::runXml,             &LoaderFuzzTargetsInternal::seedXml,  true},
             {              "Json",               &LoaderFuzzTargetsInternal::runJson,            &LoaderFuzzTargetsInternal::seedJson,  true},
             {          "KeyValue",           &LoaderFuzzTargetsInternal::runKeyValue,        &LoaderFuzzTargetsInternal::seedKeyValue,  true},
-            {               "Dds",                &LoaderFuzzTargetsInternal::runDds,             &LoaderFuzzTargetsInternal::seedDds, false},
+            {               "DDS",                &LoaderFuzzTargetsInternal::runDDS,             &LoaderFuzzTargetsInternal::seedDDS, false},
             {              "Mesh",               &LoaderFuzzTargetsInternal::runMesh,            &LoaderFuzzTargetsInternal::seedMesh, false},
             {       "Compression",        &LoaderFuzzTargetsInternal::runCompression,     &LoaderFuzzTargetsInternal::seedCompression, false},
             {              "Pack",               &LoaderFuzzTargetsInternal::runPack,            &LoaderFuzzTargetsInternal::seedPack, false},
