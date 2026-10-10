@@ -1,7 +1,7 @@
 {
     "_packRoot": "game/shooter3d",
     "_windowTitle": "Shooter 3D",
-    "_bUiPauseMenu": true,
+    "_bUIPauseMenu": true,
     "_userSettingsSchema": "data/shooter3d.settings.xml",
     "_telemetrySchema": "data/shooter3d.telemetry.xml",
     "_mapUserSettingDefault": {

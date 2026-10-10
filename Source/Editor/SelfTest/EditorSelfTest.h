@@ -72,7 +72,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorSelfTestRunner
-     * @brief `-gv_editorSelfTest` 로 켜는 실행기입니다. `ImGuiEditor::updateUi` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.
+     * @brief `-gv_editorSelfTest` 로 켜는 실행기입니다. `ImGuiEditor::updateUI` 가 패널을 그린 뒤 프레임마다 `runFrame` 을 부릅니다.
      */
     struct EditorSelfTestRunner
     {

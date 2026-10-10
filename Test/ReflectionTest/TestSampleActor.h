@@ -874,7 +874,7 @@ namespace sw
         PROPERTY( EditCondition = "_mode != DisplayMetaMode::Off" )
         float32 _blend = 0.5f;
 
-        PROPERTY( Units = cm, Min = 0, Max = 1000, UiMin = 50, UiMax = 250 )
+        PROPERTY( Units = cm, Min = 0, Max = 1000, UIMin = 50, UIMax = 250 )
         float32 _height = 180.0f;
 
         PROPERTY( ColorHdr )

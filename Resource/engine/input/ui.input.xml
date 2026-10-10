@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Runtime UI InputMap — the actions UiSystem routes to the active screen (focus navigation, accept, back, tabs).
-  UiSystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action
+  Runtime UI InputMap — the actions UISystem routes to the active screen (focus navigation, accept, back, tabs).
+  UISystem owns this map and enables the UI layer only while a focus-taking screen is active. An input the UI uses for an action
   is consumed until released: the player controller does not turn it into the pawn's intent (gamepad A = accept, not jump).
   Navigation uses trigger="Repeat" (fires on press, then repeats after navRepeatDelay at navRepeatRate) like a held D-pad.
   UI.TextBackspace is routed only while a text field holds keyboard focus (with Back and the focus Tab actions).

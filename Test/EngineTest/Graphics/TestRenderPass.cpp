@@ -17,7 +17,7 @@
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -31,7 +31,7 @@
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
-#include "Engine/Renderer/Scene/GpuScene.h"
+#include "Engine/Renderer/Scene/GPUScene.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Window/IWindow.h"
 
@@ -383,7 +383,7 @@ SW_TEST_CASE( RenderPassTest, PipelineFormatNamesResolveThroughReflection )
 /**
  * @brief 엔진이 실제로 배포하는 파이프라인 XML 들이 스스로 모순이 없는지.
  * @details 모두 검증 0건이어야 한다. 여기가 깨지면 런타임에 포맷이 어긋나 조용히 잘못 그리거나 GPU 가 죽는다.
- *          패스 수는 GPU 타임스탬프가 재는 수(`FrameRendererUtil::kGpuTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
+ *          패스 수는 GPU 타임스탬프가 재는 수(`FrameRendererUtil::kGPUTimedPassCapacity`) 이하여야 한다 — 넘는 패스는 프로파일에서 빠진다.
  */
 SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
 {
@@ -404,23 +404,23 @@ SW_TEST_CASE( RenderPassTest, ShippedPipelinesValidateClean )
         {
             SW_EXPECT_TRUE( sw::isPipelinePassType( pass._resolvedType ) );
         }
-        SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( res.getGraphPass().size() ) );
+        SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( res.getGraphPass().size() ) );
     }
 }
 
 /**
  * @brief [RenderPassTest] GPU 타임스탬프가 재는 패스 수와 칸 배치가 맞다 — 넘는 패스 수를 세는 함수가 로드 경고의 근거다
- * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGpuTimedPassCapacity` 하나로 자른다.
+ * @details 패스는 인덱스 x 2 쌍을 쓰고 뒤쪽 칸은 프레임 · 컴퓨트 예약이다. 실행 · 보고 · 로드 경고가 모두 `kGPUTimedPassCapacity` 하나로 자른다.
  */
-SW_TEST_CASE( RenderPassTest, GpuTimestampPassCapacityMatchesSlotLayout )
+SW_TEST_CASE( RenderPassTest, GPUTimestampPassCapacityMatchesSlotLayout )
 {
-    constexpr uint32 kCapacity = sw::FrameRendererUtil::kGpuTimedPassCapacity;
-    static_assert( kCapacity * 2u <= sw::FrameRendererUtil::kGpuTimestampSlotComputeBegin, "패스 칸이 예약 칸과 겹친다" );
+    constexpr uint32 kCapacity = sw::FrameRendererUtil::kGPUTimedPassCapacity;
+    static_assert( kCapacity * 2u <= sw::FrameRendererUtil::kGPUTimestampSlotComputeBegin, "패스 칸이 예약 칸과 겹친다" );
     SW_EXPECT_EQUAL( 14u, kCapacity );
-    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( 0 ) );
-    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGpuPass( kCapacity ) );
-    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::countUntimedGpuPass( kCapacity + 1u ) );
-    SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGpuPass( 20 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( 0 ) );
+    SW_EXPECT_EQUAL( 0u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity ) );
+    SW_EXPECT_EQUAL( 1u, sw::FrameRendererUtil::countUntimedGPUPass( kCapacity + 1u ) );
+    SW_EXPECT_EQUAL( 6u, sw::FrameRendererUtil::countUntimedGPUPass( 20 ) );
 }
 
 /**
@@ -614,7 +614,7 @@ SW_TEST_CASE( RenderPassTest, PipelineValidationCatchesInconsistencies )
 
     // 6) 엔진 내부 PSO 슬롯은 XML 패스 타입으로 쓸 수 없다. executePass 에 실행 코드가 없다 — XML 이 받아 주면 그 패스는
     //    매 프레임 경고만 남기고 아무것도 그리지 않는다.
-    for ( const utf8* pInternalType : { "GpuCull", "ForwardOpaqueNoDepthWrite" } )
+    for ( const utf8* pInternalType : { "GPUCull", "ForwardOpaqueNoDepthWrite" } )
     {
         sw::RenderPipelineAsset res;
         sw::RenderPipelineDesc& desc = res.getDesc();
@@ -861,7 +861,7 @@ SW_TEST_CASE( RenderPassTest, PipelineEmptyStagesSkipped )
  * @brief [RenderPassTest] 지오메트리 패스의 컬러 타깃은 선언에서 온다 — 컬러 출력만 선언 순서대로, 컬러 출력이 없으면 검증 오류
  * @details 실행(FrameRenderer)은 `_listResolvedColorOutput` 을 그대로 건다(GBuffer 는 [0] 알베도, [1] 노멀). 이름을 코드에 박으면
  *          (SceneColor · GBufferAlbedo …) 다른 이름을 쓰는 파이프라인에서 없는 첨부(핸들 0 = 백버퍼)를 연다. 실제 그림은
- *          `RenderPassGpuTest.RenamedAttachmentsRenderTheSameImage` 가 본다.
+ *          `RenderPassGPUTest.RenamedAttachmentsRenderTheSameImage` 가 본다.
  */
 SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
 {
@@ -927,7 +927,7 @@ SW_TEST_CASE( RenderPassTest, GeometryPassColorTargetsComeFromTheDeclaration )
  * @brief [RenderPassTest] 첨부가 선언한 역할(`_role`)이 이름보다 먼저다 — 이름을 바꾼 G버퍼 · 그림자 맵으로 Lighting 계약이 선다
  * @details 역할을 이름으로만 정하면 `MainAlbedo` · `MainNormal` 은 SourceColor 로 읽혀 Lighting 계약이 깨지고(가공할 컬러가 둘 ·
  *          필수 G버퍼 없음) `SunShadow` 는 SceneDepth 로 읽힌다. 모르는 역할 글은 검증 오류다. 그림은
- *          `RenderPassGpuTest.RenamedGBufferAttachmentsRenderTheSameImage` 가 본다.
+ *          `RenderPassGPUTest.RenamedGBufferAttachmentsRenderTheSameImage` 가 본다.
  */
 SW_TEST_CASE( RenderPassTest, AttachmentRoleIsDeclaredNotNamed )
 {
@@ -1123,10 +1123,10 @@ SW_TEST_CASE( RenderPassTest, CanvasAfterSwapchainWriterIsRejected )
     {
         sw::RenderPipelineAsset  res;
         sw::RenderPassAttachment attachment{};
-        attachment._name = "UiColor";
+        attachment._name = "UIColor";
         res.getDesc()._listAttachment.push_back( attachment );
         res.getDesc()._listPass.push_back( makePass( "Present", "Present", "Swapchain" ) );
-        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UiColor" ) );
+        res.getDesc()._listPass.push_back( makePass( "Canvas", "Canvas", "UIColor" ) );
         SW_EXPECT_EQUAL( 1u, res.validate( "unit-test" ) );
     }
     {

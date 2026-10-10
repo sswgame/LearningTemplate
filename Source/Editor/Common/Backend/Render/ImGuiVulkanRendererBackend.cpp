@@ -77,21 +77,21 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiVulkan" );
 
-    bool ImGuiVulkanRendererBackend::initialize( class IRHIDevice* pRhiDevice )
+    bool ImGuiVulkanRendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
-        if ( pRhiDevice == nullptr )
+        if ( pRHIDevice == nullptr )
             return false;
 
         // 이 백엔드는 Vulkan 전용이다. 핸들은 `IRHIDevice::queryNativeHandles` 로 받는다 — 모듈 경계를 넘는 것은 판 번호가 든
         // POD(RHINativeHandles) 하나이고 VulkanRHIDevice 의 레이아웃 · vtable 이 아니다. 판이 다르면 Engine 이 거절한다.
-        if ( pRhiDevice->getBackendType() != RHIBackend::Vulkan )
+        if ( pRHIDevice->getBackendType() != RHIBackend::Vulkan )
             return false;
 
         RHINativeHandles vkNative{};
-        if ( pRhiDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr )
+        if ( pRHIDevice->queryNativeHandles( vkNative ) == false || vkNative._backend != RHIBackend::Vulkan || vkNative._pDevice == nullptr )
             return false;
 
-        _pRHIDevice  = pRhiDevice;
+        _pRHIDevice  = pRHIDevice;
         _pDevice     = static_cast<VkDevice>( vkNative._pDevice );
         _pQueueMutex = static_cast<mutex*>( vkNative._pQueueMutex );
 
@@ -260,9 +260,9 @@ namespace sw::editor
         return std::unique_lock<mutex>{ *_pQueueMutex };
     }
 
-    void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
+    void ImGuiVulkanRendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pRhiDevice->getNativeContext() );
+        VkCommandBuffer cmdBuffer = static_cast<VkCommandBuffer>( pRHIDevice->getNativeContext() );
         if ( cmdBuffer != nullptr && pDrawData != nullptr && _pRHIDevice != nullptr )
             ImGui_ImplVulkan_RenderDrawData( pDrawData, cmdBuffer );
     }

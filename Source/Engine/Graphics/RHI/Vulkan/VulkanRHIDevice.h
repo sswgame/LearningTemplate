@@ -7,9 +7,9 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/Support/RHIConstantBufferMirror.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIHandle.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRenderPassCache.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISwapChain.h"
@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    struct RHIGpuMemoryBudget;
+    struct RHIMemoryBudget;
 
     class VulkanRHICommandContext;
     class VulkanRHIResourceFactory;
@@ -179,10 +179,10 @@ namespace sw
          * @brief `VK_EXT_memory_budget` 으로 이 프로세스의 힙별 사용량 · 예산을 채웁니다. 사용량은 모든 힙의 합, 예산은 DEVICE_LOCAL 힙의 합입니다.
          * @details 디바이스가 확장을 지원하지 않으면 false 입니다(드라이버 값은 "모름").
          */
-        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+        [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
         /** @brief 이번 프레임이 제출할 세대(`_frameFenceCounter + 1`)로 해제 큐에 넣습니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
         /** @brief 크기를 적고, 스왑체인 재생성은 beginFrame 까지 미룹니다. */
         void resizeInternal( uint32 width, uint32 height ) override;
@@ -197,14 +197,14 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
-        bool               isGpuClockReadCheap() const override { return false; }
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
+        bool               isGPUClockReadCheap() const override { return false; }
 
         /** @brief 타임스탬프 쿼리 풀입니다. 준비되지 않았으면 VK_NULL_HANDLE 입니다. */
         VkQueryPool getTimestampPool() const { return _timestampPool; }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
-        uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGpuTimestampSlot; }
+        uint32 getTimestampBase() const { return _currentFrame * constant::kMaxGPUTimestampSlot; }
 
     private:
         /** @brief 쿼리 풀을 한 번만 만듭니다. */
@@ -581,13 +581,13 @@ namespace sw
         VkCommandBuffer _activeFrameBuffer;
 
         /**
-         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGpuTimestampSlot` 칸을 씁니다.
+         * @brief GPU 타임스탬프입니다. 링 슬롯마다 `constant::kMaxGPUTimestampSlot` 칸을 씁니다.
          * @details 읽기는 `vkWaitForFences` 를 통과한 **직후**에 합니다. 그 슬롯의 GPU 작업이 이미
          *          끝났음이 보장된 유일한 자리라, 재려고 파이프라인을 멈춰 세우지 않습니다.
          */
-        VkQueryPool          _timestampPool;  ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
-        VkQueryPool          _clockQueryPool; ///< GPU 시계 읽기(`readGpuClockNanos`)용 한 칸. 처음 읽을 때 만든다
-        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
+        VkQueryPool       _timestampPool;  ///< 없으면 VK_NULL_HANDLE (이 헤더는 vulkan.h 를 들이지 않는다)
+        VkQueryPool       _clockQueryPool; ///< GPU 시계 읽기(`readGPUClockNanos`)용 한 칸. 처음 읽을 때 만든다
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
 
         vector<VkCommandBuffer> _listCommandBuffer;
         vector<VkFence>         _listInFlightFence;
@@ -600,7 +600,7 @@ namespace sw
         void* _pHWnd;
         void* _pDisplayHandle;
         /// @brief 스왑체인 제출마다 1씩 증가하는 단조 세대 번호입니다. 해제 큐가 실제 GPU 펜스 완료 기준으로
-        ///        해제하도록(enqueueGpuRelease) 프레임 카운트 대신 이 값을 씁니다.
+        ///        해제하도록(enqueueGPURelease) 프레임 카운트 대신 이 값을 씁니다.
         uint64                  _frameFenceCounter;
         uint32                  _width;
         uint32                  _height;

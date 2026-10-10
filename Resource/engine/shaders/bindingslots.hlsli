@@ -101,7 +101,7 @@
 // 정점 셰이더가 **자기 배치 번호**로 읽는다 — DX12 는 커맨드 시그니처가 루트 상수로 주입, Vulkan·GL 은 DrawIndex 내장
 // 변수 + 그룹 첫 번호, DX11 은 배치마다 루트 상수. 배치마다 바뀌는 값이 전부 이 표에 있으므로 같은 PSO·머티리얼의
 // 배치들을 멀티 드로우 하나로 낼 수 있다(언리얼 GPUScene 의 프리미티브/인스턴스 데이터 버퍼와 같은 자리).
-// 컬링 컴퓨트도 같은 버퍼를 t1 로 읽는다 — gpucull.hlsl 의 GpuBatchInfo 와 레이아웃이 같다.
+// 컬링 컴퓨트도 같은 버퍼를 t1 로 읽는다 — gpucull.hlsl 의 GPUBatchInfo 와 레이아웃이 같다.
 #define SW_SLOT_BATCH_SRV              13
 
 // 정점 애니메이션(VAT) 표 (StructuredBuffer<float4> g_SwVertexAnimation). 먼 군중의 메시마다 머리 원소 + 프레임 × 정점.
@@ -243,7 +243,7 @@
 #define SW_SKIN_UINT4_PER_INSTANCE     2u
 // 정점 애니메이션(VAT) 노멀 — 팔면체 한 칸의 해상도(12 비트). 굽는 쪽(MeshVertexAnimation)과 읽는 쪽(binding.hlsli)이 같아야 한다.
 #define SW_VERTEX_ANIMATION_NORMAL_STEPS 4096u
-// 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGpuTest.WaterWaveShaderMatchesCpu).
+// 거스트너 파도 칸 수. 부력 · 수면 질의(WaterWaveMath)가 CPU 에서 같은 식을 다시 계산한다(RenderPassGPUTest.WaterWaveShaderMatchesCPU).
 #define SW_GERSTNER_WAVE_COUNT         4
 
 #endif // SW_ENGINE_BINDINGSLOTS_HLSLI

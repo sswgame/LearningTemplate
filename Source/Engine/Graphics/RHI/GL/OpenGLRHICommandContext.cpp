@@ -98,7 +98,7 @@ namespace sw
 
         // 행 순서: FBO 는 UPPER_LEFT 로 그려 0 행이 화면 위다(beginRenderPass). 창(기본 프레임버퍼)은 0 행이 **아래**라,
         // 창으로 옮길 때는 대상 y 를 뒤집어야 화면에 바로 선다. 텍스처끼리는 행 순서가 같아 그대로 옮긴다.
-        // 창 쪽 반전은 오프스크린을 읽는 스크린샷으로는 보이지 않는다 — RenderPassGpuTest.PresentedBackBufferMatchesTheCapture 가 창을 읽어 본다.
+        // 창 쪽 반전은 오프스크린을 읽는 스크린샷으로는 보이지 않는다 — RenderPassGPUTest.PresentedBackBufferMatchesTheCapture 가 창을 읽어 본다.
         const GLint dstY0 = dstFbo == 0 ? static_cast<GLint>( dstH ) : 0;
         const GLint dstY1 = dstFbo == 0 ? 0 : static_cast<GLint>( dstH );
         glBindFramebuffer( GL_READ_FRAMEBUFFER, pSrcRecord->_fbo );

@@ -17,7 +17,7 @@ namespace sw
     struct PhysicsBody
     {
         AABB   _aabb{};
-        AABB   _stepAabb{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때 · 순간이동 때는 `_aabb` 와 같다
+        AABB   _stepAABB{}; ///< 지난 `step` 때의 자리 — 연속 바디는 여기서 `_aabb` 까지 쓸린다. 더할 때 · 순간이동 때는 `_aabb` 와 같다
         uint64 _objectId{ 0 };
         uint8  _layer{ 0 };
         uint8  _bContinuous{ SW_FALSE }; ///< 연속 충돌(ContinuousCollision) 바디면 SW_TRUE — `step` 이 지난 자리에서 지금 자리까지 쓸어 그 사이에 닿은 것도 겹침으로 낸다
@@ -80,14 +80,14 @@ namespace sw
         /** @brief 기본 레이어 행렬로 빈 월드를 만듭니다. */
         PhysicsWorld() = default;
 
-        /** @brief 막는 · 이산 AABB 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
+        /** @brief 막는 · 이산 AABB 바디를 등록합니다. 출발점(`_stepAABB`)은 지금 자리입니다. */
         BodyHandle addBody( const AABB& aabb, uint8 layer, uint64 objectId = 0 );
-        /** @brief 판정 방식(연속 · 트리거)까지 정한 바디를 등록합니다. 출발점(`_stepAabb`)은 지금 자리입니다. */
+        /** @brief 판정 방식(연속 · 트리거)까지 정한 바디를 등록합니다. 출발점(`_stepAABB`)은 지금 자리입니다. */
         BodyHandle addBody( const PhysicsBodyState& state, uint64 objectId );
         /** @brief 바디를 제거합니다. */
         void removeBody( BodyHandle handle );
         /** @brief 바디 AABB 를 갱신합니다. 연속 바디는 다음 `step` 에서 지난 step 의 자리부터 여기까지 쓸립니다(`BodyMoveType::Sweep`). */
-        void setAabb( BodyHandle handle, const AABB& aabb );
+        void setAABB( BodyHandle handle, const AABB& aabb );
         /**
          * @brief 바디의 상자 · 레이어 · 판정 방식을 한 번에 맞춥니다. 콜라이더가 `step` 직전에 부릅니다(`BoxCollider2DComponent::syncPhysicsBody`).
          * @details 레이어 · 판정 방식도 매번 맞춥니다 — 더할 때 한 번만 적으면 시작한 뒤 바꾼 콜라이더 종류(`setColliderType`)가 겹침에 반영되지 않습니다.
@@ -102,7 +102,7 @@ namespace sw
          *          쌍은 끝납니다(언리얼은 컴포넌트를 내릴 때 EndOverlap 을 낸다). 강체가 없으므로 적분하지 않습니다 — @p deltaTime 은 그때를 위한
          *          자리입니다. 매니저가 틱 · 트랜스폼 적용 뒤에 게임 스레드에서 부릅니다(`SceneOverlapWorld2D::step`).
          *
-         *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`ContinuousCollision::sweepAabb`, 유니티 `CollisionDetectionMode2D.Continuous`).
+         *          **연속 바디(`_bContinuous`)는 지난 step 의 자리에서 지금 자리까지 쓸립니다**(`ContinuousCollision::sweepAABB`, 유니티 `CollisionDetectionMode2D.Continuous`).
          *          한 프레임에 얇은 바디를 통째로 건너뛴 총알도 그 바디와 겹친 것으로 칩니다 — 이번 step 에 시작하고, 다음 step 에(이미 지나갔으면)
          *          끝납니다. 출발점에서 이미 겹쳐 있던 것(닿은 때 0)은 쓸림으로 더하지 않습니다 — 그 겹침은 지난 step 이 쟀고, 지금도 겹치면 제자리
          *          겹침이 이어 갑니다.
@@ -118,7 +118,7 @@ namespace sw
         /** @brief 두 바디가 레이어와 AABB 모두에서 겹치면 true 입니다. */
         bool overlaps( BodyHandle a, BodyHandle b ) const;
         /** @brief box 와 겹치는 바디 핸들을 out 에 넣습니다. */
-        void queryAabb( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const;
+        void queryAABB( const AABB& box, uint8 layer, vector<BodyHandle>& outListHandle ) const;
         /** @brief movingBox 가 displacement 만큼 움직일 때 layer 의 대상들과 연속 충돌(ContinuousCollision)을 검사합니다. */
         bool sweepTest( const AABB& movingBox, const float3& displacement, uint8 layer, SweepHit& outHit ) const;
 
@@ -170,7 +170,7 @@ namespace sw
         /**
          * @brief 바디 하나가 이 셀 수를 넘게 덮으면 그리드에 넣지 않고 **언제나 후보**로 둡니다.
          * @details 삽입 쪽에도 상한이 필요합니다. 큰 지형 · 바닥 콜라이더 하나가 자기 AABB 가 덮는 모든 셀에 핸들을 적으면,
-         *          20,000 유닛짜리 바닥이면 셀 표에 **한 바디 때문에 십만 개 가까운 항목**이 생깁니다(64 유닛 셀 기준). `setAabb` 로
+         *          20,000 유닛짜리 바닥이면 셀 표에 **한 바디 때문에 십만 개 가까운 항목**이 생깁니다(64 유닛 셀 기준). `setAABB` 로
          *          움직이기라도 하면 그만큼을 매번 지웠다 다시 적습니다.
          *
          *          넘치는 바디는 그리드에 흩뿌리는 대신 목록 하나에 모아 두고, 그리드로 가는 질의가
@@ -185,7 +185,7 @@ namespace sw
          * @struct CellRange
          * @brief AABB 하나가 덮는 그리드 셀 범위입니다. **삽입 · 제거 · 질의가 같은 집합을 보게 하는 자리**입니다.
          *
-         * @details 이 계산("이 AABB 는 어느 셀들인가")을 삽입 · 제거 · `setAabb` 의 옛/새 비교 둘 · `queryAabb` · `sweepTest` 가
+         * @details 이 계산("이 AABB 는 어느 셀들인가")을 삽입 · 제거 · `setAABB` 의 옛/새 비교 둘 · `queryAABB` · `sweepTest` 가
          *          함께 씁니다.
          *
          *          어긋났을 때의 증상은 방향마다 다르고, **둘 다 그 자리에서 터지지 않습니다.**
@@ -195,7 +195,7 @@ namespace sw
          *            틀린 답이 되지는 않지만, 옮겨 다닌 바디가 지나온 셀마다 죽은 핸들을 남겨
          *            **셀 표가 끝없이 커지고** 후보 목록이 길어집니다.
          *
-         *          `setAabb` 의 "셀이 그대로면 그리드를 건드리지 않는다" 지름길도 같은 계산에 기댑니다.
+         *          `setAABB` 의 "셀이 그대로면 그리드를 건드리지 않는다" 지름길도 같은 계산에 기댑니다.
          *          이 비교가 삽입과 어긋나면 **새 셀에 등록되지 않은 채** 넘어가서 첫 번째 증상이 됩니다.
          */
         struct CellRange
@@ -208,7 +208,7 @@ namespace sw
             int32 _maxZ{ -1 };
 
             /** @brief AABB 가 덮는 셀 범위입니다. 뒤집힌 AABB 도 정규화해서 받습니다. */
-            static CellRange fromAabb( const AABB& aabb, float32 cellSize );
+            static CellRange fromAABB( const AABB& aabb, float32 cellSize );
 
             /** @brief 두 범위가 같은 셀 집합인지 여부입니다. */
             bool operator==( const CellRange& other ) const noexcept
@@ -255,11 +255,11 @@ namespace sw
         void gatherCandidateHandles( const CellRange& range, vector<BodyHandle>& outListHandle ) const;
         /** @brief `step` 의 후보 — 범위가 비었거나 너무 넓으면 모든 바디, 아니면 그리드에서 모읍니다. `_mutex` 를 잡은 채로 부릅니다. */
         void gatherStepCandidates( const CellRange& range, vector<BodyHandle>& outListHandle ) const;
-        /** @brief 바디 하나의 상자를 바꾸고 그리드 셀을 다시 맞춥니다. `_mutex` 를 잡은 채로 부릅니다(`setAabb` · `updateBody`). */
-        void setAabbLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb );
+        /** @brief 바디 하나의 상자를 바꾸고 그리드 셀을 다시 맞춥니다. `_mutex` 를 잡은 채로 부릅니다(`setAABB` · `updateBody`). */
+        void setAABBLocked( BodyHandle handle, PhysicsBody& body, const AABB& aabb );
         /**
          * @brief 연속 바디 @p body 가 지난 step 의 자리에서 지금 자리까지 쓸리며 처음 닿은 바디를 쌍으로 더합니다. `step` 이 `_mutex` 를 잡은 채로 부릅니다.
-         * @details 상대 운동으로 잽니다 — 두 바디의 출발점(`_stepAabb`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
+         * @details 상대 운동으로 잽니다 — 두 바디의 출발점(`_stepAABB`)에서 이 바디의 이동에서 상대의 이동을 뺀 만큼. 후보는 그리드에 **지금 자리**로
          *          들어 있으므로, 쓸린 범위를 이번 step 에 가장 많이 움직인 바디의 이동만큼 넓혀 모읍니다(그 안에 없으면 그 사이 어느 때에도 닿을 수 없다).
          *          셀 하나보다 멀리 간 바디(@p listFarMover — 에디터 드래그 · 아주 빠른 바디)는 범위를 넓히지 않고 따로 하나씩 잽니다. 넓히면 그 한 바디
          *          때문에 모든 연속 바디가 월드 전체를 훑습니다.

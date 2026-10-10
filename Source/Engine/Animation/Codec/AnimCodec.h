@@ -22,7 +22,7 @@ namespace sw
     enum class AnimCodecId : uint8
     {
         Raw = 0, ///< 압축하지 않은 균일 샘플(기준 · 디버그)
-        Acl = 1, ///< Animation Compression Library 2.1(가변 비트율 · 상수 트랙 제거 · 오차 기준 키 줄이기)
+        ACL = 1, ///< Animation Compression Library 2.1(가변 비트율 · 상수 트랙 제거 · 오차 기준 키 줄이기)
         Count,
     };
 } // namespace sw

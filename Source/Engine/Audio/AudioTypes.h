@@ -118,7 +118,7 @@ namespace sw
         inline constexpr utf8 kSfx[]     = "sfx";
         inline constexpr utf8 kVoice[]   = "voice";
         inline constexpr utf8 kAmbient[] = "ambient";
-        inline constexpr utf8 kUi[]      = "ui";
+        inline constexpr utf8 kUI[]      = "ui";
         inline constexpr utf8 kReverb[]  = "reverb";
     } // namespace AudioBusNames
 } // namespace sw

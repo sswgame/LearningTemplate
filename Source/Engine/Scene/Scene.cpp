@@ -46,9 +46,9 @@ namespace sw
             }
 
             /**
-             * @brief MeshComponent 의 프리미티브 메시와 머티리얼(저장된 참조, 없으면 씬 기본)을 채우고, 잡은 머티리얼을 @p pRhiDevice 로 올립니다.
+             * @brief MeshComponent 의 프리미티브 메시와 머티리얼(저장된 참조, 없으면 씬 기본)을 채우고, 잡은 머티리얼을 @p pRHIDevice 로 올립니다.
              */
-            static void bindSceneMeshDefaults( Scene* pScene, IRHIDevice* pRhiDevice )
+            static void bindSceneMeshDefaults( Scene* pScene, IRHIDevice* pRHIDevice )
             {
                 if ( pScene == nullptr )
                     return;
@@ -65,12 +65,12 @@ namespace sw
                     if ( pMeshComp == nullptr )
                         return;
                     pMeshComp->resolveRenderAssets();
-                    // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GpuSceneBuilder 가 그렇게 고른다.
+                    // 인스턴스가 붙은 메시는 건너뛴다. 그 메시의 머티리얼은 인스턴스의 부모이고, GPUSceneBuilder 가 그렇게 고른다.
                     // 여기서 씬 기본을 넣으면 배치가 기본 머티리얼(그룹 · 텍스처)과 인스턴스(원소 바이트 · 퍼뮤테이션)로 섞인다.
                     if ( pMeshComp->getMaterial() == nullptr && pMeshComp->getRawMaterialInstance() == nullptr && pDefaultMaterial != nullptr )
                         pMeshComp->setMaterial( pDefaultMaterial );
                 } );
-                engine::getAssetManager().getMaterialManager().initializePending( pRhiDevice );
+                engine::getAssetManager().getMaterialManager().initializePending( pRHIDevice );
                 pObjectManager->flushSceneTransforms();
             }
 
@@ -143,7 +143,7 @@ namespace sw
     /**
      * @brief 씬을 초기화합니다. 기본 머티리얼을 얻고 기본 카메라를 설정합니다.
      */
-    bool Scene::initialize( IRHIDevice* pRhiDevice )
+    bool Scene::initialize( IRHIDevice* pRHIDevice )
     {
         const string materialPath = SceneInternal::resolveDefaultMaterialPath();
         if ( materialPath.empty() == false )
@@ -152,7 +152,7 @@ namespace sw
             {
                 releaseDefaultMaterial();
                 _defaultMaterialPath = materialPath;
-                _pMaterial           = engine::getAssetManager().getMaterialManager().acquire( materialPath, pRhiDevice );
+                _pMaterial           = engine::getAssetManager().getMaterialManager().acquire( materialPath, pRHIDevice );
                 if ( _pMaterial == nullptr )
                 {
                     SW_LOG_ERROR( "Failed to acquire Material from %#", materialPath );
@@ -162,7 +162,7 @@ namespace sw
             }
         }
         ensureDefaultCameras();
-        SceneInternal::bindSceneMeshDefaults( this, pRhiDevice );
+        SceneInternal::bindSceneMeshDefaults( this, pRHIDevice );
         return true;
     }
 

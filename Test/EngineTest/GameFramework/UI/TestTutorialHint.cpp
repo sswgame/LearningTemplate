@@ -3,8 +3,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/UI/Screen/UiNotificationService.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -20,7 +20,7 @@ using namespace sw;
 SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
 {
     InputManager input;
-    UiSystem     ui;
+    UISystem     ui;
     SW_ASSERT_TRUE( input.initialize() );
     SW_ASSERT_TRUE( ui.initialize( input, nullptr ) );
     UserSettingsManager settings;
@@ -38,7 +38,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     TutorialHintComponent* pHint = pVolume->addComponent<TutorialHintComponent>();
     SW_ASSERT_NOT_NULL( pHint );
     pHint->configure( "[action=Interact] to open", TagID::request( "Player" ) );
-    pHint->setUiSystem( &ui );
+    pHint->setUISystem( &ui );
     pPlayer->addTag( TagID::request( "Player" ) );
     objects.mergePendingAdds();
 
@@ -49,7 +49,7 @@ SW_TEST_CASE( TutorialHintTest, PostsOnceAndHonorsTheSetting )
     SW_EXPECT_FALSE( pHint->activate( pCrate ) ); // 태그가 없다
     SW_EXPECT_TRUE( pHint->activate( pPlayer ) );
     SW_EXPECT_FALSE( pHint->activate( pPlayer ) ); // 한 번
-    ui.update( 0.016f, UiViewport{
+    ui.update( 0.016f, UIViewport{
                            float2{ 1280.0f, 720.0f }
     } );
     SW_ASSERT_EQUAL( 1u, ui.getNotifications().getVisibleCount() );

@@ -211,7 +211,7 @@ SW_TEST_CASE( MemoryProfilerTest, EveryTagHasAName )
 {
     SW_EXPECT_STREQ( "Unknown", MemoryProfiler::getMemoryTagName( MemoryTag::Unknown ) );
     SW_EXPECT_STREQ( "Texture", MemoryProfiler::getMemoryTagName( MemoryTag::Texture ) );
-    SW_EXPECT_STREQ( "RenderCpu", MemoryProfiler::getMemoryTagName( MemoryTag::RenderCpu ) );
+    SW_EXPECT_STREQ( "RenderCPU", MemoryProfiler::getMemoryTagName( MemoryTag::RenderCPU ) );
     SW_EXPECT_STREQ( "Game", MemoryProfiler::getMemoryTagName( MemoryTag::Game ) );
     SW_EXPECT_STREQ( "Invalid", MemoryProfiler::getMemoryTagName( MemoryTag::MaxTags ) );
 }

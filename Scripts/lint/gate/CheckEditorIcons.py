@@ -33,14 +33,14 @@ class CheckEditorIconsGate(LintGate):
     description = "에디터 아이콘 폰트 · 글리프 헤더가 그림 정의와 같은지 검사"
     buildComment = "Checking that the editor icon font and glyph header match their drawing table..."
     timeoutSeconds = 30
-    preCommitPattern = ("Scripts/common/EditorIconFont.py", "Resource/editor/fonts/*", "Source/Editor/Common/Gui/EditorIconGlyphs.h")
+    preCommitPattern = ("Scripts/common/EditorIconFont.py", "Resource/editor/fonts/*", "Source/Editor/Common/GUI/EditorIconGlyphs.h")
     preCommitFileArgument = ""
     violationHeader = "에디터 아이콘 파일이 그림 정의와 다름"
     hint = "  다시 만든다:  py -3 Scripts/generate/GenerateEditorIcons.py  (폰트와 헤더를 함께 커밋한다)"
     selfTestCases = [
         {
             "name": "손으로 고친 글리프 헤더",
-            "files": {"Source/Editor/Common/Gui/EditorIconGlyphs.h": "// hand edited\n"},
+            "files": {"Source/Editor/Common/GUI/EditorIconGlyphs.h": "// hand edited\n"},
         },
     ]
 

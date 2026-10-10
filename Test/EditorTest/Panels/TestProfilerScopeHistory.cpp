@@ -57,7 +57,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, WindowStatisticsFollowRecentFrames )
     }
 
     sw::editor::ProfilerRowQuery query{};
-    query._kind = sw::editor::ProfilerScopeKind::Cpu;
+    query._kind = sw::editor::ProfilerScopeKind::CPU;
     sw::vector<sw::editor::ProfilerScopeRow> listRow;
     history.makeRows( query, listRow );
     const sw::editor::ProfilerScopeRow* pRow = findRowInternal( listRow, "GT.Work" );
@@ -95,7 +95,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, RowsAreSplitFilteredAndSorted )
     profiler.setEnabled( true );
     const uint32 slotSlow    = profiler.registerScope( "RT.Slow" );
     const uint32 slotFast    = profiler.registerScope( "RT.Fast" );
-    const uint32 slotGpu     = profiler.registerScope( "GPU.Shadow" );
+    const uint32 slotGPU     = profiler.registerScope( "GPU.Shadow" );
     const uint32 slotCounter = profiler.registerScope( "Draw.Count" );
     const uint32 slotIdle    = profiler.registerScope( "RT.NeverCalled" );
     SW_ASSERT_TRUE( slotIdle != sw::FrameProfiler::kInvalidSlot );
@@ -103,14 +103,14 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, RowsAreSplitFilteredAndSorted )
     sw::editor::ProfilerScopeHistory history{ 4 };
     profiler.addSample( slotSlow, 900'000 );
     profiler.addSample( slotFast, 50'000 );
-    profiler.addSample( slotGpu, 300'000 );
+    profiler.addSample( slotGPU, 300'000 );
     profiler.addCount( slotCounter, 42 );
     foldFrameInternal( profiler );
     SW_ASSERT_TRUE( history.capture( profiler ) );
 
     sw::vector<sw::editor::ProfilerScopeRow> listRow;
     sw::editor::ProfilerRowQuery             query{};
-    query._kind        = sw::editor::ProfilerScopeKind::Cpu;
+    query._kind        = sw::editor::ProfilerScopeKind::CPU;
     query._sortColumn  = sw::editor::ProfilerSortColumn::P99;
     query._bDescending = true;
     history.makeRows( query, listRow );
@@ -129,7 +129,7 @@ SW_TEST_CASE( ProfilerScopeHistoryTest, RowsAreSplitFilteredAndSorted )
     SW_EXPECT_TRUE( listRow[0]._name == "RT.Slow" );
 
     query._filterText.clear();
-    query._kind = sw::editor::ProfilerScopeKind::Gpu;
+    query._kind = sw::editor::ProfilerScopeKind::GPU;
     history.makeRows( query, listRow );
     SW_ASSERT_EQUAL( size_t( 1 ), listRow.size() );
     SW_EXPECT_NEAR_EQUAL( 300.0, listRow[0]._last, 1e-3 );

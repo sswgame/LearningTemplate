@@ -22,7 +22,7 @@ endif()
 
 # 매니페스트 키 · 종류 낱말(런타임 `ModuleCatalogInternal` 과 같은 표).
 set(SW_MODULE_MANIFEST_KEYS _name _version _kind _description _listDependency _listPlatform _listConfiguration _listTarget _bEnabledByDefault _listModuleOverride)
-set(SW_MODULE_KINDS GameFramework Kit Game Editor Rhi)
+set(SW_MODULE_KINDS GameFramework Kit Game Editor RHI)
 
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)

@@ -35,13 +35,13 @@ namespace sw::editor
         virtual ~IImGuiRendererBackend() = default;
 
         /** @brief RHI 디바이스에 ImGui 렌더러를 바인딩하고 초기화합니다. */
-        virtual bool initialize( IRHIDevice* pRhiDevice ) = 0;
+        virtual bool initialize( IRHIDevice* pRHIDevice ) = 0;
         /** @brief ImGui 렌더러 리소스를 해제합니다. */
         virtual void shutdown() = 0;
         /** @brief 프레임 시작 시 ImGui 렌더러 상태를 갱신합니다. */
         virtual void newFrame() = 0;
         /** @brief 주어진 DrawData 를 RHI 로 그립니다. nullptr 이면 그리지 않습니다. */
-        virtual void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) = 0;
+        virtual void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) = 0;
         /**
          * @brief 대기 중인 ImGui 텍스처 생성/갱신(폰트 아틀라스 재빌드 등)을 즉시 처리합니다.
          * @details ImGui 1.92 동적 아틀라스에서 draw-data 스냅샷을 다른 스레드로 넘길 때, 텍스처 갱신은
@@ -103,7 +103,7 @@ namespace sw::editor
          * @brief 종료 첫 단계: 렌더 스레드와 GPU 를 기다려(`IRHIDevice::waitIdle`) 디바이스로 넘긴 해제를 부르게 하고, 넘기지 않은 해제도 지금 부릅니다.
          * @details 해제 콜백은 이 모듈의 코드와 백엔드 객체를 가리킵니다. 모듈이 내려가거나 디스크립터 풀 · 힙을 부수기 전에 모두 불려야 합니다.
          */
-        void flushDrawReleases( IRHIDevice* pRhiDevice );
+        void flushDrawReleases( IRHIDevice* pRHIDevice );
 
     private:
         EditorDrawReleaseQueue _drawReleaseQueue;

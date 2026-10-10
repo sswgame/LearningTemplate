@@ -1,5 +1,5 @@
-<UiDocument _schemaVersion="1">
-	<UiScreenDesc _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
+<UIDocument _schemaVersion="1">
+	<UIScreenDesc _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel _visibility="SelfHitTestInvisible">
 		<CanvasPanel _visibility="SelfHitTestInvisible">
 			<ImageWidget _name="Crosshair" _visibility="{bind:_crosshairVisibility}" _imagePath="game/shooter3d/textures/crosshair.dds" _imageSize="32,32">
@@ -28,4 +28,4 @@
 			</BoxPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
-</UiDocument>
+</UIDocument>

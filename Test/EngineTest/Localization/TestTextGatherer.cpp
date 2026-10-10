@@ -123,11 +123,11 @@ SW_TEST_CASE( TextGathererTest, CodeScannerReadsLiteralMacroCalls )
 SW_TEST_CASE( TextGathererTest, ConflictingOrBrokenSourceIsAnError )
 {
     sw::TextGatherer gatherer;
-    gatherer.gatherCodeText( R"(a = SW_LOCTEXT( "Ui", "Ok", "OK" ); b = SW_LOCTEXT( "Ui", "Ok", "Okay" ); c = SW_LOCTEXT( "Ui", "Bad", "{n, plural, one {x}}" );)",
+    gatherer.gatherCodeText( R"(a = SW_LOCTEXT( "UI", "Ok", "OK" ); b = SW_LOCTEXT( "UI", "Ok", "Okay" ); c = SW_LOCTEXT( "UI", "Bad", "{n, plural, one {x}}" );)",
                              "Probe.cpp" );
     SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "two different source texts", true ) );
     SW_EXPECT_TRUE( TextGathererTestInternal::hasIssueContaining( gatherer.getIssues(), "not a valid message pattern", true ) );
-    SW_EXPECT_STREQ( "OK", TextGathererTestInternal::findText( gatherer, "Ui.Ok" )->_source.c_str() );
+    SW_EXPECT_STREQ( "OK", TextGathererTestInternal::findText( gatherer, "UI.Ok" )->_source.c_str() );
 }
 
 /**

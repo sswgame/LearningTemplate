@@ -29,7 +29,7 @@ namespace sw
     {
         struct PortraitRendererInternal
         {
-            /** @brief 첫 프레임은 GpuScene 업로드 · 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
+            /** @brief 첫 프레임은 GPUScene 업로드 · 머티리얼 준비가 아직이라 몇 장 그린 뒤 읽는다. */
             static constexpr uint32 kWarmupFrameCount = 3;
 
             /** @brief 스튜디오 씬의 그릴 메시(로컬 경계 상자를 월드로 옮긴 것)를 모두 덮는 구(가운데 · 반지름)입니다. 메시가 없으면 false 입니다. */

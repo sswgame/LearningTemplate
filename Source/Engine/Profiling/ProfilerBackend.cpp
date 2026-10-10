@@ -189,7 +189,7 @@ namespace sw
         if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
         {
             SW_LOG_INFO( "Tracy profiler: %# CPU zones, %# GPU zones emitted (viewer %#)", ProfilerBackendInternal::s_tracy.getZoneCount(),
-                         ProfilerBackendInternal::s_tracy.getGpuZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
+                         ProfilerBackendInternal::s_tracy.getGPUZoneCount(), ProfilerBackendInternal::s_tracy.isViewerConnected() ? "connected" : "not connected" );
         }
         Memory::setAllocationObserver( nullptr );
 #if SW_PROFILER_BACKEND_COMPILED

@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/ProfilerScopeHistory.h"
 
 namespace sw::editor
@@ -38,7 +38,7 @@ namespace sw::editor
         /** @brief 메모리 프로파일 탭을 그립니다. */
         void drawMemoryTab();
         /** @brief GPU 메모리 탭을 그립니다 — `-gv_profileFrames` 보고의 GPU 표와 같은 숫자(장부 줄별 · 드라이버 · 엔진 밖)입니다. */
-        void drawGpuMemoryTab();
+        void drawGPUMemoryTab();
         /** @brief 실시간 FPS 및 씬 성능 진단 탭을 그립니다. */
         void drawPerformanceTab();
         /** @brief 구간 표 탭입니다(CPU 구간 · 카운터 또는 GPU 패스). 위에 프레임 그래프와 계측 · Tracy 줄이 있습니다. */

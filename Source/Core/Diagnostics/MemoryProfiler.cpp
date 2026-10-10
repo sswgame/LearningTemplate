@@ -92,7 +92,7 @@ namespace sw
                 "Audio",
                 "Physics",
                 "Navigation",
-                "RenderCpu",
+                "RenderCPU",
                 "UI",
                 "Script",
                 "Editor",

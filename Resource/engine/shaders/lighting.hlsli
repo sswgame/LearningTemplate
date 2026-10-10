@@ -18,7 +18,7 @@
 #include "binding.hlsli"
 
 /**
- * 씬 라이트 한 개. C++ `GpuLight` 와 레이아웃이 같아야 한다(float4 넷 = 64바이트).
+ * 씬 라이트 한 개. C++ `GPULight` 와 레이아웃이 같아야 한다(float4 넷 = 64바이트).
  * float4 로만 채운 이유는 모프 정점 풀에서 물렸던 것과 같다 — std430 은 vec4 를 16바이트 경계에
  * 맞추는데 DX/Vulkan 은 DXC 가 명시 오프셋을 적어 넘어간다. 그러면 **OpenGL 만** 값이 어긋난다.
  */

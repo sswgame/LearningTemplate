@@ -10,7 +10,7 @@
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 namespace sw::editor
 {

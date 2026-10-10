@@ -23,8 +23,8 @@ namespace sw::editor
      */
     enum class ProfilerScopeKind : uint8
     {
-        Cpu,     ///< 시간 구간(`SW_PROFILE_SCOPE`) — 값은 마이크로초
-        Gpu,     ///< GPU 타임스탬프 구간(`GPU.<패스>`) — 값은 마이크로초
+        CPU,     ///< 시간 구간(`SW_PROFILE_SCOPE`) — 값은 마이크로초
+        GPU,     ///< GPU 타임스탬프 구간(`GPU.<패스>`) — 값은 마이크로초
         Counter, ///< 카운터(`SW_PROFILE_COUNT`) — 값은 프레임당 합
     };
 } // namespace sw::editor
@@ -68,7 +68,7 @@ namespace sw::editor
     struct ProfilerRowQuery
     {
         string             _filterText;                            ///< 이름에 들어 있어야 하는 글자(대소문자 무시). 비면 모두
-        ProfilerScopeKind  _kind{ ProfilerScopeKind::Cpu };        ///< 이 종류만
+        ProfilerScopeKind  _kind{ ProfilerScopeKind::CPU };        ///< 이 종류만
         ProfilerSortColumn _sortColumn{ ProfilerSortColumn::P99 }; ///< 정렬 열
         bool               _bDescending{ true };                   ///< 큰 값이 위
     };
@@ -115,7 +115,7 @@ namespace sw::editor
         {
             string            _name;
             vector<float32>   _listValue; ///< 크기 = 창 크기, `_writeIndex` 가 다음 칸
-            ProfilerScopeKind _kind{ ProfilerScopeKind::Cpu };
+            ProfilerScopeKind _kind{ ProfilerScopeKind::CPU };
         };
 
     private:

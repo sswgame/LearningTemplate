@@ -60,7 +60,7 @@ namespace sw
         markDirty( index );
     }
 
-    void MeshInstanceBatch::setSprite( uint32 index, const GpuSpriteInstanceData& sprite )
+    void MeshInstanceBatch::setSprite( uint32 index, const GPUSpriteInstanceData& sprite )
     {
         if ( index >= _listEntry.size() || _listEntry[index]._sprite == sprite )
             return;

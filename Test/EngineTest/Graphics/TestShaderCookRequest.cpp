@@ -7,7 +7,7 @@
  *          이 파일이 있는 이유: 쿠커가 패스의 define 을 **파이프라인 XML 의 `_listPermutation`** 에서만 읽고
  *          런타임이 G버퍼 패스에 `SW_PASS_GBUFFER=1` 같은 define 을 **C++ 에서** 얹으면, 런타임이 찾는 해시를 아무도
  *          쿠킹하지 않는다. Shipping 은 런타임 컴파일이 없으므로 G버퍼 드로우가 통째로 사라진다 — 디퍼드 화면이 한 색으로
- *          남고 SSAO 는 가림을 하나도 내지 않는다. 그 증상은 GPU 스위트(`RenderPassGpuTest`)에서만 보이고, 그 스위트는
+ *          남고 SSAO 는 가림을 하나도 내지 않는다. 그 증상은 GPU 스위트(`RenderPassGPUTest`)에서만 보이고, 그 스위트는
  *          CI 가 돌리지 않는다. 여기서는 그림을 그리지 않고 **목록만** 대조하므로 CI 가 잡는다.
  */
 #include "pch.h"
@@ -99,7 +99,7 @@ SW_TEST_CASE( ShaderCookRequestTest, PassDefineReachesCookedRequests )
 /**
  * @brief [ShaderCookRequestTest] 머티리얼 셰이더마다 define 없는 VS · PS 를 쿠킹한다 — 머티리얼이 원소 레이아웃을 읽는 변형이다
  * @details `Material::ensureShaderLayout` 은 define 없이 리플렉션한다. 패스 기본 셰이더(forwardlit)는 패스 몫으로 쿠킹되지만 머티리얼만 쓰는
- *          셰이더(지형 · 식생 · 물)는 따로 요청하지 않으면 Shipping 에서 매니페스트 미스로 XML 순서 패킹이 된다(`RenderPassGpuTest.VertexStageMaterialSchemaIsUsed`
+ *          셰이더(지형 · 식생 · 물)는 따로 요청하지 않으면 Shipping 에서 매니페스트 미스로 XML 순서 패킹이 된다(`RenderPassGPUTest.VertexStageMaterialSchemaIsUsed`
  *          가 Shipping 에서만 지던 것).
  */
 SW_TEST_CASE( ShaderCookRequestTest, MaterialShaderBaseVariantIsRequested )

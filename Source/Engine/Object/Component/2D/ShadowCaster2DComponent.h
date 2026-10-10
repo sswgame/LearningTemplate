@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    struct GpuLight;
+    struct GPULight;
 
     /**
      * @class ShadowCaster2DComponent
@@ -37,7 +37,7 @@ namespace sw
         /** @brief 월드의 가림막 토막 (x0, y0, x1, y1) 과 바깥쪽 방향을 모읍니다. */
         void computeWorldSegments( vector<float4>& outListSegment, vector<float2>& outListOutward ) const;
         /** @brief 토막마다 그림자 원소 하나를 @p inoutListLight 뒤에 붙입니다(빛 수집이 부릅니다). */
-        void appendGpuShadowSegments( vector<GpuLight>& inoutListLight ) const;
+        void appendGPUShadowSegments( vector<GPULight>& inoutListLight ) const;
 
         void          setSize( const float2& size ) { _size = size; }
         const float2& getSize() const { return _size; }

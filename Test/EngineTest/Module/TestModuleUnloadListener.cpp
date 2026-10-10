@@ -89,23 +89,23 @@ SW_TEST_CASE( ModuleUnloadListenerTest, ReleaseModuleCodeSweepsEveryLiveListener
  *          레지스트리로 올리고, 그 모듈의 `createRHIDevice` 주소를 쥔 가짜 리스너를 세운 뒤 `unloadModules` 로 내린다. 이미지를 바로 내리면
  *          리스너는 내려간 코드를 쥔 채 남는다. 시험이 따로 올린 핸들이 이미지를 붙들어 두므로 주소는 끝까지 유효하다.
  */
-SW_TEST_CASE( ModuleUnloadListenerTest, RhiModuleUnloadReleasesItsCode )
+SW_TEST_CASE( ModuleUnloadListenerTest, RHIModuleUnloadReleasesItsCode )
 {
     SW_TEST_DEFENSIVE_SCOPE( "unloadModuleImage warns about what a probe listener kept" );
 
-    struct RhiModule
+    struct RHIModule
     {
         sw::RHIBackend _backend;
         const utf8*    _pBaseName;
     };
-    const RhiModule kArrRhiModule[] = {
+    const RHIModule kArrRHIModule[] = {
         {sw::RHIBackend::DirectX11,   "RHI_DX11"},
         {sw::RHIBackend::DirectX12,   "RHI_DX12"},
         {   sw::RHIBackend::Vulkan, "RHI_Vulkan"},
         {   sw::RHIBackend::OpenGL,     "RHI_GL"},
     };
 
-    for ( const RhiModule& rhiModule : kArrRhiModule )
+    for ( const RHIModule& rhiModule : kArrRHIModule )
     {
         const sw::string path = sw::ModuleImageUtil::findModuleLibraryPath( rhiModule._pBaseName );
         if ( sw::FileUtil::exists( path ) == false )

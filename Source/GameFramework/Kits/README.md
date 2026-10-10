@@ -20,7 +20,7 @@ Kits/<성격>/<그룹>/<기능>/Server/     →  모듈 GF_Server_<기능>   (�
 Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (클라이언트 전용, 필요할 때만)
 ```
 
-**성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `Rpg` · `Simulation` · `Strategy`)이고,
+**성격은 둘입니다.** `Genre/` 는 장르 규칙을 담은 장르 키트(`Action` · `Casual` · `Horror` · `RPG` · `Simulation` · `Strategy`)이고,
 `Feature/` 는 장르를 가리지 않고 쓰는 기능 키트(`Network` · `Online` · `Storage`, 타일 월드와 복셀 월드의 `World`)입니다.
 경로만 다르고 모듈 이름은 `GF_<키트>` 그대로입니다. 성격 폴더 밖에 키트를 두면 `CheckGameFrameworkLayers` 가 실패시킵니다.
 
@@ -50,10 +50,10 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | | `AsymmetricHorror` | 1 대 4 비대칭 공포 | |
 | | `CoopScavenger` | 협동 수집 공포 | |
 | | `GhostHunt` | 루이지 맨션 류 유령 사냥 | |
-| `Genre/Rpg` | `ClassicJrpg` | 클래식 JRPG | |
+| `Genre/RPG` | `ClassicJRPG` | 클래식 JRPG | |
 | | `MonsterCollector` | 포켓몬 류 몬스터 수집 | |
 | | `OpenWorldWestern` | 오픈월드 서부극 | |
-| | `WitcherRpg` | 위쳐 류 RPG | |
+| | `WitcherRPG` | 위쳐 류 RPG | |
 | `Genre/Strategy` | `RealTimeStrategy` | 스타크래프트 류 실시간 전략 | StarSkirmish |
 | | `CityBuilder` | 파라오 류 도시 건설 | NileCity |
 | | `TacticsSRPG` | 택틱스 SRPG | |
@@ -69,7 +69,7 @@ Kits/<성격>/<그룹>/<기능>/Client/     →  모듈 GF_Client_<기능>   (�
 | `Feature/Network` | `NetClientServer` | 권위 서버 복제와 예측 | |
 | | `NetLockstep` | 락스텝과 롤백 | |
 | | `NetTurnRelay` | 턴제 중계 | |
-| | `NetMmo` | 관심 영역 복제 | |
+| | `NetMMO` | 관심 영역 복제 | |
 | | `NetDestruction` | 파괴 상태 복제 | |
 | | `NetSimulation` | 한 프로세스 가상 서버 하니스 | |
 | `Feature/World` | `Overworld` | 타일 걷기 필드와 존 | |
@@ -129,12 +129,12 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 ### 네트워크 키트
 
 네트워크 키트(`Kits/Feature/Network/`)는 장르별 동기화 방식입니다. 공통 전송 계층은 `Core/Network` 에 있고, 싱글 게임은 네트워크 키트를 링크하지 않습니다.
-슈터와 액션은 `NetClientServer`, RTS 와 격투는 `NetLockstep`, 카드와 보드는 `NetTurnRelay`, MMO 는 `NetMmo` 를 씁니다.
+슈터와 액션은 `NetClientServer`, RTS 와 격투는 `NetLockstep`, 카드와 보드는 `NetTurnRelay`, MMO 는 `NetMMO` 를 씁니다.
 
 메시지 첫 바이트의 범위는 키트마다 나뉘어 있습니다(`NetMessageRange`, `NetKitMessageRange.h`). 그래서 한 게임이 키트 둘을 같이 써도 메시지가 섞이지 않습니다.
 키트의 서버와 클라이언트는 모두 `INetMessageHandler` 이고, `NetMessageRouter` 에 등록해 두면 `pump( host )` 가 범위대로 나눠 주고 게임 메시지만 돌려줍니다.
 
-`ReplicationServer` 와 `MmoReplicator` 에 `setTaskManager( &engine::getTaskManager() )` 를 주면 관찰자마다의 스냅샷과 관심 영역 계산을 워커에 나눕니다.
+`ReplicationServer` 와 `MMOReplicator` 에 `setTaskManager( &engine::getTaskManager() )` 를 주면 관찰자마다의 스냅샷과 관심 영역 계산을 워커에 나눕니다.
 결과는 한 스레드로 돌린 것과 바이트까지 같습니다(`NetParallelTest`). 관찰자 128명, 엔티티 8,000개에서 틱당 4.4ms 가 워커 3개로 1.5ms 가 되었습니다.
 이때 정책 인터페이스(`IReplicationPolicy`, `IInterestPolicy`)는 여러 스레드에서 동시에 불리므로 읽기만 해야 합니다.
 
@@ -233,7 +233,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 - **피해는 `UnitStatsComponent::applyTakeDamage` 한 곳에서만 깎습니다.** 방어 식은 `DamageMath::applyArmor`(최소 1)이고, 0 이하 피해는 맞지 않은 것으로 봅니다.
   `DamageAppliedEvent` 는 큐를 거치므로, 같은 프레임에 받아야 하면 `registerDamageApplied` 를 씁니다.
 - **턴제 몬스터 전투는 `MonsterCollector` 하나입니다.** 전투 연출(단계 타이머, HUD 한 줄)은 게임이 맡습니다.
-- **오버월드 맵은 조우가 일어나는 셀만 알려 줍니다.** 무엇을 만나는지는 장르 키트의 지역 테이블(`MonsterCollectorCatalog::rollEncounter`, `JrpgEncounterWalker`)이 정합니다.
+- **오버월드 맵은 조우가 일어나는 셀만 알려 줍니다.** 무엇을 만나는지는 장르 키트의 지역 테이블(`MonsterCollectorCatalog::rollEncounter`, `JRPGEncounterWalker`)이 정합니다.
   존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이고(`ZoneTracker::setFromMap`), 클리어 게이트는 `clear_gate` 태그입니다. 경로 이름에서 역할을 짐작하지 않습니다.
 - **타일맵 레이어 테이블(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식입니다.** 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힙니다(`TileMapXMLTest.SavedBytesMatchTheExistingFormat`).
   레이어를 더할 때는 `TileFlagLayer` 값과 이 테이블 한 줄만 고칩니다.

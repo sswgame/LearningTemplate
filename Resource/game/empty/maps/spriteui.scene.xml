@@ -1,4 +1,4 @@
-<Scene formatVersion="1" name="SpriteUi">
+<Scene formatVersion="1" name="SpriteUI">
 	<entities>
 		<entity id="1" name="GameCamera">
 			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">

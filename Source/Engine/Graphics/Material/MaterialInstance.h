@@ -37,7 +37,7 @@ namespace sw
         MaterialInstance( CreateKey, Material* pParentMaterial );
         /**
          * @brief Engine.dll 안에서 shared_ptr 로 만듭니다.
-         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 삽니다. 렌더 패킷(GpuScene 스냅샷)이 소유를 함께
+         * @details 제어 블록(소멸 코드)은 make_shared 를 부른 DLL 에 삽니다. 렌더 패킷(GPUScene 스냅샷)이 소유를 함께
          *          실으므로 게임 모듈이 만든 인스턴스를 엔진이 마지막까지 들 수 있고, 모듈이 내려간 뒤 놓으면
          *          없는 코드로 뛰어듭니다. 여기서 만들면 누가 마지막에 놓든 Engine 코드입니다.
          */
@@ -51,9 +51,9 @@ namespace sw
         MaterialInstance& operator=( const MaterialInstance& ) = delete;
 
         /** @brief (RHIRenderResource) 살아 있는 디바이스에 상수버퍼를 돌려줍니다. */
-        void releaseRhi( IRHIDevice* pDevice ) override;
+        void releaseRHI( IRHIDevice* pDevice ) override;
         /** @brief (RHIRenderResource) 디바이스가 이미 없을 때 부릅니다. 핸들만 잊습니다. */
-        void forgetRhi( IRHIDevice* pDevice ) override;
+        void forgetRHI( IRHIDevice* pDevice ) override;
 
         /** @brief 오버라이드만 있는 MaterialInstanceDesc XML 을 로드합니다. 부모는 따로 설정합니다. */
         [[nodiscard]] bool loadFromFile( string_view assetRelativePath );
@@ -63,7 +63,7 @@ namespace sw
          * @brief CPU 버퍼(부모 기본값 + 오버라이드)를 만들고 인스턴스 CB 를 만들거나 갱신합니다.
          * @return 인스턴스 CB 와 bindless 인덱스가 준비됐으면 true 입니다. 부모가 없거나 부모 버퍼가 비었거나 버퍼를 만들지 못하면 false 입니다.
          */
-        bool updateRhi( IRHIDevice* pRhi );
+        bool updateRHI( IRHIDevice* pRHI );
         /** @brief 오버라이드를 모두 지웁니다. */
         void clearOverrides();
         /** @brief 키워드를 켭니다. */
@@ -84,7 +84,7 @@ namespace sw
         /**
          * @brief 텍스처 파라미터를 **텍스처 에셋**으로 덮어씁니다(리소스 경로, 예: `engine/textures/perlin.dds`). 빈 경로면 덮어쓰기를 지웁니다.
          * @details 언리얼 MIC 의 `SetTextureParameterValue( UTexture* )` · 유니티 `MaterialPropertyBlock.SetTexture( Texture )` 처럼 디스크립터
-         *          인덱스가 아니라 텍스처 자체를 가리킵니다. 게임 스레드는 원하는 경로만 적고, 렌더 스레드의 `updateRhi` 가 TextureCache 로 빌리고
+         *          인덱스가 아니라 텍스처 자체를 가리킵니다. 게임 스레드는 원하는 경로만 적고, 렌더 스레드의 `updateRHI` 가 TextureCache 로 빌리고
          *          돌려줍니다(그 텍스처를 읽는 프레임이 렌더 스레드에 있다). 셰이더에 넣는 값(네이티브 bindless 의 SRV 인덱스, DX11 · GL 의 슬롯
          *          서수)은 그때마다 지금 텍스처에서 읽으므로 텍스처를 다시 올려도(핫 리로드) 따라갑니다.
          *          주의: 날 디스크립터 인덱스를 들면 다시 올린 뒤 돌려준 자리를 읽고, DX11 · GL 에서는 그 인덱스가 슬롯 서수로 읽혀 엉뚱한
@@ -110,7 +110,7 @@ namespace sw
         string getTextureParameter( hashed_string name ) const;
         /**
          * @brief 이 인스턴스로 그릴 때의 텍스처 슬롯(DX11 · GL 의 t5..)에 걸 SRV 를 채웁니다 — 부모의 슬롯 위에 덮어쓴 텍스처를 얹습니다.
-         * @details 렌더 스레드가 `updateRhi` 뒤에 부릅니다(GpuScene). 슬롯 바인딩 백엔드는 배치마다 슬롯을 걸고, 인스턴스가 있는 배치는 그
+         * @details 렌더 스레드가 `updateRHI` 뒤에 부릅니다(GPUScene). 슬롯 바인딩 백엔드는 배치마다 슬롯을 걸고, 인스턴스가 있는 배치는 그
          *          인스턴스의 것입니다(합치기는 네이티브 bindless 에서만 켜진다).
          */
         void collectTextureSlotSrvs( RHIDescriptorIndex* pOutSlot, uint32 slotCount ) const;
@@ -150,12 +150,12 @@ namespace sw
         /** @brief 런타임 오버라이드를 Desc 에 다시 씁니다. */
         void syncDescOverrides() const;
         /**
-         * @brief 텍스처 덮어쓰기를 원하는 상태로 맞춥니다(렌더 스레드, `updateRhi`) — 바뀐 경로는 돌려주고 새로 빌리며, 지운 것은 뺍니다.
+         * @brief 텍스처 덮어쓰기를 원하는 상태로 맞춥니다(렌더 스레드, `updateRHI`) — 바뀐 경로는 돌려주고 새로 빌리며, 지운 것은 뺍니다.
          * @return 다시 패킹해야 하면 true 입니다(빌린 것이 바뀌었거나 텍스처가 다시 올라왔다).
          */
-        bool syncTextureOverrides( IRHIDevice* pRhi );
-        /** @brief 빌린 텍스처를 모두 돌려줍니다. `pRhi` 가 nullptr 이면(디바이스가 이미 없다) 참조만 놓습니다. */
-        void releaseTextureOverrides( IRHIDevice* pRhi );
+        bool syncTextureOverrides( IRHIDevice* pRHI );
+        /** @brief 빌린 텍스처를 모두 돌려줍니다. `pRHI` 가 nullptr 이면(디바이스가 이미 없다) 참조만 놓습니다. */
+        void releaseTextureOverrides( IRHIDevice* pRHI );
         /**
          * @brief 덮어쓴 텍스처의 슬롯 번호입니다. 부모가 그 프로퍼티에 텍스처를 빌렸으면 그 슬롯을, 아니면 부모 슬롯 뒤에 덮어쓰기 순서대로 잇습니다.
          * @return 슬롯 수(`shaderslot::kMaterialTextureCount`)를 넘거나 덮어쓰기가 없으면 Material::kInvalidTextureSlot 입니다.
@@ -168,7 +168,7 @@ namespace sw
         MaterialInstanceDesc _desc;
 
         /**
-         * @brief 덮어쓰기 목록 · 더러움 비트를 게임 스레드 세터와 렌더 스레드 `updateRhi` · `collectTextureSlotSrvs` 가 나눠 쓰는 잠금입니다.
+         * @brief 덮어쓰기 목록 · 더러움 비트를 게임 스레드 세터와 렌더 스레드 `updateRHI` · `collectTextureSlotSrvs` 가 나눠 쓰는 잠금입니다.
          * @details 지형 · 식생 · 물처럼 매 틱 값을 넣는 컴포넌트가 있어, 렌더 스레드가 목록을 읽는 동안 세터가 목록을 다시 잡을 수 있다.
          */
         mutable mutex _overrideMutex;
@@ -196,7 +196,7 @@ namespace sw
         uint32 _constantByteSize;
         /** @brief `_bytes` 를 복사할 때의 부모 `getBufferGeneration()` 입니다. 다르면 부모 값 · 레이아웃이 바뀐 것이라 다시 복사합니다. */
         uint32 _parentBufferGeneration;
-        /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 돌려줄 때 씁니다(디바이스가 죽으면 forgetRhi 가 비웁니다). */
+        /** @brief 텍스처 덮어쓰기를 빌린 디바이스입니다. 돌려줄 때 씁니다(디바이스가 죽으면 forgetRHI 가 비웁니다). */
         IRHIDevice* _pTextureDevice;
         /** @brief 덮어쓴 텍스처를 패킹할 때의 `TextureCache::getReloadGeneration()` 입니다. 다르면 다시 올라온 텍스처의 새 SRV 를 다시 패킹합니다. */
         uint32 _textureReloadGeneration;
@@ -205,7 +205,7 @@ namespace sw
         mutable uint64         _cachedPermutationHash;
         mutable uint64         _parentPermutationHash;
         mutable uint8          _bDefinesDirty : 1;
-        uint8                  _bGpuDirty     : 1;
+        uint8                  _bGPUDirty     : 1;
         [[maybe_unused]] uint8 _instReserved  : 6;
     };
 } // namespace sw

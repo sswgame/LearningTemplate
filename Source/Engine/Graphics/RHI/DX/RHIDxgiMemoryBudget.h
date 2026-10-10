@@ -33,7 +33,7 @@ namespace sw
      * @brief 어댑터에게 이 프로세스의 GPU 메모리 사용량 · 예산을 묻습니다. 아무 스레드에서나 불러도 됩니다.
      * @return 로컬 세그먼트를 묻지 못하면 false 이고 `outBudget` 은 건드리지 않습니다.
      */
-    inline bool queryDxgiMemoryBudget( IDXGIAdapter3* pAdapter, RHIGpuMemoryBudget& outBudget )
+    inline bool queryDxgiMemoryBudget( IDXGIAdapter3* pAdapter, RHIMemoryBudget& outBudget )
     {
         if ( pAdapter == nullptr )
             return false;
@@ -46,7 +46,7 @@ namespace sw
         outBudget._usageBytes      = localInfo.CurrentUsage + ( bNonLocal ? nonLocalInfo.CurrentUsage : 0 );
         outBudget._budgetBytes     = localInfo.Budget;
         outBudget._availableBytes  = localInfo.Budget > localInfo.CurrentUsage ? localInfo.Budget - localInfo.CurrentUsage : 0;
-        outBudget._scope           = RHIGpuMemoryScope::Process;
+        outBudget._scope           = RHIMemoryScope::Process;
         outBudget._bUsageKnown     = SW_TRUE;
         outBudget._bBudgetKnown    = SW_TRUE;
         outBudget._bAvailableKnown = SW_TRUE;

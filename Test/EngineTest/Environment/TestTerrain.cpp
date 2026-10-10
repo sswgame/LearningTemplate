@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -355,7 +355,7 @@ SW_TEST_CASE( TerrainTest, ComponentLoadsAndUpdatesLODs )
  * @brief [TerrainTest] 지형 컴포넌트나 그 오브젝트를 끄면 청크가 GPU 씬에서 빠지고, 켜면 돌아온다
  * @details 청크는 씬 컴포넌트 없는 인스턴스 배치라 빌더가 컴포넌트의 활성을 몰랐다 — 꺼도 지형이 그대로 그려졌다.
  */
-SW_TEST_CASE( TerrainTest, ChunksLeaveTheGpuSceneWhenTheComponentOrOwnerIsOff )
+SW_TEST_CASE( TerrainTest, ChunksLeaveTheGPUSceneWhenTheComponentOrOwnerIsOff )
 {
     const string    path = test::makeTempPath( "toggle.heightfield" );
     HeightfieldData data = TerrainTestUtil::makeData( 33, &TerrainTestUtil::wave );
@@ -375,7 +375,7 @@ SW_TEST_CASE( TerrainTest, ChunksLeaveTheGpuSceneWhenTheComponentOrOwnerIsOff )
     const uint32 chunkCount = pTerrain->getChunkLayout().getChunkCount();
     SW_ASSERT_TRUE( chunkCount > 0 );
 
-    GpuSceneBuilder gpuScene;
+    GPUSceneBuilder gpuScene;
     const float3    camPos{ 0.0f, 50.0f, 0.0f };
     gpuScene.buildFromScene( &scene, camPos );
     SW_ASSERT_EQUAL( chunkCount, static_cast<uint32>( gpuScene.getInstances().size() ) );

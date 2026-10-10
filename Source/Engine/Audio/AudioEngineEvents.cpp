@@ -4,7 +4,7 @@
 #include "Engine/Audio/AudioMixer.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
-#include "Engine/Audio/Dsp/AudioEffect.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 
 namespace sw
 {

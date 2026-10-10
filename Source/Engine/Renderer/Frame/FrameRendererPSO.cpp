@@ -175,7 +175,7 @@ namespace sw
     }
 
     RenderPSOCache::MaterialPSOEntry FrameRenderer::createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType,
-                                                                              const GpuShaderPermutation* pPermutation,
+                                                                              const GPUShaderPermutation* pPermutation,
                                                                               RenderViewMode viewMode, bool bReverseCulling )
     {
         RenderPSOCache::MaterialPSOEntry entry{ passPSO, 0 };
@@ -262,9 +262,9 @@ namespace sw
         // 유리 머티리얼의 변형을 그림자 패스까지 만들어 두는 낭비가 없다.
         // 퍼뮤테이션이 없는 배치(머티리얼을 안 붙인 메시)도 모은다. Lit 이 아니거나 거울 배치면 그 배치에도
         // 변형이 필요하다. 그냥 건너뛰면 머티리얼 없는 메시만 뷰 모드 · 컬 반전이 안 걸려 화면이 섞인다.
-        auto collect = []( const vector<GpuMeshBatch>& listBatch, vector<MaterialPSORequest>& outList )
+        auto collect = []( const vector<GPUMeshBatch>& listBatch, vector<MaterialPSORequest>& outList )
         {
-            for ( const GpuMeshBatch& batch : listBatch )
+            for ( const GPUMeshBatch& batch : listBatch )
             {
                 bool bFound{ false };
                 for ( const MaterialPSORequest& existing : outList )
@@ -293,7 +293,7 @@ namespace sw
         // 만드는 것은 락 밖에서, 넣는 것만 락 안에서 한다. 셰이더 컴파일이 낄 수 있어 드로우 경로의
         // 조회를 붙잡으면 안 된다. 세 자리가 같은 절차를 반복하던 것을 여기 하나로 모았다.
         auto ensureVariant = [this, viewMode, &bCreatedVariant]( RHIPipelineStateHandle passPSO, RenderPassType passType,
-                                                                 const GpuShaderPermutation* pPermutation, uint64 permutationHash, bool bReverseCulling )
+                                                                 const GPUShaderPermutation* pPermutation, uint64 permutationHash, bool bReverseCulling )
         {
             const uint64 key = RenderPSOCache::materialPSOKey( passPSO, permutationHash, viewMode, bReverseCulling );
             if ( _psoCache.hasMaterialPSO( key ) )
@@ -314,7 +314,7 @@ namespace sw
             {
                 const bool bReverseCulling = ( request._bReverseCulling != SW_FALSE );
                 // 이 패스가 그리지 않는 배치(외곽선을 켜지 않은 머티리얼)의 변형은 만들지 않는다 — 쿠커도 그것을 쿠킹하지 않는다.
-                const GpuShaderPermutation* pRequestPermutation =
+                const GPUShaderPermutation* pRequestPermutation =
                     ( request._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( request._shaderPermutation );
                 if ( FrameRendererUtil::drawsMaterialInPass( passType, pRequestPermutation != nullptr ? &pRequestPermutation->_listDefine : nullptr ) == false )
                     continue;
@@ -327,7 +327,7 @@ namespace sw
                         ensureVariant( passPSO, passType, nullptr, 0, bReverseCulling );
                     continue;
                 }
-                const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( request._shaderPermutation );
+                const GPUShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( request._shaderPermutation );
                 if ( pPermutation == nullptr )
                     continue;
                 ensureVariant( passPSO, passType, pPermutation, pPermutation->_hash, bReverseCulling );
@@ -348,7 +348,7 @@ namespace sw
         return _psoCache.findDesc( pso, outDesc );
     }
 
-    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GpuMeshBatch& batch ) const
+    RHIPipelineStateHandle FrameRenderer::psoForBatch( RHIPipelineStateHandle passPSO, const GPUMeshBatch& batch ) const
     {
         if ( passPSO == 0 )
             return passPSO;
@@ -358,7 +358,7 @@ namespace sw
         uint64 permutationHash{ 0 };
         if ( batch._shaderPermutation != kInvalidShaderPermutation )
         {
-            const GpuShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
+            const GPUShaderPermutation* pPermutation = _gpuScene.findShaderPermutation( batch._shaderPermutation );
             if ( pPermutation != nullptr )
                 permutationHash = pPermutation->_hash;
         }
@@ -376,11 +376,11 @@ namespace sw
         return ( variant != 0 ) ? variant : passPSO;
     }
 
-    bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GpuMeshBatch& batch ) const
+    bool FrameRenderer::drawsBatchInPass( RenderPassType passType, const GPUMeshBatch& batch ) const
     {
         if ( getRenderPassTypeInfo( passType )._pRequiredMaterialDefine == nullptr )
             return true;
-        const GpuShaderPermutation* pPermutation =
+        const GPUShaderPermutation* pPermutation =
             ( batch._shaderPermutation == kInvalidShaderPermutation ) ? nullptr : _gpuScene.findShaderPermutation( batch._shaderPermutation );
         return FrameRendererUtil::drawsMaterialInPass( passType, pPermutation != nullptr ? &pPermutation->_listDefine : nullptr );
     }

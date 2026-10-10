@@ -76,10 +76,10 @@ namespace sw
      * @brief 오너 위치 둘레 `_regionSize`(0 이면 아래 지형 전체)에 레이어마다 배치를 계산하고, (레이어, 메시, 셀)마다 `MeshInstanceBatch` 하나로 그립니다.
      * @details 배치는 결정적이라(같은 규칙 · 씨앗 · 지형 → 같은 인스턴스) 씬에는 규칙만 저장되고 로드 때 다시 계산합니다 — 쿠킹이 인스턴스를 굽지
      *          않아도 같은 숲입니다(언리얼 PCG 의 런타임 생성 자리). 표면은 오너 아래 지형(`TerrainComponent`)이고 없으면 오너 높이의 평면입니다.
-     *          셀(`_cellSize`)은 컬링 단위입니다 — 카메라에서 레이어의 페이드 끝보다 먼 셀은 배치를 숨기고(GpuScene 에 실리지 않는다), 가까운 셀은
+     *          셀(`_cellSize`)은 컬링 단위입니다 — 카메라에서 레이어의 페이드 끝보다 먼 셀은 배치를 숨기고(GPUScene 에 실리지 않는다), 가까운 셀은
      *          GPU 컬링이 인스턴스마다 절두체로 거릅니다. 페이드 구간에서는 정점 셰이더가 인스턴스를 뿌리 쪽으로 줄여 사라지게 합니다.
      *          바람(`WindComponent`) · 카메라 위치 · 휘게 하는 구(`FoliageInfluencerComponent`) · 시간은 틱마다 레이어 머티리얼 인스턴스에 실립니다.
-     *          인스턴스마다 위상은 셰이더가 위치 해시로, 밝기 흔들기는 인스턴스 색 칸(`GpuSpriteInstanceData` 의 tint)으로 받습니다.
+     *          인스턴스마다 위상은 셰이더가 위치 해시로, 밝기 흔들기는 인스턴스 색 칸(`GPUSpriteInstanceData` 의 tint)으로 받습니다.
      *          스레드: 배치 다시 만들기(`rebuildFoliage`)는 틱 밖에서만 부릅니다. 틱은 자기 배치 · 자기 머티리얼 인스턴스만 씁니다.
      */
     REFLECT( Category = "Environment", DisplayName = "Foliage", Tooltip = "Rule-placed GPU-instanced grass and trees with wind" )

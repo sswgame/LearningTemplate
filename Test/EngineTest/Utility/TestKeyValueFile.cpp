@@ -72,7 +72,7 @@ SW_TEST_CASE( KeyValueFileTest, EmptyAndMalformedLines )
 /**
  * @brief [KeyValueFileTest] 동일한 UI Key에 대해 언어 선택/전환 시 값 치환(한국어->영어->일본어->독일어->중국어->스페인어->러시아어->프랑스어) 검증
  */
-SW_TEST_CASE( KeyValueFileTest, StringTableRuntimeLanguageSwitchingOnSameUiKeys )
+SW_TEST_CASE( KeyValueFileTest, StringTableRuntimeLanguageSwitchingOnSameUIKeys )
 {
     sw::StringTable stringTable;
     SW_EXPECT_TRUE( stringTable.empty() );

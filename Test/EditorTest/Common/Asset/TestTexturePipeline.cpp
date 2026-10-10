@@ -607,7 +607,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TestTexturePipelineInternal::writeTga( sourcePath, 4, 4, TestTexturePipelineInternal::makeSolidRgba( 4, 4, 10, 20, 30, 255 ) ) );
 
         TextureImportConfig uiConfig;
-        SW_ASSERT_TRUE( uiConfig.loadFromJSONString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
+        SW_ASSERT_TRUE( uiConfig.loadFromJSONString( R"({ "rules": [ { "name": "UI", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false } ] })" ) );
 
         // 1) 한 번도 임포트하지 않았다 — 보고만 하고 아무것도 쓰지 않는다.
         AssetImportSummary summary = TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly );
@@ -632,7 +632,7 @@ namespace sw::editor
 
         // 4) 규칙만 바꿨다(원본은 그대로).
         TextureImportConfig srgbConfig;
-        SW_ASSERT_TRUE( srgbConfig.loadFromJSONString( R"({ "rules": [ { "name": "Ui", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
+        SW_ASSERT_TRUE( srgbConfig.loadFromJSONString( R"({ "rules": [ { "name": "UI", "format": "B8G8R8A8_UNORM", "swizzle": "BGRA", "generate_mips": false, "srgb": false } ] })" ) );
         SW_EXPECT_EQUAL( size_t( 1 ), TextureImporter::importAllTextures( resourceRoot, srgbConfig, AssetImportMode::CheckOnly )._listProblem.size() );
         SW_EXPECT_TRUE( TextureImporter::importAllTextures( resourceRoot, uiConfig, AssetImportMode::CheckOnly ).isClean() );
 
@@ -700,7 +700,7 @@ namespace sw::editor
         DDSImageData dds;
         SW_ASSERT_TRUE( DDSLoader::loadFromFile( ddsPath, dds ) );
         SW_EXPECT_EQUAL( static_cast<uint32>( DXGI_FORMAT_BC6H_UF16 ), dds._dxgiFormat );
-        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
+        SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( dds._dxgiFormat ) == RHIFormat::BC6H_UF16 );
         SW_ASSERT_TRUE( dds._bytes.size() >= 16 );
         // 풀어서 값을 본다 — BC6H 블록 하나(4x4)의 첫 픽셀.
         DirectX::Image block{};
@@ -723,7 +723,7 @@ namespace sw::editor
         SW_ASSERT_TRUE( TextureImporter::importTexture( sourcePath, halfDDSPath, rule ) );
         DDSImageData halfDDS;
         SW_ASSERT_TRUE( DDSLoader::loadFromFile( halfDDSPath, halfDDS ) );
-        SW_EXPECT_TRUE( Texture2D::toRhiFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
+        SW_EXPECT_TRUE( Texture2D::toRHIFormatFromDxgi( halfDDS._dxgiFormat ) == RHIFormat::R16G16B16A16_FLOAT );
 
         // 8 비트 포맷 규칙은 거절한다(자르지 않는다).
         rule._format = "bc7";

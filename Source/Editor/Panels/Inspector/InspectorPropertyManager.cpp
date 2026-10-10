@@ -10,7 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
 
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Panels/Inspector/IInspectorProperty.h"
@@ -314,7 +314,7 @@ namespace sw::editor
                     return true;
                 }
 
-                // 위젯은 `UiMin` · `UiMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막는다(`InspectorNumericRange`).
+                // 위젯은 `UIMin` · `UIMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막는다(`InspectorNumericRange`).
                 // 적히지 않은 쪽은 nullptr 이라 ImGui 가 타입의 범위로 막는다(uint8 은 0..255).
                 const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop );
                 const T                     minValue = static_cast<T>( range._widgetMin * scale );

@@ -10,7 +10,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -120,7 +120,7 @@ namespace sw::editor
         drawSelectionSection();
 
         // Undo/Redo 단축키는 여기서 처리하지 않는다 — edit.undo / edit.redo 커맨드가 유일한 처리자다.
-        // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGui)와 함께
+        // ImGui 의 IsKeyPressed 는 소비되지 않으므로 여기서도 받으면 전역 처리기(EditorCommandGUI)와 함께
         // **두 번 되돌린다.**
 
         EditorWidgets::popInspectorStyle();
@@ -231,7 +231,7 @@ namespace sw::editor
     {
         ImGui::SeparatorText( "Components" );
         EditorContext* pSelEditorContext = EditorContext::get();
-        IRHIDevice*    pRhiDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRhiDevice() : nullptr;
+        IRHIDevice*    pRHIDevice        = ( pSelEditorContext != nullptr ) ? pSelEditorContext->getRHIDevice() : nullptr;
         // 복사한다. 아래 루프가 컴포넌트를 뗄 수 있어 원본을 돌 수 없다.
         const vector<Component*> listComponent( pObj->getComponents().begin(), pObj->getComponents().end() );
         for ( Component* pComp : listComponent )
@@ -262,7 +262,7 @@ namespace sw::editor
 
                 drawComponentContextMenu( pObj, pComp, workspace, bRemove );
 
-                drawComponentSection( pComp, pRhiDevice );
+                drawComponentSection( pComp, pRHIDevice );
                 EditorWidgets::endComponentCard();
             }
             if ( bActive != bWasActive )
@@ -426,7 +426,7 @@ namespace sw::editor
         }
     }
 
-    void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice )
+    void InspectorPanel::drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice )
     {
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
@@ -455,7 +455,7 @@ namespace sw::editor
             // 확장 구역도 프로퍼티 위젯과 같은 규칙으로 되돌리기 · dirty 에 남긴다 — 구역을 한 묶음으로 닫고 그 묶음을 위젯 하나처럼 추적한다
             // (구역이 위젯마다 `trackPod` 를 부르지 않아도 된다).
             ImGui::BeginGroup();
-            pInspector->drawSection( pComp, pRhiDevice );
+            pInspector->drawSection( pComp, pRHIDevice );
             ImGui::EndGroup();
             InspectorPropertyUndo::trackLastItem( pTypeInfo->getDisplayName() );
             pInspector->collectDrawnProperties( listDrawnName );
@@ -470,7 +470,7 @@ namespace sw::editor
 
         for ( IInspectorComponent* pInspector : listInspector )
         {
-            pInspector->drawFooter( pComp, pRhiDevice );
+            pInspector->drawFooter( pComp, pRHIDevice );
         }
     }
 

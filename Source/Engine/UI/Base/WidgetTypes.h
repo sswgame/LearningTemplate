@@ -33,11 +33,11 @@ namespace sw
 {
     /**
      * @brief 위젯의 흐름 방향입니다(UMG FlowDirection · Godot layout_direction). 오른쪽에서 왼쪽이면 패널이 자식 배치를 거울로 놓고 글의 문단 방향이 RTL 입니다.
-     * @details 루트의 Inherit 은 문화권(`LocalizationManager::isRightToLeft` → `UiLayoutContext::_bRightToLeft`)을 따릅니다. 숫자 입력 칸 · 시계처럼
+     * @details 루트의 Inherit 은 문화권(`LocalizationManager::isRightToLeft` → `UILayoutContext::_bRightToLeft`)을 따릅니다. 숫자 입력 칸 · 시계처럼
      *          문화권과 상관없이 왼쪽에서 오른쪽이어야 하는 위젯은 LeftToRight 로 고정합니다.
      */
     ENUM()
-    enum class UiFlowDirection : uint8
+    enum class UIFlowDirection : uint8
     {
         Inherit,     ///< 부모(루트면 문화권)를 따른다
         LeftToRight, ///< 왼쪽에서 오른쪽으로 고정
@@ -68,10 +68,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct UiStyleState
+     * @struct UIStyleState
      * @brief 스타일 선택자의 상태(`:hover` …) 비트입니다. 위젯이 `Widget::computeStyleStates` 로 답하고, `:focus-visible` 은 스타일 걷기가 입력 방식으로 더합니다.
      */
-    struct UiStyleState
+    struct UIStyleState
     {
         static constexpr uint32 kNone         = 0;
         static constexpr uint32 kHover        = SW_BIT( 0 ); ///< 포인터가 이 위젯(또는 자손) 위에 있다
@@ -87,17 +87,17 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct UiRect
+     * @struct UIRect
      * @brief 축 정렬 사각형입니다(UI 단위, y 는 아래가 +). 포커스 탐색 · 자르기 판정이 씁니다.
      */
-    struct SW_API UiRect
+    struct SW_API UIRect
     {
         float32 _left{ 0.0f };
         float32 _top{ 0.0f };
         float32 _right{ 0.0f };
         float32 _bottom{ 0.0f };
 
-        static UiRect makeFromPositionSize( float32 x, float32 y, float32 width, float32 height ) { return UiRect{ x, y, x + width, y + height }; }
+        static UIRect makeFromPositionSize( float32 x, float32 y, float32 width, float32 height ) { return UIRect{ x, y, x + width, y + height }; }
         /** @brief 두 구간 [aMin, aMax] · [bMin, bMax] 사이의 틈입니다. 겹치면 0 입니다. */
         static float32 computeRangeGap( float32 aMin, float32 aMax, float32 bMin, float32 bMax );
 
@@ -107,7 +107,7 @@ namespace sw
         float32 getBottom() const { return _bottom; }
         float2  getCenter() const { return float2{ ( _left + _right ) * 0.5f, ( _top + _bottom ) * 0.5f }; }
         /** @brief 두 사각형이 넓이를 가지고 겹치면 true 입니다(변만 닿으면 false). */
-        bool intersects( const UiRect& other ) const { return _left < other._right && other._left < _right && _top < other._bottom && other._top < _bottom; }
+        bool intersects( const UIRect& other ) const { return _left < other._right && other._left < _right && _top < other._bottom && other._top < _bottom; }
     };
 } // namespace sw
 
@@ -139,7 +139,7 @@ namespace sw
         /** @brief 축이 단위(회전 · 기울임 · 배율 없음)면 true 입니다. */
         bool isAxisAligned() const;
         /** @brief 레이아웃 사각형의 네 꼭짓점을 화면으로 옮긴 축 정렬 경계 상자입니다. */
-        UiRect computeScreenBounds() const;
+        UIRect computeScreenBounds() const;
 
         bool operator==( const WidgetGeometry& other ) const;
         bool operator!=( const WidgetGeometry& other ) const { return ( *this == other ) == false; }
@@ -185,11 +185,11 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct UiViewport
+     * @struct UIViewport
      * @brief UI 가 그려질 화면 하나입니다. 게임 창이면 백버퍼, 에디터면 게임 뷰 렌더 타깃입니다.
-     * @details 물리 크기 = UI 크기 × 배율. `UiScaleUtil::makeViewport` 가 해상도 규칙 · 사용자 배율 · 안전 영역으로 채웁니다.
+     * @details 물리 크기 = UI 크기 × 배율. `UIScaleUtil::makeViewport` 가 해상도 규칙 · 사용자 배율 · 안전 영역으로 채웁니다.
      */
-    struct UiViewport
+    struct UIViewport
     {
         float2  _size{};          ///< UI 단위 크기(물리 크기 / 배율) — 레이아웃 루트가 놓이는 사각형
         float2  _physicalSize{};  ///< 물리 픽셀 크기

@@ -313,7 +313,7 @@ SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesTwoCommandsInOneMenuSlot
 
 /**
  * @brief [EditorCommandRegistryTest] 메인 메뉴바에도, 코드가 그리는 경로 목록에도 없는 메뉴 경로는 validate 가 잡는다
- * @details 메인 메뉴바는 부모가 `MainMenu` 인 메뉴만 그리고, 그 밖의 메뉴는 코드가 경로로 부를 때만 그려진다(`EditorCommandGui::drawMenuItems`). 표 줄의
+ * @details 메인 메뉴바는 부모가 `MainMenu` 인 메뉴만 그리고, 그 밖의 메뉴는 코드가 경로로 부를 때만 그려진다(`EditorCommandGUI::drawMenuItems`). 표 줄의
  *          경로를 잘못 적거나(`MainMenu/File/Recent` 같은 하위 메뉴) 그리는 코드가 없는 경로를 적으면 그 항목은 경고 없이 어디에도 나오지 않는다.
  */
 SW_TEST_CASE( EditorCommandRegistryTest, ValidateCatchesMenuPathsNothingDraws )

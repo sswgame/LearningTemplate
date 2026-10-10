@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -38,7 +38,7 @@ namespace sw
         onPropertyChanged( hashed_string( "_radius" ) );
     }
 
-    void PointLightComponent::writeGpuLightKindFields( GpuLight& outLight ) const
+    void PointLightComponent::writeGPULightKindFields( GPULight& outLight ) const
     {
         const float3 position    = getLightPosition();
         outLight._positionRadius = float4{ position._x, position._y, position._z, _radius };

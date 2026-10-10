@@ -15,7 +15,7 @@ namespace sw
 {
     /** @brief 격자 트랙(열 · 행 하나)의 크기 규칙입니다. */
     ENUM()
-    enum class UiGridTrackKind : uint8
+    enum class UIGridTrackKind : uint8
     {
         Auto,  ///< 그 트랙에만 든(넓이 1) 자식들의 원하는 크기 최대
         Fixed, ///< `_value` UI 단위
@@ -25,14 +25,14 @@ namespace sw
 
 namespace sw
 {
-    /** @struct UiGridTrack @brief 격자의 열 · 행 하나입니다. */
+    /** @struct UIGridTrack @brief 격자의 열 · 행 하나입니다. */
     REFLECT()
-    struct SW_API UiGridTrack
+    struct SW_API UIGridTrack
     {
         REFLECT_BODY();
 
         PROPERTY( DisplayName = "Kind" )
-        UiGridTrackKind _kind{ UiGridTrackKind::Fill };
+        UIGridTrackKind _kind{ UIGridTrackKind::Fill };
         PROPERTY( DisplayName = "Value", Tooltip = "Fixed: size in ui units. Fill: weight." )
         float32 _value{ 1.0f };
     };
@@ -59,12 +59,12 @@ namespace sw
 
         const TypeInfo* getTypeInfo() const override;
 
-        const vector<UiGridTrack>& getColumns() const { return _listColumn; }
+        const vector<UIGridTrack>& getColumns() const { return _listColumn; }
         /** @brief 열 트랙을 바꿉니다. kLayout. */
-        void                       setColumns( const vector<UiGridTrack>& listColumn );
-        const vector<UiGridTrack>& getRows() const { return _listRow; }
+        void                       setColumns( const vector<UIGridTrack>& listColumn );
+        const vector<UIGridTrack>& getRows() const { return _listRow; }
         /** @brief 행 트랙을 바꿉니다. kLayout. */
-        void          setRows( const vector<UiGridTrack>& listRow );
+        void          setRows( const vector<UIGridTrack>& listRow );
         const float2& getCellSpacing() const { return _cellSpacing; }
         /** @brief 칸 사이 간격(열 · 행, UI 단위)을 바꿉니다. kLayout. */
         void setCellSpacing( const float2& cellSpacing );
@@ -72,14 +72,14 @@ namespace sw
         uint32 getOutOfRangeCellCount() const { return _outOfRangeCellCount; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
         PROPERTY( DisplayName = "Columns" )
-        vector<UiGridTrack> _listColumn;
+        vector<UIGridTrack> _listColumn;
         PROPERTY( DisplayName = "Rows" )
-        vector<UiGridTrack> _listRow;
+        vector<UIGridTrack> _listRow;
         PROPERTY( DisplayName = "Cell Spacing", Meta = "Units=ui" )
         float2 _cellSpacing;
 

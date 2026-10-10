@@ -62,11 +62,11 @@ namespace sw
         bool canScrollIntoView() const override { return true; }
         bool scrollIntoView( const Widget& widget ) override;
 
-        UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override;
+        UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
 
     private:
         /** @brief 보이는 줄 수 + 1 개까지 줄 위젯을 만듭니다(레이아웃 안 — 새 줄은 곧바로 놓인다). */

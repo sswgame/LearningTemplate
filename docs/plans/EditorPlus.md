@@ -28,7 +28,7 @@
 
 | 원문 | 지금 |
 |---|---|
-| `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/Gui/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
+| `ICON_FA_EYE` 같은 Font Awesome 아이콘 | 5b 의 R2 뒤에는 `editoricon::k*`(`Source/Editor/Common/GUI/EditorIconGlyphs.h`). `ICON_FA_GEAR` → `kSettings`, `ICON_FA_ROTATE` → `kRefresh`, `ICON_FA_TRIANGLE_EXCLAMATION` → `kWarning`, 나머지는 같은 낱말(`kBug`, `kMap`, `kCamera`, `kEye`) |
 | "백로그 3절(3-8 에디터 등)에 한 줄" | 그 영역 README 의 함정 절. 에디터는 `Source/Editor/README.md` 의 "함정 · 계약", 모듈은 `Source/Engine/Module/README.md`, 코어는 `Source/Core/README.md`, 렌더러는 `Source/Engine/Renderer/README.md`, 프로파일링은 `Source/Engine/Profiling/README.md` |
 | "백로그 1-4 의 C, G, H 줄", "대기열 S, M 의 항목" | 이 문서. 백로그 1-4 에는 이 문서를 가리키는 항목 하나만 있습니다 |
 | `cmake/Engine/TargetRules.cmake` | `cmake/Engine/ModuleTargets.cmake`(`sw_addGameFrameworkKit`, `sw_addGameModule` 이 있는 파일) |
@@ -316,7 +316,7 @@ namespace sw::editor
 | `Common/Workspace/EditorService.h` | `getRawService` · `bindRawLocalService` · `getRawLocalService` · `getActiveScene` · `getActiveObjectManager` · `findGameObject` · `findComponent` |
 | `Common/Workspace/EditorContext.h` | `class SW_EDITOR_API EditorContext`(`get()` 이 비인라인 정적) |
 | `Common/Workspace/EditorSelection.h` · `EditorWorkspace.h` · `EditorTransaction.h` | 클래스 |
-| `Common/Gui/IEditorPanel.h` · `EditorDocumentPanel.h` · `EditorChrome.h` · `EditorThemeUtil.h` · `EditorNotificationManager.h` | 클래스 · 정적 struct |
+| `Common/GUI/IEditorPanel.h` · `EditorDocumentPanel.h` · `EditorChrome.h` · `EditorThemeUtil.h` · `EditorNotificationManager.h` | 클래스 · 정적 struct |
 | `Common/Widgets/EditorWidgets.h` · `EditorListFilter.h` | 정적 struct · 클래스 |
 | `Viewport/EditorViewportProjection.h` · `EditorVisualizerGeometry.h` | `EditorViewportProjectionUtil` · `EditorVisualizerGeometryUtil` · `EditorDebugDrawStats` |
 | `Panels/Inspector/IInspectorComponent.h` · `IInspectorProperty.h` | 클래스(인터페이스 — vtable 은 각 DLL, 붙여도 무해) |
@@ -411,14 +411,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ...
         /**
          * @brief 등록부와 맞춥니다 — 새 줄은 인스턴스를 만들고(지난번에 열려 있던 id 면 열린 채로), 사라진 줄의 인스턴스는 내립니다. 세대가 같으면 바로 돌아갑니다.
-         * @details 에디터 프레임 앞에서 부릅니다(`ImGuiEditor::updateUi`). 처음 부르면 `registerDefaultPanels` 와 같습니다.
+         * @details 에디터 프레임 앞에서 부릅니다(`ImGuiEditor::updateUI`). 처음 부르면 `registerDefaultPanels` 와 같습니다.
          */
-        void syncWithRegistry( IRHIDevice* pRhiDevice );
+        void syncWithRegistry( IRHIDevice* pRHIDevice );
         /**
          * @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 패널을 내립니다 — `shutdown` 후 소멸. 미저장 문서는 경고하고 버립니다. 내린 수입니다.
          * @details 이미지를 내리기 **전에**(`IModuleUnloadListener`) 부릅니다. 열림 상태는 id 로 기억해 같은 id 가 다시 오르면 되살립니다.
          */
-        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRhiDevice );
+        uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice );
     private:
         vector<EditorPanelEntry> _listPanel;
         vector<string>           _listRememberedOpenId; ///< 내린 패널 가운데 열려 있던 id(다시 오르면 연다)
@@ -426,7 +426,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 `EditorPanelManager.cpp`:
 ```cpp
-    void EditorPanelManager::syncWithRegistry( IRHIDevice* pRhiDevice )
+    void EditorPanelManager::syncWithRegistry( IRHIDevice* pRHIDevice )
     {
         using PanelRegistry               = EditorRegistry<EditorPanelRegistration>;
         const EditorRegistrationList& list = PanelRegistry::getList();
@@ -441,7 +441,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
             if ( entry._pRegistration == nullptr || PanelRegistry::find( entry._id ) == entry._pRegistration )
                 continue;
             if ( entry._pInstance != nullptr )
-                entry._pInstance->shutdown( pRhiDevice );
+                entry._pInstance->shutdown( pRHIDevice );
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
         }
         // 2) 새 줄은 만든다. 순서는 등록부 순서 그대로 — 그리기 순서 · Panel 메뉴 순서가 등록부와 같다
@@ -475,7 +475,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
         _listPanel = std::move( listSorted );
     }
 
-    uint32 EditorPanelManager::releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRhiDevice )
+    uint32 EditorPanelManager::releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice )
     {
         uint32 releasedCount{ 0 };
         for ( size_t index = _listPanel.size(); index-- > 0; )
@@ -489,7 +489,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
                     SW_LOG_WARNING( "Panel '%#' had unsaved edits - discarded because its module is unloading", entry._title.c_str() );
                 if ( entry._pInstance->isOpen() )
                     _listRememberedOpenId.push_back( entry._id );
-                entry._pInstance->shutdown( pRhiDevice );
+                entry._pInstance->shutdown( pRHIDevice );
             }
             _listPanel.erase( _listPanel.begin() + static_cast<ptrdiff_t>( index ) );
             ++releasedCount;
@@ -531,12 +531,12 @@ namespace sw::editor
 ```cpp
     uint32 EditorModuleUnloadListener::onModuleUnloading( const void* pBegin, const void* pEnd, bool& /*outKeepImageMapped*/ )
     {
-        IRHIDevice* pRhiDevice = _context.getRhiDevice();
-        uint32 releasedCount   = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, pRhiDevice );
+        IRHIDevice* pRHIDevice = _context.getRHIDevice();
+        uint32 releasedCount   = _context.getPanelManager().releasePanelsWithin( pBegin, pEnd, pRHIDevice );
         releasedCount += _context.getPopupManager().releasePopupsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorComponentManager().releaseInspectorsWithin( pBegin, pEnd );
         releasedCount += _context.getInspectorPropertyManager().releaseDrawersWithin( pBegin, pEnd );   // I3 뒤
-        releasedCount += EditorCommandGui::releaseCommandsWithin( pBegin, pEnd );                      // C3 뒤
+        releasedCount += EditorCommandGUI::releaseCommandsWithin( pBegin, pEnd );                      // C3 뒤
         return releasedCount;
     }
 ```
@@ -545,7 +545,7 @@ namespace sw::editor
 `ModuleImageUtil::releaseModuleCode` 의 경고 줄이 `_bExpected` 면 `SW_LOG_INFO` 로. (Core 헤더 변경 → 엔진 ABI 도장이 바뀐다 — 전체 빌드.)
 EditorContext: `_pModuleUnloadListener = make_unique<EditorModuleUnloadListener>( *this );` 를 매니저들 다음에, `shutdown` 에서 매니저보다 **먼저** `reset()`.
 
-4) `ImGuiEditor::updateUi` — "ImGui NewFrame / Dockspace" 블록 **앞**에서 맞춘다(그리기 전 · 메뉴가 패널 목록을 읽기 전):
+4) `ImGuiEditor::updateUI` — "ImGui NewFrame / Dockspace" 블록 **앞**에서 맞춘다(그리기 전 · 메뉴가 패널 목록을 읽기 전):
 ```cpp
         // 확장 모듈은 에디터가 뜬 뒤에도 오르내린다 — 등록 세대가 바뀌었으면 인스턴스를 맞춘다(같으면 비교 하나로 끝).
         if ( _editorContext != nullptr )
@@ -651,12 +651,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 **목적.** (1) 확장 DLL 은 vcpkg 정적 imgui 의 **자기 사본**을 갖는다 — 그 사본의 `GImGui` · 할당자 · ImPlot 컨텍스트를 EditorModule 이 만든 것으로 맞춰야 확장의 `ImGui::Button` 이 같은 창에 그려진다.
 (2) 확장이 메뉴 · 단축키 · 팔레트에 커맨드를 넣는 길(D4).
 
-**(1) 결속기 — 새 `Common/Gui/EditorUiContext.h` · `.cpp`(ImGui 헤더를 include 하지 않는다 — 컨텍스트는 `void*`):**
+**(1) 결속기 — 새 `Common/GUI/EditorUIContext.h` · `.cpp`(ImGui 헤더를 include 하지 않는다 — 컨텍스트는 `void*`):**
 ```cpp
 namespace sw::editor
 {
     /** @brief 지금 에디터 UI 컨텍스트입니다. 확장 DLL 이 자기 ImGui 사본에 건다. */
-    struct EditorUiContextState
+    struct EditorUIContextState
     {
         void* _pImGuiContext{ nullptr };  ///< ImGuiContext*
         void* _pImPlotContext{ nullptr }; ///< ImPlotContext*
@@ -666,91 +666,91 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @struct EditorUiBinderRegistration
-     * @brief DLL 하나의 결속 함수입니다. 확장 모듈마다 CMake 가 만든 소스(`<모듈>UiBinder.cpp`)가 하나 둔다.
+     * @struct EditorUIBinderRegistration
+     * @brief DLL 하나의 결속 함수입니다. 확장 모듈마다 CMake 가 만든 소스(`<모듈>UIBinder.cpp`)가 하나 둔다.
      * @details 결속 함수는 **그 DLL 의** ImGui 사본에 `SetAllocatorFunctions` · `SetCurrentContext` 를 겁니다(Dear ImGui FAQ "DLL 경계").
      *          할당자는 엔진 Memory 라 어느 DLL 이 잡고 풀어도 같다.
      */
-    struct EditorUiBinderRegistration : EditorRegistration
+    struct EditorUIBinderRegistration : EditorRegistration
     {
         static constexpr const utf8* kKindName = "uibinder";
 
-        void ( *_pfnBind )( const EditorUiContextState& state );
+        void ( *_pfnBind )( const EditorUIContextState& state );
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
     /**
-     * @struct EditorUiContext
+     * @struct EditorUIContext
      * @brief 에디터가 ImGui 컨텍스트를 만들거나 지울 때 알리는 곳입니다. 알릴 때마다 등록된 결속 함수를 모두 부릅니다.
      */
-    struct SW_EDITOR_API EditorUiContext
+    struct SW_EDITOR_API EditorUIContext
     {
         /** @brief `ImGuiEditor::initialize` 가 컨텍스트를 만든 직후(상태), `shutdown` 이 지우기 직전(빈 상태)에 부릅니다. */
-        static void publish( const EditorUiContextState& state );
+        static void publish( const EditorUIContextState& state );
         /** @brief 지금 상태입니다. 컨텍스트가 없으면 두 칸 모두 nullptr 입니다. */
-        static const EditorUiContextState& getCurrent();
+        static const EditorUIContextState& getCurrent();
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
     /**
-     * @class EditorUiBinderRegistrar
+     * @class EditorUIBinderRegistrar
      * @brief 결속 함수를 등록하고, 이미 컨텍스트가 있으면 **바로** 겁니다(에디터가 뜬 뒤 올라온 확장 모듈 — 핫 리로드).
      */
-    class EditorUiBinderRegistrar : public EditorRegistrar<EditorUiBinderRegistration>
+    class EditorUIBinderRegistrar : public EditorRegistrar<EditorUIBinderRegistration>
     {
     public:
-        explicit EditorUiBinderRegistrar( const EditorUiBinderRegistration& registration )
-            : EditorRegistrar<EditorUiBinderRegistration>{ registration }
+        explicit EditorUIBinderRegistrar( const EditorUIBinderRegistration& registration )
+            : EditorRegistrar<EditorUIBinderRegistration>{ registration }
         {
-            if ( EditorUiContext::getCurrent()._pImGuiContext != nullptr && registration._pfnBind != nullptr )
-                registration._pfnBind( EditorUiContext::getCurrent() );
+            if ( EditorUIContext::getCurrent()._pImGuiContext != nullptr && registration._pfnBind != nullptr )
+                registration._pfnBind( EditorUIContext::getCurrent() );
         }
     };
 } // namespace sw::editor
 ```
-`EditorUiContext.cpp`:
+`EditorUIContext.cpp`:
 ```cpp
     namespace
     {
-        struct EditorUiContextInternal
+        struct EditorUIContextInternal
         {
-            static EditorUiContextState& getState()
+            static EditorUIContextState& getState()
             {
-                static EditorUiContextState s_state{};
+                static EditorUIContextState s_state{};
                 return s_state;
             }
         };
     } // namespace
 ...
-    void EditorUiContext::publish( const EditorUiContextState& state )
+    void EditorUIContext::publish( const EditorUIContextState& state )
     {
-        EditorUiContextInternal::getState() = state;
-        using BinderRegistry = EditorRegistry<EditorUiBinderRegistration>;
+        EditorUIContextInternal::getState() = state;
+        using BinderRegistry = EditorRegistry<EditorUIBinderRegistration>;
         for ( uint32 index = 0; index < BinderRegistry::getCount(); ++index )
         {
-            const EditorUiBinderRegistration& registration = BinderRegistry::getAt( index );
+            const EditorUIBinderRegistration& registration = BinderRegistry::getAt( index );
             if ( registration._pfnBind != nullptr )
                 registration._pfnBind( state );
         }
     }
 
-    const EditorUiContextState& EditorUiContext::getCurrent() { return EditorUiContextInternal::getState(); }
+    const EditorUIContextState& EditorUIContext::getCurrent() { return EditorUIContextInternal::getState(); }
 ```
-`ImGuiEditor::initialize` — `ImPlot::CreateContext();` 바로 뒤: `EditorUiContext::publish( EditorUiContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );`.
-`shutdownPartialInitialization`(컨텍스트 지우기 직전): `EditorUiContext::publish( EditorUiContextState{} );`. EditorModule 자신은 결속기를 두지 않는다(자기 사본에 `CreateContext` 했다).
+`ImGuiEditor::initialize` — `ImPlot::CreateContext();` 바로 뒤: `EditorUIContext::publish( EditorUIContextState{ ImGui::GetCurrentContext(), ImPlot::GetCurrentContext() } );`.
+`shutdownPartialInitialization`(컨텍스트 지우기 직전): `EditorUIContext::publish( EditorUIContextState{} );`. EditorModule 자신은 결속기를 두지 않는다(자기 사본에 `CreateContext` 했다).
 
-새 `cmake/Engine/EditorExtensionUiBinder.cpp.in`(C4 의 `sw_addEditorExtension` 이 확장마다 `configure_file` — 손으로 쓰지 않는다):
+새 `cmake/Engine/EditorExtensionUIBinder.cpp.in`(C4 의 `sw_addEditorExtension` 이 확장마다 `configure_file` — 손으로 쓰지 않는다):
 ```cpp
 // AUTO-GENERATED by sw_addEditorExtension — @SW_EDITOR_EXTENSION_NAME@ 의 ImGui 사본을 에디터 컨텍스트에 건다. 고치지 말 것.
 #include "pch.h"
 
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Gui/EditorUiContext.h"
+#include "Editor/Common/GUI/EditorUIContext.h"
 
 #include <imgui.h>
 #include <implot.h>
@@ -759,12 +759,12 @@ namespace sw::editor
 {
     namespace
     {
-        struct EditorExtensionUiBinderInternal
+        struct EditorExtensionUIBinderInternal
         {
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             static void  freeForImGui( void* pPtr, void* /*pUserData*/ ) { Memory::free( pPtr ); }
 
-            static void bind( const EditorUiContextState& state )
+            static void bind( const EditorUIContextState& state )
             {
                 ImGui::SetAllocatorFunctions( &allocateForImGui, &freeForImGui, nullptr );
                 ImGui::SetCurrentContext( static_cast<ImGuiContext*>( state._pImGuiContext ) );
@@ -773,7 +773,7 @@ namespace sw::editor
         };
     } // namespace
 
-    static const EditorUiBinderRegistrar sw_editorUiBinder_@SW_EDITOR_EXTENSION_NAME@{ EditorUiBinderRegistration{ { "@SW_EDITOR_EXTENSION_NAME@", 0 }, &EditorExtensionUiBinderInternal::bind } };
+    static const EditorUIBinderRegistrar sw_editorUIBinder_@SW_EDITOR_EXTENSION_NAME@{ EditorUIBinderRegistration{ { "@SW_EDITOR_EXTENSION_NAME@", 0 }, &EditorExtensionUIBinderInternal::bind } };
 } // namespace sw::editor
 ```
 (ImGuizmo 를 쓰는 확장은 자기 코드에서 `ImGuizmo::SetImGuiContext( ImGui::GetCurrentContext() )` 를 그리기 전에 부른다 — README 한 줄.)
@@ -784,7 +784,7 @@ namespace sw::editor
 {
     /**
      * @struct EditorCommandRegistration
-     * @brief 확장 모듈(또는 EditorModule 의 아무 파일)이 커맨드 하나를 더하는 등록 줄입니다. 표(`EditorCommandGui.cpp` 의 `_s_arrCommandRow`)와 같은 칸이고,
+     * @brief 확장 모듈(또는 EditorModule 의 아무 파일)이 커맨드 하나를 더하는 등록 줄입니다. 표(`EditorCommandGUI.cpp` 의 `_s_arrCommandRow`)와 같은 칸이고,
      *        등록부가 표 + 등록 줄을 합쳐 메뉴 · 단축키 · 팔레트를 만듭니다. id 는 표와도 겹치면 안 됩니다(`validate`).
      * @details 문자열은 리터럴. 메뉴 경로는 기존 메뉴(`"MainMenu/Tools"` …)거나 새 한 단계 메뉴(`"MainMenu/ThemePark"`)다.
      */
@@ -813,7 +813,7 @@ namespace sw::editor
     SW_EDITOR_REGISTER( ::sw::editor::EditorCommandRegistration, Command_##name, { pId, menuOrder }, pLabel, pIcon, pCategory, pTooltip, pDetail, \
                         shortcut, pfnAction, pfnEnabled, pMenuPath )
 ```
-`EditorCommandGui.h/.cpp`:
+`EditorCommandGUI.h/.cpp`:
 ```cpp
         /** @brief 표 + 등록 줄로 커맨드 등록부를 다시 만듭니다(단축키 덮어쓰기 — P3 — 도 여기서 입힌다). 등록 세대가 같으면 아무것도 하지 않는다. */
         static void syncWithRegistry();
@@ -864,11 +864,11 @@ namespace sw::editor
 
 문제점:
 - vcpkg imgui 는 정적 라이브러리라 DLL 마다 GImGui · 할당자 사본이 생긴다. 확장 DLL 의 ImGui 호출은 컨텍스트가 없어 죽거나 다른 곳에 그린다.
-- 커맨드(메뉴 · 단축키 · 팔레트)는 EditorCommandGui.cpp 의 정적 표 하나라 다른 모듈이 더할 수 없었다.
+- 커맨드(메뉴 · 단축키 · 팔레트)는 EditorCommandGUI.cpp 의 정적 표 하나라 다른 모듈이 더할 수 없었다.
 
 해결방안:
-- EditorUiContext::publish(컨텍스트를 만든 직후 · 지우기 직전) + 결속 등록 줄(uibinder). 등록자는 이미 컨텍스트가 있으면 바로 건다(핫 리로드).
-  결속 소스는 cmake/Engine/EditorExtensionUiBinder.cpp.in 을 확장마다 configure_file 로 만든다(SetAllocatorFunctions · SetCurrentContext · ImPlot).
+- EditorUIContext::publish(컨텍스트를 만든 직후 · 지우기 직전) + 결속 등록 줄(uibinder). 등록자는 이미 컨텍스트가 있으면 바로 건다(핫 리로드).
+  결속 소스는 cmake/Engine/EditorExtensionUIBinder.cpp.in 을 확장마다 configure_file 로 만든다(SetAllocatorFunctions · SetCurrentContext · ImPlot).
 - SW_EDITOR_COMMAND 등록 줄: 표와 같은 칸, 등록부가 표 + 등록 줄을 합친다. 세대가 바뀌면 다시 만들고, 모듈이 내려가기 전에 그 줄을 뺀다.
 
 결과:
@@ -907,8 +907,8 @@ function(sw_addEditorExtension TARGET_NAME)
 	endif()
 
 	set(SW_EDITOR_EXTENSION_NAME ${TARGET_NAME})
-	set(swBinderSource "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}UiBinder.cpp")
-	configure_file("${CMAKE_SOURCE_DIR}/cmake/Engine/EditorExtensionUiBinder.cpp.in" "${swBinderSource}" @ONLY)
+	set(swBinderSource "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}UIBinder.cpp")
+	configure_file("${CMAKE_SOURCE_DIR}/cmake/Engine/EditorExtensionUIBinder.cpp.in" "${swBinderSource}" @ONLY)
 
 	add_library(${TARGET_NAME} SHARED ${swExtensionSources} "${swBinderSource}")
 	target_include_directories(${TARGET_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
@@ -997,7 +997,7 @@ endfunction()
 종료: `ModuleHost::shutdown` 의 `suspendModules` 뒤 LiveReloadManager 가 의존 역순으로 내리는지 확인(적용 때 — 확장이 EditorModule 보다 먼저 내려가야 등록 목록이 살아 있다). 아니면 확장 이름을 먼저 `unloadModule` 한다.
 헤드리스 임포트(`--import-*` — EditorModule 을 인스턴스 없이 올림)는 확장을 올리지 않는다(에디터 블록 밖).
 
-5) `EditorCommandGui.cpp` 의 `commandCompileEditor` 가 짓는 타깃 `EditorModule` → `EditorAll`(C1 의 묶음 타깃), 라벨 `"Compile Editor (EditorModule + extensions)"`.
+5) `EditorCommandGUI.cpp` 의 `commandCompileEditor` 가 짓는 타깃 `EditorModule` → `EditorAll`(C1 의 묶음 타깃), 라벨 `"Compile Editor (EditorModule + extensions)"`.
 
 6) 게이트:
 - `Scripts/lint/gate/CheckGameFrameworkLayers.py` 규칙 4: `Kits/<묶음>/<키트>/Editor/` 아래 파일은 `Editor/` include 를 허용한다(`_kForbiddenPrefixes` 검사 앞에 `"/Editor/" in relativeFilePath` 면 건너뜀). 규칙 3(키트끼리)은 확장에도 그대로(확장은 자기 키트만).
@@ -1555,7 +1555,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 **바꿀 것.**
 1) 키 넓히기 — `EditorCommandRegistry.h` 의 `EditorCommandKey` 에 **Space 뒤에**(계약 주석대로): `Num0 … Num9, Delete, Insert, Home, End, PageUp, PageDown, Left, Right, Up, Down, Tab, Enter, Escape, Backspace, Minus, Equal, Comma, Period, Slash, Count`.
-   `EditorCommandRegistry.cpp` 의 이름 표에 같은 순서로 이름, `EditorCommandGui.cpp` 의 `toImGuiKey` 는 A..Z · F1..F12 뺄셈 뒤 **새 키는 표**(`kArrExtraKey[]` = `{ EditorCommandKey::Num0, ImGuiKey_0 }, …`).
+   `EditorCommandRegistry.cpp` 의 이름 표에 같은 순서로 이름, `EditorCommandGUI.cpp` 의 `toImGuiKey` 는 A..Z · F1..F12 뺄셈 뒤 **새 키는 표**(`kArrExtraKey[]` = `{ EditorCommandKey::Num0, ImGuiKey_0 }, …`).
    Space 뒤 static_assert 하나 더(`Num0 == 40`).
 2) 덮어쓰기 저장 — 새 `Common/Commands/EditorShortcutOverrides.h` · `.cpp`(ImGui 없음):
 ```cpp
@@ -1599,10 +1599,10 @@ namespace sw::editor
     };
 } // namespace sw::editor
 ```
-`EditorCommandGui::syncWithRegistry`(C3)가 등록부를 다시 만든 뒤 `applyTo` → `validate`. 기본값(표 · 등록 줄의 원래 조합)은 등록부가 `EditorCommandDesc::_defaultShortcut` · `_defaultAltShortcut` 두 칸으로 든다(덮어쓰기 전 값 — "Reset" 이 쓴다).
+`EditorCommandGUI::syncWithRegistry`(C3)가 등록부를 다시 만든 뒤 `applyTo` → `validate`. 기본값(표 · 등록 줄의 원래 조합)은 등록부가 `EditorCommandDesc::_defaultShortcut` · `_defaultAltShortcut` 두 칸으로 든다(덮어쓰기 전 값 — "Reset" 이 쓴다).
 3) 창 — `Panels/ShortcutsPanel.h` · `.cpp` `SW_EDITOR_PANEL( ShortcutsPanel, "shortcuts", EditorPanelCategory::Tool, 2010 );` 제목 `"Keyboard Shortcuts"`(환경설정 창의 왼쪽 목록 맨 아래에도 링크).
    표: 커맨드(아이콘 · 라벨) · 묶음 · 단축키 · 보조 · 단추. "Set" 을 누르면 그 칸이 **다음 키 조합을 받는다**(수정자만 누른 동안은 기다림, Esc 는 취소, Backspace 는 지움 —
-   받는 동안은 전역 단축키 처리(`processHotkeys`)를 멈춘다: `EditorCommandGui::setHotkeysSuspended( true )`). 받은 조합이 다른 커맨드와 같으면 **두 줄을 빨갛게** 하고
+   받는 동안은 전역 단축키 처리(`processHotkeys`)를 멈춘다: `EditorCommandGUI::setHotkeysSuspended( true )`). 받은 조합이 다른 커맨드와 같으면 **두 줄을 빨갛게** 하고
    "Replace (clear <다른 커맨드>)" / "Cancel" 을 묻는다. 줄마다 기본과 다르면 "↺" 단추(Reset), 위에 "Reset All" · 검색(라벨 · id · 조합 글자 — `Ctrl+S` 로도 찾는다).
    ImGuiKey → `EditorCommandKey` 는 `toImGuiKey` 의 역(표 하나를 양쪽이 쓴다).
 
@@ -1702,7 +1702,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
 `ModuleCatalog` 이 프로젝트 덮어쓰기를 바꿔 다시 풀 수 있게 `ModuleCatalog::setProjectOverride( name, bEnabled )`(사본에서) 를 더한다 — 적용 때 `ModuleCatalog.h` 의 `resolve` 가 덮어쓰기를 어디서 읽는지 보고 맞춘다.
 3) 창 — `Panels/ModulesPanel.h` · `.cpp` `SW_EDITOR_PANEL( ModulesPanel, "modules", EditorPanelCategory::Tool, 2020 );` 제목 `"Modules"`. `Bin/Modules/*.module.json`(빌드가 복사한 카탈로그)을 읽어
-   종류별 묶음(GameFramework · Kit · EditorExtension · Rhi · Editor · Game) 표: 이름 · 판 · 설명 · 의존 · 상태(켜짐 · 꺼짐 + 이유 — `ModuleResolution::_listInactive` 의 이유 글).
+   종류별 묶음(GameFramework · Kit · EditorExtension · RHI · Editor · Game) 표: 이름 · 판 · 설명 · 의존 · 상태(켜짐 · 꺼짐 + 이유 — `ModuleResolution::_listInactive` 의 이유 글).
    체크박스를 바꾸면 미리보기 팝업("이것도 함께 꺼진다: GF_Editor_ThemePark (needs GF_ThemePark)") → 확인하면 **프로젝트 매니페스트 소스**(`Source/Games/<활성 게임>/SWGame.module.json`)를 고쳐 쓴다
    (`EditorSourceControl` 의 체크아웃 상태를 먼저 본다 — 읽기 전용이면 이유를 알린다). 위에 노란 띠: "Module set changed — Build to apply, then restart" + "Build" 단추(= `build.compileAll`,
    1) 덕에 ninja 가 다시 구성한다) + "Restart Editor" 단추(빌드 성공 뒤 활성 — 지금 실행 인자 그대로 새 프로세스를 띄우고 이 프로세스는 종료 확인 경로로 닫는다).
@@ -2102,7 +2102,7 @@ bool swApplyViewMode( float3 albedo, float3 worldNormal, float3 worldPosition, o
 Overdraw 는 G버퍼 패스가 가산(알베도 칸에 단색)이고 Lighting 은 알베도를 그대로. 톤맵이 색을 바꾸지 않게 보기 모드가 Lit 이 아니면 톤맵 패스는 통과(`tonemap.hlsl` 에 같은 define — Present 패스 종류에 kAppliesViewMode).
 3) **적용 뒤 `App.exe --cook-shaders`** — 쿠커가 표를 끝까지 돈다(셰이더 변형 수가 모드 수만큼 는다: 머티리얼 셰이더 × 셋 — 매니페스트 크기를 커밋 메시지에 적는다).
 
-**시험.** `RenderPassGpuTest.ViewModesProduceDistinctPictures`(E3 의 시험을 넓힌다): 포워드 · 디퍼드에서 Lit · Unlit · Normals · Depth · Overdraw 다섯 장이 서로 100 픽셀 넘게 다르다,
+**시험.** `RenderPassGPUTest.ViewModesProduceDistinctPictures`(E3 의 시험을 넓힌다): 포워드 · 디퍼드에서 Lit · Unlit · Normals · Depth · Overdraw 다섯 장이 서로 100 픽셀 넘게 다르다,
 Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 = 1.0), Overdraw 는 겹친 큐브 둘의 겹친 자리가 하나뿐인 자리보다 밝다(모서리 기준 배경을 빼고 평균으로 비교한다. 특정 색 픽셀 수는 톤매핑에 무너진다).
 
 **확인 = 에디터 시나리오.** `viewmodes.scenario.xml`: 뷰포트 툴바의 보기 모드 콤보(이름표 `viewport.viewMode`)로 모드를 하나씩 고르고 그때마다 `Screenshot` 을 찍습니다.
@@ -2124,7 +2124,7 @@ Normals 는 위를 보는 면의 G 채널 평균 > 200(노멀 +Y → 0.5 + 0.5 =
 - 셰이더 다시 쿠킹(변형 수 증가: …).
 
 결과:
-- RenderPassGpuTest.ViewModesProduceDistinctPictures(다섯 장 서로 다름 · 위 면 노멀 G · 겹친 자리 밝기).
+- RenderPassGPUTest.ViewModesProduceDistinctPictures(다섯 장 서로 다름 · 위 면 노멀 G · 겹친 자리 밝기).
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 ```
@@ -2573,7 +2573,7 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
   `shortcuts.captureAssignsCombo` · `modules.panelListsKits` · `inspector.multiEditAppliesToAll` · `contentBrowser.showsActivePackOnly` · `testRunner.runsSelfTestInPlace` · `curve.dragKeyRecordsOneUndo` ·
   `mapCheck.selectsIssueObject` · `dialogueGraph.addNodeBySearch`(11). 입력 흉내(`EditorSelfTestInput`)는 이미 있다.
 - **에디터 시나리오**: 단위마다 하나씩 더한다(머리말의 "확인 = 에디터 시나리오"). `AppScenarioTest` 가 모두 돌리므로 시나리오가 늘면 `AppTest` 의 `HOST_SHARDS` 를 늘린다.
-- **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGpuTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
+- **검증(묶음 끝 한 번):** Debug 빌드 경고 0, `ctest -L nogpu`, `ctest -L lint`, Shipping `-L hostgpu`(G1 의 RenderPassGPUTest 네 백엔드, 에디터 시나리오), 에디터 실행 넷(`-dx12 · -dx11 · -vk · -gl -EnableEditor -gv_profileFrames=40`) `[Error]` 0,
   자체 시험 전부, **핫 리로드 둘(C5 의 확인)**, 리눅스는 CI 로 확인(C1 SHARED · C4 CMake). 게임별 빌드(ThemeParkTycoon 프리셋)에서 `GF_Editor_ThemePark` 가 빌드되는지.
 
 **겹치는 파일.** 원문이 적은 다른 제안서(2차 ~ 4차)는 모두 main 에 들어갔으므로, 겹침은 이 문서 안의 단위끼리만 봅니다.
@@ -2585,14 +2585,14 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 | `EditorViewportClient.cpp` · `EditorViewportToolbar.*` | C2 · G1 · R4 · R5 · N1 | C2(마스크 → id) 먼저. R4 의 `getMaskBitById` 는 C2 의 `EditorVisualizerToggles` 로 바꿔 쓴다 |
 | `ContentBrowserPanel.*` | A1 · R9 · N3 | A1 의 역색인 뒤에 N3(이름 바꾸기 · 옮기기) |
 | `ModuleHost.cpp` · `ModuleCatalog.*` · `ModuleManifest.cmake` · `ModuleTargets.cmake` | C4 · P4 | 게이트(`CheckModuleTargets`)는 한 커밋에서 |
-| `EditorCommandGui.cpp` · `EditorCommandRegistry.*` | C3 · P3 · R5 · 여러 단위의 표 한 줄 | 표 줄은 메뉴 순서 값이 겹치지 않게(`validate` 가 잡는다) |
+| `EditorCommandGUI.cpp` · `EditorCommandRegistry.*` | C3 · P3 · R5 · 여러 단위의 표 한 줄 | 표 줄은 메뉴 순서 값이 겹치지 않게(`validate` 가 잡는다) |
 | `EditorSelfTestCases.cpp` · `AppSmokeTest` 기대 목록 | 11 줄 | 줄 더하기 — 순서 키 겹침만 본다 |
 | `AnimGraphPanel.cpp` | T3 · R5 · N8 | T3 → N8 |
 
 **확신 수준.**
 - **실행으로 확인할 것:**
   - C 단계 — (a) 확장이 EditorModule 보다 먼저 언로드되는지(종료 · 리로드): 순서가 틀리면 등록자 소멸이 지운 목록을 만진다 → `ModuleHost::shutdown` 에서 확장 이름을 먼저 언로드한다.
-    (b) 결속기: `themepark.extensionPanelDraws` 가 PASS(정점 > 0)면 맞다. 실패하면 확장 DLL 의 `GImGui` 가 null 이거나 다른 컨텍스트 — 결속 소스가 생성 · 링크됐는지(`<모듈>UiBinder.cpp`).
+    (b) 결속기: `themepark.extensionPanelDraws` 가 PASS(정점 > 0)면 맞다. 실패하면 확장 DLL 의 `GImGui` 가 null 이거나 다른 컨텍스트 — 결속 소스가 생성 · 링크됐는지(`<모듈>UIBinder.cpp`).
     (c) EditorModule SHARED 의 리눅스 링크(CI).
   - G1 Overdraw — RHI 에 가산 블렌드 상태가 있는지(없으면 ABI +1).
   - R4 — 오브젝트가 수천 개인 씬(`-gv_benchMeshes=8000 -EnableEditor`)에서 빌보드 수집이 1 ms 를 넘는지.
@@ -2624,7 +2624,7 @@ editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나�
 
 ### R3 컴포넌트와 오브젝트 아이콘(Hierarchy, 인스펙터) ★
 
-**무엇.** 컴포넌트 타입에서 아이콘과 색을 찾는 테이블 `EditorComponentIcon`(`Source/Editor/Common/Gui/EditorComponentIcon.h`, 새 파일)을 두고, Hierarchy 의 오브젝트 줄과 컴포넌트 줄, 인스펙터의 컴포넌트 카드 머리에 붙입니다.
+**무엇.** 컴포넌트 타입에서 아이콘과 색을 찾는 테이블 `EditorComponentIcon`(`Source/Editor/Common/GUI/EditorComponentIcon.h`, 새 파일)을 두고, Hierarchy 의 오브젝트 줄과 컴포넌트 줄, 인스펙터의 컴포넌트 카드 머리에 붙입니다.
 찾는 순서는 셋입니다. 먼저 타입 이름 테이블을 타입 자신부터 부모 타입으로 올라가며 찾고, 없으면 리플렉션 `Category` 테이블, 그래도 없으면 `editoricon::kComponent` 입니다.
 에디터는 GameFramework 를 링크하지 않으므로 타입 포인터가 아니라 짧은 타입 이름(`TypeInfo::_name`)으로 맞춥니다. 행마다 빌보드 여부(`_bBillboard`, 메시가 없는 종류)를 둬서 R4 가 같은 테이블을 씁니다.
 오브젝트 줄은 빌보드 종류 컴포넌트가 있으면 그 아이콘(전구, 카메라)을, 없으면 `kGameObject` 를 보입니다. `[Category]` 배지는 그대로 둡니다.

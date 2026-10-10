@@ -25,7 +25,7 @@ namespace sw::editor
         virtual ~ImGuiOpenGLRendererBackend() override = default;
 
         /** @brief OpenGL ImGui 렌더러를 초기화합니다. */
-        bool initialize( IRHIDevice* pRhiDevice ) override;
+        bool initialize( IRHIDevice* pRHIDevice ) override;
         /** @brief OpenGL ImGui 렌더러를 종료합니다. */
         void shutdown() override;
 
@@ -40,7 +40,7 @@ namespace sw::editor
         /** @brief GL 컨텍스트가 렌더 스레드 전용이므로 true 입니다. */
         bool requiresRenderThreadContext() const override { return true; }
         /** @brief ImGui draw data를 OpenGL로 그립니다. */
-        void render( IRHIDevice* pRhiDevice, ImDrawData* pDrawData ) override;
+        void render( IRHIDevice* pRHIDevice, ImDrawData* pDrawData ) override;
 
         /** @brief RHI 텍스처 핸들을 ImGui ImTextureID(GLuint)로 등록합니다. */
         void* registerTexture( RHITextureHandle texture ) override;

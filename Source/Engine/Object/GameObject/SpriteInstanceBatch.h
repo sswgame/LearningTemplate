@@ -23,7 +23,7 @@ namespace sw
      *          핫 리로드 상태에 **저장**되어, 다시 읽은 뒤 `onBeginPlay` 가 또 만들면 두 벌이 됩니다. (2) 틱 중에는 붙일 수 없어(`addComponent` 가
      *          미뤄져 nullptr) 데미지 숫자의 자릿수가 바뀔 때마다 구조 변경을 미뤄야 합니다. (3) 계층 창에 UI 조각이 오브젝트 · 컴포넌트로 보입니다.
      *          이 배치는 컴포넌트가 아니라 **저장되지 않고**, 항목 수가 정해진 뒤에는 값만 바뀌므로(쓰지 않는 자리는 숨깁니다) 틱 중에 써도 됩니다.
-     *          항목은 메시 컴포넌트와 같은 길로 GpuScene 에 들어가고(`PrimitiveRegistry` · 부분 수집 · 투명 정렬), 같은 텍스처의 스프라이트 컴포넌트와
+     *          항목은 메시 컴포넌트와 같은 길로 GPUScene 에 들어가고(`PrimitiveRegistry` · 부분 수집 · 투명 정렬), 같은 텍스처의 스프라이트 컴포넌트와
      *          머티리얼 인스턴스를 나눠 가져 한 배치로 묶입니다(`SpriteRenderUtil::acquireTextureInstance`). 언리얼이 월드 공간 위젯 대신
      *          Paper2D 그룹 스프라이트(`UPaperGroupedSpriteComponent`)로 그리는 자리입니다.
      *

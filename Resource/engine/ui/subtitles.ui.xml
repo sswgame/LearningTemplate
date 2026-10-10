@@ -1,9 +1,9 @@
-<UiDocument _schemaVersion="1">
+<UIDocument _schemaVersion="1">
 	<_listStyleSheet>
 		<item>engine/ui/styles/subtitles.uistyle.xml</item>
 	</_listStyleSheet>
-	<!-- 자막 화면 — UiSubtitleService 가 연다. 줄 자리는 이름 Line<n>(바탕) · Speaker<n> · Text<n>, 글 크기 · 바탕 알파는 사용자 설정이 바꾼다(자리 0 의 값이 기준). -->
-	<UiScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<!-- 자막 화면 — UISubtitleService 가 연다. 줄 자리는 이름 Line<n>(바탕) · Speaker<n> · Text<n>, 글 크기 · 바탕 알파는 사용자 설정이 바꾼다(자리 0 의 값이 기준). -->
+	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BoxPanel _name="Lines" _orientation="Vertical" _spacing="8">
@@ -46,4 +46,4 @@
 			</BoxPanel>
 		</CanvasPanel>
 	</SafeZonePanel>
-</UiDocument>
+</UIDocument>

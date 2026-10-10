@@ -6,7 +6,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Viewport/EditorViewTargetUtil.h"
 
 #include "Engine/Utility/DebugOverlayState.h"

@@ -13,8 +13,8 @@
 #include "Engine/Graphics/RHI/IRHIResourceFactory.h"
 #include "Engine/Graphics/RHI/IRenderSurface.h"
 #include "Engine/Graphics/RHI/RHIRenderResource.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIMemoryLedger.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 
 namespace sw
 {
@@ -113,7 +113,7 @@ namespace sw
 
     SW_LOG_CALLER( "RHI" );
 
-    bool IRHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    bool IRHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame._listMicro.clear();
         outFrame._originNanos = 0;
@@ -158,11 +158,11 @@ namespace sw
         return outHandles._pDevice != nullptr;
     }
 
-    void IRHIDevice::refreshGpuMemoryBudget()
+    void IRHIDevice::refreshGPUMemoryBudget()
     {
-        RHIGpuMemoryBudget budget{};
-        if ( queryGpuMemoryBudgetInternal( budget ) == false )
-            budget = RHIGpuMemoryBudget{};
+        RHIMemoryBudget budget{};
+        if ( queryGPUMemoryBudgetInternal( budget ) == false )
+            budget = RHIMemoryBudget{};
         _memoryLedger->setDriverBudget( budget );
     }
 

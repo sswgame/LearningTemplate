@@ -8,7 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 
@@ -49,7 +49,7 @@ namespace sw::editor
         /** @brief 필요할 때 여는 도구라 닫힌 채 시작합니다. */
         bool isToolPanel() const override { return true; }
         /** @brief ImGui 에 등록한 미리보기 텍스처를 해제합니다. */
-        void shutdown( IRHIDevice* pRhiDevice ) override;
+        void shutdown( IRHIDevice* pRHIDevice ) override;
 
     private:
         /** @brief 레지스트리 세대가 바뀌었으면 목록을 다시 가져옵니다. */

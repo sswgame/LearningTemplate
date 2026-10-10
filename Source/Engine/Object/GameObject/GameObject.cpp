@@ -332,7 +332,7 @@ namespace sw
             markTickOrderDirty();
 
         // 이 값이 곧 렌더 스냅샷의 포함 여부다. 자기 컴포넌트에만 알린다 — 메시가 제 칸을 더티로 찍는다. 프리미티브 집합 세대를
-        // 올리면 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GpuScene 이 전체를 다시 모은다.
+        // 올리면 메시 하나 없는 오브젝트(빛 · 트리거)를 켜고 꺼도 GPUScene 이 전체를 다시 모은다.
         for ( Component* pComp : _listComponent )
         {
             if ( pComp != nullptr )

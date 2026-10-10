@@ -16,7 +16,7 @@ namespace sw::editor
     /**
      * @brief 단축키의 키 코드입니다.
      * @details ImGui 헤더에 묶이지 않도록 자체 열거형을 씁니다. 이 파일이 ImGui 없이 컴파일되어야 단위 테스트를 붙일 수
-     *          있습니다. ImGuiKey 로의 변환은 이 값을 쓰는 유일한 곳(`EditorCommandGui`)이 합니다.
+     *          있습니다. ImGuiKey 로의 변환은 이 값을 쓰는 유일한 곳(`EditorCommandGUI`)이 합니다.
      */
     enum class EditorCommandKey : uint8
     {
@@ -65,7 +65,7 @@ namespace sw::editor
 
     // **이 열거형의 번호는 계약이다.** 두 곳이 값의 순서에 기대고 있다.
     //   · `EditorCommandRegistry.cpp` 의 이름 표: 열거형 값을 그대로 첨자로 쓴다.
-    //   · `EditorCommandGui.cpp` 의 `toImGuiKey`: A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
+    //   · `EditorCommandGUI.cpp` 의 `toImGuiKey`: A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
     // 둘 다 가운데에 값을 하나 끼우면 **조용히 엉뚱한 키**가 된다(단축키가 다른 명령을 실행한다). 개수만 보는 static_assert
     // 로는 그 경우를 잡지 못하므로(이름을 하나 더하면 개수는 다시 맞는다) 자리를 직접 고정한다. 키를 더하려면 **Space 앞이
     // 아니라 Space 뒤에** 붙이고 여기를 고칠 것.
@@ -97,7 +97,7 @@ namespace sw::editor
         /** @brief 뷰포트 툴바의 "Align..." 팝업이 그리는 메뉴입니다. */
         inline constexpr const utf8* kViewportAlign = "Viewport/Align";
         /**
-         * @brief 메인 메뉴바 밖에서 코드가 그리는 메뉴 경로(`EditorCommandGui::drawMenuItems`)입니다. 부모가 `kMainMenuBar` 가 아닌 메뉴는 여기 있어야 그려집니다.
+         * @brief 메인 메뉴바 밖에서 코드가 그리는 메뉴 경로(`EditorCommandGUI::drawMenuItems`)입니다. 부모가 `kMainMenuBar` 가 아닌 메뉴는 여기 있어야 그려집니다.
          * @details 메인 메뉴바는 한 단계 메뉴만 그립니다(하위 메뉴 없음). 표의 경로가 이 목록에도 메인 메뉴바에도 없으면 그 항목은 화면 어디에도 나오지
          *          않으므로 `EditorCommandRegistry::validate` 가 잡습니다. 코드가 그리는 경로는 이 상수로 적습니다(글자를 두 곳에 적지 않는다).
          */

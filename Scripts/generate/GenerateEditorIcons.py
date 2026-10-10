@@ -3,7 +3,7 @@
 """
 Scripts/generate/GenerateEditorIcons.py
 
-에디터 아이콘 폰트(`Resource/editor/fonts/sweditoricons.ttf`)와 글리프 상수 헤더(`Source/Editor/Common/Gui/EditorIconGlyphs.h`)를 씁니다.
+에디터 아이콘 폰트(`Resource/editor/fonts/sweditoricons.ttf`)와 글리프 상수 헤더(`Source/Editor/Common/GUI/EditorIconGlyphs.h`)를 씁니다.
 아이콘 그림과 폰트 형식은 `Scripts/common/EditorIconFont.py` 에 있습니다. 손으로 돌리고 결과를 커밋합니다.
 커밋한 파일이 그림과 다르면 `CheckEditorIcons` 게이트가 실패합니다.
 

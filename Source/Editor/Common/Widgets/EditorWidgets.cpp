@@ -7,7 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"

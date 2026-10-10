@@ -39,7 +39,7 @@ def addAppRunArguments(parser: argparse.ArgumentParser, *, bMultipleBackends: bo
         parser.add_argument("--backend", default=defaultBackend, choices=list(kBackendSwitch), help="돌릴 백엔드")
 
 #: App 이 "이 기계에서는 이 백엔드를 못 돌린다"(빌드에 없다 · 드라이버가 기능을 안 준다)로 끝날 때의 종료 코드
-#: (`kRhiUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
+#: (`kRHIUnusableHereExitCode`, `Source/Engine/Graphics/RHI/RHIInitResult.h` 와 같다).
 kAppRhiUnusableExitCode = 77
 
 #: ctest 가 "건너뜀" 으로 읽는 종료 코드(`SKIP_RETURN_CODE`).

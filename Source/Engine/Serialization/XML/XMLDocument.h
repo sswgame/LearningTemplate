@@ -12,6 +12,8 @@
 
 namespace sw
 {
+    class XMLDocument; // Windows SDK msxml.h 의 전역 XMLDocument 대신 이것을 friend 로 찾게 먼저 선언한다
+
     /**
      * @class XMLAttribute
      * @brief XML 속성의 가벼운 핸들입니다.

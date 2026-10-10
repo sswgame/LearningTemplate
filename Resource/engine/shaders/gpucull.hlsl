@@ -13,7 +13,7 @@
  * 주의: 보이는 **개수만** 세어 `instanceCount` 에 넣으면 드로우는 늘 배치 앞쪽 N 개를 그린다 — 앞이 안 보이고 뒤가
  * 보이는 상황에서 **보이는 쪽이 사라지고 안 보이는 쪽이 그려진다**. 개수만으로는 무엇을 그릴지 고를 수 없어 압축 목록을 만든다.
  *
- * 개수는 디스패치 전에 0 이어야 한다 — GpuScene 이 컬링이 켜져 있을 때 0 을 올린다.
+ * 개수는 디스패치 전에 0 이어야 한다 — GPUScene 이 컬링이 켜져 있을 때 0 을 올린다.
  *
  * 바인딩 계약(bindingslots.hlsli): CB b0, 인스턴스 읽기 t0, 배치 구간 읽기 t1, 간접 인자 쓰기 u0,
  * 가시 ID 쓰기 u1.
@@ -37,7 +37,7 @@ struct RHIDrawIndirectCommand
  * firstInstance 를 포함하므로 셰이더가 루트 상수로 더한다) 컬링이 그 값을 배치 시작점으로 쓸 수 없다.
  * 그래서 시작점은 이 버퍼가 따로 알려준다 — 언리얼이 드로우 커맨드마다 인스턴스 구간을 들고 있는 것과 같다.
  */
-struct GpuBatchInfo
+struct GPUBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
@@ -58,7 +58,7 @@ SW_DECLARE_CBUFFER( CullParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( GPUBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
 
@@ -86,7 +86,7 @@ void CSMain(uint3 dispatchThreadId : SV_DispatchThreadID)
 	if (batchIndex >= g_BatchCount)
 		return;
 
-	// 바운드 중심은 이미 월드 공간이다 (GpuScene 이 월드 행렬의 이동 성분으로 채우고, instanceanim 도
+	// 바운드 중심은 이미 월드 공간이다 (GPUScene 이 월드 행렬의 이동 성분으로 채우고, instanceanim 도
 	// 회전 뒤에 다시 맞춘다). 여기서 또 world 를 곱하면 이동이 두 번 들어간다.
 	if (isVisible(instance.boundsCenter, instance.boundsRadius) == false)
 		return;

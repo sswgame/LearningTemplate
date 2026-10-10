@@ -195,7 +195,7 @@ namespace sw::editor
             return false;
         // 디바이스는 **지금 것을** 넘긴다 — 캐시가 마지막으로 본 디바이스는 백엔드 교체 뒤 사라졌을 수 있다.
         EditorContext* pContext = EditorContext::get();
-        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRhiDevice() : nullptr;
+        IRHIDevice*    pDevice  = ( pContext != nullptr ) ? pContext->getRHIDevice() : nullptr;
         if ( route._pCacheKindName[0] == '\0' )
         {
             // 모듈이 올린 캐시 — 이름 대신 그 경로를 든 캐시가 다시 읽는다. 아무도 읽지 않은 파일이면 할 일이 없다(다음에 읽는 쪽이 새 내용을 읽는다).

@@ -7,15 +7,15 @@
  * 순서가 곧 블렌딩 순서라 그림이 틀린다. 투명을 압축하지 않고 CPU 정렬 순서를 쓰면 순서는 지켜지지만 **투명은 컬링
  * 이득을 통째로 포기**한다.
  *
- * 여기서는 압축을 그대로 두고 **순서를 GPU 에서 되돌린다**. 투명 순서는 CPU 가 이미 정했다(GpuSceneBuilder::sortTransparent —
+ * 여기서는 압축을 그대로 두고 **순서를 GPU 에서 되돌린다**. 투명 순서는 CPU 가 이미 정했다(GPUSceneBuilder::sortTransparent —
  * 정렬 레이어 키 → 깊이 → 후보 번호의 전순서)이고, 배치 안의 인스턴스는 그 순서대로 연속으로 놓인다. 그래서 **인스턴스 번호가
  * 곧 그리는 순서**다. 컬링 뒤에 배치마다 워크그룹 하나가 그 배치의 가시 목록을 인스턴스 번호 오름차순으로 정렬한다.
  * 깊이를 여기서 다시 재면 (1) 정렬 레이어를 모르고 (2) 같은 깊이를 불안정하게 가르며 (3) 직교 카메라의 시선 축 깊이를 모른다 —
  * CPU 와 GPU 가 다른 순서를 낸다. 정렬 기준은 CPU 한 곳뿐이다. 추가 뷰(CCTV · PiP)는 그 뷰의 눈으로 CPU 가 다시 정한 순번(t2,
- * GpuSceneBuilder::buildViewTransparentOrders)으로 정렬한다 — 키는 (순번 << 9) | 배치 안 번호.
+ * GPUSceneBuilder::buildViewTransparentOrders)으로 정렬한다 — 키는 (순번 << 9) | 배치 안 번호.
  *
  * 정렬은 그룹공유 메모리 안의 **바이토닉 정렬**이다. 워크그룹 하나에 담기는 만큼(SW_SORT_MAX_ELEMENTS)만
- * 다룰 수 있다 — 그보다 큰 투명 배치는 CPU 가 정렬한 제자리 매핑을 그대로 쓴다(GpuScene 이 그런 배치에
+ * 다룰 수 있다 — 그보다 큰 투명 배치는 CPU 가 정렬한 제자리 매핑을 그대로 쓴다(GPUScene 이 그런 배치에
  * sortMode = Preserve 를 준다). 배치 하나에 투명 인스턴스가 수백 개를 넘는 일은 드물고, 넘으면 정확성을
  * 포기하는 대신 컬링을 포기한다.
  *
@@ -40,7 +40,7 @@ struct RHIDrawIndirectCommand
 	uint startInstanceLocation;
 };
 
-struct GpuBatchInfo
+struct GPUBatchInfo
 {
 	uint instanceBase;
 	uint instanceCount;
@@ -62,7 +62,7 @@ SW_DECLARE_CBUFFER( SortParams, SW_SLOT_COMPUTE_CB )
 };
 
 SW_DECLARE_STRUCTURED_BUFFER( SwInstanceData, g_Instances, 0 );
-SW_DECLARE_STRUCTURED_BUFFER( GpuBatchInfo, g_BatchInfo, 1 );
+SW_DECLARE_STRUCTURED_BUFFER( GPUBatchInfo, g_BatchInfo, 1 );
 SW_DECLARE_STRUCTURED_BUFFER( uint, g_ViewRank, 2 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( RHIDrawIndirectCommand, g_IndirectArgs, 0 );
 SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_VisibleInstanceIds, 1 );
@@ -77,7 +77,7 @@ void CSMain(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID)
 	if (batchIndex >= g_BatchCount)
 		return;
 
-	const GpuBatchInfo info = g_BatchInfo[batchIndex];
+	const GPUBatchInfo info = g_BatchInfo[batchIndex];
 	if (info.sortMode != 2u) // 이 배치는 여기서 정렬하지 않는다
 		return;
 

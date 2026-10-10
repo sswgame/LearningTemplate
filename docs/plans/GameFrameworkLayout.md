@@ -14,7 +14,7 @@
 | `Base/Control` · `Input` · `Movement` · `Vehicle` · `Navigation` | 25 · 6 · 6 · 16 · 12 | "조종 → 이동" 한 흐름이 다섯 폴더로 갈라져 있다 |
 | `Base/Online` + `Kits/Online` | 89 + 172 | GameFramework 의 28% 가 온라인. 같은 서비스(예: Account)가 `Kits/Online/Account`(클라이언트) · `Kits/Online/Server/Account`(서버, 28)로 나뉘고 `Base/Online/{Service,Store,…}` 가 공통 |
 | 키트 14 개 | 폴더 안이 평평(루트 10~16 파일, 하위 폴더 0) | `CardGame` 한 키트에 Klondike · Matgo · Poker · Uno · Hwatu 가 들어 있다 — 키트 하나가 게임 여럿 |
-| 키트 그룹 | `Rpg` 에 `Overworld`(타일 월드 라이브러리 성격), `Simulation` 에 `Voxel`, `Storage`(SQLStore) | 장르 키트와 기능 키트가 섞였다 |
+| 키트 그룹 | `RPG` 에 `Overworld`(타일 월드 라이브러리 성격), `Simulation` 에 `Voxel`, `Storage`(SQLStore) | 장르 키트와 기능 키트가 섞였다 |
 
 ## 단계
 
@@ -42,8 +42,8 @@ Base/Gameplay/    Inventory · Progression · Match · Ability · Interaction ·
   규칙은 `Kits/README.md` "키트 안의 폴더". `CardGame` 은 게임별 폴더, DLL 은 그대로 하나.
 
 ### 4. 키트 그룹을 성격으로 다시 나눈다 — 끝남(2026-10-10)
-- `Kits/Genre/<그룹>/`(Action · Casual · Horror · Rpg · Simulation · Strategy)와 `Kits/Feature/<그룹>/`(Network · Online · Storage · World)로 나눴다.
-  `Rpg/Overworld` · `Simulation/Voxel` 은 `Feature/World/` 로. 모듈 이름은 그대로이고, 매니페스트 탐색(`Source/*.module.json` 재귀 글롭)은 깊이를 보지 않는다.
+- `Kits/Genre/<그룹>/`(Action · Casual · Horror · RPG · Simulation · Strategy)와 `Kits/Feature/<그룹>/`(Network · Online · Storage · World)로 나눴다.
+  `RPG/Overworld` · `Simulation/Voxel` 은 `Feature/World/` 로. 모듈 이름은 그대로이고, 매니페스트 탐색(`Source/*.module.json` 재귀 글롭)은 깊이를 보지 않는다.
 - 성격 폴더 밖의 키트는 `CheckGameFrameworkLayers` 가 막는다. `CheckKitNamespaces` 는 키트 이름을 한 단 깊이에서 읽는다.
 
 ### 5. 온라인 짝 맞추기 — 끝남(2026-10-10)

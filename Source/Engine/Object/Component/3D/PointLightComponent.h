@@ -16,7 +16,7 @@ namespace sw
      * @brief 한 점에서 사방으로 퍼지는 빛입니다. 위치는 이 컴포넌트의 월드 트랜스폼에서 나옵니다.
      * @details 방향광과 달리 **여러 개가 동시에 화면에 영향을 줍니다.** 그래서 프레임마다 등록부에서
      *          모아 구조 버퍼 하나로 올리고, 포워드 · 디퍼드가 같은 버퍼를 같은 루프로 읽습니다
-     *          (`GpuLightBuffer` · `lighting.hlsli`).
+     *          (`GPULightBuffer` · `lighting.hlsli`).
      * @note **그림자를 드리우지 않습니다.** 점광 그림자는 큐브맵이 필요한데 이 엔진에는 큐브맵 자원이
      *       없습니다. 없는 것을 있는 척하면 "왜 저 빛만 그림자가 없지" 를 나중에 렌더러 버그로 오인합니다.
      *       그림자를 드리우는 빛은 `DirectionalLightComponent` 하나뿐입니다(그림자 맵도 하나입니다).
@@ -39,7 +39,7 @@ namespace sw
 
     protected:
         /** @brief 월드 위치와 반경(`_positionRadius`)을 씁니다. */
-        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+        void writeGPULightKindFields( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Radius", Min = 0.0, Tooltip = "Distance at which the light reaches zero", Units = m )

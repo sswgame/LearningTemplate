@@ -73,7 +73,7 @@ namespace sw
             }
             if ( bRenderTexture )
             {
-                if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRhiValid() == false )
+                if ( view._pOutputTexture == nullptr || view._pOutputTexture->isRHIValid() == false )
                 {
                     view._bRenderThisFrame = SW_FALSE;
                     continue;
@@ -83,8 +83,8 @@ namespace sw
             }
 
             // 컬링 · 정렬 상수버퍼는 뷰마다 자기 것이다(나눠 쓰면 뒤 업로드가 앞 디스패치를 덮어쓴다).
-            const bool bCullCb = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GpuCullParams ) );
-            const bool bSortCb = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GpuSortParams ) );
+            const bool bCullCb = view._cullInput._cullCb.isValid() || view._cullInput._cullCb.create( _pDevice, sizeof( FrameRendererUtil::GPUCullParams ) );
+            const bool bSortCb = view._cullInput._sortCb.isValid() || view._cullInput._sortCb.create( _pDevice, sizeof( FrameRendererUtil::GPUSortParams ) );
             if ( bCullCb == false || bSortCb == false )
             {
                 SW_LOG_ERROR( "Failed to create the cull / sort constant buffers of extra view %# - it is not drawn", view._viewId );
@@ -138,7 +138,7 @@ namespace sw
         view._bHasTransparentRank = SW_FALSE;
         view._bUsesViewSlotStream = SW_FALSE;
         view._listTransparentBatchOrder.clear();
-        const GpuViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewId );
+        const GPUViewTransparentOrder* pOrder  = _gpuScene.findViewTransparentOrder( view._viewId );
         const bool                     bUsable = pOrder != nullptr && pOrder->_pListRank != nullptr && pOrder->_pListTailSlot != nullptr &&
                              pOrder->_listBatchOrder.size() == _gpuScene.getTransparentBatches().size() &&
                              pOrder->_tailBase + pOrder->_pListRank->size() == _gpuScene.getInstances().size();
@@ -147,7 +147,7 @@ namespace sw
         view._listTransparentBatchOrder = pOrder->_listBatchOrder;
         view._transparentTailBase       = pOrder->_tailBase;
         const uint32 tailCount          = static_cast<uint32>( pOrder->_pListRank->size() );
-        if ( _gpuScene.areIndirectCountsGpuFilled() )
+        if ( _gpuScene.areIndirectCountsGPUFilled() )
         {
             // GPU 정렬이 순번으로 되돌린다(instancesort.hlsl). 표는 뷰마다 자기 것 — 나눠 쓰면 뒤 업로드가 앞 디스패치를 덮는다(정렬 CB 와 같은 함정).
             if ( view._transparentRank.ensureCapacity( _pDevice, sizeof( uint32 ), tailCount, RHIBufferUsage::ShaderResource, true, false, nullptr ) == false )

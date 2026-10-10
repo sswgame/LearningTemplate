@@ -32,7 +32,7 @@ namespace sw
     template <typename T>
     class Delegate;
 
-    /** @brief GPU 가 다 쓴 뒤에 부를 자원 해제 콜백입니다(`RHIReleaseQueue` · `IRHIDevice::enqueueGpuRelease`). */
+    /** @brief GPU 가 다 쓴 뒤에 부를 자원 해제 콜백입니다(`RHIReleaseQueue` · `IRHIDevice::enqueueGPURelease`). */
     using RHIResourceReleaseDelegate = Delegate<void()>;
 
     /**
@@ -203,20 +203,20 @@ namespace sw
          *          32 칸은 begin/end 쌍 16 개인데, 렌더러가 뒤쪽 세 칸을 프레임 전체 · 컴퓨트 프리패스에 쓰므로 패스는
          *          14 개까지입니다(`FrameRendererUtil`). 렌더 그래프가 그보다 길어지면 뒤쪽 패스는 조용히 빠집니다.
          */
-        inline constexpr uint32 kMaxGpuTimestampSlot = 32;
+        inline constexpr uint32 kMaxGPUTimestampSlot = 32;
 
         /**
          * @brief GPU 리소스 지연 해제 프레임 수입니다(RHIReleaseQueue 기본 frameLatency).
          * @details 네 RHI 백엔드(DX11 · DX12 · Vulkan · OpenGL)가 모두 같은 값을 써야 하는 계약입니다.
          *          한쪽만 바꾸면 아직 GPU 가 참조 중인 리소스를 일찍 해제할 위험이 있습니다.
          */
-        inline constexpr uint32 kGpuReleaseFrameLatency = 3;
+        inline constexpr uint32 kGPUReleaseFrameLatency = 3;
 
         /**
          * @brief 게임 스레드가 만든 프레임 패킷이 렌더 스레드에 소비되기까지 큐잉될 수 있는 최대
          *        프레임 수입니다(RenderThread 패킷 링 깊이).
          * @details 아직 큐잉된(소비되지 않은) 패킷이 참조할 수 있는 자원은 최소 이 프레임 수만큼
-         *          해제를 미뤄야 합니다(예: GpuScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
+         *          해제를 미뤄야 합니다(예: GPUScene 의 머티리얼 원소 회수 지연). GPU 인플라이트
          *          값인 kMaxFrameCountInFlight 와는 별개 개념이니 혼동하지 말 것.
          */
         inline constexpr uint32 kRenderFrameQueueDepth = 3;
@@ -661,7 +661,7 @@ namespace sw
      * @brief 서술체의 모양과 면 수가 맞는지 확인합니다 — Texture2D 는 1, TextureCube 는 6 이고 정사각형, Texture2DArray 는 1 이상.
      * @details 네 백엔드의 `createTexture2D` 가 이 판정 하나로 거부합니다(맞지 않으면 백엔드마다 다르게 무너진다).
      */
-    inline constexpr bool isRhiTextureShapeValid( const RHITextureDesc& desc )
+    inline constexpr bool isRHITextureShapeValid( const RHITextureDesc& desc )
     {
         switch ( desc._dimension )
         {
@@ -755,7 +755,7 @@ namespace sw
 namespace sw
 {
     /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기 · 행 바이트를 같은 규칙으로 계산하는 유일한 출처입니다. */
-    inline constexpr RHIFormatBlockInfo getRhiFormatBlockInfo( RHIFormat format )
+    inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
     {
         switch ( format )
         {
@@ -786,9 +786,9 @@ namespace sw
     }
 
     /** @brief 블록 압축 포맷인지 확인합니다. */
-    inline constexpr bool isRhiFormatBlockCompressed( RHIFormat format )
+    inline constexpr bool isRHIFormatBlockCompressed( RHIFormat format )
     {
-        return getRhiFormatBlockInfo( format )._blockWidth > 1;
+        return getRHIFormatBlockInfo( format )._blockWidth > 1;
     }
 
     /**
@@ -796,7 +796,7 @@ namespace sw
      * @details 블록 압축 · Unknown 은 첨부가 될 수 없고, R32G32B32_FLOAT 는 D3D11 · D3D12 · Vulkan 모두 렌더 타깃 지원이 선택 사항이라 뺍니다.
      *          포맷을 더하면 -Wswitch-enum 이 이 자리를 알립니다(열거자를 모두 적는다).
      */
-    inline constexpr bool isRhiFormatRenderable( RHIFormat format )
+    inline constexpr bool isRHIFormatRenderable( RHIFormat format )
     {
         switch ( format )
         {
@@ -822,9 +822,9 @@ namespace sw
     }
 
     /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축 · 깊이 · Unknown 은 0 입니다. */
-    inline constexpr uint32 getRhiFormatBytesPerPixel( RHIFormat format )
+    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
     {
-        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
         return info._blockWidth == 1 ? info._blockBytes : 0;
     }
 
@@ -833,9 +833,9 @@ namespace sw
      * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지합니다.
      * @return 포맷이 대상이 아니거나 크기가 0 이면 false.
      */
-    inline bool computeRhiTextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
+    inline bool computeRHITextureMipLayout( RHIFormat format, uint32 width, uint32 height, uint32 mip, RHITextureMipSpan& outSpan )
     {
-        const RHIFormatBlockInfo info = getRhiFormatBlockInfo( format );
+        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
         if ( info._blockBytes == 0 || width == 0 || height == 0 )
             return false;
         const uint32 mipWidth  = ( width >> mip ) > 0 ? ( width >> mip ) : 1u;
@@ -871,7 +871,7 @@ namespace sw
         for ( uint32 mip = 0; mip < mipCount; ++mip )
         {
             RHITextureMipSpan& span = pOutSpan[mip];
-            if ( computeRhiTextureMipLayout( format, width, height, mip, span ) == false )
+            if ( computeRHITextureMipLayout( format, width, height, mip, span ) == false )
                 return 0;
             if ( offset + span._sizeBytes > desc._sizeBytes )
                 return 0;

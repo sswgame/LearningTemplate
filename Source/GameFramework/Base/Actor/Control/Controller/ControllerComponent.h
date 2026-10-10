@@ -19,13 +19,13 @@ namespace sw
 
     class InputManager;
     class PawnComponent;
-    class UiSystem;
+    class UISystem;
 
     /** @brief 조종 시스템이 조종자에게 넘기는 이번 틱의 문맥입니다. */
     struct ControlFrameContext
     {
         InputManager*   _pInput{ nullptr };    ///< 플레이어 조종자가 읽는 입력(없을 수 있다 — 서버 · 헤드리스)
-        const UiSystem* _pUiSystem{ nullptr }; ///< 런타임 UI — 먹은 입력 · 게임 입력 막기 · 커서를 플레이어 조종자가 본다(없을 수 있다 — 서버)
+        const UISystem* _pUISystem{ nullptr }; ///< 런타임 UI — 먹은 입력 · 게임 입력 막기 · 커서를 플레이어 조종자가 본다(없을 수 있다 — 서버)
         float32         _deltaTime{ 0.0f };
         uint32          _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
     };

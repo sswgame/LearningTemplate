@@ -345,13 +345,13 @@ namespace sw
     RHIDescriptorIndex CanvasRenderer::findTextureSrv( const CanvasTextureRef& texture ) const
     {
         if ( texture._texture != nullptr )
-            return texture._texture->isRhiValid() ? texture._texture->getSrv() : kInvalidDescriptorIndex;
+            return texture._texture->isRHIValid() ? texture._texture->getSrv() : kInvalidDescriptorIndex;
         if ( texture._texturePath.empty() == false )
         {
             for ( const PathTexture& pathTexture : _listPathTexture )
             {
                 if ( pathTexture._path == texture._texturePath )
-                    return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRhiValid() ? pathTexture._pTexture->getSrv() : kInvalidDescriptorIndex;
+                    return pathTexture._pTexture != nullptr && pathTexture._pTexture->isRHIValid() ? pathTexture._pTexture->getSrv() : kInvalidDescriptorIndex;
             }
             return kInvalidDescriptorIndex;
         }

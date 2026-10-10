@@ -119,12 +119,12 @@ namespace sw
             WidgetComponent* pMarker = pNumber->addComponent<WidgetComponent>();
             if ( pMarker != nullptr )
                 pMarker->setPivot( float2{ 0.5f, 0.5f } );
-            DamageNumberComponent* pNumberUi = pNumber->addComponent<DamageNumberComponent>();
-            if ( pNumberUi == nullptr )
+            DamageNumberComponent* pNumberUI = pNumber->addComponent<DamageNumberComponent>();
+            if ( pNumberUI == nullptr )
                 return;
-            pNumberUi->setLifeTime( kSpawnedLifeTime );
-            pNumberUi->setFloatSpeed( kSpawnedFloatSpeed );
-            pNumberUi->setDamageValue( value );
+            pNumberUI->setLifeTime( kSpawnedLifeTime );
+            pNumberUI->setFloatSpeed( kSpawnedFloatSpeed );
+            pNumberUI->setDamageValue( value );
         } ) );
     }
 

@@ -1,7 +1,7 @@
 {
     "_name": "RHI_DX12",
     "_version": "1.0.0",
-    "_kind": "Rhi",
+    "_kind": "RHI",
     "_description": "Direct3D 12 백엔드(Dev 의 MODULE — 배포본은 SW_SHIPPING_RHI_BACKEND 하나를 Engine 에 정적 링크)",
     "_listDependency": [],
     "_listPlatform": [

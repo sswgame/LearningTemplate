@@ -220,14 +220,14 @@ namespace sw
             _editorAPI.getSceneViewport( _editor, &scene._renderTarget, &scene._width, &scene._height );
     }
 
-    void EditorModuleHost::updateEditorUi( float32 /*deltaTime*/ )
+    void EditorModuleHost::updateEditorUI( float32 /*deltaTime*/ )
     {
         SW_MEMORY_SCOPE( Editor );
         if ( hasEditor() == false )
             return;
 
-        if ( _editorAPI.updateUi != nullptr )
-            _editorAPI.updateUi( _editor );
+        if ( _editorAPI.updateUI != nullptr )
+            _editorAPI.updateUI( _editor );
 
         // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
@@ -350,9 +350,9 @@ namespace sw
     }
 #endif
 
-    bool EditorModuleHost::reinitializeAfterRhiSwap( void* pEditorModule, void* pGameModule )
+    bool EditorModuleHost::reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule )
     {
-        RHI* const pRHI = getRhi();
+        RHI* const pRHI = getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return false;
 
@@ -399,6 +399,6 @@ namespace sw
     bool EditorModuleHost::createEditorInstance()
     {
         SW_MEMORY_SCOPE( Editor );
-        return ModuleInstanceUtil::createInstance( _editorAPI, _editor, getWindow(), getRhi(), true, "Editor" );
+        return ModuleInstanceUtil::createInstance( _editorAPI, _editor, getWindow(), getRHI(), true, "Editor" );
     }
 } // namespace sw

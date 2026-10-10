@@ -25,7 +25,7 @@ namespace test
 namespace test
 {
     /**
-     * @brief 되읽은 이미지 한 장(`RenderPassGpuTest`).
+     * @brief 되읽은 이미지 한 장(`RenderPassGPUTest`).
      * @details `getPixel` 이 RGBA 로 준다 — 되읽기 · 행 포인터 계산 · BGRA 뒤집기를 케이스마다 손으로 들면, 백엔드마다 스왑체인 형식이
      *          달라 뒤집기를 한 곳이라도 빠뜨릴 때 그 백엔드에서만 빨강과 파랑이 바뀐다.
      *          반정밀도 첨부(`R16G16B16A16_FLOAT`)는 [0,1] 로 잘라 0~255 로 환산한다 — 두 판을 같은 규칙으로 견주는 데 쓴다.
@@ -47,7 +47,7 @@ namespace test
         /** @brief 픽셀 하나의 **저장된 그대로의** 바이트(`getBytesPerPixel` 개) — 형식을 풀지 않고 값이 같은지만 볼 때. 범위 밖이면 널. */
         const uint8* getRawPixel( uint32 x, uint32 y ) const;
         /** @brief 저장 형식의 픽셀당 바이트 수. */
-        uint32 getBytesPerPixel() const { return sw::getRhiFormatBytesPerPixel( _format ); }
+        uint32 getBytesPerPixel() const { return sw::getRHIFormatBytesPerPixel( _format ); }
 
         uint32        getWidth() const { return _layout._width; }
         uint32        getHeight() const { return _layout._height; }

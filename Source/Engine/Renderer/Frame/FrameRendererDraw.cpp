@@ -97,8 +97,8 @@ namespace sw
         // 컬링이 실제로 목록을 만들었을 때만 건다. 안 걸리면 셰이더가 g_SwVisibleInstanceIdsIndex 로 알아채고
         // 배치 시작 + 서수를 쓴다(컬링 없음 경로). 반대로 목록만 걸고 컬링을 안 돌리면 **비어 있는
         // 목록**을 읽어 모두 0 번 인스턴스를 그린다. 그래서 둘은 반드시 같이 켜지고 같이 꺼진다.
-        const GpuCullViewResources& cullView = _gpuScene.getCullView( ctx._cullViewIndex );
-        if ( _bGpuCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
+        const GPUCullViewResources& cullView = _gpuScene.getCullView( ctx._cullViewIndex );
+        if ( _bGPUCullingActive != SW_FALSE && cullView._visibleInstances._buffer != 0 &&
              cullView._visibleInstances._srv != kInvalidDescriptorIndex )
         {
             ctx._resourceRegistry.registerBuffer( passConstantNames()._swVisibleInstanceIds,
@@ -116,7 +116,7 @@ namespace sw
         ctx._resourceRegistry.registerBuffer( passConstantNames()._swLights, buffer._buffer, buffer._srv );
     }
 
-    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GpuMeshBatch& batch, RHIPipelineStateHandle pso )
+    void FrameRenderer::registerMaterialBuffer( FramePassContext& ctx, const GPUMeshBatch& batch, RHIPipelineStateHandle pso )
     {
         // 배치의 셰이더 타입에 해당하는 머티리얼 데이터 버퍼. 이름 "SwMaterials" ↔ binding.hlsli 의 g_SwMaterials(t9).
         // 바인더가 리플렉션 슬롯에 걸고, 셰이더는 인스턴스의 materialIndex 로 원소를 읽는다(드로우별 CB 바인딩 없음).
@@ -200,7 +200,7 @@ namespace sw
 
         if ( _gpuScene.isUploaded() )
         {
-            drawGpuBatches( ctx, pso, cbIndex, bTransparentPass );
+            drawGPUBatches( ctx, pso, cbIndex, bTransparentPass );
             return;
         }
 
@@ -216,7 +216,7 @@ namespace sw
         commitBindlessTextureBindings( ctx );
     }
 
-    void FrameRenderer::drawGpuBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
+    void FrameRenderer::drawGPUBatches( FramePassContext& ctx, RHIPipelineStateHandle pso, RHIDescriptorIndex cbIndex, bool bTransparentPass )
     {
         SW_PROFILE_SCOPE( "RT.Draw.gpuBatches" );
 
@@ -238,7 +238,7 @@ namespace sw
         if ( bInstanced )
             registerInstanceBuffer( ctx );
 
-        const vector<GpuMeshBatch>& batches =
+        const vector<GPUMeshBatch>& batches =
             bTransparentPass ? _gpuScene.getTransparentBatches() : _gpuScene.getOpaqueBatches();
         // 시간만 보면 무엇이 비싼지 알 수 없다. 배치가 몇 개로 묶였는지가 해석의 전제다.
         SW_PROFILE_COUNT( "RT.Draw.gpuBatchCount", batches.size() );
@@ -255,7 +255,7 @@ namespace sw
         // 백엔드(DX11)는 하나씩 부른다. 드로우 루프의 비용은 호출 수라, 배치가 많은 씬에서는 RT 프레임의 큰 몫이 된다.
         const bool bMerge = isDrawMergeEnabled() && _pDevice->getCapabilities()._bMultiDrawIndirect != SW_FALSE;
 
-        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GpuMeshBatch::canShareMaterialBinding`).
+        // 머티리얼 CB 는 그 슬롯을 실제로 거는 셰이더에서만 병합 키다(`GPUMeshBatch::canShareMaterialBinding`).
         auto layoutBindsMaterialCb = [this]( RHIPipelineStateHandle batchPSO ) -> bool
         {
             const ShaderBindingLayout* pLayout = layoutForPSO( batchPSO );
@@ -272,7 +272,7 @@ namespace sw
 
         // 패스가 머티리얼로 배치를 거르면(메시 외곽선 — 외곽선을 켠 머티리얼만) 그 밖의 배치는 그리지도 묶지도 않는다.
         const RenderPassType passType      = ctx._passType;
-        auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GpuMeshBatch& head, const GpuMeshBatch& other ) -> bool
+        auto                 sameDrawGroup = [this, pso, passType, &layoutBindsMaterialCb]( const GPUMeshBatch& head, const GPUMeshBatch& other ) -> bool
         {
             if ( other._vertexBuffer == 0 || other._instanceCount == 0 || drawsBatchInPass( passType, other ) == false )
                 return false;
@@ -280,11 +280,11 @@ namespace sw
                 return false;
             // 레이아웃을 보는 것은 CB 가 다를 때만(대부분 같다).
             const bool bCbDiffers = other._materialCb != head._materialCb;
-            return GpuMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
+            return GPUMeshBatch::canShareMaterialBinding( head, other, bCbDiffers && layoutBindsMaterialCb( psoForBatch( pso, head ) ) );
         };
 
         const RHIBufferHandle argsBuffer = _gpuScene.getCullView( ctx._cullViewIndex )._indirectArgs._buffer;
-        // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GpuViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
+        // 추가 뷰의 투명 패스는 그 뷰의 순서로 배치를 돈다(GPUViewTransparentOrder). 묶기는 그 순서에서 이웃이고 번호도 이어진 것만 — 간접 인자는 번호 순으로 놓여 있다.
         const bool            bExtraView = isRenderingExtraView();
         const vector<uint32>* pOrder =
             ( bTransparentPass && bExtraView && _pActiveView->_listTransparentBatchOrder.size() == batches.size() ) ? &_pActiveView->_listTransparentBatchOrder : nullptr;
@@ -301,7 +301,7 @@ namespace sw
         while ( orderIndex < batchCount )
         {
             const uint32        batchIndex = ( pOrder != nullptr ) ? ( *pOrder )[orderIndex] : orderIndex;
-            const GpuMeshBatch& head       = batches[batchIndex];
+            const GPUMeshBatch& head       = batches[batchIndex];
             if ( head._vertexBuffer == 0 || head._instanceCount == 0 || drawsBatchInPass( passType, head ) == false )
             {
                 ++orderIndex;

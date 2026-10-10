@@ -2,7 +2,7 @@
 
 #include "Editor/Popups/EditorPopupManager.h"
 
-#include "Editor/Common/Gui/IEditorPopup.h"
+#include "Editor/Common/GUI/IEditorPopup.h"
 
 namespace sw::editor
 {

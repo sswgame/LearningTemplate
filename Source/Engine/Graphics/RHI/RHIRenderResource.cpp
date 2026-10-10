@@ -75,7 +75,7 @@ namespace sw
         registryInternal().erase( this );
     }
 
-    bool RHIRenderResource::initRhi( IRHIDevice* )
+    bool RHIRenderResource::initRHI( IRHIDevice* )
     {
         // 기본은 아무것도 하지 않는다. 그릴 때 알아서 다시 올라가는 리소스는 여기 낄 이유가 없다.
         return true;
@@ -96,7 +96,7 @@ namespace sw
             return;
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            pResource->releaseRhi( pDevice );
+            pResource->releaseRHI( pDevice );
         } );
     }
 
@@ -106,7 +106,7 @@ namespace sw
             return;
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            pResource->forgetRhi( pDevice );
+            pResource->forgetRHI( pDevice );
         } );
     }
 
@@ -117,7 +117,7 @@ namespace sw
         // 실패는 각자가 자기 자리에서 로그로 남긴다. 여기서 세어 봐야 어느 리소스인지 모르는 한 줄만 는다.
         broadcastInternal( [pDevice]( RHIRenderResource* pResource )
         {
-            (void)pResource->initRhi( pDevice );
+            (void)pResource->initRHI( pDevice );
         } );
     }
 } // namespace sw

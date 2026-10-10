@@ -1,6 +1,6 @@
 /**
  * @file ProfilerTestUtil.h
- * @brief 외부 프로파일러 출력을 흉내 내는 기록용 출력입니다(`ProfilerBackendTest` · `GpuTimelineExporterTest`).
+ * @brief 외부 프로파일러 출력을 흉내 내는 기록용 출력입니다(`ProfilerBackendTest` · `GPUTimelineExporterTest`).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -54,26 +54,26 @@ namespace test
         void onAllocate( const void*, size_t, const utf8* ) override {}
         void onFree( const void*, const utf8* ) override {}
 
-        uint32 createGpuContext( sw::ProfilerGraphicsAPI, const utf8* pName, int64 gpuNanos ) override
+        uint32 createGPUContext( sw::ProfilerGraphicsAPI, const utf8* pName, int64 gpuNanos ) override
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "context " ) + ( pName != nullptr ? pName : "" ) + "@" + sw::to_string( gpuNanos ) );
             return _gpuContextCount++;
         }
 
-        void syncGpuClock( uint32, int64 gpuNanos ) override
+        void syncGPUClock( uint32, int64 gpuNanos ) override
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "sync@" ) + sw::to_string( gpuNanos ) );
         }
 
-        void beginGpuZone( uint32, const sw::ProfileZoneSite& site, int64 gpuBeginNanos ) override
+        void beginGPUZone( uint32, const sw::ProfileZoneSite& site, int64 gpuBeginNanos ) override
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "+" ) + site._pName + "@" + sw::to_string( gpuBeginNanos ) );
         }
 
-        void endGpuZone( uint32, int64 gpuEndNanos ) override
+        void endGPUZone( uint32, int64 gpuEndNanos ) override
         {
             std::scoped_lock<sw::mutex> lock{ _mutex };
             _listEvent.push_back( sw::string( "-@" ) + sw::to_string( gpuEndNanos ) );

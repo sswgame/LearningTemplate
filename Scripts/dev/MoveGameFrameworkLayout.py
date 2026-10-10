@@ -102,9 +102,9 @@ _kStep2: list[Dir | Files] = [
 # CardGame 은 게임별 하위 폴더 — DLL 은 그대로 하나다.
 # ------------------------------------------------------------------------------
 _kStep3: list[Dir | Files] = [
-    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Catalog", "WesternCatalog"),
-    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Component", "HorseFollowAIController WesternHorseMountComponent"),
-    filesInternal("Kits/Rpg/OpenWorldWestern", "Kits/Rpg/OpenWorldWestern/Rule", "WesternHonor WesternHorse WesternHunting WesternLaw WesternSurvival"),
+    filesInternal("Kits/RPG/OpenWorldWestern", "Kits/RPG/OpenWorldWestern/Catalog", "WesternCatalog"),
+    filesInternal("Kits/RPG/OpenWorldWestern", "Kits/RPG/OpenWorldWestern/Component", "HorseFollowAIController WesternHorseMountComponent"),
+    filesInternal("Kits/RPG/OpenWorldWestern", "Kits/RPG/OpenWorldWestern/Rule", "WesternHonor WesternHorse WesternHunting WesternLaw WesternSurvival"),
     filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Klondike", "KlondikeGame"),
     filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Matgo", "MatgoGame HwatuDeck"),
     filesInternal("Kits/Casual/CardGame", "Kits/Casual/CardGame/Poker", "PokerHand PokerTable"),
@@ -115,8 +115,8 @@ _kStep3: list[Dir | Files] = [
     filesInternal("Kits/Simulation/Voxel", "Kits/Simulation/Voxel/View", "VoxelMesher"),
     filesInternal("Kits/Action/ActionAdventure", "Kits/Action/ActionAdventure/Rule",
                   "AdventureCooking AdventureDungeon AdventureElementGrid AdventureTargeting AdventureVitals AdventureWeaponWear AdventureWorldMap"),
-    filesInternal("Kits/Rpg/WitcherRpg", "Kits/Rpg/WitcherRpg/Catalog", "WitcherCatalog"),
-    filesInternal("Kits/Rpg/WitcherRpg", "Kits/Rpg/WitcherRpg/Rule", "WitcherAlchemy WitcherBestiary WitcherCombat WitcherContract WitcherMutagens"),
+    filesInternal("Kits/RPG/WitcherRpg", "Kits/RPG/WitcherRpg/Catalog", "WitcherCatalog"),
+    filesInternal("Kits/RPG/WitcherRpg", "Kits/RPG/WitcherRpg/Rule", "WitcherAlchemy WitcherBestiary WitcherCombat WitcherContract WitcherMutagens"),
     filesInternal("Kits/Online/Server/Matchmaking", "Kits/Online/Server/Matchmaking/Service",
                   "MatchQueueService PartyLobbyService MatchmakingServer MatchServerAgent"),
     filesInternal("Kits/Online/Server/Matchmaking", "Kits/Online/Server/Matchmaking/Rule", "MatchMaker CacheRecordUpdater"),
@@ -149,9 +149,9 @@ _kStep3: list[Dir | Files] = [
 # 장르 그룹에 있던 기능 키트(타일 월드 Overworld · 복셀 Voxel)는 Feature/World 로 — 하위 폴더 줄을 그룹 줄보다 먼저 적는다.
 # ------------------------------------------------------------------------------
 _kStep4: list[Dir | Files] = [
-    Dir("Kits/Rpg/Overworld", "Kits/Feature/World/Overworld"),
+    Dir("Kits/RPG/Overworld", "Kits/Feature/World/Overworld"),
     Dir("Kits/Simulation/Voxel", "Kits/Feature/World/Voxel"),
-    *[Dir(f"Kits/{group}", f"Kits/Genre/{group}") for group in ("Action", "Casual", "Horror", "Rpg", "Simulation", "Strategy")],
+    *[Dir(f"Kits/{group}", f"Kits/Genre/{group}") for group in ("Action", "Casual", "Horror", "RPG", "Simulation", "Strategy")],
     *[Dir(f"Kits/{group}", f"Kits/Feature/{group}") for group in ("Network", "Online", "Storage")],
 ]
 
@@ -203,7 +203,7 @@ def buildMapInternal(listEntry: list[Dir | Files], setTracked: set[str]) -> tupl
                 # 이 단계의 다른(또는 같은) 줄이 옮겨 둔 새 자리 안이면 옛 파일이 아니다(World → World/World 처럼 새 자리가 옛 자리 안).
                 if any(path.startswith(newDir + "/") for newDir in listNewDir):
                     continue
-                # 앞 줄이 이미 옮긴 하위 폴더(Rpg/Overworld 를 Rpg 보다 먼저 적는다).
+                # 앞 줄이 이미 옮긴 하위 폴더(RPG/Overworld 를 RPG 보다 먼저 적는다).
                 if path in mapFile:
                     continue
                 newPath = entry.new + path[len(entry.old):]

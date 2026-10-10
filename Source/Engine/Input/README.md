@@ -25,7 +25,7 @@ flowchart LR
   Devices --> Map["InputMap<br/>액션 평가"]
   Map --> Player["플레이어 조종자<br/>(GameFramework)"]
   Player --> Intent["ControlIntent"] --> Pawn["폰"]
-  Map --> UI["UiSystem<br/>UI 행동 맵"]
+  Map --> UI["UISystem<br/>UI 행동 맵"]
 ```
 
 이 그림에서 기억할 개념은 네 가지입니다.
@@ -158,11 +158,11 @@ inputMap.popLayer();
 
 런타임 UI는 게임 맵과 별도로 UI 행동 맵(`engine/input/ui.input.xml`)을 씁니다. UI도 키를 직접 보지 않고 `UI.Accept`, `UI.Back` 같은 액션을 받습니다.
 UI가 어떤 액션에 쓴 물리 입력은 뗄 때까지 **소비된** 입력이 됩니다. 플레이어 조종자는 소비된 입력을 의도에 넣지 않으므로, 메뉴에서 누른 패드 A가 점프가 되지 않습니다.
-`InputMap` 자체에는 소비 기능이 없고, 소비 여부는 `UiSystem::isActionConsumed` 로 묻습니다. 자세한 내용은 [UI](../UI/README.md)의 입력 절에 있습니다.
+`InputMap` 자체에는 소비 기능이 없고, 소비 여부는 `UISystem::isActionConsumed` 로 묻습니다. 자세한 내용은 [UI](../UI/README.md)의 입력 절에 있습니다.
 
 ### 키보드 포커스
 
-`InputManager::setKeyboardFocus` 는 키보드를 누가 받는지 정합니다. 값은 `Game`(기본값), `DevConsole`, `Ui` 세 가지입니다. `Ui` 는 런타임 UI의 글 입력 필드가 잡습니다.
+`InputManager::setKeyboardFocus` 는 키보드를 누가 받는지 정합니다. 값은 `Game`(기본값), `DevConsole`, `UI` 세 가지입니다. `UI` 는 런타임 UI의 글 입력 필드가 잡습니다.
 포커스가 `Game` 이 아니면 게임 쪽 키 조회와 `InputMap` 의 키보드 바인딩이 모두 "안 눌림"이 됩니다. 장치 상태(`getKeyboard()`)는 그대로 갱신됩니다.
 
 포커스를 넘긴 동안 눌린 키는 포커스가 돌아온 뒤에도 **뗄 때까지** 가립니다. 개발 콘솔을 닫은 Esc가 게임의 일시정지로 새지 않게 하기 위해서입니다.

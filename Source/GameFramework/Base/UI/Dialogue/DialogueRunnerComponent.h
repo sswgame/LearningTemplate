@@ -14,7 +14,7 @@ namespace sw
     struct DialogueStepInput;
 
     class GameFlags;
-    class UiSystem;
+    class UISystem;
 
     ENUM()
     enum class DialogueRunnerState : uint8
@@ -88,7 +88,7 @@ namespace sw
         /** @brief Branch 조건 · `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다(빌려 씁니다 — 러너보다 오래 살아야 합니다). nullptr 이면 모든 플래그가 0 입니다. */
         void setFlags( GameFlags* pFlags );
         /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다(시험 — nullptr 이면 엔진 서비스). 빌려 씁니다. */
-        void setUiSystem( UiSystem* pUiSystem ) { _pUiSystemOverride = pUiSystem; }
+        void setUISystem( UISystem* pUISystem ) { _pUISystemOverride = pUISystem; }
 
         DialogueRunnerState   getState() const;
         int32                 getCurrentNodeId() const;
@@ -132,7 +132,7 @@ namespace sw
 
         DialogueGraphAsset     _graph;
         GameFlags*             _pFlags;
-        UiSystem*              _pUiSystemOverride; ///< 자막을 보낼 UI(시험), nullptr 이면 엔진 서비스
+        UISystem*              _pUISystemOverride; ///< 자막을 보낼 UI(시험), nullptr 이면 엔진 서비스
         string                 _currentSpeaker;
         string                 _currentText;
         vector<string>         _listCurrentChoice;

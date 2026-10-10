@@ -13,7 +13,7 @@ namespace sw
 {
     /** @brief 탐색 방향입니다. Next · Previous 는 탭 순서(문서 순서)입니다. */
     ENUM()
-    enum class UiNavigationDirection : uint8
+    enum class UINavigationDirection : uint8
     {
         Up,
         Down,
@@ -28,7 +28,7 @@ namespace sw
 {
     /** @brief 한 방향의 규칙입니다(언리얼 EUINavigationRule). */
     ENUM()
-    enum class UiNavigationRule : uint8
+    enum class UINavigationRule : uint8
     {
         Escape,  ///< 여기서 정하지 않는다 — 조상에게 넘긴다(기본)
         Stop,    ///< 이 위젯(패널이면 그 안)에서만 찾고, 없으면 그 자리에 선다
@@ -46,7 +46,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( DisplayName = "Rule" )
-        UiNavigationRule _rule{ UiNavigationRule::Escape };
+        UINavigationRule _rule{ UINavigationRule::Escape };
         PROPERTY( DisplayName = "Target", Tooltip = "Widget name for the Explicit rule" )
         hashed_string _target{};
     };
@@ -76,6 +76,6 @@ namespace sw
         PROPERTY( DisplayName = "Previous" )
         WidgetNavigationEntry _previous{};
 
-        const WidgetNavigationEntry& getEntry( UiNavigationDirection direction ) const;
+        const WidgetNavigationEntry& getEntry( UINavigationDirection direction ) const;
     };
 } // namespace sw

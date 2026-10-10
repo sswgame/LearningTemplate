@@ -169,10 +169,10 @@ namespace sw
                         info._flags          = Flag::kDepthTest | kSceneColorPassFlags;
                         break;
                     }
-                    case RenderPassType::GpuCull:
+                    case RenderPassType::GPUCull:
                     {
-                        info._pDefaultShader = &EngineDefaultAssets::_shaderGpuCull;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGpuCulling;
+                        info._pDefaultShader = &EngineDefaultAssets::_shaderGPUCull;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassType::InstanceAnim:
@@ -186,7 +186,7 @@ namespace sw
                     {
                         // 컬링이 압축한 가시 목록을 정렬하므로 컬링과 같은 조건이다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderInstanceSort;
-                        info._flags          = Flag::kCompute | Flag::kRequiresGpuCulling;
+                        info._flags          = Flag::kCompute | Flag::kRequiresGPUCulling;
                         break;
                     }
                     case RenderPassType::MeshMorph:
@@ -246,7 +246,7 @@ namespace sw
                     // 컴퓨트 패스는 파이프라인 XML 에 나오지 않고 그래픽스 성질을 갖지 않는다.
                     if ( row.hasFlag( Flag::kCompute ) && ( isPipelinePassType( row._type ) || row.hasFlag( Flag::kDrawsSceneMeshes | Flag::kGenericFullscreen ) ) )
                         return false;
-                    if ( row.hasFlag( Flag::kRequiresGpuCulling ) && row.hasFlag( Flag::kCompute ) == false )
+                    if ( row.hasFlag( Flag::kRequiresGPUCulling ) && row.hasFlag( Flag::kCompute ) == false )
                         return false;
                     // 대신할 PSO 는 대신하지 않는 패스여야 한다(사슬을 따라가지 않는다).
                     if ( row._psoFallbackType != RenderPassType::Invalid &&

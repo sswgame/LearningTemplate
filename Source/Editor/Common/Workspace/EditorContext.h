@@ -2,7 +2,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
 #include "Editor/Viewport/EditorViewTargetUtil.h"
 
@@ -81,8 +81,8 @@ namespace sw::editor
         InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
 
-        void        setRhiDevice( IRHIDevice* pDevice ) { _pRhiDevice = pDevice; }
-        IRHIDevice* getRhiDevice() const { return _pRhiDevice; }
+        void        setRHIDevice( IRHIDevice* pDevice ) { _pRHIDevice = pDevice; }
+        IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
         void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
         /** @brief ImGui 렌더러 백엔드입니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
         IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
@@ -125,7 +125,7 @@ namespace sw::editor
         unique_ptr<EditorSourceControl>       _pSourceControl;
         unique_ptr<InspectorComponentManager> _pInspectorComponentManager;
         unique_ptr<InspectorPropertyManager>  _pInspectorPropertyManager;
-        IRHIDevice*                           _pRhiDevice;
+        IRHIDevice*                           _pRHIDevice;
         EditorDockLayout*                     _pDockLayout;
         IImGuiRendererBackend*                _pRendererBackend;
         EditorViewTarget                      _arrViewTarget[static_cast<uint32>( EditorViewKind::Count )];

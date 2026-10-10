@@ -124,7 +124,7 @@ _kRootLayerName = "<root>"
 # 아래층이 드는" 모양이다 — Object 가 SceneManager 에게 활성 씬을 묻거나, RHI 디바이스가 렌더 패스 에셋 캐시를
 # 소유하거나, RHI 가 IWindow 전역을 읽는 식. 처방은 Source/Engine/README.md "상용 엔진과의 대조".
 #
-# `Renderer`(FrameRenderer · RenderGraph · GpuScene · RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라
+# `Renderer`(FrameRenderer · RenderGraph · GPUScene · RenderThread · Cook)는 씬과 컴포넌트를 **읽어서 그리는 쪽**이라
 # 그 위이고, `Graphics`(RHI · Shader · Material · Mesh · Texture · Upload)는 컴포넌트가 드는 **디바이스와 GPU 에셋**이라
 # 그 아래다 — 언리얼의 RHI/RenderCore 와 Renderer 사이의 선이다. 그래서 RHI · Shader 가 Renderer 를 include 하면 실패한다.
 # ------------------------------------------------------------------------------

@@ -48,7 +48,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderRecompiler.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
-#include "Engine/Graphics/Upload/GpuUploadQueue.h"
+#include "Engine/Graphics/Upload/GPUUploadQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -73,9 +73,9 @@
 #include "Engine/Renderer/Frame/RenderFramePacket.h"
 #include "Engine/Renderer/Frame/RenderViewCollector.h"
 #include "Engine/Renderer/Frame/RenderViewScheduler.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/AssetDatabase.h"
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
@@ -89,7 +89,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 #include "Engine/Text/FontSystem.h"
 #include "Engine/Text/GlyphCache.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UserSettings/HardwareProbe.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -625,10 +625,10 @@ namespace sw
             loop._rhi = make_unique<RHI>();
             loop._rhi->setPreferredVSync( display._bHasVSync ? display._bVSync : loop._pEngineConfig->_window._bVSync );
             // RHI 는 창 시스템을 모른다. 표면(IRenderSurface)만 넘긴다. 창은 위에서 만들었거나 호스트가 들고 있다.
-            const bool bRhiReady = loop._rhi->initialize( IWindow::getActiveWindow() );
+            const bool bRHIReady = loop._rhi->initialize( IWindow::getActiveWindow() );
             // 단계가 내려가면(destroy 는 모든 단계를 돈다) _rhi 가 사라진다 — 실패의 이유를 그 전에 남긴다. App 이 이것으로 종료 코드를 고른다.
             loop._rhiInitResult = loop._rhi->getInitResult();
-            if ( bRhiReady == false )
+            if ( bRHIReady == false )
                 return EngineInitResult::Failed;
             // 백엔드가 정해졌으니 크래시 리포트에 남긴다. 이 저장소는 백엔드가 넷이라 "어느
             // 백엔드에서 났는가" 가 범위를 좁히는 첫 질문이다.
@@ -647,7 +647,7 @@ namespace sw
             if ( loop._rhi->hasDevice() )
                 loop._rhi->getDevice().waitIdle();
             // GPU 자원을 든 객체들은 여기서 손으로 훑지 않는다. IRHIDevice::shutdown 이 내려가기 직전에
-            // 등록부 전체에 releaseRhi 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
+            // 등록부 전체에 releaseRHI 를 부른다(RHIRenderResource). 백엔드 모듈 DLL 도 여기서 내린다.
             loop._rhi->shutdown();
         }
         // 종료가 디바이스와 백엔드 모듈을 이미 내렸다. 남은 것은 디바이스가 없는 팩토리 객체다.
@@ -661,14 +661,14 @@ namespace sw
             // 씬 스냅샷 · 패킷 · 업로드 큐는 그리는 쪽의 것이다. 렌더러를 세우지 않는 헤드리스 작업에는 없다.
             // 백엔드 교체로 다시 설 때(`restartStoppedSteps`)는 있는 것을 그대로 쓰고, 디바이스에 매인 설정만 새로 건다.
             if ( loop._gpuSceneBuilder == nullptr )
-                loop._gpuSceneBuilder = make_unique<GpuSceneBuilder>();
+                loop._gpuSceneBuilder = make_unique<GPUSceneBuilder>();
             if ( loop._packetScratch == nullptr )
                 loop._packetScratch = make_unique<RenderFramePacket>();
             if ( loop._gpuUploadQueue == nullptr )
-                loop._gpuUploadQueue = make_unique<GpuUploadQueue>();
+                loop._gpuUploadQueue = make_unique<GPUUploadQueue>();
             if ( loop._renderViewScheduler == nullptr )
                 loop._renderViewScheduler = make_unique<RenderViewScheduler>();
-            // GT 쪽 GpuScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
+            // GT 쪽 GPUScene 이 배치를 만든다. 텍스처를 인덱스로 고를 수 있는 백엔드면 머티리얼이 달라도
             // 셰이더 타입 단위로 합친다(언리얼 GPUScene).
             loop._gpuSceneBuilder->setMergeBatchesAcrossMaterials( loop._rhi->getDevice().supportsNativeBindlessSampling() );
             loop._gpuUploadQueue->bindDevice( &loop._rhi->getDevice(), loop._owned._pTaskManager.get() );
@@ -682,7 +682,7 @@ namespace sw
         }
         static void shutdown( EngineLoop& loop )
         {
-            // GT 쪽 GpuScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
+            // GT 쪽 GPUScene 도 스냅샷의 소유(머티리얼 · 인스턴스)를 들고 있다. 렌더러와 같은 시점에, **디바이스가 살아 있을 때** 놓는다.
             // 해제(destroy)까지 미루면 디바이스가 사라진 뒤에 놓게 된다.
             loop._gpuSceneBuilder->clear();
             loop._frameRenderer->shutdown();
@@ -766,15 +766,15 @@ namespace sw
         }
     };
 
-    struct EngineLoop::SceneRhiStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::SceneRHIStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
-            loop._owned._pSceneManager->setRhiDevice( &loop._rhi->getDevice() );
+            loop._owned._pSceneManager->setRHIDevice( &loop._rhi->getDevice() );
             return EngineInitResult::Succeeded;
         }
         // 종료는 씬에서 디바이스를 떼는 것이 처음이다(표의 마지막 줄).
-        static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRhiDevice( nullptr ); }
+        static void shutdown( EngineLoop& loop ) { loop._owned._pSceneManager->setRHIDevice( nullptr ); }
     };
 
     struct EngineLoop::TelemetryStartupStep : EngineInitStepDefaults<EngineLoop>
@@ -829,7 +829,7 @@ namespace sw
         }
     };
 
-    struct EngineLoop::UiStartupStep : EngineInitStepDefaults<EngineLoop>
+    struct EngineLoop::UIStartupStep : EngineInitStepDefaults<EngineLoop>
     {
         static EngineInitResult initialize( EngineLoop& loop )
         {
@@ -839,10 +839,10 @@ namespace sw
             const string               scalePath     = gameConfig._uiScaleSettings.empty()
                                                          ? string( defaultAssets._uiScaleSettings )
                                                          : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiScaleSettings );
-            UiScaleSettings            scaleSettings{};
+            UIScaleSettings            scaleSettings{};
             if ( scaleSettings.loadFromResource( scalePath ) == false )
                 return EngineInitResult::Failed;
-            UiSystem& ui = *loop._owned._pUiSystem;
+            UISystem& ui = *loop._owned._pUISystem;
             ui.setScaleSettings( scaleSettings );
             // UI 행동 맵(탐색 · 확인 · 뒤로)을 못 읽으면 메뉴를 패드로 다룰 수 없다 — 데이터 오류라 기동 실패다.
             if ( ui.initialize( *loop._owned._pInputManager, loop._owned._pFontSystem.get(), defaultAssets._uiInputMap ) == false )
@@ -853,7 +853,7 @@ namespace sw
             // 테마 목록 — 게임 프리셋이 덮어쓰면 그것, 아니면 엔진 기본. 모르는 키는 기동 오류다(배율 규칙과 같다).
             const string   themePath = gameConfig._uiThemes.empty() ? string( defaultAssets._uiThemes )
                                                                     : FileUtil::joinPath( FileUtil::trimTrailingSlashes( gameConfig._packRoot ), gameConfig._uiThemes );
-            UiThemeCatalog themes{};
+            UIThemeCatalog themes{};
             if ( themes.loadFromResource( themePath ) == false )
                 return EngineInitResult::Failed;
             ui.setThemeCatalog( themes );
@@ -861,19 +861,19 @@ namespace sw
             const string packRoot = FileUtil::trimTrailingSlashes( gameConfig._packRoot );
             ui.setOptionsMenuDocument( gameConfig._uiOptionsMenu.empty() ? string( defaultAssets._uiOptionsMenu )
                                                                          : FileUtil::joinPath( packRoot, gameConfig._uiOptionsMenu ) );
-            if ( gameConfig._bUiPauseMenu )
+            if ( gameConfig._bUIPauseMenu )
                 ui.setPauseMenuDocument( gameConfig._uiPauseMenu.empty() ? string( defaultAssets._uiPauseMenu )
                                                                          : FileUtil::joinPath( packRoot, gameConfig._uiPauseMenu ) );
             return EngineInitResult::Succeeded;
         }
         static void shutdown( EngineLoop& loop )
         {
-            UiSystem& ui = *loop._owned._pUiSystem;
+            UISystem& ui = *loop._owned._pUISystem;
             loop._owned._pAssetManager->unregisterAssetCache( &ui.getStyleSheetCache() );
             loop._owned._pAssetManager->unregisterAssetCache( &ui.getDocumentCache() );
             ui.shutdown();
         }
-        static void destroy( EngineLoop& loop ) { loop._owned._pUiSystem.reset(); }
+        static void destroy( EngineLoop& loop ) { loop._owned._pUISystem.reset(); }
     };
 
     EngineLoop::EngineLoop()
@@ -960,7 +960,7 @@ namespace sw
 #endif
             // 렌더러는 서비스 표에 실리므로(아래) 여기서 만든다. 초기화와 해제는 FrameRenderer 단계가 한다.
             {
-                SW_MEMORY_SCOPE( RenderCpu );
+                SW_MEMORY_SCOPE( RenderCPU );
                 _frameRenderer = make_unique<FrameRenderer>();
             }
 
@@ -1139,8 +1139,8 @@ namespace sw
         if ( _owned._pInputManager != nullptr )
             _owned._pInputManager->beginFrame( deltaSeconds );
         // UI 는 게임 틱보다 먼저 입력을 받는다 — UI 가 먹은 행동 · 마우스 버튼은 이번 프레임 폰의 의도에 들지 않는다(플레이어 조종자가 본다).
-        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
-            _owned._pUiSystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
+        if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
+            _owned._pUISystem->processInput( GameTimeScale::getUnscaledDeltaTime( deltaSeconds ) ); // 정지 메뉴의 탐색 반복은 실제 시간
 
         if ( gv_dumpReflection.empty() == false )
         {
@@ -1266,7 +1266,7 @@ namespace sw
 
         // 런타임 UI — 이번 프레임의 게임 상태로 애니메이션 · 스타일 · 레이아웃을 돌린다(게임 틱 뒤 · 렌더 패킷 앞). 뷰포트는 게임이 그려지는 화면이고,
         // UI 단위 크기 · 배율 · 안전 영역은 해상도 규칙과 사용자 배율(gv_uiScale)로 정한다.
-        if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
+        if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
         {
             // 뷰포트 0 은 "백버퍼 전체"(게임 창 — 패킷 · 캔버스 시험 그림과 같은 규칙)다.
             const IWindow* const pWindow      = IWindow::getActiveWindow();
@@ -1279,9 +1279,9 @@ namespace sw
                 uiWidth  = bHasDevice ? _rhi->getDevice().getBackBufferWidth() : ( pWindow != nullptr ? pWindow->getWidth() : 0 );
                 uiHeight = bHasDevice ? _rhi->getDevice().getBackBufferHeight() : ( pWindow != nullptr ? pWindow->getHeight() : 0 );
             }
-            const UiViewport viewport =
-                _owned._pUiSystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
-            _owned._pUiSystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
+            const UIViewport viewport =
+                _owned._pUISystem->computeViewport( float2{ static_cast<float32>( uiWidth ), static_cast<float32>( uiHeight ) }, contentScale );
+            _owned._pUISystem->update( GameTimeScale::getUnscaledDeltaTime( deltaTime ), viewport ); // 애니메이션 · 자막 · 알림은 정지 메뉴 아래서도 흐른다
         }
 
         // 이번 틱에 경로로 잡힌 머티리얼(메시의 저장된 참조)을 패킷을 내기 **전에** 올린다. 컴포넌트는 디바이스를 모른다(`MaterialCache::requestInitialize`).
@@ -1303,7 +1303,7 @@ namespace sw
 
         BLOCK( "RenderFramePacket 제출" )
         {
-            SW_MEMORY_SCOPE( RenderCpu );
+            SW_MEMORY_SCOPE( RenderCPU );
             RenderFramePacket& packet = *_packetScratch;
             packet.resetForFrame();
             packet._bValid = 1;
@@ -1403,26 +1403,26 @@ namespace sw
                 // 하면 된다(새 메시가 등장한 프레임에 RT 가 정점 버퍼 생성을 떠안지 않게).
                 if ( _gpuUploadQueue != nullptr )
                 {
-                    _gpuSceneBuilder->requestGpuUploads( *_gpuUploadQueue );
+                    _gpuSceneBuilder->requestGPUUploads( *_gpuUploadQueue );
                     _gpuUploadQueue->flush();
                 }
 
                 {
                     SW_PROFILE_SCOPE( "GT.Packet.export" );
-                    _gpuSceneBuilder->exportCpuSnapshot( packet._gpuScene );
+                    _gpuSceneBuilder->exportCPUSnapshot( packet._gpuScene );
                 }
             }
 
             // 캔버스(화면 2D) — 런타임 UI 가 칠한 목록(내용 번호가 같으면 렌더러가 사각형을 다시 올리지 않는다), 개발 시험 그림은 그 위에.
             // 글리프 아틀라스의 새 구간은 칠한 것이 없어도 늘 넘긴다(렌더러의 거울이 게임 스레드의 페이지와 어긋나지 않게).
             // 씬 뷰가 주 출력인 프레임은 화면 UI 를 싣지 않는다 — UI 는 게임 화면(게임 뷰 · 백버퍼)에만 있다.
-            if ( bSceneMain == false && _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() && _owned._pUiSystem->getCanvas().isEmpty() == false )
+            if ( bSceneMain == false && _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() && _owned._pUISystem->getCanvas().isEmpty() == false )
             {
-                packet._canvas._mainOutput      = _owned._pUiSystem->getCanvas();
-                packet._canvas._contentRevision = _owned._pUiSystem->getCanvasRevision();
+                packet._canvas._mainOutput      = _owned._pUISystem->getCanvas();
+                packet._canvas._contentRevision = _owned._pUISystem->getCanvasRevision();
             }
-            if ( _owned._pUiSystem != nullptr && _owned._pUiSystem->isInitialized() )
-                _owned._pUiSystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
+            if ( _owned._pUISystem != nullptr && _owned._pUISystem->isInitialized() )
+                _owned._pUISystem->collectWorldCanvases( packet._canvas._listTarget ); // 월드 공간 UI 의 렌더 텍스처
             if ( bSceneMain == false && gv_canvasTestPattern && _rhi != nullptr && _rhi->hasDevice() )
             {
                 packet._canvas._contentRevision = 0; // 시험 그림은 내용 번호가 없다 — 늘 올린다

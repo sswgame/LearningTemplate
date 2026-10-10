@@ -46,7 +46,7 @@ namespace sw
      * @class TerrainComponent
      * @brief 높이장(`.heightfield`)을 청크로 나눠 거리 LOD 메시로 그리고, 스플랫 맵(RGBA = 레이어 0..3 가중치)으로 레이어를 칠합니다.
      * @details 지형은 오너의 월드 위치에서 x · z 로 `_size` 만큼 펼쳐집니다(회전 · 크기는 보지 않습니다). 청크마다 `MeshInstanceBatch`
-     *          하나(항목 하나)를 프리미티브 등록부에 넣어 메시 컴포넌트와 같은 길(GpuScene · GPU 컬링)로 그려집니다 — 청크를 오브젝트로
+     *          하나(항목 하나)를 프리미티브 등록부에 넣어 메시 컴포넌트와 같은 길(GPUScene · GPU 컬링)로 그려집니다 — 청크를 오브젝트로
      *          만들지 않으므로 씬에 저장되지 않고 계층 창에도 없습니다. 틱마다 카메라 거리로 청크 LOD 를 고르고, LOD 나 이웃 LOD 가 바뀐
      *          청크만 메시를 다시 만들어 배치에 갈아 끼웁니다(`MeshInstanceBatch::setMesh`). 이웃이 더 거친 변은 접어 틈이 없습니다(`TerrainMeshBuilder`).
      *

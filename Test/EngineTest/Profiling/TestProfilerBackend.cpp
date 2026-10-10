@@ -167,14 +167,14 @@ SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
     tracy.markFrame( "ProfilerBackendTest.Frame" );
     SW_EXPECT_EQUAL( uint64( 1 ), tracy.getZoneCount() );
 
-    const uint32 gpuContext = tracy.createGpuContext( sw::ProfilerGraphicsAPI::Direct3D12, "ProfilerBackendTest", 1'000'000 );
-    SW_ASSERT_TRUE( gpuContext != sw::IProfilerBackend::kInvalidGpuContext );
-    tracy.beginGpuZone( gpuContext, *pSite, 1'000'100 );
-    tracy.beginGpuZone( gpuContext, *pSite, 1'000'200 );
-    tracy.endGpuZone( gpuContext, 1'000'300 );
-    tracy.endGpuZone( gpuContext, 1'000'400 );
-    tracy.syncGpuClock( gpuContext, 2'000'000 );
-    SW_EXPECT_EQUAL( uint64( 2 ), tracy.getGpuZoneCount() );
+    const uint32 gpuContext = tracy.createGPUContext( sw::ProfilerGraphicsAPI::Direct3D12, "ProfilerBackendTest", 1'000'000 );
+    SW_ASSERT_TRUE( gpuContext != sw::IProfilerBackend::kInvalidGPUContext );
+    tracy.beginGPUZone( gpuContext, *pSite, 1'000'100 );
+    tracy.beginGPUZone( gpuContext, *pSite, 1'000'200 );
+    tracy.endGPUZone( gpuContext, 1'000'300 );
+    tracy.endGPUZone( gpuContext, 1'000'400 );
+    tracy.syncGPUClock( gpuContext, 2'000'000 );
+    SW_EXPECT_EQUAL( uint64( 2 ), tracy.getGPUZoneCount() );
     SW_EXPECT_TRUE( sw::ProfilerBackend::getTracyPort() != 0 );
 }
 

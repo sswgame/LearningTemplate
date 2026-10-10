@@ -21,7 +21,7 @@
 #include "Engine/Object/GameObject/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
@@ -338,7 +338,7 @@ SW_TEST_CASE( SceneTest, OwnsGameObjectManager )
 /**
  * @brief [SceneTest] RHI 없이 update 안전
  */
-SW_TEST_CASE( SceneTest, UpdateWithoutRhiIsSafe )
+SW_TEST_CASE( SceneTest, UpdateWithoutRHIIsSafe )
 {
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
@@ -797,7 +797,7 @@ SW_TEST_CASE( SceneTest, SceneLightCollectionCarriesTypeAndShadowFlag )
     sw::Scene scene{ "LightCollect" };
     SW_ASSERT_NOT_NULL( scene.getObjectManager() );
 
-    sw::vector<sw::GpuLight> listLight;
+    sw::vector<sw::GPULight> listLight;
     sw::collectSceneLights( &scene, listLight );
     SW_EXPECT_TRUE( listLight.empty() );
 

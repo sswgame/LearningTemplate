@@ -5,10 +5,10 @@
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Input/UiActionGlyphSource.h"
-#include "Engine/UI/Layout/UiLayoutPass.h"
-#include "Engine/UI/Layout/UiScale.h"
-#include "Engine/UI/Render/UiPaintPass.h"
+#include "Engine/UI/Input/UIActionGlyphSource.h"
+#include "Engine/UI/Layout/UILayoutPass.h"
+#include "Engine/UI/Layout/UIScale.h"
+#include "Engine/UI/Render/UIPaintPass.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -139,7 +139,7 @@ namespace sw
             invalidateText();
     }
 
-    void TextWidget::resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UiActionGlyphSource* pActionGlyphs ) const
+    void TextWidget::resolveDisplayText( const LocalizationManager* pLocalization, uint32 textRevision, const UIActionGlyphSource* pActionGlyphs ) const
     {
         if ( _bDisplayValid && _displayRevision == textRevision )
             return;
@@ -177,12 +177,12 @@ namespace sw
     TextLayoutStyle TextWidget::makeLayoutStyle( float32 textScale ) const
     {
         TextLayoutStyle        style  = _style;
-        const UiComputedStyle* pStyle = getComputedStyle();
-        if ( pStyle != nullptr && pStyle->has( UiStyleField::Font ) )
+        const UIComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle != nullptr && pStyle->has( UIStyleField::Font ) )
             style._font = pStyle->_value._font;
-        if ( pStyle != nullptr && pStyle->has( UiStyleField::FontSize ) )
+        if ( pStyle != nullptr && pStyle->has( UIStyleField::FontSize ) )
             style._fontSize = pStyle->_value._fontSize;
-        style._fontSize           = UiScaleUtil::computeScaledFontSize( style._fontSize, textScale );
+        style._fontSize           = UIScaleUtil::computeScaledFontSize( style._fontSize, textScale );
         style._paragraphDirection = isRightToLeft() ? TextDirection::RightToLeft : TextDirection::LeftToRight;
         return style;
     }
@@ -207,18 +207,18 @@ namespace sw
         return &_richText._listSpan;
     }
 
-    float2 TextWidget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 TextWidget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         if ( context._pTextLayout == nullptr || _text.empty() )
             return float2{};
         resolveDisplayText( context._pLocalization, context._textRevision, context._pActionGlyphs );
         // 줄 바꿈이면 가용 너비 안에서 잰다(무한이면 한 줄). 줄 바꿈이 아니면 늘 한 줄이다.
-        const bool    bBounded = UiLayoutPass::isUnbounded( availableSize._x ) == false && availableSize._x > 0.0f;
+        const bool    bBounded = UILayoutPass::isUnbounded( availableSize._x ) == false && availableSize._x > 0.0f;
         const float32 maxWidth = _style._bWrap && bBounded ? availableSize._x : 0.0f;
         return context._pTextLayout->measure( getPlainText(), makeLayoutStyle( context._textScale ), maxWidth, getSpans() );
     }
 
-    void TextWidget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void TextWidget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         if ( context._pTextLayout == nullptr || context._pGlyphCache == nullptr || _text.empty() )
             return;
@@ -226,10 +226,10 @@ namespace sw
         const TextLayoutStyle  style  = makeLayoutStyle( context._textScale );
         const float32          width  = getGeometry()._size._x;
         const bool             bRtl   = style._paragraphDirection == TextDirection::RightToLeft;
-        const UiComputedStyle* pStyle = getComputedStyle();
+        const UIComputedStyle* pStyle = getComputedStyle();
         if ( _bLayoutValid == false || _layoutWidth != width || _layoutFontSize != style._fontSize || _bLayoutRtl != bRtl || _pLayoutStyle != pStyle )
         {
-            // 픽셀 맞춤(UiLayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 글을 물리 픽셀 하나까지 줄인다 — 그만큼은 넘쳐도 한 줄로 둔다
+            // 픽셀 맞춤(UILayoutPass)은 양 끝을 반올림해 원하는 너비에 놓인 글을 물리 픽셀 하나까지 줄인다 — 그만큼은 넘쳐도 한 줄로 둔다
             // (상자 줄의 단추 글이 끝 글자를 다음 줄로 넘기지 않게).
             const float32 snapSlack = width > 0.0f && context._uiScale > 0.0f ? 1.0f / context._uiScale : 0.0f;
             context._pTextLayout->layout( getPlainText(), style, width + snapSlack, _layoutCache, getSpans() );
@@ -242,10 +242,10 @@ namespace sw
 
         // 글 칸은 계산된 스타일이 정했으면(물려받은 것 포함) 그것, 아니면 자기 칸이다.
         const bool       bHasStyle = pStyle != nullptr;
-        const float4     color     = bHasStyle && pStyle->has( UiStyleField::TextColor ) ? pStyle->_value._textColor : _color;
+        const float4     color     = bHasStyle && pStyle->has( UIStyleField::TextColor ) ? pStyle->_value._textColor : _color;
         CanvasGlyphStyle glyphStyle{};
-        glyphStyle._outlineColor = bHasStyle && pStyle->has( UiStyleField::TextOutlineColor ) ? pStyle->_value._textOutlineColor : _outlineColor;
-        glyphStyle._outlineWidth = bHasStyle && pStyle->has( UiStyleField::TextOutlineWidth ) ? pStyle->_value._textOutlineWidth : _outlineWidth;
+        glyphStyle._outlineColor = bHasStyle && pStyle->has( UIStyleField::TextOutlineColor ) ? pStyle->_value._textOutlineColor : _outlineColor;
+        glyphStyle._outlineWidth = bHasStyle && pStyle->has( UIStyleField::TextOutlineWidth ) ? pStyle->_value._textOutlineWidth : _outlineWidth;
         for ( const LaidOutGlyph& glyph : _layoutCache._listGlyph )
         {
             glyphStyle._fontSize    = glyph._fontSize;

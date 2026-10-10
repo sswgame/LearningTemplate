@@ -35,7 +35,7 @@ namespace sw
             static_assert( offsetof( ProfileZoneSite, _color ) == offsetof( ___tracy_source_location_data, color ), "color offset" );
 
             /** @brief Tracy 의 GPU 컨텍스트 종류 번호입니다(서버 `GpuContextType` — OpenGl 1 · Vulkan 2 · Direct3D12 4 · Direct3D11 5). */
-            static uint8 toTracyGpuType( ProfilerGraphicsAPI api )
+            static uint8 toTracyGPUType( ProfilerGraphicsAPI api )
             {
                 switch ( api )
                 {
@@ -76,7 +76,7 @@ namespace sw
         : _zoneCount{ 0 }
         , _gpuZoneCount{ 0 }
         , _gpuContextCount{ 0 }
-        , _nextGpuQueryId{ 0 }
+        , _nextGPUQueryId{ 0 }
     {
     }
 
@@ -158,12 +158,12 @@ namespace sw
 #endif
     }
 
-    uint32 TracyProfilerBackend::createGpuContext( [[maybe_unused]] ProfilerGraphicsAPI api, [[maybe_unused]] const utf8* pName,
+    uint32 TracyProfilerBackend::createGPUContext( [[maybe_unused]] ProfilerGraphicsAPI api, [[maybe_unused]] const utf8* pName,
                                                    [[maybe_unused]] int64 gpuNanos )
     {
 #if defined( SW_PROFILER_TRACY )
-        if ( _gpuContextCount >= kMaxGpuContext )
-            return kInvalidGpuContext;
+        if ( _gpuContextCount >= kMaxGPUContext )
+            return kInvalidGPUContext;
         const uint32 context = _gpuContextCount++;
 
         // 시각은 나노초로 넘긴다(period 1). 이 순간의 GPU 시계와 Tracy 가 찍는 CPU 시계의 차가 이 큐의 기준이 된다.
@@ -172,7 +172,7 @@ namespace sw
         newContext.period  = 1.0f;
         newContext.context = static_cast<uint8_t>( context );
         newContext.flags   = 0;
-        newContext.type    = TracyProfilerBackendInternal::toTracyGpuType( api );
+        newContext.type    = TracyProfilerBackendInternal::toTracyGPUType( api );
         ___tracy_emit_gpu_new_context( newContext );
 
         if ( pName != nullptr )
@@ -185,11 +185,11 @@ namespace sw
         }
         return context;
 #else
-        return kInvalidGpuContext;
+        return kInvalidGPUContext;
 #endif
     }
 
-    void TracyProfilerBackend::syncGpuClock( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] int64 gpuNanos )
+    void TracyProfilerBackend::syncGPUClock( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] int64 gpuNanos )
     {
 #if defined( SW_PROFILER_TRACY )
         if ( gpuContext >= _gpuContextCount )
@@ -201,14 +201,14 @@ namespace sw
 #endif
     }
 
-    void TracyProfilerBackend::beginGpuZone( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] const ProfileZoneSite& site,
+    void TracyProfilerBackend::beginGPUZone( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] const ProfileZoneSite& site,
                                              [[maybe_unused]] int64 gpuBeginNanos )
     {
 #if defined( SW_PROFILER_TRACY )
         if ( gpuContext >= _gpuContextCount )
             return;
         // 시각을 이미 안다 — 구간을 열면서 그 쿼리의 시각을 바로 넘긴다. 서버는 쿼리 번호로 둘을 잇는다.
-        const uint16                 queryId = allocateGpuQueryId();
+        const uint16                 queryId = allocateGPUQueryId();
         ___tracy_gpu_zone_begin_data beginData{};
         beginData.srcloc  = static_cast<uint64_t>( reinterpret_cast<uintptr_t>( &site ) );
         beginData.queryId = queryId;
@@ -223,12 +223,12 @@ namespace sw
 #endif
     }
 
-    void TracyProfilerBackend::endGpuZone( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] int64 gpuEndNanos )
+    void TracyProfilerBackend::endGPUZone( [[maybe_unused]] uint32 gpuContext, [[maybe_unused]] int64 gpuEndNanos )
     {
 #if defined( SW_PROFILER_TRACY )
         if ( gpuContext >= _gpuContextCount )
             return;
-        const uint16               queryId = allocateGpuQueryId();
+        const uint16               queryId = allocateGPUQueryId();
         ___tracy_gpu_zone_end_data endData{};
         endData.queryId = queryId;
         endData.context = static_cast<uint8_t>( gpuContext );
@@ -243,10 +243,10 @@ namespace sw
 #endif
     }
 
-    uint16 TracyProfilerBackend::allocateGpuQueryId()
+    uint16 TracyProfilerBackend::allocateGPUQueryId()
     {
-        const uint16 queryId = _nextGpuQueryId;
-        _nextGpuQueryId      = static_cast<uint16>( _nextGpuQueryId + 1u );
+        const uint16 queryId = _nextGPUQueryId;
+        _nextGPUQueryId      = static_cast<uint16>( _nextGPUQueryId + 1u );
         return queryId;
     }
 } // namespace sw

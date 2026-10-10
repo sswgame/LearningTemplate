@@ -11,7 +11,7 @@
 #include "Engine/UI/Base/WidgetTree.h"
 #include "Engine/UI/Layout/BoxPanel.h"
 #include "Engine/UI/Layout/CanvasPanel.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 namespace sw
@@ -22,21 +22,21 @@ namespace sw
         class ComboBoxPopupRoot final : public CanvasPanel
         {
         public:
-            UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override
+            UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override
             {
-                if ( phase != UiRoutePhase::Bubble || event._kind != UiPointerEventKind::Down || getTree() == nullptr || getTree()->getScreen() == nullptr )
-                    return UiReply::makeUnhandled();
+                if ( phase != UIRoutePhase::Bubble || event._kind != UIPointerEventKind::Down || getTree() == nullptr || getTree()->getScreen() == nullptr )
+                    return UIReply::makeUnhandled();
                 getTree()->getScreen()->close();
-                return UiReply::makeHandled();
+                return UIReply::makeHandled();
             }
         };
 
         /** @brief 콤보 상자의 팝업 화면 — 상자를 화면 핸들 · 위젯 번호로 다시 찾아 고른 값을 넘긴다. */
-        class ComboBoxPopupScreen final : public UiScreen
+        class ComboBoxPopupScreen final : public UIScreen
         {
         public:
-            ComboBoxPopupScreen( const UiScreenDesc& desc, unique_ptr<Widget> root, UiScreenHandle ownerScreen, WidgetId combo )
-                : UiScreen{ desc, std::move( root ) }
+            ComboBoxPopupScreen( const UIScreenDesc& desc, unique_ptr<Widget> root, UIScreenHandle ownerScreen, WidgetId combo )
+                : UIScreen{ desc, std::move( root ) }
                 , _ownerScreen{ ownerScreen }
                 , _combo{ combo }
             {
@@ -44,8 +44,8 @@ namespace sw
 
             void choose( uint32 index )
             {
-                UiSystem* const pUi    = getUiSystem();
-                UiScreen* const pOwner = pUi != nullptr ? pUi->findScreen( _ownerScreen ) : nullptr;
+                UISystem* const pUI    = getUISystem();
+                UIScreen* const pOwner = pUI != nullptr ? pUI->findScreen( _ownerScreen ) : nullptr;
                 Widget* const   pFound = pOwner != nullptr ? pOwner->getTree().findWidgetById( _combo ) : nullptr;
                 ComboBoxWidget* pCombo = pFound != nullptr ? castTo<ComboBoxWidget>( pFound ) : nullptr;
                 if ( pCombo != nullptr )
@@ -54,7 +54,7 @@ namespace sw
             }
 
         private:
-            UiScreenHandle _ownerScreen;
+            UIScreenHandle _ownerScreen;
             WidgetId       _combo;
         };
 
@@ -77,7 +77,7 @@ namespace sw
         : ButtonWidget{}
         , _onSelectionChanged{}
         , _pLabel{ nullptr }
-        , _popupScreen{ kInvalidUiScreenHandle }
+        , _popupScreen{ kInvalidUIScreenHandle }
         , _listOption{}
         , _selectedIndex{ invalid_index::kUint32 }
     {
@@ -130,7 +130,7 @@ namespace sw
 
     void ComboBoxWidget::choosePopupOption( uint32 index )
     {
-        _popupScreen = kInvalidUiScreenHandle;
+        _popupScreen = kInvalidUIScreenHandle;
         if ( index >= _listOption.size() )
             return;
         const bool bChanged = index != _selectedIndex;
@@ -151,19 +151,19 @@ namespace sw
     void ComboBoxWidget::openPopup()
     {
         WidgetTree* const pTree   = getTree();
-        UiScreen* const   pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
-        UiSystem* const   pUi     = pScreen != nullptr ? pScreen->getUiSystem() : nullptr;
-        if ( pUi == nullptr || _listOption.empty() )
+        UIScreen* const   pScreen = pTree != nullptr ? pTree->getScreen() : nullptr;
+        UISystem* const   pUI     = pScreen != nullptr ? pScreen->getUISystem() : nullptr;
+        if ( pUI == nullptr || _listOption.empty() )
             return;
-        if ( _popupScreen != kInvalidUiScreenHandle && pUi->findScreen( _popupScreen ) != nullptr )
+        if ( _popupScreen != kInvalidUIScreenHandle && pUI->findScreen( _popupScreen ) != nullptr )
             return; // 이미 열려 있다
 
         using Internal                     = ComboBoxWidgetInternal;
-        const UiRect                  rect = getGeometry().computeScreenBounds();
+        const UIRect                  rect = getGeometry().computeScreenBounds();
         unique_ptr<ComboBoxPopupRoot> root = make_unique<ComboBoxPopupRoot>(); // 화면 루트 — 뷰포트 전체
 
         unique_ptr<BorderPanel> list      = make_unique<BorderPanel>();
-        UiBrush                 listBrush = UiBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f );
+        UIBrush                 listBrush = UIBrush::makeSolid( float4{ 0.1f, 0.11f, 0.14f, 0.98f }, 6.0f );
         listBrush._borderColor            = float4{ 0.45f, 0.48f, 0.55f, 1.0f };
         listBrush._borderWidth            = 1.0f;
         list->setBackground( listBrush );
@@ -176,13 +176,13 @@ namespace sw
         list->setLayoutSlot( listSlot );
 
         unique_ptr<BoxPanel> column = make_unique<BoxPanel>();
-        column->setOrientation( UiOrientation::Vertical );
+        column->setOrientation( UIOrientation::Vertical );
         vector<ButtonWidget*> listButton;
         for ( uint32 index = 0; index < static_cast<uint32>( _listOption.size() ); ++index )
         {
             unique_ptr<ButtonWidget> option = make_unique<ButtonWidget>();
             option->setName( Internal::makeOptionName( index ) );
-            option->setBackground( UiBrush::makeSolid( float4{}, 4.0f ) );
+            option->setBackground( UIBrush::makeSolid( float4{}, 4.0f ) );
             option->setContentPadding( float4{ 10.0f, 6.0f, 10.0f, 6.0f } );
             WidgetLayoutSlot optionSlot = option->getLayoutSlot();
             optionSlot._heightOverride  = Internal::kOptionHeight;
@@ -195,8 +195,8 @@ namespace sw
         (void)list->addChild( std::move( column ) );
         (void)root->addChild( std::move( list ) );
 
-        UiScreenDesc desc{};
-        desc._layer                            = UiLayer::Modal; // 메뉴 위 — 막지는 않는다(밖 클릭은 루트가 받아 닫는다)
+        UIScreenDesc desc{};
+        desc._layer                            = UILayer::Modal; // 메뉴 위 — 막지는 않는다(밖 클릭은 루트가 받아 닫는다)
         desc._bModal                           = false;
         desc._defaultFocus                     = Internal::makeOptionName( _selectedIndex != invalid_index::kUint32 ? _selectedIndex : 0 );
         unique_ptr<ComboBoxPopupScreen> popup  = sw::make_unique<ComboBoxPopupScreen>( desc, std::move( root ), pScreen->getHandle(), getId() );
@@ -206,10 +206,10 @@ namespace sw
             (void)listButton[index]->getOnClicked().add( [pPopup, index]( WidgetId )
             { pPopup->choose( index ); } );
         }
-        _popupScreen = pUi->pushScreen( std::move( popup ) );
+        _popupScreen = pUI->pushScreen( std::move( popup ) );
     }
 
-    void ComboBoxWidget::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
+    void ComboBoxWidget::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)context;
         // 아래 화살표 — 가로 막대 셋을 줄여 쌓은 삼각형(오른쪽 끝, 오른쪽에서 왼쪽이면 왼쪽 끝).

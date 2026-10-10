@@ -5,8 +5,8 @@
 #include "Core/Common/Defines.h"
 #include "Core/String/fixed_string.h"
 
-#include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"

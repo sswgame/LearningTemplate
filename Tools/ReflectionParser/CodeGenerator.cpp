@@ -252,18 +252,18 @@ namespace sw
             emit.assign( "p._metadata._bHasMaxRange", "SW_TRUE" );
         }
         // 슬라이더 범위는 에디터 메타다(Shipping 에 멤버가 없다).
-        if ( prop._bHasUiMinRange != SW_FALSE || prop._bHasUiMaxRange != SW_FALSE )
+        if ( prop._bHasUIMinRange != SW_FALSE || prop._bHasUIMaxRange != SW_FALSE )
         {
             emit.line( "#if !defined( SW_SHIPPING )" );
-            if ( prop._bHasUiMinRange != SW_FALSE )
+            if ( prop._bHasUIMinRange != SW_FALSE )
             {
                 emit.linef( "p._metadata._uiMinRange   = %#f;", prop._uiMinRange );
-                emit.assign( "p._metadata._bHasUiMinRange", "SW_TRUE" );
+                emit.assign( "p._metadata._bHasUIMinRange", "SW_TRUE" );
             }
-            if ( prop._bHasUiMaxRange != SW_FALSE )
+            if ( prop._bHasUIMaxRange != SW_FALSE )
             {
                 emit.linef( "p._metadata._uiMaxRange   = %#f;", prop._uiMaxRange );
-                emit.assign( "p._metadata._bHasUiMaxRange", "SW_TRUE" );
+                emit.assign( "p._metadata._bHasUIMaxRange", "SW_TRUE" );
             }
             emit.line( "#endif" );
         }

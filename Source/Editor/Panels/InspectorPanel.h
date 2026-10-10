@@ -13,7 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Panels/Inspector/InspectorBuiltinValue.h"
 
 namespace sw
@@ -65,7 +65,7 @@ namespace sw::editor
         /** @brief GameObject 헤더(이름 등)를 그립니다. */
         void drawGameObjectHeader( GameObject* pObj );
         /** @brief 컴포넌트 섹션을 그립니다. */
-        void drawComponentSection( Component* pComp, IRHIDevice* pRhiDevice );
+        void drawComponentSection( Component* pComp, IRHIDevice* pRHIDevice );
 
         // ------------------------------------------------------------------------------
         // 3) 리플렉션 위젯

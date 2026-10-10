@@ -15,7 +15,7 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 에디터 설정 경로 해석과 공통 유틸리티입니다. ImGui 에 의존하지 않습니다(폰트는 Gui/EditorFontSetup). */
+    /** @brief 에디터 설정 경로 해석과 공통 유틸리티입니다. ImGui 에 의존하지 않습니다(폰트는 GUI/EditorFontSetup). */
     class EditorUtil
     {
     public:

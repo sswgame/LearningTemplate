@@ -3,7 +3,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "Editor/Common/Gui/EditorGraphDocumentPanel.h"
+#include "Editor/Common/GUI/EditorGraphDocumentPanel.h"
 
 #include "Engine/Animation/Graph/AnimGraphAsset.h"
 #include "Engine/Animation/Graph/AnimGraphPlayer.h"
@@ -22,7 +22,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) IEditorPanel — 제목/그리기
         // ------------------------------------------------------------------------------
-        void shutdown( IRHIDevice* pRhiDevice ) override;
+        void shutdown( IRHIDevice* pRHIDevice ) override;
         /** @brief 애니메이션 그래프 UI를 그립니다. */
         void drawContent() override;
         /** @brief 노드 추가·저장·줌 툴바를 그립니다. */

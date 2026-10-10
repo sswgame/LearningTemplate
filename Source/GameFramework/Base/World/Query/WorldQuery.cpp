@@ -42,7 +42,7 @@ namespace sw
         sweptBounds._min._z = MathUtil::min( sweptBounds._min._z, -WorldQueryInternal::kRayHalfThickness );
         sweptBounds._max._z = MathUtil::max( sweptBounds._max._z, WorldQueryInternal::kRayHalfThickness );
         vector<PhysicsWorld::BodyHandle> listHandle;
-        _physicsWorld.queryAabb( sweptBounds, WorldQueryInternal::kQueryLayer, listHandle );
+        _physicsWorld.queryAABB( sweptBounds, WorldQueryInternal::kQueryLayer, listHandle );
         bool bHit = false;
         for ( const PhysicsWorld::BodyHandle handle : listHandle )
         {
@@ -56,7 +56,7 @@ namespace sw
                 target._max._z = MathUtil::max( from._z, to._z ) + WorldQueryInternal::kRayHalfThickness;
             }
             SweepHit sweep;
-            if ( ContinuousCollision::sweepAabb( rayBox, displacement, target, sweep ) == false )
+            if ( ContinuousCollision::sweepAABB( rayBox, displacement, target, sweep ) == false )
                 continue;
             if ( bHit && sweep._time >= outHit._fraction )
                 continue;

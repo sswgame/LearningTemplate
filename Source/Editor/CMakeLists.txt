@@ -33,7 +33,7 @@ sw_addModuleLibrary(EditorModule
 	REFLECTION_HEADERS
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorConfig.h"
 		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Config/EditorToolDefaults.h"
-		"${CMAKE_CURRENT_SOURCE_DIR}/Common/Gui/EditorChrome.h"
+		"${CMAKE_CURRENT_SOURCE_DIR}/Common/GUI/EditorChrome.h"
 )
 
 # 에디터는 LTO 를 받지 않는다(링크 시간 — Test/ · Tools/ 와 같은 이유).

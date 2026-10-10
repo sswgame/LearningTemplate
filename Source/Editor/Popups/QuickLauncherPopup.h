@@ -10,7 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorBackgroundIO.h"
-#include "Editor/Common/Gui/IEditorPopup.h"
+#include "Editor/Common/GUI/IEditorPopup.h"
 
 namespace sw::editor
 {

@@ -70,7 +70,7 @@ namespace
                 world.updateBody( listContinuousBody[index], state );
             }
             if ( bWithFarMover )
-                world.setAabb( farMover, makeBoxAt( ( stepIndex % 2 == 0 ) ? kFarMoverDistance : -50.0f, -50.0f ) );
+                world.setAABB( farMover, makeBoxAt( ( stepIndex % 2 == 0 ) ? kFarMoverDistance : -50.0f, -50.0f ) );
 
             const sw::Stopwatch stopwatch;
             world.step( 0.016f );

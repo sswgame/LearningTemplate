@@ -51,11 +51,11 @@ namespace sw
 {
     SW_LOG_CALLER( "RHIMemoryLedger" );
 
-    RHIGpuMemoryBudget::RHIGpuMemoryBudget() noexcept
+    RHIMemoryBudget::RHIMemoryBudget() noexcept
         : _usageBytes{ 0 }
         , _budgetBytes{ 0 }
         , _availableBytes{ 0 }
-        , _scope{ RHIGpuMemoryScope::Process }
+        , _scope{ RHIMemoryScope::Process }
         , _bUsageKnown{ SW_FALSE }
         , _bBudgetKnown{ SW_FALSE }
         , _bAvailableKnown{ SW_FALSE }
@@ -97,7 +97,7 @@ namespace sw
             return kRHIMemoryUnknownBytes;
 
         // 깊이 첨부는 서술의 포맷과 상관없이 D24S8 로 만든다(블록 표는 깊이를 "업로드 대상 아님" 으로 0 바이트라 한다).
-        RHIFormatBlockInfo block = getRhiFormatBlockInfo( desc._format );
+        RHIFormatBlockInfo block = getRHIFormatBlockInfo( desc._format );
         if ( desc._bIsDepthStencil != SW_FALSE )
             block = RHIFormatBlockInfo{ 1, 1, static_cast<uint32>( RHIMemoryLedgerInternal::kDepthStencilTexelBytes ) };
         if ( block._blockBytes == 0 )
@@ -212,21 +212,21 @@ namespace sw
         return arrKind;
     }
 
-    RHIGpuMemoryBudget RHIMemoryLedger::getDriverBudget() const
+    RHIMemoryBudget RHIMemoryLedger::getDriverBudget() const
     {
         std::scoped_lock<mutex> lock{ _mutex };
         return _driverBudget;
     }
 
-    void RHIMemoryLedger::setDriverBudget( const RHIGpuMemoryBudget& budget )
+    void RHIMemoryLedger::setDriverBudget( const RHIMemoryBudget& budget )
     {
         std::scoped_lock<mutex> lock{ _mutex };
         _driverBudget = budget;
     }
 
-    RHIGpuMemorySummary RHIMemoryLedger::makeSummary() const
+    RHIMemorySummary RHIMemoryLedger::makeSummary() const
     {
-        RHIGpuMemorySummary summary{};
+        RHIMemorySummary summary{};
         {
             std::scoped_lock<mutex> lock{ _mutex };
             summary._budget    = _driverBudget;
@@ -238,7 +238,7 @@ namespace sw
             }
         }
         // 디바이스 전체 사용량에는 다른 프로세스 몫이 섞여 있어 빼 봐야 "엔진 밖" 이 아니다.
-        const bool bProcessUsage = summary._budget._bUsageKnown != SW_FALSE && summary._budget._scope == RHIGpuMemoryScope::Process;
+        const bool bProcessUsage = summary._budget._bUsageKnown != SW_FALSE && summary._budget._scope == RHIMemoryScope::Process;
         if ( bProcessUsage )
         {
             summary._outsideBytes  = static_cast<int64>( summary._budget._usageBytes ) - static_cast<int64>( summary._trackedBytes );
@@ -250,8 +250,8 @@ namespace sw
     void RHIMemoryLedger::report( [[maybe_unused]] const utf8* pBackendName ) const
     {
 #if SW_LOG_LEVEL_COMPILED( SW_LOG_VERBOSITY_INFO )
-        const RHIGpuMemorySummary summary = makeSummary();
-        uint32                    liveCount{ 0 };
+        const RHIMemorySummary summary = makeSummary();
+        uint32                 liveCount{ 0 };
         for ( uint32 kindIndex = 0; kindIndex < kRHIMemoryKindCount; ++kindIndex )
         {
             liveCount += getStats( static_cast<RHIMemoryKind>( kindIndex ) )._liveCount;
@@ -271,16 +271,16 @@ namespace sw
                          sharePermill / 10, sharePermill % 10, stats._liveCount, stats._unknownSizeCount );
         }
 
-        const RHIGpuMemoryBudget& budget = summary._budget;
-        utf8                      arrUsage[constant::kMaxBuffer32]{};
-        utf8                      arrBudget[constant::kMaxBuffer32]{};
-        utf8                      arrAvailable[constant::kMaxBuffer32]{};
+        const RHIMemoryBudget& budget = summary._budget;
+        utf8                   arrUsage[constant::kMaxBuffer32]{};
+        utf8                   arrBudget[constant::kMaxBuffer32]{};
+        utf8                   arrAvailable[constant::kMaxBuffer32]{};
         RHIMemoryLedgerInternal::formatMegabytes( budget._usageBytes, budget._bUsageKnown != SW_FALSE, arrUsage, constant::kMaxBuffer32 );
         RHIMemoryLedgerInternal::formatMegabytes( budget._budgetBytes, budget._bBudgetKnown != SW_FALSE, arrBudget, constant::kMaxBuffer32 );
         RHIMemoryLedgerInternal::formatMegabytes( budget._availableBytes, budget._bAvailableKnown != SW_FALSE, arrAvailable, constant::kMaxBuffer32 );
-        const utf8* pScope = budget._bUsageKnown == SW_FALSE             ? ""
-                           : budget._scope == RHIGpuMemoryScope::Process ? " (이 프로세스)"
-                                                                         : " (디바이스 전체 — 다른 프로세스 몫 포함)";
+        const utf8* pScope = budget._bUsageKnown == SW_FALSE          ? ""
+                           : budget._scope == RHIMemoryScope::Process ? " (이 프로세스)"
+                                                                      : " (디바이스 전체 — 다른 프로세스 몫 포함)";
         SW_LOG_INFO( "[Profile]   드라이버: 사용량 %#%#  예산 %#  남은 양 %#", arrUsage, pScope, arrBudget, arrAvailable );
         if ( summary._bOutsideKnown == SW_FALSE )
         {

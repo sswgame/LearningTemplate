@@ -15,9 +15,9 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiDX11" );
 
-    bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRhiDevice )
+    bool ImGuiDX11RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
-        _pRHIDevice = pRhiDevice;
+        _pRHIDevice = pRHIDevice;
         if ( _pRHIDevice == nullptr )
             return false;
 
@@ -56,9 +56,9 @@ namespace sw::editor
         updatePendingTextures( &ImGui_ImplDX11_UpdateTexture );
     }
 
-    void ImGuiDX11RendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
+    void ImGuiDX11RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        (void)pRhiDevice;
+        (void)pRHIDevice;
         if ( pDrawData != nullptr && _pRHIDevice != nullptr )
             ImGui_ImplDX11_RenderDrawData( pDrawData );
     }
@@ -119,11 +119,11 @@ namespace sw::editor
 #else
 namespace sw::editor
 {
-    bool  ImGuiDX11RendererBackend::initialize( class IRHIDevice* /*pRhiDevice*/ ) { return false; }
+    bool  ImGuiDX11RendererBackend::initialize( class IRHIDevice* /*pRHIDevice*/ ) { return false; }
     void  ImGuiDX11RendererBackend::shutdown() {}
     void  ImGuiDX11RendererBackend::newFrame() {}
     void  ImGuiDX11RendererBackend::processTextureUpdates() {}
-    void  ImGuiDX11RendererBackend::render( class IRHIDevice* /*pRhiDevice*/, ImDrawData* /*pDrawData*/ ) {}
+    void  ImGuiDX11RendererBackend::render( class IRHIDevice* /*pRHIDevice*/, ImDrawData* /*pDrawData*/ ) {}
     void* ImGuiDX11RendererBackend::registerTexture( RHITextureHandle /*texture*/ ) { return nullptr; }
     void  ImGuiDX11RendererBackend::unregisterTexture( void* /*pTextureID*/ ) {}
 } // namespace sw::editor

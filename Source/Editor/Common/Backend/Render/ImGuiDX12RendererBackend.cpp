@@ -17,13 +17,13 @@ namespace sw::editor
     {
         struct ImGuiDX12RendererBackendInternal
         {
-            static void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
+            static void ImGuiAllocSrv( ImGui_ImplDX12_InitInfo* pInfo, D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
             {
                 ImGuiDX12RendererBackend* pSelf = static_cast<ImGuiDX12RendererBackend*>( pInfo->UserData );
-                if ( pSelf == nullptr || pSelf->allocateSrvDescriptor( pOutCpu, pOutGpu ) == false )
+                if ( pSelf == nullptr || pSelf->allocateSrvDescriptor( pOutCPU, pOutGPU ) == false )
                 {
-                    pOutCpu->ptr = 0;
-                    pOutGpu->ptr = 0;
+                    pOutCPU->ptr = 0;
+                    pOutGPU->ptr = 0;
                 }
             }
 
@@ -41,10 +41,10 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "ImGuiDX12" );
 
-    bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRhiDevice )
+    bool ImGuiDX12RendererBackend::initialize( class IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE( "Initialize start." );
-        _pRHIDevice = pRhiDevice;
+        _pRHIDevice = pRHIDevice;
         if ( _pRHIDevice == nullptr )
             return false;
 
@@ -110,9 +110,9 @@ namespace sw::editor
         updatePendingTextures( &ImGui_ImplDX12_UpdateTexture );
     }
 
-    void ImGuiDX12RendererBackend::render( class IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
+    void ImGuiDX12RendererBackend::render( class IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
-        ID3D12Device* pDevice = static_cast<ID3D12Device*>( pRhiDevice->getNativeDevice() );
+        ID3D12Device* pDevice = static_cast<ID3D12Device*>( pRHIDevice->getNativeDevice() );
         if ( pDevice != nullptr )
         {
             const HRESULT removed = pDevice->GetDeviceRemovedReason();
@@ -128,7 +128,7 @@ namespace sw::editor
             }
         }
 
-        ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRhiDevice->getNativeContext() );
+        ID3D12GraphicsCommandList* pCmdList = static_cast<ID3D12GraphicsCommandList*>( pRHIDevice->getNativeContext() );
         if ( pCmdList != nullptr && pDrawData != nullptr && _d3d12SrvHeap != nullptr )
         {
             ID3D12DescriptorHeap* heaps[] = { _d3d12SrvHeap.Get() };
@@ -194,9 +194,9 @@ namespace sw::editor
         { freeSrvDescriptor( cpuHandle, gpuHandle ); } ) );
     }
 
-    bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCpu, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGpu )
+    bool ImGuiDX12RendererBackend::allocateSrvDescriptor( D3D12_CPU_DESCRIPTOR_HANDLE* pOutCPU, D3D12_GPU_DESCRIPTOR_HANDLE* pOutGPU )
     {
-        if ( _d3d12SrvHeap == nullptr || pOutCpu == nullptr || pOutGpu == nullptr )
+        if ( _d3d12SrvHeap == nullptr || pOutCPU == nullptr || pOutGPU == nullptr )
             return false;
 
         std::scoped_lock<mutex> lock{ _descriptorMutex };
@@ -216,8 +216,8 @@ namespace sw::editor
             index = _nextDescriptor++;
         }
 
-        pOutCpu->ptr = _d3d12SrvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
-        pOutGpu->ptr = _d3d12SrvHeap->GetGPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
+        pOutCPU->ptr = _d3d12SrvHeap->GetCPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
+        pOutGPU->ptr = _d3d12SrvHeap->GetGPUDescriptorHandleForHeapStart().ptr + static_cast<SIZE_T>( index ) * _descriptorSize;
         return true;
     }
 
@@ -240,11 +240,11 @@ namespace sw::editor
 #else
 namespace sw::editor
 {
-    bool  ImGuiDX12RendererBackend::initialize( class IRHIDevice* /*pRhiDevice*/ ) { return false; }
+    bool  ImGuiDX12RendererBackend::initialize( class IRHIDevice* /*pRHIDevice*/ ) { return false; }
     void  ImGuiDX12RendererBackend::shutdown() {}
     void  ImGuiDX12RendererBackend::newFrame() {}
     void  ImGuiDX12RendererBackend::processTextureUpdates() {}
-    void  ImGuiDX12RendererBackend::render( class IRHIDevice* /*pRhiDevice*/, ImDrawData* /*pDrawData*/ ) {}
+    void  ImGuiDX12RendererBackend::render( class IRHIDevice* /*pRHIDevice*/, ImDrawData* /*pDrawData*/ ) {}
     void* ImGuiDX12RendererBackend::registerTexture( RHITextureHandle /*texture*/ ) { return nullptr; }
     void  ImGuiDX12RendererBackend::unregisterTexture( void* /*pTextureID*/ ) {}
 } // namespace sw::editor

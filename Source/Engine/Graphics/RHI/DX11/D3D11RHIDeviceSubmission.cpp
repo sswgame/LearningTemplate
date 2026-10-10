@@ -11,7 +11,7 @@
 #include "Engine/Graphics/RHI/DX11/D3D11RHICommandList.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIDevice.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHIResourceFactory.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
@@ -37,18 +37,18 @@ namespace sw
 
     uint32 D3D11RHIDevice::getTimestampSlotCount() const
     {
-        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGpuTimestampSlot : 0u;
+        return ( _bTimestampEnabled != SW_FALSE && _bTimestampReady != SW_FALSE ) ? constant::kMaxGPUTimestampSlot : 0u;
     }
 
-    bool D3D11RHIDevice::readTimestamps( RHIGpuTimestampFrame& outFrame )
+    bool D3D11RHIDevice::readTimestamps( RHITimestampFrame& outFrame )
     {
         outFrame = _timestampFrame;
         return outFrame._listMicro.empty() == false;
     }
 
-    bool D3D11RHIDevice::readGpuClockNanos( int64& outGpuNanos )
+    bool D3D11RHIDevice::readGPUClockNanos( int64& outGPUNanos )
     {
-        outGpuNanos = 0;
+        outGPUNanos = 0;
         // 주파수는 프레임 disjoint 가 준다 — 아직 한 프레임도 읽지 않았으면 틱을 나노초로 바꿀 근거가 없다.
         if ( _device == nullptr || _deviceContext == nullptr || _lastTimestampFrequency == 0 )
             return false;
@@ -63,7 +63,7 @@ namespace sw
         }
 
         // D3D11 에는 "지금 GPU 시계" 를 묻는 API 가 없다. 타임스탬프 하나를 내고 GPU 가 그것을 지날 때까지 묻는다 — 돌아오는 순간의 값이 곧
-        // 지금이다(관찰 지연만큼 이르다). 큐에 쌓인 프레임만큼 기다리므로 컨텍스트를 열 때 한 번만 부른다(`isGpuClockReadCheap` false).
+        // 지금이다(관찰 지연만큼 이르다). 큐에 쌓인 프레임만큼 기다리므로 컨텍스트를 열 때 한 번만 부른다(`isGPUClockReadCheap` false).
         _deviceContext->End( _clockQuery.Get() );
         _deviceContext->Flush();
         const Deadline deadline = Deadline::afterMilliseconds( D3D11RHIDeviceSubmissionInternal::kClockReadTimeoutMilliseconds );
@@ -74,14 +74,14 @@ namespace sw
                 return false;
             std::this_thread::yield();
         }
-        outGpuNanos = RHIGpuTimestamp::convertTickToNanos( tick, 1.0e9 / static_cast<float64>( _lastTimestampFrequency ) );
+        outGPUNanos = RHITimestamp::convertTickToNanos( tick, 1.0e9 / static_cast<float64>( _lastTimestampFrequency ) );
         return true;
     }
 
     void D3D11RHIDevice::writeTimestampSlot( ID3D11DeviceContext* pContext, uint32 slotIndex )
     {
         if ( pContext == nullptr || _bTimestampEnabled == SW_FALSE || _bTimestampReady == SW_FALSE ||
-             slotIndex >= constant::kMaxGpuTimestampSlot )
+             slotIndex >= constant::kMaxGPUTimestampSlot )
             return;
 
         // 이 프레임 묶음의 칸 하나. Deferred Context 마다 다른 칸이라 같은 쿼리 객체가 겹치지 않는다.
@@ -108,7 +108,7 @@ namespace sw
             D3D11TimestampFrame& frame = _arrTimestampFrame[frameIndex];
             if ( FAILED( _device->CreateQuery( &disjointDesc, &frame._disjoint ) ) )
                 return;
-            for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+            for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
             {
                 if ( FAILED( _device->CreateQuery( &stampDesc, &frame._arrQuery[slotIndex] ) ) )
                     return;
@@ -138,9 +138,9 @@ namespace sw
         if ( disjointData.Disjoint != FALSE || disjointData.Frequency == 0 )
             return;
 
-        uint64 arrTick[constant::kMaxGpuTimestampSlot]{};
+        uint64 arrTick[constant::kMaxGPUTimestampSlot]{};
         uint32 readyMask{ 0 };
-        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGpuTimestampSlot; ++slotIndex )
+        for ( uint32 slotIndex = 0; slotIndex < constant::kMaxGPUTimestampSlot; ++slotIndex )
         {
             if ( ( frame._writtenMask & ( 1u << slotIndex ) ) == 0 )
                 continue;
@@ -153,7 +153,7 @@ namespace sw
             readyMask |= ( 1u << slotIndex );
         }
         _lastTimestampFrequency = disjointData.Frequency;
-        RHIGpuTimestamp::resolve( arrTick, readyMask, 1.0e9 / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
+        RHITimestamp::resolve( arrTick, readyMask, 1.0e9 / static_cast<float64>( disjointData.Frequency ), _timestampFrame );
     }
 
     void D3D11RHIDevice::beginFrame( const float4& clearColor )
@@ -250,7 +250,7 @@ namespace sw
         _releaseQueue.flushAll();
     }
 
-    void D3D11RHIDevice::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate )
+    void D3D11RHIDevice::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate )
     {
         _releaseQueue.enqueueRelease( releaseDelegate );
     }

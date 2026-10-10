@@ -19,13 +19,13 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorCommandGui.h"
-#include "Editor/Common/Gui/EditorFontSetup.h"
-#include "Editor/Common/Gui/EditorMenuBar.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
-#include "Editor/Common/Gui/EditorPanelDump.h"
-#include "Editor/Common/Gui/EditorPlayToolbar.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorFontSetup.h"
+#include "Editor/Common/GUI/EditorMenuBar.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorPanelDump.h"
+#include "Editor/Common/GUI/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -192,13 +192,13 @@ namespace sw::editor
         ImGuiEditor::shutdown();
     }
 
-    bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRhiDevice )
+    bool ImGuiEditor::initialize( IWindow* pWindow, IRHIDevice* pRHIDevice )
     {
         SW_LOG_TRACE( "Initialize start." );
         if ( _bInitialized != SW_FALSE )
             return true;
 
-        if ( pWindow == nullptr || pRhiDevice == nullptr )
+        if ( pWindow == nullptr || pRHIDevice == nullptr )
         {
             SW_LOG_ERROR( "Cannot initialize without window and RHI device." );
             shutdownPartialInitialization();
@@ -251,7 +251,7 @@ namespace sw::editor
             }
 
             SW_LOG_TRACE( "Initializing Platform Backend" );
-            if ( _platformBackend->initialize( pWindow, pRhiDevice->getBackendType() ) == false )
+            if ( _platformBackend->initialize( pWindow, pRHIDevice->getBackendType() ) == false )
             {
                 SW_LOG_ERROR( "Platform backend initialization failed" );
                 shutdownPartialInitialization();
@@ -262,8 +262,8 @@ namespace sw::editor
         BLOCK( "Renderer Backend create / init" )
         {
             SW_LOG_TRACE( "Creating Renderer Backend" );
-            _rendererBackend = IImGuiRendererBackend::createRendererBackend( pRhiDevice->getBackendType() );
-            if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRhiDevice ) == false )
+            _rendererBackend = IImGuiRendererBackend::createRendererBackend( pRHIDevice->getBackendType() );
+            if ( _rendererBackend == nullptr || _rendererBackend->initialize( pRHIDevice ) == false )
             {
                 SW_LOG_ERROR( "Renderer backend initialization failed" );
                 shutdownPartialInitialization();
@@ -313,11 +313,11 @@ namespace sw::editor
             // 테마는 **컨텍스트가 활성화된 뒤에** 읽는다. 테마 상태를 컨텍스트가 들고 있으므로, 앞에서 부르면 적용한 테마가 갈 곳이
             // 없어 조용히 버려진다(실측: stored preset 이 0 에 머문다).
             EditorThemeUtil::loadFromConfig();
-            _editorContext->setRhiDevice( pRhiDevice );
+            _editorContext->setRHIDevice( pRHIDevice );
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
-            EditorCommandGui::registerDefaults();
+            EditorCommandGUI::registerDefaults();
             // 리로드 전에 기록한 오브젝트 편집도 되돌리면 이 모듈이 선택 · 씬 dirty 를 맞춘다.
             CommandStack* pCommandStack = editor::getService<CommandStack>();
             if ( pCommandStack != nullptr )
@@ -328,11 +328,11 @@ namespace sw::editor
             // 모니터 DPI 로 스타일 · 글자를 키운다(테마를 읽은 **뒤** — 테마가 96 DPI 기준 크기를 적는다). 모니터를 옮기면 글자와 플랫폼 창이
             // 따라간다(ImGui 1.92 동적 폰트).
             // 배율을 직접 정했으면(`gv_editorUiScale`) 모니터를 옮겨도 글자 배율을 덮어쓰지 않는다.
-            const bool bFixedUiScale = gv_editorUiScale > 0.0f;
-            EditorThemeUtil::setDpiScale( bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
-            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
-            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
-            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI",
+            const bool bFixedUIScale = gv_editorUiScale > 0.0f;
+            EditorThemeUtil::setDpiScale( bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend->getDpiScale() );
+            ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
+            ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
+            SW_LOG_INFO( "Editor UI scale %# (%#, frame padding %#x%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI",
                          ImGui::GetStyle().FramePadding.x, ImGui::GetStyle().FramePadding.y );
 
             // `-gv_editorStartupScene=<경로>`: 검증용이다 — 기동 검증이 오브젝트를 순회하는 코드까지 다루게 한다. 정의는 이 파일 위에 있다.
@@ -426,20 +426,20 @@ namespace sw::editor
         _bInitialized = SW_FALSE;
     }
 
-    void ImGuiEditor::preRender( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::preRender( IRHIDevice* pRHIDevice )
     {
         if ( _bInitialized == SW_FALSE || _editorContext == nullptr )
             return;
 
-        _editorContext->getPanelManager().preRenderOpenPanels( pRhiDevice );
+        _editorContext->getPanelManager().preRenderOpenPanels( pRHIDevice );
     }
 
-    void ImGuiEditor::updateUi()
+    void ImGuiEditor::updateUI()
     {
         if ( _bInitialized == SW_FALSE )
             return;
 
-        // 하위 구간 — `GT.Editor.updateUi`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
+        // 하위 구간 — `GT.Editor.updateUI`(App) 가 무엇에 쓰이는지 가른다. 패널마다의 시간은 `-gv_editorPanelTimes=N`.
         {
             // 지난 UI 프레임을 렌더 스레드가 다 그릴(postPresent) 때까지 기다린다 — 큰 값은 UI 일이 아니라 RT · GPU · Present 대기다.
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.waitDrawSnapshot" );
@@ -464,7 +464,7 @@ namespace sw::editor
 
         {
             SW_EDITOR_PROFILE_SCOPE( "GT.Editor.commandsAndWatchers" );
-            EditorCommandGui::processHotkeys();
+            EditorCommandGUI::processHotkeys();
             EditorMenuBar::processOpenPanelRequests();
             EditorMenuBar::processSceneSession();
 
@@ -545,7 +545,7 @@ namespace sw::editor
                 _rendererBackend->getDrawReleaseQueue().markSnapshotPublished( _lastDrawSnapshotSequence );
             _publishedDrawSlot.store( writeSlot, std::memory_order_release );
 
-            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUi 는 상단 waitForDrawSnapshotIdle
+            // 이 프레임을 "렌더 대기" 상태로 표시한다. 다음 updateUI 는 상단 waitForDrawSnapshotIdle
             // 에서 postPresent 까지 막히므로, 렌더 스레드가 present 훅에서 ImGui 공유 상태
             // (텍스처 리스트·뷰포트)를 만지는 GL 경로에서도 UI 스레드와 겹치지 않는다.
             // (렌더 스레드 render() 도 같은 값을 다시 저장하지만 값이 같아 무해하다)
@@ -553,9 +553,9 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::render( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::render( IRHIDevice* pRHIDevice )
     {
-        if ( _bInitialized == SW_FALSE || pRhiDevice == nullptr )
+        if ( _bInitialized == SW_FALSE || pRHIDevice == nullptr )
             return;
 
         // GL: 컨텍스트가 이 스레드(렌더 스레드)에 바인딩된 지금이 프레임 GPU 작업을 할 유일한 지점이다.
@@ -573,15 +573,15 @@ namespace sw::editor
         {
             ImDrawData* pDrawData = _arrDrawSnapshot[slot].getMainDrawData();
             if ( pDrawData != nullptr )
-                renderBackend( pRhiDevice, pDrawData );
+                renderBackend( pRHIDevice, pDrawData );
 
             // 이 프레임이 그린 스냅샷보다 먼저 놓인 자원은 앞 프레임들만 그렸다. 이 프레임의 GPU 완료 뒤에 놓이도록 디바이스로 넘긴다.
             if ( _rendererBackend != nullptr )
-                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRhiDevice, _arrDrawSnapshot[slot].getSequence() );
+                _rendererBackend->getDrawReleaseQueue().handOverToDevice( *pRHIDevice, _arrDrawSnapshot[slot].getSequence() );
         }
 
         // 보조(플로팅) 뷰포트도 GL 이면 여기 렌더 스레드에서 렌더·present 한다.
-        // (UI 스레드는 updateUi 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
+        // (UI 스레드는 updateUI 상단 waitForDrawSnapshotIdle 에서 막혀 있어 ImGui 상태가 안정적이다)
         if ( bRenderThreadCtx )
         {
             const ImGuiIO& io = ImGui::GetIO();
@@ -590,11 +590,11 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::postPresent( IRHIDevice* pRhiDevice )
+    void ImGuiEditor::postPresent( IRHIDevice* pRHIDevice )
     {
-        std::ignore = pRhiDevice;
+        std::ignore = pRHIDevice;
         // 메인 스냅샷 렌더가 끝났으니 UI 스레드가 다음 슬롯을 쓰도록 해제한다.
-        // 보조 뷰포트는 updateUi 에서 UI 스레드가 이미 렌더·present 했다.
+        // 보조 뷰포트는 updateUI 에서 UI 스레드가 이미 렌더·present 했다.
         _inFlightDrawSlot.store( _s_kInvalidDrawSlot, std::memory_order_release );
     }
 
@@ -728,17 +728,17 @@ namespace sw::editor
         }
         // 실행 중에 `gv_editorUiScale` 을 바꾸면(콘솔 · 시나리오 `<Variable>` · gv 패널) 바로 따른다 — 0 으로 돌리면 다시 모니터 DPI 를 따른다.
         {
-            const bool    bFixedUiScale = gv_editorUiScale > 0.0f;
-            const float32 wantedScale   = bFixedUiScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
+            const bool    bFixedUIScale = gv_editorUiScale > 0.0f;
+            const float32 wantedScale   = bFixedUIScale ? static_cast<float32>( gv_editorUiScale ) : _platformBackend != nullptr ? _platformBackend->getDpiScale()
                                                                                                                                  : 1.0f;
-            const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUiScale;
-            const bool    bFixedMoved   = bFixedUiScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
+            const bool    bModeChanged  = ImGui::GetIO().ConfigDpiScaleFonts == bFixedUIScale;
+            const bool    bFixedMoved   = bFixedUIScale && MathUtil::abs( wantedScale - EditorThemeUtil::getDpiScale() ) > ImGuiEditorInternal::kDpiFollowTolerance;
             if ( bModeChanged || bFixedMoved )
             {
-                ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUiScale == false;
-                ImGui::GetIO().ConfigDpiScaleViewports = bFixedUiScale == false;
+                ImGui::GetIO().ConfigDpiScaleFonts     = bFixedUIScale == false;
+                ImGui::GetIO().ConfigDpiScaleViewports = bFixedUIScale == false;
                 EditorThemeUtil::setDpiScale( wantedScale );
-                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUiScale ? "fixed" : "monitor DPI" );
+                SW_LOG_INFO( "Editor UI scale %# (%#)", EditorThemeUtil::getDpiScale(), bFixedUIScale ? "fixed" : "monitor DPI" );
             }
         }
         ImGuizmo::BeginFrame();
@@ -771,13 +771,13 @@ namespace sw::editor
         }
     }
 
-    void ImGuiEditor::renderBackend( IRHIDevice* pRhiDevice, ImDrawData* pDrawData )
+    void ImGuiEditor::renderBackend( IRHIDevice* pRHIDevice, ImDrawData* pDrawData )
     {
         if ( _bInitialized == SW_FALSE )
             return;
 
         if ( _rendererBackend != nullptr )
-            _rendererBackend->render( pRhiDevice, pDrawData );
+            _rendererBackend->render( pRHIDevice, pDrawData );
     }
 } // namespace sw::editor
 

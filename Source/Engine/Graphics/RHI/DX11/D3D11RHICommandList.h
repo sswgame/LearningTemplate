@@ -80,7 +80,7 @@ namespace sw
          * @brief **이 리스트만의** 기록 상태입니다. `_context` 보다 먼저 선언해야 합니다(생성자가 주소를 넘깁니다).
          * @details 주의: 리스트들이 디바이스의 `_recordingState` 하나를 나눠 쓰면, 레벨을 병렬로 기록할 때 한 패스의
          *          드로우가 **다른 패스의 PSO · 정점 버퍼**로 나갑니다(디퍼드 파이프라인의 Shadow 와 GBuffer 가
-         *          같은 레벨에 있을 때 드러나며, `RenderPassGpuTest.AmbientOcclusionReachesBloom` 이 잡습니다).
+         *          같은 레벨에 있을 때 드러나며, `RenderPassGPUTest.AmbientOcclusionReachesBloom` 이 잡습니다).
          */
         D3D11RecordingState    _recordingState;
         D3D11RHICommandContext _context;

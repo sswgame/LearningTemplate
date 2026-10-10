@@ -1,9 +1,9 @@
 /**
- * instancedata.hlsli — GPUScene 인스턴스 원소 하나(SwInstanceData). C++ `GpuInstance`(GpuSceneSnapshot.h)와 바이트까지 같다(128 바이트).
+ * instancedata.hlsli — GPUScene 인스턴스 원소 하나(SwInstanceData). C++ `GPUInstance`(GPUSceneSnapshot.h)와 바이트까지 같다(128 바이트).
  *
  * 그래픽스(binding.hlsli 가 g_SwInstances 로 건다)와 컴퓨트 셋(gpucull · instancesort 는 읽고, instanceanim 은 고쳐 쓴다)이
  * **이 파일 하나**를 include 한다. 구조체를 셰이더마다 베끼면 한쪽만 고쳤을 때 원소가 아무 말 없이 어긋난다.
- * ShaderBindingValidatorTest.InstanceElementLayoutMatchesCpuStruct 가 세 이름을 모두 쿠킹된 바이너리로 대조한다.
+ * ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct 가 세 이름을 모두 쿠킹된 바이너리로 대조한다.
  *
  * 스프라이트 칸(uvStart · uvEnd · tint)은 **머티리얼 인스턴스를 만들지 않고** 인스턴스마다 다른 값을 싣는 자리다(언리얼 Custom Primitive
  * Data · 유니티 MaterialPropertyBlock 의 자리). 배치 키는 머티리얼 인스턴스라, 프레임마다 바뀌는 아틀라스 프레임 · 색을 인스턴스로
@@ -33,7 +33,7 @@ struct SwInstanceData
 	uint     reserved2;
 };
 
-/** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GpuSpriteInstanceData::makeUnorm16x2` 의 역이다. */
+/** @brief unorm16 둘을 [0, 1] 실수 둘로 푼다(하위 16비트가 x). C++ `GPUSpriteInstanceData::makeUnorm16x2` 의 역이다. */
 float2 swUnpackUnorm16x2( uint packed )
 {
 	return float2( packed & 0xFFFFu, packed >> 16 ) * ( 1.0f / 65535.0f );

@@ -217,7 +217,7 @@ PROPERTY( EditCondition = "_bEnabled" ) // 거짓이면 편집을 막는다
 float32 _speed = 1.0f;
 PROPERTY( EditCondition = "!_bEnabled", EditConditionHides ) // 막지 않고 숨긴다
 int32 _fallback = 0;
-PROPERTY( Units = cm, Min = 0, Max = 1000, UiMin = 50, UiMax = 250 )
+PROPERTY( Units = cm, Min = 0, Max = 1000, UIMin = 50, UIMax = 250 )
 float32 _height = 180.0f;
 ```
 
@@ -225,7 +225,7 @@ float32 _height = 180.0f;
 가리키는 이름이 부모 클래스의 멤버일 수 있어 생성기는 형태만 검사하고, 이름은 실행 중에 `PropertyEditCondition::parse` 가 찾습니다.
 `ReflectionDisplayMetaTest.EveryEditConditionResolves` 가 등록된 모든 타입의 조건이 실제로 찾아지는지 확인합니다.
 
-**범위.** 슬라이더는 `UiMin` 과 `UiMax` 안에서 움직이고, 둘이 없으면 `Min` 과 `Max` 를 씁니다. 값은 언제나 `Min` 과 `Max` 로 제한합니다(`InspectorPropertyLayout::getNumericRange`).
+**범위.** 슬라이더는 `UIMin` 과 `UIMax` 안에서 움직이고, 둘이 없으면 `Min` 과 `Max` 를 씁니다. 값은 언제나 `Min` 과 `Max` 로 제한합니다(`InspectorPropertyLayout::getNumericRange`).
 
 **단위.** `Units` 는 저장된 값의 단위입니다. `ReflectUnits.h` 의 단위 목록에 있어야 하고, 없으면 생성기가 오류를 냅니다.
 인스펙터는 `rad` 를 도로, `ratio` 를 백분율로 바꿔 보여 줍니다. 다른 단위로 적힌 글자는 `ReflectUnitUtil::parseValueInUnit( "150 cm", "m", out )` 으로 변환합니다.

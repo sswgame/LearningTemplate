@@ -361,7 +361,7 @@ Debug 빌드에서는 `WalkScope` 가 단언으로 잡습니다. 그런 일이 �
 법선은 `invert().transpose()` 행렬로 변환하고, 셰이더에서는 `swComputeWorldNormal` 을 씁니다.
 
 **"바뀌었나" 검사는 제곱 거리를 `MathUtil::kEpsilonSquared` 와 비교합니다.** 거리 자체를 `kEpsilon` 과 비교하면 프레임당 1e-3보다 작은 움직임이 계속 무시됩니다.
-예외는 `GpuSceneBuilder` 의 카메라 비교(`bCamSame`)입니다. 이 비교는 제곱 거리를 일부러 `kEpsilon` 과 비교해서, 아주 작은 카메라 움직임에는 드로우 목록을 다시 만들지 않습니다.
+예외는 `GPUSceneBuilder` 의 카메라 비교(`bCamSame`)입니다. 이 비교는 제곱 거리를 일부러 `kEpsilon` 과 비교해서, 아주 작은 카메라 움직임에는 드로우 목록을 다시 만들지 않습니다.
 `float4x4::invert` 는 행렬식이 정확히 0이거나 NaN일 때만 단위 행렬을 돌려줍니다. 절대 임계값을 두면 아주 작은 부모나 큰 직교 카메라의 행렬이 깨집니다.
 
 ### 수명과 활성

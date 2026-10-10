@@ -7,7 +7,7 @@
 
 | 방향 | include 수 | 파일 수 | 대표 헤더 |
 |---|---|---|---|
-| Object → Graphics | 51 | 21 | `Mesh.h` · `GpuLight.h` · `ShaderBindingSlots.h` · `MaterialInstance.h` |
+| Object → Graphics | 51 | 21 | `Mesh.h` · `GPULight.h` · `ShaderBindingSlots.h` · `MaterialInstance.h` |
 | Object → Physics | 41 | 22 | `IPhysicsScene.h` · `PhysicsTypes.h` · `AABB.h` |
 | Object → Animation | 38 | 22 | `Skeleton.h` · `Pose.h` · `AnimClip.h` |
 | Object → Audio | 11 | 8 | `AudioSpatial.h` · `AudioEngine.h` |
@@ -16,7 +16,7 @@
 | Graphics → Physics | 1 | 1 | `PhysicsDebugDraw.h` |
 | Resource → Animation | 5 | 2 | `AnimClip.h` · `RigAsset.h` |
 | Scene → Graphics | 3 | 2 | `MaterialCache.h` · `IRHIDevice.h` |
-| Automation → UI / UI → Automation | 2 / 3 | 1 / 1 | `UiSystem.h` / `AutomationRunner.h` — 게이트가 보고하는 유일한 사이클 |
+| Automation → UI / UI → Automation | 2 / 3 | 1 / 1 | `UISystem.h` / `AutomationRunner.h` — 게이트가 보고하는 유일한 사이클 |
 
 - `Object` 안에서 기능 의존이 몰린 곳은 `Component/{2D, 3D, Audio, Navigation, Physics}`(기능 컴포넌트)와 `GameObject/`(Graphics 15 · Physics 10 · Navigation 5 · Audio 2)다.
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
@@ -86,7 +86,7 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 - 리플렉션 등록기 보존: `sw_linkWholeArchive` 를 층 라이브러리마다 건다(Shipping 정적 링크는 지금과 같다). 서버 타깃은 Render 층을 링크하지 않는다.
 
 ### 4. 월드를 값으로
-- `World` 가 씬 · 물리 월드 · 내비 · GpuScene 빌더 · 틱 설정을 소유하고 `EngineLoop` 는 월드 목록을 돈다. 프리팹 격리 · 머티리얼 미리보기 · 에디터 툴 창 · 서버의 방이 이 위에 선다(백로그 "다중 월드").
+- `World` 가 씬 · 물리 월드 · 내비 · GPUScene 빌더 · 틱 설정을 소유하고 `EngineLoop` 는 월드 목록을 돈다. 프리팹 격리 · 머티리얼 미리보기 · 에디터 툴 창 · 서버의 방이 이 위에 선다(백로그 "다중 월드").
 - 2 단계 뒤에 한다 — 월드가 코어 위의 소유자가 되려면 코어가 기능을 모르는 상태여야 한다.
 
 ### 5. 모듈 확장 창구와 상태 규칙

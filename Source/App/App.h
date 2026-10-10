@@ -45,7 +45,7 @@ namespace sw
         void shutdown();
         /** @brief 메인 루프입니다(할 일은 최소한만 합니다). */
         void run();
-        /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRhiUnusableHereExitCode`, 그 밖은 -1 입니다. */
+        /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRHIUnusableHereExitCode`, 그 밖은 -1 입니다. */
         int32 getInitFailureExitCode() const;
         /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`EngineLoop::requestQuit` — 요청이 없었으면 0). */
         int32 getExitCode() const;

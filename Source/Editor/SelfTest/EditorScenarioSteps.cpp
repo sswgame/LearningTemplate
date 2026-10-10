@@ -10,7 +10,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorPlaySession.h"
@@ -33,7 +33,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
 #include "Engine/Scene/Scene.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/Utility/CommandStack.h"
 #include "Engine/Window/IWindow.h"
 
@@ -575,10 +575,10 @@ namespace sw::editor
 
             [[nodiscard]] static bool readLoadingScreenShown( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const UiSystem* pUi = editor::getService<UiSystem>();
-                if ( pUi == nullptr )
+                const UISystem* pUI = editor::getService<UISystem>();
+                if ( pUI == nullptr )
                     return false;
-                outValue = pUi->isLoadingScreenShown() ? 1.0 : 0.0;
+                outValue = pUI->isLoadingScreenShown() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -697,7 +697,7 @@ namespace sw::editor
                 return readViewRequested( EditorViewKind::Game, outValue );
             }
 
-            [[nodiscard]] static bool readUiScale( const GameObjectManager* /*pManager*/, float64& outValue )
+            [[nodiscard]] static bool readUIScale( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorThemeUtil::getDpiScale() );
                 return true;
@@ -751,5 +751,5 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readSceneViewRequested );
     SW_AUTOMATION_PROBE( editorGameViewRequested, "Editor.GameViewRequested", "1 when the editor asked the host to render the game view this frame (0 while its panel is hidden)",
                          &EditorScenarioStepsInternal::readGameViewRequested );
-    SW_AUTOMATION_PROBE( editorUiScale, "Editor.UiScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUiScale );
+    SW_AUTOMATION_PROBE( editorUIScale, "Editor.UIScale", "Editor UI scale (1 = 96 DPI)", &EditorScenarioStepsInternal::readUIScale );
 } // namespace sw::editor

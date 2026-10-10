@@ -264,7 +264,7 @@ namespace sw
 
     void SpriteComponent::refreshSpriteInstanceData()
     {
-        setSpriteInstanceData( GpuSpriteInstanceData::make( getDisplayedUvRect(), _tint ) );
+        setSpriteInstanceData( GPUSpriteInstanceData::make( getDisplayedUvRect(), _tint ) );
     }
 
     bool SpriteComponent::getWorldBounds( float3& outCenter, float32& outRadius ) const

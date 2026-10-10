@@ -11,7 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/UI/Base/WidgetTypes.h"
-#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Screen/UIScreen.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -19,12 +19,12 @@
 namespace sw
 {
     class ScreenFade;
-    class UiSystem;
+    class UISystem;
 
     /** @brief 로딩 화면의 겉모습 · 시간입니다(`GameInstanceBase` 가 gamesettings 로 채운다). */
     struct LoadingScreenSettings
     {
-        string         _documentPath{ "engine/ui/loading.ui.xml" }; ///< 로딩 화면 문서(Loading 층 — 문서의 `UiScreenDesc`)
+        string         _documentPath{ "engine/ui/loading.ui.xml" }; ///< 로딩 화면 문서(Loading 층 — 문서의 `UIScreenDesc`)
         vector<string> _listTip{};                                  ///< 팁 글의 현지화 키(원문) — 열 때마다 하나를 고른다. 비면 팁 칸을 접는다
         float32        _minimumSeconds{ 0.5f };                     ///< 최소 표시 시간(초) — 빠른 로드에서 한 프레임 깜박이지 않게
         float32        _fadeInSeconds{ 0.35f };                     ///< 닫은 뒤 검은 화면에서 씬으로 돌아오는 페이드 인(초)
@@ -60,8 +60,8 @@ namespace sw
         LoadingScreenController& operator=( const LoadingScreenController& ) = delete;
 
         /** @brief 쓸 UI 시스템을 정합니다(옛 쪽의 화면은 닫는다). nullptr 이면 아무것도 띄우지 않습니다. 시험은 자기 것을 넘긴다. */
-        void      bindUiSystem( UiSystem* pUiSystem );
-        UiSystem* getUiSystem() const { return _pUiSystem; }
+        void      bindUISystem( UISystem* pUISystem );
+        UISystem* getUISystem() const { return _pUISystem; }
 
         /** @brief 설정을 바꿉니다(팁 시드를 다시 건다). */
         void                         setSettings( const LoadingScreenSettings& settings );
@@ -81,9 +81,9 @@ namespace sw
         /** @brief 이번 로딩에서 화면이 떠 있던 시간(초)입니다. */
         float32 getShownSeconds() const { return _shownSeconds; }
         /** @brief 지금 띄운 로딩 화면입니다(없으면 nullptr — 포인터는 그 호출 안에서만). */
-        UiScreen* findLoadingScreen() const;
+        UIScreen* findLoadingScreen() const;
         /** @brief 페이드 패널 화면입니다(없으면 nullptr — 페이드 알파가 0 이면 닫혀 있다). */
-        UiScreen* findFadeScreen() const;
+        UIScreen* findFadeScreen() const;
         /** @brief 지금 고른 팁 키입니다(없으면 빈 글). */
         const string& getCurrentTip() const { return _currentTip; }
 
@@ -93,14 +93,14 @@ namespace sw
         /** @brief 페이드 패널을 알파에 맞춥니다(0 이면 닫고, 0 보다 크면 열고 불투명도를 맞춘다). */
         void syncFadeOverlay( float32 alpha );
         /** @brief 팁을 하나 골라 `Tip` 위젯에 넣습니다(목록이 비면 팁 위젯을 접는다). */
-        void applyTip( UiScreen& screen );
+        void applyTip( UIScreen& screen );
 
     private:
         LoadingScreenSettings _settings;
         string                _currentTip;
-        UiSystem*             _pUiSystem;
-        UiScreenHandle        _loadingScreen;
-        UiScreenHandle        _fadeScreen;
+        UISystem*             _pUISystem;
+        UIScreenHandle        _loadingScreen;
+        UIScreenHandle        _fadeScreen;
         float32               _shownSeconds;
         float32               _spinnerAngle;
         GameRandom            _tipRandom; ///< 팁 고르기(`setSettings` 가 시드를 다시 건다)

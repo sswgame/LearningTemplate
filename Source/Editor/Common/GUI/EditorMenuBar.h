@@ -1,0 +1,56 @@
+/**
+ * @file EditorMenuBar.h
+ * @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGUI)
+ */
+#pragma once
+
+namespace sw
+{
+    class IModuleCompiler;
+} // namespace sw
+
+namespace sw::editor
+{
+    class EditorDockLayout;
+
+    /** @brief 에디터 메인 메뉴바 · File/Panel 요청 처리 (단축키는 EditorCommandGUI) */
+    class EditorMenuBar
+    {
+    public:
+        /** @brief 테마 설정 대화 상자를 그립니다. 메뉴바와 도크스페이스보다 먼저 그려야 스타일 변경이 한 프레임 늦지 않고 바로 반영됩니다. */
+        static void drawThemeDialog();
+        /** @brief 다음 프레임부터 테마 설정 대화상자를 엽니다 (editor.themeSettings 커맨드가 부릅니다). */
+        static void openThemeDialog();
+        /** @brief 테마 설정 대화상자를 닫습니다(에디터 자체 시험이 열었던 것을 되돌린다). */
+        static void closeThemeDialog();
+
+        /** @brief 커맨드 표의 메뉴(File / Edit / Build) · Assets / Panel 메뉴와 RHI 상태줄을 그립니다. */
+        static void draw( EditorDockLayout& dockLayout );
+
+        /** @brief Workspace에 쌓인 패널 열기 요청을 소비합니다. */
+        static void processOpenPanelRequests();
+
+        /** @brief File 메뉴가 고른 씬 경로를 메인 스레드에서 로드합니다. */
+        static void processPendingSceneLoad();
+        /** @brief 씬 세대 동기화와 "저장하지 않은 변경" 확인 창을 처리합니다. */
+        static void processSceneSession();
+
+    private:
+        // draw() 가 순서대로 부르는 조각들. 커맨드 표에서 나오지 않는 메뉴 하나가 곧 함수 하나다.
+        /** @brief 애셋 종류별 도구 패널을 여는 Assets 메뉴를 그립니다. */
+        static void drawAssetsMenu();
+        /** @brief 패널 표시 토글과 도킹 레이아웃 초기화를 담은 Panel 메뉴를 그립니다. */
+        static void drawPanelMenu( EditorDockLayout& dockLayout );
+        /** @brief Panel 메뉴 안의 이름 붙인 레이아웃 메뉴(저장 · 불러오기 · 지우기)를 그립니다. */
+        static void drawNamedLayoutMenu( EditorDockLayout& dockLayout );
+        /**
+         * @brief 메뉴바 오른쪽의 빌드 상태와 RHI·FPS 표시를 그립니다.
+         * @details 지난 프레임에 잰 너비로 오른쪽 끝에 붙이고, 마지막 메뉴와 겹칠 자리면 그 프레임은 그리지 않습니다.
+         */
+        static void drawStatusArea();
+        /** @brief 라이브 코딩 빌드가 끝난 순간(Compiling → Success / Failed)을 알림으로 띄웁니다. 상태 영역을 그리지 않는 프레임에도 부릅니다. */
+        static void notifyLiveCodingResult( IModuleCompiler& compiler );
+        /** @brief 상태 영역의 내용(컴파일 버튼 · 빌드 상태 · RHI · FPS)을 그립니다. */
+        static void drawStatusContent( IModuleCompiler* pCompiler );
+    };
+} // namespace sw::editor

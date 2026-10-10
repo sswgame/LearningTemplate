@@ -13,7 +13,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorNotificationManager.h"
+#include "Editor/Common/GUI/EditorNotificationManager.h"
 #include "Editor/Common/SourceControl/EditorSourceControl.h"
 #include "Editor/Common/Workspace/AssetHotReload.h"
 #include "Editor/Common/Workspace/ConfigHotReload.h"
@@ -60,7 +60,7 @@ namespace sw::editor
 namespace sw::editor
 {
     EditorContext::EditorContext()
-        : _pRhiDevice{ nullptr }
+        : _pRHIDevice{ nullptr }
         , _pDockLayout{ nullptr }
         , _pRendererBackend{ nullptr }
         , _arrViewTarget{}
@@ -126,7 +126,7 @@ namespace sw::editor
         _pWorkspace.reset();
         _pEditorSelection.reset();
         _pRendererBackend = nullptr;
-        _pRhiDevice       = nullptr;
+        _pRHIDevice       = nullptr;
         unbindLocalService<EditorContext>();
     }
 
@@ -155,11 +155,11 @@ namespace sw::editor
             view._pTextureId = nullptr;
         }
 
-        if ( view._renderTarget != 0 && _pRhiDevice != nullptr && _pRhiDevice->getResourceFactory() != nullptr )
+        if ( view._renderTarget != 0 && _pRHIDevice != nullptr && _pRHIDevice->getResourceFactory() != nullptr )
         {
             // 줄 서 있는 패킷이 이 렌더 타깃에 그리고, 이미 낸 draw 스냅샷이 그것을 샘플링한다. ImGui 텍스처와 같은 큐에 맡겨 그 프레임들의
             // GPU 완료 뒤에 부순다. 렌더러 백엔드가 없으면(그릴 쪽이 없다) 곧바로 부순다.
-            IRHIResourceFactory*   pResource    = _pRhiDevice->getResourceFactory();
+            IRHIResourceFactory*   pResource    = _pRHIDevice->getResourceFactory();
             const RHITextureHandle renderTarget = view._renderTarget;
             if ( _pRendererBackend != nullptr )
             {
@@ -184,7 +184,7 @@ namespace sw::editor
             return;
         if ( width == view._width && height == view._height && view._renderTarget != 0 )
             return;
-        if ( _pRhiDevice == nullptr || _pRhiDevice->getResourceFactory() == nullptr )
+        if ( _pRHIDevice == nullptr || _pRHIDevice->getResourceFactory() == nullptr )
             return;
 
         destroyViewTarget( kind );
@@ -201,14 +201,14 @@ namespace sw::editor
         rtDesc._mipLevels         = 1;
         rtDesc._clearColor        = viewClearColor;
 
-        view._renderTarget = _pRhiDevice->getResourceFactory()->createTexture2D( rtDesc );
+        view._renderTarget = _pRHIDevice->getResourceFactory()->createTexture2D( rtDesc );
         if ( view._renderTarget == 0 )
             return;
 
         // 이번 프레임의 draw 스냅샷이 새 텍스처를 그리는데, 그 스냅샷은 이 렌더 타깃에 그릴 패킷보다 먼저 줄 선 패킷이 그릴 수 있다. 렌더러가 아직
         // 쓰지 않은 텍스처를 샘플링하지 않도록 클리어 색으로 채워 셰이더 읽기 상태로 둔다(Vulkan 은 UNDEFINED 레이아웃 샘플링이 검증 Error 다).
         // 닫혀 있다 열린 패널의 첫 프레임도 이 색이다(그 뷰는 보이는 동안만 그린다).
-        if ( EditorContextLifecycleInternal::fillTextureWithColor( *_pRhiDevice->getResourceFactory(), view._renderTarget, width, height, viewClearColor ) == false )
+        if ( EditorContextLifecycleInternal::fillTextureWithColor( *_pRHIDevice->getResourceFactory(), view._renderTarget, width, height, viewClearColor ) == false )
             SW_LOG_WARNING( "View target %#x%# could not be cleared before its first frame", width, height );
 
         view._width  = width;

@@ -63,7 +63,7 @@ namespace sw
         /**
          * @brief `reload` 가 텍스처를 다시 올린 횟수입니다.
          * @details 다시 올리면 같은 `Texture2D` 에 **새 SRV 인덱스**가 붙습니다. 머티리얼은 resolve 때 받은 인덱스를 들고 있으므로, 이 값이
-         *          바뀌면 다시 받습니다(`Material::refreshTextureBindings` — `GpuSceneBuilder` 가 부릅니다).
+         *          바뀌면 다시 받습니다(`Material::refreshTextureBindings` — `GPUSceneBuilder` 가 부릅니다).
          */
         uint32 getReloadGeneration() const;
         /** @brief 참조를 하나 놓습니다. 0 이 되면 GPU 자원까지 해제합니다. */

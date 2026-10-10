@@ -7,9 +7,9 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
-#include "Editor/Common/Gui/EditorChrome.h"
-#include "Editor/Common/Gui/EditorCommandGui.h"
-#include "Editor/Common/Gui/EditorThemeUtil.h"
+#include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
+#include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
@@ -203,7 +203,7 @@ namespace sw::editor
                     ImGui::Text( "Multi-Object Alignment" );
                     ImGui::Separator();
                     // 항목 · 구분선은 커맨드 표의 메뉴 경로 칸(`commandmenu::kViewportAlign`)에서 나온다.
-                    EditorCommandGui::drawMenuItems( commandmenu::kViewportAlign );
+                    EditorCommandGUI::drawMenuItems( commandmenu::kViewportAlign );
                     ImGui::EndPopup();
                 }
             }

@@ -11,7 +11,7 @@
 #include "Engine/Object/GameObject/ComponentRegistry.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Light/GpuLightBuffer.h"
+#include "Engine/Renderer/Light/GPULightBuffer.h"
 #include "Engine/Scene/Scene.h"
 
 #include "TestFramework/TestFramework.h"
@@ -35,10 +35,10 @@ namespace
     }
 
     /** @brief 타입 태그가 kind 인 원소 수를 셉니다. */
-    size_t countLightOfType( const sw::vector<sw::GpuLight>& listLight, uint32 kind )
+    size_t countLightOfType( const sw::vector<sw::GPULight>& listLight, uint32 kind )
     {
         size_t count = 0;
-        for ( const sw::GpuLight& light : listLight )
+        for ( const sw::GPULight& light : listLight )
         {
             if ( static_cast<uint32>( light._directionType._w ) == kind )
                 ++count;
@@ -193,7 +193,7 @@ SW_TEST_CASE( SceneLightTest, CollectSkipsInactiveComponentsAndInactiveOwners )
     SW_ASSERT_NOT_NULL( pOffOwner );
     SW_ASSERT_NOT_NULL( pOffChild );
 
-    sw::vector<sw::GpuLight> listLight;
+    sw::vector<sw::GPULight> listLight;
     collectSceneLights( &scene, listLight );
     SW_ASSERT_EQUAL( size_t( 4 ), listLight.size() );
 
@@ -252,12 +252,12 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
     pFirstShadow->setCastShadow( true );
     pLateShadow->setCastShadow( true );
 
-    sw::vector<sw::GpuLight> listLight;
+    sw::vector<sw::GPULight> listLight;
     collectSceneLights( &scene, listLight );
     SW_ASSERT_EQUAL( size_t( 3 ), listLight.size() );
 
     uint32 shadowCount = 0;
-    for ( const sw::GpuLight& light : listLight )
+    for ( const sw::GPULight& light : listLight )
     {
         if ( light._params._x > 0.5f )
             ++shadowCount;
@@ -285,7 +285,7 @@ SW_TEST_CASE( SceneLightTest, OnlyTheFirstShadowCastingDirectionalTakesTheShadow
     pLateShadow->setCastShadow( false );
     SW_EXPECT_NULL( scene.findShadowCastingDirectionalLight() );
     collectSceneLights( &scene, listLight );
-    for ( const sw::GpuLight& light : listLight )
+    for ( const sw::GPULight& light : listLight )
     {
         SW_EXPECT_TRUE( light._params._x < 0.5f );
     }
@@ -347,7 +347,7 @@ SW_TEST_CASE( SceneLightTest, LightFieldsTravelInTheShaderLayout )
     pSpot->setOuterConeAngle( 0.6f );
     pSpot->setInnerConeAngle( 0.2f );
 
-    sw::vector<sw::GpuLight> listLight;
+    sw::vector<sw::GPULight> listLight;
     collectSceneLights( &scene, listLight );
     SW_ASSERT_EQUAL( size_t( 3 ), listLight.size() );
 
@@ -355,21 +355,21 @@ SW_TEST_CASE( SceneLightTest, LightFieldsTravelInTheShaderLayout )
     SW_EXPECT_EQUAL( size_t( 1 ), countLightOfType( listLight, sw::shaderslot::kLightTypePoint ) );
     SW_EXPECT_EQUAL( size_t( 1 ), countLightOfType( listLight, sw::shaderslot::kLightTypeSpot ) );
 
-    const sw::GpuLight& point = listLight[1];
+    const sw::GPULight& point = listLight[1];
     SW_EXPECT_NEAR_EQUAL( 3.0f, point._positionRadius._x, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 4.0f, point._positionRadius._y, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 5.0f, point._positionRadius._z, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 12.5f, point._positionRadius._w, 0.001f );
     SW_EXPECT_NEAR_EQUAL( 2.5f, point._colorIntensity._w, 0.001f );
 
-    const sw::GpuLight& spot = listLight[2];
+    const sw::GPULight& spot = listLight[2];
     SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 0.6f ), spot._params._y, 0.001f );
     SW_EXPECT_NEAR_EQUAL( sw::MathUtil::cos( 0.2f ), spot._params._z, 0.001f );
     // 안쪽이 바깥쪽보다 좁으므로 코사인은 안쪽이 더 크다 — 셰이더의 감쇠 분모가 양수라는 뜻이다.
     SW_EXPECT_TRUE_MSG( spot._params._z > spot._params._y, "원뿔 코사인이 뒤집혔다 — 감쇠 분모가 음수가 된다" );
 
     // 방향광의 방향은 정규화되어 실린다(셰이더는 정규화하지 않는다).
-    const sw::GpuLight& sun    = listLight[0];
+    const sw::GPULight& sun    = listLight[0];
     const float32       length = sw::MathUtil::sqrt( sun._directionType._x * sun._directionType._x +
                                                      sun._directionType._y * sun._directionType._y +
                                                      sun._directionType._z * sun._directionType._z );

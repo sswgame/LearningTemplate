@@ -71,7 +71,7 @@ namespace sw
         if ( _pEngineLoop == nullptr )
             return;
 
-        const RHI* pRHI = _pEngineLoop->getRhi();
+        const RHI* pRHI = _pEngineLoop->getRHI();
         if ( pRHI == nullptr || pRHI->hasPendingBackendChange() == false )
             return;
 
@@ -89,7 +89,7 @@ namespace sw
 
     void RHIBackendSwitcher::onBackendVariableChanged( const GlobalVariableInfo* pInfo )
     {
-        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRhi() : nullptr;
+        RHI* pRHI = _pEngineLoop != nullptr ? _pEngineLoop->getRHI() : nullptr;
         if ( pInfo == nullptr || pRHI == nullptr )
             return;
 
@@ -124,16 +124,16 @@ namespace sw
         _pModuleHost->suspendModules( ModuleScope::Both, false );
 
         const bool bSwapOk = _pEngineLoop->applyPendingBackendChange();
-        RHI*       pRHI    = _pEngineLoop->getRhi();
+        RHI*       pRHI    = _pEngineLoop->getRHI();
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
         {
             SW_LOG_ERROR( "applyPendingBackendChange 실패 — RHI 디바이스가 없어 모듈을 재생성하지 않습니다." );
             return false;
         }
 
-        const bool bReinitOk = _pModuleHost->reinitializeAfterRhiSwap( pEditorModule, pGameModule );
+        const bool bReinitOk = _pModuleHost->reinitializeAfterRHISwap( pEditorModule, pGameModule );
         if ( bReinitOk == false )
-            SW_LOG_ERROR( "reinitializeAfterRhiSwap 실패." );
+            SW_LOG_ERROR( "reinitializeAfterRHISwap 실패." );
         if ( bSwapOk == false )
             SW_LOG_ERROR( "applyPendingBackendChange 실패 — 이전 백엔드로 복구한 뒤 모듈을 재생성했습니다." );
         return bSwapOk && bReinitOk;

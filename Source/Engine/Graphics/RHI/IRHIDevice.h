@@ -15,8 +15,8 @@ namespace sw
 {
 
     struct RHIDeferredHandleQueue;
-    struct RHIGpuMemoryBudget;
-    struct RHIGpuTimestampFrame;
+    struct RHIMemoryBudget;
+    struct RHITimestampFrame;
 
     class IRenderSurface;
     class IRHICommandContext;
@@ -139,7 +139,7 @@ namespace sw
          *          **프레임을 기록하는 스레드(렌더 스레드)에서 부릅니다** — 펜스 값을 읽는 스레드가 그 값을 올리는 스레드여야 "이 프레임" 이 맞습니다.
          *          콜백은 백엔드가 완료를 확인하는 스레드에서 불리고, `waitIdle` · `shutdown` 이 남은 콜백을 모두 부릅니다.
          */
-        virtual void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
+        virtual void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) = 0;
 
         /** @brief 렌더 스레드가 받은 일을 모두 끝낼 때까지 기다리는 함수입니다(부르는 쪽은 렌더 스레드가 아니다). */
         using RenderThreadDrainFunction = void ( * )( void* pContext );
@@ -154,7 +154,7 @@ namespace sw
 
         /**
          * @brief 자원 핸들 하나를 내립니다. 렌더 스레드가 프레임을 들고 있는 동안 다른 스레드가 부르면, 그 프레임이 끝난 자리(병렬 기록 밖)까지 미룹니다.
-         * @details 게임 스레드가 GPU 자원을 든 객체(`Material` · `MaterialInstance` · `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다 — GpuScene 후보를
+         * @details 게임 스레드가 GPU 자원을 든 객체(`Material` · `MaterialInstance` · `Texture2D`)의 마지막 소유를 아무 때나 놓을 수 있다 — GPUScene 후보를
          *          덮는 수집 잡, 핫 리로드로 걷은 뷰. 그 순간 렌더 스레드가 지난 프레임을 병렬로 기록 중이면 bindless 표를 바꾸면 안 된다
          *          (`setParallelRecording`). 그래서 객체의 소멸은 그 자리에서, 핸들의 반환은 렌더 스레드가 프레임을 끝낸 뒤 한다 — 언리얼
          *          `FDeferredCleanupInterface` · `BeginReleaseResource` 의 자리입니다. 렌더 스레드가 쉬고 있거나(들고 있는 프레임 없음) 렌더 스레드 자신이면 바로 내립니다.
@@ -223,25 +223,25 @@ namespace sw
          *          부르는 쪽은 음수가 하나라도 낀 구간을 통째로 버려야 합니다.
          *          같은 값이 엔진 표(`GPU.<패스>`)와 외부 프로파일러(Tracy GPU 타임라인)로 갑니다 — 쿼리는 한 벌입니다.
          */
-        [[nodiscard]] virtual bool readTimestamps( RHIGpuTimestampFrame& outFrame );
+        [[nodiscard]] virtual bool readTimestamps( RHITimestampFrame& outFrame );
 
         /**
          * @brief GPU 시계의 **지금** 값을 타임스탬프와 같은 영역의 나노초로 읽습니다. 외부 프로파일러가 GPU 시각을 CPU 시계에 맞출 때 씁니다.
          * @return 읽지 못하면 false 입니다(타임스탬프를 지원하지 않는 디바이스).
-         * @details 값은 이 함수가 돌아오는 순간의 GPU 시계입니다. 백엔드마다 비용이 다릅니다 — `isGpuClockReadCheap` 참고.
+         * @details 값은 이 함수가 돌아오는 순간의 GPU 시계입니다. 백엔드마다 비용이 다릅니다 — `isGPUClockReadCheap` 참고.
          *          렌더 스레드(GL 은 컨텍스트를 쥔 스레드)에서 부릅니다.
          */
-        [[nodiscard]] virtual bool readGpuClockNanos( int64& outGpuNanos )
+        [[nodiscard]] virtual bool readGPUClockNanos( int64& outGPUNanos )
         {
-            outGpuNanos = 0;
+            outGPUNanos = 0;
             return false;
         }
         /**
-         * @brief `readGpuClockNanos` 가 기다리지 않으면 true 입니다(DX12 `GetClockCalibration` · GL `GL_TIMESTAMP`).
+         * @brief `readGPUClockNanos` 가 기다리지 않으면 true 입니다(DX12 `GetClockCalibration` · GL `GL_TIMESTAMP`).
          * @details false 인 백엔드(DX11 · Vulkan)는 타임스탬프 하나를 내고 GPU 가 그것을 지날 때까지 기다립니다 — 컨텍스트를 열 때 한 번만 부르고
          *          주기적으로 다시 맞추지 않습니다.
          */
-        virtual bool isGpuClockReadCheap() const { return false; }
+        virtual bool isGPUClockReadCheap() const { return false; }
         /**
          * @brief 백버퍼 크기를 바꿉니다. 채택된 크기는 `getBackBufferWidth/Height` 가 답합니다.
          * @details 크기를 여기 적어 두는 이유: 렌더러가 첨부 크기를 정할 때 **창에 묻지 않고 디바이스에 묻게**
@@ -449,7 +449,7 @@ namespace sw
          *          컨텍스트를 놓을 때까지 기다립니다. 엔진은 Present 뒤 몇 프레임마다 부르고(`RenderThread`), 읽는 쪽(프로파일 보고 · 에디터 패널)은
          *          장부에 적힌 마지막 값을 봅니다.
          */
-        void refreshGpuMemoryBudget();
+        void refreshGPUMemoryBudget();
 
     protected:
         /** @brief 백엔드의 실제 GPU 대기 + 해제 큐 비우기입니다. `waitIdle` 이 렌더 스레드를 먼저 비운 뒤, `shutdown` 이 2 단계로 부릅니다. */
@@ -469,7 +469,7 @@ namespace sw
          * @brief 백엔드가 드라이버의 GPU 메모리 사용량 · 예산을 채웁니다. `outBudget` 은 모든 칸이 "모름" 인 기본값으로 옵니다.
          * @details 물을 수 없으면(API · 확장이 없다) false 입니다(기본). 아는 칸만 플래그를 켜고, 모르는 칸은 지어내지 않습니다.
          */
-        [[nodiscard]] virtual bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+        [[nodiscard]] virtual bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
         {
             (void)outBudget;
             return false;

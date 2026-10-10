@@ -6,7 +6,7 @@ namespace sw
 {
     RHIReleaseQueue::RHIReleaseQueue( uint32 frameLatency )
         : _listFrameEntry{}
-        , _listGpuEntry{}
+        , _listGPUEntry{}
         , _spinLock{}
         , _currentFrame{ 0 }
         , _frameLatency{ frameLatency } {}
@@ -28,16 +28,16 @@ namespace sw
         _listFrameEntry.push_back( entry );
     }
 
-    void RHIReleaseQueue::enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue )
+    void RHIReleaseQueue::enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate, uint64 fenceValue )
     {
         if ( releaseDelegate.isBound() == false )
             return;
 
         std::scoped_lock<SpinLock> lock{ _spinLock };
-        GpuDeferredEntry           entry{};
+        GPUDeferredEntry           entry{};
         entry._releaseDelegate = releaseDelegate;
         entry._targetFence     = fenceValue;
-        _listGpuEntry.push_back( entry );
+        _listGPUEntry.push_back( entry );
     }
 
     void RHIReleaseQueue::tickFrame()
@@ -79,16 +79,16 @@ namespace sw
         {
             std::scoped_lock<SpinLock> lock{ _spinLock };
 
-            auto partitionIter = std::stable_partition( _listGpuEntry.begin(), _listGpuEntry.end(), [completedFence]( const GpuDeferredEntry& entry )
+            auto partitionIter = std::stable_partition( _listGPUEntry.begin(), _listGPUEntry.end(), [completedFence]( const GPUDeferredEntry& entry )
             {
                 return entry._targetFence > completedFence;
             } );
 
-            for ( auto iter = partitionIter; iter != _listGpuEntry.end(); ++iter )
+            for ( auto iter = partitionIter; iter != _listGPUEntry.end(); ++iter )
             {
                 listReady.push_back( iter->_releaseDelegate );
             }
-            _listGpuEntry.erase( partitionIter, _listGpuEntry.end() );
+            _listGPUEntry.erase( partitionIter, _listGPUEntry.end() );
         }
 
         for ( const RHIResourceReleaseDelegate& callback : listReady )
@@ -103,11 +103,11 @@ namespace sw
     void RHIReleaseQueue::flushAll()
     {
         vector<FrameDeferredEntry> listFrameFlush;
-        vector<GpuDeferredEntry>   listGpuFlush;
+        vector<GPUDeferredEntry>   listGPUFlush;
         {
             std::scoped_lock<SpinLock> lock{ _spinLock };
             listFrameFlush.swap( _listFrameEntry );
-            listGpuFlush.swap( _listGpuEntry );
+            listGPUFlush.swap( _listGPUEntry );
         }
 
         for ( const FrameDeferredEntry& entry : listFrameFlush )
@@ -115,7 +115,7 @@ namespace sw
             if ( entry._releaseDelegate.isBound() )
                 entry._releaseDelegate();
         }
-        for ( const GpuDeferredEntry& entry : listGpuFlush )
+        for ( const GPUDeferredEntry& entry : listGPUFlush )
         {
             if ( entry._releaseDelegate.isBound() )
                 entry._releaseDelegate();
@@ -125,6 +125,6 @@ namespace sw
     uint32 RHIReleaseQueue::getPendingReleaseCount() const
     {
         std::scoped_lock<SpinLock> lock{ _spinLock };
-        return static_cast<uint32>( _listFrameEntry.size() + _listGpuEntry.size() );
+        return static_cast<uint32>( _listFrameEntry.size() + _listGPUEntry.size() );
     }
 } // namespace sw

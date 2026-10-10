@@ -65,25 +65,25 @@ namespace sw
         static constexpr uint32 kDefaultTransientSize = 1280;
 
         /**
-         * @brief GPU 타임스탬프 칸 배치입니다. 칸은 `constant::kMaxGpuTimestampSlot`(32) 개입니다.
+         * @brief GPU 타임스탬프 칸 배치입니다. 칸은 `constant::kMaxGPUTimestampSlot`(32) 개입니다.
          * @details 패스는 앞에서부터 인덱스 x 2 쌍을 쓰고(병렬 기록이라 흐르는 카운터가 아니라 고정 칸),
          *          프레임 전체 · 컴퓨트 프리패스는 **뒤쪽 세 칸**을 씁니다. 그래서 패스는 14 개까지입니다.
          *          백엔드는 가장 이른 시각을 기준점으로 삼으므로 뒤쪽 칸이 먼저 적혀도 값이 잘리지 않습니다.
          */
-        static constexpr uint32 kGpuTimestampSlotComputeBegin = 29;
-        static constexpr uint32 kGpuTimestampSlotComputeEnd   = 30;
-        static constexpr uint32 kGpuTimestampSlotFrameBegin   = 31;
+        static constexpr uint32 kGPUTimestampSlotComputeBegin = 29;
+        static constexpr uint32 kGPUTimestampSlotComputeEnd   = 30;
+        static constexpr uint32 kGPUTimestampSlotFrameBegin   = 31;
         /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함)입니다. 위 예약 칸과 겹치지 않게 합니다.
-        static constexpr uint32 kGpuTimestampPassSlotEnd = kGpuTimestampSlotComputeBegin;
+        static constexpr uint32 kGPUTimestampPassSlotEnd = kGPUTimestampSlotComputeBegin;
         /// @brief GPU 시간을 잴 수 있는 패스 수입니다(패스마다 칸 둘). 넘는 패스는 시간이 적히지 않습니다 — 파이프라인 로드가 경고합니다.
-        static constexpr uint32 kGpuTimedPassCapacity = kGpuTimestampPassSlotEnd / 2u;
+        static constexpr uint32 kGPUTimedPassCapacity = kGPUTimestampPassSlotEnd / 2u;
 
-        /** @brief 패스 `passCount` 개인 파이프라인에서 GPU 시간이 적히지 않는 패스 수입니다(앞에서부터 `kGpuTimedPassCapacity` 개만 잰다). */
-        static constexpr uint32 countUntimedGpuPass( size_t passCount )
+        /** @brief 패스 `passCount` 개인 파이프라인에서 GPU 시간이 적히지 않는 패스 수입니다(앞에서부터 `kGPUTimedPassCapacity` 개만 잰다). */
+        static constexpr uint32 countUntimedGPUPass( size_t passCount )
         {
-            return passCount > kGpuTimedPassCapacity ? static_cast<uint32>( passCount - kGpuTimedPassCapacity ) : 0u;
+            return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
         }
-        static_assert( kGpuTimestampSlotFrameBegin < constant::kMaxGpuTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
+        static_assert( kGPUTimestampSlotFrameBegin < constant::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
         static constexpr auto    kDefaultMainPassName = "DefaultMainPass";
         static constexpr float4  kBlackClear          = { 0.0f, 0.0f, 0.0f, 1.0f };
         static constexpr float4  kSceneClear          = { 0.12f, 0.15f, 0.18f, 1.0f };
@@ -98,8 +98,8 @@ namespace sw
          *          속도 차이가 눈에 안 띄어 결국 "다 같은 속도" 로 보입니다. 그것이 이 패스를 만든 이유입니다.
          *          instanceanim.hlsl 이 시드 해시로 [기준, 기준+폭) 에서 속도를 고르고 방향도 가릅니다.
          */
-        static constexpr float32 kGpuSpinBaseSpeed  = 0.35f;
-        static constexpr float32 kGpuSpinSpeedRange = 1.75f;
+        static constexpr float32 kGPUSpinBaseSpeed  = 0.35f;
+        static constexpr float32 kGPUSpinSpeedRange = 1.75f;
 
         /**
          * @brief GPU 메시 모프의 변형 크기(로컬 단위)와 공간 주파수입니다.
@@ -111,7 +111,7 @@ namespace sw
         static constexpr float32 kMeshMorphFrequency = 6.0f;
 
         /** @brief 컬링 디스패치 상수(gpucull.hlsl `CullParams`, b0)입니다. 상수버퍼 크기와 올리는 값이 이 정의 하나를 씁니다. */
-        struct GpuCullParams
+        struct GPUCullParams
         {
             float32 _arrPlane[6][4]{};
             uint32  _instanceCount{ 0 };
@@ -119,7 +119,7 @@ namespace sw
             uint32  _arrPad[2]{};
         };
         /** @brief 인스턴스 애니메이션 디스패치 상수(instanceanim.hlsl `AnimParams`, b0)입니다. */
-        struct GpuAnimParams
+        struct GPUAnimParams
         {
             float32 _time{ 0.0f };
             float32 _baseSpeed{ 0.0f };
@@ -127,7 +127,7 @@ namespace sw
             uint32  _instanceCount{ 0 };
         };
         /** @brief 메시 모프 디스패치 상수(meshmorph.hlsl `MorphParams`, b0)입니다. */
-        struct GpuMorphParams
+        struct GPUMorphParams
         {
             float32 _time{ 0.0f };
             float32 _amplitude{ 0.0f };
@@ -135,7 +135,7 @@ namespace sw
             uint32  _vertexCount{ 0 };
         };
         /** @brief 메시 스킨 디스패치 상수(meshskin.hlsl `SkinParams`, b0)입니다. */
-        struct GpuSkinParams
+        struct GPUSkinParams
         {
             uint32 _skinVertexBase{ 0 };
             uint32 _skinVertexCount{ 0 };
@@ -145,7 +145,7 @@ namespace sw
             uint32 _arrPad[3]{ 0, 0, 0 };
         };
         /** @brief 인스턴스 정렬 디스패치 상수(instancesort.hlsl `SortParams`, b0)입니다. */
-        struct GpuSortParams
+        struct GPUSortParams
         {
             float32 _arrCameraPos[4]{};
             uint32  _instanceCount{ 0 };
@@ -273,7 +273,7 @@ namespace sw
         }
 
         /**
-         * @brief 이 패스가 씬 메시(GpuScene 배치)를 그리는지 반환합니다.
+         * @brief 이 패스가 씬 메시(GPUScene 배치)를 그리는지 반환합니다.
          * @details 머티리얼 퍼뮤테이션 PSO 를 미리 만들어 둘 대상이 이 패스들입니다. 풀스크린 패스는 배치를 안 씁니다.
          */
         static bool drawsSceneMeshes( RenderPassType passType )

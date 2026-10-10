@@ -33,7 +33,7 @@ namespace sw
     void D3D12RHICommandList::writeTimestamp( uint32 slotIndex )
     {
         ID3D12QueryHeap* pHeap = ( _pDevice != nullptr ) ? _pDevice->getTimestampHeap() : nullptr;
-        if ( pHeap == nullptr || slotIndex >= constant::kMaxGpuTimestampSlot || _entry._list == nullptr )
+        if ( pHeap == nullptr || slotIndex >= constant::kMaxGPUTimestampSlot || _entry._list == nullptr )
             return;
         _entry._list->EndQuery( pHeap, D3D12_QUERY_TYPE_TIMESTAMP, _pDevice->getTimestampBase() + slotIndex );
         _pDevice->markTimestampWritten( slotIndex );

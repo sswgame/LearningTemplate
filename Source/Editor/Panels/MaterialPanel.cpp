@@ -293,7 +293,7 @@ namespace sw::editor
         AssetManager*  pResources = editor::getService<AssetManager>();
         EditorContext* pContext   = EditorContext::get();
         if ( pResources != nullptr && pContext != nullptr )
-            pResources->getMaterialManager().reload( getLoadedAssetPath(), pContext->getRhiDevice() );
+            pResources->getMaterialManager().reload( getLoadedAssetPath(), pContext->getRHIDevice() );
         applyLivePreview();
         _status = "Saved";
         clearDocumentDirty();

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuLight.h"
+#include "Engine/Graphics/Shader/Binding/GPULight.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/2D/TileMapRendererComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -71,14 +71,14 @@ namespace sw
         }
     }
 
-    void ShadowCaster2DComponent::appendGpuShadowSegments( vector<GpuLight>& inoutListLight ) const
+    void ShadowCaster2DComponent::appendGPUShadowSegments( vector<GPULight>& inoutListLight ) const
     {
         vector<float4> listSegment;
         vector<float2> listEdgeNormal;
         computeWorldSegments( listSegment, listEdgeNormal );
         for ( size_t segmentIndex = 0; segmentIndex < listSegment.size(); ++segmentIndex )
         {
-            GpuLight record{};
+            GPULight record{};
             record._positionRadius = listSegment[segmentIndex];
             record._colorIntensity = float4{ listEdgeNormal[segmentIndex]._x, listEdgeNormal[segmentIndex]._y, 0.0f, 0.0f };
             record._directionType  = float4{ 0.0f, 0.0f, 0.0f, static_cast<float32>( shaderslot::kLightTypeShadow2D ) };

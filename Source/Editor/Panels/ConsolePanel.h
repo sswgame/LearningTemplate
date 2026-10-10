@@ -11,7 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorLogCommands.h"
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 
 #include "Engine/Console/DevConsole.h"
 
@@ -41,7 +41,7 @@ namespace sw::editor
         /** @brief 필터를 통과한 로그 목록을 그립니다. */
         void drawLogList( bool bNewLogs );
         /** @brief Logger 구독을 해제합니다. */
-        void shutdown( IRHIDevice* pRhiDevice ) override;
+        void shutdown( IRHIDevice* pRHIDevice ) override;
 
         /** @brief 태그(카테고리) 필터입니다. */
         EditorLogTagFilter& getTagFilter() { return _tagFilter; }

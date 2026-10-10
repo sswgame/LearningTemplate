@@ -120,7 +120,7 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 
 ### 이펙트
 
-버스마다 인서트 체인(`AudioBusDesc::_listEffect`)이 있고, 센드와 페이더 전에 순서대로 실행합니다. 이펙트 종류는 `AudioEffectRegistry` 에 이름으로 등록되어 있습니다(`Dsp/AudioEffect`).
+버스마다 인서트 체인(`AudioBusDesc::_listEffect`)이 있고, 센드와 페이더 전에 순서대로 실행합니다. 이펙트 종류는 `AudioEffectRegistry` 에 이름으로 등록되어 있습니다(`DSP/AudioEffect`).
 데이터는 종류 이름과 파라미터 이름으로만 고르고, 모르는 종류나 파라미터, 같은 버스의 겹친 이펙트 이름은 읽기 오류입니다.
 
 | 종류 | 알고리즘 |
@@ -131,7 +131,7 @@ OGG 디코더(stb_vorbis)의 메모리는 엔진 아레나에서 받고, 256KB �
 | `Reverb` | Freeverb(콤 필터 8개, 올패스 4개) |
 | `Delay` | 피드백 경로에 로우패스가 있는 딜레이 |
 
-파라미터 이름과 기본값은 `Dsp/AudioEffect.h` 에 있습니다. 20kHz 로우패스와 10Hz 하이패스는 아무것도 하지 않으므로 계산을 건너뜁니다. 스냅샷이 평소에는 열어 두는 필터를 비용 없이 걸어 둘 수 있습니다.
+파라미터 이름과 기본값은 `DSP/AudioEffect.h` 에 있습니다. 20kHz 로우패스와 10Hz 하이패스는 아무것도 하지 않으므로 계산을 건너뜁니다. 스냅샷이 평소에는 열어 두는 필터를 비용 없이 걸어 둘 수 있습니다.
 리미터는 출력이 천장 값을 넘지 않습니다. 필요한 게인의 최솟값을 미리 보기 창에서 구해 다듬고, 소리를 그만큼 늦추기 때문입니다.
 
 기본 그래프는 `master` 에 리미터(-1 dBFS)를, `reverb` 리턴 버스에 리버브를 두고, `sfx`, `voice`, `ambient` 가 센드로 리버브에 보냅니다.
@@ -260,7 +260,7 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 
 ### 새 버스 이펙트
 
-1. `Dsp/AudioEffect.h` 의 `IAudioEffect` 를 구현합니다. 파라미터 이름과 기본값을 선언하면, 데이터에 모르는 파라미터가 있을 때 읽기 오류가 됩니다.
+1. `DSP/AudioEffect.h` 의 `IAudioEffect` 를 구현합니다. 파라미터 이름과 기본값을 선언하면, 데이터에 모르는 파라미터가 있을 때 읽기 오류가 됩니다.
 2. `AudioEffectRegistry` 에 종류 이름으로 등록합니다.
 3. 믹서 데이터의 버스 `_listEffect` 에 그 이름을 씁니다. 스냅샷에서 파라미터를 바꾸려면 이펙트 이름을 붙입니다.
 
@@ -298,5 +298,5 @@ AudioEngine& engine = pAudio->getEngine();                         // 이벤트,
 | `AudioEvent.h` | 이벤트 라이브러리 데이터 |
 | `AudioMusic.h` | 적응형 음악 데이터 |
 | `AudioSpatial.h` | 리스너, 감쇠, 가림 |
-| `Dsp/AudioEffect.h` | 이펙트 종류와 파라미터 |
+| `DSP/AudioEffect.h` | 이펙트 종류와 파라미터 |
 | `Object/GameObject/SceneAudio.h` | 씬과 오디오 연결 |

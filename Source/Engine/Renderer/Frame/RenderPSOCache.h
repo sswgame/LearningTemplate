@@ -96,7 +96,7 @@ namespace sw
          * @brief 변형 캐시 키입니다.
          * @details 뷰 모드가 키의 한 축입니다. 같은 머티리얼이라도 Lit 와 Wireframe 은 다른 PSO 이고,
          *          모드를 되돌리면 이미 만들어 둔 것이 다시 나옵니다(다시 컴파일하지 않습니다).
-         *          컬 반전(거울 변환 배치, `GpuMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
+         *          컬 반전(거울 변환 배치, `GPUMeshBatch::_bReverseCulling`)도 축입니다. 컬 모드만 다른 PSO 입니다.
          */
         static uint64 materialPSOKey( RHIPipelineStateHandle passPSO, uint64 permutationHash, RenderViewMode viewMode, bool bReverseCulling );
         /** @brief 그 키의 변형이 이미 있는지 반환합니다. */

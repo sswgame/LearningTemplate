@@ -48,12 +48,12 @@ namespace sw
         float32               getValue() const { return _value; }
         ValueChangedDelegate& getOnValueChanged() { return _onValueChanged; }
 
-        UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override;
-        UiReply onActionEvent( const UiActionEvent& event, UiRoutePhase phase ) override;
+        UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
+        UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
         /** @brief 사용자 입력(끌기 · 좌우 행동)으로 값을 바꿉니다 — 바뀌면 양방향 바인딩에 알린다(`notifyValueEdited`). */
@@ -107,8 +107,8 @@ namespace sw
         const float4& getBackgroundColor() const { return _backgroundColor; }
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
         PROPERTY( DisplayName = "Percent", Min = 0.0, Max = 1.0 )

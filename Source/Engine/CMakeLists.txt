@@ -141,7 +141,7 @@ target_sources(Engine PRIVATE
 target_sources(Engine PRIVATE $<TARGET_OBJECTS:Core_objects>)
 add_dependencies(Engine Core_objects)
 
-# 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/Acl/` 에서만 include 한다 — 코덱 인터페이스(`AnimCodec.h`) 뒤에 감춘다.
+# 애니메이션 압축(ACL · RTM, 헤더만). 헤더는 `Animation/Codec/ACL/` 에서만 include 한다 — 코덱 인터페이스(`AnimCodec.h`) 뒤에 감춘다.
 target_link_libraries(Engine PRIVATE acl)
 
 # ThirdParty include/link 는 PRIVATE 로 둔다. Engine 밖으로 헤더가 노출되지 않게 해 C-ABI 격리를 유지한다.

@@ -7,7 +7,7 @@
 namespace sw
 {
     HUDViewModel::HUDViewModel()
-        : UiViewModel{}
+        : UIViewModel{}
         , _health{ 0 }
         , _healthRatio{ 0.0f }
         , _magazineAmmo{ 0 }

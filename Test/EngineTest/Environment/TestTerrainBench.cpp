@@ -7,7 +7,7 @@
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
@@ -18,7 +18,7 @@
 /**
  * @brief [TerrainBenchTest] 눈이 지형을 가로지르는 600 프레임 — LOD 교체 프레임의 GT 비용(판정 · 청크 메시 · GPU 씬 수집)
  * @details 쇼케이스 씬을 그대로 세워(머티리얼 · 식생 포함) 눈을 x 축으로 250 m(60 fps 로 10 초, 초속 25 m) 옮기며 프레임마다 updateLODs ·
- *          GpuSceneBuilder::buildFromScene 을 잰다. 교체가 있었던 프레임만 따로 모은다. 렌더 스레드의 정점 풀 재생성(`RT.GpuScene.vertexPool`)은
+ *          GPUSceneBuilder::buildFromScene 을 잰다. 교체가 있었던 프레임만 따로 모은다. 렌더 스레드의 정점 풀 재생성(`RT.GPUScene.vertexPool`)은
  *          여기 없다 — App 의 프로파일 표로 본다.
  */
 SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
@@ -34,7 +34,7 @@ SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
     sw::TerrainComponent* pTerrain = pObject->getComponent<sw::TerrainComponent>();
     SW_ASSERT_NOT_NULL( pTerrain );
 
-    sw::GpuSceneBuilder builder;
+    sw::GPUSceneBuilder builder;
     sw::vector<int64>   listAll;
     sw::vector<int64>   listSwapLOD;
     sw::vector<int64>   listSwapBuild;
@@ -56,7 +56,7 @@ SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
         }
     }
     SW_EXPECT_TRUE_MSG( listSwapLOD.empty() == false, "the sweep never changed a LOD - the bench measures nothing" );
-    test::logBenchSamples( "terrain sweep  every frame (updateLODs + GpuScene build)", listAll );
+    test::logBenchSamples( "terrain sweep  every frame (updateLODs + GPUScene build)", listAll );
     test::logBenchSamples( "terrain sweep  LOD swap frames: updateLODs (chunk meshes)", listSwapLOD );
-    test::logBenchSamples( "terrain sweep  LOD swap frames: GpuScene build", listSwapBuild );
+    test::logBenchSamples( "terrain sweep  LOD swap frames: GPUScene build", listSwapBuild );
 }

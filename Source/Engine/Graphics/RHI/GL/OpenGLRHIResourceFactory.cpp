@@ -50,7 +50,7 @@ namespace sw
             {    RHIFormat::R8G8B8A8_UNORM,                              GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
             {    RHIFormat::B8G8R8A8_UNORM,                              GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
-            // 8 바이트/픽셀이다(`getRhiFormatBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
+            // 8 바이트/픽셀이다(`getRHIFormatBlockInfo` 가 기준). HDR 첨부를 CPU 로 되읽는 경로(스크린샷 · 렌더 타깃 패널)가
             // 버퍼를 두 배로 넘겨 써서 **그냥 죽는다**.
             {RHIFormat::R16G16B16A16_FLOAT,                            GL_RGBA16F,          GL_RGBA,        GL_HALF_FLOAT},
             { RHIFormat::D24_UNORM_S8_UINT,                   GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8},
@@ -310,7 +310,7 @@ namespace sw
         }
 
         ScopedOpenGLContext ctxScope( _pDevice );
-        const bool          bCompressed = isRhiFormatBlockCompressed( pRecord->_format );
+        const bool          bCompressed = isRHIFormatBlockCompressed( pRecord->_format );
         const GLenum        glInternal  = toGlInternalFormat( pRecord->_format );
         const GLenum        glFormat    = toGlFormat( pRecord->_format );
         const GLenum        glType      = toGlType( pRecord->_format );
@@ -404,7 +404,7 @@ namespace sw
             return false;
         if ( pRecord->_bDepthStencil != SW_FALSE || mip >= pRecord->_mipLevels || arraySlice >= pRecord->_arraySize )
             return false;
-        if ( computeRhiTextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        if ( computeRHITextureMipLayout( pRecord->_format, pRecord->_width, pRecord->_height, mip, outLayout ) == false )
             return false;
 
         ScopedOpenGLContext ctxScope( _pDevice );
@@ -413,7 +413,7 @@ namespace sw
         if ( pRecord->_target == GL_TEXTURE_2D )
         {
             glBindTexture( GL_TEXTURE_2D, pRecord->_texture );
-            if ( isRhiFormatBlockCompressed( pRecord->_format ) )
+            if ( isRHIFormatBlockCompressed( pRecord->_format ) )
                 glGetCompressedTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), outBytes.data() );
             else
                 glGetTexImage( GL_TEXTURE_2D, static_cast<GLint>( mip ), toGlFormat( pRecord->_format ), toGlType( pRecord->_format ), outBytes.data() );
@@ -423,7 +423,7 @@ namespace sw
         {
             // 면 하나만 읽는다(z = 면 — 큐브 맵도 DSA 에서는 면이 z 다).
             const GLsizei bufferBytes = static_cast<GLsizei>( outBytes.size() );
-            if ( isRhiFormatBlockCompressed( pRecord->_format ) )
+            if ( isRHIFormatBlockCompressed( pRecord->_format ) )
             {
                 glGetCompressedTextureSubImage( pRecord->_texture, static_cast<GLint>( mip ), 0, 0, static_cast<GLint>( arraySlice ),
                                                 static_cast<GLsizei>( outLayout._width ), static_cast<GLsizei>( outLayout._height ), 1, bufferBytes, outBytes.data() );
@@ -443,7 +443,7 @@ namespace sw
     {
         if ( _pDevice->_bInitialized == SW_FALSE || desc._width == 0 || desc._height == 0 )
             return 0;
-        if ( isRhiTextureShapeValid( desc ) == false )
+        if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                           desc._arraySize, desc._width, desc._height );

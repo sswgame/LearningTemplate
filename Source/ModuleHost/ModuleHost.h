@@ -38,7 +38,7 @@ namespace sw
      * @brief 한 프레임 동안 고정되는 호스트 ↔ 모듈 상태입니다.
      * @details 에디터 상태는 DLL 경계를 넘는 함수 포인터 호출로만 알 수 있습니다. 고정 스텝마다 다시 묻던 것을 한 번 고정해,
      *          프레임 안의 모든 단계가 같은 답을 보게 합니다. 필드는 값이 만들어지는 곳에서 채웁니다. 게임플레이 활성 여부는
-     *          beginFrame(게임 업데이트 전)에서, 게임 뷰 · 씬 뷰 RT 와 씬 틱 여부는 updateEditorUi(에디터가 이번 프레임 입력을 처리한 뒤)에서
+     *          beginFrame(게임 업데이트 전)에서, 게임 뷰 · 씬 뷰 RT 와 씬 틱 여부는 updateEditorUI(에디터가 이번 프레임 입력을 처리한 뒤)에서
      *          채웁니다. 순서를 바꾸면 에디터의 Step 한 칸이 틱 없이 소비됩니다.
      */
     struct ModuleFrameState
@@ -208,7 +208,7 @@ namespace sw
         /** @brief 이번 프레임 상태를 호스트 모듈이 채웁니다(뷰 RT · 씬 틱 여부). */
         ModuleFrameState&  getMutableFrameState() { return _frameState; }
         LiveReloadManager* getLiveReloadManager() const { return _pLiveReloadManager; }
-        RHI*               getRhi() const { return _pRHI; }
+        RHI*               getRHI() const { return _pRHI; }
         IWindow*           getWindow() const { return _pWindow; }
 
         // 호스트 모듈(App 의 에디터)이 끼어드는 자리 — 이 클래스만으로는(전용 서버) 모두 아무 일도 하지 않습니다.

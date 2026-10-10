@@ -6,7 +6,7 @@
 
 #include "Engine/Animation/AnimClip.h"
 #include "Engine/Animation/AnimPlayer.h"
-#include "Engine/Animation/Codec/Acl/AclAnimCodec.h"
+#include "Engine/Animation/Codec/ACL/ACLAnimCodec.h"
 #include "Engine/Animation/Codec/AnimCodec.h"
 #include "Engine/Animation/Codec/Raw/RawAnimCodec.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -145,12 +145,12 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipSamplingMatchesHandComputedValues )
  * @brief [SkeletalAnimationTest] 코덱 — Raw 는 오차 0, ACL 은 정밀도 기준(0.1 mm) 근처에서 1 mm 아래이고 Raw 보다 작다
  * @details 같은 잣대(`AnimCodecRegistry::measureMaxError` — 모델 공간 가상 정점)로 두 코덱을 잰다. 이름으로 찾는 등록부도 본다.
  */
-SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsAclMaxErrorUnderThreshold )
+SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsACLMaxErrorUnderThreshold )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 5 );
     const AnimRawClip raw      = test::makeChainRawClip( skeleton, 61, 30.0f, 0.8f );
 
-    SW_EXPECT_TRUE( AnimCodecRegistry::findCodecByName( "ACL" ) == &AclAnimCodec::getInstance() );
+    SW_EXPECT_TRUE( AnimCodecRegistry::findCodecByName( "ACL" ) == &ACLAnimCodec::getInstance() );
     SW_EXPECT_TRUE( AnimCodecRegistry::findCodecByName( "raw" ) == &RawAnimCodec::getInstance() );
     SW_EXPECT_NULL( AnimCodecRegistry::findCodecByName( "zip" ) );
 
@@ -164,15 +164,15 @@ SW_TEST_CASE( SkeletalAnimationTest, CodecRawVsAclMaxErrorUnderThreshold )
 
     vector<uint8>  aclBytes;
     AnimCodecStats aclStats{};
-    SW_ASSERT_TRUE( AnimCodecRegistry::compressAndMeasure( AclAnimCodec::getInstance(), raw, settings, aclBytes, aclStats ) );
+    SW_ASSERT_TRUE( AnimCodecRegistry::compressAndMeasure( ACLAnimCodec::getInstance(), raw, settings, aclBytes, aclStats ) );
     SW_EXPECT_TRUE_MSG( aclStats._maxError < 0.001f, ( string( "ACL max error " ) + to_string( aclStats._maxError ) ).c_str() );
     SW_EXPECT_TRUE( aclStats._compressedByteCount < rawStats._compressedByteCount );
     SW_EXPECT_TRUE( aclStats.computeRatio() > 2.0f );
 
     // ACL 블롭을 클립으로 실어도 같은 값이 나온다(정렬된 보관 · 코덱 번호).
     AnimClip clip;
-    SW_ASSERT_TRUE( clip.compressFrom( raw, AclAnimCodec::getInstance(), settings, nullptr ) );
-    SW_EXPECT_TRUE( clip.getCodecId() == AnimCodecId::Acl );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), settings, nullptr ) );
+    SW_EXPECT_TRUE( clip.getCodecId() == AnimCodecId::ACL );
     Pose rawPose;
     Pose aclPose;
     raw.sample( 1.0f, rawPose );
@@ -200,7 +200,7 @@ SW_TEST_CASE( SkeletalAnimationTest, ClipFileRoundTripsAndRejectsMalformedBytes 
         AnimCurveKey{1.0f, 2.0f}
     };
     clip.addCurve( curve );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, AclAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
 
     vector<uint8> bytes;
     clip.makeBytes( bytes );
@@ -528,7 +528,7 @@ SW_TEST_CASE( SkeletalAnimationTest, AnimatorPlaysClipFromFolder )
         AnimCurveKey{1.0f, 2.0f}
     };
     clip.addCurve( curve );
-    SW_ASSERT_TRUE( clip.compressFrom( raw, AclAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
+    SW_ASSERT_TRUE( clip.compressFrom( raw, ACLAnimCodec::getInstance(), AnimCodecSettings{}, nullptr ) );
     const string folder = test::makeTempPath( "animclips" );
     SW_ASSERT_TRUE( clip.saveToFile( FileUtil::joinPath( folder, "walk.animclip" ) ) );
 

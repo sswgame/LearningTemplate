@@ -17,7 +17,7 @@ namespace sw
         struct VoxelChunkComponentInternal
         {
             /** @brief 키트 정점 → 엔진 정점입니다(같은 네 속성). */
-            static RHIVertex toRhiVertex( const VoxelMeshVertex& source )
+            static RHIVertex toRHIVertex( const VoxelMeshVertex& source )
             {
                 RHIVertex vertex{};
                 vertex._arrPosition[0] = source._position._x;
@@ -45,16 +45,16 @@ namespace sw
                     pMeshComponent->setVisible( false );
                     return;
                 }
-                vector<RHIVertex> listRhiVertex;
-                listRhiVertex.reserve( listVertex.size() );
+                vector<RHIVertex> listRHIVertex;
+                listRHIVertex.reserve( listVertex.size() );
                 for ( const VoxelMeshVertex& vertex : listVertex )
                 {
-                    listRhiVertex.push_back( toRhiVertex( vertex ) );
+                    listRHIVertex.push_back( toRHIVertex( vertex ) );
                 }
                 shared_ptr<Mesh> mesh = Mesh::create();
                 if ( mesh == nullptr )
                     return;
-                mesh->setVertices( std::move( listRhiVertex ) );
+                mesh->setVertices( std::move( listRHIVertex ) );
                 pMeshComponent->setMesh( mesh );
                 pMeshComponent->setVisible( true );
             }

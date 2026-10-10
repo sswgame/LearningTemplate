@@ -2,7 +2,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 
-#include "Engine/Audio/Dsp/AudioEffect.h"
+#include "Engine/Audio/DSP/AudioEffect.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -357,7 +357,7 @@ namespace sw
         AudioBusDesc   master;
         master._name = hashed_string( AudioBusNames::kMaster );
         desc._listBus.push_back( master );
-        const utf8* arrChildName[] = { AudioBusNames::kMusic, AudioBusNames::kSfx, AudioBusNames::kVoice, AudioBusNames::kAmbient, AudioBusNames::kUi };
+        const utf8* arrChildName[] = { AudioBusNames::kMusic, AudioBusNames::kSfx, AudioBusNames::kVoice, AudioBusNames::kAmbient, AudioBusNames::kUI };
         for ( const utf8* pName : arrChildName )
         {
             AudioBusDesc child;

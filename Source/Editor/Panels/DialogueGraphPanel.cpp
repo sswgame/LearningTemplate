@@ -12,7 +12,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorUtil.h"
-#include "Editor/Common/Gui/EditorChrome.h"
+#include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/Widgets/EditorNodeGraphId.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorSessionPolicy.h"
@@ -82,7 +82,7 @@ namespace sw::editor
     {
     }
 
-    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRhiDevice*/ )
+    void DialogueGraphPanel::shutdown( IRHIDevice* /*pRHIDevice*/ )
     {
         _nodeGraph.shutdown();
     }

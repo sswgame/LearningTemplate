@@ -12,7 +12,7 @@
 #include "Engine/Module/ModuleTypeRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Renderer/RenderThread.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/UISystem.h"
 
 #include "ModuleHost/LiveReloadManager.h"
 #include "ModuleHost/ModuleCompiler.h"
@@ -213,7 +213,7 @@ namespace sw
         // 게임 update 가 돌지 않는 동안(에디터 멈춤 · Simulate)은 게임이 연 화면(로딩 · HUD · 메뉴)을 그리지 않는다 — 그 화면을 닫을 게임 코드가
         // 돌지 않으므로, 그리면 첫 Play 전까지 로딩 화면이 게임 뷰를 덮는다. 오프스크린 미리보기(UI Preview)는 그대로다.
         if ( engine::areEngineServicesBound() )
-            engine::getUiSystem().setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
+            engine::getUISystem().setOnScreenSuppressed( _frameState._bGameplayActive == SW_FALSE );
     }
 
     void ModuleHost::updateGame( float32 deltaTime )

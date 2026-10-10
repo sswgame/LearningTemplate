@@ -43,13 +43,13 @@ namespace sw
         PROPERTY()
         string _uiOptionsMenu{};
 
-        /** @brief 엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUiPauseMenu` 가 켜졌을 때만 쓴다). */
+        /** @brief 엔진 기본(`engine/ui/pause.ui.xml`) 대신 쓸 일시정지 메뉴 문서(팩 상대 경로)입니다. 비면 엔진 기본입니다(`_bUIPauseMenu` 가 켜졌을 때만 쓴다). */
         PROPERTY()
         string _uiPauseMenu{};
 
         /** @brief 화면이 없을 때 Esc · 패드 Start(`UI.Pause`)로 일시정지 메뉴를 연다. 게임 흐름(타이틀 · 경영 화면)이 Esc 를 따로 쓰면 끈다. */
         PROPERTY()
-        bool _bUiPauseMenu{ false };
+        bool _bUIPauseMenu{ false };
 
         /**
          * @brief 게임마다 다른 사용자 설정 기본값입니다(설정 id → 값). 엔진 스키마의 기본값을 덮어씁니다.

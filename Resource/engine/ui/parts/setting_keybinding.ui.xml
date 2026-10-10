@@ -1,4 +1,4 @@
-<UiDocument _schemaVersion="1">
+<UIDocument _schemaVersion="1">
 	<BoxPanel _styleClass="settingrow" _spacing="12">
 		<TextWidget _name="Label" _styleClass="settinglabel">
 			<_slot _widthOverride="320" _verticalAlignment="Center" />
@@ -8,4 +8,4 @@
 			<TextWidget _name="Glyph" _bLocalized="false" />
 		</ButtonWidget>
 	</BoxPanel>
-</UiDocument>
+</UIDocument>

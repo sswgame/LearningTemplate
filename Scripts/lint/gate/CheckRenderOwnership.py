@@ -3,7 +3,7 @@
 """
 렌더 패킷 소유 규칙 검사.
 
-게임 스레드가 만들어 렌더 스레드로 넘기는 것(GpuSceneSnapshot · RenderFramePacket 과 그 안의 구조체)은
+게임 스레드가 만들어 렌더 스레드로 넘기는 것(GPUSceneSnapshot · RenderFramePacket 과 그 안의 구조체)은
 **소유를 함께 실어야 한다.** 생포인터를 실으면 GT 가 놓은 뒤 RT 가 해제된 메모리를 읽는다(ASAN
 heap-use-after-free — MaterialInstance 가 대표적이다). 그리고 그 객체를 게임 모듈이 make_shared 로
 만들면 제어 블록이 모듈 DLL 에 살아, 엔진이 마지막 참조를 놓을 때 이미 내려간 코드로 뛰어든다(종료 시 세그폴트).
@@ -12,7 +12,7 @@ heap-use-after-free — MaterialInstance 가 대표적이다). 그리고 그 객
   1) 아래 "옮겨지는 헤더" 에 선언된 **모든** 구조체의 멤버에 원시 포인터(`T* _x`)가 없다.
      소유는 shared_ptr, 값은 값으로.
   C++ 는 "필드를 추가하는 것" 자체를 막지 못하므로 이것만 스크립트가 본다. "옮겨지는 값의 집합" 은
-  GpuSceneSnapshot 타입이, "Material·MaterialInstance·Mesh 는 Engine 안에서 shared_ptr 로만 태어난다" 는
+  GPUSceneSnapshot 타입이, "Material·MaterialInstance·Mesh 는 Engine 안에서 shared_ptr 로만 태어난다" 는
   패스키 생성자(CreateKey)가 컴파일 시점에 보장한다 — 그래서 make_shared 규칙은 여기 없다.
 
 **구조체 이름을 나열하지 않는다 — 헤더 전체를 본다.**
@@ -43,7 +43,7 @@ from LintGate import GateResult, LintGate  # noqa: E402
 
 # 옮겨지는 것이 선언되는 헤더. 여기 있는 구조체는 **전부** 검사 대상이다.
 _kTransportedHeaders: list[str] = [
-    "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h",
+    "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h",
     "Source/Engine/Renderer/Frame/RenderFramePacket.h",
 ]
 
@@ -155,7 +155,7 @@ class CheckRenderOwnershipGate(LintGate):
         {
             "name": "스냅샷 구조체에 생포인터",
             "files": {
-                "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h": (
+                "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h": (
                     "#pragma once\n\n"
                     "struct GpuProbe\n"
                     "{\n"
@@ -170,7 +170,7 @@ class CheckRenderOwnershipGate(LintGate):
         {
             "name": "표식이 _pA 만 면제하는 구조체에 생포인터 _pB 를 더함",
             "files": {
-                "Source/Engine/Renderer/Scene/GpuSceneSnapshot.h": (
+                "Source/Engine/Renderer/Scene/GPUSceneSnapshot.h": (
                     "#pragma once\n\n"
                     "// SW_OWNERSHIP_RAW_OK( _pA ): 정체성 키다.\n"
                     "struct GpuProbeKey\n"

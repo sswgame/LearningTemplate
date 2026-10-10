@@ -3,7 +3,7 @@
  * @brief 씬 컴포넌트 없이 같은 메시 · 머티리얼의 인스턴스 N 개를 드는 렌더 프리미티브입니다(언리얼 InstancedStaticMesh 의 자리).
  * @details 게임플레이 객체는 `GameObject` + `SceneComponent` 로 두고, 수천 개가 매 프레임 움직이는 것은 이 배치로 다룹니다.
  *          항목은 월드 행렬 하나와 바운드 · 시드뿐이라 플러시도 배치 쓰기도 지나지 않습니다. `PrimitiveRegistry` 에 항목마다
- *          프리미티브 번호로 등록되어 `GpuSceneBuilder` 가 메시 컴포넌트와 **같은 경로**로 모읍니다(부분 수집 · 배치 병합 ·
+ *          프리미티브 번호로 등록되어 `GPUSceneBuilder` 가 메시 컴포넌트와 **같은 경로**로 모읍니다(부분 수집 · 배치 병합 ·
  *          더티 구간 · 투명 정렬 모두 그대로). 항목 수는 만들 때 정해집니다(언리얼 ISM 도 추가 · 제거가 재구성입니다).
  */
 #pragma once
@@ -13,7 +13,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
+#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 
 namespace sw
 {
@@ -32,7 +32,7 @@ namespace sw
             float4x4              _world{ float4x4::Identity };
             float32               _boundsRadius{ 0.866f }; ///< 단위 큐브의 반지름. MeshComponent 의 기본값과 같습니다
             uint32                _spinSeed{ 0 };          ///< GPU 회전 시드(0 이면 없음). instanceanim.hlsl 이 해시합니다
-            GpuSpriteInstanceData _sprite{};               ///< 스프라이트 프레임 · 색(sprite2d.hlsl 이 읽습니다). 기본은 텍스처 전체 · 흰색
+            GPUSpriteInstanceData _sprite{};               ///< 스프라이트 프레임 · 색(sprite2d.hlsl 이 읽습니다). 기본은 텍스처 전체 · 흰색
             uint8                 _bVisible{ SW_TRUE };    ///< 이 항목만 숨깁니다. 숨긴 항목은 후보에서 빠집니다
         };
 
@@ -65,9 +65,9 @@ namespace sw
         void setSpinSeed( uint32 index, uint32 seed );
         /**
          * @brief 항목의 스프라이트 프레임 · 색을 적습니다. 값이 그대로면 더티로 표시하지 않습니다.
-         * @details 머티리얼 인스턴스가 아니라 항목에 싣습니다 — 항목마다 프레임 · 색이 달라도 배치는 하나입니다(`GpuSpriteInstanceData`).
+         * @details 머티리얼 인스턴스가 아니라 항목에 싣습니다 — 항목마다 프레임 · 색이 달라도 배치는 하나입니다(`GPUSpriteInstanceData`).
          */
-        void setSprite( uint32 index, const GpuSpriteInstanceData& sprite );
+        void setSprite( uint32 index, const GPUSpriteInstanceData& sprite );
         /**
          * @brief 항목 하나를 보이거나 숨깁니다. 값이 그대로면 아무것도 하지 않습니다.
          * @details 항목 수는 만들 때 정해지므로(언리얼 ISM 도 추가 · 제거가 재구성입니다) 쓰지 않는 자리는 숨깁니다 — 데미지 숫자의 남는 자릿수,

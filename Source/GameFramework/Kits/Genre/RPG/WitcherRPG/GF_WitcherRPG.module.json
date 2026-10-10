@@ -1,0 +1,24 @@
+{
+    "_name": "GF_WitcherRPG",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "위쳐 RPG 키트(위쳐 3 장르) — 괴물 도감과 약점 · 연금술(독성 · 명상) · 표식 · 전투 스태미나와 아드레날린 · 변이 슬롯 · 계약 단서와 보상 흥정",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client",
+        "Server"
+    ],
+    "_bEnabledByDefault": true
+}

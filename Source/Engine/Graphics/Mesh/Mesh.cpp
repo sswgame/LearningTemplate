@@ -120,17 +120,17 @@ namespace sw
         return s_nextContentId.fetch_add( 1u, std::memory_order_relaxed );
     }
 
-    bool Mesh::initRhi( IRHIDevice* pDevice )
+    bool Mesh::initRHI( IRHIDevice* pDevice )
     {
         if ( pDevice == nullptr || _listVertex.empty() )
             return false;
 
         // 워커에서 만들어도 되는지는 **백엔드가 말한다**. DX12 · DX11 · Vulkan 은 버퍼 생성이 디바이스 레벨이고
         // 핸들 테이블도 잠겨 있어 안전하다. OpenGL 은 glGen* 이 현재 컨텍스트를 필요로 해서 안 된다. 그 백엔드에서
-        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GpuUploadQueue 는 그 백엔드에서 요청을 받지 않는다 — 렌더 스레드가 만든다).
+        // 워커가 여기 들어왔다면 부른 쪽이 틀린 것이다(GPUUploadQueue 는 그 백엔드에서 요청을 받지 않는다 — 렌더 스레드가 만든다).
         if ( engine::areEngineServicesBound() && pDevice->getCapabilities()._bThreadSafeResourceCreation == SW_FALSE )
             SW_ASSERT( engine::getTaskManager().isWorkerThread() == false );
-        // 이미 올라가 있으면 그대로 둔다. 옛 디바이스가 죽었다면 통보(`releaseRhi` · `forgetRhi`)가 먼저 와서
+        // 이미 올라가 있으면 그대로 둔다. 옛 디바이스가 죽었다면 통보(`releaseRHI` · `forgetRHI`)가 먼저 와서
         // 여기를 비워 놓았으므로, 값이 남아 있다는 것은 곧 살아 있는 디바이스의 것이라는 뜻이다.
         if ( _vertex.isResident() )
             return true;
@@ -150,7 +150,7 @@ namespace sw
         return true;
     }
 
-    void Mesh::releaseRhi( IRHIDevice* pDevice )
+    void Mesh::releaseRHI( IRHIDevice* pDevice )
     {
         // 디바이스가 죽기 **전에** 오는 통보다. 제대로 돌려준다. 남의 디바이스 것이면 내 것이 아니다.
         if ( pDevice == nullptr || _vertex._pDevice != pDevice )
@@ -158,7 +158,7 @@ namespace sw
         releaseVertexBuffer();
     }
 
-    void Mesh::forgetRhi( IRHIDevice* pDevice )
+    void Mesh::forgetRHI( IRHIDevice* pDevice )
     {
         // 남의 디바이스가 죽었다는 통보다. 내 버퍼는 멀쩡하다.
         if ( _vertex._pDevice != pDevice )

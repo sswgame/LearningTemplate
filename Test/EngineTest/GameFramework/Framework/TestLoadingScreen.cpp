@@ -3,8 +3,8 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Screen/UiScreen.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UIScreen.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
 #include "GameFramework/Base/Foundation/Framework/Flow/LoadingScreenController.h"
@@ -22,7 +22,7 @@ namespace
         static constexpr float32 kFrameSeconds = 0.1f;
 
         sw::InputManager            _input;
-        sw::UiSystem                _ui;
+        sw::UISystem                _ui;
         sw::ScreenFade              _fade;
         sw::LoadingScreenController _loading;
 
@@ -35,12 +35,12 @@ namespace
             SW_EXPECT_TRUE( sw::ResourceUtil::initialize() );
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr ) );
-            _loading.bindUiSystem( &_ui );
+            _loading.bindUISystem( &_ui );
         }
 
         ~LoadingScreenFixture()
         {
-            _loading.bindUiSystem( nullptr );
+            _loading.bindUISystem( nullptr );
             _ui.shutdown();
             _input.shutdown();
         }
@@ -52,7 +52,7 @@ namespace
             _loading.update( kFrameSeconds, bLoading, _fade );
             _input.beginFrame( kFrameSeconds );
             _ui.processInput( kFrameSeconds );
-            _ui.update( kFrameSeconds, sw::UiViewport{
+            _ui.update( kFrameSeconds, sw::UIViewport{
                                            sw::float2{ 1920.0f, 1080.0f }
             } );
             _input.endFrame();
@@ -73,9 +73,9 @@ SW_TEST_CASE( LoadingScreenTest, LoadingScreenStaysForMinimumTime )
     fixture._loading.setSettings( settings );
     SW_ASSERT_TRUE( fixture._loading.beginLoading() );
     fixture.runFrame( true );
-    const sw::UiScreen* pScreen = fixture._loading.findLoadingScreen();
+    const sw::UIScreen* pScreen = fixture._loading.findLoadingScreen();
     SW_ASSERT_NOT_NULL( pScreen );
-    SW_EXPECT_TRUE( pScreen->getDesc()._layer == sw::UiLayer::Loading );
+    SW_EXPECT_TRUE( pScreen->getDesc()._layer == sw::UILayer::Loading );
     SW_EXPECT_TRUE( fixture._ui.isGameInputBlocked() );
     SW_EXPECT_TRUE( fixture._ui.isLoadingScreenShown() ); // 자동화의 "씬 플레이 중" 은 이것이 걷힌 뒤다
     // 팁은 목록에서 고른 것이 Tip 글 위젯에 들어간다(표에 없는 키는 원문 그대로).
@@ -126,9 +126,9 @@ SW_TEST_CASE( LoadingScreenTest, FadeOverlayFollowsScreenFadeAlpha )
     {
         fixture.runFrame( false );
     }
-    const sw::UiScreen* pFade = fixture._loading.findFadeScreen();
+    const sw::UIScreen* pFade = fixture._loading.findFadeScreen();
     SW_ASSERT_NOT_NULL( pFade );
-    SW_EXPECT_TRUE( pFade->getDesc()._layer == sw::UiLayer::Overlay );
+    SW_EXPECT_TRUE( pFade->getDesc()._layer == sw::UILayer::Overlay );
     SW_EXPECT_FALSE( fixture._ui.isGameInputBlocked() );
     const sw::Widget* pPanel = pFade->getTree().getRoot();
     SW_ASSERT_NOT_NULL( pPanel );

@@ -127,7 +127,7 @@ namespace sw
                 if ( slot._pMapped != nullptr )
                     vkUnmapMemory( dev, mem );
                 RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-                _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
+                _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger]()
                 {
                     vkDestroyBuffer( dev, buf, nullptr );
                     vkFreeMemory( dev, mem, nullptr );
@@ -362,7 +362,7 @@ namespace sw
         VkDeviceMemory   mem     = owned._memory;
         VkDevice         dev     = _pDevice->_device;
         RHIMemoryLedger* pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, buf, mem, pLedger, buffer]()
         {
             if ( buf != VK_NULL_HANDLE )
                 vkDestroyBuffer( dev, buf, nullptr );
@@ -378,7 +378,7 @@ namespace sw
     {
         if ( _pDevice->_device == nullptr || desc._width == 0 || desc._height == 0 )
             return 0;
-        if ( isRhiTextureShapeValid( desc ) == false )
+        if ( isRHITextureShapeValid( desc ) == false )
         {
             SW_LOG_ERROR( "createTexture2D: dimension %# with %# slices (%#x%#) is not a valid texture shape", static_cast<uint32>( desc._dimension ),
                           desc._arraySize, desc._width, desc._height );
@@ -717,7 +717,7 @@ namespace sw
                           mip, arraySlice, pRecord->_mipLevels, pRecord->_arrayLayers );
             return false;
         }
-        if ( computeRhiTextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
+        if ( computeRHITextureMipLayout( static_cast<RHIFormat>( pRecord->_rhiFormat ), pRecord->_width, pRecord->_height, mip, outLayout ) == false )
         {
             SW_LOG_ERROR( "readbackTexture2D: unsupported format %# for %#x%# mip %#",
                           pRecord->_rhiFormat, pRecord->_width, pRecord->_height, mip );
@@ -819,7 +819,7 @@ namespace sw
         VkDeviceMemory      mem        = owned._memory;
         vector<VkImageView> listSliceView{ owned._listSliceView };
         RHIMemoryLedger*    pLedger = &_pDevice->getMemoryLedger();
-        _pDevice->_releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
+        _pDevice->_releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, [dev, view, sampleView, image, mem, listSliceView, pLedger, texture]()
         {
             for ( VkImageView sliceView : listSliceView )
             {

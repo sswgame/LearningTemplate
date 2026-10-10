@@ -18,7 +18,7 @@ engine/materials/toon.material   (MaterialDesc XML: 셰이더 경로, 블렌드 
 Material   ── 패킹된 머티리얼 원소, 퍼뮤테이션 define, 텍스처 SRV 인덱스
         │  MaterialInstance::create( Material* ) — 값 일부를 덮어씀
         ▼
-MeshComponent  ──▶  GpuSceneBuilder 가 머티리얼 원소로 모아 셰이더의 g_SwMaterials 로 보냄
+MeshComponent  ──▶  GPUSceneBuilder 가 머티리얼 원소로 모아 셰이더의 g_SwMaterials 로 보냄
 ```
 
 기억할 개념은 네 가지입니다.
@@ -86,7 +86,7 @@ XML의 프로퍼티 순서가 아니라 셰이더 구조체가 기준이므로, 
 ### 머티리얼 인스턴스
 
 `MaterialInstance::create( Material* )` 로 만들고 `setScalarParameter`, `setVectorParameter`, `setTextureParameter`, `setParameter` 로 값을 덮어씁니다.
-`updateRhi` 가 부모 기본값에 덮어쓴 값을 합쳐 인스턴스 버퍼를 만들거나 갱신하고, 렌더 스레드가 이것을 부릅니다.
+`updateRHI` 가 부모 기본값에 덮어쓴 값을 합쳐 인스턴스 버퍼를 만들거나 갱신하고, 렌더 스레드가 이것을 부릅니다.
 텍스처는 텍스처 에셋 경로로 덮어씁니다(`setTextureParameter( name, "engine/textures/perlin.dds" )`). 언리얼의 `SetTextureParameterValue` 와 같습니다.
 
 인스턴스가 다르면 머티리얼 원소가 달라지지만, DirectX 12와 Vulkan은 셰이더 종류 단위로 배치를 합치므로 드로우 콜이 늘지 않습니다.
@@ -124,13 +124,13 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 - **정적 스위치는 세 개입니다.** `Outline`(`MATERIAL_OUTLINE`)은 아래 메시 외곽선 패스가 이 머티리얼을 그리게 합니다. `AlphaCutoff`(`MATERIAL_ALPHA_CUTOFF`)는 `alphaCutoff` 아래 픽셀을 버립니다.
   `TwoSided`(`MATERIAL_TWO_SIDED`)는 양면으로 그립니다. `Outline` 과 `TwoSided` 는 `bShaderFeature="0"` 이라 실행 중에 바꿀 수 있고, `AlphaCutoff` 는 에셋 상태만 쿠킹합니다.
 - **양면은 머티리얼의 속성입니다.** 언리얼의 Two Sided와 같습니다. 머티리얼 PSO 변형(`createMaterialPSOVariant`)이 퍼뮤테이션의 `MATERIAL_TWO_SIDED` 를 보고 후면 컬링을 끕니다.
-  후면 컬링을 쓰는 패스에만 적용되고, 그림자 패스도 양면으로 드리웁니다. 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집습니다(`RenderPassGpuTest.TwoSidedMaterialDrawsBackFaces`).
+  후면 컬링을 쓰는 패스에만 적용되고, 그림자 패스도 양면으로 드리웁니다. 셰이더는 뒷면의 노멀을 `SV_IsFrontFace` 로 뒤집습니다(`RenderPassGPUTest.TwoSidedMaterialDrawsBackFaces`).
 - **디퍼드에서는 램버트로 그립니다.** G버퍼 패스는 표면(기본색, 노멀)만 기록하고, 계단 셰이딩은 포워드 경로에만 있습니다.
 - **톤 매핑과 블룸이 없는 파이프라인 `engine/pipeline/forwardtoonpipeline.xml` 을 씁니다**(`-gv_renderPipeline`). 툰은 빛을 받는 면이 기본색 그대로 보이는 것이 목표입니다.
   기본 포워드의 톤 매핑(Reinhard)은 흰색을 0.5로 누르고, 블룸은 장면 색(R8G8B8A8)에서 잘린 밝은 면을 번지게 해 계단을 지웁니다. 2D의 `forward2dpipeline.xml` 과 같은 이유입니다.
   장면 색이 LDR이라 빛 세기와 환경광의 합이 1을 넘으면 기본색이 잘립니다. 툰 장면은 주 광원 세기를 1 근처로 둡니다(쇼케이스 `game/empty/maps/toonshowcase.scene.xml`).
 
-밝기 단계 수는 `RenderPassGpuTest.ToonShadingHasFewerBrightnessLevelsThanLit` 가 픽셀로 확인합니다. 밝기 히스토그램에서 1%를 넘는 구간 수가 툰은 2, 램버트는 34입니다.
+밝기 단계 수는 `RenderPassGPUTest.ToonShadingHasFewerBrightnessLevelsThanLit` 가 픽셀로 확인합니다. 밝기 히스토그램에서 1%를 넘는 구간 수가 툰은 2, 램버트는 34입니다.
 
 ### 예: 메시 외곽선 — 인버티드 헐(inverted hull)
 
@@ -143,13 +143,13 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 - **두께**는 `outlineWidthMode` 로 고릅니다. 0은 월드 단위(미터, 노멀 방향으로 민다)이고 1은 화면 단위(화면 높이 비율)입니다.
   화면 단위는 클립 공간에서 투영한 노멀 방향으로 `width × 2 × w` 를 더해 거리와 무관한 두께를 냅니다. `outlineMaxDistance` 를 넘으면 가늘어지고, 가로세로 비는 `g_OutlineParams.yz` 로 맞춥니다.
 - **색**은 `outlineColor × lerp( 1, 직접광 + 환경광, outlineLightingMix )` 입니다.
-- **스키닝과 모프 결과를 밉니다.** 정점은 `swLoadMorphedVertex` 로 읽습니다(`RenderPassGpuTest.MeshOutlineFollowsSkinnedPose`).
+- **스키닝과 모프 결과를 밉니다.** 정점은 `swLoadMorphedVertex` 로 읽습니다(`RenderPassGPUTest.MeshOutlineFollowsSkinnedPose`).
 - **외곽선 퍼뮤테이션은 정점 셰이더가 머티리얼을 읽습니다.** 두께가 정점 단계에 필요하기 때문입니다. 픽셀이 쓸 값(색, 알파 컷오프, 기본 텍스처)은 `nointerpolation` 필드로 넘깁니다.
   OpenGL은 두 단계가 구조체 버퍼를 읽으면 링크를 거부하기 때문입니다.
 - 반투명 배치는 그리지 않고 불투명 목록만 그립니다. 와이어프레임 보기에서는 패스가 빠집니다.
 - 큐브처럼 모서리가 각진 메시는 노멀이 갈라져 껍질에 틈이 생깁니다. 인버티드 헐 방식의 한계입니다.
 
-`RenderPassGpuTest.MeshOutlineDrawsDarkRingAroundSilhouette` 가 포워드와 디퍼드에서 외곽선을 확인합니다. 외곽선을 끈 이미지의 배경 위치 중 켠 이미지에서 그려진 픽셀이 외곽선입니다.
+`RenderPassGPUTest.MeshOutlineDrawsDarkRingAroundSilhouette` 가 포워드와 디퍼드에서 외곽선을 확인합니다. 외곽선을 끈 이미지의 배경 위치 중 켠 이미지에서 그려진 픽셀이 외곽선입니다.
 이 고리가 실루엣 띠 안에 있고, 어둡고, 안쪽 픽셀은 그대로인지를 봅니다.
 
 ## 확장하는 법
@@ -179,10 +179,10 @@ shading = linearstep( -1 + shadingToony, 1 - shadingToony, dot( N, L ) + shading
 의심되면 `IRHIDevice::assertRegistryMutableNow` 에서 콜스택을 파일로 남겨 봅니다. 비동기 로거는 크래시 직전 줄을 잃습니다.
 
 **텍스처를 다시 로드하면 같은 `Texture2D` 가 새 SRV 인덱스를 받습니다.** 머티리얼은 `TextureCache::getReloadGeneration` 이 바뀐 것을 보고 `Material::refreshTextureBindings` 로 인덱스를 다시 받고,
-렌더러는 `GpuSceneBuilder::refreshReloadedTextures` 로 반영합니다. DirectX 11과 OpenGL은 인덱스를 바로 재사용해서 이 종류의 결함이 숨으므로 DirectX 12나 Vulkan으로 확인합니다.
+렌더러는 `GPUSceneBuilder::refreshReloadedTextures` 로 반영합니다. DirectX 11과 OpenGL은 인덱스를 바로 재사용해서 이 종류의 결함이 숨으므로 DirectX 12나 Vulkan으로 확인합니다.
 디바이스 없이 잡은 머티리얼은 `MaterialCache::requestInitialize` 로 표시해야 GPU에 올라갑니다.
 
-**`Material::forgetRhi` 는 `releaseRhi` 와 같은 상태를 남겨야 합니다.** 빌린 텍스처 목록이 남으면 DirectX 11과 OpenGL의 t5..t8 서수가 밀립니다.
+**`Material::forgetRHI` 는 `releaseRHI` 와 같은 상태를 남겨야 합니다.** 빌린 텍스처 목록이 남으면 DirectX 11과 OpenGL의 t5..t8 서수가 밀립니다.
 디바이스 세대 번호나 "전체 GPU 해제", "전체 재초기화" 같은 함수를 다시 만들지 않습니다. 디바이스 수명은 `RHIRenderResource` 통보가 처리합니다.
 
 **화면에 마젠타 · 검정 체커가 보이면 렌더러보다 데이터 경로를 먼저 봅니다.** 못 읽은 텍스처는 `EngineDefaultAssets::_missingTexture`, 못 읽은 머티리얼은 `_missingMaterial` 을 빌립니다(Shipping 도 같습니다). 머티리얼은 요청 경로(`_listAcquiredTexturePath`)와 실제로 빌린 경로(`_listBorrowedTexturePath`)를 따로 적고, 찾기 · 놓기는 빌린 경로로 합니다. 그 텍스처 파일을 나중에 만들어도 핫 리로드는 체커를 바꾸지 않습니다 — 캐시에 있는 경로만 다시 읽으므로 머티리얼을 다시 엽니다. `MeshComponent` 는 요청 경로(`_requestedMaterialPath`)를 기억해 같은 요청을 다시 시도 · 경고하지 않습니다.

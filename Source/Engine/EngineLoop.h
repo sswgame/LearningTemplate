@@ -40,8 +40,8 @@ namespace sw
     class FrameProfiler;
     class FrameRenderer;
     class GlobalVariableManager;
-    class GpuSceneBuilder;
-    class GpuUploadQueue;
+    class GPUSceneBuilder;
+    class GPUUploadQueue;
     class IAudioSystem;
     class InputManager;
     class InputMap;
@@ -182,7 +182,7 @@ namespace sw
         // ----------------------------------------------------------------------
         ConfigManager*      getConfigManager() const { return _configManager.get(); }
         CommandLineManager* getCommandLineManager() const { return _owned._pCommandLineManager.get(); }
-        RHI*                getRhi() const { return _rhi.get(); }
+        RHI*                getRHI() const { return _rhi.get(); }
         RenderThread*       getRenderThread() const { return _renderThread.get(); }
         bool                isHeadless() const { return _bHeadless; }
         /** @brief 이 엔진을 띄운 호스트의 역할입니다(`initialize` 의 인자). */
@@ -196,7 +196,7 @@ namespace sw
         /** @brief 헤드리스 작업(셰이더 쿠킹 · 씬 쿠킹)이 실패했는지 반환합니다. 부르는 쪽은 이것을 종료 코드로 내보냅니다. */
         bool didHeadlessTaskFail() const { return _bHeadlessTaskFailed; }
         /** @brief RHI 기동 단계의 결과입니다. 그 단계가 돌지 않았으면(헤드리스 · 앞 단계 실패) `NotStarted` 입니다. App 이 기동 실패의 종료 코드를 고를 때 읽습니다. */
-        RHIInitResult getRhiInitResult() const { return _rhiInitResult; }
+        RHIInitResult getRHIInitResult() const { return _rhiInitResult; }
 
     private:
         /** @brief 디바이스 재생성 뒤 내렸던 단계(렌더러 · 렌더 스레드 · 라이브 셰이더 · 씬의 디바이스)를 다시 세웁니다. 모두 섰으면 true 입니다. */
@@ -234,9 +234,9 @@ namespace sw
         unique_ptr<RenderThread>  _renderThread;
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. buildFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. FrameRenderer 단계가 만들고 해제합니다
          *         (헤드리스 작업에는 없습니다).
-         *         프레임마다 CPU 스냅샷만 exportCpuSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
+         *         프레임마다 CPU 스냅샷만 exportCPUSnapshot 으로 뽑아 RenderFramePacket 에 담아 RT 로 넘깁니다.
          *         패킷과 함께 힙에 둡니다. 값으로 들면 이 헤더가 Graphics 의 씬 스냅샷 헤더들을 App 까지 끌고 갑니다(전방 선언으로 끊습니다). */
-        unique_ptr<GpuSceneBuilder> _gpuSceneBuilder;
+        unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /**
          * @brief GT 가 프레임마다 채우는 패킷입니다. 링의 자리와 바꿔 가며 돕니다(`RenderThread::submit`). FrameRenderer 단계가 만들고 해제합니다.
          * @details 링에서 돌아온 저장소를 그대로 다시 채웁니다(지역 변수로 두면 스냅샷의 배치 · 그룹 목록과 라이트 목록이
@@ -256,7 +256,7 @@ namespace sw
 #endif
         /** @brief 에디터 Undo/Redo 전용이라 배포본에는 만들지 않습니다(목록의 HostCreated). */
         unique_ptr<CommandStack>   _commandStack;
-        unique_ptr<GpuUploadQueue> _gpuUploadQueue;
+        unique_ptr<GPUUploadQueue> _gpuUploadQueue;
         /** @brief `-scenario=<파일>` 의 자동화 실행기입니다. 프레임 앞(입력 전) · 뒤(씬 틱 뒤)에서 부르고, 끝나면 `requestQuit( 결과 )` 입니다. */
         unique_ptr<AutomationRunner> _pAutomationRunner;
         /** @brief 추가 뷰(CCTV · 백미러 · PiP) 중 이번 프레임에 그릴 것을 고르는 스케줄러(갱신 주기 · 예산)입니다. FrameRenderer 단계가 만들고 해제합니다. */
@@ -272,7 +272,7 @@ namespace sw
         bool           _bHeadless;
         bool           _bHeadlessTaskFailed;
         bool           _bQuitRequested;
-        /** @brief RHI 기동 단계의 결과입니다(getRhiInitResult 참고). */
+        /** @brief RHI 기동 단계의 결과입니다(getRHIInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */
         float32 _sceneDeltaSeconds;

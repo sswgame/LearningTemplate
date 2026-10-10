@@ -7,13 +7,13 @@
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Base/UiEvents.h"
-#include "Engine/UI/Document/UiDocumentCache.h"
-#include "Engine/UI/Document/UiDocumentLoader.h"
+#include "Engine/UI/Base/UIEvents.h"
+#include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Document/UIDocumentLoader.h"
 #include "Engine/UI/Screen/KeyRebindScreen.h"
 #include "Engine/UI/Screen/SettingsConfirmScreen.h"
-#include "Engine/UI/Screen/UiNotificationService.h"
-#include "Engine/UI/UiSystem.h"
+#include "Engine/UI/Screen/UINotificationService.h"
+#include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -74,31 +74,31 @@ namespace sw
         };
     } // namespace
 
-    OptionsMenuScreen::OptionsMenuScreen( const UiScreenDesc& desc, unique_ptr<Widget> root )
-        : UiScreen{ desc, std::move( root ) }
+    OptionsMenuScreen::OptionsMenuScreen( const UIScreenDesc& desc, unique_ptr<Widget> root )
+        : UIScreen{ desc, std::move( root ) }
         , _listCategory{}
         , _listTabButton{}
         , _listRow{}
         , _pSettings{ nullptr }
-        , _promptScreen{ kInvalidUiScreenHandle }
+        , _promptScreen{ kInvalidUIScreenHandle }
         , _selectedTab{ 0 }
     {
     }
 
     OptionsMenuScreen::~OptionsMenuScreen() = default;
 
-    UiScreenHandle OptionsMenuScreen::open( UiSystem& ui )
+    UIScreenHandle OptionsMenuScreen::open( UISystem& ui )
     {
         UserSettingsManager* pSettings = ui.findUserSettings();
         if ( pSettings == nullptr )
         {
-            SW_LOG_ERROR( "[Ui] Options menu needs the user settings service" );
-            return kInvalidUiScreenHandle;
+            SW_LOG_ERROR( "[UI] Options menu needs the user settings service" );
+            return kInvalidUIScreenHandle;
         }
-        const UiScreenHandle handle  = ui.openScreen<OptionsMenuScreen>( ui.getOptionsMenuDocument() );
-        UiScreen*            pScreen = ui.findScreen( handle );
+        const UIScreenHandle handle  = ui.openScreen<OptionsMenuScreen>( ui.getOptionsMenuDocument() );
+        UIScreen*            pScreen = ui.findScreen( handle );
         if ( pScreen == nullptr )
-            return kInvalidUiScreenHandle;
+            return kInvalidUIScreenHandle;
         OptionsMenuScreen& screen = static_cast<OptionsMenuScreen&>( *pScreen );
         screen._pSettings         = pSettings;
         screen.rebuild();
@@ -160,15 +160,15 @@ namespace sw
         }
         if ( command == hashed_string( "Rebind" ) )
         {
-            UiSystem* pUi = getUiSystem();
+            UISystem* pUI = getUISystem();
             for ( const RowEntry& row : _listRow )
             {
-                if ( row._value == source.getId() && pUi != nullptr && _pSettings != nullptr && isPromptOpen() == false )
-                    _promptScreen = KeyRebindScreen::open( *pUi, *_pSettings, row._settingId, kRebindDocument );
+                if ( row._value == source.getId() && pUI != nullptr && _pSettings != nullptr && isPromptOpen() == false )
+                    _promptScreen = KeyRebindScreen::open( *pUI, *_pSettings, row._settingId, kRebindDocument );
             }
             return true;
         }
-        return UiScreen::onCommand( command, source );
+        return UIScreen::onCommand( command, source );
     }
 
     bool OptionsMenuScreen::onBack()
@@ -182,12 +182,12 @@ namespace sw
         const uint32 tabCount = getTabCount();
         if ( tabCount == 0 )
             return false;
-        if ( action == hashed_string( UiActionName::kTabNext ) )
+        if ( action == hashed_string( UIActionName::kTabNext ) )
         {
             selectTab( ( _selectedTab + 1 ) % tabCount );
             return true;
         }
-        if ( action == hashed_string( UiActionName::kTabPrevious ) )
+        if ( action == hashed_string( UIActionName::kTabPrevious ) )
         {
             selectTab( ( _selectedTab + tabCount - 1 ) % tabCount );
             return true;
@@ -222,10 +222,10 @@ namespace sw
         }
         buildRows();
         // 탐색 방식이면 첫 행으로 — 탭을 바꾼 패드 사용자가 바로 행을 고른다.
-        UiSystem* pUi = getUiSystem();
-        if ( pUi == nullptr || pUi->getInputMode() != UiInputMode::Navigation || _listRow.empty() || pUi->getActiveScreen() != this )
+        UISystem* pUI = getUISystem();
+        if ( pUI == nullptr || pUI->getInputMode() != UIInputMode::Navigation || _listRow.empty() || pUI->getActiveScreen() != this )
             return;
-        (void)pUi->getFocusManager().setFocus( tree, _listRow.front()._value );
+        (void)pUI->getFocusManager().setFocus( tree, _listRow.front()._value );
     }
 
     Widget* OptionsMenuScreen::findRowValueWidget( const hashed_string& settingId ) const
@@ -243,16 +243,16 @@ namespace sw
         if ( _pSettings == nullptr )
             return;
         const UserSettingsApplyResult result = _pSettings->applyPending();
-        UiSystem*                     pUi    = getUiSystem();
-        if ( result._bAwaitingConfirm && pUi != nullptr && isPromptOpen() == false )
-            _promptScreen = SettingsConfirmScreen::open( *pUi, *_pSettings, kConfirmDocument );
-        if ( result._bNeedsRestart && pUi != nullptr )
+        UISystem*                     pUI    = getUISystem();
+        if ( result._bAwaitingConfirm && pUI != nullptr && isPromptOpen() == false )
+            _promptScreen = SettingsConfirmScreen::open( *pUI, *_pSettings, kConfirmDocument );
+        if ( result._bNeedsRestart && pUI != nullptr )
         {
-            UiNotificationDesc notice{};
+            UINotificationDesc notice{};
             notice._text            = "Some changes take effect after a restart.";
             notice._durationSeconds = 6.0f;
-            notice._kind            = UiNotificationKind::Warning;
-            pUi->getNotifications().post( notice );
+            notice._kind            = UINotificationKind::Warning;
+            pUI->getNotifications().post( notice );
         }
         refreshRestartNotice();
     }
@@ -275,7 +275,7 @@ namespace sw
         _listTabButton.clear();
         if ( _pSettings == nullptr || pTabs == nullptr )
         {
-            SW_LOG_ERROR( "[Ui] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kTabsName );
+            SW_LOG_ERROR( "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kTabsName );
             return;
         }
         pTabs->clearChildren();
@@ -305,7 +305,7 @@ namespace sw
         PanelWidget* pRows = getTree().findWidget<PanelWidget>( OptionsMenuScreenInternal::kRowsName );
         if ( pRows == nullptr || _pSettings == nullptr )
         {
-            SW_LOG_ERROR( "[Ui] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kRowsName );
+            SW_LOG_ERROR( "[UI] Options menu document %# has no '%#' panel", getDocumentPath().c_str(), OptionsMenuScreenInternal::kRowsName );
             return;
         }
         pRows->clearChildren();
@@ -324,17 +324,17 @@ namespace sw
     bool OptionsMenuScreen::buildRow( PanelWidget& rows, const UserSettingDef& setting )
     {
         using Internal = OptionsMenuScreenInternal;
-        UiSystem* pUi  = getUiSystem();
-        if ( pUi == nullptr )
+        UISystem* pUI  = getUISystem();
+        if ( pUI == nullptr )
             return false;
         const utf8*                             pDocumentPath = findRowDocument( setting );
         string                                  error;
-        const shared_ptr<const UiDocumentAsset> document = pUi->getDocumentCache().findOrLoad( pDocumentPath, error );
-        vector<UiBindingDesc>                   listBinding;
-        unique_ptr<Widget>                      row = document != nullptr ? UiDocumentLoader::instantiate( *document, pUi->getDocumentCache(), listBinding, error ) : nullptr;
+        const shared_ptr<const UIDocumentAsset> document = pUI->getDocumentCache().findOrLoad( pDocumentPath, error );
+        vector<UIBindingDesc>                   listBinding;
+        unique_ptr<Widget>                      row = document != nullptr ? UIDocumentLoader::instantiate( *document, pUI->getDocumentCache(), listBinding, error ) : nullptr;
         if ( row == nullptr )
         {
-            SW_LOG_ERROR( "[Ui] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );
+            SW_LOG_ERROR( "[UI] Options row for '%#' failed: %#", setting._id.c_str(), error.c_str() );
             return false;
         }
         const string prefix( setting._id.c_str() );
@@ -342,7 +342,7 @@ namespace sw
         (void)rows.addChild( std::move( row ) );
         WidgetTree& tree = getTree();
         // 견본에 적힌 바인딩(게임이 덮어쓴 행 견본)도 그대로 건다.
-        for ( const UiBindingDesc& binding : listBinding )
+        for ( const UIBindingDesc& binding : listBinding )
         {
             addBinding( binding );
         }
@@ -354,15 +354,15 @@ namespace sw
         Widget* pValue   = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueName ) );
         if ( pValue == nullptr )
         {
-            SW_LOG_ERROR( "[Ui] Options row document %# has no '%#' widget", pDocumentPath, Internal::kValueName );
+            SW_LOG_ERROR( "[UI] Options row document %# has no '%#' widget", pDocumentPath, Internal::kValueName );
             return false;
         }
         entry._value            = pValue->getId();
         const string expression = "{setting:" + prefix + "}";
         if ( const utf8* pProperty = Internal::findValueProperty( setting._type ); pProperty != nullptr )
-            addBinding( UiBindingDesc{ pProperty, expression, pValue->getId(), 0 } );
+            addBinding( UIBindingDesc{ pProperty, expression, pValue->getId(), 0 } );
         if ( Widget* pValueText = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kValueTextName ) ); pValueText != nullptr )
-            addBinding( UiBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getId(), 0 } );
+            addBinding( UIBindingDesc{ "_text", "{setting:" + prefix + ", mode=OneWay}", pValueText->getId(), 0 } );
         if ( Widget* pGlyph = tree.findWidgetByName( hashed_string( prefix + "." + Internal::kGlyphName ) ); pGlyph != nullptr )
             entry._glyph = pGlyph->getId();
         _listRow.push_back( entry );
@@ -371,10 +371,10 @@ namespace sw
 
     void OptionsMenuScreen::refreshGlyphs()
     {
-        UiSystem* pUi = getUiSystem();
-        if ( _pSettings == nullptr || pUi == nullptr )
+        UISystem* pUI = getUISystem();
+        if ( _pSettings == nullptr || pUI == nullptr )
             return;
-        const InputGlyphStyle style = pUi->getInputManager() != nullptr ? pUi->getInputManager()->getActiveGlyphStyle() : InputGlyphStyle::KeyboardMouse;
+        const InputGlyphStyle style = pUI->getInputManager() != nullptr ? pUI->getInputManager()->getActiveGlyphStyle() : InputGlyphStyle::KeyboardMouse;
         for ( const RowEntry& row : _listRow )
         {
             TextWidget* pGlyph = castTo<TextWidget>( getTree().findWidgetById( row._glyph ) );
@@ -397,18 +397,18 @@ namespace sw
 
     void OptionsMenuScreen::openUnsavedPrompt()
     {
-        UiSystem* pUi = getUiSystem();
-        if ( pUi == nullptr || isPromptOpen() )
+        UISystem* pUI = getUISystem();
+        if ( pUI == nullptr || isPromptOpen() )
             return;
-        _promptScreen     = pUi->openScreen( kUnsavedDocument );
-        UiScreen* pPrompt = pUi->findScreen( _promptScreen );
+        _promptScreen     = pUI->openScreen( kUnsavedDocument );
+        UIScreen* pPrompt = pUI->findScreen( _promptScreen );
         if ( pPrompt == nullptr )
             return;
         // 창의 단추는 이 메뉴를 번호로 찾는다 — 메뉴가 먼저 닫혀도(핫 리로드) 매달린 포인터가 없다.
-        const UiScreenHandle menuHandle = getHandle();
-        const auto           findMenu   = [pUi, menuHandle]()
-        { return static_cast<OptionsMenuScreen*>( pUi->findScreen( menuHandle ) ); };
-        pPrompt->registerCommand( "Apply", SW_DELEGATE_LAMBDA( UiCommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
+        const UIScreenHandle menuHandle = getHandle();
+        const auto           findMenu   = [pUI, menuHandle]()
+        { return static_cast<OptionsMenuScreen*>( pUI->findScreen( menuHandle ) ); };
+        pPrompt->registerCommand( "Apply", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
             if ( OptionsMenuScreen* pMenu = findMenu(); pMenu != nullptr )
@@ -417,7 +417,7 @@ namespace sw
                 pMenu->close();
             }
         } ) );
-        pPrompt->registerCommand( "Discard", SW_DELEGATE_LAMBDA( UiCommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
+        pPrompt->registerCommand( "Discard", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt, findMenu]( const hashed_string&, Widget& )
         {
             pPrompt->close();
             if ( OptionsMenuScreen* pMenu = findMenu(); pMenu != nullptr )
@@ -427,14 +427,14 @@ namespace sw
                 pMenu->close();
             }
         } ) );
-        pPrompt->registerCommand( "Cancel", SW_DELEGATE_LAMBDA( UiCommandDelegate, [pPrompt]( const hashed_string&, Widget& )
+        pPrompt->registerCommand( "Cancel", SW_DELEGATE_LAMBDA( UICommandDelegate, [pPrompt]( const hashed_string&, Widget& )
         { pPrompt->close(); } ) );
     }
 
     bool OptionsMenuScreen::isPromptOpen() const
     {
-        const UiSystem* pUi     = getUiSystem();
-        const UiScreen* pPrompt = pUi != nullptr ? pUi->findScreen( _promptScreen ) : nullptr;
+        const UISystem* pUI     = getUISystem();
+        const UIScreen* pPrompt = pUI != nullptr ? pUI->findScreen( _promptScreen ) : nullptr;
         return pPrompt != nullptr && pPrompt->isClosing() == false;
     }
 } // namespace sw

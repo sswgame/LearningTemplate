@@ -55,14 +55,14 @@ namespace sw
      * @details 구간은 RAII(`ScopedFrameProfile`)가 열고 닫으므로 같은 스레드에서 짝이 맞습니다. `beginZone` 이 돌려준 값은
      *          `endZone` 에 그대로 돌려줍니다.
      *
-     *          GPU 함수(`createGpuContext` · `syncGpuClock` · `beginGpuZone` · `endGpuZone`)는 **한 스레드**(렌더 스레드)가
+     *          GPU 함수(`createGPUContext` · `syncGPUClock` · `beginGPUZone` · `endGPUZone`)는 **한 스레드**(렌더 스레드)가
      *          부릅니다. GPU 시각은 이미 끝난 프레임의 타임스탬프를 읽은 뒤에 내므로 begin · end 는 그 자리에서 짝을 맞춥니다.
      */
     class SW_API IProfilerBackend
     {
     public:
         /** @brief GPU 컨텍스트를 만들지 못했을 때의 값입니다. */
-        static constexpr uint32 kInvalidGpuContext = invalid_index::kUint32;
+        static constexpr uint32 kInvalidGPUContext = invalid_index::kUint32;
 
         IProfilerBackend()          = default;
         virtual ~IProfilerBackend() = default;
@@ -92,14 +92,14 @@ namespace sw
 
         /**
          * @brief GPU 큐 하나의 타임라인을 엽니다. @p gpuNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역의 나노초)입니다.
-         * @return 컨텍스트 번호. 만들 수 없으면 `kInvalidGpuContext`.
+         * @return 컨텍스트 번호. 만들 수 없으면 `kInvalidGPUContext`.
          */
-        virtual uint32 createGpuContext( ProfilerGraphicsAPI api, const utf8* pName, int64 gpuNanos ) = 0;
+        virtual uint32 createGPUContext( ProfilerGraphicsAPI api, const utf8* pName, int64 gpuNanos ) = 0;
         /** @brief GPU 시계와 CPU 시계를 다시 맞춥니다. @p gpuNanos 는 **지금** GPU 시계입니다(시계가 서로 흐르는 만큼을 지웁니다). */
-        virtual void syncGpuClock( uint32 gpuContext, int64 gpuNanos ) = 0;
+        virtual void syncGPUClock( uint32 gpuContext, int64 gpuNanos ) = 0;
         /** @brief GPU 구간을 엽니다. 안쪽 구간은 바깥 구간이 닫히기 전에 열고 닫습니다(트리). */
-        virtual void beginGpuZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) = 0;
+        virtual void beginGPUZone( uint32 gpuContext, const ProfileZoneSite& site, int64 gpuBeginNanos ) = 0;
         /** @brief 가장 안쪽의 열린 GPU 구간을 닫습니다. */
-        virtual void endGpuZone( uint32 gpuContext, int64 gpuEndNanos ) = 0;
+        virtual void endGPUZone( uint32 gpuContext, int64 gpuEndNanos ) = 0;
     };
 } // namespace sw

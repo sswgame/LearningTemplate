@@ -6,7 +6,7 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "Editor/Common/Gui/IEditorPanel.h"
+#include "Editor/Common/GUI/IEditorPanel.h"
 #include "Editor/Viewport/EditorViewportClient.h"
 
 namespace sw::editor

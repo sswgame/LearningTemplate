@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/MeshInstanceBatch.h"
-#include "Engine/Renderer/Scene/GpuSceneBuilder.h"
+#include "Engine/Renderer/Scene/GPUSceneBuilder.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/Scene.h"
 
@@ -71,7 +71,7 @@ SW_TEST_CASE( PixelPerfectCameraTest, SnapRoundsToTheNearestGridPoint )
  * @brief [PixelPerfectCameraTest] 카메라에 붙이면 직교 · 높이를 맞추고 그리는 눈만 격자에 붙이며(트랜스폼은 그대로), 스냅 단위가 씬의 스프라이트와
  *        나중에 생긴 스프라이트에도 실리고, 띠가 기준 해상도 밖을 덮는다
  * @details 트랜스폼을 반올림하면 감쇠로 따라가는 카메라가 반 픽셀 아래의 움직임을 잃고 멈춘다 — 그래서 `CameraComponent::setViewOffset` 만 바꾼다.
- *          스냅 단위는 sprite2d.hlsl 이 읽는 인스턴스 칸(`GpuSpriteInstanceData::_pixelSnap`)으로 간다.
+ *          스냅 단위는 sprite2d.hlsl 이 읽는 인스턴스 칸(`GPUSpriteInstanceData::_pixelSnap`)으로 간다.
  */
 SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapUnit )
 {
@@ -111,10 +111,10 @@ SW_TEST_CASE( PixelPerfectCameraTest, CameraSnapsTheEyeAndSpritesReceiveTheSnapU
     SW_EXPECT_NEAR_EQUAL( unit, pLateSprite->getSpriteInstanceData()._pixelSnap, 1e-7f );
 
     // 빌더가 그 칸을 GPU 인스턴스로 옮긴다.
-    sw::GpuSceneBuilder builder;
+    sw::GPUSceneBuilder builder;
     builder.buildFromScene( &scene, pCamera->getCameraPosition() );
     bool bAllSnapped = builder.getInstances().empty() == false;
-    for ( const sw::GpuInstance& instance : builder.getInstances() )
+    for ( const sw::GPUInstance& instance : builder.getInstances() )
     {
         if ( instance._sprite._pixelSnap != unit && instance._sprite.getTint()._x > 0.5f )
             bAllSnapped = false; // 띠(검정)는 스냅하지 않는다

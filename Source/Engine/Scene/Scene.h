@@ -30,7 +30,7 @@ namespace sw
         virtual ~Scene();
 
         /** @brief 씬을 초기화합니다. */
-        virtual bool initialize( IRHIDevice* pRhiDevice );
+        virtual bool initialize( IRHIDevice* pRHIDevice );
         /** @brief 붙들고 있던 GPU · 머티리얼 자원을 놓습니다. 파괴하기 전이나 비동기 로드 결과를 버릴 때 부릅니다. */
         virtual void shutdown();
 
@@ -57,7 +57,7 @@ namespace sw
         /**
          * @brief 활성 씬의 GameObject 를 병렬로 틱합니다.
          * @note 짝이 되는 `render()` 는 **없습니다.** 씬은 그리는 쪽을 모릅니다. 게임 스레드가 씬에서 스냅샷을 뽑아
-         *       (`GpuSceneBuilder`) 패킷으로 넘기고, 렌더 스레드가 그것만 보고 그립니다.
+         *       (`GPUSceneBuilder`) 패킷으로 넘기고, 렌더 스레드가 그것만 보고 그립니다.
          */
         virtual void tick( float32 deltaTime );
         /**

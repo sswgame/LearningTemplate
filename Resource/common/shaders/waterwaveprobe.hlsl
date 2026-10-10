@@ -1,4 +1,4 @@
-// 거스트너 파도 프로브 — RenderPassGpuTest.WaterWaveShaderMatchesCpu 가 네 백엔드에서 결과를 읽어 CPU(WaterWaveMath)와 대조한다.
+// 거스트너 파도 프로브 — RenderPassGPUTest.WaterWaveShaderMatchesCPU 가 네 백엔드에서 결과를 읽어 CPU(WaterWaveMath)와 대조한다.
 // water.hlsl 이 정점을 옮기는 **같은 함수**(gerstner.hlsli 의 swComputeGerstnerDisplacement)를 표본 자리마다 부르고, 변위 (x, y, z) 의 float 비트를
 // RGBA8 텍스처에 그대로 싣는다 — 표본 하나 = 한 행의 텍셀 여섯(성분마다 16 비트 둘). 16 비트는 G(위 바이트) · A(아래 바이트)에 싣는다:
 // 백엔드가 RGBA 를 BGRA 로 돌려줘도 G · A 는 자리가 같다.

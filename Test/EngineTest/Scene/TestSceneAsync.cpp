@@ -213,7 +213,7 @@ SW_TEST_CASE( SceneAsyncTest, CarriedChildKeepsItsParentWhenTheNextSceneHasTheSa
 /**
  * @brief [SceneAsyncTest] GPU 없이 SceneDocument 로드
  */
-SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGpu )
+SW_TEST_CASE( SceneAsyncTest, DocumentLoadWithoutGPU )
 {
     const sw::string xmlPath = test::makeTempPath( "sw_test_scene_desc.scene.xml" );
     const sw::string binPath = test::makeTempPath( "sw_test_scene_desc.scene.bin" );

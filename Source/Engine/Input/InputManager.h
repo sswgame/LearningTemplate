@@ -44,7 +44,7 @@ namespace sw
     {
         Game = 0,   ///< 게임 코드 · 통합 InputMap
         DevConsole, ///< 게임 창의 개발 콘솔(열려 있는 동안)
-        Ui,         ///< 런타임 UI 의 글 입력 칸(포커스를 쥔 동안 — `UiSystem` 이 잡고 놓는다)
+        UI,         ///< 런타임 UI 의 글 입력 칸(포커스를 쥔 동안 — `UISystem` 이 잡고 놓는다)
         Count
     };
 
@@ -146,7 +146,7 @@ namespace sw
         bool wasAnyInputPressed() const;
         /**
          * @brief 이번 프레임 새로 눌린 키보드 · 마우스 · 게임패드 슬롯 하나를 찾습니다(키 바인딩 창이 받을 키). 키보드 → 마우스 → 패드 순서, 장치 안에서는 열거 순서입니다.
-         * @details 장치 상태를 바로 봅니다 — 키보드 포커스가 `Ui` 여도 키를 받습니다(바인딩 창). 개발 콘솔이 키보드를 쥐었으면 키보드는 보지 않습니다.
+         * @details 장치 상태를 바로 봅니다 — 키보드 포커스가 `UI` 여도 키를 받습니다(바인딩 창). 개발 콘솔이 키보드를 쥐었으면 키보드는 보지 않습니다.
          */
         [[nodiscard]] bool findFirstPressedSlot( InputSlot& outSlot ) const;
         void               onTextInput( string_view text );

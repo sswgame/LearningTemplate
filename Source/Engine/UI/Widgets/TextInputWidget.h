@@ -18,7 +18,7 @@ namespace sw
 
     /**
      * @class TextInputWidget
-     * @brief 포커스를 쥐면 키보드 포커스 `Ui` 를 잡아(게임은 키를 보지 못한다) 글자 사건을 받습니다. 확정 글은 끝에 붙이고, IME 조합 중인 글은 그 뒤에
+     * @brief 포커스를 쥐면 키보드 포커스 `UI` 를 잡아(게임은 키를 보지 못한다) 글자 사건을 받습니다. 확정 글은 끝에 붙이고, IME 조합 중인 글은 그 뒤에
      *        이어 보입니다. `UI.TextBackspace` 는 끝 글자(코드 포인트) 하나를 지우고, 줄 바꿈(Enter)은 `getOnCommitted()` 를 부릅니다.
      * @details 겉은 테두리 패널(배경)이고 안의 글 위젯이 글을 그립니다(비면 `_hintText` 를 흐리게). 커서는 글 끝(포커스일 때 세로 막대).
      *          커서 이동 · 선택 · 붙여넣기는 백로그입니다.
@@ -52,13 +52,13 @@ namespace sw
         TextDelegate& getOnTextChanged() { return _onTextChanged; }
         TextDelegate& getOnCommitted() { return _onCommitted; }
 
-        UiReply onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase ) override;
-        UiReply onActionEvent( const UiActionEvent& event, UiRoutePhase phase ) override;
-        UiReply onTextEvent( const UiTextEvent& event ) override;
+        UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
+        UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
+        UIReply onTextEvent( const UITextEvent& event ) override;
         void    onFocusChanged( bool bFocused ) override;
 
     protected:
-        void paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        void paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const override;
 
     private:
         /** @brief 안의 글 위젯에 보일 글(글 + 조합, 비면 힌트)을 넣습니다. */

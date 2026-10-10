@@ -1,7 +1,7 @@
 /**
  * gerstner.hlsli — 거스트너 파도 변위 · 노멀. C++ `WaterWaveMath`(Source/Engine/Environment/Water)와 **같은 식 · 같은 계산 순서**다 — 부력 ·
  * 수면 질의가 CPU 에서 이 값을 다시 계산하므로 한쪽만 고치면 배가 수면에서 떠오르거나 가라앉는다.
- * RenderPassGpuTest.WaterWaveShaderMatchesCpu 가 컴퓨트(common/shaders/waterwaveprobe.hlsl)로 이 함수를 돌려 CPU 값과 대조한다.
+ * RenderPassGPUTest.WaterWaveShaderMatchesCPU 가 컴퓨트(common/shaders/waterwaveprobe.hlsl)로 이 함수를 돌려 CPU 값과 대조한다.
  *
  * 파도 하나 = float4( 방향(라디안, +x 에서 +z 쪽), 파장, 진폭, 가파름 0..1 ). 진폭이나 파장이 0 이하면 빈 칸이다.
  * 파수 k = 2π / 파장, 각진동수 ω = √(g k)(깊은 물 분산 — g 는 설정된 물리 중력을 머티리얼 · 루트 상수로 받는다, 숫자를 두지 않는다), Q = 가파름 / (k × 진폭 × 파도 수) — 가파름 1 에서도 물마루가 고리를 만들지 않는다.

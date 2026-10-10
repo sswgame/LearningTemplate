@@ -35,7 +35,7 @@ if(WIN32)
 	target_link_libraries(GameFramework PRIVATE crypt32)
 endif()
 
-# 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Base/Online/Security/OpenSsl 에서만 include 하고(CheckThirdPartyIsolation.py)
+# 네트워크 보안 — OpenSSL 3(TLS 1.3 · X25519 · AEAD · HKDF · Argon2id). 헤더는 Base/Online/Security/OpenSSL 에서만 include 하고(CheckThirdPartyIsolation.py)
 # 링크도 여기서만 한다 — Engine.dll 은 libssl · libcrypto 를 모른다. Core · 키트 · 게임은 Core/Network/Security/INetSecurityProvider.h 와
 # Base/Online/Security/NetSecurity.h 만 본다. x64-windows 는 DLL 두 개(libssl-3-x64 · libcrypto-3-x64), 리눅스는 정적.
 target_link_libraries(GameFramework PRIVATE openssl)

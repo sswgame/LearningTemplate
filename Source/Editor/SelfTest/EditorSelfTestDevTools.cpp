@@ -9,8 +9,8 @@
 #include "Core/String/TagID.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
-#include "Editor/Common/Gui/EditorDockLayout.h"
-#include "Editor/Common/Gui/EditorPlayToolbar.h"
+#include "Editor/Common/GUI/EditorDockLayout.h"
+#include "Editor/Common/GUI/EditorPlayToolbar.h"
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorLayoutStore.h"
 #include "Editor/Common/Workspace/EditorSelection.h"

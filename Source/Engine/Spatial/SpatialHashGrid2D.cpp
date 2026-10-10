@@ -210,7 +210,7 @@ namespace sw
         _listOversizedHandle.clear();
     }
 
-    void SpatialHashGrid2D::queryAabb( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const
+    void SpatialHashGrid2D::queryAABB( float32 minX, float32 minY, float32 maxX, float32 maxY, vector<SlotHandle>& outListHandle ) const
     {
         outListHandle.clear();
 
@@ -307,7 +307,7 @@ namespace sw
                 for ( const SlotHandle handle : bucketIt->second )
                 {
                     // **좁힌다** — 지나간 셀의 핸들을 모두 담으면 광선이 스치지도 않은 것이 결과에 들어간다.
-                    // 형제 둘(`queryAabb` · `queryCircle`)도 각자의 판정을 거친다.
+                    // 형제 둘(`queryAABB` · `queryCircle`)도 각자의 판정을 거친다.
                     const auto boundIt = _mapHandleBound.find( handle );
                     if ( boundIt != _mapHandleBound.end() &&
                          doesRayHitBounds( startX, startY, directionX, directionY, maxDist, boundIt->second ) )

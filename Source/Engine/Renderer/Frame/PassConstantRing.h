@@ -3,7 +3,7 @@
  * @brief 프레임마다 되감는 패스 상수버퍼 슬롯 링입니다. 드로우마다 하나씩 나눠 줍니다.
  * @details `updateConstantBuffer` 는 버퍼의 **프레임 슬롯 하나**에 쓰고 GPU 는 제출 뒤에 읽습니다. 그래서 여러 드로우가
  *          같은 버퍼를 쓰면 모두 마지막에 쓴 값을 봅니다(한 패스의 드로우들이 서로를 덮어씁니다 —
- *          RenderPassGpuTest.MultiBatchPassKeepsPerBatchConstants). 언리얼도 드로우별 느슨한 파라미터는 드로우마다
+ *          RenderPassGPUTest.MultiBatchPassKeepsPerBatchConstants). 언리얼도 드로우별 느슨한 파라미터는 드로우마다
  *          유니폼 버퍼를 따로 잡습니다. 여기서는 슬롯을 미리 만들어 두고 원자 커서로 나눠 줍니다. 패스가 병렬로
  *          기록되므로 락 없이 분배해야 합니다.
  *

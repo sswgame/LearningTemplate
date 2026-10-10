@@ -98,7 +98,7 @@ namespace sw
 
     protected:
         /** @brief 방향(`_directionType.xyz`)을 씁니다. */
-        void writeGpuLightKindFields( GpuLight& outLight ) const override;
+        void writeGPULightKindFields( GPULight& outLight ) const override;
 
     private:
         PROPERTY( Category = "Light", DisplayName = "Ambient", Min = 0.0, Tooltip = "Ambient term" )

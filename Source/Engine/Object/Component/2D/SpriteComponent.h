@@ -36,7 +36,7 @@ namespace sw
      *          언리얼 Paper2D(`UPaperSpriteComponent`)의 자리입니다.
      *
      *          **무엇을 보이나.** 아틀라스의 한 프레임(UV 사각형)과 색입니다. 둘 다 머티리얼 인스턴스가 아니라 GPU 인스턴스에 실립니다
-     *          (`MeshComponent::getSpriteInstanceData` → `GpuInstance::_sprite`) — 프레임이 넘어가거나 알파가 줄어도 배치는 그대로입니다.
+     *          (`MeshComponent::getSpriteInstanceData` → `GPUInstance::_sprite`) — 프레임이 넘어가거나 알파가 줄어도 배치는 그대로입니다.
      *          프레임은 클립(`_clipPath`, `.sprite.json`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 입니다.
      *          텍스처 칸이 비어 있으면 클립의 아틀라스를 씁니다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임만 넘깁니다.
      */

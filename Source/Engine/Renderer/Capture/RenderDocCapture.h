@@ -27,6 +27,6 @@ namespace sw
         /** @brief 다음 프레임(Present 하나)을 캡처합니다. 쓸 수 없으면 아무것도 하지 않습니다. */
         static void triggerCapture();
         /** @brief RenderDoc 재생 UI 를 띄워 이 프로세스에 붙입니다(이미 붙어 있으면 앞으로). 쓸 수 없거나 실패하면 false 입니다. */
-        static bool launchReplayUi();
+        static bool launchReplayUI();
     };
 } // namespace sw

@@ -21,12 +21,12 @@
 
 ### 정렬 키와 그리는 순서
 
-투명 큐는 **정렬 키, 깊이, 후보 번호** 순서로 완전히 정렬해 그립니다(`GpuSceneBuilder::isDrawnBefore`).
+투명 큐는 **정렬 키, 깊이, 후보 번호** 순서로 완전히 정렬해 그립니다(`GPUSceneBuilder::isDrawnBefore`).
 
 - 키는 `(레이어 순번 << 16) | (레이어 안 순서 + 0x8000)` 입니다. 그래서 레이어가 순서보다 우선합니다. 유니티에서 Sorting Layer가 Order in Layer보다 우선하는 것과 같습니다.
 - 키 0은 "Default 레이어, 순서 0"을 뜻하는 예약값입니다. `MeshComponent` 는 정렬 테이블을 읽지 않고 0을 가지며, 빌더가 테이블의 기본 키로 바꿉니다.
   그래서 3D 투명 물체와 Default 레이어의 스프라이트가 같은 줄에서 깊이로 섞입니다.
-- 깊이는 `GpuSceneBuilder::setTransparentSortAxis` 의 축이 영벡터면 카메라까지 거리의 제곱이고, 아니면 그 축 위의 깊이입니다.
+- 깊이는 `GPUSceneBuilder::setTransparentSortAxis` 의 축이 영벡터면 카메라까지 거리의 제곱이고, 아니면 그 축 위의 깊이입니다.
   `EngineLoop` 이 `computeTransparentSortAxis( 직교 여부, 카메라 전방 )` 로 축을 정합니다. Auto는 직교 카메라에서 시선 축을 씁니다.
 - GPU 컬링이 투명 배치를 압축한 뒤 `instancesort.hlsl` 은 인스턴스 번호 오름차순으로 되돌립니다. 배치 안의 인스턴스가 CPU 정렬 순서로 놓이므로 번호가 곧 순서입니다.
   정렬 기준은 CPU 한 곳뿐입니다. GPU에서 깊이를 다시 측정하면 레이어와 시선 축을 모르므로 같은 깊이를 불안정하게 나눕니다.

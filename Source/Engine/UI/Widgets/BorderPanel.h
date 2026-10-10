@@ -9,7 +9,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/PanelWidget.h"
-#include "Engine/UI/Widgets/UiBrush.h"
+#include "Engine/UI/Widgets/UIBrush.h"
 
 namespace sw
 {
@@ -30,8 +30,8 @@ namespace sw
         const TypeInfo* getTypeInfo() const override;
 
         /** @brief 배경 브러시를 바꿉니다. kPaint. */
-        void           setBackground( const UiBrush& brush );
-        const UiBrush& getBackground() const { return _background; }
+        void           setBackground( const UIBrush& brush );
+        const UIBrush& getBackground() const { return _background; }
         /** @brief 안쪽 여백(왼 · 위 · 오른 · 아래, UI 단위)을 바꿉니다. kLayout. */
         void          setContentPadding( const float4& padding );
         const float4& getContentPadding() const { return _contentPadding; }
@@ -40,18 +40,18 @@ namespace sw
         /** @brief 지금 쓰는 안쪽 여백입니다 — 계산된 스타일이 `_padding` 을 정했으면 그것, 아니면 자기 칸. */
         float4 computeEffectivePadding() const;
         /** @brief 지금 칠할 배경입니다 — 상태 브러시(`getBackgroundBrush`) 위에 계산된 스타일이 정한 칸(배경색 · 모서리 · 테두리)을 얹는다. */
-        UiBrush computeEffectiveBrush() const;
+        UIBrush computeEffectiveBrush() const;
 
     protected:
-        float2 computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const override;
-        void   arrangeChildren( const UiLayoutContext& context, const float2& size ) override;
-        void   paint( CanvasPainter& painter, const UiPaintContext& context ) const override;
+        float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;
+        void   arrangeChildren( const UILayoutContext& context, const float2& size ) override;
+        void   paint( CanvasPainter& painter, const UIPaintContext& context ) const override;
         /** @brief 지금 칠할 배경입니다. 기본은 `_background` — 버튼은 상태(호버 · 누름 · 꺼짐)별 브러시를 돌려준다. */
-        virtual const UiBrush& getBackgroundBrush() const { return _background; }
+        virtual const UIBrush& getBackgroundBrush() const { return _background; }
 
     private:
         PROPERTY( DisplayName = "Background" )
-        UiBrush _background;
+        UIBrush _background;
         PROPERTY( DisplayName = "Content Padding", Tooltip = "Left, top, right, bottom", Meta = "Units=ui" )
         float4 _contentPadding;
         PROPERTY( DisplayName = "Shadow Color" )

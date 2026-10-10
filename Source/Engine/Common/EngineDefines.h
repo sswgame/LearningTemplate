@@ -9,7 +9,7 @@ namespace sw
 {
     namespace constant
     {
-        // 렌더링 프레임 상수(kMaxFrameCountInFlight / kGpuReleaseFrameLatency /
+        // 렌더링 프레임 상수(kMaxFrameCountInFlight / kGPUReleaseFrameLatency /
         // kRenderFrameQueueDepth)는 RHITypes.h 의 constant 블록에 있다. 백엔드 간 계약 상수들과
         // 같은 자리에 모아 두는 편이 "한쪽만 바꾸면 깨진다" 를 알아보기 쉽다.
 

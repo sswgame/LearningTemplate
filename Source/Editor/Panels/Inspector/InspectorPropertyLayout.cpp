@@ -140,13 +140,13 @@ namespace sw::editor
         range._clampMin     = static_cast<float64>( meta._minRange );
         range._clampMax     = static_cast<float64>( meta._maxRange );
 
-        range._bHasWidgetMin = meta._bHasUiMinRange != SW_FALSE || range._bHasClampMin;
-        range._bHasWidgetMax = meta._bHasUiMaxRange != SW_FALSE || range._bHasClampMax;
-        range._widgetMin     = meta._bHasUiMinRange != SW_FALSE ? static_cast<float64>( meta._uiMinRange ) : range._clampMin;
-        range._widgetMax     = meta._bHasUiMaxRange != SW_FALSE ? static_cast<float64>( meta._uiMaxRange ) : range._clampMax;
+        range._bHasWidgetMin = meta._bHasUIMinRange != SW_FALSE || range._bHasClampMin;
+        range._bHasWidgetMax = meta._bHasUIMaxRange != SW_FALSE || range._bHasClampMax;
+        range._widgetMin     = meta._bHasUIMinRange != SW_FALSE ? static_cast<float64>( meta._uiMinRange ) : range._clampMin;
+        range._widgetMax     = meta._bHasUIMaxRange != SW_FALSE ? static_cast<float64>( meta._uiMaxRange ) : range._clampMax;
 
         const bool bSliderMeta = prop.findCustomMeta( hashed_string( "Slider" ) ) != nullptr;
-        range._bSlider         = meta.hasFullUiRange() || ( meta.hasFullRange() && bSliderMeta );
+        range._bSlider         = meta.hasFullUIRange() || ( meta.hasFullRange() && bSliderMeta );
         return range;
     }
 

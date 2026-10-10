@@ -217,9 +217,9 @@ namespace sw
  */
 SW_TEST_CASE( ArchitectureTest, AllRHIModulesAbiStampExports )
 {
-    const utf8* kRhiModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* kRHIModules[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
-    for ( const utf8* modName : kRhiModules )
+    for ( const utf8* modName : kRHIModules )
     {
         const sw::string path = sw::modulePath( modName );
         if ( sw::FileUtil::exists( path ) == false )
@@ -1362,7 +1362,7 @@ SW_TEST_CASE( ArchitectureTest, ModuleCompilerAndLiveReloadE2E )
 /**
  * @brief [ArchitectureTest] GPU 없이 MaterialCache acquire/release
  */
-SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
+SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGPU )
 {
     // 디스크에 없는 경로를 잡는다 — 디바이스 없이는 파일을 읽지 않는다. 리소스 루트 밖의 임시 경로라 에셋 데이터베이스가
     // `.meta` 사이드카를 쓰지 않는다(루트 안의 없는 경로를 잡으면 시험을 돌릴 때마다 Resource 에 `.meta` 가 생긴다).
@@ -1405,11 +1405,11 @@ SW_TEST_CASE( ArchitectureTest, MaterialCacheAcquireReleaseNoGpu )
  */
 SW_TEST_CASE( ArchitectureTest, RHIBackendDynamicSwapAndReload )
 {
-    const utf8* const kRhiBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
+    const utf8* const kRHIBackends[] = { "RHI_DX11", "RHI_DX12", "RHI_Vulkan", "RHI_GL" };
 
     for ( int32 cycle = 0; cycle < 2; ++cycle )
     {
-        for ( const utf8* backendName : kRhiBackends )
+        for ( const utf8* backendName : kRHIBackends )
         {
             const sw::string modPath = sw::modulePath( backendName );
             if ( sw::FileUtil::exists( modPath ) == false )

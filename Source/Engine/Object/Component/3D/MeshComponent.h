@@ -1,6 +1,6 @@
 /**
  * @file MeshComponent.h
- * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 등록부를 거쳐 GpuScene 으로 들어갑니다.
+ * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 등록부를 거쳐 GPUScene 으로 들어갑니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -10,7 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Graphics/Shader/Binding/GpuSpriteInstanceData.h"
+#include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -109,11 +109,11 @@ namespace sw
          *          **인스턴스마다 다른 각속도**로 회전을 얹습니다. CPU 는 매 프레임 트랜스폼을 다시 쓰지 않아도
          *          되고, 회전은 전적으로 컴퓨트가 만듭니다. 시드가 다르면 속도도 다르므로 보통 인덱스 + 1 을 줍니다.
          */
-        void setGpuSpinSeed( uint32 seed );
-        /** @brief setGpuSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
-        uint32 getGpuSpinSeed() const { return _gpuSpinSeed; }
+        void setGPUSpinSeed( uint32 seed );
+        /** @brief setGPUSpinSeed 로 정한 값입니다(0 이면 GPU 회전 없음). */
+        uint32 getGPUSpinSeed() const { return _gpuSpinSeed; }
         /**
-         * @brief 정점 애니메이션(VAT) 시각 오프셋(초)을 정합니다. 메시에 VAT 가 걸려 있을 때만 셰이더가 읽습니다(`GpuInstance::_vertexAnimationPhase`).
+         * @brief 정점 애니메이션(VAT) 시각 오프셋(초)을 정합니다. 메시에 VAT 가 걸려 있을 때만 셰이더가 읽습니다(`GPUInstance::_vertexAnimationPhase`).
          * @details 셰이더는 VAT 시계 + 이 값의 프레임을 그립니다. 군중 시스템이 VAT 로 넘길 때 한 번 적습니다(저장하지 않는 런타임 값).
          */
         void setVertexAnimationPhase( float32 phaseSeconds );
@@ -121,11 +121,11 @@ namespace sw
         float32 getVertexAnimationPhase() const { return _vertexAnimationPhase; }
 
         /**
-         * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색입니다. 빌더가 `GpuInstance::_sprite` 로 옮깁니다.
+         * @brief GPU 인스턴스에 실을 스프라이트 프레임(UV 사각형) · 색입니다. 빌더가 `GPUInstance::_sprite` 로 옮깁니다.
          * @details 기본값(텍스처 전체 · 흰색)이면 아무 일도 하지 않습니다. 읽는 셰이더는 sprite2d.hlsl 이고, 값을 정하는 쪽은 파생
          *          (`SpriteComponent`)입니다 — 그래서 세터는 protected 입니다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게).
          */
-        const GpuSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+        const GPUSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
         /**
          * @brief 2D 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU, 0 = 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
          * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 메시 모두에 알리고, 새로 등록되는 메시는 카메라 등록부의 값을 읽습니다. 읽는 셰이더는 sprite2d 입니다.
@@ -185,7 +185,7 @@ namespace sw
         /** @brief `_materialPath` 가 비었을 때의 머티리얼 경로입니다. 빈 것이면 씬 기본 머티리얼입니다(렌더러가 고른다). */
         virtual hashed_string getDefaultMaterialPath() const { return {}; }
         /** @brief 스프라이트 프레임 · 색을 바꿉니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다(같은 프레임을 다시 넣는 애니메이터는 공짜). */
-        void setSpriteInstanceData( const GpuSpriteInstanceData& data );
+        void setSpriteInstanceData( const GPUSpriteInstanceData& data );
 
     private:
         /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
@@ -211,7 +211,7 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "GPU Spin Seed", Tooltip = "Non-zero makes the GPU spin this instance; the seed picks its speed" )
         uint32 _gpuSpinSeed;
         /** @brief GPU 인스턴스의 스프라이트 칸입니다. 저장하지 않습니다 — 파생의 저장되는 값(프레임 · 색)에서 만듭니다. */
-        GpuSpriteInstanceData _spriteInstanceData;
+        GPUSpriteInstanceData _spriteInstanceData;
         /** @brief 정점 애니메이션 시각 오프셋(초)입니다. 저장하지 않습니다(setVertexAnimationPhase). */
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */

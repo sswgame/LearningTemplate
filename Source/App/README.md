@@ -97,7 +97,7 @@ echo $LASTEXITCODE
 | `EngineLoop::beginFrame`, `ModuleHost::beginFrame` | 에디터의 Play 상태를 한 번 읽어 고정합니다 |
 | `pollReloadHotkeys`, `updateDevConsole` | 개발 빌드의 단축키와 개발 콘솔을 처리합니다 |
 | `fixedUpdateGame` × N, `updateGame` | 고정된 Play 상태를 읽으므로 모든 스텝이 같은 답을 봅니다 |
-| `ModuleHost::updateEditorUi` | 에디터가 입력을 처리한 뒤에 게임 뷰 · 씬 뷰 RT(보이는 패널만)와 틱 여부를 정합니다 |
+| `ModuleHost::updateEditorUI` | 에디터가 입력을 처리한 뒤에 게임 뷰 · 씬 뷰 RT(보이는 패널만)와 틱 여부를 정합니다 |
 | `LiveReloadManager::update` | 모듈 교체는 틱 직전에 합니다 |
 | `EngineLoop::tick`, `ModuleHost::endEditorFrame` | 고정한 프레임 상태(`ModuleFrameState`)를 그대로 넘깁니다 |
 | `RHIBackendSwitcher::applyIfPending`, `EngineLoop::endFrame` | 그래픽 API 교체는 프레임 경계에서만 합니다 |

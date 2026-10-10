@@ -75,7 +75,7 @@ namespace sw
         const float3                     extent{ radius, radius, radius };
         const AABB                       sweptBounds{ float3::min( from, to ) - extent, float3::max( from, to ) + extent };
         vector<PhysicsWorld::BodyHandle> listHandle;
-        _pWorld->queryAabb( sweptBounds, _layer, listHandle );
+        _pWorld->queryAABB( sweptBounds, _layer, listHandle );
         float32 nearest = length;
         bool    bHit    = false;
         for ( const PhysicsWorld::BodyHandle handle : listHandle )

@@ -14,9 +14,9 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/DX11/D3D11RHISwapChain.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
-#include "Engine/Graphics/RHI/Support/RHIGpuTimestamp.h"
 #include "Engine/Graphics/RHI/Support/RHIHandleTable.h"
 #include "Engine/Graphics/RHI/Support/RHIReleaseQueue.h"
+#include "Engine/Graphics/RHI/Support/RHITimestamp.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 #include <shared_mutex>
@@ -25,7 +25,7 @@
 
 namespace sw
 {
-    struct RHIGpuMemoryBudget;
+    struct RHIMemoryBudget;
 
     class D3D11RHICommandContext;
     class D3D11RHICommandList;
@@ -117,9 +117,9 @@ namespace sw
 
         void               setTimestampEnabled( bool bEnabled ) override { _bTimestampEnabled = bEnabled ? SW_TRUE : SW_FALSE; }
         uint32             getTimestampSlotCount() const override;
-        [[nodiscard]] bool readTimestamps( RHIGpuTimestampFrame& outFrame ) override;
-        [[nodiscard]] bool readGpuClockNanos( int64& outGpuNanos ) override;
-        bool               isGpuClockReadCheap() const override { return false; }
+        [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override;
+        [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override;
+        bool               isGPUClockReadCheap() const override { return false; }
         /**
          * @brief 커맨드 리스트가 **자기 Deferred Context 에** 타임스탬프를 겁니다.
          * @details 칸 번호는 패스 인덱스로 고정이라 쿼리 객체 하나를 두 컨텍스트가 건드릴 일이 없습니다.
@@ -137,10 +137,10 @@ namespace sw
         void waitIdleInternal() override;
 
         /** @brief DXGI `QueryVideoMemoryInfo` 로 이 프로세스의 사용량(로컬 + 비로컬)과 로컬 예산을 채웁니다. 어댑터를 못 찾았으면 false 입니다. */
-        [[nodiscard]] bool queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget ) override;
+        [[nodiscard]] bool queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget ) override;
 
-        /** @brief 프레임 지연(`kGpuReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. D3D11 은 펜스 대신 endFrame 횟수로 셉니다. */
-        void enqueueGpuRelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
+        /** @brief 프레임 지연(`kGPUReleaseFrameLatency`) 뒤 해제 큐에 넣습니다. D3D11 은 펜스 대신 endFrame 횟수로 셉니다. */
+        void enqueueGPURelease( const RHIResourceReleaseDelegate& releaseDelegate ) override;
 
         /** @brief 백엔드 종류(DirectX11)를 반환합니다. */
         RHIBackend getBackendType() const override { return RHIBackend::DirectX11; }
@@ -370,7 +370,7 @@ namespace sw
         struct D3D11TimestampFrame
         {
             Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
-            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::kMaxGpuTimestampSlot];
+            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::kMaxGPUTimestampSlot];
             uint32                              _writtenMask{ 0 };
             uint8                               _bPending{ SW_FALSE };
         };
@@ -388,10 +388,10 @@ namespace sw
         uint8          _bTimestampReady;
         uint8          _bTimestampFrameOpen;
         /// @brief 드라이버가 커맨드 리스트를 네이티브로 지원하면 SW_TRUE 입니다. 병렬 기록 능력의 근거입니다.
-        uint8                _bDriverCommandLists;
-        RHIGpuTimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
+        uint8             _bDriverCommandLists;
+        RHITimestampFrame _timestampFrame; ///< 마지막으로 읽힌 프레임(`readTimestamps`)
         /**
-         * @brief GPU 시계 읽기(`readGpuClockNanos`)용 타임스탬프 쿼리입니다. 처음 읽을 때 만듭니다.
+         * @brief GPU 시계 읽기(`readGPUClockNanos`)용 타임스탬프 쿼리입니다. 처음 읽을 때 만듭니다.
          * @details disjoint 로 감싸지 않습니다 — 프레임의 disjoint 가 열려 있는 동안 불리고, 주파수는 마지막 프레임의 disjoint 값을 씁니다.
          */
         Microsoft::WRL::ComPtr<ID3D11Query> _clockQuery;

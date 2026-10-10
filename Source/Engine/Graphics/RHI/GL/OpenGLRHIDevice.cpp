@@ -47,7 +47,7 @@ namespace sw
         , _arrComputeRootConstantShadow{}
         , _pipelineStates{}
         , _listRenderPass{}
-        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
+        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
         , _computeRootConstantUbo{ 0 }
@@ -70,7 +70,7 @@ namespace sw
     IRHIResourceFactory* OpenGLRHIDevice::getResourceFactory() { return _resourceImpl.get(); }
     IRHICommandContext*  OpenGLRHIDevice::getFrameStreamContext() { return _frameStreamContext.get(); }
 
-    bool OpenGLRHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    bool OpenGLRHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
         if ( _bInitialized == SW_FALSE || ( _bNvxMemoryInfo == SW_FALSE && _bAtiMemInfo == SW_FALSE ) )
             return false;
@@ -78,13 +78,13 @@ namespace sw
         // 확장 값은 KB 단위이고, 다른 프로세스 몫까지 든 디바이스 전체 값이다. 그래서 장부를 빼 "엔진 밖" 을 내지 않는다(Scope Device).
         ScopedOpenGLContext ctxScope( this );
         constexpr uint64    kKilobyte = 1024;
-        outBudget._scope              = RHIGpuMemoryScope::Device;
+        outBudget._scope              = RHIMemoryScope::Device;
         if ( _bNvxMemoryInfo == SW_TRUE )
         {
             GLint totalKb{ 0 };
             GLint currentKb{ 0 };
-            glGetIntegerv( OpenGLRHIDeviceInternal::kGpuMemoryInfoTotalAvailableNvx, &totalKb );
-            glGetIntegerv( OpenGLRHIDeviceInternal::kGpuMemoryInfoCurrentAvailableNvx, &currentKb );
+            glGetIntegerv( OpenGLRHIDeviceInternal::kGPUMemoryInfoTotalAvailableNvx, &totalKb );
+            glGetIntegerv( OpenGLRHIDeviceInternal::kGPUMemoryInfoCurrentAvailableNvx, &currentKb );
             if ( totalKb <= 0 )
                 return false;
             const uint64 totalBytes    = static_cast<uint64>( totalKb ) * kKilobyte;

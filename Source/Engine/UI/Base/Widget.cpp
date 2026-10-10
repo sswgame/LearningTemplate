@@ -7,11 +7,11 @@
 
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/UI/Animation/UiStyleTransition.h"
+#include "Engine/UI/Animation/UIStyleTransition.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/WidgetTree.h"
-#include "Engine/UI/Render/UiPaintPass.h"
-#include "Engine/UI/Screen/UiScreen.h"
+#include "Engine/UI/Render/UIPaintPass.h"
+#include "Engine/UI/Screen/UIScreen.h"
 #include "Engine/UI/Style/WidgetStyle.h"
 
 namespace sw
@@ -47,7 +47,7 @@ namespace sw
         , _layoutSerial{ 0 }
         , _opacity{ 1.0f }
         , _visibility{ WidgetVisibility::Visible }
-        , _flowDirection{ UiFlowDirection::Inherit }
+        , _flowDirection{ UIFlowDirection::Inherit }
         , _bEnabled{ true }
         , _bRightToLeft{ false }
         , _bHovered{ false }
@@ -131,7 +131,7 @@ namespace sw
         invalidate( WidgetDirty::kTransform | WidgetDirty::kArrange );
     }
 
-    void Widget::setFlowDirection( UiFlowDirection flowDirection )
+    void Widget::setFlowDirection( UIFlowDirection flowDirection )
     {
         if ( _flowDirection == flowDirection )
             return;
@@ -170,17 +170,17 @@ namespace sw
 
     uint32 Widget::computeStyleStates() const
     {
-        uint32 states = UiStyleState::kNone;
+        uint32 states = UIStyleState::kNone;
         if ( _bHovered )
-            states |= UiStyleState::kHover;
+            states |= UIStyleState::kHover;
         if ( hasFocus() )
-            states |= UiStyleState::kFocus;
+            states |= UIStyleState::kFocus;
         if ( isEnabledInHierarchy() == false )
-            states |= UiStyleState::kDisabled;
+            states |= UIStyleState::kDisabled;
         return states;
     }
 
-    const UiComputedStyle* Widget::getComputedStyle() const
+    const UIComputedStyle* Widget::getComputedStyle() const
     {
         if ( _styleTransition != nullptr )
             return &_styleTransition->_shown;
@@ -189,30 +189,30 @@ namespace sw
 
     float32 Widget::computeEffectiveOpacity() const
     {
-        const UiComputedStyle* pStyle = getComputedStyle();
-        if ( pStyle != nullptr && pStyle->has( UiStyleField::Opacity ) )
+        const UIComputedStyle* pStyle = getComputedStyle();
+        if ( pStyle != nullptr && pStyle->has( UIStyleField::Opacity ) )
             return _opacity * pStyle->_value._opacity;
         return _opacity;
     }
 
-    UiReply Widget::onPointerEvent( const UiPointerEvent& event, UiRoutePhase phase )
+    UIReply Widget::onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase )
     {
         (void)event;
         (void)phase;
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
-    UiReply Widget::onActionEvent( const UiActionEvent& event, UiRoutePhase phase )
+    UIReply Widget::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
         (void)event;
         (void)phase;
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
-    UiReply Widget::onTextEvent( const UiTextEvent& event )
+    UIReply Widget::onTextEvent( const UITextEvent& event )
     {
         (void)event;
-        return UiReply::makeUnhandled();
+        return UIReply::makeUnhandled();
     }
 
     void Widget::onFocusChanged( bool bFocused )
@@ -225,20 +225,20 @@ namespace sw
         (void)bHovered;
     }
 
-    float2 Widget::computeDesiredSize( const UiLayoutContext& context, const float2& availableSize ) const
+    float2 Widget::computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const
     {
         (void)context;
         (void)availableSize;
         return float2{};
     }
 
-    void Widget::paint( CanvasPainter& painter, const UiPaintContext& context ) const
+    void Widget::paint( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)painter;
         (void)context;
     }
 
-    void Widget::paintOverChildren( CanvasPainter& painter, const UiPaintContext& context ) const
+    void Widget::paintOverChildren( CanvasPainter& painter, const UIPaintContext& context ) const
     {
         (void)painter;
         (void)context;
@@ -282,7 +282,7 @@ namespace sw
 
     void Widget::notifyValueEdited( const hashed_string& propertyName )
     {
-        UiScreen* pScreen = _pTree != nullptr ? _pTree->getScreen() : nullptr;
+        UIScreen* pScreen = _pTree != nullptr ? _pTree->getScreen() : nullptr;
         if ( pScreen != nullptr )
             pScreen->onWidgetValueEdited( *this, propertyName );
     }

@@ -76,7 +76,7 @@ namespace sw
         , _fenceEvent{ nullptr }
         , _fence{ nullptr }
         , _fenceValue{ 0 }
-        , _releaseQueue{ constant::kGpuReleaseFrameLatency }
+        , _releaseQueue{ constant::kGPUReleaseFrameLatency }
         , _frameStreamContext{ nullptr }
         , _resourceImpl{ nullptr }
     {
@@ -178,7 +178,7 @@ namespace sw
         return handle;
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleCpuAt( uint32 index ) const
+    D3D12_CPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleCPUAt( uint32 index ) const
     {
         D3D12_CPU_DESCRIPTOR_HANDLE handle{};
         if ( _cbvHeap == nullptr || index >= kMaxShaderVisibleDescriptors )
@@ -188,7 +188,7 @@ namespace sw
         return handle;
     }
 
-    D3D12_GPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleGpuAt( uint32 index ) const
+    D3D12_GPU_DESCRIPTOR_HANDLE D3D12RHIDevice::shaderVisibleGPUAt( uint32 index ) const
     {
         D3D12_GPU_DESCRIPTOR_HANDLE handle{};
         if ( _cbvHeap == nullptr || index >= kMaxShaderVisibleDescriptors )
@@ -290,7 +290,7 @@ namespace sw
                 (void)owned.Get();
                 pLedger->recordFree( RHIMemoryKey::makeTexture( id ) );
             };
-            _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
+            _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
         }
         else
         {
@@ -299,7 +299,7 @@ namespace sw
                 (void)owned.Get();
                 pLedger->recordFree( RHIMemoryKey::makeBuffer( id ) );
             };
-            _releaseQueue.enqueueGpuRelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
+            _releaseQueue.enqueueGPURelease( SW_DELEGATE_LAMBDA( RHIResourceReleaseDelegate, releaseCb ), _fenceValue );
         }
     }
 
@@ -402,7 +402,7 @@ namespace sw
     #endif
     }
 
-    bool D3D12RHIDevice::queryGpuMemoryBudgetInternal( RHIGpuMemoryBudget& outBudget )
+    bool D3D12RHIDevice::queryGPUMemoryBudgetInternal( RHIMemoryBudget& outBudget )
     {
         return queryDxgiMemoryBudget( _memoryAdapter.Get(), outBudget );
     }
