@@ -18,7 +18,9 @@
                    `alloc` → `allocate`, `fetch`/`retrieve`/`lookup`/`obtain` → `get`/`find`,
                    `build`/`generate`/`construct` → `make`/`create`/`compute` (다시 채우면 `rebuild`/`populate`).
      Abbreviation — 함수 이름에 줄임말을 쓰지 않는다. `appendBoolAttr` → `appendBoolAttribute`.
-                   BannedVerb · Abbreviation 은 `mapExemption` 에 오른 기존 선언을 건너뛴다(새 위반만 막는다).
+                   BannedVerb · Abbreviation 은 예외 표에 오른 기존 선언을 건너뛴다(새 위반만 막는다).
+                   금지 동사 표(`[banned_verb]`) · 줄임말 표(`[abbreviation]`) · 예외 표(`[exemption]`)는
+                   `Scripts/lint/rules/CheckFunctionVocabulary.toml` 에 있다.
                    맨이름 `out` 매개변수는 `CheckOutParameterNames.py` 가 본다.
   3) CheckVerb   — `check*` 는 술어가 아니다. bool 이면 `is*`/`has*`, void 면 `assert*` 다.
   4) NamePair    — 같은 이름에 `string_view` 판과 `const hashed_string&` 판을 둘 다 두지 않는다.
@@ -45,6 +47,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint �
 
 import AcronymRegistry as registry  # noqa: E402
 from common import kLintTargetRelDirs, mapConcurrent  # noqa: E402
+from common.RuleData import kKindText  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 # 훑을 곳 — 우리가 이름을 정하는 코드만.
@@ -76,32 +79,13 @@ def findAcronymRunInternal(name: str) -> str | None:
             return run
     return None
 
-# 금지 동사 → 써야 할 동사. 접두사 뒤에 대문자가 오거나 이름이 거기서 끝날 때만 본다
-# (`allocate` 는 `alloc` + 소문자라 걸리지 않고, `fetch_add` 는 `_` 라 걸리지 않는다).
-_kBannedVerb: dict[str, str] = {
-    "setup": "initialize",
-    "startup": "initialize",
-    "teardown": "shutdown",
-    "cleanup": "shutdown",
-    "alloc": "allocate",
-    "dealloc": "free (STL 할당자 계약인 deallocate 는 예외)",
-    "dispose": "release / free",
-    "fetch": "get / find",
-    "retrieve": "get / find",
-    "lookup": "find",
-    "obtain": "get / acquire",
-    "calculate": "compute",
-    "calc": "compute",
-    "build": "make (값) / create (소유) / compute (계산) — 변경 이력·단계면 rebuild / populate",
-    "generate": "make / create / compute",
-    "construct": "make / create",
-}
+# 금지 동사 → 써야 할 동사, 줄임말 → 풀어 쓴 낱말(`rules/CheckFunctionVocabulary.toml`).
+_kRuleSchema = {"banned_verb": kKindText, "abbreviation": kKindText}
+_kRuleData = LintGate.readRules("CheckFunctionVocabulary", _kRuleSchema, requiredKeys=("banned_verb", "abbreviation"))
+_kBannedVerb: dict[str, str] = _kRuleData["banned_verb"]
 _kBannedVerbRe = re.compile(r"^(" + "|".join(sorted(_kBannedVerb, key=len, reverse=True)) + r")(?=[A-Z0-9]|$)")
 
-# 함수 이름 안의 줄임말 → 풀어 쓴 낱말. 낱말 경계(뒤가 소문자가 아님)일 때만 본다(`Attribute` 는 걸리지 않는다).
-_kAbbreviation: dict[str, str] = {
-    "Attr": "Attribute",
-}
+_kAbbreviation: dict[str, str] = _kRuleData["abbreviation"]
 _kAbbreviationRe = re.compile(r"(" + "|".join(_kAbbreviation) + r")(?![a-z])")
 
 _kCheckVerbRe = re.compile(r"^check(?=[A-Z])")
@@ -218,18 +202,7 @@ class CheckFunctionVocabularyGate(LintGate):
     preCommitFileArgument = "--files"
     violationHeader = "이름 규칙 위반"
     hint = "\n규칙은 AGENTS.md 의 'Function names' 절에 있습니다."
-    # 예외 표 — **새 위반만 막는다.** 규칙 전부터 있던 선언만 올리고, 고치면 지운다(전체 훑기가 낡은 줄을 잡는다).
-    # 키는 `규칙:헤더 파일 이름(확장자 없음)::함수 이름` — 폴더를 옮겨도 그대로다. 남은 줄은 모두 "도메인 용어" 다 —
-    # 그 분야에서 그 동사가 곧 용어라 그대로 둔다.
-    mapExemption = {
-        "BannedVerb:FrameArenaAllocator::construct": "도메인 용어 — STL 할당자 계약(allocator_traits::construct)과 같은 이름",
-        "BannedVerb:ReflectionContainers::constructEmpty": "도메인 용어 — 주어진 메모리에 빈 컨테이너를 배치 생성(C++ 객체 수명 시작)",
-        "BannedVerb:UUID::generate": "도메인 용어 — UUID 생성(RFC 9562)",
-        "BannedVerb:RunMap::generate": "도메인 용어 — 절차적 생성(PCG)",
-        "BannedVerb:SurfaceBvh::build": "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)",
-        "BannedVerb:ThemePark::buildRide": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
-        "BannedVerb:ParkDirectorComponent::build*": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
-    }
+    ruleSchema = _kRuleSchema
     selfTestCases = [
         {
             "name": "강제 약어가 아닌 대문자 묶음",

@@ -394,6 +394,7 @@ _kTextExcludedRel: frozenset[str] = frozenset({
     "Scripts/lint/AcronymRegistry.py", "Scripts/lint/fixer/FormatAcronymSpelling.py", "Scripts/lint/gate/CheckAcronymSpelling.py",
     "Test/PythonTest/TestAcronymSpelling.py", "docs/04_CodingGuidelines.md",
     "Scripts/lint/gate/CheckFunctionVocabulary.py",
+    "Scripts/lint/rules/AcronymRegistry.toml", "Scripts/lint/rules/CheckFunctionVocabulary.toml", "Scripts/lint/rules/CheckProductNames.toml",
 })
 
 _kIncludeLineRe = re.compile(r"^[ \t]*#[ \t]*include\b")

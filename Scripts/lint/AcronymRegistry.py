@@ -13,7 +13,10 @@
   서드파티 이름(`kExternalPrefixRe` · `kExternalNamespace` · `kExternalName`), 제품 이름(`kProductName` — `ImGui` 의 `Gui` 는 약어가 아니다).
 - 줄임말(`kNotAcronym`)은 약어가 아니다 — 등록부에 오르면 시작할 때 멈춘다.
 
-`kEnforced` 는 게이트가 막는 약어다. 약어 하나를 트리 전체에서 바꾼 커밋이 그 약어를 여기에 올린다 — 그 전까지 게이트는 보고만 한다.
+`kEnforced` 는 게이트가 막는 약어다. 약어 하나를 트리 전체에서 바꾼 커밋이 그 약어를 올린다 — 그 전까지 게이트는 보고만 한다.
+
+목록(약어 · 강제 약어 · 복수 없음 · 줄임말 · 제품 이름 · 남의 이름공간 · 남의 이름)은 `Scripts/lint/rules/AcronymRegistry.toml` 에 있고
+이 모듈이 읽어 아래 이름으로 내보낸다. 정규식(`kExternalPrefixRe`)과 철자 규칙은 여기 있다.
 """
 
 from __future__ import annotations
@@ -28,31 +31,25 @@ from typing import Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts — common
 
 from common.CodeText import blankCommentsAndLiterals, blankMatch  # noqa: E402
+from common.RuleData import kKindReason, kKindText, kKindTextList, readRuleFile  # noqa: E402
 
-#: 등록된 약어(대문자 철자). 계획 1절의 목록 + 폴더 표(2-2)의 `RPG` · `JRPG`.
-kAcronym: tuple[str, ...] = (
-    "UI", "GPU", "AI", "HTTP", "XML", "JSON", "SQL", "IO", "LOD", "RTS", "SRPG", "HUD", "URL", "UUID", "DDS", "TLS", "UDP", "IK",
-    "API", "RPC", "PSO", "CPU", "RHI", "AABB", "ID", "QA", "DSP", "MMO", "ACL", "GUI", "RPG", "JRPG",
-)
+_kRuleData = readRuleFile("AcronymRegistry", {
+    "acronym": kKindTextList, "enforced": kKindTextList, "no_plural": kKindTextList, "product": kKindTextList,
+    "external_namespace": kKindTextList, "external_name": kKindTextList,
+    "not_acronym": kKindReason, "product_variant": kKindText, "product_acronym": kKindText,
+}, requiredKeys=("acronym", "enforced", "product"))
 
-#: 게이트가 막는 약어. 그 약어를 트리 전체에서 바꾼 커밋이 여기에 올린다(계획 2절 순서).
-kEnforced: frozenset[str] = frozenset({"HUD", "IK", "DDS", "TLS", "UDP", "URL", "UUID", "RTS", "SRPG", "SQL", "AI", "LOD", "API", "RPC", "PSO", "XML", "JSON", "HTTP", "IO", "UI", "GPU", "CPU", "RHI", "AABB", "DSP", "MMO", "ACL", "GUI", "RPG", "JRPG", "ID", "QA"})
+#: 등록된 약어(대문자 철자).
+kAcronym: tuple[str, ...] = _kRuleData["acronym"]
+
+#: 게이트가 막는 약어. 그 약어를 트리 전체에서 바꾼 커밋이 올린다.
+kEnforced: frozenset[str] = frozenset(_kRuleData["enforced"])
 
 #: 복수 `s` 를 붙여 쓰지 않는 약어 — `Ios` 는 `IO` 의 복수가 아니라 플랫폼 이름(iOS)이다.
-kNoPlural: frozenset[str] = frozenset({"IO"})
+kNoPlural: frozenset[str] = frozenset(_kRuleData["no_plural"])
 
 #: 약어처럼 보이지만 줄임말인 낱말 → 이유. 등록부(`kAcronym`)에 오르면 `checkRegistry` 가 멈춘다.
-kNotAcronym: dict[str, str] = {
-    "Nav": "navigation 의 줄임말",
-    "Anim": "animation 의 줄임말",
-    "Gimmick": "낱말 그대로",
-    "Net": "network 의 줄임말",
-    "Dev": "development 의 줄임말",
-    "Resp": "response 의 줄임말",
-    "Std": "C++ 표준 라이브러리 이름(std)",
-    "Idx": "index 의 줄임말 — `Id` 와 다른 낱말이다",
-    "Info": "information 의 줄임말",
-}
+kNotAcronym: dict[str, str] = _kRuleData["not_acronym"]
 
 
 @dataclass(frozen=True)
@@ -65,17 +62,11 @@ class ProductName:
 
 
 #: 제품 이름. 정본 철자는 약어 규칙이 건드리지 않는다(`ImGui` → `ImGUI` 가 되지 않는다).
-kProductName: tuple[ProductName, ...] = (
-    ProductName("ImGui"),
-    ProductName("OpenSSL", ("OpenSsl",), "SSL"),
-    ProductName("SQLite", ("Sqlite",), "SQL"),
-    ProductName("Box2D"),
-    ProductName("Jolt"),
-    ProductName("FreeType"),
-    ProductName("HarfBuzz"),
-    ProductName("OpenGL"),
-    ProductName("DirectX"),
-)
+kProductName: tuple[ProductName, ...] = tuple(
+    ProductName(canonical,
+                tuple(variant for variant, target in _kRuleData["product_variant"].items() if target == canonical),
+                _kRuleData["product_acronym"].get(canonical, ""))
+    for canonical in _kRuleData["product"])
 
 #: 고를 수 있는 이름표 전체 — 약어 + 제품 이름표(`SSL` — `OpenSsl` → `OpenSSL`). `--acronym` 을 생략하면 이것이다.
 kSelectable: tuple[str, ...] = kAcronym + tuple(dict.fromkeys(product.acronym for product in kProductName
@@ -87,22 +78,10 @@ kExternalPrefixRe = re.compile(
     r"b2_|cgltf|ozz|rtm|WSA|SSL_|EVP_|BIO_|PQ|redis|sqlite3|curl|CURL)")
 
 #: 이 이름공간 뒤(`ns::`)의 식별자는 남의 이름이다.
-kExternalNamespace: frozenset[str] = frozenset({
-    "std", "ImGui", "JPH", "ax", "ed", "NodeEditor", "nlohmann", "pugi", "acl", "rtm", "fmt", "Microsoft", "WRL", "DirectX", "tinyxml2", "moodycamel",
-})
+kExternalNamespace: frozenset[str] = frozenset(_kRuleData["external_namespace"])
 
-#: 앞머리로 가려지지 않는 남의 이름(Win32 함수 · DXGI · ImGui 구조체 멤버). 사전 실행(`FormatAcronymSpelling --report`)의
-#: "외부 헤더에도 있는 이름" 이 후보를 내고, 사람이 남의 이름인지 보고 여기에 올린다 — 코드모드는 외부 헤더를 직접 읽지 않는다
-#: (기계마다 깔린 SDK 가 달라 같은 트리를 다르게 고치면 안 된다).
-kExternalName: frozenset[str] = frozenset({
-    "GetCurrentProcessId", "GetCurrentThreadId", "GetProcessId", "GetThreadId", "GetWindowThreadProcessId", "CancelIoEx",
-    "CreateIoCompletionPort", "UuidCreate", "UuidToStringA", "UuidFromStringA", "dwProcessId", "dwThreadId",
-    "VendorId", "DeviceId", "SubSysId",
-    "ActiveId", "ActiveIdHasBeenEditedThisFrame", "HoveredId", "DockId", "ThreadId",
-    "shapeIdA", "shapeIdB", "bodyIdA", "bodyIdB", "sensorShapeId", "visitorShapeId", "userMaterialId",
-    "minLod", "maxLod", "mipLodBias",
-    "queryId",
-})
+#: 앞머리로 가려지지 않는 남의 이름(Win32 함수 · DXGI · ImGui 구조체 멤버) — 올리는 법은 데이터 파일의 주석.
+kExternalName: frozenset[str] = frozenset(_kRuleData["external_name"])
 
 #: 코드모드 · 게이트가 보는 C++ 파일의 확장자 — X-매크로 목록(`.xxx`)도 C++ 로 include 된다.
 kCodeSuffix: tuple[str, ...] = (".h", ".hpp", ".inl", ".c", ".cpp", ".cc", ".cxx", ".xxx")
@@ -136,6 +115,11 @@ def checkRegistry() -> list[str]:
     if len(set(kAcronym)) != len(kAcronym):
         listProblem.append("kAcronym 에 같은 약어가 두 번 있습니다")
     listProblem += [f"강제 약어 '{acronym}' 가 kAcronym 에 없습니다" for acronym in kEnforced if acronym not in kAcronym]
+    setProduct = set(_kRuleData["product"])
+    listProblem += [f"제품 옛 철자 '{variant}' 의 정본 '{target}' 이 제품 목록에 없습니다"
+                    for variant, target in _kRuleData["product_variant"].items() if target not in setProduct]
+    listProblem += [f"이름표 '{label}' 의 제품 '{product}' 이 제품 목록에 없습니다"
+                    for product, label in _kRuleData["product_acronym"].items() if product not in setProduct]
     return listProblem
 
 
@@ -147,7 +131,7 @@ def resolveAcronyms(listArgument: Iterable[str] | None) -> tuple[str, ...]:
     setKnown = set(kAcronym) | {product.acronym for product in kProductName if product.acronym}
     listUnknown = [name for name in listName if name not in setKnown]
     if listUnknown:
-        raise ValueError(f"등록부에 없는 약어: {', '.join(listUnknown)} (Scripts/lint/AcronymRegistry.py 의 kAcronym)")
+        raise ValueError(f"등록부에 없는 약어: {', '.join(listUnknown)} (Scripts/lint/rules/AcronymRegistry.toml 의 acronym)")
     return tuple(dict.fromkeys(listName))
 
 

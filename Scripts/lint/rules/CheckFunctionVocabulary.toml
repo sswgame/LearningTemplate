@@ -1,0 +1,37 @@
+# CheckFunctionVocabulary 의 규칙 데이터 — 게이트는 Scripts/lint/gate/CheckFunctionVocabulary.py, 규칙은 AGENTS.md "Function names".
+
+# 금지 동사 → 써야 할 동사. 접두사 뒤에 대문자가 오거나 이름이 거기서 끝날 때만 본다
+# (`allocate` 는 `alloc` + 소문자라 걸리지 않고, `fetch_add` 는 `_` 라 걸리지 않는다).
+[banned_verb]
+setup = "initialize"
+startup = "initialize"
+teardown = "shutdown"
+cleanup = "shutdown"
+alloc = "allocate"
+dealloc = "free (STL 할당자 계약인 deallocate 는 예외)"
+dispose = "release / free"
+fetch = "get / find"
+retrieve = "get / find"
+lookup = "find"
+obtain = "get / acquire"
+calculate = "compute"
+calc = "compute"
+build = "make (값) / create (소유) / compute (계산) — 변경 이력·단계면 rebuild / populate"
+generate = "make / create / compute"
+construct = "make / create"
+
+# 함수 이름 안의 줄임말 → 풀어 쓴 낱말. 낱말 경계(뒤가 소문자가 아님)일 때만 본다(`Attribute` 는 걸리지 않는다).
+[abbreviation]
+Attr = "Attribute"
+
+# 예외 표 — **새 위반만 막는다.** 규칙 전부터 있던 선언만 올리고, 고치면 지운다(전체 훑기가 낡은 줄을 잡는다).
+# 키는 `규칙:헤더 파일 이름(확장자 없음)::함수 이름`(fnmatch) — 폴더를 옮겨도 그대로다. 남은 줄은 모두 "도메인 용어" 다 —
+# 그 분야에서 그 동사가 곧 용어라 그대로 둔다.
+[exemption]
+"BannedVerb:FrameArenaAllocator::construct" = "도메인 용어 — STL 할당자 계약(allocator_traits::construct)과 같은 이름"
+"BannedVerb:ReflectionContainers::constructEmpty" = "도메인 용어 — 주어진 메모리에 빈 컨테이너를 배치 생성(C++ 객체 수명 시작)"
+"BannedVerb:UUID::generate" = "도메인 용어 — UUID 생성(RFC 9562)"
+"BannedVerb:RunMap::generate" = "도메인 용어 — 절차적 생성(PCG)"
+"BannedVerb:SurfaceBvh::build" = "도메인 용어 — BVH 구축(Embree · Jolt 와 같은 용어)"
+"BannedVerb:ThemePark::buildRide" = "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동"
+"BannedVerb:ParkDirectorComponent::build*" = "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동"

@@ -11,10 +11,12 @@ Core 폴더 층 검사 — `Source/Core/` 바로 아래 폴더가 곧 층이고,
   1) `Source/Core/<폴더>/` 의 파일은 **자기 폴더이거나 티어가 더 낮은 폴더**의 `Core/…` 헤더만 include 한다(같은 티어의 다른 폴더도 안 된다).
      `.cpp` 도 센다 — Core 를 여러 라이브러리로 나눌 때 링크 간선이 되기 때문이다.
   2) 폴더 파일은 루트 모음 헤더(`Core/CoreMinimal.h` · `Core/pch.h`)를 include 하지 않는다(폴더 하나가 Core 전체를 끌어온다).
-  3) 표(_kCoreTier)에 없는 폴더는 실패다 — 새 폴더는 티어를 정하고 넣는다(`RunCoreLayerGraph.py` 가 계산해 준다).
+  3) 티어 표에 없는 폴더는 실패다 — 새 폴더는 티어를 정하고 넣는다(`RunCoreLayerGraph.py` 가 계산해 준다).
   4) `Log` 보다 낮은 티어의 파일은 로그 매크로(`SW_LOG_*`)를 쓰지 않는다 — `.cpp` 는 pch 로 `Logger.h` 를 include 없이 받으므로
-     include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 `mapExemption` 에 이유와 함께 적는다(줄일 대상).
+     include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 예외 표에 이유와 함께 적는다(줄일 대상).
   `Core/Network` 내부 방향은 `CheckCoreNetworkLayers.py` 가 따로 본다.
+
+티어 표(`[tier]`)와 예외 표(`[exemption]`)는 `Scripts/lint/rules/CheckCoreLayers.toml` 에 있다.
 
   python Scripts/lint/gate/CheckCoreLayers.py [--root <repo>] [--files a.h b.cpp]
 """
@@ -30,36 +32,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # Scripts — com
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts/lint — LintGate
 
 from common import blankComments, firstFolderAfter, iterIncludes, normalizePath  # noqa: E402
+from common.RuleData import kKindInteger  # noqa: E402
 from LintGate import GateResult, LintGate  # noqa: E402
 
 _kCorePrefix = "Core/"
 _kSourceCorePrefix = "Source/Core/"
 
-#: 폴더 → 티어. 숫자가 큰 쪽이 위다. `RunCoreLayerGraph.py` 의 Kahn 티어와 같아야 한다.
-_kCoreTier: dict[str, int] = {
-    "Common": 0,
-    "Predefined": 0,      # 인자 · 이름 표(.xxx) — 아무것도 include 하지 않는다
-    "Concurrency": 1,     # 원시 동기화(atomic · mutex · SpinLock · Futex)와 경합 검출 훅
-    "Math": 1,
-    "Memory": 2,          # 할당기 · 메모리 태그 · 할당 기록기 인터페이스
-    "Container": 3,       # 컨테이너 · 문자열 타입과 StringUtil · formatString · 동시 큐
-    "Delegate": 4,
-    "UUID": 4,
-    "Log": 5,             # 로그 매크로와 전역 창구(Logger) — 기본 싱크는 LogSink
-    "CommandLine": 6,
-    "Compression": 6,
-    "Process": 6,         # 프로세스 · 종료 신호 · 스레드 크래시 스택
-    "String": 6,          # 이름(hashed_string · TagID) · 고정 문자열 — 로그 매크로를 쓴다
-    "Time": 6,
-    "GlobalVariable": 7,
-    "Task": 7,
-    "File": 8,
-    "Network": 8,         # 다른 Core 폴더는 Network 를 include 하지 않는다
-    "Module": 9,
-    "Diagnostics": 10,    # 호출 스택 · 크래시 보고 · 메모리 프로파일러 · 교착 검출기 · 경합 보고기
-    "Event": 10,
-    "LogSink": 11,        # 기본 로그 싱크(AsyncLogSink)와 출력 장치
-}
+#: `rules/CheckCoreLayers.toml` 에서 예외 표 말고 읽는 것 — 폴더 → 티어(숫자가 큰 쪽이 위).
+_kRuleSchema = {"tier": kKindInteger}
+_kCoreTier: dict[str, int] = LintGate.readRules("CheckCoreLayers", _kRuleSchema, requiredKeys=("tier",))["tier"]
 
 _kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h")
 
@@ -72,7 +53,7 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
     if folder == "":
         return []
     if folder not in _kCoreTier:
-        return [f"{relative}: 'Core/{folder}/' 는 티어 표(_kCoreTier)에 없는 폴더입니다"]
+        return [f"{relative}: 'Core/{folder}/' 는 티어 표(rules/CheckCoreLayers.toml 의 [tier])에 없는 폴더입니다"]
     tier = _kCoreTier[folder]
     listViolation: list[str] = []
     for lineNumber, rawInclude in iterIncludes(text, bQuotedOnly=True):
@@ -118,15 +99,7 @@ def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> 
 class CheckCoreLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
 
-    #: Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 새로 늘리지 않는다(줄일 대상).
-    mapExemption = {
-        "Source/Core/Math/VectorMath.cpp": "영 벡터 단언(SW_LOG_ASSERT) — Math 가 Log 아래라 링크 간선이 거꾸로 간다",
-        "Source/Core/Memory/LinearAllocator.cpp": "블록 표 소진 · 블록 할당 실패 Error 로그",
-        "Source/Core/Container/FrameArenaAllocator.cpp": "프레임 아레나 청크 할당 실패 Error 로그",
-        "Source/Core/Container/DynamicBitset.cpp": "비트 위치 · 크기 단언과 잘못된 글자 Error 로그",
-        "Source/Core/Container/StringUtil.cpp": "UTF-8 검증 경고 · 단언",
-    }
-
+    ruleSchema = _kRuleSchema
     description = "Core 폴더 티어(Common → … → LogSink)를 거꾸로 include 하지 않는지 검사"
     buildComment = "Checking the Core folder layers..."
     timeoutSeconds = 30
@@ -135,7 +108,7 @@ class CheckCoreLayersGate(LintGate):
     violationHeader = "Core 층 위반"
     hint = (
         "  아래 층이 위 층을 알아야 하면 타입을 아래로 내리거나, 위 층이 인터페이스 · 함수 포인터를 건넨다(ILockObserver · IAllocationTracker 처럼).\n"
-        "  새 폴더는 Scripts/lint/gate/CheckCoreLayers.py 의 _kCoreTier 에 티어를 정해 넣는다(Scripts/lint/report/RunCoreLayerGraph.py 가 계산한다)."
+        "  새 폴더는 Scripts/lint/rules/CheckCoreLayers.toml 의 [tier] 에 티어를 정해 넣는다(Scripts/lint/report/RunCoreLayerGraph.py 가 계산한다)."
     )
     selfTestCases = [
         {

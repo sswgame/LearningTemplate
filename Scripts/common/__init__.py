@@ -29,6 +29,7 @@ Scripts/common package
   - ImageMetrics: 스크린샷 비교 — PPM · PNG, 축소, 배경을 뺀 지표 · 허용 오차
   - AssetValidation: 에셋 검증 규칙의 연산자들(Config/Editor/AssetValidationRules.json)
   - XmlAssetMerge: XML 에셋 의미 비교 · 3-way 병합
+  - RuleData: 린트 규칙 데이터(Scripts/lint/rules/*.toml) 읽기 · 스키마 검사 · 파이썬 3.10 용 TOML 부분 집합 읽기
 """
 
 from __future__ import annotations

@@ -53,6 +53,7 @@ from typing import Iterable
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from common import collectRepositoryFiles, getProjectRoot, kNotOurDirNames, readTextFiles, resolveFileArguments  # noqa: E402
+from common.RuleData import RuleDataError, kExemptionKey, kKindReason, kRuleDataRelDir, readRuleFile  # noqa: E402
 
 
 class GateError(Exception):
@@ -143,12 +144,18 @@ class LintGate:
     # --- 예외 표 -------------------------------------------------------------
     #
     # - `mapExemption`: 이 게이트가 규칙에서 빼 주는 자리(경로 · fnmatch 패턴 · `종류:이름` — 키의 뜻은 게이트가 정한다) → 이유.
-    #                   예외는 이 표에만 둔다(`selftest/CheckExemptionTables` 가 모듈 수준 `_k…Allowed/Exempt…` 표를 막는다). 기반이 지키는 것:
+    #                   **표는 `Scripts/lint/rules/<게이트 이름>.toml` 의 `[exemption]` 에 둔다** — 클래스를 만들 때 기반이 읽어 채운다
+    #                   (`common/RuleData.py`). 파일이 없으면 빈 표다(새 게이트는 파일 하나 떨구기 그대로). 게이트 파일에 `mapExemption` 을
+    #                   적거나 모듈 수준 `_k…Allowed/Exempt…` 표를 두는 것은 `selftest/CheckExemptionTables` 가 막는다. 기반이 지키는 것:
     #                   ① 이유가 빈 줄이 있으면 검사가 서지 않는다(종료 2) ② **전체 훑기**(`--files` 없음)에서 대상은 봤는데 한 번도 적용되지
     #                   않은 줄, 그리고 실제 저장소(`.git` 이 있는 루트)에서 대상조차 못 본 줄은 "낡은 예외" 위반이다 ③ OK 줄에 표 크기를 찍는다.
     #                   게이트는 예외의 대상(그 파일 · 그 이름)을 훑을 때 `seeExemption( key )`, 예외로 위반을 넘길 때 `useExemption( key )` 를 부른다.
     #                   둘 다 클래스 메서드다 — 모듈 수준 도우미 함수도 `XxxGate.useExemption( key )` 로 부른다. 기록은 `main()` 이 비운다.
+    # - `ruleSchema`  : 같은 데이터 파일에서 `[exemption]` 말고 게이트가 더 읽는 키 → 종류(`common.RuleData.kKind…`). 모르는 키는 오류라
+    #                   여기 적지 않은 키가 파일에 있으면 검사가 서지 않는다. 게이트는 그 키를 모듈 수준에서 `LintGate.readRules( 이름, 스키마 )` 로 읽는다.
     mapExemption: dict[str, str] = {}
+    ruleSchema: dict[str, str] = {}
+    _ruleDataError: str = ""
     _setSeenExemption: set[str] = set()
     _setUsedExemption: set[str] = set()
 
@@ -178,6 +185,23 @@ class LintGate:
             # 클래스 이름에서 `Gate` 를 뗀 것이 로그 태그다 — `CheckEngineLayersGate` -> `CheckEngineLayers`.
             # 모듈 이름을 쓰지 않는 이유: 스크립트로 직접 돌리면 `__main__` 이 된다.
             cls.name = cls.__name__.removesuffix("Gate")
+        if "mapExemption" not in cls.__dict__:
+            # 예외 표는 rules/<이름>.toml 에서 온다. 읽기 오류는 import 를 깨지 않고 main() 이 종료 2 로 알린다(CheckLintsAreAlive 도 본다).
+            try:
+                cls.mapExemption = cls.readRules(cls.name, cls.ruleSchema)[kExemptionKey]
+                cls._ruleDataError = ""
+            except RuleDataError as exception:
+                cls.mapExemption = {}
+                cls._ruleDataError = str(exception)
+
+    @staticmethod
+    def readRules(name: str, schema: dict[str, str] | None = None, *, requiredKeys: Iterable[str] = ()) -> dict:
+        """
+        `Scripts/lint/rules/<name>.toml` 을 읽습니다 — `[exemption]`(이유 표)에 `schema` 의 키를 더한 스키마로. 파일이 없으면
+        `requiredKeys` 가 빌 때만 빈 데이터다. 모양이 틀리면 `RuleDataError`.
+        """
+        return readRuleFile(name, {kExemptionKey: kKindReason, **(schema or {})}, requiredKeys=requiredKeys,
+                            bMissingFileIsEmpty=True)
 
     # --- 구현이 채우는 것 ------------------------------------------------------
 
@@ -205,13 +229,16 @@ class LintGate:
         cls = type(self)
         cls._setSeenExemption = set()
         cls._setUsedExemption = set()
+        if self._ruleDataError:
+            print(f"[{self.name}] {self._ruleDataError}", file=sys.stderr)
+            return 2
         listNoReason = [key for key, reason in self.mapExemption.items() if not reason.strip()]
         if listNoReason:
             print(f"[{self.name}] 이유 없는 예외: {', '.join(listNoReason)} — 이유 없는 예외는 없다", file=sys.stderr)
             return 2
         try:
             result = self.scan(repositoryRoot, args)
-        except GateError as exception:
+        except (GateError, RuleDataError) as exception:
             print(f"[{self.name}] {exception}", file=sys.stderr)
             return 2
         if not getattr(args, "files", None):
@@ -224,13 +251,14 @@ class LintGate:
         """전체 훑기 뒤 — 대상은 봤는데 쓰지 않은 예외, 실제 저장소에서 대상을 못 본 예외."""
         bRealRepository = (repositoryRoot / ".git").exists()
         listStale: list[str] = []
+        table = f"{kRuleDataRelDir}/{self.name}.toml 의 [{kExemptionKey}]"
         for key, reason in self.mapExemption.items():
             if key in self._setUsedExemption:
                 continue
             if key in self._setSeenExemption:
-                listStale.append(f"[낡은 예외] '{key}' 의 대상은 그대로인데 규칙을 어기지 않습니다 — mapExemption 에서 지웁니다({reason})")
+                listStale.append(f"[낡은 예외] '{key}' 의 대상은 그대로인데 규칙을 어기지 않습니다 — {table} 에서 지웁니다({reason})")
             elif bRealRepository:
-                listStale.append(f"[낡은 예외] '{key}' 의 대상이 없습니다(옮겼거나 지웠다) — mapExemption 을 고칩니다({reason})")
+                listStale.append(f"[낡은 예외] '{key}' 의 대상이 없습니다(옮겼거나 지웠다) — {table} 을 고칩니다({reason})")
         return listStale
 
     def report(self, result: GateResult) -> int:

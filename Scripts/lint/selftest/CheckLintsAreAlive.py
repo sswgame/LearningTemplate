@@ -14,6 +14,9 @@
 게이트가 `selfTestCases` 를 선언하지 않으면 이 검사가 "덮이지 않은 린트" 로 실패한다.
 정말 조각을 만들 수 없는 린트는 `selfTestSkipReason` 에 이유를 적는다(이유 없는 예외는 없다).
 
+예외 표 · 규칙 데이터(`Scripts/lint/rules/<게이트>.toml`)를 읽지 못한 게이트는 조각마다 종료 2 를 내 "살아 있다" 로 보인다 — 그래서 조각을 돌리기 전에
+게이트 클래스의 읽기 오류를 먼저 본다.
+
 **대상 목록도 두지 않는다** — `Scripts/lint/gate/` 에 있는 것이 게이트다. 목록을 적어 두면 새 게이트를
 거기 넣는 걸 잊는 순간 그 게이트는 아무에게도 검사받지 않는다. 자리가 규칙이다.
 폴더를 훑는 일은 `Scripts/lint/LintCatalog.py` 가 한다 — CMake 등록 파일을 만드는 쪽과 **같은 훑기**다.
@@ -79,6 +82,11 @@ class CheckLintsAreAliveGate(LintGate):
             if gateClass is None:
                 errors.append(f"{moduleName}: `LintGate` 를 상속한 게이트 클래스가 없습니다 — "
                               f"`gate/` 에 있는 것은 게이트여야 합니다 (Scripts/lint/LintGate.py 참고)")
+                continue
+
+            if gateClass._ruleDataError:
+                # 규칙 데이터를 못 읽은 게이트는 모든 조각에서 종료 2 를 낸다 — 0 이 아니라 "살아 있다" 로 보이므로 여기서 따로 잡는다.
+                errors.append(f"{moduleName}: 규칙 데이터를 읽지 못합니다 — {gateClass._ruleDataError}")
                 continue
 
             cases = gateClass.selfTestCases
