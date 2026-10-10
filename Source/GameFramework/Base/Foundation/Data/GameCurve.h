@@ -1,6 +1,6 @@
 /**
  * @file GameCurve.h
- * @brief 시간 → 값 꺾은선 곡선입니다 — 스폰 예산 배율(`SpawnTable`) · 페이싱 단계의 배율(`AiDirectorProfile`)이 같은 것을 씁니다.
+ * @brief 시간 → 값 꺾은선 곡선입니다 — 스폰 예산 배율(`SpawnTable`) · 페이싱 단계의 배율(`AIDirectorProfile`)이 같은 것을 씁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

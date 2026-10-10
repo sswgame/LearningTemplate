@@ -4,7 +4,7 @@
  *
  * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 밭 · 달력 · 인벤토리 · 작물 카탈로그의 규칙은 키트(`GF_Farming`)가 맡고, 여기는
  *          "농부가 어디 서서 무엇을 하는가" 의 규칙과 칸의 모습(프리팹)을 어디에 세우는지를 압니다. 농부가 **무엇을 누르는가는 농부 폰의 의도**
- *          (`PawnComponent` — 플레이어 조종자 또는 `FarmAutoFarmerAiComponent` 가 낸다)이고, 디렉터는 입력 맵을 읽지 않습니다. 모습을 매 프레임 맞추는 일은 뷰 컴포넌트
+ *          (`PawnComponent` — 플레이어 조종자 또는 `FarmAutoFarmerAIComponent` 가 낸다)이고, 디렉터는 입력 맵을 읽지 않습니다. 모습을 매 프레임 맞추는 일은 뷰 컴포넌트
  *          (`FarmSoilComponent` · `FarmCropComponent` · `FarmerComponent` · `FarmTargetComponent` · `FarmSunComponent`)가 이 컴포넌트를 **읽기만** 해서 합니다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 카메라 리그의 초점을 넣으며, 뷰 · 리그는 `PostUpdate` 에서 읽습니다.
@@ -113,7 +113,7 @@ namespace sw
         bool                         isNearShippingBin() const;
         bool                         isNearShop() const;
         /** @brief 농부 폰을 지금 자동 농부 AI 가 쥐고 있으면 true 입니다(시나리오 탐침). */
-        bool isFarmerDrivenByAi() const;
+        bool isFarmerDrivenByAI() const;
         /** @brief 폰 버튼의 이름입니다(입력 맵 액션 이름과 같다). */
         static const utf8* getButtonName( FarmButton button );
 

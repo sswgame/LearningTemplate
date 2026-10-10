@@ -13,7 +13,7 @@
 #include "Engine/UI/UiSystem.h"
 
 #include "GameFramework/Base/Actor/Control/ControlAutomationSteps.h"
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
@@ -36,23 +36,23 @@ namespace sw
             }
 
             /** @brief @p pawn 을 쥘 AI 조종자를 세웁니다 — 폰의 프리팹이 있으면 그것(그 안의 AI 조종자), 없으면 기본 AI 조종자 하나. */
-            static AiControllerComponent* createAiController( GameObjectManager& manager, const PawnComponent& pawn )
+            static AIControllerComponent* createAIController( GameObjectManager& manager, const PawnComponent& pawn )
             {
-                const string& prefabPath = pawn.getAiControllerPrefab();
+                const string& prefabPath = pawn.getAIControllerPrefab();
                 if ( prefabPath.empty() )
                 {
-                    GameObject* pObject = manager.createGameObject( hashed_string( "AiController" ) );
-                    return pObject != nullptr ? pObject->addComponent<AiControllerComponent>() : nullptr;
+                    GameObject* pObject = manager.createGameObject( hashed_string( "AIController" ) );
+                    return pObject != nullptr ? pObject->addComponent<AIControllerComponent>() : nullptr;
                 }
                 AssetManager*          pAssetManager = game::getService<AssetManager>();
-                GameObject*            pObject       = pAssetManager != nullptr ? pAssetManager->getPrefabCache().spawn( &manager, prefabPath, "AiController" ) : nullptr;
-                AiControllerComponent* pAi           = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
-                if ( pAi == nullptr )
+                GameObject*            pObject       = pAssetManager != nullptr ? pAssetManager->getPrefabCache().spawn( &manager, prefabPath, "AIController" ) : nullptr;
+                AIControllerComponent* pAI           = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
+                if ( pAI == nullptr )
                 {
                     const utf8* pPawnName = pawn.getOwner() != nullptr ? pawn.getOwner()->getName().c_str() : "?";
                     SW_LOG_WARNING( "Pawn '%#' auto-possess prefab '%#' has no AI controller - the pawn stays unpossessed", pPawnName, prefabPath.c_str() );
                 }
-                return pAi;
+                return pAI;
             }
         };
     } // namespace
@@ -236,11 +236,11 @@ namespace sw
             ControllerComponent* pController = nullptr;
             if ( pPawn->getAutoPossess() == PawnAutoPossess::Player0 )
                 pController = findOrCreatePlayerController( manager, 0 );
-            else if ( pPawn->getAutoPossess() == PawnAutoPossess::Ai )
-                pController = ControlSystemInternal::createAiController( manager, *pPawn );
+            else if ( pPawn->getAutoPossess() == PawnAutoPossess::AI )
+                pController = ControlSystemInternal::createAIController( manager, *pPawn );
             if ( pController == nullptr )
                 continue;
-            pController->setSpawnedForPawn( pPawn->getAutoPossess() == PawnAutoPossess::Ai );
+            pController->setSpawnedForPawn( pPawn->getAutoPossess() == PawnAutoPossess::AI );
             pController->possess( *pPawn );
         }
         _listAutoPossessPawn.clear();

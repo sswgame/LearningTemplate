@@ -33,7 +33,7 @@
 
 #include "GameFramework/Base/Actor/Camera/CameraManagerComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/IntentTrackControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/RemoteControllerComponent.h"
@@ -152,17 +152,17 @@ namespace
         }
 
         /** @brief 비스듬한 목적지 · 초점으로 도는 AI 를 쥐어 줍니다 — 이동 축 · 조종 회전이 0 · ±1 이 아닌 값이 된다. */
-        static AiControllerComponent* possessWithWanderingAi( GameObjectManager& manager, PawnComponent& pawn )
+        static AIControllerComponent* possessWithWanderingAI( GameObjectManager& manager, PawnComponent& pawn )
         {
-            auto* pAi = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
-            pAi->possess( pawn );
-            pAi->moveTo( float3{ 7.0f, 0.0f, 9.0f } );
-            pAi->setFocus( float3{ -3.0f, 1.0f, 5.0f } );
-            return pAi;
+            auto* pAI = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
+            pAI->possess( pawn );
+            pAI->moveTo( float3{ 7.0f, 0.0f, 9.0f } );
+            pAI->setFocus( float3{ -3.0f, 1.0f, 5.0f } );
+            return pAI;
         }
 
         /** @brief 매 틱 아날로그를 0.7 · −0.33 으로 번갈아 넣습니다. */
-        static void setThrottle( AiControllerComponent& ai, uint32 tick ) { ai.setAnalog( "Throttle", ( tick % 2 ) == 0 ? 0.7f : -0.33f ); }
+        static void setThrottle( AIControllerComponent& ai, uint32 tick ) { ai.setAnalog( "Throttle", ( tick % 2 ) == 0 ? 0.7f : -0.33f ); }
 
         /** @brief 보내는 창이 쓴 묶음을 받는 버퍼가 읽습니다(종류 바이트 하나를 앞에 둔 셈으로 예산을 센다). */
         static bool deliver( const NetInputSendWindow& window, NetInputReceiveBuffer& buffer )
@@ -251,7 +251,7 @@ SW_TEST_CASE( ControlTest, IntentRoundTripsThroughBits )
 /**
  * @brief [ControlTest] 플레이어(키 W → 입력 맵 Move)와 AI(곧장 앞의 목적지)가 같은 의도를 내면 두 폰의 자리가 매 프레임 비트까지 같다
  */
-SW_TEST_CASE( ControlTest, PlayerAndAiWithTheSameIntentMoveTheSame )
+SW_TEST_CASE( ControlTest, PlayerAndAIWithTheSameIntentMoveTheSame )
 {
     using Internal = ControlTestInternal;
     InputManager input;
@@ -263,20 +263,20 @@ SW_TEST_CASE( ControlTest, PlayerAndAiWithTheSameIntentMoveTheSame )
     {
         GameObjectManager manager;
         GameObject*       pPlayerPawn = Internal::spawnPawn( manager, "PlayerPawn", float3{ 0.0f, 0.0f, 0.0f } );
-        GameObject*       pAiPawn     = Internal::spawnPawn( manager, "AiPawn", float3{ 10.0f, 0.0f, 0.0f } );
+        GameObject*       pAIPawn     = Internal::spawnPawn( manager, "AIPawn", float3{ 10.0f, 0.0f, 0.0f } );
         auto*             pPlayer     = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*             pAi         = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+        auto*             pAI         = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pPlayerPawn->getComponent<PawnComponent>() );
-        pAi->possess( *pAiPawn->getComponent<PawnComponent>() );
-        pAi->moveTo( float3{ 10.0f, 0.0f, 1000.0f } );
+        pAI->possess( *pAIPawn->getComponent<PawnComponent>() );
+        pAI->moveTo( float3{ 10.0f, 0.0f, 1000.0f } );
 
         for ( uint32 frame = 0; frame < 60; ++frame )
         {
             Internal::tick( manager, input );
             const float3 playerPosition = Internal::findPosition( *pPlayerPawn );
-            const float3 aiPosition     = Internal::findPosition( *pAiPawn );
+            const float3 aiPosition     = Internal::findPosition( *pAIPawn );
             SW_EXPECT_TRUE_MSG( playerPosition._x == aiPosition._x - 10.0f && playerPosition._z == aiPosition._z,
                                 ( "frame " + std::to_string( frame ) + " player " + std::to_string( playerPosition._x ) + "," + std::to_string( playerPosition._z ) + " ai " + std::to_string( aiPosition._x ) + "," + std::to_string( aiPosition._z ) ).c_str() );
         }
@@ -349,9 +349,9 @@ SW_TEST_CASE( ControlTest, PossessingATakenPawnReleasesTheOtherController )
     GameObjectManager manager;
     GameObject*       pPawnObject = Internal::spawnPawn( manager, "Pawn", float3{} );
     PawnComponent*    pPawn       = pPawnObject->getComponent<PawnComponent>();
-    auto*             pFirst      = manager.createGameObject( hashed_string( "First" ) )->addComponent<AiControllerComponent>();
+    auto*             pFirst      = manager.createGameObject( hashed_string( "First" ) )->addComponent<AIControllerComponent>();
     GameObject*       pSecondObj  = manager.createGameObject( hashed_string( "Second" ) );
-    auto*             pSecond     = pSecondObj->addComponent<AiControllerComponent>();
+    auto*             pSecond     = pSecondObj->addComponent<AIControllerComponent>();
 
     pFirst->possess( *pPawn );
     SW_EXPECT_TRUE( pPawn->getController() == pFirst->getHandle() );
@@ -366,7 +366,7 @@ SW_TEST_CASE( ControlTest, PossessingATakenPawnReleasesTheOtherController )
 }
 
 /**
- * @brief [ControlTest] 자동 빙의 — Player0 은 시작 뒤 첫 프레임에 플레이어 0 의 조종자(없으면 세운다)가, Ai 는 기본 AI 조종자가 쥐고, None 은 아무도 쥐지 않는다
+ * @brief [ControlTest] 자동 빙의 — Player0 은 시작 뒤 첫 프레임에 플레이어 0 의 조종자(없으면 세운다)가, AI 는 기본 AI 조종자가 쥐고, None 은 아무도 쥐지 않는다
  */
 SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
 {
@@ -376,7 +376,7 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
     PawnComponent*    pGuard  = Internal::spawnPawn( manager, "Guard", float3{} )->getComponent<PawnComponent>();
     PawnComponent*    pStatue = Internal::spawnPawn( manager, "Statue", float3{} )->getComponent<PawnComponent>();
     pHero->setAutoPossess( PawnAutoPossess::Player0 );
-    pGuard->setAutoPossess( PawnAutoPossess::Ai );
+    pGuard->setAutoPossess( PawnAutoPossess::AI );
 
     // 플레이 전에는 쥐지 않는다.
     manager.tick( Internal::kDeltaTime );
@@ -398,17 +398,17 @@ SW_TEST_CASE( ControlTest, AutoPossessTakesThePawnAtStart )
 }
 
 /**
- * @brief [ControlTest] 자동 빙의(Ai)가 폰을 위해 세운 AI 조종자는 그 폰이 지워질 때 같이 지워지고, 손으로 둔 조종자는 남는다
+ * @brief [ControlTest] 자동 빙의(AI)가 폰을 위해 세운 AI 조종자는 그 폰이 지워질 때 같이 지워지고, 손으로 둔 조종자는 남는다
  * @details 스폰 · 걷기를 되풀이하는 적(슈터의 스켈레톤)마다 조종자 오브젝트가 남으면 판이 길수록 쌓인다.
  */
-SW_TEST_CASE( ControlTest, SpawnedAiControllerGoesWithItsPawn )
+SW_TEST_CASE( ControlTest, SpawnedAIControllerGoesWithItsPawn )
 {
     using Internal = ControlTestInternal;
     GameObjectManager manager;
     GameObject*       pGuardObject  = Internal::spawnPawn( manager, "Guard", float3{} );
     GameObject*       pStatueObject = Internal::spawnPawn( manager, "Statue", float3{} );
-    pGuardObject->getComponent<PawnComponent>()->setAutoPossess( PawnAutoPossess::Ai );
-    AiControllerComponent* pPlaced = manager.createGameObject( hashed_string( "PlacedAi" ) )->addComponent<AiControllerComponent>();
+    pGuardObject->getComponent<PawnComponent>()->setAutoPossess( PawnAutoPossess::AI );
+    AIControllerComponent* pPlaced = manager.createGameObject( hashed_string( "PlacedAI" ) )->addComponent<AIControllerComponent>();
     pPlaced->possess( *pStatueObject->getComponent<PawnComponent>() );
 
     manager.beginPlay();
@@ -460,7 +460,7 @@ SW_TEST_CASE( ControlTest, PlayerAndNpcWalkTheSameOnTheCharacterController )
         GameObject* pPlayerPawn = Walk::spawnWalker( manager, "PlayerWalker", float3{ -3.0f, 0.05f, 0.0f } );
         GameObject* pNpcPawn    = Walk::spawnWalker( manager, "NpcWalker", float3{ 3.0f, 0.05f, 0.0f } );
         auto*       pPlayer     = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*       pNpc        = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+        auto*       pNpc        = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pPlayerPawn->getComponent<PawnComponent>() );
@@ -497,7 +497,7 @@ SW_TEST_CASE( ControlTest, NpcRoutesAroundCratesThroughIntent )
     NavMeshAgentComponent* pAgent  = pWalker->addComponent<NavMeshAgentComponent>();
     pAgent->setMaxSpeed( 4.0f );
     pAgent->setDriveMode( NavAgentDriveMode::SteerOnly );
-    auto* pNpc = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+    auto* pNpc = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AIControllerComponent>();
 
     manager.beginPlay();
     pNpc->possess( *pWalker->getComponent<PawnComponent>() );
@@ -543,10 +543,10 @@ SW_TEST_CASE( ControlTest, RecordedIntentsReplayTheSameTrajectory )
         PawnComponent*    pPawn = Internal::spawnAnalogPawn( manager, "Runner" );
         ControlSystem::ensureFor( manager ).setRecording( true );
         manager.beginPlay();
-        AiControllerComponent* pAi = Internal::possessWithWanderingAi( manager, *pPawn );
+        AIControllerComponent* pAI = Internal::possessWithWanderingAI( manager, *pPawn );
         for ( uint32 tick = 0; tick < Internal::kTickCount; ++tick )
         {
-            Internal::setThrottle( *pAi, tick );
+            Internal::setThrottle( *pAI, tick );
             manager.tick( ControlTestInternal::kDeltaTime );
             listRecordedPosition.push_back( ControlTestInternal::findPosition( *pPawn->getOwner() ) );
         }
@@ -681,15 +681,15 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
     pRemote->setReceiveBuffer( &buffer );
     localManager.beginPlay();
     remoteManager.beginPlay();
-    AiControllerComponent* pAi = Internal::possessWithWanderingAi( localManager, *pLocalPawn );
+    AIControllerComponent* pAI = Internal::possessWithWanderingAI( localManager, *pLocalPawn );
     pRemote->possess( *pRemotePawn );
 
     vector<float3> listLocalPosition;
     for ( uint32 tick = 0; tick < 90; ++tick )
     {
-        Internal::setThrottle( *pAi, tick );
+        Internal::setThrottle( *pAI, tick );
         if ( tick == 10 )
-            pAi->pressButton( "Jump" );
+            pAI->pressButton( "Jump" );
         localManager.tick( ControlTestInternal::kDeltaTime );
         listLocalPosition.push_back( ControlTestInternal::findPosition( *pLocalPawn->getOwner() ) );
         BitWriter intentWriter;
@@ -733,7 +733,7 @@ SW_TEST_CASE( ControlTest, RemoteControllerReadsWindowBytes )
  * @brief [ControlTest] 시나리오 `<Intent>` 는 입력 맵 없이 폰을 기록 조종자로 몬다 — 앞으로 가는 AI 와 같은 자리로 30 프레임 걷고(첫 프레임에 Jump 발동),
  *        끝나면 원래 플레이어 조종자에게 돌아가 멈춘다. 모르는 속성은 읽기 오류다
  */
-SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAi )
+SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAI )
 {
     using Internal = ControlTestInternal;
     InputManager input;
@@ -743,13 +743,13 @@ SW_TEST_CASE( ControlTest, ScenarioIntentStepDrivesThePawnLikeTheAi )
         GameObject*       pHero   = Internal::spawnPawn( manager, "Hero", float3{} );
         GameObject*       pTwin   = Internal::spawnPawn( manager, "Twin", float3{ 10.0f, 0.0f, 0.0f } );
         auto*             pPlayer = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*             pAi     = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+        auto*             pAI     = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         PawnComponent* pHeroPawn = pHero->getComponent<PawnComponent>();
         pPlayer->possess( *pHeroPawn );
-        pAi->possess( *pTwin->getComponent<PawnComponent>() );
-        pAi->moveTo( float3{ 10.0f, 0.0f, 1000.0f } );
+        pAI->possess( *pTwin->getComponent<PawnComponent>() );
+        pAI->moveTo( float3{ 10.0f, 0.0f, 1000.0f } );
 
         AutomationRunner runner;
         runner.setObjectManager( &manager );

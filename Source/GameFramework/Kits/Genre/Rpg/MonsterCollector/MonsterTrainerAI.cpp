@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterTrainerAi.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterTrainerAI.h"
 
 #include "GameFramework/Base/Actor/Combat/Damage/ElementChart.h"
 
 namespace sw
 {
-    MonsterAction MonsterTrainerAi::chooseAction( const MonsterBattle& battle, int32 side )
+    MonsterAction MonsterTrainerAI::chooseAction( const MonsterBattle& battle, int32 side )
     {
         const int32 activeIndex = battle.getActiveIndex( side );
         if ( isDisadvantaged( battle, side, activeIndex ) )
@@ -38,7 +38,7 @@ namespace sw
         return slot >= 0 ? MonsterAction::makeMove( slot ) : MonsterAction{};
     }
 
-    int32 MonsterTrainerAi::chooseBestMoveSlot( const MonsterBattle& battle, int32 side, int32 partyIndex, float32& outExpectedDamage )
+    int32 MonsterTrainerAI::chooseBestMoveSlot( const MonsterBattle& battle, int32 side, int32 partyIndex, float32& outExpectedDamage )
     {
         outExpectedDamage                          = 0.0f;
         const vector<MonsterInstance>& listMonster = battle.getParty( side );
@@ -65,7 +65,7 @@ namespace sw
         return bestSlot;
     }
 
-    bool MonsterTrainerAi::isDisadvantaged( const MonsterBattle& battle, int32 side, int32 partyIndex )
+    bool MonsterTrainerAI::isDisadvantaged( const MonsterBattle& battle, int32 side, int32 partyIndex )
     {
         const vector<MonsterInstance>& listMonster = battle.getParty( side );
         if ( partyIndex < 0 || partyIndex >= static_cast<int32>( listMonster.size() ) )
@@ -75,7 +75,7 @@ namespace sw
         return computeBestOwnMultiplier( battle, monster, foeSide ) < 1.0f && computeThreatMultiplier( battle, monster, foeSide ) >= 2.0f;
     }
 
-    int32 MonsterTrainerAi::chooseReplacement( const MonsterBattle& battle, int32 side )
+    int32 MonsterTrainerAI::chooseReplacement( const MonsterBattle& battle, int32 side )
     {
         const vector<MonsterInstance>& listMonster = battle.getParty( side );
         int32                          bestIndex   = -1;
@@ -95,7 +95,7 @@ namespace sw
         return bestIndex;
     }
 
-    float32 MonsterTrainerAi::computeBestOwnMultiplier( const MonsterBattle& battle, const MonsterInstance& monster, int32 foeSide )
+    float32 MonsterTrainerAI::computeBestOwnMultiplier( const MonsterBattle& battle, const MonsterInstance& monster, int32 foeSide )
     {
         const MonsterCollectorCatalog* pCatalog = battle.getCatalog();
         float32                        best     = 0.0f;
@@ -112,7 +112,7 @@ namespace sw
         return bAny ? best : 1.0f;
     }
 
-    float32 MonsterTrainerAi::computeThreatMultiplier( const MonsterBattle& battle, const MonsterInstance& monster, int32 foeSide )
+    float32 MonsterTrainerAI::computeThreatMultiplier( const MonsterBattle& battle, const MonsterInstance& monster, int32 foeSide )
     {
         const MonsterCollectorCatalog* pCatalog = battle.getCatalog();
         const ElementChart*            pChart   = battle.getChart();

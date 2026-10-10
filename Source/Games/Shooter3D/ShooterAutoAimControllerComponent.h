@@ -8,7 +8,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
      *          적 목록 · 상자는 디렉터가 앞 프레임에 적은 것을 읽습니다(조종 단계 — 틱 전, 게임 스레드).
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Auto Aim Controller", Tooltip = "AI controller that aims, shoots, picks weapons and circles the arena with the player pawn when auto play is on" )
-    class ShooterAutoAimControllerComponent : public AiControllerComponent
+    class ShooterAutoAimControllerComponent : public AIControllerComponent
     {
     public:
         REFLECT_BODY();

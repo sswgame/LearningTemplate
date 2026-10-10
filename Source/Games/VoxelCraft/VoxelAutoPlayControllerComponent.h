@@ -8,7 +8,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw
      *          앞이 막혔거나 물 속이면 점프를 누른다(월드는 판단만 위해 읽는다).
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Auto Play Controller", Tooltip = "AI controller that walks, breaks and places blocks with the player pawn when auto play is on" )
-    class VoxelAutoPlayControllerComponent : public AiControllerComponent
+    class VoxelAutoPlayControllerComponent : public AIControllerComponent
     {
     public:
         REFLECT_BODY();

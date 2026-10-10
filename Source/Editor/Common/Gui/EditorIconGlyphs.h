@@ -94,7 +94,7 @@ namespace sw::editor::editoricon
     inline constexpr const utf8* kCharacter        = "\xee\x81\x91"; ///< U+E051
     inline constexpr const utf8* kAnimation        = "\xee\x81\x92"; ///< U+E052
     inline constexpr const utf8* kController       = "\xee\x81\x93"; ///< U+E053
-    inline constexpr const utf8* kAi               = "\xee\x81\x94"; ///< U+E054
+    inline constexpr const utf8* kAI               = "\xee\x81\x94"; ///< U+E054
     inline constexpr const utf8* kNavigation       = "\xee\x81\x95"; ///< U+E055
     inline constexpr const utf8* kTrigger          = "\xee\x81\x96"; ///< U+E056
     inline constexpr const utf8* kSpawnPoint       = "\xee\x81\x97"; ///< U+E057

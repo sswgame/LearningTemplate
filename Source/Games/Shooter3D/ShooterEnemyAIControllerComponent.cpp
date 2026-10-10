@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Shooter3D/ShooterEnemyAiControllerComponent.h"
+#include "Games/Shooter3D/ShooterEnemyAIControllerComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        struct ShooterEnemyAiControllerComponentInternal
+        struct ShooterEnemyAIControllerComponentInternal
         {
             static constexpr const utf8* kAttack       = "Attack";
             static constexpr float32     kStopFraction = 0.85f; ///< 손 닿는 거리의 이 비율 안이면 멈춰 선다
@@ -27,14 +27,14 @@ namespace sw
 
 namespace sw
 {
-    ShooterEnemyAiControllerComponent::ShooterEnemyAiControllerComponent()
+    ShooterEnemyAIControllerComponent::ShooterEnemyAIControllerComponent()
         : _retargetDistance{ 0.5f }
     {
     }
 
-    void ShooterEnemyAiControllerComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void ShooterEnemyAIControllerComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
-        using Internal = ShooterEnemyAiControllerComponentInternal;
+        using Internal = ShooterEnemyAIControllerComponentInternal;
         (void)context;
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;

@@ -1,52 +1,52 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorIntensity.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorIntensity.h"
 
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
 {
     namespace
     {
-        struct AiDirectorIntensityInternal
+        struct AIDirectorIntensityInternal
         {
             /** @brief 싸움을 한 번도 하지 않았을 때의 "싸움 뒤 지난 시간" 입니다 — 처음부터 식은 상태로 시작한다. */
             static constexpr float32 kNeverFought = 1.0e6f;
 
-            static float32 clampContribution( const AiDirectorSignalDef& signal, float32 value ) { return signal._max >= 0.0f ? MathUtil::min( signal._max, value ) : value; }
+            static float32 clampContribution( const AIDirectorSignalDef& signal, float32 value ) { return signal._max >= 0.0f ? MathUtil::min( signal._max, value ) : value; }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    AiDirectorIntensityModel::AiDirectorIntensityModel()
+    AIDirectorIntensityModel::AIDirectorIntensityModel()
         : _listSignalValue{}
         , _pDef{ nullptr }
         , _stress{ 0.0f }
-        , _calmSeconds{ AiDirectorIntensityInternal::kNeverFought }
+        , _calmSeconds{ AIDirectorIntensityInternal::kNeverFought }
     {
     }
 
-    void AiDirectorIntensityModel::initialize( const AiDirectorIntensityDef* pDef )
+    void AIDirectorIntensityModel::initialize( const AIDirectorIntensityDef* pDef )
     {
         _pDef = pDef;
         reset();
     }
 
-    void AiDirectorIntensityModel::reset()
+    void AIDirectorIntensityModel::reset()
     {
         _listSignalValue.assign( _pDef != nullptr ? _pDef->_listSignal.size() : 0, 0.0f );
         _stress      = 0.0f;
-        _calmSeconds = AiDirectorIntensityInternal::kNeverFought;
+        _calmSeconds = AIDirectorIntensityInternal::kNeverFought;
     }
 
-    int32 AiDirectorIntensityModel::findSignalIndex( const hashed_string& signalId ) const
+    int32 AIDirectorIntensityModel::findSignalIndex( const hashed_string& signalId ) const
     {
         if ( _pDef == nullptr )
             return -1;
@@ -58,50 +58,50 @@ namespace sw
         return -1;
     }
 
-    void AiDirectorIntensityModel::noteCombat()
+    void AIDirectorIntensityModel::noteCombat()
     {
         _calmSeconds = 0.0f;
     }
 
-    bool AiDirectorIntensityModel::addSignal( const hashed_string& signalId, float32 amount )
+    bool AIDirectorIntensityModel::addSignal( const hashed_string& signalId, float32 amount )
     {
         const int32 signalIndex = findSignalIndex( signalId );
         if ( signalIndex < 0 )
             return false;
-        const AiDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
-        if ( signal._kind != AiDirectorSignalKind::Impulse )
+        const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
+        if ( signal._kind != AIDirectorSignalKind::Impulse )
             return false;
         _listSignalValue[static_cast<size_t>( signalIndex )] = amount;
-        const float32 added                                  = AiDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, amount ) * signal._scale );
+        const float32 added                                  = AIDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, amount ) * signal._scale );
         _stress                                              = MathUtil::clamp( _stress + added, 0.0f, _pDef->_max );
         if ( signal._bCombat == SW_TRUE )
             noteCombat();
         return true;
     }
 
-    bool AiDirectorIntensityModel::setSignal( const hashed_string& signalId, float32 value )
+    bool AIDirectorIntensityModel::setSignal( const hashed_string& signalId, float32 value )
     {
         const int32 signalIndex = findSignalIndex( signalId );
         if ( signalIndex < 0 )
             return false;
-        const AiDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
-        if ( signal._kind == AiDirectorSignalKind::Impulse )
+        const AIDirectorSignalDef& signal = _pDef->_listSignal[static_cast<size_t>( signalIndex )];
+        if ( signal._kind == AIDirectorSignalKind::Impulse )
             return false;
         _listSignalValue[static_cast<size_t>( signalIndex )] = value;
         return true;
     }
 
-    void AiDirectorIntensityModel::update( float32 deltaTime )
+    void AIDirectorIntensityModel::update( float32 deltaTime )
     {
         if ( _pDef == nullptr || deltaTime <= 0.0f )
             return;
         bool bCombatNow = false;
         for ( size_t index = 0; index < _pDef->_listSignal.size(); ++index )
         {
-            const AiDirectorSignalDef& signal = _pDef->_listSignal[index];
-            if ( signal._kind != AiDirectorSignalKind::Rate || _listSignalValue[index] <= 0.0f )
+            const AIDirectorSignalDef& signal = _pDef->_listSignal[index];
+            if ( signal._kind != AIDirectorSignalKind::Rate || _listSignalValue[index] <= 0.0f )
                 continue;
-            const float32 perSecond = AiDirectorIntensityInternal::clampContribution( signal, _listSignalValue[index] * signal._scale );
+            const float32 perSecond = AIDirectorIntensityInternal::clampContribution( signal, _listSignalValue[index] * signal._scale );
             _stress += perSecond * deltaTime;
             bCombatNow = bCombatNow || signal._bCombat == SW_TRUE;
         }
@@ -115,32 +115,32 @@ namespace sw
         _stress = MathUtil::clamp( _stress, 0.0f, _pDef->_max );
     }
 
-    float32 AiDirectorIntensityModel::computeLevelFloor() const
+    float32 AIDirectorIntensityModel::computeLevelFloor() const
     {
         float32 floor = 0.0f;
         for ( size_t index = 0; index < _pDef->_listSignal.size(); ++index )
         {
-            const AiDirectorSignalDef& signal = _pDef->_listSignal[index];
-            if ( signal._kind == AiDirectorSignalKind::Level )
-                floor += AiDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, _listSignalValue[index] ) * signal._scale );
+            const AIDirectorSignalDef& signal = _pDef->_listSignal[index];
+            if ( signal._kind == AIDirectorSignalKind::Level )
+                floor += AIDirectorIntensityInternal::clampContribution( signal, MathUtil::max( 0.0f, _listSignalValue[index] ) * signal._scale );
         }
         return floor;
     }
 
-    float32 AiDirectorIntensityModel::getIntensity() const
+    float32 AIDirectorIntensityModel::getIntensity() const
     {
         if ( _pDef == nullptr )
             return 0.0f;
         return MathUtil::min( _pDef->_max, MathUtil::max( _stress, computeLevelFloor() ) );
     }
 
-    float32 AiDirectorIntensityModel::getSignal( const hashed_string& signalId ) const
+    float32 AIDirectorIntensityModel::getSignal( const hashed_string& signalId ) const
     {
         const int32 signalIndex = findSignalIndex( signalId );
         return signalIndex >= 0 ? _listSignalValue[static_cast<size_t>( signalIndex )] : 0.0f;
     }
 
-    void AiDirectorIntensityModel::writeState( Archive& outArchive ) const
+    void AIDirectorIntensityModel::writeState( Archive& outArchive ) const
     {
         outArchive << _stress;
         outArchive << _calmSeconds;
@@ -151,7 +151,7 @@ namespace sw
         }
     }
 
-    bool AiDirectorIntensityModel::readState( Archive& archive )
+    bool AIDirectorIntensityModel::readState( Archive& archive )
     {
         float32 stress      = 0.0f;
         float32 calmSeconds = 0.0f;

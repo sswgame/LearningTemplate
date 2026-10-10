@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -13,11 +13,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AiControllerComponent" );
+    SW_LOG_CALLER( "AIControllerComponent" );
 
     namespace
     {
-        struct AiControllerComponentInternal
+        struct AIControllerComponentInternal
         {
             /** @brief 이보다 짧은 이동 방향은 "서 있다" 로 봅니다(바라보기를 바꾸지 않는다). */
             static constexpr float32 kMinMoveLength = 1.0e-3f;
@@ -27,7 +27,7 @@ namespace sw
 
 namespace sw
 {
-    AiControllerComponent::AiControllerComponent()
+    AIControllerComponent::AIControllerComponent()
         : _turnRate{ 6.0f }
         , _arriveDistance{ 0.3f }
         , _pending{}
@@ -44,9 +44,9 @@ namespace sw
     {
     }
 
-    void AiControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
+    void AIControllerComponent::produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent )
     {
-        using Internal = AiControllerComponentInternal;
+        using Internal = AIControllerComponentInternal;
         // 틱 사이(think 밖)에 부른 pressButton · setAnalog 도 이번 의도에 싣는다 — 낸 뒤에 비운다.
         think( context, pawn );
         outIntent = _pending;
@@ -86,7 +86,7 @@ namespace sw
         outIntent.setWorldMove( moveDirection );
     }
 
-    float3 AiControllerComponent::computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition )
+    float3 AIControllerComponent::computeMoveDirection( const PawnComponent& pawn, const float3& pawnPosition )
     {
         GameObject*            pPawnOwner = pawn.getOwner();
         NavMeshAgentComponent* pAgent     = pPawnOwner != nullptr ? pPawnOwner->getComponent<NavMeshAgentComponent>() : nullptr;
@@ -106,7 +106,7 @@ namespace sw
         return float3{ deltaX / distance, 0.0f, deltaZ / distance };
     }
 
-    float3 AiControllerComponent::computeAgentMoveDirection( NavMeshAgentComponent& agent )
+    float3 AIControllerComponent::computeAgentMoveDirection( NavMeshAgentComponent& agent )
     {
         // 에이전트는 경로 · 군중 회피로 속도만 낸다(SteerOnly) — 그 속도를 이동 축으로 넣고, 움직이는 것은 플레이어와 같은 폰 이동이다.
         if ( agent.getDriveMode() != NavAgentDriveMode::SteerOnly && _bWarnedDriveMode == SW_FALSE )
@@ -153,7 +153,7 @@ namespace sw
         return direction;
     }
 
-    void AiControllerComponent::moveTo( const float3& destination )
+    void AIControllerComponent::moveTo( const float3& destination )
     {
         if ( _bHasDestination == SW_TRUE && _destination == destination )
             return;
@@ -164,7 +164,7 @@ namespace sw
         _moveStatus       = NavMoveStatus::Moving;
     }
 
-    void AiControllerComponent::stopMoving()
+    void AIControllerComponent::stopMoving()
     {
         if ( _bHasDestination == SW_TRUE )
             _bStopPending = SW_TRUE;
@@ -173,25 +173,25 @@ namespace sw
         _moveStatus       = NavMoveStatus::Idle;
     }
 
-    void AiControllerComponent::setFocus( const float3& worldPoint )
+    void AIControllerComponent::setFocus( const float3& worldPoint )
     {
         _focusPoint = worldPoint;
         _bHasFocus  = SW_TRUE;
     }
 
-    void AiControllerComponent::clearFocus()
+    void AIControllerComponent::clearFocus()
     {
         _bHasFocus = SW_FALSE;
     }
 
-    void AiControllerComponent::pressButton( const hashed_string& name )
+    void AIControllerComponent::pressButton( const hashed_string& name )
     {
         const PawnComponent* pPawn = findPawn();
         if ( pPawn != nullptr )
             _pending.setButton( pPawn->findButton( name ), true, true );
     }
 
-    void AiControllerComponent::holdButton( const hashed_string& name, bool bHeld )
+    void AIControllerComponent::holdButton( const hashed_string& name, bool bHeld )
     {
         const PawnComponent* pPawn       = findPawn();
         const int32          buttonIndex = pPawn != nullptr ? pPawn->findButton( name ) : -1;
@@ -201,7 +201,7 @@ namespace sw
         _heldButtonMask  = bHeld ? ( _heldButtonMask | bit ) : ( _heldButtonMask & ~bit );
     }
 
-    void AiControllerComponent::setAnalog( const hashed_string& name, float32 value )
+    void AIControllerComponent::setAnalog( const hashed_string& name, float32 value )
     {
         const PawnComponent* pPawn       = findPawn();
         const int32          analogIndex = pPawn != nullptr ? pPawn->findAnalog( name ) : -1;
@@ -209,7 +209,7 @@ namespace sw
             _pending._arrAnalog[analogIndex] = MathUtil::clamp( value, -1.0f, 1.0f );
     }
 
-    NavMoveStatus AiControllerComponent::getMoveStatus() const
+    NavMoveStatus AIControllerComponent::getMoveStatus() const
     {
         return _moveStatus;
     }

@@ -4,7 +4,7 @@
  *
  * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 어빌리티 · 이펙트 · 어트리뷰트는 프레임워크(`AbilitySystemComponent`)와 데이터
  *          (`Resource/game/abilityarena/data/abilities.xml`)가, 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
- *          (플레이어 조종자 · `ArenaEnemyAiComponent` · `ArenaAutoBattleAiComponent`)가 맡고, 여기는 "언제 누가 서고 누가 쓰러졌는가 · 누가 누구를 쥐는가" 만 압니다.
+ *          (플레이어 조종자 · `ArenaEnemyAIComponent` · `ArenaAutoBattleAIComponent`)가 맡고, 여기는 "언제 누가 서고 누가 쓰러졌는가 · 누가 누구를 쥐는가" 만 압니다.
  *
  *          틱 규칙: 디렉터는 `TickGroup::PrePhysics` 에서 유닛 모습(자리 · 편 · 살아 있음)을 한 번 적고, 유닛 · 투사체(`DuringPhysics`) ·
  *          카메라(`PostUpdate`)는 그것을 **읽기만** 합니다(목록은 `data()` 로). 스폰 · 빙의는 틱 안에서 할 수 없으므로 요청을 쌓아 두고
@@ -56,9 +56,9 @@ namespace sw
      * @brief 아레나 한 판입니다. 플레이가 시작되면 플레이어와 첫 웨이브를 세웁니다.
      * @details 판의 상태(웨이브 · 쓰러뜨린 수)는 핫 리로드에서 처음부터 다시 섭니다(PROPERTY 가 아닌 런타임 상태). 세운 유닛 · AI 조종자 · 투사체는 핸들로 들고,
      *          상태 저장 전에 걷습니다(`despawnViews`) — 남은 디렉터는 다음 틱에 플레이어와 지금 웨이브를 다시 세웁니다.
-     *          **빙의**: 적은 세울 때 종류의 AI 프리팹(`_gruntAiPrefab` · `_casterAiPrefab`)을 함께 세워 쥐게 하고, 쓰러져 걷을 때 그 조종자도 걷습니다(언리얼
+     *          **빙의**: 적은 세울 때 종류의 AI 프리팹(`_gruntAIPrefab` · `_casterAIPrefab`)을 함께 세워 쥐게 하고, 쓰러져 걷을 때 그 조종자도 걷습니다(언리얼
      *          GameMode 가 폰의 AIController 를 세우는 자리). 플레이어 폰은 자동 빙의(`Player0`)로 플레이어 조종자가 쥐고, 자동 플레이 스위치가 켜지면
-     *          자동 전투 AI(`_autoBattleAiPrefab`)가, 꺼지면 플레이어 조종자가 다시 쥡니다 — 몸 안에 자동 플레이 분기가 없다.
+     *          자동 전투 AI(`_autoBattleAIPrefab`)가, 꺼지면 플레이어 조종자가 다시 쥡니다 — 몸 안에 자동 플레이 분기가 없다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Director", Tooltip = "Runs the arena waves, kills, respawns and the runtime spawns" )
     class ArenaDirectorComponent : public GameDirectorComponent
@@ -107,7 +107,7 @@ namespace sw
         /** @brief 이 판에서 플레이어 편이 쏜 투사체 수입니다(시나리오 탐침). */
         uint32 getPlayerShotCount() const { return _playerShotCount; }
         /** @brief 플레이어 폰을 지금 자동 전투 AI 가 쥐고 있으면 true 입니다(시나리오 탐침). */
-        bool isPlayerDrivenByAi() const;
+        bool isPlayerDrivenByAI() const;
 
         /**
          * @brief 유닛(어빌리티 시스템)이 따르는 디렉터입니다 — 같은 오브젝트의 `ArenaUnitComponent` 가 든 핸들로 씬에서 찾습니다. 없으면 nullptr 입니다.
@@ -192,11 +192,11 @@ namespace sw
         PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
         string _projectilePrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Grunt AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller spawned to possess each grunt" )
-        string _gruntAiPrefab;
+        string _gruntAIPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Caster AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller spawned to possess each caster" )
-        string _casterAiPrefab;
+        string _casterAIPrefab;
         PROPERTY( Category = "Prefabs", DisplayName = "Auto Battle AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller that possesses the player while auto play is on" )
-        string _autoBattleAiPrefab;
+        string _autoBattleAIPrefab;
         PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Tooltip = "Units are kept inside this square", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
         PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Units = m )

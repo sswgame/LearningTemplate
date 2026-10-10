@@ -5,7 +5,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAi.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartGhost.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartRace.h"
@@ -109,7 +109,7 @@ namespace
     }
 
     /** @brief 사람 차를 AI 운전수의 입력으로 몰고(고스트 시험), 이벤트를 모읍니다. 차가 들어오면 멈춥니다. */
-    void driveHumanWithAi( KartRace& race, int32 racer, KartAiDriver& driver, int32 maxSteps, vector<KartRaceEvent>& outListEvent )
+    void driveHumanWithAI( KartRace& race, int32 racer, KartAIDriver& driver, int32 maxSteps, vector<KartRaceEvent>& outListEvent )
     {
         for ( int32 stepIndex = 0; stepIndex < maxSteps; ++stepIndex )
         {
@@ -227,7 +227,7 @@ SW_TEST_CASE( KartRacingTest, LapNeedsEveryCheckpointInOrder )
 
     // 4) 제대로 한 바퀴 — 체크포인트 셋을 차례로 지나 랩 타임이 남는다. 첫 직선의 아이템 상자도 깨진다.
     placeOnTrack( race, 0, -5.0f, 0.0f );
-    KartAiDriver          driver;
+    KartAIDriver          driver;
     vector<KartRaceEvent> listDrive;
     for ( int32 stepIndex = 0; stepIndex < 60 * 60 && race.findRacer( 0 )->_lap < 2; ++stepIndex )
     {
@@ -435,7 +435,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     SW_EXPECT_TRUE( race.getProjectiles().empty() );
 }
 
-SW_TEST_CASE( KartRacingTest, AiFinishesDeterministicallyWithRubberBand )
+SW_TEST_CASE( KartRacingTest, AIFinishesDeterministicallyWithRubberBand )
 {
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 1 ) );
@@ -521,9 +521,9 @@ SW_TEST_CASE( KartRacingTest, GhostReplaysTheSamePath )
     race.startGhostRecording( 0, &ghost );
 
     // 사람 차를 AI 운전수의 입력으로 몬다(드리프트 · 부스트 패드 포함) — 경기는 양자화한 입력으로 달리고 그것을 기록한다.
-    KartAiDriver          driver;
+    KartAIDriver          driver;
     vector<KartRaceEvent> listEvent;
-    driveHumanWithAi( race, 0, driver, 60 * 90, listEvent );
+    driveHumanWithAI( race, 0, driver, 60 * 90, listEvent );
     const KartRacer* pKart = race.findRacer( 0 );
     SW_ASSERT_TRUE( pKart->_bFinished == SW_TRUE );
     SW_EXPECT_TRUE( findEvent( listEvent, KartRaceEvent::Kind::BoostPad, 0 ) != nullptr );

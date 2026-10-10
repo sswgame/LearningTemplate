@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGAiCommander.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct SRPGAiCommanderInternal
+        struct SRPGCommanderAIInternal
         {
             static constexpr int32 kNoScore = -2147483647;
 
@@ -30,7 +30,7 @@ namespace sw
                 return nearest;
             }
 
-            static int32 scoreForecast( const SRPGBattlefield& field, const SRPGAiSettings& settings, const SRPGUnit& unit, const SRPGForecast& forecast )
+            static int32 scoreForecast( const SRPGBattlefield& field, const SRPGCommanderAISettings& settings, const SRPGUnit& unit, const SRPGForecast& forecast )
             {
                 const SRPGStrikePreview& attack    = forecast._attack;
                 const SRPGUnit*          pReceiver = field.findUnit( attack._defender );
@@ -57,14 +57,14 @@ namespace sw
 
 namespace sw
 {
-    SRPGAiCommander::SRPGAiCommander()
+    SRPGCommanderAI::SRPGCommanderAI()
         : _settings{}
     {
     }
 
-    bool SRPGAiCommander::makePlan( const SRPGBattlefield& field, int32 unitIndex, SRPGAiPlan& outPlan ) const
+    bool SRPGCommanderAI::makePlan( const SRPGBattlefield& field, int32 unitIndex, SRPGCommanderAIPlan& outPlan ) const
     {
-        outPlan = SRPGAiPlan{};
+        outPlan = SRPGCommanderAIPlan{};
         if ( field.canAct( unitIndex ) == false )
             return false;
         const SRPGUnit& unit = *field.findUnit( unitIndex );
@@ -84,7 +84,7 @@ namespace sw
         if ( unit._bAttacked == SW_TRUE )
             return true; // 이미 쳤다 — 제자리에서 끝낸다
 
-        int32        bestScore = SRPGAiCommanderInternal::kNoScore;
+        int32        bestScore = SRPGCommanderAIInternal::kNoScore;
         int32        bestCost  = 0;
         SRPGForecast forecast;
         for ( const int2& stand : listStand )
@@ -100,7 +100,7 @@ namespace sw
                     const SRPGWeaponStatus status = SRPGCombat::computeForecastFrom( field, unitIndex, stand, weaponIndex, targetIndex, bAfterMove, forecast );
                     if ( status != SRPGWeaponStatus::Ok )
                         continue;
-                    const int32 score   = SRPGAiCommanderInternal::scoreForecast( field, _settings, unit, forecast );
+                    const int32 score   = SRPGCommanderAIInternal::scoreForecast( field, _settings, unit, forecast );
                     const bool  bBetter = score > bestScore || ( score == bestScore && cost < bestCost );
                     if ( bBetter == false )
                         continue;
@@ -118,11 +118,11 @@ namespace sw
             return true;
 
         // 칠 것이 없다 — 가장 가까운 적에게 다가간다(같으면 덜 걷는 칸)
-        int32 bestDistance = SRPGAiCommanderInternal::computeNearestHostileDistance( field, unit, unit._cell );
+        int32 bestDistance = SRPGCommanderAIInternal::computeNearestHostileDistance( field, unit, unit._cell );
         bestCost           = 0;
         for ( const int2& stand : listStand )
         {
-            const int32 distance = SRPGAiCommanderInternal::computeNearestHostileDistance( field, unit, stand );
+            const int32 distance = SRPGCommanderAIInternal::computeNearestHostileDistance( field, unit, stand );
             const int32 cost     = unit._bMoved == SW_FALSE ? reach.getCost( stand ) : 0;
             const bool  bCloser  = distance >= 0 && ( distance < bestDistance || ( distance == bestDistance && cost < bestCost ) );
             if ( bCloser == false )
@@ -134,9 +134,9 @@ namespace sw
         return true;
     }
 
-    bool SRPGAiCommander::runUnit( SRPGBattlefield& field, int32 unitIndex, SRPGCombatResult* pOutResult ) const
+    bool SRPGCommanderAI::runUnit( SRPGBattlefield& field, int32 unitIndex, SRPGCombatResult* pOutResult ) const
     {
-        SRPGAiPlan plan;
+        SRPGCommanderAIPlan plan;
         if ( makePlan( field, unitIndex, plan ) == false )
             return false;
         if ( field.moveUnit( unitIndex, plan._moveCell ) && plan._bAttack == SW_TRUE )
@@ -150,7 +150,7 @@ namespace sw
         return true;
     }
 
-    int32 SRPGAiCommander::runPhase( SRPGBattlefield& field, SRPGTeam team ) const
+    int32 SRPGCommanderAI::runPhase( SRPGBattlefield& field, SRPGTeam team ) const
     {
         int32       movedCount = 0;
         const int32 limit      = field.countAlive( team );

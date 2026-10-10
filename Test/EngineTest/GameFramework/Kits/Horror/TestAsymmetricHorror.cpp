@@ -7,7 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/AIPerception.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorMatch.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
@@ -195,7 +195,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, SkillChecksAndKicksMoveGeneratorProgress )
             continue;
         penalty = before - match.findGenerator( generator )->_progress.getProgress();
         SW_EXPECT_NEAR_EQUAL( pNoise->_value, 50.0f, 0.001f );
-        vector<AiStimulus> listStimulus;
+        vector<AIStimulus> listStimulus;
         match.collectKillerStimuli( listStimulus );
         SW_ASSERT_EQUAL( static_cast<int32>( listStimulus.size() ), 1 );
         SW_EXPECT_NEAR_EQUAL( listStimulus[0]._noiseRadius, 50.0f, 0.001f );
@@ -481,7 +481,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, VaultSpeedWindowBlockAndLockerGrab )
         match.update( kAsymmetricHorrorStep );
     }
     SW_ASSERT_TRUE( match.enterLocker( runner, locker ) );
-    vector<AiStimulus> listStimulus;
+    vector<AIStimulus> listStimulus;
     match.collectKillerStimuli( listStimulus );
     SW_EXPECT_EQUAL( static_cast<int32>( listStimulus.size() ), 1 );
     match.setKillerPosition( float3{ 5.0f, 0.0f, 4.0f } );

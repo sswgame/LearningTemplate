@@ -26,7 +26,7 @@
 
 #include "GameFramework/Base/Actor/Combat/Health/HealthListenerComponent.h"
 #include "GameFramework/Base/Actor/Control/ControlSystem.h"
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Intent/ControlIntent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/CharacterPawnMovementComponent.h"
@@ -261,7 +261,7 @@ SW_TEST_CASE( MountTest, NpcMountsThroughTheSameFunction )
         GameObject* pPlayerCar   = Internal::spawnVehicle( manager, "PlayerCar", float3{ -4.0f, 0.0f, 0.0f } );
         GameObject* pNpcCar      = Internal::spawnVehicle( manager, "NpcCar", float3{ 6.0f, 0.0f, 0.0f } );
         auto*       pPlayer      = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*       pNpc         = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
+        auto*       pNpc         = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
@@ -298,31 +298,31 @@ SW_TEST_CASE( MountTest, SeatTakenAndTooFarAreRefused )
     GameObject* pSecond   = Internal::spawnRider( manager, "Second", float3{ 0.0f, 0.05f, 2.0f } );
     GameObject* pFar      = Internal::spawnRider( manager, "Far", float3{ 20.0f, 0.05f, 0.0f } );
     GameObject* pVehicle  = Internal::spawnVehicle( manager, "Car", float3{ 1.0f, 0.0f, 0.0f } );
-    auto*       pFirstAi  = manager.createGameObject( hashed_string( "FirstAi" ) )->addComponent<AiControllerComponent>();
-    auto*       pSecondAi = manager.createGameObject( hashed_string( "SecondAi" ) )->addComponent<AiControllerComponent>();
-    auto*       pFarAi    = manager.createGameObject( hashed_string( "FarAi" ) )->addComponent<AiControllerComponent>();
+    auto*       pFirstAI  = manager.createGameObject( hashed_string( "FirstAI" ) )->addComponent<AIControllerComponent>();
+    auto*       pSecondAI = manager.createGameObject( hashed_string( "SecondAI" ) )->addComponent<AIControllerComponent>();
+    auto*       pFarAI    = manager.createGameObject( hashed_string( "FarAI" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
-    pFirstAi->possess( *pFirst->getComponent<PawnComponent>() );
-    pSecondAi->possess( *pSecond->getComponent<PawnComponent>() );
-    pFarAi->possess( *pFar->getComponent<PawnComponent>() );
+    pFirstAI->possess( *pFirst->getComponent<PawnComponent>() );
+    pSecondAI->possess( *pSecond->getComponent<PawnComponent>() );
+    pFarAI->possess( *pFar->getComponent<PawnComponent>() );
     manager.tick( Internal::kDeltaTime );
     VehicleSeatComponent& seat = *pVehicle->getComponent<VehicleSeatComponent>();
 
     // 조종자 없는 탑승자는 운전석에 앉지 못한다(넘길 빙의가 없다).
-    pFirstAi->unpossess();
+    pFirstAI->unpossess();
     SW_EXPECT_TRUE( MountUtil::mount( *pFirst->getComponent<PawnComponent>(), seat ) == MountResult::NotPossessed );
     SW_EXPECT_TRUE( seat.isFree() );
-    pFirstAi->possess( *pFirst->getComponent<PawnComponent>() );
+    pFirstAI->possess( *pFirst->getComponent<PawnComponent>() );
 
     SW_EXPECT_TRUE( MountUtil::mount( *pFar->getComponent<PawnComponent>(), seat ) == MountResult::TooFar );
     SW_EXPECT_TRUE( MountUtil::findNearestFreeSeat( *pFar->getComponent<PawnComponent>() ) == nullptr );
     SW_EXPECT_TRUE( MountUtil::findNearestFreeSeat( *pFirst->getComponent<PawnComponent>() ) == &seat );
     SW_ASSERT_TRUE( MountUtil::mount( *pFirst->getComponent<PawnComponent>(), seat ) == MountResult::Mounted );
     SW_EXPECT_TRUE( MountUtil::mount( *pSecond->getComponent<PawnComponent>(), seat ) == MountResult::SeatTaken );
-    SW_EXPECT_TRUE( pSecondAi->getPawn() == pSecond->getComponent<PawnComponent>()->getHandle() );
+    SW_EXPECT_TRUE( pSecondAI->getPawn() == pSecond->getComponent<PawnComponent>()->getHandle() );
     SW_EXPECT_FALSE( MountUtil::dismount( *pSecond->getComponent<PawnComponent>(), false ) );
     SW_EXPECT_TRUE( MountUtil::dismount( *pFirst->getComponent<PawnComponent>(), false ) );
-    SW_EXPECT_TRUE( pFirstAi->getPawn() == pFirst->getComponent<PawnComponent>()->getHandle() );
+    SW_EXPECT_TRUE( pFirstAI->getPawn() == pFirst->getComponent<PawnComponent>()->getHandle() );
 }
 
 /**
@@ -382,9 +382,9 @@ SW_TEST_CASE( MountTest, ForcedDismountWhenTheRiderGoesDown )
     Internal::spawnFloor( manager );
     GameObject* pRider   = Internal::spawnRider( manager, "Rider", float3{ 0.0f, 0.05f, 0.0f } );
     GameObject* pVehicle = Internal::spawnVehicle( manager, "Horse", float3{ 1.5f, 0.0f, 0.0f } );
-    auto*       pAi      = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+    auto*       pAI      = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
-    pAi->possess( *pRider->getComponent<PawnComponent>() );
+    pAI->possess( *pRider->getComponent<PawnComponent>() );
     manager.tick( Internal::kDeltaTime );
     SW_ASSERT_TRUE( MountUtil::mount( *pRider->getComponent<PawnComponent>(), *pVehicle->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
     SW_EXPECT_NOT_NULL( pRider->getComponent<RiderDownWatcherComponent>() );
@@ -401,7 +401,7 @@ SW_TEST_CASE( MountTest, ForcedDismountWhenTheRiderGoesDown )
     down._kind  = HealthChangeKind::Died;
     HealthListenerComponent::broadcast( *pRider, down );
     SW_EXPECT_TRUE( pVehicle->getComponent<VehicleSeatComponent>()->isFree() );
-    SW_EXPECT_TRUE( pAi->getPawn() == pRider->getComponent<PawnComponent>()->getHandle() );
+    SW_EXPECT_TRUE( pAI->getPawn() == pRider->getComponent<PawnComponent>()->getHandle() );
     const float3 dropped = Internal::findPosition( *pRider );
     SW_EXPECT_NEAR_EQUAL( seated._x, dropped._x, 1.0e-3f ); // 하차 자리(왼쪽 2 m)가 아니라 그 자리
     SW_EXPECT_NEAR_EQUAL( seated._z, dropped._z, 1.0e-3f );
@@ -421,8 +421,8 @@ SW_TEST_CASE( MountTest, InputPeerFollowsTheDriver )
     VehicleSeatComponent* pBackSeat  = pVehicle->addComponent<VehicleSeatComponent>();
     pBackSeat->setDriverSeat( false );
     pBackSeat->setSeatOffset( float3{ 0.0f, 1.0f, -1.0f } );
-    auto* pDriverRemote    = manager.createGameObject( hashed_string( "DriverRemote" ) )->addComponent<AiControllerComponent>();
-    auto* pPassengerRemote = manager.createGameObject( hashed_string( "PassengerRemote" ) )->addComponent<AiControllerComponent>();
+    auto* pDriverRemote    = manager.createGameObject( hashed_string( "DriverRemote" ) )->addComponent<AIControllerComponent>();
+    auto* pPassengerRemote = manager.createGameObject( hashed_string( "PassengerRemote" ) )->addComponent<AIControllerComponent>();
     pDriverRemote->setInputPeer( 7 );
     pPassengerRemote->setInputPeer( 9 );
     manager.beginPlay();
@@ -464,10 +464,10 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     Internal::spawnFloor( manager );
     GameObject*             pHorse    = Horse::spawnHorse( manager, "Horse", float3{ 0.0f, 0.05f, 0.0f } );
     MountMovementComponent* pMovement = pHorse->getComponent<MountMovementComponent>();
-    auto*                   pRiderAi  = manager.createGameObject( hashed_string( "RiderAi" ) )->addComponent<AiControllerComponent>();
+    auto*                   pRiderAI  = manager.createGameObject( hashed_string( "RiderAI" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
-    pRiderAi->possess( *pHorse->getComponent<PawnComponent>() );
-    pRiderAi->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
+    pRiderAI->possess( *pHorse->getComponent<PawnComponent>() );
+    pRiderAI->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
     for ( uint32 frame = 0; frame < 120; ++frame )
     {
         manager.tick( Internal::kDeltaTime );
@@ -475,7 +475,7 @@ SW_TEST_CASE( MountTest, HorseGaitFollowsTheIntent )
     SW_EXPECT_TRUE( pMovement->getGait() == MountGait::Canter );
     SW_EXPECT_NEAR_EQUAL( pMovement->computeGaitSpeed( MountGait::Canter ), pMovement->getForwardSpeed(), 1.0e-3f );
 
-    pRiderAi->holdButton( "Sprint", true );
+    pRiderAI->holdButton( "Sprint", true );
     for ( uint32 frame = 0; frame < 60; ++frame )
     {
         manager.tick( Internal::kDeltaTime );
@@ -517,13 +517,13 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
         GameObject* pPlayerHorse = Horse::spawnHorse( manager, "PlayerHorse", float3{ -4.5f, 0.05f, 0.0f } );
         GameObject* pNpcHorse    = Horse::spawnHorse( manager, "NpcHorse", float3{ 7.5f, 0.05f, 0.0f } );
         auto*       pPlayer      = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*       pNpc         = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AiControllerComponent>();
-        auto*       pHorseAi     = manager.createGameObject( hashed_string( "HorseAi" ) )->addComponent<AiControllerComponent>();
+        auto*       pNpc         = manager.createGameObject( hashed_string( "Npc" ) )->addComponent<AIControllerComponent>();
+        auto*       pHorseAI     = manager.createGameObject( hashed_string( "HorseAI" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
         pNpc->possess( *pNpcRider->getComponent<PawnComponent>() );
-        pHorseAi->possess( *pPlayerHorse->getComponent<PawnComponent>() ); // 탄 사람이 없을 때 말을 쥐는 말 AI
+        pHorseAI->possess( *pPlayerHorse->getComponent<PawnComponent>() ); // 탄 사람이 없을 때 말을 쥐는 말 AI
         for ( uint32 frame = 0; frame < 5; ++frame )
         {
             Internal::tick( manager, input );
@@ -531,7 +531,7 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
 
         Internal::tapKey( manager, input, Key::E );
         SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
-        SW_EXPECT_TRUE( pHorseAi->findPawn() == nullptr );
+        SW_EXPECT_TRUE( pHorseAI->findPawn() == nullptr );
         SW_ASSERT_TRUE( MountUtil::mount( *pNpcRider->getComponent<PawnComponent>(), *pNpcHorse->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
         pNpc->moveTo( float3{ 7.5f, 0.0f, 1000.0f } );
 
@@ -553,7 +553,7 @@ SW_TEST_CASE( MountTest, PlayerAndNpcRideTheHorseTheSame )
 
         Internal::tapKey( manager, input, Key::F );
         SW_EXPECT_TRUE( pPlayer->getPawn() == pPlayerRider->getComponent<PawnComponent>()->getHandle() );
-        SW_EXPECT_TRUE( pHorseAi->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
+        SW_EXPECT_TRUE( pHorseAI->getPawn() == pPlayerHorse->getComponent<PawnComponent>()->getHandle() );
     }
     input.shutdown();
 }
@@ -580,7 +580,7 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
     pCar->addComponent<SceneComponent>();
     pCar->addComponent<PawnComponent>();
     ArcadeVehicleComponent* pVehicle = pCar->addComponent<ArcadeVehicleComponent>();
-    auto*                   pDriver  = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AiControllerComponent>();
+    auto*                   pDriver  = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
     pDriver->possess( *pCar->getComponent<PawnComponent>() );
     pDriver->moveTo( float3{ 0.0f, 0.0f, 1000.0f } );
@@ -605,7 +605,7 @@ SW_TEST_CASE( MountTest, ArcadeCarDrivesFromIntent )
 /**
  * @brief [MountTest] 플레이어(E 로 타고 W)와 AI(mount 로 타고 앞의 목적지)가 같은 의도로 아케이드 차를 몰면 매 프레임 같은 선을 간다
  */
-SW_TEST_CASE( MountTest, PlayerAndAiDriveTheSameLine )
+SW_TEST_CASE( MountTest, PlayerAndAIDriveTheSameLine )
 {
     using Internal = MountTestInternal;
     InputManager input;
@@ -615,32 +615,32 @@ SW_TEST_CASE( MountTest, PlayerAndAiDriveTheSameLine )
         GameObjectManager manager;
         Internal::spawnFloor( manager );
         GameObject* pPlayerRider = Internal::spawnRider( manager, "PlayerRider", float3{ -6.0f, 0.05f, 0.0f } );
-        GameObject* pAiRider     = Internal::spawnRider( manager, "AiRider", float3{ 6.0f, 0.05f, 0.0f } );
+        GameObject* pAIRider     = Internal::spawnRider( manager, "AIRider", float3{ 6.0f, 0.05f, 0.0f } );
         GameObject* pPlayerKart  = Internal::spawnKart( manager, "PlayerKart", float3{ -4.5f, 0.0f, 0.0f } );
-        GameObject* pAiKart      = Internal::spawnKart( manager, "AiKart", float3{ 7.5f, 0.0f, 0.0f } );
+        GameObject* pAIKart      = Internal::spawnKart( manager, "AIKart", float3{ 7.5f, 0.0f, 0.0f } );
         auto*       pPlayer      = manager.createGameObject( hashed_string( "Player" ) )->addComponent<PlayerControllerComponent>();
-        auto*       pAi          = manager.createGameObject( hashed_string( "Ai" ) )->addComponent<AiControllerComponent>();
+        auto*       pAI          = manager.createGameObject( hashed_string( "AI" ) )->addComponent<AIControllerComponent>();
         ControlSystem::ensureFor( manager ).setInputManager( &input );
         manager.beginPlay();
         pPlayer->possess( *pPlayerRider->getComponent<PawnComponent>() );
-        pAi->possess( *pAiRider->getComponent<PawnComponent>() );
+        pAI->possess( *pAIRider->getComponent<PawnComponent>() );
         Internal::tick( manager, input );
         Internal::tapKey( manager, input, Key::E );
         SW_ASSERT_TRUE( pPlayer->getPawn() == pPlayerKart->getComponent<PawnComponent>()->getHandle() );
-        SW_ASSERT_TRUE( MountUtil::mount( *pAiRider->getComponent<PawnComponent>(), *pAiKart->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
-        pAi->moveTo( float3{ 7.5f, 0.0f, 1000.0f } );
+        SW_ASSERT_TRUE( MountUtil::mount( *pAIRider->getComponent<PawnComponent>(), *pAIKart->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
+        pAI->moveTo( float3{ 7.5f, 0.0f, 1000.0f } );
 
         (void)input.postRawEvent( RawInputEvent::makeKeyDown( Key::W ) );
         for ( uint32 frame = 0; frame < 60; ++frame )
         {
             Internal::tick( manager, input );
             const float3 playerAt = Internal::findPosition( *pPlayerKart );
-            const float3 aiAt     = Internal::findPosition( *pAiKart );
+            const float3 aiAt     = Internal::findPosition( *pAIKart );
             SW_EXPECT_TRUE_MSG( playerAt._z == aiAt._z && playerAt._x + 12.0f == aiAt._x,
                                 ( "frame " + std::to_string( frame ) + " player " + std::to_string( playerAt._z ) + " ai " + std::to_string( aiAt._z ) ).c_str() );
         }
-        SW_EXPECT_TRUE( Internal::findPosition( *pAiKart )._z > 5.0f );
-        SW_EXPECT_NEAR_EQUAL( Internal::findPosition( *pAiKart )._z, Internal::findPosition( *pAiRider )._z, 1.0e-3f );
+        SW_EXPECT_TRUE( Internal::findPosition( *pAIKart )._z > 5.0f );
+        SW_EXPECT_NEAR_EQUAL( Internal::findPosition( *pAIKart )._z, Internal::findPosition( *pAIRider )._z, 1.0e-3f );
     }
     input.shutdown();
 }
@@ -676,7 +676,7 @@ SW_TEST_CASE( MountTest, PhysicsCarFromIntent )
     WheeledVehicleComponent* pWheels = pCar->addComponent<WheeledVehicleComponent>();
     pCar->addComponent<PawnComponent>();
     pCar->addComponent<PhysicsCarComponent>();
-    auto* pDriver = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AiControllerComponent>();
+    auto* pDriver = manager.createGameObject( hashed_string( "Driver" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
     pDriver->possess( *pCar->getComponent<PawnComponent>() );
     for ( uint32 frame = 0; frame < 30; ++frame )

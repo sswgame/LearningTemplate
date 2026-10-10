@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/AbilityArena/ArenaEnemyAiComponent.h"
+#include "Games/AbilityArena/ArenaEnemyAIComponent.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 
@@ -10,7 +10,7 @@
 
 namespace sw
 {
-    ArenaEnemyAiComponent::ArenaEnemyAiComponent()
+    ArenaEnemyAIComponent::ArenaEnemyAIComponent()
         : _kind{ ArenaUnitKind::Grunt }
         , _meleeReach{ 1.4f }
         , _preferredMin{ 5.0f }
@@ -19,7 +19,7 @@ namespace sw
     {
     }
 
-    void ArenaEnemyAiComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void ArenaEnemyAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
         const ArenaDirectorComponent* pDirector = ArenaDirectorComponent::findForPawn( pawn );

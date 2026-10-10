@@ -82,9 +82,9 @@ cd build/Ninja-Debug-Shooter3D/Bin
 | 폰 | 버튼 | 몸 이동 | 조종자 |
 |----|------|---------|--------|
 | 플레이어(씬의 `Player`) | `Jump`, `Sprint`, `Fire`, `Reload`, `SwitchWeapon`, `Weapon1..3` | `ShooterBodyMovementComponent` | 사람은 `PlayerControllerComponent`, 자동 플레이는 `ShooterAutoAimControllerComponent` |
-| 스켈레톤(`prefabs/skeleton.prefab.xml`) | `Attack` | 같은 `ShooterBodyMovementComponent` 와 내비메시 에이전트(`SteerOnly`) | `ShooterEnemyAiControllerComponent`(`skeleton_ai.prefab.xml`) |
+| 스켈레톤(`prefabs/skeleton.prefab.xml`) | `Attack` | 같은 `ShooterBodyMovementComponent` 와 내비메시 에이전트(`SteerOnly`) | `ShooterEnemyAIControllerComponent`(`skeleton_ai.prefab.xml`) |
 
-스켈레톤의 AI 조종자는 자동 빙의 `Ai` 가 만들고, 폰과 함께 지워집니다.
+스켈레톤의 AI 조종자는 자동 빙의 `AI` 가 만들고, 폰과 함께 지워집니다.
 
 **자동 플레이는 AI 조종자의 빙의입니다.** 스위치(`-gv_shooterAutoPlay`, 씬의 `_bAutoPlay`, 에디터 툴바)가 바뀌면 디렉터가 틱 뒤에 플레이어 폰을 자동 조준 AI 에게 넘기고, 끄면 플레이어 0 의 조종자에게 돌려줍니다.
 플레이어 몸(`ShooterPlayerComponent`)에는 자동 플레이 분기가 없습니다.

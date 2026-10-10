@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameStateRefs.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
@@ -20,7 +20,7 @@
 #include "GameFramework/Base/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Base/World/Query/GameFlags.h"
 #include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Catalog/WesternCatalog.h"
-#include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Component/HorseFollowAiController.h"
+#include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Component/HorseFollowAIController.h"
 #include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Component/WesternHorseMountComponent.h"
 #include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Rule/WesternHonor.h"
 #include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Rule/WesternHorse.h"
@@ -667,14 +667,14 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     GameObject* pRider = manager.createGameObject( hashed_string( "Rider" ) );
     pRider->addComponent<SceneComponent>()->setWorldPosition( float3{ 1.0f, 0.0f, 0.0f } );
     PawnComponent* pRiderPawn = pRider->addComponent<PawnComponent>();
-    auto*          pRiderAi   = manager.createGameObject( hashed_string( "RiderAi" ) )->addComponent<AiControllerComponent>();
+    auto*          pRiderAI   = manager.createGameObject( hashed_string( "RiderAI" ) )->addComponent<AIControllerComponent>();
     manager.beginPlay();
-    pRiderAi->possess( *pRiderPawn );
+    pRiderAI->possess( *pRiderPawn );
     SW_ASSERT_TRUE( MountUtil::mount( *pRiderPawn, *pHorseObject->getComponent<VehicleSeatComponent>() ) == MountResult::Mounted );
 
     // 질주: 스태미나 100 · 초당 20 — 다섯 초 남짓이면 바닥나 구보로 떨어진다.
-    pRiderAi->moveTo( float3{ 0.0f, 0.0f, 10000.0f } );
-    pRiderAi->holdButton( "Sprint", true );
+    pRiderAI->moveTo( float3{ 0.0f, 0.0f, 10000.0f } );
+    pRiderAI->holdButton( "Sprint", true );
     bool  bGalloped = false;
     int32 frame     = 0;
     for ( ; frame < 600 && pMovement->isGallopAllowed(); ++frame )
@@ -696,13 +696,13 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
     }
     SW_ASSERT_TRUE( reaction == WesternHorseReaction::Bucked );
     SW_EXPECT_TRUE( pHorseObject->getComponent<VehicleSeatComponent>()->isFree() );
-    SW_EXPECT_TRUE( pRiderAi->getPawn() == pRiderPawn->getHandle() );
+    SW_EXPECT_TRUE( pRiderAI->getPawn() == pRiderPawn->getHandle() );
 
     // 말 AI: 탄 사람이 없으면 말을 쥐고, 휘파람이면 멀리서도 주인 곁으로 와서 선다.
-    auto* pHorseAi = manager.createGameObject( hashed_string( "HorseAi" ) )->addComponent<HorseFollowAiController>();
-    pHorseAi->setOwnerObject( pRider->getHandle() );
-    pHorseAi->possess( *pHorsePawn );
-    pRiderAi->unpossess();
+    auto* pHorseAI = manager.createGameObject( hashed_string( "HorseAI" ) )->addComponent<HorseFollowAIController>();
+    pHorseAI->setOwnerObject( pRider->getHandle() );
+    pHorseAI->possess( *pHorsePawn );
+    pRiderAI->unpossess();
     for ( int32 settleFrame = 0; settleFrame < 90; ++settleFrame ) // 떨어뜨릴 때 달리던 말이 선다
     {
         manager.tick( kDeltaTime );
@@ -716,12 +716,12 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
         manager.tick( kDeltaTime );
     }
     SW_EXPECT_TRUE( pHorseObject->getPrimarySceneComponent()->getWorldPosition()._z < -5.5f );
-    pHorseAi->whistle();
-    for ( int32 comeFrame = 0; comeFrame < 300 && pHorseAi->isCalled(); ++comeFrame )
+    pHorseAI->whistle();
+    for ( int32 comeFrame = 0; comeFrame < 300 && pHorseAI->isCalled(); ++comeFrame )
     {
         manager.tick( kDeltaTime );
     }
-    SW_EXPECT_FALSE( pHorseAi->isCalled() );
+    SW_EXPECT_FALSE( pHorseAI->isCalled() );
     const float3 horseAt = pHorseObject->getPrimarySceneComponent()->getWorldPosition();
     SW_EXPECT_TRUE_MSG( MathUtil::abs( horseAt._z ) < 3.5f, ( "horse at z " + std::to_string( horseAt._z ) ).c_str() );
 }

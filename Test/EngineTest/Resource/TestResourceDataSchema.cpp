@@ -66,7 +66,7 @@
 
 #include "EngineTest/HostTargetTestUtil.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCatalog.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Camera/CameraPreset.h"
@@ -117,7 +117,7 @@ namespace
         static bool isSpriteClip( sw::string_view resourceId ) { return endsWith( resourceId, ".sprite.json" ); }
         static bool isCameraPresets( sw::string_view resourceId ) { return endsWith( resourceId, ".cameras.xml" ); }
         static bool isSchedules( sw::string_view resourceId ) { return endsWith( resourceId, ".schedules.xml" ); }
-        static bool isAiDirector( sw::string_view resourceId ) { return endsWith( resourceId, ".director.xml" ); }
+        static bool isAIDirector( sw::string_view resourceId ) { return endsWith( resourceId, ".director.xml" ); }
         static bool isSpawnTable( sw::string_view resourceId ) { return endsWith( resourceId, ".spawns.xml" ); }
         static bool isTelemetrySchema( sw::string_view resourceId ) { return endsWith( resourceId, ".telemetry.xml" ); }
         static bool isUserSettingsSchema( sw::string_view resourceId ) { return endsWith( resourceId, ".settings.xml" ); }
@@ -507,7 +507,7 @@ namespace
             {    "navmeshsettings",     &isNavMeshSettings,                  &loadCatalog<sw::NavMeshSettings>},
             {       "physicsasset",        &isPhysicsAsset,                                  &loadPhysicsAsset},
             {          "schedules",           &isSchedules,                  &loadCatalog<sw::ScheduleCatalog>},
-            {         "aidirector",          &isAiDirector,                &loadCatalog<sw::AiDirectorProfile>},
+            {         "aidirector",          &isAIDirector,                &loadCatalog<sw::AIDirectorProfile>},
             {         "spawntable",          &isSpawnTable,                       &loadCatalog<sw::SpawnTable>},
             {    "telemetryschema",     &isTelemetrySchema,                  &loadCatalog<sw::TelemetrySchema>},
             {       "usersettings",  &isUserSettingsSchema,                            &loadUserSettingsSchema},

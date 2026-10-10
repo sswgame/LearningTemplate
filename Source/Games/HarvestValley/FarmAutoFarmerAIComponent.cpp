@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmAutoFarmerAiComponent.h"
+#include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -18,7 +18,7 @@ namespace sw
 {
     namespace
     {
-        struct FarmAutoFarmerAiComponentInternal
+        struct FarmAutoFarmerAIComponentInternal
         {
             /** @brief 칸에 도구를 쓸 때 칸 아래 자리에서 더 아래로 물러서는 거리 — 여기서 위로 걸어 들어가 위를 보고 선다. */
             static constexpr float32 kApproachBack = 0.4f;
@@ -67,7 +67,7 @@ namespace sw
 
 namespace sw
 {
-    FarmAutoFarmerAiComponent::FarmAutoFarmerAiComponent()
+    FarmAutoFarmerAIComponent::FarmAutoFarmerAIComponent()
         : _actionInterval{ 0.25f }
         , _cultivateLimit{ 32 }
         , _buyBatch{ 6 }
@@ -79,9 +79,9 @@ namespace sw
     {
     }
 
-    bool FarmAutoFarmerAiComponent::walkTo( const FarmDirectorComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkTo( const FarmDirectorComponent& director, const float3& standPosition )
     {
-        if ( FarmAutoFarmerAiComponentInternal::computeDistanceXz( director.getPlayerPosition(), standPosition ) <= _standTolerance )
+        if ( FarmAutoFarmerAIComponentInternal::computeDistanceXz( director.getPlayerPosition(), standPosition ) <= _standTolerance )
         {
             stopMoving();
             return true;
@@ -90,9 +90,9 @@ namespace sw
         return false;
     }
 
-    bool FarmAutoFarmerAiComponent::walkUpTo( const FarmDirectorComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkUpTo( const FarmDirectorComponent& director, const float3& standPosition )
     {
-        using Internal          = FarmAutoFarmerAiComponentInternal;
+        using Internal          = FarmAutoFarmerAIComponentInternal;
         const float3& position  = director.getPlayerPosition();
         const bool    bFacingUp = director.getFacing()._z > 0.5f;
         const bool    bOnSpot   = Internal::computeDistanceXz( position, standPosition ) <= _standTolerance;
@@ -110,9 +110,9 @@ namespace sw
         return false;
     }
 
-    void FarmAutoFarmerAiComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void FarmAutoFarmerAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
-        using Internal                          = FarmAutoFarmerAiComponentInternal;
+        using Internal                          = FarmAutoFarmerAIComponentInternal;
         const GameObject*            pPawnOwner = pawn.getOwner();
         const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const FarmDirectorComponent* pDirector  = pManager != nullptr ? GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director ) : nullptr;

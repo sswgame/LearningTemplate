@@ -96,7 +96,7 @@
 			               _inputLayer="None"
 			               _aiControllerPrefab="game/shooter3d/prefabs/skeleton_ai.prefab.xml"
 			               _maxPitch="1.4"
-			               _autoPossess="Ai"
+			               _autoPossess="AI"
 			               _bLockMouse="false">
 				<_listButton>
 					<item>Attack</item>

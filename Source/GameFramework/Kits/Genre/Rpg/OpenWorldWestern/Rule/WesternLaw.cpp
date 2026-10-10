@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    WesternPerceptionSight::WesternPerceptionSight( const AiPerceptionSettings& settings, const NavGrid* pGrid )
+    WesternPerceptionSight::WesternPerceptionSight( const AIPerceptionSettings& settings, const NavGrid* pGrid )
         : _perception{}
         , _pGrid{ pGrid }
     {

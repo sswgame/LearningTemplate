@@ -29,7 +29,7 @@
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 
-#include "Games/HarvestValley/FarmAutoFarmerAiComponent.h"
+#include "Games/HarvestValley/FarmAutoFarmerAIComponent.h"
 #include "Games/HarvestValley/FarmCropComponent.h"
 #include "Games/HarvestValley/FarmSoilComponent.h"
 
@@ -194,7 +194,7 @@ namespace sw
             const FarmDirectorComponent* pDirector = findProbeDirector( pManager );
             if ( pDirector == nullptr )
                 return false;
-            outValue = pDirector->isFarmerDrivenByAi() ? 1.0 : 0.0;
+            outValue = pDirector->isFarmerDrivenByAI() ? 1.0 : 0.0;
             return true;
         }
     } // namespace
@@ -285,7 +285,7 @@ namespace sw
         if ( pFarmerPawn != nullptr )
         {
             applyFarmerIntent( deltaTime, *pFarmerPawn );
-            _bPossessionDirty = pFarmerPawn->isPossessed() == false || isAutoPlayOn() != isFarmerDrivenByAi() ? SW_TRUE : SW_FALSE;
+            _bPossessionDirty = pFarmerPawn->isPossessed() == false || isAutoPlayOn() != isFarmerDrivenByAI() ? SW_TRUE : SW_FALSE;
         }
 
         // 시간 — 공유 시계는 공유 상태가 흘린다. 다음 날 2 시가 되면 그 자리에서 쓰러져 아침이다(체력 반).
@@ -495,7 +495,7 @@ namespace sw
         return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
     }
 
-    bool FarmDirectorComponent::isFarmerDrivenByAi() const
+    bool FarmDirectorComponent::isFarmerDrivenByAI() const
     {
         GameObjectManager*   pManager    = getObjectManager();
         const PawnComponent* pPawn       = findFarmerPawn();
@@ -519,21 +519,21 @@ namespace sw
         if ( isAutoPlayOn() )
         {
             GameObject*                pObject = manager.resolveGameObject( _autoFarmerObject );
-            FarmAutoFarmerAiComponent* pAi     = pObject != nullptr ? pObject->getComponent<FarmAutoFarmerAiComponent>() : nullptr;
-            if ( pAi == nullptr )
+            FarmAutoFarmerAIComponent* pAI     = pObject != nullptr ? pObject->getComponent<FarmAutoFarmerAIComponent>() : nullptr;
+            if ( pAI == nullptr )
             {
                 pObject           = spawnPrefab( manager, _autoFarmerPrefab, "FarmAutoFarmer" );
-                pAi               = pObject != nullptr ? pObject->getComponent<FarmAutoFarmerAiComponent>() : nullptr;
+                pAI               = pObject != nullptr ? pObject->getComponent<FarmAutoFarmerAIComponent>() : nullptr;
                 _autoFarmerObject = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
             }
-            if ( pAi == nullptr )
+            if ( pAI == nullptr )
             {
-                SW_LOG_WARNING( "[Farm] auto farmer prefab '%#' has no FarmAutoFarmerAiComponent - auto play cannot take the farmer", _autoFarmerPrefab.c_str() );
+                SW_LOG_WARNING( "[Farm] auto farmer prefab '%#' has no FarmAutoFarmerAIComponent - auto play cannot take the farmer", _autoFarmerPrefab.c_str() );
                 return;
             }
-            pAi->assignDirector( getOwner()->getHandle() );
-            if ( isFarmerDrivenByAi() == false )
-                pAi->possess( *pPawn );
+            pAI->assignDirector( getOwner()->getHandle() );
+            if ( isFarmerDrivenByAI() == false )
+                pAI->possess( *pPawn );
             return;
         }
         // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다 — 씬에 없으면 세운다(조종 시스템이 자동 빙의로 세우는 것과 같은 자리).

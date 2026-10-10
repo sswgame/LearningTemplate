@@ -176,20 +176,20 @@ namespace sw
         _phase           = KartRacePhase::Setup;
     }
 
-    int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAi )
+    int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI )
     {
         if ( _phase != KartRacePhase::Setup || _pTrack == nullptr || _pTrack->isValid() == false )
             return -1;
         _listRacer.emplace_back();
         KartRacer& kart    = _listRacer.back();
         kart._baseSettings = vehicleSettings;
-        kart._bAi          = bAi ? SW_TRUE : SW_FALSE;
+        kart._bAI          = bAI ? SW_TRUE : SW_FALSE;
         kart._motor.setSettings( vehicleSettings );
         kart._motor.setGround( _pTrack );
         return static_cast<int32>( _listRacer.size() ) - 1;
     }
 
-    void KartRace::setRacerAi( int32 racer, const KartAiSettings& settings )
+    void KartRace::setRacerAI( int32 racer, const KartAISettings& settings )
     {
         if ( isValidRacer( racer ) )
             _listRacer[static_cast<size_t>( racer )]._ai.setSettings( settings );
@@ -314,9 +314,9 @@ namespace sw
             kart._input = KartRacerInput{}; // 도는 동안의 눌림은 버린다
             return ArcadeVehicleInput{};
         }
-        if ( kart._bAi != SW_FALSE )
+        if ( kart._bAI != SW_FALSE )
         {
-            KartAiContext context;
+            KartAIContext context;
             context._bHasItem        = kart._itemId.empty() ? SW_FALSE : SW_TRUE;
             context._itemHeldTime    = kart._itemHeldTime;
             context._bShielded       = kart._shieldTime.isActive() ? SW_TRUE : SW_FALSE;
@@ -744,14 +744,14 @@ namespace sw
         if ( isValidRacer( racer ) == false || _settings._bRubberBand == SW_FALSE || _settings._rubberBandDistance <= 0.0f )
             return 1.0f;
         const KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
-        if ( kart._bAi == SW_FALSE || kart._bFinished == SW_TRUE )
+        if ( kart._bAI == SW_FALSE || kart._bFinished == SW_TRUE )
             return 1.0f;
         float32 leaderProgress    = kart._progress;
         float32 bestHumanProgress = MathUtil::kMinFloat;
         for ( const KartRacer& other : _listRacer )
         {
             leaderProgress = MathUtil::max( leaderProgress, other._progress );
-            if ( other._bAi == SW_FALSE )
+            if ( other._bAI == SW_FALSE )
                 bestHumanProgress = MathUtil::max( bestHumanProgress, other._progress );
         }
         // 뒤처진 AI 는 1 등과 벌어진 만큼 빨라지고, 사람보다 앞선 AI 1 등은 조금 느려진다.

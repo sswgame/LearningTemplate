@@ -411,11 +411,11 @@ namespace sw
     {
         _listDirectorEvent.clear();
         _director.drainEvents( _listDirectorEvent );
-        for ( const AiDirectorEvent& event : _listDirectorEvent )
+        for ( const AIDirectorEvent& event : _listDirectorEvent )
         {
             switch ( event._kind )
             {
-                case AiDirectorEventKind::PhaseChanged:
+                case AIDirectorEventKind::PhaseChanged:
                 {
                     // 쌓기로 돌아왔다 = 새 웨이브. 진행 사건(동의가 없으면 텔레메트리가 버린다).
                     TelemetryService* pTelemetry = game::getService<TelemetryService>();
@@ -430,18 +430,18 @@ namespace sw
                                  event._intensity );
                     break;
                 }
-                case AiDirectorEventKind::Spawned:
+                case AIDirectorEventKind::Spawned:
                 {
                     requestEnemies( 1, 1.0f, event._spawnId, false );
                     break;
                 }
-                case AiDirectorEventKind::Encounter:
+                case AIDirectorEventKind::Encounter:
                 {
                     requestEnemies( event._count, event._scale, 0, event._id == hashed_string( "elite" ) );
                     SW_LOG_INFO( "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
                     break;
                 }
-                case AiDirectorEventKind::Reward:
+                case AIDirectorEventKind::Reward:
                 {
                     if ( event._id == hashed_string( "ammo" ) )
                         _bAmmoPending = SW_TRUE;
@@ -449,7 +449,7 @@ namespace sw
                         _pendingHeal += event._scale * _repairHealthPerScale;
                     break;
                 }
-                case AiDirectorEventKind::Despawned:
+                case AIDirectorEventKind::Despawned:
                 {
                     break;
                 }
@@ -495,35 +495,35 @@ namespace sw
         _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다 — 매 틱 플러시를 잡지 않게
         if ( pPawn == nullptr )
             return;
-        GameObject* pAiObject = manager.resolveGameObject( _autoPlayController );
+        GameObject* pAIObject = manager.resolveGameObject( _autoPlayController );
         if ( bAutoPlay )
         {
-            if ( pAiObject == nullptr )
+            if ( pAIObject == nullptr )
             {
-                pAiObject = manager.createGameObject( hashed_string( "ShooterAutoPlay" ) );
-                if ( pAiObject == nullptr || pAiObject->addComponent<ShooterAutoAimControllerComponent>() == nullptr )
+                pAIObject = manager.createGameObject( hashed_string( "ShooterAutoPlay" ) );
+                if ( pAIObject == nullptr || pAIObject->addComponent<ShooterAutoAimControllerComponent>() == nullptr )
                     return;
-                trackSpawned( *pAiObject );
-                _autoPlayController = pAiObject->getHandle();
+                trackSpawned( *pAIObject );
+                _autoPlayController = pAIObject->getHandle();
             }
-            ShooterAutoAimControllerComponent* pAi = pAiObject->getComponent<ShooterAutoAimControllerComponent>();
-            if ( pAi != nullptr && pAi->getPawn() != pPawn->getHandle() )
+            ShooterAutoAimControllerComponent* pAI = pAIObject->getComponent<ShooterAutoAimControllerComponent>();
+            if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
             {
-                pAi->possess( *pPawn );
+                pAI->possess( *pPawn );
                 SW_LOG_INFO( "[Shooter] auto play took the player" );
             }
             return;
         }
         // 끔 — 플레이어 조종자에게 돌려주고 AI 를 걷는다. 이미 다른 조종자(플레이어)가 쥐었으면 그대로.
-        const ShooterAutoAimControllerComponent* pAi = pAiObject != nullptr ? pAiObject->getComponent<ShooterAutoAimControllerComponent>() : nullptr;
-        if ( pPawn->isPossessed() == false || ( pAi != nullptr && pAi->getPawn() == pPawn->getHandle() ) )
+        const ShooterAutoAimControllerComponent* pAI = pAIObject != nullptr ? pAIObject->getComponent<ShooterAutoAimControllerComponent>() : nullptr;
+        if ( pPawn->isPossessed() == false || ( pAI != nullptr && pAI->getPawn() == pPawn->getHandle() ) )
         {
             PlayerControllerComponent* pPlayer = ControlSystem::findOrCreatePlayerController( manager, 0 );
             if ( pPlayer != nullptr )
                 pPlayer->possess( *pPawn );
             SW_LOG_INFO( "[Shooter] the player took the body back" );
         }
-        if ( pAiObject != nullptr )
+        if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }
 

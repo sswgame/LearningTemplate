@@ -1,7 +1,7 @@
-<Prefab formatVersion="0" name="ArenaCasterAi">
-	<GameObject _schemaVersion="0" _name="ArenaCasterAi" _bActive="true">
+<Prefab formatVersion="0" name="ArenaCasterAI">
+	<GameObject _schemaVersion="0" _name="ArenaCasterAI" _bActive="true">
 		<_listComponent>
-			<ArenaEnemyAiComponent _componentName="ArenaEnemyAiComponent"
+			<ArenaEnemyAIComponent _componentName="ArenaEnemyAIComponent"
 			                       _bActive="true"
 			                       _possessAtStart="0"
 			                       _turnRate="20"

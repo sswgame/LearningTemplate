@@ -1,7 +1,7 @@
 <Prefab formatVersion="0" name="FarmAutoFarmer">
 	<GameObject _schemaVersion="0" _name="FarmAutoFarmer" _bActive="true">
 		<_listComponent>
-			<FarmAutoFarmerAiComponent _componentName="FarmAutoFarmerAiComponent"
+			<FarmAutoFarmerAIComponent _componentName="FarmAutoFarmerAIComponent"
 			                           _bActive="true"
 			                           _possessAtStart="0"
 			                           _turnRate="20"

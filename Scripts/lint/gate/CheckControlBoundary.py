@@ -132,7 +132,7 @@ class CheckControlBoundaryGate(LintGate):
     violationHeader = "폰 쪽 코드가 입력을 읽는다"
     hint = (
         "  폰(몸 · 이동 · 탈것)은 PawnComponent::getIntent() 의 ControlIntent 만 읽습니다.\n"
-        "  입력 → 액션 → 의도는 PlayerControllerComponent 가 만들고, AI 는 AiControllerComponent 로 같은 의도를 냅니다.\n"
+        "  입력 → 액션 → 의도는 PlayerControllerComponent 가 만들고, AI 는 AIControllerComponent 로 같은 의도를 냅니다.\n"
         "  명령형 장르의 디렉터 · 플레이어 뷰 카메라처럼 정말 입력을 읽어야 하면 이 게이트의 mapExemption 에 이유와 함께 한 줄.\n"
         "  허용 파일도 장치를 직접 묻지 않습니다 — 클릭 · 끌기 · 시점 · 확대는 입력 맵(*.input.xml)에 액션을 두고 InputMap 으로 읽고,\n"
         "  커서 화면 위치만 InputManager::getMousePositionNormalized() 로 읽습니다."

@@ -140,7 +140,7 @@ HP 바가 그 리스너를 상속해 알림을 받습니다.
 
 - `PlayerControllerComponent` 는 입력 맵을 의도로 바꿉니다. 폰을 잡으면 폰의 입력 레이어를 켜고 `PossessionChangedEvent` 를 보냅니다.
   폰이 마우스 잠금을 원하면(`_bLockMouse`, 1인칭) 커서를 잠그고, `ToggleMouseLock` 액션(Esc)으로 풀고 다시 잠급니다.
-- `AiControllerComponent` 는 `think` 에서 목적지(`moveTo`)와 바라볼 곳(`setFocus`), 버튼을 정합니다.
+- `AIControllerComponent` 는 `think` 에서 목적지(`moveTo`)와 바라볼 곳(`setFocus`), 버튼을 정합니다.
 - `IntentTrackControllerComponent` 는 기록한 의도를 틱 순서대로 냅니다. 리플레이와 자동화 시나리오의 `<Intent>` 단계가 씁니다.
 - `RemoteControllerComponent` 는 네트워크로 받은 의도를 냅니다. 받지 못한 틱은 마지막 의도를 되풀이합니다.
 
@@ -246,7 +246,7 @@ GameFramework 최상위에는 `Base/`, `Kits/` 와 루트 파일만 둡니다. �
 - **자동 플레이 판정은 "잡은 조종자와 스위치가 다른가"로 합니다.** 잡은 조종자가 없는 폰도 다르다고 봐야 합니다.
   핫 리로드로 AI 오브젝트가 정리된 뒤에는 자동 빙의가 다시 일어나지 않으므로, 이 경우를 빼면 폰이 영영 놓입니다.
 - **조종자가 `produceIntent` 안에서 빙의를 옮기면 `ControlSystem::queuePossess` 를 씁니다.** 바로 옮기면 등록 순서에 따라 같은 틱에 두 조종자가 한 폰을 몹니다.
-- **자동 빙의 `Ai` 가 스폰한 조종자는 폰과 함께 지워집니다**(`ControllerComponent::isSpawnedForPawn`). 이 규칙이 없으면 스폰과 정리를 되풀이하는 적마다 조종자 오브젝트가 쌓입니다.
+- **자동 빙의 `AI` 가 스폰한 조종자는 폰과 함께 지워집니다**(`ControllerComponent::isSpawnedForPawn`). 이 규칙이 없으면 스폰과 정리를 되풀이하는 적마다 조종자 오브젝트가 쌓입니다.
 - **디렉터의 시뮬레이션은 `writeState` 와 `readState` 로만 넘깁니다.** 게임 모듈의 정적 변수와 PROPERTY 가 아닌 멤버는 핫 리로드 때 모듈과 함께 사라집니다.
 - **뷰와 컨트롤러를 템플릿 베이스로 묶지 않습니다**(`DirectorViewComponent<T>` 같은 것). 리플렉션 부모는 등록된 타입이어야 해서 템플릿 중간 층을 둘 수 없습니다.
 - **살아 있는 씬 위에 다시 만든 게임 인스턴스는 `requestFirstScene` 이 아무것도 하지 않습니다.** 핫 리로드나 백엔드 교체 뒤 복원한 씬을 첫 씬이 덮지 않게 하기 위해서입니다.

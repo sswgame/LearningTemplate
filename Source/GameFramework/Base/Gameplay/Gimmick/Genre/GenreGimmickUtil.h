@@ -68,7 +68,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 소리를 냈습니다(잠입 — 반경 안의 AI 가 듣는다: `AiStimulus::_noiseRadius`). */
+    /** @brief 소리를 냈습니다(잠입 — 반경 안의 AI 가 듣는다: `AIStimulus::_noiseRadius`). */
     struct SW_GF_API GimmickNoiseEvent final : IEvent
     {
         GameObjectHandle _source{};

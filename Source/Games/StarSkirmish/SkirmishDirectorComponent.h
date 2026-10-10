@@ -2,7 +2,7 @@
  * @file SkirmishDirectorComponent.h
  * @brief StarSkirmish 의 판을 돌리는 컴포넌트 — 한 판(`SkirmishMatch`) · 고르기 · 명령 · 생산 · 건설 · 부대 입력 · 속도 · 알림, 그리고 절벽 · 유닛(프리팹) 스폰 지시입니다.
  *
- * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(채취 · 생산 · 전투 · 안개 · AI)은 키트의 `RTSWorld` · `RTSAiCommander` 와
+ * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 규칙(채취 · 생산 · 전투 · 안개 · AI)은 키트의 `RTSWorld` · `RTSCommanderAI` 와
  *          `SkirmishMatch` 가 맡고, 여기는 사람의 입력과 무엇을 어디에 세우는지를 압니다. 유닛 모습은 뷰(`SkirmishUnitComponent`)가, 끌어 고르기 상자는
  *          `SkirmishDragComponent` 가 이 컴포넌트를 **읽기만** 해서 맞춥니다.
  *

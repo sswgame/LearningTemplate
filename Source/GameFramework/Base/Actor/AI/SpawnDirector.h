@@ -115,7 +115,7 @@ namespace sw
         /** @brief 죽은 개체의 비용을 예산으로 돌려줄지입니다(테이블 기본값을 덮는다). */
         void setRefundOnDespawn( bool bRefund ) { _bRefundOnDespawn = bRefund ? SW_TRUE : SW_FALSE; }
         /**
-         * @brief 쌓이는 예산에 곱할 배율입니다(기본 1). 페이싱(`AiDirector`)이 단계마다 바꿉니다.
+         * @brief 쌓이는 예산에 곱할 배율입니다(기본 1). 페이싱(`AIDirector`)이 단계마다 바꿉니다.
          * @details 0 이하이면 예산이 쌓이지도 쓰이지도 않습니다 — 쉬는 단계에서 모아 둔 예산으로 내지 않게 합니다.
          */
         void    setBudgetScale( float32 scale ) { _budgetScale = scale; }

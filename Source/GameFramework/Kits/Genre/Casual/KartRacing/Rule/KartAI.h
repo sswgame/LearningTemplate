@@ -1,5 +1,5 @@
 /**
- * @file KartAi.h
+ * @file KartAI.h
  * @brief 카트 AI 운전 — 중심선 앞을 내다보는 레이싱 라인(곡선 안쪽으로), 굽은 길의 드리프트, 아이템 쓰기 판단입니다.
  * @details 러버밴딩(1 등과 거리에 따른 최고 속도 배율)은 순위를 아는 `KartRace` 가 겁니다 — 운전은 속도 상한을 모릅니다.
  */
@@ -16,7 +16,7 @@ namespace sw
     class KartTrack;
 
     /** @brief AI 운전 수치입니다. 각은 라디안입니다. */
-    struct KartAiSettings
+    struct KartAISettings
     {
         float32 _lookAheadBase{ 6.0f };      ///< 겨누는 점까지의 기본 거리(m)
         float32 _lookAheadPerSpeed{ 0.35f }; ///< 속도 1 m/초마다 더 멀리 본다
@@ -37,7 +37,7 @@ namespace sw
 namespace sw
 {
     /** @brief 아이템 판단에 드는 경기 상황입니다. 거리 < 0 은 "없음" 입니다. */
-    struct KartAiContext
+    struct KartAIContext
     {
         float32      _gapAhead{ -1.0f };  ///< 바로 앞 순위 차까지(m)
         float32      _gapBehind{ -1.0f }; ///< 바로 뒤 순위 차까지(m)
@@ -51,15 +51,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class KartAiDriver
+     * @class KartAIDriver
      * @brief 차 하나의 운전수입니다. 드리프트 중인가만 상태로 듭니다.
      */
-    class SW_GF_API KartAiDriver
+    class SW_GF_API KartAIDriver
     {
     public:
-        KartAiDriver();
+        KartAIDriver();
 
-        void setSettings( const KartAiSettings& settings ) { _settings = settings; }
+        void setSettings( const KartAISettings& settings ) { _settings = settings; }
         void reset() { _driftSide = 0; }
         /** @brief 드리프트 중인 쪽을 되살립니다(경기 상태 읽기 — −1 · 0 · 1). */
         void setDriftSide( int32 driftSide ) { _driftSide = driftSide; }
@@ -67,13 +67,13 @@ namespace sw
         /** @brief 이번 걸음의 입력입니다. @p trackDistance 는 차의 중심선 거리입니다. */
         ArcadeVehicleInput computeInput( const KartTrack& track, const ArcadeVehicleMotor& motor, float32 trackDistance );
         /** @brief 지금 아이템을 쓸까입니다. */
-        bool shouldUseItem( const KartAiContext& context ) const;
+        bool shouldUseItem( const KartAIContext& context ) const;
 
-        const KartAiSettings& getSettings() const { return _settings; }
+        const KartAISettings& getSettings() const { return _settings; }
         int32                 getDriftSide() const { return _driftSide; }
 
     private:
-        KartAiSettings _settings;
+        KartAISettings _settings;
         int32          _driftSide; ///< −1 · 1 드리프트 중인 쪽, 0 아님
     };
 } // namespace sw

@@ -146,7 +146,7 @@
 | `Input/Events/` · `Input/Utils/` · `Reflection/Rpc/` | 한 단계 위(`Input/` · `Reflection/`) |
 | `Test/<실행 파일>/Test*.cpp`(평면) | 소스 폴더를 따르는 하위 폴더(`Test/README.md`) |
 | Overworld `PlayerController` · `PlayerControllerSettings` | `OverworldTileMover` · `OverworldTileMoverSettings`(의도를 받는 몸 — 조종자는 `PlayerControllerComponent`) |
-| `RtsAiController` · `SrpgAiController` | `RTSAiCommander` · `SRPGAiCommander`(명령형 장르의 AI — 조종자가 아니다) |
+| `RtsAiController` · `SrpgAiController` | `RTSCommanderAI` · `SRPGCommanderAI`(명령형 장르의 AI — 조종자가 아니다) |
 | `NavMeshAgentComponent::_bUpdatePosition` | `_driveMode`(`NavAgentDriveMode` — Transform · CharacterController · SteerOnly) |
 | `InputReplay::play` · `updatePlayback` | `InputManager::attachVirtualInput`(재생은 가상 입력 원천) |
 | `InputSnapshot` · `InputHistoryBuffer` · `InputManager::recordSnapshot` | 삭제 — 행동 층은 `ControlIntent` · `ControlIntentHistory` |

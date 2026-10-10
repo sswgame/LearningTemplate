@@ -32,7 +32,7 @@ namespace sw
      * @class ShooterEnemyComponent
      * @brief 스켈레톤 프리팹(`prefabs/skeleton.prefab.xml`)의 규칙 컴포넌트입니다. 디렉터가 틱 뒤에 세우고 `launch` 로 자리 · 체력 · 빠르기를 줍니다.
      * @details 몸(같은 오브젝트의 `SkeletalMeshComponent`) · 애니메이터 · 외형(`CharacterAppearanceComponent` — 디렉터가 프리셋 · 씨앗을 고른다) · 폰(`PawnComponent` —
-     *          버튼 `Attack`, 자동 빙의 `Ai` → `ShooterEnemyAiControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
+     *          버튼 `Attack`, 자동 빙의 `AI` → `ShooterEnemyAIControllerComponent`) · 몸 이동(`ShooterBodyMovementComponent` — 플레이어와 같은 이동)과 같은 오브젝트입니다.
      *          판단(쫓기 · 멈추기 · 휘두를지)은 AI 조종자가 하고, 여기는 **폰의 의도만** 읽습니다: 쫓는 단계에서 몸 이동을 한 걸음 부르고, 몸 요를 조종 요 쪽으로 돌리고,
      *          `Attack` 이 눌려 있으면 휘두르기 간격마다 휘두릅니다. 기본 틱 그룹(`DuringPhysics`)에서 디렉터가 적은 플레이어 자리 · 막는 상자를 읽고 **자기 오브젝트에만**
      *          씁니다(자리 · 요 · 애니메이터 파라미터 · HP 바 — 체력 원천 알림 `notifyHealthChanged`). 내비메시 에이전트(`SteerOnly`)는 그 자리를 다음 갱신에서 받는다.

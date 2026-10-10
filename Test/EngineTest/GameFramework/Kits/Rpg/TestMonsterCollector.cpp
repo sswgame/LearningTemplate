@@ -9,7 +9,7 @@
 #include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterBattle.h"
 #include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterCollectorCatalog.h"
 #include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterInstance.h"
-#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterTrainerAi.h"
+#include "GameFramework/Kits/Genre/Rpg/MonsterCollector/MonsterTrainerAI.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -706,7 +706,7 @@ SW_TEST_CASE( MonsterCollectorTest, WildEncounterTableRespectsAreaTimeLevelAndWe
     SW_EXPECT_TRUE( bSame );
 }
 
-SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhenDisadvantagedAndIsDeterministic )
+SW_TEST_CASE( MonsterCollectorTest, TrainerAIPicksBestExpectedDamageSwitchesWhenDisadvantagedAndIsDeterministic )
 {
     MonsterTestWorld world;
     SW_ASSERT_TRUE( world.initialize() );
@@ -716,11 +716,11 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
     MonsterBattle battle;
     battle.initialize( &world._catalog, &world._chart, 8 );
     battle.start( { world.makeMonster( "geodude", 30, { "tackle" } ) }, { world.makeMonster( "pikachu", 30, { "thundershock", "quickattack" } ) }, false );
-    MonsterAction action = MonsterTrainerAi::chooseAction( battle, MonsterBattle::kFoeSide );
+    MonsterAction action = MonsterTrainerAI::chooseAction( battle, MonsterBattle::kFoeSide );
     SW_EXPECT_TRUE( action._kind == MonsterActionKind::Move && action._index == 1 );
     // 물 앞에서는 10 만볼트 쪽(2 배)이다.
     battle.start( { squirtle }, { world.makeMonster( "pikachu", 30, { "quickattack", "thundershock" } ) }, false );
-    action = MonsterTrainerAi::chooseAction( battle, MonsterBattle::kFoeSide );
+    action = MonsterTrainerAI::chooseAction( battle, MonsterBattle::kFoeSide );
     SW_EXPECT_TRUE( action._kind == MonsterActionKind::Move && action._index == 1 );
 
     // 불리(불꽃 기술만 · 물이 2 배로 들어옴)하면 교체 — 후보 중 기대 피해가 가장 큰 개체로.
@@ -728,12 +728,12 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
     const MonsterInstance bulbasaur  = world.makeMonster( "bulbasaur", 30, { "vinewhip" } );
     const MonsterInstance pikachu    = world.makeMonster( "pikachu", 30, { "thundershock" } );
     battle.start( { squirtle }, { charmander, bulbasaur, pikachu }, false );
-    SW_EXPECT_TRUE( MonsterTrainerAi::isDisadvantaged( battle, MonsterBattle::kFoeSide, 0 ) );
+    SW_EXPECT_TRUE( MonsterTrainerAI::isDisadvantaged( battle, MonsterBattle::kFoeSide, 0 ) );
     float32 bulbasaurDamage = 0.0f;
     float32 pikachuDamage   = 0.0f;
-    (void)MonsterTrainerAi::chooseBestMoveSlot( battle, MonsterBattle::kFoeSide, 1, bulbasaurDamage );
-    (void)MonsterTrainerAi::chooseBestMoveSlot( battle, MonsterBattle::kFoeSide, 2, pikachuDamage );
-    action = MonsterTrainerAi::chooseAction( battle, MonsterBattle::kFoeSide );
+    (void)MonsterTrainerAI::chooseBestMoveSlot( battle, MonsterBattle::kFoeSide, 1, bulbasaurDamage );
+    (void)MonsterTrainerAI::chooseBestMoveSlot( battle, MonsterBattle::kFoeSide, 2, pikachuDamage );
+    action = MonsterTrainerAI::chooseAction( battle, MonsterBattle::kFoeSide );
     SW_EXPECT_TRUE( action._kind == MonsterActionKind::Switch );
     SW_EXPECT_EQUAL( bulbasaurDamage >= pikachuDamage ? 1 : 2, action._index );
     // 갈 곳이 없으면(다른 개체가 쓰러졌다) 불리해도 버틴다.
@@ -742,7 +742,7 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
     faintedBulbasaur._hp             = 0;
     faintedPikachu._hp               = 0;
     battle.start( { squirtle }, { charmander, faintedBulbasaur, faintedPikachu }, false );
-    action = MonsterTrainerAi::chooseAction( battle, MonsterBattle::kFoeSide );
+    action = MonsterTrainerAI::chooseAction( battle, MonsterBattle::kFoeSide );
     SW_EXPECT_TRUE( action._kind == MonsterActionKind::Move );
 
     // 양쪽을 AI 로 끝까지 — 같은 씨앗이면 같은 사건 줄과 같은 결과다.
@@ -758,11 +758,11 @@ SW_TEST_CASE( MonsterCollectorTest, TrainerAiPicksBestExpectedDamageSwitchesWhen
             for ( int32 side = 0; side < MonsterBattle::kSideCount; ++side )
             {
                 if ( fullBattle.needsSwitch( side ) )
-                    (void)fullBattle.switchFainted( side, MonsterTrainerAi::chooseReplacement( fullBattle, side ) );
+                    (void)fullBattle.switchFainted( side, MonsterTrainerAI::chooseReplacement( fullBattle, side ) );
             }
             for ( int32 side = 0; side < MonsterBattle::kSideCount; ++side )
             {
-                (void)fullBattle.setAction( side, MonsterTrainerAi::chooseAction( fullBattle, side ) );
+                (void)fullBattle.setAction( side, MonsterTrainerAI::chooseAction( fullBattle, side ) );
             }
             fullBattle.resolveRound();
             listRound.clear();

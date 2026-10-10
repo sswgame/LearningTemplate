@@ -1105,9 +1105,16 @@ def buildHeader(listNamed) -> str:
         "namespace sw::editor::editoricon",
         "{",
     ]
+    import pathlib
+    import sys
+    lintDir = str(pathlib.Path(__file__).resolve().parents[1] / "lint")   # Scripts/lint — 약어 등록부 한 자리
+    if lintDir not in sys.path:
+        sys.path.insert(0, lintDir)
+    import AcronymRegistry as acronymRegistry
     width = max(len(name) for name, code in listNamed) + 1
     for name, code in listNamed:
-        constant = "k" + name[0].upper() + name[1:]
+        # 약어는 등록부의 강제 약어만 대문자로(`ai` → `kAI`) — 코드모드가 헤더에 쓰는 철자와 같아야 다시 만들어도 그대로다.
+        constant = acronymRegistry.respellName("k" + name[0].upper() + name[1:], tuple(sorted(acronymRegistry.kEnforced)))
         lines.append('    inline constexpr const utf8* %s = "%s"; ///< U+%04X' % (constant.ljust(width), utf8Literal(code), code))
     first, last = listNamed[0][1], listNamed[-1][1]
     listRange = [(first, last)] + [(code, code) for code in sorted(kMapNotifyCodepoint)]

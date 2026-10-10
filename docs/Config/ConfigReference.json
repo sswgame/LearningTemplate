@@ -1928,8 +1928,8 @@
    "type": "int32",
    "default": "0",
    "kind": "시험",
-   "description": "AiDirector: log every phase change, spawn, encounter and reward (1=on)",
-   "source": "Source/GameFramework/Base/Actor/AI/Director/AiDirector.cpp"
+   "description": "AIDirector: log every phase change, spawn, encounter and reward (1=on)",
+   "source": "Source/GameFramework/Base/Actor/AI/Director/AIDirector.cpp"
   },
   {
    "name": "gv_animationForceVertexAnimation",

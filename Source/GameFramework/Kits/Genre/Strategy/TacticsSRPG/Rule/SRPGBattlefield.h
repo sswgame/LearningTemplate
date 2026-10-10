@@ -149,7 +149,7 @@ namespace sw
 {
     /**
      * @class SRPGBattlefield
-     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGAiCommander`, 승패는 `SRPGMission` 이 이 위에서 합니다.
+     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMission` 이 이 위에서 합니다.
      * @details 카탈로그는 전장보다 오래 살아야 합니다(유닛이 정의 포인터를 든다). 결정적입니다 — 같은 씨앗 · 같은 명령이면 같은 결과입니다.
      */
     class SW_GF_API SRPGBattlefield

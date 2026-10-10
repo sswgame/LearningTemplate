@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAi.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -8,13 +8,13 @@
 
 namespace sw
 {
-    KartAiDriver::KartAiDriver()
+    KartAIDriver::KartAIDriver()
         : _settings{}
         , _driftSide{ 0 }
     {
     }
 
-    ArcadeVehicleInput KartAiDriver::computeInput( const KartTrack& track, const ArcadeVehicleMotor& motor, float32 trackDistance )
+    ArcadeVehicleInput KartAIDriver::computeInput( const KartTrack& track, const ArcadeVehicleMotor& motor, float32 trackDistance )
     {
         ArcadeVehicleInput input;
         if ( track.isValid() == false )
@@ -65,7 +65,7 @@ namespace sw
         return input;
     }
 
-    bool KartAiDriver::shouldUseItem( const KartAiContext& context ) const
+    bool KartAIDriver::shouldUseItem( const KartAIContext& context ) const
     {
         if ( context._bHasItem == SW_FALSE || context._itemHeldTime < _settings._itemUseDelay )
             return false;

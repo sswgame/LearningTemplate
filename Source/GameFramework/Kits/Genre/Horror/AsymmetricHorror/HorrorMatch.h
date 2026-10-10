@@ -7,7 +7,7 @@
  *          - 체력 상태: `Vitality`(체력 2 = 건강 · 1 = 부상 · 기절 = 빈사, 출혈 체력 = 남은 출혈 초, 기절 중 부활 = 빈사 회복)
  *          - 수리 · 치료 · 탈출구: `InteractionProgress`(인원 배율 · 스킬 체크 `TimingJudge` · 실패 소음 · 퇴행)
  *          - 판 · 결과: `MatchState`(생존자 팀 · 살인마 팀, 탈출 · 희생은 탈락, 점수)
- *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AiPerception::sense` 에 넣을 자극(위치 · 소음 반경)을 채운다.
+ *          - 살인마 봇의 감각: `collectKillerStimuli` 가 `AIPerception::sense` 에 넣을 자극(위치 · 소음 반경)을 채운다.
  *          위치는 XZ 평면(y = 0)이고 이동은 `moveSurvivor` · `moveKiller` 로 — 키트가 상태에 맞는 속도를 곱합니다(벽 충돌은 게임이).
  */
 #pragma once
@@ -29,7 +29,7 @@
 
 namespace sw
 {
-    struct AiStimulus;
+    struct AIStimulus;
     struct HorrorKillerDef;
     struct HorrorSnapshot;
 
@@ -287,8 +287,8 @@ namespace sw
         float32 computeHeartbeat( int32 survivor ) const;
         float32 computeSurvivorSpeed( int32 survivor ) const;
         float32 computeKillerSpeed() const;
-        /** @brief 살인마 봇의 `AiPerception::sense` 에 넣을 자극 — 숨지 않은 생존자, 이번 걸음 소음 반경을 실은 위치입니다. */
-        void                       collectKillerStimuli( vector<AiStimulus>& outListStimulusEntry ) const;
+        /** @brief 살인마 봇의 `AIPerception::sense` 에 넣을 자극 — 숨지 않은 생존자, 이번 걸음 소음 반경을 실은 위치입니다. */
+        void                       collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const;
         const InteractionProgress* findActivityProgress( int32 survivor ) const;
         void                       makeSnapshot( HorrorSnapshot& outSnapshot ) const;
         /** @brief 서버 권위 상태를 바이트로 씁니다(`HorrorSnapshotCodec::write`). */

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/AIPerception.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -8,13 +8,13 @@
 
 namespace sw
 {
-    AiPerception::AiPerception()
+    AIPerception::AIPerception()
         : _settings{}
         , _listTarget{}
     {
     }
 
-    bool AiPerception::canSee( const float3& eyePosition, const float3& forward, const float3& target, const NavGrid* pGrid, bool bAlreadySeen ) const
+    bool AIPerception::canSee( const float3& eyePosition, const float3& forward, const float3& target, const NavGrid* pGrid, bool bAlreadySeen ) const
     {
         const float3  toTarget = float3{ target._x - eyePosition._x, 0.0f, target._z - eyePosition._z };
         const float32 distance = toTarget.getLength();
@@ -31,17 +31,17 @@ namespace sw
         return pGrid == nullptr || pGrid->hasLineOfSight( pGrid->computeCell( eyePosition ), pGrid->computeCell( target ) );
     }
 
-    void AiPerception::sense( const float3& eyePosition, const float3& forward, const vector<AiStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime )
+    void AIPerception::sense( const float3& eyePosition, const float3& forward, const vector<AIStimulus>& listCandidate, const NavGrid* pGrid, float32 deltaTime )
     {
-        for ( AiPerceivedTarget& target : _listTarget )
+        for ( AIPerceivedTarget& target : _listTarget )
         {
             target._age += deltaTime;
             target._bHeard = SW_FALSE;
         }
-        for ( const AiStimulus& stimulus : listCandidate )
+        for ( const AIStimulus& stimulus : listCandidate )
         {
-            AiPerceivedTarget* pTarget = nullptr;
-            for ( AiPerceivedTarget& target : _listTarget )
+            AIPerceivedTarget* pTarget = nullptr;
+            for ( AIPerceivedTarget& target : _listTarget )
             {
                 if ( target._id == stimulus._id )
                     pTarget = &target;
@@ -58,7 +58,7 @@ namespace sw
             }
             if ( pTarget == nullptr )
             {
-                _listTarget.push_back( AiPerceivedTarget{} );
+                _listTarget.push_back( AIPerceivedTarget{} );
                 pTarget      = &_listTarget.back();
                 pTarget->_id = stimulus._id;
             }
@@ -68,20 +68,20 @@ namespace sw
             pTarget->_bHeard            = bHeard ? SW_TRUE : SW_FALSE;
         }
         // 후보에 없는 대상(죽었거나 멀리 갔다)도 안 보이는 것이다. 오래되면 잊는다.
-        for ( AiPerceivedTarget& target : _listTarget )
+        for ( AIPerceivedTarget& target : _listTarget )
         {
             if ( target._age > 0.0f )
                 target._bSeen = SW_FALSE;
         }
         _listTarget.erase( std::remove_if( _listTarget.begin(), _listTarget.end(),
-                                           [this]( const AiPerceivedTarget& target )
+                                           [this]( const AIPerceivedTarget& target )
         { return target._age > _settings._memoryDuration; } ),
                            _listTarget.end() );
     }
 
-    const AiPerceivedTarget* AiPerception::findTarget( uint64 id ) const
+    const AIPerceivedTarget* AIPerception::findTarget( uint64 id ) const
     {
-        for ( const AiPerceivedTarget& target : _listTarget )
+        for ( const AIPerceivedTarget& target : _listTarget )
         {
             if ( target._id == id )
                 return &target;
@@ -89,11 +89,11 @@ namespace sw
         return nullptr;
     }
 
-    const AiPerceivedTarget* AiPerception::findNearestSeen( const float3& origin ) const
+    const AIPerceivedTarget* AIPerception::findNearestSeen( const float3& origin ) const
     {
-        const AiPerceivedTarget* pNearest = nullptr;
+        const AIPerceivedTarget* pNearest = nullptr;
         float32                  best     = MathUtil::kMaxFloat;
-        for ( const AiPerceivedTarget& target : _listTarget )
+        for ( const AIPerceivedTarget& target : _listTarget )
         {
             const float32 distance = float3::getDistance( origin, target._lastKnownPosition );
             if ( target._bSeen != SW_FALSE && distance < best )

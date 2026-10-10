@@ -1,5 +1,5 @@
 /**
- * @file SRPGAiCommander.h
+ * @file SRPGCommanderAI.h
  * @brief 택틱스 SRPG 의 적 AI — 갈 수 있는 칸 × 무기 × 표적마다 "기대 피해 − 반격 위험" 점수를 매겨 가장 좋은 것을 고릅니다(결정적).
  */
 #pragma once
@@ -15,7 +15,7 @@ namespace sw
     struct SRPGCombatResult;
 
     /** @brief 점수의 무게입니다. */
-    struct SRPGAiSettings
+    struct SRPGCommanderAISettings
     {
         int32 _counterRiskPercent{ 100 }; ///< 반격으로 받을 기대 피해를 얼마나 무겁게 볼까(%)
         int32 _killBonus{ 1000 };         ///< 격파할 수 있으면 더하는 점수(× 명중률)
@@ -26,7 +26,7 @@ namespace sw
 namespace sw
 {
     /** @brief 한 유닛의 계획입니다. */
-    struct SRPGAiPlan
+    struct SRPGCommanderAIPlan
     {
         int2  _moveCell{};
         int32 _weapon{ -1 };
@@ -39,27 +39,27 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SRPGAiCommander
+     * @class SRPGCommanderAI
      * @brief 표적이 없으면 가장 가까운 적 쪽으로 다가갑니다. 같은 점수면 덜 걷는 칸, 그다음 칸 번호 · 무기 · 표적 순서가 앞선 것 — 늘 같은 답입니다.
      * @details 점수 = 명중 × min( 피해, 표적 HP ) / 100 + 격파 가능이면 명중 × 격파 보너스 / 100 − 반격 명중 × min( 반격 피해, 내 HP ) / 100 × 위험 / 100.
      *          피해는 크리티컬을 넣지 않은 보통 피해입니다.
      */
-    class SW_GF_API SRPGAiCommander
+    class SW_GF_API SRPGCommanderAI
     {
     public:
-        SRPGAiCommander();
+        SRPGCommanderAI();
 
-        void                  setSettings( const SRPGAiSettings& settings ) { _settings = settings; }
-        const SRPGAiSettings& getSettings() const { return _settings; }
+        void                           setSettings( const SRPGCommanderAISettings& settings ) { _settings = settings; }
+        const SRPGCommanderAISettings& getSettings() const { return _settings; }
 
         /** @brief 계획을 세웁니다. 움직일 수 없는 유닛이면 false 입니다. */
-        [[nodiscard]] bool makePlan( const SRPGBattlefield& field, int32 unitIndex, SRPGAiPlan& outPlan ) const;
+        [[nodiscard]] bool makePlan( const SRPGBattlefield& field, int32 unitIndex, SRPGCommanderAIPlan& outPlan ) const;
         /** @brief 계획대로 움직이고 치고 행동을 끝냅니다. @p pOutResult 가 있으면 전투 결과를 담습니다. */
         [[nodiscard]] bool runUnit( SRPGBattlefield& field, int32 unitIndex, SRPGCombatResult* pOutResult = nullptr ) const;
         /** @brief 지금 페이즈 팀(@p team 일 때만)의 행동할 수 있는 유닛을 번호 순서로 모두 움직입니다. 움직인 수입니다. */
         int32 runPhase( SRPGBattlefield& field, SRPGTeam team ) const;
 
     private:
-        SRPGAiSettings _settings;
+        SRPGCommanderAISettings _settings;
     };
 } // namespace sw

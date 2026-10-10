@@ -7,8 +7,8 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Shop.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
-#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSAiCommander.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
 
@@ -488,7 +488,7 @@ SW_TEST_CASE( RealTimeStrategyTest, SelectionPrefersOwnUnitsAndControlGroupsPrun
     SW_EXPECT_TRUE( selection.recallGroup( scene._world, 5 ) == false );
 }
 
-SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuildings )
+SW_TEST_CASE( RealTimeStrategyTest, AIGrowsEconomyBuildsArmyAndWinsByRazingBuildings )
 {
     RTSTestScene scene;
     SW_ASSERT_TRUE( scene.initialize( 64, 64 ) );
@@ -505,7 +505,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuild
         (void)scene.spawn( "worker", cpu, 41.5f + static_cast<float32>( index ), 49.5f ); // 시험 준비 — 놓을 수 없으면 아래 단언이 결과 상태로 잡는다
     }
 
-    RTSAiSettings aiSettings;
+    RTSCommanderAISettings aiSettings;
     aiSettings._workerId         = hashed_string( "worker" );
     aiSettings._depotId          = hashed_string( "base" );
     aiSettings._supplyId         = hashed_string( "depot" );
@@ -514,7 +514,7 @@ SW_TEST_CASE( RealTimeStrategyTest, AiGrowsEconomyBuildsArmyAndWinsByRazingBuild
     aiSettings._workerTarget     = 8;
     aiSettings._productionTarget = 1;
     aiSettings._attackArmySize   = 3;
-    RTSAiCommander ai;
+    RTSCommanderAI ai;
     ai.initialize( &scene._world, cpu, aiSettings );
 
     bool bDefeatedSeen = false;

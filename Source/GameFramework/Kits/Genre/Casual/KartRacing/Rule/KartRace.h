@@ -26,7 +26,7 @@
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/Base/Foundation/Utility/Time/FixedStepTimer.h"
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAi.h"
+#include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 
 namespace sw
@@ -87,7 +87,7 @@ namespace sw
     struct KartRacer
     {
         ArcadeVehicleMotor    _motor{};
-        KartAiDriver          _ai{};
+        KartAIDriver          _ai{};
         ArcadeVehicleSettings _baseSettings{};
         KartRacerInput        _input{};
         vector<float32>       _listLapTime{};
@@ -108,7 +108,7 @@ namespace sw
         int32                 _place{ 0 };
         int32                 _finishPlace{ 0 }; ///< 확정 순위(0 = 아직)
         int32                 _lastBoostPad{ -1 };
-        uint8                 _bAi{ SW_FALSE };
+        uint8                 _bAI{ SW_FALSE };
         uint8                 _bFinished{ SW_FALSE };
         uint8                 _bWrongWay{ SW_FALSE };
     };
@@ -187,8 +187,8 @@ namespace sw
 
         void initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog );
         /** @brief 차를 더합니다(`Setup` 단계만). 번호를 돌려줍니다. 실패하면 −1 입니다. 돌려준 `KartRacer` 포인터는 다음 `addRacer` 까지 유효합니다. */
-        int32 addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAi );
-        void  setRacerAi( int32 racer, const KartAiSettings& settings );
+        int32 addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI );
+        void  setRacerAI( int32 racer, const KartAISettings& settings );
         /** @brief 차를 출발 격자에 세우고 카운트다운을 시작합니다. 차가 없으면 아무것도 하지 않습니다. */
         void start();
 
@@ -216,7 +216,7 @@ namespace sw
 
         /**
          * @brief 차마다 차체 · 드리프트 쪽 · 받아 둔 입력 · 랩 기록 · 아이템 · 진행 · 타이머 · 순위, 투사체 · 아이템 상자 타이머 · 순위 순서 · 난수 · 고정 걸음 · 시간 · 단계를 씁니다.
-         * @details 설정 · 트랙 · 아이템 카탈로그 · 고스트(빌린 기록기)와 차마다 기본 차 설정 · AI 설정 · 사람/AI 구분(`addRacer` · `setRacerAi` 의 것)은 싣지 않습니다.
+         * @details 설정 · 트랙 · 아이템 카탈로그 · 고스트(빌린 기록기)와 차마다 기본 차 설정 · AI 설정 · 사람/AI 구분(`addRacer` · `setRacerAI` 의 것)은 싣지 않습니다.
          *          알림은 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;

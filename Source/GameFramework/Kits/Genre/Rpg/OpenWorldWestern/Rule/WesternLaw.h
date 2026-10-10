@@ -10,7 +10,7 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/AIPerception.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -57,17 +57,17 @@ namespace sw
 {
     /**
      * @class WesternPerceptionSight
-     * @brief 기반 `AiPerception` 의 시야(거리 · 시야각 · 격자 가림)로 답하는 기본 시야입니다.
+     * @brief 기반 `AIPerception` 의 시야(거리 · 시야각 · 격자 가림)로 답하는 기본 시야입니다.
      */
     class SW_GF_API WesternPerceptionSight : public IWesternWitnessSight
     {
     public:
-        WesternPerceptionSight( const AiPerceptionSettings& settings, const NavGrid* pGrid );
+        WesternPerceptionSight( const AIPerceptionSettings& settings, const NavGrid* pGrid );
 
         bool canWitnessSee( const WesternWitness& witness, const float3& crimePosition ) const override;
 
     private:
-        AiPerception   _perception;
+        AIPerception   _perception;
         const NavGrid* _pGrid;
     };
 } // namespace sw

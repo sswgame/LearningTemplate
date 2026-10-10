@@ -20,9 +20,9 @@ namespace sw
             static constexpr int32   kStartMinerals  = 50;
 
             /** @brief 성향별 AI 설정입니다 — 0 러시(일찍 작게) · 1 운영(일꾼 · 병영을 늘려 크게) · 2 사람 상대(그 사이). */
-            static RTSAiSettings makeAiSettings( int32 style )
+            static RTSCommanderAISettings makeAISettings( int32 style )
             {
-                RTSAiSettings settings;
+                RTSCommanderAISettings settings;
                 settings._workerId     = hashed_string( "worker" );
                 settings._depotId      = hashed_string( "command_center" );
                 settings._supplyId     = hashed_string( "supply_depot" );
@@ -66,14 +66,14 @@ namespace sw
 {
     SkirmishMatch::SkirmishMatch()
         : _world{}
-        , _arrAi{}
+        , _arrAI{}
         , _arrWallet{}
         , _listEvent{}
         , _listFrameEvent{}
         , _listCliff{}
         , _statusTimer{ 0.0f }
         , _huntTimer{ 0.0f }
-        , _arrAiActive{ SW_FALSE, SW_FALSE }
+        , _arrAIActive{ SW_FALSE, SW_FALSE }
         , _bHumanPlayer{ SW_FALSE }
         , _bReportedOver{ SW_FALSE }
     {
@@ -113,11 +113,11 @@ namespace sw
 
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            const bool bAi       = bHumanPlayer == false || player != 0;
-            _arrAiActive[player] = bAi ? SW_TRUE : SW_FALSE;
+            const bool bAI       = bHumanPlayer == false || player != 0;
+            _arrAIActive[player] = bAI ? SW_TRUE : SW_FALSE;
             const int32 style    = bHumanPlayer ? 2 : player;
-            if ( bAi )
-                _arrAi[player].initialize( &_world, player, SkirmishMatchInternal::makeAiSettings( style ) );
+            if ( bAI )
+                _arrAI[player].initialize( &_world, player, SkirmishMatchInternal::makeAISettings( style ) );
         }
         SW_LOG_INFO( "[Skirmish] match start - %#", bHumanPlayer ? "you (blue, south-west) vs computer (red)" : "computer (rush, blue) vs computer (macro, red)" );
     }
@@ -132,8 +132,8 @@ namespace sw
         }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            if ( _arrAiActive[player] == SW_TRUE )
-                _arrAi[player].writeState( outArchive );
+            if ( _arrAIActive[player] == SW_TRUE )
+                _arrAI[player].writeState( outArchive );
         }
         outArchive << _statusTimer;
         outArchive << _huntTimer;
@@ -153,7 +153,7 @@ namespace sw
         }
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            if ( _arrAiActive[player] == SW_TRUE && _arrAi[player].readState( archive ) == false )
+            if ( _arrAIActive[player] == SW_TRUE && _arrAI[player].readState( archive ) == false )
                 return false;
         }
         archive >> _statusTimer;
@@ -249,8 +249,8 @@ namespace sw
         _world.update( deltaTime );
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            if ( _arrAiActive[player] != SW_FALSE )
-                _arrAi[player].update( deltaTime );
+            if ( _arrAIActive[player] != SW_FALSE )
+                _arrAI[player].update( deltaTime );
         }
         // `RTSWorld::drainEvents` 는 뒤에 붙인다(바꿔 넣지 않는다) — 비우지 않으면 지난 알림을 AI 에 다시 넘긴다.
         _listFrameEvent.clear();
@@ -259,8 +259,8 @@ namespace sw
         {
             for ( int32 player = 0; player < kPlayerCount; ++player )
             {
-                if ( _arrAiActive[player] != SW_FALSE )
-                    _arrAi[player].notify( event );
+                if ( _arrAIActive[player] != SW_FALSE )
+                    _arrAI[player].notify( event );
             }
             if ( event._kind == RTSEvent::Kind::PlayerDefeated )
                 SW_LOG_INFO( "[Skirmish] t=%#s player %# lost every building and is defeated", static_cast<int32>( _world.getTime() ), event._player );
@@ -286,7 +286,7 @@ namespace sw
             _huntTimer = 0.0f;
             for ( int32 player = 0; player < kPlayerCount; ++player )
             {
-                if ( _arrAiActive[player] != SW_FALSE )
+                if ( _arrAIActive[player] != SW_FALSE )
                     huntRemaining( player );
             }
         }

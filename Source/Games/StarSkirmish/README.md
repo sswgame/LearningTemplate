@@ -57,7 +57,7 @@ cd build/Ninja-Debug-StarSkirmish/Bin
 |------|------|
 | 카메라, 해, 땅, 끌어 고르기 상자, 디렉터 | 씬 |
 | 절벽 구간과 유닛(건물과 자원 포함) | 프리팹 `prefabs/cliff`, `unit`. 유닛 모델은 종류마다 디렉터가 겁니다 |
-| 규칙과 상태 | 키트의 `RTSWorld`, `RTSAiCommander`, `RTSSelection` 과 이 게임의 규칙 `SkirmishMatch` |
+| 규칙과 상태 | 키트의 `RTSWorld`, `RTSCommanderAI`, `RTSSelection` 과 이 게임의 규칙 `SkirmishMatch` |
 | 고르기, 명령, 생산, 건설, 부대, 속도, 알림, 스폰 | `SkirmishDirectorComponent` |
 | 모습 | 뷰 `SkirmishUnitComponent`(유닛 하나), `SkirmishDragComponent`(끌기 상자) |
 | 카메라 | GameFramework `OrthoCameraRigComponent`. 사람 쪽은 글자 키가 명령이라 WASD 를 끄고, 자동 플레이는 맵 전체가 보이게 물러서며 WASD 를 켭니다 |

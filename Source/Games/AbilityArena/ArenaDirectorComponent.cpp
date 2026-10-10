@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Utility/GameAutoplay.h"
 
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
@@ -115,7 +115,7 @@ namespace sw
                 const ArenaDirectorComponent* pDirector = findProbeDirector( pManager );
                 if ( pDirector == nullptr )
                     return false;
-                outValue = pDirector->isPlayerDrivenByAi() ? 1.0 : 0.0;
+                outValue = pDirector->isPlayerDrivenByAI() ? 1.0 : 0.0;
                 return true;
             }
         };
@@ -143,9 +143,9 @@ namespace sw
         , _gruntPrefab{}
         , _casterPrefab{}
         , _projectilePrefab{}
-        , _gruntAiPrefab{}
-        , _casterAiPrefab{}
-        , _autoBattleAiPrefab{}
+        , _gruntAIPrefab{}
+        , _casterAIPrefab{}
+        , _autoBattleAIPrefab{}
         , _arenaHalfSize{ 14.0f }
         , _waveRadius{ 11.0f }
         , _playerRespawnDelay{ 2.5f }
@@ -247,8 +247,8 @@ namespace sw
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         if ( pPlayerPawn != nullptr )
         {
-            const bool bWantAi = isAutoPlayOn();
-            _bPossessionDirty  = pPlayerPawn->isPossessed() == false || bWantAi != isPlayerDrivenByAi() ? SW_TRUE : SW_FALSE;
+            const bool bWantAI = isAutoPlayOn();
+            _bPossessionDirty  = pPlayerPawn->isPossessed() == false || bWantAI != isPlayerDrivenByAI() ? SW_TRUE : SW_FALSE;
         }
     }
 
@@ -320,7 +320,7 @@ namespace sw
         return pNearest != nullptr && findUnitPosition( pNearest->_object, outPosition );
     }
 
-    bool ArenaDirectorComponent::isPlayerDrivenByAi() const
+    bool ArenaDirectorComponent::isPlayerDrivenByAI() const
     {
         GameObjectManager*   pManager    = getObjectManager();
         const PawnComponent* pPlayerPawn = findPlayerPawn();
@@ -484,17 +484,17 @@ namespace sw
 
     GameObjectHandle ArenaDirectorComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
     {
-        const string&          prefabPath = kind == ArenaUnitKind::Caster ? _casterAiPrefab : _gruntAiPrefab;
-        GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAi" : "ArenaGruntAi" );
-        AiControllerComponent* pAi        = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
-        if ( pAi == nullptr )
+        const string&          prefabPath = kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab;
+        GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAI" : "ArenaGruntAI" );
+        AIControllerComponent* pAI        = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
+        if ( pAI == nullptr )
         {
             SW_LOG_WARNING( "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return GameObjectHandle{};
         }
-        pAi->possess( pawn );
+        pAI->possess( pawn );
         return pObject->getHandle();
     }
 
@@ -507,20 +507,20 @@ namespace sw
         if ( isAutoPlayOn() )
         {
             GameObject*            pObject = manager.resolveGameObject( _autoBattleObject );
-            AiControllerComponent* pAi     = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
-            if ( pAi == nullptr )
+            AIControllerComponent* pAI     = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
+            if ( pAI == nullptr )
             {
-                pObject           = spawnPrefab( manager, _autoBattleAiPrefab, "ArenaAutoBattleAi" );
-                pAi               = pObject != nullptr ? pObject->getComponent<AiControllerComponent>() : nullptr;
+                pObject           = spawnPrefab( manager, _autoBattleAIPrefab, "ArenaAutoBattleAI" );
+                pAI               = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
                 _autoBattleObject = pObject != nullptr ? pObject->getHandle() : GameObjectHandle{};
             }
-            if ( pAi == nullptr )
+            if ( pAI == nullptr )
             {
-                SW_LOG_WARNING( "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAiPrefab.c_str() );
+                SW_LOG_WARNING( "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAIPrefab.c_str() );
                 return;
             }
-            if ( isPlayerDrivenByAi() == false )
-                pAi->possess( *pPawn );
+            if ( isPlayerDrivenByAI() == false )
+                pAI->possess( *pPawn );
             return;
         }
         // 자동 플레이를 끄면 플레이어 0 의 조종자가 되찾는다 — 씬에 없으면 세운다(조종 시스템이 자동 빙의로 세우는 것과 같은 자리).

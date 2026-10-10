@@ -3,7 +3,7 @@
      쌓기(스켈레톤이 조금씩) → 절정(밀려오는 무리) → 쉼(내지 않고 탄을 채운다) → 쌓기. 조우 id 의 뜻은 ShooterDirectorComponent 가 안다:
      swarm · elite = 스켈레톤 count 기를 한꺼번에(체력 × scale, elite 는 전사 프리셋), ammo = 탄 채우기, repair = 체력 회복(scale × 10).
      쉼에 들어서면 탄 · 수리를 하나씩(항목 쿨다운 1 초라 두 번 고르기가 같은 것을 두 번 고르지 않는다). -->
-<AiDirector startPhase="BuildUp">
+<AIDirector startPhase="BuildUp">
   <Intensity max="1" decayPerSecond="0.06" decayDelay="4">
     <Signal id="damageTaken" kind="impulse" scale="0.012" combat="true"/>
     <Signal id="enemyKilled" kind="impulse" scale="0.035" combat="true"/>
@@ -34,4 +34,4 @@
   <Pool id="field" kind="reward" trigger="budget" perMinute="1" maxBudget="2" need="lowAmmo" needScale="2" pacing="BuildUp,Relax">
     <Encounter id="repair" cost="1" scale="2" maxIntensity="0.6"/>
   </Pool>
-</AiDirector>
+</AIDirector>

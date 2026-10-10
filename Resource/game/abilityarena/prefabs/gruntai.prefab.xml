@@ -1,7 +1,7 @@
-<Prefab formatVersion="0" name="ArenaGruntAi">
-	<GameObject _schemaVersion="0" _name="ArenaGruntAi" _bActive="true">
+<Prefab formatVersion="0" name="ArenaGruntAI">
+	<GameObject _schemaVersion="0" _name="ArenaGruntAI" _bActive="true">
 		<_listComponent>
-			<ArenaEnemyAiComponent _componentName="ArenaEnemyAiComponent"
+			<ArenaEnemyAIComponent _componentName="ArenaEnemyAIComponent"
 			                       _bActive="true"
 			                       _possessAtStart="0"
 			                       _turnRate="20"

@@ -1,5 +1,5 @@
 /**
- * @file AiControllerComponent.h
+ * @file AIControllerComponent.h
  * @brief AI 조종자 — 판단(`think`) → 의도. 플레이어와 같은 폰 이동으로 움직입니다.
  */
 #pragma once
@@ -20,20 +20,20 @@ namespace sw
     class NavMeshAgentComponent;
 
     /**
-     * @class AiControllerComponent
+     * @class AIControllerComponent
      * @brief AI 조종자 — 파생이 `think` 에서 목표를 정하면(이동 목적지 · 바라볼 곳 · 누를 버튼) 이 클래스가 의도로 옮깁니다. 행동 트리 · 감독은 `think` 안에서 돈다.
      * @details 언리얼 `AAIController` 의 자리입니다. 움직이는 것은 플레이어와 같은 폰 이동 컴포넌트입니다 — 이 조종자는 이동 축만 냅니다.
      *          폰 오브젝트에 내비 에이전트(`NavMeshAgentComponent`, 방식 `SteerOnly`)가 있으면 경로 · 군중 회피로 정한 속도를 이동 축으로 넣고,
      *          없으면 목적지로 곧장(장애물 무시) 갑니다. 바라보기는 초점이 있으면 그쪽, 없으면 움직이는 쪽으로 `_turnRate` 만큼 조종 요를 돌립니다.
      */
     REFLECT( Category = "Control", DisplayName = "AI Controller", Tooltip = "AI: decides goals in think(); moves through the pawn's own movement like a player" )
-    class SW_GF_API AiControllerComponent : public ControllerComponent
+    class SW_GF_API AIControllerComponent : public ControllerComponent
     {
     public:
         REFLECT_BODY();
 
-        AiControllerComponent();
-        ~AiControllerComponent() override = default;
+        AIControllerComponent();
+        ~AIControllerComponent() override = default;
 
         void produceIntent( const ControlFrameContext& context, const PawnComponent& pawn, ControlIntent& outIntent ) final;
 

@@ -2387,7 +2387,7 @@ namespace sw
 **확인 = 에디터 시나리오.** `curveedit.scenario.xml`: 커브 프로퍼티를 가진 시험 컴포넌트의 미리보기(이름표 `inspector.curve.<프로퍼티>`)를 눌러 편집기를 열고, 빈 곳 오른쪽 클릭으로 키를 하나 더한 뒤
 탐침 `Editor.UndoCount` 가 하나 늘었는지, `EditorKey key="Z" mods="ctrl"` 뒤 키 수 탐침이 원래대로인지 봅니다. 끌기 한 번이 Undo 한 줄인지는 자체 시험 `curve.dragKeyRecordsOneUndo` 가 봅니다.
 
-**남길 교훈.** [백로그](../06_Backlog.md) 1-6 에 남은 일 한 줄: `- **GameCurve(키트 꺾은선)는 FloatCurve 로 옮기지 않았다** — 데이터(<Curve time scale>)를 다시 써야 한다. 쓰는 곳(SpawnTable · AiDirectorProfile)을 고칠 때 같이.`
+**남길 교훈.** [백로그](../06_Backlog.md) 1-6 에 남은 일 한 줄: `- **GameCurve(키트 꺾은선)는 FloatCurve 로 옮기지 않았다** — 데이터(<Curve time scale>)를 다시 써야 한다. 쓰는 곳(SpawnTable · AIDirectorProfile)을 고칠 때 같이.`
 **커밋 메시지:**
 ```
 엔진 · 에디터 - FloatCurve 값 타입(Constant · Linear · Cubic 키)과 커브 편집 위젯

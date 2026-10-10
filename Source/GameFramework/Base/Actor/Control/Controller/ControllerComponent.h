@@ -75,7 +75,7 @@ namespace sw
         float32 getControlPitch() const { return _controlPitch; }
         void    setControlRotation( float32 yaw, float32 pitch );
         /**
-         * @brief 이 조종자가 폰 하나를 위해 세워졌는지입니다(자동 빙의 `PawnAutoPossess::Ai`). 그런 조종자의 오브젝트는 그 폰이 지워질 때 같이 지워집니다 —
+         * @brief 이 조종자가 폰 하나를 위해 세워졌는지입니다(자동 빙의 `PawnAutoPossess::AI`). 그런 조종자의 오브젝트는 그 폰이 지워질 때 같이 지워집니다 —
          *        적이 죽어 걷힐 때마다 조종자 오브젝트가 남지 않게(언리얼 AI 조종자가 폰과 함께 사라지는 것과 같다).
          */
         bool isSpawnedForPawn() const { return _bSpawnedForPawn == SW_TRUE; }

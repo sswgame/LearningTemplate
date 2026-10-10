@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Component/HorseFollowAiController.h"
+#include "GameFramework/Kits/Genre/Rpg/OpenWorldWestern/Component/HorseFollowAIController.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    HorseFollowAiController::HorseFollowAiController()
+    HorseFollowAIController::HorseFollowAIController()
         : _ownerObject{}
         , _followDistance{ 8.0f }
         , _stopDistance{ 3.0f }
@@ -21,7 +21,7 @@ namespace sw
     {
     }
 
-    void HorseFollowAiController::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void HorseFollowAIController::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
         const GameObject*        pHorse     = pawn.getOwner();

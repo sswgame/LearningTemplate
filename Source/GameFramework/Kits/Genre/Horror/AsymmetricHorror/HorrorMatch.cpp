@@ -8,7 +8,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/AIPerception.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/AsymmetricHorrorRules.h"
 #include "GameFramework/Kits/Genre/Horror/AsymmetricHorror/HorrorSnapshot.h"
@@ -747,7 +747,7 @@ namespace sw
         return speed;
     }
 
-    void HorrorMatch::collectKillerStimuli( vector<AiStimulus>& outListStimulusEntry ) const
+    void HorrorMatch::collectKillerStimuli( vector<AIStimulus>& outListStimulusEntry ) const
     {
         outListStimulusEntry.clear();
         for ( int32 index = 0; index < getSurvivorCount(); ++index )
@@ -756,7 +756,7 @@ namespace sw
             const bool            bVisible = survivor.isStanding() && survivor._state != SurvivorState::Carried && survivor._activity != SurvivorActivity::InLocker;
             if ( bVisible == false )
                 continue;
-            AiStimulus stimulus;
+            AIStimulus stimulus;
             stimulus._position    = survivor._position;
             stimulus._id          = static_cast<uint64>( index + 1 );
             stimulus._noiseRadius = survivor._noiseRemaining.isActive() ? survivor._noiseRadius : 0.0f;

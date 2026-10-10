@@ -1,5 +1,5 @@
 /**
- * @file RTSAiCommander.h
+ * @file RTSCommanderAI.h
  * @brief 컴퓨터 상대 — 행동 트리로 일꾼 · 보급 · 생산 건물 · 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
  */
 #pragma once
@@ -16,7 +16,7 @@
 namespace sw
 {
     /** @brief AI 가 쓰는 정의 id 와 목표 수입니다(종족 · 난이도마다 데이터로 바꾼다). */
-    struct RTSAiSettings
+    struct RTSCommanderAISettings
     {
         hashed_string _workerId{};
         hashed_string _depotId{};      ///< 본진(일꾼을 만든다)
@@ -35,7 +35,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class RTSAiCommander
+     * @class RTSCommanderAI
      * @brief 한 플레이어를 맡는 AI 입니다. 트리는 이렇습니다(반응형 셀렉터 — 위가 먼저).
      * @code
      *     Root (reactive)
@@ -50,12 +50,12 @@ namespace sw
      * @endcode
      *          월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 압니다. 월드 · 설정은 AI 보다 오래 살아야 합니다.
      */
-    class SW_GF_API RTSAiCommander
+    class SW_GF_API RTSCommanderAI
     {
     public:
-        RTSAiCommander();
+        RTSCommanderAI();
 
-        void initialize( RTSWorld* pWorld, int32 player, const RTSAiSettings& settings );
+        void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings );
         /** @brief `_thinkInterval` 마다 트리를 한 번 돌립니다. */
         void update( float32 deltaTime );
         /** @brief 월드 알림을 받습니다(공격받음). */
@@ -86,13 +86,13 @@ namespace sw
         RTSUnitId findDepot() const;
         void      collectArmy( vector<RTSUnitId>& outListUnit ) const;
 
-        BehaviorTree       _tree;
-        BehaviorTreeRunner _runner;
-        Blackboard         _blackboard;
-        RTSAiSettings      _settings;
-        RTSWorld*          _pWorld;
-        Countdown          _thinkTimer;
-        int32              _player;
-        int32              _attackWaveCount;
+        BehaviorTree           _tree;
+        BehaviorTreeRunner     _runner;
+        Blackboard             _blackboard;
+        RTSCommanderAISettings _settings;
+        RTSWorld*              _pWorld;
+        Countdown              _thinkTimer;
+        int32                  _player;
+        int32                  _attackWaveCount;
     };
 } // namespace sw

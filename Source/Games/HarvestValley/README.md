@@ -54,7 +54,7 @@ cd build/Ninja-Debug-HarvestValley/Bin
 |------|------|
 | 땅, 해, 카메라, 집, 출하함, 가게, 울타리와 나무 같은 장식, 농부, 바라보는 타일 표시, 디렉터 | 씬 |
 | 농부 폰 | 씬의 농부 오브젝트의 `PawnComponent`(이동 `Farm.Move`, 버튼 `Farm.Use` 등, 자동 빙의 `Player0`) |
-| 농부를 잡는 조종자 | 플레이어는 GameFramework `PlayerControllerComponent`, 자동 플레이는 `FarmAutoFarmerAiComponent`(`prefabs/autofarmer.prefab.xml`) |
+| 농부를 잡는 조종자 | 플레이어는 GameFramework `PlayerControllerComponent`, 자동 플레이는 `FarmAutoFarmerAIComponent`(`prefabs/autofarmer.prefab.xml`) |
 | 밭의 흙과 작물(12 × 8) | 프리팹 `farmsoil.prefab.xml`, `farmcrop.prefab.xml`. 디렉터가 플레이 시작에 만듭니다 |
 | 규칙과 상태 | 키트의 `FarmField`, `FarmShippingBin`, `CropCatalog` |
 | 달력, 돈, 가방 | 공유 상태 `GameStateComponent`. 디렉터 오브젝트의 맨 앞 컴포넌트이고, 하루 144초, 계절 네 개, 가방 24슬롯입니다 |

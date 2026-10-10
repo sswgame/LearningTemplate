@@ -5,9 +5,9 @@
 #include "GameFramework/Base/Actor/Navigation/GridReachability.h"
 #include "GameFramework/Base/World/Land/LandRegistry.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Catalog/SRPGCatalog.h"
-#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGAiCommander.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGBattlefield.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCombat.h"
+#include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGCommanderAI.h"
 #include "GameFramework/Kits/Genre/Strategy/TacticsSRPG/Rule/SRPGProgress.h"
 
 #include "TestFramework/TestFramework.h"
@@ -478,7 +478,7 @@ SW_TEST_CASE( TacticsSRPGTest, PhasesTurnOrderAndMissionOutcomes )
     SW_EXPECT_EQUAL( fast, order._field.getActiveUnit() );
 }
 
-SW_TEST_CASE( TacticsSRPGTest, AiPicksBestScoredTargetDeterministically )
+SW_TEST_CASE( TacticsSRPGTest, AIPicksBestScoredTargetDeterministically )
 {
     for ( int32 pass = 0; pass < 2; ++pass )
     {
@@ -494,12 +494,12 @@ SW_TEST_CASE( TacticsSRPGTest, AiPicksBestScoredTargetDeterministically )
         scene._field.endPhase();
         SW_ASSERT_TRUE( scene._field.getPhaseTeam() == SRPGTeam::Enemy );
 
-        SRPGAiCommander controller;
-        SRPGAiSettings  aiSettings;
+        SRPGCommanderAI         controller;
+        SRPGCommanderAISettings aiSettings;
         if ( pass == 1 )
             aiSettings._killBonus = 3000; // 격파를 무겁게 보면 표적이 바뀐다
         controller.setSettings( aiSettings );
-        SRPGAiPlan plan;
+        SRPGCommanderAIPlan plan;
         SW_ASSERT_TRUE( controller.makePlan( scene._field, zaku, plan ) );
         SW_ASSERT_TRUE( plan._bAttack == SW_TRUE );
         const int2 target = scene._field.findUnit( plan._target )->_cell;
@@ -520,7 +520,7 @@ SW_TEST_CASE( TacticsSRPGTest, AiPicksBestScoredTargetDeterministically )
             SW_EXPECT_EQUAL( 1650, plan._score );
             SW_EXPECT_EQUAL( 2, SRPGBattlefield::computeDistance( plan._moveCell, target ) );
         }
-        SRPGAiPlan again;
+        SRPGCommanderAIPlan again;
         SW_ASSERT_TRUE( controller.makePlan( scene._field, zaku, again ) );
         SW_EXPECT_TRUE( again._moveCell == plan._moveCell && again._target == plan._target && again._weapon == plan._weapon );
 
@@ -538,8 +538,8 @@ SW_TEST_CASE( TacticsSRPGTest, AiPicksBestScoredTargetDeterministically )
     (void)farScene.add( "gm", "grunt", SRPGTeam::Player, 0, 0 );
     farScene._field.beginBattle();
     farScene._field.endPhase();
-    SRPGAiCommander controller;
-    SRPGAiPlan      plan;
+    SRPGCommanderAI     controller;
+    SRPGCommanderAIPlan plan;
     SW_ASSERT_TRUE( controller.makePlan( farScene._field, hunter, plan ) );
     SW_EXPECT_TRUE( plan._bAttack == SW_FALSE );
     SW_EXPECT_TRUE( plan._moveCell == ( int2{ 15, 0 } ) );

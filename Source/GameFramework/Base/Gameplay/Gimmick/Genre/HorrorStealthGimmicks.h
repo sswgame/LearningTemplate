@@ -120,7 +120,7 @@ namespace sw
     /**
      * @class NoiseEmitterComponent
      * @brief 소리를 냅니다 — `emit` 로 직접, `_interval` 마다(기계), 같은 오브젝트의 센서에 새로 올라선 것이 있을 때(삐걱이는 마루). `GimmickNoiseEvent` 와
-     *        마지막 반경(`getNoiseRadius` — `AiStimulus::_noiseRadius` 로 넘긴다)을 남깁니다.
+     *        마지막 반경(`getNoiseRadius` — `AIStimulus::_noiseRadius` 로 넘긴다)을 남깁니다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Noise Emitter", Tooltip = "Emits noise events AI hearing can use (periodic, on step, or scripted)" )
     class SW_GF_API NoiseEmitterComponent : public Component

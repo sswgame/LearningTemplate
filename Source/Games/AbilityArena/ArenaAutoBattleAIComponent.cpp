@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/AbilityArena/ArenaAutoBattleAiComponent.h"
+#include "Games/AbilityArena/ArenaAutoBattleAIComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    ArenaAutoBattleAiComponent::ArenaAutoBattleAiComponent()
+    ArenaAutoBattleAIComponent::ArenaAutoBattleAIComponent()
         : _crowdRadius{ 2.5f }
         , _crowdCount{ 3 }
         , _meleeRange{ 2.0f }
@@ -23,7 +23,7 @@ namespace sw
     {
     }
 
-    void ArenaAutoBattleAiComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
+    void ArenaAutoBattleAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
         const GameObject*             pOwner         = pawn.getOwner();

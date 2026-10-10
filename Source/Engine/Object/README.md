@@ -22,7 +22,7 @@ flowchart TD
   Player --> P1["MeshComponent<br/>위치 + 모양"]
   Player --> P2["PlayerInputComponent<br/>게임이 만든 로직"]
   Enemy --> E1["MeshComponent"]
-  Enemy --> E2["SlimeAiComponent"]
+  Enemy --> E2["SlimeAIComponent"]
 ```
 
 이 그림에서 기억할 개념은 네 가지입니다.

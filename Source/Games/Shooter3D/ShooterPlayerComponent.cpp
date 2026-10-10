@@ -16,7 +16,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Base/Actor/Camera/CameraDirectorComponent.h"
-#include "GameFramework/Base/Actor/Control/Controller/AiControllerComponent.h"
+#include "GameFramework/Base/Actor/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Base/Actor/Control/FirstPersonCameraComponent.h"
 #include "GameFramework/Base/Actor/Control/Pawn/PawnComponent.h"
@@ -157,7 +157,7 @@ namespace sw
                         continue;
                     if ( castTo<PlayerControllerComponent>( pController ) != nullptr )
                         outValue = 0.0;
-                    else if ( castTo<AiControllerComponent>( pController ) != nullptr )
+                    else if ( castTo<AIControllerComponent>( pController ) != nullptr )
                         outValue = 1.0;
                 }
                 return true;

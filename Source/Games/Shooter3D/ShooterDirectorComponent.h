@@ -20,8 +20,8 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirector.h"
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirector.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Foundation/Framework/GameDirectorComponent.h"
 #include "GameFramework/Base/Foundation/Framework/Presentation/MaterialTintCache.h"
@@ -63,7 +63,7 @@ namespace sw
 {
     /**
      * @class ShooterDirectorComponent
-     * @brief 아레나 한 판입니다. 플레이가 시작되면 막는 상자를 모으고 페이싱 감독(`AiDirector`, 데이터 `_pacingProfile` · `_spawnTable`)을 시작합니다.
+     * @brief 아레나 한 판입니다. 플레이가 시작되면 막는 상자를 모으고 페이싱 감독(`AIDirector`, 데이터 `_pacingProfile` · `_spawnTable`)을 시작합니다.
      * @details 감독이 쌓기 → 절정 → 쉼을 돌며 적 스폰(예산) · 무리(절정 진입) · 탄 채우기(쉼 진입) · 수리(예산)를 정하고, 여기는 그 사건을 스켈레톤 ·
      *          탄 · 체력으로 바꿉니다. 스켈레톤은 프리팹 `_enemyPrefab` 이고 모습은 외형 프리셋(`_listEnemyPreset` 을 차례로, 정예는 `_eliteEnemyPreset`)
      *          + 스폰 순번 씨앗입니다. 긴장도 신호는 맞은 피해(`reportPlayerDamage`) · 쓰러뜨린 적 · 가까운 적 수 · 탄 부족입니다. 웨이브 번호는
@@ -109,7 +109,7 @@ namespace sw
         float32          getArenaHalfSize() const { return _arenaHalfSize; }
         /** @brief 지금 웨이브 — 감독이 쌓기 단계로 돌아온 수 + 1 입니다. */
         uint32            getWave() const { return static_cast<uint32>( _director.getCycle() + 1 ); }
-        const AiDirector& getPacingDirector() const { return _director; }
+        const AIDirector& getPacingDirector() const { return _director; }
         uint32            getKillCount() const { return _killCount; }
 
     protected:
@@ -215,10 +215,10 @@ namespace sw
 
         vector<ShooterArenaBox>  _listBox;
         vector<ShooterEnemyView> _listEnemyView;
-        AiDirectorProfile        _profile;
+        AIDirectorProfile        _profile;
         SpawnTable               _table;
-        AiDirector               _director;
-        vector<AiDirectorEvent>  _listDirectorEvent;
+        AIDirector               _director;
+        vector<AIDirectorEvent>  _listDirectorEvent;
         vector<EnemyRecord>      _listEnemy;
         EffectPool               _effectPool;
         EffectPool               _tracerPool;

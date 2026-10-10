@@ -296,20 +296,20 @@ SW_TEST_CASE( InteractionTest, SmartObjectSlotClaimAndRelease )
     SmartObjectComponent* pSmart = pBench->addComponent<SmartObjectComponent>();
     pSmart->setDefinition( bench );
     GameObject* pPlayer = manager.createGameObject( hashed_string( "Player" ) );
-    GameObject* pAiA    = manager.createGameObject( hashed_string( "VillagerA" ) );
-    GameObject* pAiB    = manager.createGameObject( hashed_string( "VillagerB" ) );
+    GameObject* pAIA    = manager.createGameObject( hashed_string( "VillagerA" ) );
+    GameObject* pAIB    = manager.createGameObject( hashed_string( "VillagerB" ) );
 
     TagContainer sit;
     sit.addTag( TagID::request( "Activity.Sit" ) );
     SW_EXPECT_TRUE( pSmart->claimSlot( *pPlayer, 1 ) );
-    SW_EXPECT_FALSE( pSmart->claimSlot( *pAiA, 1 ) ); // 남의 자리
-    SW_EXPECT_EQUAL( 0, pSmart->claimFreeSlot( *pAiA, sit ) );
-    SW_EXPECT_EQUAL( -1, pSmart->claimFreeSlot( *pAiB, sit ) ); // 꽉 찼다
+    SW_EXPECT_FALSE( pSmart->claimSlot( *pAIA, 1 ) ); // 남의 자리
+    SW_EXPECT_EQUAL( 0, pSmart->claimFreeSlot( *pAIA, sit ) );
+    SW_EXPECT_EQUAL( -1, pSmart->claimFreeSlot( *pAIB, sit ) ); // 꽉 찼다
     SW_EXPECT_FALSE( pSmart->claimSlot( *pPlayer, 0 ) );        // 한 이는 한 자리
     SW_EXPECT_EQUAL( 0, pSmart->countFreeSlots() );
     SW_EXPECT_TRUE( pSmart->releaseSlot( *pPlayer ) );
     SW_EXPECT_FALSE( pSmart->releaseSlot( *pPlayer ) );
-    SW_EXPECT_EQUAL( 1, pSmart->claimFreeSlot( *pAiB, sit ) );
+    SW_EXPECT_EQUAL( 1, pSmart->claimFreeSlot( *pAIB, sit ) );
     TagContainer cover;
     cover.addTag( TagID::request( "Cover.Low" ) );
     SW_EXPECT_EQUAL( -1, pSmart->claimFreeSlot( *pPlayer, cover ) ); // 태그가 맞는 자리가 없다
@@ -321,7 +321,7 @@ SW_TEST_CASE( InteractionTest, SmartObjectSlotClaimAndRelease )
     SW_EXPECT_NEAR_EQUAL( 10.5f, position._x, 1.0e-4f );
 
     // 차지한 이가 사라지면 자리가 빈다.
-    manager.destroyObject( pAiA );
+    manager.destroyObject( pAIA );
     manager.tick( 1.0f / 60.0f );
     SW_EXPECT_EQUAL( 0, pSmart->claimFreeSlot( *pPlayer, sit ) );
 }

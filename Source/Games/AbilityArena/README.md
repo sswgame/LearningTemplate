@@ -58,7 +58,7 @@ HP 바는 어빌리티 시스템의 체력 알림을 받는 `HealthBarComponent`
 | 어빌리티, 이펙트, 어트리뷰트, 태그 | `AbilitySystemComponent` 와 데이터 `data/abilities.xml` |
 | 웨이브, 쓰러뜨린 수, 플레이어 다시 세우기, 투사체 스폰, 로그 | `ArenaDirectorComponent` |
 | 유닛 하나의 몸(폰) | `PawnComponent`(버튼 `Arena.Melee`, `Arena.Fireball`, `Arena.Heal`, `Arena.Dash`, 이동 `Arena.Move`)과 `ArenaUnitComponent` |
-| 유닛을 잡는 조종자 | 플레이어는 `PlayerControllerComponent`(자동 빙의 `Player0`), 적은 `ArenaEnemyAiComponent`, 자동 전투는 `ArenaAutoBattleAiComponent` |
+| 유닛을 잡는 조종자 | 플레이어는 `PlayerControllerComponent`(자동 빙의 `Player0`), 적은 `ArenaEnemyAIComponent`, 자동 전투는 `ArenaAutoBattleAIComponent` |
 | 투사체 하나 | `ArenaProjectileComponent`. 자기를 옮기고 처음 닿은 적대 유닛에 이펙트를 겁니다 |
 | 카메라 | `ArenaCameraComponent`. 플레이어 메시의 이번 프레임 위치를 위에서 봅니다 |
 | 머티리얼 | 팔레트 `materials/palette.material`. 편 색과 투사체 색은 디렉터의 PROPERTY 이고, 디렉터가 머티리얼 인스턴스를 만들어 나눠 씁니다 |

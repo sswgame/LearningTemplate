@@ -3,7 +3,7 @@
 ## 이것은 무엇이고 왜 있나
 
 적을 일정한 간격으로만 내면 게임이 단조롭습니다. 플레이어가 힘들어하면 쉬게 하고, 여유가 생기면 다시 몰아붙여야 긴장과 이완의 리듬이 생깁니다.
-페이싱 감독(`AiDirector`)은 플레이어의 긴장도를 읽어 **언제, 얼마나, 무엇을** 낼지 정합니다. 장르를 가리지 않으므로 기반에 있습니다.
+페이싱 감독(`AIDirector`)은 플레이어의 긴장도를 읽어 **언제, 얼마나, 무엇을** 낼지 정합니다. 장르를 가리지 않으므로 기반에 있습니다.
 
 레프트 4 데드의 AI 디렉터는 긴장도가 오르면 절정을 유지하다 쉼으로 넘어갑니다. RDR2 의 무작위 조우는 가중 풀과 쿨다운과 조건으로 고릅니다.
 로그라이크의 방 감독은 보상 밀도를 예산으로 맞춥니다. 이 감독은 셋이 공통으로 가진 부분을 데이터로 적습니다.
@@ -37,7 +37,7 @@ stateDiagram-v2
 
 <!-- snippet: 감독 호출 순서 — 5b U7 에서 ShooterDirectorComponent 구간이나 문서 예시 테스트로 대조 -->
 ```cpp
-AiDirector director;
+AIDirector director;
 director.initialize( &profile, &spawnTable, seed );                // 테이블은 없어도 된다(조우만 고르는 감독)
 director.getBuiltinIntensityModel().addSignal( "damageTaken", 12 ); // 또는 setIntensityModel 로 게임의 모델
 director.setContext( context );                                     // 지역 태그, 시계(fillFromClock), 플래그, 플레이어 태그, 날씨
@@ -54,7 +54,7 @@ director.notifyDespawned( spawnId );
 ### 프로필 데이터
 
 ```xml
-<AiDirector startPhase="BuildUp">
+<AIDirector startPhase="BuildUp">
   <Calendar weathers="sunny,rain"/>                                    <!-- 조건 이름 검사(선택, 일정과 같은 원소) -->
   <Intensity max="1" decayPerSecond="0.06" decayDelay="4">
     <Signal id="damageTaken" kind="impulse" scale="0.012" combat="true"/>   <!-- addSignal(양) 한 번에 양 × scale -->
@@ -80,7 +80,7 @@ director.notifyDespawned( spawnId );
   <Pool id="field" kind="reward" trigger="budget" perMinute="1" maxBudget="2" need="lowAmmo" needScale="2">
     <Encounter id="repair" cost="1" maxIntensity="0.6"/>
   </Pool>
-</AiDirector>
+</AIDirector>
 ```
 
 **신호의 종류**는 셋입니다. `impulse` 는 한 번 더하는 값이고 `max` 로 상한을 둡니다. `rate` 는 값이 있는 동안 초마다 더하고, `level` 은 긴장도의 바닥입니다.
@@ -121,7 +121,7 @@ director.notifyDespawned( spawnId );
 
 ## 확장하는 법
 
-- **긴장도 계산을 바꾸려면** `IAiDirectorIntensityModel` 을 구현해 `setIntensityModel` 로 끼웁니다. 게임 모델의 상태는 게임이 저장합니다.
+- **긴장도 계산을 바꾸려면** `IAIDirectorIntensityModel` 을 구현해 `setIntensityModel` 로 끼웁니다. 게임 모델의 상태는 게임이 저장합니다.
 - **새 단계나 풀**은 데이터에 더합니다. 코드를 고치지 않습니다.
 
 ## 함정과 주의
@@ -140,6 +140,6 @@ director.notifyDespawned( spawnId );
 
 | 파일 | 내용 |
 |------|------|
-| `AiDirectorProfile.h` | `*.director.xml` 읽기 |
-| `AiDirectorIntensity.h` | 긴장도 모델 인터페이스와 기본 모델 |
-| `AiDirector.h` | 런타임, 추적, 상태 저장 |
+| `AIDirectorProfile.h` | `*.director.xml` 읽기 |
+| `AIDirectorIntensity.h` | 긴장도 모델 인터페이스와 기본 모델 |
+| `AIDirector.h` | 런타임, 추적, 상태 저장 |

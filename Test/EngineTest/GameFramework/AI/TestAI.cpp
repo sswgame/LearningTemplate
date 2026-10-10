@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Base/Actor/AI/AiPerception.h"
+#include "GameFramework/Base/Actor/AI/AIPerception.h"
 #include "GameFramework/Base/Actor/AI/BehaviorTree.h"
 #include "GameFramework/Base/Actor/AI/Blackboard.h"
 #include "GameFramework/Base/Actor/Navigation/NavGrid.h"
@@ -17,7 +17,7 @@ using namespace sw;
 namespace
 {
     /** @brief 작업이 몇 번 불리고 몇 번 중단됐는지 셉니다(행위자 자리에 넘긴다). */
-    struct AiTestAgent
+    struct AITestAgent
     {
         int32 _patrolTicks{ 0 };
         int32 _patrolStarts{ 0 };
@@ -29,15 +29,15 @@ namespace
         int32 _attackDuration{ 3 }; ///< 틱
     };
 
-    AiTestAgent& getAiTestAgent( BehaviorContext& context )
+    AITestAgent& getAITestAgent( BehaviorContext& context )
     {
-        return *static_cast<AiTestAgent*>( context._pOwner );
+        return *static_cast<AITestAgent*>( context._pOwner );
     }
 
     /** @brief 끝나지 않는 순찰 — 중단될 때까지 Running. */
     BehaviorStatus patrolTask( BehaviorContext& context )
     {
-        AiTestAgent& agent = getAiTestAgent( context );
+        AITestAgent& agent = getAITestAgent( context );
         if ( context._bAborted != SW_FALSE )
         {
             ++agent._patrolAborts;
@@ -51,7 +51,7 @@ namespace
     /** @brief `_attackDuration` 틱 걸려 끝나는 공격. */
     BehaviorStatus attackTask( BehaviorContext& context )
     {
-        AiTestAgent& agent = getAiTestAgent( context );
+        AITestAgent& agent = getAITestAgent( context );
         if ( context._bAborted != SW_FALSE )
         {
             ++agent._attackAborts;
@@ -69,7 +69,7 @@ namespace
 
     BehaviorStatus succeedTask( BehaviorContext& context )
     {
-        ++getAiTestAgent( context )._counter;
+        ++getAITestAgent( context )._counter;
         return BehaviorStatus::Success;
     }
 
@@ -90,9 +90,9 @@ namespace
 } // namespace
 
 /**
- * @brief [AiTest] 블랙보드는 종류별로 읽고 쓰며 없는 이름은 기본값 · 오브젝트 0 과 거짓은 "없음" · 바꿀 때마다 리비전이 오른다
+ * @brief [AITest] 블랙보드는 종류별로 읽고 쓰며 없는 이름은 기본값 · 오브젝트 0 과 거짓은 "없음" · 바꿀 때마다 리비전이 오른다
  */
-SW_TEST_CASE( AiTest, BlackboardStoresTypedValues )
+SW_TEST_CASE( AITest, BlackboardStoresTypedValues )
 {
     Blackboard blackboard;
     SW_EXPECT_FALSE( blackboard.isSet( "Target" ) );
@@ -117,9 +117,9 @@ SW_TEST_CASE( AiTest, BlackboardStoresTypedValues )
 }
 
 /**
- * @brief [AiTest] 시퀀스는 도는 자식에서 이어가고 실패하면 멈춘다 · 셀렉터는 첫 성공에서 멈춘다 · 반전 · 성공 강제 · 반복 · 쿨다운 · 시간 제한 · 대기
+ * @brief [AITest] 시퀀스는 도는 자식에서 이어가고 실패하면 멈춘다 · 셀렉터는 첫 성공에서 멈춘다 · 반전 · 성공 강제 · 반복 · 쿨다운 · 시간 제한 · 대기
  */
-SW_TEST_CASE( AiTest, BehaviorTreeCompositesAndDecorators )
+SW_TEST_CASE( AITest, BehaviorTreeCompositesAndDecorators )
 {
     // 뿌리 시퀀스: [조건 Healthy] → [공격(3 틱)] → [성공]
     BehaviorTree tree;
@@ -131,7 +131,7 @@ SW_TEST_CASE( AiTest, BehaviorTreeCompositesAndDecorators )
     SW_EXPECT_EQUAL( -1, tree.addSequence( -1, "SecondRoot" ) ); // 뿌리는 하나
 
     Blackboard         blackboard;
-    AiTestAgent        agent;
+    AITestAgent        agent;
     BehaviorTreeRunner runner;
     runner.initialize( &tree );
     SW_EXPECT_TRUE( runner.tick( blackboard, &agent, 0.1f ) == BehaviorStatus::Running );
@@ -178,7 +178,7 @@ SW_TEST_CASE( AiTest, BehaviorTreeCompositesAndDecorators )
 
     BehaviorTree limitTree;
     limitTree.addAction( limitTree.addTimeLimit( -1, 0.25f ), "Patrol", &patrolTask );
-    agent = AiTestAgent{};
+    agent = AITestAgent{};
     runner.initialize( &limitTree );
     SW_EXPECT_TRUE( runner.tick( blackboard, &agent, 0.1f ) == BehaviorStatus::Running );
     SW_EXPECT_TRUE( runner.tick( blackboard, &agent, 0.1f ) == BehaviorStatus::Running );
@@ -198,9 +198,9 @@ SW_TEST_CASE( AiTest, BehaviorTreeCompositesAndDecorators )
 }
 
 /**
- * @brief [AiTest] 관찰 중단 — 적이 생기면(LowerPriority) 순찰을 멈추고 공격으로, 적이 사라지면(Self) 공격을 멈추고 순찰로 · 중단된 작업은 뒷정리를 한 번 받는다
+ * @brief [AITest] 관찰 중단 — 적이 생기면(LowerPriority) 순찰을 멈추고 공격으로, 적이 사라지면(Self) 공격을 멈추고 순찰로 · 중단된 작업은 뒷정리를 한 번 받는다
  */
-SW_TEST_CASE( AiTest, BlackboardObserverAbortsSwitchBranches )
+SW_TEST_CASE( AITest, BlackboardObserverAbortsSwitchBranches )
 {
     BehaviorTree tree;
     const int32  root   = tree.addSelector( -1, "Root" );
@@ -210,7 +210,7 @@ SW_TEST_CASE( AiTest, BlackboardObserverAbortsSwitchBranches )
     SW_ASSERT_TRUE( tree.isValid() );
 
     Blackboard  blackboard;
-    AiTestAgent agent;
+    AITestAgent agent;
     agent._attackDuration = 1000; // 끝나지 않는 공격
     BehaviorTreeRunner runner;
     runner.initialize( &tree );
@@ -242,7 +242,7 @@ SW_TEST_CASE( AiTest, BlackboardObserverAbortsSwitchBranches )
     reactive.addCondition( healthy, "Healthy", &isHealthyCondition );
     reactive.addAction( healthy, "Attack", &attackTask );
     reactive.addAction( reactiveRoot, "Patrol", &patrolTask );
-    agent                 = AiTestAgent{};
+    agent                 = AITestAgent{};
     agent._attackDuration = 1000;
     blackboard.setFloat( "Health", 0.1f );
     runner.initialize( &reactive );
@@ -259,18 +259,18 @@ SW_TEST_CASE( AiTest, BlackboardObserverAbortsSwitchBranches )
 }
 
 /**
- * @brief [AiTest] 감각 — 시야각 밖 · 벽 뒤는 안 보이고 가까우면 등 뒤도 느낀다 · 소리는 벽을 넘는다 · 놓친 대상은 기억하다 잊는다 · 보던 대상은 조금 더 멀리까지 본다
+ * @brief [AITest] 감각 — 시야각 밖 · 벽 뒤는 안 보이고 가까우면 등 뒤도 느낀다 · 소리는 벽을 넘는다 · 놓친 대상은 기억하다 잊는다 · 보던 대상은 조금 더 멀리까지 본다
  */
-SW_TEST_CASE( AiTest, PerceptionSeesHearsAndForgets )
+SW_TEST_CASE( AITest, PerceptionSeesHearsAndForgets )
 {
     NavGrid grid;
     grid.initialize( 30, 30, 1.0f, float3{} );
     grid.setAreaCost( 15, 0, 15, 20, kNavBlockedCost );
-    AiPerceptionSettings settings;
+    AIPerceptionSettings settings;
     settings._sightRange     = 7.0f;
     settings._loseSightRange = 9.0f;
     settings._memoryDuration = 2.0f;
-    AiPerception perception;
+    AIPerception perception;
     perception.setSettings( settings );
     const float3 eye{ 5.5f, 0.0f, 5.5f };
     const float3 forward{ 1.0f, 0.0f, 0.0f };
@@ -283,17 +283,17 @@ SW_TEST_CASE( AiTest, PerceptionSeesHearsAndForgets )
     const float3 eyeNearWall{ 13.5f, 0.0f, 5.5f };
     SW_EXPECT_FALSE( perception.canSee( eyeNearWall, forward, float3{ 18.5f, 0.0f, 5.5f }, &grid, false ) ); // 벽 뒤
 
-    vector<AiStimulus> listCandidate;
-    listCandidate.push_back( AiStimulus{
+    vector<AIStimulus> listCandidate;
+    listCandidate.push_back( AIStimulus{
         float3{ 18.5f, 0.0f, 5.5f },
         1u, 6.0f
     } ); // 벽 뒤에서 큰 소리
-    listCandidate.push_back( AiStimulus{
+    listCandidate.push_back( AIStimulus{
         float3{ 10.5f, 0.0f, 6.5f },
         2u, 0.0f
     } ); // 조용히 — 벽 옆의 눈에는 등 뒤 3 m, 처음 눈에는 앞 5 m
     perception.sense( eyeNearWall, forward, listCandidate, &grid, 0.1f );
-    const AiPerceivedTarget* pHeard = perception.findTarget( 1u );
+    const AIPerceivedTarget* pHeard = perception.findTarget( 1u );
     SW_ASSERT_NOT_NULL( pHeard );
     SW_EXPECT_TRUE( pHeard->_bHeard == SW_TRUE && pHeard->_bSeen == SW_FALSE );
     SW_EXPECT_TRUE( perception.findTarget( 2u ) == nullptr ); // 등 뒤 3 m(주변 감지 2 m 밖) — 안 보인다
@@ -303,7 +303,7 @@ SW_TEST_CASE( AiTest, PerceptionSeesHearsAndForgets )
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( perception.findNearestSeen( eye )->_id ) );
 
     // 아무것도 감지되지 않으면 마지막 자리를 기억하다 2 초 뒤 잊는다.
-    const vector<AiStimulus> listNothing;
+    const vector<AIStimulus> listNothing;
     perception.sense( eye, forward, listNothing, &grid, 1.0f );
     SW_ASSERT_NOT_NULL( perception.findTarget( 2u ) );
     SW_EXPECT_TRUE( perception.findTarget( 2u )->_bSeen == SW_FALSE );
@@ -313,9 +313,9 @@ SW_TEST_CASE( AiTest, PerceptionSeesHearsAndForgets )
 }
 
 /**
- * @brief [AiTest] 타이머 — 한 번 · 반복(긴 프레임은 따라잡는다) · 멈춤 · 지우기 · 콜백 안에서 지우기
+ * @brief [AITest] 타이머 — 한 번 · 반복(긴 프레임은 따라잡는다) · 멈춤 · 지우기 · 콜백 안에서 지우기
  */
-SW_TEST_CASE( AiTest, TimerQueueFiresOnceRepeatsAndPauses )
+SW_TEST_CASE( AITest, TimerQueueFiresOnceRepeatsAndPauses )
 {
     TimerQueue        queue;
     int32             onceCount   = 0;

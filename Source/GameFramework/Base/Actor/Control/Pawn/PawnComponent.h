@@ -25,7 +25,7 @@ namespace sw
     {
         None = 0, ///< 아무도 — 의도 0(멈춤 · 대기). 탑승자가 내린 탈것 · 관전 대상
         Player0,  ///< 로컬 플레이어 0 의 조종자(없으면 조종 시스템이 하나 세운다)
-        Ai,       ///< `_aiControllerPrefab` 을 세워 빙의시킨다(비었으면 기본 AI 조종자 — 서 있다)
+        AI,       ///< `_aiControllerPrefab` 을 세워 빙의시킨다(비었으면 기본 AI 조종자 — 서 있다)
     };
 } // namespace sw
 
@@ -88,7 +88,7 @@ namespace sw
         /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지입니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
         bool          wantsMouseLock() const { return _bLockMouse; }
         void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
-        const string& getAiControllerPrefab() const { return _aiControllerPrefab; }
+        const string& getAIControllerPrefab() const { return _aiControllerPrefab; }
         /** @brief 이 폰의 의도를 내는 네트워크 연결입니다(0 = 로컬). 빙의를 따라갑니다 — 탈것은 운전석 조종자의 연결입니다. */
         uint32 getInputPeer() const { return _inputPeer; }
 
@@ -119,7 +119,7 @@ namespace sw
         hashed_string _upAction;
         PROPERTY( Category = "Control", DisplayName = "Input Layer", Tooltip = "InputMap layer pushed while a player possesses this pawn (OnFoot, Horse, Car); empty = none" )
         hashed_string _inputLayer;
-        PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", AssetPath, AssetType = "Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is Ai (empty: a plain AI controller)" )
+        PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", AssetPath, AssetType = "Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )
         string _aiControllerPrefab;
         PROPERTY( Category = "Control", DisplayName = "Max Pitch", Min = 0.0, Max = 1.5707963, Tooltip = "Largest look up or down angle of the control rotation", Units = rad )
         float32 _maxPitch;

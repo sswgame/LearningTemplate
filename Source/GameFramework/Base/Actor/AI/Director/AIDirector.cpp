@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirector.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirector.h"
 
 #include "Core/Common/FourCcUtil.h"
 #include "Core/Common/HashUtil.h"
@@ -11,17 +11,17 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "AiDirector" );
+    SW_LOG_CALLER( "AIDirector" );
 
     namespace
     {
-        struct AiDirectorInternal
+        struct AIDirectorInternal
         {
             static constexpr const utf8* kArrEventKindName[] = { "PhaseChanged", "Spawned", "Despawned", "Encounter", "Reward" };
             static constexpr const utf8* kArrBlockName[]     = { "weight", "pacing", "cooldown", "maxCount", "cycle", "minTime", "intensity", "area", "condition", "cost" };
@@ -68,12 +68,12 @@ namespace sw
     } // namespace
 
     /** @brief `-gv_aiDirectorTrace=1` — 감독이 낸 일(단계 · 스폰 · 조우 · 보상)을 낼 때마다 로그에 한 줄씩 남깁니다(시험용 — 배포본에는 없다). */
-    SW_TEST_GLOBAL_VARIABLE( int32, gv_aiDirectorTrace, 0, "AiDirector: log every phase change, spawn, encounter and reward (1=on)" );
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_aiDirectorTrace, 0, "AIDirector: log every phase change, spawn, encounter and reward (1=on)" );
 } // namespace sw
 
 namespace sw
 {
-    void AiDirectorContext::fillFromClock( const WorldClock& clock )
+    void AIDirectorContext::fillFromClock( const WorldClock& clock )
     {
         _condition._day         = clock.getDay();
         _condition._dayOfSeason = clock.getDayOfSeason();
@@ -81,17 +81,17 @@ namespace sw
         _condition._phase       = clock.getDayPhase();
     }
 
-    const utf8* toString( AiDirectorEventKind kind )
+    const utf8* toString( AIDirectorEventKind kind )
     {
-        return AiDirectorInternal::kArrEventKindName[static_cast<uint32>( kind )];
+        return AIDirectorInternal::kArrEventKindName[static_cast<uint32>( kind )];
     }
 
-    const utf8* AiDirectorBlock::getName( uint32 bitIndex )
+    const utf8* AIDirectorBlock::getName( uint32 bitIndex )
     {
-        return bitIndex < kCount ? AiDirectorInternal::kArrBlockName[bitIndex] : "?";
+        return bitIndex < kCount ? AIDirectorInternal::kArrBlockName[bitIndex] : "?";
     }
 
-    AiDirector::AiDirector()
+    AIDirector::AIDirector()
         : _context{}
         , _builtinModel{}
         , _spawnDirector{}
@@ -115,7 +115,7 @@ namespace sw
     {
     }
 
-    void AiDirector::initialize( const AiDirectorProfile* pProfile, const SpawnTable* pSpawnTable, uint32 seed )
+    void AIDirector::initialize( const AIDirectorProfile* pProfile, const SpawnTable* pSpawnTable, uint32 seed )
     {
         _pProfile    = pProfile;
         _pSpawnTable = pSpawnTable;
@@ -124,11 +124,11 @@ namespace sw
         restart();
     }
 
-    void AiDirector::restart()
+    void AIDirector::restart()
     {
         _random.setSeed( _seed );
         _builtinModel.reset();
-        _spawnDirector.initialize( _pSpawnTable, _seed ^ AiDirectorInternal::kSpawnSeedSalt );
+        _spawnDirector.initialize( _pSpawnTable, _seed ^ AIDirectorInternal::kSpawnSeedSalt );
         _eventBuffer.clear();
         _listTrace.clear();
         _traceHead  = 0;
@@ -141,7 +141,7 @@ namespace sw
         _listPoolState.clear();
         if ( _pProfile == nullptr || _pProfile->getPhases().empty() )
             return;
-        for ( const AiDirectorPoolDef& pool : _pProfile->getPools() )
+        for ( const AIDirectorPoolDef& pool : _pProfile->getPools() )
         {
             PoolState state;
             state._listEncounter.resize( pool._listEncounter.size() );
@@ -150,35 +150,35 @@ namespace sw
         enterPhase( MathUtil::max( 0, _pProfile->getStartPhaseIndex() ), -1 );
     }
 
-    IAiDirectorIntensityModel& AiDirector::getModel()
+    IAIDirectorIntensityModel& AIDirector::getModel()
     {
         if ( _pCustomModel != nullptr )
             return *_pCustomModel;
         return _builtinModel;
     }
 
-    const IAiDirectorIntensityModel& AiDirector::getIntensityModel() const
+    const IAIDirectorIntensityModel& AIDirector::getIntensityModel() const
     {
         if ( _pCustomModel != nullptr )
             return *_pCustomModel;
         return _builtinModel;
     }
 
-    hashed_string AiDirector::getPhase() const
+    hashed_string AIDirector::getPhase() const
     {
         return _pProfile != nullptr && _phaseIndex >= 0 ? _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )]._id : hashed_string{};
     }
 
-    float32 AiDirector::getPoolBudget( int32 poolIndex ) const
+    float32 AIDirector::getPoolBudget( int32 poolIndex ) const
     {
         return 0 <= poolIndex && poolIndex < static_cast<int32>( _listPoolState.size() ) ? _listPoolState[static_cast<size_t>( poolIndex )]._budget : 0.0f;
     }
 
-    int32 AiDirector::findPoolIndex( const hashed_string& poolId ) const
+    int32 AIDirector::findPoolIndex( const hashed_string& poolId ) const
     {
         if ( _pProfile == nullptr )
             return -1;
-        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t index = 0; index < listPool.size(); ++index )
         {
             if ( listPool[index]._id == poolId )
@@ -187,11 +187,11 @@ namespace sw
         return -1;
     }
 
-    void AiDirector::update( float32 deltaTime )
+    void AIDirector::update( float32 deltaTime )
     {
         if ( _pProfile == nullptr || _phaseIndex < 0 || deltaTime < 0.0f )
             return;
-        IAiDirectorIntensityModel& model = getModel();
+        IAIDirectorIntensityModel& model = getModel();
         model.update( deltaTime );
         _time += deltaTime;
         _phaseTime += deltaTime;
@@ -202,21 +202,21 @@ namespace sw
             const int32 exitIndex = findSatisfiedExit();
             if ( exitIndex < 0 )
                 break;
-            const AiDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+            const AIDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
             enterPhase( phase._listExit[static_cast<size_t>( exitIndex )]._toIndex, exitIndex );
         }
         updateSpawns( deltaTime );
         updatePools( deltaTime );
     }
 
-    int32 AiDirector::findSatisfiedExit() const
+    int32 AIDirector::findSatisfiedExit() const
     {
-        const AiDirectorPhaseDef&        phase       = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+        const AIDirectorPhaseDef&        phase       = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
         const float32                    calmSeconds = getIntensityModel().getCalmSeconds();
-        const vector<AiDirectorExitDef>& listExit    = phase._listExit;
+        const vector<AIDirectorExitDef>& listExit    = phase._listExit;
         for ( size_t exitIndex = 0; exitIndex < listExit.size(); ++exitIndex )
         {
-            const AiDirectorExitDef& exit    = listExit[exitIndex];
+            const AIDirectorExitDef& exit    = listExit[exitIndex];
             const bool               bTime   = exit._minTime <= _phaseTime;
             const bool               bAbove  = exit._intensityAbove < 0.0f || _intensity >= exit._intensityAbove;
             const bool               bBelow  = exit._intensityBelow < 0.0f || _intensity <= exit._intensityBelow;
@@ -228,7 +228,7 @@ namespace sw
         return -1;
     }
 
-    bool AiDirector::forcePhase( const hashed_string& phaseId )
+    bool AIDirector::forcePhase( const hashed_string& phaseId )
     {
         const int32 phaseIndex = _pProfile != nullptr ? _pProfile->findPhaseIndex( phaseId ) : -1;
         if ( phaseIndex < 0 )
@@ -237,19 +237,19 @@ namespace sw
         return true;
     }
 
-    void AiDirector::enterPhase( int32 phaseIndex, int32 exitIndex )
+    void AIDirector::enterPhase( int32 phaseIndex, int32 exitIndex )
     {
-        const vector<AiDirectorPhaseDef>& listPhase     = _pProfile->getPhases();
+        const vector<AIDirectorPhaseDef>& listPhase     = _pProfile->getPhases();
         const hashed_string               previousPhase = _phaseIndex >= 0 ? listPhase[static_cast<size_t>( _phaseIndex )]._id : hashed_string{};
         const bool                        bLoopedBack   = _phaseIndex >= 0 && phaseIndex == _pProfile->getStartPhaseIndex();
         _phaseIndex                                     = phaseIndex;
         _phaseTime                                      = 0.0f;
         _cycle += bLoopedBack ? 1 : 0;
-        const AiDirectorPhaseDef& phase = listPhase[static_cast<size_t>( phaseIndex )];
+        const AIDirectorPhaseDef& phase = listPhase[static_cast<size_t>( phaseIndex )];
         _spawnDirector.setAllowedTags( phase._listSpawnTag );
 
-        AiDirectorEvent event;
-        event._kind      = AiDirectorEventKind::PhaseChanged;
+        AIDirectorEvent event;
+        event._kind      = AIDirectorEventKind::PhaseChanged;
         event._id        = phase._id;
         event._source    = previousPhase;
         event._time      = _time;
@@ -259,11 +259,11 @@ namespace sw
         pushEvent( event );
 
         // 들어선 단계를 기다리는 풀(호드 · 보급)은 이 자리에서 고른다.
-        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
         {
-            const AiDirectorPoolDef& pool = listPool[poolIndex];
-            if ( pool._trigger != AiDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != phaseIndex || isPoolActive( pool ) == false )
+            const AIDirectorPoolDef& pool = listPool[poolIndex];
+            if ( pool._trigger != AIDirectorPoolTrigger::PhaseEnter || pool._phaseIndex != phaseIndex || isPoolActive( pool ) == false )
                 continue;
             for ( int32 pick = 0; pick < pool._picks; ++pick )
             {
@@ -277,31 +277,31 @@ namespace sw
         }
     }
 
-    void AiDirector::updateSpawns( float32 deltaTime )
+    void AIDirector::updateSpawns( float32 deltaTime )
     {
         if ( _pSpawnTable == nullptr )
             return;
-        const AiDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+        const AIDirectorPhaseDef& phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
         _spawnDirector.setBudgetScale( phase._spawnScale * phase._spawnCurve.evaluate( _phaseTime, 1.0f ) );
         (void)_spawnDirector.update( deltaTime );
         drainSpawnEvents();
     }
 
-    bool AiDirector::notifyDespawned( uint32 spawnId )
+    bool AIDirector::notifyDespawned( uint32 spawnId )
     {
         const bool bKnown = _spawnDirector.notifyDespawned( spawnId );
         drainSpawnEvents();
         return bKnown;
     }
 
-    void AiDirector::drainSpawnEvents()
+    void AIDirector::drainSpawnEvents()
     {
         _listScratchSpawnEvent.clear();
         _spawnDirector.drainEvents( _listScratchSpawnEvent );
         for ( const SpawnEvent& spawn : _listScratchSpawnEvent )
         {
-            AiDirectorEvent event;
-            event._kind      = spawn._kind == SpawnEvent::Kind::Spawned ? AiDirectorEventKind::Spawned : AiDirectorEventKind::Despawned;
+            AIDirectorEvent event;
+            event._kind      = spawn._kind == SpawnEvent::Kind::Spawned ? AIDirectorEventKind::Spawned : AIDirectorEventKind::Despawned;
             event._id        = spawn._entryId;
             event._source    = getPhase();
             event._time      = _time;
@@ -313,31 +313,31 @@ namespace sw
         }
     }
 
-    bool AiDirector::isPoolActive( const AiDirectorPoolDef& pool ) const
+    bool AIDirector::isPoolActive( const AIDirectorPoolDef& pool ) const
     {
-        return pool._listPacing.empty() || AiDirectorInternal::contains( pool._listPacing, getPhase() );
+        return pool._listPacing.empty() || AIDirectorInternal::contains( pool._listPacing, getPhase() );
     }
 
-    bool AiDirector::isPoolCooledDown( const AiDirectorPoolDef& pool, const PoolState& state ) const
+    bool AIDirector::isPoolCooledDown( const AIDirectorPoolDef& pool, const PoolState& state ) const
     {
         return state._lastPickTime < 0.0f || _time - state._lastPickTime >= pool._cooldown;
     }
 
-    void AiDirector::updatePools( float32 deltaTime )
+    void AIDirector::updatePools( float32 deltaTime )
     {
-        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
         {
-            const AiDirectorPoolDef& pool = listPool[poolIndex];
+            const AIDirectorPoolDef& pool = listPool[poolIndex];
             // 단계 밖의 풀은 시계 · 예산이 멈춘다 — 쉬는 동안 쌓인 것이 다음 쌓기 단계 첫 프레임에 몰려 나오지 않게.
             if ( isPoolActive( pool ) == false )
                 continue;
-            if ( pool._trigger == AiDirectorPoolTrigger::Budget )
+            if ( pool._trigger == AIDirectorPoolTrigger::Budget )
             {
                 updateBudgetPool( static_cast<int32>( poolIndex ), deltaTime );
                 continue;
             }
-            if ( pool._trigger != AiDirectorPoolTrigger::Interval )
+            if ( pool._trigger != AIDirectorPoolTrigger::Interval )
                 continue;
             PoolState& state = _listPoolState[poolIndex];
             state._timer += deltaTime;
@@ -354,12 +354,12 @@ namespace sw
         }
     }
 
-    void AiDirector::updateBudgetPool( int32 poolIndex, float32 deltaTime )
+    void AIDirector::updateBudgetPool( int32 poolIndex, float32 deltaTime )
     {
-        const AiDirectorPoolDef&  pool       = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
-        const AiDirectorPhaseDef& phase      = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+        const AIDirectorPoolDef&  pool       = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
+        const AIDirectorPhaseDef& phase      = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
         PoolState&                state      = _listPoolState[static_cast<size_t>( poolIndex )];
-        const float32             phaseScale = pool._kind == AiDirectorPoolKind::Reward ? phase._rewardScale : phase._spawnScale;
+        const float32             phaseScale = pool._kind == AIDirectorPoolKind::Reward ? phase._rewardScale : phase._spawnScale;
         const float32             need       = pool._needSignal.empty() ? 0.0f : getIntensityModel().getSignal( pool._needSignal );
         const float32             needScale  = MathUtil::max( 0.0f, 1.0f + pool._needScale * need );
         state._budget                        = MathUtil::min( pool._maxBudget, state._budget + pool._perMinute / 60.0f * phaseScale * needScale * deltaTime );
@@ -375,7 +375,7 @@ namespace sw
                 state._pendingIndex = pickEncounter( poolIndex );
             if ( state._pendingIndex < 0 )
                 break;
-            const AiDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( state._pendingIndex )];
+            const AIDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( state._pendingIndex )];
             if ( state._budget < encounter._cost )
                 break;
             state._budget -= encounter._cost;
@@ -385,69 +385,69 @@ namespace sw
         }
     }
 
-    uint32 AiDirector::computeChanceKey( int32 poolIndex, int32 encounterIndex ) const
+    uint32 AIDirector::computeChanceKey( int32 poolIndex, int32 encounterIndex ) const
     {
         const uint32 poolKey = GameHash::mix32( _seed ^ static_cast<uint32>( poolIndex ) * 0x9e3779b1u );
         return GameHash::mix32( poolKey ^ static_cast<uint32>( encounterIndex ) * 0x85ebca77u ^ _pickSerial * 0xc2b2ae35u );
     }
 
-    uint32 AiDirector::computeBlockMask( int32 poolIndex, int32 encounterIndex ) const
+    uint32 AIDirector::computeBlockMask( int32 poolIndex, int32 encounterIndex ) const
     {
         if ( _pProfile == nullptr || poolIndex < 0 || poolIndex >= static_cast<int32>( _listPoolState.size() ) )
-            return AiDirectorBlock::kWeight;
-        const AiDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
+            return AIDirectorBlock::kWeight;
+        const AIDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
         if ( encounterIndex < 0 || encounterIndex >= static_cast<int32>( pool._listEncounter.size() ) )
-            return AiDirectorBlock::kWeight;
-        const AiDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( encounterIndex )];
+            return AIDirectorBlock::kWeight;
+        const AIDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( encounterIndex )];
         const EncounterState&         state     = _listPoolState[static_cast<size_t>( poolIndex )]._listEncounter[static_cast<size_t>( encounterIndex )];
 
         uint32 mask = 0;
         if ( encounter._weight <= 0.0f )
-            mask |= AiDirectorBlock::kWeight;
-        if ( encounter._listPacing.empty() == false && AiDirectorInternal::contains( encounter._listPacing, getPhase() ) == false )
-            mask |= AiDirectorBlock::kPacing;
+            mask |= AIDirectorBlock::kWeight;
+        if ( encounter._listPacing.empty() == false && AIDirectorInternal::contains( encounter._listPacing, getPhase() ) == false )
+            mask |= AIDirectorBlock::kPacing;
         if ( state._lastTime >= 0.0f && _time - state._lastTime < encounter._cooldown )
-            mask |= AiDirectorBlock::kCooldown;
+            mask |= AIDirectorBlock::kCooldown;
         if ( encounter._maxCount >= 0 && state._count >= encounter._maxCount )
-            mask |= AiDirectorBlock::kMaxCount;
+            mask |= AIDirectorBlock::kMaxCount;
         if ( _cycle < encounter._minCycle )
-            mask |= AiDirectorBlock::kCycle;
+            mask |= AIDirectorBlock::kCycle;
         if ( _time < encounter._minTime )
-            mask |= AiDirectorBlock::kTime;
+            mask |= AIDirectorBlock::kTime;
         const bool bBelowMin = _intensity < encounter._minIntensity;
         const bool bAboveMax = encounter._maxIntensity >= 0.0f && _intensity > encounter._maxIntensity;
         if ( bBelowMin || bAboveMax )
-            mask |= AiDirectorBlock::kIntensity;
-        if ( encounter._listArea.empty() == false && AiDirectorInternal::containsAny( encounter._listArea, _context._listAreaTag ) == false )
-            mask |= AiDirectorBlock::kArea;
+            mask |= AIDirectorBlock::kIntensity;
+        if ( encounter._listArea.empty() == false && AIDirectorInternal::containsAny( encounter._listArea, _context._listAreaTag ) == false )
+            mask |= AIDirectorBlock::kArea;
         if ( encounter._condition.isEmpty() == false )
         {
             ScheduleConditionContext conditionContext = _context._condition;
             conditionContext._chanceKey               = computeChanceKey( poolIndex, encounterIndex );
             if ( encounter._condition.matches( conditionContext ) == false )
-                mask |= AiDirectorBlock::kCondition;
+                mask |= AIDirectorBlock::kCondition;
         }
-        if ( pool._trigger == AiDirectorPoolTrigger::Budget && encounter._cost > pool._maxBudget )
-            mask |= AiDirectorBlock::kCost;
+        if ( pool._trigger == AIDirectorPoolTrigger::Budget && encounter._cost > pool._maxBudget )
+            mask |= AIDirectorBlock::kCost;
         return mask;
     }
 
-    int32 AiDirector::pickEncounter( int32 poolIndex )
+    int32 AIDirector::pickEncounter( int32 poolIndex )
     {
-        const AiDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
+        const AIDirectorPoolDef& pool = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
         _listScratchWeight.clear();
         for ( size_t encounterIndex = 0; encounterIndex < pool._listEncounter.size(); ++encounterIndex )
         {
             const bool bEligible = computeBlockMask( poolIndex, static_cast<int32>( encounterIndex ) ) == 0;
             _listScratchWeight.push_back( bEligible ? pool._listEncounter[encounterIndex]._weight : 0.0f );
         }
-        return _random.pickWeightedIndex( _listScratchWeight, &AiDirectorInternal::identityWeight );
+        return _random.pickWeightedIndex( _listScratchWeight, &AIDirectorInternal::identityWeight );
     }
 
-    void AiDirector::emitPick( int32 poolIndex, int32 encounterIndex )
+    void AIDirector::emitPick( int32 poolIndex, int32 encounterIndex )
     {
-        const AiDirectorPoolDef&      pool      = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
-        const AiDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( encounterIndex )];
+        const AIDirectorPoolDef&      pool      = _pProfile->getPools()[static_cast<size_t>( poolIndex )];
+        const AIDirectorEncounterDef& encounter = pool._listEncounter[static_cast<size_t>( encounterIndex )];
         PoolState&                    poolState = _listPoolState[static_cast<size_t>( poolIndex )];
         EncounterState&               state     = poolState._listEncounter[static_cast<size_t>( encounterIndex )];
         state._lastTime                         = _time;
@@ -455,19 +455,19 @@ namespace sw
         poolState._lastPickTime = _time;
         ++_pickSerial;
 
-        AiDirectorEvent event;
-        event._kind      = pool._kind == AiDirectorPoolKind::Reward ? AiDirectorEventKind::Reward : AiDirectorEventKind::Encounter;
+        AIDirectorEvent event;
+        event._kind      = pool._kind == AIDirectorPoolKind::Reward ? AIDirectorEventKind::Reward : AIDirectorEventKind::Encounter;
         event._id        = encounter._id;
         event._source    = pool._id;
         event._time      = _time;
         event._intensity = _intensity;
         event._scale     = encounter._scale;
-        event._cost      = pool._trigger == AiDirectorPoolTrigger::Budget ? encounter._cost : 0.0f;
+        event._cost      = pool._trigger == AIDirectorPoolTrigger::Budget ? encounter._cost : 0.0f;
         event._count     = encounter._count;
         pushEvent( event );
     }
 
-    void AiDirector::pushEvent( const AiDirectorEvent& event )
+    void AIDirector::pushEvent( const AIDirectorEvent& event )
     {
         _eventBuffer.push( event );
         if ( static_cast<int32>( _listTrace.size() ) < kMaxTraceEvent )
@@ -481,17 +481,17 @@ namespace sw
         }
         if ( gv_aiDirectorTrace != 0 )
         {
-            SW_LOG_INFO( "[AiDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, toString( event._kind ), event._id.c_str(),
+            SW_LOG_INFO( "[AIDirector] t=%.2f I=%.2f %# '%#' (%#) count %# scale %.2f", event._time, event._intensity, toString( event._kind ), event._id.c_str(),
                          event._source.c_str(), event._count, event._scale );
         }
     }
 
-    void AiDirector::drainEvents( vector<AiDirectorEvent>& outListEvent )
+    void AIDirector::drainEvents( vector<AIDirectorEvent>& outListEvent )
     {
         _eventBuffer.drainTo( outListEvent );
     }
 
-    void AiDirector::explain( string& outText ) const
+    void AIDirector::explain( string& outText ) const
     {
         outText.clear();
         if ( _pProfile == nullptr || _phaseIndex < 0 )
@@ -499,7 +499,7 @@ namespace sw
             outText = "director: not initialized\n";
             return;
         }
-        const AiDirectorPhaseDef&               phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
+        const AIDirectorPhaseDef&               phase = _pProfile->getPhases()[static_cast<size_t>( _phaseIndex )];
         StringBuilder<constant::kMaxBuffer4096> text;
         text.appendFormat( "director t=%.2fs phase '%#' (%.2fs) intensity %.2f calm %.2fs cycle %#\n", _time, phase._id.c_str(), _phaseTime, _intensity,
                            getIntensityModel().getCalmSeconds(), _cycle );
@@ -511,7 +511,7 @@ namespace sw
         const float32 calmSeconds = getIntensityModel().getCalmSeconds();
         for ( size_t exitIndex = 0; exitIndex < phase._listExit.size(); ++exitIndex )
         {
-            const AiDirectorExitDef& exit = phase._listExit[exitIndex];
+            const AIDirectorExitDef& exit = phase._listExit[exitIndex];
             text.appendFormat( "  exit #%# -> '%#':", exitIndex, exit._to.c_str() );
             bool bBlocked = false;
             if ( _phaseTime < exit._minTime )
@@ -536,23 +536,23 @@ namespace sw
             }
             text.append( bBlocked ? "\n" : " open\n" );
         }
-        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         for ( size_t poolIndex = 0; poolIndex < listPool.size(); ++poolIndex )
         {
-            const AiDirectorPoolDef& pool  = listPool[poolIndex];
+            const AIDirectorPoolDef& pool  = listPool[poolIndex];
             const PoolState&         state = _listPoolState[poolIndex];
             text.appendFormat( "  pool '%#' (%#, %#)%#%# budget %.2f timer %.2f\n", pool._id.c_str(), toString( pool._kind ), toString( pool._trigger ),
                                isPoolActive( pool ) ? "" : " [pacing]", isPoolCooledDown( pool, state ) ? "" : " [cooldown]", state._budget, state._timer );
             for ( size_t encounterIndex = 0; encounterIndex < pool._listEncounter.size(); ++encounterIndex )
             {
-                const AiDirectorEncounterDef& encounter = pool._listEncounter[encounterIndex];
+                const AIDirectorEncounterDef& encounter = pool._listEncounter[encounterIndex];
                 const uint32                  mask      = computeBlockMask( static_cast<int32>( poolIndex ), static_cast<int32>( encounterIndex ) );
                 text.appendFormat( "    %# %# w%.2f picked %#", mask == 0 ? "+" : "-", encounter._id.c_str(), encounter._weight,
                                    state._listEncounter[encounterIndex]._count );
-                for ( uint32 bitIndex = 0; bitIndex < AiDirectorBlock::kCount; ++bitIndex )
+                for ( uint32 bitIndex = 0; bitIndex < AIDirectorBlock::kCount; ++bitIndex )
                 {
                     if ( ( mask & ( 1u << bitIndex ) ) != 0 )
-                        text.appendFormat( " [%#]", AiDirectorBlock::getName( bitIndex ) );
+                        text.appendFormat( " [%#]", AIDirectorBlock::getName( bitIndex ) );
                 }
                 text.append( "\n" );
             }
@@ -560,18 +560,18 @@ namespace sw
         outText = text.c_str();
     }
 
-    void AiDirector::dumpTrace( string& outText ) const
+    void AIDirector::dumpTrace( string& outText ) const
     {
         outText.clear();
         const size_t count = _listTrace.size();
         for ( size_t offset = 0; offset < count; ++offset )
         {
-            const AiDirectorEvent&                 event = _listTrace[( static_cast<size_t>( _traceHead ) + offset ) % count];
+            const AIDirectorEvent&                 event = _listTrace[( static_cast<size_t>( _traceHead ) + offset ) % count];
             StringBuilder<constant::kMaxBuffer256> line;
             line.appendFormat( "[%.2fs] I=%.2f %# '%#'", event._time, event._intensity, toString( event._kind ), event._id.c_str() );
             if ( event._source.empty() == false )
                 line.appendFormat( " from '%#'", event._source.c_str() );
-            if ( event._kind == AiDirectorEventKind::PhaseChanged )
+            if ( event._kind == AIDirectorEventKind::PhaseChanged )
                 line.appendFormat( " exit %# cycle %#", event._detail, event._count );
             else
                 line.appendFormat( " count %# scale %.2f", event._count, event._scale );
@@ -582,9 +582,9 @@ namespace sw
         }
     }
 
-    uint64 AiDirector::computeStateHash() const
+    uint64 AIDirector::computeStateHash() const
     {
-        using Internal = AiDirectorInternal;
+        using Internal = AIDirectorInternal;
         uint64 hash    = HashUtil::kFnvOffset64;
         hash           = Internal::hashValue( hash, _time );
         hash           = Internal::hashValue( hash, _phaseTime );
@@ -611,9 +611,9 @@ namespace sw
         return hash;
     }
 
-    void AiDirector::writeState( Archive& outArchive ) const
+    void AIDirector::writeState( Archive& outArchive ) const
     {
-        using Internal = AiDirectorInternal;
+        using Internal = AIDirectorInternal;
         StateArchiveUtil::writeHeader( outArchive, Internal::kStateTag, Internal::kStateVersion );
         const int32 phaseCount = _pProfile != nullptr ? static_cast<int32>( _pProfile->getPhases().size() ) : 0;
         outArchive << phaseCount;
@@ -642,9 +642,9 @@ namespace sw
         _spawnDirector.writeState( outArchive );
     }
 
-    bool AiDirector::readState( Archive& archive )
+    bool AIDirector::readState( Archive& archive )
     {
-        using Internal = AiDirectorInternal;
+        using Internal = AIDirectorInternal;
         if ( _pProfile == nullptr || StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
             return false;
         int32   phaseCount = 0;
@@ -665,7 +665,7 @@ namespace sw
         uint32     poolCount = 0;
         if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, Internal::kPoolMinBytes, poolCount ) == false )
             return false;
-        const vector<AiDirectorPoolDef>& listPool = _pProfile->getPools();
+        const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();
         if ( bShape == false )
             return false;
@@ -689,7 +689,7 @@ namespace sw
         }
         // 긴장도 모델 · 스폰 감독은 사본에 읽어 둘 다 맞을 때 바꾼다 — 반쯤 읽은 상태를 남기지 않는다.
         // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).
-        AiDirectorIntensityModel model   = _builtinModel;
+        AIDirectorIntensityModel model   = _builtinModel;
         SpawnDirector            spawner = _spawnDirector;
         spawner.setAllowedTags( _pProfile->getPhases()[static_cast<size_t>( phaseIndex )]._listSpawnTag );
         const bool bModel   = model.readState( archive );

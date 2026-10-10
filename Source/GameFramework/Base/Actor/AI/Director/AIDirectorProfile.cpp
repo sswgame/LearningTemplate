@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Actor/AI/Director/AiDirectorProfile.h"
+#include "GameFramework/Base/Actor/AI/Director/AIDirectorProfile.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -12,11 +12,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "AiDirectorProfile" );
+    SW_LOG_CALLER( "AIDirectorProfile" );
 
     namespace
     {
-        struct AiDirectorProfileInternal
+        struct AIDirectorProfileInternal
         {
             static constexpr const utf8* kArrRootAttribute[]      = { "startPhase" };
             static constexpr const utf8* kArrCalendarAttribute[]  = { "days", "seasons", "weathers" };
@@ -77,22 +77,22 @@ namespace sw
 
 namespace sw
 {
-    const utf8* toString( AiDirectorSignalKind kind )
+    const utf8* toString( AIDirectorSignalKind kind )
     {
-        return AiDirectorProfileInternal::kArrSignalKindName[static_cast<uint32>( kind )];
+        return AIDirectorProfileInternal::kArrSignalKindName[static_cast<uint32>( kind )];
     }
 
-    const utf8* toString( AiDirectorPoolKind kind )
+    const utf8* toString( AIDirectorPoolKind kind )
     {
-        return AiDirectorProfileInternal::kArrPoolKindName[static_cast<uint32>( kind )];
+        return AIDirectorProfileInternal::kArrPoolKindName[static_cast<uint32>( kind )];
     }
 
-    const utf8* toString( AiDirectorPoolTrigger trigger )
+    const utf8* toString( AIDirectorPoolTrigger trigger )
     {
-        return AiDirectorProfileInternal::kArrPoolTriggerName[static_cast<uint32>( trigger )];
+        return AIDirectorProfileInternal::kArrPoolTriggerName[static_cast<uint32>( trigger )];
     }
 
-    AiDirectorProfile::AiDirectorProfile()
+    AIDirectorProfile::AIDirectorProfile()
         : _intensity{}
         , _listPhase{}
         , _listPool{}
@@ -101,31 +101,31 @@ namespace sw
     {
     }
 
-    bool AiDirectorProfile::loadFromResource( string_view path )
+    bool AIDirectorProfile::loadFromResource( string_view path )
     {
         XmlDocument doc;
         XmlNode     root;
         string      sourceName;
-        return GameDataXml::loadRoot( doc, path, "AiDirector", root, sourceName ) && loadRoot( root, sourceName );
+        return GameDataXml::loadRoot( doc, path, "AIDirector", root, sourceName ) && loadRoot( root, sourceName );
     }
 
-    bool AiDirectorProfile::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool AIDirectorProfile::loadFromXmlText( string_view xmlText, string_view sourceName )
     {
         XmlDocument doc;
         XmlNode     root;
-        return GameDataXml::parseRoot( doc, xmlText, sourceName, "AiDirector", root ) && loadRoot( root, sourceName );
+        return GameDataXml::parseRoot( doc, xmlText, sourceName, "AIDirector", root ) && loadRoot( root, sourceName );
     }
 
-    void AiDirectorProfile::clear()
+    void AIDirectorProfile::clear()
     {
-        _intensity = AiDirectorIntensityDef{};
+        _intensity = AIDirectorIntensityDef{};
         _listPhase.clear();
         _listPool.clear();
         _startPhase      = hashed_string{};
         _startPhaseIndex = -1;
     }
 
-    int32 AiDirectorProfile::findPhaseIndex( const hashed_string& phaseId ) const
+    int32 AIDirectorProfile::findPhaseIndex( const hashed_string& phaseId ) const
     {
         for ( size_t index = 0; index < _listPhase.size(); ++index )
         {
@@ -135,7 +135,7 @@ namespace sw
         return -1;
     }
 
-    int32 AiDirectorProfile::findSignalIndex( const hashed_string& signalId ) const
+    int32 AIDirectorProfile::findSignalIndex( const hashed_string& signalId ) const
     {
         for ( size_t index = 0; index < _intensity._listSignal.size(); ++index )
         {
@@ -145,21 +145,21 @@ namespace sw
         return -1;
     }
 
-    void AiDirectorProfile::collectEncounterIds( vector<hashed_string>& outListId ) const
+    void AIDirectorProfile::collectEncounterIds( vector<hashed_string>& outListId ) const
     {
-        for ( const AiDirectorPoolDef& pool : _listPool )
+        for ( const AIDirectorPoolDef& pool : _listPool )
         {
-            for ( const AiDirectorEncounterDef& encounter : pool._listEncounter )
+            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
             {
-                if ( AiDirectorProfileInternal::contains( outListId, encounter._id ) == false )
+                if ( AIDirectorProfileInternal::contains( outListId, encounter._id ) == false )
                     outListId.push_back( encounter._id );
             }
         }
     }
 
-    bool AiDirectorProfile::loadRoot( const XmlNode& root, string_view sourceName )
+    bool AIDirectorProfile::loadRoot( const XmlNode& root, string_view sourceName )
     {
-        using Internal = AiDirectorProfileInternal;
+        using Internal = AIDirectorProfileInternal;
         clear();
         static constexpr const utf8* kArrRootChild[] = { "Calendar", "Intensity", "Phase", "Pool" };
         bool                         bValid          = Internal::validateAttributes( root, Internal::kArrRootAttribute, false, sourceName );
@@ -193,9 +193,9 @@ namespace sw
         return bValid;
     }
 
-    bool AiDirectorProfile::readIntensity( const XmlNode& node, string_view sourceName )
+    bool AIDirectorProfile::readIntensity( const XmlNode& node, string_view sourceName )
     {
-        using Internal                                    = AiDirectorProfileInternal;
+        using Internal                                    = AIDirectorProfileInternal;
         static constexpr const utf8* kArrIntensityChild[] = { "Signal" };
         bool                         bValid               = Internal::validateAttributes( node, Internal::kArrIntensityAttribute, false, sourceName );
         bValid                                            = Internal::validateChildren( node, kArrIntensityChild, sourceName ) && bValid;
@@ -211,7 +211,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            AiDirectorSignalDef signal;
+            AIDirectorSignalDef signal;
             signal._id       = hashed_string( pId );
             signal._scale    = child.getAttributeFloat( "scale", signal._scale );
             signal._max      = child.getAttributeFloat( "max", signal._max );
@@ -223,7 +223,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            signal._kind = static_cast<AiDirectorSignalKind>( kindIndex );
+            signal._kind = static_cast<AIDirectorSignalKind>( kindIndex );
             if ( findSignalIndex( signal._id ) >= 0 )
             {
                 SW_LOG_WARNING( "%#: signal '%#' is declared twice", sourceName, pId );
@@ -235,16 +235,16 @@ namespace sw
         return bValid;
     }
 
-    bool AiDirectorProfile::readPhase( const XmlNode& node, string_view sourceName )
+    bool AIDirectorProfile::readPhase( const XmlNode& node, string_view sourceName )
     {
-        using Internal                                = AiDirectorProfileInternal;
+        using Internal                                = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateAttributes( node, Internal::kArrPhaseAttribute, false, sourceName );
         bValid                                        = Internal::validateChildren( node, kArrPhaseChild, sourceName ) && bValid;
         const utf8* pId                               = GameDataXml::findRequiredId( node, sourceName );
         if ( pId == nullptr )
             return false;
-        AiDirectorPhaseDef phase;
+        AIDirectorPhaseDef phase;
         phase._id          = hashed_string( pId );
         phase._spawnScale  = MathUtil::max( 0.0f, node.getAttributeFloat( "spawnScale", phase._spawnScale ) );
         phase._rewardScale = MathUtil::max( 0.0f, node.getAttributeFloat( "rewardScale", phase._rewardScale ) );
@@ -257,7 +257,7 @@ namespace sw
         for ( XmlNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
             bValid = Internal::validateAttributes( child, Internal::kArrExitAttribute, false, sourceName ) && bValid;
-            AiDirectorExitDef exit;
+            AIDirectorExitDef exit;
             exit._to             = hashed_string( child.getAttributeText( "to" ) );
             exit._minTime        = MathUtil::max( 0.0f, child.getAttributeFloat( "minTime", exit._minTime ) );
             exit._intensityAbove = child.getAttributeFloat( "intensityAbove", exit._intensityAbove );
@@ -274,16 +274,16 @@ namespace sw
         return bValid;
     }
 
-    bool AiDirectorProfile::readPool( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName )
+    bool AIDirectorProfile::readPool( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName )
     {
-        using Internal                               = AiDirectorProfileInternal;
+        using Internal                               = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };
         bool                         bValid          = Internal::validateAttributes( node, Internal::kArrPoolAttribute, false, sourceName );
         bValid                                       = Internal::validateChildren( node, kArrPoolChild, sourceName ) && bValid;
         const utf8* pId                              = GameDataXml::findRequiredId( node, sourceName );
         if ( pId == nullptr )
             return false;
-        AiDirectorPoolDef pool;
+        AIDirectorPoolDef pool;
         pool._id                    = hashed_string( pId );
         uint32            kindIndex = 0;
         const string_view kindText  = node.getAttributeText( "kind" );
@@ -292,15 +292,15 @@ namespace sw
             SW_LOG_WARNING( "%#: pool '%#' has an unknown kind '%#' (encounter, reward)", sourceName, pId, kindText );
             bValid = false;
         }
-        pool._kind                     = static_cast<AiDirectorPoolKind>( kindIndex );
-        uint32            triggerIndex = static_cast<uint32>( AiDirectorPoolTrigger::Interval );
+        pool._kind                     = static_cast<AIDirectorPoolKind>( kindIndex );
+        uint32            triggerIndex = static_cast<uint32>( AIDirectorPoolTrigger::Interval );
         const string_view triggerText  = node.getAttributeText( "trigger" );
         if ( Internal::parseEnumName( triggerText, Internal::kArrPoolTriggerName, triggerIndex ) == false )
         {
             SW_LOG_WARNING( "%#: pool '%#' has an unknown trigger '%#' (phaseEnter, interval, budget)", sourceName, pId, triggerText );
             bValid = false;
         }
-        pool._trigger    = static_cast<AiDirectorPoolTrigger>( triggerIndex );
+        pool._trigger    = static_cast<AIDirectorPoolTrigger>( triggerIndex );
         pool._phase      = hashed_string( node.getAttributeText( "phase" ) );
         pool._needSignal = hashed_string( node.getAttributeText( "need" ) );
         pool._interval   = MathUtil::max( 0.01f, node.getAttributeFloat( "interval", pool._interval ) );
@@ -311,7 +311,7 @@ namespace sw
         pool._needScale  = node.getAttributeFloat( "needScale", pool._needScale );
         pool._picks      = MathUtil::max( 1, node.getAttributeInt( "picks", pool._picks ) );
         ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
-        if ( pool._trigger == AiDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
+        if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
             SW_LOG_WARNING( "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pId );
             bValid = false;
@@ -326,7 +326,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            AiDirectorEncounterDef encounter;
+            AIDirectorEncounterDef encounter;
             encounter._id           = hashed_string( pEncounterId );
             encounter._weight       = MathUtil::max( 0.0f, child.getAttributeFloat( "weight", encounter._weight ) );
             encounter._cost         = MathUtil::max( 0.0f, child.getAttributeFloat( "cost", encounter._cost ) );
@@ -341,7 +341,7 @@ namespace sw
             ScheduleCondition::parseNameList( child.getAttributeText( "areas" ), encounter._listArea );
             ScheduleCondition::parseNameList( child.getAttributeText( "pacing" ), encounter._listPacing );
             encounter._condition.readFromNode( child, vocabulary, sourceName, pEncounterId );
-            for ( const AiDirectorEncounterDef& other : pool._listEncounter )
+            for ( const AIDirectorEncounterDef& other : pool._listEncounter )
             {
                 if ( other._id == encounter._id )
                 {
@@ -356,7 +356,7 @@ namespace sw
             SW_LOG_WARNING( "%#: pool '%#' has no <Encounter>", sourceName, pId );
             bValid = false;
         }
-        for ( const AiDirectorPoolDef& other : _listPool )
+        for ( const AIDirectorPoolDef& other : _listPool )
         {
             if ( other._id == pool._id )
             {
@@ -368,7 +368,7 @@ namespace sw
         return bValid;
     }
 
-    bool AiDirectorProfile::validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerId, string_view sourceName ) const
+    bool AIDirectorProfile::validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerId, string_view sourceName ) const
     {
         bool bValid = true;
         for ( const hashed_string& phaseId : listPacing )
@@ -381,7 +381,7 @@ namespace sw
         return bValid;
     }
 
-    bool AiDirectorProfile::resolveReferences( string_view sourceName )
+    bool AIDirectorProfile::resolveReferences( string_view sourceName )
     {
         bool bValid = true;
         if ( _listPhase.empty() )
@@ -396,9 +396,9 @@ namespace sw
             bValid = false;
         }
         // 단계 이름은 나가는 길 · 풀 · 항목이 가리킨다 — 모르는 이름은 쓰는 쪽에서 조용히 "늘 거짓" 이 되므로 여기서 막는다.
-        for ( AiDirectorPhaseDef& phase : _listPhase )
+        for ( AIDirectorPhaseDef& phase : _listPhase )
         {
-            for ( AiDirectorExitDef& exit : phase._listExit )
+            for ( AIDirectorExitDef& exit : phase._listExit )
             {
                 exit._toIndex = findPhaseIndex( exit._to );
                 if ( exit._toIndex >= 0 )
@@ -407,14 +407,14 @@ namespace sw
                 bValid = false;
             }
         }
-        for ( AiDirectorPoolDef& pool : _listPool )
+        for ( AIDirectorPoolDef& pool : _listPool )
         {
             bValid = validatePacingNames( pool._listPacing, pool._id, sourceName ) && bValid;
-            for ( const AiDirectorEncounterDef& encounter : pool._listEncounter )
+            for ( const AIDirectorEncounterDef& encounter : pool._listEncounter )
             {
                 bValid = validatePacingNames( encounter._listPacing, encounter._id, sourceName ) && bValid;
             }
-            if ( pool._trigger == AiDirectorPoolTrigger::PhaseEnter )
+            if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter )
             {
                 pool._phaseIndex = findPhaseIndex( pool._phase );
                 if ( pool._phaseIndex < 0 )

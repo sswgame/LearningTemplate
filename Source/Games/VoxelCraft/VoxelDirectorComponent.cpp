@@ -103,33 +103,33 @@ namespace sw
         _appliedAutoPlay             = bAutoPlay ? 1 : 0; // 폰이 없어도 맞춘 것으로 친다 — 매 틱 플러시를 잡지 않게
         if ( pPawn == nullptr )
             return;
-        GameObject* pAiObject = manager.resolveGameObject( _autoPlayController );
+        GameObject* pAIObject = manager.resolveGameObject( _autoPlayController );
         if ( bAutoPlay )
         {
-            if ( pAiObject == nullptr )
+            if ( pAIObject == nullptr )
             {
-                pAiObject = manager.createGameObject( hashed_string( "VoxelAutoPlay" ) );
-                if ( pAiObject == nullptr || pAiObject->addComponent<VoxelAutoPlayControllerComponent>() == nullptr )
+                pAIObject = manager.createGameObject( hashed_string( "VoxelAutoPlay" ) );
+                if ( pAIObject == nullptr || pAIObject->addComponent<VoxelAutoPlayControllerComponent>() == nullptr )
                     return;
-                trackSpawned( *pAiObject );
-                _autoPlayController = pAiObject->getHandle();
+                trackSpawned( *pAIObject );
+                _autoPlayController = pAIObject->getHandle();
             }
-            VoxelAutoPlayControllerComponent* pAi = pAiObject->getComponent<VoxelAutoPlayControllerComponent>();
-            if ( pAi != nullptr && pAi->getPawn() != pPawn->getHandle() )
-                pAi->possess( *pPawn );
+            VoxelAutoPlayControllerComponent* pAI = pAIObject->getComponent<VoxelAutoPlayControllerComponent>();
+            if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
+                pAI->possess( *pPawn );
             SW_LOG_INFO( "[Voxel] auto play took the player" );
             return;
         }
         // 끔 — 플레이어 조종자에게 돌려주고 AI 를 걷는다. 이미 다른 조종자(플레이어)가 쥐었으면 그대로.
-        const VoxelAutoPlayControllerComponent* pAi = pAiObject != nullptr ? pAiObject->getComponent<VoxelAutoPlayControllerComponent>() : nullptr;
-        if ( pPawn->isPossessed() == false || ( pAi != nullptr && pAi->getPawn() == pPawn->getHandle() ) )
+        const VoxelAutoPlayControllerComponent* pAI = pAIObject != nullptr ? pAIObject->getComponent<VoxelAutoPlayControllerComponent>() : nullptr;
+        if ( pPawn->isPossessed() == false || ( pAI != nullptr && pAI->getPawn() == pPawn->getHandle() ) )
         {
             PlayerControllerComponent* pPlayer = ControlSystem::findOrCreatePlayerController( manager, 0 );
             if ( pPlayer != nullptr )
                 pPlayer->possess( *pPawn );
             SW_LOG_INFO( "[Voxel] the player took the body back" );
         }
-        if ( pAiObject != nullptr )
+        if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }
 
