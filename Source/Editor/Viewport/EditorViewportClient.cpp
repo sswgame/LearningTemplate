@@ -25,6 +25,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
 #include "Editor/Viewport/EditorGridUtil.h"
+#include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -488,6 +489,21 @@ namespace sw::editor
             return;
         GameObjectManager* pManager = pScene->getObjectManager();
         pManager->flushSceneTransforms();
+
+        // 빌보드(빛 · 카메라 · 오디오 아이콘)가 레이 피킹보다 먼저다 — 메시가 없어 레이로는 집히지 않는다(언리얼 빌보드 · 유니티 Gizmo 아이콘 클릭).
+        const EditorVisualizerRegistration* pBillboard = EditorRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
+        if ( pBillboard != nullptr && _toolbarSettings._visualizerToggles.isOn( *pBillboard ) )
+        {
+            vector<EditorViewportBillboardItem> listItem;
+            EditorViewportBillboard::collect( *pManager, pCamera->getViewProjectionMatrix( aspect ), canvasPos, canvasSize, pCamera, listItem );
+            const ImVec2 mouse = ImGui::GetIO().MousePos;
+            const uint32 index = EditorViewportBillboard::findAt( listItem, float2{ mouse.x, mouse.y } );
+            if ( index != invalid_index::kUint32 )
+            {
+                pContext->getWorkspace().selectComponent( listItem[index]._pObject, listItem[index]._pComponent );
+                return;
+            }
+        }
 
         // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
         EditorPickResult pickResult{};

@@ -95,8 +95,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 | **5 공용 편집 틀** | T2 | 맵 검사 패널(Map Check — 씬 규칙 · 저장 때 · 클릭하면 선택) | M | | |
 | | T4 | 패키징 창(타깃 · 프리셋 · 쿠킹 · 산출 폴더, 진행 로그) | M | 2 차 server-target 패키징 진입점 | |
 | **6 로드맵 — 미룬 영역 패널을 확장 모듈로** | — | GM · 오디오 믹서 · 내비메시 · 애니메이션/리그 · 기믹 회로 그래프 · 지형 칠하기 · 설정 브라우저 · 카탈로그 편집기(F) · 다중 월드 툴 창 | (표) | C · T3 | |
-| **추가 — 아이콘(12절)** | R4 | 뷰포트 빌보드와 클릭 선택 | M | R3 · C2 | ★ |
-| | R5 | 재생, 기즈모, 뷰포트 툴바, 커맨드 아이콘 | S | 5b R2 | |
+| **추가 — 아이콘(12절)** | R5 | 재생, 기즈모, 뷰포트 툴바, 커맨드 아이콘 | S | 5b R2 | |
 | | R9 | 콘텐츠 브라우저 종류 아이콘과 텍스처 썸네일 | S~M | 5b R2 · A1 | |
 | **추가 — 패널 부족한 점(13절)** | N1 ~ N12 | 뷰포트, Hierarchy, 콘텐츠 브라우저, 인스펙터, Output Log, 플레이, 도구 문서, Animation Graph 와 그 밖 | S ~ L | 단위마다 | ★ |
 
@@ -403,24 +402,6 @@ C 단계 뒤에는 "에디터 패널이 그 영역 코드 옆에 산다" 가 된
 editor-res 제안서(2026-10-07)는 에디터 리소스를 아홉 단위로 나눴습니다. 5b 는 아이콘 폰트와 Font Awesome 교체(R1, R2), 누락 텍스처(R6), 프로토타입 격자(R7), 앱 아이콘(R8)을 넣고,
 아래 넷을 이 계획으로 넘겼습니다. 아이콘은 모두 5b 의 R1 이 만든 아이콘 폰트(`Resource/editor/fonts/sweditoricons.ttf`, 글리프 이름은 `editoricon::k*`)를 씁니다.
 새 아이콘이 필요하면 `Scripts/common/EditorIconFont.py` 에 그리기 함수를 더하고 `Scripts/generate/GenerateEditorIcons.py` 를 실행합니다(5b R1 이 둔 스크립트입니다).
-
-### R4 뷰포트 빌보드와 클릭 선택 ★
-
-**무엇.** `EditorViewportBillboard`(`Source/Editor/Viewport/EditorViewportBillboard.h`, 새 파일)가 빌보드 종류 컴포넌트가 붙은 오브젝트마다 하나씩, 그 월드 위치에 둥근 배지와 아이콘 글리프를 고정 화면 크기(지름 26 px × DPI 배율)로 그립니다.
-그리기와 클릭이 같은 수집 함수(`collect`)를 씁니다. 시각화 등록 id 는 `billboard`(툴바 "Icons", 기본 켬)입니다.
-`EditorViewportClient::processPicking` 은 레이 피킹보다 먼저 빌보드를 화면 거리로 찾아, 맞으면 그 오브젝트와 컴포넌트를 고릅니다. 활성 카메라의 오브젝트는 화면 가운데를 가리므로 건너뜁니다.
-
-**왜.** 빛, 카메라, 오디오, 트리거, 내비 오브젝트는 메시가 없어서 뷰포트에 보이지 않습니다. 피킹 테이블이 메시, 스프라이트, 콜라이더만 집어서 클릭으로 고를 수도 없고, 지금은 Hierarchy 에서만 고를 수 있습니다.
-
-**상용 비교.** 언리얼의 `UBillboardComponent`(에디터 전용 스프라이트), 유니티의 Gizmo 아이콘, Godot 의 3D 기즈모 아이콘(단색 + 노드 색)에 해당합니다. 세 엔진 모두 아이콘을 눌러 고릅니다.
-
-**주의.** 원문은 시각화 마스크 비트(`getMaskBitById`)로 켬 여부를 봤습니다. C2 가 마스크를 `EditorVisualizerToggles`(id)로 바꾸므로 그것을 씁니다.
-오브젝트가 수천 개인 씬에서 매 프레임 모든 컴포넌트를 훑으면 비쌀 수 있습니다. `-gv_benchMeshes=8000 -EnableEditor` 로 에디터 UI 프레임 시간을 전후로 측정하고, 1 ms 를 넘으면 빛, 카메라, 오디오처럼 레지스트리가 있는 종류만 훑습니다.
-
-**테스트.** 자체 시험 `viewport.billboardPick`(빈 씬에 `PointLightComponent` 하나, 그 화면 위치를 클릭하면 선택이 그 오브젝트). 변이 검사: `processPicking` 의 빌보드 블록을 빼면 실패해야 합니다.
-
-**확인 = 에디터 시나리오.** `billboardpick.scenario.xml`: 빛 하나가 있는 시험 씬을 열고, 빌보드가 남긴 이름표(`viewport.billboard.<이름>`)를 `EditorClick` 으로 누른 뒤 탐침 `Editor.SelectionCount` 가 1 이고 선택이 그 빛 오브젝트인지 봅니다.
-툴바의 Icons 체크박스를 끄면 이름표가 사라지는지도 봅니다.
 
 ### R5 재생, 기즈모, 뷰포트 툴바, 커맨드 아이콘
 

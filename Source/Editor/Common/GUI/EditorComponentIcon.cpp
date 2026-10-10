@@ -2,11 +2,15 @@
 
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 
+#include "Core/Container/unordered_map.h"
+
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
+#include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw::editor
 {
@@ -92,29 +96,63 @@ namespace sw::editor
 
             static constexpr EditorComponentIconRow kDefaultRow{ "", editoricon::kComponent, kNeutral, false };
             static constexpr EditorComponentIconRow kObjectRow{ "", editoricon::kGameObject, kNeutral, false };
+
+            /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 글 비교가 수백만 번). 타입 표 세대가 바뀌면 비운다. */
+            struct RowCache
+            {
+                unordered_map<const TypeInfo*, const EditorComponentIconRow*> _mapRow;
+                uint32                                                        _generation{ invalid_index::kUint32 };
+            };
+
+            static RowCache& getRowCache()
+            {
+                static RowCache s_cache;
+                return s_cache;
+            }
+
+            static const EditorComponentIconRow& findRowUncached( const TypeInfo* pType )
+            {
+                for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr; pCurrent = pCurrent->getParentType() )
+                {
+                    const string_view name{ pCurrent->_name.c_str() };
+                    for ( const EditorComponentIconRow& row : kArrTypeRow )
+                    {
+                        if ( name == row._pKey )
+                            return row;
+                    }
+                }
+                if ( pType != nullptr && pType->getCategory().empty() == false )
+                {
+                    for ( const EditorComponentIconRow& row : kArrCategoryRow )
+                    {
+                        if ( string_view{ pType->getCategory() } == row._pKey )
+                            return row;
+                    }
+                }
+                return kDefaultRow;
+            }
         };
     } // namespace
 
     const EditorComponentIconRow& EditorComponentIcon::findRow( const TypeInfo* pType )
     {
-        for ( const TypeInfo* pCurrent = pType; pCurrent != nullptr; pCurrent = pCurrent->getParentType() )
+        const TypeRegistry* pRegistry = editor::getService<TypeRegistry>();
+        if ( pType == nullptr || pRegistry == nullptr )
+            return EditorComponentIconInternal::findRowUncached( pType );
+        // 모듈 언로드 · 리로드면 같은 주소에 다른 타입이 올 수 있다 — 타입 표 세대가 바뀌면 캐시를 비운다.
+        EditorComponentIconInternal::RowCache& cache      = EditorComponentIconInternal::getRowCache();
+        const uint32                           generation = pRegistry->getGeneration();
+        if ( cache._generation != generation )
         {
-            const string_view name{ pCurrent->_name.c_str() };
-            for ( const EditorComponentIconRow& row : EditorComponentIconInternal::kArrTypeRow )
-            {
-                if ( name == row._pKey )
-                    return row;
-            }
+            cache._mapRow.clear();
+            cache._generation = generation;
         }
-        if ( pType != nullptr && pType->getCategory().empty() == false )
-        {
-            for ( const EditorComponentIconRow& row : EditorComponentIconInternal::kArrCategoryRow )
-            {
-                if ( string_view{ pType->getCategory() } == row._pKey )
-                    return row;
-            }
-        }
-        return EditorComponentIconInternal::kDefaultRow;
+        const auto iter = cache._mapRow.find( pType );
+        if ( iter != cache._mapRow.end() )
+            return *iter->second;
+        const EditorComponentIconRow& row = EditorComponentIconInternal::findRowUncached( pType );
+        cache._mapRow.emplace( pType, &row );
+        return row;
     }
 
     const EditorComponentIconRow& EditorComponentIcon::findObjectRow( const GameObject& object )
