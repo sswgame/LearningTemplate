@@ -163,19 +163,19 @@ namespace sw
             {
                 if ( _lodDistance <= 0.0f || context._bHasViewPosition == SW_FALSE )
                 {
-                    _bLodOff = SW_FALSE;
+                    _bLODOff = SW_FALSE;
                     return;
                 }
                 const float32 distance = ( context._worldFromModel.getTranslation() - context._viewPosition ).getLength();
                 const bool    bOff     = distance > _lodDistance;
-                if ( bOff && _bLodOff == SW_FALSE )
+                if ( bOff && _bLODOff == SW_FALSE )
                     _chain.reset(); // 다시 켤 때 애니메이션 자세에서 시작한다
-                _bLodOff = bOff ? SW_TRUE : SW_FALSE;
+                _bLODOff = bOff ? SW_TRUE : SW_FALSE;
             }
 
             void evaluate( RigEvaluateContext& context ) override
             {
-                if ( _bLodOff == SW_TRUE )
+                if ( _bLODOff == SW_TRUE )
                     return;
                 const vector<RigSpringCollider>& listShared = context._pInstance->getSharedColliders();
                 if ( _bUseSharedColliders == SW_TRUE && listShared.empty() == false )
@@ -193,7 +193,7 @@ namespace sw
             void reset() override
             {
                 _chain.reset();
-                _bLodOff = SW_FALSE;
+                _bLODOff = SW_FALSE;
             }
 
         private:
@@ -212,7 +212,7 @@ namespace sw
             RigSpringSettings         _settings{};
             float32                   _lodDistance{ 0.0f };
             uint8                     _bUseSharedColliders{ SW_FALSE };
-            uint8                     _bLodOff{ SW_FALSE };
+            uint8                     _bLODOff{ SW_FALSE };
         };
 
         /**

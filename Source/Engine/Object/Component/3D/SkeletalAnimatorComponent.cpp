@@ -588,7 +588,7 @@ namespace sw
         const AnimPlayer& player   = _graphPlayer.getPlayer();
         const AnimClip*   pCurrent = static_cast<const AnimClip*>( player.getCurrentPlayable() );
         const AnimClip*   pNext    = static_cast<const AnimClip*>( player.getNextPlayable() );
-        const uint8*      pMask    = unit.findBoneLodMask();
+        const uint8*      pMask    = unit.findBoneLODMask();
 
         // pose 는 유닛이 레퍼런스(또는 리더 포즈)로 채워 둔 상태다. 지금 칸을 그 위에 샘플하고, 페이드 중이면 다음 칸과 섞는다.
         if ( pCurrent != nullptr )

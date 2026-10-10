@@ -86,7 +86,7 @@ namespace sw
          * @brief 카메라 위치 @p viewPosition 으로 청크 LOD 를 고르고, 바뀐 청크의 메시를 다시 만듭니다. 틱이 부르고 시험이 직접 부릅니다.
          * @return 메시를 다시 만든 청크 수입니다.
          */
-        uint32 updateLods( const float3& viewPosition );
+        uint32 updateLODs( const float3& viewPosition );
 
         /** @brief 월드 (x, z) 의 지형 높이입니다. 지형 밖 · 구멍이면 false 입니다. */
         [[nodiscard]] bool findHeightAt( float32 worldX, float32 worldZ, float32& outHeight ) const { return _heightfield.findHeightAt( worldX, worldZ, outHeight ); }
@@ -101,7 +101,7 @@ namespace sw
         /** @brief 청크 배치입니다. */
         const TerrainChunkLayout& getChunkLayout() const { return _layout; }
         /** @brief 청크 (x, z) 의 지금 LOD 입니다. 범위 밖이면 0 입니다. */
-        uint32 getChunkLod( uint32 chunkX, uint32 chunkZ ) const;
+        uint32 getChunkLOD( uint32 chunkX, uint32 chunkZ ) const;
         /** @brief 청크 (x, z) 의 지금 메시 정점 수입니다(시험). */
         uint32 getChunkVertexCount( uint32 chunkX, uint32 chunkZ ) const;
 
@@ -118,7 +118,7 @@ namespace sw
         void setSize( const float2& size ) { _size = size; }
         void setHeightRange( float32 heightMin, float32 heightMax );
         void setChunkCells( uint32 chunkCells ) { _chunkCells = chunkCells; }
-        void setLodDistance( float32 lodDistance ) { _lodDistance = lodDistance; }
+        void setLODDistance( float32 lodDistance ) { _lodDistance = lodDistance; }
         void setLayers( const vector<TerrainLayer>& listLayer ) { _listLayer = listLayer; }
 
     private:
@@ -127,7 +127,7 @@ namespace sw
         {
             unique_ptr<MeshInstanceBatch> _batch;
             uint32                        _lod{ 0 };
-            uint32                        _arrNeighborLod[static_cast<uint32>( TerrainChunkSide::Count )]{};
+            uint32                        _arrNeighborLOD[static_cast<uint32>( TerrainChunkSide::Count )]{};
             uint32                        _vertexCount{ 0 };
         };
 
@@ -140,7 +140,7 @@ namespace sw
         /** @brief 청크 하나의 메시를 지금 LOD · 이웃 LOD 로 다시 만들어 배치에 겁니다. */
         void rebuildChunkMesh( uint32 chunkIndex );
         /** @brief 청크 (x, z) 의 이웃 LOD 를 `TerrainChunkSide` 순서로 채웁니다(가장자리는 자기 LOD). */
-        void fillNeighborLods( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLod, uint32 ( &outArrLod )[4] ) const;
+        void fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const;
         /** @brief 머티리얼을 잡고 인스턴스에 레이어 · 텍스처 값을 싣습니다. 엔진 서비스가 없으면(CPU 시험) 건너뜁니다. */
         void acquireMaterial();
         /** @brief 스플랫 DDS 를 CPU 로 읽어 높이장에 줍니다. 비압축 RGBA8/BGRA8 만 읽습니다. */
@@ -177,7 +177,7 @@ namespace sw
         TerrainHeightfield  _heightfield;
         TerrainChunkLayout  _layout;
         vector<Chunk>       _listChunk;
-        vector<uint32>      _listWantedLod; ///< updateLods 의 스크래치(청크마다 고른 LOD)
+        vector<uint32>      _listWantedLOD; ///< updateLODs 의 스크래치(청크마다 고른 LOD)
         EnvironmentMaterial _material;
         PrimitiveRegistry*  _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
         atomic<bool>        _bOriginDirty;       ///< 오너가 움직여 지형 원점이 낡았다

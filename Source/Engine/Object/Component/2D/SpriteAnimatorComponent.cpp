@@ -18,7 +18,7 @@ namespace sw
     static_assert( sizeof( SpriteAnimatorComponent ) <=
                        ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
                          sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimGraphPlayer ) + sizeof( vector<AnimFiredNotify> ) +
-                         sizeof( IAnimNotifyListener* ) + sizeof( SpriteAnimatorLodClient ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLodState ) +
+                         sizeof( IAnimNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
                          sizeof( const SpriteClipAsset* ) + sizeof( AnimationSystem* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /
                            alignof( SpriteAnimatorComponent ) * alignof( SpriteAnimatorComponent ),
                    "SpriteAnimatorComponent has padding between fields (or a field was added without adding its size here)" );
@@ -35,35 +35,35 @@ namespace sw
         return &_owner._playable;
     }
 
-    SpriteAnimatorLodClient::SpriteAnimatorLodClient( SpriteAnimatorComponent& owner )
+    SpriteAnimatorLODClient::SpriteAnimatorLODClient( SpriteAnimatorComponent& owner )
         : _owner{ owner }
     {
     }
 
-    bool SpriteAnimatorLodClient::findAnimationLodBounds( float3& outCenter, float32& outRadius ) const
+    bool SpriteAnimatorLODClient::findAnimationLODBounds( float3& outCenter, float32& outRadius ) const
     {
         const SpriteComponent* pSprite = _owner.findSprite();
         return pSprite != nullptr && pSprite->getWorldBounds( outCenter, outRadius );
     }
 
-    void SpriteAnimatorLodClient::applyAnimationLod( const AnimationLodState& state )
+    void SpriteAnimatorLODClient::applyAnimationLOD( const AnimationLODState& state )
     {
         _owner._lodState = state;
     }
 
-    const Component* SpriteAnimatorLodClient::findRewindTarget() const
+    const Component* SpriteAnimatorLODClient::findRewindTarget() const
     {
         return _owner._bPlaying == SW_TRUE ? &_owner : nullptr;
     }
 
-    void SpriteAnimatorLodClient::collectDebugState( AnimationDebugState& inoutState ) const
+    void SpriteAnimatorLODClient::collectDebugState( AnimationDebugState& inoutState ) const
     {
         inoutState._stateName   = _owner._graphPlayer.getCurrentStateName().empty() ? hashed_string( _owner._currentAnimation ) : _owner._graphPlayer.getCurrentStateName();
         inoutState._stateTime   = _owner._graphPlayer.getPlayer().getCurrentTime();
         inoutState._spriteFrame = _owner._currentFrame;
     }
 
-    void SpriteAnimatorLodClient::applyRewindState( const AnimationDebugState& state )
+    void SpriteAnimatorLODClient::applyRewindState( const AnimationDebugState& state )
     {
         if ( state._spriteFrame < 0 )
             return;
@@ -138,14 +138,14 @@ namespace sw
     {
         SceneComponent::onRegister( manager );
         _pAnimationSystem = &manager.getAnimationSystem();
-        _pAnimationSystem->registerLodClient( &_lodClient );
+        _pAnimationSystem->registerLODClient( &_lodClient );
         const uint64 mixed = getHandle().componentId() * HashUtil::kGoldenRatio64;
         _updatePhase       = static_cast<uint32>( ( mixed ^ ( mixed >> 29 ) ) & 0xFFFFu );
     }
 
     void SpriteAnimatorComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getAnimationSystem().unregisterLodClient( &_lodClient );
+        manager.getAnimationSystem().unregisterLODClient( &_lodClient );
         _pAnimationSystem = nullptr;
         SceneComponent::onUnregister( manager );
     }
@@ -194,7 +194,7 @@ namespace sw
 
         // LOD: 안 보이거나 주기 밖이면 스프라이트에 넘기지 않는다(시간 · 상태는 위에서 흘렀다). 보이게 되면 그 틱에 맞춘다.
         const uint64 frameIndex = ( _pAnimationSystem != nullptr ) ? _pAnimationSystem->getFrameIndex() : 0u;
-        const bool   bOnRate    = AnimationLodUtil::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
+        const bool   bOnRate    = AnimationLODUtil::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
         if ( _lodState._bVisible == SW_FALSE || bOnRate == false )
         {
             if ( _currentFrame != prevFrame )

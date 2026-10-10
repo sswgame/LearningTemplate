@@ -891,7 +891,7 @@ namespace sw
         , _pAutomationRunner{ nullptr }
         , _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
-        , _listAnimationLodView{}
+        , _listAnimationLODView{}
         , _hostRole{ EngineHostRole::Client }
         , _bShellActionsBound{ false }
         , _bHeadless{ false }
@@ -1385,15 +1385,15 @@ namespace sw
                 // 갱신 주기로 쉬는 추가 뷰는 넣지 않는다 — 그 뷰에만 보이는 캐릭터는 그 뷰가 그리는 프레임에만 포즈를 만든다.
                 if ( pActiveScene->getObjectManager() != nullptr )
                 {
-                    _listAnimationLodView.clear();
+                    _listAnimationLODView.clear();
                     if ( packet._bHasViewProj == SW_TRUE )
-                        _listAnimationLodView.push_back( AnimationLodView::make( packet._viewProj, packet._cameraPos ) );
+                        _listAnimationLODView.push_back( AnimationLODView::make( packet._viewProj, packet._cameraPos ) );
                     for ( const RenderViewRequest& view : packet._listView )
                     {
                         if ( view._bRender == SW_TRUE )
-                            _listAnimationLodView.push_back( AnimationLodView::make( view._viewProj, view._position ) );
+                            _listAnimationLODView.push_back( AnimationLODView::make( view._viewProj, view._position ) );
                     }
-                    pActiveScene->getObjectManager()->getAnimationSystem().setLodViews( _listAnimationLodView );
+                    pActiveScene->getObjectManager()->getAnimationSystem().setLODViews( _listAnimationLODView );
                 }
                 _gpuSceneBuilder->buildFromScene( pActiveScene, packet._cameraPos );
                 // 추가 뷰(CCTV · PiP)는 자기 눈으로 투명을 정렬한다 — 주 카메라 순서로 그리면 반대편을 보는 뷰에서 앞뒤가 뒤집힌다.

@@ -7,7 +7,7 @@
  *          매 프레임 아무 일도 하지 않고, 몇 시간을 한 번에 건너뛰어도 매 분 돌린 것과 같은 자리에 섭니다. 시각은 정수 분, 무작위는 씨앗 해시라
  *          결정적입니다. 위치는 `ISchedulePathing` 이 정하므로 2D · 3D 를 가리지 않습니다.
  *
- *          - 판정 위치(계획의 출발점 · 끼어든 자리)는 늘 계획 경로(`setPathing` 의 첫째, 굵은 경로)에서 잽니다. 화면 안(`ScheduleLod::Near`) NPC 의
+ *          - 판정 위치(계획의 출발점 · 끼어든 자리)는 늘 계획 경로(`setPathing` 의 첫째, 굵은 경로)에서 잽니다. 화면 안(`ScheduleLOD::Near`) NPC 의
  *            보이는 자리만 고운 경로(둘째)를 따라갑니다 — 그래서 LOD 를 바꿔도 계획이 갈리지 않습니다.
  *          - 시간은 `update( clock )` 또는 `advanceTo( 분 )` 으로만 흐르고, (지금, 목표] 안의 사건(날 시작 · 끼어들기 만료 · 약속 판정 · 상태 바뀜)을
  *            시각 순, 같은 시각이면 NPC 순으로 처리합니다.
@@ -38,7 +38,7 @@ namespace sw
     class ScheduleCatalog;
 
     /** @brief 계산을 얼마나 곱게 하는가입니다. */
-    enum class ScheduleLod : uint8
+    enum class ScheduleLOD : uint8
     {
         Near = 0, ///< 화면 안 — 고운 경로 위 자리, 애니메이션 훅
         Far       ///< 화면 밖 · 로드되지 않음 — 지역 단위, 상태 사건은 굵은 시간 간격으로
@@ -61,7 +61,7 @@ namespace sw
         Appointment
     };
 
-    SW_GF_API const utf8* toString( ScheduleLod lod );
+    SW_GF_API const utf8* toString( ScheduleLOD lod );
     SW_GF_API const utf8* toString( ScheduleNpcPhase phase );
     SW_GF_API const utf8* toString( ScheduleSegmentSource source );
 } // namespace sw
@@ -104,7 +104,7 @@ namespace sw
         int32            _segmentIndex{ -1 };
         float32          _travelFraction{ 1.0f };
         ScheduleNpcPhase _phase{ ScheduleNpcPhase::Performing };
-        ScheduleLod      _lod{ ScheduleLod::Far };
+        ScheduleLOD      _lod{ ScheduleLOD::Far };
     };
 } // namespace sw
 
@@ -210,7 +210,7 @@ namespace sw
      *     schedules.setFlags( &flags );
      *     // 매 프레임
      *     schedules.setWeather( weather.getCurrent() );
-     *     schedules.setNpcLod( npcIndex, bVisible ? ScheduleLod::Near : ScheduleLod::Far );
+     *     schedules.setNpcLOD( npcIndex, bVisible ? ScheduleLOD::Near : ScheduleLOD::Far );
      *     schedules.update( clock );
      *     const ScheduleNpcView view = schedules.getNpcView( npcIndex ); // 자리 · 활동 · 애니메이션
      * @endcode
@@ -247,8 +247,8 @@ namespace sw
         /** @brief 게임이 조건 입력(세계 태그 등)을 바꿨음을 알립니다 — 지금 시각에 모두 다시 세웁니다. */
         void notifyConditionsChanged() { _bConditionsDirty = SW_TRUE; }
 
-        void        setNpcLod( int32 npcIndex, ScheduleLod lod );
-        ScheduleLod getNpcLod( int32 npcIndex ) const;
+        void        setNpcLOD( int32 npcIndex, ScheduleLOD lod );
+        ScheduleLOD getNpcLOD( int32 npcIndex ) const;
         void        addNpcTag( int32 npcIndex, const TagID& tag );
         void        removeNpcTag( int32 npcIndex, const TagID& tag );
 
@@ -311,7 +311,7 @@ namespace sw
             int32                   _planDay{ -1 };
             int32                   _wakeMinute{ 0 };
             ScheduleNpcPhase        _emittedPhase{ ScheduleNpcPhase::Performing };
-            ScheduleLod             _lod{ ScheduleLod::Far };
+            ScheduleLOD             _lod{ ScheduleLOD::Far };
             uint8                   _bTagsDirty{ SW_FALSE };
             uint8                   _bEmitted{ SW_FALSE }; ///< `_emittedSegment` 가 유효한가
         };

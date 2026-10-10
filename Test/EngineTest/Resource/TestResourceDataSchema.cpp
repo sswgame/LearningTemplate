@@ -11,7 +11,7 @@
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
@@ -36,7 +36,7 @@
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Object/Animation/AnimationCrowd.h"
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 #include "Engine/Object/Animation/VertexAnimationCooker.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -410,21 +410,21 @@ namespace
         }
 
         /** @brief 스켈레톤 곁 본 LOD 표 — 모르는 키 · 곁 스켈레톤에 없는 본 이름은 오류다. */
-        static bool               isBoneLod( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLod::kExtension ); }
-        [[nodiscard]] static bool loadBoneLod( const sw::string& resourceId )
+        static bool               isBoneLOD( sw::string_view resourceId ) { return endsWith( resourceId, sw::SkeletonBoneLOD::kExtension ); }
+        [[nodiscard]] static bool loadBoneLOD( const sw::string& resourceId )
         {
             sw::string importedPath;
             sw::string siblingPath;
-            sw::SkeletonBoneLod::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
+            sw::SkeletonBoneLOD::makeSkeletonCandidatePaths( resourceId, importedPath, siblingPath );
             const sw::string&             skeletonPath = sw::ResourceUtil::hasResource( importedPath ) ? importedPath : siblingPath;
-            sw::SkeletonBoneLod           boneLod;
+            sw::SkeletonBoneLOD           boneLOD;
             sw::Skeleton                  skeleton;
             sw::vector<sw::vector<uint8>> listMask;
-            return boneLod.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLod.buildMasks( skeleton, listMask, resourceId );
+            return boneLOD.loadFromResource( resourceId ) && skeleton.loadFromResource( skeletonPath ) && boneLOD.buildMasks( skeleton, listMask, resourceId );
         }
 
         /** @brief 애니메이션 LOD 표(주기 단계 · 예산). */
-        static bool isAnimationLod( sw::string_view resourceId ) { return resourceId == sw::AnimationLodSettings::kResourcePath; }
+        static bool isAnimationLOD( sw::string_view resourceId ) { return resourceId == sw::AnimationLODSettings::kResourcePath; }
         /** @brief 군중 공유 표(변형 칸 수 · 묶음 유지 · VAT 프레임율). */
         static bool isAnimationCrowd( sw::string_view resourceId ) { return resourceId == sw::AnimationCrowdSettings::kResourcePath; }
         /** @brief VAT 쿠킹 목록 — 가리키는 메시 · 스켈레톤 · 클립 파일이 모두 있어야 한다. */
@@ -552,8 +552,8 @@ namespace
             {    "retargetprofile",     &isRetargetProfile,                               &loadRetargetProfile},
             {        "notifytable",         &isNotifyTable,                                   &loadNotifyTable},
             {           "clipdata",            &isClipData,                                      &loadClipData},
-            {            "bonelod",             &isBoneLod,                                       &loadBoneLod},
-            {       "animationlod",        &isAnimationLod,             &loadCatalog<sw::AnimationLodSettings>},
+            {            "bonelod",             &isBoneLOD,                                       &loadBoneLOD},
+            {       "animationlod",        &isAnimationLOD,             &loadCatalog<sw::AnimationLODSettings>},
             {     "animationcrowd",      &isAnimationCrowd,           &loadCatalog<sw::AnimationCrowdSettings>},
             {    "vertexanimation", &isVertexAnimationList,          &loadCatalog<sw::VertexAnimationCookList>},
             {            "lipsync",             &isLipSync,                  &loadCatalog<sw::LipSyncSettings>},

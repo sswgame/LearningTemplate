@@ -29,7 +29,7 @@ namespace sw
             static constexpr uint32 kDxgiBgra8     = 87;
             static constexpr uint32 kDxgiBgra8Srgb = 91;
             /** @brief LOD 를 바꾸기 전에 거리가 문턱을 넘어야 하는 비율 — 문턱에 선 카메라가 매 프레임 메시를 다시 만들지 않게. */
-            static constexpr float32 kLodHysteresis = 0.1f;
+            static constexpr float32 kLODHysteresis = 0.1f;
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
             {
@@ -77,7 +77,7 @@ namespace sw
         , _heightfield{}
         , _layout{}
         , _listChunk{}
-        , _listWantedLod{}
+        , _listWantedLOD{}
         , _material{}
         , _pPrimitiveRegistry{ nullptr }
         , _bOriginDirty{ false }
@@ -170,7 +170,7 @@ namespace sw
         }
         float3 viewPosition{};
         if ( pManager != nullptr && _listChunk.empty() == false && EnvironmentUtil::findViewPosition( *pManager, viewPosition ) )
-            (void)updateLods( viewPosition );
+            (void)updateLODs( viewPosition );
     }
 
     void TerrainComponent::setHeightRange( float32 heightMin, float32 heightMax )
@@ -288,9 +288,9 @@ namespace sw
             const uint32 chunkZ = chunkIndex / _layout._chunkCountX;
             Chunk&       chunk  = _listChunk[chunkIndex];
             chunk._lod          = 0;
-            for ( uint32& neighborLod : chunk._arrNeighborLod )
+            for ( uint32& neighborLOD : chunk._arrNeighborLOD )
             {
-                neighborLod = 0;
+                neighborLOD = 0;
             }
             chunk._batch = sw::make_unique<MeshInstanceBatch>( Mesh::create(), _material.getMaterial(), _material.getInstance(), 1u );
             chunk._batch->setOwnerComponent( this );
@@ -308,42 +308,42 @@ namespace sw
         const uint32      chunkX = chunkIndex % _layout._chunkCountX;
         const uint32      chunkZ = chunkIndex / _layout._chunkCountX;
         vector<RHIVertex> listVertex;
-        TerrainMeshBuilder::buildChunkVertices( _heightfield, _layout, chunkX, chunkZ, chunk._lod, chunk._arrNeighborLod, listVertex );
+        TerrainMeshBuilder::buildChunkVertices( _heightfield, _layout, chunkX, chunkZ, chunk._lod, chunk._arrNeighborLOD, listVertex );
         chunk._vertexCount    = static_cast<uint32>( listVertex.size() );
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );
         chunk._batch->setMesh( std::move( mesh ) );
     }
 
-    void TerrainComponent::fillNeighborLods( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLod, uint32 ( &outArrLod )[4] ) const
+    void TerrainComponent::fillNeighborLODs( uint32 chunkX, uint32 chunkZ, const vector<uint32>& listLOD, uint32 ( &outArrLOD )[4] ) const
     {
-        const uint32 ownLod                                       = listLod[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX];
-        outArrLod[static_cast<uint32>( TerrainChunkSide::West )]  = chunkX > 0 ? listLod[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX - 1] : ownLod;
-        outArrLod[static_cast<uint32>( TerrainChunkSide::East )]  = chunkX + 1 < _layout._chunkCountX ? listLod[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX + 1] : ownLod;
-        outArrLod[static_cast<uint32>( TerrainChunkSide::South )] = chunkZ > 0 ? listLod[static_cast<size_t>( chunkZ - 1 ) * _layout._chunkCountX + chunkX] : ownLod;
-        outArrLod[static_cast<uint32>( TerrainChunkSide::North )] = chunkZ + 1 < _layout._chunkCountZ ? listLod[static_cast<size_t>( chunkZ + 1 ) * _layout._chunkCountX + chunkX] : ownLod;
+        const uint32 ownLOD                                       = listLOD[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX];
+        outArrLOD[static_cast<uint32>( TerrainChunkSide::West )]  = chunkX > 0 ? listLOD[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX - 1] : ownLOD;
+        outArrLOD[static_cast<uint32>( TerrainChunkSide::East )]  = chunkX + 1 < _layout._chunkCountX ? listLOD[static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX + 1] : ownLOD;
+        outArrLOD[static_cast<uint32>( TerrainChunkSide::South )] = chunkZ > 0 ? listLOD[static_cast<size_t>( chunkZ - 1 ) * _layout._chunkCountX + chunkX] : ownLOD;
+        outArrLOD[static_cast<uint32>( TerrainChunkSide::North )] = chunkZ + 1 < _layout._chunkCountZ ? listLOD[static_cast<size_t>( chunkZ + 1 ) * _layout._chunkCountX + chunkX] : ownLOD;
     }
 
-    uint32 TerrainComponent::updateLods( const float3& viewPosition )
+    uint32 TerrainComponent::updateLODs( const float3& viewPosition )
     {
         using Internal          = TerrainComponentInternal;
         const uint32 chunkCount = static_cast<uint32>( _listChunk.size() );
-        _listWantedLod.resize( chunkCount );
+        _listWantedLOD.resize( chunkCount );
         for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
         {
             const uint32  chunkX     = chunkIndex % _layout._chunkCountX;
             const uint32  chunkZ     = chunkIndex / _layout._chunkCountX;
             const float32 distance   = Internal::computeChunkDistance( _heightfield, _layout, chunkX, chunkZ, viewPosition );
-            const uint32  currentLod = _listChunk[chunkIndex]._lod;
-            uint32        wantedLod  = TerrainMeshBuilder::selectLod( distance, _lodDistance, _layout._maxLod );
+            const uint32  currentLOD = _listChunk[chunkIndex]._lod;
+            uint32        wantedLOD  = TerrainMeshBuilder::selectLOD( distance, _lodDistance, _layout._maxLOD );
             // 문턱 근처에서 흔들리지 않게 — 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
-            if ( wantedLod != currentLod )
+            if ( wantedLOD != currentLOD )
             {
-                const float32 margin = wantedLod > currentLod ? ( 1.0f - Internal::kLodHysteresis ) : ( 1.0f + Internal::kLodHysteresis );
-                if ( TerrainMeshBuilder::selectLod( distance * margin, _lodDistance, _layout._maxLod ) != wantedLod )
-                    wantedLod = currentLod;
+                const float32 margin = wantedLOD > currentLOD ? ( 1.0f - Internal::kLODHysteresis ) : ( 1.0f + Internal::kLODHysteresis );
+                if ( TerrainMeshBuilder::selectLOD( distance * margin, _lodDistance, _layout._maxLOD ) != wantedLOD )
+                    wantedLOD = currentLOD;
             }
-            _listWantedLod[chunkIndex] = wantedLod;
+            _listWantedLOD[chunkIndex] = wantedLOD;
         }
 
         uint32 rebuiltCount{ 0 };
@@ -352,18 +352,18 @@ namespace sw
             Chunk&       chunk  = _listChunk[chunkIndex];
             const uint32 chunkX = chunkIndex % _layout._chunkCountX;
             const uint32 chunkZ = chunkIndex / _layout._chunkCountX;
-            uint32       arrNeighborLod[4]{};
-            fillNeighborLods( chunkX, chunkZ, _listWantedLod, arrNeighborLod );
-            bool bChanged = chunk._lod != _listWantedLod[chunkIndex];
+            uint32       arrNeighborLOD[4]{};
+            fillNeighborLODs( chunkX, chunkZ, _listWantedLOD, arrNeighborLOD );
+            bool bChanged = chunk._lod != _listWantedLOD[chunkIndex];
             for ( uint32 side = 0; side < 4; ++side )
             {
                 // 이웃이 이쪽보다 고우면 접는 것은 이웃의 일이다 — 그 변은 이쪽 메시에 영향이 없다.
-                const uint32 oldEffective   = MathUtil::max( chunk._arrNeighborLod[side], chunk._lod );
-                const uint32 newEffective   = MathUtil::max( arrNeighborLod[side], _listWantedLod[chunkIndex] );
+                const uint32 oldEffective   = MathUtil::max( chunk._arrNeighborLOD[side], chunk._lod );
+                const uint32 newEffective   = MathUtil::max( arrNeighborLOD[side], _listWantedLOD[chunkIndex] );
                 bChanged                    = bChanged || oldEffective != newEffective;
-                chunk._arrNeighborLod[side] = arrNeighborLod[side];
+                chunk._arrNeighborLOD[side] = arrNeighborLOD[side];
             }
-            chunk._lod = _listWantedLod[chunkIndex];
+            chunk._lod = _listWantedLOD[chunkIndex];
             if ( bChanged == false )
                 continue;
             rebuildChunkMesh( chunkIndex );
@@ -372,7 +372,7 @@ namespace sw
         return rebuiltCount;
     }
 
-    uint32 TerrainComponent::getChunkLod( uint32 chunkX, uint32 chunkZ ) const
+    uint32 TerrainComponent::getChunkLOD( uint32 chunkX, uint32 chunkZ ) const
     {
         const size_t chunkIndex = static_cast<size_t>( chunkZ ) * _layout._chunkCountX + chunkX;
         return ( chunkX < _layout._chunkCountX && chunkIndex < _listChunk.size() ) ? _listChunk[chunkIndex]._lod : 0u;

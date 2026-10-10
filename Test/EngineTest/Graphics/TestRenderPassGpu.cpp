@@ -6484,9 +6484,9 @@ SW_TEST_CASE( RenderPassGpuTest, CrowdSharingAndVertexAnimationMatchPerUnitSkinn
             pUnit->setLocalPosition( sw::float3{ -1.6f + 1.6f * static_cast<float32>( index ), 1.0f, 0.0f } );
             if ( crowdCase == CrowdCase::VertexAnimation )
             {
-                sw::AnimationLodState farState{};
+                sw::AnimationLODState farState{};
                 farState._bVertexAnimation = SW_TRUE;
-                pUnit->applyAnimationLod( farState );
+                pUnit->applyAnimationLOD( farState );
             }
             if ( crowdCase == CrowdCase::BindPose )
                 continue;

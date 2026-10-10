@@ -3,7 +3,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 #include "Engine/Object/Animation/AnimationRewind.h"
 #include "Engine/Object/Animation/AnimationSystem.h"
 #include "Engine/Object/Component/2D/SpriteAnimatorComponent.h"
@@ -16,11 +16,11 @@
 
 using namespace sw;
 
-// SpriteAnimationLodTest — 2D 스프라이트 애니메이터가 애니메이션 LOD(가시성 · 주기)를 따르고 되감기에 상태(프레임)를 남기는 것.
+// SpriteAnimationLODTest — 2D 스프라이트 애니메이터가 애니메이션 LOD(가시성 · 주기)를 따르고 되감기에 상태(프레임)를 남기는 것.
 
 namespace
 {
-    struct TestSpriteAnimationLodInternal
+    struct TestSpriteAnimationLODInternal
     {
         /** @brief 프레임 넷(각 100 ms)을 도는 반복 구간 `all` 의 클립을 쓰고 경로를 돌려줍니다. */
         static string writeClip()
@@ -41,12 +41,12 @@ namespace
         }
 
         /** @brief 원점을 앞(+Z 쪽 원점) 또는 뒤로 보는 뷰입니다. */
-        static AnimationLodView makeView( bool bTowardOrigin )
+        static AnimationLODView makeView( bool bTowardOrigin )
         {
             const float3   eye{ 0.0f, 0.0f, -5.0f };
             const float3   target = bTowardOrigin ? float3{ 0.0f, 0.0f, 0.0f } : float3{ 0.0f, 0.0f, -10.0f };
             const float4x4 view   = float4x4::createLookAt( eye, target, float3{ 0.0f, 1.0f, 0.0f } );
-            return AnimationLodView::make( view * float4x4::createPerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 100.0f ), eye );
+            return AnimationLODView::make( view * float4x4::createPerspectiveFieldOfView( MathUtil::kPi * 0.5f, 1.0f, 0.1f, 100.0f ), eye );
         }
 
         struct Walker
@@ -74,21 +74,21 @@ namespace
 } // namespace
 
 /**
- * @brief [SpriteAnimationLodTest] 어느 뷰에도 안 보이면 시간은 흐르되 스프라이트 프레임은 넘기지 않고, 보이게 된 틱에 곧바로 지금 프레임으로 맞춘다
+ * @brief [SpriteAnimationLODTest] 어느 뷰에도 안 보이면 시간은 흐르되 스프라이트 프레임은 넘기지 않고, 보이게 된 틱에 곧바로 지금 프레임으로 맞춘다
  */
-SW_TEST_CASE( SpriteAnimationLodTest, OffscreenSpriteKeepsTimeButSkipsFrames )
+SW_TEST_CASE( SpriteAnimationLODTest, OffscreenSpriteKeepsTimeButSkipsFrames )
 {
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
-    const string clipPath = TestSpriteAnimationLodInternal::writeClip();
+    const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;
-    const TestSpriteAnimationLodInternal::Walker walker = TestSpriteAnimationLodInternal::createWalker( manager, clipPath );
+    const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
     AnimationSystem& system = manager.getAnimationSystem();
-    system.setLodSettings( AnimationLodSettings::makeDefault() );
+    system.setLODSettings( AnimationLODSettings::makeDefault() );
     SW_EXPECT_EQUAL( 0, walker._pSprite->getClipFrame() );
 
-    system.setLodViews( { TestSpriteAnimationLodInternal::makeView( false ) } );
+    system.setLODViews( { TestSpriteAnimationLODInternal::makeView( false ) } );
     system.evaluate( 0.0f );
     walker._pAnimator->onTick( 0.15f );
     SW_EXPECT_EQUAL( 1, walker._pAnimator->getCurrentFrame() ); // 시간 · 상태는 흘렀다
@@ -97,28 +97,28 @@ SW_TEST_CASE( SpriteAnimationLodTest, OffscreenSpriteKeepsTimeButSkipsFrames )
     SW_EXPECT_EQUAL( 2, walker._pAnimator->getCurrentFrame() );
     SW_EXPECT_EQUAL( 0, walker._pSprite->getClipFrame() );
 
-    system.setLodViews( { TestSpriteAnimationLodInternal::makeView( true ) } );
+    system.setLODViews( { TestSpriteAnimationLODInternal::makeView( true ) } );
     system.evaluate( 0.0f );
     walker._pAnimator->onTick( 0.0f ); // 프레임이 그대로여도 밀린 프레임을 맞춘다
     SW_EXPECT_EQUAL( 2, walker._pSprite->getClipFrame() );
 }
 
 /**
- * @brief [SpriteAnimationLodTest] LOD 주기가 3 이면 스프라이트 프레임은 그 주기의 틱에만 넘어간다(6 틱에 2 번) — 위상은 핸들에서 오고 시간은 매 틱 흐른다
+ * @brief [SpriteAnimationLODTest] LOD 주기가 3 이면 스프라이트 프레임은 그 주기의 틱에만 넘어간다(6 틱에 2 번) — 위상은 핸들에서 오고 시간은 매 틱 흐른다
  */
-SW_TEST_CASE( SpriteAnimationLodTest, UpdateRateDivisorThrottlesFramePushes )
+SW_TEST_CASE( SpriteAnimationLODTest, UpdateRateDivisorThrottlesFramePushes )
 {
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
-    const string clipPath = TestSpriteAnimationLodInternal::writeClip();
+    const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;
-    const TestSpriteAnimationLodInternal::Walker walker = TestSpriteAnimationLodInternal::createWalker( manager, clipPath );
+    const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
     AnimationSystem&     system = manager.getAnimationSystem();
-    AnimationLodSettings settings{};
-    settings._listRateLevel.push_back( AnimationLodRateLevel{ 0.0f, 3u, SW_FALSE } );
-    system.setLodSettings( settings );
-    system.setLodViews( { TestSpriteAnimationLodInternal::makeView( true ) } );
+    AnimationLODSettings settings{};
+    settings._listRateLevel.push_back( AnimationLODRateLevel{ 0.0f, 3u, SW_FALSE } );
+    system.setLODSettings( settings );
+    system.setLODViews( { TestSpriteAnimationLODInternal::makeView( true ) } );
 
     uint32 pushedCount = 0;
     for ( uint32 tick = 0; tick < 6; ++tick )
@@ -133,15 +133,15 @@ SW_TEST_CASE( SpriteAnimationLodTest, UpdateRateDivisorThrottlesFramePushes )
 
 #if SW_ANIMATION_REWIND_ENABLED // 되감기 기록기는 Shipping 에 없다
 /**
- * @brief [SpriteAnimationLodTest] 되감기는 스프라이트 애니메이터의 상태(구간 이름 · 시각 · 프레임)를 남기고, 되감는 동안 기록된 프레임을 건 채 흐르지 않는다
+ * @brief [SpriteAnimationLODTest] 되감기는 스프라이트 애니메이터의 상태(구간 이름 · 시각 · 프레임)를 남기고, 되감는 동안 기록된 프레임을 건 채 흐르지 않는다
  */
-SW_TEST_CASE( SpriteAnimationLodTest, RewindRecordsAndRestoresSpriteFrames )
+SW_TEST_CASE( SpriteAnimationLODTest, RewindRecordsAndRestoresSpriteFrames )
 {
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
-    const string clipPath = TestSpriteAnimationLodInternal::writeClip();
+    const string clipPath = TestSpriteAnimationLODInternal::writeClip();
     SW_ASSERT_FALSE( clipPath.empty() );
     GameObjectManager                            manager;
-    const TestSpriteAnimationLodInternal::Walker walker = TestSpriteAnimationLodInternal::createWalker( manager, clipPath );
+    const TestSpriteAnimationLODInternal::Walker walker = TestSpriteAnimationLODInternal::createWalker( manager, clipPath );
     SW_ASSERT_NOT_NULL( walker._pAnimator );
     AnimationSystem& system = manager.getAnimationSystem();
 

@@ -17,11 +17,11 @@
 
 /**
  * @brief [TerrainBenchTest] 눈이 지형을 가로지르는 600 프레임 — LOD 교체 프레임의 GT 비용(판정 · 청크 메시 · GPU 씬 수집)
- * @details 쇼케이스 씬을 그대로 세워(머티리얼 · 식생 포함) 눈을 x 축으로 250 m(60 fps 로 10 초, 초속 25 m) 옮기며 프레임마다 updateLods ·
+ * @details 쇼케이스 씬을 그대로 세워(머티리얼 · 식생 포함) 눈을 x 축으로 250 m(60 fps 로 10 초, 초속 25 m) 옮기며 프레임마다 updateLODs ·
  *          GpuSceneBuilder::buildFromScene 을 잰다. 교체가 있었던 프레임만 따로 모은다. 렌더 스레드의 정점 풀 재생성(`RT.GpuScene.vertexPool`)은
  *          여기 없다 — App 의 프로파일 표로 본다.
  */
-SW_TEST_CASE( TerrainBenchTest, LodSweepWorstFrame )
+SW_TEST_CASE( TerrainBenchTest, LODSweepWorstFrame )
 {
     constexpr uint32 kFrameCount = 600;
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
@@ -36,14 +36,14 @@ SW_TEST_CASE( TerrainBenchTest, LodSweepWorstFrame )
 
     sw::GpuSceneBuilder builder;
     sw::vector<int64>   listAll;
-    sw::vector<int64>   listSwapLod;
+    sw::vector<int64>   listSwapLOD;
     sw::vector<int64>   listSwapBuild;
     for ( uint32 frame = 0; frame < kFrameCount; ++frame )
     {
         const float32       sweep = static_cast<float32>( frame ) / static_cast<float32>( kFrameCount - 1 );
         const sw::float3    eye{ -125.0f + 250.0f * sweep, 20.0f, 3.0f };
         const sw::Stopwatch lodWatch;
-        const uint32        rebuiltCount = pTerrain->updateLods( eye );
+        const uint32        rebuiltCount = pTerrain->updateLODs( eye );
         const int64         lodMicros    = lodWatch.getElapsedNanoseconds() / 1000;
         const sw::Stopwatch buildWatch;
         builder.buildFromScene( &scene, eye );
@@ -51,12 +51,12 @@ SW_TEST_CASE( TerrainBenchTest, LodSweepWorstFrame )
         listAll.push_back( lodMicros + buildMicros );
         if ( rebuiltCount > 0 )
         {
-            listSwapLod.push_back( lodMicros );
+            listSwapLOD.push_back( lodMicros );
             listSwapBuild.push_back( buildMicros );
         }
     }
-    SW_EXPECT_TRUE_MSG( listSwapLod.empty() == false, "the sweep never changed a LOD - the bench measures nothing" );
-    test::logBenchSamples( "terrain sweep  every frame (updateLods + GpuScene build)", listAll );
-    test::logBenchSamples( "terrain sweep  LOD swap frames: updateLods (chunk meshes)", listSwapLod );
+    SW_EXPECT_TRUE_MSG( listSwapLOD.empty() == false, "the sweep never changed a LOD - the bench measures nothing" );
+    test::logBenchSamples( "terrain sweep  every frame (updateLODs + GpuScene build)", listAll );
+    test::logBenchSamples( "terrain sweep  LOD swap frames: updateLODs (chunk meshes)", listSwapLOD );
     test::logBenchSamples( "terrain sweep  LOD swap frames: GpuScene build", listSwapBuild );
 }

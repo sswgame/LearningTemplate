@@ -495,7 +495,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
     }
     for ( int32 npcIndex = 0; npcIndex < onScreen.getNpcCount(); ++npcIndex )
     {
-        onScreen.setNpcLod( npcIndex, ScheduleLod::Near );
+        onScreen.setNpcLOD( npcIndex, ScheduleLOD::Near );
     }
     const int32 pierre = onScreen.findNpcIndex( "pierre" );
 
@@ -527,7 +527,7 @@ SW_TEST_CASE( ScheduleTest, OffScreenCatchUpMatchesOnScreenSimulation )
             SW_EXPECT_TRUE( farView._phase == ScheduleNpcPhase::Traveling );
             SW_EXPECT_NEAR_EQUAL( nearView._travelFraction, farView._travelFraction, 1.0e-5f );
             SW_EXPECT_TRUE_MSG( float3::getDistance( nearView._location._position, farView._location._position ) > 1.0f, "the fine route detours around the wall" );
-            snapping.setNpcLod( pierre, ScheduleLod::Near );
+            snapping.setNpcLOD( pierre, ScheduleLOD::Near );
             SW_EXPECT_TRUE( Internal::isNear( nearView._location._position, snapping.getNpcView( pierre )._location._position ) );
             vector<ScheduleEvent> listEvent;
             snapping.drainEvents( listEvent );
@@ -707,7 +707,7 @@ SW_TEST_CASE( ScheduleTest, RunsOnA2DTileGridInTheXyPlane )
     ScheduleSystem system;
     system.setPathing( &pathing, &pathing );
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( 0, 6 ) );
-    system.setNpcLod( 0, ScheduleLod::Near );
+    system.setNpcLOD( 0, ScheduleLOD::Near );
     const ScheduleSegment* pWork = nullptr;
     for ( const ScheduleSegment& segment : system.getPlan( 0 ) )
     {
@@ -778,7 +778,7 @@ SW_TEST_CASE( ScheduleTest, AnimatorHookPlaysOnlyForNearNpcs )
     system.setActivityAnimator( &animator );
     system.initialize( &catalog, Internal::makeSettings(), Internal::makeMinute( Internal::kMonday, 8 ) );
     const int32 pierre = system.findNpcIndex( "pierre" );
-    system.setNpcLod( pierre, ScheduleLod::Near );
+    system.setNpcLOD( pierre, ScheduleLOD::Near );
     animator._listStarted.clear();
     system.advanceTo( Internal::makeMinute( Internal::kMonday, 9, 5 ) );
     SW_ASSERT_EQUAL( 1, static_cast<int32>( animator._listStarted.size() ) );

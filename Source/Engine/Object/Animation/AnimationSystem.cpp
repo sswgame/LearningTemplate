@@ -58,9 +58,9 @@ namespace sw
         , _listLevel{}
         , _listActive{}
         , _listLevelStart{}
-        , _listLodClient{}
-        , _listLodView{}
-        , _listScratchLodState{}
+        , _listLODClient{}
+        , _listLODView{}
+        , _listScratchLODState{}
         , _listScratchBudgetItem{}
         , _lodSettings{}
         , _crowd{}
@@ -79,23 +79,23 @@ namespace sw
         , _poseEvaluatedUnitCount{ 0 }
         , _bOrderDirty{ SW_FALSE }
         , _bCycle{ SW_FALSE }
-        , _bLodViewsSet{ SW_FALSE }
-        , _bLodSettingsReady{ SW_FALSE }
-        , _bLodApplied{ SW_FALSE }
+        , _bLODViewsSet{ SW_FALSE }
+        , _bLODSettingsReady{ SW_FALSE }
+        , _bLODApplied{ SW_FALSE }
         , _bCrowdSettingsReady{ SW_FALSE }
-        , _bHasLodViewPosition{ SW_FALSE }
+        , _bHasLODViewPosition{ SW_FALSE }
     {
     }
 
-    void AnimationSystem::setLodViewPosition( const float3& position )
+    void AnimationSystem::setLODViewPosition( const float3& position )
     {
         _lodViewPosition     = position;
-        _bHasLodViewPosition = SW_TRUE;
+        _bHasLODViewPosition = SW_TRUE;
     }
 
-    bool AnimationSystem::findLodViewPosition( float3& outPosition ) const
+    bool AnimationSystem::findLODViewPosition( float3& outPosition ) const
     {
-        if ( _bHasLodViewPosition == SW_FALSE )
+        if ( _bHasLODViewPosition == SW_FALSE )
             return false;
         outPosition = _lodViewPosition;
         return true;
@@ -140,103 +140,103 @@ namespace sw
         SW_PROFILE_COUNT( "GT.Animation.crowdEvaluatedBuckets", _crowd.getEvaluatedBucketCount() );
     }
 
-    void AnimationSystem::registerLodClient( IAnimationLodClient* pClient )
+    void AnimationSystem::registerLODClient( IAnimationLODClient* pClient )
     {
-        if ( pClient == nullptr || std::find( _listLodClient.begin(), _listLodClient.end(), pClient ) != _listLodClient.end() )
+        if ( pClient == nullptr || std::find( _listLODClient.begin(), _listLODClient.end(), pClient ) != _listLODClient.end() )
             return;
-        _listLodClient.push_back( pClient );
+        _listLODClient.push_back( pClient );
     }
 
-    void AnimationSystem::unregisterLodClient( IAnimationLodClient* pClient )
+    void AnimationSystem::unregisterLODClient( IAnimationLODClient* pClient )
     {
-        const auto it = std::find( _listLodClient.begin(), _listLodClient.end(), pClient );
-        if ( it != _listLodClient.end() )
-            _listLodClient.erase( it );
+        const auto it = std::find( _listLODClient.begin(), _listLODClient.end(), pClient );
+        if ( it != _listLODClient.end() )
+            _listLODClient.erase( it );
     }
 
-    void AnimationSystem::setLodViews( const vector<AnimationLodView>& listView )
+    void AnimationSystem::setLODViews( const vector<AnimationLODView>& listView )
     {
-        _listLodView  = listView;
-        _bLodViewsSet = SW_TRUE;
+        _listLODView  = listView;
+        _bLODViewsSet = SW_TRUE;
         // 거리 LOD(스프링 본 `lod_distance`)의 기준점도 주 시점이다 — 뷰를 넣는 쪽이 따로 넣지 않아도 같은 카메라를 본다.
         if ( listView.empty() == false )
-            setLodViewPosition( listView.front()._position );
+            setLODViewPosition( listView.front()._position );
     }
 
-    void AnimationSystem::clearLodViews()
+    void AnimationSystem::clearLODViews()
     {
-        _listLodView.clear();
-        _bLodViewsSet = SW_FALSE;
+        _listLODView.clear();
+        _bLODViewsSet = SW_FALSE;
     }
 
-    void AnimationSystem::setLodSettings( const AnimationLodSettings& settings )
+    void AnimationSystem::setLODSettings( const AnimationLODSettings& settings )
     {
         _lodSettings       = settings;
-        _bLodSettingsReady = SW_TRUE;
+        _bLODSettingsReady = SW_TRUE;
     }
 
-    void AnimationSystem::updateLod()
+    void AnimationSystem::updateLOD()
     {
-        if ( _listLodClient.empty() )
+        if ( _listLODClient.empty() )
             return;
         SW_PROFILE_SCOPE( "GT.Animation.lod" );
-        const size_t clientCount = _listLodClient.size();
+        const size_t clientCount = _listLODClient.size();
         // 뷰가 없거나(시험 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
-        if ( gv_animationLod == 0 || _bLodViewsSet == SW_FALSE )
+        if ( gv_animationLod == 0 || _bLODViewsSet == SW_FALSE )
         {
-            if ( _bLodApplied == SW_TRUE )
+            if ( _bLODApplied == SW_TRUE )
             {
-                const AnimationLodState fullState{};
-                for ( IAnimationLodClient* pClient : _listLodClient )
+                const AnimationLODState fullState{};
+                for ( IAnimationLODClient* pClient : _listLODClient )
                 {
-                    pClient->applyAnimationLod( fullState );
+                    pClient->applyAnimationLOD( fullState );
                 }
             }
-            _bLodApplied                    = SW_FALSE;
+            _bLODApplied                    = SW_FALSE;
             _expectedEvaluationMicroseconds = 0.0f;
             return;
         }
-        _bLodApplied = SW_TRUE;
-        if ( _bLodSettingsReady == SW_FALSE )
+        _bLODApplied = SW_TRUE;
+        if ( _bLODSettingsReady == SW_FALSE )
         {
             // 표가 없으면 단계 없는 기본(가시성만)이다. 있는데 틀리면 오류를 남기고 기본으로 간다.
-            _bLodSettingsReady = SW_TRUE;
-            if ( ResourceUtil::hasResource( AnimationLodSettings::kResourcePath ) )
-                (void)_lodSettings.loadFromResource( AnimationLodSettings::kResourcePath ); // 틀리면 loadFromResource 가 오류를 남기고 기본으로 돌린다
+            _bLODSettingsReady = SW_TRUE;
+            if ( ResourceUtil::hasResource( AnimationLODSettings::kResourcePath ) )
+                (void)_lodSettings.loadFromResource( AnimationLODSettings::kResourcePath ); // 틀리면 loadFromResource 가 오류를 남기고 기본으로 돌린다
         }
 
-        _listScratchLodState.resize( clientCount );
+        _listScratchLODState.resize( clientCount );
         _listScratchBudgetItem.clear();
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
         {
-            const IAnimationLodClient* pClient = _listLodClient[clientIndex];
+            const IAnimationLODClient* pClient = _listLODClient[clientIndex];
             float3                     center{};
             float32                    radius     = 0.0f;
             float32                    screenSize = 1.0f;
             bool                       bVisible   = true;
-            if ( pClient->findAnimationLodBounds( center, radius ) )
+            if ( pClient->findAnimationLODBounds( center, radius ) )
             {
                 screenSize = 0.0f;
-                for ( const AnimationLodView& view : _listLodView )
+                for ( const AnimationLODView& view : _listLODView )
                 {
-                    screenSize = MathUtil::max( screenSize, AnimationLodUtil::computeScreenSize( view, center, radius ) );
+                    screenSize = MathUtil::max( screenSize, AnimationLODUtil::computeScreenSize( view, center, radius ) );
                 }
                 bVisible = screenSize > 0.0f;
             }
-            AnimationLodState& state = _listScratchLodState[clientIndex];
-            state                    = AnimationLodUtil::makeState( _lodSettings, screenSize, bVisible, pClient->findBoneLod() );
+            AnimationLODState& state = _listScratchLODState[clientIndex];
+            state                    = AnimationLODUtil::makeState( _lodSettings, screenSize, bVisible, pClient->findBoneLOD() );
             // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
         }
 
-        _expectedEvaluationMicroseconds = AnimationLodUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
+        _expectedEvaluationMicroseconds = AnimationLODUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
                                                                             _averageEvaluationMicroseconds, _lodSettings._budgetMilliseconds * 1000.0f,
                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )
         {
-            AnimationLodState& state = _listScratchLodState[clientIndex];
+            AnimationLODState& state = _listScratchLODState[clientIndex];
             if ( gv_animationForceVertexAnimation != 0 )
                 state._bVertexAnimation = SW_TRUE;
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
@@ -247,7 +247,7 @@ namespace sw
                     state._bInterpolate = SW_TRUE;
                 state._updateRateDivisor = budgeted;
             }
-            _listLodClient[clientIndex]->applyAnimationLod( state );
+            _listLODClient[clientIndex]->applyAnimationLOD( state );
         }
     }
 
@@ -370,7 +370,7 @@ namespace sw
             }
         }
 #endif
-        updateLod();
+        updateLOD();
         if ( _bOrderDirty == SW_TRUE || ( _listLevel.empty() && _listUnit.empty() == false ) )
             rebuildLevels();
         ++_frameIndex;
@@ -448,7 +448,7 @@ namespace sw
             _rewind.recordUnit( *pUnit, _frameIndex );
         }
         AnimationDebugState state;
-        for ( const IAnimationLodClient* pClient : _listLodClient )
+        for ( const IAnimationLODClient* pClient : _listLODClient )
         {
             const Component* pTarget = pClient->findRewindTarget();
             if ( pTarget == nullptr )
@@ -472,7 +472,7 @@ namespace sw
             if ( pUnit->applyRewindPose( _rewindScratchPose ) )
                 _bRewindApplied = SW_TRUE;
         }
-        for ( IAnimationLodClient* pClient : _listLodClient )
+        for ( IAnimationLODClient* pClient : _listLODClient )
         {
             const Component*            pTarget = pClient->findRewindTarget();
             const AnimationRewindTrack* pTrack  = ( pTarget != nullptr ) ? _rewind.findTrack( pTarget->getHandle() ) : nullptr;

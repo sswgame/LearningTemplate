@@ -231,7 +231,7 @@ class CheckFunctionVocabularyGate(LintGate):
         "BannedVerb:ThemePark::buildRide": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
         "BannedVerb:ParkDirectorComponent::build*": "도메인 용어 — 게임 안에서 놀이기구를 짓는 행동",
         "BannedVerb:CrashContext::buildCrashReportPath": "개명 예정 makeCrashReportPath — 경로 문자열을 만든다",
-        "BannedVerb:SkeletonBoneLod::buildMasks": "개명 예정 computeMasks — 마스크를 계산한다",
+        "BannedVerb:SkeletonBoneLOD::buildMasks": "개명 예정 computeMasks — 마스크를 계산한다",
         "BannedVerb:SpriteMeshBuilder::buildSlicedVertices": "개명 예정 makeSlicedVertices — 정점 값을 만든다",
         "BannedVerb:TerrainMeshBuilder::buildChunkVertices": "개명 예정 makeChunkVertices — 정점 값을 만든다",
         "BannedVerb:WaterBodyComponent::build*Vertices": "개명 예정 make*Vertices — 정점 값을 만든다",

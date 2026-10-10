@@ -67,8 +67,8 @@
   `getWaveTime`)을 잇는다. (2) 강 경로가 점 목록이다 — 스플라인 컴포넌트가 들어오면 그것을 경로로 받는다. (3) 하늘 · 시간 · 높이 안개 + 물속 안개 패스(값은
   `WaterBodyComponent::findUnderwaterFog` 가 이미 준다) — 다중 뷰 병합 뒤. (4) 물의 굴절 · 화면 공간 두께는 반투명 패스가 장면 색 사본 · 장면 깊이를 입력으로 받는
   계약이 있어야 한다(지금은 지형 깊이를 정점에 굽는다). (5) 흔드는 식생의 그림자는 흔들리지 않는다(`shadowdepth.hlsl` 이 머티리얼 정점 변형을 모른다 — 풀은 그림자를 끔).
-  (6) 지형 LOD 교체 프레임 — `TerrainBenchTest.LodSweepWorstFrame`(Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개의
-  updateLods(청크 메시) p50 0.1 ms · 최악 4.0~5.1 ms, GpuScene 수집 p50 0.95 ms · 최악 5.0~5.2 ms — 기준(GT 2 ms)을 넘는다. 메시 집합이 바뀌어 RT 는 정점 풀을
+  (6) 지형 LOD 교체 프레임 — `TerrainBenchTest.LODSweepWorstFrame`(Release, 쇼케이스 지형을 600 프레임 동안 가로지름, 3 회): 교체 프레임 111 개의
+  updateLODs(청크 메시) p50 0.1 ms · 최악 4.0~5.1 ms, GpuScene 수집 p50 0.95 ms · 최악 5.0~5.2 ms — 기준(GT 2 ms)을 넘는다. 메시 집합이 바뀌어 RT 는 정점 풀을
   통째로 다시 만든다(`RT.GpuScene.vertexPool`, 벤치에는 없다 — App 표로). LOD 메시를 미리 만들어 두거나 청크 정점을 풀에서 부분 갱신한다. 지오모프(LOD 튐) · 레이어 다섯 이상(두 번째 스플랫 — 머티리얼 텍스처 칸이 넷이다) · 에디터 칠하기 도구가 없다.
 - **툰 머티리얼(`toon.hlsl`, MToon 1.0 체계)의 남은 것** — 노멀 맵(정점에 탄젠트가 없다) · UV 스크롤 애니메이션 · 셰이딩 시프트 / 림 곱 / 외곽선 두께 텍스처(머티리얼 텍스처 칸이 넷이라 기본 · 그림자 · 발광 · 맷캡만 받는다) · 디퍼드의 계단 셰이딩(G버퍼는 표면만 적어 램버트로 칠해진다) · 그림자 패스의 알파 컷오프
   (`shadowdepth.hlsl` 은 픽셀 스테이지가 없어 머리카락 카드가 사각형 그림자를 드리운다 — 모든 컷오프 머티리얼이 같다).
@@ -179,7 +179,7 @@
   포즈 블렌드 스페이스로 다시 짓는다) · 그래프에 레이어 · 동기 그룹을 데이터로(지금 레이어는 `addLayer` 코드) · 에디터 그래프 패널이 조건 · 블렌드를 편집
   ② 후처리 리그 — 들어갔다(`PoseModifierComponent`, `Source/Engine/Animation/README.md` "후처리 리그" 절 · `Source/Engine/Character/README.md`). 남은 것: 시퀀서 트랙이 `setSlotWeight` 를 쓰기(칸은 있다),
   해석된 소켓 표의 표면 기준 소켓 체형 보정을 리그 대상에도, 에디터 리그 패널(노드 목록 · 대상 · 기즈모) ③ 애니메이션 LOD(가시성 · URO · 보간 · 본 LOD · 예산 · 2D 스프라이트는 들어갔다 —
-  `AnimationLod.h`) — 남은 것: 거리별 IK/물리 끔을 `AnimationLodState`(화면 크기)로(지금 스프링 본은 거리 기준점) · 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 ④ 군중 공유(묶음 · 사본 풀 · VAT 쿠킹은
+  `AnimationLOD.h`) — 남은 것: 거리별 IK/물리 끔을 `AnimationLODState`(화면 크기)로(지금 스프링 본은 거리 기준점) · 메시 LOD 가 생기면 본 LOD 를 메시 LOD 와 묶기 ④ 군중 공유(묶음 · 사본 풀 · VAT 쿠킹은
   들어갔다 — `AnimationCrowd.h`) — 남은 것: 섞기 묶음(언리얼 Animation Sharing 의 블렌드 액터 — 지금 섞는 유닛은 사본으로 혼자 평가), Shooter3D 군중이 켜기 · 리타기팅(본 이름 표 · 비율) ·
   얼굴(모프 타깃 임포트 · 표정 커브 · 립싱크 · 깜빡임 · 시선은 들어갔다 — `FacialAnimationComponent`) — 남은 것: 음소 인식 립싱크(지금은 세 대역 모양
   분류 — 모음 넷 · 치찰음 정도만 가른다) · 실제 얼굴 에셋(KayKit 은 모프가 없다 — 합성 테스트 머리뿐) · 스킨 없는 메시의 모프(GPU 모프 풀이 스키닝 컴퓨트 안에서만

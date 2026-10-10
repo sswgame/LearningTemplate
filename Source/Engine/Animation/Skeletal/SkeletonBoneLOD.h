@@ -1,5 +1,5 @@
 /**
- * @file SkeletonBoneLod.h
+ * @file SkeletonBoneLOD.h
  * @brief 스켈레톤 하나의 본 LOD 표(`<이름>.bonelod.json`)입니다. 화면에서 작아진 캐릭터는 끝 본을 풀지 않습니다(언리얼 스켈레탈 메시 LOD 의 본 줄이기 자리).
  */
 #pragma once
@@ -15,10 +15,10 @@ namespace sw
     class Skeleton;
 
     /**
-     * @struct SkeletonBoneLodLevel
+     * @struct SkeletonBoneLODLevel
      * @brief 본 LOD 한 단계입니다. 화면 크기가 `_maxScreenSize` 이하이면 이 단계와 앞 단계들이 뺀 본(과 그 자손)을 풀지 않습니다.
      */
-    struct SkeletonBoneLodLevel
+    struct SkeletonBoneLODLevel
     {
         float32               _maxScreenSize{ 0.0f };
         vector<hashed_string> _listRemovedBone;
@@ -28,15 +28,15 @@ namespace sw
 namespace sw
 {
     /**
-     * @class SkeletonBoneLod
+     * @class SkeletonBoneLOD
      * @brief 스켈레톤 곁 데이터입니다. 임포트가 다시 써도 지워지지 않게 스켈레톤 파일과 따로 둡니다 — 임포트한 스켈레톤(`a/knight/knight.skeleton.json`,
      *        옆 폴더는 다시 임포트할 때 통째로 지워진다)이면 옆 폴더 밖 `a/knight.bonelod.json`, 아니면 같은 폴더의 `<이름>.bonelod.json` 입니다.
      * @details 형식: `{ "levels": [ { "max_screen_size": 0.12, "remove": [ "kneeIK.l", ... ] }, ... ] }`. 단계는 화면 크기가 작아지는 순이고(앞 단계보다
      *          `max_screen_size` 가 작아야 한다), 뒤 단계는 앞 단계가 뺀 본을 이어받습니다. 화면 크기는 경계 구의 지름이 화면 높이에서 차지하는 비율입니다
-     *          (`AnimationLodUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라갑니다 — 스키닝에는 그대로 쓰입니다.
+     *          (`AnimationLODUtil::computeScreenSize`). 빠진 본은 레퍼런스 포즈로 부모를 따라갑니다 — 스키닝에는 그대로 쓰입니다.
      *          모르는 키 · 스켈레톤에 없는 본 이름은 오류입니다(`buildMasks`).
      */
-    class SW_API SkeletonBoneLod
+    class SW_API SkeletonBoneLOD
     {
     public:
         /** @brief 본 LOD 파일의 확장자입니다. */
@@ -52,7 +52,7 @@ namespace sw
         /** @brief 단계 수입니다(0 이면 본 LOD 없음). */
         uint32 getLevelCount() const { return static_cast<uint32>( _listLevel.size() ); }
         /** @brief 단계 하나입니다. */
-        const SkeletonBoneLodLevel& getLevel( uint32 levelIndex ) const { return _listLevel[levelIndex]; }
+        const SkeletonBoneLODLevel& getLevel( uint32 levelIndex ) const { return _listLevel[levelIndex]; }
         /** @brief @p screenSize 에 맞는 단계입니다. 0 은 모든 본, n 은 `getLevel( n - 1 )` 까지 뺀 것입니다. */
         uint32 selectLevel( float32 screenSize ) const;
         /**
@@ -67,13 +67,13 @@ namespace sw
          */
         static string makePathForSkeleton( string_view skeletonPath );
         /** @brief `makePathForSkeleton` 의 역 — 본 LOD 경로의 스켈레톤 후보 둘(임포트 옆 폴더 안, 같은 폴더)입니다. */
-        static void makeSkeletonCandidatePaths( string_view boneLodPath, string& outImportedPath, string& outSiblingPath );
+        static void makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath );
 
     private:
         /** @brief 뿌리 객체를 읽습니다. */
         [[nodiscard]] bool parseRoot( const JsonValue& root, string_view sourceLabel );
 
-        vector<SkeletonBoneLodLevel> _listLevel;
+        vector<SkeletonBoneLODLevel> _listLevel;
         uint64                       _revision{ 0 };
     };
 } // namespace sw

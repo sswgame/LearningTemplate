@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
@@ -14,11 +14,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "SkeletonBoneLod" );
+    SW_LOG_CALLER( "SkeletonBoneLOD" );
 
     namespace
     {
-        struct SkeletonBoneLodInternal
+        struct SkeletonBoneLODInternal
         {
             /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
             static uint64 allocateRevision()
@@ -33,7 +33,7 @@ namespace sw
 namespace sw
 {
 
-    bool SkeletonBoneLod::parseJson( string_view json, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseJson( string_view json, string_view sourceLabel )
     {
         _listLevel.clear();
         JsonDocument document;
@@ -44,14 +44,14 @@ namespace sw
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
         {
-            _revision = SkeletonBoneLodInternal::allocateRevision();
+            _revision = SkeletonBoneLODInternal::allocateRevision();
             return true;
         }
         _listLevel.clear();
         return false;
     }
 
-    bool SkeletonBoneLod::loadFromResource( string_view path )
+    bool SkeletonBoneLOD::loadFromResource( string_view path )
     {
         SW_MEMORY_SCOPE( Animation );
         string text;
@@ -64,7 +64,7 @@ namespace sw
         return parseJson( text, path );
     }
 
-    bool SkeletonBoneLod::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool SkeletonBoneLOD::parseRoot( const JsonValue& root, string_view sourceLabel )
     {
         if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "levels" }, sourceLabel ) == false )
             return false;
@@ -85,7 +85,7 @@ namespace sw
                 SW_LOG_ERROR( "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty 'remove' array", sourceLabel, levelIndex );
                 return false;
             }
-            SkeletonBoneLodLevel entry{};
+            SkeletonBoneLODLevel entry{};
             entry._maxScreenSize = static_cast<float32>( level.get( "max_screen_size" ).asFloat() );
             if ( _listLevel.empty() == false && entry._maxScreenSize >= _listLevel.back()._maxScreenSize )
             {
@@ -106,7 +106,7 @@ namespace sw
         return true;
     }
 
-    uint32 SkeletonBoneLod::selectLevel( float32 screenSize ) const
+    uint32 SkeletonBoneLOD::selectLevel( float32 screenSize ) const
     {
         uint32 level = 0;
         for ( uint32 levelIndex = 0; levelIndex < static_cast<uint32>( _listLevel.size() ); ++levelIndex )
@@ -117,12 +117,12 @@ namespace sw
         return level;
     }
 
-    bool SkeletonBoneLod::buildMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
+    bool SkeletonBoneLOD::buildMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
     {
         outListMask.clear();
         const uint32  boneCount = skeleton.getBoneCount();
         vector<uint8> mask( boneCount, SW_TRUE );
-        for ( const SkeletonBoneLodLevel& level : _listLevel )
+        for ( const SkeletonBoneLODLevel& level : _listLevel )
         {
             for ( const hashed_string& boneName : level._listRemovedBone )
             {
@@ -147,7 +147,7 @@ namespace sw
         return true;
     }
 
-    string SkeletonBoneLod::makePathForSkeleton( string_view skeletonPath )
+    string SkeletonBoneLOD::makePathForSkeleton( string_view skeletonPath )
     {
         if ( StringUtil::endsWith( skeletonPath, Skeleton::kExtension ) == false )
             return string{};
@@ -163,13 +163,13 @@ namespace sw
         return path;
     }
 
-    void SkeletonBoneLod::makeSkeletonCandidatePaths( string_view boneLodPath, string& outImportedPath, string& outSiblingPath )
+    void SkeletonBoneLOD::makeSkeletonCandidatePaths( string_view boneLODPath, string& outImportedPath, string& outSiblingPath )
     {
         outImportedPath.clear();
         outSiblingPath.clear();
-        if ( StringUtil::endsWith( boneLodPath, kExtension ) == false )
+        if ( StringUtil::endsWith( boneLODPath, kExtension ) == false )
             return;
-        const string_view stemPath = boneLodPath.substr( 0, boneLodPath.size() - kExtension.size() );
+        const string_view stemPath = boneLODPath.substr( 0, boneLODPath.size() - kExtension.size() );
         const size_t      slash    = stemPath.find_last_of( '/' );
         const string_view stem     = ( slash == string_view::npos ) ? stemPath : stemPath.substr( slash + 1 );
         outImportedPath            = string{ stemPath } + "/" + string{ stem } + string{ Skeleton::kExtension };

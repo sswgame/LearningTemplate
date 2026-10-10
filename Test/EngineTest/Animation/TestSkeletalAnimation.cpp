@@ -442,7 +442,7 @@ SW_TEST_CASE( SkeletalAnimationTest, SystemEvaluatesDependenciesInOrder )
 /**
  * @brief [SkeletalAnimationTest] 애니메이션 LOD — 갱신 주기 2 면 포즈는 두 프레임에 한 번(시간 단계는 매 프레임), 화면 밖이면 포즈를 만들지 않고, 쉬는 유닛은 돌지 않는다
  */
-SW_TEST_CASE( SkeletalAnimationTest, LodSkipsPoseEvaluation )
+SW_TEST_CASE( SkeletalAnimationTest, LODSkipsPoseEvaluation )
 {
     GameObjectManager      manager;
     SkeletalMeshComponent* pUnit = TestSkeletalAnimationInternal::createUnit( manager, "Lod", 3 );

@@ -1,23 +1,23 @@
 #include "pch.h"
 
-#include "Engine/Object/Animation/AnimationLod.h"
+#include "Engine/Object/Animation/AnimationLOD.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/Frustum.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Animation/Skeletal/SkeletonBoneLod.h"
+#include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "AnimationLod" );
+    SW_LOG_CALLER( "AnimationLOD" );
 
-    bool AnimationLodSettings::parseJson( string_view json, string_view sourceLabel )
+    bool AnimationLODSettings::parseJson( string_view json, string_view sourceLabel )
     {
-        *this = AnimationLodSettings{};
+        *this = AnimationLODSettings{};
         JsonDocument document;
         if ( document.parse( json, sourceLabel ) == false )
         {
@@ -26,23 +26,23 @@ namespace sw
         }
         if ( parseRoot( document.getRoot(), sourceLabel ) )
             return true;
-        *this = AnimationLodSettings{};
+        *this = AnimationLODSettings{};
         return false;
     }
 
-    bool AnimationLodSettings::loadFromResource( string_view path )
+    bool AnimationLODSettings::loadFromResource( string_view path )
     {
         string text;
         if ( ResourceUtil::readTextResource( path, text ) == false )
         {
             SW_LOG_ERROR( "Animation LOD settings '%#' could not be read", path );
-            *this = AnimationLodSettings{};
+            *this = AnimationLODSettings{};
             return false;
         }
         return parseJson( text, path );
     }
 
-    bool AnimationLodSettings::parseRoot( const JsonValue& root, string_view sourceLabel )
+    bool AnimationLODSettings::parseRoot( const JsonValue& root, string_view sourceLabel )
     {
         if ( AnimJsonUtil::hasOnlyKnownKeys( root, { "rate_levels", "offscreen_update_rate_divisor", "budget_milliseconds", "max_update_rate_divisor", "vertex_animation_screen_size" },
                                              sourceLabel ) == false )
@@ -63,7 +63,7 @@ namespace sw
                 SW_LOG_ERROR( "Animation LOD settings '%#': rate level %# needs min_screen_size, update_rate_divisor and interpolate", sourceLabel, levelIndex );
                 return false;
             }
-            AnimationLodRateLevel entry{};
+            AnimationLODRateLevel entry{};
             entry._minScreenSize     = static_cast<float32>( level.get( "min_screen_size" ).asFloat() );
             entry._updateRateDivisor = static_cast<uint32>( MathUtil::max<int64>( level.get( "update_rate_divisor" ).asInt( 1 ), 1 ) );
             entry._bInterpolate      = level.get( "interpolate" ).asBool() ? SW_TRUE : SW_FALSE;
@@ -98,7 +98,7 @@ namespace sw
         return true;
     }
 
-    uint32 AnimationLodSettings::selectRateLevel( float32 screenSize ) const
+    uint32 AnimationLODSettings::selectRateLevel( float32 screenSize ) const
     {
         for ( uint32 levelIndex = 0; levelIndex < static_cast<uint32>( _listRateLevel.size() ); ++levelIndex )
         {
@@ -108,7 +108,7 @@ namespace sw
         return _listRateLevel.empty() ? 0u : static_cast<uint32>( _listRateLevel.size() - 1 );
     }
 
-    float32 AnimationLodUtil::computeScreenSize( const AnimationLodView& view, const float3& center, float32 radius )
+    float32 AnimationLODUtil::computeScreenSize( const AnimationLODView& view, const float3& center, float32 radius )
     {
         const float4x4& m = view._viewProj;
         // 절두체 밖이면 0 — 판정 식은 GPU 컬링과 같다(Frustum 의 여섯 평면).
@@ -123,7 +123,7 @@ namespace sw
         return radius * scaleY / clipW;
     }
 
-    float32 AnimationLodUtil::allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
+    float32 AnimationLODUtil::allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
                                               uint32 maxUpdateRateDivisor )
     {
         float32 expected = 0.0f;
@@ -160,16 +160,16 @@ namespace sw
         return expected;
     }
 
-    AnimationLodState AnimationLodUtil::makeState( const AnimationLodSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLod* pBoneLod )
+    AnimationLODState AnimationLODUtil::makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD )
     {
-        AnimationLodState state{};
+        AnimationLODState state{};
         state._bVisible     = bVisible ? SW_TRUE : SW_FALSE;
         state._screenSize   = bVisible ? screenSize : 0.0f;
         state._significance = state._screenSize;
         if ( settings._listRateLevel.empty() == false )
         {
             const uint32                 levelIndex = settings.selectRateLevel( state._screenSize );
-            const AnimationLodRateLevel& level      = settings._listRateLevel[levelIndex];
+            const AnimationLODRateLevel& level      = settings._listRateLevel[levelIndex];
             state._rateLevel                        = static_cast<uint8>( levelIndex );
             state._updateRateDivisor                = level._updateRateDivisor;
             state._bInterpolate                     = level._bInterpolate;
@@ -179,8 +179,8 @@ namespace sw
             state._updateRateDivisor = settings._offscreenUpdateRateDivisor;
             state._bInterpolate      = SW_FALSE;
         }
-        if ( pBoneLod != nullptr )
-            state._boneLodLevel = static_cast<uint8>( pBoneLod->selectLevel( state._screenSize ) );
+        if ( pBoneLOD != nullptr )
+            state._boneLODLevel = static_cast<uint8>( pBoneLOD->selectLevel( state._screenSize ) );
         state._bVertexAnimation = ( settings._vertexAnimationScreenSize > 0.0f && state._screenSize < settings._vertexAnimationScreenSize ) ? SW_TRUE : SW_FALSE;
         return state;
     }

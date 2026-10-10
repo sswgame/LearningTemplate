@@ -158,7 +158,7 @@ _kMapStep: dict[int, MoveStep] = {
             ("Animation/BlendSpace", "Animation/Graph/BlendSpace"),
             ("Animation/BlendCurve", "Animation/Graph/BlendCurve"),
             ("Animation/Skeleton", "Animation/Skeletal/Skeleton"),
-            ("Animation/SkeletonBoneLod", "Animation/Skeletal/SkeletonBoneLod"),
+            ("Animation/SkeletonBoneLOD", "Animation/Skeletal/SkeletonBoneLOD"),
             ("Animation/Pose", "Animation/Skeletal/Pose"),
             ("Animation/DualQuaternion", "Animation/Skeletal/DualQuaternion"),
             ("Input/InputMap", "Input/Map/InputMap"),
