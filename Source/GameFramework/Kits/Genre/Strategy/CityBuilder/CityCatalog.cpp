@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -63,7 +63,7 @@ namespace sw
             static void parseGoodList( string_view text, vector<hashed_string>& outListGood )
             {
                 outListGood.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 { outListGood.push_back( hashed_string( string( token ).c_str() ) ); } );
             }
         };
@@ -134,12 +134,12 @@ namespace sw
         return level >= 0 && level < static_cast<int32>( _listHouseLevel.size() ) ? &_listHouseLevel[static_cast<size_t>( level )] : nullptr;
     }
 
-    uint32 CityCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _roadCost = MathUtil::max( 0, root.getAttributeInt( "roadCost", _roadCost ) );
-        for ( XmlNode node = root.findChild( "Good" ); node; node = node.findNextSibling( "Good" ) )
+        for ( XMLNode node = root.findChild( "Good" ); node; node = node.findNextSibling( "Good" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             CityGoodDef good;
@@ -152,9 +152,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
+        for ( XMLNode node = root.findChild( "Building" ); node; node = node.findNextSibling( "Building" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             CityBuildingDef building;
@@ -199,7 +199,7 @@ namespace sw
         }
 
         _listHouseLevel.clear();
-        for ( XmlNode node = root.findChild( "HouseLevel" ); node; node = node.findNextSibling( "HouseLevel" ) )
+        for ( XMLNode node = root.findChild( "HouseLevel" ); node; node = node.findNextSibling( "HouseLevel" ) )
         {
             CityHouseLevelDef level;
             const utf8*       pName = node.findAttribute( "name" );
@@ -207,7 +207,7 @@ namespace sw
             level._population       = MathUtil::max( 1, node.getAttributeInt( "population", level._population ) );
             level._taxPerPerson     = MathUtil::max( 0, node.getAttributeInt( "tax", level._taxPerPerson ) );
             level._minDesirability  = node.getAttributeInt( "desirability", level._minDesirability );
-            GameDataXml::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
             {
                 CityService service = CityService::Count;
                 if ( parseCityService( token, service ) )

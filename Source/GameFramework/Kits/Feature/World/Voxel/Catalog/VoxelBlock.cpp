@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -105,15 +105,15 @@ namespace sw
         outMax                  = float2{ cellU * static_cast<float32>( column + 1 ) - insetU, cellV * static_cast<float32>( row + 1 ) - insetV };
     }
 
-    uint32 VoxelBlockCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 VoxelBlockCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _atlasColumns      = MathUtil::max( 1, root.getAttributeInt( "atlasColumns", _atlasColumns ) );
         _atlasRows         = MathUtil::max( 1, root.getAttributeInt( "atlasRows", _atlasRows ) );
         _tileTexels        = MathUtil::max( 1, root.getAttributeInt( "tileTexels", _tileTexels ) );
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Block" ); node; node = node.findNextSibling( "Block" ) )
+        for ( XMLNode node = root.findChild( "Block" ); node; node = node.findNextSibling( "Block" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             VoxelBlockDef block;
@@ -128,7 +128,7 @@ namespace sw
             block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeZ )] = sideTile;
             block._arrFaceTile[static_cast<int32>( VoxelFace::PositiveY )] = node.getAttributeInt( "top", baseTile );
             block._arrFaceTile[static_cast<int32>( VoxelFace::NegativeY )] = node.getAttributeInt( "bottom", baseTile );
-            block._color                                                   = GameDataXml::parseFloat4( node.getAttributeText( "color" ), block._color );
+            block._color                                                   = GameDataXML::parseFloat4( node.getAttributeText( "color" ), block._color );
             block._hardness                                                = MathUtil::max( 0.0f, node.getAttributeFloat( "hardness", block._hardness ) );
             block._bSolid                                                  = node.getAttributeBool( "solid", true ) ? SW_TRUE : SW_FALSE;
             block._bOpaque                                                 = node.getAttributeBool( "opaque", true ) ? SW_TRUE : SW_FALSE;

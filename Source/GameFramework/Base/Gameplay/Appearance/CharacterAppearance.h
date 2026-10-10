@@ -21,7 +21,7 @@ namespace sw
     class CustomizationSchemaCatalog;
     class EquipSetCatalog;
     class SlotTable;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 프리셋의 꾸미기 값 하나 — 고정 값 또는 범위 · 후보 목록입니다. 종류는 스키마가 정합니다. */
     struct CharacterAppearanceValueDef
@@ -105,7 +105,7 @@ namespace sw
     class SW_GF_API CharacterAppearanceCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listPreset.clear(); }
 
         const CharacterAppearanceDef*         findPreset( const hashed_string& id ) const;

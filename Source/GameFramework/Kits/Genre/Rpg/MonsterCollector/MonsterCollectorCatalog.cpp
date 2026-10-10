@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
             static void parseSixInts( string_view text, int32 ( &inoutArrValue )[kMonsterStatCount], int32 minValue )
             {
                 int32 slot = 0;
-                GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
                 {
                     if ( slot >= kMonsterStatCount )
                         return;
@@ -35,7 +35,7 @@ namespace sw
 
             static void parseNameList( string_view text, vector<hashed_string>& outListName )
             {
-                GameDataXml::forEachToken( text, ",; \t", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; \t", [&]( string_view token )
                 { outListName.push_back( hashed_string( token ) ); } );
             }
 
@@ -247,10 +247,10 @@ namespace sw
         return false;
     }
 
-    uint32 MonsterCollectorCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 MonsterCollectorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "StatusImmunity", true ) )
@@ -274,7 +274,7 @@ namespace sw
             const bool bEncounter = StringUtil::equals( pName, "Encounter", true );
             if ( ( bMove || bSpecies || bNature || bWeather || bEncounter ) == false )
                 continue;
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
 
@@ -345,7 +345,7 @@ namespace sw
         return loadedCount;
     }
 
-    void MonsterCollectorCatalog::loadMove( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void MonsterCollectorCatalog::loadMove( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         MonsterMoveDef def;
         def._id           = hashed_string( pId );
@@ -391,7 +391,7 @@ namespace sw
         (void)_moveCatalog.add( def );
     }
 
-    void MonsterCollectorCatalog::loadSpecies( const XmlNode& node, const utf8* pId, string_view sourceName )
+    void MonsterCollectorCatalog::loadSpecies( const XMLNode& node, const utf8* pId, string_view sourceName )
     {
         MonsterSpeciesDef def;
         def._id           = hashed_string( pId );
@@ -408,7 +408,7 @@ namespace sw
         if ( expGroup.empty() == false && MonsterCollectorCatalogInternal::parseExpGroup( expGroup, def._expGroup ) == false )
             SW_LOG_WARNING( "%#: species '%#' has an unknown expGroup '%#' - read as Medium", sourceName, pId, expGroup );
 
-        for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Learn", true ) )
             {
@@ -444,7 +444,7 @@ namespace sw
         (void)_speciesCatalog.add( def );
     }
 
-    void MonsterCollectorCatalog::loadEncounter( const XmlNode& node, const utf8* pId )
+    void MonsterCollectorCatalog::loadEncounter( const XMLNode& node, const utf8* pId )
     {
         MonsterEncounterDef def;
         def._id   = hashed_string( pId );
@@ -452,7 +452,7 @@ namespace sw
         if ( def._area.empty() )
             def._area = def._id;
         MonsterCollectorCatalogInternal::parseNameList( node.getAttributeText( "time" ), def._listTime );
-        for ( XmlNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
+        for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             MonsterEncounterSlot slot;
             slot._speciesId = hashed_string( child.getAttributeText( "species" ) );

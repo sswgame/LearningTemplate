@@ -10,12 +10,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 정의의 종류입니다. */
     enum class RtsUnitKind : uint8
@@ -77,9 +77,9 @@ namespace sw
      * @class RtsCatalog
      * @brief `<RtsCatalog supplyMax="200"><Unit id="worker" kind="Unit" hp="45" .../></RtsCatalog>` 를 읽습니다(키는 `Resource/game/starskirmish/data/units.xml`).
      */
-    class SW_GF_API RtsCatalog : public XmlCatalog<RtsCatalog>
+    class SW_GF_API RtsCatalog : public XMLCatalog<RtsCatalog>
     {
-        friend class XmlCatalog<RtsCatalog>;
+        friend class XMLCatalog<RtsCatalog>;
 
     public:
         RtsCatalog();
@@ -91,8 +91,8 @@ namespace sw
         int32 getSupplyMax() const { return _supplyMax; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "RtsCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "RtsCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<RtsUnitDef> _catalog;
         int32                   _supplyMax;

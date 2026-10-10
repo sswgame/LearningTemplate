@@ -41,7 +41,7 @@
 도우미가 동시에 빌드할 때는 `D:\Projects\Personal\LT-wt\BUILD-LOCK-README.txt` 의 슬롯 잠금(`.slot1~3`)을 쓴다. 사용 한도에 두 번 걸렸으니 도우미는 셋 안팎으로 둔다. **검증은 마지막에 한 번**(사용자 결정), 큰 이동 사이에는 Debug 풀 컴파일 + 린트 게이트만. WSL(리눅스)은 CI 로 본다.
 
 1. **약어 철자 통일 — 실제 치환.** 계획 [약어 철자 통일](AcronymSpelling.md), 도구는 `Scripts/lint/fixer/FormatAcronymSpelling.py`(`--report` 사전 실행 · `--acronym <약어>` · `--apply-files` · `--rename-folders`), 등록부 `Scripts/lint/AcronymRegistry.py`, 게이트 `CheckAcronymSpelling`(`kEnforced` 에 오른 약어만 강제).
-   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → Xml · Json · Http · Io → Gpu → Ui → Cpu → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
+   약어 하나당 커밋 하나, 작은 것부터(HUD · Ik · Dds · Tls · Udp · Url · Uuid → Rts · Srpg · Sql · Ai → Lod · Api · Rpc · Pso → XML · Json · Http · Io → Gpu → Ui → Cpu → **ID 마지막**, 이름 1,123 · 사용 17,504 · 데이터 1,157곳).
    약어 단계마다: 코드모드 → 셰이더(HLSL)와 문자열은 손으로 맞춘다(코드모드가 안 고친다) → reconfigure(코드젠) → Debug 풀 컴파일 경고 0 → 린트 → `kEnforced` 에 올림 → 커밋.
    첫 단계에서 `CheckFunctionVocabulary` 의 `AcronymRun` 검사를 반대로(약어는 대문자) 고치고 AGENTS.md 의 약어 문안을 바꾼다. 폴더 · 모듈 이름 14곳(`--rename-folders`)은 모듈 DLL 이름이 바뀌므로 `Bin/Modules` 산출물 정리(configure)와 모듈 ABI 판을 같이 본다.
    의심 충돌: 새 철자가 이미 있는 이름(`Id` · `Ui` · `Rhi` · `pRhi` · `editorAPI` · `platformIo` · `textureId`), 외부 헤더와 겹치는 91개(Box2D `shapeIdA` · `bodyIdA` 와 `HttpResponse` 확인), 이어 붙은 대문자 약어 19개(`RHIGPUTimestamp` · `RTSAICommander` · `XMLJSON…` — 풀어 쓴다).
@@ -70,7 +70,7 @@ RenderDoc 은 기동 단계를 따로 두지 않고 RHI 단계 맨 앞에서 올
 
 ### 이 세션에 병합된 것 (되돌아볼 때)
 
-V1 씬 뷰 / 게임 뷰(ABI v3), 빌드 속도 1단계(시험이 기본 빌드에서 빠짐 — `AllTests`), GameFramework 폴더 재배치, DevTools 해체 · Network 이동(ABI v4), Core 층 정리(순환 0 · `CheckCoreLayers`), Engine 폴더 재배치 1~7, 중복 정리(`NameRegistry` · `UiTextAssetCache` · `XmlCatalog` · `EditorModuleHost`), 이름 린트(`build`/`generate`/`construct` 금지 · `CheckOutParameterNames`), 약어 도구, 에디터 소단위, `Jolt` PCH, vcpkg 바이너리 캐시 수정.
+V1 씬 뷰 / 게임 뷰(ABI v3), 빌드 속도 1단계(시험이 기본 빌드에서 빠짐 — `AllTests`), GameFramework 폴더 재배치, DevTools 해체 · Network 이동(ABI v4), Core 층 정리(순환 0 · `CheckCoreLayers`), Engine 폴더 재배치 1~7, 중복 정리(`NameRegistry` · `UiTextAssetCache` · `XMLCatalog` · `EditorModuleHost`), 이름 린트(`build`/`generate`/`construct` 금지 · `CheckOutParameterNames`), 약어 도구, 에디터 소단위, `Jolt` PCH, vcpkg 바이너리 캐시 수정.
 계획 문서 중 끝난 단위를 아직 안 지운 곳이 있다(8번에서 정리한다).
 
 ## 검증할 것

@@ -59,10 +59,10 @@ namespace
 /**
  * @brief [AutosaveTest] 정책 XML 을 읽는다 — 빠진 속성은 기본값, 범위 밖 칸 수는 경고하고 3
  */
-SW_TEST_CASE( AutosaveTest, SettingsReadFromXml )
+SW_TEST_CASE( AutosaveTest, SettingsReadFromXML )
 {
     AutosaveSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( R"(<Autosave interval="120" minimumGap="10" slots="5" directory="saves/auto" prefix="slot_" quit="false"/>)" ) );
+    SW_ASSERT_TRUE( settings.loadFromXMLText( R"(<Autosave interval="120" minimumGap="10" slots="5" directory="saves/auto" prefix="slot_" quit="false"/>)" ) );
     SW_EXPECT_NEAR_EQUAL( 120.0f, settings._interval, 1.0e-4f );
     SW_EXPECT_NEAR_EQUAL( 10.0f, settings._minimumGap, 1.0e-4f );
     SW_EXPECT_EQUAL( 5, settings._slotCount );
@@ -72,7 +72,7 @@ SW_TEST_CASE( AutosaveTest, SettingsReadFromXml )
 
     AutosaveSettings             bad;
     test::ScopedDefensiveTestLog expected( "slot count outside the range" );
-    SW_ASSERT_TRUE( bad.loadFromXmlText( R"(<Autosave slots="0"/>)" ) );
+    SW_ASSERT_TRUE( bad.loadFromXMLText( R"(<Autosave slots="0"/>)" ) );
     SW_EXPECT_EQUAL( 3, bad._slotCount );
 }
 

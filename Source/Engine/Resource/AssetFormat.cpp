@@ -117,21 +117,21 @@ namespace sw
             return;
         _bBuiltins = true;
         // 내장 migrator 는 지금 없다 — 저장소의 데이터는 모두 현재 판이다. 호환이 깨지는 변경이면 AssetFormatVersions::* 를 올리고
-        // 여기서 registerXmlMigrator( kind, from, … ) 로 N → N+1 을 등록한다.
+        // 여기서 registerXMLMigrator( kind, from, … ) 로 N → N+1 을 등록한다.
     }
 
-    void AssetFormatRegistry::registerXmlMigrator( AssetKind kind, AssetFormatVersion fromVersion, XmlAssetMigrator migrator )
+    void AssetFormatRegistry::registerXMLMigrator( AssetKind kind, AssetFormatVersion fromVersion, XMLAssetMigrator migrator )
     {
         if ( migrator == nullptr )
             return;
         _mapMigrator.insert_or_assign( MigratorKey{ kind, fromVersion }, migrator );
     }
 
-    AssetFormatVersion AssetFormatRegistry::readXmlVersion( XmlNode root )
+    AssetFormatVersion AssetFormatRegistry::readXMLVersion( XMLNode root )
     {
         if ( root.isValid() == false )
             return AssetFormatVersions::kUnversioned;
-        const utf8* pAttr = root.findAttribute( kXmlAttrName );
+        const utf8* pAttr = root.findAttribute( kXMLAttrName );
         if ( StringUtil::isNullOrEmpty( pAttr ) == false )
         {
             // 읽지 못했거나 버전 타입에 담기지 않으면 **가장 큰 버전**으로 본다 — "지원하는 것보다 새 형식" 으로 거절된다. 잘라 담으면
@@ -144,24 +144,24 @@ namespace sw
         return AssetFormatVersions::kUnversioned;
     }
 
-    void AssetFormatRegistry::writeXmlVersion( XmlNode root, AssetFormatVersion version )
+    void AssetFormatRegistry::writeXMLVersion( XMLNode root, AssetFormatVersion version )
     {
         if ( root.isValid() == false )
             return;
 
         const string versionStr = sw::to_string( static_cast<uint32>( version ) );
 
-        if ( root.findAttribute( kXmlAttrName ) != nullptr )
+        if ( root.findAttribute( kXMLAttrName ) != nullptr )
         {
-            root.setAttribute( kXmlAttrName, versionStr.c_str() );
+            root.setAttribute( kXMLAttrName, versionStr.c_str() );
             return;
         }
-        root.appendAttribute( kXmlAttrName, versionStr.c_str() );
+        root.appendAttribute( kXMLAttrName, versionStr.c_str() );
     }
 
-    AssetFormatVersion AssetFormatRegistry::inferXmlVersion( AssetKind kind, XmlNode root ) const
+    AssetFormatVersion AssetFormatRegistry::inferXMLVersion( AssetKind kind, XMLNode root ) const
     {
-        const AssetFormatVersion tagged = readXmlVersion( root );
+        const AssetFormatVersion tagged = readXMLVersion( root );
         if ( tagged != AssetFormatVersions::kUnversioned || root.isValid() == false )
             return tagged;
 
@@ -169,14 +169,14 @@ namespace sw
         return AssetFormatVersions::kUnversioned;
     }
 
-    bool AssetFormatRegistry::upgradeXml( AssetKind kind, XmlDocument& doc, XmlNode& root,
+    bool AssetFormatRegistry::upgradeXML( AssetKind kind, XMLDocument& doc, XMLNode& root,
                                           AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion )
     {
         ensureBuiltins();
         if ( root.isValid() == false )
             return false;
 
-        AssetFormatVersion version = inferXmlVersion( kind, root );
+        AssetFormatVersion version = inferXMLVersion( kind, root );
         if ( pOutSourceVersion != nullptr )
             *pOutSourceVersion = version;
 
@@ -203,19 +203,19 @@ namespace sw
             ++version;
         }
 
-        writeXmlVersion( root, currentVersion );
+        writeXMLVersion( root, currentVersion );
         if ( pOutSourceVersion != nullptr && *pOutSourceVersion < currentVersion )
             SW_LOG_INFO( "Upgraded kind=%# formatVersion %# -> %#", static_cast<uint32>( kind ), *pOutSourceVersion, currentVersion );
         return true;
     }
 
-    bool AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion )
+    bool AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind kind, XMLDocument& doc, XMLNode& root, AssetFormatVersion currentVersion )
     {
         if ( engine::areEngineServicesBound() )
-            return engine::getAssetManager().getAssetFormatRegistry().upgradeXml( kind, doc, root, currentVersion );
+            return engine::getAssetManager().getAssetFormatRegistry().upgradeXML( kind, doc, root, currentVersion );
 
         // 호출마다 새로 만든다 — 공유하는 정적 등록부는 여러 로더 스레드의 `ensureBuiltins` 가 겹쳐 쓴다.
         AssetFormatRegistry builtinRegistry;
-        return builtinRegistry.upgradeXml( kind, doc, root, currentVersion );
+        return builtinRegistry.upgradeXML( kind, doc, root, currentVersion );
     }
 } // namespace sw

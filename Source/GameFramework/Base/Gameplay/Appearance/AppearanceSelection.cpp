@@ -8,7 +8,7 @@
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceResolver.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 namespace sw
@@ -51,7 +51,7 @@ namespace sw
 
             static void addUnique( vector<hashed_string>& inoutList, const hashed_string& name )
             {
-                if ( name.empty() == false && AppearanceXmlUtil::containsName( inoutList, name ) == false )
+                if ( name.empty() == false && AppearanceXMLUtil::containsName( inoutList, name ) == false )
                     inoutList.push_back( name );
             }
 
@@ -259,7 +259,7 @@ namespace sw
 
     bool AppearanceSelection::includesCategory( const hashed_string& category ) const
     {
-        return _listCategory.empty() || AppearanceXmlUtil::containsName( _listCategory, category );
+        return _listCategory.empty() || AppearanceXMLUtil::containsName( _listCategory, category );
     }
 
     void AppearanceSelectionUtil::captureSelection( const CharacterAppearanceSpec& spec, AppearanceSelection& outSelection )

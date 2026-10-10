@@ -17,17 +17,17 @@ namespace sw
     namespace
     {
         /** @brief 테스트용 샘플 XML 프리팹 파일을 이 케이스의 임시 경로에 만들고 경로를 반환합니다. */
-        sw::string ensureSamplePrefabXml()
+        sw::string ensureSamplePrefabXML()
         {
             const sw::string path = test::makeTempPath( "sample_source.prefab.xml" );
             if ( sw::FileUtil::exists( path ) == false )
             {
-                const utf8* pXmlContent = R"(<?xml version="1.0" encoding="utf-8"?>
+                const utf8* pXMLContent = R"(<?xml version="1.0" encoding="utf-8"?>
 <Prefab version="1" name="SampleHero">
     <GameObject _name="SampleHero">
     </GameObject>
 </Prefab>)";
-                (void)sw::FileUtil::writeTextFile( path, pXmlContent ); // 못 쓰면 뒤의 로드가 실패로 드러난다
+                (void)sw::FileUtil::writeTextFile( path, pXMLContent ); // 못 쓰면 뒤의 로드가 실패로 드러난다
             }
 
             // 쿠킹본(.prefab.bin)도 같이 만들어 둔다. PrefabCache::getOrLoad 는 Shipping 에서
@@ -38,7 +38,7 @@ namespace sw
             if ( sw::FileUtil::exists( binPath ) == false )
             {
                 sw::PrefabAsset cooked;
-                if ( cooked.loadFromXmlFile( path ) )
+                if ( cooked.loadFromXMLFile( path ) )
                     (void)cooked.saveToBinaryFile( binPath ); // 못 쓰면 Shipping 의 로드가 실패로 드러난다
             }
             return path;
@@ -61,7 +61,7 @@ namespace sw
         [[nodiscard]] bool writeCookedBeside( const sw::string& sourcePath, bool bJson )
         {
             sw::PrefabAsset cooked;
-            if ( ( bJson ? cooked.loadFromJsonFile( sourcePath ) : cooked.loadFromXmlFile( sourcePath ) ) == false )
+            if ( ( bJson ? cooked.loadFromJsonFile( sourcePath ) : cooked.loadFromXMLFile( sourcePath ) ) == false )
                 return false;
             return cooked.saveToBinaryFile( sw::AssetCookPath::toCookedPath( sourcePath ) ); // 런타임 로더 · 쿠커와 같은 이름 규칙
         }
@@ -74,11 +74,11 @@ namespace sw
 /**
  * @brief [PrefabTest] XML 로드 후 JSON/binary 라운드트립
  */
-SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
+SW_TEST_CASE( PrefabTest, XMLJsonBinaryRoundtrip )
 {
-    const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+    const sw::string srcXMLPath = sw::ensureSamplePrefabXML();
     sw::PrefabAsset  src;
-    SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
+    SW_ASSERT_TRUE( src.loadFromXMLFile( srcXMLPath ) );
     SW_EXPECT_TRUE( src.isValid() );
     SW_EXPECT_FALSE( src.getStateData().empty() );
 
@@ -86,14 +86,14 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
     const sw::string jsonPath = test::makeTempPath( "roundtrip.prefab.json" );
     const sw::string binPath  = test::makeTempPath( "roundtrip.prefab.bin" );
 
-    SW_EXPECT_TRUE( src.saveToXmlFile( xmlPath ) );
+    SW_EXPECT_TRUE( src.saveToXMLFile( xmlPath ) );
     SW_EXPECT_TRUE( src.saveToJsonFile( jsonPath ) );
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
-    sw::PrefabAsset fromXml;
-    SW_EXPECT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
-    SW_EXPECT_TRUE( fromXml.isValid() );
-    SW_EXPECT_EQUAL( src.getName(), fromXml.getName() );
+    sw::PrefabAsset fromXML;
+    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
+    SW_EXPECT_TRUE( fromXML.isValid() );
+    SW_EXPECT_EQUAL( src.getName(), fromXML.getName() );
 
     sw::PrefabAsset fromJson;
     SW_EXPECT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
@@ -112,9 +112,9 @@ SW_TEST_CASE( PrefabTest, XmlJsonBinaryRoundtrip )
  */
 SW_TEST_CASE( PrefabTest, MissingSourceDoesNotFallBackToCookedBinaryInDev )
 {
-    const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+    const sw::string srcXMLPath = sw::ensureSamplePrefabXML();
     sw::PrefabAsset  src;
-    SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
+    SW_ASSERT_TRUE( src.loadFromXMLFile( srcXMLPath ) );
 
     // 소스는 없고 쿠킹본만 있는 프리팹.
     const sw::string orphanSourcePath = test::makeTempPath( "orphan.prefab.xml" );
@@ -154,22 +154,22 @@ SW_TEST_CASE( PrefabTest, JsonSaveOfUnconvertibleStateWritesNothing )
  */
 SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
 {
-    const sw::string srcXmlPath = sw::ensureSamplePrefabXml();
+    const sw::string srcXMLPath = sw::ensureSamplePrefabXML();
     sw::PrefabAsset  src;
-    SW_ASSERT_TRUE( src.loadFromXmlFile( srcXmlPath ) );
+    SW_ASSERT_TRUE( src.loadFromXMLFile( srcXMLPath ) );
 
     const sw::string xmlPath  = test::makeTempPath( "cachekey.prefab.xml" );
     const sw::string jsonPath = test::makeTempPath( "cachekey.prefab.json" );
     const sw::string binPath  = test::makeTempPath( "cachekey.prefab.bin" );
-    SW_EXPECT_TRUE( src.saveToXmlFile( xmlPath ) );
+    SW_EXPECT_TRUE( src.saveToXMLFile( xmlPath ) );
     SW_EXPECT_TRUE( src.saveToJsonFile( jsonPath ) );
     SW_EXPECT_TRUE( src.saveToBinaryFile( binPath ) );
 
     sw::PrefabCache  manager;
-    sw::PrefabAsset* fromXml  = manager.loadPrefab( xmlPath );
+    sw::PrefabAsset* fromXML  = manager.loadPrefab( xmlPath );
     sw::PrefabAsset* fromJson = manager.loadPrefab( jsonPath );
-    SW_ASSERT_NOT_NULL( fromXml );
-    SW_EXPECT_EQUAL( fromXml, fromJson );
+    SW_ASSERT_NOT_NULL( fromXML );
+    SW_EXPECT_EQUAL( fromXML, fromJson );
 
     sw::string slashFlipped = xmlPath;
     for ( utf8& ch : slashFlipped )
@@ -180,7 +180,7 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
             ch = '/';
     }
     if ( slashFlipped != xmlPath )
-        SW_EXPECT_EQUAL( fromXml, manager.loadPrefab( slashFlipped ) );
+        SW_EXPECT_EQUAL( fromXML, manager.loadPrefab( slashFlipped ) );
 }
 
 /**
@@ -188,10 +188,10 @@ SW_TEST_CASE( PrefabTest, CacheKeyNormalizesPathAndExtension )
  */
 SW_TEST_CASE( PrefabTest, SpawnCreatesGameObject )
 {
-    const sw::string      srcXmlPath = sw::ensureSamplePrefabXml();
+    const sw::string      srcXMLPath = sw::ensureSamplePrefabXML();
     sw::GameObjectManager objects;
     sw::PrefabCache       prefabs;
-    sw::GameObject*       spawned = prefabs.spawn( &objects, srcXmlPath, "SpawnedSample" );
+    sw::GameObject*       spawned = prefabs.spawn( &objects, srcXMLPath, "SpawnedSample" );
     SW_ASSERT_NOT_NULL( spawned );
     SW_EXPECT_EQUAL( sw::string( "SpawnedSample" ), sw::string( spawned->getName().c_str() ) );
 }
@@ -235,7 +235,7 @@ SW_TEST_CASE( PrefabTest, CircularReferenceSpawnProtection )
     sw::PrefabAsset asset;
     asset.setFromGameObject( pSource );
     const sw::string xmlPath = test::makeTempPath( "circular_self.prefab.xml" );
-    SW_ASSERT_TRUE( asset.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( asset.saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
@@ -272,12 +272,12 @@ SW_TEST_CASE( PrefabTest, ConvertingAPrefabKeepsItsComponents )
     sw::PrefabAsset fromJson;
     SW_ASSERT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
     SW_EXPECT_TRUE( fromJson.getStateFormat() == sw::PrefabStateFormat::Json );
-    SW_ASSERT_TRUE( fromJson.saveToXmlFile( xmlPath ) );
-    sw::PrefabAsset fromXml;
-    SW_ASSERT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( fromJson.saveToXMLFile( xmlPath ) );
+    sw::PrefabAsset fromXML;
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
 
     sw::GameObjectManager check;
-    for ( const sw::PrefabAsset* pAsset : { &fromJson, &fromXml } )
+    for ( const sw::PrefabAsset* pAsset : { &fromJson, &fromXML } )
     {
         sw::GameObject* pObj = check.createGameObject( sw::hashed_string( "Check" ) );
         SW_ASSERT_TRUE( pAsset->applyStateTo( pObj ) );
@@ -295,7 +295,7 @@ SW_TEST_CASE( PrefabTest, ConvertingAPrefabKeepsItsComponents )
 SW_TEST_CASE( PrefabTest, SpawnDuringTickKeepsThePrefabsState )
 {
     const sw::string xmlPath = test::makeTempPath( "crate_tick.prefab.xml" );
-    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
@@ -349,7 +349,7 @@ SW_TEST_CASE( PrefabTest, JsonPrefabRevertKeepsComponents )
 SW_TEST_CASE( PrefabTest, RevertKeepsTheInstancesPlaceAndParent )
 {
     const sw::string xmlPath = test::makeTempPath( "crate_place.prefab.xml" );
-    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
@@ -388,9 +388,9 @@ SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
     SW_ASSERT_TRUE( crate.saveToFile( jsonPath ) );
     SW_ASSERT_TRUE( crate.saveToFile( xmlPath ) );
     sw::PrefabAsset fromJson;
-    sw::PrefabAsset fromXml;
+    sw::PrefabAsset fromXML;
     SW_EXPECT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
-    SW_EXPECT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
+    SW_EXPECT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
 
     const sw::string scenePath = test::makeTempPath( "level.scene.xml" );
     const sw::string kScene    = "<Scene name=\"Level\"/>\n";
@@ -413,7 +413,7 @@ SW_TEST_CASE( PrefabTest, SaveToFileWritesThePathsFormatAndRefusesOtherPaths )
 SW_TEST_CASE( PrefabTest, RevertKeepsTheSocketAndTheComponentIds )
 {
     const sw::string xmlPath = test::makeTempPath( "crate_socket.prefab.xml" );
-    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( sw::makeCratePrefab().saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     sw::GameObjectManager objects;
@@ -456,12 +456,12 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
     SW_ASSERT_TRUE( asset.isValid() );
     SW_EXPECT_TRUE( asset.getStateData().find( "Player" ) == sw::string::npos );
     const sw::string xmlPath = test::makeTempPath( "gun_from_child.prefab.xml" );
-    SW_ASSERT_TRUE( asset.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( asset.saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( xmlPath, false ) );
 
     // 부모를 실은 프리팹 파일(프리팹을 쓰는 쪽은 만들지 않는다) — 붙이지 않고 경고한다.
     const sw::string parentedPath = test::makeTempPath( "gun_parented.prefab.xml" );
-    const sw::string parentedText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXmlString( pGun ) + "</Prefab>";
+    const sw::string parentedText = sw::string( "<Prefab formatVersion=\"0\" name=\"Gun\">" ) + sw::ObjectStateSerializer::saveToXMLString( pGun ) + "</Prefab>";
     SW_ASSERT_TRUE( parentedText.find( "Player" ) != sw::string::npos );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( parentedPath, parentedText ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( parentedPath, false ) );
@@ -502,7 +502,7 @@ SW_TEST_CASE( PrefabTest, PrefabMadeFromAChildDoesNotRememberItsParent )
  * @details 씬처럼 엔진이 쿠킹한다(`App --cook-scenes` 가 함께 부른다, 언리얼 쿡 커맨드렛 자리). 형식을 따로 드는 외부 쿠커는 한 형식만 쿠킹 쉽다 —
  *          `.prefab.json` 이 빠지면 Shipping 에서 쿠킹본이 없어 스폰이 실패한다.
  */
-SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
+SW_TEST_CASE( PrefabTest, EngineCooksXMLAndJsonPrefabs )
 {
     const sw::string sourceRoot = test::makeTempDirectory( "prefab_src" );
     const sw::string cookedRoot = test::makeTempDirectory( "prefab_cooked" );
@@ -510,12 +510,12 @@ SW_TEST_CASE( PrefabTest, EngineCooksXmlAndJsonPrefabs )
     SW_ASSERT_FALSE( cookedRoot.empty() );
 
     const sw::PrefabAsset crate = sw::makeCratePrefab();
-    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/crate.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToXMLFile( sourceRoot + "/crate.prefab.xml" ) );
     SW_ASSERT_TRUE( crate.saveToJsonFile( sourceRoot + "/barrel.prefab.json" ) );
-    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/sub/deep.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToXMLFile( sourceRoot + "/sub/deep.prefab.xml" ) );
     // 읽지 못하는 프리팹과, 같은 쿠킹본(.prefab.bin)을 쓰는 두 소스.
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/broken.prefab.json", "{ not json" ) );
-    SW_ASSERT_TRUE( crate.saveToXmlFile( sourceRoot + "/twin.prefab.xml" ) );
+    SW_ASSERT_TRUE( crate.saveToXMLFile( sourceRoot + "/twin.prefab.xml" ) );
     SW_ASSERT_TRUE( crate.saveToJsonFile( sourceRoot + "/twin.prefab.json" ) );
     // 프리팹이 아닌 XML 은 건드리지 않는다.
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( sourceRoot + "/notes.xml", "<Notes/>" ) );
@@ -559,19 +559,19 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
 
     const sw::string xmlPath  = test::makeTempPath( "named.prefab.xml" );
     const sw::string jsonPath = test::makeTempPath( "named.prefab.json" );
-    SW_ASSERT_TRUE( source.saveToXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( source.saveToXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( source.saveToJsonFile( jsonPath ) );
     SW_ASSERT_TRUE( sw::writeCookedBeside( jsonPath, true ) );
 
-    sw::PrefabAsset fromXml;
+    sw::PrefabAsset fromXML;
     sw::PrefabAsset fromJson;
     sw::PrefabAsset fromCooked;
-    SW_ASSERT_TRUE( fromXml.loadFromXmlFile( xmlPath ) );
+    SW_ASSERT_TRUE( fromXML.loadFromXMLFile( xmlPath ) );
     SW_ASSERT_TRUE( fromJson.loadFromJsonFile( jsonPath ) );
     SW_ASSERT_TRUE( fromCooked.loadFromBinaryFile( sw::AssetCookPath::toCookedPath( jsonPath ) ) );
 
     sw::GameObjectManager check;
-    for ( const sw::PrefabAsset* pAsset : { &fromXml, &fromJson, &fromCooked } )
+    for ( const sw::PrefabAsset* pAsset : { &fromXML, &fromJson, &fromCooked } )
     {
         sw::GameObject* pSpawned = check.createGameObject( sw::hashed_string( "Spawned" ) );
         SW_ASSERT_TRUE( pAsset->applyStateTo( pSpawned ) );
@@ -585,7 +585,7 @@ SW_TEST_CASE( PrefabTest, ComponentNameSurvivesEveryPrefabFormat )
  * @brief [PrefabTest] XML 프리팹은 저장하는 모양(`<Prefab name=…><GameObject/></Prefab>`) 하나만 읽는다 — 루트가 바로 `<GameObject>` 인 문서 ·
  *        `<GameObject>` 가 없는 `<Prefab>` 은 거절하고, 이름은 `name` 속성에서만 읽는다
  */
-SW_TEST_CASE( PrefabTest, XmlPrefabReadsOnlyTheSavedShape )
+SW_TEST_CASE( PrefabTest, XMLPrefabReadsOnlyTheSavedShape )
 {
     const sw::string barePath = test::makeTempPath( "bare.prefab.xml" );
     SW_ASSERT_TRUE( sw::FileUtil::writeTextFile( barePath, "<GameObject _name=\"Bare\"/>\n" ) );
@@ -597,12 +597,12 @@ SW_TEST_CASE( PrefabTest, XmlPrefabReadsOnlyTheSavedShape )
     {
         SW_TEST_DEFENSIVE_SCOPE( "a prefab file that is not in the saved shape" );
         sw::PrefabAsset bare;
-        SW_EXPECT_FALSE( bare.loadFromXmlFile( barePath ) );
+        SW_EXPECT_FALSE( bare.loadFromXMLFile( barePath ) );
         sw::PrefabAsset empty;
-        SW_EXPECT_FALSE( empty.loadFromXmlFile( emptyPath ) );
+        SW_EXPECT_FALSE( empty.loadFromXMLFile( emptyPath ) );
     }
 
     sw::PrefabAsset childName;
-    SW_ASSERT_TRUE( childName.loadFromXmlFile( childNamePath ) );
+    SW_ASSERT_TRUE( childName.loadFromXMLFile( childNamePath ) );
     SW_EXPECT_STREQ( "childname.prefab", childName.getName().c_str() ); // 이름 속성이 없으면 파일 이름이다
 }

@@ -3,7 +3,7 @@
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -17,13 +17,13 @@ namespace sw
             SW_LOG_ERROR( "Physics asset not found: %#", resourcePath );
             return false;
         }
-        return loadFromXmlText( text, resourcePath );
+        return loadFromXMLText( text, resourcePath );
     }
 
-    bool PhysicsAsset::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool PhysicsAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = PhysicsAsset{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "%#: physics asset could not be read or holds unknown keys / values", sourceName );
             return false;

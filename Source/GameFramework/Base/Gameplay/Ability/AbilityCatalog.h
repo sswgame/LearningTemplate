@@ -13,7 +13,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Ability/AttributeSet.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayAbility.h"
 #include "GameFramework/Base/Gameplay/Ability/GameplayEffect.h"
@@ -21,14 +21,14 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 어빌리티 클래스 하나를 만드는 함수입니다(`AbilityCatalog::registerAbilityClass`). */
     using AbilityFactoryFunc = unique_ptr<GameplayAbility> ( * )();
     /** @brief 어트리뷰트 묶음 클래스 하나를 만드는 함수입니다(`AbilityCatalog::registerAttributeSetClass`). */
     using AttributeSetFactoryFunc = unique_ptr<AttributeSet> ( * )();
     /** @brief XML `<Execution class="...">` 노드로 실행 계산을 만드는 함수입니다(`AbilityCatalog::registerExecutionClass`). */
-    using ExecutionFactoryFunc = shared_ptr<const IGameplayEffectExecution> ( * )( const XmlNode& node );
+    using ExecutionFactoryFunc = shared_ptr<const IGameplayEffectExecution> ( * )( const XMLNode& node );
 
     // ------------------------------------------------------------------------------
     // 1) 정의 — 카탈로그가 들고 있는 데이터
@@ -117,13 +117,13 @@ namespace sw
      *          **기본 등록**: 어트리뷰트 묶음 "Generic"(`AttributeSet` — 데이터가 어트리뷰트를 정한다) · "Combat"(`CombatAttributeSet`),
      *          어빌리티 "ApplyEffects"(`ApplyEffectsAbility`), 실행 계산 "Damage"(`DamageExecution`).
      *
-     *          **데이터**(`loadFromResource` · `loadFromXmlText`): 루트 `<AbilityCatalog>` 아래 `<GameplayEffect>` · `<Ability>` · `<AbilitySet>`.
+     *          **데이터**(`loadFromResource` · `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래 `<GameplayEffect>` · `<Ability>` · `<AbilitySet>`.
      *          파일 안의 순서와 상관없이 이펙트 → 어빌리티 → 세트 순으로 읽어, 참조(비용 · 쿨다운 이펙트)가 앞에 와야 할 필요가 없습니다. 여러 파일을
      *          차례로 읽으면 합쳐지고 같은 id 는 뒤의 것이 이깁니다. 형식은 `Source/GameFramework/Base/Gameplay/Ability/README.md` 에 있습니다.
      */
-    class SW_GF_API AbilityCatalog : public XmlCatalog<AbilityCatalog>
+    class SW_GF_API AbilityCatalog : public XMLCatalog<AbilityCatalog>
     {
-        friend class XmlCatalog<AbilityCatalog>;
+        friend class XMLCatalog<AbilityCatalog>;
 
     public:
         AbilityCatalog();
@@ -192,14 +192,14 @@ namespace sw
         }
 
         /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 돌려줍니다. */
-        static constexpr const utf8* kXmlRootName = "AbilityCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<GameplayEffect>` 하나를 읽습니다. */
-        [[nodiscard]] bool readEffect( const XmlNode& node, string_view sourceName, GameplayEffectDef& outDef ) const;
+        [[nodiscard]] bool readEffect( const XMLNode& node, string_view sourceName, GameplayEffectDef& outDef ) const;
         /** @brief `<Ability>` 하나를 읽습니다. */
-        [[nodiscard]] bool readAbility( const XmlNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const;
+        [[nodiscard]] bool readAbility( const XMLNode& node, string_view sourceName, GameplayAbilityDef& outDef ) const;
         /** @brief `<AbilitySet>` 하나를 읽습니다. */
-        [[nodiscard]] bool readAbilitySet( const XmlNode& node, string_view sourceName, AbilitySetDef& outDef ) const;
+        [[nodiscard]] bool readAbilitySet( const XMLNode& node, string_view sourceName, AbilitySetDef& outDef ) const;
         /** @brief 이펙트 id 를 정의로 풉니다. 비었으면 nullptr, 없으면 경고하고 nullptr 입니다. */
         shared_ptr<const GameplayEffectDef> resolveEffectReference( const utf8* pEffectId, const utf8* pOwnerId, string_view sourceName ) const;
 

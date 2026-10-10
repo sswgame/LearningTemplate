@@ -16,7 +16,7 @@
 namespace sw
 {
     class CoasterLayoutCatalog;
-    class XmlNode;
+    class XMLNode;
 } // namespace sw
 
 namespace sw
@@ -55,7 +55,7 @@ namespace sw
         /** @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 놀이기구가 하나도 없으면 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const CoasterLayoutCatalog& layouts );
         /** @brief XML 글에서 읽습니다(시험 · 도구). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
 
         const float3&                    getGatePosition() const { return _gatePosition; }
         int32                            getEntryFee() const { return _entryFee; }
@@ -63,7 +63,7 @@ namespace sw
         const vector<ParkRidePlacement>& getPlacements() const { return _listPlacement; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
 
         vector<ParkRidePlacement> _listPlacement;
         float3                    _gatePosition;

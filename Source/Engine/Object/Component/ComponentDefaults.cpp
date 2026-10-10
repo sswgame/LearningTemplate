@@ -10,7 +10,7 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -116,13 +116,13 @@ namespace sw
                 return true;
             }
 
-            static XmlNode findDefaultsNode( XmlNode defaultsNode, const vector<string>& listName )
+            static XMLNode findDefaultsNode( XMLNode defaultsNode, const vector<string>& listName )
             {
                 for ( const string& name : listName )
                 {
                     if ( name.empty() )
                         continue;
-                    XmlNode node = defaultsNode.findChild( name.c_str() );
+                    XMLNode node = defaultsNode.findChild( name.c_str() );
                     if ( node.isValid() )
                         return node;
                 }
@@ -222,8 +222,8 @@ namespace sw
         vector<const TypeInfo*> listType;
         ComponentDefaultsInternal::collectTypeChain( typeInfo, listType );
 
-        const XmlNode root         = _defaultsDoc.getRoot( "GameSettings" );
-        const XmlNode defaultsNode = root.isValid() ? root.findChild( "Defaults" ) : XmlNode{};
+        const XMLNode root         = _defaultsDoc.getRoot( "GameSettings" );
+        const XMLNode defaultsNode = root.isValid() ? root.findChild( "Defaults" ) : XMLNode{};
 
         for ( const TypeInfo* pLevelType : listType )
         {
@@ -233,7 +233,7 @@ namespace sw
             vector<string> listName;
             ComponentDefaultsInternal::collectLookupNames( *pLevelType, listName );
 
-            const XmlNode levelNode = ComponentDefaultsInternal::findDefaultsNode( defaultsNode, listName );
+            const XMLNode levelNode = ComponentDefaultsInternal::findDefaultsNode( defaultsNode, listName );
             if ( levelNode.isValid() == false )
                 continue;
 
@@ -261,7 +261,7 @@ namespace sw
         return ( it != _mapResolved.end() ) ? it->second.get() : nullptr;
     }
 
-    void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XmlNode& compNode, vector<DefaultPatch>& inoutListPatch )
+    void ComponentDefaults::resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch )
     {
         const TypeRegistry& registry = engine::getTypeRegistry();
         typeInfo.forEachProperty( [&]( const PropertyInfo& prop )

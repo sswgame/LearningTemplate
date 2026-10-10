@@ -5,11 +5,11 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleActivity.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -60,13 +60,13 @@ namespace sw
 
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 조건 속성도 받습니다. */
             template <size_t Count>
-            static void warnUnknownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
+            static void warnUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
             {
-                (void)XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, // 경고만 하고 읽기를 잇는다
+                (void)XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, // 경고만 하고 읽기를 잇는다
                                                              bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
             }
 
-            static int32 readClock( const XmlNode& node, const utf8* pName, int32 fallback, string_view sourceName, string_view ownerName, bool& inoutbValid )
+            static int32 readClock( const XMLNode& node, const utf8* pName, int32 fallback, string_view sourceName, string_view ownerName, bool& inoutbValid )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( pText == nullptr )
@@ -92,7 +92,7 @@ namespace sw
             static void parseTagList( string_view text, vector<TagID>& outListTag )
             {
                 outListTag.clear();
-                GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
                 { outListTag.push_back( TagID::request( token ) ); } );
             }
 
@@ -181,14 +181,14 @@ namespace sw
         return false;
     }
 
-    uint32 ScheduleCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ScheduleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         using Internal = ScheduleCatalogInternal;
         // 바퀴마다 그 바퀴의 원소만 읽는다 — 달력 · 장소 · 자리 · 끼어들기 → 약속 → 묶음 → NPC · 행사.
         uint32 loadedCount = 0;
         for ( int32 pass = 0; pass < Internal::kPassCount; ++pass )
         {
-            for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+            for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
             {
                 const utf8* pName       = node.getName();
                 const int32 elementPass = Internal::findElementPass( pName );
@@ -204,7 +204,7 @@ namespace sw
         return loadedCount;
     }
 
-    uint32 ScheduleCatalog::loadElement( const XmlNode& node, string_view sourceName )
+    uint32 ScheduleCatalog::loadElement( const XMLNode& node, string_view sourceName )
     {
         using Internal    = ScheduleCatalogInternal;
         const utf8* pName = node.getName();
@@ -216,7 +216,7 @@ namespace sw
             ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), _vocabulary._listWeather );
             return 0;
         }
-        const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+        const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
         if ( pId == nullptr )
             return 0;
         if ( StringUtil::equals( pName, "Place", true ) )
@@ -225,7 +225,7 @@ namespace sw
             SchedulePlaceDef place;
             place._id       = hashed_string( pId );
             place._area     = hashed_string( node.getAttributeText( "area" ) );
-            place._position = GameDataXml::parseFloat3( node.getAttributeText( "position" ), place._position );
+            place._position = GameDataXML::parseFloat3( node.getAttributeText( "position" ), place._position );
             place._radius   = MathUtil::max( 0.0f, node.getAttributeFloat( "radius", place._radius ) );
             (void)_placeCatalog.add( place );
         }
@@ -236,7 +236,7 @@ namespace sw
             spot._id       = hashed_string( pId );
             spot._kind     = hashed_string( node.getAttributeText( "kind" ) );
             spot._area     = hashed_string( node.getAttributeText( "area" ) );
-            spot._position = GameDataXml::parseFloat3( node.getAttributeText( "position" ), spot._position );
+            spot._position = GameDataXML::parseFloat3( node.getAttributeText( "position" ), spot._position );
             spot._capacity = MathUtil::max( 1, node.getAttributeInt( "capacity", spot._capacity ) );
             if ( spot._kind.empty() )
                 SW_LOG_WARNING( "%#: spot '%#' has no kind - skipped", sourceName, pId );
@@ -283,7 +283,7 @@ namespace sw
             ScheduleArchetypeDef archetype;
             archetype._id     = hashed_string( pId );
             archetype._parent = hashed_string( node.getAttributeText( "parent" ) );
-            for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
                 {
@@ -314,7 +314,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: npc '%#' has idle activity '%#' that is not a home activity - StayHome used", sourceName, pId, npc._idleActivity.c_str() );
                 npc._idleActivity = hashed_string( "StayHome" );
             }
-            for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Routine", true ) == false )
                 {
@@ -342,7 +342,7 @@ namespace sw
                 if ( findArchetype( archetypeId ) == nullptr )
                     SW_LOG_WARNING( "%#: event '%#' has an unknown archetype '%#'", sourceName, pId, archetypeId.c_str() );
             }
-            for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+            for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
             {
                 if ( StringUtil::equals( child.getName(), "Block", true ) == false )
                 {
@@ -359,7 +359,7 @@ namespace sw
         return 0;
     }
 
-    void ScheduleCatalog::readRoutine( const XmlNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const
+    void ScheduleCatalog::readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const
     {
         using Internal = ScheduleCatalogInternal;
         Internal::warnUnknownAttributes( node, Internal::kArrRoutineAttribute, true, sourceName );
@@ -368,7 +368,7 @@ namespace sw
         if ( outRoutine._id.empty() )
             SW_LOG_WARNING( "%#: '%#' has a <Routine> without an id", sourceName, ownerName );
         outRoutine._condition.readFromNode( node, _vocabulary, sourceName, ownerName );
-        for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Block", true ) == false )
             {
@@ -382,7 +382,7 @@ namespace sw
         warnOverlappingBlocks( outRoutine._listBlock, sourceName, ownerName );
     }
 
-    bool ScheduleCatalog::readBlock( const XmlNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const
+    bool ScheduleCatalog::readBlock( const XMLNode& node, string_view sourceName, string_view ownerName, bool bInRoutine, ScheduleBlockDef& outBlock ) const
     {
         using Internal = ScheduleCatalogInternal;
         Internal::warnUnknownAttributes( node, Internal::kArrBlockAttribute, true, sourceName );

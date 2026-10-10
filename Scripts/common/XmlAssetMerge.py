@@ -4,7 +4,7 @@
 XML 에셋(씬 · 프리팹 · 머티리얼 · 카탈로그)의 의미 단위 비교와 3-way 병합 — 줄이 아니라 엔티티 id · 컴포넌트 · 속성으로 본다.
 
 유니티 Smart Merge(UnityYAMLMerge)와 같은 자리다. 줄 단위 병합은 이 저장소의 XML 에서 두 가지로 무너진다:
-  1. 엔진 저장기는 긴 시작 태그를 속성 하나당 한 줄로 접는다(`XmlDocument::wrapLongElementLines`) — 속성 하나를 고쳐도 정렬 공백이
+  1. 엔진 저장기는 긴 시작 태그를 속성 하나당 한 줄로 접는다(`XMLDocument::wrapLongElementLines`) — 속성 하나를 고쳐도 정렬 공백이
      바뀌지 않으니 괜찮지만, **속성이 120 열을 넘나들면** 한 줄 ↔ 여러 줄로 바뀌어 같은 요소의 다른 속성을 고친 두 사람이 충돌한다.
   2. 두 사람이 같은 목록 끝에 엔티티 · 컴포넌트를 더하면 줄 병합은 늘 충돌한다. 의미로는 둘 다 넣으면 된다.
 
@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 #: 요소의 정체로 쓰는 속성 — 앞에서부터 처음 있는 것.
 kKeyAttribute: tuple[str, ...] = ("id", "_componentName", "name", "key", "layout", "keyword")
 
-#: 엔진 저장기가 시작 태그를 접는 열(`kXmlWrapColumn`).
+#: 엔진 저장기가 시작 태그를 접는 열(`kXMLWrapColumn`).
 kWrapColumn = 120
 
 #: 병합 충돌을 남기는 주석의 머리 — 이 글이 든 주석이 남아 있으면 아직 풀지 않은 충돌이다.

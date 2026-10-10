@@ -38,7 +38,7 @@ namespace sw::editor
     /**
      * @struct ToonMaterialDesc
      * @brief 툰 머티리얼 하나의 값입니다. 이름 · 뜻은 `toon.hlsl` 의 머티리얼 구조체(MToon 1.0 이름)와 같습니다. 색은 선형입니다.
-     * @details 텍스처는 glTF `textures[]` 번호입니다(-1 = 없음). 파일 경로는 머티리얼을 쓸 때(`makeMaterialXml`) 정합니다.
+     * @details 텍스처는 glTF `textures[]` 번호입니다(-1 = 없음). 파일 경로는 머티리얼을 쓸 때(`makeMaterialXML`) 정합니다.
      */
     struct ToonMaterialDesc
     {
@@ -100,7 +100,7 @@ namespace sw::editor
          * @brief 엔진 툰 머티리얼(`engine/materials/toon.material`)을 틀로 @p desc 의 값을 넣은 `.material` 글을 만듭니다. 틀을 못 읽으면 빈 글입니다.
          * @param listTexturePath glTF 텍스처 번호 → 리소스 경로(DDS). 빈 칸이면 그 텍스처는 없는 것으로 씁니다.
          */
-        static string makeMaterialXml( const ToonMaterialDesc& desc, const vector<string>& listTexturePath );
+        static string makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath );
 
         /** @brief 감마(sRGB) 값 하나를 선형으로 바꿉니다. */
         static float32 convertGammaToLinear( float32 value );

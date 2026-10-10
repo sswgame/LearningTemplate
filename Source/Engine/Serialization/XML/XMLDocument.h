@@ -1,7 +1,7 @@
 /**
- * @file XmlDocument.h
+ * @file XMLDocument.h
  * @brief 리플렉션 없는 XML 파싱·탐색 (콘텐츠 테이블, 맵, 툴)
- * @note 리플렉션 객체 그래프는 XmlSerializer / IXmlBackend를 사용합니다.
+ * @note 리플렉션 객체 그래프는 XMLSerializer / IXMLBackend를 사용합니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -13,14 +13,14 @@
 namespace sw
 {
     /**
-     * @class XmlAttribute
+     * @class XMLAttribute
      * @brief XML 속성의 가벼운 핸들입니다.
      */
-    class SW_API XmlAttribute
+    class SW_API XMLAttribute
     {
     public:
         /** @brief 빈(무효) 속성 핸들. */
-        XmlAttribute() = default;
+        XMLAttribute() = default;
 
         /** @brief 속성이 유효하면 true. */
         bool isValid() const { return _pAttr != nullptr; }
@@ -32,12 +32,12 @@ namespace sw
         /** @brief 속성 값을 반환합니다. */
         const utf8* getValue() const;
         /** @brief 다음 속성을 반환합니다. */
-        XmlAttribute getNext() const;
+        XMLAttribute getNext() const;
 
     private:
-        friend class XmlNode;
+        friend class XMLNode;
         /** @brief pugixml 속성 포인터로 핸들을 만듭니다. */
-        explicit XmlAttribute( void* pAttr )
+        explicit XMLAttribute( void* pAttr )
             : _pAttr{ pAttr } {}
 
         void* _pAttr{ nullptr };
@@ -47,14 +47,14 @@ namespace sw
 namespace sw
 {
     /**
-     * @class XmlNode
-     * @brief XmlDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
+     * @class XMLNode
+     * @brief XMLDocument 안의 가벼운 핸들입니다(clear/destroy 이후 무효).
      */
-    class SW_API XmlNode
+    class SW_API XMLNode
     {
     public:
         /** @brief 빈(무효) 노드 핸들. */
-        XmlNode() = default;
+        XMLNode() = default;
 
         /** @brief 노드가 유효하면 true. */
         bool isValid() const { return _pNode != nullptr; }
@@ -70,7 +70,7 @@ namespace sw
         const utf8* getText() const;
         /**
          * @brief 파싱한 원문에서 이 노드가 시작하는 바이트 위치입니다(오류에 줄 번호를 적을 때). 알 수 없으면(만든 노드 · 무효 노드) -1 입니다.
-         * @details 줄 번호는 `XmlDocument::computeLineNumber( 원문, 위치 )` 로 셉니다.
+         * @details 줄 번호는 `XMLDocument::computeLineNumber( 원문, 위치 )` 로 셉니다.
          */
         int64 getSourceOffset() const;
         /** @brief 속성 값을 반환합니다. 없으면 nullptr. */
@@ -97,9 +97,9 @@ namespace sw
         bool getAttributeBool( const utf8* pName, bool fallback = false, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 자식 노드를 찾습니다. pName 이 nullptr 이면 첫 자식입니다. */
-        XmlNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XMLNode findChild( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 다음 형제 노드를 반환합니다. */
-        XmlNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XMLNode findNextSibling( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식의 텍스트를 반환합니다. */
         const utf8* findChildText( const utf8* pName, bool bIgnoreCaseKeys = true ) const;
         /** @brief 지정 이름 자식 텍스트를 정수로 반환합니다. */
@@ -113,18 +113,18 @@ namespace sw
         bool takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys = true ) const;
 
         /** @brief 첫 속성을 반환합니다. */
-        XmlAttribute getFirstAttribute() const;
+        XMLAttribute getFirstAttribute() const;
 
         // ------------------------------------------------------------------------------
         // 2) 쓰기 — 메모리는 문서 풀에서 할당
         // ------------------------------------------------------------------------------
         /** @brief 새 자식 노드를 추가합니다. */
-        XmlNode appendChild( const utf8* pName ) const;
+        XMLNode appendChild( const utf8* pName ) const;
         /** @brief 새 자식 노드를 추가하고 값을 설정합니다. 값 타입은 `setValue` 가 받는 것이면 무엇이든 됩니다. */
         template <typename T>
-        XmlNode appendChild( const utf8* pName, const T& value ) const
+        XMLNode appendChild( const utf8* pName, const T& value ) const
         {
-            XmlNode childNode = appendChild( pName );
+            XMLNode childNode = appendChild( pName );
             childNode.setValue( value );
             return childNode;
         }
@@ -173,7 +173,7 @@ namespace sw
         /** @brief 이 서브트리를 XML 문자열로 직렬화합니다 (Prefab/임베드용). */
         string toString() const;
         /** @brief 다른 문서의 서브트리를 이 노드의 자식으로 복사합니다. */
-        XmlNode appendClone( XmlNode src ) const;
+        XMLNode appendClone( XMLNode src ) const;
 
     private:
         /**
@@ -184,16 +184,16 @@ namespace sw
         static StringBuilder<constant::kMaxBuffer32> formatNumber( T value )
         {
             static_assert( std::is_same_v<T, int32> || std::is_same_v<T, uint32> || std::is_same_v<T, float32>,
-                           "XmlNode number text: int32 / uint32 / float32 only" );
+                           "XMLNode number text: int32 / uint32 / float32 only" );
             StringBuilder<constant::kMaxBuffer32> sb;
             sb.append( value );
             return sb;
         }
 
     private:
-        friend class XmlDocument;
+        friend class XMLDocument;
         /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */
-        explicit XmlNode( void* pNode )
+        explicit XMLNode( void* pNode )
             : _pNode{ pNode } {}
 
         void* _pNode{ nullptr };
@@ -203,28 +203,28 @@ namespace sw
 namespace sw
 {
     /**
-     * @class XmlDocument
+     * @class XMLDocument
      * @brief pugixml 문서 트리입니다. TypeInfo 없이 손으로 읽을 때 씁니다.
      */
-    class SW_API XmlDocument
+    class SW_API XMLDocument
     {
     public:
         // ------------------------------------------------------------------------------
         // 3) 수명 — 복사 금지, 이동 가능
         // ------------------------------------------------------------------------------
         /** @brief 빈 문서를 만듭니다. */
-        XmlDocument();
+        XMLDocument();
         /** @brief 파싱한 문서를 해제합니다. */
-        ~XmlDocument();
+        ~XMLDocument();
 
         /** @brief 복사를 금지합니다. */
-        XmlDocument( const XmlDocument& ) = delete;
+        XMLDocument( const XMLDocument& ) = delete;
         /** @brief 대입을 금지합니다. */
-        XmlDocument& operator=( const XmlDocument& ) = delete;
+        XMLDocument& operator=( const XMLDocument& ) = delete;
         /** @brief 문서를 이동합니다. */
-        XmlDocument( XmlDocument&& ) noexcept;
+        XMLDocument( XMLDocument&& ) noexcept;
         /** @brief 문서를 이동 대입합니다. */
-        XmlDocument& operator=( XmlDocument&& ) noexcept;
+        XMLDocument& operator=( XMLDocument&& ) noexcept;
 
         /** @brief 문서를 비우고 파싱된 데이터를 해제합니다. */
         void clear();
@@ -256,17 +256,17 @@ namespace sw
          *          부르는 쪽(씬 · 프리팹)은 이것으로 구문 오류와 없는 파일을 가린다.
          */
         const string& getLastError() const { return _lastError; }
-        /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XmlNode::getSourceOffset` 이 모를 때). */
+        /** @brief 원문 @p text 의 바이트 위치 @p offset 이 몇째 줄(1 부터)인지 셉니다. 위치가 음수면 0 입니다(`XMLNode::getSourceOffset` 이 모를 때). */
         static uint32 computeLineNumber( string_view text, int64 offset );
 
         /** @brief 첫 엘리먼트를 반환합니다. pName 이 있으면 이름으로 찾습니다(기본은 대소문자 무시). */
-        XmlNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
+        XMLNode getRoot( const utf8* pName = nullptr, bool bIgnoreCaseKeys = true ) const;
 
         // ------------------------------------------------------------------------------
         // 5) 쓰기
         // ------------------------------------------------------------------------------
         /** @brief 루트 노드를 만들고 반환합니다. */
-        XmlNode appendRoot( const utf8* pName );
+        XMLNode appendRoot( const utf8* pName );
         /** @brief 현재 문서를 XML 문자열로 직렬화합니다. */
         string saveToString() const;
         /** @brief 현재 문서를 절대 경로에 씁니다. */

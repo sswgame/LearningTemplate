@@ -14,7 +14,7 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/Time/Countdown.h"
@@ -23,7 +23,7 @@
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 아이템 정의 하나입니다. */
     struct PartyItemDef
@@ -87,9 +87,9 @@ namespace sw
      * @brief `<PartyItems minInterval="4" maxInterval="8" lifetime="10" radius="6" height="1.5" maxActive="2"><Item id="spring" effect="SuperBounce" weight="3"/>
      *        <Item id="anvil" effect="Heavy" weight="2" duration="8" knockbackTaken="0.5" knockbackDealt="1.5"/></PartyItems>` 를 읽습니다.
      */
-    class SW_GF_API PartyItemSpawner : public XmlCatalog<PartyItemSpawner>
+    class SW_GF_API PartyItemSpawner : public XMLCatalog<PartyItemSpawner>
     {
-        friend class XmlCatalog<PartyItemSpawner>;
+        friend class XMLCatalog<PartyItemSpawner>;
 
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "PISP" );
@@ -119,8 +119,8 @@ namespace sw
         float32                          getSpawnTimer() const { return _spawnTimer.getRemaining(); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "PartyItems"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "PartyItems"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         const PartyItemDef*          pickWeighted();
         void                         spawnOne();
         float32                      rollInterval();

@@ -1,15 +1,15 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/ReflectedXmlFile.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "ReflectedXmlFile" );
+    SW_LOG_CALLER( "ReflectedXMLFile" );
 
-    bool ReflectedXmlFile::loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -20,7 +20,7 @@ namespace sw
 
         // PROPERTY 그래프를 그대로 읽는다 — 필드를 손으로 읽으면 필드를 더할 때마다 파서와 라이터를 같이 고쳐야 하고,
         // 하나만 빠뜨리면 조용히 빈 값이 된다.
-        if ( XmlSerializer::loadFile( assetRelativePath, pDesc, *pTypeInfo ) == false )
+        if ( XMLSerializer::loadFile( assetRelativePath, pDesc, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR( "XML 로드 실패: %# (%#)", assetRelativePath, pTypeInfo->_name.c_str() );
             return false;
@@ -28,7 +28,7 @@ namespace sw
         return true;
     }
 
-    bool ReflectedXmlFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -42,7 +42,7 @@ namespace sw
         if ( absPath.empty() )
             absPath = assetRelativePath;
 
-        if ( XmlSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
+        if ( XMLSerializer::saveFile( absPath, pDesc, *pTypeInfo ) == false )
         {
             SW_LOG_ERROR( "XML 쓰기 실패: %# (%#)", absPath, pTypeInfo->_name.c_str() );
             return false;

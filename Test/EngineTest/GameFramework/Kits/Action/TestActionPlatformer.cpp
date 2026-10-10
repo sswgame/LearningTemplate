@@ -22,7 +22,7 @@ namespace
 {
     constexpr float32 kActionPlatformerStep = 1.0f / 60.0f;
 
-    constexpr const utf8* kActionPlatformerCatalogXml = R"(
+    constexpr const utf8* kActionPlatformerCatalogXML = R"(
 <ActionPlatformer>
   <Grading time="2" hits="1" collect="1"><Grade id="C" min="0"/><Grade id="S" min="90"/><Grade id="B" min="50"/><Grade id="A" min="70"/></Grading>
   <Body glideFallSpeed="2" glideGravityScale="0.3" grappleRange="6" grappleMinLength="1" grappleSwingAcceleration="14" grappleMaxSpeed="24"
@@ -40,7 +40,7 @@ namespace
 </ActionPlatformer>
 )";
 
-    constexpr const utf8* kMoveXml = R"(
+    constexpr const utf8* kMoveXML = R"(
 <MoveCatalog>
   <Move id="slash1" startup="3" active="2" recovery="10" damage="10" hitstop="4"><Cancel from="4" to="12" moves="slash2" onHit="true"/></Move>
   <Move id="slash2" startup="3" active="2" recovery="12" damage="12" hitstop="4"><Cancel from="4" to="14" moves="slash3"/></Move>
@@ -76,7 +76,7 @@ namespace
 
         ActionScene()
         {
-            _bLoaded = _catalog.loadFromXmlText( kActionPlatformerCatalogXml, "action" ) && _moves.loadFromXmlText( kMoveXml, "moves" );
+            _bLoaded = _catalog.loadFromXMLText( kActionPlatformerCatalogXML, "action" ) && _moves.loadFromXMLText( kMoveXML, "moves" );
             _terrain.loadFromText( kRoomText, 1.0f, float2{ 0.0f, 0.0f }, _map );
             _body.initialize( PlatformerSettings{}, _catalog.getBodySettings() );
         }

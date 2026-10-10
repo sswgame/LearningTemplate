@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -22,14 +22,14 @@ namespace sw
             static void parseIdList( string_view text, vector<hashed_string>& outListId )
             {
                 outListId.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 { outListId.push_back( hashed_string( token ) ); } );
             }
 
             static void parseDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const utf8* pId )
             {
                 outListDigit.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     int32 digit = 0;
                     if ( StringUtil::parseInt( token, digit ) )
@@ -43,7 +43,7 @@ namespace sw
             static void parseLinks( string_view text, vector<HorrorClueLink>& outListLink, string_view sourceName, const utf8* pId )
             {
                 outListLink.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 {
                     const size_t dash = token.find( '-' );
                     if ( dash == string_view::npos || dash == 0 || dash + 1 >= token.size() )
@@ -58,7 +58,7 @@ namespace sw
                 } );
             }
 
-            static void loadRules( const XmlNode& node, SurvivalHorrorRules& outRules, string_view sourceName )
+            static void loadRules( const XMLNode& node, SurvivalHorrorRules& outRules, string_view sourceName )
             {
                 outRules._maxHealth              = MathUtil::max( 1.0f, node.getAttributeFloat( "maxHealth", outRules._maxHealth ) );
                 outRules._maxSanity              = MathUtil::max( 1.0f, node.getAttributeFloat( "maxSanity", outRules._maxSanity ) );
@@ -143,15 +143,15 @@ namespace sw
         return nullptr;
     }
 
-    uint32 HorrorCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 HorrorCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        if ( const XmlNode rulesNode = root.findChild( "Rules" ) )
+        if ( const XMLNode rulesNode = root.findChild( "Rules" ) )
             HorrorCatalogInternal::loadRules( rulesNode, _rules, sourceName );
 
-        for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+        for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorItemDef item;
@@ -171,9 +171,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Combine" ); node; node = node.findNextSibling( "Combine" ) )
+        for ( XMLNode node = root.findChild( "Combine" ); node; node = node.findNextSibling( "Combine" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             const hashed_string firstItem( node.getAttributeText( "a" ) );
@@ -194,9 +194,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
+        for ( XMLNode node = root.findChild( "Monster" ); node; node = node.findNextSibling( "Monster" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorMonsterDef monster;
@@ -210,9 +210,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "KeyLock" ); node; node = node.findNextSibling( "KeyLock" ) )
+        for ( XMLNode node = root.findChild( "KeyLock" ); node; node = node.findNextSibling( "KeyLock" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorKeyLockDef lock;
@@ -228,9 +228,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "DialLock" ); node; node = node.findNextSibling( "DialLock" ) )
+        for ( XMLNode node = root.findChild( "DialLock" ); node; node = node.findNextSibling( "DialLock" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorDialLockDef lock;
@@ -244,9 +244,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Sequence" ); node; node = node.findNextSibling( "Sequence" ) )
+        for ( XMLNode node = root.findChild( "Sequence" ); node; node = node.findNextSibling( "Sequence" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorSequenceDef sequence;
@@ -260,9 +260,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Document" ); node; node = node.findNextSibling( "Document" ) )
+        for ( XMLNode node = root.findChild( "Document" ); node; node = node.findNextSibling( "Document" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorDocumentDef document;
@@ -274,9 +274,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Deduction" ); node; node = node.findNextSibling( "Deduction" ) )
+        for ( XMLNode node = root.findChild( "Deduction" ); node; node = node.findNextSibling( "Deduction" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HorrorDeductionDef deduction;

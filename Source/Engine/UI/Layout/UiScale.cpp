@@ -5,7 +5,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 SW_TEST_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone, 0.0f, "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다" );
 
@@ -27,7 +27,7 @@ namespace sw
 {
     bool UiScaleSettings::loadFromResource( string_view resourcePath )
     {
-        if ( XmlSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "[Ui] UI scale settings could not be read or hold unknown keys: %#", resourcePath );
             return false;

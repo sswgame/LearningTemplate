@@ -120,7 +120,7 @@ SW_TEST_CASE( MotionWarpingTest, WarpWindowReachesTargetAtWindowEnd )
     AnimNotifyComponent*       pNotify   = pObject->addComponent<AnimNotifyComponent>();
     SW_ASSERT_TRUE( pAnimator != nullptr && pWarping != nullptr && pNotify != nullptr );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXmlText( R"(<AnimNotifies><Notify name="Warp" handler="MotionWarp" target="Seat"/></AnimNotifies>)", "warp",
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Warp" handler="MotionWarp" target="Seat"/></AnimNotifies>)", "warp",
                                             AnimNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
     pAnimator->dispatchBeginPlay();

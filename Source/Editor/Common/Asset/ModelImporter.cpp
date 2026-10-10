@@ -1406,7 +1406,7 @@ namespace sw::editor
                         SW_LOG_ERROR( "Failed to write section mesh %#", meshPath.c_str() );
                         return false;
                     }
-                    const string materialText = VrmMaterialImporter::makeMaterialXml( section._material, listTexturePath );
+                    const string materialText = VrmMaterialImporter::makeMaterialXML( section._material, listTexturePath );
                     const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, kMaterialFolder ), section._fileStem + ".material" );
                     FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( materialPath ) );
                     if ( materialText.empty() || FileUtil::writeTextFile( materialPath, materialText ) == false )

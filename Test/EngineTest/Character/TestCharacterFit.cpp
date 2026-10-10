@@ -42,7 +42,7 @@ namespace
             string text( kTablesHead );
             text += interactionLines;
             text += "</FitTables>";
-            return outTables.loadFromXmlText( text, "test.fit.xml", solver.getOperatorRegistry() );
+            return outTables.loadFromXMLText( text, "test.fit.xml", solver.getOperatorRegistry() );
         }
 
         static FitPartData makeFitData( const utf8* pLayer, const utf8* pProfile )
@@ -436,13 +436,13 @@ SW_TEST_CASE( FitSolverTest, HiddenRegionRemovesInnerTriangles )
     SW_ASSERT_TRUE( Internal::loadTables( solver, "", tables ) );
 
     FitPartData glove;
-    SW_ASSERT_TRUE( glove.loadFromXmlText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='LowerArm'/></PartFit>", "glove.partfit.xml", tables ) );
+    SW_ASSERT_TRUE( glove.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='LowerArm'/></PartFit>", "glove.partfit.xml", tables ) );
     {
         test::ScopedLogCollector logs;
         SW_TEST_DEFENSIVE_SCOPE( "unknown names in part fit data are load errors" );
         FitPartData broken;
-        SW_EXPECT_FALSE( broken.loadFromXmlText( "<PartFit layer='Hat' profile='Rigid'/>", "broken.partfit.xml", tables ) );
-        SW_EXPECT_FALSE( broken.loadFromXmlText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='Tail'/></PartFit>", "broken.partfit.xml", tables ) );
+        SW_EXPECT_FALSE( broken.loadFromXMLText( "<PartFit layer='Hat' profile='Rigid'/>", "broken.partfit.xml", tables ) );
+        SW_EXPECT_FALSE( broken.loadFromXMLText( "<PartFit layer='Bracelet' profile='Rigid'><Hide region='Tail'/></PartFit>", "broken.partfit.xml", tables ) );
         SW_EXPECT_TRUE( logs.countContaining( "unknown region 'Tail'" ) > 0 );
     }
 
@@ -474,7 +474,7 @@ SW_TEST_CASE( FitSolverTest, CorrectiveDeltasFollowMorphWeight )
     FitTables tables;
     SW_ASSERT_TRUE( Internal::loadTables( solver, "", tables ) );
     FitPartData data;
-    SW_ASSERT_TRUE( data.loadFromXmlText( "<PartFit layer='Shirt' profile='Cloth'>"
+    SW_ASSERT_TRUE( data.loadFromXMLText( "<PartFit layer='Shirt' profile='Cloth'>"
                                           "  <Corrective><Delta vertex='0' offset='0 0.01 0'/></Corrective>"
                                           "  <Corrective morph='Heavy'><Delta vertex='1' offset='0 0 0.02'/></Corrective>"
                                           "</PartFit>",

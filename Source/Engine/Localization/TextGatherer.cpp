@@ -9,7 +9,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -392,7 +392,7 @@ namespace sw
                 return property._typeName == s_string && property._containerKind == ContainerKind::None;
             }
 
-            static string_view readPropertyValue( const XmlNode& node, const PropertyInfo& property )
+            static string_view readPropertyValue( const XMLNode& node, const PropertyInfo& property )
             {
                 const string_view attribute = node.getAttributeText( property._name.c_str(), false );
                 if ( attribute.empty() == false )
@@ -401,7 +401,7 @@ namespace sw
                 return pChildText != nullptr ? string_view( pChildText ) : string_view{};
             }
 
-            static void gatherNode( const XmlNode& node, string_view originName, TextGatherer& gatherer, uint32 depth )
+            static void gatherNode( const XMLNode& node, string_view originName, TextGatherer& gatherer, uint32 depth )
             {
                 if ( depth > 64 )
                     return;
@@ -434,7 +434,7 @@ namespace sw
                                                false );
                     }, true );
                 }
-                for ( XmlNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     gatherNode( child, originName, gatherer, depth + 1 );
                 }
@@ -491,15 +491,15 @@ namespace sw
         scanner.scan();
     }
 
-    void TextGatherer::gatherReflectedXml( string_view xmlText, string_view originName )
+    void TextGatherer::gatherReflectedXML( string_view xmlText, string_view originName )
     {
-        XmlDocument document;
+        XMLDocument document;
         if ( document.parse( xmlText, originName ) == false )
         {
             addIssue( originName, "XML cannot be parsed: " + document.getLastError(), true );
             return;
         }
-        const XmlNode root = document.getRoot();
+        const XMLNode root = document.getRoot();
         if ( root.isValid() )
             TextGathererInternal::gatherNode( root, originName, *this, 0 );
     }

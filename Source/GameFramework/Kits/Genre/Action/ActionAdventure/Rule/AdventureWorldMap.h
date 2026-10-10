@@ -11,14 +11,14 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class AdventureVitals;
     class AreaGraph;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 지도 위 표지의 종류입니다. */
     enum class AdventureLandmarkKind : uint8
@@ -60,9 +60,9 @@ namespace sw
      * @brief `<AdventureWorld orbsPerExchange="4"><Tower id="plateauTower" region="Plateau"/><Shrine id="oman" region="Plateau"/></AdventureWorld>` 를 읽고
      *        깨운 탑 · 찾은 · 마친 사당 · 증표를 듭니다.
      */
-    class SW_GF_API AdventureWorldMap : public XmlCatalog<AdventureWorldMap>
+    class SW_GF_API AdventureWorldMap : public XMLCatalog<AdventureWorldMap>
     {
-        friend class XmlCatalog<AdventureWorldMap>;
+        friend class XMLCatalog<AdventureWorldMap>;
 
     public:
         AdventureWorldMap();
@@ -89,9 +89,9 @@ namespace sw
         const vector<AdventureLandmarkDef>& getLandmarks() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "AdventureWorld"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         readLandmarks( const XmlNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
+        static constexpr const utf8* kXMLRootName = "AdventureWorld"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
 
         GameCatalog<AdventureLandmarkDef> _catalog;
         vector<uint8>                     _listActivated; ///< 탑은 깨움 · 사당은 찾음(카탈로그 순서)

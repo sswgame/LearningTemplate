@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -87,7 +87,7 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    uint32 PartyRoundSeries::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )
     {
         setWinScore( root.getAttributeInt( "winScore", _seriesSettings._winScore ) );
         const string_view points = root.getAttributeText( "placementPoints" );
@@ -95,7 +95,7 @@ namespace sw
         {
             vector<int32>& listPlacementPoint = _seriesSettings._listPlacementPoint;
             listPlacementPoint.clear();
-            GameDataXml::forEachToken( points, ",; ",
+            GameDataXML::forEachToken( points, ",; ",
                                        [&]( string_view token )
             {
                 int32 value = 0;
@@ -104,9 +104,9 @@ namespace sw
             } );
         }
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Round" ); node; node = node.findNextSibling( "Round" ) )
+        for ( XMLNode node = root.findChild( "Round" ); node; node = node.findNextSibling( "Round" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             PartyRoundDef round;

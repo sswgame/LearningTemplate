@@ -13,7 +13,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSkillTestXml = R"(
+    constexpr const utf8* kSkillTestXML = R"(
 <SkillTreeCatalog>
   <Tree id="combat">
     <Skill id="basic" maxRank="2" cost="1"><Stats attack="2"/></Skill>
@@ -24,7 +24,7 @@ namespace
 </SkillTreeCatalog>
 )";
 
-    constexpr const utf8* kReputationTestXml = R"(
+    constexpr const utf8* kReputationTestXML = R"(
 <ReputationCatalog>
   <Faction id="town" min="-100" max="100" start="0">
     <Tier name="Hated" min="-100"/><Tier name="Neutral" min="-20"/><Tier name="Friendly" min="30"/><Tier name="Hero" min="80"/>
@@ -58,7 +58,7 @@ SW_TEST_CASE( ProgressionTest, ExperienceCurvesLevelUpAndStopAtMaxLevel )
     SW_EXPECT_EQUAL( 0, progress.addXp( curve, 10 ) );
 
     ExperienceCurve table;
-    SW_ASSERT_TRUE( table.loadFromXmlText( R"(<ExperienceCurve><Level xp="10"/><Level xp="30"/></ExperienceCurve>)", "ProgressionTest" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( R"(<ExperienceCurve><Level xp="10"/><Level xp="30"/></ExperienceCurve>)", "ProgressionTest" ) );
     SW_EXPECT_EQUAL( 3, table.getMaxLevel() );
     progress.setLevel( table, 2 );
     SW_EXPECT_EQUAL( 10, static_cast<int32>( progress.getTotalXp() ) );
@@ -67,7 +67,7 @@ SW_TEST_CASE( ProgressionTest, ExperienceCurvesLevelUpAndStopAtMaxLevel )
 SW_TEST_CASE( ProgressionTest, SkillTreesCheckRequirementsTiersGroupsAndRefunds )
 {
     SkillTreeCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSkillTestXml, "ProgressionTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kSkillTestXML, "ProgressionTest" ) );
     SkillTreeState state;
     state.initialize( catalog.findTree( hashed_string( "combat" ) ) );
     state.addPoints( 5 );
@@ -109,7 +109,7 @@ SW_TEST_CASE( ProgressionTest, SkillTreesCheckRequirementsTiersGroupsAndRefunds 
 SW_TEST_CASE( ProgressionTest, ReputationTiersSpreadToLinkedFactionsAndDecay )
 {
     ReputationCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kReputationTestXml, "ProgressionTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kReputationTestXML, "ProgressionTest" ) );
     ReputationState state;
     state.initialize( &catalog );
     const hashed_string town( "town" );

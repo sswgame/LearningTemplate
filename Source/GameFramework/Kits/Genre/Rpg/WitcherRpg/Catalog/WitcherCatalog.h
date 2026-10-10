@@ -10,12 +10,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 약점의 종류입니다. */
     enum class WitcherWeaknessKind : uint8
@@ -217,9 +217,9 @@ namespace sw
      *     </WitcherCatalog>
      * @endcode
      */
-    class SW_GF_API WitcherCatalog : public XmlCatalog<WitcherCatalog>
+    class SW_GF_API WitcherCatalog : public XMLCatalog<WitcherCatalog>
     {
-        friend class XmlCatalog<WitcherCatalog>;
+        friend class XMLCatalog<WitcherCatalog>;
 
     public:
         WitcherCatalog();
@@ -238,10 +238,10 @@ namespace sw
         const WitcherAlchemySettings&      getAlchemy() const { return _alchemy; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "WitcherCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadMonster( const XmlNode& node, const hashed_string& id, string_view sourceName );
-        void                         loadContract( const XmlNode& node, const hashed_string& id );
+        static constexpr const utf8* kXMLRootName = "WitcherCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadMonster( const XMLNode& node, const hashed_string& id, string_view sourceName );
+        void                         loadContract( const XMLNode& node, const hashed_string& id );
 
         GameCatalog<WitcherMonsterDef>    _monsterCatalog;
         GameCatalog<WitcherAlchemyDef>    _alchemyCatalog;

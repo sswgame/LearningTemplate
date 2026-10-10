@@ -39,7 +39,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kWesternTestXml = R"(
+    constexpr const utf8* kWesternTestXML = R"(
 <WesternCatalog currency="Dollar" extraHitPenalty="1">
   <Crime id="murder" bounty="50" wanted="2" honor="-40" reportTime="20"/>
   <Crime id="theft" bounty="10" wanted="1" honor="-5" reportTime="10"/>
@@ -134,7 +134,7 @@ namespace
 SW_TEST_CASE( OpenWorldWesternTest, CatalogReadsLawHorseSurvivalAndHunting )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     SW_EXPECT_TRUE( catalog.getCurrency() == hashed_string( "Dollar" ) );
     const WesternCrimeDef* pMurder = catalog.findCrime( hashed_string( "murder" ) );
     SW_ASSERT_NOT_NULL( pMurder );
@@ -156,7 +156,7 @@ SW_TEST_CASE( OpenWorldWesternTest, CatalogReadsLawHorseSurvivalAndHunting )
 SW_TEST_CASE( OpenWorldWesternTest, WitnessesReportAfterDelayUnlessSilencedAndLawmenReportAtOnce )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternLawState law;
     law.initialize( &catalog );
     const hashed_string    region( "lemoyne" );
@@ -211,7 +211,7 @@ SW_TEST_CASE( OpenWorldWesternTest, WitnessesReportAfterDelayUnlessSilencedAndLa
 SW_TEST_CASE( OpenWorldWesternTest, WantedCoolsWhenUnseenFasterInDisguiseAndBountyIsPaidAfterwards )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     const hashed_string    region( "lemoyne" );
     const ListedSight      lawSees( vector<uint64>{ 9 } );
     vector<WesternWitness> listLawman{ makeWitness( 9, true ) };
@@ -264,7 +264,7 @@ SW_TEST_CASE( OpenWorldWesternTest, WantedCoolsWhenUnseenFasterInDisguiseAndBoun
 SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     ReputationState reputation; // 공유 평판 — 그 카탈로그에 명예 세력이 있어야 단계가 선다
     reputation.initialize( &catalog.getHonorReputation() );
     GameStateRefs refs;
@@ -306,7 +306,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HonorTiersGiveDiscountsAndDialogueFlags )
 SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternHorse horse;
     SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
     horse.setRidden( true ); // 타면 초당 1
@@ -351,7 +351,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondLevelsAtTheCatalogThresholds )
 SW_TEST_CASE( OpenWorldWesternTest, HorseBondUnlocksAbilitiesCoresSlowRegenAndFearIsDeterministic )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternHorse horse;
     SW_EXPECT_FALSE( horse.initialize( &catalog, hashed_string( "unicorn" ), 1u ) );
     SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 7u ) );
@@ -430,7 +430,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseBondUnlocksAbilitiesCoresSlowRegenAndFe
 SW_TEST_CASE( OpenWorldWesternTest, PlayerCoresDrainWithColdUnlessDressedAndDeadEyeSlowsAndMarks )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternSurvival naked;
     naked.initialize( &catalog );
     WesternSurvival dressed;
@@ -480,7 +480,7 @@ SW_TEST_CASE( OpenWorldWesternTest, PlayerCoresDrainWithColdUnlessDressedAndDead
 SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcassesRot )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     const auto stars = [&]( const utf8* pAnimal, const utf8* pWeapon, const utf8* pZone, int32 hits )
     {
         WesternKill kill;
@@ -501,7 +501,7 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
     SW_EXPECT_EQUAL( 0, stars( "dragon", "bow", "head", 1 ) );
 
     LootCatalog loot;
-    SW_ASSERT_TRUE( loot.loadFromXmlText( R"(<LootCatalog><Table id="deer_parts" rolls="0"><Always item="venison" min="2" max="2" chance="1"/></Table></LootCatalog>)",
+    SW_ASSERT_TRUE( loot.loadFromXMLText( R"(<LootCatalog><Table id="deer_parts" rolls="0"><Always item="venison" min="2" max="2" chance="1"/></Table></LootCatalog>)",
                                           "OpenWorldWesternTest" ) );
     WesternKill kill;
     kill._animalId         = hashed_string( "deer" );
@@ -540,7 +540,7 @@ SW_TEST_CASE( OpenWorldWesternTest, PeltStarsDependOnWeaponZoneAndHitsAndCarcass
 SW_TEST_CASE( OpenWorldWesternTest, StateRoundTripContinuesTheSameRide )
 {
     WesternCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
 
     // 말 — 유대 2 단계 · 질주 중 · 겁이 조금 쌓였다.
     WesternHorse horse;
@@ -651,7 +651,7 @@ SW_TEST_CASE( OpenWorldWesternTest, HorseMountGallopsOnStaminaBucksTheRiderAndCo
 {
     constexpr float32 kDeltaTime = 1.0f / 30.0f;
     WesternCatalog    catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kWesternTestXml, "OpenWorldWesternTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kWesternTestXML, "OpenWorldWesternTest" ) );
     WesternHorse horse;
     SW_ASSERT_TRUE( horse.initialize( &catalog, hashed_string( "arabian" ), 99u ) );
 

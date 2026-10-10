@@ -217,8 +217,8 @@ SW_TEST_CASE( PoseModifierTest, SocketTargetsResolveOnOwnAndOtherUnits )
     kinds.addKind( "Attach" );
     shared_ptr<SocketSet> bodySockets   = make_shared<SocketSet>();
     shared_ptr<SocketSet> weaponSockets = make_shared<SocketSet>();
-    SW_ASSERT_TRUE( bodySockets->loadFromXmlText( R"(<SocketSet><Socket name="Chest" parent="bone1" kind="Attach" translation="0 0 0.2"/></SocketSet>)", "body", kinds ) );
-    SW_ASSERT_TRUE( weaponSockets->loadFromXmlText( R"(<SocketSet><Socket name="Grip" parent="bone2" kind="Attach" translation="0.1 0 0"/></SocketSet>)", "weapon", kinds ) );
+    SW_ASSERT_TRUE( bodySockets->loadFromXMLText( R"(<SocketSet><Socket name="Chest" parent="bone1" kind="Attach" translation="0 0 0.2"/></SocketSet>)", "body", kinds ) );
+    SW_ASSERT_TRUE( weaponSockets->loadFromXMLText( R"(<SocketSet><Socket name="Grip" parent="bone2" kind="Attach" translation="0.1 0 0"/></SocketSet>)", "weapon", kinds ) );
 
     PoseModifierComponent* pModifier = TestPoseModifierInternal::addRig( *pBody, R"({ "targets": [ { "name": "Chest", "socket": "Chest" },
         { "name": "Grip", "socket": "Grip", "unit": "Weapon" } ], "nodes": [

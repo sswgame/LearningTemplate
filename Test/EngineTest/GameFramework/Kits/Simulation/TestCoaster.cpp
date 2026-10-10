@@ -223,7 +223,7 @@ SW_TEST_CASE( CoasterTest, CamelbackGivesAirtimeAndTooTallHillStalls )
  */
 SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndSkipsUnknownOnes )
 {
-    constexpr const utf8* kLayoutXml = R"(
+    constexpr const utf8* kLayoutXML = R"(
 <CoasterCatalog>
   <Layout id="mini" name="Mini" startHeight="2">
     <Piece type="Station" length="8"/>
@@ -234,7 +234,7 @@ SW_TEST_CASE( CoasterTest, LayoutCatalogReadsPiecesAndSkipsUnknownOnes )
 </CoasterCatalog>
 )";
     CoasterLayoutCatalog  catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kLayoutXml, "CoasterTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kLayoutXML, "CoasterTest" ) );
     const CoasterLayoutDef* pLayout = catalog.findLayout( "mini" );
     SW_ASSERT_NOT_NULL( pLayout );
     SW_EXPECT_EQUAL( static_cast<size_t>( 3 ), pLayout->_listPiece.size() );

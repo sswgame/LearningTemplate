@@ -238,7 +238,7 @@ SW_TEST_CASE( CameraPresetTest, DampingIsFrameRateIndependent )
  */
 SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
 {
-    const utf8*         pXml = R"(<CameraPresets>
+    const utf8*         pXML = R"(<CameraPresets>
         <DefaultBlend curve="Linear" duration="2"/>
         <Preset id="a">
             <View mode="Orbit" pitch="30" yaw="90" distance="12" offset="0 1 0"/>
@@ -257,7 +257,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     CameraPresetCatalog catalog;
     {
         test::ScopedDefensiveTestLog expected( "unsorted custom keys are reported and sorted" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( pXml, "camera-test" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( pXML, "camera-test" ) );
     }
     SW_ASSERT_EQUAL( size_t{ 3 }, catalog.getPresets().size() );
 
@@ -290,7 +290,7 @@ SW_TEST_CASE( CameraPresetTest, CatalogReadsSectionsAndResolvesBlends )
     {
         test::ScopedDefensiveTestLog expected( "unknown camera preset names are reported" );
         CameraPresetCatalog          typo;
-        SW_EXPECT_TRUE( typo.loadFromXmlText( R"(<CameraPresets><Preset id="x"><View mode="Orbitt" pich="3"/><Lense/></Preset></CameraPresets>)", "typo" ) );
+        SW_EXPECT_TRUE( typo.loadFromXMLText( R"(<CameraPresets><Preset id="x"><View mode="Orbitt" pich="3"/><Lense/></Preset></CameraPresets>)", "typo" ) );
     }
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown attribute 'pich'" ) );
     SW_EXPECT_EQUAL( 1u, logs.countContaining( "unknown mode 'Orbitt'" ) );
@@ -372,7 +372,7 @@ SW_TEST_CASE( CameraPresetTest, DirectorComponentDrivesItsCamera )
     pTargetScene->setLocalPosition( float3{ 3.0f, 0.0f, 4.0f } );
     pTargetScene->setLocalRotation( float3{ 0.0f, MathUtil::kHalfPi, 0.0f } );
 
-    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXmlText( R"(<CameraPresets>
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
         <Preset id="behind"><View mode="Follow" pitch="0" distance="5" offset="0 2 0"/><Lens fieldOfViewY="60" far="400"/></Preset>
         <Preset id="above"><View mode="OrthoTopDown" pitch="90" distance="50"/><Lens orthoHeight="30"/><BlendIn curve="SmoothStep" duration="1"/></Preset>
     </CameraPresets>)",
@@ -420,7 +420,7 @@ SW_TEST_CASE( CameraPresetTest, CycleActionSwitchesToTheNextPreset )
     SW_ASSERT_NOT_NULL( pCameraObject->addComponent<CameraComponent>() );
     CameraDirectorComponent* pDirector = pCameraObject->addComponent<CameraDirectorComponent>();
     SW_ASSERT_NOT_NULL( pDirector );
-    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXmlText( R"(<CameraPresets>
+    SW_ASSERT_TRUE( pDirector->getCatalog().loadFromXMLText( R"(<CameraPresets>
         <Preset id="first"><View mode="Orbit" distance="5"/></Preset>
         <Preset id="second"><View mode="Orbit" distance="9"/></Preset>
     </CameraPresets>)",

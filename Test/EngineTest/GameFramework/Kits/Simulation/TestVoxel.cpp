@@ -22,7 +22,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kVoxelTestBlockXml = R"(
+    constexpr const utf8* kVoxelTestBlockXML = R"(
 <BlockCatalog atlasColumns="4" atlasRows="4" tileTexels="16">
   <Block id="grass" name="Grass" tile="2" top="0" side="1" hardness="0.6"/>
   <Block id="dirt" tile="2"/>
@@ -44,7 +44,7 @@ namespace
 
         bool initialize( int32 chunkCountX, int32 chunkCountZ )
         {
-            if ( _catalog.loadFromXmlText( kVoxelTestBlockXml, "VoxelTest" ) == false )
+            if ( _catalog.loadFromXMLText( kVoxelTestBlockXML, "VoxelTest" ) == false )
                 return false;
             _world.initialize( chunkCountX, chunkCountZ, &_catalog );
             return true;

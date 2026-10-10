@@ -13,7 +13,7 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 
 namespace sw
@@ -917,21 +917,21 @@ namespace sw
         } );
     }
 
-    bool SerializerUtil::transcodeXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+    bool SerializerUtil::transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                const SerializeContext& ctx )
     {
         return SerializerUtilInternal::transcodeTextToBinary( xmlStr, typeInfo, outBinary, ctx, [&]( void* pScratch )
         {
-            return XmlSerializer::deserialize( pScratch, typeInfo, xmlStr, ctx );
+            return XMLSerializer::deserialize( pScratch, typeInfo, xmlStr, ctx );
         } );
     }
 
-    string SerializerUtil::transcodeBinaryToXml( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
+    string SerializerUtil::transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
                                                  const SerializeContext& ctx )
     {
         return SerializerUtilInternal::transcodeBinaryToText( pData, dataSize, typeInfo, ctx, [&]( const void* pScratch )
         {
-            return XmlSerializer::serialize( pScratch, typeInfo, ctx );
+            return XMLSerializer::serialize( pScratch, typeInfo, ctx );
         } );
     }
 

@@ -20,12 +20,12 @@
 #include "GameFramework/Base/Actor/Camera/CameraBlend.h"
 #include "GameFramework/Base/Actor/Camera/CameraPose.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 프리셋이 카메라를 놓는 방식입니다. */
     ENUM()
@@ -355,9 +355,9 @@ namespace sw
      * @endcode
      * @details 모르는 속성 · 원소 · 열거자 이름은 경고하고 넘깁니다(`ResourceDataSchemaTest` 가 그 경고를 잡는다).
      */
-    class SW_GF_API CameraPresetCatalog : public XmlCatalog<CameraPresetCatalog>
+    class SW_GF_API CameraPresetCatalog : public XMLCatalog<CameraPresetCatalog>
     {
-        friend class XmlCatalog<CameraPresetCatalog>;
+        friend class XMLCatalog<CameraPresetCatalog>;
 
     public:
         CameraPresetCatalog();
@@ -377,8 +377,8 @@ namespace sw
         void                  setDefaultBlend( const BlendCurveSpec& blend ) { _defaultBlend = blend; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "CameraPresets"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "CameraPresets"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
     private:
         GameCatalog<CameraPresetDef> _catalog;

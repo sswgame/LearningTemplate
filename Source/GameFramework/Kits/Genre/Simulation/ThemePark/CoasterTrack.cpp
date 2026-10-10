@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/World/Spline/ArcLengthUtil.h"
 
 namespace sw
@@ -468,12 +468,12 @@ namespace sw
         (void)_catalog.add( layout );
     }
 
-    uint32 CoasterLayoutCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CoasterLayoutCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode layoutNode = root.findChild( "Layout" ); layoutNode; layoutNode = layoutNode.findNextSibling( "Layout" ) )
+        for ( XMLNode layoutNode = root.findChild( "Layout" ); layoutNode; layoutNode = layoutNode.findNextSibling( "Layout" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( layoutNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( layoutNode, sourceName );
             if ( pId == nullptr )
                 continue;
             CoasterLayoutDef layout;
@@ -482,7 +482,7 @@ namespace sw
             layout._name        = pName != nullptr ? pName : pId;
             layout._startHeight = layoutNode.getAttributeFloat( "startHeight", 1.0f );
 
-            for ( XmlNode pieceNode = layoutNode.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
+            for ( XMLNode pieceNode = layoutNode.findChild( "Piece" ); pieceNode; pieceNode = pieceNode.findNextSibling( "Piece" ) )
             {
                 CoasterTrackPiece piece;
                 const utf8*       pType = pieceNode.findAttribute( "type" );

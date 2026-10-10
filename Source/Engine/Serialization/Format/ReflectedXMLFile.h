@@ -1,10 +1,10 @@
 /**
- * @file ReflectedXmlFile.h
+ * @file ReflectedXMLFile.h
  * @brief 리플렉션 desc 하나를 리소스 상대 경로의 XML 파일로 읽고 씁니다(렌더 패스 · 파이프라인 리소스가 씁니다).
  *
  * [왜 있는가]
  * 렌더 리소스 둘(`RenderPassAsset` · `RenderPipelineAsset`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
- * **같은 일**을 합니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XmlSerializer` 호출 · 실패 로그. 둘이 따로 들면 한쪽만 고쳐
+ * **같은 일**을 합니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XMLSerializer` 호출 · 실패 로그. 둘이 따로 들면 한쪽만 고쳐
  * 다른 쪽이 조용히 다르게 동작합니다.
  *
  * [왜 여기인가]
@@ -21,10 +21,10 @@
 namespace sw
 {
     /**
-     * @struct ReflectedXmlFile
+     * @struct ReflectedXMLFile
      * @brief 리플렉션 desc 를 리소스 상대 경로의 XML 로 읽고 씁니다.
      */
-    struct SW_API ReflectedXmlFile
+    struct SW_API ReflectedXMLFile
     {
         /**
          * @brief 리플렉션 desc 를 XML 에서 읽습니다.
@@ -52,7 +52,7 @@ namespace sw
         }
 
     private:
-        /** @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XmlSerializer` 는 .cpp 에서만 봅니다). */
+        /** @brief 템플릿을 얇게 두려고 타입을 지운 실제 구현입니다(`XMLSerializer` 는 .cpp 에서만 봅니다). */
         [[nodiscard]] static bool loadDescInternal( string_view assetRelativePath, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 쓰기 쪽의 같은 구현입니다. */
         [[nodiscard]] static bool saveDescInternal( string_view assetRelativePath, const void* pDesc, const TypeInfo* pTypeInfo );

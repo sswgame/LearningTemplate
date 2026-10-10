@@ -17,12 +17,12 @@
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @brief 능력 하나입니다(대시 · 2단 점프 · 벽 점프 · 갈고리 …).
@@ -132,9 +132,9 @@ namespace sw
      *        <Charm id="strength" cost="3"><Stats damage="0.5"/></Charm><Map region="crossroads" price="30"/><Site id="bench1" area="dirtmouth" rest="true"/>
      *        <Pickup id="mask1" area="hall"/><Enemy id="husk" currency="5" loot="husk"/><Enemy id="hornet" boss="true" currency="300"/></Metroidvania>` 를 읽습니다.
      */
-    class SW_GF_API MetroidvaniaCatalog : public XmlCatalog<MetroidvaniaCatalog>
+    class SW_GF_API MetroidvaniaCatalog : public XMLCatalog<MetroidvaniaCatalog>
     {
-        friend class XmlCatalog<MetroidvaniaCatalog>;
+        friend class XMLCatalog<MetroidvaniaCatalog>;
 
     public:
         MetroidvaniaCatalog();
@@ -155,9 +155,9 @@ namespace sw
         MetroRules&                      getRules() { return _rules; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "Metroidvania"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadRules( const XmlNode& root );
+        static constexpr const utf8* kXMLRootName = "Metroidvania"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadRules( const XMLNode& root );
 
         GameCatalog<MetroAbilityDef>   _abilityCatalog;
         GameCatalog<MetroCharmDef>     _charmCatalog;

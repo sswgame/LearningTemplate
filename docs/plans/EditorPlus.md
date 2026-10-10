@@ -1132,7 +1132,7 @@ namespace sw::editor
     };
 } // namespace sw::editor
 ```
-`.cpp` 의 `refresh`: 파일 바이트를 읽어 `computeHash64`(같으면 false) → `CoasterLayoutCatalog layouts; layouts.load…`(키트의 카탈로그 경로 — `ParkDirectorComponent.cpp:176` 근처가 쓰는 길을 그대로) → `ParkLayout::loadFromXmlText` →
+`.cpp` 의 `refresh`: 파일 바이트를 읽어 `computeHash64`(같으면 false) → `CoasterLayoutCatalog layouts; layouts.load…`(키트의 카탈로그 경로 — `ParkDirectorComponent.cpp:176` 근처가 쓰는 길을 그대로) → `ParkLayout::loadFromXMLText` →
 `getPlacements()` 를 `ParkRidePreview` 로, 코스터 배치는 `CoasterTrackBuilder` 로 점을 만든다(키트 API 그대로). `appendSegments`: 발자국 = 위치 중심 `_size.x × _size.z` 바닥 사각형 네 변 + 높이 기둥 넷(색 = 배치 색),
 입구 = 높이 3 m 의 십자, 트랙 = 점 사이 선분.
 - `ParkLayoutVisualizer.cpp` — 시각화 등록(뷰포트 툴바 체크박스 `Park`):

@@ -16,7 +16,7 @@
 namespace sw
 {
     class AppearanceLoadReport;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 매개변수 종류입니다. */
     enum class CustomizationKind : uint8
@@ -128,7 +128,7 @@ namespace sw
     class SW_GF_API CustomizationSchemaCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listSchema.clear(); }
 
         const CustomizationSchemaDef*         findSchema( const hashed_string& id ) const;

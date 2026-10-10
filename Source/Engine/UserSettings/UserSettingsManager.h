@@ -118,7 +118,7 @@ namespace sw
         /** @brief 스키마 XML 을 덧붙이고 검사합니다. 실패하면 덧붙인 것을 버리고 false 입니다. 새 설정은 기본값으로 시작합니다. */
         [[nodiscard]] bool loadSchema( string_view resourcePath );
         /** @brief 위와 같되 XML 글에서 읽습니다. */
-        [[nodiscard]] bool loadSchemaFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadSchemaFromXMLText( string_view xmlText, string_view sourceName );
         /**
          * @brief 게임 프리셋의 기본값 덮어쓰기(`GameConfig::_mapUserSettingDefault`)를 겁니다. 아직 바꾸지 않은 값(기본값)도 따라 바뀝니다.
          * @return 모르는 설정 · 받을 수 없는 값이면 오류를 알리고 false 입니다.

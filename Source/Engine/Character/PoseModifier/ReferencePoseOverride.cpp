@@ -6,7 +6,7 @@
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -33,13 +33,13 @@ namespace sw
 
 namespace sw
 {
-    bool ReferencePoseOverride::loadFromXmlText( string_view xmlText, string_view sourceName, const CharacterBoneArray* pBones )
+    bool ReferencePoseOverride::loadFromXMLText( string_view xmlText, string_view sourceName, const CharacterBoneArray* pBones )
     {
         _listOverride.clear();
         _listMirrorPair.clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "ReferencePose", root ) )
             readRoot( root, reader );
         string boneError;
@@ -53,8 +53,8 @@ namespace sw
         _listOverride.clear();
         _listMirrorPair.clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "ReferencePose", root ) )
             readRoot( root, reader );
         string boneError;
@@ -63,7 +63,7 @@ namespace sw
         return reader.finish();
     }
 
-    void ReferencePoseOverride::readRoot( const XmlNode& root, CharacterDataReader& reader )
+    void ReferencePoseOverride::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( root, ReferencePoseOverrideInternal::kArrRootAttribute );
         _mirrorAxis                = 0;
@@ -82,7 +82,7 @@ namespace sw
             if ( bKnownAxis == false )
                 reader.addError( root, string( "has unknown mirrorAxis '" ) + string( axisText ) + "' (X, Y, Z)" );
         }
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Bone", true ) )
             {
@@ -128,14 +128,14 @@ namespace sw
         }
     }
 
-    string ReferencePoseOverride::saveToXmlText() const
+    string ReferencePoseOverride::saveToXMLText() const
     {
-        XmlDocument document;
-        XmlNode     root = document.appendRoot( "ReferencePose" );
+        XMLDocument document;
+        XMLNode     root = document.appendRoot( "ReferencePose" );
         root.appendAttribute( "mirrorAxis", ReferencePoseOverrideInternal::kArrAxisName[_mirrorAxis] );
         for ( const BoneOverride& boneOverride : _listOverride )
         {
-            XmlNode node = root.appendChild( "Bone" );
+            XMLNode node = root.appendChild( "Bone" );
             node.appendAttribute( "name", boneOverride._bone.view() );
             if ( ( boneOverride._fieldMask & BoneOverride::kTranslationBit ) != 0 )
                 node.appendAttribute( "translation", CharacterDataReader::formatFloat3( boneOverride._translation ).c_str() );
@@ -146,7 +146,7 @@ namespace sw
         }
         for ( const BoneMirrorPair& pair : _listMirrorPair )
         {
-            XmlNode node = root.appendChild( "Mirror" );
+            XMLNode node = root.appendChild( "Mirror" );
             node.appendAttribute( "left", pair._left.view() );
             node.appendAttribute( "right", pair._right.view() );
         }

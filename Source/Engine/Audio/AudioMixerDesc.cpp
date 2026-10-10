@@ -4,7 +4,7 @@
 
 #include "Engine/Audio/Dsp/AudioEffect.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -18,13 +18,13 @@ namespace sw
             SW_LOG_ERROR( "Audio mixer not found: %#", resourcePath );
             return false;
         }
-        return loadFromXmlText( text, resourcePath );
+        return loadFromXMLText( text, resourcePath );
     }
 
-    bool AudioMixerDesc::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool AudioMixerDesc::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = AudioMixerDesc{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "%#: audio mixer could not be read or holds unknown keys / values", sourceName );
             return false;

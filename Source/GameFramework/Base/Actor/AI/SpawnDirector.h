@@ -10,7 +10,7 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/GameCurve.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/GameFrameworkExports.h"
@@ -18,7 +18,7 @@
 namespace sw
 {
     class Archive;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 낼 수 있는 것 하나입니다. */
     struct SW_GF_API SpawnEntryDef
@@ -42,9 +42,9 @@ namespace sw
      *        <Entry id="bracken" cost="3" weight="2" max="1" minTime="60" tags="Indoor"/>
      *        <Curve time="0" scale="0.5"/><Curve time="600" scale="2"/></SpawnTable>` 를 읽습니다.
      */
-    class SW_GF_API SpawnTable : public XmlCatalog<SpawnTable>
+    class SW_GF_API SpawnTable : public XMLCatalog<SpawnTable>
     {
-        friend class XmlCatalog<SpawnTable>;
+        friend class XMLCatalog<SpawnTable>;
 
     public:
         SpawnTable();
@@ -62,8 +62,8 @@ namespace sw
         bool                         isRefundOnDespawn() const { return _bRefundOnDespawn == SW_TRUE; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "SpawnTable"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "SpawnTable"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<SpawnEntryDef> _catalog;
         GameCurve                  _curve;

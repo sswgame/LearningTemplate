@@ -41,12 +41,12 @@ namespace sw
     /** @brief 조립 시험의 카탈로그입니다 — 디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다(게임에서는 게임 인스턴스가 로컬 서비스로 든다). */
     struct KitCompositionCatalogs
     {
-        static constexpr const utf8* kCropXml       = R"(
+        static constexpr const utf8* kCropXML       = R"(
 <CropCatalog>
   <Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="2" seasons="Spring" seedPrice="10" sellPrice="30"/>
 </CropCatalog>
 )";
-        static constexpr const utf8* kCreatureXml   = R"(
+        static constexpr const utf8* kCreatureXML   = R"(
 <CreatureLifeCatalog>
   <Habitat id="meadow"><Key symbol="G" object="grass"/><Row cells="GG"/></Habitat>
   <Habitat id="orchard"><Key symbol="T" object="tree"/><Row cells="TT"/></Habitat>
@@ -54,12 +54,12 @@ namespace sw
   <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/></Appeal>
 </CreatureLifeCatalog>
 )";
-        static constexpr const utf8* kFriendshipXml = R"(
+        static constexpr const utf8* kFriendshipXML = R"(
 <ReputationCatalog>
   <Faction id="creature.sprout" min="0" max="1000" start="0"><Tier name="Stranger" min="0"/><Tier name="Friend" min="50"/></Faction>
 </ReputationCatalog>
 )";
-        static constexpr const utf8* kQuestXml      = R"(
+        static constexpr const utf8* kQuestXML      = R"(
 <QuestCatalog>
   <Quest id="meadow_request">
     <Stage id="plant" next="done"><Objective kind="Habitat" target="orchard" count="1"/></Stage>
@@ -80,10 +80,10 @@ namespace sw
             if ( s_catalogs._bLoaded == SW_FALSE )
             {
                 s_catalogs._crops.setKnownSeasons( { "Spring", "Summer", "Fall", "Winter" } );
-                const bool bLoaded = s_catalogs._crops.loadFromXmlText( kCropXml, "KitCompositionTest" ) &&
-                                     s_catalogs._creatures.loadFromXmlText( kCreatureXml, "KitCompositionTest" ) &&
-                                     s_catalogs._friendship.loadFromXmlText( kFriendshipXml, "KitCompositionTest" ) &&
-                                     s_catalogs._quests.loadFromXmlText( kQuestXml, "KitCompositionTest" );
+                const bool bLoaded = s_catalogs._crops.loadFromXMLText( kCropXML, "KitCompositionTest" ) &&
+                                     s_catalogs._creatures.loadFromXMLText( kCreatureXML, "KitCompositionTest" ) &&
+                                     s_catalogs._friendship.loadFromXMLText( kFriendshipXML, "KitCompositionTest" ) &&
+                                     s_catalogs._quests.loadFromXMLText( kQuestXML, "KitCompositionTest" );
                 s_catalogs._bLoaded = bLoaded ? SW_TRUE : SW_FALSE;
             }
             return s_catalogs;
@@ -360,14 +360,14 @@ namespace sw
     /** @brief 둘째 조립 시험의 카탈로그입니다(디렉터는 되살릴 때 새로 서므로 포인터를 들지 않고 여기서 얻는다). */
     struct LandCompositionCatalogs
     {
-        static constexpr const utf8* kCityXml          = R"(
+        static constexpr const utf8* kCityXML          = R"(
 <CityCatalog roadCost="1">
   <Building id="house" kind="House" size="1" cost="5"/>
   <Building id="temple" kind="Decoration" size="4" cost="40"/>
   <HouseLevel name="Hut" population="4" tax="1"/>
 </CityCatalog>
 )";
-        static constexpr const utf8* kRtsXml           = R"(
+        static constexpr const utf8* kRtsXML           = R"(
 <RtsCatalog supplyMax="200">
   <Unit id="base" kind="Building" hp="1500" footprint="4" depot="true" provides="10" producedBy="worker" minerals="400" buildTime="60"/>
   <Unit id="worker" hp="40" speed="3" radius="0.35" worker="true" producedBy="base" minerals="50" supply="1" buildTime="12"/>
@@ -388,7 +388,7 @@ namespace sw
             static LandCompositionCatalogs s_catalogs;
             if ( s_catalogs._bLoaded == SW_FALSE )
             {
-                const bool bLoaded  = s_catalogs._city.loadFromXmlText( kCityXml, "KitCompositionTest" ) && s_catalogs._rts.loadFromXmlText( kRtsXml, "KitCompositionTest" );
+                const bool bLoaded  = s_catalogs._city.loadFromXMLText( kCityXML, "KitCompositionTest" ) && s_catalogs._rts.loadFromXMLText( kRtsXML, "KitCompositionTest" );
                 s_catalogs._bLoaded = bLoaded ? SW_TRUE : SW_FALSE;
             }
             return s_catalogs;

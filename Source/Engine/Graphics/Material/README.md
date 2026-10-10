@@ -56,10 +56,10 @@ MeshComponent  ──▶  GpuSceneBuilder 가 머티리얼 원소로 모아 셰�
 
 ### 에셋 파일과 로드
 
-`.material` 파일의 루트는 `MaterialDesc` 이고, `shaderPath`, `blendMode`, `_properties`, `_permutations` 를 가집니다. 읽고 쓰는 코드는 `MaterialXml.cpp` 에 있습니다.
+`.material` 파일의 루트는 `MaterialDesc` 이고, `shaderPath`, `blendMode`, `_properties`, `_permutations` 를 가집니다. 읽고 쓰는 코드는 `MaterialXML.cpp` 에 있습니다.
 블렌드 모드는 `Opaque` 와 `Transparent` 두 가지입니다. 반투명 머티리얼은 `blendMode="Transparent"` 와 함께 `_alwaysDefines` 에 `MATERIAL_BLEND_TRANSLUCENT` 를 넣습니다.
 
-에셋 형식이 바뀌었는지는 `AssetFormatRegistry::upgradeXmlWithActiveRegistry` 가 판단합니다. 씬, 프리팹과 같은 경로이고 `AssetManager` 없이 돕니다.
+에셋 형식이 바뀌었는지는 `AssetFormatRegistry::upgradeXMLWithActiveRegistry` 가 판단합니다. 씬, 프리팹과 같은 경로이고 `AssetManager` 없이 돕니다.
 다만 본문의 enum 글을 해석하려면 `TypeRegistry` 가 필요합니다.
 
 메시는 `MeshComponent::setMaterialPath` 로 경로를 받고, `MaterialCache::acquire` 로 머티리얼을 잡습니다. 컴포넌트는 디바이스를 모르므로 GPU 리소스는 바로 만들지 않습니다.

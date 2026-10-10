@@ -11,13 +11,13 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 화폐 하나입니다. */
     struct CurrencyDef
@@ -37,9 +37,9 @@ namespace sw
      * @class CurrencyCatalog
      * @brief 화폐 정의 모음입니다. 읽은 뒤에는 바꾸지 않는다 — 저장소 스레드가 `getBalanceCap` 을 읽는다.
      */
-    class SW_GF_API CurrencyCatalog : public XmlCatalog<CurrencyCatalog>, public ILedgerPolicy
+    class SW_GF_API CurrencyCatalog : public XMLCatalog<CurrencyCatalog>, public ILedgerPolicy
     {
-        friend class XmlCatalog<CurrencyCatalog>;
+        friend class XMLCatalog<CurrencyCatalog>;
 
     public:
         /** @brief 정의를 더합니다(시험 · 코드로 만드는 게임). 같은 id 는 바꾼다. */
@@ -50,8 +50,8 @@ namespace sw
         int64                      getBalanceCap( string_view assetId ) const override;
 
     private:
-        static constexpr const utf8* kXmlRootName = "CurrencyCatalog";
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "CurrencyCatalog";
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         vector<CurrencyDef> _listCurrency{};
     };

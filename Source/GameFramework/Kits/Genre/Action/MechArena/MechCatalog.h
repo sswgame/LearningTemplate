@@ -13,12 +13,12 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 기체의 거리 분류입니다(캡슐파이터의 근거리 · 중거리 · 원거리). 분류마다 보정(`MechCatalog::getClassModifier`)이 붙습니다. */
     enum class MechRangeClass : uint8
@@ -140,9 +140,9 @@ namespace sw
      *        <Weapon id="saber" kind="Melee" moves="slash1,slash2,slash3" range="4"/></Mode></Mech><Skill id=".." trigger="HealthBelow" attack="1.2"/></MechCatalog>` 를 읽습니다.
      * @details `<Mode>` 없이 `<Weapon>` 이 `<Mech>` 바로 아래에 있으면 형태 하나("default")로 읽습니다. 분류 보정 이름은 "melee" · "shot" · "down"(받는 다운치 배율)입니다.
      */
-    class SW_GF_API MechCatalog : public XmlCatalog<MechCatalog>
+    class SW_GF_API MechCatalog : public XMLCatalog<MechCatalog>
     {
-        friend class XmlCatalog<MechCatalog>;
+        friend class XMLCatalog<MechCatalog>;
 
     public:
         MechCatalog();
@@ -161,8 +161,8 @@ namespace sw
         static MechRangeClass parseRangeClass( string_view text, MechRangeClass fallback );
 
     private:
-        static constexpr const utf8* kXmlRootName = "MechCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "MechCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<MechDef>      _catalogMech;
         GameCatalog<MechSkillDef> _catalogSkill;

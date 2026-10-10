@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 규칙 조건의 종류입니다. */
     enum class AppearanceRuleConditionKind : uint8
@@ -102,7 +102,7 @@ namespace sw
     class SW_GF_API AppearanceRuleTable
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listRule.clear(); }
 
         const vector<AppearanceRuleDef>& getRules() const { return _listRule; }

@@ -15,7 +15,7 @@
 #include "Engine/Serialization/Base/SerializerUtil.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -721,7 +721,7 @@ namespace sw
         return SerializerUtil::transcodeBinaryToJson( _pData + _offset, _dataSize - _offset, typeInfo, bPretty );
     }
 
-    bool Archive::serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo )
+    bool Archive::serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo )
     {
         if ( pInstance == nullptr )
         {
@@ -729,12 +729,12 @@ namespace sw
             return false;
         }
 
-        const string xmlStr = XmlSerializer::serialize( pInstance, typeInfo );
+        const string xmlStr = XMLSerializer::serialize( pInstance, typeInfo );
         ( *this ) << xmlStr;
         return true;
     }
 
-    bool Archive::deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo )
+    bool Archive::deserializeXMLObject( void* pInstance, const TypeInfo& typeInfo )
     {
         if ( pInstance == nullptr )
         {
@@ -747,10 +747,10 @@ namespace sw
         if ( _bError == SW_TRUE || xmlStr.empty() )
             return false;
 
-        return XmlSerializer::deserialize( pInstance, typeInfo, xmlStr );
+        return XMLSerializer::deserialize( pInstance, typeInfo, xmlStr );
     }
 
-    bool Archive::convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo )
+    bool Archive::convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo )
     {
         if ( xmlStr.empty() || typeInfo._size == 0 )
         {
@@ -759,7 +759,7 @@ namespace sw
         }
 
         vector<uint8> outBytes;
-        if ( SerializerUtil::transcodeXmlToBinary( xmlStr, typeInfo, outBytes ) == false )
+        if ( SerializerUtil::transcodeXMLToBinary( xmlStr, typeInfo, outBytes ) == false )
         {
             _bError = SW_TRUE;
             return false;

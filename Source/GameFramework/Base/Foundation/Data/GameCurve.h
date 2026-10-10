@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 곡선의 점 하나입니다. */
     struct GameCurvePoint
@@ -37,7 +37,7 @@ namespace sw
         /** @brief 점 하나를 시각 순 자리에 넣습니다. */
         void addPoint( float32 time, float32 value );
         /** @brief @p node 의 @p pElement 자식마다 `time` 과 @p pValueAttribute 를 읽어 넣습니다(값은 @p minValue 아래로 내려가지 않는다). 읽은 점 수입니다. */
-        uint32 readPoints( const XmlNode& node, const utf8* pElement, const utf8* pValueAttribute, float32 minValue );
+        uint32 readPoints( const XMLNode& node, const utf8* pElement, const utf8* pValueAttribute, float32 minValue );
         /** @brief @p time 의 값입니다. 점이 없으면 @p fallback 입니다. */
         float32 evaluate( float32 time, float32 fallback = 1.0f ) const;
 

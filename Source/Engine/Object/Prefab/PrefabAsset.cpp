@@ -18,7 +18,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -78,18 +78,18 @@ namespace sw
                 outListPath.push_back( pText );
             }
 
-            static void collectPrefabRefsFromXml( XmlNode node, vector<string>& outListPath )
+            static void collectPrefabRefsFromXML( XMLNode node, vector<string>& outListPath )
             {
                 if ( node.isValid() == false )
                     return;
                 collectPrefabRefsFromText( node.getText(), outListPath );
-                for ( XmlAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
+                for ( XMLAttribute attr = node.getFirstAttribute(); attr; attr = attr.getNext() )
                 {
                     collectPrefabRefsFromText( attr.getValue(), outListPath );
                 }
-                for ( XmlNode childNode = node.findChild(); childNode; childNode = childNode.findNextSibling() )
+                for ( XMLNode childNode = node.findChild(); childNode; childNode = childNode.findNextSibling() )
                 {
-                    collectPrefabRefsFromXml( childNode, outListPath );
+                    collectPrefabRefsFromXML( childNode, outListPath );
                 }
             }
 
@@ -126,10 +126,10 @@ namespace sw
             static PrefabStateFormat detectStateFormat( string_view stateData )
             {
                 const string_view trimmed = StringUtil::trim( stateData );
-                return ( trimmed.empty() == false && trimmed.front() == '{' ) ? PrefabStateFormat::Json : PrefabStateFormat::Xml;
+                return ( trimmed.empty() == false && trimmed.front() == '{' ) ? PrefabStateFormat::Json : PrefabStateFormat::XML;
             }
 
-            static bool upgradePrefabXmlBody( string& xmlBody, PrefabStateFormat format )
+            static bool upgradePrefabXMLBody( string& xmlBody, PrefabStateFormat format )
             {
                 if ( xmlBody.empty() )
                     return false;
@@ -139,15 +139,15 @@ namespace sw
                 string wrapped = "<Prefab>";
                 wrapped += xmlBody;
                 wrapped += "</Prefab>";
-                XmlDocument wrapDoc;
+                XMLDocument wrapDoc;
                 if ( wrapDoc.parse( wrapped ) == false )
                     return false;
-                XmlNode wrapRoot = wrapDoc.getRoot( kRoot );
+                XMLNode wrapRoot = wrapDoc.getRoot( kRoot );
                 if ( wrapRoot.isValid() == false )
                     return false;
-                if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, wrapDoc, wrapRoot, AssetFormatVersions::kPrefab ) == false )
+                if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::Prefab, wrapDoc, wrapRoot, AssetFormatVersions::kPrefab ) == false )
                     return false;
-                XmlNode bodyNode = wrapRoot.findChild( kGameObject );
+                XMLNode bodyNode = wrapRoot.findChild( kGameObject );
                 if ( bodyNode.isValid() == false )
                     return false;
                 xmlBody = bodyNode.toString();
@@ -164,16 +164,16 @@ namespace sw
     PrefabAsset::PrefabAsset()
         : _name{}
         , _stateData{}
-        , _stateFormat{ PrefabStateFormat::Xml }
+        , _stateFormat{ PrefabStateFormat::XML }
         , _bValid{ SW_FALSE }
         , _reserved{ 0 } {}
 
-    bool PrefabAsset::loadFromXmlFile( string_view assetRelativePath )
+    bool PrefabAsset::loadFromXMLFile( string_view assetRelativePath )
     {
         _bValid = SW_FALSE;
         AssetLoadScope loadScope( "Prefab", assetRelativePath );
         string         absPath;
-        XmlDocument    doc;
+        XMLDocument    doc;
         if ( doc.loadPath( assetRelativePath, &absPath ) == false )
         {
             SW_LOG_ERROR( "Prefab not loaded - %#", doc.getLastError() );
@@ -181,13 +181,13 @@ namespace sw
         }
         loadScope.beginPhase( AssetLoadPhase::Decode );
 
-        XmlNode root = doc.getRoot( PrefabAssetInternal::kRoot );
+        XMLNode root = doc.getRoot( PrefabAssetInternal::kRoot );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing <Prefab> root: %#", absPath );
             return false;
         }
-        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::Prefab, doc, root, AssetFormatVersions::kPrefab ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;
@@ -197,7 +197,7 @@ namespace sw
         if ( pNameAttr != nullptr )
             _name = pNameAttr;
 
-        XmlNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
+        XMLNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
         if ( bodyNode.isValid() == false )
         {
             SW_LOG_ERROR( "Missing <GameObject> in <Prefab>: %#", absPath );
@@ -208,7 +208,7 @@ namespace sw
         if ( _name.empty() )
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        _stateFormat = PrefabStateFormat::Xml;
+        _stateFormat = PrefabStateFormat::XML;
         _bValid      = SW_TRUE;
         loadScope.setBytes( _stateData.size() );
         loadScope.setSucceeded();
@@ -283,7 +283,7 @@ namespace sw
         }
 
         _stateFormat = PrefabAssetInternal::detectStateFormat( _stateData );
-        if ( PrefabAssetInternal::upgradePrefabXmlBody( _stateData, _stateFormat ) == false )
+        if ( PrefabAssetInternal::upgradePrefabXMLBody( _stateData, _stateFormat ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;
@@ -294,21 +294,21 @@ namespace sw
         return true;
     }
 
-    bool PrefabAsset::saveToXmlFile( string_view assetRelativePath ) const
+    bool PrefabAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
         const string absPath = ResourceUtil::getWritePath( assetRelativePath );
 
-        const string xmlBody = ( _stateFormat == PrefabStateFormat::Xml ) ? _stateData : convertState( PrefabStateFormat::Xml );
+        const string xmlBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
 
-        XmlDocument xmlDoc;
-        XmlNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
+        XMLDocument xmlDoc;
+        XMLNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kPrefab ) );
         root.appendAttribute( PrefabAssetInternal::kName, _name );
         if ( xmlBody.empty() == false )
         {
-            XmlDocument bodyDoc;
+            XMLDocument bodyDoc;
             const bool  bBodyParsed = bodyDoc.parse( xmlBody );
-            XmlNode     bodyRoot    = bBodyParsed ? bodyDoc.getRoot() : XmlNode{};
+            XMLNode     bodyRoot    = bBodyParsed ? bodyDoc.getRoot() : XMLNode{};
             if ( bodyRoot.isValid() == false )
             {
                 SW_LOG_ERROR( "Prefab '%#' has a state that cannot be written as XML - '%#' is left as it was", _name, assetRelativePath );
@@ -323,7 +323,7 @@ namespace sw
             return false;
         }
 
-        // 상위 폴더가 없으면 쓰기가 실패한다. 실패는 로그로 남긴다(SceneDocument::saveXml 과 같은 형태).
+        // 상위 폴더가 없으면 쓰기가 실패한다. 실패는 로그로 남긴다(SceneDocument::saveXML 과 같은 형태).
         FileUtil::ensureParentDirectoryExists( absPath );
 
         const bool writeOk = xmlDoc.saveFile( absPath );
@@ -374,7 +374,7 @@ namespace sw
         if ( StringUtil::endsWith( assetRelativePath, ".prefab.json", true ) )
             return saveToJsonFile( assetRelativePath );
         if ( StringUtil::endsWith( assetRelativePath, ".prefab.xml", true ) )
-            return saveToXmlFile( assetRelativePath );
+            return saveToXMLFile( assetRelativePath );
         SW_LOG_ERROR( "'%#' is not a prefab source path (.prefab.xml / .prefab.json) - nothing was written", assetRelativePath );
         return false;
     }
@@ -410,8 +410,8 @@ namespace sw
         ObjectSaveOptions options{};
         options._bOmitExternalParent = true;
         _name                        = pGameObject->getName().c_str();
-        _stateData                   = ObjectStateSerializer::saveToXmlString( pGameObject, options );
-        _stateFormat                 = PrefabStateFormat::Xml;
+        _stateData                   = ObjectStateSerializer::saveToXMLString( pGameObject, options );
+        _stateFormat                 = PrefabStateFormat::XML;
         _bValid                      = _stateData.empty() == false ? SW_TRUE : SW_FALSE;
     }
 
@@ -424,7 +424,7 @@ namespace sw
         context._pIdentity              = pIdentity;
         context._bExternalParentAllowed = false;
         return ( _stateFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::loadFromJsonString( pTarget, _stateData, context )
-                                                           : ObjectStateSerializer::loadFromXmlString( pTarget, _stateData, context );
+                                                           : ObjectStateSerializer::loadFromXMLString( pTarget, _stateData, context );
     }
 
     string PrefabAsset::convertState( PrefabStateFormat targetFormat ) const
@@ -434,7 +434,7 @@ namespace sw
         GameObject*       pTemp = scratch.createGameObject( hashed_string( _name.c_str() ) );
         if ( applyStateTo( pTemp ) == false )
             return {};
-        return ( targetFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::saveToJsonString( pTemp ) : ObjectStateSerializer::saveToXmlString( pTemp );
+        return ( targetFormat == PrefabStateFormat::Json ) ? ObjectStateSerializer::saveToJsonString( pTemp ) : ObjectStateSerializer::saveToXMLString( pTemp );
     }
 
     void PrefabAsset::collectReferencedPrefabPaths( vector<string>& outListPath ) const
@@ -451,10 +451,10 @@ namespace sw
             PrefabAssetInternal::collectPrefabRefsFromJson( doc.getRoot(), outListPath );
             return;
         }
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( trimmed ) == false )
             return;
-        PrefabAssetInternal::collectPrefabRefsFromXml( doc.getRoot(), outListPath );
+        PrefabAssetInternal::collectPrefabRefsFromXML( doc.getRoot(), outListPath );
     }
 
     void PrefabCache::reload( string_view assetRelativePath, IRHIDevice* )
@@ -528,7 +528,7 @@ namespace sw
             // 소스를 읽는 구성은 소스(XML/JSON)만 본다. 소스가 없을 때 옆에 남은 쿠킹본(.bin)을 대신 읽으면 옮기거나 지운 프리팹이
             // 낡은 내용으로 살아나 실패가 가려진다(언리얼 · 유니티의 에디터도 쿠킹 데이터를 보지 않는다).
             const bool bJson         = FileUtil::hasExtension( resolvedPath, ".json" );
-            const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXmlFile( resolvedPath );
+            const bool bSourceLoaded = bJson ? asset->loadFromJsonFile( resolvedPath ) : asset->loadFromXMLFile( resolvedPath );
             if ( bSourceLoaded == false )
             {
                 SW_LOG_ERROR( "Prefab source could not be loaded: %#", resolvedPath );
@@ -695,9 +695,9 @@ namespace sw
         for ( const string& filePath : listFile )
         {
             const string normalized = FileUtil::normalizeSeparators( filePath );
-            const bool   bXml       = StringUtil::endsWith( normalized, ".prefab.xml", true );
+            const bool   bXML       = StringUtil::endsWith( normalized, ".prefab.xml", true );
             const bool   bJson      = StringUtil::endsWith( normalized, ".prefab.json", true );
-            if ( ( bXml || bJson ) == false || normalized.size() <= root.size() + 1 )
+            if ( ( bXML || bJson ) == false || normalized.size() <= root.size() + 1 )
                 continue;
 
             // 출력은 `<cookedDir>/<소스 루트 기준 상대 경로>` 의 쿠킹본 이름이다 — 런타임 `loadPrefab` 과 같은 규칙 하나(`AssetCookPath`).
@@ -711,7 +711,7 @@ namespace sw
             }
 
             PrefabAsset asset;
-            const bool  bLoaded = bJson ? asset.loadFromJsonFile( normalized ) : asset.loadFromXmlFile( normalized );
+            const bool  bLoaded = bJson ? asset.loadFromJsonFile( normalized ) : asset.loadFromXMLFile( normalized );
             if ( bLoaded == false || asset.isValid() == false || asset.saveToBinaryFile( outputPath ) == false )
             {
                 SW_LOG_WARNING( "Prefab cook failed for '%#'", normalized );

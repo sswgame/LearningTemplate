@@ -340,14 +340,14 @@ SW_TEST_CASE( ReflectionInnerTypesTest, InnerStructSerializationRoundtrip )
     SW_EXPECT_EQUAL( sw::string( "SerializationTest" ), dstJson._innerData );
     SW_EXPECT_NEAR_EQUAL( 12.34f, dstJson._score, 0.01f );
 
-    sw::string xml = sw::XmlSerializer::serialize( &src, *typeInfo );
+    sw::string xml = sw::XMLSerializer::serialize( &src, *typeInfo );
     SW_EXPECT_TRUE( xml.empty() == false );
 
-    sw::InnerNamespaceForTest::OuterStruct::InnerStruct dstXml;
-    bool                                                xmlOk = sw::XmlSerializer::deserialize( &dstXml, *typeInfo, xml );
+    sw::InnerNamespaceForTest::OuterStruct::InnerStruct dstXML;
+    bool                                                xmlOk = sw::XMLSerializer::deserialize( &dstXML, *typeInfo, xml );
     SW_EXPECT_TRUE( xmlOk );
-    SW_EXPECT_EQUAL( sw::string( "SerializationTest" ), dstXml._innerData );
-    SW_EXPECT_NEAR_EQUAL( 12.34f, dstXml._score, 0.01f );
+    SW_EXPECT_EQUAL( sw::string( "SerializationTest" ), dstXML._innerData );
+    SW_EXPECT_NEAR_EQUAL( 12.34f, dstXML._score, 0.01f );
 }
 
 /**
@@ -450,9 +450,9 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldSerializationRoundtrip )
     SW_EXPECT_EQUAL( 777, jsonTarget._score );
 
     // 2) XML 직렬화 & 역직렬화
-    const sw::string      xml = sw::XmlSerializer::serialize( &source, *pType );
+    const sw::string      xml = sw::XMLSerializer::serialize( &source, *pType );
     sw::BitfieldTestActor xmlTarget;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlTarget, *pType, xml ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &xmlTarget, *pType, xml ) );
     SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bActive );
     SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bInvulnerable );
     SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bCanJump );
@@ -562,9 +562,9 @@ SW_TEST_CASE( ReflectionBitfieldTest, WideBitfieldSerializationRoundtrip )
     SW_EXPECT_EQUAL( SW_TRUE, jsonTarget._bFlag64_B );
 
     // 2) XML 직렬화 & 역직렬화
-    const sw::string          xml = sw::XmlSerializer::serialize( &source, *pType );
+    const sw::string          xml = sw::XMLSerializer::serialize( &source, *pType );
     sw::WideBitfieldTestActor xmlTarget;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlTarget, *pType, xml ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &xmlTarget, *pType, xml ) );
     SW_EXPECT_EQUAL( SW_TRUE, xmlTarget._bFlag16_A );
     SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bFlag16_B );
     SW_EXPECT_EQUAL( SW_FALSE, xmlTarget._bFlag32_A );

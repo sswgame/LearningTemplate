@@ -11,7 +11,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
@@ -67,9 +67,9 @@ namespace
         return false;
     }
 
-    /** @brief 한 인스턴스의 5개 골든(Json/Xml/Bin/JsonVer/BinVer)을 검증합니다. */
+    /** @brief 한 인스턴스의 5개 골든(Json/XML/Bin/JsonVer/BinVer)을 검증합니다. */
     bool checkGoldenSet( const utf8* pLabel, const void* pInstance, const sw::TypeInfo& typeInfo,
-                         const utf8* pJson, const utf8* pXml, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
+                         const utf8* pJson, const utf8* pXML, const utf8* pBinHex, const utf8* pJsonVer, const utf8* pBinVerHex )
     {
         sw::vector<uint8> bin;
         sw::BinarySerializer::serialize( pInstance, typeInfo, bin );
@@ -78,7 +78,7 @@ namespace
 
         bool bOk = true;
         bOk &= goldenEq( pLabel, sw::JsonSerializer::serialize( pInstance, typeInfo ), pJson );
-        bOk &= goldenEq( pLabel, sw::XmlSerializer::serialize( pInstance, typeInfo ), pXml );
+        bOk &= goldenEq( pLabel, sw::XMLSerializer::serialize( pInstance, typeInfo ), pXML );
         bOk &= goldenEq( pLabel, toHexString( bin ), pBinHex );
         bOk &= goldenEq( pLabel, sw::JsonSerializer::serializeVersioned( 7, pInstance, typeInfo ), pJsonVer );
         bOk &= goldenEq( pLabel, toHexString( binVer ), pBinVerHex );
@@ -434,7 +434,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonRoundtrip )
 /**
  * @brief [ReflectionSerializationTest] XML 라운드트립
  */
-SW_TEST_CASE( ReflectionSerializationTest, XmlRapidXmlRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, XMLRapidXMLRoundtrip )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -447,11 +447,11 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlRapidXmlRoundtrip )
     src._title     = "XmlTest";
     src._listScore = { 1, 2, 3, 4 };
 
-    sw::string xml = sw::XmlSerializer::serialize( &src, *typeInfo );
+    sw::string xml = sw::XMLSerializer::serialize( &src, *typeInfo );
     SW_EXPECT_TRUE( xml.empty() == false );
 
     sw::ComplexData dst;
-    bool            success = sw::XmlSerializer::deserialize( &dst, *typeInfo, xml );
+    bool            success = sw::XMLSerializer::deserialize( &dst, *typeInfo, xml );
 
     SW_EXPECT_TRUE( success );
     SW_EXPECT_EQUAL( 888, dst._id );
@@ -459,7 +459,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlRapidXmlRoundtrip )
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( dst._listScore.size() ) );
 }
 
-struct SimpleXmlBackend : public sw::IXmlBackend
+struct SimpleXMLBackend : public sw::IXMLBackend
 {
     sw::string                                _result;
     sw::string                                _rootTagName;
@@ -493,7 +493,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         _listOpenTag.pop_back();
     }
 
-    void initializeXmlSerialization( const utf8* pRootTag ) override
+    void initializeXMLSerialization( const utf8* pRootTag ) override
     {
         _rootTagName     = pRootTag != nullptr ? pRootTag : "";
         _result          = "<" + _rootTagName;
@@ -526,7 +526,7 @@ struct SimpleXmlBackend : public sw::IXmlBackend
         return _result;
     }
 
-    bool initializeXmlDeserialization( sw::string_view xmlStr, const utf8* pRootTag ) override
+    bool initializeXMLDeserialization( sw::string_view xmlStr, const utf8* pRootTag ) override
     {
         (void)pRootTag;
         sw::string str( xmlStr );
@@ -607,10 +607,10 @@ struct SimpleXmlBackend : public sw::IXmlBackend
 /**
  * @brief [ReflectionSerializationTest] XML 어트리뷰트 라운드트립
  */
-SW_TEST_CASE( ReflectionSerializationTest, XmlAttributeRoundtrip )
+SW_TEST_CASE( ReflectionSerializationTest, XMLAttributeRoundtrip )
 {
-    sw::XmlDocumentBackend backend;
-    backend.initializeXmlSerialization( "AttrRoot" );
+    sw::XMLDocumentBackend backend;
+    backend.initializeXMLSerialization( "AttrRoot" );
     backend.writeAttribute( "_id", "42" );
     backend.writeAttribute( "_title", "AttrTitle" );
     backend.writeValue( "_note", "child-element" );
@@ -619,8 +619,8 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlAttributeRoundtrip )
     SW_EXPECT_TRUE( xml.find( "_title=\"AttrTitle\"" ) != sw::string::npos );
     SW_EXPECT_TRUE( xml.find( "<_note>" ) != sw::string::npos );
 
-    sw::XmlDocumentBackend reader;
-    SW_EXPECT_TRUE( reader.initializeXmlDeserialization( xml.c_str(), "AttrRoot" ) );
+    sw::XMLDocumentBackend reader;
+    SW_EXPECT_TRUE( reader.initializeXMLDeserialization( xml.c_str(), "AttrRoot" ) );
     sw::string id, title, note;
     SW_EXPECT_TRUE( reader.readAttribute( "_id", id ) );
     SW_EXPECT_TRUE( reader.readAttribute( "_title", title ) );
@@ -633,7 +633,7 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlAttributeRoundtrip )
 /**
  * @brief [ReflectionSerializationTest] XML/JSON 키 대소문자 무시, 값은 유지
  */
-SW_TEST_CASE( ReflectionSerializationTest, XmlJsonKeysIgnoreCaseValuesPreserveCase )
+SW_TEST_CASE( ReflectionSerializationTest, XMLJsonKeysIgnoreCaseValuesPreserveCase )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -652,13 +652,13 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlJsonKeysIgnoreCaseValuesPreserveCa
 
     const utf8* xml =
         R"(<sw__ComplexData _ID="88" _TITLE="XmlCaseValue"><_listScore><item>3</item><ITEM>4</ITEM></_listScore></sw__ComplexData>)";
-    sw::ComplexData fromXml;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromXml, *typeInfo, xml ) );
-    SW_EXPECT_EQUAL( 88, fromXml._id );
-    SW_EXPECT_EQUAL( sw::string( "XmlCaseValue" ), fromXml._title );
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromXml._listScore.size() ) );
-    SW_EXPECT_EQUAL( 3, fromXml._listScore[0] );
-    SW_EXPECT_EQUAL( 4, fromXml._listScore[1] );
+    sw::ComplexData fromXML;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromXML, *typeInfo, xml ) );
+    SW_EXPECT_EQUAL( 88, fromXML._id );
+    SW_EXPECT_EQUAL( sw::string( "XmlCaseValue" ), fromXML._title );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( fromXML._listScore.size() ) );
+    SW_EXPECT_EQUAL( 3, fromXML._listScore[0] );
+    SW_EXPECT_EQUAL( 4, fromXML._listScore[1] );
 
     SW_EXPECT_EQUAL( sw::string( "CaseSensitiveValue" ),
                      sw::JsonDocument::extractStringField( json, "_title" ) );
@@ -673,15 +673,15 @@ SW_TEST_CASE( ReflectionSerializationTest, XmlJsonKeysIgnoreCaseValuesPreserveCa
     SW_EXPECT_EQUAL( 101, strictJson._id ); // ComplexData 기본값, 77 아님
     SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictJson._title );
 
-    sw::ComplexData strictXml;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &strictXml, *typeInfo, xml, strictCtx ) );
-    SW_EXPECT_EQUAL( 101, strictXml._id );
-    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXml._title );
+    sw::ComplexData strictXML;
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &strictXML, *typeInfo, xml, strictCtx ) );
+    SW_EXPECT_EQUAL( 101, strictXML._id );
+    SW_EXPECT_EQUAL( sw::string( "HeroData" ), strictXML._title );
     // 시퀀스 원소는 이름으로 조회하지 않고 순서대로 읽는다(원소 태그는 타입에 따라 달라짐).
     // 따라서 대소문자 정책과 무관하게 자식이 모두 들어온다. strict 는 프로퍼티/속성 이름 조회에만 적용된다.
-    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( strictXml._listScore.size() ) );
-    SW_EXPECT_EQUAL( 3, strictXml._listScore[0] );
-    SW_EXPECT_EQUAL( 4, strictXml._listScore[1] );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( strictXML._listScore.size() ) );
+    SW_EXPECT_EQUAL( 3, strictXML._listScore[0] );
+    SW_EXPECT_EQUAL( 4, strictXML._listScore[1] );
 }
 
 /**
@@ -869,21 +869,21 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerReadRulesAreTheSameInEveryFo
     const sw::TypeInfo                info = makeWireShiftHostType();
     test::ScopedLogSuppressor         suppressor; // 모르는 열거자 경고
 
-    WireShiftHost fromXml;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
-        &fromXml, info, R"(<WireShiftHost><_mapColorToCount><entry key="Purple">3</entry><entry key="Blue">4</entry></_mapColorToCount></WireShiftHost>)" ) );
-    SW_EXPECT_EQUAL( size_t( 1 ), fromXml._mapColorToCount.size() );
-    SW_EXPECT_EQUAL( 4, fromXml._mapColorToCount[WireShiftColor::Blue] );
+    WireShiftHost fromXML;
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
+        &fromXML, info, R"(<WireShiftHost><_mapColorToCount><entry key="Purple">3</entry><entry key="Blue">4</entry></_mapColorToCount></WireShiftHost>)" ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), fromXML._mapColorToCount.size() );
+    SW_EXPECT_EQUAL( 4, fromXML._mapColorToCount[WireShiftColor::Blue] );
 
     WireShiftHost fromJson;
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromJson, info, R"({"_mapColorToCount":{"Purple":3,"Blue":4}})" ) );
     SW_EXPECT_EQUAL( size_t( 1 ), fromJson._mapColorToCount.size() );
     SW_EXPECT_EQUAL( 4, fromJson._mapColorToCount[WireShiftColor::Blue] );
 
-    sw::XmlDocumentBackend backend;
+    sw::XMLDocumentBackend backend;
     WireShiftHost          fromEmpty;
     fromEmpty._listColor = { WireShiftColor::Red };
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &fromEmpty, info, backend, "<WireShiftHost><_listColor /></WireShiftHost>" ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &fromEmpty, info, backend, "<WireShiftHost><_listColor /></WireShiftHost>" ) );
     SW_EXPECT_TRUE( fromEmpty._listColor.empty() );
 }
 
@@ -1166,9 +1166,9 @@ SW_TEST_CASE( ReflectionSerializationTest, NestedContainerRoundtripAllFormats )
         verify( dst, "binary" );
     }
     {
-        const sw::string         xml = sw::XmlSerializer::serialize( &src, *typeInfo );
+        const sw::string         xml = sw::XMLSerializer::serialize( &src, *typeInfo );
         sw::NestedContainerActor dst;
-        SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &dst, *typeInfo, xml ) );
+        SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &dst, *typeInfo, xml ) );
         verify( dst, "xml" );
     }
 }
@@ -1226,7 +1226,7 @@ SW_TEST_CASE( ReflectionSerializationTest, JsonValueStructElementIsReadOnlyAsIts
 
 /**
  * @brief [ReflectionSerializationTest] 엄격 역직렬화는 컨테이너 **원소 구조체** 안의 잘못된 칸에서도 실패한다 — JSON 과 XML 이 같다
- * @details XML 백엔드 입구(`deserialize( …, IXmlBackend&, … )`)는 orphan 목록 없이 칸 실패로 판정한다. 원소 구조체를 읽은 결과를
+ * @details XML 백엔드 입구(`deserialize( …, IXMLBackend&, … )`)는 orphan 목록 없이 칸 실패로 판정한다. 원소 구조체를 읽은 결과를
  *          버리면 `vector<NestedInner>` · `map<string, NestedInner>` 의 원소 칸이 깨져도 성공으로 끝난다(JSON 은 같은 입력에서 실패한다).
  */
 SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadFieldInsideContainerElement )
@@ -1239,26 +1239,26 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadFieldInsid
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonList, *typeInfo, R"({"_listInner":[{"_x":"nope"}]})" ) );
 
     // XML 은 두 입구를 다 본다 — 문자열 입구(orphan 목록으로 판정)와 백엔드 입구(orphan 목록 없이 칸 실패로 판정).
-    const utf8* const kArrBadXml[] = {
+    const utf8* const kArrBadXML[] = {
         R"(<NestedContainerActor><_listInner><NestedInner _x="nope" /></_listInner></NestedContainerActor>)",
         R"(<NestedContainerActor><_mapInner><entry key="m"><NestedInner _x="nope" /></entry></_mapInner></NestedContainerActor>)",
     };
-    for ( const utf8* pBadXml : kArrBadXml )
+    for ( const utf8* pBadXML : kArrBadXML )
     {
         sw::NestedContainerActor fromString;
-        SW_EXPECT_FALSE_MSG( sw::XmlSerializer::deserialize( &fromString, *typeInfo, pBadXml ), pBadXml );
+        SW_EXPECT_FALSE_MSG( sw::XMLSerializer::deserialize( &fromString, *typeInfo, pBadXML ), pBadXML );
 
-        sw::XmlDocumentBackend   backend;
+        sw::XMLDocumentBackend   backend;
         sw::NestedContainerActor fromBackend;
-        SW_EXPECT_FALSE_MSG( sw::XmlSerializer::deserialize( &fromBackend, *typeInfo, backend, pBadXml ), pBadXml );
+        SW_EXPECT_FALSE_MSG( sw::XMLSerializer::deserialize( &fromBackend, *typeInfo, backend, pBadXML ), pBadXML );
     }
 
     // 멀쩡한 원소는 그대로 읽힌다 — "다 막는다" 로 굳지 않는다.
-    const utf8* const kGoodXml =
+    const utf8* const kGoodXML =
         R"(<NestedContainerActor><_listInner><NestedInner _x="5" /></_listInner><_mapInner><entry key="m"><NestedInner _x="6" /></entry></_mapInner></NestedContainerActor>)";
-    sw::XmlDocumentBackend   goodBackend;
+    sw::XMLDocumentBackend   goodBackend;
     sw::NestedContainerActor xmlOk;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlOk, *typeInfo, goodBackend, kGoodXml ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &xmlOk, *typeInfo, goodBackend, kGoodXML ) );
     SW_EXPECT_EQUAL( static_cast<size_t>( 1 ), xmlOk._listInner.size() );
     SW_EXPECT_EQUAL( 6, xmlOk._mapInner.at( "m" )._x );
 }
@@ -1280,11 +1280,11 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonField, *typeInfo, R"({"_id":"not_an_int"})" ) );
 
     sw::ComplexData xmlField;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
         &xmlField, *typeInfo, R"(<sw__ComplexData _id="not_an_int"/>)" ) );
 
     sw::ComplexData xmlContainer;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
         &xmlContainer, *typeInfo,
         R"(<sw__ComplexData><_listScore><item>1</item><item>not_an_int</item></_listScore></sw__ComplexData>)" ) );
 
@@ -1300,15 +1300,15 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &jsonUnknown, *typeInfo, R"({"_id":1,"NotARealField":2})" ) );
 
     sw::ComplexData xmlUnknown;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize(
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize(
         &xmlUnknown, *typeInfo,
         R"(<sw__ComplexData _id="1" NotARealField="x"/>)" ) );
 
     const utf8* xmlUnknownStr =
         R"(<sw__ComplexData _id="1" NotARealField="x"/>)";
-    sw::XmlDocumentBackend xmlBackend;
+    sw::XMLDocumentBackend xmlBackend;
     sw::ComplexData        xmlBackendUnknown;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &xmlBackendUnknown, *typeInfo, xmlBackend, xmlUnknownStr ) );
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &xmlBackendUnknown, *typeInfo, xmlBackend, xmlUnknownStr ) );
 
     sw::ComplexData binSrc;
     binSrc._id = 3;
@@ -1339,7 +1339,7 @@ SW_TEST_CASE( ReflectionSerializationTest, StrictDeserializeFailsOnBadContainerA
 /**
  * @brief [ReflectionSerializationTest] 커스텀 XML 백엔드
  */
-SW_TEST_CASE( ReflectionSerializationTest, CustomXmlBackend )
+SW_TEST_CASE( ReflectionSerializationTest, CustomXMLBackend )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::ComplexData" ) );
@@ -1351,13 +1351,13 @@ SW_TEST_CASE( ReflectionSerializationTest, CustomXmlBackend )
     src._id    = 999;
     src._title = "CustomBackend";
 
-    SimpleXmlBackend backend;
-    sw::string       xml = sw::XmlSerializer::serialize( &src, *typeInfo, backend );
+    SimpleXMLBackend backend;
+    sw::string       xml = sw::XMLSerializer::serialize( &src, *typeInfo, backend );
     SW_EXPECT_TRUE( xml.empty() == false );
 
     sw::ComplexData  dst;
-    SimpleXmlBackend readBackend;
-    bool             success = sw::XmlSerializer::deserialize( &dst, *typeInfo, readBackend, xml );
+    SimpleXMLBackend readBackend;
+    bool             success = sw::XMLSerializer::deserialize( &dst, *typeInfo, readBackend, xml );
     SW_EXPECT_TRUE( success );
     SW_EXPECT_EQUAL( 999, dst._id );
     SW_EXPECT_EQUAL( sw::string( "CustomBackend" ), dst._title );
@@ -1423,12 +1423,12 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
     sw::PropertyInfo titleProp( sw::hashed_string( "_title" ), sw::hashed_string( "string" ),
                                 SW_OFFSET_OF( DefaultActor, _title ) );
     titleProp._metadata._defaultValue  = "Apprentice";
-    titleProp._metadata._bXmlAttribute = SW_TRUE;
+    titleProp._metadata._bXMLAttribute = SW_TRUE;
     info._listProperty                 = { manaProp, titleProp };
 
     DefaultActor actor;
-    const utf8*  emptyXml = R"(<?xml version="1.0"?><DefaultActor></DefaultActor>)";
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &actor, info, emptyXml ) );
+    const utf8*  emptyXML = R"(<?xml version="1.0"?><DefaultActor></DefaultActor>)";
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &actor, info, emptyXML ) );
     SW_EXPECT_EQUAL( 75, actor._mana );
     SW_EXPECT_EQUAL( sw::string( "Apprentice" ), actor._title );
 
@@ -1441,9 +1441,9 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyDefaultOnMissing )
 
     // 에셋의 명시 값이 Default 메타데이터보다 우선한다.
     DefaultActor overridden;
-    const utf8*  filledXml =
+    const utf8*  filledXML =
         R"(<?xml version="1.0"?><DefaultActor _title="Mage" _mana="10"/>)";
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &overridden, info, filledXml ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &overridden, info, filledXML ) );
     SW_EXPECT_EQUAL( 10, overridden._mana );
     SW_EXPECT_EQUAL( sw::string( "Mage" ), overridden._title );
 }
@@ -1475,8 +1475,8 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 
     AliasTestActor xmlActor;
     xmlActor._currentHp = 100;
-    const utf8* oldXml  = R"(<?xml version="1.0"?><AliasTestActor hp="250"/>)";
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &xmlActor, info, oldXml ) );
+    const utf8* oldXML  = R"(<?xml version="1.0"?><AliasTestActor hp="250"/>)";
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &xmlActor, info, oldXML ) );
     SW_EXPECT_EQUAL( 250, xmlActor._currentHp );
 
     // 복수 Alias (codegen AliasAndReorderTestActor: hp + HitPoints)
@@ -1490,8 +1490,8 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
     // PROPERTY(Default) 없는 누락 필드는 생성 시 값을 유지한다.
     AliasTestActor missingActor;
     missingActor._currentHp = 42;
-    const utf8* emptyXml    = R"(<?xml version="1.0"?><AliasTestActor></AliasTestActor>)";
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &missingActor, info, emptyXml ) );
+    const utf8* emptyXML    = R"(<?xml version="1.0"?><AliasTestActor></AliasTestActor>)";
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &missingActor, info, emptyXML ) );
     SW_EXPECT_EQUAL( 42, missingActor._currentHp );
 
     struct ReorderActor1
@@ -1530,7 +1530,7 @@ SW_TEST_CASE( ReflectionSerializationTest, PropertyAliasAndReorderingTest )
 /**
  * @brief [ReflectionSerializationTest] 타입 Alias + 옛 XML 루트 태그로 로드
  */
-SW_TEST_CASE( ReflectionSerializationTest, TypeAliasXmlLoad )
+SW_TEST_CASE( ReflectionSerializationTest, TypeAliasXMLLoad )
 {
     const sw::TypeInfo* typeInfo =
         sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::LegacyRenameActor" ) );
@@ -1538,8 +1538,8 @@ SW_TEST_CASE( ReflectionSerializationTest, TypeAliasXmlLoad )
 
     sw::RenameCompatActor actor;
     actor._hp          = 1;
-    const utf8* oldXml = R"(<?xml version="1.0"?><LegacyRenameActor _hp="77"/>)";
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize( &actor, *typeInfo, oldXml ) );
+    const utf8* oldXML = R"(<?xml version="1.0"?><LegacyRenameActor _hp="77"/>)";
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize( &actor, *typeInfo, oldXML ) );
     SW_EXPECT_EQUAL( 77, actor._hp );
 }
 
@@ -1597,15 +1597,15 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
     SW_EXPECT_TRUE( binOrphans.empty() == false );
 
     // --- XML: 옛 필드명 health + 제거된 score + 신규 mana 누락 ---
-    LayoutV2 fromXml{};
-    fromXml._hp   = -1;
-    fromXml._mana = -1;
-    const utf8* oldXml =
+    LayoutV2 fromXML{};
+    fromXML._hp   = -1;
+    fromXML._mana = -1;
+    const utf8* oldXML =
         R"(<?xml version="1.0"?><LayoutActor health="55" _score="1"/>)";
     sw::vector<sw::SchemaOrphanValue> xmlOrphans;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserializeSoft( &fromXml, infoV2, oldXml, &xmlOrphans ) );
-    SW_EXPECT_EQUAL( 55, fromXml._hp );
-    SW_EXPECT_EQUAL( 9, fromXml._mana );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeSoft( &fromXML, infoV2, oldXML, &xmlOrphans ) );
+    SW_EXPECT_EQUAL( 55, fromXML._hp );
+    SW_EXPECT_EQUAL( 9, fromXML._mana );
     SW_EXPECT_TRUE( xmlOrphans.empty() == false );
 
     // --- JSON: 동일 ---
@@ -1631,7 +1631,7 @@ SW_TEST_CASE( ReflectionSerializationTest, LayoutEvolveAddRemoveRename )
         { sw::hashed_string( "_v" ), sw::hashed_string( "int32" ), SW_OFFSET_OF( IntAliasHolder, _v ) }
     };
     IntAliasHolder holder{};
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserialize(
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserialize(
         &holder, intAliasInfo, R"(<?xml version="1.0"?><IntAliasHolder _v="123"/>)" ) );
     SW_EXPECT_EQUAL( 123, holder._v );
 }
@@ -1697,7 +1697,7 @@ SW_TEST_CASE( ReflectionSerializationTest, BinaryVersionHeaderTest )
 }
 
 /**
- * @brief [ReflectionSerializationTest] 필드 타입 변경 (int32→string) binary coerce + Json/Xml versioned
+ * @brief [ReflectionSerializationTest] 필드 타입 변경 (int32→string) binary coerce + Json/XML versioned
  */
 SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
 {
@@ -1747,14 +1747,14 @@ SW_TEST_CASE( ReflectionSerializationTest, FieldTypeChangeAndTextVersioned )
     SW_EXPECT_EQUAL( 3u, ver );
     SW_EXPECT_EQUAL( 99, fromJson._hp );
 
-    // Xml versioned + int32→string coerce
-    sw::string xml = sw::XmlSerializer::serializeVersioned( 4, &src, intInfo );
+    // XML versioned + int32→string coerce
+    sw::string xml = sw::XMLSerializer::serializeVersioned( 4, &src, intInfo );
     SW_EXPECT_TRUE( xml.find( "_schemaVersion" ) != sw::string::npos );
-    StrHp fromXml;
+    StrHp fromXML;
     ver = 0;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserializeVersioned( ver, &fromXml, strInfo, xml, 4u ) );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeVersioned( ver, &fromXML, strInfo, xml, 4u ) );
     SW_EXPECT_EQUAL( 4u, ver );
-    SW_EXPECT_TRUE( fromXml._hp == "42" );
+    SW_EXPECT_TRUE( fromXML._hp == "42" );
 }
 
 /**
@@ -2019,9 +2019,9 @@ SW_TEST_CASE( ReflectionSerializationTest, VersionedDeserializeFailsWithoutMigra
     ver             = 0;
     SW_EXPECT_FALSE( sw::JsonSerializer::deserializeVersioned( ver, &restored, info, json, 2u ) );
 
-    sw::string xml = sw::XmlSerializer::serializeVersioned( 1, &actor, info );
+    sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &actor, info );
     ver            = 0;
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserializeVersioned( ver, &restored, info, xml, 2u ) );
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserializeVersioned( ver, &restored, info, xml, 2u ) );
 }
 
 /**
@@ -2074,15 +2074,15 @@ SW_TEST_CASE( ReflectionSerializationTest, OrphanOnlyPolicyDiffersByFormat )
     ver                   = 0;
     const bool bJson      = sw::JsonSerializer::deserializeVersioned( ver, &target, narrow, json, 1u );
 
-    const sw::string xml = sw::XmlSerializer::serializeVersioned( 1, &source, wide );
+    const sw::string xml = sw::XMLSerializer::serializeVersioned( 1, &source, wide );
     ver                  = 0;
-    const bool bXml      = sw::XmlSerializer::deserializeVersioned( ver, &target, narrow, xml, 1u );
+    const bool bXML      = sw::XMLSerializer::deserializeVersioned( ver, &target, narrow, xml, 1u );
 
     SW_EXPECT_TRUE_MSG( bBinary == false,
                         "Binary 가 orphan 을 받아들였습니다 — SchemaOrphanPolicy::Reject 가 무력해졌습니다" );
     SW_EXPECT_TRUE_MSG( bJson,
                         "JSON 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 파일 전체가 안 읽힙니다" );
-    SW_EXPECT_TRUE_MSG( bXml,
+    SW_EXPECT_TRUE_MSG( bXML,
                         "XML 이 orphan 만으로 실패했습니다 — 모르는 필드 하나로 씬이 통째로 안 읽힙니다" );
 
     // 텍스트가 받아들였다면 **아는 필드는 제대로 들어왔어야** 한다. 그러지 않으면 "조용히 통과" 가
@@ -2130,12 +2130,12 @@ SW_TEST_CASE( ReflectionSerializationTest, DroppedValuesWarnOncePerLoad )
     SW_EXPECT_TRUE_MSG( logs.countContaining( "_hp, _mp" ) == 1, logs.joined().c_str() );
 
     // ② XML — 같은 규칙, 로드 하나에 한 줄.
-    DropProbe        fromXml;
+    DropProbe        fromXML;
     const sw::string xml = R"(<DropProbeActor _schemaVersion="1" _hp="12" _mp="lots" _level="3"/>)";
     ver                  = 0;
-    SW_EXPECT_TRUE( sw::XmlSerializer::deserializeVersioned( ver, &fromXml, info, xml, 1u ) );
-    SW_EXPECT_EQUAL( 12, fromXml._hp );
-    SW_EXPECT_EQUAL( 6, fromXml._mp );
+    SW_EXPECT_TRUE( sw::XMLSerializer::deserializeVersioned( ver, &fromXML, info, xml, 1u ) );
+    SW_EXPECT_EQUAL( 12, fromXML._hp );
+    SW_EXPECT_EQUAL( 6, fromXML._mp );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "DropProbeActor: dropped 1 saved field(s)" ) == 1, logs.joined().c_str() );
     SW_EXPECT_TRUE_MSG( logs.countContaining( "could not read: _mp" ) == 1, logs.joined().c_str() );
 
@@ -2375,7 +2375,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
         "    }\n"
         "}";
 
-    const sw::string kGoldenXml =
+    const sw::string kGoldenXML =
         "<NestedContainerActor>\n"
         "	<_grid>\n"
         "		<item>\n"
@@ -2432,10 +2432,10 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
         std::fprintf( stdout, "[golden pretty]\n---expected---\n%s\n---actual---\n%s\n", kGoldenPretty.c_str(), pretty.c_str() );
     SW_EXPECT_TRUE( pretty == kGoldenPretty );
 
-    const sw::string xml = sw::XmlSerializer::serialize( &src, *typeInfo );
-    if ( xml != kGoldenXml )
-        std::fprintf( stdout, "[golden xml]\n---expected---\n%s\n---actual---\n%s\n", kGoldenXml.c_str(), xml.c_str() );
-    SW_EXPECT_TRUE( xml == kGoldenXml );
+    const sw::string xml = sw::XMLSerializer::serialize( &src, *typeInfo );
+    if ( xml != kGoldenXML )
+        std::fprintf( stdout, "[golden xml]\n---expected---\n%s\n---actual---\n%s\n", kGoldenXML.c_str(), xml.c_str() );
+    SW_EXPECT_TRUE( xml == kGoldenXML );
 
     sw::vector<uint8> bin;
     sw::BinarySerializer::serialize( &src, *typeInfo, bin );
@@ -2452,7 +2452,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsStable )
 }
 
 /**
- * @brief [ReflectionSerializationTest] 스칼라 이스케이프·비트필드·XmlAttribute·versioned 헤더 골든.
+ * @brief [ReflectionSerializationTest] 스칼라 이스케이프·비트필드·XMLAttribute·versioned 헤더 골든.
  * @details GoldenOutputFormatsStable(중첩 컨테이너)를 보완하는 두 번째 안전망.
  */
 SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
@@ -2490,7 +2490,7 @@ SW_TEST_CASE( ReflectionSerializationTest, GoldenOutputFormatsWide )
         "{\"_schemaVersion\":7,\"_bActive\":true,\"_bInvulnerable\":false,\"_bCanJump\":true,\"_score\":777}",
         "070000000400000146dd8356dbf29d1901000000012335d1a0dbf29d1901000000002e8c2fdadbf29d190100000001bc771186bfe2defb0400000009030000" ) );
 
-    // XmlAttribute 플래그 프로퍼티
+    // XMLAttribute 플래그 프로퍼티
     sw::DefaultValueTestActor attr;
     attr._mana  = 12;
     attr._title = "Sir";
@@ -2680,9 +2680,9 @@ SW_TEST_CASE( ReflectionSerializationTest, SetPropertyRoundTripsInEveryFormat )
 
     // 3) XML
     {
-        const sw::string xml = sw::XmlSerializer::serialize( &source, info );
+        const sw::string xml = sw::XMLSerializer::serialize( &source, info );
         SetHolder        restored{};
-        SW_ASSERT_TRUE( sw::XmlSerializer::deserialize( &restored, info, xml ) );
+        SW_ASSERT_TRUE( sw::XMLSerializer::deserialize( &restored, info, xml ) );
         expectContents( restored, "XML 왕복이 set 을 잃었습니다" );
     }
 }
@@ -2754,10 +2754,10 @@ SW_TEST_CASE( ReflectionSerializationTest, AccessorPropertyReadsAndWritesOutside
     }
     // 3) XML
     {
-        const sw::string             xml = sw::XmlSerializer::serialize( &source, info );
+        const sw::string             xml = sw::XMLSerializer::serialize( &source, info );
         sw::ExternalStorageTestActor restored;
         restored._storageIndex = 0;
-        SW_ASSERT_TRUE( sw::XmlSerializer::deserialize( &restored, info, xml ) );
+        SW_ASSERT_TRUE( sw::XMLSerializer::deserialize( &restored, info, xml ) );
         SW_EXPECT_EQUAL( 7, restored._level );
         expectRestored( 0, "XML" );
     }
@@ -2845,9 +2845,9 @@ SW_TEST_CASE( ReflectionSerializationTest, ReflectAnyRoundTripsInEveryFormat )
         expectPayload( restored, "json" );
     }
     {
-        const sw::string   xml = sw::XmlSerializer::serialize( &source, *pActorType );
+        const sw::string   xml = sw::XMLSerializer::serialize( &source, *pActorType );
         sw::AssetPathActor restored;
-        SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &restored, *pActorType, xml ), xml.c_str() );
+        SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &restored, *pActorType, xml ), xml.c_str() );
         expectPayload( restored, "xml" );
     }
 
@@ -2991,7 +2991,7 @@ SW_TEST_CASE( ReflectionSerializationTest, AssetTextDoesNotGrowTheNameTable )
     sw::ComplexData                   data;
     {
         test::ScopedLogSuppressor suppressor;
-        (void)sw::XmlSerializer::deserializeSoft( &data, *pType, // 결과는 무관 — 아래 단언이 이름 표가 늘지 않았는지 본다
+        (void)sw::XMLSerializer::deserializeSoft( &data, *pType, // 결과는 무관 — 아래 단언이 이름 표가 늘지 않았는지 본다
                                                   "<ComplexData _id=\"7\" R8NoSuchAttribute=\"1\"><R8NoSuchTagProbe>2</R8NoSuchTagProbe></ComplexData>",
                                                   &listOrphan );
     }
@@ -3119,18 +3119,18 @@ SW_TEST_CASE( ReflectionSerializationTest, BitfieldTextThatIsNotABooleanFailsThe
     const sw::TypeInfo* pBits = sw::engine::getTypeRegistry().findType( sw::hashed_string( "sw::BitfieldTestActor" ) );
     SW_ASSERT_NOT_NULL( pBits );
 
-    sw::BitfieldTestActor fromXml;
-    fromXml._bActive       = SW_FALSE;
-    fromXml._bInvulnerable = SW_TRUE;
-    fromXml._bCanJump      = SW_FALSE;
+    sw::BitfieldTestActor fromXML;
+    fromXML._bActive       = SW_FALSE;
+    fromXML._bInvulnerable = SW_TRUE;
+    fromXML._bCanJump      = SW_FALSE;
     {
         test::ScopedDefensiveTestLog expected( "a bitfield written as 'ture'" );
-        SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &fromXml, *pBits,
+        SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromXML, *pBits,
                                                          "<BitfieldTestActor _bActive=\"on\" _bInvulnerable=\"ture\" _bCanJump=\"1\" _score=\"5\" />" ) );
     }
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bInvulnerable ) ); // 그대로다
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bActive ) );       // 다른 것은 읽혔다
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXml._bCanJump ) );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXML._bInvulnerable ) ); // 그대로다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXML._bActive ) );       // 다른 것은 읽혔다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( fromXML._bCanJump ) );
 
     sw::BitfieldTestActor fromJson;
     fromJson._bInvulnerable = SW_TRUE;
@@ -3220,10 +3220,10 @@ SW_TEST_CASE( ReflectionSerializationTest, ContainerShapesRoundTripInEveryFormat
         return bSame && actor._after == 42;
     };
 
-    const sw::string        xml = sw::XmlSerializer::serialize( &source, *pType );
-    sw::ContainerShapeActor fromXml;
-    SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &fromXml, *pType, xml ), xml.c_str() );
-    SW_EXPECT_TRUE_MSG( isSame( fromXml ), xml.c_str() );
+    const sw::string        xml = sw::XMLSerializer::serialize( &source, *pType );
+    sw::ContainerShapeActor fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromXML ), xml.c_str() );
 
     const sw::string        json = sw::JsonSerializer::serialize( &source, *pType );
     sw::ContainerShapeActor fromJson;
@@ -3256,10 +3256,10 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     source._arrSlot = { 7, 8, 9 };
     source._after   = 42;
 
-    const sw::string    xml = sw::XmlSerializer::serialize( &source, *pType );
-    sw::FixedArrayActor fromXml;
-    SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &fromXml, *pType, xml ), xml.c_str() );
-    SW_EXPECT_TRUE_MSG( fromXml._arrSlot[0] == 7 && fromXml._arrSlot[1] == 8 && fromXml._arrSlot[2] == 9 && fromXml._after == 42, xml.c_str() );
+    const sw::string    xml = sw::XMLSerializer::serialize( &source, *pType );
+    sw::FixedArrayActor fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, *pType, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( fromXML._arrSlot[0] == 7 && fromXML._arrSlot[1] == 8 && fromXML._arrSlot[2] == 9 && fromXML._after == 42, xml.c_str() );
 
     const sw::string    json = sw::JsonSerializer::serialize( &source, *pType );
     sw::FixedArrayActor fromJson;
@@ -3282,6 +3282,6 @@ SW_TEST_CASE( ReflectionSerializationTest, FixedArrayPropertyRoundTripsInEveryFo
     test::ScopedLogSuppressor suppressor;
     sw::FixedArrayActor       fromLong;
     SW_EXPECT_FALSE( sw::JsonSerializer::deserialize( &fromLong, *pType, "{\"_arrSlot\":[1,2,3,4],\"_after\":1}" ) );
-    SW_EXPECT_FALSE( sw::XmlSerializer::deserialize( &fromLong, *pType,
+    SW_EXPECT_FALSE( sw::XMLSerializer::deserialize( &fromLong, *pType,
                                                      "<FixedArrayActor><_arrSlot><item>1</item><item>2</item><item>3</item><item>4</item></_arrSlot></FixedArrayActor>" ) );
 }

@@ -15,7 +15,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include <shared_mutex>
 
@@ -89,7 +89,7 @@ namespace sw
         };
 
         /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 패치로 풉니다. 속성 찾기와 텍스트 파싱을 여기서 한 번 합니다. */
-        static void resolveNodeToPatches( const TypeInfo& typeInfo, const XmlNode& compNode, vector<DefaultPatch>& inoutListPatch );
+        static void resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch );
         /** @brief 패치 하나를 인스턴스에 넣습니다(memcpy 또는 텍스트 파싱). */
         static void applyPatch( void* pInstance, const DefaultPatch& patch );
 
@@ -116,7 +116,7 @@ namespace sw
         /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다. 패치는 그 문서에서 푼 값입니다. */
         void clearResolvedCache();
 
-        XmlDocument _defaultsDoc;
+        XMLDocument _defaultsDoc;
         string      _customDefaultsPath;
 
         mutable std::shared_mutex                                    _resolvedMutex;

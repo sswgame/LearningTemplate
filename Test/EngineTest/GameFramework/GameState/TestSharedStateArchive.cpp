@@ -20,7 +20,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kSharedStateQuestXml = R"(
+    constexpr const utf8* kSharedStateQuestXML = R"(
 <QuestCatalog>
   <Quest id="hunt">
     <Stage id="kill" next="done"><Objective kind="Kill" target="wolf" count="3"/></Stage>
@@ -29,7 +29,7 @@ namespace
 </QuestCatalog>
 )";
 
-    constexpr const utf8* kSharedStateOtherQuestXml = R"(
+    constexpr const utf8* kSharedStateOtherQuestXML = R"(
 <QuestCatalog>
   <Quest id="other"><Stage id="done" complete="true"/></Quest>
 </QuestCatalog>
@@ -187,9 +187,9 @@ SW_TEST_CASE( SharedStateArchiveTest, ReputationRoundTrip )
 SW_TEST_CASE( SharedStateArchiveTest, QuestLogRoundTripDropsUnknownQuests )
 {
     QuestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kSharedStateQuestXml, "SharedStateArchiveTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kSharedStateQuestXML, "SharedStateArchiveTest" ) );
     QuestCatalog otherCatalog;
-    SW_ASSERT_TRUE( otherCatalog.loadFromXmlText( kSharedStateOtherQuestXml, "SharedStateArchiveTest" ) );
+    SW_ASSERT_TRUE( otherCatalog.loadFromXMLText( kSharedStateOtherQuestXML, "SharedStateArchiveTest" ) );
 
     QuestLog log;
     log.initialize( &catalog );

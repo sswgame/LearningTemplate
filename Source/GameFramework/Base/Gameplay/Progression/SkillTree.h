@@ -11,12 +11,12 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 선행 조건 하나 — 그 스킬이 이 랭크 이상입니다. */
     struct SkillRequirement
@@ -63,17 +63,17 @@ namespace sw
      * @brief `<SkillTreeCatalog><Tree id="combat"><Skill id="power" maxRank="3" cost="1" level="2" spent="0" requires="basic:1,stance"
      *        group="" ability="PowerStrike"><Stats attack="5"/></Skill></Tree></SkillTreeCatalog>` 를 읽습니다(`<Stats>` 는 랭크 하나의 몫).
      */
-    class SW_GF_API SkillTreeCatalog : public XmlCatalog<SkillTreeCatalog>
+    class SW_GF_API SkillTreeCatalog : public XMLCatalog<SkillTreeCatalog>
     {
-        friend class XmlCatalog<SkillTreeCatalog>;
+        friend class XMLCatalog<SkillTreeCatalog>;
 
     public:
         const SkillTreeDef*         findTree( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<SkillTreeDef>& getTrees() const { return _catalog.getAll(); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "SkillTreeCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "SkillTreeCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<SkillTreeDef> _catalog{};
     };

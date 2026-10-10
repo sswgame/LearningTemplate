@@ -5,7 +5,7 @@
 #include "Core/Common/StdHeaders.h"
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -64,7 +64,7 @@ namespace sw
 
     bool AutomationScenario::loadFromPath( string_view path, string& outError )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.loadPath( path ) == false )
         {
             outError = string( path ) + ": " + ( doc.getLastError().empty() ? string( "could not read the scenario file" ) : doc.getLastError() );
@@ -79,13 +79,13 @@ namespace sw
         *this          = AutomationScenario{};
         _sourcePath    = sourceName.empty() ? string( "<memory>" ) : string( sourceName );
 
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             outError = doc.getLastError();
             return false;
         }
-        const XmlNode root = doc.getRoot( nullptr, false );
+        const XMLNode root = doc.getRoot( nullptr, false );
         if ( root.isValid() == false || string_view{ root.getName() } != "Scenario" )
         {
             outError = _sourcePath + ": the root element must be <Scenario>";
@@ -94,7 +94,7 @@ namespace sw
 
         // 루트 속성 — 모르는 속성은 읽기 오류다(오타가 기본값으로 조용히 바뀌지 않게).
         string reason;
-        for ( XmlAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             const string_view name  = attribute.getName();
             const utf8*       pText = attribute.getValue();
@@ -169,7 +169,7 @@ namespace sw
         }
 
         uint32 orderInFile = 0;
-        for ( XmlNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
+        for ( XMLNode atNode = root.findChild(); atNode.isValid(); atNode = atNode.findNextSibling() )
         {
             if ( string_view{ atNode.getName() } != "At" )
             {
@@ -183,7 +183,7 @@ namespace sw
                 outError = _sourcePath + ": <At> needs frame=\"N\" (N >= 0)";
                 return false;
             }
-            for ( XmlNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
+            for ( XMLNode stepNode = atNode.findChild(); stepNode.isValid(); stepNode = stepNode.findNextSibling() )
             {
                 const string_view kind = stepNode.getName();
                 if ( kind.empty() )
@@ -195,7 +195,7 @@ namespace sw
                 step._kind        = string( kind );
                 step._frameIndex  = frameIndex;
                 step._orderInFile = orderInFile++;
-                for ( XmlAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = stepNode.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     AutomationAttribute value{};
                     value._name  = attribute.getName();

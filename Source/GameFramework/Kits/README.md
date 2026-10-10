@@ -194,7 +194,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 
 | 필요한 것 | 쓸 것 |
 |-----------|-------|
-| XML 정의 목록(id, 읽은 순서) | `GameCatalog<T>`, `XmlCatalog<T>`, `GameDataXml` |
+| XML 정의 목록(id, 읽은 순서) | `GameCatalog<T>`, `XMLCatalog<T>`, `GameDataXML` |
 | 다시 재현되는 난수(테스트, 리플레이) | `GameRandom`(상태 있음), `GameHash`(좌표를 수로) |
 | 가중치 고르기와 섞기 | `GameRandom::pickWeightedIndex`, `shuffle` |
 | 프레임 수와 상관없는 시뮬레이션 | `FixedStepTimer` |
@@ -235,7 +235,7 @@ DB 와 캐시 드라이버, 그리고 그 서드파티 라이브러리는 `["Ser
 - **턴제 몬스터 전투는 `MonsterCollector` 하나입니다.** 전투 연출(단계 타이머, HUD 한 줄)은 게임이 맡습니다.
 - **오버월드 맵은 조우가 일어나는 셀만 알려 줍니다.** 무엇을 만나는지는 장르 키트의 지역 테이블(`MonsterCollectorCatalog::rollEncounter`, `JrpgEncounterWalker`)이 정합니다.
   존 역할은 열거가 아니라 맵 `<role>` 의 태그 목록이고(`ZoneTracker::setFromMap`), 클리어 게이트는 `clear_gate` 태그입니다. 경로 이름에서 역할을 짐작하지 않습니다.
-- **타일맵 레이어 테이블(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식입니다.** 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힙니다(`TileMapXmlTest.SavedBytesMatchTheExistingFormat`).
+- **타일맵 레이어 테이블(`kArrTileFlagLayerInfo`)의 XML 속성 이름과 줄 순서는 파일 형식입니다.** 바꾸면 기존 맵의 그 레이어가 기본값으로 읽힙니다(`TileMapXMLTest.SavedBytesMatchTheExistingFormat`).
   레이어를 더할 때는 `TileFlagLayer` 값과 이 테이블 한 줄만 고칩니다.
 - **반복 간격(연사, 스폰, 자동 공격)은 끝난 걸음에서 `Countdown::restart` 를 부릅니다.** 간격 값으로 덮어쓰면 지나친 시간을 버려서 빈도가 fps 에 묶입니다.
   float 로 빼면 0 에 조금 못 미쳐 한 걸음을 더 기다립니다(RTS 0.05초 걸음에서 1.2초가 1.25초가 됩니다). "원하는 동안 간격마다 한 번"은 `Countdown::tickRepeat` 한 줄입니다.

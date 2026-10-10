@@ -20,7 +20,7 @@ namespace
 {
     constexpr float32 kAsymmetricHorrorStep = 1.0f / 30.0f;
 
-    constexpr const utf8* kHorrorRulesXml = R"(<AsymmetricHorrorRules survivorSpeed="4" crawlSpeed="0.7" hitHasteScale="1.5" hitHasteTime="2" bleedoutTime="20" interactRange="1.5" generatorsRequired="2">
+    constexpr const utf8* kHorrorRulesXML = R"(<AsymmetricHorrorRules survivorSpeed="4" crawlSpeed="0.7" hitHasteScale="1.5" hitHasteTime="2" bleedoutTime="20" interactRange="1.5" generatorsRequired="2">
         <Generator time="10" scales="1,1.5" maxRepairers="2" skillCheckInterval="0" kickPenalty="0.1" kickRegression="0.05" noiseRadius="50"/>
         <Heal time="4" scales="1,1.6" maxHealers="2" skillCheckInterval="0"/>
         <SkillCheck leadTime="1" failPenalty="0.1">
@@ -71,7 +71,7 @@ namespace
         return nullptr;
     }
 
-    [[nodiscard]] bool loadRules( AsymmetricHorrorRulesCatalog& outCatalog, const utf8* pXml = kHorrorRulesXml ) { return outCatalog.loadFromXmlText( pXml, "AsymmetricHorrorTest" ); }
+    [[nodiscard]] bool loadRules( AsymmetricHorrorRulesCatalog& outCatalog, const utf8* pXML = kHorrorRulesXML ) { return outCatalog.loadFromXMLText( pXML, "AsymmetricHorrorTest" ); }
 
     bool beginMatch( HorrorMatch& outMatch, const AsymmetricHorrorRulesCatalog& catalog )
     {
@@ -140,7 +140,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, RepairScalesWithHelpersAndPowersGates )
 SW_TEST_CASE( AsymmetricHorrorTest, SkillChecksAndKicksMoveGeneratorProgress )
 {
     // 스킬 체크가 2 초쯤마다 뜨는 규칙.
-    string       xml( kHorrorRulesXml );
+    string       xml( kHorrorRulesXML );
     const size_t at = xml.find( "skillCheckInterval=\"0\" kickPenalty" );
     SW_ASSERT_TRUE( at != string::npos );
     xml.replace( at, string( "skillCheckInterval=\"0\"" ).size(), "skillCheckInterval=\"2\"" );
@@ -571,7 +571,7 @@ SW_TEST_CASE( AsymmetricHorrorTest, GatesHatchCollapseAndStateBytes )
 SW_TEST_CASE( AsymmetricHorrorTest, StateRoundTripContinuesTheSameMatch )
 {
     // 스킬 체크가 2 초쯤마다 뜨는 규칙 — 응답하지 않아 실패 · 소음 · 난수가 계속 움직인다.
-    string       xml( kHorrorRulesXml );
+    string       xml( kHorrorRulesXML );
     const size_t at = xml.find( "skillCheckInterval=\"0\" kickPenalty" );
     SW_ASSERT_TRUE( at != string::npos );
     xml.replace( at, string( "skillCheckInterval=\"0\"" ).size(), "skillCheckInterval=\"2\"" );

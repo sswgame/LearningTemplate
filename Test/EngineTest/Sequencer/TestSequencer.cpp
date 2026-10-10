@@ -615,11 +615,11 @@ SW_TEST_CASE( SequencerTest, PlayerComponentReopensItsSequenceAfterStateLoad )
     SW_ASSERT_NOT_NULL( pSourcePlayer );
     pSourcePlayer->setSequencePath( path );
 
-    const sw::string xml = sw::ObjectStateSerializer::saveToXmlString( pSource );
+    const sw::string xml = sw::ObjectStateSerializer::saveToXMLString( pSource );
     SW_ASSERT_FALSE( xml.empty() );
     sw::GameObject* pTarget = manager.createGameObject( sw::hashed_string{ "LoadedDirector" } );
     SW_ASSERT_NOT_NULL( pTarget );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pTarget, xml ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pTarget, xml ) );
 
     sw::SequencePlayerComponent* pLoaded = pTarget->getComponent<sw::SequencePlayerComponent>();
     SW_ASSERT_NOT_NULL( pLoaded );

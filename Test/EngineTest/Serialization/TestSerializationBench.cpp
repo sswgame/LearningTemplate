@@ -46,14 +46,14 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     {
         const sw::Stopwatch stopwatch;
         sw::SceneDocument   doc;
-        SW_ASSERT_TRUE( doc.loadXml( SerializationBenchInternal::kSceneId ) );
+        SW_ASSERT_TRUE( doc.loadXML( SerializationBenchInternal::kSceneId ) );
         sw::Scene scene{ "SerializationBenchScene" };
         SW_ASSERT_TRUE( scene.instantiate( doc ) );
         listLoadMicro.push_back( stopwatch.getElapsedMicroseconds() );
     }
 
     sw::SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXml( SerializationBenchInternal::kSceneId ) );
+    SW_ASSERT_TRUE( doc.loadXML( SerializationBenchInternal::kSceneId ) );
     sw::Scene scene{ "SerializationBenchScene" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     sw::vector<sw::GameObject*> listObject;
@@ -64,11 +64,11 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     sw::GameObject*       pScratch = scratchManager.createGameObject( sw::hashed_string( "SerializationBenchScratch" ) );
     SW_ASSERT_NOT_NULL( pScratch );
 
-    sw::vector<sw::string>        listXml( listObject.size() );
+    sw::vector<sw::string>        listXML( listObject.size() );
     sw::vector<sw::string>        listJson( listObject.size() );
     sw::vector<sw::vector<uint8>> listBinary( listObject.size() );
-    sw::vector<int64>             listXmlWriteMicro;
-    sw::vector<int64>             listXmlReadMicro;
+    sw::vector<int64>             listXMLWriteMicro;
+    sw::vector<int64>             listXMLReadMicro;
     sw::vector<int64>             listJsonWriteMicro;
     sw::vector<int64>             listJsonReadMicro;
     sw::vector<int64>             listBinaryWriteMicro;
@@ -79,17 +79,17 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
             const sw::Stopwatch stopwatch;
             for ( size_t objectIndex = 0; objectIndex < listObject.size(); ++objectIndex )
             {
-                listXml[objectIndex] = sw::ObjectStateSerializer::saveToXmlString( listObject[objectIndex] );
+                listXML[objectIndex] = sw::ObjectStateSerializer::saveToXMLString( listObject[objectIndex] );
             }
-            listXmlWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
+            listXMLWriteMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
-            for ( const sw::string& xml : listXml )
+            for ( const sw::string& xml : listXML )
             {
-                (void)sw::ObjectStateSerializer::loadFromXmlString( pScratch, xml ); // 성공 여부는 SerializationRoundTripTest 가 본다 — 여기서는 시간만
+                (void)sw::ObjectStateSerializer::loadFromXMLString( pScratch, xml ); // 성공 여부는 SerializationRoundTripTest 가 본다 — 여기서는 시간만
             }
-            listXmlReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
+            listXMLReadMicro.push_back( stopwatch.getElapsedMicroseconds() );
         }
         {
             const sw::Stopwatch stopwatch;
@@ -127,8 +127,8 @@ SW_TEST_CASE( SerializationBenchTest, LargeSceneLoadAndObjectStateRoundTrip )
     }
     pSuppressor.reset();
     test::logBenchSamples( "arena scene load (xml document + instantiate)", listLoadMicro );
-    test::logBenchSamples( "object state write xml (all objects)", listXmlWriteMicro );
-    test::logBenchSamples( "object state read xml (all objects)", listXmlReadMicro );
+    test::logBenchSamples( "object state write xml (all objects)", listXMLWriteMicro );
+    test::logBenchSamples( "object state read xml (all objects)", listXMLReadMicro );
     test::logBenchSamples( "object state write json (all objects)", listJsonWriteMicro );
     test::logBenchSamples( "object state read json (all objects)", listJsonReadMicro );
     test::logBenchSamples( "object state write binary (all objects)", listBinaryWriteMicro );

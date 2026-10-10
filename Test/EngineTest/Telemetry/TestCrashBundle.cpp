@@ -301,7 +301,7 @@ SW_TEST_CASE( CrashBundleTest, ConsentFollowsTheUserSetting )
 {
     UserSettingsManager settings;
     settings.initialize( UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="privacy"/>
 <Setting id="telemetry.crashReports" category="privacy" type="enum" default="local"><Option value="local"/><Option value="ask"/><Option value="send"/></Setting>
 </UserSettingsSchema>)",
                                                     "privacy.settings.xml" ) );

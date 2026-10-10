@@ -14,7 +14,7 @@
 namespace sw
 {
     class AppearanceLoadReport;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 칸 하나입니다. 표의 순서가 해석 순서입니다. */
     struct AppearanceSlotDef
@@ -44,7 +44,7 @@ namespace sw
     class SW_GF_API SlotTable
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear();
 
         int32                            findSlotIndex( const hashed_string& slot ) const;

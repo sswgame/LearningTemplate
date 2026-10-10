@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -51,29 +51,29 @@ namespace sw
 
     bool GimmickCircuitDef::loadFromResource( string_view path )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::loadRoot( doc, path, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::loadRoot( doc, path, GimmickCircuitDefInternal::kRootName, root, _sourceName ) == false )
             return false;
         return loadRoot( root );
     }
 
-    bool GimmickCircuitDef::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool GimmickCircuitDef::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
-        XmlNode     root;
+        XMLDocument doc;
+        XMLNode     root;
         _sourceName = string( sourceName.empty() ? string_view( "<gimmick xml>" ) : sourceName );
-        if ( GameDataXml::parseRoot( doc, xmlText, _sourceName, GimmickCircuitDefInternal::kRootName, root ) == false )
+        if ( GameDataXML::parseRoot( doc, xmlText, _sourceName, GimmickCircuitDefInternal::kRootName, root ) == false )
             return false;
         return loadRoot( root );
     }
 
-    bool GimmickCircuitDef::loadRoot( const XmlNode& root )
+    bool GimmickCircuitDef::loadRoot( const XMLNode& root )
     {
         clear();
         _stepTime   = root.getAttributeFloat( "stepTime", kDefaultStepTime );
         bool bValid = true;
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Node", true ) )
             {
@@ -86,7 +86,7 @@ namespace sw
                     continue;
                 }
                 GimmickNodeDef& node = addNode( hashed_string( pId ), hashed_string( pKind ) );
-                for ( XmlAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = child.getFirstAttribute(); attribute; attribute = attribute.getNext() )
                 {
                     const bool bReserved = StringUtil::equals( attribute.getName(), "id", true ) || StringUtil::equals( attribute.getName(), "kind", true );
                     if ( bReserved == false )

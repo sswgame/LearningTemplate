@@ -376,8 +376,8 @@ SW_TEST_CASE( InteractionTest, CatalogReadsStepsTagsAndSlots )
 
     InteractionCatalog broken;
     SW_TEST_DEFENSIVE_SCOPE( "interaction table with an unknown mode and attribute" );
-    SW_EXPECT_FALSE( broken.loadFromXmlText( R"(<Interactions><Interaction id="X" mode="Tap"/></Interactions>)", "mode.interactions.xml" ) );
-    SW_EXPECT_FALSE( broken.loadFromXmlText( R"(<Interactions><Interaction id="Y" range="3"/></Interactions>)", "attribute.interactions.xml" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<Interactions><Interaction id="X" mode="Tap"/></Interactions>)", "mode.interactions.xml" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( R"(<Interactions><Interaction id="Y" range="3"/></Interactions>)", "attribute.interactions.xml" ) );
 }
 
 /**

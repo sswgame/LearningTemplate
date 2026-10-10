@@ -183,7 +183,7 @@ SW_TEST_CASE( TextGathererTest, MergeReportsAddedChangedRemovedAndKeepsManualRow
 /**
  * @brief [TextGathererTest] 리플렉션 XML — `Localizable` 프로퍼티의 값을 모으고(최대 길이 메타 포함), 표시 없는 프로퍼티의 문장은 하드코딩 의심으로 경고한다
  */
-SW_TEST_CASE( TextGathererTest, ReflectedXmlGathersLocalizablePropertiesAndFlagsHardcodedText )
+SW_TEST_CASE( TextGathererTest, ReflectedXMLGathersLocalizablePropertiesAndFlagsHardcodedText )
 {
 #if !defined( SW_SHIPPING )
     TextGathererTestInternal::registerProbeType();
@@ -196,7 +196,7 @@ SW_TEST_CASE( TextGathererTest, ReflectedXmlGathersLocalizablePropertiesAndFlags
         </GameObject>
     </Scene>)";
     sw::TextGatherer      gatherer;
-    gatherer.gatherReflectedXml( kScene, "game/test/maps/farm.scene.xml" );
+    gatherer.gatherReflectedXML( kScene, "game/test/maps/farm.scene.xml" );
 
     const sw::GatheredText* pWelcome = TextGathererTestInternal::findText( gatherer, "Welcome to the farm" );
     SW_ASSERT_NOT_NULL( pWelcome );

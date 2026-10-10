@@ -1531,11 +1531,11 @@ SW_TEST_CASE( GameFrameworkTest, GameSettingsUnknownElementIsALoadError )
     {
         SW_TEST_DEFENSIVE_SCOPE( "철자가 틀린 gamesettings 를 일부러 읽는다" );
         GameSettings settings;
-        SW_EXPECT_FALSE( settings.loadFromXmlText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
+        SW_EXPECT_FALSE( settings.loadFromXMLText( "<GameSettings><startmap>game/x/maps/a.scene.xml</startmap></GameSettings>", "typo" ) );
         SW_EXPECT_TRUE( settings._mapCustomProperty.empty() );
     }
     GameSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><custom><prop key=\"party\">3</prop></custom>"
+    SW_ASSERT_TRUE( settings.loadFromXMLText( "<GameSettings><startMap>game/x/maps/a.scene.xml</startMap><custom><prop key=\"party\">3</prop></custom>"
                                               "<Defaults /></GameSettings>",
                                               "ok" ) );
     SW_EXPECT_EQUAL( sw::string( "game/x/maps/a.scene.xml" ), settings._startMap );
@@ -2779,7 +2779,7 @@ SW_TEST_CASE( GameFrameworkTest, UnboundGameServiceReturnsNullInsteadOfBreaking 
 
 /**
  * @brief [GameFrameworkTest] 감당할 수 없는 크기의 resize 는 거절한다
- * @details 상한은 `TileMapXmlData` 가 정본이고 로더 · 에디터 · `TileMap::resize` 가 모두 그것을 본다. `resize` 가 안 보면
+ * @details 상한은 `TileMapXMLData` 가 정본이고 로더 · 에디터 · `TileMap::resize` 가 모두 그것을 본다. `resize` 가 안 보면
  *          코드로 맵을 만들 때 `100000 x 100000` 한 줄이 10^10 칸 요청이 된다.
  */
 SW_TEST_CASE( GameFrameworkTest, TileMap_ResizeBeyondTheTileLimitIsRejected )

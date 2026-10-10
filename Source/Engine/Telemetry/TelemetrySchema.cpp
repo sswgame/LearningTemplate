@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -28,9 +28,9 @@ namespace sw
             static constexpr const utf8* kArrReservedFieldName[] = { "type", "event", "seq", "t", "sample", "session" };
 
             template <size_t Count>
-            static bool reportUnknownNames( const XmlNode& node, const utf8* const ( &arrAttribute )[Count], string_view sourceName )
+            static bool reportUnknownNames( const XMLNode& node, const utf8* const ( &arrAttribute )[Count], string_view sourceName )
             {
-                return XmlNameCheck::reportUnknownAttributes( node, arrAttribute, sourceName, LogLevel::Warning );
+                return XMLNameCheck::reportUnknownAttributes( node, arrAttribute, sourceName, LogLevel::Warning );
             }
 
             [[nodiscard]] static bool parseFieldType( string_view text, TelemetryFieldType& outType )
@@ -85,7 +85,7 @@ namespace sw
 
     bool TelemetrySchema::loadFromResource( string_view path )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         string      sourceName( path );
         if ( doc.loadPath( path, &sourceName ) == false )
         {
@@ -95,9 +95,9 @@ namespace sw
         return loadRoot( doc.getRoot( TelemetrySchemaInternal::kRootName ), sourceName );
     }
 
-    bool TelemetrySchema::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool TelemetrySchema::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             SW_LOG_WARNING( "Failed to parse telemetry schema %#", sourceName );
@@ -123,7 +123,7 @@ namespace sw
         return nullptr;
     }
 
-    bool TelemetrySchema::loadRoot( const XmlNode& root, string_view sourceName )
+    bool TelemetrySchema::loadRoot( const XMLNode& root, string_view sourceName )
     {
         using Internal = TelemetrySchemaInternal;
         if ( root.isValid() == false )
@@ -135,8 +135,8 @@ namespace sw
         bool                      bValid    = Internal::reportUnknownNames( root, Internal::kArrRootAttribute, sourceName );
         vector<TelemetryEventDef> listEvent = _listEvent;
         TelemetryPipelineSettings settings  = _settings;
-        bValid                              = XmlNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName, LogLevel::Warning ) && bValid;
-        for ( XmlNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
+        bValid                              = XMLNameCheck::reportUnknownChildren( root, Internal::kArrRootChild, sourceName, LogLevel::Warning ) && bValid;
+        for ( XMLNode node = root.findChild( "Pipeline" ); node; node = node.findNextSibling( "Pipeline" ) )
         {
             bValid                      = Internal::reportUnknownNames( node, Internal::kArrPipelineAttribute, sourceName ) && bValid;
             settings._batchEvents       = static_cast<uint32>( MathUtil::max( 1, node.getAttributeInt( "batchEvents", static_cast<int32>( settings._batchEvents ) ) ) );
@@ -147,10 +147,10 @@ namespace sw
             settings._sessionSampleRate = MathUtil::clamp( node.getAttributeFloat( "sessionSample", settings._sessionSampleRate ), 0.0f, 1.0f );
             settings._breadcrumbCount   = static_cast<uint32>( MathUtil::clamp( node.getAttributeInt( "breadcrumbs", static_cast<int32>( settings._breadcrumbCount ) ), 0, 256 ) );
         }
-        for ( XmlNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
+        for ( XMLNode node = root.findChild( "Event" ); node; node = node.findNextSibling( "Event" ) )
         {
             bValid = Internal::reportUnknownNames( node, Internal::kArrEventAttribute, sourceName ) && bValid;
-            bValid = XmlNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName, LogLevel::Warning ) && bValid;
+            bValid = XMLNameCheck::reportUnknownChildren( node, Internal::kArrEventChild, sourceName, LogLevel::Warning ) && bValid;
             TelemetryEventDef event;
             event._id                = hashed_string( node.getAttributeText( "id" ) );
             event._category          = hashed_string( node.getAttributeText( "category" ) );
@@ -167,7 +167,7 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            for ( XmlNode fieldNode = node.findChild( "Field" ); fieldNode; fieldNode = fieldNode.findNextSibling( "Field" ) )
+            for ( XMLNode fieldNode = node.findChild( "Field" ); fieldNode; fieldNode = fieldNode.findNextSibling( "Field" ) )
             {
                 bValid = Internal::reportUnknownNames( fieldNode, Internal::kArrFieldAttribute, sourceName ) && bValid;
                 TelemetryFieldDef field;

@@ -30,12 +30,12 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 단계 하나를 끝내는 입력 방식입니다. */
     ENUM()
@@ -128,9 +128,9 @@ namespace sw
      * @class InteractionCatalog
      * @brief `<Interactions>` 의 상호작용 · 스마트 오브젝트 정의입니다. `findShared` 는 경로마다 한 번 읽어 나눠 씁니다(컴포넌트들이 같은 표를 본다).
      */
-    class SW_GF_API InteractionCatalog : public XmlCatalog<InteractionCatalog>
+    class SW_GF_API InteractionCatalog : public XMLCatalog<InteractionCatalog>
     {
-        friend class XmlCatalog<InteractionCatalog>;
+        friend class XMLCatalog<InteractionCatalog>;
 
     public:
         /** @brief 컴포넌트가 따로 정하지 않으면 읽는 표입니다. */
@@ -154,11 +154,11 @@ namespace sw
         static uint32 getSharedReloadCount();
 
     private:
-        static constexpr const utf8* kXmlRootName = "Interactions"; ///< 루트 원소(`XmlCatalog`)
+        static constexpr const utf8* kXMLRootName = "Interactions"; ///< 루트 원소(`XMLCatalog`)
 
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
-        [[nodiscard]] bool readInteraction( const XmlNode& node, InteractionDef& outDef, string_view sourceName ) const;
-        [[nodiscard]] bool readSmartObject( const XmlNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const;
+        [[nodiscard]] bool readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
 
         GameCatalog<InteractionDef> _interactionCatalog{};
         GameCatalog<SmartObjectDef> _smartObjectCatalog{};

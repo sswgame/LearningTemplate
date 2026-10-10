@@ -153,8 +153,8 @@ reports keys that no longer match. The `on*` and spell-it-out rules are kept by 
 - **`on*` means "this happened"** — a notification handler, never the call that registers one. Registering
   is `register*` / `unregister*` (a registration call named `onLanguageChanged` that returns a handle
   reads as the notification it registers for).
-- **Spell the word out** unless one of this repo's own type names abbreviates it. `XmlNode` spells
-  `attribute()`, not `attr()`, because the type beside it is `XmlAttribute`; `TagQueryExpr::…Expr` and
+- **Spell the word out** unless one of this repo's own type names abbreviates it. `XMLNode` spells
+  `attribute()`, not `attr()`, because the type beside it is `XMLAttribute`; `TagQueryExpr::…Expr` and
   `ShaderEngineCbMember`'s `…Cb…` are fine because the type carries the same short form.
 - **A fallible verb returns a result you must not drop silently.** A `bool` whose name starts with a fallible verb
   (`load` · `save` · `read` · `write` · `parse` · `apply` · `remove` · `spawn` · `attach` … — the list lives in

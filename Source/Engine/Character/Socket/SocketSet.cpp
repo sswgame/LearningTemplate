@@ -7,7 +7,7 @@
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -47,11 +47,11 @@ namespace sw
 
 namespace sw
 {
-    bool SocketKindTable::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool SocketKindTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "SocketKinds", root ) )
             readRoot( root, reader );
         return reader.finish();
@@ -60,17 +60,17 @@ namespace sw
     bool SocketKindTable::loadFromResource( string_view path )
     {
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "SocketKinds", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
 
-    void SocketKindTable::readRoot( const XmlNode& root, CharacterDataReader& reader )
+    void SocketKindTable::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Kind", true ) == false )
             {
@@ -118,12 +118,12 @@ namespace sw
 
 namespace sw
 {
-    bool SocketSet::loadFromXmlText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
+    bool SocketSet::loadFromXMLText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
     {
         clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "SocketSet", root ) )
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
@@ -139,8 +139,8 @@ namespace sw
     {
         clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "SocketSet", root ) )
             readRoot( root, kinds, reader );
         if ( pBones != nullptr )
@@ -152,10 +152,10 @@ namespace sw
         return reader.finish();
     }
 
-    void SocketSet::readRoot( const XmlNode& root, const SocketKindTable& kinds, CharacterDataReader& reader )
+    void SocketSet::readRoot( const XMLNode& root, const SocketKindTable& kinds, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Socket", true ) )
                 readSocket( child, kinds, reader );
@@ -166,7 +166,7 @@ namespace sw
         }
     }
 
-    void SocketSet::readSocket( const XmlNode& node, const SocketKindTable& kinds, CharacterDataReader& reader )
+    void SocketSet::readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( node, SocketSetInternal::kArrSocketAttribute );
         SocketDef socket;
@@ -226,7 +226,7 @@ namespace sw
         _listSocket.push_back( std::move( socket ) );
     }
 
-    void SocketSet::readVirtualBone( const XmlNode& node, CharacterDataReader& reader )
+    void SocketSet::readVirtualBone( const XMLNode& node, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( node, SocketSetInternal::kArrVirtualBoneAttribute );
         VirtualBoneDef virtualBone;
@@ -244,13 +244,13 @@ namespace sw
         _listVirtualBone.push_back( virtualBone );
     }
 
-    string SocketSet::saveToXmlText() const
+    string SocketSet::saveToXMLText() const
     {
-        XmlDocument document;
-        XmlNode     root = document.appendRoot( "SocketSet" );
+        XMLDocument document;
+        XMLNode     root = document.appendRoot( "SocketSet" );
         for ( const VirtualBoneDef& virtualBone : _listVirtualBone )
         {
-            XmlNode node = root.appendChild( "VirtualBone" );
+            XMLNode node = root.appendChild( "VirtualBone" );
             node.appendAttribute( "name", virtualBone._name.view() );
             node.appendAttribute( "from", virtualBone._from.view() );
             node.appendAttribute( "to", virtualBone._to.view() );
@@ -258,7 +258,7 @@ namespace sw
         }
         for ( const SocketDef& socket : _listSocket )
         {
-            XmlNode node = root.appendChild( "Socket" );
+            XMLNode node = root.appendChild( "Socket" );
             node.appendAttribute( "name", socket._name.view() );
             const uint16 mask = socket._fieldMask;
             if ( ( mask & SocketFieldBit::kParent ) != 0 && socket._parent.empty() == false )

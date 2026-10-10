@@ -14,7 +14,7 @@
 #include "Engine/Resource/AssetLoadProfiler.h"
 #include "Engine/Resource/AssetManager.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -31,7 +31,7 @@ namespace sw
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
-            // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXml`).
+            // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             static constexpr uint32 kBinVersion = 3;
 
@@ -60,13 +60,13 @@ namespace sw
 {
     SW_LOG_CALLER( "SceneDocument" );
 
-    bool SceneDocument::loadXml( string_view path )
+    bool SceneDocument::loadXML( string_view path )
     {
         *this       = {};
         _sourcePath = path;
 
         AssetLoadScope loadScope( "Scene", path );
-        XmlDocument    doc;
+        XMLDocument    doc;
         string         absPath;
         if ( doc.loadPath( path, &absPath ) == false )
         {
@@ -76,20 +76,20 @@ namespace sw
         }
         loadScope.beginPhase( AssetLoadPhase::Decode );
 
-        XmlNode root = doc.getRoot( SceneDocumentInternal::kRoot );
+        XMLNode root = doc.getRoot( SceneDocumentInternal::kRoot );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing root <Scene>: %#", absPath );
             return false;
         }
 
-        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::Scene, doc, root, AssetFormatVersions::kScene ) == false )
         {
             SW_LOG_ERROR( "formatVersion upgrade failed: %#", absPath );
             return false;
         }
 
-        // 씬 · 엔티티의 값은 속성에만 있다(`saveXml` 이 쓰는 모양).
+        // 씬 · 엔티티의 값은 속성에만 있다(`saveXML` 이 쓰는 모양).
         const utf8* pSceneName = root.findAttribute( SceneDocumentInternal::kName );
 
         if ( pSceneName != nullptr )
@@ -97,11 +97,11 @@ namespace sw
         else
             _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
-        XmlNode entities = root.findChild( SceneDocumentInternal::kEntities );
+        XMLNode entities = root.findChild( SceneDocumentInternal::kEntities );
 
         if ( entities.isValid() )
         {
-            for ( XmlNode sceneObjectNode = entities.findChild( SceneDocumentInternal::kEntity ); sceneObjectNode.isValid();
+            for ( XMLNode sceneObjectNode = entities.findChild( SceneDocumentInternal::kEntity ); sceneObjectNode.isValid();
                   sceneObjectNode         = sceneObjectNode.findNextSibling( SceneDocumentInternal::kEntity ) )
             {
                 SceneObjectNode node{};
@@ -130,15 +130,15 @@ namespace sw
 
                 SceneDocumentInternal::resolvePrefabPathByGuid( node );
 
-                const XmlNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
+                const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
-                    node._prefabOverrideXml = overrideNode.toString();
+                    node._prefabOverrideXML = overrideNode.toString();
 
-                XmlNode stateNode = sceneObjectNode.findChild( SceneDocumentInternal::kGameObject );
-                // 서브트리는 XML 문서가 쓴다(`XmlNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
+                XMLNode stateNode = sceneObjectNode.findChild( SceneDocumentInternal::kGameObject );
+                // 서브트리는 XML 문서가 쓴다(`XMLNode::toString`) — 손으로 쓰면 속성 값의 줄바꿈이 그대로 적혀 다시 읽을 때 공백이 된다
                 // (XML 속성 값 정규화 — 여러 줄 대사 · 설명이 한 줄로).
                 if ( stateNode.isValid() )
-                    node._embeddedXml = stateNode.toString();
+                    node._embeddedXML = stateNode.toString();
 
                 if ( node._name.empty() )
                     node._name = SceneDocumentInternal::kDefaultEntity;
@@ -153,23 +153,23 @@ namespace sw
         return true;
     }
 
-    bool SceneDocument::saveXml( string_view path ) const
+    bool SceneDocument::saveXML( string_view path ) const
     {
-        XmlDocument xmlDoc;
-        XmlNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
+        XMLDocument xmlDoc;
+        XMLNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( AssetFormatVersions::kScene ) );
         root.appendAttribute( "name", _name );
-        XmlNode entities = root.appendChild( SceneDocumentInternal::kEntities );
+        XMLNode entities = root.appendChild( SceneDocumentInternal::kEntities );
 
         for ( const SceneObjectNode& entity : _listSceneObjectNode )
         {
-            // 읽는 쪽(`loadXml`)이 받지 않는 모양은 쓰지 않는다.
+            // 읽는 쪽(`loadXML`)이 받지 않는 모양은 쓰지 않는다.
             if ( entity._fileId == 0 )
             {
                 SW_LOG_ERROR( "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
-            XmlNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
+            XMLNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
             utf8         arrFileIdText[constant::kMaxBuffer32]{};
             const uint32 fileIdLength = StringUtil::formatNumber( arrFileIdText, constant::kMaxBuffer32, entity._fileId, 10 );
             sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileId, string_view( arrFileIdText, fileIdLength ) );
@@ -186,20 +186,20 @@ namespace sw
                 if ( engine::getAssetManager().getAssetDatabase().tryGetGuid( entity._prefab, prefabGuid ) && prefabGuid.isNull() == false )
                     sceneObjectNode.appendAttribute( "prefabGuid", prefabGuid.toString() );
             }
-            if ( entity._prefabOverrideXml.empty() == false )
+            if ( entity._prefabOverrideXML.empty() == false )
             {
-                XmlDocument overrideDoc;
-                if ( overrideDoc.parse( entity._prefabOverrideXml ) && overrideDoc.getRoot().isValid() )
+                XMLDocument overrideDoc;
+                if ( overrideDoc.parse( entity._prefabOverrideXML ) && overrideDoc.getRoot().isValid() )
                     sceneObjectNode.appendClone( overrideDoc.getRoot() );
                 else
                     SW_LOG_ERROR( "Entity '%#' has prefab overrides that are not XML - they are not written", entity._name );
             }
-            if ( entity._embeddedXml.empty() == false )
+            if ( entity._embeddedXML.empty() == false )
             {
-                XmlDocument goDoc;
-                if ( goDoc.parse( entity._embeddedXml ) )
+                XMLDocument goDoc;
+                if ( goDoc.parse( entity._embeddedXML ) )
                 {
-                    XmlNode goRoot = goDoc.getRoot();
+                    XMLNode goRoot = goDoc.getRoot();
                     if ( goRoot.isValid() )
                         sceneObjectNode.appendClone( goRoot );
                 }
@@ -293,7 +293,7 @@ namespace sw
         for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
         {
             SceneObjectNode node{};
-            arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXml >> node._embeddedStateBytes >> node._fileId >> node._prefabOverrideXml;
+            arch >> node._name >> node._prefab >> node._prefabGuid >> node._embeddedXML >> node._embeddedStateBytes >> node._fileId >> node._prefabOverrideXML;
             // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
             if ( arch.isError() )
                 break;
@@ -337,10 +337,10 @@ namespace sw
             arch << entity._name;
             arch << entity._prefab;
             arch << prefabGuid;
-            arch << entity._embeddedXml;
+            arch << entity._embeddedXML;
             arch << entity._embeddedStateBytes;
             arch << entity._fileId;
-            arch << entity._prefabOverrideXml;
+            arch << entity._prefabOverrideXML;
         }
 
         const string absPath = ResourceUtil::getWritePath( path );
@@ -374,7 +374,7 @@ namespace sw
         if ( binPath.empty() == false && ResourceUtil::hasResource( binPath ) && loadBinary( binPath ) )
             return true;
 
-        return loadXml( path );
+        return loadXML( path );
 #endif
     }
 

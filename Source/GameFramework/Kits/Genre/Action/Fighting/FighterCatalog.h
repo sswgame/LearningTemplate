@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 기술을 낼 수 있는 자세입니다. 순서가 비트 번호입니다(`FighterMove::_postureMask`). */
     enum class FighterPosture : uint8
@@ -102,14 +102,14 @@ namespace sw
         FighterCatalog();
 
         [[nodiscard]] bool loadFromResource( string_view path, const MoveCatalog& moveCatalog );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, const MoveCatalog& moveCatalog, string_view sourceName = {} );
         void               addFighter( const FighterDef& fighter );
 
         const FighterDef*         findFighter( const hashed_string& id ) const { return _catalog.find( id ); }
         const vector<FighterDef>& getFighters() const { return _catalog.getAll(); }
 
     private:
-        uint32 loadRoot( const XmlNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
+        uint32 loadRoot( const XMLNode& root, const MoveCatalog& moveCatalog, string_view sourceName );
 
         GameCatalog<FighterDef> _catalog;
     };

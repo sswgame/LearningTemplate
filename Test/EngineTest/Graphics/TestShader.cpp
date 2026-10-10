@@ -479,7 +479,7 @@ SW_TEST_CASE( ShaderCookerTest, DepthOnlyPassesHaveNoPixelStage )
             continue;
 
         sw::RenderPipelineAsset pipelineRes;
-        SW_EXPECT_TRUE_MSG( pipelineRes.loadFromXmlFile( absPath ), pPipeline );
+        SW_EXPECT_TRUE_MSG( pipelineRes.loadFromXMLFile( absPath ), pPipeline );
 
         uint32 depthOnlyCount{ 0 };
         uint32 colorPassCount{ 0 };

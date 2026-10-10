@@ -23,19 +23,19 @@ namespace
 {
     struct CharacterSocketTestInternal
     {
-        static constexpr const utf8* kKindsXml = "<SocketKinds><Kind name='Attach'/><Kind name='GroundPoint'/><Kind name='HitboxCenter'/><Kind name='LockOn'/></SocketKinds>";
+        static constexpr const utf8* kKindsXML = "<SocketKinds><Kind name='Attach'/><Kind name='GroundPoint'/><Kind name='HitboxCenter'/><Kind name='LockOn'/></SocketKinds>";
 
         static SocketKindTable makeKinds()
         {
             SocketKindTable kinds;
-            (void)kinds.loadFromXmlText( kKindsXml, "test.socketkinds.xml" ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
+            (void)kinds.loadFromXMLText( kKindsXML, "test.socketkinds.xml" ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
             return kinds;
         }
 
-        static SocketSet loadSockets( const utf8* pXmlText, const CharacterBoneArray* pBones = nullptr )
+        static SocketSet loadSockets( const utf8* pXMLText, const CharacterBoneArray* pBones = nullptr )
         {
             SocketSet sockets;
-            (void)sockets.loadFromXmlText( pXmlText, "test.sockets.xml", makeKinds(), pBones ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
+            (void)sockets.loadFromXMLText( pXMLText, "test.sockets.xml", makeKinds(), pBones ); // 시험 준비 — 결과는 각 시험이 상태로 확인한다
             return sockets;
         }
 
@@ -59,7 +59,7 @@ SW_TEST_CASE( SocketSetTest, LoadsSocketsAndComputesTransforms )
     using Internal                 = CharacterSocketTestInternal;
     const CharacterBoneArray bones = test::CharacterTestUtil::makeArmBones();
     SocketSet                sockets;
-    SW_ASSERT_TRUE( sockets.loadFromXmlText( "<SocketSet>"
+    SW_ASSERT_TRUE( sockets.loadFromXMLText( "<SocketSet>"
                                              "  <VirtualBone name='AimRef' from='upperarm' to='hand' weight='0.5'/>"
                                              "  <Socket name='Wrist' parent='hand' kind='Attach' translation='0 0.1 0' rotation='0 90 0' preview='engine/models/cube.mesh'/>"
                                              "  <Socket name='Aim' parent='AimRef' kind='LockOn'/>"
@@ -94,16 +94,16 @@ SW_TEST_CASE( SocketSetTest, UnknownNamesAreLoadErrors )
     test::ScopedLogCollector logs;
     SW_TEST_DEFENSIVE_SCOPE( "unknown socket kinds, bones and attributes are load errors" );
     SocketSet sockets;
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A' kind='Holster'/></SocketSet>", "a.sockets.xml", kinds ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' kind='Holster'/></SocketSet>", "a.sockets.xml", kinds ) );
     SW_EXPECT_TRUE( logs.countContaining( "unknown kind 'Holster'" ) > 0 );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A' parent='tail'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' parent='tail'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
     SW_EXPECT_TRUE( logs.countContaining( "unknown parent bone 'tail'" ) > 0 );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A' offset='0 0 1'/></SocketSet>", "a.sockets.xml", kinds ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' offset='0 0 1'/></SocketSet>", "a.sockets.xml", kinds ) );
     SW_EXPECT_TRUE( logs.countContaining( "unknown attribute 'offset'" ) > 0 );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A'/><Socket name='A'/></SocketSet>", "a.sockets.xml", kinds ) );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><VirtualBone name='V' from='hand' to='toe'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A' anchor='Skin'/></SocketSet>", "a.sockets.xml", kinds ) );
-    SW_EXPECT_FALSE( sockets.loadFromXmlText( "<SocketSet><Socket name='A' translation='0 1'/></SocketSet>", "a.sockets.xml", kinds ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A'/><Socket name='A'/></SocketSet>", "a.sockets.xml", kinds ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><VirtualBone name='V' from='hand' to='toe'/></SocketSet>", "a.sockets.xml", kinds, &bones ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' anchor='Skin'/></SocketSet>", "a.sockets.xml", kinds ) );
+    SW_EXPECT_FALSE( sockets.loadFromXMLText( "<SocketSet><Socket name='A' translation='0 1'/></SocketSet>", "a.sockets.xml", kinds ) );
 }
 
 /**
@@ -127,7 +127,7 @@ SW_TEST_CASE( SocketSetTest, LayersOverrideOnlyWrittenFieldsByName )
 
     // 쓰고 다시 읽어도 같은 것 — 적은 칸만 쓴다.
     SocketSet reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromXmlText( layered.saveToXmlText(), "saved.sockets.xml", Internal::makeKinds() ) );
+    SW_ASSERT_TRUE( reloaded.loadFromXMLText( layered.saveToXMLText(), "saved.sockets.xml", Internal::makeKinds() ) );
     const SocketDef* pReloaded = reloaded.findSocket( hashed_string( "Back" ) );
     SW_ASSERT_NOT_NULL( pReloaded );
     SW_EXPECT_TRUE( pReloaded->_parent == hashed_string( "upperarm" ) );
@@ -290,7 +290,7 @@ SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
     (void)bones.addBone( hashed_string( "arm_r" ), root, float4x4::createTranslation( 0.2f, 0.0f, 0.0f ) );
 
     ReferencePoseOverride pose;
-    SW_ASSERT_TRUE( pose.loadFromXmlText( "<ReferencePose mirrorAxis='X'>"
+    SW_ASSERT_TRUE( pose.loadFromXMLText( "<ReferencePose mirrorAxis='X'>"
                                           "  <Bone name='arm_l' translation='-0.25 0 0' rotation='0 0 -40'/>"
                                           "  <Bone name='root' scale='1.1 1.1 1.1'/>"
                                           "  <Mirror left='arm_l' right='arm_r'/>"
@@ -309,14 +309,14 @@ SW_TEST_CASE( ReferencePoseOverrideTest, OverridesWrittenFieldsAndMirrorsPairs )
     SW_EXPECT_NEAR_EQUAL( 0.25f * 1.1f, applied._listModel[2].getTranslation()._x, 1.0e-5f ); // 뿌리 스케일이 자식 자리를 옮긴다
 
     ReferencePoseOverride reloaded;
-    SW_ASSERT_TRUE( reloaded.loadFromXmlText( pose.saveToXmlText(), "saved.refpose.xml", &bones ) );
+    SW_ASSERT_TRUE( reloaded.loadFromXMLText( pose.saveToXMLText(), "saved.refpose.xml", &bones ) );
     SW_EXPECT_TRUE( reloaded.findMirrorBone( hashed_string( "arm_r" ) ) == hashed_string( "arm_l" ) );
     SW_EXPECT_NOT_NULL( reloaded.findOverride( hashed_string( "arm_r" ) ) );
 
     test::ScopedLogCollector logs;
     SW_TEST_DEFENSIVE_SCOPE( "unknown bones in a reference pose override are load errors" );
     ReferencePoseOverride broken;
-    SW_EXPECT_FALSE( broken.loadFromXmlText( "<ReferencePose><Bone name='tail' scale='2 2 2'/></ReferencePose>", "broken.refpose.xml", &bones ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<ReferencePose><Bone name='tail' scale='2 2 2'/></ReferencePose>", "broken.refpose.xml", &bones ) );
     SW_EXPECT_TRUE( logs.countContaining( "unknown bone 'tail'" ) > 0 );
 }
 
@@ -357,7 +357,7 @@ SW_TEST_CASE( SocketImportTest, CreatesDraftAndNeverOverwritesHumanFile )
 SW_TEST_CASE( BodyShapeTest, AxesResolveToMorphWeightsAndBoneProportion )
 {
     BodyShapeSet shapes;
-    SW_ASSERT_TRUE( shapes.loadFromXmlText( "<BodyShapeSet>"
+    SW_ASSERT_TRUE( shapes.loadFromXMLText( "<BodyShapeSet>"
                                             "  <Axis name='Weight' min='-1' max='1'>"
                                             "    <Positive morph='Heavy'><Bone name='upperarm' scale='1.2 1 1.2'/></Positive>"
                                             "    <Negative morph='Thin'/>"

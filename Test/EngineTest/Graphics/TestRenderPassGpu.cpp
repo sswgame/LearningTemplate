@@ -3820,7 +3820,7 @@ SW_TEST_CASE( RenderPassGpuTest, InstanceConstantBufferIsRecreatedWhenLayoutGrow
 SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
 {
     // roughness 를 먼저 — XML 순서로 쌓으면 roughness 가 0, color 가 16 에 간다. 셰이더는 color 가 0, roughness 가 16.
-    const sw::string reorderedXml =
+    const sw::string reorderedXML =
         "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
         "<MaterialDesc formatVersion=\"0\" name=\"DefaultMaterial\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\">"
         "  <_properties>"
@@ -3847,7 +3847,7 @@ SW_TEST_CASE( RenderPassGpuTest, ReloadedMaterialIsLaidOutByTheShaderAgain )
             SW_ASSERT_TRUE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 핫 리로드 — 같은 머티리얼을 프로퍼티 순서만 바꿔 다시 읽는다.
-            SW_ASSERT_TRUE( parent->loadFromXml( reorderedXml ) );
+            SW_ASSERT_TRUE( parent->loadFromXML( reorderedXML ) );
             SW_EXPECT_FALSE( parent->isShaderLayoutSynced( device.getBackend() ) );
 
             // 인스턴스가 먼저 올라가도(GpuScene 의 순서) 셰이더 레이아웃의 바이트를 집는다.
@@ -4463,7 +4463,7 @@ SW_TEST_CASE( RenderPassGpuTest, MissingTextureSamplesTheChecker )
         const bool                   bHeldBefore = textures.find( missingTexture ) != nullptr;
         sw::shared_ptr<sw::Material> material    = sw::Material::create();
         SW_ASSERT_TRUE( material->initialize( device.get(), "engine/materials/benchtextured.material" ) );
-        SW_ASSERT_TRUE( material->loadFromXml( xml ) ); // albedoMap 만 없는 파일을 가리킨다
+        SW_ASSERT_TRUE( material->loadFromXML( xml ) ); // albedoMap 만 없는 파일을 가리킨다
         material->releaseTextureAssets( device.get() );
         {
             SW_TEST_DEFENSIVE_SCOPE( "the material names a texture that does not exist" );

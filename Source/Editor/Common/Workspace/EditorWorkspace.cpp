@@ -16,7 +16,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw::editor
 {
@@ -34,7 +34,7 @@ namespace sw::editor
         , _pendingScenePath{}
         , _pendingSceneActionPath{}
         , _emptyString{}
-        , _copiedComponentXml{}
+        , _copiedComponentXML{}
         , _copiedComponentTypeName{}
         , _pendingSceneMutex{}
         , _arrCameraBookmark{}
@@ -250,22 +250,22 @@ namespace sw::editor
         _copiedComponentTypeName = pComp->getTypeName().c_str();
         _copiedComponentBytes.clear();
         BinarySerializer::serialize( pComp, *pComp->getTypeInfo(), _copiedComponentBytes );
-        _copiedComponentXml = XmlSerializer::serialize( pComp, *pComp->getTypeInfo() );
+        _copiedComponentXML = XMLSerializer::serialize( pComp, *pComp->getTypeInfo() );
     }
 
     bool EditorWorkspace::hasCopiedComponent() const
     {
-        return _copiedComponentBytes.empty() == false || _copiedComponentXml.empty() == false;
+        return _copiedComponentBytes.empty() == false || _copiedComponentXML.empty() == false;
     }
 
     bool EditorWorkspace::pasteComponentValues( Component* pTargetComp )
     {
-        return EditorTransformCommands::pasteComponentValues( pTargetComp, _copiedComponentBytes, _copiedComponentXml );
+        return EditorTransformCommands::pasteComponentValues( pTargetComp, _copiedComponentBytes, _copiedComponentXML );
     }
 
     Component* EditorWorkspace::pasteComponentAsNew( GameObject* pTargetObj )
     {
-        return EditorTransformCommands::pasteComponentAsNew( pTargetObj, _copiedComponentTypeName, _copiedComponentBytes, _copiedComponentXml );
+        return EditorTransformCommands::pasteComponentAsNew( pTargetObj, _copiedComponentTypeName, _copiedComponentBytes, _copiedComponentXML );
     }
 
     bool EditorWorkspace::saveComponentPreset( const Component* pComp, string_view presetName )

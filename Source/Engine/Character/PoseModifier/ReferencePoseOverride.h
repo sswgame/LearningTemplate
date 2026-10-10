@@ -27,7 +27,7 @@ namespace sw
     struct CharacterBoneArray;
 
     class CharacterDataReader;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 본 하나의 덮어쓰기입니다. `_fieldMask` 는 적은 칸(1 위치 · 2 회전 · 4 스케일)입니다. */
     struct SW_API BoneOverride
@@ -61,11 +61,11 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다. @p pBones 가 있으면 본 이름을 대조합니다(없는 본은 오류). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName, const CharacterBoneArray* pBones = nullptr );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const CharacterBoneArray* pBones = nullptr );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const CharacterBoneArray* pBones = nullptr );
         /** @brief XML 텍스트로 씁니다. */
-        string saveToXmlText() const;
+        string saveToXMLText() const;
 
         /** @brief 본 덮어쓰기를 더합니다(같은 본이면 적은 칸을 합칩니다). */
         void setOverride( const BoneOverride& boneOverride );
@@ -93,7 +93,7 @@ namespace sw
         void setMirrorAxis( uint8 axis ) { _mirrorAxis = axis < 3 ? axis : 0; }
 
     private:
-        void readRoot( const XmlNode& root, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
 
     private:
         vector<BoneOverride>   _listOverride;

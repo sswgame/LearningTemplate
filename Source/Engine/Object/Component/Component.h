@@ -404,7 +404,7 @@ namespace sw
          * @brief 반사 값을 직렬화기로 **직접** 쓴 뒤 부릅니다 — 프로퍼티마다 `onPropertyChanged` 를, 그다음 `onPostLoad` 를 부릅니다(언리얼
          *        `PostEditChangeProperty` · 유니티 `OnValidate` 의 자리).
          * @details 에디터의 컴포넌트 값 붙여넣기 · 새로 붙여넣기 · 프리셋 · 오버라이드 되돌리기 · 기본값 되돌리기는 값을 `BinarySerializer` ·
-         *          `XmlSerializer` · `JsonSerializer` 로 바로 쓰는데, 그 길은 알림을 부르지 않는다 — 이것을 빼면 트랜스폼이 더티가 되지 않고(값은
+         *          `XMLSerializer` · `JsonSerializer` 로 바로 쓰는데, 그 길은 알림을 부르지 않는다 — 이것을 빼면 트랜스폼이 더티가 되지 않고(값은
          *          바뀌었는데 화면에서 움직이지 않는다) 렌더 에셋(메시 · 머티리얼 · 텍스처)을 다시 풀지 않는다. 상태를 통째로 읽는 길
          *          (`ObjectStateSerializer`)은 컴포넌트를 새로 만들고 `onPostLoad` 를 부르므로 이것이 필요 없다.
          */

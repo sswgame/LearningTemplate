@@ -32,7 +32,7 @@ namespace sw
     class CharacterDataReader;
     class GameObject;
     class IAnimNotifyHandler;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 처리기 인자의 종류입니다. 읽을 때 이 종류로 검사합니다(숫자 칸에 글이면 오류). */
     enum class AnimNotifyParamKind : uint8
@@ -100,7 +100,7 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다(지금 내용을 비우고). 처리기는 @p registry 에서 이름으로 찾습니다. 오류가 있으면 모두 로그로 내고 false 입니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName, const AnimNotifyHandlerRegistry& registry );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const AnimNotifyHandlerRegistry& registry );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const AnimNotifyHandlerRegistry& registry );
 
@@ -110,8 +110,8 @@ namespace sw
         const vector<AnimNotifyEntry>& getEntries() const { return _listEntry; }
 
     private:
-        void readRoot( const XmlNode& root, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader );
-        void readEntry( const XmlNode& node, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader );
+        void readEntry( const XMLNode& node, const AnimNotifyHandlerRegistry& registry, CharacterDataReader& reader );
 
         vector<AnimNotifyEntry> _listEntry;
     };

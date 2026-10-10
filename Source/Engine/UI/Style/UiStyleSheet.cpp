@@ -9,7 +9,7 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializeContext.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Animation/UiStyleTransition.h"
 #include "Engine/UI/Base/PanelWidget.h"
 #include "Engine/UI/Base/Widget.h"
@@ -160,9 +160,9 @@ namespace sw
                 return error;
             }
 
-            static bool fail( const ParseContext& context, const XmlNode& node, string_view message )
+            static bool fail( const ParseContext& context, const XMLNode& node, string_view message )
             {
-                *context._pError = makeError( context._path, XmlDocument::computeLineNumber( context._text, node.getSourceOffset() ), message );
+                *context._pError = makeError( context._path, XMLDocument::computeLineNumber( context._text, node.getSourceOffset() ), message );
                 return false;
             }
 
@@ -199,7 +199,7 @@ namespace sw
             }
 
             /** @brief 칸 하나를 만들고 값이 그 타입으로 읽히는지 본다(빈 스타일에 써 본다). */
-            [[nodiscard]] static bool addAssignment( const ParseContext& context, const XmlNode& node, UiStyleRule& inoutRule, UiStyleField field,
+            [[nodiscard]] static bool addAssignment( const ParseContext& context, const XMLNode& node, UiStyleRule& inoutRule, UiStyleField field,
                                                      const PropertyInfo& property, const PropertyInfo* pNested, const utf8* pName, const utf8* pValue )
             {
                 UiStyleAssignment assignment{};
@@ -225,10 +225,10 @@ namespace sw
             }
 
             /** @brief 규칙 원소 하나를 읽습니다. */
-            [[nodiscard]] static bool parseRule( ParseContext& context, const XmlNode& element )
+            [[nodiscard]] static bool parseRule( ParseContext& context, const XMLNode& element )
             {
                 UiStyleRule rule{};
-                rule._sourceLine      = XmlDocument::computeLineNumber( context._text, element.getSourceOffset() );
+                rule._sourceLine      = XMLDocument::computeLineNumber( context._text, element.getSourceOffset() );
                 const utf8* pSelector = element.findAttribute( kSelectorKey );
                 if ( StringUtil::isNullOrEmpty( pSelector ) )
                     return fail( context, element, "Rule needs _selector" );
@@ -237,7 +237,7 @@ namespace sw
                     return fail( context, element, selectorError );
 
                 const TypeInfo& styleType = *WidgetStyle::StaticType();
-                for ( XmlAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                for ( XMLAttribute attribute = element.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const utf8* pName = attribute.getName();
                     if ( StringUtil::equals( pName, kSelectorKey, true ) )
@@ -249,7 +249,7 @@ namespace sw
                     if ( addAssignment( context, element, rule, field, *pProperty, nullptr, pName, attribute.getValue() ) == false )
                         return false;
                 }
-                for ( XmlNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = element.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     const utf8*         pName = child.getName();
                     UiStyleField        field{};
@@ -257,7 +257,7 @@ namespace sw
                     const TypeInfo*     pNested   = pProperty != nullptr ? SerializerUtil::findNestedObjectType( pProperty->_typeName, SerializeContext::getDefault() ) : nullptr;
                     if ( pNested == nullptr || UiStyleFieldTable::tryFindField( pName, field ) == false )
                         return fail( context, child, string( "Rule has unknown style element <" ) + pName + ">" );
-                    for ( XmlAttribute attribute = child.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                    for ( XMLAttribute attribute = child.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                     {
                         const PropertyInfo* pInner = findProperty( *pNested, attribute.getName() );
                         if ( pInner == nullptr )
@@ -352,21 +352,21 @@ namespace sw
         using Internal = UiStyleSheetInternal;
         UiStyleSheetAsset sheet{};
         sheet._path = FileUtil::normalizePath( path );
-        XmlDocument document;
+        XMLDocument document;
         if ( document.parse( text, path ) == false )
         {
             outError = document.getLastError();
             return false;
         }
         Internal::ParseContext context{ text, path, {}, &sheet, &outError };
-        const XmlNode          root = document.getRoot();
+        const XMLNode          root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UiStyleSheetAsset::kRootElementName, true ) == false )
         {
             outError = Internal::makeError( path, 1, "the root element must be <UiStyleSheet>" );
             return false;
         }
         bool bVersioned{ false };
-        for ( XmlAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
         {
             if ( StringUtil::equals( attribute.getName(), sw::kSchemaVersionKey, true ) == false )
                 return Internal::fail( context, root, string( "UiStyleSheet has unknown attribute '" ) + attribute.getName() + "'" );
@@ -379,7 +379,7 @@ namespace sw
             return Internal::fail( context, root, "UiStyleSheet needs _schemaVersion" );
 
         // 변수는 시트 안 어디에 적든 쓴다 — 먼저 모은다.
-        for ( XmlNode child = root.findChild( Internal::kVariableElement ); child.isValid(); child = child.findNextSibling( Internal::kVariableElement ) )
+        for ( XMLNode child = root.findChild( Internal::kVariableElement ); child.isValid(); child = child.findNextSibling( Internal::kVariableElement ) )
         {
             const utf8* pName  = child.findAttribute( Internal::kNameAttribute );
             const utf8* pValue = child.findAttribute( Internal::kValueAttribute );
@@ -387,7 +387,7 @@ namespace sw
                 return Internal::fail( context, child, "Variable needs _name and _value" );
             context._listVariable.push_back( Internal::Variable{ string( pName ), string( pValue ) } );
         }
-        for ( XmlNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, Internal::kVariableElement, true ) )

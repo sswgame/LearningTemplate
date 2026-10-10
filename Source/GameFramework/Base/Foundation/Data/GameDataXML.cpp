@@ -1,18 +1,18 @@
 #include "pch.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "GameDataXml" );
+    SW_LOG_CALLER( "GameDataXML" );
 
     namespace
     {
-        struct GameDataXmlInternal
+        struct GameDataXMLInternal
         {
             static constexpr const utf8* kNumberSeparators = ", \t;";
         };
@@ -21,7 +21,7 @@ namespace sw
 
 namespace sw
 {
-    bool GameDataXml::loadRoot( XmlDocument& doc, string_view path, const utf8* pRootName, XmlNode& outRoot, string& outSourceName )
+    bool GameDataXML::loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName )
     {
         outSourceName = string( path );
         if ( doc.loadPath( path, &outSourceName ) == false )
@@ -38,7 +38,7 @@ namespace sw
         return true;
     }
 
-    bool GameDataXml::parseRoot( XmlDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XmlNode& outRoot )
+    bool GameDataXML::parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot )
     {
         if ( doc.parse( xmlText, sourceName ) == false )
         {
@@ -54,7 +54,7 @@ namespace sw
         return true;
     }
 
-    const utf8* GameDataXml::findRequiredId( const XmlNode& node, string_view sourceName )
+    const utf8* GameDataXML::findRequiredId( const XMLNode& node, string_view sourceName )
     {
         const utf8* pId = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pId ) )
@@ -65,13 +65,13 @@ namespace sw
         return pId;
     }
 
-    uint32 GameDataXml::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )
+    uint32 GameDataXML::parseFloats( string_view text, float32* pOutValue, uint32 maxCount )
     {
         if ( pOutValue == nullptr )
             return 0;
         uint32 tokenIndex = 0;
         uint32 readCount  = 0;
-        forEachToken( text, GameDataXmlInternal::kNumberSeparators, [&]( string_view token )
+        forEachToken( text, GameDataXMLInternal::kNumberSeparators, [&]( string_view token )
         {
             if ( tokenIndex >= maxCount )
                 return;
@@ -86,14 +86,14 @@ namespace sw
         return readCount;
     }
 
-    float4 GameDataXml::parseFloat4( string_view text, const float4& fallback )
+    float4 GameDataXML::parseFloat4( string_view text, const float4& fallback )
     {
         float32 arrValue[4] = { fallback._x, fallback._y, fallback._z, fallback._w };
         (void)parseFloats( text, arrValue, 4 ); // 빠진 성분은 기본값 그대로
         return float4{ arrValue[0], arrValue[1], arrValue[2], arrValue[3] };
     }
 
-    float3 GameDataXml::parseFloat3( string_view text, const float3& fallback )
+    float3 GameDataXML::parseFloat3( string_view text, const float3& fallback )
     {
         float32 arrValue[3] = { fallback._x, fallback._y, fallback._z };
         (void)parseFloats( text, arrValue, 3 ); // 못 읽은 칸은 대체값이 남는다

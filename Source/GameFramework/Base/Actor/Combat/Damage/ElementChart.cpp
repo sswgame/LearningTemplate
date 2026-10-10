@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 
 namespace sw
@@ -87,12 +87,12 @@ namespace sw
         return hashed_string{};
     }
 
-    uint32 ElementChart::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ElementChart::loadRoot( const XMLNode& root, string_view sourceName )
     {
         clear();
-        for ( XmlNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
+        for ( XMLNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId != nullptr )
                 addElement( hashed_string( pId ) );
         }
@@ -102,7 +102,7 @@ namespace sw
             return 0;
         }
 
-        for ( XmlNode node = root.findChild( "Rule" ); node; node = node.findNextSibling( "Rule" ) )
+        for ( XMLNode node = root.findChild( "Rule" ); node; node = node.findNextSibling( "Rule" ) )
         {
             const hashed_string attack( node.getAttributeText( "attack" ) );
             const hashed_string defend( node.getAttributeText( "defend" ) );
@@ -114,7 +114,7 @@ namespace sw
             setMultiplier( attack, defend, node.getAttributeFloat( "multiplier", 1.0f ) );
         }
 
-        for ( XmlNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
+        for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
         {
             ElementStatusChance entry;
             entry._element = hashed_string( node.getAttributeText( "element" ) );

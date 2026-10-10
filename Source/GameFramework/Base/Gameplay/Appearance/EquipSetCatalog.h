@@ -15,7 +15,7 @@
 namespace sw
 {
     class AppearanceLoadReport;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 세트 조각 — 칸 하나와 그 칸에서 조각으로 치는 아이템들(첫 것이 세트를 입힐 때 고르는 것)입니다. */
     struct EquipSetPieceDef
@@ -59,7 +59,7 @@ namespace sw
     class SW_GF_API EquipSetCatalog : public IEquipSetLookup
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listSet.clear(); }
 
         const EquipSetDef*         findSet( const hashed_string& id ) const;

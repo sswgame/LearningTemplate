@@ -7,7 +7,7 @@
 #include "Core/Container/vector.h"
 
 #include "Engine/Graphics/Material/Material.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -44,21 +44,21 @@ namespace sw
         [[nodiscard]] static bool parseBoolToken( string_view token, string_view name, bool fallback );
         static bool               packPropertyIntoBuffer( MaterialProperty& prop, vector<uint8>& buffer );
 
-        static string fieldText( XmlNode node, const utf8* pName );
+        static string fieldText( XMLNode node, const utf8* pName );
         /** @brief `fieldText` 를 `parseBoolToken` 으로 읽습니다. 필드가 없거나 비었으면 `defaultValue` 입니다. */
-        [[nodiscard]] static bool parseBoolField( XmlNode node, const utf8* pName, bool defaultValue );
-        static MaterialProperty   parsePropertyNode( XmlNode item );
+        [[nodiscard]] static bool parseBoolField( XMLNode node, const utf8* pName, bool defaultValue );
+        static MaterialProperty   parsePropertyNode( XMLNode item );
 
-        static void appendAttribute( XmlNode parent, const utf8* pName, string_view value );
-        static void appendBoolAttr( XmlNode parent, const utf8* pName, bool value );
+        static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
+        static void appendBoolAttr( XMLNode parent, const utf8* pName, bool value );
 
         static RHIBlendMode         parseBlendMode( string_view modeName );
         static const utf8*          blendModeToString( RHIBlendMode mode );
         static MaterialQualityLevel parseQuality( string_view qualityName );
         static const utf8*          qualityToString( MaterialQualityLevel quality );
 
-        static void parsePermutationNode( XmlNode root, MaterialPermutationDesc& out );
-        static void appendPermutationNode( XmlNode root, const MaterialPermutationDesc& permutationDesc );
+        static void parsePermutationNode( XMLNode root, MaterialPermutationDesc& out );
+        static void appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
 
         static void   appendUniqueDefine( vector<string>& outListDefine, string_view define );
         static void   appendUsageDefines( MaterialUsageFlags usage, vector<string>& outListDefine );

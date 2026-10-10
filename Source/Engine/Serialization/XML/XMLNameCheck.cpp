@@ -1,19 +1,19 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
-    SW_LOG_CALLER( "XmlNameCheck" );
+    SW_LOG_CALLER( "XMLNameCheck" );
 
     namespace
     {
-        struct XmlNameCheckInternal
+        struct XMLNameCheckInternal
         {
             /** @brief 모르는 이름 한 줄을 남깁니다(@p pWhat 은 `attribute 'x'` · `element <x>` 꼴로 이미 지은 글). Error 가 아니면 Warning 이다. */
             static void logUnknown( LogLevel level, string_view sourceName, const utf8* pOwnerName, const string& what )
@@ -29,7 +29,7 @@ namespace sw
 
 namespace sw
 {
-    bool XmlNameCheck::isKnownName( const utf8* pName, const utf8* const* ppKnown, uint32 knownCount )
+    bool XMLNameCheck::isKnownName( const utf8* pName, const utf8* const* ppKnown, uint32 knownCount )
     {
         for ( uint32 index = 0; index < knownCount; ++index )
         {
@@ -39,11 +39,11 @@ namespace sw
         return false;
     }
 
-    uint32 XmlNameCheck::collectUnknownAttributes( const XmlNode& node, const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName,
+    uint32 XMLNameCheck::collectUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName,
                                                    AcceptNameFunction pfnAlsoKnown )
     {
         uint32 unknownCount{ 0 };
-        for ( XmlAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+        for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const utf8* pName  = attribute.getName();
             const bool  bKnown = isKnownName( pName, ppKnown, knownCount ) || ( pfnAlsoKnown != nullptr && pfnAlsoKnown( pName ) );
@@ -55,10 +55,10 @@ namespace sw
         return unknownCount;
     }
 
-    uint32 XmlNameCheck::collectUnknownChildren( const XmlNode& node, const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName )
+    uint32 XMLNameCheck::collectUnknownChildren( const XMLNode& node, const utf8* const* ppKnown, uint32 knownCount, vector<const utf8*>& outListName )
     {
         uint32 unknownCount{ 0 };
-        for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
         {
             if ( isKnownName( child.getName(), ppKnown, knownCount ) )
                 continue;
@@ -68,7 +68,7 @@ namespace sw
         return unknownCount;
     }
 
-    bool XmlNameCheck::reportUnknownAttributes( const XmlNode& node, const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level,
+    bool XMLNameCheck::reportUnknownAttributes( const XMLNode& node, const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level,
                                                 AcceptNameFunction pfnAlsoKnown )
     {
         vector<const utf8*> listName;
@@ -76,19 +76,19 @@ namespace sw
             return true;
         for ( const utf8* pName : listName )
         {
-            XmlNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
+            XMLNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "attribute '" ) + pName + "'" );
         }
         return false;
     }
 
-    bool XmlNameCheck::reportUnknownChildren( const XmlNode& node, const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level )
+    bool XMLNameCheck::reportUnknownChildren( const XMLNode& node, const utf8* const* ppKnown, uint32 knownCount, string_view sourceName, LogLevel level )
     {
         vector<const utf8*> listName;
         if ( collectUnknownChildren( node, ppKnown, knownCount, listName ) == 0 )
             return true;
         for ( const utf8* pName : listName )
         {
-            XmlNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
+            XMLNameCheckInternal::logUnknown( level, sourceName, node.getName(), string( "element <" ) + pName + ">" );
         }
         return false;
     }

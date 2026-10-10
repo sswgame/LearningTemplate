@@ -2,7 +2,7 @@
 
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
@@ -65,7 +65,7 @@ namespace sw
     {
         _pCatalog = pCatalog;
         _listSlot.clear();
-        GameDataXml::forEachToken( slotLayout, ", ", [&]( string_view token )
+        GameDataXML::forEachToken( slotLayout, ", ", [&]( string_view token )
         {
             EquipSlot         slot;
             const size_t      colon = token.find( ':' );

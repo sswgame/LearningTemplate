@@ -35,7 +35,7 @@ namespace sw
         if ( settingsPath.empty() == false && ResourceUtil::readTextResource( settingsPath, text ) )
         {
             PhysicsSettings settings;
-            if ( settings.loadFromXmlText( text ) == false )
+            if ( settings.loadFromXMLText( text ) == false )
             {
                 SW_LOG_ERROR( "Physics settings are invalid: %#", settingsPath );
                 return false;

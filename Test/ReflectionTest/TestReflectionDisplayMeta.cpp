@@ -6,7 +6,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "ReflectionTest/TestSampleActor.h"
 
@@ -79,10 +79,10 @@ SW_TEST_CASE( ReflectionDisplayMetaTest, FixedCArrayRoundTripsInEveryFormat )
     };
 
     const sw::TypeInfo&  type = getDisplayType();
-    const sw::string     xml  = sw::XmlSerializer::serialize( &source, type );
-    sw::DisplayMetaActor fromXml;
-    SW_EXPECT_TRUE_MSG( sw::XmlSerializer::deserialize( &fromXml, type, xml ), xml.c_str() );
-    SW_EXPECT_TRUE_MSG( isSame( fromXml ), xml.c_str() );
+    const sw::string     xml  = sw::XMLSerializer::serialize( &source, type );
+    sw::DisplayMetaActor fromXML;
+    SW_EXPECT_TRUE_MSG( sw::XMLSerializer::deserialize( &fromXML, type, xml ), xml.c_str() );
+    SW_EXPECT_TRUE_MSG( isSame( fromXML ), xml.c_str() );
 
     const sw::string     json = sw::JsonSerializer::serialize( &source, type );
     sw::DisplayMetaActor fromJson;

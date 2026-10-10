@@ -7,7 +7,7 @@
 
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
@@ -259,14 +259,14 @@ namespace sw::editor
             }
 
             /** @brief `_properties` 에서 이름의 항목입니다. */
-            static XmlNode findProperty( const XmlNode& properties, string_view name )
+            static XMLNode findProperty( const XMLNode& properties, string_view name )
             {
-                for ( XmlNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                for ( XMLNode item = properties.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     if ( item.getAttributeText( "name" ) == name )
                         return item;
                 }
-                return XmlNode{};
+                return XMLNode{};
             }
         };
     } // namespace
@@ -573,17 +573,17 @@ namespace sw::editor
         return true;
     }
 
-    string VrmMaterialImporter::makeMaterialXml( const ToonMaterialDesc& desc, const vector<string>& listTexturePath )
+    string VrmMaterialImporter::makeMaterialXML( const ToonMaterialDesc& desc, const vector<string>& listTexturePath )
     {
         using Internal = VrmMaterialImporterInternal;
         string templateText;
         if ( ResourceUtil::readTextResource( Internal::kToonMaterialTemplate, templateText ) == false )
             return {};
-        XmlDocument document;
+        XMLDocument document;
         if ( document.parse( templateText ) == false )
             return {};
-        const XmlNode root       = document.getRoot( "MaterialDesc" );
-        const XmlNode properties = root.findChild( "_properties" );
+        const XMLNode root       = document.getRoot( "MaterialDesc" );
+        const XMLNode properties = root.findChild( "_properties" );
         if ( root.isValid() == false || properties.isValid() == false )
             return {};
 
@@ -592,13 +592,13 @@ namespace sw::editor
 
         auto setValue = [&]( string_view name, const string& value )
         {
-            const XmlNode item = Internal::findProperty( properties, name );
+            const XMLNode item = Internal::findProperty( properties, name );
             if ( item.isValid() )
                 item.setAttribute( "defaultValue", string_view( value ) );
         };
         auto setTexture = [&]( string_view name, int32 textureIndex )
         {
-            const XmlNode item     = Internal::findProperty( properties, name );
+            const XMLNode item     = Internal::findProperty( properties, name );
             const bool    bInRange = 0 <= textureIndex && static_cast<size_t>( textureIndex ) < listTexturePath.size();
             if ( item.isValid() && bInRange && listTexturePath[static_cast<size_t>( textureIndex )].empty() == false )
                 item.setAttribute( "assetPath", string_view( listTexturePath[static_cast<size_t>( textureIndex )] ) );
@@ -626,9 +626,9 @@ namespace sw::editor
         setTexture( "emissiveMap", desc._emissiveTexture );
         setTexture( "matcapMap", desc._matcapTexture );
 
-        const XmlNode permutations = root.findChild( "_permutations" );
-        const XmlNode switches     = permutations.findChild( "_staticSwitches" );
-        for ( XmlNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+        const XMLNode permutations = root.findChild( "_permutations" );
+        const XMLNode switches     = permutations.findChild( "_staticSwitches" );
+        for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
         {
             const string_view name     = item.getAttributeText( "name" );
             bool              bEnabled = false;

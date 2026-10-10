@@ -3,14 +3,14 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Actor/Input/FirstPersonLook.h"
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Foundation/Utility/Grid/GridTopology.h"
 #include "GameFramework/Base/Foundation/Utility/Math/RayMath.h"
@@ -36,21 +36,21 @@ namespace
         int32         _value{ 0 };
     };
 
-    /** @brief `XmlCatalog` 를 물려받아 루트 이름 · 비공개 루트 읽기만 둔 카탈로그입니다. */
-    class GameFrameworkUtilTestCatalog : public XmlCatalog<GameFrameworkUtilTestCatalog>
+    /** @brief `XMLCatalog` 를 물려받아 루트 이름 · 비공개 루트 읽기만 둔 카탈로그입니다. */
+    class GameFrameworkUtilTestCatalog : public XMLCatalog<GameFrameworkUtilTestCatalog>
     {
-        friend class XmlCatalog<GameFrameworkUtilTestCatalog>;
+        friend class XMLCatalog<GameFrameworkUtilTestCatalog>;
 
     public:
         int32 getItemCount() const { return _itemCount; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "Catalog";
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName )
+        static constexpr const utf8* kXMLRootName = "Catalog";
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName )
         {
             (void)sourceName;
             _itemCount = 0;
-            for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+            for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
             {
                 ++_itemCount;
             }
@@ -431,30 +431,30 @@ SW_TEST_CASE( GameFrameworkUtilTest, RayPlaneAndFirstPersonMoveDirection )
 /**
  * @brief [GameFrameworkUtilTest] 데이터 XML — 루트 확인 · id 없는 원소 거르기 · 숫자 목록(빠진 성분은 기본값) · 빈 토큰을 건너뛰는 토큰 목록
  */
-SW_TEST_CASE( GameFrameworkUtilTest, DataXmlReadsRootsIdsNumbersAndTokens )
+SW_TEST_CASE( GameFrameworkUtilTest, DataXMLReadsRootsIdsNumbersAndTokens )
 {
-    XmlDocument doc;
-    XmlNode     root;
-    SW_EXPECT_FALSE( GameDataXml::parseRoot( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
-    SW_ASSERT_TRUE( GameDataXml::parseRoot( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
+    sw::XMLDocument doc;
+    XMLNode         root;
+    SW_EXPECT_FALSE( GameDataXML::parseRoot( doc, "<Other/>", "GameFrameworkUtilTest", "Catalog", root ) );
+    SW_ASSERT_TRUE( GameDataXML::parseRoot( doc, R"(<Catalog><Item id="a"/><Item name="NoId"/></Catalog>)", "GameFrameworkUtilTest", "Catalog", root ) );
     int32 idCount = 0;
-    for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+    for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
     {
-        idCount += GameDataXml::findRequiredId( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
+        idCount += GameDataXML::findRequiredId( node, "GameFrameworkUtilTest" ) != nullptr ? 1 : 0;
     }
     SW_EXPECT_EQUAL( 1, idCount );
 
-    const float4 color = GameDataXml::parseFloat4( "0.5, 0.25  1", float4{ 9.0f, 9.0f, 9.0f, 0.75f } );
+    const float4 color = GameDataXML::parseFloat4( "0.5, 0.25  1", float4{ 9.0f, 9.0f, 9.0f, 0.75f } );
     SW_EXPECT_NEAR_EQUAL( 0.5f, color._x, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, color._z, 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 0.75f, color._w, 1.0e-6f );
     float32 arrValue[2] = { -1.0f, -1.0f };
-    SW_EXPECT_EQUAL( 1u, GameDataXml::parseFloats( "x;3", arrValue, 2 ) ); // 못 읽은 칸은 그대로
+    SW_EXPECT_EQUAL( 1u, GameDataXML::parseFloats( "x;3", arrValue, 2 ) ); // 못 읽은 칸은 그대로
     SW_EXPECT_NEAR_EQUAL( -1.0f, arrValue[0], 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 3.0f, arrValue[1], 1.0e-6f );
 
     int32 tokenCount = 0;
-    GameDataXml::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
+    GameDataXML::forEachToken( ",Spring,, Fall ;", ",; ", [&]( string_view token )
     {
         ++tokenCount;
         SW_EXPECT_FALSE( token.empty() );
@@ -463,7 +463,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, DataXmlReadsRootsIdsNumbersAndTokens )
 }
 
 /**
- * @brief [GameFrameworkUtilTest] 카탈로그 로더 템플릿(`GameDataXml::loadText` · `loadFile`)은 루트를 카탈로그의 비공개 루트 읽기에 넘기고, 루트가 없거나
+ * @brief [GameFrameworkUtilTest] 카탈로그 로더 템플릿(`GameDataXML::loadText` · `loadFile`)은 루트를 카탈로그의 비공개 루트 읽기에 넘기고, 루트가 없거나
  *        읽은 수가 0(또는 false)이면 실패다 — 다른 카탈로그를 함께 넘기는 판도 같다
  * @details 카탈로그 마흔여섯이 같던 문서 · 루트 · 경고 몸통을 이 한 곳이 맡는다. 0 을 성공으로 넘기면 원소 이름을 틀린 파일이 텅 빈 카탈로그가 된다.
  */
@@ -472,27 +472,27 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
     class CountingCatalog
     {
     public:
-        bool loadFromXmlText( string_view xmlText ) { return GameDataXml::loadText( *this, &CountingCatalog::loadRoot, xmlText, "CountingCatalog", "Catalog" ); }
+        bool loadFromXMLText( string_view xmlText ) { return GameDataXML::loadText( *this, &CountingCatalog::loadRoot, xmlText, "CountingCatalog", "Catalog" ); }
         bool loadWithBonus( string_view xmlText, const int32& bonus )
         {
-            return GameDataXml::loadText( *this, &CountingCatalog::loadRootWithBonus, bonus, xmlText, "CountingCatalog", "Catalog" );
+            return GameDataXML::loadText( *this, &CountingCatalog::loadRootWithBonus, bonus, xmlText, "CountingCatalog", "Catalog" );
         }
-        bool loadFromResource( string_view path ) { return GameDataXml::loadFile( *this, &CountingCatalog::loadRoot, path, "Catalog" ); }
+        bool loadFromResource( string_view path ) { return GameDataXML::loadFile( *this, &CountingCatalog::loadRoot, path, "Catalog" ); }
 
         int32 _itemCount{ 0 };
 
     private:
-        uint32 loadRoot( const XmlNode& root, string_view sourceName )
+        uint32 loadRoot( const XMLNode& root, string_view sourceName )
         {
             (void)sourceName;
             _itemCount = 0;
-            for ( XmlNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
+            for ( XMLNode node = root.findChild( "Item" ); node; node = node.findNextSibling( "Item" ) )
             {
                 ++_itemCount;
             }
             return static_cast<uint32>( _itemCount );
         }
-        bool loadRootWithBonus( const XmlNode& root, const int32& bonus, string_view sourceName )
+        bool loadRootWithBonus( const XMLNode& root, const int32& bonus, string_view sourceName )
         {
             const bool bLoaded = loadRoot( root, sourceName ) > 0;
             _itemCount += bonus;
@@ -501,12 +501,12 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
     };
 
     CountingCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXmlText( "<Catalog><Item/><Item/></Catalog>" ) );
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( "<Catalog><Item/><Item/></Catalog>" ) );
     SW_EXPECT_EQUAL( 2, catalog._itemCount );
     {
         test::ScopedDefensiveTestLog expected( "catalog root missing, empty catalog and missing file" );
-        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Catalog><Thing/></Catalog>" ) ); // 읽은 것이 0
-        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Other><Item/></Other>" ) );      // 루트가 없다
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Catalog><Thing/></Catalog>" ) ); // 읽은 것이 0
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Other><Item/></Other>" ) );      // 루트가 없다
         SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
     }
     SW_EXPECT_TRUE( catalog.loadWithBonus( "<Catalog><Item/></Catalog>", 10 ) );
@@ -514,17 +514,17 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogLoaderTemplateHandsTheRootToThePriva
 }
 
 /**
- * @brief [GameFrameworkUtilTest] `XmlCatalog` 를 물려받은 카탈로그는 루트 이름 · 비공개 루트 읽기만으로 두 공개 창구를 얻고, 실패 규칙은 로더 템플릿과 같다
+ * @brief [GameFrameworkUtilTest] `XMLCatalog` 를 물려받은 카탈로그는 루트 이름 · 비공개 루트 읽기만으로 두 공개 창구를 얻고, 실패 규칙은 로더 템플릿과 같다
  */
-SW_TEST_CASE( GameFrameworkUtilTest, XmlCatalogBaseGivesBothLoadEntryPoints )
+SW_TEST_CASE( GameFrameworkUtilTest, XMLCatalogBaseGivesBothLoadEntryPoints )
 {
     GameFrameworkUtilTestCatalog catalog;
-    SW_EXPECT_TRUE( catalog.loadFromXmlText( "<Catalog><Item/><Item/><Item/></Catalog>", "GameFrameworkUtilTest" ) );
+    SW_EXPECT_TRUE( catalog.loadFromXMLText( "<Catalog><Item/><Item/><Item/></Catalog>", "GameFrameworkUtilTest" ) );
     SW_EXPECT_EQUAL( 3, catalog.getItemCount() );
     {
         test::ScopedDefensiveTestLog expected( "catalog base: empty catalog, wrong root and missing file" );
-        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Catalog><Thing/></Catalog>" ) );
-        SW_EXPECT_FALSE( catalog.loadFromXmlText( "<Other><Item/></Other>" ) );
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Catalog><Thing/></Catalog>" ) );
+        SW_EXPECT_FALSE( catalog.loadFromXMLText( "<Other><Item/></Other>" ) );
         SW_EXPECT_FALSE( catalog.loadFromResource( "game/none/no_such_catalog.xml" ) );
     }
 }
@@ -564,7 +564,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, CatalogKeepsOrderAndItemStackListMovesItems
 SW_TEST_CASE( GameFrameworkUtilTest, TimingJudgeGradesNarrowestWindowFirstWithLatencyAndScale )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( R"(<TimingWindows>
+    SW_ASSERT_TRUE( judge.loadFromXMLText( R"(<TimingWindows>
         <Window grade="Bad" width="0.15" score="10" breaksCombo="true"/>
         <Window grade="Cool" early="0.03" late="0.04" score="300"/>
         <Window grade="Good" width="0.08" score="100"/>
@@ -590,7 +590,7 @@ SW_TEST_CASE( GameFrameworkUtilTest, TimingJudgeGradesNarrowestWindowFirstWithLa
 
 SW_TEST_CASE( GameFrameworkUtilTest, StatBlockReadsAttributesAndMerges )
 {
-    XmlDocument doc;
+    sw::XMLDocument doc;
     SW_ASSERT_TRUE( doc.parse( R"(<Stats id="x" attack="5" speed="-0.5" label="fast"/>)" ) );
     StatBlock stats;
     SW_EXPECT_EQUAL( 2, static_cast<int32>( stats.loadFromAttributes( doc.getRoot(), "id" ) ) ); // 숫자가 아닌 label 은 건너뛴다

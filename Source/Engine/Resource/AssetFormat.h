@@ -2,13 +2,13 @@
  * @file AssetFormat.h
  * @brief XML 에셋 스키마 버전과 N→N+1 이관 등록부입니다.
  * @details 버전은 루트 속성 `formatVersion` 에 적습니다(XML 선언이 아닙니다). 없으면 세대 0(현재 기준)입니다.
- *          스키마가 깨지면 종류별 상수를 올리고 registerXmlMigrator 로 N→N+1 을 등록합니다.
+ *          스키마가 깨지면 종류별 상수를 올리고 registerXMLMigrator 로 N→N+1 을 등록합니다.
  *          저작 기본 포맷은 XML 입니다. JSON 은 도구 · 설정을 주고받는 데 씁니다.
  *          Shipping 런타임은 쿠킹된 바이너리(PFB2 등)를 로드합니다.
  */
 #pragma once
 #include "Engine/EngineMinimal.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    using XmlAssetMigrator = bool ( * )( XmlDocument& doc, XmlNode& root );
+    using XMLAssetMigrator = bool ( * )( XMLDocument& doc, XMLNode& root );
 
     /**
      * @brief 저작 소스 경로와 쿠킹본 경로 사이의 이름 규칙입니다. 로더(씬 · 프리팹)와 쿠커가 모두 여기를 지납니다.
@@ -81,7 +81,7 @@ namespace sw
     class SW_API AssetFormatRegistry
     {
     public:
-        static constexpr auto kXmlAttrName = "formatVersion";
+        static constexpr auto kXMLAttrName = "formatVersion";
 
         /** @brief 빈 등록부로 만듭니다. */
         AssetFormatRegistry() = default;
@@ -90,30 +90,30 @@ namespace sw
         void ensureBuiltins();
 
         /** @brief XML migrator 를 등록합니다. */
-        void registerXmlMigrator( AssetKind kind, AssetFormatVersion fromVersion, XmlAssetMigrator migrator );
+        void registerXMLMigrator( AssetKind kind, AssetFormatVersion fromVersion, XMLAssetMigrator migrator );
 
         /** @brief 루트의 formatVersion 을 읽습니다. */
-        static AssetFormatVersion readXmlVersion( XmlNode root );
+        static AssetFormatVersion readXMLVersion( XMLNode root );
         /** @brief 루트에 formatVersion 을 씁니다(등록부 상태를 쓰지 않아 서비스 없이 부를 수 있습니다). */
-        static void writeXmlVersion( XmlNode root, AssetFormatVersion version );
+        static void writeXMLVersion( XMLNode root, AssetFormatVersion version );
 
         /**
          * @brief 버전을 추정합니다. `formatVersion` 이 없으면 세대 0 으로 봅니다.
          */
-        AssetFormatVersion inferXmlVersion( AssetKind kind, XmlNode root ) const;
+        AssetFormatVersion inferXMLVersion( AssetKind kind, XMLNode root ) const;
 
         /**
          * @brief migrator 를 `currentVersion` 까지 차례로 실행하고, 성공하면 `formatVersion` 을 찍습니다.
          * @return 파일이 지원하는 것보다 새것이거나, 필요한 migrator 가 없거나 실패하면 false 입니다.
          */
-        bool upgradeXml( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion = nullptr );
+        bool upgradeXML( AssetKind kind, XMLDocument& doc, XMLNode& root, AssetFormatVersion currentVersion, AssetFormatVersion* pOutSourceVersion = nullptr );
 
         /**
-         * @brief 엔진 서비스가 묶여 있으면 `AssetManager` 의 등록부로, 아니면(단독 도구 · 테스트) 내장 migrator 만 든 임시 등록부로 `upgradeXml` 을 부릅니다.
+         * @brief 엔진 서비스가 묶여 있으면 `AssetManager` 의 등록부로, 아니면(단독 도구 · 테스트) 내장 migrator 만 든 임시 등록부로 `upgradeXML` 을 부릅니다.
          * @details 에셋 로더(씬 · 프리팹)는 이것을 부릅니다 — 서비스 없이 `getAssetManager()` 를 부르면 assert 입니다. 등록해 둔 migrator 는 서비스가
          *          묶여 있을 때만 쓰이고, 지원하는 것보다 새 파일은 어느 쪽이든 거절합니다.
          */
-        static bool upgradeXmlWithActiveRegistry( AssetKind kind, XmlDocument& doc, XmlNode& root, AssetFormatVersion currentVersion );
+        static bool upgradeXMLWithActiveRegistry( AssetKind kind, XMLDocument& doc, XMLNode& root, AssetFormatVersion currentVersion );
 
     private:
         /// @brief (종류, fromVersion) → migrator 조회 키입니다.
@@ -139,7 +139,7 @@ namespace sw
             }
         };
 
-        unordered_map<MigratorKey, XmlAssetMigrator, MigratorKeyHash> _mapMigrator;
+        unordered_map<MigratorKey, XMLAssetMigrator, MigratorKeyHash> _mapMigrator;
         bool                                                          _bBuiltins{ false };
     };
 } // namespace sw

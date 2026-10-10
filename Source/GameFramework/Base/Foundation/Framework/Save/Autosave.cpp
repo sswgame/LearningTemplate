@@ -8,11 +8,11 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/UI/Screen/UiNotificationService.h"
 #include "Engine/UI/UiSystem.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Framework/GameService.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
@@ -63,15 +63,15 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool AutosaveSettings::loadFromResource( string_view path )
     {
-        return GameDataXml::loadFile( *this, &AutosaveSettings::loadRoot, path, "Autosave" );
+        return GameDataXML::loadFile( *this, &AutosaveSettings::loadRoot, path, "Autosave" );
     }
 
-    bool AutosaveSettings::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool AutosaveSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        return GameDataXml::loadText( *this, &AutosaveSettings::loadRoot, xmlText, sourceName, "Autosave" );
+        return GameDataXML::loadText( *this, &AutosaveSettings::loadRoot, xmlText, sourceName, "Autosave" );
     }
 
-    bool AutosaveSettings::loadRoot( const XmlNode& root, string_view sourceName )
+    bool AutosaveSettings::loadRoot( const XMLNode& root, string_view sourceName )
     {
         const utf8* pDirectory = root.findAttribute( "directory" );
         const utf8* pPrefix    = root.findAttribute( "prefix" );

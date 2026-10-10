@@ -24,7 +24,7 @@ namespace
     struct UiSettingsBindingTestUtil
     {
         static constexpr float32     kFrameSeconds = 1.0f / 60.0f;
-        static constexpr const utf8* kSchemaXml    = R"(
+        static constexpr const utf8* kSchemaXML    = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="t.audio"/>
     <Category id="video" text="t.video"/>
@@ -78,7 +78,7 @@ namespace
             , _screen{ sw::kInvalidUiScreenHandle }
         {
             _settings.initialize( sw::UserSettingsTargets{} );
-            SW_EXPECT_TRUE( _settings.loadSchemaFromXmlText( UiSettingsBindingTestUtil::kSchemaXml, "test.settings.xml" ) );
+            SW_EXPECT_TRUE( _settings.loadSchemaFromXMLText( UiSettingsBindingTestUtil::kSchemaXML, "test.settings.xml" ) );
             _settings.reapplyAll();
             SW_EXPECT_TRUE( _input.initialize() );
             SW_EXPECT_TRUE( _ui.initialize( _input, nullptr ) );

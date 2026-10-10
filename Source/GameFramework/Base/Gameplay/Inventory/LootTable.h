@@ -9,14 +9,14 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class GameRandom;
     class ItemStackList;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 표의 항목 하나 — 아이템이거나 다른 표입니다. */
     struct LootEntry
@@ -53,9 +53,9 @@ namespace sw
      * @details 결과는 `ItemStackList` 에 더합니다(같은 아이템은 합친다). 표 안의 표는 8 단계까지만 따라갑니다(서로 부르는 표가 멈추게).
      *          난수는 부르는 쪽이 넘깁니다 — 씨앗이 같으면 같은 전리품입니다(리플레이 · 시험).
      */
-    class SW_GF_API LootCatalog : public XmlCatalog<LootCatalog>
+    class SW_GF_API LootCatalog : public XMLCatalog<LootCatalog>
     {
-        friend class XmlCatalog<LootCatalog>;
+        friend class XMLCatalog<LootCatalog>;
 
     public:
         static constexpr int32 kMaxDepth = 8;
@@ -73,8 +73,8 @@ namespace sw
         const LootTableDef* findTable( const hashed_string& id ) const { return _catalog.find( id ); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "LootCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "LootCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         void                         rollTable( const LootTableDef& table, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         void                         giveEntry( const LootEntry& entry, GameRandom& random, ItemStackList& outItems, float32 luck, int32 depth ) const;
         float32                      computeEntryChance( const LootEntry& entry, const hashed_string& itemId, int32 depth ) const;

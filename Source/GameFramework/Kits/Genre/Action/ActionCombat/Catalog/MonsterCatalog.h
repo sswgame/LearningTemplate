@@ -25,12 +25,12 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 몬스터 AI 행동 양식 아키타입입니다. monsters.xml 의 `archetype` 속성이 열거자 이름 그대로입니다(리플렉션 이름표). */
     ENUM()
@@ -116,9 +116,9 @@ namespace sw
 namespace sw
 {
     /** @brief monsters.xml 몬스터 데이터 카탈로그 서비스입니다. */
-    class SW_GF_API MonsterCatalog : public XmlCatalog<MonsterCatalog>
+    class SW_GF_API MonsterCatalog : public XMLCatalog<MonsterCatalog>
     {
-        friend class XmlCatalog<MonsterCatalog>;
+        friend class XMLCatalog<MonsterCatalog>;
 
     public:
         MonsterCatalog();
@@ -128,11 +128,11 @@ namespace sw
         MonsterCatalog& operator=( const MonsterCatalog& ) = delete;
 
         /**
-         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로 또는 실제 파일 경로입니다(`XmlDocument::loadPath`).
+         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로 또는 실제 파일 경로입니다(`XMLDocument::loadPath`).
          * @return 하나라도 읽었으면 true. 그 밖에는 **최소 폴백을 심고** false 입니다.
          * @details 실패는 셋이고 셋 다 같게 다룹니다. 파일이 없다, 루트가 `<MonsterCatalog>` 가
          *          아니다, **읽었는데 `<Monster>` 가 하나도 없다.** 마지막 것을 성공으로 취급하면
-         *          태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다. 폴백 없이 읽는 판은 `XmlCatalog` 의 `loadFromXmlText` 입니다.
+         *          태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다. 폴백 없이 읽는 판은 `XMLCatalog` 의 `loadFromXMLText` 입니다.
          */
         [[nodiscard]] bool loadFromResource( string_view assetRelativePath );
 
@@ -146,11 +146,11 @@ namespace sw
         void clear();
 
     private:
-        static constexpr const utf8* kXmlRootName = "MonsterCatalog"; ///< 루트 원소(`XmlCatalog`)
+        static constexpr const utf8* kXMLRootName = "MonsterCatalog"; ///< 루트 원소(`XMLCatalog`)
 
         void seedFallback();
-        /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽습니다(`XmlCatalog`). 읽은 수입니다(0 이면 실패). */
-        uint32 loadRoot( const XmlNode& root, string_view sourceName );
+        /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽습니다(`XMLCatalog`). 읽은 수입니다(0 이면 실패). */
+        uint32 loadRoot( const XMLNode& root, string_view sourceName );
 
         /**
          * @brief `archetype` 속성을 열거자로 읽습니다. 속성이 없으면 MeleePatrol 이고, 모르는 이름이면 경고하고 MeleePatrol 입니다.

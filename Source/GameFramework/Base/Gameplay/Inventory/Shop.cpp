@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
@@ -212,12 +212,12 @@ namespace sw
         return "Unknown";
     }
 
-    uint32 ShopCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ShopCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
+        for ( XMLNode node = root.findChild( "Shop" ); node; node = node.findNextSibling( "Shop" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ShopDef def;
@@ -230,11 +230,11 @@ namespace sw
             def._minSellFactor    = MathUtil::saturate( node.getAttributeFloat( "minSellFactor", def._minSellFactor ) );
             def._recoveryPerDay   = MathUtil::max( 0.0f, node.getAttributeFloat( "recovery", def._recoveryPerDay ) );
             def._restockDays      = MathUtil::max( 0, node.getAttributeInt( "restockDays", def._restockDays ) );
-            GameDataXml::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
             {
                 def._listRefusedCategory.push_back( hashed_string( token ) );
             } );
-            for ( XmlNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
+            for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
             {
                 const utf8* pItem = stockNode.findAttribute( "item" );
                 if ( pItem == nullptr || pItem[0] == '\0' )

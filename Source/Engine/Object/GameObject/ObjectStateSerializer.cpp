@@ -22,7 +22,7 @@
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/Serializer.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -172,7 +172,7 @@ namespace sw
                 return ( token != 0 ) ? token : 1;
             }
 
-            static SerializeContext makeGameObjectXmlContext( GameObject* pGameObject )
+            static SerializeContext makeGameObjectXMLContext( GameObject* pGameObject )
             {
                 SerializeContext ctx = SerializeContext::deriveFromDefault();
                 ctx.setOuterInstance( pGameObject );
@@ -302,7 +302,7 @@ namespace sw
         // 글로 저장하는 길(씬 · 프리팹 저작)은 쓰기 전에 검증한다 — 결과만 남기고 저장은 그대로 한다. 바이너리(플레이 · 되돌리기 스냅숏)는 보지 않는다.
         (void)ObjectValidation::reportGameObject( *pGameObject, true );
 
-        SerializeContext                                     ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        SerializeContext                                     ctx = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
         ObjectStateSerializerInternal::registerReferenceWriter( ctx, referenceWriter );
         return TSerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, ctx );
@@ -336,7 +336,7 @@ namespace sw
         pGameObject->clearComponents();
 
         const GameObject::ComponentIdRestoreScope restoreScope( pGameObject, context._pIdentity );
-        const SerializeContext                    ctx = ObjectStateSerializerInternal::makeGameObjectXmlContext( pGameObject );
+        const SerializeContext                    ctx = ObjectStateSerializerInternal::makeGameObjectXMLContext( pGameObject );
         uint32                                    version{ 0 };
         const bool                                bLoaded = deserializeState( version, ctx );
         if ( bLoaded )
@@ -386,9 +386,9 @@ namespace sw
         } );
     }
 
-    string ObjectStateSerializer::saveToXmlString( const GameObject* pGameObject, const ObjectSaveOptions& options )
+    string ObjectStateSerializer::saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options )
     {
-        return saveToText<XmlSerializer>( pGameObject, options );
+        return saveToText<XMLSerializer>( pGameObject, options );
     }
 
     string ObjectStateSerializer::saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options )
@@ -415,7 +415,7 @@ namespace sw
         writer.write( static_cast<uint32>( 0 ) );
 
         const size_t                                         bodyStart = writer.getOffset();
-        SerializeContext                                     ctx       = ObjectStateSerializerInternal::makeGameObjectXmlContext( const_cast<GameObject*>( pGameObject ) );
+        SerializeContext                                     ctx       = ObjectStateSerializerInternal::makeGameObjectXMLContext( const_cast<GameObject*>( pGameObject ) );
         const ObjectStateSerializerInternal::ReferenceWriter referenceWriter{ &options };
         ObjectStateSerializerInternal::registerReferenceWriter( ctx, referenceWriter );
         BinarySerializer::serializeVersioned( kObjectReflectedSchemaVersion, pGameObject, *pTypeInfo, outBuffer, ctx );
@@ -450,9 +450,9 @@ namespace sw
         return bLoaded ? bodyStart + bodySize : 0;
     }
 
-    bool ObjectStateSerializer::loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
+    bool ObjectStateSerializer::loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context )
     {
-        return loadFromText<XmlSerializer>( pGameObject, xmlString, context );
+        return loadFromText<XMLSerializer>( pGameObject, xmlString, context );
     }
 
     bool ObjectStateSerializer::loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context )

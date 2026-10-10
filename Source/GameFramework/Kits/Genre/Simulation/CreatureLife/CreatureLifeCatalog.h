@@ -11,13 +11,13 @@
 
 #include "GameFramework/Base/Actor/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/World/Environment/WorldClock.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 서식지 패턴의 칸 하나입니다. */
     struct HabitatCell
@@ -139,9 +139,9 @@ namespace sw
      * @endcode
      *          `.` 은 무엇이든 되는 칸, `empty` 오브젝트는 빈 칸입니다. 행 길이가 다르거나 모르는 기호가 있는 서식지는 경고하고 뺍니다.
      */
-    class SW_GF_API CreatureLifeCatalog : public XmlCatalog<CreatureLifeCatalog>
+    class SW_GF_API CreatureLifeCatalog : public XMLCatalog<CreatureLifeCatalog>
     {
-        friend class XmlCatalog<CreatureLifeCatalog>;
+        friend class XMLCatalog<CreatureLifeCatalog>;
 
     public:
         CreatureLifeCatalog();
@@ -161,8 +161,8 @@ namespace sw
         const vector<int32>& getHabitatMatchOrder() const { return _listHabitatOrder; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "CreatureLifeCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "CreatureLifeCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         void                         rebuildHabitatOrder();
 
         GameCatalog<HabitatDef>         _habitatCatalog;

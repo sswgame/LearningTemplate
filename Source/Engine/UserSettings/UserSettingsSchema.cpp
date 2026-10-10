@@ -7,8 +7,8 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Input/InputSlotUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/UserSettings/UserSettingsRegistry.h"
 
 namespace sw
@@ -81,7 +81,7 @@ namespace sw
             }
 
             /** @brief 실수 하나를 읽습니다. 속성이 없으면 @p fallback 이고 true, 글이 숫자가 아니면 오류를 알리고 false 입니다. */
-            [[nodiscard]] static bool readNumberAttribute( const XmlNode& node, const utf8* pName, float64 fallback, float64& outValue, string_view sourceName )
+            [[nodiscard]] static bool readNumberAttribute( const XMLNode& node, const utf8* pName, float64 fallback, float64& outValue, string_view sourceName )
             {
                 const string_view text = node.getAttributeText( pName );
                 outValue               = fallback;
@@ -282,7 +282,7 @@ namespace sw
 
     bool UserSettingsSchema::loadFromResource( string_view resourcePath )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         string      absPath;
         if ( doc.loadResource( resourcePath, &absPath ) == false )
         {
@@ -292,9 +292,9 @@ namespace sw
         return loadRoot( doc.getRoot( "UserSettingsSchema" ), resourcePath );
     }
 
-    bool UserSettingsSchema::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool UserSettingsSchema::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             SW_LOG_ERROR( "Failed to parse the user settings schema '%#'", sourceName );
@@ -303,7 +303,7 @@ namespace sw
         return loadRoot( doc.getRoot( "UserSettingsSchema" ), sourceName );
     }
 
-    bool UserSettingsSchema::loadRoot( const XmlNode& root, string_view sourceName )
+    bool UserSettingsSchema::loadRoot( const XMLNode& root, string_view sourceName )
     {
         using Internal = UserSettingsSchemaInternal;
         if ( root.isValid() == false )
@@ -314,19 +314,19 @@ namespace sw
 
         // 다 읽은 뒤에만 합친다 — 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓한다.
         UserSettingsSchema overlay;
-        bool               bOk = XmlNameCheck::reportUnknownAttributes( root, Internal::kArrRootAttribute, sourceName );
+        bool               bOk = XMLNameCheck::reportUnknownAttributes( root, Internal::kArrRootAttribute, sourceName );
         int32              version{ 0 };
         if ( root.tryGetAttributeIntInRange( "version", 0, 0, 1 << 20, version ) == false )
             bOk = false;
         overlay._version = static_cast<uint32>( version );
 
         const uint32 orderBase = static_cast<uint32>( _listSetting.size() );
-        for ( XmlNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Category", true ) )
             {
-                bOk = XmlNameCheck::reportUnknownAttributes( child, Internal::kArrCategoryAttribute, sourceName ) && bOk;
+                bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrCategoryAttribute, sourceName ) && bOk;
                 UserSettingCategoryDef category;
                 category._id      = hashed_string( child.getAttributeText( "id" ) );
                 category._textKey = string( child.getAttributeText( "text" ) );
@@ -341,7 +341,7 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Setting", true ) )
             {
-                bOk = XmlNameCheck::reportUnknownAttributes( child, Internal::kArrSettingAttribute, sourceName ) && bOk;
+                bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrSettingAttribute, sourceName ) && bOk;
                 UserSettingDef def;
                 def._id             = hashed_string( child.getAttributeText( "id" ) );
                 def._category       = hashed_string( child.getAttributeText( "category" ) );
@@ -391,7 +391,7 @@ namespace sw
                     bOk = false;
                 def._bindIndex = static_cast<uint32>( bindIndex );
 
-                for ( XmlNode optionNode = child.findChild(); optionNode.isValid(); optionNode = optionNode.findNextSibling() )
+                for ( XMLNode optionNode = child.findChild(); optionNode.isValid(); optionNode = optionNode.findNextSibling() )
                 {
                     if ( StringUtil::equals( optionNode.getName(), "Option", true ) == false )
                     {
@@ -399,7 +399,7 @@ namespace sw
                         bOk = false;
                         continue;
                     }
-                    bOk = XmlNameCheck::reportUnknownAttributes( optionNode, Internal::kArrOptionAttribute, sourceName ) && bOk;
+                    bOk = XMLNameCheck::reportUnknownAttributes( optionNode, Internal::kArrOptionAttribute, sourceName ) && bOk;
                     UserSettingOption option;
                     option._value       = string( optionNode.getAttributeText( "value" ) );
                     option._textKey     = string( optionNode.getAttributeText( "text" ) );
@@ -415,19 +415,19 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Scalability", true ) )
             {
-                bOk = XmlNameCheck::reportUnknownAttributes( child, Internal::kArrScalabilityAttribute, sourceName ) && bOk;
+                bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrScalabilityAttribute, sourceName ) && bOk;
                 ScalabilityGroupDef group;
                 group._settingId          = hashed_string( child.getAttributeText( "setting" ) );
                 group._customValue        = string( child.getAttributeText( "custom" ) );
                 group._autoDetectFallback = hashed_string( child.getAttributeText( "autoDetectFallback" ) );
-                for ( XmlNode groupChild = child.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
+                for ( XMLNode groupChild = child.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
                 {
                     if ( StringUtil::equals( groupChild.getName(), "Preset", true ) )
                     {
-                        bOk = XmlNameCheck::reportUnknownAttributes( groupChild, Internal::kArrPresetAttribute, sourceName ) && bOk;
+                        bOk = XMLNameCheck::reportUnknownAttributes( groupChild, Internal::kArrPresetAttribute, sourceName ) && bOk;
                         ScalabilityPresetDef preset;
                         preset._name = hashed_string( groupChild.getAttributeText( "name" ) );
-                        for ( XmlNode valueNode = groupChild.findChild(); valueNode.isValid(); valueNode = valueNode.findNextSibling() )
+                        for ( XMLNode valueNode = groupChild.findChild(); valueNode.isValid(); valueNode = valueNode.findNextSibling() )
                         {
                             if ( StringUtil::equals( valueNode.getName(), "Value", true ) == false )
                             {
@@ -435,7 +435,7 @@ namespace sw
                                 bOk = false;
                                 continue;
                             }
-                            bOk = XmlNameCheck::reportUnknownAttributes( valueNode, Internal::kArrValueAttribute, sourceName ) && bOk;
+                            bOk = XMLNameCheck::reportUnknownAttributes( valueNode, Internal::kArrValueAttribute, sourceName ) && bOk;
                             preset._listValue.push_back(
                                 ScalabilityPresetValue{ hashed_string( valueNode.getAttributeText( "setting" ) ), string( valueNode.getAttributeText( "value" ) ) } );
                         }
@@ -443,7 +443,7 @@ namespace sw
                     }
                     else if ( StringUtil::equals( groupChild.getName(), "AutoDetect", true ) )
                     {
-                        bOk = XmlNameCheck::reportUnknownAttributes( groupChild, Internal::kArrAutoDetectAttribute, sourceName ) && bOk;
+                        bOk = XMLNameCheck::reportUnknownAttributes( groupChild, Internal::kArrAutoDetectAttribute, sourceName ) && bOk;
                         int32 minCores{ 0 };
                         int32 minMemoryMb{ 0 };
                         bOk = groupChild.tryGetAttributeIntInRange( "minCores", 0, 0, 4096, minCores ) && bOk;
@@ -461,7 +461,7 @@ namespace sw
             }
             else if ( StringUtil::equals( pName, "Upgrade", true ) )
             {
-                bOk = XmlNameCheck::reportUnknownAttributes( child, Internal::kArrUpgradeAttribute, sourceName ) && bOk;
+                bOk = XMLNameCheck::reportUnknownAttributes( child, Internal::kArrUpgradeAttribute, sourceName ) && bOk;
                 UserSettingsUpgradeStep step;
                 int32                   fromVersion{ 0 };
                 bOk               = child.tryGetAttributeIntInRange( "version", 0, 0, 1 << 20, fromVersion ) && bOk;

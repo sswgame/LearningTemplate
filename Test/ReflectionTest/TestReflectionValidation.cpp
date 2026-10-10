@@ -100,7 +100,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
     sw::vector<sw::ValidationIssue> listIssue;
     {
         SW_TEST_DEFENSIVE_SCOPE( "validation warning while saving a component with a negative speed" );
-        const sw::string state = sw::ObjectStateSerializer::saveToXmlString( pObject ); // 저장 — 결과를 남기고 저장은 한다
+        const sw::string state = sw::ObjectStateSerializer::saveToXMLString( pObject ); // 저장 — 결과를 남기고 저장은 한다
         SW_EXPECT_FALSE( state.empty() );
         sw::ValidationIssueLog::get().collectIssues( listIssue );
         SW_ASSERT_EQUAL( static_cast<size_t>( 1 ), listIssue.size() );
@@ -114,7 +114,7 @@ SW_TEST_CASE( ReflectionValidationTest, LoadSaveAndEditReportToTheIssueLog )
         sw::ObjectStateBatch  batch( sw::ObjectIdSpace::Live );
         sw::ObjectLoadContext context{};
         context._pBatch = &batch;
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pLoaded, state, context ) );
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pLoaded, state, context ) );
         batch.finish();
         sw::ValidationIssueLog::get().collectIssues( listIssue );
         SW_EXPECT_EQUAL( 2u, static_cast<uint32>( listIssue.size() ) );

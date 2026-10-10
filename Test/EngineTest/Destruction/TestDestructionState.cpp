@@ -233,7 +233,7 @@ SW_TEST_CASE( DestructionStateTest, FreeObjectSplitsIntoFreeGroupsDeterministica
 SW_TEST_CASE( DestructionStateTest, ProfileRejectsUnknownNamesAndReadsTheDefault )
 {
     sw::DestructionProfile profile;
-    SW_EXPECT_TRUE( profile.loadFromXmlText( R"(<DestructionProfile density="500"><Strain thresholds="10 20"/><Links strength="5" supportStrength="7"/></DestructionProfile>)",
+    SW_EXPECT_TRUE( profile.loadFromXMLText( R"(<DestructionProfile density="500"><Strain thresholds="10 20"/><Links strength="5" supportStrength="7"/></DestructionProfile>)",
                                              "inline" ) );
     SW_EXPECT_NEAR_EQUAL( 500.0f, profile._density, 0.0f );
     SW_EXPECT_NEAR_EQUAL( 20.0f, profile.getStrainThreshold( 1 ), 0.0f );
@@ -241,10 +241,10 @@ SW_TEST_CASE( DestructionStateTest, ProfileRejectsUnknownNamesAndReadsTheDefault
     SW_EXPECT_NEAR_EQUAL( 7.0f, profile._supportStrength, 0.0f );
     {
         test::ScopedDefensiveTestLog expected( "unknown names and bad numbers are load errors" );
-        SW_EXPECT_FALSE( profile.loadFromXmlText( R"(<DestructionProfile><Strain thresholds="10"/><Shatter/></DestructionProfile>)", "unknown-element" ) );
-        SW_EXPECT_FALSE( profile.loadFromXmlText( R"(<DestructionProfile><Links strenght="5"/></DestructionProfile>)", "unknown-attribute" ) );
-        SW_EXPECT_FALSE( profile.loadFromXmlText( R"(<DestructionProfile><Strain thresholds="10 -3"/></DestructionProfile>)", "negative" ) );
-        SW_EXPECT_FALSE( profile.loadFromXmlText( R"(<DestructionProfile><Links strength="1"/><Links strength="2"/></DestructionProfile>)", "twice" ) );
+        SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Strain thresholds="10"/><Shatter/></DestructionProfile>)", "unknown-element" ) );
+        SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Links strenght="5"/></DestructionProfile>)", "unknown-attribute" ) );
+        SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Strain thresholds="10 -3"/></DestructionProfile>)", "negative" ) );
+        SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<DestructionProfile><Links strength="1"/><Links strength="2"/></DestructionProfile>)", "twice" ) );
     }
     SW_EXPECT_TRUE( profile.loadFromResource( sw::DestructionProfile::kDefaultPath ) );
     SW_EXPECT_TRUE( profile._listStrainThreshold.size() >= 2 );

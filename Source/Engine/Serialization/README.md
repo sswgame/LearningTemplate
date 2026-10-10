@@ -4,7 +4,7 @@
 쿠커와 세이브 같은 빌드 · 실행 산출물은 바이너리로 씁니다. 언리얼의 `FArchive` · `FPropertyTag` 와 유니티의 YAML 직렬화에 해당합니다.
 
 - `Base/` 에는 형식이 함께 쓰는 부품이 있습니다. 컨테이너 순회(`ContainerVisitor`), 버전 이관(`SchemaMigrate`), 값 하나 다루기(`SerializerUtil`)가 여기 있습니다.
-- `Format/` 에는 형식마다의 직렬화기(`XmlSerializer` · `JsonSerializer` · `BinarySerializer`)와 바이트 스트림 `Archive` 가 있습니다.
+- `Format/` 에는 형식마다의 직렬화기(`XMLSerializer` · `JsonSerializer` · `BinarySerializer`)와 바이트 스트림 `Archive` 가 있습니다.
 - `Object/` 에는 오브젝트 상태의 차이를 쓰는 직렬화기가 있습니다. 오브젝트 상태를 언제 · 어떤 순서로 읽는지는 [Object README](../Object/README.md) 가 다룹니다.
 
 리플렉션 매크로와 타입 등록은 [Reflection README](../Reflection/README.md) 에 있습니다.
@@ -13,9 +13,11 @@
 
 - **엔진 데이터는 별칭을 쓰지 않는다**(사용자 결정 2026-10-03 — 실제 게임 데이터가 없다). 이름을 바꾸면 `Resource/` 데이터를 다시 쓴다. 모르는 키 · 타입 · 열거자는
   안쪽 원소까지 orphan 경고가 나고, `ResourceDataSchemaTest` 가 Resource/ 의 데이터 파일 전부(종류 표에 없는 파일도 실패)를 실제 로더로 읽어 경고 0 을 단언한다.
-  Alias · ValueAlias 기능과 그 시험은 실제 게임 데이터가 생긴 뒤의 창구로 남긴다. 판 체계(registerXmlMigrator · 바이너리 판 필드)도 기능으로 남고, 지금 판만 읽는다.
+  Alias · ValueAlias 기능과 그 시험은 실제 게임 데이터가 생긴 뒤의 창구로 남긴다. 판 체계(registerXMLMigrator · 바이너리 판 필드)도 기능으로 남고, 지금 판만 읽는다.
 - **orphan 정책은 `SchemaMigrate.h` 의 계약** — XML · JSON(사람이 고치는 저작 파일)은 `Ignore`(로드마다 경고, UE `FPropertyTag` · Unity YAML), 바이너리(쿠커 ·
   빌드 산출물)는 `Reject`(UE `FPackageFileSummary` 판 검사). 필드를 버려도 되는 오브젝트 상태는 그 migrate 함수가 말한다(`skipFieldsTheTypeNoLongerHas`).
+- **`XMLDocument` 는 Windows SDK 의 전역 `XMLDocument`(msxml.h — `PlatformOsHeaders.h` 의 SDK 헤더가 끌어온다)와 이름이 같다.** `namespace sw` 안에서는
+  `sw::XMLDocument` 가 먼저 잡히지만, 전역 범위의 `using namespace sw;` 뒤(시험 본문 · 전역 `namespace test`)에서는 모호하므로 `sw::XMLDocument` 로 쓴다.
 - **바이너리 Archive 읽기는 읽은 만큼 자리를 옮긴다**(이어 쓴 객체를 차례로 읽는다). 같은 자리를 다시 보려면 새 Archive 를 만든다.
 - **set 원소 편집은 `replaceElement`(지우고 다시 넣기)로만** — 같은 값이 되면 하나로 합쳐진다. 맵은 `forEachMutable` · `eraseAt`, 고정 배열은 `appendElement` 가
   원소 순번의 칸을 채운다(칸보다 많으면 실패).
@@ -40,7 +42,7 @@
   가 72 초를 쓴 적이 있다. 넘침 회귀 시험은 위치를 먼저 옮긴 뒤 되감기는 크기를 줘야 문다.
 - **디스크 · 네트워크로 나가는 바이트는 결정적이어야 한다** — 해시맵은 키 순 정렬, 구조체는 필드 순서대로(패딩 쓰레기), 판 번호는 읽는 쪽이 대조한다. 다형 소유 포인터는
   원소마다 `[이름][본문크기][본문]`(본문 크기가 있어야 모르는 타입을 건너뛴다). `serializeCompact` 는 프로퍼티를 이름이 아니라 **인덱스**로 짝짓는다.
-- **XML** — 쓰기는 `XmlNode::toString` 하나, float 는 `std::to_chars` 최단 왕복(그래서 되돌리기 스냅샷을 바이너리로 바꾸지 않는다), 긴 줄 접기는 시작 태그 속성에만(pugixml 은 텍스트
+- **XML** — 쓰기는 `XMLNode::toString` 하나, float 는 `std::to_chars` 최단 왕복(그래서 되돌리기 스냅샷을 바이너리로 바꾸지 않는다), 긴 줄 접기는 시작 태그 속성에만(pugixml 은 텍스트
   안 `"` 를 이스케이프하지 않는다), 태그는 `sanitizeTag` 가 `::` → `__`. 정수 속성은 `tryGetAttributeIntInRange`, 불리언 글은 `StringUtil::tryParseBool`(관대한 `parseBool` 은 실패를
   알아야 하는 자리에 쓰지 말 것). Windows 헤더가 `small` 을 매크로로 정의한다.
 - **JSON** — `JsonValue` 는 빌린 포인터다: 같은 부모에 `set( 새 키 )` · `pushBack()` 을 하면 앞서 꺼낸 형제 핸들이 죽는다("하나 받아 다 채우고 다음"). nlohmann

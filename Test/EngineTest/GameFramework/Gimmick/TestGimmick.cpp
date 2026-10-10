@@ -16,18 +16,18 @@ namespace
 {
     struct GimmickTestInternal
     {
-        static bool buildFromXml( GimmickCircuit& outCircuit, const utf8* pXml, vector<string>& outListError )
+        static bool buildFromXML( GimmickCircuit& outCircuit, const utf8* pXML, vector<string>& outListError )
         {
             GimmickCircuitDef def;
-            if ( def.loadFromXmlText( pXml, "test.gimmick.xml" ) == false )
+            if ( def.loadFromXMLText( pXML, "test.gimmick.xml" ) == false )
                 return false;
             return outCircuit.build( def, GimmickNodeRegistry::getDefault(), outListError );
         }
 
-        static bool buildFromXml( GimmickCircuit& outCircuit, const utf8* pXml )
+        static bool buildFromXML( GimmickCircuit& outCircuit, const utf8* pXML )
         {
             vector<string> listError;
-            return buildFromXml( outCircuit, pXml, listError );
+            return buildFromXML( outCircuit, pXML, listError );
         }
 
         static bool hasErrorContaining( const vector<string>& listError, const utf8* pText )
@@ -51,7 +51,7 @@ namespace
         }
 
         /** @brief 두 입력 센서(Signal a · b)를 연산자 하나에 물린 회로입니다. */
-        static string makeBinaryOperatorXml( const utf8* pKind )
+        static string makeBinaryOperatorXML( const utf8* pKind )
         {
             return string( "<GimmickCircuit><Node id=\"a\" kind=\"Signal\"/><Node id=\"b\" kind=\"Signal\"/><Node id=\"op\" kind=\"" ) + pKind +
                    "\"/><Wire from=\"a.Active\" to=\"op.A\"/><Wire from=\"b.Active\" to=\"op.B\"/></GimmickCircuit>";
@@ -61,7 +61,7 @@ namespace
         static uint32 computeTruthTable( const utf8* pKind )
         {
             GimmickCircuit circuit;
-            if ( buildFromXml( circuit, makeBinaryOperatorXml( pKind ).c_str() ) == false )
+            if ( buildFromXML( circuit, makeBinaryOperatorXML( pKind ).c_str() ) == false )
                 return 0xFFu;
             const int32 a      = circuit.findNode( "a" );
             const int32 b      = circuit.findNode( "b" );
@@ -99,7 +99,7 @@ SW_TEST_CASE( GimmickTest, OperatorTruthTables )
     SW_EXPECT_EQUAL( 0x6u, GimmickTestInternal::computeTruthTable( "Xor" ) ); // 01 10
 
     GimmickCircuit circuit;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit>
   <Node id="a" kind="Signal"/>
   <Node id="not" kind="Not"/>
@@ -129,7 +129,7 @@ SW_TEST_CASE( GimmickTest, LatchToggleCounterSequence )
 {
     GimmickCircuit circuit;
     vector<string> listError;
-    SW_ASSERT_TRUE_MSG( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_ASSERT_TRUE_MSG( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit>
   <Node id="set" kind="Signal"/>
   <Node id="reset" kind="Signal"/>
@@ -209,7 +209,7 @@ SW_TEST_CASE( GimmickTest, LatchToggleCounterSequence )
 SW_TEST_CASE( GimmickTest, DelayPulseTimerUseFixedSteps )
 {
     GimmickCircuit circuit;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit stepTime="0.0166666667">
   <Node id="in" kind="Signal"/>
   <Node id="delay" kind="Delay" seconds="0.5"/>
@@ -253,7 +253,7 @@ SW_TEST_CASE( GimmickTest, DelayBreaksSignalLoops )
 {
     GimmickCircuit oscillator;
     vector<string> listError;
-    SW_ASSERT_TRUE_MSG( GimmickTestInternal::buildFromXml( oscillator, R"(
+    SW_ASSERT_TRUE_MSG( GimmickTestInternal::buildFromXML( oscillator, R"(
 <GimmickCircuit>
   <Node id="not" kind="Not"/>
   <Node id="delay" kind="Delay" seconds="0.05"/>
@@ -276,7 +276,7 @@ SW_TEST_CASE( GimmickTest, DelayBreaksSignalLoops )
 
     GimmickCircuit loop;
     listError.clear();
-    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXml( loop, R"(
+    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( loop, R"(
 <GimmickCircuit>
   <Node id="a" kind="Or"/>
   <Node id="b" kind="Not"/>
@@ -295,7 +295,7 @@ SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 {
     GimmickCircuit circuit;
     vector<string> listError;
-    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_EXPECT_FALSE( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit>
   <Node id="plate" kind="PressurePlate" threshold="heavy"/>
   <Node id="plate" kind="Volume"/>
@@ -320,7 +320,7 @@ SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 
     // 형식 오류(점 없는 배선)는 읽기에서 거절한다.
     GimmickCircuitDef def;
-    SW_EXPECT_FALSE( def.loadFromXmlText( "<GimmickCircuit><Wire from=\"plate\" to=\"door.Open\"/></GimmickCircuit>", "broken.gimmick.xml" ) );
+    SW_EXPECT_FALSE( def.loadFromXMLText( "<GimmickCircuit><Wire from=\"plate\" to=\"door.Open\"/></GimmickCircuit>", "broken.gimmick.xml" ) );
 }
 
 /**
@@ -329,7 +329,7 @@ SW_TEST_CASE( GimmickTest, WiringValidationReportsEveryError )
 SW_TEST_CASE( GimmickTest, PressurePlateOpensDoorForPulse )
 {
     GimmickCircuit circuit;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit stepTime="0.1">
   <Node id="plate" kind="PressurePlate" threshold="50"/>
   <Node id="hold" kind="Pulse" seconds="2"/>
@@ -373,7 +373,7 @@ SW_TEST_CASE( GimmickTest, MoverReachesEndAtArcLengthTime )
     SW_EXPECT_TRUE( path.getLength() > chordLength ); // 곡선은 현보다 길다
 
     GimmickCircuit circuit;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( circuit, R"(
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( circuit, R"(
 <GimmickCircuit stepTime="0.02">
   <Node id="once" kind="Mover" speed="2" mode="Once"/>
   <Node id="pingpong" kind="Mover" speed="2" mode="PingPong"/>
@@ -404,7 +404,7 @@ SW_TEST_CASE( GimmickTest, MoverReachesEndAtArcLengthTime )
  */
 SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
 {
-    const utf8*    pXml = R"(
+    const utf8*    pXML = R"(
 <GimmickCircuit>
   <Node id="use" kind="Interaction"/>
   <Node id="counter" kind="Counter" target="2"/>
@@ -415,7 +415,7 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
   <Wire from="delay.Out" to="door.Open"/>
 </GimmickCircuit>)";
     GimmickCircuit circuit;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( circuit, pXml ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( circuit, pXML ) );
     const uint64 initialHash = circuit.computeStateHash();
     const int32  use         = circuit.findNode( "use" );
     circuit.addSensorImpulse( use, 1.0f );
@@ -438,14 +438,14 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
 
     // 새로 지은 회로에 읽어도 같다(레벨 세이브 → 다시 로드).
     GimmickCircuit reloaded;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( reloaded, pXml ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( reloaded, pXML ) );
     SW_ASSERT_TRUE( reloaded.loadState( checkpoint ) );
     GimmickTestInternal::stepTimes( reloaded, 40 );
     SW_EXPECT_EQUAL( finalHash, reloaded.computeStateHash() );
 
     // 모양이 다른 회로 · 깨진 바이트는 거절하고 그대로 둔다.
     GimmickCircuit other;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( other, "<GimmickCircuit><Node id=\"use\" kind=\"Interaction\"/></GimmickCircuit>" ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( other, "<GimmickCircuit><Node id=\"use\" kind=\"Interaction\"/></GimmickCircuit>" ) );
     const uint64 otherHash = other.computeStateHash();
     SW_EXPECT_FALSE( other.loadState( checkpoint ) );
     SW_EXPECT_EQUAL( otherHash, other.computeStateHash() );
@@ -462,7 +462,7 @@ SW_TEST_CASE( GimmickTest, StateSaveLoadResetRoundTrip )
  */
 SW_TEST_CASE( GimmickTest, SameInputsSameStateHash )
 {
-    const utf8*    pXml = R"(
+    const utf8*    pXML = R"(
 <GimmickCircuit stepTime="0.0166666667">
   <Node id="plate" kind="PressurePlate" threshold="1"/>
   <Node id="timer" kind="Timer" interval="0.3"/>
@@ -480,9 +480,9 @@ SW_TEST_CASE( GimmickTest, SameInputsSameStateHash )
     GimmickCircuit runA;
     GimmickCircuit runB;
     GimmickCircuit runC;
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( runA, pXml ) );
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( runB, pXml ) );
-    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXml( runC, pXml ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( runA, pXML ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( runB, pXML ) );
+    SW_ASSERT_TRUE( GimmickTestInternal::buildFromXML( runC, pXML ) );
     const int32 plate = runA.findNode( "plate" );
     // A 는 걸음을 직접, B 는 들쭉날쭉한 프레임 시간으로 — 입력은 같은 걸음 번호에 넣는다.
     for ( int32 stepIndex = 0; stepIndex < 600; ++stepIndex )

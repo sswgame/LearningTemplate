@@ -225,7 +225,7 @@ SW_TEST_CASE( NavMeshBakeTest, CookedAssetRoundTripsTilesByteForByte )
 SW_TEST_CASE( NavMeshBakeTest, SettingsTableValidatesNamesAndRanges )
 {
     sw::NavMeshSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( "<NavMeshSettings _defaultAgentType=\"Small\"><_listAgentType>"
+    SW_ASSERT_TRUE( settings.loadFromXMLText( "<NavMeshSettings _defaultAgentType=\"Small\"><_listAgentType>"
                                               "<NavAgentTypeDef _name=\"Big\" _radius=\"1\" /><NavAgentTypeDef _name=\"Small\" _radius=\"0.3\" />"
                                               "</_listAgentType><_listArea><NavAreaDef _name=\"Default\" /><NavAreaDef _name=\"Mud\" _cost=\"5\" />"
                                               "</_listArea></NavMeshSettings>" ) );
@@ -241,8 +241,8 @@ SW_TEST_CASE( NavMeshBakeTest, SettingsTableValidatesNamesAndRanges )
 
     test::ScopedDefensiveTestLog expected( "broken navigation tables are refused" );
     sw::NavMeshSettings          broken;
-    SW_EXPECT_FALSE( broken.loadFromXmlText( "<NavMeshSettings><_listArea><NavAreaDef _name=\"A\" /><NavAreaDef _name=\"A\" /></_listArea></NavMeshSettings>" ) );
-    SW_EXPECT_FALSE( broken.loadFromXmlText( "<NavMeshSettings _defaultAgentType=\"Nobody\" />" ) );
-    SW_EXPECT_FALSE( broken.loadFromXmlText( "<NavMeshSettings><_listAgentType><NavAgentTypeDef _name=\"Odd\" _height=\"0\" /></_listAgentType></NavMeshSettings>" ) );
-    SW_EXPECT_FALSE( broken.loadFromXmlText( "<NavMeshSettings _noSuchKey=\"1\" />" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings><_listArea><NavAreaDef _name=\"A\" /><NavAreaDef _name=\"A\" /></_listArea></NavMeshSettings>" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings _defaultAgentType=\"Nobody\" />" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings><_listAgentType><NavAgentTypeDef _name=\"Odd\" _height=\"0\" /></_listAgentType></NavMeshSettings>" ) );
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<NavMeshSettings _noSuchKey=\"1\" />" ) );
 }

@@ -23,7 +23,7 @@
 #include "Engine/Scene/SceneDocument.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Sequencer/SequenceAsset.h"
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -198,7 +198,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryToolAssetLoadTellsMissingFromMal
     const string missing = FileUtil::joinPath( folder, "never_written.txt" );
 
     string         status;
-    TileMapXmlData tileMap;
+    TileMapXMLData tileMap;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( missing, tileMap, status ) == ToolAssetLoadResult::Missing );
     SpriteClipAsset clip;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadSpriteClip( clip, status, missing ) == ToolAssetLoadResult::Missing );
@@ -315,7 +315,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
         pSource->addComponent<SceneComponent>()->setLocalPosition( float3( 1.0f, 2.0f, 3.0f ) );
         PrefabAsset prefab;
         prefab.setFromGameObject( pSource );
-        SW_ASSERT_TRUE( prefab.saveToXmlFile( prefabPath ) );
+        SW_ASSERT_TRUE( prefab.saveToXMLFile( prefabPath ) );
         SW_ASSERT_TRUE( prefab.saveToBinaryFile( AssetCookPath::toCookedPath( prefabPath ) ) ); // 배포본은 쿠킹본만 읽는다
         engine::getAssetManager().getPrefabCache().reload( prefabPath );
     }
@@ -334,7 +334,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     pPlacedCrate->getPrimarySceneComponent()->setLocalPosition( float3( 4.0f, 4.0f, 4.0f ) );
     SceneDocument saved;
     SW_ASSERT_TRUE( pPlaced->serializeToDocument( saved ) );
-    SW_ASSERT_TRUE( saved._listSceneObjectNode.size() == 1 && saved._listSceneObjectNode[0]._prefabOverrideXml.empty() == false );
+    SW_ASSERT_TRUE( saved._listSceneObjectNode.size() == 1 && saved._listSceneObjectNode[0]._prefabOverrideXML.empty() == false );
 
     // 다시 연 인스턴스 — 덮어쓴 위치가 원형 위에 얹혀 있다.
     Scene* pReopened = manager.createScene( "RevertWorldReopened" );
@@ -363,8 +363,8 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, RevertingAnOverrideRemovesItFromTheSa
     SceneDocument resaved;
     SW_ASSERT_TRUE( pReopened->serializeToDocument( resaved ) );
     SW_ASSERT_EQUAL( size_t( 1 ), resaved._listSceneObjectNode.size() );
-    SW_EXPECT_TRUE_MSG( resaved._listSceneObjectNode[0]._prefabOverrideXml.empty(), resaved._listSceneObjectNode[0]._prefabOverrideXml.c_str() );
-    SW_EXPECT_TRUE( resaved._listSceneObjectNode[0]._embeddedXml.empty() );
+    SW_EXPECT_TRUE_MSG( resaved._listSceneObjectNode[0]._prefabOverrideXML.empty(), resaved._listSceneObjectNode[0]._prefabOverrideXML.c_str() );
+    SW_EXPECT_TRUE( resaved._listSceneObjectNode[0]._embeddedXML.empty() );
     manager.shutdown();
 }
 
@@ -395,7 +395,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EverySaveFailureHasTheSameShape )
     runCase( "dialogue graph", [&]()
     { return EditorToolAssetCommands::saveDialogueGraph( DialogueGraphAsset{}, unwritable ); } );
     runCase( "tile map", [&]()
-    { return EditorToolAssetCommands::saveTileMap( unwritable, TileMapXmlData{} ); } );
+    { return EditorToolAssetCommands::saveTileMap( unwritable, TileMapXMLData{} ); } );
     runCase( "sprite clip", [&]()
     { return EditorToolAssetCommands::saveSpriteClip( SpriteClipAsset{}, unwritable ); } );
     runCase( "sequence", [&]()
@@ -435,7 +435,7 @@ SW_TEST_CASE( EditorToolAssetCommandsTest, EveryUnreadableDocumentIsReportedTheS
     DialogueGraphAsset dialogueGraph;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadDialogueGraph( dialogueGraph, broken ) == ToolAssetLoadResult::Malformed );
     string         tileStatus;
-    TileMapXmlData tileMap;
+    TileMapXMLData tileMap;
     SW_EXPECT_TRUE( EditorToolAssetCommands::loadTileMap( broken, tileMap, tileStatus ) == ToolAssetLoadResult::Malformed );
     SW_EXPECT_TRUE( StringUtil::startsWith( tileStatus, "Failed to read " ) );
     string          clipStatus;

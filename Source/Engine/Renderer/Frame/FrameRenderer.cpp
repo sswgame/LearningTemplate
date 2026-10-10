@@ -162,13 +162,13 @@ namespace sw
         shutdown();
     }
 
-    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXmlPath )
+    bool FrameRenderer::initialize( IRHIDevice* pDevice, string_view pipelineXMLPath )
     {
-        return initialize( pDevice, nullptr, pipelineXmlPath );
+        return initialize( pDevice, nullptr, pipelineXMLPath );
     }
 
     bool FrameRenderer::initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                                    string_view pipelineXmlPath )
+                                    string_view pipelineXMLPath )
     {
         _pDevice = pDevice;
         // 인스턴스 애니메이션 시계는 여기서 한 번 돌린다(GameTimer 는 만들면 멈춘 상태다).
@@ -212,7 +212,7 @@ namespace sw
 
         // 인자 > `-gv_renderPipeline` > `-gv_deferred` > EngineDefaultAssets 의 포워드 순으로 고른다. 디퍼드 경로(그리고 그 위의 조명)를
         // 측정 · 검증하려면 `-gv_deferred=1` 을 준다.
-        string_view resolvedPipeline = pipelineXmlPath;
+        string_view resolvedPipeline = pipelineXMLPath;
         if ( resolvedPipeline.empty() && gv_renderPipeline.empty() == false )
             resolvedPipeline = gv_renderPipeline;
         if ( resolvedPipeline.empty() && gv_deferred )
@@ -421,23 +421,23 @@ namespace sw
         SW_LOG_INFO( "Shut down." );
     }
 
-    bool FrameRenderer::loadPipeline( string_view pipelineXmlPath )
+    bool FrameRenderer::loadPipeline( string_view pipelineXMLPath )
     {
-        _pipelinePath    = pipelineXmlPath;
+        _pipelinePath    = pipelineXMLPath;
         _bCallbacksBound = SW_FALSE;
         _graph.clear();
         releaseTransientResources();
 
-        if ( _pipelineResource.loadFromXmlFile( pipelineXmlPath ) == false )
+        if ( _pipelineResource.loadFromXMLFile( pipelineXMLPath ) == false )
         {
-            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXmlPath );
+            _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;
         }
 
         if ( _renderPipelineAssetCache != nullptr )
         {
             RenderPipelineAssetCache& rpm = *_renderPipelineAssetCache;
-            rpm.loadPipeline( pipelineXmlPath );
+            rpm.loadPipeline( pipelineXMLPath );
             for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
             {
                 if ( passRef.empty() == false )
@@ -448,7 +448,7 @@ namespace sw
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();
         if ( listPass.empty() )
         {
-            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXmlPath );
+            _statusMessage = string( "no graph passes in pipeline: " ) + string( pipelineXMLPath );
             SW_LOG_ERROR( "%#", _statusMessage );
             return false;
         }

@@ -22,7 +22,7 @@
 namespace sw
 {
     class CharacterDataReader;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 파괴 재질 표 하나입니다. 파일 머리말 참고. 단위: 변형(피해와 같은 단위) · 미터 · 킬로그램 · 초 · 뉴턴. */
     struct SW_API DestructionProfile
@@ -52,11 +52,11 @@ namespace sw
         /** @brief 깊이의 문턱입니다. 표가 비면 무한(갈라지지 않는다)입니다. */
         float32 getStrainThreshold( uint32 depth ) const;
         /** @brief 글에서 읽습니다. 오류는 모아 로그로 내고 false 입니다(그때 값은 기본값). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 리소스 경로를 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path );
 
     private:
-        void readRoot( const XmlNode& root, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, CharacterDataReader& reader );
     };
 } // namespace sw

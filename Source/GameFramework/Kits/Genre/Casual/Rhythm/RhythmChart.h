@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 노트가 판정선으로 내려오는 빠르기를 정하는 방식입니다. */
     enum class RhythmScrollMode : uint8
@@ -94,7 +94,7 @@ namespace sw
         RhythmChart();
 
         [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 박의 음악 시각(초)입니다. 박 0 보다 앞은 첫 BPM 으로 늘입니다. */
         float32 convertBeatToSeconds( float32 beat ) const;
@@ -128,7 +128,7 @@ namespace sw
         float32 getEndTime() const { return _endTime; }
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         void               makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop );
 
         vector<RhythmNote>          _listNote;

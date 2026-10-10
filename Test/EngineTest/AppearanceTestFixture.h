@@ -10,7 +10,7 @@
 
 namespace appearancetest
 {
-    inline constexpr const utf8* kItemXml = R"(
+    inline constexpr const utf8* kItemXML = R"(
 <ItemCatalog>
   <Item id="helm" slot="Head" visual="helm_full" tags="Armor.Heavy"/>
   <Item id="cap" slot="Head" visual="cap"/>
@@ -33,7 +33,7 @@ namespace appearancetest
 </ItemCatalog>
 )";
 
-    inline constexpr const utf8* kSlotXml = R"(
+    inline constexpr const utf8* kSlotXML = R"(
 <SlotTable>
   <Slot name="Head"/><Slot name="Body"/><Slot name="Legs"/>
   <Slot name="MainHand" accept="Weapon"/><Slot name="OffHand" accept="Weapon"/>
@@ -43,7 +43,7 @@ namespace appearancetest
 </SlotTable>
 )";
 
-    inline constexpr const utf8* kSetXml = R"(
+    inline constexpr const utf8* kSetXML = R"(
 <EquipSetCatalog>
   <Set id="Knight">
     <Piece slot="Head" items="helm"/><Piece slot="Body" items="plate"/><Piece slot="Legs" items="greaves"/>
@@ -53,7 +53,7 @@ namespace appearancetest
 </EquipSetCatalog>
 )";
 
-    inline constexpr const utf8* kSchemaXml = R"(
+    inline constexpr const utf8* kSchemaXML = R"(
 <CustomizationSchemaCatalog>
   <Schema id="Human">
     <Slider name="Height" category="Body" min="0" max="2" default="1"><Drive kind="BoneProportion" target="Height"/></Slider>
@@ -78,7 +78,7 @@ namespace appearancetest
 </CustomizationSchemaCatalog>
 )";
 
-    inline constexpr const utf8* kVisualXml = R"(
+    inline constexpr const utf8* kVisualXML = R"(
 <ItemVisualCatalog>
   <ItemVisual id="body_human"><Part name="Body" kind="Skinned" mesh="m/body.mesh" sockets="s/body.sockets.xml"><Variant name="Lean" mesh="m/body_lean.mesh"/></Part></ItemVisual>
   <ItemVisual id="hair_long"><Part name="Hair" kind="Skinned" mesh="m/hair_long.mesh"><Variant name="UnderHat" mesh="m/hair_flat.mesh"/></Part></ItemVisual>
@@ -116,7 +116,7 @@ namespace appearancetest
 </ItemVisualCatalog>
 )";
 
-    inline constexpr const utf8* kRuleXml = R"(
+    inline constexpr const utf8* kRuleXML = R"(
 <AppearanceRuleTable>
   <Rule id="HelmHidesCape" priority="0"><When target="Head" tag="Helmet.FullFace"/><Hide target="Back"/></Rule>
   <Rule id="FullHelmHidesHair" priority="10"><When target="Head" tag="Helmet.FullFace"/><Hide target="Hair"/><Hide target="Beard"/></Rule>
@@ -131,7 +131,7 @@ namespace appearancetest
 </AppearanceRuleTable>
 )";
 
-    inline constexpr const utf8* kPresetXml = R"(
+    inline constexpr const utf8* kPresetXML = R"(
 <CharacterAppearanceCatalog>
   <CharacterAppearance id="Human" schema="Human" bodyType="Male" bodyShape="Average" face="face_a" body="body_human" tags="Race.Human"/>
   <CharacterAppearance id="Knight" parent="Human" tags="Class.Knight">
@@ -160,12 +160,12 @@ namespace appearancetest
         sw::ItemCatalog        _items;
         sw::AppearanceDatabase _database;
 
-        /** @brief 위 데이터를 읽습니다. @p pRuleXml 로 규칙 표를 바꿀 수 있습니다. */
-        [[nodiscard]] bool load( const utf8* pRuleXml = kRuleXml )
+        /** @brief 위 데이터를 읽습니다. @p pRuleXML 로 규칙 표를 바꿀 수 있습니다. */
+        [[nodiscard]] bool load( const utf8* pRuleXML = kRuleXML )
         {
-            if ( _items.loadFromXmlText( kItemXml, "AppearanceTest.items" ) == false )
+            if ( _items.loadFromXMLText( kItemXML, "AppearanceTest.items" ) == false )
                 return false;
-            const bool bSections = _database.loadSectionFromXmlText( kSlotXml, "AppearanceTest.slots" ) && _database.loadSectionFromXmlText( kSetXml, "AppearanceTest.sets" ) && _database.loadSectionFromXmlText( kSchemaXml, "AppearanceTest.schemas" ) && _database.loadSectionFromXmlText( kVisualXml, "AppearanceTest.visuals" ) && _database.loadSectionFromXmlText( pRuleXml, "AppearanceTest.rules" ) && _database.loadSectionFromXmlText( kPresetXml, "AppearanceTest.presets" );
+            const bool bSections = _database.loadSectionFromXMLText( kSlotXML, "AppearanceTest.slots" ) && _database.loadSectionFromXMLText( kSetXML, "AppearanceTest.sets" ) && _database.loadSectionFromXMLText( kSchemaXML, "AppearanceTest.schemas" ) && _database.loadSectionFromXMLText( kVisualXML, "AppearanceTest.visuals" ) && _database.loadSectionFromXMLText( pRuleXML, "AppearanceTest.rules" ) && _database.loadSectionFromXMLText( kPresetXML, "AppearanceTest.presets" );
             return bSections && _database.finishLoad( &_items );
         }
 

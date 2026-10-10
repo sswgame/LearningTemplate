@@ -6,7 +6,7 @@
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Reflection/ReflectionEnumNames.h"
 #include "Engine/Serialization/Format/JsonSerializer.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "ReflectionTest/TestReflectionFixtures.h"
 #include "ReflectionTest/TestSampleActor.h"
@@ -304,14 +304,14 @@ SW_TEST_CASE( ReflectionEnumInfoTest, TextParseRejectsUnknownNamesInsteadOfZero 
 
         sw::NarrowEnumHost source;
         source._mode         = sw::NarrowEnum::Two;
-        sw::string   xml     = sw::XmlSerializer::serialize( &source, *pHostType );
+        sw::string   xml     = sw::XMLSerializer::serialize( &source, *pHostType );
         const size_t namePos = xml.find( "\"Two\"" );
         SW_ASSERT_TRUE_MSG( namePos != sw::string::npos, xml.c_str() );
         xml.replace( namePos, 5, "\"Bogus\"" );
-        sw::NarrowEnumHost fromXml;
-        fromXml._mode = sw::NarrowEnum::One;
-        (void)sw::XmlSerializer::deserialize( &fromXml, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
-        SW_EXPECT_TRUE( fromXml._mode == sw::NarrowEnum::One );
+        sw::NarrowEnumHost fromXML;
+        fromXML._mode = sw::NarrowEnum::One;
+        (void)sw::XMLSerializer::deserialize( &fromXML, *pHostType, xml ); // 거절이 기대값 — 아래 단언이 원래 값이 남았는지 본다
+        SW_EXPECT_TRUE( fromXML._mode == sw::NarrowEnum::One );
     }
     sw::NarrowEnumHost caseInsensitive;
     SW_EXPECT_TRUE( sw::JsonSerializer::deserialize( &caseInsensitive, *pHostType, R"({"_mode":"two"})" ) );

@@ -294,7 +294,7 @@ namespace sw
     bool TelemetryService::loadSchemaText( string_view xmlText, string_view sourceName )
     {
         std::scoped_lock<mutex> lock{ _mutex };
-        const bool              bLoaded = _schema.loadFromXmlText( xmlText, sourceName );
+        const bool              bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
         _listEventOccurrence.resize( _schema.getEvents().size(), 0u );
         return bLoaded;
     }

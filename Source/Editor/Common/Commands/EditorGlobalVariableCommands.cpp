@@ -11,7 +11,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw::editor
 {
@@ -56,8 +56,8 @@ namespace sw::editor
         if ( pGvm == nullptr )
             return false;
 
-        XmlDocument doc;
-        XmlNode     root = doc.appendRoot( "GlobalVariablesPreset" );
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "GlobalVariablesPreset" );
         root.appendAttribute( "name", presetName );
 
         const vector<string> listAllName = pGvm->collectVariableNames();
@@ -69,7 +69,7 @@ namespace sw::editor
             if ( pInfo == nullptr || pInfo->_pData == nullptr || pInfo->_bTestOnly )
                 continue;
 
-            XmlNode varNode = root.appendChild( "Var" );
+            XMLNode varNode = root.appendChild( "Var" );
             varNode.appendAttribute( "name", pInfo->_name );
             varNode.appendAttribute( "type", getTypeString( *pInfo ) );
             varNode.appendAttribute( "value", pInfo->getValueAsString() );
@@ -85,15 +85,15 @@ namespace sw::editor
         if ( pGvm == nullptr )
             return false;
 
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.loadFile( filePath ) == false )
             return false;
 
-        XmlNode rootNode = doc.getRoot();
+        XMLNode rootNode = doc.getRoot();
         if ( rootNode.isValid() == false )
             return false;
 
-        for ( XmlNode varNode = rootNode.findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
+        for ( XMLNode varNode = rootNode.findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
         {
             const utf8* pName = varNode.findAttribute( "name" );
             const utf8* pVal  = varNode.findAttribute( "value" );

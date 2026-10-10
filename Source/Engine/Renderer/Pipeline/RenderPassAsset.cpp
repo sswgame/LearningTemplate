@@ -9,48 +9,48 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Serialization/Format/ReflectedXmlFile.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "RenderPassAsset" );
 
-    bool RenderPassAsset::loadFromXmlFile( string_view assetRelativePath )
+    bool RenderPassAsset::loadFromXMLFile( string_view assetRelativePath )
     {
         _desc = {};
-        if ( ReflectedXmlFile::loadDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::loadDesc( assetRelativePath, _desc ) == false )
             return false;
 
         SW_LOG_INFO( "Loaded '%#' (Attachments: %#)", _desc._name, _desc._listAttachment.size() );
         return true;
     }
 
-    bool RenderPassAsset::saveToXmlFile( string_view assetRelativePath ) const
+    bool RenderPassAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
-        if ( ReflectedXmlFile::saveDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::saveDesc( assetRelativePath, _desc ) == false )
             return false;
 
         SW_LOG_INFO( "Saved RenderPass '%#' to: %#", _desc._name, assetRelativePath );
         return true;
     }
 
-    TaskHandle RenderPassAsset::loadFromXmlFileAsync( string_view assetRelativePath )
+    TaskHandle RenderPassAsset::loadFromXMLFileAsync( string_view assetRelativePath )
     {
         TaskHandle handle = engine::getTaskManager().emplaceTask(
             "LoadRenderPassAsync",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPassAsset::loadFromXmlFileAsyncJob ),
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPassAsset::loadFromXMLFileAsyncJob ),
             MakeTaskArgs( this, string( assetRelativePath ) ) );
         handle.submit();
         return handle;
     }
 
-    void RenderPassAsset::loadFromXmlFileAsyncJob( const TaskArgs& args )
+    void RenderPassAsset::loadFromXMLFileAsyncJob( const TaskArgs& args )
     {
         RenderPassAsset* pResource = args.get<RenderPassAsset*>( 0 );
         if ( pResource == nullptr )
             return;
-        if ( pResource->loadFromXmlFile( args.get<string>( 1 ) ) == false )
+        if ( pResource->loadFromXMLFile( args.get<string>( 1 ) ) == false )
             SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
     }
 

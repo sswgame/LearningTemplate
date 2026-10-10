@@ -11,14 +11,14 @@
 #include "Core/Container/vector.h"
 #include "Core/String/hashed_string.h"
 
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Foundation/Utility/EventBuffer.h"
 #include "GameFramework/Base/Gameplay/Match/RoundSeries.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 라운드 하나입니다. */
     struct PartyRoundDef
@@ -55,9 +55,9 @@ namespace sw
      * @brief `<PartySeries winScore="5" placementPoints="3,2,1,0"><Round id="trampoline" time="60" scoreLimit="5"/>...</PartySeries>` 를 읽습니다.
      * @details 라운드 목록이 끝나면 처음부터 다시 돕니다.
      */
-    class SW_GF_API PartyRoundSeries : public XmlCatalog<PartyRoundSeries>
+    class SW_GF_API PartyRoundSeries : public XMLCatalog<PartyRoundSeries>
     {
-        friend class XmlCatalog<PartyRoundSeries>;
+        friend class XMLCatalog<PartyRoundSeries>;
 
     public:
         PartyRoundSeries();
@@ -87,8 +87,8 @@ namespace sw
         void                         drainEvents( vector<PartySeriesEvent>& outListEvent );
 
     private:
-        static constexpr const utf8* kXmlRootName = "PartySeries"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "PartySeries"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         void                         pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
 
         vector<PartyRoundDef>         _listRound;

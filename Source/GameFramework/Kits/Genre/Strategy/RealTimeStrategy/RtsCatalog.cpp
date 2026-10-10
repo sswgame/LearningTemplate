@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -29,13 +29,13 @@ namespace sw
         }
     }
 
-    uint32 RtsCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 RtsCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _supplyMax         = MathUtil::max( 1, root.getAttributeInt( "supplyMax", _supplyMax ) );
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
+        for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             RtsUnitDef def;
@@ -85,7 +85,7 @@ namespace sw
             if ( targets.empty() == false )
             {
                 bGround = false;
-                GameDataXml::forEachToken( targets, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( targets, ",; ", [&]( string_view token )
                 {
                     bGround = bGround || StringUtil::equals( token, string_view( "Ground" ), true );
                     bAir    = bAir || StringUtil::equals( token, string_view( "Air" ), true );

@@ -16,7 +16,7 @@
   4. 코드 안 숫자 · 문자열 · `hashed_string( "..." )` 리터럴이 여러 파일에 반복되는 것.
 
 [올라오지만 고칠 것이 아닌 것]
-  - **관례 이름**: `kXmlRootName` · `kExtension` · `kVersion` · `kMagic` · `kStateTag` · `kStateVersion` 은 타입마다 자기 값을 갖는 같은 모양이다(`kConventionNames`).
+  - **관례 이름**: `kXMLRootName` · `kExtension` · `kVersion` · `kMagic` · `kStateTag` · `kStateVersion` 은 타입마다 자기 값을 갖는 같은 모양이다(`kConventionNames`).
   - **0 · 1 · -1 · 2 같은 자명한 수**, 시험의 기대값(`Test/` 는 보지 않는다), 표 초기화 행(`{ ... },` 줄), 로그 · 단언 문자열.
   - 직렬화 키(`"name"` · `"kind"`)는 형식마다 자기 스키마다 — 같은 형식의 읽기 · 쓰기가 다른 파일에 있을 때만 상수로 묶는다.
 
@@ -49,7 +49,7 @@ kListScanRoot = ("Source", "Tools/ReflectionParser")
 kSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")
 
 #: 타입마다 자기 값을 갖는 관례 이름 — 이름이 같아도 중복이 아니다.
-kConventionNames = frozenset({"kXmlRootName", "kExtension", "kVersion", "kMagic", "kStateTag", "kStateVersion", "kName", "kType",
+kConventionNames = frozenset({"kXMLRootName", "kExtension", "kVersion", "kMagic", "kStateTag", "kStateVersion", "kName", "kType",
                               "kTypeSize", "kKindName", "kRootName", "kArrRootAttribute", "kDefaultPath", "kResourcePath", "kCount"})
 #: 자명한 수 — 반복돼도 보고하지 않는다.
 kTrivialNumbers = frozenset({"0", "1", "-1", "2", "3", "4", "8", "10", "16", "32", "64", "100", "255", "0.0", "1.0", "0.5", "2.0", "-1.0"})

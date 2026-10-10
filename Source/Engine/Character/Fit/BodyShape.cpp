@@ -9,7 +9,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -142,12 +142,12 @@ namespace sw
 
 namespace sw
 {
-    bool BodyShapeSet::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool BodyShapeSet::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         _listAxis.clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "BodyShapeSet", root ) )
             readRoot( root, reader );
         return reader.finish();
@@ -157,17 +157,17 @@ namespace sw
     {
         _listAxis.clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "BodyShapeSet", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
 
-    void BodyShapeSet::readRoot( const XmlNode& root, CharacterDataReader& reader )
+    void BodyShapeSet::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        for ( XmlNode axisNode = root.findChild(); axisNode; axisNode = axisNode.findNextSibling() )
+        for ( XMLNode axisNode = root.findChild(); axisNode; axisNode = axisNode.findNextSibling() )
         {
             if ( StringUtil::equals( axisNode.getName(), "Axis", true ) == false )
             {
@@ -182,7 +182,7 @@ namespace sw
             axis._default = reader.readFloat( axisNode, "default", 0.0f );
             if ( axis._min > 0.0f || axis._max < 0.0f || axis._min >= axis._max )
                 reader.addError( axisNode, "needs min <= 0 <= max with min < max" );
-            for ( XmlNode sideNode = axisNode.findChild(); sideNode; sideNode = sideNode.findNextSibling() )
+            for ( XMLNode sideNode = axisNode.findChild(); sideNode; sideNode = sideNode.findNextSibling() )
             {
                 if ( StringUtil::equals( sideNode.getName(), "Positive", true ) )
                     readSide( sideNode, axis._positive, reader );
@@ -202,11 +202,11 @@ namespace sw
         }
     }
 
-    void BodyShapeSet::readSide( const XmlNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
+    void BodyShapeSet::readSide( const XMLNode& node, BodyShapeAxisSide& outSide, CharacterDataReader& reader )
     {
         reader.reportUnknownAttributes( node, BodyShapeInternal::kArrSideAttribute );
         outSide._morph = reader.readName( node, "morph", false );
-        for ( XmlNode boneNode = node.findChild(); boneNode; boneNode = boneNode.findNextSibling() )
+        for ( XMLNode boneNode = node.findChild(); boneNode; boneNode = boneNode.findNextSibling() )
         {
             if ( StringUtil::equals( boneNode.getName(), "Bone", true ) == false )
             {

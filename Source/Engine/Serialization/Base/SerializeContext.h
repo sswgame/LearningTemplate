@@ -29,7 +29,7 @@ namespace sw
         /** @brief 맡겨 둔 원소의 원문 형식입니다(`OpaqueElementView`). */
         enum class OpaqueFormat : uint8
         {
-            Xml,
+            XML,
             Json,
             Binary
         };
@@ -41,7 +41,7 @@ namespace sw
         struct OpaqueElementView
         {
             string_view  _typeName;
-            OpaqueFormat _format{ OpaqueFormat::Xml };
+            OpaqueFormat _format{ OpaqueFormat::XML };
             string_view  _text;              ///< XML 원소 · JSON 원소(`{ "타입": { … } }`) 원문
             const uint8* _pBytes{ nullptr }; ///< 바이너리 본문(이름 · 크기 머리 뒤)
             size_t       _byteCount{ 0 };
@@ -114,8 +114,8 @@ namespace sw
         /** @brief 등록된 텍스트 reader 를 찾습니다. */
         const TextReadFn* findTextReader( hashed_string typeName ) const;
         /**
-         * @brief Xml/Json 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
-         * @details XmlSerializer::deserialize 가 이 값을 IXmlBackend 에 넘깁니다.
+         * @brief XML/Json 의 키 · 태그 · 속성 이름을 찾을 때 대소문자를 무시하는지 반환합니다(기본 true). 값 비교에는 영향이 없습니다.
+         * @details XMLSerializer::deserialize 가 이 값을 IXMLBackend 에 넘깁니다.
          *          끄려면: `SerializeContext ctx = SerializeContext::deriveFromDefault(); ctx.setIgnoreCaseKeys( false );`
          */
         bool ignoresCaseKeys() const { return _bIgnoreCaseKeys == SW_TRUE; }

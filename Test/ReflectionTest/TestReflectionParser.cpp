@@ -308,7 +308,7 @@ SW_TEST_CASE( ReflectionParserTest, AssignedFlagFormMatchesBareToken )
     // 별칭 목록이 한쪽만 늘어나 있던 자리 — 단독 토큰으로는 `xmlAttribute` 가 먹혔다.
     const sw::PropertyInfo* pTag = pActor->findProperty( sw::hashed_string( "_tag" ) );
     SW_ASSERT_NOT_NULL( pTag );
-    SW_EXPECT_TRUE( pTag->_metadata._bXmlAttribute == SW_TRUE );
+    SW_EXPECT_TRUE( pTag->_metadata._bXMLAttribute == SW_TRUE );
 
     const sw::FunctionInfo* pPing = pActor->findMethod( sw::hashed_string( "ping" ) );
     SW_ASSERT_NOT_NULL( pPing );
@@ -395,7 +395,7 @@ SW_TEST_CASE( ReflectionParserTest, MultiplePropertyAliasesAndRenameCompat )
     SW_ASSERT_NOT_NULL( pTitleProp );
     SW_EXPECT_EQUAL( sw::string( "75" ), pManaProp->_metadata._defaultValue );
     SW_EXPECT_EQUAL( sw::string( "Apprentice" ), pTitleProp->_metadata._defaultValue );
-    SW_EXPECT_TRUE( pTitleProp->_metadata._bXmlAttribute == SW_TRUE );
+    SW_EXPECT_TRUE( pTitleProp->_metadata._bXMLAttribute == SW_TRUE );
 }
 
 /**

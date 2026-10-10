@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -15,7 +15,7 @@ namespace sw
     {
         struct WitcherCatalogInternal
         {
-            static hashed_string readName( const XmlNode& node, const utf8* pAttribute )
+            static hashed_string readName( const XMLNode& node, const utf8* pAttribute )
             {
                 const utf8* pText = node.findAttribute( pAttribute );
                 return pText != nullptr && pText[0] != '\0' ? hashed_string( pText ) : hashed_string{};
@@ -26,7 +26,7 @@ namespace sw
             static void readNameList( string_view text, vector<hashed_string>& outListName )
             {
                 outListName.clear();
-                GameDataXml::forEachToken( text, ",; ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",; ", [&]( string_view token )
                 { outListName.push_back( hashed_string( token ) ); } );
             }
         };
@@ -56,10 +56,10 @@ namespace sw
         return pColor != nullptr ? pColor->_color : hashed_string{};
     }
 
-    uint32 WitcherCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 WitcherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const string_view name = node.getName() != nullptr ? string_view( node.getName() ) : string_view{};
             if ( WitcherCatalogInternal::isNamed( name, "Alchemy" ) )
@@ -117,7 +117,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: unknown element <%#> - skipped", sourceName, name );
                 continue;
             }
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             const hashed_string id( pId );
@@ -185,7 +185,7 @@ namespace sw
         return loadedCount;
     }
 
-    void WitcherCatalog::loadMonster( const XmlNode& node, const hashed_string& id, string_view sourceName )
+    void WitcherCatalog::loadMonster( const XMLNode& node, const hashed_string& id, string_view sourceName )
     {
         WitcherMonsterDef monster;
         monster._id       = id;
@@ -198,7 +198,7 @@ namespace sw
         monster._killsPerLevel    = MathUtil::max( 1, node.getAttributeInt( "killsPerLevel", monster._killsPerLevel ) );
         monster._killCap          = MathUtil::clamp( node.getAttributeInt( "killCap", monster._killCap ), 0, monster._maxKnowledge );
         monster._investigateLevel = MathUtil::clamp( node.getAttributeInt( "investigateLevel", monster._investigateLevel ), 0, monster._maxKnowledge );
-        for ( XmlNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
+        for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )
         {
             WitcherWeakness weakness;
             weakness._id           = WitcherCatalogInternal::readName( child, "id" );
@@ -218,7 +218,7 @@ namespace sw
         (void)_monsterCatalog.add( monster );
     }
 
-    void WitcherCatalog::loadContract( const XmlNode& node, const hashed_string& id )
+    void WitcherCatalog::loadContract( const XMLNode& node, const hashed_string& id )
     {
         WitcherContractDef contract;
         contract._id            = id;
@@ -228,11 +228,11 @@ namespace sw
         contract._angerMax      = MathUtil::max( 0.01f, node.getAttributeFloat( "angerMax", contract._angerMax ) );
         contract._angerScale    = MathUtil::max( 0.0f, node.getAttributeFloat( "angerScale", contract._angerScale ) );
         contract._angerPerRound = MathUtil::max( 0.0f, node.getAttributeFloat( "angerPerRound", contract._angerPerRound ) );
-        for ( XmlNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
+        for ( XMLNode stepNode = node.findChild( "Step" ); stepNode; stepNode = stepNode.findNextSibling( "Step" ) )
         {
             WitcherContractStepDef step;
             step._id = WitcherCatalogInternal::readName( stepNode, "id" );
-            for ( XmlNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
+            for ( XMLNode clueNode = stepNode.findChild( "Clue" ); clueNode; clueNode = clueNode.findNextSibling( "Clue" ) )
             {
                 WitcherClueDef clue;
                 clue._id       = WitcherCatalogInternal::readName( clueNode, "id" );

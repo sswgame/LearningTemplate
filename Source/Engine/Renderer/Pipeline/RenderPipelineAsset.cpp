@@ -11,17 +11,17 @@
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Serialization/Format/ReflectedXmlFile.h"
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
     SW_LOG_CALLER( "RenderPipelineAsset" );
 
-    bool RenderPipelineAsset::loadFromXmlFile( string_view assetRelativePath )
+    bool RenderPipelineAsset::loadFromXMLFile( string_view assetRelativePath )
     {
         _desc = {};
-        if ( ReflectedXmlFile::loadDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::loadDesc( assetRelativePath, _desc ) == false )
             return false;
 
         validate( assetRelativePath );
@@ -352,31 +352,31 @@ namespace sw
         return issueCount;
     }
 
-    bool RenderPipelineAsset::saveToXmlFile( string_view assetRelativePath ) const
+    bool RenderPipelineAsset::saveToXMLFile( string_view assetRelativePath ) const
     {
-        if ( ReflectedXmlFile::saveDesc( assetRelativePath, _desc ) == false )
+        if ( ReflectedXMLFile::saveDesc( assetRelativePath, _desc ) == false )
             return false;
 
         SW_LOG_INFO( "Saved '%#' -> %#", _desc._name, assetRelativePath );
         return true;
     }
 
-    TaskHandle RenderPipelineAsset::loadFromXmlFileAsync( string_view assetRelativePath )
+    TaskHandle RenderPipelineAsset::loadFromXMLFileAsync( string_view assetRelativePath )
     {
         TaskHandle handle = engine::getTaskManager().emplaceTask(
             "LoadRenderPipelineAsync",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPipelineAsset::loadFromXmlFileAsyncJob ),
+            SW_DELEGATE_FUNCTION( TaskArgsDelegate, RenderPipelineAsset::loadFromXMLFileAsyncJob ),
             MakeTaskArgs( this, string( assetRelativePath ) ) );
         handle.submit();
         return handle;
     }
 
-    void RenderPipelineAsset::loadFromXmlFileAsyncJob( const TaskArgs& args )
+    void RenderPipelineAsset::loadFromXMLFileAsyncJob( const TaskArgs& args )
     {
         RenderPipelineAsset* pResource = args.get<RenderPipelineAsset*>( 0 );
         if ( pResource == nullptr )
             return;
-        if ( pResource->loadFromXmlFile( args.get<string>( 1 ) ) == false )
+        if ( pResource->loadFromXMLFile( args.get<string>( 1 ) ) == false )
             SW_LOG_WARNING( "Could not load '%#'", args.get<string>( 1 ) );
     }
 

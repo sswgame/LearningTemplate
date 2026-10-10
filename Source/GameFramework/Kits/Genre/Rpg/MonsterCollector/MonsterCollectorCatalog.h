@@ -12,13 +12,13 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class GameRandom;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 능력치 여섯 가지입니다. XML 의 `stats="HP 공격 방어 특공 특방 스피드"` 가 이 순서입니다. */
     enum class MonsterStat : uint8
@@ -207,9 +207,9 @@ namespace sw
      *          `<Learn level="1" move="scratch"/><Evolve to="charmeleon" level="16"/></Species>`
      *          `<Encounter id="route1_night" area="route1" time="Night"><Slot species="hoothoot" min="2" max="4" weight="30"/></Encounter>`
      */
-    class SW_GF_API MonsterCollectorCatalog : public XmlCatalog<MonsterCollectorCatalog>
+    class SW_GF_API MonsterCollectorCatalog : public XMLCatalog<MonsterCollectorCatalog>
     {
-        friend class XmlCatalog<MonsterCollectorCatalog>;
+        friend class XMLCatalog<MonsterCollectorCatalog>;
 
     public:
         static constexpr int32 kMaxLevel = 100;
@@ -251,11 +251,11 @@ namespace sw
             vector<hashed_string> _listType{};
         };
 
-        static constexpr const utf8* kXmlRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
-        void                         loadMove( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadSpecies( const XmlNode& node, const utf8* pId, string_view sourceName );
-        void                         loadEncounter( const XmlNode& node, const utf8* pId );
+        static constexpr const utf8* kXMLRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        void                         loadMove( const XMLNode& node, const utf8* pId, string_view sourceName );
+        void                         loadSpecies( const XMLNode& node, const utf8* pId, string_view sourceName );
+        void                         loadEncounter( const XMLNode& node, const utf8* pId );
 
         GameCatalog<MonsterSpeciesDef>   _speciesCatalog;
         GameCatalog<MonsterMoveDef>      _moveCatalog;

@@ -17,7 +17,7 @@ namespace sw
 {
     class GlobalVariableManager;
     class UserSettingApplierRegistry;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 설정 값의 종류입니다. 값은 늘 정규화한 글(`UserSettingsSchema::normalizeValue`)로 다닙니다. */
     enum class UserSettingType : uint8
@@ -232,7 +232,7 @@ namespace sw
         /** @brief 리소스 경로의 스키마 XML 을 읽어 덧붙입니다. 실패하면 아무것도 더하지 않습니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief 스키마 XML 글을 읽어 덧붙입니다. 실패하면 아무것도 더하지 않습니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
         /**
          * @brief 정의 전체를 검사합니다 — 범위 · 기본값 · 선택지 · 의존 대상 · 품질 묶음 · 적용기와 전역 변수 이름.
@@ -266,7 +266,7 @@ namespace sw
         const ScalabilityGroupDef* findScalabilityGroupOf( const hashed_string& settingId ) const;
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         void               rebuildIndex();
 
     private:

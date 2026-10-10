@@ -23,7 +23,7 @@
 #include "Engine/Resource/ResourceUtil.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Serialization/Json/JsonDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -268,9 +268,9 @@ SW_TEST_CASE( MemoryTagTest, PrimitiveDirtyFlagsAreTagged )
 /**
  * @brief [MemoryTagTest] XML 문서(pugixml)의 버퍼 · 노드 페이지는 sw 할당자로 잡혀 그때의 태그로 세인다
  * @details pugixml 은 읽은 글을 자기 버퍼로 복사하고 노드를 페이지에 담는다. 할당 함수를 sw 할당자로 바꾸지 않으면 그 둘이 CRT 에서 잡혀
- *          태그 줄에는 `XmlDocument::Impl` 몇백 바이트만 늘어난다.
+ *          태그 줄에는 `XMLDocument::Impl` 몇백 바이트만 늘어난다.
  */
-SW_TEST_CASE( MemoryTagTest, XmlDocumentParseIsTagged )
+SW_TEST_CASE( MemoryTagTest, XMLDocumentParseIsTagged )
 {
     if constexpr ( sw::kMemoryTagScopesEnabled == false )
         SW_TEST_SKIP( "memory tag scopes are compiled out in this configuration" );
@@ -289,7 +289,7 @@ SW_TEST_CASE( MemoryTagTest, XmlDocumentParseIsTagged )
     uint64       animationHeld{ 0 };
     {
         SW_MEMORY_SCOPE( Animation );
-        sw::XmlDocument document;
+        sw::XMLDocument document;
         SW_ASSERT_TRUE( document.parse( xmlText, "memorytag.xml" ) );
         animationHeld = getLiveBytes( *pProfiler, sw::MemoryTag::Animation ) - animationBefore;
     }

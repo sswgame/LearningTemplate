@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Base/Actor/AI/SpawnDirector.h"
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
@@ -18,7 +18,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kAreaGraphXml = R"(
+    constexpr const utf8* kAreaGraphXML = R"(
 <AreaGraph>
   <Area id="hall" name="Hall" x="0" y="0" w="10" h="8" region="Floor1"/>
   <Area id="kitchen" x="10" y="0" w="6" h="8" region="Floor1"/>
@@ -38,21 +38,21 @@ namespace
 </AreaGraph>
 )";
 
-    constexpr const utf8* kSkillCheckWindowXml = R"(
+    constexpr const utf8* kSkillCheckWindowXML = R"(
 <TimingWindows>
   <Window grade="Great" early="0.05" late="0.05"/>
   <Window grade="Good" early="0.15" late="0.15"/>
 </TimingWindows>
 )";
 
-    constexpr const utf8* kSpawnTableXml = R"(
+    constexpr const utf8* kSpawnTableXML = R"(
 <SpawnTable budgetPerMinute="60" maxBudget="3" startBudget="0">
   <Entry id="bug" cost="1" weight="1" max="2"/>
   <Entry id="giant" cost="3" weight="1" max="1" minTime="10" tags="Outdoor"/>
 </SpawnTable>
 )";
 
-    constexpr const utf8* kSpawnMixXml = R"(
+    constexpr const utf8* kSpawnMixXML = R"(
 <SpawnTable budgetPerMinute="30" maxBudget="8" startBudget="2">
   <Entry id="a" cost="1" weight="3"/>
   <Entry id="b" cost="2" weight="2" max="3"/>
@@ -135,7 +135,7 @@ namespace
     void runSpawnMix( uint32 seed, vector<SpawnEvent>& outListEvent )
     {
         SpawnTable table;
-        SW_ASSERT_TRUE( table.loadFromXmlText( kSpawnMixXml, "SpawnMix" ) );
+        SW_ASSERT_TRUE( table.loadFromXMLText( kSpawnMixXML, "SpawnMix" ) );
         SpawnDirector director;
         director.initialize( &table, seed );
         outListEvent.clear();
@@ -216,7 +216,7 @@ SW_TEST_CASE( WorldSystemsTest, FlagConditionsFollowPrecedenceParenthesesAndReje
 SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier )
 {
     AreaGraph graph;
-    SW_ASSERT_TRUE( graph.loadFromXmlText( kAreaGraphXml, "AreaGraphTest" ) );
+    SW_ASSERT_TRUE( graph.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( graph.getAreas().size() ) );
     SW_EXPECT_EQUAL( 7, static_cast<int32>( graph.getLinks().size() ) ); // 모르는 방으로 가는 연결은 빠진다
     const hashed_string hall( "hall" );
@@ -296,7 +296,7 @@ SW_TEST_CASE( WorldSystemsTest, AreaGraphDetoursLockedDoorsAndReportsTheFrontier
     SW_EXPECT_TRUE( listVisited[0] == cellar ); // 이름 순
     SW_EXPECT_TRUE( listVisited[3] == hashed_string( "kitchen" ) );
     AreaGraph loaded;
-    SW_ASSERT_TRUE( loaded.loadFromXmlText( kAreaGraphXml, "AreaGraphTest" ) );
+    SW_ASSERT_TRUE( loaded.loadFromXMLText( kAreaGraphXML, "AreaGraphTest" ) );
     loaded.restoreState( listVisited, listDiscovered );
     SW_EXPECT_NEAR_EQUAL( graph.computeExplorationRatio(), loaded.computeExplorationRatio(), 1.0e-6f );
     SW_EXPECT_TRUE( loaded.isDiscovered( hashed_string( "vault" ) ) );
@@ -383,7 +383,7 @@ SW_TEST_CASE( WorldSystemsTest, InteractionScalesWithParticipantsRegressesAndRes
 SW_TEST_CASE( WorldSystemsTest, SkillChecksJudgeTimingAndRepeatWithTheSameSeed )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( kSkillCheckWindowXml, "SkillCheck" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( kSkillCheckWindowXML, "SkillCheck" ) );
 
     vector<SkillCheckRecord> listFirst;
     vector<SkillCheckRecord> listSecond;
@@ -431,7 +431,7 @@ SW_TEST_CASE( WorldSystemsTest, SkillChecksJudgeTimingAndRepeatWithTheSameSeed )
 SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsWithTheSameSeed )
 {
     SpawnTable table;
-    SW_ASSERT_TRUE( table.loadFromXmlText( kSpawnTableXml, "SpawnTest" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( kSpawnTableXML, "SpawnTest" ) );
     SpawnDirector director;
     director.initialize( &table, 7u );
     vector<SpawnEvent> listEvent;
@@ -488,7 +488,7 @@ SW_TEST_CASE( WorldSystemsTest, SpawnDirectorSpendsBudgetWithinLimitsAndRepeatsW
 
     // 곡선은 선형 보간, 끝 밖은 끝 값(읽는 순서와 상관없이 시각 순).
     SpawnTable mix;
-    SW_ASSERT_TRUE( mix.loadFromXmlText( kSpawnMixXml, "SpawnMix" ) );
+    SW_ASSERT_TRUE( mix.loadFromXMLText( kSpawnMixXML, "SpawnMix" ) );
     SW_EXPECT_NEAR_EQUAL( 0.5f, mix.computeScale( -5.0f ), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 1.25f, mix.computeScale( 300.0f ), 1.0e-6f );
     SW_EXPECT_NEAR_EQUAL( 2.0f, mix.computeScale( 900.0f ), 1.0e-6f );
@@ -544,7 +544,7 @@ SW_TEST_CASE( WorldSystemsTest, AreaGraphBuildsFromCodeAndEmbeddedNodes )
     SW_EXPECT_TRUE( graph.enterArea( hashed_string( "vault" ) ) );
 
     // 다른 키트의 XML 안에 적은 그래프를 더한다(지우지 않는다 — 탐색 상태도 남는다).
-    XmlDocument doc;
+    sw::XMLDocument doc;
     SW_ASSERT_TRUE( doc.parse( "<Dungeon><Map><Area id=\"crypt\" region=\"Basement\"/><Link from=\"vault\" to=\"crypt\" oneWay=\"true\"/></Map></Dungeon>" ) );
     SW_EXPECT_EQUAL( 1, static_cast<int32>( graph.loadFromNode( doc.getRoot().findChild( "Map" ), "AreaGraphTest" ) ) );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( graph.getAreas().size() ) );

@@ -6,9 +6,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -25,13 +25,13 @@ namespace sw
         return 0.0f;
     }
 
-    uint32 WeatherCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 WeatherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _transitionTime    = MathUtil::max( 0.0f, root.getAttributeFloat( "transition", _transitionTime ) );
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
+        for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             WeatherDef weather;
@@ -40,7 +40,7 @@ namespace sw
             weather._minDuration = MathUtil::max( 1.0f, node.getAttributeFloat( "minDuration", weather._minDuration ) );
             weather._maxDuration = MathUtil::max( weather._minDuration, node.getAttributeFloat( "maxDuration", weather._maxDuration ) );
             // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 `weight`).
-            GameDataXml::forEachToken( node.getAttributeText( "seasons" ), ", ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "seasons" ), ", ", [&]( string_view token )
             {
                 WeatherSeasonWeight seasonWeight;
                 const size_t        colon = token.find( ':' );
@@ -51,7 +51,7 @@ namespace sw
                     seasonWeight._weight = MathUtil::max( 0.0f, value );
                 weather._listSeasonWeight.push_back( seasonWeight );
             } );
-            const XmlNode valueNode = node.findChild( "Values" );
+            const XMLNode valueNode = node.findChild( "Values" );
             if ( valueNode )
                 (void)weather._values.loadFromAttributes( valueNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 값이다
             (void)_catalog.add( weather );

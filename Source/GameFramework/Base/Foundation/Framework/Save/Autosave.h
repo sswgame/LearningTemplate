@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 자동 저장을 부른 까닭입니다. 칸 정보에 함께 적힙니다(목록 UI · 체크포인트 되돌리기가 고른다). */
     ENUM()
@@ -52,12 +52,12 @@ namespace sw
         uint8   _bOnQuit{ SW_TRUE };       ///< 종료에 저장한다
 
         [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 칸 번호의 저장 파일 경로입니다. */
         string makeSlotPath( int32 slot ) const;
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
     };
 } // namespace sw
 

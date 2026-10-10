@@ -5,7 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Network/BitStream.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -75,7 +75,7 @@ namespace sw
     void InputCommandParser::setButtonNames( string_view names )
     {
         _listButtonName.clear();
-        GameDataXml::forEachToken( names, ", ", [&]( string_view token )
+        GameDataXML::forEachToken( names, ", ", [&]( string_view token )
         { _listButtonName.push_back( string( token ) ); } );
     }
 
@@ -129,7 +129,7 @@ namespace sw
         if ( bKnown == false )
             return false;
         bool bAllButtons = true;
-        GameDataXml::forEachToken( rest, "+", [&]( string_view name )
+        GameDataXML::forEachToken( rest, "+", [&]( string_view name )
         {
             bool bFound = false;
             for ( size_t index = 0; index < _listButtonName.size(); ++index )
@@ -152,7 +152,7 @@ namespace sw
     {
         outCommand._listStep.clear();
         bool bOk = true;
-        GameDataXml::forEachToken( notation, ", ", [&]( string_view token )
+        GameDataXML::forEachToken( notation, ", ", [&]( string_view token )
         { bOk = bOk && parseStep( token, outCommand._listStep ); } );
         return bOk && outCommand._listStep.empty() == false;
     }

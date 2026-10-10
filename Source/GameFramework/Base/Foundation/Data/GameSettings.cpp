@@ -6,9 +6,9 @@
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Object/Component/Component.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -78,16 +78,16 @@ namespace sw
         // 주의: 안 비우면 팩을 바꿔 다시 읽을 때 앞 팩의 커스텀 프로퍼티가 그대로 남아,
         // 새 팩에 없는 키를 물으면 **없어진 팩의 값**이 나온다.
         *this = GameSettings{};
-        return GameDataXml::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
+        return GameDataXML::loadFile( *this, &GameSettings::loadRoot, path, "GameSettings" );
     }
 
-    bool GameSettings::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool GameSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = GameSettings{};
-        return GameDataXml::loadText( *this, &GameSettings::loadRoot, xmlText, sourceName, "GameSettings" );
+        return GameDataXML::loadText( *this, &GameSettings::loadRoot, xmlText, sourceName, "GameSettings" );
     }
 
-    bool GameSettings::loadRoot( const XmlNode& root, string_view sourceName )
+    bool GameSettings::loadRoot( const XMLNode& root, string_view sourceName )
     {
         root.takeChildText( "startMap", _startMap );
         root.takeChildText( "titleScene", _titleScene );
@@ -100,7 +100,7 @@ namespace sw
         root.takeChildText( "loadingScreen", _loadingScreen );
 
         bool bUnknownElement = false;
-        for ( XmlNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child.isValid() == true; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::isNullOrEmpty( pName ) )
@@ -119,7 +119,7 @@ namespace sw
 
             if ( StringUtil::equals( pName, "custom" ) )
             {
-                for ( XmlNode prop = child.findChild( "prop" ); prop.isValid() == true; prop = prop.findNextSibling( "prop" ) )
+                for ( XMLNode prop = child.findChild( "prop" ); prop.isValid() == true; prop = prop.findNextSibling( "prop" ) )
                 {
                     const utf8* pKey = prop.findAttribute( "key" );
                     const utf8* pVal = prop.getText();

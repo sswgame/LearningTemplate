@@ -317,27 +317,27 @@ namespace sw
         string convertBinaryToJson( const TypeInfo& typeInfo, bool bPretty = false );
 
         // ------------------------------------------------------------------------------
-        // 5) XML 임베딩 및 상호 변환 (XmlSerializer 연계)
+        // 5) XML 임베딩 및 상호 변환 (XMLSerializer 연계)
         // ------------------------------------------------------------------------------
         /** @brief 객체를 XML 문자열로 직렬화해 아카이브에 넣습니다. */
-        [[nodiscard]] bool serializeXmlObject( const void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool serializeXMLObject( const void* pInstance, const TypeInfo& typeInfo );
         /** @brief 아카이브에 넣어 둔 XML 문자열에서 객체를 역직렬화합니다. */
-        [[nodiscard]] bool deserializeXmlObject( void* pInstance, const TypeInfo& typeInfo );
+        [[nodiscard]] bool deserializeXMLObject( void* pInstance, const TypeInfo& typeInfo );
 
         template <typename T>
-        [[nodiscard]] bool serializeXmlObject( const T& instance )
+        [[nodiscard]] bool serializeXMLObject( const T& instance )
         {
-            return serializeXmlObject( &instance, *T::StaticType() );
+            return serializeXMLObject( &instance, *T::StaticType() );
         }
 
         template <typename T>
-        [[nodiscard]] bool deserializeXmlObject( T& instance )
+        [[nodiscard]] bool deserializeXMLObject( T& instance )
         {
-            return deserializeXmlObject( &instance, *T::StaticType() );
+            return deserializeXMLObject( &instance, *T::StaticType() );
         }
 
         /** @brief XML 문자열을 콤팩트 바이너리로 바꿔 기록합니다. */
-        [[nodiscard]] bool convertXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo );
+        [[nodiscard]] bool convertXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo );
 
         // ------------------------------------------------------------------------------
         // 6) 가변 길이 정수 (VarInt / ZigZag) 스트리밍

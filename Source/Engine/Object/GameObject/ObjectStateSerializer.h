@@ -21,7 +21,7 @@ namespace sw
     class GameObject;
     class ObjectStateBatch;
 
-    /// @brief GameObject/Component 리플렉션 스키마 버전입니다(XmlSerializer 의 `_schemaVersion`).
+    /// @brief GameObject/Component 리플렉션 스키마 버전입니다(XMLSerializer 의 `_schemaVersion`).
     inline constexpr uint32 kObjectReflectedSchemaVersion = 0;
 
     /**
@@ -231,8 +231,8 @@ namespace sw
          *          GameObject 부모는 `getParent()` 가 SceneComponent `_pParent` 에서 끌어내므로
          *          별도 `_parentGO` 필드/속성을 쓰지 않습니다.
          */
-        static string saveToXmlString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
-        /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XmlSerializer 와 같은 PROPERTY 그래프입니다. */
+        static string saveToXMLString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
+        /** @brief GameObject 상태를 JSON 으로 직렬화합니다. XMLSerializer 와 같은 PROPERTY 그래프입니다. */
         [[maybe_unused]] static string saveToJsonString( const GameObject* pGameObject, const ObjectSaveOptions& options = {} );
 
         /** @brief GameObject 상태를 바이너리 버퍼로 빠르게 직렬화합니다(핫 리로드 · 프리팹용). */
@@ -245,12 +245,12 @@ namespace sw
          *          매니저의 런타임 id 로 찾습니다). 여러 오브젝트를 읽을 때는 묶음을 주고 모두 읽은 뒤 `ObjectStateBatch::finish` 를 부릅니다 —
          *          그래야 자식이 부모보다 먼저 읽혀도 부모를 찾습니다.
          */
-        [[nodiscard]] static bool loadFromXmlString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
+        [[nodiscard]] static bool loadFromXMLString( GameObject* pGameObject, string_view xmlString, const ObjectLoadContext& context = {} );
         [[nodiscard]] static bool loadFromJsonString( GameObject* pGameObject, string_view jsonString, const ObjectLoadContext& context = {} );
 
         /**
          * @brief 바이너리 버퍼에서 GameObject 상태를 복원하고 읽은 바이트 수를 반환합니다(실패하면 0).
-         * @param context `loadFromXmlString` 과 같습니다.
+         * @param context `loadFromXMLString` 과 같습니다.
          * @details 버퍼는 본문 크기(uint32) + 본문입니다. 부모는 상태의 부착 필드가 id 로 듭니다.
          */
         [[nodiscard]] static size_t loadFromBinaryBuffer( GameObject* pGameObject, const uint8* pData, size_t size, const ObjectLoadContext& context = {} );
@@ -282,7 +282,7 @@ namespace sw
          */
         template <typename TSerializer>
         static string saveToText( const GameObject* pGameObject, const ObjectSaveOptions& options );
-        /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXmlString` · `loadFromJsonString` 의 몸통입니다. */
+        /** @brief 리플렉션 문자열 포맷 하나에서 복원합니다. `loadFromXMLString` · `loadFromJsonString` 의 몸통입니다. */
         template <typename TSerializer>
         [[nodiscard]] static bool loadFromText( GameObject* pGameObject, string_view text, const ObjectLoadContext& context );
         /**

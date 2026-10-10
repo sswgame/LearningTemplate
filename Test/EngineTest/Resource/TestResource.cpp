@@ -158,7 +158,7 @@ SW_TEST_CASE( ResourceTest, MakeUniqueSavePathDoesNotPointAtAnExistingFile )
 /**
  * @brief [ResourceTest] formatVersion=0 passthrough; legacy unmigrated XML은 거부
  */
-SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
+SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXML )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -170,13 +170,13 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 </MaterialDesc>
 )";
 
-    sw::XmlDocument doc;
+    sw::XMLDocument doc;
     SW_ASSERT_TRUE( doc.parse( kCurrent ) );
-    sw::XmlNode root = doc.getRoot( "MaterialDesc" );
+    sw::XMLNode root = doc.getRoot( "MaterialDesc" );
     SW_ASSERT_TRUE( root.isValid() );
 
     sw::AssetFormatVersion source = 99;
-    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+    SW_EXPECT_TRUE( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
                                                                                        sw::AssetFormatVersions::kMaterial, &source ) );
     SW_EXPECT_EQUAL( sw::AssetFormatVersions::kMaterial, source );
     SW_EXPECT_TRUE( root.findAttribute( "formatVersion" ) != nullptr );
@@ -195,7 +195,7 @@ SW_TEST_CASE( ResourceTest, AssetFormatAcceptsCurrentMaterialXml )
 /**
  * @brief [ResourceTest] formatVersion 없는 옛 Material 루트는 자동 변환하지 않고 거부
  */
-SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXml )
+SW_TEST_CASE( ResourceTest, AssetFormatRejectsLegacyMaterialXML )
 {
     SW_ASSERT_TRUE( sw::ResourceUtil::initialize() );
 
@@ -992,12 +992,12 @@ SW_TEST_CASE( ResourceTest, OutOfRangeFormatVersionIsRejected )
     {
         const sw::string xml = sw::string( "<MaterialDesc formatVersion=\"" ) + pVersion +
                                "\" name=\"M\" shaderPath=\"engine/shaders/forwardlit.hlsl\" blendMode=\"Opaque\"><_properties/></MaterialDesc>";
-        sw::XmlDocument doc;
+        sw::XMLDocument doc;
         SW_ASSERT_TRUE( doc.parse( xml.c_str() ) );
-        sw::XmlNode root = doc.getRoot( "MaterialDesc" );
+        sw::XMLNode root = doc.getRoot( "MaterialDesc" );
         SW_ASSERT_TRUE( root.isValid() );
         test::ScopedLogSuppressor suppressor;
-        SW_EXPECT_FALSE_MSG( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXml( sw::AssetKind::Material, doc, root,
+        SW_EXPECT_FALSE_MSG( sw::engine::getAssetManager().getAssetFormatRegistry().upgradeXML( sw::AssetKind::Material, doc, root,
                                                                                                 sw::AssetFormatVersions::kMaterial ),
                              pVersion );
     }

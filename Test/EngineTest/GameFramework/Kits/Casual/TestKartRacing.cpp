@@ -21,7 +21,7 @@ using namespace sw;
 namespace
 {
     /** @brief 둥근 직사각형 회로 — (0,0) 에서 +Z 로 출발해 오른쪽으로 돈다. 첫 직선에 부스트 패드 · 아이템 상자가 있다. */
-    const utf8* const kTrackXml = R"(<KartTrackCatalog>
+    const utf8* const kTrackXML = R"(<KartTrackCatalog>
   <Track id="oval" name="Oval" width="12" laps="3" offroadScale="0.5" samples="16">
     <Point x="0" z="0"/><Point x="0" z="100"/><Point x="30" z="130"/><Point x="90" z="130"/>
     <Point x="120" z="100"/><Point x="120" z="0"/><Point x="90" z="-30"/><Point x="30" z="-30"/>
@@ -33,7 +33,7 @@ namespace
   <Track id="broken" width="12"><Point x="0" z="0"/><Point x="0" z="10"/></Track>
 </KartTrackCatalog>)";
 
-    const utf8* const kKartRacingItemXml = R"(<KartItemCatalog places="8">
+    const utf8* const kKartRacingItemXML = R"(<KartItemCatalog places="8">
   <Item id="banana" kind="Banana" lifetime="0" spin="1.0"/>
   <Item id="green" kind="GreenShell" speed="45" spin="1.0"/>
   <Item id="red" kind="RedShell" speed="25" turnRate="10" spin="1.0"/>
@@ -50,7 +50,7 @@ namespace
     [[nodiscard]] bool loadTestTrack( KartTrack& outTrack, int32 lapCount )
     {
         KartTrackCatalog catalog;
-        if ( catalog.loadFromXmlText( kTrackXml, "test" ) == false || catalog.findTrack( "oval" ) == nullptr )
+        if ( catalog.loadFromXMLText( kTrackXML, "test" ) == false || catalog.findTrack( "oval" ) == nullptr )
             return false;
         KartTrackDef def = *catalog.findTrack( "oval" );
         def._lapCount    = lapCount;
@@ -138,7 +138,7 @@ namespace
 SW_TEST_CASE( KartRacingTest, TrackSplineGatesAndOffroad )
 {
     KartTrackCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kTrackXml, "test" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kTrackXML, "test" ) );
     SW_EXPECT_TRUE( catalog.findTrack( "broken" ) == nullptr ); // 점 둘은 건너뛴다
 
     KartTrack track;
@@ -293,7 +293,7 @@ SW_TEST_CASE( KartRacingTest, PlacesUseLapAndClampedDistance )
 SW_TEST_CASE( KartRacingTest, ItemTablesFavorRacersBehind )
 {
     KartItemCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kKartRacingItemXml, "test" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kKartRacingItemXML, "test" ) );
     SW_EXPECT_EQUAL( static_cast<int32>( catalog.getItems().getCount() ), 6 );
 
     // 8 명 기준 표 — 1 등은 바나나 · 녹색, 꼴찌는 1 등 공격까지.
@@ -330,7 +330,7 @@ SW_TEST_CASE( KartRacingTest, ItemEffectsHitBlockAndHome )
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 3 ) );
     KartItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kKartRacingItemXml, "test" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kKartRacingItemXML, "test" ) );
     KartRaceSettings settings = makeQuietSettings();
     settings._bItems          = SW_TRUE;
     KartRace race;
@@ -440,7 +440,7 @@ SW_TEST_CASE( KartRacingTest, AiFinishesDeterministicallyWithRubberBand )
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 1 ) );
     KartItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kKartRacingItemXml, "test" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kKartRacingItemXML, "test" ) );
 
     // 1) AI 셋 — 한 바퀴를 모두 완주하고 순위가 1..3 으로 확정된다. 같은 씨앗이면 같은 기록.
     float32 arrFinishTime[2][3]{};
@@ -570,7 +570,7 @@ SW_TEST_CASE( KartRacingTest, StateRoundTripContinuesTheSameRace )
     KartTrack track;
     SW_ASSERT_TRUE( loadTestTrack( track, 3 ) );
     KartItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kKartRacingItemXml, "test" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kKartRacingItemXML, "test" ) );
     auto beginRace = [&]( KartRace& outRace, uint32 seed, int32 racerCount )
     {
         KartRaceSettings settings;

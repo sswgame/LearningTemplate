@@ -205,14 +205,14 @@ SW_TEST_CASE( ShaderCookRequestTest, EveryPipelinePassShaderIsRequested )
     for ( uint32 pipelineIndex = 0; pipelineIndex < kPipelineCount; ++pipelineIndex )
     {
         sw::RenderPipelineAsset& probe = arrProbe[pipelineIndex];
-        SW_ASSERT_TRUE_MSG( probe.loadFromXmlFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
+        SW_ASSERT_TRUE_MSG( probe.loadFromXMLFile( arrPipeline[pipelineIndex] ), arrPipeline[pipelineIndex] );
         for ( sw::RenderGraphPassDesc& pass : probe.getDesc()._listPass )
         {
             pass._shaderPath.clear();
             pass._listPermutation.push_back( "SW_COOK_PROBE=1" );
         }
         const sw::string probePath = sw::FileUtil::joinPath( pipelineDir, sw::FileUtil::getFileNamePart( arrPipeline[pipelineIndex] ) );
-        SW_ASSERT_TRUE_MSG( probe.saveToXmlFile( probePath ), probePath.c_str() );
+        SW_ASSERT_TRUE_MSG( probe.saveToXMLFile( probePath ), probePath.c_str() );
     }
 
     sw::vector<sw::ShaderCookRequest> listRequest;

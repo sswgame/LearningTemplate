@@ -6,10 +6,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/TypeRegistry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -43,18 +43,18 @@ namespace sw
 
             /** @brief 표에 없는 속성마다 경고합니다 — 이름을 바꾸고 데이터를 빠뜨리면 조용히 기본값이 되는 것을 막는다. */
             template <size_t Count>
-            static void warnUnknownAttributes( const XmlNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
+            static void warnUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], string_view sourceName )
             {
-                (void)XmlNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning ); // 경고만 하고 읽기를 잇는다
+                (void)XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning ); // 경고만 하고 읽기를 잇는다
             }
 
-            static float32 readDegrees( const XmlNode& node, const utf8* pName, float32 fallbackRadians )
+            static float32 readDegrees( const XMLNode& node, const utf8* pName, float32 fallbackRadians )
             {
                 return node.getAttributeFloat( pName, fallbackRadians * MathUtil::kRadianToDegree ) * MathUtil::kDegreeToRadian;
             }
 
             template <typename TEnum>
-            static void readEnum( const XmlNode& node, const utf8* pName, TEnum& inoutValue, string_view sourceName )
+            static void readEnum( const XMLNode& node, const utf8* pName, TEnum& inoutValue, string_view sourceName )
             {
                 const utf8* pText = node.findAttribute( pName );
                 if ( pText == nullptr )
@@ -67,14 +67,14 @@ namespace sw
             }
 
             /** @brief 블렌드 속성과 `<Key>` 자식을 읽습니다. 빠진 칸은 @p inoutBlend 의 것이 남습니다. */
-            static void readBlend( const XmlNode& node, BlendCurveSpec& inoutBlend, string_view sourceName )
+            static void readBlend( const XMLNode& node, BlendCurveSpec& inoutBlend, string_view sourceName )
             {
                 readEnum( node, "curve", inoutBlend._curve, sourceName );
                 inoutBlend._duration        = MathUtil::max( 0.0f, node.getAttributeFloat( "duration", inoutBlend._duration ) );
                 inoutBlend._exponent        = MathUtil::max( 0.01f, node.getAttributeFloat( "exponent", inoutBlend._exponent ) );
                 inoutBlend._springFrequency = MathUtil::max( 0.01f, node.getAttributeFloat( "springFrequency", inoutBlend._springFrequency ) );
                 inoutBlend._springDamping   = MathUtil::max( 1.0f, node.getAttributeFloat( "springDamping", inoutBlend._springDamping ) );
-                XmlNode keyNode             = node.findChild( "Key" );
+                XMLNode keyNode             = node.findChild( "Key" );
                 if ( keyNode.isValid() )
                     inoutBlend._listCustomKey.clear();
                 bool bSorted = true;
@@ -95,25 +95,25 @@ namespace sw
                 }
             }
 
-            static void readView( const XmlNode& node, CameraViewDef& outView, string_view sourceName )
+            static void readView( const XMLNode& node, CameraViewDef& outView, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrViewAttribute, sourceName );
                 readEnum( node, "mode", outView._mode, sourceName );
                 outView._pitch    = readDegrees( node, "pitch", outView._pitch );
                 outView._yaw      = readDegrees( node, "yaw", outView._yaw );
                 outView._distance = MathUtil::max( 0.0f, node.getAttributeFloat( "distance", outView._distance ) );
-                outView._offset   = GameDataXml::parseFloat3( node.getAttributeText( "offset" ), outView._offset );
+                outView._offset   = GameDataXML::parseFloat3( node.getAttributeText( "offset" ), outView._offset );
                 readEnum( node, "aim", outView._aim, sourceName );
                 if ( node.findAttribute( "lookAt" ) != nullptr )
                 {
-                    outView._lookAt = GameDataXml::parseFloat3( node.getAttributeText( "lookAt" ), outView._lookAt );
+                    outView._lookAt = GameDataXML::parseFloat3( node.getAttributeText( "lookAt" ), outView._lookAt );
                     // 점을 적었으면 그것을 본다 — `aim` 을 따로 적지 않아도 된다.
                     if ( node.findAttribute( "aim" ) == nullptr )
                         outView._aim = CameraAimMode::Point;
                 }
             }
 
-            static void readInput( const XmlNode& node, CameraInputDef& outInput, string_view sourceName )
+            static void readInput( const XMLNode& node, CameraInputDef& outInput, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrInputAttribute, sourceName );
                 outInput._lookSensitivity = MathUtil::max( 0.0f, node.getAttributeFloat( "sensitivity", outInput._lookSensitivity ) );
@@ -124,7 +124,7 @@ namespace sw
                 outInput._bLookWhileHeld  = node.getAttributeBool( "lookWhileHeld", outInput._bLookWhileHeld );
             }
 
-            static void readConfiner( const XmlNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
+            static void readConfiner( const XMLNode& node, CameraConfinerDef& outConfiner, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrConfinerAttribute, sourceName );
                 outConfiner._pitchMin = readDegrees( node, "pitchMin", outConfiner._pitchMin );
@@ -137,13 +137,13 @@ namespace sw
                     SW_LOG_WARNING( "%#: <Confiner> needs both boundsMin and boundsMax - the box is ignored", sourceName );
                 if ( bHasMin && bHasMax )
                 {
-                    outConfiner._boundsMin = GameDataXml::parseFloat3( node.getAttributeText( "boundsMin" ), outConfiner._boundsMin );
-                    outConfiner._boundsMax = GameDataXml::parseFloat3( node.getAttributeText( "boundsMax" ), outConfiner._boundsMax );
+                    outConfiner._boundsMin = GameDataXML::parseFloat3( node.getAttributeText( "boundsMin" ), outConfiner._boundsMin );
+                    outConfiner._boundsMax = GameDataXML::parseFloat3( node.getAttributeText( "boundsMax" ), outConfiner._boundsMax );
                     outConfiner._bBounds   = true;
                 }
             }
 
-            static void readFraming( const XmlNode& node, CameraFramingDef& outFraming, string_view sourceName )
+            static void readFraming( const XMLNode& node, CameraFramingDef& outFraming, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrFramingAttribute, sourceName );
                 outFraming._bCompose          = node.getAttributeBool( "compose", outFraming._bCompose );
@@ -161,7 +161,7 @@ namespace sw
                 outFraming._groupPadding       = MathUtil::max( 0.0f, node.getAttributeFloat( "groupPadding", outFraming._groupPadding ) );
             }
 
-            static void readCollision( const XmlNode& node, CameraCollisionDef& outCollision, string_view sourceName )
+            static void readCollision( const XMLNode& node, CameraCollisionDef& outCollision, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrCollisionAttribute, sourceName );
                 outCollision._bEnabled    = true;
@@ -170,17 +170,17 @@ namespace sw
                 outCollision._recoverTime = MathUtil::max( 0.0f, node.getAttributeFloat( "recoverTime", outCollision._recoverTime ) );
             }
 
-            static void readNoise( const XmlNode& node, CameraNoiseDef& outNoise, string_view sourceName )
+            static void readNoise( const XMLNode& node, CameraNoiseDef& outNoise, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrNoiseAttribute, sourceName );
-                outNoise._positionAmplitude  = GameDataXml::parseFloat3( node.getAttributeText( "position" ), outNoise._positionAmplitude );
-                const float3 rotationDegrees = GameDataXml::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::kRadianToDegree );
+                outNoise._positionAmplitude  = GameDataXML::parseFloat3( node.getAttributeText( "position" ), outNoise._positionAmplitude );
+                const float3 rotationDegrees = GameDataXML::parseFloat3( node.getAttributeText( "rotation" ), outNoise._rotationAmplitude * MathUtil::kRadianToDegree );
                 outNoise._rotationAmplitude  = rotationDegrees * MathUtil::kDegreeToRadian;
                 outNoise._frequency          = MathUtil::max( 0.0f, node.getAttributeFloat( "frequency", outNoise._frequency ) );
                 outNoise._seed               = static_cast<uint32>( MathUtil::max( 0, node.getAttributeInt( "seed", static_cast<int32>( outNoise._seed ) ) ) );
             }
 
-            static void readSweep( const XmlNode& node, CameraSweepDef& outSweep, string_view sourceName )
+            static void readSweep( const XMLNode& node, CameraSweepDef& outSweep, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrSweepAttribute, sourceName );
                 outSweep._yawAmplitude = MathUtil::max( 0.0f, readDegrees( node, "yaw", outSweep._yawAmplitude ) );
@@ -188,7 +188,7 @@ namespace sw
                 outSweep._phase        = MathUtil::saturate( node.getAttributeFloat( "phase", outSweep._phase ) );
             }
 
-            static void readLens( const XmlNode& node, CameraLensDef& outLens, string_view sourceName )
+            static void readLens( const XMLNode& node, CameraLensDef& outLens, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrLensAttribute, sourceName );
                 outLens._fieldOfViewY  = MathUtil::clamp( readDegrees( node, "fieldOfViewY", outLens._fieldOfViewY ), 0.01f, 3.13f );
@@ -198,17 +198,17 @@ namespace sw
                 outLens._bOrthographic = node.getAttributeBool( "orthographic", outLens._bOrthographic );
             }
 
-            static void readDamping( const XmlNode& node, CameraDampingDef& outDamping, string_view sourceName )
+            static void readDamping( const XMLNode& node, CameraDampingDef& outDamping, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrDampingAttribute, sourceName );
                 outDamping._positionTime    = MathUtil::max( 0.0f, node.getAttributeFloat( "position", outDamping._positionTime ) );
                 outDamping._orientationTime = MathUtil::max( 0.0f, node.getAttributeFloat( "orientation", outDamping._orientationTime ) );
             }
 
-            static void readPreset( const XmlNode& node, CameraPresetDef& inoutDef, string_view sourceName )
+            static void readPreset( const XMLNode& node, CameraPresetDef& inoutDef, string_view sourceName )
             {
                 warnUnknownAttributes( node, kArrPresetAttribute, sourceName );
-                for ( XmlNode child = node.findChild(); child; child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {
                     const utf8* pName = child.getName();
                     if ( StringUtil::equals( pName, "View", true ) )
@@ -327,10 +327,10 @@ namespace sw
         return pTarget != nullptr ? pTarget->_blendIn : _defaultBlend;
     }
 
-    uint32 CameraPresetCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CameraPresetCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 기본 블렌드를 먼저 — `<BlendIn>` 이 없는 프리셋이 이 값으로 시작한다.
-        const XmlNode defaultNode = root.findChild( "DefaultBlend" );
+        const XMLNode defaultNode = root.findChild( "DefaultBlend" );
         if ( defaultNode.isValid() )
         {
             CameraPresetInternal::warnUnknownAttributes( defaultNode, CameraPresetInternal::kArrBlendAttribute, sourceName );
@@ -338,12 +338,12 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild(); node; node = node.findNextSibling() )
+        for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const utf8* pName = node.getName();
             if ( StringUtil::equals( pName, "Preset", true ) )
             {
-                const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+                const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
                 if ( pId == nullptr )
                     continue;
                 CameraPresetDef def;

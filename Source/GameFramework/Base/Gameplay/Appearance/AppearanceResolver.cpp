@@ -7,7 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "GameFramework/Base/Gameplay/Appearance/AppearanceDatabase.h"
-#include "GameFramework/Base/Gameplay/Appearance/AppearanceXmlUtil.h"
+#include "GameFramework/Base/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Base/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
@@ -135,7 +135,7 @@ namespace sw
 
             static void addHiddenRegion( ResolvedAppearance& out, const hashed_string& region )
             {
-                if ( AppearanceXmlUtil::containsName( out._listHiddenRegion, region ) == false )
+                if ( AppearanceXMLUtil::containsName( out._listHiddenRegion, region ) == false )
                     out._listHiddenRegion.push_back( region );
             }
 
@@ -289,12 +289,12 @@ namespace sw
                     }
                     case AppearanceRuleConditionKind::BodyShape:
                     {
-                        bMet = AppearanceXmlUtil::containsName( condition._listName, spec._bodyShape );
+                        bMet = AppearanceXMLUtil::containsName( condition._listName, spec._bodyShape );
                         break;
                     }
                     case AppearanceRuleConditionKind::BodyType:
                     {
-                        bMet = AppearanceXmlUtil::containsName( condition._listName, spec._bodyType );
+                        bMet = AppearanceXMLUtil::containsName( condition._listName, spec._bodyType );
                         break;
                     }
                 }
@@ -347,7 +347,7 @@ namespace sw
                 const Decision*                 pRuleVariant = findDecision( listDecision, AppearanceRuleActionKind::ChooseVariant, entry._owner, hashed_string{} );
                 for ( const AppearancePartDef& part : visual._listPart )
                 {
-                    if ( pState != nullptr && AppearanceXmlUtil::containsName( pState->_listHiddenPart, part._name ) )
+                    if ( pState != nullptr && AppearanceXMLUtil::containsName( pState->_listHiddenPart, part._name ) )
                         continue;
                     AppearancePlacement placement = part._placement;
                     if ( pState != nullptr )
@@ -358,7 +358,7 @@ namespace sw
                                 placement = statePlacement._placement;
                         }
                     }
-                    const bool  bHitOff    = entry._pRequest != nullptr && AppearanceXmlUtil::containsName( entry._pRequest->_listDetachedPart, part._name );
+                    const bool  bHitOff    = entry._pRequest != nullptr && AppearanceXMLUtil::containsName( entry._pRequest->_listDetachedPart, part._name );
                     const int32 breakIndex = part._breakStage.empty() ? -1 : visual.findDamageStageIndex( part._breakStage );
                     const bool  bStageOff  = breakIndex >= 0 && stageIndex >= breakIndex;
                     if ( bHitOff && part._bBreakable == SW_FALSE )
@@ -550,7 +550,7 @@ namespace sw
 
     bool ResolvedAppearance::isRegionHidden( const hashed_string& region ) const
     {
-        return AppearanceXmlUtil::containsName( _listHiddenRegion, region );
+        return AppearanceXMLUtil::containsName( _listHiddenRegion, region );
     }
 
     const ResolvedMorph* ResolvedAppearance::findMorph( const hashed_string& owner, const hashed_string& name ) const

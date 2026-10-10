@@ -1,5 +1,5 @@
 /**
- * @file GameDataXml.h
+ * @file GameDataXML.h
  * @brief 게임 데이터 XML 의 공통 읽기 — 문서 열기 · 루트 찾기 · id 확인 · 숫자 목록("1 0.5 0.2") · 토큰 목록("Spring,Fall")입니다.
  */
 #pragma once
@@ -8,7 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Math/Math.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -16,65 +16,65 @@ namespace sw
 {
 
     /**
-     * @struct GameDataXml
+     * @struct GameDataXML
      * @brief 카탈로그(작물 · 무기 · 블록 · 코스터 레이아웃 · 몬스터 …)가 저마다 적던 "문서를 열고 루트를 찾고 실패하면 경고" 를 한 곳에 둡니다.
      * @details 경고 문구가 같아야 로그를 걸러 보기 쉽습니다. 경로로 읽으면 @p outSourceName 이 절대 경로가 되어 이후 경고가 어느 파일인지 가리킵니다.
      */
-    struct SW_GF_API GameDataXml
+    struct SW_GF_API GameDataXML
     {
         /** @brief 리소스 경로의 XML 을 읽고 @p pRootName 루트를 찾습니다. 실패하면 경고하고 false 입니다. */
-        [[nodiscard]] static bool loadRoot( XmlDocument& doc, string_view path, const utf8* pRootName, XmlNode& outRoot, string& outSourceName );
+        [[nodiscard]] static bool loadRoot( XMLDocument& doc, string_view path, const utf8* pRootName, XMLNode& outRoot, string& outSourceName );
         /** @brief XML 글을 읽고 루트를 찾습니다(시험 · 에디터 미리보기). 실패하면 경고하고 false 입니다. */
-        [[nodiscard]] static bool parseRoot( XmlDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XmlNode& outRoot );
+        [[nodiscard]] static bool parseRoot( XMLDocument& doc, string_view xmlText, string_view sourceName, const utf8* pRootName, XMLNode& outRoot );
         /**
          * @brief 리소스 경로의 XML 을 열어 @p pRootName 루트를 카탈로그의 루트 읽기(@p pLoadRoot)에 넘깁니다. 문서 · 루트가 없거나 읽은 것이 없으면 false 입니다.
          * @details 카탈로그마다 같던 `loadFromResource` 몸통입니다 — 카탈로그는 이 한 줄만 둡니다:
          * @code
-         *     bool CropCatalog::loadFromResource( string_view path ) { return GameDataXml::loadFile( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }
+         *     bool CropCatalog::loadFromResource( string_view path ) { return GameDataXML::loadFile( *this, &CropCatalog::loadRoot, path, "CropCatalog" ); }
          * @endcode
          *          루트 읽기는 읽은 항목 수(`uint32` — 0 이면 실패) 또는 성공 여부(`bool`)를 돌려줍니다. 멤버 포인터를 카탈로그 안에서 넘기므로 루트 읽기는
          *          비공개로 둘 수 있습니다.
          */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XmlNode&, string_view ), string_view path, const utf8* pRootName )
+        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view path, const utf8* pRootName )
         {
-            XmlDocument doc;
-            XmlNode     root;
+            XMLDocument doc;
+            XMLNode     root;
             string      sourceName;
             return loadRoot( doc, path, pRootName, root, sourceName ) && isLoaded( ( loader.*pLoadRoot )( root, sourceName ) );
         }
-        /** @brief `loadFile` 의 XML 글 판입니다(시험 · 에디터 미리보기 — `loadFromXmlText`). */
+        /** @brief `loadFile` 의 XML 글 판입니다(시험 · 에디터 미리보기 — `loadFromXMLText`). */
         template <typename TLoader, typename TResult>
-        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XmlNode&, string_view ), string_view xmlText, string_view sourceName,
+        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, string_view ), string_view xmlText, string_view sourceName,
                                             const utf8* pRootName )
         {
-            XmlDocument doc;
-            XmlNode     root;
+            XMLDocument doc;
+            XMLNode     root;
             return parseRoot( doc, xmlText, sourceName, pRootName, root ) && isLoaded( ( loader.*pLoadRoot )( root, sourceName ) );
         }
 
         /** @brief `loadFile` 에 다른 카탈로그(기술 · 코스터 설계)를 함께 넘기는 판입니다 — 루트 읽기가 `( root, context, sourceName )` 를 받는다. */
         template <typename TLoader, typename TResult, typename TContext>
-        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XmlNode&, const TContext&, string_view ), const TContext& context,
+        [[nodiscard]] static bool loadFile( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
                                             string_view path, const utf8* pRootName )
         {
-            XmlDocument doc;
-            XmlNode     root;
+            XMLDocument doc;
+            XMLNode     root;
             string      sourceName;
             return loadRoot( doc, path, pRootName, root, sourceName ) && isLoaded( ( loader.*pLoadRoot )( root, context, sourceName ) );
         }
         /** @brief `loadText` 에 다른 카탈로그를 함께 넘기는 판입니다. */
         template <typename TLoader, typename TResult, typename TContext>
-        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XmlNode&, const TContext&, string_view ), const TContext& context,
+        [[nodiscard]] static bool loadText( TLoader& loader, TResult ( TLoader::*pLoadRoot )( const XMLNode&, const TContext&, string_view ), const TContext& context,
                                             string_view xmlText, string_view sourceName, const utf8* pRootName )
         {
-            XmlDocument doc;
-            XmlNode     root;
+            XMLDocument doc;
+            XMLNode     root;
             return parseRoot( doc, xmlText, sourceName, pRootName, root ) && isLoaded( ( loader.*pLoadRoot )( root, context, sourceName ) );
         }
 
         /** @brief `id` 속성을 돌려줍니다. 없거나 비면 "<원소> without an id - skipped" 를 경고하고 nullptr 입니다. */
-        static const utf8* findRequiredId( const XmlNode& node, string_view sourceName );
+        static const utf8* findRequiredId( const XMLNode& node, string_view sourceName );
 
         /**
          * @brief 쉼표 · 공백 · 탭 · 세미콜론으로 나뉜 실수를 최대 @p maxCount 개 읽습니다. 읽은 개수입니다.
@@ -94,7 +94,7 @@ namespace sw
         /**
          * @brief @p separators 의 아무 글자로 나뉜 비지 않은 토큰마다 @p callback( string_view ) 을 부릅니다(할당 없음).
          * @code
-         *     GameDataXml::forEachToken( "Spring, Fall", ",; ", [&]( string_view token ) { ... } );
+         *     GameDataXML::forEachToken( "Spring, Fall", ",; ", [&]( string_view token ) { ... } );
          * @endcode
          */
 

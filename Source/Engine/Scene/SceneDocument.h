@@ -27,7 +27,7 @@ namespace sw
             string _name;
             string _prefab;
             string _prefabGuid;
-            string _embeddedXml;
+            string _embeddedXML;
             /**
              * @brief 쿠킹된 리플렉션 바이너리 상태입니다. **비어 있지 않으면 XML 대신 이것을 씁니다.**
              *
@@ -37,10 +37,10 @@ namespace sw
             vector<uint8> _embeddedStateBytes;
             /**
              * @brief 프리팹 인스턴스가 프리팹과 다른 점입니다(`<PrefabOverrides>` — `PrefabOverrides`). 비어 있으면 프리팹 그대로입니다.
-             * @details 프리팹 엔티티는 이것만 싣고 상태(`_embeddedXml` · `_embeddedStateBytes`)는 비웁니다 — 로드가 프리팹을 지은 뒤 이것을 얹으므로
+             * @details 프리팹 엔티티는 이것만 싣고 상태(`_embeddedXML` · `_embeddedStateBytes`)는 비웁니다 — 로드가 프리팹을 지은 뒤 이것을 얹으므로
              *          프리팹을 고치면 놓인 인스턴스에 퍼집니다. 상태가 실린 프리팹 엔티티(프리팹을 읽지 못한 채 저장한 것)는 그 상태가 그대로 기준입니다.
              */
-            string _prefabOverrideXml;
+            string _prefabOverrideXML;
         };
 
         string                  _name;
@@ -51,9 +51,9 @@ namespace sw
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( string_view path );
         /** @brief 리소스 상대/절대 경로에서 XML 을 로드합니다. */
-        [[nodiscard]] SW_API bool loadXml( string_view path );
+        [[nodiscard]] SW_API bool loadXML( string_view path );
         /** @brief XML 을 리소스 상대/절대 경로에 저장합니다. */
-        [[nodiscard]] SW_API bool saveXml( string_view path ) const;
+        [[nodiscard]] SW_API bool saveXML( string_view path ) const;
         /** @brief 리소스 상대/절대 경로에서 바이너리(SCN1)를 로드합니다. */
         [[nodiscard]] SW_API bool loadBinary( string_view path );
         /** @brief 바이너리(SCN1)를 리소스 상대/절대 경로에 저장합니다. */

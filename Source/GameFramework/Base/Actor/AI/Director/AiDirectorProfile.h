@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 긴장도 신호가 긴장도에 들어가는 방식입니다. */
     enum class AiDirectorSignalKind : uint8
@@ -186,7 +186,7 @@ namespace sw
         AiDirectorProfile();
 
         [[nodiscard]] bool loadFromResource( string_view path );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
 
         int32 findPhaseIndex( const hashed_string& phaseId ) const;
@@ -200,10 +200,10 @@ namespace sw
         void collectEncounterIds( vector<hashed_string>& outListId ) const;
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root, string_view sourceName );
-        [[nodiscard]] bool readIntensity( const XmlNode& node, string_view sourceName );
-        [[nodiscard]] bool readPhase( const XmlNode& node, string_view sourceName );
-        [[nodiscard]] bool readPool( const XmlNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName );
+        [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
+        [[nodiscard]] bool readIntensity( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool readPhase( const XMLNode& node, string_view sourceName );
+        [[nodiscard]] bool readPool( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName );
         bool               resolveReferences( string_view sourceName );
         bool               validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerId, string_view sourceName ) const;
 

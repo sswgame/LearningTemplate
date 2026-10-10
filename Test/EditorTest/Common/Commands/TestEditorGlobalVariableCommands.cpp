@@ -7,7 +7,7 @@
 
 #include "EditorTest/EditorTestServices.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "TestFramework/TestFramework.h"
 
@@ -34,11 +34,11 @@ SW_TEST_CASE( EditorGlobalVariableCommandsTest, SavedPresetSkipsTestOnlyVariable
     const string presetPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_gv_saved.gvpreset.xml" );
     SW_ASSERT_TRUE( EditorGlobalVariableCommands::savePreset( presetPath, "probe" ) );
 
-    XmlDocument doc;
+    sw::XMLDocument doc;
     SW_ASSERT_TRUE( doc.loadFile( presetPath ) );
     bool bHasRuntime{ false };
     bool bHasTestOnly{ false };
-    for ( XmlNode varNode = doc.getRoot().findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
+    for ( XMLNode varNode = doc.getRoot().findChild( "Var" ); varNode.isValid(); varNode = varNode.findNextSibling( "Var" ) )
     {
         const utf8* pName = varNode.findAttribute( "name" );
         if ( pName == nullptr )
@@ -65,12 +65,12 @@ SW_TEST_CASE( EditorGlobalVariableCommandsTest, LoadedPresetSkipsTestOnlyVariabl
     SW_ASSERT_TRUE( manager.registerVariable( "gv_presetTestOnly", GlobalVariableType::Int32, &testOnlyValue, int32{ 5 }, "", "", "", 4, true ) );
     const ScopedGlobalVariableManagerService service{ manager };
 
-    XmlDocument doc;
-    XmlNode     root = doc.appendRoot( "GlobalVariablesPreset" );
+    sw::XMLDocument doc;
+    XMLNode         root = doc.appendRoot( "GlobalVariablesPreset" );
     root.appendAttribute( "name", "old" );
     for ( const utf8* pName : { "gv_presetRuntime", "gv_presetTestOnly" } )
     {
-        XmlNode varNode = root.appendChild( "Var" );
+        XMLNode varNode = root.appendChild( "Var" );
         varNode.appendAttribute( "name", pName );
         varNode.appendAttribute( "type", "Int32" );
         varNode.appendAttribute( "value", "99" );

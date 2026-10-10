@@ -20,7 +20,7 @@
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -158,17 +158,17 @@ namespace sw
                 vector<MaterialVariantInfo> listMaterialVariant;
 
                 // 1) 렌더 파이프라인 XML(pipeline/*.xml)
-                vector<string> listXmlFile;
-                FileUtil::collectFiles( rootDir, ".xml", listXmlFile, true );
+                vector<string> listXMLFile;
+                FileUtil::collectFiles( rootDir, ".xml", listXMLFile, true );
 
-                for ( const string& xmlPath : listXmlFile )
+                for ( const string& xmlPath : listXMLFile )
                 {
-                    const string normXml = FileUtil::normalizeSeparators( xmlPath );
-                    if ( normXml.find( "pipeline/" ) == string::npos && normXml.find( "pipeline.xml" ) == string::npos )
+                    const string normXML = FileUtil::normalizeSeparators( xmlPath );
+                    if ( normXML.find( "pipeline/" ) == string::npos && normXML.find( "pipeline.xml" ) == string::npos )
                         continue;
 
                     RenderPipelineAsset pipelineResource;
-                    if ( pipelineResource.loadFromXmlFile( xmlPath ) == false )
+                    if ( pipelineResource.loadFromXMLFile( xmlPath ) == false )
                         continue;
 
                     for ( const RenderGraphPassDesc& pass : pipelineResource.getGraphPass() )

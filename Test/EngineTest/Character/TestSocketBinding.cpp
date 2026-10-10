@@ -241,7 +241,7 @@ SW_TEST_CASE( Socket2DTest, SocketOnSpriteBoneBindsInPlane )
     SocketKindTable kinds;
     kinds.addKind( hashed_string( "Attach" ) );
     SocketSet sockets;
-    SW_ASSERT_TRUE( sockets.loadFromXmlText( "<SocketSet><Socket name='Tip' parent='arm' kind='Attach' translation='0.5 0 0'/></SocketSet>", "hero2d.sockets.xml", kinds,
+    SW_ASSERT_TRUE( sockets.loadFromXMLText( "<SocketSet><Socket name='Tip' parent='arm' kind='Attach' translation='0.5 0 0'/></SocketSet>", "hero2d.sockets.xml", kinds,
                                              &bones2D ) );
     ResolvedSocketTable table;
     table.beginResolve();

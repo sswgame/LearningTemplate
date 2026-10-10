@@ -1,6 +1,6 @@
 /**
  * @file TileMapRendererComponent.h
- * @brief 타일맵(`TileMapXmlData` 의 타일 레이어 + `.tileset.xml`)을 그리고 충돌 · 그림자 외곽선 · 이동 비용을 만드는 컴포넌트입니다.
+ * @brief 타일맵(`TileMapXMLData` 의 타일 레이어 + `.tileset.xml`)을 그리고 충돌 · 그림자 외곽선 · 이동 비용을 만드는 컴포넌트입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +16,7 @@
 #include "Engine/Object/GameObject/SpriteInstanceBatch.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/TileMap/TileGridUtil.h"
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
@@ -51,7 +51,7 @@ namespace sw
         /** @brief `_tileMapPath` 의 맵과 그 타일셋을 읽습니다. 읽으면 true 입니다(배치 · 바디는 `rebuild` 가 만듭니다). */
         [[nodiscard]] bool loadTileMap();
         /** @brief 이미 읽은 데이터로 맵을 쓰게 합니다(시험 · 절차 생성). */
-        void setTileMapData( const TileMapXmlData& map, const TileSetAsset& tileSet );
+        void setTileMapData( const TileMapXMLData& map, const TileSetAsset& tileSet );
         /** @brief 칸마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 오브젝트 관리자가 없으면 false 입니다. */
         bool rebuild();
         /** @brief 칸에 브러시를 칠합니다(빈 이름은 지우기). 그 칸과 이웃의 모습 · 바디 · 외곽선을 다시 맞춥니다. 모르는 브러시 · 맵 밖은 false 입니다. */
@@ -72,7 +72,7 @@ namespace sw
         /** @brief 물리 바디 수입니다(병합한 사각형 수와 같습니다). */
         uint32 getPhysicsBodyCount() const { return static_cast<uint32>( _listBody.size() ); }
         /** @brief 맵 데이터입니다. */
-        const TileMapXmlData& getTileMap() const { return _map; }
+        const TileMapXMLData& getTileMap() const { return _map; }
         /** @brief 타일셋입니다. */
         const TileSetAsset& getTileSet() const { return _tileSet; }
 
@@ -105,7 +105,7 @@ namespace sw
         PROPERTY( Category = "Physics", DisplayName = "Generate Colliders", Tooltip = "Turn solid tiles into merged rectangle bodies" )
         bool _bGenerateColliders;
 
-        TileMapXmlData      _map;              ///< 읽은 맵. 저장하지 않습니다
+        TileMapXMLData      _map;              ///< 읽은 맵. 저장하지 않습니다
         TileSetAsset        _tileSet;          ///< 읽은 타일셋
         vector<uint16>      _listBrushIndex;   ///< 칸마다 타일셋 브러시 번호 + 1 (0 = 빈 칸)
         vector<uint32>      _listAnimatedCell; ///< 애니메이션 모습을 보이는 칸 번호

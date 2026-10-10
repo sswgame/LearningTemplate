@@ -12,7 +12,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kPlayerStatsTestXml = R"(
+    constexpr const utf8* kPlayerStatsTestXML = R"(
 <Stats>
   <Stat id="enemies_killed" kind="Counter" name="Enemies"/>
   <Stat id="coins" kind="Counter" max="999"/>
@@ -32,7 +32,7 @@ SW_TEST_CASE( PlayerStatsTest, CatalogReadsKindsAndRejectsUnknownOnes )
     StatCatalog catalog;
     {
         test::ScopedDefensiveTestLog expected( "a stat with an unknown kind" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kPlayerStatsTestXml, "PlayerStatsTest" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kPlayerStatsTestXML, "PlayerStatsTest" ) );
     }
     SW_EXPECT_EQUAL( size_t( 5 ), catalog.getStats().size() );
     SW_EXPECT_TRUE( catalog.findStat( "mystery" ) == nullptr );
@@ -50,7 +50,7 @@ SW_TEST_CASE( PlayerStatsTest, ValuesChangeByKindAndNotifyOnlyRealChanges )
     StatCatalog catalog;
     {
         test::ScopedDefensiveTestLog expected( "a stat with an unknown kind" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kPlayerStatsTestXml, "PlayerStatsTest" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kPlayerStatsTestXML, "PlayerStatsTest" ) );
     }
     PlayerStats stats;
     stats.initialize( &catalog );
@@ -106,7 +106,7 @@ SW_TEST_CASE( PlayerStatsTest, ProfileFileRoundTripsAndDropsRemovedStats )
     StatCatalog catalog;
     {
         test::ScopedDefensiveTestLog expected( "a stat with an unknown kind" );
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kPlayerStatsTestXml, "PlayerStatsTest" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kPlayerStatsTestXML, "PlayerStatsTest" ) );
     }
     PlayerStats stats;
     stats.initialize( &catalog );

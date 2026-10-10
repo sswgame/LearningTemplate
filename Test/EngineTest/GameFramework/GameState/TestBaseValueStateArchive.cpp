@@ -42,14 +42,14 @@ namespace
 {
     constexpr float32 kValueStateStep = 1.0f / 60.0f;
 
-    constexpr const utf8* kValueStateItemXml = R"(
+    constexpr const utf8* kValueStateItemXML = R"(
 <ItemCatalog>
   <Item id="potion" category="Consumable" maxStack="10" value="12"/>
   <Item id="herb" category="Material" maxStack="99" value="2"/>
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kValueStateShopXml = R"(
+    constexpr const utf8* kValueStateShopXML = R"(
 <ShopCatalog>
   <Shop id="general" restockDays="2">
     <Stock item="potion" price="20" count="5" restock="3"/>
@@ -57,13 +57,13 @@ namespace
 </ShopCatalog>
 )";
 
-    constexpr const utf8* kValueStateRecipeXml = R"(
+    constexpr const utf8* kValueStateRecipeXML = R"(
 <RecipeCatalog>
   <Recipe id="brew" time="2"><In item="herb" count="1"/><Out item="potion" count="1"/></Recipe>
 </RecipeCatalog>
 )";
 
-    constexpr const utf8* kValueStateSpawnXml = R"(
+    constexpr const utf8* kValueStateSpawnXML = R"(
 <SpawnTable budgetPerMinute="120" maxBudget="6" startBudget="2">
   <Entry id="grunt" cost="1" weight="1" max="50" tags="Common"/>
   <Entry id="boss" cost="4" weight="1" max="1" tags="Special"/>
@@ -385,8 +385,8 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ShopStateReplaysAfterRestore )
 {
     ItemCatalog items;
     ShopCatalog shops;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kValueStateItemXml, "BaseValueStateArchiveTest" ) );
-    SW_ASSERT_TRUE( shops.loadFromXmlText( kValueStateShopXml, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kValueStateItemXML, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( shops.loadFromXMLText( kValueStateShopXML, "BaseValueStateArchiveTest" ) );
     Inventory inventory;
     inventory.initialize( &items, 4 );
     Wallet wallet;
@@ -413,8 +413,8 @@ SW_TEST_CASE( BaseValueStateArchiveTest, CrafterReplaysAfterRestore )
 {
     ItemCatalog   items;
     RecipeCatalog recipes;
-    SW_ASSERT_TRUE( items.loadFromXmlText( kValueStateItemXml, "BaseValueStateArchiveTest" ) );
-    SW_ASSERT_TRUE( recipes.loadFromXmlText( kValueStateRecipeXml, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( items.loadFromXMLText( kValueStateItemXML, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( recipes.loadFromXMLText( kValueStateRecipeXML, "BaseValueStateArchiveTest" ) );
     Inventory inventory;
     inventory.initialize( &items, 4 );
     (void)inventory.addItem( "herb", 5 );
@@ -538,7 +538,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, ElementGridReplaysAfterRestore )
 SW_TEST_CASE( BaseValueStateArchiveTest, SpawnDirectorReplaysAfterRestore )
 {
     SpawnTable table;
-    SW_ASSERT_TRUE( table.loadFromXmlText( kValueStateSpawnXml, "BaseValueStateArchiveTest" ) );
+    SW_ASSERT_TRUE( table.loadFromXMLText( kValueStateSpawnXML, "BaseValueStateArchiveTest" ) );
     SpawnDirector director;
     director.initialize( &table, 3 );
     (void)director.update( 2.0f );
@@ -619,7 +619,7 @@ SW_TEST_CASE( BaseValueStateArchiveTest, MatchStateReplaysAfterRestore )
 SW_TEST_CASE( BaseValueStateArchiveTest, InteractionProgressReplaysAfterRestore )
 {
     TimingJudge judge;
-    SW_ASSERT_TRUE( judge.loadFromXmlText( R"(<TimingWindows><Window grade="Good" early="0.15" late="0.15"/></TimingWindows>)", "ValueState" ) );
+    SW_ASSERT_TRUE( judge.loadFromXMLText( R"(<TimingWindows><Window grade="Good" early="0.15" late="0.15"/></TimingWindows>)", "ValueState" ) );
     InteractionConfig config;
     config._duration           = 10.0f;
     config._maxParticipants    = 2;

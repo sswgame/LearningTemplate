@@ -1,6 +1,6 @@
 /**
  * @file TileMapPanel.h
- * @brief 에디터 측 TileMap XML 페인터 (Engine TileMapXmlData 편집)
+ * @brief 에디터 측 TileMap XML 페인터 (Engine TileMapXMLData 편집)
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -12,7 +12,7 @@
 
 #include "Editor/Common/Gui/EditorDocumentPanel.h"
 
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 struct ImDrawList;
@@ -46,8 +46,8 @@ namespace sw::editor
     private:
         string         captureDocumentText() const override;
         void           applyDocumentText( string_view text ) override;
-        TileMapXmlData captureMapData() const;
-        void           applyMapData( const TileMapXmlData& data );
+        TileMapXMLData captureMapData() const;
+        void           applyMapData( const TileMapXMLData& data );
 
     private:
         // ------------------------------------------------------------------------------
@@ -72,9 +72,9 @@ namespace sw::editor
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반이 결과로 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
         /** @brief 타일맵 XML 을 읽어 내용을 채웁니다. */
-        ToolAssetLoadResult loadXml( string_view assetRelativePath );
+        ToolAssetLoadResult loadXML( string_view assetRelativePath );
         /** @brief Resource 상대 경로로 TileMap XML을 저장합니다. */
-        [[nodiscard]] bool saveXml( string_view assetRelativePath );
+        [[nodiscard]] bool saveXML( string_view assetRelativePath );
         /** @brief 지정 셀에 현재 레이어를 페인트합니다. */
         void paintCell( int32 x, int32 y );
         /** @brief 가장자리 워프를 페인트합니다. */
@@ -101,7 +101,7 @@ namespace sw::editor
         fixed_string<constant::kMaxBuffer128> _edgeTargetW;
         fixed_string<constant::kMaxBuffer128> _warpTarget;
         string                                _status;
-        TileMapXmlData                        _map;            ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 들고 저장 때 옮긴다.
+        TileMapXMLData                        _map;            ///< 편집 중인 맵(파일 스키마 그대로). 이름은 `_nameBuffer` 가 들고 저장 때 옮긴다.
         fixed_string<constant::kMaxBuffer256> _tileSetBuffer;  ///< Tile 레이어의 타일셋 경로 칸
         TileSetAsset                          _tileSet;        ///< 읽은 타일셋
         string                                _loadedTileSet;  ///< `_tileSet` 이 어느 경로의 것인지(실패한 경로도 — 같은 실패를 되풀이해 읽지 않는다)

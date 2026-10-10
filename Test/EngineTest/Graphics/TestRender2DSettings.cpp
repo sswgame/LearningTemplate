@@ -11,7 +11,7 @@
 
 namespace
 {
-    constexpr const utf8* kLayeredXml = "<Render2DSettings>"
+    constexpr const utf8* kLayeredXML = "<Render2DSettings>"
                                         "  <TransparencySort mode=\"CustomAxis\" axis=\"0 2 0\"/>"
                                         "  <SortingLayers>"
                                         "    <Layer name=\"Background\"/><Layer name=\"Default\"/><Layer name=\"WorldUI\"/>"
@@ -27,7 +27,7 @@ namespace
 SW_TEST_CASE( Render2DSettingsTest, LayerOrderWinsOverOrderInLayer )
 {
     sw::Render2DSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( kLayeredXml, "<test>" ) );
+    SW_ASSERT_TRUE( settings.loadFromXMLText( kLayeredXML, "<test>" ) );
     SW_ASSERT_EQUAL( 3u, settings.getSortingLayerCount() );
     SW_EXPECT_EQUAL( 1u, settings.getDefaultSortingLayer() );
     SW_EXPECT_EQUAL( 2, settings.findSortingLayer( sw::hashed_string( "worldui" ) ) ); // 이름은 대소문자를 가리지 않는다
@@ -71,7 +71,7 @@ SW_TEST_CASE( Render2DSettingsTest, SortAxisFollowsModeAndProjection )
     SW_EXPECT_NEAR_EQUAL( 0.0f, autoSettings.computeTransparentSortAxis( false, forward ).getLengthSquared(), 1e-6f );
 
     sw::Render2DSettings custom;
-    SW_ASSERT_TRUE( custom.loadFromXmlText( kLayeredXml, "<test>" ) );
+    SW_ASSERT_TRUE( custom.loadFromXMLText( kLayeredXML, "<test>" ) );
     SW_EXPECT_TRUE( custom.getTransparencySortMode() == sw::TransparencySortMode::CustomAxis );
     const sw::float3 axis = custom.computeTransparentSortAxis( false, forward );
     SW_EXPECT_NEAR_EQUAL( 0.0f, axis._x, 1e-6f );
@@ -87,9 +87,9 @@ SW_TEST_CASE( Render2DSettingsTest, MalformedTablesAreLoadErrors )
 {
     SW_TEST_DEFENSIVE_SCOPE( "each malformed table logs its load error" );
     sw::Render2DSettings settings;
-    SW_ASSERT_TRUE( settings.loadFromXmlText( kLayeredXml, "<test>" ) );
+    SW_ASSERT_TRUE( settings.loadFromXMLText( kLayeredXML, "<test>" ) );
 
-    const utf8* arrBadXml[] = {
+    const utf8* arrBadXML[] = {
         "<Render2DSettings><TransparencySort mode=\"Isometric\"/></Render2DSettings>",
         "<Render2DSettings><TransparencySort mode=\"Auto\" axes=\"0 0 1\"/></Render2DSettings>",
         "<Render2DSettings><TransparencySort mode=\"CustomAxis\" axis=\"0 0 0\"/></Render2DSettings>",
@@ -100,9 +100,9 @@ SW_TEST_CASE( Render2DSettingsTest, MalformedTablesAreLoadErrors )
         "<Render2DSettings><Layers/></Render2DSettings>",
         "<SortingLayers/>",
     };
-    for ( const utf8* pXml : arrBadXml )
+    for ( const utf8* pXML : arrBadXML )
     {
-        SW_EXPECT_FALSE_MSG( settings.loadFromXmlText( pXml, "<bad>" ), pXml );
+        SW_EXPECT_FALSE_MSG( settings.loadFromXMLText( pXML, "<bad>" ), pXML );
         SW_EXPECT_EQUAL( 3u, settings.getSortingLayerCount() );
     }
 }

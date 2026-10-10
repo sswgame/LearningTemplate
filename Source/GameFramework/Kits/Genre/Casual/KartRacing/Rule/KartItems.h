@@ -11,14 +11,14 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/Base/Gameplay/Inventory/LootTable.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class GameRandom;
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 아이템이 하는 일입니다. XML 은 열거자 이름 그대로 적습니다(대소문자 무시). */
     enum class KartItemKind : uint8
@@ -73,9 +73,9 @@ namespace sw
      * @details `places` 를 적으면 표는 그 인원 기준이고, 실제 인원이 다르면 순위를 그 인원으로 늘려 고릅니다(4 명 경기의 4 등 = 8 명 표의 8 등).
      *          어느 구간에도 들지 않는 순위는 가장 가까운 구간의 표를 씁니다.
      */
-    class SW_GF_API KartItemCatalog : public XmlCatalog<KartItemCatalog>
+    class SW_GF_API KartItemCatalog : public XMLCatalog<KartItemCatalog>
     {
-        friend class XmlCatalog<KartItemCatalog>;
+        friend class XMLCatalog<KartItemCatalog>;
 
     public:
         KartItemCatalog();
@@ -98,8 +98,8 @@ namespace sw
         const LootCatalog&              getLootCatalog() const { return _lootCatalog; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "KartItemCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "KartItemCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<KartItemDef> _catalog;
         LootCatalog              _lootCatalog;

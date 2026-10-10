@@ -199,7 +199,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, Mtoon1ValuesMapDirectly )
 /**
  * @brief [VrmMaterialImporterTest] 만든 `.material` 이 엔진 툰 머티리얼로 읽힌다 — 값 · 텍스처 경로 · 정적 스위치(외곽선 · 컷오프 · 양면) · 반투명 블렌드
  */
-SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
+SW_TEST_CASE( VrmMaterialImporterTest, MaterialXMLLoadsAsToonMaterial )
 {
     sw::editor::ToonMaterialDesc desc;
     desc._name                                   = "Hair";
@@ -212,7 +212,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
     const sw::vector<sw::string> listTexturePath = { "", "game/test/textures/hair.dds" };
 
     sw::shared_ptr<sw::Material> material = sw::Material::create();
-    SW_ASSERT_TRUE( material->loadFromXml( sw::editor::VrmMaterialImporter::makeMaterialXml( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( material->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
     SW_EXPECT_STREQ( "engine/shaders/toon.hlsl", material->getShaderPath().c_str() );
     float32 toony{ 0.0f };
     SW_EXPECT_TRUE( material->getScalarParameter( sw::hashed_string( "shadingToony" ), toony ) );
@@ -232,7 +232,7 @@ SW_TEST_CASE( VrmMaterialImporterTest, MaterialXmlLoadsAsToonMaterial )
     // 반투명은 블렌드 모드 + MATERIAL_BLEND_TRANSLUCENT 이고 외곽선 패스에는 들어가지 않는다(불투명 목록만 그린다).
     desc._alphaMode                    = sw::editor::ToonAlphaMode::Transparent;
     sw::shared_ptr<sw::Material> glass = sw::Material::create();
-    SW_ASSERT_TRUE( glass->loadFromXml( sw::editor::VrmMaterialImporter::makeMaterialXml( desc, listTexturePath ) ) );
+    SW_ASSERT_TRUE( glass->loadFromXML( sw::editor::VrmMaterialImporter::makeMaterialXML( desc, listTexturePath ) ) );
     const sw::vector<sw::string>& listGlassDefine = glass->getCachedShaderDefines();
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_BLEND_TRANSLUCENT" ) ) != listGlassDefine.end() );
     SW_EXPECT_TRUE( std::find( listGlassDefine.begin(), listGlassDefine.end(), sw::string( "MATERIAL_OUTLINE" ) ) == listGlassDefine.end() );

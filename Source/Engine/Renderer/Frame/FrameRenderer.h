@@ -82,10 +82,10 @@ namespace sw
         FrameRenderer& operator=( const FrameRenderer& ) = delete;
 
         /** @brief 디바이스와 파이프라인 XML 로 초기화합니다. */
-        bool initialize( IRHIDevice* pDevice, string_view pipelineXmlPath = {} );
+        bool initialize( IRHIDevice* pDevice, string_view pipelineXMLPath = {} );
         /** @brief 디바이스 · TaskManager · 파이프라인 XML 로 초기화합니다. */
         bool initialize( IRHIDevice* pDevice, TaskManager* pTaskManager,
-                         string_view pipelineXmlPath = {} );
+                         string_view pipelineXMLPath = {} );
         /** @brief 핫패스 서비스(TaskManager)를 연결합니다. */
         void bindServices( TaskManager* pTaskManager );
         /** @brief GPU 자원을 해제하고 종료합니다. */
@@ -95,7 +95,7 @@ namespace sw
         // 2) 파이프라인 · 실행: XML 로드, execute / executePacket
         // ------------------------------------------------------------------------------
         /** @brief RenderPipeline XML 에서 그래프를 다시 만듭니다(동기 로드). 패스 콜백은 한 번 바인딩합니다. */
-        [[nodiscard]] bool loadPipeline( string_view pipelineXmlPath );
+        [[nodiscard]] bool loadPipeline( string_view pipelineXMLPath );
         /** @brief 컴파일된 그래프를 실행합니다. scene 이 있으면 자기 빌더로 스냅샷을 만들어 패킷 경로와 같은 길로 올립니다. */
         bool execute( IRHIDevice* pDevice, Scene* pScene = nullptr );
         /** @brief 렌더 스레드 경로입니다. 미리 만든 packet 의 GpuScene 을 씁니다(Scene 에 접근하지 않습니다). */

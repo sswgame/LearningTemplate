@@ -45,7 +45,7 @@ SW_TEST_CASE( InputMapTest, DetectsBindingConflictInSameLayer )
 /**
  * @brief [InputMapTest] default.input.xml 리소스 로드 및 레이어/액션/코드 바인딩 무결성 검증
  */
-SW_TEST_CASE( InputMapTest, LoadFromDefaultInputXmlResource )
+SW_TEST_CASE( InputMapTest, LoadFromDefaultInputXMLResource )
 {
     sw::InputManager inputManager;
     SW_EXPECT_TRUE( inputManager.initialize() );
@@ -779,7 +779,7 @@ SW_TEST_CASE( InputMapTest, SaveAndLoadAllBindingKinds )
  * @brief [InputMapTest] 유저 바인딩의 패드 번호 · 수정 키 마스크가 범위를 벗어나면 그 바인딩을 버리고 알린다 — 감아서 엉뚱한 패드에 묶지 않는다
  * @details `static_cast<uint8>( getAttributeInt( … ) )` 로 읽으면 `pad="256"` 은 0 번, `pad="-1"` 은 255 번 패드가 되고
  *          (`pad="4"` 는 없는 패드), `modifierMask="257"` 은 Ctrl 이 된다 — 모두 말없이. 패드 번호는 슬롯 수(`kMaxGamepadSlot`),
- *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고(`XmlNode::tryGetAttributeIntInRange`), 벗어나면 경고하고 그 바인딩을 버린다.
+ *          마스크는 아는 비트(`ModifierKey::All`) 안에서만 받고(`XMLNode::tryGetAttributeIntInRange`), 벗어나면 경고하고 그 바인딩을 버린다.
  */
 SW_TEST_CASE( InputMapTest, UserBindingsRejectOutOfRangePadAndModifierMask )
 {
@@ -872,7 +872,7 @@ SW_TEST_CASE( InputMapTest, UserBindingsReadOnlyTheSavedShape )
 
 /**
  * @brief [InputMapTest] 유저 바인딩의 특성이 빠져도 죽지 않는다 — 모든 바인딩 종류에서 kind 만 있는 바인딩을 읽는다
- * @details 종류별 읽기는 `XmlNode::getAttributeText`(없으면 빈 글)를 넘긴다. `node.findAttribute( … )` 를 그대로 넘기면 특성이 없을 때
+ * @details 종류별 읽기는 `XMLNode::getAttributeText`(없으면 빈 글)를 넘긴다. `node.findAttribute( … )` 를 그대로 넘기면 특성이 없을 때
  *          nullptr 로 `string_view` 를 만들어 strlen(nullptr) 에서 죽는다.
  */
 SW_TEST_CASE( InputMapTest, UserBindingsWithMissingAttributesDoNotCrash )

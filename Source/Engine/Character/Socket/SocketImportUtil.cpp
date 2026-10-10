@@ -35,7 +35,7 @@ namespace sw
             return true;
         if ( FileUtil::ensureParentDirectoryExists( absolutePath ) == false )
             return false;
-        if ( FileUtil::writeTextFile( absolutePath, sockets.saveToXmlText() ) == false )
+        if ( FileUtil::writeTextFile( absolutePath, sockets.saveToXMLText() ) == false )
             return false;
         outWritten = true;
         return true;

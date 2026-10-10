@@ -19,7 +19,7 @@ flowchart LR
   File[".scene.xml<br/>.scene.bin"] -- "SceneDocument::load" --> Doc["SceneDocument<br/>엔티티 노드 목록"]
   Doc -- "Scene::instantiate" --> Scene["Scene<br/>GameObjectManager 소유"]
   Scene -- "Scene::serializeToDocument" --> Doc
-  Doc -- "SceneDocument::saveXml" --> File
+  Doc -- "SceneDocument::saveXML" --> File
   Manager["SceneManager<br/>활성 씬, 비동기 로드"] --> Scene
 ```
 
@@ -168,7 +168,7 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
 첫 엔티티는 프리팹을 그대로 놓은 것이고, 두 번째는 프리팹에서 위치를 바꾸고 콜라이더를 뺀 것입니다. 세 번째는 프리팹 없이 상태 전체를 저장한 엔티티입니다.
 오버라이드의 `key` 는 프리팹 쪽 컴포넌트의 안정 키입니다. 엔티티와 씬의 값은 속성으로만 읽고, 자식 원소로 적은 값은 읽지 않습니다.
 
-`formatVersion` 이 지금 버전(`AssetFormatVersions::kScene` = 1)과 다른 문서는 읽지 않습니다. 형식을 바꿔야 하면 버전을 올리고 `AssetFormatRegistry::registerXmlMigrator` 로 N에서 N+1로 가는 변환을 등록합니다.
+`formatVersion` 이 지금 버전(`AssetFormatVersions::kScene` = 1)과 다른 문서는 읽지 않습니다. 형식을 바꿔야 하면 버전을 올리고 `AssetFormatRegistry::registerXMLMigrator` 로 N에서 N+1로 가는 변환을 등록합니다.
 지금은 등록된 변환이 없습니다.
 
 배포 빌드는 쿠킹한 바이너리(`.scene.bin`)를 읽습니다. 파일 앞 네 바이트가 `SCN1` 이고, 그 뒤에 버전(지금 3), 씬 이름, 엔티티 목록이 옵니다.
@@ -198,12 +198,12 @@ GameFramework의 `DontDestroyOnLoadComponent` 를 오브젝트에 붙여도 같�
 
 ## 함정과 주의
 
-**씬 엔티티에는 0이 아닌 `id` 가 꼭 있어야 합니다.** `SceneDocument::loadXml`, `saveXml`, 쿠커가 모두 id가 없거나 0인 엔티티가 있는 문서를 거절합니다.
+**씬 엔티티에는 0이 아닌 `id` 가 꼭 있어야 합니다.** `SceneDocument::loadXML`, `saveXML`, 쿠커가 모두 id가 없거나 0인 엔티티가 있는 문서를 거절합니다.
 코드로 씬 XML이나 `SceneObjectNode` 를 만들 때 `_fileId` 를 빠뜨리지 마세요.
 id가 0이고 이름만 있는 부착은 찾지 못한 부모 참조를 저장한 현재 형식입니다(`SceneComponent::syncAttachSerializeFields`). 낡은 데이터로 보고 지우면 안 됩니다.
 
 **씬과 프리팹 XML을 손으로 쓰지 마세요.** 엔티티 안의 오브젝트 XML은 리플렉션이 만든 결과입니다.
-에디터로 쓰거나, 코드로 오브젝트를 만들어 `SceneManager::saveActiveScene` 이나 `PrefabAsset::saveToXmlFile` 로 씁니다.
+에디터로 쓰거나, 코드로 오브젝트를 만들어 `SceneManager::saveActiveScene` 이나 `PrefabAsset::saveToXMLFile` 로 씁니다.
 손으로 쓴 머티리얼 XML에서 `_permutations` 를 빠뜨리면 네 백엔드가 서로 다르게 깨져서 렌더러 버그로 착각하기 쉽습니다.
 
 **씬 로드 대기열에서 밀려난 요청도 `future` 를 끝내야 합니다.** 대기열은 요청 하나만 보관합니다.

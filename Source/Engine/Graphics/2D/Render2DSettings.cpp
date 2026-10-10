@@ -9,8 +9,8 @@
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
-#include "Engine/Serialization/Xml/XmlNameCheck.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
 {
@@ -118,19 +118,19 @@ namespace sw
             SW_LOG_ERROR( "2D render settings '%#' not found", path );
             return false;
         }
-        return loadFromXmlText( text, path );
+        return loadFromXMLText( text, path );
     }
 
-    bool Render2DSettings::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool Render2DSettings::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         using Internal = Render2DSettingsInternal;
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText, sourceName ) == false )
         {
             SW_LOG_ERROR( "%#", doc.getLastError() );
             return false;
         }
-        const XmlNode root = doc.getRoot( "Render2DSettings" );
+        const XMLNode root = doc.getRoot( "Render2DSettings" );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "%#: the root element must be <Render2DSettings>", sourceName );
@@ -140,12 +140,12 @@ namespace sw
         Render2DSettings loaded;
         loaded._listSortingLayer.clear();
         bool bHasLayers = false;
-        for ( XmlNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "TransparencySort", true ) )
             {
                 static constexpr const utf8* kArrKnown[] = { "mode", "axis" };
-                if ( XmlNameCheck::reportUnknownAttributes( child, kArrKnown, sourceName ) == false )
+                if ( XMLNameCheck::reportUnknownAttributes( child, kArrKnown, sourceName ) == false )
                     return false;
                 const string_view modeName = child.getAttributeText( "mode" );
                 bool              bFound   = modeName.empty();
@@ -178,7 +178,7 @@ namespace sw
             else if ( StringUtil::equals( child.getName(), "SortingLayers", true ) )
             {
                 bHasLayers = true;
-                for ( XmlNode layerNode = child.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
+                for ( XMLNode layerNode = child.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
                 {
                     static constexpr const utf8* kArrKnown[] = { "name" };
                     if ( StringUtil::equals( layerNode.getName(), "Layer", true ) == false )
@@ -186,7 +186,7 @@ namespace sw
                         SW_LOG_ERROR( "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                         return false;
                     }
-                    if ( XmlNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
+                    if ( XMLNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
                         return false;
                     const string_view name = layerNode.getAttributeText( "name" );
                     if ( name.empty() )

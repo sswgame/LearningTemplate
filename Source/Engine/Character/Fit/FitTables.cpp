@@ -7,7 +7,7 @@
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitOperator.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -21,7 +21,7 @@ namespace sw
             static constexpr const utf8* kArrInteractionAttribute[] = { "inner", "outer", "operator", "args" };
 
             /** @brief `args="a=1 b=2"` 를 읽는다. 형식이 틀리면 오류. */
-            static void readArguments( const XmlNode& node, CharacterDataReader& reader, vector<FitArgument>& outListArgument )
+            static void readArguments( const XMLNode& node, CharacterDataReader& reader, vector<FitArgument>& outListArgument )
             {
                 outListArgument.clear();
                 vector<string_view> listToken;
@@ -59,15 +59,15 @@ namespace sw
 
 namespace sw
 {
-    bool FitTables::loadFromXmlText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators )
+    bool FitTables::loadFromXMLText( string_view xmlText, string_view sourceName, const FitOperatorRegistry& operators )
     {
         _listLayer.clear();
         _listRegion.clear();
         _listProfile.clear();
         _listInteraction.clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "FitTables", root ) )
             readRoot( root, operators, reader );
         return reader.finish();
@@ -80,18 +80,18 @@ namespace sw
         _listProfile.clear();
         _listInteraction.clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "FitTables", root ) )
             readRoot( root, operators, reader );
         return reader.finish();
     }
 
-    void FitTables::readRoot( const XmlNode& root, const FitOperatorRegistry& operators, CharacterDataReader& reader )
+    void FitTables::readRoot( const XMLNode& root, const FitOperatorRegistry& operators, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        vector<XmlNode> listInteractionNode;
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        vector<XMLNode> listInteractionNode;
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
             if ( StringUtil::equals( pName, "Layer", true ) )
@@ -155,7 +155,7 @@ namespace sw
                 reader.reportUnknownElement( child );
             }
         }
-        for ( const XmlNode& node : listInteractionNode )
+        for ( const XMLNode& node : listInteractionNode )
         {
             reader.reportUnknownAttributes( node, FitTablesInternal::kArrInteractionAttribute );
             FitInteractionDef interaction;

@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Gameplay/Inventory/ItemCatalog.h"
 
 #include <algorithm>
@@ -24,7 +24,7 @@ namespace sw
                                       vector<hashed_string>& outListSeason )
             {
                 outListSeason.clear();
-                GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
                 {
                     const hashed_string season( token );
                     const bool          bKnown = listKnown.empty() || std::find( listKnown.begin(), listKnown.end(), season ) != listKnown.end();
@@ -86,12 +86,12 @@ namespace sw
         }
     }
 
-    uint32 CropCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CropCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Crop" ); node; node = node.findNextSibling( "Crop" ) )
+        for ( XMLNode node = root.findChild( "Crop" ); node; node = node.findNextSibling( "Crop" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             CropDef crop;

@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -16,19 +16,19 @@ namespace sw
     {
         struct QuestCatalogInternal
         {
-            static hashed_string readId( const XmlNode& node, const utf8* pName )
+            static hashed_string readId( const XMLNode& node, const utf8* pName )
             {
                 const utf8* pValue = node.findAttribute( pName );
                 return pValue != nullptr ? hashed_string( pValue ) : hashed_string{};
             }
 
-            static void readReward( const XmlNode& node, QuestReward& outReward )
+            static void readReward( const XMLNode& node, QuestReward& outReward )
             {
-                const XmlNode rewardNode = node.findChild( "Reward" );
+                const XMLNode rewardNode = node.findChild( "Reward" );
                 if ( rewardNode.isValid() == false )
                     return;
                 (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 돌려준다 — 없으면 값 보상이 없다
-                for ( XmlNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
+                for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
                 {
                     const utf8* pItem = item.findAttribute( "item" );
                     if ( pItem != nullptr )
@@ -48,12 +48,12 @@ namespace sw
         return nullptr;
     }
 
-    uint32 QuestCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 QuestCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
+        for ( XMLNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( questNode, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( questNode, sourceName );
             if ( pId == nullptr )
                 continue;
             QuestDef quest;
@@ -62,9 +62,9 @@ namespace sw
             quest._name          = pName != nullptr ? pName : pId;
             quest._requiredLevel = questNode.getAttributeInt( "level", 0 );
             quest._bRepeatable   = questNode.getAttributeBool( "repeatable", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXml::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
+            GameDataXML::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
             { quest._listRequiredQuest.push_back( hashed_string( token ) ); } );
-            for ( XmlNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
+            for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
                 QuestStage stage;
                 stage._id         = QuestCatalogInternal::readId( stageNode, "id" );
@@ -74,7 +74,7 @@ namespace sw
                 stage._timeLimit  = MathUtil::max( 0.0f, stageNode.getAttributeFloat( "time", 0.0f ) );
                 stage._bComplete  = stageNode.getAttributeBool( "complete", false ) ? SW_TRUE : SW_FALSE;
                 stage._bFail      = stageNode.getAttributeBool( "fail", false ) ? SW_TRUE : SW_FALSE;
-                for ( XmlNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
+                for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
                     QuestObjective objective;
                     objective._kind      = QuestCatalogInternal::readId( node, "kind" );
@@ -85,7 +85,7 @@ namespace sw
                     objective._bOptional = node.getAttributeBool( "optional", false ) ? SW_TRUE : SW_FALSE;
                     stage._listObjective.push_back( objective );
                 }
-                for ( XmlNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
+                for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
                     stage._listBranch.push_back( QuestBranch{ QuestCatalogInternal::readId( node, "choice" ), QuestCatalogInternal::readId( node, "next" ) } );
                 }

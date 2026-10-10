@@ -52,7 +52,7 @@ namespace sw
             /** @brief 프리팹을 저작 파일과 그 쿠킹본(Shipping 은 쿠킹본만 읽는다)으로 쓰고, 캐시에서 버려 다음 로드가 다시 읽게 합니다. */
             [[nodiscard]] static bool writePrefab( const PrefabAsset& asset, const string& path )
             {
-                if ( asset.saveToXmlFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
+                if ( asset.saveToXMLFile( path ) == false || asset.saveToBinaryFile( AssetCookPath::toCookedPath( path ) ) == false )
                     return false;
                 engine::getAssetManager().getPrefabCache().reload( path );
                 return true;
@@ -88,7 +88,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
 
     // 고치지 않은 인스턴스는 덮어쓴 것이 없다(이름은 엔티티가 든다).
     sw::string overrides;
-    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXmlString( pInstance ), baseState, overrides ) );
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance ), baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.empty(), overrides.c_str() );
 
     // 루트를 옮기고, 메시를 지우고, 이름표 단 컴포넌트를 더한다.
@@ -99,7 +99,7 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     pExtra->setComponentName( sw::hashed_string( "Extra" ) );
     world.flushSceneTransforms();
 
-    const sw::string instanceState = sw::ObjectStateSerializer::saveToXmlString( pInstance );
+    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance );
     SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( instanceState, baseState, overrides ) );
     // 루트의 덮어쓴 것은 위치 한 칸이다 — 같은 값(회전 · 스케일 · 부착)은 적지 않는다.
     SW_EXPECT_TRUE_MSG( overrides.find( "<Override key=\"SceneComponent#0\">\n\t\t<SceneComponent _localPosition=\"5,5,5\" />" ) != sw::string::npos,
@@ -113,8 +113,8 @@ SW_TEST_CASE( PrefabOverridesTest, OverridesHoldOnlyWhatDiffersAndRebuildTheInst
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateA", rebuiltState ) );
     sw::GameObjectManager rebuiltWorld;
     sw::GameObject*       pRebuilt = rebuiltWorld.createGameObject( sw::hashed_string( "Rebuilt" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pRebuilt, rebuiltState ) );
-    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXmlString( pRebuilt ).c_str() );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState ) );
+    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt ).c_str() );
 }
 
 /**
@@ -150,11 +150,11 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     const sw::SceneDocument::SceneObjectNode* pSavedA = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateA" );
     const sw::SceneDocument::SceneObjectNode* pSavedB = sw::PrefabOverridesTestInternal::findEntity( saved, "CrateB" );
     SW_ASSERT_TRUE( pSavedA != nullptr && pSavedB != nullptr );
-    SW_EXPECT_TRUE( pSavedA->_embeddedXml.empty() && pSavedB->_embeddedXml.empty() ); // 전체 상태를 싣지 않는다
-    SW_EXPECT_TRUE_MSG( pSavedA->_prefabOverrideXml.find( "_localPosition" ) != sw::string::npos, pSavedA->_prefabOverrideXml.c_str() );
-    SW_EXPECT_TRUE_MSG( pSavedB->_prefabOverrideXml.empty(), pSavedB->_prefabOverrideXml.c_str() );
+    SW_EXPECT_TRUE( pSavedA->_embeddedXML.empty() && pSavedB->_embeddedXML.empty() ); // 전체 상태를 싣지 않는다
+    SW_EXPECT_TRUE_MSG( pSavedA->_prefabOverrideXML.find( "_localPosition" ) != sw::string::npos, pSavedA->_prefabOverrideXML.c_str() );
+    SW_EXPECT_TRUE_MSG( pSavedB->_prefabOverrideXML.empty(), pSavedB->_prefabOverrideXML.c_str() );
     const sw::string scenePath = test::makeTempPath( "prefab_edit.scene.xml" );
-    SW_ASSERT_TRUE( saved.saveXml( scenePath ) );
+    SW_ASSERT_TRUE( saved.saveXML( scenePath ) );
 
     // 프리팹을 고친다 — 위치와 스케일 둘 다.
     SW_ASSERT_TRUE( sw::PrefabOverridesTestInternal::writePrefab(
@@ -178,7 +178,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     };
 
     sw::SceneDocument reopened;
-    SW_ASSERT_TRUE( reopened.loadXml( scenePath ) );
+    SW_ASSERT_TRUE( reopened.loadXML( scenePath ) );
     sw::Scene* pReopened = manager.createScene( "PrefabEditWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reopened ) );
     Check::run( pReopened, "xml" );
@@ -191,7 +191,7 @@ SW_TEST_CASE( PrefabOverridesTest, PrefabEditReachesPlacedInstancesButNotTheirOv
     SW_ASSERT_TRUE( cooked.loadBinary( binPath ) );
     const sw::SceneDocument::SceneObjectNode* pCookedA = sw::PrefabOverridesTestInternal::findEntity( cooked, "CrateA" );
     SW_ASSERT_NOT_NULL( pCookedA );
-    SW_EXPECT_TRUE( pCookedA->_embeddedStateBytes.empty() && pCookedA->_prefabOverrideXml.empty() == false );
+    SW_EXPECT_TRUE( pCookedA->_embeddedStateBytes.empty() && pCookedA->_prefabOverrideXML.empty() == false );
     sw::Scene* pCooked = manager.createScene( "PrefabEditWorldCooked" );
     SW_ASSERT_TRUE( pCooked->instantiate( cooked ) );
     Check::run( pCooked, "binary" );
@@ -233,34 +233,34 @@ SW_TEST_CASE( PrefabOverridesTest, FullStatePrefabEntityIsReadAndResavedAsOverri
     sw::SceneManager manager;
     SW_ASSERT_TRUE( manager.initialize() );
     sw::SceneDocument legacy;
-    SW_ASSERT_TRUE( legacy.loadXml( legacyPath ) );
+    SW_ASSERT_TRUE( legacy.loadXML( legacyPath ) );
     sw::Scene* pOpened = manager.createScene( "LegacyWorld" );
     SW_ASSERT_TRUE( pOpened->instantiate( legacy ) );
     sw::GameObject* pOld = pOpened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
     SW_ASSERT_NOT_NULL( pOld );
     SW_EXPECT_TRUE( pOld->getPrimarySceneComponent()->getLocalPosition() == sw::float3( 7.0f, 7.0f, 7.0f ) );
     SW_EXPECT_TRUE( pOld->getComponent<sw::MeshComponent>() == nullptr ); // 그 상태가 기준 — 지운 메시는 없다
-    const sw::string openedState = sw::ObjectStateSerializer::saveToXmlString( pOld );
+    const sw::string openedState = sw::ObjectStateSerializer::saveToXMLString( pOld );
 
     sw::SceneDocument resaved;
     SW_ASSERT_TRUE( pOpened->serializeToDocument( resaved ) );
     const sw::SceneDocument::SceneObjectNode* pResaved = sw::PrefabOverridesTestInternal::findEntity( resaved, "Old" );
     SW_ASSERT_NOT_NULL( pResaved );
-    SW_EXPECT_TRUE( pResaved->_embeddedXml.empty() );
-    SW_EXPECT_TRUE_MSG( pResaved->_prefabOverrideXml.find( "<Remove key=\"MeshComponent#0\"" ) != sw::string::npos, pResaved->_prefabOverrideXml.c_str() );
+    SW_EXPECT_TRUE( pResaved->_embeddedXML.empty() );
+    SW_EXPECT_TRUE_MSG( pResaved->_prefabOverrideXML.find( "<Remove key=\"MeshComponent#0\"" ) != sw::string::npos, pResaved->_prefabOverrideXML.c_str() );
     const sw::string resavedPath = test::makeTempPath( "legacy_resaved.scene.xml" );
-    SW_ASSERT_TRUE( resaved.saveXml( resavedPath ) );
+    SW_ASSERT_TRUE( resaved.saveXML( resavedPath ) );
     sw::string resavedText;
     SW_ASSERT_TRUE( sw::FileUtil::readTextFile( resavedPath, resavedText ) );
     SW_EXPECT_TRUE_MSG( resavedText.find( "formatVersion=\"1\"" ) != sw::string::npos, resavedText.c_str() );
 
     sw::SceneDocument reread;
-    SW_ASSERT_TRUE( reread.loadXml( resavedPath ) );
+    SW_ASSERT_TRUE( reread.loadXML( resavedPath ) );
     sw::Scene* pReopened = manager.createScene( "LegacyWorldReopened" );
     SW_ASSERT_TRUE( pReopened->instantiate( reread ) );
     sw::GameObject* pReopenedOld = pReopened->getObjectManager()->findGameObjectByName( sw::hashed_string( "Old" ) );
     SW_ASSERT_NOT_NULL( pReopenedOld );
-    SW_EXPECT_STREQ( openedState.c_str(), sw::ObjectStateSerializer::saveToXmlString( pReopenedOld ).c_str() );
+    SW_EXPECT_STREQ( openedState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pReopenedOld ).c_str() );
 
     manager.shutdown();
 }
@@ -315,7 +315,7 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     SW_ASSERT_NOT_NULL( pInstance->addComponent<sw::MeshComponent>() );
     world.flushSceneTransforms();
 
-    const sw::string instanceState = sw::ObjectStateSerializer::saveToXmlString( pInstance );
+    const sw::string instanceState = sw::ObjectStateSerializer::saveToXMLString( pInstance );
     sw::string       overrides;
     SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( instanceState, baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.find( "<Add after=\"Socket#0\">" ) != sw::string::npos, overrides.c_str() );
@@ -325,8 +325,8 @@ SW_TEST_CASE( PrefabOverridesTest, AddedComponentKeepsItsPlaceBetweenInheritedOn
     SW_ASSERT_TRUE( sw::PrefabOverrides::makeInstanceState( baseState, overrides, "CrateMid", rebuiltState ) );
     sw::GameObjectManager rebuiltWorld;
     sw::GameObject*       pRebuilt = rebuiltWorld.createGameObject( sw::hashed_string( "Rebuilt" ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pRebuilt, rebuiltState ) );
-    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXmlString( pRebuilt ).c_str() );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pRebuilt, rebuiltState ) );
+    SW_EXPECT_STREQ( instanceState.c_str(), sw::ObjectStateSerializer::saveToXMLString( pRebuilt ).c_str() );
 
     // 앞의 물려받은 컴포넌트가 프리팹에서 사라진 더한 것은 버리지 않고 끝에 붙인다.
     const sw::string lostAnchor = "<PrefabOverrides><Add after=\"Gone#0\"><SceneComponent _componentName=\"Late\" /></Add></PrefabOverrides>";
@@ -367,7 +367,7 @@ SW_TEST_CASE( PrefabOverridesTest, RenamedInheritedComponentIsRecordedAsRemoveAn
     pSocket->setComponentName( sw::hashed_string( "Mount" ) );
 
     sw::string overrides;
-    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXmlString( pInstance ), baseState, overrides ) );
+    SW_ASSERT_TRUE( sw::PrefabOverrides::computeOverrides( sw::ObjectStateSerializer::saveToXMLString( pInstance ), baseState, overrides ) );
     SW_EXPECT_TRUE_MSG( overrides.find( "<Remove key=\"Socket#0\"" ) != sw::string::npos, overrides.c_str() );
     SW_EXPECT_TRUE_MSG( overrides.find( "_componentName=\"Mount\"" ) != sw::string::npos, overrides.c_str() );
 }

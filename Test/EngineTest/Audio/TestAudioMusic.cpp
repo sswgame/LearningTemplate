@@ -17,7 +17,7 @@ namespace
     struct AudioMusicTestInternal
     {
         /** @brief 120 BPM 4/4 — 한 박 24000 프레임, 한 마디 96000 프레임. 구간은 모두 한 마디입니다. */
-        static constexpr const utf8* kMusicXml = R"(
+        static constexpr const utf8* kMusicXML = R"(
 <AudioMusicDesc _bus="music" _tempo="120" _beatsPerBar="4" _startSegment="A" _layerFadeSeconds="0.5">
 	<_listSegment>
 		<AudioMusicSegmentDesc _name="A" _bars="1"><_listLayer><AudioMusicLayerDesc _path="m/a" /></_listLayer></AudioMusicSegmentDesc>
@@ -56,7 +56,7 @@ namespace
         static sw::shared_ptr<const sw::AudioMusicDesc> makeMusic( const utf8* pStartSegment )
         {
             sw::shared_ptr<sw::AudioMusicDesc> pMusic = sw::make_shared<sw::AudioMusicDesc>();
-            if ( pMusic->loadFromXmlText( kMusicXml ) == false )
+            if ( pMusic->loadFromXMLText( kMusicXML ) == false )
                 return nullptr;
             pMusic->_startSegment = sw::hashed_string( pStartSegment );
             return pMusic;
@@ -189,14 +189,14 @@ SW_TEST_CASE( AudioMusicTest, MusicDataIsValidated )
 {
     SW_TEST_DEFENSIVE_SCOPE( "Music with unknown segment names is rejected" );
     sw::AudioMusicDesc music;
-    SW_EXPECT_FALSE( music.loadFromXmlText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A" _bLoop="false" _next="Z">
+    SW_EXPECT_FALSE( music.loadFromXMLText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A" _bLoop="false" _next="Z">
         <_listLayer><AudioMusicLayerDesc _path="m/a" /></_listLayer></AudioMusicSegmentDesc></_listSegment></AudioMusicDesc>)" ) );
-    SW_EXPECT_FALSE( music.loadFromXmlText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A">
+    SW_EXPECT_FALSE( music.loadFromXMLText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A">
         <_listLayer><AudioMusicLayerDesc _path="m/a" /></_listLayer></AudioMusicSegmentDesc></_listSegment>
         <_listTransition><AudioMusicTransitionDesc _to="Nope" /></_listTransition></AudioMusicDesc>)" ) );
-    SW_EXPECT_FALSE( music.loadFromXmlText( R"(<AudioMusicDesc _startSegment="Nope"><_listSegment><AudioMusicSegmentDesc _name="A">
+    SW_EXPECT_FALSE( music.loadFromXMLText( R"(<AudioMusicDesc _startSegment="Nope"><_listSegment><AudioMusicSegmentDesc _name="A">
         <_listLayer><AudioMusicLayerDesc _path="m/a" /></_listLayer></AudioMusicSegmentDesc></_listSegment></AudioMusicDesc>)" ) );
-    SW_EXPECT_FALSE( music.loadFromXmlText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A" /></_listSegment></AudioMusicDesc>)" ) );
-    SW_EXPECT_TRUE( music.loadFromXmlText( AudioMusicTestInternal::kMusicXml ) );
+    SW_EXPECT_FALSE( music.loadFromXMLText( R"(<AudioMusicDesc><_listSegment><AudioMusicSegmentDesc _name="A" /></_listSegment></AudioMusicDesc>)" ) );
+    SW_EXPECT_TRUE( music.loadFromXMLText( AudioMusicTestInternal::kMusicXML ) );
     SW_EXPECT_EQUAL( uint64{ 96000 }, music.computeSegmentFrames( 0 ) );
 }

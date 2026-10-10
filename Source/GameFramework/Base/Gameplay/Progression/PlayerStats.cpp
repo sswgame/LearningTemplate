@@ -8,9 +8,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -98,12 +98,12 @@ namespace sw
         return mapIter != _mapIndex.end() ? &_listStat[mapIter->second] : nullptr;
     }
 
-    uint32 StatCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 StatCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
+        for ( XMLNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             StatDef           def;

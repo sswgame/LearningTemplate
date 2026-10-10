@@ -26,7 +26,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 매개변수 하나 — 이름과 적힌 글 그대로입니다(숫자 · 벡터 · 이름의 해석은 노드 종류가 정한다). */
     struct GimmickParamDef
@@ -80,7 +80,7 @@ namespace sw
         /** @brief 리소스 경로의 `<GimmickCircuit>` 를 읽습니다. 형식이 깨졌으면 false 입니다(이름의 뜻은 `GimmickCircuit::build` 가 본다). */
         [[nodiscard]] bool loadFromResource( string_view path );
         /** @brief XML 글을 읽습니다(시험 · 에디터). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 노드를 더하고 그 자리를 돌려줍니다. */
         GimmickNodeDef& addNode( const hashed_string& id, const hashed_string& kind );
@@ -100,7 +100,7 @@ namespace sw
         void                          setSourceName( string_view sourceName ) { _sourceName = string( sourceName ); }
 
     private:
-        [[nodiscard]] bool loadRoot( const XmlNode& root );
+        [[nodiscard]] bool loadRoot( const XMLNode& root );
 
         vector<GimmickNodeDef> _listNode{};
         vector<GimmickWireDef> _listWire{};

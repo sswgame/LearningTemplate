@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -37,7 +37,7 @@ namespace sw
             static void parseIdList( string_view text, vector<hashed_string>& outListId )
             {
                 outListId.clear();
-                GameDataXml::forEachToken( text, ",;| ", [&]( string_view token )
+                GameDataXML::forEachToken( text, ",;| ", [&]( string_view token )
                 { outListId.push_back( hashed_string( token ) ); } );
             }
 
@@ -49,10 +49,10 @@ namespace sw
             }
 
             /** @brief `<Key>` · `<Row>` 로 패턴을 읽습니다. 행 길이가 다르거나 모르는 기호면 false 입니다. */
-            [[nodiscard]] static bool parsePattern( const XmlNode& node, string_view sourceName, const utf8* pHabitatId, HabitatDef& outHabitat )
+            [[nodiscard]] static bool parsePattern( const XMLNode& node, string_view sourceName, const utf8* pHabitatId, HabitatDef& outHabitat )
             {
                 vector<SymbolKey> listKey;
-                for ( XmlNode keyNode = node.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
+                for ( XMLNode keyNode = node.findChild( "Key" ); keyNode; keyNode = keyNode.findNextSibling( "Key" ) )
                 {
                     const string_view symbol = keyNode.getAttributeText( "symbol" );
                     if ( symbol.size() != 1 || symbol[0] == '.' )
@@ -65,7 +65,7 @@ namespace sw
                 outHabitat._listCell.clear();
                 outHabitat._width  = 0;
                 outHabitat._height = 0;
-                for ( XmlNode rowNode = node.findChild( "Row" ); rowNode; rowNode = rowNode.findNextSibling( "Row" ) )
+                for ( XMLNode rowNode = node.findChild( "Row" ); rowNode; rowNode = rowNode.findNextSibling( "Row" ) )
                 {
                     const string_view cells = rowNode.getAttributeText( "cells" );
                     if ( outHabitat._height == 0 )
@@ -189,12 +189,12 @@ namespace sw
         } );
     }
 
-    uint32 CreatureLifeCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CreatureLifeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Habitat" ); node; node = node.findNextSibling( "Habitat" ) )
+        for ( XMLNode node = root.findChild( "Habitat" ); node; node = node.findNextSibling( "Habitat" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             HabitatDef habitat;
@@ -209,15 +209,15 @@ namespace sw
         }
         rebuildHabitatOrder();
 
-        for ( XmlNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
+        for ( XMLNode node = root.findChild( "Ability" ); node; node = node.findNextSibling( "Ability" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             CreatureAbilityDef ability;
             ability._id         = hashed_string( pId );
             ability._usesPerDay = MathUtil::max( 1, node.getAttributeInt( "uses", ability._usesPerDay ) );
-            for ( XmlNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
+            for ( XMLNode ruleNode = node.findChild( "Rule" ); ruleNode; ruleNode = ruleNode.findNextSibling( "Rule" ) )
             {
                 CreatureTileRule rule;
                 rule._from         = CreatureLifeCatalogInternal::parseObject( ruleNode.getAttributeText( "from" ) );
@@ -241,9 +241,9 @@ namespace sw
             ++loadedCount;
         }
 
-        for ( XmlNode node = root.findChild( "Species" ); node; node = node.findNextSibling( "Species" ) )
+        for ( XMLNode node = root.findChild( "Species" ); node; node = node.findNextSibling( "Species" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             CreatureSpeciesDef species;
@@ -269,14 +269,14 @@ namespace sw
             ++loadedCount;
         }
 
-        const XmlNode appealNode = root.findChild( "Appeal" );
+        const XMLNode appealNode = root.findChild( "Appeal" );
         if ( appealNode )
         {
             _appeal._diversityWeight  = appealNode.getAttributeFloat( "diversity", _appeal._diversityWeight );
             _appeal._creatureWeight   = appealNode.getAttributeFloat( "creature", _appeal._creatureWeight );
             _appeal._friendshipWeight = appealNode.getAttributeFloat( "friendship", _appeal._friendshipWeight );
             _appeal._listTier.clear();
-            for ( XmlNode tierNode = appealNode.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
+            for ( XMLNode tierNode = appealNode.findChild( "Tier" ); tierNode; tierNode = tierNode.findNextSibling( "Tier" ) )
             {
                 const utf8* pTierName = tierNode.findAttribute( "name" );
                 if ( pTierName != nullptr )

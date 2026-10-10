@@ -28,7 +28,7 @@ namespace
 {
     struct AudioSceneTestInternal
     {
-        static constexpr const utf8* kMixerXml = R"(
+        static constexpr const utf8* kMixerXML = R"(
 <AudioMixerDesc>
 	<_listBus>
 		<AudioBusDesc _name="master" />
@@ -44,7 +44,7 @@ namespace
 	</_listSnapshot>
 </AudioMixerDesc>)";
 
-        static constexpr const utf8* kLibraryXml = R"(
+        static constexpr const utf8* kLibraryXML = R"(
 <AudioEventLibrary>
 	<_listEvent>
 		<AudioEventDesc _name="Probe" _bus="sfx" _attenuation="Flat" _bLoop="true"><_listClip><AudioClipEntry _path="test/one" /></_listClip></AudioEventDesc>
@@ -56,12 +56,12 @@ namespace
         static bool initializeEngine( sw::AudioEngine& engine )
         {
             sw::AudioMixerDesc mixerDesc;
-            if ( mixerDesc.loadFromXmlText( kMixerXml ) == false || engine.initialize( mixerDesc ) == false )
+            if ( mixerDesc.loadFromXMLText( kMixerXML ) == false || engine.initialize( mixerDesc ) == false )
                 return false;
             engine.getClipStore().addClip( sw::hashed_string( "test/one" ), test::AudioTestUtil::makeConstantClip( 1.0f, 4800 ) );
             engine.getClipStore().addClip( sw::hashed_string( "test/long" ), test::AudioTestUtil::makeConstantClip( 0.5f, 48000 ) );
             sw::AudioEventLibrary library;
-            return library.loadFromXmlText( kLibraryXml ) && engine.loadEventLibrary( sw::hashed_string( "test/scene" ), library );
+            return library.loadFromXMLText( kLibraryXML ) && engine.loadEventLibrary( sw::hashed_string( "test/scene" ), library );
         }
 
         /** @brief 세 블록을 렌더하고 마지막 블록의 채널 평균입니다. */

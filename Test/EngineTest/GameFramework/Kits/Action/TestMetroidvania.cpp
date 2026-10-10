@@ -27,7 +27,7 @@ namespace
 {
     constexpr float32 kMetroidvaniaStep = 1.0f / 60.0f;
 
-    constexpr const utf8* kMetroidvaniaCatalogXml = R"(
+    constexpr const utf8* kMetroidvaniaCatalogXML = R"(
 <Metroidvania currency="geo">
   <Rules flaskCharges="2" flaskMaxCharges="3" flaskHeal="30" flaskHealPerUpgrade="10" riposteMultiplier="3" riposteTime="1.0"
          attackStamina="20" dodgeStamina="25" guardStaminaPerDamage="1" guardChip="0.1" corpseRadius="1.5" charmNotches="3" overcharm="true" overcharmDamageScale="2"/>
@@ -54,7 +54,7 @@ namespace
 </Metroidvania>
 )";
 
-    constexpr const utf8* kAreaXml = R"(
+    constexpr const utf8* kAreaXML = R"(
 <AreaGraph>
   <Area id="town" region="town"/>
   <Area id="cross1" region="crossroads"/>
@@ -68,7 +68,7 @@ namespace
 </AreaGraph>
 )";
 
-    constexpr const utf8* kLootXml = R"(
+    constexpr const utf8* kLootXML = R"(
 <LootCatalog><Table id="husk" rolls="1" none="1"><Entry item="shard" weight="1" min="1" max="3"/></Table></LootCatalog>
 )";
 
@@ -92,7 +92,7 @@ namespace
         GameFlags           _flags;
         bool                _bLoaded{ false };
 
-        MetroScene() { _bLoaded = _catalog.loadFromXmlText( kMetroidvaniaCatalogXml, "metro" ) && _graph.loadFromXmlText( kAreaXml, "areas" ); }
+        MetroScene() { _bLoaded = _catalog.loadFromXMLText( kMetroidvaniaCatalogXML, "metro" ) && _graph.loadFromXMLText( kAreaXML, "areas" ); }
     };
 
     /** @brief 영혼 상태가 빌릴 지갑 묶음입니다. */
@@ -285,7 +285,7 @@ SW_TEST_CASE( MetroidvaniaTest, RegionMapPurchaseRevealsRoomsAndUnvisitedItemMar
     SW_EXPECT_EQUAL( 3, static_cast<int32>( listSite.size() ) );
     SW_EXPECT_TRUE( listPickup.size() == 2 && listPickup[0] == hashed_string( "mask_cross3" ) && listPickup[1] == hashed_string( "wings" ) );
     AreaGraph graph;
-    SW_ASSERT_TRUE( graph.loadFromXmlText( kAreaXml, "areas" ) );
+    SW_ASSERT_TRUE( graph.loadFromXMLText( kAreaXML, "areas" ) );
     MetroMapState loaded;
     loaded.initialize( &scene._catalog, &graph );
     loaded.restoreSaveState( listRegionMap, listSite, listPickup );
@@ -380,7 +380,7 @@ SW_TEST_CASE( MetroidvaniaTest, RestRefillsFlasksAndRespawnsEnemiesButNotBosses 
     MetroScene scene;
     SW_ASSERT_TRUE( scene._bLoaded );
     LootCatalog loot;
-    SW_ASSERT_TRUE( loot.loadFromXmlText( kLootXml, "loot" ) );
+    SW_ASSERT_TRUE( loot.loadFromXMLText( kLootXML, "loot" ) );
     Wallet          soulsWallet;
     MetroSoulsState souls;
     souls.initialize( &scene._catalog, lendMetroWallet( soulsWallet ) );
@@ -671,7 +671,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     SW_EXPECT_TRUE( mapState.activateSite( "stag_town" ) );
     const vector<uint8> mapBytes = captureMetroBytes( mapState );
     AreaGraph           restoredGraph;
-    SW_ASSERT_TRUE( restoredGraph.loadFromXmlText( kAreaXml, "areas" ) );
+    SW_ASSERT_TRUE( restoredGraph.loadFromXMLText( kAreaXML, "areas" ) );
     MetroMapState restoredMap;
     restoredMap.initialize( &scene._catalog, &restoredGraph );
     SW_ASSERT_TRUE( restoreMetroBytes( mapBytes, restoredMap ) );
@@ -685,7 +685,7 @@ SW_TEST_CASE( MetroidvaniaTest, StateRoundTripContinuesTheSameJourney )
     SW_EXPECT_NULL( restoredMap.collectPickup( "mask_cross3" ) ); // 주운 것은 다시 줍지 못한다
     SW_EXPECT_TRUE( captureMetroBytes( mapState ) == captureMetroBytes( restoredMap ) );
     AreaGraph truncatedGraph;
-    SW_ASSERT_TRUE( truncatedGraph.loadFromXmlText( kAreaXml, "areas" ) );
+    SW_ASSERT_TRUE( truncatedGraph.loadFromXMLText( kAreaXML, "areas" ) );
     MetroMapState truncatedMap;
     truncatedMap.initialize( &scene._catalog, &truncatedGraph );
     SW_EXPECT_FALSE( restoreTruncatedMetroBytes( mapBytes, truncatedMap ) );

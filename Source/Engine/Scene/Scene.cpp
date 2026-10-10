@@ -191,7 +191,7 @@ namespace sw
                 // 프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이다. 프리팹을 찾지 못하면 아래의 "Missing Prefab" 길이다.
                 // 전체 상태가 실린 엔티티는 원형을 짓지 않는다 — 그 상태가 기준이라 원형은 버려지고, 짓는 동안 컴포넌트가 한 벌 더 생긴다.
                 // 프리팹이 있는지만 본다(없으면 "Missing Prefab").
-                const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXml.empty() == false;
+                const bool bHasSavedState = entity._embeddedStateBytes.empty() == false || entity._embeddedXML.empty() == false;
                 bool       bStateMade     = false;
                 if ( bHasSavedState )
                 {
@@ -201,7 +201,7 @@ namespace sw
                 {
                     const string* pBaseState = SceneInternal::findPrefabBaseState( mapPrefabBaseState, entity._prefab );
                     bStateMade               = pBaseState != nullptr &&
-                                 PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXml, entity._name, prefabInstanceState );
+                                 PrefabOverrides::makeInstanceState( *pBaseState, entity._prefabOverrideXML, entity._name, prefabInstanceState );
                 }
                 if ( bStateMade )
                     pGo = _objectManager->createGameObject( hashed_string( entity._name.c_str() ) );
@@ -236,16 +236,16 @@ namespace sw
                     if ( ObjectStateSerializer::loadFromBinaryBuffer( pGo, entity._embeddedStateBytes.data(), entity._embeddedStateBytes.size(), context ) == 0 )
                         SW_LOG_WARNING( "Embedded binary state apply failed for '%#'", entity._name );
                 }
-                else if ( entity._embeddedXml.empty() == false )
+                else if ( entity._embeddedXML.empty() == false )
                 {
-                    if ( ObjectStateSerializer::loadFromXmlString( pGo, entity._embeddedXml, context ) == false )
+                    if ( ObjectStateSerializer::loadFromXMLString( pGo, entity._embeddedXML, context ) == false )
                         SW_LOG_WARNING( "Embedded state apply failed for '%#'", entity._name );
                 }
                 else if ( prefabInstanceState.empty() == false )
                 {
                     // 원형은 다른 오브젝트로의 부착 · 핸들을 싣지 않는다(`PrefabOverrides::makeBaseState`). 다른 엔티티에 붙은 인스턴스의 부착은
                     // 덮어쓴 값이라 파일 id 로 들어 있고, 묶음이 모두 읽은 뒤 잇는다.
-                    if ( ObjectStateSerializer::loadFromXmlString( pGo, prefabInstanceState, context ) == false )
+                    if ( ObjectStateSerializer::loadFromXMLString( pGo, prefabInstanceState, context ) == false )
                         SW_LOG_WARNING( "Prefab instance state apply failed for '%#' (%#)", entity._name, entity._prefab );
                 }
                 else
@@ -315,16 +315,16 @@ namespace sw
                 if ( guid.isNull() == false )
                     node._prefabGuid = guid.toString();
             }
-            const string state = ObjectStateSerializer::saveToXmlString( pGo, saveOptions );
+            const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
             // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다 — 다음 로드가 그 상태로 짓는다.
             const auto    baseIt     = node._prefab.empty() ? mapPrefabBaseState.end() : mapPrefabBaseState.find( node._prefab );
             const string* pBaseState = ( baseIt != mapPrefabBaseState.end() && baseIt->second.empty() == false ) ? &baseIt->second : nullptr;
-            if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, node._prefabOverrideXml ) == false )
+            if ( pBaseState == nullptr || PrefabOverrides::computeOverrides( state, *pBaseState, node._prefabOverrideXML ) == false )
             {
-                node._prefabOverrideXml.clear();
-                node._embeddedXml = state;
+                node._prefabOverrideXML.clear();
+                node._embeddedXML = state;
             }
-            if ( node._embeddedXml.empty() == false || node._prefab.empty() == false )
+            if ( node._embeddedXML.empty() == false || node._prefab.empty() == false )
                 outDoc._listSceneObjectNode.push_back( std::move( node ) );
         } );
         // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다 — 그 자식들이 그 id 로 가리킨다.

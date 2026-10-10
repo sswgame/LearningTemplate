@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 판정 창 하나입니다. */
     struct TimingWindow
@@ -50,8 +50,8 @@ namespace sw
     {
     public:
         void               setWindows( const vector<TimingWindow>& listWindow );
-        void               loadFromNode( const XmlNode& node );
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName = {} );
+        void               loadFromNode( const XMLNode& node );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         /** @brief 모든 창을 곱해 넓히거나 좁힙니다(난이도 · 접근성). */
         void setScale( float32 scale ) { _scale = scale > 0.0f ? scale : 1.0f; }
         /** @brief 입력 지연 보정(초) — 판정 전에 누른 시각에서 뺍니다. */

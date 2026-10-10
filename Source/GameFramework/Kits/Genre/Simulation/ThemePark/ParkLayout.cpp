@@ -5,9 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 
 SW_LOG_CALLER( "ParkLayout" );
@@ -23,24 +23,24 @@ namespace sw
 
     bool ParkLayout::loadFromResource( string_view path, const CoasterLayoutCatalog& layouts )
     {
-        return GameDataXml::loadFile( *this, &ParkLayout::loadRoot, layouts, path, "ParkLayout" );
+        return GameDataXML::loadFile( *this, &ParkLayout::loadRoot, layouts, path, "ParkLayout" );
     }
 
-    bool ParkLayout::loadFromXmlText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName )
+    bool ParkLayout::loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
-        return GameDataXml::loadText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
+        return GameDataXML::loadText( *this, &ParkLayout::loadRoot, layouts, xmlText, sourceName, "ParkLayout" );
     }
 
-    bool ParkLayout::loadRoot( const XmlNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )
+    bool ParkLayout::loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName )
     {
         _gatePosition = float3{ root.getAttributeFloat( "gateX", 0.0f ), 0.0f, root.getAttributeFloat( "gateZ", -30.0f ) };
         _entryFee     = MathUtil::max( 0, root.getAttributeInt( "entryFee", 0 ) );
         _startingCash = root.getAttributeInt( "startingCash", _startingCash );
 
         _listPlacement.clear();
-        for ( XmlNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
+        for ( XMLNode node = root.findChild( "FlatRide" ); node; node = node.findNextSibling( "FlatRide" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ParkRidePlacement placement;
@@ -63,11 +63,11 @@ namespace sw
             const utf8* pShape         = node.findAttribute( "shape" );
             placement._shape           = pShape != nullptr ? pShape : "Cylinder";
             placement._size            = float3{ node.getAttributeFloat( "sizeX", 4.0f ), node.getAttributeFloat( "sizeY", 1.0f ), sizeZ };
-            placement._color           = GameDataXml::parseFloat4( node.getAttributeText( "color" ), placement._color );
+            placement._color           = GameDataXML::parseFloat4( node.getAttributeText( "color" ), placement._color );
             placement._spin            = node.getAttributeFloat( "spin", 0.0f );
             _listPlacement.push_back( placement );
         }
-        for ( XmlNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
+        for ( XMLNode node = root.findChild( "Coaster" ); node; node = node.findNextSibling( "Coaster" ) )
         {
             const utf8*             pLayoutId = node.findAttribute( "layout" );
             const CoasterLayoutDef* pLayout   = StringUtil::isNullOrEmpty( pLayoutId ) ? nullptr : layouts.findLayout( hashed_string( pLayoutId ) );
@@ -85,7 +85,7 @@ namespace sw
             placement._heading        = node.getAttributeFloat( "heading", 0.0f );
             placement._loadTime       = MathUtil::max( 0.0f, node.getAttributeFloat( "loadTime", 15.0f ) );
             placement._buildCost      = MathUtil::max( 0, node.getAttributeInt( "cost", 5000 ) );
-            placement._color          = GameDataXml::parseFloat4( node.getAttributeText( "color" ), placement._color );
+            placement._color          = GameDataXML::parseFloat4( node.getAttributeText( "color" ), placement._color );
             _listPlacement.push_back( placement );
         }
         return _listPlacement.empty() == false;

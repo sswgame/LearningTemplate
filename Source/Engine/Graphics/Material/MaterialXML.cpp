@@ -10,33 +10,33 @@
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Resource/AssetManager.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
     namespace
     {
         /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
-        struct MaterialXmlInternal
+        struct MaterialXMLInternal
         {
-            static string nodeText( XmlNode node )
+            static string nodeText( XMLNode node )
             {
                 if ( node.isValid() == false || node.getText() == nullptr )
                     return {};
                 return string{ StringUtil::trim( node.getText() ) };
             }
 
-            static void parseEnumEntries( XmlNode parent, vector<MaterialEnumEntry>& outListEntry )
+            static void parseEnumEntries( XMLNode parent, vector<MaterialEnumEntry>& outListEntry )
             {
                 outListEntry.clear();
                 if ( parent.isValid() == false )
                     return;
-                XmlNode list = parent.findChild( "_enumEntries" );
+                XMLNode list = parent.findChild( "_enumEntries" );
                 if ( list.isValid() == false )
                     list = parent.findChild( "enumEntries" );
                 if ( list.isValid() == false )
                     return;
-                for ( XmlNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                for ( XMLNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     MaterialEnumEntry entry{};
                     entry._name            = MaterialUtil::fieldText( item, "name" );
@@ -53,12 +53,12 @@ namespace sw
                 }
             }
 
-            static void parseStringListItems( XmlNode list, vector<string>& outListItem )
+            static void parseStringListItems( XMLNode list, vector<string>& outListItem )
             {
                 outListItem.clear();
                 if ( list.isValid() == false )
                     return;
-                for ( XmlNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+                for ( XMLNode item = list.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
                 {
                     string itemText = nodeText( item );
                     if ( itemText.empty() )
@@ -70,14 +70,14 @@ namespace sw
                 }
             }
 
-            static void appendMaterialStringList( XmlNode parent, const utf8* pTag, const vector<string>& listValue )
+            static void appendMaterialStringList( XMLNode parent, const utf8* pTag, const vector<string>& listValue )
             {
                 if ( listValue.empty() )
                     return;
-                XmlNode list = parent.appendChild( pTag );
+                XMLNode list = parent.appendChild( pTag );
                 for ( const string& valueStr : listValue )
                 {
-                    XmlNode item = list.appendChild( "item" );
+                    XMLNode item = list.appendChild( "item" );
                     item.setValue( valueStr );
                 }
             }
@@ -88,7 +88,7 @@ namespace sw
 namespace sw
 {
     /** @brief 속성을 먼저 보고, 없으면 같은 이름의 자식 요소를 봅니다. */
-    string MaterialUtil::fieldText( XmlNode node, const utf8* pName )
+    string MaterialUtil::fieldText( XMLNode node, const utf8* pName )
     {
         if ( node.isValid() == false || pName == nullptr )
             return {};
@@ -102,12 +102,12 @@ namespace sw
         return {};
     }
 
-    bool MaterialUtil::parseBoolField( XmlNode node, const utf8* pName, bool defaultValue )
+    bool MaterialUtil::parseBoolField( XMLNode node, const utf8* pName, bool defaultValue )
     {
         return MaterialUtil::parseBoolToken( MaterialUtil::fieldText( node, pName ), pName != nullptr ? pName : "", defaultValue );
     }
 
-    MaterialProperty MaterialUtil::parsePropertyNode( XmlNode item )
+    MaterialProperty MaterialUtil::parsePropertyNode( XMLNode item )
     {
         MaterialProperty prop{};
         prop._name = MaterialUtil::fieldText( item, "name" );
@@ -142,18 +142,18 @@ namespace sw
         prop._bSrgb     = MaterialUtil::parseBoolField( item, "bSrgb", true );
         prop._bHidden   = MaterialUtil::parseBoolField( item, "bHidden", false );
         prop._bAdvanced = MaterialUtil::parseBoolField( item, "bAdvanced", false );
-        MaterialXmlInternal::parseEnumEntries( item, prop._listEnumEntry );
+        MaterialXMLInternal::parseEnumEntries( item, prop._listEnumEntry );
         return prop;
     }
 
-    void MaterialUtil::appendAttribute( XmlNode parent, const utf8* pName, string_view value )
+    void MaterialUtil::appendAttribute( XMLNode parent, const utf8* pName, string_view value )
     {
         if ( parent.isValid() == false || pName == nullptr || value.empty() )
             return;
         parent.appendAttribute( pName, value );
     }
 
-    void MaterialUtil::appendBoolAttr( XmlNode parent, const utf8* pName, bool value )
+    void MaterialUtil::appendBoolAttr( XMLNode parent, const utf8* pName, bool value )
     {
         parent.appendAttribute( pName, value );
     }
@@ -189,12 +189,12 @@ namespace sw
         return "High";
     }
 
-    void MaterialUtil::parsePermutationNode( XmlNode root, MaterialPermutationDesc& out )
+    void MaterialUtil::parsePermutationNode( XMLNode root, MaterialPermutationDesc& out )
     {
         out = MaterialPermutationDesc{};
         if ( root.isValid() == false )
             return;
-        XmlNode permutationsNode = root.findChild( "_permutations" );
+        XMLNode permutationsNode = root.findChild( "_permutations" );
         if ( permutationsNode.isValid() == false )
             return;
 
@@ -221,13 +221,13 @@ namespace sw
                 SW_LOG_WARNING( "Material usage '%#' has an unknown flag - keeping the default", usage );
         }
 
-        XmlNode always = permutationsNode.findChild( "_alwaysDefines" );
-        MaterialXmlInternal::parseStringListItems( always, out._listAlwaysDefine );
+        XMLNode always = permutationsNode.findChild( "_alwaysDefines" );
+        MaterialXMLInternal::parseStringListItems( always, out._listAlwaysDefine );
 
-        XmlNode switches = permutationsNode.findChild( "_staticSwitches" );
+        XMLNode switches = permutationsNode.findChild( "_staticSwitches" );
         if ( switches.isValid() )
         {
-            for ( XmlNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = switches.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialStaticSwitch entry{};
                 entry._name           = MaterialUtil::fieldText( item, "name" );
@@ -242,25 +242,25 @@ namespace sw
             }
         }
 
-        XmlNode multiCompileNode = permutationsNode.findChild( "_multiCompiles" );
+        XMLNode multiCompileNode = permutationsNode.findChild( "_multiCompiles" );
         if ( multiCompileNode.isValid() )
         {
-            for ( XmlNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = multiCompileNode.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialMultiCompile multiCompile{};
                 multiCompile._name     = MaterialUtil::fieldText( item, "name" );
                 multiCompile._selected = MaterialUtil::fieldText( item, "selected" );
-                XmlNode optionsNode    = item.findChild( "_options" );
-                MaterialXmlInternal::parseStringListItems( optionsNode, multiCompile._listOption );
+                XMLNode optionsNode    = item.findChild( "_options" );
+                MaterialXMLInternal::parseStringListItems( optionsNode, multiCompile._listOption );
                 if ( multiCompile._selected.empty() == false || multiCompile._listOption.empty() == false )
                     out._listMultiCompile.push_back( std::move( multiCompile ) );
             }
         }
     }
 
-    void MaterialUtil::appendPermutationNode( XmlNode root, const MaterialPermutationDesc& permutationsNode )
+    void MaterialUtil::appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationsNode )
     {
-        XmlNode node = root.appendChild( "_permutations" );
+        XMLNode node = root.appendChild( "_permutations" );
         MaterialUtil::appendAttribute( node, "quality", MaterialUtil::qualityToString( permutationsNode._quality ) );
         node.appendAttribute( "shaderLOD", permutationsNode._shaderLOD );
         {
@@ -268,14 +268,14 @@ namespace sw
             const utf8*     pUsageStr  = pUsageEnum != nullptr ? pUsageEnum->valueToCString( static_cast<int64>( permutationsNode._usage ) ) : nullptr;
             MaterialUtil::appendAttribute( node, "usage", pUsageStr != nullptr ? pUsageStr : "None" );
         }
-        MaterialXmlInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
+        MaterialXMLInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
         if ( permutationsNode._listStaticSwitch.empty() == false )
         {
-            XmlNode list = node.appendChild( "_staticSwitches" );
+            XMLNode list = node.appendChild( "_staticSwitches" );
             for ( const MaterialStaticSwitch& entry : permutationsNode._listStaticSwitch )
             {
-                XmlNode item = list.appendChild( "item" );
+                XMLNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", entry._name );
                 MaterialUtil::appendAttribute( item, "keyword", entry._keyword );
                 if ( entry._keywordOff.empty() == false )
@@ -287,23 +287,23 @@ namespace sw
 
         if ( permutationsNode._listMultiCompile.empty() == false )
         {
-            XmlNode list = node.appendChild( "_multiCompiles" );
+            XMLNode list = node.appendChild( "_multiCompiles" );
             for ( const MaterialMultiCompile& mc : permutationsNode._listMultiCompile )
             {
-                XmlNode item = list.appendChild( "item" );
+                XMLNode item = list.appendChild( "item" );
                 MaterialUtil::appendAttribute( item, "name", mc._name );
                 MaterialUtil::appendAttribute( item, "selected", mc._selected );
-                MaterialXmlInternal::appendMaterialStringList( item, "_options", mc._listOption );
+                MaterialXMLInternal::appendMaterialStringList( item, "_options", mc._listOption );
             }
         }
     }
 
     bool Material::loadFromFile( string_view assetRelativePath )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.loadPath( assetRelativePath ) == false )
             return false;
-        return loadFromXml( doc.saveToString() );
+        return loadFromXML( doc.saveToString() );
     }
 
     TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
@@ -335,7 +335,7 @@ namespace sw
         if ( absPath.empty() )
             absPath = assetRelativePath;
 
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( saveToString() ) == false )
             return false;
         return doc.saveFile( absPath );
@@ -345,19 +345,19 @@ namespace sw
     {
         this->syncDescFromRuntime();
 
-        XmlDocument doc;
-        XmlNode     root = doc.appendRoot( "MaterialDesc" );
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "MaterialDesc" );
 
-        AssetFormatRegistry::writeXmlVersion( root, AssetFormatVersions::kMaterial );
+        AssetFormatRegistry::writeXMLVersion( root, AssetFormatVersions::kMaterial );
         MaterialUtil::appendAttribute( root, "name", _desc._name );
         MaterialUtil::appendAttribute( root, "shaderPath", _desc._shaderPath );
         MaterialUtil::appendAttribute( root, "blendMode", MaterialUtil::blendModeToString( _blendMode ) );
 
-        XmlNode props = root.appendChild( "_properties" );
+        XMLNode props = root.appendChild( "_properties" );
 
         for ( const MaterialProperty& prop : _data._listProperty )
         {
-            XmlNode item = props.appendChild( "item" );
+            XMLNode item = props.appendChild( "item" );
 
             MaterialUtil::appendAttribute( item, "name", prop._name );
             MaterialUtil::appendAttribute( item, "type", MaterialUtil::typeToString( prop._type ) );
@@ -398,10 +398,10 @@ namespace sw
 
             if ( prop._listEnumEntry.empty() == false )
             {
-                XmlNode list = item.appendChild( "_enumEntries" );
+                XMLNode list = item.appendChild( "_enumEntries" );
                 for ( const MaterialEnumEntry& enumEntry : prop._listEnumEntry )
                 {
-                    XmlNode eItem = list.appendChild( "item" );
+                    XMLNode eItem = list.appendChild( "item" );
                     MaterialUtil::appendAttribute( eItem, "name", enumEntry._name );
                     eItem.appendAttribute( "value", enumEntry._value );
                 }
@@ -413,17 +413,17 @@ namespace sw
         return doc.saveToString();
     }
 
-    bool Material::loadFromXml( string_view xmlText )
+    bool Material::loadFromXML( string_view xmlText )
     {
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xmlText ) == false )
             return false;
 
-        XmlNode root = doc.getRoot( "MaterialDesc" );
+        XMLNode root = doc.getRoot( "MaterialDesc" );
         if ( root.isValid() == false )
             return false;
 
-        if ( AssetFormatRegistry::upgradeXmlWithActiveRegistry( AssetKind::Material, doc, root, AssetFormatVersions::kMaterial ) == false )
+        if ( AssetFormatRegistry::upgradeXMLWithActiveRegistry( AssetKind::Material, doc, root, AssetFormatVersions::kMaterial ) == false )
             return false;
 
         _desc       = MaterialDesc{};
@@ -431,10 +431,10 @@ namespace sw
         setShaderPath( MaterialUtil::fieldText( root, "shaderPath" ) );
         _desc._blendMode = MaterialUtil::fieldText( root, "blendMode" );
 
-        XmlNode props = root.findChild( "_properties" );
+        XMLNode props = root.findChild( "_properties" );
         if ( props.isValid() )
         {
-            for ( XmlNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
+            for ( XMLNode item = props.findChild( "item" ); item; item = item.findNextSibling( "item" ) )
             {
                 MaterialProperty prop = MaterialUtil::parsePropertyNode( item );
                 if ( prop._name.empty() == false )

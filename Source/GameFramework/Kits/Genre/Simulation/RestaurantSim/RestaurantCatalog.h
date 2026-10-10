@@ -10,12 +10,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @brief 메뉴의 요리 하나입니다. 재료 · 조리 시간 · 조리 스테이션 · 필요한 레벨은 기반 레시피(`RecipeCatalog`)에서 봅니다.
@@ -87,9 +87,9 @@ namespace sw
      * @endcode
      *          `Arrival` 은 그 시의 시간당 손님 수(적지 않은 시는 0)입니다. `window` 는 별점 이동 평균의 손님 수입니다.
      */
-    class SW_GF_API RestaurantCatalog : public XmlCatalog<RestaurantCatalog>
+    class SW_GF_API RestaurantCatalog : public XMLCatalog<RestaurantCatalog>
     {
-        friend class XmlCatalog<RestaurantCatalog>;
+        friend class XMLCatalog<RestaurantCatalog>;
 
     public:
         static constexpr int32 kHoursPerDay = 24;
@@ -115,8 +115,8 @@ namespace sw
         int32 getRatingWindow() const { return _ratingWindow; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "RestaurantCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "RestaurantCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<DishDef>              _dishCatalog;
         GameCatalog<IngredientDef>        _ingredientCatalog;

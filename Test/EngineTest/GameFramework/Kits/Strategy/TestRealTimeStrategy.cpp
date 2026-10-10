@@ -21,7 +21,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kRtsTestXml = R"(
+    constexpr const utf8* kRtsTestXML = R"(
 <RtsCatalog supplyMax="200">
   <Unit id="minerals" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
   <Unit id="shard" kind="Resource" resource="Minerals" amount="10" footprint="1"/>
@@ -51,7 +51,7 @@ namespace
 
         bool initialize( int32 width = 48, int32 height = 48 )
         {
-            if ( _catalog.loadFromXmlText( kRtsTestXml, "RealTimeStrategyTest" ) == false )
+            if ( _catalog.loadFromXMLText( kRtsTestXML, "RealTimeStrategyTest" ) == false )
                 return false;
             _world.initialize( &_catalog, width, height, RtsSettings{} );
             return true;
@@ -106,7 +106,7 @@ namespace
 SW_TEST_CASE( RealTimeStrategyTest, CatalogReadsUnitsBuildingsAndResources )
 {
     RtsCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kRtsTestXml, "RealTimeStrategyTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kRtsTestXML, "RealTimeStrategyTest" ) );
     SW_EXPECT_EQUAL( 15, static_cast<int32>( catalog.getUnits().size() ) );
     SW_EXPECT_EQUAL( 200, catalog.getSupplyMax() );
 
@@ -675,14 +675,14 @@ SW_TEST_CASE( RealTimeStrategyTest, PlayersSpendFromTheirOwnBorrowedWallets )
  */
 SW_TEST_CASE( RealTimeStrategyTest, AttackRateFollowsTheCooldownNotTheStepGrid )
 {
-    constexpr const utf8* kRateXml = R"(
+    constexpr const utf8* kRateXML = R"(
 <RtsCatalog supplyMax="200">
   <Unit id="cannon" kind="Building" hp="500" footprint="2" damage="10" range="8" cooldown="1.2" targets="Ground" sight="10"/>
   <Unit id="block" kind="Building" hp="100000" footprint="2" sight="2"/>
 </RtsCatalog>
 )";
     RtsCatalog            catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kRateXml, "RealTimeStrategyTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kRateXML, "RealTimeStrategyTest" ) );
     RtsWorld world;
     world.initialize( &catalog, 32, 32, RtsSettings{} );
     Wallet          blueWallet;

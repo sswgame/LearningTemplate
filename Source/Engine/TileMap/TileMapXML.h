@@ -1,5 +1,5 @@
 /**
- * @file TileMapXml.h
+ * @file TileMapXML.h
  * @brief 타일맵 XML 문서 스키마 (Engine 소유, Editor/GameFramework 공용)
  */
 #pragma once
@@ -32,7 +32,7 @@ namespace sw
     struct TileFlagLayerInfo
     {
         const utf8*   _pName;         /**< 에디터에 보이는 이름입니다. */
-        const utf8*   _pXmlAttribute; /**< `<t>` 의 속성 이름입니다(값이 기본값과 다를 때만 씀). nullptr 이면 `<t>` 본문 "1"/"0" 입니다. */
+        const utf8*   _pXMLAttribute; /**< `<t>` 의 속성 이름입니다(값이 기본값과 다를 때만 씀). nullptr 이면 `<t>` 본문 "1"/"0" 입니다. */
         uint32        _onColorRgb;    /**< 에디터에서 켜진 칸의 색(0xRRGGBB)입니다. */
         uint32        _offColorRgb;   /**< 에디터에서 꺼진 칸의 색(0xRRGGBB)입니다. */
         TileFlagLayer _layer;         /**< 레이어입니다. 표의 순번과 같아야 합니다. */
@@ -56,7 +56,7 @@ namespace sw
     static_assert( SW_COUNT_OF( kArrTileFlagLayerInfo ) == kTileFlagLayerCount, "TileFlagLayer 를 늘렸으면 kArrTileFlagLayerInfo 에도 줄을 더할 것" );
 
     /** @brief TileMap XML 전체 문서 */
-    struct TileMapXmlData
+    struct TileMapXMLData
     {
         /**
          * @brief 타일맵 하나가 가질 수 있는 최대 칸 수입니다 (2048 x 2048).
@@ -145,7 +145,7 @@ namespace sw
         /** @brief Resource 상대 또는 절대 경로에서 타일맵 XML을 읽습니다. */
         [[nodiscard]] SW_API bool load( string_view path );
         /** @brief XML 본문에서 타일맵을 읽습니다. */
-        [[nodiscard]] SW_API bool loadFromXml( string_view xml );
+        [[nodiscard]] SW_API bool loadFromXML( string_view xml );
         /** @brief Resource 상대 또는 절대 경로로 타일맵 XML을 씁니다. */
         [[nodiscard]] SW_API bool save( string_view path ) const;
         /**
@@ -154,7 +154,7 @@ namespace sw
          *          (크기만 바꾸고 칸을 늘리지 않은 상태) 모자란 칸은 **읽기 쪽 기본값**으로 적고
          *          경고를 남깁니다. 배열 밖을 읽지 않으면서 왕복도 어긋나지 않는 방법입니다.
          */
-        SW_API string toXml() const;
+        SW_API string toXML() const;
     };
 
 } // namespace sw

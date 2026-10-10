@@ -195,7 +195,7 @@ SW_TEST_CASE( AnimNotifyTest, TableRejectsUnknownHandlerAndArguments )
 {
     const AnimNotifyHandlerRegistry& registry = AnimNotifyHandlerRegistry::getDefault();
     AnimNotifyTable                  table;
-    SW_ASSERT_TRUE( table.loadFromXmlText( R"(<AnimNotifies>
+    SW_ASSERT_TRUE( table.loadFromXMLText( R"(<AnimNotifies>
             <Notify name="FootL" handler="Footstep" socket="foot.l" distance="0.4" sound="common/audio/step_{surface}.wav"/>
             <Notify name="Swing" handler="HitWindow" socketA="hand.r" socketB="SwordTip" radius="0.05" damage="10"/>
             <Notify name="Shake" handler="CameraShake" amplitude="0.1"/>
@@ -210,13 +210,13 @@ SW_TEST_CASE( AnimNotifyTest, TableRejectsUnknownHandlerAndArguments )
     SW_EXPECT_TRUE( pSwing->getNameParam( hashed_string( "socketB" ) ) == hashed_string( "SwordTip" ) );
 
     AnimNotifyTable bad;
-    SW_EXPECT_FALSE( bad.loadFromXmlText( R"(<AnimNotifies><Notify name="A" handler="NoSuchHandler"/></AnimNotifies>)", "unknownHandler", registry ) );
-    SW_EXPECT_FALSE( bad.loadFromXmlText( R"(<AnimNotifies><Notify name="A" handler="CameraShake" amplitde="0.1"/></AnimNotifies>)", "typo", registry ) );
-    SW_EXPECT_FALSE( bad.loadFromXmlText( R"(<AnimNotifies><Notify name="A" handler="Footstep"/></AnimNotifies>)", "missingRequired", registry ) );
-    SW_EXPECT_FALSE( bad.loadFromXmlText( R"(<AnimNotifies><Notify name="A" handler="CameraShake" amplitude="big"/></AnimNotifies>)", "notNumber", registry ) );
-    SW_EXPECT_FALSE( bad.loadFromXmlText(
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimNotifies><Notify name="A" handler="NoSuchHandler"/></AnimNotifies>)", "unknownHandler", registry ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimNotifies><Notify name="A" handler="CameraShake" amplitde="0.1"/></AnimNotifies>)", "typo", registry ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimNotifies><Notify name="A" handler="Footstep"/></AnimNotifies>)", "missingRequired", registry ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimNotifies><Notify name="A" handler="CameraShake" amplitude="big"/></AnimNotifies>)", "notNumber", registry ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText(
         R"(<AnimNotifies><Notify name="A" handler="CameraShake"/><Notify name="A" handler="CameraShake"/></AnimNotifies>)", "duplicate", registry ) );
-    SW_EXPECT_FALSE( bad.loadFromXmlText( R"(<AnimNotifies><Shake name="A" handler="CameraShake"/></AnimNotifies>)", "unknownElement", registry ) );
+    SW_EXPECT_FALSE( bad.loadFromXMLText( R"(<AnimNotifies><Shake name="A" handler="CameraShake"/></AnimNotifies>)", "unknownElement", registry ) );
 }
 
 /**
@@ -228,7 +228,7 @@ SW_TEST_CASE( AnimNotifyTest, DispatchRunsStateHandlersOnceAndClosesInterruptedS
     AnimNotifyHandlerRegistry registry;
     registry.registerHandler( hashed_string( "Record" ), sw::make_unique<TestAnimNotifyInternal::RecordingHandler>( &listLog ) );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXmlText( R"(<AnimNotifies><Notify name="Swing" handler="Record"/><Notify name="Ping" handler="Record" tag="x"/></AnimNotifies>)",
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Swing" handler="Record"/><Notify name="Ping" handler="Record" tag="x"/></AnimNotifies>)",
                                             "record", registry ) );
 
     GameObjectManager manager;
@@ -299,7 +299,7 @@ SW_TEST_CASE( AnimNotifyTest, AnimatorDeliversClipNotifiesToDispatcher )
     registry.registerHandler( hashed_string( "Record" ), sw::make_unique<TestAnimNotifyInternal::RecordingHandler>( &listLog ) );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
     SW_ASSERT_TRUE(
-        table->loadFromXmlText( R"(<AnimNotifies><Notify name="Swing" handler="Record"/><Notify name="Ping" handler="Record"/></AnimNotifies>)", "record", registry ) );
+        table->loadFromXMLText( R"(<AnimNotifies><Notify name="Swing" handler="Record"/><Notify name="Ping" handler="Record"/></AnimNotifies>)", "record", registry ) );
 
     GameObjectManager manager;
     GameObject*       pObject = manager.createGameObject( hashed_string( "Fighter" ) );
@@ -381,7 +381,7 @@ SW_TEST_CASE( AnimNotifyTest, BuiltInHandlersFindSurfaceHitTargetsOnceAndRaiseEv
     pSelfBody->setLocalPosition( float3{ -2.0f, 0.0f, 3.0f } );
 
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXmlText( R"(<AnimNotifies>
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies>
             <Notify name="Step" handler="Footstep" socket="bone0" distance="0.6"/>
             <Notify name="Swing" handler="HitWindow" socketA="bone1" socketB="bone2" damage="10" impulse="5"/>
             <Notify name="Taunt" handler="GameplayEvent" event="Taunted"/>

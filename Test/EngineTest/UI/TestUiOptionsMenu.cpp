@@ -30,7 +30,7 @@ namespace
     {
         static constexpr float32     kFrameSeconds = 1.0f / 60.0f;
         static constexpr const utf8* kUiInputMap   = "engine/input/ui.input.xml";
-        static constexpr const utf8* kSchemaXml    = R"(
+        static constexpr const utf8* kSchemaXML    = R"(
 <UserSettingsSchema version="1">
     <Category id="audio" text="t.audio"/>
     <Category id="video" text="t.video"/>
@@ -73,7 +73,7 @@ namespace
             sw::UserSettingsTargets targets{};
             targets._pInputMap = &_bindingMap;
             _settings.initialize( targets );
-            SW_EXPECT_TRUE( _settings.loadSchemaFromXmlText( UiOptionsMenuTestUtil::kSchemaXml, "test.settings.xml" ) );
+            SW_EXPECT_TRUE( _settings.loadSchemaFromXMLText( UiOptionsMenuTestUtil::kSchemaXML, "test.settings.xml" ) );
             _settings.reapplyAll();
             _viewport._size         = sw::float2{ 1920.0f, 1080.0f };
             _viewport._physicalSize = _viewport._size;

@@ -23,7 +23,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kRestaurantTestXml = R"(
+    constexpr const utf8* kRestaurantTestXML = R"(
 <RestaurantCatalog open="11" close="14" window="5">
   <Dish id="ramen" recipe="ramen" category="Noodle" price="40" quality="1,3,5"/>
   <Dish id="omelette" category="Breakfast" price="20" quality="1,4"/>
@@ -39,7 +39,7 @@ namespace
 </RestaurantCatalog>
 )";
 
-    constexpr const utf8* kRestaurantTestRecipeXml = R"(
+    constexpr const utf8* kRestaurantTestRecipeXML = R"(
 <RecipeCatalog>
   <Recipe id="ramen" station="Stove" time="6"><In item="noodle" count="1"/><In item="broth" count="1"/><Out item="ramen"/></Recipe>
   <Recipe id="omelette" station="Stove" time="4"><In item="egg" count="2"/><Out item="omelette"/></Recipe>
@@ -47,11 +47,11 @@ namespace
 </RecipeCatalog>
 )";
 
-    constexpr const utf8* kRestaurantTestShopXml = R"(
+    constexpr const utf8* kRestaurantTestShopXML = R"(
 <ShopCatalog><Shop id="market"><Stock item="egg" price="3"/><Stock item="noodle" price="5"/><Stock item="broth" price="4"/><Stock item="flour" price="2"/></Shop></ShopCatalog>
 )";
 
-    constexpr const utf8* kRestaurantTestReputationXml = R"(
+    constexpr const utf8* kRestaurantTestReputationXML = R"(
 <ReputationCatalog><Faction id="restaurant.guests" min="-1000" max="1000" start="100"/></ReputationCatalog>
 )";
 
@@ -102,9 +102,9 @@ namespace
                 _items.addItem( item );
             }
             _curve.setFormula( 20.0f, 1.0f, 0.0f, 10 ); // 레벨 L → L+1 에 20 × L
-            return _catalog.loadFromXmlText( kRestaurantTestXml, "RestaurantSimTest" ) && _recipes.loadFromXmlText( kRestaurantTestRecipeXml, "RestaurantSimTest" ) &&
-                   _shops.loadFromXmlText( kRestaurantTestShopXml, "RestaurantSimTest" ) &&
-                   _reputation.loadFromXmlText( kRestaurantTestReputationXml, "RestaurantSimTest" );
+            return _catalog.loadFromXMLText( kRestaurantTestXML, "RestaurantSimTest" ) && _recipes.loadFromXMLText( kRestaurantTestRecipeXML, "RestaurantSimTest" ) &&
+                   _shops.loadFromXMLText( kRestaurantTestShopXML, "RestaurantSimTest" ) &&
+                   _reputation.loadFromXMLText( kRestaurantTestReputationXML, "RestaurantSimTest" );
         }
 
         void initialize( RestaurantSimulation& sim, const RestaurantSettings& settings, RestaurantTestBorrowed& outBorrowed ) const

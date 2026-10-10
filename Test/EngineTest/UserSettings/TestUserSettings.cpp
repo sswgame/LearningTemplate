@@ -28,7 +28,7 @@ namespace
     struct UserSettingsTestInternal
     {
         /** @brief 시험 스키마 — 카테고리 둘, 전역 변수 대상 셋, 적용기 대상 하나, 품질 묶음 하나, 확인 카운트다운 하나. */
-        static constexpr const utf8* kSchemaXml = R"(
+        static constexpr const utf8* kSchemaXML = R"(
 <UserSettingsSchema version="1">
     <Category id="video" text="t.video"/>
     <Category id="sound" text="t.sound"/>
@@ -67,7 +67,7 @@ namespace
             targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
             targets._pAudioSystem           = pAudioSystem;
             outSettings.initialize( targets );
-            if ( outSettings.loadSchemaFromXmlText( kSchemaXml, "test.settings.xml" ) == false )
+            if ( outSettings.loadSchemaFromXMLText( kSchemaXML, "test.settings.xml" ) == false )
                 return false;
             outSettings.reapplyAll();
             return true;
@@ -91,14 +91,14 @@ namespace
         static sw::string makeTempPath( sw::string_view fileName ) { return sw::FileUtil::joinPath( sw::FileUtil::getTempDirectory(), fileName ); }
 
         /** @brief 매니저 하나에 스키마 하나를 읽혀 본 결과입니다(오류는 의도한 것). */
-        static bool loadsSchema( const utf8* pXml )
+        static bool loadsSchema( const utf8* pXML )
         {
             sw::UserSettingsManager settings;
             sw::UserSettingsTargets targets;
             targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
             settings.initialize( targets );
             SW_TEST_DEFENSIVE_SCOPE( "a broken user settings schema is a load error" );
-            return settings.loadSchemaFromXmlText( pXml, "broken.settings.xml" );
+            return settings.loadSchemaFromXMLText( pXML, "broken.settings.xml" );
         }
     };
 } // namespace
@@ -124,7 +124,7 @@ SW_TEST_CASE( UserSettingsTest, CommandLineGlobalVariableWinsAtStartup )
     targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
     targets._pCommandLineManager    = &commandLine;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( UserSettingsTestInternal::kSchemaXml, "test.settings.xml" ) );
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( UserSettingsTestInternal::kSchemaXML, "test.settings.xml" ) );
     settings.reapplyAll();
 
     // 1) 기동 적용은 명령줄 값을 지킨다(스키마 기본값 1 로 덮지 않는다). 명령줄에 없는 변수는 그대로 적용된다.
@@ -208,7 +208,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
     settings.getRegistry().registerApplier( "game.record", SW_DELEGATE_METHOD( sw::UserSettingApplierDelegate, &Recorder::record, &recorder ) );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="g"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.level" category="g" type="int" default="3" min="1" max="9" target="applier:game.record" param="slot2"/></UserSettingsSchema>)",
                                                     "game.settings.xml" ) );
 
@@ -227,7 +227,7 @@ SW_TEST_CASE( UserSettingsTest, ApplierRegistryDispatchesByName )
     // 같은 이름이 등록부에 없으면 그 이름을 쓰는 스키마는 읽히지 않는다.
     settings.getRegistry().unregisterApplier( "game.record" );
     SW_TEST_DEFENSIVE_SCOPE( "an applier name nobody registered" );
-    SW_EXPECT_FALSE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="h"/>
+    SW_EXPECT_FALSE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="h"/>
         <Setting id="h.x" category="h" type="bool" default="true" target="applier:game.record"/></UserSettingsSchema>)",
                                                      "game2.settings.xml" ) );
 }
@@ -247,7 +247,7 @@ SW_TEST_CASE( UserSettingsTest, RejectedApplyIsCountedAndReported )
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
     settings.getRegistry().registerApplier( "game.refuse", SW_DELEGATE_METHOD( sw::UserSettingApplierDelegate, &Refuser::refuse, &refuser ) );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="g"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="g"/>
         <Setting id="g.refused" category="g" type="int" default="3" min="1" max="9" target="applier:game.refuse"/></UserSettingsSchema>)",
                                                     "refuse.settings.xml" ) );
     SW_EXPECT_TRUE( settings.setPendingIntValue( "g.refused", 5 ) == sw::UserSettingSetResult::Accepted );
@@ -352,7 +352,7 @@ SW_TEST_CASE( UserSettingsTest, UserFileUpgradeDropsUnknownAndClamps )
 {
     sw::UserSettingsManager settings;
     settings.initialize( sw::UserSettingsTargets{} );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="3"><Category id="a"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="3"><Category id="a"/>
         <Setting id="a.volume" category="a" type="float" default="1" min="0" max="1"/>
         <Setting id="a.mode" category="a" type="enum" default="windowed"><Option value="windowed"/><Option value="borderless"/></Setting>
         <Setting id="a.gamma" category="a" type="float" default="1" min="0.5" max="2"/>
@@ -495,7 +495,7 @@ SW_TEST_CASE( UserSettingsTest, KeyBindingConflictDetectionAndSwap )
     sw::UserSettingsTargets targets;
     targets._pInputMap = &inputMap;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="controls"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="controls"/>
         <Setting id="controls.jump" category="controls" type="keyBinding" action="Jump" default=""/>
         <Setting id="controls.fire" category="controls" type="keyBinding" action="Fire" default=""/></UserSettingsSchema>)",
                                                     "bindings.settings.xml" ) );
@@ -567,7 +567,7 @@ SW_TEST_CASE( UserSettingsTest, LanguageSwitchChangesLocalizedString )
     sw::UserSettingsTargets targets;
     targets._pLocalizationManager = &localization;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="language"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="language"/>
         <Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate"
                  target="applier:localization.language"/></UserSettingsSchema>)",
                                                     "language.settings.xml" ) );
@@ -605,7 +605,7 @@ SW_TEST_CASE( UserSettingsTest, PseudoLocaleIsSelectableThroughTheLanguageSettin
     sw::UserSettingsTargets targets;
     targets._pLocalizationManager = &localization;
     settings.initialize( targets );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1"><Category id="language"/>
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1"><Category id="language"/>
         <Setting id="language.text" category="language" type="enum" default="" optionsFrom="localization.languages" apply="immediate"
                  target="applier:localization.language"/></UserSettingsSchema>)",
                                                     "language.settings.xml" ) );
@@ -710,7 +710,7 @@ SW_TEST_CASE( UserSettingsTest, GameOverlayAndGameDefaults )
     targets._pGlobalVariableManager = &sw::engine::getGlobalVariableManager();
     settings.initialize( targets );
     SW_ASSERT_TRUE( settings.loadSchema( "engine/settings/engine.settings.xml" ) );
-    SW_ASSERT_TRUE( settings.loadSchemaFromXmlText( R"(<UserSettingsSchema version="1">
+    SW_ASSERT_TRUE( settings.loadSchemaFromXMLText( R"(<UserSettingsSchema version="1">
         <Setting id="gameplay.difficulty" category="gameplay" type="enum" default="normal">
             <Option value="easy"/><Option value="normal"/><Option value="hard"/>
         </Setting></UserSettingsSchema>)",

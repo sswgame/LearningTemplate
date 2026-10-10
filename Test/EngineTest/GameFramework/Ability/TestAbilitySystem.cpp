@@ -237,7 +237,7 @@ namespace
     }
 
     /** @brief 시험 카탈로그 — 비용 · 쿨다운 · 피해 · 회복 · 세트. */
-    constexpr const utf8* kAbilityTestCatalogXml = R"(
+    constexpr const utf8* kAbilityTestCatalogXML = R"(
 <AbilityCatalog>
   <Ability id="GA_Heal" class="ApplyEffects" cost="GE_Cost_Mana20" cooldown="GE_Cooldown_Heal">
     <AbilityTag tag="Ability.Skill.Heal"/>
@@ -722,7 +722,7 @@ SW_TEST_CASE( AbilitySystemTest, GameplayEventsTriggerAbilitiesAndWakeWaitingTas
  */
 SW_TEST_CASE( AbilitySystemTest, ClassNamesResolveWhenCreatedNotWhenLoaded )
 {
-    constexpr const utf8* kLateClassXml = R"(<AbilityCatalog>
+    constexpr const utf8* kLateClassXML = R"(<AbilityCatalog>
   <Ability id="GA_Late" class="LateClass"/>
   <AbilitySet id="LateSet"><AttributeSet class="LateAttributes"/></AbilitySet>
 </AbilityCatalog>)";
@@ -730,7 +730,7 @@ SW_TEST_CASE( AbilitySystemTest, ClassNamesResolveWhenCreatedNotWhenLoaded )
     AbilityCatalog catalog;
     {
         test::ScopedLogCollector logs;
-        SW_ASSERT_TRUE( catalog.loadFromXmlText( kLateClassXml, "AbilitySystemTest.Late" ) );
+        SW_ASSERT_TRUE( catalog.loadFromXMLText( kLateClassXML, "AbilitySystemTest.Late" ) );
         SW_EXPECT_TRUE_MSG( logs.joined().empty(), ( "등록 전 클래스 이름으로 읽기가 경고했다:" + logs.joined() ).c_str() );
     }
     {
@@ -747,10 +747,10 @@ SW_TEST_CASE( AbilitySystemTest, ClassNamesResolveWhenCreatedNotWhenLoaded )
  * @details 세트의 체력 80 은 최대 체력 120 보다 먼저 적혀 있어도 잘리지 않는다(붙이기 전에 정한다). 범위 [0, 100] 의 150 은 처음 바뀔 때 잘린다.
  *          "ApplyEffects" 회복(레벨 2 → 30)은 마나 20 을 쓰고 3 초 쿨다운을 건다. 주기 리젠은 1 초마다 마나 2 다.
  */
-SW_TEST_CASE( AbilitySystemTest, CatalogXmlGrantsAnAbilitySetAndRunsADataOnlyAbility )
+SW_TEST_CASE( AbilitySystemTest, CatalogXMLGrantsAnAbilitySetAndRunsADataOnlyAbility )
 {
     AbilityCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kAbilityTestCatalogXml, "AbilitySystemTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kAbilityTestCatalogXML, "AbilitySystemTest" ) );
     SW_EXPECT_EQUAL( 5u, catalog.getEffectCount() );
     SW_EXPECT_EQUAL( 1u, catalog.getAbilityCount() );
     SW_EXPECT_EQUAL( 1u, catalog.getAbilitySetCount() );
@@ -806,7 +806,7 @@ SW_TEST_CASE( AbilitySystemTest, CatalogXmlGrantsAnAbilitySetAndRunsADataOnlyAbi
  */
 SW_TEST_CASE( AbilitySystemTest, TriggeredApplyEffectsHitsTheOtherPartyOfTheEvent )
 {
-    constexpr const utf8* kThornsXml = R"(
+    constexpr const utf8* kThornsXML = R"(
 <AbilityCatalog>
   <GameplayEffect id="GE_Thorns" duration="Instant">
     <Modifier attribute="IncomingDamage" op="Add" magnitude="2"/>
@@ -818,7 +818,7 @@ SW_TEST_CASE( AbilitySystemTest, TriggeredApplyEffectsHitsTheOtherPartyOfTheEven
 </AbilityCatalog>
 )";
     AbilityCatalog        catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kThornsXml, "AbilitySystemTest.Thorns" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kThornsXML, "AbilitySystemTest.Thorns" ) );
 
     GameObjectManager       manager;
     AbilitySystemComponent* pAttacker = spawnCombatant( manager, "Attacker", 100.0f, 50.0f, 10.0f );

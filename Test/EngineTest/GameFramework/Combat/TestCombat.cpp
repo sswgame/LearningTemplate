@@ -21,7 +21,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kCombatTestXml = R"(
+    constexpr const utf8* kCombatTestXML = R"(
 <WeaponCatalog>
   <Weapon id="smg" damage="20" falloffStart="10" falloffEnd="30" falloffMinScale="0.5" headshotMultiplier="1.5" ammo="ammo_9mm"/>
   <Weapon id="bow" damage="60" projectileSpeed="50" projectileGravity="1" automatic="false"/>
@@ -32,7 +32,7 @@ namespace
 SW_TEST_CASE( CombatTest, WeaponDamageFallsOffWithDistanceAndScalesOnHeadshots )
 {
     WeaponCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kCombatTestXml, "CombatTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kCombatTestXML, "CombatTest" ) );
     const WeaponDef* pSmg = catalog.findWeapon( hashed_string( "smg" ) );
     SW_ASSERT_NOT_NULL( pSmg );
     SW_EXPECT_TRUE( pSmg->_ammoId == hashed_string( "ammo_9mm" ) );

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -49,7 +49,7 @@ namespace sw
     bool NavMeshSettings::loadFromResource( string_view resourcePath )
     {
         *this = NavMeshSettings{};
-        if ( XmlSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "Navigation settings could not be read or hold unknown keys: %#", resourcePath );
             return false;
@@ -58,10 +58,10 @@ namespace sw
         return validate();
     }
 
-    bool NavMeshSettings::loadFromXmlText( string_view xmlText )
+    bool NavMeshSettings::loadFromXMLText( string_view xmlText )
     {
         *this = NavMeshSettings{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "Navigation settings text could not be read or holds unknown keys" );
             return false;

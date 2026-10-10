@@ -13,12 +13,12 @@
 #include "GameFramework/Base/Actor/Input/TimingJudge.h"
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 판 규칙의 수치입니다. 시간은 초, 거리 · 속도는 m · m/s, 진행량은 0..1 입니다. */
     struct AsymmetricHorrorRules
@@ -109,9 +109,9 @@ namespace sw
      *          행동 이름은 "Repair" · "SkillCheck" · "Heal" · "Unhook" · "Escape" · "PalletStun" · "Vault" · "Hit" · "Hook" · "Sacrifice" · "Kick" ·
      *          "BreakPallet" · "LockerGrab" 입니다 — 없는 행동은 점수가 없습니다.
      */
-    class SW_GF_API AsymmetricHorrorRulesCatalog : public XmlCatalog<AsymmetricHorrorRulesCatalog>
+    class SW_GF_API AsymmetricHorrorRulesCatalog : public XMLCatalog<AsymmetricHorrorRulesCatalog>
     {
-        friend class XmlCatalog<AsymmetricHorrorRulesCatalog>;
+        friend class XMLCatalog<AsymmetricHorrorRulesCatalog>;
 
     public:
         AsymmetricHorrorRulesCatalog();
@@ -125,8 +125,8 @@ namespace sw
         float32 getCategoryCap( const hashed_string& category ) const { return _categoryCap.getValue( category, 0.0f ); }
 
     private:
-        static constexpr const utf8* kXmlRootName = "AsymmetricHorrorRules"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "AsymmetricHorrorRules"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         AsymmetricHorrorRules        _rules;
         TimingJudge                  _judge;

@@ -146,7 +146,7 @@ SW_TEST_CASE( AnimNotify2DTest, SpriteNotifiesDriveFootstepAndHitWindowIn2D )
     pSprite->setClipPath( clipPath );
     pSockets->setSocketSetPath( socketPath );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXmlText( R"(<AnimNotifies>
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies>
             <Notify name="Step" handler="Footstep" socket="Root" distance="0.6"/>
             <Notify name="Swing" handler="HitWindow" socketA="BladeA" socketB="BladeB" damage="5"/>
         </AnimNotifies>)",
@@ -192,7 +192,7 @@ SW_TEST_CASE( AnimNotify2DTest, RestartedFrameClosesOpenStates )
     AnimNotifyComponent* pNotify = pObject->addComponent<AnimNotifyComponent>();
     SW_ASSERT_NOT_NULL( pNotify );
     shared_ptr<AnimNotifyTable> table = make_shared<AnimNotifyTable>();
-    SW_ASSERT_TRUE( table->loadFromXmlText( R"(<AnimNotifies><Notify name="Taunt" handler="GameplayEvent" event="Taunted"/></AnimNotifies>)", "restart",
+    SW_ASSERT_TRUE( table->loadFromXMLText( R"(<AnimNotifies><Notify name="Taunt" handler="GameplayEvent" event="Taunted"/></AnimNotifies>)", "restart",
                                             AnimNotifyHandlerRegistry::getDefault() ) );
     pNotify->setNotifyTable( table );
 

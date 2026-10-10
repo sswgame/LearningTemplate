@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Online/Ledger/LedgerTypes.h"
 
 namespace sw
@@ -17,13 +17,13 @@ namespace sw
     {
         struct OfferCatalogInternal
         {
-            [[nodiscard]] static bool readAmount( const XmlNode& node, int64& outAmount )
+            [[nodiscard]] static bool readAmount( const XMLNode& node, int64& outAmount )
             {
                 return StringUtil::parseInt64( node.getAttributeText( "amount" ), outAmount ) && 1 <= outAmount && outAmount <= LedgerConstant::kMaxAmount;
             }
 
             /** @brief 비었으면 0 으로 두고 true, 숫자가 아니면 false 입니다. */
-            [[nodiscard]] static bool readOptionalTime( const XmlNode& node, const utf8* pName, int64& outTimeMs )
+            [[nodiscard]] static bool readOptionalTime( const XMLNode& node, const utf8* pName, int64& outTimeMs )
             {
                 const string_view text = node.getAttributeText( pName );
                 return text.empty() || StringUtil::parseInt64( text, outTimeMs );
@@ -77,12 +77,12 @@ namespace sw
         return nullptr;
     }
 
-    uint32 OfferCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 OfferCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Offer" ); node; node = node.findNextSibling( "Offer" ) )
+        for ( XMLNode node = root.findChild( "Offer" ); node; node = node.findNextSibling( "Offer" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             OfferDef def;
@@ -90,19 +90,19 @@ namespace sw
             def._limitPerAccount     = node.getAttributeInt( "limit", 0 );
             def._maxCountPerPurchase = node.getAttributeInt( "maxCount", 1 );
             bool bOk                 = OfferCatalogInternal::readOptionalTime( node, "startMs", def._startMs ) && OfferCatalogInternal::readOptionalTime( node, "endMs", def._endMs );
-            for ( XmlNode priceNode = node.findChild( "Price" ); bOk && priceNode; priceNode = priceNode.findNextSibling( "Price" ) )
+            for ( XMLNode priceNode = node.findChild( "Price" ); bOk && priceNode; priceNode = priceNode.findNextSibling( "Price" ) )
             {
                 OfferPrice& price = def._listPrice.emplace_back();
                 price._currencyId = string( priceNode.getAttributeText( "currency" ) );
                 bOk               = OfferCatalogInternal::readAmount( priceNode, price._amount );
             }
-            for ( XmlNode grantNode = node.findChild( "Grant" ); bOk && grantNode; grantNode = grantNode.findNextSibling( "Grant" ) )
+            for ( XMLNode grantNode = node.findChild( "Grant" ); bOk && grantNode; grantNode = grantNode.findNextSibling( "Grant" ) )
             {
                 OfferGrant& grant = def._listGrant.emplace_back();
                 grant._assetId    = string( grantNode.getAttributeText( "asset" ) );
                 bOk               = OfferCatalogInternal::readAmount( grantNode, grant._amount );
             }
-            for ( XmlNode productNode = node.findChild( "Product" ); bOk && productNode; productNode = productNode.findNextSibling( "Product" ) )
+            for ( XMLNode productNode = node.findChild( "Product" ); bOk && productNode; productNode = productNode.findNextSibling( "Product" ) )
             {
                 OfferProduct& product = def._listProduct.emplace_back();
                 product._storeName    = string( productNode.getAttributeText( "store" ) );

@@ -16,7 +16,7 @@
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 부품 종류입니다. 해석기는 차원을 모릅니다 — 메시 부품과 스프라이트 부품이 같은 길을 탑니다. */
     enum class AppearancePartKind : uint8
@@ -156,7 +156,7 @@ namespace sw
     class SW_GF_API ItemVisualCatalog
     {
     public:
-        [[nodiscard]] bool loadFromNode( const XmlNode& root, AppearanceLoadReport& report, string_view sourceName );
+        [[nodiscard]] bool loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName );
         void               clear() { _listVisual.clear(); }
 
         const ItemVisualDef*         findVisual( const hashed_string& id ) const;

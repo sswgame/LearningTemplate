@@ -20,7 +20,7 @@
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Localization/TranslationMemory.h"
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -58,7 +58,7 @@ namespace sw
                 return count;
             }
 
-            static void applyAssetRule( const LocalizationAssetRule& rule, const XmlNode& node, TextGatherer& gatherer, string_view origin, uint32 depth )
+            static void applyAssetRule( const LocalizationAssetRule& rule, const XMLNode& node, TextGatherer& gatherer, string_view origin, uint32 depth )
             {
                 if ( depth > 64 )
                     return;
@@ -75,7 +75,7 @@ namespace sw
                     else
                         gatherer.addTextOrKey( value, rule._context, origin );
                 }
-                for ( XmlNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     applyAssetRule( rule, child, gatherer, origin, depth + 1 );
                 }
@@ -391,7 +391,7 @@ namespace sw
         {
             if ( StringUtil::endsWith( origin, rule._fileSuffix, true ) == false )
                 continue;
-            XmlDocument document;
+            XMLDocument document;
             if ( document.parse( fileText, origin ) == false )
             {
                 gatherer.addIssue( origin, "XML cannot be parsed: " + document.getLastError(), true );
@@ -399,7 +399,7 @@ namespace sw
             }
             LocalizationToolsInternal::applyAssetRule( rule, document.getRoot(), gatherer, origin, 0 );
         }
-        gatherer.gatherReflectedXml( fileText, origin );
+        gatherer.gatherReflectedXML( fileText, origin );
     }
 
     bool LocalizationTools::gatherProject( string_view projectPath, string_view repositoryRoot, bool bWrite, LocalizationGatherResult& outResult )

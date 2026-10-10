@@ -119,12 +119,12 @@ SW_TEST_CASE( GimmickSceneTest, MoverFollowsSplineAndStateSurvivesSaveLoad )
     SW_EXPECT_NEAR_EQUAL( 10.0f, pPlatform->getPrimarySceneComponent()->getWorldPosition()._x, 0.1f );
 
     const uint64 savedHash = pCircuit->getCircuit().computeStateHash();
-    const string xml       = ObjectStateSerializer::saveToXmlString( pPlatform );
+    const string xml       = ObjectStateSerializer::saveToXMLString( pPlatform );
     SW_ASSERT_FALSE( xml.empty() );
 
     GameObjectManager restoredManager;
     GameObject*       pRestored = restoredManager.createGameObject( hashed_string( "Platform" ) );
-    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pRestored, xml ) );
+    SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pRestored, xml ) );
     GimmickCircuitComponent* pRestoredCircuit = pRestored->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pRestoredCircuit );
     SW_EXPECT_EQUAL( savedHash, pRestoredCircuit->getCircuit().computeStateHash() );
@@ -153,12 +153,12 @@ SW_TEST_CASE( GimmickSceneTest, InvalidWiringIsRejectedAtLoad )
     pCircuit->addWire( "button.OnUsed", "gate.Open" );
     pCircuit->addWire( "button.OnPushed", "door.Open" );
     pCircuit->addNode( "lamp", "Light", "startOn" ); // = 가 없는 매개변수
-    const string xml = ObjectStateSerializer::saveToXmlString( pLogic );
+    const string xml = ObjectStateSerializer::saveToXMLString( pLogic );
 
     GameObject* pLoaded = manager.createGameObject( hashed_string( "Loaded" ) );
     {
         SW_TEST_DEFENSIVE_SCOPE( "gimmick circuit with unknown target node and output" );
-        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXmlString( pLoaded, xml ) );
+        SW_ASSERT_TRUE( ObjectStateSerializer::loadFromXMLString( pLoaded, xml ) );
     }
     const GimmickCircuitComponent* pLoadedCircuit = pLoaded->getComponent<GimmickCircuitComponent>();
     SW_ASSERT_NOT_NULL( pLoadedCircuit );
@@ -185,7 +185,7 @@ SW_TEST_CASE( GimmickSceneTest, ShowcaseSceneWiresAcrossObjects )
 {
     SW_ASSERT_TRUE( ResourceUtil::initialize() );
     SceneDocument doc;
-    SW_ASSERT_TRUE( doc.loadXml( "game/empty/maps/gimmickshowcase.scene.xml" ) );
+    SW_ASSERT_TRUE( doc.loadXML( "game/empty/maps/gimmickshowcase.scene.xml" ) );
     Scene scene{ "GimmickShowcase" };
     SW_ASSERT_TRUE( scene.instantiate( doc ) );
     GameObjectManager& manager = *scene.getObjectManager();

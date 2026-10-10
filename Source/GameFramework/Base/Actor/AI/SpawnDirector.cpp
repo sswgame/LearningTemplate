@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
 namespace sw
@@ -35,7 +35,7 @@ namespace sw
     {
     }
 
-    uint32 SpawnTable::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 SpawnTable::loadRoot( const XMLNode& root, string_view sourceName )
     {
         _catalog.clear();
         _curve.clear();
@@ -43,9 +43,9 @@ namespace sw
         _maxBudget        = MathUtil::max( 0.0f, root.getAttributeFloat( "maxBudget", _maxBudget ) );
         _startBudget      = MathUtil::clamp( root.getAttributeFloat( "startBudget", _startBudget ), 0.0f, _maxBudget );
         _bRefundOnDespawn = root.getAttributeBool( "refund", false ) ? SW_TRUE : SW_FALSE;
-        for ( XmlNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
+        for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             SpawnEntryDef entry;
@@ -54,7 +54,7 @@ namespace sw
             entry._weight  = MathUtil::max( 0.0f, node.getAttributeFloat( "weight", entry._weight ) );
             entry._minTime = MathUtil::max( 0.0f, node.getAttributeFloat( "minTime", entry._minTime ) );
             entry._max     = node.getAttributeInt( "max", entry._max );
-            GameDataXml::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
             { entry._listTag.push_back( hashed_string( token ) ); } );
             (void)_catalog.add( entry );
         }

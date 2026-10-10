@@ -386,7 +386,7 @@ SW_TEST_CASE( TradeStreamTest, PartnerLeavingClosesTheTradeAndFeatureFlagCanTurn
 SW_TEST_CASE( TradeStreamTest, InventorySlotsBecomeLegs )
 {
     ItemCatalog items;
-    SW_ASSERT_TRUE( items.loadFromXmlText( R"(<ItemCatalog>
+    SW_ASSERT_TRUE( items.loadFromXMLText( R"(<ItemCatalog>
   <Item id="potion" category="Consumable" maxStack="10" value="12"/>
   <Item id="sword" category="Weapon" maxStack="1" value="100"/>
   <Item id="quest_key" category="Quest" maxStack="1" value="0"/>

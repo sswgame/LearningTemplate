@@ -15,7 +15,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kConquestTestXml = R"(
+    constexpr const utf8* kConquestTestXML = R"(
 <ConquestCatalog>
   <Rules waveUnit="raider" waveInterval="30" waveBaseCount="2" waveCountPerMinute="1" waveCountPerSite="2" captureTime="2" incomeInterval="10"
          moraleRadius="5" moraleDamageBonus="0.5" wallProtection="0.5" commanderHealth="100" commanderDamage="10" commanderRange="1.5"
@@ -89,7 +89,7 @@ namespace
 SW_TEST_CASE( SideScrollConquestTest, CatalogReadsUnitsBuildingsSitesAndRules )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     const ConquestUnitDef* pRam = catalog.findUnit( "ram" );
     SW_ASSERT_NOT_NULL( pRam );
     SW_EXPECT_TRUE( pRam->_siegeRole == ConquestSiegeRole::Ram );
@@ -121,7 +121,7 @@ SW_TEST_CASE( SideScrollConquestTest, CatalogReadsUnitsBuildingsSitesAndRules )
 SW_TEST_CASE( SideScrollConquestTest, BuildingsWorkersProductionAndTrainingRespectCostsAndPopulation )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     disableWaves( catalog );
     ConquestWorld world;
     world.initialize( &catalog );
@@ -179,7 +179,7 @@ SW_TEST_CASE( SideScrollConquestTest, BuildingsWorkersProductionAndTrainingRespe
 SW_TEST_CASE( SideScrollConquestTest, SquadFollowsHoldsAndChargesInFormation )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     disableWaves( catalog );
     ConquestWorld world;
     world.initialize( &catalog );
@@ -226,7 +226,7 @@ SW_TEST_CASE( SideScrollConquestTest, SquadFollowsHoldsAndChargesInFormation )
 SW_TEST_CASE( SideScrollConquestTest, MoraleNearTheCommanderAndWallsChangeDamage )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     disableWaves( catalog );
 
     // 같은 싸움을 지휘관 근처(4)와 먼 곳(20)에서 — 사기 버프는 피해 1.5 배.
@@ -268,7 +268,7 @@ SW_TEST_CASE( SideScrollConquestTest, MoraleNearTheCommanderAndWallsChangeDamage
 SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptureEndsTheWar )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     disableWaves( catalog );
 
     // 성문(요새 구역 가장자리 56)은 막는다 — 창병은 그 앞에서 성문을 조금씩 때릴 뿐.
@@ -315,7 +315,7 @@ SW_TEST_CASE( SideScrollConquestTest, GatesBlockRamsBreachLaddersBypassAndCaptur
 SW_TEST_CASE( SideScrollConquestTest, TerritoryRaisesIncomeAndCounterAttackWavesGrowWithTimeAndLand )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     ConquestWorld world;
     world.initialize( &catalog );
     SW_EXPECT_EQUAL( 2, world.computeWaveSize() );
@@ -359,7 +359,7 @@ SW_TEST_CASE( SideScrollConquestTest, TerritoryRaisesIncomeAndCounterAttackWaves
 SW_TEST_CASE( SideScrollConquestTest, SameInputsGiveTheSameBattle )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     ConquestWorld  first;
     ConquestWorld  second;
     ConquestWorld* arrWorld[2] = { &first, &second };
@@ -404,11 +404,11 @@ SW_TEST_CASE( SideScrollConquestTest, SameInputsGiveTheSameBattle )
  */
 SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
 {
-    string xml = kConquestTestXml;
+    string xml = kConquestTestXML;
     SW_ASSERT_TRUE( replaceFirst( xml, R"(damage="5" range="1" attackInterval="1")", R"(damage="5" range="1" attackInterval="0.75")" ) );
     SW_ASSERT_TRUE( replaceFirst( xml, R"(<Unit id="guard" hp="50" damage="4")", R"(<Unit id="guard" hp="100000" damage="0")" ) );
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( xml.c_str(), "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( xml.c_str(), "SideScrollConquestTest" ) );
     disableWaves( catalog );
     ConquestRules rules            = catalog.getRules();
     rules._moraleDamageBonus       = 0.0f;
@@ -447,7 +447,7 @@ SW_TEST_CASE( SideScrollConquestTest, AttackRateFollowsTheIntervalNotTheStep )
 SW_TEST_CASE( SideScrollConquestTest, StateRoundTripContinuesTheSameWar )
 {
     ConquestCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kConquestTestXml, "SideScrollConquestTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kConquestTestXML, "SideScrollConquestTest" ) );
     ConquestWorld world;
     world.initialize( &catalog );
     SW_EXPECT_TRUE( world.placeBuilding( "barracks", "home" ) == ConquestResult::Ok );

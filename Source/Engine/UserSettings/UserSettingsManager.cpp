@@ -164,10 +164,10 @@ namespace sw
         return false;
     }
 
-    bool UserSettingsManager::loadSchemaFromXmlText( string_view xmlText, string_view sourceName )
+    bool UserSettingsManager::loadSchemaFromXMLText( string_view xmlText, string_view sourceName )
     {
         const UserSettingsSchema backup  = _schema;
-        const bool               bLoaded = _schema.loadFromXmlText( xmlText, sourceName );
+        const bool               bLoaded = _schema.loadFromXMLText( xmlText, sourceName );
         if ( appendSchema( bLoaded ) )
             return true;
         _schema = backup;

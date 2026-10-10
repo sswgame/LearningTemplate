@@ -28,7 +28,7 @@ namespace sw
     public:
         /**
          * @brief 문서의 각 엔티티 XML 을 바이너리 상태로 쿠킹합니다.
-         * @param inoutDoc 대상 문서. 성공한 엔티티는 `_embeddedStateBytes` 가 차고 `_embeddedXml` 이 비워집니다.
+         * @param inoutDoc 대상 문서. 성공한 엔티티는 `_embeddedStateBytes` 가 차고 `_embeddedXML` 이 비워집니다.
          * @param pOutMissingComponentCount 주면, 모르는 타입으로 지어진 컴포넌트(`MissingComponent`) 수를 받습니다. 하나마다 오류 로그를 남깁니다.
          * @return 바이너리로 바꾼 엔티티 수입니다.
          *

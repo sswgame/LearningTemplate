@@ -12,12 +12,12 @@
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
 #include "GameFramework/Base/Foundation/Data/StatBlock.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 편입니다. 플레이어는 왼쪽(작은 x)에서 오른쪽으로 쳐들어갑니다. */
     enum class ConquestTeam : uint8
@@ -150,9 +150,9 @@ namespace sw
      *        <Site id="home" x="0" kind="Village" owner="Player" workers="4" slots="3" housing="5"><Income gold="2"/></Site>
      *        <Site id="keep" x="60" kind="Fortress" owner="Enemy" gate="200" wall="300" garrison="spearman:3"/></ConquestCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ConquestCatalog : public XmlCatalog<ConquestCatalog>
+    class SW_GF_API ConquestCatalog : public XMLCatalog<ConquestCatalog>
     {
-        friend class XmlCatalog<ConquestCatalog>;
+        friend class XMLCatalog<ConquestCatalog>;
 
     public:
         ConquestCatalog();
@@ -167,8 +167,8 @@ namespace sw
         void                               setRules( const ConquestRules& rules ) { _rules = rules; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "ConquestCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "ConquestCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<ConquestBuildingDef> _buildingCatalog;
         GameCatalog<ConquestUnitDef>     _unitCatalog;

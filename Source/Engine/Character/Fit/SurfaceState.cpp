@@ -7,7 +7,7 @@
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -23,12 +23,12 @@ namespace sw
 
 namespace sw
 {
-    bool SurfaceChannelTable::loadFromXmlText( string_view xmlText, string_view sourceName )
+    bool SurfaceChannelTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         _listChannel.clear();
         CharacterDataReader reader( sourceName );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.parseRoot( document, xmlText, "SurfaceChannels", root ) )
             readRoot( root, reader );
         return reader.finish();
@@ -38,17 +38,17 @@ namespace sw
     {
         _listChannel.clear();
         CharacterDataReader reader( path );
-        XmlDocument         document;
-        XmlNode             root;
+        XMLDocument         document;
+        XMLNode             root;
         if ( reader.loadRoot( document, path, "SurfaceChannels", root ) )
             readRoot( root, reader );
         return reader.finish();
     }
 
-    void SurfaceChannelTable::readRoot( const XmlNode& root, CharacterDataReader& reader )
+    void SurfaceChannelTable::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
         reader.reportUnexpectedAttributes( root );
-        for ( XmlNode child = root.findChild(); child; child = child.findNextSibling() )
+        for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( StringUtil::equals( child.getName(), "Channel", true ) == false )
             {

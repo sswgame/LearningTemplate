@@ -1,25 +1,25 @@
 #include "pch.h"
 
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
 #include "Engine/Resource/ResourceUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw
 {
     namespace
     {
-        struct TileMapXmlInternal
+        struct TileMapXMLInternal
         {
             /**
              * @brief 0~255 칸(높이 · 아틀라스 · 색)을 읽습니다. 범위를 넘으면 0 · 255 로 묶고 경고합니다.
              * @details 그대로 잘라 넣으면 색 "300" 이 44 · "-1" 이 255 가 된다(유니티 `Color32` 는 묶는다).
              */
-            static uint8 readByteAttribute( const XmlNode& node, const utf8* pName, int32 fallback )
+            static uint8 readByteAttribute( const XMLNode& node, const utf8* pName, int32 fallback )
             {
                 const int32 value = node.getAttributeInt( pName, fallback );
                 if ( value < 0 || value > 255 )
@@ -38,34 +38,34 @@ namespace sw
                 {
                     if ( kArrTileFlagLayerInfo[layerIndex]._layer != static_cast<TileFlagLayer>( layerIndex ) )
                         return false;
-                    if ( kArrTileFlagLayerInfo[layerIndex]._pXmlAttribute == nullptr )
+                    if ( kArrTileFlagLayerInfo[layerIndex]._pXMLAttribute == nullptr )
                         ++textLayerCount;
                 }
                 return textLayerCount <= 1;
             }
 
             /** @brief `<t>` 하나에서 레이어 값을 읽습니다. 본문 레이어는 "0" 으로 시작하면 0 이고, 없으면 기본값입니다. */
-            static uint8 readFlag( const XmlNode& tileNode, const TileFlagLayerInfo& info )
+            static uint8 readFlag( const XMLNode& tileNode, const TileFlagLayerInfo& info )
             {
-                if ( info._pXmlAttribute == nullptr )
+                if ( info._pXMLAttribute == nullptr )
                 {
                     const utf8* pText = tileNode.getText();
                     if ( pText == nullptr || pText[0] == '\0' )
                         return info._defaultValue;
                     return pText[0] != '0' ? 1 : 0;
                 }
-                if ( tileNode.findAttribute( info._pXmlAttribute ) == nullptr )
+                if ( tileNode.findAttribute( info._pXMLAttribute ) == nullptr )
                     return info._defaultValue;
-                return tileNode.getAttributeInt( info._pXmlAttribute, 0 ) != 0 ? 1 : 0;
+                return tileNode.getAttributeInt( info._pXMLAttribute, 0 ) != 0 ? 1 : 0;
             }
         };
 
-        static_assert( TileMapXmlInternal::isFlagLayerTableValid(), "kArrTileFlagLayerInfo must be ordered by TileFlagLayer and have at most one text layer" );
+        static_assert( TileMapXMLInternal::isFlagLayerTableValid(), "kArrTileFlagLayerInfo must be ordered by TileFlagLayer and have at most one text layer" );
     } // namespace
 
-    SW_LOG_CALLER( "TileMapXml" );
+    SW_LOG_CALLER( "TileMapXML" );
 
-    bool TileMapXmlData::load( string_view path )
+    bool TileMapXMLData::load( string_view path )
     {
         if ( path.empty() )
             return false;
@@ -78,21 +78,21 @@ namespace sw
             return false;
         }
 
-        if ( loadFromXml( text ) == false )
+        if ( loadFromXML( text ) == false )
             return false;
         _sourcePath = path;
         return true;
     }
 
-    bool TileMapXmlData::loadFromXml( string_view xml )
+    bool TileMapXMLData::loadFromXML( string_view xml )
     {
         *this = {};
 
-        XmlDocument doc;
+        XMLDocument doc;
         if ( doc.parse( xml ) == false )
             return false;
 
-        XmlNode root = doc.getRoot( "TileMap" );
+        XMLNode root = doc.getRoot( "TileMap" );
         if ( root.isValid() == false )
         {
             SW_LOG_ERROR( "Missing <TileMap>" );
@@ -104,7 +104,7 @@ namespace sw
         _height = root.getChildInt( "height", 0 );
         root.takeChildText( "scene", _scenePath );
         root.takeChildText( "role", _role );
-        XmlNode spawn = root.findChild( "spawn" );
+        XMLNode spawn = root.findChild( "spawn" );
         if ( spawn.isValid() )
         {
             _spawnX = spawn.getAttributeInt( "x", _spawnX );
@@ -133,35 +133,35 @@ namespace sw
         const vector<uint8>& listEncounter   = getFlagLayer( TileFlagLayer::Encounter );
         const vector<uint8>& listPassThrough = getFlagLayer( TileFlagLayer::PassThrough );
 
-        XmlNode tiles = root.findChild( "tiles" );
+        XMLNode tiles = root.findChild( "tiles" );
         if ( tiles.isValid() )
         {
             int32 index{ 0 };
-            for ( XmlNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count );
+            for ( XMLNode tileNode = tiles.findChild( "t" ); tileNode && index < static_cast<int32>( count );
                   tileNode         = tileNode.findNextSibling( "t" ), ++index )
             {
                 const size_t elementIndex = static_cast<size_t>( index );
                 for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
                 {
-                    getFlagLayer( info._layer )[elementIndex] = TileMapXmlInternal::readFlag( tileNode, info );
+                    getFlagLayer( info._layer )[elementIndex] = TileMapXMLInternal::readFlag( tileNode, info );
                 }
 
                 // 높이 · 틴트가 없는 맵은 레이어 값으로 보기를 만든다.
                 Visual tileVisual{};
                 if ( tileNode.findAttribute( "h" ) != nullptr )
-                    tileVisual._height = TileMapXmlInternal::readByteAttribute( tileNode, "h", 0 );
+                    tileVisual._height = TileMapXMLInternal::readByteAttribute( tileNode, "h", 0 );
                 else
                     tileVisual._height = listEncounter[elementIndex] != 0 ? 2 : ( listWalkable[elementIndex] != 0 ? 1 : 0 );
 
                 if ( tileNode.findAttribute( "atlas" ) != nullptr )
-                    tileVisual._atlasId = TileMapXmlInternal::readByteAttribute( tileNode, "atlas", 0 );
+                    tileVisual._atlasId = TileMapXMLInternal::readByteAttribute( tileNode, "atlas", 0 );
 
                 const bool bHasTint = tileNode.findAttribute( "tr" ) != nullptr || tileNode.findAttribute( "tg" ) != nullptr || tileNode.findAttribute( "tb" ) != nullptr;
                 if ( bHasTint )
                 {
-                    tileVisual._tintR = TileMapXmlInternal::readByteAttribute( tileNode, "tr", 255 );
-                    tileVisual._tintG = TileMapXmlInternal::readByteAttribute( tileNode, "tg", 255 );
-                    tileVisual._tintB = TileMapXmlInternal::readByteAttribute( tileNode, "tb", 255 );
+                    tileVisual._tintR = TileMapXMLInternal::readByteAttribute( tileNode, "tr", 255 );
+                    tileVisual._tintG = TileMapXMLInternal::readByteAttribute( tileNode, "tg", 255 );
+                    tileVisual._tintB = TileMapXMLInternal::readByteAttribute( tileNode, "tb", 255 );
                 }
                 else if ( listEncounter[elementIndex] != 0 )
                 {
@@ -185,10 +185,10 @@ namespace sw
             }
         }
 
-        XmlNode warps = root.findChild( "warps" );
+        XMLNode warps = root.findChild( "warps" );
         if ( warps.isValid() )
         {
-            for ( XmlNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
+            for ( XMLNode warpNode = warps.findChild( "warp" ); warpNode; warpNode = warpNode.findNextSibling( "warp" ) )
             {
                 Warp warp{};
                 warp._tileX      = warpNode.getAttributeInt( "x", 0 );
@@ -206,12 +206,12 @@ namespace sw
         }
 
         // 타일 레이어 — 팔레트(브러시 이름)와 칸마다 팔레트 번호. 칸 수가 맞지 않거나 팔레트 밖 번호는 읽기 오류다.
-        XmlNode tileLayer = root.findChild( "tileLayer" );
+        XMLNode tileLayer = root.findChild( "tileLayer" );
         if ( tileLayer.isValid() )
         {
             _tileSetPath    = string( tileLayer.getAttributeText( "tileSet" ) );
-            XmlNode palette = tileLayer.findChild( "palette" );
-            for ( XmlNode entry = palette.isValid() ? palette.findChild( "b" ) : XmlNode{}; entry; entry = entry.findNextSibling( "b" ) )
+            XMLNode palette = tileLayer.findChild( "palette" );
+            for ( XMLNode entry = palette.isValid() ? palette.findChild( "b" ) : XMLNode{}; entry; entry = entry.findNextSibling( "b" ) )
             {
                 _listPaletteName.push_back( string( entry.getAttributeText( "name" ) ) );
             }
@@ -263,7 +263,7 @@ namespace sw
         return true;
     }
 
-    bool TileMapXmlData::resetTiles( int32 width, int32 height )
+    bool TileMapXMLData::resetTiles( int32 width, int32 height )
     {
         if ( isSizeSupported( width, height ) == false )
             return false;
@@ -282,7 +282,7 @@ namespace sw
         return true;
     }
 
-    string_view TileMapXmlData::getTileBrushName( int32 x, int32 y ) const
+    string_view TileMapXMLData::getTileBrushName( int32 x, int32 y ) const
     {
         if ( x < 0 || y < 0 || x >= _width || y >= _height )
             return {};
@@ -295,7 +295,7 @@ namespace sw
         return _listPaletteName[value - 1u];
     }
 
-    bool TileMapXmlData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
+    bool TileMapXMLData::mapTileCells( const TileSetAsset& tileSet, vector<uint16>& outListBrushIndex ) const
     {
         vector<int32> listPaletteToBrush( _listPaletteName.size(), -1 );
         bool          bAllKnown = true;
@@ -318,7 +318,7 @@ namespace sw
         return bAllKnown;
     }
 
-    bool TileMapXmlData::setTileBrush( int32 x, int32 y, string_view brushName )
+    bool TileMapXMLData::setTileBrush( int32 x, int32 y, string_view brushName )
     {
         if ( x < 0 || y < 0 || x >= _width || y >= _height )
             return false;
@@ -341,13 +341,13 @@ namespace sw
         return true;
     }
 
-    bool TileMapXmlData::save( string_view path ) const
+    bool TileMapXMLData::save( string_view path ) const
     {
         string absPath = ResourceUtil::getResourcePath( path );
         if ( absPath.empty() )
             absPath = path;
 
-        const string xml = toXml();
+        const string xml = toXML();
         if ( xml.empty() )
             return false;
         const bool bOk = FileUtil::writeTextFile( absPath, xml );
@@ -356,10 +356,10 @@ namespace sw
         return bOk;
     }
 
-    string TileMapXmlData::toXml() const
+    string TileMapXMLData::toXML() const
     {
-        XmlDocument doc;
-        XmlNode     root = doc.appendRoot( "TileMap" );
+        XMLDocument doc;
+        XMLNode     root = doc.appendRoot( "TileMap" );
         root.appendChild( "name", _name.empty() ? string_view{ "Untitled" } : string_view{ _name } );
         root.appendChild( "width", _width );
         root.appendChild( "height", _height );
@@ -368,17 +368,17 @@ namespace sw
         if ( _role.empty() == false )
             root.appendChild( "role", _role );
 
-        XmlNode spawn = root.appendChild( "spawn" );
+        XMLNode spawn = root.appendChild( "spawn" );
         spawn.appendAttribute( "x", _spawnX );
         spawn.appendAttribute( "y", _spawnY );
 
-        XmlNode      tiles = root.appendChild( "tiles" );
+        XMLNode      tiles = root.appendChild( "tiles" );
         const size_t count = static_cast<size_t>( _width ) * static_cast<size_t>( _height );
 
         // **네 배열이 `_width × _height` 와 같다는 보장은 이 구조체에 없다.** 필드가 모두 공개라
         // 크기만 바꾸고 칸을 늘리지 않은 채로 저장할 수 있고, 그러면 여기서 남의 메모리를 읽어 파일에
         // 적는다(Debug 는 vector assert 에서 죽고, 배포본은 조용히 쓰레기 값을 쓴다). 모자란 칸은
-        // **읽기 쪽 기본값**으로 적는다. `loadFromXml` 이 `<t>` 가 없을 때 넣는 값과 같아서
+        // **읽기 쪽 기본값**으로 적는다. `loadFromXML` 이 `<t>` 가 없을 때 넣는 값과 같아서
         // 왕복이 어긋나지 않는다(통행 가능 · 조우 없음 · 기본 틴트).
         size_t tileCount = MathUtil::min( count, _listVisual.size() );
         for ( const vector<uint8>& listFlag : _arrFlagLayer )
@@ -395,7 +395,7 @@ namespace sw
         for ( size_t tileIndex = 0; tileIndex < count; ++tileIndex )
         {
             const bool    bHasTile   = tileIndex < tileCount;
-            XmlNode       tileNode   = tiles.appendChild( "t" );
+            XMLNode       tileNode   = tiles.appendChild( "t" );
             const Visual& tileVisual = bHasTile ? _listVisual[tileIndex] : defaultVisual;
             tileNode.appendAttribute( "h", static_cast<int32>( tileVisual._height ) );
             // 레이어는 표 순서로 적는다. 속성은 기본값과 다를 때만 적고, 본문 레이어는 맨 끝 본문이 된다.
@@ -403,10 +403,10 @@ namespace sw
             for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
             {
                 const uint8 value = bHasTile ? getFlagLayer( info._layer )[tileIndex] : info._defaultValue;
-                if ( info._pXmlAttribute == nullptr )
+                if ( info._pXMLAttribute == nullptr )
                     pTextFlag = value != 0 ? "1" : "0";
                 else if ( ( value != 0 ) != ( info._defaultValue != 0 ) )
-                    tileNode.appendAttribute( info._pXmlAttribute, value != 0 ? 1 : 0 );
+                    tileNode.appendAttribute( info._pXMLAttribute, value != 0 ? 1 : 0 );
             }
             if ( tileVisual._atlasId != 0 )
                 tileNode.appendAttribute( "atlas", static_cast<int32>( tileVisual._atlasId ) );
@@ -417,10 +417,10 @@ namespace sw
                 tileNode.setValue( pTextFlag );
         }
 
-        XmlNode warps = root.appendChild( "warps" );
+        XMLNode warps = root.appendChild( "warps" );
         for ( const Warp& warp : _listWarp )
         {
-            XmlNode warpNode = warps.appendChild( "warp" );
+            XMLNode warpNode = warps.appendChild( "warp" );
             warpNode.appendAttribute( "x", warp._tileX );
             warpNode.appendAttribute( "y", warp._tileY );
             warpNode.appendAttribute( "map", warp._targetMap );
@@ -433,9 +433,9 @@ namespace sw
         // 타일 레이어는 타일셋이 있을 때만 쓴다 — 없는 맵은 예전과 바이트까지 같다. 칸은 한 행씩 줄을 바꿔 적는다(사람이 읽고 비교할 수 있게).
         if ( _tileSetPath.empty() == false )
         {
-            XmlNode tileLayer = root.appendChild( "tileLayer" );
+            XMLNode tileLayer = root.appendChild( "tileLayer" );
             tileLayer.appendAttribute( "tileSet", _tileSetPath );
-            XmlNode palette = tileLayer.appendChild( "palette" );
+            XMLNode palette = tileLayer.appendChild( "palette" );
             for ( const string& name : _listPaletteName )
             {
                 palette.appendChild( "b" ).appendAttribute( "name", name );

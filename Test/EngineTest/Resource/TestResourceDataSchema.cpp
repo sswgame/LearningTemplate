@@ -52,7 +52,7 @@
 #include "Engine/Serialization/Json/JsonDocument.h"
 #include "Engine/Telemetry/TelemetrySchema.h"
 #include "Engine/Text/FontCatalog.h"
-#include "Engine/TileMap/TileMapXml.h"
+#include "Engine/TileMap/TileMapXML.h"
 #include "Engine/TileMap/TileSetAsset.h"
 #include "Engine/UI/Base/Widget.h"
 #include "Engine/UI/Document/UiDocument.h"
@@ -182,7 +182,7 @@ namespace
         [[nodiscard]] static bool loadScene( const sw::string& resourceId )
         {
             sw::SceneDocument doc;
-            if ( doc.loadXml( resourceId ) == false )
+            if ( doc.loadXML( resourceId ) == false )
                 return false;
             sw::Scene scene{ "ResourceDataSchemaScene" };
             return scene.instantiate( doc );
@@ -191,7 +191,7 @@ namespace
         [[nodiscard]] static bool loadPrefab( const sw::string& resourceId )
         {
             sw::PrefabAsset prefab;
-            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXmlFile( resourceId );
+            const bool      bLoaded = endsWith( resourceId, ".json" ) ? prefab.loadFromJsonFile( resourceId ) : prefab.loadFromXMLFile( resourceId );
             if ( bLoaded == false )
                 return false;
             sw::GameObjectManager manager;
@@ -202,13 +202,13 @@ namespace
         [[nodiscard]] static bool loadPipeline( const sw::string& resourceId )
         {
             sw::RenderPipelineAsset pipeline;
-            return pipeline.loadFromXmlFile( resourceId );
+            return pipeline.loadFromXMLFile( resourceId );
         }
 
         [[nodiscard]] static bool loadRenderPass( const sw::string& resourceId )
         {
             sw::RenderPassAsset pass;
-            return pass.loadFromXmlFile( resourceId );
+            return pass.loadFromXMLFile( resourceId );
         }
 
         [[nodiscard]] static bool loadEngineDefaultAssets( const sw::string& resourceId )
@@ -270,7 +270,7 @@ namespace
         /** @brief 타일 레이어가 있으면 그 타일셋도 읽고 팔레트의 이름이 모두 타일셋에 있는지 본다. */
         [[nodiscard]] static bool loadTileMap( const sw::string& resourceId )
         {
-            sw::TileMapXmlData map;
+            sw::TileMapXMLData map;
             if ( map.load( resourceId ) == false )
                 return false;
             if ( map._tileSetPath.empty() )
@@ -695,7 +695,7 @@ SW_TEST_CASE( ResourceDataSchemaTest, UnknownComponentAttributeIsNamed )
     test::ScopedLogCollector logs;
     {
         test::ScopedDefensiveTestLog expected( "a component attribute the type does not have" );
-        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString(
+        SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString(
             pObject, "<GameObject _name=\"Probe\"><_listComponent><SceneComponent _localScale=\"2,2,2\" _noSuchField=\"1\" /></_listComponent></GameObject>" ) );
     }
     SW_EXPECT_TRUE_MSG( logs.countContaining( "SceneComponent._noSuchField" ) == 1, logs.joined().c_str() );

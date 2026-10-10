@@ -36,7 +36,7 @@ namespace
         }
     };
 
-    constexpr const utf8* kHorrorTestXml = R"(
+    constexpr const utf8* kHorrorTestXML = R"(
 <HorrorCatalog>
   <Rules saveMode="InkRibbon" gridWidth="4" gridHeight="2" maxSanity="100" darknessDrain="10" sanityRegen="5" sanityRegenDelay="2"
          hallucinationThreshold="0.3" maxAimSway="2" maxBattery="20" batteryDrain="2" repeatSightingScale="0.25"/>
@@ -68,7 +68,7 @@ namespace
 </HorrorCatalog>
 )";
 
-    constexpr const utf8* kHorrorAreaXml = R"(
+    constexpr const utf8* kHorrorAreaXML = R"(
 <AreaGraph>
   <Area id="hall" region="Mansion"/>
   <Area id="dining" region="Mansion"/>
@@ -94,7 +94,7 @@ namespace
 SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsItemsCombinesPuzzlesAndRules )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     const HorrorItemDef* pRifle = catalog.findItem( "rifle" );
     SW_ASSERT_NOT_NULL( pRifle );
     SW_EXPECT_EQUAL( 3, pRifle->_width );
@@ -127,7 +127,7 @@ SW_TEST_CASE( SurvivalHorrorTest, CatalogReadsItemsCombinesPuzzlesAndRules )
 SW_TEST_CASE( SurvivalHorrorTest, GridPlacesRotatesFindsFreeSpotsAndStacks )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     GridInventory grid;
     grid.initialize( catalog.makeShapeLookup(), 3, 3 );
 
@@ -178,7 +178,7 @@ SW_TEST_CASE( SurvivalHorrorTest, GridPlacesRotatesFindsFreeSpotsAndStacks )
 SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoom )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -221,7 +221,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ItemBoxAndCombineRollBackWhenTheResultHasNoRoo
 SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsScarce )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -260,7 +260,7 @@ SW_TEST_CASE( SurvivalHorrorTest, SavesNeedInkRibbonsOrRespectTheLimitAndAmmoIsS
 SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlashlightHoldsItBack )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -314,9 +314,9 @@ SW_TEST_CASE( SurvivalHorrorTest, SanityFallsInDarknessAndSightingsWhileTheFlash
 SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughAreaGraphFlags )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     AreaGraph areaGraph;
-    SW_ASSERT_TRUE( areaGraph.loadFromXmlText( kHorrorAreaXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( areaGraph.loadFromXMLText( kHorrorAreaXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, &areaGraph, "hall", sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -358,7 +358,7 @@ SW_TEST_CASE( SurvivalHorrorTest, KeysDialsAndSequencesOpenTheMansionThroughArea
 SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishesWrongGuesses )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -397,7 +397,7 @@ SW_TEST_CASE( SurvivalHorrorTest, ClueBoardDeductionNeedsTheRightLinksAndPunishe
 SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVictoryOrDefeat )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     const HorrorMonsterDef* pZombie = catalog.findMonster( "zombie" );
     SW_ASSERT_NOT_NULL( pZombie );
 
@@ -460,7 +460,7 @@ SW_TEST_CASE( SurvivalHorrorTest, TurnBasedEncounterIsDeterministicAndEndsInVict
 SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     HorrorSession        session;
     HorrorTestContainers sessionContainers;
     session.initialize( &catalog, nullptr, hashed_string(), sessionContainers.makeRefs(), sessionContainers._grid, sessionContainers._box );
@@ -532,7 +532,7 @@ SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameSession )
 SW_TEST_CASE( SurvivalHorrorTest, StateRoundTripContinuesTheSameEncounter )
 {
     HorrorCatalog catalog;
-    SW_ASSERT_TRUE( catalog.loadFromXmlText( kHorrorTestXml, "SurvivalHorrorTest" ) );
+    SW_ASSERT_TRUE( catalog.loadFromXMLText( kHorrorTestXML, "SurvivalHorrorTest" ) );
     const HorrorMonsterDef* pZombie = catalog.findMonster( "zombie" );
     const HorrorMonsterDef* pElder  = catalog.findMonster( "elder" );
     SW_ASSERT_NOT_NULL( pZombie );

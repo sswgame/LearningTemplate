@@ -35,7 +35,7 @@ namespace sw
         struct BindingKindInfo
         {
             BindingKind _kind;              ///< 표의 자리와 열거자가 어긋나지 않게 들고 있는 자기 값.
-            const utf8* _pXmlName;          ///< XML `kind` 특성에 적히는 이름.
+            const utf8* _pXMLName;          ///< XML `kind` 특성에 적히는 이름.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수 (0 = 특정 키를 점유하지 않음).
             uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯(`BindingKinds::kNoRebindSlot` = 키 하나로는 못 바꾼다).
             bool        _bRelative;         ///< 이번 프레임 이동량이다(묶지 않고 액션 값 단계에서 반전하지 않는다 — `BindingKinds::isRelative`).
@@ -97,7 +97,7 @@ namespace sw
     {
         const BindingKindInfo* pInfo = findBindingKindInfo( kind );
         // 이름이 없으면 저장이 조용히 망가지므로, 모르는 종류는 빈 문자열로 **눈에 띄게** 둔다.
-        return ( pInfo != nullptr ) ? pInfo->_pXmlName : "";
+        return ( pInfo != nullptr ) ? pInfo->_pXMLName : "";
     }
 
     BindingKind BindingKinds::fromName( string_view name )
@@ -105,7 +105,7 @@ namespace sw
         for ( const BindingKindInfo& info : kArrBindingKindInfo )
         {
             // string_view 오버로드를 쓴다. `name.data()` 는 널 종료가 보장되지 않는다.
-            if ( StringUtil::equals( name, string_view{ info._pXmlName }, true ) )
+            if ( StringUtil::equals( name, string_view{ info._pXMLName }, true ) )
                 return info._kind;
         }
         return BindingKind::Count;

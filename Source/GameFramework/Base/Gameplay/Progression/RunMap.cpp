@@ -5,9 +5,9 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 #include "GameFramework/Base/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Base/Foundation/Utility/StateArchiveUtil.h"
 
@@ -17,15 +17,15 @@ namespace sw
 {
     bool RunMap::loadSettings( string_view xmlText, string_view sourceName, RunMapSettings& outSettings )
     {
-        XmlDocument doc;
-        XmlNode     root;
-        if ( GameDataXml::parseRoot( doc, xmlText, sourceName, "RunMap", root ) == false )
+        XMLDocument doc;
+        XMLNode     root;
+        if ( GameDataXML::parseRoot( doc, xmlText, sourceName, "RunMap", root ) == false )
             return false;
         outSettings._floorCount  = MathUtil::max( 2, root.getAttributeInt( "floors", outSettings._floorCount ) );
         outSettings._columnCount = MathUtil::max( 1, root.getAttributeInt( "columns", outSettings._columnCount ) );
         outSettings._pathCount   = MathUtil::max( 1, root.getAttributeInt( "paths", outSettings._pathCount ) );
         outSettings._listRule.clear();
-        for ( XmlNode node = root.findChild( "Node" ); node; node = node.findNextSibling( "Node" ) )
+        for ( XMLNode node = root.findChild( "Node" ); node; node = node.findNextSibling( "Node" ) )
         {
             const utf8* pKind = node.findAttribute( "kind" );
             if ( pKind == nullptr )
@@ -39,7 +39,7 @@ namespace sw
             outSettings._listRule.push_back( rule );
         }
         outSettings._listForcedFloor.assign( static_cast<size_t>( outSettings._floorCount ), hashed_string{} );
-        for ( XmlNode node = root.findChild( "Floor" ); node; node = node.findNextSibling( "Floor" ) )
+        for ( XMLNode node = root.findChild( "Floor" ); node; node = node.findNextSibling( "Floor" ) )
         {
             int32       index = node.getAttributeInt( "index", 0 );
             const utf8* pKind = node.findAttribute( "kind" );

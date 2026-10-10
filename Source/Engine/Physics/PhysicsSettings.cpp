@@ -2,7 +2,7 @@
 
 #include "Engine/Physics/PhysicsSettings.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
@@ -26,7 +26,7 @@ namespace sw
     bool PhysicsSettings::loadFromResource( string_view resourcePath )
     {
         *this = PhysicsSettings{};
-        if ( XmlSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
+        if ( XMLSerializer::loadFile( resourcePath, this, *StaticType() ) == false )
         {
             SW_LOG_ERROR( "Physics settings could not be read or hold unknown keys: %#", resourcePath );
             return false;
@@ -35,10 +35,10 @@ namespace sw
         return validate();
     }
 
-    bool PhysicsSettings::loadFromXmlText( string_view xmlText )
+    bool PhysicsSettings::loadFromXMLText( string_view xmlText )
     {
         *this = PhysicsSettings{};
-        if ( XmlSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
         {
             SW_LOG_ERROR( "Physics settings text could not be read or holds unknown keys" );
             return false;

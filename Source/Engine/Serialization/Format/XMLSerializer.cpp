@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Format/XmlSerializer.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -11,13 +11,13 @@
 #include "Engine/Serialization/Base/ContainerVisitor.h"
 #include "Engine/Serialization/Base/SchemaMigrate.h"
 #include "Engine/Serialization/Base/SerializerUtil.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
     namespace
     {
-        struct XmlSerializerInternal
+        struct XMLSerializerInternal
         {
             /**
              * @brief 프로퍼티 이름, 안 되면 별칭 순으로 `tryName( pName )` 을 불러 처음 성공하면 true 입니다.
@@ -53,7 +53,7 @@ namespace sw
             class ContainerWriter final : public IContainerWriter
             {
             public:
-                ContainerWriter( IXmlBackend& backend, const SerializeContext& ctx )
+                ContainerWriter( IXMLBackend& backend, const SerializeContext& ctx )
                     : _backend{ backend }
                     , _ctx{ ctx }
                 {
@@ -68,8 +68,8 @@ namespace sw
                 {
                     StringBuilder<constant::kMaxBuffer8192> keyText;
                     SerializerUtil::valueToText( keyText, pKey, keyTypeName, _ctx );
-                    _backend.beginMap( kXmlEntryTag );
-                    _backend.writeAttribute( kXmlKeyAttr, keyText.c_str() );
+                    _backend.beginMap( kXMLEntryTag );
+                    _backend.writeAttribute( kXMLKeyAttr, keyText.c_str() );
                 }
 
                 void endMapEntry() override { _backend.endMap(); }
@@ -78,7 +78,7 @@ namespace sw
                 void beginNestedContainer( const ContainerSlot slot ) override
                 {
                     if ( slot == ContainerSlot::SequenceElement )
-                        _backend.beginMap( kXmlItemTag );
+                        _backend.beginMap( kXMLItemTag );
                 }
 
                 void endNestedContainer( const ContainerSlot slot ) override
@@ -93,7 +93,7 @@ namespace sw
                         return;
                     // 맡아 둔 원소(모르는 타입)는 읽은 원문 그대로 다시 쓴다.
                     SerializeContext::OpaqueElementView opaque{};
-                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::Xml )
+                    if ( _ctx.queryOpaqueElement( pObject, opaque ) && opaque._format == SerializeContext::OpaqueFormat::XML )
                     {
                         _backend.writeRawElement( opaque._text );
                         return;
@@ -103,14 +103,14 @@ namespace sw
                     if ( pRuntimeType == nullptr )
                         return;
                     _backend.beginMap( pRuntimeType->_name.c_str() );
-                    writeXmlProperties( pObject, *pRuntimeType, _backend, _ctx );
+                    writeXMLProperties( pObject, *pRuntimeType, _backend, _ctx );
                     _backend.endMap();
                 }
 
                 void writeValueObject( const void* pValue, const hashed_string&, const TypeInfo& typeInfo, ContainerSlot ) override
                 {
                     _backend.beginMap( typeInfo._name.c_str() );
-                    writeXmlProperties( pValue, typeInfo, _backend, _ctx );
+                    writeXMLProperties( pValue, typeInfo, _backend, _ctx );
                     _backend.endMap();
                 }
 
@@ -119,13 +119,13 @@ namespace sw
                     StringBuilder<constant::kMaxBuffer8192> text;
                     SerializerUtil::valueToText( text, pValue, typeName, _ctx );
                     if ( slot == ContainerSlot::SequenceElement )
-                        _backend.writeValue( kXmlItemTag, text.c_str() );
+                        _backend.writeValue( kXMLItemTag, text.c_str() );
                     else
                         _backend.writeText( text.c_str() );
                 }
 
             private:
-                IXmlBackend&            _backend;
+                IXMLBackend&            _backend;
                 const SerializeContext& _ctx;
             };
 
@@ -133,7 +133,7 @@ namespace sw
             class ContainerReader final : public IContainerReader
             {
             public:
-                ContainerReader( IXmlBackend& backend, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
+                ContainerReader( IXMLBackend& backend, const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan, const PropertyInfo& propForOrphan )
                     : _backend{ backend }
                     , _ctx{ ctx }
                     , _pOutListOrphan{ pOutListOrphan }
@@ -160,7 +160,7 @@ namespace sw
                     ContainerReadResult total{ ContainerReadResult::Read };
                     size_t              elementIndex{ 0 };
                     // 자식이 없으면 false 다 — 빈 컨테이너라 볼 것이 없다.
-                    (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XmlChildVisitDelegate, [&]( string_view tagName )
+                    (void)_backend.iterateChildren( SW_DELEGATE_LAMBDA( XMLChildVisitDelegate, [&]( string_view tagName )
                     {
                         if ( total == ContainerReadResult::StreamBroken )
                             return;
@@ -173,7 +173,7 @@ namespace sw
                 ContainerReadResult readMapKey( void* pKey, const hashed_string& keyTypeName ) override
                 {
                     string keyText;
-                    (void)_backend.readAttribute( kXmlKeyAttr, keyText ); // 없으면 빈 키 — 아래 파싱이 거른다
+                    (void)_backend.readAttribute( kXMLKeyAttr, keyText ); // 없으면 빈 키 — 아래 파싱이 거른다
                     return readText( pKey, keyTypeName, keyText );
                 }
 
@@ -186,29 +186,29 @@ namespace sw
                     if ( pObject == nullptr )
                     {
                         // 모르는(만들 수 없는) 타입이다 — 원문을 맡긴다(다음 저장이 그대로 다시 쓴다). 맡을 곳이 없으면 건너뛴다.
-                        string rawXml;
-                        if ( _backend.readCurrentNodeXml( rawXml ) )
+                        string rawXML;
+                        if ( _backend.readCurrentNodeXML( rawXML ) )
                         {
                             SerializeContext::OpaqueElementView opaque{};
                             opaque._typeName = _currentTagName;
-                            opaque._format   = SerializeContext::OpaqueFormat::Xml;
-                            opaque._text     = rawXml;
+                            opaque._format   = SerializeContext::OpaqueFormat::XML;
+                            opaque._text     = rawXML;
                             (void)_ctx.keepOpaqueElement( opaque ); // 맡지 못하면 건너뛴다
                         }
                         return ContainerReadResult::Read;
                     }
                     // 원소 안의 못 읽은 칸 — orphan 목록이 있으면 거기 남고 Read, 엄격 읽기면 FieldFailed 다.
-                    return toResult( readNestedXmlIntoInstance( pObject, *pType, _backend, _ctx, _pOutListOrphan ) );
+                    return toResult( readNestedXMLIntoInstance( pObject, *pType, _backend, _ctx, _pOutListOrphan ) );
                 }
 
                 ContainerReadResult readValueObject( void* pValue, const hashed_string&, const TypeInfo& typeInfo, const ContainerSlot slot ) override
                 {
                     if ( slot == ContainerSlot::SequenceElement )
-                        return toResult( readNestedXmlIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan ) );
+                        return toResult( readNestedXMLIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan ) );
                     // 맵 값의 구조체는 `<entry>` 안의 `<TypeName>` 자식이다. 자식이 없으면 기본값 그대로 넣는다.
                     if ( _backend.pushFirstChild() == false )
                         return ContainerReadResult::Read;
-                    const bool bRead = readNestedXmlIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan );
+                    const bool bRead = readNestedXMLIntoInstance( pValue, typeInfo, _backend, _ctx, _pOutListOrphan );
                     _backend.popChild();
                     return toResult( bRead );
                 }
@@ -242,14 +242,14 @@ namespace sw
                     return ContainerReadResult::FieldFailed;
                 }
 
-                IXmlBackend&               _backend;
+                IXMLBackend&               _backend;
                 const SerializeContext&    _ctx;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
                 const PropertyInfo&        _propForOrphan;
                 string_view                _currentTagName;
             };
 
-            static void writeXmlProperties( const void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend,
+            static void writeXMLProperties( const void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend,
                                             const SerializeContext& ctx )
             {
                 typeInfo.forEachProperty( [&]( const PropertyInfo& prop )
@@ -280,7 +280,7 @@ namespace sw
                         if ( pNestedType != nullptr )
                         {
                             backend.beginMap( prop._name.c_str() );
-                            writeXmlProperties( pPropPtr, *pNestedType, backend, ctx );
+                            writeXMLProperties( pPropPtr, *pNestedType, backend, ctx );
                             backend.endMap();
                         }
                         else
@@ -321,16 +321,16 @@ namespace sw
              * @details 루트 원소는 `deserializeSoft` 가 따로 훑는다. 안쪽 원소의 모르는 이름은 타입 이름을 붙여 적는다(`SpriteComponent._clipPth`) —
              *          로드가 끝난 뒤 `runSchemaMigrateStep` 이 루트 타입 이름과 함께 경고한다.
              */
-            [[nodiscard]] static bool readNestedXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
+            [[nodiscard]] static bool readNestedXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& ctx,
                                                                  vector<SchemaOrphanValue>* pOutListOrphan )
             {
-                const bool bRead = readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan );
+                const bool bRead = readXMLIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan );
                 if ( pOutListOrphan != nullptr )
-                    appendUnknownXmlChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
+                    appendUnknownXMLChildOrphans( backend.getCurrentNode(), typeInfo, backend.ignoresCaseKeys(), pOutListOrphan, typeInfo._name.c_str() );
                 return bRead;
             }
 
-            [[nodiscard]] static bool readXmlIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXmlBackend& backend, const SerializeContext& ctx,
+            [[nodiscard]] static bool readXMLIntoInstance( void* pInstance, const TypeInfo& typeInfo, IXMLBackend& backend, const SerializeContext& ctx,
                                                            vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 bool bFieldError{ false };
@@ -369,7 +369,7 @@ namespace sw
                             } );
                             if ( entered )
                             {
-                                if ( readNestedXmlIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
+                                if ( readNestedXMLIntoInstance( pPropPtr, *pNestedType, backend, ctx, pOutListOrphan ) == false )
                                     bFieldError = true;
                                 backend.popChild();
                             }
@@ -434,7 +434,7 @@ namespace sw
              * @brief 원소 @p node 의 속성 · 자식 가운데 타입이 모르는 이름을 orphan 으로 남깁니다.
              * @param pOwnerTypeName 안쪽 원소면 그 타입 이름(경고에 붙는다), 루트면 nullptr 입니다.
              */
-            static void appendUnknownXmlChildOrphans( XmlNode node, const TypeInfo& typeInfo, bool bIgnore,
+            static void appendUnknownXMLChildOrphans( XMLNode node, const TypeInfo& typeInfo, bool bIgnore,
                                                       vector<SchemaOrphanValue>* pOutListOrphan, const utf8* pOwnerTypeName = nullptr )
             {
                 if ( pOutListOrphan == nullptr || node.isValid() == false )
@@ -442,7 +442,7 @@ namespace sw
 
                 // 대소문자만 다른 태그는 setIgnoreCaseKeys(false) 로 의도적으로 바인딩을 거른 것이므로
                 // 모르는 필드(orphan)로 올리지 않는다. bIgnore 와 무관하게 무시 대소문자로 판정한다.
-                for ( XmlNode child = node.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
+                for ( XMLNode child = node.findChild( nullptr, bIgnore ); child.isValid(); child = child.findNextSibling( nullptr, bIgnore ) )
                 {
                     const utf8* pChildName = child.getName();
                     if ( pChildName == nullptr )
@@ -451,13 +451,13 @@ namespace sw
                         continue;
                     if ( isNameKnown( typeInfo, pChildName ) )
                         continue;
-                    const utf8* pNameAttr = child.findAttribute( kXmlPropertyNameAttr, bIgnore );
+                    const utf8* pNameAttr = child.findAttribute( kXMLPropertyNameAttr, bIgnore );
                     if ( pNameAttr != nullptr && isNameKnown( typeInfo, pNameAttr ) )
                         continue;
                     appendUnknownNameOrphan( pChildName, child.getText(), pOwnerTypeName, *pOutListOrphan );
                 }
 
-                for ( XmlAttribute attr = node.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
+                for ( XMLAttribute attr = node.getFirstAttribute(); attr.isValid(); attr = attr.getNext() )
                 {
                     const utf8* pAttrName = attr.getName();
                     if ( pAttrName == nullptr )
@@ -470,24 +470,24 @@ namespace sw
                 }
             }
 
-            [[nodiscard]] static bool tryAppendUnknownXmlChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
+            [[nodiscard]] static bool tryAppendUnknownXMLChildOrphans( string_view xmlStr, const TypeInfo& typeInfo,
                                                                        const SerializeContext& ctx, vector<SchemaOrphanValue>* pOutListOrphan )
             {
                 if ( xmlStr.empty() || pOutListOrphan == nullptr )
                     return false;
 
-                XmlDocument doc;
+                XMLDocument doc;
                 if ( doc.parse( xmlStr ) == false )
                     return false;
 
                 const bool bIgnore = ctx.ignoresCaseKeys();
-                XmlNode    root    = doc.getRoot( typeInfo._name.c_str(), bIgnore );
+                XMLNode    root    = doc.getRoot( typeInfo._name.c_str(), bIgnore );
                 if ( root.isValid() == false )
                     root = doc.getRoot( nullptr, bIgnore );
                 if ( root.isValid() == false )
                     return false;
 
-                appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
+                appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
                 return true;
             }
         };
@@ -496,13 +496,13 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XmlSerializer" );
+    SW_LOG_CALLER( "XMLSerializer" );
 
-    struct XmlDocumentBackend::Impl
+    struct XMLDocumentBackend::Impl
     {
-        XmlDocument     _doc;
-        XmlNode         _currentParent;
-        vector<XmlNode> _listNodeStack;
+        XMLDocument     _doc;
+        XMLNode         _currentParent;
+        vector<XMLNode> _listNodeStack;
 
         static string sanitizeTag( const utf8* pName )
         {
@@ -515,32 +515,32 @@ namespace sw
         }
     };
 
-    XmlDocumentBackend::XmlDocumentBackend()
+    XMLDocumentBackend::XMLDocumentBackend()
         : _impl{ make_unique<Impl>() } {}
 
-    XmlDocumentBackend::~XmlDocumentBackend() = default;
+    XMLDocumentBackend::~XMLDocumentBackend() = default;
 
-    void XmlDocumentBackend::initializeXmlSerialization( const utf8* pRootTagName )
+    void XMLDocumentBackend::initializeXMLSerialization( const utf8* pRootTagName )
     {
         _impl->_doc.clear();
         string  tag           = Impl::sanitizeTag( pRootTagName );
-        XmlNode root          = _impl->_doc.appendRoot( tag.c_str() );
+        XMLNode root          = _impl->_doc.appendRoot( tag.c_str() );
         _impl->_currentParent = root;
         _impl->_listNodeStack.push_back( root );
     }
 
-    void XmlDocumentBackend::writeValue( const utf8* pTagName, const utf8* pValueString )
+    void XMLDocumentBackend::writeValue( const utf8* pTagName, const utf8* pValueString )
     {
         if ( _impl->_currentParent.isValid() == false )
             return;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
+        XMLNode node = _impl->_currentParent.appendChild( sTag.c_str() );
         if ( StringUtil::isNullOrEmpty( pValueString ) == false )
             node.setValue( pValueString );
     }
 
-    void XmlDocumentBackend::writeAttribute( const utf8* pAttrName, const utf8* pValueString )
+    void XMLDocumentBackend::writeAttribute( const utf8* pAttrName, const utf8* pValueString )
     {
         if ( _impl->_currentParent.isValid() == false )
             return;
@@ -549,18 +549,18 @@ namespace sw
         _impl->_currentParent.appendAttribute( sName.c_str(), pValueString != nullptr ? pValueString : "" );
     }
 
-    void XmlDocumentBackend::beginMap( const utf8* pTagName )
+    void XMLDocumentBackend::beginMap( const utf8* pTagName )
     {
         if ( _impl->_currentParent.isValid() == false )
             return;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XmlNode node = _impl->_currentParent.appendChild( sTag.c_str() );
+        XMLNode node = _impl->_currentParent.appendChild( sTag.c_str() );
         _impl->_listNodeStack.push_back( node );
         _impl->_currentParent = node;
     }
 
-    void XmlDocumentBackend::endMap()
+    void XMLDocumentBackend::endMap()
     {
         if ( _impl->_listNodeStack.size() > 1 )
         {
@@ -569,31 +569,31 @@ namespace sw
         }
     }
 
-    string XmlDocumentBackend::endSerialize()
+    string XMLDocumentBackend::endSerialize()
     {
         return _impl->_doc.saveToString();
     }
 
-    XmlNode IXmlBackend::getCurrentNode() const
+    XMLNode IXMLBackend::getCurrentNode() const
     {
-        return XmlNode{};
+        return XMLNode{};
     }
 
-    XmlNode XmlDocumentBackend::getCurrentNode() const
+    XMLNode XMLDocumentBackend::getCurrentNode() const
     {
         return _impl->_currentParent;
     }
 
-    XmlNode XmlDocumentBackend::getDeserializationRoot() const
+    XMLNode XMLDocumentBackend::getDeserializationRoot() const
     {
-        // 스택의 바닥이 `initializeXmlDeserialization` 이 찾은 루트다. `pushChild` 로 내려가
+        // 스택의 바닥이 `initializeXMLDeserialization` 이 찾은 루트다. `pushChild` 로 내려가
         // 있어도 루트는 그대로 바닥에 있다.
         if ( _impl->_listNodeStack.empty() )
-            return XmlNode{};
+            return XMLNode{};
         return _impl->_listNodeStack.front();
     }
 
-    bool XmlDocumentBackend::initializeXmlDeserialization( string_view xmlStr, const utf8* pRootTagName )
+    bool XMLDocumentBackend::initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName )
     {
         _impl->_doc.clear();
         if ( xmlStr.empty() )
@@ -603,7 +603,7 @@ namespace sw
             return false;
 
         string  sTag = Impl::sanitizeTag( pRootTagName );
-        XmlNode root = _impl->_doc.getRoot( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode root = _impl->_doc.getRoot( sTag.c_str(), ignoresCaseKeys() );
         if ( root.isValid() == false )
             root = _impl->_doc.getRoot( nullptr, ignoresCaseKeys() );
 
@@ -616,13 +616,13 @@ namespace sw
         return true;
     }
 
-    bool XmlDocumentBackend::readValue( const utf8* pTagName, string& outValue )
+    bool XMLDocumentBackend::readValue( const utf8* pTagName, string& outValue )
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
         string  sTag = Impl::sanitizeTag( pTagName );
-        XmlNode node = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode node = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
         if ( node.isValid() == false )
             return false;
 
@@ -630,7 +630,7 @@ namespace sw
         return true;
     }
 
-    bool XmlDocumentBackend::readAttribute( const utf8* pAttrName, string& outValue )
+    bool XMLDocumentBackend::readAttribute( const utf8* pAttrName, string& outValue )
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
@@ -644,13 +644,13 @@ namespace sw
         return true;
     }
 
-    bool XmlDocumentBackend::pushChild( const utf8* pTagName )
+    bool XMLDocumentBackend::pushChild( const utf8* pTagName )
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
         string  sTag  = Impl::sanitizeTag( pTagName );
-        XmlNode child = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
+        XMLNode child = _impl->_currentParent.findChild( sTag.c_str(), ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
 
@@ -659,11 +659,11 @@ namespace sw
         return true;
     }
 
-    bool XmlDocumentBackend::pushFirstChild()
+    bool XMLDocumentBackend::pushFirstChild()
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        XmlNode child = _impl->_currentParent.findChild( nullptr, ignoresCaseKeys() );
+        XMLNode child = _impl->_currentParent.findChild( nullptr, ignoresCaseKeys() );
         if ( child.isValid() == false )
             return false;
         _impl->_listNodeStack.push_back( child );
@@ -671,13 +671,13 @@ namespace sw
         return true;
     }
 
-    void XmlDocumentBackend::writeText( const utf8* pText )
+    void XMLDocumentBackend::writeText( const utf8* pText )
     {
         if ( _impl->_currentParent.isValid() && pText != nullptr )
             _impl->_currentParent.setValue( pText );
     }
 
-    bool XmlDocumentBackend::readText( string& outText )
+    bool XMLDocumentBackend::readText( string& outText )
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
@@ -686,34 +686,34 @@ namespace sw
         return true;
     }
 
-    bool XmlDocumentBackend::readCurrentNodeXml( string& outXml )
+    bool XMLDocumentBackend::readCurrentNodeXML( string& outXML )
     {
         if ( _impl->_currentParent.isValid() == false )
             return false;
-        outXml = _impl->_currentParent.toString();
-        return outXml.empty() == false;
+        outXML = _impl->_currentParent.toString();
+        return outXML.empty() == false;
     }
 
-    void XmlDocumentBackend::writeRawElement( string_view xml )
+    void XMLDocumentBackend::writeRawElement( string_view xml )
     {
         if ( _impl->_currentParent.isValid() == false || xml.empty() )
             return;
-        XmlDocument rawDoc;
+        XMLDocument rawDoc;
         if ( rawDoc.parse( xml, "<kept element>" ) == false )
             return;
-        const XmlNode rawRoot = rawDoc.getRoot();
+        const XMLNode rawRoot = rawDoc.getRoot();
         if ( rawRoot.isValid() )
             (void)_impl->_currentParent.appendClone( rawRoot );
     }
 
-    bool XmlDocumentBackend::iterateChildren( const XmlChildVisitDelegate& callback )
+    bool XMLDocumentBackend::iterateChildren( const XMLChildVisitDelegate& callback )
     {
         if ( _impl->_currentParent.isValid() == false || callback.isBound() == false )
             return false;
 
-        const XmlNode parent = _impl->_currentParent;
+        const XMLNode parent = _impl->_currentParent;
         bool          bAny{ false };
-        for ( XmlNode child = parent.findChild( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.findNextSibling( nullptr, ignoresCaseKeys() ) )
+        for ( XMLNode child = parent.findChild( nullptr, ignoresCaseKeys() ); child.isValid(); child = child.findNextSibling( nullptr, ignoresCaseKeys() ) )
         {
             // 콜백이 도는 동안 그 자식이 현재 노드가 되어야 재귀 순회가 가능하다.
             _impl->_listNodeStack.push_back( child );
@@ -729,7 +729,7 @@ namespace sw
         return bAny;
     }
 
-    void XmlDocumentBackend::popChild()
+    void XMLDocumentBackend::popChild()
     {
         if ( _impl->_listNodeStack.size() <= 1 )
             return;
@@ -737,16 +737,16 @@ namespace sw
         _impl->_currentParent = _impl->_listNodeStack.back();
     }
 
-    string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
-                                     IXmlBackend& backend, const SerializeContext& ctx )
+    string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo,
+                                     IXMLBackend& backend, const SerializeContext& ctx )
     {
-        backend.initializeXmlSerialization( typeInfo._name.c_str() );
-        XmlSerializerInternal::writeXmlProperties( pInstance, typeInfo, backend, ctx );
+        backend.initializeXMLSerialization( typeInfo._name.c_str() );
+        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, ctx );
         return backend.endSerialize();
     }
 
-    bool XmlSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo,
-                                     IXmlBackend& backend, string_view xmlStr,
+    bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo,
+                                     IXMLBackend& backend, string_view xmlStr,
                                      const SerializeContext& ctx )
     {
         if ( xmlStr.empty() )
@@ -754,25 +754,25 @@ namespace sw
 
         backend.setIgnoreCaseKeys( ctx.ignoresCaseKeys() );
 
-        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
+        if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, ctx, nullptr ) == false )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
-        if ( XmlSerializerInternal::tryAppendUnknownXmlChildOrphans( xmlStr, typeInfo, ctx, &listOrphan ) && listOrphan.empty() == false )
+        if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, ctx, &listOrphan ) && listOrphan.empty() == false )
             return false;
         return true;
     }
 
-    string XmlSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    string XMLSerializer::serialize( const void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
-        XmlDocumentBackend backend;
+        XMLDocumentBackend backend;
         return serialize( pInstance, typeInfo, backend, ctx );
     }
 
-    bool XmlSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& ctx )
+    bool XMLSerializer::deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr, const SerializeContext& ctx )
     {
         if ( xmlStr.empty() )
             return false;
@@ -782,7 +782,7 @@ namespace sw
         return listOrphan.empty();
     }
 
-    bool XmlSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
+    bool XMLSerializer::saveFile( string_view absPath, const void* pInstance, const TypeInfo& typeInfo,
                                   const SerializeContext& ctx )
     {
         if ( absPath.empty() )
@@ -790,7 +790,7 @@ namespace sw
         return FileUtil::writeTextFile( absPath, serialize( pInstance, typeInfo, ctx ) );
     }
 
-    bool XmlSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
+    bool XMLSerializer::loadFile( string_view path, void* pInstance, const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
         string text;
         if ( ResourceUtil::readTextResource( path, text ) == false && FileUtil::readTextFile( path, text ) == false )
@@ -798,7 +798,7 @@ namespace sw
         return deserialize( pInstance, typeInfo, text, ctx );
     }
 
-    bool XmlSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
+    bool XMLSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                          vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
                                          const SerializeContext& ctx )
     {
@@ -808,12 +808,12 @@ namespace sw
         // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
         // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JsonSerializer::deserializeSoft` 도 문서 하나만 쓴다).
         const bool         bIgnore = ctx.ignoresCaseKeys();
-        XmlDocumentBackend backend;
+        XMLDocumentBackend backend;
         backend.setIgnoreCaseKeys( bIgnore );
-        if ( backend.initializeXmlDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
+        if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
-        const XmlNode root = backend.getDeserializationRoot();
+        const XMLNode root = backend.getDeserializationRoot();
         if ( root.isValid() == false )
             return false;
 
@@ -830,33 +830,33 @@ namespace sw
             }
         }
 
-        if ( XmlSerializerInternal::readXmlIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
+        if ( XMLSerializerInternal::readXMLIntoInstance( pInstance, typeInfo, backend, ctx, pOutListOrphan ) == false )
             return false;
 
         if ( pOutListOrphan != nullptr )
-            XmlSerializerInternal::appendUnknownXmlChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
+            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, bIgnore, pOutListOrphan );
 
         return true;
     }
 
-    string XmlSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
+    string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,
                                               const SerializeContext& ctx )
     {
-        XmlDocumentBackend backend;
-        backend.initializeXmlSerialization( typeInfo._name.c_str() );
+        XMLDocumentBackend backend;
+        backend.initializeXMLSerialization( typeInfo._name.c_str() );
         serializeVersionedInto( backend, version, pInstance, typeInfo, ctx );
         return backend.endSerialize();
     }
 
-    void XmlSerializer::serializeVersionedInto( IXmlBackend& backend, uint32 version, const void* pInstance,
+    void XMLSerializer::serializeVersionedInto( IXMLBackend& backend, uint32 version, const void* pInstance,
                                                 const TypeInfo& typeInfo, const SerializeContext& ctx )
     {
         const string verStr = to_string( version );
         backend.writeAttribute( kSchemaVersionKey, verStr.c_str() );
-        XmlSerializerInternal::writeXmlProperties( pInstance, typeInfo, backend, ctx );
+        XMLSerializerInternal::writeXMLProperties( pInstance, typeInfo, backend, ctx );
     }
 
-    bool XmlSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
+    bool XMLSerializer::deserializeVersioned( uint32& outVersion, void* pInstance, const TypeInfo& typeInfo,
                                               string_view xmlStr, uint32 currentVersion, SchemaMigrateFn migrate,
                                               const TypeInfo* pLegacyTypeInfo, const SerializeContext& ctx )
     {

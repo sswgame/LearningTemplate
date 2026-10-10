@@ -16,7 +16,7 @@
 #include "Engine/Resource/AssetFormat.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneDocument.h"
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
@@ -48,7 +48,7 @@ namespace sw
                 scene.collectSavedIdMap( mapSavedId );
                 ObjectSaveOptions options{};
                 options._pSavedIdMap = &mapSavedId;
-                return ObjectStateSerializer::saveToXmlString( pObject, options );
+                return ObjectStateSerializer::saveToXMLString( pObject, options );
             }
 
             /**
@@ -97,11 +97,11 @@ namespace sw
                 const TypeRegistry& registry = engine::getTypeRegistry();
                 for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
                 {
-                    XmlDocument xml;
-                    if ( entity._embeddedXml.empty() || xml.parse( entity._embeddedXml ) == false )
+                    XMLDocument xml;
+                    if ( entity._embeddedXML.empty() || xml.parse( entity._embeddedXML ) == false )
                         continue;
-                    const XmlNode listComponent = xml.getRoot().findChild( "_listComponent" );
-                    for ( XmlNode component = listComponent.findChild(); component.isValid(); component = component.findNextSibling() )
+                    const XMLNode listComponent = xml.getRoot().findChild( "_listComponent" );
+                    for ( XMLNode component = listComponent.findChild(); component.isValid(); component = component.findNextSibling() )
                     {
                         if ( registry.findType( hashed_string( component.getName() ) ) == nullptr )
                             return true;
@@ -152,7 +152,7 @@ namespace sw
         SceneDocument cooked = inoutDoc;
         for ( SceneDocument::SceneObjectNode& entity : cooked._listSceneObjectNode )
         {
-            if ( entity._embeddedXml.empty() )
+            if ( entity._embeddedXML.empty() )
                 continue;
             const auto  sourceIt = mapSourceByFileId.find( entity._fileId );
             GameObject* pSource  = ( sourceIt != mapSourceByFileId.end() ) ? sourceIt->second : nullptr;
@@ -162,7 +162,7 @@ namespace sw
             if ( ObjectStateSerializer::saveToBinaryBuffer( pSource, stateBytes, saveOptions ) && stateBytes.empty() == false )
             {
                 entity._embeddedStateBytes = std::move( stateBytes );
-                entity._embeddedXml.clear();
+                entity._embeddedXML.clear();
             }
         }
 
@@ -181,7 +181,7 @@ namespace sw
             const SceneDocument::SceneObjectNode& cookedState = cooked._listSceneObjectNode[entityIndex];
             if ( cookedState._embeddedStateBytes.empty() )
             {
-                if ( entity._embeddedXml.empty() == false )
+                if ( entity._embeddedXML.empty() == false )
                     SW_LOG_WARNING( "Entity '%#' could not be cooked to binary state - keeping XML.", entity._name );
                 continue;
             }
@@ -198,7 +198,7 @@ namespace sw
 
             entity._embeddedStateBytes = cookedState._embeddedStateBytes;
             // 둘 다 실으면 파일만 커진다. 바이너리가 기준이 된 순간 XML 은 뺀다.
-            entity._embeddedXml.clear();
+            entity._embeddedXML.clear();
             ++cookedCount;
         }
 
@@ -247,7 +247,7 @@ namespace sw
                 continue;
 
             SceneDocument doc{};
-            if ( doc.loadXml( scenePath ) == false )
+            if ( doc.loadXML( scenePath ) == false )
             {
                 SW_LOG_ERROR( "Scene cook failed to read '%#'.", scenePath );
                 ++outFailedCount;
@@ -266,7 +266,7 @@ namespace sw
             uint32 statefulCount{ 0 };
             for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
             {
-                if ( entity._embeddedXml.empty() == false )
+                if ( entity._embeddedXML.empty() == false )
                     ++statefulCount;
             }
 

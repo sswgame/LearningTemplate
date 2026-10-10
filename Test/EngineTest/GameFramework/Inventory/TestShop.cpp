@@ -12,7 +12,7 @@ using namespace sw;
 
 namespace
 {
-    constexpr const utf8* kShopItemXml = R"(
+    constexpr const utf8* kShopItemXML = R"(
 <ItemCatalog>
   <Item id="potion" category="Consumable" maxStack="10" value="12"/>
   <Item id="ether" category="Consumable" maxStack="10" value="40"/>
@@ -22,7 +22,7 @@ namespace
 </ItemCatalog>
 )";
 
-    constexpr const utf8* kShopXml = R"(
+    constexpr const utf8* kShopXML = R"(
 <ShopCatalog>
   <Shop id="general" buyMultiplier="1" sellMultiplier="0.5" restockDays="2" refuses="Key">
     <Stock item="potion" price="20" count="5" restock="3"/>
@@ -57,7 +57,7 @@ namespace
 
         ShopScene()
         {
-            _bLoaded = _itemCatalog.loadFromXmlText( kShopItemXml, "ShopTest" ) && _shopCatalog.loadFromXmlText( kShopXml, "ShopTest" );
+            _bLoaded = _itemCatalog.loadFromXMLText( kShopItemXML, "ShopTest" ) && _shopCatalog.loadFromXMLText( kShopXML, "ShopTest" );
             _shop.initialize( &_shopCatalog, &_itemCatalog );
             _inventory.initialize( &_itemCatalog, 4 );
         }

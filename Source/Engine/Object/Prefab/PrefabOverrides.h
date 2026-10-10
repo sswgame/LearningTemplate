@@ -40,20 +40,20 @@ namespace sw
          * @details 프리팹을 씬 밖 임시 매니저의 오브젝트에 읽어 다시 씁니다 — 저장된 본문(XML · JSON · 쿠킹본)의 형식과 무관하게 같은 글이 나오고,
          *          프리팹 본문에 남은 다른 오브젝트로의 부착 · 핸들은 적지 않습니다. 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool makeBaseState( const PrefabAsset& prefab, string& outStateXml );
+        [[nodiscard]] static bool makeBaseState( const PrefabAsset& prefab, string& outStateXML );
 
         /**
-         * @brief 인스턴스 상태와 기준 상태의 차이를 `<PrefabOverrides>` XML 로 만듭니다. 다른 점이 없으면 @p outOverrideXml 은 빈 글입니다.
+         * @brief 인스턴스 상태와 기준 상태의 차이를 `<PrefabOverrides>` XML 로 만듭니다. 다른 점이 없으면 @p outOverrideXML 은 빈 글입니다.
          * @return 두 상태 가운데 하나라도 오브젝트 상태 XML 로 읽지 못하면 false 입니다(그때 부른 쪽은 전체 상태를 저장한다).
          */
-        [[nodiscard]] static bool computeOverrides( string_view instanceStateXml, string_view baseStateXml, string& outOverrideXml );
+        [[nodiscard]] static bool computeOverrides( string_view instanceStateXML, string_view baseStateXML, string& outOverrideXML );
 
         /**
-         * @brief 기준 상태에 덮어쓴 것을 얹어 인스턴스의 오브젝트 상태 XML 을 만듭니다. @p overrideXml 이 비면 기준 상태 그대로입니다.
+         * @brief 기준 상태에 덮어쓴 것을 얹어 인스턴스의 오브젝트 상태 XML 을 만듭니다. @p overrideXML 이 비면 기준 상태 그대로입니다.
          * @param instanceName 비어 있지 않으면 루트의 `_name` 을 이것으로 씁니다(엔티티 이름).
          * @details 프리팹에서 사라진 컴포넌트를 가리키는 덮어쓴 값은 버리고 엔티티 이름과 함께 경고합니다 — 다음 저장에서 빠집니다(언리얼 · 유니티도 원형에 없는
          *          오버라이드는 버린다). 읽지 못하면 false 입니다.
          */
-        [[nodiscard]] static bool makeInstanceState( string_view baseStateXml, string_view overrideXml, string_view instanceName, string& outStateXml );
+        [[nodiscard]] static bool makeInstanceState( string_view baseStateXML, string_view overrideXML, string_view instanceName, string& outStateXML );
     };
 } // namespace sw

@@ -585,7 +585,7 @@ SW_TEST_CASE( GameObjectTest, StructuralChangesDuringTickFollowOneRule )
 
     keeperMesh->_pTickClearOwner = victim;
     keeperMesh->_pTickLoadTarget = loaded;
-    keeperMesh->_tickLoadXml     = ObjectStateSerializer::saveToXmlString( victim );
+    keeperMesh->_tickLoadXML     = ObjectStateSerializer::saveToXMLString( victim );
     {
         test::ScopedDefensiveTestLog expected( "a state load during the component tick" );
         manager.tick( 0.016f );
@@ -2920,8 +2920,8 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     SW_ASSERT_NOT_NULL( pChild->addComponent<sw::MockPostLoadProbeComponent>() );
     SW_ASSERT_TRUE( pChild->attachToParent( pParent ) );
 
-    const sw::string parentXml     = sw::ObjectStateSerializer::saveToXmlString( pParent );
-    const sw::string childXml      = sw::ObjectStateSerializer::saveToXmlString( pChild );
+    const sw::string parentXML     = sw::ObjectStateSerializer::saveToXMLString( pParent );
+    const sw::string childXML      = sw::ObjectStateSerializer::saveToXMLString( pChild );
     const uint64     parentSavedId = pParent->getObjectId();
     const uint64     childSavedId  = pChild->getObjectId();
     manager.clear();
@@ -2933,8 +2933,8 @@ SW_TEST_CASE( GameObjectTest, PostLoadRunsAfterTheBatchResolvesReferences )
     sw::MockPostLoadProbeComponent::s_postLoadCount           = 0;
     sw::MockPostLoadProbeComponent::s_postLoadWithParentCount = 0;
     sw::ObjectStateBatch batch( sw::ObjectIdSpace::Saved );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewChild, childXml, { nullptr, &batch, childSavedId } ) );
-    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXmlString( pNewParent, parentXml, { nullptr, &batch, parentSavedId } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewChild, childXML, { nullptr, &batch, childSavedId } ) );
+    SW_ASSERT_TRUE( sw::ObjectStateSerializer::loadFromXMLString( pNewParent, parentXML, { nullptr, &batch, parentSavedId } ) );
     SW_EXPECT_EQUAL( 0, sw::MockPostLoadProbeComponent::s_postLoadCount ); // 묶음이 끝나기 전에는 부르지 않는다
     batch.finish();
 

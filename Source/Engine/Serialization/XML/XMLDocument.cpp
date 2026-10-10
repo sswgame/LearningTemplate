@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
@@ -17,10 +17,10 @@ namespace sw
     namespace
     {
         /// @brief 에셋 XML 저장 포맷입니다. 줄 접기는 pugixml 이 아니라 wrapLongElementLines 가 합니다.
-        inline constexpr uint32 kXmlSaveFormat = pugi::format_default | pugi::format_no_declaration;
+        inline constexpr uint32 kXMLSaveFormat = pugi::format_default | pugi::format_no_declaration;
 
         /// @brief 이 길이를 넘는 요소 줄만 속성 단위로 접습니다.
-        inline constexpr size_t kXmlWrapColumn = 120;
+        inline constexpr size_t kXMLWrapColumn = 120;
 
         /**
          * @brief 시작 태그의 끝(따옴표 밖의 첫 `>`) 위치입니다. 없으면 npos 입니다.
@@ -106,7 +106,7 @@ namespace sw
 
                 // 속성은 시작 태그 안에서만 찾는다(`findStartTagEnd` 설명). 태그 이름 뒤 첫 공백이 태그 밖이면 속성이 없는 요소다.
                 listAttrEnd.clear();
-                if ( line.size() > kXmlWrapColumn && bOpenTag && firstSpace != string_view::npos && tagEnd != string_view::npos && firstSpace < tagEnd )
+                if ( line.size() > kXMLWrapColumn && bOpenTag && firstSpace != string_view::npos && tagEnd != string_view::npos && firstSpace < tagEnd )
                     collectAttributeEnds( line.substr( 0, tagEnd ), firstSpace, listAttrEnd );
 
                 if ( listAttrEnd.size() < 2 )
@@ -155,7 +155,7 @@ namespace sw
             return result;
         }
 
-        struct XmlStringWriter : pugi::xml_writer
+        struct XMLStringWriter : pugi::xml_writer
         {
             string _result;
 
@@ -165,12 +165,12 @@ namespace sw
             }
         };
 
-        struct XmlDocumentInternal
+        struct XMLDocumentInternal
         {
             /**
              * @brief pugixml 의 전역 할당 함수를 sw 할당자(`Memory::allocate` · `Memory::free`)로 바꿉니다. 처음 부를 때 한 번만 하고 되돌리지 않습니다.
              * @details pugixml 의 할당 함수는 프로세스 전역(pugixml 라이브러리 하나)입니다. 바꾸기 전에 잡은 블록을 바꾼 뒤에 풀면 sw 할당자가 남의 블록을
-             *          받으므로, 문서 트리가 하나라도 생기기 전에(`XmlDocument::Impl` 의 첫 멤버) 부릅니다. 엔진에서 pugixml 을 쓰는 곳은 이 파일뿐입니다.
+             *          받으므로, 문서 트리가 하나라도 생기기 전에(`XMLDocument::Impl` 의 첫 멤버) 부릅니다. 엔진에서 pugixml 을 쓰는 곳은 이 파일뿐입니다.
              *          되돌리지 않는 이유도 같습니다 — 종료 중에 풀리는 문서가 CRT `free` 로 sw 블록을 풀게 됩니다.
              */
             static bool installSwAllocator()
@@ -261,72 +261,72 @@ namespace sw
 
 namespace sw
 {
-    SW_LOG_CALLER( "XmlDocument" );
+    SW_LOG_CALLER( "XMLDocument" );
 
-    struct XmlDocument::Impl
+    struct XMLDocument::Impl
     {
-        bool               _bSwAllocator{ XmlDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)
+        bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)
         pugi::xml_document doc;
     };
 
-    const utf8* XmlAttribute::getName() const
+    const utf8* XMLAttribute::getName() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
+        const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         return attr.name();
     }
 
-    const utf8* XmlAttribute::getValue() const
+    const utf8* XMLAttribute::getValue() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
+        const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         return attr.value();
     }
 
-    XmlAttribute XmlAttribute::getNext() const
+    XMLAttribute XMLAttribute::getNext() const
     {
-        const pugi::xml_attribute attr = XmlDocumentInternal::asAttribute( _pAttr );
+        const pugi::xml_attribute attr = XMLDocumentInternal::asAttribute( _pAttr );
         if ( attr.empty() )
             return {};
-        return XmlAttribute{ attr.next_attribute().internal_object() };
+        return XMLAttribute{ attr.next_attribute().internal_object() };
     }
 
-    const utf8* XmlNode::getName() const
+    const utf8* XMLNode::getName() const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         return pNode.name();
     }
 
-    const utf8* XmlNode::getText() const
+    const utf8* XMLNode::getText() const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         return pNode.child_value();
     }
 
-    int64 XmlNode::getSourceOffset() const
+    int64 XMLNode::getSourceOffset() const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return -1;
         return static_cast<int64>( pNode.offset_debug() );
     }
 
-    const utf8* XmlNode::findAttribute( const utf8* pName, bool bIgnoreCaseKeys ) const
+    const utf8* XMLNode::findAttribute( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return nullptr;
-        const pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
+        const pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, bIgnoreCaseKeys );
         if ( pAttr.empty() == false )
             return pAttr.value();
         return nullptr;
     }
 
-    string_view XmlNode::getAttributeText( const utf8* pName, bool bIgnoreCaseKeys ) const
+    string_view XMLNode::getAttributeText( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
         return ( pValue != nullptr ) ? string_view( pValue ) : string_view{};
     }
 
-    int32 XmlNode::getAttributeInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
+    int32 XMLNode::getAttributeInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
@@ -338,7 +338,7 @@ namespace sw
         return val;
     }
 
-    bool XmlNode::tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
+    bool XMLNode::tryGetAttributeIntInRange( const utf8* pName, int32 fallback, int32 minValue, int32 maxValue, int32& outValue,
                                              bool bIgnoreCaseKeys ) const
     {
         outValue           = fallback;
@@ -356,7 +356,7 @@ namespace sw
         return true;
     }
 
-    float32 XmlNode::getAttributeFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
+    float32 XMLNode::getAttributeFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findAttribute( pName, bIgnoreCaseKeys );
         if ( pValue == nullptr )
@@ -367,41 +367,41 @@ namespace sw
         return val;
     }
 
-    bool XmlNode::getAttributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
+    bool XMLNode::getAttributeBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
-        return XmlDocumentInternal::parseNodeBool( "Attribute", pName, findAttribute( pName, bIgnoreCaseKeys ), fallback );
+        return XMLDocumentInternal::parseNodeBool( "Attribute", pName, findAttribute( pName, bIgnoreCaseKeys ), fallback );
     }
 
-    XmlNode XmlNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLNode::findChild( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
         if ( pName == nullptr )
-            return XmlNode{ pNode.first_child().internal_object() };
-        return XmlNode{ XmlDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ).internal_object() };
+            return XMLNode{ pNode.first_child().internal_object() };
+        return XMLNode{ XMLDocumentInternal::findChild( pNode, pName, bIgnoreCaseKeys ).internal_object() };
     }
 
-    XmlNode XmlNode::findNextSibling( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLNode::findNextSibling( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
         const pugi::xml_node pSibling = pNode.next_sibling();
         if ( pName == nullptr )
-            return XmlNode{ pSibling.internal_object() };
-        return XmlNode{ XmlDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ).internal_object() };
+            return XMLNode{ pSibling.internal_object() };
+        return XMLNode{ XMLDocumentInternal::findSibling( pSibling, pName, bIgnoreCaseKeys ).internal_object() };
     }
 
-    const utf8* XmlNode::findChildText( const utf8* pName, bool bIgnoreCaseKeys ) const
+    const utf8* XMLNode::findChildText( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
-        const XmlNode childNode = findChild( pName, bIgnoreCaseKeys );
+        const XMLNode childNode = findChild( pName, bIgnoreCaseKeys );
         if ( childNode.isValid() == false )
             return nullptr;
         return childNode.getText();
     }
 
-    int32 XmlNode::getChildInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
+    int32 XMLNode::getChildInt( const utf8* pName, int32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pText = findChildText( pName, bIgnoreCaseKeys );
         if ( pText == nullptr )
@@ -412,7 +412,7 @@ namespace sw
         return val;
     }
 
-    float32 XmlNode::getChildFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
+    float32 XMLNode::getChildFloat( const utf8* pName, float32 fallback, bool bIgnoreCaseKeys ) const
     {
         const utf8* pText = findChildText( pName, bIgnoreCaseKeys );
         if ( pText == nullptr )
@@ -423,12 +423,12 @@ namespace sw
         return val;
     }
 
-    bool XmlNode::getChildBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
+    bool XMLNode::getChildBool( const utf8* pName, bool fallback, bool bIgnoreCaseKeys ) const
     {
-        return XmlDocumentInternal::parseNodeBool( "Element", pName, findChildText( pName, bIgnoreCaseKeys ), fallback );
+        return XMLDocumentInternal::parseNodeBool( "Element", pName, findChildText( pName, bIgnoreCaseKeys ), fallback );
     }
 
-    bool XmlNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const
+    bool XMLNode::takeChildText( const utf8* pName, string& dst, bool bIgnoreCaseKeys ) const
     {
         const utf8* pValue = findChildText( pName, bIgnoreCaseKeys );
         if ( StringUtil::isNullOrEmpty( pValue ) )
@@ -437,35 +437,35 @@ namespace sw
         return true;
     }
 
-    XmlAttribute XmlNode::getFirstAttribute() const
+    XMLAttribute XMLNode::getFirstAttribute() const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
-        return XmlAttribute{ pNode.first_attribute().internal_object() };
+        return XMLAttribute{ pNode.first_attribute().internal_object() };
     }
 
-    XmlNode XmlNode::appendChild( const utf8* pName ) const
+    XMLNode XMLNode::appendChild( const utf8* pName ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return {};
         pugi::xml_node pChild = pNode.append_child( pName );
-        return XmlNode{ pChild.internal_object() };
+        return XMLNode{ pChild.internal_object() };
     }
 
-    void XmlNode::appendAttribute( const utf8* pName, const utf8* pValue ) const
+    void XMLNode::appendAttribute( const utf8* pName, const utf8* pValue ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
         pugi::xml_attribute pAttr = pNode.append_attribute( pName );
         pAttr.set_value( pValue != nullptr ? pValue : "" );
     }
 
-    void XmlNode::appendAttribute( const utf8* pName, string_view value ) const
+    void XMLNode::appendAttribute( const utf8* pName, string_view value ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
         pugi::xml_attribute pAttr = pNode.append_attribute( pName );
@@ -480,29 +480,29 @@ namespace sw
         }
     }
 
-    void XmlNode::appendAttribute( const utf8* pName, bool value ) const
+    void XMLNode::appendAttribute( const utf8* pName, bool value ) const
     {
         appendAttribute( pName, value ? "1" : "0" );
     }
 
-    void XmlNode::setAttribute( const utf8* pName, const utf8* pValue ) const
+    void XMLNode::setAttribute( const utf8* pName, const utf8* pValue ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
-        pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, true );
         if ( pAttr.empty() == false )
             pAttr.set_value( pValue != nullptr ? pValue : "" );
         else
             appendAttribute( pName, pValue );
     }
 
-    void XmlNode::setAttribute( const utf8* pName, string_view value ) const
+    void XMLNode::setAttribute( const utf8* pName, string_view value ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
-        pugi::xml_attribute pAttr = XmlDocumentInternal::findAttr( pNode, pName, true );
+        pugi::xml_attribute pAttr = XMLDocumentInternal::findAttr( pNode, pName, true );
         if ( pAttr.empty() == false )
         {
             const string valStr( value );
@@ -514,71 +514,71 @@ namespace sw
         }
     }
 
-    void XmlNode::setAttribute( const utf8* pName, bool value ) const
+    void XMLNode::setAttribute( const utf8* pName, bool value ) const
     {
         setAttribute( pName, value ? "1" : "0" );
     }
 
-    void XmlNode::setName( const utf8* pName ) const
+    void XMLNode::setName( const utf8* pName ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() || pName == nullptr )
             return;
         pNode.set_name( pName );
     }
 
-    void XmlNode::setValue( const utf8* pValue ) const
+    void XMLNode::setValue( const utf8* pValue ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return;
         pNode.text().set( pValue != nullptr ? pValue : "" );
     }
 
-    void XmlNode::setValue( string_view value ) const
+    void XMLNode::setValue( string_view value ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return;
         const string valStr( value );
         pNode.text().set( valStr.c_str() );
     }
 
-    void XmlNode::setValue( bool value ) const
+    void XMLNode::setValue( bool value ) const
     {
         setValue( value ? "1" : "0" );
     }
 
-    string XmlNode::toString() const
+    string XMLNode::toString() const
     {
-        const pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
+        const pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
         if ( pNode.empty() )
             return {};
-        XmlStringWriter writer;
-        pNode.print( writer, "\t", kXmlSaveFormat );
+        XMLStringWriter writer;
+        pNode.print( writer, "\t", kXMLSaveFormat );
         return wrapLongElementLines( writer._result );
     }
 
-    XmlNode XmlNode::appendClone( XmlNode src ) const
+    XMLNode XMLNode::appendClone( XMLNode src ) const
     {
-        pugi::xml_node pNode = XmlDocumentInternal::asNode( _pNode );
-        pugi::xml_node pSrc  = XmlDocumentInternal::asNode( src._pNode );
+        pugi::xml_node pNode = XMLDocumentInternal::asNode( _pNode );
+        pugi::xml_node pSrc  = XMLDocumentInternal::asNode( src._pNode );
         if ( pNode.empty() || pSrc.empty() )
             return {};
         pugi::xml_node cloned = pNode.append_copy( pSrc );
-        return XmlNode{ cloned.internal_object() };
+        return XMLNode{ cloned.internal_object() };
     }
 
-    XmlDocument::XmlDocument()
+    XMLDocument::XMLDocument()
         : _impl{ make_unique<Impl>() } {}
 
-    XmlDocument::~XmlDocument() = default;
+    XMLDocument::~XMLDocument() = default;
 
-    XmlDocument::XmlDocument( XmlDocument&& other ) noexcept
+    XMLDocument::XMLDocument( XMLDocument&& other ) noexcept
         : _impl{ std::move( other._impl ) }
         , _lastError{ std::move( other._lastError ) } {}
 
-    XmlDocument& XmlDocument::operator=( XmlDocument&& other ) noexcept
+    XMLDocument& XMLDocument::operator=( XMLDocument&& other ) noexcept
     {
         if ( this != &other )
         {
@@ -588,7 +588,7 @@ namespace sw
         return *this;
     }
 
-    void XmlDocument::clear()
+    void XMLDocument::clear()
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
@@ -596,7 +596,7 @@ namespace sw
             _impl->doc.reset();
     }
 
-    bool XmlDocument::parse( string_view xmlText, string_view sourceName )
+    bool XMLDocument::parse( string_view xmlText, string_view sourceName )
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
@@ -635,7 +635,7 @@ namespace sw
         return true;
     }
 
-    bool XmlDocument::loadFile( string_view absPath )
+    bool XMLDocument::loadFile( string_view absPath )
     {
         string text;
         if ( FileUtil::readTextFile( absPath, text ) == false )
@@ -646,7 +646,7 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool XmlDocument::loadResource( string_view relativePath, string* pOutAbsPath )
+    bool XMLDocument::loadResource( string_view relativePath, string* pOutAbsPath )
     {
         string text;
         string absPath;
@@ -660,7 +660,7 @@ namespace sw
         return parse( text, absPath );
     }
 
-    bool XmlDocument::loadPath( string_view path, string* pOutAbsPath )
+    bool XMLDocument::loadPath( string_view path, string* pOutAbsPath )
     {
         if ( path.empty() )
         {
@@ -676,7 +676,7 @@ namespace sw
         return loadResource( path, pOutAbsPath );
     }
 
-    uint32 XmlDocument::computeLineNumber( string_view text, int64 offset )
+    uint32 XMLDocument::computeLineNumber( string_view text, int64 offset )
     {
         if ( offset < 0 )
             return 0;
@@ -690,40 +690,40 @@ namespace sw
         return line;
     }
 
-    XmlNode XmlDocument::getRoot( const utf8* pName, bool bIgnoreCaseKeys ) const
+    XMLNode XMLDocument::getRoot( const utf8* pName, bool bIgnoreCaseKeys ) const
     {
         if ( _impl == nullptr )
             return {};
         if ( pName == nullptr )
-            return XmlNode{ _impl->doc.first_child().internal_object() };
-        return XmlNode{ XmlDocumentInternal::findChild( _impl->doc, pName, bIgnoreCaseKeys ).internal_object() };
+            return XMLNode{ _impl->doc.first_child().internal_object() };
+        return XMLNode{ XMLDocumentInternal::findChild( _impl->doc, pName, bIgnoreCaseKeys ).internal_object() };
     }
 
-    XmlNode XmlDocument::appendRoot( const utf8* pName )
+    XMLNode XMLDocument::appendRoot( const utf8* pName )
     {
         if ( _impl == nullptr )
             _impl = make_unique<Impl>();
         pugi::xml_node pRoot = _impl->doc.append_child( pName );
-        return XmlNode{ pRoot.internal_object() };
+        return XMLNode{ pRoot.internal_object() };
     }
 
-    string XmlDocument::saveToString() const
+    string XMLDocument::saveToString() const
     {
         if ( _impl == nullptr )
             return "";
-        XmlStringWriter writer;
-        _impl->doc.save( writer, "\t", kXmlSaveFormat );
+        XMLStringWriter writer;
+        _impl->doc.save( writer, "\t", kXMLSaveFormat );
         return wrapLongElementLines( writer._result );
     }
 
-    bool XmlDocument::saveFile( string_view absPath ) const
+    bool XMLDocument::saveFile( string_view absPath ) const
     {
         if ( absPath.empty() )
             return false;
         return FileUtil::writeTextFile( absPath, saveToString() );
     }
 
-    string XmlDocument::escapeString( string_view text )
+    string XMLDocument::escapeString( string_view text )
     {
         StringBuilder<constant::kMaxBuffer1024> out;
         for ( const utf8 ch : text )
@@ -765,7 +765,7 @@ namespace sw
         return string{ out.view() };
     }
 
-    string XmlDocument::unescapeString( string_view text )
+    string XMLDocument::unescapeString( string_view text )
     {
         StringBuilder<constant::kMaxBuffer1024> out;
         for ( size_t index = 0; index < text.size(); ++index )

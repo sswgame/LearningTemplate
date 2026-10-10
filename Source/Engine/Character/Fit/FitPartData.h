@@ -29,7 +29,7 @@ namespace sw
 
     class CharacterDataReader;
     class FitTables;
-    class XmlNode;
+    class XMLNode;
 
     /**
      * @brief 손으로 적은 조임 고리입니다(본 · 축 · 반지름 · 폭). 메시의 안면 대신 이 고리로 안쪽 겹을 조입니다.
@@ -73,7 +73,7 @@ namespace sw
     {
     public:
         /** @brief XML 텍스트에서 읽습니다. 이름은 @p tables 에 대조합니다. */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText, string_view sourceName, const FitTables& tables );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const FitTables& tables );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const FitTables& tables );
         /**
@@ -103,7 +103,7 @@ namespace sw
         void addCorrective( const FitCorrectiveDef& corrective ) { _listCorrective.push_back( corrective ); }
 
     private:
-        void readRoot( const XmlNode& root, const FitTables& tables, CharacterDataReader& reader );
+        void readRoot( const XMLNode& root, const FitTables& tables, CharacterDataReader& reader );
 
     private:
         vector<hashed_string>    _listHiddenRegion;

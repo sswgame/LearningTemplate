@@ -137,7 +137,7 @@ namespace sw
         PROPERTY( Default = "75" )
         int32 _mana{ 0 };
 
-        PROPERTY( Default = "Apprentice", XmlAttribute )
+        PROPERTY( Default = "Apprentice", XMLAttribute )
         string _title = "unset";
     };
 } // namespace sw

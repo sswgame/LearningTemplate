@@ -4,9 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 namespace sw
 {
@@ -62,11 +62,11 @@ namespace sw
         return pDef != nullptr ? pDef->_cap : 0;
     }
 
-    uint32 CurrencyCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 CurrencyCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        for ( XmlNode node = root.findChild( "Currency" ); node; node = node.findNextSibling( "Currency" ) )
+        for ( XMLNode node = root.findChild( "Currency" ); node; node = node.findNextSibling( "Currency" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             if ( LedgerUtil::isValidAssetId( pId ) == false )
@@ -84,7 +84,7 @@ namespace sw
                 SW_LOG_WARNING( "%#: currency '%#' has an invalid cap '%#' - no cap", sourceName, pId, capText );
                 def._cap = 0;
             }
-            for ( XmlNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
+            for ( XMLNode fundingNode = node.findChild( "Funding" ); fundingNode; fundingNode = fundingNode.findNextSibling( "Funding" ) )
             {
                 def._listFundingAsset.push_back( string( fundingNode.getAttributeText( "asset" ) ) );
             }

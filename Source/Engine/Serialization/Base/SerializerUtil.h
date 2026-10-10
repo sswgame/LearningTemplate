@@ -207,13 +207,13 @@ namespace sw
         /**
          * @brief 이 타입 이름이 **중첩 객체**(프로퍼티를 풀어 쓰는 REFLECT 타입)면 그 TypeInfo 를, 아니면 nullptr 를 반환합니다.
          * @details 텍스트 핸들러가 있거나(값 한 줄로 씁니다) enum 이거나 기본형이면 중첩 객체가 아닙니다. `JsonSerializer` 와
-         *          `XmlSerializer` 가 함께 씁니다 — 한쪽만 규칙이 바뀌면 두 포맷이 같은 필드를 다르게 씁니다.
+         *          `XMLSerializer` 가 함께 씁니다 — 한쪽만 규칙이 바뀌면 두 포맷이 같은 필드를 다르게 씁니다.
          */
         SW_API static const TypeInfo* findNestedObjectType( hashed_string typeName, const SerializeContext& ctx );
 
         /**
          * @brief 원소 타입 이름이 **소유 포인터**인지 봅니다(이름에 `*` 가 있으면 그렇습니다).
-         * @details `JsonSerializer` 와 `XmlSerializer` 가 함께 씁니다. 판정 기준이
+         * @details `JsonSerializer` 와 `XMLSerializer` 가 함께 씁니다. 판정 기준이
          *          "이름에 별표가 있는가" 라는 문자열 규칙이라, 한쪽만 고치면 두 포맷이 서로 다른
          *          컨테이너를 소유로 보게 됩니다.
          */
@@ -251,11 +251,11 @@ namespace sw
                                                     const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief XML 문자열을 바이너리 버퍼로 트랜스코딩합니다. */
-        SW_API static bool transcodeXmlToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
+        SW_API static bool transcodeXMLToBinary( string_view xmlStr, const TypeInfo& typeInfo, vector<uint8>& outBinary,
                                                  const SerializeContext& ctx = SerializeContext::getDefault() );
 
         /** @brief 바이너리 데이터를 XML 문자열로 트랜스코딩합니다. */
-        SW_API static string transcodeBinaryToXml( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
+        SW_API static string transcodeBinaryToXML( const uint8* pData, size_t dataSize, const TypeInfo& typeInfo,
                                                    const SerializeContext& ctx = SerializeContext::getDefault() );
     };
 } // namespace sw

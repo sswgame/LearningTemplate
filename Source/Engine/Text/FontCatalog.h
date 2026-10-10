@@ -95,7 +95,7 @@ namespace sw
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 키 · 검사 실패) 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(시험용). */
-        [[nodiscard]] bool loadFromXmlText( string_view xmlText );
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText );
         /** @brief 가족 이름이 비지 않고 겹치지 않고(저장소 · 시스템 합쳐), 저장소 가족마다 면이 있고 경로가 비지 않고, 기본 가족이 저장소 가족인지 봅니다. */
         [[nodiscard]] bool validate() const;
 

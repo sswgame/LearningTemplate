@@ -4,9 +4,9 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Serialization/Xml/XmlDocument.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
-#include "GameFramework/Base/Foundation/Data/GameDataXml.h"
+#include "GameFramework/Base/Foundation/Data/GameDataXML.h"
 
 #include <algorithm>
 
@@ -47,7 +47,7 @@ namespace sw
         return _listBuyRate.back()._rate;
     }
 
-    uint32 ScavengerCatalog::loadRoot( const XmlNode& root, string_view sourceName )
+    uint32 ScavengerCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         const string_view shopId = root.getAttributeText( "terminalShop" );
         if ( shopId.empty() == false )
@@ -58,7 +58,7 @@ namespace sw
 
         _crewHealth = MathUtil::max( 1.0f, root.getAttributeFloat( "crewHealth", _crewHealth ) );
 
-        if ( const XmlNode node = root.findChild( "Quota" ) )
+        if ( const XMLNode node = root.findChild( "Quota" ) )
         {
             _quota._startQuota      = MathUtil::max( 1, node.getAttributeInt( "start", _quota._startQuota ) );
             _quota._daysPerCycle    = MathUtil::max( 0, node.getAttributeInt( "days", _quota._daysPerCycle ) );
@@ -69,7 +69,7 @@ namespace sw
             _quota._startCredits    = MathUtil::max( 0, node.getAttributeInt( "credits", _quota._startCredits ) );
         }
         _listBuyRate.clear();
-        for ( XmlNode node = root.findChild( "BuyRate" ); node; node = node.findNextSibling( "BuyRate" ) )
+        for ( XMLNode node = root.findChild( "BuyRate" ); node; node = node.findNextSibling( "BuyRate" ) )
         {
             ScavengerBuyRatePoint point;
             point._daysLeft = MathUtil::max( 0, node.getAttributeInt( "daysLeft", point._daysLeft ) );
@@ -88,28 +88,28 @@ namespace sw
         { return lhs._daysLeft == rhs._daysLeft; } ),
                             _listBuyRate.end() );
 
-        if ( const XmlNode node = root.findChild( "Day" ) )
+        if ( const XMLNode node = root.findChild( "Day" ) )
         {
             _day._secondsPerDay = MathUtil::max( 1.0f, node.getAttributeFloat( "secondsPerDay", _day._secondsPerDay ) );
             _day._arrivalHour   = MathUtil::clamp( node.getAttributeFloat( "arrival", _day._arrivalHour ), 0.0f, 23.0f );
             _day._duskHour      = MathUtil::clamp( node.getAttributeFloat( "dusk", _day._duskHour ), _day._arrivalHour, 24.0f );
             _day._departHour    = MathUtil::clamp( node.getAttributeFloat( "depart", _day._departHour ), _day._arrivalHour + 0.5f, 48.0f );
         }
-        if ( const XmlNode node = root.findChild( "Carry" ) )
+        if ( const XMLNode node = root.findChild( "Carry" ) )
         {
             _carry._slotCount      = MathUtil::clamp( node.getAttributeInt( "slots", _carry._slotCount ), 1, 16 );
             _carry._speedPerWeight = MathUtil::max( 0.0f, node.getAttributeFloat( "speedPerWeight", _carry._speedPerWeight ) );
             _carry._minSpeedScale  = MathUtil::saturate( node.getAttributeFloat( "minSpeed", _carry._minSpeedScale ) );
             _carry._bodyWeight     = MathUtil::max( 0.0f, node.getAttributeFloat( "bodyWeight", _carry._bodyWeight ) );
         }
-        if ( const XmlNode node = root.findChild( "Penalty" ) )
+        if ( const XMLNode node = root.findChild( "Penalty" ) )
         {
             _penalty._deathFine        = MathUtil::saturate( node.getAttributeFloat( "deathFine", _penalty._deathFine ) );
             _penalty._recoveredFine    = MathUtil::saturate( node.getAttributeFloat( "recoveredFine", _penalty._recoveredFine ) );
             _penalty._allDeadLossRatio = MathUtil::saturate( node.getAttributeFloat( "allDeadLoss", _penalty._allDeadLossRatio ) );
             _penalty._allDeadMaxKept   = MathUtil::max( 0, node.getAttributeInt( "allDeadKeep", _penalty._allDeadMaxKept ) );
         }
-        if ( const XmlNode node = root.findChild( "Facility" ) )
+        if ( const XMLNode node = root.findChild( "Facility" ) )
         {
             _facility._minRooms     = MathUtil::clamp( node.getAttributeInt( "rooms", _facility._minRooms ), 1, 256 );
             _facility._maxRooms     = MathUtil::clamp( node.getAttributeInt( "roomsMax", _facility._minRooms ), _facility._minRooms, 256 );
@@ -119,9 +119,9 @@ namespace sw
         }
 
         uint32 loadedCount = 0;
-        for ( XmlNode node = root.findChild( "Scrap" ); node; node = node.findNextSibling( "Scrap" ) )
+        for ( XMLNode node = root.findChild( "Scrap" ); node; node = node.findNextSibling( "Scrap" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ScavengerScrapDef def;
@@ -134,9 +134,9 @@ namespace sw
             (void)_scrapCatalog.add( def );
             ++loadedCount;
         }
-        for ( XmlNode node = root.findChild( "Moon" ); node; node = node.findNextSibling( "Moon" ) )
+        for ( XMLNode node = root.findChild( "Moon" ); node; node = node.findNextSibling( "Moon" ) )
         {
-            const utf8* pId = GameDataXml::findRequiredId( node, sourceName );
+            const utf8* pId = GameDataXML::findRequiredId( node, sourceName );
             if ( pId == nullptr )
                 continue;
             ScavengerMoonDef def;
@@ -150,7 +150,7 @@ namespace sw
             def._minValueScale = MathUtil::max( 0.0f, node.getAttributeFloat( "valueMin", def._minValueScale ) );
             def._maxValueScale = MathUtil::max( def._minValueScale, node.getAttributeFloat( "valueMax", def._minValueScale ) );
             def._bCompany      = node.getAttributeBool( "company", false ) ? SW_TRUE : SW_FALSE;
-            GameDataXml::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
+            GameDataXML::forEachToken( node.getAttributeText( "scraps" ), ",; ", [&]( string_view token )
             {
                 const hashed_string scrapId( token );
                 if ( _scrapCatalog.find( scrapId ) == nullptr )

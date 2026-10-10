@@ -97,7 +97,7 @@ namespace sw::editor
                 if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading DefaultRenderPass.xml" );
-                if ( pPass->loadFromXmlFile( pEngineDefaultAssets->_defaultRenderPass ) == false )
+                if ( pPass->loadFromXMLFile( pEngineDefaultAssets->_defaultRenderPass ) == false )
                     SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
             }
 
@@ -110,7 +110,7 @@ namespace sw::editor
                 if ( pEngineDefaultAssets == nullptr )
                     return;
                 SW_LOG_TRACE( "Splash: reading ForwardPipeline.xml" );
-                if ( pPipeline->loadFromXmlFile( pEngineDefaultAssets->_defaultForwardPipeline ) == false )
+                if ( pPipeline->loadFromXMLFile( pEngineDefaultAssets->_defaultForwardPipeline ) == false )
                     SW_LOG_WARNING( "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
             }
 

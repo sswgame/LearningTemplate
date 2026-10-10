@@ -10,12 +10,12 @@
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/Base/Foundation/Data/GameCatalog.h"
-#include "GameFramework/Base/Foundation/Data/XmlCatalog.h"
+#include "GameFramework/Base/Foundation/Data/XMLCatalog.h"
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
-    class XmlNode;
+    class XMLNode;
 
     /** @brief 할당량 주기의 규칙입니다. */
     struct ScavengerQuotaSettings
@@ -131,9 +131,9 @@ namespace sw
      *        <Scrap id="bolt" min="20" max="40" weight="5" spawnWeight="5" twoHanded="false"/>
      *        <Moon id="experimentation" risk="1" cost="0" scrap="8" scrapMax="12" valueMin="0.9" valueMax="1.1" scraps="bolt,bell" company="false"/></ScavengerCatalog>` 를 읽습니다.
      */
-    class SW_GF_API ScavengerCatalog : public XmlCatalog<ScavengerCatalog>
+    class SW_GF_API ScavengerCatalog : public XMLCatalog<ScavengerCatalog>
     {
-        friend class XmlCatalog<ScavengerCatalog>;
+        friend class XMLCatalog<ScavengerCatalog>;
 
     public:
         ScavengerCatalog();
@@ -154,8 +154,8 @@ namespace sw
         float32                          getCrewHealth() const { return _crewHealth; }
 
     private:
-        static constexpr const utf8* kXmlRootName = "ScavengerCatalog"; ///< 루트 원소(`XmlCatalog`)
-        uint32                       loadRoot( const XmlNode& root, string_view sourceName );
+        static constexpr const utf8* kXMLRootName = "ScavengerCatalog"; ///< 루트 원소(`XMLCatalog`)
+        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
         GameCatalog<ScavengerMoonDef>  _moonCatalog;
         GameCatalog<ScavengerScrapDef> _scrapCatalog;
