@@ -36,9 +36,17 @@ class CheckConfigReferenceGate(LintGate):
     description = "설정 참조 문서(docs/Config)가 코드와 같은지 · 설정 파일이 모두 목록에 있는지 검사"
     buildComment = "Checking that docs/Config matches config structs, global variables, arguments and build options..."
     timeoutSeconds = 60
-    preCommitPattern = ("Source/*.h", "Source/*.cpp", "Source/*.inl", "Source/*.xxx", "Source/*.module.json", "*CMakeLists.txt", "cmake/*",
+    # 무조건 도는 파일: 명령줄 표 · 모듈 매니페스트 · CMake 옵션 · 설정 파일 · 생성 문서 · 목록 · 생성기. 소스(.h · .cpp · .inl)는 문서의 재료가 되는
+    # 토큰이 든 파일일 때만 돈다 — 재료는 ConfigReference.py 가 읽는 것 전부다: 헤더의 `REFLECT` 구조체 · `enum class`(칸 · 기본값 · 문서 주석 ·
+    # enum 값), 소스의 `*GLOBAL_VARIABLE`, 손으로 읽는 설정의 `ConfigKeyDoc` 표. HEAD · staged 어느 쪽 내용이든 맞으면 돈다(토큰을 지우는 커밋도 잡힌다).
+    preCommitPattern = ("Source/*.xxx", "Source/*.module.json", "*CMakeLists.txt", "*.cmake", "cmake/*",
                         "CMakePresets.json", "Config/*", "Resource/*.xml", "docs/Config/*", "Scripts/common/ConfigCatalog.py",
                         "Scripts/common/ConfigReference.py")
+    preCommitContentPattern = (
+        ("Source/*.h", r"\bREFLECT\b|\benum\s+class\b|GLOBAL_VARIABLE|ConfigKeyDoc"),
+        ("Source/*.cpp", r"GLOBAL_VARIABLE|ConfigKeyDoc"),
+        ("Source/*.inl", r"GLOBAL_VARIABLE|ConfigKeyDoc"),
+    )
     preCommitFileArgument = ""
     violationHeader = "설정 참조 문서가 코드와 다르거나, 목록 밖 설정 파일 · 설명 없는 칸"
     hint = (

@@ -52,6 +52,10 @@ _kBorrowedDrainRe = re.compile(r"(?:\b_p(?:Wallet|QuestLog|Reputation|Flags|Cloc
 _kLogCallerRe = re.compile(r"\bSW_LOG_CALLER\s*\(\s*\"([^\"]*)\"")
 _kGlobalVariableRe = re.compile(r"\bSW_(?:TEST_)?GLOBAL_VARIABLE\w*\s*\(")
 
+#: 훅이 이 게이트를 돌릴지 가르는 토큰 — 위 정규식들이 찾는 낱말의 합집합이다(`preCommitContentPattern`).
+_kContentTokenPattern = (
+    r"Tag\s*=|\b(?:isKeyDown|wasKeyPressed|wasKeyReleased)\b|\bKey::|\b(?:wasActionTriggered|isActionDown|wasActionPressed|wasActionReleased|isActionToggled|getActionHoldDuration|getVector2D|getAxis1D|isChordDown|wasChordTriggered)\b|\bgetCustomProperty|changeValue|[Ff]action|drainEvents|SW_LOG_CALLER|GLOBAL_VARIABLE|\b(?:Wallet|Inventory|GameFlags|QuestLog|WorldClock|WeatherSystem|ReputationState|LandRegistry|ItemStackList)\b")
+
 
 def findKitNameInternal(relativePath: str) -> str:
     """`Source/GameFramework/Kits/<성격>/<묶음>/<키트>/...` 의 키트 이름입니다. 키트 밖이거나 묶음 공용 파일이면 빈 글자입니다."""
@@ -74,7 +78,9 @@ class CheckKitNamespacesGate(LintGate):
     description = "키트를 섞을 때 부딪히는 이름 공간 · 소유 검사(상태 표 · 입력 · 설정 칸 · 세력 · 공유 상태 소유 · 빌린 알림 · 로그 범주 · 전역 변수)"
     buildComment = "Checking kit namespaces (state tags, input, settings keys, ownership, log callers)..."
     timeoutSeconds = 30
-    preCommitPattern = ("Source/*.h", "Source/*.cpp", "Test/*.h", "Test/*.cpp")
+    # 아홉 규칙이 읽는 토큰이 든 파일일 때만 돈다(HEAD · staged 어느 쪽이든 — 토큰을 지우는 커밋도 잡힌다): 상태 표 `…Tag =` · 키 읽기 ·
+    # 입력 액션 함수 · 설정 칸 · 세력 · 알림 꺼내기 · 로그 범주 · 전역 변수 · 공유 상태 타입. 규칙을 더하면 이 정규식도 같은 커밋에서 넓힌다.
+    preCommitContentPattern = tuple((glob, _kContentTokenPattern) for glob in ("Source/*.h", "Source/*.cpp", "Test/*.h", "Test/*.cpp"))
     preCommitFileArgument = ""
     violationHeader = "키트 이름 공간 위반"
     hint = ("상태 표는 새 네 글자로(FourCcUtil::make), 입력은 입력 맵 액션으로(키트는 설정 칸), 키트 설정 칸은 `<키트>.` 접두로, "

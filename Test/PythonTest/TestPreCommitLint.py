@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import types
 import unittest
@@ -15,7 +16,7 @@ sys.path.insert(0, str(kRepositoryRoot / "Scripts" / "lint"))
 
 from LintCatalog import LintScript, discoverLintScripts  # noqa: E402
 from LintGate import LintGate  # noqa: E402
-from PreCommitLint import selectGatesForStaged  # noqa: E402
+from PreCommitLint import StagedContentProbe, selectGatesForStaged  # noqa: E402
 
 
 def makeScript(name: str, **mapAttribute) -> LintScript:
@@ -93,6 +94,48 @@ class PreCommitLintRealGateTest(unittest.TestCase):
     def testDataFileReferencesRunsForListFile(self) -> None:
         self.assertEqual(self.plan("CheckDataFileReferences", ["Source/Core/Predefined/X.xxx"]), "")
         self.assertEqual(self.plan("CheckDataFileReferences", ["cmake/Engine/X.cmake"]), "")
+
+
+class PreCommitLintContentRuleTest(unittest.TestCase):
+    """내용 규칙(`preCommitContentPattern` · `preCommitChangedLinePattern`) — 토큰이 없는 소스 커밋에서는 트리 전체 게이트가 서지 않는다."""
+
+    class FakeProbe(StagedContentProbe):
+        def __init__(self, mapBlob: dict[str, str], mapChanged: dict[str, str]) -> None:
+            super().__init__(kRepositoryRoot)
+            self._mapBlob = dict(mapBlob)
+            self._mapChangedLine = dict(mapChanged)
+
+        def hasContentMatch(self, listRelative: list[str], pattern: str) -> bool:
+            return any(re.search(pattern, self._mapBlob.get(relative, "")) is not None for relative in listRelative)
+
+    def plan(self, gateName: str, listStaged: list[str], mapBlob: dict[str, str], mapChanged: dict[str, str]) -> str:
+        listScript = [script for script in discoverLintScripts("gate") if script.name == gateName]
+        listStagedPath = [kRepositoryRoot / path for path in listStaged]
+        probe = self.FakeProbe(mapBlob, mapChanged)
+        return selectGatesForStaged(kRepositoryRoot, listStagedPath, listStagedPath, listScript, probe)[0].skipReason
+
+    def testConfigReferenceSkipsSourceWithoutConfigTokens(self) -> None:
+        self.assertTrue(self.plan("CheckConfigReference", ["Source/Core/A.cpp"], {"Source/Core/A.cpp": "int main() {}"}, {}))
+
+    def testConfigReferenceRunsForGlobalVariableOrReflect(self) -> None:
+        self.assertEqual(self.plan("CheckConfigReference", ["Source/Core/A.cpp"], {"Source/Core/A.cpp": "SW_GLOBAL_VARIABLE( int32, gv_a, 1, \"x\" );"}, {}), "")
+        self.assertEqual(self.plan("CheckConfigReference", ["Source/Core/A.h"], {"Source/Core/A.h": "REFLECT( X ) struct S {};"}, {}), "")
+
+    def testConfigReferenceRunsForListFilesWithoutLookingAtContent(self) -> None:
+        self.assertEqual(self.plan("CheckConfigReference", ["Config/Engine/A.json"], {}, {}), "")
+
+    def testDuplicateTypeNamesLooksOnlyAtChangedLines(self) -> None:
+        self.assertTrue(self.plan("CheckDuplicateTypeNames", ["Source/A.h"], {}, {"Source/A.h": "int x = 1;"}))
+        self.assertEqual(self.plan("CheckDuplicateTypeNames", ["Source/A.h"], {}, {"Source/A.h": "struct Foo"}), "")
+
+    def testKitNamespacesRunsWhenTokenIsInEitherContent(self) -> None:
+        self.assertEqual(self.plan("CheckKitNamespaces", ["Source/A.cpp"], {"Source/A.cpp": "SW_LOG_CALLER( \"x\" );"}, {}), "")
+        self.assertTrue(self.plan("CheckKitNamespaces", ["Source/A.cpp"], {"Source/A.cpp": "int x;"}, {}))
+
+    def testWithoutProbeAnyMatchingGlobRuns(self) -> None:
+        listScript = [script for script in discoverLintScripts("gate") if script.name == "CheckConfigReference"]
+        listStaged = [kRepositoryRoot / "Source/Core/A.cpp"]
+        self.assertEqual(selectGatesForStaged(kRepositoryRoot, listStaged, listStaged, listScript)[0].skipReason, "")
 
 
 if __name__ == "__main__":

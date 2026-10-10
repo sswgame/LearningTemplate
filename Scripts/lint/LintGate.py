@@ -129,8 +129,14 @@ class LintGate:
     #                            저장소 기준 POSIX 경로). **비우면 항상 돈다.**
     # - `preCommitFileArgument`: staged 부분집합을 넘기는 방법. `"--files"`(게이트 · 픽서 같은 철자) ·
     #                            `""`(전체를 훑는 게이트).
+    # - `preCommitContentPattern`    : `(글롭, 정규식)` 줄. 글롭에 맞는 staged 파일의 **HEAD 내용 또는 staged 내용** 어느 쪽이든 정규식에 맞으면 돈다
+    #                                  (지운 토큰도 잡는다). 이 줄이 있으면 `preCommitPattern` 은 "무조건 도는 파일" 이 되고 비워도 항상 돌지 않는다.
+    #                                  게이트가 읽는 것이 파일 전체의 어떤 토큰일 때(`REFLECT` · `GLOBAL_VARIABLE`) — 좁힌 근거는 게이트 옆에 적는다.
+    # - `preCommitChangedLinePattern`: 같은 모양인데 **바뀐 줄**(`git diff --cached -U0` 의 + · - 줄)만 본다. 위반이 그 줄 하나로 생기는 게이트용.
     # - `preCommitSkipReason`  : 훅에서 돌 수 없는 이유. 이유 없는 예외는 없다.
     preCommitPattern: tuple[str, ...] = ()
+    preCommitContentPattern: tuple[tuple[str, str], ...] = ()
+    preCommitChangedLinePattern: tuple[tuple[str, str], ...] = ()
     preCommitFileArgument: str = ""
     preCommitSkipReason: str = ""
 

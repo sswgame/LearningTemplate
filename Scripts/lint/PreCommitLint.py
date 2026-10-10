@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import concurrent.futures
 import os
+import re
 import sys
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
@@ -76,6 +77,13 @@ def listMatchingStagedInternal(listStaged: list[Path], projectRoot: Path,
     return listMatched
 
 
+def _relativeInternal(path: Path, projectRoot: Path) -> str:
+    try:
+        return path.relative_to(projectRoot).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
 def selectFileScopedStagedInternal(projectRoot: Path, listStaged: list[Path]) -> list[Path]:
     """
     파일 단위 검사에 넘길 staged 파일. 병합 중이 아니면 staged 전체, 병합 중이면 어느 부모와도 내용이 다른 파일만(모듈 머리말).
@@ -89,6 +97,57 @@ def selectFileScopedStagedInternal(projectRoot: Path, listStaged: list[Path]) ->
           f"(나머지 {len(listStaged) - len(listScoped)}개는 한쪽 부모와 내용이 같아 그 부모 커밋 때 검사됐습니다 — "
           f"트리 전체 게이트는 그대로 돌고, 병합 뒤 `ctest -L lint` 가 전체를 다시 봅니다).")
     return listScoped
+
+
+class StagedContentProbe:
+    """
+    staged 파일의 **내용**을 묻는다 — `LintGate.preCommitContentPattern`(HEAD · staged 파일 전체) · `preCommitChangedLinePattern`(바뀐 줄).
+    git 이 찾는다: 파일 전체는 `git grep -P` 를 HEAD 와 인덱스에 한 번씩, 바뀐 줄은 `git diff --cached -U0` 한 번(파일 수와 상관없다).
+    git 이 답하지 못하면 "맞는다" 고 답한다 — 좁히는 쪽이 아니라 도는 쪽으로 틀린다.
+    """
+
+    kChunkSize = 200
+
+    def __init__(self, projectRoot: Path) -> None:
+        self._root = projectRoot
+        self._mapChangedLine: dict[str, str] | None = None
+
+    def hasContentMatch(self, listRelative: list[str], pattern: str) -> bool:
+        """`listRelative` 중 HEAD 내용이나 staged 내용이 `pattern`(PCRE) 에 맞는 파일이 있는가."""
+        for start in range(0, len(listRelative), self.kChunkSize):
+            listChunk = listRelative[start:start + self.kChunkSize]
+            for listRevision in ([("HEAD",)], [("--cached",)]):
+                result = runGit(["--literal-pathspecs", "grep", "-l", "-P", "-e", pattern, *listRevision[0], "--", *listChunk], cwd=self._root)
+                if result.returnCode == 0 or result.returnCode > 1:
+                    return True      # 맞는다 — 또는 git 이 답하지 못했다(조건 없이 돈다)
+        return False
+
+    def hasChangedLineMatch(self, listRelative: list[str], pattern: str) -> bool:
+        """`listRelative` 중 바뀐 줄(+ · -)이 `pattern` 에 맞는 파일이 있는가."""
+        if self._mapChangedLine is None:
+            result = runGit(["diff", "--cached", "-U0", "--no-color", "--no-ext-diff", "--no-renames"], cwd=self._root)
+            if result.returnCode != 0:
+                return True
+            mapLine: dict[str, list[str]] = {}
+            current = ""
+            for line in result.stdout.splitlines():
+                if line.startswith("diff --git "):
+                    current = line.rsplit(" b/", 1)[-1]
+                    mapLine[current] = []
+                elif line.startswith(("+", "-")) and not line.startswith(("+++", "---")) and current:
+                    mapLine[current].append(line[1:])
+            self._mapChangedLine = {relative: "\n".join(listLine) for relative, listLine in mapLine.items()}
+        regex = re.compile(pattern)
+        return any(regex.search(self._mapChangedLine.get(relative, "")) is not None for relative in listRelative)
+
+    def isTriggered(self, listRelative: list[str], listContent: tuple[tuple[str, str], ...], listChanged: tuple[tuple[str, str], ...]) -> bool:
+        """어느 staged 파일이든 내용 규칙에 맞으면 True."""
+        for listRule, bChangedOnly in ((listContent, False), (listChanged, True)):
+            for glob, pattern in listRule:
+                listTarget = [relative for relative in listRelative if fnmatch(relative, glob)]
+                if listTarget and (self.hasChangedLineMatch if bChangedOnly else self.hasContentMatch)(listTarget, pattern):
+                    return True
+        return False
 
 
 @dataclass(frozen=True)
@@ -115,7 +174,7 @@ class GateRunPlan:
 
 
 def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScoped: list[Path],
-                         listScript: list[LintScript] | None = None) -> list[GateRunPlan]:
+                         listScript: list[LintScript] | None = None, probe: StagedContentProbe | None = None) -> list[GateRunPlan]:
     """
     staged 파일 목록 → 게이트마다의 계획(건너뜀 이유 또는 넘길 인자). 아무것도 돌리거나 찍지 않는다 — 판정만(시험이 이것을 본다).
 
@@ -125,6 +184,7 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
     파일을 인자로 받는 게이트는 `listFileScoped`(병합 커밋이면 새 내용인 파일만)에서, 트리 전체 게이트는 `listStaged` 에서 고른다.
     파일 인자 게이트에 넘길 파일이 하나도 없으면 돌리지 않는다 — 빈 `--files` 는 "전체를 훑어라" 로 읽힌다.
     게이트 클래스가 없는 파일은 계획에 넣지 않는다.
+    내용 규칙(`preCommitContentPattern` · `preCommitChangedLinePattern`)은 `probe` 가 답한다 — `probe` 가 없으면(시험) 글롭에 맞는 파일이 있는 것으로 본다.
     """
     listPlan: list[GateRunPlan] = []
     for script in discoverLintScripts("gate") if listScript is None else listScript:
@@ -136,8 +196,19 @@ def selectGatesForStaged(projectRoot: Path, listStaged: list[Path], listFileScop
             listPlan.append(GateRunPlan(script, skipReason=gateClass.preCommitSkipReason))
             continue
 
-        listMatched = listMatchingStagedInternal(listStaged, projectRoot, gateClass.preCommitPattern)
-        if gateClass.preCommitPattern and not listMatched:
+        bContentRule = bool(gateClass.preCommitContentPattern or gateClass.preCommitChangedLinePattern)
+        listMatched = listMatchingStagedInternal(listStaged, projectRoot, gateClass.preCommitPattern) if gateClass.preCommitPattern or not bContentRule else []
+        if bContentRule and not listMatched:
+            listRelative = [_relativeInternal(path, projectRoot) for path in listStaged]
+            if probe is None:
+                bTriggered = any(fnmatch(relative, glob) for relative in listRelative
+                                 for glob, _ in (*gateClass.preCommitContentPattern, *gateClass.preCommitChangedLinePattern))
+            else:
+                bTriggered = probe.isTriggered(listRelative, gateClass.preCommitContentPattern, gateClass.preCommitChangedLinePattern)
+            if not bTriggered:
+                listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음 (내용 규칙에 맞는 변경 없음)"))
+                continue
+        elif gateClass.preCommitPattern and not listMatched:
             listPlan.append(GateRunPlan(script, skipReason="해당 파일 변경 없음"))
             continue
 
@@ -173,7 +244,7 @@ def runGatesInternal(projectRoot: Path, listStaged: list[Path], listFileScoped: 
     """
     listScript = discoverLintScripts("gate")
     mapIndex = {script.name: index for index, script in enumerate(listScript, start=1)}
-    listPlan = selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript)
+    listPlan = selectGatesForStaged(projectRoot, listStaged, listFileScoped, listScript, StagedContentProbe(projectRoot))
     listBackground = [plan for plan in listPlan if plan.bBackground]
     bFailed = False
 

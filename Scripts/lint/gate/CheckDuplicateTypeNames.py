@@ -68,7 +68,12 @@ class CheckDuplicateTypeNamesGate(LintGate):
     description = "같은 이름의 타입 정의 검사(ODR)"
     buildComment = "Checking that no two files define a type of the same name in one namespace..."
     timeoutSeconds = 30
-    preCommitPattern = ("Source/*.h", "Source/*.cpp")
+    # 위반은 `class` · `struct` 정의 줄이나 `namespace` 줄이 생기거나 바뀔 때만 생긴다(깊이는 균형 잡힌 중괄호라 다른 줄은 영향이 없다).
+    # 바뀐 줄(+ · -)에 그 낱말이 있는 커밋만 돈다 — 파일 삭제 · 이름 바꿈은 옛 줄이 - 로 남아 잡힌다.
+    preCommitChangedLinePattern = (
+        ("Source/*.h", r"\b(?:class|struct|namespace)\b"),
+        ("Source/*.cpp", r"\b(?:class|struct|namespace)\b"),
+    )
     preCommitFileArgument = ""
     violationHeader = "같은 이름의 타입 정의"
     selfTestCases = [

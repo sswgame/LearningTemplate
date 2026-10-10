@@ -13,7 +13,7 @@ Core 폴더 층 검사 — `Source/Core/` 바로 아래 폴더가 곧 층이고,
   2) 폴더 파일은 루트 모음 헤더(`Core/CoreMinimal.h` · `Core/pch.h`)를 include 하지 않는다(폴더 하나가 Core 전체를 끌어온다).
   3) 표(_kCoreTier)에 없는 폴더는 실패다 — 새 폴더는 티어를 정하고 넣는다(`RunCoreLayerGraph.py` 가 계산해 준다).
   4) `Log` 보다 낮은 티어의 파일은 로그 매크로(`SW_LOG_*`)를 쓰지 않는다 — `.cpp` 는 pch 로 `Logger.h` 를 include 없이 받으므로
-     include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 `_kHiddenLogUse` 에 이유와 함께 적는다(줄일 대상).
+     include 간선에는 보이지 않는 거꾸로 가는 의존이다. 이미 있는 것은 `mapExemption` 에 이유와 함께 적는다(줄일 대상).
   `Core/Network` 내부 방향은 `CheckCoreNetworkLayers.py` 가 따로 본다.
 
   python Scripts/lint/gate/CheckCoreLayers.py [--root <repo>] [--files a.h b.cpp]
@@ -63,15 +63,6 @@ _kCoreTier: dict[str, int] = {
 
 _kRootAggregate = ("Core/CoreMinimal.h", "Core/pch.h")
 
-#: Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 새로 늘리지 않는다.
-_kHiddenLogUse: dict[str, str] = {
-    "Source/Core/Math/VectorMath.cpp": "영 벡터 단언(SW_LOG_ASSERT) — Math 가 Log 아래라 링크 간선이 거꾸로 간다",
-    "Source/Core/Memory/LinearAllocator.cpp": "블록 표 소진 · 블록 할당 실패 Error 로그",
-    "Source/Core/Container/FrameArenaAllocator.cpp": "프레임 아레나 청크 할당 실패 Error 로그",
-    "Source/Core/Container/DynamicBitset.cpp": "비트 위치 · 크기 단언과 잘못된 글자 Error 로그",
-    "Source/Core/Container/StringUtil.cpp": "UTF-8 검증 경고 · 단언",
-}
-
 _kSourceSuffixes = (".h", ".hpp", ".inl", ".cpp", ".xxx")
 _kLogUseRe = re.compile(r"\bSW_LOG_(?:ERROR|WARNING|INFO|TRACE|ASSERT|CALLER)\b|\bLogger::")
 
@@ -99,8 +90,15 @@ def findViolationsInFile(relative: str, text: str) -> list[str]:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 티어 표에 없는 폴더입니다")
         elif includeTier >= tier:
             listViolation.append(f"{relative}:{lineNumber}: <{includePath}> -> 티어 {tier}('{folder}')가 티어 {includeTier}('{includeFolder}')를 include 합니다")
-    if tier < _kCoreTier["Log"] and relative not in _kHiddenLogUse and _kLogUseRe.search(blankComments(text)):
-        listViolation.append(f"{relative}: 티어 {tier}('{folder}')가 로그 매크로를 씁니다 — Log(티어 {_kCoreTier['Log']}) 아래 층은 로그를 쓰지 않습니다")
+    if tier < _kCoreTier["Log"]:
+        bExempt = relative in CheckCoreLayersGate.mapExemption
+        if bExempt:
+            CheckCoreLayersGate.seeExemption(relative)
+        if _kLogUseRe.search(blankComments(text)):
+            if bExempt:
+                CheckCoreLayersGate.useExemption(relative)
+            else:
+                listViolation.append(f"{relative}: 티어 {tier}('{folder}')가 로그 매크로를 씁니다 — Log(티어 {_kCoreTier['Log']}) 아래 층은 로그를 쓰지 않습니다")
     return listViolation
 
 
@@ -114,14 +112,20 @@ def findViolations(repositoryRoot: Path, listFileArgument: list[str] | None) -> 
             continue
         fileCount += 1
         listViolation.extend(findViolationsInFile(relative, text))
-    for relative in _kHiddenLogUse:
-        if listFileArgument is None and (repositoryRoot / relative).is_file() is False:
-            listViolation.append(f"{relative}: _kHiddenLogUse 에 있지만 파일이 없습니다 — 표에서 지우세요")
     return listViolation, fileCount
 
 
 class CheckCoreLayersGate(LintGate):
     """`selfTestCases` 는 이 린트가 **반드시 잡아야 하는** 조각이다."""
+
+    #: Log 보다 아래 티어에서 pch 로 로그 매크로를 쓰는 파일 → 이유. 새로 늘리지 않는다(줄일 대상).
+    mapExemption = {
+        "Source/Core/Math/VectorMath.cpp": "영 벡터 단언(SW_LOG_ASSERT) — Math 가 Log 아래라 링크 간선이 거꾸로 간다",
+        "Source/Core/Memory/LinearAllocator.cpp": "블록 표 소진 · 블록 할당 실패 Error 로그",
+        "Source/Core/Container/FrameArenaAllocator.cpp": "프레임 아레나 청크 할당 실패 Error 로그",
+        "Source/Core/Container/DynamicBitset.cpp": "비트 위치 · 크기 단언과 잘못된 글자 Error 로그",
+        "Source/Core/Container/StringUtil.cpp": "UTF-8 검증 경고 · 단언",
+    }
 
     description = "Core 폴더 티어(Common → … → LogSink)를 거꾸로 include 하지 않는지 검사"
     buildComment = "Checking the Core folder layers..."

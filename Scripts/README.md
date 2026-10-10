@@ -347,6 +347,13 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
 - **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
   파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
+- **트리 전체 게이트를 소스 변경마다 돌리지 않으려면 내용 규칙을 쓴다**(`LintGate.preCommitContentPattern` · `preCommitChangedLinePattern`, 판정은 `PreCommitLint.StagedContentProbe`).
+  `preCommitPattern` 은 "무조건 도는 파일" 이 되고, 소스는 **게이트가 읽는 토큰**이 든 파일일 때만 돈다 — 토큰 목록은 게이트가 읽는 정규식의 합집합이어야 하므로 규칙을 더하는
+  커밋이 같은 커밋에서 내용 규칙도 넓힌다(`CheckKitNamespaces._kContentTokenPattern` · `CheckConfigReference` 의 `REFLECT` · `enum class` · `GLOBAL_VARIABLE` · `ConfigKeyDoc`).
+  전체 내용 규칙은 HEAD · staged 어느 쪽이든 맞으면 돈다(토큰을 **지우는** 커밋도 잡는다). 바뀐 줄 규칙은 위반이 그 줄 하나로 생기는 게이트에만 쓴다(`CheckDuplicateTypeNames`:
+  `class` · `struct` · `namespace` 줄 — 중괄호 깊이는 균형이 맞는 편집에서 안 바뀐다). 좁혀도 같은 결과인지는 건너뛴 커밋마다 부모 · 자식 트리에서 `buildConfigReference` 를 돌려
+  바이트가 같은지로 봤다(최근 80 커밋 중 12 가 건너뛰기, 표본 4 개 모두 같음). git 이 답하지 못하면 도는 쪽으로 틀린다. 함정: 훅의 staged 목록은 `--diff-filter=ACM` 이라
+  **삭제만 든 커밋은 어느 게이트도 보지 못한다**(내용 규칙 이전부터) — 파일 삭제가 문서 · 짝을 낡게 하는 게이트는 별도 확인이 필요하다. `selfTestCases` 는 파일 내용을 쓰므로 내용 규칙 게이트의 시험은 그대로다.
 - **린트 시간은 `RunLintSuite` 가 잰다**(CI 린트 잡 · 손으로 `py -3 -m Scripts lint-suite`): CTest 와 같은 목록 · 인자를 빌드 폴더 없이 돌리고, CTest TIMEOUT 의 절반을
   넘긴 린트와 훅 표본(staged 1 · 10)이 `kHookBudgetSeconds` 를 넘으면 경고, 기록은 CI 아티팩트 `lint-timing`. 새 린트의 `timeoutSeconds` 는 이 PC 시간의 3~4 배로 —
   절반 경고가 먼저 울리게.
