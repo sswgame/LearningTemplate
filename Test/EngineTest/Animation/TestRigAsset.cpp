@@ -4,7 +4,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -87,7 +87,7 @@ namespace
         class TestCurveSource final : public IRigCurveSource
         {
         public:
-            float32 getCurveValue( const hashed_string& curveName ) const override { return curveName == hashed_string( "Ik" ) ? _value : 0.0f; }
+            float32 getCurveValue( const hashed_string& curveName ) const override { return curveName == hashed_string( "IK" ) ? _value : 0.0f; }
             float32 _value{ 0.0f };
         };
 
@@ -117,7 +117,7 @@ SW_TEST_CASE( RigAssetTest, ParsesInOrderAndRejectsUnknownNames )
 {
     const Skeleton             skeleton = test::makeChainSkeleton( 3 );
     const string_view          valid    = R"({ "targets": [ { "name": "Goal", "object": "Ball" }, { "name": "Tip", "bone": "bone2", "translation": [0, 0.5, 0] } ],
-        "nodes": [ { "type": "TwoBoneIk", "name": "Arm", "root": "bone0", "mid": "bone1", "end": "bone2", "target": "Goal" },
+        "nodes": [ { "type": "TwoBoneIK", "name": "Arm", "root": "bone0", "mid": "bone1", "end": "bone2", "target": "Goal" },
                    { "type": "Aim", "name": "Look", "bone": "bone2", "target": "Goal", "max_degrees": 45 } ] })";
     shared_ptr<const RigAsset> asset    = TestRigAssetInternal::parseRig( valid );
     SW_ASSERT_NOT_NULL( asset );
@@ -198,7 +198,7 @@ SW_TEST_CASE( RigAssetTest, WeightFollowsCurveAndSequencerSlot )
 {
     const Skeleton    skeleton = test::makeChainSkeleton( 3 );
     const string_view json     = R"({ "targets": [ { "name": "A", "object": "A" } ], "nodes": [
-        { "type": "Position", "name": "Copy", "bone": "bone2", "target": "A", "weight_curve": "Ik", "weight_slot": "Shot" } ] })";
+        { "type": "Position", "name": "Copy", "bone": "bone2", "target": "A", "weight_curve": "IK", "weight_slot": "Shot" } ] })";
     RigInstance       instance;
     SW_ASSERT_TRUE( instance.initialize( TestRigAssetInternal::parseRig( json ), skeleton, nullptr, "test" ) );
     TestRigAssetInternal::TestCurveSource curve;
@@ -296,8 +296,8 @@ SW_TEST_CASE( RigAssetTest, TwistDistributionSpreadsForearmTwist )
     pose.computeModelSpace( skeleton.getParentIndices(), listAfter );
     quaternion swing{};
     quaternion twist{};
-    RigIkSolver::decomposeSwingTwist( pose.getBoneTransform( 1 )._rotation, float3::UnitY, swing, twist );
-    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi * 0.5f, RigIkSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
+    RigIKSolver::decomposeSwingTwist( pose.getBoneTransform( 1 )._rotation, float3::UnitY, swing, twist );
+    SW_EXPECT_NEAR_EQUAL( MathUtil::kHalfPi * 0.5f, RigIKSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
     SW_EXPECT_NEAR_EQUAL( 1.0f, MathUtil::abs( listBefore[2].getRotation().dot( listAfter[2].getRotation() ) ), 1e-4f );
 }
 

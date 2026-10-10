@@ -4,7 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
@@ -13,11 +13,11 @@
 
 namespace sw
 {
-    SW_LOG_CALLER( "RigIkNodes" );
+    SW_LOG_CALLER( "RigIKNodes" );
 
     namespace
     {
-        struct RigIkNodesInternal
+        struct RigIKNodesInternal
         {
             static constexpr const utf8* kArrLimitType[] = { "Cone", "Hinge" };
 
@@ -107,7 +107,7 @@ namespace sw
                     if ( chainIndex + 1 < listChainBone.size() )
                     {
                         const float3 toNext   = listReference[listChainBone[chainIndex + 1]].getTranslation() - listReference[bone].getTranslation();
-                        const float3 boneAxis = float3::transform( toNext, RigIkSolver::makeInverse( listReference[bone].getRotation() ) ).normalize();
+                        const float3 boneAxis = float3::transform( toNext, RigIKSolver::makeInverse( listReference[bone].getRotation() ) ).normalize();
                         limit._boneAxis       = ( boneAxis.getLengthSquared() > 0.5f ) ? boneAxis : float3::UnitY;
                     }
                 }
@@ -119,11 +119,11 @@ namespace sw
          *        `keep_end_rotation`(기본 true — 끝 본의 모델 회전을 애니메이션 값으로 지킨다).
          * @details 왼손을 무기 손잡이 소켓에 — `target` 이 무기 유닛의 `Grip` 소켓(space = 오른손)이고 `match_rotation` 이면 손이 손잡이 방향으로 돈다.
          */
-        class RigTwoBoneIkNode final : public RigNode
+        class RigTwoBoneIKNode final : public RigNode
         {
         public:
-            unique_ptr<RigNode> clone() const override { return make_unique<RigTwoBoneIkNode>( *this ); }
-            const utf8*         getTypeName() const override { return "TwoBoneIk"; }
+            unique_ptr<RigNode> clone() const override { return make_unique<RigTwoBoneIKNode>( *this ); }
+            const utf8*         getTypeName() const override { return "TwoBoneIK"; }
 
             [[nodiscard]] bool parse( RigJsonReader& reader ) override
             {
@@ -162,7 +162,7 @@ namespace sw
                 quaternion       poleRotation{};
                 const bool       bPole     = _pole != MathUtil::kMaxUInt32 && context._pInstance->resolveTarget( _pole, pose, polePosition, poleRotation );
                 const quaternion endBefore = pose.getModelRotation( _end );
-                (void)RigIkSolver::solveTwoBone( pose, _root, _mid, _end, targetPosition, bPole ? &polePosition : nullptr, *context._pSpace );
+                (void)RigIKSolver::solveTwoBone( pose, _root, _mid, _end, targetPosition, bPole ? &polePosition : nullptr, *context._pSpace );
                 if ( _bMatchRotation == SW_TRUE )
                     pose.setModelRotation( _end, targetRotation );
                 else if ( _bKeepEndRotation == SW_TRUE )
@@ -194,13 +194,13 @@ namespace sw
         /**
          * @brief 사슬 IK(FABRIK 또는 CCD). 키: `bones`(뿌리 → 끝) · `target` · `iterations` · `tolerance` · `max_step_degrees`(CCD) · `limits` · `match_rotation`.
          */
-        class RigChainIkNode final : public RigNode
+        class RigChainIKNode final : public RigNode
         {
         public:
             /** @brief FABRIK 인지 CCD 인지 정합니다(만들 때 한 번). */
             void setFabrik( bool bFabrik ) { _bFabrik = bFabrik ? SW_TRUE : SW_FALSE; }
 
-            unique_ptr<RigNode> clone() const override { return make_unique<RigChainIkNode>( *this ); }
+            unique_ptr<RigNode> clone() const override { return make_unique<RigChainIKNode>( *this ); }
             const utf8*         getTypeName() const override { return _bFabrik == SW_TRUE ? "FabrikChain" : "CcdChain"; }
 
             [[nodiscard]] bool parse( RigJsonReader& reader ) override
@@ -214,7 +214,7 @@ namespace sw
                     bOk = bOk && reader.readFloat( "max_step_degrees", maxStepDegrees, false );
                 _settings._maxStepAngle = maxStepDegrees * MathUtil::kDegreeToRadian;
                 _bMatchRotation         = bMatch ? SW_TRUE : SW_FALSE;
-                bOk                     = bOk && RigIkNodesInternal::parseLimits( reader, _listLimitSpec );
+                bOk                     = bOk && RigIKNodesInternal::parseLimits( reader, _listLimitSpec );
                 if ( bOk && _listBoneName.size() < 2 )
                 {
                     reader.fail( "'bones' needs at least two bones" );
@@ -226,7 +226,7 @@ namespace sw
             bool bind( const RigBindContext& context ) override
             {
                 return context.findBones( _listBoneName, _listBone, true ) && context.findTarget( _targetName, _target ) &&
-                       RigIkNodesInternal::bindLimits( context, _listLimitSpec, _listBone, _listLimit );
+                       RigIKNodesInternal::bindLimits( context, _listLimitSpec, _listBone, _listLimit );
             }
 
             void evaluate( RigEvaluateContext& context ) override
@@ -237,9 +237,9 @@ namespace sw
                 if ( context._pInstance->resolveTarget( _target, pose, targetPosition, targetRotation ) == false )
                     return;
                 if ( _bFabrik == SW_TRUE )
-                    (void)RigIkSolver::solveFabrik( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
+                    (void)RigIKSolver::solveFabrik( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
                 else
-                    (void)RigIkSolver::solveCcd( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
+                    (void)RigIKSolver::solveCcd( pose, _listBone, targetPosition, _listLimit, _settings, *context._pSpace );
                 if ( _bMatchRotation == SW_TRUE )
                     pose.setModelRotation( _listBone.back(), targetRotation );
             }
@@ -248,7 +248,7 @@ namespace sw
 
         private:
             vector<hashed_string>                 _listBoneName{};
-            vector<RigIkNodesInternal::LimitSpec> _listLimitSpec{};
+            vector<RigIKNodesInternal::LimitSpec> _listLimitSpec{};
             vector<uint32>                        _listBone{};
             vector<RigJointLimit>                 _listLimit{};
             hashed_string                         _targetName{};
@@ -319,7 +319,7 @@ namespace sw
                 if ( animated.getLengthSquared() < 0.5f || toTarget.getLengthSquared() < 1e-8f )
                     return;
                 const float32 distance  = toTarget.getLength();
-                quaternion    turn      = RigIkSolver::makeFromToRotation( animated, toTarget );
+                quaternion    turn      = RigIKSolver::makeFromToRotation( animated, toTarget );
                 const float32 turnAngle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( turn._w ), 0.0f, 1.0f ) );
                 if ( turnAngle > _maxAngle && turnAngle > MathUtil::kEpsilon )
                     turn = quaternion::slerp( quaternion::Identity, turn, _maxAngle / turnAngle );
@@ -331,10 +331,10 @@ namespace sw
                     const float3 desired    = space.projectVector( aimPoint - pose.getModelPosition( _bone ) );
                     if ( currentAim.getLengthSquared() < 1e-8f || desired.getLengthSquared() < 1e-8f )
                         continue;
-                    const quaternion delta = RigIkSolver::makeFromToRotation( currentAim, desired );
+                    const quaternion delta = RigIKSolver::makeFromToRotation( currentAim, desired );
                     pose.rotateModel( entry._bone, quaternion::slerp( quaternion::Identity, delta, MathUtil::saturate( entry._weight ) ) );
                 }
-                (void)RigIkSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::kPi, 1.0f, space );
+                (void)RigIKSolver::aimBone( pose, _bone, _aimAxis, aimPoint, MathUtil::kPi, 1.0f, space );
             }
 
             void collectWrittenBones( vector<uint32>& inoutListBone ) const override
@@ -408,7 +408,7 @@ namespace sw
                 if ( context.findBone( _pelvisName, _pelvis ) == false )
                     return false;
                 vector<float4x4> listReference;
-                RigIkNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
+                RigIKNodesInternal::computeReferenceModel( *context._pSkeleton, listReference );
                 for ( Foot& foot : _listFoot )
                 {
                     vector<uint32> listBone;
@@ -466,11 +466,11 @@ namespace sw
                 {
                     const quaternion footRotation = pose.getModelRotation( foot._end );
                     const float3     goal         = foot._animatedModel + float3{ 0.0f, foot._offset, 0.0f };
-                    (void)RigIkSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, goal, nullptr, *context._pSpace );
+                    (void)RigIKSolver::solveTwoBone( pose, foot._root, foot._mid, foot._end, goal, nullptr, *context._pSpace );
                     quaternion aligned = footRotation;
                     if ( _bAlignToNormal == SW_TRUE && foot._bHit == SW_TRUE )
                     {
-                        quaternion    tilt  = RigIkSolver::makeFromToRotation( float3::UnitY, foot._normalModel );
+                        quaternion    tilt  = RigIKSolver::makeFromToRotation( float3::UnitY, foot._normalModel );
                         const float32 angle = 2.0f * MathUtil::acos( MathUtil::clamp( MathUtil::abs( tilt._w ), 0.0f, 1.0f ) );
                         if ( angle > _maxAlignAngle && angle > MathUtil::kEpsilon )
                             tilt = quaternion::slerp( quaternion::Identity, tilt, _maxAlignAngle / angle );
@@ -531,14 +531,14 @@ namespace sw
             uint8         _bPelvisInitialized{ SW_FALSE };
         };
 
-        struct RigIkNodesFactory
+        struct RigIKNodesFactory
         {
-            static unique_ptr<RigNode> createTwoBone() { return make_unique<RigTwoBoneIkNode>(); }
+            static unique_ptr<RigNode> createTwoBone() { return make_unique<RigTwoBoneIKNode>(); }
             static unique_ptr<RigNode> createFabrik() { return createChain( true ); }
             static unique_ptr<RigNode> createCcd() { return createChain( false ); }
             static unique_ptr<RigNode> createChain( bool bFabrik )
             {
-                unique_ptr<RigChainIkNode> node = make_unique<RigChainIkNode>();
+                unique_ptr<RigChainIKNode> node = make_unique<RigChainIKNode>();
                 node->setFabrik( bFabrik );
                 return node;
             }
@@ -550,12 +550,12 @@ namespace sw
 
 namespace sw
 {
-    void RigNodeLibrary::registerIkNodes( RigNodeRegistry& registry )
+    void RigNodeLibrary::registerIKNodes( RigNodeRegistry& registry )
     {
-        registry.registerNode( "TwoBoneIk", &RigIkNodesFactory::createTwoBone );
-        registry.registerNode( "FabrikChain", &RigIkNodesFactory::createFabrik );
-        registry.registerNode( "CcdChain", &RigIkNodesFactory::createCcd );
-        registry.registerNode( "Aim", &RigIkNodesFactory::createAim );
-        registry.registerNode( "FootPlacement", &RigIkNodesFactory::createFootPlacement );
+        registry.registerNode( "TwoBoneIK", &RigIKNodesFactory::createTwoBone );
+        registry.registerNode( "FabrikChain", &RigIKNodesFactory::createFabrik );
+        registry.registerNode( "CcdChain", &RigIKNodesFactory::createCcd );
+        registry.registerNode( "Aim", &RigIKNodesFactory::createAim );
+        registry.registerNode( "FootPlacement", &RigIKNodesFactory::createFootPlacement );
     }
 } // namespace sw

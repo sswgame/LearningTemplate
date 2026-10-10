@@ -349,8 +349,8 @@ Debug 기동은 CRT 누수 보고도 stderr로 냅니다(`MemoryTagTest.Diagnost
 
 ### 수학
 
-**`quaternion::inverse()` 와 `conjugate()` 는 const가 아닌 값에서 제자리 버전(void)이 골라집니다.** 식 안에서는 const 참조로 받아서 부릅니다(`RigIkSolver::makeInverse`).
-**`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버립니다.** 반복 IK의 마지막 몇 mm가 그 범위에 들어 CCD가 멈춥니다(`RigIkSolver::makeFromToRotation`).
+**`quaternion::inverse()` 와 `conjugate()` 는 const가 아닌 값에서 제자리 버전(void)이 골라집니다.** 식 안에서는 const 참조로 받아서 부릅니다(`RigIKSolver::makeInverse`).
+**`quaternion::fromToRotation` 은 코사인 차 1e-6(약 0.08°) 안쪽을 단위 회전으로 버립니다.** 반복 IK의 마지막 몇 mm가 그 범위에 들어 CCD가 멈춥니다(`RigIKSolver::makeFromToRotation`).
 
 ### 서비스 비동기 API
 

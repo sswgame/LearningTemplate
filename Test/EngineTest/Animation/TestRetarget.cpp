@@ -61,7 +61,7 @@ namespace
             return hashed_string( name );
         }
 
-        static RetargetProfile makeLegProfile( bool bIkGoal )
+        static RetargetProfile makeLegProfile( bool bIKGoal )
         {
             RetargetProfile profile;
             profile.setRootAndPelvis( "root", "root", "hips", "hips", RetargetTranslationMode::ScaleByPelvisHeight );
@@ -75,7 +75,7 @@ namespace
                     chain._listSourceBone.push_back( makeName( pBone, pSide ) );
                     chain._listTargetBone.push_back( makeName( pBone, pSide ) );
                 }
-                chain._bIkGoal = bIkGoal ? SW_TRUE : SW_FALSE;
+                chain._bIKGoal = bIKGoal ? SW_TRUE : SW_FALSE;
                 profile.addChain( chain );
             }
             return profile;
@@ -131,7 +131,7 @@ SW_TEST_CASE( RetargetTest, ProfileParsesAndRejectsUnknownNames )
     SW_ASSERT_TRUE( profile.loadFromResource( TestRetargetInternal::kProfile ) );
     SW_EXPECT_EQUAL( 8u, static_cast<uint32>( profile.getChains().size() ) );
     SW_EXPECT_TRUE( profile.getTargetPelvis() == hashed_string( "hips" ) );
-    SW_EXPECT_TRUE( profile.getChains()[4]._bIkGoal == SW_TRUE );
+    SW_EXPECT_TRUE( profile.getChains()[4]._bIKGoal == SW_TRUE );
 
     test::ScopedDefensiveTestLog expected( "malformed retarget profiles are rejected" );
     const string_view            listBad[] = {
@@ -164,7 +164,7 @@ SW_TEST_CASE( RetargetTest, RotationTransfersAcrossLocalAxisConventions )
     Skeleton         target;
     (void)target.addBone( "bone0", -1, test::makeBoneTransform( float3{} ), float4x4::Identity );
     (void)target.addBone( "bone1", 0, test::makeBoneTransform( float3{ 0.0f, 1.0f, 0.0f }, turned ), float4x4::Identity );
-    (void)target.addBone( "bone2", 1, test::makeBoneTransform( float3::transform( float3{ 0.0f, 1.0f, 0.0f }, RigIkSolver::makeInverse( turned ) ) ), float4x4::Identity );
+    (void)target.addBone( "bone2", 1, test::makeBoneTransform( float3::transform( float3{ 0.0f, 1.0f, 0.0f }, RigIKSolver::makeInverse( turned ) ) ), float4x4::Identity );
     target.computeInverseBindFromReference();
 
     RetargetProfile profile;
@@ -252,7 +252,7 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
     clip.setRootMotionTrack( 0 );
     clip.addNotify( AnimNotifyEvent{ hashed_string( "Step" ), 0.5f, 0.0f } );
     AnimCurve curve{};
-    curve._name    = hashed_string( "Ik" );
+    curve._name    = hashed_string( "IK" );
     curve._listKey = {
         AnimCurveKey{0.0f, 0.0f},
         AnimCurveKey{1.0f, 1.0f}
@@ -282,7 +282,7 @@ SW_TEST_CASE( RetargetTest, BakedClipMatchesRuntimeRetarget )
     SW_EXPECT_TRUE( baked.isLoopingByDefault() );
     SW_EXPECT_EQUAL( 0, baked.getRootMotionTrack() );
     SW_EXPECT_EQUAL( 1u, static_cast<uint32>( baked.getNotifyTrack().getEvents().size() ) );
-    SW_ASSERT_NOT_NULL( baked.findCurve( "Ik" ) );
+    SW_ASSERT_NOT_NULL( baked.findCurve( "IK" ) );
 
     vector<int32> listTrackToBone;
     clip.makeTrackToBoneMap( source, listTrackToBone );

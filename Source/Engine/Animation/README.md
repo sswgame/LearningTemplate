@@ -257,7 +257,7 @@ Weight[i] = 1 / dist(p, p[i])^2,   NormalizedWeight[i] = Weight[i] / ΣWeight
 
 | 노드 종류 | 하는 일 |
 |---|---|
-| `TwoBoneIk` | 팔이나 다리의 2본 IK. 극점(pole)으로 무릎 방향을 정합니다 |
+| `TwoBoneIK` | 팔이나 다리의 2본 IK. 극점(pole)으로 무릎 방향을 정합니다 |
 | `FabrikChain`, `CcdChain` | 여러 본 사슬의 IK. 관절 제한(원뿔, 경첩)을 걸 수 있습니다 |
 | `Aim` | 본이 대상을 바라보게 합니다. 척추와 목이 나눠 받을 수 있습니다 |
 | `FootPlacement` | 땅 높이에 맞춰 발을 딛고 골반을 내립니다 |
@@ -268,7 +268,7 @@ Weight[i] = 1 / dist(p, p[i])^2,   NormalizedWeight[i] = Weight[i] / ΣWeight
 | `PoseDriver` | 관절 각도로 보정 모프와 본을 구동합니다(RBF) |
 | `SpringChain` | 꼬리, 머리카락, 망토 같은 2차 움직임을 시뮬레이션합니다 |
 
-노드마다 받는 JSON 키는 그 노드 클래스의 주석(`RigIkNodes.cpp`, `RigConstraintNodes.cpp`, `RigSecondaryNodes.cpp`)에 있습니다. 모르는 키나 모르는 노드 종류는 로드 오류입니다.
+노드마다 받는 JSON 키는 그 노드 클래스의 주석(`RigIKNodes.cpp`, `RigConstraintNodes.cpp`, `RigSecondaryNodes.cpp`)에 있습니다. 모르는 키나 모르는 노드 종류는 로드 오류입니다.
 
 **평가 순서.** 게임 스레드의 `prepare` 가 땅 광선, 거리 LOD, 시간을 준비합니다. 워커의 `evaluate` 는 로컬 포즈로 작업 포즈(`RigPoseBuffer`)를 열고 노드를 파일 순서대로 실행합니다.
 **순서가 결과를 정합니다.** "위치 복사 후 거리 제한"과 그 반대는 결과가 다릅니다.
@@ -374,9 +374,9 @@ Shooter3D 에서는 원인 셋이 겹쳐 있었습니다. 반복으로 돌린 �
 **되감는 동안 평가가 멈춘다는 것을 기억하세요.** 기록 요청은 프로세스 전역이고, 씬마다의 기록기가 평가 전에 그 요청을 따릅니다. 테스트에서 요청을 바꿨으면 되돌립니다(`ScopedRecording`).
 군중 그룹을 나눠 쓰는 유닛에는 기록된 포즈를 적용하지 않습니다. 포즈가 그룹의 것이기 때문입니다. 기록과 뼈대 그리기만 됩니다.
 
-**`quaternion::fromToRotation` 을 IK 에 쓰지 마세요.** 코사인 차가 1e-6(약 0.08도) 안쪽이면 단위 회전으로 버립니다. 사슬 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춥니다. 리그는 `RigIkSolver::makeFromToRotation` 을 씁니다.
+**`quaternion::fromToRotation` 을 IK 에 쓰지 마세요.** 코사인 차가 1e-6(약 0.08도) 안쪽이면 단위 회전으로 버립니다. 사슬 IK 의 마지막 몇 mm 가 그 안이라 CCD 가 멈춥니다. 리그는 `RigIKSolver::makeFromToRotation` 을 씁니다.
 
-**식 안에서 `quaternion::inverse()` 를 부르지 마세요.** const 가 아닌 값에서는 제자리에서 바꾸는 버전(반환값 `void`)이 골라집니다. 식 안에서는 `RigIkSolver::makeInverse` 를 씁니다.
+**식 안에서 `quaternion::inverse()` 를 부르지 마세요.** const 가 아닌 값에서는 제자리에서 바꾸는 버전(반환값 `void`)이 골라집니다. 식 안에서는 `RigIKSolver::makeInverse` 를 씁니다.
 
 **트위스트 본이 소스의 조상이면 비틀림을 부모 쪽(왼쪽)에서 빼세요.** 그래야 손의 모델 방향이 유지됩니다. 흔들림(swing)과 비틀림(twist)은 교환 법칙이 성립하지 않습니다.
 

@@ -6,7 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/AnimJsonUtil.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/Json/JsonDocument.h"

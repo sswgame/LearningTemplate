@@ -4,7 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
@@ -305,7 +305,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose      = *context._pPose;
-                const quaternion current   = ( RigIkSolver::makeInverse( _driverReference ) * pose.getLocalRotation( _driver ) ).normalize();
+                const quaternion current   = ( RigIKSolver::makeInverse( _driverReference ) * pose.getLocalRotation( _driver ) ).normalize();
                 const uint32     poseCount = static_cast<uint32>( _listPose.size() );
                 for ( uint32 index = 0; index < poseCount; ++index )
                 {
@@ -397,7 +397,7 @@ namespace sw
 
     bool RigNodeLibrary::registerEngineNodes( RigNodeRegistry& registry )
     {
-        registerIkNodes( registry );
+        registerIKNodes( registry );
         registerConstraintNodes( registry );
         registerSecondaryNodes( registry );
         return true;

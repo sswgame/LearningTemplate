@@ -118,10 +118,10 @@ namespace sw
         {
             RigJsonReader chainReader( chains.at( index ), sourceLabel );
             RetargetChain chain{};
-            bool          bIkGoal = false;
+            bool          bIKGoal = false;
             bOk                   = chainReader.readName( "name", chain._name, true ) && chainReader.readNameList( "source", chain._listSourceBone, true ) &&
-                  chainReader.readNameList( "target", chain._listTargetBone, true ) && chainReader.readBool( "ik_goal", bIkGoal, false );
-            chain._bIkGoal = bIkGoal ? SW_TRUE : SW_FALSE;
+                  chainReader.readNameList( "target", chain._listTargetBone, true ) && chainReader.readBool( "ik_goal", bIKGoal, false );
+            chain._bIKGoal = bIKGoal ? SW_TRUE : SW_FALSE;
             if ( ( chainReader.finish() && bOk ) == false )
                 return false;
             for ( const RetargetChain& existing : _listChain )

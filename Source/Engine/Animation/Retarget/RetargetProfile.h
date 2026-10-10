@@ -23,14 +23,14 @@ namespace sw
 
     /**
      * @brief 사슬 하나의 짝입니다. 본 수가 달라도 됩니다 — 대상 본마다 사슬 길이 비율로 원본 본을 고릅니다.
-     * @details `_bIkGoal` 이면 회전을 옮긴 뒤 끝을 원본 끝 자리(골반 높이 비로 바꾼)로 IK 해 발이 미끄러지지 않게 디딥니다.
+     * @details `_bIKGoal` 이면 회전을 옮긴 뒤 끝을 원본 끝 자리(골반 높이 비로 바꾼)로 IK 해 발이 미끄러지지 않게 디딥니다.
      */
     struct RetargetChain
     {
         hashed_string         _name{};
         vector<hashed_string> _listSourceBone{};
         vector<hashed_string> _listTargetBone{};
-        uint8                 _bIkGoal{ SW_FALSE };
+        uint8                 _bIKGoal{ SW_FALSE };
     };
 } // namespace sw
 

@@ -14,8 +14,8 @@ namespace sw
     {
         /** @brief 아래 모두를 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
         static bool registerEngineNodes( RigNodeRegistry& registry );
-        /** @brief IK — `TwoBoneIk` · `FabrikChain` · `CcdChain` · `Aim` · `FootPlacement`. */
-        static void registerIkNodes( RigNodeRegistry& registry );
+        /** @brief IK — `TwoBoneIK` · `FabrikChain` · `CcdChain` · `Aim` · `FootPlacement`. */
+        static void registerIKNodes( RigNodeRegistry& registry );
         /** @brief 제약 — `CopyTransform` · `Position` · `Rotation` · `ParentSwitch` · `Distance` · `LimitRotation` · `TwistDistribution`. */
         static void registerConstraintNodes( RigNodeRegistry& registry );
         /** @brief 2 차 움직임 · 보정 — `SpringChain` · `PoseDriver`. */

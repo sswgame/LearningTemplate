@@ -54,7 +54,7 @@ namespace sw
      *            "targets": [ { "name": "Grip", "socket": "Grip", "unit": "Weapon", "space": "handslot.r" },
      *                         { "name": "Look", "object": "LookTarget" },
      *                         { "name": "Chest", "bone": "chest", "unit": "Body", "translation": [0,0,0], "rotation": [0,0,0] } ],
-     *            "nodes": [ { "type": "TwoBoneIk", "name": "LeftHand", "weight": 1, "weight_curve": "HandIk", "weight_slot": "Grip",
+     *            "nodes": [ { "type": "TwoBoneIK", "name": "LeftHand", "weight": 1, "weight_curve": "HandIK", "weight_slot": "Grip",
      *                         "root": "upperarm.l", "mid": "lowerarm.l", "end": "hand.l", "target": "Grip", "match_rotation": true } ] }
      *          @endcode
      *          대상은 `bone` · `socket` · `object` 중 하나, `rotation` 은 도 단위 [피치, 요, 롤] 입니다. 노드 종류별 키는 `README.md` 표에 있습니다.

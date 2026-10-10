@@ -2,7 +2,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -126,7 +126,7 @@ SW_TEST_CASE( RigSolverTest, TwoBoneReachesTargetAndBendsTowardPole )
     const RigSolveSpace space{};
     const float3        target{ 1.0f, 1.0f, 0.0f };
     const float3        pole{ 0.0f, 0.5f, 1.0f };
-    SW_EXPECT_TRUE( RigIkSolver::solveTwoBone( buffer, 0, 1, 2, target, &pole, space ) );
+    SW_EXPECT_TRUE( RigIKSolver::solveTwoBone( buffer, 0, 1, 2, target, &pole, space ) );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( target, buffer.getModelPosition( 2 ), 1e-3f ) );
     SW_EXPECT_TRUE( buffer.getModelPosition( 1 )._z > 0.1f ); // 극점(+Z) 쪽으로 굽었다
     SW_EXPECT_NEAR_EQUAL( 1.0f, ( buffer.getModelPosition( 1 ) - buffer.getModelPosition( 0 ) ).getLength(), 1e-4f );
@@ -134,12 +134,12 @@ SW_TEST_CASE( RigSolverTest, TwoBoneReachesTargetAndBendsTowardPole )
 
     // 극점을 반대로 두면 반대쪽으로 굽는다.
     const float3 poleBack{ 0.0f, 0.5f, -1.0f };
-    (void)RigIkSolver::solveTwoBone( buffer, 0, 1, 2, target, &poleBack, space );
+    (void)RigIKSolver::solveTwoBone( buffer, 0, 1, 2, target, &poleBack, space );
     SW_EXPECT_TRUE( buffer.getModelPosition( 1 )._z < -0.1f );
 
     // 닿지 않는다 — 목표 쪽으로 곧게, 끝은 뿌리에서 길이만큼.
     const float3 distant{ 5.0f, 0.0f, 0.0f };
-    SW_EXPECT_FALSE( RigIkSolver::solveTwoBone( buffer, 0, 1, 2, distant, nullptr, space ) );
+    SW_EXPECT_FALSE( RigIKSolver::solveTwoBone( buffer, 0, 1, 2, distant, nullptr, space ) );
     SW_EXPECT_NEAR_EQUAL( 2.0f, buffer.getModelPosition( 2 )._x, 1e-2f );
     SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( 2 )._y, 1e-2f );
 }
@@ -158,7 +158,7 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
 
     RigPoseBuffer fabrik;
     TestRigSolverInternal::openReference( skeleton, fabrik );
-    SW_EXPECT_TRUE( RigIkSolver::solveFabrik( fabrik, listBone, target, {}, settings, space ) );
+    SW_EXPECT_TRUE( RigIKSolver::solveFabrik( fabrik, listBone, target, {}, settings, space ) );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( target, fabrik.getModelPosition( 4 ), 2e-3f ) );
     for ( uint32 boneIndex = 1; boneIndex < 5; ++boneIndex )
     {
@@ -171,7 +171,7 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
     ccdSettings._tolerance       = 2e-3f;
     RigPoseBuffer ccd;
     TestRigSolverInternal::openReference( skeleton, ccd );
-    SW_EXPECT_TRUE( RigIkSolver::solveCcd( ccd, listBone, target, {}, ccdSettings, space ) );
+    SW_EXPECT_TRUE( RigIKSolver::solveCcd( ccd, listBone, target, {}, ccdSettings, space ) );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( target, ccd.getModelPosition( 4 ), 2e-3f ) );
 
     // 경첩: Z 축 둘레 [-30°, 0°] 만 — 관절마다 그 범위 안에 있어야 한다.
@@ -189,15 +189,15 @@ SW_TEST_CASE( RigSolverTest, ChainSolversReachTargetAndRespectLimits )
         TestRigSolverInternal::openReference( skeleton, limited );
         const float3 sideTarget{ 2.5f, 1.5f, 0.0f }; // +X 쪽 — Z 축 음의 회전으로 닿는다
         if ( solver == 0 )
-            (void)RigIkSolver::solveFabrik( limited, listBone, sideTarget, listLimit, settings, space );
+            (void)RigIKSolver::solveFabrik( limited, listBone, sideTarget, listLimit, settings, space );
         else
-            (void)RigIkSolver::solveCcd( limited, listBone, sideTarget, listLimit, settings, space );
+            (void)RigIKSolver::solveCcd( limited, listBone, sideTarget, listLimit, settings, space );
         for ( uint32 boneIndex = 0; boneIndex < 5; ++boneIndex )
         {
             quaternion swing{};
             quaternion twist{};
-            RigIkSolver::decomposeSwingTwist( limited.getLocalRotation( boneIndex ), float3::UnitZ, swing, twist );
-            const float32 angle = RigIkSolver::computeTwistAngle( twist, float3::UnitZ );
+            RigIKSolver::decomposeSwingTwist( limited.getLocalRotation( boneIndex ), float3::UnitZ, swing, twist );
+            const float32 angle = RigIKSolver::computeTwistAngle( twist, float3::UnitZ );
             SW_EXPECT_TRUE( -30.5f * MathUtil::kDegreeToRadian <= angle && angle <= 0.5f * MathUtil::kDegreeToRadian );
             SW_EXPECT_TRUE( 2.0f * MathUtil::acos( MathUtil::min( 1.0f, MathUtil::abs( swing._w ) ) ) < 1e-3f ); // 경첩 밖 흔들림 없음
         }
@@ -215,13 +215,13 @@ SW_TEST_CASE( RigSolverTest, AimClampsToMaxAngleAndConeLimitsSwing )
     RigPoseBuffer  buffer;
     TestRigSolverInternal::openReference( skeleton, buffer );
     const RigSolveSpace space{};
-    const float32       turned = RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 5.0f, 0.0f, 0.0f }, 30.0f * MathUtil::kDegreeToRadian, 1.0f, space );
+    const float32       turned = RigIKSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 5.0f, 0.0f, 0.0f }, 30.0f * MathUtil::kDegreeToRadian, 1.0f, space );
     SW_EXPECT_NEAR_EQUAL( 30.0f * MathUtil::kDegreeToRadian, turned, 1e-3f );
     const float3 facing = float3::transform( float3::UnitZ, buffer.getModelRotation( 0 ) );
     SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 30.0f * MathUtil::kDegreeToRadian ), facing._z, 1e-3f );
 
     TestRigSolverInternal::openReference( skeleton, buffer );
-    (void)RigIkSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 3.0f, 4.0f, 0.0f }, MathUtil::kPi, 1.0f, space );
+    (void)RigIKSolver::aimBone( buffer, 0, float3::UnitZ, float3{ 3.0f, 4.0f, 0.0f }, MathUtil::kPi, 1.0f, space );
     SW_EXPECT_TRUE( TestRigSolverInternal::isNear( float3{ 0.6f, 0.8f, 0.0f }, float3::transform( float3::UnitZ, buffer.getModelRotation( 0 ) ), 1e-3f ) );
 
     // 원뿔 20°: 본 축(+Y)을 X 축으로 60° 눕힌 로컬 회전은 20° 로 잘린다.
@@ -232,13 +232,13 @@ SW_TEST_CASE( RigSolverTest, AimClampsToMaxAngleAndConeLimitsSwing )
     cone._twistLimit = 5.0f * MathUtil::kDegreeToRadian;
     TestRigSolverInternal::openReference( skeleton, buffer );
     buffer.setLocalRotation( 1, quaternion::createFromAxisAngle( float3::UnitX, 60.0f * MathUtil::kDegreeToRadian ) * quaternion::createFromAxisAngle( float3::UnitY, 0.5f ) );
-    RigIkSolver::applyJointLimit( buffer, 1, cone );
+    RigIKSolver::applyJointLimit( buffer, 1, cone );
     const float3 boneAxis = float3::transform( float3::UnitY, buffer.getLocalRotation( 1 ) );
     SW_EXPECT_NEAR_EQUAL( MathUtil::cos( 20.0f * MathUtil::kDegreeToRadian ), boneAxis._y, 1e-3f );
     quaternion swing{};
     quaternion twist{};
-    RigIkSolver::decomposeSwingTwist( buffer.getLocalRotation( 1 ), float3::UnitY, swing, twist );
-    SW_EXPECT_NEAR_EQUAL( 5.0f * MathUtil::kDegreeToRadian, RigIkSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
+    RigIKSolver::decomposeSwingTwist( buffer.getLocalRotation( 1 ), float3::UnitY, swing, twist );
+    SW_EXPECT_NEAR_EQUAL( 5.0f * MathUtil::kDegreeToRadian, RigIKSolver::computeTwistAngle( twist, float3::UnitY ), 1e-3f );
 }
 
 /**
@@ -260,11 +260,11 @@ SW_TEST_CASE( RigSolverTest, PlanarSolversStayInPlane )
         RigPoseBuffer buffer;
         TestRigSolverInternal::openReference( skeleton, buffer );
         if ( solver == 0 )
-            (void)RigIkSolver::solveTwoBone( buffer, 0, 1, 2, float3{ 1.0f, 1.0f, 0.7f }, nullptr, planar );
+            (void)RigIKSolver::solveTwoBone( buffer, 0, 1, 2, float3{ 1.0f, 1.0f, 0.7f }, nullptr, planar );
         else if ( solver == 1 )
-            (void)RigIkSolver::solveFabrik( buffer, listBone, target, {}, settings, planar );
+            (void)RigIKSolver::solveFabrik( buffer, listBone, target, {}, settings, planar );
         else
-            (void)RigIkSolver::solveCcd( buffer, listBone, target, {}, settings, planar );
+            (void)RigIKSolver::solveCcd( buffer, listBone, target, {}, settings, planar );
         for ( uint32 boneIndex = 0; boneIndex < 4; ++boneIndex )
         {
             SW_EXPECT_NEAR_EQUAL( 0.0f, buffer.getModelPosition( boneIndex )._z, 1e-4f );

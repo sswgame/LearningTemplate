@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 
@@ -8,7 +8,7 @@ namespace sw
 {
     namespace
     {
-        struct RigIkSolverInternal
+        struct RigIKSolverInternal
         {
             /** @brief 사슬 하나가 가질 수 있는 본 수의 상한입니다(풀이가 스택 배열을 쓴다 — 프레임마다 힙을 잡지 않게). */
             static constexpr uint32 kMaxChainBone = 32;
@@ -63,7 +63,7 @@ namespace sw
                 {
                     pose.aimBoneAt( listChainBone[index], listChainBone[index + 1], pPosition[index + 1] );
                     if ( index < listLimit.size() && listLimit[index]._type != RigJointLimitType::None )
-                        RigIkSolver::applyJointLimit( pose, listChainBone[index], listLimit[index] );
+                        RigIKSolver::applyJointLimit( pose, listChainBone[index], listLimit[index] );
                 }
             }
 
@@ -94,7 +94,7 @@ namespace sw
         return origin + projectVector( point - origin );
     }
 
-    bool RigIkSolver::solveTwoBone( RigPoseBuffer& pose, uint32 rootBone, uint32 midBone, uint32 endBone, const float3& target, const float3* pPole,
+    bool RigIKSolver::solveTwoBone( RigPoseBuffer& pose, uint32 rootBone, uint32 midBone, uint32 endBone, const float3& target, const float3* pPole,
                                     const RigSolveSpace& space )
     {
         const float3  rootPosition = pose.getModelPosition( rootBone );
@@ -118,7 +118,7 @@ namespace sw
         const float3 bendHint      = space.projectVector( ( pPole != nullptr ) ? ( *pPole - rootPosition ) : ( midPosition - rootPosition ) );
         float3       perpendicular = bendHint - direction * bendHint.dot( direction );
         if ( perpendicular.getLengthSquared() < 1e-8f )
-            perpendicular = RigIkSolverInternal::makePerpendicular( direction, space );
+            perpendicular = RigIKSolverInternal::makePerpendicular( direction, space );
         perpendicular = perpendicular.normalize();
 
         const float32 cosRoot = MathUtil::clamp( ( upperLength * upperLength + distance * distance - lowerLength * lowerLength ) / ( 2.0f * upperLength * distance ),
@@ -131,15 +131,15 @@ namespace sw
         return bReached;
     }
 
-    bool RigIkSolver::solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+    bool RigIKSolver::solveFabrik( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                    const RigChainSettings& settings, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listChainBone.size() );
-        if ( count < 2 || count > RigIkSolverInternal::kMaxChainBone )
+        if ( count < 2 || count > RigIKSolverInternal::kMaxChainBone )
             return false;
-        float3  arrPosition[RigIkSolverInternal::kMaxChainBone];
-        float32 arrLength[RigIkSolverInternal::kMaxChainBone];
-        RigIkSolverInternal::readChain( pose, listChainBone, arrPosition, arrLength );
+        float3  arrPosition[RigIKSolverInternal::kMaxChainBone];
+        float32 arrLength[RigIKSolverInternal::kMaxChainBone];
+        RigIKSolverInternal::readChain( pose, listChainBone, arrPosition, arrLength );
 
         const float3 root  = arrPosition[0];
         const float3 goal  = space.projectPoint( target, root );
@@ -149,7 +149,7 @@ namespace sw
             total += arrLength[index];
         }
 
-        const bool bLimited = RigIkSolverInternal::hasAnyLimit( listLimit );
+        const bool bLimited = RigIKSolverInternal::hasAnyLimit( listLimit );
         if ( ( goal - root ).getLength() >= total )
         {
             // 닿지 않는다 — 목표 쪽으로 곧게 편다.
@@ -158,7 +158,7 @@ namespace sw
             {
                 arrPosition[index] = arrPosition[index - 1] + direction * arrLength[index - 1];
             }
-            RigIkSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
+            RigIKSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
             return false;
         }
 
@@ -181,18 +181,18 @@ namespace sw
             if ( bLimited )
             {
                 // 제한은 회전에 건다 — 위치를 회전으로 옮겨 제한하고, 제한된 위치에서 다음 반복을 시작한다.
-                RigIkSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
-                RigIkSolverInternal::readChain( pose, listChainBone, arrPosition, arrLength );
+                RigIKSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
+                RigIKSolverInternal::readChain( pose, listChainBone, arrPosition, arrLength );
             }
             if ( ( arrPosition[count - 1] - goal ).getLength() <= settings._tolerance )
                 break;
         }
         if ( bLimited == false )
-            RigIkSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
+            RigIKSolverInternal::applyChain( pose, listChainBone, arrPosition, listLimit );
         return ( pose.getModelPosition( listChainBone[count - 1] ) - goal ).getLength() <= settings._tolerance;
     }
 
-    bool RigIkSolver::solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
+    bool RigIKSolver::solveCcd( RigPoseBuffer& pose, span<const uint32> listChainBone, const float3& target, span<const RigJointLimit> listLimit,
                                 const RigChainSettings& settings, const RigSolveSpace& space )
     {
         const uint32 count = static_cast<uint32>( listChainBone.size() );
@@ -211,9 +211,9 @@ namespace sw
                 if ( toEnd.getLengthSquared() < 1e-10f || toGoal.getLengthSquared() < 1e-10f )
                     continue;
                 quaternion    delta = makeFromToRotation( toEnd, toGoal );
-                const float32 angle = RigIkSolverInternal::computeRotationAngle( delta );
+                const float32 angle = RigIKSolverInternal::computeRotationAngle( delta );
                 if ( angle > settings._maxStepAngle )
-                    delta = RigIkSolverInternal::scaleRotation( delta, settings._maxStepAngle / angle );
+                    delta = RigIKSolverInternal::scaleRotation( delta, settings._maxStepAngle / angle );
                 pose.rotateModel( joint, delta );
                 if ( index - 1 < listLimit.size() && listLimit[index - 1]._type != RigJointLimitType::None )
                     applyJointLimit( pose, joint, listLimit[index - 1] );
@@ -224,7 +224,7 @@ namespace sw
         return ( pose.getModelPosition( endBone ) - goal ).getLength() <= settings._tolerance;
     }
 
-    float32 RigIkSolver::aimBone( RigPoseBuffer& pose, uint32 bone, const float3& localAxis, const float3& target, float32 maxAngle, float32 weight,
+    float32 RigIKSolver::aimBone( RigPoseBuffer& pose, uint32 bone, const float3& localAxis, const float3& target, float32 maxAngle, float32 weight,
                                   const RigSolveSpace& space )
     {
         const float3     position = pose.getModelPosition( bone );
@@ -234,15 +234,15 @@ namespace sw
         if ( current.getLengthSquared() < 1e-10f || desired.getLengthSquared() < 1e-10f )
             return 0.0f;
         quaternion    delta = makeFromToRotation( current, desired );
-        const float32 angle = RigIkSolverInternal::computeRotationAngle( delta );
+        const float32 angle = RigIKSolverInternal::computeRotationAngle( delta );
         if ( angle > maxAngle && angle > MathUtil::kEpsilon )
-            delta = RigIkSolverInternal::scaleRotation( delta, maxAngle / angle );
-        delta = RigIkSolverInternal::scaleRotation( delta, weight );
+            delta = RigIKSolverInternal::scaleRotation( delta, maxAngle / angle );
+        delta = RigIKSolverInternal::scaleRotation( delta, weight );
         pose.rotateModel( bone, delta );
-        return RigIkSolverInternal::computeRotationAngle( delta );
+        return RigIKSolverInternal::computeRotationAngle( delta );
     }
 
-    quaternion RigIkSolver::makeFromToRotation( const float3& from, const float3& to )
+    quaternion RigIKSolver::makeFromToRotation( const float3& from, const float3& to )
     {
         const float3  fromUnit = from.normalize();
         const float3  toUnit   = to.normalize();
@@ -259,7 +259,7 @@ namespace sw
         return quaternion{ axis._x, axis._y, axis._z, 1.0f + cosine }.normalize();
     }
 
-    void RigIkSolver::decomposeSwingTwist( const quaternion& delta, const float3& axis, quaternion& outSwing, quaternion& outTwist )
+    void RigIKSolver::decomposeSwingTwist( const quaternion& delta, const float3& axis, quaternion& outSwing, quaternion& outTwist )
     {
         const float3     vectorPart{ delta._x, delta._y, delta._z };
         const float3     projected = axis * vectorPart.dot( axis );
@@ -275,7 +275,7 @@ namespace sw
         outSwing = ( delta * makeInverse( outTwist ) ).normalize();
     }
 
-    float32 RigIkSolver::computeTwistAngle( const quaternion& twist, const float3& axis )
+    float32 RigIKSolver::computeTwistAngle( const quaternion& twist, const float3& axis )
     {
         quaternion positive = twist;
         if ( positive._w < 0.0f )
@@ -284,7 +284,7 @@ namespace sw
         return 2.0f * MathUtil::atan2( vectorPart.dot( axis ), positive._w );
     }
 
-    void RigIkSolver::applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit )
+    void RigIKSolver::applyJointLimit( RigPoseBuffer& pose, uint32 bone, const RigJointLimit& limit )
     {
         if ( limit._type == RigJointLimitType::None )
             return;
@@ -297,9 +297,9 @@ namespace sw
             decomposeSwingTwist( delta, limit._boneAxis, swing, twist );
             if ( swing._w < 0.0f )
                 swing = -swing;
-            const float32 swingAngle = RigIkSolverInternal::computeRotationAngle( swing );
+            const float32 swingAngle = RigIKSolverInternal::computeRotationAngle( swing );
             if ( swingAngle > limit._swingLimit && swingAngle > MathUtil::kEpsilon )
-                swing = RigIkSolverInternal::scaleRotation( swing, limit._swingLimit / swingAngle );
+                swing = RigIKSolverInternal::scaleRotation( swing, limit._swingLimit / swingAngle );
             const float32 twistAngle = MathUtil::clamp( computeTwistAngle( twist, limit._boneAxis ), -limit._twistLimit, limit._twistLimit );
             limited                  = swing * quaternion::createFromAxisAngle( limit._boneAxis, twistAngle );
         }

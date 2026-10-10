@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 
 namespace sw
 {
@@ -210,6 +210,6 @@ namespace sw
         const float3 desired      = newChildPosition - bonePosition;
         if ( current.getLengthSquared() <= MathUtil::kEpsilonSquared || desired.getLengthSquared() <= MathUtil::kEpsilonSquared )
             return;
-        rotateModel( boneIndex, RigIkSolver::makeFromToRotation( current, desired ) );
+        rotateModel( boneIndex, RigIKSolver::makeFromToRotation( current, desired ) );
     }
 } // namespace sw

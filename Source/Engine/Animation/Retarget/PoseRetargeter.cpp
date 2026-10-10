@@ -39,7 +39,7 @@ namespace sw
 {
     PoseRetargeter::PoseRetargeter()
         : _listPair{}
-        , _listIkChain{}
+        , _listIKChain{}
         , _listGoal{}
         , _listSourceParent{}
         , _listTargetParent{}
@@ -64,7 +64,7 @@ namespace sw
     {
         _bInitialized = SW_FALSE;
         _listPair.clear();
-        _listIkChain.clear();
+        _listIKChain.clear();
         _listSourceParent = sourceSkeleton.getParentIndices();
         _listTargetParent = targetSkeleton.getParentIndices();
         if ( pTargetReference != nullptr && pTargetReference->getBoneCount() == targetSkeleton.getBoneCount() )
@@ -119,14 +119,14 @@ namespace sw
                 listSourceBone.push_back( listChainSource[sourceIndex] );
                 listTargetBone.push_back( listChainTarget[targetIndex] );
             }
-            if ( chain._bIkGoal == SW_TRUE && targetCount >= 2 )
+            if ( chain._bIKGoal == SW_TRUE && targetCount >= 2 )
             {
-                IkChain ikChain{};
+                IKChain ikChain{};
                 ikChain._listTargetBone     = listChainTarget;
                 ikChain._sourceEnd          = listChainSource.back();
                 ikChain._sourceEndReference = _sourceBuffer.getModelPosition( listChainSource.back() );
                 ikChain._targetEndReference = _targetBuffer.getModelPosition( listChainTarget.back() );
-                _listIkChain.push_back( ikChain );
+                _listIKChain.push_back( ikChain );
             }
         }
 
@@ -171,7 +171,7 @@ namespace sw
         // 1) 모델 공간 회전 차이를 옮긴다.
         for ( const BonePair& pair : _listPair )
         {
-            const quaternion delta = ( _sourceBuffer.getModelRotation( pair._source ) * RigIkSolver::makeInverse( pair._sourceReferenceRotation ) ).normalize();
+            const quaternion delta = ( _sourceBuffer.getModelRotation( pair._source ) * RigIKSolver::makeInverse( pair._sourceReferenceRotation ) ).normalize();
             _targetBuffer.setModelRotation( pair._target, delta * pair._targetReferenceRotation );
         }
 
@@ -185,11 +185,11 @@ namespace sw
 
         // 3) IK 목표 — 원본 끝이 레퍼런스에서 움직인 만큼(높이 비)을 대상 끝 레퍼런스에 더한 자리.
         const float32 goalScale = ( _translationMode == RetargetTranslationMode::Copy ) ? 1.0f : _heightRatio;
-        _listGoal.resize( _listIkChain.size() );
+        _listGoal.resize( _listIKChain.size() );
         float32 pelvisDrop = 0.0f;
-        for ( size_t chainIndex = 0; chainIndex < _listIkChain.size(); ++chainIndex )
+        for ( size_t chainIndex = 0; chainIndex < _listIKChain.size(); ++chainIndex )
         {
-            const IkChain& chain  = _listIkChain[chainIndex];
+            const IKChain& chain  = _listIKChain[chainIndex];
             const float3   goal   = chain._targetEndReference + ( _sourceBuffer.getModelPosition( chain._sourceEnd ) - chain._sourceEndReference ) * goalScale;
             _listGoal[chainIndex] = goal;
             // 다리를 다 펴도 닿지 않는 목표(늘린 다리의 보폭 끝)면 골반을 그만큼 내린다 — 발이 목표에서 떨어지지 않게(발이 미끄러지지 않게).
@@ -211,15 +211,15 @@ namespace sw
         // 끝 본의 모델 회전은 1 의 값을 지킨다.
         const RigSolveSpace space{};
         RigChainSettings    settings{};
-        for ( size_t chainIndex = 0; chainIndex < _listIkChain.size(); ++chainIndex )
+        for ( size_t chainIndex = 0; chainIndex < _listIKChain.size(); ++chainIndex )
         {
-            const IkChain&   chain       = _listIkChain[chainIndex];
+            const IKChain&   chain       = _listIKChain[chainIndex];
             const uint32     targetEnd   = chain._listTargetBone.back();
             const quaternion endRotation = _targetBuffer.getModelRotation( targetEnd );
             if ( chain._listTargetBone.size() == 3 )
-                (void)RigIkSolver::solveTwoBone( _targetBuffer, chain._listTargetBone[0], chain._listTargetBone[1], targetEnd, _listGoal[chainIndex], nullptr, space );
+                (void)RigIKSolver::solveTwoBone( _targetBuffer, chain._listTargetBone[0], chain._listTargetBone[1], targetEnd, _listGoal[chainIndex], nullptr, space );
             else
-                (void)RigIkSolver::solveFabrik( _targetBuffer, chain._listTargetBone, _listGoal[chainIndex], {}, settings, space );
+                (void)RigIKSolver::solveFabrik( _targetBuffer, chain._listTargetBone, _listGoal[chainIndex], {}, settings, space );
             _targetBuffer.setModelRotation( targetEnd, endRotation );
         }
 

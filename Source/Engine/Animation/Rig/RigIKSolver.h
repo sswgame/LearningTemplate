@@ -1,5 +1,5 @@
 /**
- * @file RigIkSolver.h
+ * @file RigIKSolver.h
  * @brief IK 풀이(2 본 · FABRIK · CCD · 조준)와 관절 제한입니다. 모두 `RigPoseBuffer` 의 모델 공간 위에서 돌고 결과를 로컬 회전으로 씁니다.
  * @details 평면(2D) 풀이는 같은 함수에 `RigSolveSpace::_bPlanar` 를 켜서 씁니다 — 위치를 평면에 투영하고 회전은 평면 법선(기본 Z) 둘레로만 납니다.
  */
@@ -69,10 +69,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @struct RigIkSolver
+     * @struct RigIKSolver
      * @brief IK 풀이 함수 묶음입니다. 본 번호는 작업 포즈의 번호이고, 사슬은 뿌리 → 끝 순서(각 본이 다음 본의 조상)입니다.
      */
-    struct SW_API RigIkSolver
+    struct SW_API RigIKSolver
     {
         /**
          * @brief 2 본 IK(해석해) — 뿌리 · 가운데 · 끝 관절이 목표에 닿게 뿌리와 가운데를 돌립니다. 닿지 않으면 목표 쪽으로 곧게 뻗습니다.

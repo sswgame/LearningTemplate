@@ -10,7 +10,7 @@
 #include "Core/Math/MatrixMath.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 
@@ -68,7 +68,7 @@ namespace sw
             uint32     _target{ 0 };
         };
 
-        struct IkChain
+        struct IKChain
         {
             vector<uint32> _listTargetBone{};
             float3         _sourceEndReference{};
@@ -80,7 +80,7 @@ namespace sw
         static bool isPairBefore( const BonePair& lhs, const BonePair& rhs ) { return lhs._target < rhs._target; }
 
         vector<BonePair>        _listPair; ///< 대상 본 순서(부모가 먼저)
-        vector<IkChain>         _listIkChain;
+        vector<IKChain>         _listIKChain;
         vector<float3>          _listGoal; ///< IK 목표(사슬마다, 재사용)
         vector<int32>           _listSourceParent;
         vector<int32>           _listTargetParent;

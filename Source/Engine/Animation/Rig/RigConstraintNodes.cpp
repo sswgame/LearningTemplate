@@ -4,7 +4,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Rig/RigAsset.h"
-#include "Engine/Animation/Rig/RigIkSolver.h"
+#include "Engine/Animation/Rig/RigIKSolver.h"
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNodeLibrary.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
@@ -322,7 +322,7 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose  = *context._pPose;
-                const quaternion delta = ( RigIkSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
+                const quaternion delta = ( RigIKSolver::makeInverse( _reference ) * pose.getLocalRotation( _bone ) ).normalize();
                 const float3     euler = delta.getEulerAngles() * MathUtil::kRadianToDegree;
                 const float3     clamped{ MathUtil::clamp( euler._x, _minAngle._x, _maxAngle._x ), MathUtil::clamp( euler._y, _minAngle._y, _maxAngle._y ),
                                       MathUtil::clamp( euler._z, _minAngle._z, _maxAngle._z ) };
@@ -398,11 +398,11 @@ namespace sw
             void evaluate( RigEvaluateContext& context ) override
             {
                 RigPoseBuffer&   pose  = *context._pPose;
-                const quaternion delta = ( RigIkSolver::makeInverse( _sourceReference ) * pose.getLocalRotation( _source ) ).normalize();
+                const quaternion delta = ( RigIKSolver::makeInverse( _sourceReference ) * pose.getLocalRotation( _source ) ).normalize();
                 quaternion       swing{};
                 quaternion       twist{};
-                RigIkSolver::decomposeSwingTwist( delta, _axis, swing, twist );
-                const float32 angle = RigIkSolver::computeTwistAngle( twist, _axis );
+                RigIKSolver::decomposeSwingTwist( delta, _axis, swing, twist );
+                const float32 angle = RigIKSolver::computeTwistAngle( twist, _axis );
                 for ( const TwistBone& entry : _listTwist )
                 {
                     const quaternion share = quaternion::createFromAxisAngle( _axis, angle * entry._weight );
