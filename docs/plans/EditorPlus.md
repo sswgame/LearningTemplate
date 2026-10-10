@@ -91,8 +91,7 @@ O1 ~ O6(창 제목 잘림, 에디터 스크린샷이 까맣던 것, Unlit 무효
 
 | 단계 | 단위 | 무엇 | 규모 | 선행 | 체감 |
 |------|------|------|------|------|------|
-| **2 에디터 설정** | P3 | 단축키 편집기(`Saved/Editor/Shortcuts.json` · 키 받기 · 충돌) | M | C3 | ★ |
-| | P4 | 모듈 창(켜고 끄기 · 의존 미리보기 · 구성/빌드 버튼) | M | C4 | |
+| **2 에디터 설정** | P4 | 모듈 창(켜고 끄기 · 의존 미리보기 · 구성/빌드 버튼) | M | C4 | |
 | **3 인스펙터 · 콘텐츠** | I1 | 다중 선택 편집(공통 프로퍼티 · 다른 값 표시 · 한 트랜잭션) | M | P1 | ★ |
 | | I2 | 기본값과 다름 표시 · 기본값으로 · 프로퍼티 복사/붙여넣기 | S | P1 | ★ |
 | | I3 | 프로퍼티 그리기 확장 `SW_EDITOR_PROPERTY_DRAWER`(유니티 PropertyDrawer) | S | C1 · P1 | |
@@ -138,129 +137,6 @@ EditorModule 을 언리얼 `UnrealEd` 처럼 내보내고, 키트 확장이 리�
 유니티는 `SettingsProvider` 등록(Preferences · Project Settings 두 창, 같은 IMGUI/UIElements 그리기), Shortcuts Manager(키보드 그림 + 프로필, 바뀐 것만 저장, 충돌 표시),
 Package Manager 가 모듈 켜기/끄기. Godot 은 Editor Settings(검색 · 섹션 트리 · "바뀐 것만 보기") · Shortcuts 탭 · Project Settings > Plugins.
 공통점: **(1) 설정 = 리플렉션 객체, 그리기는 인스펙터와 같은 위젯 (2) 섹션은 등록으로 늘어난다(확장 모듈도) (3) 사용자 파일에는 바뀐 것만.**
-
-### P3 단축키 편집기 — `Saved/Editor/Shortcuts.json` · 키 받기 · 충돌 ★
-
-**목적.** 커맨드 단축키는 표(`_s_arrCommandRow`)와 등록 줄(C3)에 박혀 있다. 사용자가 바꾸는 길이 없다(유니티 Shortcuts Manager · 언리얼 Keyboard Shortcuts).
-쓸 수 있는 키도 A–Z · F1–F12 · Space 뿐이라 `Ctrl+,` · `Delete` · 숫자 · 화살표를 못 건다.
-
-**바꿀 것.**
-1) 키 넓히기 — `EditorCommandRegistry.h` 의 `EditorCommandKey` 에 **Space 뒤에**(계약 주석대로): `Num0 … Num9, Delete, Insert, Home, End, PageUp, PageDown, Left, Right, Up, Down, Tab, Enter, Escape, Backspace, Minus, Equal, Comma, Period, Slash, Count`.
-   `EditorCommandRegistry.cpp` 의 이름 표에 같은 순서로 이름, `EditorCommandGUI.cpp` 의 `toImGuiKey` 는 A..Z · F1..F12 뺄셈 뒤 **새 키는 표**(`kArrExtraKey[]` = `{ EditorCommandKey::Num0, ImGuiKey_0 }, …`).
-   Space 뒤 static_assert 하나 더(`Num0 == 40`).
-2) 덮어쓰기 저장 — 새 `Common/Commands/EditorShortcutOverrides.h` · `.cpp`(ImGui 없음):
-```cpp
-namespace sw::editor
-{
-    /** @brief 커맨드 하나의 사용자 단축키입니다. */
-    struct EditorShortcutOverride
-    {
-        string                _commandId;
-        EditorCommandShortcut _shortcut;
-        EditorCommandShortcut _altShortcut;
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @class EditorShortcutOverrides
-     * @brief 사용자가 바꾼 단축키입니다(기본과 다른 커맨드만). `Saved/Editor/Shortcuts.json` — `{ "edit.undo": [ "Ctrl+Z", "" ] }`(첫 칸 주 조합, 둘째 칸 보조, "" 는 없음).
-     * @details 커맨드 등록부를 만든 뒤(표 + 등록 줄) 입힙니다. 없는 커맨드 id 는 경고 한 번(확장 모듈을 끈 경우) 하고 남겨 둔다 — 다시 켜면 돌아온다.
-     */
-    class SW_EDITOR_API EditorShortcutOverrides
-    {
-    public:
-        [[nodiscard]] bool loadFromFile( string_view filePath );
-        [[nodiscard]] bool saveToFile( string_view filePath ) const;
-        /** @brief 등록부의 커맨드에 덮어쓰기를 입힙니다. 입힌 수입니다. */
-        uint32 applyTo( EditorCommandRegistry& registry ) const;
-        /** @brief @p commandID 의 덮어쓰기를 둡니다. 기본(@p defaultShortcut · @p defaultAlt)과 같으면 지웁니다. */
-        void setOverride( string_view commandID, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut,
-                          const EditorCommandShortcut& defaultShortcut, const EditorCommandShortcut& defaultAlt );
-        void removeOverride( string_view commandID );
-        void clear() { _listOverride.clear(); }
-        const vector<EditorShortcutOverride>& getOverrides() const { return _listOverride; }
-
-        /** @brief "Ctrl+Shift+B" 를 읽습니다(formatShortcutLabel 의 짝). 빈 글은 None. 모르는 키 이름이면 false. */
-        [[nodiscard]] static bool parseShortcut( string_view text, EditorCommandShortcut& outShortcut );
-
-    private:
-        vector<EditorShortcutOverride> _listOverride;
-    };
-} // namespace sw::editor
-```
-`EditorCommandGUI::syncWithRegistry`(C3)가 등록부를 다시 만든 뒤 `applyTo` → `validate`. 기본값(표 · 등록 줄의 원래 조합)은 등록부가 `EditorCommandDesc::_defaultShortcut` · `_defaultAltShortcut` 두 칸으로 든다(덮어쓰기 전 값 — "Reset" 이 쓴다).
-3) 창 — `Panels/ShortcutsPanel.h` · `.cpp` `SW_EDITOR_PANEL( ShortcutsPanel, "shortcuts", EditorPanelCategory::Tool, 2010 );` 제목 `"Keyboard Shortcuts"`(환경설정 창의 왼쪽 목록 맨 아래에도 링크).
-   표: 커맨드(아이콘 · 라벨) · 묶음 · 단축키 · 보조 · 단추. "Set" 을 누르면 그 칸이 **다음 키 조합을 받는다**(수정자만 누른 동안은 기다림, Esc 는 취소, Backspace 는 지움 —
-   받는 동안은 전역 단축키 처리(`processHotkeys`)를 멈춘다: `EditorCommandGUI::setHotkeysSuspended( true )`). 받은 조합이 다른 커맨드와 같으면 **두 줄을 빨갛게** 하고
-   "Replace (clear <다른 커맨드>)" / "Cancel" 을 묻는다. 줄마다 기본과 다르면 "↺" 단추(Reset), 위에 "Reset All" · 검색(라벨 · id · 조합 글자 — `Ctrl+S` 로도 찾는다).
-   ImGuiKey → `EditorCommandKey` 는 `toImGuiKey` 의 역(표 하나를 양쪽이 쓴다).
-
-**시험 — `Test/EditorTest/Common/Commands/TestEditorShortcutOverrides.cpp`(새, `EditorShortcutOverridesTest`):**
-```cpp
-SW_TEST_CASE( EditorShortcutOverridesTest, ParseIsTheInverseOfTheLabel )
-{
-    sw::editor::EditorCommandShortcut shortcut{};
-    SW_ASSERT_TRUE( sw::editor::EditorShortcutOverrides::parseShortcut( "Ctrl+Shift+B", shortcut ) );
-    SW_EXPECT_TRUE( shortcut._key == sw::editor::EditorCommandKey::B );
-    SW_EXPECT_EQ( shortcut._modifier, static_cast<uint8>( sw::editor::commandmodifier::kCtrl | sw::editor::commandmodifier::kShift ) );
-    SW_EXPECT_TRUE( sw::editor::EditorShortcutOverrides::parseShortcut( "Ctrl+Comma", shortcut ) );   // 넓힌 키
-    SW_EXPECT_FALSE( sw::editor::EditorShortcutOverrides::parseShortcut( "Ctrl+Banana", shortcut ) );
-}
-
-SW_TEST_CASE( EditorShortcutOverridesTest, ApplyChangesOnlyOverriddenCommands )
-{
-    sw::editor::EditorCommandRegistry registry;
-    registry.registerCommand( makeCommand( "edit.undo", { sw::editor::EditorCommandKey::Z, sw::editor::commandmodifier::kCtrl } ) );
-    registry.registerCommand( makeCommand( "edit.redo", { sw::editor::EditorCommandKey::Y, sw::editor::commandmodifier::kCtrl } ) );
-    sw::editor::EditorShortcutOverrides overrides;
-    overrides.setOverride( "edit.undo", { sw::editor::EditorCommandKey::U, sw::editor::commandmodifier::kCtrl }, {},
-                           { sw::editor::EditorCommandKey::Z, sw::editor::commandmodifier::kCtrl }, {} );
-    SW_EXPECT_EQ( overrides.applyTo( registry ), 1u );
-    SW_EXPECT_TRUE( registry.find( "edit.undo" )->_shortcut._key == sw::editor::EditorCommandKey::U );
-    SW_EXPECT_TRUE( registry.find( "edit.redo" )->_shortcut._key == sw::editor::EditorCommandKey::Y );
-}
-
-SW_TEST_CASE( EditorShortcutOverridesTest, SettingTheDefaultRemovesTheOverride )
-{
-    sw::editor::EditorShortcutOverrides overrides;
-    const sw::editor::EditorCommandShortcut kDefault{ sw::editor::EditorCommandKey::Z, sw::editor::commandmodifier::kCtrl };
-    overrides.setOverride( "edit.undo", kDefault, {}, kDefault, {} );
-    SW_EXPECT_TRUE( overrides.getOverrides().empty() );
-}
-
-SW_TEST_CASE( EditorShortcutOverridesTest, ConflictIsReportedByValidateAfterApply )
-{
-    // 덮어쓰기로 redo 를 Ctrl+Z 로 → registry.validate 가 중복 조합을 적는다(창은 저장 전에 같은 판정으로 빨갛게 한다)
-}
-```
-(`makeCommand` 는 파일 위 익명 이름공간 도우미.) 자체 시험 `shortcuts.captureAssignsCombo`(2 차 단위 8 의 입력 창구 — "Set" 클릭 → `Ctrl+K` 입력 → 그 커맨드 조합이 바뀌고 저장 파일 없이 되돌림).
-
-**확인 = 에디터 시나리오.** `shortcuts.scenario.xml`: Keyboard Shortcuts 창을 열고 Undo 줄의 "Set" 단추(이름표 `shortcuts.set.edit.undo`)를 누른 뒤 `EditorKey key="U" mods="ctrl"` 을 보냅니다.
-이어서 오브젝트를 하나 만들고 `EditorKey key="U" mods="ctrl"` 로 되돌려지는지(탐침 `Editor.UndoIndex`), 충돌 조합(`Ctrl+Y`)을 받으면 탐침 `Editor.ShortcutConflictCount` 가 1 인지 봅니다.
-끝에 "Reset All" 을 눌러 원래대로 돌리고, 저장 경로는 임시 경로입니다.
-
-**남길 교훈.** `Source/Editor/README.md` 함정 · 계약 절의 에디터 커맨드 줄에 덧붙임: `사용자 조합은 Saved/Editor/Shortcuts.json(EditorShortcutOverrides — 기본과 다른 커맨드만)이 표 · 등록 줄 위에 입힌다. 키를 더하면 EditorCommandKey 의 Space 뒤 + toImGuiKey 표.`
-**커밋 메시지:**
-```
-에디터 - 단축키 편집기(Saved/Editor/Shortcuts.json · 키 받기 · 충돌 표시)와 키 넓히기
-
-문제점:
-- 커맨드 단축키는 표 · 등록 줄에 박혀 사용자가 바꿀 수 없었다. 쓸 수 있는 키가 A-Z · F1-F12 · Space 뿐이었다.
-
-해결방안:
-- EditorCommandKey 를 Space 뒤로 넓힌다(숫자 · 편집 · 화살표 · 구두점 25 개), toImGuiKey 는 새 키를 표로.
-- EditorShortcutOverrides(기본과 다른 커맨드만 · parseShortcut 은 라벨의 역) — 등록부를 만든 뒤 입히고 validate.
-  EditorCommandDesc 에 원래 조합(_defaultShortcut · _defaultAltShortcut).
-- Keyboard Shortcuts 창: 검색(조합 글자 포함) · Set(다음 조합을 받음, 받는 동안 전역 단축키 멈춤) · 충돌 두 줄 빨강 + 바꾸기/취소 · Reset · Reset All.
-
-결과:
-- EditorShortcutOverridesTest 넷, 자체 시험 shortcuts.captureAssignsCombo.
-
-Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
-```
-**적용 뒤 확인:** `EditorTest --test_filter=EditorShortcutOverridesTest.*:EditorCommandRegistryTest.*`, 자체 시험, 에디터에서 Undo 를 Ctrl+U 로 바꾸고 재시작 뒤 남는지.
 
 ### P4 모듈 창 — 켜고 끄기 · 의존 미리보기 · 구성/빌드
 

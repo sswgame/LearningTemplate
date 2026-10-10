@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/Commands/EditorScreenshotCommands.h"
+#include "Editor/Common/Commands/EditorShortcutOverrides.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -460,7 +461,78 @@ namespace sw::editor
                     return static_cast<ImGuiKey>( ImGuiKey_F1 + ( keyValue - static_cast<int32>( EditorCommandKey::F1 ) ) );
                 if ( key == EditorCommandKey::Space )
                     return ImGuiKey_Space;
+                for ( const ExtraKeyRow& row : kArrExtraKey )
+                {
+                    if ( row._key == key )
+                        return row._platformKey;
+                }
                 return ImGuiKey_None;
+            }
+
+            /** @brief Space 뒤에 더한 키 ↔ ImGuiKey 표입니다(`toImGuiKey` 와 `findPressedShortcut` 이 같이 쓴다). */
+            struct ExtraKeyRow
+            {
+                EditorCommandKey _key;
+                ImGuiKey         _platformKey;
+            };
+            static constexpr ExtraKeyRow kArrExtraKey[] = {
+                {     EditorCommandKey::Num0,          ImGuiKey_0},
+                {     EditorCommandKey::Num1,          ImGuiKey_1},
+                {     EditorCommandKey::Num2,          ImGuiKey_2},
+                {     EditorCommandKey::Num3,          ImGuiKey_3},
+                {     EditorCommandKey::Num4,          ImGuiKey_4},
+                {     EditorCommandKey::Num5,          ImGuiKey_5},
+                {     EditorCommandKey::Num6,          ImGuiKey_6},
+                {     EditorCommandKey::Num7,          ImGuiKey_7},
+                {     EditorCommandKey::Num8,          ImGuiKey_8},
+                {     EditorCommandKey::Num9,          ImGuiKey_9},
+                {   EditorCommandKey::Delete,     ImGuiKey_Delete},
+                {   EditorCommandKey::Insert,     ImGuiKey_Insert},
+                {     EditorCommandKey::Home,       ImGuiKey_Home},
+                {      EditorCommandKey::End,        ImGuiKey_End},
+                {   EditorCommandKey::PageUp,     ImGuiKey_PageUp},
+                { EditorCommandKey::PageDown,   ImGuiKey_PageDown},
+                {     EditorCommandKey::Left,  ImGuiKey_LeftArrow},
+                {    EditorCommandKey::Right, ImGuiKey_RightArrow},
+                {       EditorCommandKey::Up,    ImGuiKey_UpArrow},
+                {     EditorCommandKey::Down,  ImGuiKey_DownArrow},
+                {      EditorCommandKey::Tab,        ImGuiKey_Tab},
+                {    EditorCommandKey::Enter,      ImGuiKey_Enter},
+                {   EditorCommandKey::Escape,     ImGuiKey_Escape},
+                {EditorCommandKey::Backspace,  ImGuiKey_Backspace},
+                {    EditorCommandKey::Minus,      ImGuiKey_Minus},
+                {    EditorCommandKey::Equal,      ImGuiKey_Equal},
+                {    EditorCommandKey::Comma,      ImGuiKey_Comma},
+                {   EditorCommandKey::Period,     ImGuiKey_Period},
+                {    EditorCommandKey::Slash,      ImGuiKey_Slash},
+            };
+            static_assert( sizeof( kArrExtraKey ) / sizeof( kArrExtraKey[0] ) == static_cast<size_t>( EditorCommandKey::Count ) - static_cast<size_t>( EditorCommandKey::Num0 ),
+                           "Space 뒤의 키마다 ImGuiKey 표에 한 줄" );
+
+            /** @brief 지금 눌린 수정자(`commandmodifier` 비트)입니다. */
+            static uint8 getPressedModifier()
+            {
+                const ImGuiIO& io              = ImGui::GetIO();
+                uint8          pressedModifier = commandmodifier::kNone;
+                if ( io.KeyCtrl )
+                    pressedModifier |= commandmodifier::kCtrl;
+                if ( io.KeyShift )
+                    pressedModifier |= commandmodifier::kShift;
+                if ( io.KeyAlt )
+                    pressedModifier |= commandmodifier::kAlt;
+                return pressedModifier;
+            }
+
+            static bool& getHotkeysSuspended()
+            {
+                static bool s_bSuspended = false;
+                return s_bSuspended;
+            }
+
+            static EditorShortcutOverrides& getOverrides()
+            {
+                static EditorShortcutOverrides s_overrides;
+                return s_overrides;
             }
 
             /** @brief 이 조합이 이번 프레임에 정확히 눌렸으면 true입니다. 수정자 비교는 `EditorCommandRegistry::matchesPressedModifiers` 입니다. */
@@ -552,6 +624,37 @@ namespace sw::editor
         return EditorCommandGUIInternal::rebuild( pBegin, pEnd );
     }
 
+    void EditorCommandGUI::setHotkeysSuspended( bool bSuspended )
+    {
+        EditorCommandGUIInternal::getHotkeysSuspended() = bSuspended;
+    }
+
+    EditorShortcutOverrides& EditorCommandGUI::getShortcutOverrides()
+    {
+        return EditorCommandGUIInternal::getOverrides();
+    }
+
+    bool EditorCommandGUI::loadShortcutOverrides()
+    {
+        return getShortcutOverrides().loadFromFile( EditorShortcutOverrides::getDefaultFilePath() );
+    }
+
+    bool EditorCommandGUI::findPressedShortcut( EditorCommandShortcut& outShortcut )
+    {
+        const uint8 modifier = EditorCommandGUIInternal::getPressedModifier();
+        for ( uint8 keyValue = static_cast<uint8>( EditorCommandKey::A ); keyValue < static_cast<uint8>( EditorCommandKey::Count ); ++keyValue )
+        {
+            const EditorCommandKey key   = static_cast<EditorCommandKey>( keyValue );
+            const ImGuiKey         imKey = EditorCommandGUIInternal::toImGuiKey( key );
+            if ( imKey == ImGuiKey_None || ImGui::IsKeyPressed( imKey, false ) == false )
+                continue;
+            outShortcut._key      = key;
+            outShortcut._modifier = modifier;
+            return true;
+        }
+        return false;
+    }
+
     uint32 EditorCommandGUIInternal::rebuild( const void* pExcludeBegin, const void* pExcludeEnd )
     {
         EditorContext* pContext = EditorContext::get();
@@ -589,6 +692,8 @@ namespace sw::editor
         }
         // 확장 모듈 · 다른 파일의 등록 줄(SW_EDITOR_COMMAND) — 표와 같은 레지스트리에 합친다.
         const uint32 excludedCount = EditorCommandTableUtil::appendRegistrations( registry, pExcludeBegin, pExcludeEnd );
+        // 사용자가 바꾼 단축키(Saved/Editor/Shortcuts.json)를 입힌다 — 기본 조합은 각 커맨드의 _default* 에 남는다.
+        (void)getOverrides().applyTo( registry ); // 입힌 수는 쓰지 않는다 — 충돌은 아래 validate 가 알린다
 
         string report;
         if ( registry.validate( report ) == false )
@@ -605,7 +710,7 @@ namespace sw::editor
     void EditorCommandGUI::processHotkeys()
     {
         EditorContext* pContext = EditorContext::get();
-        if ( pContext == nullptr )
+        if ( pContext == nullptr || EditorCommandGUIInternal::getHotkeysSuspended() )
             return;
         if ( ImGui::GetIO().WantTextInput )
             return;

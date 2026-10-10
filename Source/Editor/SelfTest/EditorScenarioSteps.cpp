@@ -11,7 +11,9 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
+#include "Editor/Common/Commands/EditorShortcutOverrides.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -24,6 +26,7 @@
 #include "Editor/Panels/HierarchyPanel.h"
 #include "Editor/Panels/PreferencesPanel.h"
 #include "Editor/Panels/SceneViewPanel.h"
+#include "Editor/Panels/ShortcutsPanel.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorCamera.h"
@@ -802,6 +805,20 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 단축키 편집기가 지금 묻고 있는 충돌 수입니다. */
+            [[nodiscard]] static bool readShortcutConflictCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( ShortcutsPanel::getPendingConflictCount() );
+                return true;
+            }
+
+            /** @brief 사용자 단축키 덮어쓰기 수입니다(기본과 다른 커맨드). */
+            [[nodiscard]] static bool readShortcutOverrideCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                outValue = static_cast<float64>( EditorCommandGUI::getShortcutOverrides().getOverrides().size() );
+                return true;
+            }
+
             /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -911,6 +928,10 @@ namespace sw::editor
                          &EditorScenarioStepsInternal::readPreferencesVisibleSections );
     SW_AUTOMATION_PROBE( editorPreferencesSavedKeyCount, "Editor.PreferencesSavedKeyCount", "Keys saved in EditorPreferences.json (only values that differ from the defaults)",
                          &EditorScenarioStepsInternal::readPreferencesSavedKeyCount );
+    SW_AUTOMATION_PROBE( editorShortcutConflictCount, "Editor.ShortcutConflictCount", "Conflicts the Keyboard Shortcuts window is asking about",
+                         &EditorScenarioStepsInternal::readShortcutConflictCount );
+    SW_AUTOMATION_PROBE( editorShortcutOverrideCount, "Editor.ShortcutOverrideCount", "Commands whose shortcut the user changed",
+                         &EditorScenarioStepsInternal::readShortcutOverrideCount );
     SW_AUTOMATION_PROBE( editorPanelCount, "Editor.PanelCount", "Panels the panel manager holds (registered panels plus directly added ones)",
                          &EditorScenarioStepsInternal::readPanelCount );
     SW_AUTOMATION_PROBE( editorSceneViewMode, "Editor.SceneViewMode", "Scene view mode: 0 Lit, 1 Unlit, 2 Wireframe, 3 Normals, 4 Depth, 5 Overdraw",

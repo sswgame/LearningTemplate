@@ -324,6 +324,9 @@ namespace sw::editor
             _editorContext->setRendererBackend( _rendererBackend.get() );
 
             _editorContext->getPanelManager().registerDefaultPanels();
+            // 사용자 단축키(Saved/Editor/Shortcuts.json)는 레지스트리를 만들 때 입힌다 — 처음이면 파일이 없다.
+            if ( EditorCommandGUI::loadShortcutOverrides() == false )
+                SW_LOG_TRACE( "No shortcut overrides yet - default shortcuts" );
             EditorCommandGUI::registerDefaults();
             // 리로드 전에 기록한 오브젝트 편집도 되돌리면 이 모듈이 선택 · 씬 dirty 를 맞춘다.
             CommandStack* pCommandStack = editor::getService<CommandStack>();

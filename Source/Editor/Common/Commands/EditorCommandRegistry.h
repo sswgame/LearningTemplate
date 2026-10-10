@@ -63,6 +63,35 @@ namespace sw::editor
         F11,
         F12,
         Space,
+        Num0,
+        Num1,
+        Num2,
+        Num3,
+        Num4,
+        Num5,
+        Num6,
+        Num7,
+        Num8,
+        Num9,
+        Delete,
+        Insert,
+        Home,
+        End,
+        PageUp,
+        PageDown,
+        Left,
+        Right,
+        Up,
+        Down,
+        Tab,
+        Enter,
+        Escape,
+        Backspace,
+        Minus,
+        Equal,
+        Comma,
+        Period,
+        Slash,
         Count
     };
 
@@ -71,12 +100,13 @@ namespace sw::editor
     //   · `EditorCommandGUI.cpp` 의 `toImGuiKey`: A..Z 와 F1..F12 를 **뺄셈**으로 옮긴다.
     // 둘 다 가운데에 값을 하나 끼우면 **조용히 엉뚱한 키**가 된다(단축키가 다른 명령을 실행한다). 개수만 보는 static_assert
     // 로는 그 경우를 잡지 못하므로(이름을 하나 더하면 개수는 다시 맞는다) 자리를 직접 고정한다. 키를 더하려면 **Space 앞이
-    // 아니라 Space 뒤에** 붙이고 여기를 고칠 것.
+    // 아니라 Space 뒤에** 붙이고 여기를 고칠 것. Space 뒤의 키(Num0 …)는 `EditorCommandGUI.cpp` 의 표(`kArrExtraKey`)가 ImGuiKey 로 옮긴다.
     static_assert( static_cast<uint8>( EditorCommandKey::A ) == 1, "EditorCommandKey::A 의 자리가 바뀌었습니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::Z ) == 26, "EditorCommandKey 의 A..Z 가 연속이 아닙니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::F1 ) == 27, "EditorCommandKey::F1 의 자리가 바뀌었습니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::F12 ) == 38, "EditorCommandKey 의 F1..F12 가 연속이 아닙니다" );
     static_assert( static_cast<uint8>( EditorCommandKey::Space ) == 39, "EditorCommandKey::Space 의 자리가 바뀌었습니다" );
+    static_assert( static_cast<uint8>( EditorCommandKey::Num0 ) == 40, "EditorCommandKey::Num0 의 자리가 바뀌었습니다" );
 
     /** @brief 단축키 수정자 비트 */
     namespace commandmodifier
@@ -133,7 +163,9 @@ namespace sw::editor
         string                _tooltip;  ///< 메뉴 항목 툴팁 (한국어)
         string                _detail;   ///< 팔레트 오른쪽 설명 (영어)
         EditorCommandShortcut _shortcut;
-        EditorCommandShortcut _altShortcut; ///< 같은 커맨드의 두 번째 조합. 없으면 None
+        EditorCommandShortcut _altShortcut;        ///< 같은 커맨드의 두 번째 조합. 없으면 None
+        EditorCommandShortcut _defaultShortcut;    ///< 사용자 덮어쓰기 전의 조합(표 · 등록 줄) — Reset 이 쓴다. 등록할 때 채운다
+        EditorCommandShortcut _defaultAltShortcut; ///< 사용자 덮어쓰기 전의 보조 조합
         /**
          * @brief 메뉴 안의 순서입니다. 작을수록 위이고, 백의 자리(`commandmenu::kGroupSpan`)가 바뀌는 자리에 구분선이 들어갑니다.
          * @details 메뉴끼리의 순서(메뉴바의 왼쪽→오른쪽)도 이 값으로 정합니다 — 가장 작은 값이 더 작은 메뉴가 앞입니다.
@@ -216,6 +248,10 @@ namespace sw::editor
         static void formatMenuLabel( const EditorCommandDesc& desc, fixed_string<constant::kMaxBuffer128>& outLabel );
         /** @brief 키 하나의 표시 이름입니다. None 이면 빈 문자열입니다. */
         static const utf8* getKeyName( EditorCommandKey key );
+        /** @brief 표시 이름으로 키를 찾습니다(`getKeyName` 의 역, 대소문자 무시). 모르는 이름이면 false 입니다. */
+        [[nodiscard]] static bool findKeyByName( string_view name, EditorCommandKey& outKey );
+        /** @brief 단축키를 고칩니다(사용자 덮어쓰기). 그 id 가 없으면 false 입니다. 메뉴는 그대로입니다. */
+        [[nodiscard]] bool setShortcut( string_view commandID, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut );
         /** @brief 두 조합이 같은 키·같은 수정자이면 true입니다. */
         static bool isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs );
         /** @brief 우리가 실제로 처리하는 조합이면 true입니다 (키가 있고 DisplayOnly 가 아닙니다). */

@@ -71,9 +71,11 @@ namespace sw::editor
     void PreferencesPanel::drawContent()
     {
         using SettingsRegistry = EditorRegistry<EditorSettingsRegistration>;
-        _grid.drawSearchBar( "preferences.search" );
-        ImGui::SameLine();
+        // 체크를 먼저 둔다 — 검색 칸이 남은 폭을 다 쓰므로 뒤에 두면 창 밖으로 밀린다.
         ImGui::Checkbox( "Modified only", &_bModifiedOnly );
+        EditorSelfTestMarks::note( "preferences.modifiedOnly" );
+        ImGui::SameLine();
+        _grid.drawSearchBar( "preferences.search" );
 
         // 왼쪽: 검색어에 맞는 섹션 목록. 고른 섹션이 걸러지면 첫 섹션으로 옮긴다.
         const float32 listWidth = 180.0f * EditorThemeUtil::getDpiScale();

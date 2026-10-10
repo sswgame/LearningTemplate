@@ -526,6 +526,10 @@ Tab 자동완성(후보가 여럿이면 로그에 줄로 보인다), ↑↓ 기�
   칸이 빠지면 static_assert 가 막는다. 도구 문서 IO 는 `loadToolDocument` / `saveToolDocument<TAsset>` + `ToolDocumentDesc` 하나.
 - **에디터는 `-EnableEditor` 로 켜야 뜬다.** 에디터 스모크에는 `-gv_profileFrames` 를 꼭 붙인다(`-gv_editorPanelDump` 는 스스로 끝나지 않는다). 창 수가 모자라면 코드보다 로컬
   `Saved/Editor/` 의 `windows.ini` · `imgui.ini` 를 먼저 본다(추적하지 않는 파일 — 세션 간 픽셀 비교도 이것 때문에 안 된다). `-gv_editorOpenPanel=<id|all>`.
+- **사용자 단축키는 `Saved/Editor/Shortcuts.json`(`EditorShortcutOverrides` — 기본과 다른 커맨드만)이 표 · 등록 줄 위에 입힌다**(`EditorCommandGUI::rebuild` 가
+  등록 줄 뒤 · validate 앞에서). 원래 조합은 `EditorCommandDesc::_defaultShortcut` 에 남는다. 창은 Keyboard Shortcuts(`ShortcutsPanel` — Set 은 다음 조합을 받고
+  받는 동안 전역 단축키를 멈춘다). 키를 더하려면 `EditorCommandKey` 의 Space 뒤 + 이름 표 + `EditorCommandGUI.cpp` 의 `kArrExtraKey`. 시나리오 `editor/shortcuts`.
+- **검색 칸 뒤에 단추를 같은 줄로 두지 않는다.** `drawSearchField` 는 폭 0 이면 남은 폭을 다 써서 뒤의 단추가 창 밖으로 밀린다 — 단추를 앞에 둔다.
 - **에디터 커맨드 정본은 `Common/GUI/EditorCommandGUI.cpp` 의 표 하나**(메뉴 · 단축키 · 팔레트, `EditorCommandRegistry::validate` 가 중복 조합을 잡는다). 한 줄짜리 래퍼는 이유가 있어
   남았다(파일 머리) — "마저 정리" 하지 말 것. 확장자 정본은 `EditorAssetTypeRegistry`(`kArrAssetMatch` 한 줄), 핫 리로드 경로도 같은 줄의 칸(`_pCacheKindName` · `_pfnImportSource`)이다. 복합 접미사
   `.prefab.xml` 은 접미사 비교로(`hasExtension` 은 마지막 점 뒤만 본다).

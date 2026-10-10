@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Module/ModuleUnloadListener.h"
 
 namespace sw::editor
@@ -25,7 +26,8 @@ namespace sw::editor
                 "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
                 "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
                 "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
-                "Space" };
+                "Space",
+                "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Delete", "Insert", "Home", "End", "PageUp", "PageDown", "Left", "Right", "Up", "Down", "Tab", "Enter", "Escape", "Backspace", "Minus", "Equal", "Comma", "Period", "Slash" };
 
             static_assert( sizeof( _s_arrKeyName ) / sizeof( _s_arrKeyName[0] ) == static_cast<size_t>( EditorCommandKey::Count ),
                            "EditorCommandKey 와 표시 이름 표의 개수가 다릅니다" );
@@ -128,8 +130,23 @@ namespace sw::editor
             return;
         }
 
+        desc._defaultShortcut    = desc._shortcut;
+        desc._defaultAltShortcut = desc._altShortcut;
         _listCommand.push_back( std::move( desc ) );
         rebuildMenus();
+    }
+
+    bool EditorCommandRegistry::setShortcut( string_view commandID, const EditorCommandShortcut& shortcut, const EditorCommandShortcut& altShortcut )
+    {
+        for ( EditorCommandDesc& desc : _listCommand )
+        {
+            if ( desc._id != commandID )
+                continue;
+            desc._shortcut    = shortcut;
+            desc._altShortcut = altShortcut;
+            return true;
+        }
+        return false;
     }
 
     const EditorMenu* EditorCommandRegistry::findMenu( string_view menuPath ) const
@@ -321,6 +338,19 @@ namespace sw::editor
         if ( static_cast<size_t>( EditorCommandKey::Count ) <= keyIndex )
             return "";
         return EditorCommandRegistryInternal::_s_arrKeyName[keyIndex];
+    }
+
+    bool EditorCommandRegistry::findKeyByName( string_view name, EditorCommandKey& outKey )
+    {
+        for ( size_t keyIndex = 1; keyIndex < static_cast<size_t>( EditorCommandKey::Count ); ++keyIndex )
+        {
+            if ( StringUtil::equals( name, EditorCommandRegistryInternal::_s_arrKeyName[keyIndex], true ) )
+            {
+                outKey = static_cast<EditorCommandKey>( keyIndex );
+                return true;
+            }
+        }
+        return false;
     }
 
     bool EditorCommandRegistry::isSameShortcut( const EditorCommandShortcut& lhs, const EditorCommandShortcut& rhs )
