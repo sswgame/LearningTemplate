@@ -2,6 +2,7 @@
 
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 
@@ -11,6 +12,11 @@ namespace sw::editor
 {
     namespace
     {
+        struct AudioAssetTypeActionsInternal
+        {
+            static constexpr Color kWaveform{ Color::fromBytes( 80, 210, 220, 240 ) };
+        };
+
         /** @brief 오디오 — 이퀄라이저 막대 썸네일. */
         class AudioAssetTypeActions final : public IEditorAssetTypeActions
         {
@@ -34,7 +40,7 @@ namespace sw::editor
                     const float32 barX      = startX + static_cast<float32>( barIndex ) * ( kBarWidth + kBarGap );
                     const float32 barHeight = height * 0.45f * arrBarHeight[barIndex];
                     pDrawList->AddRectFilled( ImVec2( barX, centerY - barHeight * 0.5f ), ImVec2( barX + kBarWidth, centerY + barHeight * 0.5f ),
-                                              IM_COL32( 80, 210, 220, 240 ), 1.0f );
+                                              EditorColorUtil::toImU32( AudioAssetTypeActionsInternal::kWaveform ), 1.0f );
                 }
                 return true;
             }

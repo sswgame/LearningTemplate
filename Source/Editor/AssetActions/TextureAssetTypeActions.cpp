@@ -4,6 +4,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 
@@ -13,6 +14,15 @@ namespace sw::editor
 {
     namespace
     {
+        struct TextureAssetTypeActionsInternal
+        {
+            static constexpr Color kCheckerDark{ Color::fromBytes( 38, 40, 46, 255 ) };
+            static constexpr Color kCheckerLight{ Color::fromBytes( 58, 62, 70, 255 ) };
+            static constexpr Color kFrame{ Color::fromBytes( 255, 255, 255, 200 ) };
+            static constexpr Color kSun{ Color::fromBytes( 240, 200, 80, 230 ) };
+            static constexpr Color kHill{ Color::fromBytes( 70, 180, 120, 230 ) };
+        };
+
         /** @brief 텍스처 — 썸네일은 그 텍스처 자체이고, 읽기 전에는 체크무늬 위 액자다. 뷰포트에 끌어 놓으면 그 텍스처의 스프라이트를 만든다. */
         class TextureAssetTypeActions final : public IEditorAssetTypeActions
         {
@@ -48,15 +58,15 @@ namespace sw::editor
 
                         const bool bDark = ( ( indexX + indexY ) % 2 ) == 0;
                         pDrawList->AddRectFilled( ImVec2( x, y ), ImVec2( x + kCheckerSize, y + kCheckerSize ),
-                                                  bDark ? IM_COL32( 38, 40, 46, 255 ) : IM_COL32( 58, 62, 70, 255 ) );
+                                                  bDark ? EditorColorUtil::toImU32( TextureAssetTypeActionsInternal::kCheckerDark ) : EditorColorUtil::toImU32( TextureAssetTypeActionsInternal::kCheckerLight ) );
                     }
                 }
                 // 액자 테두리 · 해 · 산
                 pDrawList->AddRect( ImVec2( minPos._x + width * 0.16f, minPos._y + height * 0.16f ), ImVec2( minPos._x + width * 0.84f, minPos._y + height * 0.84f ),
-                                    IM_COL32( 255, 255, 255, 200 ), 2.0f );
-                pDrawList->AddCircleFilled( ImVec2( centerX + width * 0.15f, centerY - height * 0.12f ), width * 0.08f, IM_COL32( 240, 200, 80, 230 ) );
+                                    EditorColorUtil::toImU32( TextureAssetTypeActionsInternal::kFrame ), 2.0f );
+                pDrawList->AddCircleFilled( ImVec2( centerX + width * 0.15f, centerY - height * 0.12f ), width * 0.08f, EditorColorUtil::toImU32( TextureAssetTypeActionsInternal::kSun ) );
                 ImVec2 arrTriangle[3] = { ImVec2( centerX - width * 0.22f, centerY + height * 0.22f ), ImVec2( centerX, centerY - height * 0.05f ), ImVec2( centerX + width * 0.22f, centerY + height * 0.22f ) };
-                pDrawList->AddConvexPolyFilled( arrTriangle, 3, IM_COL32( 70, 180, 120, 230 ) );
+                pDrawList->AddConvexPolyFilled( arrTriangle, 3, EditorColorUtil::toImU32( TextureAssetTypeActionsInternal::kHill ) );
                 return true;
             }
 

@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -238,22 +239,23 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasCellTip" ) );
 
         // 칸 격자와 고른 프레임 사각형을 그림 위에 그린다.
-        ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+        static constexpr Color kSliceGrid{ Color::fromBytes( 255, 255, 255, 90 ) };
+        ImDrawList*            pDrawList = ImGui::GetWindowDrawList();
         for ( int32 column = 1; column < _sliceColumns; ++column )
         {
             const float32 x = imageMin.x + side * static_cast<float32>( column ) / static_cast<float32>( _sliceColumns );
-            pDrawList->AddLine( ImVec2( x, imageMin.y ), ImVec2( x, imageMin.y + side ), IM_COL32( 255, 255, 255, 90 ) );
+            pDrawList->AddLine( ImVec2( x, imageMin.y ), ImVec2( x, imageMin.y + side ), EditorColorUtil::toImU32( kSliceGrid ) );
         }
         for ( int32 row = 1; row < _sliceRows; ++row )
         {
             const float32 y = imageMin.y + side * static_cast<float32>( row ) / static_cast<float32>( _sliceRows );
-            pDrawList->AddLine( ImVec2( imageMin.x, y ), ImVec2( imageMin.x + side, y ), IM_COL32( 255, 255, 255, 90 ) );
+            pDrawList->AddLine( ImVec2( imageMin.x, y ), ImVec2( imageMin.x + side, y ), EditorColorUtil::toImU32( kSliceGrid ) );
         }
         if ( 0 <= _selectedFrame && _selectedFrame < static_cast<int32>( _listFrame.size() ) )
         {
             const float4& uvRect = _listFrame[static_cast<size_t>( _selectedFrame )]._uvRect;
             pDrawList->AddRect( ImVec2( imageMin.x + uvRect._x * side, imageMin.y + uvRect._y * side ),
-                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), IM_COL32( 255, 200, 60, 255 ),
+                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( style::kHighlight ),
                                 0.0f, 0, 2.0f );
         }
 

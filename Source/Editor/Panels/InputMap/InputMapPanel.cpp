@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -37,6 +38,14 @@ namespace sw::editor
         /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
         struct InputMapPanelInternal
         {
+            static constexpr Color kStickBg{ Color::fromBytes( 30, 30, 30, 255 ) };
+            static constexpr Color kStickRing{ Color::fromBytes( 100, 100, 100, 255 ) };
+            static constexpr Color kStickDeadzone{ Color::fromBytes( 80, 40, 40, 255 ) };
+            static constexpr Color kStickDot{ Color::fromBytes( 50, 200, 50, 255 ) };
+
+            /** @brief 마우스 단추 상태 글자 색(눌림 · 뗌)입니다. */
+            static constexpr Color kButtonDownText{ 0.2f, 1.0f, 0.2f, 1.0f };
+            static constexpr Color kButtonUpText{ 0.4f, 0.4f, 0.4f, 1.0f };
             /** @brief 표의 열 하나입니다. 폭이 0 이면 남는 폭을 나눠 가집니다(Stretch). */
             struct TableColumn
             {
@@ -785,11 +794,11 @@ namespace sw::editor
             ImGui::SameLine( 200.0f );
             ImGui::Text( "Buttons:" );
             ImGui::SameLine();
-            ImGui::TextColored( pInput->isMouseButtonDown( MouseButton::Left ) ? ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ) : ImVec4( 0.4f, 0.4f, 0.4f, 1.0f ), "[L]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Left ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[L]" );
             ImGui::SameLine();
-            ImGui::TextColored( pInput->isMouseButtonDown( MouseButton::Right ) ? ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ) : ImVec4( 0.4f, 0.4f, 0.4f, 1.0f ), "[R]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Right ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[R]" );
             ImGui::SameLine();
-            ImGui::TextColored( pInput->isMouseButtonDown( MouseButton::Middle ) ? ImVec4( 0.2f, 1.0f, 0.2f, 1.0f ) : ImVec4( 0.4f, 0.4f, 0.4f, 1.0f ), "[M]" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( pInput->isMouseButtonDown( MouseButton::Middle ) ? InputMapPanelInternal::kButtonDownText : InputMapPanelInternal::kButtonUpText ), "[M]" );
         }
     }
 
@@ -862,12 +871,12 @@ namespace sw::editor
         const ImVec2  center = ImVec2( pos.x + radius, pos.y + radius );
 
         ImDrawList* pDraw = ImGui::GetWindowDrawList();
-        pDraw->AddCircleFilled( center, radius, IM_COL32( 30, 30, 30, 255 ) );
-        pDraw->AddCircle( center, radius, IM_COL32( 100, 100, 100, 255 ) );
-        pDraw->AddCircle( center, radius * deadzone, IM_COL32( 80, 40, 40, 255 ) );
+        pDraw->AddCircleFilled( center, radius, EditorColorUtil::toImU32( InputMapPanelInternal::kStickBg ) );
+        pDraw->AddCircle( center, radius, EditorColorUtil::toImU32( InputMapPanelInternal::kStickRing ) );
+        pDraw->AddCircle( center, radius * deadzone, EditorColorUtil::toImU32( InputMapPanelInternal::kStickDeadzone ) );
 
         const ImVec2 dotPos = ImVec2( center.x + stickX * radius, center.y - stickY * radius );
-        pDraw->AddCircleFilled( dotPos, 6.0f * EditorThemeUtil::getDpiScale(), IM_COL32( 50, 200, 50, 255 ) );
+        pDraw->AddCircleFilled( dotPos, 6.0f * EditorThemeUtil::getDpiScale(), EditorColorUtil::toImU32( InputMapPanelInternal::kStickDot ) );
 
         ImGui::Dummy( ImVec2( radius * 2.0f, radius * 2.0f ) );
         ImGui::Text( "X: %+.2f  Y: %+.2f", static_cast<float64>( stickX ), static_cast<float64>( stickY ) );

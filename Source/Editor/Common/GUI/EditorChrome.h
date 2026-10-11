@@ -7,6 +7,7 @@
 #include "Core/Common/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorColor.h"
 #include "Editor/Common/EditorExports.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -136,8 +137,8 @@ namespace sw::editor
         float32     _viewportYFrac{ 0.28f };
         float32     _rounding{ 8.0f };
         float32     _borderSize{ 1.5f };
-        float4      _bgColor{ 0.12f, 0.12f, 0.14f, 0.96f };
-        float4      _borderColor{ 0.25f, 0.45f, 0.75f, 1.0f };
+        Color       _bgColor{ style::kOverlayBg.withAlpha( 0.96f ) };
+        Color       _borderColor{ 0.25f, 0.45f, 0.75f, 1.0f };
         bool*       _pFocusOnOpen{ nullptr };
     };
 } // namespace sw::editor

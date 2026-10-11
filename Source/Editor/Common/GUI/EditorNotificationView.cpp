@@ -5,6 +5,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
@@ -40,34 +41,34 @@ namespace sw::editor
             if ( remainingTime < 0.5f )
                 alpha = remainingTime / 0.5f;
 
-            ImVec4 bgColor{ 0.12f, 0.12f, 0.14f, 0.92f * alpha };
-            ImVec4 borderColor{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
-            ImVec4 titleColor{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
+            const Color bgColor = style::kOverlayBg.withAlpha( 0.92f * alpha );
+            Color       borderColor{ 0.3f, 0.3f, 0.3f, 0.8f * alpha };
+            Color       titleColor{ 1.0f, 1.0f, 1.0f, 1.0f * alpha };
 
             switch ( item._type )
             {
                 case NotificationType::Success:
                 {
-                    borderColor = ImVec4{ 0.2f, 0.7f, 0.3f, alpha };
-                    titleColor  = ImVec4{ 0.4f, 0.9f, 0.5f, alpha };
+                    borderColor = Color{ 0.2f, 0.7f, 0.3f, alpha };
+                    titleColor  = Color{ 0.4f, 0.9f, 0.5f, alpha };
                     break;
                 }
                 case NotificationType::Warning:
                 {
-                    borderColor = ImVec4{ 0.9f, 0.6f, 0.1f, alpha };
-                    titleColor  = ImVec4{ 1.0f, 0.8f, 0.3f, alpha };
+                    borderColor = Color{ 0.9f, 0.6f, 0.1f, alpha };
+                    titleColor  = Color{ 1.0f, 0.8f, 0.3f, alpha };
                     break;
                 }
                 case NotificationType::Error:
                 {
-                    borderColor = ImVec4{ 0.9f, 0.2f, 0.2f, alpha };
-                    titleColor  = ImVec4{ 1.0f, 0.4f, 0.4f, alpha };
+                    borderColor = Color{ 0.9f, 0.2f, 0.2f, alpha };
+                    titleColor  = Color{ 1.0f, 0.4f, 0.4f, alpha };
                     break;
                 }
                 case NotificationType::Info:
                 {
-                    borderColor = ImVec4{ 0.2f, 0.5f, 0.9f, alpha };
-                    titleColor  = ImVec4{ 0.4f, 0.7f, 1.0f, alpha };
+                    borderColor = Color{ 0.2f, 0.5f, 0.9f, alpha };
+                    titleColor  = Color{ 0.4f, 0.7f, 1.0f, alpha };
                     break;
                 }
             }
@@ -84,23 +85,23 @@ namespace sw::editor
             toastDesc._size       = float2{ toastWidth, 0.0f };
             toastDesc._rounding   = 6.0f;
             toastDesc._borderSize = 1.5f;
-            toastDesc._bgAlpha    = bgColor.w;
+            toastDesc._bgAlpha    = bgColor._a;
             toastDesc._flags      = editor::EditorOverlayFlags::NoDecoration | editor::EditorOverlayFlags::NoInputs |
                                editor::EditorOverlayFlags::NoNav | editor::EditorOverlayFlags::AutoResize |
                                editor::EditorOverlayFlags::NoSavedSettings | editor::EditorOverlayFlags::NoFocusOnAppearing;
 
-            ImGui::PushStyleColor( ImGuiCol_WindowBg, bgColor );
-            ImGui::PushStyleColor( ImGuiCol_Border, borderColor );
+            ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( bgColor ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( borderColor ) );
 
             if ( EditorChrome::beginOverlay( toastDesc ) )
             {
-                ImGui::PushStyleColor( ImGuiCol_Text, titleColor );
+                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( titleColor ) );
                 ImGui::TextUnformatted( item._title.c_str() );
                 ImGui::PopStyleColor();
 
                 if ( item._message.empty() == false )
                 {
-                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.85f, 0.85f, 0.85f, alpha } );
+                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( Color{ 0.85f, 0.85f, 0.85f, alpha } ) );
                     ImGui::TextWrapped( "%s", item._message.c_str() );
                     ImGui::PopStyleColor();
                 }

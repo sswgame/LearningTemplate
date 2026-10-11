@@ -60,25 +60,25 @@ namespace sw::editor
         static void drawThemeSettingsDialog( bool* pOpen );
 
         /** @brief 액센트 색을 바꾸고 테마를 다시 적용합니다. */
-        static void setAccentColor( const Color4& accentColor );
+        static void setAccentColor( const Color& accentColor );
 
         // ----------------------------------------------------------------------
-        // 1) 테마 색상 접근자 (Color4)
+        // 1) 테마 색상 접근자 (Color)
         // ----------------------------------------------------------------------
-        static const Color4& getAccentColor();
+        static const Color& getAccentColor();
         /** @brief 씬 뷰 호버 강조 색입니다(강조색을 밝게 · 반투명 — 선택 주황보다 약하게, 테마를 따른다). */
-        static Color4        getViewportHoverColor();
-        static const Color4& getWindowBgColor();
-        static const Color4& getPanelBgColor();
-        static const Color4& getHeaderBgColor();
-        static const Color4& getFrameBgColor();
-        static const Color4& getBorderColor();
+        static Color        getViewportHoverColor();
+        static const Color& getWindowBgColor();
+        static const Color& getPanelBgColor();
+        static const Color& getHeaderBgColor();
+        static const Color& getFrameBgColor();
+        static const Color& getBorderColor();
 
-        static const Color4& getSuccessColor();
-        static const Color4& getWarningColor();
-        static const Color4& getErrorColor();
-        static const Color4& getInfoColor();
-        static const Color4& getTextMutedColor();
+        static const Color& getSuccessColor();
+        static const Color& getWarningColor();
+        static const Color& getErrorColor();
+        static const Color& getInfoColor();
+        static const Color& getTextMutedColor();
 
         // ----------------------------------------------------------------------
         // 2) UI 텍스트 & 스타일 헬퍼
@@ -95,7 +95,7 @@ namespace sw::editor
          * @details `textSuccess` 류는 서식이 없는 문자열만 받습니다. `"Frame #%u"` 처럼 서식이 필요한 곳은 이 짝으로 감싸고
          *          평소처럼 `ImGui::Text` 를 부릅니다. 색을 고르는 곳은 여전히 테마 하나입니다.
          */
-        static void pushTextColor( const Color4& color );
+        static void pushTextColor( const Color& color );
         /** @brief pushTextColor() 와 짝을 이룹니다. */
         static void popTextColor();
 
@@ -109,7 +109,7 @@ namespace sw::editor
         // 3) 리소스 & 애셋 아이콘 및 테마 색상 헬퍼
         // ----------------------------------------------------------------------
         /** @brief 폴더용 테마 색을 반환합니다. */
-        static Color4 getFolderColor();
+        static Color getFolderColor();
 
         /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(editoricon::kFolderOpen / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
@@ -117,13 +117,13 @@ namespace sw::editor
         /** @brief 종류의 에디터 아이콘입니다(애셋 종류 표). `Unknown` 이면 일반 파일 아이콘입니다. */
         static const utf8* getAssetTypeIcon( EditorAssetType kind );
         /** @brief 종류의 색입니다(애셋 종류 표, 액센트 종류는 테마 액센트). `Unknown` 이면 흐린 글자색입니다. */
-        static Color4 getAssetTypeColor( EditorAssetType kind );
+        static Color getAssetTypeColor( EditorAssetType kind );
 
         /** @brief 경로(확장자)에 맞는 애셋 아이콘을 반환합니다. */
         static const utf8* getAssetIconForPath( string_view path, bool bIsDirectory = false );
 
         /** @brief 경로(확장자)에 맞는 테마 색을 반환합니다. */
-        static Color4 getAssetColorForPath( string_view path, bool bIsDirectory = false );
+        static Color getAssetColorForPath( string_view path, bool bIsDirectory = false );
 
         /**
          * @brief "아이콘 + 공백 두 칸 + 라벨" 문자열을 만듭니다. ImGui 라벨 앞에 아이콘을 붙일 때 씁니다.
@@ -136,6 +136,6 @@ namespace sw::editor
          * @brief 아이콘 글리프 하나를 사각형 가운데에 그립니다. 글리프 높이는 사각형 짧은 변의 @p sizeRatio 배입니다.
          * @details 콘텐츠 브라우저의 종류 아이콘 썸네일이 쓴다. 글리프 폭과 높이는 그 글꼴 크기로 잰다(가운데가 글자 기준선이 아니라 글리프 상자다).
          */
-        static void drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color4& color, float32 sizeRatio );
+        static void drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color& color, float32 sizeRatio );
     };
 } // namespace sw::editor

@@ -6,6 +6,7 @@
 
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -110,7 +111,7 @@ namespace sw::editor
                 vector<GameObject*> listSelected;
                 pContext->getEditorSelection().getSelectedObjects( listSelected );
                 // 주황(유니티 선택 외곽선 색) — 테마 강조색은 파랑 계열이라 격자 · 카메라 프러스텀과 섞인다.
-                const ImU32 color = ImGui::ColorConvertFloat4ToU32( ImVec4{ 1.0f, 0.62f, 0.15f, 0.95f } );
+                const ImU32 color = EditorColorUtil::toImU32( style::kSelectionOutline );
                 for ( const GameObject* pObject : listSelected )
                 {
                     AABB box{};
@@ -133,8 +134,7 @@ namespace sw::editor
                 AABB                     box{};
                 if ( pHovered == nullptr || computeObjectBox( *pHovered, box ) == false )
                     return;
-                const Color4& hover = EditorThemeUtil::getViewportHoverColor();
-                drawBox( args, box, ImGui::ColorConvertFloat4ToU32( ImVec4{ hover._r, hover._g, hover._b, hover._a } ), 1.0f );
+                drawBox( args, box, EditorColorUtil::toImU32( EditorThemeUtil::getViewportHoverColor() ), 1.0f );
             }
         };
     } // namespace

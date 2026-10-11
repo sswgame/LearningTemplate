@@ -17,6 +17,7 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -55,10 +56,21 @@ namespace sw::editor
     {
         struct EditorViewportClientInternal
         {
+            static constexpr Color kCubeBackground{ Color::fromBytes( 18, 22, 30, 200 ) };
+            static constexpr Color kCubeRing{ Color::fromBytes( 55, 65, 85, 180 ) };
+            static constexpr Color kAxisNegativeX{ Color::fromBytes( 130, 60, 60, 200 ) };
+            static constexpr Color kAxisNegativeY{ Color::fromBytes( 50, 130, 70, 200 ) };
+            static constexpr Color kAxisNegativeZ{ Color::fromBytes( 50, 70, 140, 200 ) };
+            static constexpr Color kCubeHandleHovered{ Color::fromBytes( 255, 255, 255, 255 ) };
+            static constexpr Color kCubeLabel{ Color::fromBytes( 15, 15, 20, 255 ) };
+            static constexpr Color kRulerLine{ Color::fromBytes( 255, 215, 40, 240 ) };
+            static constexpr Color kRulerAccent{ Color::fromBytes( 255, 230, 80, 255 ) };
+            static constexpr Color kRulerLabelBg{ Color::fromBytes( 20, 24, 32, 220 ) };
+
             // 축 색의 정본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
-            static constexpr ImU32 _s_kColorAxisX = IM_COL32( 235, 65, 65, 255 );
-            static constexpr ImU32 _s_kColorAxisY = IM_COL32( 65, 220, 95, 255 );
-            static constexpr ImU32 _s_kColorAxisZ = IM_COL32( 65, 130, 245, 255 );
+            static constexpr Color kAxisX{ Color::fromBytes( 235, 65, 65 ) };
+            static constexpr Color kAxisY{ Color::fromBytes( 65, 220, 95 ) };
+            static constexpr Color kAxisZ{ Color::fromBytes( 65, 130, 245 ) };
 
             /**
              * @brief 엔진 행렬을 ImGuizmo 배열(float[16])로 옮깁니다. **그대로 복사한다.**
@@ -875,8 +887,8 @@ namespace sw::editor
 
         // 원형 배경
         pDrawList->AddCircleFilled( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f,
-                                    IM_COL32( 18, 22, 30, 200 ) );
-        pDrawList->AddCircle( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f, IM_COL32( 55, 65, 85, 180 ), 0,
+                                    EditorColorUtil::toImU32( EditorViewportClientInternal::kCubeBackground ) );
+        pDrawList->AddCircle( ImVec2( cubeCenterX, cubeCenterY ), cubeRadius + 6.0f, EditorColorUtil::toImU32( EditorViewportClientInternal::kCubeRing ), 0,
                               1.5f );
 
         const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
@@ -899,18 +911,18 @@ namespace sw::editor
         };
 
         AxisItem arrAxis[6] = {
-            { float3{ 1.0f, 0.0f, 0.0f }, EditorViewportClientInternal::_s_kColorAxisX, "X", 0.0f, float2{},
-             float3{ 0.0f, -90.0f, 0.0f } },
-            { float3{ -1.0f, 0.0f, 0.0f }, IM_COL32( 130, 60, 60, 200 ), "-X", 0.0f, float2{},
+            { float3{ 1.0f, 0.0f, 0.0f },         EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisX ),  "X", 0.0f, float2{},
+             float3{ 0.0f, -90.0f, 0.0f }},
+            {float3{ -1.0f, 0.0f, 0.0f }, EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisNegativeX ), "-X", 0.0f, float2{},
              float3{ 0.0f, 90.0f, 0.0f } },
-            { float3{ 0.0f, 1.0f, 0.0f }, EditorViewportClientInternal::_s_kColorAxisY, "Y", 0.0f, float2{},
+            { float3{ 0.0f, 1.0f, 0.0f },         EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisY ),  "Y", 0.0f, float2{},
              float3{ 89.0f, 0.0f, 0.0f } },
-            { float3{ 0.0f, -1.0f, 0.0f }, IM_COL32( 50, 130, 70, 200 ), "-Y", 0.0f, float2{},
-             float3{ -89.0f, 0.0f, 0.0f } },
-            { float3{ 0.0f, 0.0f, 1.0f }, EditorViewportClientInternal::_s_kColorAxisZ, "Z", 0.0f, float2{},
-             float3{ 0.0f, 180.0f, 0.0f } },
-            { float3{ 0.0f, 0.0f, -1.0f }, IM_COL32( 50, 70, 140, 200 ), "-Z", 0.0f, float2{},
-             float3{ 0.0f, 0.0f, 0.0f } }
+            {float3{ 0.0f, -1.0f, 0.0f }, EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisNegativeY ), "-Y", 0.0f, float2{},
+             float3{ -89.0f, 0.0f, 0.0f }},
+            { float3{ 0.0f, 0.0f, 1.0f },         EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisZ ),  "Z", 0.0f, float2{},
+             float3{ 0.0f, 180.0f, 0.0f }},
+            {float3{ 0.0f, 0.0f, -1.0f }, EditorColorUtil::toImU32( EditorViewportClientInternal::kAxisNegativeZ ), "-Z", 0.0f, float2{},
+             float3{ 0.0f, 0.0f, 0.0f }  }
         };
 
         for ( uint32 axisIndex = 0; axisIndex < 6; ++axisIndex )
@@ -944,10 +956,10 @@ namespace sw::editor
             const float32 distToMouse  = float2::getDistance( float2{ mousePos.x, mousePos.y }, float2{ pt.x, pt.y } );
             const bool    bHovered     = ( distToMouse <= handleRadius + 2.0f );
 
-            pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? IM_COL32( 255, 255, 255, 255 ) : ax._color );
+            pDrawList->AddCircleFilled( pt, handleRadius, bHovered ? EditorColorUtil::toImU32( EditorViewportClientInternal::kCubeHandleHovered ) : ax._color );
 
             if ( ax._depth > -0.2f && ax._pLabel[0] != '-' )
-                pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), IM_COL32( 15, 15, 20, 255 ), ax._pLabel );
+                pDrawList->AddText( ImVec2( pt.x - 3.5f, pt.y - 6.0f ), EditorColorUtil::toImU32( EditorViewportClientInternal::kCubeLabel ), ax._pLabel );
 
             if ( bHovered && ImGui::IsMouseClicked( 0 ) )
             {
@@ -1006,8 +1018,8 @@ namespace sw::editor
             const float32 across    = bAlongV ? centerV : centerU;
             const int64   firstIdx  = static_cast<int64>( MathUtil::ceil( ( center - radius ) / level._step ) );
             const int64   lastIdx   = static_cast<int64>( MathUtil::floor( ( center + radius ) / level._step ) );
-            const ImU32   axisColor = bAlongV ? ( b2D ? EditorViewportClientInternal::_s_kColorAxisY : EditorViewportClientInternal::_s_kColorAxisZ )
-                                              : EditorViewportClientInternal::_s_kColorAxisX;
+            const Color   axisColor = bAlongV ? ( b2D ? EditorViewportClientInternal::kAxisY : EditorViewportClientInternal::kAxisZ )
+                                              : EditorViewportClientInternal::kAxisX;
 
             for ( int64 worldIndex = firstIdx; worldIndex <= lastIdx; ++worldIndex )
             {
@@ -1052,8 +1064,7 @@ namespace sw::editor
                     ImU32 color = 0;
                     if ( bOrigin )
                     {
-                        const uint32 axisAlpha = static_cast<uint32>( static_cast<float32>( ( axisColor >> IM_COL32_A_SHIFT ) & 0xFFu ) * alpha + 0.5f );
-                        color                  = ( axisColor & ~IM_COL32_A_MASK ) | ( axisAlpha << IM_COL32_A_SHIFT );
+                        color = EditorColorUtil::toImU32( axisColor.scaleAlpha( alpha ) );
                     }
                     else
                     {
@@ -1114,9 +1125,9 @@ namespace sw::editor
                  EditorViewportProjectionUtil::projectPoint( viewProj, _rulerEndWorld, canvasPos, canvasSize, sEnd ) )
             {
                 // 측정선
-                pDrawList->AddLine( sStart, sEnd, IM_COL32( 255, 215, 40, 240 ), 2.5f );
-                pDrawList->AddCircleFilled( sStart, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
-                pDrawList->AddCircleFilled( sEnd, 5.0f, IM_COL32( 255, 230, 80, 255 ) );
+                pDrawList->AddLine( sStart, sEnd, EditorColorUtil::toImU32( EditorViewportClientInternal::kRulerLine ), 2.5f );
+                pDrawList->AddCircleFilled( sStart, 5.0f, EditorColorUtil::toImU32( EditorViewportClientInternal::kRulerAccent ) );
+                pDrawList->AddCircleFilled( sEnd, 5.0f, EditorColorUtil::toImU32( EditorViewportClientInternal::kRulerAccent ) );
 
                 const float3  delta = _rulerEndWorld - _rulerStartWorld;
                 const float32 dist  = delta.getLength();
@@ -1128,8 +1139,8 @@ namespace sw::editor
 
                 const ImVec2 mid( ( sStart.x + sEnd.x ) * 0.5f, ( sStart.y + sEnd.y ) * 0.5f - 16.0f );
                 pDrawList->AddRectFilled( ImVec2( mid.x - 4.0f, mid.y - 2.0f ),
-                                          ImVec2( mid.x + 160.0f, mid.y + 18.0f ), IM_COL32( 20, 24, 32, 220 ), 4.0f );
-                pDrawList->AddText( mid, IM_COL32( 255, 230, 80, 255 ), arrDistText.c_str() );
+                                          ImVec2( mid.x + 160.0f, mid.y + 18.0f ), EditorColorUtil::toImU32( EditorViewportClientInternal::kRulerLabelBg ), 4.0f );
+                pDrawList->AddText( mid, EditorColorUtil::toImU32( EditorViewportClientInternal::kRulerAccent ), arrDistText.c_str() );
             }
         }
     }

@@ -105,3 +105,17 @@ SW_TEST_CASE( ColorTest, ModifiersKeepTheOtherChannels )
     SW_EXPECT_NEAR_EQUAL( 0.5f, sw::Color::lerp( sw::Color::kBlack, sw::Color::kWhite, 0.5f )._r, 1e-6f );
     SW_EXPECT_TRUE( sw::Color::fromFloat4( color.toFloat4() ) == color );
 }
+
+/**
+ * @brief [ColorTest] saturate 는 네 채널을 0~1 로 자르고 범위 안 값은 그대로 둔다
+ */
+SW_TEST_CASE( ColorTest, SaturateClampsEveryChannel )
+{
+    const sw::Color clamped = sw::Color( 1.5f, -0.25f, 0.5f, 2.0f ).saturate();
+    SW_EXPECT_NEAR_EQUAL( 1.0f, clamped._r, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.0f, clamped._g, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 0.5f, clamped._b, 1e-6f );
+    SW_EXPECT_NEAR_EQUAL( 1.0f, clamped._a, 1e-6f );
+    const sw::Color inside( 0.2f, 0.4f, 0.6f, 0.8f );
+    SW_EXPECT_TRUE( inside.saturate() == inside );
+}

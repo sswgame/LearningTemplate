@@ -23,7 +23,7 @@ namespace sw::editor
     {
         const utf8* _pKey{ nullptr };     ///< 타입 이름(`TypeInfo::_name`) 또는 리플렉션 Category
         const utf8* _pGlyph{ nullptr };   ///< `editoricon::k*` 글리프
-        Color4      _color{};             ///< 뷰포트 빌보드 · 카드 아이콘 색
+        Color       _color{};             ///< 뷰포트 빌보드 · 카드 아이콘 색
         bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …)
     };
 } // namespace sw::editor

@@ -8,6 +8,7 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -92,11 +93,13 @@ namespace sw::editor
         ImDrawList* pDrawList              = ImGui::GetWindowDrawList();
         if ( _bNoCameraHintShown && imageSize.x > 1.0f && imageSize.y > 1.0f )
         {
-            constexpr const utf8* kHint    = "No camera rendering";
-            const ImVec2          hintSize = ImGui::CalcTextSize( kHint );
-            pDrawList->AddRectFilled( imagePos, ImVec2{ imagePos.x + imageSize.x, imagePos.y + imageSize.y }, IM_COL32( 0, 0, 0, 255 ) );
+            constexpr const utf8*  kHint = "No camera rendering";
+            static constexpr Color kHintBackground{ Color::fromBytes( 0, 0, 0 ) };
+            static constexpr Color kHintText{ Color::fromBytes( 220, 220, 220 ) };
+            const ImVec2           hintSize = ImGui::CalcTextSize( kHint );
+            pDrawList->AddRectFilled( imagePos, ImVec2{ imagePos.x + imageSize.x, imagePos.y + imageSize.y }, EditorColorUtil::toImU32( kHintBackground ) );
             pDrawList->AddText( ImVec2{ imagePos.x + ( imageSize.x - hintSize.x ) * 0.5f, imagePos.y + ( imageSize.y - hintSize.y ) * 0.5f },
-                                IM_COL32( 220, 220, 220, 255 ), kHint );
+                                EditorColorUtil::toImU32( kHintText ), kHint );
         }
 
         if ( imageSize.x > 1.0f && imageSize.y > 1.0f )

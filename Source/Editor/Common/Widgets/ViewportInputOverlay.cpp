@@ -2,6 +2,8 @@
 
 #include "Editor/Common/Widgets/ViewportInputOverlay.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
+
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/GamepadButtonUtil.h"
 #include "Engine/Input/InputManager.h"
@@ -15,6 +17,34 @@ namespace sw::editor
     namespace
     {
         ViewportInputOverlayConfig s_overlayConfig{};
+
+        struct ViewportInputOverlayInternal
+        {
+            static constexpr Color kBackground{ Color::fromBytes( 15, 18, 25 ) };
+            static constexpr Color kBorder{ Color::fromBytes( 50, 160, 240 ) };
+            static constexpr Color kTitle{ Color::fromBytes( 180, 220, 255 ) };
+            static constexpr Color kStickBase{ Color::fromBytes( 30, 35, 45 ) };
+            static constexpr Color kStickRing{ Color::fromBytes( 80, 120, 180 ) };
+            static constexpr Color kStickDot{ Color::fromBytes( 50, 255, 120 ) };
+            static constexpr Color kTriggerTrack{ Color::fromBytes( 40, 45, 55 ) };
+            static constexpr Color kTriggerFill{ Color::fromBytes( 240, 180, 40 ) };
+            static constexpr Color kButtonADown{ Color::fromBytes( 50, 255, 100 ) };
+            static constexpr Color kButtonAUp{ Color::fromBytes( 30, 80, 40 ) };
+            static constexpr Color kButtonBDown{ Color::fromBytes( 255, 60, 60 ) };
+            static constexpr Color kButtonBUp{ Color::fromBytes( 90, 30, 30 ) };
+            static constexpr Color kButtonXDown{ Color::fromBytes( 60, 140, 255 ) };
+            static constexpr Color kButtonXUp{ Color::fromBytes( 30, 40, 90 ) };
+            static constexpr Color kButtonYDown{ Color::fromBytes( 255, 230, 50 ) };
+            static constexpr Color kButtonYUp{ Color::fromBytes( 90, 80, 20 ) };
+            static constexpr Color kButtonLabel{ Color::fromBytes( 255, 255, 255 ) };
+            static constexpr Color kActiveAction{ Color::fromBytes( 255, 220, 100 ) };
+
+            /** @brief 오버레이 불투명도를 알파로 씌운 ImGui 색입니다. */
+            static uint32 fade( const Color& color, const float32 alpha )
+            {
+                return EditorColorUtil::toImU32( color.withAlpha( alpha ) );
+            }
+        };
     } // namespace
 
     ViewportInputOverlayConfig& ViewportInputOverlay::getConfig()
@@ -36,6 +66,7 @@ namespace sw::editor
         const float32 boxH      = 130.0f * config._scale;
         const float32 margin    = 15.0f;
         const uint8   alphaByte = static_cast<uint8>( 255.0f * config._opacity );
+        const float32 alpha     = static_cast<float32>( alphaByte ) / 255.0f;
 
         ImVec2 boxMin{ 0.0f, 0.0f };
         switch ( config._position )
@@ -64,12 +95,12 @@ namespace sw::editor
         const ImVec2 boxMax = ImVec2( boxMin.x + boxW, boxMin.y + boxH );
 
         // 1) 반투명 배경 및 테두리
-        pDrawList->AddRectFilled( boxMin, boxMax, IM_COL32( 15, 18, 25, alphaByte ), 8.0f );
-        pDrawList->AddRect( boxMin, boxMax, IM_COL32( 50, 160, 240, alphaByte ), 8.0f, 0, 1.5f );
+        pDrawList->AddRectFilled( boxMin, boxMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kBackground, alpha ), 8.0f );
+        pDrawList->AddRect( boxMin, boxMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kBorder, alpha ), 8.0f, 0, 1.5f );
 
         // 2) 타이틀 텍스트
         const ImVec2 titlePos = ImVec2( boxMin.x + 10.0f, boxMin.y + 6.0f );
-        pDrawList->AddText( titlePos, IM_COL32( 180, 220, 255, alphaByte ), "INPUT OVERLAY" );
+        pDrawList->AddText( titlePos, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTitle, alpha ), "INPUT OVERLAY" );
 
         GamepadDevice* pGamepad = pInput->getGamepad( 0 );
         float32        lx = 0.0f, ly = 0.0f, rx = 0.0f, ry = 0.0f, lt = 0.0f, rt = 0.0f;
@@ -93,27 +124,27 @@ namespace sw::editor
             const ImVec2  centerR     = ImVec2( boxMin.x + 105.0f * config._scale, boxMin.y + 75.0f * config._scale );
 
             // LS
-            pDrawList->AddCircleFilled( centerL, stickRadius, IM_COL32( 30, 35, 45, alphaByte ) );
-            pDrawList->AddCircle( centerL, stickRadius, IM_COL32( 80, 120, 180, alphaByte ), 16, 1.0f );
+            pDrawList->AddCircleFilled( centerL, stickRadius, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickBase, alpha ) );
+            pDrawList->AddCircle( centerL, stickRadius, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickRing, alpha ), 16, 1.0f );
             const ImVec2 dotL = ImVec2( centerL.x + lx * stickRadius, centerL.y - ly * stickRadius );
-            pDrawList->AddCircleFilled( dotL, 4.0f, IM_COL32( 50, 255, 120, alphaByte ) );
+            pDrawList->AddCircleFilled( dotL, 4.0f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickDot, alpha ) );
 
             // RS
-            pDrawList->AddCircleFilled( centerR, stickRadius * 0.8f, IM_COL32( 30, 35, 45, alphaByte ) );
-            pDrawList->AddCircle( centerR, stickRadius * 0.8f, IM_COL32( 80, 120, 180, alphaByte ), 16, 1.0f );
+            pDrawList->AddCircleFilled( centerR, stickRadius * 0.8f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickBase, alpha ) );
+            pDrawList->AddCircle( centerR, stickRadius * 0.8f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickRing, alpha ), 16, 1.0f );
             const ImVec2 dotR = ImVec2( centerR.x + rx * stickRadius * 0.8f, centerR.y - ry * stickRadius * 0.8f );
-            pDrawList->AddCircleFilled( dotR, 3.5f, IM_COL32( 50, 255, 120, alphaByte ) );
+            pDrawList->AddCircleFilled( dotR, 3.5f, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kStickDot, alpha ) );
 
             // LT / RT Bar
             const ImVec2 ltBarMin = ImVec2( boxMin.x + 10.0f, boxMin.y + 100.0f * config._scale );
             const ImVec2 ltBarMax = ImVec2( boxMin.x + 70.0f * config._scale, boxMin.y + 110.0f * config._scale );
-            pDrawList->AddRectFilled( ltBarMin, ltBarMax, IM_COL32( 40, 45, 55, alphaByte ) );
-            pDrawList->AddRectFilled( ltBarMin, ImVec2( ltBarMin.x + ( ltBarMax.x - ltBarMin.x ) * lt, ltBarMax.y ), IM_COL32( 240, 180, 40, alphaByte ) );
+            pDrawList->AddRectFilled( ltBarMin, ltBarMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerTrack, alpha ) );
+            pDrawList->AddRectFilled( ltBarMin, ImVec2( ltBarMin.x + ( ltBarMax.x - ltBarMin.x ) * lt, ltBarMax.y ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerFill, alpha ) );
 
             const ImVec2 rtBarMin = ImVec2( boxMin.x + 80.0f * config._scale, boxMin.y + 100.0f * config._scale );
             const ImVec2 rtBarMax = ImVec2( boxMin.x + 140.0f * config._scale, boxMin.y + 110.0f * config._scale );
-            pDrawList->AddRectFilled( rtBarMin, rtBarMax, IM_COL32( 40, 45, 55, alphaByte ) );
-            pDrawList->AddRectFilled( rtBarMin, ImVec2( rtBarMin.x + ( rtBarMax.x - rtBarMin.x ) * rt, rtBarMax.y ), IM_COL32( 240, 180, 40, alphaByte ) );
+            pDrawList->AddRectFilled( rtBarMin, rtBarMax, ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerTrack, alpha ) );
+            pDrawList->AddRectFilled( rtBarMin, ImVec2( rtBarMin.x + ( rtBarMax.x - rtBarMin.x ) * rt, rtBarMax.y ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kTriggerFill, alpha ) );
         }
 
         // 4) 페이스 버튼 다이아몬드 (A, B, X, Y)
@@ -130,23 +161,23 @@ namespace sw::editor
 
             // A (Bottom)
             const ImVec2 posA = ImVec2( faceCenter.x, faceCenter.y + btnDist );
-            pDrawList->AddCircleFilled( posA, btnRadius, bA ? IM_COL32( 50, 255, 100, alphaByte ) : IM_COL32( 30, 80, 40, alphaByte ) );
-            pDrawList->AddText( ImVec2( posA.x - 3.0f, posA.y - 6.0f ), IM_COL32( 255, 255, 255, alphaByte ), "A" );
+            pDrawList->AddCircleFilled( posA, btnRadius, bA ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonADown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonAUp, alpha ) );
+            pDrawList->AddText( ImVec2( posA.x - 3.0f, posA.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "A" );
 
             // B (Right)
             const ImVec2 posB = ImVec2( faceCenter.x + btnDist, faceCenter.y );
-            pDrawList->AddCircleFilled( posB, btnRadius, bB ? IM_COL32( 255, 60, 60, alphaByte ) : IM_COL32( 90, 30, 30, alphaByte ) );
-            pDrawList->AddText( ImVec2( posB.x - 3.0f, posB.y - 6.0f ), IM_COL32( 255, 255, 255, alphaByte ), "B" );
+            pDrawList->AddCircleFilled( posB, btnRadius, bB ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonBDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonBUp, alpha ) );
+            pDrawList->AddText( ImVec2( posB.x - 3.0f, posB.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "B" );
 
             // X (Left)
             const ImVec2 posX = ImVec2( faceCenter.x - btnDist, faceCenter.y );
-            pDrawList->AddCircleFilled( posX, btnRadius, bX ? IM_COL32( 60, 140, 255, alphaByte ) : IM_COL32( 30, 40, 90, alphaByte ) );
-            pDrawList->AddText( ImVec2( posX.x - 3.0f, posX.y - 6.0f ), IM_COL32( 255, 255, 255, alphaByte ), "X" );
+            pDrawList->AddCircleFilled( posX, btnRadius, bX ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonXDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonXUp, alpha ) );
+            pDrawList->AddText( ImVec2( posX.x - 3.0f, posX.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "X" );
 
             // Y (Top)
             const ImVec2 posY = ImVec2( faceCenter.x, faceCenter.y - btnDist );
-            pDrawList->AddCircleFilled( posY, btnRadius, bY ? IM_COL32( 255, 230, 50, alphaByte ) : IM_COL32( 90, 80, 20, alphaByte ) );
-            pDrawList->AddText( ImVec2( posY.x - 3.0f, posY.y - 6.0f ), IM_COL32( 255, 255, 255, alphaByte ), "Y" );
+            pDrawList->AddCircleFilled( posY, btnRadius, bY ? ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonYDown, alpha ) : ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonYUp, alpha ) );
+            pDrawList->AddText( ImVec2( posY.x - 3.0f, posY.y - 6.0f ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kButtonLabel, alpha ), "Y" );
         }
 
         // 5) 활성 액션 표시
@@ -159,7 +190,7 @@ namespace sw::editor
                 if ( pInputMap->isActionDown( act ) )
                 {
                     const string text = pInputMap->getGlyphForAction( sw::hashed_string( act.view() ) ) + " " + string( act.c_str() );
-                    pDrawList->AddText( ImVec2( boxMin.x + 150.0f * config._scale, boxMin.y + offsetY ), IM_COL32( 255, 220, 100, alphaByte ), text.c_str() );
+                    pDrawList->AddText( ImVec2( boxMin.x + 150.0f * config._scale, boxMin.y + offsetY ), ViewportInputOverlayInternal::fade( ViewportInputOverlayInternal::kActiveAction, alpha ), text.c_str() );
                     offsetY += 14.0f;
                     if ( offsetY > boxH - 10.0f )
                         break;

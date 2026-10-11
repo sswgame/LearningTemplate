@@ -137,6 +137,11 @@ namespace sw
         outText[9] = '\0';
     }
 
+    Color Color::saturate() const noexcept
+    {
+        return Color{ MathUtil::clamp( _r, 0.0f, 1.0f ), MathUtil::clamp( _g, 0.0f, 1.0f ), MathUtil::clamp( _b, 0.0f, 1.0f ), MathUtil::clamp( _a, 0.0f, 1.0f ) };
+    }
+
     Color Color::toLinear() const noexcept
     {
         return Color{ ColorInternal::srgbToLinear( _r ), ColorInternal::srgbToLinear( _g ), ColorInternal::srgbToLinear( _b ), _a };

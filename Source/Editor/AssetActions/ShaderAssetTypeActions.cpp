@@ -2,6 +2,7 @@
 
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 
@@ -11,6 +12,12 @@ namespace sw::editor
 {
     namespace
     {
+        struct ShaderAssetTypeActionsInternal
+        {
+            static constexpr Color kCornerFill{ Color::fromBytes( 240, 120, 50, 255 ) };
+            static constexpr Color kCornerOutline{ Color::fromBytes( 255, 210, 140, 255 ) };
+        };
+
         /** @brief 셰이더 — 다이아몬드(프리즘) 썸네일. */
         class ShaderAssetTypeActions final : public IEditorAssetTypeActions
         {
@@ -25,8 +32,8 @@ namespace sw::editor
                 const float32 radius       = width * 0.24f;
                 ImVec2        arrCorner[4] = { ImVec2( centerX, centerY - radius ), ImVec2( centerX + radius * 0.85f, centerY ), ImVec2( centerX, centerY + radius ),
                                                ImVec2( centerX - radius * 0.85f, centerY ) };
-                pDrawList->AddConvexPolyFilled( arrCorner, 4, IM_COL32( 240, 120, 50, 255 ) );
-                pDrawList->AddPolyline( arrCorner, 4, IM_COL32( 255, 210, 140, 255 ), ImDrawFlags_Closed, 1.5f );
+                pDrawList->AddConvexPolyFilled( arrCorner, 4, EditorColorUtil::toImU32( ShaderAssetTypeActionsInternal::kCornerFill ) );
+                pDrawList->AddPolyline( arrCorner, 4, EditorColorUtil::toImU32( ShaderAssetTypeActionsInternal::kCornerOutline ), ImDrawFlags_Closed, 1.5f );
                 return true;
             }
         };

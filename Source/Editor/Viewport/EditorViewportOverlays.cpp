@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -246,8 +247,8 @@ namespace sw::editor
 
         const bool bVertical = EditorViewportOverlayLayout::isVertical( state );
         ImGui::SetCursorScreenPos( ImVec2{ canvasMin._x + position._x, canvasMin._y + position._y } );
-        const ImVec4 background = ImGui::GetStyleColorVec4( ImGuiCol_WindowBg );
-        ImGui::PushStyleColor( ImGuiCol_ChildBg, ImVec4{ background.x, background.y, background.z, 0.88f } );
+        const Color background = EditorColorUtil::fromImVec4( ImGui::GetStyleColorVec4( ImGuiCol_WindowBg ) );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( background.withAlpha( 0.88f ) ) );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2{ 4.0f * scale, 3.0f * scale } );
         ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2{ 4.0f * scale, 3.0f * scale } );
         ImGui::PushStyleVar( ImGuiStyleVar_ChildRounding, 4.0f * scale );

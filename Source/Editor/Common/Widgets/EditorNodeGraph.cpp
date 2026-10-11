@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Editor/Common/EditorPaths.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -21,8 +22,6 @@ namespace sw::editor
     {
         struct EditorNodeGraphInternal
         {
-            static ImVec4 toImVec4( const Color4& color ) { return ImVec4{ color._r, color._g, color._b, color._a }; }
-
             /** @brief 가장 최근에 그린 그래프의 노드 수 — 탐침이 읽는다(그래프 패널은 RTTI 없이 찾을 수 없다). */
             static uint32& getDrawnNodeCountSlot()
             {
@@ -188,12 +187,12 @@ namespace sw::editor
                 const bool         bKnown  = findPin.isBound() && findPin( idA, infoA ) && findPin( idB, infoB );
                 if ( bKnown && EditorNodeGraphRules::canConnect( idA, infoA, idB, infoB, outFromPin, outToPin, pReason ) )
                 {
-                    if ( ed::AcceptNewItem( EditorNodeGraphInternal::toImVec4( getPinTypeColor( infoA._type ) ), 2.0f ) )
+                    if ( ed::AcceptNewItem( EditorColorUtil::toImVec4( getPinTypeColor( infoA._type ) ), 2.0f ) )
                         bAccepted = true;
                 }
                 else
                 {
-                    ed::RejectNewItem( EditorNodeGraphInternal::toImVec4( style::kError ), 2.0f );
+                    ed::RejectNewItem( EditorColorUtil::toImVec4( style::kError ), 2.0f );
                     ed::Suspend();
                     ImGui::SetTooltip( "%s", pReason );
                     ed::Resume();
@@ -204,12 +203,11 @@ namespace sw::editor
         return bAccepted;
     }
 
-    Color4 EditorNodeGraph::getPinTypeColor( uint32 pinType ) const
+    Color EditorNodeGraph::getPinTypeColor( uint32 pinType ) const
     {
         if ( pinType < _listPinTypeColor.size() )
             return _listPinTypeColor[pinType];
-        const ImVec4 text = ImGui::GetStyleColorVec4( ImGuiCol_Text );
-        return Color4{ text.x, text.y, text.z, text.w };
+        return EditorColorUtil::fromImVec4( ImGui::GetStyleColorVec4( ImGuiCol_Text ) );
     }
 
     void EditorNodeGraph::drawPinIcon( uint32 pinType, bool bConnected ) const
@@ -218,7 +216,7 @@ namespace sw::editor
         const ImVec2  corner = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2{ size, size } );
         const ImVec2 center{ corner.x + size * 0.5f, corner.y + size * 0.5f };
-        const ImU32  color     = ImGui::ColorConvertFloat4ToU32( EditorNodeGraphInternal::toImVec4( getPinTypeColor( pinType ) ) );
+        const ImU32  color     = EditorColorUtil::toImU32( getPinTypeColor( pinType ) );
         ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
         if ( bConnected )
             pDrawList->AddCircleFilled( center, size * 0.3f, color );
@@ -228,7 +226,7 @@ namespace sw::editor
 
     void EditorNodeGraph::drawNodeIssues() const
     {
-        const ImU32      color   = ImGui::ColorConvertFloat4ToU32( EditorNodeGraphInternal::toImVec4( style::kError ) );
+        const ImU32      color   = EditorColorUtil::toImU32( style::kError );
         const ed::NodeId hovered = ed::GetHoveredNode();
         for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
         {

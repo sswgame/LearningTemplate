@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -19,7 +20,13 @@ namespace sw::editor
     {
         struct DebugDrawVisualizerInternal
         {
-            static ImU32 toColor( const float4& color ) { return ImGui::ColorConvertFloat4ToU32( ImVec4( color._x, color._y, color._z, color._w ) ); }
+            /** @brief 글자 그림자 색입니다(밝은 배경에서도 읽히게). */
+            static constexpr Color kTextShadow{ Color::fromBytes( 0, 0, 0, 200 ) };
+
+            static ImU32 toColor( const float4& color )
+            {
+                return EditorColorUtil::toImU32( Color::fromFloat4( color ) );
+            }
 
             /**
              * @brief 디버그 큐가 확정한 도형을 그립니다. 구는 대원 셋(2D 뷰는 XY 원 하나), 선분은 근평면에서 잘라 투영합니다.
@@ -55,7 +62,7 @@ namespace sw::editor
                     if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, text._position, args._canvasPos, args._canvasSize, screen ) == false )
                         continue;
                     // 글자 그림자를 먼저 깔아 밝은 배경에서도 읽히게 한다.
-                    args._pDrawList->AddText( ImVec2( screen.x + 1.0f, screen.y + 1.0f ), IM_COL32( 0, 0, 0, 200 ), text._text.c_str() );
+                    args._pDrawList->AddText( ImVec2( screen.x + 1.0f, screen.y + 1.0f ), EditorColorUtil::toImU32( kTextShadow ), text._text.c_str() );
                     args._pDrawList->AddText( screen, toColor( text._color ), text._text.c_str() );
                     ++stats._textCount;
                 }

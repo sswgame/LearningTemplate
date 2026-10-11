@@ -7,6 +7,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorLabelLayout.h"
@@ -46,10 +47,9 @@ namespace sw::editor
                 return s_frame;
             }
 
-            static ImVec4 toIm( const Color4& c )
-            {
-                return ImVec4( c._r, c._g, c._b, c._a );
-            }
+            /** @brief 애셋 슬롯 버튼 바탕(평소 · 호버)입니다. */
+            static constexpr Color kAssetSlotButton{ 0.15f, 0.15f, 0.15f, 1.0f };
+            static constexpr Color kAssetSlotButtonHovered{ 0.25f, 0.25f, 0.25f, 1.0f };
 
             /**
              * @brief InputText 가 요구하는 만큼 `string` 버퍼를 늘려 줍니다.
@@ -92,11 +92,11 @@ namespace sw::editor
         const ImVec2  buttonSize{ lineHeight + 3.0f, lineHeight };
         bool          bChanged{ false };
 
-        auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color4& color )
+        auto axis = [&]( const utf8* pAxisLabel, float32& axisValue, const Color& color )
         {
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( color._r + 0.1f, color._g + 0.1f, color._b + 0.1f, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( color ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( Color{ color._r + 0.1f, color._g + 0.1f, color._b + 0.1f, 1.0f } ) );
+            ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( color ) );
             if ( ImGui::Button( pAxisLabel, buttonSize ) )
             {
                 axisValue = resetValue;
@@ -133,18 +133,18 @@ namespace sw::editor
         ImGui::PushID( static_cast<int32>( id ) );
         if ( bAccent )
         {
-            const Color4 accent = EditorThemeUtil::getAccentColor();
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( accent._r, accent._g, accent._b, 0.85f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( accent._r * 1.15f, accent._g * 1.15f, accent._b * 1.15f, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( accent._r * 1.30f, accent._g * 1.30f, accent._b * 1.30f, 1.0f ) );
+            const Color accent = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Header, EditorColorUtil::toImVec4( accent.withAlpha( 0.85f ) ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorColorUtil::toImVec4( accent.scaleBrightness( 1.15f ).withAlpha( 1.0f ) ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorColorUtil::toImVec4( accent.scaleBrightness( 1.30f ).withAlpha( 1.0f ) ) );
         }
         else
         {
-            const Color4 headerColor = EditorThemeUtil::getHeaderBgColor();
-            const Color4 accent      = EditorThemeUtil::getAccentColor();
-            ImGui::PushStyleColor( ImGuiCol_Header, ImVec4( headerColor._r, headerColor._g, headerColor._b, 1.0f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, ImVec4( accent._r, accent._g, accent._b, 0.70f ) );
-            ImGui::PushStyleColor( ImGuiCol_HeaderActive, ImVec4( accent._r, accent._g, accent._b, 0.90f ) );
+            const Color headerColor = EditorThemeUtil::getHeaderBgColor();
+            const Color accent      = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Header, EditorColorUtil::toImVec4( headerColor.withAlpha( 1.0f ) ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorColorUtil::toImVec4( accent.withAlpha( 0.70f ) ) );
+            ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorColorUtil::toImVec4( accent.withAlpha( 0.90f ) ) );
         }
 
         ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2{ 4.0f, 4.0f } );
@@ -243,10 +243,10 @@ namespace sw::editor
         ImGui::SameLine();
     }
 
-    bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor )
+    bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor )
     {
-        const Color4& color = bActive ? activeColor : style::kToggleInactive;
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
+        const Color& color = bActive ? activeColor : style::kToggleInactive;
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
         const bool bClicked = ImGui::Button( pLabel );
         ImGui::PopStyleColor();
         return bClicked;
@@ -257,8 +257,8 @@ namespace sw::editor
         const float32 side = ImGui::GetFrameHeight();
         if ( bActive )
         {
-            const Color4& accent = EditorThemeUtil::getAccentColor();
-            ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ accent._r, accent._g, accent._b, 0.85f } );
+            const Color& accent = EditorThemeUtil::getAccentColor();
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( accent.withAlpha( 0.85f ) ) );
         }
         ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( pIcon, ImVec2{ side, side } );
@@ -401,11 +401,11 @@ namespace sw::editor
         return bChanged;
     }
 
-    void EditorWidgets::drawChip( const utf8* pLabel, const Color4& color )
+    void EditorWidgets::drawChip( const utf8* pLabel, const Color& color )
     {
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorWidgetsInternal::toIm( color ) );
-        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorWidgetsInternal::toIm( color ) );
-        ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorWidgetsInternal::toIm( color ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( color ) );
+        ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( color ) );
         ImGui::SmallButton( pLabel );
         ImGui::PopStyleColor( 3 );
     }
@@ -450,8 +450,8 @@ namespace sw::editor
         const float32 inputWidth    = ( assetPath.empty() == false ) ? ( availWidth - clearBtnWidth - 4.0f ) : availWidth;
 
         const utf8* pDisplayPath = assetPath.empty() ? "(None / Drop Asset)" : assetPath.c_str();
-        ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.15f, 0.15f, 0.15f, 1.0f } );
-        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.25f, 0.25f, 1.0f } );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorWidgetsInternal::kAssetSlotButton ) );
+        ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorWidgetsInternal::kAssetSlotButtonHovered ) );
         ImGui::Button( pDisplayPath, ImVec2{ inputWidth, 0.0f } );
         ImGui::PopStyleColor( 2 );
         drawTooltip( SW_LOCKEY( "EdCommon", "AssetSlotDrop" ) );
@@ -482,7 +482,7 @@ namespace sw::editor
         return bChanged;
     }
 
-    bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth )
+    bool EditorWidgets::drawColorEdit( const utf8* pLabel, Color& color, float32 labelWidth )
     {
         ImGui::PushID( pLabel );
         if ( StringUtil::isNullOrEmpty( pLabel ) == false )

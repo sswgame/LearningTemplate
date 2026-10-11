@@ -7,6 +7,7 @@
 
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -29,6 +30,17 @@ namespace sw::editor
     {
         struct TileMapPanelInternal
         {
+            static constexpr Color kCanvasBg{ Color::fromBytes( 28, 28, 32, 255 ) };
+            static constexpr Color kEmptyCell{ Color::fromBytes( 60, 60, 70, 255 ) };
+            static constexpr Color kWarpCell{ Color::fromBytes( 200, 120, 80, 255 ) };
+            static constexpr Color kNoWarpCell{ Color::fromBytes( 50, 50, 55, 255 ) };
+            static constexpr Color kCellBorder{ Color::fromBytes( 20, 20, 24, 255 ) };
+
+            static constexpr Color kBrushPreview{ Color::fromBytes( 255, 255, 255 ) };
+            static constexpr Color kBrushPreviewErase{ Color::fromBytes( 255, 90, 90 ) };
+            static constexpr Color kCellNumberText{ Color::fromBytes( 255, 255, 255 ) };
+            /** @brief 플래그 층의 `0xRRGGBB` 색을 불투명 `0xAARRGGBB` 로 만드는 알파 바이트입니다. */
+            static constexpr uint32 kOpaqueAlphaMask = 0xFF000000u;
             /** @brief 확대 1 의 칸 한 변(96 DPI px)입니다. */
             static constexpr float32 kBaseCellSize = 18.0f;
             /** @brief 확대 범위입니다. */
@@ -234,7 +246,7 @@ namespace sw::editor
         const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
         ImDrawList*   pDl = ImGui::GetWindowDrawList();
         pDl->PushClipRect( canvasMin, canvasMax, true );
-        pDl->AddRectFilled( canvasMin, canvasMax, IM_COL32( 28, 28, 32, 255 ) );
+        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( TileMapPanelInternal::kCanvasBg ) );
 
         void* pAtlasTexture{ nullptr };
         if ( _layer == PaintLayer::Tile )
@@ -260,19 +272,19 @@ namespace sw::editor
             for ( int32 tileX = 0; tileX < _map._width; ++tileX )
             {
                 const size_t tileIndex = indexOf( tileX, tileY );
-                ImU32        color     = IM_COL32( 60, 60, 70, 255 );
+                ImU32        color     = EditorColorUtil::toImU32( TileMapPanelInternal::kEmptyCell );
                 switch ( _layer )
                 {
                     case PaintLayer::Visual:
                     {
                         const TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
-                        color                                    = IM_COL32( tileVisual._tintR, tileVisual._tintG, tileVisual._tintB, 255 );
+                        color                                    = EditorColorUtil::toImU32( Color::fromBytes( tileVisual._tintR, tileVisual._tintG, tileVisual._tintB ) );
                         break;
                     }
                     case PaintLayer::Warp:
                     {
                         const uint64 key = ( static_cast<uint64>( static_cast<uint32>( tileY ) ) << 32 ) | static_cast<uint32>( tileX );
-                        color            = uniqueWarpCells.count( key ) ? IM_COL32( 200, 120, 80, 255 ) : IM_COL32( 50, 50, 55, 255 );
+                        color            = uniqueWarpCells.count( key ) ? EditorColorUtil::toImU32( TileMapPanelInternal::kWarpCell ) : EditorColorUtil::toImU32( TileMapPanelInternal::kNoWarpCell );
                         break;
                     }
                     case PaintLayer::Tile:
@@ -283,7 +295,7 @@ namespace sw::editor
                     {
                         const TileFlagLayerInfo& info = kArrTileFlagLayerInfo[static_cast<size_t>( _flagLayer )];
                         const uint32             rgb  = _map.getFlagLayer( _flagLayer )[tileIndex] != 0 ? info._onColorRgb : info._offColorRgb;
-                        color                         = IM_COL32( ( rgb >> 16 ) & 0xFFu, ( rgb >> 8 ) & 0xFFu, rgb & 0xFFu, 255 );
+                        color                         = EditorColorUtil::toImU32( Color::fromArgb( TileMapPanelInternal::kOpaqueAlphaMask | rgb ) );
                         break;
                     }
                 }
@@ -293,13 +305,13 @@ namespace sw::editor
                 pDl->AddRectFilled( p0, p1, color );
                 if ( _layer == PaintLayer::Tile )
                     drawTileLayerCell( pDl, p0, p1, tileX, tileY, pAtlasTexture );
-                pDl->AddRect( p0, p1, IM_COL32( 20, 20, 24, 255 ) );
+                pDl->AddRect( p0, p1, EditorColorUtil::toImU32( TileMapPanelInternal::kCellBorder ) );
             }
         }
 
         // 브러시 미리보기 — 커서 아래 칸, Rect 도구로 끄는 중이면 그 사각형(지우기면 빨강).
         const int2  hoverCell    = TileMapPaintUtil::findCellAt( io.MousePos.x - origin.x, io.MousePos.y - origin.y, cell );
-        const ImU32 previewColor = _bErase ? IM_COL32( 255, 90, 90, 255 ) : IM_COL32( 255, 255, 255, 255 );
+        const ImU32 previewColor = EditorColorUtil::toImU32( _bErase ? TileMapPanelInternal::kBrushPreviewErase : TileMapPanelInternal::kBrushPreview );
         if ( _bRectActive )
         {
             const float32 minX = static_cast<float32>( MathUtil::min( _rectStartCell._x, hoverCell._x ) );
@@ -744,10 +756,10 @@ namespace sw::editor
         // 브러시마다 다른 색(이름 해시) + 규칙이 고른 아틀라스 칸 번호 — 이웃을 칠하면 번호가 바뀌는 것이 규칙 타일이 일하는 모습이다.
         const uint16 brushValue = _listBrushIndex[indexOf( x, y )];
         const uint32 hash       = static_cast<uint32>( _tileSet.getBrushes()[brushValue - 1u]._name.getHash() );
-        const ImU32  color      = IM_COL32( 80 + ( hash & 0x7Fu ), 80 + ( ( hash >> 8 ) & 0x7Fu ), 80 + ( ( hash >> 16 ) & 0x7Fu ), 255 );
+        const ImU32  color      = EditorColorUtil::toImU32( Color::fromBytes( static_cast<uint8>( 80 + ( hash & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 8 ) & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 16 ) & 0x7Fu ) ) ) );
         pDrawList->AddRectFilled( cellMin, cellMax, color );
         const string number = to_string( pVisual->computeCellAt( 0.0f ) );
-        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), IM_COL32( 255, 255, 255, 255 ), number.c_str() );
+        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( TileMapPanelInternal::kCellNumberText ), number.c_str() );
     }
 
     string TileMapPanel::captureDocumentText() const

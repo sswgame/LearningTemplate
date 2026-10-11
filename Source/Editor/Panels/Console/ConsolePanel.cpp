@@ -9,6 +9,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -30,20 +31,20 @@ namespace sw::editor
     {
         struct ConsolePanelInternal
         {
-            static ImVec4 colorForLevel( LogLevel level )
+            static Color colorForLevel( LogLevel level )
             {
                 switch ( level )
                 {
                     case LogLevel::Error:
-                        return ImVec4( 1.0f, 0.4f, 0.4f, 1.0f );
+                        return Color{ 1.0f, 0.4f, 0.4f, 1.0f };
                     case LogLevel::Warning:
-                        return ImVec4( 1.0f, 0.8f, 0.4f, 1.0f );
+                        return Color{ 1.0f, 0.8f, 0.4f, 1.0f };
                     case LogLevel::Info:
-                        return ImVec4( 0.8f, 0.8f, 0.8f, 1.0f );
+                        return Color{ 0.8f, 0.8f, 0.8f, 1.0f };
                     case LogLevel::Trace:
-                        return ImVec4( 0.6f, 0.6f, 0.6f, 1.0f );
+                        return Color{ 0.6f, 0.6f, 0.6f, 1.0f };
                     case LogLevel::Count:
-                        return ImVec4( 1.0f, 1.0f, 1.0f, 1.0f );
+                        return Color{ 1.0f, 1.0f, 1.0f, 1.0f };
                 }
             }
 
@@ -353,7 +354,7 @@ namespace sw::editor
             fixed_string<constant::kMaxBuffer32> arrTraceLabel;
             formatstring( arrTraceLabel.data(), arrTraceLabel.capacity(), "Trace (%zu)", traceCount );
 
-            constexpr editor::Color4 kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
+            constexpr Color kTraceChip{ 0.40f, 0.40f, 0.45f, 1.0f };
 
             ImGui::SameLine();
             if ( EditorWidgets::drawToggleButton( arrErrLabel.c_str(), _arrLevelEnabled[0], editor::style::kError ) )
@@ -469,7 +470,7 @@ namespace sw::editor
 
                 if ( row._repeatCount > 1 )
                 {
-                    ImGui::TextColored( ConsolePanelInternal::colorForLevel( entry._level ), "(%u)", row._repeatCount );
+                    ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), "(%u)", row._repeatCount );
                     ImGui::SameLine( 0.0f, ImGui::GetStyle().ItemInnerSpacing.x );
                 }
                 ImGui::TextDisabled( "[%s]", entry._timeStamp.c_str() );
@@ -481,7 +482,7 @@ namespace sw::editor
                     ImGui::Text( " [%s:%s]", entry._tag.c_str(), entry._caller.c_str() );
                 EditorThemeUtil::popTextColor();
                 ImGui::SameLine( 0.0f, 0.0f );
-                ImGui::TextColored( ConsolePanelInternal::colorForLevel( entry._level ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " [%s]", ConsolePanelInternal::levelName( entry._level ) );
                 ImGui::SameLine( 0.0f, 0.0f );
                 ImGui::TextUnformatted( " - " );
                 ImGui::SameLine( 0.0f, 0.0f );

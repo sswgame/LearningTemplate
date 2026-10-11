@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -42,6 +43,8 @@ namespace sw::editor
     {
         struct HierarchyPanelInternal
         {
+            static constexpr Color kPrefabInstanceText{ 0.45f, 0.70f, 1.0f, 1.0f };
+
             static constexpr const utf8* kHierarchyGoPayload = "SW_HIERARCHY_GO";
 
             static bool typeMatchesFilter( GameObject* pObj, string_view typeFilter )
@@ -451,7 +454,7 @@ namespace sw::editor
                 // 프리팹 인스턴스는 이름을 파랗게(유니티 Hierarchy).
                 const bool bPrefabInstance = pContext->getWorkspace().getGameObjectPrefabPath( objectID ).empty() == false;
                 if ( bPrefabInstance )
-                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.45f, 0.70f, 1.0f, 1.0f } );
+                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HierarchyPanelInternal::kPrefabInstanceText ) );
                 // SpanAvailWidth — 선택 배경 · 클릭 영역이 앞의 가시성 토글 오른쪽부터다(SpanFullWidth 면 창 왼쪽부터 칠해 토글을 덮는다).
                 const bool bOpen = ImGui::TreeNodeEx(
                     arrLabel.c_str(),

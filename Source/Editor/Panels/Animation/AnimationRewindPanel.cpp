@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -31,6 +32,8 @@ namespace sw::editor
     {
         struct AnimationRewindPanelInternal
         {
+            static constexpr Color kNotifyText{ 1.0f, 0.8f, 0.3f, 1.0f };
+
             /** @brief 뼈대 색(고른 것 · 나머지)입니다. */
             static constexpr float4 kSelectedColor{ 1.0f, 0.75f, 0.1f, 1.0f };
             static constexpr float4 kOtherColor{ 0.35f, 0.7f, 1.0f, 1.0f };
@@ -204,7 +207,7 @@ namespace sw::editor
             for ( const hashed_string& notify : state._listNotify )
             {
                 ImGui::SameLine();
-                ImGui::TextColored( ImVec4{ 1.0f, 0.8f, 0.3f, 1.0f }, "%s", notify.c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( AnimationRewindPanelInternal::kNotifyText ), "%s", notify.c_str() );
             }
         }
         if ( state._listCurveName.empty() == false && ImGui::BeginTable( "##RewindCurves", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY,

@@ -18,13 +18,13 @@ namespace sw::editor
     {
         struct EditorComponentIconInternal
         {
-            static constexpr Color4 kLight{ 1.00f, 0.83f, 0.30f, 1.0f };
-            static constexpr Color4 kCamera{ 0.45f, 0.70f, 1.00f, 1.0f };
-            static constexpr Color4 kAudio{ 0.45f, 0.90f, 0.60f, 1.0f };
-            static constexpr Color4 kPhysics{ 1.00f, 0.60f, 0.30f, 1.0f };
-            static constexpr Color4 kNavigation{ 0.35f, 0.85f, 0.85f, 1.0f };
-            static constexpr Color4 kEnvironment{ 0.55f, 0.80f, 0.95f, 1.0f };
-            static constexpr Color4 kNeutral{ 0.85f, 0.87f, 0.90f, 1.0f };
+            static constexpr Color kLight{ 1.00f, 0.83f, 0.30f, 1.0f };
+            static constexpr Color kCamera{ 0.45f, 0.70f, 1.00f, 1.0f };
+            static constexpr Color kAudio{ 0.45f, 0.90f, 0.60f, 1.0f };
+            static constexpr Color kPhysics{ 1.00f, 0.60f, 0.30f, 1.0f };
+            static constexpr Color kNavigation{ 0.35f, 0.85f, 0.85f, 1.0f };
+            static constexpr Color kEnvironment{ 0.55f, 0.80f, 0.95f, 1.0f };
+            static constexpr Color kNeutral{ 0.85f, 0.87f, 0.90f, 1.0f };
 
             /** @brief 타입 이름 표 — 파생 타입이 기반보다 먼저 맞는다(찾기가 타입 자신부터 부모로 올라간다). */
             static constexpr EditorComponentIconRow kArrTypeRow[] = {

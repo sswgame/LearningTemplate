@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
@@ -216,9 +217,11 @@ namespace sw::editor
 
             if ( bCompiling )
             {
-                const float32 elapsed = pCompiler->getElapsedTimeSec();
-                ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0.7f, 0.5f, 0.1f, 1.0f ) );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( 0.8f, 0.3f, 0.2f, 1.0f ) );
+                static constexpr Color kCompilingButton{ 0.7f, 0.5f, 0.1f, 1.0f };
+                static constexpr Color kCompilingButtonHovered{ 0.8f, 0.3f, 0.2f, 1.0f };
+                const float32          elapsed = pCompiler->getElapsedTimeSec();
+                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( kCompilingButton ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( kCompilingButtonHovered ) );
                 fixed_string<constant::kMaxBuffer64> label;
                 formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", editoricon::kSpinner, Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )

@@ -706,11 +706,11 @@ namespace sw::editor
             /** @brief 액센트 색을 0xRRGGBB 정수로(채널마다 0..255 반올림) — `equals` 로 정확히 견줄 수 있다. */
             [[nodiscard]] static bool readAccentColor( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const Color4& accent = EditorThemeUtil::getAccentColor();
-                const uint32  red    = static_cast<uint32>( accent._r * 255.0f + 0.5f );
-                const uint32  green  = static_cast<uint32>( accent._g * 255.0f + 0.5f );
-                const uint32  blue   = static_cast<uint32>( accent._b * 255.0f + 0.5f );
-                outValue             = static_cast<float64>( ( red << 16 ) | ( green << 8 ) | blue );
+                const Color& accent = EditorThemeUtil::getAccentColor();
+                const uint32 red    = static_cast<uint32>( accent._r * 255.0f + 0.5f );
+                const uint32 green  = static_cast<uint32>( accent._g * 255.0f + 0.5f );
+                const uint32 blue   = static_cast<uint32>( accent._b * 255.0f + 0.5f );
+                outValue            = static_cast<float64>( ( red << 16 ) | ( green << 8 ) | blue );
                 return true;
             }
 

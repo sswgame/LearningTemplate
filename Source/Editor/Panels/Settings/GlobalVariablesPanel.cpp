@@ -11,6 +11,7 @@
 
 #include "Editor/Common/Commands/EditorGlobalVariableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -31,6 +32,8 @@ namespace sw::editor
     {
         struct GlobalVariablesPanelInternal
         {
+            static constexpr Color kPinnedText{ 1.0f, 0.85f, 0.2f, 1.0f };
+
             /**
              * @brief 모듈별 묶음 표의 플래그입니다 — 스크롤(ScrollY)이 없어 행 수만큼만 차지합니다.
              * @details ScrollY 표에 바깥 높이 0 을 주면 ImGui 는 남은 높이를 모두 준다. 그러면 첫 묶음이 패널을 다 차지해 다음 모듈은 바깥을 한참
@@ -462,7 +465,7 @@ namespace sw::editor
         {
             const bool bPinned = ( _uniquePinnedVar.find( info._name ) != _uniquePinnedVar.end() );
             if ( bPinned )
-                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 1.0f, 0.85f, 0.2f, 1.0f } );
+                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( GlobalVariablesPanelInternal::kPinnedText ) );
 
             if ( ImGui::SmallButton( bPinned ? "*" : "-" ) )
             {

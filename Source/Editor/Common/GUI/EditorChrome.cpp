@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorDockLayout.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 
@@ -355,9 +356,8 @@ namespace sw::editor
         overlayDesc._flags      = EditorOverlayFlags::NoTitleBar | EditorOverlayFlags::NoResize |
                              EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
 
-        ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4{ desc._bgColor._x, desc._bgColor._y, desc._bgColor._z, desc._bgColor._w } );
-        ImGui::PushStyleColor( ImGuiCol_Border,
-                               ImVec4{ desc._borderColor._x, desc._borderColor._y, desc._borderColor._z, desc._borderColor._w } );
+        ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( desc._bgColor ) );
+        ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( desc._borderColor ) );
 
         const bool bVisible = beginOverlay( overlayDesc );
         if ( bVisible == false )

@@ -7,6 +7,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Backend/IImGuiRendererBackend.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -34,9 +35,8 @@ namespace sw::editor
         {
             static constexpr float32 kListWidth      = 260.0f;
             static constexpr float32 kIndentPerLevel = 12.0f;
-            static constexpr ImU32   kLayoutColor    = IM_COL32( 90, 200, 255, 110 );
-            static constexpr ImU32   kSelectColor    = IM_COL32( 255, 200, 60, 255 );
-            static constexpr ImU32   kSafeZoneColor  = IM_COL32( 255, 80, 80, 200 );
+            static constexpr Color   kLayoutColor{ Color::fromBytes( 90, 200, 255, 110 ) };
+            static constexpr Color   kSafeZoneColor{ Color::fromBytes( 255, 80, 80, 200 ) };
         };
     } // namespace
 
@@ -260,16 +260,16 @@ namespace sw::editor
             for ( const Widget* pWidget : listWidget )
             {
                 if ( pWidget->isVisible() )
-                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport ), Internal::kLayoutColor, 1.0f );
+                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kLayoutColor ), 1.0f );
             }
         }
         if ( pSelected != nullptr )
-            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), Internal::kSelectColor, 2.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, _viewport ), EditorColorUtil::toImU32( style::kHighlight ), 2.0f );
         const float4& insets = _viewport._safeInsets;
         if ( insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f )
         {
             const UIRect safe{ insets._x, insets._y, _viewport._size._x - insets._z, _viewport._size._y - insets._w };
-            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), Internal::kSafeZoneColor, 1.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, _viewport ), EditorColorUtil::toImU32( Internal::kSafeZoneColor ), 1.0f );
         }
         ImGui::EndChild();
     }

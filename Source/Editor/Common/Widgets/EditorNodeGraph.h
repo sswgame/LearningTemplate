@@ -76,9 +76,9 @@ namespace sw::editor
          */
         bool queryNewLink( const Delegate<bool( int32, EditorGraphPinInfo& )>& findPin, int32& outFromPin, int32& outToPin );
         /** @brief 핀 타입 색 표를 둡니다(핀 타입 번호 = 칸). 표 밖의 타입은 글자색입니다. */
-        void setPinTypeColors( const vector<Color4>& listColor ) { _listPinTypeColor = listColor; }
+        void setPinTypeColors( const vector<Color>& listColor ) { _listPinTypeColor = listColor; }
         /** @brief 핀 타입의 색입니다. */
-        Color4 getPinTypeColor( uint32 pinType ) const;
+        Color getPinTypeColor( uint32 pinType ) const;
         /** @brief 핀 자리에 타입 색 동그라미를 그립니다(이어졌으면 채운다). `ed::BeginPin` ~ `EndPin` 안에서 부릅니다. */
         void drawPinIcon( uint32 pinType, bool bConnected ) const;
         /** @brief 이번 프레임의 문제 노드입니다. 패널이 검증한 결과를 넘깁니다. */
@@ -121,7 +121,7 @@ namespace sw::editor
         string                               _settingsPath;
         float2                               _previousCanvasSize; ///< 앞 프레임의 캔버스 크기(beginCanvas 가 잰다)
         float2                               _canvasSize;         ///< 이번 프레임의 캔버스 크기
-        vector<Color4>                       _listPinTypeColor;   ///< 핀 타입 번호 → 색
+        vector<Color>                        _listPinTypeColor;   ///< 핀 타입 번호 → 색
         vector<EditorGraphNodeIssue>         _listNodeIssue;      ///< 이번 프레임의 문제 노드
         fixed_string<constant::kMaxBuffer64> _addNodeFilter;      ///< 찾아 넣기 검색어
         float2                               _addNodePosition;    ///< 찾아 넣기를 연 자리(캔버스 좌표)

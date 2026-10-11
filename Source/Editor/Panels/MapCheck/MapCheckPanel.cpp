@@ -5,6 +5,7 @@
 #include "Core/String/fixed_string.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorStatusBar.h"
@@ -84,12 +85,12 @@ namespace sw::editor
                 const MapCheckCounts& counts   = syncStatusCounts();
                 if ( pContext != nullptr )
                     notifyOnSceneChange( *pContext, counts );
-                const Color4                         color = counts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
+                const Color                          color = counts._errorCount > 0   ? EditorThemeUtil::getErrorColor()
                                                            : counts._warningCount > 0 ? EditorThemeUtil::getWarningColor()
                                                                                       : EditorThemeUtil::getTextMutedColor();
                 fixed_string<constant::kMaxBuffer64> label;
                 formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", editoricon::kWarning, counts._errorCount + counts._warningCount );
-                ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( color._r, color._g, color._b, color._a ) );
+                ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
                 ImGui::PopStyleColor();
                 EditorSelfTestMarks::note( "statusBar.mapCheck" );
@@ -240,9 +241,9 @@ namespace sw::editor
             ImGui::PushID( static_cast<int32>( rowIndex ) );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            const bool   bError = issue._severity == ValidationSeverity::Error;
-            const Color4 color  = bError ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getWarningColor();
-            ImGui::TextColored( ImVec4( color._r, color._g, color._b, color._a ), "%s", bError ? editoricon::kError : editoricon::kWarning );
+            const bool  bError = issue._severity == ValidationSeverity::Error;
+            const Color color  = bError ? EditorThemeUtil::getErrorColor() : EditorThemeUtil::getWarningColor();
+            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? editoricon::kError : editoricon::kWarning );
 
             ImGui::TableSetColumnIndex( 1 );
             const bool bSelected = pObject != nullptr && pObject == pPrimary;

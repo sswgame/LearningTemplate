@@ -86,6 +86,8 @@ namespace sw
         }
         /** @brief RGB 를 @p factor 배한 색입니다(알파는 그대로). 1 보다 작으면 어둡고 크면 밝습니다. */
         [[nodiscard]] constexpr Color scaleBrightness( const float32 factor ) const noexcept { return Color{ _r * factor, _g * factor, _b * factor, _a }; }
+        /** @brief 네 채널을 모두 0~1 로 자른 색입니다(HDR 값 · 밝기를 키운 값을 화면 색으로 쓸 때). */
+        [[nodiscard]] Color saturate() const noexcept;
         /** @brief 이 색을 sRGB 값으로 보고 선형 값으로 바꿉니다(알파는 그대로). */
         [[nodiscard]] Color toLinear() const noexcept;
         /** @brief 이 색을 선형 값으로 보고 sRGB 값으로 바꿉니다(알파는 그대로). */
