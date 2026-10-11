@@ -108,15 +108,16 @@ namespace sw::editor
 
         /**
          * @brief C 버퍼를 쓰는 검색 필드입니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
+         * @details @p pHint 가 nullptr 이면 지금 문화권의 "Search..." 입니다.
          */
-        static bool drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = "Search...",
+        static bool drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = nullptr,
                                      float32 width = 0.0f, bool bShowClear = true );
 
         /**
          * @brief fixed_string 검색 필드 오버로드입니다.
          */
         template <uint32 N>
-        static bool drawSearchField( const utf8* pID, fixed_string<N>& str, const utf8* pHint = "Search...",
+        static bool drawSearchField( const utf8* pID, fixed_string<N>& str, const utf8* pHint = nullptr,
                                      float32 width = 0.0f, bool bShowClear = true )
         {
             return drawSearchField( pID, str.data(), str.capacity(), pHint, width, bShowClear );

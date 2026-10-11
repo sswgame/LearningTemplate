@@ -8,6 +8,8 @@
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -32,7 +34,7 @@ namespace sw::editor
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "toolbar.netMode" );
-        EditorWidgets::drawTooltip( "Net Mode — Standalone 은 에디터 안에서 재생하고, 나머지는 서버와 클라이언트를 따로 띄운다 (Window > Multiplayer)" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetMode", "Net Mode: Standalone plays inside the editor; the other modes launch a separate server and clients (Window > Multiplayer)." ) );
         if ( settings._mode != EditorNetMode::Standalone )
         {
             ImGui::SameLine();
@@ -40,7 +42,7 @@ namespace sw::editor
             if ( ImGui::InputInt( "##PlayerCount", &settings._clientCount, 1, 1 ) )
                 bChanged = true;
             settings._clientCount = MathUtil::clamp( settings._clientCount, 1, kMaxPlayerCount );
-            EditorWidgets::drawTooltip( "플레이어 수 — 전용 서버면 클라이언트 수, 리슨 호스트면 호스트를 넣은 수" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "NetPlayerCount", "Number of players: the client count for a dedicated server, or the count including the host for a listen host." ) );
         }
         ImGui::EndDisabled();
         return bChanged;

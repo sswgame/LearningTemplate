@@ -14,6 +14,9 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+#include "Engine/Localization/TextFormatter.h"
+
 #include <imgui.h>
 #include <imgui_internal.h>
 
@@ -99,13 +102,13 @@ namespace sw::editor
                 axisValue = resetValue;
                 bChanged  = true;
             }
-            drawTooltip( "클릭하여 기본값으로 초기화합니다" );
+            drawTooltip( SW_LOCTEXT( "EdCommon", "Vec3AxisReset", "Click to reset this axis to its default value." ) );
             ImGui::PopStyleColor( 3 );
             ImGui::SameLine();
             ImGui::PushID( pAxisLabel );
             if ( ImGui::DragFloat( "##v", &axisValue, speed, 0.0f, 0.0f, "%.2f" ) )
                 bChanged = true;
-            drawTooltip( "마우스 드래그 또는 더블 클릭으로 값 수정" );
+            drawTooltip( SW_LOCTEXT( "EdCommon", "Vec3AxisDrag", "Drag to change the value, or double-click to type a number." ) );
             ImGui::PopID();
             ImGui::PopItemWidth();
             ImGui::SameLine();
@@ -155,13 +158,13 @@ namespace sw::editor
         {
             ImGui::SameLine( availX - lineHeight * 2.2f );
             ImGui::Checkbox( "##active", pBActive );
-            drawTooltip( "컴포넌트 활성화/비활성화" );
+            drawTooltip( SW_LOCTEXT( "EdCommon", "ComponentCardActive", "Enable or disable this component." ) );
         }
 
         ImGui::SameLine( availX - lineHeight * 0.5f );
         if ( ImGui::Button( "+", ImVec2{ lineHeight, lineHeight } ) )
             ImGui::OpenPopup( "ComponentSettings" );
-        drawTooltip( "컴포넌트 추가 옵션 및 삭제" );
+        drawTooltip( SW_LOCTEXT( "EdCommon", "ComponentCardOptions", "More options for this component, including removing it." ) );
 
         if ( ImGui::BeginPopup( "ComponentSettings" ) )
         {
@@ -201,19 +204,24 @@ namespace sw::editor
         {
             const utf8* _pID;
             const utf8* _pIcon;
-            const utf8* _pTooltip;
             const utf8* _pMark;
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
-            {"##gizmoTranslate", editoricon::kTranslate, "Translate (W)", "gizmo.translate"},
-            {   "##gizmoRotate",    editoricon::kRotate,    "Rotate (E)",    "gizmo.rotate"},
-            {    "##gizmoScale",     editoricon::kScale,     "Scale (R)",     "gizmo.scale"},
+            {"##gizmoTranslate", editoricon::kTranslate, "gizmo.translate"},
+            {   "##gizmoRotate",    editoricon::kRotate,    "gizmo.rotate"},
+            {    "##gizmoScale",     editoricon::kScale,     "gizmo.scale"},
+        };
+        // 툴팁은 지금 문화권의 글이라 상수 표에 넣지 않고 그릴 때 찾는다.
+        const utf8* const arrTooltip[] = {
+            SW_LOCTEXT( "EdCommon", "GizmoTranslate", "Translate: move the selection along an axis or plane (W)" ),
+            SW_LOCTEXT( "EdCommon", "GizmoRotate", "Rotate: turn the selection around an axis (E)" ),
+            SW_LOCTEXT( "EdCommon", "GizmoScale", "Scale: resize the selection along an axis, or uniformly from the center (R)" ),
         };
         const int32 operation = pContext->getWorkspace().getGizmoOperation();
         for ( int32 index = 0; index < 3; ++index )
         {
             const GizmoButton& button = kArrGizmoButton[index];
-            if ( drawIconToggle( button._pID, button._pIcon, operation == index, button._pTooltip ) )
+            if ( drawIconToggle( button._pID, button._pIcon, operation == index, arrTooltip[index] ) )
                 pContext->getWorkspace().setGizmoOperation( index );
             EditorSelfTestMarks::note( button._pMark );
             if ( bVertical == false )
@@ -221,8 +229,9 @@ namespace sw::editor
         }
 
         const bool bLocalSpace = pContext->getWorkspace().isGizmoLocalSpace();
-        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe, "Local space - click for world space",
-                                   "World space - click for local space" ) )
+        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, editoricon::kAxes, editoricon::kGlobe,
+                                   SW_LOCTEXT( "EdCommon", "GizmoLocalSpace", "Local space: the gizmo follows the object's rotation. Click to switch to world space." ),
+                                   SW_LOCTEXT( "EdCommon", "GizmoWorldSpace", "World space: the gizmo follows the world axes. Click to switch to local space." ) ) )
             pContext->getWorkspace().setGizmoLocalSpace( bLocalSpace == false );
         EditorSelfTestMarks::note( "gizmo.space" );
     }
@@ -310,13 +319,14 @@ namespace sw::editor
         ++EditorWidgetsInternal::noSearchResultHintCount();
         if ( filter.empty() )
         {
-            drawEmptyHint( "No matches." );
+            drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoMatches", "No matches." ) );
             return;
         }
         EditorWidgetsInternal::filteredHintFrame() = static_cast<uint32>( ImGui::GetFrameCount() );
 
-        // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '%' 가 들어와도 서식으로 해석되지 않는다.
-        ImGui::TextDisabled( "No matches for \"%.*s\".", static_cast<int32>( filter.size() ), filter.data() );
+        // 필터를 서식 **인자**로 넘긴다. 그래서 검색어에 '{' · '%' 가 들어와도 서식으로 해석되지 않는다.
+        const string text = SW_LOCFORMAT( "EdCommon", "NoMatchesForFilter", "No matches for \"{filter}\".", TextArgumentList().addText( "filter", filter ) );
+        ImGui::TextDisabled( "%s", text.c_str() );
     }
 
     uint32 EditorWidgets::getNoSearchResultHintCount()
@@ -375,7 +385,7 @@ namespace sw::editor
             ImGui::SetNextItemWidth( ( avail > clearWidth + 4.0f ) ? ( avail - clearWidth ) : avail );
         }
 
-        const utf8* pHintText = ( pHint != nullptr ) ? pHint : "Search...";
+        const utf8* pHintText = ( pHint != nullptr ) ? pHint : SW_LOCTEXT( "EdCommon", "SearchHint", "Search..." );
         bool        bChanged  = ImGui::InputTextWithHint( "##search", pHintText, pBuffer, bufferBytes );
         if ( bShowClear )
         {
@@ -385,6 +395,7 @@ namespace sw::editor
                 pBuffer[0] = '\0';
                 bChanged   = true;
             }
+            drawTooltip( SW_LOCTEXT( "EdCommon", "SearchClear", "Clear the search text." ) );
         }
         ImGui::PopID();
         return bChanged;
@@ -443,6 +454,7 @@ namespace sw::editor
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.25f, 0.25f, 1.0f } );
         ImGui::Button( pDisplayPath, ImVec2{ inputWidth, 0.0f } );
         ImGui::PopStyleColor( 2 );
+        drawTooltip( SW_LOCTEXT( "EdCommon", "AssetSlotDrop", "Drag an asset from the Content Browser and drop it here to assign it." ) );
 
         string droppedPath;
         if ( acceptAssetDrop( droppedPath ) )
@@ -463,6 +475,7 @@ namespace sw::editor
                 assetPath.clear();
                 bChanged = true;
             }
+            drawTooltip( SW_LOCTEXT( "EdCommon", "AssetSlotClear", "Clear this asset reference." ) );
         }
 
         ImGui::PopID();

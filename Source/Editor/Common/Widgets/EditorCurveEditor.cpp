@@ -119,7 +119,7 @@ namespace sw::editor
                 FloatCurve& curve = state._working;
                 if ( state._selectedKey >= curve._listKey.size() )
                 {
-                    ImGui::TextDisabled( "Click a key to edit it. Right-click to add a key. F fits the view." );
+                    ImGui::TextDisabled( "%s", SW_LOCTEXT( "EdCommon", "CurveEditorHint", "Click a key to edit it. Right-click to add a key. F fits the view." ) );
                     return false;
                 }
                 FloatCurveKey& key       = curve._listKey[state._selectedKey];
@@ -303,7 +303,7 @@ namespace sw::editor
                                 ImGui::GetStyle().FrameRounding );
         if ( curve._listKey.empty() )
         {
-            drawList.AddText( ImVec2{ minPoint.x + 4.0f, minPoint.y + 2.0f }, ImGui::GetColorU32( ImGuiCol_TextDisabled ), "(no keys)" );
+            drawList.AddText( ImVec2{ minPoint.x + 4.0f, minPoint.y + 2.0f }, ImGui::GetColorU32( ImGuiCol_TextDisabled ), SW_LOCTEXT( "EdCommon", "CurveNoKeys", "(no keys)" ) );
             return bClicked;
         }
         EditorCurveView view{};
@@ -312,7 +312,7 @@ namespace sw::editor
         view.fitToCurve( curve, 0.0f );
         EditorCurveEditorInternal::drawCurveLine( drawList, view, curve, ImGui::GetColorU32( ImGuiCol_PlotLines ), 1.5f,
                                                   MathUtil::max( view._frameSize._x / EditorCurveEditorInternal::kPreviewSamples, 1.0f ) );
-        EditorWidgets::drawTooltip( "Click to edit the curve" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "CurvePreviewEdit", "Click to edit the curve" ) );
         return bClicked;
     }
 

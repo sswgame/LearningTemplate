@@ -15,6 +15,8 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 SW_LOG_CALLER( "EditorDocumentPanel" );
@@ -112,16 +114,16 @@ namespace sw::editor
             ImGui::OpenPopup( "##DocumentOpen" );
         }
         EditorSelfTestMarks::note( markOpen.c_str() );
-        EditorWidgets::drawTooltip( "이 종류의 에셋을 찾아 엽니다(Quick Open · 콘텐츠 브라우저 더블클릭과 같다)" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "DocumentOpen", "Find and open an asset of this type (the same as Quick Open or double-clicking it in the Content Browser)." ) );
         drawOpenDocumentPopup( pMarkPrefix );
 
         ImGui::SameLine();
-        const utf8* pPreview = _loadedAssetPath.empty() ? "(no document)" : _loadedAssetPath.c_str();
+        const utf8* pPreview = _loadedAssetPath.empty() ? SW_LOCTEXT( "EdCommon", "NoDocument", "(no document)" ) : _loadedAssetPath.c_str();
         ImGui::SetNextItemWidth( -1.0f );
         if ( ImGui::BeginCombo( "##RecentDocuments", pPreview ) )
         {
             if ( _listRecentPath.empty() )
-                ImGui::TextDisabled( "No recent documents" );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoRecentDocuments", "No recent documents" ) );
             string openPath;
             for ( const string& path : _listRecentPath )
             {
@@ -132,7 +134,7 @@ namespace sw::editor
             if ( openPath.empty() == false )
                 requestOpenDocument( openPath );
         }
-        EditorWidgets::drawTooltip( "최근에 연 문서" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EdCommon", "RecentDocuments", "Recently opened documents. Pick one to open it again." ) );
     }
 
     void EditorDocumentPanel::drawOpenDocumentPopup( const utf8* pMarkPrefix )
@@ -142,7 +144,7 @@ namespace sw::editor
         const string markPrefix = string{ pMarkPrefix } + ".open.";
         if ( ImGui::IsWindowAppearing() )
             ImGui::SetKeyboardFocusHere();
-        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, "Search assets", 360.0f * EditorThemeUtil::getDpiScale(), false );
+        EditorWidgets::drawSearchField( "##DocumentOpenSearch", _openFilter, SW_LOCTEXT( "EdCommon", "SearchAssetsHint", "Search assets" ), 360.0f * EditorThemeUtil::getDpiScale(), false );
         EditorSelfTestMarks::note( ( markPrefix + "search" ).c_str() );
 
         const EditorListFilter filter{ _openFilter.c_str() };
@@ -162,7 +164,7 @@ namespace sw::editor
             if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
-                EditorWidgets::drawEmptyHint( "No assets of this kind under Resource/." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoAssetsOfKind", "No assets of this kind under Resource/." ) );
         }
         if ( openPath.empty() == false )
         {

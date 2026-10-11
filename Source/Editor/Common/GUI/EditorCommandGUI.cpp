@@ -30,6 +30,7 @@
 #include "Editor/Popups/QuickLauncherPopup.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Renderer/Capture/RenderDocCapture.h"
@@ -160,7 +161,7 @@ namespace sw::editor
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext != nullptr && pContext->getWorkspace().isSceneDirty() && EditorPlaySession::isStopped() )
                 {
-                    pContext->getNotificationManager().push( "Play", "Scene has unsaved changes. Use the toolbar Play to confirm.",
+                    pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyPlayTitle", "Play" ), SW_LOCTEXT( "EdCommon", "NotifyPlayUnsaved", "The scene has unsaved changes. Use Play on the toolbar to confirm." ),
                                                              NotificationType::Warning );
                     return;
                 }
@@ -200,12 +201,12 @@ namespace sw::editor
                 Component*     pComp    = selectedComponent();
                 if ( pContext == nullptr || pComp == nullptr )
                 {
-                    warn( "Paste", "Select a component first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPasteTitle", "Paste" ), SW_LOCTEXT( "EdCommon", "NotifySelectComponent", "Select a component first" ) );
                     return;
                 }
                 if ( pContext->getWorkspace().hasCopiedComponent() == false )
                 {
-                    warn( "Paste", "Clipboard is empty" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPasteTitle", "Paste" ), SW_LOCTEXT( "EdCommon", "NotifyClipboardEmpty", "Clipboard is empty" ) );
                     return;
                 }
                 (void)EditorTransformCommands::pasteCopiedComponentValues( pContext->getWorkspace(), pComp ); // 실패는 붙여넣기가 로그로 알린다
@@ -217,12 +218,12 @@ namespace sw::editor
                 GameObject*    pObj     = primaryObject();
                 if ( pContext == nullptr || pObj == nullptr )
                 {
-                    warn( "Paste", "Select an object first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPasteTitle", "Paste" ), SW_LOCTEXT( "EdCommon", "NotifySelectObject", "Select an object first" ) );
                     return;
                 }
                 if ( pContext->getWorkspace().hasCopiedComponent() == false )
                 {
-                    warn( "Paste", "Clipboard is empty" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPasteTitle", "Paste" ), SW_LOCTEXT( "EdCommon", "NotifyClipboardEmpty", "Clipboard is empty" ) );
                     return;
                 }
                 (void)EditorTransformCommands::pasteCopiedComponentAsNew( pContext->getWorkspace(), pObj ); // 실패는 붙여넣기가 로그로 알린다
@@ -235,13 +236,13 @@ namespace sw::editor
                 Component* pComp = selectedComponent();
                 if ( pComp == nullptr )
                 {
-                    warn( "Preset", "Select a component first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifySelectComponent", "Select a component first" ) );
                     return;
                 }
                 // 반환값을 버리면 "프리셋을 골랐는데 아무 일도 없다" 가 된다 (파일이 없거나
                 // XML 이 그 컴포넌트 타입과 맞지 않으면 실패한다).
                 if ( EditorTransformCommands::loadComponentPreset( pComp, listPath[0] ) == false )
-                    warn( "Preset", "Failed to apply the preset to this component" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifyPresetApplyFailed", "Failed to apply the preset to this component" ) );
             }
 
             static void onSavePresetDialogResult( const vector<string>& listPath )
@@ -251,18 +252,18 @@ namespace sw::editor
                 Component* pComp = selectedComponent();
                 if ( pComp == nullptr )
                 {
-                    warn( "Preset", "Select a component first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifySelectComponent", "Select a component first" ) );
                     return;
                 }
                 if ( EditorTransformCommands::saveComponentPresetTo( pComp, listPath[0] ) == false )
-                    warn( "Preset", "Failed to write the preset file" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifyPresetWriteFailed", "Failed to write the preset file" ) );
             }
 
             static void commandLoadComponentPreset()
             {
                 if ( selectedComponent() == nullptr )
                 {
-                    warn( "Preset", "Select a component first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifySelectComponent", "Select a component first" ) );
                     return;
                 }
                 FileDialogParams params{};
@@ -279,7 +280,7 @@ namespace sw::editor
             {
                 if ( selectedComponent() == nullptr )
                 {
-                    warn( "Preset", "Select a component first" );
+                    warn( SW_LOCTEXT( "EdCommon", "NotifyPresetTitle", "Preset" ), SW_LOCTEXT( "EdCommon", "NotifySelectComponent", "Select a component first" ) );
                     return;
                 }
                 FileDialogParams params{};

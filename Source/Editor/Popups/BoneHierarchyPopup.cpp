@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include <imgui.h>
@@ -151,7 +152,7 @@ namespace sw::editor
         const string     name = ws.getSelectedObjectName();
         if ( name.empty() || ws.getSelectedObjectID() == 0 )
         {
-            EditorWidgets::drawEmptyHint( "No selection. Select an object in the Hierarchy." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "BoneNoSelection", "No selection. Select an object in the Hierarchy." ) );
             EditorChrome::endPanel();
             return;
         }
@@ -166,10 +167,10 @@ namespace sw::editor
             if ( pSelectedObj != nullptr )
                 BoneHierarchyPopupInternal::drawGameObjectHierarchy( pSelectedObj );
             else
-                EditorWidgets::drawEmptyHint( "Object not found in active scene." );
+                EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "BoneObjectNotFound", "Object not found in the active scene." ) );
         }
         else
-            EditorWidgets::drawEmptyHint( "No active scene." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EdCommon", "NoActiveScene", "No active scene." ) );
 
         EditorChrome::endPanel();
     }

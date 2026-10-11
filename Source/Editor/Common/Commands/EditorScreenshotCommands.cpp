@@ -5,6 +5,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
 #include "Engine/Renderer/RenderThread.h"
 
@@ -44,7 +45,7 @@ namespace sw::editor
         const uint64 renderTarget = pContext->getViewTarget( EditorViewKind::Scene )._renderTarget;
         if ( renderTarget == 0 )
         {
-            pContext->getNotificationManager().push( "Screenshot", "The scene view is not drawn - open the Scene tab first", NotificationType::Warning );
+            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyScreenshotTitle", "Screenshot" ), SW_LOCTEXT( "EdCommon", "NotifyScreenshotNoSceneView", "The scene view is not drawn. Open the Scene tab first." ), NotificationType::Warning );
             return;
         }
         EditorScreenshotCommandsInternal::request( ScreenshotPathUtil::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
@@ -75,8 +76,8 @@ namespace sw::editor
             return;
         const string path = RenderThread::getLastScreenshotPath();
         if ( path.empty() )
-            pContext->getNotificationManager().push( "Screenshot", "The screenshot was not written (see the log)", NotificationType::Error );
+            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyScreenshotTitle", "Screenshot" ), SW_LOCTEXT( "EdCommon", "NotifyScreenshotFailed", "The screenshot was not written (see the log)" ), NotificationType::Error );
         else
-            pContext->getNotificationManager().push( "Screenshot saved", path, NotificationType::Success );
+            pContext->getNotificationManager().push( SW_LOCTEXT( "EdCommon", "NotifyScreenshotSaved", "Screenshot saved" ), path, NotificationType::Success );
     }
 } // namespace sw::editor

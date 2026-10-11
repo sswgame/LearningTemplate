@@ -8,6 +8,8 @@
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
 
@@ -131,7 +133,7 @@ namespace sw::editor
             if ( ImGui::IsWindowAppearing() )
                 ImGui::SetKeyboardFocusHere();
             ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDpiScale() );
-            const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", "Search nodes...", _addNodeFilter.data(), _addNodeFilter.capacity(),
+            const bool bEnter = ImGui::InputTextWithHint( "##addNodeSearch", SW_LOCTEXT( "EdCommon", "SearchNodesHint", "Search nodes..." ), _addNodeFilter.data(), _addNodeFilter.capacity(),
                                                           ImGuiInputTextFlags_EnterReturnsTrue );
             EditorSelfTestMarks::note( "graph.addNode.search" );
             vector<uint32> listIndex;
@@ -153,7 +155,7 @@ namespace sw::editor
                 }
             }
             if ( listIndex.empty() )
-                ImGui::TextDisabled( "No node matches." );
+                ImGui::TextDisabled( "%s", SW_LOCTEXT( "EdCommon", "NoNodeMatches", "No node matches." ) );
             // Enter 는 맨 위 줄을 고른다(언리얼 · 유니티 검색 팝업과 같다).
             if ( bEnter && bPicked == false && listIndex.empty() == false )
             {
@@ -182,7 +184,7 @@ namespace sw::editor
                 const int32        idB = static_cast<int32>( pinB.Get() );
                 EditorGraphPinInfo infoA{};
                 EditorGraphPinInfo infoB{};
-                const utf8*        pReason = "Unknown pin";
+                const utf8*        pReason = SW_LOCTEXT( "EdCommon", "UnknownPin", "Unknown pin" );
                 const bool         bKnown  = findPin.isBound() && findPin( idA, infoA ) && findPin( idB, infoB );
                 if ( bKnown && EditorNodeGraphRules::canConnect( idA, infoA, idB, infoB, outFromPin, outToPin, pReason ) )
                 {
