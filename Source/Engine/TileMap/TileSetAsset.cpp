@@ -17,7 +17,7 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
-            /** @brief 공백으로 나뉜 정수 목록을 읽습니다. 숫자가 아닌 것이 있으면 false 입니다. */
+            /** @brief 공백으로 나뉜 정수 목록을 읽습니다. 숫자가 아닌 것이 있으면 false 를 반환합니다. */
             [[nodiscard]] static bool parseIntList( string_view text, vector<int32>& outListValue )
             {
                 outListValue.clear();
@@ -43,7 +43,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 아홉 글자 패턴(공백은 건너뜀)을 이웃 여덟 칸의 조건으로 읽습니다. 가운데(다섯째) 글자는 보지 않습니다. */
+            /** @brief 아홉 글자 패턴(공백은 건너뜀)을 이웃 여덟 셀의 조건으로 읽습니다. 가운데(다섯째) 글자는 보지 않습니다. */
             [[nodiscard]] static bool parsePattern( string_view text, TileNeighborRule ( &outArrNeighbor )[8] )
             {
                 TileNeighborRule arrCell[9]{};
@@ -283,7 +283,7 @@ namespace sw
         if ( brush.isRuleTile() == false )
             return &brush._defaultVisual;
 
-        // 이웃마다 "같은 브러시인가" 를 한 번 재고, 규칙을 앞에서부터 맞춘다(첫 규칙이 이긴다 — 유니티 RuleTile 과 같다).
+        // 이웃마다 "같은 브러시인가"를 한 번 측정하고, 규칙을 앞에서부터 맞춘다(첫 규칙이 이긴다. 유니티 RuleTile 과 같다).
         bool arrSame[8]{};
         for ( uint32 neighbor = 0; neighbor < 8; ++neighbor )
         {
