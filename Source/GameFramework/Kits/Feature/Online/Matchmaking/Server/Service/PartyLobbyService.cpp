@@ -42,7 +42,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 인원이 적은 편(같으면 0)입니다. */
+            /** @brief 인원이 적은 팀을 반환합니다. 같으면 0번 팀입니다. */
             static int32 findSmallerTeam( const LobbySnapshot& lobby )
             {
                 int32 arrCount[PartyLobbyLimit::kLobbyTeamCount] = {};
@@ -65,7 +65,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 파티 기록 하나의 바꾸기 — 연산마다 규칙(순수)이고, 끝나면 서비스에 넘긴다. 계정 색인은 서비스가 성공 · 실패 뒤 따로 맞춘다. */
+    /** @brief 파티 기록 하나를 바꾸는 규칙입니다. 연산마다 순수한 규칙이며 끝나면 서비스에 넘깁니다. 계정 인덱스는 서비스가 성공이나 실패 뒤에 따로 맞춥니다. */
     class PartyMutation final : public ICacheRecordMutation
     {
     public:
@@ -86,7 +86,7 @@ namespace sw
             if ( _request._operation == PartyLobbyOperation::PartyCreate )
             {
                 if ( bExists )
-                    return MatchmakingResult::Conflict; // id 가 겹쳤다(서버 id + 순번이라 있을 수 없다)
+                    return MatchmakingResult::Conflict; // id 가 겹쳤다. 서버 id 와 순번으로 만들므로 생길 수 없는 경우이다
                 party._partyID        = _request._partyID;
                 party._maxMemberCount = _pService->getMaxPartySize();
                 party._listMemberID.push_back( _request._actorID );
@@ -111,7 +111,7 @@ namespace sw
                         return MatchmakingResult::AlreadyInParty;
                     if ( static_cast<int32>( party._listMemberID.size() ) >= party._maxMemberCount )
                         return MatchmakingResult::PartyFull;
-                    outNewBytes = oldBytes; // 같은 값으로 비교 후 쓰기 — 만료 연장 + 그새 해산되지 않았음을 확인
+                    outNewBytes = oldBytes; // 같은 값으로 비교 후 쓰기를 한다. 만료를 연장하고 그사이 해산되지 않았음을 확인하는 것이다
                     return MatchmakingResult::Ok;
                 }
                 case PartyLobbyOperation::PartyAccept:
@@ -121,7 +121,7 @@ namespace sw
                     if ( static_cast<int32>( party._listMemberID.size() ) >= party._maxMemberCount )
                         return MatchmakingResult::PartyFull;
                     if ( party._queuedTicketID != 0 )
-                        return MatchmakingResult::AlreadyQueued; // 줄 선 동안은 못 들어온다
+                        return MatchmakingResult::AlreadyQueued; // 줄을 서 있는 동안은 들어올 수 없다
                     party._listMemberID.push_back( _request._actorID );
                     break;
                 }
@@ -133,18 +133,18 @@ namespace sw
                     if ( bKick && party.getLeaderID() != _request._actorID )
                         return MatchmakingResult::NotPartyLeader;
                     if ( bKick && leaving == _request._actorID )
-                        return MatchmakingResult::Invalid; // 장은 자신을 내보내지 않는다(떠나기)
+                        return MatchmakingResult::Invalid; // 파티장은 자신을 내보낼 수 없다. 떠나기를 써야 한다
                     if ( party.hasMember( leaving ) == false )
                         return MatchmakingResult::NotInParty;
                     for ( size_t index = 0; index < party._listMemberID.size(); ++index )
                     {
                         if ( party._listMemberID[index] == leaving )
                         {
-                            party._listMemberID.erase( party._listMemberID.begin() + static_cast<ptrdiff_t>( index ) ); // 장이 나가면 다음 사람이 첫째 — 장
+                            party._listMemberID.erase( party._listMemberID.begin() + static_cast<ptrdiff_t>( index ) ); // 파티장이 나가면 다음 사람이 첫 항목이 되어 파티장이 된다
                             break;
                         }
                     }
-                    _brokenTicketID       = party._queuedTicketID; // 사람이 바뀌면 대기열에서 빠진다
+                    _brokenTicketID       = party._queuedTicketID; // 멤버가 바뀌면 대기열에서 빠진다
                     party._queuedTicketID = 0;
                     _removedID            = leaving;
                     outbErase             = party._listMemberID.empty();
@@ -185,7 +185,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 로비 기록 하나의 바꾸기입니다(파티와 같은 모양). */
+    /** @brief 로비 기록 하나를 바꾸는 규칙입니다. 파티와 같은 구조입니다. */
     class LobbyMutation final : public ICacheRecordMutation
     {
     public:
@@ -229,7 +229,7 @@ namespace sw
                 {
                     if ( lobby.hasMember( _request._actorID ) )
                     {
-                        outNewBytes = oldBytes; // 이미 들어 있다 — 같은 값(만료 연장)
+                        outNewBytes = oldBytes; // 이미 들어 있으므로 같은 값으로 쓴다. 만료를 연장하는 효과가 있다
                         return MatchmakingResult::Ok;
                     }
                     if ( lobby._state != LobbyState::Open )
@@ -246,7 +246,7 @@ namespace sw
                     {
                         if ( lobby._listMember[index]._accountID == _request._actorID )
                         {
-                            lobby._listMember.erase( lobby._listMember.begin() + static_cast<ptrdiff_t>( index ) ); // 방장이 나가면 다음 사람이 방장
+                            lobby._listMember.erase( lobby._listMember.begin() + static_cast<ptrdiff_t>( index ) ); // 방장이 나가면 다음 사람이 방장이 된다
                             bRemoved = true;
                             break;
                         }
@@ -622,7 +622,7 @@ namespace sw
                     result = MatchmakingResult::Unavailable;
                 else if ( reply._result != EphemeralResult::Ok || MatchmakingProtocol::decodeParty( reply._value, party ) == false ||
                           party.hasMember( step._request._actorID ) == false )
-                    result = MatchmakingResult::NotInParty; // 색인만 남았다(파티 만료)
+                    result = MatchmakingResult::NotInParty; // 인덱스만 남았다. 파티가 만료됐다
                 if ( step._request._onPartyFound.isBound() )
                     step._request._onPartyFound( step._request._requestTag, result, party );
                 break;
@@ -719,7 +719,7 @@ namespace sw
         }
         else if ( reply._result == EphemeralResult::NotFound )
         {
-            submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( list._modeID ), ServiceKeyUtil::makeHex64( lobbyID ) ) ); // 만료로 사라진 로비
+            submitFireAndForget( EphemeralRequest::makeScoreRemove( makeLobbyListKey( list._modeID ), ServiceKeyUtil::makeHex64( lobbyID ) ) ); // 만료로 사라진 로비이다
         }
         if ( --list._remainingCount > 0 )
             return;
@@ -746,7 +746,7 @@ namespace sw
             {
                 if ( result != MatchmakingResult::Ok )
                 {
-                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) ); // 잡아 둔 색인을 되돌린다
+                    submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) ); // 잡아 둔 인덱스를 되돌린다
                     break;
                 }
                 if ( request._operation == PartyLobbyOperation::PartyAccept )
@@ -754,7 +754,7 @@ namespace sw
                     submitFireAndForget( EphemeralRequest::makeErase( makeInviteKey( request._actorID, request._partyID ) ) );
                     refreshIndexTtl( party );
                 }
-                notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 — 클라이언트의 "내 파티" 는 알림이 원본
+                notifyParty( party, kInvalidAccountID ); // 만든 사람에게도 보낸다. 클라이언트의 "내 파티" 는 알림이 원본이기 때문이다
                 break;
             }
             case PartyLobbyOperation::PartyInvite:
@@ -777,7 +777,7 @@ namespace sw
             {
                 if ( result == MatchmakingResult::NotInParty && request._operation == PartyLobbyOperation::PartyLeave && party._listMemberID.empty() )
                 {
-                    // 색인만 남았다(파티 기록이 만료) — 색인을 지우면 떠난 것과 같다
+                    // 인덱스만 남았다. 파티 기록이 만료된 것이며 인덱스를 지우면 떠난 것과 같다
                     submitFireAndForget( EphemeralRequest::makeCompareAndErase( makeAccountPartyKey( request._actorID ), indexValue ) );
                     result = MatchmakingResult::Ok;
                     break;
@@ -795,7 +795,7 @@ namespace sw
             {
                 if ( result == MatchmakingResult::Ok )
                     notifyParty( party, kInvalidAccountID );
-                return; // 완료 없음
+                return; // 완료는 없다
             }
             default:
             {
@@ -846,11 +846,11 @@ namespace sw
                     break;
                 }
             }
-            if ( bErased == false ) // 목록도 살아 있는 로비만큼 산다
+            if ( bErased == false ) // 목록도 살아 있는 로비만큼만 유지한다
                 submitFireAndForget( EphemeralRequest::makeExpire( makeLobbyListKey( lobby._modeID ), PartyLobbyLimit::kLobbyTtlMs ) );
         }
         if ( request._operation == PartyLobbyOperation::LobbyReopen )
-            return; // 완료 없음
+            return; // 완료는 없다
         completeLobby( request, result, lobby );
     }
 
@@ -858,7 +858,7 @@ namespace sw
     {
         for ( const AccountID memberID : party._listMemberID )
         {
-            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장
+            submitFireAndForget( EphemeralRequest::makeExpire( makeAccountPartyKey( memberID ), PartyLobbyLimit::kPartyTtlMs ) ); // 파티 기록과 함께 연장한다
         }
     }
 
@@ -877,7 +877,7 @@ namespace sw
         PartyLobbyNotification removed;
         removed._recipientID    = removedID;
         removed._pushKind       = MatchmakingMethod::kPushParty;
-        removed._party._partyID = party._partyID; // 빈 회원 — 이 파티에서 빠졌다
+        removed._party._partyID = party._partyID; // 멤버가 비어 있으면 이 파티에서 빠진 것이다
         _notificationBuffer.push( std::move( removed ) );
     }
 

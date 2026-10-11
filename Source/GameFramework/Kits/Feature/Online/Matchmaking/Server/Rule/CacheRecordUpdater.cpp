@@ -75,7 +75,7 @@ namespace sw
         }
         if ( bErase && operation->_bExists == SW_FALSE )
         {
-            operation->_mutation->onFinished( MatchmakingResult::Ok, {} ); // 이미 없다
+            operation->_mutation->onFinished( MatchmakingResult::Ok, {} ); // 이미 없는 기록이다
             return;
         }
         operation->_bErase = bErase ? SW_TRUE : SW_FALSE;
@@ -102,7 +102,7 @@ namespace sw
             operation->_mutation->onFinished( MatchmakingResult::Ok, operation->_bErase != SW_FALSE ? vector<uint8>{} : operation->_newBytes );
             return;
         }
-        // 누가 먼저 바꿨다(CAS 의 Conflict · 비교 대상이 사라져 NotFound) — 다시 읽고 다시
+        // 다른 곳이 먼저 바꿨다. CAS 가 Conflict 이거나 비교 대상이 사라져 NotFound 이면 다시 읽고 다시 시도한다
         const bool bRaced = reply._result == EphemeralResult::Conflict || reply._result == EphemeralResult::NotFound;
         if ( bRaced && ++operation->_attempt < kMaxAttempt )
         {

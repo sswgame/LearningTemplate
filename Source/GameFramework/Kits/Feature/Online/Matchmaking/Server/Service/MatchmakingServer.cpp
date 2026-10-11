@@ -62,7 +62,7 @@ namespace sw
     void MatchmakingServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 푼다
+        _listSubscribedTopic.clear(); // 구독은 호스트가 이어서 모두 해제한다
         _pHost = nullptr;
     }
 
@@ -326,7 +326,7 @@ namespace sw
     {
         NetRequestToken token;
         if ( requestTag == 0 || _pendingTable.take( requestTag, token ) == false )
-            return; // 서버가 낸 요청(계정이 떠남)
+            return; // 서버가 낸 요청이다. 계정이 떠난 경우이다
         BitWriter body;
         MatchmakingProtocol::writeReply( body, reply );
         (void)host.respondOk( token, body );
@@ -337,6 +337,6 @@ namespace sw
         if ( host.sendPush( accountID, kind, body ) )
             return;
         if ( _pPresence != nullptr )
-            (void)_pPresence->sendRemotePush( accountID, kind, body ); // 다른 서버에 붙은 회원
+            (void)_pPresence->sendRemotePush( accountID, kind, body ); // 다른 서버에 접속한 멤버이다
     }
 } // namespace sw

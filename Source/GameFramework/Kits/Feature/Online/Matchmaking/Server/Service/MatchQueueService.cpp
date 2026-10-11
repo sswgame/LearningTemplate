@@ -80,7 +80,7 @@ namespace sw
             state._reader = make_unique<ServerRegistryReader>();
             state._reader->initialize( dependencies._pRouter, mode._serverKind, dependencies._registryRefreshPeriodMs );
             if ( dependencies._pBus == nullptr )
-                state._bAuthority = SW_TRUE; // 서버 한 대 — 늘 권한
+                state._bAuthority = SW_TRUE; // 서버가 한 대이므로 항상 권한을 가진다
         }
         if ( dependencies._pBus != nullptr )
             _topicBuffer.push( MatchQueueTopicChange{ makeResultTopic( dependencies._serverID ), SW_TRUE } );
@@ -140,11 +140,11 @@ namespace sw
         {
             if ( _dependencies._pBus != nullptr )
                 tickLease( modeID, state, nowMs );
-            state._reader->tick( nowMs ); // 로비 배정은 권한이 아니어도 고른다
+            state._reader->tick( nowMs ); // 로비 배정은 권한이 없어도 서버를 고른다
             if ( state._bAuthority != SW_FALSE )
                 placeMatches( state, nowMs );
         }
-        // 이 서버가 낸 표의 시한 — 권한이 넘어가 표를 잃었으면 결과가 오지 않는다
+        // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다
         vector<uint64> listExpired;
         for ( const auto& [ticketID, ticket] : _mapLocalTicket )
         {
@@ -164,7 +164,7 @@ namespace sw
     void MatchQueueService::tickLease( const string& modeID, ModeState& state, int64 nowMs )
     {
         if ( state._leaseRequestID != 0 )
-            return; // 답을 기다린다
+            return; // 응답을 기다린다
         if ( state._bLeaseAttempted != SW_FALSE && nowMs - state._leaseAttemptMs < MatchQueueLimit::kLeaseRenewMs )
             return;
         const vector<uint8>    selfValue              = MatchmakingProtocol::encodeID( _dependencies._serverID );
@@ -189,7 +189,7 @@ namespace sw
             return;
         pState->_leaseRequestID = 0;
         if ( reply._result == EphemeralResult::Unavailable || reply._result == EphemeralResult::Invalid )
-            return; // 캐시가 아프다 — 지금 상태로 다음 주기에 다시
+            return; // 캐시에 문제가 있으므로 지금 상태로 두고 다음 주기에 다시 시도한다
         const bool bHold = reply._result == EphemeralResult::Ok;
         if ( bHold == ( pState->_bAuthority != SW_FALSE ) )
             return;
@@ -198,7 +198,7 @@ namespace sw
         _topicBuffer.push( MatchQueueTopicChange{ makeCancelTopic( modeID ), static_cast<uint8>( bHold ? SW_TRUE : SW_FALSE ) } );
         if ( bHold == false )
         {
-            // 권한을 잃었다 — 매처를 비운다(표는 새 권한 서버가 모르는 채 잃는다 — 낸 서버의 시한이 알린다)
+            // 권한을 잃었으므로 매처를 비운다. 티켓은 새 권한 서버가 모르는 채 사라지며, 티켓을 낸 서버의 시한이 이를 알린다.
             pState->_maker.initialize( _mapMode[modeID], _dependencies._serverID );
             pState->_listUnplaced.clear();
         }
@@ -233,7 +233,7 @@ namespace sw
             submitTicket( join, vector<AccountID>{ accountID }, 0 );
             return;
         }
-        // 파티 장이면 파티 전체를 — 파티 기록을 읽은 뒤(onPartyFound)
+        // 파티장이면 파티 전체를 넣는다. 파티 기록을 읽은 뒤(onPartyFound)에 처리한다
         const uint64 lookupTag      = _nextLookupTag++;
         _mapLookupToJoin[lookupTag] = join;
         _dependencies._pPartyLobby->findPartyOfAccount( accountID, lookupTag, PartyLobbyService::PartyFoundDelegate::create<&MatchQueueService::onPartyFound>( this ) );
@@ -341,7 +341,7 @@ namespace sw
         {
             const UnplacedMatch& unplaced = state._listUnplaced[index];
             const bool           bGiveUp  = nowMs - unplaced._formedMs >= MatchQueueLimit::kNoServerGiveUpMs;
-            // 자리가 없으면 다음 틱에 다시(서버 목록이 바뀌길) — 오래 기다렸으면 NoServer 로 끝낸다
+            // 자리가 없으면 다음 틱에 다시 시도한다. 서버 목록이 바뀌기를 기다리는 것이며, 오래 기다렸으면 NoServer 로 끝낸다
             if ( placeMatch( state, unplaced._match, bGiveUp ? MatchQueueOutcome::NoServer : MatchQueueOutcome::Count, nowMs ) == false && bGiveUp == false )
             {
                 ++index;
@@ -387,7 +387,7 @@ namespace sw
         if ( bPlaced == false && failOutcome == MatchQueueOutcome::Count )
             return false;
 
-        if ( bPlaced && _dependencies._pBus != nullptr ) // 게임 서버에 올 사람을 먼저 알린다
+        if ( bPlaced && _dependencies._pBus != nullptr ) // 게임 서버에 접속할 사람을 먼저 알린다
         {
             BitWriter body;
             MatchmakingProtocol::writeFormed( body, match );
@@ -407,7 +407,7 @@ namespace sw
                 assignment._port     = picked._descriptor._port;
             }
             if ( ticket._listMember.empty() == false )
-                fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 표 하나는 한 팀
+                fillTeam( match, ticket._listMember.front()._accountID, assignment ); // 티켓 하나는 한 팀에 들어간다
             deliverToTicket( ticket._originServerID, assignment );
         }
         if ( bPlaced == false )
@@ -436,7 +436,7 @@ namespace sw
             query._kind              = mode._serverKind;
             query._buildVersion      = mode._buildVersion;
             query._seatCount         = static_cast<int32>( lobby._listMember.size() );
-            query._bAllowOtherRegion = SW_TRUE; // 로비는 지역을 고르지 않았다
+            query._bAllowOtherRegion = SW_TRUE; // 로비는 지역을 고르지 않았으므로 다른 지역도 허용한다
             bPlaced                  = pState->_reader->pickServer( query, nowMs, picked );
         }
         if ( bPlaced && _dependencies._pBus != nullptr )
@@ -461,7 +461,7 @@ namespace sw
             _notificationBuffer.push( MatchQueueNotification{ assignment, member._accountID } );
         }
         if ( bPlaced == false && _dependencies._pPartyLobby != nullptr )
-            _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게
+            _dependencies._pPartyLobby->reopenLobby( lobby._lobbyID ); // 다시 시작할 수 있게 한다
     }
 
     void MatchQueueService::deliverToTicket( uint64 originServerID, const MatchAssignment& assignment )
@@ -480,7 +480,7 @@ namespace sw
     {
         const auto ticketIt = _mapLocalTicket.find( ticketID );
         if ( ticketIt == _mapLocalTicket.end() )
-            return; // 이미 끝냄(시한 뒤 늦은 결과 · 빠진 표)
+            return; // 이미 끝났다. 시한 뒤에 온 늦은 결과이거나 이미 빠진 티켓이다
         for ( const AccountID accountID : ticketIt->second._listAccount )
         {
             _notificationBuffer.push( MatchQueueNotification{ assignment, accountID } );
@@ -564,7 +564,7 @@ namespace sw
             notifyLocalTicket( ticketID, cancelled );
             return;
         }
-        // 다른 서버가 낸 파티 표 — 모드를 모르니 모든 모드의 권한에서 빼고, 낸 서버(표 id 의 위 32 비트)에 Cancelled 를 알린다
+        // 다른 서버가 낸 파티 티켓이다. 모드를 모르므로 모든 모드의 권한에서 빼고, 티켓을 낸 서버(티켓 id 의 위쪽 32비트)에 Cancelled 를 알린다
         for ( const auto& [modeID, mode] : _mapMode )
         {
             removeFromQueue( modeID, ticketID );

@@ -1,10 +1,11 @@
 /**
  * @file CacheRecordUpdater.h
- * @brief 캐시 기록 하나의 비교 후 쓰기 고리 — 읽기 → 바꾸기(함수 객체) → CompareAndSet(없던 기록은 IfAbsent Set, 지우기는 CompareAndErase) → 어긋나면 다시(4 번).
- *        서비스 스레드 하나에서 씁니다(델리게이트는 라우터 `pump` 안).
- * @details - 바꾸기 객체(`ICacheRecordMutation`)는 순수해야 한다 — 다시 할 때 새로 읽은 값으로 다시 불린다. 끝나면 `onFinished` 가 정확히 한 번(`shutdown` 으로 버린 것은 빼고).
- *          - 규칙 실패(Ok 가 아닌 `mutate`)는 그 읽기로 판정한다 — 쓰지 않으므로 그사이 다른 서버의 쓰기는 보지 못한다(낙관적 — 다시 요청하면 새 값으로 판정).
- *          EOS · PlayFab 로비가 서비스 쪽 공유 상태를 판(etag) 조건으로 바꾸는 것과 같은 모양이다.
+ * @brief 캐시 기록 하나를 비교 후 쓰기로 바꾸는 반복 처리입니다. 읽기, 바꾸기(함수 객체), CompareAndSet 순서로 진행하며, 없던 기록은 IfAbsent Set 으로, 지우기는 CompareAndErase 로 처리합니다. 어긋나면 최대 4번 다시 시도합니다.
+ *        서비스 스레드 하나에서 쓰며 델리게이트는 라우터 `pump` 안에서 불립니다.
+ * @details - 바꾸기 객체(`ICacheRecordMutation`)는 순수해야 한다. 다시 시도할 때 새로 읽은 값으로 다시 호출되기 때문이다. 끝나면 `onFinished` 를 정확히 한 번 부른다. `shutdown` 으로 버린 요청은 제외한다.
+ *          - 규칙 실패(`mutate` 가 Ok 가 아닌 경우)는 그때 읽은 값으로 판정한다. 쓰지 않으므로 그사이 다른 서버의 쓰기는 보지 못한다. 낙관적 방식이며 다시 요청하면 새 값으로 판정한다.
+ *
+ *          EOS 와 PlayFab 로비가 서비스 쪽 공유 상태를 버전(etag) 조건으로 바꾸는 것과 같은 구조이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -31,12 +32,12 @@ namespace sw
     public:
         virtual ~ICacheRecordMutation() = default;
         /**
-         * @brief 옛 값으로 새 값을 정합니다. Ok 가 아니면 쓰지 않고 끝낸다.
-         * @param bExists 기록이 있었나
-         * @param outbErase 참이면 지운다(비교 후 지우기)
+         * @brief 이전 값으로 새 값을 정합니다. Ok 가 아니면 쓰지 않고 끝냅니다.
+         * @param bExists 기록이 있었는지 나타냅니다.
+         * @param outbErase 참이면 기록을 지웁니다. 비교 후 지우기로 처리합니다.
          */
         virtual MatchmakingResult mutate( bool bExists, const vector<uint8>& oldBytes, vector<uint8>& outNewBytes, bool& outbErase ) = 0;
-        /** @brief 끝 — 결과와 마지막에 쓴 값(지웠으면 빈 값, 규칙 실패면 읽은 값)입니다. */
+        /** @brief 끝났을 때 불립니다. 결과와 마지막에 쓴 값을 받으며, 지웠으면 빈 값이고 규칙이 실패했으면 읽은 값입니다. */
         virtual void onFinished( MatchmakingResult result, const vector<uint8>& finalBytes ) = 0;
     };
 } // namespace sw
@@ -45,7 +46,7 @@ namespace sw
 {
     /**
      * @class CacheRecordUpdater
-     * @brief 비교 후 쓰기 고리입니다.
+     * @brief 비교 후 쓰기를 반복하는 클래스입니다.
      */
     class SW_GF_API CacheRecordUpdater
     {
@@ -59,10 +60,10 @@ namespace sw
         CacheRecordUpdater& operator=( const CacheRecordUpdater& ) = delete;
 
         void initialize( EphemeralStoreRouter* pRouter );
-        /** @brief 기다리던 캐시 요청을 취소하고 바꾸기 객체를 버립니다(`onFinished` 없음 — 주인이 내려간다). */
+        /** @brief 기다리던 캐시 요청을 취소하고 바꾸기 객체를 버립니다. 소유자가 종료되므로 `onFinished` 는 부르지 않습니다. */
         void shutdown();
 
-        /** @brief @p key 의 기록을 @p mutation 으로 바꿉니다. 새로 쓰는 값의 만료는 @p ttlMs 입니다. */
+        /** @brief @p key 의 기록을 @p mutation 으로 바꿉니다. 새로 쓰는 값의 만료 시간은 @p ttlMs 입니다. */
         void update( string_view key, int64 ttlMs, unique_ptr<ICacheRecordMutation> mutation );
 
         int32 getPendingCount() const { return static_cast<int32>( _mapRequestToOperation.size() ); }

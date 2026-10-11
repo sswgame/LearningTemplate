@@ -1,10 +1,11 @@
 /**
  * @file MatchmakingClient.h
- * @brief 매칭 클라이언트 — `OnlineServiceClient` 에 올리는 `IOnlineClientService`. 파티 · 로비 · 대기열 요청을 보내고, 알림(파티 · 초대 · 로비 · 매칭 결과)을 모아 둡니다.
- * @details - 요청마다 완료 델리게이트를 정확히 한 번(`tick` 스레드) — 업무 결과는 `_reply._result`, 전송 · 공통 오류는 `_errorCode`(그때 결과는 `fromErrorCode`).
- *          - 매칭 결과가 `Found` 면 게임은 계정 클라이언트로 그 서버(`_serverID` 16 진)의 접속 표를 받아 `_address:_port` 에 UDP 로 붙는다.
- *          - 마지막 파티 스냅숏을 든다(알림 · 응답) — 빈 회원이면 파티가 없다.
- *          언리얼 Online Services 의 비동기 호출 + 완료 델리게이트, 경제 · 서버 디렉터리 클라이언트와 같은 모양이다.
+ * @brief 매칭 클라이언트입니다. `OnlineServiceClient` 에 등록하는 `IOnlineClientService` 이며, 파티, 로비, 대기열 요청을 보내고 알림(파티, 초대, 로비, 매칭 결과)을 모아 둡니다.
+ * @details - 요청마다 완료 델리게이트를 `tick` 스레드에서 정확히 한 번 부른다. 업무 결과는 `_reply._result` 에 있고, 전송 오류와 공통 오류는 `_errorCode` 에 있으며 이때 결과는 `fromErrorCode` 로 구한다.
+ *          - 매칭 결과가 `Found` 이면 게임은 계정 클라이언트로 그 서버(`_serverID`, 16진)의 접속 티켓을 받아 `_address:_port` 에 UDP 로 접속한다.
+ *          - 마지막으로 받은 파티 스냅샷(알림이나 응답)을 보관한다. 멤버가 비어 있으면 파티가 없는 것이다.
+ *
+ *          언리얼 Online Services 의 비동기 호출과 완료 델리게이트, 경제와 서버 디렉터리 클라이언트와 같은 구조이다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -25,7 +26,7 @@ namespace sw
     {
         MatchmakingReply _reply{};
         uint64           _requestID{ 0 };
-        uint16           _errorCode{ 0 }; ///< 전송 · 공통 오류(`OnlineError`) — 0 이 아니면 `_reply._result` 는 그 코드의 결과
+        uint16           _errorCode{ 0 }; ///< 전송 오류나 공통 오류(`OnlineError`)이다. 0이 아니면 `_reply._result` 는 그 코드에 대응하는 결과이다
     };
 } // namespace sw
 
@@ -33,7 +34,7 @@ namespace sw
 {
     /**
      * @class MatchmakingClient
-     * @brief 연결 하나의 매칭 창구입니다.
+     * @brief 연결 하나의 매칭 클라이언트입니다.
      */
     class SW_GF_API MatchmakingClient final : public IOnlineClientService
     {
@@ -42,7 +43,7 @@ namespace sw
 
         MatchmakingClient();
 
-        /** @brief @p pClient 는 빌려 쓴다 — `registerClientService( this )` 는 부르는 쪽이(초기화 전에). */
+        /** @brief @p pClient 는 빌려 씁니다. `registerClientService( this )` 는 호출하는 쪽이 초기화하기 전에 부릅니다. */
         void initialize( OnlineServiceClient* pClient );
 
         uint64 createParty( const ReplyDelegate& onReply );
@@ -50,14 +51,14 @@ namespace sw
         uint64 acceptPartyInvite( uint64 partyID, const ReplyDelegate& onReply );
         uint64 leaveParty( const ReplyDelegate& onReply );
         uint64 kickFromParty( AccountID targetID, const ReplyDelegate& onReply );
-        /** @brief @p request 의 이름 · 모드 · 정원 · 설정으로 로비를 만듭니다. */
+        /** @brief @p request 의 이름, 모드, 정원, 설정으로 로비를 만듭니다. */
         uint64 createLobby( const LobbySnapshot& request, const ReplyDelegate& onReply );
         uint64 listLobbies( string_view modeID, const ReplyDelegate& onReply );
         uint64 joinLobby( uint64 lobbyID, const ReplyDelegate& onReply );
         uint64 leaveLobby( uint64 lobbyID, const ReplyDelegate& onReply );
         uint64 setLobbyReady( uint64 lobbyID, bool bReady, const ReplyDelegate& onReply );
         uint64 startLobby( uint64 lobbyID, const ReplyDelegate& onReply );
-        /** @brief 줄 섭니다(파티 장이면 파티 전체). 결과는 매칭 결과 알림으로 온다. */
+        /** @brief 대기열에 줄을 섭니다. 파티장이면 파티 전체가 섭니다. 결과는 매칭 결과 알림으로 옵니다. */
         uint64 joinQueue( string_view modeID, string_view region, const ReplyDelegate& onReply );
         uint64 leaveQueue( const ReplyDelegate& onReply );
 
@@ -65,7 +66,7 @@ namespace sw
         void drainInvites( vector<PartyInvite>& outListInvite ) { _inviteBuffer.drainTo( outListInvite ); }
         void drainLobbyUpdates( vector<LobbySnapshot>& outListLobby ) { _lobbyBuffer.drainTo( outListLobby ); }
         void drainMatchResults( vector<MatchAssignment>& outListAssignment ) { _matchBuffer.drainTo( outListAssignment ); }
-        /** @brief 마지막으로 받은 내 파티입니다(빈 회원 = 파티 없음). */
+        /** @brief 마지막으로 받은 내 파티입니다. 멤버가 비어 있으면 파티가 없는 것입니다. */
         const PartySnapshot& getParty() const { return _party; }
 
         // IOnlineClientService
