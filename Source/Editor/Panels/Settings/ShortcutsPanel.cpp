@@ -3,6 +3,7 @@
 #include "Editor/Panels/Settings/ShortcutsPanel.h"
 
 #include "Editor/Common/Commands/EditorShortcutOverrides.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -21,6 +22,8 @@ namespace sw::editor
     {
         struct ShortcutsPanelInternal
         {
+            static constexpr Color kConflictRowBg{ 0.55f, 0.12f, 0.12f, 0.6f };
+
             static uint32& getPendingConflictCount()
             {
                 static uint32 s_pendingConflictCount{ 0 };
@@ -147,7 +150,7 @@ namespace sw::editor
             ImGui::PushID( desc._id.c_str() );
             ImGui::TableNextRow();
             if ( bConflict )
-                ImGui::TableSetBgColor( ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32( ImVec4{ 0.55f, 0.12f, 0.12f, 0.6f } ) );
+                ImGui::TableSetBgColor( ImGuiTableBgTarget_RowBg0, ImGui::GetColorU32( EditorColorUtil::toImVec4( ShortcutsPanelInternal::kConflictRowBg ) ) );
             ImGui::TableSetColumnIndex( 0 );
             ImGui::TextUnformatted( desc._label.c_str() );
             ImGui::TableSetColumnIndex( 1 );

@@ -23,6 +23,7 @@
 #include "Editor/Common/Config/EditorToolDefaults.h"
 #include "Editor/Common/EditorProfile.h"
 #include "Editor/Common/EditorUtil.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorCommandGUI.h"
 #include "Editor/Common/GUI/EditorFontSetup.h"
 #include "Editor/Common/GUI/EditorMenuBar.h"
@@ -74,6 +75,8 @@ namespace sw::editor
     {
         struct ImGuiEditorInternal
         {
+            static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
+
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이만큼 넘게 다르면 테마가 따라간다(beginFrame).
             static constexpr float32 kDpiFollowTolerance = 0.001f;
 
@@ -798,7 +801,7 @@ namespace sw::editor
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
         ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-        ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4( 0.10f, 0.10f, 0.10f, 1.00f ) );
+        ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( ImGuiEditorInternal::kNotificationWindowBg ) );
         ImGui::RenderNotifications();
         ImGui::PopStyleColor( 1 );
         ImGui::PopStyleVar( 2 );

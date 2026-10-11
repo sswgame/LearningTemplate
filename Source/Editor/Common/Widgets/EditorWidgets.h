@@ -19,7 +19,7 @@ namespace sw
 namespace sw::editor
 {
     // ------------------------------------------------------------------------------
-    // 1) 드래그 페이로드 (색 타입 Color4 · style 은 EditorColor.h)
+    // 1) 드래그 페이로드 (색 타입 Color · style 은 EditorColor.h)
     // ------------------------------------------------------------------------------
     /** @brief 콘텐츠 브라우저 → 뷰포트/인스펙터 애셋 드래그 페이로드 */
     inline constexpr const utf8* kAssetPathPayload = "SW_ASSET_PATH";
@@ -64,7 +64,7 @@ namespace sw::editor
         /**
          * @brief 활성 · 비활성 색이 바뀌는 토글 · 필터 칩 버튼입니다. 클릭되면 true 입니다.
          */
-        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color4& activeColor = style::kToggleActive );
+        static bool drawToggleButton( const utf8* pLabel, bool bActive, const Color& activeColor = style::kToggleActive );
         /**
          * @brief 켬/끔 아이콘 단추(정사각, 한 줄 높이)입니다. 눌렸으면 true 입니다. 툴팁은 상태에 따라 @p pTooltipOn · @p pTooltipOff 입니다.
          * @details 한 변은 `GetFrameHeight()` 라 글꼴 · DPI 배율을 함께 받는다. 픽셀 상수로 폭을 주면 150 % 에서 글자가 잘린다.
@@ -126,7 +126,7 @@ namespace sw::editor
         /**
          * @brief 색이 들어간 작은 태그(칩) 버튼을 그립니다.
          */
-        static void drawChip( const utf8* pLabel, const Color4& color );
+        static void drawChip( const utf8* pLabel, const Color& color );
 
         /**
          * @brief 프로퍼티 행의 라벨을 왼쪽에 그리고, 다음 항목이 @p labelWidth 부터 남은 폭을 다 쓰게 합니다.
@@ -155,9 +155,9 @@ namespace sw::editor
                                    float32 labelWidth = 120.0f );
 
         /**
-         * @brief Color4 색상을 편집할 수 있는 일관된 색상 편집기 위젯을 그립니다.
+         * @brief Color 색상을 편집할 수 있는 일관된 색상 편집기 위젯을 그립니다.
          */
-        static bool drawColorEdit( const utf8* pLabel, Color4& color, float32 labelWidth = 120.0f );
+        static bool drawColorEdit( const utf8* pLabel, Color& color, float32 labelWidth = 120.0f );
 
         /**
          * @brief 인스펙터 패널 등에서 사용할 공통 ImGui 스타일을 스택에 푸시합니다.

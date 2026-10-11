@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorMultiEdit.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
@@ -57,6 +58,8 @@ namespace sw::editor
     {
         struct InspectorPanelInternal
         {
+            static constexpr Color kMultiSelectionText{ 0.4f, 0.7f, 1.0f, 1.0f };
+
             /**
              * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
              * @details 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거가 이것을 지난다 — 기록도 dirty 도 없이 바꾸면 그 편집만
@@ -201,7 +204,7 @@ namespace sw::editor
     void InspectorPanel::drawMultiSelection( const vector<GameObject*>& listObject )
     {
         GameObject* pPrimary = listObject[0];
-        ImGui::TextColored( ImVec4{ 0.4f, 0.7f, 1.0f, 1.0f }, "%u objects selected", static_cast<uint32>( listObject.size() ) );
+        ImGui::TextColored( EditorColorUtil::toImVec4( InspectorPanelInternal::kMultiSelectionText ), "%u objects selected", static_cast<uint32>( listObject.size() ) );
         ImGui::TextDisabled( "Primary: %s", pPrimary->getName().c_str() );
 
         const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();

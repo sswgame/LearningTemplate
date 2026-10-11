@@ -40,14 +40,14 @@ namespace sw::editor
 
             static bool isNear( float32 left, float32 right, float32 tolerance ) { return ( left - right ) <= tolerance && ( right - left ) <= tolerance; }
 
-            static bool isSameColor( const Color4& left, const Color4& right )
+            static bool isSameColor( const Color& left, const Color& right )
             {
                 constexpr float32 kTolerance = 0.0001f;
                 return isNear( left._r, right._r, kTolerance ) && isNear( left._g, right._g, kTolerance ) && isNear( left._b, right._b, kTolerance ) &&
                        isNear( left._a, right._a, kTolerance );
             }
 
-            static bool isSameRgb( const ImVec4& left, const Color4& right )
+            static bool isSameRgb( const ImVec4& left, const Color& right )
             {
                 constexpr float32 kTolerance = 0.0001f;
                 return isNear( left.x, right._r, kTolerance ) && isNear( left.y, right._g, kTolerance ) && isNear( left.z, right._b, kTolerance );

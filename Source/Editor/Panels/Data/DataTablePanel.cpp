@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Commands/EditorDataTableCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorListFilter.h"
@@ -20,6 +21,19 @@
 #include <imgui.h>
 
 SW_LOG_CALLER( "DataTablePanel" );
+namespace sw::editor
+{
+    namespace
+    {
+        struct DataTablePanelInternal
+        {
+            static constexpr Color kStaleText{ 1.0f, 0.62f, 0.25f, 1.0f };
+            static constexpr Color kReviewText{ 0.95f, 0.85f, 0.30f, 1.0f };
+            static constexpr Color kTooLongBorder{ 0.95f, 0.25f, 0.25f, 1.0f };
+        };
+    } // namespace
+} // namespace sw::editor
+
 namespace sw::editor
 {
     SW_EDITOR_PANEL( DataTablePanel, "data_table", EditorPanelCategory::Tool, 1700 );
@@ -250,17 +264,17 @@ namespace sw::editor
         uint32 pushedColorCount = 0;
         if ( state == TranslationState::Stale )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 1.0f, 0.62f, 0.25f, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( DataTablePanelInternal::kStaleText ) );
             ++pushedColorCount;
         }
         else if ( state == TranslationState::Review )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( 0.95f, 0.85f, 0.30f, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( DataTablePanelInternal::kReviewText ) );
             ++pushedColorCount;
         }
         if ( bTooLong )
         {
-            ImGui::PushStyleColor( ImGuiCol_Border, ImVec4( 0.95f, 0.25f, 0.25f, 1.0f ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( DataTablePanelInternal::kTooLongBorder ) );
             ++pushedColorCount;
         }
         const bool bChanged = EditorWidgets::drawTextField( "##tr", text, -1.0f );

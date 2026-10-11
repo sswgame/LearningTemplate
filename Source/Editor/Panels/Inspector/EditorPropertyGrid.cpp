@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorInspectorCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTransformCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -54,6 +55,12 @@ namespace sw::editor
     {
         struct EditorPropertyGridInternal
         {
+            static constexpr Color kNestedHeader{ 0.15f, 0.15f, 0.15f, 1.0f };
+            static constexpr Color kCallInEditorButton{ 0.18f, 0.42f, 0.65f, 1.0f };
+            static constexpr Color kCallInEditorButtonHovered{ 0.25f, 0.52f, 0.78f, 1.0f };
+            static constexpr Color kCallInEditorButtonActive{ 0.12f, 0.35f, 0.55f, 1.0f };
+            static constexpr Color kCallInEditorText{ 0.3f, 0.8f, 1.0f, 1.0f };
+
             /**
              * @brief 오브젝트 하나를 바꾸는 인스펙터 편집 — 멈춰 있으면 되돌리기 기록과 씬 dirty 를 남기고, 플레이 중이면 바로 바꿉니다.
              * @details 이름 · 활성 · 부모 해제 · 컴포넌트 활성 · 컴포넌트 제거가 이것을 지난다 — 기록도 dirty 도 없이 바꾸면 그 편집만
@@ -730,7 +737,7 @@ namespace sw::editor
         if ( pNestedPtr == nullptr )
             return;
 
-        ImGui::PushStyleColor( ImGuiCol_Header, ImVec4{ 0.15f, 0.15f, 0.15f, 1.0f } );
+        ImGui::PushStyleColor( ImGuiCol_Header, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kNestedHeader ) );
         bool bNodeOpen = ImGui::TreeNodeEx( pLabel, ImGuiTreeNodeFlags_SpanFullWidth, "[%s]", prop._typeName.c_str() );
         ImGui::PopStyleColor();
 
@@ -782,9 +789,9 @@ namespace sw::editor
             if ( method._metadata._bCallInEditor != SW_FALSE && paramCount == 0 )
             {
                 ImGui::PushID( method._hashName.c_str() );
-                ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.18f, 0.42f, 0.65f, 1.0f } );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4{ 0.25f, 0.52f, 0.78f, 1.0f } );
-                ImGui::PushStyleColor( ImGuiCol_ButtonActive, ImVec4{ 0.12f, 0.35f, 0.55f, 1.0f } );
+                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButton ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonHovered ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorButtonActive ) );
 
                 fixed_string<constant::kMaxBuffer128> buttonLabel;
                 formatstring( buttonLabel.data(), buttonLabel.capacity(), "Run %#", pLabelName );
@@ -804,7 +811,7 @@ namespace sw::editor
             if ( method._metadata._bCallInEditor != SW_FALSE )
             {
                 ImGui::SameLine();
-                ImGui::TextColored( ImVec4{ 0.3f, 0.8f, 1.0f, 1.0f }, "[Editor]" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( EditorPropertyGridInternal::kCallInEditorText ), "[Editor]" );
             }
             EditorWidgets::drawTooltip( method._metadata._tooltip.c_str() );
             const uint64                    slotKey  = static_cast<uint64>( pTypeInfo->_fullyQualifiedName.getHash() ) * 31u + static_cast<uint64>( method._hashName.getHash() );

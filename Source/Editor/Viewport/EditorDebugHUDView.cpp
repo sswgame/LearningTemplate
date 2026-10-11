@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -19,6 +20,15 @@ namespace sw::editor
     {
         struct EditorDebugHUDViewInternal
         {
+            static constexpr Color kBackground{ Color::fromBytes( 15, 17, 22, 210 ) };
+            static constexpr Color kBorder{ Color::fromBytes( 50, 60, 80, 180 ) };
+            static constexpr Color kViewText{ Color::fromBytes( 140, 160, 190, 220 ) };
+            static constexpr Color kSectionTitle{ Color::fromBytes( 80, 230, 120, 240 ) };
+            static constexpr Color kLineLabel{ Color::fromBytes( 160, 200, 255, 230 ) };
+            static constexpr Color kLineValue{ Color::fromBytes( 230, 232, 240, 240 ) };
+            static constexpr Color kGraphBar{ Color::fromBytes( 80, 200, 120, 200 ) };
+            static constexpr Color kNote{ Color::fromBytes( 150, 150, 160, 200 ) };
+
             /** @brief 섹션 본문을 다시 부르는 간격(초) — 게임 HUD 와 같은 4 Hz. */
             static constexpr float32 kRefreshSeconds = 0.25f;
             /** @brief 상자 여백 · 열 간격 · 바깥 여백(픽셀, DPI 전)입니다. */
@@ -133,26 +143,26 @@ namespace sw::editor
         const float32 x0    = canvasPos._x + canvasSize._x - topRightInset._x - width - EditorDebugHUDViewInternal::kMargin * dpiScale;
         const float32 y0    = canvasPos._y + topRightInset._y + EditorDebugHUDViewInternal::kMargin * dpiScale;
         const float32 boxH  = height + padding * 2.0f;
-        pDrawList->AddRectFilled( ImVec2{ x0, y0 }, ImVec2{ x0 + width, y0 + boxH }, IM_COL32( 15, 17, 22, 210 ), 6.0f );
-        pDrawList->AddRect( ImVec2{ x0, y0 }, ImVec2{ x0 + width, y0 + boxH }, IM_COL32( 50, 60, 80, 180 ), 6.0f );
+        pDrawList->AddRectFilled( ImVec2{ x0, y0 }, ImVec2{ x0 + width, y0 + boxH }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kBackground ), 6.0f );
+        pDrawList->AddRect( ImVec2{ x0, y0 }, ImVec2{ x0 + width, y0 + boxH }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kBorder ), 6.0f );
 
         const float32 valueX = x0 + padding + labelWidth + EditorDebugHUDViewInternal::kColumnGap * dpiScale;
         float32       y      = y0 + padding;
-        pDrawList->AddText( ImVec2{ x0 + padding, y }, IM_COL32( 140, 160, 190, 220 ), "view" );
-        pDrawList->AddText( ImVec2{ valueX, y }, IM_COL32( 140, 160, 190, 220 ), viewLine.c_str() );
+        pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kViewText ), "view" );
+        pDrawList->AddText( ImVec2{ valueX, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kViewText ), viewLine.c_str() );
         y += lineHeight;
         for ( const SectionSlot& slot : _listSlot )
         {
             const DebugHUDSectionWriter& writer = *slot._pWriter;
             if ( writer.getLineCount() == 0 && writer.hasGraph() == false )
                 continue;
-            pDrawList->AddText( ImVec2{ x0 + padding, y }, IM_COL32( 80, 230, 120, 240 ), slot._pRegistration->_pTitle );
+            pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kSectionTitle ), slot._pRegistration->_pTitle );
             y += lineHeight;
             for ( uint32 index = 0; index < writer.getLineCount(); ++index )
             {
                 const DebugHUDLine& line = writer.getLineAt( index );
-                pDrawList->AddText( ImVec2{ x0 + padding, y }, IM_COL32( 160, 200, 255, 230 ), line._label.c_str() );
-                pDrawList->AddText( ImVec2{ valueX, y }, IM_COL32( 230, 232, 240, 240 ), line._value.c_str() );
+                pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kLineLabel ), line._label.c_str() );
+                pDrawList->AddText( ImVec2{ valueX, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kLineValue ), line._value.c_str() );
                 y += lineHeight;
             }
             if ( writer.hasGraph() )
@@ -167,7 +177,7 @@ namespace sw::editor
                     const float32 ratio = MathUtil::clamp( listValue[index] / maxValue, 0.0f, 1.0f );
                     const float32 bx    = x0 + padding + barWidth * static_cast<float32>( index );
                     pDrawList->AddRectFilled( ImVec2{ bx, y + graphH * ( 1.0f - ratio ) }, ImVec2{ bx + MathUtil::max( barWidth - 0.5f, 1.0f ), y + graphH },
-                                              IM_COL32( 80, 200, 120, 200 ) );
+                                              EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kGraphBar ) );
                 }
                 y += graphH;
             }
@@ -176,7 +186,7 @@ namespace sw::editor
         {
             fixed_string<constant::kMaxBuffer64> note;
             formatstring( note.data(), note.capacity(), "%# section(s) need the profiler", _skippedProfilerSectionCount );
-            pDrawList->AddText( ImVec2{ x0 + padding, y }, IM_COL32( 150, 150, 160, 200 ), note.c_str() );
+            pDrawList->AddText( ImVec2{ x0 + padding, y }, EditorColorUtil::toImU32( EditorDebugHUDViewInternal::kNote ), note.c_str() );
         }
         return topRightInset._y + boxH + EditorDebugHUDViewInternal::kMargin * dpiScale;
     }

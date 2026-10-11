@@ -9,6 +9,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
@@ -38,6 +39,11 @@ namespace sw::editor
          */
         struct AnimGraphPanelInternal
         {
+            static constexpr Color kCurrentStateText{ 0.4f, 0.9f, 0.5f, 1.0f };
+            /** @brief 조건이 있는 전이 · 조건 없는 전이 링크 색입니다. */
+            static constexpr Color kConditionedLink{ 1.0f, 0.75f, 0.3f, 1.0f };
+            static constexpr Color kPlainLink{ 1.0f, 1.0f, 1.0f, 1.0f };
+
             /** @brief 핀 번호의 자릿수 기준입니다. 한 노드가 가질 수 있는 핀 오프셋 개수이기도 합니다. */
             static constexpr int32 kPinScale = 10;
             /** @brief 입력 핀의 오프셋입니다. */
@@ -86,7 +92,7 @@ namespace sw::editor
         , _flowLinkID{ 0 }
     {
         _nodeGraph.setPinTypeColors( {
-            Color4{ 0.45f, 0.85f, 0.55f, 1.0f }
+            Color{ 0.45f, 0.85f, 0.55f, 1.0f }
         } ); // 상태 전환 핀 하나
     }
 
@@ -221,7 +227,7 @@ namespace sw::editor
             const ed::NodeId nodeID = toNodeID( node._id );
             ed::BeginNode( nodeID );
             if ( _previewPlayer.getCurrentStateName().c_str() == node._name && _previewPlayer.getCurrentStateName().empty() == false )
-                ImGui::TextColored( ImVec4( 0.4f, 0.9f, 0.5f, 1.0f ), "%s", node._name.c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( AnimGraphPanelInternal::kCurrentStateText ), "%s", node._name.c_str() );
             else
                 ImGui::TextUnformatted( node._name.c_str() );
             if ( EditorSelfTestMarks::isEnabled() )
@@ -260,7 +266,7 @@ namespace sw::editor
         {
             // 조건이 있는 전이는 굵게 · 다른 색으로(조건 없는 "끝나면 다음" 과 구별).
             const bool   bConditioned = link._op != AnimConditionOp::None;
-            const ImVec4 color        = bConditioned ? ImVec4{ 1.0f, 0.75f, 0.3f, 1.0f } : ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f };
+            const ImVec4 color        = EditorColorUtil::toImVec4( bConditioned ? AnimGraphPanelInternal::kConditionedLink : AnimGraphPanelInternal::kPlainLink );
             ed::Link( toLinkID( link._id ), toPinID( AnimGraphPanelInternal::pinOut( link._fromNode ) ), toPinID( AnimGraphPanelInternal::pinIn( link._toNode ) ), color,
                       bConditioned ? 2.5f : 1.5f );
         }

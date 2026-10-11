@@ -13,6 +13,7 @@
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -43,16 +44,26 @@ namespace sw::editor
     {
         struct ContentBrowserPanelInternal
         {
+            static constexpr Color kThumbnailBg{ Color::fromBytes( 22, 24, 30, 255 ) };
+            static constexpr Color kThumbnailBorder{ Color::fromBytes( 50, 55, 65, 200 ) };
+            static constexpr Color kFolderCardBorder{ Color::fromBytes( 40, 48, 62, 160 ) };
+            static constexpr Color kFolderPocketBorder{ Color::fromBytes( 15, 25, 45, 120 ) };
+            static constexpr Color kLockBadgeLocked{ Color::fromBytes( 255, 160, 40, 255 ) };
+            static constexpr Color kLockBadgeReadOnly{ Color::fromBytes( 170, 170, 170, 255 ) };
+
             /** @brief 타일 이름 줄 수 — 넘치면 마지막 줄을 말줄임한다(`EditorWidgets::drawClampedLabel`). */
             static constexpr uint32 kTileLabelLineCount = 2;
 
             /** @brief 삭제 확인 모달의 팝업 이름입니다(OpenPopup 과 BeginPopupModal 이 같은 글을 써야 한다). */
             static constexpr const utf8* kDeleteConfirmPopupName = "Delete Asset##ConfirmDeleteAsset";
 
+            /** @brief 참조 삭제 경고 글자 · 참조 조회 ID 글자 색입니다. */
+            static constexpr Color kReferrerWarningText{ 1.0f, 0.7f, 0.25f, 1.0f };
+            static constexpr Color kReferenceQueryText{ 0.55f, 0.8f, 1.0f, 1.0f };
+
             static ImVec4 colorForAsset( string_view path, bool bIsDirectory = false )
             {
-                const Color4 c = EditorThemeUtil::getAssetColorForPath( path, bIsDirectory );
-                return ImVec4( c._r, c._g, c._b, c._a );
+                return EditorColorUtil::toImVec4( EditorThemeUtil::getAssetColorForPath( path, bIsDirectory ) );
             }
 
             static const utf8* typeLabel( string_view path, bool bIsDirectory )
@@ -194,7 +205,7 @@ namespace sw::editor
         const ImVec2 maxVec{ maxPos._x, maxPos._y };
 
         // 카드 썸네일 배경
-        pDrawList->AddRectFilled( minVec, maxVec, IM_COL32( 22, 24, 30, 255 ), 4.0f );
+        pDrawList->AddRectFilled( minVec, maxVec, EditorColorUtil::toImU32( ContentBrowserPanelInternal::kThumbnailBg ), 4.0f );
 
         const utf8* pPath = entry._absolutePath.empty() ? entry._name.c_str() : entry._absolutePath.c_str();
         if ( entry._bIsDirectory )
@@ -232,7 +243,7 @@ namespace sw::editor
         }
 
         // 안쪽 테두리
-        pDrawList->AddRect( minVec, maxVec, IM_COL32( 50, 55, 65, 200 ), 4.0f );
+        pDrawList->AddRect( minVec, maxVec, EditorColorUtil::toImU32( ContentBrowserPanelInternal::kThumbnailBorder ), 4.0f );
     }
 
     void ContentBrowserPanel::drawFolderThumbnail( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos )
@@ -242,10 +253,10 @@ namespace sw::editor
         const float32 w = maxPos._x - minPos._x;
         const float32 h = maxPos._y - minPos._y;
 
-        const Color4 folderColor = EditorThemeUtil::getFolderColor();
+        const Color folderColor = EditorThemeUtil::getFolderColor();
 
         // 카드의 옅은 테두리
-        pDrawList->AddRect( minVec, maxVec, IM_COL32( 40, 48, 62, 160 ), 4.0f );
+        pDrawList->AddRect( minVec, maxVec, EditorColorUtil::toImU32( ContentBrowserPanelInternal::kFolderCardBorder ), 4.0f );
 
         // UE5 스타일의 겹친 폴더 아이콘
         // 1) 뒤쪽 탭과 뒤판(짙은 슬레이트)
@@ -285,7 +296,7 @@ namespace sw::editor
         // 앞주머니 윗면 하이라이트
         pDrawList->AddLine( ImVec2( fLeft + 2.0f, fPktTop + 1.0f ), ImVec2( fRight - 2.0f, fPktTop + 1.0f ), colorPocketHighlight, 1.5f );
         // 테두리
-        pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), IM_COL32( 15, 25, 45, 120 ), 3.0f );
+        pDrawList->AddRect( ImVec2( fLeft, fPktTop ), ImVec2( fRight, fBottom ), EditorColorUtil::toImU32( ContentBrowserPanelInternal::kFolderPocketBorder ), 3.0f );
     }
 
     string ContentBrowserPanel::describeSourceControlStatus( const AssetEntry& entry )
@@ -304,7 +315,7 @@ namespace sw::editor
         // 잠금(남이든 나든)은 주황, 읽기 전용(잠그기 전)은 회색 자물쇠 — 바로 아래 버튼의 도구 설명이 이유를 말한다.
         EditorContext* pContext = EditorContext::get();
         const bool     bLocked  = pContext != nullptr && pContext->getSourceControl().findLock( entry._absolutePath ) != nullptr;
-        const ImU32    color    = bLocked ? IM_COL32( 255, 160, 40, 255 ) : IM_COL32( 170, 170, 170, 255 );
+        const ImU32    color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
         const ImVec2   textSize = ImGui::CalcTextSize( editoricon::kLock );
         pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, editoricon::kLock );
         if ( ImGui::IsItemHovered() )
@@ -446,7 +457,7 @@ namespace sw::editor
         {
             const uint32 referrerCount = _referenceIndex.countReferrerFiles( ResourcePaths::toResourceID( _pendingDeleteAbs ) );
             if ( referrerCount > 0 )
-                ImGui::TextColored( ImVec4( 1.0f, 0.7f, 0.25f, 1.0f ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s Used by %u file(s). They will name a missing asset.", editoricon::kWarning, referrerCount );
             else
                 ImGui::TextDisabled( "No text asset names it." );
         }
@@ -689,7 +700,7 @@ namespace sw::editor
         const bool bDependencies = _bReferenceQueryDependencies == SW_TRUE;
         ImGui::TextUnformatted( bDependencies ? "Dependencies of" : "References to" );
         ImGui::SameLine();
-        ImGui::TextColored( ImVec4( 0.55f, 0.8f, 1.0f, 1.0f ), "%s", _referenceQueryID.c_str() );
+        ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferenceQueryText ), "%s", _referenceQueryID.c_str() );
         if ( _referenceIndex.isReady() == false )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorContentBrowser", "IndexingReferences" ) );
@@ -1117,8 +1128,8 @@ namespace sw::editor
         const bool   bDefaultOpen  = ( ( flags & ImGuiTreeNodeFlags_DefaultOpen ) != 0 );
         const utf8*  pFolderIcon   = EditorThemeUtil::getFolderIcon( bDefaultOpen );
         const string labelWithIcon = string( pFolderIcon ) + "  " + string( label );
-        const Color4 folderColor   = EditorThemeUtil::getFolderColor();
-        ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( folderColor._r, folderColor._g, folderColor._b, 1.0f ) );
+        const Color  folderColor   = EditorThemeUtil::getFolderColor();
+        ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( folderColor.withAlpha( 1.0f ) ) );
         const bool opened = ImGui::TreeNodeEx( labelWithIcon.c_str(), flags );
         ImGui::PopStyleColor();
         if ( EditorSelfTestMarks::isEnabled() )
@@ -1215,8 +1226,8 @@ namespace sw::editor
             const bool bIsLast = ( crumbIndex + 1 == _listCrumb.size() );
             if ( bIsLast )
             {
-                const Color4 accentColor = EditorThemeUtil::getAccentColor();
-                ImGui::TextColored( ImVec4( accentColor._r, accentColor._g, accentColor._b, 1.0f ), "%s", editoricon::kFolderOpen );
+                const Color accentColor = EditorThemeUtil::getAccentColor();
+                ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", editoricon::kFolderOpen );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( crumb._label.c_str() );
             }
@@ -1272,11 +1283,11 @@ namespace sw::editor
                     if ( column > 0 )
                         ImGui::SameLine();
 
-                    const bool   selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );
-                    const Color4 accent   = EditorThemeUtil::getAccentColor();
-                    const Color4 frameBg  = EditorThemeUtil::getFrameBgColor();
-                    ImGui::PushStyleColor( ImGuiCol_Button, selected ? ImVec4( accent._r, accent._g, accent._b, 0.40f ) : ImVec4( frameBg._r, frameBg._g, frameBg._b, 0.60f ) );
-                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, ImVec4( accent._r, accent._g, accent._b, 0.60f ) );
+                    const bool  selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs ) || ( entry._bIsDirectory && FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedFolderAbs ) );
+                    const Color accent   = EditorThemeUtil::getAccentColor();
+                    const Color frameBg  = EditorThemeUtil::getFrameBgColor();
+                    ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( selected ? accent.withAlpha( 0.40f ) : frameBg.withAlpha( 0.60f ) ) );
+                    ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( accent.withAlpha( 0.60f ) ) );
 
                     ImGui::BeginGroup();
                     const ImVec2 cursor = ImGui::GetCursorScreenPos();
@@ -1336,10 +1347,10 @@ namespace sw::editor
                     const bool selected = FileUtil::pathsEqualNormalized( entry._absolutePath, _selectedAssetAbs );
                     ImGui::TableSetColumnIndex( 0 );
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
-                    const Color4 assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
+                    const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
                     const string statusText   = describeSourceControlStatus( entry );
                     const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + editoricon::kLock );
-                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4( assetColor._r, assetColor._g, assetColor._b, assetColor._a ) );
+                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();
                     if ( bSelected )

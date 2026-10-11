@@ -12,6 +12,7 @@
 
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/Commands/EditorTracyLauncher.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -45,6 +46,12 @@ namespace sw::editor
     {
         struct ProfilerPanelInternal
         {
+            static constexpr Color kTimelineLabel{ Color::fromBytes( 0, 0, 0, 255 ) };
+            static constexpr Color kFrameBoundary{ Color::fromBytes( 255, 255, 255, 160 ) };
+
+            static constexpr Color kTracyErrorText{ 1.0f, 0.6f, 0.3f, 1.0f };
+            static constexpr Color kFrameOffsetText{ 1.0f, 0.8f, 0.25f, 1.0f };
+            static constexpr Color kCallThreadText{ 0.6f, 0.8f, 1.0f, 1.0f };
             template <uint32 N>
             static void formatBytes( uint64 bytes, fixed_string<N>& out )
             {
@@ -90,7 +97,7 @@ namespace sw::editor
                 float32          green{ 0.0f };
                 float32          blue{ 0.0f };
                 ImGui::ColorConvertHSVtoRGB( hue, 0.55f, 0.85f, red, green, blue );
-                return ImGui::GetColorU32( ImVec4{ red, green, blue, 1.0f } );
+                return ImGui::GetColorU32( EditorColorUtil::toImVec4( Color{ red, green, blue, 1.0f } ) );
             }
         };
     } // namespace
@@ -309,7 +316,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
-            ImGui::TextColored( ImVec4{ 1.0f, 0.6f, 0.3f, 1.0f }, "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kTracyErrorText ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
 
         // RenderDoc — GPU 프레임 캡처(네 백엔드). 붙어 있지 않으면 단추가 회색이고 이유를 툴팁으로 보인다.
         ImGui::SameLine();
@@ -630,7 +637,7 @@ namespace sw::editor
             if ( rect._bShowsLabel == SW_TRUE && pName != nullptr )
             {
                 pDrawList->PushClipRect( minPoint, maxPoint, true );
-                pDrawList->AddText( ImVec2{ minPoint.x + rowGap, minPoint.y + rowGap }, IM_COL32( 0, 0, 0, 255 ), pName );
+                pDrawList->AddText( ImVec2{ minPoint.x + rowGap, minPoint.y + rowGap }, EditorColorUtil::toImU32( ProfilerPanelInternal::kTimelineLabel ), pName );
                 pDrawList->PopClipRect();
             }
             const bool bUnderMouse = bHovered && minPoint.x <= mouse.x && mouse.x <= maxPoint.x && minPoint.y <= mouse.y && mouse.y <= maxPoint.y;
@@ -641,7 +648,7 @@ namespace sw::editor
         for ( const uint64 frameBegin : _listTimelineFrameBegin )
         {
             const float32 lineX = trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, trackWidth );
-            pDrawList->AddLine( ImVec2{ lineX, origin.y }, ImVec2{ lineX, origin.y + totalHeight }, IM_COL32( 255, 255, 255, 160 ), 1.0f );
+            pDrawList->AddLine( ImVec2{ lineX, origin.y }, ImVec2{ lineX, origin.y + totalHeight }, EditorColorUtil::toImU32( ProfilerPanelInternal::kFrameBoundary ), 1.0f );
         }
         pDrawList->PopClipRect();
 
@@ -717,12 +724,12 @@ namespace sw::editor
             if ( _rowQuery._frameOffset > 0 )
             {
                 const float32 lineX = plotMax.x - ( static_cast<float32>( _rowQuery._frameOffset ) + 0.5f ) * frameWidth;
-                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, IM_COL32( 255, 200, 60, 255 ) );
+                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( style::kHighlight ) );
             }
         }
         if ( _rowQuery._frameOffset > 0 )
         {
-            ImGui::TextColored( ImVec4{ 1.0f, 0.8f, 0.25f, 1.0f }, "Last column shows the frame %u frames ago", _rowQuery._frameOffset );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kFrameOffsetText ), "Last column shows the frame %u frames ago", _rowQuery._frameOffset );
             ImGui::SameLine();
             if ( ImGui::SmallButton( "Latest" ) )
                 _rowQuery._frameOffset = 0;
@@ -1194,7 +1201,7 @@ namespace sw::editor
                 shownThread = threadIndex;
                 ImGui::TableNextRow();
                 ImGui::TableNextColumn();
-                ImGui::TextColored( ImVec4{ 0.6f, 0.8f, 1.0f, 1.0f }, "%s", _listCallThread[threadIndex]._name.c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kCallThreadText ), "%s", _listCallThread[threadIndex]._name.c_str() );
             }
             drawCallTreeNode( root );
         }

@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -17,6 +18,18 @@
 #include "Engine/Utility/CommandStack.h"
 
 #include <imgui.h>
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct HistoryPanelInternal
+        {
+            static constexpr Color kCurrentMarker{ 0.2f, 0.8f, 0.3f, 1.0f };
+            static constexpr Color kUndoneText{ 0.5f, 0.5f, 0.5f, 1.0f };
+        };
+    } // namespace
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -88,7 +101,7 @@ namespace sw::editor
             ImGui::TextDisabled( "#0" );
             ImGui::TableNextColumn();
             if ( currIndex == 0 )
-                ImGui::TextColored( ImVec4{ 0.2f, 0.8f, 0.3f, 1.0f }, ">" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::kCurrentMarker ), ">" );
             else
                 ImGui::TextUnformatted( "" );
             ImGui::TableNextColumn();
@@ -113,7 +126,7 @@ namespace sw::editor
 
                 ImGui::TableNextColumn();
                 if ( bIsActiveHead )
-                    ImGui::TextColored( ImVec4{ 0.2f, 0.8f, 0.3f, 1.0f }, ">" );
+                    ImGui::TextColored( EditorColorUtil::toImVec4( HistoryPanelInternal::kCurrentMarker ), ">" );
                 else
                     ImGui::TextUnformatted( "" );
 
@@ -122,7 +135,7 @@ namespace sw::editor
                 const utf8* pCmdLabel = cmd._label.empty() == false ? cmd._label.c_str() : "Command";
 
                 if ( bIsUndone )
-                    ImGui::PushStyleColor( ImGuiCol_Text, ImVec4{ 0.5f, 0.5f, 0.5f, 1.0f } );
+                    ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::kUndoneText ) );
 
                 ImGui::PushID( static_cast<int32>( stepNum ) );
                 if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )

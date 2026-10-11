@@ -6,6 +6,7 @@
 
 #include "Core/Math/MatrixMath.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -24,7 +25,8 @@ namespace sw::editor
             /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. 카메라 등록부만 봅니다(씬 전체를 훑지 않습니다). */
             static void draw( const EditorViewportVisualizerArgs& args )
             {
-                constexpr ImU32 colorCameraWire = IM_COL32( 60, 200, 255, 200 );
+                static constexpr Color kCameraWire{ Color::fromBytes( 60, 200, 255, 200 ) };
+                const ImU32            colorCameraWire = EditorColorUtil::toImU32( kCameraWire );
 
                 if ( args._pListCamera == nullptr )
                     return;

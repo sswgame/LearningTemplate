@@ -8,6 +8,7 @@
 
 #include "Editor/Common/Config/EditorConfig.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
@@ -35,7 +36,7 @@ namespace sw::editor
 
             /**
              * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. **상수이므로 상태가 아닙니다.**
-             * @details 색 게터들이 `const Color4&` 를 반환하므로 임시 객체를 참조로 넘길 수 없습니다.
+             * @details 색 게터들이 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없습니다.
              */
             static const EditorThemeConfig& fallbackTheme()
             {
@@ -58,18 +59,24 @@ namespace sw::editor
                     pContext->getThemeConfig() = config;
             }
 
-            static ImVec4 toImVec4( const Color4& c, float32 alphaMultiplier = 1.0f )
+            /** @brief 테마 고정 색입니다(팔레트에서 오지 않는 칸). */
+            static constexpr Color kText{ 0.92f, 0.94f, 0.97f, 1.0f };
+            static constexpr Color kScrollbarBg{ 0.02f, 0.02f, 0.03f, 0.35f };
+            static constexpr Color kDockingEmptyBg{ 0.05f, 0.05f, 0.07f, 1.0f };
+            static constexpr Color kTableRowBgAlt{ 1.0f, 1.0f, 1.0f, 0.02f };
+            static constexpr Color kClear{ 0.0f, 0.0f, 0.0f, 0.0f };
+            /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 그 알파입니다. */
+            static constexpr float32 kHoverWhiten = 0.45f;
+            static constexpr float32 kHoverAlpha  = 0.75f;
+
+            static ImVec4 toImVec4( const Color& color, float32 alphaMultiplier = 1.0f )
             {
-                return ImVec4( c._r, c._g, c._b, c._a * alphaMultiplier );
+                return EditorColorUtil::toImVec4( color.scaleAlpha( alphaMultiplier ) );
             }
 
-            static ImVec4 adjustBrightness( const Color4& c, float32 factor, float32 alpha = 1.0f )
+            static ImVec4 adjustBrightness( const Color& color, float32 factor, float32 alpha = 1.0f )
             {
-                return ImVec4(
-                    MathUtil::clamp( c._r * factor, 0.0f, 1.0f ),
-                    MathUtil::clamp( c._g * factor, 0.0f, 1.0f ),
-                    MathUtil::clamp( c._b * factor, 0.0f, 1.0f ),
-                    alpha );
+                return EditorColorUtil::toImVec4( color.scaleBrightness( factor ).saturate().withAlpha( alpha ) );
             }
 
             /**
@@ -160,47 +167,47 @@ namespace sw::editor
             static const ThemePresetRow arrRow[] = {
                 {  EditorThemePreset::ModernDark,   "ModernDark", "Modern Dark (UE5 / JetBrains)", false,
                  EditorThemeConfig{ EditorThemePreset::ModernDark,
-                 Color4{ 0.27f, 0.57f, 1.0f, 1.0f }, // Electric Blue
-                 Color4{ 0.10f, 0.11f, 0.14f, 1.0f },
-                 Color4{ 0.13f, 0.15f, 0.19f, 1.0f },
-                 Color4{ 0.18f, 0.21f, 0.28f, 1.0f },
-                 Color4{ 0.15f, 0.17f, 0.22f, 1.0f },
-                 Color4{ 0.22f, 0.26f, 0.33f, 1.0f },
-                 Color4{ 0.20f, 0.75f, 0.35f, 1.0f },
-                 Color4{ 0.95f, 0.70f, 0.15f, 1.0f },
-                 Color4{ 0.95f, 0.30f, 0.25f, 1.0f },
-                 Color4{ 0.30f, 0.70f, 0.95f, 1.0f },
-                 Color4{ 0.55f, 0.60f, 0.68f, 1.0f },
+                 Color{ 0.27f, 0.57f, 1.0f, 1.0f }, // Electric Blue
+                 Color{ 0.10f, 0.11f, 0.14f, 1.0f },
+                 Color{ 0.13f, 0.15f, 0.19f, 1.0f },
+                 Color{ 0.18f, 0.21f, 0.28f, 1.0f },
+                 Color{ 0.15f, 0.17f, 0.22f, 1.0f },
+                 Color{ 0.22f, 0.26f, 0.33f, 1.0f },
+                 Color{ 0.20f, 0.75f, 0.35f, 1.0f },
+                 Color{ 0.95f, 0.70f, 0.15f, 1.0f },
+                 Color{ 0.95f, 0.30f, 0.25f, 1.0f },
+                 Color{ 0.30f, 0.70f, 0.95f, 1.0f },
+                 Color{ 0.55f, 0.60f, 0.68f, 1.0f },
                  4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
 
                 {EditorThemePreset::DeepCharcoal, "DeepCharcoal",    "Deep Charcoal (Minimalist)", false,
                  EditorThemeConfig{ EditorThemePreset::DeepCharcoal,
-                 Color4{ 0.35f, 0.70f, 0.95f, 1.0f }, // Ice Blue
-                 Color4{ 0.08f, 0.08f, 0.09f, 1.0f },
-                 Color4{ 0.11f, 0.11f, 0.13f, 1.0f },
-                 Color4{ 0.16f, 0.16f, 0.19f, 1.0f },
-                 Color4{ 0.13f, 0.13f, 0.16f, 1.0f },
-                 Color4{ 0.20f, 0.20f, 0.24f, 1.0f },
-                 Color4{ 0.25f, 0.80f, 0.40f, 1.0f },
-                 Color4{ 0.90f, 0.75f, 0.20f, 1.0f },
-                 Color4{ 0.90f, 0.30f, 0.30f, 1.0f },
-                 Color4{ 0.35f, 0.75f, 0.90f, 1.0f },
-                 Color4{ 0.50f, 0.55f, 0.60f, 1.0f },
+                 Color{ 0.35f, 0.70f, 0.95f, 1.0f }, // Ice Blue
+                 Color{ 0.08f, 0.08f, 0.09f, 1.0f },
+                 Color{ 0.11f, 0.11f, 0.13f, 1.0f },
+                 Color{ 0.16f, 0.16f, 0.19f, 1.0f },
+                 Color{ 0.13f, 0.13f, 0.16f, 1.0f },
+                 Color{ 0.20f, 0.20f, 0.24f, 1.0f },
+                 Color{ 0.25f, 0.80f, 0.40f, 1.0f },
+                 Color{ 0.90f, 0.75f, 0.20f, 1.0f },
+                 Color{ 0.90f, 0.30f, 0.30f, 1.0f },
+                 Color{ 0.35f, 0.75f, 0.90f, 1.0f },
+                 Color{ 0.50f, 0.55f, 0.60f, 1.0f },
                  2.0f, 2.0f, 2.0f, 2.0f, 4.0f, 2.0f }},
 
                 {EditorThemePreset::MidnightBlue, "MidnightBlue",     "Midnight Blue (High-Tech)", false,
                  EditorThemeConfig{ EditorThemePreset::MidnightBlue,
-                 Color4{ 0.40f, 0.55f, 1.0f, 1.0f }, // Neon Indigo
-                 Color4{ 0.07f, 0.09f, 0.14f, 1.0f },
-                 Color4{ 0.09f, 0.12f, 0.18f, 1.0f },
-                 Color4{ 0.14f, 0.19f, 0.28f, 1.0f },
-                 Color4{ 0.11f, 0.15f, 0.22f, 1.0f },
-                 Color4{ 0.18f, 0.25f, 0.36f, 1.0f },
-                 Color4{ 0.20f, 0.85f, 0.50f, 1.0f },
-                 Color4{ 1.0f, 0.75f, 0.20f, 1.0f },
-                 Color4{ 1.0f, 0.35f, 0.35f, 1.0f },
-                 Color4{ 0.40f, 0.75f, 1.0f, 1.0f },
-                 Color4{ 0.50f, 0.60f, 0.75f, 1.0f },
+                 Color{ 0.40f, 0.55f, 1.0f, 1.0f }, // Neon Indigo
+                 Color{ 0.07f, 0.09f, 0.14f, 1.0f },
+                 Color{ 0.09f, 0.12f, 0.18f, 1.0f },
+                 Color{ 0.14f, 0.19f, 0.28f, 1.0f },
+                 Color{ 0.11f, 0.15f, 0.22f, 1.0f },
+                 Color{ 0.18f, 0.25f, 0.36f, 1.0f },
+                 Color{ 0.20f, 0.85f, 0.50f, 1.0f },
+                 Color{ 1.0f, 0.75f, 0.20f, 1.0f },
+                 Color{ 1.0f, 0.35f, 0.35f, 1.0f },
+                 Color{ 0.40f, 0.75f, 1.0f, 1.0f },
+                 Color{ 0.50f, 0.60f, 0.75f, 1.0f },
                  4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
 
                 // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
@@ -208,17 +215,17 @@ namespace sw::editor
                 // 이 프리셋도 활성 테마를 갱신해야 한다 — 안 그러면 **이전 테마의 색**이 나온다.
                 { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
                  EditorThemeConfig{ EditorThemePreset::ClassicDark,
-                 Color4{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
-                 Color4{ 0.06f, 0.06f, 0.06f, 1.0f },
-                 Color4{ 0.10f, 0.10f, 0.10f, 1.0f },
-                 Color4{ 0.16f, 0.29f, 0.48f, 1.0f },
-                 Color4{ 0.16f, 0.29f, 0.48f, 1.0f },
-                 Color4{ 0.43f, 0.43f, 0.50f, 1.0f },
-                 Color4{ 0.20f, 0.75f, 0.35f, 1.0f },
-                 Color4{ 0.95f, 0.70f, 0.15f, 1.0f },
-                 Color4{ 0.95f, 0.30f, 0.25f, 1.0f },
-                 Color4{ 0.30f, 0.70f, 0.95f, 1.0f },
-                 Color4{ 0.50f, 0.50f, 0.50f, 1.0f },
+                 Color{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
+                 Color{ 0.06f, 0.06f, 0.06f, 1.0f },
+                 Color{ 0.10f, 0.10f, 0.10f, 1.0f },
+                 Color{ 0.16f, 0.29f, 0.48f, 1.0f },
+                 Color{ 0.16f, 0.29f, 0.48f, 1.0f },
+                 Color{ 0.43f, 0.43f, 0.50f, 1.0f },
+                 Color{ 0.20f, 0.75f, 0.35f, 1.0f },
+                 Color{ 0.95f, 0.70f, 0.15f, 1.0f },
+                 Color{ 0.95f, 0.30f, 0.25f, 1.0f },
+                 Color{ 0.30f, 0.70f, 0.95f, 1.0f },
+                 Color{ 0.50f, 0.50f, 0.50f, 1.0f },
                  0.0f, 0.0f, 0.0f, 4.0f, 9.0f, 0.0f }}
             };
 
@@ -313,15 +320,15 @@ namespace sw::editor
         // 2. 통합 컬러 팔레트 구성
         ImVec4* pColors = style.Colors;
 
-        const Color4& accent   = config._accentColor;
-        const Color4& winBg    = config._windowBg;
-        const Color4& panBg    = config._panelBg;
-        const Color4& headerBg = config._headerBg;
-        const Color4& frmBg    = config._frameBg;
-        const Color4& border   = config._border;
+        const Color& accent   = config._accentColor;
+        const Color& winBg    = config._windowBg;
+        const Color& panBg    = config._panelBg;
+        const Color& headerBg = config._headerBg;
+        const Color& frmBg    = config._frameBg;
+        const Color& border   = config._border;
 
         // 텍스트
-        pColors[ImGuiCol_Text]         = ImVec4( 0.92f, 0.94f, 0.97f, 1.0f );
+        pColors[ImGuiCol_Text]         = EditorColorUtil::toImVec4( EditorThemeInternal::kText );
         pColors[ImGuiCol_TextDisabled] = EditorThemeInternal::toImVec4( config._textMuted, 1.0f );
 
         // 창 및 배경
@@ -329,7 +336,7 @@ namespace sw::editor
         pColors[ImGuiCol_ChildBg]      = EditorThemeInternal::toImVec4( panBg, 1.0f );
         pColors[ImGuiCol_PopupBg]      = EditorThemeInternal::adjustBrightness( winBg, 1.15f, 0.98f );
         pColors[ImGuiCol_Border]       = EditorThemeInternal::toImVec4( border, 1.0f );
-        pColors[ImGuiCol_BorderShadow] = ImVec4( 0.0f, 0.0f, 0.0f, 0.0f );
+        pColors[ImGuiCol_BorderShadow] = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
         pColors[ImGuiCol_MenuBarBg]    = EditorThemeInternal::adjustBrightness( winBg, 0.85f, 1.0f );
 
         // 입력 프레임
@@ -343,7 +350,7 @@ namespace sw::editor
         pColors[ImGuiCol_TitleBgCollapsed] = EditorThemeInternal::toImVec4( winBg, 0.75f );
 
         // 스크롤바
-        pColors[ImGuiCol_ScrollbarBg]          = ImVec4( 0.02f, 0.02f, 0.03f, 0.35f );
+        pColors[ImGuiCol_ScrollbarBg]          = EditorColorUtil::toImVec4( EditorThemeInternal::kScrollbarBg );
         pColors[ImGuiCol_ScrollbarGrab]        = EditorThemeInternal::adjustBrightness( border, 1.1f, 0.8f );
         pColors[ImGuiCol_ScrollbarGrabHovered] = EditorThemeInternal::adjustBrightness( border, 1.4f, 1.0f );
         pColors[ImGuiCol_ScrollbarGrabActive]  = EditorThemeInternal::toImVec4( accent, 0.9f );
@@ -365,13 +372,13 @@ namespace sw::editor
         pColors[ImGuiCol_TabUnfocused]       = EditorThemeInternal::adjustBrightness( winBg, 0.80f, 1.0f );
         pColors[ImGuiCol_TabUnfocusedActive] = EditorThemeInternal::adjustBrightness( panBg, 0.90f, 1.0f );
         pColors[ImGuiCol_DockingPreview]     = EditorThemeInternal::toImVec4( accent, 0.45f );
-        pColors[ImGuiCol_DockingEmptyBg]     = ImVec4( 0.05f, 0.05f, 0.07f, 1.0f );
+        pColors[ImGuiCol_DockingEmptyBg]     = EditorColorUtil::toImVec4( EditorThemeInternal::kDockingEmptyBg );
 
         // 구분선 & 기타
         pColors[ImGuiCol_Separator]         = EditorThemeInternal::toImVec4( border, 0.85f );
         pColors[ImGuiCol_SeparatorHovered]  = EditorThemeInternal::toImVec4( accent, 0.85f );
         pColors[ImGuiCol_SeparatorActive]   = EditorThemeInternal::toImVec4( accent, 1.0f );
-        pColors[ImGuiCol_ResizeGrip]        = ImVec4( 0.0f, 0.0f, 0.0f, 0.0f );
+        pColors[ImGuiCol_ResizeGrip]        = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
         pColors[ImGuiCol_ResizeGripHovered] = EditorThemeInternal::toImVec4( accent, 0.60f );
         pColors[ImGuiCol_ResizeGripActive]  = EditorThemeInternal::toImVec4( accent, 0.90f );
         pColors[ImGuiCol_CheckMark]         = EditorThemeInternal::toImVec4( accent, 1.0f );
@@ -384,8 +391,8 @@ namespace sw::editor
         pColors[ImGuiCol_TableHeaderBg]     = EditorThemeInternal::toImVec4( headerBg, 1.0f );
         pColors[ImGuiCol_TableBorderStrong] = EditorThemeInternal::toImVec4( border, 1.0f );
         pColors[ImGuiCol_TableBorderLight]  = EditorThemeInternal::toImVec4( border, 0.5f );
-        pColors[ImGuiCol_TableRowBg]        = ImVec4( 0.0f, 0.0f, 0.0f, 0.0f );
-        pColors[ImGuiCol_TableRowBgAlt]     = ImVec4( 1.0f, 1.0f, 1.0f, 0.02f );
+        pColors[ImGuiCol_TableRowBg]        = EditorColorUtil::toImVec4( EditorThemeInternal::kClear );
+        pColors[ImGuiCol_TableRowBgAlt]     = EditorColorUtil::toImVec4( EditorThemeInternal::kTableRowBgAlt );
     }
 
     void EditorThemeUtil::setDpiScale( float32 dpiScale )
@@ -424,7 +431,7 @@ namespace sw::editor
         {
             EditorThemeConfig themeConfig = EditorThemeInternal::activeTheme();
             if ( editorConfig._themeAccentR > 0.0f || editorConfig._themeAccentG > 0.0f || editorConfig._themeAccentB > 0.0f )
-                themeConfig._accentColor = Color4{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
+                themeConfig._accentColor = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
 
             if ( editorConfig._themeWindowRounding >= 0.0f )
             {
@@ -458,7 +465,7 @@ namespace sw::editor
         EditorConfig::saveToPreferences();
     }
 
-    void EditorThemeUtil::setAccentColor( const Color4& accentColor )
+    void EditorThemeUtil::setAccentColor( const Color& accentColor )
     {
         EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
         editorConfig._accentColor      = accentColor;
@@ -466,63 +473,63 @@ namespace sw::editor
         saveToConfig();
     }
 
-    Color4 EditorThemeUtil::getViewportHoverColor()
+    Color EditorThemeUtil::getViewportHoverColor()
     {
-        const Color4& accent = getAccentColor();
-        return Color4{ accent._r + ( 1.0f - accent._r ) * 0.45f, accent._g + ( 1.0f - accent._g ) * 0.45f, accent._b + ( 1.0f - accent._b ) * 0.45f, 0.75f };
+        const Color& accent = getAccentColor();
+        return Color::lerp( accent, Color{ 1.0f, 1.0f, 1.0f, 1.0f }, EditorThemeInternal::kHoverWhiten ).withAlpha( EditorThemeInternal::kHoverAlpha );
     }
 
-    const Color4& EditorThemeUtil::getAccentColor()
+    const Color& EditorThemeUtil::getAccentColor()
     {
         return EditorThemeInternal::activeTheme()._accentColor;
     }
 
-    const Color4& EditorThemeUtil::getWindowBgColor()
+    const Color& EditorThemeUtil::getWindowBgColor()
     {
         return EditorThemeInternal::activeTheme()._windowBg;
     }
 
-    const Color4& EditorThemeUtil::getPanelBgColor()
+    const Color& EditorThemeUtil::getPanelBgColor()
     {
         return EditorThemeInternal::activeTheme()._panelBg;
     }
 
-    const Color4& EditorThemeUtil::getHeaderBgColor()
+    const Color& EditorThemeUtil::getHeaderBgColor()
     {
         return EditorThemeInternal::activeTheme()._headerBg;
     }
 
-    const Color4& EditorThemeUtil::getFrameBgColor()
+    const Color& EditorThemeUtil::getFrameBgColor()
     {
         return EditorThemeInternal::activeTheme()._frameBg;
     }
 
-    const Color4& EditorThemeUtil::getBorderColor()
+    const Color& EditorThemeUtil::getBorderColor()
     {
         return EditorThemeInternal::activeTheme()._border;
     }
 
-    const Color4& EditorThemeUtil::getSuccessColor()
+    const Color& EditorThemeUtil::getSuccessColor()
     {
         return EditorThemeInternal::activeTheme()._successColor;
     }
 
-    const Color4& EditorThemeUtil::getWarningColor()
+    const Color& EditorThemeUtil::getWarningColor()
     {
         return EditorThemeInternal::activeTheme()._warningColor;
     }
 
-    const Color4& EditorThemeUtil::getErrorColor()
+    const Color& EditorThemeUtil::getErrorColor()
     {
         return EditorThemeInternal::activeTheme()._errorColor;
     }
 
-    const Color4& EditorThemeUtil::getInfoColor()
+    const Color& EditorThemeUtil::getInfoColor()
     {
         return EditorThemeInternal::activeTheme()._infoColor;
     }
 
-    const Color4& EditorThemeUtil::getTextMutedColor()
+    const Color& EditorThemeUtil::getTextMutedColor()
     {
         return EditorThemeInternal::activeTheme()._textMuted;
     }
@@ -545,7 +552,7 @@ namespace sw::editor
             ImGui::TextColored( EditorThemeInternal::toImVec4( getInfoColor() ), "%s", pText );
     }
 
-    void EditorThemeUtil::pushTextColor( const Color4& color )
+    void EditorThemeUtil::pushTextColor( const Color& color )
     {
         ImGui::PushStyleColor( ImGuiCol_Text, EditorThemeInternal::toImVec4( color ) );
     }
@@ -575,7 +582,7 @@ namespace sw::editor
 
     void EditorThemeUtil::pushAccentButton( float32 alpha )
     {
-        const Color4& accent = getAccentColor();
+        const Color& accent = getAccentColor();
         ImGui::PushStyleColor( ImGuiCol_Button, EditorThemeInternal::toImVec4( accent, 0.70f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorThemeInternal::toImVec4( accent, 0.90f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_ButtonActive, EditorThemeInternal::toImVec4( accent, 1.0f * alpha ) );
@@ -588,7 +595,7 @@ namespace sw::editor
 
     void EditorThemeUtil::pushAccentHeader( float32 alpha )
     {
-        const Color4& accent = getAccentColor();
+        const Color& accent = getAccentColor();
         ImGui::PushStyleColor( ImGuiCol_Header, EditorThemeInternal::toImVec4( accent, 0.70f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorThemeInternal::toImVec4( accent, 0.85f * alpha ) );
         ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorThemeInternal::toImVec4( accent, 1.0f * alpha ) );
@@ -641,7 +648,7 @@ namespace sw::editor
             float32 arrAccentRaw[4] = { editorConfig._accentColor._r, editorConfig._accentColor._g, editorConfig._accentColor._b, editorConfig._accentColor._a };
             if ( ImGui::ColorEdit4( "Accent Color", arrAccentRaw, ImGuiColorEditFlags_NoAlpha ) )
             {
-                editorConfig._accentColor = Color4{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
+                editorConfig._accentColor = Color{ arrAccentRaw[0], arrAccentRaw[1], arrAccentRaw[2], arrAccentRaw[3] };
                 applyTheme( editorConfig );
                 saveToConfig();
             }
@@ -650,7 +657,7 @@ namespace sw::editor
             // 3) 빠른 액센트 팔레트 스와치
             ImGui::Text( "Accent Swatches:" );
             ImGui::SameLine();
-            const Color4 arrSwatches[] = {
+            const Color arrSwatches[] = {
                 {0.27f, 0.57f,  1.0f, 1.0f}, // Electric Blue
                 {0.15f, 0.75f, 0.55f, 1.0f}, // Emerald Cyan
                 {0.65f, 0.35f, 0.95f, 1.0f}, // Neon Violet
@@ -708,7 +715,7 @@ namespace sw::editor
         ImGui::End();
     }
 
-    Color4 EditorThemeUtil::getFolderColor()
+    Color EditorThemeUtil::getFolderColor()
     {
         // 폴더 색은 테마 액센트 색을 그대로 쓴다(UE5 · Rider 처럼 액센트와 같은 파란 계열)
         return getAccentColor();
@@ -725,7 +732,7 @@ namespace sw::editor
         return pInfo != nullptr ? pInfo->_pIcon : editoricon::kFile;
     }
 
-    Color4 EditorThemeUtil::getAssetTypeColor( EditorAssetType kind )
+    Color EditorThemeUtil::getAssetTypeColor( EditorAssetType kind )
     {
         const EditorAssetTypeInfo* pInfo = EditorAssetTypeRegistry::findKindInfo( kind );
         if ( pInfo == nullptr )
@@ -740,14 +747,14 @@ namespace sw::editor
         return getAssetTypeIcon( EditorAssetTypeRegistry::findKind( path ) );
     }
 
-    Color4 EditorThemeUtil::getAssetColorForPath( string_view path, bool bIsDirectory )
+    Color EditorThemeUtil::getAssetColorForPath( string_view path, bool bIsDirectory )
     {
         if ( bIsDirectory )
             return getFolderColor();
         return getAssetTypeColor( EditorAssetTypeRegistry::findKind( path ) );
     }
 
-    void EditorThemeUtil::drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color4& color, float32 sizeRatio )
+    void EditorThemeUtil::drawCenteredGlyph( ImDrawList* pDrawList, const float2& minPos, const float2& maxPos, const utf8* pGlyph, const Color& color, float32 sizeRatio )
     {
         if ( pDrawList == nullptr || pGlyph == nullptr || pGlyph[0] == '\0' )
             return;
@@ -758,7 +765,7 @@ namespace sw::editor
             return;
         const ImVec2 glyphSize = pFont->CalcTextSizeA( fontSize, MathUtil::kMaxFloat, 0.0f, pGlyph );
         const ImVec2 position{ ( minPos._x + maxPos._x - glyphSize.x ) * 0.5f, ( minPos._y + maxPos._y - glyphSize.y ) * 0.5f };
-        pDrawList->AddText( pFont, fontSize, position, ImGui::ColorConvertFloat4ToU32( ImVec4( color._r, color._g, color._b, color._a ) ), pGlyph );
+        pDrawList->AddText( pFont, fontSize, position, EditorColorUtil::toImU32( color ), pGlyph );
     }
 
     const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )

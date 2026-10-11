@@ -10,6 +10,7 @@
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorSceneCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPopupManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -31,13 +32,18 @@ namespace sw::editor
     {
         struct QuickLauncherPopupInternal
         {
+            static constexpr Color kSelectedRowBg{ Color::fromBytes( 40, 75, 130, 220 ) };
+            static constexpr Color kSelectedRowBorder{ Color::fromBytes( 80, 140, 240, 255 ) };
+            static constexpr Color kTitleText{ Color::fromBytes( 240, 240, 245, 255 ) };
+            static constexpr Color kDetailText{ Color::fromBytes( 150, 155, 170, 200 ) };
+            static constexpr Color kGameObjectBadge{ 0.95f, 0.85f, 0.30f, 1.0f };
+
             /** @brief 배지 색 — 파일 항목은 콘텐츠 브라우저와 같은 종류 색(애셋 종류 표)이다. */
-            static ImVec4 getCategoryColor( const QuickLauncherItem& item )
+            static Color getCategoryColor( const QuickLauncherItem& item )
             {
                 if ( item._category == "GameObject" )
-                    return ImVec4( 0.95f, 0.85f, 0.30f, 1.0f );
-                const Color4 color = EditorThemeUtil::getAssetTypeColor( item._kind );
-                return ImVec4( color._r, color._g, color._b, color._a );
+                    return kGameObjectBadge;
+                return EditorThemeUtil::getAssetTypeColor( item._kind );
             }
         };
     } // namespace
@@ -167,7 +173,7 @@ namespace sw::editor
         overlayDesc._pID          = "##QuickLauncherOverlay";
         overlayDesc._pOpen        = &_bOpen;
         overlayDesc._size         = float2{ 620.0f, 400.0f };
-        overlayDesc._borderColor  = float4{ 0.25f, 0.55f, 0.85f, 1.0f };
+        overlayDesc._borderColor  = Color{ 0.25f, 0.55f, 0.85f, 1.0f };
         overlayDesc._pFocusOnOpen = &_bJustOpened;
 
         if ( EditorChrome::beginSearchOverlay( overlayDesc ) == false )
@@ -238,24 +244,24 @@ namespace sw::editor
                 if ( bSelected )
                 {
                     pDrawList->AddRectFilled( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-                                              IM_COL32( 40, 75, 130, 220 ), 4.0f );
+                                              EditorColorUtil::toImU32( QuickLauncherPopupInternal::kSelectedRowBg ), 4.0f );
                     pDrawList->AddRect( cursor, ImVec2( cursor.x + availW, cursor.y + itemH ),
-                                        IM_COL32( 80, 140, 240, 255 ), 4.0f );
+                                        EditorColorUtil::toImU32( QuickLauncherPopupInternal::kSelectedRowBorder ), 4.0f );
                 }
 
-                const ImVec4                         categoryColor = QuickLauncherPopupInternal::getCategoryColor( *pItem );
+                const Color                          categoryColor = QuickLauncherPopupInternal::getCategoryColor( *pItem );
                 fixed_string<constant::kMaxBuffer32> badge;
                 formatstring( badge.data(), badge.capacity(), "[%s]", pItem->_category.c_str() );
 
-                pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), ImGui::ColorConvertFloat4ToU32( categoryColor ), badge.c_str() );
+                pDrawList->AddText( ImVec2( cursor.x + layout._badgeX, textY ), EditorColorUtil::toImU32( categoryColor ), badge.c_str() );
 
                 // 긴 이름은 경로 열 앞에서, 긴 경로는 줄 끝에서 자른다.
                 pDrawList->PushClipRect( ImVec2( cursor.x + layout._titleX, cursor.y ), ImVec2( cursor.x + layout._titleClipRight, cursor.y + itemH ), true );
-                pDrawList->AddText( ImVec2( cursor.x + layout._titleX, textY ), IM_COL32( 240, 240, 245, 255 ), pItem->_title.c_str() );
+                pDrawList->AddText( ImVec2( cursor.x + layout._titleX, textY ), EditorColorUtil::toImU32( QuickLauncherPopupInternal::kTitleText ), pItem->_title.c_str() );
                 pDrawList->PopClipRect();
 
                 pDrawList->PushClipRect( ImVec2( cursor.x + layout._detailX, cursor.y ), ImVec2( cursor.x + availW, cursor.y + itemH ), true );
-                pDrawList->AddText( ImVec2( cursor.x + layout._detailX, textY ), IM_COL32( 150, 155, 170, 200 ), pItem->_detail.c_str() );
+                pDrawList->AddText( ImVec2( cursor.x + layout._detailX, textY ), EditorColorUtil::toImU32( QuickLauncherPopupInternal::kDetailText ), pItem->_detail.c_str() );
                 pDrawList->PopClipRect();
 
                 if ( ImGui::InvisibleButton( "##itemBtn", ImVec2( availW, itemH ) ) )

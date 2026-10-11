@@ -84,7 +84,7 @@ namespace sw::editor
         const utf8*     _pBrowserLabel;  ///< 콘텐츠 브라우저 필터 · 리소스 카탈로그 라벨
         const utf8*     _pPanelTitle;    ///< 전용 도구 패널 제목. nullptr 이면 패널이 없습니다
         const utf8*     _pIcon;          ///< 에디터 아이콘 글리프(editoricon::k…, UTF-8)
-        Color4          _color;          ///< 목록 · 배지 색. `_bAccentColor` 이면 쓰지 않습니다
+        Color           _color;          ///< 목록 · 배지 색. `_bAccentColor` 이면 쓰지 않습니다
         bool            _bAccentColor;   ///< 고정 색 대신 테마 액센트 색을 씁니다
         bool            _bOtherExcluded; ///< 브라우저 "Other" 필터에서 뺄지
         bool            _bImportable;    ///< 임포트 대화상자의 확장자 목록에 넣을지

@@ -10,6 +10,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/Commands/EditorViewportPreview.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -32,6 +33,8 @@ namespace sw::editor
     {
         struct MaterialPanelInternal
         {
+            static constexpr Color kPreviewBg{ Color::fromBytes( 38, 38, 44, 255 ) };
+
             static void writeFloats( string& out, const float32* pVal, uint32 count )
             {
                 fixed_string<constant::kMaxBuffer128> buf;
@@ -101,7 +104,7 @@ namespace sw::editor
                     {
                         float32 arrVal[4]{ 1.0f, 1.0f, 1.0f, 1.0f };
                         MaterialPreviewShading::parseFloats( prop._value, arrVal, 4 );
-                        Color4     color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
+                        Color      color{ arrVal[0], arrVal[1], arrVal[2], arrVal[3] };
                         const bool bChanged = EditorWidgets::drawColorEdit( pLabel, color );
                         if ( bChanged )
                         {
@@ -303,12 +306,12 @@ namespace sw::editor
         ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
         const float32 radius    = side * 0.5f - 2.0f;
         const ImVec2  center( minPos.x + side * 0.5f, minPos.y + side * 0.5f );
-        pDrawList->AddRectFilled( minPos, ImVec2( minPos.x + side, minPos.y + side ), IM_COL32( 38, 38, 44, 255 ), 4.0f );
+        pDrawList->AddRectFilled( minPos, ImVec2( minPos.x + side, minPos.y + side ), EditorColorUtil::toImU32( MaterialPanelInternal::kPreviewBg ), 4.0f );
 
         auto toColor = [&inputs]( float32 nx, float32 ny )
         {
             const float3 color = MaterialPreviewShading::shadePoint( inputs, nx, ny );
-            return ImGui::ColorConvertFloat4ToU32( ImVec4( color._x, color._y, color._z, 1.0f ) );
+            return EditorColorUtil::toImU32( Color{ color._x, color._y, color._z, 1.0f } );
         };
 
         const ImVec2 whiteUv  = ImGui::GetFontTexUvWhitePixel();

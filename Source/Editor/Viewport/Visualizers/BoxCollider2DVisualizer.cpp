@@ -4,6 +4,7 @@
  */
 #include "pch.h"
 
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
@@ -28,7 +29,8 @@ namespace sw::editor
             {
                 if ( args._pListCollider == nullptr )
                     return;
-                constexpr ImU32 colorWire = IM_COL32( 60, 230, 80, 220 );
+                static constexpr Color kWire{ Color::fromBytes( 60, 230, 80, 220 ) };
+                const ImU32            colorWire = EditorColorUtil::toImU32( kWire );
 
                 for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
                 {

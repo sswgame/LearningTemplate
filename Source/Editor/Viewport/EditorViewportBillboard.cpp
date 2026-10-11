@@ -6,6 +6,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/EditorProfile.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorComponentIcon.h"
 #include "Editor/Common/GUI/EditorIconGlyphs.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
@@ -33,6 +34,8 @@ namespace sw::editor
     {
         struct EditorViewportBillboardInternal
         {
+            static constexpr Color kBadgeBackground{ Color::fromBytes( 20, 22, 28, 190 ) };
+
             static constexpr float32 kDiameter = 26.0f; ///< 배지 지름(배율 1)
 
             /** @brief 컴포넌트의 월드 자리입니다. 씬 컴포넌트면 그것, 아니면 오브젝트의 주 씬 컴포넌트입니다. */
@@ -59,13 +62,13 @@ namespace sw::editor
                 const float32 fontSize = radius * 1.15f;
                 for ( const EditorViewportBillboardItem& item : listItem )
                 {
-                    const Color4& color = item._pRow->_color;
-                    const ImVec2  center{ item._screen._x, item._screen._y };
-                    args._pDrawList->AddCircleFilled( center, radius, IM_COL32( 20, 22, 28, 190 ) );
-                    args._pDrawList->AddCircle( center, radius, ImGui::ColorConvertFloat4ToU32( ImVec4{ color._r, color._g, color._b, 0.9f } ), 0, 1.5f );
+                    const Color& color = item._pRow->_color;
+                    const ImVec2 center{ item._screen._x, item._screen._y };
+                    args._pDrawList->AddCircleFilled( center, radius, EditorColorUtil::toImU32( EditorViewportBillboardInternal::kBadgeBackground ) );
+                    args._pDrawList->AddCircle( center, radius, EditorColorUtil::toImU32( color.withAlpha( 0.9f ) ), 0, 1.5f );
                     const ImVec2 glyphSize = pFont->CalcTextSizeA( fontSize, FLT_MAX, 0.0f, item._pRow->_pGlyph );
                     args._pDrawList->AddText( pFont, fontSize, ImVec2{ center.x - glyphSize.x * 0.5f, center.y - glyphSize.y * 0.5f },
-                                              ImGui::ColorConvertFloat4ToU32( ImVec4{ color._r, color._g, color._b, 1.0f } ), item._pRow->_pGlyph );
+                                              EditorColorUtil::toImU32( color.withAlpha( 1.0f ) ), item._pRow->_pGlyph );
                     if ( EditorSelfTestMarks::isEnabled() )
                     {
                         // 상호작용 없는 항목으로 자리만 남긴다 — 캔버스의 누름(피킹)을 뺏지 않는다.

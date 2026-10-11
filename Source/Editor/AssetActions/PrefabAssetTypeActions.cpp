@@ -3,6 +3,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/Workspace/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorAssetTypeActions.h"
 
@@ -15,6 +16,13 @@ namespace sw::editor
 {
     namespace
     {
+        struct PrefabAssetTypeActionsInternal
+        {
+            static constexpr Color kCubeTop{ Color::fromBytes( 90, 160, 255, 255 ) };
+            static constexpr Color kCubeLeft{ Color::fromBytes( 50, 120, 230, 255 ) };
+            static constexpr Color kCubeRight{ Color::fromBytes( 35, 95, 195, 255 ) };
+        };
+
         /** @brief 프리팹 — 등각 큐브 썸네일. 뷰포트에 끌어 놓으면 그 자리에 스폰한다(열기는 프리팹 편집기 패널). */
         class PrefabAssetTypeActions final : public IEditorAssetTypeActions
         {
@@ -29,15 +37,15 @@ namespace sw::editor
                 const float32 size      = width * 0.22f;
                 ImVec2        arrTop[4] = { ImVec2( centerX, centerY - size * 1.1f ), ImVec2( centerX + size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX, centerY ),
                                             ImVec2( centerX - size * 0.9f, centerY - size * 0.55f ) };
-                pDrawList->AddConvexPolyFilled( arrTop, 4, IM_COL32( 90, 160, 255, 255 ) );
+                pDrawList->AddConvexPolyFilled( arrTop, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeTop ) );
 
                 ImVec2 arrLeft[4] = { ImVec2( centerX - size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX, centerY ), ImVec2( centerX, centerY + size * 0.9f ),
                                       ImVec2( centerX - size * 0.9f, centerY + size * 0.35f ) };
-                pDrawList->AddConvexPolyFilled( arrLeft, 4, IM_COL32( 50, 120, 230, 255 ) );
+                pDrawList->AddConvexPolyFilled( arrLeft, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeLeft ) );
 
                 ImVec2 arrRight[4] = { ImVec2( centerX, centerY ), ImVec2( centerX + size * 0.9f, centerY - size * 0.55f ), ImVec2( centerX + size * 0.9f, centerY + size * 0.35f ),
                                        ImVec2( centerX, centerY + size * 0.9f ) };
-                pDrawList->AddConvexPolyFilled( arrRight, 4, IM_COL32( 35, 95, 195, 255 ) );
+                pDrawList->AddConvexPolyFilled( arrRight, 4, EditorColorUtil::toImU32( PrefabAssetTypeActionsInternal::kCubeRight ) );
                 return true;
             }
 

@@ -302,7 +302,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runClassicDarkSwatch( EditorSelfTestContext& context )
             {
-                const Color4 violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 셋째 스와치(Neon Violet)와 같은 값
+                const Color violet{ 0.65f, 0.35f, 0.95f, 1.0f }; // EditorThemeUtil 의 셋째 스와치(Neon Violet)와 같은 값
                 switch ( context.getStepIndex() )
                 {
                     case 0:
@@ -343,8 +343,8 @@ namespace sw::editor
                     }
                     default:
                     {
-                        const Color4& accent       = EditorThemeUtil::getAccentColor();
-                        const bool    bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
+                        const Color& accent       = EditorThemeUtil::getAccentColor();
+                        const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
                         (void)context.expect( bIsVioletNow, "clicking a swatch in the Classic Dark theme dialog did not change the accent" );
                         (void)context.expect( EditorThemeUtil::getActiveTheme()._preset == EditorThemePreset::ClassicDark,
                                               "the swatch switched the preset away from Classic Dark" );

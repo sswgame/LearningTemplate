@@ -13,6 +13,7 @@
 #include "Editor/Common/Commands/EditorViewportPreview.h"
 #include "Editor/Common/EditorPaths.h"
 #include "Editor/Common/GUI/EditorChrome.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -38,6 +39,10 @@ namespace sw::editor
          */
         struct DialogueGraphPanelInternal
         {
+            static constexpr Color kSelectedNodeText{ 0.2f, 0.8f, 1.0f, 1.0f };
+            static constexpr Color kTrueBranchText{ 0.3f, 1.0f, 0.4f, 1.0f };
+            static constexpr Color kFalseBranchText{ 1.0f, 0.4f, 0.4f, 1.0f };
+
             static constexpr int32 kPinInputOffset  = DialogueGraphAsset::kPinOffsetIn;
             static constexpr int32 kPinOutputOffset = DialogueGraphAsset::kPinOffsetOut;
             static constexpr int32 kPinTrueOffset   = DialogueGraphAsset::kPinOffsetTrue;
@@ -82,7 +87,7 @@ namespace sw::editor
         , _previewNodeID{ 0 }
     {
         _nodeGraph.setPinTypeColors( {
-            Color4{ 0.85f, 0.85f, 0.90f, 1.0f }
+            Color{ 0.85f, 0.85f, 0.90f, 1.0f }
         } ); // 흐름 핀 하나
     }
 
@@ -283,7 +288,7 @@ namespace sw::editor
 
         if ( pSelectedNode != nullptr )
         {
-            ImGui::TextColored( ImVec4( 0.2f, 0.8f, 1.0f, 1.0f ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kSelectedNodeText ), "Node #%d (%s)", pSelectedNode->_id, DialogueGraphAsset::nodeTypeName( pSelectedNode->_type ) );
             ImGui::Separator();
 
             const DialogueNodeInfo* pInfo = DialogueGraphAsset::findNodeInfo( pSelectedNode->_type );
@@ -601,11 +606,11 @@ namespace sw::editor
             {
                 ImGui::TextDisabled( "if (%s)", node._condition.c_str() );
                 ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchTrue( node._id ) ), ed::PinKind::Output );
-                ImGui::TextColored( ImVec4( 0.3f, 1.0f, 0.4f, 1.0f ), "True ->" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kTrueBranchText ), "True ->" );
                 ed::EndPin();
                 ImGui::SameLine();
                 ed::BeginPin( toPinID( DialogueGraphPanelInternal::pinBranchFalse( node._id ) ), ed::PinKind::Output );
-                ImGui::TextColored( ImVec4( 1.0f, 0.4f, 0.4f, 1.0f ), "False ->" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( DialogueGraphPanelInternal::kFalseBranchText ), "False ->" );
                 ed::EndPin();
                 return;
             }

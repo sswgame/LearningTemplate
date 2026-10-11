@@ -6,6 +6,7 @@
 
 #include "Editor/Common/Commands/EditorAssetCommands.h"
 #include "Editor/Common/Commands/EditorToolAssetCommands.h"
+#include "Editor/Common/GUI/EditorColorUtil.h"
 #include "Editor/Common/GUI/EditorPanelManager.h"
 #include "Editor/Common/GUI/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -25,6 +26,8 @@ namespace sw::editor
     {
         struct PrefabPanelInternal
         {
+            static constexpr Color kIsolationText{ 1.0f, 0.75f, 0.2f, 1.0f };
+
             static GameObject* getPrefabTargetInstance()
             {
                 EditorContext* pContext = EditorContext::get();
@@ -86,7 +89,7 @@ namespace sw::editor
 
         if ( pContext != nullptr && pContext->getWorkspace().isPrefabIsolationActive() )
         {
-            ImGui::TextColored( ImVec4( 1.0f, 0.75f, 0.2f, 1.0f ), "Isolation: %s",
+            ImGui::TextColored( EditorColorUtil::toImVec4( PrefabPanelInternal::kIsolationText ), "Isolation: %s",
                                 pContext->getWorkspace().getPrefabIsolationPrefabPath().c_str() );
             if ( ImGui::Button( "Save Prefab & Exit Isolation" ) )
                 EditorAssetCommands::exitPrefabIsolation( true );
