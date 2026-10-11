@@ -91,7 +91,7 @@ namespace sw
         {
             uint32  _targetIndex{ 0 };
             float32 _levelDb{ 0.0f };
-            float32 _gain{ 1.0f }; ///< 지금 램프 중인 선형 레벨
+            float32 _gain{ 1.0f }; ///< 지금 램프 중인 선형 레벨이다.
             bool    _bPreFader{ false };
         };
 

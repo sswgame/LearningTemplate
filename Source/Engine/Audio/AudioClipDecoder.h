@@ -22,7 +22,7 @@ namespace sw
         uint32                 _channelMask{ 0 }; ///< 확장형일 때 스피커 배치(0 = 정하지 않음)
         uint16                 _channelCount{ 0 };
         uint16                 _bitsPerSample{ 0 };
-        uint16                 _validBitsPerSample{ 0 }; ///< 확장형일 때 유효 비트
+        uint16                 _validBitsPerSample{ 0 }; ///< 확장형일 때 유효 비트 수다.
         uint8                  _bFloat      : 1;         ///< 샘플이 IEEE float 다(아니면 정수 PCM)
         uint8                  _bExtensible : 1;         ///< 원본이 확장형(WAVE_FORMAT_EXTENSIBLE)이었다. 재생 형식도 확장형으로 넘긴다.
         [[maybe_unused]] uint8 _reserved    : 6;

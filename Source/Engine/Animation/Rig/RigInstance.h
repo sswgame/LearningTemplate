@@ -25,7 +25,7 @@ namespace sw
     /** @brief 소켓 이름을 푼 결과입니다. */
     enum class RigSocketLookup : uint8
     {
-        Missing = 0, ///< 없는 소켓
+        Missing = 0, ///< 소켓이 없다.
         OwnUnit,     ///< 이 유닛의 소켓이다. 부모 본과 로컬로 작업 포즈에서 바로 읽는다.
         OtherUnit,   ///< 해석된 외형에 있는 다른 유닛의 소켓(`MainHand.Grip`)이다. 호스트가 바깥 대상 값으로 넣는다.
     };
@@ -150,7 +150,7 @@ namespace sw
         RigPoseBuffer               _pose;
         RigSolveSpace               _space;
         const IRigCurveSource*      _pCurveSource;
-        float3                      _worldGravity; ///< 마지막 준비 단계가 받은 월드 중력
+        float3                      _worldGravity; ///< 마지막 준비 단계가 받은 월드 중력이다.
         float32                     _pendingDeltaSeconds;
         uint32                      _evaluationCount;
     };

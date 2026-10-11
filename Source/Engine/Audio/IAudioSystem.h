@@ -27,8 +27,8 @@ namespace sw
      */
     struct AudioBusVolume
     {
-        hashed_string _bus{};          ///< 버스 이름
-        float32       _volume{ 1.0f }; ///< 버스 볼륨 [0,1]
+        hashed_string _bus{};          ///< 버스 이름이다.
+        float32       _volume{ 1.0f }; ///< 버스 볼륨이다([0, 1]).
     };
 } // namespace sw
 

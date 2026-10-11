@@ -116,7 +116,7 @@ namespace sw
     struct GeometryRayHit
     {
         float3  _normal{};               ///< 맞은 삼각형의 면 법선이다(감은 방향 기준).
-        uint32  _triangle{ 0 };          ///< 삼각형 번호
+        uint32  _triangle{ 0 };          ///< 삼각형 번호다.
         float32 _distance{ 0.0f };       ///< 광선 시작에서의 거리다.
         float32 _baryU{ 0.0f };          ///< 무게중심 좌표다(두 번째 정점 가중치).
         float32 _baryV{ 0.0f };          ///< 무게중심 좌표다(세 번째 정점 가중치).

@@ -27,9 +27,9 @@ namespace sw
     struct SW_API AudioClipData
     {
         vector<float32> _listSample;        ///< 채널 교차 샘플([-1, 1])
-        uint32          _frameCount{ 0 };   ///< 채널당 샘플 수
+        uint32          _frameCount{ 0 };   ///< 채널당 샘플 수다.
         uint32          _sampleRate{ 0 };   ///< 원본 샘플레이트(Hz)
-        uint16          _channelCount{ 0 }; ///< 1 또는 2
+        uint16          _channelCount{ 0 }; ///< 1 또는 2 다.
 
         /** @brief 길이(초)입니다. */
         float32 getDurationSeconds() const { return _sampleRate == 0 ? 0.0f : static_cast<float32>( _frameCount ) / static_cast<float32>( _sampleRate ); }

@@ -27,7 +27,7 @@ namespace sw
         PhysicsBodyHandle _body{};
         float3            _point{};
         float3            _normal{};
-        hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름
+        hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름이다.
         float32           _distance{ 0.0f };
         bool              _bIs2D{ false };
     };

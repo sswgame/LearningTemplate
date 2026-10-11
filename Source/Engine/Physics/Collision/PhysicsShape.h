@@ -22,7 +22,7 @@ namespace sw
         Box = 0,
         Sphere,
         Capsule,      ///< 로컬 Y 축으로 선 캡슐이다. 원기둥 반 높이(`_halfHeight`)와 반지름으로 정한다.
-        ConvexHull,   ///< `_listPoint` 를 감싸는 볼록 껍질
+        ConvexHull,   ///< `_listPoint` 를 감싸는 볼록 껍질이다.
         TriangleMesh, ///< `_listPoint` 와 `_listIndex` 의 삼각형이다. Static 과 Kinematic 바디만 쓸 수 있다(움직이는 메시 충돌은 백엔드가 막는다).
     };
 
@@ -32,7 +32,7 @@ namespace sw
     {
         Box = 0,
         Circle,
-        Capsule, ///< 로컬 Y 축으로 선 캡슐
+        Capsule, ///< 로컬 Y 축으로 선 캡슐이다.
         Polygon, ///< `_listPoint` 의 볼록 다각형이다(최대 8 점이며, 넘거나 오목하면 볼록 껍질을 쓴다).
         Chain,   ///< `_listPoint` 를 이은 선분 체인이다(지형). 한쪽 면만 막고, `_bLoop` 면 닫는다.
     };

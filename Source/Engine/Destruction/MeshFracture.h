@@ -50,8 +50,8 @@ namespace sw
     enum class FractureVolume : uint8
     {
         Mesh = 0, ///< 메시 자체다(닫혀 있어야 한다).
-        Bounds,   ///< 메시의 경계 상자
-        Hull,     ///< 메시 정점의 볼록 껍질
+        Bounds,   ///< 메시의 경계 상자다.
+        Hull,     ///< 메시 정점의 볼록 껍질이다.
     };
 } // namespace sw
 

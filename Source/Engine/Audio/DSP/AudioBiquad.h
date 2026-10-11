@@ -48,8 +48,8 @@ namespace sw
     struct SW_API AudioBiquadStereo
     {
         AudioBiquadCoefficients _coefficients{};
-        float32                 _arrState1[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻¹ 상태
-        float32                 _arrState2[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻² 상태
+        float32                 _arrState1[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻¹ 상태를 가진다.
+        float32                 _arrState2[2]{ 0.0f, 0.0f }; ///< 채널마다 z⁻² 상태를 가진다.
 
         /** @brief 상태를 비웁니다. */
         void reset();

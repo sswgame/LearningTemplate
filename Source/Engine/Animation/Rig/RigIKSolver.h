@@ -33,9 +33,9 @@ namespace sw
     /** @brief 관절 제한의 종류입니다. */
     enum class RigJointLimitType : uint8
     {
-        None = 0, ///< 제한 없음
-        Cone,     ///< 본 축의 흔들림(swing)을 원뿔 각 안으로, 비틀림(twist)을 ± 각 안으로
-        Hinge,    ///< 한 축(본의 레퍼런스 로컬 축) 둘레 회전만, [최소, 최대] 각
+        None = 0, ///< 제한이 없다.
+        Cone,     ///< 본 축의 흔들림(swing)을 원뿔 각 안으로, 비틀림(twist)을 ± 각 안으로 제한한다.
+        Hinge,    ///< 한 축(본의 레퍼런스 로컬 축) 둘레 회전만 [최소, 최대] 각으로 제한한다.
     };
 
     /**

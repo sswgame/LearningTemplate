@@ -62,8 +62,8 @@ namespace sw
     private:
         BVHTree3D                  _tree;
         vector<Surface>            _listSurface;
-        vector<uint32>             _listTriangleSurface; /**< 전역 삼각형 → 표면 번호 */
-        vector<uint32>             _listTriangleLocal;   /**< 전역 삼각형 → 표면 안 삼각형 번호 */
-        mutable vector<SlotHandle> _listScratchHandle;   /**< 질의 후보 스크래치 */
+        vector<uint32>             _listTriangleSurface; /**< 전역 삼각형에서 표면 번호로 가는 매핑이다. */
+        vector<uint32>             _listTriangleLocal;   /**< 전역 삼각형에서 표면 안 삼각형 번호로 가는 매핑이다. */
+        mutable vector<SlotHandle> _listScratchHandle;   /**< 질의 후보를 담는 스크래치 버퍼다. */
     };
 } // namespace sw

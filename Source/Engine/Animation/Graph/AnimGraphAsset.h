@@ -37,12 +37,12 @@ namespace sw
     enum class AnimConditionOp : uint8
     {
         None = 0,     ///< 조건이 없습니다. 현재 상태가 반복 없이 끝나면 넘어갑니다("끝나면 다음").
-        Greater,      ///< 파라미터 > 값
-        Less,         ///< 파라미터 < 값
-        GreaterEqual, ///< 파라미터 >= 값
-        LessEqual,    ///< 파라미터 <= 값
-        Equal,        ///< 파라미터 == 값
-        NotEqual,     ///< 파라미터 != 값
+        Greater,      ///< 파라미터가 값보다 크다.
+        Less,         ///< 파라미터가 값보다 작다.
+        GreaterEqual, ///< 파라미터가 값보다 크거나 같다.
+        LessEqual,    ///< 파라미터가 값보다 작거나 같다.
+        Equal,        ///< 파라미터가 값과 같다.
+        NotEqual,     ///< 파라미터가 값과 다르다.
         Trigger,      ///< 트리거가 켜져 있습니다. 전이가 일어나면 끕니다.
     };
 } // namespace sw

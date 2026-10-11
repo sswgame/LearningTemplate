@@ -21,11 +21,11 @@ namespace sw
     /** @brief 한 점이 원본 표면에 연결된 위치입니다. */
     struct SurfaceBinding
     {
-        uint32  _triangle{ 0 };        ///< 원본 삼각형 번호
+        uint32  _triangle{ 0 };        ///< 원본 삼각형 번호다.
         float32 _baryU{ 0.0f };        ///< 무게중심 좌표다(두 번째 정점 가중치).
         float32 _baryV{ 0.0f };        ///< 무게중심 좌표다(세 번째 정점 가중치).
-        float32 _normalOffset{ 0.0f }; ///< 보간 법선 방향 거리
-        uint8   _bBound{ SW_FALSE };   ///< 거리 안에서 표면을 찾았는가
+        float32 _normalOffset{ 0.0f }; ///< 보간 법선 방향 거리다.
+        uint8   _bBound{ SW_FALSE };   ///< 거리 안에서 표면을 찾았는지 나타낸다.
     };
 } // namespace sw
 

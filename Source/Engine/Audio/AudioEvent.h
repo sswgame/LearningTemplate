@@ -51,7 +51,7 @@ namespace sw
     enum class AudioParameterTarget : uint8
     {
         Volume = 0, ///< dB
-        Pitch,      ///< 반음
+        Pitch,      ///< 반음 단위다.
         LowPass,    ///< Hz
     };
 } // namespace sw

@@ -16,9 +16,9 @@ namespace sw
     /** @brief 바람 값 한 벌입니다. 씬에 `WindComponent` 가 없으면 기본값(약한 바람)입니다. */
     struct WindSettings
     {
-        float2  _direction{ 1.0f, 0.0f }; ///< 정규화된 xz 방향
+        float2  _direction{ 1.0f, 0.0f }; ///< 정규화된 xz 방향이다.
         float32 _strength{ 0.35f };       ///< 기본 흔들림 세기(m, 높이 1 m 의 끝이 밀리는 양)
-        float32 _gustStrength{ 0.25f };   ///< 돌풍이 더하는 세기
+        float32 _gustStrength{ 0.25f };   ///< 돌풍이 더하는 세기다.
         float32 _gustFrequency{ 0.25f };  ///< 돌풍 주파수(Hz)
         float32 _swayFrequency{ 1.2f };   ///< 흔들림 주파수(Hz)
     };

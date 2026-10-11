@@ -14,7 +14,7 @@ namespace sw
     enum class NavMoveStatus : uint8
     {
         Idle = 0, ///< 목적지가 없다.
-        Moving,   ///< 경로를 구하거나 따라가는 중
+        Moving,   ///< 경로를 구하거나 따라가는 중이다.
         Arrived,  ///< 목적지(멈춤 거리 안)에 닿았다
         Failed,   ///< 목적지로 가는 길이 없다(내비메시나 격자 밖이거나 막혔다).
     };

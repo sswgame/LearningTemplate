@@ -37,9 +37,9 @@ namespace sw
         PROPERTY( Units = m )
         float2 _center{};
         PROPERTY( Min = 0.0, Units = m )
-        float2 _halfExtent{ 1.0f, 1.0f }; ///< 사각형의 반폭
+        float2 _halfExtent{ 1.0f, 1.0f }; ///< 사각형의 반폭이다.
         PROPERTY( Min = 0.0, Units = m )
-        float32 _radius{ 1.0f }; ///< 원의 반지름
+        float32 _radius{ 1.0f }; ///< 원의 반지름이다.
         PROPERTY()
         PlacementExclusionShape _shape{ PlacementExclusionShape::Circle };
     };

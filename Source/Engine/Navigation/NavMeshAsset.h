@@ -80,7 +80,7 @@ namespace sw
     {
         float64 _milliseconds{ 0.0 };
         uint32  _tileCount{ 0 };       ///< 베이크한 타일 위치 수다.
-        uint32  _filledTileCount{ 0 }; ///< 걸을 곳이 있는 타일 수
+        uint32  _filledTileCount{ 0 }; ///< 걸을 곳이 있는 타일 수다.
         uint32  _failedTileCount{ 0 };
         uint32  _polygonCount{ 0 };
     };

@@ -113,19 +113,19 @@ namespace sw
     struct FitPartState
     {
         vector<float3>       _listBindPosition{}; ///< 입력 위치(변하지 않음)
-        vector<float3>       _listPosition{};     ///< 지금 위치
+        vector<float3>       _listPosition{};     ///< 현재 위치다.
         vector<float3>       _listNormal{};       ///< 입력 법선(변위 방향)
-        vector<float3>       _listDisplacement{}; ///< 이번 반복에 쌓인 변위
+        vector<float3>       _listDisplacement{}; ///< 이번 반복에 쌓인 변위다.
         vector<uint32>       _listDisplacementCount{};
         vector<uint16>       _listVertexRegion{}; ///< 정점마다 몸 영역 번호(`FitTables` 순서)
         vector<uint8>        _listCovered{};      ///< 삼각형마다 덮임 표시(덮임 단계)
-        vector<uint8>        _listHidden{};       ///< 삼각형마다 숨김 영역 표시
-        vector<float3>       _listFalloffAxis{};  ///< 정점마다 감쇠 축(주 본 → 첫 자식), 없으면 0
+        vector<uint8>        _listHidden{};       ///< 삼각형마다 숨김 영역 표시를 가진다.
+        vector<float3>       _listFalloffAxis{};  ///< 정점마다 감쇠 축(주 본에서 첫 자식으로 가는 방향)을 가진다. 없으면 0 이다.
         const FitPartInput*  _pInput{ nullptr };
         const FitProfileDef* _pProfile{ nullptr };
         int32                _layerOrder{ 0 };
         uint32               _layerIndex{ 0 };
-        uint32               _surfaceIndex{ 0 }; ///< 겹 표면 안의 표면 번호
+        uint32               _surfaceIndex{ 0 }; ///< 겹 표면 안의 표면 번호다.
         uint8                _bMoved{ SW_FALSE };
     };
 } // namespace sw

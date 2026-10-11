@@ -82,7 +82,7 @@ namespace sw
     struct FractureGroupRuntime
     {
         float3             _position{};      ///< 그룹 자세다(오브젝트 원점이 있는 월드 위치).
-        quaternion         _rotation{};      ///< 그룹 자세의 회전
+        quaternion         _rotation{};      ///< 그룹 자세의 회전이다.
         float3             _drivePosition{}; ///< 네트워크가 정한 목표 자세다(`_bDriven`).
         quaternion         _driveRotation{};
         PhysicsBodyHandle  _body{};  ///< 떨어진 그룹은 동적 바디 하나를 가진다. 앵커 그룹은 잎마다 정적 바디가 있고, 컴포넌트가 잎 테이블로 관리한다.
@@ -116,7 +116,7 @@ namespace sw
         uint8      _bGone{ SW_FALSE };    ///< 사라졌다
         uint8      _bDriven{ SW_FALSE };  ///< 네트워크가 자세를 정한다(클라이언트의 덩어리, 키네마틱).
         uint8      _bHasBody{ SW_FALSE }; ///< 바디가 있다(충돌한다).
-        uint8      _layer{ 0 };           ///< 바디의 물리 레이어
+        uint8      _layer{ 0 };           ///< 바디의 물리 레이어다.
     };
 } // namespace sw
 

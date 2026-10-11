@@ -20,10 +20,10 @@ namespace sw
     ENUM()
     enum class AudioAttenuationCurve : uint8
     {
-        Linear = 0,    ///< 최소 → 최대 거리에서 1 → 0 직선
-        Inverse,       ///< min / d(OpenAL inverse clamped), 최대 거리 밖은 그 값을 유지
-        InverseSquare, ///< (min / d)², 최대 거리 밖은 그 값을 유지
-        Custom,        ///< 점(거리, dB) 사이 직선 보간, 끝 점 밖은 끝 값
+        Linear = 0,    ///< 최소 거리에서 최대 거리까지 1 에서 0 으로 직선으로 줄어든다.
+        Inverse,       ///< min / d 로 줄어든다(OpenAL inverse clamped). 최대 거리 밖은 그 값을 유지한다.
+        InverseSquare, ///< (min / d)² 로 줄어든다. 최대 거리 밖은 그 값을 유지한다.
+        Custom,        ///< 점(거리, dB) 사이를 직선으로 보간하고, 끝 점 밖은 끝 값을 쓴다.
     };
 
     /** @brief 앰비언트 에미터와 리버브 존의 형태입니다. */
@@ -39,8 +39,8 @@ namespace sw
     ENUM()
     enum class AudioSpatialMode : uint8
     {
-        World3D = 0, ///< 리스너의 오른쪽 축으로 팬, 3D 거리
-        Screen2D,    ///< 화면 평면: 리스너 오른쪽 축 방향 거리 / 화면 반폭으로 팬, 화면 세로는 팬에 쓰지 않음, 거리는 시선 성분을 뺀 화면 평면 거리
+        World3D = 0, ///< 리스너의 오른쪽 축으로 팬을 정하고, 3D 거리로 감쇠한다.
+        Screen2D,    ///< 화면 평면에서 팬을 정한다. 리스너 오른쪽 축 방향 거리를 화면 반폭으로 나눈 값을 쓰고, 화면 세로는 팬에 쓰지 않는다. 거리는 시선 성분을 뺀 화면 평면 거리다.
     };
 } // namespace sw
 
@@ -124,10 +124,10 @@ namespace sw
     struct AudioListenerState
     {
         float3           _position{};
-        float3           _forward{ 0.0f, 0.0f, 1.0f }; ///< 정규화된 앞
-        float3           _up{ 0.0f, 1.0f, 0.0f };      ///< 정규화된 위
+        float3           _forward{ 0.0f, 0.0f, 1.0f }; ///< 정규화된 앞 방향이다.
+        float3           _up{ 0.0f, 1.0f, 0.0f };      ///< 정규화된 위 방향이다.
         float3           _velocity{};                  ///< m/s(도플러)
-        float32          _screenHalfWidth{ 10.0f };    ///< Screen2D: 팬이 끝(±1)에 닿는 가로 거리
+        float32          _screenHalfWidth{ 10.0f };    ///< Screen2D 에서 팬이 끝(±1)에 닿는 가로 거리다.
         AudioSpatialMode _mode{ AudioSpatialMode::World3D };
         bool             _bActive{ false };
     };
@@ -140,8 +140,8 @@ namespace sw
     {
         float3  _position{};
         float3  _velocity{};
-        float32 _occlusionTarget{ 0.0f }; ///< 게임이 넣은 값
-        float32 _occlusion{ 0.0f };       ///< 엔진이 따라간 값
+        float32 _occlusionTarget{ 0.0f }; ///< 게임이 넣은 값이다.
+        float32 _occlusion{ 0.0f };       ///< 엔진이 따라간 값이다.
     };
 } // namespace sw
 
@@ -152,8 +152,8 @@ namespace sw
     {
         float32 _gain{ 1.0f };          ///< 거리 감쇠 × 가림(선형)
         float32 _pan{ 0.0f };           ///< [-1, 1]
-        float32 _pitchRatio{ 1.0f };    ///< 도플러 비
-        float32 _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽
+        float32 _pitchRatio{ 1.0f };    ///< 도플러 비다.
+        float32 _lowPassHz{ 20000.0f }; ///< 공기 흡수와 가림 중 낮은 쪽이다.
         float32 _distance{ 0.0f };
     };
 } // namespace sw

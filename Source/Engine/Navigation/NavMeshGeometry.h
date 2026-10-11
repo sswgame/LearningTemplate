@@ -89,8 +89,8 @@ namespace sw
         void expandBounds( const float3& point );
 
         vector<float3>          _listVertex;
-        vector<uint32>          _listIndex;        ///< 삼각형마다 셋
-        vector<uint8>           _listTriangleArea; ///< 삼각형마다 하나
+        vector<uint32>          _listIndex;        ///< 삼각형마다 점 셋을 가진다.
+        vector<uint8>           _listTriangleArea; ///< 삼각형마다 하나를 가진다.
         vector<NavConvexVolume> _listVolume;
         vector<uint32>          _listCellStart; ///< 셀마다 `_listCellTriangle` 의 시작 위치다(셀 수 + 1).
         vector<uint32>          _listCellTriangle;

@@ -149,10 +149,10 @@ namespace sw
         shared_ptr<const AnimNotifyTable> _table;
         vector<ActiveState>               _listActiveState;
         vector<AnimNotifyAction>          _listAction;
-        vector<AnimFiredNotify>           _listPendingFired;    ///< 2D: 워커가 베낀 이번 틱의 알림
-        vector<const IAnimPlayable*>      _listPendingActive;   ///< 2D: 워커가 베낀 재생 중인 것
+        vector<AnimFiredNotify>           _listPendingFired;    ///< 2D 에서 워커가 복사한 이번 틱의 알림이다.
+        vector<const IAnimPlayable*>      _listPendingActive;   ///< 2D 에서 워커가 복사한 재생 중인 항목이다.
         ComponentHandle                   _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
-        float32                           _pendingDeltaSeconds; ///< 2D: 베낀 프레임의 걸음
+        float32                           _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
         uint32                            _seenTableReloadCount;
         uint8                             _bPendingFrame;     ///< 2D: 처리를 기다리는 프레임이 있다
         uint8                             _bPendingRestarted; ///< 2D: 베낀 프레임 중 재생할 것이 바뀐 것이 있었다

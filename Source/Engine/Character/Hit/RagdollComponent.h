@@ -205,7 +205,7 @@ namespace sw
         vector<quaternion>             _listKinematicStartRotation;
         vector<quaternion>             _listKinematicTargetRotation;
         vector<PendingImpulse>         _listPendingImpulse;
-        Pose                           _physicsPose; ///< 후처리 스크래치
+        Pose                           _physicsPose; ///< 후처리용 스크래치 버퍼다.
         const Skeleton*                _pBoneNameSkeleton;
         SkeletalMeshComponent*         _pUnit;
         uint32                         _seenAssetReloadCount;

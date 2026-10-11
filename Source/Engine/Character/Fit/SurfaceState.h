@@ -129,7 +129,7 @@ namespace sw
     private:
         vector<SurfaceChannelDef> _listChannel;
         vector<float32>           _listRegionValue; /**< 영역 × 채널(행 = 영역) */
-        vector<SurfaceMask>       _listMask;        /**< 부품 × 채널(행 = 부품), 마스크 없는 채널은 해상도 0 */
+        vector<SurfaceMask>       _listMask;        /**< 부품 × 채널 마스크다(행은 부품). 마스크가 없는 채널은 해상도가 0 이다. */
         uint32                    _regionCount{ 0 };
         uint32                    _partCount{ 0 };
     };

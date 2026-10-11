@@ -39,7 +39,7 @@ namespace sw
     {
         Name = 0, ///< 이름이다(소켓, 이벤트, 레이어). `hashed_string` 으로 보관한다.
         Text,     ///< 글이다(사운드나 프리팹 경로).
-        Float,    ///< 실수
+        Float,    ///< 실수다.
         Vector,   ///< 세 수 "x y z" 다.
         Bool,     ///< 참과 거짓이다.
     };

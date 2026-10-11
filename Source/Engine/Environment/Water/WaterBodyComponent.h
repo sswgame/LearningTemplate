@@ -166,7 +166,7 @@ namespace sw
         EnvironmentMaterial           _material;
         unique_ptr<MeshInstanceBatch> _batch;
         PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
-        float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치
+        float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치다.
         float32                       _waveTime;
         uint32                        _surfaceVertexCount;
         atomic<bool>                  _bOriginDirty;    ///< 오너가 움직여 수면 원점이 낡았다

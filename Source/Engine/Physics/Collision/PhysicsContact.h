@@ -39,12 +39,12 @@ namespace sw
         PhysicsBodyHandle   _bodyB{};
         uint64              _userDataA{ 0 };
         uint64              _userDataB{ 0 };
-        Vector              _point{};         ///< 대표 접촉점(월드). 끝 이벤트는 마지막으로 안 점
+        Vector              _point{};         ///< 대표 접촉점이다(월드). 끝 이벤트는 마지막으로 알려진 점이다.
         Vector              _normal{};        ///< A 에서 B 쪽 법선(월드)
         float32             _impulse{ 0.0f }; ///< 접촉 충격량 크기(뉴턴초)
         PhysicsContactPhase _phase{ PhysicsContactPhase::Begin };
-        uint8               _bTriggerA{ SW_FALSE }; ///< A 가 트리거인지
-        uint8               _bTriggerB{ SW_FALSE }; ///< B 가 트리거인지
+        uint8               _bTriggerA{ SW_FALSE }; ///< A 가 트리거인지 나타낸다.
+        uint8               _bTriggerB{ SW_FALSE }; ///< B 가 트리거인지 나타낸다.
 
         /** @brief 어느 쪽이든 트리거면 true 를 반환합니다. 막는 접촉이 아니라 감지입니다. */
         bool involvesTrigger() const { return _bTriggerA == SW_TRUE || _bTriggerB == SW_TRUE; }
@@ -210,8 +210,8 @@ namespace sw
             Vector             _normal{};
             float32            _impulse{ 0.0f };
             int32              _subContactCount{ 0 };
-            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지
-            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지
+            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다.
+            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다.
             bool               _bBodyRemoved{ false };
         };
 

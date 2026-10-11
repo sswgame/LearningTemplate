@@ -60,9 +60,9 @@ namespace sw
         uint64  _objectA{ 0 };
         uint64  _objectB{ 0 };
         float32 _hitFraction{ 1.0f };   ///< 이번 step 안에서 닿은 시점이다(0..1). 쓸려서 닿은 시작만 1 보다 작고, 끝과 제자리 겹침은 1 이다.
-        uint8   _bBegin{ SW_FALSE };    ///< 시작이면 SW_TRUE, 끝이면 SW_FALSE
-        uint8   _bTriggerA{ SW_FALSE }; ///< A 쪽 바디가 트리거인지
-        uint8   _bTriggerB{ SW_FALSE }; ///< B 쪽 바디가 트리거인지
+        uint8   _bBegin{ SW_FALSE };    ///< 시작이면 SW_TRUE 이고, 끝이면 SW_FALSE 다.
+        uint8   _bTriggerA{ SW_FALSE }; ///< A 쪽 바디가 트리거인지 나타낸다.
+        uint8   _bTriggerB{ SW_FALSE }; ///< B 쪽 바디가 트리거인지 나타낸다.
     };
 } // namespace sw
 
@@ -320,6 +320,6 @@ namespace sw
         };
         vector<OverlapPair>         _listOverlapPair;  ///< 지난 step 의 겹친 쌍(정렬)
         vector<OverlapPair>         _listScratchPair;  ///< 이번 step 의 겹친 쌍을 모으는 버퍼다(할당을 재사용한다).
-        vector<PhysicsOverlapEvent> _listOverlapEvent; ///< 지난 step 이 낸 이벤트
+        vector<PhysicsOverlapEvent> _listOverlapEvent; ///< 지난 step 이 낸 이벤트다.
     };
 } // namespace sw

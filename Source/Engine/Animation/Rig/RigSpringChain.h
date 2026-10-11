@@ -19,8 +19,8 @@ namespace sw
     /** @brief 스프링 충돌체의 형태입니다. */
     enum class RigSpringColliderShape : uint8
     {
-        Sphere = 0, ///< 점 A 와 반지름
-        Capsule,    ///< 선분 A–B 와 반지름
+        Sphere = 0, ///< 점 A 와 반지름으로 정한다.
+        Capsule,    ///< 선분 A-B 와 반지름으로 정한다.
     };
 
     /** @brief 본에 붙은 충돌체 하나입니다. 점은 본 공간(본의 모델 변환으로 옮김)입니다. */

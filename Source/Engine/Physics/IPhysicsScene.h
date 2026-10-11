@@ -134,7 +134,7 @@ namespace sw
         virtual PhysicsJointHandle createJoint( const JointDesc& desc )           = 0;
         virtual void               destroyJoint( PhysicsJointHandle joint )       = 0;
         virtual bool               isJointValid( PhysicsJointHandle joint ) const = 0;
-        /** @brief 모터를 바꿉니다(Hinge · Slider · Distance). */
+        /** @brief 모터를 바꿉니다(Hinge, Slider, Distance). */
         virtual void setJointMotor( PhysicsJointHandle joint, const PhysicsJointMotor& motor ) = 0;
         /** @brief Hinge 면 현재 각(라디안), Slider 면 현재 거리, Distance 면 현재 길이를 반환합니다. 나머지는 0 입니다. */
         virtual float32 getJointPosition( PhysicsJointHandle joint ) const = 0;

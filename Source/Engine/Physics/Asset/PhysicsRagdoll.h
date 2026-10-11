@@ -51,9 +51,9 @@ namespace sw
     /** @brief 만든 래그돌입니다. 에셋 바디 순서의 핸들과 뼈 대응을 담습니다. 값이라 복사해서 보관할 수 있고, 핸들은 씬이 지울 때까지 유효합니다. */
     struct SW_API PhysicsRagdoll
     {
-        vector<PhysicsBodyHandle>  _listBody;       ///< 에셋 바디 순서
+        vector<PhysicsBodyHandle>  _listBody;       ///< 에셋 바디 순서다.
         vector<PhysicsJointHandle> _listJoint;      ///< 에셋 바디 순서(루트 바디는 무효)
-        vector<int32>              _listBoneIndex;  ///< 에셋 바디 → 스켈레톤 뼈 번호
+        vector<int32>              _listBoneIndex;  ///< 에셋 바디에서 스켈레톤 뼈 번호로 가는 매핑이다.
         vector<int32>              _listParentBody; ///< 에셋 바디 → 부모 쪽 에셋 바디(루트는 -1)
         vector<int32>              _listBodyOfBone; ///< 스켈레톤 뼈 → 에셋 바디(없으면 -1)
 

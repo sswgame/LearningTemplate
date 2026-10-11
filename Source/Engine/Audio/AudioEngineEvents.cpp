@@ -165,7 +165,7 @@ namespace sw
             return;
         }
 
-        // 동시 재생 상한과 뺏기(Wwise Playback Limit · 언리얼 Sound Concurrency).
+        // 동시 재생 상한과 뺏기다(Wwise 의 Playback Limit, 언리얼의 Sound Concurrency).
         if ( event._maxInstances > 0 )
         {
             uint32 liveCount   = 0;

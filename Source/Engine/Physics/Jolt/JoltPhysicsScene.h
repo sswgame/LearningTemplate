@@ -312,7 +312,7 @@ namespace sw
         JPH::TempAllocatorImpl                    _tempAllocator;
         JPH::PhysicsSystem                        _system;
         JoltJobSystem*                            _pJobSystem;
-        vector<JPH::Ref<JoltPhysicsMaterial>>     _listJoltMaterial; ///< `_settings._listMaterial` 과 같은 순서
+        vector<JPH::Ref<JoltPhysicsMaterial>>     _listJoltMaterial; ///< `_settings._listMaterial` 과 같은 순서다.
         SlotHandleTable<BodyRecord>               _bodies;
         SlotHandleTable<JointRecord>              _joints;
         SlotHandleTable<CharacterRecord>          _characters;

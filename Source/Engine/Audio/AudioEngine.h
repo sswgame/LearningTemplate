@@ -42,7 +42,7 @@ namespace sw
         AudioEmitterID   _emitterID{ 0 };         ///< 소리를 내는 에미터다.
         float32          _volumeDb{ 0.0f };       ///< 볼륨(dB)
         float32          _pitchSemitones{ 0.0f }; ///< 피치(반음)
-        float32          _pan{ 0.0f };            ///< 팬 [-1, 1]
+        float32          _pan{ 0.0f };            ///< 팬이다([-1, 1]).
         float32          _fadeInSeconds{ 0.0f };  ///< 0 에서 오르는 시간(초)
         int32            _priority{ 50 };         ///< 보이스가 모자랄 때 우선순위가 높은 쪽이 남는다.
         AudioVirtualMode _virtual{ AudioVirtualMode::Virtualize };
@@ -55,12 +55,12 @@ namespace sw
     /** @brief 마지막 블록에서 게시한 엔진 상태입니다. */
     struct AudioEngineStats
     {
-        uint64 _renderedFrameCount{ 0 }; ///< 지금까지 렌더한 프레임
+        uint64 _renderedFrameCount{ 0 }; ///< 지금까지 렌더한 프레임 수다.
         uint32 _voiceCount{ 0 };         ///< 살아 있는 보이스 수다. 실제, 가상, 클립 대기 보이스를 모두 센다.
-        uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스
-        uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스
-        uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스
-        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스의 최대
+        uint32 _realVoiceCount{ 0 };     ///< 섞은 보이스 수다.
+        uint32 _virtualVoiceCount{ 0 };  ///< 위치만 진행한 보이스 수다.
+        uint32 _instanceCount{ 0 };      ///< 살아 있는 이벤트 인스턴스 수다.
+        uint32 _peakRealVoiceCount{ 0 }; ///< 지금까지 한 블록에 섞은 보이스 수의 최댓값이다.
         uint64 _playedEventCount{ 0 };   ///< 지금까지 낸 이벤트 수다. 인스턴스를 만든 이벤트만 센다.
         uint64 _droppedEventCount{ 0 };  ///< 쿨다운, 상한(Reject), 슬롯 부족으로 버린 이벤트 수다.
     };
@@ -73,7 +73,7 @@ namespace sw
     {
         hashed_string _segment{};     ///< 현재 구간이다. 전환을 기다리는 동안은 이전 구간이다.
         float64       _beat{ 0.0 };   ///< 구간 시작에서 센 박(소수)
-        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디
+        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디 수다.
         float32       _tempo{ 0.0f }; ///< 현재 템포(BPM)다.
         bool          _bPlaying{ false };
     };
@@ -252,7 +252,7 @@ namespace sw
             shared_ptr<const AudioEventLibrary> _pLibrary{};   ///< SetLibrary 가 쓴다. nullptr 이면 언로드한다.
             shared_ptr<const AudioMusicDesc>    _pMusic{};     ///< StartMusic
             hashed_string                       _name{};       ///< 버스, 이벤트, 파라미터, 스냅샷, 라이브러리의 이름이다.
-            hashed_string                       _path{};       ///< 클립 경로
+            hashed_string                       _path{};       ///< 클립 경로다.
             AudioClipPlayParams                 _clipParams{}; ///< PlayClip
             AudioListenerState                  _listener{};   ///< SetListener
             float3                              _position{};   ///< SetEmitter
@@ -261,7 +261,7 @@ namespace sw
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _seed{ 0 };     ///< SetRandomSeed
             float32                             _value{ 0.0f }; ///< 볼륨, 페이드, 파라미터, 세기 값이다.
-            uint32                              _index{ 0 };    ///< 리스너 번호
+            uint32                              _index{ 0 };    ///< 리스너 번호다.
             CommandType                         _type{ CommandType::PlayClip };
             bool                                _bFlag{ false }; ///< 음소거, 솔로, 일시정지 플래그다.
         };
@@ -320,7 +320,7 @@ namespace sw
             AudioEmitterID                      _emitterID{ 0 };
             uint64                              _startFrame{ 0 };
             float32                             _audibility{ 0.0f }; ///< 지난 블록 보이스 목표 게인의 최댓값이다.
-            float32                             _distance{ 0.0f };   ///< 지난 블록의 리스너 거리
+            float32                             _distance{ 0.0f };   ///< 지난 블록의 리스너 거리다.
             bool                                _bInUse{ false };
             bool                                _bStopping{ false }; ///< 우선순위에서 밀려 페이드아웃 중이다. 동시 재생 상한을 셀 때 뺀다.
         };

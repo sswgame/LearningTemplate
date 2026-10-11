@@ -50,7 +50,7 @@ namespace sw
         int32   _tileCountZ{ 0 };
 
         int32 getTileCount() const { return _tileCountX * _tileCountZ; }
-        /** @brief 타일 하나의 XZ 상자입니다(Y 는 @p minY · @p maxY). */
+        /** @brief 타일 하나의 XZ 상자를 반환합니다(Y 는 @p minY 와 @p maxY 입니다). */
         AABB computeTileBounds( int32 tileX, int32 tileZ, float32 minY, float32 maxY ) const
         {
             const float32 minX = _origin._x + static_cast<float32>( tileX ) * _tileWorldSize;

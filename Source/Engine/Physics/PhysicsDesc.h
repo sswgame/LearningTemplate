@@ -22,7 +22,7 @@ namespace sw
     struct PhysicsDimension3D
     {
         using Vector    = float3;
-        using Rotation  = quaternion; ///< 바디 회전
+        using Rotation  = quaternion; ///< 바디 회전이다.
         using Angular   = float3;     ///< 각속도와 토크다(축 × 크기).
         using ShapeDesc = PhysicsShapeDesc3D;
     };
@@ -94,14 +94,14 @@ namespace sw
         using Vector = typename TDimension::Vector;
 
         PhysicsBodyHandle _bodyA{};
-        PhysicsBodyHandle _bodyB{};      ///< 무효면 월드
+        PhysicsBodyHandle _bodyB{};      ///< 무효면 월드에 붙는다.
         Vector            _anchor{};     ///< 관절 위치다(월드).
         Vector            _anchorB{};    ///< Distance 만 쓴다. B 쪽 점(월드)이다. 나머지는 `_anchor` 하나를 함께 쓴다.
         Vector            _axis{};       ///< Hinge 는 회전축, Slider 는 이동축, Cone 은 비틀림 축이다(월드, 정규화).
         Vector            _normalAxis{}; ///< Cone 만 쓴다. 비틀림 축에 수직인 기준 축이다(월드, 정규화).
         PhysicsJointMotor _motor{};
         float32           _minLimit{ 0.0f };         ///< Hinge 각, Slider 거리, Distance 길이, Cone 비틀림 각의 아래 한계다.
-        float32           _maxLimit{ 0.0f };         ///< 위 한계
+        float32           _maxLimit{ 0.0f };         ///< 위 한계다.
         float32           _swingLimitNormal{ 0.0f }; ///< Cone 만 쓴다. `_normalAxis` 둘레 스윙 반각이다(라디안).
         float32           _swingLimitPlane{ 0.0f };  ///< Cone 만 쓴다. 나머지 축 둘레 스윙 반각이다(라디안).
         PhysicsJointType  _type{ PhysicsJointType::Fixed };
@@ -166,10 +166,10 @@ namespace sw
         float3  _position{}; ///< 서스펜션이 가장 짧을 때 바퀴 중심이 붙는 위치다(차체 기준).
         float32 _radius{ 0.35f };
         float32 _width{ 0.25f };
-        float32 _suspensionMinLength{ 0.1f };  ///< 미터
-        float32 _suspensionMaxLength{ 0.35f }; ///< 미터
+        float32 _suspensionMinLength{ 0.1f };  ///< 단위는 미터다.
+        float32 _suspensionMaxLength{ 0.35f }; ///< 단위는 미터다.
         float32 _suspensionFrequency{ 1.5f };  ///< 스프링 고유 진동수(Hz)
-        float32 _suspensionDamping{ 0.5f };    ///< 감쇠비
+        float32 _suspensionDamping{ 0.5f };    ///< 감쇠비다.
         float32 _maxSteerAngle{ 0.0f };        ///< 라디안이다. 0 이면 조향하지 않는 바퀴다.
         float32 _maxBrakeTorque{ 1500.0f };    ///< N·m
         float32 _maxHandBrakeTorque{ 0.0f };   ///< N·m 이다. 0 이면 핸드브레이크가 걸리지 않는 바퀴다.

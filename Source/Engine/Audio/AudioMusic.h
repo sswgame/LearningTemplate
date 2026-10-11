@@ -22,10 +22,10 @@ namespace sw
     ENUM()
     enum class AudioMusicSync : uint8
     {
-        Immediate = 0, ///< 다음 블록에 바로
-        NextBeat,      ///< 다음 박
-        NextBar,       ///< 다음 마디
-        SegmentEnd,    ///< 지금 구간(루프 한 바퀴)의 끝
+        Immediate = 0, ///< 다음 블록에서 바로 전환한다.
+        NextBeat,      ///< 다음 박에서 전환한다.
+        NextBar,       ///< 다음 마디에서 전환한다.
+        SegmentEnd,    ///< 현재 구간(루프 한 바퀴)의 끝에서 전환한다.
     };
 } // namespace sw
 

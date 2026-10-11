@@ -63,7 +63,7 @@ namespace sw
         Count          /**< 개수를 세는 용도입니다. 종류가 아닙니다. */
     };
 
-    /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz · 회전 xyz · 크기 xyz). */
+    /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz, 회전 xyz, 크기 xyz). */
     constexpr uint32 kSequenceTransformChannelCount = 9;
     /** @brief 키를 "그 프레임에 있다" 고 보는 시각 차입니다. 키는 정수 프레임에 찍히므로 반 프레임이면 이웃 키와 겹치지 않습니다. */
     constexpr float32 kSequenceKeyFrameTolerance = 0.5f;

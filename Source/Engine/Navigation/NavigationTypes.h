@@ -157,8 +157,8 @@ namespace sw
     /** @brief 군중 에이전트의 이동 요청 상태입니다. */
     enum class NavCrowdMoveState : uint8
     {
-        Idle = 0, ///< 목적지 없음
-        Pending,  ///< 경로를 구하는 중
+        Idle = 0, ///< 목적지가 없다.
+        Pending,  ///< 경로를 구하는 중이다.
         Moving,   ///< 경로를 따라간다
         Arrived,  ///< 목적지 안에 들었다
         Failed,   ///< 목적지를 내비메시에서 찾지 못했다
@@ -171,8 +171,8 @@ namespace sw
     struct NavCrowdAgentState
     {
         float3            _position{};
-        float3            _velocity{};        ///< 이번 갱신의 실제 속도
-        float3            _desiredVelocity{}; ///< 회피 전 경로가 원한 속도
+        float3            _velocity{};        ///< 이번 갱신의 실제 속도다.
+        float3            _desiredVelocity{}; ///< 회피 전 경로가 원한 속도다.
         float3            _target{};
         float3            _nextCorner{}; ///< 다음 모퉁이(경로가 있으면)
         NavCrowdMoveState _moveState{ NavCrowdMoveState::Idle };

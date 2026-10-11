@@ -155,7 +155,7 @@ namespace sw
         // 핀 번호 계약: **이 파일이 기준이다.**
         //
         // 핀 번호는 `노드 id * kPinScale + 오프셋` 이고 링크의 양 끝으로 디스크에 저장된다.
-        // 인코딩 · 디코딩 모두 여기 있다 — 에디터 패널이 오프셋을 따로 들면 한쪽만 바뀔 때 대화가 조용히 엉뚱한 분기를 탄다
+        // 인코딩과 디코딩을 모두 여기서 한다. 에디터 패널이 오프셋을 따로 가지면 한쪽만 바뀔 때 대화가 조용히 엉뚱한 분기를 탄다.
         // (증상은 "가끔 다른 대사가 나온다" 라서 추적이 어렵다).
         // ------------------------------------------------------------------------------
 
@@ -197,14 +197,14 @@ namespace sw
         int32 findBranchNextNodeID( int32 fromNodeID, bool bTrue ) const;
         /** @brief text 필드를 로컬라이즈 키로 해석합니다. 키가 없으면 원문을 반환합니다. */
         static string resolveLocalizedText( string_view textOrKey );
-        /** @brief 화자 · 대사 · 선택지를 로컬라이제이션 수집기에 넣습니다(키이거나 글 그대로 — `resolveLocalizedText` 가 같은 규칙으로 찾는다). */
+        /** @brief 화자, 대사, 선택지를 로컬라이제이션 수집기에 넣습니다. 키이거나 글 그대로인 값을 넣으며, `resolveLocalizedText` 가 같은 규칙으로 찾습니다. */
         void collectLocalizableText( TextGatherer& gatherer, string_view origin ) const;
 
         vector<DialogueAssetNode> _listNode; /**< 노드 목록입니다. */
         vector<DialogueAssetLink> _listLink; /**< 링크 목록입니다. */
 
     private:
-        /** @brief 이미 파싱된 JSON 루트에서 노드 · 링크를 읽습니다. */
+        /** @brief 이미 파싱된 JSON 루트에서 노드와 링크를 읽습니다. */
         void parseRoot( const JSONValue& root );
     };
 } // namespace sw
