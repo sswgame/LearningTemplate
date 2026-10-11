@@ -212,9 +212,10 @@ kListConfigFile: tuple[ConfigFileEntry, ...] = (
         bCommitted=True, ownerDoc="Scripts/generate/README.md"),
     # --- 모듈 매니페스트 ----------------------------------------------------------------------------------------------------
     ConfigFileEntry(
-        page="", pathPattern="Source/*.module.json", layer=kLayerModule, fileFormat="json",
+        page="ModuleManifest", pathPattern="Source/*.module.json", layer=kLayerModule, fileFormat="json",
         reader="CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory`", readWhen="configure · 기동(모듈 적재 순서)",
-        shipping="빌드에 굳음(링크할 모듈 · 순서)", bCommitted=True, ownerDoc="Source/Engine/Module/ModuleCatalog.h",
+        shipping="빌드에 굳음(링크할 모듈 · 순서)", bCommitted=True,
+        typeName="ModuleManifestFile", header="Source/Engine/Module/ModuleCatalog.h", keyStyle=kKeyStyleJsonMember,
         note="`ModuleCatalogTest.EveryRepositoryManifestParses` 가 모두 읽는다"),
     # --- 개발 머신 로컬 -----------------------------------------------------------------------------------------------------
     ConfigFileEntry(

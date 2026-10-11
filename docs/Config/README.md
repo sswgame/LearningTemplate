@@ -78,7 +78,7 @@
 
 | 파일 | 읽는 곳과 시점 | 배포본 | 커밋 | 문서 |
 |---|---|---|---|---|
-| `Source/*.module.json` | CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory` — configure · 기동(모듈 적재 순서). `ModuleCatalogTest.EveryRepositoryManifestParses` 가 모두 읽는다 | 빌드에 굳음(링크할 모듈 · 순서) | 한다 | [형식 설명](../../Source/Engine/Module/ModuleCatalog.h) |
+| `Source/*.module.json` | CMake `ModuleManifest.cmake` · `ModuleCatalog::loadDirectory` — configure · 기동(모듈 적재 순서). `ModuleCatalogTest.EveryRepositoryManifestParses` 가 모두 읽는다 | 빌드에 굳음(링크할 모듈 · 순서) | 한다 | [ModuleManifest](ModuleManifest.md) |
 
 ## 개발 머신 로컬
 

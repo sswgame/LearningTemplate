@@ -26,6 +26,9 @@ Engine 은 모듈 사이의 결속(어느 이미지가 어느 이미지에 묶�
 - **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 복원한 월드를 덮는다.** 첫 씬 요청이 그랬다(복원한 씬을 몇 프레임
   뒤 새 첫 씬이 바꿔 디렉터 상태가 사라졌다) — `requestFirstScene` 은 살아 있는 씬 위에서는 아무것도 하지 않는다. PROPERTY 가 아닌 디렉터 상태는
   `ComponentStateStore`(봉투 v3 의 세 번째 섹션)로 넘기고, 손 없이 확인은 `App -gv_reloadGameAtFrame=N`.
+- **매니페스트 파일의 모양은 리플렉션 구조체 `ModuleManifestFile` 이 원본이다**(키 표를 손으로 들지 않는다 — 칸 표는 `docs/Config/ModuleManifest.md`). `parseManifest` 는
+  `JSONSerializer::deserializeSoft` 로 읽어 모르는 키 · 읽지 못한 값(모르는 종류 · 플랫폼 낱말 포함)을 오류로 돌리고, 의미 검사만 직접 한다. 새 키를 더하면 CMake `ModuleManifest.cmake` 도 같이 고친다.
+  리플렉션은 "적지 않음" 과 "빈 목록" 을 가르지 못해 `_kind` 는 센티널(`kModuleKindUnset`)로 필수를 검사하고, 게임이 아닌 모듈의 `_listModuleOverride` 는 **비어 있지 않을 때만** 거절한다.
 - **모듈 켜기/끄기 · 의존 · 적재 순서는 매니페스트(`<모듈>.module.json`)가 원본이다**(CMake `ModuleManifest.cmake` 와 App `ModuleCatalog` 가 같은 규칙 — 둘의 답을
   `ModuleCatalogTest.BuildAndRuntimeAgree` 가 견준다). 새 동적 모듈은 매니페스트가 없으면 `sw_registerDynamicModule` 에서 구성이 선다. 게임 매니페스트는 활성 게임 것만
   빌드가 읽으므로 다른 게임 것은 `ModuleCatalogTest.EveryRepositoryManifestParses` 가 본다. 꺼진 모듈의 낡은 DLL 은 `Bin` 에 남아도 올리지 않는다.

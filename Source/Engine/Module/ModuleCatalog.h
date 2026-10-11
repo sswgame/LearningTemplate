@@ -19,9 +19,12 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
-    /** @brief 모듈 종류입니다(CMake 동적 모듈 레지스트리의 종류와 같은 이름). */
+    /** @brief 모듈 종류입니다(CMake 동적 모듈 레지스트리의 종류와 같은 이름 — 매니페스트 `_kind` 의 낱말이 열거자 이름이다). */
+    ENUM()
     enum class ModuleKind : uint8
     {
         GameFramework,   ///< 장르 공통 게임플레이 프레임워크(공유 모듈이며 리로드하지 않는다)
@@ -32,14 +35,16 @@ namespace sw
         EditorExtension, ///< 에디터 확장(`GF_Editor_<키트>`, `SWGameEditor`)이다. Dev 전용이며 `-EnableEditor` 일 때만 로드한다
     };
 
-    /** @brief 모듈이 도는 플랫폼 비트입니다. */
+    /** @brief 모듈이 도는 플랫폼 비트입니다(매니페스트 `_listPlatform` 의 낱말이 열거자 이름이다). */
+    ENUM()
     enum class ModulePlatform : uint8
     {
         Windows = 1 << 0,
         Linux   = 1 << 1,
     };
 
-    /** @brief 모듈이 들어가는 빌드 구성 비트입니다(Dev = 배포본이 아닌 모든 구성). */
+    /** @brief 모듈이 들어가는 빌드 구성 비트입니다(Dev = 배포본이 아닌 모든 구성. 매니페스트 `_listConfiguration` 의 낱말이 열거자 이름이다). */
+    ENUM()
     enum class ModuleConfiguration : uint8
     {
         Dev      = 1 << 0,
@@ -47,6 +52,7 @@ namespace sw
     };
 
     /** @brief 모듈이 들어가는 빌드 타깃 비트입니다(`_listTarget`). 빌드 타깃 Game 은 둘 다를 담습니다. */
+    ENUM()
     enum class ModuleTarget : uint8
     {
         Client = 1 << 0, ///< 플레이어 실행 파일(App)
@@ -84,11 +90,68 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 프로젝트가 모듈 하나를 켜거나 끕니다(`.uproject` 의 Plugins 항목에 해당). */
-    struct ModuleOverride
+    /** @brief 프로젝트가 모듈 하나를 켜거나 끕니다(`.uproject` 의 Plugins 항목에 해당). 매니페스트 `_listModuleOverride` 의 원소와 같은 모양이다. */
+    REFLECT()
+    struct SW_API ModuleOverride
     {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Name of the module to turn on or off" )
         string _name;
-        bool   _bEnabled{ true };
+        PROPERTY( Tooltip = "true turns the module on, false turns it off" )
+        bool _bEnabled{ true };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 매니페스트 파일의 의존 항목입니다. 버전은 글(`"1.2.3"`)로 적고 `ModuleVersion::parse` 가 읽는다. */
+    REFLECT()
+    struct SW_API ModuleDependencyFile
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Name of the module that has to load first" )
+        string _name;
+        PROPERTY( Tooltip = "Lowest accepted version as major.minor.patch (empty accepts any)" )
+        string _minVersion;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `_kind` 를 적지 않았음을 알아보는 값입니다(열거자 어느 것도 아니다). */
+    inline constexpr ModuleKind kModuleKindUnset = static_cast<ModuleKind>( 0xFF );
+
+    /**
+     * @brief `<모듈>.module.json` 이 담는 내용입니다. `ModuleCatalog::parseManifest` 가 리플렉션으로 읽어(모르는 키 · 읽지 못한 값은 오류) `ModuleManifest` 로 옮깁니다.
+     * @details 읽은 값의 의미 검사(필수 · 버전 형식 · 파일 이름 · 에디터 확장 규칙)는 `parseManifest` 가 한다. 키 이름은 CMake `ModuleManifest.cmake` 와 같다.
+     */
+    REFLECT()
+    struct SW_API ModuleManifestFile
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Module name (= CMake target = file name before .module.json)" )
+        string _name;
+        PROPERTY( Tooltip = "Version as major.minor.patch" )
+        string _version;
+        PROPERTY( Tooltip = "Module kind: GameFramework, Kit, Game, Editor, RHI or EditorExtension (required)" )
+        ModuleKind _kind{ kModuleKindUnset };
+        PROPERTY( Tooltip = "Human readable description" )
+        string _description;
+        PROPERTY( Tooltip = "Modules that load first" )
+        vector<ModuleDependencyFile> _listDependency;
+        PROPERTY( Tooltip = "Platforms the module is built for: Windows, Linux (at least one)" )
+        vector<ModulePlatform> _listPlatform;
+        PROPERTY( Tooltip = "Build configurations the module is built for: Dev, Shipping (at least one)" )
+        vector<ModuleConfiguration> _listConfiguration;
+        PROPERTY( Tooltip = "Executables that load the module: Client, Server (at least one)" )
+        vector<ModuleTarget> _listTarget;
+        PROPERTY( Tooltip = "Whether the module is on unless the project turns it off" )
+        bool _bEnabledByDefault{ true };
+        PROPERTY( Tooltip = "Only the Game module (the project) lists these: modules it turns on or off" )
+        vector<ModuleOverride> _listModuleOverride;
     };
 } // namespace sw
 
@@ -162,7 +225,7 @@ namespace sw
         static constexpr const utf8* kCatalogFolder = "Modules";
 
         /**
-         * @brief JSON 매니페스트 하나를 읽습니다. 모르는 키, 종류, 플랫폼, 구성, 틀린 버전, 빈 이름은 오류입니다.
+         * @brief JSON 매니페스트 하나를 `ModuleManifestFile` 로 읽어 옮깁니다. 모르는 키, 종류, 플랫폼, 구성, 틀린 버전, 빈 이름은 오류입니다.
          * @param sourcePath 오류 메시지에 적을 경로. 파일 이름이 있으면 `<_name>.module.json` 과 같아야 합니다.
          */
         [[nodiscard]] static bool parseManifest( string_view jsonText, string_view sourcePath, ModuleManifest& outManifest, string& outError );
@@ -198,8 +261,6 @@ namespace sw
         static ModuleConfiguration getCurrentConfiguration();
         /** @brief 이 빌드가 담는 대상입니다(`SW_WITH_CLIENT_CODE` 는 Client, `SW_WITH_SERVER_CODE` 는 Server). CMake 해석이 쓴 마스크와 같습니다. */
         static uint8 getBuildTargetMask();
-        /** @brief 종류 이름(`"Kit"` 등)입니다. */
-        static const utf8* getKindName( ModuleKind kind );
 
     private:
         vector<ModuleManifest> _listManifest;

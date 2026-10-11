@@ -208,7 +208,7 @@ SW_TEST_CASE( ModuleCatalogTest, ParsesManifestsStrictly )
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Mac" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [], "_listTarget": [ "Client" ] })",
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ],
-             "_listModuleOverride": [] })",
+             "_listModuleOverride": [ { "_name": "GF_Other", "_bEnabled": false } ] })",
         R"({ "_name": "GF_Farm", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ],
              "_listDependency": [ { "_name": "GF_Farm" } ] })",
         R"({ "_name": "GF_Ranch", "_version": "1.2.3", "_kind": "Kit", "_listPlatform": [ "Windows" ], "_listConfiguration": [ "Dev" ], "_listTarget": [ "Client" ] })",

@@ -6,7 +6,7 @@
 #include "Core/Container/TopologicalSortUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/Format/JSONSerializer.h"
 
 #include "sw/config/ConfigConstants.h"
 
@@ -16,62 +16,16 @@ namespace sw
     {
         struct ModuleCatalogInternal
         {
-            /** @brief 종류 낱말 표입니다(`ModuleKind` 값 순서 — CMake `ModuleManifest.cmake` 와 같은 낱말). */
-            static constexpr const utf8* kArrKindName[] = { "GameFramework", "Kit", "Game", "Editor", "RHI", "EditorExtension" };
-
-            /** @brief 매니페스트가 가질 수 있는 키입니다. 모르는 키는 오류다(오타를 기본값으로 삼키지 않는다). */
-            static constexpr const utf8* kArrManifestKey[]   = { "_name", "_version", "_kind",
-                                                                 "_description", "_listDependency", "_listPlatform",
-                                                                 "_listConfiguration", "_listTarget", "_bEnabledByDefault", "_listModuleOverride" };
-            static constexpr const utf8* kArrDependencyKey[] = { "_name", "_minVersion" };
-            static constexpr const utf8* kArrOverrideKey[]   = { "_name", "_bEnabled" };
-
-            /** @brief @p value 의 멤버가 모두 @p arrAllowed 안이면 true. 아니면 첫 모르는 이름을 @p outUnknown 에 담습니다. */
-            template <size_t N>
-            static bool hasOnlyKnownKeys( const JSONValue& value, const utf8* const ( &arrAllowed )[N], string& outUnknown )
+            /** @brief 낱말 목록을 비트로 모읍니다(중복은 같은 비트). */
+            template <typename TEnum>
+            static uint8 toMask( const vector<TEnum>& listValue )
             {
-                for ( const string& memberName : value.getMemberNames() )
+                uint8 mask = 0;
+                for ( const TEnum value : listValue )
                 {
-                    bool bKnown = false;
-                    for ( const utf8* pAllowed : arrAllowed )
-                    {
-                        bKnown = bKnown || memberName == pAllowed;
-                    }
-                    if ( bKnown == false )
-                    {
-                        outUnknown = memberName;
-                        return false;
-                    }
+                    mask |= static_cast<uint8>( value );
                 }
-                return true;
-            }
-
-            /** @brief 낱말 배열을 비트로 읽습니다. 모르는 낱말 · 빈 배열이면 false 입니다. */
-            template <typename TEnum, size_t N>
-            [[nodiscard]] static bool parseMask( const JSONValue& list, const utf8* const ( &arrWord )[N], const TEnum ( &arrValue )[N], uint8& outMask, string& outBadWord )
-            {
-                outMask = 0;
-                if ( list.isArray() == false || list.size() == 0 )
-                    return false;
-                for ( size_t index = 0; index < list.size(); ++index )
-                {
-                    const string word   = list.at( index ).asString();
-                    bool         bFound = false;
-                    for ( size_t wordIndex = 0; wordIndex < N; ++wordIndex )
-                    {
-                        if ( word == arrWord[wordIndex] )
-                        {
-                            outMask |= static_cast<uint8>( arrValue[wordIndex] );
-                            bFound = true;
-                        }
-                    }
-                    if ( bFound == false )
-                    {
-                        outBadWord = word;
-                        return false;
-                    }
-                }
-                return true;
+                return mask;
             }
 
             /** @brief 모듈이 이 플랫폼 · 구성 · 대상에 없으면 그 이유, 있으면 빈 문자열입니다(CMake 이유 글과 같다). */
@@ -152,26 +106,25 @@ namespace sw
         outManifest._sourcePath = string( sourcePath );
         const string where      = sourcePath.empty() ? string( "<module manifest>" ) : string( sourcePath );
 
-        JSONDocument document;
-        if ( document.tryParse( jsonText ) == false )
+        // 키는 대소문자까지 맞아야 한다(기본 문맥은 대소문자를 무시해 오타를 삼킨다). 모르는 키 · 읽지 못한 값은 orphan 으로 남는다.
+        SerializeContext context = SerializeContext::deriveFromDefault();
+        context.setIgnoreCaseKeys( false );
+        ModuleManifestFile        file;
+        vector<SchemaOrphanValue> listOrphan;
+        if ( JSONSerializer::deserializeSoft( &file, *ModuleManifestFile::StaticType(), jsonText, &listOrphan, nullptr, context ) == false )
         {
-            outError = where + ": not valid JSON";
+            outError = where + ": not valid JSON, or the root is not an object";
             return false;
         }
-        const JSONValue root = document.getRoot();
-        string          unknown;
-        if ( root.isObject() == false )
+        if ( listOrphan.empty() == false )
         {
-            outError = where + ": the root must be an object";
-            return false;
-        }
-        if ( ModuleCatalogInternal::hasOnlyKnownKeys( root, ModuleCatalogInternal::kArrManifestKey, unknown ) == false )
-        {
-            outError = where + ": unknown key '" + unknown + "'";
+            const SchemaOrphanValue& orphan = listOrphan.front();
+            outError                        = where + ": unknown key '" + string( orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str() ) +
+                       "' or a value that cannot be read (" + orphan._text + ")";
             return false;
         }
 
-        outManifest._name = root.get( "_name" ).asString();
+        outManifest._name = file._name;
         if ( outManifest._name.empty() )
         {
             outError = where + ": _name is missing";
@@ -187,123 +140,80 @@ namespace sw
                 return false;
             }
         }
-        const string context = where + " (" + outManifest._name + ")";
+        const string errorContext = where + " (" + outManifest._name + ")";
 
-        if ( ModuleVersion::parse( root.get( "_version" ).asString(), outManifest._version ) == false )
+        if ( ModuleVersion::parse( file._version, outManifest._version ) == false )
         {
-            outError = context + ": _version must be 'major.minor.patch'";
+            outError = errorContext + ": _version must be 'major.minor.patch'";
             return false;
         }
+        if ( file._kind == kModuleKindUnset )
+        {
+            outError = errorContext + ": _kind is missing";
+            return false;
+        }
+        outManifest._kind        = file._kind;
+        outManifest._description = file._description;
 
-        const string kindWord   = root.get( "_kind" ).asString();
-        bool         bKindFound = false;
-        for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( ModuleCatalogInternal::kArrKindName ); ++kindIndex )
+        outManifest._platformMask      = ModuleCatalogInternal::toMask( file._listPlatform );
+        outManifest._configurationMask = ModuleCatalogInternal::toMask( file._listConfiguration );
+        outManifest._targetMask        = ModuleCatalogInternal::toMask( file._listTarget );
+        if ( outManifest._platformMask == 0 )
         {
-            if ( kindWord == ModuleCatalogInternal::kArrKindName[kindIndex] )
-            {
-                outManifest._kind = static_cast<ModuleKind>( kindIndex );
-                bKindFound        = true;
-            }
-        }
-        if ( bKindFound == false )
-        {
-            outError = context + ": unknown _kind '" + kindWord + "'";
+            outError = errorContext + ": _listPlatform must list Windows and/or Linux";
             return false;
         }
+        if ( outManifest._configurationMask == 0 )
+        {
+            outError = errorContext + ": _listConfiguration must list Dev and/or Shipping";
+            return false;
+        }
+        if ( outManifest._targetMask == 0 )
+        {
+            outError = errorContext + ": _listTarget must list Client and/or Server";
+            return false;
+        }
+        outManifest._bEnabledByDefault = file._bEnabledByDefault;
 
-        outManifest._description = root.get( "_description" ).asString();
-
-        static constexpr const utf8*    kArrPlatformWord[]  = { "Windows", "Linux" };
-        static constexpr ModulePlatform kArrPlatformValue[] = { ModulePlatform::Windows, ModulePlatform::Linux };
-        string                          badWord;
-        if ( ModuleCatalogInternal::parseMask( root.get( "_listPlatform" ), kArrPlatformWord, kArrPlatformValue, outManifest._platformMask, badWord ) == false )
+        for ( size_t index = 0; index < file._listDependency.size(); ++index )
         {
-            outError = context + ": _listPlatform must list Windows and/or Linux" + ( badWord.empty() ? string{} : " (got '" + badWord + "')" );
-            return false;
-        }
-        static constexpr const utf8*         kArrConfigurationWord[]  = { "Dev", "Shipping" };
-        static constexpr ModuleConfiguration kArrConfigurationValue[] = { ModuleConfiguration::Dev, ModuleConfiguration::Shipping };
-        badWord.clear();
-        if ( ModuleCatalogInternal::parseMask( root.get( "_listConfiguration" ), kArrConfigurationWord, kArrConfigurationValue, outManifest._configurationMask, badWord ) ==
-             false )
-        {
-            outError = context + ": _listConfiguration must list Dev and/or Shipping" + ( badWord.empty() ? string{} : " (got '" + badWord + "')" );
-            return false;
-        }
-        static constexpr const utf8*  kArrTargetWord[]  = { "Client", "Server" };
-        static constexpr ModuleTarget kArrTargetValue[] = { ModuleTarget::Client, ModuleTarget::Server };
-        badWord.clear();
-        if ( ModuleCatalogInternal::parseMask( root.get( "_listTarget" ), kArrTargetWord, kArrTargetValue, outManifest._targetMask, badWord ) == false )
-        {
-            outError = context + ": _listTarget must list Client and/or Server" + ( badWord.empty() ? string{} : " (got '" + badWord + "')" );
-            return false;
-        }
-
-        const JSONValue enabledByDefault = root.get( "_bEnabledByDefault" );
-        if ( enabledByDefault.isValid() && enabledByDefault.isBool() == false )
-        {
-            outError = context + ": _bEnabledByDefault must be true or false";
-            return false;
-        }
-        outManifest._bEnabledByDefault = enabledByDefault.isValid() ? enabledByDefault.asBool() : true;
-
-        const JSONValue dependencyList = root.get( "_listDependency" );
-        if ( dependencyList.isValid() && dependencyList.isArray() == false )
-        {
-            outError = context + ": _listDependency must be an array";
-            return false;
-        }
-        for ( size_t index = 0; dependencyList.isValid() && index < dependencyList.size(); ++index )
-        {
-            const JSONValue  entry = dependencyList.at( index );
-            ModuleDependency dependency{};
-            if ( entry.isObject() == false || ModuleCatalogInternal::hasOnlyKnownKeys( entry, ModuleCatalogInternal::kArrDependencyKey, unknown ) == false )
-            {
-                outError = context + ": dependency " + to_string( index ) + ( entry.isObject() ? " has an unknown key '" + unknown + "'" : string( " is not an object" ) );
-                return false;
-            }
-            dependency._name = entry.get( "_name" ).asString();
+            const ModuleDependencyFile& entry = file._listDependency[index];
+            ModuleDependency            dependency{};
+            dependency._name = entry._name;
             if ( dependency._name.empty() || dependency._name == outManifest._name )
             {
-                outError = context + ": dependency " + to_string( index ) + " has no name or names the module itself";
+                outError = errorContext + ": dependency " + to_string( index ) + " has no name or names the module itself";
                 return false;
             }
-            const JSONValue minVersion = entry.get( "_minVersion" );
-            if ( minVersion.isValid() && ModuleVersion::parse( minVersion.asString(), dependency._minVersion ) == false )
+            if ( entry._minVersion.empty() == false && ModuleVersion::parse( entry._minVersion, dependency._minVersion ) == false )
             {
-                outError = context + ": dependency '" + dependency._name + "' has a bad _minVersion";
+                outError = errorContext + ": dependency '" + dependency._name + "' has a bad _minVersion";
                 return false;
             }
             outManifest._listDependency.push_back( std::move( dependency ) );
         }
 
-        const JSONValue overrideList = root.get( "_listModuleOverride" );
-        if ( overrideList.isValid() )
+        if ( file._listModuleOverride.empty() == false && outManifest._kind != ModuleKind::Game )
         {
-            if ( outManifest._kind != ModuleKind::Game || overrideList.isArray() == false )
+            outError = errorContext + ": only a Game module (the project) has _listModuleOverride";
+            return false;
+        }
+        for ( size_t index = 0; index < file._listModuleOverride.size(); ++index )
+        {
+            if ( file._listModuleOverride[index]._name.empty() )
             {
-                outError = context + ": only a Game module (the project) has _listModuleOverride, and it is an array";
+                outError = errorContext + ": module override " + to_string( index ) + " must be { \"_name\": ..., \"_bEnabled\": true|false }";
                 return false;
             }
-            for ( size_t index = 0; index < overrideList.size(); ++index )
-            {
-                const JSONValue entry = overrideList.at( index );
-                if ( entry.isObject() == false || ModuleCatalogInternal::hasOnlyKnownKeys( entry, ModuleCatalogInternal::kArrOverrideKey, unknown ) == false ||
-                     entry.get( "_bEnabled" ).isBool() == false || entry.get( "_name" ).asString().empty() )
-                {
-                    outError = context + ": module override " + to_string( index ) + " must be { \"_name\": ..., \"_bEnabled\": true|false }";
-                    return false;
-                }
-                outManifest._listModuleOverride.push_back( ModuleOverride{ entry.get( "_name" ).asString(), entry.get( "_bEnabled" ).asBool() } );
-            }
         }
+        outManifest._listModuleOverride = std::move( file._listModuleOverride );
 
         // 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — CMake `sw_readModuleManifest` 와 같은 검사.
         if ( outManifest._kind == ModuleKind::EditorExtension )
         {
             if ( outManifest._configurationMask != static_cast<uint8>( ModuleConfiguration::Dev ) )
             {
-                outError = context + ": an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])";
+                outError = errorContext + ": an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])";
                 return false;
             }
             bool bDependsOnEditor = false;
@@ -313,7 +223,7 @@ namespace sw
             }
             if ( bDependsOnEditor == false )
             {
-                outError = context + ": an EditorExtension module must list " + string( config::kTargetEditorModule ) + " in _listDependency";
+                outError = errorContext + ": an EditorExtension module must list " + string( config::kTargetEditorModule ) + " in _listDependency";
                 return false;
             }
         }
@@ -565,11 +475,5 @@ namespace sw
         mask |= static_cast<uint8>( ModuleTarget::Server );
 #endif
         return mask;
-    }
-
-    const utf8* ModuleCatalog::getKindName( ModuleKind kind )
-    {
-        const size_t kindIndex = static_cast<size_t>( kind );
-        return kindIndex < SW_COUNT_OF( ModuleCatalogInternal::kArrKindName ) ? ModuleCatalogInternal::kArrKindName[kindIndex] : "Unknown";
     }
 } // namespace sw

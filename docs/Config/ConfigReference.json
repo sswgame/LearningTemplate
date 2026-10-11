@@ -1833,6 +1833,192 @@
     }
    ],
    "enums": []
+  },
+  {
+   "page": "ModuleManifest",
+   "path": "Source/*.module.json",
+   "layer": "모듈 매니페스트",
+   "type": "ModuleManifestFile",
+   "types": [
+    {
+     "name": "ModuleManifestFile",
+     "source": "Source/Engine/Module/ModuleCatalog.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Module name (= CMake target = file name before .module.json)"
+      },
+      {
+       "name": "_version",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Version as major.minor.patch"
+      },
+      {
+       "name": "_kind",
+       "type": "ModuleKind",
+       "default": "kModuleKindUnset",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Module kind: GameFramework, Kit, Game, Editor, RHI or EditorExtension (required)"
+      },
+      {
+       "name": "_description",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Human readable description"
+      },
+      {
+       "name": "_listDependency",
+       "type": "vector<ModuleDependencyFile>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Modules that load first"
+      },
+      {
+       "name": "_listPlatform",
+       "type": "vector<ModulePlatform>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Platforms the module is built for: Windows, Linux (at least one)"
+      },
+      {
+       "name": "_listConfiguration",
+       "type": "vector<ModuleConfiguration>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Build configurations the module is built for: Dev, Shipping (at least one)"
+      },
+      {
+       "name": "_listTarget",
+       "type": "vector<ModuleTarget>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Executables that load the module: Client, Server (at least one)"
+      },
+      {
+       "name": "_bEnabledByDefault",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Whether the module is on unless the project turns it off"
+      },
+      {
+       "name": "_listModuleOverride",
+       "type": "vector<ModuleOverride>",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Only the Game module (the project) lists these: modules it turns on or off"
+      }
+     ]
+    },
+    {
+     "name": "ModuleDependencyFile",
+     "source": "Source/Engine/Module/ModuleCatalog.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Name of the module that has to load first"
+      },
+      {
+       "name": "_minVersion",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Lowest accepted version as major.minor.patch (empty accepts any)"
+      }
+     ]
+    },
+    {
+     "name": "ModuleOverride",
+     "source": "Source/Engine/Module/ModuleCatalog.h",
+     "fields": [
+      {
+       "name": "_name",
+       "type": "string",
+       "default": "",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "Name of the module to turn on or off"
+      },
+      {
+       "name": "_bEnabled",
+       "type": "bool",
+       "default": "true",
+       "min": "",
+       "max": "",
+       "units": "",
+       "description": "true turns the module on, false turns it off"
+      }
+     ]
+    }
+   ],
+   "enums": [
+    {
+     "name": "ModuleKind",
+     "values": [
+      "GameFramework",
+      "Kit",
+      "Game",
+      "Editor",
+      "RHI",
+      "EditorExtension"
+     ]
+    },
+    {
+     "name": "ModulePlatform",
+     "values": [
+      "Windows",
+      "Linux"
+     ]
+    },
+    {
+     "name": "ModuleConfiguration",
+     "values": [
+      "Dev",
+      "Shipping"
+     ]
+    },
+    {
+     "name": "ModuleTarget",
+     "values": [
+      "Client",
+      "Server"
+     ]
+    }
+   ]
   }
  ],
  "globalVariables": [
