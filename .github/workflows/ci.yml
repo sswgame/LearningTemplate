@@ -138,6 +138,11 @@ jobs:
       if: runner.os == 'Windows'
       run: |
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        # 러너 이미지의 clang-cl 버전을 로그와 요약에 남긴다 — 로컬은 Tools/LLVM 20.1.8 로 고정인데 CI 는 이미지 것을 쓴다.
+        # 액션 키트 시험 넷이 Windows Debug · STL 잡에서만 지는 원인을 가를 때(컴파일러 차이 가설) 이 줄이 필요하다.
+        $version = (& "C:\Program Files\LLVM\bin\clang-cl.exe" --version | Select-Object -First 1)
+        echo "clang-cl: $version"
+        echo "clang-cl: $version" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
 
     # Linux Environment Setup
     - name: Setup Linux toolchain & dependencies
