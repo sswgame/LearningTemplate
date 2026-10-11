@@ -30,6 +30,7 @@
 #include "Engine/Common/EngineDefines.h"
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Resource/ResourcePaths.h"
 
 #include <imgui.h>
@@ -691,13 +692,13 @@ namespace sw::editor
         ImGui::TextColored( ImVec4( 0.55f, 0.8f, 1.0f, 1.0f ), "%s", _referenceQueryID.c_str() );
         if ( _referenceIndex.isReady() == false )
         {
-            ImGui::TextDisabled( "Indexing references. Try again in a moment." );
+            ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorContentBrowser", "IndexingReferences", "Indexing references. Try again in a moment." ) );
             ImGui::EndPopup();
             return;
         }
         if ( _listReferenceResult.empty() )
         {
-            EditorWidgets::drawEmptyHint( bDependencies ? "This asset names no other asset." : "No text asset names this asset." );
+            EditorWidgets::drawEmptyHint( bDependencies ? SW_LOCTEXT( "EditorContentBrowser", "NoDependencies", "This asset names no other asset." ) : SW_LOCTEXT( "EditorContentBrowser", "NoReferencers", "No text asset names this asset." ) );
             ImGui::EndPopup();
             return;
         }
@@ -722,7 +723,7 @@ namespace sw::editor
                 ImGui::Selectable( shownPath.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                 if ( ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked( ImGuiMouseButton_Left ) )
                     openPath = shownPath;
-                EditorWidgets::drawTooltip( "Double-click to open" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "OpenOnDoubleClick", "Double-click to open" ) );
                 ImGui::TableSetColumnIndex( 1 );
                 ImGui::Text( "%u", reference._line );
                 ImGui::PopID();
@@ -939,7 +940,7 @@ namespace sw::editor
                 navigateBack();
             if ( bCanBack == false )
                 ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( "이전 폴더로 이동 (마우스 뒤로가기 버튼 / Alt+Left / Backspace)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "NavigateBack", "Go to the previous folder (Mouse Back button / Alt+Left / Backspace)" ) );
 
             ImGui::SameLine();
             const bool bCanForward = canNavigateForward();
@@ -949,19 +950,19 @@ namespace sw::editor
                 navigateForward();
             if ( bCanForward == false )
                 ImGui::EndDisabled();
-            EditorWidgets::drawTooltip( "다음 폴더로 이동 (마우스 앞으로가기 버튼 / Alt+Right)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "NavigateForward", "Go to the next folder (Mouse Forward button / Alt+Right)" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kPlus, "Add" ) ) )
                 ImGui::OpenPopup( "##cb_add" );
             EditorSelfTestMarks::note( "contentBrowser.add" );
-            EditorWidgets::drawTooltip( "지금 폴더에 새 폴더 또는 새 에셋(머티리얼, 씬, 프리팹)을 만듭니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "AddAsset", "Create a new folder or asset (material, scene, prefab) in the current folder" ) );
             drawAddMenu();
 
             ImGui::SameLine();
-            EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, "Search Content", 160.0f, false );
+            EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCTEXT( "EditorContentBrowser", "SearchHint", "Search Content" ), 160.0f, false );
             EditorSelfTestMarks::note( "contentBrowser.search" );
-            EditorWidgets::drawTooltip( "에셋 이름 또는 확장자로 필터링하여 검색합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "SearchTooltip", "Filter assets by name or extension" ) );
 
             ImGui::SameLine();
             uint32                          filterCount{ 0 };
@@ -982,24 +983,24 @@ namespace sw::editor
                 }
                 ImGui::EndCombo();
             }
-            EditorWidgets::drawTooltip( "특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TypeFilter", "Filter by asset type (texture, scene, prefab, sound, ...)" ) );
 
             ImGui::SameLine();
             if ( ImGui::RadioButton( "Tiles", _viewMode == ViewMode::Tiles ) )
                 _viewMode = ViewMode::Tiles;
-            EditorWidgets::drawTooltip( "에셋을 사각형 썸네일 카드(타일) 형태로 표시합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TilesView", "Show assets as square thumbnail cards (tiles)" ) );
 
             ImGui::SameLine();
             if ( ImGui::RadioButton( "List", _viewMode == ViewMode::List ) )
                 _viewMode = ViewMode::List;
-            EditorWidgets::drawTooltip( "에셋을 이름, 종류, 경로 세부 리스트 목록으로 표시합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "ListView", "Show assets as a detailed list of name, type and path" ) );
 
             if ( _viewMode == ViewMode::Tiles )
             {
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth( 80.0f * EditorThemeUtil::getDpiScale() );
                 ImGui::SliderFloat( "##cb_tile", &_tileSize, 64.0f, 160.0f, "%.0f" );
-                EditorWidgets::drawTooltip( "타일 썸네일의 크기를 조절합니다 (64px ~ 160px)" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "TileSize", "Adjust the tile thumbnail size (64px to 160px)" ) );
             }
 
             ImGui::SameLine();
@@ -1010,11 +1011,11 @@ namespace sw::editor
             if ( canImport == false )
             {
                 ImGui::EndDisabled();
-                EditorWidgets::drawTooltip( "에셋을 가져올 대상 폴더를 먼저 선택하세요" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "ImportNeedsFolder", "Select a target folder to import assets into first" ) );
             }
             else
             {
-                EditorWidgets::drawTooltip( "외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "Import", "Import external files (textures, shaders, sounds, ...) into the current folder" ) );
             }
             if ( importClicked )
                 importFilesFromDialog();
@@ -1028,14 +1029,14 @@ namespace sw::editor
                 refreshRoots();
                 refreshCurrentFolder();
             }
-            EditorWidgets::drawTooltip( "디스크 파일 및 리소스 루트 목록을 새로고침합니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "Refresh", "Refresh the disk files and the resource root list" ) );
 
             ImGui::SameLine();
             bool bShowAllPacks = _bShowAllPacks == SW_TRUE;
             if ( ImGui::Checkbox( "All packs", &bShowAllPacks ) )
                 setShowAllPacks( bShowAllPacks );
             EditorSelfTestMarks::note( "contentBrowser.allPacks" );
-            EditorWidgets::drawTooltip( "끄면 활성 게임 팩만, 켜면 game/ 의 모든 팩을 보입니다(기본값은 환경설정 Content Browser)" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorContentBrowser", "AllPacks", "Off shows only the active game pack; on shows every pack under game/ (default: Preferences > Content Browser)" ) );
         }
         EditorChrome::endToolbar();
     }
@@ -1090,7 +1091,7 @@ namespace sw::editor
         }
 
         if ( _listRoot.empty() )
-            EditorWidgets::drawEmptyHint( "No resource roots found." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorContentBrowser", "NoResourceRoots", "No resource roots found." ) );
 
         EditorChrome::endSection();
     }
@@ -1194,7 +1195,7 @@ namespace sw::editor
     {
         if ( _listCrumb.empty() )
         {
-            EditorWidgets::drawEmptyHint( "Select a folder" );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorContentBrowser", "SelectFolder", "Select a folder" ) );
             return;
         }
 

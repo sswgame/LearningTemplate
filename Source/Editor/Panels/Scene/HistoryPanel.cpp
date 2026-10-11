@@ -13,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Utility/CommandStack.h"
 
 #include <imgui.h>
@@ -31,7 +32,7 @@ namespace sw::editor
         CommandStack* pCmdStack = editor::getService<CommandStack>();
         if ( pCmdStack == nullptr )
         {
-            EditorWidgets::drawEmptyHint( "CommandStack service is not available." );
+            EditorWidgets::drawEmptyHint( SW_LOCTEXT( "EditorScene", "CommandStackUnavailable", "CommandStack service is not available." ) );
             return;
         }
 
@@ -50,6 +51,7 @@ namespace sw::editor
                 cmdStack.undo();
             if ( bCanUndo == false )
                 ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "HistoryUndo", "Undo the last edit. Ctrl+Z" ) );
 
             ImGui::SameLine();
             if ( bCanRedo == false )
@@ -58,10 +60,12 @@ namespace sw::editor
                 cmdStack.redo();
             if ( bCanRedo == false )
                 ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "HistoryRedo", "Redo the edit that was undone. Ctrl+Y" ) );
 
             ImGui::SameLine();
             if ( ImGui::Button( "Clear" ) )
                 cmdStack.clear();
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "HistoryClear", "Clear the whole undo history. This cannot be undone" ) );
 
             ImGui::SameLine();
             EditorWidgets::drawCountLabel( static_cast<uint32>( currIndex ), static_cast<uint32>( cmdCount ) );

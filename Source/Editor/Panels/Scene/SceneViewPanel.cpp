@@ -15,6 +15,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Localization/LocText.h"
 #include "Engine/Utility/GameTimeScale.h"
 
 #include <imgui.h>
@@ -49,12 +50,12 @@ namespace sw::editor
             if ( ImGui::Button( EditorThemeUtil::makeIconLabel( editoricon::kCamera, "##SceneViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureSceneView();
             EditorSelfTestMarks::note( "sceneView.screenshot" );
-            EditorWidgets::drawTooltip( "씬 뷰 그림(에디터 카메라)을 Saved/Screenshots/<시각>.png 로 저장합니다 — 격자 · 기즈모는 ImGui 오버레이라 들지 않습니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "SceneViewScreenshot", "Save the scene view image (editor camera) to Saved/Screenshots/<time>.png - the grid and gizmos are ImGui overlays and are not included" ) );
             EditorWidgets::drawToolbarSeparator();
 
             if ( ImGui::Button( "Dbg Cat" ) )
                 ImGui::OpenPopup( "##DebugDrawCategories" );
-            EditorWidgets::drawTooltip( "DebugDrawQueue 카테고리를 켜고 끕니다" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorScene", "DebugDrawCategories", "Turn DebugDrawQueue categories on or off" ) );
             drawDebugCategoryPopup();
             EditorWidgets::drawToolbarSeparator();
             _viewportClient.drawOverlaysMenu(); // 보기 · 표시 · 도구 · 트랜스폼 바는 씬 뷰 위에 떠 있다(`EditorViewportOverlays`)

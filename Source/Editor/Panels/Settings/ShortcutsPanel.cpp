@@ -11,6 +11,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -100,13 +102,14 @@ namespace sw::editor
             saveAndRebuild();
         }
         EditorSelfTestMarks::note( "shortcuts.resetAll" );
+        EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetAllShortcuts", "Restore every shortcut to its default binding" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##ShortcutFilter", _filter, "Search commands or keys (Ctrl+S)...", 0.0f, false );
+        EditorWidgets::drawSearchField( "##ShortcutFilter", _filter, SW_LOCTEXT( "EditorSettings", "SearchShortcutsHint", "Search commands or keys (Ctrl+S)..." ), 0.0f, false );
 
         if ( _conflictCommandID.empty() == false )
         {
             const EditorCommandDesc* pOther = registry.find( _conflictCommandID );
-            EditorThemeUtil::textError( "This combo is already used. Replace clears it from the other command." );
+            EditorThemeUtil::textError( SW_LOCTEXT( "EditorSettings", "ShortcutInUse", "This combo is already used. Replace clears it from the other command." ) );
             if ( ImGui::Button( "Replace" ) && pOther != nullptr )
             {
                 const EditorCommandDesc*    pTarget = registry.find( _captureCommandID );
@@ -119,6 +122,7 @@ namespace sw::editor
                 finishCapture();
             }
             EditorSelfTestMarks::note( "shortcuts.replace" );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ReplaceShortcut", "Give this combo to the selected command and remove it from the other command" ) );
             ImGui::SameLine();
             if ( ImGui::Button( "Cancel" ) )
                 finishCapture();
@@ -150,7 +154,7 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", desc._category.c_str() );
             ImGui::TableSetColumnIndex( 2 );
             if ( desc._id == _captureCommandID )
-                EditorThemeUtil::textAccent( "Press a key combo (Esc cancels, Backspace clears)" );
+                EditorThemeUtil::textAccent( SW_LOCTEXT( "EditorSettings", "PressKeyCombo", "Press a key combo (Esc cancels, Backspace clears)" ) );
             else
                 ImGui::TextUnformatted( label.c_str() );
             ImGui::TableSetColumnIndex( 3 );
@@ -161,6 +165,7 @@ namespace sw::editor
                 EditorCommandGUI::setHotkeysSuspended( true );
             }
             EditorSelfTestMarks::note( ShortcutsPanelInternal::makeMark( "set", desc._id ).c_str() );
+            EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "SetShortcut", "Record a new shortcut for this command" ) );
             const bool bModified = EditorCommandRegistry::isSameShortcut( desc._shortcut, desc._defaultShortcut ) == false ||
                                    EditorCommandRegistry::isSameShortcut( desc._altShortcut, desc._defaultAltShortcut ) == false;
             if ( bModified )
@@ -174,6 +179,7 @@ namespace sw::editor
                     saveAndRebuild();
                     return; // 레지스트리를 다시 만들었다 — 이 프레임의 표는 낡았다
                 }
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorSettings", "ResetShortcut", "Restore this command's default shortcut" ) );
             }
             ImGui::PopID();
         }

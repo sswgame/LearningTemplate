@@ -28,6 +28,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/ReflectionCore.h"
 #include "Engine/Resource/ResourcePaths.h"
@@ -139,7 +140,7 @@ namespace sw::editor
                     EditorResourceIndex::collectEntries( picker._listEntry );
                     ImGui::OpenPopup( "AssetPicker" );
                 }
-                EditorWidgets::drawTooltip( "Pick an asset" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "PickAsset", "Pick an asset" ) );
                 EditorSelfTestMarks::note( ( string( "inspector.assetPicker." ) + prop._name.c_str() ).c_str() );
                 if ( ImGui::BeginPopup( "AssetPicker" ) )
                 {
@@ -147,7 +148,7 @@ namespace sw::editor
                     if ( ImGui::IsWindowAppearing() )
                         ImGui::SetKeyboardFocusHere();
                     ImGui::SetNextItemWidth( 320.0f * EditorThemeUtil::getDpiScale() );
-                    const bool bEnter = ImGui::InputTextWithHint( "##pickerSearch", "Search assets...", picker._search.data(), picker._search.capacity(),
+                    const bool bEnter = ImGui::InputTextWithHint( "##pickerSearch", SW_LOCTEXT( "EditorInspector", "SearchAssetsHint", "Search assets..." ), picker._search.data(), picker._search.capacity(),
                                                                   ImGuiInputTextFlags_EnterReturnsTrue );
                     EditorSelfTestMarks::note( "inspector.assetPicker.search" );
                     const EditorListFilter filter{ picker._search.c_str() };
@@ -168,7 +169,7 @@ namespace sw::editor
                         }
                     }
                     if ( shownCount == 0 )
-                        ImGui::TextDisabled( "No matching assets." );
+                        ImGui::TextDisabled( "%s", SW_LOCTEXT( "EditorInspector", "NoMatchingAssets", "No matching assets." ) );
                     ImGui::EndChild();
                     ImGui::EndPopup();
                 }
@@ -179,12 +180,12 @@ namespace sw::editor
                 if ( ImGui::Button( editoricon::kFolderOpen, ImVec2( kButtonWidth, 0 ) ) )
                     revealInContentBrowser( currentPath );
                 ImGui::EndDisabled();
-                EditorWidgets::drawTooltip( "Show in the Content Browser" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ShowInContentBrowser", "Show in the Content Browser" ) );
 
                 ImGui::SameLine();
                 if ( ImGui::Button( "x##clear", ImVec2( kButtonWidth, 0 ) ) )
                     action = AssetFieldAction::Cleared;
-                EditorWidgets::drawTooltip( "Clear asset reference" );
+                EditorWidgets::drawTooltip( SW_LOCTEXT( "EditorInspector", "ClearAssetReference", "Clear asset reference" ) );
 
                 ImGui::PopID();
                 return action;
