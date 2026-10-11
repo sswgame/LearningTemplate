@@ -427,6 +427,8 @@ SW_TEST_CASE( StreamTransportTest, PlatformBackpressureFillsThenDrains )
 
 /**
  * @brief [StreamTransportTest] 걸린 일이 하나도 없는 연결(읽기를 멈춘 뒤 받기가 끝났고 보낼 것도 없다)을 끊어도 닫힘은 한 번 온다
+ * @details 멈춘 뒤 온 바이트는 모델마다 다르다 — IOCP 는 이미 걸어 둔 받기가 끝나 10 바이트가 오고 다시 걸지 않는다,
+ *          epoll(준비 알림)은 멈춘 동안 읽지 않아 0 바이트다. 어느 쪽이든 끊으면 닫힘은 한 번 온다.
  */
 SW_TEST_CASE( StreamTransportTest, PlatformAbortWithNothingPendingStillCloses )
 {
@@ -439,8 +441,14 @@ SW_TEST_CASE( StreamTransportTest, PlatformAbortWithNothingPendingStillCloses )
     rig._server->setReceivePaused( serverHandle, true );
     const uint8 arrBytes[10] = {};
     (void)rig._client->send( clientHandle, arrBytes, 10 );
+#if defined( SW_PLATFORM_WINDOWS )
     SW_ASSERT_TRUE( rig.runUntil( [&]()
     { return rig._serverRecorder.getReceivedCount() == 10; } ) ); // 이미 걸려 있던 받기는 끝나고 다시 걸리지 않는다
+#else
+    (void)rig.runUntil( []()
+    { return false; }, 200 );                                     // 바이트가 커널 버퍼에 닿을 만큼 돈다
+    SW_EXPECT_EQUAL( 0, rig._serverRecorder.getReceivedCount() ); // 멈춘 동안 읽지 않는다
+#endif
     rig._server->close( serverHandle, StreamCloseMode::Abort );
     SW_ASSERT_TRUE( rig.runUntil( [&]()
     { return rig._serverRecorder.getClosedCount() == 1 && rig._clientRecorder.getClosedCount() == 1; } ) );

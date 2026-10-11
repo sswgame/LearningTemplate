@@ -288,6 +288,8 @@ namespace sw
     {
         if ( _bInitialized == SW_FALSE )
             return;
+        // 캐시의 만료(TTL)도 서비스와 같은 시계로 잰다 — 캐시가 제 단조 시계를 쓰면 가짜 시계 · 느린 빌드에서 게임 서버 등록 · 매칭 표가 서비스 시각보다 먼저 만료된다.
+        _parts->_cacheDatabase.setManualTimeMs( nowMs );
         _parts->_host.tick( nowMs );
         _parts->_gameServer.tick( nowMs );
     }

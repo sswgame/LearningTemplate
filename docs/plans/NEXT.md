@@ -8,7 +8,10 @@
 - 전체 검증(2026-10-11, PC `SW`)은 린트 63/63 · Debug `-L nogpu` · `-L hostgpu` · Shipping · Server · 게임별 프리셋 여덟 · 대표 실행 네 백엔드가 통과했다. 이후 변경은 린트 + Debug `-L nogpu` + Shipping `-L nogpu` 로 확인했다.
 - **CI**: 새 push 마다 진행 중인 실행이 취소돼 결과를 못 볼 수 있다 — push 는 묶어서 하고 실행이 끝나기를 기다린 뒤 다음을 올린다. 리눅스 구성은 zlib `ZLIB::ZLIBSTATIC` 대응(`6f6a441c9`)으로 통과했고, 리눅스 빌드는 `EpollStreamTransport` 의 `unique_ptr<EpollLoop[]>` 를 고쳤다(`37df145`) —
   리눅스는 이제 컴파일되고 시험 단계에서 진다(2026-10-11 `954ed55cb` 실행). 고친 것: `FileUtil` 파일 시각 기원(libstdc++ `file_clock` 은 2174 기원) · POSIX 경로 구분자 정규화, 헤드리스(서버) 입력의 게임패드 슬롯 · 창 포커스, 서버 시험의 `exec`(dash 의 `sh -c` 가 SIGTERM 에 먼저 죽어 143).
-  **아직 남은 리눅스 실패**(고친 뒤 CI 로 확인): `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(포커스 위젯 ID 839 ≠ 823, Debug · Shipping · ASan), `OnlineLoadBotTest.TwoHundredBots…`(ASan · TSan 오류 수 ≠ 0), `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses` 와 `EpollStreamTransport::runOnce` 의 `RaceDetectContext::enterWrite` 데이터 레이스, `GameObjectTest.ApplyTransformBatchMatchesSetters` 와 `LoaderFuzzTest` 180 초 시간 초과(TSan), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`).
+  고쳤고 CI 로 확인할 것: `OnlineLoadBotTest.TwoHundredBots…`(캐시 TTL 이 단조 시계라 느린 빌드에서 매칭 임대가 풀렸다 — 캐시를 서버 틱 시각에 맞춤),
+  `EpollStreamTransport` 경합 보고(비 const `_listLoop[]` · 공유 읽기 버퍼가 검출기에 쓰기로 잡혔다), `StreamTransportTest.PlatformAbortWithNothingPendingStillCloses`(epoll 은 멈춘 동안 읽지 않는다 — 시험을 모델별로).
+  **아직 남은 리눅스 실패**(원인 불명): `UIOptionsMenuTest.RebindIgnoresUIActionsWhileListening`(포커스 위젯 ID 839 ≠ 823, Debug · Shipping · ASan — 다음 CI 에서 실패 메시지가 포커스 위젯 이름을 보인다),
+  `GameObjectTest.ApplyTransformBatchMatchesSetters` 와 `LoaderFuzzTest` 에서 멈춤(Linux Debug 조각이 그 시험 중에 끝났다), ASan 중단 두 건(`PlatformLoginTest.Oidc…` · `NetRequestTest.IdempotentRetry…`).
   Windows STL containers 잡은 sw 할당자 · 기록 해시에 기대는 시험 셋(`MemoryTagTest` 둘 · `DestructionDamageTest.EventLogHash…`)을 건너뛰게 했다. 같은 시험이 기본 컨테이너 구성에서 가끔 지는지는 지켜본다(Windows Debug 잡의 `ActionAdventure` · `ActionCombat` · `ActionPlatformer` 실패는 한 번 있었고 다음 실행에서 사라졌다).
 - **못 한 것**: 리눅스(CI 로), 실제 RenderDoc 캡처(이 PC 에 없다), 단언 대화상자 세 단추(모달), Tracy 0.14.1 뷰어 연결, 배율 1.5 · 2 에디터, Dialogue Graph 첫 열기, 리눅스 RPATH.
 - 최근에 들어간 것: 이름 정리(`ResourceUtil` → `ResourcePaths` + `ResourceIO`, `EditorUtil` 경로 → `EditorPaths`, `Misc` → `None`, `CameraShakeRequest.h`, `_sizeBytes`),
