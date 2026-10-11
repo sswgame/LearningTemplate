@@ -19,7 +19,7 @@ namespace sw
         struct Win32SplashWindowInternal
         {
             static constexpr const utf16* kSplashClassName = L"SWSplashWindowClass";
-            /// @brief 아래 상태 띠(그라디언트 · 글자 · 진행 막대)의 높이입니다. 상태가 바뀌면 이 띠만 다시 그립니다.
+            /// @brief 아래 상태 띠(그라디언트, 텍스트, 진행 막대)의 높이입니다. 상태가 바뀌면 이 띠만 다시 그립니다.
             static constexpr int32 kStatusBarHeight = 54;
 
             static LRESULT CALLBACK splashWndProcInternal( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
@@ -94,7 +94,7 @@ namespace sw
         Gdiplus::GdiplusStartup( reinterpret_cast<ULONG_PTR*>( &_gdiplusToken ), &gdiplusStartupInput, nullptr );
 
         // 채널 뒤집기는 여기 있지 않다. `loadSplashImage()` 가 **모든 플랫폼에** BGRA 를 보장한다.
-        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시다 — 로드가 이유를 알린다
+        (void)loadSplashImage(); // 이미지가 없으면 빈 스플래시이며, 로드가 이유를 알린다
 
         HINSTANCE hInstance = GetModuleHandleW( nullptr );
 
@@ -103,7 +103,7 @@ namespace sw
         wc.style       = CS_HREDRAW | CS_VREDRAW | CS_DROPSHADOW;
         wc.lpfnWndProc = splashWndProc;
         wc.hInstance   = hInstance;
-        // 실행 파일(App.exe)의 아이콘 리소스. hInstance 는 프로세스 exe 라 Engine.dll 안에서도 App.exe 리소스를 찾는다 — 없으면 nullptr(기본 아이콘).
+        // 실행 파일(App.exe)의 아이콘 리소스다. hInstance 는 프로세스 exe 라 Engine.dll 안에서도 App.exe 리소스를 찾는다. 없으면 nullptr(기본 아이콘).
         wc.hIcon   = LoadIconW( hInstance, MAKEINTRESOURCEW( constant::window::kAppIconResourceID ) );
         wc.hIconSm = wc.hIcon;
         // IDC_* 는 TCHAR 매크로(A 판 포인터 모양의 정수 자원 id)라 W 판에 맞게 넘긴다.
@@ -167,7 +167,7 @@ namespace sw
 
         if ( _hWnd != nullptr && IsWindow( _hWnd ) )
         {
-            // 바뀌는 것은 아래 상태 띠(글자 · 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
+            // 바뀌는 것은 아래 상태 띠(텍스트와 진행 막대)뿐이다. 그 띠만 무효로 해 배경을 다시 늘리지 않는다.
             RECT rcClient{};
             GetClientRect( _hWnd, &rcClient );
             const RECT rcStatusBar = { 0, rcClient.bottom - Win32SplashWindowInternal::kStatusBarHeight, rcClient.right, rcClient.bottom };
@@ -199,7 +199,7 @@ namespace sw
         const int32 width  = rc.right - rc.left;
         const int32 height = rc.bottom - rc.top;
 
-        // 1) 배경: 창 크기로 늘린 그림을 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
+        // 1) 배경: 창 크기로 늘린 이미지를 처음 한 번 메모리 DC 에 그려 두고, 무효 영역만 복사한다(HALFTONE 늘리기가 비싸다).
         if ( _hBackgroundDC == nullptr || _backgroundWidth != width || _backgroundHeight != height )
         {
             releasePaintCache();
@@ -233,7 +233,7 @@ namespace sw
                                                     Gdiplus::LinearGradientModeVertical );
         graphics.FillRectangle( &gradientBrush, gradientRect );
 
-        // 3) 상태 진행 텍스트(Segoe UI). 글꼴은 한 번 만들어 둔다.
+        // 3) 상태 진행 텍스트(Segoe UI). 폰트는 한 번 만들어 둔다.
         if ( _hStatusFont == nullptr )
         {
             _hStatusFont = CreateFontW( -12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,

@@ -80,7 +80,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief 실수 하나를 읽습니다. 속성이 없으면 @p fallback 이고 true, 글이 숫자가 아니면 오류를 알리고 false 입니다. */
+            /** @brief 실수 하나를 읽습니다. 속성이 없으면 @p fallback 을 쓰고 true 를 반환하며, 텍스트가 숫자가 아니면 오류를 알리고 false 를 반환합니다. */
             [[nodiscard]] static bool readNumberAttribute( const XMLNode& node, const utf8* pName, float64 fallback, float64& outValue, string_view sourceName )
             {
                 const string_view text = node.getAttributeText( pName );
@@ -93,7 +93,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief `gv:name` · `applier:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
+            /** @brief `gv:name` 과 `applier:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
             [[nodiscard]] static bool parseTarget( string_view text, UserSettingDef& inoutDef, string_view sourceName )
             {
                 if ( text.empty() )
@@ -193,7 +193,7 @@ namespace sw
                 return bOk;
             }
 
-            /** @brief 숫자를 가장 짧은 왕복 표기로 적습니다. 실수는 float32 로 한 번 거쳐 `0.15000000000000002` 같은 꼬리를 없앱니다. */
+            /** @brief 숫자를 가장 짧은 왕복 표기로 적습니다. 실수는 float32 를 한 번 거쳐 `0.15000000000000002` 같은 꼬리를 없앱니다. */
             static string formatFloat( float64 value )
             {
                 utf8 arrBuffer[constant::kMaxBuffer64]{};
@@ -208,7 +208,7 @@ namespace sw
                 return string( arrBuffer );
             }
 
-            /** @brief 숫자를 범위 · 눈금에 맞춥니다. 바뀌었으면 true 입니다. */
+            /** @brief 숫자를 범위와 눈금에 맞춥니다. 바뀌었으면 true 입니다. */
             static bool fitNumber( const UserSettingDef& def, float64& inoutValue )
             {
                 const float64 original = inoutValue;
@@ -312,7 +312,7 @@ namespace sw
             return false;
         }
 
-        // 다 읽은 뒤에만 합친다 — 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓한다.
+        // 다 읽은 뒤에만 합친다. 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓하기 때문이다.
         UserSettingsSchema overlay;
         bool               bOk = XMLNameCheck::reportUnknownAttributes( root, Internal::kArrRootAttribute, sourceName );
         int32              version{ 0 };
@@ -407,7 +407,7 @@ namespace sw
                     def._listOption.push_back( option );
                 }
 
-                // 기본값을 정규화해 둔다(`0.50` → `0.5`). 범위 밖 · 형식 오류는 그대로 두어 검사(`validate`)가 알린다.
+                // 기본값을 정규화해 둔다(`0.50` → `0.5`). 범위 밖이나 형식 오류는 그대로 두어 검사(`validate`)가 알린다.
                 string normalized;
                 if ( normalizeValue( def, def._defaultValue, normalized ) == UserSettingValueResult::Accepted )
                     def._defaultValue = normalized;
@@ -490,7 +490,7 @@ namespace sw
             }
         }
 
-        // 겹치는 id 는 덧붙이기에서도 오류다 — 게임마다 다른 값은 기본값 덮어쓰기(게임 프리셋)로 준다.
+        // 겹치는 id 는 덧붙이기에서도 오류다. 게임마다 다른 값은 기본값 덮어쓰기(게임 프리셋)로 준다.
         for ( const UserSettingDef& def : overlay._listSetting )
         {
             bool bDuplicate = findSetting( def._id ) != nullptr;
@@ -515,7 +515,7 @@ namespace sw
         if ( bOk == false )
             return false;
 
-        // 판 번호는 가장 큰 것을 쓴다 — 게임 덧붙이기가 자기 버전 단계를 더하면 그 판까지 올라간다.
+        // 버전 번호는 가장 큰 것을 쓴다. 게임 덧붙이기가 자기 버전 단계를 더하면 그 버전까지 올라간다.
         _version = _version > overlay._version ? _version : overlay._version;
         _listCategory.insert( _listCategory.end(), overlay._listCategory.begin(), overlay._listCategory.end() );
         _listSetting.insert( _listSetting.end(), overlay._listSetting.begin(), overlay._listSetting.end() );
@@ -612,7 +612,7 @@ namespace sw
             {
                 if ( def._listOption.empty() )
                 {
-                    // 선택지를 공급자에서 받는 열거형 — 여기서는 형식만 본다(빈 글 = "자동").
+                    // 선택지를 공급자에서 받는 열거형은 여기서 형식만 본다(빈 텍스트는 "자동").
                     outValue = string( value );
                     return UserSettingValueResult::Accepted;
                 }
@@ -739,7 +739,7 @@ namespace sw
                         bOk = false;
                         break;
                     }
-                    // 적용기가 받는 값을 아는 경우(창 방식 이름 · 해상도 형식) 기본값과 선택지를 지금 대조한다 — 실행 중에 처음 알면 늦다.
+                    // 적용기가 받는 값을 아는 경우(창 방식 이름, 해상도 형식)에는 기본값과 선택지를 지금 대조한다. 실행 중에 처음 알면 늦다.
                     if ( registry.acceptsValue( def._targetName, def._defaultValue ) == false )
                     {
                         SW_LOG_ERROR( "setting '%#': applier '%#' does not accept the default '%#'", pID, def._targetName.c_str(), def._defaultValue );
@@ -789,7 +789,7 @@ namespace sw
                 SW_LOG_ERROR( "<Scalability> '%#': custom value '%#' is not an option", group._settingID.c_str(), group._customValue );
                 bOk = false;
             }
-            // 선택지 하나하나(custom 밖)가 프리셋 하나다 — 프리셋이 없는 선택지를 고르면 묶인 설정이 아무것도 바뀌지 않는다.
+            // 선택지 하나하나(custom 제외)가 프리셋 하나다. 프리셋이 없는 선택지를 고르면 묶인 설정이 아무것도 바뀌지 않는다.
             for ( const UserSettingOption& option : pGroupSetting->_listOption )
             {
                 if ( StringUtil::equals( option._value, group._customValue, true ) )

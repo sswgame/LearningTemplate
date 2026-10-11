@@ -102,11 +102,11 @@ namespace sw
     IWindow::~IWindow()
     {
         // **활성 창이 죽으면 전역 포인터도 같이 끊는다.** 그러지 않으면 뒤에
-        // `getActiveWindow()` 를 부르는 쪽(RHI 초기화 · 에디터 명령 · 프레임 트랜지언트)이
-        // 죽은 포인터를 받는다. 부르는 쪽이 파괴 전에 손으로 끊는 것은 **한 경로의 규율**일 뿐이다.
+        // `getActiveWindow()` 를 부르는 쪽(RHI 초기화, 에디터 명령, 프레임 트랜지언트)이
+        // 죽은 포인터를 받는다. 부르는 쪽이 파괴 전에 직접 끊는 것은 **한 경로의 규율**일 뿐이다.
         // `EngineLoop` 은 App 이 없는 임베드 시나리오에서 창을
-        // 전역에 놓아둔 채 소유를 부르는 쪽에 넘긴다(`EngineLoop::initialize` 의 `setActiveWindow`
-        // 바로 위 주석). 여기서 끊으면 어느 경로로 죽어도 참이다.
+        // 전역에 놓아둔 채 소유권을 부르는 쪽에 넘긴다(`EngineLoop::initialize` 의 `setActiveWindow`
+        // 바로 위 주석). 여기서 끊으면 어느 경로로 죽어도 안전하다.
         if ( s_pActiveWindow == this )
             s_pActiveWindow = nullptr;
     }
@@ -116,12 +116,12 @@ namespace sw
         if ( _title.empty() )
             return false;
 
-        // 다시 만들어도 **보이던 창은 보여야 한다** — 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
+        // 다시 만들어도 **보이던 창은 보여야 한다**. 빠뜨리면 백엔드 교체 뒤 창이 사라진다.
         //
         // **묻는 것은 화면 상태가 아니라 의도다.** `isVisible()` 은 X11 에서 "창 관리자가 이미 매핑했는가" 를 묻는다.
         // 방금 `showWindow(true)` 한 창도 아직 아니고, 최소화됐거나 다른 워크스페이스에 있어도 아니다. 그 값으로 다시 만들면
-        // **창이 사라진다**(윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 리눅스에서만 드러난다 —
-        // `WindowTest.RecreateKeepsVisibilityAndSize`).
+        // **창이 사라진다**(윈도우에서는 `IsWindowVisible` 이 WS_VISIBLE 스타일이라 둘이 같아 리눅스에서만 드러난다.
+        // `WindowTest.RecreateKeepsVisibilityAndSize` 참고).
         const bool bWasVisible = isVisibleRequested();
         captureRestorePosition();
 

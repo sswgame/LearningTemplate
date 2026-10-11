@@ -1,6 +1,6 @@
 /**
  * @file Win32DevConsoleWindow.cpp
- * @brief 개발 콘솔의 Win32 창입니다 — 게임 창이 소유한 반투명 GDI 팝업(포커스를 빼앗지 않는다).
+ * @brief 개발 콘솔의 Win32 창입니다. 게임 창이 소유한 반투명 GDI 팝업이며 포커스를 빼앗지 않습니다.
  */
 #include "pch.h"
 
@@ -90,7 +90,7 @@ namespace sw
 
         void present( const vector<string>& listLine, const vector<uint8>& listErrorFlag ) override
         {
-            // 같은 내용을 프레임마다 다시 그리지 않는다 — 자리만 맞추고, 줄이 바뀌었을 때만 다시 그린다.
+            // 같은 내용을 프레임마다 다시 그리지 않는다. 위치만 맞추고, 줄이 바뀌었을 때만 다시 그린다.
             const bool bChanged = listLine != _listLine || listErrorFlag != _listErrorFlag;
             _listLine           = listLine;
             _listErrorFlag      = listErrorFlag;
@@ -118,7 +118,7 @@ namespace sw
                 SetWindowPos( _hWnd, nullptr, origin.x, origin.y, width, height, SWP_NOACTIVATE | SWP_NOZORDER );
         }
 
-        /** @brief 메모리 DC 에 다 그린 뒤 한 번에 옮깁니다 — 창에 바로 그리면 합성기가 반쯤 그린 화면(아래 줄이 빈)을 내보낸다. */
+        /** @brief 메모리 DC 에 다 그린 뒤 한 번에 옮깁니다. 창에 바로 그리면 합성기가 반쯤 그린 화면(아래 줄이 빈 화면)을 내보냅니다. */
         void paint( HDC hWindowDC )
         {
             RECT clientRect{};

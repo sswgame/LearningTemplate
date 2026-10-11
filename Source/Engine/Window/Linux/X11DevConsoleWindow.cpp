@@ -1,6 +1,6 @@
 /**
  * @file X11DevConsoleWindow.cpp
- * @brief 개발 콘솔의 X11 창입니다 — 게임 창의 자식 창에 기본 글꼴로 줄을 그린다.
+ * @brief 개발 콘솔의 X11 창입니다. 게임 창의 자식 창에 기본 글꼴로 줄을 그립니다.
  */
 #include "pch.h"
 
@@ -31,7 +31,7 @@ namespace sw
 {
     /**
      * @class X11DevConsoleWindow
-     * @brief 게임 창 위쪽을 덮는 자식 창입니다. 키보드는 게임 창이 받아 `InputManager` 로 가고, 이 창은 그리기만 합니다. 열려 있는 동안 `present` 가 프레임마다 다시 그리므로 Expose 를 따로 받지 않습니다.
+     * @brief 게임 창 위쪽을 덮는 자식 창입니다. 키보드는 게임 창이 받아 `InputManager` 로 보내고, 이 창은 그리기만 합니다. 열려 있는 동안 `present` 가 프레임마다 다시 그리므로 Expose 를 따로 받지 않습니다.
      */
     class X11DevConsoleWindow final : public IDevConsoleWindow
     {

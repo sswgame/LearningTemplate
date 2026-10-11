@@ -26,14 +26,14 @@ namespace sw
             static constexpr utf8 kVersionKey[] = "version";
             static constexpr utf8 kValuesKey[]  = "values";
 
-            /** @brief 사용자 파일의 키 · 값 한 줄입니다(버전 올리기가 이 목록을 고친다). */
+            /** @brief 사용자 파일의 키와 값 한 줄입니다(버전 올리기 단계가 이 목록을 고칩니다). */
             struct FileEntry
             {
                 string _key;
                 string _value;
             };
 
-            /** @brief JSON 값을 글로 바꿉니다 — 숫자는 쓰인 그대로, 불리언은 true/false. */
+            /** @brief JSON 값을 텍스트로 바꿉니다. 숫자는 쓰인 그대로, 불리언은 true/false 로 씁니다. */
             static string toText( const JSONValue& value )
             {
                 switch ( value.getType() )
@@ -54,7 +54,7 @@ namespace sw
 
             static bool equalsText( string_view lhs, string_view rhs ) { return StringUtil::equals( lhs, rhs, true ); }
 
-            /** @brief 판 @p fromVersion 의 단계를 적힌 순서대로 목록에 적용합니다. */
+            /** @brief 버전 @p fromVersion 의 단계를 적힌 순서대로 목록에 적용합니다. */
             static void applyUpgradeSteps( const UserSettingsSchema& schema, uint32 fromVersion, vector<FileEntry>& inoutListEntry,
                                            [[maybe_unused]] string_view sourceName )
             {
@@ -188,7 +188,7 @@ namespace sw
             _listState.push_back( state );
         }
 
-        // 품질 묶음의 기본 프리셋이 묶인 설정의 기본값이다 — 두 곳에 적은 기본값이 어긋나 첫 화면이 Custom 이 되는 일이 없게.
+        // 품질 번들의 기본 프리셋이 묶인 설정의 기본값이다. 두 곳에 적은 기본값이 어긋나 첫 화면이 Custom 이 되는 일이 없게 한다.
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
         {
             const uint32 groupIndex = findIndex( group._settingID );
@@ -280,7 +280,7 @@ namespace sw
             listEntry.push_back( Internal::FileEntry{ key, Internal::toText( values.get( key, false ) ) } );
         }
 
-        // 버전 올리기 — 배포된 플레이어 데이터라 옛 판을 읽어야 한다(게임 데이터와 달리 다시 쓸 수 없다).
+        // 버전 올리기: 배포된 플레이어 데이터라 이전 버전을 읽어야 한다(게임 데이터와 달리 다시 쓸 수 없다).
         const uint32 fileVersion   = static_cast<uint32>( root.get( Internal::kVersionKey ).asUint( 0 ) );
         const uint32 schemaVersion = _schema.getVersion();
         for ( uint32 version = fileVersion; version < schemaVersion; ++version )
@@ -339,7 +339,7 @@ namespace sw
         for ( size_t settingIndex = 0; settingIndex < _listState.size(); ++settingIndex )
         {
             const SettingState& state = _listState[settingIndex];
-            // 확인 대기 중이면 옛 값을 쓴다 — 확인 전에 꺼지면 다음 실행은 확인된 화면으로 뜬다.
+            // 확인 대기 중이면 기존 값을 쓴다. 확인 전에 꺼지면 다음 실행은 확인된 화면으로 뜬다.
             const string& value = state._bRollback ? state._rollbackValue : state._committedValue;
             if ( value == state._defaultValue )
                 continue;
@@ -434,11 +434,11 @@ namespace sw
         for ( uint32 settingIndex = 0; settingIndex < static_cast<uint32>( _listState.size() ); ++settingIndex )
         {
             SettingState& state = _listState[settingIndex];
-            // 다음 실행에 닿는 값은 기동 때 한 번만 바뀐다 — 게임을 다시 세울 때(핫 리로드)의 다시 적용은 기동 때 넣은 값을 지킨다.
+            // 다음 실행에 반영되는 값은 기동 때 한 번만 바뀐다. 게임을 다시 만들 때(핫 리로드)의 다시 적용은 기동 때 넣은 값을 지킨다.
             const bool bKeepStartupValue = _bStartupApplied && listSetting[settingIndex]._applyTiming == UserSettingApplyTiming::NeedsRestart;
             if ( bKeepStartupValue == false )
                 state._startupValue = state._committedValue;
-            (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수 · 적용기)은 건너뛴다 — 값은 저장된 그대로다
+            (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수나 적용기)은 건너뛴다. 값은 저장된 그대로다
         }
         _bStartupApplied = true;
     }
@@ -518,7 +518,7 @@ namespace sw
         if ( normalizeResult == UserSettingValueResult::Rejected )
             return UserSettingSetResult::Rejected;
 
-        // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면 — 언어 팩을 읽기 전 — 형식만 본다).
+        // 공급자 열거형은 지금 공급자가 주는 선택지와 대조한다(공급자가 아직 비었으면, 곧 언어 팩을 읽기 전이면 형식만 본다).
         if ( def._type == UserSettingType::Enum && def._optionProvider.empty() == false && normalized.empty() == false )
         {
             vector<UserSettingOption> listOption;
@@ -546,7 +546,7 @@ namespace sw
         if ( result == UserSettingSetResult::Unchanged )
             return result;
 
-        // 품질 묶음: 프리셋을 고르면 묶인 설정이 따라가고, 묶인 설정을 바꾸면 묶음이 프리셋 이름이나 Custom 이 된다.
+        // 품질 번들: 프리셋을 고르면 묶인 설정이 따라가고, 묶인 설정을 바꾸면 번들이 프리셋 이름이나 Custom 이 된다.
         const ScalabilityGroupDef* pGroup = _schema.findScalabilityGroupOf( settingID );
         if ( pGroup != nullptr && pGroup->_settingID == settingID )
             applyScalabilityPreset( *pGroup, hashed_string( normalized ), false );
@@ -603,7 +603,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 5) 적용 · 되돌리기 · 확인
+    // 5) 적용, 되돌리기, 확인
     // ------------------------------------------------------------------------------
     UserSettingsApplyResult UserSettingsManager::applyPending()
     {
@@ -619,7 +619,7 @@ namespace sw
             const bool            bChanged = state._pendingValue != state._committedValue;
             if ( bChanged && def._confirmSeconds > 0.0f )
             {
-                // 이미 확인 대기 중이면 처음의 옛 값을 지킨다 — 두 번 바꾸고 시간이 다 되면 처음 화면으로 돌아가야 한다.
+                // 이미 확인 대기 중이면 처음의 기존 값을 유지한다. 두 번 바꾸고 시간이 다 되면 처음 화면으로 돌아가야 한다.
                 if ( state._bRollback == false )
                 {
                     state._rollbackValue = state._committedValue;
@@ -641,7 +641,7 @@ namespace sw
                 ++result._appliedCount;
             else
             {
-                // 대상이 거절한 값은 저장은 되지만 지금 실행에는 닿지 않았다 — 어느 설정인지 남긴다(메뉴 · 에디터는 수만 받는다).
+                // 대상이 거절한 값은 저장은 되지만 지금 실행에는 반영되지 않았다. 어느 설정인지 남긴다(메뉴와 에디터는 개수만 받는다).
                 ++result._failedCount;
                 SW_LOG_WARNING( "User setting '%#' = '%#' was rejected by its target '%#'", def._id.c_str(), state._committedValue.c_str(), def._targetName.c_str() );
             }
@@ -670,7 +670,7 @@ namespace sw
             state._pendingValue.clear();
             state._bPending = false;
             if ( bPreviewed )
-                (void)applyToTarget( settingIndex, state._committedValue, false ); // 미리 보기를 되돌린다 — 대상이 없는 설정은 건너뛴다
+                (void)applyToTarget( settingIndex, state._committedValue, false ); // 미리 보기를 되돌린다. 대상이 없는 설정은 건너뛴다
             broadcast( listSetting[settingIndex]._id, UserSettingEventKind::Reverted );
         }
     }
@@ -682,7 +682,7 @@ namespace sw
         {
             if ( listSetting[settingIndex]._category != categoryID || isAvailableAt( settingIndex ) == false )
                 continue;
-            // 키 바인딩은 겹침 검사를 건너뛴다 — 모두 기본으로 돌아가면 기본 맵끼리는 겹치지 않는다.
+            // 키 바인딩은 겹침 검사를 건너뛴다. 모두 기본으로 돌아가면 기본 맵끼리는 겹치지 않는다.
             (void)setPendingAt( settingIndex, _listState[settingIndex]._defaultValue, UserSettingValueResult::Accepted );
         }
         for ( const ScalabilityGroupDef& group : _schema.getScalabilityGroups() )
@@ -701,7 +701,7 @@ namespace sw
             state._bRollback = false;
             state._rollbackValue.clear();
         }
-        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이고, 쓰기 실패는 saveUserFile 이 경고로 남긴다
+        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이며, 쓰기 실패는 saveUserFile 이 경고로 남긴다
         broadcast( {}, UserSettingEventKind::Confirmed );
     }
 
@@ -722,10 +722,10 @@ namespace sw
             state._committedValue = state._rollbackValue;
             state._rollbackValue.clear();
             state._bRollback = false;
-            (void)applyToTarget( settingIndex, state._committedValue, false ); // 확인 전 값으로 되돌린다 — 대상이 없는 설정은 건너뛴다
+            (void)applyToTarget( settingIndex, state._committedValue, false ); // 확인 전 값으로 되돌린다. 대상이 없는 설정은 건너뛴다
         }
         SW_LOG_INFO( "Display change was not confirmed - reverted" );
-        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이고, 쓰기 실패는 saveUserFile 이 경고로 남긴다
+        (void)saveIfPathSet(); // 경로가 없으면 저장하지 않는 실행이며, 쓰기 실패는 saveUserFile 이 경고로 남긴다
         broadcast( {}, UserSettingEventKind::ConfirmTimedOut );
     }
 
@@ -831,7 +831,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 7) 통보 · 모듈
+    // 7) 통보와 모듈
     // ------------------------------------------------------------------------------
     DelegateHandle UserSettingsManager::registerEventListener( const UserSettingEventListener& listener )
     {
@@ -903,8 +903,8 @@ namespace sw
                 GlobalVariableInfo*    pVariable              = pGlobalVariableManager != nullptr ? pGlobalVariableManager->findVariable( def._targetName.c_str() ) : nullptr;
                 if ( pVariable == nullptr )
                     return false;
-                // 기동 · 다시 세울 때의 적용은 명령줄로 준 변수를 덮지 않는다 — 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
-                // 메뉴에서 바꾼 값(bStartup 거짓)은 덮는다 — 플레이어가 지금 고른 것이다.
+                // 기동이나 다시 만들 때의 적용은 명령줄로 준 변수를 덮지 않는다. 실행 한 번의 값(명령줄)이 저장된 값(사용자 설정)을 이긴다(화면 설정과 같은 순서).
+                // 메뉴에서 바꾼 값(bStartup 이 false)은 덮는다. 플레이어가 지금 고른 값이기 때문이다.
                 const CommandLineManager* pCommandLineManager = getTargets()._pCommandLineManager;
                 string                    commandLineValue;
                 if ( bStartup && pCommandLineManager != nullptr && pCommandLineManager->findPendingGlobalValue( def._targetName.view(), commandLineValue ) )
@@ -954,7 +954,7 @@ namespace sw
             state._bPending     = true;
         }
         if ( def._applyTiming == UserSettingApplyTiming::Immediate )
-            (void)applyToTarget( settingIndex, normalized, false ); // 즉시 미리 보기 — 대상이 없는 설정은 건너뛰고, 확정(commit)이 결과를 다시 본다
+            (void)applyToTarget( settingIndex, normalized, false ); // 즉시 미리 본다. 대상이 없는 설정은 건너뛰고, 확정(commit)이 결과를 다시 확인한다
         broadcast( def._id, UserSettingEventKind::PendingChanged );
         return normalizeResult == UserSettingValueResult::Clamped ? UserSettingSetResult::Clamped : UserSettingSetResult::Accepted;
     }
@@ -1019,7 +1019,7 @@ namespace sw
             }
             return;
         }
-        // "custom" 은 프리셋이 없다 — 묶인 설정은 그대로 둔다.
+        // "custom" 은 프리셋이 없다. 묶인 설정은 그대로 둔다.
     }
 
     bool UserSettingsManager::findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const

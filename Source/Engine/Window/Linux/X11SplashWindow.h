@@ -33,7 +33,7 @@ namespace sw
     private:
         [[maybe_unused]] void*  _pX11Display;
         [[maybe_unused]] uint64 _x11Window;
-        [[maybe_unused]] uint64 _x11Pixmap;       /**< 창 배경으로 걸어 두는 그림. 서버가 알아서 다시 그림. */
+        [[maybe_unused]] uint64 _x11Pixmap;       /**< 창 배경으로 설정해 두는 이미지입니다. 서버가 알아서 다시 그립니다. */
         vector<uint8>           _listScaledPixel; /**< 창 크기로 줄인 BGRA 픽셀. 비어 있으면 그리지 않음. */
     };
 } // namespace sw

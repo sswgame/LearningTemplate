@@ -1,6 +1,6 @@
 /**
  * @file UserSettingsEngineAppliers.h
- * @brief 엔진이 올리는 사용자 설정 적용기(오디오 버스 · 입력 · 언어 · 화면)와 화면 요청(`DisplaySettingsRequest`)입니다.
+ * @brief 엔진이 등록하는 사용자 설정 적용기(오디오 버스, 입력, 언어, 화면)와 화면 요청(`DisplaySettingsRequest`)을 정의합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -33,10 +33,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 화면 설정(창 방식 · 해상도 · VSync)이 요청하는 상태입니다.
-     * @details 적용기는 창 · 스왑체인을 직접 만지지 않고 여기 적기만 합니다. 실제 변경은 호스트(App)가 프레임 맨 앞 — OS 리사이즈와 같은 자리 —
-     *          에서 `UserSettingsManager::consumeDisplayRequest` 로 꺼내 합니다(렌더 스레드를 기다린 뒤 VSync, 창 크기 통보 → App::onResize).
-     *          `_bHas*` 는 플레이어가 고른(기본값이 아닌) 값이 있는지 — 기동 때 엔진 설정(EngineConfig) · 명령줄보다 앞설지 정합니다.
+     * @brief 화면 설정(창 방식, 해상도, VSync)이 요청하는 상태입니다.
+     * @details 적용기는 창과 스왑체인을 직접 건드리지 않고 여기에 적기만 한다. 실제 변경은 호스트(App)가 프레임 맨 앞(OS 리사이즈와 같은 위치)에서
+     *          `UserSettingsManager::consumeDisplayRequest` 로 꺼내 처리한다(렌더 스레드를 기다린 뒤 VSync 를 바꾸고, 창 크기를 알려 App::onResize 를 부른다).
+     *          `_bHas*` 는 플레이어가 고른(기본값이 아닌) 값이 있는지 나타낸다. 기동 때 엔진 설정(EngineConfig)이나 명령줄보다 우선할지 정한다.
      */
     struct DisplaySettingsRequest
     {
@@ -54,21 +54,21 @@ namespace sw
 {
     /**
      * @class UserSettingsEngineAppliers
-     * @brief 엔진 적용기 묶음입니다. `UserSettingsManager` 가 하나 들고 레지스트리에 올립니다.
+     * @brief 엔진 적용기 모음입니다. `UserSettingsManager` 가 하나 가지고 레지스트리에 등록합니다.
      * @details 이름(스키마의 `target="applier:…"`):
-     *          - `audio.busVolume`(param = 버스) · `audio.mute`
-     *          - `input.mouseSensitivity` · `input.gamepadSensitivity` · `input.invertX` · `input.invertY` · `input.stickDeadzone` ·
-     *            `input.toggleMode`(param = 액션, 값 `hold`/`toggle`) · `input.keyBinding`(키 바인딩 설정의 기본 대상)
-     *          - `localization.language`(빈 값 = 게임 기본 언어 그대로)
-     *          - `display.windowMode`(`windowed`/`borderless`) · `display.resolution`(`<너비>x<높이>`) · `display.vsync`
-     *          선택지 공급자: `localization.languages`(읽힌 언어 목록).
+     *          - `audio.busVolume`(param 은 버스), `audio.mute`
+     *          - `input.mouseSensitivity`, `input.gamepadSensitivity`, `input.invertX`, `input.invertY`, `input.stickDeadzone`,
+     *            `input.toggleMode`(param 은 액션, 값은 `hold`/`toggle`), `input.keyBinding`(키 바인딩 설정의 기본 대상)
+     *          - `localization.language`(빈 값은 게임 기본 언어 그대로)
+     *          - `display.windowMode`(`windowed`/`borderless`), `display.resolution`(`<너비>x<높이>`), `display.vsync`
+     *          선택지 공급자: `localization.languages`(읽은 언어 목록).
      */
     class SW_API UserSettingsEngineAppliers
     {
     public:
         UserSettingsEngineAppliers();
 
-        /** @brief 대상을 정하고 적용기 · 공급자를 @p registry 에 올립니다. */
+        /** @brief 대상을 정하고 적용기와 공급자를 @p registry 에 등록합니다. */
         void initialize( const UserSettingsTargets& targets, UserSettingApplierRegistry& registry );
         /** @brief 대상을 잊습니다. */
         void shutdown();
@@ -80,7 +80,7 @@ namespace sw
 
         /** @brief `1920x1080` 을 읽습니다. */
         [[nodiscard]] static bool tryParseResolution( string_view text, uint32& outWidth, uint32& outHeight );
-        /** @brief `windowed` · `borderless` 를 읽습니다. */
+        /** @brief `windowed` 와 `borderless` 를 읽습니다. */
         [[nodiscard]] static bool tryParseWindowMode( string_view text, WindowDisplayMode& outMode );
 
     private:

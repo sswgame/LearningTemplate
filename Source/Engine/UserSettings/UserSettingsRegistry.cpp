@@ -48,7 +48,7 @@ namespace sw
         const ApplierEntry* pEntry = findApplierEntry( name );
         if ( pEntry == nullptr || pEntry->_applier.isBound() == false )
             return false;
-        // 적용기가 레지스트리를 바꿀 수 있으므로(다른 적용기를 올리는 게임 코드) 사본을 부른다.
+        // 적용기가 레지스트리를 바꿀 수 있으므로(다른 적용기를 등록하는 게임 코드) 사본을 부른다.
         const UserSettingApplierDelegate applier = pEntry->_applier;
         return applier( context );
     }

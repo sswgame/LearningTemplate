@@ -15,7 +15,7 @@ namespace sw
         , _reservedWin32{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`IWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 
@@ -41,7 +41,7 @@ namespace sw
         wc.style       = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         wc.lpfnWndProc = wndProc;
         wc.hInstance   = hInstance;
-        // 실행 파일(App.exe)의 아이콘 리소스. hInstance 는 프로세스 exe 라 Engine.dll 안에서도 App.exe 리소스를 찾는다 — 없으면 nullptr(기본 아이콘).
+        // 실행 파일(App.exe)의 아이콘 리소스다. hInstance 는 프로세스 exe 라 Engine.dll 안에서도 App.exe 리소스를 찾는다. 없으면 nullptr(기본 아이콘).
         wc.hIcon   = LoadIconW( hInstance, MAKEINTRESOURCEW( constant::window::kAppIconResourceID ) );
         wc.hIconSm = wc.hIcon;
         // IDC_* 는 TCHAR 매크로(A 판 포인터 모양의 정수 자원 id)라 W 판에 맞게 넘긴다.
@@ -162,7 +162,7 @@ namespace sw
     }
 
     /**
-     * @brief 다시 만들기 직전의 창 위치를 `GetWindowRect` 로 `_restoreX` · `_restoreY` 에 담습니다.
+     * @brief 다시 만들기 직전의 창 위치를 `GetWindowRect` 로 `_restoreX` 와 `_restoreY` 에 담습니다.
      */
     void Win32Window::captureRestorePosition()
     {
@@ -229,9 +229,9 @@ namespace sw
                 {
                     // **최소화한 크기를 창 크기로 기억하지 않는다.** 최소화는 클라이언트 영역
                     // 0x0 짜리 WM_SIZE 로 온다. 그 값을 `_width`/`_height` 에 적어 두면 창이
-                    // 0 칸짜리가 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
-                    // 이 길로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
-                    // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 지 "0 칸이다" 가 아니다.
+                    // 크기 0 이 됐다는 뜻이 되어 버린다. 그 상태에서 `recreate()`(백엔드 교체가
+                    // 이 경로로 온다)가 돌면 기억해 둔 0x0 으로 창을 다시 만들고, 복원해도 그 크기가
+                    // 그대로 남는다. 최소화가 말하는 것은 "안 보인다" 이지 "크기가 0 이다" 가 아니다.
                     const uint32 clientWidth  = LOWORD( lParam );
                     const uint32 clientHeight = HIWORD( lParam );
                     if ( wParam == SIZE_MINIMIZED || clientWidth == 0 || clientHeight == 0 )
@@ -246,8 +246,8 @@ namespace sw
                     if ( pThis->_bRecreating == SW_FALSE && pThis->_bResizing == SW_FALSE && pThis->_onResize.isBound() )
                     {
                         // 재진입한 WM_SIZE 는 위에서 크기만 적고 콜백을 건너뛴다. 그래서 콜백이 돌아온 뒤 크기가 바뀌었으면 **마지막 크기로 한 번
-                        // 더** 부른다 — 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
-                        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 막는다.
+                        // 더** 부른다. 바깥 호출이 넘긴 옛 크기로 끝나면 스왑체인이 다음 WM_SIZE 까지 옛 크기로 남는다(DPI 변경의
+                        // SetWindowPos 가 바로 그 재진입이다). 끝없이 돌지 않게 횟수를 제한한다.
                         pThis->_bResizing    = SW_TRUE;
                         uint32 resizedWidth  = 0;
                         uint32 resizedHeight = 0;
@@ -264,8 +264,8 @@ namespace sw
 
                 case WM_DPICHANGED:
                 {
-                    // 모니터별 DPI 인식(PerMonitorV2)에서는 OS 가 창 크기를 바꿔 주지 않는다. 권장 사각형으로 옮긴다 — 그 뒤의 WM_SIZE 가
-                    // 스왑체인을 맞춘다. 이 처리가 없으면 배율이 다른 모니터로 옮길 때 창이 실제 크기의 절반 · 두 배가 된다.
+                    // 모니터별 DPI 인식(PerMonitorV2)에서는 OS 가 창 크기를 바꿔 주지 않는다. 권장 사각형으로 옮긴다. 그 뒤의 WM_SIZE 가
+                    // 스왑체인을 맞춘다. 이 처리가 없으면 배율이 다른 모니터로 옮길 때 창이 실제 크기의 절반이나 두 배가 된다.
                     const RECT* pSuggested = reinterpret_cast<const RECT*>( lParam );
                     if ( pSuggested != nullptr )
                     {
@@ -277,9 +277,9 @@ namespace sw
 
                 case WM_GETMINMAXINFO:
                 {
-                    // 창 모드에서 사용자가 줄일 수 있는 바닥(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리 · 제목 줄을 더해 창 크기로 넘긴다
+                    // 창 모드에서 사용자가 줄일 수 있는 하한(`setMinimumClientSize`)이다. 클라이언트 크기에 테두리와 제목 줄을 더해 창 크기로 넘긴다
                     // (`setDisplayMode` 와 같은 `AdjustWindowRect`). SetWindowPos 도 DefWindowProcW 의 WM_WINDOWPOSCHANGING 이 이 값으로 자른다.
-                    // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다 — 그때는 pThis 가 없어 기본 처리로 간다.
+                    // 이 메시지는 WM_NCCREATE 보다 먼저 오는 첫 메시지다. 그때는 pThis 가 없어 기본 처리로 간다.
                     if ( pThis->_displayMode != WindowDisplayMode::Windowed || pThis->_minClientWidth == 0 || pThis->_minClientHeight == 0 )
                         break;
                     RECT frameRect = { 0, 0, static_cast<LONG>( pThis->_minClientWidth ), static_cast<LONG>( pThis->_minClientHeight ) };
@@ -314,7 +314,7 @@ namespace sw
             }
         }
 
-        // 창 클래스 · 창을 W 판으로 만들었으니 기본 처리도 W 판이다. A 판은 WM_NCCREATE · WM_SETTEXT 의 UTF-16 제목을 ANSI 로 읽어 첫 글자에서 끊는다.
+        // 창 클래스와 창을 W 버전으로 만들었으니 기본 처리도 W 버전이다. A 버전은 WM_NCCREATE 와 WM_SETTEXT 의 UTF-16 제목을 ANSI 로 읽어 첫 글자에서 끊는다.
         return DefWindowProcW( hWnd, msg, wParam, lParam );
     }
 } // namespace sw

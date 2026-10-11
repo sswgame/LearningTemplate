@@ -29,7 +29,7 @@ namespace sw
         , _reservedX11{ 0 }
         , _padding{ 0 }
     {
-        // 복원 위치는 기반(`IWindow`)이 들고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
+        // 복원 위치는 기반(`IWindow`)이 가지고 절차도 기반이 맡는다. 플랫폼은 "알아서" 값만 정한다.
         clearRestorePosition();
     }
 
@@ -74,7 +74,7 @@ namespace sw
         _x11Window    = win;
         _x11WmDelete  = wmDeleteMessage;
         _bShouldClose = SW_FALSE;
-        applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 바닥을 갖는다
+        applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 하한을 가진다
         applyTitle();
 
         SW_LOG_INFO( "Native X11 Window created successfully! (%#×%#)", width, height );
@@ -192,8 +192,8 @@ namespace sw
         if ( _pX11Display == nullptr || _x11Window == 0 )
             return;
 
-        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다 — 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
-        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 옛 창 관리자 몫).
+        // 제목은 UTF-8 이다. XStoreName 은 WM_NAME 을 Latin-1(STRING)으로 적어 비-ASCII 글자가 깨진다. 창 관리자는 _NET_WM_NAME(UTF8_STRING)을
+        // 먼저 읽으므로 그것을 같이 적는다(XStoreName 은 _NET_WM_NAME 을 모르는 이전 창 관리자를 위한 것이다).
         Display*     pDisplay  = static_cast<Display*>( _pX11Display );
         const Window win       = static_cast<Window>( _x11Window );
         const string titleText = StringUtil::utf16ToUtf8( _title.c_str() );

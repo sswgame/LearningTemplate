@@ -1,6 +1,6 @@
 /**
  * @file NativeWindowEvent.h
- * @brief 플랫폼 메시지 페이로드입니다(Win32 · X11 등이 같은 칸을 채웁니다).
+ * @brief 플랫폼 메시지 페이로드입니다(Win32, X11 등이 같은 필드를 채웁니다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
