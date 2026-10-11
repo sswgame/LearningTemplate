@@ -137,6 +137,12 @@ namespace test
         bool isEnvironmentMissing( const sw::string& suiteName ) const;
         /** @brief 견딘 알려진 Error 로그를 실행 요약에 찍습니다. */
         void printKnownErrorLogSummary() const;
+        /**
+         * @brief 결과 줄(`[ RUN ]` · `[FAILED]` · 실패 요약)의 머리입니다. 프로세스 레지스트리는 빈 문자열, 시험 안에서 만든 레지스트리는 `(nested) ` 입니다.
+         * @details CI 실패 보고(`Scripts/dev/CiFailureReport.py`)와 에디터 시험 출력 해석은 줄 머리로 실패를 고른다. 틀 시험이 일부러 지게 만든
+         *          안쪽 케이스가 바깥 실행의 실패로 보이지 않게 한다.
+         */
+        const utf8* getLinePrefix() const;
         /** @brief 케이스 하나를 돌리고(정리 · 임시 폴더 지우기까지) 결과 줄을 찍습니다. */
         CaseResult runCase( const TestCaseInfo& testInfo, float64& outElapsedMs );
 
