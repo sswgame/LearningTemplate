@@ -42,18 +42,18 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일입니다. */
+        /** @brief 애셋 경로 필드에서 이번 프레임에 일어난 일을 나타냅니다. */
         enum class AssetFieldAction : uint8
         {
             None,
-            Dropped, ///< 드래그 드롭이나 고르기 팝업으로 경로가 들어왔다
-            Cleared, ///< 지우기 버튼
+            Dropped, ///< 드래그 앤 드롭이나 선택 팝업으로 경로가 들어왔다
+            Cleared, ///< 지우기 버튼을 눌렀다
         };
 
-        /** @brief 에셋 고르기 팝업의 상태입니다. 열린 팝업은 하나라 하나만 든다. */
+        /** @brief 에셋 선택 팝업의 상태입니다. 열린 팝업은 하나뿐이므로 상태도 하나만 보관합니다. */
         struct AssetPickerState
         {
-            vector<EditorResourceIndexEntry>     _listEntry; ///< 열 때 한 번 모은 리소스(파일 목록을 프레임마다 훑지 않는다)
+            vector<EditorResourceIndexEntry>     _listEntry; ///< 팝업을 열 때 한 번 모은 리소스다. 파일 목록을 프레임마다 스캔하지 않는다
             fixed_string<constant::kMaxBuffer64> _search;
         };
 
@@ -78,7 +78,7 @@ namespace sw::editor
                 ImGui::TextUnformatted( pValue != nullptr ? pValue : "" );
                 showTooltipIfHovered( prop );
             }
-            /** @brief 내장 타입 값을 표의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
+            /** @brief 내장 타입 값을 테이블의 형식(`InspectorBuiltinValue::_pFormatValue`)으로 읽기 전용 표시합니다. */
             void drawReadOnlyValue( const PropertyInfo& prop, const void* pValue )
             {
                 fixed_string<constant::kMaxBuffer512> buf;
@@ -88,13 +88,13 @@ namespace sw::editor
                 drawReadOnlyText( prop, buf.c_str() );
             }
             bool isColorRequested( const PropertyInfo& prop ) { return InspectorPropertyLayout::isColorRequested( prop ); }
-            /** @brief 색 편집 플래그입니다. `ColorHdr` 면 1 을 넘는 값을 받는다. */
+            /** @brief 색 편집 플래그입니다. `ColorHdr` 이면 1 을 넘는 값을 받습니다. */
             ImGuiColorEditFlags getColorFlags( const PropertyInfo& prop )
             {
                 return ImGuiColorEditFlags_Float | ( prop._metadata._bColorHdr != SW_FALSE ? ImGuiColorEditFlags_HDR : ImGuiColorEditFlags_None );
             }
 
-            /** @brief 비트필드는 포인터를 잡을 수 없어 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
+            /** @brief 비트필드는 포인터를 잡을 수 없으므로 값으로 읽고 씁니다. 정수 계열과 bool 이 같은 체크박스를 씁니다. */
             bool drawBitFieldCheckbox( void* pInstance, const PropertyInfo& prop )
             {
                 bool bValue = prop.getValue<bool>( pInstance );
@@ -110,9 +110,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 애셋 경로 필드의 틀(입력 칸 · 드롭 대상 · 지우기 버튼)을 그립니다.
-             * @details 입력 칸만 부르는 쪽이 그립니다. `string` 은 키 입력마다 반영하고, `hashed_string` 은 Enter 로 확정합니다
-             *          (키 입력마다 인턴하면 그 문자열이 모두 표에 남습니다). 드롭과 지우기의 처리도 부르는 쪽이 합니다.
+             * @brief 애셋 경로 필드의 틀(입력란, 드롭 대상, 지우기 버튼)을 그립니다.
+             * @details 입력란만 호출하는 쪽이 그린다. `string` 은 키 입력마다 반영하고, `hashed_string` 은 Enter 로 확정한다.
+             *          키 입력마다 인턴하면 그 문자열이 모두 테이블에 남기 때문이다. 드롭과 지우기의 처리도 호출하는 쪽이 한다.
              */
             template <typename DrawInputFn>
             AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyInfo& prop, string_view currentPath, string& outDroppedPath )
@@ -130,7 +130,7 @@ namespace sw::editor
                 if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
                     action = AssetFieldAction::Dropped;
 
-                // 고르기 팝업(언리얼 에셋 피커 · 유니티 Object Picker) — 프로퍼티의 FileFilter 에 맞는 리소스만, 검색으로 거른다.
+                // 선택 팝업이다(언리얼의 에셋 피커, 유니티의 Object Picker). 프로퍼티의 FileFilter 에 맞는 리소스만 보여 주고 검색으로 거른다.
                 ImGui::SameLine();
                 if ( ImGui::Button( editoricon::kSearch, ImVec2( kButtonWidth, 0 ) ) )
                 {
@@ -174,7 +174,7 @@ namespace sw::editor
                     ImGui::EndPopup();
                 }
 
-                // 콘텐츠 브라우저에서 보기(언리얼 Browse to Asset)
+                // 콘텐츠 브라우저에서 보기. 언리얼의 Browse to Asset 에 해당한다
                 ImGui::SameLine();
                 ImGui::BeginDisabled( currentPath.empty() );
                 if ( ImGui::Button( editoricon::kFolderOpen, ImVec2( kButtonWidth, 0 ) ) )
@@ -206,14 +206,14 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 값 위젯. 프로퍼티와 CallInEditor 인자가 같은 함수로 그린다 — 갈래는 `InspectorWidgetFor<T>` 가 정한다
+        // 값 위젯. 프로퍼티와 CallInEditor 인자를 같은 함수로 그린다. 분기는 `InspectorWidgetFor<T>` 가 정한다
         // ------------------------------------------------------------------------------
         static_assert( ImGuiDataType_S8 + 1 == ImGuiDataType_U8 && ImGuiDataType_U8 + 1 == ImGuiDataType_S16 &&
                            ImGuiDataType_S16 + 2 == ImGuiDataType_S32 && ImGuiDataType_S32 + 2 == ImGuiDataType_S64 &&
                            ImGuiDataType_S64 + 1 == ImGuiDataType_U64,
                        "getNumberDataType assumes ImGuiDataType orders S8 U8 S16 U16 S32 U32 S64 U64" );
 
-        /** @brief 숫자 타입의 ImGui 데이터 타입입니다. 정수는 크기 · 부호로 정합니다. */
+        /** @brief 숫자 타입에 대응하는 ImGui 데이터 타입입니다. 정수는 크기와 부호로 정합니다. */
         template <typename T>
         constexpr ImGuiDataType getNumberDataType()
         {
@@ -229,7 +229,7 @@ namespace sw::editor
             }
         }
 
-        /** @brief 숫자 위젯의 서식입니다. 정수는 ImGui 의 타입별 서식(`%lld` 등), 실수는 소수 둘째 자리입니다. */
+        /** @brief 숫자 위젯의 서식입니다. 정수는 ImGui 의 타입별 서식(`%lld` 등)을 쓰고, 실수는 소수 둘째 자리까지 표시합니다. */
         template <typename T>
         const utf8* getNumberFormat()
         {
@@ -239,7 +239,7 @@ namespace sw::editor
                 return ImGui::DataTypeGetInfo( getNumberDataType<T>() )->PrintFmt;
         }
 
-        /** @brief Enter 로 확정하는 입력 칸입니다. 키 입력마다 인턴하지 않으려는 것입니다. 확정했으면 true 입니다. */
+        /** @brief Enter 로 확정하는 입력란입니다. 키 입력마다 인턴하지 않으려는 용도입니다. 확정했으면 true 입니다. */
         bool drawNameInput( const utf8* pID, hashed_string& value )
         {
             fixed_string<constant::kMaxBuffer256> buf{ value.c_str() };
@@ -250,9 +250,9 @@ namespace sw::editor
         }
 
         /**
-         * @brief 내장 값 하나를 고치는 위젯입니다. 메타데이터(범위 · 단위 · 색 · 애셋 경로)를 모르는 기본 모양입니다.
-         * @details CallInEditor 인자 칸은 늘 이것을 쓰고, 메타데이터가 필요 없는 갈래(행렬 · 회전 · 핸들 · 태그)의 프로퍼티도
-         *          이것을 씁니다. 갈래가 늘었는데 여기 분기가 없으면 컴파일되지 않습니다.
+         * @brief 내장 값 하나를 편집하는 위젯입니다. 메타데이터(범위, 단위, 색, 애셋 경로)를 모르는 기본 형태입니다.
+         * @details CallInEditor 인자 입력란은 항상 이 위젯을 쓰고, 메타데이터가 필요 없는 분기(행렬, 회전, 핸들, 태그)의 프로퍼티도
+         *          이 위젯을 쓴다. 분기가 늘었는데 여기에 분기가 없으면 컴파일되지 않는다.
          * @return 값이 바뀌었으면 true 입니다.
          */
         template <typename T>
@@ -286,7 +286,7 @@ namespace sw::editor
                 return ImGui::DragFloat4( pLabel, &value._x, 0.01f );
             else if constexpr ( kWidget == InspectorValueWidget::Matrix )
             {
-                // 행 넷을 한 묶음으로 둔다 — 되돌리기 추적이 마지막 항목(묶음)을 본다.
+                // 행 네 개를 한 그룹으로 둔다. 되돌리기 추적이 마지막 항목(그룹)을 본다.
                 bool bChanged = false;
                 ImGui::PushID( pLabel );
                 ImGui::BeginGroup();
@@ -347,7 +347,7 @@ namespace sw::editor
             }
         }
 
-        /** @brief CallInEditor 인자 칸 하나를 그 C++ 타입의 위젯으로 그립니다. `ReflectBuiltins.xxx` 줄마다 하나입니다. */
+        /** @brief CallInEditor 인자 입력란 하나를 그 C++ 타입의 위젯으로 그립니다. `ReflectBuiltins.xxx` 항목마다 하나씩 있습니다. */
         template <typename T>
         bool drawMethodArgFor( const utf8* pLabel, TaskValue& value )
         {
@@ -360,7 +360,7 @@ namespace sw::editor
 
         using DrawMethodArgFn = bool ( * )( const utf8* pLabel, TaskValue& value );
 
-        /** @brief 인자 위젯 표입니다. 순서는 `InspectorBuiltinValueUtil` 표와 같습니다(같은 파일을 같은 순서로 include). */
+        /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValueUtil` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgFor<InspectorBuiltinCppTypeT<CppType>>,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -370,7 +370,7 @@ namespace sw::editor
         };
 
         // ------------------------------------------------------------------------------
-        // 숫자 프로퍼티. 정수 여덟 · 실수 둘이 같은 경로로 그리고, 타입마다 다른 것은 ImGui 데이터 타입뿐이다
+        // 숫자 프로퍼티. 정수 여덟 개와 실수 두 개가 같은 경로로 그리고, 타입마다 다른 것은 ImGui 데이터 타입뿐이다
         // ------------------------------------------------------------------------------
         template <typename T>
         class NumericProperty : public BuiltinPropertyBase
@@ -390,7 +390,7 @@ namespace sw::editor
                 if ( pPtr == nullptr )
                     return true;
 
-                // 보이는 단위(라디안 → 도)의 배율은 실수에만 건다. 정수는 단위를 글자로만 붙인다.
+                // 표시 단위(라디안에서 도)의 배율은 실수에만 적용한다. 정수는 단위를 문자열로만 붙인다.
                 const InspectorDisplayUnit unit      = InspectorPropertyLayout::getDisplayUnit( prop );
                 const float64              scale     = kIsInteger ? 1.0 : static_cast<float64>( unit._scale );
                 const float32              dragSpeed = kIsInteger ? 1.0f : ( unit._dragSpeed > 0.0f ? unit._dragSpeed : 0.01f );
@@ -405,8 +405,8 @@ namespace sw::editor
                     return true;
                 }
 
-                // 위젯은 `UIMin` · `UIMax`(없으면 `Min` · `Max`) 안에서 움직이고, 값은 늘 `Min` · `Max` 로 막는다(`InspectorNumericRange`).
-                // 적히지 않은 쪽은 nullptr 이라 ImGui 가 타입의 범위로 막는다(uint8 은 0..255).
+                // 위젯은 `UIMin` 과 `UIMax`(없으면 `Min` 과 `Max`) 안에서 움직이고, 값은 항상 `Min` 과 `Max` 로 제한한다(`InspectorNumericRange`).
+                // 적히지 않은 쪽은 nullptr 이므로 ImGui 가 타입의 범위로 제한한다(uint8 은 0..255).
                 const InspectorNumericRange range    = InspectorPropertyLayout::getNumericRange( prop );
                 const T                     minValue = static_cast<T>( range._widgetMin * scale );
                 const T                     maxValue = static_cast<T>( range._widgetMax * scale );
@@ -435,7 +435,7 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 그 밖의 내장 타입
         // ------------------------------------------------------------------------------
-        /** @brief bool · atomic<bool> 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
+        /** @brief bool 과 atomic<bool> 의 체크박스입니다. 정수 비트필드와 같은 체크박스를 씁니다. */
         template <typename T>
         class CheckboxProperty : public BuiltinPropertyBase
         {
@@ -458,14 +458,14 @@ namespace sw::editor
                 }
                 drawValueWidget( _pLabel, *pPtr );
                 showTooltipIfHovered( prop );
-                // atomic<bool> 은 다른 스레드가 쓰는 값이라 되돌리기 기록에 넣지 않는다.
+                // atomic<bool> 은 다른 스레드가 쓰는 값이므로 되돌리기 기록에 넣지 않는다.
                 if constexpr ( std::is_same_v<T, bool> )
                     InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
         };
 
-        /** @brief 메타데이터가 필요 없는 갈래(행렬 · 회전 · 핸들 · 태그)의 프로퍼티입니다. 고치는 위젯은 인자 칸과 같습니다. */
+        /** @brief 메타데이터가 필요 없는 분기(행렬, 회전, 핸들, 태그)의 프로퍼티입니다. 편집 위젯은 인자 입력란과 같습니다. */
         template <typename T>
         class ValueProperty : public BuiltinPropertyBase
         {
@@ -509,7 +509,7 @@ namespace sw::editor
                     const AssetFieldAction action = drawAssetPathField(
                         [pPtr]( const utf8* pID )
                     { EditorWidgets::drawTextField( pID, *pPtr ); }, prop, string_view{ *pPtr }, droppedPath );
-                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭 · 고르기 · 지우기는 위젯 편집이 아니라 그리드가 입혀야 통지 · 되돌리기에 남는다.
+                    // `FileFilter` 에 맞지 않는 파일은 받지 않는다. 드롭, 선택, 지우기는 위젯 편집이 아니라 그리드가 적용해야 알림과 되돌리기에 남는다.
                     if ( action == AssetFieldAction::Dropped && InspectorPropertyLayout::matchesFileFilter( prop._metadata._fileFilter, droppedPath ) )
                         grid.applyPropertyTextAsEdit( pInstance, prop, droppedPath, "Set Asset" );
                     else if ( action == AssetFieldAction::Cleared )
@@ -561,7 +561,7 @@ namespace sw::editor
                     drawNameInput( _pLabel, *pPtr );
                 }
                 showTooltipIfHovered( prop );
-                // 인턴 인덱스 하나라 POD 로 되돌린다 — 인턴된 문자열은 해제되지 않으므로 옛 인덱스는 언제나 유효하다.
+                // 인턴 인덱스 하나이므로 POD 로 되돌린다. 인턴된 문자열은 해제되지 않으므로 이전 인덱스는 언제나 유효하다.
                 InspectorPropertyUndo::trackPod( pPtr, sizeof( *pPtr ), prop );
                 return true;
             }
@@ -575,7 +575,7 @@ namespace sw::editor
                 float3* pPtr = prop.getValuePtr<float3>( pInstance );
                 if ( pPtr == nullptr )
                     return true;
-                // 라디안으로 저장한 각도(`Units=rad`)는 도로 보이고 고친다 — 바뀌었을 때만 되쓴다.
+                // 라디안으로 저장한 각도(`Units=rad`)는 도로 보여 주고 편집한다. 바뀌었을 때만 다시 쓴다.
                 const InspectorDisplayUnit unit = InspectorPropertyLayout::getDisplayUnit( prop );
                 if ( prop._metadata._bReadOnly != SW_FALSE )
                 {
@@ -653,8 +653,8 @@ namespace sw::editor
         };
 
         /**
-         * @brief 내장 타입 하나의 프로퍼티 위젯을 만듭니다. 갈래는 `InspectorWidgetFor<T>` 가 정합니다.
-         * @details 메타데이터(범위 · 단위 · 색 · 애셋 경로)를 읽는 갈래는 전용 클래스, 나머지는 `ValueProperty` 입니다.
+         * @brief 내장 타입 하나의 프로퍼티 위젯을 만듭니다. 분기는 `InspectorWidgetFor<T>` 가 정합니다.
+         * @details 메타데이터(범위, 단위, 색, 애셋 경로)를 읽는 분기는 전용 클래스를 쓰고, 나머지는 `ValueProperty` 를 씁니다.
          */
         template <typename T>
         unique_ptr<IInspectorProperty> createBuiltinProperty()
@@ -717,7 +717,7 @@ namespace sw::editor
         if ( list.getGeneration() == _syncedGeneration )
             return;
         _syncedGeneration = list.getGeneration();
-        // 줄이 빠졌으면 내장 위젯부터 다시 건다(등록 줄이 가렸던 것이 돌아온다). 그다음 지금 줄을 모두 건다.
+        // 항목이 빠졌으면 내장 위젯부터 다시 등록한다. 등록 항목이 가렸던 것이 돌아온다. 그다음 현재 항목을 모두 등록한다.
         bool bRemoved = false;
         for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
         {
@@ -751,7 +751,7 @@ namespace sw::editor
         if ( releasedCount > 0 )
         {
             _registry.clear();  // 언로드되는 이미지의 위젯(그 vtable)을 남기지 않는다
-            registerBuiltins(); // 가렸던 내장 위젯을 복원한다
+            registerBuiltins(); // 가려졌던 내장 위젯을 복원한다
             for ( const EditorPropertyDrawerRegistration* pRegistration : _listRegistration )
             {
                 registerType( pRegistration->_pID, pRegistration->_pCreate() );

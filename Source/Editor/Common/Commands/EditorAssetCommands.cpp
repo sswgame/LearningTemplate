@@ -46,7 +46,7 @@ namespace sw::editor
     {
         struct EditorAssetCommandsInternal
         {
-            /** @brief 프리팹을 스폰합니다(부모가 있으면 그 아래에). 실패하면 로그를 남기고 nullptr 을 반환합니다. */
+            /** @brief 프리팹을 스폰합니다. 부모가 있으면 그 아래에 스폰합니다. 실패하면 로그를 남기고 nullptr 을 반환합니다. */
             static GameObject* spawnPrefabFromAssetPath( GameObjectManager* pManager, const utf8* pPath, GameObject* pParent )
             {
                 if ( pManager == nullptr || StringUtil::isNullOrEmpty( pPath ) )
@@ -58,7 +58,7 @@ namespace sw::editor
                     return nullptr;
                 }
 
-                // `getService<T>()` 는 nullptr 을 반환할 수 있다(문서에 그렇게 적혀 있다). 역참조하기 전에 확인한다.
+                // `getService<T>()` 는 nullptr 을 반환할 수 있다. 역참조하기 전에 확인한다.
                 AssetManager* pResources = editor::getService<AssetManager>();
                 if ( pResources == nullptr )
                 {
@@ -84,20 +84,20 @@ namespace sw::editor
                 return pSpawned;
             }
 
-            /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다(`getChildFolderScanCount`). */
+            /** @brief `collectChildFolders` 가 디스크를 읽은 횟수입니다. `getChildFolderScanCount` 가 반환합니다. */
             static atomic<uint64>& getChildFolderScanCounter()
             {
                 static atomic<uint64> s_scanCount{ 0 };
                 return s_scanCount;
             }
 
-            /// @brief 파일 대화 상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 **메인 스레드에서** 부릅니다.
+            /// @brief 파일 대화상자의 결과를 받습니다. `FileUtil::pumpFileDialogResults` 가 메인 스레드에서 호출합니다.
             static void onSaveSceneDialogResult( const vector<string>& listPath )
             {
                 if ( listPath.empty() )
                     return;
 
-                // 컨텍스트는 한 번 받아 검사하고 그것만 쓴다.
+                // 컨텍스트는 한 번 받아 검사하고, 그 값만 쓴다.
                 EditorContext* pContext = EditorContext::get();
                 if ( pContext == nullptr )
                     return;
@@ -133,7 +133,7 @@ namespace sw::editor
                 const EditorPendingSceneAction action = ws.getPendingSceneAction();
                 const string                   path   = ws.getPendingSceneActionPath();
                 ws.clearPendingSceneAction();
-                // 실패는 각 함수가 알린다(읽지 못한 씬 · 플레이 중).
+                // 실패는 각 함수가 알린다. 씬을 읽지 못했거나 플레이 중일 때가 해당한다.
                 if ( action == EditorPendingSceneAction::Load )
                     (void)EditorAssetCommands::loadScene( path ); // 실패는 loadScene 이 알린다
                 else if ( action == EditorPendingSceneAction::New )
@@ -266,7 +266,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return false;
 
-        // 전용 도구 패널이 먼저다(종류 표의 패널 제목). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
+        // 전용 도구 패널을 먼저 찾는다(종류 테이블의 패널 제목). 패널이 없는 종류는 그 종류의 동작이 연다(씬).
         const string_view panelTitle = EditorAssetTypeRegistry::findPanelTitleForPath( relativePath );
         if ( panelTitle.empty() == false )
         {
@@ -281,7 +281,7 @@ namespace sw::editor
 
     bool EditorAssetCommands::loadScene( string_view path )
     {
-        // 리소스 트리 안이면 리소스 id 로 연다(절대 경로 · 프로젝트 기준 경로 · id 모두). 밖이면 받은 경로 그대로다.
+        // 리소스 트리 안이면 리소스 id 로 연다. 절대 경로, 프로젝트 기준 경로, id 모두 받는다. 밖이면 받은 경로를 그대로 쓴다.
         string loadPath = ResourcePaths::toResourceID( path );
         if ( loadPath.empty() )
             loadPath = string{ path };
@@ -295,7 +295,7 @@ namespace sw::editor
 
         if ( pSceneManager->requestLoadAsync( loadPath ) == false )
         {
-            // 여기서 알린다 — 호출부는 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 골랐는데 아무 일도
+            // 여기서 알린다. 호출하는 쪽이 이 반환값을 읽지 않으므로, 조용히 false 만 반환하면 사용자가 씬을 선택했는데 아무 일도
             // 일어나지 않고 로그에도 남지 않는다.
             SW_LOG_ERROR( "Open Scene: 로드 요청 실패 — %#", loadPath );
             EditorContext* pFailContext = EditorContext::get();
@@ -415,7 +415,7 @@ namespace sw::editor
         if ( pContext == nullptr || pSceneManager == nullptr )
             return;
 
-        // 옛 씬을 가리키던 상태(선택 · dirty · Undo · 프리팹 격리)를 버린다 — 이유는 `EditorSceneGenerationSync::apply`.
+        // 이전 씬을 가리키던 상태(선택, dirty, Undo, 프리팹 격리)를 버린다. 이유는 `EditorSceneGenerationSync::apply` 에 있다.
         (void)EditorSceneGenerationSync::apply( pContext->getWorkspace(), pSceneManager->getSceneGeneration(), editor::getService<CommandStack>() );
     }
 
@@ -487,13 +487,13 @@ namespace sw::editor
         SpriteComponent* pSprite = pSpawned->addComponent<SpriteComponent>();
         if ( pSprite != nullptr )
         {
-            // 끌어 놓은 것은 리소스 id 다(콘텐츠 브라우저). 주의: 그것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
-            // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려진다.
+            // 드롭한 것은 콘텐츠 브라우저의 리소스 id 다. 이것을 프로젝트 루트 기준으로 다시 `makeRelativePath` 하면 경로가 깨져
+            // 스프라이트가 텍스처를 찾지 못하고 흰 사각형으로 그려지므로 주의한다.
             const string textureID = ResourcePaths::toResourceID( pPath );
             if ( textureID.empty() )
                 SW_LOG_WARNING( "Sprite drop: '%#' is not inside the resource tree - the sprite has no texture", pPath );
             pSprite->setTextureName( textureID );
-            // 편집 모드에서는 시작(onBeginPlay)이 없다 — 떨군 자리에서 바로 그려지게 렌더 에셋을 푼다.
+            // 편집 모드에서는 시작(onBeginPlay)이 없다. 드롭한 위치에서 바로 그려지도록 렌더 에셋을 해석한다.
             pSprite->resolveRenderAssets();
         }
 
@@ -507,7 +507,7 @@ namespace sw::editor
         if ( pManager == nullptr || pPath == nullptr )
             return;
 
-        // 스폰 · 로드는 종류의 동작이 한다(프리팹 · 텍스처 · 씬). 처리하지 않은 것은 연다.
+        // 스폰과 로드는 종류의 동작(프리팹, 텍스처, 씬)이 한다. 처리하지 않은 것은 연다.
         const IEditorAssetTypeActions* pActions = EditorAssetTypeActionsRegistry::findActionsForPath( pPath );
         if ( pActions != nullptr && pActions->dropInViewport( pManager, pPath, spawnPos ) )
             return;
@@ -520,7 +520,7 @@ namespace sw::editor
         if ( pSceneManager == nullptr )
             return false;
 
-        // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable — 잠그기 전)에는 쓰지 않고 이유를 말한다. 쓰기 실패 로그만으로는 "잠가야 한다" 가 안 보인다.
+        // 버전 관리가 읽기 전용으로 둔 파일(git LFS lockable, 잠그기 전)에는 쓰지 않고 이유를 알린다. 쓰기 실패 로그만으로는 "잠가야 한다" 는 사실이 드러나지 않는다.
         Scene*         pScene     = pSceneManager->getActiveScene();
         const string   targetPath = path.empty() && pScene != nullptr ? pScene->getSourcePath() : string{ path };
         const string   targetAbs  = FileUtil::isAbsolutePath( targetPath ) ? targetPath : FileUtil::joinPath( ResourcePaths::getRootFolderPath(), targetPath );
@@ -539,7 +539,7 @@ namespace sw::editor
         if ( pContext != nullptr )
         {
             pContext->getWorkspace().clearSceneDirty();
-            // 저장한 씬에 검증 규칙을 돌린다(결과는 로그로 — 저장을 막지 않는다).
+            // 저장한 씬에 검증 규칙을 실행한다. 결과는 로그로 알리고 저장을 막지 않는다.
             pScene = pSceneManager->getActiveScene();
             if ( pScene != nullptr )
                 pContext->getAssetValidation().requestValidation( pScene->getSourcePath() );
@@ -568,7 +568,7 @@ namespace sw::editor
         params._title              = "Save Scene";
         params._description        = "Scene";
         params._bEnableMultiselect = false;
-        // 씬 이름은 쿠커의 규칙 하나다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
+        // 씬 이름은 쿠커의 규칙 하나를 따른다(`EditorAssetTypeRegistry` → `AssetCookPath`). 맨 `.xml` 은 쿠커가 쿠킹하지 않는 이름이다.
         EditorAssetTypeRegistry::appendSuffixes( EditorAssetType::Scene, params._listFilterExtension );
         const string mapsDir = ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot, path::kMapsFolder );
         if ( FileUtil::isDirectory( mapsDir ) )
@@ -601,9 +601,9 @@ namespace sw::editor
                 continue;
             }
 
-            // **이미 있는 애셋을 덮어쓰지 않는다.** 같은 이름의 파일을 끌어다 놓아 폴더에 있던 것을 덮으면 **아무 말 없이 사라지고**,
+            // 이미 있는 애셋을 덮어쓰지 않는다. 같은 이름의 파일을 드롭해 폴더에 있던 것을 덮으면 아무 말 없이 사라지고,
             // 에디터의 임포트에는 되돌리기가 없으므로 그대로 잃는다.
-            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 **다른 파일인데 이름만 같은**
+            // "원래 있던 것과 같은 파일인가" 는 바로 위에서 경로로 이미 걸렀으므로, 여기까지 온 것은 다른 파일인데 이름만 같은
             // 경우다.
             const string destPath = ResourcePaths::makeUniqueSavePath( destFolderAbs, fileName );
 
@@ -640,7 +640,7 @@ namespace sw::editor
         const string path = FileUtil::normalizeSeparators( absolutePath );
         string       command;
 #if defined( SW_PLATFORM_WINDOWS )
-        // explorer 는 백슬래시만 받는다(슬래시를 주면 선택이 안 되고 내 문서를 연다).
+        // explorer 는 백슬래시만 받는다. 슬래시를 주면 선택이 안 되고 내 문서를 연다.
         string windowsPath = path;
         for ( utf8& ch : windowsPath )
         {
@@ -649,12 +649,12 @@ namespace sw::editor
         }
         command = "explorer.exe /select,\"" + windowsPath + "\"";
 #else
-        // 리눅스 파일 관리자에는 "선택한 채로 열기" 가 표준이 아니다. 그래서 폴더까지만 연다.
+        // 리눅스 파일 관리자에는 "선택한 채로 열기" 표준이 없다. 그래서 폴더까지만 연다.
         command = "xdg-open \"" + FileUtil::getDirectoryPart( path ) + "\"";
 #endif
 
-        // **띄우고 기다리지 않는다.** `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 그것이 띄운 창)가 출력 파이프를 놓을
-        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 돌려준다. 알 수 있는 실패는 "띄우지 못했다" 뿐이다.
+        // 실행하고 기다리지 않는다. `Process::execute` 로 기다리면 UI 스레드가 탐색기(또는 탐색기가 띄운 창)가 출력 파이프를 놓을
+        // 때까지 멈추고, `explorer.exe /select,` 는 성공해도 종료 코드 1 을 반환한다. 알 수 있는 실패는 "실행하지 못했다" 뿐이다.
         if ( Process::launchDetached( command ) == false )
         {
             SW_LOG_WARNING( "Failed to open file explorer for %#", path.c_str() );
@@ -780,7 +780,7 @@ namespace sw::editor
         if ( pManager != nullptr )
             pRoot = pManager->findGameObjectByID( frame._rootObjectID );
 
-        // 저장하지 못하면 격리를 끝내지 않는다 — 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
+        // 저장하지 못하면 격리를 끝내지 않는다. 끝내면 편집한 프리팹 내용이 저장 없이 사라진다.
         if ( bSaveToPrefab && pRoot != nullptr && EditorInspectorCommands::applyToPrefab( pRoot, frame._prefabPath ) == false )
         {
             SW_LOG_ERROR( "Prefab isolation could not save '%#' - still editing it", frame._prefabPath.c_str() );

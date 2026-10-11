@@ -33,14 +33,14 @@ namespace sw::editor
     class InspectorComponentManager;
     class InspectorPropertyManager;
 
-    /** @brief 에디터가 소유하는 뷰 RT 하나(씬 뷰 · 게임 뷰)입니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport` · `getGameViewport`). */
+    /** @brief 에디터가 소유하는 뷰 렌더 타깃 하나입니다. 씬 뷰와 게임 뷰가 각각 하나씩 가집니다. 호스트는 프레임마다 핸들만 조회합니다(`ImGuiEditor::getSceneViewport`, `getGameViewport`). */
     struct EditorViewTarget
     {
         uint64 _renderTarget{ 0 };
         void*  _pTextureID{ nullptr };
         uint32 _width{ 0 };
         uint32 _height{ 0 };
-        uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다) — 프레임 시작에 지운다
+        uint8  _bDrawn{ SW_FALSE }; ///< 이번 UI 프레임에 패널이 이 뷰를 그렸다(보인다). 프레임을 시작할 때 지운다
     };
 } // namespace sw::editor
 
@@ -48,7 +48,7 @@ namespace sw::editor
 {
     /**
      * @class EditorContext
-     * @brief 에디터의 중앙 컨텍스트입니다. 에디터 셸(ImGuiEditor)이 직접 만들고 없앱니다.
+     * @brief 에디터의 중앙 컨텍스트입니다. 에디터 셸(ImGuiEditor)이 직접 만들고 파괴합니다.
      */
     class SW_EDITOR_API EditorContext
     {
@@ -56,20 +56,20 @@ namespace sw::editor
         EditorContext();
         ~EditorContext();
 
-        /** @brief 에디터 서브시스템들을 생성 및 초기화합니다. */
+        /** @brief 에디터 서브시스템들을 만들고 초기화합니다. */
         void initialize();
-        /** @brief 에디터 서브시스템들을 정리 및 해제합니다. */
+        /** @brief 에디터 서브시스템들을 정리하고 해제합니다. */
         void shutdown();
         /**
-         * @brief 패널 · 팝업 · 인스펙터 매니저를 등록 목록과 맞춥니다. 에디터 프레임 앞에서 부릅니다.
-         * @details 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드됩니다(핫 리로드). 등록 세대가 같으면 비교 하나로 끝납니다.
+         * @brief 패널, 팝업, 인스펙터 매니저를 등록 목록과 맞춥니다. 에디터 프레임 앞에서 호출합니다.
+         * @details 확장 모듈은 에디터가 뜬 뒤에도 로드되고 언로드된다(핫 리로드). 등록 세대가 같으면 비교 한 번으로 끝난다.
          */
         void syncExtensionRegistrations();
 
         /**
-         * @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다(셸이 `initialize` 에서 걸고 `shutdown` 에서 푼다). 없으면 nullptr 입니다.
-         * @details 창구는 이것 하나입니다 — 로컬 서비스(`getService<EditorContext>`)로 다시 걸지 않습니다. 호스트(엔진) 서비스는 `EditorService.h` 의
-         *          `getService<T>()` 가, 에디터가 소유한 하위 시스템은 이 컨텍스트의 접근자가 돌려줍니다.
+         * @brief 현재 활성화된 전역 에디터 컨텍스트 포인터를 반환합니다. 셸이 `initialize` 에서 설정하고 `shutdown` 에서 해제합니다. 없으면 nullptr 입니다.
+         * @details 접근 경로는 이 함수 하나다. 로컬 서비스(`getService<EditorContext>`)로 다시 등록하지 않는다. 호스트(엔진) 서비스는 `EditorService.h` 의
+         *          `getService<T>()` 가, 에디터가 소유한 하위 시스템은 이 컨텍스트의 접근자가 반환한다.
          */
         static EditorContext* get();
         /** @brief 활성 에디터 컨텍스트 포인터를 설정합니다. */
@@ -80,31 +80,31 @@ namespace sw::editor
         EditorNotificationManager& getNotificationManager() { return *_pNotificationManager; }
         EditorCommandRegistry&     getCommandRegistry() { return *_pCommandRegistry; }
         EditorPanelManager&        getPanelManager() { return *_pPanelManager; }
-        /** @brief 패널 열기 · 최대화 · 도구 문서 저장 창구입니다. 커맨드 · 뷰포트처럼 패널 매니저(GUI)를 모르는 층이 씁니다. */
+        /** @brief 패널 열기, 최대화, 도구 문서 저장을 맡는 호스트입니다. 커맨드와 뷰포트처럼 패널 매니저(GUI)를 모르는 레이어가 씁니다. */
         IEditorPanelHost&   getPanelHost() { return *_pPanelHost; }
         EditorPopupManager& getPopupManager() { return *_pPopupManager; }
         AssetHotReload&     getAssetHotReload() { return *_pAssetHotReload; }
         /** @brief `Config/` 설정 파일 감시입니다. */
         ConfigHotReload& getConfigHotReload() { return *_pConfigHotReload; }
-        /** @brief 에디터 셸의 도킹 레이아웃입니다(소유는 `ImGuiEditor`). 셸이 서기 전이면 nullptr 입니다. */
+        /** @brief 에디터 셸의 도킹 레이아웃을 반환합니다. 소유자는 `ImGuiEditor` 입니다. 셸이 만들어지기 전이면 nullptr 입니다. */
         EditorDockLayout* findDockLayout() const { return _pDockLayout; }
-        /** @brief 셸이 도킹 레이아웃을 알립니다(내릴 때 nullptr). */
+        /** @brief 셸이 도킹 레이아웃을 알립니다. 종료할 때는 nullptr 을 넘깁니다. */
         void setDockLayout( EditorDockLayout* pDockLayout ) { _pDockLayout = pDockLayout; }
-        /** @brief 저장 · 임포트 직후 에셋 검증입니다. */
+        /** @brief 저장이나 임포트 직후에 에셋을 검증합니다. */
         EditorAssetValidation& getAssetValidation() { return *_pAssetValidation; }
-        /** @brief 버전 관리 잠금(체크아웃) 창구입니다. */
+        /** @brief 버전 관리 잠금(체크아웃)을 담당합니다. */
         EditorSourceControl&       getSourceControl() { return *_pSourceControl; }
         InspectorComponentManager& getInspectorComponentManager() { return *_pInspectorComponentManager; }
         InspectorPropertyManager&  getInspectorPropertyManager() { return *_pInspectorPropertyManager; }
-        /** @brief 컴포넌트 타입마다의 기본값 인스턴스입니다(인스펙터의 "기본값과 다름" 판정). */
+        /** @brief 컴포넌트 타입마다의 기본값 인스턴스입니다. 인스펙터가 "기본값과 다름" 을 판정할 때 씁니다. */
         EditorDefaultObjects& getDefaultObjects() { return *_pDefaultObjects; }
-        /** @brief 멀티 프로세스 재생(서버 · 클라이언트 자식 프로세스)입니다 — 툴바의 Net Mode 와 Multiplayer 창이 같이 씁니다. */
+        /** @brief 멀티 프로세스 재생(서버와 클라이언트 자식 프로세스)을 담당합니다. 툴바의 Net Mode 와 Multiplayer 창이 함께 씁니다. */
         EditorNetPlaySession& getNetPlaySession() { return *_pNetPlaySession; }
 
         void        setRHIDevice( IRHIDevice* pDevice ) { _pRHIDevice = pDevice; }
         IRHIDevice* getRHIDevice() const { return _pRHIDevice; }
         void        setRendererBackend( IImGuiRendererBackend* pBackend ) { _pRendererBackend = pBackend; }
-        /** @brief ImGui 렌더러 백엔드입니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
+        /** @brief ImGui 렌더러 백엔드를 반환합니다. 텍스처를 ImGui 에 등록하려는 패널이 씁니다. 없으면 nullptr 입니다. */
         IImGuiRendererBackend* getRendererBackend() const { return _pRendererBackend; }
         void                   setGameViewHovered( bool bHovered ) { _bGameViewHovered = bHovered ? SW_TRUE : SW_FALSE; }
         void                   setGameViewFocused( bool bFocused ) { _bGameViewFocused = bFocused ? SW_TRUE : SW_FALSE; }
@@ -113,23 +113,23 @@ namespace sw::editor
 
         /** @brief 뷰 RT 하나입니다. */
         const EditorViewTarget& getViewTarget( EditorViewKind kind ) const { return _arrViewTarget[static_cast<uint32>( kind )]; }
-        /** @brief 뷰 RT 를 그 크기로 (다시) 만듭니다. 같은 크기면 아무 일도 없습니다. */
+        /** @brief 뷰 렌더 타깃을 그 크기로 (다시) 만듭니다. 같은 크기이면 아무 일도 하지 않습니다. */
         void ensureViewTargetSize( EditorViewKind kind, uint32 width, uint32 height );
-        /** @brief 뷰 RT 하나를 놓습니다(그 RT 를 그렸을 프레임의 GPU 작업 뒤에 부서진다). */
+        /** @brief 뷰 렌더 타깃 하나를 해제합니다. 그 렌더 타깃을 그렸을 프레임의 GPU 작업이 끝난 뒤에 파괴됩니다. */
         void destroyViewTarget( EditorViewKind kind );
-        /** @brief 뷰 RT 를 모두 놓습니다. */
+        /** @brief 뷰 렌더 타깃을 모두 해제합니다. */
         void destroyViewTargets();
         /** @brief 패널이 이번 프레임에 그 뷰를 그렸다고 알립니다. 셸은 그린 뷰만 호스트에 요청합니다. */
         void markViewDrawn( EditorViewKind kind ) { _arrViewTarget[static_cast<uint32>( kind )]._bDrawn = SW_TRUE; }
-        /** @brief 이번 프레임에 그 뷰를 그렸는지입니다. */
+        /** @brief 이번 프레임에 그 뷰를 그렸으면 true 입니다. */
         bool wasViewDrawn( EditorViewKind kind ) const { return getViewTarget( kind )._bDrawn == SW_TRUE; }
-        /** @brief UI 프레임 시작 — 그린 뷰 표시를 지웁니다. */
+        /** @brief UI 프레임을 시작할 때 그린 뷰 표시를 지웁니다. */
         void clearViewDrawnMarks();
 
-        /** @brief 플레이(PIE) 세션 상태입니다. 조작은 `EditorPlaySession` 을 통합니다. */
+        /** @brief 플레이(PIE) 세션 상태를 반환합니다. 조작은 `EditorPlaySession` 을 거칩니다. */
         PlaySessionData& getPlaySessionData() { return _playSessionData; }
 
-        /** @brief 지금 적용된 테마입니다. 조작은 `EditorThemeUtil` 을 통합니다. */
+        /** @brief 현재 적용된 테마를 반환합니다. 조작은 `EditorThemeUtil` 을 거칩니다. */
         EditorThemeConfig& getThemeConfig() { return _themeConfig; }
 
     private:

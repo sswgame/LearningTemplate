@@ -31,14 +31,14 @@ namespace sw::editor
     {
         /**
          * @brief 콘텐츠 브라우저, 도구 창, 오버레이의 결함 재현 테스트입니다.
-         * @details 테스트가 디스크에 만드는 것(테스트 폴더)은 끝나는 단계에서 지운다. 실패로 일찍 끝나도 같은 정리 단계를 지난다.
+         * @details 테스트가 디스크에 만드는 테스트 폴더는 끝나는 단계에서 지운다. 실패로 일찍 끝나도 같은 정리 단계를 거친다.
          */
         struct EditorSelfTestPanelCasesInternal
         {
             static constexpr const utf8* kContentBrowserPanelID    = "content_browser";
             static constexpr const utf8* kContentBrowserPanelTitle = "Content Browser";
-            static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래 테스트 폴더 — 끝나면 지운다
-            static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커) · 파일 감시를 기다리는 최대 프레임
+            static constexpr const utf8* kProbeFolderName          = "__editorselftest"; ///< 활성 게임 팩 아래의 테스트 폴더. 끝나면 지운다
+            static constexpr uint32      kMaxWaitStepCount         = 180;                ///< 폴더 목록(워커)과 파일 감시를 기다리는 최대 프레임 수
 
             /** @brief 콘텐츠 브라우저 테스트의 진행 상태입니다. */
             struct ContentBrowserProbe
@@ -54,7 +54,7 @@ namespace sw::editor
                 return s_probe;
             }
 
-            /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다(도킹 탭이 가려져 있으면 그리기가 돌지 않는다). */
+            /** @brief 콘텐츠 브라우저를 열고 그 탭이 보이게 합니다. 도킹 탭이 가려져 있으면 그리기가 실행되지 않습니다. */
             static ContentBrowserPanel* findVisibleContentBrowser( EditorSelfTestContext& context )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -72,7 +72,7 @@ namespace sw::editor
             static bool makeProbeFolder( ContentBrowserProbe& probe, const utf8* pFileName )
             {
                 probe._folderAbs = FileUtil::joinPath( ResourcePaths::getDomainFolderPath( GameConfig::getActive()._packRoot ), kProbeFolderName );
-                if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 것
+                if ( FileUtil::removeDirectory( probe._folderAbs ) == false ) // 앞 실행이 남긴 폴더다
                     return false;
                 if ( FileUtil::ensureDirectoryExists( probe._folderAbs ) == false )
                     return false;
@@ -87,7 +87,7 @@ namespace sw::editor
                 probe = ContentBrowserProbe{};
             }
 
-            /** @brief 다음 단계로 넘어갑니다(기다림 한도는 새 단계의 시작부터 센다). */
+            /** @brief 다음 단계로 넘어갑니다. 기다림 한도는 새 단계의 시작부터 셉니다. */
             static void enterPhase( ContentBrowserProbe& probe, uint32 phase, uint32 stepIndex )
             {
                 probe._phase          = phase;
@@ -98,7 +98,7 @@ namespace sw::editor
             static bool hasPhaseTimedOut( const ContentBrowserProbe& probe, uint32 stepIndex ) { return stepIndex - probe._phaseStartStep > kMaxWaitStepCount; }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.deleteRefreshesTheList — 삭제는 확인을 거쳐 지우고 목록에서 바로 빠진다. 에디터 밖에서 더한 파일은 파일 감시로 목록에 들어온다
+            // contentBrowser.deleteRefreshesTheList: 삭제는 확인을 거쳐 지우고 목록에서 바로 빠진다. 에디터 밖에서 추가한 파일은 파일 감시로 목록에 들어온다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runDeleteRefreshesTheList( EditorSelfTestContext& context )
             {
@@ -140,10 +140,10 @@ namespace sw::editor
                             }
                             return EditorSelfTestStep::Continue;
                         }
-                        // 우클릭 Delete 와 같은 길: 확인 모달을 열고 확인한다.
+                        // 우클릭 Delete 와 같은 경로로 확인 모달을 열고 확인한다.
                         pPanel->requestDeleteAsset( FileUtil::joinPath( probe._folderAbs, kDeletedFileName ) );
                         (void)context.expect( pPanel->confirmDeleteAsset(), "confirming the delete did not delete the asset" );
-                        // 파일 감시도 같은 변경을 알리지만 프레임이 지난 뒤다 — 지운 그 자리에서 다시 읽기로 해야 한다.
+                        // 파일 감시도 같은 변경을 알리지만 프레임이 지난 뒤다. 지운 직후 그 자리에서 다시 읽어야 한다.
                         (void)context.expect( pPanel->isFolderRefreshPending(), "deleting an asset did not refresh the folder listing" );
                         enterPhase( probe, kPhaseWaitDeleted, stepIndex );
                         return EditorSelfTestStep::Continue;
@@ -159,7 +159,7 @@ namespace sw::editor
                             }
                             return EditorSelfTestStep::Continue;
                         }
-                        // 에디터 밖(탐색기 · git)의 변경 — 패널을 건드리지 않고 파일만 쓴다.
+                        // 에디터 밖(탐색기, git)의 변경을 흉내 낸다. 패널을 건드리지 않고 파일만 쓴다.
                         (void)context.expect( FileUtil::writeTextFile( FileUtil::joinPath( probe._folderAbs, kAddedFileName ), "editor self test" ),
                                               "could not write the added file" );
                         enterPhase( probe, kPhaseWaitAdded, stepIndex );
@@ -189,7 +189,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.browsingWritesNoMeta — 폴더를 보기만 해서는 `.meta` 가 생기지 않는다. GUID 는 그 에셋을 쓰는 시스템이 만든다
+            // contentBrowser.browsingWritesNoMeta: 폴더를 보기만 해서는 `.meta` 가 생기지 않는다. GUID 는 그 에셋을 쓰는 시스템이 만든다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runBrowsingWritesNoMeta( EditorSelfTestContext& context )
             {
@@ -228,9 +228,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.treeDoesNotReadTheDiskEveryFrame — 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다(프레임마다 읽으면 Debug 에서 16.8 ms 가 든다)
+            // contentBrowser.treeDoesNotReadTheDiskEveryFrame: 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다. 프레임마다 읽으면 Debug 에서 16.8 ms 가 걸린다
             // ------------------------------------------------------------------------------
-            /** @brief 폴더 트리 테스트의 진행 상태입니다. 앞 테스트가 지운 폴더의 파일 감시 사건이 캐시를 비울 수 있어 변경 번호가 멎을 때까지 기다린다. */
+            /** @brief 폴더 트리 테스트의 진행 상태입니다. 앞 테스트가 지운 폴더의 파일 감시 이벤트가 캐시를 비울 수 있으므로 변경 번호가 멈출 때까지 기다립니다. */
             struct FolderTreeProbe
             {
                 uint64 _contentSerial{ 0 };
@@ -248,9 +248,9 @@ namespace sw::editor
 
             static EditorSelfTestStep runTreeDoesNotReadTheDiskEveryFrame( EditorSelfTestContext& context )
             {
-                constexpr uint32 kPhaseSettle       = 0; ///< `Resource/` 변경 번호가 멎기를 기다린다
+                constexpr uint32 kPhaseSettle       = 0; ///< `Resource/` 변경 번호가 멈추기를 기다린다
                 constexpr uint32 kPhaseWarmUp       = 1; ///< 캐시를 비우고 트리가 한 번 그려지기를 기다린다
-                constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤 프레임들은 디스크를 읽지 않아야 한다
+                constexpr uint32 kPhaseSteady       = 2; ///< 그 뒤의 프레임들은 디스크를 읽지 않아야 한다
                 constexpr uint32 kSettleStepCount   = 10;
                 constexpr uint32 kWarmUpStepCount   = 3;
                 constexpr uint32 kSteadyStepCount   = 10;
@@ -321,7 +321,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.showsActivePackOnly — 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나이고, All packs 를 켜면 game/ 의 팩마다 하나다(O7)
+            // contentBrowser.showsActivePackOnly: 게임 루트는 활성 팩(`GameConfig::_packRoot`) 하나이고, All packs 를 켜면 game/ 의 팩마다 하나다
             // ------------------------------------------------------------------------------
             static bool& wasShowingAllPacks()
             {
@@ -357,7 +357,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
 
                 vector<string> listPackFolder;
-                (void)FileUtil::collectFolders( ResourcePaths::getDomainFolderPath( "game" ), listPackFolder, false ); // 없으면 아래 기대가 진다
+                (void)FileUtil::collectFolders( ResourcePaths::getDomainFolderPath( "game" ), listPackFolder, false ); // 없으면 아래 기대가 실패한다
                 (void)context.expect( listPackFolder.empty() == false && pPanel->getGameRootCount() == static_cast<uint32>( listPackFolder.size() ),
                                       "All packs does not list every game pack" );
                 pPanel->setShowAllPacks( wasShowingAllPacks() );
@@ -365,7 +365,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // mapCheck.selectsIssueObject — 결과 줄을 누르면 그 오브젝트가 골라진다. 검증 결과는 ValidationIssueLog::replaceIssues 로 넣는다(T2)
+            // mapCheck.selectsIssueObject: 결과 행을 누르면 그 오브젝트가 선택된다. 검증 결과는 ValidationIssueLog::replaceIssues 로 넣는다
             // ------------------------------------------------------------------------------
             struct MapCheckProbe
             {
@@ -414,7 +414,7 @@ namespace sw::editor
                 if ( stepIndex < kSettleStepCount )
                     return EditorSelfTestStep::Continue;
 
-                // 오류가 먼저이고 이 테스트의 결과는 오류 하나다 — 첫 오류 줄들 가운데 이 오브젝트의 줄을 누른다.
+                // 오류가 먼저 나오고 이 테스트의 결과는 오류 하나다. 첫 오류 행들 중에서 이 오브젝트의 행을 누른다.
                 bool bSelected = false;
                 for ( uint32 rowIndex = 0; rowIndex < pPanel->getRowCount() && bSelected == false; ++rowIndex )
                 {
@@ -436,8 +436,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // prefab.ignoresOtherFocusedAssets — 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다
-            // 프리팹으로 읽으면 Prefab Editor 가 `Missing <Prefab> root` · `Prefab source could not be loaded` 두 [Error] 를 남긴다.
+            // prefab.ignoresOtherFocusedAssets: 프리팹이 아닌 오브젝트의 오버라이드를 모을 때 포커스된 머티리얼을 프리팹으로 읽지 않는다.
+            // 프리팹으로 읽으면 Prefab Editor 가 `Missing <Prefab> root` 와 `Prefab source could not be loaded` 두 [Error] 를 남긴다.
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runPrefabIgnoresOtherFocusedAssets( EditorSelfTestContext& context )
             {
@@ -469,8 +469,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // globalVariables.groupsStack — 모듈별 묶음 표는 자기 행 수만큼만 차지한다. 묶음 표가 혼자 스크롤하면 패널 높이를 다 차지해
-            // 다음 모듈이 바깥 스크롤 아래로 밀려난다. 이 프레임에 그려진 변수 표(Pin … Reset 다섯 열)가 둘 이상이고, 어느 것도 자기 스크롤 창이 없어야 한다.
+            // globalVariables.groupsStack: 모듈별 그룹 테이블은 자기 행 수만큼만 차지한다. 그룹 테이블이 혼자 스크롤하면 패널 높이를 다 차지해서
+            // 다음 모듈이 바깥 스크롤 아래로 밀려난다. 이 프레임에 그려진 변수 테이블(Pin 에서 Reset 까지 다섯 열)이 둘 이상이고, 어느 것도 자기 스크롤 창이 없어야 한다.
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runGlobalVariableGroupsStack( EditorSelfTestContext& context )
             {
@@ -512,9 +512,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // panels.toolWindowsOpenAtAUsableSize — 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다
-            // 크기를 정하지 않은 도구 창은 내용 크기로 열려 Data Table 은 높이 100 px, User Settings 는 값 칸 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
-            // 자체 테스트는 레이아웃을 저장 · 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 걸린다.
+            // panels.toolWindowsOpenAtAUsableSize: 기본 도킹이 없는 도구 창은 닫힌 채 시작하고, 열면 쓸 수 있는 크기로 주 뷰포트 안에 뜬다.
+            // 크기를 정하지 않은 도구 창은 내용 크기로 열려서 Data Table 은 높이가 100 px 가 되고, User Settings 는 값 입력란의 폭이 0 이 된다. Input Map Editor 도 시작할 때 닫혀 있어야 한다.
+            // 자체 테스트는 레이아웃을 저장하거나 복원하지 않으므로 이 실행에서 처음 만드는 창에 처음 크기가 적용된다.
             // ------------------------------------------------------------------------------
             static constexpr const utf8* kArrFloatingToolPanelID[] = { "history", "global_variables", "render_targets", "ui_preview",
                                                                        "animation_rewind", "data_table", "input_map", "user_settings" };
@@ -553,7 +553,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     probe = ToolWindowProbe{};
-                    // 처음 열림은 레지스트리가 만드는 새 인스턴스로 본다 — 실행 중인 패널은 앞 테스트 · 사용자가 열었을 수 있다.
+                    // 처음 열림은 레지스트리가 만드는 새 인스턴스로 판단한다. 실행 중인 패널은 앞 테스트나 사용자가 열었을 수 있다.
                     for ( const utf8* pPanelID : kArrFloatingToolPanelID )
                     {
                         const EditorPanelRegistration* pRegistration = EditorRegistry<EditorPanelRegistration>::find( pPanelID );
@@ -582,7 +582,7 @@ namespace sw::editor
                 if ( probe._openStep == 0 )
                 {
                     probe._bWasOpen = pPanel->isOpen();
-                    probe._openStep = stepIndex + 1; // 0 은 "아직 열지 않음"
+                    probe._openStep = stepIndex + 1; // 0 은 "아직 열지 않음" 이다
                     (void)panelManager.setPanelOpen( pPanelID, true );
                     return EditorSelfTestStep::Continue;
                 }
@@ -609,11 +609,11 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // sceneView.overlaysStayInsideTheCanvas — 씬 뷰의 격자 · 시각화 선은 캔버스(씬 뷰 이미지) 사각형으로 잘린다
-            // 창 그리기 목록에 자르지 않고 그리면 카메라 절두체 선이 탭 · 툴바 위까지 뻗는다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
-            // 한다(격자는 기본으로 켜져 있다).
+            // sceneView.overlaysStayInsideTheCanvas: 씬 뷰의 격자와 시각화 선은 캔버스(씬 뷰 이미지) 사각형으로 잘린다.
+            // 창 그리기 목록에 자르지 않고 그리면 카메라 절두체 선이 탭과 툴바 위까지 뻗는다. 이미지 명령 뒤에 캔버스와 같은 ClipRect 의 명령이 있어야
+            // 한다. 격자는 기본으로 켜져 있다.
             // ------------------------------------------------------------------------------
-            /** @brief @p pDrawList 에서 텍스처가 @p textureID 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false. */
+            /** @brief @p pDrawList 에서 텍스처가 @p textureID 인 명령의 순번과 그 정점이 덮는 사각형을 찾습니다. 없으면 false 입니다. */
             static bool findImageCommand( const ImDrawList* pDrawList, ImTextureID textureID, int32& outCommandIndex, ImVec4& outRect )
             {
                 for ( int32 commandIndex = 0; commandIndex < pDrawList->CmdBuffer.Size; ++commandIndex )
@@ -650,7 +650,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    ImGui::SetWindowFocus( kSceneViewTitle ); // 가운데 탭이 게임 뷰 · 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
+                    ImGui::SetWindowFocus( kSceneViewTitle ); // 가운데 탭이 게임 뷰나 다른 도구로 가려져 있으면 씬 뷰가 그려지지 않는다
                     return EditorSelfTestStep::Continue;
                 }
 
@@ -678,7 +678,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 }
 
-                // 이미지 다음 명령이 오버레이(격자부터)다 — 캔버스와 같은 사각형으로 잘려 있어야 한다.
+                // 이미지 다음 명령이 오버레이(격자부터)다. 캔버스와 같은 사각형으로 잘려 있어야 한다.
                 bool bFoundCanvasClip{ false };
                 for ( int32 commandIndex = imageCommandIndex + 1; commandIndex < pCanvasDrawList->CmdBuffer.Size; ++commandIndex )
                 {

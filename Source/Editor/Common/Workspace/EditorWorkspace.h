@@ -1,6 +1,6 @@
 /**
  * @file EditorWorkspace.h
- * @brief 에디터의 선택 · 애셋 포커스 · 기즈모 · 창 열기 요청을 모아 둔 곳입니다(EditorContext 소유).
+ * @brief 에디터의 선택, 애셋 포커스, 기즈모, 창 열기 요청을 모아 둡니다. `EditorContext` 가 소유합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -25,7 +25,7 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 에디터 뷰포트 카메라 북마크 (위치, 회전, 타깃) */
+    /** @brief 에디터 뷰포트 카메라 북마크입니다. 위치, 회전, 타깃을 저장합니다. */
     struct CameraBookmark
     {
         string  _name;
@@ -39,7 +39,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief Isolation에서 숨긴 오브젝트와 이전 활성 상태 */
+    /** @brief Isolation 에서 숨긴 오브젝트와 그 이전 활성 상태입니다. */
     struct PrefabIsolationHiddenObject
     {
         uint64 _objectID{ 0 };
@@ -49,7 +49,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 제자리(in-place) 프리팹 Isolation 한 단계입니다. */
+    /** @brief 제자리(in-place) 프리팹 Isolation 의 한 단계입니다. */
     struct PrefabIsolationFrame
     {
         string                              _prefabPath;
@@ -63,7 +63,7 @@ namespace sw::editor
 {
     /**
      * @class EditorWorkspace
-     * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다(EditorContext 소유).
+     * @brief 에디터의 작업 공간 상태(선택, 포커스 애셋, 기즈모, 창 요청)를 관리합니다. `EditorContext` 가 소유합니다.
      */
     class SW_EDITOR_API EditorWorkspace
     {
@@ -72,10 +72,10 @@ namespace sw::editor
         ~EditorWorkspace() = default;
 
         // ------------------------------------------------------------------------------
-        // 1) 선택 — 오브젝트 / 컴포넌트
+        // 1) 선택: 오브젝트와 컴포넌트
         // ------------------------------------------------------------------------------
         uint64 getSelectedObjectID() const;
-        /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. 이번 호출 안에서만 쓰십시오. */
+        /** @brief 처음 선택한 오브젝트입니다. 선택이 없거나 사라졌으면 nullptr 입니다. 이번 호출 안에서만 쓰세요. */
         GameObject* getSelectedObject() const;
         uint64      getSelectedComponentID() const { return _selectedComponentID; }
         void        setSelectedComponentID( uint64 id ) { _selectedComponentID = id; }
@@ -94,31 +94,31 @@ namespace sw::editor
         void          setFocusedAssetPath( const utf8* pPath );
 
         // ------------------------------------------------------------------------------
-        // 3) 기즈모 — 조작 모드 / 로컬 스페이스
+        // 3) 기즈모: 조작 모드와 로컬 스페이스
         // ------------------------------------------------------------------------------
         int32 getGizmoOperation() const { return _gizmoOperation; }
         void  setGizmoOperation( int32 op ) { _gizmoOperation = op; }
 
         bool isGizmoLocalSpace() const { return _bGizmoLocalSpace == SW_TRUE; }
-        /** @brief 뷰포트에서 고르지 못하게 잠갔으면 true 입니다(Hierarchy 에서는 고를 수 있다 — 유니티 Pickability · 언리얼 잠금). 저장되지 않습니다. */
+        /** @brief 뷰포트에서 선택하지 못하게 잠갔으면 true 입니다. Hierarchy 에서는 선택할 수 있습니다. 유니티의 Pickability, 언리얼의 잠금에 해당합니다. 저장되지 않습니다. */
         bool isObjectLocked( uint64 objectID ) const;
-        /** @brief 뷰포트 고르기 잠금을 걸거나 풉니다. */
+        /** @brief 뷰포트 선택 잠금을 걸거나 풉니다. */
         void setObjectLocked( uint64 objectID, bool bLocked );
         void setGizmoLocalSpace( bool bLocal ) { _bGizmoLocalSpace = ( bLocal ) ? SW_TRUE : SW_FALSE; }
 
         // ------------------------------------------------------------------------------
-        // 4) 창 열기 요청 (메뉴가 넣고 셸이 소비한다)
+        // 4) 창 열기 요청. 메뉴가 넣고 셸이 소비한다
         // ------------------------------------------------------------------------------
         void requestOpenPanel( const utf8* pTitle );
         bool consumeOpenPanel( string& outTitle );
 
         // ------------------------------------------------------------------------------
-        // 5) 씬 열기 (파일 대화 상자는 백그라운드, 소비는 메인 스레드)
+        // 5) 씬 열기. 파일 대화상자는 백그라운드에서 열고, 소비는 메인 스레드에서 한다
         // ------------------------------------------------------------------------------
         void requestLoadScene( string_view path );
         bool consumeLoadScene( string& outPath );
 
-        /** @brief 미저장 확인 뒤에 이어서 할 씬 동작을 넣습니다. */
+        /** @brief 미저장 확인 뒤에 이어서 할 씬 동작을 등록합니다. */
         void                     setPendingSceneAction( EditorPendingSceneAction action, string_view loadPath = {} );
         EditorPendingSceneAction getPendingSceneAction() const { return _pendingSceneAction; }
         const string&            getPendingSceneActionPath() const { return _pendingSceneActionPath; }
@@ -130,27 +130,27 @@ namespace sw::editor
 
         /** @brief 활성 씬에 저장되지 않은 에디터 변경이 있음을 표시합니다. */
         void markSceneDirty() { _bSceneDirty = SW_TRUE; }
-        /** @brief 씬 dirty 플래그를 지웁니다. 저장/로드 성공 시 호출합니다. */
+        /** @brief 씬 dirty 플래그를 지웁니다. 저장이나 로드에 성공했을 때 호출합니다. */
         void clearSceneDirty() { _bSceneDirty = SW_FALSE; }
-        /** @brief 저장하지 않은 씬 변경이 있으면 true입니다. */
+        /** @brief 저장하지 않은 씬 변경이 있으면 true 입니다. */
         bool isSceneDirty() const { return _bSceneDirty == SW_TRUE; }
 
         // ------------------------------------------------------------------------------
-        // 6) 스크롤 타깃 · 본 계층 팝업
+        // 6) 스크롤 타깃과 본 계층 팝업
         // ------------------------------------------------------------------------------
         uint64 getScrollToComponentID() const { return _scrollToComponentID; }
         void   setScrollToComponentID( uint64 id ) { _scrollToComponentID = id; }
 
         // ------------------------------------------------------------------------------
-        // 7) 프리팹 인스턴스 경로 — 활성 씬(`Scene::getEntityPrefabPath`)이 원본이고 여기는 창구일 뿐입니다
+        // 7) 프리팹 인스턴스 경로. 원본은 활성 씬(`Scene::getEntityPrefabPath`)이고 여기는 접근 함수일 뿐이다
         // ------------------------------------------------------------------------------
-        /** @brief 활성 씬에 오브젝트의 프리팹 경로를 적습니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
+        /** @brief 활성 씬에 오브젝트의 프리팹 경로를 기록합니다. 빈 경로는 연결을 끊습니다. 활성 씬이 없으면 아무것도 하지 않습니다. */
         void setGameObjectPrefabPath( uint64 objectID, string_view prefabPath );
-        /** @brief 활성 씬이 적어 둔 오브젝트의 프리팹 경로입니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
+        /** @brief 활성 씬이 기록해 둔 오브젝트의 프리팹 경로를 반환합니다. 프리팹 인스턴스가 아니거나 활성 씬이 없으면 빈 문자열입니다. */
         string_view getGameObjectPrefabPath( uint64 objectID ) const;
 
         // ------------------------------------------------------------------------------
-        // 8) 뷰포트 카메라 북마크 (0~8 인덱스, 1~9 슬롯)
+        // 8) 뷰포트 카메라 북마크. 인덱스는 0~8이고 슬롯은 1~9다
         // ------------------------------------------------------------------------------
         void                  setCameraBookmark( uint32 slot, const CameraBookmark& bookmark );
         const CameraBookmark* getCameraBookmark( uint32 slot ) const;
@@ -158,17 +158,17 @@ namespace sw::editor
         void                  clearCameraBookmark( uint32 slot );
 
         // ------------------------------------------------------------------------------
-        // 9) 컴포넌트 복사/붙여넣기 & 프리셋 (에디터 클립보드)
+        // 9) 컴포넌트 복사, 붙여 넣기, 프리셋(에디터 클립보드)
         // ------------------------------------------------------------------------------
         void          copyComponent( const Component* pComp );
         bool          hasCopiedComponent() const;
         const string& getCopiedComponentTypeName() const { return _copiedComponentTypeName; }
-        /** @brief 복사한 컴포넌트의 바이너리 값입니다(붙여넣기는 `EditorTransformCommands::pasteCopiedComponentValues`). */
+        /** @brief 복사한 컴포넌트의 바이너리 값입니다. 붙여 넣기는 `EditorTransformCommands::pasteCopiedComponentValues` 가 합니다. */
         const vector<uint8>& getCopiedComponentBytes() const { return _copiedComponentBytes; }
-        /** @brief 바이너리로 옮기지 못하는 값의 XML 대체본입니다. */
+        /** @brief 바이너리로 옮기지 못하는 값의 XML 대체 사본입니다. */
         const string& getCopiedComponentXML() const { return _copiedComponentXML; }
 
-        // 붙여넣기 · 프리셋 · 정렬 · 분배 · 바닥 스냅은 여기 전달자를 두지 않는다. 로직은 EditorTransformCommands 에 있고(작업 공간은 클립보드만 든다),
+        // 붙여 넣기, 프리셋, 정렬, 분배, 바닥 스냅은 여기에 전달 함수를 두지 않는다. 로직은 EditorTransformCommands 에 있고(작업 공간은 클립보드만 보관한다),
         // 커맨드 레지스트리(transform.*)를 거친다.
 
         bool                        isPrefabIsolationActive() const { return _bPrefabIsolation == SW_TRUE; }
@@ -176,7 +176,7 @@ namespace sw::editor
         uint64                      getPrefabIsolationRootID() const;
         const PrefabIsolationFrame* getPrefabIsolationFrame() const;
         void                        pushPrefabIsolation( PrefabIsolationFrame frame );
-        /** @brief 한 단계를 나갑니다. 스택이 비면 true입니다. */
+        /** @brief 한 단계를 나갑니다. 스택이 비면 true 입니다. */
         bool popPrefabIsolation();
         void clearPrefabIsolation();
 
@@ -197,7 +197,7 @@ namespace sw::editor
         mutex                        _pendingSceneMutex;
         array<CameraBookmark, 9>     _arrCameraBookmark;
         vector<PrefabIsolationFrame> _listPrefabIsolationFrame;
-        vector<uint64>               _listLockedObjectID; ///< 뷰포트 고르기를 잠근 오브젝트 id
+        vector<uint64>               _listLockedObjectID; ///< 뷰포트 선택을 잠근 오브젝트 id
         int32                        _gizmoOperation;
         EditorPendingSceneAction     _pendingSceneAction;
         uint8                        _bGizmoLocalSpace  : 1;

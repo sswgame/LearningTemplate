@@ -1,6 +1,6 @@
 /**
  * @file EditorDocumentPanel.h
- * @brief 포커스 애셋 경로와 연동되는 온디맨드 도구 패널
+ * @brief 포커스한 애셋 경로와 연동되어 필요할 때 여는 도구 패널의 기반 클래스입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,7 +17,7 @@ namespace sw::editor
 {
     /**
      * @class EditorDocumentPanel
-     * @brief 워크스페이스 포커스 경로가 지정 애셋 종류와 맞으면 문서를 바꿉니다.
+     * @brief 워크스페이스 포커스 경로가 지정한 애셋 종류와 맞으면 문서를 바꿉니다.
      */
     class SW_EDITOR_API EditorDocumentPanel : public IEditorPanel
     {
@@ -27,26 +27,26 @@ namespace sw::editor
 
     protected:
         /**
-         * @param kind 이 패널이 다루는 애셋 종류
-         * @param bLoadOnOpen true면 포커스가 없어도 첫 draw에서 로드를 요청합니다 (기본 문서).
+         * @param kind 이 패널이 다루는 애셋 종류입니다.
+         * @param bLoadOnOpen true 이면 포커스가 없어도 첫 draw 에서 로드를 요청합니다. 기본 문서를 여는 용도입니다.
          */
         explicit EditorDocumentPanel( EditorAssetType kind, bool bLoadOnOpen );
 
-        /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true입니다. */
+        /** @brief 포커스가 이 종류이고 현재 로드 경로와 다르면 true 입니다. */
         bool hasNewFocusedDocument() const;
-        /** @brief 매칭된 포커스 경로입니다. 매칭이 없으면 empty입니다. */
+        /** @brief 매칭된 포커스 경로를 반환합니다. 매칭이 없으면 빈 문자열입니다. */
         string_view getMatchingFocusedPath() const;
         /** @brief 포커스 경로를 로드 경로로 확정하고 로드가 필요함을 표시합니다. */
         void acceptFocusedDocument();
-        /** @brief dirty면 확인 팝업, 아니면 포커스 경로를 받아들입니다. */
+        /** @brief dirty 이면 확인 팝업을 띄우고, 아니면 포커스 경로를 받아들입니다. */
         void updateFocusedDocument();
         /**
-         * @brief "Open..." 단추(이 종류의 에셋을 찾아 고르는 팝업)와 최근 문서 콤보를 한 줄에 그립니다.
-         * @details 고른 문서는 워크스페이스 포커스로 넘깁니다. 바꾸기 · 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 합니다.
-         *          이름은 `<패널 id>.open`, 팝업 검색 칸 `<패널 id>.open.search`, 목록 줄 `<패널 id>.open.<파일 이름>` 입니다.
+         * @brief "Open..." 버튼(이 종류의 에셋을 찾아 고르는 팝업)과 최근 문서 콤보를 한 줄에 그립니다.
+         * @details 고른 문서는 워크스페이스 포커스로 넘긴다. 문서 교체와 미저장 확인은 다음 그리기의 `updateFocusedDocument` 가 한다.
+         *          레이블은 `<패널 id>.open`, 팝업 검색 입력란은 `<패널 id>.open.search`, 목록 항목은 `<패널 id>.open.<파일 이름>` 이다.
          */
         void drawDocumentOpenBar( const utf8* pMarkPrefix );
-        /** @brief 최근에 연 문서(새 것이 앞, 최대 `kMaxRecentDocumentCount`)입니다. */
+        /** @brief 최근에 연 문서 목록을 반환합니다. 새 것이 앞이고 최대 `kMaxRecentDocumentCount` 개입니다. */
         const vector<string>& getRecentDocumentPaths() const { return _listRecentPath; }
 
         const string& getLoadedAssetPath() const { return _loadedAssetPath; }
@@ -55,25 +55,25 @@ namespace sw::editor
         bool          canSaveDocument() const override { return _bLoadFailed == SW_FALSE; }
 
         /**
-         * @brief 이 패널의 문서를 (다시) 읽어 내용을 채웁니다. **읽음 · 못 읽음 표시는 기반이 결과로 합니다**(`reloadDocument`) — 패널은 표시하지 않습니다.
-         * @details `Missing` 은 새 문서(기본값으로 시작하고 저장하면 만든다), `Malformed` 는 저장을 막는다(읽지 못한 파일을 앞 문서로 덮지 않게).
-         *          패널이 "읽었다" 표시를 직접 부르지 않는다 — 읽기 결과를 버리고 늘 읽었다고 표시하는 일을 막는다.
+         * @brief 이 패널의 문서를 (다시) 읽어 내용을 채웁니다. 읽음 또는 못 읽음 표시는 기반 클래스가 결과를 보고 하며(`reloadDocument`), 패널은 표시하지 않습니다.
+         * @details `Missing` 은 새 문서이며 기본값으로 시작하고 저장하면 파일을 만든다. `Malformed` 는 저장을 막는다. 읽지 못한 파일을 이전 문서로 덮어쓰지 않기 위해서다.
+         *          패널이 "읽었다" 표시를 직접 호출하지 않는다. 읽기 결과를 버리고 항상 읽었다고 표시하는 일을 막기 위해서다.
          */
         virtual ToolAssetLoadResult loadDocument() = 0;
-        /** @brief 문서를 읽고 결과를 표시합니다. 첫 그리기(`ensureDocumentLoaded`)와 패널의 Load · Reload 단추가 부릅니다. */
+        /** @brief 문서를 읽고 결과를 표시합니다. 첫 그리기(`ensureDocumentLoaded`)와 패널의 Load, Reload 버튼이 호출합니다. */
         void reloadDocument();
-        /** @brief 아직 읽지 않았으면 읽습니다. 그리기 머리(`updateFocusedDocument` 다음)에서 부릅니다. */
+        /** @brief 아직 읽지 않았으면 읽습니다. 그리기 앞부분(`updateFocusedDocument` 다음)에서 호출합니다. */
         void ensureDocumentLoaded();
 
         /**
-         * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true입니다.
+         * @brief 현재 문서를 디스크에 저장합니다. 성공하면 true 입니다.
          * @details 기반(IEditorPanel)에는 "문서 없음" 기본 구현이 있지만, 문서 패널은 반드시 구현해야 하므로 여기서 다시 순수
-         *          가상으로 선언합니다. 구현을 잊으면 컴파일이 막힙니다.
+         *          가상으로 선언한다. 구현을 잊으면 컴파일이 실패한다.
          */
         [[nodiscard]] bool saveDocument() override = 0;
-        /** @brief 편집 단위 Undo를 남기고 dirty로 표시합니다. */
+        /** @brief 편집 단위로 Undo 를 남기고 dirty 로 표시합니다. */
         void notifyDocumentEdited( string_view label, string_view coalesceKey = {} );
-        /** @brief 로드/저장 직후 Undo 기준 텍스트를 맞춥니다. */
+        /** @brief 로드나 저장 직후에 Undo 기준 텍스트를 맞춥니다. */
         void syncDocumentUndoBaseline();
         /** @brief 현재 문서를 텍스트로 직렬화합니다. */
         virtual string captureDocumentText() const { return {}; }
@@ -96,15 +96,15 @@ namespace sw::editor
 
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
-        /** @brief 문서를 엽니다(워크스페이스 포커스로 넘긴다). */
+        /** @brief 문서를 엽니다. 워크스페이스 포커스로 넘깁니다. */
         void requestOpenDocument( string_view assetPath );
-        /** @brief 최근 문서 목록 맨 앞에 @p assetPath 를 둡니다(중복은 뺀다). */
+        /** @brief 최근 문서 목록 맨 앞에 @p assetPath 를 둡니다. 중복은 뺍니다. */
         void rememberRecentDocument( string_view assetPath );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
-        /** @brief 읽었다(또는 새 문서) — 저장을 허용하고 되돌리기 기준을 맞춥니다. */
+        /** @brief 읽었거나 새 문서임을 표시합니다. 저장을 허용하고 되돌리기 기준을 맞춥니다. */
         void markDocumentLoaded();
-        /** @brief 읽지 못했다 — 다시 읽으려 하지 않고(`isDocumentLoaded`), **저장을 막습니다**(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀린다. */
+        /** @brief 읽지 못했음을 표시합니다. 다시 읽으려 하지 않고(`isDocumentLoaded`) 저장을 막습니다(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀립니다. */
         void markDocumentLoadFailed( string_view reason );
 
         EditorAssetType                       _kind;
