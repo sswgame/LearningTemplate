@@ -1574,7 +1574,7 @@ SW_TEST_CASE( SceneTest, PrefabInstanceWithSavedStateIsBuiltOnce )
     sw::GameObject* pInstance = pScene->getObjectManager()->findGameObjectByName( sw::hashed_string( "Lifecycle" ) );
     SW_ASSERT_NOT_NULL( pInstance );
     SW_EXPECT_TRUE( pInstance->getComponent<sw::MockPoolLifecycleComponent>() != nullptr );
-    SW_EXPECT_STREQ( prefabPath.c_str(), pScene->getEntityPrefabPath( pInstance->getObjectID() ).c_str() );
+    SW_EXPECT_STREQ( prefabPath.c_str(), sw::string{ pScene->getEntityPrefabPath( pInstance->getObjectID() ) }.c_str() );
 
     manager.shutdown();
 }

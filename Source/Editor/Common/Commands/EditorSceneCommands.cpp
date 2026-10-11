@@ -172,8 +172,8 @@ namespace sw::editor
         EditorTransaction::beginTransaction( "Duplicate GameObject" );
         for ( size_t copyIndex = 0; copyIndex < listCopy.size(); ++copyIndex )
         {
-            const string prefabPath =
-                ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() ) : string{};
+            const string prefabPath{ ( pContext != nullptr ) ? pContext->getWorkspace().getGameObjectPrefabPath( listSource[copyIndex]->getObjectID() )
+                                                             : string_view{} };
             if ( prefabPath.empty() == false && pContext != nullptr )
                 pContext->getWorkspace().setGameObjectPrefabPath( listCopy[copyIndex]->getObjectID(), prefabPath );
             EditorTransaction::recordCreation( listCopy[copyIndex], "Duplicate GameObject" );

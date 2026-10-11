@@ -116,10 +116,11 @@ namespace sw
         return _pOpenFile != nullptr ? _pOpenFile->_size : 0;
     }
 
-    const string& AsyncFileHandle::getPath() const
+    string_view AsyncFileHandle::getPath() const
     {
-        static const string s_emptyPath{};
-        return _pOpenFile != nullptr ? _pOpenFile->_path : s_emptyPath;
+        if ( _pOpenFile == nullptr )
+            return {};
+        return _pOpenFile->_path;
     }
 
     bool AsyncFileHandle::readAt( uint64 offset, void* pDst, size_t size ) const

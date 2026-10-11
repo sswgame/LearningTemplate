@@ -479,26 +479,24 @@ namespace sw
         return text;
     }
 
-    const string& CultureInfo::findDatePattern( string_view styleName ) const
+    string_view CultureInfo::findDatePattern( string_view styleName ) const
     {
-        static const string s_empty{};
         if ( styleName.empty() || styleName == "medium" )
             return _dateMedium;
         if ( styleName == "short" )
             return _dateShort;
         if ( styleName == "long" || styleName == "full" )
             return _dateLong;
-        return s_empty;
+        return {};
     }
 
-    const string& CultureInfo::findTimePattern( string_view styleName ) const
+    string_view CultureInfo::findTimePattern( string_view styleName ) const
     {
-        static const string s_empty{};
         if ( styleName.empty() || styleName == "short" )
             return _timeShort;
         if ( styleName == "medium" || styleName == "long" || styleName == "full" )
             return _timeMedium;
-        return s_empty;
+        return {};
     }
 
     string CultureInfo::formatDateTime( const TextDateTime& value, string_view pattern ) const

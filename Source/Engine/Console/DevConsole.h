@@ -68,10 +68,13 @@ namespace sw
          */
         bool complete( string& inoutLine, vector<string>& outListCandidate ) const;
 
-        /** @brief 기록에서 하나 앞(오래된 쪽)으로 갑니다. 더 없으면 nullptr 입니다. */
-        const string* moveHistoryBack();
-        /** @brief 기록에서 하나 뒤(새 쪽)로 갑니다. 끝을 지나면 빈 줄을 돌려줍니다. 기록 밖이면 nullptr 입니다. */
-        const string* moveHistoryForward();
+        /** @brief 기록에서 하나 앞(오래된 쪽)으로 가서 그 줄을 @p outLine 에 담습니다. 더 없으면 false 이고 @p outLine 은 그대로입니다. */
+        [[nodiscard]] bool moveHistoryBack( string& outLine );
+        /**
+         * @brief 기록에서 하나 뒤(새 쪽)로 가서 그 줄을 @p outLine 에 담습니다. 끝을 지나면 빈 줄을 담습니다.
+         * @return 기록 밖이면 false 이고 @p outLine 은 그대로입니다.
+         */
+        [[nodiscard]] bool moveHistoryForward( string& outLine );
         /** @brief 기록 위치를 새 줄로 되돌립니다. */
         void resetHistoryCursor() { _historyCursor = static_cast<uint32>( _listHistory.size() ); }
 

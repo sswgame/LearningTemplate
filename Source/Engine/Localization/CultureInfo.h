@@ -142,9 +142,9 @@ namespace sw
         /** @brief 날짜 · 시각을 CLDR 패턴(`y` · `M` · `d` · `H` · `h` · `m` · `s` · `a`, 작은따옴표 글자)으로 씁니다. */
         string formatDateTime( const TextDateTime& value, string_view pattern ) const;
         /** @brief `short` · `medium` · `long` 날짜 패턴입니다. 모르는 이름이면 빈 값입니다. */
-        const string& findDatePattern( string_view styleName ) const;
+        string_view findDatePattern( string_view styleName ) const;
         /** @brief `short` · `medium` 시각 패턴입니다. 모르는 이름이면 빈 값입니다. */
-        const string& findTimePattern( string_view styleName ) const;
+        string_view findTimePattern( string_view styleName ) const;
         /** @brief 소수 실수의 보이는 소수 자리 수입니다(`formatDecimal` 과 같은 반올림). 복수형 피연산자를 만들 때 씁니다. */
         static uint32 countVisibleFraction( float64 value, uint32 minFraction, uint32 maxFraction );
 

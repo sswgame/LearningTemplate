@@ -184,7 +184,7 @@ namespace
  */
 SW_TEST_CASE( LogTest, LoggerInitialized )
 {
-    const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     SW_EXPECT_FALSE( folderPath.empty() );
 }
 
@@ -193,7 +193,7 @@ SW_TEST_CASE( LogTest, LoggerInitialized )
  */
 SW_TEST_CASE( LogTest, LogFolderExists )
 {
-    const sw::string& folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
+    const sw::string_view folderPath = sw::Logger::getGlobalSink()->getLogFolderPath();
     if ( folderPath.empty() == false )
         SW_EXPECT_TRUE( sw::FileUtil::isDirectory( folderPath ) );
 }

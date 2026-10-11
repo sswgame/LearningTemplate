@@ -498,12 +498,11 @@ namespace sw
             _mapPrefabSource[objectID] = string{ prefabPath };
     }
 
-    const string& Scene::getEntityPrefabPath( uint64 objectID ) const
+    string_view Scene::getEntityPrefabPath( uint64 objectID ) const
     {
-        static const string s_emptyString{};
-        const auto          it = _mapPrefabSource.find( objectID );
+        const auto it = _mapPrefabSource.find( objectID );
         if ( it != _mapPrefabSource.end() )
             return it->second;
-        return s_emptyString;
+        return {};
     }
 } // namespace sw

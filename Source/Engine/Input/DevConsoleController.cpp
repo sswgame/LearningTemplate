@@ -114,15 +114,9 @@ namespace sw
                 if ( DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleDeleteBackwardAction ) )
                     DevConsoleControllerInternal::removeLastCharacter( _inputLine );
                 if ( DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleHistoryBackAction ) )
-                {
-                    if ( const string* pLine = _console.moveHistoryBack() )
-                        _inputLine = *pLine;
-                }
+                    (void)_console.moveHistoryBack( _inputLine ); // 기록이 더 없으면 줄을 그대로 둔다
                 if ( DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleHistoryForwardAction ) )
-                {
-                    if ( const string* pLine = _console.moveHistoryForward() )
-                        _inputLine = *pLine;
-                }
+                    (void)_console.moveHistoryForward( _inputLine ); // 기록 밖이면 줄을 그대로 둔다
                 if ( DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleCompleteAction ) )
                     completeInputLine();
                 if ( DevConsoleControllerInternal::wasTriggered( shellMap, InputMapDefaults::kDevConsoleSubmitAction ) )

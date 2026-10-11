@@ -77,11 +77,12 @@ namespace sw::editor
                 }
                 if ( pData->EventFlag == ImGuiInputTextFlags_CallbackHistory )
                 {
-                    const string* pLine = pData->EventKey == ImGuiKey_UpArrow ? pConsole->moveHistoryBack() : pConsole->moveHistoryForward();
-                    if ( pLine != nullptr )
+                    string     line;
+                    const bool bMoved = pData->EventKey == ImGuiKey_UpArrow ? pConsole->moveHistoryBack( line ) : pConsole->moveHistoryForward( line );
+                    if ( bMoved )
                     {
                         pData->DeleteChars( 0, pData->BufTextLen );
-                        pData->InsertChars( 0, pLine->c_str() );
+                        pData->InsertChars( 0, line.c_str() );
                     }
                 }
                 return 0;

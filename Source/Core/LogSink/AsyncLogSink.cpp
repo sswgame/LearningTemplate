@@ -250,10 +250,11 @@ namespace sw
         return true;
     }
 
-    const string& AsyncLogSink::getLogFolderPath()
+    string_view AsyncLogSink::getLogFolderPath()
     {
-        static const string s_empty{};
-        return ( _pFileOutput != nullptr ) ? _pFileOutput->getLogFolderPath() : s_empty;
+        if ( _pFileOutput == nullptr )
+            return {};
+        return _pFileOutput->getLogFolderPath();
     }
 
     void AsyncLogSink::workerLoop()

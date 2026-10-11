@@ -229,20 +229,18 @@ SW_TEST_CASE( DevConsoleTest, HistoryWalksBothWays )
     (void)console.submit( "gv_testSpeed 2" );
     SW_ASSERT_EQUAL( size_t( 2 ), console.getHistory().size() );
 
-    const string* pLine = console.moveHistoryBack();
-    SW_ASSERT_NOT_NULL( pLine );
-    SW_EXPECT_STREQ( "gv_testSpeed 2", pLine->c_str() );
-    pLine = console.moveHistoryBack();
-    SW_ASSERT_NOT_NULL( pLine );
-    SW_EXPECT_STREQ( "gv_testSpeed 1", pLine->c_str() );
-    SW_EXPECT_NULL( console.moveHistoryBack() );
-    pLine = console.moveHistoryForward();
-    SW_ASSERT_NOT_NULL( pLine );
-    SW_EXPECT_STREQ( "gv_testSpeed 2", pLine->c_str() );
-    pLine = console.moveHistoryForward();
-    SW_ASSERT_NOT_NULL( pLine );
-    SW_EXPECT_TRUE( pLine->empty() );
-    SW_EXPECT_NULL( console.moveHistoryForward() );
+    string line;
+    SW_ASSERT_TRUE( console.moveHistoryBack( line ) );
+    SW_EXPECT_STREQ( "gv_testSpeed 2", line.c_str() );
+    SW_ASSERT_TRUE( console.moveHistoryBack( line ) );
+    SW_EXPECT_STREQ( "gv_testSpeed 1", line.c_str() );
+    SW_EXPECT_FALSE( console.moveHistoryBack( line ) );
+    SW_EXPECT_STREQ( "gv_testSpeed 1", line.c_str() ); // 실패하면 줄을 건드리지 않는다
+    SW_ASSERT_TRUE( console.moveHistoryForward( line ) );
+    SW_EXPECT_STREQ( "gv_testSpeed 2", line.c_str() );
+    SW_ASSERT_TRUE( console.moveHistoryForward( line ) );
+    SW_EXPECT_TRUE( line.empty() );
+    SW_EXPECT_FALSE( console.moveHistoryForward( line ) );
 
     // 출력 줄: 입력 줄과 답이 쌓인다.
     SW_EXPECT_TRUE( console.getOutput().size() >= 4 );

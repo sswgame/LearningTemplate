@@ -204,11 +204,11 @@ namespace sw::editor
         pScene->setEntityPrefabPath( objectID, prefabPath );
     }
 
-    const string& EditorWorkspace::getGameObjectPrefabPath( uint64 objectID ) const
+    string_view EditorWorkspace::getGameObjectPrefabPath( uint64 objectID ) const
     {
         const Scene* pScene = editor::getActiveScene();
         if ( pScene == nullptr )
-            return _emptyString;
+            return {};
         return pScene->getEntityPrefabPath( objectID );
     }
 

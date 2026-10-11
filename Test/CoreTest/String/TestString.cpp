@@ -1722,7 +1722,7 @@ namespace
             (void)pEnd;
             return 0;
         }
-        const sw::string& getLogFolderPath() override { return _folderPath; }
+        sw::string_view getLogFolderPath() override { return _folderPath; }
 
         static constexpr uint32 kMaxWriteCount = 8;
 

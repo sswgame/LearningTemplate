@@ -279,10 +279,11 @@ namespace test
             return _pWrappedSink != nullptr ? _pWrappedSink->releaseListenerCodeWithin( pBegin, pEnd ) : 0;
         }
 
-        const sw::string& getLogFolderPath() override
+        sw::string_view getLogFolderPath() override
         {
-            static const sw::string s_emptyPath{};
-            return _pWrappedSink != nullptr ? _pWrappedSink->getLogFolderPath() : s_emptyPath;
+            if ( _pWrappedSink == nullptr )
+                return {};
+            return _pWrappedSink->getLogFolderPath();
         }
 
         void flushForCrash() override

@@ -125,7 +125,7 @@ namespace sw::editor
                 {
                     for ( const EditorComponentIconRow& row : kArrCategoryRow )
                     {
-                        if ( string_view{ pType->getCategory() } == row._pKey )
+                        if ( pType->getCategory() == row._pKey )
                             return row;
                     }
                 }

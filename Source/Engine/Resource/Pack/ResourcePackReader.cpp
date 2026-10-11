@@ -215,7 +215,7 @@ namespace sw
         return true;
     }
 
-    bool ResourcePackReader::decodeStoredBytes( const PackReadPlan& plan, const string& packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
+    bool ResourcePackReader::decodeStoredBytes( const PackReadPlan& plan, string_view packPath, vector<uint8>& storedBytes, vector<uint8>& outBytes )
     {
         // 1. 비압축(Raw) 항목은 읽은 버퍼가 곧 결과다(중간 버퍼 할당과 복사가 없다).
         if ( plan._compression == PackCompressionType::None )
