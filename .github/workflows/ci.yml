@@ -25,6 +25,7 @@ jobs:
   lint:
     name: Lints (gates + self-tests)
     runs-on: ubuntu-22.04
+    timeout-minutes: 30
     outputs:
       code: ${{ steps.changes.outputs.code }}
 
@@ -53,7 +54,8 @@ jobs:
         echo "code=$code" >> "$GITHUB_OUTPUT"
         echo "build jobs: $code"
 
-    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자) — 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다(빌드 잡마다 그 구성으로 돈다 — 아래 "Source glob coverage"). 시간 표는 단계 요약 · 아티팩트로.
+    # 게이트 + 셀프테스트 전부(CTest 의 lint 라벨과 같은 목록 · 인자). 빌드 폴더가 없어 CheckSourceGlob 만 건너뛴다(빌드 잡마다 돈다).
+    # 시간 표는 lint-timing 아티팩트로 올린다.
     - name: Run all lints (gates + self-tests) with timings
       run: |
         python3 Scripts/lint/RunLintSuite.py --json lint-timing.json --hook-sample 1,10
@@ -70,8 +72,10 @@ jobs:
     needs: lint
     if: needs.lint.outputs.code == 'true'
     runs-on: ${{ matrix.os }}
-    # 매트릭스 항목에 `reportOnly: true` 를 주면 그 잡은 **보고만 한다**(실패해도 CI 를 붉게 하지 않는다). 새 검사(새니타이저 등)를 처음
-    # 켤 때 기존 트리의 보고를 먼저 추리는 동안 쓴다. TSan 은 그렇게 시작해 첫 보고 둘(46c78038)을 고친 뒤 막는 잡이 됐다.
+    # vcpkg 를 처음부터 지으면 Windows 에서 한 시간이 넘으므로 한도는 그보다 길게 둔다.
+    timeout-minutes: 180
+    # 매트릭스 항목에 `reportOnly: true` 를 주면 그 잡은 보고만 한다(실패해도 CI 를 붉게 하지 않는다). 새 검사(새니타이저 등)를 처음 켜고
+    # 기존 트리의 보고를 추리는 동안 쓴다.
     continue-on-error: ${{ matrix.reportOnly == true }}
     strategy:
       fail-fast: false
@@ -89,15 +93,14 @@ jobs:
             os: ubuntu-22.04
             preset: CI-Debug-ASAN
 
-          # 프리셋이 트리플릿 `x64-linux-tsan`(cmake/Modules/Toolchain/VcpkgTsan — Jolt · Box2D 를 -fsanitize=thread 로 짓는다)을 쓴다. 트리플릿 파일이
-          # ABI 해시에 들어 포트가 다른 리눅스 잡과 하나도 겹치지 않으므로 vcpkg 캐시를 따로 둔다(`vcpkgCache`, 아래 Restore 단계 주석).
+          # 프리셋이 트리플릿 `x64-linux-tsan`(cmake/Modules/Toolchain/VcpkgTsan — Jolt · Box2D 를 -fsanitize=thread 로 짓는다)을 쓴다.
+          # 포트가 다른 리눅스 잡과 겹치지 않아 vcpkg 캐시를 따로 둔다(`vcpkgCache`, 아래 Restore 단계 주석).
           - name: Build Linux TSan (Clang)
             os: ubuntu-22.04
             preset: CI-Debug-TSAN
             vcpkgCache: vcpkg-bin-tsan
 
           # `SW_ENABLE_STL_CONTAINER` 구성(표준 컨테이너 · 할당자)이 컴파일되는지 지킨다. 기본 빌드가 쓰지 않는 옵션이라 돌리지 않으면 썩는다.
-          # 다른 잡과 나란히 돌아 벽시계 시간은 늘지 않고, Windows Debug 잡 하나만큼 러너 시간이 는다.
           - name: Build Windows STL containers (clang-cl)
             os: windows-2022
             preset: CI-Debug-STL
@@ -139,7 +142,6 @@ jobs:
       run: |
         echo "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
         # 러너 이미지의 clang-cl 버전을 로그와 요약에 남긴다 — 로컬은 Tools/LLVM 20.1.8 로 고정인데 CI 는 이미지 것을 쓴다.
-        # 액션 키트 테스트 넷이 Windows Debug · STL 잡에서만 지는 원인을 가를 때(컴파일러 차이 가설) 이 줄이 필요하다.
         $version = (& "C:\Program Files\LLVM\bin\clang-cl.exe" --version | Select-Object -First 1)
         echo "clang-cl: $version"
         echo "clang-cl: $version" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
@@ -147,8 +149,7 @@ jobs:
     # Linux Environment Setup
     - name: Setup Linux toolchain & dependencies
       if: runner.os == 'Linux'
-      # apt 미러가 멈추면 이 단계가 잡의 기본 제한(6 시간)까지 러너를 붙잡는다 — 실제로 f3097b6a 의 TSan 잡이 여기서 2 시간 넘게 멈췄다.
-      # 평소 1~2 분이다. 빨리 실패하게 해서 다시 돌리게 한다.
+      # apt 미러가 멈추면 이 단계가 러너를 붙잡는다. 평소 1~2 분이므로 빨리 실패시켜 다시 돌리게 한다.
       timeout-minutes: 15
       run: |
         sudo apt-get update
@@ -166,9 +167,8 @@ jobs:
           fi
         done
 
-    # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡 끝(post)에 **잡이 성공했을 때만** 돌아, 테스트 하나가
-    # 지거나 실행이 취소되면 방금 1 시간 걸려 지은 포트가 버려지고 다음 실행이 또 처음부터 짓는다(2026-10-04: Configure 50~90 분이 매번).
-    # 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 기본 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
+    # vcpkg 바이너리 캐시 — 복원과 저장을 나눈다. `actions/cache` 하나로 두면 저장이 잡이 성공했을 때만 돌아, 테스트 하나가 지거나 실행이
+    # 취소되면 1 시간 걸려 지은 포트가 버려진다. 그래서 구성이 끝난 바로 뒤에 저장한다. 키에 프리셋을 넣지 않는다 — 기본 트리플릿은 OS 하나에 하나(x64-windows · x64-linux)라 같은 OS 의 잡이 같은
     # 패키지를 쓰고, 프리셋마다 따로 두면 저장소 캐시 한도(10 GB, sccache 항목과 나눠 쓴다)를 세 배로 먹어 서로를 밀어낸다.
     # 다른 트리플릿을 쓰는 잡(TSan 의 `x64-linux-tsan`)만 매트릭스의 `vcpkgCache` 로 이름을 가른다. 이름은 `vcpkg-bin-<OS>-` 로 시작하면 안 된다 —
     # 다른 잡의 restore-keys 가 접두어로 그 캐시(그 잡의 트리플릿 패키지가 없다)를 집어 포트를 처음부터 짓게 된다.
@@ -190,9 +190,8 @@ jobs:
         vcpkgJsonGlob: 'vcpkg.json'
 
     # Configure, Build, and Test
-    # Windows 는 PCH 를 끈다. clang-cl 의 PCH 는 MSVC 방식(`/Yc` · `/Yu` · `/Fp`)이고 sccache 는 그것을 캐시하지 못한다("Non-cacheable reasons:
-    # /Fp") — PCH 를 쓰는 TU(1118 개 중 1016 개)가 매번 처음부터 컴파일돼 적중률이 0 % 였다(0 hits, 45 misses — 셀 수 있는 것은 PCH 를 안 쓰는
-    # 생성 파일 · Jolt 소스뿐). 리눅스 clang 의 `-include-pch` 는 sccache 가 캐시하므로 그대로 둔다.
+    # Windows 는 PCH 를 끈다. clang-cl 의 PCH 는 MSVC 방식(`/Yc` · `/Yu` · `/Fp`)이라 sccache 가 캐시하지 못하고("Non-cacheable reasons: /Fp"),
+    # PCH 를 쓰는 TU 가 매번 처음부터 컴파일된다. 리눅스 clang 의 `-include-pch` 는 sccache 가 캐시하므로 그대로 둔다.
     - name: Configure (${{ matrix.preset }})
       id: configure
       env:
@@ -244,16 +243,15 @@ jobs:
       run: |
         python Scripts/lint/report/RunBuildWarnings.py --preset ${{ matrix.preset }} --define SW_ENABLE_DEADLOCK_DETECTION --fail-on error
 
-    # Shipping 도 Debug 와 **같은 집합**을 돈다 — Debug 가 숨기는 결함(최적화 · 정적 링크 · 로그 매크로
-    # 제거로만 드러나는 것)이 드러나는 곳이 배포 구성이므로, Shipping 을 일부 실행 파일로 좁히지 말 것.
-    # GPU·디스플레이가 필요한 스위트는 `-L nogpu` 가 걸러내므로 러너에서 돌릴 수 있는 것만 돈다.
-    # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
-    # 린트 잡은 빌드 폴더가 없어 CheckSourceGlob 을 건너뛴다(빌드 폴더의 compile_commands.json 과 대조한다). 구성마다 짓지 않는 소스가 다르므로
-    # (플랫폼 · Shipping · 서버 타깃) 빌드 잡마다 그 구성으로 한 번 — 새 .cpp 가 어느 구성에서 빌드 밖으로 빠졌는지 여기서 잡는다.
+    # CheckSourceGlob 은 빌드 폴더의 compile_commands.json 과 소스 글롭을 대조한다(린트 잡은 빌드 폴더가 없어 건너뛴다). 구성마다 짓지 않는
+    # 소스가 다르므로(플랫폼 · Shipping · 서버 타깃) 빌드 잡마다 그 구성으로 한 번 돌려, 새 .cpp 가 어느 구성에서 빌드 밖으로 빠졌는지 잡는다.
     - name: Source glob coverage
       run: |
         ctest --test-dir build/${{ matrix.preset }} -R "^CheckSourceGlob$" --output-on-failure
 
+    # Shipping 도 Debug 와 같은 집합을 돈다 — Debug 가 숨기는 결함(최적화 · 정적 링크 · 로그 매크로 제거로만 드러나는 것)은 배포 구성에서
+    # 드러나므로 Shipping 을 일부 실행 파일로 좁히지 않는다. GPU · 디스플레이가 필요한 스위트는 `-L nogpu` 가 걸러낸다.
+    # TSan 옵션(억제 목록 · 두 번째 스택)은 ctest 항목이 든다(`sw_applySanitizerTestProperties`) — 여기서 따로 주지 않는다.
     - name: Test
       id: test
       run: |
