@@ -28,7 +28,7 @@ namespace sw
     {
         if ( pOutListCurrent != nullptr )
             pOutListCurrent->assign( _listEntity.size(), kEntityNotSent );
-        // 재구성은 @p outWritten 의 엔티티 자리를 덮어쓴다 — 버퍼 용량이 남아 틱마다 엔티티 수만큼 할당하지 않는다(서버는 보낸 고리의 자리를 넘긴다).
+        // 복원 결과는 @p outWritten 의 엔티티 항목을 덮어쓴다. 버퍼 용량이 남으므로 틱마다 엔티티 수만큼 할당하지 않는다. 서버는 보낸 링 버퍼의 슬롯을 넘긴다.
         SW_ASSERT( pBaseline != &outWritten && this != &outWritten );
         outWritten._tick                   = _tick;
         outWritten._lastProcessedInputTick = _lastProcessedInputTick;
@@ -43,14 +43,14 @@ namespace sw
             ++writtenCount;
         };
         writer.writeVarUint( _tick );
-        writer.writeVarUint( pBaseline != nullptr ? pBaseline->_tick + 1u : 0u ); // 0 = 기준 없음
+        writer.writeVarUint( pBaseline != nullptr ? pBaseline->_tick + 1u : 0u ); // 0이면 기준이 없다
         writer.writeVarUint( _lastProcessedInputTick );
         writer.writeVarUint( _firstMissingInputTick );
-        // 예산은 메시지 전체 — 앞서 쓴 종류 바이트 · 머리, 끝 표시 1 비트를 먼저 센다.
+        // 예산은 메시지 전체에 적용한다. 앞서 쓴 종류 바이트와 헤더, 끝 표시 1비트를 먼저 센다.
         NetSendBudget budget( maxBytes );
         budget.reserveBits( writer.getBitCount() + 1 );
 
-        // 사라진 것 — 기준에는 있고 지금은 없다. 개수 칸은 가장 큰 값으로 잡고, 들어가는 만큼만 싣는다(나머지는 다음 델타가 다시 고른다).
+        // 사라진 엔티티는 기준에는 있고 지금은 없는 것이다. 개수 필드는 가장 큰 값으로 잡고 들어가는 만큼만 싣는다. 나머지는 다음 델타가 다시 고른다.
         vector<uint32> listRemoved;
         if ( pBaseline != nullptr )
         {
@@ -72,7 +72,7 @@ namespace sw
             writer.writeVarUint( listRemoved[index] );
         }
 
-        // 재구성의 시작 = 기준에서 지금도 있는 것 + 사라졌지만 이번에 못 실은 것(받는 쪽은 아직 가지고 있다).
+        // 복원 스냅샷의 시작은 기준에서 지금도 있는 엔티티와, 사라졌지만 이번에 못 실은 엔티티이다. 못 실은 엔티티는 받는 쪽이 아직 가지고 있다.
         if ( pBaseline != nullptr )
         {
             for ( const NetEntityState& old : pBaseline->_listEntity )
@@ -82,9 +82,9 @@ namespace sw
                     appendWritten( old );
             }
         }
-        const size_t baselineCount = writtenCount; // [0, baselineCount) 는 기준 순(id 오름차순)
+        const size_t baselineCount = writtenCount; // [0, baselineCount) 는 기준의 순서(id 오름차순)이다
 
-        // 바뀐 것 — 넘치면 건너뛰고 실은 것만 재구성에 반영한다(나머지는 기준 값으로 남는다).
+        // 바뀐 엔티티는 예산이 넘치면 건너뛰고, 실은 것만 복원 스냅샷에 반영한다. 나머지는 기준 값으로 남는다.
         const size_t entityCount = pListOrder != nullptr ? pListOrder->size() : _listEntity.size();
         for ( size_t orderIndex = 0; orderIndex < entityCount; ++orderIndex )
         {
@@ -99,17 +99,18 @@ namespace sw
             }
             const int32 size = static_cast<int32>( entity._buffer.size() );
             if ( size > kMaxEntityBytes )
-                continue; // 받는 쪽이 읽지 않는 크기 — 싣지도 재구성에 넣지도 않는다
+                continue; // 받는 쪽이 읽지 않는 크기이므로 싣지도, 복원 스냅샷에 넣지도 않는다
             const int32 entityBits = 1 + BitMath::computeVarUintBits( entity._entityID ) + BitMath::computeVarUintBits( entity._typeID ) + BitMath::computeBlobBits( size );
             if ( budget.tryReserveBits( entityBits ) == false )
-                continue; // 작은 다음 것은 들어갈 수 있다
+                continue; // 뒤에 오는 작은 엔티티는 들어갈 수 있다
             writer.writeBool( true );
             writer.writeVarUint( entity._entityID );
             writer.writeVarUint( entity._typeID );
             writer.writeBlob( entity._buffer.data(), size );
             if ( pOutListCurrent != nullptr )
                 ( *pOutListCurrent )[entityIndex] = kEntityWritten;
-            // 기준에 있던 것은 그 자리를 덮고(id 순 — 이분 탐색), 새 것은 뒤에 붙인 뒤 끝에서 한 번 정렬한다. 붙이면 저장소가 옮겨질 수 있어 시작은 매번 다시 읽는다.
+            // 기준에 있던 엔티티는 그 항목을 덮어쓰고(id 순이므로 이분 탐색), 새 엔티티는 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
+            // 붙이면 저장 공간이 옮겨질 수 있으므로 시작 위치는 매번 다시 읽는다.
             NetEntityState* const pBegin = outWritten._listEntity.data();
             NetEntityState* const pEnd   = pBegin + baselineCount;
             NetEntityState* const pFound = std::lower_bound( pBegin, pEnd, entity._entityID, []( const NetEntityState& written, uint32 entityID )
@@ -120,7 +121,7 @@ namespace sw
                 appendWritten( entity );
         }
         writer.writeBool( false );
-        outWritten._listEntity.resize( writtenCount ); // 옛 재구성에서 남은 자리를 자른다
+        outWritten._listEntity.resize( writtenCount ); // 이전 복원 스냅샷에서 남은 항목을 자른다
         outWritten.sortEntities();
     }
 
@@ -132,8 +133,8 @@ namespace sw
         outSnapshot._lastProcessedInputTick = static_cast<uint32>( reader.readVarUint() );
         outSnapshot._firstMissingInputTick  = static_cast<uint32>( reader.readVarUint() );
         if ( baselineCode != 0 && ( pBaseline == nullptr || pBaseline->_tick != baselineCode - 1u ) )
-            return false; // 기준이 없다 — 서버가 곧 다른 기준으로 보낸다
-        // 기준에서 시작한다 — 벡터 복사 대입은 있는 원소에 대입하므로 @p outSnapshot 의 엔티티 버퍼 용량을 다시 쓴다.
+            return false; // 기준이 없으므로 서버가 곧 다른 기준으로 다시 보낸다
+        // 기준에서 시작한다. 벡터 복사 대입은 이미 있는 원소에 대입하므로 @p outSnapshot 의 엔티티 버퍼 용량을 재사용한다.
         if ( baselineCode != 0 )
             outSnapshot._listEntity = pBaseline->_listEntity;
         else
@@ -141,7 +142,7 @@ namespace sw
         const uint64 removedCount = reader.readVarUint();
         if ( reader.hasOverflowed() || removedCount > 65535 )
             return false;
-        // 사라진 id 를 모아 한 번에 지운다(이분 탐색).
+        // 사라진 id 를 모아 한 번에 지운다. 찾을 때는 이분 탐색을 쓴다.
         if ( removedCount > 0 )
         {
             vector<uint32> listRemoved( static_cast<size_t>( removedCount ) );
@@ -157,8 +158,8 @@ namespace sw
             { return std::binary_search( listRemoved.begin(), listRemoved.end(), entity._entityID ); } ),
                                            outSnapshot._listEntity.end() );
         }
-        // 기준에 있던 것은 그 자리의 버퍼에 바로 읽고(id 순 — 이분 탐색), 새 것은 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
-        const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순
+        // 기준에 있던 엔티티는 그 항목의 버퍼에 바로 읽고(id 순이므로 이분 탐색), 새 엔티티는 뒤에 붙인 뒤 끝에서 한 번 정렬한다.
+        const size_t baselineCount = outSnapshot._listEntity.size(); // [0, baselineCount) 는 id 오름차순이다
         while ( reader.readBool() )
         {
             const uint32          entityID = static_cast<uint32>( reader.readVarUint() );

@@ -58,7 +58,7 @@ namespace sw
             return 0;
         uint32  bestID       = 0;
         float32 bestDistance = maxDistance;
-        // 지금 있는 몸들을 그 시각으로 되감아 본다.
+        // 지금 있는 몸을 그 시각으로 되감는다.
         for ( const LagRecord& current : *pNewest )
         {
             if ( current._entityID == ignoreEntityID )
@@ -66,7 +66,7 @@ namespace sw
             LagRecord past;
             if ( sampleAt( tick, current._entityID, past ) == false )
                 continue;
-            // 광선 · 구.
+            // 광선과 구의 교차를 검사한다.
             const float3  toCenter = past._position - origin;
             const float32 along    = toCenter.dot( direction );
             if ( along < 0.0f )

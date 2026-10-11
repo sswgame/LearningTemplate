@@ -42,7 +42,7 @@ namespace sw
         _currentTick = 0;
         _desyncTick  = 0;
         _bDesynced   = SW_FALSE;
-        // 처음 지연 틱들은 모두 빈 입력 — 그동안 첫 입력이 망을 건넌다.
+        // 처음 지연 틱은 모두 빈 입력이다. 그동안 첫 입력이 망을 건넌다.
         const vector<uint8> listEmpty;
         for ( uint32 tick = 0; tick < static_cast<uint32>( _inputDelay ); ++tick )
         {
@@ -64,14 +64,15 @@ namespace sw
     {
         if ( player < 0 || player >= _playerCount )
             return false;
-        // 신뢰 순서라 플레이어마다 빈틈없이 온다 — 다음 틱이 아니면(겹친 것 · 먼 틱) 버린다. 떠난 뒤의 틱도 버린다(모두가 빈 입력으로 둔다).
+        // 신뢰 순서 채널이라 플레이어별로 빈틈없이 온다. 다음 틱이 아닌 입력(겹친 입력, 먼 틱의 입력)은 버린다.
+        // 이탈한 뒤의 틱도 버린다. 모두가 그 틱을 빈 입력으로 처리하기 때문이다.
         const bool bInWindow = _currentTick <= tick && tick - _currentTick < kInputWindow;
         if ( tick != _listNextInputTick[static_cast<size_t>( player )] || isPresentAt( player, tick ) == false || bInWindow == false )
             return false;
         TickInput* pTickInput = _listTickInput.find( tick );
         if ( pTickInput == nullptr )
         {
-            // 그 틱에 처음 온 입력 — 자리의 옛 값(지난 바퀴에 꺼낸 틱)을 비운다.
+            // 그 틱에 처음 온 입력이다. 슬롯의 이전 값(지난 바퀴에 꺼낸 틱)을 비운다.
             pTickInput = &_listTickInput.acquire( tick );
             pTickInput->_listInput.assign( static_cast<size_t>( _playerCount ), vector<uint8>{} );
             pTickInput->_listHas.assign( static_cast<size_t>( _playerCount ), SW_FALSE );
@@ -125,8 +126,8 @@ namespace sw
             outListInput.assign( static_cast<size_t>( _playerCount ), vector<uint8>{} );
         }
         ++_currentTick;
-        // 창 아래로 빠진 틱의 체크섬은 더 기다리지 않는다(보고하지 않는 플레이어가 있어도 쌓이지 않게). 틱은 하나씩 넘어가므로 빠지는 틱도
-        // (지금 − kChecksumWindow − 1) 하나다 — 그보다 앞은 지난 진행들이 이미 지웠다.
+        // 창 아래로 빠진 틱의 체크섬은 더 기다리지 않는다. 보고하지 않는 플레이어가 있어도 체크섬이 쌓이지 않게 하려는 것이다.
+        // 틱은 하나씩 넘어가므로 빠지는 틱도 (지금 − kChecksumWindow − 1) 하나뿐이다. 그보다 앞의 틱은 이전 진행에서 이미 지웠다.
         if ( _currentTick > kChecksumWindow )
             _listTickChecksum.remove( _currentTick - kChecksumWindow - 1u );
         return true;
@@ -138,7 +139,7 @@ namespace sw
         for ( int32 player = 0; player < _playerCount; ++player )
         {
             if ( isPresentAt( player, tick ) == false )
-                continue; // 떠난 플레이어는 그 틱부터 다른 입력으로 돌았을 수 있다 — 비교하지 않는다
+                continue; // 이탈한 플레이어는 그 틱부터 다른 입력으로 진행했을 수 있으므로 비교하지 않는다
             const int64 value = listChecksum[static_cast<size_t>( player )];
             if ( value < 0 )
                 return false;
@@ -183,7 +184,7 @@ namespace sw
     void LockstepSession::applyLeave( int32 player, uint32 tick )
     {
         _listLeaveTick[static_cast<size_t>( player )] = tick;
-        // 그 플레이어만 기다리던 체크섬은 이제 비교할 수 있다 — 창 안을 틱 순으로 훑는다(어긋난 첫 틱이 desync 틱이 된다).
+        // 그 플레이어만 기다리던 체크섬은 이제 비교할 수 있다. 창 안을 틱 순서로 훑으며, 어긋난 첫 틱이 desync 틱이 된다.
         const uint32 windowFirst = _currentTick > kChecksumWindow ? _currentTick - kChecksumWindow : 0u;
         const uint32 windowEnd   = _currentTick + kChecksumWindow;
         for ( uint32 checkTick = MathUtil::max( tick, windowFirst ); checkTick < windowEnd; ++checkTick )
@@ -200,7 +201,7 @@ namespace sw
         const int32 player = connectionID + 1;
         if ( _pHost == nullptr || _pHost->isServer() == false || player <= 0 || player >= _playerCount || hasLeft( player ) )
             return;
-        // 서버가 받은 마지막 입력의 다음 틱 — 그 앞의 입력은 이미 모두에게 신뢰 순서로 나갔고, 그 뒤는 아무도 받지 못했다.
+        // 서버가 받은 마지막 입력의 다음 틱을 이탈 틱으로 한다. 그 이전의 입력은 이미 모두에게 신뢰 순서로 나갔고, 그 이후의 입력은 아무도 받지 못했다.
         const uint32 tick = MathUtil::max( _listNextInputTick[static_cast<size_t>( player )], _currentTick );
         applyLeave( player, tick );
         BitWriter& writer = _messageWriter.begin( NetLockstepMessage::kLeave );
@@ -218,12 +219,12 @@ namespace sw
         {
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
-            // 떠남은 서버만 정한다.
+            // 이탈은 서버만 정한다.
             if ( bServer == false && 0 < player && player < _playerCount && hasLeft( player ) == false )
                 applyLeave( player, tick );
             return NetHandleResult::Handled;
         }
-        // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
+        // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         if ( bServer && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
         if ( context._kind == NetLockstepMessage::kInput )
@@ -234,7 +235,7 @@ namespace sw
             if ( body.hasOverflowed() )
                 return NetHandleResult::Malformed;
             if ( storeInput( player, tick, listInput ) && _pHost != nullptr )
-                (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 것만 — 버린 입력이 다른 클라이언트의 순서를 흐리지 않게
+                (void)NetMessageRouter::relayToOtherPeers( *_pHost, context ); // 받아들인 입력만 전달한다. 버린 입력이 다른 클라이언트의 순서를 어지럽히지 않게 하려는 것이다
             return NetHandleResult::Handled;
         }
         const uint32 checksum = body.readUint32();

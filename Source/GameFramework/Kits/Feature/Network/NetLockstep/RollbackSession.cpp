@@ -49,7 +49,7 @@ namespace sw
             buffer.initialize( kHistorySize, kInputFormat, NetInputWindowMode::Manual );
         }
         _sendWindow.initialize( kFrameWindow, kInputFormat );
-        // 지연 프레임들은 모두 중립 입력 — 모두가 아는 값이라 상대도 이미 확인한 것으로 둔다.
+        // 지연 프레임은 모두 중립 입력이다. 모두가 아는 값이므로 상대도 이미 확인한 것으로 둔다.
         PeerState peer;
         peer._ackedLocalFrame = _settings._inputDelay - 1;
         _listPeer.assign( static_cast<size_t>( _playerCount ), peer );
@@ -90,7 +90,7 @@ namespace sw
             const PeerState& peer = _listPeer[static_cast<size_t>( player )];
             if ( player == _localPlayer || peer._reportedFrame < 0 )
                 continue;
-            // 두 이점에는 같은 망 지연이 들어 있다 — 빼면 지연은 지워지고 프레임 차이의 두 배가 남는다.
+            // 두 이점에는 같은 망 지연이 들어 있다. 서로 빼면 지연은 사라지고 프레임 차이의 두 배가 남는다.
             lead = MathUtil::max( lead, ( peer._localAdvantage - peer._remoteAdvantage ) / 2 );
         }
         return lead;
@@ -100,14 +100,14 @@ namespace sw
     {
         if ( player < 0 || player >= _playerCount || frame < 0 )
             return;
-        // 창 [지금 − 창, 지금 + 창) 밖 · 이미 있는 것(다시 보낸 것)은 버퍼가 버린다.
+        // 창 [지금 − 창, 지금 + 창) 밖의 입력과 이미 있는 입력(다시 보낸 것)은 버퍼가 버린다.
         if ( _listReceive[static_cast<size_t>( player )].store( static_cast<uint32>( frame ), &input, 1 ) )
             markMisprediction( player, frame, input );
     }
 
     void RollbackSession::markMisprediction( int32 player, int32 frame, uint8 input )
     {
-        // 이미 예측으로 흘린 프레임인데 다르면 되감아야 한다.
+        // 이미 예측으로 진행한 프레임인데 입력이 다르면 되감아야 한다.
         if ( frame >= _frame )
             return;
         const FrameRecord* pRecord       = _listRecord.find( static_cast<uint32>( frame ) );
@@ -119,7 +119,7 @@ namespace sw
 
     void RollbackSession::moveReceiveWindows()
     {
-        // 고리(128 칸)의 두 반쪽 — 창 안의 프레임끼리는 칸을 덮지 않고, 예측 · 되감기가 읽는 지난 64 프레임도 남는다.
+        // 링 버퍼(128슬롯)를 두 반쪽으로 쓴다. 창 안의 프레임끼리는 슬롯을 덮어쓰지 않고, 예측과 되감기가 읽는 지난 64프레임도 남는다.
         const uint32 first = static_cast<uint32>( MathUtil::max( 0, _frame - kFrameWindow ) );
         const uint32 end   = static_cast<uint32>( _frame + kFrameWindow );
         for ( NetInputReceiveBuffer& buffer : _listReceive )
@@ -135,7 +135,7 @@ namespace sw
 
     uint8 RollbackSession::predictInput( int32 player, int32 frame ) const
     {
-        // 그 프레임 것이 있으면 그것, 없으면 가장 최근에 받은 것(같은 버튼을 계속 누르고 있다고 본다).
+        // 그 프레임의 입력이 있으면 그것을 쓴다. 없으면 가장 최근에 받은 입력을 쓰며, 같은 버튼을 계속 누르고 있다고 본다.
         const uint32         lowestFrame = static_cast<uint32>( MathUtil::max( 0, frame - kFrameWindow ) );
         const NetInputEntry* pEntry      = _listReceive[static_cast<size_t>( player )].findLatestAtOrBefore( static_cast<uint32>( frame ), lowestFrame );
         return pEntry != nullptr ? pEntry->_bytes[0] : static_cast<uint8>( 0 );
@@ -145,7 +145,7 @@ namespace sw
     {
         const FrameRecord* pStart = _listRecord.find( static_cast<uint32>( frame ) );
         if ( pStart == nullptr )
-            return; // 기록 밖 — 고칠 수 없다(최대 예측 안이면 생기지 않는다)
+            return; // 기록 밖이라 고칠 수 없다. 최대 예측 안에서는 생기지 않는다
         _pGame->loadState( pStart->_listState );
         ++_rollbackCount;
         for ( int32 replay = frame; replay < _frame; ++replay )
@@ -167,7 +167,7 @@ namespace sw
     {
         if ( _pHost == nullptr )
             return;
-        // 모두가 확인한 다음 프레임부터 — 상대가 아직 못 받은 것은 확인이 오를 때까지 메시지마다 다시 싣는다(`NetInputSendWindow`).
+        // 모두가 확인한 다음 프레임부터 싣는다. 상대가 아직 못 받은 입력은 확인이 올라갈 때까지 메시지마다 다시 싣는다(`NetInputSendWindow`).
         int32 acked = getConfirmedInputFrame( _localPlayer );
         for ( int32 player = 0; player < _playerCount; ++player )
         {
@@ -183,10 +183,10 @@ namespace sw
             writer.writeVarUint( _listReceive[static_cast<size_t>( player )].getFirstMissingTick() );
             writer.writeVarInt( _listPeer[static_cast<size_t>( player )]._localAdvantage );
         }
-        // 확인 안 된 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다(static_assert) — 예산(1024 B)은 닿지 않는다.
+        // 확인되지 않은 내 입력은 (예측 + 지연) × 2 + 1 프레임을 넘지 않는다(static_assert). 그래서 예산(1024 B)에 닿지 않는다.
         NetSendBudget budget( NetConnection::kMaxSingleMessageSize );
         budget.reserveBits( writer.getBitCount() );
-        (void)_sendWindow.write( writer, budget ); // 실은 수는 쓰지 않는다 — 예산이 넘치지 않는다(위 주석)
+        (void)_sendWindow.write( writer, budget ); // 실은 수는 쓰지 않는다. 예산이 넘치지 않기 때문이다(위 주석)
         (void)_messageWriter.sendToPeers( *_pHost, NetChannelType::Unreliable );
     }
 
@@ -202,7 +202,7 @@ namespace sw
             rollbackTo( _pendingRollbackFrame );
             _pendingRollbackFrame = -1;
         }
-        // 너무 앞서면 기다린다(예측이 길수록 되감기가 길고 화면이 튄다).
+        // 너무 앞서면 기다린다. 예측이 길수록 되감기가 길어지고 화면이 튀기 때문이다.
         for ( int32 player = 0; player < _playerCount; ++player )
         {
             if ( _frame - getConfirmedInputFrame( player ) > _settings._maxPrediction )
@@ -238,8 +238,8 @@ namespace sw
         if ( body.hasOverflowed() )
             return NetHandleResult::Malformed;
         if ( player < 0 || player >= _playerCount || player == _localPlayer )
-            return NetHandleResult::Handled; // 시작 전이거나 남의 판
-        // 서버는 클라이언트가 자기 번호로만 보내게 한다(남의 입력을 위조하지 못하게).
+            return NetHandleResult::Handled; // 시작 전이거나 다른 판의 메시지이다
+        // 서버는 클라이언트가 자기 번호로만 보내게 한다. 다른 플레이어의 입력을 위조하지 못하게 하려는 것이다.
         if ( _pHost != nullptr && _pHost->isServer() && player != context._connectionID + 1 )
             return NetHandleResult::Handled;
         int32 ackedLocalFrame = -1;
@@ -254,12 +254,12 @@ namespace sw
                 advantage       = peerAdvantage;
             }
         }
-        // 입력 묶음 — 깨졌으면 하나도 넣지 않는다. 창 밖 · 이미 받은 프레임은 버퍼가 버린다.
+        // 입력 묶음이 손상됐으면 하나도 넣지 않는다. 창 밖이거나 이미 받은 프레임은 버퍼가 버린다.
         NetInputReceiveBuffer& buffer = _listReceive[static_cast<size_t>( player )];
         if ( body.hasOverflowed() || buffer.read( body, &_listNewFrameScratch ) == false )
             return NetHandleResult::Malformed;
         PeerState& peer = _listPeer[static_cast<size_t>( player )];
-        // 확인은 늘기만 한다(비신뢰라 늦게 온 옛 메시지가 있다). 내가 아직 안 만든 프레임은 확인할 수 없다.
+        // 확인은 늘어나기만 한다. 비신뢰 채널이라 늦게 도착한 오래된 메시지가 있을 수 있다. 내가 아직 만들지 않은 프레임은 확인할 수 없다.
         peer._ackedLocalFrame = MathUtil::max( peer._ackedLocalFrame, MathUtil::min( ackedLocalFrame, getConfirmedInputFrame( _localPlayer ) ) );
         if ( remoteFrame >= peer._reportedFrame )
         {
