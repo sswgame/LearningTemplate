@@ -33,9 +33,9 @@ namespace sw::editor
     namespace
     {
         /**
-         * @brief 핀 번호의 원본은 **`DialogueGraphAsset`** 입니다. 여기서는 이름만 짧게 빌립니다.
-         * @details 오프셋 상수와 인코딩의 사본을 여기 두지 않습니다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
-         *          대화가 조용히 엉뚱한 분기를 탑니다.
+         * @brief 핀 번호의 원본은 `DialogueGraphAsset` 입니다. 여기서는 이름만 짧게 가져다 씁니다.
+         * @details 오프셋 상수와 인코딩의 복사본을 여기 두지 않는다. 링크는 디스크에 저장되므로, 한쪽만 바뀌면
+         *          대화가 조용히 엉뚱한 분기로 간다.
          */
         struct DialogueGraphPanelInternal
         {
@@ -105,7 +105,7 @@ namespace sw::editor
 
         drawGraphToolbar();
 
-        // 노드를 고르면 오른쪽에 인스펙터가 붙으므로 캔버스가 그만큼 좁아진다.
+        // 노드를 선택하면 오른쪽에 인스펙터가 붙으므로 캔버스가 그만큼 좁아진다.
         const float32 availWidth  = ImGui::GetContentRegionAvail().x;
         const float32 canvasWidth = _selectedNodeID > 0 ? availWidth * 0.72f : availWidth;
         drawGraphCanvas( canvasWidth );
@@ -226,7 +226,7 @@ namespace sw::editor
 
     void DialogueGraphPanel::handleCanvasInteractions()
     {
-        // 새 링크 — 방향(나가는 핀 → 들어오는 핀) · 타입 판정과 거절 표시는 틀(`EditorNodeGraph::queryNewLink`)이 한다.
+        // 새 링크. 방향(나가는 핀에서 들어오는 핀)과 타입 판정, 거절 표시는 프레임워크(`EditorNodeGraph::queryNewLink`)가 한다.
         int32 fromPin{ 0 };
         int32 toPin{ 0 };
         if ( _nodeGraph.queryNewLink( SW_DELEGATE_METHOD( Delegate<bool( int32, EditorGraphPinInfo& )>, &DialogueGraphPanel::findGraphPin, this ), fromPin, toPin ) )
@@ -239,7 +239,7 @@ namespace sw::editor
             notifyDocumentEdited( "Link Dialogue Nodes" );
         }
 
-        // 빈 곳 오른쪽 클릭 → 찾아 넣기. 고른 노드는 오른쪽 클릭한 자리에 놓는다.
+        // 빈 곳을 오른쪽 클릭하면 노드 검색 팝업이 열린다. 고른 노드는 오른쪽 클릭한 위치에 놓는다.
         vector<EditorGraphNodeKind> listKind;
         for ( const DialogueNodeInfo& info : kArrDialogueNodeInfo )
         {
@@ -254,8 +254,8 @@ namespace sw::editor
             notifyDocumentEdited( "Add Dialogue Node" );
         }
 
-        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 풀어 본다. **핀을 푸는 원본은 `DialogueGraphAsset` 이다.**
-        // 핀을 푸는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 손으로 풀면
+        // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 해석해서 판단한다. 핀을 해석하는 원본은 `DialogueGraphAsset` 이다.
+        // 핀을 해석하는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 직접 해석하면
         // 기준이 바뀔 때 노드를 지워도 그 링크가 남는다.
         processCanvasDeletions(
             []( const DialogueLink& link, int32 nodeID )
@@ -364,7 +364,7 @@ namespace sw::editor
     bool DialogueGraphPanel::saveGraphData()
     {
         DialogueGraphAsset data = captureGraphData();
-        // 실패하면 아무것도 지우지 않는다. AnimGraphPanel 쪽 주석 참고.
+        // 실패하면 아무것도 지우지 않는다. AnimGraphPanel 쪽 주석을 참고한다.
         if ( EditorToolAssetCommands::saveDialogueGraph( data, getLoadedAssetPath() ) == false )
             return false;
 
@@ -413,7 +413,7 @@ namespace sw::editor
         if ( pInfo == nullptr )
             return;
 
-        // 기다리는 노드만 사람이 고른다. 고른 값은 러너와 같은 `DialogueCursor::step` 의 입력이 된다.
+        // 기다리는 노드만 사람이 선택한다. 선택한 값은 러너와 같은 `DialogueCursor::step` 의 입력이 된다.
         if ( pInfo->_flow == DialogueNodeFlow::WaitChoice )
         {
             for ( int32 choiceIndex = 0; choiceIndex < static_cast<int32>( pNode->_listChoice.size() ); ++choiceIndex )
@@ -480,7 +480,7 @@ namespace sw::editor
                 _bPreviewPlaying = SW_FALSE;
                 return;
             }
-            case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 고른다
+            case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 선택한다
             case DialogueNodeFlow::Condition:
             {
                 return;
@@ -513,7 +513,7 @@ namespace sw::editor
         }
 
         _previewNodeID = nodeID;
-        // 러너가 알리는 노드(대사 · 선택지)만 뷰포트에 보인다.
+        // 러너가 알리는 노드(대사, 선택지)만 뷰포트에 보인다.
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
             EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
         if ( pInfo->_flow == DialogueNodeFlow::Finish )
@@ -616,7 +616,7 @@ namespace sw::editor
             }
             case DialogueNodeOutput::Choice:
             {
-                // 선택지가 없으면 기본 출력 핀 하나를 보인다 — 이어지지 않은 선택지는 기본 출력 핀으로 간다(`DialogueCursor::step`).
+                // 선택지가 없으면 기본 출력 핀 하나를 보여 준다. 연결되지 않은 선택지는 기본 출력 핀으로 간다(`DialogueCursor::step`).
                 if ( node._listChoice.empty() )
                 {
                     drawOutputPin( DialogueGraphPanelInternal::pinOut( node._id ), "Choice 0 ->" );

@@ -34,12 +34,12 @@ namespace sw
             static constexpr const utf8* kArrCodeExtension[] = { ".h", ".cpp", ".inl" };
             static constexpr const utf8* kDialogueSuffix     = ".dialogue.json";
 
-            /** @brief 리소스 경로 또는 절대 경로를 디스크의 절대 경로로 풉니다. */
+            /** @brief 리소스 경로 또는 절대 경로를 디스크의 절대 경로로 변환합니다. */
             static string resolveAbsolutePath( string_view path )
             {
                 if ( FileUtil::exists( path ) || FileUtil::isDirectory( path ) )
                     return FileUtil::normalizeSeparators( path );
-                // 리소스 루트 아래의 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 자리다 — 도구는 모든 팩을 다룬다.
+                // 리소스 루트 아래의 전역 id(`game/shooter3d/…`)는 활성 게임과 상관없이 그 위치다. 도구는 모든 팩을 다룬다.
                 const string underRoot = FileUtil::joinPath( ResourcePaths::getRootFolderPath(), path );
                 if ( FileUtil::exists( underRoot ) || FileUtil::isDirectory( underRoot ) )
                     return FileUtil::normalizeSeparators( underRoot );
@@ -47,7 +47,7 @@ namespace sw
                 return resolved.empty() ? string( path ) : FileUtil::normalizeSeparators( resolved );
             }
 
-            /** @brief 글자 수(UTF-8 코드 포인트)입니다. */
+            /** @brief 글자 수를 UTF-8 코드 포인트 단위로 셉니다. */
             static uint32 countCharacters( string_view text )
             {
                 uint32 count{ 0 };
@@ -82,7 +82,7 @@ namespace sw
                 }
             }
 
-            /** @brief 번역 하나를 원문에 대어 검사합니다 — 구문 · 자리표시자 이름 · 리치 텍스트 태그 열 · 최대 길이. */
+            /** @brief 번역 하나를 원문과 대조해 검사합니다. 구문, 자리 표시자 이름, 리치 텍스트 태그 열, 최대 길이를 봅니다. */
             static void validateTranslation( const string& culture, const string& key, const SourceTextEntry& source, const TranslationEntry& translation,
                                              TextGatherReport& inoutReport )
             {
@@ -113,7 +113,7 @@ namespace sw
                                                                               TranslationMemory::kExtension );
             }
 
-            /** @brief 번역 메모리를 읽습니다(없으면 빈 메모리). 못 읽으면 문제로 알리고 false 입니다. */
+            /** @brief 번역 메모리를 읽습니다. 없으면 빈 메모리입니다. 읽지 못하면 문제로 알리고 false 를 반환합니다. */
             [[nodiscard]] static bool loadMemory( const string& path, string_view culture, TranslationMemory& outMemory, TextGatherReport& inoutReport )
             {
                 outMemory = TranslationMemory{};
@@ -128,8 +128,8 @@ namespace sw
             }
 
             /**
-             * @brief 문화권 번역 표 하나를 수집 결과에 맞춥니다 — 해시 없는 번역에 해시를 찍고, 지금 번역을 번역 메모리에 쌓고, 원문 표에 없는 키의 번역을 빼고,
-             *        없는 · 낡은 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
+             * @brief 문화권 번역 테이블 하나를 수집 결과에 맞춥니다. 해시가 없는 번역에 해시를 기록하고, 현재 번역을 번역 메모리에 쌓고, 원문 테이블에 없는 키의 번역을 빼고,
+             *        없거나 오래된 번역을 메모리로 미리 채운 뒤 상태를 세고 검사합니다.
              */
             static void updateTranslation( const string& projectPath, const string& culture, const map<string, const SourceTextEntry*>& mapSource, bool bWrite,
                                            LocalizationGatherResult& inoutResult )
@@ -151,7 +151,7 @@ namespace sw
                     return;
                 const string memoryBefore = memory.toJSONText();
 
-                // 1) 해시 없는 번역은 지금 원문의 번역으로 받고, 지금 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺀다.
+                // 1) 해시가 없는 번역은 현재 원문의 번역으로 받고, 현재 번역은 메모리에 쌓고, 원문이 없는 키의 번역은 뺀다.
                 vector<string> listOrphan;
                 for ( auto& [key, entry] : translation.getMutableEntries() )
                 {
@@ -176,7 +176,7 @@ namespace sw
                     cultureReport._bChanged = true;
                 }
 
-                // 2) 없는 번역 · 낡은 번역을 메모리로 채운다 — 같은 원문은 그대로, 비슷한 원문은 검토 표시(없는 칸만).
+                // 2) 없는 번역과 오래된 번역을 메모리로 채운다. 같은 원문은 그대로 채우고, 비슷한 원문은 검토 표시를 붙인다(번역이 없는 항목만).
                 for ( const auto& [key, pSource] : mapSource )
                 {
                     const TranslationState state = translation.computeState( key, pSource );
@@ -186,7 +186,7 @@ namespace sw
                     if ( memory.findBestMatch( pSource->_source, match ) == false )
                         continue;
                     if ( match._bExact == false && state == TranslationState::Stale )
-                        continue; // 낡은 번역은 옛 글을 그대로 둔다 — 번역가가 PO 에서 옛 원문과 함께 본다
+                        continue; // 오래된 번역은 이전 문구를 그대로 둔다. 번역가가 PO 에서 이전 원문과 함께 본다
                     TranslationEntry& entry = translation.getOrAddEntry( key );
                     entry._text             = match._text;
                     entry._sourceHash       = LocalizationTextUtil::computeSourceHash( pSource->_source );
@@ -198,7 +198,7 @@ namespace sw
                         ++cultureReport._prefilledFuzzy;
                 }
 
-                // 3) 상태 · 검사
+                // 3) 상태와 검사
                 for ( const auto& [key, pSource] : mapSource )
                 {
                     const TranslationEntry* pEntry = translation.findEntry( key );
@@ -249,7 +249,7 @@ namespace sw
                     inoutResult._report._listIssue.push_back( { memoryPath, "translation memory could not be written", true } );
             }
 
-            /** @brief PO 하나를 만듭니다 — 원문 표의 모든 키, 사전 순. */
+            /** @brief PO 하나를 만듭니다. 원문 테이블의 모든 키를 사전 순으로 담습니다. */
             static PortableObjectFile makePortableObject( const LocalizationProject& project, string_view culture, const map<string, const SourceTextEntry*>& mapSource,
                                                           const TranslationTable& translation, const TranslationMemory& memory, LocalizationExchangeResult& outResult )
             {
@@ -291,7 +291,7 @@ namespace sw
                 return file;
             }
 
-            /** @brief 프로젝트 · 원문 표들을 읽어 키 → 원문 표 줄을 만듭니다. */
+            /** @brief 프로젝트와 원문 테이블들을 읽어 키에서 원문 테이블 행으로의 대응을 만듭니다. */
             [[nodiscard]] static bool loadProjectSources( string_view projectPath, LocalizationProject& outProject, vector<SourceStringTable>& outListTable,
                                                           map<string, const SourceTextEntry*>& outMapSource, string& outAbsolutePath )
             {
@@ -336,7 +336,7 @@ namespace sw
     void LocalizationTools::collectProjectPaths( vector<string>& outListProjectPath, bool bAllGames )
     {
         outListProjectPath.clear();
-        // 에디터 모듈은 엔진 서비스를 서비스 표로만 본다(EngineServices.h 는 Engine · App · 테스트 전용). 표가 없으면(테스트) 기본값이다.
+        // 에디터 모듈은 엔진 서비스를 서비스 테이블로만 접근한다. EngineServices.h 는 Engine, App, 테스트 전용이다. 테이블이 없으면(테스트) 기본값을 쓴다.
         const EngineDefaultAssets* pDefaultAssets = editor::getService<const EngineDefaultAssets>();
         const string               engineProject  = pDefaultAssets != nullptr ? pDefaultAssets->_localizationProject : EngineDefaultAssets{}._localizationProject;
         if ( engineProject.empty() == false )
@@ -493,7 +493,7 @@ namespace sw
         }
         outResult._fileCount = gatherer.getFileCount();
 
-        // 3) 합치기 · 쓰기
+        // 3) 합치기와 쓰기
         outResult._report    = gatherer.mergeInto( gatherTable, listOtherTable );
         const string newText = gatherTable.toJSONText();
         string       diskText;
@@ -506,7 +506,7 @@ namespace sw
                 outResult._bOutOfDate = true;
         }
 
-        // 4) 번역 표 — 해시 찍기 · 상태 · 검사
+        // 4) 번역 테이블. 해시 기록, 상태, 검사를 한다
         map<string, const SourceTextEntry*> mapSource;
         for ( const SourceStringTable& table : listTable )
         {
@@ -528,7 +528,7 @@ namespace sw
         SW_LOG_INFO( "[GatherText] project '%#': %# files, +%# added, ~%# changed, -%# removed, %# unchanged%#", result._projectName.c_str(), result._fileCount,
                      report._listAdded.size(), report._listChanged.size(), report._listRemoved.size(), report._unchangedCount,
                      result._bOutOfDate ? " (OUT OF DATE)" : ( result._bWritten ? " (written)" : "" ) );
-        // 줄을 모아 한 번에 쓴다 — 정보 로그가 빠지는 배포 구성에서도 같은 코드다.
+        // 줄을 모아 한 번에 쓴다. 정보 로그가 빠지는 배포 구성에서도 같은 코드를 쓴다.
         string details;
         for ( const string& key : report._listAdded )
         {
@@ -562,7 +562,7 @@ namespace sw
 
     bool LocalizationTools::runGatherCommand( bool bCheckOnly, string_view projectArgument )
     {
-        // 배포본은 속성 메타(Localizable)를 싣지 않아 UI 문서의 글을 못 알아본다 — 그대로 쓰면 원문 표에서 그 글을 모두 지운다.
+        // 배포본은 속성 메타(Localizable)를 싣지 않아 UI 문서의 문구를 알아보지 못한다. 그대로 쓰면 원문 테이블에서 그 문구를 모두 지운다.
 #if defined( SW_SHIPPING )
         constexpr bool kHasPropertyMeta = false;
 #else
@@ -626,7 +626,7 @@ namespace sw
                 bAllWritten = false;
                 continue;
             }
-            // 번역 메모리가 깨졌으면 그 문화권은 내보내지 않는다(번역 표와 같다) — 빈 메모리로 내보내면 옛 원문 · 제안이 조용히 빠진 PO 가 나간다.
+            // 번역 메모리가 깨졌으면 그 문화권은 내보내지 않는다. 번역 테이블과 같다. 빈 메모리로 내보내면 이전 원문과 제안이 조용히 빠진 PO 가 나간다.
             TextGatherReport  memoryReport;
             TranslationMemory memory;
             if ( LocalizationToolsInternal::loadMemory( LocalizationToolsInternal::makeMemoryPath( absolute, culture ), culture, memory, memoryReport ) == false )
@@ -719,7 +719,7 @@ namespace sw
                 continue;
             }
             if ( poEntry._translation.empty() )
-                continue; // 번역하지 않은 항목 — 있던 번역은 그대로 둔다
+                continue; // 번역하지 않은 항목이다. 있던 번역은 그대로 둔다
             TranslationEntry& entry  = translation.getOrAddEntry( poEntry._context );
             entry._text              = poEntry._translation;
             entry._translatorComment = poEntry._translatorComment;
@@ -769,7 +769,7 @@ namespace sw
         string projectPath( projectArgument );
         if ( projectPath.empty() )
         {
-            // PO 머리의 프로젝트 이름으로 기본 대상 중에서 고른다.
+            // PO 헤더의 프로젝트 이름으로 기본 대상 중에서 고른다.
             string             text;
             PortableObjectFile file;
             if ( FileUtil::readTextFile( poPath, text ) == false || file.parse( text ) == false )
