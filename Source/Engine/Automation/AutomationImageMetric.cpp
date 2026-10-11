@@ -14,7 +14,7 @@ namespace sw
     {
         struct AutomationImageMetricInternal
         {
-            /** @brief PPM 머리의 다음 수(공백 · `#` 주석을 건너뛴다)를 읽습니다. */
+            /** @brief PPM 헤더의 다음 수를 읽습니다(공백과 `#` 주석은 건너뜁니다). */
             [[nodiscard]] static bool readHeaderNumber( const uint8* pData, size_t size, size_t& inOutCursor, uint32& outValue )
             {
                 while ( inOutCursor < size )
@@ -88,7 +88,7 @@ namespace sw
             outError = "the PPM header is broken (needs width height 255)";
             return false;
         }
-        ++cursor; // 머리 끝의 공백 하나
+        ++cursor; // 헤더 끝의 공백 하나
         const uint64 pixelBytes = static_cast<uint64>( width ) * height * 3u;
         if ( size - cursor < pixelBytes )
         {
@@ -198,7 +198,7 @@ namespace sw
             outValue = sum / pixelCount;
             return true;
         }
-        // 중앙값 대비 — 조명 · 톤맵 · 클리어 색이 바뀌어도 "영역의 보통보다 어두운 몫" 은 그대로다.
+        // 중앙값 기준이라 조명, 톤맵, 클리어 색이 바뀌어도 "영역의 일반적인 밝기보다 어두운 비율" 은 그대로다.
         vector<float64> listSorted = listLuma;
         const size_t    middle     = listSorted.size() / 2;
         std::nth_element( listSorted.begin(), listSorted.begin() + static_cast<ptrdiff_t>( middle ), listSorted.end() );

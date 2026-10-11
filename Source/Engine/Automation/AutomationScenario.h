@@ -1,6 +1,6 @@
 /**
  * @file AutomationScenario.h
- * @brief 자동화 시나리오 한 편 — 시작 조건 · 시간 · 프레임별 단계 목록(읽은 값)입니다. 형식은 `Engine/Automation/README.md`.
+ * @brief 자동화 시나리오 한 편을 정의합니다. 시작 조건, 시간, 프레임별 단계 목록(읽은 값)을 가지며 형식은 `Engine/Automation/README.md` 에 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,14 +15,14 @@ namespace sw
     /** @brief 시나리오의 프레임 0 이 언제인가입니다. */
     enum class AutomationStartCondition : uint8
     {
-        Immediately = 0, ///< 시나리오를 시작한 뒤 첫 프레임
+        Immediately = 0, ///< 시나리오를 시작한 뒤 첫 프레임입니다.
         ScenePlaying,    ///< 활성 씬의 오브젝트 매니저가 플레이를 시작했고 로딩 화면(UI Loading 층)이 걷힌 첫 프레임(기본)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @struct AutomationAttribute @brief 단계 엘리먼트의 속성 하나(이름 · 글)입니다. 단계 처리기가 해석합니다. */
+    /** @struct AutomationAttribute @brief 단계 요소의 속성 하나(이름과 텍스트)입니다. 단계 처리기가 해석합니다. */
     struct AutomationAttribute
     {
         string _name{};
@@ -36,9 +36,9 @@ namespace sw
     struct SW_API AutomationStep
     {
         vector<AutomationAttribute> _listAttribute{};
-        string                      _kind{}; ///< 엘리먼트 이름(`Tap` · `Expect` …)
+        string                      _kind{}; ///< 요소 이름입니다(`Tap`, `Expect` 등).
         uint32                      _frameIndex{ 0 };
-        uint32                      _orderInFile{ 0 }; ///< 파일에서 몇 번째 단계인가(0 부터) — 오류 · 실패 보고에 적는다
+        uint32                      _orderInFile{ 0 }; ///< 파일에서 몇 번째 단계인지입니다(0 부터이며, 오류와 실패 보고에 적습니다).
 
         /** @brief 속성 글입니다. 없으면 nullptr 입니다. */
         const string* findAttribute( string_view name ) const;
@@ -51,9 +51,9 @@ namespace sw
 {
     /**
      * @class AutomationScenario
-     * @brief 시나리오 파일 하나를 읽은 값입니다. 단계는 프레임 순(같은 프레임은 파일 순)입니다.
-     * @details 읽기는 형식만 봅니다(루트 · `<At frame>` · 속성 글). 단계 종류 · 속성이 맞는가는 실행기가 시작할 때 본다(`AutomationRunner`) —
-     *          게임 · 에디터 모듈이 등록하는 단계 종류는 그때 차 있다.
+     * @brief 시나리오 파일 하나를 읽은 값입니다. 단계는 프레임 순이며 같은 프레임은 파일 순입니다.
+     * @details 읽기는 형식만 본다(루트, `<At frame>`, 속성 텍스트). 단계 종류와 속성이 맞는지는 실행기가 시작할 때 본다(`AutomationRunner`).
+     *          게임과 에디터 모듈이 등록하는 단계 종류는 그때 채워져 있다.
      */
     class SW_API AutomationScenario
     {

@@ -47,7 +47,7 @@ namespace sw
 
     void AutomationStepRegistry::unregisterStep( const AutomationStepRegistration* pRegistration )
     {
-        (void)AutomationStepRegistryInternal::getRegistrations().remove( pRegistration ); // 올라 있지 않은 단계를 빼는 것은 할 일이 없는 것이다
+        (void)AutomationStepRegistryInternal::getRegistrations().remove( pRegistration ); // 등록되어 있지 않은 단계를 빼는 것은 할 일이 없다
     }
 
     void AutomationStepRegistry::releaseUnusedStorage()
@@ -88,7 +88,7 @@ namespace sw
 
     void AutomationStepRegistry::unregisterStartBlocker( const AutomationStartBlocker* pBlocker )
     {
-        (void)AutomationStepRegistryInternal::getStartBlockers().remove( pBlocker ); // 올라 있지 않은 조건을 빼는 것은 할 일이 없는 것이다
+        (void)AutomationStepRegistryInternal::getStartBlockers().remove( pBlocker ); // 등록되어 있지 않은 조건을 빼는 것은 할 일이 없다
     }
 
     bool AutomationStepRegistry::isStartBlocked()

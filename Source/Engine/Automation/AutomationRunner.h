@@ -1,6 +1,6 @@
 /**
  * @file AutomationRunner.h
- * @brief 자동화 시나리오 실행기 — 입력 단계는 가상 입력으로, 단언 · 환경 단계는 씬 틱 뒤에 프레임마다 진행하고 결과를 종료 코드로 냅니다.
+ * @brief 자동화 시나리오 실행기를 정의합니다. 입력 단계는 가상 입력으로, 단언과 환경 단계는 씬 틱 뒤에 프레임마다 진행하고 결과를 종료 코드로 냅니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -27,9 +27,9 @@ namespace sw
         Running   = -1,
         Passed    = 0,
         Failed    = 10,
-        LoadError = 11, ///< 파일 · 형식 · 모르는 단계 · 모르는 속성 · 모르는 탐침 — 조용히 버리지 않는다
+        LoadError = 11, ///< 파일, 형식, 모르는 단계, 모르는 속성, 모르는 탐침이 있습니다. 조용히 버리지 않습니다.
         TimedOut  = 12,
-        Skipped   = 13, ///< 이 기계에서 돌 수 없다(전경 창을 못 얻음 등) — CTest 는 건너뜀으로 본다
+        Skipped   = 13, ///< 이 기계에서 돌 수 없습니다(전경 창을 얻지 못한 경우 등). CTest 는 건너뜀으로 봅니다.
     };
 } // namespace sw
 
@@ -47,11 +47,11 @@ namespace sw
 {
     /**
      * @class AutomationRunner
-     * @brief 시나리오 한 편을 프레임마다 진행합니다. `EngineLoop` 가 `-scenario` 를 받으면 하나 들고 프레임 앞뒤에서 부릅니다.
-     * @details 프레임 0 = 시작 조건이 처음 참인 프레임입니다. 그때 단계를 검사하고(등록표 · 탐침은 모듈이 올라온 뒤라 그때 차 있다) 입력 단계를
-     *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호 = 가상 입력 프레임 번호입니다.
-     *          단언 · 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돕니다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 됩니다.
-     *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 씁니다. 게임 스레드에서만 씁니다.
+     * @brief 시나리오 한 편을 프레임마다 진행합니다. `EngineLoop` 가 `-scenario` 를 받으면 하나를 가지고 프레임 앞뒤에서 부릅니다.
+     * @details 프레임 0 은 시작 조건이 처음 참인 프레임이다. 그때 단계를 검사하고(레지스트리와 탐침은 모듈이 로드된 뒤라 그때 채워져 있다) 입력 단계를
+     *          가상 입력 원천(`VirtualInputScript`)으로 옮겨 `InputManager` 에 붙이므로, 입력 단계의 프레임 번호는 가상 입력 프레임 번호와 같다.
+     *          단언과 환경 단계는 그 프레임의 씬 틱 뒤(`onFrameEnd`)에 돈다. 단언 실패는 적어 두고 계속 가며, 끝에서 `Failed` 가 된다.
+     *          끝나면 가상 입력을 떼고 `[Scenario]` 요약 줄과 (요청됐으면) JSON 보고를 쓴다. 게임 스레드에서만 쓴다.
      */
     class SW_API AutomationRunner
     {
@@ -70,9 +70,9 @@ namespace sw
          */
         [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
 
-        /** @brief 프레임 시작(입력 `beginFrame` **전**) — 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌린다. */
+        /** @brief 프레임 시작(입력 `beginFrame` 전)에 부릅니다. 시작 조건을 보고, 시작했으면 가상 입력을 붙이고 입력 전 단계(`_bBeforeInput`)를 돌립니다. */
         void onFrameBegin( InputManager& input );
-        /** @brief 프레임 끝(씬 틱 · 렌더 제출 뒤) — 이 프레임의 나머지 단계 · 시간 초과 · 끝을 본다. 끝났으면 결과(아니면 Running)입니다. */
+        /** @brief 프레임 끝(씬 틱과 렌더 제출 뒤)에 부릅니다. 이 프레임의 나머지 단계, 시간 초과, 끝을 확인합니다. 끝났으면 결과를, 아니면 Running 을 반환합니다. */
         AutomationResult onFrameEnd( InputManager& input );
         /**
          * @brief 창이 닫혀 루프가 끝났습니다. `ExpectExitWithin` 을 기다리던 중이면 그 시한 안인지로, 아니면 "끝나기 전에 닫혔다" 로 끝냅니다.
@@ -81,23 +81,23 @@ namespace sw
         AutomationResult onWindowClosed( InputManager* pInput );
 
         /**
-         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(EngineLoop 가 다음 렌더 패킷에 싣는다 — 그 패킷이 그린 그림이 찍힌다). 없으면 false 입니다.
+         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(EngineLoop 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
          */
         [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(EngineLoop 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */
         void setCompletedScreenshotCount( uint32 completedCount ) { _screenshotCompletedCount = completedCount; }
-        /** @brief 지표 값 줄들(`darkFraction(0,0,1,0.12) park.ppm = 0.034`) — 보고에 적는다. */
+        /** @brief 지표 값 줄들입니다(`darkFraction(0,0,1,0.12) park.ppm = 0.034`). 보고에 적습니다. */
         const vector<string>& getMetricLines() const { return _listMetricLine; }
 
-        /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 — 끝에서 Failed). */
+        /** @brief 단계 처리기가 실패를 적습니다(시나리오는 계속 진행하고 끝에서 Failed 가 됩니다). */
         void recordFailure( const AutomationStep& step, string_view message );
-        /** @brief 시나리오를 바로 끝냅니다(`Pass` · `Fail` · `Skipped` …). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
+        /** @brief 시나리오를 바로 끝냅니다(`Pass`, `Fail`, `Skipped` 등). 실패가 적혀 있으면 Passed 는 Failed 가 됩니다. 이미 끝났으면 무시합니다. */
         void finish( AutomationResult result, string_view reason );
 
         bool isActive() const { return _result == AutomationResult::Running; }
         /**
-         * @brief 끝맺음(요약 줄 · 보고 · 가상 입력 떼기)까지 마쳤는지 묻습니다.
-         * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다 — 시작 프레임(`onFrameBegin`)에서 읽기 오류 · 시작 시한으로 끝나면
+         * @brief 끝맺음(요약 줄, 보고, 가상 입력 떼기)까지 마쳤는지 묻습니다.
+         * @details `isActive` 가 false 여도 아직 끝맺지 않았을 수 있다. 시작 프레임(`onFrameBegin`)에서 읽기 오류나 시작 시한으로 끝나면
          *          그 프레임의 `onFrameEnd` 가 끝맺고 결과를 돌려준다. 루프는 이것으로 `onFrameEnd` 를 부를지 정한다.
          */
         bool             hasEnded() const { return _bEnded == SW_TRUE; }
@@ -113,16 +113,16 @@ namespace sw
         string resolveOutputPath( string_view file ) const;
         /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
         GameObjectManager* findActiveObjectManager() const;
-        /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트 · 도구 — 씬 없이 매니저를 손으로 돌릴 때). nullptr 이면 활성 씬입니다. */
+        /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트와 도구용이며, 씬 없이 매니저를 손으로 돌릴 때 씁니다). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
-        /** @brief 결과 이름(`PASS` · `FAIL` · `LOAD ERROR` · `TIMEOUT` · `SKIP`)입니다. */
+        /** @brief 결과 이름(`PASS`, `FAIL`, `LOAD ERROR`, `TIMEOUT`, `SKIP`)입니다. */
         static const utf8* getResultName( AutomationResult result );
 
     private:
         /** @brief 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 건너뜀(13)으로 끝내고 true 입니다. */
         bool skipIfStepsAreMissingFromThisBuild();
-        /** @brief 시작 조건이 참이 된 프레임 — 단계를 검사하고 입력 단계를 옮기고 로그를 듣기 시작한다. 실패면 false 와 이유. */
+        /** @brief 시작 조건이 참이 된 프레임에서 단계를 검사하고 입력 단계를 옮기고 로그 수집을 시작합니다. 실패면 false 를 반환하고 이유를 남깁니다. */
         [[nodiscard]] bool prepare( string& outError );
         [[nodiscard]] bool validateEngineStep( const AutomationStep& step, string& outError ) const;
         [[nodiscard]] bool compileInputStep( const AutomationStep& step, string& outError );
@@ -130,19 +130,19 @@ namespace sw
         [[nodiscard]] bool runEngineStep( const AutomationStep& step );
         void               runExpect( const AutomationStep& step );
         /**
-         * @brief 탐침 단계(`Expect` · `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 까닭을 씁니다.
-         * @details 값이 있으면 @p outMessage 는 `<탐침> <규칙>, got <값>` 입니다.
+         * @brief 탐침 단계(`Expect`, `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 이유를 씁니다.
+         * @details 값이 있으면 @p outMessage 는 `<탐침> <규칙>, got <값>` 이다.
          */
         [[nodiscard]] bool compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const;
         /**
-         * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 사건을 한 프레임 민다).
+         * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 이벤트를 한 프레임 밉니다).
          * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.
          */
         [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
         void               runExpectLog( const AutomationStep& step );
         void               runExpectImage( const AutomationStep& step );
         void               onLogWritten( const LogEntry& entry );
-        /** @brief 끝 정리 — 가상 입력 · 로그 듣기를 떼고 요약 줄 · 보고를 쓴다. 한 번만 돈다. */
+        /** @brief 끝 정리를 합니다. 가상 입력과 로그 수집을 떼고 요약 줄과 보고를 씁니다. 한 번만 돕니다. */
         void endRun( InputManager* pInput );
         void writeReport() const;
 
@@ -150,22 +150,22 @@ namespace sw
         VirtualInputScript        _inputScript;
         vector<string>            _listFailure;           ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"
         vector<AutomationLogLine> _listLogLine;           ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`)
-        vector<string>            _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로
-        vector<string>            _listMetricLine;        ///< 보고에 적는 지표 값
+        vector<string>            _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
+        vector<string>            _listMetricLine;        ///< 보고에 적는 지표 값입니다.
         string                    _reportPath;
         string                    _outputDirectory;
         string                    _finishReason;
-        mutex                     _logMutex; ///< `_listLogLine` — 로그는 아무 스레드에서나 온다
+        mutex                     _logMutex; ///< `_listLogLine` 을 보호합니다. 로그는 아무 스레드에서나 옵니다.
         DelegateHandle            _logListenerHandle;
-        GameObjectManager*        _pObjectManagerOverride; ///< `setObjectManager` — nullptr 이면 활성 씬
-        float64                   _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한(단조 시계 초). 0 이면 기다리지 않는다
+        GameObjectManager*        _pObjectManagerOverride; ///< `setObjectManager` 로 정한 매니저입니다(nullptr 이면 활성 씬).
+        float64                   _exitDeadlineSeconds;    ///< `ExpectExitWithin` 이 정한 벽시계 시한입니다(단조 시계 초). 0 이면 기다리지 않습니다.
         size_t                    _nextStepIndex;
         atomic<uint32>            _logFrameIndex; ///< 로그 줄에 적을 프레임(로그 스레드가 읽는다)
         uint32                    _frameIndex;
-        uint32                    _waitFrameCount; ///< 시작 조건을 기다린 프레임
+        uint32                    _waitFrameCount; ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                    _screenshotRequestedCount;
         uint32                    _screenshotCompletedCount;
-        uint32                    _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임
+        uint32                    _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임 수입니다.
         uint32                    _holdFrameCount;      ///< 지금 `<WaitUntil>` 이 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
         AutomationResult          _result;
         uint8                     _bStarted      : 1;
