@@ -116,8 +116,6 @@
   있지 않다, X11 그리기는 `XDrawString`(Latin-1)이라 한글이 깨진다.
 
 - **입력 흉내 창구(`EditorSelfTestInput` · `EditorSelfTestMarks::note`)로 아직 안 덮은 것** — 그래프 패널 ↔ 저장 커맨드 배선, 인스펙터 콤보 직접 편집, 드래그 드롭.
-- **`editor/sequencerkeys` 시나리오가 부하 중 OpenGL 에서 한 번 졌다**(2026-10-11, 다른 에이전트의 클린 빌드와 겹친 `AppScenarioTest.EditorScenariosPassOnOpenGL`).
-  280 프레임에 시퀀서 대상이 없고 `sequencer.addKey` 표식이 안 그려졌다 — 단독 재실행은 3/3 통과. 시나리오가 고정 프레임을 기다리는 곳을 조건 대기로 바꿀지 본다.
 
 ### 1-5. 핫 리로드 · 모듈
 

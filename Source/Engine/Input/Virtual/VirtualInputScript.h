@@ -51,6 +51,11 @@ namespace sw
         void addMousePosition( uint32 frameIndex, int32 x, int32 y );
         /** @brief 패드 축(스틱 · 트리거) 값을 냅니다. */
         void addGamepadAxis( uint32 frameIndex, uint16 axisIndex, float32 value, uint8 padIndex = 0 );
+        /**
+         * @brief @p firstFrameIndex 이후(포함)의 사건을 @p frameCount 프레임 뒤로 밉니다. 이미 낸 사건은 그대로입니다.
+         * @details 시나리오가 조건을 기다리며 시계를 붙잡는 동안(`WaitUntil`) 입력 단계가 시나리오 프레임과 같은 프레임에 나도록 쓴다.
+         */
+        void delayEventsFrom( uint32 firstFrameIndex, uint32 frameCount );
         /** @brief 사건을 모두 지웁니다. */
         void clear();
 

@@ -24,6 +24,8 @@ namespace
         static inline bool   s_bSwitchDown         = false;
         static inline uint32 s_beforeInputRunCount = 0;
         static inline uint32 s_beforeInputFrame    = 0;
+        static inline uint32 s_runFrameCount       = 0; ///< `run` 이 돈 실제 프레임(시나리오 시계가 붙잡혀도 오른다)
+        static inline uint32 s_readyAtRunFrame     = 0; ///< `Test.Ready` 가 1 이 되는 실제 프레임
 
         [[nodiscard]] static bool readSwitchCount( const sw::GameObjectManager* /*pManager*/, float64& outValue )
         {
@@ -38,6 +40,15 @@ namespace
         }
 
         [[nodiscard]] static bool readNothing( const sw::GameObjectManager* /*pManager*/, float64& /*outValue*/ ) { return false; }
+
+        /** @brief 느린 준비를 흉내 낸다 — 실제 프레임이 `s_readyAtRunFrame` 에 닿기 전에는 값이 없고, 닿으면 1 이다. */
+        [[nodiscard]] static bool readReady( const sw::GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            if ( s_runFrameCount < s_readyAtRunFrame )
+                return false;
+            outValue = 1.0;
+            return true;
+        }
 
         /** @brief 등록 단계 — 입력 재생 전에 돈다(행동 층 주입 자리). 프레임을 적어 둔다. */
         static bool runMark( sw::AutomationRunner& runner, const sw::AutomationStep& /*step*/ )
@@ -61,9 +72,11 @@ namespace
             s_switchCount               = 0;
             s_bSwitchDown               = false;
             s_beforeInputRunCount       = 0;
+            s_runFrameCount             = 0;
             sw::AutomationResult result = sw::AutomationResult::Running;
             for ( uint32 frame = 0; frame < maxFrames && result == sw::AutomationResult::Running; ++frame )
             {
+                ++s_runFrameCount;
                 runner.onFrameBegin( input );
                 input.beginFrame( 1.0f / 60.0f );
                 if ( input.getInputMap().wasActionTriggered( "Switch" ) )
@@ -84,6 +97,7 @@ namespace
     SW_AUTOMATION_PROBE( testSwitchCount, "Test.SwitchCount", "Switch action triggers so far", &TestAutomationScenarioInternal::readSwitchCount );
     SW_AUTOMATION_PROBE( testSwitchDown, "Test.SwitchDown", "1 while the Switch action is held", &TestAutomationScenarioInternal::readSwitchDown );
     SW_AUTOMATION_PROBE( testNothing, "Test.Nothing", "never has a value", &TestAutomationScenarioInternal::readNothing );
+    SW_AUTOMATION_PROBE( testReady, "Test.Ready", "1 once the harness has run s_readyAtRunFrame frames", &TestAutomationScenarioInternal::readReady );
     SW_AUTOMATION_STEP( testMark, "TestMark", &TestAutomationScenarioInternal::runMark, &TestAutomationScenarioInternal::validateMark, true );
 } // namespace
 
@@ -177,6 +191,9 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         R"(<ExpectImage file="a.ppm" metric="differentFrom" atMost="0.1"/>)",
         R"(<MousePosition x="1.5" y="0.5"/>)",
         R"(<MousePosition x="0.5"/>)",
+        R"(<WaitUntil probe="Test.Ready" equals="1" timeoutFrames="-1"/>)",
+        R"(<WaitUntil probe="Test.Ready" equals="1" frames="3"/>)",
+        R"(<WaitUntil probe="Test.Ready" equals="1"/><Pass/>)",
     };
     sw::InputManager input;
     SW_ASSERT_TRUE( input.initialize() );
@@ -214,6 +231,44 @@ SW_TEST_CASE( AutomationScenarioTest, UnknownStepOrAttributeIsALoadError )
         SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately"><At frame="0"><MousePosition x="0.5" y="0.5"/></At></Scenario>)" ) );
         SW_EXPECT_TRUE( Internal::run( runner, input, 5 ) == sw::AutomationResult::LoadError );
         SW_EXPECT_TRUE_MSG( runner.getFinishReason().find( "no window to place the pointer" ) != sw::string::npos, runner.getFinishReason().c_str() );
+    }
+    input.shutdown();
+}
+
+/**
+ * @brief [AutomationScenarioTest] WaitUntil 은 조건이 참이 될 때까지 시나리오 시계를 붙잡는다 — 뒤 단계 · 입력 사건이 그만큼 밀리고, 시한을 넘으면 실패로 적고 간다
+ * @details 부하 걸린 기계에서 고정 프레임 대기가 지던 에디터 시나리오(`sequencerkeys`)의 고침이다. 미는 것을 빼면 Tap 이 붙잡힌 동안 나가 frame 3 의 Expect 가 진다.
+ */
+SW_TEST_CASE( AutomationScenarioTest, WaitUntilHoldsTheScenarioClock )
+{
+    using Internal = TestAutomationScenarioInternal;
+    sw::InputManager input;
+    SW_ASSERT_TRUE( input.initialize() );
+    Internal::bindSwitch( input );
+    {
+        Internal::s_readyAtRunFrame = 40;
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately" timeoutFrames="20">
+        <At frame="2"><WaitUntil probe="Test.Ready" equals="1"/></At>
+        <At frame="3"><Expect probe="Test.SwitchCount" equals="0"/></At>
+        <At frame="4"><Tap slot="Key.E"/></At>
+        <At frame="5"><Expect probe="Test.SwitchCount" equals="1"/><Pass/></At>
+      </Scenario>)" ) );
+        const sw::AutomationResult result = Internal::run( runner, input );
+        SW_EXPECT_TRUE_MSG( result == sw::AutomationResult::Passed, runner.getFinishReason().c_str() );
+        SW_EXPECT_EQUAL( 5u, runner.getFrameIndex() );
+        SW_EXPECT_TRUE( Internal::s_runFrameCount >= 40u ); // 시나리오 시한(20) 보다 오래 돌았다 — 붙잡은 프레임은 시한에 세지 않는다
+    }
+    {
+        SW_TEST_DEFENSIVE_SCOPE( "a WaitUntil that never comes true logs its failure" );
+        sw::AutomationRunner runner;
+        SW_ASSERT_TRUE( runner.startFromText( R"(<Scenario name="t" startAfter="Immediately">
+        <At frame="1"><WaitUntil probe="Test.Nothing" atLeast="0" timeoutFrames="5"/></At>
+        <At frame="2"><Pass/></At>
+      </Scenario>)" ) );
+        SW_EXPECT_TRUE( Internal::run( runner, input ) == sw::AutomationResult::Failed );
+        SW_ASSERT_EQUAL( 1u, static_cast<uint32>( runner.getFailures().size() ) );
+        SW_EXPECT_TRUE_MSG( runner.getFailures()[0].find( "gave up after 5" ) != sw::string::npos, runner.getFailures()[0].c_str() );
     }
     input.shutdown();
 }

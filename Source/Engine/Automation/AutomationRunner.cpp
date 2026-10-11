@@ -41,6 +41,8 @@ namespace sw
             static constexpr float32 kDefaultDarkRatio = 0.7f;
             /** @brief `CloseWindow` 의 기본 종료 시한(초)입니다. */
             static constexpr float32 kDefaultExitWithinSeconds = 10.0f;
+            /** @brief `WaitUntil` 의 기본 시한(프레임) — 부하 걸린 기계에서 에디터가 에셋을 여는 데 드는 시간보다 넉넉히. */
+            static constexpr uint32 kDefaultWaitTimeoutFrames = 1200;
 
             /**
              * @brief 이 구성에 없는 단계가 든 시나리오면 그 첫 단계를 돌려줍니다 — 개발 명령(`DevCommand`)은 Shipping 에서 빠진다.
@@ -215,6 +217,7 @@ namespace sw
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
         , _imageWaitFrameCount{ 0 }
+        , _holdFrameCount{ 0 }
         , _result{ AutomationResult::Running }
         , _bStarted{ SW_FALSE }
         , _bEnded{ SW_FALSE }
@@ -332,6 +335,8 @@ namespace sw
             while ( _nextStepIndex < listStep.size() && listStep[_nextStepIndex]._frameIndex <= _frameIndex && _result == AutomationResult::Running )
             {
                 const AutomationStep& waitingStep = listStep[_nextStepIndex];
+                if ( waitingStep._kind == "WaitUntil" && shouldHoldForCondition( waitingStep, input ) )
+                    break;
                 if ( waitingStep._kind == "ExpectImage" && ( _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount ) )
                 {
                     if ( ++_imageWaitFrameCount <= AutomationRunnerInternal::kMaxImageWaitFrames )
@@ -357,8 +362,8 @@ namespace sw
             if ( _result == AutomationResult::Running && _exitDeadlineSeconds > 0.0 &&
                  static_cast<float64>( MonotonicClock::nowMicroseconds() ) * 1.0e-6 > _exitDeadlineSeconds )
                 finish( AutomationResult::Failed, "the window was asked to close but the loop kept running past ExpectExitWithin" );
-            // 끝난 프레임은 세지 않는다 — 보고의 프레임 = 끝낸 단계의 프레임.
-            if ( _result == AutomationResult::Running )
+            // 끝난 프레임은 세지 않는다 — 보고의 프레임 = 끝낸 단계의 프레임. `WaitUntil` 이 붙잡은 프레임도 세지 않는다(뒤 단계가 그만큼 밀린다).
+            if ( _result == AutomationResult::Running && _holdFrameCount == 0 )
                 ++_frameIndex;
             // 창 닫기를 기다리는 동안은 프레임 시한을 보지 않는다(벽시계 시한이 본다).
             if ( _result == AutomationResult::Running && _exitDeadlineSeconds <= 0.0 && _frameIndex > _scenario.getTimeoutFrames() )
@@ -519,10 +524,28 @@ namespace sw
             }
             return true;
         }
-        if ( kind == "Expect" )
+        if ( kind == "Expect" || kind == "WaitUntil" )
         {
-            if ( Internal::checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false )
+            const bool bWait = kind == "WaitUntil";
+            if ( bWait )
+            {
+                if ( Internal::checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost", "timeoutFrames" }, outError ) == false ||
+                     Internal::readUint( step, "timeoutFrames", Internal::kDefaultWaitTimeoutFrames, count, outError ) == false )
+                    return false;
+                // 붙잡는 동안 같은 프레임의 다른 단계가 몇 번이고(입력 전 단계) 또는 조건보다 먼저 돌지 않게 — 기다림은 그 프레임에 혼자 둔다.
+                for ( const AutomationStep& otherStep : _scenario.getSteps() )
+                {
+                    if ( &otherStep != &step && otherStep._frameIndex == step._frameIndex )
+                    {
+                        outError = step.describe() + ": <WaitUntil> must be the only step at its frame (move " + otherStep.describe() + ")";
+                        return false;
+                    }
+                }
+            }
+            else if ( Internal::checkAttributeNames( step, { "probe", "equals", "near", "tolerance", "atLeast", "atMost" }, outError ) == false )
+            {
                 return false;
+            }
             const string* pProbe = Internal::requireAttribute( step, "probe", outError );
             if ( pProbe == nullptr )
                 return false;
@@ -679,6 +702,8 @@ namespace sw
             runExpectLog( step );
             return true;
         }
+        if ( kind == "WaitUntil" )
+            return true; // 기다림은 `shouldHoldForCondition` 이 이미 끝냈다
         if ( kind == "Screenshot" )
         {
             const string path      = resolveOutputPath( *step.findAttribute( "file" ) );
@@ -734,14 +759,53 @@ namespace sw
 
     void AutomationRunner::runExpect( const AutomationStep& step )
     {
+        bool   bMatched = false;
+        string message;
+        if ( compareProbe( step, bMatched, message ) == false )
+            recordFailure( step, message );
+        else if ( bMatched == false )
+            recordFailure( step, "Expect " + message );
+    }
+
+    bool AutomationRunner::shouldHoldForCondition( const AutomationStep& step, InputManager& input )
+    {
+        bool       bMatched = false;
+        string     message;
+        const bool bHasValue = compareProbe( step, bMatched, message );
+        if ( bHasValue && bMatched )
+        {
+            if ( _holdFrameCount > 0 )
+                SW_LOG_INFO( "[Scenario] %# held the clock for %# frame(s)", step.describe().c_str(), _holdFrameCount );
+            _holdFrameCount = 0;
+            return false;
+        }
+        string error;
+        uint32 timeoutFrames = 0;
+        (void)AutomationRunnerInternal::readUint( step, "timeoutFrames", AutomationRunnerInternal::kDefaultWaitTimeoutFrames, timeoutFrames,
+                                                  error ); // validateEngineStep 이 이미 읽어 봤다 — 실패할 수 없다
+        if ( _holdFrameCount >= timeoutFrames )
+        {
+            recordFailure( step, "WaitUntil gave up after " + to_string( _holdFrameCount ) + " frame(s): " + message );
+            _holdFrameCount = 0;
+            return false;
+        }
+        ++_holdFrameCount;
+        // 이 프레임은 시나리오 프레임으로 세지 않는다 — 다음 프레임에 낼 입력 사건부터 한 프레임씩 밀어 시나리오 프레임과 맞춘다.
+        _inputScript.delayEventsFrom( input.getVirtualFrameIndex(), 1 );
+        return true;
+    }
+
+    bool AutomationRunner::compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const
+    {
         const string&                      probeName     = *step.findAttribute( "probe" );
         const AutomationProbeRegistration* pRegistration = AutomationProbes::find( probeName );
         float64                            value         = 0.0;
+        outMatched                                       = false;
         // 모듈을 내렸다 올리면 탐침이 빠질 수 있다 — 시작 때 있었어도 다시 찾는다.
         if ( pRegistration == nullptr || pRegistration->_pFunction( findActiveObjectManager(), value ) == false )
         {
-            recordFailure( step, pRegistration == nullptr ? probeName + " is no longer registered" : probeName + " has no value (no target in the scene)" );
-            return;
+            outMessage = pRegistration == nullptr ? probeName + " is no longer registered" : probeName + " has no value (no target in the scene)";
+            return false;
         }
         string  error;
         float32 expected  = 0.0f;
@@ -773,8 +837,9 @@ namespace sw
             bOk  = value <= static_cast<float64>( expected );
             rule = "<= " + *step.findAttribute( "atMost" );
         }
-        if ( bOk == false )
-            recordFailure( step, "Expect " + probeName + " " + rule + ", got " + AutomationRunnerInternal::formatNumber( value ) );
+        outMatched = bOk;
+        outMessage = probeName + " " + rule + ", got " + AutomationRunnerInternal::formatNumber( value );
+        return true;
     }
 
     void AutomationRunner::runExpectLog( const AutomationStep& step )

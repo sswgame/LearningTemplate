@@ -19,6 +19,6 @@
 	<At frame="68"><EditorClick mark="testRunner.select.hierarchy.tagFilter" state="up"/></At>
 	<At frame="75"><EditorClick mark="testRunner.runSelected" state="down"/></At>
 	<At frame="78"><EditorClick mark="testRunner.runSelected" state="up"/></At>
-	<At frame="400"><Expect probe="Editor.TestRunnerPassCount" equals="1"/></At>
-	<At frame="410"><Pass/></At>
+	<At frame="90"><WaitUntil probe="Editor.TestRunnerPassCount" equals="1"/></At>
+	<At frame="100"><Pass/></At>
 </Scenario>

@@ -129,6 +129,16 @@ namespace sw
         /** @brief 엔진 단계를 돌린다. 돌릴 수 없으면(형식) false 입니다. */
         [[nodiscard]] bool runEngineStep( const AutomationStep& step );
         void               runExpect( const AutomationStep& step );
+        /**
+         * @brief 탐침 단계(`Expect` · `WaitUntil`)의 비교를 봅니다. 탐침에 값이 없으면 false 이고 @p outMessage 에 까닭을 씁니다.
+         * @details 값이 있으면 @p outMessage 는 `<탐침> <규칙>, got <값>` 입니다.
+         */
+        [[nodiscard]] bool compareProbe( const AutomationStep& step, bool& outMatched, string& outMessage ) const;
+        /**
+         * @brief `WaitUntil` 이 아직 시나리오 시계를 붙잡아야 하면 true 입니다(이 프레임은 세지 않고 뒤의 입력 사건을 한 프레임 민다).
+         * @details 조건이 참이거나 `timeoutFrames` 를 넘으면(실패로 적는다) false 이고, 그 단계는 끝난다.
+         */
+        [[nodiscard]] bool shouldHoldForCondition( const AutomationStep& step, InputManager& input );
         void               runExpectLog( const AutomationStep& step );
         void               runExpectImage( const AutomationStep& step );
         void               onLogWritten( const LogEntry& entry );
@@ -156,6 +166,7 @@ namespace sw
         uint32                    _screenshotRequestedCount;
         uint32                    _screenshotCompletedCount;
         uint32                    _imageWaitFrameCount; ///< `<ExpectImage>` 가 스크린샷을 기다린 프레임
+        uint32                    _holdFrameCount;      ///< 지금 `<WaitUntil>` 이 시나리오 시계를 붙잡은 프레임(그동안 `_frameIndex` 는 그대로다)
         AutomationResult          _result;
         uint8                     _bStarted      : 1;
         uint8                     _bEnded        : 1;
