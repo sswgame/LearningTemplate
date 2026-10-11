@@ -1,9 +1,9 @@
 /**
  * @file GrabberComponent.h
- * @brief 집기 · 던지기 · 붙이기 — 물리 백엔드를 모르는 창구(`IGrabPhysics`)와 그것을 쓰는 컴포넌트입니다.
- * @details 게임이 `IGrabPhysics` 를 게임 서비스로 걸면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics` — 강체를 키네마틱으로 손에 묶고 놓을 때
- *          동적 + 속도)입니다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics` — 들고 있는 쪽 씬 컴포넌트에 월드 자리를 지켜 붙이고, 놓으면 떼며
- *          속도는 대상의 `GravityComponent` 수직 속도로만 준다)입니다.
+ * @brief 집기, 던지기, 붙이기입니다. 물리 백엔드를 모르는 인터페이스(`IGrabPhysics`)와 그것을 쓰는 컴포넌트를 담습니다.
+ * @details 게임이 `IGrabPhysics` 를 게임 서비스로 등록하면 그것을 쓰고, 없으면 강체 백엔드(`RigidBodyGrabPhysics`)를 쓴다. 이 백엔드는 강체를 키네마틱으로 손에 묶고, 놓을 때
+ *          동적으로 되돌리고 속도를 준다. 강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)을 쓴다. 이 폴백은 들고 있는 쪽 씬 컴포넌트에 월드 위치를 유지한 채 붙이고, 놓으면 떼며,
+ *          속도는 대상의 `GravityComponent` 수직 속도로만 준다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,7 +17,7 @@
 
 namespace sw
 {
-    /** @brief 집기 백엔드입니다. 게임 스레드에서 불립니다(틱 밖 — 컴포넌트가 틱 뒤로 미룬다). */
+    /** @brief 집기 백엔드 인터페이스입니다. 게임 스레드의 틱 밖에서 불리며, 컴포넌트가 호출을 틱 뒤로 미룹니다. */
     class IGrabPhysics
     {
     public:
@@ -27,16 +27,16 @@ namespace sw
         IGrabPhysics( const IGrabPhysics& )            = default;
         IGrabPhysics& operator=( const IGrabPhysics& ) = default;
 
-        /** @brief @p target 을 @p holder 의 @p localOffset 자리에 묶습니다. 묶었으면 true 입니다. */
+        /** @brief @p target 을 @p holder 의 @p localOffset 위치에 붙입니다. 붙였으면 true 입니다. */
         [[nodiscard]] virtual bool attach( GameObject& holder, GameObject& target, const float3& localOffset ) = 0;
-        /** @brief 묶음을 풀고 @p velocity(월드, m/s)로 놓습니다(0 이면 떨어뜨리기). */
+        /** @brief 붙인 것을 풀고 @p velocity(월드, m/s)로 놓습니다. 0 이면 그냥 떨어뜨립니다. */
         virtual void release( GameObject& holder, GameObject& target, const float3& velocity ) = 0;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 물리 없이 트랜스폼으로 묶는 폴백입니다. */
+    /** @brief 물리 없이 트랜스폼으로 붙이는 폴백입니다. */
     class SW_GF_API TransformGrabPhysics final : public IGrabPhysics
     {
     public:
@@ -49,8 +49,8 @@ namespace sw
 {
     /**
      * @class RigidBodyGrabPhysics
-     * @brief 강체를 키네마틱으로 손에 묶고(트랜스폼을 따른다 — 밀린 것이 속도를 받는다), 놓을 때 동적으로 되돌려 속도를 줍니다(3D · 2D 강체).
-     *        강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)과 같습니다. 서비스가 없을 때 `GrabberComponent` 의 기본 백엔드입니다.
+     * @brief 강체를 키네마틱으로 손에 붙이고(트랜스폼을 따르며, 밀린 것이 속도를 받음), 놓을 때 동적으로 되돌려 속도를 줍니다. 3D 강체와 2D 강체를 모두 지원합니다.
+     *        강체가 없는 대상은 트랜스폼 폴백(`TransformGrabPhysics`)과 같게 동작합니다. 서비스가 없을 때 `GrabberComponent` 가 쓰는 기본 백엔드입니다.
      */
     class SW_GF_API RigidBodyGrabPhysics final : public IGrabPhysics
     {
@@ -67,8 +67,8 @@ namespace sw
 {
     /**
      * @class GrabberComponent
-     * @brief 하나를 집어 들고(`grab`) 던지거나(`throwHeld`) 내려놓습니다(`dropHeld`). 소켓에 붙이기(무기를 등에)는 `grab` 에 그 소켓 자리를 오프셋으로 줍니다.
-     * @details 든 것은 핸들로 저장합니다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics`, 없으면 `RigidBodyGrabPhysics`.
+     * @brief 하나를 집어 들고(`grab`) 던지거나(`throwHeld`) 내려놓습니다(`dropHeld`). 소켓에 붙이기(무기를 등에 메기)는 `grab` 에 그 소켓의 위치를 오프셋으로 줍니다.
+     * @details 든 것은 핸들로 저장한다(`_held`). 백엔드는 게임 서비스 `IGrabPhysics` 를 쓰고, 없으면 `RigidBodyGrabPhysics` 를 쓴다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Grabber", Tooltip = "Grab, carry, throw or attach one object through the grab physics interface" )
     class SW_GF_API GrabberComponent : public Component

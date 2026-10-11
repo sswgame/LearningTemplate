@@ -1,6 +1,6 @@
 /**
  * @file QuestCatalog.h
- * @brief 퀘스트 정의 — 선행 퀘스트 · 레벨, 단계(목표 · 다음 단계 · 선택지 분기 · 완료 · 실패), 보상입니다.
+ * @brief 퀘스트 정의입니다. 선행 퀘스트와 레벨, 단계(목표, 다음 단계, 선택지 분기, 완료, 실패), 보상을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,20 +19,20 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 목표 하나 — "무엇을(종류) 누구에게(대상) 몇 번" 입니다. 종류 · 대상은 문자열이라 게임이 정합니다("Kill" · "Collect" · "Talk" · "Reach"). */
+    /** @brief 목표 하나입니다. "무엇을(종류) 누구에게(대상) 몇 번" 하는지 담습니다. 종류와 대상은 문자열이므로 게임이 정합니다("Kill", "Collect", "Talk", "Reach"). */
     struct QuestObjective
     {
         hashed_string _kind{};
         hashed_string _target{};
         string        _text{};
         int32         _count{ 1 };
-        uint8         _bOptional{ SW_FALSE }; ///< 끝내지 않아도 단계가 넘어간다(덤 보상 · 다른 결말 조건)
+        uint8         _bOptional{ SW_FALSE }; ///< 끝내지 않아도 단계가 넘어간다. 보너스 보상이나 다른 결말의 조건에 쓴다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 선택지 하나 — 고르면 그 단계로 갑니다. */
+    /** @brief 선택지 하나입니다. 고르면 그 단계로 넘어갑니다. */
     struct QuestBranch
     {
         hashed_string _choice{};
@@ -42,11 +42,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 보상입니다. 아이템은 값 목록(`ItemStackList`), 그 밖(경험치 · 돈 · 평판)은 이름 → 수치입니다. */
+    /** @brief 보상입니다. 아이템은 값 목록(`ItemStackList`)이고, 그 밖의 보상(경험치, 돈, 평판)은 이름과 수치의 쌍입니다. */
     struct QuestReward
     {
         ItemStackList _items{};
-        StatBlock     _values{}; ///< `xp="100" gold="50" rep.town="10"` — 이름은 게임이 읽는다
+        StatBlock     _values{}; ///< `xp="100" gold="50" rep.town="10"` 형식이다. 이름의 뜻은 게임이 해석한다
     };
 } // namespace sw
 
@@ -56,12 +56,12 @@ namespace sw
     struct QuestStage
     {
         hashed_string          _id{};
-        hashed_string          _nextStage{}; ///< 목표를 다 하면(비면 완료 · 실패 단계거나 선택지 단계)
-        string                 _text{};      ///< 일지에 보일 글
+        hashed_string          _nextStage{}; ///< 목표를 다 하면 넘어갈 단계. 비어 있으면 완료나 실패 단계이거나 선택지 단계이다
+        string                 _text{};      ///< 일지에 표시할 텍스트
         vector<QuestObjective> _listObjective{};
         vector<QuestBranch>    _listBranch{};      ///< 있으면 목표를 다 한 뒤 선택을 기다린다
-        QuestReward            _reward{};          ///< 이 단계에 들어설 때 준다(완료 단계면 퀘스트 보상)
-        float32                _timeLimit{ 0.0f }; ///< 초 — 넘으면 실패(0 = 없음)
+        QuestReward            _reward{};          ///< 이 단계에 들어설 때 준다. 완료 단계이면 퀘스트 보상이다
+        float32                _timeLimit{ 0.0f }; ///< 초 단위이며, 넘으면 실패한다. 0 이면 제한이 없다
         uint8                  _bComplete{ SW_FALSE };
         uint8                  _bFail{ SW_FALSE };
     };
@@ -74,7 +74,7 @@ namespace sw
     {
         hashed_string         _id{};
         string                _name{};
-        vector<hashed_string> _listRequiredQuest{}; ///< 끝낸(완료) 퀘스트
+        vector<hashed_string> _listRequiredQuest{}; ///< 끝낸(완료한) 퀘스트
         vector<QuestStage>    _listStage{};
         int32                 _requiredLevel{ 0 };
         uint8                 _bRepeatable{ SW_FALSE };

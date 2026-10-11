@@ -17,11 +17,11 @@ namespace sw
     {
         struct AppearanceResolverInternal
         {
-            /** @brief 해석 중의 외형 하나(몸 · 꾸미기 외형 · 칸의 장비 · 세트 완성 표현)입니다. */
+            /** @brief 해석 중인 외형 하나입니다. 몸, 꾸미기 외형, 슬롯의 장비, 세트 완성 표현이 있습니다. */
             struct Entry
             {
                 const ItemVisualDef*         _pVisual{ nullptr };
-                const AppearanceSlotRequest* _pRequest{ nullptr }; ///< 칸의 장비일 때
+                const AppearanceSlotRequest* _pRequest{ nullptr }; ///< 슬롯의 장비일 때
                 hashed_string                _owner{};
                 hashed_string                _itemID{};
                 hashed_string                _state{};
@@ -30,14 +30,14 @@ namespace sw
                 uint8                        _bHidden{ SW_FALSE };
             };
 
-            /** @brief 규칙 동작 하나의 판정 — 같은 대상을 두고 이긴 쪽입니다. */
+            /** @brief 규칙 동작 하나의 판정입니다. 같은 대상을 두고 이긴 쪽을 담습니다. */
             struct Decision
             {
                 const AppearanceRuleAction* _pAction{ nullptr };
                 const AppearanceRuleDef*    _pRule{ nullptr };
             };
 
-            /** @brief FNV-1a 64 로 값을 쌓습니다. 이름은 내용 해시(대소문자 무시)라 프로세스 · 기계가 달라도 같습니다. */
+            /** @brief FNV-1a 64 로 값을 누적합니다. 이름은 내용 해시(대소문자 무시)이므로 프로세스나 기계가 달라도 같은 값이 나옵니다. */
             struct HashBuilder
             {
 
@@ -55,7 +55,7 @@ namespace sw
                 void addInt( int32 value ) { addUint64( static_cast<uint64>( static_cast<uint32>( value ) ) ); }
                 void addFloat( float32 value )
                 {
-                    const float32 canonical = value == 0.0f ? 0.0f : value; // -0 과 +0 을 하나로
+                    const float32 canonical = value == 0.0f ? 0.0f : value; // -0 과 +0 을 같은 값으로 취급한다
                     uint32        bits      = 0;
                     Memory::copy( &bits, &canonical, sizeof( bits ) );
                     addUint64( bits );
@@ -154,8 +154,8 @@ namespace sw
             static hashed_string getDefaultState( const ItemVisualDef& visual ) { return visual._defaultState; }
 
             /**
-             * @brief 꾸미기 값을 겁니다 — 슬라이더 · 색은 모프 · 본 비율 · 머티리얼, 고르기는 변형 · 외형, 부착은 소켓 부착물. @p ownerIndex 는 그 주인의 항목입니다.
-             * @details 몸(주인이 빔)의 고르기 외형은 매개변수 이름을 주인으로 새 항목이 되고, 아이템의 고르기 외형은 @p outListExtraVisual 로 나옵니다(같은 주인).
+             * @brief 꾸미기 값을 적용합니다. 슬라이더와 색은 모프, 본 비율, 머티리얼에 적용하고, 고르기는 변형과 외형에, 부착은 소켓 부착물에 적용합니다. @p ownerIndex 는 그 주인의 항목입니다.
+             * @details 몸(주인이 빔)의 고르기 외형은 매개변수 이름을 주인으로 하는 새 항목이 된다. 아이템의 고르기 외형은 같은 주인으로 @p outListExtraVisual 에 담겨 나온다.
              */
             static void applyCustomization( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalized, const hashed_string& owner, int32 ownerIndex,
                                             const AppearanceDatabase& database, vector<Entry>& inoutListEntry, vector<const ItemVisualDef*>& outListExtraVisual,
@@ -301,7 +301,7 @@ namespace sw
                 return bMet != ( condition._bNegate == SW_TRUE );
             }
 
-            /** @brief 규칙의 비숨김 동작을 대상별 판정에 넣습니다 — 높은 우선순위가 이기고, 같으면 먼저 온 규칙(로드가 그런 짝을 막는다). */
+            /** @brief 규칙의 숨김이 아닌 동작을 대상별 판정에 넣습니다. 우선순위가 높은 쪽이 이기고, 같으면 먼저 온 규칙이 이깁니다. 로드 단계에서 우선순위가 같은 충돌 짝을 막습니다. */
             static void decide( const AppearanceRuleDef& rule, const AppearanceRuleAction& action, vector<Decision>& inoutListDecision, ResolvedAppearance& out )
             {
                 for ( Decision& decision : inoutListDecision )
@@ -410,7 +410,7 @@ namespace sw
                     resolved._placement   = placement;
                     resolved._damageStage = pStage != nullptr ? pStage->_name : hashed_string{};
 
-                    // 메시 변형: 규칙 > 피해 단계 > 꾸미기. 부품에 없는 변형 이름은 그 부품에는 아무 일도 하지 않는다.
+                    // 메시 변형의 우선순위는 규칙, 피해 단계, 꾸미기 순이다. 부품에 없는 변형 이름은 그 부품에 아무 영향을 주지 않는다.
                     hashed_string variant = entry._customVariant;
                     if ( pStage != nullptr )
                     {
@@ -589,7 +589,7 @@ namespace sw
         outResolved._bodyShape = spec._bodyShape;
         outResolved._face      = spec._face;
 
-        // 1) 몸 + 캐릭터 꾸미기.
+        // 1) 몸과 캐릭터 꾸미기.
         vector<Entry>        listEntry;
         int32                bodyIndex = -1;
         const ItemVisualDef* pBody     = database.getVisuals().findVisual( spec._bodyVisual );
@@ -615,7 +615,7 @@ namespace sw
             Internal::applyCustomization( *pSchema, normalized, hashed_string{}, bodyIndex, database, listEntry, listUnused, outResolved );
         }
 
-        // 2) 칸 — 형상 변경 · 숨김.
+        // 2) 슬롯: 형상 변경과 숨김.
         const ItemCatalog* pItemCatalog = database.getItemCatalog();
         for ( const AppearanceSlotRequest& request : spec._listSlot )
         {
@@ -645,7 +645,7 @@ namespace sw
             listEntry.push_back( entry );
         }
 
-        // 3) 칸 점유 — 표 순서로, 먼저 보이는 장비의 점유가 이긴다.
+        // 3) 슬롯 점유: 테이블 순서대로 보며, 먼저 보이는 장비의 점유가 이긴다.
         for ( size_t index = 0; index < listEntry.size(); ++index )
         {
             const Entry& occupier = listEntry[index];
@@ -665,7 +665,7 @@ namespace sw
             }
         }
 
-        // 4) 세트 완성 표현 — 요청된 아이템(숨김 정책으로 꺼진 것은 빼고)으로 판정한다.
+        // 4) 세트 완성 표현: 요청된 아이템으로 판정한다. 숨김 정책으로 꺼진 것은 뺀다.
         for ( const EquipSetDef& set : database.getSets().getSets() )
         {
             const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisual( set._completeVisual );
@@ -693,7 +693,7 @@ namespace sw
                                 static_cast<int32>( set._listCompleteSlot.size() ) );
         }
 
-        // 5) 규칙 — 지금(점유 · 세트 뒤, 규칙 동작 전)의 목록으로만 판정한다.
+        // 5) 규칙: 지금의 목록(점유와 세트 처리 뒤, 규칙 동작 전)으로만 판정한다.
         const vector<Entry>              listSnapshot = listEntry;
         vector<Internal::Decision>       listDecision;
         vector<const AppearanceRuleDef*> listFired;
@@ -738,7 +738,7 @@ namespace sw
             }
         }
 
-        // 6) 출력 — 몸 → 꾸미기 외형 → 칸 순서.
+        // 6) 출력: 몸, 꾸미기 외형, 슬롯 순서.
         for ( size_t index = 0; index < listEntry.size(); ++index )
         {
             if ( listEntry[index]._bHidden == SW_TRUE )

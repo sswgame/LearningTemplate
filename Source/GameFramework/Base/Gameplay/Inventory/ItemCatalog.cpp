@@ -20,7 +20,7 @@ namespace sw
         {
             static constexpr const utf8* kArrRequiresAttribute[] = { "set", "pieces", "equippedTag", "characterTag", "bodyShape" };
 
-            /** @brief `<Requires>` 하나를 읽습니다. 조건 속성이 없거나 둘 이상이면 경고하고 false 입니다. */
+            /** @brief `<Requires>` 하나를 읽습니다. 조건 속성이 없거나 둘 이상이면 경고를 남기고 false 를 반환합니다. */
             [[nodiscard]] static bool readRequires( const XMLNode& node, EquipCondition& outCondition, string_view sourceName, const utf8* pItemID )
             {
                 const utf8* pSet          = node.findAttribute( "set" );
@@ -130,7 +130,7 @@ namespace sw
             }
             const XMLNode statNode = node.findChild( "Stats" );
             if ( statNode )
-                (void)def._stats.loadFromAttributes( statNode ); // 읽은 속성 수만 돌려준다 — 없으면 빈 스탯이다
+                (void)def._stats.loadFromAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
             for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
             {
                 EquipCondition condition;

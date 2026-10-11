@@ -20,7 +20,7 @@ namespace sw
     {
         struct ArcadeVehicleComponentInternal
         {
-            /** @brief 땅 광선을 차 위 몇 미터에서 쏘는가입니다. */
+            /** @brief 땅 광선을 차 위 몇 미터에서 쏘는지 나타냅니다. */
             static constexpr float32 kProbeAbove = 2.0f;
             /** @brief 땅 광선의 길이입니다(미터). */
             static constexpr float32 kProbeLength = 50.0f;
@@ -103,7 +103,7 @@ namespace sw
 
     ArcadeVehicleInput ArcadeVehicleComponent::toVehicleInput( const ControlIntent& intent, float32 vehicleYaw, int32 driftIndex, int32 boostIndex, int32 jumpIndex )
     {
-        // 가고 싶은 월드 방향을 차 기준으로 — 앞 성분은 페달, 옆 성분은 조향(요 0 이면 앞 +Z · 오른쪽 +X).
+        // 가고 싶은 월드 방향을 차 기준으로 바꾼다. 앞 성분은 페달, 옆 성분은 조향이다. 요가 0 이면 앞은 +Z 이고 오른쪽은 +X 이다.
         const float3       worldMove = intent.computeWorldMove();
         const float32      sinYaw    = MathUtil::sin( vehicleYaw );
         const float32      cosYaw    = MathUtil::cos( vehicleYaw );

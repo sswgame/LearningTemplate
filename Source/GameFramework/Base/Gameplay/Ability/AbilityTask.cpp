@@ -49,7 +49,7 @@ namespace sw
 
     void AbilityTaskWaitDelay::onActivate()
     {
-        // 0 이하의 지연은 다음 틱이 아니라 지금 끝난다 — "바로" 를 뜻한 호출이 한 프레임 늦지 않게.
+        // 0 이하의 지연은 다음 틱이 아니라 지금 끝낸다. "바로" 를 뜻하는 호출이 한 프레임 늦어지지 않게 하기 위해서다.
         if ( _delay.isActive() == false )
             onTick( 0.0f );
     }
@@ -62,7 +62,7 @@ namespace sw
         if ( _delay.isActive() )
             return;
 
-        // 끝을 먼저 적고 부른다 — 콜백이 어빌리티를 끝내도(작업 정리) 이 작업이 다시 불리지 않는다.
+        // 끝났다고 먼저 기록한 뒤에 콜백을 부른다. 콜백이 어빌리티를 끝내서 작업이 정리되어도 이 작업이 다시 불리지 않는다.
         const Delegate<void()> callback = _onFinished;
         endTask();
         if ( callback.isBound() )

@@ -139,7 +139,7 @@ namespace sw
         return changed;
     }
 
-    // 바뀐 양은 쓰지 않는다 — 범위 밖이면 경계에서 멈춘다
+    // 바뀐 양은 쓰지 않는다. 범위 밖이면 경계에서 멈춘다
     void ReputationState::setValue( const hashed_string& factionID, int32 value ) { (void)applyDelta( factionID, value - getValue( factionID ) ); }
 
     void ReputationState::advanceDay()
@@ -198,7 +198,7 @@ namespace sw
     bool ReputationState::readState( Archive& archive )
     {
         uint32 count = 0;
-        // 칸마다 이름 길이(4) + 값(4) 이상
+        // 세력마다 이름 길이(4) + 값(4) 이상
         if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
             return false;
         vector<Entry> listEntry;
