@@ -1,6 +1,6 @@
 /**
  * @file Archive.h
- * @brief 바이너리 아카이브 읽기 · 쓰기입니다(리플렉션 직렬화는 선택).
+ * @brief 바이너리 아카이브를 읽고 쓰는 클래스입니다. 리플렉션 직렬화는 선택입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,7 +26,7 @@ namespace sw
     class SW_API Archive
     {
     public:
-        /// @brief 매직 · 버전 헤더입니다.
+        /// @brief 매직 값과 버전을 담은 헤더입니다.
         struct Header
         {
             uint64 _version{ 0 };
@@ -76,8 +76,8 @@ namespace sw
 
         /**
          * @brief 오프셋을 직접 설정합니다. 데이터 끝을 넘으면 옮기지 않고 false 를 반환합니다.
-         * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 `_dataSize - _offset` 로 남은 양을 셉니다 — 끝을 넘긴 위치를 받으면 그 뺄셈이
-         *          돌아 다음 읽기가 버퍼 밖을 읽습니다.
+         * @details 읽기 함수들은 `_offset <= _dataSize` 를 믿고 `_dataSize - _offset` 으로 남은 양을 센다. 끝을 넘긴 위치를 받으면 그 뺄셈이
+         *          언더플로되어 다음 읽기가 버퍼 밖을 읽는다.
          */
         bool setOffset( uint64 offset );
         /** @brief 읽기/쓰기 모드를 바꾸고 오프셋을 처음으로 되돌립니다. */
@@ -113,14 +113,14 @@ namespace sw
         bool isOk() const { return _bError == SW_FALSE; }
         /** @brief 오류 상태로 만듭니다. */
         void setError() { _bError = SW_TRUE; }
-        /** @brief 오류 상태를 풉니다. */
+        /** @brief 오류 상태를 해제합니다. */
         void clearError() { _bError = SW_FALSE; }
         /** @brief 정상 상태인지를 bool 로 반환합니다. */
         explicit operator bool() const { return isOk(); }
 
         /** @brief 읽을 수 있는 남은 바이트 수를 반환합니다. */
         uint64 getRemainingBytes() const { return ( _pData != nullptr && _offset < _dataSize ) ? ( _dataSize - _offset ) : 0; }
-        /** @brief 남은 바이트가 @p byteSize 이상인지 반환합니다. 뺄셈으로 비교합니다. 덧셈은 큰 값에서 넘칩니다. */
+        /** @brief 남은 바이트가 @p byteSize 이상이면 true 입니다. 뺄셈으로 비교하는데, 덧셈은 큰 값에서 오버플로되기 때문입니다. */
         bool hasBytesAvailable( uint64 byteSize ) const { return ( _pData != nullptr && byteSize <= _dataSize - _offset ); }
 
         /** @brief 지정한 바이트 크기만큼을 잘라 읽기 전용 하위 아카이브로 만듭니다. */
