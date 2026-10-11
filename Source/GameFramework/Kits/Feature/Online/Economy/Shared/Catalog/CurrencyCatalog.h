@@ -1,9 +1,11 @@
 /**
  * @file CurrencyCatalog.h
- * @brief 화폐 정의 — `<CurrencyCatalog><Currency id="cur.gold" cap="999999999"/><Currency id="cur.gem_paid" paid="true"/><Currency id="cur.gem_free"/>
- *        <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>`.
- * @details `<Funding>` 이 있는 화폐는 **가상**(가격 단위)이다 — 잔액이 없고, 그 가격은 재원 자산을 적힌 순서대로 쓴다(유상 · 무상 구분 — 차감 순서는 데이터,
- *          관례는 무상 먼저). 재원은 가상이 아닌 정의된 화폐여야 한다(아니면 그 가상 화폐를 버리고 경고). `ILedgerPolicy` 로 계정 상한을 답한다(`cap`, 0 = 원장 상한만).
+ * @brief 화폐 정의입니다. 형식은 `<CurrencyCatalog><Currency id="cur.gold" cap="999999999"/><Currency id="cur.gem_paid" paid="true"/><Currency id="cur.gem_free"/>
+ *        <Currency id="cur.gem"><Funding asset="cur.gem_free"/><Funding asset="cur.gem_paid"/></Currency></CurrencyCatalog>` 입니다.
+ * @details `<Funding>` 이 있는 화폐는 **가상** 화폐(가격 단위)이다. 가상 화폐에는 잔액이 없고, 그 가격은 재원 자산을 적힌 순서대로 차감한다.
+ *          유상과 무상을 구분하며 차감 순서는 데이터가 정한다. 관례는 무상을 먼저 쓰는 것이다.
+ *          재원은 가상이 아닌, 정의된 화폐여야 한다. 아니면 그 가상 화폐를 버리고 경고한다.
+ *          `ILedgerPolicy` 로 계정 상한을 답한다(`cap`, 0이면 원장 상한만 적용한다).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,10 +24,10 @@ namespace sw
     /** @brief 화폐 하나입니다. */
     struct CurrencyDef
     {
-        vector<string> _listFundingAsset{}; ///< 비지 않으면 가상 화폐 — 차감 순서
+        vector<string> _listFundingAsset{}; ///< 비어 있지 않으면 가상 화폐이다. 차감 순서를 나타낸다
         string         _id{};
-        int64          _cap{ 0 };          ///< 계정 잔액 상한(0 = 원장 상한만)
-        uint8          _bPaid{ SW_FALSE }; ///< 결제로 산 재화(청약철회 · 표시 구분)
+        int64          _cap{ 0 };          ///< 계정 잔액 상한이다. 0이면 원장 상한만 적용한다
+        uint8          _bPaid{ SW_FALSE }; ///< 결제로 산 재화이다. 청약 철회와 표시 구분에 쓴다
 
         bool isVirtual() const { return _listFundingAsset.empty() == false; }
     };
@@ -35,14 +37,14 @@ namespace sw
 {
     /**
      * @class CurrencyCatalog
-     * @brief 화폐 정의 모음입니다. 읽은 뒤에는 바꾸지 않는다 — 저장소 스레드가 `getBalanceCap` 을 읽는다.
+     * @brief 화폐 정의 모음입니다. 읽은 뒤에는 바꾸지 않습니다. 저장소 스레드가 `getBalanceCap` 을 읽기 때문입니다.
      */
     class SW_GF_API CurrencyCatalog : public XMLCatalog<CurrencyCatalog>, public ILedgerPolicy
     {
         friend class XMLCatalog<CurrencyCatalog>;
 
     public:
-        /** @brief 정의를 더합니다(테스트 · 코드로 만드는 게임). 같은 id 는 바꾼다. */
+        /** @brief 정의를 추가합니다. 테스트와 코드로 정의를 만드는 게임이 씁니다. 같은 id 는 교체합니다. */
         void addCurrency( const CurrencyDef& def );
 
         const CurrencyDef*         findCurrency( string_view id ) const;

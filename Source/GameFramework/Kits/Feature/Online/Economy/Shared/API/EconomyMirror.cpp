@@ -16,7 +16,7 @@ namespace sw
     {
         struct EconomyMirrorInternal
         {
-            /** @brief @p assetID 가 @p prefix 로 시작하면 뒤 이름을 @p outName 에 넣고 true 입니다. */
+            /** @brief @p assetID 가 @p prefix 로 시작하면 뒤의 이름을 @p outName 에 넣고 true 를 반환합니다. */
             static bool findSuffix( string_view assetID, string_view prefix, hashed_string& outName )
             {
                 if ( StringUtil::startsWith( assetID, prefix ) == false || assetID.size() == prefix.size() )
@@ -42,7 +42,7 @@ namespace sw
                 if ( target > current )
                     inoutWallet.add( currency, target - current );
                 else if ( target < current )
-                    inoutWallet.charge( currency, current - target ); // 빚(음수)까지 그대로 — 원장이 원본이다
+                    inoutWallet.charge( currency, current - target ); // 빚(음수)까지 그대로 맞춘다. 원장이 원본이기 때문이다
             }
         };
     } // namespace
@@ -60,7 +60,7 @@ namespace sw
         }
         if ( bSnapshot == false )
             return;
-        const vector<WalletBalance> listWallet = inoutWallet.getBalances(); // 아래에서 바꾸므로 복사
+        const vector<WalletBalance> listWallet = inoutWallet.getBalances(); // 아래에서 바꾸므로 복사한다
         for ( const WalletBalance& walletBalance : listWallet )
         {
             const bool bListed = EconomyMirrorInternal::isListed( listBalance, kCurrencyPrefix, walletBalance._currency );
@@ -71,7 +71,7 @@ namespace sw
 
     int32 EconomyMirror::applyToInventory( const vector<LedgerBalance>& listBalance, bool bSnapshot, Inventory& inoutInventory )
     {
-        // 스냅숏이면 원장에 없는 아이템을 먼저 뺀다 — 빈 칸이 생긴 뒤에 넣어야 칸이 모자라지 않는다.
+        // 스냅샷이면 원장에 없는 아이템을 먼저 뺀다. 빈 슬롯이 생긴 뒤에 넣어야 슬롯이 모자라지 않는다.
         if ( bSnapshot )
         {
             vector<hashed_string> listHeld;
@@ -86,7 +86,7 @@ namespace sw
                 if ( EconomyMirrorInternal::isListed( listBalance, kItemPrefix, itemID ) )
                     continue;
                 const bool bRemoved = inoutInventory.removeItem( itemID, inoutInventory.getItemCount( itemID ) );
-                SW_ASSERT( bRemoved ); // 가진 개수를 그대로 빼므로 늘 된다
+                SW_ASSERT( bRemoved ); // 가진 개수를 그대로 빼므로 항상 성공한다
                 (void)bRemoved;
             }
         }
@@ -96,7 +96,7 @@ namespace sw
             hashed_string itemID;
             if ( EconomyMirrorInternal::findSuffix( balance._assetID, kItemPrefix, itemID ) == false )
                 continue;
-            const int64 target  = balance._amount > 0 ? balance._amount : 0; // 아이템 빚은 0 으로 비춘다
+            const int64 target  = balance._amount > 0 ? balance._amount : 0; // 아이템의 빚은 0으로 반영한다
             const int64 current = inoutInventory.getItemCount( itemID );
             if ( target > current )
             {
@@ -106,7 +106,7 @@ namespace sw
             else if ( target < current )
             {
                 const bool bRemoved = inoutInventory.removeItem( itemID, static_cast<int32>( current - target ) );
-                SW_ASSERT( bRemoved ); // 가진 개수보다 적게 빼므로 늘 된다
+                SW_ASSERT( bRemoved ); // 가진 개수보다 적게 빼므로 항상 성공한다
                 (void)bRemoved;
             }
         }

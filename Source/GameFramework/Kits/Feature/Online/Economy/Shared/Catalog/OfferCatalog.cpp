@@ -22,7 +22,7 @@ namespace sw
                 return StringUtil::parseInt64( node.getAttributeText( "amount" ), outAmount ) && 1 <= outAmount && outAmount <= LedgerConstant::kMaxAmount;
             }
 
-            /** @brief 비었으면 0 으로 두고 true, 숫자가 아니면 false 입니다. */
+            /** @brief 비어 있으면 0으로 두고 true 를 반환하고, 숫자가 아니면 false 를 반환합니다. */
             [[nodiscard]] static bool readOptionalTime( const XMLNode& node, const utf8* pName, int64& outTimeMs )
             {
                 const string_view text = node.getAttributeText( pName );
