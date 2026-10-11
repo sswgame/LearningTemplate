@@ -1,6 +1,6 @@
 /**
  * @file InspectorComponentManager.h
- * @brief 컴포넌트 타입명 → IInspectorComponent (EditorContext 소유)
+ * @brief 컴포넌트 타입 이름에서 IInspectorComponent 로의 대응을 관리합니다. `EditorContext` 가 소유합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -22,9 +22,9 @@ namespace sw::editor
 
     /**
      * @struct EditorInspectorRegistration
-     * @brief 컴포넌트 인스펙터 확장 하나의 등록 줄입니다. 확장의 .cpp 가 `SW_EDITOR_INSPECTOR` 로 둡니다.
-     * @details id 는 컴포넌트 클래스 이름입니다. 컴포넌트 하나에 확장은 하나이고, 둘째 등록은 거절됩니다. 그리는 순서는 등록 순서가
-     *          아니라 타입 계층(기반 → 파생)이 정하므로 `_order` 는 쓰지 않습니다.
+     * @brief 컴포넌트 인스펙터 확장 하나의 등록 항목입니다. 확장의 .cpp 가 `SW_EDITOR_INSPECTOR` 로 둡니다.
+     * @details id 는 컴포넌트 클래스 이름이다. 컴포넌트 하나에 확장은 하나이고, 두 번째 등록은 거절된다. 그리는 순서는 등록 순서가
+     *          아니라 타입 계층(기반에서 파생 순서)이 정하므로 `_order` 는 쓰지 않는다.
      */
     struct EditorInspectorRegistration : EditorRegistration
     {
@@ -37,25 +37,25 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 등록 줄이 가리키는 확장 생성 함수입니다. */
+    /** @brief 등록 항목이 가리키는 확장 생성 함수입니다. */
     template <typename TInspector>
     unique_ptr<IInspectorComponent> createInspectorComponent()
     {
         return make_unique<TInspector>();
     }
 
-    /** @brief 컴포넌트 타입 하나에 건 인스펙터 확장입니다. */
+    /** @brief 컴포넌트 타입 하나에 연결한 인스펙터 확장입니다. */
     struct InspectorComponentEntry
     {
         hashed_string                      _typeName;
         unique_ptr<IInspectorComponent>    _pInstance;
-        const EditorInspectorRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerType 한 것은 nullptr)
+        const EditorInspectorRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 항목이다. 직접 registerType 한 것은 nullptr 이다
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 컴포넌트 타입별 인스펙터 UI 관리자 (EditorContext 소유) */
+    /** @brief 컴포넌트 타입별 인스펙터 UI 를 관리합니다. `EditorContext` 가 소유합니다. */
     class InspectorComponentManager
     {
     public:
@@ -64,23 +64,23 @@ namespace sw::editor
         InspectorComponentManager( const InspectorComponentManager& )            = delete;
         InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 
-        /** @brief 타입 이름에 확장을 겁니다. 같은 이름이 있으면 바꿉니다. */
+        /** @brief 타입 이름에 확장을 등록합니다. 같은 이름이 있으면 교체합니다. */
         void                 registerType( string_view typeName, unique_ptr<IInspectorComponent> pInspector );
         IInspectorComponent* find( string_view typeName ) const;
         /**
-         * @brief 이 타입과 그 기반들에 등록된 확장을 기반 → 파생 순서로 모읍니다.
-         * @details 언리얼 `IDetailCustomization` 처럼 하위 타입에도 걸립니다. 게임이 만든 SceneComponent 파생에도 트랜스폼 칸이 그려집니다.
+         * @brief 이 타입과 그 기반 타입들에 등록된 확장을 기반에서 파생 순서로 모읍니다.
+         * @details 언리얼의 `IDetailCustomization` 처럼 하위 타입에도 적용된다. 게임이 만든 SceneComponent 파생에도 트랜스폼 항목이 그려진다.
          */
         void collectForType( const TypeInfo& type, vector<IInspectorComponent*>& outListInspector ) const;
         /** @brief `SW_EDITOR_INSPECTOR` 로 등록된 확장을 모두 만들어 둡니다. */
         void registerDefaults();
-        /** @brief 등록 목록과 맞춥니다. 새 줄은 만들고 사라진 줄의 확장은 지웁니다. 세대가 같으면 바로 돌아갑니다. */
+        /** @brief 등록 목록과 맞춥니다. 새 항목은 만들고 사라진 항목의 확장은 지웁니다. 세대가 같으면 바로 반환합니다. */
         void syncWithRegistry();
-        /** @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 확장을 지웁니다. 지운 수를 돌려줍니다. 이미지를 언로드하기 전에 부릅니다. */
+        /** @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 이미지) 안에 있는 확장을 지우고, 지운 수를 반환합니다. 이미지를 언로드하기 전에 호출합니다. */
         uint32 releaseInspectorsWithin( const void* pBegin, const void* pEnd );
 
     private:
-        vector<InspectorComponentEntry> _listEntry;        ///< 확장은 열 개 안팎이라 줄 찾기로 충분하다
+        vector<InspectorComponentEntry> _listEntry;        ///< 확장은 열 개 안팎이므로 선형 탐색으로 충분하다
         uint32                          _syncedGeneration; ///< 마지막으로 맞춘 등록 세대
 
         /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
@@ -90,8 +90,8 @@ namespace sw::editor
 
 /**
  * @brief 컴포넌트 인스펙터 확장을 그 확장의 .cpp 에서 등록합니다. 예: `SW_EDITOR_INSPECTOR( CameraComponent, CameraComponentInspector );`
- * @param TComponent 리플렉션 타입(`StaticType()`)이 있는 컴포넌트
- * @param TInspector 기본 생성자가 있는 `IInspectorComponent` 구현
+ * @param TComponent 리플렉션 타입(`StaticType()`)이 있는 컴포넌트입니다.
+ * @param TInspector 기본 생성자가 있는 `IInspectorComponent` 구현입니다.
  */
 #define SW_EDITOR_INSPECTOR( TComponent, TInspector )                                                          \
     SW_EDITOR_REGISTER( ::sw::editor::EditorInspectorRegistration, Inspector_##TInspector, { #TComponent, 0 }, \

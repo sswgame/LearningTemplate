@@ -21,27 +21,27 @@ namespace sw::editor
 {
     /**
      * @enum ModelRecenter
-     * @brief 합친 메시를 원점 기준으로 옮기는 방법입니다(엔진 공간의 경계 상자 기준).
+     * @brief 합친 메시를 원점 기준으로 옮기는 방법입니다. 엔진 공간의 경계 상자를 기준으로 합니다.
      */
     enum class ModelRecenter : uint8
     {
-        None = 0,     ///< 원본 노드 변환 그대로입니다.
-        Xz,           ///< 경계 상자의 XZ 중심을 원점으로 옮깁니다. Y 는 그대로입니다.
-        BottomCenter, ///< XZ 중심을 원점으로, 가장 낮은 Y 를 0 으로 옮깁니다.
+        None = 0,     ///< 원본 노드 변환을 그대로 둔다
+        Xz,           ///< 경계 상자의 XZ 중심을 원점으로 옮긴다. Y 는 그대로 둔다
+        BottomCenter, ///< XZ 중심을 원점으로, 가장 낮은 Y 를 0 으로 옮긴다
     };
 
     /**
      * @struct ModelImportRule
-     * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음 · 애니메이션 모두 · ACL)입니다.
-     * @details 적용 순서는 `translation` 다음 `recenter` 입니다(스킨드 모델에는 둘 다 쓸 수 없습니다 — 바인드 행렬이 어긋납니다).
-     *          키는 `ModelImportConfig.cpp` 의 `kArrModelImport…KeyDoc` 표 — 생성 문서 `docs/Config/ModelImportConfig.md`. 모르는 키 · 틀린 값은 설정 오류입니다.
+     * @brief 모델 원본 하나에 적용하는 임포트 규칙입니다. 규칙이 없는 원본은 기본값(옮기지 않음, 애니메이션 모두, ACL)을 씁니다.
+     * @details 적용 순서는 `translation` 다음 `recenter` 이다. 스킨드 모델에는 둘 다 쓸 수 없다. 바인드 행렬이 어긋나기 때문이다.
+     *          키는 `ModelImportConfig.cpp` 의 `kArrModelImport…KeyDoc` 테이블에 있고 생성 문서는 `docs/Config/ModelImportConfig.md` 이다. 모르는 키나 틀린 값은 설정 오류다.
      */
     struct ModelImportRule
     {
         string                _name;
         AssetImportPathFilter _filter;
         FractureSettings      _fracture;
-        /** @brief 모든 노드의 월드 위치에 더하는 이동입니다(glTF 원본 공간 — 축 변환 전). 원본이 배치 오프셋을 품고 있을 때 씁니다. */
+        /** @brief 모든 노드의 월드 위치에 더하는 이동입니다. glTF 원본 공간이며 축 변환 전입니다. 원본이 배치 오프셋을 포함하고 있을 때 씁니다. */
         float32        _arrTranslation[3];
         vector<string> _listClipName;
         string         _animationCodec;
@@ -52,7 +52,7 @@ namespace sw::editor
         ModelRecenter  _recenter;
         uint8          _bImportAnimations;
         uint8          _bImportAttachments;
-        uint8          _bFracture; ///< 규칙에 `fracture` 가 있으면 참 — `.mesh` 옆에 `.fracture` 를 쓴다
+        uint8          _bFracture; ///< 규칙에 `fracture` 가 있으면 참이다. `.mesh` 옆에 `.fracture` 를 쓴다
 
         ModelImportRule()
             : _name{}
@@ -72,9 +72,9 @@ namespace sw::editor
         {
         }
 
-        /** @brief 원본 해시에 섞을 애니메이션 · 부착 규칙의 글입니다(규칙만 바꿔도 다시 임포트하게). */
+        /** @brief 원본 해시에 섞을 애니메이션과 부착 규칙의 문자열입니다. 규칙만 바꿔도 다시 임포트하게 합니다. */
         string makeAnimationHashText() const;
-        /** @brief 원본 해시에 섞을 파쇄 규칙의 글입니다. 파쇄가 없으면 빈 글입니다. */
+        /** @brief 원본 해시에 섞을 파쇄 규칙의 문자열입니다. 파쇄가 없으면 빈 문자열입니다. */
         string makeFractureHashText() const;
     };
 } // namespace sw::editor
@@ -94,23 +94,23 @@ namespace sw::editor
         /** @brief 파일에서 설정을 읽습니다. */
         [[nodiscard]] bool loadFromFile( string_view configPath );
 
-        /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 `recenter` 값, 숫자 셋이 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
+        /** @brief JSON 문자열에서 설정을 읽습니다. 모르는 `recenter` 값, 숫자 세 개가 아닌 `translation`, 객체가 아닌 규칙은 오류입니다. */
         [[nodiscard]] bool loadFromJSONString( string_view jsonString );
 
-        /** @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 처음으로 맞는 규칙입니다. 없으면 기본 규칙입니다. */
+        /** @brief 리소스 루트 기준 경로(예: "game/x/models_raw/a.glb")에 처음으로 맞는 규칙을 반환합니다. 없으면 기본 규칙입니다. */
         ModelImportRule findMatchingRule( string_view relativePath ) const;
 
         const vector<ModelImportRule>& getRules() const { return _listRule; }
 
-        /** @brief 규칙의 애니메이션 · 부착 키를 읽습니다. 모르는 코덱 · 양수가 아닌 숫자는 false 입니다. */
+        /** @brief 규칙의 애니메이션과 부착 키를 읽습니다. 모르는 코덱이나 양수가 아닌 숫자가 있으면 false 입니다. */
         [[nodiscard]] static bool parseAnimationKeys( const JSONValue& ruleValue, ModelImportRule& inoutRule );
-        /** @brief 규칙의 `fracture` 객체를 읽습니다. 모르는 키 · 패턴 · 양수가 아닌 수 · 길이가 틀린 배열은 false 입니다. */
+        /** @brief 규칙의 `fracture` 객체를 읽습니다. 모르는 키나 패턴, 양수가 아닌 수, 길이가 틀린 배열이 있으면 false 입니다. */
         [[nodiscard]] static bool parseFractureKeys( const JSONValue& fractureValue, ModelImportRule& inoutRule );
 
-        /** @brief `recenter` 값 이름을 읽습니다("none" · "xz" · "bottom-center"). 모르는 이름이면 false 입니다. */
+        /** @brief `recenter` 값 이름을 읽습니다. "none", "xz", "bottom-center" 중 하나이며, 모르는 이름이면 false 입니다. */
         [[nodiscard]] static bool parseRecenter( string_view text, ModelRecenter& outRecenter );
 
-        /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)입니다. */
+        /** @brief 에디터 설정을 거치지 않은 기본 경로(`<프로젝트>/Config/Editor/ModelImportConfig.json`)를 반환합니다. */
         static string makeDefaultConfigPath();
 
     private:
