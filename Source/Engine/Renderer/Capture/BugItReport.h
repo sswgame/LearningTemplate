@@ -33,6 +33,8 @@ namespace sw
         static constexpr const utf8* kSceneFileName = "scene.scene.xml";
         /** @brief 재현 명령 파일 이름입니다. */
         static constexpr const utf8* kReproFileName = "repro.txt";
+        /** @brief 타임라인 기록이 켜져 있었으면 최근 프레임의 Chrome Trace Event 파일입니다(Dev 만). */
+        static constexpr const utf8* kTraceFileName = "trace.trace.json";
 
         string _note;
         string _scenePath;          ///< 활성 씬의 원본 경로(사본이 아니라 원래 씬)

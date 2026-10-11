@@ -429,10 +429,25 @@ namespace sw
             {
                 if ( engine::areEngineServicesBound() == false )
                     return false;
-                if ( listArgument.empty() || ( listArgument[0] != "save" && listArgument[0] != "record" ) )
+                if ( listArgument.empty() ||
+                     ( listArgument[0] != "save" && listArgument[0] != "record" && listArgument[0] != "on" && listArgument[0] != "off" ) )
                 {
-                    outReply = "usage: profile.trace save [<path>] [<frames>] | profile.trace record <seconds> [<path>] [<eventBudgetPerThread>]";
+                    outReply = "usage: profile.trace on|off | save [<path>] [<frames>] | record <seconds> [<path>] [<eventBudgetPerThread>]";
                     return false;
+                }
+                if ( listArgument[0] == "on" || listArgument[0] == "off" )
+                {
+                    // 링 버퍼 기록을 켜고 끈다(에디터 Timeline 탭의 Record 와 같다) — bugit 이 최근 프레임을 trace.trace.json 으로 같이 담는다.
+                    FrameProfiler& profiler = engine::getFrameProfiler();
+                    const bool     bOn      = listArgument[0] == "on";
+                    if ( bOn )
+                    {
+                        profiler.setEnabled( true );
+                        profiler.getTimeline().clear();
+                    }
+                    profiler.getTimeline().setRecording( bOn );
+                    outReply = bOn ? "timeline recording on" : "timeline recording off";
+                    return true;
                 }
                 if ( listArgument[0] == "record" )
                 {
@@ -470,7 +485,7 @@ namespace sw
         };
     } // namespace
 
-    SW_DEV_COMMAND( ProfileTrace, "profile.trace", "profile.trace save [<path>] [<frames>]",
+    SW_DEV_COMMAND( ProfileTrace, "profile.trace", "profile.trace on|off | save [<path>] [<frames>] | record <seconds> [<path>] [<budget>]",
                     "Save the profiler timeline of the recent frames as a Chrome trace (.trace.json)", &ProfilerTraceDevCommandsInternal::runTrace );
 } // namespace sw
     #endif

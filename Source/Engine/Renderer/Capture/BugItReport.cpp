@@ -18,6 +18,7 @@
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/CameraRegistry.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 #include "Engine/Renderer/Frame/FrameRenderer.h"
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
@@ -312,6 +313,17 @@ namespace sw
         RenderThread::requestScreenshot( FileUtil::joinPath( directory, kScreenshotFileName ) );
         if ( BugItReportInternal::copyCurrentLog( FileUtil::joinPath( directory, kLogFileName ) ) == false )
             SW_LOG_WARNING( "bugit: the log file could not be copied" );
+#if SW_PROFILER_TRACE_ENABLED
+        if ( engine::areEngineServicesBound() )
+        {
+            // 타임라인 기록이 켜져 있었으면 최근 프레임의 시간축을 같이 담는다(꺼져 있으면 조용히 건너뛴다).
+            string tracePath;
+            string traceReply;
+            if ( ProfilerTraceExport::saveRecentFrames( engine::getFrameProfiler(), ProfilerTimeline::kFrameCapacity - 1,
+                                                        FileUtil::joinPath( directory, kTraceFileName ), "Game", tracePath, traceReply ) )
+                SW_LOG_INFO( "bugit: timeline trace saved (%#)", traceReply );
+        }
+#endif
         if ( pScene != nullptr && engine::getSceneManager().saveActiveSceneCopy( FileUtil::joinPath( directory, kSceneFileName ) ) == false )
             SW_LOG_WARNING( "bugit: the scene copy could not be saved" );
 
