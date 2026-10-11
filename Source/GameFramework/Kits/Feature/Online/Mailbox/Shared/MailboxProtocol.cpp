@@ -140,7 +140,7 @@ namespace sw
             balance._amount = reader.readVarInt();
         }
         const uint64 mailCount = reader.readVarUint();
-        if ( mailCount > static_cast<uint64>( kMaxListCount * 2 ) ) // 캠페인이 개인 우편 앞에 끼어든다
+        if ( mailCount > static_cast<uint64>( kMaxListCount * 2 ) ) // 캠페인이 개인 우편 앞에 끼어들기 때문이다
             return false;
         outReply._listMail.resize( static_cast<size_t>( mailCount ) );
         for ( MailView& mail : outReply._listMail )

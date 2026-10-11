@@ -65,7 +65,7 @@ namespace sw
 
     void MailboxClient::onServicePush( uint16 kind, BitReader& body )
     {
-        (void)kind; // 우편함은 아직 알림을 보내지 않는다(새 우편은 다음 목록으로)
+        (void)kind; // 우편함은 아직 알림을 보내지 않는다. 새 우편은 다음 목록으로 알게 된다
         (void)body;
     }
 
@@ -160,7 +160,7 @@ namespace sw
             if ( mail._mailKey != call._mailKey )
                 continue;
             if ( call._method == MailboxMethod::kDelete || ( call._method == MailboxMethod::kClaim && mail._bCampaign == SW_TRUE ) )
-                _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) ); // 받은 캠페인은 목록에서 빠진다
+                _listMail.erase( _listMail.begin() + static_cast<ptrdiff_t>( mailIndex ) ); // 받은 캠페인은 목록에서 뺀다
             else if ( call._method == MailboxMethod::kClaim )
                 mail._state = ServiceMailState::Claimed;
             else if ( call._method == MailboxMethod::kMarkRead && mail._state == ServiceMailState::Unread )

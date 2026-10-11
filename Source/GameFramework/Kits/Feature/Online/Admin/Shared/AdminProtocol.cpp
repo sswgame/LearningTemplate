@@ -328,7 +328,7 @@ namespace sw
             }
             default:
             {
-                return AdminRole::Count; // 모르는 메서드 — 누구도 갖지 못한 등급
+                return AdminRole::Count; // 모르는 메서드이므로 누구도 가질 수 없는 등급이다
             }
         }
     }
