@@ -36,7 +36,7 @@ _kTailLineCount = 25
 _kLogTailLineCount = 60
 # 빌드 로그에서 오류를 고르는 줄: 컴파일러 `error:`, 링커 `undefined`/`duplicate symbol`, ninja `FAILED:`/`build stopped`.
 _kBuildErrorMarker = re.compile(r"\berror\b[:\s]|\bundefined (reference|symbol)\b|duplicate symbol|^FAILED:|ninja: build stopped|\bfatal error\b")
-_kMaxBuildErrorCount = 12
+_kMaxBuildErrorCount = 10  # 주석은 단계마다 error 10 개까지 보인다
 _kBuildContextLines = 2
 
 
@@ -108,11 +108,17 @@ def reportBuild(logPath: Path) -> int:
     if not listHit:
         emitErrorInternal("build", kNewline.join(lines[-_kLogTailLineCount:]))
         return 0
+    # `-k 0` 로 지으면 같은 파일의 오류가 쏟아진다 — 파일마다 첫 오류 하나만 올려 열 덩어리 안에 여러 파일이 들게 한다.
     listBlock: list[str] = []
+    setSeenFile: set[str] = set()
     lastEnd = -1
     for index in listHit:
         if len(listBlock) >= _kMaxBuildErrorCount:
             break
+        fileKey = re.split(r"[:(]\d", lines[index], maxsplit=1)[0]
+        if fileKey in setSeenFile and _kBuildErrorMarker.search(lines[index]) is not None and "error" in lines[index]:
+            continue
+        setSeenFile.add(fileKey)
         begin = max(index - _kBuildContextLines, lastEnd + 1)
         end = min(index + _kBuildContextLines + 1, len(lines))
         if begin >= end:

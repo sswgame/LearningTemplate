@@ -222,7 +222,8 @@ jobs:
       id: build
       shell: pwsh
       run: |
-        cmake --build --preset ${{ matrix.preset }} 2>&1 | Tee-Object -FilePath build/build.log
+        # `-k 0`: 실패한 번역 단위가 있어도 끝까지 지어 오류를 한 번에 모은다(리눅스 전용 소스가 여럿 깨졌을 때 한 번에 하나씩 보이는 것을 막는다).
+        cmake --build --preset ${{ matrix.preset }} -- -k 0 2>&1 | Tee-Object -FilePath build/build.log
         exit $LASTEXITCODE
 
     - name: Report build failure as annotations
