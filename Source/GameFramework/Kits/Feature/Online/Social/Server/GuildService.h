@@ -1,13 +1,17 @@
 /**
  * @file GuildService.h
- * @brief 길드 로직 — 만들기 · 초대 · 수락 · 떠나기 · 내보내기 · 역할 · 공지 · 조회. 모든 바꾸기는 읽기 → 판 조건 트랜잭션(충돌이면 4 번까지 다시). 전송 · 채팅을 모릅니다.
- * @details - 표 여섯: 길드 `social_guild` · 회원 `social_guild_member`(`<길드>/<계정>`) · 계정의 길드 `social_account_guild` · 이름 `social_guild_name`(ASCII 소문자로
- *            바꾼 바이트의 16 진 — 대소문자 무시 유일) · 초대 `social_guild_invite`(`<계정>/<길드>`, 7 일) · 순번 `social_sequence/guild`(만들기와 같은 트랜잭션).
- *          - 한 계정 한 길드(계정의 길드를 "없어야 함" 으로), 정원 100, 길드장은 혼자일 때만 떠나고 그때 해산(이름도 지운다), 내보내기는 높은 역할만.
- *          - 바뀐 뒤 회원 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다(받는 이가 오프라인이면 호스트가 버린다).
- *          - 채팅 길드 채널은 사건(`GuildEvent` — 가입 · 떠남 · 로그인한 회원)으로 게임 조립이 잇는다(`setEventDelegate` — 키트끼리 모른다). 로그인한 계정의 길드는
- *            조립이 로그인 사건에서 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
- *          PlayFab Groups · Nakama Groups(역할 · 초대 · 정원)와 같은 자리다. 길드 창고 · 레벨 · 가입 신청은 게임 몫(백로그).
+ * @brief 길드 로직입니다. 만들기, 초대, 수락, 떠나기, 내보내기, 역할, 공지, 조회를 처리합니다. 모든 변경은 읽은 뒤 버전 조건으로 쓰는 트랜잭션이며 충돌이 나면 최대 4번 다시 시도합니다. 전송과 채팅은 모릅니다.
+ * @details - 테이블은 여섯 개이다.
+ *            길드는 `social_guild`, 멤버는 `social_guild_member`(`<길드>/<계정>`), 계정의 길드는 `social_account_guild` 에 둔다.
+ *            이름은 `social_guild_name` 에 ASCII 소문자로 바꾼 바이트의 16진 문자열로 두므로 대소문자를 무시하고 유일하다.
+ *            초대는 `social_guild_invite`(`<계정>/<길드>`, 7일)에, 순번은 `social_sequence/guild` 에 두며 순번은 만들기와 같은 트랜잭션에서 올린다.
+ *          - 한 계정은 한 길드에만 들어간다. 계정의 길드를 "없어야 함" 조건으로 쓰기 때문이다. 정원은 100명이다.
+ *            길드장은 혼자일 때만 떠날 수 있고 그때 길드가 해산되며 이름도 지운다. 내보내기는 더 높은 역할만 할 수 있다.
+ *          - 변경한 뒤 멤버 목록을 한 번 더 읽어 `GuildChanged` 알림을 보낸다. 받는 사람이 오프라인이면 호스트가 버린다.
+ *          - 채팅 길드 채널은 이벤트(`GuildEvent`)로 게임 조립 단계가 연결한다(`setEventDelegate`). 이벤트는 가입, 떠남, 로그인한 멤버이며 키트끼리는 서로 모른다.
+ *            로그인한 계정의 길드는 조립 단계가 로그인 이벤트에서 `attachAccount` 를 불러 `MemberAttached` 로 받는다.
+ *
+ *          PlayFab Groups 와 Nakama Groups(역할, 초대, 정원)에 해당한다. 길드 창고, 레벨, 가입 신청은 게임이 구현한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -34,13 +38,13 @@ namespace sw
         SetRole,
         SetNotice,
         Get,
-        Attach ///< 로그인한 계정의 길드 찾기(완료 없음 — 사건만)
+        Attach ///< 로그인한 계정의 길드를 찾는다. 완료는 없고 이벤트만 발생한다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 게임 조립이 받는 사건 — 채팅 길드 채널 회원을 맞춘다. */
+    /** @brief 게임 조립이 받는 이벤트입니다. 채팅 길드 채널의 멤버를 맞추는 데 씁니다. */
     struct GuildEvent
     {
         enum class Kind : uint8
@@ -63,10 +67,10 @@ namespace sw
     /** @brief 길드 요청 하나입니다. */
     struct GuildRequest
     {
-        string         _text{};                         ///< 이름 · 공지
-        AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 이
-        AccountID      _targetID{ kInvalidAccountID };  ///< 초대 · 내보내기 · 역할 대상
-        uint64         _guildID{ 0 };                   ///< 수락
+        string         _text{};                         ///< 이름이나 공지이다
+        AccountID      _accountID{ kInvalidAccountID }; ///< 요청한 사람이다
+        AccountID      _targetID{ kInvalidAccountID };  ///< 초대, 내보내기, 역할 변경의 대상이다
+        uint64         _guildID{ 0 };                   ///< 수락할 길드이다
         int64          _nowMs{ 0 };
         GuildRole      _role{ GuildRole::Member };
         GuildOperation _operation{ GuildOperation::Get };
@@ -78,7 +82,7 @@ namespace sw
     /** @brief 요청 하나의 완료입니다. */
     struct GuildCompletion
     {
-        GuildInfo    _info{}; ///< Create(id · 이름) · Get(회원까지)
+        GuildInfo    _info{}; ///< Create 에서는 id 와 이름이고 Get 에서는 멤버까지 담는다
         uint64       _requestTag{ 0 };
         SocialResult _result{ SocialResult::Ok };
     };
@@ -86,11 +90,11 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 일 하나가 정한 결과입니다 — 서비스가 완료 · 알림 · 사건으로 나눈다. */
+    /** @brief 작업 하나가 정한 결과입니다. 서비스가 완료, 알림, 이벤트로 나눕니다. */
     struct GuildOutcome
     {
         GuildInfo         _info{};
-        vector<AccountID> _listNotifyMember{}; ///< GuildChanged 를 받을 회원
+        vector<AccountID> _listNotifyMember{}; ///< GuildChanged 를 받을 멤버이다
         AccountID         _invitedID{ kInvalidAccountID };
         AccountID         _joinedID{ kInvalidAccountID };
         AccountID         _leftID{ kInvalidAccountID };
@@ -104,7 +108,7 @@ namespace sw
 {
     /**
      * @class GuildService
-     * @brief 길드 로직입니다(서비스 스레드).
+     * @brief 길드 로직입니다. 서비스 스레드에서 씁니다.
      */
     class SW_GF_API GuildService
     {
@@ -115,19 +119,19 @@ namespace sw
         void shutdown();
 
         void submit( const GuildRequest& request, uint64 requestTag );
-        /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 사건을 냅니다(완료 없음). */
+        /** @brief 로그인한 계정의 길드를 찾아 `MemberAttached` 이벤트를 냅니다. 완료는 없습니다. */
         void attachAccount( AccountID accountID, int64 nowMs );
-        /** @brief 사건을 받을 곳입니다(게임 조립 — 비어 있으면 버린다). */
+        /** @brief 이벤트를 받을 델리게이트입니다. 게임 조립 단계가 지정하며 비어 있으면 이벤트를 버립니다. */
         void setEventDelegate( const GuildEventDelegate& onEvent ) { _onEvent = onEvent; }
 
         void  drainCompletions( vector<GuildCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
         void  drainNotifications( vector<SocialNotification>& outListNotification ) { _notificationBuffer.drainTo( outListNotification ); }
         int32 getPendingCount() const { return _pendingCount; }
 
-        /** @brief 이름 규칙 — 1..24 바이트, 올바른 UTF-8, 제어 글자 없음, 앞뒤 공백 없음. */
+        /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
 
-        /** @brief 일의 `complete` 가 부릅니다(키트 안). */
+        /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );
 
     private:

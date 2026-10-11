@@ -100,14 +100,14 @@ namespace sw
                 inoutCounts._blockedCount  = std::max( 0, inoutCounts._blockedCount + delta._blockedCount );
             }
 
-            /** @brief 레코드를 읽습니다 — 저장소가 아프면 false(없음은 true — 판이 `kAbsentVersion`). */
+            /** @brief 레코드를 읽습니다. 저장소를 쓸 수 없으면 false 를 반환하고, 레코드가 없는 것은 true 이며 버전이 `kAbsentVersion` 입니다. */
             [[nodiscard]] static bool readOrAbsent( IServiceStoreConnection& connection, const hashed_string& table, string_view key, ServiceRecord& outRecord )
             {
                 const ServiceStoreResult result = connection.readRecord( table, key, outRecord );
                 return result == ServiceStoreResult::Ok || result == ServiceStoreResult::NotFound;
             }
 
-            /** @brief 줄 하나의 새 상태를 트랜잭션에 붙입니다(같으면 아무것도 쓰지 않는다). */
+            /** @brief 줄 하나의 새 상태를 트랜잭션에 붙입니다. 상태가 같으면 아무것도 쓰지 않습니다. */
             static void stageLink( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialLinkState oldState, SocialLinkState newState,
                                    int64 nowMs )
             {
@@ -121,7 +121,7 @@ namespace sw
                     inoutTransaction.put( getLinkTable(), key, encodeLink( newState, nowMs ), record._version );
             }
 
-            /** @brief 개수 차이를 붙입니다 — 바뀌지 않아도 판은 본다(상한 판정의 근거가 그새 바뀌면 안 된다). */
+            /** @brief 개수 변화를 트랜잭션에 붙입니다. 바뀌지 않아도 버전은 확인합니다. 상한 판정의 근거가 그사이 바뀌면 안 되기 때문입니다. */
             static void stageCounts( ServiceTransaction& inoutTransaction, const string& key, const ServiceRecord& record, SocialCounts counts, const SocialCounts& delta )
             {
                 if ( delta.isZero() )
@@ -134,7 +134,7 @@ namespace sw
             }
         };
 
-        /** @brief 관계 바꾸기 하나 — (이름이면 이름 색인을 읽고) 두 줄 · 두 개수를 읽어 규칙으로 정하고 판 조건으로 쓴다. 충돌이면 다시 읽고 다시. */
+        /** @brief 관계 바꾸기 하나를 처리합니다. 이름으로 신청했으면 이름 인덱스를 읽고, 두 줄과 두 개수를 읽어 규칙으로 정한 뒤 버전 조건으로 씁니다. 충돌이 나면 다시 읽고 다시 시도합니다. */
         class SocialLinkWork final : public IServiceStoreWork
         {
         public:
@@ -175,7 +175,7 @@ namespace sw
             void complete() override { _pService->applyLinkChange( _requestTag, _accountID, _otherID, _decision ); }
 
         private:
-            /** @brief 이름 → 계정 id. 못 찾으면 결과를 적고 false. */
+            /** @brief 이름으로 계정 id 를 찾습니다. 못 찾으면 결과를 적고 false 를 반환합니다. */
             bool resolveName( IServiceStoreConnection& connection )
             {
                 AccountIdentity          identity;
@@ -195,7 +195,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief 읽고 · 정하고 · 커밋합니다. 쓸 것이 없으면 Ok(결정의 결과가 답이다). */
+            /** @brief 읽고, 정하고, 커밋합니다. 쓸 것이 없으면 Ok 이며 결정의 결과가 응답입니다. */
             ServiceStoreResult runOnce( IServiceStoreConnection& connection )
             {
                 using Internal = SocialServiceInternal;
@@ -251,7 +251,7 @@ namespace sw
             SocialLinkOperation      _operation;
         };
 
-        /** @brief 한 계정의 관계를 모두 읽는 일입니다. */
+        /** @brief 한 계정의 관계를 모두 읽는 작업입니다. */
         class SocialLoadWork final : public IServiceStoreWork
         {
         public:
@@ -332,7 +332,7 @@ namespace sw
 
     void SocialService::tick( int64 nowMs )
     {
-        for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태 시한 연장
+        for ( auto& [accountID, local] : _mapAccountToLocal ) // 접속 상태의 시한을 연장한다
         {
             if ( local._status == SocialPresenceStatus::Offline || nowMs - local._presenceWrittenMs < SocialServiceInternal::kPresenceRefreshMs )
                 continue;
@@ -379,7 +379,7 @@ namespace sw
         if ( decision._result != SocialResult::Ok || decision._bWrite == SW_FALSE )
             return;
 
-        // 이 서버 메모리 — 두 사람 모두(붙어 있으면) 다시 읽는다. 다른 서버는 버스로.
+        // 이 서버의 메모리는 두 사람 모두(접속해 있으면) 다시 읽는다. 다른 서버에는 버스로 알린다.
         reloadIfLocal( accountID );
         reloadIfLocal( otherID );
         if ( _dependencies._pBus != nullptr )
@@ -404,7 +404,7 @@ namespace sw
     void SocialService::listLinks( AccountID accountID, uint64 requestTag )
     {
         (void)_mapAccountToLocal[accountID];
-        startLoad( accountID, requestTag ); // 목록은 언제나 저장소에서(메모리는 그 김에 갈아 끼운다)
+        startLoad( accountID, requestTag ); // 목록은 항상 저장소에서 읽고, 메모리는 그 결과로 교체한다
     }
 
     void SocialService::applyLinksLoaded( AccountID accountID, uint64 requestTag, bool bReadOk, vector<SocialLink>&& listLink )
@@ -421,7 +421,7 @@ namespace sw
             }
         }
         if ( requestTag == 0 )
-            return; // 안에서 건 읽기(첫 요청 · 버스 알림)
+            return; // 내부에서 건 읽기이다. 첫 요청이나 버스 알림에서 시작한 것이다
         SocialCompletion completion;
         completion._requestTag = requestTag;
         completion._result     = bReadOk ? SocialResult::Ok : SocialResult::Unavailable;
@@ -473,7 +473,7 @@ namespace sw
             const auto friendIt = _mapAccountToLocal.find( link._otherID );
             if ( friendIt != _mapAccountToLocal.end() && friendIt->second._status != SocialPresenceStatus::Offline )
             {
-                query._listPresence.push_back( SocialPresence{ friendIt->second._activity, link._otherID, friendIt->second._status } ); // 이 서버 — 캐시를 읽지 않는다
+                query._listPresence.push_back( SocialPresence{ friendIt->second._activity, link._otherID, friendIt->second._status } ); // 이 서버의 계정이므로 캐시를 읽지 않는다
                 continue;
             }
             if ( _dependencies._pRouter == nullptr )
@@ -570,7 +570,7 @@ namespace sw
     void SocialService::publishPresence( AccountID accountID, const LocalAccount& local )
     {
         const SocialPresence presence{ local._activity, accountID, local._status };
-        notifyFriendsOfPresence( presence ); // 이 서버
+        notifyFriendsOfPresence( presence ); // 이 서버의 계정이다
         if ( _dependencies._pBus == nullptr )
             return;
         BitWriter body;

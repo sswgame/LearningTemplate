@@ -1,10 +1,11 @@
 /**
  * @file SocialServer.h
- * @brief 친구 · 길드의 스트림 바인딩 — `IOnlineService`(영역 `kSocial`). 요청을 두 로직에 꼬리표로 맡기고, 완료를 응답으로, 알림을 받는 계정에게 보냅니다.
- * @details - 응답 몸은 언제나 `SocialReply`(업무 결과가 첫 값) — 오류 코드는 깨진 몸(`kInvalidRequest`)뿐이다.
- *          - 받는 계정이 이 프로세스에 없으면 알림을 접속 상태 창구(`IAccountPresence::sendRemotePush`)에 맡긴다(거래 키트와 같은 자리).
- *          - 버스 `social.links` · `social.presence` 를 친구 로직에 넘긴다(자기 서버가 낸 것은 거른다). 구독은 첫 서비스 틱에(호스트가 버스를 받은 뒤).
- *          - 계정이 떠나면 친구 로직에서 뺀다(오프라인 알림). 호스트에 올리는 것은 부르는 쪽이(`host.registerService( &server )` — 호스트 `initialize` 전에).
+ * @brief 친구와 길드의 스트림 바인딩입니다. `IOnlineService`(영역 `kSocial`)를 구현합니다.
+ * @details 요청은 요청 태그와 함께 두 로직에 맡기고, 완료는 응답으로, 알림은 받는 계정에게 보낸다.
+ *          - 응답 본문은 항상 `SocialReply` 이며 업무 결과가 첫 값이다. 오류 코드는 손상된 본문(`kInvalidRequest`)뿐이다.
+ *          - 받는 계정이 이 프로세스에 접속해 있지 않으면 알림을 접속 상태 관리자(`IAccountPresence::sendRemotePush`)에 맡긴다. 거래 키트도 같은 방식이다.
+ *          - 버스 `social.links` 와 `social.presence` 를 친구 로직에 넘기며 자기 서버가 낸 메시지는 거른다. 구독은 첫 서비스 틱에서 하며 호스트가 버스를 받은 뒤이다.
+ *          - 계정이 떠나면 친구 로직에서 뺀다. 그때 오프라인 알림이 나간다. 호스트에 등록하는 일은 호출하는 쪽이 한다(`host.registerService( &server )`, 호스트 `initialize` 전에).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -25,16 +26,16 @@ namespace sw
 
     /**
      * @class SocialServer
-     * @brief 친구 · 길드 바인딩입니다(호스트 `tick` 스레드).
+     * @brief 친구와 길드 바인딩입니다. 호스트 `tick` 스레드에서 씁니다.
      */
     class SW_GF_API SocialServer final : public IOnlineService
     {
     public:
         SocialServer();
 
-        /** @brief 넘긴 것은 빌려 쓴다. @p pPresence 는 서버 여럿일 때만(없으면 nullptr — 서버 한 대). */
+        /** @brief 넘긴 객체는 빌려 씁니다. @p pPresence 는 서버가 여러 대일 때만 넘기며, 없으면 nullptr 이고 서버가 한 대입니다. */
         void initialize( SocialService* pSocialService, GuildService* pGuildService, IAccountPresence* pPresence );
-        /** @brief 버스 구독을 풉니다. 로직은 부르는 쪽이 내린다. */
+        /** @brief 버스 구독을 해제합니다. 로직은 호출하는 쪽이 종료합니다. */
         void shutdown();
 
         // IOnlineService
@@ -58,6 +59,6 @@ namespace sw
         SocialService*             _pSocialService;
         GuildService*              _pGuildService;
         IAccountPresence*          _pPresence;
-        OnlineServiceHost*         _pHost; ///< 버스를 구독한 호스트(풀 때)
+        OnlineServiceHost*         _pHost; ///< 버스를 구독한 호스트이다. 구독을 해제할 때 쓴다
     };
 } // namespace sw

@@ -95,7 +95,7 @@ namespace sw
     void SocialServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _pHost = nullptr; // 구독은 호스트가 이어서 모두 푼다
+        _pHost = nullptr; // 구독은 호스트가 이어서 모두 해제한다
     }
 
     uint32 SocialServer::getProtocolVersion() const { return SocialProtocol::kVersion; }
@@ -205,14 +205,14 @@ namespace sw
         if ( _pSocialService == nullptr )
             return;
         _pSocialService->removeAccount( accountID );
-        sendNotifications( host ); // 이 서버 친구들에게 오프라인을 바로
+        sendNotifications( host ); // 이 서버의 친구들에게 오프라인을 바로 알린다
     }
 
     void SocialServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
     {
         const IServerBus* pBus = host.getServerBus();
         if ( _pSocialService == nullptr || ( pBus != nullptr && message._originServerID == pBus->getServerID() ) )
-            return; // 이 서버가 낸 것 — 바꾼 자리에서 이미 처리했다
+            return; // 이 서버가 낸 메시지이다. 바꾼 시점에 이미 처리했다
         _pSocialService->handleBusMessage( message._topic, message._bytes );
     }
 
@@ -227,10 +227,10 @@ namespace sw
     {
         NetRequestToken token;
         if ( _pendingTable.take( requestTag, token ) == false )
-            return; // 꼬리표 0(안에서 건 일) · 이미 답함
+            return; // 요청 태그가 0이거나(내부에서 건 작업) 이미 응답했다
         BitWriter body;
         SocialProtocol::writeReply( body, reply );
-        (void)host.respondOk( token, body ); // 닫힌 연결이면 호스트가 버린다
+        (void)host.respondOk( token, body ); // 연결이 닫혔으면 호스트가 버린다
     }
 
     void SocialServer::sendNotifications( OnlineServiceHost& host )
@@ -243,7 +243,7 @@ namespace sw
             BitWriter body;
             SocialProtocol::writeNotification( body, notification );
             if ( host.sendPush( notification._recipientID, SocialMethod::kPushNotification, body ) == false && _pPresence != nullptr )
-                (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 붙어 있다
+                (void)_pPresence->sendRemotePush( notification._recipientID, SocialMethod::kPushNotification, body ); // 다른 서버에 접속해 있다
         }
         _listNotificationScratch.clear();
     }
