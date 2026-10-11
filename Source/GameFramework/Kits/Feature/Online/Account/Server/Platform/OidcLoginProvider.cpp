@@ -96,7 +96,7 @@ namespace sw
                     ++pendingIndex;
                     continue;
                 }
-                // 받아 봤는데도 키가 없다 — 받기가 실패했으면 제공자 문제, 받았으면 표가 틀렸다(모르는 kid).
+                // 받아 봤는데도 키가 없다. 받기가 실패했으면 제공자 문제이고, 받았다면 티켓이 틀린 것이다(모르는 kid).
                 if ( _bLastFetchFailed == SW_TRUE )
                     verification._bUnavailable = SW_TRUE;
                 else

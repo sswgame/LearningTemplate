@@ -13,7 +13,7 @@ namespace sw
     {
         struct AccountClientInternal
         {
-            /** @brief 공통 오류 코드를 가까운 업무 결과로 읽습니다. */
+            /** @brief 공통 오류 코드를 의미가 가까운 업무 결과로 바꿉니다. */
             static LoginResult toResult( uint16 errorCode )
             {
                 switch ( errorCode )
@@ -194,16 +194,16 @@ namespace sw
         if ( AccountWire::readRevokedPush( body, event._reason, event._reasonCode ) == false )
             return;
         _bLoggedIn = SW_FALSE;
-        _token     = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없다 — 다시 로그인
+        _token     = LoginSessionToken{}; // 밀려난 세션은 돌아올 수 없으므로 다시 로그인해야 한다
         _listEvent.push_back( std::move( event ) );
     }
 
     void AccountClient::onClientReady( OnlineServiceClient& client )
     {
-        _bLoggedIn = SW_FALSE; // 새 연결 — 서버는 아직 주체를 모른다
+        _bLoggedIn = SW_FALSE; // 새 연결이므로 서버는 아직 주체를 모른다
         if ( _token.isEmpty() == false && _bResuming == SW_FALSE )
         {
-            client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에
+            client.setRequestGate( OnlineMethodRange::kAccount, true ); // 다른 키트의 요청은 재접속 응답 뒤에 보낸다
             BitWriter body;
             AccountWire::writeToken( body, _token );
             AccountWire::writeClientInfo( body, _clientInfo );
@@ -224,7 +224,7 @@ namespace sw
         const vector<uint8> bodyBytes( body.getBytes().begin(), body.getBytes().begin() + body.getByteCount() );
         if ( bNeedsSession && _bResuming == SW_TRUE )
         {
-            _listDeferred.push_back( DeferredCall{ bodyBytes, requestID, method, operation } ); // 재접속 응답 뒤에 보낸다
+            _listDeferred.push_back( DeferredCall{ bodyBytes, requestID, method, operation } ); // 재접속 응답 뒤에 보내도록 모아 둔다
             return requestID;
         }
         transmit( operation, method, bodyBytes, requestID, bAutomatic );
@@ -259,7 +259,7 @@ namespace sw
         else if ( _bSending == SW_TRUE && _sendingCall._requestID != 0 )
         {
             call                    = _sendingCall;
-            _sendingCall._requestID = 0; // 맡기는 자리에서 바로 끝났다
+            _sendingCall._requestID = 0; // 맡기는 시점에 바로 끝났다
         }
         else
         {
@@ -276,7 +276,7 @@ namespace sw
             reply._result = AccountClientInternal::toResult( response._errorCode );
             BitReader detail( response._pBody, response._bodySize );
             if ( response._errorCode == OnlineError::kUpdateRequired )
-                (void)AccountWire::readText( detail, 512, reply._grant._storeURL ); // 상세가 깨졌으면 상점 주소만 빈다 — 결과 코드는 위에서 정했다
+                (void)AccountWire::readText( detail, 512, reply._grant._storeURL ); // 상세가 깨졌으면 상점 주소만 빈다. 결과 코드는 위에서 이미 정했다
             else if ( response._errorCode == OnlineError::kRateLimited )
                 reply._grant._retryAfterMs = static_cast<int64>( detail.readVarUint() );
         }
@@ -317,7 +317,7 @@ namespace sw
             _listReply.push_back( std::move( reply ) );
             finishDeferred( bOk ? LoginResult::Ok : LoginResult::InvalidToken );
             if ( _pClient != nullptr && _pClient->isRequestGateClosed() )
-                _pClient->setRequestGate( OnlineMethodRange::kAccount, false ); // 다른 키트의 모은 요청을 보낸다(실패여도 — 그쪽이 kUnauthenticated 로 안다)
+                _pClient->setRequestGate( OnlineMethodRange::kAccount, false ); // 다른 키트가 모아 둔 요청을 보낸다. 실패해도 그쪽이 kUnauthenticated 로 알 수 있다
             return;
         }
         _listReply.push_back( std::move( reply ) );

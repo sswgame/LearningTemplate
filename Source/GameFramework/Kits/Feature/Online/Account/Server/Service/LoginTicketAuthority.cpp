@@ -37,10 +37,10 @@ namespace sw
                 return value;
             }
 
-            /** @brief 서버 id 는 `hashed_string` 규칙대로 대소문자를 가리지 않는다. */
+            /** @brief 서버 id 는 `hashed_string` 규칙대로 대소문자를 구분하지 않습니다. */
             static uint64 computeServerHash( const hashed_string& serverID ) { return StringUtil::computeHash64( serverID.c_str(), serverID.size(), true ); }
 
-            /** @brief 상수 시간 비교 — 첫 다른 바이트에서 멈추지 않는다. */
+            /** @brief 상수 시간으로 비교합니다. 처음 다른 바이트에서 멈추지 않습니다. */
             static bool isEqualConstantTime( const uint8* pFirst, const uint8* pSecond, int32 size )
             {
                 uint8 difference = 0;
@@ -51,7 +51,7 @@ namespace sw
                 return difference == 0;
             }
 
-            /** @brief 정보 = 라벨 ‖ 본문 으로 키 있는 해시를 냅니다. */
+            /** @brief 정보를 라벨 뒤에 본문을 붙인 값으로 하여 키를 쓰는 해시를 계산합니다. */
             static bool computeLabeled( ILoginCrypto& crypto, const uint8* pMasterKey, int32 masterKeySize, const utf8* pLabel, int32 labelSize, const uint8* pBody,
                                         uint8* pOut, int32 outSize )
             {

@@ -47,7 +47,7 @@ namespace sw
             }
             if ( completion._result != LocalStoreResult::NotFound )
             {
-                // 다른 장치 · 깨진 슬롯 — 새로 만들면 그 게스트 계정을 잃는다.
+                // 다른 장치의 슬롯이거나 깨진 슬롯이다. 새로 만들면 그 게스트 계정을 잃는다.
                 SW_LOG_WARNING( "guest device secret could not be read (%#) — not replacing it", static_cast<int32>( completion._result ) );
                 _state = AccountDeviceSecretState::Failed;
                 return true;

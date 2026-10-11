@@ -1,9 +1,9 @@
 /**
  * @file OidcLoginProvider.h
- * @brief OIDC ID 토큰 제공자 — JWT 서명(RS256 · ES256, JWKS 캐시) · `iss` · `aud` · `exp` · `iat` · `nonce` 를 보고 주체(`sub`)를 돌려줍니다. 구글 · 애플 · 카카오가 설정만으로 된다.
- * @details - JWKS 는 처음 · `_jwksRefreshMs` 마다 · 모르는 kid 가 오면(키 회전 — `_minRefetchMs` 간격 이상) 다시 받는다. 받는 동안 온 표는 기다린다.
- *          - JWKS 서버에 닿지 못해도 캐시 키로 확인할 수 있는 표는 계속 확인한다. 캐시에 없는 kid 는 받기가 실패했으면 `_bUnavailable`, 받았는데도 없으면 `_bRejected`.
- *          - 표 글 = ID 토큰, 또는 `ID 토큰|nonce`(클라이언트가 인증 요청에 실은 값 그대로 — 토큰의 `nonce` 와 같아야 한다).
+ * @brief OIDC ID 토큰 제공자입니다. JWT 서명(RS256, ES256, JWKS 캐시)과 `iss`, `aud`, `exp`, `iat`, `nonce` 를 확인해 주체(`sub`)를 돌려줍니다. 구글, 애플, 카카오는 설정만으로 쓸 수 있습니다.
+ * @details - JWKS 는 처음 확인할 때, `_jwksRefreshMs` 마다, 모르는 kid 가 올 때 다시 받는다. 모르는 kid 는 키 회전일 수 있으며 `_minRefetchMs` 이상 간격을 두고 받는다. 받는 동안 도착한 티켓은 기다린다.
+ *          - JWKS 서버에 닿지 못해도 캐시된 키로 확인할 수 있는 티켓은 계속 확인한다. 캐시에 없는 kid 는 받기가 실패했으면 `_bUnavailable`, 받았는데도 없으면 `_bRejected` 이다.
+ *          - 티켓 문자열은 ID 토큰이거나 `ID 토큰|nonce` 이다. nonce 는 클라이언트가 인증 요청에 실은 값 그대로이며 토큰의 `nonce` 와 같아야 한다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -27,7 +27,7 @@ namespace sw
     class SW_GF_API OidcLoginProvider final : public IPlatformLoginProvider
     {
     public:
-        /** @brief @p pProvider · @p pHTTPClient 는 빌려 쓴다. @p pHTTPClient 의 응답은 이 객체 혼자 거둔다. */
+        /** @brief @p pProvider 와 @p pHTTPClient 는 빌려 씁니다. @p pHTTPClient 의 응답은 이 객체만 회수합니다. */
         OidcLoginProvider( const PlatformLoginProviderSettings& settings, INetSecurityProvider* pProvider, HTTPClient* pHTTPClient );
 
         const utf8* getName() const override { return _settings._name.c_str(); }
@@ -44,7 +44,7 @@ namespace sw
             string _token{};
             string _nonce{};
             uint64 _verificationID{ 0 };
-            uint32 _waitedFetchGeneration{ 0 }; ///< 이 세대의 받기가 끝나면 다시 본다(0 = 기다리지 않는다)
+            uint32 _waitedFetchGeneration{ 0 }; ///< 이 세대의 받기가 끝나면 다시 확인한다. 0이면 기다리지 않는다
         };
 
         enum class Decision : uint8
@@ -65,7 +65,7 @@ namespace sw
         uint64                            _nextVerificationID;
         uint64                            _jwksRequestID;
         int64                             _lastFetchStartMs;
-        uint32                            _fetchGeneration; ///< 끝난 받기 수
+        uint32                            _fetchGeneration; ///< 끝난 받기의 횟수이다
         int32                             _jwksFetchCount;
         uint8                             _bLastFetchFailed;
     };

@@ -68,7 +68,7 @@ namespace sw
     void AccountServer::onHostShutdown( OnlineServiceHost& host )
     {
         (void)host;
-        _presence.detach(); // 캐시 답은 호스트가 이미 Unavailable 로 거뒀다
+        _presence.detach(); // 캐시 응답은 호스트가 이미 Unavailable 로 회수했다
         _bHostAttached = SW_FALSE;
     }
 
@@ -81,7 +81,7 @@ namespace sw
         _nowMs = context._nowMs;
         if ( AccountServerInternal::isLoginMethod( context._method ) && context._accountID != kInvalidAccountID )
         {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest ); // 한 연결에 계정 하나
+            (void)host.respondError( context._token, OnlineError::kInvalidRequest ); // 한 연결에는 계정 하나만 쓴다
             return;
         }
         const auto          sessionIt     = _mapAccountToSession.find( context._accountID );
@@ -223,7 +223,7 @@ namespace sw
         {
             handleCompletion( host, completion );
         }
-        // 완료 뒤에 사건 — 로그인 응답 · 탈퇴 응답을 먼저 보내고, 밀려난 세션은 그 뒤 끊는다.
+        // 이벤트는 완료 뒤에 처리한다. 로그인 응답과 탈퇴 응답을 먼저 보내고, 밀려난 세션은 그 뒤에 끊는다.
         _listEventScratch.clear();
         _pLoginService->drainEvents( _listEventScratch );
         for ( const LoginEvent& event : _listEventScratch )
@@ -250,10 +250,10 @@ namespace sw
         _presence.noteOffline( accountID );
         const auto sessionIt = _mapAccountToSession.find( accountID );
         if ( sessionIt == _mapAccountToSession.end() )
-            return; // 이 객체가 끊은 연결(밀려남 · 로그아웃) — 세션 표에서 먼저 뺐다
+            return; // 이 객체가 끊은 연결(밀려남, 로그아웃)이다. 세션 테이블에서 먼저 뺐다
         const uint64 sessionID = sessionIt->second._token._sessionID;
         _mapAccountToSession.erase( sessionIt );
-        _pLoginService->markDisconnected( sessionID, _nowMs ); // 클라이언트가 끊겼다 — 재접속 유예
+        _pLoginService->markDisconnected( sessionID, _nowMs ); // 클라이언트가 끊겼으므로 재접속 유예를 시작한다
     }
 
     void AccountServer::onServerBusMessage( OnlineServiceHost& host, const ServerBusMessage& message )
@@ -264,7 +264,7 @@ namespace sw
             return;
         }
         if ( host.getServerBus() != nullptr && message._originServerID == host.getServerBus()->getServerID() )
-            return; // 이 서버가 보낸 것 — 이미 끊었다
+            return; // 이 서버가 보낸 알림이므로 이미 끊었다
         BitReader       reader( message._bytes.data(), static_cast<int32>( message._bytes.size() ) );
         const AccountID accountID = reader.readVarUint();
         const uint64    sessionID = reader.readVarUint();
@@ -284,7 +284,7 @@ namespace sw
     void AccountServer::revokeAccountSessions( AccountID accountID, string_view reasonCode, int64 nowMs )
     {
         _mapAccountToReasonCode[accountID] = string( reasonCode );
-        _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 꼬리표에 짝이 없다 — 완료는 버리고 사건으로 끊는다
+        _pLoginService->revokeAccountSessions( accountID, LoginRevokeReason::Administrative, nowMs, _nextTag++ ); // 짝이 되는 요청 태그가 없으므로 완료는 버리고 이벤트로 끊는다
     }
 
     uint64 AccountServer::findSessionID( AccountID accountID ) const
@@ -338,11 +338,11 @@ namespace sw
             const AccountID accountID = completion._grant._identity._accountID;
             if ( host.bindAccount( call._connection, accountID ) == false )
             {
-                // 같은 계정이 이 프로세스의 다른 연결에 붙어 있다 — 새 로그인이 옛 연결을 밀어낸다(사용자 결정).
+                // 같은 계정이 이 프로세스의 다른 연결에 접속해 있으면 새 로그인이 이전 연결을 밀어낸다. 사용자가 정한 정책이다.
                 revokeBound( host, accountID, LoginRevokeReason::DuplicateLogin );
                 if ( host.bindAccount( call._connection, accountID ) == false )
                 {
-                    // 그새 이 연결이 닫혔다 — 세션은 재접속 유예로 둔다.
+                    // 그사이 이 연결이 닫혔으므로 세션은 재접속 유예로 둔다.
                     _pLoginService->markDisconnected( completion._grant._token._sessionID, _nowMs );
                     (void)host.respondOk( call._token, body );
                     return;
@@ -353,7 +353,7 @@ namespace sw
         }
         const bool bLinkOperation = completion._operation == LoginOperation::LinkCredential || completion._operation == LoginOperation::LinkPlatform;
         if ( bOk && bLinkOperation && _mapAccountToSession.find( completion._identity._accountID ) != _mapAccountToSession.end() )
-            _presence.noteOnline( completion._identity ); // 표시 이름 · 게스트 깃발이 바뀌었다
+            _presence.noteOnline( completion._identity ); // 표시 이름이나 게스트 플래그가 바뀌었다
         (void)host.respondOk( call._token, body );
         if ( bOk && completion._operation == LoginOperation::Logout )
         {
@@ -375,7 +375,7 @@ namespace sw
             return;
         const auto sessionIt = _mapAccountToSession.find( event._accountID );
         if ( sessionIt == _mapAccountToSession.end() || sessionIt->second._token._sessionID != event._sessionID )
-            return; // 이 프로세스에 그 세션의 연결이 없다(이미 새 세션으로 바뀌었다)
+            return; // 이 프로세스에 그 세션의 연결이 없다. 이미 새 세션으로 바뀌었다
         revokeBound( host, event._accountID, event._reason );
     }
 
@@ -429,7 +429,7 @@ namespace sw
         _bHostAttached = SW_TRUE;
         _presence.attach( &host );
         if ( _presence.isEnabled() == false )
-            return; // 서버 한 대
+            return; // 서버가 한 대이다
         host.subscribeServerBus( kRevokeTopic, this );
         host.subscribeServerBus( OnlinePresence::makePushTopic( host.getServerBus()->getServerID() ), this );
     }
@@ -449,7 +449,7 @@ namespace sw
                 _mapAccountToReasonCode.erase( codeIt );
             }
             if ( pBus == nullptr )
-                continue; // 서버 한 대 — 붙어 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
+                continue; // 서버가 한 대이므로 접속해 있지 않은 세션(재접속 유예)은 알릴 곳이 없다
             BitWriter message;
             message.writeVarUint( event._accountID );
             message.writeVarUint( event._sessionID );

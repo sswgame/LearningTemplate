@@ -18,7 +18,7 @@ namespace sw
     {
         struct LoopbackPkceLoginClientInternal
         {
-            static constexpr int32 kVerifierBytes  = 32; ///< base64url 43 자 — RFC 7636 의 43..128
+            static constexpr int32 kVerifierBytes  = 32; ///< base64url 로 43자이다. RFC 7636 의 43~128자 범위에 든다
             static constexpr int32 kStateBytes     = 16;
             static constexpr utf8  kCallbackPath[] = "/callback";
             static constexpr utf8  kDonePage[]     = "<html><body>Sign-in finished. You can close this window and return to the game.</body></html>";
@@ -61,7 +61,7 @@ namespace sw
         _pProvider            = pProvider;
         _pBrowser             = pBrowser;
         _listProviderSettings = listProviderSettings;
-        HTTPServerSettings serverSettings; // 127.0.0.1:0 — 다른 기계에서 닿지 않고 포트는 OS 가 고른다
+        HTTPServerSettings serverSettings; // 127.0.0.1:0 으로 연다. 다른 기계에서 닿지 않고 포트는 OS 가 고른다
         if ( _redirectServer.initialize( std::move( serverTransport ), transportSettings, serverSettings, this ) == false )
             return false;
         return _httpClient.initialize( std::move( clientTransport ), transportSettings, HTTPClientSettings{} );
@@ -192,7 +192,7 @@ namespace sw
         }
         if ( pFound == nullptr )
         {
-            // 모르는 state — 위조이거나 이미 끝난 로그인. 아무 로그인도 바꾸지 않는다.
+            // 모르는 state 이다. 위조이거나 이미 끝난 로그인이므로 어떤 로그인도 바꾸지 않는다.
             outResponse._statusCode = 400;
             return;
         }

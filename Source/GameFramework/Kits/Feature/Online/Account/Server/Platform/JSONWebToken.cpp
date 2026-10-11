@@ -75,7 +75,7 @@ namespace sw
         else if ( algorithmName == "ES256" )
             _algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
         else
-            return false; // none · HS256 · 그 밖 — 받지 않는다
+            return false; // none, HS256, 그 밖의 알고리즘은 받지 않는다
         const JSONValue keyID = header.getRoot().get( "kid", false );
         _keyID                = keyID.isString() ? keyID.asString() : string{};
         _signingInput         = string( compact.substr( 0, secondDot ) );
