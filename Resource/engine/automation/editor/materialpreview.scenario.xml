@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 머티리얼 미리보기(N10): Quick Open 으로 빨간 시험 머티리얼을 열면 Material 패널의 구 미리보기 평균 (R - B) 가 크게 양수이고,
-  파란 시험 머티리얼로 바꾸면 크게 음수다 — 미리보기가 머티리얼 색을 따른다. 시험 머티리얼은 materialpreview/ 폴더에 있다.
+  에디터 시나리오 — 머티리얼 미리보기(N10): Quick Open 으로 빨간 테스트 머티리얼을 열면 Material 패널의 구 미리보기 평균 (R - B) 가 크게 양수이고,
+  파란 테스트 머티리얼로 바꾸면 크게 음수다 — 미리보기가 머티리얼 색을 따른다. 테스트 머티리얼은 materialpreview/ 폴더에 있다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/materialpreview.scenario.xml -dx12
 -->
 <Scenario name="editor.materialpreview" fixedDelta="0.0166667" timeoutFrames="800" startAfter="Immediately" input="exclusive">

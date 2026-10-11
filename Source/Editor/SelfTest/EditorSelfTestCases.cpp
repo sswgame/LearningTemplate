@@ -80,7 +80,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // theme.palette — 소비자가 아직 없는 팔레트 아홉(창 · 패널 · 테두리 색, 액센트 · 흐린 글자, 액센트 버튼 · 헤더 짝)
+            // theme.palette: 아직 쓰는 곳이 없는 팔레트 아홉 개를 확인한다. 창, 패널, 테두리 색, 액센트와 흐린 글자 색, 액센트 버튼과 헤더 색이다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runPaletteFollowsTheTheme( EditorSelfTestContext& context )
             {
@@ -124,13 +124,13 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // theme.reapplyKeepsSizes — 1 이 아닌 DPI 에서 테마를 거듭 적용해도 테마가 적지 않는 크기(도킹 구분선 · 테두리 호버 여백)는 기본 × 배율 한 번이다
+            // theme.reapplyKeepsSizes: 1 이 아닌 DPI 에서 테마를 거듭 적용해도, 테마가 적지 않는 크기(도킹 구분선, 테두리 호버 여백)는 기본값에 배율을 한 번만 곱한 값이다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runThemeReapplyKeepsSizes( EditorSelfTestContext& context )
             {
                 const EditorThemeConfig savedTheme = EditorThemeUtil::getActiveTheme();
                 const float32           savedScale = EditorThemeUtil::getDpiScale();
-                const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다 — 모니터 배율과 무관하게 1 이 아닌 값
+                const float32           probeScale = savedScale + 0.5f; // 배율 1 은 ScaleAllSizes 를 건너뛰어 거듭 곱해지는지 볼 수 없다. 그래서 모니터 배율과 무관하게 1 이 아닌 값을 쓴다
                 EditorThemeUtil::applyPreset( EditorThemePreset::ModernDark );
                 EditorThemeUtil::setDpiScale( probeScale );
                 const EditorThemeConfig probeTheme = EditorThemeUtil::getActiveTheme();
@@ -152,7 +152,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // font.iconGlyphs — 아이콘 폰트가 본문 폰트에 합쳐졌다(못 찾으면 ImGui 는 빈 상자를 그리고 로그 한 줄만 남긴다)
+            // font.iconGlyphs: 아이콘 폰트가 본문 폰트에 합쳐졌는지 확인한다. 글리프를 찾지 못하면 ImGui 는 빈 상자를 그리고 로그 한 줄만 남긴다
             // ------------------------------------------------------------------------------
             static bool hasGlyph( ImFontBaked* pBaked, uint32 codepoint )
             {
@@ -161,14 +161,14 @@ namespace sw::editor
 
             static uint32 decodeFirstCodepoint( const utf8* pText )
             {
-                uint32 codepoint{ 0 }; // ImTextCharFromUtf8 은 unsigned int* 를 받는다(uint32 와 같은 형)
+                uint32 codepoint{ 0 }; // ImTextCharFromUtf8 은 unsigned int* 를 받는다(uint32 와 같은 타입)
                 ImTextCharFromUtf8( &codepoint, pText, nullptr );
                 return codepoint;
             }
 
             static EditorSelfTestStep runIconFontHasGlyphs( EditorSelfTestContext& context )
             {
-                // ImGuiNotify 토스트가 박아 둔 Font Awesome 코드포인트(성공) — 아이콘 폰트가 같은 자리에 글리프를 둔다.
+                // ImGuiNotify 토스트가 고정해 둔 Font Awesome 코드포인트(성공)다. 아이콘 폰트가 같은 코드포인트에 글리프를 둔다.
                 constexpr uint32 kNotifySuccessCodepoint = 0xF058;
                 ImFont*          pFont                   = ImGui::GetFont();
                 ImFontBaked*     pBaked                  = pFont != nullptr ? pFont->GetFontBaked( ImGui::GetFontSize() ) : nullptr;
@@ -179,7 +179,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // widgets.* — 도움말 표식 · 프로퍼티 행 라벨
+            // widgets.*: 도움말 마커와 프로퍼티 행 라벨
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runHelpMarkerDrawsTheMarker( EditorSelfTestContext& context )
             {
@@ -205,7 +205,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // dock.corePanelsAreDocked — 기본 도킹 배치가 적는 제목과 패널 제목이 맞는다(`-gv_editorOpenPanel=all` 로 기본 배치일 때)
+            // dock.corePanelsAreDocked: 기본 도킹 배치가 적는 제목과 패널 제목이 일치하는지 확인한다. `-gv_editorOpenPanel=all` 로 기본 배치일 때 검사한다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runCorePanelsAreDocked( EditorSelfTestContext& context )
             {
@@ -229,9 +229,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // dock.followsWindowSize — 창을 키우고 줄여도 메인 뷰포트가 클라이언트 크기를 따르고, 도크 칸이 화면 안에서 창에 대한 비율을 지킨다
-            // ImGui 는 중앙 노드 옆 칸에 마지막 픽셀 크기(SizeRef)를 그대로 준다. 맞추지 않으면 창을 줄일 때 옆 칸은 그대로이고 게임 뷰 쪽이 32 px 로 눌린다.
-            // 게임 뷰 위 Transform 바는 게임 뷰의 뷰포트 안에 남아야 한다 — 넘치면 멀티 뷰포트가 OS 창으로 떼어 낸다. 에디터 창은 최소 크기 밑으로 줄지 않는다.
+            // dock.followsWindowSize: 창을 키우고 줄여도 메인 뷰포트가 클라이언트 크기를 따르고, 도크 노드가 화면 안에서 창에 대한 비율을 유지하는지 확인한다.
+            // ImGui 는 중앙 노드 옆 노드에 마지막 픽셀 크기(SizeRef)를 그대로 준다. 맞추지 않으면 창을 줄일 때 옆 노드는 그대로이고 게임 뷰 쪽이 32 px 로 눌린다.
+            // 게임 뷰 위의 Transform 바는 게임 뷰의 뷰포트 안에 남아야 한다. 넘치면 멀티 뷰포트가 OS 창으로 떼어 낸다. 에디터 창은 최소 크기 밑으로 줄지 않는다.
             // ------------------------------------------------------------------------------
             struct DockResizeProbe
             {
@@ -252,7 +252,7 @@ namespace sw::editor
                 return s_probe;
             }
 
-            /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr. */
+            /** @brief 메인 뷰포트를 덮는 도크스페이스의 루트 노드입니다. 없으면 nullptr 입니다. */
             static const ImGuiDockNode* findMainDockspace()
             {
                 const ImGuiViewport* pMain       = ImGui::GetMainViewport();
@@ -282,8 +282,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 이번 프레임의 메인 뷰포트 · 도크 칸을 봅니다.
-             * @param bCompareShare false 면 칸마다 창에 대한 비율을 기준으로 적고, true 면 적어 둔 기준과 견줍니다.
+             * @brief 이번 프레임의 메인 뷰포트와 도크 노드를 검사합니다.
+             * @param bCompareShare false 이면 노드마다 창에 대한 비율을 기준으로 기록하고, true 이면 기록해 둔 기준과 비교합니다.
              */
             static void expectDockFitsViewport( EditorSelfTestContext& context, const IWindow& window, bool bCompareShare )
             {
@@ -332,7 +332,7 @@ namespace sw::editor
                 const ImGuiWindow* pSceneView      = ImGui::FindWindowByName( "Scene" );
                 const ImGuiWindow* pBar            = ImGui::FindWindowByName( "##EditorTransformBar" );
                 if ( pSceneView == nullptr || pBar == nullptr || pBar->Active == false )
-                    return; // 이번 프레임에 바를 그리지 않았다(씬 뷰가 가려졌다)
+                    return; // 이번 프레임에 바를 그리지 않았다. 씬 뷰가 가려졌기 때문이다
                 (void)context.expect( pBar->Viewport == pSceneView->Viewport, "the transform bar left the scene view's viewport (it became its own OS window)" );
                 (void)context.expect( pBar->Pos.x >= pSceneView->Pos.x - kPixelTolerance &&
                                           pBar->Pos.x + pBar->Size.x <= pSceneView->Pos.x + pSceneView->Size.x + kPixelTolerance,
@@ -341,10 +341,10 @@ namespace sw::editor
 
             static EditorSelfTestStep runDockFollowsWindowSize( EditorSelfTestContext& context )
             {
-                constexpr uint32 kSettleFrameCount = 3; // 크기 통보 → 다음 NewFrame 의 DisplaySize → 도크 갱신
+                constexpr uint32 kSettleFrameCount = 3; // 크기 통보, 다음 NewFrame 의 DisplaySize, 도크 갱신 순서로 반영된다
                 constexpr uint32 kWideWidth        = 1600;
                 constexpr uint32 kWideHeight       = 900;
-                constexpr uint32 kNarrowWidth      = 640; // 에디터 최소 크기보다 작다 — 최소 크기에서 멈춰야 한다
+                constexpr uint32 kNarrowWidth      = 640; // 에디터 최소 크기보다 작다. 창은 최소 크기에서 멈춰야 한다
                 constexpr uint32 kNarrowHeight     = 360;
 
                 IWindow* pWindow = IWindow::getActiveWindow();
@@ -381,13 +381,13 @@ namespace sw::editor
                 if ( stepIndex < kSettleFrameCount * 3 )
                     return EditorSelfTestStep::Continue;
 
-                expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로다
+                expectDockFitsViewport( context, *pWindow, true ); // 원래 크기로 돌려도 비율이 그대로여야 한다
                 probe = DockResizeProbe{};
                 return EditorSelfTestStep::Done;
             }
 
             // ------------------------------------------------------------------------------
-            // inspector.drawLeavesTheObjectAlone — 좁은 enum(CameraRole : uint8) 바로 뒤의 bool 을 인스펙터가 그리며 건드리지 않는다
+            // inspector.drawLeavesTheObjectAlone: 좁은 enum(CameraRole : uint8) 바로 뒤의 bool 을 인스펙터가 그리면서 건드리지 않는지 확인한다
             // ------------------------------------------------------------------------------
             struct InspectorProbe
             {
@@ -425,7 +425,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
                 if ( context.getStepIndex() < 3 )
-                    return EditorSelfTestStep::Continue; // 인스펙터가 두 번 그리게 둔다
+                    return EditorSelfTestStep::Continue; // 인스펙터가 두 번 그리도록 한다
 
                 GameObjectManager* pManager = editor::getActiveObjectManager();
                 GameObject*        pObj     = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
@@ -444,7 +444,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // preview.materialHoldsOneReference — 머티리얼 미리보기는 머티리얼 하나에 참조 하나만 든다(acquire · release 짝)
+            // preview.materialHoldsOneReference: 머티리얼 미리보기는 머티리얼 하나에 참조 하나만 가진다. acquire 와 release 가 짝이 맞아야 한다
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runMaterialPreviewHoldsOneReference( EditorSelfTestContext& context )
             {
@@ -468,7 +468,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // hierarchy.tagFilter — Hierarchy 의 `tag:` 필터가 태그 계층 · 대소문자를 따라 오브젝트를 찾는다
+            // hierarchy.tagFilter: Hierarchy 의 `tag:` 필터가 태그 계층과 대소문자 규칙을 따라 오브젝트를 찾는지 확인한다
             // ------------------------------------------------------------------------------
             struct HierarchyProbe
             {
@@ -483,7 +483,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runHierarchyTagFilter( EditorSelfTestContext& context )
             {
-                // 단계마다 넣을 필터와, 그 필터가 앞 단계에서 그린 프레임에 보여야 할 루트 수.
+                // 단계마다 넣을 필터와, 그 필터를 넣은 앞 단계에서 그린 프레임에 보여야 할 루트 수다.
                 struct FilterCase
                 {
                     const utf8* _pFilter;
@@ -538,7 +538,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // hierarchy.offscreenRootsKeepTheirPlace — 화면 밖의 접힌 루트를 빈자리로 둬도 스크롤 길이가 같고, 맨 아래로 내리면 마지막 루트가 그려진다
+            // hierarchy.offscreenRootsKeepTheirPlace: 화면 밖의 접힌 루트를 빈 공간으로 대체해도 스크롤 길이가 같고, 맨 아래로 내리면 마지막 루트가 그려지는지 확인한다
             // ------------------------------------------------------------------------------
             struct OffscreenRowProbe
             {
@@ -552,7 +552,7 @@ namespace sw::editor
                 return s_probe;
             }
 
-            /** @brief Hierarchy 트리 구역(자식 창 "##HierarchyTree")을 찾습니다. 없으면 nullptr. */
+            /** @brief Hierarchy 트리 영역(자식 창 "##HierarchyTree")을 찾습니다. 없으면 nullptr 입니다. */
             static ImGuiWindow* findHierarchyTreeWindow()
             {
                 const ImGuiContext* pImGui = ImGui::GetCurrentContext();
@@ -600,7 +600,7 @@ namespace sw::editor
                     }
                     case 1:
                     {
-                        return EditorSelfTestStep::Continue; // 줄이 다 그려진(빈자리 포함) 크기로 스크롤 길이가 정해지게
+                        return EditorSelfTestStep::Continue; // 행이 모두 그려진(빈 공간 포함) 크기로 스크롤 길이가 정해지게 한다
                     }
                     case 2:
                     {
@@ -620,12 +620,12 @@ namespace sw::editor
                     }
                     case 4:
                     {
-                        // 빈자리 높이 = 그린 줄의 높이여야 스크롤 길이가 같다(틀리면 스크롤이 튄다).
+                        // 빈 공간의 높이가 그린 행의 높이와 같아야 스크롤 길이가 같다. 다르면 스크롤이 튄다.
                         if ( pTree != nullptr )
                             (void)context.expect( isNear( pTree->ScrollMax.y, probe._scrollMaxWithSkip, 0.5f ), "skipped rows changed the scroll length" );
                         pHierarchy->setOffscreenRowSkipEnabled( true );
                         if ( pTree != nullptr )
-                            ImGui::SetScrollY( pTree, pTree->ScrollMax.y ); // 맨 아래로 — 다음 프레임에 걸린다
+                            ImGui::SetScrollY( pTree, pTree->ScrollMax.y ); // 맨 아래로 내린다. 다음 프레임에 반영된다
                         return EditorSelfTestStep::Continue;
                     }
                     case 5:
@@ -655,8 +655,8 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // sceneView.resizeEveryFrame — 씬 뷰 RT 를 프레임마다 다른 크기로 다시 만든다(패널을 닫아도 두 뷰가 다 안 보이면 씬 뷰 RT 에 그린다)
-            // 놓은 ImGui 텍스처 · 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 놓여야 한다. 어기면 Vulkan 검증 레이어가
+            // sceneView.resizeEveryFrame: 씬 뷰 렌더 타깃을 프레임마다 다른 크기로 다시 만든다. 패널을 닫아도 두 뷰가 모두 안 보이면 씬 뷰 렌더 타깃에 그린다.
+            // 해제한 ImGui 텍스처와 렌더 타깃은 그것을 그렸을 수 있는 마지막 프레임의 GPU 작업이 끝난 뒤에 해제해야 한다. 어기면 Vulkan 검증 레이어가
             // "사용 중인 디스크립터 세트 해제" 를 Error 로 남기고, AppSmokeTest 가 그 줄을 센다.
             // ------------------------------------------------------------------------------
             static EditorSelfTestStep runSceneViewResizeEveryFrame( EditorSelfTestContext& context )
@@ -668,8 +668,8 @@ namespace sw::editor
                 if ( context.expect( pContext != nullptr, "no editor context" ) == false )
                     return EditorSelfTestStep::Done;
 
-                // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 테스트가 바꾼 크기를 되돌리며 이미 그린 텍스처를
-                // 같은 프레임에 놓는다. 패널이 닫히는 것은 다음 프레임이라 첫 단계는 닫기만 한다.
+                // 씬 뷰 패널은 닫아 둔다. 패널은 그리기 전에 자기 크기로 다시 맞추므로, 열어 두면 이 테스트가 바꾼 크기를 되돌리면서 이미 그린 텍스처를
+                // 같은 프레임에 해제한다. 패널은 다음 프레임에 닫히므로 첫 단계는 닫기만 한다.
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
@@ -682,7 +682,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Done;
                 }
 
-                // 패널과 같은 순서다: 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임이 놓은 텍스처는 앞 프레임의 스냅샷만 그린다.
+                // 패널과 같은 순서로 크기를 맞춘 뒤 그 프레임의 텍스처를 그린다. 이 프레임에서 해제한 텍스처는 앞 프레임의 스냅샷만 그렸다.
                 const uint32 width  = 256u + ( stepIndex % 2u ) * 64u;
                 const uint32 height = 144u + ( stepIndex % 2u ) * 36u;
                 pContext->ensureViewTargetSize( EditorViewKind::Scene, width, height );
@@ -698,9 +698,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // profiler.gpuMemoryTab — 프로파일러의 GPU Memory 탭이 장부 표(줄 · 바이트 · 비율 · 개수 · 크기 모름)를 그린다
+            // profiler.gpuMemoryTab: 프로파일러의 GPU Memory 탭이 장부 테이블(항목, 바이트, 비율, 개수, 크기 모름)을 그리는지 확인한다
             // ------------------------------------------------------------------------------
-            /** @brief 이 프레임에 그려진, 첫 열이 `pFirstColumn` 이고 마지막 열이 `pLastColumn` 인 표입니다. 없으면 nullptr. */
+            /** @brief 이 프레임에 그려진 테이블 중 첫 열이 `pFirstColumn` 이고 마지막 열이 `pLastColumn` 인 것을 찾습니다. 없으면 nullptr 입니다. */
             static ImGuiTable* findActiveTable( const utf8* pFirstColumn, const utf8* pLastColumn, int32 columnCount )
             {
                 ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
@@ -717,7 +717,7 @@ namespace sw::editor
                 return nullptr;
             }
 
-            /** @brief 이름이 `pTabName` 인 탭을 가진 탭 바를 찾아 그 탭을 다음 프레임에 고르게 합니다. 찾으면 true. */
+            /** @brief 이름이 `pTabName` 인 탭을 가진 탭 바를 찾아 그 탭을 다음 프레임에 선택하게 합니다. 찾으면 true 입니다. */
             static bool queueTabFocus( const utf8* pTabName )
             {
                 ImGuiContext& imguiContext = *ImGui::GetCurrentContext();
@@ -753,7 +753,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                // 탭은 고른 다음 프레임에 그려진다. 표가 이 프레임에 그려졌으면 확인하고, 아니면 GPU Memory 탭을 다시 고른다.
+                // 탭은 선택한 다음 프레임에 그려진다. 테이블이 이 프레임에 그려졌으면 확인하고, 아니면 GPU Memory 탭을 다시 선택한다.
                 const ImGuiTable* pTable = findActiveTable( "Kind", "Unknown Size", 5 );
                 if ( pTable == nullptr && stepIndex < kMaxStepCount )
                 {
@@ -768,18 +768,18 @@ namespace sw::editor
             }
 
             /**
-             * @brief 사용자 설정 창이 카테고리 탭마다 설정 표를 그린다 — 탭을 하나씩 골라 다음 프레임에 표가 그려졌는지 본다.
-             * @details 창은 게임 메뉴 UI 가 부를 바인딩 API 만 쓰므로, 모든 종류의 위젯(체크 · 슬라이더 · 콤보 · 키)이 엔진 스키마로 한 번씩 그려진다.
+             * @brief 사용자 설정 창이 카테고리 탭마다 설정 테이블을 그리는지 확인합니다. 탭을 하나씩 선택하고 다음 프레임에 테이블이 그려졌는지 봅니다.
+             * @details 창은 게임 메뉴 UI 가 호출할 바인딩 API 만 쓰므로, 모든 종류의 위젯(체크, 슬라이더, 콤보, 키)이 엔진 스키마로 한 번씩 그려진다.
              */
             // ------------------------------------------------------------------------------
-            // dpi.monitorScaleFollows — 창 DPI 가 0.5 커지면(100 % → 150 %) 글자 · 여백 · 테마 배율이 함께 따르고, Windows 는 WM_DPICHANGED 로 창 · 백버퍼가 권장 사각형을 따른다.
-            // 실물 150 % 모니터 대신이다(이 PC 는 96 DPI). 글자 래스터의 선명도는 이것으로 못 본다. 끝에 원래 DPI · 창 크기로 되돌린다.
+            // dpi.monitorScaleFollows: 창 DPI 가 0.5 커지면(100 % 에서 150 %) 글자, 여백, 테마 배율이 함께 따르고, Windows 에서는 WM_DPICHANGED 로 창과 백버퍼가 권장 사각형을 따르는지 확인한다.
+            // 실제 150 % 모니터를 대신하는 테스트다(이 PC 는 96 DPI). 글자 래스터의 선명도는 이 테스트로 확인할 수 없다. 끝나면 원래 DPI 와 창 크기로 되돌린다.
             // ------------------------------------------------------------------------------
             struct DpiProbe
             {
                 float32 ( *_pfnSavedDpiScale )( ImGuiViewport* ){ nullptr };
                 float32 _baseScale{ 1.0f };
-                float32 _fakeScale{ 1.5f }; ///< 바꿔 끼운 창 DPI — 지금 배율 + 0.5(이 PC 가 이미 150 % 여도 바뀐다)
+                float32 _fakeScale{ 1.5f }; ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
                 float32 _basePaddingX{ 0.0f };
 #if defined( SW_PLATFORM_WINDOWS )
                 RECT _originalRect{};
@@ -801,7 +801,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runDpiMonitorScaleFollows( EditorSelfTestContext& context )
             {
-                // 단계 표 — 바꿔 끼운 DPI 를 NewFrame 이 읽고 테마가 따르는 데 몇 프레임, 창 메시지가 펌프 · 리사이즈를 거치는 데 몇 프레임.
+                // 단계 테이블. 교체한 DPI 를 NewFrame 이 읽고 테마가 따르는 데 몇 프레임, 창 메시지가 펌프와 리사이즈를 거치는 데 몇 프레임이 걸리는지 나타낸다.
                 constexpr uint32 kCheckScaleStep   = 4;
                 constexpr uint32 kCheckWindowStep  = 12;
                 constexpr uint32 kCheckRestoreStep = 20;
@@ -812,7 +812,7 @@ namespace sw::editor
                 if ( stepIndex == 0 )
                 {
                     if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
-                        return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않는다 — 볼 것이 없다
+                        return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않으므로 확인할 것이 없다
                     probe                                 = DpiProbe{};
                     probe._pfnSavedDpiScale               = platformIO.Platform_GetWindowDpiScale;
                     probe._baseScale                      = EditorThemeUtil::getDpiScale();
@@ -832,7 +832,7 @@ namespace sw::editor
                     (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), "frame padding stayed at the old DPI while fonts grew" );
                     platformIO.Platform_GetWindowDpiScale = probe._pfnSavedDpiScale;
 #if defined( SW_PLATFORM_WINDOWS )
-                    // 창 쪽 — OS 가 보내는 것과 같은 메시지(새 DPI · 그 비율만큼 큰 권장 사각형). 보내기(SendMessage)로 — 주의: 게시(PostMessage)한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
+                    // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
                     HWND hWnd = static_cast<HWND>( ImGui::GetMainViewport()->PlatformHandleRaw );
                     if ( hWnd != nullptr && GetWindowRect( hWnd, &probe._originalRect ) )
                     {
@@ -863,7 +863,7 @@ namespace sw::editor
                         (void)context.expect( bGrew == false || ( windowRect.right - windowRect.left ) == ( probe._suggestedRect.right - probe._suggestedRect.left ),
                                               "WM_DPICHANGED did not move the window to the suggested rectangle" );
                         (void)context.expect( bMatchesBb, "after WM_DPICHANGED the back buffer does not match the window client area" );
-                        // 원래 창 크기 · DPI 로 되돌린다 — 다음 테스트가 커진 창에서 돌지 않게.
+                        // 원래 창 크기와 DPI 로 되돌린다. 다음 테스트가 커진 창에서 실행되지 않게 하기 위해서다.
                         SendMessageW( hWnd, WM_DPICHANGED, MAKEWPARAM( static_cast<WORD>( 96.0f * probe._baseScale ), static_cast<WORD>( 96.0f * probe._baseScale ) ), reinterpret_cast<LPARAM>( &probe._originalRect ) );
                     }
 #endif
@@ -871,7 +871,7 @@ namespace sw::editor
                 }
                 if ( stepIndex < kCheckRestoreStep )
                     return EditorSelfTestStep::Continue;
-                // 진짜 DPI 로 돌아왔다 — 테마도 따라 돌아와야 한다(옮겨 갔다 돌아오는 모니터 이동과 같다).
+                // 실제 DPI 로 돌아왔으므로 테마도 따라 돌아와야 한다. 모니터를 옮겼다가 돌아오는 것과 같다.
                 (void)context.expect( isNear( EditorThemeUtil::getDpiScale(), probe._baseScale, 0.001f ), "the theme scale did not follow the DPI back" );
                 return EditorSelfTestStep::Done;
             }
@@ -892,7 +892,7 @@ namespace sw::editor
                     return EditorSelfTestStep::Continue;
                 }
 
-                // 홀수 단계는 탭을 고르고, 짝수 단계는 그 탭의 표가 이 프레임에 그려졌는지 본다.
+                // 홀수 단계는 탭을 선택하고, 짝수 단계는 그 탭의 테이블이 이 프레임에 그려졌는지 확인한다.
                 const vector<UserSettingCategoryDef>& listCategory  = pSettings->getCategories();
                 const uint32                          categoryIndex = ( stepIndex - 1 ) / 2;
                 if ( categoryIndex >= static_cast<uint32>( listCategory.size() ) )

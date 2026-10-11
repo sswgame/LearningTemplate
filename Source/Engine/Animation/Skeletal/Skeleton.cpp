@@ -16,7 +16,7 @@ namespace sw
 
     int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose, const float4x4& inverseBind )
     {
-        // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어 구할 수 없다. 들어오는 자리에서 막는다.
+        // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.
         const int32 boneCount = static_cast<int32>( _listBone.size() );
         if ( parentIndex < -1 || boneCount <= parentIndex )
         {

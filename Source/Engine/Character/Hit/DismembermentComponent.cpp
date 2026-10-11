@@ -27,7 +27,7 @@ namespace sw
         struct DismembermentComponentInternal
         {
             static constexpr const utf8* kDefaultSurfaceChannels = "engine/character/default.surfacechannels.xml";
-            static constexpr float32     kWeldScale              = 1.0e5f; ///< 자리 용접 격자(10 마이크로미터)
+            static constexpr float32     kWeldScale              = 1.0e5f; ///< 위치 용접 격자다(10 마이크로미터).
             static constexpr uint32      kMaxHullPoint           = 256;    ///< 볼록 껍질 점 상한(넘으면 고르게 솎는다)
 
             struct WeldKey
@@ -80,8 +80,8 @@ namespace sw
             }
 
             /**
-             * @brief 인덱스 없는 삼각형 목록을 자리로 이은 형상으로 만듭니다(위상 — 경계 고리 · 캡). 삼각형 순서는 그대로라 삼각형 i 가 목록의 삼각형 i 입니다.
-             * @details 같은 자리의 첫 정점의 노멀 · UV · 스킨을 씁니다(캡과 영역 매기기에만 쓰이고, 남은 메시는 원래 정점을 쓴다).
+             * @brief 인덱스 없는 삼각형 목록을 위치로 이은 형상으로 만듭니다(위상: 경계 고리, 캡). 삼각형 순서는 그대로라 삼각형 i 가 목록의 삼각형 i 입니다.
+             * @details 같은 위치의 첫 정점의 노멀, UV, 스킨을 쓴다(캡과 영역 매기기에만 쓰이고, 남은 메시는 원래 정점을 쓴다).
              */
             static void weld( const vector<RHIVertex>& listVertex, const vector<MeshSkinVertex>& listSkin, AppearanceGeometry& outGeometry )
             {
@@ -133,7 +133,7 @@ namespace sw
                 }
             }
 
-            /** @brief 정점 하나를 지금 포즈(스킨 팔레트)로 옮깁니다 — 바인드 공간 → 유닛 모델 공간. 노멀도 돌립니다. */
+            /** @brief 정점 하나를 현재 포즈(스킨 팔레트)로 옮깁니다. 바인드 공간에서 유닛 모델 공간으로 바꾸며, 노멀도 돌립니다. */
             static void skinVertex( RHIVertex& inoutVertex, const MeshSkinVertex& skin, const vector<float4x4>& listPalette )
             {
                 const float3 position{ inoutVertex._arrPosition[0], inoutVertex._arrPosition[1], inoutVertex._arrPosition[2] };
@@ -278,7 +278,7 @@ namespace sw
         if ( std::find( _listSeveredRegion.begin(), _listSeveredRegion.end(), region ) != _listSeveredRegion.end() )
             return false;
 
-        // 1) 위상 — 자리로 이은 형상과 정점마다 영역.
+        // 1) 위상: 위치로 이은 형상과 정점마다 영역을 구한다.
         const shared_ptr<Mesh>&       mesh       = pUnit->getMesh();
         const vector<RHIVertex>&      listVertex = mesh->getVertices();
         const vector<MeshSkinVertex>& listSkin   = mesh->getSkinVertices();
@@ -299,7 +299,7 @@ namespace sw
                                               vector_reference<const uint16>{ &severedRegion, 1 }, result ) == false )
             return false;
 
-        // 2) 남은 몸 — 원래 정점(이음매 그대로)에서 잘린 삼각형을 빼고 남은 몸 캡을 스킨 정점으로 붙인다.
+        // 2) 남은 몸: 원래 정점(이음매 그대로)에서 잘린 삼각형을 빼고, 남은 몸 캡을 스킨 정점으로 붙인다.
         vector<RHIVertex>      listKeptVertex;
         vector<MeshSkinVertex> listKeptSkin;
         vector<RHIVertex>      listPieceVertex;
@@ -323,7 +323,7 @@ namespace sw
         kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBoneCount() );
         pUnit->setMesh( std::move( kept ) );
 
-        // 3) 떨어진 조각 — 지금 포즈로 스키닝해 정적 메시, 그 정점의 볼록 껍질 강체.
+        // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.
         const vector<float4x4>& listPalette = pUnit->getSkinPalette();
         const float4x4          unitWorld   = pUnit->getWorldMatrix();
         float3                  center{};
@@ -377,12 +377,12 @@ namespace sw
             _lastPiece = pPiece->getHandle();
         }
 
-        // 4) 그 영역 뼈의 래그돌 바디를 끈다 — 보이지 않는 바디가 남아 부딪히지 않게.
+        // 4) 그 영역 뼈의 래그돌 바디를 끈다. 보이지 않는 바디가 남아 부딪히지 않게 하려는 것이다.
         RagdollComponent* pRagdoll = pOwner->getComponent<RagdollComponent>();
         if ( pRagdoll != nullptr )
             pRagdoll->detachBoneBodies( _regionTable.getRegions()[static_cast<size_t>( regionIndex )]._listBone );
 
-        // 5) 표면 상태 — 잘린 영역에 피.
+        // 5) 표면 상태: 잘린 영역에 피를 올린다.
         (void)_surfaceState.setRegionValue( static_cast<uint32>( regionIndex ), _bloodChannel, 1.0f );
         _listSeveredRegion.push_back( region );
         return true;

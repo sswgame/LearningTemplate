@@ -67,22 +67,22 @@ namespace sw::editor
             static constexpr Color kRulerAccent{ Color::fromBytes( 255, 230, 80, 255 ) };
             static constexpr Color kRulerLabelBg{ Color::fromBytes( 20, 24, 32, 220 ) };
 
-            // 축 색의 원본. 그리드 · 오리엔테이션 큐브가 같은 값을 본다. 기즈모(ImGuizmo)도 같은 관례(X 빨강 · Y 초록 · Z 파랑)를 쓴다.
+            // 축 색의 원본이다. 그리드와 오리엔테이션 큐브가 같은 값을 읽는다. 기즈모(ImGuizmo)도 같은 관례(X 빨강, Y 초록, Z 파랑)를 쓴다.
             static constexpr Color kAxisX{ Color::fromBytes( 235, 65, 65 ) };
             static constexpr Color kAxisY{ Color::fromBytes( 65, 220, 95 ) };
             static constexpr Color kAxisZ{ Color::fromBytes( 65, 130, 245 ) };
 
             /**
-             * @brief 엔진 행렬을 ImGuizmo 배열(float[16])로 옮깁니다. **그대로 복사한다.**
-             * @details 엔진 float4x4 는 행 벡터 규약(이동이 _41 · _42 · _43)의 행 우선 저장이라 메모리가 곧 ImGuizmo 가 받는 배열
-             *          (이동이 [12] · [13] · [14])이다. 전치하면 이동이 [3] · [7] · [11] 로 가서 ImGuizmo 는 물체를 원점 · 카메라 눈 자리로 보고
-             *          (클립 w = 0) 기즈모를 엉뚱한 곳에 그리며 손잡이를 잡지 못한다.
+             * @brief 엔진 행렬을 ImGuizmo 배열(float[16])로 변환합니다. 그대로 복사합니다.
+             * @details 엔진의 float4x4 는 행 벡터 규약(이동이 _41, _42, _43)의 행 우선 저장이므로 메모리가 곧 ImGuizmo 가 받는 배열
+             *          (이동이 [12], [13], [14])이다. 전치하면 이동이 [3], [7], [11] 로 가서 ImGuizmo 는 물체가 원점이나 카메라 눈 위치에 있다고 보고
+             *          (클립 w = 0) 기즈모를 엉뚱한 곳에 그리며 핸들을 잡지 못한다.
              */
             static void storeGizmoMatrix( float32* pOut, const float4x4& matrix ) { Memory::copy( pOut, &matrix, sizeof( float32 ) * 16 ); }
 
             static void loadGizmoMatrix( float4x4& outMatrix, const float32* pIn ) { Memory::copy( &outMatrix, pIn, sizeof( float32 ) * 16 ); }
 
-            /** @brief view · proj 배열(ImGuizmo 형식)에서 뷰-투영 행렬을 만듭니다. */
+            /** @brief view 와 proj 배열(ImGuizmo 형식)에서 뷰-투영 행렬을 만듭니다. */
             static void loadViewProj( const float32* pView, const float32* pProj, float4x4& outViewProj )
             {
                 float4x4 viewMat{};
@@ -94,11 +94,11 @@ namespace sw::editor
 
             /**
              * @brief 마우스 아래의 월드 레이를 만듭니다. 캔버스 밖이거나 퇴화했으면 false 입니다.
-             * @details 피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다. ImGui 에 닿는 것은 마우스 위치뿐이고, 나머지는
-             *          `EditorViewportPick::makeRay` 라 테스트가 있습니다.
+             * @details 피킹, 자, 애셋 드롭이 같은 레이를 쓴다. ImGui 에 의존하는 부분은 마우스 위치뿐이고, 나머지는
+             *          `EditorViewportPick::makeRay` 이므로 테스트가 있다.
              */
-            static constexpr float64 kSlowHoverPickSeconds  = 0.002; ///< 이보다 오래 걸린 호버 피킹은 비싸다고 본다
-            static constexpr float64 kSlowHoverPickInterval = 0.1;   ///< 비싸면 이만큼 사이를 둔다(초)
+            static constexpr float64 kSlowHoverPickSeconds  = 0.002; ///< 이보다 오래 걸린 호버 피킹은 비싸다고 판단한다
+            static constexpr float64 kSlowHoverPickInterval = 0.1;   ///< 비싸면 이만큼 간격을 둔다(초)
 
             static bool makeMouseRay( const float4x4& invViewProj, const float2& canvasPos, const float2& canvasSize,
                                       EditorPickRay& outRay )
@@ -121,15 +121,15 @@ namespace sw::editor
             }
 
             /**
-             * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다 — 호스트가 씬 뷰를 그리는 카메라와 같다(`ImGuiEditor::getSceneViewCamera`).
-             * @details 오버레이(격자 · 시각화 · 디버그 드로우 · 피킹 · 기즈모)는 이 카메라로 투영해야 그림과 겹칩니다. Play 중에도 씬 뷰는 이 카메라다.
+             * @brief 씬 뷰 이미지를 그린 카메라(에디터 카메라)입니다. 호스트가 씬 뷰를 그리는 카메라와 같습니다(`ImGuiEditor::getSceneViewCamera`).
+             * @details 오버레이(격자, 시각화, 디버그 드로우, 피킹, 기즈모)는 이 카메라로 투영해야 이미지와 겹친다. Play 중에도 씬 뷰는 이 카메라를 쓴다.
              */
             static CameraComponent* getSceneViewCamera()
             {
                 return EditorCamera::ensure( editor::getActiveScene() );
             }
 
-            /** @brief 에디터 카메라가 지난 프레임에 건 자리에서 이만큼(m) 넘게 떨어져 있으면 바깥이 옮긴 것으로 본다(부동소수 왕복 오차보다 크다). */
+            /** @brief 에디터 카메라가 지난 프레임에 설정한 위치에서 이 거리(m)보다 멀리 떨어져 있으면 외부에서 옮긴 것으로 봅니다. 부동소수 왕복 오차보다 큰 값입니다. */
             static constexpr float32 kExternalMoveTolerance = 0.001f;
         };
     } // namespace
@@ -172,7 +172,7 @@ namespace sw::editor
         , _bMaximized{ SW_FALSE }
         , _reservedGizmo{ 0 }
     {
-        // 어떤 시각화가 기본으로 켜지는지는 시각화 등록 줄이 정한다. 스냅 · 카메라 속도 · 표시 기본값은 환경설정(Editor/Viewport)에서 온다.
+        // 어떤 시각화가 기본으로 켜지는지는 시각화 등록 항목이 정한다. 스냅, 카메라 속도, 표시 기본값은 환경설정(Editor/Viewport)에서 온다.
         const EditorViewportPreferences& preferences = getPreferences<EditorViewportPreferences>();
         _toolbarSettings._cameraSpeed                = preferences._cameraSpeed;
         _toolbarSettings._gridSnapValue              = preferences._gridSnapValue;
@@ -274,13 +274,13 @@ namespace sw::editor
             else if ( io.MouseDown[1] )
                 processFlyInput( deltaTime );
             else if ( _bOrthographicView == SW_TRUE && bWindowHovered && MathUtil::abs( io.MouseWheel ) > 0.01f )
-                _orthoHeight = MathUtil::clamp( _orthoHeight * MathUtil::pow( 0.9f, io.MouseWheel ), 0.5f, 1000.0f ); // 직교 보기의 휠은 확대
+                _orthoHeight = MathUtil::clamp( _orthoHeight * MathUtil::pow( 0.9f, io.MouseWheel ), 0.5f, 1000.0f ); // 직교 보기에서는 휠이 확대와 축소다
         }
 
         CameraComponent* pCam = EditorViewportClientInternal::getSceneViewCamera();
         if ( pCam != nullptr )
         {
-            // 바깥(개발 명령 bugitgo · teleport)이 에디터 카메라를 옮겼으면 씬 뷰가 그 자리 · 시선을 이어받는다 — 덮어쓰면 명령이 한 프레임도 남지 않는다.
+            // 외부(개발 명령 bugitgo, teleport)가 에디터 카메라를 옮겼으면 씬 뷰가 그 위치와 시선을 이어받는다. 덮어쓰면 명령이 한 프레임도 유지되지 않는다.
             const bool bSameCamera   = _lastAppliedCameraID == pCam->getComponentID();
             const bool bMovedOutside = bSameCamera && ( pCam->getLocalPosition() - _lastAppliedCameraPos ).getLength() > EditorViewportClientInternal::kExternalMoveTolerance;
             if ( bMovedOutside )
@@ -339,10 +339,10 @@ namespace sw::editor
         if ( ImGui::IsKeyDown( ImGuiKey_Q ) )
             moveDir -= up;
 
-        // 오른쪽 단추를 누른 채 휠로 비행 속도를 바꾼다(언리얼 · 유니티) — 툴바 슬라이더와 같은 값이다.
+        // 오른쪽 버튼을 누른 채 휠로 비행 속도를 바꾼다(언리얼과 유니티). 툴바 슬라이더와 같은 값이다.
         if ( MathUtil::abs( io.MouseWheel ) > 0.01f )
             _toolbarSettings._cameraSpeed = MathUtil::clamp( _toolbarSettings._cameraSpeed * MathUtil::pow( 1.2f, io.MouseWheel ), 0.5f, 20.0f );
-        // 직교 보기에서 날기 시작하면 원근으로 돌아간다(Godot 의 직교 보기와 같다 — 직교로 둘러보기는 의미가 적다).
+        // 직교 보기에서 비행을 시작하면 원근 보기로 돌아간다. Godot 의 직교 보기와 같다. 직교로 둘러보는 것은 의미가 적기 때문이다.
         _bOrthographicView = SW_FALSE;
 
         const float32 speed = _toolbarSettings._cameraSpeed * ( io.KeyShift ? 3.0f : 1.0f ) * deltaTime;
@@ -357,7 +357,7 @@ namespace sw::editor
         EditorContext* pContext = EditorContext::get();
         if ( pContext == nullptr )
             return;
-        // 기즈모 모드(유니티 · 언리얼 · Godot 모두 W · E · R). Q 와 Space 는 다음 모드로 돈다(Space 는 언리얼).
+        // 기즈모 모드는 유니티, 언리얼, Godot 모두 W, E, R 이다. Q 와 Space 는 다음 모드로 순환한다(Space 는 언리얼).
         EditorWorkspace& ws = pContext->getWorkspace();
         if ( io.KeyShift == false )
         {
@@ -374,7 +374,7 @@ namespace sw::editor
         {
             toggleMaximize();
         }
-        // 직교 보기(Blender · Godot 키패드): 7 위 · 1 앞 · 3 오른쪽, 5 는 직교 ↔ 원근.
+        // 직교 보기(Blender, Godot 키패드). 7 은 위, 1 은 앞, 3 은 오른쪽이고, 5 는 직교와 원근을 전환한다.
         if ( ImGui::IsKeyPressed( ImGuiKey_Keypad7, false ) )
             setOrthographicView( 89.9f, 0.0f );
         if ( ImGui::IsKeyPressed( ImGuiKey_Keypad1, false ) )
@@ -387,7 +387,7 @@ namespace sw::editor
 
     void EditorViewportClient::setOrthographicView( float32 pitch, float32 yaw )
     {
-        // 지금 보는 점(시선 앞 궤도 거리)을 축에서 다시 바라본다 — 화면 가운데가 그대로 남는다.
+        // 지금 보는 점(시선 앞 궤도 거리)을 축 방향에서 다시 바라본다. 화면 가운데는 그대로 유지된다.
         const float32 pitchRad = MathUtil::toRadian( _cameraRot._x );
         const float32 yawRad   = MathUtil::toRadian( _cameraRot._y );
         const float3  forward{ MathUtil::sin( yawRad ) * MathUtil::cos( pitchRad ), -MathUtil::sin( pitchRad ), MathUtil::cos( yawRad ) * MathUtil::cos( pitchRad ) };
@@ -461,8 +461,8 @@ namespace sw::editor
             ImGui::Image( reinterpret_cast<ImTextureID>( pTextureID ), ImVec2{ canvasSize._x, canvasSize._y } );
         else
             ImGui::Dummy( ImVec2{ canvasSize._x, canvasSize._y } );
-        EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다(뷰포트 피킹 · 카메라 비행)
-        // 캔버스(이미지)의 호버 · 클릭은 지금 읽는다 — 뒤에서 시각화가 레이블 자리로 항목을 더하면(빌보드) "마지막 항목" 이 바뀐다.
+        EditorSelfTestMarks::note( "sceneView.canvas" ); // 시나리오가 씬 뷰 가운데를 누른다. 뷰포트 피킹과 카메라 비행에 쓴다
+        // 캔버스(이미지)의 호버와 클릭은 지금 읽는다. 뒤에서 시각화가 레이블 위치에 항목을 추가하면(빌보드) "마지막 항목" 이 바뀐다.
         const bool bCanvasHovered = ImGui::IsItemHovered();
         const bool bCanvasClicked = ImGui::IsItemClicked( ImGuiMouseButton_Left );
 
@@ -479,15 +479,15 @@ namespace sw::editor
             EditorViewportClientInternal::storeGizmoMatrix( arrView, pCamera->getViewMatrix() );
             EditorViewportClientInternal::storeGizmoMatrix( arrProj, pCamera->getProjectionMatrix( aspect ) );
 
-            // 격자 · 시각화 · 자 · 통계 · 방향 큐브는 창 그리기 목록에 그린다 — 캔버스로 자르지 않으면 화면 밖으로 뻗은 선(카메라 절두체 등)이
-            // 탭 · 툴바 위까지 그려진다. 기즈모는 ImGuizmo 가 같은 사각형(SetRect)으로 자른다.
+            // 격자, 시각화, 자, 통계, 방향 큐브는 창의 그리기 목록에 그린다. 캔버스로 자르지 않으면 화면 밖으로 뻗은 선(카메라 절두체 등)이
+            // 탭과 툴바 위까지 그려진다. 기즈모는 ImGuizmo 가 같은 사각형(SetRect)으로 자른다.
             ImDrawList*  pCanvasDrawList = ImGui::GetWindowDrawList();
             const ImVec2 canvasMax{ imagePos.x + canvasSize._x, imagePos.y + canvasSize._y };
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             if ( _toolbarSettings._bShowGrid )
                 drawAdaptiveGrid( ImGui::GetWindowDrawList(), canvasPos, canvasSize, arrView, arrProj );
 
-            // 이 프레임의 스냅샷을 한 번만 만든다. 시각화와 아래 통계 오버레이가 함께 본다.
+            // 이 프레임의 스냅샷을 한 번만 만든다. 시각화와 아래의 통계 오버레이가 함께 읽는다.
             _listSceneObject.clear();
             GameObjectManager* pSnapshotManager = editor::getActiveObjectManager();
             if ( pSnapshotManager != nullptr )
@@ -521,7 +521,7 @@ namespace sw::editor
             }
 
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
-            // 위 · 오른쪽에 붙은 오버레이 바 아래에 둔다(지난 프레임 자리). 방향 큐브는 그 아래다.
+            // 위쪽이나 오른쪽에 붙은 오버레이 바 아래에 둔다(지난 프레임 위치). 방향 큐브는 그 아래다.
             const float2 topRightInset = _overlays.computeTopRightInset();
             _hudBoxHeight              = _toolbarSettings._bShowHUD ? _hudView.draw( ImGui::GetWindowDrawList(), canvasPos, canvasSize, topRightInset, ImGui::GetIO().DeltaTime )
                                                                     : topRightInset._y;
@@ -554,8 +554,8 @@ namespace sw::editor
         GameObjectManager* pManager = pScene->getObjectManager();
         pManager->flushSceneTransforms();
 
-        // 빌보드(빛 · 카메라 · 오디오 아이콘)가 레이 피킹보다 먼저다 — 메시가 없어 레이로는 집히지 않는다(언리얼 빌보드 · 유니티 Gizmo 아이콘 클릭).
-        // 잠근 오브젝트의 빌보드가 맞으면 그 자리는 "빈 곳" 이다(뒤의 레이 피킹으로 넘기지 않는다).
+        // 빌보드(라이트, 카메라, 오디오 아이콘)를 레이 피킹보다 먼저 검사한다. 메시가 없어 레이로는 집히지 않기 때문이다(언리얼 빌보드, 유니티 Gizmo 아이콘 클릭).
+        // 잠근 오브젝트의 빌보드가 맞으면 그 위치는 "빈 곳" 으로 처리한다. 뒤의 레이 피킹으로 넘기지 않는다.
         const EditorVisualizerRegistration* pBillboard = EditorRegistry<EditorVisualizerRegistration>::find( EditorViewportBillboard::kVisualizerID );
         if ( pBillboard != nullptr && _toolbarSettings._visualizerToggles.isOn( *pBillboard ) )
         {
@@ -573,7 +573,7 @@ namespace sw::editor
             }
         }
 
-        // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 표가 정한다 (ImGui 없이 테스트된다).
+        // 어떤 컴포넌트 종류를 집을 수 있는지는 EditorViewportPick 의 테이블이 정한다. ImGui 없이 테스트한다.
         EditorPickResult pickResult{};
         if ( EditorViewportPick::pick( pManager, pickRay, _toolbarSettings._bIs2DMode, pickResult ) == false || pickResult._pObject == nullptr ||
              pContext->getWorkspace().isObjectLocked( pickResult._pObject->getObjectID() ) || pickResult._pObject->isHiddenInEditor() )
@@ -604,7 +604,7 @@ namespace sw::editor
 
     void EditorViewportClient::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered )
     {
-        // 호버는 마우스가 씬 뷰 위에만 있고(다른 패널 · 팝업이 마우스를 갖지 않음) 끌기 · 비행 · 궤도 · 기즈모 위가 아닐 때만이다(언리얼 · 유니티의 호버 강조).
+        // 호버는 마우스가 씬 뷰 위에만 있고(다른 패널이나 팝업이 마우스를 가지고 있지 않고) 드래그, 비행, 궤도, 기즈모 위가 아닐 때만 처리한다(언리얼과 유니티의 호버 강조).
         const ImGuiIO& io       = ImGui::GetIO();
         const bool     bBlocked = bCanvasHovered == false || pCamera == nullptr || io.KeyAlt || io.MouseDown[0] || io.MouseDown[1] || io.MouseDown[2] ||
                               ImGui::IsAnyItemActive() || ImGuizmo::IsOver() || ImGuizmo::IsUsing() || _bGizmoTracking == SW_TRUE;
@@ -614,12 +614,12 @@ namespace sw::editor
             _hoverMousePos   = float2{ -1.0f, -1.0f };
             return;
         }
-        // 마우스가 그대로면 지난 답을 쓴다(프레임당 많아야 한 번, 대개는 0 번 — 카메라를 움직이는 동안은 위에서 막혔다).
+        // 마우스가 그대로면 지난 결과를 쓴다. 프레임당 많아야 한 번이고 대개는 0번이다. 카메라를 움직이는 동안은 위에서 막힌다.
         const float2 mouse{ io.MousePos.x, io.MousePos.y };
         if ( mouse._x == _hoverMousePos._x && mouse._y == _hoverMousePos._y )
             return;
-        // 피킹이 비싼 씬(레이 피킹은 오브젝트 수에 비례 — 8000 개면 Debug 로 약 20 ms)은 마우스가 움직이는 동안 0.1 초에 한 번만 찾는다.
-        // 마우스 자리를 적지 않고 돌아가므로 멈춘 뒤 다음 기회에 마지막 자리로 다시 찾는다.
+        // 피킹이 비싼 씬은 마우스가 움직이는 동안 0.1초에 한 번만 찾는다. 레이 피킹은 오브젝트 수에 비례하며, 8000개이면 Debug 에서 약 20 ms 가 걸린다.
+        // 이때 마우스 위치를 기록하지 않고 반환하므로, 마우스가 멈춘 뒤 다음 기회에 마지막 위치로 다시 찾는다.
         const float64 now = ImGui::GetTime();
         if ( _lastHoverPickSeconds > EditorViewportClientInternal::kSlowHoverPickSeconds && now - _lastHoverPickTime < EditorViewportClientInternal::kSlowHoverPickInterval )
             return;
@@ -629,7 +629,7 @@ namespace sw::editor
         GameObject* pObject    = nullptr;
         Component*  pComponent = nullptr;
         _hoveredObjectID       = findObjectUnderMouse( canvasPos, canvasSize, pCamera, pObject, pComponent ) ? pObject->getObjectID() : 0;
-        // 이미 고른 오브젝트는 호버가 아니다 — 선택 상자 · 기즈모가 이미 있다(그 위의 기즈모 손잡이와 겹치는 판정도 여기서 사라진다).
+        // 이미 선택한 오브젝트는 호버로 취급하지 않는다. 선택 상자와 기즈모가 이미 있다. 그 위의 기즈모 핸들과 겹치는 판정도 여기서 없어진다.
         EditorContext* pContext = EditorContext::get();
         if ( pObject != nullptr && pContext != nullptr && pContext->getEditorSelection().hasObject( pObject ) )
             _hoveredObjectID = 0;
@@ -669,7 +669,7 @@ namespace sw::editor
         _lastGizmoObjectCount = static_cast<uint32>( listGizmo.size() );
         ImGuizmo::SetDrawlist();
         ImGuizmo::SetRect( canvasPos._x, canvasPos._y, canvasSize._x, canvasSize._y );
-        // beginFrame 이 프레임마다 끈다 — 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 끈 채면 그리기만 하고 조작을 받지 않는다.
+        // beginFrame 이 프레임마다 끈다. 캔버스가 이번 프레임에 그려졌고 편집이 허용될 때(위에서 걸렀다)만 켠다. 꺼 둔 상태이면 그리기만 하고 조작을 받지 않는다.
         ImGuizmo::Enable( true );
 
         EditorWorkspace&    ws    = pContext->getWorkspace();
@@ -702,7 +702,7 @@ namespace sw::editor
         SceneComponent* pSceneComp = pRaw->getPrimarySceneComponent();
         if ( pSceneComp == nullptr )
             return;
-        // 추적 중인 드래그가 이 오브젝트 것이 아니면(선택이 바뀌었다 · 그룹 드래그였다) 먼저 정리한다 — 그 스냅숏을 이 오브젝트에 커밋하지 않는다.
+        // 추적 중인 드래그가 이 오브젝트의 것이 아니면(선택이 바뀌었거나 그룹 드래그였다) 먼저 정리한다. 그 스냅샷을 이 오브젝트에 커밋하지 않는다.
         if ( _bGizmoTracking == SW_TRUE && _gizmoObject != pRaw->getHandle() )
             endGizmoDrag();
 
@@ -720,8 +720,8 @@ namespace sw::editor
             float4x4 newWorldMat{};
             EditorViewportClientInternal::loadGizmoMatrix( newWorldMat, arrMatrix );
 
-            // 표면 붙이기는 **월드** 위치 · 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
-            // 로컬 높이를 견준다.
+            // 표면 붙이기는 월드 위치와 월드 Y 스케일로 한다. 로컬로 분해한 값을 넘기면 부모가 있을 때 다른 오브젝트의 월드 윗면과
+            // 로컬 높이를 비교하게 된다.
             if ( op == ImGuizmo::TRANSLATE && _toolbarSettings._bSurfaceSnap )
             {
                 float3 worldTranslation = newWorldMat.getTranslation();
@@ -729,13 +729,13 @@ namespace sw::editor
                 newWorldMat.setTranslation( worldTranslation );
             }
 
-            // 분해는 엔진이 한다(엔진의 오일러 규칙 — ImGuizmo 의 XYZ 분해는 엔진의 요 · 피치 · 롤 순서와 달라 섞인 회전이 틀어진다).
+            // 분해는 엔진이 한다. 엔진의 오일러 규칙을 따라야 한다. ImGuizmo 의 XYZ 분해는 엔진의 요, 피치, 롤 순서와 달라서 여러 축이 섞인 회전이 틀어진다.
             EditorSceneCommands::applyWorldTransform( pRaw, newWorldMat );
         }
 
         if ( ImGuizmo::IsUsing() )
         {
-            // 클릭 없이 시작된 드래그(스냅숏이 없다)는 대상만 기억한다 — 커밋할 "이전" 이 없으니 끝에서 버린다.
+            // 클릭 없이 시작된 드래그(스냅샷이 없다)는 대상만 기억한다. 커밋할 "이전" 값이 없으므로 끝에서 버린다.
             if ( _bGizmoTracking == SW_FALSE && _gizmoObject != pRaw->getHandle() )
             {
                 _gizmoUndoBefore = ObjectSnapshot{};
@@ -753,7 +753,7 @@ namespace sw::editor
     {
         if ( _bGizmoTracking == SW_TRUE && EditorPlaySession::areSceneEditsAllowed() )
         {
-            // 단일 드래그: 스냅숏을 찍은 **그 오브젝트**에만 커밋한다(핸들로 다시 찾는다 — 지워졌으면 버린다).
+            // 단일 드래그는 스냅샷을 찍은 그 오브젝트에만 커밋한다. 핸들로 다시 찾으며, 지워졌으면 버린다.
             GameObject* pTracked = editor::findGameObject( _gizmoObject );
             if ( pTracked != nullptr && _gizmoUndoBefore._xml.empty() == false )
                 EditorSceneCommands::commitModify( pTracked, _gizmoUndoBefore, "Gizmo Transform" );
@@ -776,7 +776,7 @@ namespace sw::editor
 
     void EditorViewportClient::manipulateGroupGizmo( const float32* pView, const float32* pProj, uint32 operation, uint32 gizmoMode, const vector<GameObject*>& listGizmo, bool bUseSnap, const float32* pSnap )
     {
-        // 헤더가 ImGuizmo 를 알 필요는 없다. 열거형은 여기서만 되돌린다.
+        // 헤더가 ImGuizmo 를 알 필요는 없다. 열거형은 여기서만 변환한다.
         const ImGuizmo::OPERATION op   = static_cast<ImGuizmo::OPERATION>( operation );
         const ImGuizmo::MODE      mode = static_cast<ImGuizmo::MODE>( gizmoMode );
 
@@ -849,8 +849,8 @@ namespace sw::editor
 
         const float3 worldPos = pSceneComp->getWorldPosition();
 
-        // 크기는 오브젝트의 월드 상자로 측정한다(`GameObject::getWorldBox`). 메시의 **로컬** 스케일 · 콜라이더 오프셋 크기로 따로 셈하면
-        // 부모가 키운 오브젝트 · 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
+        // 크기는 오브젝트의 월드 상자로 측정한다(`GameObject::getWorldBox`). 메시의 로컬 스케일과 콜라이더 오프셋 크기로 따로 계산하면
+        // 부모가 키운 오브젝트나 단위 상자가 아닌 메시를 너무 가깝거나 멀게 잡는다.
         float32 objectRadius = 2.0f;
         AABB    objectBox{};
         if ( pRaw->getWorldBox( objectBox ) )
@@ -882,7 +882,7 @@ namespace sw::editor
             return;
 
         const float32     cubeCenterX = canvasPos._x + canvasSize._x - 45.0f;
-        const float32     cubeCenterY = canvasPos._y + _hudBoxHeight + 45.0f; // HUD 상자 아래
+        const float32     cubeCenterY = canvasPos._y + _hudBoxHeight + 45.0f; // HUD 박스 아래
         constexpr float32 cubeRadius  = 26.0f;
 
         // 원형 배경
@@ -983,7 +983,7 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        // 선 하나를 가장자리 흐림이 보이도록 이만큼 조각으로 나눠 그린다(ImGui 선은 한 색이다).
+        // 선 하나를 이 개수의 조각으로 나눠 그려서 가장자리가 흐려 보이게 한다. ImGui 의 선은 한 가지 색이다.
         constexpr uint32  kSegmentCount    = 8;
         constexpr float32 kMinVisibleAlpha = 0.01f;
         constexpr float32 kMinorWidth      = 1.0f;
@@ -991,7 +991,7 @@ namespace sw::editor
         constexpr float32 kMinorColor[4]   = { 60.0f, 65.0f, 80.0f, 55.0f };
         constexpr float32 kMajorColor[4]   = { 90.0f, 100.0f, 120.0f, 100.0f };
 
-        // 격자 평면의 두 축(u, v)과 평면까지의 거리. 2D 는 XY 평면(직교 뷰 — 보이는 반 높이로 단계를 고른다), 3D 는 XZ 바닥.
+        // 격자 평면의 두 축(u, v)과 평면까지의 거리다. 2D 는 XY 평면(직교 뷰이며 보이는 반 높이로 단계를 고른다), 3D 는 XZ 바닥이다.
         const bool    b2D        = _toolbarSettings._bIs2DMode;
         const bool    bOrtho     = MathUtil::abs( pProj[15] - 1.0f ) < 0.001f;
         const float32 centerU    = _cameraPos._x;
@@ -1010,8 +1010,8 @@ namespace sw::editor
         stats._misplacedMajorCount = 0;
         stats._frame               = ImGui::GetFrameCount();
 
-        // bAlongV: 선이 v 방향으로 뻗는다(좌표는 u). 원점 선의 색 — 3D 는 x == 0 선이 Z 축, z == 0 선이 X 축이다. 2D 는 x == 0 선이 Y 축.
-        // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브 · 기즈모와 달라진다.
+        // bAlongV 는 선이 v 방향으로 뻗는다는 뜻이다(좌표는 u). 원점 선의 색은 3D 에서 x == 0 선이 Z 축, z == 0 선이 X 축이고, 2D 에서 x == 0 선이 Y 축이다.
+        // 이 둘의 색을 바꿔 쓰면 그리드의 축 색이 오리엔테이션 큐브와 기즈모의 색과 달라진다.
         const auto drawFamily = [&]( bool bAlongV )
         {
             const float32 center    = bAlongV ? centerU : centerV;
@@ -1100,7 +1100,7 @@ namespace sw::editor
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 
-        // 마우스 아래 바닥(Y = 0)의 점이 자의 엔드포인트이다.
+        // 마우스 아래 바닥(Y = 0)의 점이 자의 엔드포인트다.
         EditorPickRay mouseRay{};
         float3        groundPt{};
         if ( EditorViewportClientInternal::makeMouseRay( viewProj.invert(), canvasPos, canvasSize, mouseRay ) &&
@@ -1160,7 +1160,7 @@ namespace sw::editor
 
         GameObjectManager* pManager = pScene->getObjectManager();
 
-        // 마우스 아래의 바닥에 놓는다(2D 는 Z = 0 평면, 3D 는 Y = 0). 캔버스 밖이거나 평면과 나란하면 원점에 놓는다.
+        // 마우스 아래의 바닥에 놓는다(2D 는 Z = 0 평면, 3D 는 Y = 0). 캔버스 밖이거나 평면과 평행하면 원점에 놓는다.
         float4x4 viewProj{};
         EditorViewportClientInternal::loadViewProj( pView, pProj, viewProj );
 

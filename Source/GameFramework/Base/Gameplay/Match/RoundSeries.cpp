@@ -11,7 +11,7 @@ namespace sw
     {
         struct RoundSeriesInternal
         {
-            static constexpr int64 kMaxStateValue = 0x3FFFFFFF; ///< 상태 바이트 정수의 상한 — 깨진 바이트가 넘치는 값을 넣지 않게
+            static constexpr int64 kMaxStateValue = 0x3FFFFFFF; ///< 상태 바이트 정수의 상한. 깨진 바이트가 넘치는 값을 넣지 못하게 한다
 
             static bool isStateValue( int64 value, int64 minValue ) { return minValue <= value && value <= kMaxStateValue; }
         };
@@ -97,7 +97,7 @@ namespace sw
         const bool bKnownWinner = winner == kNoWinner || isValidParticipant( winner );
         if ( _phase != RoundSeriesPhase::RoundActive || bKnownWinner == false )
             return RoundSeriesOutcome::Rejected;
-        // 무승부 라운드는 모두 1 위, 아니면 이긴 쪽 1 위 · 나머지 2 위.
+        // 무승부 라운드는 모두 1 위이고, 아니면 이긴 쪽이 1 위, 나머지가 2 위이다.
         const int32 participantCount = getParticipantCount();
         for ( int32 participant = 0; participant < participantCount; ++participant )
         {
@@ -109,7 +109,7 @@ namespace sw
 
     RoundSeriesOutcome RoundSeries::finishRound()
     {
-        // 목표에 닿은 참가자 중 총점이 가장 높은 한 명 — 같으면 동점 규칙.
+        // 목표에 닿은 참가자 중 총점이 가장 높은 한 명을 고른다. 같으면 동점 규칙을 따른다.
         int32       best             = kNoWinner;
         int32       bestTotal        = 0;
         bool        bTied            = false;
@@ -173,7 +173,7 @@ namespace sw
         const bool   bBadCounter       = RoundSeriesInternal::isStateValue( roundIndex, 0 ) == false || RoundSeriesInternal::isStateValue( roundTicks, 0 ) == false ||
                                  RoundSeriesInternal::isStateValue( intermissionTicks, 0 ) == false;
         const bool bBadWinner = RoundSeriesInternal::isStateValue( winner, kNoWinner ) == false || winner >= static_cast<int64>( _listTotal.size() );
-        // 같은 참가자 수로 시작한 묶음에만 되돌린다.
+        // 같은 참가자 수로 시작한 시리즈에만 복원한다.
         const bool bOtherSeries = participantCount != static_cast<uint64>( _listTotal.size() );
         if ( bBadPhase || bBadCounter || bBadWinner || bOtherSeries || reader.hasOverflowed() )
             return false;

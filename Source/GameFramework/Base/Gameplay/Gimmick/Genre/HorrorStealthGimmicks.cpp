@@ -31,7 +31,7 @@ namespace sw
             static TagID getHiddenTag() { return TagID::request( "State.Hidden" ); }
             static TagID getHideActivityTag() { return TagID::request( "Activity.Hide" ); }
 
-            /** @brief 빛까지 막는 것이 있는가입니다(가림을 볼 때만). */
+            /** @brief 라이트까지 막는 것이 있으면 true 입니다. 가림을 검사할 때만 씁니다. */
             static bool isOccluded( const GameObjectManager& manager, const float3& position, const float3& lightPosition, uint64 ignoreObjectID, uint64 lightObjectID )
             {
                 return WorldQuery::hasLineOfSight( manager, position, lightPosition, ignoreObjectID, lightObjectID ) == false;
@@ -173,7 +173,7 @@ namespace sw
         GameObject*                  pWho          = pInteractable != nullptr ? pManager->resolveGameObject( pInteractable->getLastInteractor() ) : nullptr;
         if ( pWho == nullptr )
             return;
-        // 숨은 사람이 다시 쓰면 나오고, 아니면 들어간다.
+        // 숨은 쪽이 다시 사용하면 나오고, 아니면 들어간다.
         if ( exit( *pWho ) == false )
             (void)enter( *pWho );
     }

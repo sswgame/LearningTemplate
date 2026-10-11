@@ -1,6 +1,6 @@
 /**
  * @file ParkLayout.h
- * @brief 공원 배치 데이터(`<ParkLayout>` — 정문 · 입장료 · 시작 자금 · 평지 놀이기구 · 코스터 배치)를 읽는 정의입니다.
+ * @brief 공원 배치 데이터(`<ParkLayout>`)를 읽는 정의입니다. 정문, 입장료, 시작 자금, 평지 놀이기구, 코스터 배치를 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -23,17 +23,17 @@ namespace sw
 {
     /**
      * @struct ParkRidePlacement
-     * @brief 지을 수 있는 놀이기구 하나(배치 데이터의 한 줄)입니다. `_layoutID` 가 비면 평지 놀이기구, 아니면 코스터 레이아웃입니다.
+     * @brief 지을 수 있는 놀이기구 하나(배치 데이터의 한 줄)입니다. `_layoutID` 가 비어 있으면 평지 놀이기구이고, 아니면 코스터 레이아웃입니다.
      */
     struct ParkRidePlacement
     {
         ParkRide      _ride{};
-        hashed_string _layoutID{}; ///< 비면 평지 놀이기구
+        hashed_string _layoutID{}; ///< 비어 있으면 평지 놀이기구이다
         string        _shape{ "Cylinder" };
         float3        _position{};
         float3        _size{ 4.0f, 1.0f, 4.0f };
         float4        _color{ 1.0f, 1.0f, 1.0f, 1.0f };
-        float32       _heading{ 0.0f }; ///< 코스터 스테이션 방향(도)
+        float32       _heading{ 0.0f }; ///< 코스터 스테이션의 방향(도)
         float32       _spin{ 0.0f };    ///< 평지 놀이기구가 운행 중 도는 빠르기(rad/s)
         float32       _loadTime{ 15.0f };
         int32         _buildCost{ 1000 };
@@ -44,17 +44,17 @@ namespace sw
 {
     /**
      * @class ParkLayout
-     * @brief 공원 배치 데이터 한 장입니다. 게임은 읽은 정의로 놀이기구를 세우기만 한다 — 형식과 검증은 여기 한 곳이다.
-     * @details 코스터 줄(`<Coaster layout="…">`)은 코스터 레이아웃 카탈로그에서 찾으므로 그 카탈로그를 먼저 읽어 넘긴다. 없는 레이아웃은 경고하고 건너뛴다.
+     * @brief 공원 배치 데이터 한 장입니다. 게임은 읽은 정의로 놀이기구를 만들기만 하며, 형식과 검증은 이 클래스가 한 곳에서 맡습니다.
+     * @details 코스터 줄(`<Coaster layout="…">`)은 코스터 레이아웃 카탈로그에서 찾으므로, 그 카탈로그를 먼저 읽어 넘겨야 한다. 없는 레이아웃은 경고하고 건너뛴다.
      */
     class SW_GF_API ParkLayout
     {
     public:
         ParkLayout();
 
-        /** @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 놀이기구가 하나도 없으면 false 입니다. */
+        /** @brief 리소스 경로의 `<ParkLayout>` 을 읽습니다. 놀이기구가 하나도 없으면 false 를 반환합니다. */
         [[nodiscard]] bool loadFromResource( string_view path, const CoasterLayoutCatalog& layouts );
-        /** @brief XML 글에서 읽습니다(테스트 · 도구). */
+        /** @brief XML 문자열에서 읽습니다(테스트와 도구용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName = {} );
 
         const float3&                    getGatePosition() const { return _gatePosition; }

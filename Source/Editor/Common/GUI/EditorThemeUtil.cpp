@@ -25,7 +25,7 @@ namespace sw::editor
     {
         struct EditorThemeInternal
         {
-            /** @brief 환경설정 섹션 Appearance 의 인스턴스입니다(활성 EditorConfig). */
+            /** @brief 환경설정 섹션 Appearance 의 인스턴스입니다. 활성 EditorConfig 에 속합니다. */
             static void* getAppearanceInstance() { return EditorConfig::getActiveInstance(); }
             /** @brief 환경설정 섹션 Appearance 의 기본값입니다. */
             static const void* getAppearanceDefault()
@@ -35,8 +35,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. **상수이므로 상태가 아닙니다.**
-             * @details 색 게터들이 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없습니다.
+             * @brief 컨텍스트가 없을 때 반환할 기본 테마입니다. 상수이므로 상태가 아닙니다.
+             * @details 색 게터가 `const Color&` 를 반환하므로 임시 객체를 참조로 넘길 수 없다.
              */
             static const EditorThemeConfig& fallbackTheme()
             {
@@ -44,14 +44,14 @@ namespace sw::editor
                 return kFallback;
             }
 
-            /** @brief 지금 적용된 테마입니다. `EditorContext` 가 소유하고, 컨텍스트가 없으면 기본값을 봅니다. */
+            /** @brief 현재 적용된 테마를 반환합니다. `EditorContext` 가 소유하며, 컨텍스트가 없으면 기본값을 봅니다. */
             static const EditorThemeConfig& activeTheme()
             {
                 EditorContext* pContext = EditorContext::get();
                 return pContext != nullptr ? pContext->getThemeConfig() : fallbackTheme();
             }
 
-            /** @brief 테마를 바꿔 씁니다. 컨텍스트가 없으면 조용히 무시합니다(적용할 UI 가 없습니다). */
+            /** @brief 테마를 교체합니다. 컨텍스트가 없으면 적용할 UI 가 없으므로 조용히 무시합니다. */
             static void setActiveTheme( const EditorThemeConfig& config )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -59,13 +59,13 @@ namespace sw::editor
                     pContext->getThemeConfig() = config;
             }
 
-            /** @brief 테마 고정 색입니다(팔레트에서 오지 않는 칸). */
+            /** @brief 테마 고정 색입니다. 팔레트에서 오지 않는 항목입니다. */
             static constexpr Color kText{ 0.92f, 0.94f, 0.97f, 1.0f };
             static constexpr Color kScrollbarBg{ 0.02f, 0.02f, 0.03f, 0.35f };
             static constexpr Color kDockingEmptyBg{ 0.05f, 0.05f, 0.07f, 1.0f };
             static constexpr Color kTableRowBgAlt{ 1.0f, 1.0f, 1.0f, 0.02f };
             static constexpr Color kClear{ 0.0f, 0.0f, 0.0f, 0.0f };
-            /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 그 알파입니다. */
+            /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 알파입니다. */
             static constexpr float32 kHoverWhiten = 0.45f;
             static constexpr float32 kHoverAlpha  = 0.75f;
 
@@ -80,23 +80,23 @@ namespace sw::editor
             }
 
             /**
-             * @brief 프리셋 하나의 정의입니다. 이름과 팔레트가 **여기 한 줄에** 모여 있습니다.
-             * @details 팔레트 적용 · 설정 읽기/쓰기의 이름 변환 · 대화 상자의 콤보가 모두 이 표를 봅니다. 프리셋을 하나 더하려면
-             *          한 줄만 더합니다. 이름 배열을 따로 두고 열거형 순서로 인덱스를 삼으면 순서를 바꿀 때 콤보가 조용히 틀린 이름을 보여 줍니다.
+             * @brief 프리셋 하나의 정의입니다. 이름과 팔레트가 한 항목에 모여 있습니다.
+             * @details 팔레트 적용, 설정 읽기와 쓰기의 이름 변환, 대화상자의 콤보가 모두 이 테이블을 본다. 프리셋을 추가하려면
+             *          항목 하나만 추가한다. 이름 배열을 따로 두고 열거형 순서로 인덱스를 삼으면 순서를 바꿀 때 콤보가 조용히 틀린 이름을 보여 준다.
              */
             struct ThemePresetRow
             {
                 EditorThemePreset _preset;
                 const utf8*       _pConfigID;    ///< EditorConfig 에 저장되는 이름
                 const utf8*       _pDisplayName; ///< 콤보에 보이는 이름
-                /** @brief true면 창 색을 우리 팔레트로 덮지 않고 ImGui 기본 다크를 씁니다. */
+                /** @brief true 이면 창 색을 엔진 팔레트로 덮지 않고 ImGui 기본 다크를 씁니다. */
                 bool              _bUseImGuiDarkColors;
                 EditorThemeConfig _config;
             };
 
             static const ThemePresetRow* getPresetRows( uint32& outCount );
 
-            /** @brief 해당 프리셋의 행입니다. 모르는 값이면 첫 행(기본)입니다. */
+            /** @brief 해당 프리셋의 항목을 반환합니다. 모르는 값이면 첫 항목(기본)입니다. */
             static const ThemePresetRow& findRow( EditorThemePreset preset )
             {
                 uint32                      rowCount{ 0 };
@@ -109,7 +109,7 @@ namespace sw::editor
                 return pRow[0];
             }
 
-            /** @brief 저장된 이름의 행입니다. 못 찾으면 첫 행(기본)입니다. */
+            /** @brief 저장된 이름에 해당하는 항목을 반환합니다. 찾지 못하면 첫 항목(기본)입니다. */
             static const ThemePresetRow& findRowByConfigID( string_view configID )
             {
                 uint32                      rowCount{ 0 };
@@ -122,14 +122,14 @@ namespace sw::editor
                 return pRow[0];
             }
 
-            /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 적고 적용할 때 이것을 곱한다. */
+            /** @brief DPI 배율입니다(`EditorThemeUtil::setDpiScale`). 테마는 96 DPI 기준 크기로 기록하고, 적용할 때 이 값을 곱합니다. */
             static float32& dpiScale()
             {
                 static float32 s_dpiScale{ 1.0f };
                 return s_dpiScale;
             }
 
-            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 되읽습니다. 스타일에는 DPI 배율이 곱해져 있으므로 나눠 96 DPI 기준으로 적는다. */
+            /** @brief 현재 ImGui 스타일의 지오메트리를 config 에 다시 읽어 옵니다. 스타일에는 DPI 배율이 곱해져 있으므로 나눠서 96 DPI 기준으로 기록합니다. */
             static void readGeometryFromStyle( EditorThemeConfig& outConfig )
             {
                 const ImGuiStyle& style      = ImGui::GetStyle();
@@ -143,9 +143,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 스타일의 크기 칸을 ImGui 기본(96 DPI)으로 되돌립니다. 색과 글꼴 크기 · 배율은 그대로 둔다.
-             * @details 주의: `ScaleAllSizes` 는 테마가 적지 않는 크기(도킹 구분선 · 창 테두리 호버 여백 · 창 최소 크기 …)까지 곱한다. 기본에서 다시
-             *          시작하지 않으면 테마를 적용할 때마다 배율이 거듭 곱해져, 150 % 모니터에서 몇 번이면 구분선의 호버 여백이 옆 패널의 클릭을 가로챈다.
+             * @brief 스타일의 크기 항목을 ImGui 기본(96 DPI)으로 되돌립니다. 색과 글꼴 크기, 배율은 그대로 둡니다.
+             * @details `ScaleAllSizes` 는 테마가 기록하지 않는 크기(도킹 구분선, 창 테두리 호버 여백, 창 최소 크기 등)까지 곱한다. 기본값에서 다시
+             *          시작하지 않으면 테마를 적용할 때마다 배율이 거듭 곱해져, 150 % 모니터에서 몇 번만 반복해도 구분선의 호버 여백이 옆 패널의 클릭을 가로챈다.
              */
             static void resetSizesToDefault( ImGuiStyle& outStyle )
             {
@@ -211,8 +211,8 @@ namespace sw::editor
                  4.0f, 3.0f, 4.0f, 4.0f, 6.0f, 3.0f }},
 
                 // 창 색은 ImGui 기본 다크를 그대로 쓰므로 아래 배경색은 적용되지 않는다. 다만 상태색
-                // (textSuccess/textWarning/...)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다.
-                // 이 프리셋도 활성 테마를 갱신해야 한다 — 안 그러면 **이전 테마의 색**이 나온다.
+                // (textSuccess, textWarning 등)과 액센트는 이 테마에서도 필요하므로 값을 채워 둔다.
+                // 이 프리셋도 활성 테마를 갱신해야 한다. 갱신하지 않으면 이전 테마의 색이 나온다.
                 { EditorThemePreset::ClassicDark,  "ClassicDark",  "Classic Dark (Default ImGui)",  true,
                  EditorThemeConfig{ EditorThemePreset::ClassicDark,
                  Color{ 0.26f, 0.59f, 0.98f, 1.0f }, // ImGui 기본 파랑
@@ -269,12 +269,12 @@ namespace sw::editor
 
         if ( row._bUseImGuiDarkColors )
         {
-            // 창 색은 ImGui 기본 다크를 그대로 쓴다 (지오메트리는 건드리지 않는다).
+            // 창 색은 ImGui 기본 다크를 그대로 쓴다. 지오메트리는 건드리지 않는다.
             ImGui::StyleColorsDark();
 
-            // 주의: 여기서 그대로 return 하면 활성 테마가 **이전 프리셋에 머물러** (1) 이 선택이 저장되지 않고
-            // (2) 콤보가 옛 프리셋을 선택된 것으로 보여 주고 (3) textWarning 등 상태색 API 가 옛 테마 색을 낸다.
-            // 지오메트리는 현재 스타일에서 되읽어 기록이 화면과 어긋나지 않게 한다.
+            // 여기서 그대로 return 하면 활성 테마가 이전 프리셋에 머물러서 세 가지 문제가 생긴다.
+            // 이 선택이 저장되지 않고, 콤보가 이전 프리셋을 선택된 것으로 보여 주고, textWarning 등 상태색 API 가 이전 테마 색을 낸다.
+            // 지오메트리는 현재 스타일에서 다시 읽어 기록이 화면과 어긋나지 않게 한다.
             EditorThemeInternal::readGeometryFromStyle( config );
             EditorThemeInternal::setActiveTheme( config );
             return;
@@ -290,7 +290,7 @@ namespace sw::editor
         ImGuiStyle& style = ImGui::GetStyle();
         EditorThemeInternal::resetSizesToDefault( style );
 
-        // 1. 지오메트리 & 레이아웃 메트릭스
+        // 1. 지오메트리와 레이아웃 메트릭
         style.WindowRounding    = config._windowRounding;
         style.ChildRounding     = config._frameRounding;
         style.FrameRounding     = config._frameRounding;
@@ -400,8 +400,8 @@ namespace sw::editor
         const float32 scale = ( dpiScale > 0.0f ) ? dpiScale : 1.0f;
         if ( EditorThemeInternal::dpiScale() == scale )
             return;
-        // 지금 테마를 96 DPI 기준으로 되읽고 새 배율로 다시 적용한다. ImGui 기본 다크 프리셋은 지오메트리를 건드리지 않으므로, 바뀐 비율만큼
-        // 지금 스타일을 늘린다.
+        // 현재 테마를 96 DPI 기준으로 다시 읽고 새 배율로 다시 적용한다. ImGui 기본 다크 프리셋은 지오메트리를 건드리지 않으므로, 바뀐 비율만큼
+        // 현재 스타일을 늘린다.
         const float32     previousScale = EditorThemeInternal::dpiScale();
         EditorThemeConfig config        = getActiveTheme();
         EditorThemeInternal::dpiScale() = scale;
@@ -419,7 +419,7 @@ namespace sw::editor
 
     void EditorThemeUtil::loadFromConfig()
     {
-        // 환경설정 파일은 ImGui 컨텍스트보다 먼저 읽는다(섹션의 바뀐 뒤 동작이 여기로 온다) — 테마는 컨텍스트를 만든 뒤 ImGuiEditor 가 다시 적용한다.
+        // 환경설정 파일은 ImGui 컨텍스트보다 먼저 읽는다. 섹션이 바뀐 뒤의 동작이 여기로 들어온다. 테마는 컨텍스트를 만든 뒤 ImGuiEditor 가 다시 적용한다.
         if ( ImGui::GetCurrentContext() == nullptr )
             return;
         const EditorConfig& editorConfig = EditorConfig::getActive();
@@ -616,7 +616,7 @@ namespace sw::editor
         {
             EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
 
-            // 1) 프리셋 선택. 이름과 순서는 프리셋 표에서 온다(열거형 값을 인덱스로 삼지 않는다).
+            // 1) 프리셋 선택. 이름과 순서는 프리셋 테이블에서 온다. 열거형 값을 인덱스로 삼지 않는다.
             uint32                                           rowCount{ 0 };
             const EditorThemeInternal::ThemePresetRow* const pRow = EditorThemeInternal::getPresetRows( rowCount );
 
@@ -676,7 +676,7 @@ namespace sw::editor
                     editorConfig = getActiveTheme();
                 }
                 if ( index == 2 )
-                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.classicDarkSwatch)이 누른다
+                    EditorSelfTestMarks::note( "theme.swatch.violet" ); // 에디터 자체 테스트(input.classicDarkSwatch)가 누른다
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ThemeAccentSwatch" ) );
                 ImGui::PopID();
             }
@@ -717,7 +717,7 @@ namespace sw::editor
 
     Color EditorThemeUtil::getFolderColor()
     {
-        // 폴더 색은 테마 액센트 색을 그대로 쓴다(UE5 · Rider 처럼 액센트와 같은 파란 계열)
+        // 폴더 색은 테마 액센트 색을 그대로 쓴다. UE5 와 Rider 처럼 액센트와 같은 파란 계열이다
         return getAccentColor();
     }
 
@@ -770,7 +770,7 @@ namespace sw::editor
 
     const utf8* EditorThemeUtil::makeIconLabel( const utf8* pIcon, const utf8* pLabel )
     {
-        // UI 스레드 하나가 부르지만 자체 테스트 스레드에서도 불릴 수 있어 스레드마다 버퍼를 둔다.
+        // UI 스레드 하나가 호출하지만 자체 테스트 스레드에서도 호출할 수 있으므로 스레드마다 버퍼를 둔다.
         thread_local fixed_string<constant::kMaxBuffer256> s_label;
         formatstring( s_label.data(), s_label.capacity(), "%#  %#", pIcon, pLabel );
         return s_label.c_str();
@@ -779,7 +779,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    // 테마는 환경설정 섹션 "Editor/Appearance" 다 — 저장은 EditorPreferences.json 하나, 값을 고치면(창 · 파일 다시 읽기) 테마를 다시 적용한다.
+    // 테마는 환경설정 섹션 "Editor/Appearance" 다. 저장은 EditorPreferences.json 하나에 하고, 값을 고치면(창에서 편집하거나 파일을 다시 읽으면) 테마를 다시 적용한다.
     SW_EDITOR_REGISTER( EditorSettingsRegistration, Settings_EditorConfig, { "appearance", 200 }, "Editor/Appearance", &EditorConfig::StaticType,
                         &EditorThemeInternal::getAppearanceInstance, &EditorThemeInternal::getAppearanceDefault, &EditorThemeUtil::loadFromConfig, nullptr );
 } // namespace sw::editor

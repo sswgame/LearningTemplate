@@ -1,8 +1,10 @@
 /**
  * @file InputCommandBuffer.h
- * @brief 커맨드 입력 — 틱마다의 방향(넘패드 1..9)과 버튼을 쌓아 두고 "f,f+2" · "qcf+1" · "d/f+1+2" · "F+4"(누른 채) 같은 기술 커맨드가 방금 완성됐는지 봅니다.
- * @details 격투(철권 · 스트리트 파이터)와 액션 게임의 콤보 입력이 씁니다. 방향은 절대값(6 = 오른쪽)으로 쌓고, 맞춰 볼 때 바라보는 쪽으로 뒤집습니다(앞 = 상대 쪽).
- *          결정적입니다 — 같은 입력이면 같은 결과라 롤백 넷코드에서 다시 돌려도 됩니다.
+ * @brief 커맨드 입력을 정의합니다.
+ * @details 틱마다의 방향(넘패드 1..9)과 버튼을 쌓아 두고, "f,f+2", "qcf+1", "d/f+1+2", "F+4"(누른 채) 같은 기술 커맨드가 방금 완성됐는지 본다.
+ *          격투 게임(철권, 스트리트 파이터)과 액션 게임의 콤보 입력이 쓴다.
+ *          방향은 절대값(6 이 오른쪽)으로 쌓고, 맞춰 볼 때 바라보는 쪽으로 뒤집는다. 앞은 상대 쪽이다.
+ *          같은 입력이면 같은 결과가 나오는 결정적 계산이라 롤백 넷코드에서 다시 돌려도 된다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,7 +20,7 @@ namespace sw
     class BitReader;
     class BitWriter;
 
-    /** @brief 한 틱의 입력입니다. 방향은 넘패드(5 = 가운데, 6 = 오른쪽, 8 = 위). */
+    /** @brief 한 틱의 입력입니다. 방향은 넘패드 표기이며 5 가 가운데, 6 이 오른쪽, 8 이 위입니다. */
     struct InputFrame
     {
         uint16 _buttons{ 0 };
@@ -54,7 +56,9 @@ namespace sw
     /**
      * @class InputCommandParser
      * @brief 철권 표기를 읽습니다. 쉼표로 단계를 나누고, 단계는 `방향+버튼+버튼` 입니다.
-     *        방향: f b u d n, u/f d/f u/b d/b(대문자 = 누른 채), 줄임: qcf(d,d/f,f) qcb(d,d/b,b) dp(f,d,d/f). 버튼 이름은 `setButtonNames` 로(기본 "1,2,3,4").
+     * @details 방향은 f, b, u, d, n 과 u/f, d/f, u/b, d/b 를 쓰며 대문자는 누른 채라는 뜻이다.
+     *          줄임 표기는 qcf(d,d/f,f), qcb(d,d/b,b), dp(f,d,d/f) 이다.
+     *          버튼 이름은 `setButtonNames` 로 정하며 기본값은 "1,2,3,4" 이다.
      */
     class SW_GF_API InputCommandParser
     {
@@ -76,7 +80,7 @@ namespace sw
 {
     /**
      * @class InputCommandBuffer
-     * @brief 지난 몇십 틱의 입력입니다. 매 고정 틱 `push` 한 뒤 `findCompleted` 로 이번 틱에 끝난 커맨드를 고릅니다.
+     * @brief 지난 몇십 틱의 입력을 쌓아 둔 버퍼입니다. 매 고정 틱 `push` 한 뒤 `findCompleted` 로 이번 틱에 끝난 커맨드를 고릅니다.
      */
     class SW_GF_API InputCommandBuffer
     {
@@ -87,20 +91,20 @@ namespace sw
 
         void push( const InputFrame& frame );
         void clear();
-        /** @brief 이번 틱에 완성됐는가입니다. @p facing −1 이면 왼쪽을 본다(앞 = 4). */
+        /** @brief 이번 틱에 완성됐으면 true 입니다. @p facing 이 −1 이면 왼쪽을 보며 앞이 4 입니다. */
         bool isCompleted( const InputCommand& command, int32 facing ) const;
-        /** @brief 이번 틱에 완성된 커맨드 가운데 우선도가 가장 높은 것입니다. 없으면 nullptr 입니다. */
+        /** @brief 이번 틱에 완성된 커맨드 가운데 우선도가 가장 높은 것을 반환합니다. 없으면 nullptr 입니다. */
         const InputCommand* findCompleted( const vector<InputCommand>& listCommand, int32 facing ) const;
 
         /**
-         * @brief 상태를 바이트로 씁니다(롤백 · 리플레이). 쌓인 프레임만 오래된 것부터 씁니다.
-         * @details 버튼 16 비트 + 방향 4 비트씩입니다. 더 작게 싣고 싶은 키트는 `getFrame` 으로 직접 씁니다.
+         * @brief 상태를 바이트로 씁니다. 롤백과 리플레이에 씁니다. 쌓인 프레임만 오래된 것부터 씁니다.
+         * @details 프레임마다 버튼 16 비트와 방향 4 비트를 쓴다. 더 작게 싣고 싶은 키트는 `getFrame` 으로 직접 쓴다.
          */
         void writeState( BitWriter& outWriter ) const;
-        /** @brief `writeState` 로 쓴 상태를 읽습니다. 바이트가 모자라거나 용량을 넘으면 false 이고 버퍼는 그대로입니다. */
+        /** @brief `writeState` 로 쓴 상태를 읽습니다. 바이트가 모자라거나 용량을 넘으면 false 를 반환하고 버퍼는 그대로입니다. */
         [[nodiscard]] bool readState( BitReader& reader );
 
-        /** @brief 지금 쌓인 프레임 수입니다(`push` 한 수, 용량에서 멈춘다). */
+        /** @brief 지금 쌓인 프레임 수입니다. `push` 한 수이며 용량에서 멈춥니다. */
         int32             getFrameCount() const { return _count; }
         int32             getCapacity() const { return _capacity; }
         const InputFrame& getFrame( int32 framesAgo ) const;

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 인스펙터 다중 선택 편집(I1): 시험 씬의 카메라 둘(GameCamera · TestGameCamera)을 Ctrl+클릭으로 함께 고르고
+  에디터 시나리오 — 인스펙터 다중 선택 편집(I1): 테스트 씬의 카메라 둘(GameCamera · TestGameCamera)을 Ctrl+클릭으로 함께 고르고
   공통 컴포넌트 CameraComponent 의 _priority 에 5 를 치면 둘 다 5 가 되고(합 10), Ctrl+Z 한 번에 둘 다 0 으로 돌아온다.
   실행: App.exe -EnableEditor -gv_editorStateDir=<빈 폴더> -scenario=engine/automation/editor/multiedit.scenario.xml -dx12
 -->

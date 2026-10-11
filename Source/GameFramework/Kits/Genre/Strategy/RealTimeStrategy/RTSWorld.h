@@ -1,6 +1,6 @@
 /**
  * @file RTSWorld.h
- * @brief RTS 한 판 — 플레이어(자원 · 보급 · 팀) · 유닛 · 명령 대기열 · 채취 · 건설 · 생산 대기열 · 테크 · 전투 · 전장의 안개 · 승패입니다.
+ * @brief RTS 한 판의 규칙을 담습니다. 플레이어, 유닛, 명령 대기열, 채취, 건설, 생산, 테크, 전투, 전장의 안개, 승패를 다룹니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -28,23 +28,23 @@ namespace sw
     class Archive;
     class Wallet;
 
-    /** @brief 유닛 id 입니다. 죽은 유닛의 자리가 다시 쓰여도 옛 id 는 세대가 달라 찾지 못합니다. */
+    /** @brief 유닛 id 입니다. 죽은 유닛의 슬롯이 다시 쓰여도 세대가 달라서 옛 id 로는 찾을 수 없습니다. */
     using RTSUnitID = SlotHandle;
 
-    /** @brief 규칙의 수치입니다. 시간은 게임 초입니다. */
+    /** @brief 규칙의 수치입니다. 시간 단위는 게임 초입니다. */
     struct RTSSettings
     {
-        float32       _fixedStep{ 0.05f };             ///< 시뮬레이션 걸음(20 Hz — 스타크래프트의 게임 틱 근처)
-        float32       _minimumDamage{ 0.5f };          ///< 방어가 높아도 이만큼은 들어간다
+        float32       _fixedStep{ 0.05f };             ///< 시뮬레이션 한 걸음의 길이(20 Hz, 스타크래프트의 게임 틱과 비슷하다)
+        float32       _minimumDamage{ 0.5f };          ///< 방어가 높아도 최소한 이만큼은 피해가 들어간다
         float32       _repathInterval{ 0.5f };         ///< 움직이는 목표를 쫓을 때 경로를 다시 구하는 간격
         float32       _visionInterval{ 0.25f };        ///< 안개를 다시 칠하는 간격
-        float32       _interactSlack{ 0.35f };         ///< 채취 · 짓기 · 반납이 닿았다고 보는 가장자리 거리
-        float32       _resourceSearchRadius{ 8.0f };   ///< 다 캔 광물 대신 찾을 반경
-        float32       _constructionStartRatio{ 0.1f }; ///< 짓기 시작한 건물의 체력 몫
-        float32       _underAttackCooldown{ 10.0f };   ///< "공격받고 있다" 알림 간격(플레이어마다)
+        float32       _interactSlack{ 0.35f };         ///< 채취, 건설, 반납에서 닿았다고 보는 가장자리 거리
+        float32       _resourceSearchRadius{ 8.0f };   ///< 광물이 바닥났을 때 대신할 광물을 찾는 반경
+        float32       _constructionStartRatio{ 0.1f }; ///< 건설을 시작한 건물이 처음 가지는 체력 비율
+        float32       _underAttackCooldown{ 10.0f };   ///< "공격받고 있다" 알림의 간격(플레이어마다 적용)
         int32         _productionQueueMax{ 5 };
-        int32         _flowFieldGroupSize{ 6 };       ///< 이만큼 이상을 한 곳으로 보내면 A* 대신 흐름장 하나
-        int32         _bucketSize{ 4 };               ///< 이웃 찾기 버킷(칸)
+        int32         _flowFieldGroupSize{ 6 };       ///< 이 수 이상을 한 곳으로 보내면 A* 대신 흐름장 하나를 쓴다
+        int32         _bucketSize{ 4 };               ///< 이웃 탐색 버킷의 한 변 길이(셀 수)
         hashed_string _mineralCurrency{ "Minerals" }; ///< 플레이어 지갑에서 광물로 쓰는 통화
         hashed_string _gasCurrency{ "Gas" };          ///< 플레이어 지갑에서 가스로 쓰는 통화
     };
@@ -56,11 +56,11 @@ namespace sw
     enum class RTSOrderType : uint8
     {
         Move = 0,
-        AttackMove, ///< 가는 길에 적을 만나면 싸운다
-        Attack,     ///< 그 유닛을 친다
-        Gather,     ///< 자원(광물 · 정제소)을 캐서 본진으로 나른다(반복)
-        Build,      ///< 일꾼 — 그 자리에 건물을 짓는다(이미 놓인 건물이면 이어 짓는다)
-        Hold        ///< 제자리 — 사거리 안만 친다
+        AttackMove, ///< 이동 중 적을 만나면 싸운다
+        Attack,     ///< 지정한 유닛을 공격한다
+        Gather,     ///< 자원(광물, 정제소)을 캐서 본진으로 나르는 일을 반복한다
+        Build,      ///< 일꾼이 그 위치에 건물을 짓는다. 이미 놓인 건물이면 이어서 짓는다
+        Hold        ///< 제자리를 지키며 사거리 안의 적만 공격한다
     };
 
     /** @brief 명령 하나입니다. */
@@ -70,21 +70,21 @@ namespace sw
         float3           _target{};
         int2             _buildCell{ -1, -1 };
         RTSUnitID        _targetUnit{};
-        const FlowField* _pFlowField{ nullptr }; ///< 무리 이동 — 월드가 빌려 준 흐름장(명령이 끝나면 돌려준다)
-        float32          _arriveRadius{ 0.0f };  ///< 무리 이동 — 목표 이 안이면 다 왔다(한 점에 모두 설 수 없다)
+        const FlowField* _pFlowField{ nullptr }; ///< 무리 이동에 쓴다. 월드가 빌려 준 흐름장이며 명령이 끝나면 돌려준다
+        float32          _arriveRadius{ 0.0f };  ///< 무리 이동에 쓴다. 목표에서 이 거리 안이면 도착한 것으로 본다(모두가 한 점에 설 수는 없다)
         RTSOrderType     _type{ RTSOrderType::Move };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 명령 · 생산 결과입니다. */
+    /** @brief 명령과 생산의 결과입니다. */
     enum class RTSCommandResult : uint8
     {
         Ok = 0,
         InvalidUnit,
         NotOwner,
-        CannotDo, ///< 그 유닛이 할 수 없다(일꾼이 아님 · 그 건물이 만들지 않음 등)
+        CannotDo, ///< 그 유닛이 할 수 없는 일이다(일꾼이 아니거나 그 건물이 만들 수 없는 유닛 등)
         NotEnoughMinerals,
         NotEnoughGas,
         NotEnoughSupply,
@@ -99,43 +99,43 @@ namespace sw
     enum class RTSGatherPhase : uint8
     {
         ToResource = 0,
-        Waiting, ///< 다른 일꾼이 캐는 중
+        Waiting, ///< 다른 일꾼이 캐는 중이라 기다린다
         Harvesting,
         Returning
     };
 
-    /** @brief 유닛 · 건물 · 자원 하나입니다. */
+    /** @brief 유닛, 건물, 자원 하나입니다. */
     struct RTSUnit
     {
         NavAgent             _agent{};
-        deque<RTSOrder>      _listOrder{};      ///< 앞이 지금 명령(쉬프트로 뒤에 붙인다)
-        deque<hashed_string> _listProduction{}; ///< 생산 대기열(값은 넣을 때 낸다)
+        deque<RTSOrder>      _listOrder{};      ///< 맨 앞이 현재 명령이다(쉬프트 입력은 뒤에 붙인다)
+        deque<hashed_string> _listProduction{}; ///< 생산 대기열이다(비용은 넣을 때 낸다)
         const RTSUnitDef*    _pDef{ nullptr };
         float3               _position{};
         float3               _rallyPoint{};
-        float3               _moveGoal{};     ///< 지금 다가가는 자리(다시 구할지 정한다)
-        int2                 _cell{ -1, -1 }; ///< 건물 · 자원 — 왼쪽 아래 칸
+        float3               _moveGoal{};     ///< 지금 다가가는 위치(경로를 다시 구할지 판단하는 기준)
+        int2                 _cell{ -1, -1 }; ///< 건물과 자원이 쓴다. 왼쪽 아래 셀이다
         RTSUnitID            _id{};
-        RTSUnitID            _attackTarget{};   ///< 지금 치는 유닛(명령 · 자동)
-        RTSUnitID            _gatherTarget{};   ///< 캐는 자원 · 정제소
-        RTSUnitID            _harvester{};      ///< 자원 · 정제소 — 지금 캐는 일꾼
-        RTSUnitID            _builder{};        ///< 짓는 중인 건물 — 짓는 일꾼
-        RTSUnitID            _linkedResource{}; ///< 정제소 — 아래 간헐천
+        RTSUnitID            _attackTarget{};   ///< 지금 공격하는 유닛(명령이나 자동 선택)
+        RTSUnitID            _gatherTarget{};   ///< 채취하는 자원 또는 정제소
+        RTSUnitID            _harvester{};      ///< 자원과 정제소가 쓴다. 지금 캐고 있는 일꾼
+        RTSUnitID            _builder{};        ///< 건설 중인 건물이 쓴다. 짓고 있는 일꾼
+        RTSUnitID            _linkedResource{}; ///< 정제소가 쓴다. 아래에 있는 간헐천
         float32              _hp{ 0.0f };
-        Countdown            _cooldown{};            ///< 다음 공격까지
-        float32              _buildProgress{ 1.0f }; ///< 0..1 — 1 이면 다 지었다
+        Countdown            _cooldown{};            ///< 다음 공격까지 남은 시간
+        float32              _buildProgress{ 1.0f }; ///< 0..1 범위이고 1이면 건설이 끝난 것이다
         float32              _productionTimer{ 0.0f };
         float32              _gatherTimer{ 0.0f };
         Countdown            _repathTimer{};
-        int32                _owner{ -1 }; ///< −1 = 주인 없음(자원)
+        int32                _owner{ -1 }; ///< -1 이면 주인이 없다(자원)
         int32                _resourceLeft{ 0 };
         int32                _cargoAmount{ 0 };
-        int32                _supplyReserved{ 0 }; ///< 건물 — 생산 중인 유닛의 보급
+        int32                _supplyReserved{ 0 }; ///< 건물이 쓴다. 생산 중인 유닛이 쓸 보급
         RTSResourceType      _cargoType{ RTSResourceType::None };
         RTSGatherPhase       _gatherPhase{ RTSGatherPhase::ToResource };
         uint8                _bAlive{ SW_TRUE };
         uint8                _bHasRally{ SW_FALSE };
-        uint8                _bOrderStarted{ SW_FALSE }; ///< 앞 명령의 경로를 구했다
+        uint8                _bOrderStarted{ SW_FALSE }; ///< 맨 앞 명령의 경로를 이미 구했다
         uint8                _bSupplyBlocked{ SW_FALSE };
 
         bool            isConstructed() const { return _buildProgress >= 1.0f; }
@@ -153,46 +153,46 @@ namespace sw
     struct RTSPlayer
     {
         float3  _startPosition{};
-        Wallet* _pWallet{ nullptr }; ///< 빌린 지갑(광물 · 가스 — `RTSSettings` 의 통화) — 지역 플레이어는 공유 지갑, AI 는 게임이 든다
+        Wallet* _pWallet{ nullptr }; ///< 빌린 지갑이다. `RTSSettings` 의 통화(광물, 가스)를 담는다. 지역 플레이어는 공유 지갑을 쓰고, AI 의 지갑은 게임이 가지고 있다
         int32   _supplyUsed{ 0 };
         int32   _supplyCap{ 0 };
         int32   _team{ 0 };
         float32 _nextUnderAttackTime{ 0.0f }; ///< "공격받고 있다" 를 다시 알릴 수 있는 시각
         uint8   _bDefeated{ SW_FALSE };
-        uint8   _bHadBuilding{ SW_FALSE }; ///< 건물이 있었던 적이 있다(시작 전에는 지지 않는다)
+        uint8   _bHadBuilding{ SW_FALSE }; ///< 건물을 가진 적이 있다(시작 전에는 패배하지 않는다)
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 안개 상태입니다. */
+    /** @brief 안개의 상태입니다. */
     enum class RTSVisibility : uint8
     {
         Unexplored = 0,
-        Explored, ///< 본 적은 있다(지형 · 마지막으로 본 건물)
+        Explored, ///< 본 적이 있다(지형과 마지막으로 본 건물)
         Visible
     };
 
-    /** @brief 게임에 알리는 일입니다. */
+    /** @brief 게임에 알리는 이벤트입니다. */
     struct RTSEvent
     {
         enum class Kind : uint8
         {
-            UnitCreated = 0, ///< 생산 · 소환 · 건설 시작
+            UnitCreated = 0, ///< 생산, 소환, 건설 시작
             UnitDied,
             ConstructionComplete,
             ProductionComplete,
             ResourceDepleted,
-            ResourcesDeposited, ///< _value = 양
+            ResourcesDeposited, ///< _value 가 양이다
             SupplyBlocked,
             UnderAttack,
             PlayerDefeated,
-            GameOver ///< _player = 이긴 팀
+            GameOver ///< _player 가 이긴 팀이다
         };
         hashed_string _defID{};
         float3        _position{};
         RTSUnitID     _unit{};
-        RTSUnitID     _other{}; ///< 죽음 — 죽인 유닛
+        RTSUnitID     _other{}; ///< 죽음 이벤트에서 죽인 유닛
         int32         _player{ -1 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::UnitCreated };
@@ -203,16 +203,17 @@ namespace sw
 {
     /**
      * @class RTSWorld
-     * @brief 스타크래프트 규칙을 줄인 한 판입니다. 화면 · 입력은 게임이 하고 여기는 규칙만 돌립니다.
-     * @details 한 걸음(`_fixedStep`)마다:
-     *          1. 보급 — 다 지은 건물이 주는 양(상한 `supplyMax`)과 산 유닛 · 생산 중 유닛이 쓰는 양을 다시 센다.
-     *          2. 명령 — 유닛마다 앞 명령을 처리한다. 이동은 `NavAgent`(A*), 여럿을 한 곳으로 보내면 흐름장 하나를 나눠 쓴다. 공격 · 채취 · 짓기는
-     *             목표 가장자리까지 다가가 멈춘다. 할 일이 없거나 공격 이동 · 제자리면 시야(제자리는 사거리) 안의 가장 가까운 적을 고른다.
-     *          3. 채취 — 자원 → 캐기(한 자원에 한 일꾼) → 가장 가까운 본진에 내려놓기 → 다시. 다 캔 광물은 사라지고 근처 다른 광물로 간다.
-     *          4. 건설 · 생산 — 일꾼이 붙어 있는 동안 건물이 오르고(체력도 함께), 생산은 대기열 앞부터 보급이 되면 시작한다.
-     *          5. 전투 — 피해 = max(최소, 공격 − 방어). 맞은 쪽 주인에게 "공격받고 있다" 를 간격을 두고 알린다.
-     *          6. 안개 — 팀마다 시야를 칠한다(본 칸은 Explored 로 남는다). 남은 건물이 없는 플레이어는 진다.
-     *          카탈로그는 빌려 씁니다(월드보다 오래 · 바뀌지 않게).
+     * @brief 스타크래프트 규칙을 줄인 RTS 한 판을 진행합니다. 화면과 입력은 게임이 맡고, 이 클래스는 규칙만 돌립니다.
+     * @details 고정 걸음(`_fixedStep`)마다 아래 순서로 처리한다.
+     *          1. 보급: 다 지은 건물이 주는 양(상한 `supplyMax`)과, 살아 있거나 생산 중인 유닛이 쓰는 양을 다시 센다.
+     *          2. 명령: 유닛마다 맨 앞 명령을 처리한다. 이동은 `NavAgent`(A*)가 맡고, 여럿을 한 곳으로 보내면 흐름장 하나를 나눠 쓴다.
+     *             공격, 채취, 건설은 목표의 가장자리까지 다가가 멈춘다. 할 일이 없거나 공격 이동이나 제자리 상태이면 시야(제자리는 사거리) 안에서 가장 가까운 적을 고른다.
+     *          3. 채취: 자원으로 가서 캐고(자원 하나에 일꾼 하나), 가장 가까운 본진에 내려놓고, 다시 돌아가는 일을 반복한다. 다 캔 광물은 사라지고 일꾼은 근처 다른 광물로 간다.
+     *          4. 건설과 생산: 일꾼이 붙어 있는 동안 건물이 올라가고(체력도 함께 오른다), 생산은 대기열 맨 앞부터 보급이 허락하면 시작한다.
+     *          5. 전투: 피해는 max(최소 피해, 공격 - 방어)이다. 맞은 쪽 주인에게는 "공격받고 있다" 를 간격을 두고 알린다.
+     *          6. 안개: 팀마다 시야를 칠한다(본 셀은 Explored 로 남는다). 건물이 남지 않은 플레이어는 진다.
+     *
+     *          카탈로그는 빌려 쓴다. 월드보다 오래 살아야 하고 바뀌지 않아야 한다.
      */
     class SW_GF_API RTSWorld
     {
@@ -222,43 +223,44 @@ namespace sw
         RTSWorld();
 
         void initialize( const RTSCatalog* pCatalog, int32 width, int32 height, const RTSSettings& settings );
-        /** @brief 지형 막힘(절벽 · 물)입니다. 유닛을 놓기 전에 칠합니다. */
+        /** @brief 지형이 막힌 곳(절벽, 물)을 지정합니다. 유닛을 놓기 전에 칠합니다. */
         void setTerrainBlocked( int32 x, int32 y, bool bBlocked );
         /**
-         * @brief 공유 땅을 빌립니다(월드 칸 (0, 0) = 땅 칸 @p origin). 그 뒤로 건물은 놓을 때 땅을 얻고(막힘) 부서지면 놓습니다.
-         * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힘이다 — 땅 리비전이 바뀐 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로).
-         *          막히지 않은 남의 땅(도로)도 짓지는 못한다. 이미 놓인 건물은 얻지 않으므로 건물을 놓기 전에 묶습니다. @p pLand 가 nullptr 이면 풉니다.
+         * @brief 공유 땅을 빌립니다. 월드 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 이후 건물은 놓을 때 땅을 얻고(막힘) 부서지면 반납합니다.
+         * @details 다른 키트가 막아 둔 땅은 땅 격자에서 막힌 곳이다. 땅 리비전이 바뀌면 `update` 머리에서 땅 격자를 다시 칠한다(하늘 격자는 그대로 둔다).
+         *          막히지 않은 남의 땅(도로)에도 건물을 짓지 못한다. 이미 놓인 건물은 땅을 얻지 않으므로 건물을 놓기 전에 호출해야 한다. @p pLand 가 nullptr 이면 빌린 땅을 반납한다.
          */
         void bindLand( LandRegistry* pLand, const int2& origin );
-        /** @brief 플레이어를 더합니다. 자원은 빌린 지갑(@p pWallet — 월드보다 오래 살아야 한다, nullptr 이면 아무것도 사지 못한다)입니다. 플레이어 번호입니다. */
+        /** @brief 플레이어를 추가하고 플레이어 번호를 반환합니다. 자원은 빌린 지갑 @p pWallet 에서 쓰며, 지갑은 월드보다 오래 살아야 합니다. nullptr 이면 아무것도 살 수 없습니다. */
         int32 addPlayer( int32 team, Wallet* pWallet, const float3& startPosition );
-        /** @brief 유닛 · 건물(다 지은 채) · 자원을 놓습니다. 건물 · 자원은 @p position 이 든 칸이 왼쪽 아래입니다. 놓을 수 없으면 무효 id 입니다. */
+        /** @brief 유닛, 건물(건설이 끝난 상태), 자원을 놓습니다. 건물과 자원은 @p position 이 속한 셀이 왼쪽 아래가 됩니다. 놓을 수 없으면 무효 id 를 반환합니다. */
         RTSUnitID spawnUnit( const hashed_string& defID, int32 owner, const float3& position );
 
-        // 명령 — @p bQueue 면 명령 대기열 뒤에 붙인다(쉬프트).
+        // 명령. @p bQueue 가 true 이면 명령 대기열 뒤에 붙인다(쉬프트 입력).
         RTSCommandResult issueMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
         RTSCommandResult issueAttackMove( RTSUnitID unitID, const float3& target, bool bQueue = false );
         RTSCommandResult issueAttack( RTSUnitID unitID, RTSUnitID targetID, bool bQueue = false );
         RTSCommandResult issueGather( RTSUnitID unitID, RTSUnitID resourceID, bool bQueue = false );
-        /** @brief 일꾼이 @p cell(왼쪽 아래)에 @p buildingID 를 짓게 합니다. 값은 자리에 닿아 짓기 시작할 때 냅니다. */
+        /** @brief 일꾼이 @p cell(왼쪽 아래)에 @p buildingID 를 짓게 합니다. 비용은 그 위치에 도착해 건설을 시작할 때 냅니다. */
         RTSCommandResult issueBuild( RTSUnitID workerID, const hashed_string& buildingID, const int2& cell, bool bQueue = false );
         RTSCommandResult issueHold( RTSUnitID unitID );
         RTSCommandResult issueStop( RTSUnitID unitID );
         /**
-         * @brief 오른쪽 클릭 — 적이면 공격, 자원 · 내 정제소면 채취(일꾼), 내 덜 지은 건물이면 이어 짓기(일꾼), 아니면 이동입니다.
-         * @param targetID 클릭한 유닛(없으면 무효 id).
+         * @brief 오른쪽 클릭에 해당하는 명령을 내립니다.
+         * @details 적이면 공격하고, 자원이나 내 정제소면 채취하고(일꾼), 내가 덜 지은 건물이면 이어 짓고(일꾼), 그 밖에는 이동한다.
+         * @param targetID 클릭한 유닛이다. 없으면 무효 id 이다.
          */
         RTSCommandResult issueSmart( RTSUnitID unitID, const float3& position, RTSUnitID targetID, bool bQueue = false );
-        /** @brief 여럿에게 같은 이동 · 공격 이동을 줍니다. 무리가 크면 흐름장 하나를 함께 씁니다. 받은 유닛 수입니다. */
+        /** @brief 여러 유닛에게 같은 이동이나 공격 이동을 시킵니다. 무리가 크면 흐름장 하나를 함께 씁니다. 명령을 받은 유닛 수를 반환합니다. */
         int32 issueGroupMove( const vector<RTSUnitID>& listUnit, const float3& target, bool bAttackMove, bool bQueue = false );
 
-        /** @brief 건물의 생산 대기열에 넣습니다. 값(광물 · 가스)은 지금 내고 보급은 생산을 시작할 때 봅니다. */
+        /** @brief 건물의 생산 대기열에 유닛을 넣습니다. 비용(광물, 가스)은 지금 내고, 보급은 생산을 시작할 때 확인합니다. */
         RTSCommandResult train( RTSUnitID buildingID, const hashed_string& unitID );
-        /** @brief 대기열 마지막을 빼고 값을 돌려받습니다. */
+        /** @brief 대기열의 마지막 항목을 빼고 비용을 돌려받습니다. */
         bool cancelTrain( RTSUnitID buildingID );
         void setRallyPoint( RTSUnitID buildingID, const float3& position );
 
-        /** @brief 시간을 넘깁니다(고정 걸음). */
+        /** @brief 시간을 진행합니다. 내부에서는 고정 걸음으로 나눠 처리합니다. */
         void update( float32 deltaTime );
         void drainEvents( vector<RTSEvent>& outListEvent );
 
@@ -266,10 +268,10 @@ namespace sw
         const RTSUnit*   findUnit( RTSUnitID unitID ) const;
         const RTSPlayer* findPlayer( int32 player ) const;
         int32            getPlayerCount() const { return static_cast<int32>( _listPlayer.size() ); }
-        /** @brief 그 플레이어 지갑의 광물 · 가스입니다(지갑이 없으면 0). */
+        /** @brief 그 플레이어 지갑의 광물과 가스를 반환합니다. 지갑이 없으면 0 입니다. */
         int64 getMinerals( int32 player ) const;
         int64 getGas( int32 player ) const;
-        /** @brief 산 유닛마다 부릅니다. */
+        /** @brief 살아 있는 유닛마다 @p function 을 호출합니다. */
         template <typename TFunction>
         void forEachUnit( TFunction&& function ) const
         {
@@ -279,49 +281,49 @@ namespace sw
                     function( unit );
             }
         }
-        /** @brief @p center 둘레 @p radius 안(몸 가장자리 기준)의 산 유닛입니다. */
+        /** @brief @p center 둘레 @p radius 안(몸 가장자리 기준)에 있는 살아 있는 유닛을 모읍니다. */
         void queryUnits( const float3& center, float32 radius, vector<RTSUnitID>& outListUnit ) const;
-        /** @brief 그 자리를 덮는 유닛(건물 · 자원은 칸, 유닛은 몸)입니다 — 클릭 고르기. */
+        /** @brief 그 위치를 덮는 유닛을 반환합니다. 건물과 자원은 셀, 유닛은 몸 기준이며 클릭 선택에 씁니다. */
         RTSUnitID pickUnit( const float3& position ) const;
         int32     countUnits( int32 player, const hashed_string& defID, bool bIncludeUnfinished ) const;
-        /** @brief 다 지은 그 건물이 있는가입니다(테크). */
+        /** @brief 그 건물을 건설이 끝난 채로 가지고 있는지 반환합니다(테크 조건 확인). */
         bool hasConstructed( int32 player, const hashed_string& defID ) const;
-        /** @brief 생산 대기열 · 짓는 중까지 셉니다(AI 가 같은 것을 두 번 시키지 않게). */
+        /** @brief 생산 대기열과 건설 중인 것까지 센 수를 반환합니다. AI 가 같은 것을 두 번 시키지 않게 하려는 용도입니다. */
         int32 countPlanned( int32 player, const hashed_string& defID ) const;
 
-        /** @brief 건물을 그 칸에 놓을 수 있는가입니다(격자 · 다른 건물 · 땅 유닛 · 정제소는 간헐천 위 · 빌린 공유 땅이 남의 것이 아님). @p ignoreUnit 은 짓는 일꾼. */
+        /** @brief 건물을 그 셀에 놓을 수 있는지 반환합니다. 격자, 다른 건물, 땅 위의 유닛, 정제소는 간헐천 위인지, 빌린 공유 땅이 남의 것이 아닌지를 확인합니다. @p ignoreUnit 은 건설 중인 일꾼입니다. */
         bool canPlaceBuilding( const hashed_string& buildingID, const int2& cell, RTSUnitID ignoreUnit = RTSUnitID{} ) const;
-        /** @brief @p nearPosition 둘레에서 둘레 한 칸을 비운 건물 자리를 찾습니다(AI · 자동 배치). 정제소는 가까운 빈 간헐천입니다. */
+        /** @brief @p nearPosition 둘레에서 건물을 놓을 자리를 찾습니다. 건물 둘레 한 셀은 비워 둡니다(AI 와 자동 배치용). 정제소는 가까운 빈 간헐천을 고릅니다. */
         [[nodiscard]] bool findBuildSite( const hashed_string& buildingID, const float3& nearPosition, int32 minRadius, int32 maxRadius, int2& outCell ) const;
-        /** @brief @p position 에서 가장 가까운 자원(그 종류)입니다. @p maxDistance 밖이면 무효 id 입니다. */
+        /** @brief @p position 에서 가장 가까운 그 종류의 자원을 반환합니다. @p maxDistance 밖이면 무효 id 입니다. */
         RTSUnitID findNearestResource( const float3& position, RTSResourceType type, float32 maxDistance ) const;
-        /** @brief 그 플레이어의 가장 가까운 다 지은 본진입니다. */
+        /** @brief 그 플레이어의 가장 가까운, 건설이 끝난 본진을 반환합니다. */
         RTSUnitID findNearestDepot( int32 player, const float3& position ) const;
 
         RTSVisibility getVisibility( int32 player, const int2& cell ) const;
-        /** @brief 그 플레이어(팀)가 지금 그 유닛을 보는가입니다. */
+        /** @brief 그 플레이어(팀)가 지금 그 유닛을 볼 수 있는지 반환합니다. */
         bool isVisibleTo( int32 player, RTSUnitID unitID ) const;
-        /** @brief 두 플레이어가 서로 적인가입니다(팀이 다르면 적 — `TeamAttitudeUtil::isHostile`). 없는 플레이어(주인 없음)는 누구와도 적이 아닙니다. */
+        /** @brief 두 플레이어가 서로 적인지 반환합니다. 팀이 다르면 적이며(`TeamAttitudeUtil::isHostile`), 주인 없음 같은 없는 플레이어는 누구와도 적이 아닙니다. */
         bool areEnemies( int32 playerA, int32 playerB ) const;
-        /** @brief 남은 팀이 하나면 그 팀, 아니면 −1 입니다. */
+        /** @brief 남은 팀이 하나면 그 팀을, 아니면 -1 을 반환합니다. */
         int32 getWinningTeam() const { return _winningTeam; }
 
         const NavGrid&     getGrid() const { return _grid; }
         const RTSCatalog*  getCatalog() const { return _pCatalog; }
         const RTSSettings& getSettings() const { return _settings; }
         float32            getTime() const { return _time; }
-        /** @brief 그 칸 왼쪽 아래 건물의 가운데 자리입니다. */
+        /** @brief 그 셀을 왼쪽 아래로 하는 건물의 가운데 위치를 반환합니다. */
         float3 computeFootprintCenter( const int2& cell, int32 footprint ) const;
 
         /**
-         * @brief 땅 · 유닛(자리 · 명령 · 생산 · 채취) · 플레이어 · 안개 · 시간을 씁니다(핫 리로드 · 세이브). 설정 · 카탈로그는 쓰지 않습니다.
-         * @details 정의는 카탈로그 id, 유닛 참조는 id(세대 포함)로 적습니다. 길(경로 · 흐름장)은 쓰지 않습니다 — 읽은 쪽이 앞 명령의 길을 다시 구합니다.
+         * @brief 땅, 유닛(위치, 명령, 생산, 채취), 플레이어, 안개, 시간을 씁니다. 핫 리로드와 세이브에 쓰며 설정과 카탈로그는 쓰지 않습니다.
+         * @details 정의는 카탈로그 id 로, 유닛 참조는 세대를 포함한 id 로 적는다. 경로와 흐름장은 쓰지 않으므로, 읽은 쪽에서 맨 앞 명령의 경로를 다시 구한다.
          */
         void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 의 바이트로 바꿉니다. `initialize` 한 뒤에 부릅니다(같은 크기 · 카탈로그).
-         * @details 격자는 땅 + 서 있는 건물 · 자원의 발자국으로 다시 칠하고, 움직이던 유닛은 앞 명령을 처음부터 다시 걷습니다(흐름장을 쓰던 무리 이동은 다시 빌린다).
-         * @return 크기가 다르거나, 카탈로그에 없는 유닛이 있거나, 깨졌으면 false 이고 그대로입니다.
+         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
+         * @details 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다. 이동 중이던 유닛은 맨 앞 명령을 처음부터 다시 진행하고, 흐름장을 쓰던 무리 이동은 흐름장을 다시 빌린다.
+         * @return 크기가 다르거나, 카탈로그에 없는 유닛이 있거나, 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
          */
         [[nodiscard]] bool readState( Archive& archive );
 
@@ -356,7 +358,7 @@ namespace sw
         RTSCommandResult pushOrder( RTSUnit& unit, const RTSOrder& order, bool bQueue );
         void             finishOrder( RTSUnit& unit );
         void             clearOrders( RTSUnit& unit );
-        /** @brief 목표 쪽으로 걷습니다(목표가 움직이면 간격을 두고 경로를 다시). */
+        /** @brief 목표 쪽으로 걷습니다. 목표가 움직이면 간격을 두고 경로를 다시 구합니다. */
         void      approach( RTSUnit& unit, const float3& target, bool bForce );
         bool      isWithinReach( const RTSUnit& unit, const RTSUnit& target, float32 reach ) const;
         float32   computeEdgeDistance( const RTSUnit& unit, const RTSUnit& target ) const;
@@ -365,7 +367,7 @@ namespace sw
         void      dealDamage( RTSUnit& attacker, RTSUnit& target );
         void      killUnit( RTSUnit& unit, RTSUnitID killerID );
         void      placeFootprint( const RTSUnit& unit, bool bBlocked );
-        /** @brief 땅 격자를 지형 · 남의 막힌 땅 · 서 있는 건물 · 자원의 발자국으로 다시 칠합니다. */
+        /** @brief 땅 격자를 지형, 남이 막은 땅, 서 있는 건물과 자원의 발자국으로 다시 칠합니다. */
         void             repaintGrid();
         void             startConstruction( RTSUnit& worker, RTSOrder& order );
         void             completeProduction( RTSUnit& building );
@@ -379,27 +381,27 @@ namespace sw
         int32            computeBucketIndex( const float3& position ) const;
 
         NavGrid               _grid;
-        NavGrid               _airGrid; ///< 하늘 — 모두 열린 같은 크기의 격자(공중 유닛은 지형 · 건물을 넘는다)
+        NavGrid               _airGrid; ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다
         GridPathfinder        _pathfinder;
-        deque<RTSUnit>        _listUnit;       ///< 자리 = id 의 index(deque — 걸음 중에 생겨도 다른 유닛 참조가 살아 있다)
-        vector<uint32>        _listGeneration; ///< 자리마다 세대
+        deque<RTSUnit>        _listUnit;       ///< 슬롯 번호가 id 의 index 이다(deque 라서 걸음 중에 유닛이 생겨도 다른 유닛 참조가 유지된다)
+        vector<uint32>        _listGeneration; ///< 슬롯마다의 세대
         vector<uint32>        _listFreeSlot;
         vector<RTSPlayer>     _listPlayer;
         EventBuffer<RTSEvent> _eventBuffer;
         vector<uint8>         _listTerrainBlocked;
-        vector<vector<uint8>> _listTeamVisibility; ///< 팀마다 칸의 RTSVisibility
-        vector<int32>         _listBucketHead;     ///< 버킷마다 첫 유닛 자리(−1 끝)
-        vector<int32>         _listBucketNext;     ///< 유닛 자리마다 다음 자리
+        vector<vector<uint8>> _listTeamVisibility; ///< 팀마다 셀의 RTSVisibility 를 담는다
+        vector<int32>         _listBucketHead;     ///< 버킷마다 첫 유닛의 슬롯(-1 이면 끝)
+        vector<int32>         _listBucketNext;     ///< 유닛 슬롯마다 다음 유닛의 슬롯
         vector<float3>        _listNeighborScratch;
         vector<RTSUnitID>     _listQueryScratch;
-        deque<FlowFieldSlot>  _listFlowField; ///< deque — 자리가 움직이지 않아 행위자가 포인터를 들 수 있다
+        deque<FlowFieldSlot>  _listFlowField; ///< deque 라서 슬롯이 움직이지 않으므로 행위자가 포인터를 보관할 수 있다
         const RTSCatalog*     _pCatalog;
         RTSSettings           _settings;
         FixedStepTimer        _stepTimer;
         float32               _time;
         Countdown             _visionTimer;
-        GridTopology          _bucketTopology; ///< 이웃 찾기 버킷 격자(버킷 = `_settings._bucketSize` 칸)
-        LandBinding           _land;           ///< 빌린 공유 땅(없으면 단독)
+        GridTopology          _bucketTopology; ///< 이웃 탐색 버킷 격자(버킷 하나는 `_settings._bucketSize` 셀)
+        LandBinding           _land;           ///< 빌린 공유 땅(없으면 단독 동작)
         int32                 _teamCount;
         int32                 _winningTeam;
         uint32                _landRevision; ///< 마지막으로 땅 격자를 칠한 땅 리비전

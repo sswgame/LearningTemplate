@@ -21,7 +21,7 @@ namespace sw
         {
             static constexpr float32 kTiny = 1.0e-5f;
 
-            /** @brief XZ 평면에서 길이 1 로 만듭니다. 너무 짧으면 @p fallback 입니다. */
+            /** @brief XZ 평면에서 길이 1로 만듭니다. 너무 짧으면 @p fallback 을 반환합니다. */
             static float3 flattenDirection( const float3& direction, const float3& fallback )
             {
                 const float3  flat{ direction._x, 0.0f, direction._z };
@@ -35,7 +35,7 @@ namespace sw
                 return length > kTiny ? direction / length : fallback;
             }
 
-            /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터입니다. */
+            /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터여야 합니다. */
             static float3 rotateToward( const float3& direction, const float3& desired, float32 maxRadian )
             {
                 const float32 cosAngle = MathUtil::clamp( direction.dot( desired ), -1.0f, 1.0f );
@@ -44,7 +44,7 @@ namespace sw
                     return desired;
                 const float32 sinAngle = MathUtil::sin( angle );
                 if ( sinAngle < kTiny )
-                    return direction; // 정반대 — 돌 축이 정해지지 않는다
+                    return direction; // 정반대 방향이라 돌 축이 정해지지 않는다
                 const float32 ratio    = maxRadian / angle;
                 const float32 fromPart = MathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
                 const float32 toPart   = MathUtil::sin( ratio * angle ) / sinAngle;
@@ -433,7 +433,7 @@ namespace sw
         pilot._vitality.drainEvents( _listVitalityScratch );
         if ( pilot._state == MechPilotState::Down && pilot._vitality.isPoiseBroken() == false )
         {
-            // 기상 — 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
+            // 기상: 다운치는 가득 찬 채로 일어나고 잠시 무적이다.
             pilot._state = MechPilotState::Active;
             pilot._vitality.setInvulnerable( pMech->_wakeInvulnerable );
             pushEvent( MechArenaEvent::Kind::WokeUp, pilotIndex, -1, pMech->_wakeInvulnerable, hashed_string{} );
@@ -621,7 +621,7 @@ namespace sw
             const MoveFrameData* pNext     = bHasNext ? _pMoveCatalog->findMove( slot._listMoveID[static_cast<size_t>( nextStage )] ) : nullptr;
             if ( pilot._bMeleeQueued == SW_TRUE && pNext != nullptr && pilot._melee.canCancelInto( pNext->_id ) )
             {
-                // 캔슬 창 — 다음 단이 이 프레임에 나간다.
+                // 캔슬 창이 열려서 다음 단이 이 프레임에 나간다.
                 pilot._melee.start( *pNext );
                 pilot._comboStage   = nextStage;
                 pilot._bMeleeHit    = SW_FALSE;
@@ -655,7 +655,7 @@ namespace sw
                 continue;
             const float32 reach    = slot._range + pMech->_radius + candidate.getMech()->_radius;
             const float32 distance = float3::getDistance( computeCenter( pilot ), computeCenter( candidate ) );
-            // 록온 대상이 닿으면 그쪽, 아니면 가장 가까운 적.
+            // 록온 대상이 닿으면 그쪽을, 아니면 가장 가까운 적을 고른다.
             const bool    bLocked = pilot._lockOn.getTarget() == static_cast<uint64>( other + 1 );
             const float32 score   = bLocked ? -1.0f : distance;
             if ( distance <= reach && score < best )
@@ -771,7 +771,7 @@ namespace sw
         }
     }
 
-    // --- 무기 · 피해 ------------------------------------------------------------------------------
+    // --- 무기와 피해 ------------------------------------------------------------------------------
 
     void MechArenaWorld::fireShot( int32 pilotIndex, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed )
     {
@@ -816,7 +816,7 @@ namespace sw
         const float3     origin = computeCenter( pilot );
         if ( speed <= 0.0f )
         {
-            // 즉시 탄(광선) — 사거리 안의 가장 가까운 적.
+            // 즉시 탄(광선)은 사거리 안에서 가장 가까운 적을 맞힌다.
             const GameRay ray{ origin, direction };
             int32         hitPilot    = -1;
             float32       hitDistance = range;
@@ -915,7 +915,7 @@ namespace sw
         {
             if ( staggerTime > 0.0f )
             {
-                // 경직 — 하던 근접 · 대시가 끊긴다.
+                // 경직: 하던 근접과 대시가 끊긴다.
                 target._staggerRemaining.extendTo( staggerTime );
                 target._dashRemaining.clear();
                 target._melee.cancel();
@@ -946,7 +946,7 @@ namespace sw
         triggerSkills( victim, MechSkillTrigger::HealthBelow );
     }
 
-    // --- 스킬 · 장비 ------------------------------------------------------------------------------
+    // --- 스킬과 장비 ------------------------------------------------------------------------------
 
     void MechArenaWorld::activateSkill( int32 pilotIndex, int32 skillIndex )
     {
@@ -1083,7 +1083,7 @@ namespace sw
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
         if ( pilot._lockOn.hasTarget() == false )
         {
-            // 록온 없이 쏘면 앞의 가장 좋은 대상을 잡는다(캡슐파이터의 자동 록온).
+            // 록온 없이 쏘면 앞쪽의 가장 좋은 대상을 잡는다(캡슐파이터의 자동 록온).
             collectCandidates( pilotIndex, _listCandidateScratch );
             (void)pilot._lockOn.pickBest( computeCenter( pilot ), pilot._forward, _listCandidateScratch );
         }
@@ -1248,7 +1248,7 @@ namespace sw
     {
         if ( _pMechCatalog == nullptr || _pMoveCatalog == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정 · 카탈로그는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 설정과 카탈로그는 사본이 그대로 가지고 있다.
         MechArenaWorld restored  = *this;
         uint32         teamCount = 0;
         if ( StateArchiveUtil::readCount( archive, 4, teamCount ) == false )
@@ -1270,7 +1270,7 @@ namespace sw
             return false;
 
         uint32 pilotCount = 0;
-        // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 자리 · 정수 · 상태 칸(60)
+        // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 위치, 정수, 상태 슬롯(60) 바이트
         if ( StateArchiveUtil::readCount( archive, 72, pilotCount ) == false )
             return false;
         restored._listPilot.assign( pilotCount, MechPilot{} );
@@ -1281,7 +1281,7 @@ namespace sw
         }
 
         uint32 projectileCount = 0;
-        // 탄마다 자리(12) + 방향(12) + 실수 일곱(28) + 쏜 쪽 · 대상(8) + 종류(1)
+        // 탄마다 위치(12) + 방향(12) + 실수 7개(28) + 쏜 쪽과 대상(8) + 종류(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 61, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, MechProjectile{} );
@@ -1378,7 +1378,7 @@ namespace sw
             return false;
         outPilot._state = static_cast<MechPilotState>( state );
 
-        // 무기 · 체력 · 부스트 설정은 지금 장착한 기체가 정한다 — 격추된 동안은 격추된 칸의 기체다(교체한 칸은 부활 때 장착된다).
+        // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다. 격추된 동안은 격추된 슬롯의 기체를 쓴다(교체한 슬롯은 부활할 때 장착된다).
         const int32 deckIndex = outPilot._deckIndex;
         outPilot._deckIndex   = outPilot._deathSlot >= 0 ? outPilot._deathSlot : deckIndex;
         const MechDef* pMech  = outPilot.getMech();

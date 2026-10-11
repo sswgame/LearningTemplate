@@ -1,10 +1,10 @@
 /**
  * @file WaterWaveMath.h
- * @brief 거스트너 파도의 CPU 판 — 셰이더(`Resource/engine/shaders/gerstner.hlsli`)와 같은 식입니다. 부력 · 수면 질의가 이것을 씁니다.
- * @details 파도 하나 = 방향(라디안, +x 에서 +z 쪽으로) · 파장 · 진폭 · 가파름(0..1). 파수 k = 2π / 파장, 위상 속도는 깊은 물 분산
- *          ω = √(g k) 이고 가파름 Q = 가파름 / (k × 진폭 × 파도 수) 라 가파름 1 에서도 고리가 생기지 않습니다(GPU Gems 1 장 1 의 식).
- *          변위는 수평 원점 (x, z) 의 점이 시간 t 에 옮겨 가는 양입니다 — 월드 (x, z) 의 수면 높이는 그 자리로 **옮겨 오는** 원점을
- *          고정점 반복으로 찾은 뒤의 높이입니다(`computeSurfaceHeight`).
+ * @brief 거스트너 파도의 CPU 버전입니다. 셰이더(`Resource/engine/shaders/gerstner.hlsli`)와 같은 식이며, 부력과 수면 질의가 이것을 씁니다.
+ * @details 파도 하나는 방향(라디안, +x 에서 +z 쪽으로), 파장, 진폭, 가파름(0..1)으로 정한다. 파수 k = 2π / 파장이고, 위상 속도는 깊은 물 분산
+ *          ω = √(g k) 이며, 가파름 Q = 가파름 / (k × 진폭 × 파도 수)라 가파름 1 에서도 고리가 생기지 않는다(GPU Gems 1 장 1 의 식이다).
+ *          변위는 수평 원점 (x, z) 의 점이 시간 t 에 옮겨 가는 양이다. 월드 (x, z) 의 수면 높이는 그 위치로 **옮겨 오는** 원점을
+ *          고정점 반복으로 찾은 뒤의 높이다(`computeSurfaceHeight`).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -39,9 +39,9 @@ namespace sw
 {
     /**
      * @struct WaterWaveMath
-     * @brief 거스트너 변위 · 노멀 · 수면 높이입니다. 파도는 `shaderslot::kGerstnerWaveCount` 개까지이고 진폭 0 인 칸은 빈 칸입니다.
-     * @details @p gravity 는 깊은 물 분산의 중력 크기(m/s²)입니다 — 물은 설정된 물리 중력(`PhysicsSystem::getConfiguredGravityMagnitude`)을 넘기고
-     *          같은 값을 머티리얼(`waveParams.x`)로 셰이더에 싣는다. 숫자를 따로 적지 않는다.
+     * @brief 거스트너 변위, 노멀, 수면 높이를 계산합니다. 파도는 `shaderslot::kGerstnerWaveCount` 개까지이고, 진폭 0 인 슬롯은 빈 슬롯입니다.
+     * @details @p gravity 는 깊은 물 분산의 중력 크기(m/s²)다. 물은 설정된 물리 중력(`PhysicsSystem::getConfiguredGravityMagnitude`)을 넘기고
+     *          같은 값을 머티리얼(`waveParams.x`)로 셰이더에 싣는다. 값을 따로 적지 않는다.
      */
     struct SW_API WaterWaveMath
     {
@@ -50,12 +50,12 @@ namespace sw
         /** @brief 수평 원점 (x, z) 의 옮겨 간 점에서의 수면 노멀입니다. */
         static float3 computeNormal( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] );
         /**
-         * @brief 월드 (x, z) 의 수면 높이(기준면 0 에 대한 변위)입니다. 그 자리로 옮겨 오는 원점을 고정점 반복 @p iterationCount 번으로 찾습니다.
-         * @param pOutOrigin 찾은 원점입니다(nullptr 이면 버립니다). 노멀은 이 원점으로 `computeNormal` 을 부릅니다.
+         * @brief 월드 (x, z) 의 수면 높이(기준면 0 에 대한 변위)를 구합니다. 그 위치로 옮겨 오는 원점을 고정점 반복 @p iterationCount 번으로 찾습니다.
+         * @param pOutOrigin 찾은 원점입니다(nullptr 이면 버립니다). 노멀은 이 원점으로 `computeNormal` 을 호출해 구합니다.
          */
         static float32 computeSurfaceHeight( const float2& position, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount], uint32 iterationCount = 4,
                                              float2* pOutOrigin = nullptr );
-        /** @brief 파도 수(진폭 > 0 인 칸)입니다. 가파름 Q 를 나누는 수입니다. */
+        /** @brief 파도 수(진폭 > 0 인 슬롯)를 반환합니다. 가파름 Q 를 나누는 수입니다. */
         static uint32 countActiveWaves( const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] );
     };
 } // namespace sw

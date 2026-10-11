@@ -18,9 +18,9 @@ namespace sw
     {
         struct DetourNavCrowdInternal
         {
-            /** @brief 군중 밖 질의 객체의 노드 수입니다(목적지 붙이기 · 자리 맞추기는 짧다). */
+            /** @brief 군중 밖 질의 객체의 노드 수입니다(목적지 붙이기와 위치 맞추기는 짧습니다). */
             static constexpr int32 kQueryNodeCount = 512;
-            /** @brief 회피 품질 넷의 적응 표본(나눔 · 고리 · 깊이) — Detour 예제의 Low · Medium · Good · High 값입니다. */
+            /** @brief 회피 품질 넷의 적응 샘플(분할 수, 고리 수, 깊이)입니다. Detour 예제의 Low, Medium, Good, High 값입니다. */
             static constexpr uint8 kArrAdaptiveDivision[4] = { 5, 5, 7, 7 };
             static constexpr uint8 kArrAdaptiveRing[4]     = { 2, 2, 2, 3 };
             static constexpr uint8 kArrAdaptiveDepth[4]    = { 1, 2, 3, 3 };
@@ -177,7 +177,7 @@ namespace sw
     {
         if ( isActiveAgent( agentID ) == false )
             return;
-        // Detour 의 addAgent 가 하는 것과 같은 초기화 — 통로를 새 자리에서 다시 시작한다.
+        // Detour 의 addAgent 가 하는 것과 같은 초기화다. 통로를 새 위치에서 다시 시작한다.
         dtCrowdAgent* pAgent  = _pCrowd->getEditableAgent( agentID );
         dtPolyRef     polyRef = 0;
         float32       arrNearest[3]{ position._x, position._y, position._z };
@@ -209,7 +209,7 @@ namespace sw
             teleportAgent( agentID, position );
             return;
         }
-        // 통로를 따라 새 자리로 끌어 옮긴다(벽을 넘지 않는다) — 경로는 지킨다.
+        // 통로를 따라 새 위치로 끌어 옮긴다(벽을 넘지 않는다). 경로는 유지한다.
         if ( pAgent->corridor.movePosition( &position._x, _pQuery, _pCrowd->getFilter( 0 ) ) )
             dtVcopy( pAgent->npos, pAgent->corridor.getPos() );
     }

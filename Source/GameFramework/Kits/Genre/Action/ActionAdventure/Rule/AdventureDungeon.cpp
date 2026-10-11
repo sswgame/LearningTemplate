@@ -28,7 +28,7 @@ namespace sw
                 return pValue != nullptr && pValue[0] != '\0' ? hashed_string( pValue ) : fallback;
             }
 
-            /** @brief 비었을 때 쓰는 플래그 이름 `<종류>.<id>` 입니다 — 공유 플래그에서 다른 키트의 같은 id 와 갈린다. */
+            /** @brief 비어 있을 때 쓰는 플래그 이름 `<종류>.<id>` 를 만듭니다. 공유 플래그에서 다른 키트의 같은 id 와 겹치지 않게 종류를 붙입니다. */
             static hashed_string makeDefaultFlag( const utf8* pKind, const hashed_string& id ) { return hashed_string( string( pKind ) + "." + id.c_str() ); }
 
             static bool isKind( string_view text, const utf8* pKind ) { return StringUtil::equals( text, string_view( pKind ), true ); }
@@ -498,10 +498,10 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         uint32 dungeonCount = 0;
-        // 던전마다 id(4) + 진행(11) + 장치 수(4) 이상
+        // 던전마다 id(4) + 진행(11) + 장치 수(4) 바이트 이상
         if ( StateArchiveUtil::readCount( archive, 19, dungeonCount ) == false )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 실리지 않은 던전은 새 판(`initialize` 의 모양)으로 남는다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 저장되지 않은 던전은 `initialize` 직후의 새 상태로 남는다.
         vector<DungeonRuntime> listRuntime = _listRuntime;
         for ( uint32 entry = 0; entry < dungeonCount; ++entry )
         {
@@ -520,7 +520,7 @@ namespace sw
             archive >> progress._bBossKey;
             archive >> progress._bMap;
             archive >> progress._bCompass;
-            // 장치마다 남은 시간(4) + 켜진 수(4) + 활성(1)
+            // 장치마다 남은 시간(4) + 켜진 수(4) + 활성(1) 바이트
             if ( StateArchiveUtil::readCount( archive, 9, deviceCount ) == false || deviceCount != runtime._listDevice.size() )
                 return false;
             const bool bProgressValid = 0 <= progress._smallKeyCount && 0 <= progress._smallKeyUsedCount && progress._bBossKey <= SW_TRUE &&

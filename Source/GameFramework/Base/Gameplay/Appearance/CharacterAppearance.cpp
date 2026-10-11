@@ -25,7 +25,7 @@ namespace sw
             static constexpr const utf8* kArrEquipAttribute[]     = { "set", "slot", "item", "items", "visible", "state", "damage" };
             static constexpr const utf8* kArrSocketAttribute[]    = { "name", "parent", "offset", "rotation" };
 
-            // 뽑기 키 — 칸 · 매개변수 이름 해시와 섞어 키마다 다른 흐름을 쓴다.
+            // 뽑기 키: 슬롯이나 매개변수 이름 해시와 섞어서 키마다 다른 난수열을 쓴다.
             static constexpr uint64 kKeyBodyType  = 0x51ed2701a3c1b5e7ull;
             static constexpr uint64 kKeyBodyShape = 0x8b1f0e3d77c2a941ull;
             static constexpr uint64 kKeyFace      = 0x2c64f3a9d05be813ull;
@@ -252,9 +252,9 @@ namespace sw
             }
             outListChain.push_back( pDef );
             if ( pDef->_parent.empty() == false && findPreset( pDef->_parent ) == nullptr )
-                return false; // 모르는 부모
+                return false; // 알 수 없는 부모
         }
-        // 뿌리부터 잎으로.
+        // 뿌리에서 잎 방향으로 처리한다.
         std::reverse( outListChain.begin(), outListChain.end() );
         return outListChain.empty() == false;
     }
@@ -394,7 +394,7 @@ namespace sw
             request._slot = slotDef._name;
             outSpec._listSlot.push_back( request );
         }
-        // 장비 구성은 층마다 세트 → 칸 순서로 건다 — 아래 층의 세트가 위 층의 칸을 덮는다.
+        // 장비 구성은 레이어마다 세트, 슬롯 순서로 적용한다. 아래 레이어의 세트가 위 레이어의 슬롯을 덮어쓴다.
         vector<const CharacterAppearanceDef*> listChain;
         if ( collectChain( id, listChain ) == false )
             return false;

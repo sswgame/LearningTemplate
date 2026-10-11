@@ -219,7 +219,7 @@ namespace sw
     {
         if ( isValidPlayer( player ) == false )
             return;
-        // 눌림은 다음 걸음까지 모은다(프레임이 걸음보다 잦아도 잃지 않게).
+        // 눌림은 다음 걸음까지 모은다(프레임이 걸음보다 잦아도 잃지 않게 하려는 것이다).
         TrampolineInput& stored = _listPlayer[static_cast<size_t>( player )]._input;
         stored._moveX           = input._moveX;
         stored._moveZ           = input._moveZ;
@@ -336,7 +336,7 @@ namespace sw
         archive >> playerCount;
         if ( archive.isError() || playerCount != _listPlayer.size() )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 설정 · 판정 창 · 아이템 정의는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정, 판정 창, 아이템 정의는 사본도 그대로 가지고 있다.
         TrampolineArena arena = *this;
         for ( TrampolinePlayer& body : arena._listPlayer )
         {
@@ -394,14 +394,14 @@ namespace sw
             }
             case TrampolinePlayerState::Contact:
             {
-                // 닿기 전 창 안에서 미리 누른 것이 있으면 그것을, 없으면 닿은 뒤 처음 누른 것을 쓴다(눌러 대도 늦어지지 않게).
+                // 닿기 전 창 안에서 미리 누른 입력이 있으면 그것을, 없으면 닿은 뒤 처음 누른 입력을 쓴다(연타해도 늦어지지 않게 하려는 것이다).
                 const bool bNoPressYet = body._jumpPressTime < body._landTime - _judge.getEarliestWidth();
                 if ( body._input._bJumpPressed == SW_TRUE && bNoPressYet )
                     body._jumpPressTime = _time;
                 body._contactTimer.tick( deltaTime );
                 if ( body._contactTimer.isActive() )
                     return;
-                // 눌림이 끝났다 — 닿은 순간을 목표로 점프 입력을 판정한다.
+                // 눌림이 끝났다. 닿은 순간을 목표로 점프 입력을 판정한다.
                 const TimingResult result   = _judge.judge( body._landTime, body._jumpPressTime );
                 const bool         bSuccess = result.isHit() && result._pWindow->_bBreaksCombo == SW_FALSE;
                 launch( player, bSuccess, bSuccess ? result._pWindow->_grade : hashed_string{} );
@@ -457,7 +457,7 @@ namespace sw
         }
         else if ( body._bPounding == SW_FALSE )
         {
-            // 밀려나는 중 — 수평 속도가 서서히 준다.
+            // 밀려나는 중에는 수평 속도가 서서히 줄어든다.
             const float32 keep = MathUtil::max( 0.0f, 1.0f - _settings._knockbackDrag * deltaTime );
             body._velocity._x *= keep;
             body._velocity._z *= keep;
@@ -509,7 +509,7 @@ namespace sw
         if ( body._bPounding == SW_FALSE )
             return;
 
-        // 내려찍기 — 둘레의 낮은 상대를 밀어내고 콤보를 끊는다.
+        // 내려찍기: 둘레의 낮은 상대를 밀어내고 콤보를 끊는다.
         body._bPounding = SW_FALSE;
         int32 pushed    = 0;
         for ( int32 other = 0; other < getPlayerCount(); ++other )

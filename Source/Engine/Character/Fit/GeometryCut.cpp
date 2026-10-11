@@ -19,8 +19,8 @@ namespace sw
             static uint64 makeEdgeKey( uint32 from, uint32 to ) { return ( static_cast<uint64>( from ) << 32 ) | static_cast<uint64>( to ); }
 
             /**
-             * @brief 자리를 격자로 반올림한 키 — 용접(같은 자리 = 같은 정점).
-             * @details 성분을 차례로 섞어 잇는다. 성분마다 곱해 XOR 로 합치면 부호만 다른 대칭 꼭짓점(±1 · ±0.5 · ±0.25 상자)이 같은 키가 되어
+             * @brief 위치를 격자로 반올림한 키입니다. 용접(같은 위치는 같은 정점)에 씁니다.
+             * @details 성분을 차례로 섞어 이어 붙인다. 성분마다 곱해 XOR 로 합치면 부호만 다른 대칭 꼭짓점(±1, ±0.5, ±0.25 상자)이 같은 키가 되어
              *          서로 다른 꼭짓점이 하나로 용접된다.
              */
             static uint64 makePositionKey( const float3& position )
@@ -55,7 +55,7 @@ namespace sw
         const uint32   vertexCount   = source.getVertexCount();
         const uint32   triangleCount = MathUtil::min( source.getTriangleCount(), static_cast<uint32>( listTriangleSelected.size() ) );
         vector<uint32> listRemap( vertexCount, GeometryCutInternal::kNoVertex );
-        // 남는 정점은 원래 순서를 지킨다 — 다시 떼어 낸 부품이 원본과 같은 정점 번호를 갖게.
+        // 남는 정점은 원래 순서를 유지한다. 다시 분리한 부품이 원본과 같은 정점 번호를 갖게 하려는 것이다.
         for ( uint32 triangle = 0; triangle < triangleCount; ++triangle )
         {
             if ( listTriangleSelected[triangle] == 0 )
@@ -139,7 +139,7 @@ namespace sw
         const uint32 baseVertex        = inoutTarget.getVertexCount();
         const uint32 sourceVertexCount = source.getVertexCount();
         const uint32 targetTriangles   = inoutTarget.getTriangleCount();
-        // 선택 칸은 한쪽에만 있어도 맞춰 채운다(없는 쪽은 기본값).
+        // 선택 필드는 한쪽에만 있어도 맞춰 채운다(없는 쪽은 기본값).
         const bool bAnyNormal = inoutTarget._listNormal.empty() == false || source._listNormal.empty() == false;
         const bool bAnyUv     = inoutTarget._listUv.empty() == false || source._listUv.empty() == false;
         const bool bAnySkin   = inoutTarget._listSkin.empty() == false || source._listSkin.empty() == false;
@@ -188,7 +188,7 @@ namespace sw
                                                                                                                                : CharacterGeometryConstant::kNoPart ) );
             }
         }
-        // 모프는 이름으로 — 한쪽에만 있는 모프는 다른 쪽 구간이 0.
+        // 모프는 이름으로 맞춘다. 한쪽에만 있는 모프는 다른 쪽 구간이 0 이다.
         for ( GeometryMorphTarget& targetMorph : inoutTarget._listMorph )
         {
             targetMorph._listPositionDelta.resize( baseVertex, float3::Zero );
@@ -233,7 +233,7 @@ namespace sw
     void GeometryCutUtil::findBoundaryLoops( const AppearanceGeometry& geometry, vector<vector<uint32>>& outListLoop )
     {
         outListLoop.clear();
-        // 같은 자리 정점을 하나로 본다 — UV 이음매로 갈라진 정점이 가짜 경계를 만들지 않게.
+        // 같은 위치의 정점을 하나로 본다. UV 이음매로 갈라진 정점이 가짜 경계를 만들지 않게 하려는 것이다.
         const uint32                  vertexCount = geometry.getVertexCount();
         vector<uint32>                listWelded( vertexCount );
         unordered_map<uint64, uint32> mapPositionToVertex;
@@ -261,7 +261,7 @@ namespace sw
                 ++mapEdgeCount[GeometryCutInternal::makeEdgeKey( from, to )];
             }
         }
-        // 경계 모서리 = 반대 방향 모서리가 없는 것. 시작 정점 → 끝 정점으로 잇는다.
+        // 경계 모서리는 반대 방향 모서리가 없는 것이다. 시작 정점에서 끝 정점으로 잇는다.
         unordered_map<uint32, uint32> mapNext;
         vector<uint32>                listStart;
         for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
@@ -273,7 +273,7 @@ namespace sw
                 if ( mapEdgeCount.find( GeometryCutInternal::makeEdgeKey( to, from ) ) != mapEdgeCount.end() )
                     continue;
                 if ( mapNext.find( from ) != mapNext.end() )
-                    continue; // 나비 모양(한 정점에 경계 둘) — 첫 것만 잇는다
+                    continue; // 나비 모양(한 정점에 경계 둘)이면 첫 것만 잇는다.
                 mapNext.emplace( from, to );
                 listStart.push_back( from );
             }
@@ -328,7 +328,7 @@ namespace sw
                 center += geometry._listPosition[vertex];
             }
             center *= 1.0f / static_cast<float32>( loop.size() );
-            // 뉴웰 법선 — 경계 감음(원래 면 기준)의 반대가 캡의 바깥쪽이다.
+            // 뉴웰 법선이다. 경계 감음(원래 면 기준)의 반대가 캡의 바깥쪽이다.
             float3 newell = float3::Zero;
             for ( size_t corner = 0; corner < loop.size(); ++corner )
             {
@@ -388,7 +388,7 @@ namespace sw
             if ( found == mapPositionToVertex.end() )
                 mapPositionToVertex.emplace( key, vertex );
         }
-        // 방향 있는 모서리가 각각 한 번, 그 반대가 한 번 — 감음까지 맞는 닫힌 면.
+        // 방향 있는 모서리가 각각 한 번, 그 반대가 한 번 있으면 감음까지 맞는 닫힌 면이다.
         unordered_map<uint64, uint32> mapEdgeCount;
         for ( uint32 triangle = 0; triangle < geometry.getTriangleCount(); ++triangle )
         {

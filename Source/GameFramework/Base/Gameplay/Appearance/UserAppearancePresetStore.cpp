@@ -17,7 +17,7 @@ namespace sw
     {
         struct UserAppearancePresetStoreInternal
         {
-            static constexpr int32 kMaxPresetCount = 1000; ///< 손으로 고친 세이브가 큰 수를 말해도 그만큼만 읽는다
+            static constexpr int32 kMaxPresetCount = 1000; ///< 손으로 고친 세이브가 큰 수를 적어도 그 상한만큼만 읽는다
 
             static string makeKey( int32 index, const utf8* pField )
             {
@@ -28,7 +28,7 @@ namespace sw
                 return key;
             }
 
-            /** @brief 플레이어가 적은 이름 — 줄바꿈은 한 줄 세이브를 깨므로 공백으로 바꾼다. */
+            /** @brief 플레이어가 적은 이름입니다. 줄바꿈은 한 줄 세이브를 깨뜨리므로 공백으로 바꿉니다. */
             static string sanitizeName( string_view name )
             {
                 string result( name );
@@ -41,7 +41,7 @@ namespace sw
             }
 
             /**
-             * @brief 판 1 → 2: `version` → `formatVersion`, `count` → `presetCount`, 즐겨찾기 목록(`favorites=이름,이름`) → 프리셋마다 `.favorite=1`.
+             * @brief 버전 1에서 2로 올립니다. `version` 은 `formatVersion` 으로, `count` 는 `presetCount` 로 바꾸고, 즐겨찾기 목록(`favorites=이름,이름`)은 프리셋마다 `.favorite=1` 로 바꿉니다.
              */
             static void upgradeFromVersion1( KeyValueMap& inoutMap )
             {
@@ -68,7 +68,7 @@ namespace sw
                 inoutMap.erase( "favorites" );
             }
 
-            /** @brief 파일의 판을 지금 판까지 올립니다. 모르는(새) 판이면 false 입니다. */
+            /** @brief 파일의 버전을 현재 버전까지 올립니다. 알 수 없는 새 버전이면 false 입니다. */
             static bool upgradeToCurrent( KeyValueMap& inoutMap )
             {
                 int32 version = KeyValueFile::getInt( inoutMap, "formatVersion", 0 );

@@ -84,7 +84,7 @@ namespace sw
         const WesternAnimalDef* pAnimal = catalog.findAnimal( carcass._animalID );
         if ( pAnimal == nullptr || isRotten( catalog, carcass ) )
             return 0;
-        // 사체 값은 고기 몫도 있어 등급 0 이어도 1 성 값을 준다. 벗긴 사체는 절반.
+        // 사체 값에는 고기 값도 들어 있어서 등급이 0이어도 1성 값을 준다. 가죽을 벗긴 사체는 절반이다.
         const int32   stars = MathUtil::max( 1, computeCarcassStars( catalog, carcass ) );
         const float32 scale = carcass._bSkinned != SW_FALSE ? 0.5f : 1.0f;
         return static_cast<int32>( MathUtil::round( pAnimal->_carcassPrice * catalog.getGradeScale( stars ) * scale * 100.0f ) );

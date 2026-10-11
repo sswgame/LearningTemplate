@@ -18,7 +18,7 @@ namespace sw::editor
     {
         struct ParkLayoutPreviewInternal
         {
-            /** @brief 트랙 선분을 이을 때 건너뛰는 점 간격입니다. 트랙 점은 0.25 m 마다라 그대로 그리면 선분이 수천 개다. */
+            /** @brief 트랙 선분을 이을 때 건너뛰는 점 간격입니다. 트랙 점은 0.25 m 마다 있어서 그대로 그리면 선분이 수천 개가 됩니다. */
             static constexpr size_t kTrackPointStride = 8;
             /** @brief 입구 십자의 높이(m)입니다. */
             static constexpr float32 kGateHeight = 3.0f;

@@ -14,10 +14,10 @@ namespace sw
     {
         /**
          * @brief 포즈 행렬과 (스케일 + 강체 변환) 사이를 오갑니다.
-         * @details `DualQuaternion` 은 스케일을 담지 못합니다. 그래서 포즈를 섞을 때는 스케일을
-         *          따로 떼어 선형 보간하고, 나머지 회전 · 이동만 DLB 로 섞은 뒤 다시 곱합니다.
-         *          떼지 않고 섞으면 표본 지점에서는 원본 포즈가 그대로 나오는데 그 사이에서만
-         *          스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로 포즈가 튑니다.
+         * @details `DualQuaternion` 은 스케일을 담지 못한다. 그래서 포즈를 섞을 때는 스케일을
+         *          따로 떼어 선형 보간하고, 나머지 회전과 이동만 DLB 로 섞은 뒤 다시 곱한다.
+         *          떼지 않고 섞으면 샘플 지점에서는 원본 포즈가 그대로 나오는데 그 사이에서만
+         *          스케일이 1 로 주저앉아, 파라미터를 조금 옮기는 것만으로 포즈가 튄다.
          */
         struct BlendSpaceInternal
         {
@@ -27,7 +27,7 @@ namespace sw
                 quaternion rotation{};
                 float3     translation{};
                 // 축 하나가 0 이면 회전을 뽑을 수 없어 decompose 가 Identity 를 준다. 그래도
-                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 복원하면 그것대로 틀린 그림이다.
+                // 스케일 0 은 그대로 살려 둔다. 눌린 포즈를 1 로 복원하면 그것대로 틀린 결과다.
                 pose.decompose( outScale, rotation, translation );
                 return DualQuaternion( rotation, translation );
             }
@@ -114,11 +114,11 @@ namespace sw
         if ( _listSample.size() == 1 )
             return _listSample.front()._pose;
 
-        // 역거리 가중치(IDW). 표본 수에 상한이 없다(고정 길이 버퍼를 두지 않는다 — 넘는 표본을 한 마디 없이 버리게 된다).
+        // 역거리 가중치(IDW)다. 샘플 수에 상한이 없다(고정 길이 버퍼를 두지 않는다. 두면 넘는 샘플을 아무 말 없이 버리게 된다).
         //
-        // 파라미터는 **표본 범위로 먼저 가둔다**(언리얼 블렌드 스페이스와 같다). 가중치는 가장 가까운 표본의 거리로 나눠 1 이 되게 한다.
-        // 주의: 1/d² 를 그대로 더해 절대값 임계값과 비교하면 cm/s 단위(표본 0~600)에서 대시 2500 일 때 표본마다 가중치가 2e-7 쯤이라
-        // "합이 너무 작다" 에 걸려, 가장 가까운 표본이 아니라 **처음 넣은 표본**(보통 Idle)으로 튄다.
+        // 파라미터는 **샘플 범위로 먼저 제한한다**(언리얼 블렌드 스페이스와 같다). 가중치는 가장 가까운 샘플의 거리로 나눠 1 이 되게 한다.
+        // 주의: 1/d² 를 그대로 더해 절대값 임계값과 비교하면, cm/s 단위(샘플 0~600)에서 대시 2500 일 때 샘플마다 가중치가 2e-7 쯤이라
+        // "합이 너무 작다"에 걸려, 가장 가까운 샘플이 아니라 **처음 넣은 샘플**(보통 Idle)로 튄다.
         float2 minParam = _listSample.front()._parameter;
         float2 maxParam = _listSample.front()._parameter;
         for ( const BlendSample2D& sample : _listSample )
@@ -137,7 +137,7 @@ namespace sw
             nearestDistSq = MathUtil::min( nearestDistSq, distSq );
         }
 
-        // 가장 가까운 표본의 상대 가중치가 1 이므로 합은 1 이상이다 — 작아서 버리는 일이 없다.
+        // 가장 가까운 샘플의 상대 가중치가 1 이므로 합은 1 이상이다. 작아서 버리는 일이 없다.
         float32 totalWeight = 0.0f;
         for ( const BlendSample2D& sample : _listSample )
         {

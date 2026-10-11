@@ -26,18 +26,18 @@ namespace sw::editor
     {
         struct EditorDockLayoutInternal
         {
-            /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이라 겹치지 않습니다. */
+            /** @brief `-gv_editorOpenPanel` 이 이 값이면 등록된 패널을 전부 엽니다. 패널 id 는 `hierarchy` 같은 소문자 이름이므로 겹치지 않습니다. */
             static constexpr const utf8* kOpenAllPanels = "all";
 
-            /** @brief 셸이 요청한 레이아웃 덮어쓰기(자체 테스트 실행) — `setPanelOverrideRequested`. */
+            /** @brief 셸이 요청한 레이아웃 덮어쓰기입니다. 자체 테스트를 실행할 때 쓰며 `setPanelOverrideRequested` 가 설정합니다. */
             inline static bool _s_bPanelOverrideRequested = false;
 
-            /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없습니다. */
+            /** @brief 이보다 작은 뷰포트(최소화한 창의 0×0)는 비율의 기준으로 삼지 않습니다. 비율이 0 이 되면 되돌릴 수 없기 때문입니다. */
             static constexpr float32 kMinScaledDockspaceSize = 64.0f;
 
-            /** @brief 기본 배치에서 가운데 영역의 앞 탭이 될 창(씬 뷰 패널 제목)입니다. */
+            /** @brief 기본 배치에서 가운데 영역의 앞 탭이 될 창입니다. 씬 뷰 패널의 제목입니다. */
             static constexpr const utf8* kFrontTabWindowTitle = "Scene";
-            /** @brief 기본 배치 뒤 앞 탭을 고르려 포커스를 주는 최대 프레임 수입니다 — 창이 도킹되고 탭 막대가 서는 데 한두 프레임이 든다. */
+            /** @brief 기본 배치 뒤에 앞 탭을 고르려고 포커스를 주는 최대 프레임 수입니다. 창이 도킹되고 탭 막대가 만들어지는 데 한두 프레임이 걸립니다. */
             static constexpr uint8 kMaxFrontTabFrames = 8;
 
             /** @brief @p pNode 아래 모든 노드의 기준 크기(SizeRef)에 @p scale 을 곱합니다. */
@@ -52,9 +52,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록돼 있는지 확인합니다.
-             * @details `DockBuilderDockWindow` 는 **모르는 이름도 조용히 받습니다.** 그래서 패널 제목이 바뀌면 기본 배치만 말없이
-             *          깨집니다. `EditorCommandRegistry::validate` 가 커맨드 표에 하는 일을 여기서도 합니다.
+             * @brief 창을 도킹하고, 그 이름을 가진 패널이 실제로 등록되어 있는지 확인합니다.
+             * @details `DockBuilderDockWindow` 는 모르는 이름도 조용히 받는다. 그래서 패널 제목이 바뀌면 기본 배치만 말없이
+             *          깨진다. `EditorCommandRegistry::validate` 가 커맨드 테이블에 하는 일을 여기서도 한다.
              */
             static void dockCheckedWindow( const utf8* pTitle, ImGuiID dockID )
             {
@@ -81,15 +81,15 @@ namespace sw::editor
 {
     SW_LOG_CALLER( "EditorDockLayout" );
 
-    // 이 파일만 읽으므로 여기서 정의한다(헤더에 선언하지 않는다).
+    // 이 파일만 읽으므로 여기서 정의하고 헤더에는 선언하지 않는다.
     /**
-     * @brief `-gv_editorOpenPanel=<id>`: 그 패널 **하나만** 열고 나머지는 닫습니다. `-gv_editorOpenPanel=all` 이면 **전부** 엽니다.
-     * @details 하나만 열기는 화면 캡처용입니다. 전부 띄우면 서로를 가려 마지막에 등록된 것이 위로 오므로 원하는 패널이 캡처에
-     *          나오지 않습니다. 전부 열기는 `-gv_editorPanelDump` 가 도구 패널까지 재게 하려는 것입니다. 도구 패널은 기본이 닫힘이라
-     *          덤프가 기본 레이아웃의 다섯 개만 봅니다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둡니다.
-     *          **어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않습니다** — 저장하면 그 가시성이 `windows.ini` 에 굳어, 다음 실행부터
-     *          그 패널만 열립니다.
-     *          id 는 패널의 `SW_EDITOR_PANEL` 이 준 것입니다(예: `render_targets` · `profiler` · `material`).
+     * @brief `-gv_editorOpenPanel=<id>` 는 그 패널 하나만 열고 나머지는 닫습니다. `-gv_editorOpenPanel=all` 이면 전부 엽니다.
+     * @details 하나만 열기는 화면 캡처용이다. 전부 띄우면 서로를 가려 마지막에 등록된 것이 위로 오므로 원하는 패널이 캡처에
+     *          나오지 않는다. 전부 열기는 `-gv_editorPanelDump` 가 도구 패널까지 측정하게 하려는 것이다. 도구 패널은 기본이 닫힘이라
+     *          덤프가 기본 레이아웃의 다섯 개만 본다. 그래서 전부 열기는 기본 도킹을 적용하지 않고 모두 떠 있는 창으로 둔다.
+     *          어느 쪽이든 저장된 레이아웃을 읽지도 쓰지도 않는다. 저장하면 그 가시성이 `windows.ini` 에 굳어, 다음 실행부터
+     *          그 패널만 열린다.
+     *          id 는 패널의 `SW_EDITOR_PANEL` 이 정한 값이다(예: `render_targets`, `profiler`, `material`).
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorOpenPanel, "", "시작할 때 이 id 의 패널 하나만 연다, all 이면 전부 연다 (비우면 사용 안 함)" );
 
@@ -171,7 +171,7 @@ namespace sw::editor
             return;
         _bLayoutPending = SW_FALSE;
 
-        // 가시성을 먼저 — 다시 열린 패널의 창이 이번 프레임에 만들어지며 읽은 도킹 설정을 받는다.
+        // 가시성을 먼저 적용한다. 다시 열린 패널의 창이 이번 프레임에 만들어지면서 읽은 도킹 설정을 받는다.
         EditorContext* pContext = EditorContext::get();
         if ( pContext != nullptr && _pendingLayoutVisibility.empty() == false )
         {
@@ -182,13 +182,13 @@ namespace sw::editor
             }
         }
         ImGui::LoadIniSettingsFromMemory( _pendingLayoutIni.c_str(), _pendingLayoutIni.size() );
-        // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 든다. 다음 프레임이 그 크기를 기준으로 지금 창에 비율을 맞춘다.
+        // 읽은 레이아웃은 저장할 때의 도크스페이스 크기와 그 크기의 SizeRef 를 가지고 있다. 다음 프레임이 그 크기를 기준으로 현재 창에 비율을 맞춘다.
         _lastDockspaceWidth  = 0.0f;
         _lastDockspaceHeight = 0.0f;
-        // 기본 배치를 다시 덮지 않게 한다(읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다). 배치가 맞지 않으면 메뉴의 레이아웃 초기화로 되돌린다.
+        // 기본 배치를 다시 덮어쓰지 않게 한다. 읽은 도킹 노드가 비어 보여도 그것이 사용자의 배치다. 배치가 맞지 않으면 메뉴의 레이아웃 초기화로 되돌린다.
         _bApplied      = SW_TRUE;
         _bResetDefault = SW_FALSE;
-        // 다시 연 패널의 창은 처음 나타나며 포커스를 받아 그 탭이 앞에 선다(그대로 두면 씬 뷰 최대화를 풀 때 Prefab Editor 가 앞에 선다) — 기본 배치처럼 Scene 탭을 앞으로.
+        // 다시 연 패널의 창은 처음 나타나면서 포커스를 받아 그 탭이 앞에 선다. 그대로 두면 씬 뷰 최대화를 풀 때 Prefab Editor 가 앞에 선다. 기본 배치처럼 Scene 탭을 앞으로 가져온다.
         _bFrontTabPending   = SW_TRUE;
         _frontTabFrameCount = 0;
         _pendingLayoutIni.clear();
@@ -218,10 +218,10 @@ namespace sw::editor
         ImGuiIO& io = ImGui::GetIO();
 
         // 진단 스위치가 켜져 있으면 저장된 레이아웃을 읽지도 쓰지도 않는다. 도킹된 패널은 같은 노드에
-        // 탭으로 쌓여 **앞의 하나만 그려지므로**, 모두 열어도 뒤의 것은 여전히 확인되지 않는다.
+        // 탭으로 쌓여 앞의 하나만 그려지므로, 모두 열어도 뒤의 것은 여전히 확인되지 않는다.
         // 레이아웃을 비우면 모두 떠 있는 창이 되어 한 프레임에 전부 그려진다.
         // 하나만 열 때도 같은 이유로 레이아웃을 비운다. 저장된 도킹으로 복원되면 그 패널이
-        // 탭 뒤에 숨어 결국 보이지 않는다.
+        // 탭 뒤에 숨어서 결국 보이지 않는다.
         if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false )
             io.IniFilename = _imguiIniPath.c_str();
         else
@@ -234,7 +234,7 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 진단 스위치가 켜져 있으면 저장된 가시성을 **읽지 않는다**. 도구 패널은 기본이 닫힘이고
+        // 진단 스위치가 켜져 있으면 저장된 가시성을 읽지 않는다. 도구 패널은 기본이 닫힘이고
         // windows.ini 도 닫힘으로 기억하므로, 등록 시점에 열어 두어도 여기서 곧바로 닫힌다.
         if ( isOpeningAllPanels() )
         {
@@ -247,7 +247,7 @@ namespace sw::editor
             return;
         }
 
-        // 에디터 자체 테스트는 사용자의 레이아웃과 무관한 상태에서 돈다 — 등록된 기본 가시성(코어 열림 · 도구 닫힘)과 기본 도킹 배치.
+        // 에디터 자체 테스트는 사용자의 레이아웃과 무관한 상태에서 실행한다. 등록된 기본 가시성(코어는 열림, 도구는 닫힘)과 기본 도킹 배치를 쓴다.
         if ( gv_editorOpenPanel.empty() && isPanelOverrideActive() )
         {
             SW_LOG_INFO( "Editor self test: default panel visibility and dock layout (saved layout is neither read nor written)." );
@@ -300,8 +300,8 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 스위치로 정한 가시성(전부 열기 · 하나만 열기)을 사용자의 레이아웃으로 굳히지 않는다. 한 번 켠 스위치 때문에
-        // 다음 실행부터 모든 패널이, 또는 그 패널 하나만 열리는 일이 없어야 한다.
+        // 스위치로 정한 가시성(전부 열기, 하나만 열기)을 사용자의 레이아웃으로 굳히지 않는다. 스위치를 한 번 켰다고
+        // 다음 실행부터 모든 패널이 열리거나 그 패널 하나만 열려서는 안 된다.
         if ( _windowsIniPath.empty() == false && isPanelOverrideActive() == false )
         {
             KeyValueMap visibilityKv;
@@ -319,7 +319,7 @@ namespace sw::editor
                 SW_LOG_WARNING( "Failed to write windows.ini: %#", _windowsIniPath.c_str() );
         }
 
-        // 도킹 레이아웃도 같다 — 스위치가 만든 배치(전부 떠 있는 창 · 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
+        // 도킹 레이아웃도 같다. 스위치가 만든 배치(전부 떠 있는 창, 기본 배치)를 사용자의 imgui.ini 에 쓰지 않는다.
         if ( _imguiIniPath.empty() == false && isPanelOverrideActive() == false && ImGui::GetCurrentContext() != nullptr )
         {
             ImGui::SaveIniSettingsToDisk( _imguiIniPath.c_str() );
@@ -334,7 +334,7 @@ namespace sw::editor
             return;
 
         const ImGuiViewport* pViewport = ImGui::GetMainViewport();
-        // 이름의 판 번호는 기본 배치의 창이 바뀔 때 올린다 — 저장된 imgui.ini 의 옛 도크 트리를 버리고 기본 배치를 다시 짓는다.
+        // 이름의 버전 번호는 기본 배치의 창이 바뀔 때 올린다. 저장된 imgui.ini 의 이전 도크 트리를 버리고 기본 배치를 다시 만든다.
         const ImGuiID dockspaceID = ImGui::GetID( "EditorMainDockSpace_v7" );
         // 도크스페이스가 이번 프레임 크기를 나누기 전에 기준 크기를 새 뷰포트 비율로 맞춘다.
         scaleDockSizeToViewport( dockspaceID );
@@ -359,7 +359,7 @@ namespace sw::editor
 
     void EditorDockLayout::requestResetDefault()
     {
-        // 저장된 배치가 있으면 도크 트리가 비어 있지 않다 — 빈 트리일 때만 짓는 첫 적용과 달리 덮어쓰라고 따로 적는다.
+        // 저장된 배치가 있으면 도크 트리가 비어 있지 않다. 빈 트리일 때만 만드는 첫 적용과 달리, 덮어쓰라고 따로 지정한다.
         _bApplied      = SW_FALSE;
         _bResetDefault = SW_TRUE;
     }
@@ -369,7 +369,7 @@ namespace sw::editor
         if ( _bFrontTabPending == SW_FALSE )
             return;
 
-        // 숨은 탭의 창도 Active 다(Begin 은 불렸고 내용만 건너뛴다). 닫힌 패널의 창은 Active 가 아니라 고를 탭이 없다.
+        // 숨은 탭의 창도 Active 다. Begin 은 호출되고 내용만 건너뛴다. 닫힌 패널의 창은 Active 가 아니므로 고를 탭이 없다.
         ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorDockLayoutInternal::kFrontTabWindowTitle );
         if ( pWindow == nullptr || pWindow->Active == false || _frontTabFrameCount >= EditorDockLayoutInternal::kMaxFrontTabFrames )
         {
@@ -377,8 +377,8 @@ namespace sw::editor
             return;
         }
 
-        // DockTabIsVisible 는 이번 프레임 Begin 이 정한 값이다 — 도킹된 창이 탭 막대에서 골라져 보이면 참이다. 주의: 같은 프레임에 뒤에서 처음 나타난
-        // 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀐다 — 그래서 두 프레임은 포커스를 주고 나서 본다.
+        // DockTabIsVisible 는 이번 프레임의 Begin 이 정한 값이다. 도킹된 창이 탭 막대에서 선택되어 보이면 참이다. 같은 프레임에 뒤에서 처음 나타난
+        // 창(다시 연 패널)이 포커스를 가져가면 다음 프레임에 탭이 바뀌므로, 두 프레임 동안 포커스를 주고 나서 확인한다.
         constexpr uint32 kMinFocusFrames = 2;
         if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
         {
@@ -386,19 +386,19 @@ namespace sw::editor
             return;
         }
         ++_frontTabFrameCount;
-        ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 고른다
+        ImGui::FocusWindow( pWindow ); // 도킹된 창이면 그 노드의 탭 막대에서 이 탭을 선택한다
     }
 
     void EditorDockLayout::scaleDockSizeToViewport( uint32 dockspaceID )
     {
         const ImVec2 workSize = ImGui::GetMainViewport()->WorkSize;
         if ( workSize.x < EditorDockLayoutInternal::kMinScaledDockspaceSize || workSize.y < EditorDockLayoutInternal::kMinScaledDockspaceSize )
-            return; // 최소화 — 기준을 바꾸지 않고 다음 실제 크기에서 비교한다
+            return; // 최소화 상태이므로 기준을 바꾸지 않고 다음 실제 크기에서 비교한다
 
         ImGuiDockNode* pRoot = ImGui::DockBuilderGetNode( dockspaceID );
         if ( _lastDockspaceWidth <= 0.0f || _lastDockspaceHeight <= 0.0f )
         {
-            // 첫 프레임 · 이름 붙인 레이아웃을 읽은 뒤: 기준은 저장된 도크스페이스 크기다(다른 창 크기로 저장한 imgui.ini 도 비율로 맞는다).
+            // 첫 프레임이거나 이름 붙인 레이아웃을 읽은 뒤에는 저장된 도크스페이스 크기를 기준으로 한다. 다른 창 크기로 저장한 imgui.ini 도 비율로 맞는다.
             const bool bHasSavedSize = pRoot != nullptr && pRoot->Size.x >= EditorDockLayoutInternal::kMinScaledDockspaceSize &&
                                        pRoot->Size.y >= EditorDockLayoutInternal::kMinScaledDockspaceSize;
             _lastDockspaceWidth  = bHasSavedSize ? pRoot->Size.x : workSize.x;
@@ -436,14 +436,14 @@ namespace sw::editor
         ImGui::DockBuilderSplitNode( dockMain, ImGuiDir_Down, 0.28f, &dockBottom, &dockMain );
         (void)dockTop;
 
-        // 기본 배치는 패널 **제목 문자열**로 붙인다(ImGui 의 API 가 그렇다). 그래서 제목이 패널 쪽에서 바뀌면 여기 적힌
+        // 기본 배치는 패널 제목 문자열로 붙인다. ImGui 의 API 가 그렇다. 그래서 제목이 패널 쪽에서 바뀌면 여기 적힌
         // 이름과 어긋나고, 그 패널은 아무 말 없이 도킹되지 않는다. `DockBuilderDockWindow` 는 모르는 이름도 조용히 받기
-        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알린다(도구 패널은 레지스트리에서 이름을 받아 온다).
+        // 때문이다. 등록된 패널 제목과 대조해 어긋나면 알린다. 도구 패널은 레지스트리에서 이름을 받아 온다.
         EditorDockLayoutInternal::dockCheckedWindow( "Hierarchy", dockLeft );
         EditorDockLayoutInternal::dockCheckedWindow( "Inspector", dockRight );
 
-        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene 이다 — 붙인 순서로는 정해지지 않으므로(ImGui 는 새 탭 가운데
-        // 마지막 것을 고른다) 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.
+        // 씬 뷰와 게임 뷰는 같은 영역의 탭이다(유니티 기본). 앞 탭은 Scene 이다. 붙인 순서로는 정해지지 않는다. ImGui 는 새 탭 가운데
+        // 마지막 것을 고르기 때문이다. 그래서 패널을 그린 뒤 `updateDefaultTabSelection` 이 포커스로 고른다.
         EditorDockLayoutInternal::dockCheckedWindow( EditorDockLayoutInternal::kFrontTabWindowTitle, dockMain );
         EditorDockLayoutInternal::dockCheckedWindow( "Game", dockMain );
         EditorDockLayoutInternal::dockCheckedWindow( "Profiler", dockMain );

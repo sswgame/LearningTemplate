@@ -23,7 +23,7 @@ namespace sw
             static constexpr uint32 kVersion      = 1;
             static constexpr uint32 kNoActiveNode = invalid_index::kUint32;
 
-            /** @brief 0/1 바이트 목록을 비트로 씁니다. */
+            /** @brief 0 또는 1 인 바이트 목록을 비트로 씁니다. */
             static void writeFlagBits( BitWriter& writer, const vector<uint8>& listFlag )
             {
                 for ( const uint8 flag : listFlag )
@@ -41,7 +41,7 @@ namespace sw
                 }
             }
 
-            /** @brief 0 이 아닌 값만 (앞 자리와의 차, 비트 그대로) 로 씁니다. */
+            /** @brief 0 이 아닌 값만 (앞 인덱스와의 차이, 비트 그대로) 형태로 씁니다. */
             static void writeSparseFloats( BitWriter& writer, const vector<float32>& listValue )
             {
                 uint64 count = 0;
@@ -121,7 +121,7 @@ namespace sw
                 return bits;
             }
 
-            /** @brief 오름차순 목록에서 값의 자리입니다. 없으면 -1 입니다. */
+            /** @brief 오름차순 목록에서 값의 인덱스를 반환합니다. 없으면 -1 입니다. */
             static int32 findSorted( const vector<uint32>& listSorted, uint32 value )
             {
                 const auto iter = std::lower_bound( listSorted.begin(), listSorted.end(), value );
@@ -176,7 +176,7 @@ namespace sw
             _listInitialAnchor[leaf] = listAnchoredLeaf[leaf] != 0 ? SW_TRUE : SW_FALSE;
         }
 
-        // 잎 → 연결 표(CSR).
+        // 잎에서 연결로 가는 테이블(CSR)을 만든다.
         _listLeafLinkStart.assign( graph._leafCount + 1, 0 );
         for ( const FractureLink& link : graph._listLink )
         {
@@ -276,7 +276,7 @@ namespace sw
                 _listLeafActive[leaf] = child;
             }
         }
-        // 그 그룹의 노드 목록에서 갈린 노드를 자식들로 바꾼다.
+        // 그 그룹의 노드 목록에서 갈라진 노드를 자식들로 바꾼다.
         const int32 groupIndex = findGroupIndex( _listLeafGroup[graph._listNode[node]._firstLeaf] );
         if ( groupIndex < 0 )
             return;
@@ -372,7 +372,7 @@ namespace sw
                 }
             }
         }
-        // 덩어리 순서 = 가장 작은 노드 순(노드 목록이 오름차순이므로 뿌리 = 가장 작은 자리).
+        // 덩어리 순서는 가장 작은 노드 순이다(노드 목록이 오름차순이므로 뿌리가 가장 작은 인덱스다).
         vector<int32> listComponentOfRoot( listNode.size(), -1 );
         for ( uint32 index = 0; index < static_cast<uint32>( listNode.size() ); ++index )
         {
@@ -390,7 +390,7 @@ namespace sw
     {
         const FractureGraph& graph     = *_pGraph;
         const uint32         nodeCount = static_cast<uint32>( listNode.size() );
-        // 이웃 쌍(작은 자리 → 큰 자리)마다 맞닿은 넓이와 그 사이 연결들.
+        // 이웃 쌍(작은 인덱스에서 큰 인덱스로)마다 맞닿은 넓이와 그 사이의 연결들을 구한다.
         struct Neighbor
         {
             uint32  _other;
@@ -443,7 +443,7 @@ namespace sw
             { return lhs._other < rhs._other; } );
         }
 
-        // 앵커에서 너비 우선 — 깊이(앵커까지 몇 단계).
+        // 앵커에서 너비 우선으로 깊이(앵커까지 몇 단계인지)를 구한다.
         vector<uint32> listDepth( nodeCount, 0xFFFFFFFFu );
         vector<uint32> listQueue;
         for ( uint32 index = 0; index < nodeCount; ++index )
@@ -466,10 +466,10 @@ namespace sw
             }
         }
 
-        // 깊은 노드부터 — 제 무게 + 받은 하중을 더 얕은 이웃에게 맞닿은 세기 비율로 나눠 넘긴다. 몫이 세기를 넘으면 그 사이가 끊긴다.
+        // 깊은 노드부터 자기 무게와 받은 하중을 더 얕은 이웃에게 맞닿은 세기의 비율로 나눠 넘긴다. 나눠 받은 하중이 세기를 넘으면 그 사이가 끊긴다.
         vector<float32> listIncoming( nodeCount, 0.0f );
         bool            bBroke  = false;
-        const float32   gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력 — 서버 · 클라가 같은 설정을 읽는다
+        const float32   gravity = PhysicsSystem::getConfiguredGravityMagnitude(); // 설정된 물리 중력이다. 서버와 클라이언트가 같은 설정을 읽는다.
         for ( size_t order = listQueue.size(); order > 0; --order )
         {
             const uint32 current = listQueue[order - 1];
@@ -521,7 +521,7 @@ namespace sw
                 continue;
             const DestructionGroup old = _listGroup[static_cast<size_t>( groupIndex )];
             vector<vector<uint32>> listComponent;
-            // 붙은 덩어리는 무게로 끊길 수 있다 — 끊기면 다시 나눠 다시 측정한다.
+            // 붙은 덩어리는 무게로 끊길 수 있다. 끊기면 다시 나누고 지지를 다시 계산한다.
             for ( uint32 pass = 0; pass < kMaxSupportPass; ++pass )
             {
                 splitComponents( old._listNode, listComponent );
@@ -554,7 +554,7 @@ namespace sw
                 }
                 listPart.push_back( std::move( part ) );
             }
-            // 한 덩어리 그대로면(묶음이 갈라졌을 뿐) 번호를 지킨다 — 바디도 그림도 바뀌지 않는다.
+            // 한 덩어리 그대로면(묶음이 갈라졌을 뿐이면) 번호를 유지한다. 바디도 렌더링도 바뀌지 않는다.
             if ( listPart.size() == 1 && listPart[0]._bAnchored == old._bAnchored )
             {
                 DestructionGroup& kept = _listGroup[static_cast<size_t>( groupIndex )];
@@ -692,7 +692,7 @@ namespace sw
         if ( bNodeStrainRead == false || bLinkStrainRead == false )
             return false;
 
-        // 그룹 — 활성 노드가 잎을 하나씩 정확히 덮어야 한다.
+        // 그룹: 활성 노드가 잎을 하나씩 정확히 덮어야 한다.
         const uint64 groupCount = reader.readVarUint();
         if ( groupCount == 0 || groupCount > graph._listNode.size() )
             return false;

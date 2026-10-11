@@ -20,6 +20,6 @@ namespace sw
         GameObject* pOwner = getOwner();
         AABB        box{};
         if ( pOwner != nullptr && pOwner->getManager() != nullptr && pOwner->getWorldBox( box ) )
-            pOwner->getManager()->getSceneNavigation().invalidateArea( box, true );
+            pOwner->getManager()->getSceneService<SceneNavigation>().invalidateArea( box, true );
     }
 } // namespace sw

@@ -74,7 +74,7 @@ namespace sw
             frame._uvRect._z  = static_cast<float32>( frameJSON.get( "w" ).asFloat( 1.0 ) );
             frame._uvRect._w  = static_cast<float32>( frameJSON.get( "h" ).asFloat( 1.0 ) );
             frame._durationMs = static_cast<int32>( frameJSON.get( "durationMs" ).asInt( 0 ) );
-            // 9-슬라이스 테두리는 선택 키다. 숫자 넷의 배열이 아니면 데이터 오류라 알리고 테두리 없이 읽는다.
+            // 9-슬라이스 테두리는 선택 키다. 숫자 네 개의 배열이 아니면 데이터 오류로 알리고 테두리 없이 읽는다.
             const JSONValue borderJSON = frameJSON.get( "border" );
             if ( borderJSON.isValid() )
             {
@@ -104,7 +104,7 @@ namespace sw
             _listKey.push_back( key );
         } );
 
-        // 구간은 프레임 목록 안으로 자른다. 잘린 것 · 버린 것은 로드마다 한 번 알린다(조용히 다른 프레임을 보이지 않게).
+        // 구간은 프레임 목록 안으로 자른다. 잘리거나 버린 것은 로드마다 한 번 알린다(조용히 다른 프레임을 보이지 않게 하려는 것이다).
         const int32 frameCount   = getFrameCount();
         uint32      clampedCount = 0;
         forEachObjectInArray( root, "animations", [this, frameCount, &clampedCount]( const JSONValue& animationJSON, size_t /*animationIndex*/ )
@@ -114,7 +114,7 @@ namespace sw
             const int64 requestedFirst = animationJSON.get( "start" ).asInt( 0 );
             const int64 requestedCount = animationJSON.get( "count" ).asInt( 0 );
             animation._bLoop           = animationJSON.get( "loop" ).asBool( true ) ? SW_TRUE : SW_FALSE;
-            // 알림 — 구간 시작 기준 시각(초) · 길이(구간 알림). 스켈레탈 클립 곁 데이터(`clips.json`)와 같은 키다.
+            // 알림은 구간 시작 기준 시각(초)과 길이(구간 알림)를 쓴다. 스켈레탈 클립 옆 데이터(`clips.json`)와 같은 키다.
             const JSONValue notifies = animationJSON.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {

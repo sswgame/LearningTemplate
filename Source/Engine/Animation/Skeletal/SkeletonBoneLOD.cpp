@@ -157,7 +157,7 @@ namespace sw
         const string_view folder     = ( slash == string_view::npos ) ? string_view{} : stemPath.substr( 0, slash );
         const size_t      parentCut  = folder.find_last_of( '/' );
         const string_view folderName = ( parentCut == string_view::npos ) ? folder : folder.substr( parentCut + 1 );
-        // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다 — 그 밖, 메시 곁에 둔다.
+        // 임포트 옆 폴더(폴더 이름 = 파일 이름)는 다시 임포트할 때 지워진다. 그 밖의 메시 옆에 둔다.
         string path = ( folder.empty() == false && folderName == stem ) ? string{ folder } : string{ stemPath };
         path.append( kExtension.data(), kExtension.size() );
         return path;

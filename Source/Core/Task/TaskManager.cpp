@@ -208,7 +208,7 @@ namespace sw
         _bStop        = false;
         _idleWorkerMask.store( 0, std::memory_order_relaxed );
         _mainThreadParkedSlot.store( -1, std::memory_order_relaxed );
-        // 자리를 모두 만든 **뒤에** 스레드를 띄운다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
+        // 슬롯을 모두 만든 **뒤에** 스레드를 시작한다. 워커는 서로의 데크를 훔치므로, 도는 동안 목록의 크기가 바뀌면 안 된다.
         _listWorkerSlot.reserve( threadCount );
         for ( uint32 workerIndex = 0; workerIndex < threadCount; ++workerIndex )
         {
@@ -338,7 +338,7 @@ namespace sw
         if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
         {
             t_helperSlotOwnerID = _instanceID;
-            // 돌려받은 칸부터 다시 쓴다(가장 낮은 비트).
+            // 돌려받은 슬롯부터 다시 쓴다(가장 낮은 비트).
             uint32 freeMask = _helperSlotFreeMask.load( std::memory_order_acquire );
             while ( freeMask != 0 )
             {
@@ -358,7 +358,7 @@ namespace sw
             const uint32 assigned = _helperSlotCount.fetch_add( 1, std::memory_order_relaxed );
             if ( assigned >= kMaxHelperThreadCount )
             {
-                // 넘치면 마지막 칸을 나눠 쓴다. 스크래치가 겹칠 수 있으니 알린다. 끝나는 스레드가 칸을 돌려주므로 동시에 살아 있는 비워커 스레드가
+                // 넘치면 마지막 슬롯을 나눠 쓴다. 스크래치가 겹칠 수 있으므로 로그로 알린다. 끝나는 스레드가 슬롯을 돌려주므로 동시에 살아 있는 비워커 스레드가
                 // 이만큼일 때만 닿는다.
                 SW_LOG_ERROR( "More than %# non-worker threads execute tasks at once — scratch slots collide (raise kMaxHelperThreadCount)", kMaxHelperThreadCount );
                 t_helperScratchSlot = static_cast<int32>( kMaxHelperThreadCount - 1 );
@@ -373,7 +373,7 @@ namespace sw
     {
         if ( t_helperScratchSlot < 0 || t_helperSlotOwnerID != _instanceID )
             return;
-        // 넘쳐서 나눠 쓰던 마지막 칸은 다른 스레드도 쓰고 있을 수 있어 돌려주지 않는다.
+        // 넘쳐서 나눠 쓰던 마지막 슬롯은 다른 스레드도 쓰고 있을 수 있으므로 돌려주지 않는다.
         const bool bShared = _helperSlotCount.load( std::memory_order_relaxed ) > kMaxHelperThreadCount &&
                              t_helperScratchSlot == static_cast<int32>( kMaxHelperThreadCount - 1 );
         if ( bShared == false )

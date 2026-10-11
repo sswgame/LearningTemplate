@@ -15,7 +15,7 @@ namespace sw
     {
         struct BrZoneInternal
         {
-            static constexpr int32 kMaxPhaseBits = 1024; ///< 직렬화 단계 번호 상한
+            static constexpr int32 kMaxPhaseBits = 1024; ///< 직렬화할 단계 번호의 상한
 
             static float32 computeDistance( const float2& lhs, const float2& rhs )
             {
@@ -24,7 +24,7 @@ namespace sw
                 return MathUtil::sqrt( dx * dx + dy * dy );
             }
 
-            /** @brief @p center 둘레 반지름 @p radius 원판에서 고르게 고른 점입니다. */
+            /** @brief @p center 둘레의 반지름 @p radius 원판에서 고르게 뽑은 점을 반환합니다. */
             static float2 pickInDisk( GameRandom& random, const float2& center, float32 radius )
             {
                 const float32 distance = radius * MathUtil::sqrt( random.nextFloat() );
@@ -100,7 +100,7 @@ namespace sw
                 }
                 continue;
             }
-            // 다 줄었다 — 다음 단계.
+            // 다 줄었으면 다음 단계로 넘어간다.
             _center = _nextCenter;
             _radius = _nextRadius;
             pushEvent( BrZoneEvent::Kind::ShrinkFinished );
@@ -189,7 +189,7 @@ namespace sw
     }
 
     // 세이브(Archive)는 넷 스냅숏 코덱의 바이트를 그대로 싣는다(같은 상태를 두 형식으로 따로 쓰지 않는다).
-    // 넷 코덱은 씨앗을 양쪽이 같다고 보고 난수를 싣지 않으므로, 다음 원을 같은 수열로 고르게 난수 상태만 뒤에 붙인다.
+    // 넷 코덱은 시드를 양쪽이 같다고 보고 난수를 싣지 않는다. 그래서 다음 원을 같은 수열로 고를 수 있도록 난수 상태만 뒤에 붙인다.
     void BrZone::writeState( Archive& outArchive ) const
     {
         BitWriter writer;
@@ -206,7 +206,7 @@ namespace sw
         if ( archive.readSection( bytes ) == false || StateArchiveUtil::readRandom( archive, random ) == false )
             return false;
         BitReader reader( bytes.data(), static_cast<int32>( bytes.size() ) );
-        if ( readState( reader ) == false ) // 넷 코덱의 읽기(임시에 읽어 끝까지 맞을 때만 바꿈)
+        if ( readState( reader ) == false ) // 넷 코덱으로 읽는다(임시 객체에 읽어서 끝까지 맞을 때만 바꾼다)
             return false;
         _random = random;
         _eventBuffer.clear();
@@ -215,7 +215,7 @@ namespace sw
 
     bool BrZone::isCenterAllowed( const float2& center, float32 radius ) const
     {
-        // 원이 맵 밖으로 나가지 않게 — 원이 맵보다 크면 중심이 맵 안이기만 하면 된다.
+        // 원이 맵 밖으로 나가지 않게 한다. 원이 맵보다 크면 중심이 맵 안에 있기만 하면 된다.
         const float32 margin = MathUtil::min( radius, _mapSize * 0.5f );
         if ( center._x < margin || center._y < margin || center._x > _mapSize - margin || center._y > _mapSize - margin )
             return false;

@@ -1,6 +1,6 @@
 /**
  * @file InteractorComponent.h
- * @brief 상호작용하는 쪽(플레이어 · AI) — 대상 고르기(거리 · 시야각 · 시야), UI 안내 데이터, 입력 방식 진행, 강조 요청, 권한 훅입니다.
+ * @brief 상호작용하는 쪽(플레이어, AI)입니다. 대상 고르기(거리, 시야각, 시야), UI 안내 데이터, 입력 방식에 따른 진행, 강조 요청, 권한 훅을 처리합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -19,7 +19,7 @@
 
 namespace sw
 {
-    /** @brief UI 가 그리는 안내 한 벌입니다(문구 키 · 입력 방식 · 진행 · 단계). */
+    /** @brief UI 가 그리는 안내 데이터 한 벌입니다. 문구 키, 입력 방식, 진행량, 단계가 들어 있습니다. */
     struct InteractionPrompt
     {
         hashed_string        _prompt{};
@@ -37,11 +37,11 @@ namespace sw
 {
     /**
      * @class InteractorComponent
-     * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는(켜짐 · 쿨다운 · 태그) 것을 후보로 모아 `InteractionSelector` 로 고르고, 입력(`setInput`)으로
-     *        `InteractionSession` 을 진행합니다. 2D 는 `_space = Space2D` 와 `setFacing2D`(좌우 보기)로 같은 코드가 돕니다.
-     * @details 눈은 소유자 월드 자리 + `_eyeOffset`, 시선은 3D 면 소유자의 앞(+Z), 2D 면 `_facing2D` 입니다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
-     *          되거나 거리의 1.25 배 밖으로 나가면 취소합니다. 완료는 틱 뒤에 대상의 `completeInteraction` 을 부릅니다(대상 상태를 게임 스레드에서 바꾼다).
-     *          권한이 `Server` 인 상호작용은 권한 훅(`IInteractionAuthority`)이 걸려 있으면 시작 전에 허락을 묻습니다.
+     * @brief 틱마다 씬의 `InteractableComponent` 중 쓸 수 있는 것(켜짐, 쿨다운, 태그 조건)을 후보로 모아 `InteractionSelector` 로 고르고, 입력(`setInput`)으로
+     *        `InteractionSession` 을 진행합니다. 2D 는 `_space = Space2D` 와 `setFacing2D`(좌우 보기)를 쓰며 같은 코드가 동작합니다.
+     * @details 눈의 위치는 소유자의 월드 위치에 `_eyeOffset` 을 더한 값이고, 시선은 3D 이면 소유자의 앞(+Z), 2D 이면 `_facing2D` 이다. 진행 중에는 대상을 바꾸지 않고, 대상이 쓸 수 없게
+     *          되거나 거리의 1.25 배 밖으로 나가면 취소한다. 완료하면 틱 뒤에 대상의 `completeInteraction` 을 부른다. 대상 상태를 게임 스레드에서 바꾸기 위해서다.
+     *          권한이 `Server` 인 상호작용은 권한 훅(`IInteractionAuthority`)이 등록되어 있으면 시작 전에 허락을 묻는다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Interactor", Tooltip = "Picks the best interactable in reach and view, drives press / hold / mash input" )
     class SW_GF_API InteractorComponent : public Component
@@ -56,13 +56,13 @@ namespace sw
         void onEndPlay() override;
         void onTick( float32 deltaTime ) override;
 
-        /** @brief 이번 프레임의 상호작용 버튼입니다(틱 전에 게임 입력이 넣는다). 새로 누른 것은 지난 값과 견줘 정한다. */
+        /** @brief 이번 프레임의 상호작용 버튼 상태입니다. 틱 전에 게임 입력이 넣습니다. 새로 눌렀는지는 지난 값과 비교해서 정합니다. */
         void setInput( bool bHeld );
         /** @brief 2D 의 시선(좌우)입니다. */
         void setFacing2D( const float3& facing ) { _facing2D = facing; }
         void setSpace( InteractionSpace space ) { _space = space; }
         void setEyeOffset( const float3& eyeOffset ) { _eyeOffset = eyeOffset; }
-        /** @brief 진행 중인 상호작용을 취소합니다(맞음 · 컷신). */
+        /** @brief 진행 중인 상호작용을 취소합니다. 맞았을 때나 컷신에서 씁니다. */
         void cancelInteraction();
 
         const InteractionPrompt&  getPrompt() const { return _prompt; }

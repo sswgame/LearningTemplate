@@ -373,7 +373,7 @@ namespace sw
 
     void MonsterBattle::executeRun()
     {
-        // 3세대 도망: 내 스피드가 상대 이상이면 반드시, 아니면 F = ⌊A × 128 / B⌋ + 30 × 시도 횟수 를 0..255 와 견준다.
+        // 3세대 도망 공식이다. 내 스피드가 상대 이상이면 반드시 도망치고, 아니면 F = ⌊A × 128 / B⌋ + 30 × 시도 횟수 를 0..255 와 비교한다.
         const int32 playerSpeed = MathUtil::max( 1, getActive( kPlayerSide ).getStat( MonsterStat::Speed ) );
         const int32 foeSpeed    = MathUtil::max( 1, getActive( kFoeSide ).getStat( MonsterStat::Speed ) );
         ++_escapeAttempts;
@@ -399,7 +399,7 @@ namespace sw
             return;
         if ( entry._listMonster[static_cast<size_t>( partyIndex )].isFainted() )
             return;
-        // 능력 변화는 나간 개체와 함께 사라지고, 맹독의 n 은 1 로 돌아간다.
+        // 능력 변화는 나간 개체와 함께 사라지고, 맹독의 n 은 1로 돌아간다.
         MonsterInstance& leaving = getActiveMutable( side );
         if ( leaving._status == MonsterStatus::Toxic )
             leaving._statusTurns = 1;
@@ -754,7 +754,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 상성표는 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그와 상성표는 사본이 그대로 가지고 있다.
         MonsterBattle restored = *this;
         for ( Side& side : restored._arrSide )
         {

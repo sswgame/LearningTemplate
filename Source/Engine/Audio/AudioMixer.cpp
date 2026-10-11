@@ -142,7 +142,7 @@ namespace sw
         if ( bAnySolo == false )
             return;
 
-        // 솔로 버스의 조상(신호가 지나가는 길)과 자손(솔로 버스로 들어오는 것)은 소리를 낸다. DAW · Wwise 의 솔로와 같다.
+        // 솔로 버스의 조상(신호가 지나가는 경로)과 자손(솔로 버스로 들어오는 것)은 소리를 낸다. DAW 와 Wwise 의 솔로와 같다.
         for ( size_t busIndex = 0; busIndex < _listBusState.size(); ++busIndex )
         {
             if ( _listBusState[busIndex]._bSolo == SW_FALSE )
@@ -192,7 +192,7 @@ namespace sw
             Bus&     bus    = _listBusState[busIndex];
             float32* pInput = bus._listInput.data();
 
-            // 인서트 이펙트 — 센드 · 페이더 앞(채널 스트립과 같은 자리).
+            // 인서트 이펙트는 센드와 페이더 앞에서 처리한다(채널 스트립과 같은 위치).
             for ( const unique_ptr<IAudioEffect>& pEffect : bus._listEffect )
             {
                 pEffect->process( pInput, blockFrames );

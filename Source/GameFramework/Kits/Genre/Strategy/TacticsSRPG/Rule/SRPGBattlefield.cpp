@@ -15,7 +15,7 @@ namespace sw
     {
         struct SRPGBattlefieldInternal
         {
-            /** @brief 동쪽(+x)을 보는 무늬 칸을 @p direction 쪽으로 돌립니다. */
+            /** @brief 동쪽(+x)을 보는 패턴 셀을 @p direction 쪽으로 돌립니다. */
             static int2 rotateOffset( const int2& offset, const int2& direction )
             {
                 if ( direction._x > 0 )
@@ -27,7 +27,7 @@ namespace sw
                 return int2{ offset._y, -offset._x };
             }
 
-            /** @brief 쏘는 칸 → 겨눈 칸의 주된 방향(네 방향 중 하나)입니다. 같은 칸이면 (0, 0) 입니다. */
+            /** @brief 쏘는 셀에서 겨눈 셀로 가는 주된 방향(네 방향 중 하나)을 반환합니다. 같은 셀이면 (0, 0) 입니다. */
             static int2 computeDirection( const int2& fromCell, const int2& aimCell )
             {
                 const int32 deltaX = aimCell._x - fromCell._x;
@@ -67,7 +67,7 @@ namespace sw
                                       uint32 seed )
     {
         _pCatalog = pCatalog;
-        _topology = GridTopology{ width, height }; // 음수는 0 칸
+        _topology = GridTopology{ width, height }; // 음수는 0 셀로 처리한다
         _settings = settings;
         _random.setSeed( seed );
         const SRPGTerrainDef* pTerrain = pCatalog != nullptr ? pCatalog->findTerrain( defaultTerrain ) : nullptr;
@@ -198,7 +198,7 @@ namespace sw
             return;
         if ( canAct( unitIndex ) )
             _listUnit[static_cast<size_t>( unitIndex )]._bActed = SW_TRUE;
-        // 반격에 격파된 유닛도 차례는 넘긴다 — 죽은 유닛은 canAct 가 false 라 위에서 걸러진다
+        // 반격에 격파된 유닛도 차례는 넘긴다. 죽은 유닛은 canAct 가 false 라 위에서 걸러진다.
         if ( _settings._turnMode == SRPGTurnMode::Individual )
         {
             if ( unitIndex == _activeUnit )
@@ -355,15 +355,15 @@ namespace sw
         {
             const int32 occupant = findUnitAt( toCell );
             if ( occupant >= 0 && isHostile( _listUnit[static_cast<size_t>( occupant )]._team, unit._team ) )
-                return -1; // 적은 막는다
+                return -1; // 적이 선 셀은 막는다
             if ( bZoc && fromCell != start && isInEnemyZone( unit, fromCell ) )
-                return -1; // 적과 이웃한 칸에 들어오면 거기서 멈춘다
+                return -1; // 적과 이웃한 셀에 들어오면 거기서 멈춘다
             return computeTerrainCost( unit, toCell );
         },
             [&]( const int2& cell )
         {
             const int32 occupant = findUnitAt( cell );
-            return occupant < 0 || occupant == unitIndex; // 아군 칸은 지나가기만
+            return occupant < 0 || occupant == unitIndex; // 아군이 선 셀은 지나가기만 한다
         } );
     }
 
@@ -403,7 +403,7 @@ namespace sw
             computeMoveRange( unitIndex, reach );
             reach.collectReachable( listStand );
         }
-        // 한 칸을 한 번만 — 표시는 재사용 스크래치에(호출마다 W × H 를 잡지 않는다).
+        // 한 셀을 한 번만 처리한다. 표시는 재사용 스크래치에 두어 호출마다 W x H 를 할당하지 않는다.
         _cellMarks.begin( _topology.getCellCount() );
         vector<int2> listRange;
         for ( int32 weaponIndex = 0; weaponIndex < static_cast<int32>( pUnit->_listWeapon.size() ); ++weaponIndex )
@@ -590,7 +590,7 @@ namespace sw
         archive >> height;
         if ( archive.isError() || _pCatalog == nullptr || width != _topology._width || height != _topology._height )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 카탈로그 · 설정은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그와 설정은 사본도 그대로 가지고 있다.
         SRPGBattlefield restored = *this;
         for ( const SRPGTerrainDef*& pTerrain : restored._listTerrain )
         {
@@ -603,7 +603,7 @@ namespace sw
         }
 
         uint32 unitCount = 0;
-        // 유닛마다 이름 둘(8) + 탄 수(4) + 레벨 둘(40) + 칸(8) + HP · EN · 기력 · 회피 · 명단(20) + 팀 · 비트 여섯(7)
+        // 유닛마다 이름 둘(8) + 탄 수(4) + 레벨 둘(40) + 셀(8) + HP, EN, 기력, 회피, 명단(20) + 팀, 비트 여섯(7)
         if ( StateArchiveUtil::readCount( archive, 87, unitCount ) == false )
             return false;
         restored._listUnit.assign( unitCount, SRPGUnit{} );
@@ -620,7 +620,7 @@ namespace sw
             unit._pPilot = _pCatalog->findPilot( pilotID );
             if ( unit._pDef == nullptr || unit._pPilot == nullptr )
                 return false;
-            // 무기는 기체 정의의 순서로 다시 짓는다 — 탄 수가 그 무기 수와 같아야 한다.
+            // 무기는 기체 정의의 순서로 다시 만든다. 탄 수가 그 무기 수와 같아야 한다.
             restored.refillUnit( unit );
             if ( ammoCount != unit._listAmmo.size() )
                 return false;
@@ -723,7 +723,7 @@ namespace sw
         SRPGMoveType domain       = pTerrain->_domain;
         const bool   bFlyingAbove = unit._pDef->_moveType == SRPGMoveType::Air && ( domain == SRPGMoveType::Ground || domain == SRPGMoveType::Water );
         if ( bFlyingAbove )
-            domain = SRPGMoveType::Air; // 땅 · 물 위를 나는 유닛은 공중 적성으로 싸운다
+            domain = SRPGMoveType::Air; // 땅이나 물 위를 나는 유닛은 공중 적성으로 싸운다
         return unit._pDef->_arrAptitude[static_cast<size_t>( domain )];
     }
 

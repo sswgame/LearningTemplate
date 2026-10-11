@@ -108,7 +108,7 @@ namespace sw
                 continue;
             _listParticipant.erase( _listParticipant.begin() + static_cast<ptrdiff_t>( index ) );
             if ( _bSkillCheckPending == SW_TRUE && _skillCheckActor == actorID )
-                _bSkillCheckPending = SW_FALSE; // 떠난 사람의 체크는 없던 일
+                _bSkillCheckPending = SW_FALSE; // 떠난 사람의 체크는 취소한다
             pushEvent( InteractionEvent::Kind::Left, actorID, _progress );
             if ( _listParticipant.empty() && _bCompleted == SW_FALSE )
             {
@@ -158,7 +158,7 @@ namespace sw
             return;
         }
 
-        // 응답 없이 창이 닫힌 체크는 실패.
+        // 응답 없이 창이 닫힌 체크는 실패로 처리한다.
         if ( _bSkillCheckPending == SW_TRUE && _pJudge != nullptr && _pJudge->hasExpired( _skillCheckTarget, _time ) )
             resolveSkillCheck( false, hashed_string{} );
 

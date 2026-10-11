@@ -33,8 +33,8 @@ namespace sw
     {
         struct SkirmishDirectorComponentInternal
         {
-            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭
-            static constexpr int32   kUnitLookCategory = 5;    ///< 0 번 · 1 번 · 주인 없음 · 광물 · 가스
+            static constexpr float32 kClickSlop        = 0.6f; ///< 이보다 짧게 끌면 클릭으로 본다.
+            static constexpr int32   kUnitLookCategory = 5;    ///< 0번 팀, 1번 팀, 주인 없음, 광물, 가스.
             static constexpr uint32  kStateTag         = FourCcUtil::make( "RTMS" );
             static constexpr uint32  kStateVersion     = 2;
 
@@ -44,7 +44,7 @@ namespace sw
             static constexpr const utf8* kSoundBlocked  = "Blocked";
             static constexpr const utf8* kSoundUnitDied = "UnitDied";
 
-            /** @brief 모습 칸 — 편(0 · 1 · 그 밖)이거나 자원(광물 · 가스)입니다. */
+            /** @brief 모습 종류입니다. 팀(0번, 1번, 그 밖)이거나 자원(광물, 가스)입니다. */
             static int32 computeLookCategory( const RTSUnit& unit )
             {
                 if ( unit.isResource() )
@@ -55,8 +55,8 @@ namespace sw
             }
 
             /**
-             * @brief 칸의 모델에 곱할 색입니다 — 키트의 흰 · 회색 몸체가 편 색(파랑 · 빨강)으로, 자원은 광물 하늘색 · 가스 초록으로 읽힌다. 고르면 흰 쪽으로 반.
-             * @details 건물 · 일꾼을 어둡게 · 밝게 가르던 것은 모델이 대신하므로 편 색을 그대로 곱한다(곱하면 이미 어두워진다).
+             * @brief 해당 모습의 모델에 곱할 색입니다. 키트의 흰색과 회색 몸체가 팀 색(파랑, 빨강)으로, 자원은 광물이 하늘색, 가스가 초록색으로 보입니다. 선택하면 흰색 쪽으로 절반 섞습니다.
+             * @details 건물과 일꾼을 어둡게, 밝게 나누던 일은 모델이 대신하므로 팀 색을 그대로 곱한다(곱하면 이미 어두워진다).
              */
             static float4 computeLookColor( int32 category, bool bSelected )
             {
@@ -74,7 +74,7 @@ namespace sw
             }
         };
 
-        /** @brief 탐침이 읽는 디렉터 — 씬의 첫 디렉터입니다(탐침은 단언 단계에서만 불린다 — 프레임 경로가 아니다). */
+        /** @brief 프로브가 읽는 디렉터입니다. 씬의 첫 디렉터이며, 프로브는 단언 단계에서만 불리므로 프레임 경로가 아닙니다. */
         const SkirmishDirectorComponent* findProbeDirector( const GameObjectManager* pManager )
         {
             const SkirmishDirectorComponent* pFound = nullptr;
@@ -89,7 +89,7 @@ namespace sw
             return pFound;
         }
 
-        /** @brief 고른 유닛 중 @p bMoveOnly 면 앞 명령이 이동인 것만 셉니다. */
+        /** @brief 선택한 유닛 중 @p bMoveOnly 면 앞 명령이 이동인 것만 셉니다. */
         [[nodiscard]] bool countSelected( const GameObjectManager* pManager, bool bMoveOnly, float64& outValue )
         {
             const SkirmishDirectorComponent* pDirector = findProbeDirector( pManager );
@@ -118,8 +118,8 @@ namespace sw
     } // namespace
 
     /**
-     * @brief `-gv_skirmishAutoPlay=1` — 디렉터를 컴퓨터 대 컴퓨터(러시 대 운영)로 엽니다(씬의 `_bAutoPlay` 가 꺼져 있어도). 입력 없이 승패까지 가는 확인 · 화면 녹화용.
-     * @details 배포본으로도 돌릴 수 있게 남긴다: `App -gv_skirmishAutoPlay=1`. 30 초마다 `[Skirmish] t=.. p0 workers .. army ..` 와 끝에 승패가 로그에 남는다.
+     * @brief `-gv_skirmishAutoPlay=1`: 디렉터를 컴퓨터 대 컴퓨터(러시 대 운영)로 엽니다(씬의 `_bAutoPlay` 가 꺼져 있어도 엽니다). 입력 없이 승패까지 가므로 확인과 화면 녹화에 씁니다.
+     * @details 배포본으로도 돌릴 수 있게 남겨 둔다. `App -gv_skirmishAutoPlay=1` 로 실행하면 30초마다 `[Skirmish] t=.. p0 workers .. army ..` 가, 끝에는 승패가 로그에 남는다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_skirmishAutoPlay, 0, "StarSkirmish: 두 플레이어 모두 AI 로 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_skirmishAutoPlay, "StarSkirmish", "Both players are AI" );
@@ -162,11 +162,11 @@ namespace sw
 
     void SkirmishDirectorComponent::onGameStarted()
     {
-        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라다.
+        // 사람 쪽은 글자 키가 명령이라 카메라는 방향키만 쓴다. 둘 다 AI 면 맵 전체가 보이게 물러서고 WASD 도 카메라를 움직인다.
         OrthoCameraRigComponent* pRig = findCameraRig();
         if ( pRig != nullptr )
         {
-            pRig->setPanAction( hashed_string( _bHuman == SW_TRUE ? "Camera.Pan" : "Skirmish.SpectatorPan" ) ); // 플레이할 때 WASD 는 명령 단축키
+            pRig->setPanAction( hashed_string( _bHuman == SW_TRUE ? "Camera.Pan" : "Skirmish.SpectatorPan" ) ); // 플레이할 때 WASD 는 명령 단축키다.
             if ( _bHuman == SW_FALSE )
             {
                 pRig->setFocus( _watchFocus );
@@ -213,7 +213,7 @@ namespace sw
         const int32                               lookIndex = SkirmishDirectorComponentInternal::computeLookCategory( unit ) * 2 + ( bSelected ? 1 : 0 );
         if ( lookIndex >= static_cast<int32>( _listUnitLook.size() ) )
             return kNoLook;
-        // 뷰가 워커에서 부른다 — 컨테이너 첨자 대신 포인터로 읽는다.
+        // 뷰가 워커에서 부른다. 컨테이너 인덱스 대신 포인터로 읽는다.
         return _listUnitLook.data()[lookIndex];
     }
 
@@ -264,7 +264,7 @@ namespace sw
         }
         else
         {
-            // 판이 반쯤 바뀌었을 수 있다 — 새 판으로 되돌린다.
+            // 판이 반쯤 바뀌었을 수 있다. 새 판으로 되돌린다.
             SW_LOG_WARNING( "[Skirmish] the saved match state does not match this build - starting a new match" );
             (void)startGame();
         }
@@ -287,13 +287,13 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 스폰(틱 뒤 · 게임 스레드)
+    // 스폰(틱이 끝난 뒤, 게임 스레드)
     // ------------------------------------------------------------------------------
     void SkirmishDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
         {
-            // 처음(또는 걷은 뒤) — 절벽과 지금 보이는 유닛 모두.
+            // 처음이거나 정리한 뒤다. 절벽과 지금 보이는 유닛을 모두 스폰한다.
             spawnCliffs( manager );
             _listPendingUnit.clear();
             collectUnitChanges();
@@ -310,7 +310,7 @@ namespace sw
 
     void SkirmishDirectorComponent::spawnCliffs( GameObjectManager& manager )
     {
-        // 절벽 — 줄마다 이어진 칸을 상자 하나로.
+        // 절벽은 줄마다 이어진 타일을 상자 하나로 만든다.
         const int32 size = SkirmishMatch::kMapSize;
         for ( int32 y = 0; y < size; ++y )
         {
@@ -351,7 +351,7 @@ namespace sw
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
         {
-            // 모델은 유닛 종류마다 정해져 바뀌지 않는다 — 여기(게임 스레드)서 건다. 색 · 자리 · 크기 · 방향은 뷰가 맞춘다.
+            // 모델은 유닛 종류마다 정해져 바뀌지 않는다. 그래서 여기(게임 스레드)에서 지정한다. 색, 위치, 크기, 방향은 뷰가 맞춘다.
             if ( _listUnitLook.empty() )
                 prepareUnitLooks( pMesh->getMaterial() );
             pMesh->setMeshID( SkirmishUnitComponent::makeModelPath( pModel->_pModel ) );
@@ -375,11 +375,11 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 갱신(PrePhysics — 워커)
+    // 갱신(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
     void SkirmishDirectorComponent::collectUnitChanges()
     {
-        // 보일 유닛 — 사람 쪽 화면은 안 보이는 적을 그리지 않는다(자원은 늘 보인다). 자리의 유닛이 바뀌었거나 이번에 못 본 자리(죽음 · 안개)만 쌓는다.
+        // 보일 유닛은 사람 쪽 화면이 안 보이는 적을 그리지 않게 정한다(자원은 항상 보인다). 슬롯의 유닛이 바뀌었거나 이번에 못 본 슬롯(죽음, 안개)만 쌓는다.
         ++_frameStamp;
         const RTSWorld& world  = _match.getWorld();
         const bool      bHuman = _bHuman == SW_TRUE;
@@ -411,7 +411,7 @@ namespace sw
 
     void SkirmishDirectorComponent::updateInput( const InputManager& input )
     {
-        // 카메라 이동 · 확대는 리그(PostUpdate)가 읽는다. 여기는 속도 · 멈춤 · 명령.
+        // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 속도, 일시정지, 명령을 처리한다.
         // 키는 입력 맵(`data/skirmish.input.xml`)이 정한다.
         const InputMap& inputMap = input.getInputMap();
         const bool      bFaster  = inputMap.wasActionTriggered( hashed_string( "Skirmish.Faster" ) );
@@ -444,7 +444,7 @@ namespace sw
         if ( bPointValid && inputMap.wasActionTriggered( hashed_string( "Skirmish.Order" ) ) )
             issueOrder( point, bShift );
 
-        // 명령 단축키 — 고른 것이 모두 내 것일 때만.
+        // 명령 단축키는 선택한 것이 모두 내 것일 때만 동작한다.
         if ( _selection.isCommandable( world ) && _selection.getSelected().empty() == false )
         {
             if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.AttackMove" ) ) )
@@ -490,7 +490,7 @@ namespace sw
             }
         }
 
-        // 부대 — Ctrl + 숫자 정하기, Shift + 숫자 더하기, 숫자 부르기.
+        // 부대 입력: Ctrl + 숫자는 지정, Shift + 숫자는 추가, 숫자는 호출이다.
         for ( int32 group = 0; group < RTSSelection::kGroupCount; ++group )
         {
             constexpr const utf8* kArrGroupAction[] = { "Skirmish.Group0", "Skirmish.Group1", "Skirmish.Group2", "Skirmish.Group3", "Skirmish.Group4",
@@ -507,7 +507,7 @@ namespace sw
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Skirmish.JumpToSelection" ) ) )
         {
-            // 고른 유닛으로 — 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
+            // 선택한 유닛으로 이동한다. 리그는 PostUpdate 에서 이 초점을 읽는다(리그의 오브젝트에는 다른 쓰기가 없다).
             const RTSUnit*           pPrimary = world.findUnit( _selection.getPrimary() );
             OrthoCameraRigComponent* pRig     = findCameraRig();
             if ( pPrimary != nullptr && pRig != nullptr )
@@ -525,7 +525,7 @@ namespace sw
         {
             if ( _bAttackMovePending == SW_TRUE )
             {
-                // A 다음 고르기(왼쪽 클릭) — 고른 병력을 그 자리로 공격 이동.
+                // A 다음 선택(왼쪽 클릭)이면 선택한 병력을 그 위치로 공격 이동시킨다.
                 _bAttackMovePending                = SW_FALSE;
                 [[maybe_unused]] const int32 count = world.issueGroupMove( _selection.getSelected(), point, true, bShift );
                 SW_LOG_INFO( "[Skirmish] %# units attack-move to (%#, %#)", count, static_cast<int32>( point._x ), static_cast<int32>( point._z ) );
@@ -540,7 +540,7 @@ namespace sw
         if ( _bDragging == SW_FALSE || inputMap.isActionDown( selectAction ) )
             return;
 
-        // 놓았다 — 짧으면 클릭(그 자리 유닛 하나), 길면 사각형.
+        // 버튼을 놓았다. 짧게 끌었으면 클릭(그 위치의 유닛 하나)이고, 길게 끌었으면 사각형 선택이다.
         _bDragging            = SW_FALSE;
         const float3  end     = bPointValid ? point : _dragStart;
         const float32 dragged = MathUtil::max( MathUtil::abs( end._x - _dragStart._x ), MathUtil::abs( end._z - _dragStart._z ) );
@@ -567,7 +567,7 @@ namespace sw
         RTSWorld& world = _match.getWorld();
         if ( _selection.getSelected().empty() || _selection.isCommandable( world ) == false )
             return;
-        // 유닛 · 자원을 눌렀으면 하나씩 똑똑한 명령(공격 · 채취 · 이어 짓기), 빈 땅이면 움직이는 것은 무리 이동 · 건물은 집결지.
+        // 유닛이나 자원을 눌렀으면 하나씩 상황에 맞는 명령(공격, 채취, 이어 짓기)을 낸다. 빈 땅이면 움직이는 것은 무리 이동, 건물은 집결지 지정이다.
         const RTSUnitID   targetID = world.pickUnit( point );
         vector<RTSUnitID> listMobile;
         for ( const RTSUnitID unitID : _selection.getSelected() )
@@ -592,7 +592,7 @@ namespace sw
         const RTSUnitDef* pDef  = _catalog.findUnit( hashed_string( pBuildingID ) );
         if ( pDef == nullptr )
             return;
-        // 고른 것 중 첫 일꾼이 짓는다. 정제소는 커서 가까운 빈 간헐천, 다른 건물은 커서가 가운데가 되는 자리.
+        // 선택한 것 중 첫 일꾼이 짓는다. 정제소는 커서에 가까운 빈 간헐천에, 다른 건물은 커서가 중심이 되는 위치에 짓는다.
         RTSUnitID workerID{};
         for ( const RTSUnitID unitID : _selection.getSelected() )
         {
@@ -652,9 +652,9 @@ namespace sw
     void SkirmishDirectorComponent::handleEvents()
     {
         using Internal = SkirmishDirectorComponentInternal;
-        _listEvent.clear(); // drainEvents 는 뒤에 붙인다
+        _listEvent.clear(); // drainEvents 는 뒤에 붙인다.
         _match.drainEvents( _listEvent );
-        // 유닛이 부서지면 누구 것이든 그 자리에서 쇳소리 — 한 프레임에 여럿이어도 한 번(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
+        // 유닛이 부서지면 누구 것이든 그 위치에서 쇳소리를 낸다. 한 프레임에 여럿이어도 한 번만 낸다(구경하는 AI 대 AI 판에서도 들린다). 동시 재생 상한은 이벤트 데이터가 정한다.
         for ( const RTSEvent& event : _listEvent )
         {
             if ( event._kind == RTSEvent::Kind::UnitDied )
@@ -665,7 +665,7 @@ namespace sw
         }
         if ( _bHuman == SW_FALSE )
             return;
-        // 사람 쪽(0 번)에 알릴 것만 — 나머지는 판이 로그로 남긴다.
+        // 사람 쪽(0번)에 알릴 것만 다룬다. 나머지는 판이 로그로 남긴다.
         for ( const RTSEvent& event : _listEvent )
         {
             if ( event._player != 0 )

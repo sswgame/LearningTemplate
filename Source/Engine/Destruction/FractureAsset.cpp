@@ -102,7 +102,7 @@ namespace sw
                 }
             };
 
-            /** @brief 원소 수가 남은 바이트로 담길 수 있는지 봅니다(잘린 파일이 큰 할당을 일으키지 않게). */
+            /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다. 잘린 파일이 큰 할당을 일으키지 않게 하려는 것입니다. */
             static bool canHold( const Reader& reader, uint64 count, uint64 elementSize ) { return count * elementSize <= reader._size - reader._offset; }
         };
     } // namespace

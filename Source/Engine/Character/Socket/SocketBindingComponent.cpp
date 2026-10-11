@@ -59,7 +59,7 @@ namespace sw
         , _pPhysicsBody{ nullptr }
         , _returnElapsed{ 0.0f }
     {
-        // 쉬는 단위는 비용이 없다 — 틱은 물리 · 되돌아가기 동안만 켠다(`enterState`).
+        // 쉬는 단위는 비용이 없다. 틱은 물리와 되돌아가기 동안만 켠다(`enterState`).
         setCanEverTick( false );
     }
 
@@ -82,7 +82,7 @@ namespace sw
         float4x4 target;
         if ( computeSocketWorld( target ) == false )
         {
-            // holder 가 사라졌다 — 지금 자리에 남는다.
+            // holder 가 사라졌다. 현재 위치에 남는다.
             enterState( SocketBindingState::ReleasedAnimated );
             return;
         }
@@ -101,7 +101,7 @@ namespace sw
     void SocketBindingComponent::onBeginPlay()
     {
         Component::onBeginPlay();
-        // 같은 오브젝트의 강체가 물리 바디다 — 코드가 따로 정했으면 그것을 둔다.
+        // 같은 오브젝트의 강체가 물리 바디다. 코드가 따로 정했으면 그것을 둔다.
         GameObject*         pOwner = getOwner();
         RigidBodyComponent* pBody  = pOwner != nullptr ? pOwner->getComponent<RigidBodyComponent>() : nullptr;
         if ( pBody != nullptr && resolvePhysicsBody() == nullptr )
@@ -130,7 +130,7 @@ namespace sw
 
     ISocketPhysicsBody* SocketBindingComponent::resolvePhysicsBody() const
     {
-        // 인터페이스 포인터는 핸들이 살아 있다고 확인될 때만 쓴다 — 바디 컴포넌트가 먼저 사라질 수 있다.
+        // 인터페이스 포인터는 핸들이 살아 있다고 확인될 때만 쓴다. 바디 컴포넌트가 먼저 사라질 수 있다.
         const GameObject* pOwner = getOwner();
         if ( _pPhysicsBody == nullptr || pOwner == nullptr || pOwner->getManager() == nullptr )
             return nullptr;
@@ -217,7 +217,7 @@ namespace sw
         ISocketPhysicsBody* pBody = resolvePhysicsBody();
         if ( mode == SocketReleaseMode::Physics && pBody == nullptr )
             return false;
-        // 월드 자리를 지키며 뗀다 — 뗀 뒤 첫 프레임이 붙어 있던 자리다.
+        // 월드 위치를 유지하며 뗀다. 뗀 뒤 첫 프레임이 붙어 있던 위치다.
         const float4x4 boundWorld = pScene->getWorldMatrix();
         pScene->detachFromComponent( AttachRule::KeepWorld );
         pScene->setWorldTransform( boundWorld );

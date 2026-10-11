@@ -21,7 +21,7 @@ namespace sw
             {
                 outStats.clear();
                 if ( const XMLNode child = node.findChild( pChildName ) )
-                    (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
+                    (void)outStats.loadFromAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
             }
 
             [[nodiscard]] static bool parseSiteKind( string_view text, ConquestSiteKind& outKind )
@@ -52,7 +52,7 @@ namespace sw
                 return false;
             }
 
-            /** @brief "spearman:3,archer:2" 를 읽습니다(개수를 빼면 하나). */
+            /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나로 봅니다. */
             static void parseGarrison( string_view text, vector<ConquestGarrisonDef>& outListGarrison, string_view sourceName, const utf8* pID )
             {
                 outListGarrison.clear();
@@ -143,7 +143,7 @@ namespace sw
         if ( const XMLNode startNode = root.findChild( "Start" ) )
         {
             _rules._startResources.clear();
-            (void)_rules._startResources.loadFromAttributes( startNode ); // 반환값은 읽은 개수다 — 숫자 아닌 속성은 건너뛰면 그만이다
+            (void)_rules._startResources.loadFromAttributes( startNode ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
         }
 
         for ( XMLNode node = root.findChild( "Unit" ); node; node = node.findNextSibling( "Unit" ) )

@@ -20,10 +20,10 @@ namespace sw
     {
         struct RTSWorldInternal
         {
-            static constexpr float32 kMaxUnitExtent       = 4.5f; ///< 버킷 조회에 더하는 몸 크기 상한(건물 반 변)
-            static constexpr uint32  kMinUnitStateBytes   = 128;  ///< 유닛 하나의 상태가 적어도 쓰는 바이트(개수 상한)
-            static constexpr uint32  kMinOrderStateBytes  = 34;   ///< 명령 하나의 상태가 적어도 쓰는 바이트
-            static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 적어도 쓰는 바이트
+            static constexpr float32 kMaxUnitExtent       = 4.5f; ///< 버킷 조회에 더하는 몸 크기의 상한(건물 한 변의 절반)
+            static constexpr uint32  kMinUnitStateBytes   = 128;  ///< 유닛 하나의 상태가 최소한 차지하는 바이트 수(개수 상한 계산용)
+            static constexpr uint32  kMinOrderStateBytes  = 34;   ///< 명령 하나의 상태가 최소한 차지하는 바이트 수
+            static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 최소한 차지하는 바이트 수
 
             static float32 computeFlatDistance( const float3& lhs, const float3& rhs )
             {
@@ -170,7 +170,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 유닛 자리
+    // 유닛 슬롯
     // ------------------------------------------------------------------------------
     RTSUnitID RTSWorld::allocateUnit()
     {
@@ -611,7 +611,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return;
-        // 다른 키트가 땅을 얻거나 놓았으면 땅 격자를 다시 칠한다(흐름장은 격자 리비전으로 스스로 다시 구한다).
+        // 다른 키트가 땅을 얻거나 반납했으면 땅 격자를 다시 칠한다. 흐름장은 격자 리비전이 바뀌면 스스로 다시 구한다.
         if ( _land.isBound() && _land.getRevision() != _landRevision )
         {
             repaintGrid();
@@ -639,7 +639,7 @@ namespace sw
         }
         recomputeSupply();
         rebuildBuckets();
-        const size_t unitCount = _listUnit.size(); // 이번 걸음에 생긴 유닛은 다음 걸음부터
+        const size_t unitCount = _listUnit.size(); // 이번 걸음에 생긴 유닛은 다음 걸음부터 처리한다
         for ( size_t index = 0; index < unitCount; ++index )
         {
             RTSUnit& unit = _listUnit[index];
@@ -745,7 +745,7 @@ namespace sw
                                                : computeRectDistance( position, unit._cell, unit._pDef->_footprint );
             if ( distance > 0.0f )
                 continue;
-            // 유닛이 건물 위에 겹치면 유닛을 고른다(정제소는 간헐천보다 먼저).
+            // 유닛이 건물 위에 겹치면 유닛을 고른다(정제소는 간헐천보다 먼저 고른다).
             distance -= unit.isMobile() ? 10.0f : ( unit._pDef->_bExtractor ? 5.0f : 0.0f );
             if ( distance < bestDistance )
             {
@@ -823,7 +823,7 @@ namespace sw
     {
         const bool bGround = RTSWorldInternal::isGround( unit );
         _listNeighborScratch.clear();
-        // 채취하는 일꾼은 서로 밀지 않는다(광물 앞에 모여도 된다 — 스타크래프트도 같다).
+        // 채취하는 일꾼은 서로 밀지 않는다. 스타크래프트처럼 광물 앞에 모여도 된다.
         const RTSOrder* pOrder = unit.findOrder();
         if ( pOrder == nullptr || pOrder->_type != RTSOrderType::Gather )
         {
@@ -864,7 +864,7 @@ namespace sw
                         unit._attackTarget = findAutoTarget( unit, unit._pDef->_sight );
                     if ( unit._attackTarget.isValid() )
                     {
-                        unit._bOrderStarted = SW_FALSE; // 싸운 뒤 길을 다시 구한다
+                        unit._bOrderStarted = SW_FALSE; // 싸운 뒤에는 경로를 다시 구한다
                         return;
                     }
                 }
@@ -953,7 +953,7 @@ namespace sw
         RTSUnit* pTarget = findUnitMutable( order._targetUnit );
         if ( pTarget == nullptr )
         {
-            // 다 캔 광물 — 둘레의 다른 광물로(정제소가 부서졌으면 끝).
+            // 다 캔 광물이면 둘레의 다른 광물로 옮긴다. 정제소가 부서졌으면 끝낸다.
             const RTSUnitID nextID = findNearestResource( order._target, RTSResourceType::Minerals, _settings._resourceSearchRadius );
             if ( nextID.isValid() == false )
             {
@@ -1004,7 +1004,7 @@ namespace sw
         const RTSUnit* pHarvester = findUnit( pTarget->_harvester );
         if ( pHarvester != nullptr && pHarvester != &unit )
         {
-            // 남이 캔다 — 광물이면 바로 옆의 빈 광물로 옮긴다.
+            // 다른 일꾼이 캐는 중이면, 광물일 때 바로 옆의 빈 광물로 옮긴다.
             if ( bExtractor == false && unit._gatherPhase == RTSGatherPhase::ToResource )
             {
                 queryUnits( unit._position, 2.0f, _listQueryScratch );
@@ -1064,7 +1064,7 @@ namespace sw
                 finishOrder( unit );
                 return;
             }
-            // 자리 사각형의 가장자리까지.
+            // 건물 영역 사각형의 가장자리까지 다가간다.
             if ( computeRectDistance( unit._position, order._buildCell, pDef->_footprint ) - unit._pDef->_radius > _settings._interactSlack )
             {
                 approach( unit, order._target, false );
@@ -1082,7 +1082,7 @@ namespace sw
         }
         if ( findUnit( pBuilding->_builder ) != nullptr && pBuilding->_builder != unit._id )
         {
-            finishOrder( unit ); // 다른 일꾼이 짓는다
+            finishOrder( unit ); // 다른 일꾼이 짓는 중이다
             return;
         }
         pBuilding->_builder = unit._id;
@@ -1241,7 +1241,7 @@ namespace sw
             const float32 distance = computeEdgeDistance( unit, *pCandidate );
             if ( distance > radius )
                 continue;
-            // 싸울 수 있는 유닛 → 그 밖의 유닛 → 건물 순(스타크래프트의 자동 목표 우선순위).
+            // 싸울 수 있는 유닛, 그 밖의 유닛, 건물 순으로 고른다(스타크래프트의 자동 목표 우선순위).
             const float32 priority = pCandidate->_pDef->canAttack() && pCandidate->isMobile() ? 0.0f : ( pCandidate->isMobile() ? 100.0f : 200.0f );
             if ( priority + distance < bestScore )
             {
@@ -1274,7 +1274,7 @@ namespace sw
                 unit._agent.stop();
             if ( unit._cooldown.isActive() == false )
             {
-                // 늦음을 이어 공격 빈도가 고정 걸음 격자에 맞춰 내려가지 않게 한다(1.2 초가 25 걸음 = 1.25 초가 되지 않게).
+                // 늦은 만큼을 이어받아 공격 빈도가 고정 걸음 격자에 맞춰 내려가지 않게 한다. 1.2초 쿨다운이 25걸음(1.25초)이 되면 안 된다.
                 unit._cooldown.restart( unit._pDef->_cooldown );
                 dealDamage( unit, *pTarget );
             }
@@ -1283,7 +1283,7 @@ namespace sw
         const bool bOrdered = pOrder != nullptr && pOrder->_type == RTSOrderType::Attack;
         if ( unit.isMobile() == false || bHold || ( bOrdered == false && distance > unit._pDef->_sight * 1.5f ) )
         {
-            unit._attackTarget = RTSUnitID{}; // 놓쳤다(자동 목표만 — 명령한 목표는 끝까지 쫓는다)
+            unit._attackTarget = RTSUnitID{}; // 목표를 놓쳤다. 자동으로 고른 목표에만 해당하며, 명령한 목표는 끝까지 쫓는다
             return;
         }
         approach( unit, pTarget->_position, false );
@@ -1302,7 +1302,7 @@ namespace sw
                 pushEvent( RTSEvent::Kind::UnderAttack, target._owner, target._id, target._pDef->_id, 0, attacker._id );
             }
         }
-        // 할 일 없이 맞으면 되받아친다.
+        // 할 일이 없을 때 맞으면 되받아친다.
         if ( target.isMobile() && target._listOrder.empty() && target._attackTarget.isValid() == false && canAttack( target, attacker ) )
             target._attackTarget = attacker._id;
         if ( target._hp <= 0.0f )
@@ -1321,16 +1321,16 @@ namespace sw
         unit._listOrder.clear();
         unit._agent.stop();
         if ( unit.isMobile() == false && unit._pDef->_bExtractor == SW_FALSE )
-            placeFootprint( unit, false ); // 정제소는 아니다 — 그 칸은 간헐천이 계속 막는다
+            placeFootprint( unit, false ); // 정제소는 해당하지 않는다. 간헐천이 그 셀을 계속 막고 있다
         if ( unit._pDef->_kind == RTSUnitKind::Building )
             _land.releaseRect( unit._cell._x, unit._cell._y, unit._cell._x + unit._pDef->_footprint - 1, unit._cell._y + unit._pDef->_footprint - 1 );
-        // 생산 대기열 값은 돌려주지 않는다(부서진 건물 — 스타크래프트와 같다).
+        // 부서진 건물의 생산 대기열 비용은 돌려주지 않는다(스타크래프트와 같다).
         unit._bAlive = SW_FALSE;
         pushEvent( RTSEvent::Kind::UnitDied, unit._owner, unit._id, unit._pDef->_id, 0, killerID );
     }
 
     // ------------------------------------------------------------------------------
-    // 시야 · 승패
+    // 시야와 승패
     // ------------------------------------------------------------------------------
     void RTSWorld::updateVision()
     {
@@ -1433,7 +1433,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 조회 · 배치
+    // 조회와 배치
     // ------------------------------------------------------------------------------
     int32 RTSWorld::countUnits( int32 player, const hashed_string& defID, bool bIncludeUnfinished ) const
     {
@@ -1482,12 +1482,12 @@ namespace sw
             for ( int32 x = cell._x; x < cell._x + footprint; ++x )
             {
                 if ( _land.isUsable( x, y ) == false )
-                    return false; // 남의 땅 — 막히지 않은 땅(도로)도 짓지 못한다
+                    return false; // 남의 땅이다. 막히지 않은 땅(도로)에도 건물을 짓지 못한다
             }
         }
         if ( pDef->_bExtractor )
         {
-            // 같은 칸 · 같은 크기의 빈 가스 간헐천 위만.
+            // 같은 셀 위치에 같은 크기의 빈 가스 간헐천이 있을 때만 놓을 수 있다.
             for ( const RTSUnit& unit : _listUnit )
             {
                 if ( unit._bAlive == SW_FALSE || unit.isResource() == false || unit._pDef->_resourceType != RTSResourceType::Gas || unit._cell != cell ||
@@ -1555,7 +1555,7 @@ namespace sw
                     const int2 cell{ center._x + offsetX - footprint / 2, center._y + offsetY - footprint / 2 };
                     if ( canPlaceBuilding( buildingID, cell ) == false )
                         continue;
-                    // 둘레 한 칸은 비운다 — 길을 막지 않게.
+                    // 둘레 한 셀은 비워 둔다. 경로를 막지 않기 위해서다.
                     bool bClear = true;
                     for ( int32 y = cell._y - 1; y <= cell._y + footprint && bClear; ++y )
                     {
@@ -1612,7 +1612,7 @@ namespace sw
     }
 
     // ------------------------------------------------------------------------------
-    // 흐름장 · 알림
+    // 흐름장과 알림
     // ------------------------------------------------------------------------------
     FlowField* RTSWorld::acquireFlowField( const int2& goal )
     {
@@ -1670,7 +1670,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 상태 쓰기 · 읽기(핫 리로드 · 세이브)
+    // 상태 쓰기와 읽기(핫 리로드, 세이브)
     // ------------------------------------------------------------------------------
     void RTSWorld::writeState( Archive& outArchive ) const
     {
@@ -1771,7 +1771,7 @@ namespace sw
             return false;
         deque<RTSUnit> listUnit;
         vector<uint32> listGeneration( unitCount );
-        vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는가(유닛 · 명령 순)
+        vector<uint8>  listFlowFieldOrder; // 무리 이동 명령마다 흐름장이 있었는지(유닛, 명령 순서)
         for ( uint32 index = 0; index < unitCount; ++index )
         {
             RTSUnit&      unit = listUnit.emplace_back();
@@ -1781,7 +1781,7 @@ namespace sw
                 return false;
             unit._pDef = defID.empty() ? nullptr : _pCatalog->findUnit( defID );
             if ( defID.empty() == false && unit._pDef == nullptr )
-                return false; // 카탈로그에서 빠진 유닛 — 판을 맞출 수 없다
+                return false; // 카탈로그에서 빠진 유닛이라 판을 맞출 수 없다
             uint32 orderCount = 0;
             if ( StateArchiveUtil::readCount( archive, Internal::kMinOrderStateBytes, orderCount ) == false )
                 return false;
@@ -1859,7 +1859,7 @@ namespace sw
             unit._linkedResource = RTSUnitID::fromPacked( linkedResource );
             unit._cargoType      = static_cast<RTSResourceType>( cargoType );
             unit._gatherPhase    = static_cast<RTSGatherPhase>( gatherPhase );
-            // 길(경로 · 흐름장)은 싣지 않는다 — 앞 명령을 처음부터 다시 걷게 해 이 격자에서 길을 다시 구한다.
+            // 경로와 흐름장은 싣지 않는다. 맨 앞 명령을 처음부터 다시 진행시키면 이 격자에서 경로를 다시 구한다.
             unit._bOrderStarted = SW_FALSE;
             unit._repathTimer.clear();
         }
@@ -1875,7 +1875,7 @@ namespace sw
                 archive.setError();
         }
         uint32 playerCount = 0;
-        // 지갑은 플레이어를 더한 쪽이 빌려 준 것이라 싣지 않는다 — 같은 수의 플레이어를 먼저 더한 월드에만 읽는다.
+        // 지갑은 플레이어를 추가한 쪽이 빌려 준 것이라 싣지 않는다. 같은 수의 플레이어를 먼저 추가한 월드에만 읽어야 한다.
         if ( archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size() )
             return false;
         vector<RTSPlayer> listPlayer( playerCount );
@@ -1931,7 +1931,7 @@ namespace sw
         _teamCount              = teams;
         _winningTeam            = winningTeam;
 
-        // 격자는 땅 + 서 있는 건물 · 자원의 발자국으로 다시 칠한다(저장하지 않는다 — 같은 것에서 나온다).
+        // 격자는 땅과 서 있는 건물, 자원의 발자국으로 다시 칠한다. 같은 데이터에서 나오므로 저장하지 않는다.
         const float32 cellSize = _grid.getCellSize();
         const float3  origin   = _grid.getOrigin();
         _grid.initialize( width, height, cellSize, origin );
@@ -1981,7 +1981,7 @@ namespace sw
 
     void RTSWorld::payCost( RTSPlayer& player, const RTSUnitDef& def )
     {
-        // evaluateCost 가 둘 다 된다고 본 뒤에만 부른다 — 한쪽만 빠지지 않는다.
+        // evaluateCost 가 둘 다 된다고 판단한 뒤에만 호출한다. 한쪽만 빠지는 일이 없게 하려는 것이다.
         if ( player._pWallet == nullptr )
             return;
         if ( player._pWallet->trySpend( _settings._mineralCurrency, def._minerals ) == false || player._pWallet->trySpend( _settings._gasCurrency, def._gas ) == false )
