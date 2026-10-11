@@ -303,6 +303,15 @@ namespace sw
         return static_cast<int32>( GetCurrentProcessId() );
     }
 
+    string Process::getHostName()
+    {
+        utf16 arrBuffer[MAX_COMPUTERNAME_LENGTH + 1]{};
+        DWORD length = static_cast<DWORD>( MAX_COMPUTERNAME_LENGTH + 1 );
+        if ( GetComputerNameW( arrBuffer, &length ) == FALSE )
+            return {};
+        return StringUtil::utf16ToUtf8( arrBuffer );
+    }
+
     bool Process::isProcessAlive( int32 processID )
     {
         if ( processID <= 0 )

@@ -117,6 +117,8 @@
 | `gv_profileAllocSites` | `int32` | `0` | 시험 | 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileFrames` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 프레임 수 (0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
 | `gv_profileSeconds` | `int32` | `0` | 시험 · 배포본에도 | 프레임 프로파일 측정 시간(초, 0=사용 안 함) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_profileTracePath` | `string` | — | 시험 | 측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기) | [FrameProfileSession.cpp](../../Source/Engine/Profiling/FrameProfileSession.cpp) |
+| `gv_traceSlowTickMs` | `int32` | `0` | 시험 | 틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기) | [ProfilerTraceExport.cpp](../../Source/Engine/Profiling/ProfilerTraceExport.cpp) |
 | `gv_tracy` | `bool` | `false` | 시험 | Tracy 프로파일러로 계측을 내보낸다(기동부터, 뷰어는 localhost 로 붙는다) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
 | `gv_tracyMemory` | `bool` | `false` | 시험 | Tracy 에 할당 · 해제를 메모리 태그별로 보낸다(느림, gv_tracy 와 같이) | [ProfilerBackend.cpp](../../Source/Engine/Profiling/ProfilerBackend.cpp) |
 

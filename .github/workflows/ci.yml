@@ -263,6 +263,7 @@ jobs:
         ${{ runner.os == 'Windows' && 'python' || 'python3' }} Scripts/dev/CiFailureReport.py tests --ctest-dir build/${{ matrix.preset }}
 
     # Diagnostics & Artifact Upload
+    # 트레이스(`*.trace.json` — 성능 회귀 · 느린 틱 · bugit 이 남긴다)도 같이 올린다. Perfetto UI 로 연다.
     # 시험 단계가 돌았을 때만 올린다 — 빌드에서 진 잡에는 LastTest.log 가 없어 "No files were found" 경고만 남았다.
     - name: Upload test logs on failure
       if: failure() && steps.test.outcome == 'failure'
@@ -273,6 +274,7 @@ jobs:
           build/${{ matrix.preset }}/Testing/Temporary/LastTest*.log
           build/${{ matrix.preset }}/Bin/*.log
           build/${{ matrix.preset }}/Bin/Saved/Logs/crash_*
+          build/${{ matrix.preset }}/Bin/Saved/Traces/*.trace.json
         if-no-files-found: ignore
         retention-days: 7
 

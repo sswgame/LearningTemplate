@@ -29,6 +29,7 @@
 #include "Engine/Observability/ServiceHealthRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 #if SW_DEV_COMMANDS_ENABLED
     #include "Engine/Console/DevConsole.h"
 #endif
@@ -293,6 +294,11 @@ namespace sw
             tickOnce( deltaSeconds );
             const int64 tickTime = MonotonicClock::nowNanoseconds() - tickStart;
             _pTickHistogram->observe( static_cast<float64>( tickTime ) * 1.0e-9 );
+#if SW_PROFILER_TRACE_ENABLED
+            // 느린 틱 자동 캡처(`-gv_traceSlowTickMs`) — 꺼져 있으면 정수 비교 하나다. Shipping 서버에는 없다(지표 `server_tick_seconds` 만).
+            ProfilerTraceExport::tickSlowFrameCapture( engine::getFrameProfiler(), static_cast<uint64>( tickStart ),
+                                                       static_cast<uint64>( tickStart + tickTime ), "Server" );
+#endif
             _healthRegistry->markTick( ServerAppInternal::nowMonotonicMs() );
             _statusTickSumNanoseconds += tickTime;
             _statusTickMaxNanoseconds = tickTime > _statusTickMaxNanoseconds ? tickTime : _statusTickMaxNanoseconds;

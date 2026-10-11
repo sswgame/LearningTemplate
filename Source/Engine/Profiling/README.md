@@ -71,7 +71,7 @@ VSync는 기본이 꺼짐이지만, 사용자 파일에 켜 둔 값이 있으면
 |---|---|
 | `FrameProfiler` | 프로세스 안의 구간 집계와 카운터 |
 | `ProfilerTimeline` | 켤 때만 계측 구간을 스레드마다 링(8192 사건)에 남기는 미니 타임라인. `FrameProfiler` 가 소유한다 |
-| `ProfilerTraceExport` | 타임라인 사건을 Chrome Trace Event JSON 으로 바꾸고 저장한다(`profile.trace save [<경로>] [<프레임 수>]`, 에디터 Timeline 탭의 Save Trace). `profile.trace record <초> [<경로>] [<스레드당 사건 예산>]` 은 처음부터 N 초를 모아(링과 따로, 예산을 넘으면 거기서 멈추고 `TRUNCATED` 표지) 끝나면 저장한다. `parseTraceJSON` · `loadTraceFile` 은 이 파일이 낸 것과 완전 이벤트(`X`)를 가진 다른 도구의 트레이스를 읽고(깊이는 겹침으로 다시 센다), 에디터 Timeline 탭의 Load Trace 가 가장 최근 파일을 살아 있는 기록 아래에 첫 시각을 맞춰 겹쳐 그린다(검색 · 같은 구간 통계 툴팁). **Shipping 에서는 통째로 빠진다**(`SW_PROFILER_TRACE_ENABLED` 0 — 긴 캡처 기록 경로 · 변환기 · 개발 명령 · 프레임당 확인). `chrome://tracing` · Perfetto UI 가 읽는다. 머리말에 벽시계 · 단조 시계 쌍을 남겨 프로세스끼리 시간을 맞출 수 있다 |
+| `ProfilerTraceExport` | 타임라인 사건을 Chrome Trace Event JSON 으로 바꾸고 저장한다(`profile.trace save [<경로>] [<프레임 수>]`, 에디터 Timeline 탭의 Save Trace). `profile.trace record <초> [<경로>] [<스레드당 사건 예산>]` 은 처음부터 N 초를 모아(링과 따로, 예산을 넘으면 거기서 멈추고 `TRUNCATED` 표지) 끝나면 저장한다. `parseTraceJSON` · `loadTraceFile` 은 이 파일이 낸 것과 완전 이벤트(`X`)를 가진 다른 도구의 트레이스를 읽고(깊이는 겹침으로 다시 센다), 에디터 Timeline 탭의 Load Trace 가 가장 최근 파일을 살아 있는 기록 아래에 첫 시각을 맞춰 겹쳐 그린다(검색 · 같은 구간 통계 툴팁). **Shipping 에서는 통째로 빠진다**(`SW_PROFILER_TRACE_ENABLED` 0 — 긴 캡처 기록 경로 · 변환기 · 개발 명령 · 프레임당 확인). `chrome://tracing` · Perfetto UI 가 읽는다. 머리말에 벽시계 · 단조 시계 쌍과 호스트 이름을 남기고, `profile.trace merge <출력> <입력1> <입력2> …`(`mergeTraceFiles`)가 프로세스마다 저장한 파일을 줄 묶음(`pid`)별로 한 타임라인에 합친다(첫 입력이 시간 기준, 흐름 이벤트는 그대로 옮긴다). 사람이 누르지 않아도 남는 길: `bugit`(타임라인 기록이 켜져 있으면 `trace.trace.json`), `-gv_profileTracePath=<경로>`(측정 창 전체 — 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 남긴다), `-gv_traceSlowTickMs=N`(전용 서버의 틱 본문이 N ms 를 넘으면 그 앞뒤를 `Saved/Traces/slowtick_*.trace.json` 으로) |
 | `FrameProfileSession` | `-gv_profileFrames=N` 한 번의 측정 |
 | `MemoryBudgetMonitor` | 메모리 태그 예산(`Config/Engine/MemoryBudget.json`), 프레임 끝 예산 검사, `-gv_memoryReport` 표 |
 | `IProfilerBackend.h` | 출력 하나의 인터페이스 |
@@ -199,6 +199,9 @@ Tracy 뷰어를 에디터 도킹 창으로 넣지 않고 별도 프로세스로 
 - **구간은 연 출력으로 닫힙니다.** 프레임 도중에 출력이 켜져도 짝이 어긋나지 않습니다. `ScopedFrameProfile` 이 구간을 연 출력을 보관하기 때문입니다.
 - **빠른 확인은 패널 타임라인, 깊은 분석은 Tracy 입니다.** 타임라인은 최근 64 프레임 · 스레드당 8192 사건까지만 들고 계측 구간(`SW_PROFILE_SCOPE`)만 봅니다.
   잠금 · GPU 큐 · 컨텍스트 전환 · 긴 녹화는 Tracy 로 봅니다. 기록은 `FrameProfiler` 계측이 켜져 있어야 쌓입니다(스코프가 시계를 읽어야 한다).
+- **트레이스 합치기는 프로세스 하나짜리 파일을 넣으세요.** 파일마다 줄 묶음 하나로 다시 번호를 매기므로, 이미 합친 파일을 다시 넣으면 그 안의 프로세스들이 한 줄 묶음으로 뭉칩니다.
+  시간은 같은 기계면 정확하고, 다른 기계면 두 시계의 차이만큼 틀립니다 — 줄 묶음 이름의 `[wall clock …]` 이 그 표시입니다.
+- **느린 틱 저장은 그 자체가 틱을 늦춥니다.** 링 버퍼를 문자열로 바꿔 쓰는 데 수 ms 가 들어, 저장한 틱이 또 느린 틱이 됩니다. 그래서 30 초 쿨다운과 프로세스당 20 파일 상한이 있습니다. Shipping 에는 없습니다.
 - Tracy를 처음 켜면 Windows 방화벽이 리슨 소켓 허용을 묻습니다. 거절해도 같은 PC의 뷰어는 localhost로 연결됩니다.
 
 ## 더 볼 곳

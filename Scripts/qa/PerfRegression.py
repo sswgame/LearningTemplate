@@ -10,6 +10,9 @@
 프로세서 이름이다. 판마다 `-gv_profileFrames=N`(워밍업 60 프레임은 엔진이 버린다)으로 재고, 판들의 중앙값을 쓴다 — 한 판의 max 는 잡음이다
 (docs/08_Verification.md 2 절 "측정 · 프로파일"). 판정: 값 > 기준 × (1 + 허용) + 바닥(us) 이면 회귀다. 개선은 알리기만 한다.
 
+회귀로 지면 한 번 더 돌려 측정 창 전체를 트레이스로 남긴다(`-gv_profileTracePath`, 끄려면 `--no-trace`) — `<App 폴더>/Saved/Traces/perf_<게임>_<백엔드>.trace.json`.
+Perfetto UI · `chrome://tracing` · 에디터 프로파일러 패널의 Load Trace 로 연다. 숫자를 재는 판에는 켜지 않는다(긴 캡처가 사건마다 24 B 를 쓴다).
+
 Debug 숫자로는 재지 않는다 — Debug 는 경합 검출기 · 할당 추적으로 컨테이너 코드가 과장된다(빌드 형식이 Release 가 아니면 멈춘다).
 """
 
@@ -88,6 +91,19 @@ def compareInternal(baseline: dict[str, dict[str, float]], measured: dict[str, d
     return listRegression, listNote
 
 
+def captureTraceInternal(appPath: Path, listAppArgument: list[str], gameName: str, backend: str) -> Path | None:
+    """같은 인자로 한 판 더 돌려 측정 창 전체를 트레이스로 남깁니다. 남긴 경로(실패하면 None)."""
+    tracePath = Path(appPath).resolve().parent / "Saved" / "Traces" / f"perf_{gameName}_{backend}.trace.json"
+    tracePath.parent.mkdir(parents=True, exist_ok=True)
+    tracePath.unlink(missing_ok=True)
+    result = runApp(appPath, [*listAppArgument, f"-gv_profileTracePath={tracePath.as_posix()}"], timeoutSeconds=600.0)
+    if not result.bClean or not tracePath.is_file():
+        print(f"[Perf] trace run did not leave {tracePath} ({(result.listErrorLine or [f'exit {result.exitCode}'])[0]})", flush=True)
+        return None
+    print(f"[Perf] trace {tracePath}", flush=True)
+    return tracePath
+
+
 def main(listArgument: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="게임마다 프레임 시간 p50/p99 를 이 기계의 기준과 견준다(Release)")
     addAppRunArguments(parser, bMultipleBackends=False)
@@ -98,6 +114,7 @@ def main(listArgument: list[str] | None = None) -> int:
     parser.add_argument("--tolerance-p99", type=float, default=0.35, help="p99 의 허용 비율")
     parser.add_argument("--floor-us", type=float, default=150.0, help="모든 한계에 더하는 절대 여유(us)")
     parser.add_argument("--allow-debug", action="store_true", help="Release 가 아닌 빌드도 잰다(숫자는 의미가 적다)")
+    parser.add_argument("--no-trace", action="store_true", help="회귀로 졌을 때 트레이스를 남기는 한 판을 더 돌리지 않는다")
     args = parser.parse_args(listArgument)
 
     repositoryRoot = getProjectRoot()
@@ -152,6 +169,8 @@ def main(listArgument: list[str] | None = None) -> int:
         print(f"[Perf] note {note}", flush=True)
     for regression in listRegression:
         print(f"[Perf] REGRESSION {regression}", flush=True)
+    if listRegression and not args.no_trace:
+        captureTraceInternal(args.app, listAppArgument, gameName, args.backend)
     print("[Perf] PASS" if not listRegression else "[Perf] FAIL", flush=True)
     return 1 if listRegression else 0
 

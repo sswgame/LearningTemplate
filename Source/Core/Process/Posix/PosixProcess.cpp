@@ -388,6 +388,14 @@ namespace sw
         return static_cast<int32>( ::getpid() );
     }
 
+    string Process::getHostName()
+    {
+        utf8 arrBuffer[256]{};
+        if ( ::gethostname( arrBuffer, sizeof( arrBuffer ) - 1 ) != 0 )
+            return {};
+        return string( arrBuffer );
+    }
+
     bool Process::isProcessAlive( int32 processID )
     {
         // 0 이하를 kill 에 넘기면 프로세스 그룹을 가리킨다. 여기서 막는다.

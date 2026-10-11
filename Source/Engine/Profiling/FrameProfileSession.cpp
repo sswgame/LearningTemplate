@@ -16,6 +16,7 @@
 #include "Engine/Common/EngineServices.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Profiling/MemoryBudgetMonitor.h"
+#include "Engine/Profiling/ProfilerTraceExport.h"
 
 namespace sw
 {
@@ -35,6 +36,14 @@ namespace sw
      *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 재는 용도가 아닙니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
+#if SW_PROFILER_TRACE_ENABLED
+    /**
+     * @brief `-gv_profileTracePath=<경로>`: 측정 창(워밍업 뒤 ~ 보고) 전체를 트레이스로 저장합니다(비면 끄기).
+     * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다(`Scripts/qa/PerfRegression.py`).
+     *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 재는 판에는 켜지 않습니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( sw::string, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
+#endif
 
     bool FrameProfileSession::isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget )
     {
@@ -77,6 +86,14 @@ namespace sw
             profiler.reset();
             SW_LOG_INFO( "[Profile] 워밍업 %# 프레임을 버렸습니다. 지금부터 %# 프레임을 잽니다.", kWarmupFrames,
                          _frameTarget );
+#if SW_PROFILER_TRACE_ENABLED
+            if ( gv_profileTracePath.empty() == false )
+            {
+                string reply;
+                if ( ProfilerTraceExport::startRecording( profiler, 0.0, gv_profileTracePath, "Game", 0, reply ) == false )
+                    SW_LOG_WARNING( "[Profile] trace capture not started: %#", reply );
+            }
+#endif
             // 할당 횟수도 같은 측정 구간에서 센다. 시간 표에는 보이지 않는 비용이다. 배포본에는 프로파일러가 없다.
             if ( MemoryProfiler* pMemory = MemoryProfiler::getActive(); pMemory != nullptr )
             {
@@ -100,6 +117,10 @@ namespace sw
         [[maybe_unused]] const int64 elapsedMicro = nowMicro - _measureStartMicro;
         SW_LOG_INFO( "[Profile] wall  %# frames in %# ms  = %# us/frame", frames, elapsedMicro / 1000, elapsedMicro / static_cast<int64>( frames == 0 ? 1 : frames ) );
         reportAllocations( frames );
+#if SW_PROFILER_TRACE_ENABLED
+        if ( gv_profileTracePath.empty() == false )
+            (void)ProfilerTraceExport::finishRecording( profiler ); // 저장 경로 · 실패 이유는 finishRecording 이 로그로 남긴다
+#endif
         profiler.setEnabled( false );
         _bQuitRequested = SW_TRUE;
     }

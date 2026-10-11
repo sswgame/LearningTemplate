@@ -156,6 +156,12 @@ namespace sw
         static int32 getCurrentProcessID();
 
         /**
+         * @brief 이 기계의 호스트 이름입니다. 얻지 못하면 빈 글입니다.
+         * @details 프로세스마다 남긴 파일(트레이스 등)이 같은 기계에서 나왔는지 가를 때 씁니다 — 같은 기계면 단조 시계를 나눠 쓴다.
+         */
+        static string getHostName();
+
+        /**
          * @brief ID 가 @p processID 인 프로세스가 지금 살아 있는지 OS 에 묻습니다. 0 이하는 false 입니다.
          * @details 있지만 권한이 없어 열 수 없는 프로세스는 살아 있다고 봅니다(지우면 안 되는 쪽으로 틀린다). 끝났지만 아직 거두지 않은
          *          POSIX 좀비도 살아 있다고 나옵니다. OS 가 ID 를 다시 쓰면 다른 프로세스를 보고 true 일 수 있으므로, 이 답은 "죽었으니

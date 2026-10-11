@@ -2637,6 +2637,14 @@
    "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
   },
   {
+   "name": "gv_profileTracePath",
+   "type": "string",
+   "default": "",
+   "kind": "시험",
+   "description": "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)",
+   "source": "Source/Engine/Profiling/FrameProfileSession.cpp"
+  },
+  {
    "name": "gv_reduceFlashing",
    "type": "bool",
    "default": "false",
@@ -2859,6 +2867,14 @@
    "kind": "일반",
    "description": "게임 시간 배율 (1=실시간, 0.25=슬로 모션, 0=멈춤)",
    "source": "Source/Engine/Utility/GameTimeScale.cpp"
+  },
+  {
+   "name": "gv_traceSlowTickMs",
+   "type": "int32",
+   "default": "0",
+   "kind": "시험",
+   "description": "틱 본문이 N ms 를 넘으면 앞뒤 프레임을 트레이스로 저장 (0=끄기)",
+   "source": "Source/Engine/Profiling/ProfilerTraceExport.cpp"
   },
   {
    "name": "gv_tracy",
