@@ -1291,7 +1291,7 @@ namespace sw
             Scene* pDebugScene = _owned._pSceneManager->getActiveScene();
             if ( pDebugScene != nullptr && pDebugScene->getObjectManager() != nullptr )
             {
-                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneNavigation();
+                SceneNavigation& navigation = pDebugScene->getObjectManager()->getSceneService<SceneNavigation>();
                 navigation.updateDebugView( static_cast<uint32>( gv_navDebugDraw ) );
                 if ( gv_navDebugDraw != 0 )
                 {

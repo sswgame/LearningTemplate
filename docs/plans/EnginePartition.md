@@ -3,7 +3,7 @@
 `Engine.dll` 하나를 티어 경계로 나누고, 그 전에 의존 방향의 약한 고리를 푼다. 폴더 의존은 이미 DAG 이고 `CheckEngineLayers.py` 가 지킨다.
 막힌 곳은 링크 단위가 하나라는 점과, 컴포넌트 모델(`Object`)이 기능 폴더 다섯에 묶여 있다는 점이다.
 
-## 측정한 현재 상태 (2026-10-11, `Source/Engine` 의 `#include "Engine/…"` 수 — 기능 캐시 등록 반전 · `SceneNavigation` 이동 뒤)
+## 측정한 현재 상태 (2026-10-12, `Source/Engine` 의 `#include "Engine/…"` 수 — 기능 캐시 등록 반전 · 씬 서비스 등록표 뒤)
 
 | 방향 | include 수 | 파일 수 | 대표 헤더 |
 |---|---|---|---|
@@ -39,8 +39,8 @@
 
 ### 2. 컴포넌트 모델을 코어와 기능으로 가르기 (중간 위험, 가장 큰 효과)
 - `Object` 를 둘로: **코어**(`GameObject` · `Prefab` · `Component` 기반 클래스 · 리플렉션 훅)와 **기능 컴포넌트**(`Component/{2D,3D,Audio,Navigation,Physics}` · `Object/Animation`).
-- `SceneNavigation` 은 `Object/Component/Navigation` 으로 옮겼고 `GameObjectManager` 는 전방 선언 + `unique_ptr` 로 든다 — `GameObject/` 의 Navigation include 는 0 이다.
-  남은 것: `GameObjectManager.cpp` 가 아직 그것을 만들고 틱에서 부른다(씬 시스템 등록으로 뒤집을 차례). `ScenePhysics` · `SceneAudio` 도 같은 모양이다.
+- 씬마다 하나인 기능 서비스는 씬 서비스 등록표(`ISceneService` · `SW_SCENE_SERVICE`)로 만든다 — `SceneNavigation` 이 첫 예이고 `GameObject/` 는 그 타입을 모른다.
+  다음: `ScenePhysics` · `SceneAudio` 를 같은 등록표로 옮긴다(`SceneAudio::update` 는 카메라가 필요해 프레임 표 밖에 있다 — 단계 하나를 더하거나 `Scene::tick` 쪽 창구가 필요하다).
 - 코어는 `Graphics` · `Physics` · `Navigation` · `Audio` 를 include 하지 않는다. `GameObject` 의 기능 의존 19 건(위 줄)은 기능 컴포넌트가 코어에 등록하는 방향으로 뒤집는다:
   Transform 변경 알림 · 바운드 질의 · 씬 등록 모두 `GameObject` 가 인터페이스(`ISceneListener` 꼴)로 듣는다.
 - 기능 컴포넌트는 코어 위, 각자의 기능 폴더 아래에 둔다. 폴더 이동은 `git mv` 후 코드젠을 다시 만든다(헤더 이동은 .gen.cpp 를 썩힌다 — 메모리 `moved-header-stale-codegen`).

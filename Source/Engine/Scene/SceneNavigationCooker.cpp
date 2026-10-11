@@ -53,7 +53,7 @@ namespace sw
             return false;
         }
         GameObjectManager&    manager    = *scene.getObjectManager();
-        SceneNavigation&      navigation = manager.getSceneNavigation();
+        SceneNavigation&      navigation = manager.getSceneService<SceneNavigation>();
         vector<hashed_string> listAgentType;
         manager.forEachComponentOfType<NavMeshSurfaceComponent>( [&listAgentType]( NavMeshSurfaceComponent* pSurface )
         {

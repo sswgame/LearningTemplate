@@ -1,8 +1,9 @@
 /**
  * @file SceneNavigation.h
  * @brief 씬 하나의 내비게이션 — 에이전트 종류마다 내비메시 · 군중, 기하 모으기, 베이크(쿠킹본 · 런타임), 장애물 · 파괴의 타일 재베이크, 에이전트 갱신입니다.
- * @details `GameObjectManager` 가 소유만 하고(`ScenePhysics` 와 같은 자리) 틱의 한 줄(`tick` — PrePhysics · DuringPhysics 틱 결과 적용 뒤, 애니메이션 ·
- *          물리 앞)만 정합니다. 언리얼 `UNavigationSystemV1` + `ARecastNavMesh` + `UCrowdManager` 를 씬 단위로 묶은 자리입니다.
+ * @details 씬 서비스(`ISceneService`)입니다. 이 .cpp 의 `SW_SCENE_SERVICE` 줄로 매니저마다 하나 생기고, 매니저는 `Navigation` 단계(PrePhysics ·
+ *          DuringPhysics 틱 결과 적용 뒤, 애니메이션 · 물리 앞 — 에이전트가 캐릭터 컨트롤러에 넘긴 속도가 이번 물리에 든다)에서 `update` 만 부릅니다.
+ *          얻기는 `manager.getSceneService<SceneNavigation>()` 입니다. 언리얼 `UNavigationSystemV1` + `ARecastNavMesh` + `UCrowdManager` 를 씬 단위로 묶은 자리입니다.
  *
  *          **갱신 한 번**(게임 스레드): ① 플레이 중이면 표면 · 에이전트가 쓰는 에이전트 종류의 내비메시를 마련한다(쿠킹본이 맞으면 읽고, 아니면 모든 타일을
  *          워커로 베이크한다) ② 장애물이 움직였으면 옛 · 새 자리를, 파괴 · 수정자가 알린 자리를(`invalidateArea`) 타일로 바꿔 재베이크 줄에 넣는다 ③ 끝난 재베이크
@@ -28,6 +29,7 @@
 #include "Engine/Navigation/NavMeshAsset.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 #include "Engine/Navigation/NavigationTypes.h"
+#include "Engine/Object/GameObject/ISceneService.h"
 
 namespace sw
 {
@@ -85,22 +87,24 @@ namespace sw
 namespace sw
 {
     /** @class SceneNavigation @brief 파일 머리말 참고. */
-    class SW_API SceneNavigation
+    class SW_API SceneNavigation : public ISceneService
     {
     public:
         /** @brief 등록부에 없는 자리입니다. */
         static constexpr uint32 kNotRegistered = invalid_index::kUint32;
 
-        SceneNavigation();
-        ~SceneNavigation();
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+
+        /** @brief @p manager 의 기하를 모으는 내비게이션을 만듭니다(등록표가 매니저마다 부른다). */
+        explicit SceneNavigation( GameObjectManager& manager );
+        ~SceneNavigation() override;
 
         SceneNavigation( const SceneNavigation& )            = delete;
         SceneNavigation& operator=( const SceneNavigation& ) = delete;
 
-        /** @brief 기하를 모을 매니저를 정합니다(매니저가 만들 때). */
-        void setObjectManager( GameObjectManager* pManager ) { _pManager = pManager; }
         /** @brief 베이크하던 일을 기다리고 내비메시 · 군중을 모두 놓습니다. 등록부는 그대로입니다(컴포넌트가 스스로 뺀다). */
-        void shutdown();
+        void shutdown() override;
 
         /** @brief 씬 소스 경로 — 쿠킹본(`<씬>.navmesh`)을 찾는 데 씁니다(`Scene::instantiate`). */
         void          setSourcePath( string_view path ) { _sourcePath = string{ path }; }
@@ -113,7 +117,7 @@ namespace sw
         const NavMeshSettings& getSettings();
 
         /** @brief 갱신 한 번 — 파일 머리말의 순서입니다. 게임 스레드에서 매니저가 부릅니다. */
-        void tick( float32 deltaTime );
+        void update( float32 deltaTime ) override;
 
         void registerAgent( NavMeshAgentComponent* pAgent );
         void unregisterAgent( NavMeshAgentComponent* pAgent );
