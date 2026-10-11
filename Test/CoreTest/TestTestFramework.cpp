@@ -525,6 +525,44 @@ SW_TEST_CASE( TestFrameworkTest, HangingChildIsKilledAtTheDeadline )
 }
 
 /**
+ * @brief [TestFrameworkTest] 도움말 인자는 철자마다 하네스가 가져가고 엔진 명령줄로 넘어가지 않는다
+ */
+SW_TEST_CASE( TestFrameworkTest, HelpArgumentIsTakenByTheHarness )
+{
+    for ( const utf8* pArgument : { "--help", "-h", "-?", "/?", "--gtest_help" } )
+    {
+        test::TestRegistry registry;
+        utf8               programName[] = "probe";
+        sw::string         argument( pArgument );
+        utf8*              argv[]             = { programName, argument.data() };
+        const auto         listApplicationArg = registry.configureFromArgs( 2, argv );
+        SW_EXPECT_TRUE_MSG( registry.isHelpRequested(), pArgument );
+        SW_EXPECT_EQUAL( size_t{ 1 }, listApplicationArg.size() );
+    }
+
+    test::TestRegistry plainRegistry;
+    configureWithArgument( plainRegistry, "--test_list" );
+    SW_EXPECT_FALSE( plainRegistry.isHelpRequested() );
+}
+
+/**
+ * @brief [TestFrameworkTest] `--help` 를 주고 띄우면 도움말만 찍고 케이스를 하나도 돌리지 않은 채 종료 코드 0 으로 곧 끝난다
+ * @details 하네스가 `--help` 를 모르면 엔진 명령줄이 모르는 인자로 무시하고 전체 시험을 돈다 — 도움말을 보려던 사람에게는 끝나지 않는 실행이다.
+ *          필터는 건너뛰는 자식 역할 케이스 하나만 고르게 해, 고치기 전 하네스에서도 이 케이스가 자기 자신을 다시 띄우지 않는다.
+ */
+SW_TEST_CASE( TestFrameworkTest, HelpPrintsUsageAndExitsWithoutRunningCases )
+{
+    const test::ChildRunResult child =
+        test::runThisExecutableWithArguments( "--help --test_filter=TestFrameworkTest.ChildRoleEchoesOrHangs", sw::vector_reference<const test::ChildEnvironmentVariable>{}, 60 );
+    SW_ASSERT_TRUE( child._bLaunched );
+    SW_EXPECT_FALSE( child._bTimedOut );
+    SW_EXPECT_EQUAL( 0, child._exitCode );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "Usage:" ), child.getOutputTail().c_str() );
+    SW_EXPECT_TRUE_MSG( sw::StringUtil::contains( child._output, "--test_filter" ), child.getOutputTail().c_str() );
+    SW_EXPECT_FALSE_MSG( sw::StringUtil::contains( child._output, "[ RUN" ), child.getOutputTail().c_str() );
+}
+
+/**
  * @brief [TestFrameworkTest] 작업 스레드 여럿이 동시에 실패해도 실패는 하나도 빠지지 않고 깨지지 않는다
  * @details 단언은 `runParallel` 본문 · `std::thread` 람다에서도 불린다. 기록이 락 없는 `push_back` 이면 둘이 동시에 실패할 때
  *          벡터가 깨진다 — 병렬 코드가 틀렸다는 것을 알려야 할 그 순간에 테스트 실행 파일이 죽거나 실패 수가 틀린다.

@@ -54,6 +54,45 @@ namespace
         uint64 _blockedObjectID;
     };
 
+    /**
+     * @brief 케이스 동안 게임 서비스(`AssetManager`)를 묶고, 풀 때 상호작용 표 캐시를 비웁니다 — 단언이 일찍 빠져도 소멸자가 같은 일을 합니다.
+     * @details 표 캐시(`InteractionCatalog`)는 GameFramework 모듈 정적이고 케이스의 임시 경로는 회차마다 같다. 비우지 않으면 `--test_repeat` 다음
+     *          회차가 앞 회차가 고친 표를 그대로 읽는다. 비워도 앞서 돌려준 표는 캐시가 들고 있으므로 케이스가 든 날 포인터는 유효하다.
+     */
+    class ScopedCatalogServiceBinding final
+    {
+    public:
+        explicit ScopedCatalogServiceBinding( AssetManager& resources )
+            : _resources{ resources }
+            , _bBound{ true }
+        {
+            ModuleService service{};
+            service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &_resources;
+            game::bindGameService( service );
+        }
+
+        ~ScopedCatalogServiceBinding() { release(); }
+
+        ScopedCatalogServiceBinding( const ScopedCatalogServiceBinding& )            = delete;
+        ScopedCatalogServiceBinding& operator=( const ScopedCatalogServiceBinding& ) = delete;
+
+        /** @brief 표 캐시를 비우고 서비스를 풉니다. 두 번 불러도 된다. */
+        void release()
+        {
+            if ( _bBound == false )
+                return;
+            _bBound             = false;
+            IAssetCache* pCache = _resources.findAssetCache( "InteractionCatalog" );
+            if ( pCache != nullptr )
+                pCache->clear();
+            game::unbindGameService();
+        }
+
+    private:
+        AssetManager& _resources;
+        bool          _bBound;
+    };
+
     struct InteractionTestInternal
     {
         static InteractionCandidate makeCandidate( uint64 objectID, const float3& position )
@@ -423,10 +462,8 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     FileUtil::ensureParentDirectoryExists( path );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><Interaction id="Open" mode="Press" maxDistance="2"/></Interactions>)" ) );
 
-    AssetManager  resources;
-    ModuleService service{};
-    service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &resources;
-    game::bindGameService( service );
+    AssetManager                resources;
+    ScopedCatalogServiceBinding binding{ resources };
 
     GameObjectManager      manager;
     GameObject*            pDoor         = manager.createGameObject( hashed_string( "Door" ) );
@@ -446,7 +483,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesComponentsThroughTheAssetCach
     if ( pInteractable != nullptr )
         pInteractable->onTick( 0.0f );
     const InteractionDef* pAfter = pInteractable != nullptr ? pInteractable->getDefinition() : nullptr;
-    game::unbindGameService();
+    binding.release();
 
     SW_EXPECT_NULL( resources.findAssetCache( "InteractionCatalog" ) ); // 서비스가 풀리면 등록부에서 내려간다
     SW_ASSERT_NOT_NULL( pInteractable );
@@ -469,10 +506,8 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
     FileUtil::ensureParentDirectoryExists( path );
     SW_ASSERT_TRUE( FileUtil::writeTextFile( path, R"(<Interactions><SmartObject id="Bench"><Slot id="Left" offset="-0.5,0,0" tags="Activity.Sit"/></SmartObject></Interactions>)" ) );
 
-    AssetManager  resources;
-    ModuleService service{};
-    service.arrServices[internal::toRawServiceID( internal::ModuleServiceID::AssetManager )] = &resources;
-    game::bindGameService( service );
+    AssetManager                resources;
+    ScopedCatalogServiceBinding binding{ resources };
 
     GameObjectManager     manager;
     GameObject*           pBench  = manager.createGameObject( hashed_string( "Bench" ) );
@@ -496,7 +531,7 @@ SW_TEST_CASE( InteractionTest, EditedCatalogReachesSmartObjectSlots )
         after = pSmart->getSlotCount();
         bKept = pSmart->findSlotOf( *pSitter ) == 0;
     }
-    game::unbindGameService();
+    binding.release();
 
     SW_ASSERT_NOT_NULL( pSmart );
     SW_EXPECT_EQUAL( 1, before );

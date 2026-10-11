@@ -295,6 +295,12 @@ namespace test
         // 목록(`EngineServiceList.xxx`)의 `EngineCreated` 서비스는 저장소가 만든다. 시험 실행 파일은 진단 도구(교착 감지기 · 메모리 프로파일러)를 늘 켠다.
         // 프레임워크 전용 플래그를 먼저 소비해 CommandLineManager 가 미지 인자를 경고하지 않게 한다(부트스트랩이 나머지를 파싱한다).
         sw::vector<utf8*> listApplicationArg = TestRegistry::getInstance().configureFromArgs( argc, argv );
+        if ( TestRegistry::getInstance().isHelpRequested() )
+        {
+            // 도움말은 엔진 없이 찍는다 — 기동을 기다릴 까닭이 없고, `main` 이 종료 코드 0 으로 끝낸다.
+            TestRegistry::getInstance().printHelp();
+            return false;
+        }
         if ( state._bootstrap.initialize( state._owned, true, static_cast<int32>( listApplicationArg.size() ), listApplicationArg.data() ) == false )
             return false;
         state._bBootstrapped = true;

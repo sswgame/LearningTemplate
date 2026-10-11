@@ -225,6 +225,7 @@ AssetManager 전체 종료나 전역 씬 초기화처럼 다른 테스트와 엔
 
 섞을 때 스위트끼리는 붙어 있습니다(gtest와 같음). 섞어서 실패한 실행은 끝에 다시 돌릴 플래그를 출력합니다.
 실행 요약에는 가장 오래 걸린 케이스 다섯 개가 `Slowest cases:` 로 나옵니다. 테스트가 느려지는 것은 조용히 일어나기 때문입니다.
+받는 플래그 전체는 `--help`(`-h` · `--gtest_help`)로 봅니다. 엔진을 세우지 않고 도움말만 찍은 뒤 종료 코드 0 으로 끝납니다.
 
 ```powershell
 cd build/Ninja-Debug/Bin
@@ -318,6 +319,8 @@ $env:SW_FUZZ_ITERATIONS=20000; $env:SW_FUZZ_TRACE=1; cd build/Ninja-Debug/Bin; .
 - **스킵은 "이 구성에 없다" 일 때만 씁니다.** 있어야 할 것이 실패하면 단언합니다. SmokeTest 는 모듈 파일이 있는지를 `isModuleBuilt` 로 보고 스킵하고,
   지어진 모듈의 `registerModule` 실패(로드 · 바인딩)는 `SW_ASSERT_TRUE_MSG` 로 실패시킵니다. 등록 실패를 스킵으로 바꾸면 회귀가 스킵 줄 하나로 지나갑니다.
 - **오브젝트는 지역 `GameObjectManager` 로 만듭니다.** 전역 활성 씬을 빌려 쓰면 테스트끼리 상태가 샙니다.
+- **모듈 정적 캐시에 넣은 것은 케이스 끝에 비웁니다.** `makeTempPath` 는 반복 회차마다 같은 경로를 주므로, 표 캐시(`GameDataCache`)처럼 경로를 키로 쥐는 정적 상태가
+  남으면 `--test_repeat` 다음 회차가 앞 회차가 고친 내용을 읽습니다. 서비스를 풀 때 캐시를 비우는 RAII 가드로 묶습니다(`InteractionTest.EditedCatalog…` 의 `ScopedCatalogServiceBinding`).
 - **`TestBin` 에서 테스트를 직접 돌리지 마세요.** 리소스 루트를 찾지 못합니다. 작업 폴더는 언제나 `Bin` 입니다.
 - **커버리지 안내 퍼징은 Linux에서만 합니다.** Windows의 `clang_rt.fuzzer` 는 정적 런타임(/MT)뿐이라 동적 런타임(/MD)인 엔진과 링크되지 않습니다. 디코더만 /MT로 떼어 돌리지 않고, 같은 코드를 Linux가 퍼징합니다.
 - **틀을 시험하려고 시험 안에서 만든 `TestRegistry` 의 결과 줄은 `(nested) ` 로 시작합니다.** `TestFrameworkTest` 는 안쪽 케이스(`GpuProbeTest.LogsError`)를 일부러 지게 만듭니다.

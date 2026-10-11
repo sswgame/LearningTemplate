@@ -395,6 +395,12 @@ namespace test
         for ( int32 argIndex = 1; argIndex < argc; ++argIndex )
         {
             const std::string_view arg = argv[argIndex] != nullptr ? argv[argIndex] : "";
+            // 도움말 — 엔진 명령줄로 넘기면 모르는 인자로 무시되고 전체 시험이 돈다. 하네스가 먼저 가져가 기동 전에 끝낸다.
+            if ( arg == "--help" || arg == "-h" || arg == "-?" || arg == "/?" || arg == "--gtest_help" )
+            {
+                _bHelpRequested = true;
+                continue;
+            }
             if ( arg == "--test_list" || arg == "--gtest_list_tests" )
             {
                 _listOnly = true;
@@ -526,6 +532,23 @@ namespace test
         const std::lock_guard<std::mutex> lock( getRecordMutex() );
         _currentContext.skip();
         SW_LOG_INFO( "\n  [SKIPPED] %#:%# — %#", file.c_str(), line, reason.c_str() );
+    }
+
+    void TestRegistry::printHelp() const
+    {
+        std::fprintf( stdout,
+                      "Usage: <TestExecutable> [options] [engine arguments]\n"
+                      "  --help, -h, -?, /?, --gtest_help  Print this help and exit (the engine is not started)\n"
+                      "  --test_list, --gtest_list_tests   List the cases the filter selects and exit\n"
+                      "  --test_filter=PATTERN             Run matching cases (gtest form: A.*:B.* or A.*,B.*; after the first '-' patterns exclude)\n"
+                      "  --gtest_filter=PATTERN            Same as --test_filter\n"
+                      "  --test_repeat=N                   Run the selected cases N times (--gtest_repeat=N)\n"
+                      "  --test_shuffle[=SEED]             Shuffle suites and cases per iteration (--gtest_shuffle, --gtest_random_seed=SEED)\n"
+                      "  --test_shard=INDEX/COUNT          Run one shard (GTEST_SHARD_INDEX / GTEST_TOTAL_SHARDS also work)\n"
+                      "  --host_suites=exclude|only|all    Exclude or select suites that need a GPU, window or DXC\n"
+                      "  --allow_empty_suite               Do not fail when a selected suite has no runnable case\n"
+                      "Other arguments go to the engine command line (-gv_<name>=<value> and so on).\n" );
+        std::fflush( stdout );
     }
 
     void TestRegistry::listTests() const

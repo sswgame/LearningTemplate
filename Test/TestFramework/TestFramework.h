@@ -95,6 +95,10 @@ namespace test
         int32 runAllTests();
         /** @brief 등록된 테스트 이름을 나열합니다. */
         void listTests() const;
+        /** @brief 명령줄에 `--help` · `-h` · `-?` · `/?` · `--gtest_help` 가 있었는가 — 있으면 하네스는 엔진을 세우지 않고 도움말만 찍고 끝난다. */
+        bool isHelpRequested() const { return _bHelpRequested; }
+        /** @brief 시험 실행 파일이 받는 인자를 표준 출력에 찍습니다. */
+        void printHelp() const;
         /** @brief 이번 실행이 이 케이스를 고르는지 — 이름 필터와 호스트 스위트 모드를 함께 봅니다. */
         bool isSelected( const TestCaseInfo& testInfo ) const;
 
@@ -163,6 +167,7 @@ namespace test
         uint32                                                _shardIndex{ 0 }; /**< 이 실행의 샤드(0 부터) — `--test_shard=INDEX/COUNT` */
         uint32                                                _shardCount{ 1 }; /**< 샤드 수(1 = 나누지 않는다) */
         bool                                                  _bInvalidArgument{ false };
+        bool                                                  _bHelpRequested{ false };
     };
 } // namespace test
 

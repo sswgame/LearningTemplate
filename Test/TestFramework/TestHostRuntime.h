@@ -26,7 +26,10 @@ namespace test
         TestHostRuntime( const TestHostRuntime& )            = delete;
         TestHostRuntime& operator=( const TestHostRuntime& ) = delete;
 
-        /** @brief 엔진을 세웁니다(명령줄의 시험 플래그는 `TestRegistry` 가 먼저 가져간다). 모두 섰으면 true. 지면 `stop` 으로 내린다. */
+        /**
+         * @brief 엔진을 세웁니다(명령줄의 시험 플래그는 `TestRegistry` 가 먼저 가져간다). 모두 섰으면 true. 지면 `stop` 으로 내린다.
+         * @details 도움말을 요청했으면(`TestRegistry::isHelpRequested`) 도움말만 찍고 엔진을 세우지 않은 채 false 다.
+         */
         [[nodiscard]] bool start( int32 argc, utf8* argv[] );
         /** @brief 세운 만큼 역순으로 내립니다. 두 번 불러도 된다. */
         void stop();

@@ -42,4 +42,12 @@ namespace test
      */
     ChildRunResult runThisExecutableAsChild( sw::string_view caseFullName, sw::vector_reference<const ChildEnvironmentVariable> listEnvironment,
                                              uint32 timeoutSeconds );
+
+    /**
+     * @brief 이 실행 파일을 @p arguments 그대로 붙여 자식 프로세스로 띄운다 — 하네스 자체의 명령줄 처리(`--help` 등)를 재는 케이스가 쓴다.
+     * @param arguments 실행 파일 경로 뒤에 붙는 인자 문자열이다(따옴표는 부르는 쪽이 붙인다).
+     * @details 환경 변수와 시한은 `runThisExecutableAsChild` 와 같다(그 함수가 `--test_filter=<caseFullName>` 으로 이것을 부른다).
+     */
+    ChildRunResult runThisExecutableWithArguments( sw::string_view arguments, sw::vector_reference<const ChildEnvironmentVariable> listEnvironment,
+                                                   uint32 timeoutSeconds );
 } // namespace test
