@@ -515,3 +515,48 @@ SW_TEST_CASE( AssetStreamingTest, CanceledDataRequestCompletesOnceAsFailure )
     SW_EXPECT_FALSE( queue.isLoaded( assetPath ) );
     queue.shutdown();
 }
+
+/**
+ * @brief [AssetStreamingTest] 읽기가 끝났지만 `update` 가 아직 전달하지 않은 요청을 취소하면 실패로 한 번 오고, 로드됨으로 남지 않는다
+ * @details 취소와 완료는 다른 스레드라 작은 파일은 취소보다 먼저 끝날 수 있다. 그 순서를 강제로 만든다 — 읽기를 끝까지 기다린 뒤 취소한다.
+ */
+SW_TEST_CASE( AssetStreamingTest, CancelAfterReadFinishedButBeforeUpdateDeliversFailure )
+{
+    sw::AssetStreamingQueue queue;
+    queue.initialize();
+
+    const sw::string        assetPath = test::makeTempPath( "sw_stream_cancel_late.bin" );
+    const sw::vector<uint8> payload( 1024, uint8{ 0x22 } );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( assetPath, payload.data(), payload.size() ) );
+
+    std::atomic<uint32> callbackCount{ 0 };
+    std::atomic<uint32> successCount{ 0 };
+    SW_ASSERT_TRUE( queue.requestAssetData( assetPath, sw::StreamingPriority::High,
+                                            SW_DELEGATE_LAMBDA( sw::OnStreamingDataCompleteDelegate, [&]( sw::string_view, bool bSuccess, const sw::vector<uint8>& )
+    {
+        callbackCount.fetch_add( 1 );
+        if ( bSuccess )
+            successCount.fetch_add( 1 );
+    } ) ) );
+
+    // 찾기 태스크 → 비동기 읽기 → 완료 태스크가 모두 끝나 완료가 줄에 들어갈 때까지 기다린다(`update` 는 아직 부르지 않는다).
+    const sw::Deadline deadline = sw::Deadline::afterMilliseconds( 5000 );
+    while ( queue.isStreaming( assetPath ) && deadline.isExpired() == false )
+    {
+        sw::engine::getTaskManager().waitAll();
+        sw::engine::getAsyncFileIO().waitIdle();
+    }
+    SW_ASSERT_FALSE( queue.isStreaming( assetPath ) );
+    SW_ASSERT_TRUE( queue.isLoaded( assetPath ) );
+
+    queue.cancelRequest( assetPath );
+    for ( uint32 pump = 0; pump < 4; ++pump )
+    {
+        queue.update();
+    }
+
+    SW_EXPECT_EQUAL( 1u, callbackCount.load() );
+    SW_EXPECT_EQUAL( 0u, successCount.load() );
+    SW_EXPECT_FALSE( queue.isLoaded( assetPath ) );
+    queue.shutdown();
+}

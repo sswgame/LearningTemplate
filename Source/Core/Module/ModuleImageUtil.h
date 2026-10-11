@@ -85,8 +85,11 @@ namespace sw
          * @details 묶기가 올린 이미지(서버 키트가 지연 로드하는 공유 키트)도 묶는다 — 새 이미지가 없을 때까지 다시 모은다.
          */
         static uint32 bindDelayLoadImportsOfLoadedModules();
-        /** @brief 지금 프로세스에 올라와 있는 이미지(실행 파일 · DLL)의 핸들을 모읍니다. Windows 밖에서는 아무것도 담지 않습니다. */
-        static void collectLoadedModuleHandles( vector<void*>& outListHandle );
+        /**
+         * @brief 지금 프로세스에 올라와 있는 이미지(실행 파일 · DLL)의 핸들을 모읍니다. Windows 밖에서는 아무것도 담지 않고 true 를 반환합니다.
+         * @return 목록을 읽었으면 true. 다른 스레드가 DLL 을 올리고 내리는 동안 시간 한도 안에서도 못 읽으면 빈 목록과 false
+         */
+        [[nodiscard]] static bool collectLoadedModuleHandles( vector<void*>& outListHandle );
 
         // ------------------------------------------------------------------------------
         // 3) 올라온 이미지 조회
