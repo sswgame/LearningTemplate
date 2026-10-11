@@ -12,7 +12,7 @@ namespace sw
     {
         struct EquipmentInternal
         {
-            /** @brief 칸 상태가 같은가입니다(판을 올릴지 고른다). */
+            /** @brief 슬롯 상태가 같은지 비교합니다. 버전을 올릴지 판단하는 데 씁니다. */
             static bool isSameSlot( const EquipSlot& lhs, const EquipSlot& rhs )
             {
                 const InventorySlot& left  = lhs._item;
@@ -20,7 +20,7 @@ namespace sw
                 return lhs._bSuppressed == rhs._bSuppressed && left._itemID == right._itemID && left._count == right._count && left._durability == right._durability && left._damage == right._damage && left._listDetachedPart == right._listDetachedPart && left._customization.isEquivalent( right._customization );
             }
 
-            /** @brief 정리는 칸 수의 두 배 안에 끝난다 — 넘으면 데이터 순환이다(로드에서 막히지만 방어). */
+            /** @brief 정리는 슬롯 수의 두 배 안에 끝난다. 넘으면 데이터에 순환이 있다는 뜻이다. 로드 단계에서 막지만 방어용으로 둔다. */
             static size_t computeSettleLimit( size_t slotCount ) { return slotCount * 2 + 2; }
         };
     } // namespace
@@ -186,7 +186,7 @@ namespace sw
         outListRemoved.clear();
         _context                    = context;
         vector<EquipSlot> listTrial = _listSlot;
-        // 캐릭터 쪽 변화는 거부할 수 없다 — 거부 정책도 숨김으로 둔다.
+        // 캐릭터 쪽 변화는 거부할 수 없다. 거부 정책인 아이템도 숨김으로 둔다.
         (void)settleConditions( listTrial, false, outListRemoved );
         commitSlots( std::move( listTrial ) );
     }
@@ -262,11 +262,11 @@ namespace sw
         const InventorySlot source     = inventory.getSlot( inventorySlot );
         const hashed_string targetSlot = slot.empty() ? findSlotFor( source._itemID ) : slot;
         if ( targetSlot.empty() )
-            return EquipResult::WrongSlot; // 그 아이템을 받는 칸이 없다
+            return EquipResult::WrongSlot; // 그 아이템을 받는 슬롯이 없다
         const EquipResult evaluated = evaluateEquip( targetSlot, source._itemID );
         if ( evaluated != EquipResult::Ok )
             return evaluated;
-        // 하나를 꺼내고, 벗은 것은 인벤토리로. 하나라도 자리가 없으면 두 쪽을 모두 되돌린다.
+        // 하나를 꺼내고 벗은 것은 인벤토리로 보낸다. 하나라도 공간이 없으면 두 쪽을 모두 되돌린다.
         const Inventory         inventoryBefore = inventory;
         const vector<EquipSlot> slotsBefore     = _listSlot;
         const uint32            revisionBefore  = _revision;

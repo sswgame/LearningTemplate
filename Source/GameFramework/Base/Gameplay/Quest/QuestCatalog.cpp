@@ -27,7 +27,7 @@ namespace sw
                 const XMLNode rewardNode = node.findChild( "Reward" );
                 if ( rewardNode.isValid() == false )
                     return;
-                (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 돌려준다 — 없으면 값 보상이 없다
+                (void)outReward._values.loadFromAttributes( rewardNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 값 보상이 없다
                 for ( XMLNode item = rewardNode.findChild( "Item" ); item; item = item.findNextSibling( "Item" ) )
                 {
                     const utf8* pItem = item.findAttribute( "item" );
@@ -94,7 +94,7 @@ namespace sw
                     SW_LOG_WARNING( "%#: quest '%#' has a stage without id", sourceName, pID );
                 quest._listStage.push_back( stage );
             }
-            // 다음 단계 · 분기가 가리키는 단계가 있는지.
+            // 다음 단계와 분기가 가리키는 단계가 있는지 확인한다.
             for ( const QuestStage& stage : quest._listStage )
             {
                 if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )

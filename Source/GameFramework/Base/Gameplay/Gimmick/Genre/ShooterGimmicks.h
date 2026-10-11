@@ -1,9 +1,9 @@
 /**
  * @file ShooterGimmicks.h
- * @brief 슈터 기믹 — 폭발 드럼통(사슬 폭발), 포탑(고르기 · 조준 · 사격), 부서지는 엄폐물(단계 · 파괴 훅)입니다. 점프대는 `LaunchPadComponent`, 키카드 문은 상호작용 + 회로입니다.
- * @details 피해는 모두 같은 오브젝트의 `GimmickSensorComponent` 로 받습니다(`GimmickDamageUtil::applyDamage` — 총알 · 위험 지대 · 다른 폭발이 같은 길).
- *          오브젝트에 파괴 컴포넌트(`FractureComponentBase` — `.fracture` 가 있는 메시)가 있으면 몸을 끄는 대신 조각으로 부서집니다. 폭발은 반경에 닿은
- *          파괴 오브젝트에 자리 있는 폭발 피해(`applyRadialDamageAtWorld`)를 주어 벽 · 상자를 그 자리에서 깹니다(사슬 폭발이 근처 파괴물을 부순다).
+ * @brief 슈터 기믹입니다. 폭발 드럼통(연쇄 폭발), 포탑(대상 고르기, 조준, 사격), 부서지는 엄폐물(단계, 파괴 훅)을 다룹니다. 점프대는 `LaunchPadComponent` 로, 키카드 문은 상호작용과 회로로 만듭니다.
+ * @details 피해는 모두 같은 오브젝트의 `GimmickSensorComponent` 로 받는다. 총알, 위험 지대, 다른 폭발이 모두 같은 경로(`GimmickDamageUtil::applyDamage`)를 쓴다.
+ *          오브젝트에 파괴 컴포넌트(`FractureComponentBase`, `.fracture` 가 있는 메시)가 있으면 몸을 끄는 대신 조각으로 부서진다. 폭발은 반경에 닿은
+ *          파괴 오브젝트에 위치 기반 폭발 피해(`applyRadialDamageAtWorld`)를 주어 벽과 상자를 그 자리에서 깨뜨린다. 그래서 연쇄 폭발이 근처의 파괴물도 부순다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -23,10 +23,10 @@ namespace sw
 {
     /**
      * @class ExplosiveBarrelComponent
-     * @brief 피해가 `_health` 를 넘으면 터집니다 — `_radius` 안의 오브젝트에 거리 감쇠 피해(가까울수록 큼, 다른 드럼통도 터진다), "Explosion" 연출, 몸을 끕니다.
-     * @details 터짐은 걸음(60 Hz) 끝에 한 번 — 사슬 폭발은 다음 걸음에 이어집니다(한 프레임에 무한히 번지지 않는다). `_fuseTime` 이 있으면 플레이 시작부터 그만큼
-     *          지나 스스로 터집니다(시한 폭탄 · 쇼케이스). 반경에 닿은 파괴 오브젝트(자기 포함)에는
-     *          중심 변형 `_fractureStrain` · 충격량 `_blastImpulse` 의 폭발 피해를 주고, 자기에게 파괴 컴포넌트가 있으면 몸을 끄지 않고 조각으로 날아갑니다.
+     * @brief 피해가 `_health` 를 넘으면 터집니다. `_radius` 안의 오브젝트에 거리 감쇠 피해를 주고(가까울수록 큼, 다른 드럼통도 터짐), "Explosion" 연출을 내고, 몸을 끕니다.
+     * @details 터짐은 스텝(60 Hz) 끝에 한 번 일어난다. 연쇄 폭발은 다음 스텝으로 이어지므로 한 프레임에 무한히 번지지 않는다. `_fuseTime` 이 있으면 플레이 시작부터 그만큼
+     *          지난 뒤 스스로 터진다(시한 폭탄, 쇼케이스). 반경에 닿은 파괴 오브젝트(자기 포함)에는
+     *          중심 변형 `_fractureStrain` 과 충격량 `_blastImpulse` 의 폭발 피해를 주고, 자기에게 파괴 컴포넌트가 있으면 몸을 끄지 않고 조각으로 날아간다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Explosive Barrel", Tooltip = "Explodes after enough damage, damaging everything in a radius (chains)" )
     class SW_GF_API ExplosiveBarrelComponent : public Component
@@ -63,7 +63,7 @@ namespace sw
         PROPERTY( Category = "Barrel", DisplayName = "Exploded", Tooltip = "Runtime" )
         bool _bExploded;
 
-        int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 걸음(-1 = 아직 세지 않음)
+        int32          _fuseStepsLeft; ///< 도화선이 다 타기까지 남은 스텝 수(-1 이면 아직 세지 않음)
         FixedStepTimer _clock;
     };
 } // namespace sw
@@ -72,9 +72,9 @@ namespace sw
 {
     /**
      * @class TurretComponent
-     * @brief 사거리 · 시야각 · 시야 안에서 태그(`_targetTags`)를 가진 가장 가까운 것을 고르고(`InteractionSelector` 와 같은 고르기), 요를 `_turnSpeed` 로 돌려
-     *        `_aimTolerance` 안에 들면 `_fireInterval` 마다 쏩니다(히트스캔 — 시야 광선이 대상에 닿으면 피해).
-     * @details 회로의 Enable 노드로 켜고 끕니다(오브젝트 켜기). 요는 소유자 로컬 회전의 Y 입니다(3D). 걸음은 60 Hz.
+     * @brief 사거리, 시야각, 시야 안에서 태그(`_targetTags`)를 가진 가장 가까운 것을 고르고(`InteractionSelector` 와 같은 방식), 요를 `_turnSpeed` 로 돌립니다.
+     *        `_aimTolerance` 안에 들어오면 `_fireInterval` 마다 쏩니다. 히트스캔 방식이며 시야 광선이 대상에 닿으면 피해를 줍니다.
+     * @details 회로의 Enable 노드로 켜고 끈다(오브젝트 켜기). 요는 소유자 로컬 회전의 Y 이다(3D). 스텝은 60 Hz 이다.
      */
     REFLECT( Category = "Gimmick", DisplayName = "Turret", Tooltip = "Picks the nearest visible tagged target, turns, fires hitscan shots" )
     class SW_GF_API TurretComponent : public Component
@@ -121,10 +121,10 @@ namespace sw
 {
     /**
      * @class DestructibleComponent
-     * @brief 부서지는 엄폐물 — 받은 피해가 `_listStageThreshold` 를 넘을 때마다 단계가 오르고("Stage" 연출 + 회로 신호), 마지막을 넘으면 몸을 끕니다.
-     * @details 같은 오브젝트의 센서 신호에 단계(0..)를 넣어 회로가 읽게 합니다. 오브젝트에 파괴 컴포넌트(`FractureComponentBase`)가 있으면 단계가 오를 때마다
-     *          중심에 변형(`_stageStrain` × 단계 비율)을 주어 조각을 깎아 내고, 마지막 단계에서는 몸을 끄는 대신 `_shatterStrain` 으로 통째로 부숩니다.
-     *          파쇄 데이터가 없으면 예전처럼 몸을 끕니다(`GimmickCueEvent` "Destroyed").
+     * @brief 부서지는 엄폐물입니다. 받은 피해가 `_listStageThreshold` 를 넘을 때마다 단계가 오르고("Stage" 연출과 회로 신호), 마지막 임계값을 넘으면 몸을 끕니다.
+     * @details 같은 오브젝트의 센서 신호에 단계(0..)를 넣어 회로가 읽게 한다. 오브젝트에 파괴 컴포넌트(`FractureComponentBase`)가 있으면 단계가 오를 때마다
+     *          중심에 변형(`_stageStrain` × 단계 비율)을 주어 조각을 깎아 내고, 마지막 단계에서는 몸을 끄는 대신 `_shatterStrain` 으로 통째로 부순다.
+     *          파쇄 데이터가 없으면 몸을 끈다(`GimmickCueEvent` "Destroyed").
      */
     REFLECT( Category = "Gimmick", DisplayName = "Destructible", Tooltip = "Damage stages ending in destruction (fracture hook)" )
     class SW_GF_API DestructibleComponent : public Component

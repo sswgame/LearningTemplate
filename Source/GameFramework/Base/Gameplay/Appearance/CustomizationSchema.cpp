@@ -147,7 +147,7 @@ namespace sw
                 CustomizationConditionDef condition;
                 condition._parameter = AppearanceXMLUtil::readName( node, "parameter" );
                 AppearanceXMLUtil::readNameList( node, "options", condition._listOption );
-                // 조건은 앞에 선언한 매개변수만 — 아직 목록에 들어가지 않은 자기 자신도 못 가리킨다(순환이 생길 수 없다).
+                // 조건은 앞에 선언한 매개변수만 가리킬 수 있다. 아직 목록에 들어가지 않은 자기 자신도 가리킬 수 없으므로 순환이 생길 수 없다.
                 const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
                 if ( pTarget == nullptr )
                 {
@@ -343,7 +343,7 @@ namespace sw
                 else
                     AppearanceXMLUtil::reportUnknownChild( schemaNode, paramNode, report, sourceName );
             }
-            // 공유 코드 · 네트워크는 매개변수 이름을 32 비트 해시로 싣는다 — 한 스키마 안에서 겹치면 안 된다.
+            // 공유 코드와 네트워크는 매개변수 이름을 32 비트 해시로 싣는다. 한 스키마 안에서 해시가 겹치면 안 된다.
             for ( size_t lhs = 0; lhs < schema._listParameter.size(); ++lhs )
             {
                 for ( size_t rhs = lhs + 1; rhs < schema._listParameter.size(); ++rhs )
@@ -407,7 +407,7 @@ namespace sw
                 value._option = pGiven->_option;
             else if ( pGiven != nullptr && pOutListDropped != nullptr )
                 pOutListDropped->push_back( pGiven->_option );
-            // 기본값도 같은 격자로 — 정규화를 두 번 해도 같아야 한다(전송한 값과 기본값이 비트까지 같다).
+            // 기본값도 같은 격자로 맞춘다. 정규화를 두 번 해도 결과가 같아야 하고, 전송한 값과 기본값이 비트까지 같아야 하기 때문이다.
             if ( param._kind == CustomizationKind::Slider )
             {
                 value._number = float4( dequantizeSlider( param, quantizeSlider( param, value._number._x ) ), 0.0f, 0.0f, 0.0f );
@@ -436,7 +436,7 @@ namespace sw
             const CustomizationValue*    pValue  = normalizedValues.findValue( condition._parameter );
             if ( pTarget == nullptr || pValue == nullptr )
                 return false;
-            // 조건 대상이 꺼져 있으면 그 값도 없는 것으로 친다(사슬 — 앞 매개변수부터 판정되므로 한 번에 끝난다).
+            // 조건 대상이 꺼져 있으면 그 값도 없는 것으로 본다. 앞 매개변수부터 차례로 판정하므로 연쇄 조건도 한 번에 끝난다.
             if ( isActive( *pTarget, schema, normalizedValues ) == false )
                 return false;
             if ( pTarget->_kind == CustomizationKind::Slider )

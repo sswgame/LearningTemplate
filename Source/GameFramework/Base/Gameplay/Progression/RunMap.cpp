@@ -44,7 +44,7 @@ namespace sw
             int32       index = node.getAttributeInt( "index", 0 );
             const utf8* pKind = node.findAttribute( "kind" );
             if ( index < 0 )
-                index += outSettings._floorCount; // −1 = 마지막 층
+                index += outSettings._floorCount; // −1 은 마지막 층이다
             if ( pKind != nullptr && index >= 0 && index < outSettings._floorCount )
                 outSettings._listForcedFloor[static_cast<size_t>( index )] = hashed_string( pKind );
         }
@@ -69,7 +69,7 @@ namespace sw
     {
         if ( fromColumn == toColumn )
             return false;
-        // 옆 칸에서 거꾸로 이어진 선이 있으면 X 자로 엇갈린다.
+        // 옆 열에서 거꾸로 이어진 선이 있으면 X 자로 엇갈린다.
         const int32 neighborIndex = _listCell[static_cast<size_t>( floor * _columnCount + toColumn )];
         if ( neighborIndex < 0 )
             return false;
@@ -114,7 +114,7 @@ namespace sw
         _listNode.clear();
         _listCell.assign( static_cast<size_t>( _floorCount * _columnCount ), -1 );
 
-        // 길을 아래에서 위로 긋는다(마지막 층 하나 아래까지). 첫 두 길은 다른 열에서 시작한다.
+        // 길을 아래에서 위로 긋는다. 마지막 층 바로 아래까지 긋는다. 첫 두 길은 서로 다른 열에서 시작한다.
         const int32 lastFloor  = _floorCount - 1;
         int32       firstStart = -1;
         for ( int32 pathIndex = 0; pathIndex < MathUtil::max( 1, settings._pathCount ); ++pathIndex )
@@ -129,7 +129,7 @@ namespace sw
             {
                 int32 nextColumn = MathUtil::clamp( column + random.nextInt( -1, 1 ), 0, _columnCount - 1 );
                 if ( crossesExisting( floor, column, nextColumn ) )
-                    nextColumn = column; // 엇갈리면 곧게
+                    nextColumn = column; // 엇갈리면 곧게 편다
                 const int32    nextIndex = findOrAddNode( floor + 1, nextColumn );
                 vector<int32>& listNext  = _listNode[static_cast<size_t>( nodeIndex )]._listNext;
                 if ( std::find( listNext.begin(), listNext.end(), nextIndex ) == listNext.end() )
@@ -138,14 +138,14 @@ namespace sw
                 column    = nextColumn;
             }
         }
-        // 마지막 층 — 가운데 한 칸으로 모은다.
+        // 마지막 층은 가운데 노드 하나로 모은다.
         const int32 bossIndex = findOrAddNode( lastFloor, _columnCount / 2 );
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
             if ( _listNode[index]._floor == lastFloor - 1 )
                 _listNode[index]._listNext.push_back( bossIndex );
         }
-        // 종류 — 층 순서로, 들어오는 칸 하나의 종류를 "바로 앞" 으로 본다.
+        // 종류는 층 순서대로 정한다. 들어오는 노드 중 하나의 종류를 "바로 앞" 으로 본다.
         vector<int32> listOrder;
         for ( size_t index = 0; index < _listNode.size(); ++index )
         {
@@ -236,7 +236,7 @@ namespace sw
     bool RunMap::readState( Archive& archive )
     {
         uint32 nodeCount = 0;
-        // 노드마다 이름(4) + 층 · 열(8) + 이어진 수(4)
+        // 노드마다 이름(4) + 층과 열(8) + 이어진 수(4)
         if ( StateArchiveUtil::readCount( archive, 16, nodeCount ) == false )
             return false;
         vector<RunNode> listNode( nodeCount );

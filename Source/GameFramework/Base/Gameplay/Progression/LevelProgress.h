@@ -1,6 +1,6 @@
 /**
  * @file LevelProgress.h
- * @brief 경험치 곡선(공식 · 표)과 레벨 진행 — 경험치를 더하면 몇 레벨이 올랐는지, 최고 레벨에서 멈추기입니다.
+ * @brief 경험치 곡선(공식 또는 테이블)과 레벨 진행입니다. 경험치를 더하면 몇 레벨이 올랐는지 계산하고, 최고 레벨에서 멈춥니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,9 +16,9 @@ namespace sw
 
     /**
      * @class ExperienceCurve
-     * @brief 레벨 L → L+1 에 필요한 경험치입니다. 표가 있으면 표, 없으면 `base × L^exponent + linear × L`(반올림)입니다.
-     * @details XML: `<ExperienceCurve maxLevel="50" base="100" exponent="1.5" linear="0"/>` 또는 `<ExperienceCurve><Level xp="100"/>...</ExperienceCurve>`
-     *          (표는 레벨 1 부터 차례로 — 표 길이 + 1 이 최고 레벨).
+     * @brief 레벨 L 에서 L+1 로 오르는 데 필요한 경험치입니다. 테이블이 있으면 테이블 값을 쓰고, 없으면 `base × L^exponent + linear × L`(반올림)로 계산합니다.
+     * @details XML 은 `<ExperienceCurve maxLevel="50" base="100" exponent="1.5" linear="0"/>` 또는 `<ExperienceCurve><Level xp="100"/>...</ExperienceCurve>` 형식이다.
+     *          테이블은 레벨 1 부터 차례로 적으며, 테이블 길이 + 1 이 최고 레벨이다.
      */
     class SW_GF_API ExperienceCurve
     {
@@ -30,9 +30,9 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               loadFromNode( const XMLNode& node );
 
-        /** @brief @p level 에서 다음 레벨까지입니다. 최고 레벨이면 0 입니다. */
+        /** @brief @p level 에서 다음 레벨까지 필요한 경험치입니다. 최고 레벨이면 0 입니다. */
         int64 getXpToNext( int32 level ) const;
-        /** @brief 레벨 1 에서 @p level 이 되기까지의 합입니다. */
+        /** @brief 레벨 1 에서 @p level 이 되기까지 필요한 경험치의 합입니다. */
         int64 computeTotalXp( int32 level ) const;
         int32 getMaxLevel() const { return _maxLevel; }
 
@@ -47,29 +47,29 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 캐릭터 · 직업 · 무기 숙련 하나의 레벨입니다. */
+    /** @brief 캐릭터, 직업, 무기 숙련 중 하나의 레벨입니다. */
     class SW_GF_API LevelProgress
     {
     public:
-        /** @brief 경험치를 더하고 오른 레벨 수를 돌려줍니다. 최고 레벨이면 경험치는 0 에 머뭅니다. */
+        /** @brief 경험치를 더하고 오른 레벨 수를 반환합니다. 최고 레벨이면 경험치는 0 에 머뭅니다. */
         int32 addXp( const ExperienceCurve& curve, int64 amount );
-        /** @brief 레벨을 정합니다(세이브 · 치트). 경험치는 0 입니다. */
+        /** @brief 레벨을 정합니다. 세이브와 치트에 씁니다. 경험치는 0 이 됩니다. */
         void setLevel( const ExperienceCurve& curve, int32 level );
-        /** @brief 이 레벨 안에서 찬 비율(0..1, 최고 레벨이면 1)입니다 — 경험치 막대. */
+        /** @brief 이 레벨 안에서 찬 비율(0..1)입니다. 최고 레벨이면 1 이며, 경험치 막대에 씁니다. */
         float32 computeRatio( const ExperienceCurve& curve ) const;
 
         int32 getLevel() const { return _level; }
         int64 getXp() const { return _xp; }
         int64 getTotalXp() const { return _totalXp; }
 
-        /** @brief xp · 총 xp · 레벨을 씁니다. 곡선은 호출자가 줍니다. */
+        /** @brief xp, 총 xp, 레벨을 씁니다. 곡선은 호출하는 쪽이 줍니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        int64 _xp{ 0 };      ///< 이 레벨 안에서 모은 것
-        int64 _totalXp{ 0 }; ///< 모두
+        int64 _xp{ 0 };      ///< 이 레벨 안에서 모은 경험치
+        int64 _totalXp{ 0 }; ///< 누적한 전체 경험치
         int32 _level{ 1 };
     };
 } // namespace sw

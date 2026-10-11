@@ -1,6 +1,6 @@
 /**
  * @file VehicleSeatComponent.h
- * @brief 탈것의 좌석 하나 — 소켓 · 하차 자리 · 탑승 중 자세. 운전석이면 앉은 이의 조종자가 탈것 폰을 쥡니다.
+ * @brief 탈것의 좌석 하나입니다. 소켓, 하차 위치, 탑승 중 자세를 가집니다. 운전석이면 앉은 쪽의 조종자가 탈것 폰을 쥡니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,10 +19,10 @@ namespace sw
 {
     /**
      * @class VehicleSeatComponent
-     * @brief 탈것 오브젝트의 좌석 하나입니다(운전석 하나 + 승객석 여럿). 운전석이 있으면 탈것 오브젝트에 `PawnComponent` 가 있어야 합니다.
-     * @details 타기 · 내리기는 `MountUtil` 이 합니다 — 탑승자는 소켓에 붙고(`SocketBindingComponent`, 붙은 동안 비용 0) 이동이 멈추며, 운전석이면
-     *          탑승자의 조종자가 빙의를 탈것으로 옮깁니다. 말이든 차든 같은 틀이고 의도 → 탈것 이동 규칙만 다릅니다.
-     *          빈 좌석 찾기가 씬을 훑지 않게 레지스트리(`ComponentRegistry`)에 듭니다.
+     * @brief 탈것 오브젝트의 좌석 하나입니다. 운전석 하나와 승객석 여럿을 둘 수 있습니다. 운전석이 있으면 탈것 오브젝트에 `PawnComponent` 가 있어야 합니다.
+     * @details 타기와 내리기는 `MountUtil` 이 처리한다. 탑승자는 소켓에 붙고(`SocketBindingComponent`, 붙어 있는 동안 비용이 0), 이동이 멈추며, 운전석이면
+     *          탑승자의 조종자가 빙의를 탈것으로 옮긴다. 말이든 차든 같은 구조이고, 의도를 탈것의 이동으로 바꾸는 규칙만 다르다.
+     *          빈 좌석을 찾을 때 씬을 순회하지 않도록 레지스트리(`ComponentRegistry`)에 등록한다.
      */
     REFLECT( Category = "Vehicle", DisplayName = "Vehicle Seat", Tooltip = "Seat on a vehicle: socket, exit spot, rider pose; the driver seat hands the vehicle pawn to the rider's controller" )
     class SW_GF_API VehicleSeatComponent : public Component
@@ -34,10 +34,10 @@ namespace sw
         ~VehicleSeatComponent() override = default;
 
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 앉은 이가 있으면 내려 둡니다(탈것이 사라진다). */
+        /** @brief 앉은 쪽이 있으면 내려 줍니다. 탈것이 사라질 때 부릅니다. */
         void onUnregister( GameObjectManager& manager ) override;
 
-        /** @brief 앉은 탑승자의 오브젝트입니다(비었으면 무효). */
+        /** @brief 앉은 탑승자의 오브젝트입니다. 비어 있으면 무효 핸들입니다. */
         const GameObjectHandle& getOccupant() const { return _occupant; }
         bool                    isDriverSeat() const { return _bDriverSeat; }
         void                    setDriverSeat( bool bDriverSeat ) { _bDriverSeat = bDriverSeat; }
@@ -69,7 +69,7 @@ namespace sw
         bool _bDriverSeat;
 
         GameObjectHandle _occupant;                  ///< 앉은 탑승자의 오브젝트
-        ComponentHandle  _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자(운전석 — 내릴 때 탑승자에게 돌려준다)
-        ComponentHandle  _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자(주인을 따라오던 말 AI — 내리면 다시 쥔다)
+        ComponentHandle  _occupantController;        ///< 탈 때 탑승자를 쥐고 있던 조종자. 운전석에서 쓰며 내릴 때 탑승자에게 돌려준다
+        ComponentHandle  _previousVehicleController; ///< 탈 때 탈것을 쥐고 있던 조종자. 주인을 따라오던 말 AI 가 해당하며, 내리면 다시 쥔다
     };
 } // namespace sw

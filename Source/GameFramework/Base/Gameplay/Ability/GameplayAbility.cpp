@@ -32,7 +32,7 @@ namespace sw
 
     GameplayAbility::~GameplayAbility()
     {
-        // 컴포넌트는 지우기 전에 끝내고(`retireAbilitySpec`) 작업을 비운다. 여기서는 남은 작업이 걸어 둔 구독만 확실히 뗀다.
+        // 컴포넌트는 어빌리티를 지우기 전에 끝내고(`retireAbilitySpec`) 작업을 비운다. 여기서는 남은 작업이 등록한 구독만 확실히 해제한다.
         for ( unique_ptr<AbilityTask>& pTask : _listTask )
         {
             if ( pTask != nullptr )
@@ -81,9 +81,9 @@ namespace sw
             return false;
 
         if ( _config._pCostEffect != nullptr )
-            (void)_pAbilitySystem->applyGameplayEffectSpecToSelf( _pAbilitySystem->makeOutgoingSpec( _config._pCostEffect, _level ) ); // 막혀도 커밋은 선다
+            (void)_pAbilitySystem->applyGameplayEffectSpecToSelf( _pAbilitySystem->makeOutgoingSpec( _config._pCostEffect, _level ) ); // 막혀도 커밋은 성립한다
         if ( _config._pCooldownEffect != nullptr )
-            // 막혀도 커밋은 선다 — 쿨다운 효과가 면역으로 막히면 쿨다운 없이 간다
+            // 막혀도 커밋은 성립한다. 쿨다운 이펙트가 면역으로 막히면 쿨다운 없이 진행한다
             (void)_pAbilitySystem->applyGameplayEffectSpecToSelf( _pAbilitySystem->makeOutgoingSpec( _config._pCooldownEffect, _level ) );
         return true;
     }
@@ -166,7 +166,7 @@ namespace sw
         pRaw->_pAbility   = this;
         _listTask.push_back( std::move( pTask ) );
 
-        // 시작 안에서 바로 끝나 콜백이 어빌리티를 끝낼 수 있다 — 그동안 목록에서 지우지 않는다(돌려줄 포인터가 살아 있어야 한다).
+        // 시작하는 도중에 콜백이 어빌리티를 바로 끝낼 수 있다. 그동안 목록에서 지우지 않는다. 반환할 포인터가 유효해야 하기 때문이다.
         ++_taskTickDepth;
         pRaw->onActivate();
         --_taskTickDepth;
@@ -234,7 +234,7 @@ namespace sw
         if ( isActive() == false )
             return;
 
-        // 작업 콜백이 어빌리티를 끝내거나 새 작업을 붙일 수 있다 — 인덱스로 돌고(붙인 작업은 다음 틱부터), 지우기는 다 돈 뒤에 한다.
+        // 작업 콜백이 어빌리티를 끝내거나 새 작업을 붙일 수 있다. 그래서 인덱스로 순회하고(붙인 작업은 다음 틱부터 돈다), 지우기는 순회가 끝난 뒤에 한다.
         const uint32 serial    = _activationSerial;
         const size_t taskCount = _listTask.size();
         ++_taskTickDepth;
@@ -249,7 +249,7 @@ namespace sw
         --_taskTickDepth;
         removeFinishedTasks();
 
-        // 작업이 끝냈거나 다시 시작했으면 이번 틱의 `onTickAbility` 는 건너뛴다 — 끝난 발동에 틱을 주지 않는다.
+        // 작업이 어빌리티를 끝냈거나 다시 시작했으면 이번 틱의 `onTickAbility` 는 건너뛴다. 끝난 발동에는 틱을 주지 않는다.
         if ( isActive() && serial == _activationSerial )
             onTickAbility( deltaTime );
     }
@@ -282,7 +282,7 @@ namespace sw
 
     void GameplayAbility::endAllTasks()
     {
-        // 끝내는 순서는 붙인 순서다. `finish` 가 구독을 떼므로 그 뒤로는 어떤 콜백도 오지 않는다.
+        // 붙인 순서대로 끝낸다. `finish` 가 구독을 해제하므로 그 뒤로는 어떤 콜백도 오지 않는다.
         const size_t taskCount = _listTask.size();
         for ( size_t taskIndex = 0; taskIndex < taskCount && taskIndex < _listTask.size(); ++taskIndex )
         {
@@ -309,7 +309,7 @@ namespace sw
         const hashed_string targetEffect = getNameParameter( "targetEffect" );
         if ( pAbilitySystem != nullptr && targetEffect.empty() == false && pTriggerEvent != nullptr )
         {
-            // 상대는 이벤트의 "다른 쪽" 이다 — 받은 이벤트(`_target` 이 주인 자신, 피격)면 일으킨 쪽, 보낸 이벤트면 받은 쪽.
+            // 상대는 이벤트의 "다른 쪽" 이다. 받은 이벤트(`_target` 이 주인 자신인 피격)이면 일으킨 쪽이고, 보낸 이벤트이면 받은 쪽이다.
             GameObject*             pOwner        = pAbilitySystem->getOwner();
             GameObjectManager*      pManager      = pOwner != nullptr ? pOwner->getManager() : nullptr;
             const bool              bTargetIsSelf = pOwner != nullptr && ( pTriggerEvent->_target.isValid() == false || pTriggerEvent->_target == pOwner->getHandle() );
@@ -317,7 +317,7 @@ namespace sw
             GameObject*             pTargetObject = pManager != nullptr ? pManager->resolveGameObject( targetHandle ) : nullptr;
             AbilitySystemComponent* pTarget       = pTargetObject != nullptr ? pTargetObject->getComponent<AbilitySystemComponent>() : nullptr;
             if ( pTarget != nullptr )
-                (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 효과 핸들은 쓰지 않는다 — 막히면 걸리지 않을 뿐이다
+                (void)applyEffectSpecToTarget( makeOutgoingSpec( targetEffect ), pTarget ); // 이펙트 핸들은 쓰지 않는다. 막히면 걸리지 않을 뿐이다
             else
                 SW_LOG_WARNING( "ApplyEffects '%#': the trigger event has no target with an AbilitySystemComponent", getConfig()._id.c_str() );
         }

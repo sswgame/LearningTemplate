@@ -19,7 +19,7 @@ namespace sw
     {
         struct AppearanceSelectionInternal
         {
-            static constexpr uint32 kMaxCount      = 1024; ///< 읽을 때 개수 상한(망가진 · 악의적인 입력이 큰 할당을 만들지 않게)
+            static constexpr uint32 kMaxCount      = 1024; ///< 읽을 때의 개수 상한. 망가진 입력이나 악의적인 입력이 큰 할당을 일으키지 않게 한다
             static constexpr int32  kKindBits      = 2;
             static constexpr int32  kSliderBits    = 16;
             static constexpr int32  kColorBits     = 8;
@@ -29,7 +29,7 @@ namespace sw
 
             static uint32 toHash32( const hashed_string& name ) { return name.empty() ? 0u : static_cast<uint32>( name.getHash() ); }
 
-            /** @brief 받는 쪽이 모르는 해시의 자리 이름(`#1a2b3c4d`)입니다 — 펼칠 때 "지워진 콘텐츠" 로 보고된다. */
+            /** @brief 받는 쪽이 알지 못하는 해시의 임시 이름(`#1a2b3c4d`)입니다. 펼칠 때 "지워진 콘텐츠" 로 보고됩니다. */
             static hashed_string makePlaceholder( uint32 hash )
             {
                 if ( hash == 0 )
@@ -55,7 +55,7 @@ namespace sw
                     inoutList.push_back( name );
             }
 
-            /** @brief 몸 종류 · 체형 · 얼굴은 열린 이름이라 데이터에 나오는 모든 이름을 후보로 모은다. */
+            /** @brief 몸 종류, 체형, 얼굴은 열린 이름이므로 데이터에 나오는 모든 이름을 후보로 모은다. */
             static void collectBodyNames( const AppearanceDatabase& database, vector<hashed_string>& outListName )
             {
                 for ( const CharacterAppearanceDef& preset : database.getPresets().getPresets() )
@@ -219,7 +219,7 @@ namespace sw
                 SW_LOG_WARNING( "Appearance value '%#' no longer exists - dropped", name.c_str() );
             }
 
-            /** @brief 아이템 인스턴스 값을 보이는 외형의 스키마로 거릅니다. */
+            /** @brief 아이템 인스턴스 값을 보이는 외형의 스키마로 걸러 냅니다. */
             static void filterItemValues( const CustomizationSchemaDef* pSchema, const CustomizationValueSet& values, CustomizationValueSet& outValues, AppearanceSelectionReport& outReport )
             {
                 outValues.clear();
@@ -300,7 +300,7 @@ namespace sw
         using Internal = AppearanceSelectionInternal;
         outReport      = AppearanceSelectionReport{};
 
-        // 칸의 기본(지워졌거나 잠긴 아이템이 돌아갈 곳)은 기준 프리셋의 것이다.
+        // 슬롯의 기본값(지워졌거나 잠긴 아이템이 돌아갈 값)은 기준 프리셋의 것이다.
         CharacterAppearanceSpec baseSpec = current;
         const bool              bBaseKnown =
             selection._basePresetID.empty() == false && database.getPresets().expand( selection._basePresetID, selection._seed, database.getSlotTable(), database.getSets(), database.getSchemas(), baseSpec );

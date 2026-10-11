@@ -66,7 +66,7 @@ namespace sw
     {
         Component::onOverlapBegin( overlap );
         if ( RacingGimmicksInternal::accepts( overlap, _requiredTags ) )
-            (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다 — 비어 있으면 열리지 않을 뿐이다
+            (void)open( *overlap._pOther ); // 뽑힌 이름은 쓰지 않는다. 비어 있으면 열리지 않을 뿐이다
     }
 
     hashed_string ItemBoxComponent::open( GameObject& target )
@@ -74,7 +74,7 @@ namespace sw
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr || isAvailable() == false || _listChoice.empty() )
             return hashed_string{};
-        // 씨앗 + 연 횟수로 뽑는다 — 같은 순서로 열면 같은 것이 나온다.
+        // 시드와 연 횟수로 뽑는다. 같은 순서로 열면 같은 것이 나온다.
         GameRandom  random( GameHash::hashCoord( _openCount, 0, _seed ) );
         const int32 index = random.pickWeightedIndex( _listChoice, RacingGimmicksInternal::ChoiceWeight{} );
         ++_openCount;
