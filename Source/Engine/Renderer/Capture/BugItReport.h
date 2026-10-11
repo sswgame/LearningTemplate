@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @struct BugItReport
-     * @brief bugit 한 번에 남길 값과 그 파일 읽고 쓰기입니다. 파일 쓰기와 읽기는 ImGui · 렌더러 없이 시험할 수 있습니다(`BugItReportTest`).
+     * @brief bugit 한 번에 남길 값과 그 파일 읽고 쓰기입니다. 파일 쓰기와 읽기는 ImGui · 렌더러 없이 테스트할 수 있습니다(`BugItReportTest`).
      * @details `info.txt` 는 `키 = 값` 한 줄씩입니다. 읽을 때 모르는 키는 건너뜁니다(필드가 늘어도 옛 폴더를 읽는다).
      */
     struct SW_API BugItReport

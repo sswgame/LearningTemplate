@@ -73,7 +73,7 @@ namespace sw
         /** @brief 얼굴 리그 경로를 바꾸고 읽습니다. */
         void          setFacialRigPath( string_view path );
         const string& getFacialRigPath() const { return _facialRigPath; }
-        /** @brief 리그를 런타임에 정합니다(시험 · 절차 생성). */
+        /** @brief 리그를 런타임에 정합니다(테스트 · 절차 생성). */
         void             setFacialRig( const FacialRig& rig );
         const FacialRig& getFacialRig() const { return _rig; }
 
@@ -88,15 +88,15 @@ namespace sw
          * @return 트랙도 PCM 도 읽지 못하면 false 입니다.
          */
         bool speak( string_view audioPath );
-        /** @brief 비즘 트랙을 직접 말합니다(시험 · 절차 생성 — 소리는 내지 않는다). */
+        /** @brief 비즘 트랙을 직접 말합니다(테스트 · 절차 생성 — 소리는 내지 않는다). */
         void speakTrack( const VisemeTrack& track );
-        /** @brief 진폭 표본(모노 float)을 직접 말합니다(시험 — 소리는 내지 않는다). */
+        /** @brief 진폭 표본(모노 float)을 직접 말합니다(테스트 — 소리는 내지 않는다). */
         void speakSamples( vector<float32> listSample, uint32 sampleRate );
         /** @brief 말하기를 멈춥니다. */
         void stopSpeaking();
         /** @brief 말하는 중인지입니다(트랙 · 표본 끝까지). */
         bool isSpeaking() const;
-        /** @brief 립싱크 표를 정합니다(시험). 정하지 않으면 `LipSyncSettings::kResourcePath` 를 읽습니다. */
+        /** @brief 립싱크 표를 정합니다(테스트). 정하지 않으면 `LipSyncSettings::kResourcePath` 를 읽습니다. */
         void setLipSyncSettings( const LipSyncSettings& settings );
 
         /** @brief 저절로 깜빡일지입니다. */
@@ -104,9 +104,9 @@ namespace sw
         /** @brief 시선에 사카드를 더할지입니다. */
         void setSaccades( bool bSaccades ) { _bSaccades = bSaccades ? SW_TRUE : SW_FALSE; }
 
-        /** @brief 지금 깜빡임 정도(0 = 뜸, 1 = 감음)입니다(진단 · 시험). */
+        /** @brief 지금 깜빡임 정도(0 = 뜸, 1 = 감음)입니다(진단 · 테스트). */
         float32 getBlinkAmount() const { return _blinkAmount; }
-        /** @brief 지금 사카드 오프셋(요 · 피치 라디안)입니다(진단 · 시험). */
+        /** @brief 지금 사카드 오프셋(요 · 피치 라디안)입니다(진단 · 테스트). */
         const float2& getSaccadeOffset() const { return _saccadeOffset; }
         /** @brief 얼굴이 유닛에 보이는 얼굴입니다. */
         FacialAnimationBinding& getBinding() { return _binding; }

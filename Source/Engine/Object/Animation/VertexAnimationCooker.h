@@ -57,7 +57,7 @@ namespace sw
          * @return 쓴 `.vat` 수입니다. 읽지 못한 목록 · 굽지 못한 클립은 @p outFailedCount 에 셉니다.
          */
         static uint32 cookAll( const string& resourceRoot, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount );
-        /** @brief 목록 하나를 굽습니다. 쓴 수를 돌려줍니다. @p cookedDir 가 비었으면 메시 경로 곁에 씁니다(시험). */
+        /** @brief 목록 하나를 굽습니다. 쓴 수를 돌려줍니다. @p cookedDir 가 비었으면 메시 경로 곁에 씁니다(테스트). */
         static uint32 cookList( const VertexAnimationCookList& list, const string& cookedDir, float32 framesPerSecond, uint32& outFailedCount );
     };
 } // namespace sw

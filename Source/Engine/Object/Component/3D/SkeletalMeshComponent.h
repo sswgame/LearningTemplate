@@ -76,7 +76,7 @@ namespace sw
         /** @brief 스켈레톤 에셋 경로를 바꾸고 읽습니다. 빈 경로면 본 하나짜리 암묵 스켈레톤입니다. */
         void          setSkeletonPath( string_view path );
         const string& getSkeletonPath() const { return _skeletonPath; }
-        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성 · 파괴 조각). 경로가 빈 동안 렌더 에셋을 다시 풀어도 유지됩니다. */
+        /** @brief 스켈레톤을 런타임에 정합니다(저장되지 않습니다 — 테스트 · 절차 생성 · 파괴 조각). 경로가 빈 동안 렌더 에셋을 다시 풀어도 유지됩니다. */
         void setSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 스켈레톤입니다. 늘 있습니다(없으면 암묵 스켈레톤). */
         const Skeleton& getSkeleton() const;
@@ -133,7 +133,7 @@ namespace sw
         bool isVisibleHint() const { return _bVisibleHint == SW_TRUE; }
         /** @brief 화면 밖에서도 포즈를 만들지입니다. */
         void setAnimateWhenOffscreen( bool bAnimate ) { _bAnimateWhenOffscreen = bAnimate ? SW_TRUE : SW_FALSE; }
-        /** @brief 포즈를 실제로 만든 횟수입니다(진단 · 시험). 보간만 한 프레임은 세지 않습니다. */
+        /** @brief 포즈를 실제로 만든 횟수입니다(진단 · 테스트). 보간만 한 프레임은 세지 않습니다. */
         uint32 getPoseEvaluationCount() const { return _poseEvaluationCount; }
         /** @brief 이번 프레임에 포즈를 만드는지입니다(`beginAnimationFrame` 뒤에 뜻이 있습니다). */
         bool isPoseNeededThisFrame() const { return _frameContext._bPoseNeeded == SW_TRUE; }
@@ -145,7 +145,7 @@ namespace sw
         const AnimationLODState& getAnimationLODState() const { return _lodState; }
         /** @brief 주기 위상입니다(핸들에서 나온다 — 같은 주기의 유닛이 같은 프레임에 몰리지 않게). */
         uint32 getUpdatePhase() const { return _updatePhase; }
-        /** @brief 본 LOD 표를 런타임에 정합니다(시험 — 보통은 스켈레톤 곁 파일에서 읽습니다). */
+        /** @brief 본 LOD 표를 런타임에 정합니다(테스트 — 보통은 스켈레톤 곁 파일에서 읽습니다). */
         void setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD );
         /** @brief 본 LOD 표입니다(없으면 nullptr). */
         const SkeletonBoneLOD* findBoneLOD() const { return _boneLOD.get(); }

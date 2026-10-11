@@ -163,7 +163,7 @@ namespace sw
         using FrameStepObserver = Delegate<void( SceneFrameStep )>;
         /**
          * @brief 단계마다 돌기 **직전에** 부를 관찰자를 겁니다(게임 스레드). 묶이지 않은 델리게이트를 주면 풉니다.
-         * @details 진단 · 시험용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
+         * @details 진단 · 테스트용입니다 — 단계 사이의 상태를 보거나 순서를 기록합니다. 관찰자 안에서 구조를 바꾸지 마십시오.
          */
         void setFrameStepObserver( FrameStepObserver observer ) { _frameStepObserver = std::move( observer ); }
 

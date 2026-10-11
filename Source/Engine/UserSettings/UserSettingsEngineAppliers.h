@@ -19,7 +19,7 @@ namespace sw
     class InputMap;
     class LocalizationManager;
 
-    /** @brief 엔진 적용기가 값을 넣는 대상입니다. 시험은 자기 것을 넘기고, 엔진은 서비스를 넘깁니다. 비어 있는 대상의 적용기는 아무것도 하지 않습니다. */
+    /** @brief 엔진 적용기가 값을 넣는 대상입니다. 테스트는 자기 것을 넘기고, 엔진은 서비스를 넘깁니다. 비어 있는 대상의 적용기는 아무것도 하지 않습니다. */
     struct UserSettingsTargets
     {
         GlobalVariableManager*    _pGlobalVariableManager{ nullptr };

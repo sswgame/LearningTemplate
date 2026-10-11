@@ -127,7 +127,7 @@ cd build/Ninja-Debug/Bin
 5. 자리표시자 이름 차이, 최대 길이 초과, 포맷 구문 오류, 리치 텍스트 태그 차이를 보고합니다.
 
 `--check-text` 는 파일을 쓰지 않고 테이블이 최신인지만 종료 코드로 알립니다. `-loc-project=<경로>` 로 프로젝트 하나를, `-loc-project=all` 로 엔진과 모든 게임 팩을 고릅니다.
-CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate` 가 합니다(에디터 모듈이 지어지는 구성의 `nogpu` 시험).
+CI 는 App 을 띄우지 않습니다. 같은 확인을 `EditorTest` 의 `LocalizationGatherTest.RepositoryProjectsAreUpToDate` 가 합니다(에디터 모듈이 지어지는 구성의 `nogpu` 테스트).
 
 **PO 교환.** `--export-po` 는 문화권마다 `<프로젝트 폴더>/po/<문화권>.po` 를 씁니다. 키는 `msgctxt` 에 들어갑니다.
 `-import-po=<파일>` 은 파일 머리의 `X-Localization-Project` 로 프로젝트를 고릅니다. 가져온 번역의 해시는 번역가가 본 원문(`msgid`)의 해시이므로, 그 사이 원문이 바뀌었으면 낡은 번역으로 남습니다.

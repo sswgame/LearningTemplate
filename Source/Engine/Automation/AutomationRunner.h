@@ -65,7 +65,7 @@ namespace sw
         /** @brief 시나리오 파일(리소스 경로 또는 절대 경로)을 읽습니다. 읽지 못하면 결과가 LoadError 이고 다음 `onFrameEnd` 에서 끝납니다. */
         void startFromPath( string_view scenarioPath, string_view reportPath );
         /**
-         * @brief XML 글로 시작합니다(시험). 형식 오류면 false 이고 결과는 LoadError 입니다.
+         * @brief XML 글로 시작합니다(테스트). 형식 오류면 false 이고 결과는 LoadError 입니다.
          * @details 이 구성에 없는 단계(Shipping 의 `DevCommand`)가 들었으면 false 이고 결과는 Skipped 입니다(`startFromPath` 도 같다).
          */
         [[nodiscard]] bool startFromText( string_view xmlText, string_view reportPath = {} );
@@ -113,7 +113,7 @@ namespace sw
         string resolveOutputPath( string_view file ) const;
         /** @brief 활성 씬의 오브젝트 매니저입니다(없으면 nullptr). `setObjectManager` 로 정했으면 그것입니다. */
         GameObjectManager* findActiveObjectManager() const;
-        /** @brief 활성 씬 대신 @p pManager 를 봅니다(시험 · 도구 — 씬 없이 매니저를 손으로 돌릴 때). nullptr 이면 활성 씬입니다. */
+        /** @brief 활성 씬 대신 @p pManager 를 봅니다(테스트 · 도구 — 씬 없이 매니저를 손으로 돌릴 때). nullptr 이면 활성 씬입니다. */
         void setObjectManager( GameObjectManager* pManager ) { _pObjectManagerOverride = pManager; }
 
         /** @brief 결과 이름(`PASS` · `FAIL` · `LOAD ERROR` · `TIMEOUT` · `SKIP`)입니다. */

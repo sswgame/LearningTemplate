@@ -36,7 +36,7 @@ namespace sw
         /**
          * @brief enum 전역 변수의 글 값을 리플렉션 열거자로 읽습니다(`GlobalVariableEnumTextParser`).
          * @details 타입 이름은 정의 매크로의 `#enumType` 이라 인턴해도 된다. `findInterned` 로 찾으면 그 이름을 아직 아무도 인턴하지 않은
-         *          기동 시점(App)에 빈 해시가 나와 모든 이름이 "없다" 가 된다 — 시험 프로세스는 다른 시험이 먼저 인턴해 두어 가려진다.
+         *          기동 시점(App)에 빈 해시가 나와 모든 이름이 "없다" 가 된다 — 테스트 프로세스는 다른 테스트가 먼저 인턴해 두어 가려진다.
          */
         [[nodiscard]] bool parseGlobalVariableEnumText( string_view enumType, string_view text, int32& outValue )
         {

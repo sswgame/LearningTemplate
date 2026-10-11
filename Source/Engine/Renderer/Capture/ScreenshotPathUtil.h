@@ -27,7 +27,7 @@ namespace sw
     /**
      * @struct ScreenshotPathUtil
      * @brief 스크린샷 기본 경로 `Saved/Screenshots/<yyyyMMdd-HHmmss>.png` 를 만듭니다(언리얼 HighResShot · 유니티 Game view 스크린샷과 같은 PNG).
-     * @details 작업 폴더 기준 상대 경로입니다. 시험용 `-gv_screenshot` 은 PPM 계약 그대로입니다.
+     * @details 작업 폴더 기준 상대 경로입니다. 테스트용 `-gv_screenshot` 은 PPM 계약 그대로입니다.
      */
     struct SW_API ScreenshotPathUtil
     {

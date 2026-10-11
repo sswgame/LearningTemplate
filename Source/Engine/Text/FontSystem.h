@@ -70,7 +70,7 @@ namespace sw
     public:
         FontSystem();
         /**
-         * @brief 래스터라이저(시험은 결정적인 가짜)와 문화권 출처를 주입합니다.
+         * @brief 래스터라이저(테스트는 결정적인 가짜)와 문화권 출처를 주입합니다.
          * @param pLocalization 대체 목록을 묻는 곳. nullptr 이면 엔진 서비스(`engine::getLocalizationManager()`)를 씁니다.
          */
         explicit FontSystem( unique_ptr<IFontRasterizer> rasterizer, const LocalizationManager* pLocalization = nullptr );
@@ -81,13 +81,13 @@ namespace sw
 
         /** @brief 카탈로그 파일을 읽고 기본 가족을 엽니다. 기본 가족을 못 열면 false(글자를 그릴 수 없다 — 기동 오류). */
         [[nodiscard]] bool initialize( string_view catalogPath );
-        /** @brief 이미 읽은 카탈로그로 시작합니다(시험 · 도구). 검사 · 기본 가족 열기는 `initialize` 와 같습니다. */
+        /** @brief 이미 읽은 카탈로그로 시작합니다(테스트 · 도구). 검사 · 기본 가족 열기는 `initialize` 와 같습니다. */
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
         /** @brief 연 면 · 사슬 · 경고 기록을 모두 놓습니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
 
         /**
-         * @brief 파일 대신 메모리의 글꼴 바이트를 그 경로로 등록합니다(시험 · 게임이 글꼴을 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.
+         * @brief 파일 대신 메모리의 글꼴 바이트를 그 경로로 등록합니다(테스트 · 게임이 글꼴을 묶어 넣을 때). 카탈로그 면 경로가 같으면 이것을 먼저 씁니다.
          * @details 이미 연 면에는 영향이 없습니다 — `initialize` 앞에 등록합니다.
          */
         void registerMemoryFontFile( string_view path, vector<uint8> bytes );
@@ -110,7 +110,7 @@ namespace sw
         GlyphCache& getGlyphCache() { return *_glyphCache; }
         /** @brief 읽은 카탈로그입니다. */
         const FontCatalogDesc& getCatalog() const { return _catalog; }
-        /** @brief 한 번만 남긴 경고(못 찾은 가족 · 글리프 없는 코드 포인트)의 수입니다 — 경고가 되풀이되지 않는지 시험이 봅니다. */
+        /** @brief 한 번만 남긴 경고(못 찾은 가족 · 글리프 없는 코드 포인트)의 수입니다 — 경고가 되풀이되지 않는지 테스트가 봅니다. */
         uint32 getWarnedOnceCount() const { return static_cast<uint32>( _uniqueWarned.size() ); }
 
     private:

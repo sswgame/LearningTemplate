@@ -186,7 +186,7 @@ namespace sw
         /**
          * @brief 이 프로퍼티의 값을 세 형식(XML · JSON · 바이너리)이 모두 실어 나를 수 있으면 true 입니다 — 직렬화기의 분기와 같은 판정입니다.
          * @details 직렬화기는 다룰 줄 모르는 타입을 **조용히** 텍스트 `null` · 바이너리 0 바이트로 쓰고, 읽을 때는 그 칸이 기본값이 된다(저장한 줄 알았던
-         *          값이 사라진다). 컨테이너는 원소 · 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿습니다. 모든 PROPERTY 를 이것으로 훑는 시험이 있다.
+         *          값이 사라진다). 컨테이너는 원소 · 키 타입을, 소유 포인터 원소는 런타임 팩토리를 믿습니다. 모든 PROPERTY 를 이것으로 훑는 테스트가 있다.
          */
         SW_API static bool canCarryProperty( const PropertyInfo& prop, const SerializeContext& context );
         /** @brief 값 타입 하나를 세 형식이 모두 실어 나를 수 있으면 true 입니다(글 처리기 짝 · enum · 반사 구조체). */

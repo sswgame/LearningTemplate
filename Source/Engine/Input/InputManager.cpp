@@ -349,7 +349,7 @@ namespace sw
         }
 
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다 — 엔진 루프 ·
-        //    리플레이 재동기화 · 시험이 같은 길을 탄다.
+        //    리플레이 재동기화 · 테스트가 같은 길을 탄다.
         if ( _pInputMap != nullptr )
             _pInputMap->update( deltaSeconds );
     }

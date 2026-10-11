@@ -237,7 +237,7 @@ namespace sw
             return;
         GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
-            return; // 오브젝트 밖(시험이 `applyPlacement` 로 직접 놓는다)
+            return; // 오브젝트 밖(테스트가 `applyPlacement` 로 직접 놓는다)
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const CameraComponent*   pCamera  = pManager != nullptr ? pManager->getCameraRegistry().selectCamera( CameraRole::Game ) : nullptr;

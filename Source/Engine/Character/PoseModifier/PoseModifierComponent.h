@@ -74,7 +74,7 @@ namespace sw
         /** @brief 리그 에셋 경로를 바꾸고 다시 묶습니다. */
         void          setRigPath( string_view path );
         const string& getRigPath() const { return _rigPath; }
-        /** @brief 리그를 런타임에 정합니다(저장되지 않습니다 — 시험 · 절차 생성). */
+        /** @brief 리그를 런타임에 정합니다(저장되지 않습니다 — 테스트 · 절차 생성). */
         void setRigAsset( shared_ptr<const RigAsset> asset );
         /** @brief 자기 유닛의 소켓 에셋 경로입니다(`*.sockets.xml`, 소켓 대상이 쓴다). */
         void setSocketSetPath( string_view path );
@@ -116,7 +116,7 @@ namespace sw
         bool isTargetBound( const hashed_string& targetName ) const;
         /** @brief 포즈 구동이 낸 보정 모프 가중치입니다(모든 단계 뒤 게임 스레드에서 읽습니다). GPU 모프 풀은 아직 이름 모프를 받지 않습니다. */
         const vector<RigMorphWeight>& getMorphWeights() const { return _instance.getMorphWeights(); }
-        /** @brief 실행 상태(시험 · 진단)입니다. */
+        /** @brief 실행 상태(테스트 · 진단)입니다. */
         RigInstance&       getRigInstance() { return _instance; }
         const RigInstance& getRigInstance() const { return _instance; }
 

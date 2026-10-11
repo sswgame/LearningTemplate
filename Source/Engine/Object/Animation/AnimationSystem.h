@@ -187,17 +187,17 @@ namespace sw
         void unregisterLODClient( IAnimationLODClient* pClient );
         /**
          * @brief 다음 평가가 쓸 뷰들입니다(주 시점 + 추가 뷰). 엔진 루프가 프레임마다 넣습니다. 한 번도 넣지 않았으면 LOD 는 꺼져 있습니다
-         *        (모든 클라이언트가 보이고 매 프레임 — 시험 · 서버 · 뷰가 없는 실행).
+         *        (모든 클라이언트가 보이고 매 프레임 — 테스트 · 서버 · 뷰가 없는 실행).
          */
         void setLODViews( const vector<AnimationLODView>& listView );
         /** @brief 뷰를 지워 LOD 를 끕니다. */
         void clearLODViews();
-        /** @brief LOD 표를 정합니다(시험 · 게임). 정하지 않으면 처음 판정 때 `AnimationLODSettings::kResourcePath` 를 읽습니다. */
+        /** @brief LOD 표를 정합니다(테스트 · 게임). 정하지 않으면 처음 판정 때 `AnimationLODSettings::kResourcePath` 를 읽습니다. */
         void                        setLODSettings( const AnimationLODSettings& settings );
         const AnimationLODSettings& getLODSettings() const { return _lodSettings; }
         /** @brief 지난 판정에서 포즈 하나를 만드는 데 든 평균 시간(마이크로초, 지수 이동 평균)입니다 — 예산 배분이 씁니다. */
         float32 getAverageEvaluationMicroseconds() const { return _averageEvaluationMicroseconds; }
-        /** @brief 비용 평균을 정합니다(시험 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
+        /** @brief 비용 평균을 정합니다(테스트 — 측정 대신 정한 값으로 예산을 돌린다). 0 이면 다시 잽니다. */
         void setAverageEvaluationMicroseconds( float32 microseconds ) { _averageEvaluationMicroseconds = microseconds; }
         /** @brief 지난 판정에서 예산 배분 뒤의 예상 비용(마이크로초)입니다. */
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
@@ -208,14 +208,14 @@ namespace sw
         /** @brief 군중(묶음 · 사본 풀 · VAT 캐시 · 시계)입니다. */
         AnimationCrowd&       getCrowd() { return _crowd; }
         const AnimationCrowd& getCrowd() const { return _crowd; }
-        /** @brief 군중 표를 정합니다(시험 · 게임). 정하지 않으면 처음 쓸 때 `AnimationCrowdSettings::kResourcePath` 를 읽습니다. */
+        /** @brief 군중 표를 정합니다(테스트 · 게임). 정하지 않으면 처음 쓸 때 `AnimationCrowdSettings::kResourcePath` 를 읽습니다. */
         void setCrowdSettings( const AnimationCrowdSettings& settings );
 
         /** @brief 등록된 유닛 수입니다. */
         uint32 getUnitCount() const { return static_cast<uint32>( _listUnit.size() ); }
         /** @brief 등록된 유닛 전부입니다(평가 순서 아님). 레벨은 유닛이 빠지는 순간 비워지므로 "지금 있는 유닛" 은 이것으로 봅니다. */
         const vector<SkeletalMeshComponent*>& getUnits() const { return _listUnit; }
-        /** @brief 의존 레벨입니다(0 이 먼저). 시험 · 진단용입니다. */
+        /** @brief 의존 레벨입니다(0 이 먼저). 테스트 · 진단용입니다. */
         const vector<vector<SkeletalMeshComponent*>>& getLevels() const { return _listLevel; }
         /** @brief 마지막으로 지은 레벨에 의존 고리가 있었는지입니다. */
         bool hasDependencyCycle() const { return _bCycle == SW_TRUE; }

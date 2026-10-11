@@ -44,7 +44,7 @@ namespace sw
         static float32 packNormal( const float3& normal );
         /** @brief `packNormal` 의 역입니다(셰이더 `swUnpackVertexAnimationNormal` 과 같은 식). */
         static float3 unpackNormal( float32 packed );
-        /** @brief 시각 @p time(초)의 정점 위치입니다 — 셰이더와 같은 프레임 보간입니다(시험 · 디버그). */
+        /** @brief 시각 @p time(초)의 정점 위치입니다 — 셰이더와 같은 프레임 보간입니다(테스트 · 디버그). */
         float3 samplePosition( float32 time, uint32 vertexIndex ) const;
 
         /** @brief 쿠킹본 바이트로 만듭니다. */

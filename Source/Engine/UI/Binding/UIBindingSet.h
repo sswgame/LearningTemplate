@@ -84,7 +84,7 @@ namespace sw
         uint32 getBindingCount() const { return static_cast<uint32>( _listBinding.size() ); }
         /** @brief 마지막으로 걸 때의 오류(파일 · 줄 · 식 · 이유, 영어)입니다. */
         const vector<string>& getErrors() const { return _listError; }
-        /** @brief 위젯 칸에 실제로 쓴 횟수입니다(같은 값이면 세지 않는다 — 시험 · 진단). */
+        /** @brief 위젯 칸에 실제로 쓴 횟수입니다(같은 값이면 세지 않는다 — 테스트 · 진단). */
         uint32 getWriteCount() const { return _writeCount; }
         /** @brief 이번 `update` 가 견준 폴링 바인딩 수입니다(프로파일 카운터 UI.PollBindings). */
         uint32 getPolledCount() const { return _polledCount; }

@@ -92,7 +92,7 @@ namespace sw
         const PhysicsRagdoll& getRagdoll() const { return _ragdoll; }
         /** @brief 지금 상태입니다. */
         RagdollState getState() const { return _state; }
-        /** @brief 기상 클립(누움 · 엎드림)과 끝난 뒤 상태를 정합니다(코드 · 시험 — 보통은 PROPERTY 데이터). */
+        /** @brief 기상 클립(누움 · 엎드림)과 끝난 뒤 상태를 정합니다(코드 · 테스트 — 보통은 PROPERTY 데이터). */
         void setGetUpClips( const hashed_string& faceUpClip, const hashed_string& faceDownClip, const hashed_string& exitState );
         /** @brief 가산 움찔 클립을 정합니다. */
         void setFlinchClip( const hashed_string& clip ) { _flinchClip = clip; }

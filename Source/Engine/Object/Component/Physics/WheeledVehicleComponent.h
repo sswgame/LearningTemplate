@@ -50,7 +50,7 @@ namespace sw
         PhysicsVehicleState getVehicleState() const;
         /** @brief 차가 만들어졌는지입니다. */
         bool isVehicleCreated() const { return _vehicle.isValid(); }
-        /** @brief 이 컴포넌트의 수치로 만든 바퀴 차 서술자입니다(시험 · 도구가 본다). */
+        /** @brief 이 컴포넌트의 수치로 만든 바퀴 차 서술자입니다(테스트 · 도구가 본다). */
         PhysicsWheeledVehicleDesc makeVehicleDesc() const;
 
     protected:

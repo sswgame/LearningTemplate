@@ -40,7 +40,7 @@ namespace sw
 
         /** @brief 지금 설정으로 3D 씬을 만듭니다. 올라와 있지 않으면 nullptr 입니다. */
         unique_ptr<IPhysicsScene3D> createScene3D() const;
-        /** @brief 주어진 설정으로 3D 씬을 만듭니다(시험 · 미리보기 월드). */
+        /** @brief 주어진 설정으로 3D 씬을 만듭니다(테스트 · 미리보기 월드). */
         unique_ptr<IPhysicsScene3D> createScene3D( const PhysicsSettings& settings ) const;
         /** @brief 지금 설정으로 2D 씬을 만듭니다. */
         unique_ptr<IPhysicsScene2D> createScene2D() const;
@@ -53,7 +53,7 @@ namespace sw
         [[nodiscard]] bool setSettings( const PhysicsSettings& settings );
 
         /**
-         * @brief 설정된 3D 중력(m/s²)입니다 — 엔진 서비스가 묶여 있으면 이 서비스의 설정 표(`physicssettings.xml`), 없으면(도구 · 서비스 없는 시험) 설정 표 기본값.
+         * @brief 설정된 3D 중력(m/s²)입니다 — 엔진 서비스가 묶여 있으면 이 서비스의 설정 표(`physicssettings.xml`), 없으면(도구 · 서비스 없는 테스트) 설정 표 기본값.
          * @details 물리 바깥에서 중력을 쓰는 계산(탄도 · 파괴 하중 · 코스터 · 파도 분산 · 스프링 사슬)은 숫자를 따로 적지 않고 이것 하나를 읽는다
          *          (언리얼 `UWorld::GetGravityZ` ← 프로젝트 물리 설정과 같은 한 출처).
          */

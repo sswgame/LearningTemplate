@@ -2,7 +2,7 @@
  * @file CharacterGeometry.h
  * @brief 캐릭터 외형 계산(피팅 · 병합 · 절단 · 체형 · 소켓)이 주고받는 중립 형상(`AppearanceGeometry`)과 본 배열(`CharacterBoneArray`)입니다.
  * @details 메시 에셋 · 포즈 버퍼를 모르는 값 타입입니다. 외형을 조립하는 쪽이 `Mesh` · 포즈를 이 꼴로 바꿔 넘기고, 결과(삼각형 마스크 · 정점
- *          델타 · 병합된 형상)를 다시 GPU 쪽에 싣습니다. 그래서 이 폴더의 계산은 GPU · 씬 없이 시험할 수 있습니다.
+ *          델타 · 병합된 형상)를 다시 GPU 쪽에 싣습니다. 그래서 이 폴더의 계산은 GPU · 씬 없이 테스트할 수 있습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

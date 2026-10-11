@@ -26,7 +26,7 @@ namespace sw
             /** @brief 리소스 경로 또는 절대 경로의 글을 읽습니다(팩 안이면 팩에서). */
             [[nodiscard]] static bool readLocalizationFile( string_view path, string& outText )
             {
-                // 디스크에 있는 경로(시험 · 도구의 절대 경로)는 그대로 읽는다 — 리소스 조회는 못 찾으면 오류를 남긴다.
+                // 디스크에 있는 경로(테스트 · 도구의 절대 경로)는 그대로 읽는다 — 리소스 조회는 못 찾으면 오류를 남긴다.
                 if ( FileUtil::isRegularFile( path ) )
                     return FileUtil::readTextFile( path, outText );
                 return ResourceIO::readTextResource( path, outText );
@@ -809,7 +809,7 @@ namespace sw
         {
             std::shared_lock<std::shared_mutex> lock( _mutex );
             if ( _listProject.empty() && _mapLooseTable.empty() )
-                return; // 글을 하나도 올리지 않은 실행(로컬라이제이션 없는 게임 · 시험)은 모든 키가 빠진다 — 알릴 것이 아니다
+                return; // 글을 하나도 올리지 않은 실행(로컬라이제이션 없는 게임 · 테스트)은 모든 키가 빠진다 — 알릴 것이 아니다
             language = _currentLanguage;
         }
         bool bFirst{ false };

@@ -82,7 +82,7 @@ namespace sw
 
         /**
          * @brief 입력을 묶고 일을 시작합니다.
-         * @param inputManager 행동 · 포인터를 읽는 입력(시험은 자기 것을 넘긴다).
+         * @param inputManager 행동 · 포인터를 읽는 입력(테스트는 자기 것을 넘긴다).
          * @param pFontSystem 글 측정 · 그리기가 쓰는 글꼴(레이아웃부터). 없으면 글 위젯이 크기 0 입니다.
          * @param uiInputMapPath UI 행동 맵 리소스(`engine/input/ui.input.xml`). 비우면 UI 행동이 없습니다(포인터만).
          * @return 행동 맵을 주었는데 읽지 못하면 false 입니다.
@@ -293,12 +293,12 @@ namespace sw
         uint64 getCanvasRevision() const { return _canvasRevision; }
         /**
          * @brief 스택의 화면마다 레이아웃 덤프(`UILayoutDump`, 물리 픽셀)를 그리기 순서로 이어 씁니다 — 화면마다 첫 줄 `## <문서 경로 또는 (code)>`.
-         * @details 실기동 시험(`AppUITest` — 시나리오 단계 `UILayoutDump`)이 위젯 이름으로 스크린샷 안의 사각형을 찾는 길입니다.
+         * @details 실기동 테스트(`AppUITest` — 시나리오 단계 `UILayoutDump`)이 위젯 이름으로 스크린샷 안의 사각형을 찾는 길입니다.
          */
         string makeLayoutDump() const;
-        /** @brief 문화권 출처를 정합니다(시험이 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
+        /** @brief 문화권 출처를 정합니다(테스트가 자기 것을 넘긴다 — 전역 문화권을 건드리지 않게). nullptr 이면 바인딩된 엔진 서비스입니다. */
         void setLocalization( const LocalizationManager* pLocalization ) { _pLocalization = pLocalization; }
-        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다(시험이 자기 것을 넘긴다). nullptr 이면 바인딩된 엔진 서비스입니다. 화면 바인딩은 다시 걸린다. */
+        /** @brief 설정 바인딩(`{setting:id}`)의 출처를 정합니다(테스트가 자기 것을 넘긴다). nullptr 이면 바인딩된 엔진 서비스입니다. 화면 바인딩은 다시 걸린다. */
         void setUserSettings( UserSettingsManager* pSettings );
 
         const utf8* getModuleUnloadListenerName() const override { return "ui screens"; }
@@ -365,7 +365,7 @@ namespace sw
         void paintScreens();
         /** @brief 사용자 설정 `gv_uiTheme`(accessibility.uiTheme)이 바뀌었으면 그 테마로 바꿉니다(빈 값 · 테마 목록이 없으면 그대로). */
         void syncThemeSetting();
-        /** @brief `gv_uiDemo` 를 따라 개발 시험 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
+        /** @brief `gv_uiDemo` 를 따라 개발 테스트 화면을 열고 닫습니다(열면 입력 방식을 탐색으로 — 첫 버튼에 포커스 테두리). */
         void syncDemoScreen();
         /** @brief `gv_benchUiWidgets` 를 보고 벤치 화면(`UIBenchScreen`)을 열고 닫습니다(칸 수가 바뀌면 다시 짓는다). */
         void syncBenchScreen();
@@ -432,7 +432,7 @@ namespace sw
         float32                      _inputDeltaSeconds;  ///< 이번 `processInput` 의 프레임 시간(행동 사건에 싣는다)
         UINavigationDirection        _stickDirection;     ///< 스틱이 지금 가리키는 탐색 방향(기울지 않았으면 Next — 쓰지 않는 값)
         UIScreenHandle               _activeScreen;
-        UIScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 시험 화면(없으면 무효)
+        UIScreenHandle               _demoScreen;          ///< `-gv_uiDemo` 가 연 테스트 화면(없으면 무효)
         UIScreenHandle               _benchScreen;         ///< `-gv_benchUiWidgets` 가 연 벤치 화면(없으면 무효)
         UIScreenHandle               _markerScreen;        ///< 화면 마커를 담는 HUD 화면(없으면 무효)
         vector<WidgetComponent*>     _listWidgetComponent; ///< 등록된 위젯 컴포넌트(소유하지 않는다 — 끝날 때 스스로 뺀다)

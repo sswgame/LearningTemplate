@@ -44,7 +44,7 @@ namespace sw
 
         /**
          * @brief 매니페스트 하나를 통째로 읽습니다. 캐시하지 않고 신선도도 따지지 않습니다.
-         * @details 셰이더 하나가 아니라 **쿠킹된 것 전부**를 보는 쪽(계약 시험: C++ 가 묶는 이름이 실제로 쿠킹됐는가)이 씁니다.
+         * @details 셰이더 하나가 아니라 **쿠킹된 것 전부**를 보는 쪽(계약 테스트: C++ 가 묶는 이름이 실제로 쿠킹됐는가)이 씁니다.
          *          매니페스트는 리플렉터 없이 읽히므로 DXBC · DXIL 리플렉터가 없는 플랫폼에서도 네 백엔드를 다 봅니다.
          * @param binDirectoryRelative 리소스 상대 `<domain>/shaders/bin/<rhi>` 디렉터리
          * @return 파일이 없거나 형식 · 내용이 맞지 않으면 false 입니다(그때 `outMapEntry` 는 비어 있습니다).
@@ -77,7 +77,7 @@ namespace sw
         /** @brief 캐시를 비웁니다(셰이더를 다시 쿠킹한 뒤 · 라이브 셰이더 편집 뒤 · 엔진 종료 때 `ShaderCache::shutdown`). 캐시 세대가 오릅니다. */
         static void clearCache();
 
-        /** @brief 지금 캐시에 든 매니페스트 수입니다(RHI 폴더마다 하나, 없는 파일도 빈 채로 하나). 진단 · 시험용입니다. */
+        /** @brief 지금 캐시에 든 매니페스트 수입니다(RHI 폴더마다 하나, 없는 파일도 빈 채로 하나). 진단 · 테스트용입니다. */
         static uint32 getCachedManifestCount();
 
         /**

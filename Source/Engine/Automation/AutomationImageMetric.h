@@ -47,7 +47,7 @@ namespace sw
 {
     /**
      * @class AutomationImageMetric
-     * @brief PPM 읽기와 영역 지표 계산입니다. 시험 바이너리의 PPM 도구(`RHITestImage`)와 따로 엔진에 둡니다 — 시나리오는 배포본에서도 돈다.
+     * @brief PPM 읽기와 영역 지표 계산입니다. 테스트 바이너리의 PPM 도구(`RHITestImage`)와 따로 엔진에 둡니다 — 시나리오는 배포본에서도 돈다.
      */
     class SW_API AutomationImageMetric
     {

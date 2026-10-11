@@ -50,7 +50,7 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view resourceID );
         /** @brief 형식대로 바이트를 만듭니다. */
         void saveToMemory( vector<uint8>& outBytes ) const;
-        /** @brief 절대 경로에 씁니다(임포터 · 시험). */
+        /** @brief 절대 경로에 씁니다(임포터 · 테스트). */
         [[nodiscard]] bool saveToFile( string_view filePath ) const;
     };
 } // namespace sw

@@ -8,7 +8,7 @@
  *          **블록 순서.** 명령 → 파라미터(seek) → 스냅샷 세기 · 적용 → 에미터 가림 추종 → 보이스 목표(볼륨 · 팬 · 피치 · 로우패스, 들림 정도)
  *          → 실제/가상 보이스 고르기(우선순위 · 들림) → 섞기(가상은 위치만) → 버스 그래프 → 게시.
  *
- *          **결정성.** 같은 명령 · 같은 씨앗(`setRandomSeed`)이면 `render` 가 같은 샘플을 냅니다 — 장치 없이 버퍼에 렌더해 숫자로 재는 시험이
+ *          **결정성.** 같은 명령 · 같은 씨앗(`setRandomSeed`)이면 `render` 가 같은 샘플을 냅니다 — 장치 없이 버퍼에 렌더해 숫자로 재는 테스트가
  *          이것에 기댑니다.
  */
 #pragma once
@@ -83,7 +83,7 @@ namespace sw
 {
     /**
      * @class AudioEngine
-     * @brief 오디오 엔진 하나입니다. `IAudioSystem` 이 하나를 들고, 시험은 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
+     * @brief 오디오 엔진 하나입니다. `IAudioSystem` 이 하나를 들고, 테스트는 장치 없이 직접 만들어 `render` 로 버퍼에 렌더합니다.
      */
     class SW_API AudioEngine
     {
@@ -122,7 +122,7 @@ namespace sw
         bool hasEvent( const hashed_string& eventName ) const;
         /** @brief 클립 캐시입니다. */
         AudioClipStore& getClipStore() { return _clipStore; }
-        /** @brief 컨테이너 · 범위가 쓰는 난수의 씨앗입니다(시험의 결정성). 다음 블록부터 적용됩니다. */
+        /** @brief 컨테이너 · 범위가 쓰는 난수의 씨앗입니다(테스트의 결정성). 다음 블록부터 적용됩니다. */
         void setRandomSeed( uint64 seed );
 
         // --- 게임 스레드: 재생 ------------------------------------------------------------------------------------------
@@ -207,13 +207,13 @@ namespace sw
          * @details 안에서는 블록(`audio::kBlockFrameCount`) 단위로 돌고, 블록을 시작할 때 쌓인 명령을 적용합니다. 초기화 전이면 0 을 씁니다.
          */
         void render( float32* pOutput, uint32 frameCount );
-        /** @brief 버스 하나의 마지막 블록 피크입니다(오디오 스레드 · 시험). 없는 버스면 0 입니다. */
+        /** @brief 버스 하나의 마지막 블록 피크입니다(오디오 스레드 · 테스트). 없는 버스면 0 입니다. */
         float32 getBusPeak( const hashed_string& bus ) const;
-        /** @brief 파라미터의 지금 값(seek 뒤)입니다(오디오 스레드 · 시험). 모르면 0 입니다. */
+        /** @brief 파라미터의 지금 값(seek 뒤)입니다(오디오 스레드 · 테스트). 모르면 0 입니다. */
         float32 getParameterValue( const hashed_string& name ) const;
-        /** @brief 스냅샷의 지금 세기입니다(오디오 스레드 · 시험). */
+        /** @brief 스냅샷의 지금 세기입니다(오디오 스레드 · 테스트). */
         float32 getSnapshotIntensity( const hashed_string& name ) const;
-        /** @brief 지금 그래프입니다(오디오 스레드 · 시험). */
+        /** @brief 지금 그래프입니다(오디오 스레드 · 테스트). */
         const AudioMixer* getMixer() const { return _pMixer.get(); }
 
     private:

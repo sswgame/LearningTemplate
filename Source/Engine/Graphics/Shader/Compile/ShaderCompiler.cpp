@@ -19,7 +19,7 @@
     #include <dxcapi.h>
 #endif
 #if defined( SW_PLATFORM_WINDOWS ) && !defined( SW_HAS_DXC_API )
-    // SW_HAS_DXC_API 는 EnginePlatformHeaders.h 가 정한다 — 빠지면 DXC 경로가 조용히 꺼지고 시험은 "컴파일러 없음" 으로 건너뛴다.
+    // SW_HAS_DXC_API 는 EnginePlatformHeaders.h 가 정한다 — 빠지면 DXC 경로가 조용히 꺼지고 테스트는 "컴파일러 없음" 으로 건너뛴다.
     #error "SW_HAS_DXC_API is not defined on Windows - include Engine/Common/EnginePlatformHeaders.h"
 #endif
 
@@ -393,7 +393,7 @@ namespace sw
             static auto s_getDxCompilerHandle = []() -> void*
             {
                 string libName = ModuleImageUtil::formatSharedLibraryName( "dxcompiler" );
-                // 실행 파일 옆(배포 구성의 시험은 TestBin 에 DXC 를 둔다) → Bin → 이름만.
+                // 실행 파일 옆(배포 구성의 테스트는 TestBin 에 DXC 를 둔다) → Bin → 이름만.
                 const string   execDir       = FileUtil::getDirectoryPart( FileUtil::getExecutablePath() );
                 vector<string> listCandidate = {
                     execDir.empty() ? libName : FileUtil::joinPath( execDir, libName ),

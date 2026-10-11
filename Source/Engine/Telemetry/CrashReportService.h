@@ -106,7 +106,7 @@ namespace sw
         /** @brief 보낼 줄에 있고 시도가 남은 묶음 수입니다. */
         uint32 countPendingUploads() const;
         /**
-         * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 시험 실행 파일 같은
+         * @brief 보고 프로세스로 띄울 실행 파일입니다(`kReporterArgument` 를 알아듣는 것 — App). 비면(기본) 띄우지 않습니다 — 테스트 실행 파일 같은
          *        다른 호스트가 자기를 보고 프로세스로 다시 띄우지 않게, 띄울 쪽(EngineLoop)이 정합니다.
          */
         void setReporterExecutable( string_view executablePath ) { _reporterExecutable = string( executablePath ); }

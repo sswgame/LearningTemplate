@@ -885,7 +885,7 @@ namespace sw
                 pJob->_tileZ                    = tile._y;
                 NavTileBakeJob* pRaw            = pJob.get();
                 pRuntime->_listJob.push_back( std::move( pJob ) );
-                // 워커가 없으면(시험 · 도구) 지금 베이크한다 — 끼우기는 그래도 다음 갱신이다.
+                // 워커가 없으면(테스트 · 도구) 지금 베이크한다 — 끼우기는 그래도 다음 갱신이다.
                 if ( engine::areEngineServicesBound() )
                 {
                     pRaw->_task = engine::getTaskManager().emplaceTask( "NavTileBake", SW_DELEGATE_METHOD( TaskDelegate, &NavTileBakeJob::run, pRaw ) );

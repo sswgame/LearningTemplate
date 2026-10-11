@@ -3,7 +3,7 @@
  * @brief 텔레메트리 · 크래시 보고가 바깥으로 보낼 때 쓰는 HTTP 창구 — 요청 · 응답 값과 인터페이스, 그리고 아무것도 보내지 않는 기본 구현입니다.
  * @details 이 저장소는 실제 네트워크 클라이언트를 싣지 않습니다. 업로더(`HTTPTelemetryUploader` · `HTTPCrashReportUploader`)는 요청을 만들어 이 창구에
  *          넘기기까지만 하고, 기본 창구(`NullHTTPClient`)는 보내지 않고 거절합니다. 배포 게임은 플랫폼 HTTP(WinHTTP · libcurl · 콘솔 SDK)로
- *          `IHTTPClient` 를 구현해 끼웁니다. 시험은 요청을 받아 적기만 하는 가짜를 끼웁니다.
+ *          `IHTTPClient` 를 구현해 끼웁니다. 테스트는 요청을 받아 적기만 하는 가짜를 끼웁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"

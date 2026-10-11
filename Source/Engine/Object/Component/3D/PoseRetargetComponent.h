@@ -68,7 +68,7 @@ namespace sw
         void setSource( SkeletalMeshComponent* pSource );
         /** @brief 대상 레퍼런스 덮어쓰기(본 비율을 건 포즈)입니다. 본 수가 이 유닛 스켈레톤과 같아야 쓰입니다. */
         void setTargetReferencePose( const Pose& referencePose );
-        /** @brief 지금 묶인 리타기터입니다(시험 · 진단). */
+        /** @brief 지금 묶인 리타기터입니다(테스트 · 진단). */
         const PoseRetargeter& getRetargeter() const { return _retargeter; }
 
     private:

@@ -34,7 +34,7 @@ namespace sw
          * @param gainDb Peaking · 셸빙에서만 씁니다.
          */
         static AudioBiquadCoefficients make( AudioBiquadType type, float32 frequencyHz, float32 q, float32 gainDb, float32 sampleRate );
-        /** @brief @p frequencyHz 에서 크기 응답(선형)입니다 — |H(e^jω)|. 시험이 처리 결과와 견줍니다. */
+        /** @brief @p frequencyHz 에서 크기 응답(선형)입니다 — |H(e^jω)|. 테스트가 처리 결과와 견줍니다. */
         float32 computeMagnitude( float32 frequencyHz, float32 sampleRate ) const;
     };
 } // namespace sw

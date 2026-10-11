@@ -45,7 +45,7 @@ namespace sw
 
         /**
          * @brief 측정 창을 닫을 때인가입니다. 프레임 목표와 시간 목표 가운데 먼저 닿는 쪽이 닫습니다(0 인 목표는 보지 않습니다).
-         * @details 프레임 상한이 없는 실행은 초당 프레임 수가 장면마다 수십 배 달라 "N 프레임" 이 몇 초인지 모릅니다 — 오래 도는 시험(soak)은
+         * @details 프레임 상한이 없는 실행은 초당 프레임 수가 장면마다 수십 배 달라 "N 프레임" 이 몇 초인지 모릅니다 — 오래 도는 테스트(soak)은
          *          시간으로 끊습니다(`-gv_profileSeconds`).
          */
         static bool isMeasureWindowDone( uint64 frames, uint64 frameTarget, int64 elapsedMicro, int64 secondsTarget );

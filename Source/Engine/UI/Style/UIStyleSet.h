@@ -43,7 +43,7 @@ namespace sw
          * @param outAncestorKey 이 위젯이 맞는 "조상 쪽 선택자 조각" 의 해시 — 바뀌면 자손의 맞춤이 바뀔 수 있다.
          */
         shared_ptr<const UIComputedStyle> computeStyle( const Widget& widget, const UIComputedStyle* pParentStyle, bool bNavigationMode, uint64& outAncestorKey );
-        /** @brief 지금 캐시에 든 계산된 스타일 수입니다(나눠 쓰기 시험). */
+        /** @brief 지금 캐시에 든 계산된 스타일 수입니다(나눠 쓰기 테스트). */
         uint32 getComputedStyleCount() const { return static_cast<uint32>( _listEntry.size() ); }
 
     private:

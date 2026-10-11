@@ -274,7 +274,7 @@ namespace sw
                     appendRequestUnique( outListRequest, engineDefaultAssets.*info._pDefaultShader, getShaderStageInfo( ShaderStage::Pixel )._pEntryPoint, ShaderStage::Pixel, {} );
                 }
 
-                // 패스가 아닌 엔진 · 시험 셰이더.
+                // 패스가 아닌 엔진 · 테스트 셰이더.
                 const vector<string> listEngineShader = {
                     engineDefaultAssets._shaderFullscreenTriangle,
                     "engine/shaders/sprite2d.hlsl",

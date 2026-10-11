@@ -67,7 +67,7 @@ namespace sw
 
         /**
          * @brief UI 시스템과 설정 출처를 묶고, 명령 · 탐침이 찾는 조종자로 둡니다.
-         * @param pSettings 설정 매니저(nullptr 이거나 HUD 스키마를 읽지 않았으면 전역 변수에 바로 쓴다 — 시험).
+         * @param pSettings 설정 매니저(nullptr 이거나 HUD 스키마를 읽지 않았으면 전역 변수에 바로 쓴다 — 테스트).
          */
         void initialize( UISystem& ui, UserSettingsManager* pSettings );
         /** @brief 화면 · 창을 닫고 HUD 가 켠 프로파일러를 끕니다. */

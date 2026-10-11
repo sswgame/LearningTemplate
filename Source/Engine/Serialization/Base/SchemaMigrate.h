@@ -82,7 +82,7 @@ namespace sw
      *            함수(`SchemaMigrateFn`)가 받아 주지 않으면 실패합니다 — 언리얼 쿠킹 패키지가 판(`FPackageFileSummary` 의 버전)이 다르면 로드를
      *            거절하는 것과 같은 자리입니다. 오브젝트 상태처럼 지운 칸을 버려도 되는 자리는 이관 함수가 그렇게 말합니다
      *            (`ObjectStateSerializer` 의 `skipFieldsTheTypeNoLongerHas`).
-     *          고정하는 시험: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
+     *          고정하는 테스트: `ReflectionSerializationTest.OrphanOnlyPolicyDiffersByFormat`.
      */
     enum class SchemaOrphanPolicy : uint8
     {

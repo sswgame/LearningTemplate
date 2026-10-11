@@ -70,7 +70,7 @@ namespace sw
          */
         void clearAllDirty();
 
-        /** @brief 이 트리를 소유한 화면입니다(화면 밖의 트리 — 시험 · 월드 위젯 — 면 nullptr). 팝업을 여는 위젯이 그 화면의 UI 시스템을 찾는다. */
+        /** @brief 이 트리를 소유한 화면입니다(화면 밖의 트리 — 테스트 · 월드 위젯 — 면 nullptr). 팝업을 여는 위젯이 그 화면의 UI 시스템을 찾는다. */
         UIScreen* getScreen() const { return _pScreen; }
 
         /** @brief 이 트리에서 포커스를 쥔 위젯입니다(포커스가 다른 트리에 있거나 없으면 무효). */

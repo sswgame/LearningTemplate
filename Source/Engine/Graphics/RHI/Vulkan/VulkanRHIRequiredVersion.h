@@ -2,7 +2,7 @@
  * @file VulkanRHIRequiredVersion.h
  * @brief Vulkan 백엔드가 요구하는 API 판입니다. 셰이더 쿠킹 타깃과 물리 디바이스 선택이 이 값 하나를 봅니다.
  * @details Vulkan 헤더 없이 읽히도록 판 번호를 `VK_MAKE_API_VERSION( 0, major, minor, 0 )` 과 같은 비트 배치로 직접 만듭니다
- *          (셰이더 컴파일러와 시험이 이 헤더를 씁니다).
+ *          (셰이더 컴파일러와 테스트가 이 헤더를 씁니다).
  */
 #pragma once
 #include "Core/Common/Types.h"

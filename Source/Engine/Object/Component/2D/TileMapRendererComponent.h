@@ -50,7 +50,7 @@ namespace sw
 
         /** @brief `_tileMapPath` 의 맵과 그 타일셋을 읽습니다. 읽으면 true 입니다(배치 · 바디는 `rebuild` 가 만듭니다). */
         [[nodiscard]] bool loadTileMap();
-        /** @brief 이미 읽은 데이터로 맵을 쓰게 합니다(시험 · 절차 생성). */
+        /** @brief 이미 읽은 데이터로 맵을 쓰게 합니다(테스트 · 절차 생성). */
         void setTileMapData( const TileMapXMLData& map, const TileSetAsset& tileSet );
         /** @brief 칸마다의 스프라이트 배치를 (다시) 만들고 모든 칸 · 바디 · 외곽선을 맞춥니다. 오브젝트 관리자가 없으면 false 입니다. */
         bool rebuild();

@@ -225,7 +225,7 @@ namespace sw
          */
         EngineServiceCollection _owned;
 
-        /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 시험 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
+        /** @brief 기동 표 밖의 부트스트랩(로거 · 크래시 핸들러 · 진단 도구 · 명령줄 · 전역 변수)입니다. 테스트 하네스와 같은 것을 쓴다. `_owned` 보다 먼저 사라진다. */
         EngineBootstrap           _bootstrap;
         unique_ptr<ConfigManager> _configManager;
         unique_ptr<RHI>           _rhi;

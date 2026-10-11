@@ -47,7 +47,7 @@ namespace sw
 {
     /**
      * @struct TerrainMeshBuilder
-     * @brief 청크 배치 · 바운드 · LOD 선택 · 정점 만들기입니다. 씬 없이 돕니다(시험이 틈 없음을 정점으로 확인합니다).
+     * @brief 청크 배치 · 바운드 · LOD 선택 · 정점 만들기입니다. 씬 없이 돕니다(테스트가 틈 없음을 정점으로 확인합니다).
      */
     struct SW_API TerrainMeshBuilder
     {

@@ -1,6 +1,6 @@
 /**
  * @file IVirtualInputSource.h
- * @brief 가상 입력 원천 — 프레임 번호마다 장치 사건(`RawInputEvent`)을 내는 쪽의 계약입니다(시나리오 · 입력 리플레이 · 시험).
+ * @brief 가상 입력 원천 — 프레임 번호마다 장치 사건(`RawInputEvent`)을 내는 쪽의 계약입니다(시나리오 · 입력 리플레이 · 테스트).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -14,7 +14,7 @@ namespace sw
     /** @brief 가상 입력이 붙어 있는 동안 OS 입력을 어떻게 하는가입니다. */
     enum class VirtualInputMode : uint8
     {
-        Exclusive = 0, ///< OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다(시험 · 시나리오 기본)
+        Exclusive = 0, ///< OS 키 · 마우스 · 패드 사건, 패드 폴링, 창 포커스 사건, 커서 가두기를 무시한다(테스트 · 시나리오 기본)
         Mixed,         ///< OS 입력과 함께 적용한다(사람이 보는 데모 · 진짜 OS 창 상태를 보는 시나리오) — 결정적이지 않다
     };
 } // namespace sw

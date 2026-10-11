@@ -36,7 +36,7 @@ namespace sw
 
         bool             supportsFocus() const override { return true; }
         ClickedDelegate& getOnClicked() { return _onClicked; }
-        /** @brief 지금까지 클릭된 수입니다(시험 · 디버그). */
+        /** @brief 지금까지 클릭된 수입니다(테스트 · 디버그). */
         uint32 getClickCount() const { return _clickCount; }
         bool   isPressed() const { return _bPressed; }
         /** @brief 클릭하면 화면에 보낼 명령입니다. 비면 명령을 내지 않습니다. */

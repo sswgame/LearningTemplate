@@ -1,6 +1,6 @@
 /**
  * @file Engine/EngineBootstrap.h
- * @brief 기동 표(`EngineInitStepList.xxx`) **앞**의 고정 부트스트랩과 표 **뒤**의 끝 정리입니다. 두 호스트(`EngineLoop` · 시험 하네스)가 함께 씁니다.
+ * @brief 기동 표(`EngineInitStepList.xxx`) **앞**의 고정 부트스트랩과 표 **뒤**의 끝 정리입니다. 두 호스트(`EngineLoop` · 테스트 하네스)가 함께 씁니다.
  * @details 이름 풀 · 로거 · 크래시 핸들러 · 리소스 루트 · 진단 도구(교착 감지기 · 메모리 프로파일러) · 명령줄 · 전역 변수가 여기서 서고,
  *          `shutdown` 이 그 역순으로 내린다. 서비스 표를 언제 끊는지(`unbindEngineServices`) · 로거를 언제 세우는지도 여기 한 곳에서 정한다.
  *          표를 **채우는** 일(`bindEngineServices`)은 호스트가 한다 — 호스트마다 직접 만드는 서비스(`HostCreated`)가 다르고,
@@ -36,7 +36,7 @@ namespace sw
 
         /**
          * @brief 이름 풀 · 로거 · (@p bDiagnostics 면) 메모리 프로파일러를 세우고, @p owned 에 명령줄 · 전역 변수를 만들어 @p pArgv 를 파싱한 뒤,
-         *        크래시 핸들러 · 리소스 루트 · 교착 감지기를 세웁니다. 하네스는 시험 프레임워크 인자를 먼저 걸러 낸 나머지를 넘깁니다.
+         *        크래시 핸들러 · 리소스 루트 · 교착 감지기를 세웁니다. 하네스는 테스트 프레임워크 인자를 먼저 걸러 낸 나머지를 넘깁니다.
          * @details 크래시 보고 프로세스(`-crash-reporter=<폴더>`)면 명령줄까지만 세우고 true 입니다(`isCrashReporterRun`) — 핸들러를 세우지 않고
          *          리소스 루트도 찾지 않는다.
          * @return 리소스 루트를 찾지 못하면 false 입니다(진단은 로거에 남는다).

@@ -116,7 +116,7 @@ namespace sw
         }
         RenderDocCaptureInternal::_s_pAPI = static_cast<RENDERDOC_API_1_6_0*>( pAPI );
         RenderDocCaptureInternal::_s_pAPI->SetCaptureFilePathTemplate( RenderDocCaptureInternal::kCaptureFilePathTemplate );
-        // 화면 글자를 끈다 — 캡처하지 않는 프레임의 스크린샷 · 픽셀 시험이 흔들리지 않게.
+        // 화면 글자를 끈다 — 캡처하지 않는 프레임의 스크린샷 · 픽셀 테스트가 흔들리지 않게.
         RenderDocCaptureInternal::_s_pAPI->MaskOverlayBits( eRENDERDOC_Overlay_None, eRENDERDOC_Overlay_None );
         SW_LOG_INFO( "RenderDoc attached - captures go to %#_frame<N>.rdc", RenderDocCaptureInternal::kCaptureFilePathTemplate );
     }

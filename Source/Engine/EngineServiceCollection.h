@@ -3,7 +3,7 @@
  * @brief 호스트가 소유하는 엔진 서비스들의 **저장소**입니다. `EngineServiceList.xxx` 에서 생성됩니다.
  *
  * [왜 필요한가]
- * 서비스를 만들고 표에 연결하는 코드(멤버 선언 · `make_unique` · 대입)를 호스트(`EngineLoop` · 시험 하네스)마다 손으로 적으면,
+ * 서비스를 만들고 표에 연결하는 코드(멤버 선언 · `make_unique` · 대입)를 호스트(`EngineLoop` · 테스트 하네스)마다 손으로 적으면,
  * 하나를 빠뜨렸을 때 `areEngineServicesBound()` 가 영영 false 가 되어 그것으로 게이팅되는 곳들이 조용히 폴백으로 갑니다.
  * 그래서 그 세 가지가 목록의 `EngineCreated` 한 글자에서 생성됩니다. 호스트는 이 구조체를 하나 들고
  * `createAll()` · `bindInto()` 만 부릅니다.
@@ -16,7 +16,7 @@
  * [초기화 · 종료 · 해제 순서는 여기 없다]
  * 이 저장소는 "누가 만들고 누가 들고 있는가" 만 압니다. 무엇을 언제 `initialize()` 하고 어떤 순서로
  * 내리고 해제하는지는 기동 단계 표(`Engine/EngineInitStepList.xxx`)의 의존 칸이 정하고, `EngineInitSequence` 가
- * 위상 정렬해 두 호스트(`EngineLoop` · 시험 하네스)에 같은 순서를 줍니다. 디바이스 · 렌더 스레드 · 모듈 이미지처럼
+ * 위상 정렬해 두 호스트(`EngineLoop` · 테스트 하네스)에 같은 순서를 줍니다. 디바이스 · 렌더 스레드 · 모듈 이미지처럼
  * 서비스가 아닌 단계도 같은 표에 있어서 서비스 목록의 칸으로 두지 않았습니다.
  */
 #pragma once
@@ -117,7 +117,7 @@ namespace sw
          *          맨 나중에 사라집니다.
          */
         void destroyAll();
-        /** @brief `destroyAll` 이 놓는 순서(멤버 이름)입니다. 같은 해제 표 · 같은 순서 함수로 만듭니다(시험이 순서를 본다). */
+        /** @brief `destroyAll` 이 놓는 순서(멤버 이름)입니다. 같은 해제 표 · 같은 순서 함수로 만듭니다(테스트가 순서를 본다). */
         static vector<const utf8*> makeDestroyOrder();
     };
 } // namespace sw

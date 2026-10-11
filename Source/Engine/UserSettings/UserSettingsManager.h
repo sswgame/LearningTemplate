@@ -139,7 +139,7 @@ namespace sw
         [[nodiscard]] bool saveUserFile( string_view filePath ) const;
         /** @brief `saveUserFile` 이 쓰는 JSON 글입니다. */
         string makeUserJSON() const;
-        /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(시험 · 헤드리스). */
+        /** @brief `applyPending` 이 저장할 경로입니다. 비면 저장하지 않습니다(테스트 · 헤드리스). */
         void          setUserFilePath( string_view filePath ) { _userFilePath = string( filePath ); }
         const string& getUserFilePath() const { return _userFilePath; }
         /** @brief 사용자 파일을 읽었는지(첫 실행이 아닌지) 반환합니다. */
@@ -231,7 +231,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         DelegateHandle registerEventListener( const UserSettingEventListener& listener );
         void           unregisterEventListener( const DelegateHandle& handle );
-        /** @brief 변경 통보를 받는 리스너가 하나라도 있는가(화면이 닫힐 때 뗐는지 시험이 본다). */
+        /** @brief 변경 통보를 받는 리스너가 하나라도 있는가(화면이 닫힐 때 뗐는지 테스트가 본다). */
         bool                        hasEventListener() const { return _onEvent.isBound(); }
         UserSettingApplierRegistry& getRegistry() { return _registry; }
         const UserSettingsTargets&  getTargets() const { return _engineAppliers.getTargets(); }

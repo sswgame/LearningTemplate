@@ -16,7 +16,7 @@ namespace sw
 
     /**
      * @struct UINavigationSolver
-     * @brief 포커스 탐색의 고르기 규칙입니다(상태 없음 — 시험이 직접 부른다).
+     * @brief 포커스 탐색의 고르기 규칙입니다(상태 없음 — 테스트가 직접 부른다).
      * @details 고르기 순서(언리얼 FNavigationConfig · EUINavigationRule, Godot focus_neighbor 와 같은 모양):
      *          (1) 포커스 위젯에서 조상으로 올라가며 그 방향 항목을 본다 — 첫 Explicit 은 그 이름의 위젯(받을 수 없으면 다음 규칙), 첫 Stop · Wrap 위젯이
      *          **찾는 범위**. 모두 Escape 면 범위 = 트리 뿌리(화면 — 모달 밖으로 나가지 않는다).

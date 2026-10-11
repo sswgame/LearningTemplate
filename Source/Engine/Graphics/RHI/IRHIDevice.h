@@ -167,7 +167,7 @@ namespace sw
         void notifyRenderFrameQueued();
         /** @brief 렌더 스레드가 프레임 하나를 끝냈습니다. */
         void notifyRenderFrameRetired();
-        /** @brief 아직 내리지 않은(미뤄 둔) 핸들 수입니다(진단 · 시험). */
+        /** @brief 아직 내리지 않은(미뤄 둔) 핸들 수입니다(진단 · 테스트). */
         size_t getDeferredHandleCount() const;
 
         // ------------------------------------------------------------------------------

@@ -248,7 +248,7 @@ namespace sw
             PhysicsCharacterState3D         _state{};
         };
 
-        /** @brief 바퀴 차 하나 — 구속(스텝 리스너이기도 하다)과 바퀴 충돌 시험기, 차체 바디입니다. */
+        /** @brief 바퀴 차 하나 — 구속(스텝 리스너이기도 하다)과 바퀴 충돌 테스터, 차체 바디입니다. */
         struct VehicleRecord
         {
             JPH::Ref<JPH::VehicleConstraint>      _pConstraint;

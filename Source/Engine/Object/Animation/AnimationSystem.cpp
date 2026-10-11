@@ -181,7 +181,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Animation.lod" );
         const size_t clientCount = _listLODClient.size();
-        // 뷰가 없거나(시험 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
+        // 뷰가 없거나(테스트 · 서버) 꺼져 있으면 판정하지 않는다 — 켜져 있다가 꺼진 첫 프레임에만 지난 판정을 되돌린다(가시성 훅을 직접 부르는 쪽을 덮지 않게).
         if ( gv_animationLod == 0 || _bLODViewsSet == SW_FALSE )
         {
             if ( _bLODApplied == SW_TRUE )

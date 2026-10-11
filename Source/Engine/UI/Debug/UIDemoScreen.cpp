@@ -63,7 +63,7 @@ namespace sw
 
             /**
              * @brief 그리기 견본 줄 — 둥근 상자(`RoundBox`) · 자르기(`ClipBox` — 넓은 빨간 자식을 자른다) · 9-슬라이스(`NineSlice`) · 오른쪽에서 왼쪽 글(`RtlSample`).
-             * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 본다 — 이름을 바꾸면 그 시험도 바꾼다.
+             * @details `AppUITest` 가 레이아웃 덤프의 이름으로 사각형을 찾아 픽셀을 본다 — 이름을 바꾸면 그 테스트도 바꾼다.
              */
             static unique_ptr<BoxPanel> makeSamples()
             {

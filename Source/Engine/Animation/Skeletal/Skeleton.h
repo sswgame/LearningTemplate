@@ -69,7 +69,7 @@ namespace sw
          * @param parentIndex 부모 본 인덱스. **이미 추가된 본만 가리킬 수 있습니다**(루트는 -1). 아니면 아무것도 추가하지 않고 -1 입니다.
          */
         int32 addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose, const float4x4& inverseBind );
-        /** @brief 레퍼런스 포즈로 모든 본의 역 바인드를 다시 구합니다(손으로 만든 스켈레톤 · 시험). */
+        /** @brief 레퍼런스 포즈로 모든 본의 역 바인드를 다시 구합니다(손으로 만든 스켈레톤 · 테스트). */
         void computeInverseBindFromReference();
         /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
         int32 findBoneIndex( const hashed_string& name ) const;

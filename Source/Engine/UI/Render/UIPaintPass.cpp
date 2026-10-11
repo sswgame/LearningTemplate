@@ -17,7 +17,7 @@ namespace sw
     {
         struct UIPaintPassInternal
         {
-            /** @brief 이 위젯만 다시 칠하게 하는 무효화입니다. `kStyle` 은 스타일 걷기가 먼저 비우고 필요하면 `kPaint` 를 건다 — 걷기 없이 칠하는 쪽(시험)의 몫으로 남긴다. */
+            /** @brief 이 위젯만 다시 칠하게 하는 무효화입니다. `kStyle` 은 스타일 걷기가 먼저 비우고 필요하면 `kPaint` 를 건다 — 걷기 없이 칠하는 쪽(테스트)의 몫으로 남긴다. */
             static constexpr uint32 kSelfPaintBits = WidgetDirty::kPaint | WidgetDirty::kTransform | WidgetDirty::kStyle | WidgetDirty::kVisibility;
             /** @brief 자손까지 다시 칠하게 하는 무효화입니다 — 불투명도 · 렌더 변환은 자손 캐시에 구워져 있다. */
             static constexpr uint32 kSubtreePaintBits = WidgetDirty::kTransform | WidgetDirty::kVisibility;

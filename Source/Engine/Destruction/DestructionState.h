@@ -109,7 +109,7 @@ namespace sw
         bool    isLeafAnchored( uint32 leaf ) const { return _listLeafAnchored[leaf] != SW_FALSE; }
         float32 getNodeStrain( uint32 node ) const { return _listNodeStrain[node]; }
         float32 getLinkStrain( uint32 link ) const { return _listLinkStrain[link]; }
-        /** @brief 지난 지지 계산에서 연결이 받던 하중(뉴턴)입니다(진단 · 시험). */
+        /** @brief 지난 지지 계산에서 연결이 받던 하중(뉴턴)입니다(진단 · 테스트). */
         float32                   getLinkLoad( uint32 link ) const { return _listLinkLoad[link]; }
         const FractureGraph&      getGraph() const { return *_pGraph; }
         const DestructionProfile& getProfile() const { return _profile; }

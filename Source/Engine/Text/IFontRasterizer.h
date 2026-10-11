@@ -1,7 +1,7 @@
 /**
  * @file IFontRasterizer.h
  * @brief 글꼴 래스터라이저 계약입니다 — 글꼴 바이트를 면으로 열고, 메트릭 · 글리프 번호 · 커닝을 답하고, 글리프를 SDF 로 래스터화합니다.
- * @details 구현은 FreeType 하나(`Text/FreeType/`)이고, 시험은 결정적인 가짜 구현을 씁니다. 스레드: 게임 스레드에서만 부릅니다(FreeType 라이브러리
+ * @details 구현은 FreeType 하나(`Text/FreeType/`)이고, 테스트는 결정적인 가짜 구현을 씁니다. 스레드: 게임 스레드에서만 부릅니다(FreeType 라이브러리
  *          객체는 스레드 안전하지 않습니다). 셰이핑은 이 계약이 아니라 `ITextShaper` 가 합니다(HarfBuzz 를 그 자리에 꽂는다).
  */
 #pragma once

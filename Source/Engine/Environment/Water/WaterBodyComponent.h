@@ -98,9 +98,9 @@ namespace sw
         void getWaveVectors( float4 ( &outArrWave )[shaderslot::kGerstnerWaveCount] ) const;
         /** @brief 지금 파도 시간(초)입니다. */
         float32 getWaveTime() const { return _waveTime; }
-        /** @brief 파도 시간을 정합니다(시험 · 시퀀서). 다음 틱부터 그 값에서 쌓입니다. */
+        /** @brief 파도 시간을 정합니다(테스트 · 시퀀서). 다음 틱부터 그 값에서 쌓입니다. */
         void setWaveTime( float32 time );
-        /** @brief 수면 메시 정점 수입니다(시험). */
+        /** @brief 수면 메시 정점 수입니다(테스트). */
         uint32 getSurfaceVertexCount() const { return _surfaceVertexCount; }
 
         /**

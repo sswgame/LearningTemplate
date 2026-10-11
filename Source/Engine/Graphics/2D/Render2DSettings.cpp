@@ -78,7 +78,7 @@ namespace sw
             /** @brief 활성 게임 팩의 파일, 없으면 엔진 파일을 읽어 @p outSettings 에 넣습니다. */
             static void loadActive( Render2DSettings& outSettings )
             {
-                // 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 시험). 그대로 읽으면 기본 표가 프로세스 끝까지 남는다.
+                // 첫 읽기가 리소스 루트를 잡기 전에 올 수 있다(엔진 기동 없이 도는 테스트). 그대로 읽으면 기본 표가 프로세스 끝까지 남는다.
                 (void)ResourcePaths::initialize();
                 const string& packRoot = GameConfig::getActive()._packRoot;
                 if ( packRoot.empty() == false )

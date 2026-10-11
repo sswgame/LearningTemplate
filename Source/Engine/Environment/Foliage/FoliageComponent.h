@@ -103,11 +103,11 @@ namespace sw
         /** @brief 배치를 다시 계산하고 셀 배치를 다시 만듭니다. 등록 전이면 아무것도 하지 않습니다. */
         void rebuildFoliage();
         /**
-         * @brief 레이어 @p layerIndex 의 배치를 계산합니다(그리지 않습니다 — 시험 · 도구). 표면은 오너 아래 지형입니다.
+         * @brief 레이어 @p layerIndex 의 배치를 계산합니다(그리지 않습니다 — 테스트 · 도구). 표면은 오너 아래 지형입니다.
          * @return 레이어가 없으면 false 입니다.
          */
         bool computeLayerPlacements( uint32 layerIndex, vector<PlacementInstance>& outListInstance ) const;
-        /** @brief 셀 거리 컬링과 머티리얼 값(바람 · 시간 · 카메라 · 휘게 하는 구)을 @p viewPosition 으로 갱신합니다. 틱이 부르고 시험이 직접 부릅니다. */
+        /** @brief 셀 거리 컬링과 머티리얼 값(바람 · 시간 · 카메라 · 휘게 하는 구)을 @p viewPosition 으로 갱신합니다. 틱이 부르고 테스트가 직접 부릅니다. */
         void updateView( const float3& viewPosition );
 
         /** @brief 만든 인스턴스 수(모든 레이어)입니다. */

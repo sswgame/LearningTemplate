@@ -212,11 +212,11 @@ namespace sw
         bool playGamepadVibration( float32 leftMotor, float32 rightMotor, float32 durationSeconds, uint32 deviceIndex = 0 );
 
         // ------------------------------------------------------------------------------
-        // 7) 가상 입력(Virtual Input) — 시험 · 시나리오 · 입력 리플레이가 OS 사건과 같은 자리로 넣는다
+        // 7) 가상 입력(Virtual Input) — 테스트 · 시나리오 · 입력 리플레이가 OS 사건과 같은 자리로 넣는다
         // ------------------------------------------------------------------------------
         /**
          * @brief 가상 입력 원천을 붙입니다(빌려 쓴다 — 떼기 전까지 살아 있어야 한다). 이미 붙어 있으면 바꿉니다. 프레임 번호는 0 부터 다시 셉니다.
-         * @details 붙이는 순간 모든 장치 상태를 지웁니다 — 사람이 누르고 있던 키가 시험 첫 프레임에 남지 않게. 배타 모드면 붙어 있는 동안
+         * @details 붙이는 순간 모든 장치 상태를 지웁니다 — 사람이 누르고 있던 키가 테스트 첫 프레임에 남지 않게. 배타 모드면 붙어 있는 동안
          *          OS 키 · 마우스 · 패드 사건과 패드 폴링, 창 포커스 사건, 커서 가두기 · 가운데 되돌리기를 하지 않고, 패드 연결은 가상
          *          연결 사건이 정합니다. 엔진 키보드 포커스(`setKeyboardFocus` — 개발 콘솔)는 가상 키에도 그대로 걸립니다.
          * @param bResetState false 면 장치 상태를 지우지 않습니다 — `InputReplay::seekTo` 로 만든 상태에서 이어 재생할 때.
@@ -312,7 +312,7 @@ namespace sw
         /** @brief Alt 를 누르거나 뗐습니다. 누르는 동안 잠금을 쉽니다. */
         void onPlatformAltChanged( bool bHeld );
         /**
-         * @brief 활성 창이 지금 OS 전경인지 플랫폼에 묻습니다. 창이 없으면(단위 시험) 추적해 둔 값입니다.
+         * @brief 활성 창이 지금 OS 전경인지 플랫폼에 묻습니다. 창이 없으면(단위 테스트) 추적해 둔 값입니다.
          * @details 게임이 잠금을 처음 켜는 순간 쓰입니다 — 그때까지 포커스 메시지를 하나도 못 받았을 수 있습니다(창이 처음부터 뒤에 떴다).
          */
         bool isWindowFocusedPlatform() const;
@@ -357,7 +357,7 @@ namespace sw
         uint8                                _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼어지지 않은 마우스 버튼 비트(`1 << MouseButton`). */
         uint8                                _bInitialized          : 1;
         uint8                                _bInputMuted           : 1;
-        uint8                                _bWindowFocused        : 1; /**< 창이 포커스를 쥐고 있는가(포커스 메시지로 갱신, 창 없는 시험에서는 참). */
+        uint8                                _bWindowFocused        : 1; /**< 창이 포커스를 쥐고 있는가(포커스 메시지로 갱신, 창 없는 테스트에서는 참). */
         uint8                                _bMouseLockEngaged     : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는가. */
         uint8                                _bAltHeld              : 1; /**< Alt 를 누르고 있는가(누르는 동안 잠금을 쉰다). */
         uint8                                _bCursorHiddenApplied  : 1; /**< OS 커서를 숨겨 둔 상태인가 — `ShowCursor` 는 카운터라 전이에서만 부른다. */

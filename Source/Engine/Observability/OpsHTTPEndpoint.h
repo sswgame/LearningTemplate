@@ -26,7 +26,7 @@ namespace sw
     /** @brief 운영 HTTP 끝점 설정입니다. */
     struct OpsHTTPEndpointSettings
     {
-        NetAddress _bindAddress{ NetAddress::makeLoopback( 9100 ) }; ///< 받을 주소 — 기본은 이 기계만. 포트 0 = 아무 포트(시험)
+        NetAddress _bindAddress{ NetAddress::makeLoopback( 9100 ) }; ///< 받을 주소 — 기본은 이 기계만. 포트 0 = 아무 포트(테스트)
         int32      _maxRequestBytes{ 8 * 1024 };                     ///< 요청 머리 상한(넘으면 431)
     };
 } // namespace sw
@@ -51,7 +51,7 @@ namespace sw
         uint16 getListenPort() const;
 
         /**
-         * @brief 요청 머리(빈 줄 앞까지) 하나에 대한 응답 전체를 @p outResponse 에 씁니다 — 전송 없이 시험한다.
+         * @brief 요청 머리(빈 줄 앞까지) 하나에 대한 응답 전체를 @p outResponse 에 씁니다 — 전송 없이 테스트한다.
          * @param monotonicMs 상태 판정 시각(단조 밀리초)
          * @return HTTP 상태 코드
          */

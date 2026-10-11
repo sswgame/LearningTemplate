@@ -42,7 +42,7 @@ namespace sw
 
             static constexpr uint32 kNotFound = invalid_index::kUint32;
 
-            /** @brief 의존 글의 구분자입니다 — 표는 `{ A, B }`, 시험은 공백으로 이은 이름을 넘긴다. */
+            /** @brief 의존 글의 구분자입니다 — 표는 `{ A, B }`, 테스트는 공백으로 이은 이름을 넘긴다. */
             static constexpr bool isDependencySeparator( utf8 ch ) { return ch == ' ' || ch == ',' || ch == '{' || ch == '}'; }
 
             static uint32 findNodeIndex( const vector<EngineInitNode>& listNode, string_view name )
@@ -360,7 +360,7 @@ namespace sw
         }
 
         // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`TopologicalSortUtil` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
-        // 순서는 의존 칸만이 정한다(표를 기동 순서로 적고, 그것이 이 결과와 같은지 시험이 본다).
+        // 순서는 의존 칸만이 정한다(표를 기동 순서로 적고, 그것이 이 결과와 같은지 테스트가 본다).
         vector<string_view> listName;
         listName.reserve( nodeCount );
         for ( const EngineInitNode& node : listNode )

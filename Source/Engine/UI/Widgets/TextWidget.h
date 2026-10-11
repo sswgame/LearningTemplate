@@ -74,7 +74,7 @@ namespace sw
 
         bool usesGlyphAtlas() const override { return true; }
 
-        /** @brief 마지막 칠하기의 배치 결과입니다(시험 · 커서 위치). */
+        /** @brief 마지막 칠하기의 배치 결과입니다(테스트 · 커서 위치). */
         const TextLayoutResult& getLastLayout() const { return _layoutCache; }
 
     protected:

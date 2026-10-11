@@ -54,7 +54,7 @@ namespace sw
      */
     inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
 
-    /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(시험이 리플렉션의 열거자 수와 대조합니다). */
+    /** @brief `RenderPassType` 열거자 수입니다. 마지막 열거자가 바뀌면 여기를 고칩니다(테스트가 리플렉션의 열거자 수와 대조합니다). */
     inline constexpr uint32 kRenderPassTypeCount = static_cast<uint32>( RenderPassType::MeshSkin ) + 1;
 
     /**

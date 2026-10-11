@@ -152,7 +152,7 @@ namespace sw
         uint32 getVisibleMemberCount() const { return _visibleMemberCount; }
         /** @brief 이 묶음을 가리키는 유닛 수입니다(0 이고 오래 쉬면 지운다). */
         uint32 getReferenceCount() const { return _referenceCount; }
-        /** @brief 포즈를 만든 횟수입니다(진단 · 시험). */
+        /** @brief 포즈를 만든 횟수입니다(진단 · 테스트). */
         uint32 getEvaluationCount() const { return _evaluationCount; }
 
     private:
@@ -224,12 +224,12 @@ namespace sw
          */
         shared_ptr<Mesh> findVertexAnimationMesh( const shared_ptr<Mesh>& sourceMesh, const Skeleton& skeleton, const AnimClip& clip, bool bAnchorRootMotion,
                                                   string_view meshPath );
-        /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단 · 시험). */
+        /** @brief 쿠킹본에서 읽은 VAT 수입니다(진단 · 테스트). */
         uint32 getCookedVertexAnimationCount() const { return _cookedVertexAnimationCount; }
 
         /** @brief 군중 시계(초)입니다. VAT 시계와 같은 값입니다(렌더 스냅샷으로 간다). */
         float64 getClock() const { return _clock; }
-        /** @brief 시계를 정합니다(시험). */
+        /** @brief 시계를 정합니다(테스트). */
         void setClock( float64 clock ) { _clock = clock; }
         /** @brief 묶음들입니다(렌더 빌더가 멤버 있는 묶음의 팔레트를 싣습니다). */
         const vector<unique_ptr<AnimationCrowdBucket>>& getBuckets() const { return _listBucket; }

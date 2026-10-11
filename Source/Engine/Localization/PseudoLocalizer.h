@@ -30,7 +30,7 @@ namespace sw
          * @details 리치 텍스트 표기(`[b]` · `[color=…]` · `[[` — `MarkupTagScanner`)도 그대로 둡니다.
          */
         static string accentLiteral( string_view literalText );
-        /** @brief 의사 변환을 거친 글인지(앞뒤 표시가 있는지)입니다. 하드코딩 글 찾기 · 시험이 씁니다. */
+        /** @brief 의사 변환을 거친 글인지(앞뒤 표시가 있는지)입니다. 하드코딩 글 찾기 · 테스트가 씁니다. */
         static bool isPseudoText( string_view text );
 
     private:

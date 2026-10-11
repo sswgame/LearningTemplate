@@ -39,7 +39,7 @@ namespace sw
     /**
      * @class EnvironmentMaterial
      * @brief 머티리얼 캐시에서 경로로 잡은 머티리얼과, 컴포넌트가 값을 싣는 자기 몫 인스턴스입니다. 놓기는 `release` 하나입니다.
-     * @details 엔진 서비스가 없으면(CPU 시험) 아무것도 잡지 않고 `getMaterial` 이 nullptr 입니다 — 그리는 쪽은 씬 기본 머티리얼로 물러납니다.
+     * @details 엔진 서비스가 없으면(CPU 테스트) 아무것도 잡지 않고 `getMaterial` 이 nullptr 입니다 — 그리는 쪽은 씬 기본 머티리얼로 물러납니다.
      *          인스턴스는 이 객체만 값을 쓰므로 그 컴포넌트의 틱에서 값을 바꿔도 됩니다.
      */
     class SW_API EnvironmentMaterial

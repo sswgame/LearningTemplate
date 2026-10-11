@@ -23,7 +23,7 @@ namespace sw
         [[nodiscard]] static bool writeDDSRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
         /** @brief RGBA8 을 PNG 로 씁니다. 실패하면 false 입니다. */
         [[nodiscard]] static bool writePngRgba8( string_view path, const vector<uint8>& rgbaBytes, uint32 width, uint32 height );
-        /** @brief RGBA8 의 PNG 바이트입니다(파일 없이 — 시험 · 업로드). */
+        /** @brief RGBA8 의 PNG 바이트입니다(파일 없이 — 테스트 · 업로드). */
         static void encodePngRgba8( const vector<uint8>& rgbaBytes, uint32 width, uint32 height, vector<uint8>& outBytes );
     };
 } // namespace sw

@@ -13,7 +13,7 @@ namespace sw
 {
     bool LinuxJoystickGamepadDevice::isGamepadButtonMap( const uint16* pButtonCode, uint32 buttonCount )
     {
-        // linux/input-event-codes.h 의 값이다. 판정을 Windows 에서도 시험하려고 헤더 없이 둔다.
+        // linux/input-event-codes.h 의 값이다. 판정을 Windows 에서도 테스트하려고 헤더 없이 둔다.
         constexpr uint16 kButtonJoystickFirst     = 0x120; // BTN_JOYSTICK(BTN_TRIGGER): 조이스틱 0x120..0x12f, 게임패드 0x130..0x13e
         constexpr uint16 kButtonDigitizerFirst    = 0x140; // BTN_DIGI(BTN_TOOL_PEN): 여기부터는 태블릿 · 터치
         constexpr uint16 kButtonTriggerHappyFirst = 0x2c0; // BTN_TRIGGER_HAPPY1

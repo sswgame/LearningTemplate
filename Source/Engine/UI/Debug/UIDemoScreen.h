@@ -1,6 +1,6 @@
 /**
  * @file UIDemoScreen.h
- * @brief 개발용 UI 시험 화면입니다(`-gv_uiDemo=1`) — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸을 한 패널에 띄웁니다.
+ * @brief 개발용 UI 테스트 화면입니다(`-gv_uiDemo=1`) — 글 · 버튼 다섯 · 슬라이더 · 체크 · 진행 · 콤보 · 입력 칸을 한 패널에 띄웁니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -21,7 +21,7 @@ namespace sw
      */
     struct SW_API UIDemoScreen
     {
-        /** @brief 시험 화면을 짓습니다(Menu 층 · 게임 정지 없음 · 기본 포커스 첫 버튼). */
+        /** @brief 테스트 화면을 짓습니다(Menu 층 · 게임 정지 없음 · 기본 포커스 첫 버튼). */
         static unique_ptr<UIScreen> create();
     };
 } // namespace sw

@@ -12,7 +12,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Base/WidgetTypes.h"
 
-/** @brief 안전 영역 흉내(0..0.1) — 각 변을 물리 크기의 이 비율만큼 안쪽으로 민다(언리얼 r.DebugSafeZone.TitleRatio). 시험 · 미리보기용. */
+/** @brief 안전 영역 흉내(0..0.1) — 각 변을 물리 크기의 이 비율만큼 안쪽으로 민다(언리얼 r.DebugSafeZone.TitleRatio). 테스트 · 미리보기용. */
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone );
 
 namespace sw

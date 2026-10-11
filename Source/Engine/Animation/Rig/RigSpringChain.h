@@ -69,7 +69,7 @@ namespace sw
         void reset();
         /** @brief 시뮬레이션 상태가 있는지입니다. */
         bool isSimulating() const { return _bInitialized == SW_TRUE; }
-        /** @brief 지난 시뮬레이션의 스텝 수입니다(시험 · 진단). */
+        /** @brief 지난 시뮬레이션의 스텝 수입니다(테스트 · 진단). */
         uint32 getLastStepCount() const { return _lastStepCount; }
         /** @brief 입자의 월드 위치입니다. */
         const vector<float3>& getParticles() const { return _listPosition; }

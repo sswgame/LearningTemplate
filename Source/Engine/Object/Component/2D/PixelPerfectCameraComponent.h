@@ -66,7 +66,7 @@ namespace sw
         void onOwnerActiveInHierarchyChanged() override;
 
         /**
-         * @brief 뷰포트 하나에서 배율 · 직교 높이 · 스냅 단위 · 띠를 고릅니다(순수 함수 — 시험이 직접 부릅니다).
+         * @brief 뷰포트 하나에서 배율 · 직교 높이 · 스냅 단위 · 띠를 고릅니다(순수 함수 — 테스트가 직접 부릅니다).
          * @details 기준 해상도나 PPU 가 0 이하이거나 뷰포트가 0 이면 배율 1 · 띠 0 입니다. 뷰포트가 기준보다 작으면 배율은 1 이고 띠는 0 입니다(잘리지 않는다).
          */
         static PixelPerfectLayout computeLayout( const float2& referenceResolution, float32 pixelsPerUnit, uint32 viewportWidth, uint32 viewportHeight,
@@ -74,7 +74,7 @@ namespace sw
         /** @brief 값을 단위 격자의 가장 가까운 점으로 붙입니다(반은 위로). 단위가 0 이하면 그대로입니다. */
         static float32 snapToGrid( float32 value, float32 unit );
 
-        /** @brief 뷰포트 크기를 주고 카메라를 맞춥니다(틱이 카메라 등록부의 크기로 부릅니다. 시험은 직접 부릅니다). 마지막 배치를 돌려줍니다. */
+        /** @brief 뷰포트 크기를 주고 카메라를 맞춥니다(틱이 카메라 등록부의 크기로 부릅니다. 테스트는 직접 부릅니다). 마지막 배치를 돌려줍니다. */
         PixelPerfectLayout applyToCamera( uint32 viewportWidth, uint32 viewportHeight );
         /** @brief 마지막으로 고른 배치입니다. */
         const PixelPerfectLayout& getLayout() const { return _layout; }

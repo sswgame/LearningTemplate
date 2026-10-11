@@ -162,7 +162,7 @@ namespace sw
 {
     /**
      * @struct AudioSpatializer
-     * @brief 공간화 순수 함수입니다. 상태가 없어 시험이 거리 · 각도마다 바로 잽니다.
+     * @brief 공간화 순수 함수입니다. 상태가 없어 테스트가 거리 · 각도마다 바로 잽니다.
      */
     struct SW_API AudioSpatializer
     {

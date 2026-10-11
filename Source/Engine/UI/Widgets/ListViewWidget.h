@@ -54,9 +54,9 @@ namespace sw
         void scrollToItem( uint32 itemIndex );
         /** @brief 줄 위젯 @p row 가 지금 맡은 항목입니다(없으면 `invalid_index::kUint32`). */
         uint32 findItemIndex( const Widget& row ) const;
-        /** @brief 지금까지 만든 줄 위젯 수입니다(시험 — 보이는 줄 + 1 을 넘지 않는다). */
+        /** @brief 지금까지 만든 줄 위젯 수입니다(테스트 — 보이는 줄 + 1 을 넘지 않는다). */
         uint32 getCreatedRowCount() const { return static_cast<uint32>( _listRowItem.size() ); }
-        /** @brief 지금까지 줄을 다시 묶은 수입니다(시험). */
+        /** @brief 지금까지 줄을 다시 묶은 수입니다(테스트). */
         uint32 getBindCount() const { return _bindCount; }
 
         bool canScrollIntoView() const override { return true; }

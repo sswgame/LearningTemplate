@@ -77,7 +77,7 @@ namespace sw
         void registerComponent( PhysicsComponent* pComponent );
         /** @brief 물리 컴포넌트를 뺍니다. */
         void unregisterComponent( PhysicsComponent* pComponent );
-        /** @brief 등록된 물리 컴포넌트 수입니다(진단 · 시험). */
+        /** @brief 등록된 물리 컴포넌트 수입니다(진단 · 테스트). */
         uint32 getComponentCount() const;
 
         /**
