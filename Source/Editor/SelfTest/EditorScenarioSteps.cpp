@@ -1,9 +1,9 @@
 /**
  * @file EditorScenarioSteps.cpp
- * @brief 자동화 시나리오의 에디터 단계(`EditorClick` · `EditorText` · `EditorKey` · `EditorExpectObject` · `EditorExpectDockLayout`)와 에디터 탐침(`Editor.*`).
- * @details 에디터 패널 입력은 엔진 입력 층이 아니라 ImGui 가 받으므로 ImGui 사건으로 넣는다. 게임 뷰 입력은 가상 입력 장치(`<Tap>` …)로, 에디터 패널 입력은
- *          이 단계로 — 두 창구가 한 시나리오 파일에서 같이 쓰인다. 에디터 모듈이 올라온 실행(`-EnableEditor`)에서만 등록되므로, 에디터 없이 이 단계 · 탐침을
- *          쓰면 시작할 때 읽기 오류다. 플레이 · 저장 · 열기 같은 에디터 명령은 엔진 `DevCommand` 단계로 부른다(`play` · `stop` · `editor <커맨드 id>` · `scene.saveAs`).
+ * @brief 자동화 시나리오의 에디터 단계와 에디터 프로브(`Editor.*`)를 구현합니다. 단계는 `EditorClick`, `EditorText`, `EditorKey`, `EditorExpectObject`, `EditorExpectDockLayout` 입니다.
+ * @details 에디터 패널 입력은 엔진 입력 레이어가 아니라 ImGui 가 받으므로 ImGui 이벤트로 넣는다. 게임 뷰 입력은 가상 입력 장치(`<Tap>` 등)로,
+ *          에디터 패널 입력은 이 단계로 넣으며, 두 방식을 한 시나리오 파일에서 함께 쓸 수 있다. 에디터 모듈이 로드된 실행(`-EnableEditor`)에서만 등록되므로,
+ *          에디터 없이 이 단계나 프로브를 쓰면 시작할 때 읽기 오류가 난다. 플레이, 저장, 열기 같은 에디터 명령은 엔진 `DevCommand` 단계로 호출한다(`play`, `stop`, `editor <커맨드 id>`, `scene.saveAs`).
  */
 #include "pch.h"
 
@@ -64,13 +64,13 @@
 
 namespace sw::editor
 {
-    /** @brief 탐침 `Editor.VisualizerOn` 이 볼 시각화 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
+    /** @brief 프로브 `Editor.VisualizerOn` 이 볼 시각화 id 입니다. 시나리오가 `<Variable>` 로 정합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeVisualizer, "", "탐침 Editor.VisualizerOn 이 볼 뷰포트 시각화 id (시나리오용)" );
-    /** @brief 탐침 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정한다. */
+    /** @brief 프로브 `Editor.PanelOpen` 이 볼 패널 id 입니다. 시나리오가 `<Variable>` 로 정합니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbePanel, "", "탐침 Editor.PanelOpen 이 볼 패널 id (시나리오용)" );
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeObject, "", "탐침 Editor.HierarchyRowIcon 이 볼 오브젝트 이름 (시나리오용)" );
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeOverlay, "view", "탐침 Editor.Overlay* 가 볼 씬 뷰 오버레이 바 id (view · transform · display · tools, 시나리오용)" );
-    /** @brief 탐침 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
+    /** @brief 프로브 `Editor.SelectedProperty` 가 볼 `<컴포넌트 타입>.<프로퍼티>` 입니다. */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_editorProbeProperty, "", "탐침 Editor.SelectedProperty 가 볼 <컴포넌트 타입>.<프로퍼티> (시나리오용)" );
 } // namespace sw::editor
 
@@ -80,12 +80,12 @@ namespace sw::editor
     {
         struct EditorScenarioStepsInternal
         {
-            /** @brief `EditorExpectDockLayout` 의 도크 칸 최소 변(px) 기본값입니다 — 이보다 좁은 칸은 탭 글자도 못 담는다. */
+            /** @brief `EditorExpectDockLayout` 의 도크 노드 최소 변(px) 기본값입니다. 이보다 좁은 노드는 탭 글자도 담지 못합니다. */
             static constexpr float32 kDefaultMinDockNodeSide = 24.0f;
-            /** @brief 창 · 도크 사각형 비교의 픽셀 허용치입니다. */
+            /** @brief 창과 도크 사각형을 비교할 때의 픽셀 허용치입니다. */
             static constexpr float32 kPixelTolerance = 1.0f;
 
-            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 봅니다. 위젯 레이블을 적기 시작한다(레이블은 켜진 뒤 그린 위젯만 적힌다). */
+            /** @brief 속성이 @p listAllowed 안에만 있고 @p pRequired 가 있는지 검사합니다. 위젯 레이블 기록을 시작합니다. 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다. */
             static bool validate( const AutomationStep& step, std::initializer_list<string_view> listAllowed, const utf8* pRequired, string& outError )
             {
                 for ( const AutomationAttribute& attribute : step._listAttribute )
@@ -110,7 +110,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p defaultValue 입니다. 형식이 틀리면 false 입니다. */
+            /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p defaultValue 를 씁니다. 형식이 틀리면 false 입니다. */
             [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32 defaultValue, uint32& outValue )
             {
                 const string* pText = step.findAttribute( name );
@@ -127,9 +127,9 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // EditorClick · EditorText · EditorKey — ImGui 입력
+            // EditorClick, EditorText, EditorKey: ImGui 입력
             // ------------------------------------------------------------------------------
-            /** @brief `mods` 속성("ctrl" · "shift" · "ctrl+shift" …)을 수정자 키 목록으로 풉니다. 없으면 빈 목록, 모르는 이름이면 false 입니다. */
+            /** @brief `mods` 속성("ctrl", "shift", "ctrl+shift" 등)을 수정자 키 목록으로 해석합니다. 없으면 빈 목록이고, 모르는 이름이면 false 입니다. */
             [[nodiscard]] static bool parseModifiers( const AutomationStep& step, vector<int32>& outListKey )
             {
                 outListKey.clear();
@@ -158,7 +158,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `state` 속성("down" · "up")을 읽습니다. 없으면 누르고 떼는 한 번(`PressState::Tap`), 모르는 값이면 false 입니다. */
+            /** @brief `state` 속성("down", "up")을 읽습니다. 없으면 누르고 떼는 한 번(`PressState::Tap`)이고, 모르는 값이면 false 입니다. */
             enum class PressState : uint8
             {
                 Tap,
@@ -215,7 +215,7 @@ namespace sw::editor
 
             static bool validateText( const AutomationStep& step, string& outError ) { return validate( step, { "value" }, "value", outError ); }
 
-            /** @brief `anchor="x,y"`(레이블 안 자리 0..1)를 읽습니다. 없으면 가운데이고 true, 꼴이 틀리면 false 입니다. */
+            /** @brief `anchor="x,y"`(레이블 안의 위치 0..1)를 읽습니다. 없으면 가운데이고 true 를 반환하며, 형식이 틀리면 false 입니다. */
             [[nodiscard]] static bool readAnchor( const AutomationStep& step, float2& outAnchor )
             {
                 outAnchor             = float2{ 0.5f, 0.5f };
@@ -232,7 +232,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 레이블 가운데(또는 `anchor` 자리)로 마우스를 옮기고 누르고 뗀다(ImGui 입력 큐가 누름 · 뗌을 프레임에 나눠 넣는다). 레이블이 없으면 실패를 적는다. */
+            /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationRunner& runner, const AutomationStep& step )
             {
                 const string& mark    = *step.findAttribute( "mark" );
@@ -247,13 +247,13 @@ namespace sw::editor
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                     return true;
                 }
-                // 누름과 뗌을 두 프레임으로 — 뗌 앞에서 다시 레이블 위로 옮긴다(플랫폼이 그 사이 실제 커서를 넣는다).
-                // 수정자(Ctrl+클릭 다중 선택 …)는 누르기 전에 눌러 뗀 뒤에 놓는다.
+                // 누름과 뗌을 두 프레임으로 나누고, 뗌 앞에서 다시 레이블 위로 옮긴다. 그 사이에 플랫폼이 실제 커서를 넣기 때문이다.
+                // 수정자(Ctrl+클릭 다중 선택 등)는 누르기 전에 누르고, 뗀 뒤에 놓는다.
                 vector<int32> listModifier;
                 (void)parseModifiers( step, listModifier ); // 검사에서 봤다
                 PressState state = PressState::Tap;
                 (void)readPressState( step, state ); // 검사에서 봤다
-                // state="down" 은 누른 채로 두고(끌기 · 뷰포트 비행), state="up" 은 그 단추를 뗀다 — 사이 프레임에 다른 단계(키를 누른 채)를 넣는다.
+                // state="down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="up" 은 그 버튼을 뗀다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
                 if ( state == PressState::Up )
                 {
                     EditorSelfTestInput::setMouseButton( button, false );
@@ -262,7 +262,7 @@ namespace sw::editor
                 }
                 if ( state == PressState::Down )
                 {
-                    // 커서를 먼저 레이블에 붙잡아 한 프레임 둔 뒤 누른다 — 누른 프레임의 마우스 이동량이 0 이라 뷰포트 비행이 시점을 돌리지 않는다.
+                    // 커서를 먼저 레이블에 붙잡아 한 프레임 둔 뒤 누른다. 누른 프레임의 마우스 이동량이 0 이어야 뷰포트 비행이 시점을 돌리지 않는다.
                     (void)EditorSelfTestInput::holdMouseAtMark( mark, anchor ); // 위에서 같은 이름으로 찾았다
                     EditorSelfTestInput::waitNextFrame();
                 }
@@ -274,7 +274,7 @@ namespace sw::editor
                 if ( state == PressState::Down )
                     return true;
                 EditorSelfTestInput::waitNextFrame();
-                (void)EditorSelfTestInput::moveMouseToMark( mark, anchor ); // 표식은 누르기 전에 같은 이름으로 찾았다
+                (void)EditorSelfTestInput::moveMouseToMark( mark, anchor ); // 마크는 누르기 전에 같은 이름으로 찾았다
                 EditorSelfTestInput::setMouseButton( button, false );
                 for ( const int32 modifier : listModifier )
                 {
@@ -307,8 +307,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 끌어 놓습니다(키 · 손잡이 끌기). 프레임마다 커서를 다시 넣는다 — 넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다.
-             * @details 누름 → 절반 → 끝 → 뗌을 네 프레임에 나눈다. 수정자는 누르기 전에 눌러 뗀 뒤에 놓는다.
+             * @brief 레이블 가운데를 누르고 (dx, dy) 픽셀만큼 드래그해 놓습니다. 키와 핸들 드래그에 씁니다. 프레임마다 커서를 다시 넣으며, 넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다.
+             * @details 누름, 절반 이동, 끝 이동, 뗌을 네 프레임에 나눈다. 수정자는 누르기 전에 누르고 뗀 뒤에 놓는다.
              */
             static bool runDrag( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -376,8 +376,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 단추를 누르지 않고 커서를 레이블 자리(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 까지 프레임마다 그 자리를 다시 넣는다 —
-             *        넣지 않은 프레임엔 플랫폼이 실제 커서를 넣는다. 레이블이 없으면 실패를 적는다.
+             * @brief 버튼을 누르지 않고 커서를 레이블 위치(`anchor`)에 붙잡아 둡니다(호버). `release="true"` 가 나올 때까지 프레임마다 그 위치를 다시 넣으며,
+             *        넣지 않은 프레임에는 플랫폼이 실제 커서를 넣습니다. 레이블이 없으면 실패를 기록합니다.
              */
             static bool runHover( AutomationRunner& runner, const AutomationStep& step )
             {
@@ -400,7 +400,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief "Ctrl+Z" 를 ImGuiKey 들로 풉니다(마지막이 키, 앞은 수정자). 모르는 이름이면 false 입니다. */
+            /** @brief "Ctrl+Z" 를 ImGuiKey 목록으로 해석합니다. 마지막이 키이고 앞은 수정자입니다. 모르는 이름이면 false 입니다. */
             [[nodiscard]] static bool parseKeyChord( string_view chord, vector<int32>& outListKey )
             {
                 outListKey.clear();
@@ -440,7 +440,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 수정자를 누르고 키를 눌렀다 뗀 뒤 수정자를 거꾸로 뗀다 — ImGui 가 사건을 프레임에 나눠 흘리므로 한 단계로 된다. */
+            /** @brief 수정자를 누르고 키를 눌렀다 뗀 뒤 수정자를 거꾸로 뗍니다. ImGui 가 이벤트를 프레임에 나눠 처리하므로 한 단계로 충분합니다. */
             static bool runKey( AutomationRunner& /*runner*/, const AutomationStep& step )
             {
                 vector<int32> listKey;
@@ -464,7 +464,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // EditorExpectObject — 활성 씬에 그 이름의 오브젝트가 몇 개인지(그 컴포넌트를 가진 것만 셀 수도 있다)
+            // EditorExpectObject: 활성 씬에 그 이름의 오브젝트가 몇 개인지 센다. 그 컴포넌트를 가진 것만 셀 수도 있다
             // ------------------------------------------------------------------------------
             static bool validateExpectObject( const AutomationStep& step, string& outError )
             {
@@ -530,7 +530,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // EditorExpectDockLayout — 메인 뷰포트가 창과 같고, 보이는 도크 칸이 모두 화면 안 · 최소 변 이상, 창이 최소 크기 이상
+            // EditorExpectDockLayout: 메인 뷰포트가 창과 같고, 보이는 도크 노드가 모두 화면 안에 있고 최소 변 이상이며, 창이 최소 크기 이상인지 검사한다
             // ------------------------------------------------------------------------------
             static const ImGuiDockNode* findMainDockspace()
             {
@@ -622,7 +622,7 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // 탐침 — `<Expect probe="Editor.*">`
+            // 프로브. `<Expect probe="Editor.*">` 로 읽는다
             // ------------------------------------------------------------------------------
             [[nodiscard]] static bool readPlayState( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -639,7 +639,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 창 제목이 미저장 표시(`*`)를 달고 있으면 1 입니다 — 셸이 실제로 창에 건 제목을 읽는다. */
+            /** @brief 창 제목에 미저장 표시(`*`)가 있으면 1 입니다. 셸이 실제로 창에 설정한 제목을 읽습니다. */
             [[nodiscard]] static bool readWindowTitleDirty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const IWindow* pWindow = IWindow::getActiveWindow();
@@ -703,7 +703,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 액센트 색을 0xRRGGBB 정수로(채널마다 0..255 반올림) — `equals` 로 정확히 견줄 수 있다. */
+            /** @brief 액센트 색을 0xRRGGBB 정수로 반환합니다. 채널마다 0..255 로 반올림하므로 `equals` 로 정확히 비교할 수 있습니다. */
             [[nodiscard]] static bool readAccentColor( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const Color& accent = EditorThemeUtil::getAccentColor();
@@ -752,7 +752,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 뷰포트 격자가 이번이나 지난 프레임에 그려졌는가입니다. 아니면 격자 탐침은 값을 내지 않습니다(격자를 끈 뷰 · 다른 탭). */
+            /** @brief 뷰포트 격자가 이번 프레임이나 지난 프레임에 그려졌는지 확인합니다. 그려지지 않았으면 격자 프로브는 값을 내지 않습니다. 격자를 끈 뷰나 다른 탭이 해당합니다. */
             [[nodiscard]] static const EditorGridStats* findRecentGridStats()
             {
                 const EditorGridStats& stats = EditorGridStats::get();
@@ -786,7 +786,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 씬 뷰 카메라(에디터 카메라)의 월드 위치입니다. Play 중에도 에디터 카메라다. */
+            /** @brief 씬 뷰 카메라(에디터 카메라)의 월드 위치입니다. Play 중에도 에디터 카메라입니다. */
             [[nodiscard]] static bool findSceneViewCameraPosition( float3& outPosition )
             {
                 const CameraComponent* pCamera = EditorCamera::find( editor::getActiveScene() );
@@ -843,7 +843,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 이번 UI 프레임에 셸이 호스트에 그 뷰 RT 를 알렸는지(`ImGuiEditor::getSceneViewport` · `getGameViewport` 와 같은 판정)입니다. */
+            /** @brief 이번 UI 프레임에 셸이 호스트에 그 뷰의 렌더 타깃을 알렸는지 확인합니다. `ImGuiEditor::getSceneViewport` 와 `getGameViewport` 가 쓰는 판정과 같습니다. */
             [[nodiscard]] static bool readViewRequested( EditorViewKind kind, float64& outValue )
             {
                 const EditorContext* pContext = EditorContext::get();
@@ -867,7 +867,7 @@ namespace sw::editor
                 return readViewRequested( EditorViewKind::Game, outValue );
             }
 
-            /** @brief 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸는지(앞 탭으로 보이는지)입니다. 두 뷰가 다 가려져도 `Editor.SceneViewRequested` 는 1 이다. */
+            /** @brief 이번 UI 프레임에 Scene 패널이 씬 뷰를 그렸는지 확인합니다. 앞 탭으로 보이는 경우입니다. 두 뷰가 모두 가려져도 `Editor.SceneViewRequested` 는 1 입니다. */
             [[nodiscard]] static bool readSceneViewDrawn( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorContext* pContext = EditorContext::get();
@@ -883,7 +883,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 씬 뷰가 `-gv_editorProbeVisualizer` 의 시각화를 켜 두었으면 1 입니다. 패널이나 그 id 의 시각화가 없으면 값을 내지 않는다. */
+            /** @brief 씬 뷰가 `-gv_editorProbeVisualizer` 의 시각화를 켜 두었으면 1 입니다. 패널이나 그 id 의 시각화가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readVisualizerOn( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -898,8 +898,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 주 선택 오브젝트의 `-gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 값입니다. 숫자 프로퍼티(float32 · int32 · uint32)만 읽는다.
-             * @details 선택이 없거나 그 컴포넌트 · 프로퍼티가 없으면 값을 내지 않는다.
+             * @brief 주 선택 오브젝트의 `-gv_editorProbeProperty`(`<컴포넌트 타입>.<프로퍼티>`) 값을 읽습니다. 숫자 프로퍼티(float32, int32, uint32)만 읽습니다.
+             * @details 선택이 없거나 그 컴포넌트나 프로퍼티가 없으면 값을 내지 않는다.
              */
             [[nodiscard]] static bool readSelectedProperty( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -927,7 +927,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 선택한 오브젝트 모두의 `-gv_editorProbeProperty` 값 합입니다(다중 편집이 모두에 들어갔는지). 숫자 프로퍼티만 읽는다. */
+            /** @brief 선택한 오브젝트 모두의 `-gv_editorProbeProperty` 값의 합입니다. 다중 편집이 모든 오브젝트에 적용되었는지 확인하는 데 씁니다. 숫자 프로퍼티만 읽습니다. */
             [[nodiscard]] static bool readSelectedPropertySum( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -958,7 +958,7 @@ namespace sw::editor
                 return listSelected.empty() == false;
             }
 
-            /** @brief 주 선택의 `-gv_editorProbeProperty` 커브(`FloatCurve`)의 키 수입니다. 커브가 아니면 값을 내지 않는다. */
+            /** @brief 주 선택의 `-gv_editorProbeProperty` 커브(`FloatCurve`)의 키 수입니다. 커브가 아니면 값을 내지 않습니다. */
             [[nodiscard]] static bool readSelectedCurveKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -978,7 +978,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 줄에 그리는 아이콘의 코드 포인트입니다. 그 이름의 오브젝트가 없으면 값을 내지 않는다. */
+            /** @brief `-gv_editorProbeObject` 이름의 오브젝트가 Hierarchy 행에 그리는 아이콘의 코드 포인트입니다. 그 이름의 오브젝트가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readHierarchyRowIcon( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObjectManager* pManager = editor::getActiveObjectManager();
@@ -991,14 +991,14 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeObject` 이름의 오브젝트입니다(활성 씬). */
+            /** @brief 활성 씬에서 `-gv_editorProbeObject` 이름의 오브젝트를 찾습니다. */
             static const GameObject* findProbedObject()
             {
                 const GameObjectManager* pManager = editor::getActiveObjectManager();
                 return pManager != nullptr ? pManager->findGameObjectByName( hashed_string( gv_editorProbeObject.c_str() ) ) : nullptr;
             }
 
-            /** @brief 플레이 세션이 Simulate(조종 없이 월드만)면 1, 플레이어가 조종하면 0 입니다. 멈춤이면 값을 내지 않는다. */
+            /** @brief 플레이 세션이 Simulate(조종 없이 월드만 실행)이면 1, 플레이어가 조종하면 0 입니다. 정지 상태이면 값을 내지 않습니다. */
             [[nodiscard]] static bool readPlaySimulating( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 if ( EditorPlaySession::isStopped() )
@@ -1007,7 +1007,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeObject` 오브젝트의 자기 활성 비트(1 · 0)입니다. */
+            /** @brief `-gv_editorProbeObject` 오브젝트 자신의 활성 비트(1 또는 0)입니다. */
             [[nodiscard]] static bool readObjectActive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObject* pObject = findProbedObject();
@@ -1038,7 +1038,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 씬 뷰 클라이언트입니다(씬 뷰 패널이 없으면 nullptr). */
+            /** @brief 씬 뷰 클라이언트를 반환합니다. 씬 뷰 패널이 없으면 nullptr 입니다. */
             static const EditorViewportClient* findSceneViewClient()
             {
                 EditorContext*        pContext = EditorContext::get();
@@ -1066,7 +1066,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 씬 뷰 HUD 상자가 지난 프레임에 그린 섹션 수입니다(상자를 껐으면 0). */
+            /** @brief 씬 뷰 HUD 박스가 지난 프레임에 그린 섹션 수입니다. 박스를 껐으면 0 입니다. */
             [[nodiscard]] static bool readSceneViewHUDSections( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorViewportClient* pClient = findSceneViewClient();
@@ -1076,7 +1076,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`)입니다 — 화면이 열렸는지(엔진 탐침 `DebugHUD.Shown`)와 달리 멈춤에도 켜짐을 답한다. 조종자가 없으면 값을 내지 않는다. */
+            /** @brief 게임 디버그 HUD 의 켜짐(`debug.hud`) 상태입니다. 화면이 열렸는지(엔진 프로브 `DebugHUD.Shown`)와 달리 정지 상태에서도 켜짐 여부를 반환합니다. 조종자가 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readDebugHUDEnabled( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const DebugHUD* pHUD = DebugHUD::findActive();
@@ -1086,14 +1086,14 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 켜진 디버그 HUD 섹션 수입니다(HUD 가 꺼져 있어도 센다). */
+            /** @brief 켜진 디버그 HUD 섹션 수입니다. HUD 가 꺼져 있어도 셉니다. */
             [[nodiscard]] static bool readDebugHUDShownSections( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( DebugHUD::getShownSectionCount() );
                 return true;
             }
 
-            /** @brief 씬 뷰의 호버 오브젝트입니다: `-gv_editorProbeObject` 오브젝트면 1, 없으면 0, 다른 오브젝트면 -1. */
+            /** @brief 씬 뷰의 호버 오브젝트를 구분합니다. `-gv_editorProbeObject` 오브젝트이면 1, 없으면 0, 다른 오브젝트이면 -1 입니다. */
             [[nodiscard]] static bool readHoveredObject( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const uint64 hoveredID = EditorSelectionBounds::getHoveredObjectID();
@@ -1114,7 +1114,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief `-gv_editorProbeOverlay` 바의 상태 · 이번 실행 상태입니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
+            /** @brief `-gv_editorProbeOverlay` 바의 상태를 읽습니다. 씬 뷰가 없거나 그 바가 없으면 false 입니다. */
             static bool findProbedOverlay( const EditorOverlayBarState*& pOutState, const EditorOverlayBarRuntime*& pOutRuntime )
             {
                 const EditorViewportClient* pClient = findSceneViewClient();
@@ -1125,7 +1125,7 @@ namespace sw::editor
                 return pOutState != nullptr;
             }
 
-            /** @brief 바가 붙은 쪽입니다(0 떠 있음 · 1 위 · 2 아래 · 3 왼쪽 · 4 오른쪽). */
+            /** @brief 바가 붙은 쪽입니다. 0 은 떠 있음, 1 은 위, 2 는 아래, 3 은 왼쪽, 4 는 오른쪽입니다. */
             [[nodiscard]] static bool readOverlayDock( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorOverlayBarState*   pState   = nullptr;
@@ -1136,7 +1136,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 바의 왼쪽 위 X(뷰포트 왼쪽 기준 픽셀, 지난 프레임)입니다. */
+            /** @brief 바의 왼쪽 위 X 입니다. 뷰포트 왼쪽 기준 픽셀이며 지난 프레임 값입니다. */
             [[nodiscard]] static bool readOverlayX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorOverlayBarState*   pState   = nullptr;
@@ -1147,7 +1147,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 바의 왼쪽 위 Y(뷰포트 위 기준 픽셀, 지난 프레임)입니다. */
+            /** @brief 바의 왼쪽 위 Y 입니다. 뷰포트 위쪽 기준 픽셀이며 지난 프레임 값입니다. */
             [[nodiscard]] static bool readOverlayY( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorOverlayBarState*   pState   = nullptr;
@@ -1158,7 +1158,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 바가 세로로 쌓였으면(키 > 폭) 1 입니다. */
+            /** @brief 바가 세로로 쌓였으면(높이가 폭보다 크면) 1 입니다. */
             [[nodiscard]] static bool readOverlayVertical( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorOverlayBarState*   pState   = nullptr;
@@ -1169,7 +1169,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 바가 보이면 1, 접혔으면 10 을 더한다(보임 1 · 숨김 0, 접힘이면 +10). */
+            /** @brief 바가 보이면 1, 숨겨져 있으면 0 이고, 접혀 있으면 10 을 더합니다. */
             [[nodiscard]] static bool readOverlayFlags( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const EditorOverlayBarState*   pState   = nullptr;
@@ -1180,7 +1180,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 기즈모 조작입니다(0 이동 · 1 회전 · 2 크기). */
+            /** @brief 기즈모 조작 모드입니다. 0 은 이동, 1 은 회전, 2 는 크기입니다. */
             [[nodiscard]] static bool readGizmoOperation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -1190,14 +1190,14 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 가장 최근에 그린 노드 그래프 캔버스의 노드 수입니다(대화 · 애니메이션 그래프 · 확장의 그래프 문서 패널). */
+            /** @brief 가장 최근에 그린 노드 그래프 캔버스의 노드 수입니다. 대화 그래프, 애니메이션 그래프, 확장의 그래프 문서 패널이 해당합니다. */
             [[nodiscard]] static bool readGraphNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorNodeGraph::getDrawnNodeCount() );
                 return true;
             }
 
-            /** @brief 애니메이션 그래프 패널의 전이 수(@p bConditionOnly 면 조건이 있는 것만)입니다. 패널이 없으면 값을 내지 않는다. */
+            /** @brief 애니메이션 그래프 패널의 전이 수입니다. @p bConditionOnly 이면 조건이 있는 전이만 셉니다. 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readAnimGraphLinks( bool bConditionOnly, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -1220,7 +1220,7 @@ namespace sw::editor
                 return readAnimGraphLinks( true, outValue );
             }
 
-            /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않는다. */
+            /** @brief `-gv_editorProbePanel` 의 패널이 열려 있으면 1 입니다. 그 id 의 패널이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProbedPanelOpen( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -1233,42 +1233,42 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 환경설정 창의 섹션 목록에 지난 프레임 보인 섹션 수입니다(검색이 거른 뒤). */
+            /** @brief 환경설정 창의 섹션 목록에서 지난 프레임에 보인 섹션 수입니다. 검색이 거른 뒤의 수입니다. */
             [[nodiscard]] static bool readPreferencesVisibleSections( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( PreferencesPanel::getVisibleSectionCount() );
                 return true;
             }
 
-            /** @brief 환경설정 파일에 저장된 키 수입니다(모든 섹션 합 — 기본과 다른 값만 저장된다). */
+            /** @brief 환경설정 파일에 저장된 키 수입니다. 모든 섹션의 합이며, 기본과 다른 값만 저장됩니다. */
             [[nodiscard]] static bool readPreferencesSavedKeyCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorPreferencesStore::countSavedKeys( EditorPreferencesStore::getDefaultFilePath() ) );
                 return true;
             }
 
-            /** @brief 단축키 편집기가 지금 묻고 있는 충돌 수입니다. */
+            /** @brief 단축키 편집기가 현재 보고하는 충돌 수입니다. */
             [[nodiscard]] static bool readShortcutConflictCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( ShortcutsPanel::getPendingConflictCount() );
                 return true;
             }
 
-            /** @brief 사용자 단축키 덮어쓰기 수입니다(기본과 다른 커맨드). */
+            /** @brief 사용자 단축키 덮어쓰기 수입니다. 기본과 다른 커맨드의 수입니다. */
             [[nodiscard]] static bool readShortcutOverrideCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( EditorCommandGUI::getShortcutOverrides().getOverrides().size() );
                 return true;
             }
 
-            /** @brief 모듈 창이 묻는 미리보기에서 새로 꺼지는 모듈 수입니다. */
+            /** @brief 모듈 창의 미리보기에서 새로 꺼지는 모듈 수입니다. */
             [[nodiscard]] static bool readModulePreviewNewlyInactive( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 outValue = static_cast<float64>( ModulesPanel::getPreviewNewlyInactiveCount() );
                 return true;
             }
 
-            /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 갈라지면 줄어든다. */
+            /** @brief 패널 매니저가 가진 패널 수입니다. 등록 목록이 DLL 마다 달라지면 줄어듭니다. */
             [[nodiscard]] static bool readPanelCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
@@ -1278,7 +1278,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 씬 뷰(툴바) · 주 출력(게임 뷰)의 보기 모드 번호입니다(`RenderViewMode`). 렌더러가 없으면 false. */
+            /** @brief 씬 뷰(툴바)나 주 출력(게임 뷰)의 보기 모드 번호(`RenderViewMode`)를 읽습니다. 렌더러가 없으면 false 입니다. */
             [[nodiscard]] static bool readViewMode( bool bSceneView, float64& outValue )
             {
                 const FrameRenderer* pRenderer = editor::getService<FrameRenderer>();
@@ -1292,7 +1292,7 @@ namespace sw::editor
 
             [[nodiscard]] static bool readGameViewMode( const GameObjectManager* /*pManager*/, float64& outValue ) { return readViewMode( false, outValue ); }
 
-            /** @brief 마지막(또는 지금) 자체 테스트 실행에서 통과한 테스트 수입니다(Test Runner 창 · 명령줄 실행 모두). */
+            /** @brief 마지막(또는 현재) 자체 테스트 실행에서 통과한 테스트 수입니다. Test Runner 창과 명령줄 실행 모두 해당합니다. */
             [[nodiscard]] static bool readTestRunnerPassCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 uint32 passedCount{ 0 };
@@ -1305,7 +1305,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief Input Map Editor 값 하나입니다(0 고른 액션의 바인딩 수, 1 그 0 번 바인딩의 발화 규칙, 2 충돌 수). 패널이 없거나 고른 액션이 없으면 값을 내지 않는다. */
+            /** @brief Input Map Editor 값 하나를 읽습니다. 0 은 선택한 액션의 바인딩 수, 1 은 그 0번 바인딩의 발화 규칙, 2 는 충돌 수입니다. 패널이 없거나 선택한 액션이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readInputMapValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
@@ -1325,7 +1325,7 @@ namespace sw::editor
             [[nodiscard]] static bool readInputMapSelectedTrigger( const GameObjectManager* /*pManager*/, float64& outValue ) { return readInputMapValue( 1, outValue ); }
             [[nodiscard]] static bool readInputMapConflicts( const GameObjectManager* /*pManager*/, float64& outValue ) { return readInputMapValue( 2, outValue ); }
 
-            /** @brief 프로파일러 패널 값 하나입니다(열려 있지 않으면 값을 내지 않는다). */
+            /** @brief 프로파일러 패널 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readProfilerPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*       pContext = EditorContext::get();
@@ -1383,7 +1383,7 @@ namespace sw::editor
             [[nodiscard]] static bool readProfilerLoadedTraceThreads( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 4, outValue ); }
             [[nodiscard]] static bool readProfilerTraceSearchMatches( const GameObjectManager* /*pManager*/, float64& outValue ) { return readProfilerPanelValue( 5, outValue ); }
 
-            /** @brief 렌더 타깃 창 값 하나입니다(열려 있지 않으면 값을 내지 않는다). 픽셀 값은 읽은 적이 없으면 내지 않는다. */
+            /** @brief 렌더 타깃 창 값 하나를 읽습니다. 열려 있지 않으면 값을 내지 않으며, 픽셀 값은 읽은 적이 없으면 내지 않습니다. */
             [[nodiscard]] static bool readRenderTargetPanelValue( uint32 which, float64& outValue )
             {
                 EditorContext*           pContext = EditorContext::get();
@@ -1430,7 +1430,7 @@ namespace sw::editor
             [[nodiscard]] static bool readRenderTargetLinearized( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 3, outValue ); }
             [[nodiscard]] static bool readRenderTargetPixelRed( const GameObjectManager* /*pManager*/, float64& outValue ) { return readRenderTargetPanelValue( 4, outValue ); }
 
-            /** @brief 프로파일러 타임라인이 최근 4 프레임에 사건을 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
+            /** @brief 프로파일러 타임라인이 최근 4프레임에 이벤트를 남긴 스레드 수입니다. 녹화를 켜지 않았으면 0 입니다. */
             [[nodiscard]] static bool readProfilerTimelineThreadCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 constexpr uint32     kRecentFrameCount = 4;
@@ -1444,7 +1444,7 @@ namespace sw::editor
 
         struct EditorSequencerProbeInternal
         {
-            /** @brief `-gv_editorProbeObject` 오브젝트의 로컬 위치 X 입니다(시퀀서 키 트랙 미리보기가 옮긴 값). */
+            /** @brief `-gv_editorProbeObject` 오브젝트의 로컬 위치 X 입니다. 시퀀서 키 트랙 미리보기가 옮긴 값입니다. */
             [[nodiscard]] static bool readObjectPositionX( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const GameObjectManager* pManager = editor::getActiveObjectManager();
@@ -1456,7 +1456,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief Sequencer 패널이 고른 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 고른 트랙이 없으면 값이 없다. */
+            /** @brief Sequencer 패널이 선택한 키 트랙의 키 프레임 수입니다. 패널이 닫혔거나 선택한 트랙이 없으면 값을 내지 않습니다. */
             [[nodiscard]] static bool readSequencerKeyFrameCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 EditorContext* pContext = EditorContext::get();
