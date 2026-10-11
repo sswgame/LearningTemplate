@@ -107,6 +107,8 @@ namespace sw
     private:
         /** @brief 클라이언트 연결이 끝났으면 로그에 남깁니다. 시간 초과면 다시 시도합니다(같이 띄운 서버가 아직 기동 중일 수 있다). */
         void reportConnectResult();
+        /** @brief `_listEventScratch` 의 연결 · 끊김을 로그 한 줄씩 남깁니다(서버는 둘 다, 클라이언트는 끊김만). */
+        void logEvents() const;
 
     private:
         NetHost                      _host;

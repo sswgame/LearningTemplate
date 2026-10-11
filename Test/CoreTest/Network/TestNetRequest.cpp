@@ -186,12 +186,15 @@ SW_TEST_CASE( NetRequestTest, CancelCompletesLocallyAndMarksServerRequest )
  */
 SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
 {
+    // 응답 기록은 rig 보다 먼저 선언한다 — 마지막 요청(freshLog)은 끝까지 처리 중이라 rig 소멸(연결 닫힘)이 ConnectionLost 콜백을 부른다.
+    ResponseLog                  lostLog;
+    ResponseLog                  retryLog;
+    ResponseLog                  freshLog;
     RequestRig                   rig( NetRequestServerSettings{}, 42 );
     const StreamConnectionHandle first = rig._pair._clientHandle;
     NetRequestOptions            options;
     options._idempotencyKey = NetIdempotencyKey{ 0x1234u, 0x5678u };
 
-    ResponseLog lostLog;
     SW_EXPECT_TRUE( rig.send( first, 2, vector<uint8>{ 9 }, options, lostLog ) != 0 );
     rig._pair.step( 2 );
     SW_ASSERT_EQUAL( 1, rig._echo._callCount );
@@ -206,7 +209,6 @@ SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
     const StreamConnectionHandle second = rig._pair._client.connect( NetAddress::makeLoopback( rig._pair._serverTransport->getListenPort() ) );
     rig._pair.step( 2 );
     SW_ASSERT_EQUAL( 2, static_cast<int32>( rig._serverSide._listOpened.size() ) );
-    ResponseLog retryLog;
     SW_EXPECT_TRUE( rig.send( second, 2, vector<uint8>{ 9 }, options, retryLog ) != 0 );
     rig._pair.step( 4 );
     SW_EXPECT_EQUAL( 1, rig._echo._callCount );
@@ -214,7 +216,6 @@ SW_TEST_CASE( NetRequestTest, IdempotentRetryAfterReconnectIsProcessedOnce )
     SW_EXPECT_TRUE( retryLog._listStatus[0] == NetRequestStatus::Ok );
     SW_EXPECT_TRUE( retryLog._listBody[0] == ( vector<uint8>{ 7 } ) );
 
-    ResponseLog freshLog;
     SW_EXPECT_TRUE( rig.send( second, 2, vector<uint8>{ 9 }, NetRequestOptions{}, freshLog ) != 0 );
     rig._pair.step( 2 );
     SW_EXPECT_EQUAL( 2, rig._echo._callCount ); // 키가 없으면 다른 요청이다
