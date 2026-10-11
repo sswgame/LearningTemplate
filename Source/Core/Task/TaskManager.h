@@ -74,9 +74,9 @@ namespace sw
         TaskHandle emplaceTask( string_view name, const TaskDelegate& delegate, TaskThreadAffinity affinity = TaskThreadAffinity::Any );
 
         /**
-         * @brief 임의 타입의 인자 묶음(TaskArgs)을 받는 태스크를 만듭니다.
+         * @brief 임의 타입의 인자 팩(TaskArgs)을 받는 태스크를 만듭니다.
          * @param delegate 실행할 함수 · 람다 델리게이트
-         * @param args 태스크에 넘길 인자 묶음
+         * @param args 태스크에 넘길 인자 팩
          * @param affinity 실행할 스레드
          * @return 만든 태스크의 핸들
          */
@@ -86,7 +86,7 @@ namespace sw
          * @brief 디버깅용 이름을 가지고 임의의 인자를 받는 태스크를 만듭니다.
          * @param name 태스크 이름
          * @param delegate 실행할 함수 · 람다 델리게이트
-         * @param args 태스크에 넘길 인자 묶음
+         * @param args 태스크에 넘길 인자 팩
          * @param affinity 실행할 스레드
          * @return 만든 태스크의 핸들
          */
@@ -168,7 +168,7 @@ namespace sw
         void wakeSleepingWorkers( uint32 requestedCount );
         /** @brief 지금까지 워커를 깨운 시그널 수입니다. 테스트가 "그룹 하나에 한 번" 인지 확인하는 데 씁니다. */
         uint32 getWakeSignalCount() const { return _wakeSignalCount.load( std::memory_order_relaxed ); }
-        /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 몫이 빠져 있어야 합니다(테스트용). */
+        /** @brief 만들어졌지만 아직 끝나지 않은 태스크 수입니다. `waitStage` · `waitAll` 이 돌아온 직후에는 그 태스크가 빠져 있어야 합니다(테스트용). */
         uint32 getActiveTaskCount() const { return _activeTaskCount.load( std::memory_order_acquire ); }
 
         /**
@@ -210,7 +210,7 @@ namespace sw
 
         /** @brief 현재 스레드가 TaskManager 를 초기화한 메인 스레드인지 확인합니다. */
         bool isMainThread() const;
-        /** @brief Debug: 메인 스레드가 아니면 assert 합니다(UE 의 `check( IsInGameThread() )` 자리). */
+        /** @brief Debug: 메인 스레드가 아니면 assert 합니다(UE 의 `check( IsInGameThread() )` 에 해당). */
         void ensureMainThread() const;
         /** @brief 현재 스레드가 이 풀의 워커인지 확인합니다. */
         bool isWorkerThread() const;
@@ -222,21 +222,21 @@ namespace sw
          * @details 스레드마다 하나씩 쓰는 스크래치(플러시 DFS 스택 · 더티 루트 · 트랜스폼 쓰기 큐) 배열의 크기입니다. **워커가 아닌
          *          스레드도 태스크를 실행합니다.** `waitStage` · `waitAll` · `runParallel` 이 기다리는 동안 `helpOrSpin` 으로 준비된
          *          잡을 아무거나 돕는데, 메인 스레드뿐 아니라 렌더 스레드(패스 기록 대기) · 로더 스레드(스트리밍 대기)도 그 경로를
-         *          지납니다. 그래서 그 스레드들도 각자 칸을 받습니다 — 한 칸을 나눠 쓰면 메인과 렌더가 같은 프레임에 같은 슬롯 벡터에
+         *          지납니다. 그래서 그 스레드들도 각자 슬롯을 받습니다. 한 슬롯을 나눠 쓰면 메인과 렌더가 같은 프레임에 같은 슬롯 벡터에
          *          push 해 벡터가 깨집니다(틱 중 트랜스폼 쓰기 큐에서 세그폴트).
          */
         uint32 getScratchSlotCount() const { return getWorkerCount() + kMaxHelperThreadCount; }
         /**
          * @brief 현재 스레드의 스크래치 슬롯입니다. 워커면 그 번호이고, 아니면 처음 물을 때 받는 고유한 도우미 번호(워커 수 + n)입니다.
          * @details 도우미 번호는 스레드마다 한 번 배정되어 그 스레드가 사는 동안 바뀌지 않습니다. 상한(`kMaxHelperThreadCount`)을
-         *          넘는 스레드는 마지막 칸을 나눠 쓰고, 그 경우를 로그로 알립니다(엔진에서 태스크를 기다리는 스레드는 메인 · 렌더 ·
+         *          넘는 스레드는 마지막 슬롯을 나눠 쓰고, 그 경우를 로그로 알립니다(엔진에서 태스크를 기다리는 스레드는 메인 · 렌더 ·
          *          로더 · 업로드 정도라 넘지 않습니다). 대기자 슬롯(잠드는 워드)도 같은 번호를 씁니다.
          */
         uint32 getCurrentThreadScratchSlot();
         /**
          * @brief 이 스레드가 받은 도우미 슬롯을 돌려줍니다. **이 매니저에서 태스크를 기다리던 비워커 스레드가 끝나기 직전에** 부릅니다.
-         * @details 돌려받지 않으면 백엔드 교체 · `gv_useRenderThread` 토글로 렌더 스레드를 새로 만들 때마다 새 칸을 받아, 상한(8)을 넘을 때
-         *          두 스레드가 마지막 칸을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
+         * @details 돌려받지 않으면 백엔드 교체 · `gv_useRenderThread` 토글로 렌더 스레드를 새로 만들 때마다 새 슬롯을 받아, 상한(8)을 넘을 때
+         *          두 스레드가 마지막 슬롯을 나눠 써 **스크래치 벡터가 겹치고**(힙 손상) 깨우기 하나가 엉뚱한 스레드로 갑니다.
          */
         void releaseCurrentThreadHelperSlot();
 #if !defined( SW_SHIPPING )
@@ -362,7 +362,7 @@ namespace sw
         {
             WorkStealingDeque<uintptr_t> _queue{ 4096 }; ///< 항목은 태스크 노드(짝수)이거나 병렬 그룹의 티켓(홀수)이다
             WaiterSlot                   _park;          ///< 유휴 워커가 잠드는 워드이자, 이 워커가 태스크 안에서 기다릴 때 쓰는 대기 워드
-            std::thread                  _thread;        ///< 이 자리를 도는 워커 스레드. `shutdown` 이 합류한다
+            std::thread                  _thread;        ///< 이 슬롯을 도는 워커 스레드. `shutdown` 이 합류한다
         };
 
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
@@ -372,7 +372,7 @@ namespace sw
         std::thread::id                _mainThreadID;       ///< 메인 스레드의 ID
         atomic<bool>                   _bStop;              ///< 워커 스레드 종료 플래그
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot;     ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다
-        atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 칸은 `_helperSlotFreeMask` 로 다시 쓴다)
+        atomic<uint32>                 _helperSlotCount;    ///< 한 번이라도 나눠 준 도우미 슬롯 수(돌려받은 슬롯은 `_helperSlotFreeMask` 로 다시 쓴다)
         atomic<uint32>                 _helperSlotFreeMask; ///< 돌려받아 다시 나눠 줄 수 있는 도우미 슬롯의 비트마스크
         uint32                         _instanceID;         ///< 매니저마다 다른 번호. 스레드에 캐시한 슬롯 번호가 **이** 매니저 것인지 가린다
         /**

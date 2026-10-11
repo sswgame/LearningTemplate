@@ -36,10 +36,11 @@ namespace sw
         {
             static constexpr uint32 kMagic = FourCcUtil::make( "SWST" );
             /**
-             * @brief 봉투 버전입니다. 읽기도 이 판만 받습니다. 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실립니다.
-             *        섹션은 씬 오브젝트 · 파생의 리플렉션 상태 · 컴포넌트 상태(`ComponentStateStore`) 셋입니다.
-             * @details 토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) 읽고 버립니다.
-             *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문입니다.
+             * @brief 스냅샷 봉투의 버전입니다. 읽을 때도 이 버전만 받습니다.
+             * @details 봉투 머리에 프로세스 토큰이 있고, 씬 섹션의 오브젝트마다 런타임 id 가 상태 앞에 실린다.
+             *          섹션은 씬 오브젝트, 파생의 리플렉션 상태, 컴포넌트 상태(`ComponentStateStore`) 셋이다.
+             *          토큰이 지금 프로세스와 같으면(핫 리로드) id 를 복원하고, 다르면(다른 실행의 세이브 파일) id 를 읽고 버린다.
+             *          다른 실행에서 나간 id 를 복원하면 이 실행에서 이미 나간 id 와 겹칠 수 있기 때문이다.
              */
             static constexpr uint32 kVersion = 3;
         };
@@ -68,8 +69,8 @@ namespace sw
 
     GameObjectManager* GameInstanceBase::findActiveObjectManager()
     {
-        // `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를 보므로 아래 널 검사는 사실상 닿지 않지만,
-        // `game::getService<T>()` 가 nullptr 을 반환할 수 있는 함수라 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
+        // `areGameServicesBound()` 가 바로 이 서비스(SceneManager 슬롯)를 보므로 아래 널 검사에는 사실상 닿지 않는다.
+        // 그래도 `game::getService<T>()` 는 nullptr 을 반환할 수 있어서 `CheckNullableServiceUse` 린트가 요구하는 모양을 지킨다.
         if ( game::areGameServicesBound() == false )
             return nullptr;
         SceneManager* pSceneManager = game::getService<SceneManager>();
@@ -92,20 +93,20 @@ namespace sw
             SW_LOG_TRACE( "No custom bootstrap in pack '%#' — using defaults.", _bootstrap._packRoot );
         game::bindLocalService<GameSettings>( &_bootstrap._data );
         applyBootstrap();
-        // 로딩 화면 — 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
+        // 로딩 화면은 첫 씬 요청(onInitialize 안)이 띄울 수 있게 그 앞에 묶는다. UI 시스템이 없으면(전용 서버) 띄우지 않는다.
         LoadingScreenSettings loadingSettings = _pLoadingScreen->getSettings();
         loadingSettings._documentPath         = _bootstrap._data._loadingScreen;
         _pLoadingScreen->setSettings( loadingSettings );
         UISystem* pUISystem = game::getService<UISystem>();
         _pLoadingScreen->bindUISystem( pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr );
-        // 네트워크 역할은 실행 인자가 정한다 — 파생의 onInitialize 가 역할을 보고 키트 처리기를 달 수 있게 그 앞에서 연다.
-        // 열지 못해도(포트 사용 중) 게임은 혼자 뜬다 — 실패는 세션이 로그에 남긴다.
+        // 네트워크 역할은 실행 인자가 정한다. 파생의 onInitialize 가 역할을 보고 키트 처리기를 달 수 있게 그 앞에서 연다.
+        // 포트가 사용 중이라 열지 못해도 게임은 혼자 뜬다. 실패는 세션이 로그에 남긴다.
         GameNetSessionParams netParams;
         if ( GameNetSession::makeParamsFromGlobalVariables( netParams ) )
             (void)_pNetSession->initialize( netParams ); // 실패는 initialize 가 알린다
         const bool bInitialized = onInitialize();
 
-        // 플레이어 설정을 다시 넣는다 — 언어 팩 · 입력 맵(키 바인딩 · 누르기/토글)은 위에서 막 생겼다. 엔진 기동 때의 적용은 그 대상이 없을 때였다.
+        // 플레이어 설정을 다시 넣는다. 언어 팩과 입력 맵(키 바인딩, 누르기/토글)은 위에서 막 생겼고, 엔진 기동 때의 적용은 그 대상이 없을 때 한 것이다.
         // 액션을 더 늦게(컴포넌트 시작 때) 만드는 게임은 그 뒤에 `UserSettingsManager::reapplyAll` 을 부른다.
         UserSettingsManager* pUserSettings = game::getService<UserSettingsManager>();
         if ( pUserSettings != nullptr )
@@ -116,7 +117,7 @@ namespace sw
     void GameInstanceBase::shutdown()
     {
         onShutdown();
-        // 키트 처리기는 onShutdown 에서 내려갔다 — 그 뒤에 연결을 끊는다(끊기 사건을 내린 처리기에 나눠 주지 않게).
+        // 키트 처리기는 onShutdown 에서 내려갔다. 연결은 그 뒤에 끊어야 끊김 이벤트가 이미 내려간 처리기에 가지 않는다.
         _pNetSession->shutdown();
         // 다른 인스턴스(리로드가 먼저 만든 새 것)가 묶은 것은 건드리지 않는다.
         if ( game::getService<GameSettings>() == &_bootstrap._data )
@@ -132,11 +133,11 @@ namespace sw
     {
         const GameSettings& data = _bootstrap._data;
 
-        // 다국어 — 게임의 로컬라이제이션 프로젝트를 올린다(엔진 프로젝트는 엔진이 기동 때 올렸다).
+        // 게임의 로컬라이제이션 프로젝트를 올린다. 엔진 프로젝트는 엔진이 기동 때 올렸다.
         if ( data._localizationProject.empty() == false && GameStrings::initialize( data._localizationProject, data._defaultLanguage, data._fallbackLanguage ) == false )
             SW_LOG_WARNING( "GameSettings localization project '%#' could not be loaded - strings show their keys", data._localizationProject.c_str() );
 
-        // 게임플레이 입력 맵 — `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵(`PlayerController` 가 읽는 맵)이다.
+        // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
         if ( data._inputMap.empty() == false )
         {
             InputManager* pInput = game::getService<InputManager>();
@@ -148,8 +149,9 @@ namespace sw
     }
 
     /**
-     * @brief `"-gv_firstScene=<리소스 경로>"` — 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다(에디터 없이 다른 씬을 띄워 보는 자리 — 환경 쇼케이스).
-     * @note PowerShell 은 점이 든 인자를 쪼갠다 — 따옴표로 감쌀 것.
+     * @brief `"-gv_firstScene=<리소스 경로>"` 인자입니다. 팩 설정(gamesettings)의 시작 씬 대신 이 씬을 처음 엽니다.
+     * @details 에디터 없이 다른 씬(환경 쇼케이스 등)을 띄워 볼 때 쓴다.
+     * @note PowerShell 은 점이 든 인자를 쪼개므로 따옴표로 감싸야 한다.
      */
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( sw::string, gv_firstScene, "", "팩 설정의 시작 씬 대신 처음 열 씬의 리소스 경로 (비우면 사용 안 함)" );
 
@@ -208,7 +210,7 @@ namespace sw
 
     void GameInstanceBase::publishFinishedSceneLoads()
     {
-        // 끝난 것만 순서를 지키며 뺀다. 대기열에서 밀린 요청은 nullptr 로 끝나 실패로 알린다.
+        // 끝난 것만 순서를 지키며 뺀다. 대기열에서 밀린 요청은 nullptr 로 끝나므로 실패로 알린다.
         size_t keptCount = 0;
         for ( size_t index = 0; index < _listPendingSceneLoad.size(); ++index )
         {
@@ -230,16 +232,16 @@ namespace sw
 
     void GameInstanceBase::update( float32 deltaTime )
     {
-        // 로딩 중 = 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이다. 페이드를 먼저 넘기고, 로딩 화면이 닫히면 페이드 인을 건다.
+        // 맡긴 씬 로드가 남았거나 씬 매니저가 전환 중이면 로딩 중이다. 페이드를 먼저 진행하고, 로딩 화면이 닫히면 페이드 인을 건다.
         const SceneManager* pSceneManager = game::getService<SceneManager>();
         const bool          bLoading      = _listPendingSceneLoad.empty() == false || ( pSceneManager != nullptr && pSceneManager->isTransitioning() );
-        // 페이드 · 로딩 화면은 실제 시간 — 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
+        // 페이드와 로딩 화면은 실제 시간으로 돌린다. 게임 시간으로 돌리면 정지 메뉴(게임 시간 0)가 뜬 동안 페이드가 반쯤 검은 채로 멈춘다.
         const float32 realDeltaTime = GameTimeScale::getUnscaledDeltaTime( deltaTime );
         _screenTransition.update( realDeltaTime );
         _pLoadingScreen->update( realDeltaTime, bLoading, _screenTransition.fade() );
         if ( _listPendingSceneLoad.empty() == false )
             publishFinishedSceneLoads();
-        _pNetSession->update(); // 받은 사건 · 메시지를 처리기에 — 게임 프레임 앞에서(세션이 없으면 바로 돌아온다)
+        _pNetSession->update(); // 받은 이벤트와 메시지를 게임 프레임 앞에서 처리기에 나눠 준다. 세션이 없으면 바로 돌아온다.
         onUpdate( deltaTime );
     }
 
@@ -249,14 +251,14 @@ namespace sw
         if ( pObjectManager == nullptr )
             return false;
 
-        // 살아 있는 것만 담는다. `forEachGameObject` 는 파괴 대기 오브젝트를 이미 건너뛴다(값 반환 목록을 받아 다시 거를 일이 없다).
+        // 살아 있는 것만 담는다. `forEachGameObject` 가 파괴 대기 오브젝트를 이미 건너뛰므로 목록을 받아 다시 거를 일이 없다.
         vector<GameObject*> listValidObject;
         pObjectManager->forEachGameObject( [&listValidObject]( GameObject* pObj )
         { listValidObject.push_back( pObj ); } );
 
         outBytes.clear();
 
-        // 게임오브젝트 개수를 맨 앞에 기록
+        // 게임오브젝트 개수를 맨 앞에 쓴다.
         const uint32 count   = static_cast<uint32>( listValidObject.size() );
         const size_t oldSize = outBytes.size();
         outBytes.resize( oldSize + sizeof( uint32 ) );
@@ -265,7 +267,7 @@ namespace sw
         for ( GameObject* pObj : listValidObject )
         {
             ObjectStateSerializer::writeIdentity( ObjectStateSerializer::captureIdentity( pObj ), outBytes );
-            // 개수를 이미 앞에 적었다 — 하나라도 못 쓰면 개수와 본문이 어긋나므로 통째로 실패한다(버리고 성공이라 하지 않는다).
+            // 개수를 이미 앞에 적었으므로 하나라도 못 쓰면 개수와 본문이 어긋난다. 그래서 통째로 실패로 처리한다.
             if ( ObjectStateSerializer::saveToBinaryBuffer( pObj, outBytes ) == false )
             {
                 SW_LOG_ERROR( "Scene object '%#' could not be serialized - the snapshot is not taken", pObj->getName().c_str() );
@@ -286,7 +288,7 @@ namespace sw
         if ( pObjectManager == nullptr )
             return false;
 
-        // 기존 엔티티들 정리
+        // 기존 오브젝트를 정리한다.
         pObjectManager->clear();
 
         size_t offset = 0;
@@ -305,12 +307,13 @@ namespace sw
         const size_t     maxPossibleObject  = ( size - offset ) / kMinBytesPerObject;
         listRestoredObject.reserve( MathUtil::min( static_cast<size_t>( count ), maxPossibleObject ) );
 
-        // 모든 게임오브젝트를 만들고 읽은 뒤 묶음이 계층을 한 번에 잇는다. 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도
-        // 복원한다. 부착은 상태의 부착 필드(부모의 **id** · 컴포넌트 키)로 잇는다 — 주의: 부모 이름으로 찾아 부모의 primary 에 붙이면
-        // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 간다. 다른 실행의 세이브는 id 를 복원하지 않지만, 스트림에 적힌
-        // 그때의 id 로 묶음 안에서 찾는다.
-        // **하나라도 못 읽으면 실패다.** 주의: 멈추고도 true 를 돌려주면 핫 리로드가 스냅샷을 버리고 저장 막기를 푼다 — 씬은 이미
-        // 비운 뒤라 못 읽은 오브젝트부터 뒤가 사라진 채 저장할 수 있다.
+        // 모든 게임오브젝트를 만들고 읽은 뒤에 묶음이 계층을 한 번에 잇는다.
+        // 같은 프로세스의 스냅샷이면 원래 id 로 만들고 컴포넌트 id 도 복원한다.
+        // 부착은 상태의 부착 필드(부모의 **id** 와 컴포넌트 키)로 잇는다. 부모 이름으로 찾아 부모의 primary 에 붙이면
+        // 부모보다 먼저 읽힌 소켓 자식(손에 든 무기)이 몸통으로 옮겨 가므로 깨진다.
+        // 다른 실행의 세이브는 id 를 복원하지 않고, 스트림에 적힌 그때의 id 로 묶음 안에서 부모를 찾는다.
+        // **하나라도 못 읽으면 실패다.** 읽기를 멈추고도 true 를 돌려주면 핫 리로드가 스냅샷을 버리고 저장 막기를 풀어 버린다.
+        // 씬은 이미 비운 뒤라서, 못 읽은 오브젝트부터 뒤가 사라진 채 저장될 수 있다.
         const bool       bRestoreIdentity = ( format == SceneObjectFormat::RestoreIdentity );
         bool             bComplete        = true;
         ObjectStateBatch batch( bRestoreIdentity ? ObjectIDSpace::Live : ObjectIDSpace::Saved );
@@ -336,7 +339,7 @@ namespace sw
             if ( readBytes == 0 )
             {
                 SW_LOG_ERROR( "Failed to load binary object state at index %u", objectIndex );
-                pObjectManager->destroyObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다
+                pObjectManager->destroyObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다.
                 bComplete = false;
                 break;
             }
@@ -344,10 +347,10 @@ namespace sw
             offset += readBytes;
         }
 
-        // 씬 계층 구조(부모 · 소켓)를 한 번에 잇는다 — 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
+        // 씬 계층 구조(부모와 소켓)를 한 번에 잇는다. 자식이 부모보다 먼저 읽혔어도 부모를 찾을 수 있다.
         batch.finish();
 
-        // 복원된 모든 오브젝트들의 월드 매트릭스를 강제 동기화
+        // 복원된 모든 오브젝트의 월드 매트릭스를 강제로 동기화한다.
         pObjectManager->flushSceneTransforms();
 
         if ( bComplete == false )
@@ -364,7 +367,7 @@ namespace sw
         GameObjectManager* pManager = findActiveObjectManager();
         if ( pManager == nullptr )
             return;
-        // 모두 싣고 나서 걷는다 — 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게.
+        // 모두 싣고 나서 걷는다. 걷기가 다른 타입의 상태(플레이어가 읽는 디렉터)를 바꾸지 않게 하려는 순서다.
         for ( const StatefulComponentType& type : _listStatefulType )
         {
             if ( type._pCapture != nullptr )
@@ -405,10 +408,10 @@ namespace sw
 
         // 1) 씬 오브젝트 바이너리 스냅샷
         //
-        // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원되는 사용법이라
-        // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다) 여기서 끊으면 안 된다.
-        // 다만 반환값을 흔적 없이 버리면 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
-        // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 실마리는 남긴다.
+        // **씬이 없는 것은 실패가 아니다.** 씬 없이 커스텀 상태만 스냅샷하는 것은 지원하는 사용법이다
+        // (GameFrameworkTest.GameInstanceBaseSnapshotAndFileRoundTrip 이 그렇게 쓴다). 그러니 여기서 끊으면 안 된다.
+        // 다만 반환값을 흔적 없이 버리면, 씬이 있어야 할 상황에서 오브젝트가 하나도 없는 세이브가 나와도
+        // 로드할 때까지 아무도 모른다. 빈 섹션은 그대로 쓰되 단서는 남긴다.
         vector<uint8> bytesScene;
         if ( serializeSceneObjects( bytesScene ) == false )
         {
@@ -422,9 +425,9 @@ namespace sw
         const void*     pStateInstance = getStateInstance();
         if ( pStateTypeInfo != nullptr && pStateInstance != nullptr )
         {
-            // serialize 는 void 라 성공 여부를 반환하지 않는다. 결과가 비면 **단정하지 않고 남긴다.**
-            // 프로퍼티가 없는 상태 타입도 있을 수 있어 여기서 실패로 끊으면 멀쩡한 저장을 막는다.
-            // 나중에 "상태가 비어서 돌아왔다" 를 추적할 실마리는 있어야 한다.
+            // serialize 는 void 라 성공 여부를 반환하지 않는다. 결과가 비어도 **단정하지 않고 로그만 남긴다.**
+            // 프로퍼티가 없는 상태 타입도 있을 수 있어서, 여기서 실패로 끊으면 멀쩡한 저장을 막는다.
+            // 나중에 "상태가 비어서 돌아왔다" 를 추적할 단서는 있어야 한다.
             vector<uint8> bytesState;
             BinarySerializer::serialize( pStateInstance, *pStateTypeInfo, bytesState );
             if ( bytesState.empty() )
@@ -436,7 +439,7 @@ namespace sw
             arch.writeSection( nullptr, 0 );
         }
 
-        // 3) PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션) — 훅이 실어 둔 것
+        // 3) PROPERTY 가 아닌 컴포넌트 상태(디렉터의 시뮬레이션). 훅이 실어 둔 것을 쓴다.
         Archive componentArch;
         _pComponentStateStore->write( componentArch );
         arch.writeSection( componentArch.getData(), static_cast<uint32>( componentArch.getSize() ) );
@@ -514,7 +517,7 @@ namespace sw
             }
         }
 
-        // 3) 컴포넌트 상태 — 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 넘어간다(씬은 이미 섰다 — 디렉터는 새 판으로 시작한다).
+        // 3) 컴포넌트 상태는 훅이 다시 만든 컴포넌트에 넘긴다. 못 읽으면 알리고 넘어간다. 씬은 이미 섰고, 디렉터는 새로 시작한다.
         vector<uint8> bytesComponent;
         if ( arch.readSection( bytesComponent ) == false )
             return false;

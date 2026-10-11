@@ -1,12 +1,12 @@
 /**
  * @file FrameRendererCompute.cpp
- * @brief 프레임의 컴퓨트 프리패스 다섯입니다: 인스턴스 애니메이션 · 메시 모프 · 메시 스킨 · GPU 컬링 · 인스턴스 정렬.
- * @details 넷 다 그래프(RenderGraph)의 패스가 아닙니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 걸리고, 그 순서가
- *          곧 GPU 타임라인의 순서입니다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
- *          되돌립니다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 합니다.
+ * @brief 프레임의 컴퓨트 프리패스 다섯 가지를 정의합니다. 인스턴스 애니메이션, 메시 모프, 메시 스킨, GPU 컬링, 인스턴스 정렬입니다.
+ * @details 다섯 가지 모두 그래프(RenderGraph)의 패스가 아니다. 그리기 **전에** 프레임 커맨드 리스트에 직접 기록되고, 그 순서가
+ *          곧 GPU 타임라인의 순서다. 애니메이션이 바운드를 바꾸고, 컬링이 그 바운드로 거르고, 정렬이 컬링 결과를
+ *          되돌린다. 그래서 순서와 배리어가 한 파일 안에 나란히 보여야 한다.
  *
- *          컴퓨트 패스를 감싸는 래퍼 클래스는 두지 않습니다. 각자의 상수버퍼는 `RHIConstantBufferSlot` 이고 소유는
- *          `FrameRenderer` 입니다.
+ *          컴퓨트 패스를 감싸는 래퍼 클래스는 두지 않는다. 각자의 상수 버퍼는 `RHIConstantBufferSlot` 이고 소유는
+ *          `FrameRenderer` 가 한다.
  */
 #include "pch.h"
 
@@ -24,22 +24,22 @@
 namespace sw
 {
     /**
-     * @brief `-gv_gpuCulling=0` 이면 GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로).
+     * @brief `-gv_gpuCulling=0` 이면 GPU 컬링 컴퓨트 디스패치를 건너뜁니다(인다이렉트 드로우는 그대로 실행합니다).
      * @details 간접 인자는 GPUScene 이 CPU 에서 이미 채워 두므로, 이 디스패치만 빼면 "컴퓨트가 인자를
-     *          망치는가" 를 백엔드별로 가를 수 있습니다. 기본은 켬입니다.
+     *          망치는가" 를 백엔드별로 가를 수 있다. 기본은 켬이다.
      */
     SW_GLOBAL_VARIABLE( int32, gv_gpuCulling, 1, "GPU 컬링 컴퓨트 디스패치 (0=건너뜀, 진단용)" );
 
     /**
-     * @brief `-gv_morphDiag=<0|1|2|3>` 는 GPU 메시 모프 경로를 백엔드 능력표와 **상관없이** 돌려 봅니다.
-     * @details 0 = 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), 1 = 능력표를 무시하고 켬,
-     *          2 = 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 물림**,
-     *          3 = 2 에 더해 풀 원소의 노멀 자리에 **원소 번호**를 적음.
+     * @brief `-gv_morphDiag=<0|1|2|3>` 은 GPU 메시 모프 경로를 백엔드 능력 테이블과 **상관없이** 돌려 봅니다.
+     * @details 0은 평소대로(`RHICapabilities::_bGPUMeshMorph` 를 따름), 1은 능력 테이블을 무시하고 켬,
+     *          2는 켜되 **컴퓨트 디스패치를 건너뛰고 레스트 버퍼를 정점 셰이더에 그대로 바인딩**,
+     *          3은 2에 더해 풀 원소의 노멀 위치에 **원소 번호**를 기록한다.
      *
-     *          2 의 정답은 **레스트 포즈와 같은 그림**입니다. 컴퓨트가 아예 안 돌기 때문입니다. 그래서
-     *          2 만으로 "컴퓨트가 범인인가" 가 갈립니다.
-     *          3 은 거기서 한 걸음 더 갑니다. 번호표를 읽으면 "제 원소를 짚었는가" 를 위치 값과 **따로**
-     *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 한 장으로 갈립니다.
+     *          2의 정답은 **레스트 포즈와 같은 이미지**다. 컴퓨트가 아예 돌지 않기 때문이다. 그래서
+     *          2만으로 "컴퓨트가 범인인가" 를 가를 수 있다.
+     *          3은 거기서 한 걸음 더 간다. 원소 번호를 읽으면 "제 원소를 가리켰는가" 를 위치 값과 **따로**
+     *          볼 수 있어서, 인덱싱이 틀린 것인지 내용이 틀린 것인지 이미지 한 장으로 가를 수 있다.
      */
     SW_GLOBAL_VARIABLE( int32, gv_morphDiag, 0, "메시 모프 진단 (0 평소 / 1 강제 켬 / 2 디스패치 생략 / 3 번호표)" );
 
@@ -52,11 +52,11 @@ namespace sw
 
     void FrameRenderer::dispatchInstanceAnimation( uint32 instanceCount )
     {
-        // 컴퓨트 프리패스 둘. 인스턴스 애니메이션이 먼저고 컬링이 나중이다. 순서가 뒤집히면 컬링이
+        // 컴퓨트 프리패스 둘이다. 인스턴스 애니메이션이 먼저고 컬링이 나중이다. 순서가 뒤집히면 컬링이
         // **이번 프레임에 회전하기 전의** 바운드로 판정한다. 애니메이션이 회전만 바꾸므로 지금 씬에서는
         // 결과가 같지만, 이동을 넣는 순간 한 프레임 늦은 컬링이 된다.
-        // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 안 쓰는 씬도
-        // 매 프레임 인스턴스당 96 바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
+        // 회전을 요청한 인스턴스가 하나도 없으면 디스패치 자체를 건너뛴다. 안 그러면 회전을 쓰지 않는 씬도
+        // 매 프레임 인스턴스당 96바이트를 읽고 아무 일도 하지 않는다. 컬링 능력과는 무관하다(DX11 도 돈다).
         if ( _gpuScene.isUploaded() && instanceCount > 0 && _gpuScene.getSpinInstanceCount() > 0 )
         {
             const RHIPipelineStateHandle animPSO = getEnginePSO( RenderPassType::InstanceAnim );
@@ -65,18 +65,18 @@ namespace sw
             {
                 FrameRendererUtil::GPUAnimParams animParams{};
                 animParams._time = getAnimationTime();
-                // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도"로 보이지 않는다.
+                // 기준 각속도와 편차 폭(라디안/초). 편차가 기준보다 커야 "다 같은 속도" 로 보이지 않는다.
                 animParams._baseSpeed     = FrameRendererUtil::kGPUSpinBaseSpeed;
                 animParams._speedRange    = FrameRendererUtil::kGPUSpinSpeedRange;
                 animParams._instanceCount = instanceCount;
                 _instanceAnimCb.update( *_pCmd, &animParams, sizeof( animParams ) );
 
                 // **쓰기 전에** UAV 상태로 옮긴다. 인스턴스 버퍼는 직전 프레임에 정점 셰이더가 읽던
-                // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 · Vulkan 에서 쓰기가
+                // (그리고 방금 CPU 업로드가 쓴) 상태라, 이 전이 없이 UAV 로 쓰면 DX12 와 Vulkan 에서 쓰기가
                 // 유효하지 않다. 화면은 조용히 예전 값 그대로다.
                 _pCmd->transitionBuffer( _gpuScene.getInstanceBuffer(), RHIBufferState::UnorderedAccess );
                 _pCmd->setComputePipelineState( animPSO );
-                // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 대응.
+                // AnimParams(b0) / g_InstancesRW(u0). instanceanim.hlsl 레지스터와 1:1 로 대응한다.
                 _pCmd->bindComputeConstantBuffer( _instanceAnimCb._index, 0 );
                 _pCmd->bindComputeUav( _gpuScene.getInstanceUav(), 0 );
                 const uint32 animGroups = ( instanceCount + 63u ) / 64u;
@@ -106,14 +106,14 @@ namespace sw
     {
         const int32 morphDiag = getEffectiveMeshMorphDiag();
         // 백엔드가 못 하면 풀을 만들지도 않는다. 배치의 base 가 kInvalidBase 로 남아 셰이더가
-        // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같은 자리). 자세한 사연은 RHICapabilities.h.
+        // 레스트 포즈로 그린다(언리얼의 스킨 캐시 폴백과 같다). 자세한 사연은 RHICapabilities.h 를 참고한다.
         _bMorphBindsRest = SW_FALSE;
         if ( _pDevice == nullptr )
             return;
         if ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 )
             return;
 
-        // 풀은 **배치가 든 메시**에서 만든다. 스냅샷 배치가 소유를 들고 있으므로 이 프레임 동안 살아 있다.
+        // 풀은 **배치가 가진 메시**에서 만든다. 스냅샷 배치가 소유권을 가지고 있으므로 이 프레임 동안 살아 있다.
         // 스킨드 메시는 스킨 구간(뒤)으로, 모프를 켠 메시는 모프 구간(앞)으로 간다.
         _listScratchMorphMesh.clear();
         _listScratchSkinMesh.clear();
@@ -123,7 +123,7 @@ namespace sw
             Mesh* pMesh = batch._mesh.get();
             if ( pMesh == nullptr )
                 continue;
-            // 정점 애니메이션(VAT) 메시는 컴퓨트 없이 정점 셰이더가 표를 읽는다 — 표 풀로 간다.
+            // 정점 애니메이션(VAT) 메시는 컴퓨트 없이 정점 셰이더가 테이블을 읽는다. 테이블 풀로 간다.
             if ( pMesh->findVertexAnimation() != nullptr )
             {
                 if ( std::find( _listScratchVertexAnimationMesh.begin(), _listScratchVertexAnimationMesh.end(), pMesh ) == _listScratchVertexAnimationMesh.end() )
@@ -133,7 +133,7 @@ namespace sw
             const bool bSkin = pMesh->hasSkin();
             if ( bSkin == false && pMesh->isGPUMorphEnabled() == false )
                 continue;
-            // 같은 메시가 여러 배치에 나올 수 있다(불투명 · 투명 · 뷰). 풀에는 한 번만 넣는다.
+            // 같은 메시가 여러 배치에 나올 수 있다(불투명, 투명, 뷰). 풀에는 한 번만 넣는다.
             vector<Mesh*>& listTarget = bSkin ? _listScratchSkinMesh : _listScratchMorphMesh;
             if ( std::find( listTarget.begin(), listTarget.end(), pMesh ) == listTarget.end() )
                 listTarget.push_back( pMesh );
@@ -142,7 +142,7 @@ namespace sw
         _meshMorphPool.rebuild( _pDevice, _listScratchMorphMesh, _listScratchSkinMesh );
         _meshMorphPool.uploadSkinPalettes( _pDevice, _gpuScene.getSkinPalettes(), _gpuScene.findSkinPaletteRows(), _gpuScene.findMorphWeights() );
 
-        // 배치에 구간을 적어 둔다. upload() 가 배치 표(g_SwBatches)에 싣는다. 풀에 못 들어간 메시는 kInvalidBase 라
+        // 배치에 구간을 기록해 둔다. upload() 가 배치 테이블(g_SwBatches)에 싣는다. 풀에 들어가지 못한 메시는 kInvalidBase 라
         // 셰이더가 레스트 포즈로 그린다.
         _gpuScene.assignMorphBases( _meshMorphPool );
         _vertexAnimationPool.rebuild( _pDevice, _listScratchVertexAnimationMesh );
@@ -162,16 +162,16 @@ namespace sw
         if ( _meshMorphPool.isDispatchable() == false )
             return;
 
-        // 진단 2: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 물린다(위 gv 주석 참고).
+        // 진단 2: 컴퓨트를 돌리지 않고 레스트 버퍼를 그대로 정점 셰이더에 바인딩한다(위 gv 주석 참고).
         if ( morphDiag == 2 )
         {
             _bMorphBindsRest = SW_TRUE;
             return;
         }
 
-        // 진단 3: 레스트 버퍼에 **위치는 진짜 값, 노멀 자리에는 원소 번호**를 적어 올리고 컴퓨트를
-        //         건너뛴다. 그러면 한 장으로 "정점 셰이더가 제 원소를 짚었는가"(번호표)와 "그 원소의
-        //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 못 가른다.
+        // 진단 3: 레스트 버퍼에 **위치는 진짜 값, 노멀 위치에는 원소 번호**를 기록해 올리고 컴퓨트를
+        //         건너뛴다. 그러면 이미지 한 장으로 "정점 셰이더가 제 원소를 가리켰는가"(원소 번호)와 "그 원소의
+        //         위치가 정점 스트림과 같은가" 를 **따로** 볼 수 있다. 값만 비교해서는 둘을 가를 수 없다.
         if ( morphDiag == 3 )
         {
             _listScratchMorphTag.clear();
@@ -209,8 +209,8 @@ namespace sw
             return;
         _meshMorphCb.update( *_pCmd, &morphParams, sizeof( morphParams ) );
 
-        // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
-        // DX12 · Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정).
+        // 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다. 정점 셰이더가 이 버퍼를 읽으므로 배리어가 빠지면
+        // DX12 와 Vulkan 에서 조용히 예전 값이 나온다(인스턴스 애니메이션과 같은 함정이다).
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( morphPSO );
         _pCmd->bindComputeConstantBuffer( _meshMorphCb._index, 0 );
@@ -227,7 +227,7 @@ namespace sw
         if ( _pDevice == nullptr || _pCmd == nullptr )
             return;
         const int32 morphDiag = getEffectiveMeshMorphDiag();
-        // 진단 2 · 3 은 레스트 버퍼를 그대로 물려 "컴퓨트 없이" 를 본다 — 스키닝도 돌리지 않는다(바인드 포즈).
+        // 진단 2와 3은 레스트 버퍼를 그대로 바인딩해 "컴퓨트 없이" 를 본다. 스키닝도 돌리지 않는다(바인드 포즈).
         if ( ( _pDevice->getCapabilities()._bGPUMeshMorph == SW_FALSE && morphDiag == 0 ) || morphDiag == 2 || morphDiag == 3 )
             return;
         if ( _meshMorphPool.isSkinDispatchable() == false )
@@ -244,11 +244,11 @@ namespace sw
         skinParams._skinDeltaBase     = _meshMorphPool.getSkinDeltaBase();
         _meshSkinCb.update( *_pCmd, &skinParams, sizeof( skinParams ) );
 
-        // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로(배리어가 빠지면 DX12 · Vulkan 에서 예전 값이 나온다).
+        // 모프와 같은 결과 버퍼의 뒤 구간에 쓴다. 쓰기 전에 UAV 로, 드로우 전에 다시 SRV 로 전이한다(배리어가 빠지면 DX12 와 Vulkan 에서 예전 값이 나온다).
         _pCmd->transitionBuffer( _meshMorphPool.getMorphBuffer()._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->setComputePipelineState( skinPSO );
         // SkinParams(b0) / g_RestVertices(t0, 원본 레스트) / g_SkinWeights(t1) / g_SkinPalette(t2) / g_SkinInstances(t3) / g_MorphVerticesRW(u0).
-        // meshskin.hlsl 레지스터와 1:1 대응.
+        // meshskin.hlsl 레지스터와 1:1 로 대응한다.
         _pCmd->bindComputeConstantBuffer( _meshSkinCb._index, 0 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinRestBuffer()._srv, 0 );
         _pCmd->bindComputeShaderResource( _meshMorphPool.getSkinWeightBuffer()._srv, 1 );
@@ -268,7 +268,7 @@ namespace sw
         //
         // **뷰마다 한 번씩** 돈다. 컬링 결과는 절두체에 종속이라, 메인 카메라로 거른 목록을 그림자 패스가
         // 쓰면 화면 밖에서 화면 안으로 그림자를 드리우는 물체가 사라진다. 언리얼이 뷰마다
-        // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV · PiP)도 자기 칸을 돈다.
+        // FInstanceCullingContext 를 두는 것과 같은 이유다. 이번 프레임에 그리는 추가 뷰(CCTV, PiP)도 자기 슬롯을 돈다.
         if ( _gpuScene.isUploaded() == false || _gpuScene.areIndirectCountsGPUFilled() == false )
             return;
         if ( getEnginePSO( RenderPassType::GPUCull ) == 0 || _gpuScene.getInstanceSrv() == kInvalidDescriptorIndex ||
@@ -282,7 +282,7 @@ namespace sw
         }
         for ( unique_ptr<ViewTarget>& pView : _listExtraView )
         {
-            // 컬링 못 한 추가 뷰는 그리지 않는다 — 가시 목록을 거는 프레임에 갱신 안 된 목록을 읽게 된다.
+            // 컬링하지 못한 추가 뷰는 그리지 않는다. 가시 목록을 바인딩하는 프레임에 갱신되지 않은 목록을 읽게 된다.
             if ( pView->_bRenderThisFrame == SW_TRUE && dispatchCullView( pView->_cullSlot, pView->_cullInput, instanceCount, pView.get() ) == false )
                 pView->_bRenderThisFrame = SW_FALSE;
         }
@@ -298,36 +298,36 @@ namespace sw
             return false;
 
         FrameRendererUtil::GPUCullParams cullParams{};
-        // 절두체는 **뷰가 이미 들고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
-        // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 안 바뀌는 상태가 생길 수 있다.
+        // 절두체는 **뷰가 이미 가지고 있다.** setViewProjection 이 행렬과 함께 갱신한다.
+        // 여기서 다시 뽑으면 행렬만 바뀌고 평면이 바뀌지 않는 상태가 생길 수 있다.
         Memory::copy( cullParams._arrPlane, renderView._frustum._arrPlane, sizeof( cullParams._arrPlane ) );
         cullParams._instanceCount = instanceCount;
         cullParams._batchCount    = _gpuScene.getIndirectCommandCount();
-        // 상수버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
+        // 상수 버퍼는 **뷰마다 자기 것**이다. 하나를 나눠 쓰면 뒤 업로드가 앞 디스패치가 읽을 내용을 덮어쓴다.
         renderView._cullCb.update( *_pCmd, &cullParams, sizeof( cullParams ) );
 
         // 컬링이 쓰는 두 버퍼는 UAV 상태여야 한다. 간접 인자는 직전 프레임에 IndirectArgument 로,
         // 가시 목록은 ShaderResource 로 두고 끝냈다.
         _pCmd->transitionBuffer( view._indirectArgs._buffer, RHIBufferState::UnorderedAccess );
         _pCmd->transitionBuffer( view._visibleInstances._buffer, RHIBufferState::UnorderedAccess );
-        // PSO 와 바인딩은 **뷰마다** 다시 건다. 아래 정렬 패스가 둘 다 갈아 끼우므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
+        // PSO 와 바인딩은 **뷰마다** 다시 설정한다. 아래 정렬 패스가 둘 다 교체하므로 다음 뷰가 정렬 PSO 로 컬링을 돌면 안 된다.
         _pCmd->setComputePipelineState( getEnginePSO( RenderPassType::GPUCull ) );
         // CullParams(b0) / g_Instances(t0) / g_BatchInfo(t1) / g_IndirectArgs(u0) / g_VisibleInstanceIds(u1).
-        // gpucull.hlsl 레지스터와 1:1 대응이다. 인스턴스 · 배치 구간은 뷰가 공유한다(절두체만 다르다).
+        // gpucull.hlsl 레지스터와 1:1 로 대응한다. 인스턴스와 배치 구간은 뷰가 공유한다(절두체만 다르다).
         _pCmd->bindComputeConstantBuffer( renderView._cullCb._index, 0 );
         _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
         _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
         _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
         _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
-        // **인스턴스마다** 스레드 하나다. 그래야 보이는 것을 골라 압축할 수 있다.
+        // **인스턴스마다** 스레드 하나를 쓴다. 그래야 보이는 것을 골라 압축할 수 있다.
         const uint32 groups = ( cullParams._instanceCount + 63u ) / 64u;
         if ( groups > 0 )
             _pCmd->dispatchCompute( groups, 1, 1 );
-        // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 자리 번호는
-        // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축 · 컬링 이득을 받는다(instancesort.hlsl).
+        // 압축이 끝났으면 투명 배치의 순서를 CPU 가 정한 순서(인스턴스 번호 오름차순)로 되돌린다. 원자 연산이 준 슬롯 번호는
+        // 완료 순서라 그대로 두면 블렌딩이 틀린다. 되돌리기가 GPU 에서 돌므로 투명도 압축과 컬링 이득을 받는다(instancesort.hlsl).
         // 컬링이 채운 목록을 정렬이 바로 읽는다. 상태가 그대로라 transitionBuffer 는
         // 아무것도 하지 않으므로 **UAV 배리어**를 따로 걸어야 한다. 없으면 정렬이 아직
-        // 안 채워진 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
+        // 채워지지 않은 목록을 읽는다(백엔드마다 결과가 달라 재현이 어렵다).
         _pCmd->uavBarrier( view._indirectArgs._buffer );
         _pCmd->uavBarrier( view._visibleInstances._buffer );
 
@@ -335,8 +335,8 @@ namespace sw
         if ( sortPSO != 0 && renderView._sortCb.isValid() && cullParams._batchCount > 0 )
         {
             FrameRendererUtil::GPUSortParams sortParams{};
-            // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳 — 정렬 레이어 · 시선 축). 추가 뷰는 CPU 가 그 뷰의 눈으로 다시 정한 순번(t2)으로.
-            // 카메라 위치는 상수버퍼 꼴을 지키려 그대로 싣는다.
+            // 셰이더는 인스턴스 번호로 정렬한다(정렬 기준은 CPU 한 곳이며 정렬 레이어와 시선 축을 쓴다). 추가 뷰는 CPU 가 그 뷰의 시점으로 다시 정한 순번(t2)으로 정렬한다.
+            // 카메라 위치는 상수 버퍼 레이아웃을 지키려고 그대로 싣는다.
             const bool bViewRank             = pExtraView != nullptr && pExtraView->_bHasTransparentRank == SW_TRUE;
             sortParams._arrCameraPos[0]      = renderView._position._x;
             sortParams._arrCameraPos[1]      = renderView._position._y;
@@ -346,11 +346,11 @@ namespace sw
             sortParams._bUseViewRank         = bViewRank ? 1u : 0u;
             sortParams._transparentTailBase  = bViewRank ? pExtraView->_transparentTailBase : 0u;
             const RHIDescriptorIndex rankSrv = bViewRank ? pExtraView->_transparentRank._srv : _transparentRankPlaceholder._srv;
-            // 정렬 상수버퍼도 **뷰마다 자기 것**이다 — 뷰마다 다른 값(눈 자리)을 실으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
+            // 정렬 상수 버퍼도 **뷰마다 자기 것**이다. 뷰마다 다른 값(눈 위치)을 싣으므로 나눠 쓰면 뒤 업로드가 앞 디스패치의 내용을 덮어쓴다.
             renderView._sortCb.update( *_pCmd, &sortParams, sizeof( sortParams ) );
 
             _pCmd->setComputePipelineState( sortPSO );
-            // 바인딩 자리는 컬링과 같다. 인자 · 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 표, 그 밖은 자리표다.
+            // 바인딩 위치는 컬링과 같다. 인자와 가시 목록을 그대로 읽고 쓴다. g_ViewRank(t2)는 추가 뷰의 순번 테이블이고, 그 밖의 뷰는 자리 표시용이다.
             _pCmd->bindComputeConstantBuffer( renderView._sortCb._index, 0 );
             _pCmd->bindComputeShaderResource( _gpuScene.getInstanceSrv(), 0 );
             _pCmd->bindComputeShaderResource( _gpuScene.getBatchInfoSrv(), 1 );
@@ -358,7 +358,7 @@ namespace sw
                 _pCmd->bindComputeShaderResource( rankSrv, 2 );
             _pCmd->bindComputeUav( view._indirectArgs._uav, 0 );
             _pCmd->bindComputeUav( view._visibleInstances._uav, 1 );
-            // 배치마다 워크그룹 하나. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
+            // 배치마다 워크그룹 하나를 쓴다. 그 배치의 목록을 그룹 공유 메모리 안에서 정렬한다.
             _pCmd->dispatchCompute( cullParams._batchCount, 1, 1 );
         }
 

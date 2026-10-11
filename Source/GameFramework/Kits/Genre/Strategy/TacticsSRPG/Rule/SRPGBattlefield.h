@@ -1,7 +1,7 @@
 /**
  * @file SRPGBattlefield.h
- * @brief 택틱스 SRPG 의 전장 — 격자 지형 · 유닛 배치 · 팀(아군 · 적 · 제3세력) · 페이즈 또는 개별 행동 순 · 이동 범위(ZOC) · 무기 사용 조건 · MAP 병기 범위 ·
- *        HP · EN · 탄수 · 기력 · 이동 회피 · 경험치 · 개발입니다.
+ * @brief 택틱스 SRPG 의 전장을 담습니다. 격자 지형, 유닛 배치, 팀(아군, 적, 제3세력), 페이즈 또는 개별 행동 순, 이동 범위(ZOC), 무기 사용 조건,
+ *        MAP 병기 범위, HP, EN, 탄수, 기력, 이동 회피, 경험치, 개발을 다룹니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -25,7 +25,7 @@ namespace sw
     class Archive;
     class GridReachability;
 
-    /** @brief 팀입니다. 다른 팀끼리는 모두 적입니다(제3세력은 양쪽 모두와 싸운다). */
+    /** @brief 팀입니다. 다른 팀끼리는 모두 적이며, 제3세력은 양쪽 모두와 싸웁니다. */
     enum class SRPGTeam : uint8
     {
         Player = 0,
@@ -33,17 +33,17 @@ namespace sw
         Third
     };
 
-    /** @brief 팀 수입니다. */
+    /** @brief 팀의 개수입니다. */
     static constexpr int32 kSRPGTeamCount = 3;
 
     /** @brief 차례 방식입니다. */
     enum class SRPGTurnMode : uint8
     {
-        Phases = 0, ///< 아군 페이즈 → 적 페이즈 → 제3세력 페이즈 — 팀의 모든 유닛이 행동하면 넘긴다(G 제네레이션 · 파이어 엠블렘)
-        Individual  ///< 유닛마다 반응 + 운동성 순서로(`TurnOrder` 라운드제)
+        Phases = 0, ///< 아군, 적, 제3세력 페이즈 순서로 진행하고, 팀의 모든 유닛이 행동하면 다음 페이즈로 넘긴다(G 제네레이션, 파이어 엠블렘)
+        Individual  ///< 유닛마다 반응과 운동성 순서로 진행한다(`TurnOrder` 라운드제)
     };
 
-    /** @brief 무기를 지금 쓸 수 있는가의 답입니다. */
+    /** @brief 무기를 지금 쓸 수 있는지에 대한 결과입니다. */
     enum class SRPGWeaponStatus : uint8
     {
         Ok = 0,
@@ -51,7 +51,7 @@ namespace sw
         NotEnoughEnergy,
         NoAmmo,
         LowMorale,
-        NotAfterMove, ///< 이동한 뒤에는 못 쓰는 무기
+        NotAfterMove, ///< 이동한 뒤에는 쓸 수 없는 무기이다
         CannotAct,    ///< 그 유닛의 차례가 아니거나 이미 공격했다
         OutOfRange,
         InvalidTarget
@@ -64,55 +64,55 @@ namespace sw
         int32        _baseCrit{ 5 };
         int32        _critPercent{ 150 }; ///< 크리티컬 피해 배율(%)
         int32        _minimumDamage{ 10 };
-        int32        _sizeHitStep{ 5 }; ///< 크기 한 단계 차이마다 명중 보정
+        int32        _sizeHitStep{ 5 }; ///< 크기가 한 단계 차이 날 때마다 주는 명중 보정
         int32        _moraleStart{ 100 };
         int32        _moraleMin{ 50 };
         int32        _moraleMax{ 150 };
         int32        _moraleOnHit{ 2 };              ///< 맞혔을 때
-        int32        _moraleOnKill{ 5 };             ///< 격파했을 때(맞힌 것에 더해서)
+        int32        _moraleOnKill{ 5 };             ///< 격파했을 때(맞혔을 때의 증가에 더해진다)
         int32        _moraleOnEvade{ 3 };            ///< 피했을 때
         int32        _moraleOnDamaged{ 1 };          ///< 맞았을 때
-        int32        _supportDefenseReduction{ 50 }; ///< 지원 방어로 대신 맞을 때 줄어드는 몫(%)
-        int32        _syncDamagePercent{ 50 };       ///< 동기 공격의 피해 몫(%)
-        int32        _dodgePerCell{ 5 };             ///< 이동 회피 — 움직인 칸마다 쌓이는 회피(%p)
+        int32        _supportDefenseReduction{ 50 }; ///< 지원 방어로 대신 맞을 때 줄어드는 피해 비율(%)
+        int32        _syncDamagePercent{ 50 };       ///< 동기 공격이 주는 피해 비율(%)
+        int32        _dodgePerCell{ 5 };             ///< 이동 회피에서 움직인 셀마다 쌓이는 회피(%p)
         int32        _dodgeMax{ 30 };
-        int32        _xpHit{ 10 };      ///< 맞혔을 때 경험치
-        int32        _xpKill{ 30 };     ///< 격파했을 때 경험치(맞힌 것에 더해서)
-        int32        _xpLevelStep{ 2 }; ///< 상대와 레벨 한 차이마다 더하고 빼는 경험치
+        int32        _xpHit{ 10 };      ///< 맞혔을 때 얻는 경험치
+        int32        _xpKill{ 30 };     ///< 격파했을 때 얻는 경험치(맞혔을 때의 경험치에 더해진다)
+        int32        _xpLevelStep{ 2 }; ///< 상대와 레벨이 한 단계 차이 날 때마다 더하거나 빼는 경험치
         SRPGTurnMode _turnMode{ SRPGTurnMode::Phases };
-        uint8        _bZoneOfControl{ SW_FALSE };   ///< 적과 이웃한 칸에 들어가면 거기서 멈춘다
+        uint8        _bZoneOfControl{ SW_FALSE };   ///< 적과 이웃한 셀에 들어가면 거기서 멈춘다
         uint8        _bSupportAttack{ SW_TRUE };    ///< 공격자와 이웃한 아군이 함께 친다
         uint8        _bSupportDefense{ SW_TRUE };   ///< 방어자와 이웃한 아군이 대신 맞는다
-        uint8        _bSyncAttack{ SW_FALSE };      ///< 메탈슬러그 택틱스 — 같은 적을 사거리에 둔 아군이 함께 쏜다
-        uint8        _bMoveDodge{ SW_FALSE };       ///< 메탈슬러그 택틱스 — 움직인 칸만큼 회피가 쌓인다(자기 차례가 오면 0)
+        uint8        _bSyncAttack{ SW_FALSE };      ///< 메탈슬러그 택틱스 방식이다. 같은 적을 사거리에 둔 아군이 함께 쏜다
+        uint8        _bMoveDodge{ SW_FALSE };       ///< 메탈슬러그 택틱스 방식이다. 움직인 셀 수만큼 회피가 쌓이고, 자기 차례가 오면 0 이 된다
         uint8        _bMapFriendlyFire{ SW_FALSE }; ///< MAP 병기가 아군도 친다
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 전장의 유닛 하나입니다. 번호는 `addUnit` 이 돌려준 자리이고 격파되어도 자리는 남습니다. */
+    /** @brief 전장의 유닛 하나입니다. 번호는 `addUnit` 이 반환한 슬롯이며, 격파되어도 슬롯은 남습니다. */
     struct SRPGUnit
     {
-        vector<const SRPGWeaponDef*> _listWeapon{}; ///< 기체 정의의 무기 순서
-        vector<int32>                _listAmmo{};   ///< 무기마다 남은 탄(탄 없는 무기는 0)
+        vector<const SRPGWeaponDef*> _listWeapon{}; ///< 기체 정의의 무기 순서를 따른다
+        vector<int32>                _listAmmo{};   ///< 무기마다 남은 탄이다(탄 없는 무기는 0)
         LevelProgress                _pilotLevel{};
-        LevelProgress                _unitLevel{}; ///< 기체 레벨 — 개발 조건
+        LevelProgress                _unitLevel{}; ///< 기체 레벨이다(개발 조건에 쓴다)
         const SRPGUnitDef*           _pDef{ nullptr };
         const SRPGPilotDef*          _pPilot{ nullptr };
         int2                         _cell{};
         int32                        _hp{ 0 };
         int32                        _en{ 0 };
         int32                        _morale{ 100 };
-        int32                        _dodge{ 0 };        ///< 이동 회피로 쌓인 것
-        int32                        _rosterIndex{ -1 }; ///< 캠페인 명단의 자리(없으면 −1)
+        int32                        _dodge{ 0 };        ///< 이동 회피로 쌓인 값
+        int32                        _rosterIndex{ -1 }; ///< 캠페인 명단의 슬롯이다(없으면 -1)
         SRPGTeam                     _team{ SRPGTeam::Player };
         uint8                        _bAlive{ SW_TRUE };
         uint8                        _bMoved{ SW_FALSE };
         uint8                        _bAttacked{ SW_FALSE };
         uint8                        _bActed{ SW_FALSE };
         uint8                        _bCommander{ SW_FALSE };
-        uint8                        _bSupportUsed{ SW_FALSE }; ///< 이번 차례에 지원 공격 · 방어를 했다
+        uint8                        _bSupportUsed{ SW_FALSE }; ///< 이번 차례에 지원 공격이나 지원 방어를 했다
 
         int32 computeStat( SRPGPilotStat stat ) const { return _pPilot != nullptr ? _pPilot->computeStat( stat, _pilotLevel.getLevel() ) : 0; }
     };
@@ -120,21 +120,21 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 전장 알림입니다. */
+    /** @brief 전장의 이벤트입니다. */
     struct SRPGEvent
     {
         enum class Kind : uint8
         {
-            TurnStarted = 0, ///< _value = 턴
-            PhaseStarted,    ///< _team
-            UnitTurnStarted, ///< 개별 행동 순 — _unit
-            Moved,           ///< _unit, _value = 걸은 칸
-            Hit,             ///< _unit 이 _other 를, _value = 피해
-            Missed,          ///< _unit 이 _other 를 놓쳤다
-            Destroyed,       ///< _unit 이 _other 에게 격파되었다(_other 는 −1 일 수 있다)
-            PilotLevelUp,    ///< _unit, _value = 새 레벨
-            UnitLevelUp,     ///< _unit, _value = 새 기체 레벨
-            Developed        ///< _unit
+            TurnStarted = 0, ///< `_value` 는 턴이다
+            PhaseStarted,    ///< `_team` 이 시작한 페이즈이다
+            UnitTurnStarted, ///< 개별 행동 순에서 `_unit` 의 차례가 시작되었다
+            Moved,           ///< `_unit` 이 움직였고 `_value` 는 걸은 셀 수이다
+            Hit,             ///< `_unit` 이 `_other` 를 맞혔고 `_value` 는 피해이다
+            Missed,          ///< `_unit` 이 `_other` 를 놓쳤다
+            Destroyed,       ///< `_unit` 이 `_other` 에게 격파되었다(`_other` 는 -1 일 수 있다)
+            PilotLevelUp,    ///< `_unit` 의 파일럿이 올랐고 `_value` 는 새 레벨이다
+            UnitLevelUp,     ///< `_unit` 의 기체가 올랐고 `_value` 는 새 기체 레벨이다
+            Developed        ///< `_unit` 이 개발되었다
         };
 
         int32    _unit{ -1 };
@@ -149,8 +149,8 @@ namespace sw
 {
     /**
      * @class SRPGBattlefield
-     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMission` 이 이 위에서 합니다.
-     * @details 카탈로그는 전장보다 오래 살아야 합니다(유닛이 정의 포인터를 든다). 결정적입니다 — 같은 씨앗 · 같은 명령이면 같은 결과입니다.
+     * @brief 엔진 없이 도는 전장 상태입니다. 전투 계산은 `SRPGCombat`, 적 AI 는 `SRPGCommanderAI`, 승패는 `SRPGMission` 이 이 클래스를 사용해 처리합니다.
+     * @details 카탈로그는 전장보다 오래 살아야 한다(유닛이 정의 포인터를 보관한다). 결과는 결정적이다. 같은 시드와 같은 명령이면 같은 결과가 나온다.
      */
     class SW_GF_API SRPGBattlefield
     {
@@ -162,59 +162,59 @@ namespace sw
 
         void               initialize( const SRPGCatalog* pCatalog, int32 width, int32 height, const hashed_string& defaultTerrain, const SRPGSettings& settings, uint32 seed );
         [[nodiscard]] bool setTerrain( const int2& cell, const hashed_string& terrainID );
-        /** @brief 사각형(양 끝 포함)을 한 지형으로 칠합니다. 칠한 칸 수입니다. */
+        /** @brief 사각형(양 끝 포함)을 한 지형으로 칠하고, 칠한 셀 수를 반환합니다. */
         int32 fillTerrain( const int2& fromCell, const int2& toCell, const hashed_string& terrainID );
-        /** @brief 유닛을 놓습니다. 모르는 기체 · 파일럿, 격자 밖, 이미 선 칸, 못 들어가는 지형이면 −1 입니다. */
+        /** @brief 유닛을 놓습니다. 모르는 기체나 파일럿이거나, 격자 밖이거나, 이미 유닛이 선 셀이거나, 못 들어가는 지형이면 -1 을 반환합니다. */
         int32 addUnit( const hashed_string& unitID, const hashed_string& pilotID, SRPGTeam team, const int2& cell, int32 pilotLevel = 1 );
         void  setCommander( int32 unitIndex, bool bCommander );
-        /** @brief 1 턴을 엽니다(유닛을 다 놓은 뒤). */
+        /** @brief 1턴을 시작합니다(유닛을 모두 놓은 뒤에 호출). */
         void beginBattle();
         /**
-         * @brief 전투 동안 공유 땅을 빌립니다 — 전장 전체(막힘 아님)를 한 번에 얻습니다(전장 칸 (0, 0) = 땅 칸 @p origin). 전투가 끝나면 `releaseLand` 로 놓습니다.
-         * @return 그 자리에 남의 땅이 있으면 false 이고 묶지 않습니다(전장은 단독). @p pLand 가 nullptr 이면 true 입니다. `initialize` 뒤에 부릅니다.
+         * @brief 전투 동안 공유 땅을 빌립니다. 전장 전체(막힘 아님)를 한 번에 얻으며, 전장 셀 (0, 0) 이 땅 셀 @p origin 에 해당합니다. 전투가 끝나면 `releaseLand` 로 반납합니다.
+         * @return 그 위치에 남의 땅이 있으면 false 이며 땅을 묶지 않는다(전장은 단독으로 동작한다). @p pLand 가 nullptr 이면 true 이다. `initialize` 뒤에 호출해야 한다.
          */
         [[nodiscard]] bool bindLand( LandRegistry* pLand, const int2& origin );
-        /** @brief 빌린 전장 땅을 놓고 풉니다(전투가 끝났다). */
+        /** @brief 빌린 전장 땅을 반납하고 바인딩을 해제합니다(전투가 끝났을 때). */
         void releaseLand();
 
         // --- 차례 ---
         bool canAct( int32 unitIndex ) const;
-        /** @brief 유닛의 행동을 끝냅니다. 페이즈의 모두가 끝났으면 다음 페이즈(또는 다음 유닛)로 넘깁니다. */
+        /** @brief 유닛의 행동을 끝냅니다. 페이즈의 모든 유닛이 끝났으면 다음 페이즈(또는 다음 유닛)로 넘깁니다. */
         void endUnitAction( int32 unitIndex );
         /** @brief 지금 페이즈를 통째로 끝냅니다(남은 유닛은 대기). 개별 행동 순이면 지금 유닛만 끝냅니다. */
         void     endPhase();
         SRPGTeam getPhaseTeam() const { return _phaseTeam; }
         int32    getTurn() const { return _turn; }
-        /** @brief 개별 행동 순에서 지금 차례인 유닛입니다(페이즈 방식이면 −1). */
+        /** @brief 개별 행동 순에서 지금 차례인 유닛을 반환합니다(페이즈 방식이면 -1). */
         int32 getActiveUnit() const { return _activeUnit; }
 
         // --- 이동 ---
-        /** @brief 유닛이 그 칸에 들어가는 비용입니다(지형 · 이동 타입 · 적성). 못 들어가면 −1 입니다 — 다른 유닛은 보지 않는다. */
+        /** @brief 유닛이 그 셀에 들어가는 비용을 반환합니다(지형, 이동 타입, 적성 반영). 들어갈 수 없으면 -1 이며, 다른 유닛은 고려하지 않습니다. */
         int32 computeTerrainCost( const SRPGUnit& unit, const int2& cell ) const;
-        /** @brief 그 칸이 @p unit 의 적과 이웃한가(ZOC)입니다. */
+        /** @brief 그 셀이 @p unit 의 적과 이웃한지(ZOC) 반환합니다. */
         bool isInEnemyZone( const SRPGUnit& unit, const int2& cell ) const;
-        /** @brief 이동 범위 — 적 칸은 막히고 아군 칸은 지나가되 서지 못한다. ZOC 면 적과 이웃한 칸에서 더 나아가지 못한다. */
+        /** @brief 이동 범위를 구합니다. 적이 선 셀은 막히고, 아군이 선 셀은 지나갈 수 있지만 멈출 수는 없습니다. ZOC 가 켜져 있으면 적과 이웃한 셀에서 더 나아가지 못합니다. */
         void computeMoveRange( int32 unitIndex, GridReachability& outReach ) const;
-        /** @brief 이동합니다(차례 · 아직 안 움직임 · 범위 안). 걸은 칸만큼 이동 회피가 쌓입니다. */
+        /** @brief 유닛을 이동합니다(차례이고, 아직 움직이지 않았고, 범위 안이어야 함). 걸은 셀 수만큼 이동 회피가 쌓입니다. */
         [[nodiscard]] bool moveUnit( int32 unitIndex, const int2& cell );
-        /** @brief "빨간 칸" — 이동 후 쓸 수 있는 무기는 갈 수 있는 모든 칸에서, 나머지는 지금 칸에서 닿는 칸입니다. */
+        /** @brief 위협 범위("빨간 칸")를 모읍니다. 이동 후 쓸 수 있는 무기는 갈 수 있는 모든 셀에서, 나머지는 지금 셀에서 닿는 셀을 기준으로 합니다. */
         void collectThreatCells( int32 unitIndex, vector<int2>& outListCell ) const;
 
         // --- 무기 ---
         const SRPGWeaponDef* findWeapon( const SRPGUnit& unit, int32 weaponIndex ) const;
-        /** @brief EN · 탄 · 기력 · 이동 후 조건입니다(차례와 사거리는 보지 않는다). */
+        /** @brief EN, 탄, 기력, 이동 후 사용 조건을 확인합니다(차례와 사거리는 보지 않습니다). */
         SRPGWeaponStatus computeWeaponStatus( const SRPGUnit& unit, int32 weaponIndex, bool bAfterMove ) const;
         static bool      isInWeaponRange( const SRPGWeaponDef& weapon, const int2& fromCell, const int2& toCell );
-        /** @brief EN · 탄을 씁니다. */
+        /** @brief EN 과 탄을 소모합니다. */
         void consumeWeapon( int32 unitIndex, int32 weaponIndex );
         /**
-         * @brief MAP 병기가 덮는 칸입니다(격자 밖은 뺀다). `Self` 는 @p aimCell 쪽으로 무늬를 돌리고, `Target` 은 @p aimCell 이 사거리 안이어야 합니다.
-         * @return 겨눌 수 없으면 false 입니다.
+         * @brief MAP 병기가 덮는 셀을 모읍니다(격자 밖은 뺍니다). `Self` 는 @p aimCell 쪽으로 패턴을 돌리고, `Target` 은 @p aimCell 이 사거리 안이어야 합니다.
+         * @return 겨눌 수 없으면 false 를 반환한다.
          */
         [[nodiscard]] bool collectMapCells( int32 unitIndex, int32 weaponIndex, const int2& aimCell, vector<int2>& outListCell ) const;
 
-        // --- 상태 변화(전투 계산이 부른다) ---
-        /** @brief 피해를 줍니다. 격파하면 true 입니다. */
+        // --- 상태 변화(전투 계산이 호출한다) ---
+        /** @brief 피해를 줍니다. 격파하면 true 를 반환합니다. */
         [[nodiscard]] bool applyDamage( int32 unitIndex, int32 amount, int32 attackerIndex );
         void               addMorale( int32 unitIndex, int32 delta );
         /** @brief 파일럿과 기체에 경험치를 줍니다. */
@@ -223,17 +223,18 @@ namespace sw
         void drainEvents( vector<SRPGEvent>& outListEvent );
 
         /**
-         * @brief 크기 · 칸마다 지형 정의 id · 유닛(기체 · 파일럿 id, 탄, 레벨 둘, 칸 · HP · EN · 기력 · 회피 · 명단 자리 · 팀 · 차례 비트) · 차례(`TurnOrder`) · 난수 ·
-         *        턴 · 활성 유닛 · 페이즈 팀을 씁니다. 정의는 id 로 싣고 카탈로그에서 찾습니다(무기 목록은 기체 정의에서 다시 만든다). 설정은 `initialize` 의 것이라 싣지 않고, 알림은 읽을 때 비웁니다.
+         * @brief 크기, 셀마다 지형 정의 id, 유닛(기체와 파일럿 id, 탄, 레벨 둘, 셀, HP, EN, 기력, 회피, 명단 슬롯, 팀, 차례 비트), 차례(`TurnOrder`), 난수,
+         *        턴, 활성 유닛, 페이즈 팀을 씁니다. 정의는 id 로 저장하고 읽을 때 카탈로그에서 찾습니다.
+         *        무기 목록은 기체 정의에서 다시 만들고, 설정은 `initialize` 에서 받으므로 저장하지 않습니다. 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 같은 카탈로그 · 같은 크기로 `initialize` 한 뒤에 부릅니다. 깨졌거나 없는 정의면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 같은 크기로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         // --- 개발 ---
-        /** @brief 기체 레벨 조건을 채운 개발 갈래입니다. */
+        /** @brief 기체 레벨 조건을 채운 개발 분기를 모읍니다. */
         void collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitID ) const;
-        /** @brief 다른 기체로 개발합니다(파일럿 · 위치 그대로, 기체 레벨 1, HP · EN · 탄 가득). 조건이 안 되면 false 입니다. */
+        /** @brief 다른 기체로 개발합니다. 파일럿과 위치는 그대로이고 기체 레벨은 1 이 되며 HP, EN, 탄이 가득 찹니다. 조건이 안 되면 false 를 반환합니다. */
         [[nodiscard]] bool developUnit( int32 unitIndex, const hashed_string& targetUnitID );
 
         // --- 조회 ---
@@ -241,11 +242,11 @@ namespace sw
         static int32          computeDistance( const int2& lhs, const int2& rhs );
         bool                  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         const SRPGTerrainDef* findTerrainAt( const int2& cell ) const;
-        /** @brief 그 칸에 선 살아 있는 유닛입니다. 없으면 −1 입니다. */
+        /** @brief 그 셀에 선 살아 있는 유닛을 반환합니다. 없으면 -1 입니다. */
         int32 findUnitAt( const int2& cell ) const;
-        /** @brief 유닛이 그 칸에서 쓰는 적성(%)입니다. */
+        /** @brief 유닛이 그 셀에서 쓰는 적성(%)을 반환합니다. */
         int32 computeAptitude( const SRPGUnit& unit, const int2& cell ) const;
-        /** @brief 그 팀의 살아 있는 유닛 수입니다. */
+        /** @brief 그 팀의 살아 있는 유닛 수를 반환합니다. */
         int32 countAlive( SRPGTeam team ) const;
 
         SRPGUnit*               findUnit( int32 unitIndex );
@@ -265,16 +266,16 @@ namespace sw
         void refillUnit( SRPGUnit& unit );
         bool isPhaseFinished() const;
 
-        vector<const SRPGTerrainDef*> _listTerrain; ///< 칸 → 지형
+        vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
         vector<SRPGUnit>              _listUnit;
         EventBuffer<SRPGEvent>        _eventBuffer;
-        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 의 "한 칸 한 번" 표시
+        mutable GridSearchScratch     _cellMarks; ///< `collectThreatCells` 가 "한 셀은 한 번만" 처리하려고 쓰는 표시이다
         SRPGSettings                  _settings;
         TurnOrder                     _turnOrder;
         GameRandom                    _random;
         const SRPGCatalog*            _pCatalog;
         GridTopology                  _topology;
-        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독)
+        LandBinding                   _land; ///< 전투 동안 빌린 공유 땅(없으면 단독 동작)
         int32                         _turn;
         int32                         _activeUnit;
         SRPGTeam                      _phaseTeam;

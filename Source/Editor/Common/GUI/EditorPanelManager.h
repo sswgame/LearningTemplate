@@ -1,6 +1,6 @@
 /**
  * @file EditorPanelManager.h
- * @brief 에디터 패널 인스턴스 중앙 등록 및 관리 (EditorContext 소유)
+ * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다. `EditorContext` 가 소유합니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -20,7 +20,7 @@ namespace sw
 namespace sw::editor
 {
 
-    /** @brief 에디터 패널 카테고리 */
+    /** @brief 에디터 패널의 카테고리입니다. */
     enum class EditorPanelCategory : uint8
     {
         Core = 0, // Hierarchy, Inspector, Scene, Game, Console, Profiler, ContentBrowser
@@ -30,16 +30,16 @@ namespace sw::editor
 
     struct EditorPanelRegistration;
 
-    /** @brief 등록된 에디터 패널 항목 메타데이터 */
+    /** @brief 등록된 에디터 패널 항목의 메타데이터입니다. */
     struct EditorPanelEntry
     {
         string                         _id;
         string                         _title;
         EditorPanelCategory            _category{ EditorPanelCategory::Core };
         unique_ptr<IEditorPanel>       _pInstance;
-        const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 줄(직접 registerPanel 한 것은 nullptr)
-        uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간 합(ns)
-        uint64                         _drawNanosMax{ 0 };        ///< 그 가운데 가장 긴 한 프레임(ns)
+        const EditorPanelRegistration* _pRegistration{ nullptr }; ///< 이 인스턴스를 만든 등록 항목. 직접 registerPanel 한 것은 nullptr 이다
+        uint64                         _drawNanosSum{ 0 };        ///< `-gv_editorPanelTimes` 가 모으는 그리기 시간의 합(ns)
+        uint64                         _drawNanosMax{ 0 };        ///< 그중 가장 긴 한 프레임의 시간(ns)
     };
 } // namespace sw::editor
 
@@ -47,9 +47,9 @@ namespace sw::editor
 {
     /**
      * @struct EditorPanelRegistration
-     * @brief 패널 한 종류의 등록 줄입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
-     * @details `_pID` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값입니다. `_order` 는 Panel 메뉴 · 그리기 순서이고,
-     *          카테고리는 Panel 메뉴의 Panels / Tools 묶음을 정합니다.
+     * @brief 패널 한 종류의 등록 항목입니다. 패널의 .cpp 가 `SW_EDITOR_PANEL` 로 둡니다.
+     * @details `_pID` 는 `windows.ini` 의 가시성 키이자 `-gv_editorOpenPanel` 의 값이다. `_order` 는 Panel 메뉴와 그리기 순서이고,
+     *          카테고리는 Panel 메뉴의 Panels 와 Tools 그룹을 정한다.
      */
     struct EditorPanelRegistration : EditorRegistration
     {
@@ -62,7 +62,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 등록 줄이 가리키는 패널 생성 함수입니다. */
+    /** @brief 등록 항목이 가리키는 패널 생성 함수입니다. */
     template <typename TPanel>
     unique_ptr<IEditorPanel> createEditorPanel()
     {
@@ -71,7 +71,7 @@ namespace sw::editor
 
     /**
      * @class EditorPanelManager
-     * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다(EditorContext 소유).
+     * @brief 에디터 패널 인스턴스를 한곳에서 등록하고 관리합니다. `EditorContext` 가 소유합니다.
      */
     class SW_EDITOR_API EditorPanelManager
     {
@@ -90,52 +90,52 @@ namespace sw::editor
         IEditorPanel*                   findPanel( string_view panelID ) const;
         bool                            setPanelOpen( string_view panelID, bool bOpen );
         void                            clear();
-        /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다(앞의 목록은 버립니다). */
+        /** @brief `SW_EDITOR_PANEL` 로 등록된 패널을 순서대로 만들어 둡니다. 이전 목록은 버립니다. */
         void registerDefaultPanels();
         /**
-         * @brief 등록 목록과 맞춥니다. 새 줄은 인스턴스를 만들고(지난번에 열려 있던 id 면 열린 채로), 사라진 줄의 인스턴스는 종료합니다.
-         * @details 세대(`EditorRegistrationList::getGeneration`)가 같으면 바로 돌아갑니다. 에디터 프레임 앞에서 부릅니다(`EditorContext::syncExtensionRegistrations`).
+         * @brief 등록 목록과 맞춥니다. 새 항목은 인스턴스를 만들고(지난번에 열려 있던 id 이면 열린 채로), 사라진 항목의 인스턴스는 종료합니다.
+         * @details 세대(`EditorRegistrationList::getGeneration`)가 같으면 바로 반환한다. 에디터 프레임 앞에서 호출한다(`EditorContext::syncExtensionRegistrations`).
          */
         void syncWithRegistry( IRHIDevice* pRHIDevice );
         /**
-         * @brief 등록 줄이 [@p pBegin, @p pEnd)(모듈 이미지) 안인 패널을 종료하고 지웁니다. 지운 수를 돌려줍니다.
-         * @details 이미지를 언로드하기 **전에** 부릅니다(`EditorModuleUnloadListener`). 저장하지 않은 문서는 경고하고 버립니다.
-         *          열림 상태는 id 로 기억해 같은 id 가 다시 등록되면 연 채로 만듭니다.
+         * @brief 등록 항목이 [@p pBegin, @p pEnd)(모듈 이미지) 안에 있는 패널을 종료하고 지웁니다. 지운 수를 반환합니다.
+         * @details 이미지를 언로드하기 전에 호출한다(`EditorModuleUnloadListener`). 저장하지 않은 문서는 경고하고 버린다.
+         *          열림 상태는 id 로 기억해 두었다가 같은 id 가 다시 등록되면 연 채로 만든다.
          */
         uint32 releasePanelsWithin( const void* pBegin, const void* pEnd, IRHIDevice* pRHIDevice );
         void   drawOpenPanels();
         void   preRenderOpenPanels( IRHIDevice* pRHIDevice );
         void   shutdownAllPanels( IRHIDevice* pRHIDevice );
-        /** @brief 포커스된 도구 문서가 dirty이면 저장하고 true입니다. */
+        /** @brief 포커스된 도구 문서가 dirty 이면 저장하고 true 를 반환합니다. */
         [[nodiscard]] bool saveFocusedDirtyDocument();
-        /** @brief 모든 더티 도구 문서를 저장합니다. 하나라도 실패하면 false입니다. */
+        /** @brief 모든 dirty 도구 문서를 저장합니다. 하나라도 실패하면 false 입니다. */
         [[nodiscard]] bool saveAllDirtyDocuments();
-        /** @brief 열린 패널 · 닫힌 패널을 모두 포함한 dirty 문서 개수입니다. */
+        /** @brief 열린 패널과 닫힌 패널을 모두 포함한 dirty 문서 개수를 반환합니다. */
         uint32 countDirtyDocuments() const;
-        /** @brief 모든 더티 도구 문서를 저장하지 않고 버립니다. */
+        /** @brief 모든 dirty 도구 문서를 저장하지 않고 버립니다. */
         void discardAllDirtyDocuments();
 
     private:
-        /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그로 찍습니다(`EditorPanelTime|<id>|avg … us|max … us`). */
+        /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그에 남깁니다(`EditorPanelTime|<id>|avg … us|max … us`). */
         void reportPanelTimes();
 
         vector<EditorPanelEntry> _listPanel;
-        vector<string>           _listRememberedOpenID; ///< 지운 패널 가운데 열려 있던 id(다시 등록되면 연다)
-        uint32                   _syncedGeneration;     ///< 마지막으로 맞춘 등록 세대(맞춘 적이 없으면 kNotSynced)
+        vector<string>           _listRememberedOpenID; ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
+        uint32                   _syncedGeneration;     ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
         uint32                   _panelTimeFrameCount;  ///< 패널 시간을 모은 프레임 수
-        bool                     _bPanelTimesReported;  ///< 한 번 찍었으면 더 모으지 않는다
+        bool                     _bPanelTimesReported;  ///< 한 번 기록했으면 더 모으지 않는다
 
-        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
+        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시값입니다. */
         static constexpr uint32 kNotSynced = invalid_index::kUint32;
     };
 } // namespace sw::editor
 
 /**
  * @brief 패널 종류를 그 패널의 .cpp 에서 등록합니다. 예: `SW_EDITOR_PANEL( HierarchyPanel, "hierarchy", EditorPanelCategory::Core, 100 );`
- * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현
- * @param pID      가시성 저장 키(리터럴, 종류 안에서 유일)
- * @param category Panel 메뉴의 묶음
- * @param order    Panel 메뉴 · 그리기 순서(작을수록 앞)
+ * @param TPanel   기본 생성자가 있는 `IEditorPanel` 구현입니다.
+ * @param pID      가시성을 저장하는 키입니다. 리터럴이며 종류 안에서 유일해야 합니다.
+ * @param category Panel 메뉴의 그룹입니다.
+ * @param order    Panel 메뉴와 그리기 순서입니다. 작을수록 앞입니다.
  */
 #define SW_EDITOR_PANEL( TPanel, pID, category, order ) \
     SW_EDITOR_REGISTER( ::sw::editor::EditorPanelRegistration, Panel_##TPanel, { pID, order }, category, &::sw::editor::createEditorPanel<TPanel> )

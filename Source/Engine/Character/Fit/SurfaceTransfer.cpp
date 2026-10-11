@@ -145,7 +145,7 @@ namespace sw
                     arrWeight[found] += weight;
                 }
             }
-            // 큰 가중치 넷만 남긴다(선택 정렬 — 많아야 열둘).
+            // 큰 가중치 넷만 남긴다(선택 정렬이며 많아야 열둘이다).
             SkinInfluence result;
             float32       total = 0.0f;
             for ( uint32 slot = 0; slot < CharacterGeometryConstant::kMaxSkinInfluence; ++slot )

@@ -1,7 +1,9 @@
 /**
  * @file BehaviorTree.h
- * @brief 행동 트리 — 정의(공유)와 실행기(행위자마다)를 나눈 언리얼식 트리입니다. 셀렉터 · 시퀀스 · 데코레이터(반전 · 성공 강제 · 반복 · 쿨다운 ·
- *        시간 제한 · 블랙보드 조건과 관찰 중단) · 작업 · 조건 · 대기.
+ * @brief 행동 트리를 정의합니다.
+ * @details 정의(여러 행위자가 공유)와 실행기(행위자마다)를 나눈 언리얼식 트리이다.
+ *          노드는 셀렉터, 시퀀스, 데코레이터, 작업, 조건, 대기가 있다.
+ *          데코레이터는 반전, 성공 강제, 반복, 쿨다운, 시간 제한, 블랙보드 조건(관찰 중단 포함)을 지원한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -16,7 +18,7 @@ namespace sw
 {
     class Blackboard;
 
-    /** @brief 노드가 돌려주는 상태입니다. */
+    /** @brief 노드가 반환하는 상태입니다. */
     enum class BehaviorStatus : uint8
     {
         Success = 0,
@@ -40,7 +42,7 @@ namespace sw
         Wait                 ///< `_seconds` 기다린다
     };
 
-    /** @brief 블랙보드 조건의 비교입니다. */
+    /** @brief 블랙보드 조건의 비교 방식입니다. */
     enum class BlackboardCompare : uint8
     {
         IsSet = 0,
@@ -54,9 +56,10 @@ namespace sw
     };
 
     /**
-     * @brief 블랙보드 조건이 결과가 바뀔 때 무엇을 멈추는가입니다(언리얼 Observer Aborts).
-     * @details `Self` — 이 가지가 도는 중에 조건이 거짓이 되면 가지를 멈춘다. `LowerPriority` — 이 가지보다 뒤(우선순위가 낮은) 가지가 도는 중에 조건이
-     *          참이 되면 그 가지를 멈추고 처음부터 다시 고른다. 노드는 우선순위 순서(깊이 우선)로 더한다 — `add*` 를 부르는 순서가 곧 그 순서다.
+     * @brief 블랙보드 조건의 결과가 바뀔 때 무엇을 멈출지 정합니다. 언리얼의 Observer Aborts 에 해당합니다.
+     * @details `Self` 는 이 가지가 도는 중에 조건이 거짓이 되면 가지를 멈춘다.
+     *          `LowerPriority` 는 이 가지보다 뒤(우선순위가 낮은) 가지가 도는 중에 조건이 참이 되면 그 가지를 멈추고 처음부터 다시 고른다.
+     *          노드는 우선순위 순서(깊이 우선)로 더하므로, `add*` 를 부르는 순서가 곧 우선순위이다.
      */
     enum class BehaviorAbortMode : uint8
     {
@@ -68,10 +71,10 @@ namespace sw
 
     struct BehaviorContext;
 
-    /** @brief 작업 · 조건 함수입니다. 작업은 끝날 때까지 `Running` 을 돌려주고, 중단되면 `_bAborted` 로 한 번 더 불려 뒷정리합니다. */
+    /** @brief 작업과 조건 함수입니다. 작업은 끝날 때까지 `Running` 을 반환하고, 중단되면 `_bAborted` 로 한 번 더 불려 뒷정리합니다. */
     using BehaviorTaskFunction = BehaviorStatus ( * )( BehaviorContext& context );
 
-    /** @brief 작업 함수가 받는 것입니다. */
+    /** @brief 작업 함수가 받는 인자입니다. */
     struct BehaviorContext
     {
         Blackboard* _pBlackboard{ nullptr };
@@ -85,7 +88,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 트리의 노드 하나(정의 — 상태 없음)입니다. */
+    /** @brief 트리의 노드 하나입니다. 정의일 뿐이며 상태는 없습니다. */
     struct BehaviorNode
     {
         string               _name{};
@@ -108,8 +111,10 @@ namespace sw
 {
     /**
      * @class BehaviorTree
-     * @brief 트리 정의입니다. 여러 행위자가 같은 트리를 나눠 쓰고 상태는 `BehaviorTreeRunner` 가 행위자마다 듭니다(언리얼 BT 에셋 · 인스턴스와 같다).
-     * @details 부모 −1 로 더한 첫 노드가 뿌리입니다. 함수 포인터는 게임 모듈의 것이니 핫 리로드 뒤에는 트리를 다시 만듭니다.
+     * @brief 트리 정의입니다. 여러 행위자가 같은 트리를 나눠 쓰고, 상태는 `BehaviorTreeRunner` 가 행위자마다 듭니다.
+     * @details 언리얼의 BT 에셋과 인스턴스의 관계와 같다.
+     *          부모를 −1 로 더한 첫 노드가 뿌리이다.
+     *          함수 포인터는 게임 모듈의 것이므로 핫 리로드 뒤에는 트리를 다시 만들어야 한다.
      * @code
      *     const int32 root  = tree.addSelector( -1, "Root" );
      *     const int32 fight = tree.addBlackboardCondition( root, "Target", BlackboardCompare::IsSet, 0.0f, BehaviorAbortMode::Both );
@@ -126,7 +131,7 @@ namespace sw
         int32 addSequence( int32 parent, const utf8* pName = "Sequence" );
         int32 addInverter( int32 parent );
         int32 addForceSuccess( int32 parent );
-        /** @brief @p count 번 되풀이(0 = 자식이 실패할 때까지)입니다. */
+        /** @brief 자식을 @p count 번 되풀이합니다. 0 이면 자식이 실패할 때까지 되풀이합니다. */
         int32 addRepeat( int32 parent, int32 count );
         int32 addCooldown( int32 parent, float32 seconds );
         int32 addTimeLimit( int32 parent, float32 seconds );
@@ -136,7 +141,7 @@ namespace sw
         int32 addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function );
         int32 addWait( int32 parent, float32 seconds );
 
-        /** @brief 뿌리가 있고, 데코레이터는 자식이 꼭 하나, 컴포짓은 하나 이상, 작업 · 조건은 함수가 있으면 true 입니다. */
+        /** @brief 트리가 올바르면 true 입니다. 뿌리가 있고, 데코레이터는 자식이 꼭 하나, 컴포짓은 하나 이상, 작업과 조건은 함수가 있어야 합니다. */
         bool                isValid() const;
         const BehaviorNode& getNode( int32 index ) const { return _listNode[static_cast<size_t>( index )]; }
         int32               getNodeCount() const { return static_cast<int32>( _listNode.size() ); }
@@ -155,8 +160,9 @@ namespace sw
 {
     /**
      * @class BehaviorTreeRunner
-     * @brief 행위자 하나의 트리 실행 상태입니다. 매 틱 뿌리부터 내려가되 도는 중인(Running) 가지는 그 자리에서 이어갑니다.
-     * @details 뿌리가 끝나면(성공 · 실패) 다음 틱에 처음부터 다시 돕니다. `getActiveLeafName` 은 디버그 표시(언리얼 BT 디버거의 깜빡이는 노드)에 씁니다.
+     * @brief 행위자 하나의 트리 실행 상태입니다. 매 틱 뿌리부터 내려가되, 도는 중인(Running) 가지는 그 자리에서 이어갑니다.
+     * @details 뿌리가 끝나면(성공이든 실패든) 다음 틱에 처음부터 다시 돈다.
+     *          `getActiveLeafName` 은 디버그 표시에 쓴다. 언리얼 BT 디버거에서 깜빡이는 노드와 같다.
      */
     class SW_GF_API BehaviorTreeRunner
     {
@@ -164,7 +170,7 @@ namespace sw
         BehaviorTreeRunner();
 
         void initialize( const BehaviorTree* pTree );
-        /** @brief 한 틱 돌립니다. 뿌리의 상태입니다. */
+        /** @brief 한 틱 돌리고 뿌리의 상태를 반환합니다. */
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
         void reset();
@@ -176,11 +182,11 @@ namespace sw
 
     private:
         BehaviorStatus tickNode( int32 index );
-        /** @brief 노드를 끝난 상태로 돌립니다(커서 · 타이머 · 횟수, 쿨다운은 남긴다). */
+        /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */
         void finishNode( int32 index );
-        /** @brief 도는 노드와 그 아래를 중단합니다 — 작업은 `_bAborted` 로 한 번 불린다. */
+        /** @brief 도는 노드와 그 아래를 중단합니다. 작업은 `_bAborted` 로 한 번 불립니다. */
         void abortNode( int32 index );
-        /** @brief 우선순위가 높은 가지의 조건이 거짓 → 참이 됐으면 true 입니다(관찰 중단 LowerPriority). */
+        /** @brief 우선순위가 높은 가지의 조건이 거짓에서 참이 됐으면 true 입니다. 관찰 중단 `LowerPriority` 가 씁니다. */
         bool pollHigherPriorityTrigger();
 
         const BehaviorTree* _pTree;

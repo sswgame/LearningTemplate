@@ -10,7 +10,7 @@ namespace sw
     {
         struct AdventureElementGridInternal
         {
-            /** @brief 알림 이름 → 열거입니다. 표의 알림 이름은 열거자 이름 그대로입니다. */
+            /** @brief 알림 이름을 열거형으로 바꿉니다. 테이블의 알림 이름은 열거자 이름과 같습니다. */
             static bool findEventType( const hashed_string& name, AdventureElementEventType& outType )
             {
                 struct NameType
@@ -108,7 +108,7 @@ namespace sw
         _updraftFlag           = _table.addFlag( "Updraft" );
         _burningStatus         = _table.addStatus( "Burning", ElementStatusKind::Age );
         _chargedStatus         = _table.addStatus( "Charged", ElementStatusKind::Countdown, _settings._chargeSteps );
-        // 재질 번호 = AdventureMaterial 의 순서
+        // 재질 번호는 `AdventureMaterial` 의 순서와 같다
         const int32 empty = _table.addMaterial( "Empty", {} );
         const int32 grass = _table.addMaterial( "Grass", { hashed_string( "Flammable" ), hashed_string( "Updraft" ) } );
         const int32 wood  = _table.addMaterial( "Wood", { hashed_string( "Flammable" ) } );
@@ -140,7 +140,7 @@ namespace sw
         _table.addStimulusRule( _iceStimulus, extinguish );
         _table.addStimulusRule( _iceStimulus, freeze );
 
-        // 부도체에 떨어진 번개는 그 칸만 — 그 위의 생물은 게임이 맞힌다.
+        // 부도체에 떨어진 번개는 그 칸에만 작용한다. 그 위의 생물은 게임이 처리한다.
         _electricStimulus           = _table.addStimulus( "Electric" );
         ElementStimulusRule conduct = Internal::makeRule( "Electrified" );
         conduct._flag               = conductive;
@@ -246,7 +246,7 @@ namespace sw
 
     bool AdventureElementGrid::readState( Archive& archive )
     {
-        // 격자가 크기 · 깨짐을 스스로 거절한다(그대로 둔다).
+        // 격자가 크기 불일치와 깨진 데이터를 스스로 거절하므로 그대로 둔다.
         if ( _grid.readState( archive ) == false )
             return false;
         _listGridEvent.clear();

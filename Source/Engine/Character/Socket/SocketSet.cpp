@@ -19,7 +19,7 @@ namespace sw
             static constexpr const utf8* kArrSocketAttribute[]      = { "name", "parent", "kind", "translation", "rotation", "scale", "preview", "fallback", "anchor" };
             static constexpr const utf8* kArrVirtualBoneAttribute[] = { "name", "from", "to", "weight" };
 
-            /** @brief 위층 항목의 적은 칸만 아래층 항목에 옮긴다. */
+            /** @brief 위층 항목에서 적은 필드만 아래층 항목에 옮깁니다. */
             static void mergeSocket( SocketDef& inoutLower, const SocketDef& upper )
             {
                 const uint16 mask = upper._fieldMask;

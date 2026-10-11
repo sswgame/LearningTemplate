@@ -17,7 +17,7 @@ namespace sw
     {
         struct UnitStatsComponentInternal
         {
-            /** @brief 틱 중의 피해 · 회복을 틱 직후로 미룹니다. 피해는 @p instigator 를 들고 간다 — 미룬 피해의 이벤트도 누가 냈는지 안다. */
+            /** @brief 틱 중의 피해와 회복을 틱 직후로 미룹니다. 미룬 피해도 @p instigator 를 유지하므로, 미룬 피해의 이벤트도 누가 냈는지 알 수 있습니다. */
             static void enqueueStatsMutation( GameObject* pOwner, int32 amount, bool bHeal, GameObjectHandle instigator )
             {
                 if ( pOwner == nullptr )
@@ -140,7 +140,7 @@ namespace sw
         if ( bCannotTakeDamage )
             return;
 
-        // 방어 식은 `DamageMath::applyArmor` 하나다(액션 룸의 적도 같은 식) — 고정 방어를 빼고 최소 1. 0 이하 피해는 맞지 않은 것이다(언리얼 `ApplyDamage` 가 0 을 버린다).
+        // 방어 공식은 `DamageMath::applyArmor` 하나다(액션 룸의 적도 같은 공식을 쓴다). 고정 방어를 빼고 최소 1을 보장한다. 0 이하의 피해는 맞지 않은 것으로 본다(언리얼 `ApplyDamage` 도 0 을 버린다).
         const int32 actualDamage = static_cast<int32>( DamageMath::applyArmor( static_cast<float32>( amount ), static_cast<float32>( _defense ), 0.0f, 1.0f ) );
         if ( actualDamage <= 0 )
             return;
@@ -156,8 +156,8 @@ namespace sw
             _invincibilityTime = _maxInvincibilityTime;
         }
 
-        // 피해가 HP 에 닿는 자리는 여기 하나다 — 알림도 여기서 한 번 낸다(깎인 값 · 남은 HP 를 아는 곳이 여기뿐이다). 컴포넌트의 구독자는 그 자리에서,
-        // "game" 채널은 버스 스레드면 그 자리에서 · 아니면 다음 processEvents 에 받는다(`GameEventUtil::send`).
+        // 피해가 HP 에 닿는 곳은 여기 하나뿐이다. 알림도 여기서 한 번 낸다(깎인 값과 남은 HP 를 아는 곳이 여기뿐이다). 컴포넌트의 구독자는 이 시점에 받고,
+        // "game" 채널은 버스 스레드면 이 시점에, 아니면 다음 processEvents 에 받는다(`GameEventUtil::send`).
         GameObject*        pOwner = getOwner();
         DamageAppliedEvent event;
         event._instigator  = instigator;

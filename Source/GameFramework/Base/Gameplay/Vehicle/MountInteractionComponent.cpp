@@ -47,7 +47,7 @@ namespace sw
         const VehicleSeatComponent* pCurrentSeat = MountUtil::findSeatOf( *pPawn );
         if ( pCurrentSeat != nullptr )
         {
-            // 운전석에서 내리는 것은 탈것 쪽 버튼이다 — 여기서는 승객석만.
+            // 운전석에서 내리는 것은 탈것 쪽 버튼이다. 여기서는 승객석만 처리한다.
             if ( pCurrentSeat->isDriverSeat() == false )
                 (void)MountUtil::dismount( *pPawn, false );
             return;

@@ -14,7 +14,7 @@ namespace sw
     {
         struct AnimCodecInternal
         {
-            /** @brief 가상 정점 넷 — 본 원점과 세 축 방향(곱하기 shell 거리)입니다. */
+            /** @brief 가상 정점 넷입니다. 본 원점과 세 축 방향(shell 거리를 곱한 위치)입니다. */
             static constexpr uint32 kVirtualVertexCount = 4;
 
             /** @brief 등록된 코덱 표입니다. 번호 순서입니다. */
@@ -92,7 +92,7 @@ namespace sw
         if ( rawClip._sampleCount == 0 || rawClip.getTrackCount() == 0 )
             return 0.0f;
 
-        // 블롭은 16 바이트 정렬이어야 한다 — 바이트 배열이 그 정렬을 보장하지 않으므로 정렬된 사본에서 측정한다.
+        // 블롭은 16 바이트 정렬이어야 한다. 바이트 배열이 그 정렬을 보장하지 않으므로 정렬된 사본에서 측정한다.
         const size_t           blockCount = ( byteCount + sizeof( float4 ) - 1 ) / sizeof( float4 );
         vector<AnimCodecBlock> listBlock( blockCount );
         Memory::copy( listBlock.data(), pBytes, byteCount );

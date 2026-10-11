@@ -17,17 +17,17 @@ namespace sw
     {
         struct Box2DPhysicsSceneQueryInternal
         {
-            /** @brief 위치 모터(관절 스프링)의 세기 — 목표에 1/5 초 안팎으로 붙는다. */
+            /** @brief 위치 모터(관절 스프링)의 세기입니다. 목표에 1/5 초 안팎으로 붙습니다. */
             static constexpr float32 kPositionMotorHertz        = 5.0f;
             static constexpr float32 kPositionMotorDampingRatio = 0.7f;
             /** @brief 무버 반복 수와 "더 움직이지 않는다" 로 볼 거리입니다(Box2D 무버 예제의 값). */
             static constexpr int32   kMoverIterationCount = 5;
             static constexpr float32 kMoverTolerance      = 0.01f;
             static constexpr int32   kMaxMoverPlaneCount  = 16;
-            /** @brief 디딤을 찾으려고 캡슐을 내려 보는 거리입니다. */
+            /** @brief 디딤면을 찾으려고 캡슐을 내려 보는 거리입니다. */
             static constexpr float32 kGroundProbeDistance = 0.05f;
 
-            /** @brief 질의 하나의 거름 · 가장 가까운 결과입니다(콜백 문맥). */
+            /** @brief 질의 하나의 필터와 가장 가까운 결과입니다(콜백 컨텍스트). */
             struct CastContext
             {
                 const Box2DPhysicsScene*  _pScene{ nullptr };
@@ -225,7 +225,7 @@ namespace sw
                 jointDef.maxLength          = desc._maxLimit;
                 if ( desc._bLimitsEnabled )
                 {
-                    // 범위가 있으면 막대가 아니라 줄이다 — 범위 안에서는 자유롭다.
+                    // 범위가 있으면 막대가 아니라 줄이다. 범위 안에서는 자유롭다.
                     jointDef.enableSpring = true;
                     jointDef.hertz        = 0.0f;
                 }
@@ -392,7 +392,7 @@ namespace sw
         float2                                       position = start;
         if ( deltaTime > 0.0f )
         {
-            // Box2D 무버: 겹친 면을 모아(`b2World_CollideMover`) 그 면들을 지키는 이동을 풀고(`b2SolvePlanes`) 그만큼 쓸어(`b2World_CastMover`) 옮긴다.
+            // Box2D 무버는 겹친 면을 모아(`b2World_CollideMover`) 그 면들을 지키는 이동을 풀고(`b2SolvePlanes`), 그만큼 쓸어(`b2World_CastMover`) 옮긴다.
             const float2 target = start + velocity * deltaTime;
             for ( int32 iteration = 0; iteration < Box2DPhysicsSceneQueryInternal::kMoverIterationCount; ++iteration )
             {
@@ -407,7 +407,7 @@ namespace sw
                     break;
             }
         }
-        // 디딤: 캡슐을 조금 내려 걸리는 면 가운데 걸을 수 있는 기울기가 있는가.
+        // 디딤: 캡슐을 조금 내려 걸리는 면 가운데 걸을 수 있는 기울기가 있는지 본다.
         const b2Capsule probe = makeMoverCapsule( *pRecord, position - float2{ 0.0f, Box2DPhysicsSceneQueryInternal::kGroundProbeDistance } );
         context._planeCount   = 0;
         b2World_CollideMover( _worldID, &probe, filter, &Box2DPhysicsSceneQueryInternal::collectPlane, &context );

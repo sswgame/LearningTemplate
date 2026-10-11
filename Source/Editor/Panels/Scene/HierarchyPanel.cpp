@@ -79,12 +79,12 @@ namespace sw::editor
                 // 2) 태그 문법 "tag:TagName"
                 if ( StringUtil::startsWith( pFilter, "tag:", true ) )
                 {
-                    // ID 의 원본은 `TagID::computeID` 다. 주의: `computeHash64` 를 기본 인자로 부르면 대소문자를 무시해
-                    // 태그 쪽(구별한다)과 어긋나고, 대문자로 시작하는 태그를 **하나도 찾지 못한다.**
+                    // ID 의 원본은 `TagID::computeID` 다. `computeHash64` 를 기본 인자로 호출하면 대소문자를 무시해서
+                    // 대소문자를 구별하는 태그 쪽과 어긋나고, 대문자로 시작하는 태그를 하나도 찾지 못한다.
                     //
-                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 그것을 보므로 `tag:Faction` 이 `Faction.Player` 까지
-                    // 잡는다. 리터럴 태그는 역조회 표에 등록되지 않아, ID 만 든 TagID 로는 계층 비교를 할 수
-                    // 없다. 필터 버퍼는 이 호출 동안 살아 있다.
+                    // 문자열도 함께 넘긴다. `isSubtagOf` 가 문자열을 보므로 `tag:Faction` 이 `Faction.Player` 까지
+                    // 찾는다. 리터럴 태그는 역조회 테이블에 등록되지 않아, ID 만 가진 TagID 로는 계층 비교를 할 수
+                    // 없다. 필터 버퍼는 이 호출 동안 유효하다.
                     const string_view tagFilter{ pFilter + 4 };
                     return pObj->hasTag( TagID{ TagID::computeID( tagFilter.data(), tagFilter.size() ), tagFilter.data() } );
                 }
@@ -93,14 +93,14 @@ namespace sw::editor
                 return EditorListFilter{ pFilter }.matches( pObj->getName().view() );
             }
 
-            /** @brief 이번 프레임에 그린 오브젝트 줄(위에서 아래 순서) — Shift 범위 선택 · Ctrl+A · 화살표가 지난 프레임의 것을 본다. */
+            /** @brief 이번 프레임에 그린 오브젝트 행을 위에서 아래 순서로 담습니다. Shift 범위 선택, Ctrl+A, 화살표가 지난 프레임의 것을 봅니다. */
             struct RowState
             {
                 vector<uint64> _listDrawnRow;
                 vector<uint64> _listPreviousRow;
-                uint64         _anchorObjectID{ 0 }; ///< 범위 선택의 시작(마지막으로 그냥 · Ctrl 누른 줄)
-                uint64         _revealObjectID{ 0 }; ///< 펼쳐서 보여 줄 오브젝트(뷰포트에서 골랐다)
-                uint64         _lastPrimaryID{ 0 };  ///< 지난 프레임의 주 선택 — 바깥에서 바뀌었는지 가린다
+                uint64         _anchorObjectID{ 0 }; ///< 범위 선택의 시작 행. 마지막으로 그냥 클릭하거나 Ctrl 을 누르고 클릭한 행이다
+                uint64         _revealObjectID{ 0 }; ///< 펼쳐서 보여 줄 오브젝트. 뷰포트에서 선택했다
+                uint64         _lastPrimaryID{ 0 };  ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
                 bool           _bClickedThisFrame{ false };
             };
 
@@ -122,8 +122,8 @@ namespace sw::editor
             }
 
             /**
-             * @brief 이 루트 줄을 그리지 않고 자리만 둘 수 있는지 봅니다 — 접혀 있고, 이름을 바꾸는 중이 아니고, 줄이 창의 보이는 범위 밖일 때.
-             * @details 트리 노드의 열림 상태는 drawGameObjectNode 와 같은 ID 로 읽는다(PushID( 오브젝트 id ) 안의 "###go<id>"). @p cursorY 는 이 줄이 놓일 화면 y 다.
+             * @brief 이 루트 행을 그리지 않고 공간만 둘 수 있는지 확인합니다. 접혀 있고, 이름을 바꾸는 중이 아니고, 행이 창의 보이는 범위 밖일 때 가능합니다.
+             * @details 트리 노드의 열림 상태는 drawGameObjectNode 와 같은 ID 로 읽는다(PushID( 오브젝트 id ) 안의 "###go<id>"). @p cursorY 는 이 행이 놓일 화면 y 다.
              */
             static bool canSkipRootRow( const GameObject* pObj, uint64 renamingObjectID, float32 cursorY, float32 rowHeight )
             {
@@ -230,13 +230,13 @@ namespace sw::editor
                     return;
                 static fixed_string<constant::kMaxBuffer64> s_searchBuf;
                 bool                                        bFailed{ false };
-                (void)EditorComponentMenu::drawAddComponentList( pObj, s_searchBuf, "hierarchy.addComponent", false, bFailed ); // 더했는지는 되돌리기가 기록한다
+                (void)EditorComponentMenu::drawAddComponentList( pObj, s_searchBuf, "hierarchy.addComponent", false, bFailed ); // 추가했는지는 되돌리기가 기록한다
                 if ( bFailed )
                     ImGui::OpenPopup( "AddCompFailed" );
                 ImGui::EndMenu();
             }
 
-            /** @brief 이 오브젝트의 컴포넌트 종류 · 태그마다 "그것을 가진 오브젝트 모두 선택" 을 고르는 메뉴입니다. */
+            /** @brief 이 오브젝트의 컴포넌트 종류와 태그마다 "그것을 가진 오브젝트 모두 선택" 을 고르는 메뉴입니다. */
             static void drawSelectSameMenu( GameObject* pObj, GameObjectManager* pManager )
             {
                 if ( pObj == nullptr || pManager == nullptr || ImGui::BeginMenu( "Select All With" ) == false )
@@ -343,7 +343,7 @@ namespace sw::editor
                                           ? pSceneComp->getComponentName().c_str()
                                           : "SceneComponent";
 
-                // 줄 앞에 컴포넌트 아이콘(언리얼 Outliner · Godot 씬 트리처럼 종류를 한눈에)
+                // 행 앞에 컴포넌트 아이콘을 그린다. 언리얼의 Outliner 나 Godot 의 씬 트리처럼 종류를 한눈에 알 수 있다
                 const utf8*                           pIcon = EditorComponentIcon::findRow( pSceneComp->getTypeInfo() )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 formatstring( arrLabel.data(), arrLabel.capacity(), "%# %###sc%#", pIcon, pCompName, pSceneComp->getComponentID() );
@@ -403,7 +403,7 @@ namespace sw::editor
 
                 ImGui::PushID( static_cast<int32>( objectID ) );
 
-                // 1) 눈 — 에디터에서만 숨김(저장 · 되돌리기 · 게임 동작에 남지 않는다 — 언리얼 · 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
+                // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
                 const bool bVisible = pObj->isHiddenInEditor() == false;
                 if ( EditorWidgets::drawToggleIconButton( "##visible", bVisible, editoricon::kEye, editoricon::kEyeSlash, SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
                                                           SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
@@ -412,7 +412,7 @@ namespace sw::editor
                 if ( EditorSelfTestMarks::isEnabled() )
                     EditorSelfTestMarks::note( ( string( "hierarchy.toggle." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
-                // 2) 자물쇠 — 뷰포트에서 고르지 못하게(Hierarchy 에서는 고른다). 저장하지 않는다.
+                // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
                 const bool bLocked = pContext->getWorkspace().isObjectLocked( objectID );
                 if ( EditorWidgets::drawToggleIconButton( "##lock", bLocked, editoricon::kLock, editoricon::kUnlock, SW_LOCKEY( "EditorScene", "LockedInViewport" ),
                                                           SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
@@ -421,8 +421,8 @@ namespace sw::editor
                     EditorSelfTestMarks::note( ( string( "hierarchy.lock." ) + pObj->getName().c_str() ).c_str() );
                 ImGui::SameLine();
 
-                // 뱃지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
-                // 타입 이름을 비교하면 게임이 넣은 컴포넌트는 뱃지가 없다.
+                // 배지는 리플렉션 Category 에서 가져온다. 위의 컴포넌트 추가 메뉴가 이미 쓰는 데이터다.
+                // 타입 이름을 비교하면 게임이 추가한 컴포넌트는 배지가 없다.
                 string badgeStr;
                 for ( const Component* pComp : pObj->getComponents() )
                 {
@@ -434,7 +434,7 @@ namespace sw::editor
                     EditorUtil::appendCategoryBadge( pTypeInfo->getCategory(), badgeStr );
                 }
 
-                // 오브젝트 아이콘: 빌보드 종류 컴포넌트(빛 · 카메라 · 오디오)가 있으면 그 아이콘, 없으면 오브젝트 아이콘이다.
+                // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
                 const utf8*                           pIcon = EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 fixed_string<constant::kMaxBuffer256> arrLabel;
                 if ( badgeStr.empty() == false )
@@ -446,16 +446,16 @@ namespace sw::editor
                 const bool bHasComponents = pObj->getComponentCount() > 0;
                 const bool bLeaf          = ( bHasChildGos == false && bHasComponents == false );
 
-                // 뷰포트에서 고른 오브젝트는 조상을 펼쳐 그 줄까지 보인다(언리얼 Outliner 의 선택 따라가기).
+                // 뷰포트에서 선택한 오브젝트는 조상을 펼쳐 그 행까지 보여 준다. 언리얼 Outliner 의 선택 따라가기에 해당한다.
                 RowState&         rowState      = getRowState();
                 const GameObject* pRevealTarget = rowState._revealObjectID != 0 ? pManager->findGameObjectByID( rowState._revealObjectID ) : nullptr;
                 if ( pRevealTarget != nullptr && isAncestorOf( pObj, pRevealTarget ) )
                     ImGui::SetNextItemOpen( true );
-                // 프리팹 인스턴스는 이름을 파랗게(유니티 Hierarchy).
+                // 프리팹 인스턴스는 이름을 파랗게 표시한다(유니티 Hierarchy).
                 const bool bPrefabInstance = pContext->getWorkspace().getGameObjectPrefabPath( objectID ).empty() == false;
                 if ( bPrefabInstance )
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HierarchyPanelInternal::kPrefabInstanceText ) );
-                // SpanAvailWidth — 선택 배경 · 클릭 영역이 앞의 가시성 토글 오른쪽부터다(SpanFullWidth 면 창 왼쪽부터 칠해 토글을 덮는다).
+                // SpanAvailWidth 를 쓰면 선택 배경과 클릭 영역이 앞의 가시성 토글 오른쪽부터 시작한다. SpanFullWidth 는 창 왼쪽부터 칠해서 토글을 덮는다.
                 const bool bOpen = ImGui::TreeNodeEx(
                     arrLabel.c_str(),
                     ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -479,7 +479,7 @@ namespace sw::editor
                     rowState._bClickedThisFrame = true;
                     if ( io.KeyShift && rowState._anchorObjectID != 0 )
                     {
-                        // Shift — 시작 줄부터 이 줄까지(지난 프레임에 그린 순서) 모두 고른다(유니티 · 언리얼 · 윈도 탐색기).
+                        // Shift 는 시작 행부터 이 행까지(지난 프레임에 그린 순서) 모두 선택한다. 유니티, 언리얼, 윈도 탐색기와 같다.
                         const vector<uint64>& listRow     = rowState._listPreviousRow;
                         size_t                anchorIndex = listRow.size();
                         size_t                clickIndex  = listRow.size();
@@ -502,7 +502,7 @@ namespace sw::editor
                                 if ( pRow != nullptr )
                                     pContext->getWorkspace().selectGameObject( pRow, SelectionMode::Add );
                             }
-                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add ); // 누른 줄이 주 선택
+                            pContext->getWorkspace().selectGameObject( pObj, SelectionMode::Add ); // 누른 행이 주 선택이다
                         }
                         else
                         {
@@ -516,7 +516,7 @@ namespace sw::editor
                     }
                 }
 
-                // 제자리 이름 바꾸기 입력
+                // 그 자리에서 이름을 바꾸는 입력
                 if ( renamingObjectID == objectID && EditorPlaySession::areSceneEditsAllowed() )
                 {
                     ImGui::SameLine();
@@ -529,12 +529,12 @@ namespace sw::editor
                     if ( ImGui::InputText( "##InlineRename", renameBuffer.data(), renameBuffer.capacity(),
                                            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll ) )
                     {
-                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
+                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
                         renamingObjectID = 0;
                     }
                     if ( ImGui::IsItemDeactivated() && ImGui::IsKeyPressed( ImGuiKey_Escape ) == false )
                     {
-                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절 — 이름이 그대로 남는다
+                        (void)EditorSceneCommands::rename( pObj, renameBuffer.c_str() ); // 빈 이름은 거절하므로 이름이 그대로 남는다
                         renamingObjectID = 0;
                     }
                     if ( ImGui::IsKeyPressed( ImGuiKey_Escape ) )
@@ -560,7 +560,7 @@ namespace sw::editor
                         if ( pComp == nullptr )
                             continue;
 
-                        // 노드마다, 프레임마다 묻는 곳이다. 그래서 리플렉션 캐스트 대신 생성자에서 세운 비트를 본다.
+                        // 노드마다 프레임마다 확인하는 곳이다. 그래서 리플렉션 캐스트 대신 생성자에서 설정한 비트를 본다.
                         if ( pComp->isSceneComponent() )
                         {
                             SceneComponent*       pSceneComp    = static_cast<SceneComponent*>( pComp );
@@ -625,9 +625,9 @@ namespace sw::editor
         }
 
         GameObjectManager* pManager = pScene->getObjectManager();
-        EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만, id 순 — 지우고 되돌려도 자리가 그대로다
+        EditorSceneCommands::collectRootsInOrder( *pManager, _listSceneObject ); // 루트만 id 순서로 모은다. 지우고 되돌려도 위치가 그대로다
 
-        // 줄 순서를 프레임마다 다시 모은다. 주 선택이 바깥(뷰포트 · 다른 패널)에서 바뀌었으면 그 줄을 펼쳐 보인다.
+        // 행 순서를 프레임마다 다시 모은다. 주 선택이 외부(뷰포트, 다른 패널)에서 바뀌었으면 그 행을 펼쳐 보여 준다.
         HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
         rowState._listPreviousRow.swap( rowState._listDrawnRow );
         rowState._listDrawnRow.clear();
@@ -641,7 +641,7 @@ namespace sw::editor
             rowState._bClickedThisFrame = false;
         }
 
-        // 상단 툴바: 생성 버튼 + 검색창
+        // 상단 툴바에는 생성 버튼과 검색창이 있다
         if ( EditorChrome::beginToolbar( "##HierarchyToolbar" ) )
         {
             const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
@@ -675,17 +675,17 @@ namespace sw::editor
         treeDesc._kind = editor::EditorSectionKind::Child;
         if ( EditorChrome::beginSection( treeDesc ) )
         {
-            // `drawGameObjectNode` 는 서브트리가 필터에 안 걸리면 조용히 빠진다. 그래서 같은 술어로
-            // 미리 세어, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
+            // `drawGameObjectNode` 는 서브트리가 필터에 걸리지 않으면 조용히 빠진다. 그래서 같은 술어로
+            // 미리 세어 두고, 전부 빠질 때는 빈 상자 대신 이유를 보여 준다.
             const EditorListFilter treeFilter{ _filterBuffer.c_str() };
             const bool             bFilterActive = treeFilter.isActive();
             uint32                 visibleRootCount{ 0 };
             uint32                 drawnRootCount{ 0 };
             uint64                 lastDrawnRootID{ 0 };
 
-            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈자리만 둔다 — 스크롤 막대와 다음 줄 위치는 그대로다. 모두 그리면 큐브 8000 개 씬에서 노드 8000 개
-            // (버튼 · 뱃지 문자열 · 트리 노드 · 드래그 드롭)를 프레임마다 그린다. 이어진 빈 줄은 빈자리 하나로 모은다.
-            // 접힌 루트 줄의 높이는 프레임 높이(버튼 · 트리 노드) + 줄 간격이다.
+            // 화면 밖의 접힌 루트는 그리지 않고 같은 높이의 빈 공간만 둔다. 스크롤 막대와 다음 행의 위치는 그대로다. 모두 그리면 큐브 8000개 씬에서 노드 8000개
+            // (버튼, 배지 문자열, 트리 노드, 드래그 앤 드롭)를 프레임마다 그린다. 이어진 빈 행은 빈 공간 하나로 합친다.
+            // 접힌 루트 행의 높이는 프레임 높이(버튼, 트리 노드)에 행 간격을 더한 값이다.
             const float32 rowStride        = ImGui::GetFrameHeightWithSpacing();
             const float32 rowSpacing       = rowStride - ImGui::GetFrameHeight();
             uint32        pendingSkipRow   = 0;
@@ -697,7 +697,7 @@ namespace sw::editor
                 ImGui::Dummy( ImVec2( 0.0f, static_cast<float32>( pendingSkipRow ) * rowStride - rowSpacing ) );
                 pendingSkipRow = 0;
             };
-            // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다(저장에서도 빠진다) — 목록에 내지 않는다.
+            // 화면을 그리는 에디터 카메라는 씬 오브젝트지만 편집 대상이 아니다. 저장에서도 빠진다. 그래서 목록에 표시하지 않는다.
             const CameraComponent* pEditorCamera       = EditorCamera::find( pScene );
             const GameObject*      pEditorCameraObject = pEditorCamera != nullptr ? pEditorCamera->getOwner() : nullptr;
             for ( GameObject* pObj : _listSceneObject )
@@ -766,12 +766,12 @@ namespace sw::editor
         if ( pContext == nullptr )
             return;
 
-        // 단축키(Ctrl+D 복제, Ctrl+C/V 복사 · 붙여 넣기, Ctrl+A 모두, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제)
+        // 단축키는 Ctrl+D 복제, Ctrl+C 와 Ctrl+V 복사와 붙여 넣기, Ctrl+A 모두 선택, ↑↓ 이동, F2 이름 바꾸기, Delete 삭제다
         if ( ImGui::IsWindowFocused( ImGuiFocusedFlags_ChildWindows ) && ImGui::GetIO().WantTextInput == false )
         {
             const ImGuiIO&   io              = ImGui::GetIO();
             EditorSelection& editorSelection = pContext->getEditorSelection();
-            // 사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 뺀다.
+            // 복사본으로 받는다. 아래 삭제가 순회 도중 선택 목록에서 항목을 빼기 때문이다.
             vector<GameObject*> listSel;
             editorSelection.getSelectedObjects( listSel );
             HierarchyPanelInternal::RowState& rowState = HierarchyPanelInternal::getRowState();
@@ -780,12 +780,12 @@ namespace sw::editor
             if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_V, false ) && EditorSceneCommands::hasCopiedObjects() )
             {
                 vector<GameObject*> listPasted;
-                EditorSceneCommands::pasteObjects( pManager, listPasted ); // 되돌리기 한 단계 · 붙여 넣은 것을 고른다
+                EditorSceneCommands::pasteObjects( pManager, listPasted ); // 되돌리기는 한 단계이고, 붙여 넣은 것을 선택한다
                 return;
             }
             if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_A, false ) )
             {
-                // 지난 프레임에 보인 줄을 모두 고른다(접힌 자식은 빠진다 — 유니티와 같다).
+                // 지난 프레임에 보인 행을 모두 선택한다. 접힌 자식은 빠진다. 유니티와 같다.
                 editorSelection.clearObjectSelection();
                 for ( const uint64 rowID : listRow )
                 {
@@ -811,13 +811,13 @@ namespace sw::editor
                 {
                     pContext->getWorkspace().selectGameObject( pNext, SelectionMode::Replace );
                     rowState._anchorObjectID    = pNext->getObjectID();
-                    rowState._bClickedThisFrame = true; // 키로 고른 것 — 펼쳐 보이기 대상이 아니다
+                    rowState._bClickedThisFrame = true; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
                 }
                 return;
             }
             if ( io.KeyCtrl && ImGui::IsKeyPressed( ImGuiKey_C, false ) && listSel.empty() == false )
             {
-                (void)EditorSceneCommands::copyObjects( listSel ); // 복사한 수는 붙여 넣을 때 보인다
+                (void)EditorSceneCommands::copyObjects( listSel ); // 복사한 수는 붙여 넣을 때 확인할 수 있다
                 return;
             }
 

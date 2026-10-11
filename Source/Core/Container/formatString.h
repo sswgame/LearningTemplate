@@ -16,9 +16,9 @@ namespace sw
 {
 
     // ------------------------------------------------------------------------------
-    // 1) Format — 정밀도 · 너비 · 기수 · 정렬. Fmt(value, Format) 으로 인자마다 지정한다
+    // 1) Format. 정밀도, 너비, 기수, 정렬을 정한다. Fmt(value, Format) 으로 인자마다 지정한다.
     // ------------------------------------------------------------------------------
-    /** @brief %# 자리표에 붙는 출력 옵션입니다. */
+    /** @brief %# 플레이스홀더에 붙는 출력 옵션입니다. */
     class Format
     {
         friend class FormatString;
@@ -243,7 +243,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) FormattedValue / Fmt — 값과 Format 을 인자 하나로 묶는다
+    // 2) FormattedValue / Fmt. 값과 Format 을 인자 하나로 묶는다.
     // ------------------------------------------------------------------------------
     template <typename T>
     /** @brief 값과 Format 을 같이 넘길 때 씁니다. */
@@ -273,20 +273,20 @@ namespace sw
     constexpr FormattedValue<T> Fmt( T&& value, const Format& format ) noexcept { return FormattedValue<T>( std::forward<T>( value ), format ); }
 
     // ------------------------------------------------------------------------------
-    // 3) FormatString — %# 를 인자로 바꿔 버퍼에 쓴다
-    //    자유 함수 formatstring 이 이 static 을 부른다
+    // 3) FormatString. %# 를 인자로 바꿔 버퍼에 쓴다.
+    //    자유 함수 formatstring 이 이 static 함수를 부른다.
     // ------------------------------------------------------------------------------
     /**
-     * @brief 포맷 문자열을 버퍼에 씁니다. 자리표는 두 종류입니다.
-     * @details - `%#`: 옵션이 없는 순수 자리표입니다. 두 글자만 소비하고, 뒤의 글자는 리터럴입니다(`%#dB`, `%#x%#`, `%#.txt`).
-     *          - printf 형식: 서식이 필요하면 이쪽을 씁니다. `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d`. 플래그 · 너비 · 정밀도 · 길이
-     *            수식어 · 변환 문자를 printf 대로 읽지만, 타입은 인자가 정합니다(`%d` 에 문자열을 주면 문자열로 씁니다).
-     *            공백 플래그(`% d`)는 없습니다.
-     *          - `%%` 는 퍼센트 문자입니다. 알아볼 수 없는 `%…` 는 리터럴로 두고 인자를 소비하지 않습니다.
-     *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 줄 수 있습니다.
-     * @note 인자 수는 Debug 빌드에서 실행 시점에 대조합니다. 자리표를 소비하는 그 자리에서 확인하므로 따로 세는 단계가 없습니다.
-     *       컴파일 시점 검사는 C++17 에서 함수 형태로는 불가능합니다(C++20 `consteval` 포맷 타입으로 갈 때 옮깁니다). 실행 시점
-     *       검사는 데이터에서 오는 포맷(현지화)까지 확인합니다. Release · Shipping 에서는 아무것도 하지 않습니다.
+     * @brief 포맷 문자열을 버퍼에 씁니다. 플레이스홀더는 두 종류입니다.
+     * @details - `%#`: 옵션이 없는 순수 플레이스홀더다. 두 글자만 소비하고 뒤의 글자는 리터럴이다(`%#dB`, `%#x%#`, `%#.txt`).
+     *          - printf 형식: 서식이 필요하면 이쪽을 쓴다. `%3d`, `%-20s`, `%08x`, `%.2f`, `%+d` 가 해당한다.
+     *            플래그, 너비, 정밀도, 길이 수식어, 변환 문자를 printf 와 같이 읽지만 타입은 인자가 정한다(`%d` 에 문자열을 주면 문자열로 쓴다).
+     *            공백 플래그(`% d`)는 없다.
+     *          - `%%` 는 퍼센트 문자다. 알아볼 수 없는 `%…` 는 리터럴로 두고 인자를 소비하지 않는다.
+     *          - 값 쪽 서식은 `Fmt( value, Format()... )` 로도 줄 수 있다.
+     * @note 인자 수는 Debug 빌드에서 실행 시점에 대조한다. 플레이스홀더를 소비하는 그 위치에서 확인하므로 따로 세는 단계가 없다.
+     *       컴파일 시점 검사는 C++17 에서 함수 형태로는 불가능하다(C++20 `consteval` 포맷 타입으로 옮길 때 추가한다). 실행 시점
+     *       검사는 데이터에서 오는 포맷(지역화)까지 확인한다. Release 와 Shipping 에서는 아무것도 하지 않는다.
      */
     class FormatString
     {
@@ -296,10 +296,10 @@ namespace sw
         static void formatstring( utf8* SW_RESTRICT pBuffer, uint32 capacity, string_view format, Args&&... args ) noexcept
         {
             SW_ASSERT( pBuffer != nullptr && capacity > 0 );
-            // **단언은 Debug 가 아니면 통째로 사라진다.** 그 뒤로 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰이는데(`write` 의
-            // 남은 자리 계산, 아래 종료 문자 위치), 0 이면 그 뺄셈이 언더플로해 4,294,967,295 가 된다. 그러면 `write` 가 **길이
-            // 제한 없이** 복사하고 종료 문자도 버퍼 밖에 쓴다. 지금 호출하는 곳들은 0 을 넘기지 않지만(`StringBuilder` 는 2 미만이면
-            // 버퍼를 늘리고 `CrashContext` 는 남은 자리를 먼저 확인한다) 이것은 공개 API 다.
+            // **단언은 Debug 가 아니면 통째로 사라진다.** 그런데 `capacity` 는 곳곳에서 `capacity - 1` 로 쓰인다(`write` 의
+            // 남은 공간 계산, 아래 종료 문자 위치). 0 이면 그 뺄셈이 언더플로해 4,294,967,295 가 되고, 그러면 `write` 가 **길이
+            // 제한 없이** 복사하며 종료 문자도 버퍼 밖에 쓴다. 지금 호출하는 곳은 0 을 넘기지 않지만(`StringBuilder` 는 2 미만이면
+            // 버퍼를 늘리고 `CrashContext` 는 남은 공간을 먼저 확인한다) 이 함수는 공개 API 다.
             if ( pBuffer == nullptr || capacity == 0 )
                 return;
 
@@ -310,7 +310,7 @@ namespace sw
             }
             else
             {
-                // 인자가 없으니 자리표도 없어야 한다. 있으면 호출하는 쪽이 인자를 빠뜨린 것이다.
+                // 인자가 없으니 플레이스홀더도 없어야 한다. 있으면 호출하는 쪽이 인자를 빠뜨린 것이다.
 #if defined( SW_DEBUG )
                 if ( findNextPlaceholder( format )._pos != string_view::npos )
                     reportArgumentMismatch( format, "placeholders but no arguments" );
@@ -321,7 +321,7 @@ namespace sw
             pBuffer[MathUtil::min( pos, capacity - 1 )] = '\0';
         }
 
-        /** @brief 자리표 수와 인자 수가 어긋난 호출을 Debug 에서 멈춰 세웁니다. 어느 포맷인지 stderr 에 출력하고(로거는 재귀가 되므로 쓸 수 없습니다) 디버그 브레이크를 겁니다. */
+        /** @brief 플레이스홀더 수와 인자 수가 어긋난 호출을 Debug 에서 멈춥니다. 어느 포맷인지 stderr 에 출력하고(로거는 재귀가 되므로 쓸 수 없습니다) 디버그 브레이크를 겁니다. */
         static void reportArgumentMismatch( string_view format, const utf8* pReason ) noexcept
         {
             std::fputs( "[formatstring] argument/placeholder mismatch (", stderr );
@@ -370,7 +370,7 @@ namespace sw
         template <typename T>
         static constexpr bool is_formatted_value_v = is_formatted_value<std::decay_t<T>>::value;
 
-        /** @brief %# 위치와 그 자리에 쓸 Format 입니다. */
+        /** @brief %# 위치와 그 위치에 쓸 Format 입니다. */
         struct PlaceholderMatch
         {
             size_t _pos = string_view::npos;
@@ -380,9 +380,9 @@ namespace sw
         };
 
         /**
-         * @brief `%` 뒤의 printf 서식(플래그 · 너비 · 정밀도 · 길이 · 변환 문자)을 읽어 Format 으로 옮깁니다.
-         * @details 문법은 printf 와 같습니다: `% [flags] [width] [.precision] [length] conversion`. 문자를 읽어 Format 의 스위치를
-         *          켜기만 하고, 값을 출력하는 코드는 건드리지 않습니다.
+         * @brief `%` 뒤의 printf 서식(플래그, 너비, 정밀도, 길이, 변환 문자)을 읽어 Format 으로 옮깁니다.
+         * @details 문법은 printf 와 같다. `% [flags] [width] [.precision] [length] conversion` 형식이다. 문자를 읽어 Format 의 스위치를
+         *          켜기만 하고, 값을 출력하는 코드는 건드리지 않는다.
          * @param format     `%` 바로 다음부터 남은 문자열
          * @param outFormat  읽어 낸 옵션을 켤 Format
          * @param outHasSpec 옵션을 하나라도 읽었으면 true
@@ -420,7 +420,7 @@ namespace sw
                         ++cursor;
                         break;
                     }
-                    // `#` 은 플래그가 아니다. `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 자리표라 여기로 오지 않는다.
+                    // `#` 은 플래그가 아니다. `%#` 은 findNextPlaceholder 가 두 글자만 소비하는 순수 플레이스홀더라 여기로 오지 않는다.
                     // 공백도 플래그로 받지 않는다. 받으면 `%# Failed` 의 'F' 가 변환 문자로 읽힌다. 서식이 아니면 0 을 반환한다.
                     default:
                     {
@@ -520,12 +520,12 @@ namespace sw
             return cursor + 2; // `%` + 여기까지
         }
 
-        /** @brief 다음 자리표를 찾습니다. */
+        /** @brief 다음 플레이스홀더를 찾습니다. */
         static constexpr PlaceholderMatch findNextPlaceholder( string_view format ) noexcept
         {
             PlaceholderMatch match;
             size_t           charIndex{ 0 };
-            // 한 글자씩 훑지 않고 '%' 를 바로 찾는다. find 는 memchr 로 처리된다. 포맷 문자열은 대개 리터럴이 길고 자리표가
+            // 한 글자씩 훑지 않고 '%' 를 바로 찾는다. find 는 memchr 로 처리된다. 포맷 문자열은 대개 리터럴이 길고 플레이스홀더가
             // 드물어서, 한 글자씩 훑으면 그것이 이 함수 시간의 대부분이 된다.
             while ( ( charIndex = format.find( '%', charIndex ) ) != string_view::npos )
             {
@@ -539,7 +539,7 @@ namespace sw
                             continue;
                         }
 
-                        // `%#` 은 순수 자리표다. 두 글자만 소비하고 뒤는 리터럴이다. 서식이 필요하면 printf 형식을 쓴다.
+                        // `%#` 은 순수 플레이스홀더다. 두 글자만 소비하고 뒤는 리터럴이다. 서식이 필요하면 printf 형식을 쓴다.
                         if ( format[charIndex + 1] == '#' )
                         {
                             match._pos = charIndex;
@@ -569,7 +569,7 @@ namespace sw
             return match;
         }
 
-        /** @brief 자리표 사이의 리터럴 구간을 씁니다. `%%` 는 `%` 하나로 씁니다. */
+        /** @brief 플레이스홀더 사이의 리터럴 구간을 씁니다. `%%` 는 `%` 하나로 씁니다. */
         static uint32 writeFormatPrefix( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view prefix ) noexcept
         {
             size_t prefixIndex{ 0 };
@@ -586,7 +586,7 @@ namespace sw
             return pos;
         }
 
-        /** @brief 자리표 하나에 인자 하나를 붙이고 나머지로 재귀합니다. */
+        /** @brief 플레이스홀더 하나에 인자 하나를 붙이고 나머지로 재귀합니다. */
         template <typename T, typename... Args>
         static uint32 formatInternal( utf8* SW_RESTRICT pBuffer, uint32 pos, uint32 capacity, string_view format, T&& value, Args&&... args ) noexcept
         {
@@ -603,7 +603,7 @@ namespace sw
                 }
                 else
                 {
-                    // 마지막 인자를 썼다. 나머지에 자리표가 남아 있으면 호출하는 쪽이 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
+                    // 마지막 인자를 썼다. 나머지에 플레이스홀더가 남아 있으면 호출하는 쪽이 인자를 빠뜨린 것이다(리터럴 `%#` 가 남는다).
 #if defined( SW_DEBUG )
                     if ( findNextPlaceholder( nextFormat )._pos != string_view::npos )
                         reportArgumentMismatch( nextFormat, "more placeholders than arguments" );
@@ -612,7 +612,7 @@ namespace sw
                 }
             }
 
-            // 자리표는 없는데 인자가 남았다. 호출하는 쪽이 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
+            // 플레이스홀더는 없는데 인자가 남았다. 호출하는 쪽이 인자를 더 넘긴 것이다. Release 는 조용히 버린다.
 #if defined( SW_DEBUG )
             reportArgumentMismatch( format, "more arguments than placeholders" );
 #endif
@@ -626,8 +626,8 @@ namespace sw
                 return pos;
 
             uint32 copyLength = MathUtil::min( static_cast<uint32>( str.length() ), capacity - 1 - pos );
-            // 잘리는 자리가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다 — 바이트 단위로 자르면 버퍼 끝에 걸친
-            // 한글 한 글자가 깨진 바이트로 남는다(로그 · 경로 표시).
+            // 잘리는 위치가 UTF-8 글자 한가운데면 그 글자의 선두 바이트 앞까지 물러난다. 바이트 단위로 자르면 버퍼 끝에 걸친
+            // 한글 한 글자가 깨진 바이트로 남는다(로그, 경로 표시).
             if ( copyLength < str.length() )
             {
                 while ( copyLength > 0 && ( static_cast<uint8>( str[copyLength] ) & 0xC0 ) == 0x80 )
@@ -642,10 +642,10 @@ namespace sw
 
         /**
          * @brief 값 하나를 버퍼에 붙입니다. pSpec 은 서식 문자열(`%5d` 등)이 준 서식이고, 없으면 nullptr 입니다.
-         * @details 값 변환(기수 · 정밀도)에는 Fmt 가 있으면 Fmt 의 서식을, 없으면 pSpec 을 씁니다. 너비 · 정렬에는 pSpec 이 있으면
-         *          pSpec 을, 없으면 Fmt 를 씁니다. 문자열 종류는 임시 버퍼를 거치지 않습니다(거치면 긴 문자열이 거기서 잘립니다).
-         *          널 포인터는 빠른 경로를 타면 안 됩니다. `string_view{ nullptr }` 는 strlen(nullptr) 이기 때문입니다(`nullptr`
-         *          리터럴도 C++17 에서는 string_view 로 변환 "가능" 합니다).
+         * @details 값 변환(기수, 정밀도)에는 Fmt 가 있으면 Fmt 의 서식을, 없으면 pSpec 을 쓴다. 너비와 정렬에는 pSpec 이 있으면
+         *          pSpec 을, 없으면 Fmt 를 쓴다. 문자열 종류는 임시 버퍼를 거치지 않는다(거치면 긴 문자열이 거기서 잘린다).
+         *          널 포인터는 빠른 경로를 타면 안 된다. `string_view{ nullptr }` 는 strlen(nullptr) 이기 때문이다(`nullptr`
+         *          리터럴도 C++17 에서는 string_view 로 변환 "가능"하다).
          */
         template <typename T>
         static uint32 addValue( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value, const Format* pSpec ) noexcept
@@ -677,9 +677,9 @@ namespace sw
         }
 
         /**
-         * @brief 문자열이 아닌 값을 변환해 붙입니다. 너비 맞춤이 없고 목적지에 자리가 있으면 바로 그 자리에 변환합니다.
-         * @details 그 밖의 경우(패딩이 필요하거나 버퍼 끝에 가까울 때)에만 임시 버퍼를 거칩니다. 잘림 규칙(앞부분만 남는다)은
-         *          write 가 지킵니다.
+         * @brief 문자열이 아닌 값을 변환해 붙입니다. 너비 맞춤이 없고 목적지에 공간이 있으면 바로 그 위치에 변환합니다.
+         * @details 그 밖의 경우(패딩이 필요하거나 버퍼 끝에 가까울 때)에만 임시 버퍼를 거친다. 잘림 규칙(앞부분만 남는다)은
+         *          write 가 지킨다.
          */
         template <typename T>
         static uint32 appendConverted( utf8* SW_RESTRICT pBuffer, const uint32 pos, const uint32 capacity, T&& value,
@@ -959,7 +959,7 @@ namespace sw
     };
 
     // ------------------------------------------------------------------------------
-    // 4) formatstring — FormatString::formatstring 의 자유 함수 진입점
+    // 4) formatstring. FormatString::formatstring 의 자유 함수 진입점이다.
     // ------------------------------------------------------------------------------
     /**
      * @brief 서식에 맞춘 문자열을 버퍼에 씁니다.

@@ -45,7 +45,7 @@ namespace sw
                 }
                 (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다
 
-                // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
+                // 로드하는 순간 모듈의 정적 등록기가 전역 헤드에 매달린다. 모듈 이름으로 등록해 두어야 언로드하기 전에 해제할 수 있다.
                 engine::registerModuleTypes( sw::config::kTargetEditorModule );
 
                 bool bSucceeded = false;
@@ -63,7 +63,7 @@ namespace sw
                 }
 
                 engine::unregisterModuleTypes( sw::config::kTargetEditorModule );
-                // 내리지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 올라와 있을 뿐이다 — 이유는 경고로 남는다.
+                // 언로드하지 못하면(다른 코드가 아직 그 이미지의 이벤트 채널을 구독한다) 프로세스 끝까지 로드된 채로 남을 뿐이다. 이유는 경고로 남는다.
                 (void)ModuleImageUtil::unloadModuleImage( sw::config::kTargetEditorModule, pLibraryModule );
                 return bSucceeded;
             }
@@ -89,14 +89,14 @@ namespace sw
 
     EditorModuleHost::~EditorModuleHost()
     {
-        // 공통 호스트의 소멸자 안에서는 가상 함수가 이 클래스로 오지 않는다 — 에디터를 여기서 먼저 내린다.
+        // 공통 호스트의 소멸자 안에서는 가상 함수가 이 클래스로 오지 않는다. 그래서 에디터를 여기서 먼저 종료한다.
         shutdown();
     }
 
     bool EditorModuleHost::loadModuleImages( LiveReloadManager* pLiveReloadManager, const ModuleCatalog& catalog, const ModuleResolution& resolution )
     {
         _bEditorModuleActive = resolution.isActive( config::kTargetEditorModule ) ? SW_TRUE : SW_FALSE;
-        // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다 — 카탈로그는 initialize 에 없다.
+        // 에디터 확장은 에디터를 켤 때만 로드한다(initialize 의 에디터 블록). 여기서는 이름과 의존만 적어 둔다. 카탈로그는 initialize 에 없다.
         _listEditorExtension.clear();
         for ( const string& moduleName : resolution._listLoadOrder )
         {
@@ -126,7 +126,7 @@ namespace sw
 #if !defined( SW_SHIPPING )
         if ( _bEnableEditor == SW_TRUE && _bEditorModuleActive == SW_FALSE )
         {
-            // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트 · 구성) — 에디터 없이 조용히 뜨지 않는다.
+            // -EnableEditor 를 줬는데 매니페스트가 에디터 모듈을 껐다(프로젝트나 구성 때문이다). 에디터 없이 조용히 시작하지 않는다.
             SW_LOG_ERROR( "-EnableEditor was given, but the module manifests turn %# off for this project", config::kTargetEditorModule );
             return false;
         }
@@ -169,13 +169,13 @@ namespace sw
 #if defined( SW_SHIPPING )
         (void)pLiveReloadManager; // 배포본에는 에디터 · 확장이 없다
 #else
-        // 확장 모듈은 EditorModule 과 자기 키트에 의존한다 — 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다(키트 → SWGame 과 같다).
+        // 확장 모듈은 EditorModule 과 자기 키트에 의존한다. 의존이 바뀌면 리로드 그래프가 확장을 다시 로드한다(키트와 SWGame 의 관계와 같다).
         // 인스턴스는 없다: 정적 등록자가 EditorModule 의 등록 목록에 오르고, 에디터 매니저가 다음 프레임에 맞춘다(EditorContext::syncExtensionRegistrations).
         for ( const EditorExtensionModule& extension : _listEditorExtension )
         {
             if ( pLiveReloadManager->registerModule( extension._name, extension._listDependency ) == false )
             {
-                // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다 — 에디터는 뜬다.
+                // 언리얼도 에디터 모듈 하나가 실패하면 그 플러그인만 끈다. 에디터는 시작한다.
                 SW_LOG_ERROR( "Editor extension module %# could not be loaded - the editor runs without it", extension._name.c_str() );
                 continue;
             }
@@ -192,7 +192,7 @@ namespace sw
         SW_LOG_ERROR( "Asset importing needs the editor module, which a Shipping build does not have - run it from a Dev build." );
         return false;
 #else
-        // 인스턴스 없이 부르므로 엔진 서비스 표를 직접 넘긴다 — 임포터가 작업 시스템으로 압축을 나눈다.
+        // 인스턴스 없이 부르므로 엔진 서비스 테이블을 직접 넘긴다. 임포터가 작업 시스템으로 압축을 나눈다.
         return EditorModuleHostInternal::callEditorModuleEntry<PFN_ImportEditorAssets>( kImportEditorAssetsSymbol, "Asset importing",
                                                                                         [kind, bCheckOnly]( PFN_ImportEditorAssets pfnImport, const ModuleService& service )
         {
@@ -267,7 +267,7 @@ namespace sw
         if ( _editorAPI.updateUI != nullptr )
             _editorAPI.updateUI( _editor );
 
-        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 칸 틱한 다음
+        // 에디터가 이번 프레임 입력을 처리한 **뒤에** 확정한다. Step 버튼은 이 갱신에서 눌리고, 씬을 한 틱 진행한 다음
         // endEditorFrame 에서 소비된다. 이 질의를 프레임 앞으로 옮기면 Step 이 틱 없이 소비되어 아무 일도 일어나지 않는다.
         getMutableFrameState()._bTickScene = queryTickScene() ? SW_TRUE : SW_FALSE;
         sampleViewTargets();
@@ -298,7 +298,7 @@ namespace sw
     }
 
     // ======================================================================
-    // LiveReload 콜백 — 에디터
+    // LiveReload 콜백. 에디터.
     // ======================================================================
 
     void EditorModuleHost::onBeforeEditorReload()
@@ -341,7 +341,7 @@ namespace sw
     }
 
     // ======================================================================
-    // 공통 호스트가 부르는 자리 — 내리기 · 비우기
+    // 공통 호스트가 부르는 지점. 언로드와 비우기.
     // ======================================================================
 
     void EditorModuleHost::onBeforeSuspendModules()
@@ -394,7 +394,7 @@ namespace sw
         if ( pRHI == nullptr || pRHI->hasDevice() == false )
             return false;
 
-        // 기동과 같은 순서다 — 게임이 먼저 서고 에디터가 그 타입 · 서비스를 본다.
+        // 기동과 같은 순서다. 게임이 먼저 스폰되고 에디터가 그 타입과 서비스를 본다.
         bool bOk = true;
         if ( recreateGameInstance( pGameModule ) == false )
             bOk = false;

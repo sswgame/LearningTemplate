@@ -10,7 +10,7 @@ namespace sw
     {
         struct AudioEngineMusicInternal
         {
-            /** @brief 스팅어 보이스의 구간 표시입니다(레이어가 아니라 구간이 바뀌어도 페이드하지 않는다). */
+            /** @brief 스팅어 보이스의 구간 표시입니다. 레이어가 아니라 구간이 바뀌어도 페이드하지 않습니다. */
             static constexpr int32 kStingerSegment = -2;
         };
     } // namespace
@@ -66,7 +66,7 @@ namespace sw
         else if ( sync == AudioMusicSync::SegmentEnd )
             unit = static_cast<float64>( _pMusic->computeSegmentFrames( segmentIndex ) );
 
-        // 구간 시작에서 센 다음 경계 — 박 · 마디는 지금이 경계면 지금, 구간 끝은 지금 돌고 있는 한 바퀴의 끝.
+        // 구간 시작에서 센 다음 경계를 구한다. 박과 마디는 지금이 경계면 지금이고, 구간 끝은 지금 돌고 있는 한 바퀴의 끝이다.
         const float64 elapsed  = MathUtil::max( 0.0, static_cast<float64>( now ) - static_cast<float64>( _musicSegmentStart ) );
         const float64 steps    = sync == AudioMusicSync::SegmentEnd ? MathUtil::floor( elapsed / unit ) + 1.0 : MathUtil::ceil( elapsed / unit );
         uint64        boundary = _musicSegmentStart + static_cast<uint64>( steps * unit + 0.5 );
@@ -90,7 +90,7 @@ namespace sw
         const AudioMusicTransitionDesc* pRule       = _pMusic->findTransition( currentName, segment );
         const float32                   fadeIn      = pRule != nullptr ? pRule->_fadeInSeconds : 0.0f;
 
-        // 이미 전환을 기다리는 중이면 목적지만 바꾼다 — 경계와 옛 구간의 페이드는 그대로다.
+        // 이미 전환을 기다리는 중이면 목적지만 바꾼다. 경계와 이전 구간의 페이드는 그대로다.
         if ( _musicPendingSegment >= 0 )
         {
             if ( targetSegment == _musicPendingSegment )
@@ -190,7 +190,7 @@ namespace sw
         const uint64 now      = _renderedFrameCount;
         const uint64 blockEnd = now + audio::kBlockFrameCount;
 
-        // 경계가 이 블록 안에 들면 지금 구간을 넘긴다(소리는 보이스의 지연 · 페이드가 샘플 단위로 맞춘다).
+        // 경계가 이 블록 안에 들어오면 지금 구간을 넘긴다(소리는 보이스의 지연과 페이드가 샘플 단위로 맞춘다).
         if ( _musicPendingSegment >= 0 && _musicPendingFrame < blockEnd )
         {
             _musicSegment        = _musicPendingSegment;
@@ -198,7 +198,7 @@ namespace sw
             _musicPendingSegment = -1;
         }
 
-        // 루프하지 않는 구간 — 다음 구간이 있으면 끝에 잇고, 없으면 끝나면 멈춘다.
+        // 루프하지 않는 구간이다. 다음 구간이 있으면 끝에 연결하고, 없으면 끝나면 멈춘다.
         if ( _musicSegment >= 0 && _musicPendingSegment < 0 )
         {
             const AudioMusicSegmentDesc& segment = _pMusic->_listSegment[static_cast<size_t>( _musicSegment )];

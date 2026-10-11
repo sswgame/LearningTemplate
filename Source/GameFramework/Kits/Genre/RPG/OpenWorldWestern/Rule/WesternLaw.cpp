@@ -86,7 +86,7 @@ namespace sw
             report._bMasked = bMasked ? SW_TRUE : SW_FALSE;
             if ( witness._bLawman != SW_FALSE )
             {
-                // 보안관은 그 자리에서 — 같은 사건의 다른 신고 대기는 필요 없다.
+                // 보안관은 그 자리에서 신고한다. 같은 사건의 다른 신고 대기는 필요 없다.
                 applyReport( report );
                 for ( size_t index = _listPending.size(); index > 0; --index )
                 {
@@ -136,7 +136,7 @@ namespace sw
     {
         if ( deltaTime <= 0.0f || _pCatalog == nullptr )
             return;
-        // 신고 — 먼저 다다른 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서로 보아 결과가 늘 같다.
+        // 먼저 도착한 목격자가 신고하면 같은 사건의 나머지는 지운다. 넣은 순서대로 확인하므로 결과가 항상 같다.
         for ( PendingReport& report : _listPending )
         {
             report._remaining.tick( deltaTime );
@@ -257,7 +257,7 @@ namespace sw
     bool WesternLawState::readState( Archive& archive )
     {
         uint32 recordCount = 0;
-        // 기록마다 지역(4) + 안 보인 시간 · 현상금 · 수배(12) + 보는지(1)
+        // 기록마다 지역(4) + 안 보인 시간, 현상금, 수배(12) + 보는지(1) 바이트
         if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 17, recordCount ) == false )
             return false;
         vector<RegionRecord> listRecord( recordCount );
@@ -275,7 +275,7 @@ namespace sw
         }
 
         uint32 pendingCount = 0;
-        // 대기마다 범죄 · 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1)
+        // 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
         if ( StateArchiveUtil::readCount( archive, 25, pendingCount ) == false )
             return false;
         vector<PendingReport> listPending( pendingCount );
@@ -348,7 +348,7 @@ namespace sw
         const float32 scale  = report._bMasked != SW_FALSE ? pRegion->_maskedBountyScale : 1.0f;
         record._bounty += static_cast<int32>( MathUtil::round( static_cast<float32>( pCrime->_bounty ) * scale ) );
         record._unseenTime = 0.0f;
-        _bDisguised        = SW_FALSE; // 새로 신고된 모습 — 갈아입은 옷도 이제 알려졌다
+        _bDisguised        = SW_FALSE; // 새로 신고된 모습이므로 갈아입은 옷도 이제 알려졌다
         pushEvent( WesternLawEvent::Kind::Reported, report._regionID, record._bounty, report._incidentID, report._crimeID, report._witnessID );
         if ( pCrime->_wanted > 0 )
         {

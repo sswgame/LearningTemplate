@@ -55,7 +55,7 @@ namespace sw
                 return position._x == 0.0f && position._y == 0.0f && position._z == 0.0f && rotation._x == 0.0f && rotation._y == 0.0f && rotation._z == 0.0f;
             }
 
-            /** @brief 상자 반 크기에 맞는 볼록 반지름 — 기본값(0.05)이 반 크기보다 크면 Jolt 가 상자를 거부한다. */
+            /** @brief 상자 반 크기에 맞는 볼록 반지름입니다. 기본값(0.05)이 반 크기보다 크면 Jolt 가 상자를 거부합니다. */
             static float32 computeBoxConvexRadius( const float3& halfExtents )
             {
                 float32 smallest    = halfExtents._x < halfExtents._y ? halfExtents._x : halfExtents._y;
@@ -67,7 +67,7 @@ namespace sw
             /**
              * @brief 만들 때 넘기는 각속도를 바디 상한 안으로 줄입니다.
              * @details Jolt 는 상한을 넘는 시작 각속도에 단언한다. 상한에 붙어 돌던 바디에서 읽은 값(갈라진 파괴 덩어리가 부모 운동을 이을 때)도
-             *          길이를 다시 측정하면 반올림으로 상한을 한 ulp 넘을 수 있어 조금 안쪽으로 줄인다.
+             *          길이를 다시 측정하면 반올림으로 상한을 한 ulp 넘을 수 있어서, 조금 안쪽으로 줄인다.
              */
             static JPH::Vec3 clampAngularVelocity( const JPH::Vec3& velocity, float32 maxLength )
             {
@@ -83,7 +83,7 @@ namespace sw
             {
                 if ( pMaterial == nullptr || pMaterial == JPH::PhysicsMaterial::sDefault.GetPtr() )
                     return nullptr;
-                // 이 씬이 짓는 셰이프는 모두 `JoltPhysicsMaterial` 을 단다(기본 재질만 예외).
+                // 이 씬이 만드는 셰이프는 모두 `JoltPhysicsMaterial` 을 단다(기본 재질만 예외).
                 return static_cast<const JoltPhysicsMaterial*>( pMaterial );
             }
         };
@@ -129,7 +129,7 @@ namespace sw
 
     JoltPhysicsScene::~JoltPhysicsScene()
     {
-        // 바퀴 차 · 관절 → 캐릭터 → 바디 순서로 내린다(차 · 관절이 바디를 가리킨다).
+        // 바퀴 차와 관절, 캐릭터, 바디 순서로 해제한다(차와 관절이 바디를 가리킨다).
         _vehicles.forEach( [this]( VehicleRecord& vehicle )
         { removeVehicleConstraint( vehicle ); } );
         _vehicles.clear();
@@ -378,7 +378,7 @@ namespace sw
         }
         JPH::StaticCompoundShapeSettings compound;
         compound.SetEmbedded();
-        ShapeDescList listDesc; // 선 그리기용 — 자식 서술자를 이어 붙인다
+        ShapeDescList listDesc; // 선 그리기용이다. 자식 서술자를 이어 붙인다.
         for ( const PhysicsShapeHandle& child : listChild )
         {
             const ShapeRecord* pChild = _shapes.get( child.getSlot() );
@@ -520,7 +520,7 @@ namespace sw
 
     void JoltPhysicsScene::createBodies( span<const PhysicsBodyDesc3D> listDesc, vector<PhysicsBodyHandle>& outListBody )
     {
-        // 넓은 단계 트리를 한 번에 고치려고 움직이는 것과 정적인 것을 따로 모아 묶음으로 넣는다.
+        // 넓은 단계 트리를 한 번에 고치려고, 움직이는 것과 정적인 것을 따로 모아 배치로 넣는다.
         vector<JPH::BodyID> listMovingID;
         vector<JPH::BodyID> listStaticID;
         outListBody.reserve( outListBody.size() + listDesc.size() );
@@ -644,7 +644,7 @@ namespace sw
         else
         {
             bodyInterface.RemoveBody( pRecord->_bodyID );
-            // 빠진 바디의 접촉은 Jolt 가 알리지 않는다 — 추적기가 끝낸다.
+            // 빠진 바디의 접촉은 Jolt 가 알리지 않는다. 추적기가 끝낸다.
             _contactTracker.removeBodies( span<const PhysicsBodyHandle>{ &body, 1 } );
         }
         pRecord->_bEnabled = bEnabled;
@@ -748,7 +748,7 @@ namespace sw
         JPH::BodyInterface& bodyInterface = _system.GetBodyInterface();
         if ( pRecord->_type == PhysicsBodyType::Static )
         {
-            // 정적으로 만든 바디는 움직임 정보가 없다 — `_bAllowTypeChange` 로 만든 것만 바꿀 수 있다.
+            // 정적으로 만든 바디는 움직임 정보가 없다. `_bAllowTypeChange` 로 만든 것만 바꿀 수 있다.
             const JPH::BodyLockRead lock{ _system.GetBodyLockInterface(), pRecord->_bodyID };
             if ( lock.Succeeded() && lock.GetBody().GetMotionPropertiesUnchecked() == nullptr )
             {
@@ -841,7 +841,7 @@ namespace sw
     void JoltPhysicsScene::recordContact( const JPH::Body& bodyA, const JPH::Body& bodyB, const JPH::ContactManifold& manifold, JPH::ContactSettings& ioSettings,
                                           uint8 kind )
     {
-        // 서브 셰이프의 재질로 마찰 · 반발을 섞는다(바디 값은 첫 셰이프의 재질).
+        // 서브 셰이프의 재질로 마찰과 반발을 섞는다(바디 값은 첫 셰이프의 재질).
         const JoltPhysicsMaterial* pMaterialA = JoltPhysicsSceneInternal::findOurMaterial( bodyA.GetShape()->GetMaterial( manifold.mSubShapeID1 ) );
         const JoltPhysicsMaterial* pMaterialB = JoltPhysicsSceneInternal::findOurMaterial( bodyB.GetShape()->GetMaterial( manifold.mSubShapeID2 ) );
         if ( pMaterialA != nullptr && pMaterialB != nullptr )
@@ -913,7 +913,7 @@ namespace sw
 
     void JoltPhysicsScene::flushContactReports()
     {
-        // 잡 스레드가 붙인 순서는 매번 다르다 — 바디 쌍 · 서브 셰이프 · 종류로 줄 세워 같은 입력이면 같은 이벤트를 낸다.
+        // 잡 스레드가 붙인 순서는 매번 다르다. 바디 쌍, 서브 셰이프, 종류 순으로 정렬해 같은 입력이면 같은 이벤트를 낸다.
         std::sort( _listContactReport.begin(), _listContactReport.end(), &JoltPhysicsScene::isEarlierReport );
         for ( ContactReport& report : _listContactReport )
         {

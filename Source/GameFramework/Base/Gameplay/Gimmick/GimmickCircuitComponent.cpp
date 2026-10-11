@@ -140,7 +140,7 @@ namespace sw
         for ( const GimmickNodeDesc& desc : _listNode )
         {
             GimmickNodeDef& node = outDef.addNode( desc._id, desc._kind );
-            // "name=value; name=value" — 값에는 공백이 들어갈 수 있다("0 3 0").
+            // "name=value; name=value" 형식이다. 값에는 공백이 들어갈 수 있다("0 3 0").
             size_t start = 0;
             while ( start < desc._params.size() )
             {
@@ -207,7 +207,7 @@ namespace sw
         Component::onBeginPlay();
         setTickGroup( TickGroup::PrePhysics );
         if ( _circuit.isBuilt() == false && rebuild() && _stateBytes.empty() == false )
-            (void)_circuit.loadState( _stateBytes ); // 모양이 다른 저장이면 false — 회로는 처음 상태로 시작한다
+            (void)_circuit.loadState( _stateBytes ); // 구조가 다른 저장이면 false 이고, 이 경우 회로는 처음 상태로 시작한다
         bindNodes();
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;

@@ -35,7 +35,7 @@ namespace sw::editor
 
     namespace
     {
-        /** @brief 이 TU 전용 도우미 모음입니다(유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다). */
+        /** @brief 이 TU 전용 도우미 모음입니다. 유니티 빌드에서 이름이 충돌하지 않도록 TU 이름을 붙입니다. */
         struct InputMapPanelInternal
         {
             static constexpr Color kStickBg{ Color::fromBytes( 30, 30, 30, 255 ) };
@@ -43,17 +43,17 @@ namespace sw::editor
             static constexpr Color kStickDeadzone{ Color::fromBytes( 80, 40, 40, 255 ) };
             static constexpr Color kStickDot{ Color::fromBytes( 50, 200, 50, 255 ) };
 
-            /** @brief 마우스 단추 상태 글자 색(눌림 · 뗌)입니다. */
+            /** @brief 마우스 버튼 상태 문구의 색입니다. 눌림과 뗌에 따라 다릅니다. */
             static constexpr Color kButtonDownText{ 0.2f, 1.0f, 0.2f, 1.0f };
             static constexpr Color kButtonUpText{ 0.4f, 0.4f, 0.4f, 1.0f };
-            /** @brief 표의 열 하나입니다. 폭이 0 이면 남는 폭을 나눠 가집니다(Stretch). */
+            /** @brief 테이블의 열 하나입니다. 폭이 0 이면 남는 폭을 나눠 가집니다(Stretch). */
             struct TableColumn
             {
                 const utf8* _pLabel;
                 float32     _width;
             };
 
-            /** @brief 표를 열고 열 · 머리 줄을 둡니다. 열렸으면 true 이고, 그때 부르는 쪽이 `ImGui::EndTable` 을 부릅니다. */
+            /** @brief 테이블을 열고 열과 헤더 행을 만듭니다. 열렸으면 true 이며, 이때 호출하는 쪽이 `ImGui::EndTable` 을 호출해야 합니다. */
             template <size_t kColumnCount>
             static bool beginColumnTable( const utf8* pTableID, const TableColumn ( &arrColumn )[kColumnCount], ImGuiTableFlags flags )
             {
@@ -70,7 +70,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 새 줄을 열고 첫 열에 이름을 쓴 뒤 둘째 열로 갑니다(액션 · 레이어 표의 줄 머리). */
+            /** @brief 새 행을 열고 첫 열에 이름을 쓴 뒤 둘째 열로 이동합니다. 액션과 레이어 테이블의 행 머리입니다. */
             static void beginNamedRow( const hashed_string& name )
             {
                 ImGui::TableNextRow();
@@ -79,7 +79,7 @@ namespace sw::editor
                 ImGui::TableNextColumn();
             }
 
-            /** @brief ImGui 키 하나와 엔진 키 하나의 짝입니다. 두 열거형에서 연속이 아닌 키만 표로 둡니다. */
+            /** @brief ImGui 키 하나와 엔진 키 하나의 대응입니다. 두 열거형에서 연속이 아닌 키만 테이블에 둡니다. */
             struct ImGuiKeyPair
             {
                 ImGuiKey _imguiKey;
@@ -135,7 +135,7 @@ namespace sw::editor
                 {   ImGuiKey_KeypadEnter,    Key::NumpadEnter},
             };
 
-            /** @brief ImGuiKey 의 연속 구간(시작 · 개수)을 엔진 키의 연속 구간으로 옮깁니다. */
+            /** @brief ImGuiKey 의 연속 구간(시작, 개수)을 엔진 키의 연속 구간으로 변환합니다. */
             static Key findPressedInRange( ImGuiKey firstImGuiKey, Key firstKey, int32 count )
             {
                 for ( int32 offset = 0; offset < count; ++offset )
@@ -148,9 +148,9 @@ namespace sw::editor
 
             /**
              * @brief 이번 프레임에 눌린 키를 ImGui 에서 읽습니다. 없으면 `Key::Unknown` 입니다.
-             * @details 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 쥐고 있고(`WantCaptureKeyboard`), 에디터는 그 키를
-             *          게임 입력으로 넘기지 않습니다(`ImGuiEditor::processEvent`). 그래서 `InputManager::wasKeyPressed` 를
-             *          물으면 키가 영원히 오지 않습니다. 키는 창이 받은 곳에서 읽습니다.
+             * @details 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 가져가고(`WantCaptureKeyboard`), 에디터는 그 키를
+             *          게임 입력으로 넘기지 않는다(`ImGuiEditor::processEvent`). 그래서 `InputManager::wasKeyPressed` 로
+             *          물으면 키가 영원히 오지 않는다. 키는 창이 받은 곳에서 읽는다.
              */
             static Key findPressedKey()
             {
@@ -172,9 +172,9 @@ namespace sw::editor
             }
 
             /**
-             * @brief 활성 입력 장치 종류의 표시 이름입니다.
-             * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 늘 쓰이지 않는 저장이 됩니다(분석기가 열거자를 모두 알기
-             *          때문에 default 도 쓰이지 않습니다). 값을 반환하는 함수로 두면 그런 곳이 생기지 않습니다.
+             * @brief 활성 입력 장치 종류의 표시 이름을 반환합니다.
+             * @details 값을 먼저 넣고 switch 로 덮어쓰면 둘 중 하나는 항상 쓰이지 않는 저장이 된다. 분석기가 열거자를 모두 알기
+             *          때문에 default 도 쓰이지 않는다. 값을 반환하는 함수로 두면 이런 문제가 생기지 않는다.
              */
             static const utf8* glyphStyleName( InputGlyphStyle type )
             {
@@ -192,7 +192,7 @@ namespace sw::editor
                 return "Unknown";
             }
 
-            /** @brief 게임패드 배터리 잔량의 표시 이름입니다. */
+            /** @brief 게임패드 배터리 잔량의 표시 이름을 반환합니다. */
             static const utf8* batteryLevelName( GamepadBatteryLevel level )
             {
                 switch ( level )
@@ -214,7 +214,7 @@ namespace sw::editor
     SW_LOG_CALLER( "InputMapPanel" );
 
     InputMapPanel::InputMapPanel()
-        : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다(열린 채 시작하면 떠 있는 창으로 화면 가운데를 덮는다)
+        : IEditorPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _inputMap{}
         , _replay{}
         , _inputMapPath{ "engine/input/default.input.xml" }
@@ -256,8 +256,8 @@ namespace sw::editor
         if ( pInput != nullptr && _inputMap.getInputManager() != pInput )
             _inputMap.setInputManager( pInput );
 
-        // ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
-        // 프레임마다 불러야 액션 테이블 · 콤보 테스터 · 버퍼링 데모가 실제로 동작한다.
+        // ActionPhase 상태 머신, 커맨드 히스토리, 버퍼 만료 타이머 등은 update() 안에서만 갱신되므로,
+        // 프레임마다 호출해야 액션 테이블, 콤보 테스터, 버퍼링 데모가 실제로 동작한다.
         if ( pInput != nullptr )
             _inputMap.update( ImGui::GetIO().DeltaTime );
 
@@ -290,17 +290,17 @@ namespace sw::editor
             _plotOffset = ( _plotOffset + 1 ) % kPlotSampleCount;
         }
 
-        // 입력 녹화 — 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 사건을 적는다.
+        // 입력 녹화는 입력 프레임마다 한 번, 그 프레임에 장치에 적용된 이벤트를 기록한다.
         if ( _replay.isRecording() && pInput != nullptr && pInput->getBeginFrameCount() != _recordedBeginFrameCount )
         {
             _recordedBeginFrameCount = pInput->getBeginFrameCount();
             _replay.recordFrame( ImGui::GetIO().DeltaTime, pInput->getLastFrameEvents() );
         }
-        // 재생(가상 입력으로 붙인 리플레이)이 끝나면 뗀다.
+        // 재생(가상 입력으로 붙인 리플레이)이 끝나면 해제한다.
         if ( pInput != nullptr && pInput->getVirtualInput() == &_replay && _replay.isFinished( pInput->getVirtualFrameIndex() ) )
             pInput->detachVirtualInput();
 
-        // 탭 셋 — 편집(Mappings) · 들여다보기(Debug) · 녹화와 주입(Replay & Inject). 언리얼 Enhanced Input 은 액션 · 매핑 · 트리거를 한 화면에서 고친다.
+        // 탭은 셋이다. 편집(Mappings), 들여다보기(Debug), 녹화와 주입(Replay & Inject)이다. 언리얼의 Enhanced Input 은 액션, 매핑, 트리거를 한 화면에서 편집한다.
         if ( ImGui::BeginTabBar( "InputEditorTabs" ) )
         {
             if ( ImGui::BeginTabItem( "Mappings" ) )
@@ -444,7 +444,7 @@ namespace sw::editor
             markDocumentDirty();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
 
-        // 바인딩마다 — 키(글리프) · 레이어 · 발화 규칙(트리거) · 다시 잡기.
+        // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 버튼을 둔다.
         ImGui::SeparatorText( "Bindings" );
         const uint32 bindingCount = _inputMap.getBindingCount( action );
         for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
@@ -496,7 +496,7 @@ namespace sw::editor
         if ( bindingCount == 0 )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "NoBindings" ) );
 
-        // 충돌 — 같은 레이어에서 같은 키를 쓰는 다른 액션. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
+        // 충돌은 같은 레이어에서 같은 키를 쓰는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
         if ( InputMapConflicts::involves( _listConflict, action ) )
         {
             ImGui::SeparatorText( "Conflicts" );
@@ -528,7 +528,7 @@ namespace sw::editor
             }
         }
 
-        // 플랫폼 글리프 — 화면에 뜰 버튼 표시(언리얼 CommonUI 의 입력 표시).
+        // 플랫폼 글리프는 화면에 표시할 버튼 아이콘이다. 언리얼 CommonUI 의 입력 표시에 해당한다.
         ImGui::SeparatorText( "Prompt Glyphs" );
         static constexpr InputGlyphStyle kArrStyle[]     = { InputGlyphStyle::KeyboardMouse, InputGlyphStyle::GamepadXbox, InputGlyphStyle::GamepadPlayStation, InputGlyphStyle::GamepadSwitch };
         static constexpr const utf8*     kArrStyleName[] = { "Keyboard / Mouse", "Xbox", "PlayStation", "Switch" };
@@ -645,7 +645,7 @@ namespace sw::editor
             ImGui::TextUnformatted( SW_LOCKEY( "EditorInputMap", "CaptureInstruction" ) );
             ImGui::Separator();
 
-            // 실시간 활성 입력 감지 — 모달이 떠 있는 동안 키는 ImGui 로만 온다(`findPressedKey` 설명).
+            // 실시간 활성 입력 감지. 모달이 떠 있는 동안 키는 ImGui 로만 들어온다(`findPressedKey` 설명 참고).
             const Key pressedKey = InputMapPanelInternal::findPressedKey();
             if ( pressedKey != Key::Unknown )
             {
@@ -687,7 +687,7 @@ namespace sw::editor
 
     void InputMapPanel::rebindSelectedAction( sw::Key newKey )
     {
-        // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩 자신이 안다.
+        // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩이 직접 안다.
         const sw::ActionBinding* pBinding = _inputMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
         const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
 
@@ -698,7 +698,7 @@ namespace sw::editor
                             _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
         }
 
-        // 키 하나로 바꿀 수 없는 바인딩(합성 축 · 스틱)이면 바뀌지 않는다 — 경고는 InputMap 이 남긴다. 그때 문서를 더럽히지 않는다.
+        // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
         if ( _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex ) )
             markDocumentDirty();
     }
@@ -1036,7 +1036,7 @@ namespace sw::editor
 
         ImGui::Separator();
 
-        // 재생 제어 — 재생은 붙이기, 일시정지는 그 프레임으로 seekTo(상태 재현 뒤 뗌), 탐색도 seekTo.
+        // 재생 제어. 재생은 리플레이를 붙이는 것이고, 일시정지는 그 프레임으로 seekTo 하는 것이다(상태를 재현한 뒤 뗀다). 탐색도 seekTo 다.
         ImGui::Text( "Playback Controls (Total Frames: %u, Duration: %.2f s):", _replay.getFrameCount(), static_cast<float64>( _replay.getTotalDuration() ) );
         const uint32 currentFrame = _replay.getStartFrameIndex() + ( bPlaying ? pInput->getVirtualFrameIndex() : 0u );
         if ( bPlaying )
@@ -1128,7 +1128,7 @@ namespace sw::editor
 
     void InputMapPanel::reloadFromFile()
     {
-        // 못 읽으면 편집 중인 바인딩과 dirty 를 그대로 둔다(dirty 를 지우고 "다시 읽었다" 고 하지 않는다).
+        // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
         if ( _inputMap.loadFromResource( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_ERROR( "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
@@ -1140,8 +1140,8 @@ namespace sw::editor
 
     bool InputMapPanel::saveToFile()
     {
-        // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다 — 다시 읽기(`reloadFromFile`)와 같은 형식 · 같은 자리에 쓴다.
-        // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 든다.
+        // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reloadFromFile`)와 같은 형식, 같은 위치에 쓴다.
+        // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
         if ( _inputMap.saveToResource( _inputMapPath.c_str() ) == false )
         {
             SW_LOG_WARNING( "Failed to save InputMap to %#", _inputMapPath.c_str() );

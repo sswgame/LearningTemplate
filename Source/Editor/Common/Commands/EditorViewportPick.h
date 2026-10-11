@@ -1,6 +1,6 @@
 /**
  * @file EditorViewportPick.h
- * @brief 뷰포트 클릭 피킹입니다. 레이와 처음 만나는 오브젝트 · 컴포넌트를 찾습니다(ImGui 없음).
+ * @brief 뷰포트 클릭 피킹을 담당합니다. 레이와 처음 만나는 오브젝트와 컴포넌트를 찾으며, ImGui 에 의존하지 않습니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -17,17 +17,17 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief 화면 좌표에서 만든 월드 레이 */
+    /** @brief 화면 좌표에서 만든 월드 레이입니다. */
     struct EditorPickRay
     {
         float3 _origin{};
-        float3 _direction{}; ///< 정규화되어 있어야 합니다
+        float3 _direction{}; ///< 정규화되어 있어야 한다
     };
 } // namespace sw::editor
 
 namespace sw::editor
 {
-    /** @brief 피킹 결과. 맞은 것이 없으면 포인터가 nullptr입니다. */
+    /** @brief 피킹 결과입니다. 맞은 것이 없으면 포인터가 nullptr 입니다. */
     struct EditorPickResult
     {
         GameObject* _pObject{ nullptr };
@@ -40,10 +40,10 @@ namespace sw::editor
 {
     /**
      * @class EditorViewportPick
-     * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 안의 표가 정합니다.
-     * @details (1) 종류를 아는 제공자는 표의 한 줄이고, (2) 표가 잡지 못한 오브젝트는 그 오브젝트의 **모든** SceneComponent 를 기본
-     *          반지름으로 훑습니다 — 주 컴포넌트(`getPrimarySceneComponent()`)만 보면 게임이 만든 컴포넌트를 클릭으로 집을 수 없습니다.
-     *          ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증합니다.
+     * @brief 뷰포트 피킹 로직입니다. 경계는 컴포넌트가 선언하고(`SceneComponent::getWorldBounds`), 같은 거리에서 어느 종류가 이기는지는 이 클래스 안의 테이블이 정합니다.
+     * @details 종류를 아는 제공자는 테이블의 항목 하나다. 테이블이 잡지 못한 오브젝트는 그 오브젝트의 모든 SceneComponent 를 기본
+     *          반지름으로 검사한다. 주 컴포넌트(`getPrimarySceneComponent()`)만 보면 게임이 만든 컴포넌트를 클릭으로 집을 수 없다.
+     *          ImGui 를 쓰지 않으므로 `Test/EditorTest` 가 실제 씬으로 검증한다.
      */
     class EditorViewportPick
     {
@@ -52,9 +52,9 @@ namespace sw::editor
         static constexpr float32 kFallbackRadius = 0.35f;
 
         /**
-         * @brief 레이와 가장 먼저 만나는 오브젝트·컴포넌트를 찾습니다.
-         * @param b2DMode true면 같은 거리에서 스프라이트·콜라이더가 메시보다 우선합니다.
-         * @return 맞은 것이 있으면 true이고 outResult를 채웁니다.
+         * @brief 레이와 가장 먼저 만나는 오브젝트와 컴포넌트를 찾습니다.
+         * @param b2DMode true 이면 같은 거리에서 스프라이트와 콜라이더가 메시보다 우선합니다.
+         * @return 맞은 것이 있으면 true 이고 outResult 를 채웁니다.
          */
         static bool pick( const GameObjectManager* pManager, const EditorPickRay& ray, bool b2DMode,
                           EditorPickResult& outResult );
@@ -64,21 +64,21 @@ namespace sw::editor
                                    float32& outHitT );
 
         /**
-         * @brief 캔버스 정규 좌표(u·v ∈ [0,1], 왼쪽 위가 0·0)에서 월드 레이를 만듭니다.
-         * @details 근평면(NDC z 0)과 원평면(z 1)을 역투영해 잇습니다. 원점은 근평면 위의 점이고, 방향은 단위 벡터입니다.
-         *          피킹 · 자 · 애셋 드롭이 같은 레이를 씁니다.
-         * @return 역행렬이 퇴화했으면 false
+         * @brief 캔버스 정규 좌표(u, v ∈ [0,1], 왼쪽 위가 0, 0)에서 월드 레이를 만듭니다.
+         * @details 근평면(NDC z 0)과 원평면(z 1)을 역투영해 잇는다. 원점은 근평면 위의 점이고, 방향은 단위 벡터다.
+         *          피킹, 자, 애셋 드롭이 같은 레이를 쓴다.
+         * @return 역행렬이 퇴화했으면 false 입니다.
          */
         static bool makeRay( const float4x4& invViewProj, float32 u, float32 v, EditorPickRay& outRay );
 
         /**
-         * @brief 레이와 축 평면(axisIndex 0 · 1 · 2 = X · Y · Z = 0)의 교점을 구합니다. 나란하면 false 입니다.
-         * @details 자는 바닥(Y = 0)을, 애셋 드롭은 2D 에서 Z = 0, 3D 에서 Y = 0 을 씁니다. 평면이 레이 뒤에 있어도 교점을
-         *          냅니다(카메라가 바닥 아래일 때 드롭이 원점으로 튀지 않게). 교점의 축 성분은 정확히 0 입니다.
+         * @brief 레이와 축 평면(axisIndex 0, 1, 2 는 각각 X, Y, Z = 0)의 교점을 구합니다. 평행하면 false 입니다.
+         * @details 자는 바닥(Y = 0)을 쓰고, 애셋 드롭은 2D 에서 Z = 0, 3D 에서 Y = 0 을 쓴다. 평면이 레이 뒤에 있어도 교점을
+         *          구한다. 카메라가 바닥 아래에 있을 때 드롭이 원점으로 튀지 않게 하기 위해서다. 교점의 축 성분은 정확히 0 이다.
          */
         static bool rayHitsAxisPlane( const EditorPickRay& ray, uint32 axisIndex, float3& outPoint );
 
-        /** @brief 순서 표의 줄 수입니다(표가 비어 있지 않은지 보는 데 씁니다). */
+        /** @brief 순서 테이블의 항목 수입니다. 테이블이 비어 있지 않은지 확인하는 데 씁니다. */
         static uint32 getTypedProviderCount();
     };
 } // namespace sw::editor

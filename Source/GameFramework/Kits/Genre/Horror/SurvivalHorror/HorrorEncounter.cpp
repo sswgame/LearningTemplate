@@ -158,11 +158,11 @@ namespace sw
     {
         hashed_string monsterID;
         uint32        count = 0;
-        // 조사자마다 속도 · 번호 · 체력 · 정신력 · 의지 · 힘(24) + 빠짐(1)
+        // 조사자마다 속도, 번호, 체력, 정신력, 의지, 힘(24) + 빠짐(1)
         const bool bHeadRead = StateArchiveUtil::readName( archive, monsterID ) && StateArchiveUtil::readCount( archive, 25, count );
         if ( bHeadRead == false || monsterID != _monster._id )
             return false;
-        // 사본에 읽고 끝까지 맞으면 바꾼다 — 괴물 정의 · 성공 눈은 사본이 그대로 든다.
+        // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 괴물 정의와 성공 눈은 사본도 그대로 가지고 있다.
         HorrorEncounter restored = *this;
         restored._listInvestigator.assign( count, HorrorInvestigator{} );
         for ( HorrorInvestigator& investigator : restored._listInvestigator )

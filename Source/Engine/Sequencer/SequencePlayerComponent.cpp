@@ -90,7 +90,7 @@ namespace sw
     void SequencePlayerComponent::stop()
     {
         _player.stop();
-        // 카메라 컷은 컷 구간이 끝나야 풀리므로, 구간 안에서 멈추면 여기서 푼다(게임 카메라가 원래 규칙으로 돌아간다).
+        // 카메라 컷은 컷 구간이 끝나야 해제되므로, 구간 안에서 멈추면 여기서 해제한다(게임 카메라가 원래 규칙으로 돌아간다).
         GameObject* pOwner = getOwner();
         if ( pOwner != nullptr )
             SequenceTimelineUtil::releaseCameraCut( pOwner->getManager(), _player.getAsset() );
@@ -136,7 +136,7 @@ namespace sw
         if ( listCrossed.empty() )
             return;
 
-        // **사본으로 알린다.** 지난 항목은 플레이어가 든 에셋의 원소라, 핸들러가 다른 시퀀스를 걸면(`setSequence`) 남은 포인터가 죽는다.
+        // **사본으로 알린다.** 지난 항목은 플레이어가 가진 에셋의 원소라, 핸들러가 다른 시퀀스를 설정하면(`setSequence`) 남은 포인터가 무효가 된다.
         vector<SequenceTrackItem> listEvent;
         listEvent.reserve( listCrossed.size() );
         for ( const SequenceTrackItem* pItem : listCrossed )

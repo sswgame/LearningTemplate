@@ -66,7 +66,7 @@ namespace sw::editor
                     formatstring( out.data(), out.capacity(), "%# GB", Fmt( static_cast<float64>( bytes ) / ( 1024.0 * 1024.0 * 1024.0 ), Format().precision( 2 ) ) );
             }
 
-            /** @brief 아는 값은 `formatBytes` 로, 드라이버가 답하지 않은 값은 "Unknown" 으로 적습니다. */
+            /** @brief 아는 값은 `formatBytes` 로, 드라이버가 응답하지 않은 값은 "Unknown" 으로 표시합니다. */
             template <uint32 N>
             static void formatKnownBytes( uint64 bytes, bool bKnown, fixed_string<N>& out )
             {
@@ -78,16 +78,16 @@ namespace sw::editor
                 formatBytes( bytes, out );
             }
 
-            /** @brief Timeline 탭이 고를 수 있는 최근 프레임 수입니다. */
+            /** @brief Timeline 탭에서 선택할 수 있는 최근 프레임 수입니다. */
             static constexpr uint32 kArrTimelineFrameChoice[] = { 1, 4, 16 };
-            /** @brief 휠 한 칸의 확대 배율입니다(1 보다 작으면 확대). */
+            /** @brief 휠 한 단계의 확대 배율입니다. 1 보다 작으면 확대입니다. */
             static constexpr float32 kTimelineWheelZoomFactor = 0.8f;
-            /** @brief 불러온 트레이스 구간의 슬롯 번호가 시작하는 값입니다 — 살아 있는 프로파일러 슬롯(`FrameProfiler::kMaxScope` 미만)과 겹치지 않는다. */
+            /** @brief 불러온 트레이스 구간의 슬롯 번호가 시작하는 값입니다. 살아 있는 프로파일러 슬롯(`FrameProfiler::kMaxScope` 미만)과 겹치지 않습니다. */
             static constexpr uint32 kLoadedSlotBase = 1u << 20;
-            /** @brief 스레드 이름 칸의 폭입니다(UI 단위, DPI 배율을 곱한다). */
+            /** @brief 스레드 이름 영역의 폭입니다. UI 단위이며 DPI 배율을 곱합니다. */
             static constexpr float32 kTimelineLabelWidth = 120.0f;
 
-            /** @brief 슬롯마다 다른 색입니다(색상환을 슬롯 번호로 돌린다). */
+            /** @brief 슬롯마다 다른 색을 냅니다. 슬롯 번호로 색상환을 돌려 고릅니다. */
             static ImU32 computeSlotColor( uint32 slot )
             {
                 constexpr uint32 kHueStepDegrees = 47;
@@ -154,7 +154,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawContent()
     {
-        // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸 담는다(탭과 무관 — 탭을 바꿔도 그래프가 끊기지 않게).
+        // 패널이 열려 있는 동안 엔진 프로파일러를 켜 두고 프레임마다 한 칸씩 담는다. 탭과 무관하게 담으므로 탭을 바꿔도 그래프가 끊기지 않는다.
         FrameProfiler* pProfiler = editor::getService<FrameProfiler>();
         if ( pProfiler != nullptr )
         {
@@ -243,7 +243,7 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "profiler.capture.clear" );
 
-        // 멈춤 · 스파이크 · 캡처 파일(유니티 Profiler 의 Record 끄기 · 언리얼 stat hitches · Save/Load).
+        // 정지, 스파이크, 캡처 파일을 다룬다. 유니티 Profiler 의 Record 끄기, 언리얼의 stat hitches, Save/Load 에 해당한다.
         ImGui::SameLine();
         if ( _bCapturePaused == SW_TRUE )
         {
@@ -285,7 +285,7 @@ namespace sw::editor
             const string path = getCaptureFilePath();
             if ( _scopeHistory.loadFromFile( path ) )
             {
-                _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮지 않게
+                _bCapturePaused        = SW_TRUE; // 연 캡처를 보는 동안 새 프레임이 덮어쓰지 않게 한다
                 _rowQuery._frameOffset = 0;
                 SW_LOG_INFO( "Profiler capture loaded: %#", path.c_str() );
             }
@@ -295,7 +295,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "profiler.capture.load" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "LoadCapture" ) );
 
-        // Tracy — 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼.
+        // Tracy. 시간축 분석은 외부 뷰어가 한다. 상태 한 줄과 여는 버튼을 둔다.
         ImGui::SameLine();
         ImGui::TextUnformatted( "|" );
         ImGui::SameLine();
@@ -318,7 +318,7 @@ namespace sw::editor
         if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
             ImGui::TextColored( EditorColorUtil::toImVec4( ProfilerPanelInternal::kTracyErrorText ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
 
-        // RenderDoc — GPU 프레임 캡처(네 백엔드). 붙어 있지 않으면 단추가 회색이고 이유를 툴팁으로 보인다.
+        // RenderDoc 으로 GPU 프레임을 캡처한다(네 백엔드 모두). 붙어 있지 않으면 버튼이 회색이고 이유를 툴팁으로 보여 준다.
         ImGui::SameLine();
         ImGui::TextUnformatted( "|" );
         ImGui::SameLine();
@@ -348,7 +348,7 @@ namespace sw::editor
         const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
         {
-            // 녹화는 계측이 켜져 있어야 쌓인다(스코프가 시계를 읽어야 한다). 켤 때 지난 사건을 비운다.
+            // 녹화는 계측이 켜져 있어야 쌓인다. 스코프가 시계를 읽어야 하기 때문이다. 켤 때 지난 이벤트를 비운다.
             if ( bRecording == false )
             {
                 timeline.clear();
@@ -506,7 +506,7 @@ namespace sw::editor
         _listLoadedFrameDraw.clear();
         if ( _bLoadedTrace == SW_FALSE )
             return;
-        // 살아 있는 기록이 있으면 불러온 트레이스의 첫 시각을 그 구간 시작에 맞춘다(둘은 다른 프로세스의 단조 시계라 절대 시각으로는 못 겹친다).
+        // 살아 있는 기록이 있으면 불러온 트레이스의 첫 시각을 그 구간 시작에 맞춘다. 둘은 다른 프로세스의 단조 시계라 절대 시각으로는 겹칠 수 없다.
         const bool   bLive  = _listTimelineThread.empty() == false;
         const uint64 anchor = bLive ? _timelineWindowBegin : _loadedTrace._beginNanos;
         const int64  shift  = static_cast<int64>( anchor ) - static_cast<int64>( _loadedTrace._beginNanos );
@@ -598,7 +598,7 @@ namespace sw::editor
 
         pDrawList->PushClipRect( ImVec2{ trackLeft, origin.y }, ImVec2{ origin.x + totalWidth, origin.y + totalHeight }, true );
         const ProfilerTimelineRect* pHoveredRect = nullptr;
-        // 슬롯 → 이름: 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이라 그 표를 본다.
+        // 슬롯에서 이름을 찾는다. 불러온 트레이스의 슬롯은 `kLoadedSlotBase` 이상이므로 그 테이블을 본다.
         const auto findName = [&]( uint32 slot ) -> const utf8*
         {
             if ( slot >= ProfilerPanelInternal::kLoadedSlotBase )
@@ -620,7 +620,7 @@ namespace sw::editor
             const utf8*                  pName     = findName( event._slot );
             ImU32                        slotColor = ProfilerPanelInternal::computeSlotColor( event._slot );
 #if SW_PROFILER_TRACE_ENABLED
-            // 검색어가 있으면 맞는 구간만 또렷하게 두고 나머지는 흐리게 한다.
+            // 검색어가 있으면 일치하는 구간만 또렷하게 두고 나머지는 흐리게 한다.
             if ( bSearching )
             {
                 if ( pName != nullptr && StringUtil::contains( pName, _arrTraceSearch, true ) )
@@ -644,7 +644,7 @@ namespace sw::editor
             if ( bUnderMouse )
                 pHoveredRect = &rect;
         }
-        // 프레임 경계 — 세로선.
+        // 프레임 경계는 세로선으로 그린다.
         for ( const uint64 frameBegin : _listTimelineFrameBegin )
         {
             const float32 lineX = trackLeft + ProfilerTimelineLayout::computeX( frameBegin, _timelineViewBegin, _timelineViewEnd, trackWidth );
@@ -660,7 +660,7 @@ namespace sw::editor
             ImGui::TextUnformatted( pName != nullptr ? pName : "?" );
             ImGui::Text( "%.1f us, depth %u", static_cast<float64>( event._endNanos - event._beginNanos ) / 1000.0, static_cast<uint32>( event._depth ) );
             ImGui::TextDisabled( "%s", listThread[pHoveredRect->_threadIndex]._name.c_str() );
-            // 같은 구간(같은 스레드 · 같은 슬롯)의 횟수 · 합 · 최대 — 어느 구간이 늘었는지 한눈에 본다.
+            // 같은 구간(같은 스레드, 같은 슬롯)의 횟수, 합계, 최대를 구한다. 어느 구간이 늘었는지 한눈에 볼 수 있다.
             uint32  sameCount{ 0 };
             float64 sameTotalUs{ 0.0 };
             float64 sameMaxUs{ 0.0 };
@@ -680,7 +680,7 @@ namespace sw::editor
 
     void ProfilerPanel::drawFrameGraph()
     {
-        // 세 줄 — 게임 스레드 · 렌더 스레드 · GPU. 같은 축(ms)으로 그려야 누가 프레임을 정하는지 보인다.
+        // 게임 스레드, 렌더 스레드, GPU 세 줄을 그린다. 같은 축(ms)으로 그려야 어느 쪽이 프레임 시간을 정하는지 보인다.
         static constexpr const utf8* kArrSeriesName[] = { "GT.Frame", "RT.Frame", "GPU.Frame" };
         float32                      maxMicro{ 1000.0f };
         for ( const utf8* pSeriesName : kArrSeriesName )
@@ -709,7 +709,7 @@ namespace sw::editor
                           Fmt( static_cast<float64>( _listScratchSeries.back() ), Format().precision( 2 ) ) );
             ImGui::PlotLines( pSeriesName, _listScratchSeries.data(), static_cast<int32>( _listScratchSeries.size() ), 0, overlay.c_str(), 0.0f,
                               maxMs, ImVec2{ 0.0f, 48.0f } );
-            // 그래프의 한 프레임을 누르면 표의 "Last" 가 그 프레임 값이 된다(유니티 Profiler 의 프레임 고르기). 고른 프레임에 세로줄.
+            // 그래프의 한 프레임을 누르면 테이블의 "Last" 가 그 프레임 값이 된다. 유니티 Profiler 의 프레임 선택과 같다. 선택한 프레임에는 세로줄을 그린다.
             const ImVec2  plotMin    = ImGui::GetItemRectMin();
             const ImVec2  plotMax    = ImGui::GetItemRectMax();
             const float32 frameWidth = ( plotMax.x - plotMin.x ) / static_cast<float32>( _listScratchSeries.size() );
@@ -766,7 +766,7 @@ namespace sw::editor
         ImGui::TableSetupColumn( "Frames", ImGuiTableColumnFlags_NoSort, 0.8f );
         ImGui::TableHeadersRow();
 
-        // 머리줄을 누르면 정렬이 바뀐다. 집계 쪽 정렬을 그대로 쓴다(ImGui 는 열 번호만 넘긴다).
+        // 헤더를 누르면 정렬이 바뀐다. 집계 쪽의 정렬을 그대로 쓴다. ImGui 는 열 번호만 넘긴다.
         ImGuiTableSortSpecs* pSortSpecs = ImGui::TableGetSortSpecs();
         if ( pSortSpecs != nullptr && pSortSpecs->SpecsCount > 0 )
         {
@@ -885,8 +885,8 @@ namespace sw::editor
             Scene* pScene = editor::getActiveScene();
             if ( pScene != nullptr && pScene->getObjectManager() != nullptr )
             {
-                // 집계는 ImGui 를 모르는 EditorSceneCommands 가 한다(테스트가 붙어 있다).
-                // 이 패널은 그려 주기만 한다. 타입 이름을 여기서 알 필요가 없다.
+                // 집계는 ImGui 에 의존하지 않는 EditorSceneCommands 가 한다. 테스트가 있다.
+                // 이 패널은 그리기만 하며 타입 이름을 알 필요가 없다.
                 const EditorSceneCommands::SceneStatistics stats =
                     EditorSceneCommands::collectSceneStatistics( pScene->getObjectManager() );
 
@@ -950,7 +950,7 @@ namespace sw::editor
                 ImGui::TableSetupColumn( "Unknown Size" );
                 ImGui::TableHeadersRow();
 
-                // 로그 보고와 같은 순서(바이트가 큰 줄부터)와 같은 이름이다. 크기 모름은 바이트 합에 넣지 않고 따로 센다.
+                // 로그 보고와 같은 순서(바이트가 큰 항목부터)와 같은 이름을 쓴다. 크기 모름은 바이트 합에 넣지 않고 따로 센다.
                 for ( const RHIMemoryKind kind : ledger.makeKindOrderByLiveBytes() )
                 {
                     const RHIMemoryKindStats stats = ledger.getStats( kind );
@@ -974,7 +974,7 @@ namespace sw::editor
 
         if ( ImGui::CollapsingHeader( "Driver", ImGuiTreeNodeFlags_DefaultOpen ) )
         {
-            // 드라이버가 답하지 않은 칸은 "Unknown" 이다 — 0 으로 지어내지 않는다.
+            // 드라이버가 응답하지 않은 항목은 "Unknown" 으로 표시하고, 0 으로 대체하지 않는다.
             const RHIMemoryBudget&               budget = summary._budget;
             fixed_string<constant::kMaxBuffer32> arrUsageBuf;
             fixed_string<constant::kMaxBuffer32> arrBudgetBuf;
@@ -1034,7 +1034,7 @@ namespace sw::editor
                 fixed_string<constant::kMaxBuffer32> arrBytesBuf;
                 fixed_string<constant::kMaxBuffer32> arrTotalBuf;
 
-                // 지금 살아 있는 바이트가 큰 태그부터. 한 번도 할당하지 않은 태그는 줄을 내지 않는다(Unknown 은 늘 낸다 — 진입점이 빠진 몫이다).
+                // 현재 살아 있는 바이트가 큰 태그부터 표시한다. 한 번도 할당하지 않은 태그는 행을 만들지 않는다. Unknown 은 항상 만든다. 태그가 지정되지 않은 진입점의 할당량이기 때문이다.
                 const uint64 liveBytes = profiler.getLiveAllocatedBytes();
                 for ( const MemoryTag tag : profiler.makeTagOrderByLiveBytes() )
                 {
@@ -1083,7 +1083,7 @@ namespace sw::editor
                     for ( const auto& info : listTopStack )
                     {
                         if ( displayCount++ > 100 )
-                            break; // 최대 100개만 표시
+                            break; // 최대 100개만 표시한다
 
                         ImGui::TableNextRow();
                         ImGui::TableNextColumn();
@@ -1218,7 +1218,7 @@ namespace sw::editor
         ImGui::PushID( static_cast<int32>( nodeIndex ) );
         const bool         bLeaf     = node._firstChild == ProfilerCallTree::kNoParent;
         ImGuiTreeNodeFlags treeFlags = ImGuiTreeNodeFlags_SpanFullWidth | ( bLeaf ? ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen : 0 );
-        // 바깥 두 겹은 펼쳐 둔다(프레임 → 큰 단계가 바로 보이게).
+        // 바깥쪽 두 단계는 펼쳐 둔다. 프레임과 큰 단계가 바로 보이게 하기 위해서다.
         if ( node._depth < 2 )
             treeFlags |= ImGuiTreeNodeFlags_DefaultOpen;
         const bool    bOpen       = ImGui::TreeNodeEx( pName != nullptr ? pName : "?", treeFlags );

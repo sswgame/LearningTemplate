@@ -14,7 +14,7 @@ namespace sw
         {
             static constexpr uint32 kDefaultIterationCount = 3;
 
-            /** @brief 짝 (안쪽 @p inner, 바깥 @p outer)이 성립하는가 — 순서가 작은 쪽이 안쪽, 같으면 입력 앞이 안쪽. */
+            /** @brief 쌍 (안쪽 @p inner, 바깥 @p outer)이 성립하는지 반환합니다. 순서가 작은 쪽이 안쪽이고, 같으면 입력에서 앞선 쪽이 안쪽입니다. */
             static bool isInnerOuterPair( const FitSolveState& state, uint32 inner, uint32 outer )
             {
                 if ( inner == outer )
@@ -24,7 +24,7 @@ namespace sw
                 return innerOrder < outerOrder || ( innerOrder == outerOrder && inner < outer );
             }
 
-            /** @brief 정점마다 감쇠 축 — 주 본에서 첫 자식(없으면 부모에서 그 본)으로. 스킨이 없으면 0. */
+            /** @brief 정점마다 감쇠 축을 구합니다. 주 본에서 첫 자식(없으면 부모에서 그 본)으로 가는 방향입니다. 스킨이 없으면 0 입니다. */
             static void computeFalloffAxes( const AppearanceGeometry& geometry, const CharacterBoneArray* pBones, vector<float3>& outListAxis )
             {
                 outListAxis.assign( geometry.getVertexCount(), float3::Zero );
@@ -268,7 +268,7 @@ namespace sw
         if ( prepareState( tables, input, state, outResult._report ) == false )
             return false;
 
-        // 1) 변형 — 야코비: 짝마다 변위를 쌓고 정점마다 평균을 한 번에 적용한다.
+        // 1) 변형: 야코비 방식이다. 쌍마다 변위를 쌓고 정점마다 평균을 한 번에 적용한다.
         for ( uint32 iteration = 0; iteration < _iterationCount; ++iteration )
         {
             for ( FitPartState& part : state._listPart )
@@ -298,7 +298,7 @@ namespace sw
             FitSolverInternal::rebuildMovedSurfaces( state );
         }
 
-        // 2) 손 보정 조각 — 체형 모프 가중치만큼.
+        // 2) 손 보정 조각: 체형 모프 가중치만큼 적용한다.
         for ( FitPartState& part : state._listPart )
         {
             for ( const FitCorrectiveDef& corrective : part._pInput->_pFitData->getCorrectives() )
@@ -317,7 +317,7 @@ namespace sw
         }
         FitSolverInternal::rebuildMovedSurfaces( state );
 
-        // 3) 덮임 — 변형 뒤의 자리로. 숨김 영역은 바깥 부품이 안쪽 부품에 적는다.
+        // 3) 덮임: 변형 뒤의 위치로 판정한다. 숨김 영역은 바깥 부품이 안쪽 부품에 적는다.
         runPhase( FitPhase::Coverage, tables, state );
         const uint32 partCount = static_cast<uint32>( state._listPart.size() );
         for ( uint32 outer = 0; outer < partCount; ++outer )
@@ -352,10 +352,10 @@ namespace sw
             }
         }
 
-        // 4) 검증 — 고치지 않고 보고.
+        // 4) 검증: 고치지 않고 보고만 한다.
         runPhase( FitPhase::Validate, tables, state );
 
-        // 5) 결과 — 덮였어도 덮이지 않은 삼각형과 정점을 나누면 남긴다(경계 한 겹).
+        // 5) 결과: 덮였어도 덮이지 않은 삼각형과 정점을 나누면 남긴다(경계 한 겹).
         outResult._listPart.resize( partCount );
         for ( uint32 partIndex = 0; partIndex < partCount; ++partIndex )
         {

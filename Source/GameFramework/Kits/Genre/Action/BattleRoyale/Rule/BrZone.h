@@ -1,6 +1,6 @@
 /**
  * @file BrZone.h
- * @brief 자기장 — 단계마다 다음 원을 지금 원 안에서 씨앗 난수로 고르고(맵 경계 · 금지 지형 콜백), 기다렸다 줄이며, 자리마다 안 · 밖과 피해를 답합니다.
+ * @brief 자기장입니다. 단계마다 다음 원을 지금 원 안에서 시드 난수로 고르고(맵 경계와 금지 지형 콜백을 확인), 기다렸다가 줄이며, 위치마다 안과 밖 여부와 피해를 답합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class IBrZoneTerrain
-     * @brief 다음 원 중심 · 보급 상자 자리로 쓸 수 있는 땅인가를 게임이 답합니다(물 · 산꼭대기 금지). 맵 경계는 자기장이 따로 봅니다.
+     * @brief 다음 원 중심이나 보급 상자 위치로 쓸 수 있는 땅인지 게임이 답합니다(물과 산꼭대기는 금지). 맵 경계는 자기장이 따로 확인합니다.
      */
     class SW_GF_API IBrZoneTerrain
     {
@@ -43,11 +43,11 @@ namespace sw
     enum class BrZoneStage : uint8
     {
         Waiting = 0, ///< 다음 원이 드러나 있고 아직 줄지 않는다
-        Shrinking,   ///< 지금 원이 다음 원으로 보간된다
-        Final        ///< 마지막 원 — 더 줄지 않는다
+        Shrinking,   ///< 지금 원이 다음 원으로 보간되는 중이다
+        Final        ///< 마지막 원이다(더 줄지 않는다)
     };
 
-    /** @brief 자기장에 생긴 일입니다. */
+    /** @brief 자기장에서 생긴 일입니다. */
     struct BrZoneEvent
     {
         enum class Kind : uint8
@@ -68,10 +68,10 @@ namespace sw
 {
     /**
      * @class BrZone
-     * @brief 원 하나(중심 · 반지름)와 다음 원입니다. 맵은 [0, mapSize]² 정사각형이고 좌표는 수평면(x, z → float2)입니다.
-     * @details 다음 원은 늘 지금 원 안에 통째로 들어갑니다 — 중심을 지금 중심에서 (R − r) 안의 원판에서 고르고, 그 원이 맵 안이며
-     *          지형 콜백이 허락할 때까지 `_centerAttempts` 번 시도합니다(다 실패하면 지금 중심). 줄어드는 동안 중심과 반지름은 선형 보간입니다.
-     *          피해는 원 밖에서만, 지금 단계의 초당 피해입니다. 시간은 `update` 로만 흐르고 난수는 씨앗 하나라 같은 씨앗이면 같은 원이 나옵니다.
+     * @brief 원 하나(중심과 반지름)와 다음 원입니다. 맵은 [0, mapSize]² 정사각형이고 좌표는 수평면(x, z → float2)입니다.
+     * @details 다음 원은 항상 지금 원 안에 통째로 들어간다. 중심은 지금 중심에서 (R − r) 안의 원판에서 고르고, 그 원이 맵 안에 있고 지형 콜백이 허락할 때까지 `_centerAttempts` 번 시도한다(다 실패하면 지금 중심을 쓴다).
+     *          줄어드는 동안 중심과 반지름은 선형 보간한다. 피해는 원 밖에서만 받고, 지금 단계의 초당 피해를 쓴다.
+     *          시간은 `update` 로만 흐르고 난수는 시드 하나로 만들므로, 같은 시드면 같은 원이 나온다.
      */
     class SW_GF_API BrZone
     {
@@ -81,26 +81,26 @@ namespace sw
 
         BrZone();
 
-        /** @brief 설정 · 맵 크기 · 씨앗 · 지형(빌림, nullptr 가능)을 두고 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
+        /** @brief 설정, 맵 크기, 시드, 지형(빌려 옴, nullptr 가능)을 설정하고, 첫 원을 맵 중심에 놓은 뒤 첫 단계의 다음 원을 고릅니다. */
         void initialize( const BrZoneSettings& settings, float32 mapSize, uint32 seed, const IBrZoneTerrain* pTerrain );
         void update( float32 deltaTime );
 
         bool isInside( const float2& position ) const;
-        /** @brief 원 가장자리 밖으로 나간 거리입니다(안이면 0). */
+        /** @brief 원 가장자리 밖으로 나간 거리를 반환합니다(안이면 0). */
         float32 computeDistanceOutside( const float2& position ) const;
-        /** @brief 그 자리에서 지금 받는 초당 피해입니다(안이면 0). */
+        /** @brief 그 위치에서 지금 받는 초당 피해를 반환합니다(안이면 0). */
         float32 computeDamagePerSecond( const float2& position ) const;
-        /** @brief 지금 원 안 · 맵 안 · 지형이 허락하는 무작위 자리를 고릅니다(보급 상자). 못 찾으면 원 중심을 주고 false 입니다. */
+        /** @brief 지금 원 안이고 맵 안이며 지형이 허락하는 무작위 위치를 고릅니다(보급 상자). 못 찾으면 원 중심을 주고 false 를 반환합니다. */
         [[nodiscard]] bool pickPointInside( GameRandom& random, float2& outPosition ) const;
         void               drainEvents( vector<BrZoneEvent>& outListEvent );
 
-        /** @brief 네트워크용 — 원 상태를 씁니다(설정 · 씨앗은 양쪽이 같다고 본다). */
+        /** @brief 네트워크용으로 원 상태를 씁니다(설정과 시드는 양쪽이 같다고 가정합니다). */
         void writeState( BitWriter& writer ) const;
-        /** @brief 네트워크용 — `writeState` 를 읽습니다. 넘치면 false 이고 상태는 그대로입니다. */
+        /** @brief 네트워크용으로 `writeState` 가 쓴 값을 읽습니다. 값이 범위를 넘으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( BitReader& reader );
-        /** @brief 세이브(`Archive`) — 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정 · 지형은 `initialize` 의 것이고, 알림은 읽을 때 비웁니다. */
+        /** @brief 세이브(`Archive`)에 넷 코덱(`writeState( BitWriter& )`)의 바이트를 길이가 붙은 본문으로 싣고 난수 상태를 붙입니다. 설정과 지형은 `initialize` 에서 받은 것이고, 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState( Archive& )` 를 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 false 이고 상태는 그대로입니다. */
+        /** @brief `writeState( Archive& )` 가 쓴 값을 읽습니다. 본문이 잘렸거나 넷 코덱이 거절하면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const float2& getCenter() const { return _center; }
@@ -109,7 +109,7 @@ namespace sw
         float32       getNextRadius() const { return _nextRadius; }
         int32         getPhaseIndex() const { return _phaseIndex; }
         BrZoneStage   getStage() const { return _stage; }
-        /** @brief 지금 단계(기다림 · 줄어듦)가 끝날 때까지 남은 초입니다. */
+        /** @brief 지금 단계(기다림 또는 줄어듦)가 끝날 때까지 남은 시간(초)입니다. */
         float32 getStageRemaining() const { return _stageRemaining; }
         float32 getMapSize() const { return _mapSize; }
 

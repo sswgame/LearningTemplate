@@ -1,6 +1,6 @@
 /**
  * @file BlendSpace.h
- * @brief 1D · 2D 파라미터로 포즈를 합성하는 Blend Space 입니다.
+ * @brief 1D 와 2D 파라미터로 포즈를 합성하는 Blend Space 입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -58,7 +58,7 @@ namespace sw
         /**
          * @brief 파라미터에 해당하는 포즈를 합성합니다.
          * @details 양 끝 바깥에서는 끝 표본을 그대로 반환하고, 사이에서는 이웃한 두 표본을
-         *          DLB(회전 · 이동) + 선형 보간(스케일)으로 섞습니다.
+         *          DLB(회전과 이동)와 선형 보간(스케일)으로 섞습니다.
          */
         float4x4 evaluate( float32 parameter ) const;
         /** @brief 합성한 변환을 포즈의 루트 본(0 번)에 씁니다. 본이 없으면 아무것도 하지 않습니다. */
@@ -93,7 +93,7 @@ namespace sw
         void addSample( float32 paramX, float32 paramY, string_view clipName, const float4x4& pose );
         /**
          * @brief (x, y) 에 해당하는 포즈를 역거리 가중치(IDW)로 합성합니다.
-         * @details 회전 · 이동은 DLB 로, 스케일은 같은 가중치의 선형 결합으로 섞습니다.
+         * @details 회전과 이동은 DLB 로, 스케일은 같은 가중치의 선형 결합으로 섞는다.
          */
         float4x4 evaluate( float32 paramX, float32 paramY ) const;
 

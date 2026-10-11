@@ -1,9 +1,10 @@
 /**
  * @file Vitality.h
- * @brief 체력 상태 기계 — 실드(먼저 깎인다) · 체력 · 재생 · 기절(출혈 · 부활) · 죽음 · 무적 시간 · 경직 게이지입니다.
- * @details 배틀로얄(실드 · 기절 · 동료 부활), 데드 바이 데이라이트(빈사 · 치료 · 갈고리 단계 = 최대 기절 횟수), 캡슐파이터(다운치),
- *          소울라이크(강인도 붕괴), 리썰 컴퍼니 · 위쳐 · 젤다(체력 · 재생)가 같은 상태 기계를 씁니다. 엔진 컴포넌트가 아닌 보통 클래스라
- *          씬 없이 돌고, 시간은 `update` 로만 흐릅니다(결정적).
+ * @brief 체력 상태 기계를 정의합니다.
+ * @details 실드(먼저 깎인다), 체력, 재생, 기절(출혈과 부활), 죽음, 무적 시간, 경직 게이지를 다룬다.
+ *          배틀로얄(실드, 기절, 동료 부활), 데드 바이 데이라이트(빈사, 치료, 갈고리 단계는 최대 기절 횟수), 캡슐파이터(다운치),
+ *          소울라이크(강인도 붕괴), 리썰 컴퍼니, 위쳐, 젤다(체력과 재생)가 같은 상태 기계를 쓴다.
+ *          엔진 컴포넌트가 아닌 보통 클래스라서 씬 없이 돌고, 시간은 `update` 로만 흐르므로 결정적이다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,7 +19,7 @@ namespace sw
 {
     class Archive;
 
-    /** @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 0 인 재생 속도는 "재생 없음" 입니다. */
+    /** @brief 체력 설정입니다. 시간은 초, 비율은 0..1 입니다. 재생 속도가 0 이면 재생하지 않습니다. */
     struct VitalitySettings
     {
         float32 _maxHealth{ 100.0f };
@@ -53,7 +54,7 @@ namespace sw
         Dead
     };
 
-    /** @brief 체력 알림의 종류입니다. */
+    /** @brief 체력 알림(이벤트)의 종류입니다. */
     enum class VitalityEventType : uint8
     {
         Damaged = 0,       ///< `_amount` = 실드 + 체력(또는 출혈 체력) 피해
@@ -96,10 +97,10 @@ namespace sw
 {
     /**
      * @class Vitality
-     * @brief 한 개체의 체력입니다. 피해는 실드 → 체력 순서로 깎이고, 체력이 0 이 되면 설정에 따라 기절하거나 죽습니다.
-     * @details 넘친 피해는 실드에서 체력으로 넘어가지만, 체력에서 출혈 체력으로는 넘어가지 않습니다(기절 순간의 한 방이 바로 죽이지 않게).
-     *          기절 중에는 실드 · 재생 · 경직이 멈추고 `heal` 도 듣지 않습니다 — 복원하는 길은 부활(`startRevive`) 하나입니다.
-     *          부활은 여럿이 함께 살릴 수 있게 속도 배율을 받습니다(`startRevive` 를 다시 부르면 배율만 바뀐다).
+     * @brief 한 개체의 체력입니다. 피해는 실드, 체력 순서로 깎이고, 체력이 0 이 되면 설정에 따라 기절하거나 죽습니다.
+     * @details 넘친 피해는 실드에서 체력으로 넘어가지만, 체력에서 출혈 체력으로는 넘어가지 않는다. 기절한 순간의 한 방이 바로 죽이지 않게 하려는 것이다.
+     *          기절 중에는 실드, 재생, 경직이 멈추고 `heal` 도 듣지 않는다. 복원하는 길은 부활(`startRevive`) 하나뿐이다.
+     *          부활은 여럿이 함께 살릴 수 있도록 속도 배율을 받는다. `startRevive` 를 다시 부르면 배율만 바뀐다.
      */
     class SW_GF_API Vitality
     {
@@ -107,43 +108,43 @@ namespace sw
         Vitality();
         explicit Vitality( const VitalitySettings& settings );
 
-        /** @brief 설정을 두고 가득 찬 상태로 시작합니다(죽음 · 기절 횟수 · 알림도 비운다). */
+        /** @brief 설정을 두고 가득 찬 상태로 시작합니다. 죽음, 기절 횟수, 알림도 비웁니다. */
         void initialize( const VitalitySettings& settings );
-        /** @brief 같은 설정으로 가득 찬 상태로 복원합니다(리스폰). 기절 횟수는 남깁니다 — 지우려면 `resetDownCount`. */
+        /** @brief 같은 설정으로 가득 찬 상태로 복원합니다(리스폰). 기절 횟수는 남기며, 지우려면 `resetDownCount` 를 부릅니다. */
         void respawn();
         /**
-         * @brief 최대 체력을 바꿉니다(하트 그릇 · 레벨 업 · 장비). 상태 · 알림 · 기절 횟수는 그대로입니다.
+         * @brief 최대 체력을 바꿉니다. 하트 그릇, 레벨 업, 장비가 쓰며, 상태와 알림과 기절 횟수는 그대로입니다.
          * @param bFill 살아 있으면 새 최대까지 채운다(젤다의 하트 그릇). 아니면 지금 체력을 새 최대로 자르기만 한다.
          */
         void setMaxHealth( float32 maxHealth, bool bFill );
 
         /**
          * @brief 피해를 줍니다. @p amount 는 실드 → 체력 순서, @p poiseDamage 는 경직 게이지에 갑니다.
-         * @param instigatorID 때린 쪽(게임이 정한 번호 — 알림과 죽음 귀속에 실린다)
+         * @param instigatorID 때린 쪽이다. 게임이 정한 번호이며 알림과 죽음 귀속에 실린다.
          */
         VitalityDamageResult applyDamage( float32 amount, float32 poiseDamage = 0.0f, int32 instigatorID = -1 );
-        /** @brief 체력을 채웁니다(살아 있을 때만, 최대까지). 실제로 찬 양입니다. */
+        /** @brief 체력을 최대까지 채웁니다. 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
         float32 heal( float32 amount );
-        /** @brief 실드를 채웁니다(살아 있을 때만, 최대까지 — 실드 전지). 실제로 찬 양입니다. */
+        /** @brief 실드를 최대까지 채웁니다(실드 전지). 살아 있을 때만 채우며, 실제로 찬 양을 반환합니다. */
         float32 addShield( float32 amount );
-        /** @brief 시간을 흘립니다 — 무적 시간 · 실드 · 체력 · 경직 재생, 기절 중이면 출혈과 부활 진행. */
+        /** @brief 시간을 흘립니다. 무적 시간, 실드, 체력, 경직이 재생하고, 기절 중이면 출혈과 부활이 진행됩니다. */
         void update( float32 deltaTime );
 
         /**
          * @brief 기절한 개체를 살리기 시작합니다. 기절 상태가 아니면 false 입니다.
-         * @param speedScale 진행 배율(둘이 살리면 2 처럼 — 게임이 정한다). 이미 살리는 중이면 배율과 살리는 쪽만 바뀐다.
+         * @param speedScale 진행 배율이다. 둘이 살리면 2 처럼 게임이 정한다. 이미 살리는 중이면 배율과 살리는 쪽만 바뀐다.
          */
         [[nodiscard]] bool startRevive( int32 reviverID, float32 speedScale = 1.0f );
-        /** @brief 살리기를 그만둡니다(살리는 쪽이 떠났다). 진행은 `_bKeepReviveProgress` 에 따릅니다. */
+        /** @brief 살리기를 그만둡니다. 살리는 쪽이 떠났을 때 부르며, 진행은 `_bKeepReviveProgress` 에 따릅니다. */
         void stopRevive();
-        /** @brief @p seconds 동안 피해를 받지 않습니다(이미 남은 것보다 길 때만 늘린다). */
+        /** @brief @p seconds 동안 피해를 받지 않습니다. 이미 남은 시간보다 길 때만 늘립니다. */
         void setInvulnerable( float32 seconds );
-        /** @brief 상태를 가리지 않고 죽입니다(낙사 · 존 밖 · 갈고리 희생). 이미 죽었으면 아무 일도 없습니다. */
+        /** @brief 상태를 가리지 않고 죽입니다. 낙사, 존 밖, 갈고리 희생에 씁니다. 이미 죽었으면 아무 일도 없습니다. */
         void kill( int32 instigatorID = -1 );
         void resetDownCount() { _downCount = 0; }
         /** @brief 쌓인 알림을 @p outListEvent 뒤에 붙이고 비웁니다. */
         void drainEvents( vector<VitalityEvent>& outListEvent );
-        /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
+        /** @brief 쌓인 알림을 꺼내지 않고 버립니다. 알림을 쓰지 않는 쪽이 받을 목록을 만들어 복사하지 않도록 둔 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 
         const VitalitySettings& getSettings() const { return _settings; }
@@ -164,9 +165,9 @@ namespace sw
         float32 getPoise() const { return _poise; }
         bool    isPoiseBroken() const { return _poiseBreak.isActive(); }
 
-        /** @brief 체력 · 보호막 · 다운 · 강인도 · 무적 · 부활 진행 · 상태을 씁니다. 설정은 `initialize` 의 것, 알림은 "일어난 일" 이라 싣지 않고 읽을 때 비웁니다. */
+        /** @brief 체력, 보호막, 다운, 강인도, 무적, 부활 진행, 상태를 씁니다. 설정은 `initialize` 의 것이고, 알림은 이미 일어난 일이라 싣지 않으며 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

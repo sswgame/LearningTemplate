@@ -42,22 +42,22 @@ namespace sw
         ~FileWatchDispatcher();
 
         /**
-         * @brief 초기화합니다. 네이티브 감시자는 @p watchRootPath 아래를 봅니다(비우면 리소스 루트).
-         * @details 감시(`registerWatch`)의 접두사는 이 루트 아래여야 이벤트가 옵니다. 다른 루트(`Config/`)를 보려면 디스패처를 하나 더 둡니다.
+         * @brief 초기화합니다. 네이티브 감시자는 @p watchRootPath 아래를 감시하며, 비우면 리소스 루트를 감시합니다.
+         * @details 감시(`registerWatch`)의 접두사가 이 루트 아래에 있어야 이벤트가 온다. 다른 루트(`Config/`)를 보려면 디스패처를 하나 더 둔다.
          */
         bool initialize( string_view watchRootPath = {} );
         /** @brief 종료합니다. */
         void shutdown();
 
         /**
-         * @brief 프레임마다 불러 파일 변경을 폴링합니다.
+         * @brief 프레임마다 호출해 파일 변경을 폴링합니다.
          */
         void update();
 
         /**
-         * @brief pathPrefix 아래에서 확장자가 맞는 변경이 있을 때만 onMatch 를 부르도록 등록합니다.
-         * @param pathPrefix 감시 · 필터 경로(안에서 정규화합니다)
-         * @param listExtension 예: { ".hlsl", ".hlsli" } (점 포함, 대소문자 무시)
+         * @brief pathPrefix 아래에서 확장자가 맞는 변경이 있을 때만 onMatch 를 호출하도록 등록합니다.
+         * @param pathPrefix 감시와 필터에 쓰는 경로입니다. 안에서 정규화합니다.
+         * @param listExtension 예를 들면 { ".hlsl", ".hlsli" } 입니다. 점을 포함하며 대소문자를 무시합니다.
          */
         FileWatchHandle registerWatch( string_view pathPrefix, const vector<string>& listExtension, const FileWatchMatchDelegate& onMatch );
         /** @brief 감시 등록을 해제합니다. */
@@ -65,23 +65,23 @@ namespace sw
 
         /**
          * @brief 파일 변경 이벤트를 등록된 감시 콜백으로 보냅니다.
-         * @details **공개인 이유는 이것이 이 클래스의 절반이기 때문입니다.** 나머지 절반(폴링)은 OS 알림에 기대므로 검사가
-         *          타이밍에 흔들립니다. 이벤트를 직접 넣을 수 있으면 "누구에게 가고 누구에게 안 가는가" 와 "콜백이 목록을
-         *          바꿔도 견디는가" 를 파일 시스템 없이 결정적으로 볼 수 있습니다. 도구가 합성 이벤트를 넣는 데도 씁니다.
-         * @note 콜백 안에서 `registerWatch`/`unregisterWatch` 를 불러도 됩니다.
+         * @details 이 함수를 공개한 이유는 이 클래스의 절반이기 때문이다. 나머지 절반(폴링)은 OS 알림에 기대므로 검사가
+         *          타이밍에 따라 흔들린다. 이벤트를 직접 넣을 수 있으면 "누구에게 가고 누구에게 안 가는가" 와 "콜백이 목록을
+         *          바꿔도 견디는가" 를 파일 시스템 없이 결정적으로 확인할 수 있다. 도구가 합성 이벤트를 넣는 데도 쓴다.
+         * @note 콜백 안에서 `registerWatch` 와 `unregisterWatch` 를 호출해도 됩니다.
          */
         void dispatchEvents( const vector<FileChangeEvent>& listEvent );
 
     private:
-        /// @brief 경로 접두사 · 확장자 필터 · 콜백입니다.
+        /// @brief 경로 접두사, 확장자 필터, 콜백을 담습니다.
         struct WatchEntry
         {
             FileWatchHandle _handle;
             string          _pathPrefix;
             /**
-             * @brief `_pathPrefix` 를 `normalizePath` 한 것입니다. **등록할 때 한 번** 만듭니다.
-             * @details 접두사는 감시가 등록된 뒤로 바뀌지 않으므로, `matchesWatch` 가 이벤트마다 다시 만들면 이벤트 E 개 ·
-             *          감시 W 개에 E x W 번의 정규화가 모두 같은 값을 다시 구합니다.
+             * @brief `_pathPrefix` 를 `normalizePath` 한 값입니다. 등록할 때 한 번만 만듭니다.
+             * @details 접두사는 감시가 등록된 뒤로 바뀌지 않는다. `matchesWatch` 가 이벤트마다 다시 만들면 이벤트 E 개와
+             *          감시 W 개에 대해 E x W 번의 정규화가 모두 같은 값을 다시 구한다.
              */
             string                 _normalizedPrefix;
             vector<string>         _listExtension;
@@ -89,15 +89,15 @@ namespace sw
         };
 
         /**
-         * @brief 이벤트가 이 감시의 접두사 · 확장자와 맞으면 true 입니다.
-         * @param normalizedFullPath 이벤트의 전체 경로를 정규화한 것. **부르는 쪽이 이벤트당 한 번** 만들어 넘깁니다(감시마다
-         *        다시 만들지 않게).
+         * @brief 이벤트가 이 감시의 접두사와 확장자에 맞으면 true 입니다.
+         * @param normalizedFullPath 이벤트의 전체 경로를 정규화한 값입니다. 호출하는 쪽이 이벤트당 한 번만 만들어 넘깁니다. 감시마다
+         *        다시 만들지 않기 위해서입니다.
          */
         bool matchesWatch( const WatchEntry& entry, const FileChangeEvent& changeEvent,
                            string_view normalizedFullPath ) const;
         /**
          * @brief 파일 이름이 빈 리스캔 신호를 실제 변경 파일 목록으로 펼칩니다.
-         * @param sinceTimestamp 이 시각(파일 시계, 초) 이후 mtime 인 파일만 냅니다(직전 비우기 시각).
+         * @param sinceTimestamp 이 시각(파일 시계, 초) 이후에 mtime 이 바뀐 파일만 냅니다. 직전에 큐를 비운 시각입니다.
          */
         void expandRescanEvents( vector<FileChangeEvent>& outListEvent, uint64 sinceTimestamp );
         /** @brief mtime 폴백으로 변경을 모읍니다. */

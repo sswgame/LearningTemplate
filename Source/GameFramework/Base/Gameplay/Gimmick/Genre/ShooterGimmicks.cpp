@@ -32,10 +32,10 @@ namespace sw
                 GameEventUtil::send( event );
             }
 
-            /** @brief 오브젝트의 파괴 컴포넌트입니다(파쇄 데이터가 있든 없든). 없으면 nullptr 입니다. */
+            /** @brief 오브젝트의 파괴 컴포넌트입니다. 파쇄 데이터가 있든 없든 반환하며, 컴포넌트가 없으면 nullptr 입니다. */
             static FractureComponentBase* findFracture( GameObject& object ) { return object.getComponent<FractureComponentBase>(); }
 
-            /** @brief 오브젝트를 그 경계 구 크기의 폭발로 중심에서 깹니다(조각 깎기 · 통째로 부수기). */
+            /** @brief 오브젝트를 그 경계 구 크기의 폭발로 중심에서 깹니다. 조각을 깎아 내거나 통째로 부술 때 씁니다. */
             static void breakAtCenter( FractureComponentBase& fracture, const float3& center, float32 strain, float32 impulse )
             {
                 const FractureAsset* pAsset = fracture.findAsset();
@@ -102,7 +102,7 @@ namespace sw
         const SceneComponent* pScene   = owner.getPrimarySceneComponent();
         const float3          center   = pScene != nullptr ? pScene->getWorldPosition() : float3{};
         ShooterGimmicksInternal::sendCue( owner, hashed_string( "Explosion" ), center, _damage );
-        // 파괴 컴포넌트가 있으면 몸을 끄지 않는다 — 조각으로 부서져 날아간다(조각 그림 · 바디가 그 몸이다).
+        // 파괴 컴포넌트가 있으면 몸을 끄지 않는다. 조각으로 부서져 날아가며, 조각의 그래픽과 바디가 그 몸이다.
         FractureComponentBase* pSelfFracture = ShooterGimmicksInternal::findFracture( owner );
         if ( pSelfFracture != nullptr && pSelfFracture->hasFractureData() )
             ShooterGimmicksInternal::breakAtCenter( *pSelfFracture, center, _fractureStrain * 2.0f, _blastImpulse );
@@ -110,7 +110,7 @@ namespace sw
             GenreGimmickUtil::setBodyActive( owner, false, this );
         if ( pManager == nullptr || _radius <= 0.0f )
             return;
-        // 반경 안의 것에 거리 감쇠 피해 — 다른 드럼통은 자기 걸음에 터진다(사슬). 파괴 오브젝트는 경계가 반경에 닿으면 자리 있는 폭발로 깬다.
+        // 반경 안의 것에 거리 감쇠 피해를 준다. 다른 드럼통은 자기 스텝에 터지며 연쇄가 이어진다. 파괴 오브젝트는 경계가 반경에 닿으면 위치 기반 폭발로 깬다.
         const uint64      selfID         = owner.getObjectID();
         const float32     radius         = _radius;
         const float32     damage         = _damage;
@@ -166,7 +166,7 @@ namespace sw
         if ( _cooldownSteps > 0 )
             --_cooldownSteps;
 
-        // 고르기 — 태그를 가진 것들을 후보로, 상호작용과 같은 고르기(거리 · 시야각 · 시야).
+        // 대상 고르기: 태그를 가진 것들을 후보로 삼고, 상호작용과 같은 방식(거리, 시야각, 시야)으로 고른다.
         const float3      origin = pScene->getWorldPosition();
         InteractionViewer viewer;
         viewer._position = origin;
@@ -194,7 +194,7 @@ namespace sw
         if ( pick < 0 )
             return;
 
-        // 조준 — 요를 목표 쪽으로 돌린다.
+        // 조준: 요를 목표 쪽으로 돌린다.
         const float3  toTarget   = listCandidate[static_cast<size_t>( pick )]._position - origin;
         const float32 desiredYaw = MathUtil::atan2( toTarget._x, toTarget._z );
         float3        rotation   = pScene->getLocalRotation();

@@ -70,7 +70,7 @@ namespace sw
         const float3 offset = emitterPosition - listener._position;
         if ( listener._mode == AudioSpatialMode::Screen2D )
         {
-            // 화면 평면 거리 — 시선(앞) 방향 성분(깊이 · 레이어)을 뺀다. 옆에서 본 2D(XY, +Z 를 봄)면 XY 거리, 위에서 본 직교(XZ)면 XZ 거리.
+            // 화면 평면 거리를 구한다. 시선(앞) 방향 성분(깊이, 레이어)을 뺀다. 옆에서 본 2D(XY, +Z 를 봄)면 XY 거리, 위에서 본 직교(XZ)면 XZ 거리다.
             const float3 forward = listener._forward.normalize();
             const float3 planar  = offset - forward * offset.dot( forward );
             return planar.getLength();
@@ -81,11 +81,11 @@ namespace sw
     float32 AudioSpatializer::computePan( const AudioListenerState& listener, const float3& emitterPosition, float32 centerRadius )
     {
         const float3 offset = emitterPosition - listener._position;
-        // 왼손 좌표(+X 오른쪽 · +Y 위 · +Z 앞): 오른쪽 = 위 × 앞.
+        // 왼손 좌표(+X 오른쪽, +Y 위, +Z 앞)에서 오른쪽 = 위 × 앞이다.
         const float3 right = listener._up.cross( listener._forward ).normalize();
         if ( listener._mode == AudioSpatialMode::Screen2D )
         {
-            // 화면 가로 거리 / 화면 반폭 — 화면 세로(고도)는 팬에 쓰지 않는다.
+            // 화면 가로 거리 / 화면 반폭이다. 화면 세로(고도)는 팬에 쓰지 않는다.
             const float32 halfWidth = MathUtil::max( 0.01f, listener._screenHalfWidth );
             return MathUtil::clamp( offset.dot( right ) / halfWidth, -1.0f, 1.0f );
         }
@@ -106,7 +106,7 @@ namespace sw
         if ( distance < 1e-4f )
             return 1.0f;
         toListener /= distance;
-        // 다가오는 속도(+)를 소리 속도의 절반 안으로 묶는다 — 분모가 0 이나 음수가 되지 않게.
+        // 다가오는 속도(+)를 소리 속도의 절반 안으로 제한한다. 분모가 0 이나 음수가 되지 않게 하려는 것이다.
         const float32 limit          = kSpeedOfSound * 0.5f;
         const float32 sourceApproach = MathUtil::clamp( emitter._velocity.dot( toListener ), -limit, limit );
         const float32 listenerRecede = MathUtil::clamp( listener._velocity.dot( toListener ), -limit, limit );
@@ -177,7 +177,7 @@ namespace sw
         AudioSpatialResult result;
         result._distance = computeDistance( listener, emitter._position );
         result._gain     = attenuation.computeGain( result._distance );
-        // 리스너 0.5 m 안(최소 거리가 더 작으면 그 절반 안)에서는 팬을 가운데로 모은다 — 머리를 지나가는 소리가 좌우로 튀지 않게.
+        // 리스너 0.5 m 안(최소 거리가 더 작으면 그 절반 안)에서는 팬을 가운데로 모은다. 머리 옆을 지나가는 소리가 좌우로 튀지 않게 하려는 것이다.
         result._pan        = computePan( listener, emitter._position, MathUtil::min( attenuation._minDistance * 0.5f, 0.5f ) );
         result._pitchRatio = computeDopplerRatio( listener, emitter, attenuation._dopplerFactor );
         result._lowPassHz  = attenuation.computeLowPassHz( result._distance );

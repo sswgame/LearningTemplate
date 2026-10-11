@@ -1,6 +1,6 @@
 /**
  * @file ParkLayoutCommands.cpp
- * @brief ThemePark 확장의 커맨드 — 메뉴(Panel) · 팔레트에서 Park Layout 패널을 엽니다.
+ * @brief ThemePark 확장의 커맨드를 등록합니다. 메뉴(Panel)와 팔레트에서 Park Layout 패널을 엽니다.
  */
 #include "pch.h"
 

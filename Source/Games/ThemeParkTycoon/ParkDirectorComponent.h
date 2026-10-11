@@ -1,13 +1,12 @@
 /**
  * @file ParkDirectorComponent.h
- * @brief ThemeParkTycoon 의 규칙을 돌리는 컴포넌트 — 시뮬레이션 · 짓기 · 입력 · 자동 짓기 · 로그, 그리고 런타임 오브젝트(프리팹) 스폰 지시입니다.
+ * @brief ThemeParkTycoon 의 규칙을 돌리는 컴포넌트입니다. 시뮬레이션, 건설, 입력, 자동 건설, 로그를 맡고 런타임 오브젝트(프리팹) 스폰을 지시합니다.
+ * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 손님, 대기줄, 티켓, 평점은 키트의 `ThemeParkSimulation` 이, 코스터 트랙, 물리, 평가는
+ *          `CoasterTrackBuilder`, `CoasterTrain`, `CoasterRideAnalyzer` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
+ *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
- * @details 언리얼 GameMode/GameState 의 자리입니다. 씬에 하나 둡니다. 손님 · 줄 · 표 · 평점은 키트의 `ThemeParkSimulation`, 코스터 트랙 · 물리 · 평가는
- *          `CoasterTrackBuilder` · `CoasterTrain` · `CoasterRideAnalyzer` 가 맡고, 여기는 무엇을 언제 짓는지와 그 모습(프리팹)을 어디에 세우는지를 압니다.
- *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`ParkGuestComponent` · `CoasterCarComponent` · `FlatRideComponent`)가 이 컴포넌트를 **읽기만** 해서 합니다.
- *
- *          틱 규칙 · 틱 뒤 스폰 · 상태 바이트 보류 · 걷기는 베이스 `GameDirectorComponent` 가 맡습니다 — 디렉터는 `PrePhysics` 에서 상태를 쓰고,
- *          뷰 · 카메라 리그는 `PostUpdate` 에서 읽습니다(그룹은 차례로 돈다).
+ *          틱 규칙, 틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리는 베이스 `GameDirectorComponent` 가 맡는다. 디렉터는 `PrePhysics` 에서 상태를 쓰고,
+ *          뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -40,9 +39,9 @@ namespace sw
 
     /**
      * @class ParkDirectorComponent
-     * @brief 공원 한 판입니다. 플레이가 시작되면 데이터를 읽고 시뮬레이션을 열어 처음 둘(가장 싼 평지 · 코스터)을 짓습니다.
-     * @details 시뮬레이션 · 지은 것 · 열차 자리는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드 · 세이브를
-     *          넘깁니다(`ThemeParkTycoonGame`). 코스터 트랙은 배치 데이터에서 다시 짓습니다. 세운 오브젝트는 핸들로 들고, 상태 저장 전에 걷습니다.
+     * @brief 공원 한 판을 진행합니다. 플레이가 시작되면 데이터를 읽고 시뮬레이션을 열어, 처음 두 개(가장 싼 평지 놀이기구와 코스터)를 건설합니다.
+     * @details 시뮬레이션, 건설한 것, 열차 위치는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를
+     *          넘긴다(`ThemeParkTycoonGame`). 코스터 트랙은 배치 데이터에서 다시 만든다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Director", Tooltip = "Runs the park simulation, building, input and the runtime spawns" )
     class ParkDirectorComponent : public GameDirectorComponent
@@ -53,22 +52,22 @@ namespace sw
         ParkDirectorComponent();
         virtual ~ParkDirectorComponent() override;
 
-        /** @brief 공원 상태(시뮬레이션 · 지은 배치 · 열차 자리 · 타이머 · 고른 배치)를 씁니다 — `ComponentStateStore::capture` 가 부릅니다. */
+        /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 타이머, 선택한 배치)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;
 
-        // ---- 뷰가 읽는 것(PostUpdate — 디렉터가 쓰지 않는 그룹) ----
+        // ---- 뷰가 읽는 것(PostUpdate. 디렉터가 쓰지 않는 그룹) ----
         const ThemeParkSimulation& getSimulation() const { return _simulation; }
-        /** @brief 행복도 칸(0 초록 · 1 노랑 · 2 빨강)의 손님 모습입니다. 아직 없으면 비어 있다. */
+        /** @brief 행복도 슬롯(0 초록, 1 노랑, 2 빨강)의 손님 모습을 반환합니다. 아직 없으면 비어 있습니다. */
         const shared_ptr<MaterialInstance>& getGuestLook( int32 bucket ) const;
-        /** @brief 코스터 번호의 열차입니다. 없으면 nullptr 입니다. */
+        /** @brief 코스터 번호의 열차를 반환합니다. 없으면 nullptr 입니다. */
         const CoasterTrain* findCoasterTrain( int32 coasterIndex ) const;
-        /** @brief 행복도 → 색 칸입니다. */
+        /** @brief 행복도에서 색 슬롯으로 바꿉니다. */
         static int32 computeHappinessBucket( float32 happiness );
 
     protected:
-        /** @brief 배치 데이터를 읽고 공원을 열어 처음 둘(가장 싼 평지 · 코스터)을 짓습니다. */
+        /** @brief 배치 데이터를 읽고 공원을 열어 처음 두 개(가장 싼 평지 놀이기구와 코스터)를 건설합니다. */
         [[nodiscard]] bool startGame() override;
-        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트를 읽어 한 번에 바꿉니다. 끝까지 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive ) override;
         void               onStateRestored( bool bRestored ) override;
         void               onGameStarted() override;
@@ -78,13 +77,13 @@ namespace sw
         bool               hasPendingSpawn() const override { return _listPendingRideView.empty() == false; }
 
     private:
-        /** @brief 지을 수 있는 놀이기구 하나 — 키트의 배치 정의에 지은 뒤의 번호를 더한다. */
+        /** @brief 건설할 수 있는 놀이기구 하나입니다. 키트의 배치 정의에 건설한 뒤의 번호를 더합니다. */
         struct RidePlacement : ParkRidePlacement
         {
-            int32 _rideIndex{ -1 }; ///< 지었으면 시뮬레이션의 놀이기구 번호
+            int32 _rideIndex{ -1 }; ///< 건설했으면 시뮬레이션의 놀이기구 번호.
         };
 
-        /** @brief 지은 코스터 하나 — 트랙은 열차가 가리키므로 힙에 둔다(목록이 자라도 주소가 그대로). */
+        /** @brief 건설한 코스터 하나입니다. 트랙은 열차가 가리키므로 힙에 둡니다(목록이 자라도 주소가 그대로입니다). */
         struct CoasterRuntime
         {
             unique_ptr<CoasterTrack> _pTrack{};
@@ -94,15 +93,15 @@ namespace sw
 
     private:
         /**
-         * @brief 배치의 코스터(트랙 · 열차)를 짓고 테스트 운행 결과를 @p outStats 에 냅니다. 배치 · 설계가 없으면 nullptr 입니다.
-         * @details 짓기(`buildPlacement`)와 복원이 같은 트랙을 짓습니다 — 열차는 트랙을 가리키므로 트랙째 힙에 있다.
+         * @brief 배치의 코스터(트랙, 열차)를 만들고 테스트 운행 결과를 @p outStats 에 냅니다. 배치나 설계가 없으면 nullptr 을 반환합니다.
+         * @details 건설(`buildPlacement`)과 복원이 같은 트랙을 만든다. 열차는 트랙을 가리키므로 트랙째 힙에 둔다.
          */
         unique_ptr<CoasterRuntime> createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const;
-        /** @brief 설계도 하나를 짓습니다(돈이 모자라면 false). 모습은 틱 뒤에 세운다. */
+        /** @brief 설계도 하나를 건설합니다(돈이 모자라면 false). 모습은 틱이 끝난 뒤 스폰합니다. */
         bool buildPlacement( int32 placementIndex );
-        /** @brief 아직 안 지은 것 중 가장 싼 것을 짓습니다. */
+        /** @brief 아직 건설하지 않은 것 중 가장 싼 것을 건설합니다. */
         bool buildCheapestRemaining();
-        /** @brief 공원이 빌릴 공유 상태(디렉터가 든 금고)입니다. */
+        /** @brief 공원이 빌려 쓸 공유 상태(디렉터가 보관하는 금고)를 반환합니다. */
         GameStateRefs makeRefs();
         void          spawnGuestPool( GameObjectManager& manager );
         void          spawnRideView( GameObjectManager& manager, int32 placementIndex );
@@ -165,19 +164,19 @@ namespace sw
         float32 _rideFarPlane;
 
         ThemeParkSimulation                _simulation;
-        Wallet                             _wallet; ///< 공원 금고 — 키트 하나만 쓰는 게임이라 디렉터가 들고 빌려 준다
+        Wallet                             _wallet; ///< 공원 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
         CoasterLayoutCatalog               _layoutCatalog;
         ThemeParkSettings                  _settings;
         vector<RidePlacement>              _listPlacement;
         vector<unique_ptr<CoasterRuntime>> _listCoaster;
-        vector<int32>                      _listPendingRideView; ///< 모습을 세울 배치 번호(틱 뒤)
-        MaterialTintCache                  _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다 — 배치 키가 인스턴스다)
+        vector<int32>                      _listPendingRideView; ///< 모습을 스폰할 배치 번호(틱이 끝난 뒤 처리).
+        MaterialTintCache                  _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다).
         shared_ptr<MaterialInstance>       _arrGuestLook[3];
         float32                            _statusTimer;
         float32                            _autoBuildTimer;
         int32                              _startingCash;
         int32                              _selectedPlacement;
-        int32                              _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다
+        int32                              _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
         uint8                              _bWasRiding : 1;
         uint8                              _reserved   : 7;
     };

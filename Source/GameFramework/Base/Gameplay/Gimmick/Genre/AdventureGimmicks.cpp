@@ -40,7 +40,7 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr || isMoving() )
             return false;
-        // 가장 가까운 축 하나로 맞춘다(3D 는 X/Z, 2D 는 X/Y).
+        // 가장 가까운 축 하나로 맞춘다. 3D 는 X/Z, 2D 는 X/Y 축을 쓴다.
         const float32 along  = direction._x;
         const float32 across = _bPlanar2D ? direction._y : direction._z;
         float3        cellStep{};
@@ -80,7 +80,7 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
-        // 상호작용(Push)을 끝낸 이가 있으면 그 사람에게서 블록 쪽으로 민다.
+        // 상호작용(Push)을 끝낸 쪽이 있으면 그 쪽에서 블록 방향으로 민다.
         GimmickSensorComponent* pSensor = pOwner->getComponent<GimmickSensorComponent>();
         if ( pSensor != nullptr && pSensor->consumeUses() > 0.0f )
         {
@@ -134,7 +134,7 @@ namespace sw
         if ( _grid.getTable() == nullptr )
             rebuild();
         if ( _startStimulus.empty() == false )
-            (void)applyStimulus( _startStimulus ); // 바뀐 것이 없거나 모르는 자극이면 false — 시작 상태 그대로 둔다
+            (void)applyStimulus( _startStimulus ); // 바뀐 것이 없거나 알 수 없는 자극이면 false 이고, 이때는 시작 상태 그대로 둔다
         publishSignal();
     }
 
@@ -142,7 +142,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         if ( _seenTableReloadCount != ElementRuleTable::getSharedReloadCount() )
-            rebuild(); // 규칙 표 파일을 고쳤다 — 새 표로 다시 짓는다(상태는 처음부터)
+            rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
         if ( _grid.update( deltaTime ) > 0 )
             publishSignal();
     }

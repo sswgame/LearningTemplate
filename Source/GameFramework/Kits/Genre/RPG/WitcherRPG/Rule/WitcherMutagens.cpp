@@ -173,7 +173,7 @@ namespace sw
         int32  characterLevel = 0;
         uint32 count          = 0;
         archive >> characterLevel;
-        // 묶음마다 슬롯 수(4) + 변이원(4) 이상
+        // 그룹마다 슬롯 수(4) + 변이원(4) 바이트 이상
         if ( _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size() )
             return false;
         vector<Group> listGroup = _listGroup;

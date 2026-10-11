@@ -20,12 +20,12 @@ namespace sw
         struct HorrorMatchInternal
         {
             static constexpr float32 kTiny             = 1.0e-5f;
-            static constexpr float32 kNeverReviveTime  = 1.0e9f; ///< 빈사 회복은 치료 진행이 정한다 — Vitality 의 부활 시계는 멈춤용으로만 쓴다
+            static constexpr float32 kNeverReviveTime  = 1.0e9f; ///< 빈사 회복은 치료 진행이 정하므로, Vitality 의 부활 시계는 멈춤용으로만 쓴다
             static constexpr uint32  kGeneratorSeedMix = HashUtil::kGoldenRatio32;
             static constexpr uint32  kHealSeedMix      = 0x85EBCA6Bu;
             static constexpr uint32  kGateSeedMix      = 0xC2B2AE35u;
 
-            /** @brief XZ 평면 거리입니다. */
+            /** @brief XZ 평면 거리를 반환합니다. */
             static float32 computeFlatDistance( const float3& from, const float3& to )
             {
                 const float32 deltaX = to._x - from._x;
@@ -33,7 +33,7 @@ namespace sw
                 return MathUtil::sqrt( deltaX * deltaX + deltaZ * deltaZ );
             }
 
-            /** @brief XZ 평면에서 길이 1 이하로 자른 방향입니다. */
+            /** @brief XZ 평면에서 길이를 1 이하로 자른 방향을 반환합니다. */
             static float3 clampDirection( const float3& direction )
             {
                 float3        flat{ direction._x, 0.0f, direction._z };
@@ -43,7 +43,7 @@ namespace sw
                 return flat;
             }
 
-            /** @brief 창틀 건너편 — 창틀을 사이에 두고 마주 보는 자리입니다. */
+            /** @brief 창틀 건너편을 반환합니다. 창틀을 사이에 두고 마주 보는 위치입니다. */
             static float3 computeVaultExit( const float3& from, const float3& window )
             {
                 return float3{ window._x * 2.0f - from._x, 0.0f, window._z * 2.0f - from._z };
@@ -549,7 +549,7 @@ namespace sw
         leaveActivity( victim );
         _killer._attackCooldown.start( def._hitCooldown );
         _match.reportDamage( _killer._participant, target._participant, 1.0f );
-        (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
+        (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 이벤트로 읽는다
         _listVitalityScratch.clear();
         target._vitality.drainEvents( _listVitalityScratch );
         awardScore( _killer._score, "Hit", 1.0f );
@@ -602,7 +602,7 @@ namespace sw
         pushEvent( AsymmetricHorrorEvent::Kind::Hooked, survivor, hook, static_cast<float32>( target._hookStage ), position );
         if ( target._hookStage >= rules._maxHookStage )
         {
-            sacrifice( survivor, false ); // 마지막 걸림은 바로 희생
+            sacrifice( survivor, false ); // 마지막 걸림이면 바로 희생된다
             return true;
         }
         target._state = SurvivorState::Hooked;
@@ -672,7 +672,7 @@ namespace sw
         releaseHealers( occupant, true );
         while ( target._vitality.isAlive() )
         {
-            (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
+            (void)target._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 이벤트로 읽는다
         }
         _listVitalityScratch.clear();
         target._vitality.drainEvents( _listVitalityScratch );
@@ -871,7 +871,7 @@ namespace sw
         StateArchiveUtil::writeCountdown( outArchive, _collapseRemaining );
         outArchive << _hatchPosition;
 
-        // 무대 — 자리를 먼저 싣고(읽는 쪽이 add… 로 다시 세운다) 그 위에 상태를 덮는다.
+        // 무대: 위치를 먼저 싣고(읽는 쪽이 add... 로 다시 만든다) 그 위에 상태를 덮는다.
         outArchive << static_cast<uint32>( _listHook.size() );
         for ( const float3& position : _listHook )
         {
@@ -958,7 +958,7 @@ namespace sw
         hashed_string killerID;
         if ( StateArchiveUtil::readName( archive, killerID ) == false || killerID != _settings._killerID )
             return false;
-        // 같은 설정 · 카탈로그로 새 판을 열고 무대 · 생존자를 add… 로 다시 세운 뒤(규칙에서 오는 설정) 상태를 덮는다 — 끝까지 맞을 때만 바꾼다.
+        // 같은 설정과 카탈로그로 새 판을 열고, 무대와 생존자를 add... 로 다시 만든 뒤(규칙에서 오는 설정) 상태를 덮는다. 끝까지 맞을 때만 바꾼다.
         HorrorMatch restored;
         if ( restored.initialize( _settings, _pCatalog ) == false )
             return false;
@@ -1045,7 +1045,7 @@ namespace sw
             if ( archive.isError() || bKicked > SW_TRUE || bBlocked > SW_TRUE )
                 return false;
             const int32 generator = restored.addGenerator( position );
-            restored.configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙으로
+            restored.configureGenerator( generator, bKicked == SW_TRUE ); // 걷어차인 발전기는 퇴행 규칙을 쓴다
             HorrorGenerator& target = restored._listGenerator[static_cast<size_t>( generator )];
             target._bBlocked        = bBlocked;
             if ( target._progress.readState( archive ) == false )
@@ -1066,7 +1066,7 @@ namespace sw
         }
 
         uint32 survivorCount = 0;
-        // 생존자마다 적어도 자리(12) + 실수 · 타이머 · 정수 칸(60) + 체력 · 치료 · 점수
+        // 생존자마다 최소한 위치(12) + 실수, 타이머, 정수 필드(60) + 체력, 치료, 점수
         if ( StateArchiveUtil::readCount( archive, 72, survivorCount ) == false )
             return false;
         for ( uint32 index = 0; index < survivorCount; ++index )
@@ -1260,7 +1260,7 @@ namespace sw
                 survivor._hookTimer += deltaTime;
                 if ( survivor._hookStage >= 2 )
                 {
-                    // 몸부림 단계 — 멈추면 희생이 앞당겨진다.
+                    // 몸부림 단계에서는 멈추면 희생이 앞당겨진다.
                     survivor._struggleIdle = survivor._bStruggling == SW_TRUE ? 0.0f : survivor._struggleIdle + deltaTime;
                     if ( survivor._struggleIdle > rules._struggleGrace )
                     {
@@ -1289,14 +1289,14 @@ namespace sw
             }
         }
 
-        // 이 생존자를 치료하는 진행 — 치료하는 쪽들이 붙어 있다.
+        // 이 생존자를 치료하는 진행이며, 치료하는 쪽들이 붙어 있다.
         if ( survivor._healing.getParticipantCount() > 0 )
         {
             survivor._healing.update( deltaTime );
             if ( drainProgress( survivor._healing, survivor._position ) )
                 finishHeal( survivorIndex );
         }
-        survivor._lastMoveSpeed = 0.0f; // 이동은 걸음 사이에 들어온다 — 다음 걸음까지만 빠른 넘기 판정에 쓴다
+        survivor._lastMoveSpeed = 0.0f; // 이동은 걸음 사이에 들어오므로, 다음 걸음까지만 빠른 넘기 판정에 쓴다
     }
 
     void HorrorMatch::stepGenerators( float32 deltaTime )
@@ -1325,7 +1325,7 @@ namespace sw
             if ( drainProgress( generator._progress, generator._position ) == false )
                 continue;
 
-            // 다 고쳤다 — 고치던 사람은 손을 뗀다.
+            // 다 고쳤다. 고치던 사람은 손을 뗀다.
             for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
             {
                 HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
@@ -1401,7 +1401,7 @@ namespace sw
         _collapseRemaining.tick( deltaTime * ( bSlowed ? rules._collapseSlowScale : 1.0f ) );
         if ( _collapseRemaining.isActive() )
             return;
-        // 붕괴가 끝났다 — 아직 남은 생존자는 모두 희생된다.
+        // 붕괴가 끝났다. 아직 남은 생존자는 모두 희생된다.
         for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
         {
             if ( _listSurvivor[static_cast<size_t>( survivor )].isStanding() )
@@ -1510,7 +1510,7 @@ namespace sw
         releaseHealers( patient, true );
         if ( target._state == SurvivorState::Dying )
         {
-            restoreInjured( target ); // 빈사 → 부상
+            restoreInjured( target ); // 빈사에서 부상으로 돌아간다
         }
         else if ( target._state == SurvivorState::Injured )
         {
@@ -1525,7 +1525,7 @@ namespace sw
     void HorrorMatch::restoreInjured( HorrorSurvivor& survivor )
     {
         survivor._vitality.respawn();
-        (void)survivor._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 사건으로 읽는다
+        (void)survivor._vitality.applyDamage( 1.0f, 0.0f, -1 ); // 결과는 아래 drainEvents 가 이벤트로 읽는다
         _listVitalityScratch.clear();
         survivor._vitality.drainEvents( _listVitalityScratch );
         survivor._state          = SurvivorState::Injured;
@@ -1648,7 +1648,7 @@ namespace sw
             sacrificed += survivor._state == SurvivorState::Sacrificed ? 1 : 0;
             escaped += survivor._state == SurvivorState::Escaped ? 1 : 0;
         }
-        // 희생이 많으면 살인마, 탈출이 많으면 생존자, 같으면 무승부입니다.
+        // 희생이 많으면 살인마, 탈출이 많으면 생존자가 이기고, 같으면 무승부이다.
         const int32 winner = sacrificed > escaped ? _killerTeam : ( escaped > sacrificed ? _survivorTeam : -1 );
         _bEndReported      = SW_TRUE;
         _match.endMatch( winner );

@@ -39,7 +39,7 @@ namespace sw
         {
             case InteractionInputMode::Press:
             {
-                // 누름 단계는 그 단계를 시작한 누름으로 끝난다(첫 단계는 시작한 누름, 다음 단계는 다음 누름 — `update`).
+                // 누름 단계는 그 단계를 시작한 누름으로 끝난다. 첫 단계는 시작한 누름으로, 다음 단계는 다음 누름으로 끝나며 이는 `update` 에서 처리한다.
                 if ( _stepIndex == 0 )
                     completeStep();
                 break;
@@ -91,7 +91,7 @@ namespace sw
             {
                 if ( bHeld == false )
                 {
-                    // 떼면 진행은 처음부터(InteractionProgress 의 끊김 규칙) — 상호작용이 끝난다.
+                    // 떼면 진행은 처음부터 다시 시작한다(InteractionProgress 의 끊김 규칙). 이 상호작용은 끝난다.
                     (void)_holdProgress.leave( _actorID );
                     cancel();
                     break;

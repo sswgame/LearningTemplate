@@ -17,7 +17,7 @@ namespace sw
     {
         struct FighterCatalogInternal
         {
-            /** @brief "Standing,Crouching,Airborne,Stance" 를 비트로 읽습니다. 모르는 낱말은 경고합니다. 비면 @p fallback 입니다. */
+            /** @brief "Standing,Crouching,Airborne,Stance" 를 비트로 읽습니다. 모르는 낱말은 경고하고, 문자열이 비면 @p fallback 을 반환합니다. */
             static uint8 parsePostureMask( string_view text, uint8 fallback, string_view sourceName, const utf8* pMoveID )
             {
                 uint8 mask = 0;
@@ -37,7 +37,7 @@ namespace sw
                 return mask != 0 ? mask : fallback;
             }
 
-            /** @brief 커맨드 표기를 읽습니다. 비면 @p pDefault 를 씁니다. */
+            /** @brief 커맨드 표기를 읽습니다. 문자열이 비면 @p pDefault 를 씁니다. */
             [[nodiscard]] static bool parseCommandOr( const InputCommandParser& parser, string_view text, const utf8* pDefault, InputCommand& outCommand )
             {
                 const string_view notation = text.empty() ? string_view( pDefault ) : text;

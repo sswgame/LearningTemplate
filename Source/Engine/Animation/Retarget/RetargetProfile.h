@@ -1,6 +1,6 @@
 /**
  * @file RetargetProfile.h
- * @brief 리타깃 프로필(`*.retarget.json`) — 원본 · 대상 스켈레톤 사이의 사슬 짝(이름 · 본 목록), 골반 · 뿌리 처리, IK 목표 사슬입니다.
+ * @brief 리타깃 프로필(`*.retarget.json`)입니다. 원본과 대상 스켈레톤 사이의 사슬 쌍(이름, 본 목록), 골반과 뿌리 처리, IK 목표 사슬을 담습니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -13,17 +13,17 @@ namespace sw
 {
     class JSONValue;
 
-    /** @brief 뿌리 · 골반 이동을 옮기는 방법입니다. */
+    /** @brief 뿌리와 골반 이동을 옮기는 방법입니다. */
     enum class RetargetTranslationMode : uint8
     {
-        ScaleByPelvisHeight = 0, ///< 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다 — 다리 길이가 다른 캐릭터가 같은 보폭 비로 걷는다
+        ScaleByPelvisHeight = 0, ///< 골반 높이 비(대상 / 원본)만큼 줄이거나 늘린다. 다리 길이가 다른 캐릭터가 같은 보폭 비로 걷는다.
         Copy,                    ///< 그대로 옮긴다
-        None,                    ///< 대상 레퍼런스 자리에 둔다(제자리 동작)
+        None,                    ///< 대상 레퍼런스 위치에 둔다(제자리 동작).
     };
 
     /**
-     * @brief 사슬 하나의 짝입니다. 본 수가 달라도 됩니다 — 대상 본마다 사슬 길이 비율로 원본 본을 고릅니다.
-     * @details `_bIKGoal` 이면 회전을 옮긴 뒤 끝을 원본 끝 자리(골반 높이 비로 바꾼)로 IK 해 발이 미끄러지지 않게 디딥니다.
+     * @brief 사슬 하나의 쌍입니다. 본 수가 달라도 됩니다. 대상 본마다 사슬 길이 비율로 원본 본을 고릅니다.
+     * @details `_bIKGoal` 이면 회전을 옮긴 뒤 끝을 원본 끝 위치(골반 높이 비로 바꾼 값)로 IK 해서, 발이 미끄러지지 않고 디디게 한다.
      */
     struct RetargetChain
     {
@@ -38,14 +38,14 @@ namespace sw
 {
     /**
      * @class RetargetProfile
-     * @brief 프로필 하나입니다. 형식(JSON, 모르는 키 · 겹친 사슬 이름은 오류):
+     * @brief 프로필 하나입니다. 형식은 JSON 이며, 모르는 키나 겹친 사슬 이름은 오류입니다.
      * @code
      * { "source_skeleton": "game/.../knight.skeleton.json", "target_skeleton": "game/.../skeleton_minion.skeleton.json",
      *   "root": { "source": "root", "target": "root" }, "pelvis": { "source": "hips", "target": "hips" },
      *   "translation": "ScaleByPelvisHeight",
      *   "chains": [ { "name": "LeftLeg", "source": ["upperleg.l", "lowerleg.l", "foot.l"], "target": ["upperleg.l", "lowerleg.l", "foot.l"], "ik_goal": true } ] }
      * @endcode
-     *          사슬 · 골반 · 뿌리에 들지 않은 대상 본은 대상 레퍼런스 포즈 그대로입니다(IK 보조 본 · 손가락).
+     *          사슬, 골반, 뿌리에 속하지 않은 대상 본은 대상 레퍼런스 포즈 그대로입니다(IK 보조 본, 손가락).
      */
     class SW_API RetargetProfile
     {
@@ -69,9 +69,9 @@ namespace sw
         const hashed_string&         getTargetPelvis() const { return _targetPelvis; }
         RetargetTranslationMode      getTranslationMode() const { return _translationMode; }
         const vector<RetargetChain>& getChains() const { return _listChain; }
-        /** @brief 사슬을 더합니다(코드로 짓는 프로필 · 테스트). */
+        /** @brief 사슬을 추가합니다(코드로 만드는 프로필과 테스트용). */
         void addChain( const RetargetChain& chain ) { _listChain.push_back( chain ); }
-        /** @brief 뿌리 · 골반 짝과 이동 방법을 정합니다(코드로 짓는 프로필 · 테스트). */
+        /** @brief 뿌리와 골반 쌍, 이동 방법을 정합니다(코드로 만드는 프로필과 테스트용). */
         void setRootAndPelvis( const hashed_string& sourceRoot, const hashed_string& targetRoot, const hashed_string& sourcePelvis, const hashed_string& targetPelvis,
                                RetargetTranslationMode mode );
 

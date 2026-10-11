@@ -20,9 +20,9 @@ namespace sw
         {
             /** @brief 파일 머리의 매직(`SWAC`)입니다. */
             static constexpr uint8 kArrMagic[4] = { 'S', 'W', 'A', 'C' };
-            /** @brief 플래그 비트 — 반복입니다. */
+            /** @brief 플래그 비트입니다. 반복을 나타냅니다. */
             static constexpr uint32 kFlagLoop = 1u;
-            /** @brief 문자열 하나의 길이 상한입니다(깨진 파일이 거대한 할당을 부르지 않게). */
+            /** @brief 문자열 하나의 길이 상한입니다. 깨진 파일이 거대한 할당을 일으키지 않게 합니다. */
             static constexpr uint32 kMaxStringLength = 4096;
 
             /** @brief 리틀 엔디언 바이트 쓰개입니다. */
@@ -68,19 +68,19 @@ namespace sw
                 uint32 readUint()
                 {
                     uint32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
                     return value;
                 }
                 int32 readInt()
                 {
                     int32 value = 0;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
                     return value;
                 }
                 float32 readFloat()
                 {
                     float32 value = 0.0f;
-                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다 — 호출자가 끝에 _bFailed 를 본다
+                    (void)readRaw( &value, sizeof( value ) ); // 실패는 _bFailed 에 남고 값은 0 이다. 호출자가 끝에 _bFailed 를 확인한다.
                     return value;
                 }
                 string readString()
@@ -95,7 +95,7 @@ namespace sw
                     _offset += length;
                     return text;
                 }
-                /** @brief 원소 수가 남은 바이트로 담길 수 있는지 봅니다(원소 하나가 @p minElementSize 바이트 이상). */
+                /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다(원소 하나가 @p minElementSize 바이트 이상). */
                 bool canHold( uint32 count, size_t minElementSize )
                 {
                     if ( _bFailed || static_cast<uint64>( count ) * minElementSize > _size - _offset )
@@ -190,7 +190,7 @@ namespace sw
         if ( sampleTracks( time, scratchTrackPose, pTrackMask ) == false )
             return false;
         copyTracksToPose( scratchTrackPose, listTrackToBone, inoutPose, pTrackMask );
-        // 루트 모션을 뽑으면 그 본은 클립 시작 자리에 묶는다 — 움직임은 오브젝트가 맡는다.
+        // 루트 모션을 추출하면 그 본은 클립 시작 위치에 고정한다. 움직임은 오브젝트가 맡는다.
         const int32 rootTrack = _rootMotionTrack;
         if ( bAnchorRootMotion == false || rootTrack < 0 || static_cast<size_t>( rootTrack ) >= listTrackToBone.size() || listTrackToBone[static_cast<size_t>( rootTrack )] < 0 )
             return true;
@@ -244,7 +244,7 @@ namespace sw
             return delta;
         }
 
-        // 반복 경계를 넘었다 — 끝까지 간 몫, 온 바퀴들, 처음부터 지금까지를 잇는다.
+        // 반복 경계를 넘었다. 끝까지 간 구간, 온 바퀴들, 처음부터 현재까지를 이어서 합친다.
         const BoneTransform start    = sampleRootMotionTrack( 0.0f );
         const BoneTransform end      = sampleRootMotionTrack( _duration );
         const float3        loopMove = end._translation - start._translation;
