@@ -20,6 +20,7 @@ namespace sw
         , _mapInFlightDataCallback{}
         , _mapRequestGeneration{}
         , _mapInFlightIO{}
+        , _listDetachedIO{}
         , _completedMutex{}
         , _listCompleted{}
         , _bInitialized{ false }
@@ -50,6 +51,7 @@ namespace sw
             {
                 listIO.push_back( handle );
             }
+            listIO.insert( listIO.end(), _listDetachedIO.begin(), _listDetachedIO.end() );
         }
         for ( const AsyncReadHandle& handle : listIO )
         {
@@ -71,6 +73,7 @@ namespace sw
             _mapInFlightDataCallback.clear();
             _mapRequestGeneration.clear();
             _mapInFlightIO.clear();
+            _listDetachedIO.clear();
             _bInitialized = false;
         }
         std::scoped_lock<mutex> completedLock{ _completedMutex };
@@ -265,9 +268,12 @@ namespace sw
                 completeRequestLocked( pathStr, false, vector<uint8>{} );
             return;
         }
-        // 이미 끝났으면(빠른 읽기 · 취소) 핸들을 적지 않는다 — 완료가 진행 표를 먼저 지웠다.
+        // 이미 끝났으면(빠른 읽기 · 취소) 진행 표에 적지 않는다 — 완료가 진행 표를 먼저 지웠다. 그래도 완료 콜백이 이 큐를 부르므로
+        // `shutdown` 이 기다리도록 떨어진 핸들로 든다.
         if ( bCurrent && _uniqueActiveDataRequest.find( pathStr ) != _uniqueActiveDataRequest.end() )
             _mapInFlightIO[pathStr] = handle;
+        else
+            retainDetachedIOLocked( handle );
     }
 
     void AssetStreamingQueue::onDataRead( const string& pathStr, uint64 generation, bool bSuccess, vector<uint8>& bytes )
@@ -392,13 +398,43 @@ namespace sw
                 _mapInFlightDataCallback.erase( itDataCallbacks );
             }
 
+            // 워커가 이미 끝냈지만 `update` 가 아직 부르지 않은 완료도 실패로 바꾼다. 취소와 완료는 서로 다른 스레드라 어느 쪽이 먼저일지 정할 수
+            // 없다 — 취소가 돌아온 뒤에는 이 경로에 성공 콜백이 오지 않는다는 것만 계약이다. 그 완료가 남긴 성공 기록도 지운다.
+            {
+                std::scoped_lock<mutex> completedLock{ _completedMutex };
+                bool                    bRevokedSuccess{ false };
+                for ( CompletedItem& item : _listCompleted )
+                {
+                    if ( item._path != pathStr )
+                        continue;
+                    bRevokedSuccess = bRevokedSuccess || item._bSuccess;
+                    item._bSuccess  = false;
+                    item._bytes.clear();
+                }
+                if ( bRevokedSuccess )
+                    _mapAssetResult.erase( pathStr );
+            }
+
             ++_mapRequestGeneration[pathStr];
+            if ( ioHandle.isValid() )
+                retainDetachedIOLocked( ioHandle );
         }
 
         // 아직 OS 에 넘기지 않은 읽기는 큐에서 빠지고, 걸린 읽기는 결과를 버린다(세대가 올라 완료는 무시된다). 잠금 밖이다 — 취소의 완료가 이 스레드에서
         // 바로 올 수 있다.
         if ( ioHandle.isValid() )
             (void)ioHandle.cancel();
+    }
+
+    void AssetStreamingQueue::retainDetachedIOLocked( const AsyncReadHandle& handle )
+    {
+        // 끝난 것은 버리고 남은 것만 든다 — 취소가 잦아도 목록이 자라지 않는다.
+        _listDetachedIO.erase( std::remove_if( _listDetachedIO.begin(), _listDetachedIO.end(), []( const AsyncReadHandle& detached )
+        {
+            return detached.isDone();
+        } ),
+                               _listDetachedIO.end() );
+        _listDetachedIO.push_back( handle );
     }
 
     void AssetStreamingQueue::clearCompletionRecord()
