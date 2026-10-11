@@ -55,13 +55,13 @@ namespace sw
     {
         static constexpr uint32 kNone        = 0;
         static constexpr uint32 kLayout      = SW_BIT( 0 ); ///< 원하는 크기가 바뀔 수 있다 — 부모 방향으로 레이아웃 경계까지 올라간다
-        static constexpr uint32 kChildLayout = SW_BIT( 1 ); ///< 자식 중 누가 kLayout — 이 위젯은 자기 원하는 크기를 다시 재야 하는지 자식에게 묻는다
+        static constexpr uint32 kChildLayout = SW_BIT( 1 ); ///< 자식 중 누가 kLayout — 이 위젯은 자기 원하는 크기를 다시 측정해야 하는지 자식에게 묻는다
         static constexpr uint32 kArrange     = SW_BIT( 2 ); ///< 크기는 같지만 자식 자리를 다시 놓는다(정렬 · 스크롤 오프셋)
         static constexpr uint32 kPaint       = SW_BIT( 3 ); ///< 자기 그림만 다시(색 · 글 색 · 그림 바뀜) — 레이아웃은 그대로
         static constexpr uint32 kStyle       = SW_BIT( 4 ); ///< 계산된 스타일을 다시(상태 · 클래스 바뀜) — 결과에 따라 kLayout 또는 kPaint 로 번진다
         static constexpr uint32 kTransform   = SW_BIT( 5 ); ///< 렌더 변환 · 불투명도만 — 레이아웃을 건드리지 않는다(애니메이션의 값싼 길)
         static constexpr uint32 kVisibility  = SW_BIT( 6 ); ///< 보임이 바뀜 — 보수적으로 레이아웃 · 그리기 둘 다
-        static constexpr uint32 kLayoutRoot  = SW_BIT( 7 ); ///< (트리가 붙인다) 다시 잴 뿌리 목록에 이미 올랐다 — 같은 뿌리를 두 번 적지 않는다
+        static constexpr uint32 kLayoutRoot  = SW_BIT( 7 ); ///< (트리가 붙인다) 다시 측정할 뿌리 목록에 이미 올랐다 — 같은 뿌리를 두 번 적지 않는다
     };
 } // namespace sw
 

@@ -55,7 +55,7 @@ namespace sw
     /**
      * @class AssetLoadProfiler
      * @brief 프로세스에 하나인 에셋 로드 기록부입니다(Engine.dll 안 — 모듈 핫 리로드에 사라지지 않는다). 스레드 안전합니다.
-     * @details 로더가 `AssetLoadScope` 를 열면 단계마다 시간이 재지고, 닫힐 때 여기 넘어온다. 여기서:
+     * @details 로더가 `AssetLoadScope` 를 열면 단계마다 시간이 측정되고, 닫힐 때 여기 넘어온다. 여기서:
      *          - 종류별 누적(수 · 바이트 · 단계별 시간 · 가장 긴 로드 · 비동기 수 · 실패 수)
      *          - 가장 느린 로드 `kSlowestCount` 개(경로 · 단계별 시간)
      *          - 엔진 프레임 프로파일러가 있으면 `Asset.<종류>.<단계>` 구간 · `Asset.Bytes` 카운터에도 더한다(`frame breakdown` 표에 로딩이 보인다).
@@ -109,7 +109,7 @@ namespace sw
 {
     /**
      * @class AssetLoadScope
-     * @brief 로드 한 번을 잽니다. 열 때 `IO` 단계가 시작되고, `beginPhase` 가 앞 단계를 닫고 다음을 열며, 닫힐 때 마지막 단계를 닫고 기록을 넘긴다.
+     * @brief 로드 한 번을 측정합니다. 열 때 `IO` 단계가 시작되고, `beginPhase` 가 앞 단계를 닫고 다음을 열며, 닫힐 때 마지막 단계를 닫고 기록을 넘긴다.
      * @code
      *     AssetLoadScope scope( "Texture", path );
      *     // 파일 읽기

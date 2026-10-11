@@ -343,7 +343,7 @@ namespace sw
         /**
          * @brief 비트필드의 바이트 · 마스크를 **이 빌드 구성의 실제 레이아웃에서** 찾아 이 프로퍼티를 비트필드로 만듭니다.
          * @details 0 으로 채운 자리에 그 비트만 세우는 함수를 불러, 바뀐 바이트와 비트를 읽는다(언리얼 `FBoolProperty` 가 UHT 의
-         *          SetBit 함수로 하는 것과 같다). 주의: 파서가 libclang 으로 잰 바이트를 쓰면 안 된다 — 파서는 Debug 정의
+         *          SetBit 함수로 하는 것과 같다). 주의: 파서가 libclang 으로 측정한 바이트를 쓰면 안 된다 — 파서는 Debug 정의
          *          (`SW_DEBUG` · `_DEBUG`)를 모른 채 재므로, Debug 에서 커지는 멤버(`sw::string` 의 경쟁 검사 자리 · 반복자 디버그) 뒤의
          *          비트필드가 엉뚱한 바이트를 가리키고 씬을 읽을 때마다 그 자리의 다른 필드를 덮어쓴다. 다른 프로퍼티는 `offsetof` 다.
          * @param ownerSize 이 프로퍼티를 가진 타입의 크기(`sizeof`)
@@ -516,7 +516,7 @@ namespace sw
 
         /**
          * @brief 메모리 포인터에서 실제 enum 크기만큼 안전하게 읽어 int64로 반환합니다.
-         * @details 밑바탕 타입의 부호대로 넓힌다 — 이름표(`_mapValueToName`)의 값도 같은 규칙(생성 코드의 `static_cast<int64>( 열거자 )`)
+         * @details 밑바탕 타입의 부호대로 넓힌다 — 이름(`_mapValueToName`)의 값도 같은 규칙(생성 코드의 `static_cast<int64>( 열거자 )`)
          *          이다. 둘이 어긋나면 `uint8` 의 0x80 · `int8` 의 -1 같은 값이 이름을 잃는다.
          */
         int64 readValueFromMemory( const void* pPtr ) const noexcept
@@ -637,7 +637,7 @@ namespace sw
         }
 
         /**
-         * @brief 이름 해시로 열거자 값을 찾습니다 — 정본 이름과 ValueAlias 모두. 바이너리는 열거자를 이 해시로 싣습니다(값이 아니라 이름이 정체성이다).
+         * @brief 이름 해시로 열거자 값을 찾습니다 — 원본 이름과 ValueAlias 모두. 바이너리는 열거자를 이 해시로 싣습니다(값이 아니라 이름이 정체성이다).
          * @details 표식 값(`Invalid` · `Count`)도 받습니다 — `tryParseText` 와 같은 규칙(필드에 든 값을 적은 그대로 읽는다). 이름 해시는 대소문자를
          *          가리지 않습니다(`hashed_string` — 글 읽기도 대소문자를 가리지 않는다). ValueAlias 로 남긴 이전 이름도 새 열거자로 읽힙니다
          *          (실제 게임 데이터가 생긴 뒤 이름을 바꿀 때의 창구 — 그 전에는 데이터를 새 이름으로 다시 쓴다).
@@ -707,7 +707,7 @@ namespace sw
          *          값으로 읽는 길은 이것 하나다(직렬화기 · 머티리얼).
          *
          *          `tryParse` 와 달리 표식 값(`Invalid` · `Count`)도 받는다. 직렬화는 필드에 든 값을 이름으로 적으므로(`Key::Unknown` 은
-         *          "바인딩 없음" 이다) 읽기도 그 이름을 받아야 왕복이 맞는다. 이름을 해시로 바꾸지 않는다 — 에셋 글을 전역 이름표에 넣지
+         *          "바인딩 없음" 이다) 읽기도 그 이름을 받아야 왕복이 맞는다. 이름을 해시로 바꾸지 않는다 — 에셋 글을 전역 이름에 넣지
          *          않는다.
          */
         [[nodiscard]] bool tryParseText( string_view text, int64& outValue ) const
@@ -936,7 +936,7 @@ namespace sw
          * @brief 레지스트리에 살아 있는 타입인지 나타냅니다. 모듈 해제는 항목을 지우지 않고 이것을 내립니다(묘비).
          * @details `TypeInfo` 의 주소는 고정입니다. 레지스트리가 `unique_ptr` 로 들고, 표가 커져도 옮기지 않으며, 해제해도
          *          지우지 않습니다. 그래서 `TypeLookupCache` 와 `_pParentType` 은 세대 검사 없이 포인터를 그대로 쓰고, 이
-         *          플래그 하나로 "해제됐나" 를 봅니다. 같은 FQN 이 다시 등록되면 같은 객체에 덮어써 되살립니다. 레지스트리
+         *          플래그 하나로 "해제됐나" 를 봅니다. 같은 FQN 이 다시 등록되면 같은 객체에 덮어써 복원합니다. 레지스트리
          *          밖에서 만든 사본은 항상 살아 있습니다.
          */
         mutable atomic<uint8> _bAlive;

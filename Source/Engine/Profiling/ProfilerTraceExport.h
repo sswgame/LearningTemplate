@@ -47,7 +47,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 합칠 트레이스 하나입니다 — 파일 내용과(비면 머리말의 프로세스 이름을 쓰는) 줄 묶음 이름표입니다. */
+    /** @brief 합칠 트레이스 하나입니다 — 파일 내용과(비면 머리말의 프로세스 이름을 쓰는) 줄 묶음 이름입니다. */
     struct ProfilerTraceMergeInput
     {
         string _json;
@@ -143,7 +143,7 @@ namespace sw
          * @return 입력이 모두 읽혔고 사건이 하나라도 있으면 true
          */
         [[nodiscard]] static bool mergeTraceJSON( const vector<ProfilerTraceMergeInput>& listInput, string& outJSON, string& outReport );
-        /** @brief 파일들을 읽어 `mergeTraceJSON` 으로 합치고 @p outputPath 에 씁니다. 이름표는 각 파일의 머리말 프로세스 이름입니다. */
+        /** @brief 파일들을 읽어 `mergeTraceJSON` 으로 합치고 @p outputPath 에 씁니다. 이름은 각 파일의 머리말 프로세스 이름입니다. */
         [[nodiscard]] static bool mergeTraceFiles( const vector<string>& listInputPath, string_view outputPath, string& outReply );
 
         /**

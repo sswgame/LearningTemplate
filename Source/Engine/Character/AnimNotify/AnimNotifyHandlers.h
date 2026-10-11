@@ -27,7 +27,7 @@ namespace sw
     /** @brief 내장 처리기 등록과 요청 창구입니다(전부 static). */
     struct SW_API AnimNotifyHandlerUtil
     {
-        /** @brief 내장 처리기를 @p registry 에 더합니다. 등록부의 기본 표가 처음 만들어질 때 부릅니다. */
+        /** @brief 내장 처리기를 @p registry 에 더합니다. 레지스트리의 기본 표가 처음 만들어질 때 부릅니다. */
         static bool registerBuiltInHandlers( AnimNotifyHandlerRegistry& registry );
         /**
          * @brief 카메라 흔들림 요청을 듣는 자리입니다(엔진 수명). 카메라 매니저가 플레이 시작에 구독하고 끝에 뗍니다.

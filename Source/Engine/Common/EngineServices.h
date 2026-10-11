@@ -57,7 +57,7 @@ namespace sw
         SW_API void unbindEngineServices();
         /**
          * @brief `Required` 인 매니저가 모두 바인딩되었는지 반환합니다.
-         * @details 선택(`Optional`) 항목의 정본은 `EngineServiceList.xxx` 입니다. 지금은 `CommandStack`(Shipping 에
+         * @details 선택(`Optional`) 항목의 원본은 `EngineServiceList.xxx` 입니다. 지금은 `CommandStack`(Shipping 에
          *          없습니다)과 `SW_ENGINE_SERVICE_OPT` 로 적힌 `MemoryProfiler` · `RenderTargetRegistry` · `FrameRenderer`
          *          (호스트가 렌더러를 세운 뒤에만 있습니다. 테스트 하네스에는 없습니다)입니다. 목록이 바뀌면 이 설명이 아니라
          *          목록을 믿으십시오.

@@ -1,6 +1,6 @@
 /**
  * @file MeshComponent.h
- * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 등록부를 거쳐 GPUScene 으로 들어갑니다.
+ * @brief 메시를 그리는 SceneComponent 입니다(3D 렌더링). 프리미티브 레지스트리를 거쳐 GPUScene 으로 들어갑니다.
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -29,7 +29,7 @@ namespace sw
     REFLECT( Category = "Rendering 3D", DisplayName = "Mesh Component", Tooltip = "3D Static Mesh Renderer" )
     class SW_API MeshComponent : public SceneComponent
     {
-        /// 등록부 슬롯과 더티 플래그를 관리하는 유일한 주체입니다.
+        /// 레지스트리 슬롯과 더티 플래그를 관리하는 유일한 주체입니다.
         friend class PrimitiveRegistry;
 
     public:
@@ -128,7 +128,7 @@ namespace sw
         const GPUSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
         /**
          * @brief 2D 픽셀 스냅 단위(자산 픽셀 하나의 월드 길이 = 1 / PPU, 0 = 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
-         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 메시 모두에 알리고, 새로 등록되는 메시는 카메라 등록부의 값을 읽습니다. 읽는 셰이더는 sprite2d 입니다.
+         * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 메시 모두에 알리고, 새로 등록되는 메시는 카메라 레지스트리의 값을 읽습니다. 읽는 셰이더는 sprite2d 입니다.
          */
         void setPixelSnapUnit( float32 unit );
 
@@ -164,14 +164,14 @@ namespace sw
          *          전부 훑어 "뭐가 바뀌었나" 되묻는 대신, 바꾼 쪽이 알립니다.
          */
         void markRenderStateDirty();
-        /** @brief 프리미티브 등록부에 자기를 넣습니다. 여기서 타입이 한 번 확정됩니다. */
+        /** @brief 프리미티브 레지스트리에 자기를 넣습니다. 여기서 타입이 한 번 확정됩니다. */
         void onRegister( GameObjectManager& manager ) override;
-        /** @brief 프리미티브 등록부에서 자기를 빼고, 잡아 둔 머티리얼 참조를 놓습니다. 멱등입니다. */
+        /** @brief 프리미티브 레지스트리에서 자기를 빼고, 잡아 둔 머티리얼 참조를 놓습니다. 멱등입니다. */
         void onUnregister( GameObjectManager& manager ) override;
         /** @brief 인스펙터/직렬화가 PROPERTY 를 바꾸면 렌더 상태를 더티로 표시합니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
         /**
-         * @brief 쓰지 않습니다(`final`). 메시는 월드가 바뀌면 트랜스폼 칸에 적힌 프리미티브 번호로 등록부에 바로 더티가 찍힙니다.
+         * @brief 쓰지 않습니다(`final`). 메시는 월드가 바뀌면 트랜스폼 칸에 적힌 프리미티브 번호로 레지스트리에 바로 더티가 찍힙니다.
          * @details 생성자에서 이 훅의 알림을 끕니다 — 틱 뒤 적용이 움직인 메시마다 컴포넌트를 건너다니지 않게 하려는 것입니다. 그래서 파생이
          *          덮어써도 불리지 않으므로 아예 막습니다.
          */
@@ -188,9 +188,9 @@ namespace sw
         void setSpriteInstanceData( const GPUSpriteInstanceData& data );
 
     private:
-        /** @brief 등록부 슬롯입니다. 등록부(PrimitiveRegistry)만 만집니다. */
+        /** @brief 레지스트리 슬롯입니다. 레지스트리(PrimitiveRegistry)만 만집니다. */
         uint32 getPrimitiveIndex() const { return _primitiveIndex; }
-        /** @brief 등록부 슬롯을 설정합니다. */
+        /** @brief 레지스트리 슬롯을 설정합니다. */
         void                         setPrimitiveIndex( uint32 index );
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
@@ -216,11 +216,11 @@ namespace sw
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */
         uint32 _sortKey;
-        /** @brief 등록 시점에 받은 등록부입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
+        /** @brief 등록 시점에 받은 레지스트리입니다. 더티 표시는 소유자를 거치지 않고 여기로 바로 갑니다. */
         PrimitiveRegistry* _pPrimitiveRegistry;
-        /** @brief 등록부 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
+        /** @brief 레지스트리 슬롯입니다. 등록되지 않았으면 kInvalidPrimitiveIndex 입니다. */
         uint32 _primitiveIndex;
-        // "더티" 비트는 여기 없다. 등록부의 원자 플래그 하나가 기준이다. 주의: 더티를 이 비트필드에 두면 워커의 더티 쓰기가
+        // "더티" 비트는 여기 없다. 레지스트리의 원자 플래그 하나가 기준이다. 주의: 더티를 이 비트필드에 두면 워커의 더티 쓰기가
         // `_bVisible` 과 같은 바이트를 읽고-고치고-쓰는 것이라, 이웃 비트를 만지는 스레드와 레이스다.
         /** @brief 그리는지 여부입니다. 저장됩니다(PROPERTY) — 숨긴 메시가 Stop · 되돌리기 · 씬 다시 열기 뒤에도 숨은 채로 남는다. */
         PROPERTY( Category = "Rendering", DisplayName = "Visible", Tooltip = "Draw this mesh" )

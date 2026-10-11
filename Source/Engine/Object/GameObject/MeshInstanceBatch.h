@@ -41,7 +41,7 @@ namespace sw
          * @param pMaterial 소유하지 않습니다. MeshComponent 와 같은 규칙입니다(빌더가 스냅샷에 소유를 싣습니다).
          */
         MeshInstanceBatch( shared_ptr<Mesh> mesh, Material* pMaterial, shared_ptr<MaterialInstance> instance, uint32 count );
-        /** @brief 등록되어 있으면 등록부에서 빠집니다. */
+        /** @brief 등록되어 있으면 레지스트리에서 빠집니다. */
         ~MeshInstanceBatch();
 
         MeshInstanceBatch( const MeshInstanceBatch& )            = delete;
@@ -109,13 +109,13 @@ namespace sw
         MaterialInstance* getRawMaterialInstance() const { return _instance.get(); }
         /** @brief 머티리얼 인스턴스(소유 포인터)입니다. */
         const shared_ptr<MaterialInstance>& getMaterialInstance() const { return _instance; }
-        /** @brief 등록부에 들어 있으면 true 입니다. */
+        /** @brief 레지스트리에 들어 있으면 true 입니다. */
         bool isRegistered() const { return _pRegistry != nullptr; }
 
     private:
         friend class PrimitiveRegistry;
 
-        /** @brief 항목 하나를 등록부에 더티로 알립니다. 등록 전이면 아무것도 하지 않습니다. */
+        /** @brief 항목 하나를 레지스트리에 더티로 알립니다. 등록 전이면 아무것도 하지 않습니다. */
         void markDirty( uint32 index );
 
         vector<Entry>                _listEntry;
@@ -123,8 +123,8 @@ namespace sw
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _instance;
         const Component*             _pOwnerComponent; ///< 든 컴포넌트(빌림). 꺼지면 빌더가 뺀다. nullptr 이면 늘 그린다
-        PrimitiveRegistry*           _pRegistry;       ///< 등록된 등록부. 등록부가 먼저 사라지면 등록부가 비웁니다
-        uint32                       _firstEntry;      ///< 등록부의 인스턴스 항목 목록에서 첫 항목 자리. 등록부가 적습니다
+        PrimitiveRegistry*           _pRegistry;       ///< 등록된 레지스트리. 레지스트리가 먼저 사라지면 레지스트리가 비웁니다
+        uint32                       _firstEntry;      ///< 레지스트리의 인스턴스 항목 목록에서 첫 항목 자리. 레지스트리가 적습니다
         uint32                       _sortKey;         ///< 항목 모두의 투명 정렬 키(0 = 기본)
         uint8                        _bVisible;
     };

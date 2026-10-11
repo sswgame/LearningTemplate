@@ -1,6 +1,6 @@
 /**
  * @file ComponentRegistry.cpp
- * @brief 타입별 컴포넌트 등록부 구현입니다(타입 · 칸마다 등록 순서 목록).
+ * @brief 타입별 컴포넌트 레지스트리 구현입니다(타입 · 칸마다 등록 순서 목록).
  */
 #include "pch.h"
 

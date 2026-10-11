@@ -28,7 +28,7 @@ namespace sw
             static constexpr uint32 kDxgiRgba8Srgb = 29;
             static constexpr uint32 kDxgiBgra8     = 87;
             static constexpr uint32 kDxgiBgra8Srgb = 91;
-            /** @brief LOD 를 바꾸기 전에 거리가 문턱을 넘어야 하는 비율 — 문턱에 선 카메라가 매 프레임 메시를 다시 만들지 않게. */
+            /** @brief LOD 를 바꾸기 전에 거리가 임계값을 넘어야 하는 비율 — 임계값에 선 카메라가 매 프레임 메시를 다시 만들지 않게. */
             static constexpr float32 kLODHysteresis = 0.1f;
 
             static const hashed_string& getLayerColorName( uint32 layerIndex )
@@ -158,7 +158,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
-            // 다시 읽기는 배치를 등록부에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
+            // 다시 읽기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미루고, 그 사이 사라졌을 수 있으니 핸들로 다시 찾는다.
             const ComponentHandle self = getHandle();
             pManager->executeOrDeferPostTick( [pManager, self]()
             {
@@ -264,7 +264,7 @@ namespace sw
         }
         _material.setVector( hashed_string( "layerDetail" ), float4{ arrDetail[0], arrDetail[1], arrDetail[2], arrDetail[3] } );
         _material.setVector( hashed_string( "layerTriplanar" ), float4{ arrTriplanar[0], arrTriplanar[1], arrTriplanar[2], arrTriplanar[3] } );
-        // x = 스플랫 너비(텍셀 중심 맞추기), y = 디테일 반복(1/m), z = 절벽 문턱(노멀 y), w = 절벽 레이어(−1 = 끔)
+        // x = 스플랫 너비(텍셀 중심 맞추기), y = 디테일 반복(1/m), z = 절벽 임계값(노멀 y), w = 절벽 레이어(−1 = 끔)
         const float32 splatWidth = static_cast<float32>( _heightfield.getSplatWidth() );
         _material.setVector( hashed_string( "terrainParams" ), float4{ splatWidth, _detailTiling, _cliffStart, static_cast<float32>( _cliffLayer ) } );
         _material.setTexture( hashed_string( "splatMap" ), _splatTexturePath );
@@ -273,7 +273,7 @@ namespace sw
 
     void TerrainComponent::releaseChunks()
     {
-        // 배치의 소멸자가 등록부에서 뺀다.
+        // 배치의 소멸자가 레지스트리에서 뺀다.
         _listChunk.clear();
     }
 
@@ -336,7 +336,7 @@ namespace sw
             const float32 distance   = Internal::computeChunkDistance( _heightfield, _layout, chunkX, chunkZ, viewPosition );
             const uint32  currentLOD = _listChunk[chunkIndex]._lod;
             uint32        wantedLOD  = TerrainMeshBuilder::selectLOD( distance, _lodDistance, _layout._maxLOD );
-            // 문턱 근처에서 흔들리지 않게 — 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
+            // 임계값 근처에서 흔들리지 않게 — 바꾸는 쪽으로 10 % 더 넘어야 바꾼다.
             if ( wantedLOD != currentLOD )
             {
                 const float32 margin = wantedLOD > currentLOD ? ( 1.0f - Internal::kLODHysteresis ) : ( 1.0f + Internal::kLODHysteresis );

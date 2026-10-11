@@ -1,6 +1,6 @@
 /**
  * @file InputManager.h
- * @brief App · Game 용 입력 장치 등록부, 락프리 비동기 이벤트 큐, 이벤트 디스패치를 한데 모은 허브입니다.
+ * @brief App · Game 용 입력 장치 레지스트리, 락프리 비동기 이벤트 큐, 이벤트 디스패치를 한데 모은 허브입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -101,7 +101,7 @@ namespace sw
         uint32 getPendingRawEventCount() const { return _queueRawEvent.size(); }
 
         // ------------------------------------------------------------------------------
-        // 3) 다형 장치 등록부(Device Registry)
+        // 3) 다형 장치 레지스트리(Device Registry)
         // ------------------------------------------------------------------------------
         void            registerDevice( unique_ptr<IInputDevice> pDevice );
         void            unregisterDevice( IInputDevice* pDevice );

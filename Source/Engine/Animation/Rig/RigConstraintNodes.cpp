@@ -141,8 +141,8 @@ namespace sw
         /**
          * @brief 부모 바꾸기(공간 전환). 키: `bone` · `parents`(대상 이름들) · `initial`(처음 부모 번호) · `settle_seconds`(바꾼 뒤 새 부모 자리로
          *        옮겨 가는 시간, 0 이면 오프셋을 끝까지 지킨다). 조절 `parent` = 부모 번호.
-         * @details 바꾸는 순간 지난 프레임 출력 자리를 새 부모 기준으로 다시 재서 그대로 시작합니다(튀지 않음). `settle_seconds` 동안 그 오프셋을
-         *          단위로 부드럽게 줄여 본이 새 부모(소켓) 자리에 앉습니다 — 무기를 손에서 등으로. 처음 평가는 첫 부모 기준으로 지금 자리를 잽니다.
+         * @details 바꾸는 순간 지난 프레임 출력 자리를 새 부모 기준으로 다시 측정해서 그대로 시작합니다(튀지 않음). `settle_seconds` 동안 그 오프셋을
+         *          단위로 부드럽게 줄여 본이 새 부모(소켓) 자리에 앉습니다 — 무기를 손에서 등으로. 처음 평가는 첫 부모 기준으로 지금 자리를 측정합니다.
          */
         class RigParentSwitchNode final : public RigNode
         {
@@ -205,7 +205,7 @@ namespace sw
                     return;
                 if ( _bCaptured == SW_FALSE || _bSwitchPending == SW_TRUE )
                 {
-                    // 처음이면 지금(애니메이션) 자리, 바꿈이면 지난 출력 자리를 새 부모 기준으로 잰다.
+                    // 처음이면 지금(애니메이션) 자리, 바꿈이면 지난 출력 자리를 새 부모 기준으로 측정한다.
                     const RigConstraintNodesInternal::RigidTransform from = _bCaptured == SW_TRUE ? _lastOutput : RigConstraintNodesInternal::readBone( pose, _bone );
                     _offset                                               = RigConstraintNodesInternal::makeRelative( parent, from );
                     _settleElapsed                                        = 0.0f;

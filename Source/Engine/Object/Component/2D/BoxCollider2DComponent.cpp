@@ -134,7 +134,7 @@ namespace sw
         if ( pOther == nullptr )
             return false;
 
-        // 바디(지난 step 의 상자)가 아니라 지금 상자로 잰다 — 등록 전후로 답이 갈리지 않는다. 판정 식은 물리 step 의 것 그대로다.
+        // 바디(지난 step 의 상자)가 아니라 지금 상자로 측정한다 — 등록 전후로 답이 갈리지 않는다. 판정 식은 물리 step 의 것 그대로다.
         static const CollisionLayers s_defaultLayers{};
         const PhysicsWorld*          pPhysics = _pPhysics != nullptr ? _pPhysics : pOther->_pPhysics;
         const CollisionLayers&       layers   = pPhysics != nullptr ? pPhysics->layers() : s_defaultLayers;

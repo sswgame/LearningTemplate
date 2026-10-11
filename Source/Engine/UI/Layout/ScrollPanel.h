@@ -1,6 +1,6 @@
 /**
  * @file ScrollPanel.h
- * @brief 내용 하나를 스크롤 축으로 원하는 만큼 재서 오프셋만큼 밀어 보여 주는 패널입니다(UMG ScrollBox · Godot ScrollContainer · 유니티 ScrollView).
+ * @brief 내용 하나를 스크롤 축으로 원하는 만큼 측정해서 오프셋만큼 밀어 보여 주는 패널입니다(UMG ScrollBox · Godot ScrollContainer · 유니티 ScrollView).
  */
 #pragma once
 #include "Core/Common/Macros.h"

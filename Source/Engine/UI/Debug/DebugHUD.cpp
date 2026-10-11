@@ -395,7 +395,7 @@ namespace sw
             vector<SectionView>                        _listView;
             vector<const DebugHUDSectionRegistration*> _listShownScratch; ///< 이번 갱신의 켜진 섹션(호출 안에서만 — 모듈이 내려가면 빠진다)
             string                                     _seenState;        ///< 마지막으로 본 `gv_debugHUDSections`
-            uint64                                     _seenRevision;     ///< 마지막으로 본 등록부 판
+            uint64                                     _seenRevision;     ///< 마지막으로 본 레지스트리 판
             WidgetID                                   _panel;
             WidgetID                                   _column;
             float32                                    _secondsSinceRefresh;
@@ -405,7 +405,7 @@ namespace sw
 
         /**
          * @class DebugHUDWindowScreen
-         * @brief 설정 창입니다(문서 `engine/ui/debughud.ui.xml`). 표시 · 모서리 · 불투명도는 문서의 설정 바인딩이, 섹션 체크 상자는 이 클래스가 등록부에서 짓습니다.
+         * @brief 설정 창입니다(문서 `engine/ui/debughud.ui.xml`). 표시 · 모서리 · 불투명도는 문서의 설정 바인딩이, 섹션 체크 상자는 이 클래스가 레지스트리에서 짓습니다.
          * @details 체크 상자를 사용자가 바꾸면 `DebugHUD::setSectionShown` 으로 쓰고, 명령 · 다른 곳에서 설정이 바뀌면 체크 상자를 따라 맞춥니다.
          */
         class DebugHUDWindowScreen final : public UIScreen
@@ -435,7 +435,7 @@ namespace sw
                         continue;
                     const bool bChecked = pCheckBox->isChecked();
                     if ( bChecked != ( _listLastChecked[index] == SW_TRUE ) && pHUD != nullptr )
-                        (void)pHUD->setSectionShown( _listSectionName[index], bChecked ); // 이름은 방금 등록부에서 찾았다
+                        (void)pHUD->setSectionShown( _listSectionName[index], bChecked ); // 이름은 방금 레지스트리에서 찾았다
                     else
                         pCheckBox->setChecked( DebugHUD::isSectionShown( *pRegistration ) );
                     _listLastChecked[index] = pCheckBox->isChecked() ? SW_TRUE : SW_FALSE;
@@ -533,7 +533,7 @@ namespace sw
                 bool bShown = DebugHUD::isSectionShown( *pRegistration ) == false;
                 if ( listArgument.size() >= 2 && readOnOff( listArgument[1], bShown ) == false )
                     return false;
-                (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 등록부에서 찾은 이름이다
+                (void)hud.setSectionShown( pRegistration->_pName, bShown ); // 방금 레지스트리에서 찾은 이름이다
                 if ( bShown )
                     hud.setShown( true ); // 섹션을 켜면 HUD 도 보인다(언리얼 `stat fps`)
                 outReply = string( "debug HUD section " ) + pRegistration->_pName + ( bShown ? " on" : " off" );
@@ -699,7 +699,7 @@ namespace sw
 
     void DebugHUD::update( const InputMap* pShellMap )
     {
-        SW_PROFILE_SCOPE( "GT.DebugHUD" ); // 꺼진 상태의 비용을 재는 구간(검증과 측정 2절) — 섹션 본문은 GT.DebugHUD.Sections
+        SW_PROFILE_SCOPE( "GT.DebugHUD" ); // 꺼진 상태의 비용을 측정하는 구간(검증과 측정 2절) — 섹션 본문은 GT.DebugHUD.Sections
         if ( _pUI == nullptr )
             return;
         if ( pShellMap != nullptr && pShellMap->wasActionTriggered( _toggleAction ) )

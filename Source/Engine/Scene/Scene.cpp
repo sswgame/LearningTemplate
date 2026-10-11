@@ -77,7 +77,7 @@ namespace sw
 
             /**
              * @brief 켜져 있는 첫 방향광(등록 순서)을 찾습니다. @p bRequireShadow 면 그림자를 드리우는 것만 봅니다.
-             * @details 활성 판정은 여기서 한다. 등록부는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가
+             * @details 활성 판정은 여기서 한다. 레지스트리는 "무엇이 있나"만 안다(PrimitiveRegistry 와 같은 규약). `Component::isActive` 가
              *          소유 오브젝트의 계층 활성까지 본다.
              */
             static DirectionalLightComponent* findDirectionalLight( const GameObjectManager* pObjectManager, bool bRequireShadow )
@@ -413,7 +413,7 @@ namespace sw
         if ( _objectManager == nullptr )
             return false;
 
-        // 시퀀서 카메라 컷이 먼저(언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리), 다음은 직접 고른 카메라, 그다음은 등록부의 규칙. 모두 없으면
+        // 시퀀서 카메라 컷이 먼저(언리얼 Camera Cut 트랙이 뷰 타깃을 덮는 자리), 다음은 직접 고른 카메라, 그다음은 레지스트리의 규칙. 모두 없으면
         // 지난번 카메라를 그대로 둔다 — 하나뿐인 게임 카메라를 끈 경우다. 그때 새로 만들거나 기본값으로 되돌리면 꺼 둔 카메라를 프레임마다
         // 옮기게 된다. 아무것도 없을 때만 만든다.
         CameraComponent* pCamera = _objectManager->getCameraRegistry().getCutCamera();
@@ -445,7 +445,7 @@ namespace sw
 
     /**
      * @brief 지금 켜져 있는 방향광 하나를 반환합니다. 없으면 nullptr 입니다.
-     * @details 등록부만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다(EngineLoop 이 매 프레임 부르므로 씬을 훑으면 안 된다 —
+     * @details 레지스트리만 봅니다. 빛의 수에 비례하고 씬 크기와 무관합니다(EngineLoop 이 매 프레임 부르므로 씬을 훑으면 안 된다 —
      *          `ComponentRegistry` 설명).
      */
     DirectionalLightComponent* Scene::findActiveDirectionalLight() const

@@ -1,6 +1,6 @@
 /**
  * @file AudioEffect.h
- * @brief 버스 이펙트의 공통 틀 — 이름 붙인 파라미터 · 처리 함수와, 데이터의 이름으로 이펙트를 만드는 등록부입니다.
+ * @brief 버스 이펙트의 공통 틀 — 이름 붙인 파라미터 · 처리 함수와, 데이터의 이름으로 이펙트를 만드는 레지스트리입니다.
  * @details 이펙트 종류는 코드의 표(`AudioEffectRegistry`) 한 줄씩이고, 데이터(`*.audiomixer.xml` 의 `AudioEffectDesc`)는 종류 이름과 파라미터 이름으로만
  *          고릅니다. 모르는 종류 · 모르는 파라미터는 읽기 오류입니다. 파라미터는 스냅샷이 이름으로 바꿉니다(`AudioSnapshotDesc`).
  */
@@ -28,7 +28,7 @@ namespace sw
 {
     class IAudioEffect;
 
-    /** @brief 이펙트 종류 하나입니다(등록부의 한 줄). */
+    /** @brief 이펙트 종류 하나입니다(레지스트리의 한 줄). */
     struct AudioEffectTypeInfo
     {
         const utf8*                     _pName{ nullptr };

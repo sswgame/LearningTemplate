@@ -55,7 +55,7 @@ namespace sw
             /** @brief UI 행동 맵의 레이어 이름입니다(활성 화면이 있을 때만 켠다). */
             static constexpr utf8 kUILayerName[]       = "UI";
             static constexpr utf8 kUIGlobalLayerName[] = "UIGlobal"; ///< 화면이 없을 때의 UI 행동(일시정지)
-            /** @brief 스틱 탐색이 한 칸 옮기는 기울기 문턱입니다. */
+            /** @brief 스틱 탐색이 한 칸 옮기는 기울기 임계값입니다. */
             static constexpr float32 kStickNavigateMagnitude = 0.5f;
             /** @brief 패드 축 사건이 "패드를 쓴다" 로 세는 크기입니다(손을 떼어 둔 스틱의 떨림은 세지 않는다). */
             static constexpr float32 kGamepadAxisActivity = 0.5f;
@@ -327,7 +327,7 @@ namespace sw
         {
             pComponent->updateScreenMarker( _viewport );
         }
-        // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 잰다. 화면마다 뷰포트 전체가 루트 사각형이다.
+        // 레이아웃 — 화면 트리마다 더러운 뿌리만 다시 측정한다. 화면마다 뷰포트 전체가 루트 사각형이다.
         {
             SW_PROFILE_SCOPE( "GT.UI.Layout" );
             const UILayoutContext context       = makeLayoutContext();
@@ -584,7 +584,7 @@ namespace sw
                 (void)UIStylePass::update( tree, *screen._styleSet, false );
             // 미리보기는 애니메이션 단계를 돌지 않는다 — 방금 시작한 스타일 전환을 끝 값으로 바로 맞춘다(옛 값에 멈추지 않게).
             (void)UIStyleTransition::update( tree, MathUtil::kMaxFloat );
-            // 화면 UI 와 같은 문맥에 이 화면의 뷰포트 · 글자 배율만 바꿔 쓴다(배율 · 글자 배율이 바뀌면 루트부터 다시 잰다 — 트리가 지난 값을 든다).
+            // 화면 UI 와 같은 문맥에 이 화면의 뷰포트 · 글자 배율만 바꿔 쓴다(배율 · 글자 배율이 바뀌면 루트부터 다시 측정한다 — 트리가 지난 값을 든다).
             UILayoutContext layout = makeLayoutContext();
             layout._viewportSize   = viewport._size;
             layout._safeInsets     = viewport._safeInsets;

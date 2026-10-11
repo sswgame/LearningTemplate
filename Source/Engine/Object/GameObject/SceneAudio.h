@@ -5,7 +5,7 @@
  *          오디오 컴포넌트는 틱하지 않고 여기에 등록합니다. 엔진은 서비스(`engine::getAudioSystem`)의 것이고, 테스트는 `setAudioEngine` 으로 바꿉니다.
  *
  *          **2D 게임**: 리스너 컴포넌트가 없고 게임 카메라가 직교면 리스너를 `Screen2D`(화면 평면 팬, 반폭 = 직교 높이 × 16/9 ÷ 2)로 둡니다.
- *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 잽니다.
+ *          **가림**: 3D 물리 씬이 있으면 `PhysicsAudioOcclusionQuery`(레이 셋)로, 프레임마다 에미터 `kOcclusionChecksPerFrame` 개씩 돌아가며 측정합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -31,7 +31,7 @@ namespace sw
     class SW_API SceneAudio
     {
     public:
-        /** @brief 한 프레임에 가림을 다시 재는 에미터 수입니다(레이 셋씩). */
+        /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
         static constexpr uint32 kOcclusionChecksPerFrame = 16;
 
         SceneAudio();
@@ -43,7 +43,7 @@ namespace sw
         /**
          * @brief 프레임 하나를 넣습니다 — 리스너 · 에미터 자리와 속도 · 가림 · 리버브 존 세기.
          * @param pCamera 리스너 컴포넌트가 없을 때 리스너가 되는 게임 카메라입니다(nullptr 이면 리스너 0 을 끕니다).
-         * @param pScene3D 가림 레이캐스트를 쏠 3D 물리 씬입니다(nullptr 이면 가림을 재지 않습니다 — 0 으로 둡니다).
+         * @param pScene3D 가림 레이캐스트를 쏠 3D 물리 씬입니다(nullptr 이면 가림을 측정하지 않습니다 — 0 으로 둡니다).
          */
         void update( float32 deltaSeconds, const CameraComponent* pCamera, const IPhysicsScene3D* pScene3D );
 
@@ -88,7 +88,7 @@ namespace sw
         float3                                     _primaryListenerPosition; /**< 첫 리스너 자리입니다. */
         float3                                     _lastCameraPosition;      /**< 카메라 리스너의 지난 자리입니다(속도). */
         mutable mutex                              _mutex;                   /**< 등록 목록을 지킵니다(비동기 씬 로드는 워커에서 등록한다). */
-        uint32                                     _occlusionCursor;         /**< 가림을 잴 다음 에미터 자리입니다. */
+        uint32                                     _occlusionCursor;         /**< 가림을 측정할 다음 에미터 자리입니다. */
         uint32                                     _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
         bool                                       _bHasLastCameraPosition;  /**< `_lastCameraPosition` 이 유효한지입니다. */
     };

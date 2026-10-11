@@ -564,7 +564,7 @@ namespace sw
 
         // 인스턴스의 자리를 적어 둔다. 상태를 읽으면 컴포넌트가 모두 새로 만들어지고 이름 · 부착 · 트랜스폼이 프리팹의 것이 된다.
         // 부모는 오브젝트가 아니라 **붙어 있던 컴포넌트**(소켓일 수 있다)를 핸들로 적는다 — 부모 오브젝트의 primary 에 다시 붙이면
-        // 소켓에 달린 무기가 튄다. 컴포넌트 id 도 되살린다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
+        // 소켓에 달린 무기가 튄다. 컴포넌트 id 도 복원한다 — 이 인스턴스의 컴포넌트를 가리키던 핸들(활성 카메라 · 게임 코드)이 이어지게.
         const hashed_string   name         = pInstance->getName();
         const SceneComponent* pOldRoot     = pInstance->getPrimarySceneComponent();
         const bool            bHadRoot     = pOldRoot != nullptr;

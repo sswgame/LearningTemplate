@@ -1,6 +1,6 @@
 /**
  * @file SpriteClipCache.h
- * @brief 스프라이트 클립(`.sprite.json`)을 경로로 나눠 주는 표와, 그 표를 에셋 캐시 등록부에 보이는 창구입니다.
+ * @brief 스프라이트 클립(`.sprite.json`)을 경로로 나눠 주는 표와, 그 표를 에셋 캐시 레지스트리에 보이는 창구입니다.
  */
 #pragma once
 #include "Core/Common/Types.h"
@@ -15,8 +15,8 @@ namespace sw
 
     /**
      * @class SpriteClipCache
-     * @brief 스프라이트 클립을 경로로 나눠 주고, 에셋 캐시 등록부(`AssetManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
-     * @details 표는 프로세스에 하나입니다 — 씬 로드 워커와 게임 모듈이 서비스 없이 부릅니다(`acquire`). 이 객체는 그 표를 등록부에 보이는 창구일 뿐
+     * @brief 스프라이트 클립을 경로로 나눠 주고, 에셋 캐시 레지스트리(`AssetManager`)에 보여 핫 리로드 · 종료 · 진단이 다른 캐시와 같은 길을 탑니다.
+     * @details 표는 프로세스에 하나입니다 — 씬 로드 워커와 게임 모듈이 서비스 없이 부릅니다(`acquire`). 이 객체는 그 표를 레지스트리에 보이는 창구일 뿐
      *          상태를 갖지 않습니다. 표는 약한 참조(`MeshUtil::acquirePrimitive` 와 같은 모양)라 마지막 사용자가 놓으면 사라집니다.
      */
     class SW_API SpriteClipCache final : public IAssetCache
@@ -36,7 +36,7 @@ namespace sw
          */
         [[nodiscard]] static bool reloadShared( string_view path );
 
-        /** @brief 등록부의 종류 이름("SpriteClip")입니다. */
+        /** @brief 레지스트리의 종류 이름("SpriteClip")입니다. */
         const utf8* getAssetKindName() const override { return "SpriteClip"; }
         /** @brief 그 경로의 클립을 누가 쥐고 있는지 반환합니다. */
         bool isCached( string_view relativePath ) const override;

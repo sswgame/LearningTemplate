@@ -561,7 +561,7 @@ namespace sw
 
     void VulkanRHICommandContext::bindComputeUav( RHIDescriptorIndex index, uint32 slot )
     {
-        // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 등록부(registerBindlessUav)의 것이다.
+        // 컴퓨트 u# → 슬롯 세트의 u 범위. 인덱스는 UAV 레지스트리(registerBindlessUav)의 것이다.
         slot = toRegister( slot, shaderslot::vk::kUShift );
         if ( slot >= shaderslot::kComputeUavSlotCount )
             return;

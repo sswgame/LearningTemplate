@@ -16,7 +16,7 @@ namespace sw
 {
     namespace
     {
-        /** @brief 레이아웃 걷기 번호입니다(0 은 "잰 적 없음"). 게임 스레드만 — 걷기마다 하나 늘어 같은 걷기 안의 다시 재기를 막는다. */
+        /** @brief 레이아웃 걷기 번호입니다(0 은 "측정한 적 없음"). 게임 스레드만 — 걷기마다 하나 늘어 같은 걷기 안의 다시 재기를 막는다. */
         uint32 s_layoutSerial = 0;
         /** @brief `computeDesiredSize` 호출 수(누적) — `update` 가 앞뒤 차로 이번 걷기의 수를 낸다. */
         uint32 s_measureCount = 0;
@@ -105,7 +105,7 @@ namespace sw
         if ( pRoot->_layoutSerial != 0 && pRoot->_bRightToLeft != resolveRightToLeft( pRoot->getFlowDirection(), context._bRightToLeft ) )
             pRoot->_dirtyFlags |= WidgetDirty::kArrange;
 
-        // 뿌리 목록을 먼저 떼어 둔다 — 걷는 동안 그리기 더러움만 생긴다(arrange 의 기하 변경). 목록 순서대로 처리하고, 이미 위에서 다시 잰 뿌리는
+        // 뿌리 목록을 먼저 떼어 둔다 — 걷는 동안 그리기 더러움만 생긴다(arrange 의 기하 변경). 목록 순서대로 처리하고, 이미 위에서 다시 측정한 뿌리는
         // 비트가 지워져 건너뛴다. 처리 순서가 어떻든 마지막에 놓인 쪽이 맞다 — 조상이 나중이면 조상이 다시 놓는다.
         vector<WidgetID> listRoot;
         listRoot.swap( tree._listLayoutDirtyRoot );
@@ -123,7 +123,7 @@ namespace sw
             if ( pWidget == nullptr || pWidget == pRoot || ( pWidget->_dirtyFlags & WidgetDirty::kLayoutRoot ) == 0 )
                 continue;
             if ( pWidget->_layoutSerial == 0 || pWidget->getParent() == nullptr )
-                continue; // 아직 놓인 적이 없다 — 조상의 걷기가 처음 잰다
+                continue; // 아직 놓인 적이 없다 — 조상의 걷기가 처음 측정한다
             measure( *pWidget, context, pWidget->_lastAvailableSize );
             arrange( *pWidget, context, pWidget->getParent()->getGeometry(), pWidget->_lastSlotPosition, pWidget->_lastSlotSize );
             clearLayoutFlags( *pWidget );
@@ -175,7 +175,7 @@ namespace sw
     {
         if ( widget.getVisibility() == WidgetVisibility::Collapsed )
             return;
-        // 이번 걷기에서 재지 않은 더러운 위젯(배치만 다시 하는 조상 아래의 경계)은 놓기 전에 지난 가용 크기로 다시 잰다.
+        // 이번 걷기에서 측정하지 않은 더러운 위젯(배치만 다시 하는 조상 아래의 경계)은 놓기 전에 지난 가용 크기로 다시 측정한다.
         if ( isMeasureStale( widget ) )
             measure( widget, context, widget._layoutSerial == 0 ? slotSize : widget._lastAvailableSize );
 
@@ -237,7 +237,7 @@ namespace sw
     {
         if ( widget.getVisibility() == WidgetVisibility::Collapsed )
         {
-            // 접힌 위젯은 재지 않았다 — 자기 kLayout 은 지워(다시 보이게 될 때 위로 번지게) 두고, kChildLayout 을 남겨 그때 그 아래를 다시 재게 한다.
+            // 접힌 위젯은 측정하지 않았다 — 자기 kLayout 은 지워(다시 보이게 될 때 위로 번지게) 두고, kChildLayout 을 남겨 그때 그 아래를 다시 재게 한다.
             // 접힌 동안 자손이 바뀌면 번짐이 여기서 멈춘다(이미 kChildLayout).
             if ( ( widget._dirtyFlags & UILayoutPassInternal::kClearBits ) != 0 )
                 widget._dirtyFlags = ( widget._dirtyFlags & ~UILayoutPassInternal::kClearBits ) | WidgetDirty::kChildLayout;

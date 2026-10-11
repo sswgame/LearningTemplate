@@ -232,7 +232,7 @@ namespace sw
         record._bPairFilterSet = desc._bCollideConnectedBodies == false && desc._bodyB.isValid();
         if ( desc._type == PhysicsJointType::Distance )
         {
-            // 지금 길이를 재려고 두 점을 각 바디의 로컬로 적어 둔다.
+            // 지금 길이를 측정하려고 두 점을 각 바디의 로컬로 적어 둔다.
             float3     positionA{};
             quaternion rotationA{};
             (void)getBodyTransform( desc._bodyA, positionA, rotationA );

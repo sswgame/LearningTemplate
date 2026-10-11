@@ -81,7 +81,7 @@ namespace sw
                 continue;
 
             // **가용 여부부터 묻는다.** 바로 결과를 읽으면 GL 이 그 자리에서 GPU 를 기다려,
-            // 재려던 파이프라인을 멈춰 세운다. 그러면 숫자가 거짓이 된다.
+            // 측정하려던 파이프라인을 멈춰 세운다. 그러면 숫자가 거짓이 된다.
             GLint bAvailable{ 0 };
             glGetQueryObjectiv( _arrTimestampQuery[base + slotIndex], GL_QUERY_RESULT_AVAILABLE, &bAvailable );
             if ( bAvailable == GL_FALSE )

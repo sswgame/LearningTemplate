@@ -159,8 +159,8 @@ namespace sw
             }
 
             /**
-             * @brief 모서리 위 교점입니다. 끝점을 자리 순으로 정렬해 구하므로, 그 모서리를 나누는 두 삼각형이 비트까지 같은 자리를 얻습니다.
-             *        한 끝점이 평면 위(거리 0)면 그 끝점 그대로입니다.
+             * @brief 모서리 위 교점입니다. 엔드포인트를 자리 순으로 정렬해 구하므로, 그 모서리를 나누는 두 삼각형이 비트까지 같은 자리를 얻습니다.
+             *        한 엔드포인트가 평면 위(거리 0)면 그 엔드포인트 그대로입니다.
              */
             static RHIVertex intersect( const RHIVertex& vertexA, float32 distanceA, const RHIVertex& vertexB, float32 distanceB )
             {

@@ -147,7 +147,7 @@ namespace sw
             // 변수를 기본값으로 되돌린다. 값 변경 콜백을 부르므로 콜백을 건 쪽(App 의 백엔드 교체)은 그 전에 떼어 두었다.
             if ( _pOwned->_pGlobalVariableManager != nullptr )
                 _pOwned->_pGlobalVariableManager->shutdown();
-            // 단계에 속하지 않는 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 등록부 · 전역 변수 · 명령줄)를 목록의 역순으로 놓는다.
+            // 단계에 속하지 않는 서비스(이벤트 · 지역화 · 디버그 도구 · 프로파일러 · 백엔드 레지스트리 · 전역 변수 · 명령줄)를 목록의 역순으로 놓는다.
             _pOwned->destroyAll();
         }
         // 표가 가리키던 것이 모두 사라졌다. 이 뒤로 `engine::get*` 은 쓰지 않는다.
@@ -162,7 +162,7 @@ namespace sw
         AssetLoadProfiler::get().releaseStorage();
         if ( RHIRenderResource::releaseRegistryStorage() == false )
             SW_LOG_WARNING( "RHI render resources are still registered at shutdown - a mesh, texture or material leaked" );
-        // 번역 문자열은 지역화 서비스가 내려간 뒤라 들고 있는 쪽이 없다. 등록부는 모듈이 모두 내려가 엔진 것만 남았다 — 기동 뒤 모듈이 키운 용량을 놓는다.
+        // 번역 문자열은 지역화 서비스가 내려간 뒤라 들고 있는 쪽이 없다. 레지스트리는 모듈이 모두 내려가 엔진 것만 남았다 — 기동 뒤 모듈이 키운 용량을 놓는다.
         StringTable::releaseTextStorage();
         IModuleUnloadListener::releaseUnusedStorage();
         AutomationStepRegistry::releaseUnusedStorage();

@@ -70,7 +70,7 @@ namespace sw
         PhysicsBodyType    _type{ PhysicsBodyType::Dynamic };
         uint8              _layer{ 0 };                ///< 충돌 레이어 번호(`PhysicsSettings::findLayerIndex`)
         bool               _bTrigger{ false };         ///< 감지만 하고 막지 않는다(유니티 isTrigger · Jolt sensor · Box2D sensor)
-        bool               _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않게 연속 충돌로 잰다(Jolt LinearCast · Box2D bullet)
+        bool               _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않게 연속 충돌로 측정한다(Jolt LinearCast · Box2D bullet)
         bool               _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다
         bool               _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic · Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다)
         bool               _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터 · 3D 는 관성을 무한으로)

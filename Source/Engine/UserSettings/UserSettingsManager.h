@@ -95,7 +95,7 @@ namespace sw
 {
     /**
      * @class UserSettingsManager
-     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에도 보임) — 스키마 · 값 · 사용자 파일 · 적용기 등록부를 가집니다.
+     * @brief 엔진 서비스(`engine::getUserSettingsManager`, 게임에도 보임) — 스키마 · 값 · 사용자 파일 · 적용기 레지스트리를 가집니다.
      * @details **게임 스레드 전용**입니다. 대상 적용은 게임 스레드에서 일어나고, 창 · 스왑체인 변경은 화면 요청으로 미뤄 호스트가 프레임 맨 앞에서
      *          합니다(`consumeDisplayRequest`). 모듈이 건 통보 · 적용기는 모듈을 내리기 전에 뗍니다(IModuleUnloadListener).
      */
@@ -227,7 +227,7 @@ namespace sw
         string getBindingGlyph( const hashed_string& settingID, InputGlyphStyle style ) const;
 
         // ------------------------------------------------------------------------------
-        // 7) 통보 · 등록부 · 화면 요청
+        // 7) 통보 · 레지스트리 · 화면 요청
         // ------------------------------------------------------------------------------
         DelegateHandle registerEventListener( const UserSettingEventListener& listener );
         void           unregisterEventListener( const DelegateHandle& handle );

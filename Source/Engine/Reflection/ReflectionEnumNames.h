@@ -1,6 +1,6 @@
 /**
  * @file ReflectionEnumNames.h
- * @brief ContainerKind / FunctionNetRole 과 식별자 문자열 사이의 변환입니다(정본은 Predefined*.xxx).
+ * @brief ContainerKind / FunctionNetRole 과 식별자 문자열 사이의 변환입니다(원본은 Predefined*.xxx).
  */
 #pragma once
 #include "Core/Common/Macros.h"

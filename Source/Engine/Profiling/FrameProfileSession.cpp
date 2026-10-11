@@ -33,14 +33,14 @@ namespace sw
     /**
      * @brief `-gv_profileAllocSites=N`: 측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고합니다 (0=끄기).
      * @details 프레임당 할당 **횟수**는 시간 표에 보이지 않는 비용입니다. 잡았다 놓는 것은 살아 있는 양에 남지 않습니다.
-     *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 재는 용도가 아닙니다.
+     *          할당마다 콜스택을 잡으므로 느립니다. 숫자를 읽는 용도이지 프레임 시간을 같이 측정하는 용도가 아닙니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_profileAllocSites, 0, "측정 구간의 할당을 콜스택별로 세어 상위 N 곳을 보고 (0=끄기)" );
 #if SW_PROFILER_TRACE_ENABLED
     /**
      * @brief `-gv_profileTracePath=<경로>`: 측정 창(워밍업 뒤 ~ 보고) 전체를 트레이스로 저장합니다(비면 끄기).
      * @details 성능 회귀 스크립트가 진 게임을 한 번 더 돌려 "어느 스레드의 어느 구간이 늘었나" 를 볼 파일을 남길 때 씁니다(`Scripts/qa/PerfRegression.py`).
-     *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 재는 판에는 켜지 않습니다.
+     *          긴 캡처가 사건마다 24 B 를 쓰므로 숫자를 측정하는 판에는 켜지 않습니다.
      */
     SW_TEST_GLOBAL_VARIABLE( sw::string, gv_profileTracePath, "", "측정 창 전체를 이 경로에 트레이스로 저장 (비면 끄기)" );
 #endif

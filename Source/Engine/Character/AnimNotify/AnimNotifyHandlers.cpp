@@ -161,7 +161,7 @@ namespace sw
                 bool                                       supportsState() const override { return true; }
                 void                                       onNotify( AnimNotifyContext& context ) const override
                 {
-                    // 길이 없는 판정 — 지금 칼날 하나만 잰다.
+                    // 길이 없는 판정 — 지금 칼날 하나만 측정한다.
                     AnimNotifyStateData data{};
                     AnimNotifyContext   stateContext{ context._component, context._owner, context._entry, context._fired, &data, context._deltaSeconds };
                     collectBlade( stateContext, data._listPreviousPoint );

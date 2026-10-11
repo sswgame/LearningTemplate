@@ -88,7 +88,7 @@ namespace sw
     class SW_API SceneNavigation
     {
     public:
-        /** @brief 등록부에 없는 자리입니다. */
+        /** @brief 레지스트리에 없는 자리입니다. */
         static constexpr uint32 kNotRegistered = invalid_index::kUint32;
 
         SceneNavigation();
@@ -99,7 +99,7 @@ namespace sw
 
         /** @brief 기하를 모을 매니저를 정합니다(매니저가 만들 때). */
         void setObjectManager( GameObjectManager* pManager ) { _pManager = pManager; }
-        /** @brief 베이크하던 일을 기다리고 내비메시 · 군중을 모두 놓습니다. 등록부는 그대로입니다(컴포넌트가 스스로 뺀다). */
+        /** @brief 베이크하던 일을 기다리고 내비메시 · 군중을 모두 놓습니다. 레지스트리는 그대로입니다(컴포넌트가 스스로 뺀다). */
         void shutdown();
 
         /** @brief 씬 소스 경로 — 쿠킹본(`<씬>.navmesh`)을 찾는 데 씁니다(`Scene::instantiate`). */

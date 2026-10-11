@@ -31,7 +31,7 @@ namespace sw
         float32            _durationSeconds{ 4.0f }; ///< 보이는 시간(대기열에서 기다린 시간은 세지 않는다)
         int32              _priority{ 0 };           ///< 클수록 대기열에서 먼저 나온다(같으면 먼저 온 것)
         UINotificationKind _kind{ UINotificationKind::Info };
-        bool               _bMergeSameText{ true }; ///< 같은 글이 보이거나 기다리는 중이면 새로 쌓지 않고 센다("×2") · 시간을 다시 잰다
+        bool               _bMergeSameText{ true }; ///< 같은 글이 보이거나 기다리는 중이면 새로 쌓지 않고 센다("×2") · 시간을 다시 측정한다
     };
 } // namespace sw
 

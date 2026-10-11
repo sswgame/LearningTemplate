@@ -17,7 +17,7 @@ namespace sw
             return;
 
         std::scoped_lock<mutex> lock{ _mutex };
-        // 슬롯이 정말 이 등록부에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
+        // 슬롯이 정말 이 레지스트리에서 자기를 가리키고 있을 때만 "이미 등록됨"이다. 인덱스는 컴포넌트가 들고 있어서, 목록이 다른 것을
         // 가리키는데 그대로 믿으면 조용히 미등록으로 남는다(컴포넌트 이동은 막혀 있지만 인덱스를 그대로 믿지 않는다).
         const uint32 existing = pComp->getPrimitiveIndex();
         if ( existing != MeshComponent::kInvalidPrimitiveIndex && existing < _listPrimitive.size() &&
@@ -67,7 +67,7 @@ namespace sw
 
         std::scoped_lock<mutex> lock{ _mutex };
         const uint32            slot = pComp->getPrimitiveIndex();
-        // 슬롯이 정말 이 등록부의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 등록부가
+        // 슬롯이 정말 이 레지스트리의 것인지 확인한다. 인덱스는 컴포넌트가 들고 있어서, 다른 레지스트리가
         // 실수로 불리면 남의 목록을 그럴듯한 인덱스로 훼손할 수 있다.
         if ( slot == MeshComponent::kInvalidPrimitiveIndex || slot >= _listPrimitive.size() ||
              _listPrimitive[slot] != pComp )

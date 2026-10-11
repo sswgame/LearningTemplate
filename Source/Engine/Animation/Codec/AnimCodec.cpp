@@ -92,7 +92,7 @@ namespace sw
         if ( rawClip._sampleCount == 0 || rawClip.getTrackCount() == 0 )
             return 0.0f;
 
-        // 블롭은 16 바이트 정렬이어야 한다 — 바이트 배열이 그 정렬을 보장하지 않으므로 정렬된 사본에서 잰다.
+        // 블롭은 16 바이트 정렬이어야 한다 — 바이트 배열이 그 정렬을 보장하지 않으므로 정렬된 사본에서 측정한다.
         const size_t           blockCount = ( byteCount + sizeof( float4 ) - 1 ) / sizeof( float4 );
         vector<AnimCodecBlock> listBlock( blockCount );
         Memory::copy( listBlock.data(), pBytes, byteCount );

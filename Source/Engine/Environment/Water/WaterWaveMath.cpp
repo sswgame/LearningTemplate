@@ -71,7 +71,7 @@ namespace sw
 
     float3 WaterWaveMath::computeNormal( const float2& origin, float32 time, float32 gravity, const float4 ( &arrWave )[shaderslot::kGerstnerWaveCount] )
     {
-        // 옮겨 간 면의 두 접선(원점 x · z 로 편미분)의 외적이다 — GPU Gems 의 근사(옮겨 간 자리에서 위상을 다시 잰다)가 아니라 정확한 노멀이다.
+        // 옮겨 간 면의 두 접선(원점 x · z 로 편미분)의 외적이다 — GPU Gems 의 근사(옮겨 간 자리에서 위상을 다시 측정한다)가 아니라 정확한 노멀이다.
         using Internal           = WaterWaveMathInternal;
         const uint32 activeCount = countActiveWaves( arrWave );
         float3       tangentX{ 1.0f, 0.0f, 0.0f };

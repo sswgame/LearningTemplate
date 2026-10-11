@@ -25,7 +25,7 @@ namespace sw
         uint32  _childCount{ 0 }; ///< 자식 수(잎은 0)
         uint32  _firstLeaf{ 0 };  ///< 이 노드가 품은 첫 잎
         uint32  _leafCount{ 0 };  ///< 품은 잎 수(잎은 1)
-        uint8   _depth{ 0 };      ///< 뿌리 0 부터의 깊이 — 피해 문턱 표의 번호
+        uint8   _depth{ 0 };      ///< 뿌리 0 부터의 깊이 — 피해 임계값 표의 번호
 
         /** @brief 잎이면 true 입니다. */
         bool isLeaf() const { return _childCount == 0; }

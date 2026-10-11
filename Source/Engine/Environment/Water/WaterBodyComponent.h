@@ -42,7 +42,7 @@ namespace sw
     {
         float4  _color{ 0.05f, 0.2f, 0.25f, 1.0f };
         float32 _density{ 0.15f };
-        float32 _depth{ 0.0f }; ///< 수면에서 아래로 잰 깊이(m)
+        float32 _depth{ 0.0f }; ///< 수면에서 아래로 측정한 깊이(m)
     };
 } // namespace sw
 
@@ -55,7 +55,7 @@ namespace sw
      *          (`WaterWaveMath` ↔ `gerstner.hlsli`, `RenderPassGPUTest.WaterWaveShaderMatchesCPU`). 파도 시간은 이 컴포넌트가 틱마다 쌓아 머티리얼에 싣고
      *          질의도 그 시간을 씁니다(`getWaveTime`).
      *          수면 아래 깊이는 메시를 만들 때 지형(`TerrainComponent`)을 읽어 정점 색 알파에 굽습니다 — 반투명 패스에는 장면 깊이 입력이 없어
-     *          화면 공간에서 두께를 잴 수 없기 때문입니다. 지형이 없으면 깊은 물입니다. 강은 정점 색 rg 에 흐름 방향을 싣습니다(물결이 흐른다).
+     *          화면 공간에서 두께를 측정할 수 없기 때문입니다. 지형이 없으면 깊은 물입니다. 강은 정점 색 rg 에 흐름 방향을 싣습니다(물결이 흐른다).
      *          강 경로는 지금 점 목록입니다 — 스플라인 컴포넌트가 생기면 그것을 경로로 받도록 바꿉니다.
      *          스레드: 질의는 읽기만입니다. 메시 다시 만들기(`rebuildSurface`)는 틱 밖에서만 부릅니다.
      */
@@ -90,7 +90,7 @@ namespace sw
         [[nodiscard]] bool computeSurfaceHeight( float32 worldX, float32 worldZ, float32& outHeight, float32 time = -1.0f ) const;
         /** @brief 월드 (x, z) 의 수면 노멀입니다. 덮지 않는 자리면 false 입니다. */
         [[nodiscard]] bool computeSurfaceNormal( float32 worldX, float32 worldZ, float3& outNormal, float32 time = -1.0f ) const;
-        /** @brief 월드 점이 이 물의 수면 아래면 true 입니다(부력 · 물속 판정). @p outDepth 는 수면에서 아래로 잰 깊이입니다. */
+        /** @brief 월드 점이 이 물의 수면 아래면 true 입니다(부력 · 물속 판정). @p outDepth 는 수면에서 아래로 측정한 깊이입니다. */
         bool isUnderwater( const float3& worldPosition, float32& outDepth ) const;
         /** @brief 이 물이 덮는 자리(파도 없는 기준면 기준)면 true 입니다. */
         bool coversPosition( float32 worldX, float32 worldZ ) const;
@@ -165,7 +165,7 @@ namespace sw
 
         EnvironmentMaterial           _material;
         unique_ptr<MeshInstanceBatch> _batch;
-        PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 등록부(구조 링크라 생포인터)
+        PrimitiveRegistry*            _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리(구조 링크라 생포인터)
         float3                        _surfaceOrigin;      ///< 메시를 만들 때의 오너 월드 위치
         float32                       _waveTime;
         uint32                        _surfaceVertexCount;

@@ -34,7 +34,7 @@ namespace sw
                 inoutBody += "\r\n\r\n";
             }
 
-            /** @brief 파일의 multipart 필드 이름 — 덤프는 미니덤프 끝점들이 받는 이름이다. */
+            /** @brief 파일의 multipart 필드 이름 — 덤프는 미니덤프 엔드포인트들이 받는 이름이다. */
             static string makeFieldName( string_view fileName )
             {
                 if ( FileUtil::hasExtension( fileName, ".dmp" ) )

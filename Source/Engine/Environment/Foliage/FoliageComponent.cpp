@@ -101,7 +101,7 @@ namespace sw
     void FoliageComponent::onBeginPlay()
     {
         SceneComponent::onBeginPlay();
-        // 로드 순서상 지형이 뒤에 섰으면 처음 계산은 평면 위였다 — 모두 선 지금 지형을 다시 찾는다. 등록부를 바꾸므로 틱 뒤에.
+        // 로드 순서상 지형이 뒤에 섰으면 처음 계산은 평면 위였다 — 모두 선 지금 지형을 다시 찾는다. 레지스트리를 바꾸므로 틱 뒤에.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr || _bBuiltOnTerrain == SW_TRUE )
@@ -211,7 +211,7 @@ namespace sw
 
     void FoliageComponent::releaseCells()
     {
-        _listCell.clear(); // 배치의 소멸자가 등록부에서 뺀다
+        _listCell.clear(); // 배치의 소멸자가 레지스트리에서 뺀다
         _instanceCount = 0;
     }
 

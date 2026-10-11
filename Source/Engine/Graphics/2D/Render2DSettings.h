@@ -82,7 +82,7 @@ namespace sw
         /** @brief CustomAxis 의 축입니다(정규화됨). */
         const float3& getTransparencySortAxis() const { return _sortAxis; }
         /**
-         * @brief 이 카메라에서 투명 정렬에 쓸 축입니다. 영벡터면 "눈까지의 거리" 이고, 아니면 그 축 위의 깊이(카메라에서 그 축으로 잰 값)입니다.
+         * @brief 이 카메라에서 투명 정렬에 쓸 축입니다. 영벡터면 "눈까지의 거리" 이고, 아니면 그 축 위의 깊이(카메라에서 그 축으로 측정한 값)입니다.
          * @param bOrthographic 카메라가 직교 투영인가
          * @param cameraForward 카메라가 보는 방향(정규화)
          */

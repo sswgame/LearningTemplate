@@ -72,7 +72,7 @@ namespace sw
                 target._pManager->destroyObject( pTarget );
             }
 
-            /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 되살립니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다. */
+            /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다. */
             static void recreate( CommandStack* pStack, SceneManager* pSceneManager, const string& name, const ObjectSnapshot& snapshot,
                                   const string& prefabPath )
             {

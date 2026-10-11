@@ -1,6 +1,6 @@
 /**
  * @file UserSettingsRegistry.h
- * @brief 사용자 설정이 값을 넘기는 이름 붙인 적용기와, 런타임 선택지 공급자의 등록부입니다.
+ * @brief 사용자 설정이 값을 넘기는 이름 붙인 적용기와, 런타임 선택지 공급자의 레지스트리입니다.
  * @details 스키마(데이터)는 `target="applier:<name>"` · `optionsFrom="<name>"` 으로 여기 이름을 고릅니다. 코드는 이름과 동작만 가집니다.
  */
 #pragma once

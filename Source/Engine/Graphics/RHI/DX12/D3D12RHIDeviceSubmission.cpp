@@ -532,7 +532,7 @@ namespace sw
         if ( bPresent )
             _swapChain.transitionTo( _pActiveFrameList, D3D12_RESOURCE_STATE_PRESENT );
 
-        // Present 의 300 us 가 어디로 가는지 재려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 잰다.
+        // Present 의 300 us 가 어디로 가는지 측정하려고 닫기 · 제출 / DXGI Present / 펜스 신호 · 다음 이미지로 나눠 측정한다.
         {
             SW_PROFILE_SCOPE( "RT.Present.submit" );
             static const uint32 s_slotSubmitListCount = engine::getFrameProfiler().registerScope( "RT.Present.submit.listCount" );

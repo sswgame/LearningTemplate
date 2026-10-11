@@ -38,7 +38,7 @@ namespace sw
 
             /**
              * @brief 제약된 정점(양 > 0)의 양을 이웃으로 감쇠시켜 퍼뜨린다 — 가장 가까운 제약 정점의 양 × 감쇠(본 축을 따른 거리 / 폭).
-             * @details 축이 없는 정점(스킨 없음)은 그냥 거리로 잰다. 부드럽게 오므라들거나 부풀게 하는 것이 목적이다.
+             * @details 축이 없는 정점(스킨 없음)은 그냥 거리로 측정한다. 부드럽게 오므라들거나 부풀게 하는 것이 목적이다.
              */
             static void spreadWithFalloff( const FitPartState& part, float32 falloffWidth, vector<float32>& inoutListAmount )
             {

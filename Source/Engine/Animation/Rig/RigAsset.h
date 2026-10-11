@@ -1,6 +1,6 @@
 /**
  * @file RigAsset.h
- * @brief 후처리 리그 에셋(`*.rig.json`) — 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 등록부(이름 → 만들기)입니다.
+ * @brief 후처리 리그 에셋(`*.rig.json`) — 대상 목록과 **순서 있는** 노드 목록, 그리고 노드 종류 레지스트리(이름 → 만들기)입니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -26,7 +26,7 @@ namespace sw
     class SW_API RigNodeRegistry
     {
     public:
-        /** @brief 프로세스 하나의 등록부입니다(엔진 노드가 든 채로). */
+        /** @brief 프로세스 하나의 레지스트리입니다(엔진 노드가 든 채로). */
         static RigNodeRegistry& getInstance();
 
         /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. */

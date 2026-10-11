@@ -1,6 +1,6 @@
 /**
  * @file DebugHUDRegistry.h
- * @brief 디버그 HUD 섹션 등록부와 `SW_DEBUG_HUD_SECTION` 입니다. **Shipping 에서는 통째로 빠집니다**(`SW_DEV_COMMANDS_ENABLED`).
+ * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. **Shipping 에서는 통째로 빠집니다**(`SW_DEV_COMMANDS_ENABLED`).
  */
 #pragma once
 #include "Core/Common/Defines.h"
@@ -110,7 +110,7 @@ namespace sw
 {
     /**
      * @class DebugHUDRegistry
-     * @brief 디버그 HUD 섹션의 등록부입니다(Engine 하나 — 엔진 · 키트 · 게임이 등록하고, 모듈을 내리면 그 섹션이 빠집니다).
+     * @brief 디버그 HUD 섹션의 레지스트리입니다(Engine 하나 — 엔진 · 키트 · 게임이 등록하고, 모듈을 내리면 그 섹션이 빠집니다).
      * @details 섹션은 자기 .cpp 에 `SW_DEBUG_HUD_SECTION` 한 줄로 등록합니다(`SW_DEV_COMMAND` 와 같은 모양). 등록 · 해제마다 판 번호가 올라
      *          HUD 와 설정 창이 섹션 목록을 다시 짓습니다. 같은 이름 · 예약어(`on` · `off` · `list` · `corner` · `opacity` · `window`)는 경고와 함께 거절합니다.
      *          게임 스레드 · 정적 초기화에서만 씁니다.
@@ -118,7 +118,7 @@ namespace sw
     class SW_API DebugHUDRegistry
     {
     public:
-        /** @brief 프로세스에 하나인 등록부입니다(Engine 이미지의 함수 정적). */
+        /** @brief 프로세스에 하나인 레지스트리입니다(Engine 이미지의 함수 정적). */
         static DebugHUDRegistry& get();
 
         DebugHUDRegistry();

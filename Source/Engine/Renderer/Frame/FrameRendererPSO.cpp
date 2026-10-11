@@ -48,7 +48,7 @@ namespace sw
             }
 
             // 셰이딩을 바꾸는 모드(Unlit · Normals · Depth · Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
-            // define 은 쿠커와 같은 정본(findViewModeDefine)에서 얻는다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
+            // define 은 쿠커와 같은 원본(findViewModeDefine)에서 얻는다 — 쿠커가 쿠킹하지 않은 define 은 Shipping 에서 PSO 를 못 만든다.
             const utf8* pViewModeDefine = FrameRendererUtil::findViewModeDefine( viewMode );
             if ( pViewModeDefine == nullptr )
                 return bChanged;

@@ -50,10 +50,10 @@ namespace sw
         static constexpr uint32 kGPUTimestampSlotFrameBegin   = 31;
         /// @brief 패스 쌍이 쓸 수 있는 칸의 끝(미포함)입니다. 위 예약 칸과 겹치지 않게 합니다.
         static constexpr uint32 kGPUTimestampPassSlotEnd = kGPUTimestampSlotComputeBegin;
-        /// @brief GPU 시간을 잴 수 있는 패스 수입니다(패스마다 칸 둘). 넘는 패스는 시간이 적히지 않습니다 — 파이프라인 로드가 경고합니다.
+        /// @brief GPU 시간을 측정할 수 있는 패스 수입니다(패스마다 칸 둘). 넘는 패스는 시간이 적히지 않습니다 — 파이프라인 로드가 경고합니다.
         static constexpr uint32 kGPUTimedPassCapacity = kGPUTimestampPassSlotEnd / 2u;
 
-        /** @brief 패스 `passCount` 개인 파이프라인에서 GPU 시간이 적히지 않는 패스 수입니다(앞에서부터 `kGPUTimedPassCapacity` 개만 잰다). */
+        /** @brief 패스 `passCount` 개인 파이프라인에서 GPU 시간이 적히지 않는 패스 수입니다(앞에서부터 `kGPUTimedPassCapacity` 개만 측정한다). */
         static constexpr uint32 countUntimedGPUPass( size_t passCount )
         {
             return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
@@ -158,9 +158,9 @@ namespace sw
         }
 
         /**
-         * @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 이름표는 리플렉션된 열거자 이름 하나뿐입니다(대소문자 무시, ValueAlias 포함).
-         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 물러납니다. 그 이름은 로드 때 `RenderPipelineAsset::validate` 가 같은 이름표로 이미 오류로
-         *          알렸고, 여기는 PSO · 트랜지언트를 만들 때마다 불리는 자리라 다시 말하지 않습니다. 이름표를 따로 두면 검증은 통과하는데 여기서는
+         * @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 이름은 리플렉션된 열거자 이름 하나뿐입니다(대소문자 무시, ValueAlias 포함).
+         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 물러납니다. 그 이름은 로드 때 `RenderPipelineAsset::validate` 가 같은 이름으로 이미 오류로
+         *          알렸고, 여기는 PSO · 트랜지언트를 만들 때마다 불리는 자리라 다시 말하지 않습니다. 이름을 따로 두면 검증은 통과하는데 여기서는
          *          모르는 포맷이 생깁니다.
          */
         static RHIFormat parseAttachmentFormat( string_view formatName )
@@ -317,7 +317,7 @@ namespace sw
 
         /**
          * @brief 이 뷰 모드가 셰이더에 얹는 define 입니다. 셰이더를 바꾸지 않는 모드(Lit · Wireframe)는 nullptr 입니다.
-         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 함께 보는 정본입니다. 쿠커는
+         * @details 런타임 PSO 변형(`FrameRenderer::createMaterialPSOVariant`)과 셰이더 쿠커가 함께 보는 원본입니다. 쿠커는
          *          `RenderViewMode` 를 끝까지 훑어 define 이 있는 모드마다 변형을 쿠킹합니다 — 모드를 더하면 쿠킹하는 목록이 따라옵니다.
          */
         static const utf8* findViewModeDefine( RenderViewMode viewMode ) { return getRenderViewModeInfo( viewMode )._pShaderDefine; }

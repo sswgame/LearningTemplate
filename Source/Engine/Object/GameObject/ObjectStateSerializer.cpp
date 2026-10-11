@@ -107,7 +107,7 @@ namespace sw
                 pGameObject->setActive( pGameObject->isActive() );
             }
 
-            /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 되살리는 원래 id 입니다. */
+            /** @brief 상태가 이 오브젝트를 부를 때의 id 입니다. 문맥이 따로 주지 않았으면 복원하는 원래 id 입니다. */
             static uint64 resolveSavedID( const ObjectLoadContext& context )
             {
                 if ( context._savedID != 0 )
@@ -472,7 +472,7 @@ namespace sw
         {
             if ( pComp == nullptr || pComp->isPendingDestroy() )
                 continue;
-            // 타입 이름으로 적는다 — 되살릴 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 견준다. 이름표를 적으면 이름표를 단
+            // 타입 이름으로 적는다 — 복원할 때(`takeRestoredComponentID`) 새 컴포넌트의 타입 이름과 견준다. 이름을 적으면 이름을 단
             // 컴포넌트는 id 를 되찾지 못해 되돌리기 뒤 핸들이 끊긴다.
             identity._listComponent.push_back( ObjectIdentity::ComponentEntry{ pComp->getTypeName(), pComp->getComponentID() } );
         }

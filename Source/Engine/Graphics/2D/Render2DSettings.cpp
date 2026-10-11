@@ -23,7 +23,7 @@ namespace sw
         {
             static constexpr const utf8* kDefaultLayerName = "Default";
 
-            /** @brief 정렬 방식 이름표입니다. 모르는 이름은 읽기 오류입니다. */
+            /** @brief 정렬 방식 이름입니다. 모르는 이름은 읽기 오류입니다. */
             struct SortModeName
             {
                 const utf8*          _pName;

@@ -374,7 +374,7 @@ namespace sw
         for ( const auto& diskEntry : listDiskEntry )
         {
             // **항목도 파일 안을 가리켜야 한다.** `validateHeaderGeometry` 는 헤더의 구역(인덱스 ·
-            // 스트링 풀)만 잰다. 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
+            // 스트링 풀)만 측정한다. 그런데 `readFile` 은 항목이 적어 둔 크기를 그대로 `resize` 에 넣는다 —
             // 손상된 32바이트 항목 하나가 4GB 할당 요청이 된다.
             // 여기서 한 번 걸러 두면 `readFile` 은 그 값을 믿어도 된다.
             if ( validateFileEntry( diskEntry, fileSize ) == false )
@@ -449,7 +449,7 @@ namespace sw
 
     bool ResourcePackReader::validateFileEntry( const PackFileEntryOnDisk& diskEntry, uint64 fileSize ) const
     {
-        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 잰다.** `offset + size` 는 넘칠 수 있다.
+        // 페이로드가 파일 안에 있어야 한다. **뺄셈으로 측정한다.** `offset + size` 는 넘칠 수 있다.
         if ( diskEntry._dataOffset > fileSize || diskEntry._compressedSize > fileSize - diskEntry._dataOffset )
         {
             SW_LOG_ERROR( "Pack entry payload lies outside the file %# (offset %#, size %#, file %#)",
@@ -495,7 +495,7 @@ namespace sw
             return true;
         }
 
-        // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 등록부가 든다.
+        // 팩 종류 → 코덱 종류는 표 한 곳(`PackCompressionUtil::kArrCodecMapping`), 구현은 코덱 레지스트리가 든다.
         ICompressionCodec* pCodec = PackCompressionUtil::findCodec( type );
         if ( pCodec == nullptr )
         {

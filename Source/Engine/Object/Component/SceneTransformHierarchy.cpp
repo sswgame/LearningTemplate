@@ -295,7 +295,7 @@ namespace sw
 
     void SceneTransformHierarchy::notifyWorldUpdated( SceneTransformPage& page, uint32 pageIndex, PrimitiveRegistry* pRegistry )
     {
-        // 렌더 프리미티브는 칸에 적힌 번호로 등록부에 바로 찍는다(메시 컴포넌트는 훅을 끈다). 그 밖의 파생은 알림 비트로 훅을 받는다.
+        // 렌더 프리미티브는 칸에 적힌 번호로 레지스트리에 바로 찍는다(메시 컴포넌트는 훅을 끈다). 그 밖의 파생은 알림 비트로 훅을 받는다.
         const uint32 primitiveIndex = page._arrPrimitiveIndex[pageIndex];
         if ( primitiveIndex != SceneTransformStorage::kNoPrimitive && pRegistry != nullptr )
             pRegistry->markTransformDirty( primitiveIndex );

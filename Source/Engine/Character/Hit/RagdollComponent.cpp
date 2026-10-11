@@ -528,7 +528,7 @@ namespace sw
         const uint32    boneCount = skeleton.getBoneCount();
         if ( _listPhysicsModel.size() != boneCount )
             return false;
-        // 골반(부모 바디가 없는 바디의 뼈)과 위 몸(부분 래그돌 뿌리 뼈)으로 누운 방향을 잰다.
+        // 골반(부모 바디가 없는 바디의 뼈)과 위 몸(부분 래그돌 뿌리 뼈)으로 누운 방향을 측정한다.
         int32 pelvisBone = -1;
         for ( size_t body = 0; body < _ragdoll._listParentBody.size() && pelvisBone < 0; ++body )
         {
