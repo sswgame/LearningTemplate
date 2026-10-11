@@ -11,8 +11,11 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Time/WallClock.h"
 
+#include <chrono>
 #include <filesystem>
+#include <limits>
 
 namespace sw
 {
@@ -25,6 +28,63 @@ namespace sw
             /** @brief 파일 시각 100 ns 눈금의 길이 타입입니다. */
             using TickDuration = std::chrono::duration<int64, std::ratio<1, FileUtil::kFileTimeTicksPerSecond>>;
 
+#if !defined( SW_PLATFORM_WINDOWS )
+            /** @brief 1601-01-01(Windows FILETIME 기원)에서 유닉스 기원까지의 100 ns 눈금 수입니다. */
+            static constexpr int64 kUnixEpochTicks = 116'444'736'000'000'000;
+
+            /**
+             * @brief `file_clock` 이 `WallClock` 보다 몇 눈금 앞서는지입니다(처음 한 번 잰다).
+             * @details libstdc++ 의 `file_clock` 은 기원이 2174 년이라(C++20 의 `clock_cast` 를 쓸 수 없는 C++17 이다) 두 시계를 맞대어 잰다.
+             *          창이 가장 좁은 표본을 골라 오차를 줄이고, 한 번만 재므로 읽기 · 쓰기가 같은 값으로 오간다.
+             */
+            static int64 getFileClockOffsetTicks()
+            {
+                static const int64 s_offset = []()
+                {
+                    constexpr int64 kTicksPerMilli = kFileTimeTicksPerSecond / 1000;
+                    int64           bestOffset     = 0;
+                    int64           bestWindow     = std::numeric_limits<int64>::max();
+                    for ( uint32 sample = 0; sample < 8; ++sample )
+                    {
+                        const int64 beforeMilli = WallClock::nowUnixMilliseconds();
+                        const int64 file        = std::chrono::duration_cast<TickDuration>( std::filesystem::file_time_type::clock::now().time_since_epoch() ).count();
+                        const int64 afterMilli  = WallClock::nowUnixMilliseconds();
+                        if ( afterMilli - beforeMilli < bestWindow )
+                        {
+                            bestWindow = afterMilli - beforeMilli;
+                            bestOffset = file - ( beforeMilli + afterMilli ) * kTicksPerMilli / 2;
+                        }
+                    }
+                    return bestOffset;
+                }();
+                return s_offset;
+            }
+
+#endif
+
+            /** @brief 파일 시각을 1601 기원 100 ns 눈금으로 바꿉니다(플랫폼마다 `file_clock` 기원이 달라 같은 기원으로 맞춘다). */
+            static int64 toTicks( const std::filesystem::file_time_type& writeTime )
+            {
+                const int64 fileTicks = std::chrono::duration_cast<TickDuration>( writeTime.time_since_epoch() ).count();
+#if defined( SW_PLATFORM_WINDOWS )
+                return fileTicks; // 이미 1601 기원이다
+#else
+                return fileTicks - getFileClockOffsetTicks() + kUnixEpochTicks;
+#endif
+            }
+
+            /** @brief `toTicks` 의 역입니다. */
+            static std::filesystem::file_time_type fromTicks( const int64 ticks )
+            {
+#if defined( SW_PLATFORM_WINDOWS )
+                const int64 fileTicks = ticks;
+#else
+                const int64 fileTicks = ticks - kUnixEpochTicks + getFileClockOffsetTicks();
+#endif
+                using FileDuration = std::filesystem::file_time_type::duration;
+                return std::filesystem::file_time_type{ std::chrono::duration_cast<FileDuration>( TickDuration{ fileTicks } ) };
+            }
+
             /** @brief UTF-8 경로를 `path` 로 만듭니다. Windows 는 넓은 문자로 직접 만든다(좁은 문자 생성자는 잘못된 UTF-8 에서 던진다). */
             static std::filesystem::path toPath( string_view path )
             {
@@ -33,8 +93,8 @@ namespace sw
                 const wstring widePath  = StringUtil::utf8ToUtf16( separated.c_str() );
                 return std::filesystem::path( widePath.c_str() );
 #else
-                // POSIX 의 좁은 문자 경로는 바이트 그대로다(변환이 없다).
-                return std::filesystem::path( std::string_view( path.data(), path.size() ) );
+                // POSIX 의 좁은 문자 경로는 인코딩 변환이 없다. 구분자만 맞춘다(`\` 가 섞인 경로도 Windows 와 같은 폴더를 가리킨다).
+                return std::filesystem::path( FileUtil::normalizeSeparators( path ) );
 #endif
             }
 
@@ -209,13 +269,12 @@ namespace sw
         const std::filesystem::file_time_type writeTime = std::filesystem::last_write_time( FileUtilStdInternal::toPath( fileName ), errorCode );
         if ( errorCode )
             return 0;
-        return std::chrono::duration_cast<std::chrono::duration<uint64>>( writeTime.time_since_epoch() ).count();
+        return static_cast<uint64>( FileUtilStdInternal::toTicks( writeTime ) / kFileTimeTicksPerSecond );
     }
 
     uint64 FileUtil::getCurrentFileTimestamp()
     {
-        const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
-        return std::chrono::duration_cast<std::chrono::duration<uint64>>( now.time_since_epoch() ).count();
+        return static_cast<uint64>( getCurrentFileWriteTime() / kFileTimeTicksPerSecond );
     }
 
     bool FileUtil::getFileWriteTime( string_view path, int64& outTicks )
@@ -227,14 +286,13 @@ namespace sw
         const std::filesystem::file_time_type writeTime = std::filesystem::last_write_time( FileUtilStdInternal::toPath( path ), errorCode );
         if ( errorCode )
             return false;
-        outTicks = std::chrono::duration_cast<FileUtilStdInternal::TickDuration>( writeTime.time_since_epoch() ).count();
+        outTicks = FileUtilStdInternal::toTicks( writeTime );
         return true;
     }
 
     bool FileUtil::setFileWriteTime( string_view path, const int64 ticks )
     {
-        using FileDuration = std::filesystem::file_time_type::duration;
-        const std::filesystem::file_time_type writeTime{ std::chrono::duration_cast<FileDuration>( FileUtilStdInternal::TickDuration{ ticks } ) };
+        const std::filesystem::file_time_type writeTime = FileUtilStdInternal::fromTicks( ticks );
         std::error_code                       errorCode;
         std::filesystem::last_write_time( FileUtilStdInternal::toPath( path ), writeTime, errorCode );
         if ( errorCode )
@@ -247,8 +305,7 @@ namespace sw
 
     int64 FileUtil::getCurrentFileWriteTime()
     {
-        const std::filesystem::file_time_type now = std::filesystem::file_time_type::clock::now();
-        return std::chrono::duration_cast<FileUtilStdInternal::TickDuration>( now.time_since_epoch() ).count();
+        return FileUtilStdInternal::toTicks( std::filesystem::file_time_type::clock::now() );
     }
 
     uint64 FileUtil::getFileSize( string_view fileName )

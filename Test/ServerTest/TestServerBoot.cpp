@@ -56,7 +56,13 @@ namespace
         ServerRun    run;
         const string serverPath = findServerPath();
         Process      process;
-        if ( serverPath.empty() || process.launch( "\"" + serverPath + "\" " + string( arguments ), options ) == false )
+#if defined( SW_PLATFORM_WINDOWS )
+        const string command = "\"" + serverPath + "\" " + string( arguments );
+#else
+        // POSIX 는 `sh -c` 가 명령을 띄운다. `exec` 가 없으면(dash) sh 가 부모로 남아 SIGTERM 에 서버보다 먼저 죽고 종료 코드가 143 이 된다.
+        const string command = "exec \"" + serverPath + "\" " + string( arguments );
+#endif
+        if ( serverPath.empty() || process.launch( command, options ) == false )
             return run;
         run._bLaunched = true;
         atomic<uint32> finished{ 0 };

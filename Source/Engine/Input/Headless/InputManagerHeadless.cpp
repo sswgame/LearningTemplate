@@ -6,12 +6,29 @@
  */
 #include "pch.h"
 
+#include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
 
 #if defined( SW_PLATFORM_LINUX ) && !defined( SW_WITH_CLIENT_CODE )
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 하드웨어가 없는 게임패드 슬롯입니다 — 가상 입력 · 시험이 넣는 이벤트만 받는다. */
+        class HeadlessGamepadDevice final : public GamepadDevice
+        {
+        public:
+            explicit HeadlessGamepadDevice( uint32 deviceIndex )
+                : GamepadDevice( deviceIndex ) {}
+
+            void poll( [[maybe_unused]] float32 deltaTime ) override {}
+
+        protected:
+            bool isHardwareConnected() const override { return false; }
+        };
+    } // namespace
+
     void InputManager::pollPlatform()
     {
     }
@@ -26,6 +43,8 @@ namespace sw
 
     void InputManager::registerPlatformGamepads()
     {
+        // 하드웨어는 없지만 슬롯은 둔다 — 가상 입력(재생 · 시험)이 게임패드 이벤트를 넣는 길이 Windows 서버 빌드와 같아야 한다.
+        registerGamepadSlots<HeadlessGamepadDevice>();
     }
 
     void InputManager::setCursorVisiblePlatform( [[maybe_unused]] bool bVisible )
@@ -46,7 +65,8 @@ namespace sw
 
     bool InputManager::isWindowFocusedPlatform() const
     {
-        return false;
+        // 창이 없으면 포커스 값 그대로다(Win32 · X11 구현의 "창 없음" 규칙과 같다 — 시험 · 서버는 참).
+        return _bWindowFocused == SW_TRUE;
     }
 
     void InputManager::disableWindowsAccessibilityShortcuts()
