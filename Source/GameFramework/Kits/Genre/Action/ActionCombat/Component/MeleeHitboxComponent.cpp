@@ -47,11 +47,11 @@ namespace sw
     void MeleeHitboxComponent::onOverlapBegin( const OverlapInfo& overlap )
     {
         Component::onOverlapBegin( overlap );
-        // 상대의 감지 범위(트리거)에 닿은 것은 맞은 것이 아니다 — 몸(막는 콜라이더)에 닿아야 한다.
+        // 상대의 감지 범위(트리거)에 닿은 것은 맞은 것이 아니다. 몸(막는 콜라이더)에 닿아야 맞는다.
         if ( overlap._pOther == nullptr || overlap._bOtherTrigger == SW_TRUE )
             return;
 
-        // 접촉마다 하나씩 든다 — 상대가 콜라이더 둘로 겹쳤다가 하나만 떨어져도 남은 접촉이 남는다.
+        // 접촉마다 하나씩 보관한다. 상대가 콜라이더 둘로 겹쳤다가 하나만 떨어져도 남은 접촉이 계속 남는다.
         _listOverlapping.push_back( overlap._pOther->getHandle() );
         if ( _bIsAttacking )
             deliverHit( overlap._pOther );
@@ -61,14 +61,14 @@ namespace sw
     {
         Component::onOverlapEnd( overlap );
         if ( overlap._bOtherTrigger == SW_TRUE )
-            return; // 시작에서 들지 않았다
+            return; // 시작 이벤트에서 보관하지 않은 접촉이다
         if ( overlap._pOther != nullptr )
         {
             (void)VectorUtil::removeSingleSwap( _listOverlapping, overlap._pOther->getHandle() ); // 없으면 잊을 것도 없다
             return;
         }
 
-        // 상대가 사라져 누구인지 모른다 — 더는 풀리지 않는 것을 모두 덜어 낸다.
+        // 상대가 사라져서 누구인지 알 수 없으므로, 더 이상 해제되지 않을 접촉을 모두 제거한다.
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -88,7 +88,7 @@ namespace sw
         _bIsAttacking    = true;
         _listHitTarget.clear();
 
-        // 휘두르기 전부터 판정 안에 서 있던 유닛도 맞는다 — 그 겹침의 시작 이벤트는 이미 지나갔다(언리얼 `GetOverlappingActors`).
+        // 휘두르기 전부터 판정 안에 서 있던 유닛도 맞는다. 그 겹침의 시작 이벤트는 이미 지나갔다(언리얼 `GetOverlappingActors` 에 해당).
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = ( pOwner != nullptr ) ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
@@ -113,7 +113,7 @@ namespace sw
 
     void MeleeHitboxComponent::deliverHit( GameObject* pTarget )
     {
-        // 공격자 자신과 그 계층(몸 · 다른 판정)은 맞지 않는다.
+        // 공격자 자신과 그 계층(몸, 다른 판정)은 맞지 않는다.
         GameObject* pAttacker = findAttackerRoot();
         if ( pTarget->isDescendantOf( pAttacker ) )
             return;
@@ -121,7 +121,7 @@ namespace sw
         if ( pStats == nullptr )
             return;
 
-        // 한 번 휘두를 때 유닛마다 한 번 — 판정을 나갔다 다시 들어와도 다시 맞지 않는다.
+        // 한 번 휘두를 때 유닛마다 한 번만 맞는다. 판정을 나갔다 다시 들어와도 다시 맞지 않는다.
         const GameObjectHandle target = pTarget->getHandle();
         if ( std::find( _listHitTarget.begin(), _listHitTarget.end(), target ) != _listHitTarget.end() )
             return;
