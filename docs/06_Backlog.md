@@ -482,12 +482,10 @@
 - **CI 린트 잡이 처음으로 린트 전부를 리눅스에서 돈다**(`RunLintSuite`, 2026-10-06 — 그 전엔 `CheckCodeConventions` 하나). 첫 실행에서 지는 게이트가 있으면
   그 게이트의 결함(경로 대소문자 · 줄끝 · 외부 도구)이다 — 고치고, 급하면 그 단계에 `continue-on-error` 를 한 번 두고 여기 적는다. 훅 상한
   `kHookBudgetSeconds`(1: 8 · 10: 12 s)는 이 PC 기준 짐작이다 — 첫 `lint-timing` 아티팩트를 보고 러너 값의 1.5 배로 고친다.
-- **Scripts 정리의 남은 후보**(2026-10-10, `CodeText` 도우미 · `lint/conventions/` 나누기 · 훅 내용 규칙 뒤). 커밋 훅의 바닥은 아직 트리 전체 게이트 `CheckConfigReference` · `CheckDuplicateTypeNames` ·
-  `CheckKitNamespaces` 다 — 내용 규칙으로 토큰이 없는 소스 커밋에서는 서지 않게 했지만, 토큰이 든 파일(`REFLECT` · `enum class` 헤더)을 건드린 커밋은 여전히 돈다.
-  더 줄이려면 `CheckConfigReference` 를 파일 단위로(생성 문서를 통째로 다시 만들지 않고 바뀐 구조체만) 나눠야 한다.
-  ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
-  (CTest 이름을 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
-  모양이다 — 폴더 재배치가 끝났으니 지우거나 공용 이동기 하나로.
+- **Scripts 정리의 남은 후보**([Scripts 개편 계획](plans/ScriptsRestructure.md)). 커밋 훅의 바닥은 트리 전체 게이트 여섯이 비슷한 높이(조용할 때 1~1.4 s,
+  대개 `Source/` 를 읽는 값)로 만든다 — `CheckConfigReference` 하나를 파일 단위로 나눠도 바닥은 그대로라 하지 않는다(계획 1 단계에 숫자). 더 내리려면
+  트리 전체 게이트가 파일 읽기를 나누는 구조가 필요하다. 남은 작은 것: `CheckFunctionVocabulary` 의 손으로 짠 주석 가리기(`common.CodeText` 로),
+  `dev/MoveEditorState.py`(PC 마다 한 번짜리 옛 자리 이동기 — 모든 PC 가 돌렸으면 지운다).
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 

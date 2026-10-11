@@ -30,9 +30,16 @@ def getProjectRoot() -> Path:
 def normalizePath(pathString: PathLike) -> str:
     """
     경로 문자열을 정규화하여 POSIX 스타일(슬래시 사용) 문자열로 반환합니다.
+
+    게이트가 include 마다 부른다(트리 전체에서 수십만 번) — 이미 정규형인 글자(`\\` · `//` · `.` 조각 · 끝 `/` · 드라이브 `:` 가 없는 것)는
+    `Path` 를 만들지 않고 그대로 돌려준다. 답은 `Path(x).as_posix()` 와 같다.
     """
-    if isinstance(pathString, str) and not pathString:
-        return ""
+    if isinstance(pathString, str):
+        if not pathString:
+            return ""
+        if ("\\" not in pathString and "//" not in pathString and "/./" not in pathString and ":" not in pathString
+                and not pathString.startswith("./") and not pathString.endswith(("/", "/."))):
+            return pathString
     return Path(pathString).as_posix()
 
 

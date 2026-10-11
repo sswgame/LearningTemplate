@@ -104,8 +104,7 @@ Scripts/
   │     ├── conventions/              # CheckCodeConventions 의 규칙 묶음(라이브러리 — 묶음 지도는 __init__.py). LintCatalog 는 훑지 않는다
   │     ├── rules/                    # 규칙 데이터 — `<게이트 · 등록부 이름>.toml`(예외 표 `[exemption]` · 티어 · 어휘 · 허용 목록). 코드는 없다
   │     ├── gate/                     # 위반이 있으면 **실패한다** — 빌드와 커밋을 막는 건 이 폴더뿐
-  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/)
-  │     │     ├── CheckOutParameterNames.py   # 맨이름 `out` 매개변수(헤더 선언)
+  │     │     ├── CheckCodeConventions.py     # C++ 엔진 코딩 컨벤션 — 진입점 · 파일 고르기 · 보고(규칙은 lint/conventions/, 맨이름 `out` 도 여기)
   │     │     ├── CheckLoopBraces.py          # 본문에 중괄호가 없는 for · while
   │     │     ├── CheckDiscardReason.py       # 실패 가능 함수 결과를 (void) 로 버리는 자리의 이유 한 줄
   │     │     ├── CheckSuppressionReasons.py  # NOLINT · diagnostic ignored · CMake 경고 끄기의 검사 이름과 이유
@@ -180,7 +179,7 @@ Scripts/
   │     │     ├── RunPaddingReport.py         # 레코드별 패딩 · 필드 재배치로 줄일 수 있는 크기 (libclang, `--preset` · `--define SW_SHIPPING`)
   │     │     ├── RunForwardDeclarationCandidates.py # 전방 선언으로 바꿀 수 있는 include (`--apply` 는 고쳐 쓴다)
   │     │     ├── RunDuplicateCode.py         # 복사돼 있는 코드 블록 (C++ · `--language py` · `--language cmake`)
-  │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음
+  │     │     ├── RunEngineLayerGraph.py      # Engine 폴더 간 include 그래프 · 강결합 묶음 · 티어 (`--apply` 는 티어 표 둘을 고쳐 쓴다)
   │     │     ├── RunCoreLayerGraph.py        # Core 폴더 간 include 그래프 · 묶음 · 거꾸로 가는 include(파일 단위)
   │     │     ├── RunFolderFileCount.py       # 너무 큰 평면 폴더 · 파일 하나짜리 폴더
   │     │     ├── RunRepeatedConstants.py     # 같은 뜻이 여러 곳에 따로 적힌 상수 · 리터럴
@@ -210,8 +209,6 @@ Scripts/
   │     ├── ListCiJobs.py             # GitHub Actions 실행 · 잡 · 실패 주석을 공개 API 로(로그인 없이)
   │     ├── ListOutdatedDeps.py       # vcpkg 의존성의 지금 판 · 레지스트리 최신 판(오버레이 포함, docs/09 5-2)
   │     ├── MoveEditorState.py        # 체크아웃마다 한 번: 옛 자리(Config/Editor · 팩 gv 프리셋)의 에디터 로컬 상태를 Saved/Editor 로
-  │     ├── MoveEngineFolders.py      # Engine 폴더 재배치의 이동 표(git mv + 경로 치환)와 티어 표 맞추기(--sync-tier) — 다시 돌릴 수 있다
-  │     ├── MoveGameFrameworkLayout.py # GameFramework 폴더 재배치(끝남)의 이동 표와 경로 치환 — 다시 돌릴 수 있다
   │     ├── RunTests.py               # 스위트 · 케이스 이름으로 테스트 실행 — 시험까지 지은 뒤(`all` · `AllTests`) 그 케이스가 사는 실행 파일을 `Bin` 에서
   │     ├── RunBuildBaseline.py       # 빌드 시간 기준선(풀 · 헤더 수정 · .cpp 수정 · 워크트리 콜드, 각 3 회 중앙값, 머리에 PC · CPU)
   │     ├── SampleStacks.py           # 살아 있는 프로세스의 스레드 스택을 여러 번 떠 함수별로(DbgHelp) — 프로파일러가 닿지 않는 곳
@@ -374,6 +371,9 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   게이트는 읽기만. 새 린트가 저장소 안에 파일을 쓰면 이 전제가 깨진다. 8 · 16 은 4 와 같거나 느리다(`CheckCodeConventions` · `CheckLintsAreAlive` 가 스스로 여럿을 쓴다).
 - **커밋 훅은 트리 전체 게이트(`preCommitFileArgument = ""`)를 하위 프로세스로 먼저 띄운다**(`GateRunPlan.bBackground`) — 파일 하나 커밋 9.6 → 4.3 s(부하 중).
   파일 단위 게이트는 이 프로세스에서(기동 0.1~0.3 s 가 게이트보다 비싸다). 훅의 바닥 시간은 가장 긴 트리 전체 게이트다 — 새 게이트는 가능하면 `--files` 를 받게 짓는다.
+  훅은 끝에 `게이트 시간:` 한 줄(가장 긴 셋 · 파일 단위 합)을 찍는다. 트리 전체 게이트 여섯(`CheckConfigReference` · `CheckDuplicateTypeNames` · `CheckEngineLayers` ·
+  `CheckModuleTargets` · `CheckDataFileReferences` · `CheckGlobalVariableKinds`)이 비슷한 높이(조용할 때 1~1.4 s)라 하나만 깎으면 바닥이 안 내려간다 — 남은 것은 대개
+  `Source/` 파일 3,000 개를 읽는 값이다. include · 파일마다 부르는 도우미는 `Path` 객체를 만들지 말 것(`normalizePath` 가 그것으로 2 s 를 썼다).
 - **트리 전체 게이트를 소스 변경마다 돌리지 않으려면 내용 규칙을 쓴다**(`LintGate.preCommitContentPattern` · `preCommitChangedLinePattern`, 판정은 `PreCommitLint.StagedContentProbe`).
   `preCommitPattern` 은 "무조건 도는 파일" 이 되고, 소스는 **게이트가 읽는 토큰**이 든 파일일 때만 돈다 — 토큰 목록은 게이트가 읽는 정규식의 합집합이어야 하므로 규칙을 더하는
   커밋이 같은 커밋에서 내용 규칙도 넓힌다(`CheckKitNamespaces._kContentTokenPattern` · `CheckConfigReference` 의 `REFLECT` · `enum class` · `GLOBAL_VARIABLE` · `ConfigKeyDoc`).
@@ -464,7 +464,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   그 셀프테스트가 조각 전에 게이트 클래스의 읽기 오류(`_ruleDataError`)를 따로 본다. 모듈 수준에서 읽는 목록이 깨지면 import 가 트레이스백으로 진다.
 - **`rules/*.toml` 만 바꾼 커밋은 훅이 그 게이트를 돌리지 않는다**(게이트의 `preCommitPattern` 은 소스 경로다) — 예외 · 목록을 고쳤으면
   그 게이트를 직접 돌리거나 `ctest -L lint` 로 본다. 옛 철자를 일부러 적는 데이터 파일(약어 등록부 · 제품 이름 · 함수 어휘)은
-  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `dev/MoveEngineFolders.py --sync-tier` 가 TOML 을 고쳐 쓴다.
+  `FormatAcronymSpelling._kTextExcludedRel` 에 있어 글 치환이 건드리지 않는다. 엔진 티어 표는 `report/RunEngineLayerGraph.py --apply` 가 TOML 과 `Source/Engine/README.md` 표를 고쳐 쓴다.
 - **"헤더 혼자 빼도 선다" 는 "아무도 안 쓴다" 가 아니다** — `RunForwardDeclarationCandidates --verify-unused` 가 고른 120 건을 지우자 소비자 TU 에서 오류 2790 개가
   났다(거쳐 받던 `RHIBackend` · `IRHIResourceFactory`, NOMINMAX 가 `windows.h` 보다 먼저 오던 순서가 깨져 `std::max` 가 매크로에 먹힘). 보고는 "후보" 로만 쓰고, 지울 때는
   그 헤더를 include 하는 TU 전부를 다시 지어 본다.

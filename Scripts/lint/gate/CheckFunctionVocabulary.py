@@ -21,7 +21,7 @@
                    BannedVerb · Abbreviation 은 예외 표에 오른 기존 선언을 건너뛴다(새 위반만 막는다).
                    금지 동사 표(`[banned_verb]`) · 줄임말 표(`[abbreviation]`) · 예외 표(`[exemption]`)는
                    `Scripts/lint/rules/CheckFunctionVocabulary.toml` 에 있다.
-                   맨이름 `out` 매개변수는 `CheckOutParameterNames.py` 가 본다.
+                   맨이름 `out` 매개변수는 `CheckCodeConventions` 의 `Naming/BareOutParameter` 가 본다.
   3) CheckVerb   — `check*` 는 술어가 아니다. bool 이면 `is*`/`has*`, void 면 `assert*` 다.
   4) NamePair    — 같은 이름에 `string_view` 판과 `const hashed_string&` 판을 둘 다 두지 않는다.
                    `hashed_string` 은 리터럴에서 암묵 변환되므로 `f( "Jump" )` 가 **모호**해진다. 이름은

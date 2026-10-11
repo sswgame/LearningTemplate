@@ -39,6 +39,7 @@
 | [다음 세션 인계](plans/NEXT.md) | 진행 중인 배치의 상태와 다음 세션이 할 일(배치 경계마다 고쳐 쓴다) |
 | [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할 단위와 순서(끝나면 지운다) |
 | [빌드 속도 계획](plans/BuildSpeed.md) | 기준선 측정 · 시험 빌드 분리 · 헤더 다이어트 · PCH 공유 · 유니티(끝나면 지운다) |
+| [Scripts 개편 계획](plans/ScriptsRestructure.md) | 커밋 훅 바닥 · 겹치는 게이트 · 죽은 스크립트의 우선순위와 단계(끝나면 지운다) |
 
 ## 모듈 README
 
