@@ -24,25 +24,9 @@
 ### 문서로 해결
 어휘표(`acquire` · `tryGet` · `getOrCreate` · `ensure` · 프레임 진행 동사)와 접미사 표 · `RT` 는 AGENTS.md "Function names" 와 [코딩 규칙 예시](../04_CodingGuidelines.md) 2 절에 올렸다.
 
-### 끝난 것 (2026-10-10 기계적 치환)
-`MatrixMath::create*` → `make*`, `ctx` · `*Ctx` → `context` · `*Context`, `BlendCurveSpec` → `BlendCurveDef`, 스윕 비율 `_time` → `_hitFraction`,
-부정형 불린(`_bCollideConnectedBodies` · `_bCollideJointedBodies` — 데이터도 다시 썼다 · `_bTCPNoDelay` · `_bIgnoreCost`), 동작과 어긋난 함수 넷,
-`getMaterialCache` / `getTextureCache`, `RegistrationResult` 한 이름, `NetHost` 의 `nowSeconds` · `_timeoutSeconds`,
-`HorrorItemKind::Misc` → `None`, `CameraShakeRequest` 를 `CameraShakeRequest.h` 로 분리, `ResourceUtil` → `ResourcePaths`(경로 해석 · 저장 경로) + `ResourceIO`(읽기 · 존재 확인 · 팩 매니저; 참조 200 파일), `EditorUtil` 의 경로 · 상태 파일 이름 → `EditorPaths`,
-두 린트 예외 표의 "개명 예정" 59 줄(`build*` · `generateNewID` · `Attr` · 맨이름 `out`). 예외 표에는 "도메인 용어" 일곱 줄만 남았다.
-
-### 끝난 것 (2026-10-11 건별 판단)
-시간 필드: 정수는 이미 `Ms` · `Frames` · `Steps` · `Minutes` 접미사가 붙어 있고, `float32` 시간(`_time` · `_duration` · `_elapsed` …)은 엔진 전체가 초라서 접미사를 붙이지 않는다(AGENTS.md 관례).
-바이트 크기: 맨 `_size` 482 곳은 대부분 컨테이너 크기나 화면 크기라 대상이 아니고, 바이트가 분명한 구조체 필드만 `_sizeBytes` 로 바꿨다(`RHIBufferCopyRegion` · `VulkanBufferRecord` · `FileStamp`).
-셰이더 리플렉션 · 머티리얼 패킹의 `_size` · `_offset` 은 레이아웃 계산 전체에 걸쳐 있어 그대로 둔다.
-
-### 채택 — 구조와 얽힌 큰 이름 (건별 결정 뒤)
+### 남은 것
 - `MathUtil::getRandom` 은 중복 정리 계획의 "결정적 난수를 Core 로" 단계와 함께 옮긴다.
 - 사용자 결정(2026-10-10): `PhysicsWorld` 는 그대로 둔다. 나머지는 상용 엔진과 견주어 정했다 — `GameConfig` · `GameSettings` 는 그대로(언리얼도 프로젝트 설정과 게임 설정이 따로), `GameplayAbilityConfig` · `GameplayAbilityDef` 는 그대로(정의가 설정을 품는 층), `ResourceUtil` 은 `ResourcePaths` · `ResourceIO` 로 나누기(언리얼 `FPaths` / `FFileHelper`), `EditorUtil` 은 경로를 `EditorPaths` 로 빼기, `FrameRendererUtil` 은 그대로(언리얼 `RenderUtils`). 결정은 [결정 기록](../09_Decisions.md) 5-4.
-
-## 순서
-1. 엔진 · GameFramework 폴더 재배치와 약어 철자 통일 뒤에 기계적 치환(린트 예외 표 비우기 포함)을 약어 코드모드 틀에 얹어 한 묶음씩.
-2. 구조와 얽힌 큰 이름은 건별로 사용자 결정을 받는다.
 
 ## 점검이 보지 못한 곳
 `.cpp` 지역 변수 · 람다, `Games/` · `Server/` · `Test/` · `Tools/` · HLSL · Python 스크립트는 거의 보지 않았다. 코드모드 사전 실행 때 같은 기준으로 이 범위의 식별자를 한 번 더 훑는다.

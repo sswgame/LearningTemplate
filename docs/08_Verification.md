@@ -162,6 +162,34 @@ cd build/Ninja-Debug/Bin
 
   헤더 시나리오가 풀 빌드와 같다 — Core 기본 헤더 하나를 고치면 사실상 전 TU 를 다시 컴파일한다(2 단계 헤더 다이어트의 근거).
   워크트리 콜드가 풀 빌드보다 느린 것은 PCH 를 켠 Windows 빌드가 sccache 에 거의 맞지 않기 때문이다(`/Yu` 캐시 불가, `Scripts/setup/README.md`). Release 는 재지 않았다(풀 1 회 192.3 s 만 있다).
+
+- **헤더 파싱 비용 상위 20 개는 `Scripts/lint/report/RunIncludeCost.py --preset Ninja-Debug --jobs 8` 로 뽑는다.**
+  0 단계 집계(2026-10-10, 위와 같은 PC · 커밋, `RunIncludeCost.py --preset Ninja-Debug --jobs 8`, 다른 빌드와 겹쳐 돌았으므로 순위만 믿는다):
+  TU 1936 개 중 헤더 파싱 합 2619.9 s / 컴파일러 합 3190.5 s = **82 %**(구문 검사만이라 진짜 빌드 비율보다 높다).
+  시험을 짓지 않은 트리라 시험 TU 372 개는 코드젠 산출물이 없어 구문 검사가 졌다 — 시험까지 넣으려면 `--target all AllTests` 로 지은 뒤 다시 돌린다.
+
+  | 순위 | 누적(s) | TU | 평균(ms) | 헤더 |
+  |---:|---:|---:|---:|---|
+  | 1 | 2376.3 | 1323 | 1796.1 | `Source/Engine/pch.h` |
+  | 2 | 1709.1 | 1426 | 1198.5 | `Source/Core/CoreMinimal.h` |
+  | 3 | 891.4 | 1426 | 625.1 | `Source/Core/Common/StdHeaders.h` |
+  | 4 | 682.6 | 1426 | 478.7 | `Source/Core/Common/Defines.h` |
+  | 5 | 681.7 | 1426 | 478.1 | `Source/Core/Common/Types.h` |
+  | 6 | 679.8 | 1426 | 476.7 | `MSVC/include/string_view` |
+  | 7 | 666.9 | 1426 | 467.7 | `MSVC/include/__msvc_string_view.hpp` |
+  | 8 | 593.8 | 1355 | 438.2 | `Source/Core/Common/PlatformOsHeaders.h` |
+  | 9 | 590.2 | 1336 | 441.8 | `Source/Engine/EngineMinimal.h` |
+  | 10 | 590.1 | 1426 | 413.8 | `MSVC/include/iosfwd` |
+  | 11 | 587.3 | 1326 | 442.9 | `Source/Engine/Common/Common.h` |
+  | 12 | 535.1 | 1426 | 375.2 | `MSVC/include/cwchar` |
+  | 13 | 533.9 | 1426 | 374.4 | `WinSDK/ucrt/wchar.h` |
+  | 14 | 509.6 | 1426 | 357.4 | `clang/intrin.h` |
+  | 15 | 503.4 | 1426 | 353.0 | `clang/x86intrin.h` |
+  | 16 | 483.8 | 1426 | 339.3 | `clang/immintrin.h` |
+  | 17 | 333.8 | 1355 | 246.4 | `WinSDK/um/Windows.h` |
+  | 18 | 205.9 | 1355 | 151.9 | `WinSDK/um/Unknwn.h` |
+  | 19 | 164.7 | 1357 | 121.4 | `WinSDK/um/ole2.h` |
+  | 20 | 145.6 | 1357 | 107.3 | `WinSDK/um/objbase.h` |
 - **Jolt 백엔드 TU**(`Physics/Jolt/*.cpp` 다섯, 같은 PC, 컴파일 DB 명령 그대로 3 회 중앙값의 합): 자기 PCH 없이 11.1 s(그중 헤더 파싱 7.0 s, 엔진 `pch.h` 만 5.8 s) →
   `EngineJolt_objects` PCH 2.9 s + TU 2.6 s = 5.5 s. 한 파일 수정 뒤 다시 짓는 시간은 TU 하나당 1.9 ~ 2.5 s → 0.3 ~ 0.8 s 다.
   재는 법: `/clang:-ftime-trace` 를 `-c --` 앞에 넣는다(뒤에 두면 파일 이름으로 읽힌다). 다른 빌드가 돌 때 잰 값은 1.5 배까지 흔들린다.

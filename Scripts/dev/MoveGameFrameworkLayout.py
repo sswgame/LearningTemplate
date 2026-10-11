@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 @file MoveGameFrameworkLayout.py
-@brief GameFramework 폴더 재배치(docs/plans/GameFrameworkLayout.md) 의 이동 표와 경로 치환 — 단계마다 다시 돌릴 수 있습니다.
+@brief GameFramework 폴더 재배치(끝남 — 커밋 기록)의 이동 표와 경로 치환 — 단계마다 다시 돌릴 수 있습니다.
 
     py -3 Scripts/dev/MoveGameFrameworkLayout.py --step 1            # 1 단계 이동 + 경로 치환
     py -3 Scripts/dev/MoveGameFrameworkLayout.py --step 1 --dry-run  # 옮길 파일 수와 고칠 파일만 보인다

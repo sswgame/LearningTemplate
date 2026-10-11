@@ -22,6 +22,7 @@
   `GameObject` 가 기능 폴더를 직접 아는 것이 진짜 문제다 — 컴포넌트 모델의 코어가 렌더 · 물리 · 내비를 include 한다.
 - `Engine/` 은 소스 559개 · 헤더 포함 약 1,160개, Debug `Engine.dll` 은 약 18 MB 다. 재링크 시간은 아직 재지 않았다(아래 0 단계).
 - 게이트 티어 표가 실제와 다르다: `Text`(표 5, 실제 3).
+- Core 층 정리와 Engine 폴더 재배치(1 ~ 7)는 끝났다([Core README](../../Source/Core/README.md) · 결정 기록).
 
 ## 단계
 
@@ -29,33 +30,8 @@
 - Engine 안에서 `Graphics` 한 파일 · `UI` 한 파일 · `Object` 한 파일을 고쳤을 때 Release 증분 빌드 시간(컴파일 + 재링크)을 3회씩 잰다. 표는 [검증과 측정](../08_Verification.md) 형식.
 - 분할 뒤 같은 세 경우와 비교한다. 이득이 재링크 시간에서 나오지 않으면 3 단계(DLL 승격)는 하지 않는다.
 
-### 0-2. Core 층 정리 (분할의 선행 조건)
-Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `File` · `Log` · `Math` · `Memory` · `Module` · `Process` · `String` · `Task` · `Time`)가 하나의 순환 묶음이다.
-`Scripts/lint/report/RunCoreLayerGraph.py` 가 `.cpp` 를 포함한 파일 단위 간선을 전수로 뽑는다(2026-10-10). 거꾸로 가는 include 가 가장 적은 순서를 찾아도 38 건이 남는다.
-건수만 줄이는 순서(`Concurrency` 를 `Memory` · `Container` 아래에 두는 쪽)를 그대로 쓰지 않고, 아래 순서로 확정한다. 남는 간선이 설계 문제 몇 개로 모이기 때문이다.
-
-**확정한 층(밑에서 위로, 같은 줄은 서로 include 하지 않는다):**
-`Common` · `Predefined` → `Math` · `Concurrency`(원시 동기화: `atomic` · `mutex` · `SpinLock` · `Futex` · 경합 검출 훅) → `Memory`(할당기와 메모리 태그) → `Container`(+ `StringUtil` · `formatString` · 동시 큐) · `UUID` → `Delegate` → `Log`(로그 파사드와 매크로) → `Time` · `String`(이름 · 고정 문자열) · `Process`(프로세스 · 스레드 크래시 스택) · `Compression` · `CommandLine` → `Task` · `GlobalVariable` → `File` → `Module` → `Diagnostics`(호출 스택 · 크래시 · 메모리 프로파일러 · 교착 · 경합 보고) · `Event` → `LogSink`(기본 싱크와 출력 장치) → `Network`.
-
-| 거꾸로 가는 방향 | 건수 | 예 | 풀이 |
-|---|---|---|---|
-| Common → Container | 3 | `TopologicalSortUtil.h` · `VarIntUtil.h` 의 `vector.h` | 두 도우미를 `Container` 로 옮긴다 |
-| Concurrency → Container · Memory · String · Log · Process | 14 | `mutex.h` → `DeadlockDetector.h`, `DataRaceDetector.cpp` → `CallStackCapture.h`, `ConcurrentQueue.h` → `vector.h` | `mutex` 는 관찰자 인터페이스(`ILockObserver`)만 알고 `DeadlockDetector` 는 `Diagnostics` 로. 경합 보고는 함수 포인터로 받는다(`DataRaceReporter`). `ConcurrentQueue` · `WorkStealingDeque` 는 `Container`, `LockFreeObjectPool` 은 `Task` 로 |
-| Memory → Container · String · Log · Process | 10 | `Memory.cpp` → `MemoryProfiler.h`, `FrameArenaAllocator.h` → `vector.h` | 스레드의 현재 태그와 `ScopedMemoryTag` 는 `Memory` 가 갖고, 프로파일러는 할당 기록기 인터페이스(`IAllocationTracker`)로 걸린다. `MemoryProfiler` 는 `Diagnostics`, `FrameArenaAllocator` 는 `Container` 로 |
-| String → Log | 2 | `hashed_string.h` · `fixed_string.h` → `Logger.h` | `Log` 가 쓰는 `StringUtil` · `formatString` 을 `Container`(문자열 타입 옆)로 옮겨 `String` 을 `Log` 위에 둔다 |
-| Log → File · Process · Module | 5 | `FileLogOutput.cpp` → `FileUtil.h`, `Logger.cpp` → `CrashHandler.h` | `Logger` 는 정적 파사드(전역 싱크 · 상세도 · 호출자 표)만 남고, 기본 싱크(`AsyncLogSink`)와 출력 장치는 `LogSink` 로 |
-| Process → File · Module | 3 | `WindowsCallStackCapture.cpp` → `FileUtil.h` · `ModuleImageUtil.h`, `ModuleBuildID.cpp` → `FileUtil.h` | 작업 스레드가 부르는 크래시 스택 준비(`ThreadCrashStack`)만 `Process` 에 남기고 호출 스택 · 크래시 보고는 `Diagnostics` 로, `ModuleBuildID` 는 `Module` 로 |
-| Time → Log | 1 | `GameTimer.h` → `Logger.h` | `Time` 을 `Log` 위에 둔다(`Log` 파사드는 시계를 쓰지 않는다) |
-| 폴더 → 루트 모음 헤더(38 건 밖) | 3 | `LinearAllocator.cpp` 등의 `CoreMinimal.h` | 쓰는 헤더를 직접 include 한다 |
-
-- 경합 보고기는 `Diagnostics/DataRaceReporter.cpp` 의 정적 등록으로 걸린다. `Core` STATIC 을 링크하는 `ReflectionParser` 는 그 목적 파일이 빠질 수 있어 진입점에서 `DataRaceReporter::install()` 을 부른다.
-- 끝에 `CheckCoreLayers` 게이트(티어 표 + 거꾸로 가는 include 실패)를 둔다. Engine 의 `_kEngineTier` 와 같은 구조.
-- `Core/Network`(59 파일, Core 의 21%)는 순환에 끼지 않는다. 다른 Core 폴더는 Network 를 include 하지 않는다. 순환을 푼 뒤 별도 정적 라이브러리로 빼서 `ReflectionParser` 가 링크하지 않게 할 수 있다(파서가 Network 를 쓰지 않는지 먼저 확인).
-
-### 0-3. Engine 폴더 재배치 (분할 전, 의존 정리의 일부)
-1 ~ 7 은 끝났다(2026-10-10). 이동 표와 include · 문서 치환은 `Scripts/dev/MoveEngineFolders.py`(단계별, 다시 돌릴 수 있다)이고,
-`--sync-tier` 가 게이트 표와 `Source/Engine/README.md` 티어 표를 include 그래프 계산값으로 맞춘다. 옛 경로는 [결정 기록](../09_Decisions.md) 4 절,
-옮기지 않기로 한 것(`EngineServices` · `RHIBackendType`)은 같은 문서 2 절에 있다. 남은 판단:
+### 0-3. Engine 폴더 재배치 — 남은 판단
+옛 경로와 옮기지 않기로 한 것은 [결정 기록](../09_Decisions.md) 2 · 4 절, 이동 도구는 `Scripts/dev/MoveEngineFolders.py`(`--sync-tier` 가 게이트 표와 `Source/Engine/README.md` 티어 표를 맞춘다).
 
 - `Utility` 루트 10 파일(`CommandStack` · `DebugOverlayState` · `GameAutoplay` · `GameTimeScale` · `KeyValueFile`)은 이름만 보고 두었다. 후보는 `CommandStack` → `Scene`(에디터 실행 취소),
   `KeyValueFile` → `Serialization/Format`, `GameTimeScale` · `GameAutoplay` → `Config`, `DebugOverlayState` → `Profiling` 이다.
@@ -64,8 +40,6 @@ Core 폴더 13개(`Common` · `Concurrency` · `Container` · `Delegate` · `Fil
 
 **Engine 에 남는 이유가 있는 폴더(2026-10-10 사용 현황 조사):** 에디터는 `GameFramework` 를 include 할 수 없다(`CheckEngineLayers`: Editor 금지 목록) — 그래서 에디터가 쓰는 폴더(`Dialogue` · `Sequencer` · `Destruction` · `Environment` · `Automation` · `UI` · `Animation` · `Scene` …)는 Engine 이 아니면 둘 곳이 없다. 서버 실행 파일도 `GameFramework` 를 모르므로 `Observability`(서버가 `MetricRegistry` · `OpsHTTPEndpoint` 를 쓴다)도 남는다.
 `Character` 는 `Destruction`(에디터가 씀)과 `Resource/AssetManager` 가 쓰고 `Spatial` 은 `Character/Fit` 이 쓰므로 남는다 — `Resource` 의 기능 캐시를 자기 폴더로 보낸 뒤에도 `Destruction` 이 `Character` 를 쓴다. `Telemetry` 는 `EngineLoop` · App · 게임이, `Compression` 은 Core 인터페이스의 코덱 공급자라 Core 가 서드파티를 몰라야 하는 규칙 때문에 남는다.
-
-각 순서는 독립 커밋이며 끝날 때 `RunEngineLayerGraph.py` 로 티어 표를 다시 맞춘다. 0-2(Core 층 정리) 뒤, 1 단계 앞에 한다.
 
 ### 1. 작은 고리 풀기 (낮은 위험)
 - 게이트 티어 표를 실제에 맞춘다(`Text`). `RunEngineLayerGraph.py` 출력이 기준.

@@ -38,7 +38,6 @@
 | [11 작업 방식](11_Workflow.md) | 워크트리와 적용 담당, 동시 빌드, 검증 단계, push 와 CI, 결정 권한, 커밋 메시지, 에이전트 정의와 세션 가드 |
 | [다음 세션 인계](plans/NEXT.md) | 진행 중인 배치의 상태와 다음 세션이 할 일(배치 경계마다 고쳐 쓴다) |
 | [엔진 분할 계획](plans/EnginePartition.md) | 엔진 분할 단위와 순서(끝나면 지운다) |
-| [GameFramework 폴더 재배치 계획](plans/GameFrameworkLayout.md) | 기반 층 묶기 · 평평한 폴더 나누기 · 키트 그룹(끝나면 지운다) |
 | [이름 정리 계획](plans/NamingPass.md) | 이름 점검 제안의 채택 · 기각 · 문서화 판단과 순서(끝나면 지운다) |
 | [빌드 속도 계획](plans/BuildSpeed.md) | 기준선 측정 · 시험 빌드 분리 · 헤더 다이어트 · PCH 공유 · 유니티(끝나면 지운다) |
 

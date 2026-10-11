@@ -17,7 +17,6 @@
 "확인 필요" 가 붙은 항목은 열려 있는지부터 확인하고 시작한다.
 
 - **엔진 분할 — 계획은 [docs/plans/EnginePartition.md](plans/EnginePartition.md).** `Engine.dll` 을 티어 경계로 나누기 전에 의존 방향의 약한 고리를 푼다. 단위를 끝내면 계획 문서에서 지운다.
-- **GameFramework 폴더 재배치 — 계획은 [docs/plans/GameFrameworkLayout.md](plans/GameFrameworkLayout.md).** `Base` 24 개 폴더를 층으로 묶고, 평평한 폴더와 키트 안을 나눈다. 엔진 분할 0-3 뒤에 한다. 단위를 끝내면 계획 문서에서 지운다.
 - **이름 정리 — 계획은 [docs/plans/NamingPass.md](plans/NamingPass.md).** 남은 것은 `MathUtil::getRandom` 뿐이다(결정적 난수를 Core 로 옮기는 중복 정리와 함께).
 - **빌드 속도 — 계획은 [docs/plans/BuildSpeed.md](plans/BuildSpeed.md).** 사용자 결정(2026-10-10): 1 ~ 6 단계까지 하고 7 ~ 9 는 필요할 때만. 컴파일이 CPU 시간의 85 %, 헤더 파싱이 한 TU 의 57 %, PCH 가 타깃마다 86 개. 1 단계(시험 빌드 분리)와 0 단계 도구(`RunBuildBaseline` · `RunIncludeCost`)는 끝났고, 기준선 측정은 다른 빌드가 없을 때 남았다.
 
@@ -495,7 +494,7 @@
   더 줄이려면 `CheckConfigReference` 를 파일 단위로(생성 문서를 통째로 다시 만들지 않고 바뀐 구조체만) 나눠야 한다.
   ① `CheckOutParameterNames`(맨이름 `out`)는 `CheckCodeConventions` 의 `Naming/OutParameter` 와 같은 주제다 — 줄 규칙 하나로 합치면 게이트 하나가 준다
   (CTest 이름을 옮기는 일). ② `dev/MoveEngineFolders.py` · `MoveGameFrameworkLayout.py` 는 "이동 표 + git mv + 경로 치환" 이 같은
-  모양이다 — 두 계획(`docs/plans/EnginePartition.md` · `GameFrameworkLayout.md`)이 끝나면 지우거나 공용 이동기 하나로.
+  모양이다 — 폴더 재배치가 끝났으니 지우거나 공용 이동기 하나로.
 
 ### 1-10. 관찰 중 — 다시 보이면 원인을 판다
 
