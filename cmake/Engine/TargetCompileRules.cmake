@@ -37,7 +37,45 @@ function(sw_configurePch targetName headerPath)
 endfunction()
 
 # ------------------------------------------------------------------------------
-# sw_markDeterministicSources — 같은 입력이면 구성 · 컴파일러 · 플랫폼을 넘어 같은 비트를 내야 하는 시뮬레이션 TU(파괴 · 파쇄 · 그 복제)에
+# sw_addSharedPchOwner — 같은 정의를 가진 타깃들이 PCH 하나를 나눠 쓰게 하는 중립 소유자(`REUSE_PRECOMPILE_HEADERS_FROM`).
+#   clang 은 PCH 와 명령줄의 `-D` 가 하나라도 다르면 거부한다(`definition of macro 'SW_LOG_TAG' differs`). 소유자는 타깃 고유 정의가 없고
+#   `LINK` 만 받아 공통 정의(`SW_IMPORTS` 등)를 물려받는다 — 특정 킷이 소유하면 그 킷의 정의가 PCH 에 구워져 나머지로 샌다.
+# ------------------------------------------------------------------------------
+function(sw_addSharedPchOwner OWNER_NAME HEADER_PATH)
+	cmake_parse_arguments(ARG "" "" "LINK" ${ARGN})
+	if(NOT SW_ENABLE_PCH OR TARGET ${OWNER_NAME})
+		return()
+	endif()
+	set(ownerSource "${CMAKE_BINARY_DIR}/generated/sw/pch/${OWNER_NAME}.cpp")
+	file(GENERATE OUTPUT "${ownerSource}" CONTENT "// ${OWNER_NAME}: shared PCH owner (no code)\n")
+	add_library(${OWNER_NAME} OBJECT "${ownerSource}")
+	target_link_libraries(${OWNER_NAME} PRIVATE ${ARG_LINK})
+	set_target_properties(${OWNER_NAME} PROPERTIES FOLDER "Build/Pch" EXCLUDE_FROM_ALL ON)
+	target_precompile_headers(${OWNER_NAME} PRIVATE "${HEADER_PATH}")
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_setTargetDefsHeader — 타깃 고유 정의(`SW_LOG_TAG` · `SW_GF_EXPORTS`)를 `-D` 대신 PCH 뒤에 강제 포함하는 헤더로 준다.
+#   PCH 를 나눠 쓰려면 명령줄 정의가 같아야 하므로 타깃마다 다른 값은 여기로 옮긴다. `Logger.h` 가 PCH 안에서 기본 `SW_LOG_TAG` 를 정의해
+#   두므로 `#undef` 로 덮는다. 인자: LOG_TAG, GF_EXPORTS(켜면 `SW_GF_EXPORTS` 정의).
+# ------------------------------------------------------------------------------
+function(sw_setTargetDefsHeader TARGET_NAME)
+	cmake_parse_arguments(ARG "GF_EXPORTS" "LOG_TAG" "" ${ARGN})
+	set(content "// ${TARGET_NAME}: per-target definitions (generated)\n#pragma once\n#undef SW_LOG_TAG\n#define SW_LOG_TAG \"${ARG_LOG_TAG}\"\n")
+	if(ARG_GF_EXPORTS)
+		string(APPEND content "#define SW_GF_EXPORTS\n")
+	endif()
+	set(header "${CMAKE_BINARY_DIR}/generated/sw/targetdefs/${TARGET_NAME}.h")
+	file(GENERATE OUTPUT "${header}" CONTENT "${content}")
+	if(MSVC)
+		target_compile_options(${TARGET_NAME} PRIVATE "/FI${header}")
+	else()
+		target_compile_options(${TARGET_NAME} PRIVATE -include "${header}")
+	endif()
+endfunction()
+
+# ------------------------------------------------------------------------------
+# sw_markDeterministicSources —같은 입력이면 구성 · 컴파일러 · 플랫폼을 넘어 같은 비트를 내야 하는 시뮬레이션 TU(파괴 · 파쇄 · 그 복제)에
 #   부동소수점 축약(FMA 합치기)을 끈다. Release 의 /arch:AVX2 · -mavx2 는 `a * b + c` 를 FMA 한 번으로 합쳐 반올림이 Debug(/Od · AVX2 없음)와
 #   달라진다 — 씨앗과 사건만 보내고 받는 쪽이 같은 계산을 하는 파괴 네트워킹은 Debug 서버 ↔ Shipping 클라이언트에서 다른 그림이 된다.
 #   엔진 전체에는 걸지 않는다(렌더 · 애니메이션 수학은 FMA 가 이득이고 비트 결정성이 필요 없다). 언리얼도 결정성이 필요한 물리 경로만 /fp:precise 로 짓는다.
