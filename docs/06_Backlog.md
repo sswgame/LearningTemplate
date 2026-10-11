@@ -497,6 +497,12 @@
   로그는 `TaskManager Shutdown cleanly` 에서 끝나고 크래시 스택 주석이 없었다. 이 PC Debug 로 같은 조각(`--test_shard=2/3 --host_suites=exclude`) 15 회 순차 ·
   12 회 4 개 동시 — 재현 안 됨. 하네스가 이제 마지막 줄 `[TestHost] shut down - exit code N` 을 찍는다: 다시 나면 그 줄이 없으면 `TestHostRuntime::stop`
   안(부트스트랩 · 로거 · 메모리 프로파일러 종료), 있으면 정적 소멸자다.
+  **같은 증상이 리눅스 Shipping 에서 나왔다**(run 38163565253, `734f7fa08`, 조각 여섯으로 늘린 뒤 `EngineTest_NoGPU_Shard2`): 테스트는 10 초에 끝나 요약까지 찍혔는데
+  마지막 줄이 없이 180 초 한도로 졌다 — `stop()` 안에서 멈춘 것이다. 어느 단계인지 가르려고 `stop()` 이 단계 앞마다 `[TestHost] stopping: …` 을 찍는다. 다시 나면 그 줄로 좁힌다.
+- **CI Windows STL 잡이 파일 잠금으로 두 번 연속 졌다**(`334cae46e` · `734f7fa08`): 첫 번은 `OnlineLoadBot.exe` 링크("being used by another process"), 둘째는 모듈 링크 뒤 `vcpkg z-applocal`
+  실행("resource busy or locked"). 둘 다 `BuildTestBinaries`(Test 단계)의 ninja 에서 났다. `StageModuleRuntimeDlls.cmake` 가 z-applocal 을 다섯 번까지 다시 띄운다.
+  `OnlineLoadBot.exe` 쪽은 막지 못했다. 근본 의문: `Build` 단계가 끝난 트리에서 `BuildTestBinaries` 가 또 294 단계를 링크한다(ninja 가 `Re-checking globbed directories` 뒤
+  `Re-running CMake` 를 도는 것을 로컬 드라이런에서 봤다) — 빌드 직후 두 번째 빌드가 빈손이 아닌 이유를 찾으면 Test 단계의 재링크와 잠금 경합이 함께 사라진다.
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
 - **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을

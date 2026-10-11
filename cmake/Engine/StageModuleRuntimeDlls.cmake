@@ -22,12 +22,26 @@ file(MAKE_DIRECTORY "${STAGE_DIR}")
 # 모듈을 복사하지 않고 하드 링크로 둔다(Debug 모듈은 수십 MB). 다른 볼륨이면 복사로 넘어간다.
 file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${swModuleName}" COPY_ON_ERROR)
 
-execute_process(
-	COMMAND "${VCPKG_EXECUTABLE}" z-applocal "--target-binary=${STAGE_DIR}/${swModuleName}" "--installed-bin-dir=${INSTALLED_BIN_DIR}"
-	RESULT_VARIABLE swResult
-	OUTPUT_VARIABLE swOutput
-	ERROR_VARIABLE swOutput
-)
+# 병렬 링크가 같은 `vcpkg.exe` 를 동시에 띄우면 백신 검사 · 다른 링크가 잡은 순간에 실행이 "resource busy or locked" 로 실패한다
+# (CI Windows STL 잡). 잠깐 쉬고 다시 띄운다 — 스테이지 폴더는 매번 비우고 시작하므로 반복해도 결과가 같다.
+set(swAttempt 0)
+while(TRUE)
+	math(EXPR swAttempt "${swAttempt} + 1")
+	execute_process(
+		COMMAND "${VCPKG_EXECUTABLE}" z-applocal "--target-binary=${STAGE_DIR}/${swModuleName}" "--installed-bin-dir=${INSTALLED_BIN_DIR}"
+		RESULT_VARIABLE swResult
+		OUTPUT_VARIABLE swOutput
+		ERROR_VARIABLE swOutput
+	)
+	if(swResult EQUAL 0 OR swAttempt GREATER_EQUAL 5)
+		break()
+	endif()
+	message(STATUS "[StageModuleRuntimeDlls] z-applocal attempt ${swAttempt} failed for ${swModuleName} (${swResult}), retrying")
+	execute_process(COMMAND "${CMAKE_COMMAND}" -E sleep 2)
+	file(REMOVE_RECURSE "${STAGE_DIR}")
+	file(MAKE_DIRECTORY "${STAGE_DIR}")
+	file(CREATE_LINK "${MODULE_FILE}" "${STAGE_DIR}/${swModuleName}" COPY_ON_ERROR)
+endwhile()
 if(NOT swResult EQUAL 0)
 	message(FATAL_ERROR "[StageModuleRuntimeDlls] vcpkg z-applocal failed for ${swModuleName} (${swResult}):\n${swOutput}")
 endif()
