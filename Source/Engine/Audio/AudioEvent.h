@@ -1,10 +1,10 @@
 /**
  * @file AudioEvent.h
- * @brief 사운드 이벤트 데이터(`*.audioevents.xml`) — 컨테이너(랜덤 · 순서 · 레이어)의 클립, 볼륨 · 피치 범위, 쿨다운, 동시 재생 상한과 뺏기 규칙,
- *        우선순위, 들리지 않을 때의 가상화, 파라미터(RTPC) → 볼륨 · 피치 · 로우패스 곡선입니다.
- * @details Wwise 의 Event + Random/Sequence/Blend Container + Playback Limit + RTPC, FMOD 의 Event + Multi Instrument + Parameter,
- *          언리얼의 Sound Cue(Random · Concatenator 노드) + Sound Concurrency 의 자리입니다. 게임 코드는 이벤트 이름 하나만 압니다
- *          (`AudioEngine::postEvent( "Footstep", emitter )`) — 무슨 클립을 어떻게 낼지는 이 데이터가 정합니다.
+ * @brief 사운드 이벤트 데이터입니다(`*.audioevents.xml`). 컨테이너(랜덤, 순서, 레이어)의 클립, 볼륨과 피치 범위, 쿨다운, 동시 재생 상한과 뺏기 규칙,
+ *        우선순위, 들리지 않을 때의 가상화, 파라미터(RTPC)에서 볼륨, 피치, 로우패스로 가는 곡선을 담습니다.
+ * @details Wwise 의 Event, Random/Sequence/Blend Container, Playback Limit, RTPC 와 FMOD 의 Event, Multi Instrument, Parameter,
+ *          언리얼의 Sound Cue(Random, Concatenator 노드), Sound Concurrency 에 해당한다. 게임 코드는 이벤트 이름만 안다
+ *          (`AudioEngine::postEvent( "Footstep", emitter )`). 어떤 클립을 어떻게 낼지는 이 데이터가 정한다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,9 +22,9 @@ namespace sw
     ENUM()
     enum class AudioContainerType : uint8
     {
-        Random = 0, ///< 가중치로 하나(바로 앞의 것은 피함 — `_bAvoidRepeat`)
-        Sequence,   ///< 적은 순서대로 하나씩, 끝나면 처음으로(이벤트마다 커서)
-        Layer,      ///< 전부 함께(Wwise Blend · FMOD 멀티 레이어)
+        Random = 0, ///< 가중치로 하나를 고른다(바로 앞에 낸 것은 피한다. `_bAvoidRepeat`).
+        Sequence,   ///< 적은 순서대로 하나씩 낸다. 끝나면 처음으로 돌아가며 이벤트마다 커서를 둔다.
+        Layer,      ///< 전부 함께 낸다(Wwise Blend, FMOD 멀티 레이어).
     };
 
     /** @brief 동시 재생 상한에 닿았을 때 새 재생을 어떻게 할지입니다. */
@@ -41,9 +41,9 @@ namespace sw
     ENUM()
     enum class AudioVirtualMode : uint8
     {
-        Virtualize = 0, ///< 섞지 않고 시간만 흐르게 둔다 — 다시 들리면 그 자리에서 이어진다
-        Stop,           ///< 멈춘다(짧은 원샷)
-        KeepReal,       ///< 언제나 섞는다(음악 · 중요한 대사)
+        Virtualize = 0, ///< 섞지 않고 시간만 흐르게 둔다. 다시 들리면 그 위치에서 이어진다.
+        Stop,           ///< 멈춘다(짧은 원샷).
+        KeepReal,       ///< 항상 섞는다(음악, 중요한 대사).
     };
 
     /** @brief 파라미터가 바꾸는 것입니다. 곡선의 y 단위가 정해집니다. */
@@ -51,7 +51,7 @@ namespace sw
     enum class AudioParameterTarget : uint8
     {
         Volume = 0, ///< dB
-        Pitch,      ///< 반음
+        Pitch,      ///< 반음 단위다.
         LowPass,    ///< Hz
     };
 } // namespace sw
@@ -76,7 +76,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 게임 파라미터 하나입니다(Wwise RTPC · FMOD parameter). 게임이 `setParameter` 로 넣고, 엔진이 `_seekSpeed` 로 따라갑니다.
+     * @brief 게임 파라미터 하나입니다(Wwise RTPC, FMOD parameter). 게임이 `setParameter` 로 값을 넣고, 엔진이 `_seekSpeed` 로 따라갑니다.
      */
     REFLECT()
     struct SW_API AudioParameterDesc
@@ -98,7 +98,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 파라미터 하나를 이벤트의 볼륨 · 피치 · 로우패스로 바꾸는 곡선입니다. */
+    /** @brief 파라미터 하나를 이벤트의 볼륨, 피치, 로우패스로 바꾸는 곡선입니다. */
     REFLECT()
     struct SW_API AudioParameterMapping
     {
@@ -173,9 +173,9 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 이벤트 라이브러리 파일 하나입니다 — 파라미터 · 감쇠 프리셋 · 이벤트. 게임마다 하나 이상(`game/<게임>/audio/<이름>.audioevents.xml`).
-     * @details 이름이 비었거나 겹치거나, 이벤트가 모르는 파라미터를 쓰거나, 클립이 없거나, 범위가 거꾸로면 읽기 오류입니다. 버스 · 감쇠 이름은
-     *          불러 올리는 엔진의 그래프와 대조합니다(`AudioEngine::loadEventLibrary`).
+     * @brief 이벤트 라이브러리 파일 하나입니다. 파라미터, 감쇠 프리셋, 이벤트를 담으며, 게임마다 하나 이상 둡니다(`game/<게임>/audio/<이름>.audioevents.xml`).
+     * @details 이름이 비었거나 겹치거나, 이벤트가 모르는 파라미터를 쓰거나, 클립이 없거나, 범위가 거꾸로면 읽기 오류다.
+     *          버스와 감쇠 이름은 로드하는 엔진의 그래프와 대조한다(`AudioEngine::loadEventLibrary`).
      */
     REFLECT()
     struct SW_API AudioEventLibrary
@@ -193,7 +193,7 @@ namespace sw
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
-        /** @brief 파일 안에서만 정해지는 규칙을 검사합니다(이름 · 클립 · 범위 · 파라미터 이름 · 곡선 순서). */
+        /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
 
         /** @brief 이벤트입니다. 없으면 nullptr 입니다. */

@@ -24,9 +24,9 @@ namespace sw
         struct NavMeshAssetInternal
         {
             static constexpr uint32 kMagic = FourCcUtil::make( "SWNV" );
-            /** @brief 씬 저작 · 쿠킹 접미사(긴 것부터)입니다. */
+            /** @brief 씬 저작과 쿠킹 접미사입니다(긴 것부터 둡니다). */
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin", ".scene" };
-            /** @brief 타일 베이크 한 덩어리 — 워커는 자기 구간의 칸만 쓴다. */
+            /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
             struct BakeJob
             {
                 const INavMesh*                _pNavMesh{ nullptr };
@@ -196,7 +196,7 @@ namespace sw
         const Stopwatch    stopwatch;
         const NavTileGrid& grid      = navMesh.getTileGrid();
         const uint32       tileCount = static_cast<uint32>( grid.getTileCount() );
-        // 색인 칸은 타일보다 잘게 — 타일 하나가 몇 칸만 훑는다.
+        // 색인 셀은 타일보다 잘게 나눈다. 타일 하나가 몇 셀만 훑게 된다.
         geometry.rebuildSpatialIndex( MathUtil::max( 1.0f, grid._tileWorldSize * 0.25f ) );
 
         vector<NavTileData>           listTile( tileCount );

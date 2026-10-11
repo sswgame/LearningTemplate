@@ -23,9 +23,9 @@ namespace sw
     {
         struct WaterBodyComponentInternal
         {
-            /** @brief 지형이 없을 때의 깊이(m) — 깊은 물 색이다. */
+            /** @brief 지형이 없을 때의 깊이(m)입니다. 깊은 물의 색을 냅니다. */
             static constexpr float32 kOpenWaterDepth = 100.0f;
-            /** @brief 한 변의 격자 칸 상한 — 정점 수가 터지지 않게. */
+            /** @brief 한 변의 격자 셀 수 상한입니다. 정점 수가 폭주하지 않게 합니다. */
             static constexpr uint32 kMaxCellsPerSide = 512;
 
             static const hashed_string& getWaveName( uint32 waveIndex )
@@ -53,7 +53,7 @@ namespace sw
                 vertex._arrNormal[1]   = 1.0f;
                 vertex._arrUv[0]       = localPosition._x;
                 vertex._arrUv[1]       = localPosition._z;
-                // 색: rg = 흐름 방향(강), b = 0, a = 물 깊이(m) — water.hlsl 이 읽는다.
+                // 색: rg 는 흐름 방향(강), b 는 0, a 는 물 깊이(m)다. water.hlsl 이 읽는다.
                 vertex._arrColor[0] = flow._x;
                 vertex._arrColor[1] = flow._y;
                 vertex._arrColor[3] = depth;
@@ -71,7 +71,7 @@ namespace sw
                 outListVertex.push_back( v10 );
             }
 
-            /** @brief 경로 위 표본 하나 — 중심(로컬) · 진행 방향(xz)입니다. */
+            /** @brief 경로 위 샘플 하나입니다. 중심(로컬)과 진행 방향(xz)을 담습니다. */
             struct RiverSample
             {
                 float3 _center{};
@@ -99,7 +99,7 @@ namespace sw
                         outListSample.push_back( sample );
                     }
                 }
-                // 진행 방향은 앞뒤 표본의 차 — 꺾이는 자리에서 띠가 갈라지지 않는다.
+                // 진행 방향은 앞뒤 샘플의 차로 구한다. 꺾이는 곳에서 띠가 갈라지지 않는다.
                 for ( size_t index = 0; index < outListSample.size(); ++index )
                 {
                     const float3& previous = outListSample[index > 0 ? index - 1 : index]._center;
@@ -151,7 +151,7 @@ namespace sw
     void WaterBodyComponent::onRegister( GameObjectManager& manager )
     {
         SceneComponent::onRegister( manager );
-        manager.getComponentRegistry().add<WaterBodyComponent>( this ); // `findWaterAt` · `findUnderwaterFog` 가 씬을 훑지 않고 본다
+        manager.getComponentRegistry().add<WaterBodyComponent>( this ); // `findWaterAt` 와 `findUnderwaterFog` 가 씬을 훑지 않고 이 목록을 본다.
         _pPrimitiveRegistry = &manager.getPrimitiveRegistry();
         rebuildSurface();
     }
@@ -190,7 +190,7 @@ namespace sw
     void WaterBodyComponent::onPropertyChanged( hashed_string propertyName )
     {
         SceneComponent::onPropertyChanged( propertyName );
-        // 켜고 끄기는 수면을 바꾸지 않는다 — 다시 짓지 않고 빌더가 다시 보게만 한다.
+        // 켜고 끄기는 수면을 바꾸지 않는다. 다시 만들지 않고 빌더가 다시 확인하게만 한다.
         static const hashed_string s_activeName( "_bActive" );
         if ( propertyName == s_activeName )
         {
@@ -224,7 +224,7 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr && _bOriginDirty.exchange( false, std::memory_order_relaxed ) )
         {
-            // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다 — 틱 뒤로 미룬다.
+            // 다시 만들기는 배치를 레지스트리에서 빼고 넣는 구조 변경이다. 틱 뒤로 미룬다.
             const ComponentHandle self = getHandle();
             pManager->executeOrDeferPostTick( [pManager, self]()
             {
@@ -272,7 +272,7 @@ namespace sw
         _material.setVector( hashed_string( "shallowColor" ), _shallowColor );
         _material.setVector( hashed_string( "deepColor" ), _deepColor );
         _material.setVector( hashed_string( "skyColor" ), _skyColor );
-        // 파도 분산의 중력 — CPU 수면 질의(WaterWaveMath)와 같은 설정된 물리 중력 하나.
+        // 파도 분산의 중력이다. CPU 수면 질의(WaterWaveMath)와 같은, 설정된 물리 중력 하나를 쓴다.
         _material.setVector( hashed_string( "waveParams" ), float4{ PhysicsSystem::getConfiguredGravityMagnitude(), 0.0f, 0.0f, 0.0f } );
     }
 
@@ -280,7 +280,7 @@ namespace sw
     {
         _batch.reset();
         _surfaceVertexCount = 0;
-        // 질의도 이 원점을 쓴다 — 물은 움직이지 않는 것으로 보고, 옮기면 다시 만든다(트랜스폼 변경은 onPropertyChanged 로 온다).
+        // 질의도 이 원점을 쓴다. 물은 움직이지 않는 것으로 보고, 옮기면 다시 만든다(트랜스폼 변경은 onPropertyChanged 로 온다).
         _surfaceOrigin = getWorldPosition();
         if ( _pPrimitiveRegistry == nullptr )
             return;
@@ -300,7 +300,7 @@ namespace sw
         if ( listVertex.empty() )
             return;
 
-        // 파도가 메시를 위아래 · 옆으로 민다 — 바운드에 진폭 합만큼 더한다.
+        // 파도가 메시를 위아래와 옆으로 민다. 바운드에 진폭 합만큼 더한다.
         for ( const GerstnerWave& wave : _listWave )
         {
             boundsRadius += wave._amplitude * 2.0f;
@@ -367,7 +367,7 @@ namespace sw
         {
             for ( uint32 across = 0; across < acrossCells; ++across )
             {
-                // 진행 방향이 +x 이고 옆(왼쪽)이 +z 일 때 위에서 앞면 — (x, z) 격자와 같은 감김이다.
+                // 진행 방향이 +x 이고 옆(왼쪽)이 +z 일 때 위에서 본 면이 앞면이다. (x, z) 격자와 같은 감김이다.
                 Internal::pushQuad( outListVertex, vertexAt( sampleIndex, across ), vertexAt( sampleIndex + 1, across ), vertexAt( sampleIndex, across + 1 ),
                                     vertexAt( sampleIndex + 1, across + 1 ) );
             }

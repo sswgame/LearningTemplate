@@ -1,9 +1,9 @@
 /**
  * @file PhysicsDesc.h
- * @brief 바디 · 관절 · 캐릭터를 만드는 서술자입니다. 2D · 3D 가 같은 템플릿 하나를 쓰고, 차원 묶음(`PhysicsDimension3D` · `PhysicsDimension2D`)이
- *        벡터 · 회전 · 각속도 · 셰이프 타입만 바꿉니다.
- * @details 서술자는 런타임 값입니다(데이터 파일에 쓰지 않는다). 재질 · 레이어는 이름이 아니라 씬이 아는 값으로 넘깁니다 — 재질은 이름으로
- *          씬의 재질 표에서 찾고(`PhysicsSettings`, 없으면 오류 후 기본 재질), 레이어는 번호입니다(`PhysicsSettings::findLayerIndex`).
+ * @brief 바디, 관절, 캐릭터를 만드는 서술자입니다. 2D 와 3D 가 같은 템플릿 하나를 쓰고, 차원 트레이트(`PhysicsDimension3D`, `PhysicsDimension2D`)가
+ *        벡터, 회전, 각속도, 셰이프 타입만 바꿉니다.
+ * @details 서술자는 런타임 값이다(데이터 파일에 쓰지 않는다). 재질과 레이어는 이름이 아니라 씬이 아는 값으로 넘긴다.
+ *          재질은 이름으로 씬의 재질 테이블에서 찾고(`PhysicsSettings`, 없으면 오류를 남기고 기본 재질을 쓴다), 레이어는 번호다(`PhysicsSettings::findLayerIndex`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -18,19 +18,19 @@
 
 namespace sw
 {
-    /** @brief 3D 물리의 차원 묶음입니다. */
+    /** @brief 3D 물리의 차원 트레이트입니다. */
     struct PhysicsDimension3D
     {
         using Vector    = float3;
-        using Rotation  = quaternion; ///< 바디 회전
-        using Angular   = float3;     ///< 각속도 · 토크(축 × 크기)
+        using Rotation  = quaternion; ///< 바디 회전이다.
+        using Angular   = float3;     ///< 각속도와 토크다(축 × 크기).
         using ShapeDesc = PhysicsShapeDesc3D;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 2D 물리의 차원 묶음입니다. XY 평면, 회전은 Z 축 둘레의 각(라디안)입니다. */
+    /** @brief 2D 물리의 차원 트레이트입니다. XY 평면이며, 회전은 Z 축 둘레의 각(라디안)입니다. */
     struct PhysicsDimension2D
     {
         using Vector    = float2;
@@ -44,8 +44,8 @@ namespace sw
 {
     /**
      * @brief 바디 하나를 만드는 값입니다.
-     * @details 셰이프가 둘 이상이면 컴파운드 바디입니다. `_sharedShape` 가 유효하면 `_listShape` 대신 미리 지은 셰이프 묶음을 씁니다
-     *          (`createShape` — 같은 모양의 파편 · 탄피를 대량으로 만들 때 셰이프를 다시 짓지 않는다).
+     * @details 셰이프가 둘 이상이면 컴파운드 바디다. `_sharedShape` 가 유효하면 `_listShape` 대신 미리 만든 셰이프를 쓴다
+     *          (`createShape`. 같은 형태의 파편이나 탄피를 대량으로 만들 때 셰이프를 다시 만들지 않는다).
      */
     template <typename TDimension>
     struct PhysicsBodyDesc
@@ -60,20 +60,20 @@ namespace sw
         Rotation           _rotation{};
         Vector             _linearVelocity{};
         Angular            _angularVelocity{};
-        uint64             _userData{ 0 };           ///< 이벤트 · 질의 결과가 돌려주는 값(엔진은 소유 오브젝트 id 를 싣는다)
-        hashed_string      _material{};              ///< 셰이프가 재질을 적지 않았을 때의 재질 이름(비면 첫 재질)
-        PhysicsShapeHandle _sharedShape{};           ///< 미리 지은 셰이프 묶음(`createShape`). 유효하면 `_listShape` 를 보지 않는다
-        float32            _mass{ 0.0f };            ///< 0 이면 셰이프 부피 × 밀도
+        uint64             _userData{ 0 };           ///< 이벤트와 질의 결과가 돌려주는 값이다(엔진은 소유 오브젝트 id 를 싣는다).
+        hashed_string      _material{};              ///< 셰이프가 재질을 지정하지 않았을 때의 재질 이름이다(비면 첫 재질).
+        PhysicsShapeHandle _sharedShape{};           ///< 미리 만든 셰이프다(`createShape`). 유효하면 `_listShape` 를 보지 않는다.
+        float32            _mass{ 0.0f };            ///< 0 이면 셰이프 부피 × 밀도를 쓴다.
         float32            _linearDamping{ 0.05f };  ///< 선속도 감쇠(1/초)
         float32            _angularDamping{ 0.05f }; ///< 각속도 감쇠(1/초)
         float32            _gravityFactor{ 1.0f };   ///< 중력 배율(0 이면 떠 있다)
         PhysicsBodyType    _type{ PhysicsBodyType::Dynamic };
-        uint8              _layer{ 0 };                ///< 충돌 레이어 번호(`PhysicsSettings::findLayerIndex`)
-        bool               _bTrigger{ false };         ///< 감지만 하고 막지 않는다(유니티 isTrigger · Jolt sensor · Box2D sensor)
-        bool               _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않게 연속 충돌로 측정한다(Jolt LinearCast · Box2D bullet)
-        bool               _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다
-        bool               _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic · Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다)
-        bool               _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터 · 3D 는 관성을 무한으로)
+        uint8              _layer{ 0 };                ///< 충돌 레이어 번호다(`PhysicsSettings::findLayerIndex`).
+        bool               _bTrigger{ false };         ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor).
+        bool               _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않도록 연속 충돌로 측정한다(Jolt LinearCast, Box2D bullet).
+        bool               _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다.
+        bool               _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic 이나 Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다).
+        bool               _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터, 3D 는 관성을 무한으로 둔다).
     };
 
     using PhysicsBodyDesc3D = PhysicsBodyDesc<PhysicsDimension3D>;
@@ -83,10 +83,10 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 관절 하나를 만드는 값입니다. 자리 · 축은 월드 공간입니다(만드는 순간의 두 바디 자세를 기준으로 고정된다).
-     * @details 축 하나(`_axis`)가 종류마다 다른 뜻을 집니다 — Hinge 는 회전축, Slider 는 이동축, Cone 은 비틀림 축(뼈 방향).
-     *          Cone 의 스윙 한계는 `_normalAxis`(비틀림 축에 수직) 둘레와 그 둘에 수직인 축 둘레로 따로 줍니다.
-     *          `_bodyB` 가 무효면 월드에 붙습니다. 2D 는 `_axis` 의 XY 만 보고 Hinge 축은 늘 Z 입니다.
+     * @brief 관절 하나를 만드는 값입니다. 위치와 축은 월드 공간입니다(만드는 순간의 두 바디 자세를 기준으로 고정됩니다).
+     * @details 축 하나(`_axis`)가 종류마다 다른 뜻을 가진다. Hinge 는 회전축, Slider 는 이동축, Cone 은 비틀림 축(뼈 방향)이다.
+     *          Cone 의 스윙 한계는 `_normalAxis`(비틀림 축에 수직) 둘레와 그 둘에 수직인 축 둘레로 따로 준다.
+     *          `_bodyB` 가 무효면 월드에 붙는다. 2D 는 `_axis` 의 XY 만 보고, Hinge 축은 항상 Z 다.
      */
     template <typename TDimension>
     struct PhysicsJointDesc
@@ -94,19 +94,19 @@ namespace sw
         using Vector = typename TDimension::Vector;
 
         PhysicsBodyHandle _bodyA{};
-        PhysicsBodyHandle _bodyB{};      ///< 무효면 월드
-        Vector            _anchor{};     ///< 관절 자리(월드)
-        Vector            _anchorB{};    ///< Distance 만: B 쪽 점(월드). 나머지는 `_anchor` 하나를 함께 쓴다
-        Vector            _axis{};       ///< Hinge 회전축 · Slider 이동축 · Cone 비틀림 축(월드, 정규화)
-        Vector            _normalAxis{}; ///< Cone 만: 비틀림 축에 수직인 기준 축(월드, 정규화)
+        PhysicsBodyHandle _bodyB{};      ///< 무효면 월드에 붙는다.
+        Vector            _anchor{};     ///< 관절 위치다(월드).
+        Vector            _anchorB{};    ///< Distance 만 쓴다. B 쪽 점(월드)이다. 나머지는 `_anchor` 하나를 함께 쓴다.
+        Vector            _axis{};       ///< Hinge 는 회전축, Slider 는 이동축, Cone 은 비틀림 축이다(월드, 정규화).
+        Vector            _normalAxis{}; ///< Cone 만 쓴다. 비틀림 축에 수직인 기준 축이다(월드, 정규화).
         PhysicsJointMotor _motor{};
-        float32           _minLimit{ 0.0f };         ///< Hinge 각 · Slider 거리 · Distance 길이 · Cone 비틀림 각의 아래 한계
-        float32           _maxLimit{ 0.0f };         ///< 위 한계
-        float32           _swingLimitNormal{ 0.0f }; ///< Cone 만: `_normalAxis` 둘레 스윙 반각(라디안)
-        float32           _swingLimitPlane{ 0.0f };  ///< Cone 만: 나머지 축 둘레 스윙 반각(라디안)
+        float32           _minLimit{ 0.0f };         ///< Hinge 각, Slider 거리, Distance 길이, Cone 비틀림 각의 아래 한계다.
+        float32           _maxLimit{ 0.0f };         ///< 위 한계다.
+        float32           _swingLimitNormal{ 0.0f }; ///< Cone 만 쓴다. `_normalAxis` 둘레 스윙 반각이다(라디안).
+        float32           _swingLimitPlane{ 0.0f };  ///< Cone 만 쓴다. 나머지 축 둘레 스윙 반각이다(라디안).
         PhysicsJointType  _type{ PhysicsJointType::Fixed };
-        bool              _bLimitsEnabled{ false };          ///< Hinge · Slider · Distance 의 한계를 건다(Cone 은 늘 건다)
-        bool              _bCollideConnectedBodies{ false }; ///< 이어진 두 바디끼리 부딪힌다(기본은 거짓 — 래그돌 이웃 뼈)
+        bool              _bLimitsEnabled{ false };          ///< Hinge, Slider, Distance 에서 한계를 적용한다(Cone 은 항상 적용한다).
+        bool              _bCollideConnectedBodies{ false }; ///< 연결된 두 바디끼리 충돌한다(기본은 false 이며, 래그돌 이웃 뼈가 그렇다).
     };
 
     using PhysicsJointDesc3D = PhysicsJointDesc<PhysicsDimension3D>;
@@ -117,8 +117,8 @@ namespace sw
 {
     /**
      * @brief 캐릭터 컨트롤러 하나를 만드는 값입니다. 캡슐은 위(+Y)로 섭니다. `_position` 은 캡슐 바닥(발)입니다.
-     * @details 3D 는 Jolt `CharacterVirtual`(계단 오르기 · 바닥 붙기), 2D 는 Box2D 무버(`b2World_CastMover` · `b2SolvePlanes`)입니다 — 둘 다
-     *          시뮬레이션 바디가 아니라 질의로 움직이는 키네마틱 컨트롤러입니다(유니티 CharacterController 와 같은 자리).
+     * @details 3D 는 Jolt `CharacterVirtual`(계단 오르기, 바닥 붙기)을, 2D 는 Box2D 무버(`b2World_CastMover`, `b2SolvePlanes`)를 쓴다.
+     *          둘 다 시뮬레이션 바디가 아니라 질의로 움직이는 키네마틱 컨트롤러이며, 유니티의 CharacterController 에 해당한다.
      */
     template <typename TDimension>
     struct PhysicsCharacterDesc
@@ -128,11 +128,11 @@ namespace sw
         Vector  _position{};
         uint64  _userData{ 0 };
         float32 _radius{ 0.3f };
-        float32 _halfHeight{ 0.6f };                        ///< 원기둥 부분의 반 높이 — 키는 2 × (반 높이 + 반지름)
-        float32 _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }; ///< 걸어 오를 수 있는 가장 가파른 바닥(라디안, 기본 45 도)
-        float32 _stepHeight{ 0.3f };                        ///< 걸어 오를 수 있는 가장 높은 턱(미터). 2D 는 쓰지 않는다
-        float32 _mass{ 70.0f };                             ///< 밀어낼 때의 질량(3D)
-        float32 _maxStrength{ 100.0f };                     ///< 동적 바디를 미는 가장 큰 힘(3D, 뉴턴)
+        float32 _halfHeight{ 0.6f };                        ///< 원기둥 부분의 반 높이다. 키는 2 × (반 높이 + 반지름)이다.
+        float32 _maxSlopeAngle{ MathUtil::kHalfPi * 0.5f }; ///< 걸어 오를 수 있는 가장 가파른 바닥이다(라디안, 기본 45 도).
+        float32 _stepHeight{ 0.3f };                        ///< 걸어 오를 수 있는 가장 높은 턱이다(미터). 2D 는 쓰지 않는다.
+        float32 _mass{ 70.0f };                             ///< 밀어낼 때의 질량이다(3D).
+        float32 _maxStrength{ 100.0f };                     ///< 동적 바디를 미는 가장 큰 힘이다(3D, 뉴턴).
         uint8   _layer{ 0 };
     };
 
@@ -148,9 +148,9 @@ namespace sw
     {
         using Vector = typename TDimension::Vector;
 
-        Vector _position{};     ///< 발 자리
-        Vector _velocity{};     ///< 이번 이동에서 실제로 난 속도
-        Vector _groundNormal{}; ///< 서 있으면 바닥 법선
+        Vector _position{};     ///< 발 위치다.
+        Vector _velocity{};     ///< 이번 이동에서 실제로 난 속도다.
+        Vector _groundNormal{}; ///< 서 있으면 바닥 법선이다.
         bool   _bGrounded{ false };
     };
 
@@ -160,32 +160,32 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 바퀴 하나입니다(차체 바디 기준 — 차체의 앞 +Z · 위 +Y). 3D 만입니다. */
+    /** @brief 바퀴 하나입니다(차체 바디 기준이며 차체의 앞은 +Z, 위는 +Y). 3D 만 지원합니다. */
     struct PhysicsWheelDesc
     {
-        float3  _position{}; ///< 서스펜션이 가장 짧을 때 바퀴 중심의 붙는 자리(차체 기준)
+        float3  _position{}; ///< 서스펜션이 가장 짧을 때 바퀴 중심이 붙는 위치다(차체 기준).
         float32 _radius{ 0.35f };
         float32 _width{ 0.25f };
-        float32 _suspensionMinLength{ 0.1f };  ///< 미터
-        float32 _suspensionMaxLength{ 0.35f }; ///< 미터
+        float32 _suspensionMinLength{ 0.1f };  ///< 단위는 미터다.
+        float32 _suspensionMaxLength{ 0.35f }; ///< 단위는 미터다.
         float32 _suspensionFrequency{ 1.5f };  ///< 스프링 고유 진동수(Hz)
-        float32 _suspensionDamping{ 0.5f };    ///< 감쇠비
-        float32 _maxSteerAngle{ 0.0f };        ///< 라디안 — 0 이면 조향하지 않는 바퀴
+        float32 _suspensionDamping{ 0.5f };    ///< 감쇠비다.
+        float32 _maxSteerAngle{ 0.0f };        ///< 라디안이다. 0 이면 조향하지 않는 바퀴다.
         float32 _maxBrakeTorque{ 1500.0f };    ///< N·m
-        float32 _maxHandBrakeTorque{ 0.0f };   ///< N·m — 0 이면 핸드브레이크가 걸리지 않는 바퀴
+        float32 _maxHandBrakeTorque{ 0.0f };   ///< N·m 이다. 0 이면 핸드브레이크가 걸리지 않는 바퀴다.
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 바퀴 차 하나입니다 — 이미 만든 동적 차체 바디에 바퀴 · 엔진 · 변속 · 디퍼렌셜을 붙입니다(Jolt `VehicleConstraint` · `WheeledVehicleController`).
-     * @details 디퍼렌셜은 바퀴 둘씩(`_listDriven` 의 짝 — 0 과 1 이 한 차축)입니다. 2D 물리에는 없습니다(무효 핸들).
+     * @brief 바퀴 차 하나입니다. 이미 만든 동적 차체 바디에 바퀴, 엔진, 변속, 디퍼렌셜을 붙입니다(Jolt `VehicleConstraint`, `WheeledVehicleController`).
+     * @details 디퍼렌셜은 바퀴 둘씩(`_listDriven` 의 짝, 0 과 1 이 한 차축) 묶는다. 2D 물리에는 없다(무효 핸들).
      */
     struct PhysicsWheeledVehicleDesc
     {
         vector<PhysicsWheelDesc> _listWheel;
-        vector<int32>            _listDrivenAxle;            ///< 구동 차축의 바퀴 짝 — `[왼쪽, 오른쪽, 왼쪽, 오른쪽 …]` 자리 번호
+        vector<int32>            _listDrivenAxle;            ///< 구동 차축의 바퀴 쌍이다. `[왼쪽, 오른쪽, 왼쪽, 오른쪽 ...]` 의 인덱스를 담는다.
         float32                  _engineMaxTorque{ 500.0f }; ///< N·m
         float32                  _engineMinRpm{ 1000.0f };
         float32                  _engineMaxRpm{ 6000.0f };
@@ -200,7 +200,7 @@ namespace sw
     {
         float32 _forwardSpeed{ 0.0f }; ///< 차체 앞 방향 속도(m/s)
         float32 _engineRpm{ 0.0f };
-        int32   _gear{ 0 }; ///< 0 중립 · 음수 후진
+        int32   _gear{ 0 }; ///< 0 은 중립이고, 음수는 후진이다.
         uint32  _groundedWheelCount{ 0 };
     };
 } // namespace sw

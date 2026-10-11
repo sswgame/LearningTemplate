@@ -18,7 +18,7 @@ namespace sw
         /** @brief 이 파일의 노드가 함께 쓰는 변환 도우미입니다. */
         struct RigConstraintNodesInternal
         {
-            /** @brief 회전 · 이동 한 벌(본 기준 상대 변환 · 출력 기억)입니다. */
+            /** @brief 회전과 이동 한 세트입니다(본 기준 상대 변환과 출력 기억). */
             struct RigidTransform
             {
                 float3     _position{};
@@ -32,7 +32,7 @@ namespace sw
                 return RigidTransform{ float3::transform( child._position - parent._position, inverse ), ( inverse * child._rotation ).normalize() };
             }
 
-            /** @brief 상대 변환을 @p parent 위에 얹습니다. */
+            /** @brief 상대 변환을 @p parent 위에 적용합니다. */
             static RigidTransform compose( const RigidTransform& parent, const RigidTransform& relative )
             {
                 return RigidTransform{ parent._position + float3::transform( relative._position, parent._rotation ), ( parent._rotation * relative._rotation ).normalize() };
@@ -42,8 +42,8 @@ namespace sw
         };
 
         /**
-         * @brief 변환 복사 · 위치 · 회전 제약. 키: `bone` · `target` · `maintain_offset`(처음 평가 때의 상대 자리를 지킴),
-         *        `CopyTransform` 만 `position` · `rotation`(기본 둘 다 true).
+         * @brief 변환 복사, 위치 제약, 회전 제약입니다. 키는 `bone`, `target`, `maintain_offset`(처음 평가 때의 상대 위치를 유지),
+         *        `CopyTransform` 에서만 `position` 과 `rotation`(기본은 둘 다 true)입니다.
          */
         class RigCopyTransformNode final : public RigNode
         {
@@ -55,7 +55,7 @@ namespace sw
                 Rotation,
             };
 
-            /** @brief 종류를 정합니다(만들 때 한 번) — 위치 제약은 이동만, 회전 제약은 회전만 씁니다. */
+            /** @brief 종류를 정합니다(만들 때 한 번). 위치 제약은 이동만, 회전 제약은 회전만 씁니다. */
             void setMode( Mode mode )
             {
                 _mode      = mode;
@@ -139,10 +139,10 @@ namespace sw
         };
 
         /**
-         * @brief 부모 바꾸기(공간 전환). 키: `bone` · `parents`(대상 이름들) · `initial`(처음 부모 번호) · `settle_seconds`(바꾼 뒤 새 부모 자리로
-         *        옮겨 가는 시간, 0 이면 오프셋을 끝까지 지킨다). 조절 `parent` = 부모 번호.
-         * @details 바꾸는 순간 지난 프레임 출력 자리를 새 부모 기준으로 다시 측정해서 그대로 시작합니다(튀지 않음). `settle_seconds` 동안 그 오프셋을
-         *          단위로 부드럽게 줄여 본이 새 부모(소켓) 자리에 앉습니다 — 무기를 손에서 등으로. 처음 평가는 첫 부모 기준으로 지금 자리를 측정합니다.
+         * @brief 부모 바꾸기(공간 전환)입니다. 키는 `bone`, `parents`(대상 이름들), `initial`(처음 부모 번호), `settle_seconds`(바꾼 뒤 새 부모 위치로
+         *        옮겨 가는 시간이며, 0 이면 오프셋을 끝까지 유지)입니다. 조절 `parent` 는 부모 번호입니다.
+         * @details 바꾸는 순간 지난 프레임의 출력 위치를 새 부모 기준으로 다시 측정해서 그대로 시작한다(튀지 않는다). `settle_seconds` 동안 그 오프셋을
+         *          단위로 부드럽게 줄여서 본이 새 부모(소켓) 위치에 자리 잡는다. 무기를 손에서 등으로 옮기는 경우가 그렇다. 처음 평가는 첫 부모 기준으로 현재 위치를 측정한다.
          */
         class RigParentSwitchNode final : public RigNode
         {
@@ -205,7 +205,7 @@ namespace sw
                     return;
                 if ( _bCaptured == SW_FALSE || _bSwitchPending == SW_TRUE )
                 {
-                    // 처음이면 지금(애니메이션) 자리, 바꿈이면 지난 출력 자리를 새 부모 기준으로 측정한다.
+                    // 처음이면 현재(애니메이션) 위치를, 바꿈이면 지난 출력 위치를 새 부모 기준으로 측정한다.
                     const RigConstraintNodesInternal::RigidTransform from = _bCaptured == SW_TRUE ? _lastOutput : RigConstraintNodesInternal::readBone( pose, _bone );
                     _offset                                               = RigConstraintNodesInternal::makeRelative( parent, from );
                     _settleElapsed                                        = 0.0f;
@@ -250,7 +250,7 @@ namespace sw
             uint8                                      _bSwitchPending{ SW_FALSE };
         };
 
-        /** @brief 거리 제한. 키: `bone` · `target` · `min` · `max` — 본을 대상에서 [min, max] 거리 안으로 옮깁니다. */
+        /** @brief 거리 제한입니다. 키는 `bone`, `target`, `min`, `max` 이며, 본을 대상에서 [min, max] 거리 안으로 옮깁니다. */
         class RigDistanceNode final : public RigNode
         {
         public:
@@ -298,7 +298,7 @@ namespace sw
             uint32        _target{ 0 };
         };
 
-        /** @brief 회전 범위 제한. 키: `bone` · `min_degrees` · `max_degrees`([피치, 요, 롤], 레퍼런스 로컬 회전 기준). */
+        /** @brief 회전 범위 제한입니다. 키는 `bone`, `min_degrees`, `max_degrees`([피치, 요, 롤], 레퍼런스 로컬 회전 기준)입니다. */
         class RigLimitRotationNode final : public RigNode
         {
         public:
@@ -342,9 +342,9 @@ namespace sw
         };
 
         /**
-         * @brief 트위스트 분배(팔뚝 비틀림). 키: `source`(손) · `axis`(본 로컬 비틀림 축, 기본 +Y) · `bones`(`[{ "bone", "weight" }]`).
-         * @details 소스 본의 레퍼런스 기준 비틀림 각 θ 를 나눠 줍니다 — 비틀림 본 b 는 로컬에 θ × weight 를 더 돌리고, 그 본이 소스의 조상이면
-         *          소스에서 그만큼 뺍니다(손이 두 번 돌지 않게). 손목을 돌릴 때 팔뚝이 사탕 포장지처럼 꼬이지 않습니다.
+         * @brief 트위스트 분배(팔뚝 비틀림)입니다. 키는 `source`(손), `axis`(본 로컬 비틀림 축, 기본 +Y), `bones`(`[{ "bone", "weight" }]`)입니다.
+         * @details 소스 본의 레퍼런스 기준 비틀림 각 θ 를 나눠 준다. 비틀림 본 b 는 로컬에 θ × weight 를 더 돌리고, 그 본이 소스의 조상이면
+         *          소스에서 그만큼 뺀다(손이 두 번 돌지 않게 하려는 것이다). 손목을 돌릴 때 팔뚝이 사탕 포장지처럼 꼬이지 않는다.
          */
         class RigTwistDistributionNode final : public RigNode
         {
@@ -408,7 +408,7 @@ namespace sw
                     const quaternion share = quaternion::makeFromAxisAngle( _axis, angle * entry._weight );
                     pose.setLocalRotation( entry._bone, ( pose.getLocalRotation( entry._bone ) * share ).normalize() );
                 }
-                // 조상이 더 돈 만큼 소스의 로컬 앞(부모 쪽)에서 되돌린다 — 손의 모델 방향이 그대로 남는다.
+                // 조상이 더 돈 만큼 소스의 로컬 앞(부모 쪽)에서 되돌린다. 손의 모델 방향이 그대로 남는다.
                 const quaternion ancestorShare = quaternion::makeFromAxisAngle( _axis, -angle * _ancestorWeight );
                 pose.setLocalRotation( _source, ( ancestorShare * pose.getLocalRotation( _source ) ).normalize() );
             }

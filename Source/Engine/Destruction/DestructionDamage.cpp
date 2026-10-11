@@ -56,7 +56,7 @@ namespace sw
                 return value;
             }
 
-            /** @brief 노드가 품은 잎들의 이번 변형 중 가장 큰 것입니다. */
+            /** @brief 노드가 포함한 잎들의 이번 변형 중 가장 큰 값입니다. */
             static float32 findMaxStrain( const FractureNode& node, const vector<float32>& listLeafStrain )
             {
                 float32 maxStrain = 0.0f;
@@ -229,7 +229,7 @@ namespace sw
         const uint32 brokenNodeBefore = outChange._brokenNodeCount;
         const uint32 brokenLinkBefore = outChange._brokenLinkCount;
 
-        // 활성 노드마다 그 잎들의 최대 변형 — 노드 번호 순으로 쌓고, 갈라지면 넘친 비율만큼 자식에게.
+        // 활성 노드마다 그 잎들의 최대 변형을 노드 번호 순으로 쌓고, 갈라지면 넘친 비율만큼 자식에게 넘긴다.
         vector<Internal::NodeStrain> listQueue;
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {
@@ -277,7 +277,7 @@ namespace sw
             }
         }
 
-        // 연결 — 활성 노드가 다른 두 잎 사이만, 두 잎 변형의 평균을 쌓는다(연결 번호 순으로 한 번씩).
+        // 연결: 활성 노드가 서로 다른 두 잎 사이만, 두 잎 변형의 평균을 쌓는다(연결 번호 순으로 한 번씩).
         vector<uint32> listTouchedLink;
         for ( const DestructionLeafStrain& entry : listLeafStrain )
         {

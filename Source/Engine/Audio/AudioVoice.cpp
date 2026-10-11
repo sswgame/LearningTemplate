@@ -208,7 +208,7 @@ namespace sw
     {
         if ( isActive() == false || _bPaused == SW_TRUE )
             return;
-        // 다시 섞일 때 0 에서 오르게 둔다 — 가상이 되는 동안 들리지 않았다.
+        // 다시 섞일 때 0 에서 오르게 둔다. 가상이 되는 동안은 들리지 않았기 때문이다.
         _gainLeft    = 0.0f;
         _gainRight   = 0.0f;
         _bFirstBlock = SW_FALSE;

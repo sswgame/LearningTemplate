@@ -20,17 +20,17 @@ namespace sw
 
     /**
      * @brief 프레임 번호가 가질 수 있는 절댓값 상한입니다.
-     * @details 프레임 번호는 JSON 에서 옵니다. 그대로 믿으면 안 됩니다. 타임라인 코드는 두 프레임의
-     *          **차**를 그냥 빼기로 구하고(`_frameMax - _frameMin`, `_end - _start`), int32 의
-     *          양 끝값이 짝으로 들어오면 그 빼기가 부호 있는 넘침(UB)이 됩니다. 범위를 절반으로
-     *          자르면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 자리마다 넓은 타입으로
-     *          올리지 않아도 됩니다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않습니다.
+     * @details 프레임 번호는 JSON 에서 오므로 그대로 믿으면 안 된다. 타임라인 코드는 두 프레임의
+     *          **차**를 그냥 빼기로 구하는데(`_frameMax - _frameMin`, `_end - _start`), int32 의
+     *          양 끝값이 쌍으로 들어오면 그 빼기가 부호 있는 오버플로(UB)가 된다. 범위를 절반으로
+     *          자르면 어떤 두 값의 차도 반드시 int32 안에 들어오므로, 빼는 곳마다 넓은 타입으로
+     *          올리지 않아도 된다. 30fps 기준 1,000만 일이 넘는 길이라 실사용을 자르지 않는다.
      */
     constexpr int32 kSequenceFrameLimit = MathUtil::kMaxInt32 / 2;
 
     /**
-     * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다 — 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.
-     * @details 종류를 더하면 값 하나와 `kArrSequenceItemKindInfo` 의 줄 하나를 더합니다(static_assert 가 짚습니다).
+     * @brief 시퀀서 트랙 항목의 종류입니다. JSON 에는 정수(`"type"`)로 적힙니다. 값을 바꾸면 기존 시퀀스 파일이 다른 종류로 읽힙니다.
+     * @details 종류를 추가하면 값 하나와 `kArrSequenceItemKindInfo` 의 항목 하나를 추가한다(static_assert 가 알려 준다).
      */
     ENUM()
     enum class SequenceItemKind : int32
@@ -44,9 +44,9 @@ namespace sw
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
     struct SequenceItemKindInfo
     {
-        SequenceItemKind _kind;          /**< 종류입니다. 표의 순번과 같아야 합니다. */
+        SequenceItemKind _kind;          /**< 종류입니다. 테이블의 순번과 같아야 합니다. */
         uint32           _defaultColor;  /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
-        bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 · 트랜스폼을 정하는지입니다. */
+        bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */
         bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
         bool             _bCutsCamera;   /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
     };
@@ -58,12 +58,12 @@ namespace sw
     ENUM()
     enum class SequenceTrackKind : int32
     {
-        Transform = 0, /**< 대상의 로컬 이동 · 회전(라디안) · 크기 아홉 채널입니다(언리얼 3D Transform 트랙). */
-        Property  = 1, /**< 대상 컴포넌트의 숫자 프로퍼티 하나(`float32` · `int32`)입니다. */
-        Count          /**< 표식입니다. 종류가 아닙니다. */
+        Transform = 0, /**< 대상의 로컬 이동, 회전(라디안), 크기 아홉 채널입니다(언리얼의 3D Transform 트랙). */
+        Property  = 1, /**< 대상 컴포넌트의 숫자 프로퍼티 하나입니다(`float32` 또는 `int32`). */
+        Count          /**< 개수를 세는 용도입니다. 종류가 아닙니다. */
     };
 
-    /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz · 회전 xyz · 크기 xyz). */
+    /** @brief 트랜스폼 트랙의 채널 수입니다(이동 xyz, 회전 xyz, 크기 xyz). */
     constexpr uint32 kSequenceTransformChannelCount = 9;
     /** @brief 키를 "그 프레임에 있다" 고 보는 시각 차입니다. 키는 정수 프레임에 찍히므로 반 프레임이면 이웃 키와 겹치지 않습니다. */
     constexpr float32 kSequenceKeyFrameTolerance = 0.5f;
@@ -96,7 +96,7 @@ namespace sw
     static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ),
                    "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
-    /** @brief 시퀀서 트랙 항목입니다(클립 · 이벤트 · 카메라 컷 — 구간 하나). */
+    /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷). 구간 하나를 나타냅니다. */
     struct SequenceTrackItem
     {
         string           _name;
@@ -104,7 +104,7 @@ namespace sw
         int32            _start{ 0 };
         int32            _end{ 10 };
         uint32           _color{ 0xFFAA8080 };
-        SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 표에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
+        SequenceItemKind _kind{ SequenceItemKind::Clip }; /**< 테이블에 없는 값(새 버전 파일)은 읽고 다시 쓰지만 적용하지 않습니다. */
     };
 } // namespace sw
 
@@ -112,9 +112,9 @@ namespace sw
 {
     /**
      * @struct SequenceKeyTrack
-     * @brief 대상 하나의 값을 시각(프레임)마다 찍은 키로 모는 트랙입니다. 채널마다 `FloatCurve` 하나이고, 커브의 시각 단위는 프레임입니다.
-     * @details 키가 없는 채널은 대상 값을 건드리지 않습니다. 키를 찍으면(`setKey`) 모든 채널에 같은 시각의 키가 생깁니다 — 언리얼 Sequencer 의
-     *          트랜스폼 키와 같습니다. 채널 하나만 고치면(`setChannelKey`) 그 채널에만 키가 생깁니다.
+     * @brief 대상 하나의 값을 시각(프레임)마다 찍은 키로 몰아 가는 트랙입니다. 채널마다 `FloatCurve` 하나이고, 커브의 시각 단위는 프레임입니다.
+     * @details 키가 없는 채널은 대상 값을 건드리지 않는다. 키를 찍으면(`setKey`) 모든 채널에 같은 시각의 키가 생긴다. 언리얼 Sequencer 의
+     *          트랜스폼 키와 같다. 채널 하나만 고치면(`setChannelKey`) 그 채널에만 키가 생긴다.
      */
     struct SW_API SequenceKeyTrack
     {
@@ -122,7 +122,7 @@ namespace sw
         string             _targetObject;
         string             _propertyPath; /**< 프로퍼티 트랙의 `<컴포넌트 타입>.<프로퍼티>` 입니다(트랜스폼 트랙은 비어 있다). */
         vector<FloatCurve> _listChannel;
-        SequenceTrackKind  _kind{ SequenceTrackKind::Transform }; /**< 표에 없는 값은 읽고 다시 쓰지만 적용하지 않습니다. */
+        SequenceTrackKind  _kind{ SequenceTrackKind::Transform }; /**< 테이블에 없는 값은 읽고 다시 쓰지만 적용하지 않습니다. */
 
         /** @brief 종류의 채널 수입니다. 모르는 종류면 0 입니다. */
         static uint32 getChannelCount( SequenceTrackKind kind );
@@ -142,7 +142,7 @@ namespace sw
         void collectKeyFrames( vector<float32>& outListFrame ) const;
         /** @brief 채널의 @p frame 값입니다. 키가 없으면 @p fallback 입니다. */
         float32 evaluateChannel( uint32 channelIndex, float32 frame, float32 fallback ) const;
-        /** @brief 채널 @p channelIndex 의 @p frame 키 자리입니다. 없으면 `invalid_index::kUint32` 입니다. */
+        /** @brief 채널 @p channelIndex 의 @p frame 키 인덱스를 반환합니다. 없으면 `invalid_index::kUint32` 입니다. */
         uint32 findChannelKey( uint32 channelIndex, float32 frame ) const;
     };
 } // namespace sw
@@ -151,7 +151,7 @@ namespace sw
 {
     /**
      * @class SequenceAsset
-     * @brief 구간 항목(클립 · 이벤트 · 카메라 컷)과 키 트랙(트랜스폼 · 프로퍼티)을 담는 타임라인 에셋입니다.
+     * @brief 구간 항목(클립, 이벤트, 카메라 컷)과 키 트랙(트랜스폼, 프로퍼티)을 담는 타임라인 에셋입니다.
      */
     class SW_API SequenceAsset
     {
@@ -168,29 +168,29 @@ namespace sw
         [[nodiscard]] bool saveToFile( string_view path ) const;
         /**
          * @brief JSON 본문을 파싱합니다.
-         * @details **실패하면 빈 에셋이 남습니다** — 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아 트랙 없는 옛
-         *          시퀀스가 새 시퀀스인 척합니다.
+         * @details **실패하면 빈 에셋이 남는다.** 일부만 비우면 앞 시퀀스의 프레임 범위와 노트가 그대로 남아, 트랙 없는 이전
+         *          시퀀스가 새 시퀀스인 척한다.
          */
         [[nodiscard]] bool parseJSON( string_view json );
         /** @brief JSON 본문을 만듭니다. */
         string toJSON() const;
-        /** @brief 종류의 특성 줄입니다. 표에 없는 값이면 nullptr 입니다. */
+        /** @brief 종류의 특성 항목을 반환합니다. 테이블에 없는 값이면 nullptr 입니다. */
         static const SequenceItemKindInfo* findItemKindInfo( SequenceItemKind kind );
         /** @brief 그 프레임에 걸쳐 있는 트랙 항목을 채웁니다. */
         void collectActiveItems( int32 frame, vector<const SequenceTrackItem*>& outListItem ) const;
 
     private:
-        /** @brief 파싱된 루트 하나를 읽습니다. 파일 경로와 문자열 경로가 모이는 자리입니다. */
+        /** @brief 파싱된 루트 하나를 읽습니다. 파일 경로와 문자열 경로가 모이는 지점입니다. */
         [[nodiscard]] bool parseRoot( const JSONValue& root );
 
     public:
-        /** @brief 카메라 컷 항목이 하나라도 있으면 true 입니다 — 없으면 시퀀스가 게임 카메라를 건드리지 않습니다. */
+        /** @brief 카메라 컷 항목이 하나라도 있으면 true 를 반환합니다. 없으면 시퀀스가 게임 카메라를 건드리지 않습니다. */
         bool hasCameraCut() const;
 
         int32                     _frameMin{ 0 };
         int32                     _frameMax{ 100 };
         string                    _note;
         vector<SequenceTrackItem> _listItem;
-        vector<SequenceKeyTrack>  _listTrack; /**< 키 트랙(트랜스폼 · 프로퍼티)입니다. 클립 · 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
+        vector<SequenceKeyTrack>  _listTrack; /**< 키 트랙(트랜스폼, 프로퍼티)입니다. 클립이나 이벤트와 달리 구간이 아니라 키로 값을 몹니다. */
     };
 } // namespace sw

@@ -1,8 +1,8 @@
 /**
  * @file JoltPhysicsSceneVehicle.cpp
- * @brief `JoltPhysicsScene` 의 바퀴 차입니다 — `VehicleConstraint` + `WheeledVehicleController`(엔진 · 자동 변속 · 디퍼렌셜) + 원기둥 쓸기 바퀴 충돌.
- * @details 차는 구속이면서 스텝 리스너입니다(바퀴 충돌 · 서스펜션은 스텝 앞에서 푼다) — 만들 때 둘 다 넣고 지울 때 둘 다 뺍니다. 차체 바디를 지우면
- *          그 차도 지웁니다(`destroyJointsOf`). 같은 입력 · 같은 스텝이면 같은 결과입니다(Jolt 결정성 — 같은 실행 안에서).
+ * @brief `JoltPhysicsScene` 의 바퀴 차입니다. `VehicleConstraint` 와 `WheeledVehicleController`(엔진, 자동 변속, 디퍼렌셜), 원기둥 쓸기 바퀴 충돌을 씁니다.
+ * @details 차는 구속이면서 스텝 리스너다(바퀴 충돌과 서스펜션은 스텝 앞에서 푼다). 만들 때 둘 다 넣고 지울 때 둘 다 뺀다. 차체 바디를 지우면
+ *          그 차도 지운다(`destroyJointsOf`). 같은 입력과 같은 스텝이면 같은 결과가 나온다(같은 실행 안에서의 Jolt 결정성).
  */
 #include "pch.h"
 
@@ -58,7 +58,7 @@ namespace sw
         settings.mWheels.reserve( desc._listWheel.size() );
         for ( const PhysicsWheelDesc& wheel : desc._listWheel )
         {
-            JPH::WheelSettingsWV* pWheel         = JoltUtil::createObject<JPH::WheelSettingsWV>(); // Jolt 참조 셈 객체 — Ref 가 놓는다
+            JPH::WheelSettingsWV* pWheel         = JoltUtil::createObject<JPH::WheelSettingsWV>(); // Jolt 참조 카운트 객체다. Ref 가 해제한다.
             pWheel->mPosition                    = JoltUtil::toJolt( wheel._position );
             pWheel->mSuspensionDirection         = JPH::Vec3( 0.0f, -1.0f, 0.0f );
             pWheel->mSteeringAxis                = JPH::Vec3::sAxisY();
@@ -136,7 +136,7 @@ namespace sw
         if ( pRecord == nullptr || pRecord->_pConstraint == nullptr )
             return;
         JPH::WheeledVehicleController* pController = static_cast<JPH::WheeledVehicleController*>( pRecord->_pConstraint->GetController() );
-        // 엔진은 요 0 에서 앞 +Z · 오른쪽 +X(왼손)다. Jolt 의 오른쪽 조향(+1)은 오른손 좌표의 오른쪽(위 +Y · 앞 +Z 에서 −X)이라 부호를 바꿔 넘긴다.
+        // 엔진은 요 0 에서 앞 +Z, 오른쪽 +X(왼손)다. Jolt 의 오른쪽 조향(+1)은 오른손 좌표의 오른쪽(위 +Y, 앞 +Z 에서 -X)이라 부호를 바꿔서 넘긴다.
         pController->SetDriverInput( MathUtil::clamp( forward, -1.0f, 1.0f ), -MathUtil::clamp( right, -1.0f, 1.0f ), MathUtil::clamp( brake, 0.0f, 1.0f ),
                                      MathUtil::clamp( handBrake, 0.0f, 1.0f ) );
         // 입력이 있으면 자는 차체를 깨운다(자는 바디에는 구속이 돌지 않는다).

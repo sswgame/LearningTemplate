@@ -1,8 +1,8 @@
 /**
  * @file PhysicsSettings.h
- * @brief 사람이 고치는 물리 표 — 충돌 레이어와 레이어끼리의 충돌 표 · 물리 재질 · 중력 · 고정 스텝입니다(`engine/physics/physicssettings.xml`).
- * @details 코드는 이름으로만 고릅니다(`findLayerIndex` · `findMaterial`). 표에 없는 이름 · 32 개를 넘는 레이어 · 겹친 이름은 읽을 때 오류입니다.
- *          레이어 표는 2D · 3D 가 같이 쓰고, 겹침 월드(`PhysicsWorld`)도 같은 행렬을 받습니다(`makeCollisionLayers`).
+ * @brief 사람이 고치는 물리 설정입니다. 충돌 레이어와 레이어끼리의 충돌 테이블, 물리 재질, 중력, 고정 스텝을 담습니다(`engine/physics/physicssettings.xml`).
+ * @details 코드는 이름으로만 고른다(`findLayerIndex`, `findMaterial`). 테이블에 없는 이름, 32 개를 넘는 레이어, 겹친 이름은 읽을 때 오류다.
+ *          레이어 테이블은 2D 와 3D 가 함께 쓰고, 겹침 월드(`PhysicsWorld`)도 같은 행렬을 받는다(`makeCollisionLayers`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,7 +19,7 @@
 namespace sw
 {
     /**
-     * @brief 물리 재질 하나입니다. 두 셰이프가 닿으면 마찰은 기하 평균(√(a·b)), 반발은 큰 쪽을 씁니다(Jolt · Box2D 기본과 같다).
+     * @brief 물리 재질 하나입니다. 두 셰이프가 닿으면 마찰은 기하 평균(√(a·b))을, 반발은 큰 쪽을 씁니다(Jolt 와 Box2D 의 기본과 같습니다).
      * @code
      *     <PhysicsMaterialDef _name="Rubber" _friction="0.9" _restitution="0.8" _density="1100" />
      * @endcode
@@ -43,7 +43,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 충돌 레이어 하나와 그것이 부딪히는 레이어 이름들입니다. 표는 대칭으로 읽습니다 — 한쪽만 적어도 둘이 부딪힙니다.
+     * @brief 충돌 레이어 하나와 그 레이어가 부딪히는 레이어 이름들입니다. 테이블은 대칭으로 읽으므로 한쪽만 적어도 둘이 부딪힙니다.
      * @code
      *     <PhysicsLayerDef _name="Debris">
      *         <_listCollidesWith><item>Default</item><item>Static</item></_listCollidesWith>
@@ -65,8 +65,8 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 물리 설정 표 하나입니다. `PhysicsSystem` 이 기동 때 읽어 모든 씬에 나눠 줍니다.
-     * @details 레이어 순서가 레이어 번호입니다(0..31). 레이어 · 재질이 하나도 없으면 `Default` 하나씩을 채웁니다(`ensureDefaults`).
+     * @brief 물리 설정 하나입니다. `PhysicsSystem` 이 기동할 때 읽어 모든 씬에 나눠 줍니다.
+     * @details 레이어 순서가 레이어 번호다(0..31). 레이어와 재질이 하나도 없으면 `Default` 하나씩을 채운다(`ensureDefaults`).
      */
     REFLECT()
     struct SW_API PhysicsSettings
@@ -90,20 +90,20 @@ namespace sw
         PROPERTY( Tooltip = "Physics materials" )
         vector<PhysicsMaterialDef> _listMaterial;
 
-        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면(파일 없음 · 모르는 이름 · 겹친 이름) 오류를 남기고 false 입니다. */
+        /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 파일이 없거나 모르는 이름이거나 이름이 겹쳐서 실패하면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool loadFromResource( string_view resourcePath );
         /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText );
-        /** @brief 이름이 겹치지 않고 · 레이어가 32 개 이하이고 · 충돌 목록의 이름이 모두 있는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 입니다. */
+        /** @brief 이름이 겹치지 않는지, 레이어가 32 개 이하인지, 충돌 목록의 이름이 모두 존재하는 레이어인지 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate() const;
-        /** @brief 레이어 · 재질이 비어 있으면 `Default` 하나씩을 채웁니다(Default 레이어는 자기와 부딪힌다). */
+        /** @brief 레이어와 재질이 비어 있으면 `Default` 하나씩을 채웁니다(Default 레이어는 자기 자신과 부딪힙니다). */
         void ensureDefaults();
 
-        /** @brief 레이어 이름의 번호입니다. 없으면 false 입니다. */
+        /** @brief 레이어 이름의 번호를 찾습니다. 없으면 false 를 반환합니다. */
         [[nodiscard]] bool findLayerIndex( const hashed_string& name, uint8& outIndex ) const;
         /** @brief 재질을 찾습니다. 없으면 nullptr 입니다. */
         const PhysicsMaterialDef* findMaterial( const hashed_string& name ) const;
-        /** @brief 레이어 표를 대칭 행렬로 풉니다. 표에 없는 레이어 번호는 아무것과도 부딪히지 않습니다. */
+        /** @brief 레이어 테이블을 대칭 행렬로 풉니다. 테이블에 없는 레이어 번호는 아무것과도 부딪히지 않습니다. */
         CollisionLayers makeCollisionLayers() const;
     };
 } // namespace sw

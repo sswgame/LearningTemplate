@@ -226,7 +226,7 @@ namespace sw
     string CharacterDataReader::formatFloat( float32 value )
     {
         utf8 arrBuffer[constant::kMaxBuffer64]{};
-        // -0 을 0 으로 — 쓴 파일이 "-0" 으로 흔들리지 않게.
+        // -0 을 0 으로 바꾼다. 쓴 파일이 "-0" 으로 흔들리지 않게 하려는 것이다.
         const float32 cleanValue = MathUtil::abs( value ) < 1.0e-7f ? 0.0f : value;
         const uint32  length     = StringUtil::formatNumber( arrBuffer, constant::kMaxBuffer64, cleanValue );
         return string( arrBuffer, length );

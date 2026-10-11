@@ -170,7 +170,7 @@ namespace sw
             return;
         }
         const vector_reference<const AnimNotifyParamDef> listDef = entry._pHandler->getParams();
-        // 표의 칸은 처리기가 선언한 인자만 — 모르는 칸은 오타이므로 오류다.
+        // 테이블 항목은 처리기가 선언한 인자만 쓸 수 있다. 모르는 필드는 오타이므로 오류다.
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
         {
             const utf8* pName      = attribute.getName();

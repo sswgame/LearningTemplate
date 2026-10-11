@@ -33,7 +33,7 @@ namespace sw
 {
     /**
      * @class IFracturePhysics
-     * @brief 조각 바디를 3D(Jolt) · 2D(Box2D) 씬에 같은 말로 만드는 창구입니다. 자세는 늘 3D(2D 는 XY · Z 축 회전)로 주고받습니다.
+     * @brief 조각 바디를 3D(Jolt)와 2D(Box2D) 씬에 같은 인터페이스로 만드는 어댑터입니다. 자세는 항상 3D 로 주고받으며, 2D 는 XY 평면과 Z 축 회전을 씁니다.
      */
     class IFracturePhysics
     {
@@ -43,7 +43,7 @@ namespace sw
         IFracturePhysics( const IFracturePhysics& )            = delete;
         IFracturePhysics& operator=( const IFracturePhysics& ) = delete;
 
-        /** @brief 잎마다 껍질 셰이프를 지금 모두 짓습니다(오브젝트 원점 기준, 배율 · 줄임을 건 점). 앞서 지은 것은 놓습니다. */
+        /** @brief 잎마다 껍질 셰이프를 지금 모두 만듭니다(오브젝트 원점 기준, 배율과 축소를 적용한 점). 이전에 만든 것은 해제합니다. */
         virtual void               prepareLeafShapes( const FractureAsset& asset, float32 scale, float32 shrink, const hashed_string& material ) = 0;
         virtual void               releaseLeafShapes()                                                                                           = 0;
         virtual void               createStaticLeafBodies( vector_reference<const uint32> listLeaf, const float3& position, const quaternion& rotation, uint8 layer,
@@ -58,11 +58,11 @@ namespace sw
         virtual bool               isSleeping( PhysicsBodyHandle body ) const                                                                    = 0;
         virtual void               addImpulseAtPoint( PhysicsBodyHandle body, const float3& impulse, const float3& point )                       = 0;
         virtual void               setBodyEnabled( PhysicsBodyHandle body, bool bEnabled )                                                       = 0;
-        /** @brief 바디를 키네마틱으로 바꿉니다(네트워크가 자세를 정하는 덩어리). */
+        /** @brief 바디를 키네마틱으로 바꿉니다. 네트워크가 자세를 정하는 덩어리에 씁니다. */
         virtual void setBodyKinematic( PhysicsBodyHandle body ) = 0;
-        /** @brief 키네마틱 바디를 한 스텝 동안 목표 자세로 옮깁니다(닿는 것을 민다). */
+        /** @brief 키네마틱 바디를 한 스텝 동안 목표 자세로 옮깁니다. 닿는 것은 밀립니다. */
         virtual void moveKinematic( PhysicsBodyHandle body, const float3& position, const quaternion& rotation, float32 deltaTime ) = 0;
-        /** @brief 잎 껍질을 그 자세에 놓았을 때 다른 오브젝트(@p ignoreUserData 가 아닌)의 정적 바디에 닿는지입니다(앵커 World). */
+        /** @brief 잎 껍질을 그 자세에 놓았을 때 다른 오브젝트(@p ignoreUserData 가 아닌)의 정적 바디에 닿는지 반환합니다(앵커 World). */
         virtual bool overlapsStaticWorld( const FractureAsset& asset, uint32 leaf, float32 scale, const float3& position, const quaternion& rotation,
                                           uint64 ignoreUserData ) const = 0;
     };
@@ -79,10 +79,10 @@ namespace sw
             static constexpr uint32  kBakeAfterStillFrames = 30;
             static constexpr float32 kMoveEpsilon          = 1.0e-4f;
             static constexpr uint32  kMaxPolygonPoint2D    = 8;
-            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 태어난 조각끼리의 부딪힘을 피해로 보지 않는 시간(초)
+            static constexpr float32 kSpawnGraceTime       = 0.3f; ///< 갓 생성된 조각끼리의 충돌을 피해로 보지 않는 시간(초)이다.
             static constexpr uint32  kMagic                = FourCcUtil::make( "SWFS" );
 
-            /** @brief 잎 껍질 점을 오브젝트 원점 기준으로(무게 중심 + 줄인 껍질) × 배율. */
+            /** @brief 잎 껍질 점을 오브젝트 원점 기준으로 만듭니다. (무게 중심 + 축소한 껍질) × 배율입니다. */
             static void makeLeafHull( const FractureAsset& asset, uint32 leaf, float32 scale, float32 shrink, vector<float3>& outListPoint )
             {
                 outListPoint.clear();
@@ -95,7 +95,7 @@ namespace sw
                 }
             }
 
-            /** @brief 2D 볼록 껍질(반시계, 모노톤 체인)을 짓고 점이 많으면 넓이를 가장 적게 잃는 점부터 빼 @p maxPoint 개로 줄입니다. */
+            /** @brief 2D 볼록 껍질(반시계, 모노톤 체인)을 만들고, 점이 많으면 넓이를 가장 적게 잃는 점부터 빼서 @p maxPoint 개로 줄입니다. */
             static void makeConvexPolygon( const vector<float3>& listPoint, uint32 maxPoint, vector<float2>& outListPolygon )
             {
                 vector<float2> listSorted;
@@ -154,11 +154,11 @@ namespace sw
 
             static quaternion makeRotationZ( float32 angle ) { return quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle ); }
 
-            /** @brief 역회전입니다(const 로 불러 제자리 뒤집기가 아니라 값을 받는다). */
+            /** @brief 역회전을 반환합니다. const 로 불러 값을 받으며, 제자리에서 뒤집지 않습니다. */
             static quaternion invert( const quaternion& rotation ) { return rotation.inverse(); }
         };
 
-        /** @brief 3D(Jolt) 창구입니다. */
+        /** @brief 3D(Jolt) 어댑터입니다. */
         class FracturePhysics3D final : public IFracturePhysics
         {
         public:
@@ -226,7 +226,7 @@ namespace sw
                 }
                 else
                 {
-                    // 지어 둔 잎 껍질을 묶기만 한다(껍질을 다시 지으면 덩어리마다 잎 수 × 수십 us).
+                    // 만들어 둔 잎 껍질을 묶기만 한다. 껍질을 다시 만들면 덩어리마다 잎 수 × 수십 us 가 든다.
                     vector<PhysicsShapeHandle> listChild;
                     listChild.reserve( listLeaf.size() );
                     for ( const uint32 leaf : listLeaf )
@@ -307,7 +307,7 @@ namespace sw
             hashed_string              _material;
         };
 
-        /** @brief 2D(Box2D) 창구입니다. 껍질은 XY 볼록 다각형(최대 8 점), 깊이(Z)는 오브젝트 것 그대로입니다. */
+        /** @brief 2D(Box2D) 어댑터입니다. 껍질은 XY 볼록 다각형(최대 8 점)이고, 깊이(Z)는 오브젝트의 값을 그대로 씁니다. */
         class FracturePhysics2D final : public IFracturePhysics
         {
         public:
@@ -626,7 +626,7 @@ namespace sw
         PhysicsComponent::onCollisionBegin( collision );
         if ( _bAuthority == false || _bStateReady == SW_FALSE || collision._impulse <= _profile._minImpulse )
             return;
-        // 갓 갈라진 조각끼리는 맞닿은 채 태어난다 — 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 태어난 지 kSpawnGraceTime 안).
+        // 갓 갈라진 조각끼리는 맞닿은 채 생성된다. 그 밀어냄은 피해가 아니다(같은 오브젝트 조각끼리, 생성 후 kSpawnGraceTime 안).
         if ( collision._pOther == getOwner() )
         {
             const FractureGroupRuntime* pSelf       = findRuntime( findGroupOfBody( collision._selfBody ) );
@@ -675,7 +675,7 @@ namespace sw
             if ( _physics == nullptr )
                 return;
         }
-        // 온전한 동안 데이터가 다시 읽혔으면(핫 리로드) 상태를 다시 시작한다 — 쪼갠 뒤에는 지금 조각을 지킨다.
+        // 온전한 동안 데이터가 다시 읽혔으면(핫 리로드) 상태를 다시 시작한다. 쪼갠 뒤에는 현재 조각을 유지한다.
         if ( _bStateReady == SW_TRUE && _bFractured == SW_FALSE && isFractureStale() )
             _bStateReady = SW_FALSE;
         if ( _bFractureMissing == SW_TRUE && isFractureStale() == false )
@@ -874,7 +874,7 @@ namespace sw
     {
         if ( _bFractured == SW_FALSE )
         {
-            // 온전하다 — 오브젝트의 지금 자세(움직이는 상자일 수 있다)로 옮긴다.
+            // 온전하다. 오브젝트의 현재 자세(움직이는 상자일 수 있다)로 옮긴다.
             float3     position{};
             quaternion rotation{};
             float32    scale = 1.0f;
@@ -894,7 +894,7 @@ namespace sw
             const FractureGroupRuntime* pRuntime = groupID != 0 ? findRuntime( groupID ) : nullptr;
             if ( pRuntime == nullptr )
             {
-                // 바디를 모르면(이미 빠진 파편 · 광선이 아닌 요청) 붙은 구조 기준.
+                // 바디를 모르면(이미 빠진 파편이거나 광선이 아닌 요청) 붙은 구조를 기준으로 한다.
                 for ( const FractureGroupRuntime& runtime : _listRuntime )
                 {
                     if ( runtime._bAnchored == SW_TRUE )
@@ -914,7 +914,7 @@ namespace sw
             outListEvent.push_back( event );
             return;
         }
-        // 폭발 — 반경 안의 그룹마다 그 그룹 자세로 사건 하나(떨어진 덩어리는 지금 있는 자리로 맞는다).
+        // 폭발: 반경 안의 그룹마다 그 그룹의 자세로 사건을 하나 만든다. 떨어진 덩어리는 현재 위치에서 맞는다.
         for ( const FractureGroupRuntime& runtime : _listRuntime )
         {
             if ( runtime._bGone == SW_TRUE )
@@ -945,7 +945,7 @@ namespace sw
 
     void FractureComponentBase::applyMeshEvent( ScenePhysics& physics, const DestructionDamageEvent& event, const FractureGroupPose* pGroupPose )
     {
-        // 맞은 떨어진 그룹 — 보낸 쪽 자세가 왔으면 그 자리로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
+        // 맞은 떨어진 그룹: 보낸 쪽 자세가 왔으면 그 위치로 옮기고, 적용 직전 자세를 사건 기록 옆에 적는다(보낼 때 함께 간다).
         FractureGroupPose     hitPose;
         FractureGroupRuntime* pHit = event._groupID != 0 ? findRuntime( event._groupID ) : nullptr;
         if ( pHit != nullptr && pHit->_bAnchored == SW_FALSE )
@@ -968,7 +968,7 @@ namespace sw
         }
         _listEventGroupPose.push_back( hitPose );
         DestructionChange change;
-        // 흩기 씨앗의 번호는 상태의 사건 수다 — 스냅숏을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
+        // 흩기 시드는 상태의 사건 수다. 스냅샷을 받은 쪽은 기록이 짧아도 서버와 같은 번호가 된다.
         const uint32 eventIndex = _state.getEventCount();
         const bool   bChanged   = _state.applyDamage( event, change );
         _eventLog._listEvent.push_back( event );
@@ -1032,7 +1032,7 @@ namespace sw
             return;
         readObjectPose( _objectPosition, _objectRotation, _objectScale );
 
-        // 오브젝트의 온전한 메시 · 강체를 넘겨받는다 — 메시는 숨기고 바디는 지금 꺼(새 조각 바디와 겹치지 않게) 컴포넌트도 끈다.
+        // 오브젝트의 온전한 메시와 강체를 넘겨받는다. 메시는 숨기고, 바디는 새 조각 바디와 겹치지 않게 지금 끄며, 컴포넌트도 끈다.
         for ( Component* pComp : pOwner->getComponents() )
         {
             MeshComponent* pMesh = pComp != nullptr ? castTo<MeshComponent>( pComp ) : nullptr;
@@ -1081,7 +1081,7 @@ namespace sw
         (void)physics;
         vector<PhysicsBodyHandle>    listDestroy;
         vector<FractureGroupRuntime> listRemoved;
-        // 갓 쪼갰으면 런타임이 아직 없다 — 지금 그룹 모두가 오브젝트 자세에서 새로 선다.
+        // 갓 쪼갰으면 런타임이 아직 없다. 모든 그룹이 오브젝트 자세에서 새로 생성된다.
         const bool bFirst = _listRuntime.empty();
         for ( const uint32 groupID : change._listRemovedGroup )
         {
@@ -1132,7 +1132,7 @@ namespace sw
                 runtime._rotation = parent._rotation;
                 if ( parent._body.isValid() )
                 {
-                    // 부모 질량 중심의 속도 + 각속도 × (자식 질량 중심 - 부모 원점) — 떨어지던 덩어리가 갈라져도 같은 운동을 잇는다.
+                    // 부모 질량 중심의 속도 + 각속도 × (자식 질량 중심 - 부모 원점)이다. 떨어지던 덩어리가 갈라져도 같은 운동을 이어 간다.
                     float3 parentLinear{};
                     float3 parentAngular{};
                     _physics->readVelocity( parent._body, parentLinear, parentAngular );
@@ -1154,7 +1154,7 @@ namespace sw
                     if ( push.getLengthSquared() < 1.0e-8f )
                         push = float3{ 0.0f, 1.0f, 0.0f };
                     push = push.normalize();
-                    // 같은 씨앗 · 같은 사건이면 같은 흩기(보기 좋게 조금 비튼다 — 상태에는 들지 않는다).
+                    // 같은 시드와 같은 사건이면 같은 흩기가 나온다. 보기 좋게 조금 비틀지만 상태에는 영향이 없다.
                     push            = ( push + random.nextPointInUnitSphere() * 0.25f ).normalize();
                     float32 falloff = 1.0f;
                     if ( pEvent->_kind == DestructionDamageKind::Radial && pEvent->_radius > 0.0f )
@@ -1174,7 +1174,7 @@ namespace sw
             _physics->destroyBodies( listDestroy );
         rebuildLeafRuntimeMap();
         _bPoseDirty = SW_TRUE;
-        // 붙어 있던 것이 갈라지거나 떨어졌으면 그 모양에 기대는 것(내비메시)에 알린다. 떨어진 덩어리끼리의 갈라짐은 알리지 않는다.
+        // 붙어 있던 것이 갈라지거나 떨어졌으면 그 형태에 의존하는 쪽(내비메시)에 알린다. 떨어진 덩어리끼리의 갈라짐은 알리지 않는다.
         bool bAnchoredChanged = bFirst;
         for ( const FractureGroupRuntime& removed : listRemoved )
         {
@@ -1300,7 +1300,7 @@ namespace sw
                     runtime._rotation = rotation;
                 }
                 runtime._sleepTime = _physics->isSleeping( runtime._body ) ? runtime._sleepTime + deltaTime : 0.0f;
-                // 잠들어 쉰 덩어리 — 작은 것은 바디를 빼고(자세 고정, 정적 그림에 합쳐진다), 큰 것은 잠든 바디로 충돌을 남긴다.
+                // 잠들어 쉰 덩어리다. 작은 것은 바디를 제거하고(자세 고정, 정적 렌더링에 합쳐진다), 큰 것은 잠든 바디로 충돌을 유지한다.
                 const bool bRemoveOnSleep = runtime._sleepTime >= _profile._sleepRemoveTime && runtime._volume < _profile._keepCollisionVolume;
                 if ( bRemoveOnSleep )
                 {
@@ -1333,7 +1333,7 @@ namespace sw
                 ++liveBodyCount;
         }
 
-        // 예산 — 이 오브젝트(표의 maxBodies)와 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
+        // 예산: 이 오브젝트(프로필의 maxBodies)나 전역(gv_destructionMaxDebrisBodies)을 넘으면 오래된 것부터, 작은 것을 먼저 사라지게 한다.
         const uint32 globalLimit = static_cast<uint32>( MathUtil::max( 0, static_cast<int32>( gv_destructionMaxDebrisBodies ) ) );
         uint32       globalCount = getScenePhysics() != nullptr ? getScenePhysics()->getDebrisBodyCount() : 0u;
         while ( liveBodyCount > _profile._maxDebrisBody || globalCount > globalLimit )
@@ -1549,7 +1549,7 @@ namespace sw
     {
         if ( _bAuthority )
             return;
-        // 받는 쪽 컴포넌트만 처음 적을 때 자리를 잡는다(권한 쪽 · 파괴를 받지 않는 컴포넌트는 칸을 들지 않는다).
+        // 받는 쪽 컴포넌트만 처음 기록할 때 슬롯을 잡는다. 권한 쪽이나 파괴를 받지 않는 컴포넌트는 슬롯을 갖지 않는다.
         if ( _listRecentHash.getCapacity() != static_cast<int32>( kRecentHashCount ) )
             _listRecentHash.initialize( static_cast<int32>( kRecentHashCount ) );
         _listRecentHash.acquire( _state.getEventCount() ) = _state.computeStateHash();
@@ -1673,7 +1673,7 @@ namespace sw
             const DestructionGroup* pGroup = _state.findGroup( target._groupID );
             if ( pGroup == nullptr )
                 continue;
-            // 질량 중심 → 그룹 원점(오브젝트 원점이 있는 자리).
+            // 질량 중심에서 그룹 원점(오브젝트 원점이 있는 위치)으로 옮긴다.
             float3 localCenter{};
             (void)_state.computeGroupMass( *pGroup, localCenter );
             if ( pRuntime->_bDriven == SW_FALSE && pRuntime->_body.isValid() )
@@ -1683,7 +1683,7 @@ namespace sw
             pRuntime->_driveRotation = target._rotation;
             if ( pRuntime->_body.isValid() == false )
             {
-                // 바디를 뺀(쉬는) 그룹은 자세만 옮긴다 — 그림이 따라온다.
+                // 바디를 제거한(쉬는) 그룹은 자세만 옮긴다. 렌더링이 따라온다.
                 pRuntime->_position = pRuntime->_drivePosition;
                 pRuntime->_rotation = target._rotation;
                 _bPoseDirty         = SW_TRUE;
@@ -1701,7 +1701,7 @@ namespace sw
             SW_LOG_ERROR( "'%#': destruction snapshot has a wrong magic", pOwnerName );
             return;
         }
-        // 상태 바이트의 상한은 남은 바이트다 — 받은 스냅숏 자체가 길이를 정한다(조각은 이미 모아 왔다).
+        // 상태 바이트의 상한은 남은 바이트다. 받은 스냅샷 자체가 길이를 정한다(조각은 이미 모아 왔다).
         vector<uint8> stateBytes;
         if ( reader.readBlob( stateBytes, reader.getBitsRemaining() / 8 ) == false || stateBytes.empty() )
         {
@@ -1741,7 +1741,7 @@ namespace sw
         _state = std::move( trial );
         recordRecentStateHash();
 
-        // 아직 온전하고 스냅숏도 한 덩어리 그대로면 바디 · 그림을 바꿀 것이 없다(변형만 쌓였다).
+        // 아직 온전하고 스냅샷도 한 덩어리 그대로면 바디나 렌더링을 바꿀 것이 없다(변형만 쌓였다).
         const vector<DestructionGroup>& listGroup = _state.getGroups();
         const bool                      bIntact   = listGroup.size() == 1 && listGroup[0]._id == 1;
         if ( bIntact && _bFractured == SW_FALSE )
@@ -1749,7 +1749,7 @@ namespace sw
         if ( _bFractured == SW_FALSE )
             activate( physics );
 
-        // 그룹 런타임을 모두 내리고 스냅숏의 그룹마다 다시 세운다(정적 잎 바디는 `syncStaticBodies` 가 맞춘다).
+        // 그룹 런타임을 모두 해제하고 스냅샷의 그룹마다 다시 생성한다(정적 잎 바디는 `syncStaticBodies` 가 맞춘다).
         vector<PhysicsBodyHandle> listDestroy;
         for ( FractureGroupRuntime& runtime : _listRuntime )
         {
@@ -1790,7 +1790,7 @@ namespace sw
                         runtime._rotation = pPose->_rotation;
                     }
                     spawnGroup( runtime, group, float3{}, float3{} );
-                    // 받는 쪽의 덩어리는 서버 자세를 따른다 — 멈춘 덩어리의 자세는 다시 오지 않으므로 스냅숏 자세에 키네마틱으로 둔다.
+                    // 받는 쪽의 덩어리는 서버 자세를 따른다. 멈춘 덩어리의 자세는 다시 오지 않으므로 스냅샷 자세에서 키네마틱으로 둔다.
                     if ( _bAuthority == false && pPose != nullptr && isChunkVolume( runtime._volume ) && runtime._body.isValid() )
                     {
                         _physics->setBodyKinematic( runtime._body );

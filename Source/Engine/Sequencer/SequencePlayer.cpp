@@ -23,7 +23,7 @@ namespace sw
     {
         const bool bLoaded = _asset.loadFromFile( path );
         // **에셋을 바꾼 뒤에 멈춘다.** `stop()` 이 먼저면 그 안의 `_previousFrame = _asset._frameMin` 이
-        // **바뀌기 전 에셋**의 시작 프레임을 집는다 — 새 에셋이 100 프레임에서 시작하고 직전 값이 0 이면 첫 갱신이
+        // **바뀌기 전 에셋**의 시작 프레임을 가져간다. 새 에셋이 100 프레임에서 시작하고 직전 값이 0 이면 첫 갱신이
         // `applyFrame(100, 0)` 이 되어 100 이하의 이벤트가 모두 한꺼번에 발화한다.
         stop();
         return bLoaded;
@@ -39,8 +39,8 @@ namespace sw
     {
         _playbackTime = 0.0f;
         // **첫 프레임보다 하나 앞**에서 시작한다. 이전 프레임을 `_frameMin` 으로 두면 첫 프레임에
-        // 걸린 이벤트가 처음부터 "이미 지난 것" 이라 영영 발화하지 않는다. 이벤트 판정은
-        // `previousFrame < start <= frame`(지나갔는가) 이기 때문이다.
+        // 걸린 이벤트가 처음부터 "이미 지난 것"이라 영영 발화하지 않는다. 이벤트 판정은
+        // `previousFrame < start <= frame`(지나갔는가)이기 때문이다.
         _previousFrame = _asset._frameMin - 1;
         _bPlaying      = SW_TRUE;
         _bPaused       = SW_FALSE;
@@ -97,9 +97,9 @@ namespace sw
             _playbackTime = MathUtil::fmod( _playbackTime, durationSec );
             if ( _playbackTime < 0.0f )
                 _playbackTime += durationSec;
-            // 한 바퀴를 돌았으면 `play()` 와 같은 자리에서 다시 시작해야 한다. 그러지 않으면
+            // 한 바퀴를 돌았으면 `play()` 와 같은 위치에서 다시 시작해야 한다. 그러지 않으면
             // 이전 프레임이 끝쪽(`_frameMax` 근처)인 채로 남아, 되감긴 첫 프레임의 이벤트가
-            // "이미 지난 것" 이 되어 **루프마다 빠진다.**
+            // "이미 지난 것"이 되어 **루프마다 빠진다.**
             _frameBeforeWrap = _previousFrame;
             _previousFrame   = _asset._frameMin - 1;
         }
@@ -140,9 +140,9 @@ namespace sw
     int32 SequencePlayer::computeFrame( float32 timeSeconds ) const
     {
         const float32 fps = ( _framesPerSecond > 0.0f ) ? _framesPerSecond : 30.0f;
-        // 프레임 경계에 **정확히** 놓인 시간(끝에서 멈춤 · `seekToFrame`)이 float32 로는 경계 바로 아래가 된다 — (63/30)*30 은 62.999996
-        // 이라 그냥 자르면 한 프레임 모자란다. 반복 안 하는 시퀀스가 `_frameMax` 에 영영 닿지 않아, 그 프레임에서 끝나는 클립 · 이벤트가
-        // 빠진다. 프레임의 천분의 일만큼 얹어 자른다(배 정밀도로 곱해 긴 시퀀스에서도 오차가 그보다 작다).
+        // 프레임 경계에 **정확히** 놓인 시간(끝에서 멈춤, `seekToFrame`)이 float32 로는 경계 바로 아래가 된다. (63/30)*30 은 62.999996
+        // 이라 그냥 자르면 한 프레임 모자란다. 반복하지 않는 시퀀스가 `_frameMax` 에 영영 닿지 못해, 그 프레임에서 끝나는 클립과 이벤트가
+        // 빠진다. 프레임의 천분의 일만큼 더해서 자른다(배정밀도로 곱하므로 긴 시퀀스에서도 오차가 그보다 작다).
         constexpr float64 kFrameBoundaryTolerance = 1e-3;
         int32             frame                   = _asset._frameMin + static_cast<int32>( static_cast<float64>( timeSeconds ) * static_cast<float64>( fps ) + kFrameBoundaryTolerance );
         if ( frame < _asset._frameMin )

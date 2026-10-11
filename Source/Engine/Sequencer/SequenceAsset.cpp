@@ -88,7 +88,7 @@ namespace sw
                 (void)curve.addKey( frame, value );
             }
 
-            /** @brief 종류 표가 값 순서인지 봅니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
+            /** @brief 종류 테이블이 값 순서인지 확인합니다. `findItemKindInfo` 가 값으로 바로 찾습니다. */
             static constexpr bool isKindTableOrdered()
             {
                 for ( size_t kindIndex = 0; kindIndex < SW_COUNT_OF( kArrSequenceItemKindInfo ); ++kindIndex )
@@ -161,7 +161,7 @@ namespace sw
             item._targetObject = itemJSON.get( "target" ).asString();
             item._start        = SequenceAssetInternal::clampFrame( itemJSON.get( "start" ).asInt( 0 ) );
             item._end          = SequenceAssetInternal::clampFrame( itemJSON.get( "end" ).asInt( 10 ) );
-            // 종류는 정수 그대로 둔다 — 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
+            // 종류는 정수 그대로 둔다. 모르는 값(새 버전이 쓴 종류)도 다시 쓸 때 잃지 않고, 적용만 하지 않는다.
             const int64 rawKind = itemJSON.get( "type" ).asInt( 0 );
             item._kind          = static_cast<SequenceItemKind>( SequenceAssetInternal::clampKindValue( rawKind ) );
             if ( findItemKindInfo( item._kind ) == nullptr )

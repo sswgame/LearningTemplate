@@ -29,7 +29,7 @@ namespace sw
 
     RigNodeRegistry& RigNodeRegistry::getInstance()
     {
-        // 엔진 노드는 레지스트리가 처음 만들어질 때 한 번 든다(함수 안 정적 초기화라 스레드에 안전하다).
+        // 엔진 노드는 레지스트리가 처음 만들어질 때 한 번 등록한다(함수 안 정적 초기화라 스레드에 안전하다).
         static RigNodeRegistry s_registry;
         static const bool      s_bEngineNodes = RigNodeLibrary::registerEngineNodes( s_registry );
         (void)s_bEngineNodes;
