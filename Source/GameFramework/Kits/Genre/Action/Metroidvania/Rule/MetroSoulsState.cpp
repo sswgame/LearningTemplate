@@ -61,7 +61,7 @@ namespace sw
 
     hashed_string MetroSoulsState::die( const hashed_string& areaID, const float2& position, Vitality& vitality )
     {
-        // 되찾지 못한 시체가 있으면 그 통화는 영영 사라진다 — 두 번째 죽음의 벌.
+        // 되찾지 못한 시체가 있으면 그 통화는 영영 사라진다. 두 번째 죽음의 대가다.
         if ( _corpse._bActive == SW_TRUE )
         {
             _lostCurrency += _corpse._currency;
@@ -215,7 +215,7 @@ namespace sw
     bool MetroSoulsState::readState( Archive& archive )
     {
         uint32 killCount = 0;
-        // 처치마다 자리 id(4) + 보스(1) 이상
+        // 처치마다 위치 id(4) + 보스(1) 바이트 이상
         if ( StateArchiveUtil::readCount( archive, 5, killCount ) == false )
             return false;
         vector<MetroKillRecord> listKill( killCount );

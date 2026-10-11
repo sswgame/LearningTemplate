@@ -164,7 +164,7 @@ namespace sw
     bool WitcherBestiary::readState( Archive& archive )
     {
         uint32 count = 0;
-        // 괴물마다 이름(4) + 지식 · 처치 수(8)
+        // 괴물마다 이름(4) + 지식과 처치 수(8) 바이트
         if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 12, count ) == false )
             return false;
         vector<Entry> listEntry( count );

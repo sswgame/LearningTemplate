@@ -1,9 +1,11 @@
 /**
  * @file ArcadeVehicleMotor.h
- * @brief 아케이드 차량 몸 — 물리 엔진 없이 XZ 평면 + 높이로 가속 · 브레이크 · 후진 · 속도에 따라 둔해지는 조향 · 옆 미끄러짐(접지) · 드리프트 ·
- *        미니터보 단계 · 부스트 · 니트로 게이지 · 오프로드 감속 · 점프와 착지입니다.
- * @details 카트라이더 · 마리오카트 · 배틀로얄 차량 · 레드 데드 마차가 같은 몸을 씁니다. 좌표는 +Y 위, 진행 방향(yaw) 0 이 +Z, 양의 yaw 가 오른쪽(+X) 회전입니다.
- *          **벽 · 차끼리 충돌은 하지 않습니다** — 게임(또는 물리)이 위치 · 속도를 고쳐 넣습니다(`setPosition` · `setVelocity` · `addImpulse`).
+ * @brief 물리 엔진 없이 움직이는 아케이드 차량의 몸을 정의합니다.
+ * @details XZ 평면과 높이만으로 가속, 브레이크, 후진, 속도에 따라 둔해지는 조향, 옆 미끄러짐(접지), 드리프트, 미니터보 단계, 부스트, 니트로 게이지,
+ *          오프로드 감속, 점프와 착지를 계산한다.
+ *          카트라이더, 마리오카트, 배틀로얄 차량, 레드 데드의 마차가 같은 몸을 쓴다.
+ *          좌표는 +Y 가 위이고, 진행 방향(yaw) 0 이 +Z 이며, 양의 yaw 가 오른쪽(+X) 회전이다.
+ *          **벽이나 차끼리의 충돌은 하지 않는다.** 게임(또는 물리)이 위치와 속도를 고쳐 넣는다(`setPosition`, `setVelocity`, `addImpulse`).
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -22,7 +24,7 @@ namespace sw
 
     /**
      * @class IVehicleGround
-     * @brief 차 밑의 땅입니다 — 높이와 그 자리의 속도 배율(길 1, 풀밭 · 모래 < 1). 게임이 지형 · 높이맵 · 트랙 메시로 답합니다.
+     * @brief 차 밑의 땅입니다. 높이와 그 자리의 속도 배율(길은 1, 풀밭과 모래는 1 미만)을 게임이 지형, 높이맵, 트랙 메시로 답합니다.
      */
     class SW_GF_API IVehicleGround
     {
@@ -34,7 +36,7 @@ namespace sw
         IVehicleGround& operator=( const IVehicleGround& ) = default;
 
         virtual float32 sampleHeight( float32 x, float32 z ) const = 0;
-        /** @brief 그 자리의 최고 속도 배율입니다(1 = 길, 0.5 = 풀밭 — 오프로드). */
+        /** @brief 그 자리의 최고 속도 배율입니다. 길은 1, 풀밭 같은 오프로드는 0.5 입니다. */
         virtual float32 sampleSpeedScale( float32 x, float32 z ) const
         {
             (void)x;
@@ -46,7 +48,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 미니터보 단계 수(마리오카트의 파랑 · 주황 · 보라)입니다. */
+    /** @brief 미니터보 단계 수입니다. 마리오카트의 파랑, 주황, 보라에 해당합니다. */
     constexpr int32 kVehicleMiniTurboTierCount = 3;
 
     /** @brief 차 한 종류의 수치입니다. 속도는 월드 단위/초, 조향은 라디안/초입니다. */
@@ -98,7 +100,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 차에 일어난 일입니다. */
+    /** @brief 차에 일어난 일(이벤트)입니다. */
     struct ArcadeVehicleEvent
     {
         enum class Kind : uint8
@@ -123,10 +125,13 @@ namespace sw
 {
     /**
      * @class ArcadeVehicleMotor
-     * @brief 고정 걸음(권장 1/60)으로 `update` 를 부르거나 `advance` 에 프레임 시간을 넘깁니다(안의 `FixedStepTimer` 가 나눈다 — 프레임과 상관없이 같은 결과).
-     * @details 한 걸음: 땅 배율 → 앞 속도(가속 · 브레이크 · 후진 · 관성 · 부스트 · 상한) → 드리프트 → 조향(yaw) → 새 방향으로 속도를 나눠 옆 성분을 접지로 줄인다
-     *          → 점프 · 중력 · 착지 → 위치. 드리프트는 꾹 누른 채 조향하면 그 방향으로 시작하고, 시간이 쌓이면 미니터보 단계가 오르며, 떼면 단계만큼 부스트합니다.
-     *          드리프트하는 동안 니트로 게이지가 차서 1 이 될 때마다 니트로 하나(최대 `_maxNitroCount`)가 되고 `_bBoostPressed` 로 씁니다.
+     * @brief 아케이드 차량의 몸입니다. 고정 걸음(권장 1/60)으로 `update` 를 부르거나 `advance` 에 프레임 시간을 넘깁니다.
+     * @details `advance` 는 안의 `FixedStepTimer` 가 프레임 시간을 고정 걸음으로 나누므로 프레임 속도와 상관없이 같은 결과가 나온다.
+     *          한 걸음은 다음 순서로 진행한다.
+     *          땅 배율, 앞 속도(가속, 브레이크, 후진, 관성, 부스트, 상한), 드리프트, 조향(yaw)을 차례로 처리한다.
+     *          그다음 새 방향으로 속도를 나눠 옆 성분을 접지로 줄이고, 점프와 중력과 착지를 처리한 뒤 위치를 갱신한다.
+     *          드리프트는 버튼을 누른 채 조향하면 그 방향으로 시작한다. 시간이 쌓이면 미니터보 단계가 오르고, 버튼을 떼면 단계만큼 부스트한다.
+     *          드리프트하는 동안 니트로 게이지가 차서 1 이 될 때마다 니트로가 하나 생기며(최대 `_maxNitroCount`), `_bBoostPressed` 로 쓴다.
      */
     class SW_GF_API ArcadeVehicleMotor
     {
@@ -134,29 +139,29 @@ namespace sw
         ArcadeVehicleMotor();
 
         void setSettings( const ArcadeVehicleSettings& settings ) { _settings = settings; }
-        /** @brief 땅입니다(빌려 쓴다). nullptr 이면 높이 0 의 평평한 길입니다. */
+        /** @brief 땅을 정합니다. 빌려 쓰며, nullptr 이면 높이 0 의 평평한 길입니다. */
         void setGround( const IVehicleGround* pGround ) { _pGround = pGround; }
-        /** @brief 위치 · 방향을 두고 멈춘 상태로 돌립니다(드리프트 · 부스트 · 니트로도 비운다). */
+        /** @brief 위치와 방향을 두고 멈춘 상태로 돌립니다. 드리프트, 부스트, 니트로도 비웁니다. */
         void reset( const float3& position, float32 yaw );
         void setPosition( const float3& position ) { _position = position; }
         void setYaw( float32 yaw ) { _yaw = yaw; }
         void setVelocity( const float3& velocity ) { _velocity = velocity; }
-        /** @brief 부딪힘 · 튕기기 — 속도에 더하고 드리프트를 끊습니다(보상 없음). */
+        /** @brief 부딪힘이나 튕기기를 속도에 더하고 드리프트를 끊습니다. 드리프트 보상은 주지 않습니다. */
         void addImpulse( const float3& impulse );
-        /** @brief 게임이 주는 부스트(대시 판 · 버섯)입니다. 남은 시간보다 길면 바꿉니다. */
+        /** @brief 게임이 주는 부스트(대시 판, 버섯)를 겁니다. 남은 시간보다 길 때만 바꿉니다. */
         void startBoost( float32 duration, int32 source = -1 );
 
         /** @brief 한 걸음 나아갑니다. */
         void update( const ArcadeVehicleInput& input, float32 deltaTime );
-        /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 줍니다. 걸음 수를 돌려줍니다. */
+        /** @brief 프레임 시간을 고정 걸음으로 나눠 나아갑니다. 눌림 입력은 첫 걸음에만 주며, 진행한 걸음 수를 반환합니다. */
         int32 advance( const ArcadeVehicleInput& input, float32 frameTime );
         void  drainEvents( vector<ArcadeVehicleEvent>& outListEvent );
-        /** @brief 쌓인 알림을 꺼내지 않고 버립니다(쓰지 않는 쪽 — 받을 목록을 만들어 복사하지 않는다). */
+        /** @brief 쌓인 알림을 꺼내지 않고 버립니다. 알림을 쓰지 않는 쪽이 받을 목록을 만들어 복사하지 않도록 둔 함수입니다. */
         void discardEvents() { _eventBuffer.clear(); }
 
-        /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다 — 조향 반경 = 속도 / 이 값. */
+        /** @brief 앞 속도 @p speed 에서 조향 1 의 회전 속도(라디안/초)입니다. 조향 반경은 속도를 이 값으로 나눈 것입니다. */
         float32 computeSteerRate( float32 speed ) const;
-        /** @brief 지금 자리 · 부스트로 정해지는 최고 속도입니다. */
+        /** @brief 지금 자리와 부스트로 정해지는 최고 속도입니다. */
         float32 computeSpeedCap() const;
         float3  computeForward() const;
 
@@ -177,9 +182,9 @@ namespace sw
         const ArcadeVehicleSettings& getSettings() const { return _settings; }
         FixedStepTimer&              getTimer() { return _timer; }
 
-        /** @brief 고정 걸음 남은 시간 · 자리 · 속도 · 요 · 드리프트 · 부스트 · 니트로 · 공중을 씁니다. 설정 · 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
+        /** @brief 고정 걸음의 남은 시간, 자리, 속도, 요, 드리프트, 부스트, 니트로, 공중 여부를 씁니다. 설정과 지면 포인터는 싣지 않고, 알림은 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 의 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

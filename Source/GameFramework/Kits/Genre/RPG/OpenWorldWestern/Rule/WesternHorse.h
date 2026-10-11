@@ -1,6 +1,6 @@
 /**
  * @file WesternHorse.h
- * @brief 말 한 마리 — 유대 단계(타기 · 손질 · 먹이 · 달래기 경험치) · 단계별 능력 해금 · 체력 · 스태미나 게이지(기반 `ResourceGauge`)와 코어 · 질주 · 겁먹음입니다.
+ * @brief 말 한 마리를 다룹니다. 유대 단계(타기, 손질, 먹이, 달래기 경험치), 단계별 능력 해금, 체력, 스태미나 게이지(기반 `ResourceGauge`)와 코어, 질주, 겁먹음을 관리합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -26,7 +26,7 @@ namespace sw
     enum class WesternHorseReaction : uint8
     {
         Calm = 0, ///< 버텼다
-        Rearing,  ///< 뒷발로 섰다 — 잠깐 못 움직인다
+        Rearing,  ///< 뒷발로 섰다(잠깐 움직일 수 없다)
         Bucked    ///< 탄 사람을 떨어뜨렸다
     };
 
@@ -35,8 +35,8 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            BondLevelUp = 0, ///< _value = 새 단계
-            AbilityUnlocked, ///< _ability
+            BondLevelUp = 0, ///< _value 는 새 단계
+            AbilityUnlocked, ///< _ability 가 열렸다
             Exhausted,       ///< 질주하다 스태미나가 바닥났다
             Spooked,         ///< 뒷발로 섰다
             ThrewRider       ///< 탄 사람을 떨어뜨렸다
@@ -51,8 +51,8 @@ namespace sw
 {
     /**
      * @class WesternHorse
-     * @brief 코어는 0..100 입니다. 게이지 회복 속도는 코어에 비례합니다(코어 0 이면 생존 설정의 `_minRegenScale` 배). 코어는 게임 시간으로 줄고
-     *        먹이로 찹니다. 겁은 쌓였다 식고, 임계값(1)을 넘으면 씨앗 난수로 뒷발 · 낙마를 정합니다 — 용기와 유대가 높을수록 덜 쌓이고 덜 떨어뜨립니다.
+     * @brief 코어는 0..100 입니다. 게이지 회복 속도는 코어에 비례합니다(코어가 0이면 생존 설정의 `_minRegenScale` 배). 코어는 게임 시간으로 줄고
+     *        먹이로 찹니다. 겁은 쌓였다가 식고, 임계값(1)을 넘으면 시드 난수로 뒷발 서기와 낙마를 정합니다. 용기와 유대가 높을수록 덜 쌓이고 덜 떨어뜨립니다.
      */
     class SW_GF_API WesternHorse
     {
@@ -64,44 +64,44 @@ namespace sw
 
         WesternHorse();
 
-        /** @brief 품종으로 시작합니다. 품종이 없으면 false 입니다. */
+        /** @brief 품종으로 시작합니다. 품종이 없으면 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const WesternCatalog* pCatalog, const hashed_string& horseID, uint32 seed );
         /**
-         * @brief 시간을 흘립니다 — 게이지 회복(코어 배율) · 코어 감소 · 겁 식기 · 탄 시간 경험치.
+         * @brief 시간을 흘립니다. 게이지 회복(코어 배율), 코어 감소, 겁 식기, 탄 시간 경험치를 처리합니다.
          * @param deltaTime 실제 초 @param gameHours 이번에 흐른 게임 시간
          */
         void update( float32 deltaTime, float32 gameHours );
         void setRidden( bool bRidden ) { _bRidden = bRidden ? SW_TRUE : SW_FALSE; }
-        /** @brief 질주합니다(이번 프레임). 스태미나가 바닥나면 false — 질주를 멈춘다. */
+        /** @brief 이번 프레임에 질주합니다. 스태미나가 바닥나면 false 를 반환하며, 질주를 멈춰야 합니다. */
         bool gallop( float32 deltaTime );
-        /** @brief 솔질합니다. 손질 대기 시간이 지났으면 경험치가 붙고 true 입니다. */
+        /** @brief 솔질합니다. 손질 대기 시간이 지났으면 경험치가 붙고 true 를 반환합니다. */
         bool brush();
-        /** @brief 먹이를 줍니다 — 코어 · 게이지 회복과 유대 경험치. 모르는 먹이면 false 입니다. */
+        /** @brief 먹이를 줍니다. 코어와 게이지를 회복하고 유대 경험치를 줍니다. 모르는 먹이면 false 를 반환합니다. */
         bool feed( const hashed_string& foodID );
-        /** @brief 겁을 줍니다(총소리 · 뱀 · 곰 — @p amount 1 이면 용기 없는 말이 바로 넘는다). */
+        /** @brief 겁을 줍니다(총소리, 뱀, 곰). @p amount 가 1이면 용기 없는 말이 바로 한계를 넘습니다. */
         WesternHorseReaction frighten( float32 amount );
-        /** @brief 달랩니다 — 겁을 지우고 유대 경험치를 조금. */
+        /** @brief 달랩니다. 겁을 지우고 유대 경험치를 조금 줍니다. */
         void calm();
         void addBondExperience( float32 amount );
         void takeDamage( float32 amount ) { (void)_health.reduce( amount ); }
 
-        /** @brief 지금 유대 단계(카탈로그의 `level`)입니다. */
+        /** @brief 지금 유대 단계를 반환합니다(카탈로그의 `level`). */
         int32 getBondLevel() const;
-        /** @brief 모은 유대 경험치(정수 경험치 + 아직 1 이 안 된 소수)입니다. */
+        /** @brief 모은 유대 경험치를 반환합니다(정수 경험치에 아직 1이 안 된 소수를 더한 값). */
         float32 getBondExperience() const { return static_cast<float32>( _bond.getTotalXp() ) + _bondXpCarry; }
         bool    hasAbility( const hashed_string& abilityID ) const;
         float32 getHealthCore() const { return _healthCore; }
         float32 getStaminaCore() const { return _staminaCore; }
         float32 getFear() const { return _fear; }
-        /** @brief 코어에 따른 게이지 회복 배율입니다. */
+        /** @brief 코어에 따른 게이지 회복 배율을 반환합니다. */
         float32                computeRegenScale( float32 core ) const;
         const ResourceGauge&   getHealth() const { return _health; }
         const ResourceGauge&   getStamina() const { return _stamina; }
         const WesternHorseDef* getDef() const { return _pDef; }
         void                   drainEvents( vector<WesternHorseEvent>& outListEvent );
-        /** @brief 품종 id · 열린 능력 · 체력 · 스태미나 게이지 · 난수 · 코어 · 유대(레벨 진행 + 소수) · 겁 · 손질 뒤 시간 · 탔는지 · 질주를 씁니다. 카탈로그는 싣지 않는다. */
+        /** @brief 품종 id, 열린 능력, 체력, 스태미나 게이지, 난수, 코어, 유대(레벨 진행과 소수), 겁, 손질한 뒤 시간, 탔는지, 질주를 씁니다. 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 품종이 카탈로그에 없거나 깨졌으면 false 이고 그대로입니다(품종이 다르면 그 품종의 게이지 설정으로 바꾼다). */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 품종이 카탈로그에 없거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(품종이 다르면 그 품종의 게이지 설정으로 바꿉니다). */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
@@ -117,11 +117,11 @@ namespace sw
         const WesternHorseDef*         _pDef;
         float32                        _healthCore;
         float32                        _staminaCore;
-        LevelProgress                  _bond;        ///< 유대 — 레벨 L 은 카탈로그 단계 L − 1 번째(`WesternCatalog::getBondCurve`)
-        float32                        _bondXpCarry; ///< 아직 1 이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
+        LevelProgress                  _bond;        ///< 유대 단계다. 레벨 L 은 카탈로그 단계의 L − 1 번째다(`WesternCatalog::getBondCurve`)
+        float32                        _bondXpCarry; ///< 아직 1이 안 된 유대 경험치(타기는 초당 소수로 쌓인다)
         float32                        _fear;
         float32                        _hoursSinceBrush;
         uint8                          _bRidden;
-        uint8                          _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 준다)
+        uint8                          _bGalloping; ///< 이번 `update` 앞에 질주했다(코어가 더 줄어든다)
     };
 } // namespace sw

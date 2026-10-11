@@ -64,7 +64,7 @@ namespace sw
         {
             if ( _pStage->_listCheckpoint[index] != checkpointID )
                 continue;
-            // 앞 것으로 되돌아가지 않는다 — 이미 지난 체크포인트를 다시 밟아도 시작점은 그대로.
+            // 앞쪽 체크포인트로 되돌아가지 않는다. 이미 지난 체크포인트를 다시 밟아도 시작점은 그대로다.
             if ( static_cast<int32>( index ) <= _checkpointIndex )
                 return false;
             _checkpointIndex = static_cast<int32>( index );
@@ -94,7 +94,7 @@ namespace sw
             return hashed_string{};
         ++_deathCount;
         --_lives;
-        _listSecretPending.clear(); // 확정되지 않은 것은 제자리로
+        _listSecretPending.clear(); // 확정되지 않은 것은 원래 자리에 다시 놓는다
         if ( _lives <= 0 )
         {
             _lives = 0;
@@ -124,7 +124,7 @@ namespace sw
         result._deathCount                = _deathCount;
         result._secretFound               = static_cast<int32>( _listSecretCommitted.size() );
         result._secretTotal               = static_cast<int32>( _pStage->_listSecret.size() );
-        // 시간: 기준 시간 안이면 만점, 넘으면 기준 ÷ 걸린 시간. 피격: 허용 수에 닿으면 0(죽음도 한 번의 피격으로 센다). 수집: 찾은 비율.
+        // 시간은 기준 시간 안이면 만점이고, 넘으면 기준 시간을 걸린 시간으로 나눈 값이다. 피격은 허용 수에 닿으면 0이다(죽음도 한 번의 피격으로 센다). 수집은 찾은 비율이다.
         result._timeScore    = _elapsed <= _pStage->_parTime ? 1.0f : _pStage->_parTime / _elapsed;
         const float32 hits   = static_cast<float32>( _hitCount + _deathCount );
         result._hitScore     = MathUtil::saturate( 1.0f - hits / static_cast<float32>( _pStage->_hitTolerance ) );
@@ -214,7 +214,7 @@ namespace sw
             return false;
         restored._state = static_cast<ActionStageState>( state );
 
-        // 확정 · 지닌 비밀 순서 — 비밀은 이 스테이지의 것이어야 한다
+        // 확정한 비밀, 지닌 비밀 순서로 읽는다. 비밀은 이 스테이지의 것이어야 한다
         for ( int32 listIndex = 0; listIndex < 2; ++listIndex )
         {
             vector<hashed_string>& listSecret  = listIndex == 0 ? restored._listSecretCommitted : restored._listSecretPending;

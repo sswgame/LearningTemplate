@@ -1,6 +1,6 @@
 /**
  * @file CreatureLifeCatalog.h
- * @brief 생물 생활 정의 — 서식지 레시피(칸 패턴) · 생물 종(좋아하는 서식지 · 음식 · 선물 · 시간대 · 날씨 · 능력 · 부탁) · 능력(칸 변환 규칙) · 마을 매력도 단계입니다.
+ * @brief 생물 생활 정의를 담습니다. 서식지 레시피(셀 패턴), 생물 종(좋아하는 서식지, 음식, 선물, 시간대, 날씨, 능력, 부탁), 능력(셀 변환 규칙), 마을 매력도 단계를 정의합니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -19,50 +19,50 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 서식지 패턴의 칸 하나입니다. */
+    /** @brief 서식지 패턴의 셀 하나입니다. */
     struct HabitatCell
     {
-        hashed_string _object{};         ///< 있어야 하는 오브젝트(비면 빈 칸이어야 한다)
-        uint8         _bAny{ SW_FALSE }; ///< 무엇이든 된다(`.`) — 칸을 차지하지 않는다
+        hashed_string _object{};         ///< 있어야 하는 오브젝트이다(비어 있으면 빈 셀이어야 한다)
+        uint8         _bAny{ SW_FALSE }; ///< 무엇이든 된다(`.`). 셀을 차지하지 않는다
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @brief 서식지 레시피 하나 — 격자 위 오브젝트 조합입니다. 90° 회전한 모양도 같은 서식지입니다.
-     * @details 패턴은 `_width` × `_height` 행 우선입니다. 무엇이든 되는 칸이 아닌 칸을 서식지가 차지합니다(한 칸은 한 서식지에만).
+     * @brief 서식지 레시피 하나입니다. 격자 위 오브젝트의 조합이며, 90° 회전한 모양도 같은 서식지입니다.
+     * @details 패턴은 `_width` x `_height` 크기의 행 우선 배열이다. 서식지는 "무엇이든 되는 셀" 이 아닌 셀을 차지한다(한 셀은 한 서식지에만 속한다).
      */
     struct SW_GF_API HabitatDef
     {
         hashed_string       _id{};
         string              _name{};
-        vector<HabitatCell> _listCell{}; ///< 행 우선(y × width + x)
+        vector<HabitatCell> _listCell{}; ///< 행 우선 배열이다(y x width + x)
         int32               _width{ 0 };
         int32               _height{ 0 };
         int32               _capacity{ 1 }; ///< 이 서식지 하나에 머무는 생물 수
 
         const HabitatCell& getCell( int32 x, int32 y ) const { return _listCell[static_cast<size_t>( y * _width + x )]; }
-        /** @brief 차지하는 칸 수입니다(무엇이든 되는 칸 제외). 큰 서식지가 먼저 맞춰집니다. */
+        /** @brief 차지하는 셀 수를 반환합니다(무엇이든 되는 셀은 제외합니다). 큰 서식지를 먼저 맞춥니다. */
         int32 countClaimedCells() const;
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 능력의 칸 변환 규칙 하나 — `_from` 이 놓인 칸을 `_to` 로 바꾸고 `_yieldItem` 을 줍니다. */
+    /** @brief 능력의 셀 변환 규칙 하나입니다. `_from` 이 놓인 셀을 `_to` 로 바꾸고 `_yieldItem` 을 줍니다. */
     struct CreatureTileRule
     {
-        hashed_string _from{};      ///< 비면 빈 칸
-        hashed_string _to{};        ///< 비면 비운다
-        hashed_string _yieldItem{}; ///< 바꾸며 얻는 아이템(바위 → 돌)
+        hashed_string _from{};      ///< 비어 있으면 빈 셀이다
+        hashed_string _to{};        ///< 비어 있으면 비운다
+        hashed_string _yieldItem{}; ///< 바꾸며 얻는 아이템이다(바위에서 돌)
         int32         _yieldCount{ 1 };
     };
 } // namespace sw
 
 namespace sw
 {
-    /** @brief 생물 능력 하나입니다(나무 심기 · 물 만들기 · 바위 부수기). 규칙은 위에서부터 처음 맞는 것을 씁니다. */
+    /** @brief 생물 능력 하나입니다(나무 심기, 물 만들기, 바위 부수기). 규칙은 위에서부터 처음 맞는 것을 씁니다. */
     struct SW_GF_API CreatureAbilityDef
     {
         hashed_string            _id{};
@@ -80,12 +80,12 @@ namespace sw
     {
         hashed_string         _id{};
         string                _name{};
-        vector<hashed_string> _listHabitat{}; ///< 좋아하는 서식지(이 서식지가 생기면 찾아온다)
-        vector<hashed_string> _listFood{};    ///< 좋아하는 음식(선물 점수 `_foodPoints`)
-        vector<hashed_string> _listGift{};    ///< 좋아하는 선물(선물 점수 `_likedGiftPoints`)
+        vector<hashed_string> _listHabitat{}; ///< 좋아하는 서식지이다(이 서식지가 생기면 찾아온다)
+        vector<hashed_string> _listFood{};    ///< 좋아하는 음식이다(선물 점수 `_foodPoints`)
+        vector<hashed_string> _listGift{};    ///< 좋아하는 선물이다(선물 점수 `_likedGiftPoints`)
         vector<hashed_string> _listAbility{};
-        vector<hashed_string> _listRequest{};    ///< 이 생물이 하는 부탁(퀘스트 id)
-        ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`) · 날씨(`weathers`) — 비면 언제나. NPC 일정과 같은 조건 판정이다
+        vector<hashed_string> _listRequest{};    ///< 이 생물이 하는 부탁이다(퀘스트 id)
+        ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`)와 날씨(`weathers`)이며 비어 있으면 언제나 온다. NPC 일정과 같은 조건 판정을 쓴다
         float32               _chance{ 0.5f };   ///< 조건이 맞는 시간마다 찾아올 확률
 
         bool likesHabitat( const hashed_string& habitatID ) const;
@@ -99,7 +99,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 매력도 단계 하나 — 점수가 `_minScore` 이상이면 이 단계입니다. */
+    /** @brief 매력도 단계 하나입니다. 점수가 `_minScore` 이상이면 이 단계입니다. */
     struct TownAppealTier
     {
         hashed_string _name{};
@@ -109,10 +109,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 마을 매력도 점수 = 서식지 종류 수 × `_diversityWeight` + 생물 수 × `_creatureWeight` + 호감도 평균 × `_friendshipWeight` 입니다. */
+    /** @brief 마을 매력도 점수는 서식지 종류 수 x `_diversityWeight` + 생물 수 x `_creatureWeight` + 호감도 평균 x `_friendshipWeight` 입니다. */
     struct TownAppealDef
     {
-        vector<TownAppealTier> _listTier{}; ///< 낮은 점수부터
+        vector<TownAppealTier> _listTier{}; ///< 낮은 점수부터 나열한다
         float32                _diversityWeight{ 10.0f };
         float32                _creatureWeight{ 5.0f };
         float32                _friendshipWeight{ 0.1f };
@@ -123,7 +123,7 @@ namespace sw
 {
     /**
      * @class CreatureLifeCatalog
-     * @brief XML 형식입니다.
+     * @brief 카탈로그의 XML 형식입니다.
      * @code
      *     <CreatureLifeCatalog>
      *       <Habitat id="tall_grass" name="Tall Grass" capacity="1">
@@ -137,7 +137,7 @@ namespace sw
      *       <Appeal diversity="10" creature="5" friendship="0.1"><Tier name="Camp" min="0"/><Tier name="Village" min="40"/></Appeal>
      *     </CreatureLifeCatalog>
      * @endcode
-     *          `.` 은 무엇이든 되는 칸, `empty` 오브젝트는 빈 칸입니다. 행 길이가 다르거나 모르는 기호가 있는 서식지는 경고하고 뺍니다.
+     * @details `.` 은 무엇이든 되는 셀이고, `empty` 오브젝트는 빈 셀이다. 행 길이가 다르거나 모르는 기호가 있는 서식지는 경고하고 뺀다.
      */
     class SW_GF_API CreatureLifeCatalog : public XMLCatalog<CreatureLifeCatalog>
     {
@@ -157,11 +157,11 @@ namespace sw
         const vector<HabitatDef>&         getHabitats() const { return _habitatCatalog.getAll(); }
         const vector<CreatureSpeciesDef>& getSpecies() const { return _speciesCatalog.getAll(); }
         const TownAppealDef&              getAppeal() const { return _appeal; }
-        /** @brief 서식지를 맞춰 볼 차례(차지 칸이 많은 것 먼저, 같으면 읽은 순서)의 자리 번호입니다. */
+        /** @brief 서식지를 맞춰 볼 순서(차지하는 셀이 많은 것 먼저, 같으면 읽은 순서)의 index 를 반환합니다. */
         const vector<int32>& getHabitatMatchOrder() const { return _listHabitatOrder; }
 
     private:
-        static constexpr const utf8* kXMLRootName = "CreatureLifeCatalog"; ///< 루트 원소(`XMLCatalog`)
+        static constexpr const utf8* kXMLRootName = "CreatureLifeCatalog"; ///< XML 루트 원소 이름이다(`XMLCatalog` 이 사용한다)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         void                         rebuildHabitatOrder();
 

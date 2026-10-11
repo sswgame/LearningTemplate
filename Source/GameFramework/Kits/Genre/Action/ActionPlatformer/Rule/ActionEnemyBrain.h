@@ -1,8 +1,8 @@
 /**
  * @file ActionEnemyBrain.h
- * @brief 적 패턴 실행 — 데이터로 적은 간단한 상태 기계(`ActionPatternDef`)를 프레임 단위로 돌립니다: 시간이 다 하면 다음 상태, 플레이어가 가까우면
- *        `onNear` 상태, 맞으면 `onHit` 상태(경직). 상태마다 이동 · 근접 판정 · 들어설 때 한 발 쏘기를 냅니다.
- * @details 순찰 → 조준 → 사격 → 쉬기 같은 플랫포머 졸개 · 보스 패턴이 이것으로 충분합니다. 난수가 없고 프레임으로만 가서 결정적입니다.
+ * @brief 적 패턴을 실행합니다. 데이터로 적은 간단한 상태 기계(`ActionPatternDef`)를 프레임 단위로 돌립니다. 시간이 다 되면 다음 상태로 가고, 플레이어가 가까우면 `onNear` 상태로, 맞으면 `onHit` 상태(경직)로 갑니다.
+ *        상태마다 이동, 근접 판정, 들어설 때 한 발 쏘기를 정할 수 있습니다.
+ * @details 순찰, 조준, 사격, 쉬기로 이어지는 플랫포머의 졸개와 보스 패턴은 이것으로 충분하다. 난수가 없고 프레임으로만 진행하므로 결정적이다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -35,7 +35,7 @@ namespace sw
 {
     /**
      * @class ActionEnemyBrain
-     * @brief 적 하나의 패턴 진행입니다. 정의는 빌려 씁니다.
+     * @brief 적 하나의 패턴 진행 상태입니다. 정의는 빌려 씁니다.
      */
     class SW_GF_API ActionEnemyBrain
     {
@@ -45,14 +45,14 @@ namespace sw
 
         ActionEnemyBrain();
 
-        /** @brief 패턴을 두고 시작 상태로 갑니다. 패턴이 비면 false 입니다. */
+        /** @brief 패턴을 설정하고 시작 상태로 갑니다. 패턴이 비어 있으면 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const ActionPatternDef* pPattern, int32 facing = 1 );
         /**
-         * @brief 한 프레임 갑니다. 먼저 가까움(`onNear`)을, 그다음 시간(`next`)을 보고 상태를 바꾼 뒤 이번 프레임의 할 일을 냅니다.
-         * @param playerDistance 플레이어까지 거리(가까움 판정)
+         * @brief 한 프레임 진행합니다. 먼저 가까움(`onNear`)을 보고 그다음 시간(`next`)을 확인해 상태를 바꾼 뒤, 이번 프레임에 할 일을 정합니다.
+         * @param playerDistance 플레이어까지의 거리(가까움 판정에 쓴다)
          */
         ActionEnemyAction advanceFrame( float32 playerDistance );
-        /** @brief 맞았습니다 — 지금 상태에 `onHit` 이 있으면 그리로 갑니다(다음 프레임부터). 바뀌었으면 true 입니다. */
+        /** @brief 맞았음을 알립니다. 지금 상태에 `onHit` 이 있으면 다음 프레임부터 그 상태로 갑니다. 상태가 바뀌었으면 true 를 반환합니다. */
         bool notifyHit();
         void setFacing( int32 facing ) { _facing = facing < 0 ? -1 : 1; }
 
@@ -60,11 +60,11 @@ namespace sw
         int32                getStateFrame() const { return _stateFrame; }
         int32                getFacing() const { return _facing; }
 
-        /** @brief 패턴 id · 상태 id · 상태 안의 프레임 · 바라보는 쪽 · 들어선 프레임 표시를 씁니다. 패턴 정의는 카탈로그의 것이라 id 만 싣습니다. */
+        /** @brief 패턴 id, 상태 id, 상태 안의 프레임, 바라보는 쪽, 들어선 프레임 표시를 씁니다. 패턴 정의는 카탈로그의 것이라 id 만 싣습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief 패턴을 찾을 카탈로그를 빌립니다 — `readState` 하기 전에 묶는다(카탈로그는 뇌보다 오래 산다). */
+        /** @brief 패턴을 찾을 카탈로그를 빌립니다. `readState` 하기 전에 연결해야 합니다(카탈로그는 이 객체보다 오래 삽니다). */
         void bindCatalog( const ActionPlatformerCatalog* pCatalog ) { _pCatalog = pCatalog; }
-        /** @brief `writeState` 의 바이트로 바꿉니다 — 패턴은 묶은 카탈로그에서 id 로 찾습니다. 패턴이 있는데 카탈로그가 없거나, 없는 패턴 · 상태거나 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 패턴은 연결한 카탈로그에서 id 로 찾습니다. 패턴이 있는데 카탈로그가 없거나, 없는 패턴이나 상태이거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
@@ -72,10 +72,10 @@ namespace sw
         const ActionPatternStateDef* getState() const;
 
         const ActionPatternDef*        _pPattern;
-        const ActionPlatformerCatalog* _pCatalog; ///< `readState` 가 패턴을 찾는 곳(빌림)
+        const ActionPlatformerCatalog* _pCatalog; ///< `readState` 가 패턴을 찾는 카탈로그(빌려 온 것)
         int32                          _stateIndex;
-        int32                          _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임 = 0)
+        int32                          _stateFrame; ///< 지금 상태에서 지난 프레임(들어선 프레임이 0)
         int32                          _facing;
-        uint8                          _bEntered; ///< 이번 프레임에 상태에 들어섰다(쏘기 한 번)
+        uint8                          _bEntered; ///< 이번 프레임에 상태에 들어섰다(한 번만 쏘기 위한 표시)
     };
 } // namespace sw

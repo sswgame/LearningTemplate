@@ -1,7 +1,7 @@
 /**
  * @file JRPGParty.h
- * @brief JRPG 파티 — 멤버(직업 · 레벨 · 능력치 · HP/MP · 내공 · 배운 주문 · 비급 숙련 · 장비), 전직(레벨 1 · 능력치 절반 · 주문 유지 — DQ3),
- *        경험치 · 골드 분배, 여관(살아 있는 멤버 회복) · 교회(부활), 지갑 · 인벤토리(기반 ShopState 와 그대로 쓴다)입니다.
+ * @brief JRPG 파티입니다. 멤버(직업, 레벨, 능력치, HP/MP, 내공, 배운 주문, 비급 숙련, 장비), 전직(레벨 1로 돌아가고 능력치는 절반이 되며 주문은 유지, DQ3),
+ *        경험치와 골드 분배, 여관(살아 있는 멤버 회복)과 교회(부활), 지갑과 인벤토리(기반 ShopState 와 그대로 함께 씀)를 관리합니다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -54,7 +54,7 @@ namespace sw
         bool  isAlive() const { return _hp > 0; }
         int32 getStat( JRPGStat stat ) const { return _arrStat[static_cast<size_t>( stat )]; }
         bool  knowsSpell( const hashed_string& spellID ) const;
-        /** @brief 비급 숙련입니다. 배우지 않았으면 −1 입니다. */
+        /** @brief 비급 숙련을 반환합니다. 배우지 않았으면 −1 입니다. */
         int32 findProficiency( const hashed_string& manualID ) const;
     };
 } // namespace sw
@@ -78,14 +78,14 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            LevelUp = 0,       ///< `_value` = 새 레벨
-            LearnedSpell,      ///< `_id` = 주문
-            TechniqueUnlocked, ///< `_id` = 초식
-            ClassChanged,      ///< `_id` = 새 직업
-            ExpGained,         ///< `_value` = 받은 경험치
-            GoldGained,        ///< `_value` = 골드(멤버 −1)
-            Rested,            ///< 여관 — `_value` = 낸 돈
-            Revived            ///< 교회 — `_value` = 낸 돈
+            LevelUp = 0,       ///< `_value` 는 새 레벨
+            LearnedSpell,      ///< `_id` 는 주문
+            TechniqueUnlocked, ///< `_id` 는 초식
+            ClassChanged,      ///< `_id` 는 새 직업
+            ExpGained,         ///< `_value` 는 받은 경험치
+            GoldGained,        ///< `_value` 는 골드(멤버는 −1)
+            Rested,            ///< 여관에서 쉬었다. `_value` 는 낸 돈
+            Revived            ///< 교회에서 부활했다. `_value` 는 낸 돈
         };
         hashed_string _id{};
         int32         _memberIndex{ -1 };
@@ -98,9 +98,9 @@ namespace sw
 {
     /**
      * @class JRPGParty
-     * @brief 멤버 최대 4 명과 지갑 · 인벤토리입니다. 카탈로그 둘은 빌려 씁니다.
-     * @details 공격력 = 힘 + 장비 "attack", 방어력 = 체력 / 2 + 장비 "defense" 입니다(장비는 기반 `Equipment` — 아이템 `<Stats attack="12"/>`).
-     *          경험치 분배는 DQ 식: 살아 있는 멤버 수로 나눈 몫(내림)을 각자 받고, 골드는 지갑에 그대로 들어갑니다.
+     * @brief 멤버 최대 4명과 지갑, 인벤토리를 관리합니다. 카탈로그 둘은 빌려 씁니다.
+     * @details 공격력은 힘에 장비 "attack" 을 더한 값이고, 방어력은 체력 / 2 에 장비 "defense" 를 더한 값이다(장비는 기반 `Equipment` 를 쓰며 아이템의 `<Stats attack="12"/>` 로 정한다).
+     *          경험치 분배는 DQ 식이다. 살아 있는 멤버 수로 나눈 몫(내림)을 각자 받고, 골드는 지갑에 그대로 들어간다.
      */
     class SW_GF_API JRPGParty
     {
@@ -109,39 +109,39 @@ namespace sw
         static constexpr uint32 kStateVersion        = 1;
         static constexpr int32  kMaxMembers          = 4;
         static constexpr int32  kInnerMax            = 100;
-        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전
+        static constexpr int32  kClassChangeMinLevel = 20; ///< DQ3 다마 신전의 최소 레벨
 
         JRPGParty();
 
-        /** @brief 새 파티를 엽니다. 파티 가방 · 지갑은 @p refs 에서 빌립니다 — 가방이 없으면 아이템이 드는 전직이, 지갑이 없으면 골드 보상 · 여관 · 교회가 막힙니다. */
+        /** @brief 새 파티를 엽니다. 파티 가방과 지갑은 @p refs 에서 빌립니다. 가방이 없으면 아이템이 필요한 전직이, 지갑이 없으면 골드 보상, 여관, 교회가 막힙니다. */
         void initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const GameStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
-        /** @brief 멤버를 더합니다(직업의 레벨 1 능력치에서 @p level 까지 성장). 자리 번호, 못 더하면 −1 입니다. */
+        /** @brief 멤버를 추가합니다(직업의 레벨 1 능력치에서 @p level 까지 성장시킵니다). 멤버 인덱스를 반환하고, 추가하지 못하면 −1 을 반환합니다. */
         int32 addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level = 1 );
         /**
-         * @brief 전직합니다(DQ3) — 레벨 1 · 경험치 0 으로 돌아가고 능력치는 지금의 절반(내림, 최대 HP 는 1 이상), 배운 주문은 남습니다.
-         * @param minLevel 전직할 수 있는 최소 레벨입니다.
+         * @brief 전직합니다(DQ3). 레벨 1과 경험치 0으로 돌아가고, 능력치는 지금의 절반이 되며(내림, 최대 HP 는 1 이상), 배운 주문은 남습니다.
+         * @param minLevel 전직할 수 있는 최소 레벨
          */
         JRPGClassChangeResult changeClass( int32 memberIndex, const hashed_string& classID, int32 minLevel = kClassChangeMinLevel );
-        /** @brief 경험치를 더하고 오른 레벨 수입니다. 레벨마다 직업 성장치를 더하고 그 레벨의 주문을 배웁니다. */
+        /** @brief 경험치를 더하고 오른 레벨 수를 반환합니다. 레벨마다 직업 성장치를 더하고 그 레벨의 주문을 배웁니다. */
         int32 addExp( int32 memberIndex, int64 amount );
-        /** @brief 전투 보상 — 살아 있는 멤버가 경험치를 똑같이 나눠 받고(나머지 버림), 골드는 지갑으로 갑니다. 한 멤버의 몫입니다. */
+        /** @brief 전투 보상을 나눕니다. 살아 있는 멤버가 경험치를 똑같이 나눠 받고(나머지는 버림), 골드는 지갑으로 갑니다. 한 멤버가 받은 경험치를 반환합니다. */
         int64 distributeRewards( int64 exp, int64 gold );
-        /** @brief 여관 — 살아 있는 멤버 수 × @p pricePerMember 를 내고 HP · MP 를 채웁니다. 쓰러진 멤버는 그대로입니다. 돈이 모자라면 false 입니다. */
+        /** @brief 여관을 씁니다. 살아 있는 멤버 수 × @p pricePerMember 를 내고 HP 와 MP 를 채웁니다. 쓰러진 멤버는 그대로 두며, 돈이 모자라면 false 를 반환합니다. */
         [[nodiscard]] bool restAtInn( int64 pricePerMember );
-        /** @brief 교회 — 레벨 × @p pricePerLevel 을 내고 쓰러진 멤버를 HP 가득 살립니다. */
+        /** @brief 교회를 씁니다. 레벨 × @p pricePerLevel 을 내고 쓰러진 멤버를 HP 가득 살립니다. */
         [[nodiscard]] bool reviveAtChurch( int32 memberIndex, int64 pricePerLevel );
-        /** @brief 비급을 익힙니다(숙련 0 — 첫 단계가 0 이면 그 초식이 열린다). */
+        /** @brief 비급을 익힙니다(숙련 0). 첫 단계가 0이면 그 초식이 열립니다. */
         void learnManual( int32 memberIndex, const hashed_string& manualID );
         /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이면 아무것도 하지 않습니다. */
         void addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount );
         void drainEvents( vector<JRPGPartyEvent>& outListEvent );
-        /** @brief 멤버(직업 · 이름 · 주문 · 비급 숙련 · 장비 아이템 id · 레벨 · 능력치 · HP/MP · 내공)를 씁니다. 가방 · 지갑은 빌린 것이라 싣지 않는다. */
+        /** @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 id, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 모르는 직업 · 아이템, 장비 칸 수가 다르거나 깨졌으면 false 이고 그대로입니다(카탈로그 · 칸 구성은 `initialize` 의 것). */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 직업이나 아이템이거나, 장비 슬롯 수가 다르거나, 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(카탈로그와 슬롯 구성은 `initialize` 에서 받은 것입니다). */
         [[nodiscard]] bool readState( Archive& archive );
 
-        /** @brief 이 주문 · 초식을 쓸 수 있는가입니다(배웠거나, 비급 숙련이 그 단계에 닿았다). */
+        /** @brief 이 주문이나 초식을 쓸 수 있는지 반환합니다(배웠거나, 비급 숙련이 그 단계에 닿았으면 true 입니다). */
         bool  canUseSpell( int32 memberIndex, const hashed_string& spellID ) const;
         bool  isTechniqueUnlocked( int32 memberIndex, const hashed_string& techniqueID ) const;
         int32 computeAttack( int32 memberIndex ) const;
@@ -165,7 +165,7 @@ namespace sw
         string                      _equipLayout;
         const JRPGCatalog*          _pCatalog;
         const ItemCatalog*          _pItemCatalog;
-        Inventory*                  _pInventory; ///< 플레이어 가방(빌림)
-        Wallet*                     _pWallet;    ///< 빌린 지갑(골드)
+        Inventory*                  _pInventory; ///< 플레이어 가방(빌려 온 것)
+        Wallet*                     _pWallet;    ///< 빌려 온 지갑(골드)
     };
 } // namespace sw

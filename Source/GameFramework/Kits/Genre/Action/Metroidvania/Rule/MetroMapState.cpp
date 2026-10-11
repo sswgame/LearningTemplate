@@ -134,7 +134,7 @@ namespace sw
         outListPickup.clear();
         if ( _pCatalog == nullptr )
             return;
-        // 얻은 순서가 아니라 카탈로그 순서로 — 같은 진행이면 늘 같은 세이브.
+        // 얻은 순서가 아니라 카탈로그 순서로 쓴다. 그래야 같은 진행이면 항상 같은 세이브가 나온다.
         for ( const MetroRegionMapDef& regionMap : _pCatalog->getRegionMaps() )
         {
             if ( hasRegionMap( regionMap._id ) )
@@ -205,7 +205,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return false;
-        // 산 지도 · 연 지점 · 주운 것 순서 — 모두 카탈로그에 있고 겹치지 않아야 한다
+        // 산 지도, 연 지점, 주운 것 순서로 읽는다. 모두 카탈로그에 있고 겹치지 않아야 한다
         vector<hashed_string> listRegionMap;
         vector<hashed_string> listSite;
         vector<hashed_string> listPickup;

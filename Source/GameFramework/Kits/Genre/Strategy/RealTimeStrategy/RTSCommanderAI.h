@@ -1,6 +1,6 @@
 /**
  * @file RTSCommanderAI.h
- * @brief 컴퓨터 상대 — 행동 트리로 일꾼 · 보급 · 생산 건물 · 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
+ * @brief 컴퓨터 상대를 구현합니다. 행동 트리로 일꾼, 보급, 생산 건물, 병력을 늘리고, 공격받으면 막고, 병력이 차면 쳐들어갑니다.
  */
 #pragma once
 #include "Core/Common/Macros.h"
@@ -15,20 +15,20 @@
 
 namespace sw
 {
-    /** @brief AI 가 쓰는 정의 id 와 목표 수입니다(종족 · 난이도마다 데이터로 바꾼다). */
+    /** @brief AI 가 쓰는 정의 id 와 목표 수입니다. 종족과 난이도에 따라 데이터로 바꿉니다. */
     struct RTSCommanderAISettings
     {
         hashed_string _workerID{};
-        hashed_string _depotID{};      ///< 본진(일꾼을 만든다)
+        hashed_string _depotID{};      ///< 일꾼을 만드는 본진
         hashed_string _supplyID{};     ///< 보급 건물
         hashed_string _productionID{}; ///< 병력 건물
         hashed_string _armyUnitID{};   ///< 병력 유닛
         float32       _thinkInterval{ 0.5f };
-        float32       _defendRadius{ 14.0f }; ///< 본진에서 이 안의 공격만 막으러 간다
+        float32       _defendRadius{ 14.0f }; ///< 본진에서 이 거리 안의 공격만 막으러 간다
         int32         _workerTarget{ 14 };
         int32         _productionTarget{ 2 };
         int32         _attackArmySize{ 8 };
-        int32         _supplyMargin{ 3 }; ///< 남은 보급이 이만큼 이하면 보급 건물을 짓는다
+        int32         _supplyMargin{ 3 }; ///< 남은 보급이 이 값 이하이면 보급 건물을 짓는다
     };
 } // namespace sw
 
@@ -36,19 +36,19 @@ namespace sw
 {
     /**
      * @class RTSCommanderAI
-     * @brief 한 플레이어를 맡는 AI 입니다. 트리는 이렇습니다(반응형 셀렉터 — 위가 먼저).
+     * @brief 플레이어 한 명을 맡는 AI 입니다. 트리는 아래와 같고, 반응형 셀렉터라서 위쪽 노드를 먼저 평가합니다.
      * @code
      *     Root (reactive)
-     *     ├─ [Threat IsSet, LowerPriority 중단] Defend — 병력을 위협 자리로 공격 이동
+     *     ├─ [Threat IsSet, LowerPriority 중단] Defend: 병력을 위협 위치로 공격 이동
      *     └─ Economy (sequence, 모두 ForceSuccess)
-     *        ├─ GatherIdle      — 노는 일꾼을 가까운 광물로
-     *        ├─ TrainWorkers    — 목표 수까지 본진에서
-     *        ├─ BuildSupply     — 남은 보급이 적으면
-     *        ├─ BuildProduction — 목표 수까지
-     *        ├─ TrainArmy       — 노는 생산 건물마다
-     *        └─ Attack          — 병력이 차면 적 시작 지점으로 공격 이동
+     *        ├─ GatherIdle      : 노는 일꾼을 가까운 광물로 보낸다
+     *        ├─ TrainWorkers    : 목표 수까지 본진에서 일꾼을 만든다
+     *        ├─ BuildSupply     : 남은 보급이 적으면 보급 건물을 짓는다
+     *        ├─ BuildProduction : 목표 수까지 생산 건물을 짓는다
+     *        ├─ TrainArmy       : 노는 생산 건물마다 병력을 만든다
+     *        └─ Attack          : 병력이 차면 적 시작 지점으로 공격 이동한다
      * @endcode
-     *          월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 압니다. 월드 · 설정은 AI 보다 오래 살아야 합니다.
+     * @details 월드의 알림을 `notify` 로 넘겨야 "공격받고 있다" 를 알 수 있다. 월드와 설정은 AI 보다 오래 살아야 한다.
      */
     class SW_GF_API RTSCommanderAI
     {
@@ -56,9 +56,9 @@ namespace sw
         RTSCommanderAI();
 
         void initialize( RTSWorld* pWorld, int32 player, const RTSCommanderAISettings& settings );
-        /** @brief `_thinkInterval` 마다 트리를 한 번 돌립니다. */
+        /** @brief `_thinkInterval` 마다 행동 트리를 한 번 실행합니다. */
         void update( float32 deltaTime );
-        /** @brief 월드 알림을 받습니다(공격받음). */
+        /** @brief 월드의 알림(공격받음)을 받습니다. */
         void notify( const RTSEvent& event );
 
         const utf8*       getActiveTaskName() const { return _runner.getActiveLeafName(); }
@@ -66,9 +66,9 @@ namespace sw
         int32             getAttackWaveCount() const { return _attackWaveCount; }
         const Blackboard& getBlackboard() const { return _blackboard; }
 
-        /** @brief 생각 간격 타이머 · 공격 물결 수를 씁니다. 행동 트리 · 칠판은 쓰지 않습니다 — 읽은 쪽은 트리를 처음부터 다시 고른다. */
+        /** @brief 생각 간격 타이머와 공격 횟수를 씁니다. 행동 트리와 블랙보드는 쓰지 않으며, 읽은 쪽에서 트리를 처음부터 다시 고릅니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
@@ -81,7 +81,7 @@ namespace sw
         static BehaviorStatus taskAttack( BehaviorContext& context );
 
         void makeTree();
-        /** @brief 노는 · 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */
+        /** @brief 놀거나 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */
         bool      orderConstruction( const hashed_string& buildingID );
         RTSUnitID findDepot() const;
         void      collectArmy( vector<RTSUnitID>& outListUnit ) const;

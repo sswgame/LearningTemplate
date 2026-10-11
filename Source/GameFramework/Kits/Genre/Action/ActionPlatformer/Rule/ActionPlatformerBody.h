@@ -1,10 +1,9 @@
 /**
  * @file ActionPlatformerBody.h
- * @brief 기반 `PlatformerMotor2D` 위의 이동 모드 — 우산 활공(검브렐라) · 갈고리(갈고리 지점에 걸어 진자 운동, 놓을 때 속도 유지) ·
- *        드릴(페퍼 그라인더 — 흙 칸 안을 파고 다니다 튀어나올 때 점프)입니다.
- * @details 흙 · 갈고리 지점은 키트 자체 격자(`ActionTerrainGrid`)가 듭니다. 흙은 기반 칸 지형에는 벽(Solid)으로 칠해 보통 몸은 그 위를 걷고,
- *          드릴 모드만 그 안을 지납니다. 보통 · 활공 모드는 기반 몸이 움직이고, 갈고리 · 드릴 모드는 이 몸이 직접 움직인 뒤 놓을 때 위치와 속도를
- *          기반 몸에 돌려줍니다. 고정 틱(권장 1/60)으로 부르면 결정적입니다.
+ * @brief 기반 `PlatformerMotor2D` 위에 얹는 이동 모드입니다. 우산 활공(검브렐라), 갈고리(갈고리 지점에 걸어 진자 운동을 하고 놓을 때 속도를 유지), 드릴(페퍼 그라인더에서 흙 칸 안을 파고 다니다 튀어나올 때 점프)을 다룹니다.
+ * @details 흙과 갈고리 지점은 이 키트의 격자(`ActionTerrainGrid`)가 가진다. 흙은 기반 칸 지형에서는 벽(Solid)으로 칠해서 일반 몸은 그 위를 걷고, 드릴 모드만 그 안을 지나간다.
+ *          일반 모드와 활공 모드는 기반 몸이 움직이고, 갈고리 모드와 드릴 모드는 이 몸이 직접 움직인 뒤 놓을 때 위치와 속도를 기반 몸에 돌려준다.
+ *          고정 틱(권장 1/60)으로 호출하면 결정적이다.
  */
 #pragma once
 #include "Core/Common/FourCcUtil.h"
@@ -25,7 +24,7 @@ namespace sw
 
     /**
      * @class ActionTerrainGrid
-     * @brief 키트의 칸 정보 — 흙(드릴로 파는 칸)과 갈고리 지점입니다. 칸 크기 · 원점은 기반 칸 지형과 같습니다.
+     * @brief 키트의 칸 정보입니다. 흙(드릴로 파는 칸)과 갈고리 지점을 가집니다. 칸 크기와 원점은 기반 칸 지형과 같습니다.
      */
     class SW_GF_API ActionTerrainGrid
     {
@@ -33,7 +32,7 @@ namespace sw
         ActionTerrainGrid();
 
         /**
-         * @brief 글자로 칠합니다 — 기반 `PlatformTileMap::loadFromText` 의 글자에 더해 'D' 흙(기반 지형에는 벽), 'O' 갈고리 지점(칸 가운데, 기반 지형에는 빈 칸).
+         * @brief 글자로 칠합니다. 기반 `PlatformTileMap::loadFromText` 의 글자에 더해 'D' 는 흙(기반 지형에서는 벽), 'O' 는 갈고리 지점(칸 가운데이며, 기반 지형에서는 빈 칸)입니다.
          * @param outMap 기반 몸이 쓸 칸 지형(이 글로 함께 채운다)
          */
         void loadFromText( string_view text, float32 tileSize, const float2& origin, PlatformTileMap& outMap );
@@ -41,7 +40,7 @@ namespace sw
 
         bool isDirt( int32 x, int32 y ) const;
         bool isDirtAt( const float2& worldPosition ) const;
-        /** @brief @p position 에서 가장 가까운 갈고리 지점(거리 [@p minDistance, @p maxDistance])의 자리입니다. 같은 거리면 앞 자리. 없으면 −1 입니다. */
+        /** @brief @p position 에서 가장 가까운 갈고리 지점(거리 [@p minDistance, @p maxDistance])의 인덱스를 반환합니다. 거리가 같으면 앞쪽 인덱스를 고르고, 없으면 −1 을 반환합니다. */
         int32 findGrapplePoint( const float2& position, float32 minDistance, float32 maxDistance ) const;
 
         const vector<float2>& getGrapplePoints() const { return _listGrapplePoint; }
@@ -52,7 +51,7 @@ namespace sw
         int32 computeTileX( float32 worldX ) const;
         int32 computeTileY( float32 worldY ) const;
 
-        vector<uint8>  _listDirt; ///< 칸마다 SW_TRUE/SW_FALSE(`_topology` 의 칸 번호)
+        vector<uint8>  _listDirt; ///< 칸마다 SW_TRUE 또는 SW_FALSE(`_topology` 의 칸 인덱스)
         vector<float2> _listGrapplePoint;
         float2         _origin;
         float32        _tileSize;
@@ -65,9 +64,9 @@ namespace sw
     /** @brief 이동 모드입니다. */
     enum class ActionMoveMode : uint8
     {
-        Normal = 0, ///< 기반 몸 그대로
-        Glide,      ///< 우산 — 떨어지는 속도 상한 · 중력이 준다
-        Grapple,    ///< 갈고리 진자
+        Normal = 0, ///< 기반 몸 그대로 움직인다
+        Glide,      ///< 우산을 펴서 떨어지는 속도 상한과 중력이 줄어든다
+        Grapple,    ///< 갈고리 진자 운동
         Drill       ///< 흙 속 굴착
     };
 
@@ -76,7 +75,7 @@ namespace sw
     {
         PlatformerInput _motor{};
         uint8           _bGlideHeld{ SW_FALSE };
-        uint8           _bGrapplePressed{ SW_FALSE }; ///< 이번 틱에 눌렀다 — 가까운 지점에 건다
+        uint8           _bGrapplePressed{ SW_FALSE }; ///< 이번 틱에 눌렀다(가까운 지점에 건다)
         uint8           _bGrappleHeld{ SW_FALSE };    ///< 떼면 놓는다
         uint8           _bDrillHeld{ SW_FALSE };      ///< 누른 채 흙 쪽으로 가면 파고든다
     };
@@ -84,7 +83,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 한 틱에 일어난 일(비트)입니다. 기반 몸의 일은 `getMotor().getEvents()` 입니다. */
+    /** @brief 한 틱에 일어난 일(비트)입니다. 기반 몸의 일은 `getMotor().getEvents()` 로 확인합니다. */
     struct ActionBodyEvent
     {
         static constexpr uint32 kGlideStarted    = 1u << 0;
@@ -94,7 +93,7 @@ namespace sw
         static constexpr uint32 kDrillEntered    = 1u << 4;
         static constexpr uint32 kDrillExited     = 1u << 5;
         static constexpr uint32 kDrillJumped     = 1u << 6; ///< 튀어나오며 점프했다
-        static constexpr uint32 kDrillAborted    = 1u << 7; ///< 흙에 닿지 못해 그만뒀다
+        static constexpr uint32 kDrillAborted    = 1u << 7; ///< 흙에 닿지 못해 그만두었다
     };
 } // namespace sw
 
@@ -127,29 +126,29 @@ namespace sw
         PlatformerMotor2D&       getMotor() { return _motor; }
 
         /**
-         * @brief 이동 모드 · 기반 몸(`PlatformerMotor2D`) · 갈고리 · 드릴의 자리 · 속도 · 밧줄 끝 · 길이 · 드릴 찾기 시간 · 흙 안 표시를 씁니다.
-         *        설정은 `initialize` 의 것(활공이면 활공 설정을 다시 건다), 지형은 `update` 의 인자, 이번 틱의 사건 비트는 싣지 않습니다.
+         * @brief 이동 모드, 기반 몸(`PlatformerMotor2D`), 갈고리와 드릴의 위치, 속도, 밧줄 끝, 길이, 드릴 찾기 시간, 흙 안 표시를 씁니다.
+         *        설정은 `initialize` 에서 받은 것이라 싣지 않습니다(활공이면 활공 설정을 다시 적용합니다). 지형은 `update` 의 인자이고, 이번 틱의 사건 비트도 싣지 않습니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 의 바이트로 바꿉니다. 깨졌으면 false 이고 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        /** @brief 기반 몸에 걸 설정입니다 — 활공이면 낙하 상한 · 중력을 줄인 것입니다. */
+        /** @brief 기반 몸에 적용할 설정을 만듭니다. 활공이면 낙하 속도 상한과 중력을 줄인 설정입니다. */
         PlatformerSettings makeMotorSettings( bool bGlide ) const;
         void               setGlide( bool bGlide );
         [[nodiscard]] bool tryAttachGrapple( const ActionTerrainGrid& terrain );
         [[nodiscard]] bool tryEnterDrill( const ActionTerrainGrid& terrain, const ActionBodyInput& input );
         void               updateGrapple( const PlatformTileMap& map, const ActionBodyInput& input, float32 deltaTime );
         void               updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
-        /** @brief 직접 움직이던 위치 · 속도를 기반 몸에 돌려주고 보통 모드로 갑니다. */
+        /** @brief 직접 움직이던 위치와 속도를 기반 몸에 돌려주고 일반 모드로 돌아갑니다. */
         void returnToMotor( const float2& velocity );
 
         PlatformerMotor2D  _motor;
         PlatformerSettings _motorSettings;
         ActionBodySettings _settings;
-        float2             _position; ///< 갈고리 · 드릴 모드의 위치
-        float2             _velocity; ///< 갈고리 · 드릴 모드의 속도
+        float2             _position; ///< 갈고리와 드릴 모드의 위치
+        float2             _velocity; ///< 갈고리와 드릴 모드의 속도
         float2             _anchor;
         float32            _ropeLength;
         Countdown          _drillSearchTimer;
