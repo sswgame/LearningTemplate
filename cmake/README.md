@@ -38,7 +38,6 @@ cmake/
     │                               (include 되는 순간 실행된다 — 타깃 규칙 파일보다 먼저여야 한다. 아래 파일은 함수만 정의한다)
     ├── UnbuiltSources.cmake      — 이 구성이 일부러 짓지 않는 소스 목록(sw_declare* · sw_exclude* · 플랫폼 폴더 규칙 → CheckSourceGlob)
     ├── TargetCompileRules.cmake  — 타깃 하나의 컴파일 규칙: 내보내기 매크로 짝 · PCH · 결정성 TU(sw_markDeterministicSources)
-    ├── DelayLoad.cmake           — Windows 지연 로드를 정하는 유일한 자리(sw_addDelayloadHook · sw_addDelayloadSystemDlls — CheckDelayLoadSites)
     ├── EngineAbiStamp.cmake      — 핫 리로드 ABI 도장(Core · Engine 헤더 지문을 Engine 과 Dev 모듈이 같이 박는다)
     ├── ModuleRegistry.cmake      — 동적 모듈 레지스트리: 등록(ABI 도장 · 서버 전용 표식) · 종류별 조회 · 빌드 순서 · 빠진 등록 대조
     ├── ModuleTargets.cmake       — 모듈 라이브러리 팩토리(sw_addModuleLibrary)와 RHI 백엔드 · 키트 · 게임 모듈, 모듈 출력 폴더 · 서드파티 DLL 모으기
@@ -85,8 +84,8 @@ cmake/
 | `sw_isModuleActive` / `sw_skipInactiveModule` | 모듈이 켜져 있나 · 꺼졌으면 그 폴더를 "짓지 않는다" 로 적고 건너뛴다(모듈을 만드는 함수의 첫 줄). 매니페스트가 없는 동적 모듈은 `sw_registerDynamicModule` 에서 구성이 선다 |
 | `sw_filterPlatformSources` | 플랫폼 폴더 규칙(`Windows/` · `Linux/` · `Posix/`)으로 소스 목록을 거르고 고르지 않은 것을 "짓지 않는 소스" 로 적는다(Core) |
 | `sw_excludeSourcesOfInactiveKits` | 꺼진 키트의 헤더를 include 하는 소스를 목록에서 뺀다(EngineTest — 키트를 끄면 그 테스트도 짓지 않는다) |
-| `sw_addModuleLibrary` | 엔진 모듈 라이브러리의 기본값(종류 · Bin 출력 · 내보내기 · 등록 · PCH · 유니티 · 리플렉션 · 지연 로드) 한 자리 — 팩토리 셋 · GameFramework · 에디터가 이것을 부른다 |
-| `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션/딜레이로드 자동화 |
+| `sw_addModuleLibrary` | 엔진 모듈 라이브러리의 기본값(종류 · Bin 출력 · 내보내기 · 등록 · PCH · 유니티 · 리플렉션) 한 자리 — 팩토리 셋 · GameFramework · 에디터가 이것을 부른다 |
+| `sw_addGameFrameworkKit` | GameFramework 장르 키트(`GF_Overworld` 등) 라이브러리 정의 및 리플렉션 자동화 |
 | `sw_registerScriptTest` | 파이썬 스크립트 하나를 CTest 항목 하나로(PythonTest · QA · 린트가 같은 속성 철자). 린트는 **목록이 여기 없다** — `Scripts/lint/gate/` · `selftest/` 폴더가 목록이고, `GenerateLintTargets.py` 가 만든 `LintTargets.cmake` 의 등록 함수가 이것을 부른다 |
 | `sw_addReflectionStep` | ReflectionParser 코드 생성 스텝 자동 연결 |
 | `sw_addTestExecutable` | 테스트 실행 파일 하나 — 소스는 그 폴더를 훑고(`SOURCES` 를 주면 그것), 같이 컴파일할 엔진 밖 소스는 `EXTRA_SOURCES` (`TestTargets.cmake`) |
@@ -113,7 +112,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 
 - **Dev 산출물 자리**: 모듈 DLL(GF_* · RHI_* · EditorModule · SWGame)은 `Bin/Modules`, Engine · GameFramework · 서드파티 DLL 은 `Bin`, Windows PDB 는 `Bin/Symbols`,
   테스트 실행 파일은 `TestBin` 이다. 런타임은 `FileUtil::getBinaryDirectory`(TestBin → Bin) · `ModuleImageUtil::findModuleLibraryPath`(Modules → Bin)로 찾는다.
-  테스트가 키트를 링크하면 그 DLL 을 TestBin 에 복사한다 — 키트는 자료를 내보내 lld 가 지연 로드를 거절한다(`cannot delay-load ... due to import of data`).
+  테스트가 키트를 링크하면 그 DLL 을 TestBin 에 복사한다(OS 로더가 `Bin/Modules` 를 보지 않는다).
   옛 자리 산출물과 꺼진 모듈의 DLL 은 configure 가 지운다(`sw_removeStaleBinaryOutputs`, 잠긴 파일은 경고).
 - **서드파티 DLL 은 `Bin` 에 한 벌이다.** vcpkg 의 `add_library` 래퍼는 타깃을 만드는 순간 `VCPKG_APPLOCAL_DEPS` 를 읽어 의존 DLL 을 타깃 **옆에** 복사하는 POST_BUILD 를 단다.
   `Bin/Modules` 에 가는 모듈은 `sw_addModuleLibrary` 가 그 순간만 끄고, `sw_stageModuleRuntimeDlls` 가 모듈마다 `build/<프리셋>/ModuleRuntimeStage/<모듈>` 에 하드 링크를 두고
@@ -138,7 +137,7 @@ Dev 와 Shipping · Server 는 다른 갈래를 탄다 — 고친 갈래의 프�
 - **configure 의 PATH 는 `sw_prependEnvPath` 로만 고친다**(`cmake/Environment/HostPath.cmake` — 호스트 구분자, 이미 있으면 그대로). project() 전에는
   호스트 판정 `CMAKE_HOST_WIN32` 로 고른다(이 PC 의 --fresh 구성에서는 `WIN32` 도 그때 이미 1 이었다 — 문서가 보장하는 것은 호스트 변수다).
 - **빌드 스크립트의 자리**: 모듈 라이브러리는 `sw_addModuleLibrary` 하나(`cmake/Engine/ModuleTargets.cmake` — 팩토리 밖 SHARED/MODULE 은
-  `CheckCmakeConventions` 가 막는다), 지연 로드는 `DelayLoad.cmake` 하나(`CheckDelayLoadSites` 가 그 파일 이름을 든다 — 옮기면 게이트도 고친다), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
+  `CheckCmakeConventions` 가 막는다), 지연 로드(`/DELAYLOAD` · `delayimp`)는 쓰지 않는다(`CheckNoDelayLoad`), 키트는 매니페스트 의존 위상 순서(`PythonTest_TestKitBuildOrder`), RHI 백엔드의 빌드 칸은 `CookContract.json` 의 `rhi_backends`,
   vcpkg 라이브러리는 `sw_addVcpkgPackage`(REQUIRED) · `sw_addVcpkgHeaderOnly`. 파이썬은 프로세스 `runProcess` · 빌드 폴더 `BuildTree` · 생성 파일 `writeGeneratedFile` ·
   보고서 `LintReport` 가 한 자리이고 `CheckScriptCommonHelpers` 가 비켜 가는 호출을, `CheckScriptLayout` 이 폴더 → 이름 앞머리 → 기반 클래스 표를 지킨다.
 - **configure 의 파이썬은 `GenerateConfigureFiles.py` 한 프로세스**(생성기 다섯) — 새 configure 생성기는 각자 `sw_executePythonScript` 를 더하지 말고 거기에 한 줄.

@@ -219,7 +219,6 @@ XML · JSON 문서(`XMLDocument`, `JSONDocument`, `ConfigKeyDoc`)는 `Serializat
 `Module/` 에는 모듈 DLL 쪽 계약만 둡니다.
 
 - `ModuleTypeRegistry` 는 로드한 모듈의 타입과 전역 변수를 등록하고 정리합니다.
-- `ModuleHandleProvider` 는 지연 로드 훅이 섀도 복사본을 묻는 진입점입니다. 훅 자체(`DelayLoadNotifyHook.cpp`)는 모듈 DLL마다 컴파일됩니다.
 - `EngineAbiStamp` 는 핫 리로드의 엔진 ABI 스탬프입니다.
 - `ModuleCatalog` 는 모듈 매니페스트(`<모듈>.module.json`)를 읽고 로드 순서를 정합니다. CMake와 같은 규칙으로 켜짐, 플랫폼, 구성, 의존, 버전, 순환을 봅니다.
 

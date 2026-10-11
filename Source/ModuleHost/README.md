@@ -60,12 +60,14 @@ cd build/Ninja-Debug/Bin
 배치 콜백(`OnBeforeCommitBatchDelegate`)이 false를 반환하면 아무것도 언로드하지 않습니다. 게임 상태 저장이 실패한 경우도 여기에 포함됩니다.
 이렇게 적용 전에 실패하면 옛 모듈이 계속 돕니다. 적용한 뒤의 결함만 `markGraphBroken` 으로 처리합니다. 언리얼의 Live Coding도 같은 방식입니다.
 
-**모듈 리로드는 호스트가 맡습니다.** Engine에는 `IModuleHandleProvider` 인터페이스만 두고, 공개 헤더에 리로드 콜백을 두지 않습니다.
+**모듈 리로드는 호스트가 맡습니다.** Engine에는 리로드 창구를 두지 않고, 공개 헤더에 리로드 콜백을 두지 않습니다.
 `LiveReloadManager` 와 그 도우미 셋은 Shipping 빌드에서 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록). Shipping은 모듈을 언로드하지 않습니다. 이 동작은 SmokeTest가 검증합니다.
 
 **핫 리로드는 원본 DLL이 아니라 섀도 복사본을 로드합니다.** 원본 파일을 잠그지 않아야 빌드가 그 파일을 덮어쓸 수 있기 때문입니다.
-Windows에서는 지연 로드 훅(`DelayLoadNotifyHook.cpp`)이 `GameFramework.dll` 의 import를 현재 복사본으로 돌립니다. 이 훅을 빼면 원본이 한 번 더 로드되어 정적 상태가 두 벌이 됩니다.
-Linux에서는 SONAME을 같은 길이의 이름으로 바꿔 씁니다(`ModuleImagePatch`). 모듈이 올바른 이미지에 연결됐는지는 `verifyModuleBindings` 가 확인합니다.
+복사본은 세대마다 다른 이름을 받고, 그 모듈을 import 하는 복사본은 import 이름을 그 이름으로 바꿉니다(`rewriteShadowImageNames`, 같은 길이로 제자리에서 — `ModuleImagePatch`).
+Windows는 DLL 파일 이름이 그 이름이라 복사본을 제 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`)에 두고, Linux는 SONAME을 바꿉니다. 바꾸지 않으면 원본이 한 번 더 로드되어 정적 상태가 두 벌이 됩니다.
+그래서 모듈끼리는 일반 import 입니다 — 지연 로드는 쓰지 않습니다(lld 20 썽크가 첫 호출의 float 인자를 망가뜨린다, [Module README](../Engine/Module/README.md)).
+모듈이 올바른 이미지에 연결됐는지는 `verifyModuleBindings` 가 확인합니다.
 
 **옛 이미지는 바로 언로드하지 않습니다.** `deferImageUnload` 가 최근 4번의 리로드 배치를 남겨 두고, 배치 안에서는 의존하는 쪽부터 언로드합니다.
 다른 코드가 구독 중인 채널을 만든 이미지는 프로세스가 끝날 때까지 남겨 둡니다. 언리얼도 같은 방식이고, 되돌리면 구독자가 언로드된 코드를 부르게 됩니다.

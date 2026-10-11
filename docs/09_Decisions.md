@@ -136,6 +136,9 @@
 | `retire*` · `retireImage` | `deferImageUnload` · `free*` |
 | `*Recipe`(`D3D12RHIResourceRecipe` · `VulkanRHISamplerRecipe`) | `*Preset` · `ShaderCookRequest` |
 | `poisonLiveReload` | `markGraphBroken` |
+| `bindDelayLoadImports` · `DelayLoadNotifyHook` · `IModuleHandleProvider` · `DelayLoad.cmake`(`sw_addDelayloadHook`) | 없음 — 지연 로드를 걷고 `LiveReloadManager::rewriteShadowImageNames` |
+| `CheckDelayLoadSites` · `DelayLoadBindTest` | `CheckNoDelayLoad` · `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` |
+| `rewriteShadowSonames` · `SonameState` | `rewriteShadowImageNames` · `ImageNameState` |
 | Vulkan band | range(`SW_VK_SLOT_RANGE_SIZE`) |
 | `HandleTable` · `ObjectHandle` | `SlotHandleTable` · `SlotHandle` |
 | `isVisibleIntended` | `isVisibleRequested` |
@@ -191,6 +194,21 @@
   버전, 빌드, 베이크, 테이블, 슬롯, 레지스트리, 엔드포인트 같은 업계 용어를 그대로 쓰고 순우리말 조어를 만들지 않습니다. 지침 전문은 [문서 쓰기 지침](10_WritingDocs.md)이고, 코드 주석과 커밋 메시지에도 같은 기준을 씁니다.
 
 ### 5-2. 빌드, 스크립트, CI
+
+- **Windows 지연 로드(`/DELAYLOAD`)를 쓰지 않습니다 — 모듈끼리는 일반 import 이고 핫 리로드가 섀도 복사본의 import 이름을 세대 이름으로 바꿉니다**(2026-10-12).
+  lld 20.1.8 의 x64 지연 로드 썽크(`__tailMerge_<dll>`)가 xmm0~3 을 `__delayLoadHelper2` 호출의 홈 공간에 저장해, 처음 묶는 호출의 float 인자가 망가졌습니다
+  (LLVM 이슈 51941 · bz52599, 고침은 #149521 로 LLVM 21.x 에 들어감). 모든 지연 import 를 코드가 돌기 전에 미리 묶는 우회는 이미지 목록을 놓치면(DbgHelp 열거 실패)
+  조용히 다시 망가졌습니다. 후보와 결론:
+  (a) 도구 사슬을 LLVM 21 로 올리기 — 근본이지만 clang-format · 컴파일러 · 경고 전부가 같이 움직여 이 결함 하나로는 크고, 올린 뒤에도 지연 로드가 필요한 자리가 없어 하지 않음.
+  (b) 다시 올리지 않는 의존(GameFramework — App 은 `loadSharedModule` 로 원본을 한 번 올린다)만 일반 import 로 — 고친 CI 실패는 모두 이것이었지만 키트 → 키트 · SWGame → 키트 ·
+  에디터 확장 → EditorModule 은 다시 올리는 의존이라 썽크가 남는다. (c) 모듈이 자기 첫 진입점 · DllMain 에서 스스로 묶기 — DllMain 은 로더 락 안이라 다른 DLL 을 올릴 수 없고,
+  첫 진입점보다 먼저 도는 정적 초기화가 이미 썽크를 지난다. (d) 첫 호출을 float 인자 없는 함수로 만드는 프라이머 — 썽크는 import 마다라 함수마다 프라이머가 필요해 지킬 수 없다.
+  (e) **고른 것**: 리눅스 SONAME 바꾸기와 같은 장치를 Windows 에 — 복사본 파일 이름을 같은 길이의 세대 이름(`GF_Mai0003.dll`, 복사본마다 제 폴더)으로 하고 의존하는 복사본의
+  import 표 이름을 제자리에서 바꾼다. 로더가 이미 올라온 같은 이름의 이미지를 쓰므로 원본이 두 번 올라오지 않고, 썽크 자체가 없다. 없을 수 있는 시스템 DLL(Media Foundation ·
+  XAudio2 · TracyClient)은 LoadLibrary + 함수 표, 늘 있는 d3dcompiler_47 은 일반 import.
+  상용 엔진 비교: 언리얼은 모듈 DLL 을 정적 import 하고 핫 리로드 때 번호 붙은 새 이름으로 다시 링크하며(지연 로드 없음 — 이 방식은 그 다시 링크를 복사 시점에 한다),
+  유니티는 관리 코드를 도메인 리로드로 갈아 네이티브 import 를 건드리지 않고, Godot GDExtension 은 `get_proc_address` 함수 표로 엔진 API 를 받아 import 자체가 없다(시스템 DLL 쪽이 이 방식).
+  가드는 빌드 `CheckNoDelayLoad`, 런타임 `LiveReloadManager` 의 지연 import 이미지 거절(Debug 단언), 산출물 `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` 입니다.
 
 - **Shipping 의 RHI 백엔드는 쿠킹 테이블의 이름(`DirectX11`, `DirectX12`, `Vulkan`, `OpenGL`)으로만 고릅니다**(2026-10-06). 별칭이나 그 플랫폼에 없는 백엔드를 주면 configure 가 멈춥니다.
   언리얼의 TargetRules 도 플랫폼에 없는 RHI 를 빌드 전에 거부합니다.

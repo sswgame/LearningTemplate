@@ -2,7 +2,7 @@
  * @file TracyProfilerBackend.cpp
  * @brief Tracy C API 호출부입니다. 저장소에서 Tracy 헤더를 include 하는 유일한 파일입니다.
  * @details Tracy 를 링크하지 않은 빌드(`SW_PROFILER_TRACY` 없음 — Shipping · `SW_ENABLE_TRACY=OFF`)에서는 몸통이 모두 빈 함수입니다.
- *          C API 만 씁니다 — 함수만 가져다 쓰므로 TracyClient.dll 을 지연 로드할 수 있습니다(데이터 임포트가 있으면 지연 로드가 안 된다).
+ *          C API 만 씁니다 — 함수 표(`TracyProfilerBackendInternal::TracyClientAPI`)로 부르므로 Windows 는 켤 때 TracyClient.dll 을 올립니다.
  */
 #include "pch.h"
 
@@ -11,6 +11,8 @@
 #include "Core/Common/StdHeaders.h"
 
 #if defined( SW_PROFILER_TRACY )
+    #include "Core/Common/PlatformOsHeaders.h"
+
     #include <tracy/TracyC.h>
 #endif
 
@@ -66,6 +68,96 @@ namespace sw
                 return zone;
             }
 #endif
+
+#if defined( SW_PROFILER_TRACY )
+            /**
+             * @brief Tracy C API 함수 표입니다. 리눅스는 링크한 함수의 주소를, Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 찾은 주소를 담습니다.
+             * @details Windows 는 import 라이브러리를 링크하지 않는다 — 일반 import 면 DLL 이 올라오는 순간(프로세스 시작) Tracy 수집 스레드 · 리슨 소켓이
+             *          서고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자(`___tracy_emit_plot` 의 값)를 망가뜨려 쓰지 않는다(docs/09_Decisions.md).
+             */
+            struct TracyClientAPI
+            {
+                decltype( &___tracy_connected )               _pfnConnected{ nullptr };
+                decltype( &___tracy_emit_zone_begin )         _pfnZoneBegin{ nullptr };
+                decltype( &___tracy_emit_zone_end )           _pfnZoneEnd{ nullptr };
+                decltype( &___tracy_emit_frame_mark )         _pfnFrameMark{ nullptr };
+                decltype( &___tracy_emit_plot )               _pfnPlot{ nullptr };
+                decltype( &___tracy_emit_memory_alloc_named ) _pfnMemoryAllocate{ nullptr };
+                decltype( &___tracy_emit_memory_free_named )  _pfnMemoryFree{ nullptr };
+                decltype( &___tracy_emit_gpu_new_context )    _pfnGPUNewContext{ nullptr };
+                decltype( &___tracy_emit_gpu_context_name )   _pfnGPUContextName{ nullptr };
+                decltype( &___tracy_emit_gpu_time_sync )      _pfnGPUTimeSync{ nullptr };
+                decltype( &___tracy_emit_gpu_zone_begin )     _pfnGPUZoneBegin{ nullptr };
+                decltype( &___tracy_emit_gpu_time )           _pfnGPUTime{ nullptr };
+                decltype( &___tracy_emit_gpu_zone_end )       _pfnGPUZoneEnd{ nullptr };
+                bool                                          _bLoaded{ false }; ///< 모든 칸이 찼다
+
+                /** @brief 모든 칸이 찼는지 봅니다. */
+                bool hasEveryFunction() const
+                {
+                    return _pfnConnected != nullptr && _pfnZoneBegin != nullptr && _pfnZoneEnd != nullptr && _pfnFrameMark != nullptr && _pfnPlot != nullptr &&
+                           _pfnMemoryAllocate != nullptr && _pfnMemoryFree != nullptr && _pfnGPUNewContext != nullptr && _pfnGPUContextName != nullptr &&
+                           _pfnGPUTimeSync != nullptr && _pfnGPUZoneBegin != nullptr && _pfnGPUTime != nullptr && _pfnGPUZoneEnd != nullptr;
+                }
+            };
+
+    #if defined( SW_PLATFORM_WINDOWS )
+            /** @brief TracyClient.dll 에서 @p pSymbol 을 찾아 @p outFunction 에 넣습니다. */
+            template <typename TFunction>
+            static void findClientFunction( HMODULE hClient, const utf8* pSymbol, TFunction& outFunction )
+            {
+                outFunction = reinterpret_cast<TFunction>( reinterpret_cast<void*>( GetProcAddress( hClient, pSymbol ) ) );
+            }
+    #endif
+
+            /** @brief 함수 표를 채웁니다. Windows 는 TracyClient.dll 을 실행 파일 폴더 · 검색 경로에서 올립니다(없으면 빈 표). */
+            static TracyClientAPI loadClientAPI()
+            {
+                TracyClientAPI api{};
+    #if defined( SW_PLATFORM_WINDOWS )
+                const HMODULE hClient = LoadLibraryExW( L"TracyClient.dll", nullptr, LOAD_LIBRARY_SEARCH_DEFAULT_DIRS );
+                if ( hClient == nullptr )
+                    return api;
+                findClientFunction( hClient, "___tracy_connected", api._pfnConnected );
+                findClientFunction( hClient, "___tracy_emit_zone_begin", api._pfnZoneBegin );
+                findClientFunction( hClient, "___tracy_emit_zone_end", api._pfnZoneEnd );
+                findClientFunction( hClient, "___tracy_emit_frame_mark", api._pfnFrameMark );
+                findClientFunction( hClient, "___tracy_emit_plot", api._pfnPlot );
+                findClientFunction( hClient, "___tracy_emit_memory_alloc_named", api._pfnMemoryAllocate );
+                findClientFunction( hClient, "___tracy_emit_memory_free_named", api._pfnMemoryFree );
+                findClientFunction( hClient, "___tracy_emit_gpu_new_context", api._pfnGPUNewContext );
+                findClientFunction( hClient, "___tracy_emit_gpu_context_name", api._pfnGPUContextName );
+                findClientFunction( hClient, "___tracy_emit_gpu_time_sync", api._pfnGPUTimeSync );
+                findClientFunction( hClient, "___tracy_emit_gpu_zone_begin", api._pfnGPUZoneBegin );
+                findClientFunction( hClient, "___tracy_emit_gpu_time", api._pfnGPUTime );
+                findClientFunction( hClient, "___tracy_emit_gpu_zone_end", api._pfnGPUZoneEnd );
+    #else
+                api._pfnConnected      = &___tracy_connected;
+                api._pfnZoneBegin      = &___tracy_emit_zone_begin;
+                api._pfnZoneEnd        = &___tracy_emit_zone_end;
+                api._pfnFrameMark      = &___tracy_emit_frame_mark;
+                api._pfnPlot           = &___tracy_emit_plot;
+                api._pfnMemoryAllocate = &___tracy_emit_memory_alloc_named;
+                api._pfnMemoryFree     = &___tracy_emit_memory_free_named;
+                api._pfnGPUNewContext  = &___tracy_emit_gpu_new_context;
+                api._pfnGPUContextName = &___tracy_emit_gpu_context_name;
+                api._pfnGPUTimeSync    = &___tracy_emit_gpu_time_sync;
+                api._pfnGPUZoneBegin   = &___tracy_emit_gpu_zone_begin;
+                api._pfnGPUTime        = &___tracy_emit_gpu_time;
+                api._pfnGPUZoneEnd     = &___tracy_emit_gpu_zone_end;
+    #endif
+                // 한 칸이라도 비면(다른 판의 DLL) 쓰지 않는다 — 계측 지점마다 칸을 검사하지 않기 위해서다.
+                api._bLoaded = api.hasEveryFunction();
+                return api;
+            }
+
+            /** @brief 함수 표입니다. 처음 부를 때 채웁니다(정적 지역 초기화라 여러 스레드가 함께 불러도 한 번). */
+            static const TracyClientAPI& getClientAPI()
+            {
+                static const TracyClientAPI s_api = loadClientAPI();
+                return s_api;
+            }
+#endif
         };
     } // namespace
 } // namespace sw
@@ -78,6 +170,15 @@ namespace sw
         , _gpuContextCount{ 0 }
         , _nextGPUQueryID{ 0 }
     {
+    }
+
+    bool TracyProfilerBackend::loadClient()
+    {
+#if defined( SW_PROFILER_TRACY )
+        return TracyProfilerBackendInternal::getClientAPI()._bLoaded;
+#else
+        return false;
+#endif
     }
 
     bool TracyProfilerBackend::isCompiled()
@@ -104,7 +205,8 @@ namespace sw
     bool TracyProfilerBackend::isViewerConnected() const
     {
 #if defined( SW_PROFILER_TRACY )
-        return ___tracy_connected() != 0;
+        const TracyProfilerBackendInternal::TracyClientAPI& api = TracyProfilerBackendInternal::getClientAPI();
+        return api._bLoaded && api._pfnConnected() != 0;
 #else
         return false;
 #endif
@@ -114,7 +216,7 @@ namespace sw
     {
 #if defined( SW_PROFILER_TRACY )
         _zoneCount.fetch_add( 1, std::memory_order_relaxed );
-        const TracyCZoneCtx zone = ___tracy_emit_zone_begin( reinterpret_cast<const ___tracy_source_location_data*>( &site ), 1 );
+        const TracyCZoneCtx zone = TracyProfilerBackendInternal::getClientAPI()._pfnZoneBegin( reinterpret_cast<const ___tracy_source_location_data*>( &site ), 1 );
         return TracyProfilerBackendInternal::packZone( zone );
 #else
         return 0;
@@ -124,14 +226,14 @@ namespace sw
     void TracyProfilerBackend::endZone( [[maybe_unused]] uint64 zoneToken )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_zone_end( TracyProfilerBackendInternal::unpackZone( zoneToken ) );
+        TracyProfilerBackendInternal::getClientAPI()._pfnZoneEnd( TracyProfilerBackendInternal::unpackZone( zoneToken ) );
 #endif
     }
 
     void TracyProfilerBackend::markFrame( [[maybe_unused]] const utf8* pFrameName )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_frame_mark( pFrameName );
+        TracyProfilerBackendInternal::getClientAPI()._pfnFrameMark( pFrameName );
 #endif
     }
 
@@ -139,7 +241,7 @@ namespace sw
     {
 #if defined( SW_PROFILER_TRACY )
         if ( pPlotName != nullptr )
-            ___tracy_emit_plot( pPlotName, value );
+            TracyProfilerBackendInternal::getClientAPI()._pfnPlot( pPlotName, value );
 #endif
     }
 
@@ -147,14 +249,14 @@ namespace sw
                                            [[maybe_unused]] const utf8* pPoolName )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_memory_alloc_named( pPtr, size, pPoolName );
+        TracyProfilerBackendInternal::getClientAPI()._pfnMemoryAllocate( pPtr, size, pPoolName );
 #endif
     }
 
     void TracyProfilerBackend::onFree( [[maybe_unused]] const void* pPtr, [[maybe_unused]] const utf8* pPoolName )
     {
 #if defined( SW_PROFILER_TRACY )
-        ___tracy_emit_memory_free_named( pPtr, pPoolName );
+        TracyProfilerBackendInternal::getClientAPI()._pfnMemoryFree( pPtr, pPoolName );
 #endif
     }
 
@@ -173,7 +275,7 @@ namespace sw
         newContext.context = static_cast<uint8_t>( context );
         newContext.flags   = 0;
         newContext.type    = TracyProfilerBackendInternal::toTracyGPUType( api );
-        ___tracy_emit_gpu_new_context( newContext );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUNewContext( newContext );
 
         if ( pName != nullptr )
         {
@@ -181,7 +283,7 @@ namespace sw
             nameData.context = static_cast<uint8_t>( context );
             nameData.name    = pName;
             nameData.len     = static_cast<uint16_t>( std::strlen( pName ) );
-            ___tracy_emit_gpu_context_name( nameData );
+            TracyProfilerBackendInternal::getClientAPI()._pfnGPUContextName( nameData );
         }
         return context;
 #else
@@ -197,7 +299,7 @@ namespace sw
         ___tracy_gpu_time_sync_data syncData{};
         syncData.gpuTime = gpuNanos;
         syncData.context = static_cast<uint8_t>( gpuContext );
-        ___tracy_emit_gpu_time_sync( syncData );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUTimeSync( syncData );
 #endif
     }
 
@@ -213,13 +315,13 @@ namespace sw
         beginData.srcloc  = static_cast<uint64_t>( reinterpret_cast<uintptr_t>( &site ) );
         beginData.queryId = queryID;
         beginData.context = static_cast<uint8_t>( gpuContext );
-        ___tracy_emit_gpu_zone_begin( beginData );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUZoneBegin( beginData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuBeginNanos;
         timeData.queryId = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
-        ___tracy_emit_gpu_time( timeData );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUTime( timeData );
 #endif
     }
 
@@ -232,13 +334,13 @@ namespace sw
         ___tracy_gpu_zone_end_data endData{};
         endData.queryId = queryID;
         endData.context = static_cast<uint8_t>( gpuContext );
-        ___tracy_emit_gpu_zone_end( endData );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUZoneEnd( endData );
 
         ___tracy_gpu_time_data timeData{};
         timeData.gpuTime = gpuEndNanos;
         timeData.queryId = queryID;
         timeData.context = static_cast<uint8_t>( gpuContext );
-        ___tracy_emit_gpu_time( timeData );
+        TracyProfilerBackendInternal::getClientAPI()._pfnGPUTime( timeData );
         _gpuZoneCount.fetch_add( 1, std::memory_order_relaxed );
 #endif
     }

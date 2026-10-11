@@ -20,15 +20,8 @@ else()
 	set(coreLibType SHARED)
 endif()
 
-# DelayLoadNotifyHook 이 Engine 에서 빠지는 것은 **의도한 것**이다. 이 훅은 지연 로드된 DLL 을
-# 이미 로드된 엔진 모듈 핸들로 돌려주는 장치라, 그런 DLL 을 지연 로드하는 쪽(kit · SWGame)이
-# sw_addDelayloadHook 으로 자기 바이너리에 넣어야 의미가 있다. 훅 변수는 모듈마다 따로다.
-# Engine 이 지연 로드하는 것은 d3dcompiler_47 · mfplat · mfreadwrite · xaudio2_9 로 전부 시스템
-# DLL 이고, 그것들은 훅이 돌려줄 핸들이 없다(Bin 에도 없다). 훅을 넣으면 정상 로드마다 훅이
-# "못 찾았다" 는 ERROR 를 남기게 된다.
 set(coreExclude
 	"Graphics/RHI/Modules/"
-	"Module/DelayLoadNotifyHook.cpp"
 	"Physics/Jolt/[^/]+\\.cpp$"   # EngineJolt_objects 가 짓는다(아래 9))
 )
 
@@ -94,10 +87,6 @@ add_dependencies(Engine Core_objects)
 sw_configureDllExports(Engine ${coreLibType} ENGINE)
 set_target_properties(Engine PROPERTIES FOLDER "Source/Engine")
 
-# 지연 로드 훅 소스의 자리 — sw_addDelayloadHook(cmake/Engine/DelayLoad.cmake)이 이 속성을 읽어 키트 · 게임에 넣는다.
-set_property(TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE
-	"${CMAKE_CURRENT_SOURCE_DIR}/Module/DelayLoadNotifyHook.cpp")
-
 # ------------------------------------------------------------------------------
 # 4) 서드파티 링크 — 서드파티 물리 · 애니메이션 · 프로파일러 · 내비 · 글꼴 라이브러리를 링크하는 곳은 이 파일 하나다.
 # 헤더는 각 백엔드 폴더에서만 include 한다(CheckThirdPartyIsolation.py) — 다른 코드와 다른 타깃은 엔진 인터페이스만 본다.
@@ -121,9 +110,12 @@ target_link_libraries(Engine PRIVATE $<LINK_ONLY:joltphysics> box2d)
 # Shipping 은 링크하지 않는다(SW_ENABLE_TRACY 를 무시). 클라이언트는 프로세스에 하나 — Engine 만 링크하고, RHI 백엔드 · 모듈은 엔진
 # 인터페이스(IProfilerBackend)만 본다. GPU 구간은 엔진이 이미 모으는 타임스탬프를 넘기므로 백엔드 DLL 이 Tracy 를 알 필요가 없다.
 # 임포트 타깃의 정의(TRACY_ENABLE · TRACY_IMPORTS …) · include 경로는 Tracy 구현 소스에만 붙인다(Jolt 와 같은 방식).
-# Windows 는 DLL 을 지연 로드한다 — `-gv_tracy` 로 켜기 전에는 올라오지 않는다(C API 함수만 쓰므로 지연 로드가 된다).
+# 링크하지 않는다 — Windows 는 `-gv_tracy` 로 켤 때 TracyClient.dll 을 올려 C API 함수 표를 채운다(`TracyProfilerBackend::loadClient`,
+# 지연 로드를 쓰지 않는 이유는 docs/09_Decisions.md). 리눅스는 링크한다.
 if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
-	target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
+	if(NOT WIN32)
+		target_link_libraries(Engine PRIVATE $<LINK_ONLY:tracy>)
+	endif()
 	target_compile_definitions(Engine PRIVATE SW_PROFILER_TRACY)
 	file(GLOB swTracyBackendSources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Profiling/Tracy/*.cpp")
 	# include 경로는 시스템 경로로 준다 — Tracy C API 의 `___tracy_*` 이름이 -Wreserved-identifier 경고를 낸다.
@@ -138,10 +130,7 @@ if(SW_ENABLE_TRACY AND NOT SW_SHIPPING_BUILD AND TARGET Tracy::TracyClient)
 		COMPILE_OPTIONS "${swTracyIncludeOption}"
 		SKIP_PRECOMPILE_HEADERS ON
 	)
-	if(WIN32)
-		sw_addDelayloadSystemDlls(Engine DLLS TracyClient.dll)
-	endif()
-	message(STATUS "[Engine] Tracy profiler client linked (delay-loaded on Windows)")
+	message(STATUS "[Engine] Tracy profiler client enabled (loaded on demand on Windows)")
 endif()
 
 # RenderDoc in-app API — 헤더 하나(include 경로만, 링크할 것 없음). Renderer/Capture/RenderDocCapture.cpp 가 Dev 에서만 쓴다.
@@ -183,7 +172,9 @@ elseif(SW_SHIPPING_BUILD)
 endif()
 
 # ------------------------------------------------------------------------------
-# 6) Windows 시스템 라이브러리 · 지연 로드 — Input(XInput) + Audio(XAudio2) + 파일 대화상자 + 셰이더 컴파일러 유틸리티
+# 6) Windows 시스템 라이브러리 — Input(XInput) + 파일 대화상자 + 셰이더 컴파일러 유틸리티. 지연 로드(/DELAYLOAD)는 쓰지 않는다(docs/09_Decisions.md):
+#    없을 수 있는 DLL(Media Foundation — Windows N · XAudio2)은 쓰는 쪽이 LoadLibrary + 함수 표로 올리므로 import 라이브러리를 링크하지 않는다
+#    (`XAudio2System.cpp`). d3dcompiler_47 은 Windows 8.1 부터 System32 에 늘 있어 일반 import 다(DX 백엔드 모듈도 그렇다).
 # ------------------------------------------------------------------------------
 if(WIN32)
 	target_link_libraries(Engine PRIVATE
@@ -191,19 +182,10 @@ if(WIN32)
 		d3dcompiler.lib
 		dbghelp.lib
 		synchronization.lib
-		mfplat.lib
-		mfreadwrite.lib
 		mfuuid.lib
 		ole32.lib
 		shell32.lib
 	)
-	# 전용 서버 빌드에는 XAudio2 구현이 없다(`IAudioSystem.cpp` · `XAudio2System.cpp` 의 SW_WITH_CLIENT_CODE) — 링크 · 지연 로드 항목도 뺀다.
-	if(SW_TARGET_TYPE STREQUAL "Server")
-		sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll)
-	else()
-		target_link_libraries(Engine PRIVATE xaudio2.lib)
-		sw_addDelayloadSystemDlls(Engine DLLS d3dcompiler_47.dll mfplat.dll mfreadwrite.dll xaudio2_9.dll)
-	endif()
 endif()
 
 # ------------------------------------------------------------------------------

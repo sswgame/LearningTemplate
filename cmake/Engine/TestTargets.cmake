@@ -194,8 +194,7 @@ function(sw_addTestExecutable TARGET_NAME)
 	)
 
 	# Dev(Windows): 테스트가 링크한 모듈 DLL(키트 — `Bin/Modules`)은 OS 로더가 시작 때 찾지 못한다(실행 파일 폴더 TestBin · 작업 폴더 Bin 만 본다).
-	# 지연 로드는 못 쓴다 — 키트는 자료(정적 상수 · 사건 종류)를 내보내고 lld 는 자료 import 를 지연 로드하지 않는다. 그래서 링크한 모듈 DLL 을
-	# 실행 파일 옆(TestBin)에 복사한다. 키트끼리의 지연 import 는 이미 올라온 같은 이름 이미지를 먼저 쓴다(`DelayLoadNotifyHook`).
+	# 그래서 링크한 모듈 DLL 을 실행 파일 옆(TestBin)에 복사한다. 키트끼리의 import 는 이미 올라온 같은 이름 이미지를 먼저 쓴다(OS 로더 규칙).
 	# GameFramework 는 `Bin` 에 있어 작업 폴더에서 찾는다. 리눅스는 링크한 라이브러리 폴더가 빌드 RPATH 에 들어간다.
 	if(WIN32 AND NOT SW_SHIPPING_BUILD)
 		get_property(swModuleList GLOBAL PROPERTY SW_DYNAMIC_MODULES)

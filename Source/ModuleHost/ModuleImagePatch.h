@@ -1,6 +1,6 @@
 /**
  * @file ModuleImagePatch.h
- * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 도장 · 리눅스 SONAME).
+ * @brief 섀도 복사본을 올리기 전에 파일 바이트를 읽고 고칩니다(엔진 ABI 도장 · 리눅스 SONAME · Windows import DLL 이름).
  *
  * @note 핫 리로드(`LiveReloadManager`)와 그 테스트만 쓰고, Shipping 빌드에서 함께 빠집니다(`Source/ModuleHost/CMakeLists.txt` 의 제외 목록).
  */
@@ -13,19 +13,27 @@ namespace sw
 {
     /**
      * @struct ModuleImagePatch
-     * @brief ELF64(리틀 엔디언) 공유 라이브러리의 동적 섹션 문자열을 **같은 길이로** 바꿉니다.
-     * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 Windows 에서도 합성 ELF 로 돈다). 쓰는 곳은 리눅스의
-     *          `LiveReloadManager` 뿐입니다. 문자열 표를 늘리지 않으므로 섹션 · 세그먼트 배치가 그대로입니다.
-     * @note 왜 고치는가: 리눅스 동적 링커는 `DT_NEEDED` 를 풀 때 이미 올라온 라이브러리 중 SONAME 이 같은 **먼저 올라온 것**을 씁니다.
-     *       섀도 복사본은 파일만 복사하므로 SONAME 이 원본과 같고, 연쇄 리로드는 "전부 prepare(새 이미지 로드) → commit(옛 이미지 내림)"
-     *       순서라서 prepare 중인 새 킷이 아직 올라와 있는 **옛** GameFramework 에 묶입니다. 그래서 복사본을 올리기 전에 SONAME 을
-     *       세대마다 고유한 이름으로 바꾸고, 의존 모듈 복사본의 NEEDED 를 그 이름으로 바꿉니다 — UE 가 빌드마다 번호 붙은 이름으로 다시
-     *       링크하는 것을 복사 시점에 하는 셈입니다. Windows 에서 지연 로드 훅(`DelayLoadNotifyHook.cpp`)이 하는 일의 리눅스 짝입니다.
+     * @brief 공유 라이브러리가 의존을 부르는 이름을 **같은 길이로** 바꿉니다 — ELF64(리틀 엔디언)의 동적 섹션 문자열과 PE32+ 의 import DLL 이름.
+     * @details 파일 바이트만 다루므로 어느 플랫폼에서나 돕니다(테스트는 합성 ELF · 합성 PE 로 돈다). 쓰는 곳은 `LiveReloadManager` 뿐입니다.
+     *          문자열을 늘리지 않으므로 섹션 · 세그먼트 배치가 그대로입니다.
+     * @note 왜 고치는가: 로더는 의존을 이름으로 풀고, 같은 이름의 이미지가 이미 올라와 있으면 그것을 씁니다(리눅스는 SONAME, Windows 는 파일
+     *       이름). 섀도 복사본을 원본 이름 그대로 두면 연쇄 리로드("전부 prepare(새 이미지 로드) → commit(옛 이미지 내림)")의 prepare 중인 새 킷이
+     *       아직 올라와 있는 **옛** 의존에 묶이고(리눅스), 원본 이름의 import 는 원본 DLL 을 한 벌 더 올립니다(Windows). 그래서 복사본에 세대마다
+     *       고유한 이름을 주고(리눅스 SONAME · Windows 파일 이름), 의존 모듈 복사본이 그 이름을 부르게 바꿉니다 — 언리얼이 빌드마다 번호 붙은
+     *       이름으로 다시 링크하는 것을 복사 시점에 하는 셈입니다. 그래서 모듈끼리 지연 로드(`/DELAYLOAD`)를 쓰지 않고 일반 import 로 묶습니다
+     *       (lld 20 의 지연 로드 썽크는 첫 호출의 float 인자를 망가뜨린다 — `docs/09_Decisions.md`).
      */
     struct ModuleImagePatch
     {
         static constexpr int64 kTagNeeded = 1;  ///< DT_NEEDED
         static constexpr int64 kTagSoname = 14; ///< DT_SONAME
+
+        /** @brief PE import 표 종류입니다. */
+        enum class ImportTable : uint8
+        {
+            Load,  ///< 일반 import(IMAGE_DIRECTORY_ENTRY_IMPORT) — 로더가 올릴 때 묶는다
+            Delay, ///< 지연 import(IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT) — 첫 호출이 썽크를 지나 묶는다
+        };
         /** @brief 엔진 ABI 도장 문자열의 머리입니다. 뒤에 SHA-1 16진 40 글자가 옵니다(`GenerateEngineAbiStamp.py` 와 같아야 한다). */
         static constexpr const utf8* kEngineAbiStampMarker = "swEngineAbiStamp:";
         static constexpr uint32      kEngineAbiStampDigits = 40;
@@ -40,12 +48,28 @@ namespace sw
         static uint32 replaceDynamicString( vector<uint8>& inoutBytes, int64 tag, string_view from, string_view to );
 
         /**
-         * @brief 세대 @p generation 을 담은, @p soname 과 **길이가 같은** 이름을 만듭니다(예: `libGameFramework.so` → `libGameFrame0003.so`).
-         * @details 확장자(`.so` 부터) 앞의 끝 네 글자를 36진 세대로 바꿉니다. 세대는 프로세스 안에서 모듈과 무관하게 하나씩 오르므로
-         *          앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다.
-         * @return 만들 수 없으면(`.so` 가 없거나 그 앞이 `lib` + 네 글자보다 짧다) 빈 문자열입니다.
+         * @brief 세대 @p generation 을 담은, @p libraryName 과 **길이가 같은** 이름을 만듭니다
+         *        (예: `libGameFramework.so` → `libGameFrame0003.so`, `GF_Mailbox.dll` → `GF_Mai0003.dll`).
+         * @details 확장자(`.so` · `.dll` 부터) 앞의 끝 네 글자를 36진 세대로 바꿉니다. 세대는 프로세스 안에서 모듈과 무관하게 하나씩 오르므로
+         *          앞부분이 같은 두 모듈도 같은 이름을 받지 않습니다. `lib` 접두어는 남깁니다(도구가 이름을 알아보는 자리).
+         * @return 만들 수 없으면(확장자가 없거나 그 앞이 접두어 + 한 글자 + 네 글자보다 짧다) 빈 문자열입니다.
          */
-        static string makeGenerationName( string_view soname, uint32 generation );
+        static string makeGenerationName( string_view libraryName, uint32 generation );
+
+        /**
+         * @brief PE32+ 이미지 @p bytes 의 @p table 에 적힌 DLL 이름을 순서대로 모읍니다.
+         * @return PE32+ 로 읽었으면 true(표가 없으면 빈 목록). PE32+ 가 아니거나 잘렸으면 false 입니다.
+         */
+        [[nodiscard]] static bool readImportDllNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDllName );
+
+        /** @brief PE32+ 이미지 @p bytes 의 데이터 디렉터리에 @p table 이 있으면(RVA 가 0 이 아니면) true 입니다. 담긴 서술자 수와 무관합니다. */
+        [[nodiscard]] static bool hasImportDirectory( const vector<uint8>& bytes, ImportTable table );
+
+        /**
+         * @brief PE32+ 이미지의 일반 import 표에서 DLL 이름이 @p from 인 항목(대소문자 무시)을 @p to 로 바꾸고, 바꾼 항목 수를 반환합니다.
+         * @details @p to 는 @p from 과 길이가 같아야 합니다(이름 문자열을 제자리로 덮습니다). 다르거나 PE32+ 가 아니면 0 입니다.
+         */
+        static uint32 replaceImportDllName( vector<uint8>& inoutBytes, string_view from, string_view to );
 
         /**
          * @brief 모듈 파일 바이트에서 엔진 ABI 도장(`swEngineAbiStamp:<sha1>`)을 찾습니다. 이 함수만은 ELF 에 한정되지 않습니다(DLL · SO 모두).

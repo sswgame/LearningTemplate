@@ -325,9 +325,7 @@ One meaning, one definition. A second copy of a value compiles, passes tests, an
 
 - **Used in one `.cpp`** → that file's `XxxInternal` struct as `static constexpr` (or inside the function). Do not hoist it "in case".
 - **Used across one module** → the owning type as `static constexpr` (`MeshAssetFormat::kExtension`), or the module's namespace in its
-  types header (`audio::kSampleRate` in `AudioTypes.h`). No `*Constants.h` grab-bag per folder. A constant a delay-loaded module reads by
-  reference must not be a static member of an exported (`SW_GF_API`) class — it becomes a data import the delay-load rejects; use a
-  namespace-scope `inline constexpr` (`kMaterialColorParameter`).
+  types header (`audio::kSampleRate` in `AudioTypes.h`). No `*Constants.h` grab-bag per folder.
 - **A contract between modules or backends** → the contract header: `RHITypes.h` `constant` block (backend ↔ backend),
   `bindingslots.hlsli` (shader ↔ C++, pure `#define` numeric literals, read through `ShaderBindingSlots.h` as `shaderslot::k*`),
   `Core/Common/Defines.h` · `Engine/Common/EngineDefines.h` `constant` (engine-wide). If two sides must agree, there is one definition and both

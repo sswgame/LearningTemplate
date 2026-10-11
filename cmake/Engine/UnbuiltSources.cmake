@@ -76,15 +76,6 @@ endfunction()
 
 # 구성 끝(모든 소스 타겟을 만든 뒤)에 한 번 — 적어 둔 것을 빌드 트리에 쓴다. 내용이 같으면 파일을 다시 쓰지 않는다.
 function(sw_writeUnbuiltSourceList)
-	# 지연 로드 훅은 그것을 부탁한 타겟이 있어야 지어진다(`sw_addDelayloadHook`). 아무도 부탁하지 않은 구성(배포 · Windows 밖)은 짓지 않는다.
-	get_property(bHookRequested GLOBAL PROPERTY SW_DELAYLOAD_HOOK_REQUESTED)
-	if(NOT bHookRequested AND TARGET Engine)
-		get_property(hookSource TARGET Engine PROPERTY SW_DELAYLOAD_HOOK_SOURCE)
-		if(hookSource)
-			sw_declareUnbuiltSources("${hookSource}")
-		endif()
-	endif()
-
 	get_property(listSource GLOBAL PROPERTY SW_UNBUILT_SOURCES)
 	list(FILTER listSource INCLUDE REGEX "\\.(c|cpp)$")
 	set(listRelative "")

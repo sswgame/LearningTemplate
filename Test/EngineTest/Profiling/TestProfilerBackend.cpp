@@ -157,6 +157,8 @@ SW_TEST_CASE( ProfilerBackendTest, TracyBackendAcceptsZonesWithoutViewer )
     if ( sw::ProfilerBackend::isTracyCompiled() == false )
         SW_TEST_SKIP( "Tracy is not linked into this build (SW_ENABLE_TRACY=OFF)" );
 
+    // 출력의 함수는 클라이언트 함수 표를 채운 뒤에만 부른다(`ProfilerBackend::startTracy` 와 같은 순서) — Windows 는 여기서 TracyClient.dll 이 올라온다.
+    SW_ASSERT_TRUE_MSG( sw::TracyProfilerBackend::loadClient(), "TracyClient.dll is missing next to the executable or lacks a function the engine calls" );
     sw::TracyProfilerBackend   tracy;
     const sw::ProfileZoneSite* pSite = sw::ProfilerBackend::registerZoneSite( "ProfilerBackendTest.Tracy", "test", "Test/EngineTest", 1u );
     SW_ASSERT_NOT_NULL( pSite );

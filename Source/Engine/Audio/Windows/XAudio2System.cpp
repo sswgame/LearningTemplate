@@ -21,6 +21,64 @@ namespace sw
             static constexpr uint32 kStreamBufferCount = 3;
 
             /**
+             * @brief Media Foundation · XAudio2 함수 표입니다. 처음 쓸 때 시스템 DLL 을 올려 한 번 채우고 프로세스 끝까지 둡니다.
+             * @details import 라이브러리를 링크하지 않는다 — 없을 수 있는 DLL 이라(Media Foundation 이 빠진 Windows N) 일반 import 면 프로세스가
+             *          뜨지 못하고, 지연 로드(/DELAYLOAD)는 lld 썽크가 첫 호출의 float 인자를 망가뜨려 쓰지 않는다(docs/09_Decisions.md).
+             *          함수가 없으면 그 기능이 꺼진다(오프라인 렌더 · 대체 디코더 없음).
+             */
+            struct SystemAudioAPI
+            {
+                using PFN_MFStartup                   = HRESULT( WINAPI* )( ULONG, DWORD );
+                using PFN_MFShutdown                  = HRESULT( WINAPI* )();
+                using PFN_MFCreateMediaType           = HRESULT( WINAPI* )( IMFMediaType** );
+                using PFN_MFCreateSourceReaderFromURL = HRESULT( WINAPI* )( LPCWSTR, IMFAttributes*, IMFSourceReader** );
+                using PFN_XAudio2Create               = HRESULT( WINAPI* )( IXAudio2**, UINT32, XAUDIO2_PROCESSOR );
+
+                PFN_MFStartup                   _pfnMFStartup{ nullptr };
+                PFN_MFShutdown                  _pfnMFShutdown{ nullptr };
+                PFN_MFCreateMediaType           _pfnMFCreateMediaType{ nullptr };
+                PFN_MFCreateSourceReaderFromURL _pfnMFCreateSourceReaderFromURL{ nullptr };
+                PFN_XAudio2Create               _pfnXAudio2Create{ nullptr };
+
+                /** @brief Media Foundation 디코드에 필요한 함수가 모두 있으면 true 입니다. */
+                bool hasMediaFoundation() const
+                {
+                    return _pfnMFStartup != nullptr && _pfnMFShutdown != nullptr && _pfnMFCreateMediaType != nullptr && _pfnMFCreateSourceReaderFromURL != nullptr;
+                }
+            };
+
+            /** @brief System32 의 @p pDllName 에서 @p pSymbol 을 찾습니다. DLL 이나 함수가 없으면 nullptr 입니다. */
+            template <typename TFunction>
+            static TFunction findSystemFunction( const utf16* pDllName, const utf8* pSymbol )
+            {
+                HMODULE hModule = GetModuleHandleW( pDllName );
+                if ( hModule == nullptr )
+                    hModule = LoadLibraryExW( pDllName, nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32 );
+                if ( hModule == nullptr )
+                    return nullptr;
+                return reinterpret_cast<TFunction>( reinterpret_cast<void*>( GetProcAddress( hModule, pSymbol ) ) );
+            }
+
+            /** @brief 시스템 DLL 을 올려 함수 표를 채웁니다. 없는 함수는 nullptr 로 남깁니다. */
+            static SystemAudioAPI loadSystemAudioAPI()
+            {
+                SystemAudioAPI api{};
+                api._pfnMFStartup                   = findSystemFunction<SystemAudioAPI::PFN_MFStartup>( L"mfplat.dll", "MFStartup" );
+                api._pfnMFShutdown                  = findSystemFunction<SystemAudioAPI::PFN_MFShutdown>( L"mfplat.dll", "MFShutdown" );
+                api._pfnMFCreateMediaType           = findSystemFunction<SystemAudioAPI::PFN_MFCreateMediaType>( L"mfplat.dll", "MFCreateMediaType" );
+                api._pfnMFCreateSourceReaderFromURL = findSystemFunction<SystemAudioAPI::PFN_MFCreateSourceReaderFromURL>( L"mfreadwrite.dll", "MFCreateSourceReaderFromURL" );
+                api._pfnXAudio2Create               = findSystemFunction<SystemAudioAPI::PFN_XAudio2Create>( L"xaudio2_9.dll", "XAudio2Create" );
+                return api;
+            }
+
+            /** @brief 함수 표입니다. 처음 부를 때 채운다(정적 지역 초기화라 여러 스레드가 함께 불러도 한 번). */
+            static const SystemAudioAPI& getSystemAudioAPI()
+            {
+                static const SystemAudioAPI s_api = loadSystemAudioAPI();
+                return s_api;
+            }
+
+            /**
              * @brief 부르는 스레드에서 COM 과 Media Foundation 이 초기화되어 있게 하는 RAII 도우미입니다.
              */
             struct ScopedThreadComAndMf
@@ -38,15 +96,15 @@ namespace sw
                     if ( SUCCEEDED( hrCo ) )
                         _bCoInit = SW_TRUE;
 
-                    const HRESULT hrMf = MFStartup( MF_VERSION );
-                    if ( SUCCEEDED( hrMf ) )
+                    const SystemAudioAPI& api = getSystemAudioAPI();
+                    if ( api.hasMediaFoundation() && SUCCEEDED( api._pfnMFStartup( MF_VERSION, MFSTARTUP_FULL ) ) )
                         _bMfInit = SW_TRUE;
                 }
 
                 ~ScopedThreadComAndMf()
                 {
                     if ( _bMfInit == SW_TRUE )
-                        MFShutdown();
+                        getSystemAudioAPI()._pfnMFShutdown();
                     if ( _bCoInit == SW_TRUE )
                         CoUninitialize();
                 }
@@ -61,16 +119,19 @@ namespace sw
                 if ( absPath.empty() )
                     absPath = string( path );
 
+                const SystemAudioAPI& api = getSystemAudioAPI();
+                if ( api.hasMediaFoundation() == false )
+                    return false; // Media Foundation 이 없는 Windows(N 에디션) — 공통 디코더가 못 푸는 형식은 재생하지 않는다
                 ScopedThreadComAndMf threadComScope;
                 IMFSourceReader*     pReader{ nullptr };
                 const wstring        wpath = StringUtil::utf8ToUtf16( absPath.c_str() );
-                HRESULT              hr    = MFCreateSourceReaderFromURL( wpath.c_str(), nullptr, &pReader );
+                HRESULT              hr    = api._pfnMFCreateSourceReaderFromURL( wpath.c_str(), nullptr, &pReader );
                 if ( FAILED( hr ) || pReader == nullptr )
                     return false;
 
                 IMFMediaType* pPartial{ nullptr };
                 // 실패하면 pPartial 이 nullptr 인 채로 돌아온다. 결과를 보지 않으면 바로 널 역참조다.
-                if ( FAILED( MFCreateMediaType( &pPartial ) ) || pPartial == nullptr )
+                if ( FAILED( api._pfnMFCreateMediaType( &pPartial ) ) || pPartial == nullptr )
                 {
                     pReader->Release();
                     return false;
@@ -211,13 +272,25 @@ namespace sw
         else if ( hr != RPC_E_CHANGED_MODE )
             SW_LOG_WARNING( "CoInitializeEx failed (0x%#).", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
 
-        const HRESULT mfHr = MFStartup( MF_VERSION );
-        if ( SUCCEEDED( mfHr ) )
-            _impl->_bMfInitialized = SW_TRUE;
+        const XAudio2SystemInternal::SystemAudioAPI& api = XAudio2SystemInternal::getSystemAudioAPI();
+        if ( api.hasMediaFoundation() == false )
+            SW_LOG_WARNING( "Media Foundation is not available (mfplat.dll / mfreadwrite.dll) - clips the built-in decoders cannot read will not play." );
         else
-            SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
+        {
+            const HRESULT mfHr = api._pfnMFStartup( MF_VERSION, MFSTARTUP_FULL );
+            if ( SUCCEEDED( mfHr ) )
+                _impl->_bMfInitialized = SW_TRUE;
+            else
+                SW_LOG_WARNING( "MFStartup failed (0x%#).", Fmt( static_cast<uint32>( mfHr ), Format( 8, Format::Padding::Zero ).hex() ) );
+        }
 
-        hr = XAudio2Create( &_impl->_pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
+        if ( api._pfnXAudio2Create == nullptr )
+        {
+            SW_LOG_WARNING( "XAudio2 is not available (xaudio2_9.dll). Rendering offline." );
+            closeOutput();
+            return false;
+        }
+        hr = api._pfnXAudio2Create( &_impl->_pXAudio, 0, XAUDIO2_DEFAULT_PROCESSOR );
         if ( FAILED( hr ) || _impl->_pXAudio == nullptr )
         {
             SW_LOG_WARNING( "XAudio2Create failed (0x%#). Rendering offline.", Fmt( static_cast<uint32>( hr ), Format( 8, Format::Padding::Zero ).hex() ) );
@@ -298,7 +371,7 @@ namespace sw
         }
         if ( _impl->_bMfInitialized == SW_TRUE )
         {
-            MFShutdown();
+            XAudio2SystemInternal::getSystemAudioAPI()._pfnMFShutdown();
             _impl->_bMfInitialized = SW_FALSE;
         }
         if ( _impl->_bComInitialized == SW_TRUE )

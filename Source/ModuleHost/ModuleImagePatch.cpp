@@ -2,6 +2,7 @@
 
 #include "ModuleHost/ModuleImagePatch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
 
 namespace sw
@@ -130,6 +131,146 @@ namespace sw
                 return outView._stringOffset <= bytes.size() && bytes.size() - outView._stringOffset >= outView._stringSize;
             }
 
+            // PE32+ 필드 위치(Microsoft PE/COFF 사양). 이름을 붙여 두면 사양 표와 대조할 수 있다.
+            static constexpr uint64 kDosNewHeaderOffset       = 0x3C;   ///< e_lfanew
+            static constexpr uint32 kPeSignature              = 0x4550; ///< "PE\0\0"
+            static constexpr uint64 kCoffSectionCount         = 4 + 2;  ///< 서명 뒤 NumberOfSections
+            static constexpr uint64 kCoffOptionalHeaderSize   = 4 + 16; ///< 서명 뒤 SizeOfOptionalHeader
+            static constexpr uint64 kCoffHeaderEnd            = 4 + 20; ///< 서명 + COFF 헤더 = 선택 헤더의 시작
+            static constexpr uint16 kOptionalMagicPe32Plus    = 0x20B;
+            static constexpr uint64 kOptionalDirectoryCount   = 108; ///< NumberOfRvaAndSizes(PE32+)
+            static constexpr uint64 kOptionalDirectoryBegin   = 112; ///< DataDirectory[0](PE32+)
+            static constexpr uint64 kDirectoryEntrySize       = 8;
+            static constexpr uint32 kDirectoryImport          = 1;  ///< IMAGE_DIRECTORY_ENTRY_IMPORT
+            static constexpr uint32 kDirectoryDelayImport     = 13; ///< IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT
+            static constexpr uint64 kSectionHeaderSize        = 40;
+            static constexpr uint64 kSectionVirtualSize       = 8;
+            static constexpr uint64 kSectionVirtualAddress    = 12;
+            static constexpr uint64 kSectionRawSize           = 16;
+            static constexpr uint64 kSectionRawOffset         = 20;
+            static constexpr uint64 kImportDescriptorSize     = 20; ///< IMAGE_IMPORT_DESCRIPTOR
+            static constexpr uint64 kImportDescriptorName     = 12;
+            static constexpr uint64 kImportDescriptorThunk    = 16;   ///< FirstThunk
+            static constexpr uint64 kDelayDescriptorSize      = 32;   ///< IMAGE_DELAYLOAD_DESCRIPTOR
+            static constexpr uint64 kDelayDescriptorName      = 4;    ///< DllNameRVA
+            static constexpr uint32 kMaxImportDescriptorCount = 4096; ///< 깨진 표가 끝없이 돌지 않게
+
+            /** @brief PE32+ 의 섹션 표 위치와 import 디렉터리 둘입니다. */
+            struct PeView
+            {
+                uint64 _sectionOffset{ 0 };
+                uint32 _importRva{ 0 };
+                uint32 _delayImportRva{ 0 };
+                uint16 _sectionCount{ 0 };
+            };
+
+            /** @brief PE32+ 인지 보고, 섹션 표와 두 import 디렉터리의 RVA 를 찾습니다. */
+            static bool findPe( const vector<uint8>& bytes, PeView& outView )
+            {
+                if ( bytes.size() < kDosNewHeaderOffset + 4 || bytes[0] != 'M' || bytes[1] != 'Z' )
+                    return false;
+                uint32 peOffset{ 0 };
+                uint32 signature{ 0 };
+                if ( readAt( bytes, kDosNewHeaderOffset, peOffset ) == false || readAt( bytes, peOffset, signature ) == false || signature != kPeSignature )
+                    return false;
+                uint16     optionalHeaderSize{ 0 };
+                uint16     magic{ 0 };
+                uint32     directoryCount{ 0 };
+                const bool bHeaderRead = readAt( bytes, peOffset + kCoffSectionCount, outView._sectionCount ) &&
+                                         readAt( bytes, peOffset + kCoffOptionalHeaderSize, optionalHeaderSize ) &&
+                                         readAt( bytes, peOffset + kCoffHeaderEnd, magic ) &&
+                                         readAt( bytes, peOffset + kCoffHeaderEnd + kOptionalDirectoryCount, directoryCount );
+                if ( bHeaderRead == false || magic != kOptionalMagicPe32Plus )
+                    return false;
+                const uint64 directoryBase = peOffset + kCoffHeaderEnd + kOptionalDirectoryBegin;
+                if ( directoryCount > kDirectoryImport && readAt( bytes, directoryBase + kDirectoryImport * kDirectoryEntrySize, outView._importRva ) == false )
+                    return false;
+                if ( directoryCount > kDirectoryDelayImport &&
+                     readAt( bytes, directoryBase + kDirectoryDelayImport * kDirectoryEntrySize, outView._delayImportRva ) == false )
+                    return false;
+                outView._sectionOffset = peOffset + kCoffHeaderEnd + optionalHeaderSize;
+                return outView._sectionOffset + static_cast<uint64>( outView._sectionCount ) * kSectionHeaderSize <= bytes.size();
+            }
+
+            /** @brief RVA 를 섹션 표로 파일 위치로 바꿉니다. 파일에 실린 바이트가 아니면 false 입니다. */
+            static bool mapRvaToOffset( const vector<uint8>& bytes, const PeView& view, uint64 rva, uint64& outOffset )
+            {
+                for ( uint16 sectionIndex = 0; sectionIndex < view._sectionCount; ++sectionIndex )
+                {
+                    const uint64 base = view._sectionOffset + static_cast<uint64>( sectionIndex ) * kSectionHeaderSize;
+                    uint32       virtualSize{ 0 };
+                    uint32       virtualAddress{ 0 };
+                    uint32       rawSize{ 0 };
+                    uint32       rawOffset{ 0 };
+                    const bool   bRead = readAt( bytes, base + kSectionVirtualSize, virtualSize ) && readAt( bytes, base + kSectionVirtualAddress, virtualAddress ) &&
+                                       readAt( bytes, base + kSectionRawSize, rawSize ) && readAt( bytes, base + kSectionRawOffset, rawOffset );
+                    if ( bRead == false )
+                        return false;
+                    const uint64 extent = ( virtualSize > rawSize ) ? virtualSize : rawSize;
+                    if ( virtualAddress <= rva && rva < virtualAddress + extent )
+                    {
+                        if ( rva - virtualAddress >= rawSize )
+                            return false;
+                        outOffset = rva - virtualAddress + rawOffset;
+                        return outOffset < bytes.size();
+                    }
+                }
+                return false;
+            }
+
+            /** @brief 파일 위치 @p offset 에서 시작하는 NUL 로 끝나는 문자열입니다. 파일 끝까지 NUL 이 없으면 빈 뷰입니다. */
+            static string_view cStringAt( const vector<uint8>& bytes, uint64 offset )
+            {
+                if ( offset >= bytes.size() )
+                    return {};
+                const utf8*  pBegin = reinterpret_cast<const utf8*>( bytes.data() + offset );
+                const uint64 limit  = bytes.size() - offset;
+                uint64       length{ 0 };
+                while ( length < limit && pBegin[length] != '\0' )
+                {
+                    ++length;
+                }
+                if ( length == limit )
+                    return {};
+                return string_view{ pBegin, static_cast<size_t>( length ) };
+            }
+
+            /**
+             * @brief @p table 의 서술자마다 DLL 이름 문자열의 파일 위치를 모읍니다.
+             * @return 표를 끝까지 읽었으면 true(표가 없으면 빈 목록). 이름이 파일 밖을 가리키면 false 입니다.
+             */
+            static bool collectImportNameOffsets( const vector<uint8>& bytes, const PeView& view, ModuleImagePatch::ImportTable table, vector<uint64>& outListOffset )
+            {
+                outListOffset.clear();
+                const bool   bDelay         = table == ModuleImagePatch::ImportTable::Delay;
+                const uint32 directoryRva   = bDelay ? view._delayImportRva : view._importRva;
+                const uint64 descriptorSize = bDelay ? kDelayDescriptorSize : kImportDescriptorSize;
+                const uint64 nameField      = bDelay ? kDelayDescriptorName : kImportDescriptorName;
+                if ( directoryRva == 0 )
+                    return true;
+                uint64 directoryOffset{ 0 };
+                if ( mapRvaToOffset( bytes, view, directoryRva, directoryOffset ) == false )
+                    return false;
+                for ( uint32 descriptorIndex = 0; descriptorIndex < kMaxImportDescriptorCount; ++descriptorIndex )
+                {
+                    const uint64 descriptor = directoryOffset + static_cast<uint64>( descriptorIndex ) * descriptorSize;
+                    uint32       nameRva{ 0 };
+                    uint32       firstThunkRva{ 0 };
+                    if ( readAt( bytes, descriptor + nameField, nameRva ) == false )
+                        return false;
+                    // 일반 import 표는 모두 0 인 서술자로, 지연 import 표는 이름 칸이 0 인 서술자로 끝난다.
+                    if ( bDelay == false && readAt( bytes, descriptor + kImportDescriptorThunk, firstThunkRva ) == false )
+                        return false;
+                    if ( nameRva == 0 && firstThunkRva == 0 )
+                        return true;
+                    uint64 nameOffset{ 0 };
+                    if ( mapRvaToOffset( bytes, view, nameRva, nameOffset ) == false || cStringAt( bytes, nameOffset ).empty() )
+                        return false;
+                    outListOffset.push_back( nameOffset );
+                }
+                return false;
+            }
+
             /** @brief 문자열 표 안의 @p index 에서 시작하는 NUL 로 끝나는 문자열입니다. 표를 벗어나면 빈 뷰입니다. */
             static string_view stringAt( const vector<uint8>& bytes, const DynamicView& view, uint64 index )
             {
@@ -235,17 +376,21 @@ namespace sw
         return false;
     }
 
-    string ModuleImagePatch::makeGenerationName( string_view soname, uint32 generation )
+    string ModuleImagePatch::makeGenerationName( string_view libraryName, uint32 generation )
     {
-        const size_t extensionPos = soname.find( ".so" );
+        size_t extensionPos = libraryName.find( ".so" );
+        if ( extensionPos == string_view::npos && libraryName.size() > 4 && StringUtil::endsWith( libraryName, ".dll", true ) )
+            extensionPos = libraryName.size() - 4;
         if ( extensionPos == string_view::npos )
             return {};
-        const size_t minimumStem = ModuleImagePatchInternal::kLibPrefixLength + ModuleImagePatchInternal::kGenerationDigits;
+        // 접두어(`lib`) 뒤에 원래 이름이 한 글자는 남아야 세대 이름에서 모듈을 알아본다.
+        const size_t prefixLength = StringUtil::startsWith( libraryName, "lib" ) ? ModuleImagePatchInternal::kLibPrefixLength : 0;
+        const size_t minimumStem  = prefixLength + 1 + ModuleImagePatchInternal::kGenerationDigits;
         if ( extensionPos < minimumStem )
             return {};
 
         constexpr const utf8* kDigits = "0123456789abcdefghijklmnopqrstuvwxyz";
-        string                name{ soname };
+        string                name{ libraryName };
         uint32                remaining = generation;
         for ( uint32 digitIndex = 0; digitIndex < ModuleImagePatchInternal::kGenerationDigits; ++digitIndex )
         {
@@ -253,5 +398,49 @@ namespace sw
             remaining /= 36;
         }
         return name;
+    }
+
+    bool ModuleImagePatch::readImportDllNames( const vector<uint8>& bytes, ImportTable table, vector<string>& outListDllName )
+    {
+        outListDllName.clear();
+        ModuleImagePatchInternal::PeView view{};
+        vector<uint64>                   listOffset;
+        if ( ModuleImagePatchInternal::findPe( bytes, view ) == false || ModuleImagePatchInternal::collectImportNameOffsets( bytes, view, table, listOffset ) == false )
+            return false;
+        for ( const uint64 offset : listOffset )
+        {
+            outListDllName.push_back( string{ ModuleImagePatchInternal::cStringAt( bytes, offset ) } );
+        }
+        return true;
+    }
+
+    bool ModuleImagePatch::hasImportDirectory( const vector<uint8>& bytes, ImportTable table )
+    {
+        ModuleImagePatchInternal::PeView view{};
+        if ( ModuleImagePatchInternal::findPe( bytes, view ) == false )
+            return false;
+        return ( table == ImportTable::Delay ? view._delayImportRva : view._importRva ) != 0;
+    }
+
+    uint32 ModuleImagePatch::replaceImportDllName( vector<uint8>& inoutBytes, string_view from, string_view to )
+    {
+        if ( from.empty() || from.size() != to.size() )
+            return 0;
+        ModuleImagePatchInternal::PeView view{};
+        vector<uint64>                   listOffset;
+        if ( ModuleImagePatchInternal::findPe( inoutBytes, view ) == false ||
+             ModuleImagePatchInternal::collectImportNameOffsets( inoutBytes, view, ImportTable::Load, listOffset ) == false )
+            return 0;
+
+        uint32 replacedCount{ 0 };
+        for ( const uint64 offset : listOffset )
+        {
+            // Windows 로더는 DLL 이름을 대소문자 없이 맞춘다 — 링커가 적은 철자(`gameframework.dll` 일 수도 있다)와 무관하게 바꾼다.
+            if ( StringUtil::equals( ModuleImagePatchInternal::cStringAt( inoutBytes, offset ), from, true ) == false )
+                continue;
+            Memory::copy( inoutBytes.data() + offset, to.data(), to.size() );
+            ++replacedCount;
+        }
+        return replacedCount;
     }
 } // namespace sw

@@ -209,7 +209,12 @@ namespace sw
         if ( getActiveBackend() == &ProfilerBackendInternal::s_tracy )
             return true;
 
-        // 첫 Tracy 호출이 TracyClient.dll 을 올리고 수집 스레드 · 리슨 소켓을 세운다(지연 로드).
+        // 함수 표를 채우며 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 이때 선다.
+        if ( TracyProfilerBackend::loadClient() == false )
+        {
+            SW_LOG_WARNING( "Tracy client library (TracyClient.dll) could not be loaded or lacks a function this engine calls - Tracy stays off" );
+            return false;
+        }
         setActiveBackend( &ProfilerBackendInternal::s_tracy );
         // 태스크 · 스테이지 이름이 구간이 된다(Core 는 프로파일러를 모르므로 여기서 꽂는다).
         TaskManager::setProfileHook( &ProfilerBackendInternal::kTaskProfileHook );

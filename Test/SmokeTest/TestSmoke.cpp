@@ -1,11 +1,15 @@
 #include "pch.h"
 
+#include "Core/Common/PlatformOsHeaders.h"
 #include "Core/Common/StdHeaders.h"
+#include "Core/Container/StringUtil.h"
 #include "Core/Event/EventDispatcher.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Module/ModuleImageUtil.h"
 #include "Core/Process/Process.h"
+#include "Core/String/StringBuilder.h"
 #include "Core/Task/TaskManager.h"
 #include "Core/Time/MonotonicClock.h"
 
@@ -70,9 +74,35 @@ namespace sw
             return sw::FileUtil::exists( modulePath( pBaseName ) );
         }
 
+        /** @brief (Windows) 올라온 이미지 @p pHandle 의 파일 이름(`GameFrame0001.dll`)입니다 — 로더가 import 를 맞추는 이름입니다. */
+        sw::string findLoadedFileName( void* pHandle )
+        {
+    #if defined( SW_PLATFORM_WINDOWS )
+            utf16       arrPath[constant::kMaxPathSize]{};
+            const DWORD length = GetModuleFileNameW( static_cast<HMODULE>( pHandle ), arrPath, constant::kMaxPathSize );
+            if ( length == 0 || length >= constant::kMaxPathSize )
+                return {};
+            const sw::string path = sw::StringUtil::utf16ToUtf8( arrPath );
+            sw::string_view  fileName;
+            sw::FileUtil::getFileNamePart( path, fileName );
+            return sw::string{ fileName };
+    #else
+            (void)pHandle;
+            return {};
+    #endif
+        }
+
+        /** @brief @p filePath 의 PE 지연 import DLL 이름을 읽습니다. 파일을 못 읽거나 PE 가 아니면 false 입니다. */
+        [[nodiscard]] bool readDelayImportsOfFile( const sw::string& filePath, sw::vector<sw::string>& outListDllName )
+        {
+            sw::vector<uint8> bytes;
+            return sw::FileUtil::readFile( filePath, bytes ) && sw::ModuleImagePatch::readImportDllNames( bytes, sw::ModuleImagePatch::ImportTable::Delay, outListDllName );
+        }
+
         /**
          * @brief 모듈 폴더에 남은 @p pModuleName 의 섀도 복사본 파일(DLL · 디버그 심볼) 가운데 **이 프로세스가 만든 것**의 수를 셉니다.
          * @details 그 폴더는 나란히 도는 다른 테스트 프로세스(App 을 띄우는 AppTest 등)도 쓰므로 그쪽 복사본은 세지 않습니다.
+         *          Windows 복사본은 제 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`) 안에 있으므로 그 폴더 안의 파일을 셉니다.
          */
         uint32 countShadowCopies( const utf8* pModuleName )
         {
@@ -80,6 +110,8 @@ namespace sw
             sw::vector<sw::string> listFile;
             if ( sw::FileUtil::collectFiles( directory, "", listFile, false ) == false )
                 return 0;
+            sw::vector<sw::string> listFolder;
+            (void)sw::FileUtil::collectFolders( directory, listFolder, false ); // 폴더가 없으면 파일만 센다
             const sw::string prefix           = sw::string{ pModuleName } + sw::ShadowCopyName::kMarker;
             const int32      currentProcessID = sw::Process::getCurrentProcessID();
             uint32           count{ 0 };
@@ -90,6 +122,15 @@ namespace sw
                                       ownerProcessID == currentProcessID;
                 if ( bOwnCopy )
                     ++count;
+            }
+            for ( const sw::string& folderPath : listFolder )
+            {
+                int32      ownerProcessID{ 0 };
+                const bool bOwnCopy = folderPath.find( prefix ) != sw::string::npos && sw::ShadowCopyName::parse( folderPath, ownerProcessID ) &&
+                                      ownerProcessID == currentProcessID;
+                sw::vector<sw::string> listCopyFile;
+                if ( bOwnCopy && sw::FileUtil::collectFiles( folderPath, "", listCopyFile, false ) )
+                    count += static_cast<uint32>( listCopyFile.size() );
             }
             return count;
         }
@@ -954,13 +995,12 @@ SW_TEST_CASE( ArchitectureTest, LiveReloadOneOfTwoKitsCascadesIntoTheGameOnly )
 
 /**
  * @brief [ArchitectureTest] App 과 같은 사슬(GameFramework → 킷 → SWGame)을 연쇄 리로드해도, 의존 모듈은 **지금의** 복사본에 묶인다
- * @details 섀도 복사본은 파일 이름이 원본과 달라서 의존 모듈이 어느 이미지에 묶일지를 로더가 정한다. Windows 는 지연 로드 훅이
- *          `LiveReloadManager` 에게 물어 지금의 복사본을 받고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다. 어긋나면
- *          GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로 뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면
- *          이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
+ * @details 의존은 이름으로 묶인다. prepare 가 복사본마다 세대 이름을 주고(Windows 는 파일 이름, 리눅스는 SONAME), 의존하는 복사본의
+ *          import · NEEDED 를 그 이름으로 바꾼다(`LiveReloadManager::rewriteShadowImageNames`). 빠지면 Windows 는 원본 DLL 을 한 벌 더 올리고,
+ *          리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이긴다 — GameFramework 가 한 프로세스에 두 벌 돌고, 옛 복사본을 내리는 순간 그리로
+ *          뛰는 코드가 죽는다. 리로드가 "끝났다" 만 보면 이것을 못 잡으므로 누가 누구에게 묶였는지를 본다.
  *
- *          Windows 는 올리는 자리(`LiveReloadManager` 의 커밋)가 지연 import 를 미리 묶으므로(`ModuleImageUtil::bindDelayLoadImports`) 모듈 코드를
- *          부르기 전에 이미 지금의 GameFramework 에 묶여 있어야 한다. 리눅스는 `RTLD_NOW` 라 로드하는 순간 모두 묶인다.
+ *          모듈끼리는 일반 import 라 로드하는 순간 모두 묶인다(Windows 지연 로드 썽크는 첫 호출의 float 인자를 망가뜨려 쓰지 않는다).
  */
 SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 {
@@ -974,9 +1014,15 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
 
     SW_EXPECT_FALSE( manager.isGraphBroken() );
     #if defined( SW_PLATFORM_WINDOWS )
-    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
-    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
-    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    // 복사본은 세대 이름이고, 의존하는 복사본은 그 이름을 import 해 로드하는 순간 지금의 GameFramework 에 묶였다(지연 import 없음).
+    {
+        const sw::string gameFrameworkFile = sw::findLoadedFileName( manager.getModuleHandle( "GameFramework" ) );
+        SW_EXPECT_TRUE_MSG( gameFrameworkFile.empty() == false && sw::StringUtil::equals( gameFrameworkFile, "GameFramework.dll", true ) == false,
+                            "the GameFramework shadow copy must carry a generation name" );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), gameFrameworkFile ) == manager.getModuleHandle( "GameFramework" ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), gameFrameworkFile ) ==
+                        manager.getModuleHandle( "GameFramework" ) );
+    }
     #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
@@ -1002,14 +1048,115 @@ SW_TEST_CASE( ArchitectureTest, ReloadedDependentsBindToTheCurrentImages )
     SW_EXPECT_TRUE( bGameReloaded );
     SW_EXPECT_FALSE( manager.isGraphBroken() );
     #if defined( SW_PLATFORM_WINDOWS )
-    // 올리는 자리가 지연 import 를 미리 묶는다(첫 호출이 묶으면 첫 float 인자가 망가진다) — 모듈 코드를 부르기 전에 이미 지금의 GameFramework 에 묶여 있다.
-    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
-    SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), "GameFramework.dll" ) == manager.getModuleHandle( "GameFramework" ) );
+    // 복사본은 세대 이름이고, 의존하는 복사본은 그 이름을 import 해 로드하는 순간 지금의 GameFramework 에 묶였다(지연 import 없음).
+    {
+        const sw::string gameFrameworkFile = sw::findLoadedFileName( manager.getModuleHandle( "GameFramework" ) );
+        SW_EXPECT_TRUE_MSG( gameFrameworkFile.empty() == false && sw::StringUtil::equals( gameFrameworkFile, "GameFramework.dll", true ) == false,
+                            "the GameFramework shadow copy must carry a generation name" );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "SWGame" ), gameFrameworkFile ) == manager.getModuleHandle( "GameFramework" ) );
+        SW_EXPECT_TRUE( sw::ModuleImageUtil::findBoundImportImage( manager.getModuleHandle( "GF_Overworld" ), gameFrameworkFile ) ==
+                        manager.getModuleHandle( "GameFramework" ) );
+    }
     #endif
     SW_EXPECT_TRUE( sw::createAndDestroyGame( manager.getModuleHandle( "SWGame" ) ) );
     SW_EXPECT_TRUE( manager.verifyModuleBindings() );
 
     manager.shutdown();
+}
+
+/**
+ * @brief [ArchitectureTest] 빌드한 엔진 · 모듈 · 실행 이미지에는 지연 import 가 하나도 없다
+ * @details lld 20 의 x64 지연 로드 썽크는 xmm0~3 을 `__delayLoadHelper2` 호출의 홈 공간에 저장해, 첫 호출이 묶으면 그 호출의 float 인자가
+ *          망가진다(CI 의 액션 키트 테스트가 `DamageMath::applyArmor` 의 damage 로 0 을 받았다). 미리 묶기로 버티던 것을 걷고 지연 로드를
+ *          아예 쓰지 않으므로, 썽크가 도는 자리가 남지 않았는지 산출물에서 본다(빌드 쪽 가드는 `CheckNoDelayLoad`).
+ *          보는 것: `Bin` 의 Engine · GameFramework · 실행 파일, `Bin/Modules` 의 모든 DLL(모듈만 있다), 이 실행 파일 폴더의 실행 파일.
+ */
+SW_TEST_CASE( ArchitectureTest, NoBuiltImageHasDelayLoadedImports )
+{
+    #if defined( SW_PLATFORM_WINDOWS )
+    const sw::string       moduleDirectory = sw::ModuleImageUtil::getModuleDirectory();
+    const sw::string       binDirectory    = sw::FileUtil::getDirectoryPart( moduleDirectory );
+    sw::vector<sw::string> listImage;
+    (void)sw::FileUtil::collectFiles( moduleDirectory, ".dll", listImage, false ); // 없으면(모듈 없는 구성) Bin 만 본다
+    sw::vector<sw::string> listBinExecutable;
+    (void)sw::FileUtil::collectFiles( binDirectory, ".exe", listBinExecutable, false ); // 없으면 아래 단언이 Engine 으로 잡는다
+    listImage.insert( listImage.end(), listBinExecutable.begin(), listBinExecutable.end() );
+    sw::vector<sw::string> listTestExecutable;
+    (void)sw::FileUtil::collectFiles( sw::FileUtil::getBinaryDirectory(), ".exe", listTestExecutable, false ); // 이 실행 파일이 그 안에 있다
+    listImage.insert( listImage.end(), listTestExecutable.begin(), listTestExecutable.end() );
+    for ( const utf8* pName : { "Engine", "GameFramework" } )
+    {
+        const sw::string path = sw::FileUtil::joinPath( binDirectory, sw::ModuleImageUtil::formatSharedLibraryName( pName ) );
+        if ( sw::FileUtil::exists( path ) )
+            listImage.push_back( path );
+    }
+    SW_ASSERT_TRUE_MSG( listImage.empty() == false, "no built image found next to this executable" );
+
+    uint32 checkedCount{ 0 };
+    for ( const sw::string& imagePath : listImage )
+    {
+        int32 ownerProcessID{ 0 };
+        if ( sw::ShadowCopyName::parse( imagePath, ownerProcessID ) )
+            continue; // 다른 프로세스가 쓰는 중인 섀도 복사본(원본과 같은 바이트다)
+        sw::vector<sw::string> listDllName;
+        const bool             bRead = sw::readDelayImportsOfFile( imagePath, listDllName );
+        if ( bRead == false && sw::FileUtil::exists( imagePath ) == false )
+            continue; // 그 사이 다른 프로세스가 지운 임시 파일
+        SW_EXPECT_TRUE_MSG( bRead, ( "could not read the import tables of " + imagePath ).c_str() );
+        SW_EXPECT_TRUE_MSG( listDllName.empty(), ( imagePath + " delay-loads " + ( listDllName.empty() ? sw::string{} : listDllName.front() ) ).c_str() );
+        ++checkedCount;
+    }
+    SW_EXPECT_TRUE( checkedCount > 0u );
+    #else
+    SW_TEST_SKIP( "delay-load imports are a PE (Windows) feature" );
+    #endif
+}
+
+/**
+ * @brief [ArchitectureTest] 지연 import 가 있는 모듈 이미지는 올리지 않는다 — 원인을 남기고 등록이 실패한다(Debug 는 단언)
+ * @details 이 저장소는 지연 로드를 쓰지 않지만(`CheckNoDelayLoad`), 규칙을 어긴 이미지가 들어오면 그 첫 float 인자 호출이 조용히 쓰레기를 받는다.
+ *          그래서 `LiveReloadManager` 가 정적 초기화가 돌기 **전에** 파일 바이트에서 지연 import 표를 보고 거절한다. 실제 키트의 바이트에
+ *          지연 import 디렉터리를 하나 붙인 사본으로 그 길을 지난다(엔진 ABI 도장은 그대로라 앞 검사는 통과한다).
+ */
+SW_TEST_CASE( ArchitectureTest, ModuleWithDelayImportsIsRefused )
+{
+    #if defined( SW_PLATFORM_WINDOWS )
+    if ( sw::isModuleBuilt( "GF_Overworld" ) == false )
+        SW_TEST_SKIP( "GF_Overworld is not built in this configuration" );
+
+    sw::vector<uint8> bytes;
+    SW_ASSERT_TRUE( sw::FileUtil::readFile( sw::modulePath( "GF_Overworld" ), bytes ) );
+    // PE32+ 선택 헤더의 데이터 디렉터리 13(지연 import)에 일반 import 표의 RVA 를 적는다 — 표가 무엇을 담든 "지연 import 가 있다" 가 된다.
+    uint32 peOffset{ 0 };
+    sw::Memory::copy( &peOffset, bytes.data() + 0x3C, sizeof( peOffset ) );
+    const size_t directoryBase = static_cast<size_t>( peOffset ) + 4 + 20 + 112;
+    uint32       importRva{ 0 };
+    sw::Memory::copy( &importRva, bytes.data() + directoryBase + 1 * 8, sizeof( importRva ) );
+    SW_ASSERT_TRUE( importRva != 0u );
+    sw::Memory::copy( bytes.data() + directoryBase + 13 * 8, &importRva, sizeof( importRva ) );
+
+    // 이름에 프로세스 ID 를 넣는다 — Bin 은 나란히 도는 테스트 프로세스가 함께 쓴다.
+    sw::StringBuilder<sw::constant::kMaxBuffer64> nameBuilder;
+    nameBuilder.append( "GF_DelayProbe" ).append( sw::Process::getCurrentProcessID() );
+    const sw::string moduleName{ nameBuilder.c_str() };
+    const sw::string probePath = sw::FileUtil::joinPath( sw::FileUtil::getDirectoryPart( sw::ModuleImageUtil::getModuleDirectory() ),
+                                                         sw::ModuleImageUtil::formatSharedLibraryName( moduleName ) );
+    SW_ASSERT_TRUE( sw::FileUtil::writeFile( probePath, bytes.data(), bytes.size() ) );
+
+    SW_TEST_DEFENSIVE_SCOPE( "a module image with delay-loaded imports is refused before it loads" );
+    {
+        test::ScopedAssertCapture assertCapture;
+        sw::LiveReloadManager     manager;
+        SW_EXPECT_FALSE_MSG( manager.registerModule( moduleName ), "a module with delay-loaded imports was loaded" );
+        SW_EXPECT_TRUE( manager.getModuleHandle( moduleName ) == nullptr );
+        if ( test::ScopedAssertCapture::kAssertsAreActive )
+            SW_EXPECT_EQUAL( 1u, assertCapture.getCount() );
+        manager.shutdown();
+    }
+    (void)sw::FileUtil::tryRemoveFile( probePath ); // 남아도 다음 configure 의 옛 산출물 정리가 지운다
+    #else
+    SW_TEST_SKIP( "delay-load imports are a PE (Windows) feature" );
+    #endif
 }
 
 /**

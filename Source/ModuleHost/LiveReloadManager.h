@@ -20,7 +20,6 @@
 #include "Core/Time/GameTimer.h"
 
 #include "Engine/Common/Common.h"
-#include "Engine/Module/ModuleHandleProvider.h"
 
 namespace sw
 {
@@ -41,7 +40,7 @@ namespace sw
      *       - **적용 뒤 결함은 되돌리지 않습니다**: commit 중 실패 · onAfter 의 결함이나 그래프 막음은 남은 commit 을 멈추고 그래프를 막습니다
      *         (재시작 안내). 이미 교체된 DLL 은 되돌릴 수 없습니다 — UE Live Coding · Unity 의 도메인 리로드도 적용 뒤 결함을 되돌리지 않습니다.
      */
-    class LiveReloadManager final : public IModuleHandleProvider
+    class LiveReloadManager final
     {
     public:
         using OnBeforeReloadDelegate = Delegate<void()>;
@@ -71,14 +70,14 @@ namespace sw
          * @brief 교체된 옛 이미지의 언로드를 몇 번의 연쇄 리로드(배치)만큼 미룰지입니다.
          * @details 옛 코드를 가리키는 것(델리게이트 · 함수 포인터 · vtable · 문자열 리터럴)이 어딘가 남아 있어도, 이미지가 올라와 있는
          *          동안은 크래시가 아니라 옛 동작이 한 번 더 돕니다. 섀도 복사본이라 올려 두어도 원본 파일은 잠기지 않습니다. 이보다
-         *          오래된 배치는 의존하는 쪽부터 내립니다(Windows 지연 로드는 참조 수를 올리지 않으므로 순서를 손으로 지킵니다).
+         *          오래된 배치는 의존하는 쪽부터 내립니다.
          */
         static constexpr uint32 kMaxDeferredUnloadBatchCount = 4;
 
         /** @brief 모듈 맵과 감시자가 빈 상태로 시작합니다. */
         LiveReloadManager();
         /** @brief 로드된 모듈을 언로드합니다. */
-        ~LiveReloadManager() override;
+        ~LiveReloadManager();
 
         /** @brief 복사를 금지합니다. */
         LiveReloadManager( const LiveReloadManager& ) = delete;
@@ -179,13 +178,12 @@ namespace sw
         /**
          * @brief 등록된 모듈마다, 의존 모듈이 **지금 이 매니저가 들고 있는 이미지**에 묶였는지 확인합니다.
          * @return 어긋난 결속이 하나도 없으면 true. 어긋나면 모듈 · 의존 이름과 양쪽 주소를 로그로 남기고 false 입니다.
-         * @details 섀도 복사본은 원본과 파일 이름이 달라서, 의존 모듈이 어느 이미지에 묶일지는 로더가 정합니다. Windows 는 지연 로드
-         *          훅(`DelayLoadNotifyHook.cpp`)이 지금의 복사본을 돌려주고, 리눅스는 SONAME 이 같은 **먼저 올라온** 이미지가 이깁니다.
-         *          어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태 · 타입 등록이 갈린다), 옛 이미지를 내리는 순간 그리로 뛰는
-         *          코드가 죽습니다. 등록과 연쇄 리로드 끝에 부르고, 어긋나면 그래프를 막습니다 — 섞인 채 조용히 도는 것보다 낫습니다.
-         *          Windows 에서 아직 풀리지 않은 지연 로드는 어긋남이 아닙니다(풀릴 때 훅이 그때의 복사본을 돌려줍니다).
-         *          리눅스는 모듈마다 박힌 도장 상수(`sw_moduleEngineAbiStamp_<이름>`, `sw_registerDynamicModule` 이 넣는다)의 주소로
-         *          가립니다.
+         * @details 의존 모듈은 이름으로 묶이고, prepare 가 복사본마다 세대 이름을 주고 의존하는 복사본이 그 이름을 부르게 바꿉니다
+         *          (`rewriteShadowImageNames`). 바꾸기가 빠지면 Windows 는 원본 DLL 을 한 벌 더 올리고, 리눅스는 SONAME 이 같은 **먼저 올라온**
+         *          이미지에 묶입니다. 어긋나면 한 프로세스에서 같은 모듈이 두 벌 돌고(정적 상태 · 타입 등록이 갈린다), 옛 이미지를 내리는 순간
+         *          그리로 뛰는 코드가 죽습니다. 등록과 연쇄 리로드 끝에 부르고, 어긋나면 그래프를 막습니다 — 섞인 채 조용히 도는 것보다 낫습니다.
+         *          Windows 는 import 표의 첫 칸이 가리키는 이미지로, 리눅스는 모듈마다 박힌 도장 상수(`sw_moduleEngineAbiStamp_<이름>`,
+         *          `sw_registerDynamicModule` 이 넣는다)의 주소로 가립니다.
          */
         bool verifyModuleBindings() const;
 
@@ -194,12 +192,6 @@ namespace sw
 
         /** @brief 교체된 뒤 언로드를 미루고 아직 올려 둔 옛 이미지 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
         uint32 getDeferredUnloadImageCount() const { return static_cast<uint32>( _listDeferredUnloadImage.size() ); }
-
-        // --- IModuleHandleProvider: 모듈 DLL 안의 지연 로드 훅이 Engine.dll 을 거쳐 이것만 묻는다 ---
-        /** @brief 리로드 그래프가 깨져 있으면 true 입니다. */
-        bool isModuleGraphBroken() const override { return isGraphBroken(); }
-        /** @brief 이름으로 이미 로드된 모듈 핸들을 찾습니다. */
-        void* findLoadedModuleHandle( string_view moduleName ) const override { return getModuleHandle( moduleName ); }
 
     private:
         struct ModuleContext;
@@ -228,12 +220,15 @@ namespace sw
         /** @brief prepare 가 실패하면 새 이미지를 버리고, 바꿔 둔 SONAME 을 commit 된 이름으로 되돌립니다. */
         void abortShadowCopy( ModuleContext& context, PreparedShadow& prepared );
         /**
-         * @brief (리눅스) 섀도 복사본의 SONAME 을 세대 이름으로, 의존 모듈의 NEEDED 를 그 의존의 **지금** 이름으로 바꿉니다.
-         * @details 복사본은 원본의 SONAME 을 그대로 들고 있어서, 동적 링커는 SONAME 이 같은 **먼저 올라온** 이미지에 새 모듈을 묶습니다
-         *          (연쇄 리로드의 prepare 에서는 그것이 아직 내려가지 않은 옛 이미지입니다). 이름을 세대마다 고유하게 하면 NEEDED 가
-         *          가리키는 이미지가 하나뿐입니다. Windows 에서 지연 로드 훅이 하는 일의 짝입니다(`ModuleImagePatch`).
+         * @brief 섀도 복사본에 세대 이름을 주고(리눅스 SONAME · Windows 파일 이름), 복사본이 부르는 의존 모듈 이름을 그 의존의 **지금** 이름으로 바꿉니다.
+         * @details 로더는 의존을 이름으로 풀고 같은 이름의 이미지가 이미 올라와 있으면 그것을 씁니다. 복사본이 원본 이름을 그대로 들고 있으면
+         *          리눅스는 SONAME 이 같은 **먼저 올라온** 이미지(연쇄 리로드의 prepare 에서는 아직 내려가지 않은 옛 이미지)에 묶이고, Windows 는
+         *          원본 DLL 을 한 벌 더 올립니다. 이름을 세대마다 고유하게 하면 이름이 가리키는 이미지가 하나뿐입니다(`ModuleImagePatch`).
+         *          그래서 모듈끼리는 지연 로드 없이 일반 import 로 묶입니다 — 첫 호출이 썽크를 지나는 일이 없습니다.
+         * @return Windows 에서 세대 이름을 만들 수 없거나(이름이 너무 짧다), 복사본이 등록된 모듈을 의존 목록에 없이 원본 이름으로 부르면 false 입니다.
+         *         리눅스는 늘 true 입니다(SONAME 이 없는 이미지는 바꾸지 않는다).
          */
-        void rewriteShadowSonames( ModuleContext& context, vector<uint8>& inoutBytes );
+        [[nodiscard]] bool rewriteShadowImageNames( ModuleContext& context, vector<uint8>& inoutBytes );
         /** @brief 모듈 핸들을 언로드합니다. */
         void unloadModule( ModuleContext& context );
         /** @brief 교체된 옛 이미지를 지연 언로드 목록에 올리고, 배치가 상한을 넘으면 가장 오래된 배치를 내립니다. */
@@ -257,12 +252,12 @@ namespace sw
         void reloadCascade( const vector<string>& listSubgraphName );
 
         /**
-         * @brief (리눅스) 모듈의 SONAME 세 가지입니다. 다른 플랫폼에서는 비어 있습니다.
-         * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED 가 이것을 적고 있고, `_current` 는 의존 모듈이 **지금** NEEDED 에
+         * @brief 모듈 이미지 이름 세 가지입니다 — 리눅스는 SONAME, Windows 는 DLL 파일 이름(로더가 import 를 맞추는 이름)입니다.
+         * @details `_original` 은 원본 파일의 이름이라 의존 모듈의 NEEDED · import 표가 이것을 적고 있고, `_current` 는 의존 모듈이 **지금**
          *          적어야 할 이름(prepare 가 세대 이름으로 바꾼다), `_loaded` 는 commit 된 복사본의 이름입니다. prepare 가 실패하면
          *          `_current` 를 `_loaded` 로 되돌립니다.
          */
-        struct SonameState
+        struct ImageNameState
         {
             string _original;
             string _current;
@@ -290,7 +285,7 @@ namespace sw
             string                  _originalModulePath;
             string                  _tempModulePath;
             vector<string>          _listDependsOn;
-            SonameState             _soname;
+            ImageNameState          _imageName;
             void*                   _pLibraryModule;
             uint64                  _loadedSourceMtime;
             uint64                  _debounceMtime;

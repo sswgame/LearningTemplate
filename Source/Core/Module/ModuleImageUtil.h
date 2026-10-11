@@ -20,9 +20,6 @@ namespace sw
      */
     struct SW_API ModuleImageUtil
     {
-        /** @brief 지연 로드 훅을 넣은 모듈이 내보내는 미리 묶기 함수의 이름입니다(`Engine/Module/DelayLoadNotifyHook.cpp`). */
-        static constexpr const utf8* kBindDelayLoadImportsSymbol = "bindDelayLoadImports";
-
         // ------------------------------------------------------------------------------
         // 1) 이름 — 플랫폼 접두어 · 확장자 · 디버그 심볼 파일
         // ------------------------------------------------------------------------------
@@ -69,27 +66,10 @@ namespace sw
         static void unloadDynamicLibrary( void* pHandle );
         /**
          * @brief 라이브러리 @p pHandle 이 import 하는 라이브러리 가운데 지금 올라와 있는 것을 프로세스 끝까지 내려가지 않게 고정하고, 고정한 수를 반환합니다.
-         * @details 이 핸들을 내려도 그것이 끌어온 의존 이미지는 남깁니다. Windows 는 import · 지연 import 표의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN`
+         * @details 이 핸들을 내려도 그것이 끌어온 의존 이미지는 남깁니다. Windows 는 import 표의 DLL 을 `GET_MODULE_HANDLE_EX_FLAG_PIN`
          *          으로, 리눅스는 `DT_NEEDED` 를 `RTLD_NODELETE | RTLD_NOLOAD` 로 고정합니다. 아직 올라오지 않은 의존은 올리지 않습니다.
          */
         static uint32 pinDynamicLibraryDependencies( void* pHandle );
-        /**
-         * @brief 모듈 @p pHandle 의 지연 import 를 **지금 전부** 묶고, 묶지 못한 DLL 수를 반환합니다(모듈이 내보낸 `bindDelayLoadImports` 를 부른다).
-         * @details 지연 import 를 첫 호출이 묶게 두면 그 첫 호출의 첫 float 인자가 망가진다 — lld 의 x64 지연 로드 썽크가 xmm0 을 헬퍼 호출의
-         *          홈(shadow) 공간에 저장한다(`Engine/Module/DelayLoadNotifyHook.cpp`). 모듈을 올린 뒤, 그 의존 이미지가 등록된 뒤, 그 코드를 처음
-         *          부르기 **전**에 부릅니다. 그 함수를 내보내지 않는 이미지(지연 로드 훅이 없는 모듈 · Windows 밖)는 아무것도 하지 않습니다.
-         */
-        static uint32 bindDelayLoadImports( void* pHandle );
-        /**
-         * @brief 지금 올라와 있는 모든 이미지에 `bindDelayLoadImports` 를 합니다 — OS 로더가 함께 올린 모듈(테스트 실행 파일이 링크한 키트)용, 엔진 기동이 부른다.
-         * @details 묶기가 올린 이미지(서버 키트가 지연 로드하는 공유 키트)도 묶는다 — 새 이미지가 없을 때까지 다시 모은다.
-         */
-        static uint32 bindDelayLoadImportsOfLoadedModules();
-        /**
-         * @brief 지금 프로세스에 올라와 있는 이미지(실행 파일 · DLL)의 핸들을 모읍니다. Windows 밖에서는 아무것도 담지 않고 true 를 반환합니다.
-         * @return 목록을 읽었으면 true. 다른 스레드가 DLL 을 올리고 내리는 동안 시간 한도 안에서도 못 읽으면 빈 목록과 false
-         */
-        [[nodiscard]] static bool collectLoadedModuleHandles( vector<void*>& outListHandle );
 
         // ------------------------------------------------------------------------------
         // 3) 올라온 이미지 조회
@@ -105,10 +85,10 @@ namespace sw
         static bool findDynamicLibraryRange( void* pHandle, const void*& pOutBegin, const void*& pOutEnd );
         /**
          * @brief 모듈 @p pHandle 이 DLL @p dependencyFileName(예: `GameFramework.dll`)을 **어느 이미지에 묶었는지** import 표에서 읽습니다.
-         * @details 지연 로드는 서술자의 모듈 핸들 칸에 훅이 돌려준 핸들이 적힙니다(풀리기 전에는 0). 일반 import 는 로드할 때 이미 풀리므로
-         *          IAT 첫 칸이 가리키는 주소의 모듈이 묶인 이미지입니다. Windows 전용입니다 — 리눅스는 import 표에서 결속을 읽을 수 없어
+         * @details import 는 로드할 때 풀리므로 IAT 첫 칸이 가리키는 주소의 모듈이 묶인 이미지입니다(모듈 이미지에는 지연 import 가 없다 —
+         *          `LiveReloadManager` 가 그런 이미지를 거절한다). Windows 전용입니다 — 리눅스는 import 표에서 결속을 읽을 수 없어
          *          부르는 쪽이 심볼로 가립니다(`LiveReloadManager` 의 결속 검사).
-         * @return 묶인 이미지의 핸들입니다. 아직 풀리지 않은 지연 로드이거나 그 DLL 을 import 하지 않으면(그 외 플랫폼 포함) nullptr 입니다.
+         * @return 묶인 이미지의 핸들입니다. 그 DLL 을 import 하지 않으면(그 외 플랫폼 포함) nullptr 입니다.
          */
         static void* findBoundImportImage( void* pHandle, string_view dependencyFileName );
 

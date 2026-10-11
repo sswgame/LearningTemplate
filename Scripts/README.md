@@ -129,7 +129,7 @@ Scripts/
   │     │     ├── CheckFallibleNodiscard.py   # 실패를 bool 로 알리는 함수 선언의 `[[nodiscard]]`
   │     │     ├── CheckSourceGlob.py          # CMake GLOB 소스 누락 (짓지 않는 소스는 CMake 가 적은 UnbuiltSources.txt 로만 안다)
   │     │     ├── CheckDataFileReferences.py  # 아무도 include 하지 않는 죽은 데이터 파일
-  │     │     ├── CheckDelayLoadSites.py      # /DELAYLOAD 는 DelayLoad.cmake 의 두 함수로만(지연 로드 첫 호출이 첫 float 인자를 망가뜨린다)
+  │     │     ├── CheckNoDelayLoad.py         # /DELAYLOAD · delayimp 금지(lld 20 지연 로드 썽크가 첫 호출의 float 인자를 망가뜨린다)
   │     │     ├── CheckResourceCasing.py      # 리소스 소문자 명명
   │     │     ├── CheckTextureFolders.py      # 런타임 textures/ 에는 DDS 만, 원본 이미지는 textures_raw/ 에만
   │     │     ├── CheckClockReads.py          # std::chrono 시계가 아니라 MonotonicClock · Stopwatch · Deadline
@@ -435,7 +435,7 @@ git config diff.swasset.command  "py -3 Scripts/asset/AssetMerge.py git-diff"
   글자마다 도는 파이썬 루프는 트리 전체에서 초 단위다(`CheckNamespaceBlocks` 의 가리기 — 정규식 `sub` 로 바꾸자 직렬 CPU 8.8 → 2.1 s) — 덩어리는 정규식으로 찾고,
   루프는 반응하는 글자만(`findall(r"[{};]")`) 돈다. 덩어리 글자 집합 + 꼬리 패턴 정규식(`[A-Za-z0-9_./\-]+\.ext`)은 `(?<![집합])` 로 덩어리 첫 글자에서만
   시작하게 — 없으면 모든 자리에서 끝까지 먹고 되돌아온다(`AssetValidation` 의 참조 토큰, 꼬리 거르기와 함께 2.8 → 1.3 s).
-- **`CheckIncludeOrder` 는 첫 `#if` 를 경계로 삼는다.** include 가 전부 `#if` 안인 파일(`DelayLoadNotifyHook.cpp` · `PlatformOsHeaders.h` · `X11MacroUndef.h`)과 새 플랫폼 전용
+- **`CheckIncludeOrder` 는 첫 `#if` 를 경계로 삼는다.** include 가 전부 `#if` 안인 파일(`PlatformOsHeaders.h` · `X11MacroUndef.h`)과 새 플랫폼 전용
   `.cpp` 는 손으로 순서를 지킨다(Core → Engine).
 - **`CheckFunctionVocabulary` 는 헤더 선언만 본다**(호출부를 보면 `vk*KHR` 를 잡는다). 대문자 규칙은 "셋 이상은 어디서든, 둘은 이름 끝에서". `hashed_string` 은 리터럴에서만
   암묵 변환, `string_view` 판과 `const hashed_string&` 판을 함께 두면 NamePair 위반, `setX` 의 게터는 `getX`(BareGetter), `calculate` · `calc` · `init*` 축약 금지(`initRHI` 예외).

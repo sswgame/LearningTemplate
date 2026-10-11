@@ -56,8 +56,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         // 2) 이 빌드 · 상태
         // ------------------------------------------------------------------------------
-        /** @brief Tracy 클라이언트가 이 빌드에 링크되어 있으면 true 입니다. */
+        /** @brief Tracy 클라이언트가 이 빌드에 들어 있으면 true 입니다. */
         static bool isCompiled();
+        /**
+         * @brief Tracy 클라이언트 함수 표를 채우고(Windows 는 TracyClient.dll 을 올린다 — 수집 스레드 · 리슨 소켓이 선다), 다 찼으면 true 입니다.
+         * @details 이 출력을 켜기 전에 부릅니다(`ProfilerBackend::startTracy`). 거짓이면 이 출력의 함수를 부르지 않습니다.
+         */
+        [[nodiscard]] static bool loadClient();
         /** @brief Tracy 데이터 포트입니다(`TRACY_PORT` 환경 변수가 있으면 그 값, 없으면 8086). */
         static uint16 getDataPort();
         /** @brief 지금까지 낸 GPU 구간 수입니다(테스트 · 에디터 표시). */

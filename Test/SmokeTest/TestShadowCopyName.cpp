@@ -117,3 +117,34 @@ SW_TEST_CASE( ShadowCopyNameTest, CleanupKeepsCopiesOfOtherLiveProcesses )
     SW_EXPECT_FALSE( sw::FileUtil::exists( legacyPath ) );
     SW_EXPECT_TRUE( sw::FileUtil::exists( unrelatedPath ) );
 }
+
+/**
+ * @brief [ShadowCopyNameTest] Windows 복사본 폴더(`<모듈>_temp_p<pid>_…/<세대 이름>.dll`)도 같은 규칙으로 치우고, 다른 살아 있는 프로세스의 폴더는 남긴다
+ * @details Windows 로더는 import 를 파일 이름으로 맞추므로 복사본 파일 이름이 곧 세대 이름이고, 프로세스끼리 겹치지 않게 복사본마다 제 폴더에 둔다.
+ */
+SW_TEST_CASE( ShadowCopyNameTest, CleanupRemovesCopyFoldersButKeepsOtherLiveProcesses )
+{
+#if defined( SW_PLATFORM_WINDOWS )
+    const sw::string liveCommand = "ping.exe 127.0.0.1 -n 30";
+#else
+    const sw::string liveCommand = "sleep 30";
+#endif
+    ChildProcessScope liveChild;
+    SW_ASSERT_TRUE( liveChild._process.launch( liveCommand ) );
+    const int32 liveProcessID = liveChild._process.getProcessID();
+    SW_ASSERT_TRUE( liveProcessID > 0 );
+
+    const sw::string directory  = test::makeTempDirectory( "shadow_copy_folders" );
+    const sw::string ownFolder  = makeCopyPath( directory, sw::Process::getCurrentProcessID(), 5 );
+    const sw::string liveFolder = makeCopyPath( directory, liveProcessID, 6 );
+    for ( const sw::string* pFolder : { &ownFolder, &liveFolder } )
+    {
+        SW_ASSERT_TRUE( sw::FileUtil::ensureDirectoryExists( *pFolder ) );
+        SW_ASSERT_TRUE( writeEmptyFile( sw::FileUtil::joinPath( *pFolder, "SWGa0005.dll" ) ) );
+        SW_ASSERT_TRUE( writeEmptyFile( sw::FileUtil::joinPath( *pFolder, "SWGa0005.pdb" ) ) );
+    }
+
+    SW_EXPECT_EQUAL( 1u, sw::ShadowCopyName::removeStaleCopies( directory ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( ownFolder ) );
+    SW_EXPECT_TRUE_MSG( sw::FileUtil::exists( sw::FileUtil::joinPath( liveFolder, "SWGa0005.dll" ) ), "a copy folder another running process owns was emptied" );
+}

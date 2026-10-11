@@ -43,7 +43,6 @@ namespace sw
                     SW_LOG_ERROR( "%# needs the editor module in Bin/Modules: %#", pPurpose, modulePath.c_str() );
                     return false;
                 }
-                (void)ModuleImageUtil::bindDelayLoadImports( pLibraryModule ); // 못 묶으면 경고했다
 
                 // 올리는 순간 모듈의 정적 등록기가 전역 머리에 매달린다. 모듈 이름으로 등록해 두어야 내리기 전에 걷을 수 있다.
                 engine::registerModuleTypes( sw::config::kTargetEditorModule );

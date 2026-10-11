@@ -93,9 +93,6 @@ namespace sw
                 }();
                 (void)s_bAdded;
             }
-
-            /** @brief 올라온 이미지 목록을 다시 읽는 시간 한도(ms)입니다 — 다른 스레드가 DLL 을 올리고 내리는 동안 열거가 드물게 진다. */
-            static constexpr uint64 kEnumerateModulesRetryMs = 1000;
 #endif
         };
     } // namespace
@@ -242,81 +239,6 @@ namespace sw
 #endif
     }
 
-    uint32 ModuleImageUtil::bindDelayLoadImports( void* pHandle )
-    {
-        using BindDelayLoadImportsFunction         = uint32 ( * )();
-        const BindDelayLoadImportsFunction pfnBind = reinterpret_cast<BindDelayLoadImportsFunction>( getDynamicSymbol( pHandle, kBindDelayLoadImportsSymbol ) );
-        if ( pfnBind == nullptr )
-            return 0;
-        const uint32 failedCount = pfnBind();
-        if ( failedCount > 0 )
-            SW_LOG_WARNING( "A module could not bind %# delay-loaded DLL(s) up front - those imports bind on their first call", failedCount );
-        return failedCount;
-    }
-
-    uint32 ModuleImageUtil::bindDelayLoadImportsOfLoadedModules()
-    {
-        // 묶기가 지연 로드 DLL 을 새로 올린다(서버 키트 → 공유 키트) — 새로 올라온 이미지의 지연 import 도 묶어야 하므로, 새 이미지가 없을 때까지 돈다.
-        vector<void*> listBound;
-        vector<void*> listHandle;
-        uint32        failedCount{ 0 };
-        for ( ;; )
-        {
-            if ( collectLoadedModuleHandles( listHandle ) == false )
-            {
-                // 목록을 못 읽으면 어떤 이미지도 묶이지 않는다 — 그 모듈들의 첫 float 인자 호출이 쓰레기 값을 받는다. 조용히 넘기지 않는다.
-                SW_LOG_ERROR( "Could not enumerate the loaded modules - their delay-loaded imports stay unbound and bind on their first call" );
-                return failedCount + 1;
-            }
-            bool bBoundAny{ false };
-            for ( void* pHandle : listHandle )
-            {
-                if ( std::find( listBound.begin(), listBound.end(), pHandle ) != listBound.end() )
-                    continue;
-                listBound.push_back( pHandle );
-                failedCount += bindDelayLoadImports( pHandle );
-                bBoundAny = true;
-            }
-            if ( bBoundAny == false )
-                return failedCount;
-        }
-    }
-
-    bool ModuleImageUtil::collectLoadedModuleHandles( vector<void*>& outListHandle )
-    {
-        outListHandle.clear();
-#if defined( SW_PLATFORM_WINDOWS )
-        // DbgHelp 의 `EnumerateLoadedModulesW64` 는 쓰지 않는다 — 다른 스레드가 DLL 을 올리고 내리는 동안 몇 % 확률로 실패한다(엔진 기동에는 로거 ·
-        // 작업 스레드가 함께 선다). `K32EnumProcessModules` 도 같은 순간에 드물게 질 수 있어(ERROR_PARTIAL_COPY) 시간 한도 안에서 다시 읽는다.
-        const HANDLE hProcess   = GetCurrentProcess();
-        const uint64 deadlineMs = GetTickCount64() + ModuleImageUtilInternal::kEnumerateModulesRetryMs;
-        size_t       capacity   = 256;
-        for ( ;; )
-        {
-            outListHandle.resize( capacity );
-            const DWORD capacityBytes = static_cast<DWORD>( capacity * sizeof( HMODULE ) );
-            DWORD       neededBytes   = 0;
-            if ( K32EnumProcessModules( hProcess, reinterpret_cast<HMODULE*>( outListHandle.data() ), capacityBytes, &neededBytes ) != FALSE )
-            {
-                if ( neededBytes <= capacityBytes )
-                {
-                    outListHandle.resize( neededBytes / sizeof( HMODULE ) );
-                    return true;
-                }
-                capacity = neededBytes / sizeof( HMODULE ) + 64; // 그 사이 늘었을 수 있어 여유를 둔다
-            }
-            if ( GetTickCount64() >= deadlineMs )
-            {
-                outListHandle.clear();
-                return false;
-            }
-            (void)SwitchToThread();
-        }
-#else
-        return true;
-#endif
-    }
-
     bool ModuleImageUtil::findLoadedImageRange( const void* pAddressInside, const void*& pOutBegin, const void*& pOutEnd )
     {
         pOutBegin = nullptr;
@@ -403,18 +325,6 @@ namespace sw
             }
         }
 
-        const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
-        if ( delayDir.VirtualAddress != 0 )
-        {
-            for ( const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress ); pDesc->DllNameRVA != 0;
-                  ++pDesc )
-            {
-                if ( pDesc->Attributes.RvaBased == 0 )
-                    continue;
-                if ( ModuleImageUtilInternal::pinLoadedModule( reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA ) ) )
-                    ++pinnedCount;
-            }
-        }
 #elif defined( SW_PLATFORM_LINUX )
         struct link_map* pLinkMap = nullptr;
         if ( dlinfo( pHandle, RTLD_DI_LINKMAP, &pLinkMap ) != 0 || pLinkMap == nullptr || pLinkMap->l_ld == nullptr )
@@ -486,20 +396,6 @@ namespace sw
         if ( pNt == nullptr )
             return nullptr;
         const uint8* pBase = static_cast<const uint8*>( pHandle );
-
-        const IMAGE_DATA_DIRECTORY& delayDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT];
-        if ( delayDir.VirtualAddress != 0 )
-        {
-            const IMAGE_DELAYLOAD_DESCRIPTOR* pDesc = reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR*>( pBase + delayDir.VirtualAddress );
-            for ( ; pDesc->DllNameRVA != 0; ++pDesc )
-            {
-                if ( pDesc->Attributes.RvaBased == 0 )
-                    continue;
-                const utf8* pName = reinterpret_cast<const utf8*>( pBase + pDesc->DllNameRVA );
-                if ( StringUtil::equals( string_view{ pName }, dependencyFileName, true ) )
-                    return *reinterpret_cast<void* const*>( pBase + pDesc->ModuleHandleRVA );
-            }
-        }
 
         const IMAGE_DATA_DIRECTORY& importDir = pNt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
         if ( importDir.VirtualAddress != 0 )

@@ -50,7 +50,6 @@ endfunction()
 #   SOURCES     소스
 #   LINK_PUBLIC · LINK_PRIVATE   링크(PRIVATE 끝에 sw_global_options 가 붙는다)
 #   DEFINITIONS 더 붙일 PRIVATE 정의
-#   DELAYLOAD   개발 빌드에서 지연 로드할 DLL(Windows 만 — `sw_addDelayloadHook`)
 #   UNITY_BATCH 유니티 묶음 크기(주면 `sw_setUnityBuild`)
 #   REFLECTION_HEADERS  리플렉션 입력 헤더. 비우면 폴더를 재귀로 훑는다(`sw_addReflectionStep` 자동 훑기)
 #   REFLECTION_EXCLUDE  자동 훑기에서 뺄 경로 정규식(하위 폴더의 다른 모듈 — 키트 · 게임의 `/Editor/`)
@@ -58,7 +57,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 function(sw_addModuleLibrary TARGET_NAME)
 	cmake_parse_arguments(ARG "NO_REFLECTION" "KIND;DEV_TYPE;EXPORTS;LOG_TAG;FOLDER;UNITY_BATCH;REFLECTION_EXCLUDE"
-		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;DELAYLOAD;REFLECTION_HEADERS" ${ARGN})
+		"SOURCES;LINK_PUBLIC;LINK_PRIVATE;DEFINITIONS;REFLECTION_HEADERS" ${ARGN})
 
 	if(NOT ARG_DEV_TYPE MATCHES "^(SHARED|MODULE)$")
 		message(FATAL_ERROR "sw_addModuleLibrary(${TARGET_NAME}): DEV_TYPE 는 SHARED | MODULE 이다 (받은 값: ${ARG_DEV_TYPE})")
@@ -108,9 +107,6 @@ function(sw_addModuleLibrary TARGET_NAME)
 
 	if(NOT libType STREQUAL "STATIC")
 		sw_setModuleBinOutput(${TARGET_NAME} ${ARG_KIND})
-		if(ARG_DELAYLOAD)
-			sw_addDelayloadHook(${TARGET_NAME} DLLS ${ARG_DELAYLOAD})
-		endif()
 	endif()
 
 	sw_registerDynamicModule(${TARGET_NAME} ${ARG_KIND})
@@ -174,7 +170,6 @@ function(sw_addGameFrameworkKit KIT_NAME)
 		FOLDER "Source/GameFramework/Kits"
 		SOURCES ${listKitSource}
 		LINK_PUBLIC GameFramework Engine sw_public_source_includes
-		DELAYLOAD GameFramework.dll
 		REFLECTION_EXCLUDE "/Editor/"
 	)
 	if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Editor/CMakeLists.txt")
@@ -183,8 +178,8 @@ function(sw_addGameFrameworkKit KIT_NAME)
 endfunction()
 
 # 서버 · 클라이언트 키트(GF_Server_<X> · GF_Client_<X>)가 같은 기능의 공유 키트(GF_<X>)를 링크합니다.
-# 키트는 다시 올릴 수 있는 모듈이라(Dev) 공유 키트 DLL 도 GameFramework.dll 처럼 **지연 로드**해야 한다 — 바로 링크하면 OS 로더가
-# Bin 의 원본 DLL 을 따로 올려, 모듈 호스트가 올린 그림자 사본과 이미지가 둘이 된다(LiveReloadManager 가 "bound to a stale ... image" 로 멈춘다).
+# 일반 import 다 — 모듈 호스트가 공유 키트의 섀도 복사본에 세대 이름을 주고 이 키트 복사본의 import 이름을 그 이름으로 바꾼다
+# (`LiveReloadManager::rewriteShadowImageNames`). 그래서 의존은 매니페스트에 있어야 한다(없으면 로드가 거절된다).
 function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
 	# 링크는 매니페스트 의존이어야 한다 — 키트 폴더를 의존 순서로 들어가므로(Kits/CMakeLists.txt) 그래야 공유 키트 타깃이 먼저 선다.
 	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${KIT_NAME}_DEPENDENCIES)
@@ -195,19 +190,11 @@ function(sw_linkSharedKit KIT_NAME SHARED_KIT_NAME)
 		message(FATAL_ERROR "sw_linkSharedKit: target '${KIT_NAME}' or '${SHARED_KIT_NAME}' does not exist")
 	endif()
 	target_link_libraries(${KIT_NAME} PUBLIC ${SHARED_KIT_NAME})
-	get_target_property(kitType ${KIT_NAME} TYPE)
-	if(WIN32 AND kitType STREQUAL "SHARED_LIBRARY")
-		sw_addDelayloadHook(${KIT_NAME} DLLS ${SHARED_KIT_NAME}.dll)
-	endif()
 endfunction()
 
 # 게임 팩 모듈(SWGame) — 링크하는 키트는 게임 매니페스트(`SWGame.module.json`)의 의존 가운데 Kit 인 것이다(CMake 에 다시 적지 않는다).
 function(sw_addGameModule TARGET_NAME)
 	sw_getModuleDependenciesOfKind(${TARGET_NAME} Kit listKit)
-	set(listDelayLoad GameFramework.dll)
-	foreach(kit IN LISTS listKit)
-		list(APPEND listDelayLoad "${kit}.dll")
-	endforeach()
 
 	file(GLOB_RECURSE listGameSource CONFIGURE_DEPENDS "*.cpp" "*.c" "*.h" "*.hpp")
 	# 게임의 에디터 확장(Editor/)은 따로 짓는 모듈이다(SWGameEditor).
@@ -220,7 +207,6 @@ function(sw_addGameModule TARGET_NAME)
 		FOLDER "Source/Games"
 		SOURCES ${listGameSource}
 		LINK_PRIVATE Engine RuntimeAPI GameFramework ${listKit}
-		DELAYLOAD ${listDelayLoad}
 		UNITY_BATCH 8
 		REFLECTION_EXCLUDE "/Editor/"
 	)
@@ -232,7 +218,7 @@ endfunction()
 # ------------------------------------------------------------------------------
 # 에디터 확장 모듈(GF_Editor_<키트> · SWGameEditor) — Dev 전용 SHARED. EditorModule 을 링크하고(언리얼 <X>Editor 모듈이 UnrealEd 를 링크하는 것과 같다),
 # 매니페스트의 의존 가운데 키트 · GameFramework 를 링크한다(목록을 CMake 에 다시 적지 않는다 — 매니페스트가 원본). ImGui 결속 소스를 만들어 넣는다
-# (손으로 빠뜨릴 수 없게 — `cmake/Engine/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트 · GameFramework)은 지연 로드한다.
+# (손으로 빠뜨릴 수 없게 — `cmake/Engine/EditorExtensionUIBinder.cpp.in`). 다시 로드되는 DLL(EditorModule · 키트)도 일반 import 다(모듈 호스트가 이름을 바꾼다).
 # ------------------------------------------------------------------------------
 function(sw_addEditorExtension TARGET_NAME)
 	file(GLOB_RECURSE listExtensionSource CONFIGURE_DEPENDS "*.cpp" "*.h")
@@ -250,18 +236,13 @@ function(sw_addEditorExtension TARGET_NAME)
 	configure_file("${CMAKE_SOURCE_DIR}/cmake/Engine/EditorExtensionUIBinder.cpp.in" "${binderSource}" @ONLY)
 
 	set(listLinkedModule "")
-	set(listDelayLoad EditorModule.dll)
 	get_property(listDependency GLOBAL PROPERTY SW_MODULE_${TARGET_NAME}_DEPENDENCIES)
 	foreach(dependency IN LISTS listDependency)
 		get_property(dependencyKind GLOBAL PROPERTY SW_MODULE_${dependency}_KIND)
 		if(dependencyKind STREQUAL "Kit" OR dependencyKind STREQUAL "GameFramework")
 			list(APPEND listLinkedModule ${dependency})
-			list(APPEND listDelayLoad "${dependency}.dll")
 		endif()
 	endforeach()
-	if(NOT "GameFramework" IN_LIST listLinkedModule AND listLinkedModule)
-		list(APPEND listDelayLoad GameFramework.dll) # 키트가 GameFramework 를 PUBLIC 으로 링크한다
-	endif()
 
 	sw_addModuleLibrary(${TARGET_NAME}
 		KIND editorextension
@@ -271,7 +252,6 @@ function(sw_addEditorExtension TARGET_NAME)
 		FOLDER "Source/EditorExtensions"
 		SOURCES ${listExtensionSource} "${binderSource}"
 		LINK_PRIVATE EditorModule Engine RuntimeAPI ${listLinkedModule} imgui implot imgui_nodeeditor
-		DELAYLOAD ${listDelayLoad}
 	)
 	add_dependencies(EditorAll ${TARGET_NAME})
 endfunction()

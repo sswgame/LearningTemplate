@@ -50,8 +50,9 @@ flowchart TD
 
 ### 리로드 코드는 App에 있습니다
 
-`LiveReloadManager` 는 `Source/ModuleHost/` 에 있고 Shipping 빌드에서는 파일째 빠집니다. Engine이 아는 것은 지연 로드 훅이 쓰는 `IModuleHandleProvider` 인터페이스 하나뿐입니다.
-Linux에서는 섀도 복사본의 SONAME을 세대마다 다른 이름으로 바꿉니다(`ModuleImagePatch`). 그래야 의존 모듈이 옛 이미지에 연결되지 않습니다.
+`LiveReloadManager` 는 `Source/ModuleHost/` 에 있고 Shipping 빌드에서는 파일째 빠집니다. Engine은 리로드를 모릅니다.
+섀도 복사본은 세대마다 다른 이름을 받고(Windows는 DLL 파일 이름, Linux는 SONAME), 의존 모듈 복사본의 import는 그 이름으로 바뀝니다(`ModuleImagePatch`).
+그래야 의존 모듈이 옛 이미지나 원본에 연결되지 않습니다. 모듈끼리는 일반 import이고 지연 로드는 쓰지 않습니다.
 App 쪽의 세부 규칙은 [App 문서](../Source/App/README.md)의 "함정과 주의" 절에 있습니다.
 
 ## 3. 리로드에서 지킬 것

@@ -24,11 +24,9 @@
     #include <Windows.h>
     #include <Unknwn.h>
     #include <DbgHelp.h>
-    #include <Psapi.h>
     #include <Xinput.h>
     #include <commdlg.h>
     #include <crtdbg.h>
-    #include <delayimp.h>
     #include <intrin.h>
     #include <malloc.h>
     #include <sdkddkver.h>

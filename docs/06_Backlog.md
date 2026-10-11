@@ -497,13 +497,6 @@
   로그는 `TaskManager Shutdown cleanly` 에서 끝나고 크래시 스택 주석이 없었다. 이 PC Debug 로 같은 조각(`--test_shard=2/3 --host_suites=exclude`) 15 회 순차 ·
   12 회 4 개 동시 — 재현 안 됨. 하네스가 이제 마지막 줄 `[TestHost] shut down - exit code N` 을 찍는다: 다시 나면 그 줄이 없으면 `TestHostRuntime::stop`
   안(부트스트랩 · 로거 · 메모리 프로파일러 종료), 있으면 정적 소멸자다.
-- **CI Windows Debug · STL 잡의 액션 키트 테스트 실패 — 원인을 고쳤고 CI 확인만 남았다**(run 38128333251 ~ 38146909091). 실패는 모두 "키트 → GameFramework
-  의 첫 float 인자 호출이 쓰레기를 받음"이었다(`DamageMath::applyArmor` 의 damage · `GameRandom::nextRange` 의 범위 · MechArena · Metroidvania · KartRacing).
-  지연 로드 썽크가 xmm 을 홈 공간에 둬 첫 호출이 인자를 망가뜨리는데, 기동의 미리 묶기가 이미지 목록을 DbgHelp `EnumerateLoadedModulesW64` 로 읽었고 그것은
-  다른 스레드가 DLL 을 올리고 내리는 동안 몇 % 확률로 실패한다(독립 실험 20000 회 중 684 회, `K32EnumProcessModules` 는 0 회). 실패가 무시돼 그 프로세스의
-  키트가 하나도 묶이지 않았다. CI 의 `DelayLoadBindTest` 도 한 번 졌다(`Bin\Modules\GF_Mailbox.dll` — 훅이 직접 올린 이미지는 아무도 묶지 않았다).
-  `ModuleImageUtil::collectLoadedModuleHandles` 를 `K32EnumProcessModules` + 시간 한도 재시도 + 실패 반환으로, 훅이 올린 이미지도 그 자리에서 묶도록 고쳤다.
-  다음 CI 몇 번에서 이 테스트들과 `DelayLoadBindTest` 가 초록이면 이 항목과 테스트에 넣은 진단 메시지를 지운다.
 - **Shipping `EngineTest_NoGPU` · HostOnly 간헐 세그폴트**(09-20 · 21 · 22 에 한 번씩, 2026-10-06 nogpu 3 회 · host 3 회 재실행 깨끗). 다시 나면: 크래시 핸들러의
   스택 파일(`Bin/Saved/Logs/crash_<세션>.stack.txt` — Shipping 도 이제 PDB 가 있어 함수 이름), CI 는 그 파일을 아티팩트로 · 스택을 주석으로 올린다(`CiFailureReport.py`).
 - **WSL lavapipe 가 가끔 서피스를 잃는다**(`AppTest_HostOnly` 43 회 중 3 회, 첫 `vkAcquireNextImageKHR` 가 `VK_ERROR_SURFACE_LOST_KHR`) — 이제 서피스 · 스왑체인을

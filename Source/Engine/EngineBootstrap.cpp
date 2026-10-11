@@ -76,10 +76,6 @@ namespace sw
         _logger = make_unique<AsyncLogSink>();
         _logger->initialize();
 
-        // OS 로더가 실행 파일과 함께 올린 모듈(테스트 실행 파일이 링크한 키트 · 게임)의 지연 import 를 그 코드가 돌기 전에 묶는다 — 첫 호출이 묶으면
-        // 그 호출의 첫 float 인자가 망가진다(`ModuleImageUtil::bindDelayLoadImports`). 명시적으로 올리는 모듈은 올리는 자리가 묶는다.
-        (void)ModuleImageUtil::bindDelayLoadImportsOfLoadedModules(); // 못 묶으면 경고했다
-
         // 명령줄 · 전역 변수는 표의 서비스이지만 파싱이 다른 서비스 생성보다 먼저라 여기서 만든다(`createAll` 은 있는 것을 덮지 않는다).
         // 크래시 핸들러 · 리소스 루트보다 먼저 파싱한다 — 크래시 보고 프로세스(`-crash-reporter`)는 둘 다 세우지 않는다.
         if ( owned._pCommandLineManager == nullptr )

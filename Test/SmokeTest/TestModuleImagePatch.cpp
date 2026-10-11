@@ -90,6 +90,73 @@ namespace
         sw::Memory::copy( bytes.data() + kStringOffset, stringTable.data(), stringTable.size() );
         return bytes;
     }
+
+    /** @brief 버퍼의 @p offset 에 NUL 로 끝나는 문자열을 적습니다. */
+    void writeTextAt( sw::vector<uint8>& bytes, uint64 offset, sw::string_view text )
+    {
+        sw::Memory::copy( bytes.data() + offset, text.data(), text.size() );
+        bytes[static_cast<size_t>( offset + text.size() )] = 0;
+    }
+
+    /** @brief 합성 PE 의 섹션(RVA 0x1000 ↔ 파일 0x200)에서 RVA 를 파일 위치로 옮깁니다. */
+    uint64 syntheticFileOffset( uint32 rva )
+    {
+        return static_cast<uint64>( rva - 0x1000u ) + 0x200u;
+    }
+
+    /**
+     * @brief 일반 import 둘(GameFramework.dll · Engine.dll)과 지연 import 하나(TracyClient.dll)를 가진 최소 PE32+ 이미지를 만듭니다.
+     * @details 배치: DOS 헤더(e_lfanew = 0x40) · PE 서명 · COFF 헤더(섹션 하나) · PE32+ 선택 헤더(디렉터리 16) · 섹션 표 · 섹션 하나.
+     *          섹션은 RVA 0x1000 ↔ 파일 0x200 이라 RVA 를 파일 위치로 옮기는 길을 지난다.
+     */
+    sw::vector<uint8> makeSyntheticPortableExecutable()
+    {
+        constexpr uint64 kPeOffset       = 0x40;
+        constexpr uint64 kOptionalOffset = kPeOffset + 4 + 20;
+        constexpr uint16 kOptionalSize   = 240;
+        constexpr uint64 kSectionTable   = kOptionalOffset + kOptionalSize;
+        constexpr uint64 kRawOffset      = 0x200;
+        constexpr uint32 kSectionRva     = 0x1000;
+        constexpr uint32 kImportRva      = kSectionRva;        // 서술자 셋(둘 + 끝)
+        constexpr uint32 kDelayRva       = kSectionRva + 0x80; // 서술자 둘(하나 + 끝)
+        constexpr uint32 kStringRva      = kSectionRva + 0x100;
+        constexpr uint64 kFileSize       = kRawOffset + 0x200;
+
+        sw::vector<uint8> bytes( static_cast<size_t>( kFileSize ), 0 );
+        bytes[0] = 'M';
+        bytes[1] = 'Z';
+        writeAt<uint32>( bytes, 0x3C, static_cast<uint32>( kPeOffset ) );
+        writeAt<uint32>( bytes, kPeOffset, 0x4550 );     // "PE\0\0"
+        writeAt<uint16>( bytes, kPeOffset + 4, 0x8664 ); // x64
+        writeAt<uint16>( bytes, kPeOffset + 4 + 2, 1 );  // NumberOfSections
+        writeAt<uint16>( bytes, kPeOffset + 4 + 16, kOptionalSize );
+        writeAt<uint16>( bytes, kOptionalOffset, 0x20B );    // PE32+
+        writeAt<uint32>( bytes, kOptionalOffset + 108, 16 ); // NumberOfRvaAndSizes
+        writeAt<uint32>( bytes, kOptionalOffset + 112 + 1 * 8, kImportRva );
+        writeAt<uint32>( bytes, kOptionalOffset + 112 + 13 * 8, kDelayRva );
+
+        writeAt<uint32>( bytes, kSectionTable + 8, 0x200 ); // VirtualSize
+        writeAt<uint32>( bytes, kSectionTable + 12, kSectionRva );
+        writeAt<uint32>( bytes, kSectionTable + 16, 0x200 ); // SizeOfRawData
+        writeAt<uint32>( bytes, kSectionTable + 20, static_cast<uint32>( kRawOffset ) );
+
+        const uint32 gameFrameworkName = kStringRva;
+        const uint32 engineName        = kStringRva + 0x20;
+        const uint32 tracyName         = kStringRva + 0x40;
+        writeTextAt( bytes, syntheticFileOffset( gameFrameworkName ), "GameFramework.dll" );
+        writeTextAt( bytes, syntheticFileOffset( engineName ), "Engine.dll" );
+        writeTextAt( bytes, syntheticFileOffset( tracyName ), "TracyClient.dll" );
+
+        // IMAGE_IMPORT_DESCRIPTOR(20 바이트): Name +12 · FirstThunk +16. 모두 0 인 서술자가 끝이다.
+        writeAt<uint32>( bytes, syntheticFileOffset( kImportRva ) + 12, gameFrameworkName );
+        writeAt<uint32>( bytes, syntheticFileOffset( kImportRva ) + 16, kSectionRva + 0x180 );
+        writeAt<uint32>( bytes, syntheticFileOffset( kImportRva ) + 20 + 12, engineName );
+        writeAt<uint32>( bytes, syntheticFileOffset( kImportRva ) + 20 + 16, kSectionRva + 0x190 );
+        // IMAGE_DELAYLOAD_DESCRIPTOR(32 바이트): Attributes +0 · DllNameRVA +4. 이름 칸이 0 인 서술자가 끝이다.
+        writeAt<uint32>( bytes, syntheticFileOffset( kDelayRva ), 1 );
+        writeAt<uint32>( bytes, syntheticFileOffset( kDelayRva ) + 4, tracyName );
+        return bytes;
+    }
 } // namespace
 
 /**
@@ -177,4 +244,79 @@ SW_TEST_CASE( ModuleImagePatchTest, EngineAbiStampIsFoundOnlyWithAFullDigest )
     const sw::string  upperText = sw::string{ sw::ModuleImagePatch::kEngineAbiStampMarker } + "0123456789ABCDEF0123456789ABCDEF01234567";
     sw::vector<uint8> upperBytes( reinterpret_cast<const uint8*>( upperText.data() ), reinterpret_cast<const uint8*>( upperText.data() ) + upperText.size() );
     SW_EXPECT_FALSE( sw::ModuleImagePatch::findEngineAbiStamp( upperBytes, found ) );
+}
+
+/**
+ * @brief [ModuleImagePatchTest] Windows 세대 이름은 `.dll` 앞 끝 네 글자를 바꾸고 길이를 지킨다 — 다섯 글자보다 짧은 이름은 만들지 않는다
+ * @details 로더가 import 를 파일 이름으로 맞추므로 복사본 파일 이름이 곧 이 이름이다(`LiveReloadManager::rewriteShadowImageNames`).
+ */
+SW_TEST_CASE( ModuleImagePatchTest, DllGenerationNameKeepsTheLength )
+{
+    const sw::string third = sw::ModuleImagePatch::makeGenerationName( "GF_Mailbox.dll", 3 );
+    SW_EXPECT_STREQ( "GF_Mai0003.dll", third.c_str() );
+    SW_EXPECT_EQUAL( sw::string_view{ "GF_Mailbox.dll" }.size(), third.size() );
+    SW_EXPECT_STREQ( "GameFrame0010.dll", sw::ModuleImagePatch::makeGenerationName( "GameFramework.dll", 36 ).c_str() );
+    SW_EXPECT_STREQ( "S0001.dll", sw::ModuleImagePatch::makeGenerationName( "SWGam.dll", 1 ).c_str() );
+    SW_EXPECT_TRUE( sw::ModuleImagePatch::makeGenerationName( "GF_A.dll", 1 ).empty() );
+}
+
+/**
+ * @brief [ModuleImagePatchTest] PE32+ 의 일반 import · 지연 import 이름을 표마다 읽는다
+ * @details 지연 import 표는 `LiveReloadManager` 가 모듈 이미지를 올리기 전에 보는 그물이고(있으면 거절), 일반 import 표는 세대 이름으로 바꿀 자리다.
+ */
+SW_TEST_CASE( ModuleImagePatchTest, PortableExecutableImportTablesAreRead )
+{
+    const sw::vector<uint8> bytes = makeSyntheticPortableExecutable();
+    sw::vector<sw::string>  listName;
+    SW_ASSERT_TRUE( sw::ModuleImagePatch::readImportDllNames( bytes, sw::ModuleImagePatch::ImportTable::Load, listName ) );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_STREQ( "GameFramework.dll", listName[0].c_str() );
+    SW_EXPECT_STREQ( "Engine.dll", listName[1].c_str() );
+
+    SW_ASSERT_TRUE( sw::ModuleImagePatch::readImportDllNames( bytes, sw::ModuleImagePatch::ImportTable::Delay, listName ) );
+    SW_ASSERT_EQUAL( 1u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_STREQ( "TracyClient.dll", listName[0].c_str() );
+    SW_EXPECT_TRUE( sw::ModuleImagePatch::hasImportDirectory( bytes, sw::ModuleImagePatch::ImportTable::Delay ) );
+    SW_EXPECT_TRUE( sw::ModuleImagePatch::hasImportDirectory( bytes, sw::ModuleImagePatch::ImportTable::Load ) );
+    SW_EXPECT_FALSE( sw::ModuleImagePatch::hasImportDirectory( makeSyntheticSharedObject(), sw::ModuleImagePatch::ImportTable::Delay ) );
+}
+
+/**
+ * @brief [ModuleImagePatchTest] 일반 import 의 DLL 이름은 대소문자 없이 맞춰 제자리에서 바뀌고, 다른 import · 지연 import · 파일 크기는 그대로다
+ */
+SW_TEST_CASE( ModuleImagePatchTest, PortableExecutableImportNameIsRewrittenInPlace )
+{
+    sw::vector<uint8> bytes    = makeSyntheticPortableExecutable();
+    const size_t      sizeBase = bytes.size();
+    SW_EXPECT_EQUAL( 1u, sw::ModuleImagePatch::replaceImportDllName( bytes, "gameframework.dll", "GameFrame0007.dll" ) );
+
+    sw::vector<sw::string> listName;
+    SW_ASSERT_TRUE( sw::ModuleImagePatch::readImportDllNames( bytes, sw::ModuleImagePatch::ImportTable::Load, listName ) );
+    SW_ASSERT_EQUAL( 2u, static_cast<uint32>( listName.size() ) );
+    SW_EXPECT_STREQ( "GameFrame0007.dll", listName[0].c_str() );
+    SW_EXPECT_STREQ( "Engine.dll", listName[1].c_str() );
+    // 지연 import 는 바꾸는 자리가 아니다(모듈 이미지에는 없어야 한다).
+    SW_EXPECT_EQUAL( 0u, sw::ModuleImagePatch::replaceImportDllName( bytes, "TracyClient.dll", "TracyCl0001.dll" ) );
+    SW_EXPECT_TRUE( containsText( bytes, "TracyClient.dll" ) );
+    SW_EXPECT_EQUAL( sizeBase, bytes.size() );
+}
+
+/**
+ * @brief [ModuleImagePatchTest] 길이가 다른 요청 · PE 가 아닌 바이트 · 잘린 이미지는 건드리지 않고 읽기도 거절한다
+ */
+SW_TEST_CASE( ModuleImagePatchTest, PortableExecutableMismatchOrForeignBytesAreLeftAlone )
+{
+    sw::vector<uint8>       bytes    = makeSyntheticPortableExecutable();
+    const sw::vector<uint8> original = bytes;
+    SW_EXPECT_EQUAL( 0u, sw::ModuleImagePatch::replaceImportDllName( bytes, "GameFramework.dll", "GF.dll" ) );
+    SW_EXPECT_TRUE( bytes == original );
+
+    sw::vector<sw::string>  listName;
+    const sw::vector<uint8> elf = makeSyntheticSharedObject();
+    SW_EXPECT_FALSE( sw::ModuleImagePatch::readImportDllNames( elf, sw::ModuleImagePatch::ImportTable::Load, listName ) );
+    sw::vector<uint8> notPe( 128, 0x41 );
+    SW_EXPECT_EQUAL( 0u, sw::ModuleImagePatch::replaceImportDllName( notPe, "AAAA", "BBBB" ) );
+
+    const sw::vector<uint8> truncated( original.begin(), original.begin() + 0x220 );
+    SW_EXPECT_FALSE( sw::ModuleImagePatch::readImportDllNames( truncated, sw::ModuleImagePatch::ImportTable::Load, listName ) );
 }

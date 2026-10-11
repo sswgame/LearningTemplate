@@ -5,20 +5,24 @@
 언리얼의 플러그인 매니페스트(`.uplugin`)와 모듈 관리자에 해당합니다.
 
 감시 · 섀도 복사 · 다시 로드 같은 핫 리로드 장치는 App 에 있습니다([App README](../../App/README.md), [핫 리로드와 C-ABI](../../../docs/03_LiveReload_and_ABI.md)).
-Engine 이 아는 것은 지연 로드 훅이 묻는 창구(`ModuleHandleProvider`)까지입니다.
+Engine 은 모듈 사이의 결속(어느 이미지가 어느 이미지에 묶이는가)을 모릅니다 — 섀도 복사본의 이름을 맞추는 것은 핫 리로드(`LiveReloadManager`)의 일입니다.
 
 ## 함정 · 계약
 
-- **지연 로드 훅(`__pfnDliNotifyHook2`)은 모듈마다 따로다.** 엔진 모듈 DLL 을 지연 로드하는 kit · SWGame 에만 넣는다(Engine 에 넣으면 시스템 DLL 로드마다 ERROR).
 - **모듈 대상은 매니페스트 `_listTarget`(Client · Server, 필수)** — CMake 는 빌드 타깃(`SW_TARGET_TYPE`)으로, 런타임은 호스트 역할(App · Server)로 거른다.
   키트는 공유 `GF_<X>` · 서버 `GF_Server_<X>` · (필요하면) 클라이언트 `GF_Client_<X>` 로 나누고, 새 매니페스트에는 처음부터 이 키를 적는다(없으면 configure 가 선다).
-- **지연 import 는 첫 호출로 묶이게 두지 않는다 — 첫 float 인자가 망가진다**(2026-10-06). lld 20 의 x64 지연 로드 썽크 `__tailMerge_<dll>` 은
+- **지연 로드(`/DELAYLOAD`)는 쓰지 않는다 — 모듈끼리도 시스템 DLL 도.** lld 20 의 x64 지연 로드 썽크 `__tailMerge_<dll>` 은
   `push rcx … r9; sub rsp,48h; movdqa [rsp],xmm0; movdqa [rsp+10h],xmm1; …; call __delayLoadHelper2` — `[rsp..rsp+1Fh]` 가 그 호출의 홈 공간이라 헬퍼가
-  rcx · rdx 를 흘려 저장된 xmm0 을 덮는다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이 damage = 0 을 받았다). 지연 로드 훅 TU 가
-  `bindDelayLoadImports`(이미지의 지연 import 를 `__HrLoadAllImportsForDll` 로 전부)를 내보내고, `LiveReloadManager` 의 커밋 · `ModuleHost` · 엔진 기동
-  (`bindDelayLoadImportsOfLoadedModules` — 테스트 실행 파일이 링크한 키트)이 모듈 코드가 돌기 전에 부른다. `/DELAYLOAD` 는 `DelayLoad.cmake` 의 두 함수로만
-  (`CheckDelayLoadSites`) — Engine 의 시스템 DLL(D3DCompiler · MF · XAudio2 · Tracy)은 미리 묶지 않으니 첫 인자가 float 인 함수를 부르지 않는다.
-  Shipping 은 키트 · 게임을 정적으로 링크해 모듈 지연 로드가 없다. 테스트: `DelayLoadBindTest` · `ArchitectureTest.ReloadedDependentsBindToTheCurrentImages`.
+  레지스터를 흘려 저장된 xmm0 · xmm1 을 덮는다. 처음 묶는 호출의 float 인자가 쓰레기가 된다(키트의 `DamageMath::applyArmor( 25, 5, 0, 1 )` 첫 호출이
+  damage = 0 을 받아 CI 의 액션 키트 테스트가 간헐로 졌다). LLVM 21 이 썽크를 고쳤지만 도구 사슬은 20.1.8 이다.
+  모듈끼리는 일반 import 이고(키트 → GameFramework · 공유 키트, SWGame → 키트, 에디터 확장 → EditorModule · 키트), 핫 리로드가 섀도 복사본에 세대 이름을
+  주고 의존하는 복사본의 import 이름을 그 이름으로 바꿔 맞춘다(`LiveReloadManager::rewriteShadowImageNames` — 리눅스 SONAME 바꾸기와 같은 장치).
+  없을 수 있는 시스템 DLL(Media Foundation · XAudio2 · TracyClient)은 쓰는 쪽이 LoadLibrary + 함수 표로 올린다(`XAudio2System` · `TracyProfilerBackend`).
+  가드: 빌드는 `CheckNoDelayLoad`(CMake 에 `/DELAYLOAD` · `delayimp` 금지), 런타임은 `LiveReloadManager` 가 지연 import 가 있는 모듈 이미지를 올리기 전에
+  거절한다(Debug 는 단언). 테스트: `ArchitectureTest.NoBuiltImageHasDelayLoadedImports` · `ModuleWithDelayImportsIsRefused` · `ReloadedDependentsBindToTheCurrentImages`.
+- **모듈이 import 하는 다시 올리는 모듈은 매니페스트 의존에 있어야 한다.** 섀도 복사본의 import 이름은 등록된 의존만 바꾼다 — 의존 목록에 없이 등록된 모듈을
+  원본 이름으로 부르면 OS 로더가 원본 DLL 을 한 벌 더 올리므로 그 복사본을 거절한다. 세대 이름은 원래 이름과 길이가 같아야 해(`.dll` 앞 끝 네 글자가 세대)
+  모듈 이름은 다섯 글자 이상이다.
 - **게임 인스턴스는 핫 리로드 · 백엔드 교체마다 다시 선다 — `onInitialize` 의 "처음 한 번" 일은 되살린 월드를 덮는다.** 첫 씬 요청이 그랬다(되살린 씬을 몇 프레임
   뒤 새 첫 씬이 바꿔 디렉터 상태가 사라졌다) — `requestFirstScene` 은 살아 있는 씬 위에서는 아무것도 하지 않는다. PROPERTY 가 아닌 디렉터 상태는
   `ComponentStateStore`(봉투 v3 의 세 번째 섹션)로 넘기고, 손 없이 확인은 `App -gv_reloadGameAtFrame=N`.
